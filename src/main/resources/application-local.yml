@@ -1,0 +1,11 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+  thymeleaf:
+    cache: false
+
+logging:
+  level:
+    org.flywaydb: INFO
+    org.hibernate.SQL: WARN

@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "1.0",
+  "project": {
+    "name": "SofaScore Local Lab",
+    "repository": "betting-sofascore-local-lab",
+    "artifactId": "betting-sofascore-local-lab",
+    "version": "0.1.0-SNAPSHOT",
+    "package": "com.geoffrey.betting.sofascorelocal"
+  },
+  "preparedAt": "2026-08-08",
+  "milestones": [
+    "J0_GOVERNANCE",
+    "J1_BOOTSTRAP"
+  ],
+  "status": [
+    "EXPERIMENTAL",
+    "LOCAL_ONLY",
+    "NOT_PRODUCTION_APPROVED",
+    "NO_CRITICAL_DEPENDENCY"
+  ],
+  "toolchain": {
+    "eclipse": "2026-06 (4.40.0), build 20260604-0653",
+    "springTools": "5.3.0.202607290337",
+    "java": "25 LTS",
+    "springBoot": "4.1.0",
+    "maven": "3.9.16 via versioned launcher",
+    "mavenWrapper": "3.3.4 property convention",
+    "postgresqlImage": "postgres:18.4-alpine",
+    "testcontainers": "2.0.5"
+  },
+  "localRuntime": {
+    "applicationAddress": "127.0.0.1",
+    "applicationPort": 8087,
+    "databaseAddress": "127.0.0.1",
+    "databasePortVariable": "POSTGRES_PORT",
+    "applicationContainerized": false,
+    "databaseContainerized": true
+  },
+  "networkSafety": {
+    "sofascoreEnabledByDefault": false,
+    "baseUrlVersioned": false,
+    "realEndpointUrisVersioned": false,
+    "transportAdapterActive": false,
+    "connectorMode": "LOCKED_OFFLINE_J1",
+    "maximumConcurrency": 1,
+    "minimumDelay": "PT3S",
+    "automaticRefreshEnabled": false,
+    "livePollingEnabled": false,
+    "liveTestProfileBlocked": true
+  },
+  "referenceDocuments": [
+    {
+      "path": "ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md",
+      "sha256": "13252a5cd5fdbb394a253af82fbaf3a634a86688bbb1a8d37a3e1dc82cee06cb"
+    },
+    {
+      "path": "docs/reference/Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf",
+      "sha256": "746106cfe5142ad7b7426443b9730b22f281d6d844d108a5c371c7e08c9f1fee"
+    }
+  ],
+  "nextMilestone": "J2_FIXTURES_OFFLINE"
+}

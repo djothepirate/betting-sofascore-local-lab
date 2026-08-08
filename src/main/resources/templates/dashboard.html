@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SofaScore Local Lab — Tableau de bord</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="shell">
+    <p class="eyebrow">BETTING PROJECT / SOFASCORE LOCAL LAB</p>
+    <h1>Tableau de bord local</h1>
+    <p class="subtitle">Bootstrap J0/J1 — aucun appel SofaScore réel n’est implémenté.</p>
+  </div>
+</header>
+
+<main class="shell">
+  <section class="status-banner status-safe" aria-labelledby="status-title">
+    <div>
+      <p class="label" id="status-title">Statut de gouvernance</p>
+      <p class="status-value" th:text="${dashboard.projectStatus}">EXPERIMENTAL / LOCAL_ONLY</p>
+    </div>
+    <span class="chip chip-safe" th:text="${dashboard.connectorMode}">LOCKED_OFFLINE_J1</span>
+  </section>
+
+  <section class="grid cards" aria-label="État du laboratoire">
+    <article class="card">
+      <p class="label">Connecteur</p>
+      <p class="metric danger" th:text="${dashboard.configurationEnabled ? 'CONFIG_ENABLED_BUT_CODE_LOCKED' : 'DISABLED'}">DISABLED</p>
+      <dl>
+        <div><dt>Base URL</dt><dd th:text="${dashboard.baseUrlState}">NON_CONFIGURED</dd></div>
+        <div><dt>Concurrence max.</dt><dd th:text="${dashboard.maximumConcurrency}">1</dd></div>
+        <div><dt>Délai minimal</dt><dd th:text="${dashboard.minimumDelay}">3 s</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <p class="label">Exposition</p>
+      <p class="metric safe" th:text="${dashboard.binding}">127.0.0.1:8087</p>
+      <p>La garde de démarrage refuse toute adresse qui n’est pas une adresse de boucle locale.</p>
+    </article>
+
+    <article class="card">
+      <p class="label">PostgreSQL</p>
+      <p class="metric" th:classappend="${dashboard.databaseState == 'AVAILABLE'} ? ' safe' : ' danger'"
+         th:text="${dashboard.databaseState}">AVAILABLE</p>
+      <dl>
+        <div><dt>Migration Flyway</dt><dd th:text="${dashboard.flywayVersion}">1</dd></div>
+        <div><dt>Snapshots</dt><dd th:text="${dashboard.snapshotCount}">0</dd></div>
+        <div><dt>Incidents</dt><dd th:text="${dashboard.incidentCount}">0</dd></div>
+      </dl>
+    </article>
+
+    <article class="card">
+      <p class="label">Dernier appel enregistré</p>
+      <div th:if="${dashboard.lastCall == null}">
+        <p class="metric muted">AUCUN</p>
+        <p>État attendu au jalon J1.</p>
+      </div>
+      <dl th:if="${dashboard.lastCall != null}">
+        <div><dt>Reçu à</dt><dd th:text="${dashboard.lastCall.receivedAt}">—</dd></div>
+        <div><dt>Endpoint</dt><dd th:text="${dashboard.lastCall.logicalEndpoint}">—</dd></div>
+        <div><dt>HTTP</dt><dd th:text="${dashboard.lastCall.httpStatus == null ? '—' : dashboard.lastCall.httpStatus}">—</dd></div>
+        <div><dt>Latence</dt><dd th:text="${dashboard.lastCall.latencyMs == null ? '—' : dashboard.lastCall.latencyMs + ' ms'}">—</dd></div>
+        <div><dt>Hash</dt><dd class="mono" th:text="${dashboard.lastCall.payloadHash}">—</dd></div>
+      </dl>
+    </article>
+  </section>
+
+  <section class="panel" aria-labelledby="catalog-title">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Catalogue logique</p>
+        <h2 id="catalog-title">Familles prévues</h2>
+      </div>
+      <span class="chip chip-warning">URI NON CONFIGURÉES</span>
+    </div>
+    <div class="table-scroll">
+      <table>
+        <thead>
+        <tr>
+          <th>Type logique</th>
+          <th>Cache initial</th>
+          <th>Déclenchement</th>
+          <th>Appelable</th>
+          <th>URI</th>
+          <th>Objet</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="endpoint : ${dashboard.endpoints}">
+          <td class="mono" th:text="${endpoint.type}">SCHEDULED_EVENTS</td>
+          <td th:text="${endpoint.cacheTtl}">10 min</td>
+          <td th:text="${endpoint.manualOnly ? 'MANUEL' : 'AUTOMATIQUE'}">MANUEL</td>
+          <td><span class="chip chip-danger" th:text="${endpoint.callable ? 'OUI' : 'NON'}">NON</span></td>
+          <td th:text="${endpoint.uriConfigured ? 'CONFIGURÉE' : 'ABSENTE'}">ABSENTE</td>
+          <td th:text="${endpoint.purpose}">Objet</td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="grid two-columns">
+    <article class="panel">
+      <p class="label">Actions réseau</p>
+      <h2>Verrouillées au jalon J1</h2>
+      <p>Le code ne contient ni chemin d’endpoint SofaScore, ni adaptateur de transport actif, ni profil de test réel utilisable.</p>
+      <div class="actions">
+        <button type="button" disabled>Activer le connecteur</button>
+        <button type="button" disabled>Lancer un appel</button>
+      </div>
+    </article>
+
+    <article class="panel">
+      <p class="label">Contrôles locaux</p>
+      <h2>Actuator</h2>
+      <p>Les points de santé et d’information utilisent le même serveur lié à la boucle locale.</p>
+      <nav class="links" aria-label="Liens Actuator">
+        <a href="/actuator/health">/actuator/health</a>
+        <a href="/actuator/info">/actuator/info</a>
+        <a href="/actuator/metrics">/actuator/metrics</a>
+      </nav>
+    </article>
+  </section>
+
+  <section class="panel guardrails">
+    <p class="label">Limites actives</p>
+    <h2>Ce bootstrap ne fait pas</h2>
+    <ul>
+      <li>aucun polling, live ou rafraîchissement automatique ;</li>
+      <li>aucune rotation de proxy, simulation de navigateur ou réutilisation de session ;</li>
+      <li>aucun envoi vers le VPS ou dépendance du Betting Project principal ;</li>
+      <li>aucun test Maven standard ne contacte SofaScore.</li>
+    </ul>
+  </section>
+
+  <p class="generated">Vue générée à <span th:text="${dashboard.generatedAt}">—</span>.</p>
+</main>
+
+<footer>
+  <div class="shell">SofaScore Local Lab v0.1.0-SNAPSHOT — J0/J1</div>
+</footer>
+</body>
+</html>

@@ -1,0 +1,28 @@
+name: betting-sofascore-local-lab
+
+services:
+  postgres:
+    image: postgres:18.4-alpine
+    container_name: betting-sofascore-local-lab-postgres
+    restart: unless-stopped
+    shm_size: 128mb
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sofascore_local_lab}
+      POSTGRES_USER: ${POSTGRES_USER:-sofascore_lab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Run scripts/Initialize-LocalConfig.ps1 first}
+      POSTGRES_INITDB_ARGS: --data-checksums --auth-host=scram-sha-256
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    stop_grace_period: 30s
+
+volumes:
+  postgres_data:
+    name: betting-sofascore-local-lab-postgres-data

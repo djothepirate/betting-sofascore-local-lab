@@ -1,0 +1,42 @@
+# Maven / Java
+target/
+*.class
+*.log
+hs_err_pid*
+replay_pid*
+
+# Local configuration and secrets
+.env
+.env.local
+.env.*
+!.env.example
+*.local.properties
+config/local/
+
+# Eclipse / Spring Tools
+.classpath
+.project
+.settings/
+.springBeans
+.sts4-cache/
+.factorypath
+
+# IntelliJ / VS Code (not part of the supported baseline)
+.idea/
+*.iml
+.vscode/
+
+# Operating systems
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Local runtime output
+logs/
+exports/*
+!exports/.gitkeep
+
+# Testcontainers / temporary files
+.testcontainers.properties
+.tmp/
+tmp/
