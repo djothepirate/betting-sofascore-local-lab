@@ -34,8 +34,8 @@ Le dépôt respecte statiquement le cadrage J0/J1 : Java 25 est imposé par Mave
 | migration V1 | PASS statique | trois tables, contraintes, index et état initial verrouillé |
 | compilation d’un sous-ensemble Java pur | PASS | 8 classes compilées avec le JDK 21 disponible ; contrôle de syntaxe seulement |
 | contrôles statiques consolidés | PASS | 360 contrôles, 0 échec |
-| `git diff --check` | PENDING | renseigné après initialisation Git |
-| `git fsck` | PENDING | renseigné après les commits initiaux |
+| `git diff --check` | PASS | index et arbre de travail sans erreur d’espace ou de marqueur de conflit |
+| `git fsck --full` | PASS | objets et références du dépôt cohérents après le commit initial |
 
 ## 2. Limite de l’environnement de préparation
 
