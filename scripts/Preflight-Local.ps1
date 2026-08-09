@@ -17,11 +17,12 @@ function Assert-Command {
 }
 
 Assert-Command -Name 'java'
-$javaOutput = (& java -version 2>&1 | Out-String)
-if ($LASTEXITCODE -ne 0) {
-    throw 'java -version failed'
+$javaOutput = (& java --version | Out-String)
+$javaExitCode = $LASTEXITCODE
+if ($javaExitCode -ne 0) {
+    throw 'java --version failed'
 }
-if ($javaOutput -notmatch 'version\s+"25(?:[\.\-\"]|$)') {
+if ($javaOutput -notmatch '(?m)^\s*(?:java|openjdk)\s+(?:version\s+)?["]?25(?:[.\-"\s]|$)') {
     throw "Java 25 LTS is required. Detected output: $($javaOutput.Trim())"
 }
 

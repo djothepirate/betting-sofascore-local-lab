@@ -37,6 +37,8 @@ class DashboardControllerTest {
 
         MockMvc mockMvc = MockMvcBuilders
                 .standaloneSetup(new DashboardController(dashboardService))
+                // The standalone setup does not load the Thymeleaf view resolver.
+                .setSingleView((model, request, response) -> { })
                 .build();
 
         mockMvc.perform(get("/dashboard"))
