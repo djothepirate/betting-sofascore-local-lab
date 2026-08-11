@@ -1,9 +1,17 @@
 # WO-SS-20260808-002 — J2 Fixtures et premier contrat de parsing hors ligne
 
-- **Statut :** `DRAFT`
+- **Statut :** `IN_DEVELOPMENT`
 - **Date :** 2026-08-08
+- **Date de démarrage :** 2026-08-11
 - **Prérequis :** WO-SS-20260808-001 validé sous Windows
 - **Jalon :** J2 — Fixtures
+- **Branche :** `feat/j2-scheduled-events-fixtures`
+- **Commit de base :** `197bf01c10c813374f1b701c26ff958497b0d08a`
+- **Tag de base :** `j0-j1-v0.1.1`
+- **Première famille :** `SCHEDULED_EVENTS`
+- **Réseau autorisé :** `NO`
+- **URI d’endpoint réelle autorisée :** `NO`
+- **Appel SofaScore réel autorisé :** `NO`
 
 ## 1. Objectif
 

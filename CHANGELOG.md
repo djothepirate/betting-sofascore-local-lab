@@ -2,6 +2,17 @@
 
 Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier.
 
+## [Non publié]
+
+### Documentation
+
+- démarrage du Work Order `WO-SS-20260808-002` sur la branche `feat/j2-scheduled-events-fixtures` depuis le tag `j0-j1-v0.1.1` ;
+- passage du jalon J2 au statut `IN_DEVELOPMENT` avec `SCHEDULED_EVENTS` comme première famille de fixtures hors ligne.
+
+### Sécurité
+
+- maintien du verrouillage réseau pendant J2 : aucune URI d’endpoint réelle et aucun appel SofaScore réel ne sont autorisés.
+
 ## [0.1.0] — 2026-08-08
 
 ### Ajouté
