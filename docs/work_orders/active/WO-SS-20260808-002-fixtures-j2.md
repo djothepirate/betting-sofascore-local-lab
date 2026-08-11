@@ -74,11 +74,35 @@ Livrables attendus :
 - [ ] rapport de décision indiquant les champs retenus, ignorés et obligatoires ;
 - [ ] préparation du Work Order J3, sans l’exécuter.
 
-## 6. Décisions à prendre avant démarrage
+## 6. Décisions actées et restant à prendre
+
+Décisions actées pour l’infrastructure générique :
+
+- le corpus initial sera déclaré `SYNTHETIC` avec `providerSchemaValidated=false` ;
+- chaque payload versionné est accompagné d’un manifeste v1 et chargé depuis le classpath ;
+- le hash brut porte sur les octets exacts conservés ;
+- le hash JSON canonique trie récursivement les propriétés des objets et conserve l’ordre des tableaux ;
+- les propriétés JSON dupliquées, le contenu résiduel et le JSON invalide sont rejetés ;
+- chaque manifeste fixe une taille maximale, sous une limite absolue de 5 Mio ;
+- la présence d’un motif de cookie, jeton, secret, identifiant de session ou clé privée bloque le chargement sans journaliser la valeur détectée.
+
+Décisions restant nécessaires avant une fixture représentative du fournisseur :
 
 - méthode autorisée d’obtention de la première réponse ;
 - politique exacte de minimisation ;
 - liste des champs d’identité minimum ;
-- distinction entre hash brut et hash canonique ;
-- politique de conservation dans Git ;
+- politique de conservation dans Git d’un payload observé ;
 - niveau de preuve requis pour l’origine de la fixture.
+
+## 7. Avancement J2
+
+- [x] format de manifeste v1 fortement validé ;
+- [x] chargement classpath borné ;
+- [x] SHA-256 brut ;
+- [x] canonicalisation et SHA-256 JSON ;
+- [x] classification `JSON`, `HTML` et `OTHER` ;
+- [x] détection bloquante de motifs sensibles ;
+- [ ] corpus synthétique `SCHEDULED_EVENTS` ;
+- [ ] DTO externe et parseur `scheduled-events-v1` ;
+- [ ] mapper vers le modèle local ;
+- [ ] mise à jour du tableau de bord.

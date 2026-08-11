@@ -4,6 +4,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Ajouté
+
+- manifeste de fixture v1 avec origine, preuve de schéma, taille maximale, hashes attendus et traçabilité de minimisation ;
+- chargeur de fixtures classpath entièrement hors ligne, avec classification `JSON`, `HTML` ou `OTHER` ;
+- calcul SHA-256 brut et JSON canonique stable malgré l’ordre des propriétés ;
+- contrôles bloquants de taille, d’intégrité, de JSON ambigu et de motifs sensibles.
+
 ### Documentation
 
 - démarrage du Work Order `WO-SS-20260808-002` sur la branche `feat/j2-scheduled-events-fixtures` depuis le tag `j0-j1-v0.1.1` ;
