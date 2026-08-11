@@ -10,6 +10,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - chargeur de fixtures classpath entièrement hors ligne, avec classification `JSON`, `HTML` ou `OTHER` ;
 - calcul SHA-256 brut et JSON canonique stable malgré l’ordre des propriétés ;
 - contrôles bloquants de taille, d’intégrité, de JSON ambigu et de motifs sensibles.
+- corpus synthétique `SCHEDULED_EVENTS` de neuf scénarios avec manifestes, hashes réels et test d’inventaire classpath.
 
 ### Documentation
 

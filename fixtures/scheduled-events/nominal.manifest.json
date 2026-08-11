@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "scheduled-events-nominal",
+  "endpointType": "SCHEDULED_EVENTS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-12T00:00:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "UNASSIGNED",
+  "payloadResource": "fixtures/scheduled-events/nominal.json",
+  "maximumBytes": 4096,
+  "expectedRawSha256": "5c1dc22c6f44bb889311f1c8aa0c5d543b4ccaea779593e20a0fc378c2d7a4bf",
+  "expectedCanonicalJsonSha256": "fbf6395ac9621a8228813f6a28172c26d0dcaf7ab76f9c983c14fe9ddb568d48",
+  "minimized": false,
+  "removedFields": []
+}

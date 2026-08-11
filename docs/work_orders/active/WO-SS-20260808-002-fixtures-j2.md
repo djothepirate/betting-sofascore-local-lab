@@ -78,7 +78,7 @@ Livrables attendus :
 
 Décisions actées pour l’infrastructure générique :
 
-- le corpus initial sera déclaré `SYNTHETIC` avec `providerSchemaValidated=false` ;
+- le corpus initial de neuf scénarios est déclaré `SYNTHETIC` avec `providerSchemaValidated=false` ;
 - chaque payload versionné est accompagné d’un manifeste v1 et chargé depuis le classpath ;
 - le hash brut porte sur les octets exacts conservés ;
 - le hash JSON canonique trie récursivement les propriétés des objets et conserve l’ordre des tableaux ;
@@ -102,7 +102,23 @@ Décisions restant nécessaires avant une fixture représentative du fournisseur
 - [x] canonicalisation et SHA-256 JSON ;
 - [x] classification `JSON`, `HTML` et `OTHER` ;
 - [x] détection bloquante de motifs sensibles ;
-- [ ] corpus synthétique `SCHEDULED_EVENTS` ;
+- [x] corpus synthétique `SCHEDULED_EVENTS` ;
 - [ ] DTO externe et parseur `scheduled-events-v1` ;
 - [ ] mapper vers le modèle local ;
 - [ ] mise à jour du tableau de bord.
+
+## 8. État du corpus synthétique
+
+```text
+FIXTURE_FAMILY=SCHEDULED_EVENTS
+FIXTURE_SCENARIOS=9
+FIXTURE_ORIGIN=SYNTHETIC
+PROVIDER_SCHEMA_VALIDATED=NO
+PARSER_VERSION=UNASSIGNED
+NETWORK_AUTHORIZED=NO
+REAL_SOFASCORE_CALL_EXECUTED=NO
+```
+
+Les scénarios versionnés sont : nominal, variante d’ordre des propriétés, champ facultatif absent, champ obligatoire absent, nombre devenu texte, tableau vide, champ inconnu, objet inattendu et HTML inattendu.
+
+À ce stade, le test du corpus valide le chargement classpath, les métadonnées, les tailles, les hashes et la forme synthétique annoncée. Les décisions `PARSED`, `SCHEMA_INCOMPATIBLE` et `UNEXPECTED_CONTENT` restent volontairement différées jusqu’au parseur `scheduled-events-v1`.

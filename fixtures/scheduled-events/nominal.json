@@ -1,0 +1,25 @@
+{
+  "events": [
+    {
+      "id": 900001,
+      "startTimestamp": 1786543200,
+      "homeTeam": {
+        "id": 9101,
+        "name": "Synthetic Home FC"
+      },
+      "awayTeam": {
+        "id": 9202,
+        "name": "Synthetic Away FC"
+      },
+      "status": {
+        "type": "notstarted",
+        "description": "Not started"
+      },
+      "tournament": {
+        "id": 9303,
+        "name": "Synthetic League"
+      }
+    }
+  ],
+  "hasNextPage": false
+}

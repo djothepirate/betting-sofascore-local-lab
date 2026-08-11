@@ -92,4 +92,36 @@ Le chargeur `ClasspathFixtureLoader` applique dans l’ordre :
 
 Les catégories sensibles bloquantes couvrent les en-têtes d’autorisation, les cookies, les champs usuels de jeton ou d’identifiant de session, les JWT plausibles et les blocs de clé privée.
 
+## Corpus synthétique `SCHEDULED_EVENTS`
+
+Le corpus initial contient neuf scénarios créés de zéro. Il ne reproduit pas et ne prétend pas valider un schéma SofaScore observé.
+
+Tous les manifestes conservent :
+
+```text
+endpointType=SCHEDULED_EVENTS
+fixtureOrigin=SYNTHETIC
+providerSchemaValidated=false
+httpStatus=null
+parserVersion=UNASSIGNED
+maximumBytes=4096
+minimized=false
+```
+
+`minimized=false` signifie que ces payloads ont été conçus directement sous une forme minimale : aucun champ n’a été supprimé d’une réponse fournisseur.
+
+| Scénario | Ressource | Intention pour le futur parseur |
+|---|---|---|
+| nominal | `scheduled-events/nominal.json` | structure synthétique de référence |
+| ordre différent | `scheduled-events/nominal-property-order-variant.json` | même contenu canonique, octets différents |
+| champ facultatif absent | `scheduled-events/optional-field-missing.json` | `tournament` et `status.description` absents |
+| tableau vide | `scheduled-events/empty-events-array.json` | liste d’événements vide et valide à qualifier |
+| champ inconnu | `scheduled-events/unknown-extra-field.json` | propriétés synthétiques supplémentaires à tolérer et tracer |
+| champ obligatoire absent | `schema-breaks/scheduled-events-required-field-missing.json` | `event.id` absent |
+| nombre devenu texte | `schema-breaks/scheduled-events-numeric-field-as-string.json` | `event.id` est une chaîne |
+| objet inattendu | `schema-breaks/scheduled-events-unexpected-object.json` | `events` est un objet au lieu d’un tableau |
+| HTML inattendu | `schema-breaks/scheduled-events-unexpected-html.html` | contenu classé `HTML` avant parsing |
+
+Les manifestes portent les hashes réels calculés par `FixturePayloadHasher`. Le nominal et sa variante d’ordre ont des hashes bruts différents et le même hash JSON canonique.
+
 Les tests doivent rester reproductibles sans connexion à la source externe.
