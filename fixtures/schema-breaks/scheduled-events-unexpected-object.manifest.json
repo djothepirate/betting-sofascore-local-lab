@@ -7,7 +7,7 @@
   "recordedAt": "2026-08-12T00:00:00Z",
   "httpStatus": null,
   "contentType": "application/json",
-  "parserVersion": "UNASSIGNED",
+  "parserVersion": "scheduled-events-v1",
   "payloadResource": "fixtures/schema-breaks/scheduled-events-unexpected-object.json",
   "maximumBytes": 4096,
   "expectedRawSha256": "6b8ec35967e810aae7512abbcf1f88803a72a3bd58c1a903996e47abd73ce1aa",

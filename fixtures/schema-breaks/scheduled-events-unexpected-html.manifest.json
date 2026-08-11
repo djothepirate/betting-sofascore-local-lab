@@ -7,7 +7,7 @@
   "recordedAt": "2026-08-12T00:00:00Z",
   "httpStatus": null,
   "contentType": "text/html",
-  "parserVersion": "UNASSIGNED",
+  "parserVersion": "scheduled-events-v1",
   "payloadResource": "fixtures/schema-breaks/scheduled-events-unexpected-html.html",
   "maximumBytes": 4096,
   "expectedRawSha256": "e7e8db7f133258155e024da0445c7f35441f7a161b0833f39e788e330eb7da99",

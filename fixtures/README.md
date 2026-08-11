@@ -25,7 +25,7 @@ Exemple structurel pour une fixture synthétique — les deux hashes d’exemple
   "recordedAt": "2026-08-12T00:00:00Z",
   "httpStatus": null,
   "contentType": "application/json",
-  "parserVersion": "UNASSIGNED",
+  "parserVersion": "scheduled-events-v1",
   "payloadResource": "fixtures/scheduled-events/nominal.json",
   "maximumBytes": 262144,
   "expectedRawSha256": "<64 caractères hexadécimaux>",
@@ -103,25 +103,28 @@ endpointType=SCHEDULED_EVENTS
 fixtureOrigin=SYNTHETIC
 providerSchemaValidated=false
 httpStatus=null
-parserVersion=UNASSIGNED
+parserVersion=scheduled-events-v1
 maximumBytes=4096
 minimized=false
 ```
 
 `minimized=false` signifie que ces payloads ont été conçus directement sous une forme minimale : aucun champ n’a été supprimé d’une réponse fournisseur.
 
-| Scénario | Ressource | Intention pour le futur parseur |
+| Scénario | Ressource | Comportement `scheduled-events-v1` |
 |---|---|---|
-| nominal | `scheduled-events/nominal.json` | structure synthétique de référence |
-| ordre différent | `scheduled-events/nominal-property-order-variant.json` | même contenu canonique, octets différents |
-| champ facultatif absent | `scheduled-events/optional-field-missing.json` | `tournament` et `status.description` absents |
-| tableau vide | `scheduled-events/empty-events-array.json` | liste d’événements vide et valide à qualifier |
-| champ inconnu | `scheduled-events/unknown-extra-field.json` | propriétés synthétiques supplémentaires à tolérer et tracer |
-| champ obligatoire absent | `schema-breaks/scheduled-events-required-field-missing.json` | `event.id` absent |
-| nombre devenu texte | `schema-breaks/scheduled-events-numeric-field-as-string.json` | `event.id` est une chaîne |
-| objet inattendu | `schema-breaks/scheduled-events-unexpected-object.json` | `events` est un objet au lieu d’un tableau |
-| HTML inattendu | `schema-breaks/scheduled-events-unexpected-html.html` | contenu classé `HTML` avant parsing |
+| nominal | `scheduled-events/nominal.json` | `PARSED`, sans avertissement |
+| ordre différent | `scheduled-events/nominal-property-order-variant.json` | même modèle local et même contenu canonique, octets différents |
+| champ facultatif absent | `scheduled-events/optional-field-missing.json` | `PARSED` avec avertissements pour `tournament` et `status.description` |
+| tableau vide | `scheduled-events/empty-events-array.json` | `PARSED`, liste vide et avertissement `EMPTY_EVENTS` |
+| champ inconnu | `scheduled-events/unknown-extra-field.json` | `PARSED`, propriétés ignorées et chemins signalés par `UNKNOWN_FIELD` |
+| champ obligatoire absent | `schema-breaks/scheduled-events-required-field-missing.json` | destiné à `SCHEMA_INCOMPATIBLE` car `event.id` est absent |
+| nombre devenu texte | `schema-breaks/scheduled-events-numeric-field-as-string.json` | destiné à `SCHEMA_INCOMPATIBLE`, sans conversion implicite |
+| objet inattendu | `schema-breaks/scheduled-events-unexpected-object.json` | destiné à `SCHEMA_INCOMPATIBLE` car `events` n’est pas un tableau |
+| HTML inattendu | `schema-breaks/scheduled-events-unexpected-html.html` | destiné à `UNEXPECTED_CONTENT`, classé `HTML` avant parsing |
 
 Les manifestes portent les hashes réels calculés par `FixturePayloadHasher`. Le nominal et sa variante d’ordre ont des hashes bruts différents et le même hash JSON canonique.
+
+Le contrat détaillé des champs obligatoires, facultatifs et ignorés, ainsi que les résultats
+structurés, est décrit dans `docs/architecture/SCHEDULED-EVENTS-V1.md`.
 
 Les tests doivent rester reproductibles sans connexion à la source externe.

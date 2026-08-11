@@ -7,7 +7,7 @@
   "recordedAt": "2026-08-12T00:00:00Z",
   "httpStatus": null,
   "contentType": "application/json",
-  "parserVersion": "UNASSIGNED",
+  "parserVersion": "scheduled-events-v1",
   "payloadResource": "fixtures/scheduled-events/nominal.json",
   "maximumBytes": 4096,
   "expectedRawSha256": "5c1dc22c6f44bb889311f1c8aa0c5d543b4ccaea779593e20a0fc378c2d7a4bf",

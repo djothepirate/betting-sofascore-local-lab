@@ -7,7 +7,7 @@
   "recordedAt": "2026-08-12T00:00:00Z",
   "httpStatus": null,
   "contentType": "application/json",
-  "parserVersion": "UNASSIGNED",
+  "parserVersion": "scheduled-events-v1",
   "payloadResource": "fixtures/scheduled-events/optional-field-missing.json",
   "maximumBytes": 4096,
   "expectedRawSha256": "4c3cf318290526f923735971baf4129bcafa924c7709a675ea391c362ec3c535",

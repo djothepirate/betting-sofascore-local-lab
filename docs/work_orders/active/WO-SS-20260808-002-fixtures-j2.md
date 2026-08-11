@@ -7,6 +7,7 @@
 - **Jalon :** J2 — Fixtures
 - **Branche :** `feat/j2-scheduled-events-fixtures`
 - **Commit de base :** `197bf01c10c813374f1b701c26ff958497b0d08a`
+- **Base de l’unité parseur :** `415dd4533ac9b3911da70eb63b70b83cf62755e5`
 - **Tag de base :** `j0-j1-v0.1.1`
 - **Première famille :** `SCHEDULED_EVENTS`
 - **Réseau autorisé :** `NO`
@@ -66,12 +67,12 @@ Livrables attendus :
 
 ## 5. Critères d’acceptation
 
-- [ ] aucun changement du statut J1 réseau ;
+- [x] aucun changement du statut J1 réseau ;
 - [ ] fixtures documentées et minimisées ;
-- [ ] parseur versionné ;
+- [x] parseur versionné ;
 - [ ] tests nominaux et de rupture réussis ;
 - [ ] aucun appel réseau capturé ;
-- [ ] rapport de décision indiquant les champs retenus, ignorés et obligatoires ;
+- [x] rapport de décision indiquant les champs retenus, ignorés et obligatoires ;
 - [ ] préparation du Work Order J3, sans l’exécuter.
 
 ## 6. Décisions actées et restant à prendre
@@ -85,6 +86,16 @@ Décisions actées pour l’infrastructure générique :
 - les propriétés JSON dupliquées, le contenu résiduel et le JSON invalide sont rejetés ;
 - chaque manifeste fixe une taille maximale, sous une limite absolue de 5 Mio ;
 - la présence d’un motif de cookie, jeton, secret, identifiant de session ou clé privée bloque le chargement sans journaliser la valeur détectée.
+
+Décisions actées pour `scheduled-events-v1` :
+
+- `events`, `hasNextPage`, l’identité et l’horaire d’un événement, les deux équipes et le type de statut sont obligatoires ;
+- `tournament` et `status.description` sont facultatifs et leur absence produit un avertissement structuré ;
+- les champs inconnus sont ignorés pour le mapping et leur chemin est signalé par `UNKNOWN_FIELD` ;
+- les identifiants exigent un entier 64 bits positif et aucune chaîne numérique n’est convertie ;
+- une incompatibilité n’expose jamais de page locale partielle ;
+- chaque résultat conserve l’identifiant de fixture, les hashes disponibles, la date du manifeste et la version du parseur ;
+- le contrat complet est consigné dans `docs/architecture/SCHEDULED-EVENTS-V1.md`.
 
 Décisions restant nécessaires avant une fixture représentative du fournisseur :
 
@@ -103,8 +114,8 @@ Décisions restant nécessaires avant une fixture représentative du fournisseur
 - [x] classification `JSON`, `HTML` et `OTHER` ;
 - [x] détection bloquante de motifs sensibles ;
 - [x] corpus synthétique `SCHEDULED_EVENTS` ;
-- [ ] DTO externe et parseur `scheduled-events-v1` ;
-- [ ] mapper vers le modèle local ;
+- [x] DTO externe et parseur `scheduled-events-v1` ;
+- [x] mapper vers le modèle local ;
 - [ ] mise à jour du tableau de bord.
 
 ## 8. État du corpus synthétique
@@ -114,11 +125,11 @@ FIXTURE_FAMILY=SCHEDULED_EVENTS
 FIXTURE_SCENARIOS=9
 FIXTURE_ORIGIN=SYNTHETIC
 PROVIDER_SCHEMA_VALIDATED=NO
-PARSER_VERSION=UNASSIGNED
+PARSER_VERSION=scheduled-events-v1
 NETWORK_AUTHORIZED=NO
 REAL_SOFASCORE_CALL_EXECUTED=NO
 ```
 
 Les scénarios versionnés sont : nominal, variante d’ordre des propriétés, champ facultatif absent, champ obligatoire absent, nombre devenu texte, tableau vide, champ inconnu, objet inattendu et HTML inattendu.
 
-À ce stade, le test du corpus valide le chargement classpath, les métadonnées, les tailles, les hashes et la forme synthétique annoncée. Les décisions `PARSED`, `SCHEMA_INCOMPATIBLE` et `UNEXPECTED_CONTENT` restent volontairement différées jusqu’au parseur `scheduled-events-v1`.
+Le parseur classe désormais les résultats en `PARSED`, `SCHEMA_INCOMPATIBLE` ou `UNEXPECTED_CONTENT`. Les tests de cette unité valident le nominal, la variante d’ordre, les absences facultatives, le tableau vide et les champs inconnus. La couverture exhaustive des fixtures de rupture reste affectée à l’étape suivante `test: cover scheduled-events schema incompatibilities`.

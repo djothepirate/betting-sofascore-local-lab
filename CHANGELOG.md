@@ -11,11 +11,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - calcul SHA-256 brut et JSON canonique stable malgré l’ordre des propriétés ;
 - contrôles bloquants de taille, d’intégrité, de JSON ambigu et de motifs sensibles.
 - corpus synthétique `SCHEDULED_EVENTS` de neuf scénarios avec manifestes, hashes réels et test d’inventaire classpath.
+- parseur hors ligne `scheduled-events-v1`, DTO externe minimal et mapper vers un modèle local immuable ;
+- résultats de parsing structurés avec statuts, avertissements, problèmes et preuve de traçabilité ;
 
 ### Documentation
 
 - démarrage du Work Order `WO-SS-20260808-002` sur la branche `feat/j2-scheduled-events-fixtures` depuis le tag `j0-j1-v0.1.1` ;
 - passage du jalon J2 au statut `IN_DEVELOPMENT` avec `SCHEDULED_EVENTS` comme première famille de fixtures hors ligne.
+- contrat d’architecture `scheduled-events-v1` détaillant les champs obligatoires, facultatifs et inconnus.
 
 ### Modifié
 

@@ -7,7 +7,7 @@
   "recordedAt": "2026-08-12T00:00:00Z",
   "httpStatus": null,
   "contentType": "application/json",
-  "parserVersion": "UNASSIGNED",
+  "parserVersion": "scheduled-events-v1",
   "payloadResource": "fixtures/scheduled-events/nominal-property-order-variant.json",
   "maximumBytes": 4096,
   "expectedRawSha256": "a78ffbe2a744831541277f02d6813a625a2b14d3762a0f8cac74b4d4a9c5a5cd",

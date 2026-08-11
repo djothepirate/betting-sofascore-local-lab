@@ -101,7 +101,7 @@ class SyntheticScheduledEventsFixtureCorpusTest {
             assertThat(fixture.manifest().recordedAt())
                     .isEqualTo(Instant.parse("2026-08-12T00:00:00Z"));
             assertThat(fixture.manifest().httpStatus()).isNull();
-            assertThat(fixture.manifest().parserVersion()).isEqualTo("UNASSIGNED");
+            assertThat(fixture.manifest().parserVersion()).isEqualTo("scheduled-events-v1");
             assertThat(fixture.manifest().maximumBytes()).isEqualTo(4096);
             assertThat(fixture.manifest().minimized()).isFalse();
             assertThat(fixture.manifest().removedFields()).isEmpty();
