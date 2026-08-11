@@ -99,7 +99,15 @@ Vérifier :
 - PostgreSQL `AVAILABLE` ;
 - migration Flyway `1` ;
 - snapshots `0` sur une base neuve ;
+- corpus hors ligne `AVAILABLE_OFFLINE` ;
+- fixtures `9 / 9 disponibles` ;
+- résultats du corpus : `5` parsés, `3` incompatibilités de schéma prévues et `1` contenu inattendu prévu ;
+- origine `SYNTHETIC` et schéma fournisseur `NON VALIDÉ` ;
 - toutes les familles `Appelable = NON` et `URI = ABSENTE`.
+
+Le compteur de fixtures est calculé depuis les ressources classpath et reste disponible même si
+PostgreSQL est arrêté. Un état `INCOMPLETE` signifie qu’au moins une fixture déclarée n’a pas pu
+être chargée ou vérifiée ; il ne faut pas contourner le contrôle d’intégrité.
 
 ## 4. Validation
 

@@ -2,6 +2,8 @@ package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.adapter.sofascore.SofascoreEndpointCatalog;
 import com.bettingproject.sofascorelocal.application.ConnectorGate;
+import com.bettingproject.sofascorelocal.application.fixture.FixtureCorpusOverview;
+import com.bettingproject.sofascorelocal.application.fixture.OfflineFixtureCorpusService;
 import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointDefinition;
 import org.slf4j.Logger;
@@ -25,20 +27,24 @@ public class DashboardService {
     private final SofascoreEndpointCatalog endpointCatalog;
     private final ConnectorGate connectorGate;
     private final JdbcTemplate jdbcTemplate;
+    private final OfflineFixtureCorpusService fixtureCorpusService;
 
     public DashboardService(
             SofascoreProperties properties,
             SofascoreEndpointCatalog endpointCatalog,
             ConnectorGate connectorGate,
-            JdbcTemplate jdbcTemplate) {
+            JdbcTemplate jdbcTemplate,
+            OfflineFixtureCorpusService fixtureCorpusService) {
         this.properties = properties;
         this.endpointCatalog = endpointCatalog;
         this.connectorGate = connectorGate;
         this.jdbcTemplate = jdbcTemplate;
+        this.fixtureCorpusService = fixtureCorpusService;
     }
 
     public DashboardView load() {
         DatabaseOverview database = loadDatabaseOverview();
+        FixtureCorpusOverview fixtureCorpus = fixtureCorpusService.loadOverview();
         List<DashboardView.EndpointRowView> endpointRows = endpointCatalog.list().stream()
                 .map(this::toEndpointRow)
                 .toList();
@@ -56,8 +62,25 @@ public class DashboardService {
                 database.flywayVersion(),
                 database.snapshotCount(),
                 database.incidentCount(),
+                toFixtureCorpusView(fixtureCorpus),
                 database.lastCall(),
                 endpointRows);
+    }
+
+    private static DashboardView.FixtureCorpusView toFixtureCorpusView(
+            FixtureCorpusOverview source) {
+        return new DashboardView.FixtureCorpusView(
+                source.availability().name(),
+                source.family().name(),
+                source.origin().name(),
+                source.providerSchemaValidated(),
+                source.parserVersion(),
+                source.declaredCount(),
+                source.availableCount(),
+                source.parsedCount(),
+                source.schemaIncompatibleCount(),
+                source.unexpectedContentCount(),
+                source.loadingFailureCount());
     }
 
     private DatabaseOverview loadDatabaseOverview() {

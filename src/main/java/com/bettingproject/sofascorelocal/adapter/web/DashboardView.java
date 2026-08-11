@@ -15,8 +15,23 @@ public record DashboardView(
         String flywayVersion,
         long snapshotCount,
         long incidentCount,
+        FixtureCorpusView fixtureCorpus,
         LastCallView lastCall,
         List<EndpointRowView> endpoints) {
+
+    public record FixtureCorpusView(
+            String availability,
+            String family,
+            String origin,
+            boolean providerSchemaValidated,
+            String parserVersion,
+            int declaredCount,
+            int availableCount,
+            int parsedCount,
+            int schemaIncompatibleCount,
+            int unexpectedContentCount,
+            int loadingFailureCount) {
+    }
 
     public record LastCallView(
             String receivedAt,

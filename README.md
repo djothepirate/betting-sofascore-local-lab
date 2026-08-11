@@ -4,9 +4,9 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons **J0 — Gouvernance** et **J1 — Bootstrap** du document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et de l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance** et **J1 — Bootstrap**, puis le jalon **J2 — Fixtures** en cours, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
-## Ce qui est livré au J0/J1
+## Ce qui est livré localement
 
 - dépôt Git autonome, documentation, ADR, règles agent et Work Orders ;
 - Java **25 LTS**, Spring Boot **4.1.0** et Maven Wrapper versionné ;
@@ -17,6 +17,9 @@ Le dépôt matérialise les jalons **J0 — Gouvernance** et **J1 — Bootstrap*
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J1` ;
 - tests unitaires hors ligne et test Flyway/Testcontainers dans un profil explicite ;
 - scripts PowerShell de configuration, préflight, démarrage, arrêt et vérification.
+- corpus synthétique `SCHEDULED_EVENTS` de neuf fixtures classpath avec hashes vérifiés ;
+- parseur hors ligne `scheduled-events-v1`, modèle local et tests de rupture de schéma ;
+- inventaire du corpus visible dans le tableau de bord, sans dépendance à PostgreSQL.
 
 ## Limite essentielle du bootstrap
 
@@ -178,12 +181,13 @@ Le jalon J3 devra retirer **explicitement** certaines de ces barrières, une par
 
 - [ADR-SS-001](ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md)
 - [Architecture J0/J1](docs/architecture/ARCHITECTURE.md)
+- [Contrat hors ligne scheduled-events-v1](docs/architecture/SCHEDULED-EVENTS-V1.md)
 - [Runbook local](docs/runbooks/RUNBOOK-LOCAL.md)
 - [Cadrage PDF](docs/reference/Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf)
 - [Rapport de validation du bootstrap](docs/validation/J0-J1-VALIDATION-REPORT.md)
 - [Work Order J0/J1](docs/work_orders/completed/WO-SS-20260808-001-bootstrap-j0-j1.md)
-- [Work Order J2 en attente](docs/work_orders/active/WO-SS-20260808-002-fixtures-j2.md)
+- [Work Order J2 actif](docs/work_orders/active/WO-SS-20260808-002-fixtures-j2.md)
 
 ## Prochaine frontière
 
-Le prochain jalon prévu est **J2 — Fixtures** : définir une première famille de réponse, créer des fixtures minimisées, un parseur versionné et des tests de rupture de schéma, toujours sans appel réel.
+La prochaine frontière est la validation humaine et documentaire de **J2 — Fixtures**, puis la préparation d’un Work Order J3 séparé. Aucun appel réel, URI fournisseur ou déverrouillage du connecteur n’est autorisé par les travaux J2.

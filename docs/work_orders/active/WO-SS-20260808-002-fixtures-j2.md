@@ -9,6 +9,7 @@
 - **Commit de base :** `197bf01c10c813374f1b701c26ff958497b0d08a`
 - **Base de l’unité parseur :** `415dd4533ac9b3911da70eb63b70b83cf62755e5`
 - **Base de l’unité tests de rupture :** `94368fd974b29de31e019216072cf30cf47b19c9`
+- **Base de l’unité tableau de bord :** `6c6aa3c0235dec9502a6758d54b3ad119730e7a4`
 - **Tag de base :** `j0-j1-v0.1.1`
 - **Première famille :** `SCHEDULED_EVENTS`
 - **Réseau autorisé :** `NO`
@@ -118,7 +119,7 @@ Décisions restant nécessaires avant une fixture représentative du fournisseur
 - [x] DTO externe et parseur `scheduled-events-v1` ;
 - [x] mapper vers le modèle local ;
 - [x] couverture des incompatibilités de schéma et du contenu HTML inattendu ;
-- [ ] mise à jour du tableau de bord.
+- [x] mise à jour du tableau de bord.
 
 ## 8. État du corpus synthétique
 
@@ -128,6 +129,12 @@ FIXTURE_SCENARIOS=9
 FIXTURE_ORIGIN=SYNTHETIC
 PROVIDER_SCHEMA_VALIDATED=NO
 PARSER_VERSION=scheduled-events-v1
+DASHBOARD_CORPUS_AVAILABILITY=AVAILABLE_OFFLINE
+DASHBOARD_FIXTURES_DECLARED=9
+DASHBOARD_FIXTURES_AVAILABLE=9
+DASHBOARD_PARSE_RESULTS=5
+DASHBOARD_SCHEMA_INCOMPATIBLE_RESULTS=3
+DASHBOARD_UNEXPECTED_CONTENT_RESULTS=1
 NETWORK_AUTHORIZED=NO
 REAL_SOFASCORE_CALL_EXECUTED=NO
 ```
@@ -135,3 +142,14 @@ REAL_SOFASCORE_CALL_EXECUTED=NO
 Les scénarios versionnés sont : nominal, variante d’ordre des propriétés, champ facultatif absent, champ obligatoire absent, nombre devenu texte, tableau vide, champ inconnu, objet inattendu et HTML inattendu.
 
 Le parseur classe les résultats en `PARSED`, `SCHEMA_INCOMPATIBLE` ou `UNEXPECTED_CONTENT`. Les tests valident désormais les neuf scénarios du corpus : nominal, variante d’ordre, absences facultatives, tableau vide, champs inconnus, champs obligatoires absents, nombre devenu texte, objet inattendu et HTML inattendu. Les tests de rupture vérifient également l’absence de page partielle et la conservation de la preuve de traçabilité.
+
+## 9. Visibilité dans le tableau de bord
+
+Le tableau de bord recharge les neuf manifestes depuis le classpath, applique les contrôles
+d’intégrité existants et agrège les résultats de `scheduled-events-v1`. Il affiche le nombre de
+fixtures déclarées et disponibles, la répartition `PARSED`, `SCHEMA_INCOMPATIBLE` et
+`UNEXPECTED_CONTENT`, l’origine synthétique et l’absence de validation du schéma fournisseur.
+
+Si une ressource ne peut plus être chargée ou vérifiée, le tableau de bord reste disponible et le
+corpus passe à l’état `INCOMPLETE` avec un compteur d’échecs. Cet inventaire n’utilise ni réseau,
+ni base de données, ni lecture d’un répertoire extérieur au classpath de l’application.

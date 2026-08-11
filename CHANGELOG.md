@@ -14,6 +14,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - parseur hors ligne `scheduled-events-v1`, DTO externe minimal et mapper vers un modèle local immuable ;
 - résultats de parsing structurés avec statuts, avertissements, problèmes et preuve de traçabilité ;
 - couverture hors ligne des incompatibilités `scheduled-events-v1` : champs obligatoires absents, type numérique modifié, structure inattendue et contenu HTML ;
+- inventaire applicatif du corpus classpath avec disponibilité et répartition des résultats de parsing ;
 
 ### Documentation
 
@@ -24,6 +25,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 ### Modifié
 
 - renommage du package Java de base de `com.geoffrey.betting.sofascorelocal` vers `com.bettingproject.sofascorelocal`.
+- tableau de bord enrichi avec le compteur des neuf fixtures hors ligne et leur état de validation synthétique.
 
 ### Sécurité
 

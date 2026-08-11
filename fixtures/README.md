@@ -131,4 +131,8 @@ Les quatre scénarios de rupture sont exécutés par
 `ScheduledEventsV1SchemaIncompatibilityTest`. Chaque test vérifie le statut, les codes et chemins
 de problèmes, l'absence de page locale partielle et la preuve de traçabilité.
 
+Le tableau de bord inventorie les neuf manifestes classpath avec les mêmes contrôles. Il affiche
+uniquement leur disponibilité et la répartition des résultats du parseur ; aucun payload ni hash
+n’est rendu dans l’interface.
+
 Les tests doivent rester reproductibles sans connexion à la source externe.

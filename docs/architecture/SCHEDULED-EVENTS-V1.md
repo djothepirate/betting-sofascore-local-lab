@@ -121,3 +121,25 @@ La couverture du contrat est répartie entre deux classes de test :
 Les quatre résultats en échec conservent l'identifiant de fixture, les hashes disponibles, la date
 du manifeste et la version du parseur. Les tests standards restent sans Internet et sans
 PostgreSQL.
+
+## Projection dans le tableau de bord
+
+`OfflineFixtureCorpusService` constitue l’inventaire du corpus depuis une liste fermée de neuf
+manifestes classpath. Pour chaque entrée, il réutilise `ClasspathFixtureLoader`, puis
+`ScheduledEventsV1Parser`. Le tableau de bord expose uniquement des compteurs et métadonnées :
+
+```text
+availability=AVAILABLE_OFFLINE
+declared=9
+available=9
+parsed=5
+schemaIncompatible=3
+unexpectedContent=1
+loadingFailures=0
+origin=SYNTHETIC
+providerSchemaValidated=false
+```
+
+Les payloads, leurs champs et leurs hashes ne sont pas affichés. Une erreur de chargement ne rend
+pas le tableau de bord indisponible : l’état devient `INCOMPLETE` et le compteur d’échecs augmente.
+Le calcul est indépendant de PostgreSQL et ne contient aucun chemin réseau.
