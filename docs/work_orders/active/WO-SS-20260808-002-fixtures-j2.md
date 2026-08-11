@@ -8,6 +8,7 @@
 - **Branche :** `feat/j2-scheduled-events-fixtures`
 - **Commit de base :** `197bf01c10c813374f1b701c26ff958497b0d08a`
 - **Base de l’unité parseur :** `415dd4533ac9b3911da70eb63b70b83cf62755e5`
+- **Base de l’unité tests de rupture :** `94368fd974b29de31e019216072cf30cf47b19c9`
 - **Tag de base :** `j0-j1-v0.1.1`
 - **Première famille :** `SCHEDULED_EVENTS`
 - **Réseau autorisé :** `NO`
@@ -70,7 +71,7 @@ Livrables attendus :
 - [x] aucun changement du statut J1 réseau ;
 - [ ] fixtures documentées et minimisées ;
 - [x] parseur versionné ;
-- [ ] tests nominaux et de rupture réussis ;
+- [x] tests nominaux et de rupture réussis ;
 - [ ] aucun appel réseau capturé ;
 - [x] rapport de décision indiquant les champs retenus, ignorés et obligatoires ;
 - [ ] préparation du Work Order J3, sans l’exécuter.
@@ -116,6 +117,7 @@ Décisions restant nécessaires avant une fixture représentative du fournisseur
 - [x] corpus synthétique `SCHEDULED_EVENTS` ;
 - [x] DTO externe et parseur `scheduled-events-v1` ;
 - [x] mapper vers le modèle local ;
+- [x] couverture des incompatibilités de schéma et du contenu HTML inattendu ;
 - [ ] mise à jour du tableau de bord.
 
 ## 8. État du corpus synthétique
@@ -132,4 +134,4 @@ REAL_SOFASCORE_CALL_EXECUTED=NO
 
 Les scénarios versionnés sont : nominal, variante d’ordre des propriétés, champ facultatif absent, champ obligatoire absent, nombre devenu texte, tableau vide, champ inconnu, objet inattendu et HTML inattendu.
 
-Le parseur classe désormais les résultats en `PARSED`, `SCHEMA_INCOMPATIBLE` ou `UNEXPECTED_CONTENT`. Les tests de cette unité valident le nominal, la variante d’ordre, les absences facultatives, le tableau vide et les champs inconnus. La couverture exhaustive des fixtures de rupture reste affectée à l’étape suivante `test: cover scheduled-events schema incompatibilities`.
+Le parseur classe les résultats en `PARSED`, `SCHEMA_INCOMPATIBLE` ou `UNEXPECTED_CONTENT`. Les tests valident désormais les neuf scénarios du corpus : nominal, variante d’ordre, absences facultatives, tableau vide, champs inconnus, champs obligatoires absents, nombre devenu texte, objet inattendu et HTML inattendu. Les tests de rupture vérifient également l’absence de page partielle et la conservation de la preuve de traçabilité.

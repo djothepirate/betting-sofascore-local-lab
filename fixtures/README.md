@@ -117,14 +117,18 @@ minimized=false
 | champ facultatif absent | `scheduled-events/optional-field-missing.json` | `PARSED` avec avertissements pour `tournament` et `status.description` |
 | tableau vide | `scheduled-events/empty-events-array.json` | `PARSED`, liste vide et avertissement `EMPTY_EVENTS` |
 | champ inconnu | `scheduled-events/unknown-extra-field.json` | `PARSED`, propriétés ignorées et chemins signalés par `UNKNOWN_FIELD` |
-| champ obligatoire absent | `schema-breaks/scheduled-events-required-field-missing.json` | destiné à `SCHEMA_INCOMPATIBLE` car `event.id` est absent |
-| nombre devenu texte | `schema-breaks/scheduled-events-numeric-field-as-string.json` | destiné à `SCHEMA_INCOMPATIBLE`, sans conversion implicite |
-| objet inattendu | `schema-breaks/scheduled-events-unexpected-object.json` | destiné à `SCHEMA_INCOMPATIBLE` car `events` n’est pas un tableau |
-| HTML inattendu | `schema-breaks/scheduled-events-unexpected-html.html` | destiné à `UNEXPECTED_CONTENT`, classé `HTML` avant parsing |
+| champ obligatoire absent | `schema-breaks/scheduled-events-required-field-missing.json` | `SCHEMA_INCOMPATIBLE` pour `event.id` et `event.status` absents |
+| nombre devenu texte | `schema-breaks/scheduled-events-numeric-field-as-string.json` | `SCHEMA_INCOMPATIBLE` pour `event.id`, sans conversion implicite, et pour `event.status` absent |
+| objet inattendu | `schema-breaks/scheduled-events-unexpected-object.json` | `SCHEMA_INCOMPATIBLE` car `events` n’est pas un tableau |
+| HTML inattendu | `schema-breaks/scheduled-events-unexpected-html.html` | `UNEXPECTED_CONTENT`, classé `HTML` avant parsing |
 
 Les manifestes portent les hashes réels calculés par `FixturePayloadHasher`. Le nominal et sa variante d’ordre ont des hashes bruts différents et le même hash JSON canonique.
 
 Le contrat détaillé des champs obligatoires, facultatifs et ignorés, ainsi que les résultats
 structurés, est décrit dans `docs/architecture/SCHEDULED-EVENTS-V1.md`.
+
+Les quatre scénarios de rupture sont exécutés par
+`ScheduledEventsV1SchemaIncompatibilityTest`. Chaque test vérifie le statut, les codes et chemins
+de problèmes, l'absence de page locale partielle et la preuve de traçabilité.
 
 Les tests doivent rester reproductibles sans connexion à la source externe.

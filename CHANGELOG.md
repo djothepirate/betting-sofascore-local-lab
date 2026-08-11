@@ -13,6 +13,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - corpus synthétique `SCHEDULED_EVENTS` de neuf scénarios avec manifestes, hashes réels et test d’inventaire classpath.
 - parseur hors ligne `scheduled-events-v1`, DTO externe minimal et mapper vers un modèle local immuable ;
 - résultats de parsing structurés avec statuts, avertissements, problèmes et preuve de traçabilité ;
+- couverture hors ligne des incompatibilités `scheduled-events-v1` : champs obligatoires absents, type numérique modifié, structure inattendue et contenu HTML ;
 
 ### Documentation
 

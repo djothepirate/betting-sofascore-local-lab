@@ -102,9 +102,22 @@ Chaque résultat, y compris un échec, transporte une preuve immuable contenant 
 La preuve brute reste portée par `LoadedFixture`. Le parseur ne modifie ni les octets ni les hashes
 et ne journalise aucune valeur de payload.
 
-## Validation de cette unité
+## Validation hors ligne
 
-Cette unité couvre le nominal, la stabilité face à l'ordre des propriétés, les champs facultatifs
-absents, le tableau vide et les champs inconnus. L'étape suivante
-`test: cover scheduled-events schema incompatibilities` exercera exhaustivement le corpus de
-rupture déjà versionné.
+La couverture du contrat est répartie entre deux classes de test :
+
+- `ScheduledEventsV1ParserTest` couvre le nominal, la stabilité face à l'ordre des propriétés,
+  les champs facultatifs absents, le tableau vide et les champs inconnus ;
+- `ScheduledEventsV1SchemaIncompatibilityTest` couvre les quatre fixtures de rupture, les codes et
+  chemins de chaque problème, l'absence de page partielle et la conservation de la traçabilité.
+
+| Fixture de rupture | Statut vérifié | Problèmes vérifiés |
+|---|---|---|
+| champ obligatoire absent | `SCHEMA_INCOMPATIBLE` | `REQUIRED_FIELD_MISSING` pour `event.id` et `event.status` |
+| identifiant numérique devenu texte | `SCHEMA_INCOMPATIBLE` | `TYPE_MISMATCH` pour `event.id`, sans coercition, et `REQUIRED_FIELD_MISSING` pour `event.status` |
+| `events` devenu objet | `SCHEMA_INCOMPATIBLE` | `TYPE_MISMATCH` sur `$.events` |
+| HTML inattendu | `UNEXPECTED_CONTENT` | `UNEXPECTED_CONTENT_KIND` sur `$` |
+
+Les quatre résultats en échec conservent l'identifiant de fixture, les hashes disponibles, la date
+du manifeste et la version du parseur. Les tests standards restent sans Internet et sans
+PostgreSQL.
