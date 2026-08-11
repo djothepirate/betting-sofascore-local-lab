@@ -5,7 +5,7 @@
     "repository": "betting-sofascore-local-lab",
     "artifactId": "betting-sofascore-local-lab",
     "version": "0.1.0-SNAPSHOT",
-    "package": "com.geoffrey.betting.sofascorelocal"
+    "package": "com.bettingproject.sofascorelocal"
   },
   "preparedAt": "2026-08-08",
   "milestones": [

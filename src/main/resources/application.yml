@@ -80,6 +80,6 @@ sofascore:
 logging:
   level:
     root: INFO
-    com.geoffrey.betting.sofascorelocal: INFO
+    com.bettingproject.sofascorelocal: INFO
   pattern:
     console: "%d{yyyy-MM-dd'T'HH:mm:ss.SSSXXX} %-5level [%thread] %logger{36} - %msg%n"
