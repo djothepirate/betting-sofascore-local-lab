@@ -42,7 +42,7 @@
     "baseUrlVersioned": false,
     "realEndpointUrisVersioned": false,
     "transportAdapterActive": false,
-    "connectorMode": "LOCKED_OFFLINE_J1",
+    "connectorMode": "LOCKED_OFFLINE_J3_POLICY",
     "maximumConcurrency": 1,
     "minimumDelay": "PT3S",
     "automaticRefreshEnabled": false,

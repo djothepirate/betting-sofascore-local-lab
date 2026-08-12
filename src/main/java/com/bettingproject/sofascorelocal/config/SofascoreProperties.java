@@ -122,7 +122,7 @@ public class SofascoreProperties {
         return minimumDelay != null && minimumDelay.compareTo(Duration.ofSeconds(3)) >= 0;
     }
 
-    @AssertTrue(message = "automatic refresh and live polling must stay disabled during J1")
+    @AssertTrue(message = "automatic refresh and live polling must stay disabled during manual J3")
     public boolean isAutomaticNetworkActivityDisabled() {
         return !automaticRefreshEnabled && !livePollingEnabled;
     }

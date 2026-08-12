@@ -14,12 +14,14 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
 - PostgreSQL local dans Docker Desktop, migration Flyway initiale et stockage brut séparé ;
 - Actuator, Caffeine, validation de configuration et garde de liaison locale ;
 - catalogue logique des familles d’endpoints, sans URI réelle ;
-- connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J1` ;
+- connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
 - tests unitaires hors ligne et test Flyway/Testcontainers dans un profil explicite ;
 - scripts PowerShell de configuration, préflight, démarrage, arrêt et vérification.
 - corpus synthétique `SCHEDULED_EVENTS` de neuf fixtures classpath avec hashes vérifiés ;
 - parseur hors ligne `scheduled-events-v1`, modèle local et tests de rupture de schéma ;
 - inventaire du corpus visible dans le tableau de bord, sans dépendance à PostgreSQL.
+- politique J3 hors ligne pour l’activation explicite, la confirmation par appel, le cache préalable, le délai minimal et l’arrêt global ;
+- circuit J3 en mémoire initialisé à `LOCKED`, incidents typés et garde atomique limitant la concurrence à un appel ;
 
 ## Limite essentielle du bootstrap
 
@@ -182,6 +184,7 @@ Le jalon J3 devra retirer **explicitement** certaines de ces barrières, une par
 - [ADR-SS-001](ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md)
 - [Architecture J0/J1](docs/architecture/ARCHITECTURE.md)
 - [Contrat hors ligne scheduled-events-v1](docs/architecture/SCHEDULED-EVENTS-V1.md)
+- [Politique réseau J3 hors ligne](docs/architecture/J3-OFFLINE-NETWORK-POLICY.md)
 - [Runbook local](docs/runbooks/RUNBOOK-LOCAL.md)
 - [Cadrage PDF](docs/reference/Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf)
 - [Rapport de validation du bootstrap](docs/validation/J0-J1-VALIDATION-REPORT.md)

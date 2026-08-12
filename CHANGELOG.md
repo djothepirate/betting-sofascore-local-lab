@@ -15,6 +15,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - résultats de parsing structurés avec statuts, avertissements, problèmes et preuve de traçabilité ;
 - couverture hors ligne des incompatibilités `scheduled-events-v1` : champs obligatoires absents, type numérique modifié, structure inattendue et contenu HTML ;
 - inventaire applicatif du corpus classpath avec disponibilité et répartition des résultats de parsing ;
+- politique de décision J3 hors ligne avec résultats `USE_CACHE`, `BLOCKED` et `TRANSPORT_ELIGIBLE` ;
+- circuit J3 en mémoire à activation explicite, incidents typés et absence de réouverture automatique ;
+- garde atomique limitant à un le nombre de permis d’appel simultanés ;
 
 ### Documentation
 
@@ -24,16 +27,19 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - validation Windows et clôture du Work Order J2 après fusion de la Pull Request `#2` sur `main` ;
 - ouverture du Work Order `WO-SS-20260812-003` sur la branche `feat/j3-manual-call` depuis le commit de fusion `b2561e542b1f893ec2f15c5eaeb67a361ee551ea` ;
 - périmètre J3 découpé en unités hors ligne avec un point de décision explicite avant toute URI ou requête réelle.
+- contrat d’architecture de la politique réseau J3 hors ligne, de son ordre d’évaluation et de ses transitions de circuit.
 
 ### Modifié
 
 - renommage du package Java de base de `com.geoffrey.betting.sofascorelocal` vers `com.bettingproject.sofascorelocal`.
 - tableau de bord enrichi avec le compteur des neuf fixtures hors ligne et leur état de validation synthétique.
+- mode visible du verrou mis à jour vers `LOCKED_OFFLINE_J3_POLICY` sans ouvrir le transport.
 
 ### Sécurité
 
 - maintien du verrouillage réseau pendant J2 : aucune URI d’endpoint réelle et aucun appel SofaScore réel ne sont autorisés.
 - maintien du connecteur et du profil réel bloqués au démarrage de J3 ; la revue des conditions officielles impose une décision humaine préalable avant tout appel.
+- résultat `TRANSPORT_ELIGIBLE` explicitement sans effet : aucun client HTTP, aucune URI réelle et aucun appel fournisseur ne sont introduits.
 
 ## [0.1.0] — 2026-08-08
 

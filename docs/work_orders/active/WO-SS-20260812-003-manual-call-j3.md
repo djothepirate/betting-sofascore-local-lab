@@ -7,6 +7,7 @@
 - **Jalon :** J3 — Appel manuel
 - **Branche :** `feat/j3-manual-call`
 - **Commit de base :** `b2561e542b1f893ec2f15c5eaeb67a361ee551ea`
+- **Base de l’unité de politique réseau hors ligne :** `c51c45f4831dad2922018e25baee97dcf7bbcf5c`
 - **Famille initiale :** `SCHEDULED_EVENTS`
 - **Mode d’acquisition prévu :** `DIRECT_LOCAL_ENDPOINT`
 - **Développement hors ligne J3 autorisé :** `YES`
@@ -112,11 +113,11 @@ validation juridique ou contractuelle. En conséquence :
 
 ## 6. Unités de livraison prévues
 
-1. `docs: close J2 and start bounded J3 manual call`
+1. `docs: close J2 and start bounded J3 manual call` — terminé
    - clôturer le Work Order J2 ;
    - enregistrer la base J3 ;
    - documenter les limites et le point de décision.
-2. `feat: add offline J3 network policy and circuit model`
+2. `feat: add offline J3 network policy and circuit model` — terminé
    - modéliser activation, délai, concurrence, cache, arrêt et incidents ;
    - tester sans URI réelle et sans réseau.
 3. `feat: persist raw manual-call snapshots`
@@ -226,3 +227,32 @@ Avant toute proposition de fusion :
 Le Work Order ne passe à `VALIDATED` qu’après satisfaction des critères applicables et validation de
 la preuve de sortie J3. Une démonstration simulée peut valider l’architecture technique, mais ne vaut
 pas preuve de sortie « une requête réelle » et doit être déclarée comme telle.
+
+## 11. Avancement de la politique réseau hors ligne
+
+L’unité `feat: add offline J3 network policy and circuit model` introduit :
+
+- une évaluation pure donnant `USE_CACHE`, `BLOCKED` ou `TRANSPORT_ELIGIBLE` ;
+- un ordre de décision déterministe couvrant activation, arrêt global, endpoint, confirmation,
+  circuit, concurrence et délai minimal ;
+- un circuit en mémoire démarrant à `LOCKED`, activable explicitement et ouvert par incident ;
+- des incidents typés pour `400`, `401`, `403`, `429`, timeout, contenu inattendu, schéma
+  incompatible et erreur serveur ;
+- la conservation de `retryNotBefore` pour `429` sans réouverture ou retry automatique ;
+- une garde atomique limitant à un le nombre de permis simultanés ;
+- une documentation d’architecture et des tests unitaires entièrement hors ligne.
+
+`TRANSPORT_ELIGIBLE` reste une information sans effet. `ConnectorGate` conserve un refus
+systématique au mode `LOCKED_OFFLINE_J3_POLICY`, le catalogue reste non appelable et aucune URI
+réelle n’est présente.
+
+```text
+J3_OFFLINE_POLICY=IMPLEMENTED
+J3_CIRCUIT_MODEL=IMPLEMENTED
+J3_SINGLE_CALL_GUARD=IMPLEMENTED
+J3_INCIDENT_PERSISTENCE=NOT_STARTED
+J3_RAW_SNAPSHOT_PERSISTENCE=NOT_STARTED
+J3_TRANSPORT=NOT_STARTED
+J3_REAL_ENDPOINT_URI_AUTHORIZED=NO
+J3_REAL_CALL_AUTHORIZED=NO
+```

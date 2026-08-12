@@ -93,7 +93,7 @@ http://127.0.0.1:8087
 
 Vérifier :
 
-- statut `LOCKED_OFFLINE_J1` ;
+- statut `LOCKED_OFFLINE_J3_POLICY` ;
 - connecteur `DISABLED` ;
 - base URL `NON_CONFIGURED` ;
 - PostgreSQL `AVAILABLE` ;

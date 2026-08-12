@@ -13,7 +13,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class DisabledSofascoreDataProviderTest {
 
     @Test
-    void refusesEveryProviderRequestAtJ1() {
+    void refusesEveryProviderRequestDuringOfflineJ3PolicyDevelopment() {
         DisabledSofascoreDataProvider provider =
                 new DisabledSofascoreDataProvider(new ConnectorGate());
         ProviderRequest request = new ProviderRequest(
@@ -22,6 +22,6 @@ class DisabledSofascoreDataProviderTest {
 
         assertThatThrownBy(() -> provider.load(request))
                 .isInstanceOf(NetworkAccessDisabledException.class)
-                .hasMessageContaining("NETWORK_CALLS_NOT_IMPLEMENTED_J1");
+                .hasMessageContaining("NETWORK_TRANSPORT_NOT_AUTHORIZED_J3");
     }
 }

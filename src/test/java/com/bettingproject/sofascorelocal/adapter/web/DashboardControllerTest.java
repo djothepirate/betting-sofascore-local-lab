@@ -34,7 +34,7 @@ class DashboardControllerTest {
         DashboardView dashboardView = new DashboardView(
                 "2026-08-08T00:00:00Z",
                 "EXPERIMENTAL",
-                "LOCKED_OFFLINE_J1",
+                "LOCKED_OFFLINE_J3_POLICY",
                 false,
                 "127.0.0.1:8087",
                 "NON_CONFIGURED",
@@ -64,6 +64,7 @@ class DashboardControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("dashboard"))
                 .andExpect(model().attribute("dashboard", dashboardView))
+                .andExpect(content().string(containsString("LOCKED_OFFLINE_J3_POLICY")))
                 .andExpect(content().string(containsString("9 / 9 disponibles")))
                 .andExpect(content().string(containsString("scheduled-events-v1")))
                 .andExpect(content().string(containsString("NON VALIDÉ")));

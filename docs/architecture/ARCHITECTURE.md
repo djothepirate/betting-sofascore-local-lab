@@ -1,4 +1,4 @@
-# Architecture J0/J1 — SofaScore Local Lab
+# Architecture J0 à J3 — SofaScore Local Lab
 
 ## 1. Positionnement
 
@@ -29,7 +29,8 @@ La relation future autorisée est un export JSON normalisé et versionné. Aucun
 │  127.0.0.1:8087                                           │
 │  ├─ Spring MVC + Thymeleaf                                │
 │  ├─ DashboardService                                      │
-│  ├─ ConnectorGate = LOCKED_OFFLINE_J1                     │
+│  ├─ ConnectorGate = LOCKED_OFFLINE_J3_POLICY              │
+│  ├─ Politique J3 hors ligne et circuit en mémoire         │
 │  ├─ Catalogue logique sans URI                            │
 │  ├─ Flyway / JDBC / JPA                                   │
 │  └─ Actuator                                              │
@@ -42,13 +43,13 @@ La relation future autorisée est un export JSON normalisé et versionné. Aucun
 │  exports/                                                 │
 └───────────────────────────────────────────────────────────┘
 
-SofaScore : aucune connexion au J1
-VPS       : aucune connexion au J1
+SofaScore : aucune connexion dans l’unité de politique J3
+VPS       : aucune connexion
 ```
 
 ## 3. Couches
 
-| Couche | Responsabilité J1 |
+| Couche | Responsabilité actuelle |
 |---|---|
 | `config` | propriétés typées, garde de liaison locale, initialisation du dossier d’export, en-têtes de sécurité |
 | `domain.provider` | types logiques, définition de catalogue et mode du connecteur |
@@ -60,7 +61,7 @@ VPS       : aucune connexion au J1
 
 Le starter `RestClient` est présent pour figer le choix technologique, mais aucun `RestClient` n’est encore construit pour SofaScore.
 
-## 4. Défense en profondeur J1
+## 4. Défense en profondeur J3 hors ligne
 
 ```text
 Configuration par défaut        sofascore.enabled=false
@@ -70,6 +71,9 @@ Catalogue logique               callable=false, URI absente
           │
           ▼
 ConnectorGate                   exception systématique
+          │
+          ▼
+Politique hors ligne            aucune URI, aucun transport
           │
           ▼
 Profil Maven réel               alwaysFail
@@ -102,11 +106,12 @@ circuit_state   = LOCKED
 last_reason     = J1 bootstrap: network calls are not implemented
 ```
 
-Cette table ne remplace pas le verrou logiciel. Au J1, modifier la ligne n’autorise aucun appel.
+Cette table ne remplace pas le verrou logiciel. Pendant l’unité de politique J3, modifier cette ligne
+n’autorise toujours aucun appel.
 
 ## 6. Catalogue logique
 
-| Type | Cache initial | Déclenchement J1 | Appelable J1 |
+| Type | Cache initial | Déclenchement prévu | Appelable actuellement |
 |---|---:|---|---|
 | `SCHEDULED_EVENTS` | 10 min | manuel prévu | non |
 | `EVENT_DETAILS` | 15 min | manuel prévu | non |
@@ -136,7 +141,8 @@ Les modèles d’URI, paramètres autorisés, tailles maximales et parseurs sero
 
 ### Réel
 
-Le profil `sofascore-live-test` est bloqué avec `alwaysFail`. Son activation effective appartient au jalon J3.
+Le profil `sofascore-live-test` reste bloqué avec `alwaysFail`. L’ouverture du Work Order J3 ne
+suffit pas à l’activer : le point de décision humain et les autres unités techniques restent requis.
 
 ## 8. Décisions différées
 
@@ -145,10 +151,13 @@ Le profil `sofascore-live-test` est bloqué avec `alwaysFail`. Son activation ef
 - stockage de headers autorisés ;
 - canonicalisation et hash de payload ;
 - parseurs et DTO externes ;
-- circuit breaker réel et persistance des incidents ;
+- persistance du circuit et des incidents ;
 - écran de confirmation d’appel ;
 - export canonique ;
 - push HTTPS vers le Betting Project ;
 - tout polling ou usage live.
 
 Chaque décision doit être introduite par un Work Order, avec critères d’acceptation et tests de non-régression des garde-fous.
+
+Le modèle de décision et le circuit J3 désormais actés sont détaillés dans
+`docs/architecture/J3-OFFLINE-NETWORK-POLICY.md`. Ils restent sans client HTTP et sans URI réelle.

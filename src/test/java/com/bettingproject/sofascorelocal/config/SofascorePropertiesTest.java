@@ -13,7 +13,7 @@ class SofascorePropertiesTest {
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
 
     @Test
-    void defaultsAreSafeForJ1() {
+    void defaultsRemainSafeForManualJ3() {
         SofascoreProperties properties = new SofascoreProperties();
 
         assertThat(properties.isEnabled()).isFalse();

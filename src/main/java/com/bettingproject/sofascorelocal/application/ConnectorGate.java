@@ -8,12 +8,12 @@ import org.springframework.stereotype.Component;
 public class ConnectorGate {
 
     public ConnectorMode mode() {
-        return ConnectorMode.LOCKED_OFFLINE_J1;
+        return ConnectorMode.LOCKED_OFFLINE_J3_POLICY;
     }
 
     public void requireNetworkCallAllowed(SofascoreEndpointType endpointType) {
         throw new NetworkAccessDisabledException(
-                "NETWORK_CALLS_NOT_IMPLEMENTED_J1: " + endpointType
-                        + ". A J3 Work Order and an explicit architecture review are required.");
+                "NETWORK_TRANSPORT_NOT_AUTHORIZED_J3: " + endpointType
+                        + ". Offline policy eligibility never authorizes a provider call.");
     }
 }

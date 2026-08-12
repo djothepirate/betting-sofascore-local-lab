@@ -1,0 +1,15 @@
+package com.bettingproject.sofascorelocal.domain.provider;
+
+public enum J3CircuitReason {
+    NONE,
+    STARTUP_LOCK,
+    OPERATOR_STOP,
+    HTTP_BAD_REQUEST,
+    HTTP_UNAUTHORIZED,
+    HTTP_FORBIDDEN,
+    HTTP_TOO_MANY_REQUESTS,
+    TIMEOUT,
+    UNEXPECTED_CONTENT,
+    SCHEMA_INCOMPATIBLE,
+    SERVER_ERROR
+}
