@@ -82,7 +82,7 @@ hors du dépôt : seule cette synthèse textuelle minimisée est versionnée.
 
 | ID | Action ou contrôle | Résultat observé | Statut |
 |---|---|---|---|
-| J3-WIN-01 | État protégé | Arrêt global actif, circuit `LOCKED`, motif `OPERATOR_STOP`, activation opérateur `NON`, transport fournisseur `INDISPONIBLE` | PASS |
+| J3-WIN-01 | État protégé | Arrêt global actif, circuit `LOCKED`, motif `STARTUP_LOCK`, activation opérateur `NON`, transport fournisseur `INDISPONIBLE` | PASS |
 | J3-WIN-02 | Lever l’arrêt global | Arrêt global levé ; le circuit reste `LOCKED` jusqu’à une activation distincte | PASS |
 | J3-WIN-03 | Activer le circuit | Circuit `CLOSED`, motif `NONE`, activation opérateur `OUI`, incident actif `NON` | PASS |
 | J3-WIN-04 | Préparer une intention datée | Intention `SCHEDULED_EVENTS` en `AWAITING_CONFIRMATION`, clé canonique datée et expiration visible | PASS |
