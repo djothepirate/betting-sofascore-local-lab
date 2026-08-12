@@ -4,6 +4,7 @@ import com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceOutcome;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceResult;
+import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import org.springframework.jdbc.core.namedparam.MapSqlParameterSource;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -68,6 +69,20 @@ public class JdbcRawManualCallSnapshotStore implements RawManualCallSnapshotStor
               and payload_sha256 = :payloadSha256
             """;
 
+    private static final String CLASSIFY_SQL = """
+            update provider_snapshot
+            set schema_status = :schemaStatus,
+                error_code = :errorCode
+            where id = :snapshotId
+              and (
+                    schema_status = 'RAW_ONLY'
+                    or (
+                        schema_status = :schemaStatus
+                        and error_code is not distinct from :errorCode
+                    )
+              )
+            """;
+
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
     public JdbcRawManualCallSnapshotStore(NamedParameterJdbcTemplate jdbcTemplate) {
@@ -104,6 +119,24 @@ public class JdbcRawManualCallSnapshotStore implements RawManualCallSnapshotStor
                 payload.sizeBytes());
     }
 
+    @Override
+    @Transactional
+    public void classify(
+            long snapshotId,
+            RawSnapshotSchemaStatus schemaStatus,
+            String errorCode) {
+        requireFinalClassification(snapshotId, schemaStatus, errorCode);
+        MapSqlParameterSource parameters = new MapSqlParameterSource()
+                .addValue("snapshotId", snapshotId)
+                .addValue("schemaStatus", schemaStatus.name())
+                .addValue("errorCode", errorCode, Types.VARCHAR);
+        int updatedRows = jdbcTemplate.update(CLASSIFY_SQL, parameters);
+        if (updatedRows != 1) {
+            throw new IllegalStateException(
+                    "raw snapshot classification requires one RAW_ONLY or identical row");
+        }
+    }
+
     private static MapSqlParameterSource parameters(
             RawManualCallSnapshot snapshot,
             RawPayloadEvidence payload) {
@@ -123,5 +156,31 @@ public class JdbcRawManualCallSnapshotStore implements RawManualCallSnapshotStor
                 .addValue("parserVersion", snapshot.parserVersion())
                 .addValue("schemaStatus", snapshot.schemaStatus().name())
                 .addValue("errorCode", snapshot.errorCode(), Types.VARCHAR);
+    }
+
+    private static void requireFinalClassification(
+            long snapshotId,
+            RawSnapshotSchemaStatus schemaStatus,
+            String errorCode) {
+        if (snapshotId < 1) {
+            throw new IllegalArgumentException("snapshotId must be positive");
+        }
+        Objects.requireNonNull(schemaStatus, "schemaStatus");
+        if (schemaStatus != RawSnapshotSchemaStatus.PARSED
+                && schemaStatus != RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE
+                && schemaStatus != RawSnapshotSchemaStatus.UNEXPECTED_CONTENT) {
+            throw new IllegalArgumentException(
+                    "raw snapshot classification must be a parser outcome");
+        }
+        if (schemaStatus == RawSnapshotSchemaStatus.PARSED) {
+            if (errorCode != null) {
+                throw new IllegalArgumentException(
+                        "a parsed snapshot cannot have an error code");
+            }
+        }
+        else if (!schemaStatus.name().equals(errorCode)) {
+            throw new IllegalArgumentException(
+                    "an incompatible snapshot requires its schema status as error code");
+        }
     }
 }

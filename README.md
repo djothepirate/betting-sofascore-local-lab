@@ -26,6 +26,7 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
 - transport J3 simulé limité à `127.0.0.1`, derrière la politique manuelle et la garde de concurrence ;
 - contrôle J3 visible avec arrêt global, activation distincte et confirmation exacte d’une intention datée ;
 - jeton de formulaire local lié à la session et à usage unique, sans rendre l’action fournisseur disponible ;
+- matrice J3 d’incidents simulés avec conservation du brut avant parsing, circuit ouvert et aucun retry automatique ;
 
 ## Limite essentielle du bootstrap
 
@@ -194,6 +195,7 @@ Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces
 - [Persistance des snapshots bruts J3](docs/architecture/J3-RAW-SNAPSHOT-PERSISTENCE.md)
 - [Transport scheduled-events J3 protégé et simulé](docs/architecture/J3-GUARDED-SCHEDULED-EVENTS-TRANSPORT.md)
 - [Confirmation explicite d’appel manuel J3](docs/architecture/J3-EXPLICIT-MANUAL-CALL-CONFIRMATION.md)
+- [Politiques d’arrêt et d’incident J3](docs/architecture/J3-TRANSPORT-STOP-AND-INCIDENT-POLICIES.md)
 - [Runbook local](docs/runbooks/RUNBOOK-LOCAL.md)
 - [Cadrage PDF](docs/reference/Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf)
 - [Rapport de validation du bootstrap](docs/validation/J0-J1-VALIDATION-REPORT.md)
@@ -204,7 +206,7 @@ Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces
 
 ## Prochaine frontière
 
-La prochaine frontière est la couverture exhaustive des politiques d’arrêt et d’incident du transport
-J3. Le Work Order impose toujours un point de décision humain distinct avant toute URI réelle ou
-requête fournisseur. Dans l’état actuel, le connecteur, le profil réel, l’adaptateur fournisseur et
-l’action réseau de l’interface restent bloqués, même après confirmation d’une intention.
+La prochaine frontière est le point de décision humain du Work Order avant toute qualification
+manuelle réelle. Aucun appel ne peut être déduit de la réussite des tests simulés : l’URI réelle,
+le connecteur, le profil live, l’adaptateur fournisseur et l’action réseau de l’interface restent
+bloqués, même après confirmation d’une intention.

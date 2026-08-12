@@ -67,7 +67,7 @@ info:
   app:
     name: SofaScore Local Lab
     version: 0.1.0-SNAPSHOT
-    phase: J3-EXPLICIT-MANUAL-CONFIRMATION
+    phase: J3-TRANSPORT-STOP-INCIDENT-POLICIES
     status: EXPERIMENTAL_LOCAL_ONLY
 
 sofascore:

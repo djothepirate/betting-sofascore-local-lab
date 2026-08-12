@@ -90,7 +90,8 @@ Le transport retourne :
 
 Le transport ne parse, ne normalise et ne persiste rien. Cette séparation garantit que le brut reste
 disponible avant les étapes ultérieures. La composition transport–persistance–parseur et les
-politiques détaillées d’incident restent couvertes par les unités suivantes du Work Order.
+politiques détaillées d’incident sont couvertes par
+`docs/architecture/J3-TRANSPORT-STOP-AND-INCIDENT-POLICIES.md`.
 
 ## 6. Simulation et tests
 

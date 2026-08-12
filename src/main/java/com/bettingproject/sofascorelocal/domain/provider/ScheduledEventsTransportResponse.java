@@ -11,7 +11,8 @@ public record ScheduledEventsTransportResponse(
         int httpStatus,
         String contentType,
         Duration latency,
-        RawPayloadEvidence payload) {
+        RawPayloadEvidence payload,
+        Instant retryNotBefore) {
 
     private static final int MAXIMUM_CONTENT_TYPE_LENGTH = 160;
 
@@ -35,6 +36,30 @@ public record ScheduledEventsTransportResponse(
         if (latency.isNegative()) {
             throw new IllegalArgumentException("latency cannot be negative");
         }
+        if (retryNotBefore != null
+                && (httpStatus != 429 || !retryNotBefore.isAfter(receivedAt))) {
+            throw new IllegalArgumentException(
+                    "retryNotBefore is accepted only for HTTP 429 after receivedAt");
+        }
+    }
+
+    public ScheduledEventsTransportResponse(
+            String requestKey,
+            Instant requestedAt,
+            Instant receivedAt,
+            int httpStatus,
+            String contentType,
+            Duration latency,
+            RawPayloadEvidence payload) {
+        this(
+                requestKey,
+                requestedAt,
+                receivedAt,
+                httpStatus,
+                contentType,
+                latency,
+                payload,
+                null);
     }
 
     public SofascoreEndpointType endpointType() {

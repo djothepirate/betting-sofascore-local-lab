@@ -16,6 +16,9 @@ public record J3CircuitIncident(
             J3CircuitReason.HTTP_FORBIDDEN,
             J3CircuitReason.HTTP_TOO_MANY_REQUESTS,
             J3CircuitReason.TIMEOUT,
+            J3CircuitReason.TRANSPORT_IO_FAILURE,
+            J3CircuitReason.PAYLOAD_TOO_LARGE,
+            J3CircuitReason.SENSITIVE_CONTENT_REJECTED,
             J3CircuitReason.UNEXPECTED_CONTENT,
             J3CircuitReason.SCHEMA_INCOMPATIBLE,
             J3CircuitReason.SERVER_ERROR);

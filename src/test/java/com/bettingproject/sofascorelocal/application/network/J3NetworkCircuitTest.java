@@ -59,6 +59,9 @@ class J3NetworkCircuitTest {
                     "HTTP_UNAUTHORIZED",
                     "HTTP_FORBIDDEN",
                     "TIMEOUT",
+                    "TRANSPORT_IO_FAILURE",
+                    "PAYLOAD_TOO_LARGE",
+                    "SENSITIVE_CONTENT_REJECTED",
                     "UNEXPECTED_CONTENT",
                     "SCHEMA_INCOMPATIBLE",
                     "SERVER_ERROR"

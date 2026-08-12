@@ -5,7 +5,11 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.Sched
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsEnvelopeDto.TeamDto;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsEnvelopeDto.TournamentDto;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
+import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportResponse;
 import com.bettingproject.sofascorelocal.fixture.FixtureContentKind;
+import com.bettingproject.sofascorelocal.fixture.FixtureContentClassifier;
+import com.bettingproject.sofascorelocal.fixture.FixtureLoadingException;
+import com.bettingproject.sofascorelocal.fixture.FixturePayloadHasher;
 import com.bettingproject.sofascorelocal.fixture.LoadedFixture;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.StreamReadFeature;
@@ -19,6 +23,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 public final class ScheduledEventsV1Parser {
@@ -54,9 +59,50 @@ public final class ScheduledEventsV1Parser {
 
     public ScheduledEventsParseResult parse(LoadedFixture fixture) {
         Objects.requireNonNull(fixture, "fixture");
-        ScheduledEventsParseEvidence evidence = evidence(fixture);
+        return parsePayload(
+                fixture.manifest().endpointType(),
+                fixture.rawPayload(),
+                fixture.contentKind(),
+                evidence(fixture));
+    }
 
-        if (fixture.manifest().endpointType() != SofascoreEndpointType.SCHEDULED_EVENTS) {
+    public ScheduledEventsParseResult parseTransportResponse(
+            ScheduledEventsTransportResponse response) {
+        Objects.requireNonNull(response, "response");
+        byte[] rawPayload = response.payload().bytes();
+        FixtureContentKind contentKind = FixtureContentClassifier.classify(
+                rawPayload,
+                response.contentType());
+        Optional<String> canonicalJsonSha256 = Optional.empty();
+        if (contentKind == FixtureContentKind.JSON) {
+            try {
+                canonicalJsonSha256 = Optional.of(
+                        FixturePayloadHasher.canonicalJsonSha256(rawPayload));
+            }
+            catch (FixtureLoadingException exception) {
+                canonicalJsonSha256 = Optional.empty();
+            }
+        }
+        ScheduledEventsParseEvidence evidence = new ScheduledEventsParseEvidence(
+                "manual-call-scheduled-events",
+                response.payload().sha256(),
+                canonicalJsonSha256,
+                response.receivedAt(),
+                PARSER_VERSION);
+        return parsePayload(
+                response.endpointType(),
+                rawPayload,
+                contentKind,
+                evidence);
+    }
+
+    private ScheduledEventsParseResult parsePayload(
+            SofascoreEndpointType endpointType,
+            byte[] rawPayload,
+            FixtureContentKind contentKind,
+            ScheduledEventsParseEvidence evidence) {
+
+        if (endpointType != SofascoreEndpointType.SCHEDULED_EVENTS) {
             return failed(
                     ScheduledEventsParseStatus.SCHEMA_INCOMPATIBLE,
                     evidence,
@@ -64,7 +110,7 @@ public final class ScheduledEventsV1Parser {
                     "$",
                     "The fixture endpoint is not SCHEDULED_EVENTS");
         }
-        if (fixture.contentKind() != FixtureContentKind.JSON) {
+        if (contentKind != FixtureContentKind.JSON) {
             return failed(
                     ScheduledEventsParseStatus.UNEXPECTED_CONTENT,
                     evidence,
@@ -75,7 +121,7 @@ public final class ScheduledEventsV1Parser {
 
         JsonNode root;
         try {
-            root = JSON_MAPPER.readTree(fixture.rawPayload());
+            root = JSON_MAPPER.readTree(rawPayload);
         }
         catch (JacksonException exception) {
             return failed(

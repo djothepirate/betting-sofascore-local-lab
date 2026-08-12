@@ -6,7 +6,7 @@ public final class ScheduledEventsTransportException extends RuntimeException {
 
     private final ScheduledEventsTransportFailure failure;
 
-    ScheduledEventsTransportException(ScheduledEventsTransportFailure failure) {
+    public ScheduledEventsTransportException(ScheduledEventsTransportFailure failure) {
         super("scheduled-events transport failed safely: "
                 + Objects.requireNonNull(failure, "failure"));
         this.failure = failure;

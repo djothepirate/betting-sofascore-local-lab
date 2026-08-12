@@ -5,16 +5,23 @@ import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTranspor
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportResponse;
 import com.bettingproject.sofascorelocal.port.ScheduledEventsTransport;
 import org.springframework.http.MediaType;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import java.io.IOException;
+import java.net.SocketTimeoutException;
+import java.net.http.HttpTimeoutException;
 import java.net.http.HttpClient;
 import java.time.Clock;
+import java.time.DateTimeException;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 /**
  * HTTP transport restricted to the exact IPv4 loopback origin and the simulated J3 route.
@@ -25,6 +32,8 @@ public final class LoopbackScheduledEventsRestTransport implements ScheduledEven
     public static final Duration MAXIMUM_TIMEOUT = Duration.ofSeconds(10);
 
     private static final String FALLBACK_CONTENT_TYPE = "application/octet-stream";
+    private static final int MAXIMUM_RETRY_AFTER_LENGTH = 128;
+    private static final Pattern DELTA_SECONDS = Pattern.compile("[0-9]{1,10}");
 
     private final RestClient restClient;
     private final Clock clock;
@@ -85,7 +94,11 @@ public final class LoopbackScheduledEventsRestTransport implements ScheduledEven
                                 httpResponse.getStatusCode().value(),
                                 contentType,
                                 Duration.between(requestedAt, receivedAt),
-                                evidence);
+                                evidence,
+                                retryNotBefore(
+                                        httpResponse.getStatusCode().value(),
+                                        httpResponse.getHeaders(),
+                                        receivedAt));
                     });
         }
         catch (ScheduledEventsTransportException exception) {
@@ -93,8 +106,51 @@ public final class LoopbackScheduledEventsRestTransport implements ScheduledEven
         }
         catch (RestClientException exception) {
             throw new ScheduledEventsTransportException(
-                    ScheduledEventsTransportFailure.IO_FAILURE);
+                    classifyFailure(exception));
         }
+    }
+
+    private static Instant retryNotBefore(
+            int httpStatus,
+            HttpHeaders headers,
+            Instant receivedAt) {
+        if (httpStatus != 429) {
+            return null;
+        }
+        String value = headers.getFirst(HttpHeaders.RETRY_AFTER);
+        if (value == null || value.isBlank() || value.length() > MAXIMUM_RETRY_AFTER_LENGTH) {
+            return null;
+        }
+        String normalized = value.trim();
+        try {
+            Instant boundary;
+            if (DELTA_SECONDS.matcher(normalized).matches()) {
+                long seconds = Long.parseLong(normalized);
+                boundary = receivedAt.plusSeconds(seconds);
+            }
+            else {
+                boundary = ZonedDateTime.parse(
+                                normalized,
+                                DateTimeFormatter.RFC_1123_DATE_TIME)
+                        .toInstant();
+            }
+            return boundary.isAfter(receivedAt) ? boundary : null;
+        }
+        catch (ArithmeticException | DateTimeException exception) {
+            return null;
+        }
+    }
+
+    private static boolean isTimeout(Throwable throwable) {
+        Throwable current = throwable;
+        while (current != null) {
+            if (current instanceof HttpTimeoutException
+                    || current instanceof SocketTimeoutException) {
+                return true;
+            }
+            current = current.getCause();
+        }
+        return false;
     }
 
     private static byte[] readBounded(java.io.InputStream input) {
@@ -108,8 +164,15 @@ public final class LoopbackScheduledEventsRestTransport implements ScheduledEven
         }
         catch (IOException exception) {
             throw new ScheduledEventsTransportException(
-                    ScheduledEventsTransportFailure.IO_FAILURE);
+                    classifyFailure(exception));
         }
+    }
+
+    static ScheduledEventsTransportFailure classifyFailure(Throwable throwable) {
+        Objects.requireNonNull(throwable, "throwable");
+        return isTimeout(throwable)
+                ? ScheduledEventsTransportFailure.TIMEOUT
+                : ScheduledEventsTransportFailure.IO_FAILURE;
     }
 
     private static RawPayloadEvidence captureSafely(byte[] rawPayload) {

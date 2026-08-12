@@ -174,6 +174,23 @@ La suite standard couvre l’ordre des transitions, l’expiration à cinq minut
 l’arrêt global, le jeton lié à la session et son usage unique. La confirmation finale produit
 `CONFIRMED_BLOCKED` : elle ne branche pas le transport simulé et ne peut pas joindre un fournisseur.
 
+### 4.6 Politiques d’arrêt et d’incident J3
+
+La suite standard simule les statuts `400`, `401`, `403`, `429`, `500` et `503`, le timeout, les
+erreurs de lecture, le dépassement de 5 Mio, le contenu sensible, le HTML inattendu et la rupture de
+schéma. Pour vérifier également la transition PostgreSQL `RAW_ONLY` avant parsing :
+
+```powershell
+.\mvnw.cmd -Pintegration-tests verify
+```
+
+Pour `429`, `Retry-After` est seulement une frontière de blocage du circuit. Ne jamais l’interpréter
+comme une autorisation de retry ou de réouverture automatique. Un incident exige toujours l’arrêt,
+la revue puis une nouvelle activation explicite.
+
+La preuve attendue conserve uniquement des codes d’incident et des métadonnées bornées. Ne pas
+copier un payload, un header ou une valeur sensible depuis les rapports de test.
+
 ## 5. Arrêt
 
 Arrêt conservant les données :

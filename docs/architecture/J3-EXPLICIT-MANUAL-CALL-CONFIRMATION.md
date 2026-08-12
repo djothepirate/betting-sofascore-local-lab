@@ -107,8 +107,9 @@ profil réel, ni les classes de transport.
 
 L’interface affiche l’état, le motif et la date de changement du circuit ainsi que la présence d’un
 incident. Le service de confirmation n’ouvre lui-même aucun incident fournisseur : il ne réalise
-aucune entrée/sortie. Cette exposition prépare l’unité de tests des politiques d’arrêt et d’incident,
-sans anticiper leur branchement à un transport réel.
+aucune entrée/sortie. Les politiques d’arrêt et d’incident simulées sont décrites dans
+`docs/architecture/J3-TRANSPORT-STOP-AND-INCIDENT-POLICIES.md`, sans branchement à un transport
+réel.
 
 ## 7. Preuves automatisées
 

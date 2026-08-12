@@ -145,6 +145,43 @@ class FlywayMigrationIT {
     }
 
     @Test
+    void persistsRawOnlyBeforeApplyingAParserClassificationIdempotently() {
+        byte[] rawPayload = "{\"events\":[],\"hasNextPage\":false}"
+                .getBytes(StandardCharsets.UTF_8);
+        RawManualCallSnapshot rawOnly = snapshot(
+                "SCHEDULED_EVENTS|date=2026-08-15",
+                rawPayload,
+                RawSnapshotSchemaStatus.RAW_ONLY,
+                null);
+
+        var result = snapshotStore.save(rawOnly);
+        assertThat(schemaStatus(result.snapshotId())).isEqualTo("RAW_ONLY");
+
+        snapshotStore.classify(
+                result.snapshotId(),
+                RawSnapshotSchemaStatus.PARSED,
+                null);
+        snapshotStore.classify(
+                result.snapshotId(),
+                RawSnapshotSchemaStatus.PARSED,
+                null);
+
+        assertThat(schemaStatus(result.snapshotId())).isEqualTo("PARSED");
+        assertThat(jdbcTemplate.queryForObject(
+                "select payload_raw from provider_snapshot where id = ?",
+                byte[].class,
+                result.snapshotId())).isEqualTo(rawPayload);
+        assertThatThrownBy(() -> snapshotStore.classify(
+                result.snapshotId(),
+                RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE,
+                "SCHEMA_INCOMPATIBLE"))
+                .isInstanceOf(RuntimeException.class)
+                .hasRootCauseInstanceOf(IllegalStateException.class)
+                .hasRootCauseMessage(
+                        "raw snapshot classification requires one RAW_ONLY or identical row");
+    }
+
+    @Test
     void databaseRejectsAnInconsistentRawPayloadSize() {
         byte[] rawPayload = "{}".getBytes(StandardCharsets.UTF_8);
 
@@ -183,6 +220,18 @@ class FlywayMigrationIT {
     }
 
     private static RawManualCallSnapshot snapshot(String requestKey, byte[] rawPayload) {
+        return snapshot(
+                requestKey,
+                rawPayload,
+                RawSnapshotSchemaStatus.PARSED,
+                null);
+    }
+
+    private static RawManualCallSnapshot snapshot(
+            String requestKey,
+            byte[] rawPayload,
+            RawSnapshotSchemaStatus schemaStatus,
+            String errorCode) {
         Instant requestedAt = Instant.parse("2026-08-12T12:00:00Z");
         return new RawManualCallSnapshot(
                 SofascoreEndpointType.SCHEDULED_EVENTS,
@@ -194,7 +243,14 @@ class FlywayMigrationIT {
                 Duration.ofMillis(275),
                 RawPayloadEvidence.capture(rawPayload),
                 "scheduled-events-v1",
-                RawSnapshotSchemaStatus.PARSED,
-                null);
+                schemaStatus,
+                errorCode);
+    }
+
+    private String schemaStatus(long snapshotId) {
+        return jdbcTemplate.queryForObject(
+                "select schema_status from provider_snapshot where id = ?",
+                String.class,
+                snapshotId);
     }
 }

@@ -11,6 +11,7 @@
 - **Base de l’unité de persistance brute :** `1a9ca0e753cedf1ac4730adea865bd7ea3369660`
 - **Base de l’unité de transport simulé :** `f8f01225bd4efa0eead432c90899d6c9e1f293b9`
 - **Base de l’unité de confirmation explicite :** `c33192969f780dfa6d5d98590c4fee79907ccaa5`
+- **Base de l’unité de politiques d’arrêt et d’incident :** `e555a13bc8023ebb3dd7a9454719dd16144210e2`
 - **Famille initiale :** `SCHEDULED_EVENTS`
 - **Mode d’acquisition prévu :** `DIRECT_LOCAL_ENDPOINT`
 - **Développement hors ligne J3 autorisé :** `YES`
@@ -134,7 +135,7 @@ validation juridique ou contractuelle. En conséquence :
 5. `feat: add explicit manual-call confirmation` — terminé
    - exposer l’activation, la confirmation, l’arrêt global et les incidents dans l’interface locale ;
    - garder les actions réelles désactivées en l’absence de configuration et d’autorisation.
-6. `test: cover J3 transport stop and incident policies`
+6. `test: cover J3 transport stop and incident policies` — terminé
    - couvrir succès, timeout, `400`, `401`, `403`, `429`, `5xx`, HTML inattendu, taille excessive,
      schéma incompatible, déduplication et absence de secret dans les logs.
 7. `docs: record J3 Windows manual-call qualification`
@@ -385,4 +386,50 @@ J3_PROVIDER_TRANSPORT_ACTIVE=NO
 J3_REAL_ENDPOINT_URI=ABSENT
 J3_REAL_CALL_AUTHORIZED=NO
 J3_NEXT_UNIT=TRANSPORT_STOP_AND_INCIDENT_POLICY_TESTS
+```
+
+## 15. Avancement des politiques d’arrêt et d’incident
+
+L’unité `test: cover J3 transport stop and incident policies` introduit et vérifie :
+
+- un processeur déterministe des réponses et échecs du transport simulé, sans entrée/sortie réseau ;
+- la persistance du brut en `RAW_ONLY` avant parsing, puis la classification idempotente du même
+  snapshot ;
+- le succès JSON, la déduplication et la conservation des octets, de leur taille et de leur hash ;
+- l’arrêt sans retry sur `400`, `401`, `403`, `429`, `500` et `503` ;
+- la conservation d’un `Retry-After` valide ou d’une garde locale de cinq minutes, sans retry
+  planifié ni réouverture automatique ;
+- l’ouverture du circuit sur timeout, erreur d’entrée/sortie, taille excessive et contenu sensible ;
+- la conservation avant classement des réponses HTML inattendues et des schémas incompatibles ;
+- la détection des timeouts de connexion et de lecture dans la chaîne des causes ;
+- l’absence de valeur sensible dans les messages sûrs et les sorties capturées ;
+- l’obligation d’un arrêt et d’une nouvelle activation explicites après tout incident.
+
+`DisabledSofascoreDataProvider`, `ConnectorGate`, le catalogue non appelable, l’absence d’URI réelle
+et le profil bloquant restent inchangés. Le processeur n’est pas relié à l’interface ni à un transport
+fournisseur actif. Le contrat détaillé est consigné dans
+`docs/architecture/J3-TRANSPORT-STOP-AND-INCIDENT-POLICIES.md`.
+
+Validation consolidée exécutée le 2026-08-12 :
+
+- `scripts/Verify-Local.ps1 -WithIntegrationTests` : préflight Java 25, Docker et scanner de
+  garde-fous réussis ;
+- `mvnw.cmd clean verify` : `115` tests, `0` échec, `0` erreur, `0` ignoré ;
+- `mvnw.cmd -Pintegration-tests verify` : `115` tests standards et `5` tests d’intégration,
+  `0` échec, `0` erreur, `0` ignoré ;
+- PostgreSQL Testcontainers `18.4` : migrations V1/V2 appliquées, schéma final `v2` ;
+- `target/classes/META-INF/build-info.properties` : `build.group=com.bettingproject` ;
+- appels réseau SofaScore exécutés : `0`.
+
+```text
+J3_STOP_AND_INCIDENT_POLICY_TESTS=IMPLEMENTED
+J3_RAW_BEFORE_PARSE=ENFORCED
+J3_HTTP_STOP_STATUSES=400,401,403,429,5XX
+J3_RETRY_AFTER=BLOCKING_BOUNDARY_ONLY
+J3_AUTOMATIC_RETRY=NO
+J3_SENSITIVE_VALUE_IN_OUTPUT=NO
+J3_PROVIDER_TRANSPORT_ACTIVE=NO
+J3_REAL_ENDPOINT_URI=ABSENT
+J3_REAL_CALL_AUTHORIZED=NO
+J3_NEXT_UNIT=WINDOWS_MANUAL_CALL_QUALIFICATION_DECISION
 ```
