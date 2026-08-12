@@ -200,6 +200,21 @@ Puis rechercher toute surcharge de propriété dans Eclipse, les variables d’e
 L’échec reste volontaire pendant les unités hors ligne J3. Ne pas contourner l’Enforcer. Une
 éventuelle qualification réelle exige le point de décision complet du Work Order J3.
 
+### 6.7 Métadonnées Actuator obsolètes après une modification du POM
+
+Si `/actuator/info` affiche un ancien `build.group` alors que le `pom.xml` contient
+`com.bettingproject`, l’application utilise un `target/classes/META-INF/build-info.properties`
+généré avant l’actualisation du modèle Maven Eclipse.
+
+1. arrêter l’application ;
+2. dans Eclipse, exécuter **Maven → Update Project** sur le projet ;
+3. exécuter **Project → Clean** ;
+4. lancer `mvnw.cmd clean verify` ;
+5. redémarrer l’application et vérifier que `build.group` vaut `com.bettingproject`.
+
+Le build échoue désormais si le `project.groupId` diffère de `com.bettingproject` ou si les
+métadonnées Spring Boot générées exposent encore l’ancienne valeur.
+
 ## 7. Sauvegarde locale
 
 Avant que les données réelles n’existent, le volume PostgreSQL reste recréable. Dès les premiers snapshots utiles :

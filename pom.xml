@@ -149,6 +149,11 @@
                   <version>[25,26)</version>
                   <message>Java 25 LTS est requis pour compiler et exécuter le laboratoire.</message>
                 </requireJavaVersion>
+                <requireProperty>
+                  <property>project.groupId</property>
+                  <regex>^com\.bettingproject$</regex>
+                  <message>Le groupId Maven doit rester com.bettingproject.</message>
+                </requireProperty>
               </rules>
             </configuration>
           </execution>

@@ -41,6 +41,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - tableau de bord enrichi avec le compteur des neuf fixtures hors ligne et leur état de validation synthétique.
 - mode visible du verrou mis à jour vers `LOCKED_OFFLINE_J3_POLICY` sans ouvrir le transport.
 - phase applicative avancée à `J3-OFFLINE-RAW-PERSISTENCE` sans modifier l’état du connecteur.
+- identité de build Maven protégée par Enforcer et par un test des métadonnées Actuator générées,
+  afin d’empêcher la réapparition de `com.geoffrey.betting` depuis un dossier `target` obsolète.
 - calcul SHA-256 et détection de contenu sensible mutualisés entre les fixtures hors ligne et les futures preuves brutes.
 
 ### Sécurité
