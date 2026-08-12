@@ -12,6 +12,7 @@
 - **Base de l’unité de transport simulé :** `f8f01225bd4efa0eead432c90899d6c9e1f293b9`
 - **Base de l’unité de confirmation explicite :** `c33192969f780dfa6d5d98590c4fee79907ccaa5`
 - **Base de l’unité de politiques d’arrêt et d’incident :** `e555a13bc8023ebb3dd7a9454719dd16144210e2`
+- **Base de l’unité de qualification Windows :** `f0cd29ccc40ac7c430130630f6e55f17b09f6968`
 - **Famille initiale :** `SCHEDULED_EVENTS`
 - **Mode d’acquisition prévu :** `DIRECT_LOCAL_ENDPOINT`
 - **Développement hors ligne J3 autorisé :** `YES`
@@ -138,9 +139,10 @@ validation juridique ou contractuelle. En conséquence :
 6. `test: cover J3 transport stop and incident policies` — terminé
    - couvrir succès, timeout, `400`, `401`, `403`, `429`, `5xx`, HTML inattendu, taille excessive,
      schéma incompatible, déduplication et absence de secret dans les logs.
-7. `docs: record J3 Windows manual-call qualification`
-   - seulement après le point de décision et, si autorisé, une requête unique ;
-   - consigner les preuves minimisées sans publier le payload brut.
+7. `docs: record J3 Windows manual-call qualification` — terminé pour le périmètre local et simulé
+   - le point de décision réel étant incomplet, arrêter la qualification avant tout transport ;
+   - consigner les preuves Windows minimisées sans publier de phrase active, de jeton ni de payload ;
+   - déclarer séparément la qualification technique réussie et la preuve de sortie réelle absente.
 
 Chaque unité part du commit précédent, reste autonome et fait l’objet d’un commit explicite. Une
 modification de persistance déclenche obligatoirement le profil `integration-tests`.
@@ -152,21 +154,24 @@ Toutes les conditions suivantes doivent être remplies :
 - [ ] décision explicite du propriétaire autorisant une requête unique `SCHEDULED_EVENTS` ;
 - [ ] examen des conditions d’utilisation considéré suffisant par le propriétaire ;
 - [ ] source et exactitude de l’URI documentées sans donnée de session ;
-- [ ] paramètre de date unique validé ;
-- [ ] tests standards hors ligne réussis ;
-- [ ] tests d’intégration PostgreSQL réussis ;
-- [ ] tests de transport sur serveur simulé réussis ;
-- [ ] confirmation que `127.0.0.1`, concurrence `1`, délai `3 s` et arrêt global sont effectifs ;
+- [x] paramètre de date unique validé ;
+- [x] tests standards hors ligne réussis ;
+- [x] tests d’intégration PostgreSQL réussis ;
+- [x] tests de transport sur serveur simulé réussis ;
+- [x] confirmation que `127.0.0.1`, concurrence `1`, délai `3 s` et arrêt global sont effectifs ;
 - [ ] preuve qu’aucun cookie, jeton ou secret n’est requis ;
-- [ ] sauvegarde ou stratégie de conservation locale décidée ;
-- [ ] application et PostgreSQL démarrés localement ;
-- [ ] procédure d’incident et d’arrêt disponible à l’écran et dans le runbook.
+- [x] sauvegarde ou stratégie de conservation locale décidée ;
+- [x] application et PostgreSQL démarrés localement ;
+- [x] procédure d’incident et d’arrêt disponible à l’écran et dans le runbook.
 
 Si une case manque, la qualification s’arrête avant le transport.
 
 ```text
 J3_WORK_ORDER=IN_DEVELOPMENT
 J3_OFFLINE_DEVELOPMENT_AUTHORIZED=YES
+J3_WINDOWS_LOCAL_QUALIFICATION=PASS
+J3_REAL_OUTPUT_PROOF=NOT_AVAILABLE
+J3_POINT_OF_DECISION=NOT_PASSED
 J3_REAL_ENDPOINT_URI_AUTHORIZED=NO
 J3_REAL_CALL_AUTHORIZED=NO
 J3_POLLING_AUTHORIZED=NO
@@ -432,4 +437,40 @@ J3_PROVIDER_TRANSPORT_ACTIVE=NO
 J3_REAL_ENDPOINT_URI=ABSENT
 J3_REAL_CALL_AUTHORIZED=NO
 J3_NEXT_UNIT=WINDOWS_MANUAL_CALL_QUALIFICATION_DECISION
+```
+
+## 16. Qualification Windows du parcours manuel
+
+L’unité `docs: record J3 Windows manual-call qualification`, fondée sur le commit
+`f0cd29ccc40ac7c430130630f6e55f17b09f6968`, enregistre :
+
+- la validation humaine sous Windows du démarrage protégé, du réarmement et de l’activation
+  explicite ;
+- la préparation d’une intention `SCHEDULED_EVENTS` datée et sa confirmation exacte ;
+- l’état terminal `CONFIRMED_BLOCKED`, avec action et transport fournisseur indisponibles ;
+- l’arrêt global immédiat, le verrouillage du circuit et l’annulation de l’intention active ;
+- la validation automatisée consolidée de `115` tests standards et `5` tests d’intégration ;
+- la qualification des incidents sur transport simulé, sans retry automatique ;
+- l’absence d’URI réelle, d’autorisation réseau et d’appel SofaScore exécuté.
+
+Le rapport détaillé est conservé dans
+`docs/validation/J3-WINDOWS-MANUAL-CALL-QUALIFICATION-20260812.md`. Les captures restent hors Git et
+le rapport ne reproduit ni phrase active, ni jeton, ni payload brut.
+
+Cette unité valide l’architecture technique hors ligne, mais ne vaut pas preuve de sortie réelle. Les
+trois premières conditions du point de décision et la preuve d’absence de secret fournisseur restent
+ouvertes. Le Work Order demeure donc `IN_DEVELOPMENT`.
+
+```text
+J3_LAST_PLANNED_DELIVERY_UNIT=COMPLETED_WITH_SCOPE_LIMITATION
+J3_WINDOWS_LOCAL_OPERATOR_QUALIFICATION=PASS
+J3_SIMULATED_TRANSPORT_POLICY_QUALIFICATION=PASS
+J3_PROVIDER_ACTION_AVAILABLE=NO
+J3_PROVIDER_TRANSPORT_ACTIVE=NO
+J3_REAL_ENDPOINT_URI=ABSENT
+J3_REAL_CALL_AUTHORIZED=NO
+J3_REAL_SOFASCORE_CALLS_EXECUTED=0
+J3_REAL_OUTPUT_PROOF=NOT_AVAILABLE
+J3_POINT_OF_DECISION=NOT_PASSED
+J3_WORK_ORDER=IN_DEVELOPMENT
 ```

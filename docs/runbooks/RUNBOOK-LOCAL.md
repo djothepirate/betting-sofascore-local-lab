@@ -191,6 +191,23 @@ la revue puis une nouvelle activation explicite.
 La preuve attendue conserve uniquement des codes d’incident et des métadonnées bornées. Ne pas
 copier un payload, un header ou une valeur sensible depuis les rapports de test.
 
+### 4.7 Qualification manuelle Windows J3
+
+Le rapport `docs/validation/J3-WINDOWS-MANUAL-CALL-QUALIFICATION-20260812.md` distingue deux
+résultats :
+
+- `PASS` pour le parcours opérateur local, l’arrêt global et les politiques simulées ;
+- `NOT_EXECUTED` pour l’appel réel et `NOT_AVAILABLE` pour sa preuve de sortie.
+
+Si le point de décision du Work Order n’est pas entièrement satisfait, exécuter seulement la
+séquence locale de la section 3.4, vérifier `CONFIRMED_BLOCKED`, appliquer l’arrêt global puis arrêter
+la qualification. Ne pas ajouter une URI, activer un profil réel ou rendre le bouton fournisseur
+disponible pour compléter artificiellement la preuve.
+
+La synthèse versionnée peut contenir les états du circuit, les codes d’incident et les comptes de
+tests. Elle ne doit jamais reproduire une phrase de confirmation active, un UUID, un jeton de
+formulaire, un cookie, un header, une URI fournisseur, un payload brut ou une donnée de session.
+
 ## 5. Arrêt
 
 Arrêt conservant les données :

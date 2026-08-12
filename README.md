@@ -27,6 +27,8 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
 - contrôle J3 visible avec arrêt global, activation distincte et confirmation exacte d’une intention datée ;
 - jeton de formulaire local lié à la session et à usage unique, sans rendre l’action fournisseur disponible ;
 - matrice J3 d’incidents simulés avec conservation du brut avant parsing, circuit ouvert et aucun retry automatique ;
+- qualification Windows du parcours opérateur local et des politiques simulées, avec preuve explicite
+  que l’action fournisseur reste indisponible ;
 
 ## Limite essentielle du bootstrap
 
@@ -202,11 +204,13 @@ Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces
 - [Work Order J0/J1](docs/work_orders/completed/WO-SS-20260808-001-bootstrap-j0-j1.md)
 - [Rapport de validation J2](docs/validation/J2-WINDOWS-VALIDATION-20260812.md)
 - [Work Order J2 validé](docs/work_orders/completed/WO-SS-20260808-002-fixtures-j2.md)
+- [Qualification Windows J3 — contrôle local et politiques simulées](docs/validation/J3-WINDOWS-MANUAL-CALL-QUALIFICATION-20260812.md)
 - [Work Order J3 actif](docs/work_orders/active/WO-SS-20260812-003-manual-call-j3.md)
 
 ## Prochaine frontière
 
-La prochaine frontière est le point de décision humain du Work Order avant toute qualification
-manuelle réelle. Aucun appel ne peut être déduit de la réussite des tests simulés : l’URI réelle,
-le connecteur, le profil live, l’adaptateur fournisseur et l’action réseau de l’interface restent
-bloqués, même après confirmation d’une intention.
+La qualification technique Windows locale est enregistrée avec le résultat `PASS`. La prochaine
+frontière reste le point de décision humain du Work Order avant toute qualification réelle. Aucun
+appel ne peut être déduit de cette réussite : la preuve de sortie fournisseur est `NOT_AVAILABLE` et
+l’URI réelle, le connecteur, le profil live, l’adaptateur fournisseur et l’action réseau de
+l’interface restent bloqués, même après confirmation d’une intention.

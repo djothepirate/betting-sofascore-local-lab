@@ -47,6 +47,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - contrat de transport J3 simulé, de sa frontière loopback et de sa composition avec les politiques.
 - contrat de confirmation manuelle J3, de ses transitions sûres et de ses protections Web locales.
 - matrice d’architecture des politiques J3 d’arrêt, d’incident, de conservation du brut et d’absence de retry.
+- qualification Windows J3 du parcours opérateur local, de l’arrêt global et des politiques simulées,
+  avec déclaration distincte de l’absence d’appel réel et de preuve de sortie fournisseur.
 
 ### Modifié
 
@@ -76,6 +78,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - suppression de la phrase de confirmation après usage, expiration ou arrêt global ; aucun contenu saisi n’est journalisé.
 - exceptions de transport réduites à des codes sûrs, sans URI, payload ou diagnostic interne ; aucune donnée partielle n’est persistée après un échec de lecture.
 - maintien de tous les incidents en circuit `OPEN` jusqu’à un arrêt et une nouvelle activation explicites, y compris après `Retry-After`.
+- arrêt de la qualification Windows avant transport tant que le point de décision réel reste incomplet ;
+  aucune phrase active, jeton, URI fournisseur ou donnée brute n’est versionné comme preuve.
 
 ## [0.1.0] — 2026-08-08
 
