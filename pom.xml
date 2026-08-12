@@ -11,7 +11,7 @@
     <relativePath/>
   </parent>
 
-  <groupId>com.geoffrey.betting</groupId>
+  <groupId>com.bettingproject</groupId>
   <artifactId>betting-sofascore-local-lab</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <name>SofaScore Local Lab</name>
@@ -149,6 +149,11 @@
                   <version>[25,26)</version>
                   <message>Java 25 LTS est requis pour compiler et exécuter le laboratoire.</message>
                 </requireJavaVersion>
+                <requireProperty>
+                  <property>project.groupId</property>
+                  <regex>^com\.bettingproject$</regex>
+                  <message>Le groupId Maven doit rester com.bettingproject.</message>
+                </requireProperty>
               </rules>
             </configuration>
           </execution>

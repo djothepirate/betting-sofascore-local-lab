@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.fixture;
 
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
+import com.bettingproject.sofascorelocal.security.SensitiveContentScanner;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.StreamReadFeature;
 import tools.jackson.databind.DeserializationFeature;
@@ -9,10 +10,8 @@ import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -60,7 +59,9 @@ public final class ClasspathFixtureLoader {
                     "Raw SHA-256 mismatch for fixture '" + manifest.fixtureId() + "'");
         }
 
-        FixtureContentKind contentKind = classify(payload, manifest.contentType());
+        FixtureContentKind contentKind = FixtureContentClassifier.classify(
+                payload,
+                manifest.contentType());
         Optional<String> canonicalJsonSha256 = canonicalHash(
                 manifest,
                 payload,
@@ -137,35 +138,6 @@ public final class ClasspathFixtureLoader {
                             + "': "
                             + findings);
         }
-    }
-
-    private static FixtureContentKind classify(byte[] payload, String declaredContentType) {
-        int prefixLength = Math.min(payload.length, 1024);
-        String prefix = new String(payload, 0, prefixLength, StandardCharsets.UTF_8).stripLeading();
-        if (prefix.startsWith("\uFEFF")) {
-            prefix = prefix.substring(1).stripLeading();
-        }
-
-        String lowerPrefix = prefix.toLowerCase(Locale.ROOT);
-        String lowerContentType = declaredContentType.toLowerCase(Locale.ROOT);
-
-        if (lowerPrefix.startsWith("<!doctype html")
-                || lowerPrefix.startsWith("<html")
-                || lowerPrefix.startsWith("<head")
-                || lowerPrefix.startsWith("<body")) {
-            return FixtureContentKind.HTML;
-        }
-        if (prefix.startsWith("{") || prefix.startsWith("[")) {
-            return FixtureContentKind.JSON;
-        }
-        if (lowerContentType.contains("text/html")) {
-            return FixtureContentKind.HTML;
-        }
-        if (lowerContentType.contains("application/json")
-                || lowerContentType.contains("+json")) {
-            return FixtureContentKind.JSON;
-        }
-        return FixtureContentKind.OTHER;
     }
 
     private static Optional<String> canonicalHash(

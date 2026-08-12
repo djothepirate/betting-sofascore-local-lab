@@ -28,6 +28,8 @@ class DashboardServiceTest {
 
         DashboardView dashboard = service.load();
 
+        assertThat(dashboard.connectorMode()).isEqualTo("LOCKED_OFFLINE_J3_POLICY");
+        assertThat(dashboard.configurationEnabled()).isFalse();
         assertThat(dashboard.databaseState()).isEqualTo("UNAVAILABLE");
         assertThat(dashboard.fixtureCorpus())
                 .isEqualTo(new DashboardView.FixtureCorpusView(

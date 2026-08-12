@@ -14,10 +14,10 @@ class ConnectorGateTest {
     private final ConnectorGate gate = new ConnectorGate();
 
     @Test
-    void remainsCodeLockedDuringJ1() {
-        assertThat(gate.mode()).isEqualTo(ConnectorMode.LOCKED_OFFLINE_J1);
+    void remainsCodeLockedDuringOfflineJ3PolicyDevelopment() {
+        assertThat(gate.mode()).isEqualTo(ConnectorMode.LOCKED_OFFLINE_J3_POLICY);
         assertThatThrownBy(() -> gate.requireNetworkCallAllowed(SofascoreEndpointType.SCHEDULED_EVENTS))
                 .isInstanceOf(NetworkAccessDisabledException.class)
-                .hasMessageContaining("NETWORK_CALLS_NOT_IMPLEMENTED_J1");
+                .hasMessageContaining("NETWORK_TRANSPORT_NOT_AUTHORIZED_J3");
     }
 }

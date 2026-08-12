@@ -4,26 +4,35 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance** et **J1 — Bootstrap**, puis le jalon **J2 — Fixtures** en cours, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap** et **J2 — Fixtures**. Le Work Order **J3 — Appel manuel** est ouvert pour le développement hors ligne des protections et de la conservation des preuves brutes, sans autorisation actuelle d’URI réelle ni d’appel fournisseur, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
 ## Ce qui est livré localement
 
 - dépôt Git autonome, documentation, ADR, règles agent et Work Orders ;
 - Java **25 LTS**, Spring Boot **4.1.0** et Maven Wrapper versionné ;
 - interface Spring MVC + Thymeleaf sur `127.0.0.1:8087` ;
-- PostgreSQL local dans Docker Desktop, migration Flyway initiale et stockage brut séparé ;
+- PostgreSQL local dans Docker Desktop, migrations Flyway V1/V2 et stockage brut séparé ;
 - Actuator, Caffeine, validation de configuration et garde de liaison locale ;
 - catalogue logique des familles d’endpoints, sans URI réelle ;
-- connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J1` ;
+- connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
 - tests unitaires hors ligne et test Flyway/Testcontainers dans un profil explicite ;
 - scripts PowerShell de configuration, préflight, démarrage, arrêt et vérification.
 - corpus synthétique `SCHEDULED_EVENTS` de neuf fixtures classpath avec hashes vérifiés ;
 - parseur hors ligne `scheduled-events-v1`, modèle local et tests de rupture de schéma ;
 - inventaire du corpus visible dans le tableau de bord, sans dépendance à PostgreSQL.
+- politique J3 hors ligne pour l’activation explicite, la confirmation par appel, le cache préalable, le délai minimal et l’arrêt global ;
+- circuit J3 en mémoire initialisé à `LOCKED`, incidents typés et garde atomique limitant la concurrence à un appel ;
+- persistance J3 des octets bruts avec taille, SHA-256, métadonnées bornées et déduplication par requête ;
+- transport J3 simulé limité à `127.0.0.1`, derrière la politique manuelle et la garde de concurrence ;
+- contrôle J3 visible avec arrêt global, activation distincte et confirmation exacte d’une intention datée ;
+- jeton de formulaire local lié à la session et à usage unique, sans rendre l’action fournisseur disponible ;
+- matrice J3 d’incidents simulés avec conservation du brut avant parsing, circuit ouvert et aucun retry automatique ;
+- qualification Windows du parcours opérateur local et des politiques simulées, avec preuve explicite
+  que l’action fournisseur reste indisponible ;
 
 ## Limite essentielle du bootstrap
 
-**Aucun appel SofaScore réel n’est implémenté.** Le dépôt ne contient ni chemin d’endpoint SofaScore, ni adaptateur de transport actif, ni polling. Le profil Maven `sofascore-live-test` échoue volontairement jusqu’au jalon J3 et à un Work Order dédié.
+**Aucun appel SofaScore réel n’est implémenté.** Le dépôt ne contient aucun chemin d’endpoint SofaScore, aucun adaptateur fournisseur actif et aucun polling. Le transport J3 présent ne peut cibler que l’adresse littérale `127.0.0.1` et une route de simulation fixe ; il n’est pas enregistré comme bean Spring. Le profil Maven `sofascore-live-test` reste volontairement bloqué jusqu’au point de décision du Work Order J3.
 
 Cette limite préserve la règle du Betting Project principal : aucun composant du VPS ne dépend du laboratoire, et l’arrêt du poste Windows ne doit avoir aucun effet sur la chaîne globale.
 
@@ -152,15 +161,17 @@ betting-sofascore-local-lab/
 └── src/
 ```
 
-## Modèle de données J1
+## Modèle de données J1 à J3
 
 La migration `V1__bootstrap_schema.sql` crée :
 
-- `provider_snapshot` : métadonnées de transport, payload JSONB, hash, parseur et statut de schéma ;
+- `provider_snapshot` : métadonnées de transport, emplacement normalisé JSONB, hash, parseur et statut de schéma ;
 - `export_manifest` : manifeste des futurs exports normalisés ;
 - `connector_control` : état opérateur persistant, initialisé à `network_enabled=false` et `circuit_state=LOCKED`.
 
-Le mode de provenance futur pour les appels du laboratoire est `DIRECT_LOCAL_ENDPOINT`. Il ne doit jamais être confondu avec une `VisualObservation` du projet global.
+La migration append-only `V2__raw_manual_call_snapshots.sql` ajoute à `provider_snapshot` les octets exacts dans `payload_raw` (`bytea`), leur taille et le mode de provenance obligatoire `DIRECT_LOCAL_ENDPOINT`. Le brut reste distinct de `payload_jsonb`, qui n’est pas alimenté par cette unité. La taille est limitée à 5 Mio et une même combinaison fournisseur, endpoint logique, clé de requête et SHA-256 est dédupliquée.
+
+Le mode `DIRECT_LOCAL_ENDPOINT` ne doit jamais être confondu avec une `VisualObservation` du projet global. Cette persistance est prête pour un transport futur, mais n’effectue elle-même aucun appel.
 
 ## Politique réseau J1
 
@@ -175,19 +186,31 @@ Le bootstrap cumule plusieurs barrières :
 7. l’application n’écoute que sur une adresse de boucle locale ;
 8. les paramètres imposent concurrence `1`, délai minimal `3s`, rafraîchissement et live désactivés.
 
-Le jalon J3 devra retirer **explicitement** certaines de ces barrières, une par une, après validation du J2 et création d’un Work Order borné.
+Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces barrières qu’une par une, conformément au Work Order borné et au point de décision humain.
 
 ## Documentation de référence
 
 - [ADR-SS-001](ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md)
 - [Architecture J0/J1](docs/architecture/ARCHITECTURE.md)
 - [Contrat hors ligne scheduled-events-v1](docs/architecture/SCHEDULED-EVENTS-V1.md)
+- [Politique réseau J3 hors ligne](docs/architecture/J3-OFFLINE-NETWORK-POLICY.md)
+- [Persistance des snapshots bruts J3](docs/architecture/J3-RAW-SNAPSHOT-PERSISTENCE.md)
+- [Transport scheduled-events J3 protégé et simulé](docs/architecture/J3-GUARDED-SCHEDULED-EVENTS-TRANSPORT.md)
+- [Confirmation explicite d’appel manuel J3](docs/architecture/J3-EXPLICIT-MANUAL-CALL-CONFIRMATION.md)
+- [Politiques d’arrêt et d’incident J3](docs/architecture/J3-TRANSPORT-STOP-AND-INCIDENT-POLICIES.md)
 - [Runbook local](docs/runbooks/RUNBOOK-LOCAL.md)
 - [Cadrage PDF](docs/reference/Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf)
 - [Rapport de validation du bootstrap](docs/validation/J0-J1-VALIDATION-REPORT.md)
 - [Work Order J0/J1](docs/work_orders/completed/WO-SS-20260808-001-bootstrap-j0-j1.md)
-- [Work Order J2 actif](docs/work_orders/active/WO-SS-20260808-002-fixtures-j2.md)
+- [Rapport de validation J2](docs/validation/J2-WINDOWS-VALIDATION-20260812.md)
+- [Work Order J2 validé](docs/work_orders/completed/WO-SS-20260808-002-fixtures-j2.md)
+- [Qualification Windows J3 — contrôle local et politiques simulées](docs/validation/J3-WINDOWS-MANUAL-CALL-QUALIFICATION-20260812.md)
+- [Work Order J3 actif](docs/work_orders/active/WO-SS-20260812-003-manual-call-j3.md)
 
 ## Prochaine frontière
 
-La prochaine frontière est la validation humaine et documentaire de **J2 — Fixtures**, puis la préparation d’un Work Order J3 séparé. Aucun appel réel, URI fournisseur ou déverrouillage du connecteur n’est autorisé par les travaux J2.
+La qualification technique Windows locale est enregistrée avec le résultat `PASS`. La prochaine
+frontière reste le point de décision humain du Work Order avant toute qualification réelle. Aucun
+appel ne peut être déduit de cette réussite : la preuve de sortie fournisseur est `NOT_AVAILABLE` et
+l’URI réelle, le connecteur, le profil live, l’adaptateur fournisseur et l’action réseau de
+l’interface restent bloqués, même après confirmation d’une intention.

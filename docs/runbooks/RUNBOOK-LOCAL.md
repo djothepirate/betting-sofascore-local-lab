@@ -93,21 +93,41 @@ http://127.0.0.1:8087
 
 Vérifier :
 
-- statut `LOCKED_OFFLINE_J1` ;
+- statut `LOCKED_OFFLINE_J3_POLICY` ;
 - connecteur `DISABLED` ;
 - base URL `NON_CONFIGURED` ;
 - PostgreSQL `AVAILABLE` ;
-- migration Flyway `1` ;
+- migration Flyway `2` ;
 - snapshots `0` sur une base neuve ;
 - corpus hors ligne `AVAILABLE_OFFLINE` ;
 - fixtures `9 / 9 disponibles` ;
 - résultats du corpus : `5` parsés, `3` incompatibilités de schéma prévues et `1` contenu inattendu prévu ;
 - origine `SYNTHETIC` et schéma fournisseur `NON VALIDÉ` ;
 - toutes les familles `Appelable = NON` et `URI = ABSENTE`.
+- contrôle manuel J3 avec `ARRÊT GLOBAL ACTIF`, circuit `LOCKED` et transport fournisseur
+  `INDISPONIBLE`.
 
 Le compteur de fixtures est calculé depuis les ressources classpath et reste disponible même si
 PostgreSQL est arrêté. Un état `INCOMPLETE` signifie qu’au moins une fixture déclarée n’a pas pu
 être chargée ou vérifiée ; il ne faut pas contourner le contrôle d’intégrité.
+
+### 3.4 Vérifier la confirmation locale sans appel fournisseur
+
+Cette procédure valide seulement les transitions de l’interface. Elle ne constitue ni une
+autorisation ni une tentative d’appel réel.
+
+1. dans « Contrôle opérateur local », vérifier les cinq verrous fournisseur et le bouton réel
+   désactivé ;
+2. sélectionner « Lever l’arrêt global » ;
+3. sélectionner ensuite « Activer le circuit » ;
+4. conserver ou choisir une date unique et sélectionner « Préparer l’intention » ;
+5. avant cinq minutes, recopier exactement la phrase affichée, cocher l’acquittement puis confirmer ;
+6. vérifier l’état `CONFIRMED_BLOCKED` et le message indiquant qu’aucun transport n’a été exécuté ;
+7. sélectionner « Arrêt global immédiat » et vérifier le retour du circuit à `LOCKED`.
+
+À chaque rechargement après une commande, un nouveau jeton de formulaire est émis. Ne pas rejouer
+une page historique ou réutiliser un formulaire déjà envoyé. Un redémarrage de l’application remet
+toujours l’arrêt global à l’état actif.
 
 ## 4. Validation
 
@@ -125,7 +145,8 @@ Aucun Docker ni accès SofaScore n’est requis par les tests standards.
 .\mvnw.cmd -Pintegration-tests verify
 ```
 
-Docker doit être disponible. Testcontainers vérifie les tables et l’état initial du connecteur.
+Docker doit être disponible. Testcontainers vérifie les migrations V1/V2, l’état initial du
+connecteur, la conservation exacte du brut et sa déduplication.
 
 ### 4.3 Script consolidé
 
@@ -133,6 +154,59 @@ Docker doit être disponible. Testcontainers vérifie les tables et l’état in
 powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File .\scripts\Verify-Local.ps1 -WithIntegrationTests
 ```
+
+### 4.4 Transport J3 simulé
+
+La suite standard exerce un `RestClient` avec `MockRestServiceServer`. Aucun serveur public ni
+SofaScore n’est contacté. Le contrat autorise seulement :
+
+```text
+http://127.0.0.1:<port>/simulated/scheduled-events?date=AAAA-MM-JJ
+```
+
+Toute autre origine, tout chemin libre, proxy, redirection ou retry doit faire échouer la revue. Le
+transport n’est pas un bean Spring et ne peut pas être déclenché depuis l’interface. Ne pas ajouter
+une base URL réelle pour « essayer » cette unité.
+
+### 4.5 Confirmation J3
+
+La suite standard couvre l’ordre des transitions, l’expiration à cinq minutes, la comparaison exacte,
+l’arrêt global, le jeton lié à la session et son usage unique. La confirmation finale produit
+`CONFIRMED_BLOCKED` : elle ne branche pas le transport simulé et ne peut pas joindre un fournisseur.
+
+### 4.6 Politiques d’arrêt et d’incident J3
+
+La suite standard simule les statuts `400`, `401`, `403`, `429`, `500` et `503`, le timeout, les
+erreurs de lecture, le dépassement de 5 Mio, le contenu sensible, le HTML inattendu et la rupture de
+schéma. Pour vérifier également la transition PostgreSQL `RAW_ONLY` avant parsing :
+
+```powershell
+.\mvnw.cmd -Pintegration-tests verify
+```
+
+Pour `429`, `Retry-After` est seulement une frontière de blocage du circuit. Ne jamais l’interpréter
+comme une autorisation de retry ou de réouverture automatique. Un incident exige toujours l’arrêt,
+la revue puis une nouvelle activation explicite.
+
+La preuve attendue conserve uniquement des codes d’incident et des métadonnées bornées. Ne pas
+copier un payload, un header ou une valeur sensible depuis les rapports de test.
+
+### 4.7 Qualification manuelle Windows J3
+
+Le rapport `docs/validation/J3-WINDOWS-MANUAL-CALL-QUALIFICATION-20260812.md` distingue deux
+résultats :
+
+- `PASS` pour le parcours opérateur local, l’arrêt global et les politiques simulées ;
+- `NOT_EXECUTED` pour l’appel réel et `NOT_AVAILABLE` pour sa preuve de sortie.
+
+Si le point de décision du Work Order n’est pas entièrement satisfait, exécuter seulement la
+séquence locale de la section 3.4, vérifier `CONFIRMED_BLOCKED`, appliquer l’arrêt global puis arrêter
+la qualification. Ne pas ajouter une URI, activer un profil réel ou rendre le bouton fournisseur
+disponible pour compléter artificiellement la preuve.
+
+La synthèse versionnée peut contenir les états du circuit, les codes d’incident et les comptes de
+tests. Elle ne doit jamais reproduire une phrase de confirmation active, un UUID, un jeton de
+formulaire, un cookie, un header, une URI fournisseur, un payload brut ou une donnée de session.
 
 ## 5. Arrêt
 
@@ -196,7 +270,23 @@ Puis rechercher toute surcharge de propriété dans Eclipse, les variables d’e
 
 ### 6.6 Profil `sofascore-live-test` activé
 
-L’échec est volontaire au J1. Ne pas contourner l’Enforcer. Créer le Work Order J3 après validation du J2.
+L’échec reste volontaire pendant les unités hors ligne J3. Ne pas contourner l’Enforcer. Une
+éventuelle qualification réelle exige le point de décision complet du Work Order J3.
+
+### 6.7 Métadonnées Actuator obsolètes après une modification du POM
+
+Si `/actuator/info` affiche un ancien `build.group` alors que le `pom.xml` contient
+`com.bettingproject`, l’application utilise un `target/classes/META-INF/build-info.properties`
+généré avant l’actualisation du modèle Maven Eclipse.
+
+1. arrêter l’application ;
+2. dans Eclipse, exécuter **Maven → Update Project** sur le projet ;
+3. exécuter **Project → Clean** ;
+4. lancer `mvnw.cmd clean verify` ;
+5. redémarrer l’application et vérifier que `build.group` vaut `com.bettingproject`.
+
+Le build échoue désormais si le `project.groupId` diffère de `com.bettingproject` ou si les
+métadonnées Spring Boot générées exposent encore l’ancienne valeur.
 
 ## 7. Sauvegarde locale
 
@@ -208,6 +298,10 @@ Avant que les données réelles n’existent, le volume PostgreSQL reste recréa
 4. copier les exports et manifestes ;
 5. tester une restauration sur une base distincte ;
 6. documenter la date, le hash et le résultat.
+
+Les octets bruts résident uniquement dans la colonne locale `provider_snapshot.payload_raw`. Ne pas
+les copier dans Git, un ticket, un chat ou les logs. `payload_jsonb` reste réservé à une évolution
+distincte de normalisation et ne doit pas servir de duplicata du brut.
 
 ## 8. Interdictions d’exploitation
 

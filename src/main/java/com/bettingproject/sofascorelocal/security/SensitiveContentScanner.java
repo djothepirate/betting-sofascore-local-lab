@@ -1,10 +1,11 @@
-package com.bettingproject.sofascorelocal.fixture;
+package com.bettingproject.sofascorelocal.security;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Pattern;
 
-final class SensitiveContentScanner {
+public final class SensitiveContentScanner {
 
     private static final List<Rule> RULES = List.of(
             new Rule(
@@ -32,7 +33,8 @@ final class SensitiveContentScanner {
     private SensitiveContentScanner() {
     }
 
-    static List<String> findings(byte[] content) {
+    public static List<String> findings(byte[] content) {
+        Objects.requireNonNull(content, "content");
         String text = new String(content, StandardCharsets.UTF_8);
         return RULES.stream()
                 .filter(rule -> rule.pattern().matcher(text).find())

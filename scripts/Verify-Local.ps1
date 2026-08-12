@@ -23,7 +23,6 @@ $forbiddenPatterns = @(
     '\bProxySelector\b',
     '\borg\.openqa\.selenium\b',
     '\bcom\.microsoft\.playwright\b',
-    '\bRestClient\s*\.(?:builder|create)\b',
     '\bWebClient\s*\.(?:builder|create)\b'
 )
 
@@ -35,9 +34,18 @@ foreach ($pattern in $forbiddenPatterns) {
         $violations += $matches
     }
 }
+
+$approvedRestClientConstruction = Join-Path $sourceRoot `
+    'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\LoopbackScheduledEventsRestTransport.java'
+$restClientConstructions = $sourceFiles |
+    Select-String -Pattern '\bRestClient\s*\.(?:builder|create)\b' -CaseSensitive:$false |
+    Where-Object { $_.Path -ne $approvedRestClientConstruction }
+if ($restClientConstructions) {
+    $violations += $restClientConstructions
+}
 if ($violations.Count -gt 0) {
     $violations | ForEach-Object { Write-Error ($_.ToString()) }
-    throw 'J1 source guardrail scan failed'
+    throw 'J3 source guardrail scan failed'
 }
 
 Push-Location $repositoryRoot

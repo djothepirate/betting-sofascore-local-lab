@@ -1,5 +1,6 @@
 package com.bettingproject.sofascorelocal.fixture;
 
+import com.bettingproject.sofascorelocal.security.Sha256;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.StreamReadFeature;
 import tools.jackson.databind.DeserializationFeature;
@@ -9,9 +10,6 @@ import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ArrayNode;
 import tools.jackson.databind.node.ObjectNode;
 
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
-import java.util.HexFormat;
 import java.util.Objects;
 
 public final class FixturePayloadHasher {
@@ -25,14 +23,7 @@ public final class FixturePayloadHasher {
     }
 
     public static String rawSha256(byte[] payload) {
-        Objects.requireNonNull(payload, "payload");
-        try {
-            MessageDigest digest = MessageDigest.getInstance("SHA-256");
-            return HexFormat.of().formatHex(digest.digest(payload));
-        }
-        catch (NoSuchAlgorithmException exception) {
-            throw new IllegalStateException("SHA-256 is not available", exception);
-        }
+        return Sha256.hex(payload);
     }
 
     public static byte[] canonicalizeJson(byte[] payload) {

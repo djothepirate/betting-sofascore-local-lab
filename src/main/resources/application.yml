@@ -42,6 +42,11 @@ server:
   address: 127.0.0.1
   port: 8087
   shutdown: graceful
+  servlet:
+    session:
+      cookie:
+        http-only: true
+        same-site: strict
   error:
     include-message: never
     include-stacktrace: never
@@ -62,7 +67,7 @@ info:
   app:
     name: SofaScore Local Lab
     version: 0.1.0-SNAPSHOT
-    phase: J0-J1
+    phase: J3-TRANSPORT-STOP-INCIDENT-POLICIES
     status: EXPERIMENTAL_LOCAL_ONLY
 
 sofascore:

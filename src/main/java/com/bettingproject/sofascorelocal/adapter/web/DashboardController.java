@@ -1,5 +1,8 @@
 package com.bettingproject.sofascorelocal.adapter.web;
 
+import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlService;
+import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
+import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -8,14 +11,25 @@ import org.springframework.web.bind.annotation.GetMapping;
 public class DashboardController {
 
     private final DashboardService dashboardService;
+    private final J3ManualCallControlService manualCallControlService;
+    private final LocalFormTokenService formTokenService;
 
-    public DashboardController(DashboardService dashboardService) {
+    public DashboardController(
+            DashboardService dashboardService,
+            J3ManualCallControlService manualCallControlService,
+            LocalFormTokenService formTokenService) {
         this.dashboardService = dashboardService;
+        this.manualCallControlService = manualCallControlService;
+        this.formTokenService = formTokenService;
     }
 
     @GetMapping({"/", "/dashboard"})
-    public String dashboard(Model model) {
+    public String dashboard(Model model, HttpSession session) {
         model.addAttribute("dashboard", dashboardService.load());
+        model.addAttribute(
+                "manualCall",
+                ManualCallControlView.from(manualCallControlService.snapshot()));
+        model.addAttribute("localFormToken", formTokenService.issue(session));
         return "dashboard";
     }
 }
