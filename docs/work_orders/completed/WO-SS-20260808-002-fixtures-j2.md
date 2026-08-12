@@ -1,15 +1,19 @@
 # WO-SS-20260808-002 — J2 Fixtures et premier contrat de parsing hors ligne
 
-- **Statut :** `IN_DEVELOPMENT`
+- **Statut :** `VALIDATED`
 - **Date :** 2026-08-08
 - **Date de démarrage :** 2026-08-11
+- **Date de validation :** 2026-08-12
 - **Prérequis :** WO-SS-20260808-001 validé sous Windows
 - **Jalon :** J2 — Fixtures
 - **Branche :** `feat/j2-scheduled-events-fixtures`
 - **Commit de base :** `197bf01c10c813374f1b701c26ff958497b0d08a`
-- **Base de l’unité parseur :** `415dd4533ac9b3911da70eb63b70b83cf62755e5`
-- **Base de l’unité tests de rupture :** `94368fd974b29de31e019216072cf30cf47b19c9`
-- **Base de l’unité tableau de bord :** `6c6aa3c0235dec9502a6758d54b3ad119730e7a4`
+- **Base de l’unité parseur :** `3d0803e694a3d52597660139524d647c1ca2ec9f`
+- **Base de l’unité tests de rupture :** `59c80fdb763f630cb9fa790c1053bab37e458adb`
+- **Base de l’unité tableau de bord :** `b3076826ba60d82bfa379ae58250987a59521c44`
+- **Commit technique validé :** `4ba0232e81f86c306df187887fcac49b46619b34`
+- **Commit final de la branche :** `74245896be67d091787e8a67afa2f7b5cce257c8`
+- **Commit de fusion sur `main` :** `b2561e542b1f893ec2f15c5eaeb67a361ee551ea`
 - **Tag de base :** `j0-j1-v0.1.1`
 - **Première famille :** `SCHEDULED_EVENTS`
 - **Réseau autorisé :** `NO`
@@ -70,12 +74,12 @@ Livrables attendus :
 ## 5. Critères d’acceptation
 
 - [x] aucun changement du statut J1 réseau ;
-- [ ] fixtures documentées et minimisées ;
+- [x] fixtures documentées et minimisées ;
 - [x] parseur versionné ;
 - [x] tests nominaux et de rupture réussis ;
-- [ ] aucun appel réseau capturé ;
+- [x] aucun appel réseau exécuté pendant le développement et la validation ;
 - [x] rapport de décision indiquant les champs retenus, ignorés et obligatoires ;
-- [ ] préparation du Work Order J3, sans l’exécuter.
+- [x] préparation du Work Order J3 distinct, sans appel réel.
 
 ## 6. Décisions actées et restant à prendre
 
@@ -153,3 +157,29 @@ fixtures déclarées et disponibles, la répartition `PARSED`, `SCHEMA_INCOMPATI
 Si une ressource ne peut plus être chargée ou vérifiée, le tableau de bord reste disponible et le
 corpus passe à l’état `INCOMPLETE` avec un compteur d’échecs. Cet inventaire n’utilise ni réseau,
 ni base de données, ni lecture d’un répertoire extérieur au classpath de l’application.
+
+## 10. Validation et clôture
+
+La validation Windows est consignée dans
+`docs/validation/J2-WINDOWS-VALIDATION-20260812.md`. Elle établit notamment :
+
+- la réussite des tests Maven hors ligne et des tests d’intégration PostgreSQL ;
+- la disponibilité des neuf fixtures et la répartition attendue des résultats ;
+- le rendu du corpus dans le tableau de bord local ;
+- le maintien de la liaison à la boucle locale ;
+- l’absence d’URI réelle, d’appel SofaScore, de déverrouillage du connecteur et d’accès au VPS ;
+- l’arrêt propre de l’application et de PostgreSQL.
+
+La Pull Request GitHub `#2` a été fusionnée sur `main` par un merge commit. Le jalon J2 est donc
+clôturé avec le statut `VALIDATED`. Cette clôture valide le corpus synthétique et le comportement
+hors ligne ; elle ne valide pas le schéma réel du fournisseur et n’autorise pas à elle seule un appel
+réseau.
+
+```text
+J2_STATUS=VALIDATED
+J2_WINDOWS_MANUAL_VALIDATION=PASS
+J2_MERGE_COMMIT=b2561e542b1f893ec2f15c5eaeb67a361ee551ea
+PROVIDER_SCHEMA_VALIDATED=NO
+REAL_SOFASCORE_CALLS_EXECUTED=NO
+J3_WORK_ORDER_REQUIRED=YES
+```

@@ -4,7 +4,7 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance** et **J1 — Bootstrap**, puis le jalon **J2 — Fixtures** en cours, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap** et **J2 — Fixtures**. Le Work Order **J3 — Appel manuel** est ouvert pour le développement hors ligne des protections, sans autorisation actuelle d’URI réelle ni d’appel fournisseur, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
 ## Ce qui est livré localement
 
@@ -186,8 +186,10 @@ Le jalon J3 devra retirer **explicitement** certaines de ces barrières, une par
 - [Cadrage PDF](docs/reference/Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf)
 - [Rapport de validation du bootstrap](docs/validation/J0-J1-VALIDATION-REPORT.md)
 - [Work Order J0/J1](docs/work_orders/completed/WO-SS-20260808-001-bootstrap-j0-j1.md)
-- [Work Order J2 actif](docs/work_orders/active/WO-SS-20260808-002-fixtures-j2.md)
+- [Rapport de validation J2](docs/validation/J2-WINDOWS-VALIDATION-20260812.md)
+- [Work Order J2 validé](docs/work_orders/completed/WO-SS-20260808-002-fixtures-j2.md)
+- [Work Order J3 actif](docs/work_orders/active/WO-SS-20260812-003-manual-call-j3.md)
 
 ## Prochaine frontière
 
-La prochaine frontière est la validation humaine et documentaire de **J2 — Fixtures**, puis la préparation d’un Work Order J3 séparé. Aucun appel réel, URI fournisseur ou déverrouillage du connecteur n’est autorisé par les travaux J2.
+La prochaine frontière est le développement hors ligne des politiques réseau, du circuit d’arrêt et de la conservation du brut prévus par **J3 — Appel manuel**. Le Work Order J3 impose un point de décision humain distinct avant toute URI réelle ou requête fournisseur. Dans l’état actuel, le connecteur, le profil réel et toutes les actions réseau restent bloqués.
