@@ -104,10 +104,30 @@ Vérifier :
 - résultats du corpus : `5` parsés, `3` incompatibilités de schéma prévues et `1` contenu inattendu prévu ;
 - origine `SYNTHETIC` et schéma fournisseur `NON VALIDÉ` ;
 - toutes les familles `Appelable = NON` et `URI = ABSENTE`.
+- contrôle manuel J3 avec `ARRÊT GLOBAL ACTIF`, circuit `LOCKED` et transport fournisseur
+  `INDISPONIBLE`.
 
 Le compteur de fixtures est calculé depuis les ressources classpath et reste disponible même si
 PostgreSQL est arrêté. Un état `INCOMPLETE` signifie qu’au moins une fixture déclarée n’a pas pu
 être chargée ou vérifiée ; il ne faut pas contourner le contrôle d’intégrité.
+
+### 3.4 Vérifier la confirmation locale sans appel fournisseur
+
+Cette procédure valide seulement les transitions de l’interface. Elle ne constitue ni une
+autorisation ni une tentative d’appel réel.
+
+1. dans « Contrôle opérateur local », vérifier les cinq verrous fournisseur et le bouton réel
+   désactivé ;
+2. sélectionner « Lever l’arrêt global » ;
+3. sélectionner ensuite « Activer le circuit » ;
+4. conserver ou choisir une date unique et sélectionner « Préparer l’intention » ;
+5. avant cinq minutes, recopier exactement la phrase affichée, cocher l’acquittement puis confirmer ;
+6. vérifier l’état `CONFIRMED_BLOCKED` et le message indiquant qu’aucun transport n’a été exécuté ;
+7. sélectionner « Arrêt global immédiat » et vérifier le retour du circuit à `LOCKED`.
+
+À chaque rechargement après une commande, un nouveau jeton de formulaire est émis. Ne pas rejouer
+une page historique ou réutiliser un formulaire déjà envoyé. Un redémarrage de l’application remet
+toujours l’arrêt global à l’état actif.
 
 ## 4. Validation
 
@@ -147,6 +167,12 @@ http://127.0.0.1:<port>/simulated/scheduled-events?date=AAAA-MM-JJ
 Toute autre origine, tout chemin libre, proxy, redirection ou retry doit faire échouer la revue. Le
 transport n’est pas un bean Spring et ne peut pas être déclenché depuis l’interface. Ne pas ajouter
 une base URL réelle pour « essayer » cette unité.
+
+### 4.5 Confirmation J3
+
+La suite standard couvre l’ordre des transitions, l’expiration à cinq minutes, la comparaison exacte,
+l’arrêt global, le jeton lié à la session et son usage unique. La confirmation finale produit
+`CONFIRMED_BLOCKED` : elle ne branche pas le transport simulé et ne peut pas joindre un fournisseur.
 
 ## 5. Arrêt
 

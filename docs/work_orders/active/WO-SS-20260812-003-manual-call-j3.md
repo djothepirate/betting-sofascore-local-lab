@@ -10,6 +10,7 @@
 - **Base de l’unité de politique réseau hors ligne :** `c51c45f4831dad2922018e25baee97dcf7bbcf5c`
 - **Base de l’unité de persistance brute :** `1a9ca0e753cedf1ac4730adea865bd7ea3369660`
 - **Base de l’unité de transport simulé :** `f8f01225bd4efa0eead432c90899d6c9e1f293b9`
+- **Base de l’unité de confirmation explicite :** `c33192969f780dfa6d5d98590c4fee79907ccaa5`
 - **Famille initiale :** `SCHEDULED_EVENTS`
 - **Mode d’acquisition prévu :** `DIRECT_LOCAL_ENDPOINT`
 - **Développement hors ligne J3 autorisé :** `YES`
@@ -130,7 +131,7 @@ validation juridique ou contractuelle. En conséquence :
    - introduire le transport derrière les politiques ;
    - utiliser un serveur simulé dans les tests ;
    - conserver le profil réel bloqué.
-5. `feat: add explicit manual-call confirmation`
+5. `feat: add explicit manual-call confirmation` — terminé
    - exposer l’activation, la confirmation, l’arrêt global et les incidents dans l’interface locale ;
    - garder les actions réelles désactivées en l’absence de configuration et d’autorisation.
 6. `test: cover J3 transport stop and incident policies`
@@ -343,4 +344,45 @@ J3_REAL_ENDPOINT_URI=ABSENT
 J3_PROVIDER_TRANSPORT_ACTIVE=NO
 J3_RETRY_POLICY=NONE
 J3_NEXT_UNIT=EXPLICIT_MANUAL_CALL_CONFIRMATION
+```
+
+## 14. Avancement de la confirmation manuelle explicite
+
+L’unité `feat: add explicit manual-call confirmation` introduit :
+
+- un état en mémoire démarrant avec arrêt global actif et circuit `LOCKED` à chaque lancement ;
+- un réarmement et une activation opérateur distincts avant toute préparation ;
+- une intention `SCHEDULED_EVENTS` limitée à une date et à une clé de requête canonique ;
+- un UUID et une phrase exacte à six chiffres, valables cinq minutes et supprimés après usage ;
+- une case d’acquittement obligatoire et un état terminal `CONFIRMED_BLOCKED` ;
+- un arrêt global immédiat qui verrouille le circuit et annule toute intention active ;
+- cinq routes `POST` locales protégées par un jeton de session aléatoire à usage unique ;
+- un tableau de bord exposant circuit, incident, étapes opérateur et verrous fournisseur ;
+- une action fournisseur toujours désactivée, même après confirmation réussie.
+
+Le service de contrôle ne référence aucun transport. `DisabledSofascoreDataProvider` reste actif,
+`ConnectorGate` demeure bloquant, le catalogue ne contient aucune URI appelable et le profil réel
+échoue toujours. Le contrat détaillé est consigné dans
+`docs/architecture/J3-EXPLICIT-MANUAL-CALL-CONFIRMATION.md`.
+
+Validation exécutée le 2026-08-12 :
+
+- `scripts/Verify-Local.ps1` : préflight Java 25 et scanner de garde-fous réussis ;
+- `mvnw.cmd clean verify` exécuté par le script : `93` tests, `0` échec, `0` erreur,
+  `0` ignoré ;
+- `target/classes/META-INF/build-info.properties` : `build.group=com.bettingproject` ;
+- tests d’intégration PostgreSQL non rejoués, cette unité ne modifiant ni migration ni
+  persistance ;
+- appels réseau SofaScore exécutés : `0`.
+
+```text
+J3_EXPLICIT_CONFIRMATION=IMPLEMENTED
+J3_CONFIRMATION_TTL=PT5M
+J3_GLOBAL_STOP_DEFAULT=ACTIVE
+J3_CONFIRMED_STATE=CONFIRMED_BLOCKED
+J3_FORM_TOKEN=SESSION_BOUND_SINGLE_USE
+J3_PROVIDER_TRANSPORT_ACTIVE=NO
+J3_REAL_ENDPOINT_URI=ABSENT
+J3_REAL_CALL_AUTHORIZED=NO
+J3_NEXT_UNIT=TRANSPORT_STOP_AND_INCIDENT_POLICY_TESTS
 ```

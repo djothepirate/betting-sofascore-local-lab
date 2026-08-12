@@ -26,6 +26,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - transport `RestClient` synchrone sans proxy ni redirection, avec délais plafonnés, lecture bornée et conservation des octets de réponse ;
 - orchestrateur appliquant la politique J3 puis la garde atomique avant toute entrée/sortie simulée ;
 - tests de serveur simulé couvrant la requête exacte, le statut `429` sans retry, la taille maximale et le rejet de contenu sensible ;
+- contrôle opérateur J3 en mémoire démarrant sous arrêt global, avec réarmement et activation distincts ;
+- intention manuelle `SCHEDULED_EVENTS` datée, phrase exacte à usage unique, acquittement explicite et expiration après cinq minutes ;
+- tableau de bord local exposant circuit, incidents, arrêt global, confirmation et verrous fournisseur sans rendre le transport disponible ;
 
 ### Documentation
 
@@ -38,6 +41,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - contrat d’architecture de la politique réseau J3 hors ligne, de son ordre d’évaluation et de ses transitions de circuit.
 - contrat de persistance J3 du snapshot brut, de ses contraintes, de sa clé de déduplication et de ses limites de sécurité.
 - contrat de transport J3 simulé, de sa frontière loopback et de sa composition avec les politiques.
+- contrat de confirmation manuelle J3, de ses transitions sûres et de ses protections Web locales.
 
 ### Modifié
 
@@ -47,6 +51,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - mode visible du verrou mis à jour vers `LOCKED_OFFLINE_J3_POLICY` sans ouvrir le transport.
 - phase applicative avancée à `J3-OFFLINE-RAW-PERSISTENCE` sans modifier l’état du connecteur.
 - phase applicative avancée à `J3-GUARDED-SIMULATED-TRANSPORT`, toujours sans transport fournisseur actif.
+- phase applicative avancée à `J3-EXPLICIT-MANUAL-CONFIRMATION`, avec confirmation d’intention uniquement.
 - identité de build Maven protégée par Enforcer et par un test des métadonnées Actuator générées,
   afin d’empêcher la réapparition de `com.geoffrey.betting` depuis un dossier `target` obsolète.
 - calcul SHA-256 et détection de contenu sensible mutualisés entre les fixtures hors ligne et les futures preuves brutes.
@@ -59,6 +64,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - rejet avant persistance des payloads dépassant 5 Mio ou contenant des motifs de secret, cookie, jeton ou clé privée ; aucun octet brut n’est journalisé ou versionné.
 - maintien de `payload_jsonb` à `NULL` pour les snapshots bruts afin d’éviter toute normalisation implicite avant parsing.
 - maintien de `ConnectorGate`, du catalogue, du profil réel et de l’adaptateur fournisseur en état bloqué ; le seul chemin HTTP introduit cible strictement une simulation sur `127.0.0.1`.
+- formulaires opérateur protégés par un jeton aléatoire lié à la session et à usage unique, avec cookie `HttpOnly` et `SameSite=Strict`.
+- suppression de la phrase de confirmation après usage, expiration ou arrêt global ; aucun contenu saisi n’est journalisé.
 
 ## [0.1.0] — 2026-08-08
 
