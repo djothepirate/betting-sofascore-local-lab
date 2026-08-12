@@ -97,7 +97,7 @@ Vérifier :
 - connecteur `DISABLED` ;
 - base URL `NON_CONFIGURED` ;
 - PostgreSQL `AVAILABLE` ;
-- migration Flyway `1` ;
+- migration Flyway `2` ;
 - snapshots `0` sur une base neuve ;
 - corpus hors ligne `AVAILABLE_OFFLINE` ;
 - fixtures `9 / 9 disponibles` ;
@@ -125,7 +125,8 @@ Aucun Docker ni accès SofaScore n’est requis par les tests standards.
 .\mvnw.cmd -Pintegration-tests verify
 ```
 
-Docker doit être disponible. Testcontainers vérifie les tables et l’état initial du connecteur.
+Docker doit être disponible. Testcontainers vérifie les migrations V1/V2, l’état initial du
+connecteur, la conservation exacte du brut et sa déduplication.
 
 ### 4.3 Script consolidé
 
@@ -196,7 +197,8 @@ Puis rechercher toute surcharge de propriété dans Eclipse, les variables d’e
 
 ### 6.6 Profil `sofascore-live-test` activé
 
-L’échec est volontaire au J1. Ne pas contourner l’Enforcer. Créer le Work Order J3 après validation du J2.
+L’échec reste volontaire pendant les unités hors ligne J3. Ne pas contourner l’Enforcer. Une
+éventuelle qualification réelle exige le point de décision complet du Work Order J3.
 
 ## 7. Sauvegarde locale
 
@@ -208,6 +210,10 @@ Avant que les données réelles n’existent, le volume PostgreSQL reste recréa
 4. copier les exports et manifestes ;
 5. tester une restauration sur une base distincte ;
 6. documenter la date, le hash et le résultat.
+
+Les octets bruts résident uniquement dans la colonne locale `provider_snapshot.payload_raw`. Ne pas
+les copier dans Git, un ticket, un chat ou les logs. `payload_jsonb` reste réservé à une évolution
+distincte de normalisation et ne doit pas servir de duplicata du brut.
 
 ## 8. Interdictions d’exploitation
 

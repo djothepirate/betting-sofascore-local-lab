@@ -46,7 +46,7 @@
       <p class="metric" th:classappend="${dashboard.databaseState == 'AVAILABLE'} ? ' safe' : ' danger'"
          th:text="${dashboard.databaseState}">AVAILABLE</p>
       <dl>
-        <div><dt>Migration Flyway</dt><dd th:text="${dashboard.flywayVersion}">1</dd></div>
+        <div><dt>Migration Flyway</dt><dd th:text="${dashboard.flywayVersion}">2</dd></div>
         <div><dt>Snapshots</dt><dd th:text="${dashboard.snapshotCount}">0</dd></div>
         <div><dt>Incidents</dt><dd th:text="${dashboard.incidentCount}">0</dd></div>
       </dl>
@@ -181,7 +181,7 @@
 </main>
 
 <footer>
-  <div class="shell">SofaScore Local Lab v0.1.0-SNAPSHOT — J2 Fixtures hors ligne</div>
+  <div class="shell">SofaScore Local Lab v0.1.0-SNAPSHOT — J3 Appel manuel hors ligne</div>
 </footer>
 </body>
 </html>

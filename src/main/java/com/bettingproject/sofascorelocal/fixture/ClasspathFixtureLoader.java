@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.fixture;
 
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
+import com.bettingproject.sofascorelocal.security.SensitiveContentScanner;
 import tools.jackson.core.JacksonException;
 import tools.jackson.core.StreamReadFeature;
 import tools.jackson.databind.DeserializationFeature;

@@ -8,6 +8,7 @@
 - **Branche :** `feat/j3-manual-call`
 - **Commit de base :** `b2561e542b1f893ec2f15c5eaeb67a361ee551ea`
 - **Base de l’unité de politique réseau hors ligne :** `c51c45f4831dad2922018e25baee97dcf7bbcf5c`
+- **Base de l’unité de persistance brute :** `1a9ca0e753cedf1ac4730adea865bd7ea3369660`
 - **Famille initiale :** `SCHEDULED_EVENTS`
 - **Mode d’acquisition prévu :** `DIRECT_LOCAL_ENDPOINT`
 - **Développement hors ligne J3 autorisé :** `YES`
@@ -120,7 +121,7 @@ validation juridique ou contractuelle. En conséquence :
 2. `feat: add offline J3 network policy and circuit model` — terminé
    - modéliser activation, délai, concurrence, cache, arrêt et incidents ;
    - tester sans URI réelle et sans réseau.
-3. `feat: persist raw manual-call snapshots`
+3. `feat: persist raw manual-call snapshots` — terminé
    - ajouter uniquement les évolutions append-only nécessaires ;
    - tester avec Testcontainers ;
    - garantir la déduplication par hash et la séparation brut/normalisé.
@@ -251,8 +252,50 @@ J3_OFFLINE_POLICY=IMPLEMENTED
 J3_CIRCUIT_MODEL=IMPLEMENTED
 J3_SINGLE_CALL_GUARD=IMPLEMENTED
 J3_INCIDENT_PERSISTENCE=NOT_STARTED
-J3_RAW_SNAPSHOT_PERSISTENCE=NOT_STARTED
+J3_RAW_SNAPSHOT_PERSISTENCE=IMPLEMENTED
+J3_DATABASE_MIGRATION=V2
+J3_RAW_PAYLOAD_LIMIT_BYTES=5242880
+J3_RAW_SNAPSHOT_DEDUPLICATION=IMPLEMENTED
 J3_TRANSPORT=NOT_STARTED
 J3_REAL_ENDPOINT_URI_AUTHORIZED=NO
 J3_REAL_CALL_AUTHORIZED=NO
+```
+
+## 12. Avancement de la persistance des snapshots bruts
+
+L’unité `feat: persist raw manual-call snapshots` introduit :
+
+- un contrat de domaine immuable pour les métadonnées et les octets bruts d’un futur appel manuel ;
+- une copie défensive du payload, une limite de 5 Mio et un SHA-256 calculé avant persistance ;
+- la migration append-only `V2__raw_manual_call_snapshots.sql` ajoutant `payload_raw`, sa taille et
+  la provenance obligatoire `DIRECT_LOCAL_ENDPOINT` ;
+- un port de persistance et un adaptateur JDBC retournant `INSERTED` ou `DEDUPLICATED` ;
+- une déduplication atomique par fournisseur, endpoint logique, clé de requête et SHA-256 ;
+- le maintien de `payload_jsonb` à `NULL`, afin de séparer strictement preuve brute et donnée
+  normalisée ;
+- des validations empêchant l’écriture de métadonnées non canoniques, de payloads trop grands ou
+  de motifs sensibles ;
+- des tests unitaires hors ligne et des tests PostgreSQL/Testcontainers couvrant la migration V2,
+  la fidélité binaire, les contraintes et la déduplication.
+
+Cette unité n’introduit ni transport, ni URI réelle, ni stockage de headers, ni persistance
+d’incident. Le profil réel reste bloqué, `ConnectorGate` refuse toujours tout appel et le catalogue
+reste non appelable. Le contrat détaillé est consigné dans
+`docs/architecture/J3-RAW-SNAPSHOT-PERSISTENCE.md`.
+
+Validation exécutée le 2026-08-12 :
+
+- `mvnw.cmd clean verify` : `74` tests, `0` échec, `0` erreur, `0` ignoré ;
+- `mvnw.cmd --activate-profiles integration-tests verify` : `74` tests standards et `4` tests
+  d’intégration, `0` échec, `0` erreur, `0` ignoré ;
+- PostgreSQL Testcontainers `18.4` : migrations V1 et V2 appliquées, schéma final `v2` ;
+- appels réseau SofaScore exécutés : `0`.
+
+```text
+J3_RAW_SNAPSHOT_PERSISTENCE=IMPLEMENTED
+J3_RAW_BYTES=EXACT_BYTEA
+J3_NORMALIZED_PAYLOAD_WRITE=NO
+J3_RAW_PAYLOAD_GIT_STORAGE=NO
+J3_NETWORK_CALLS_EXECUTED=NO
+J3_NEXT_UNIT=GUARDED_SCHEDULED_EVENTS_TRANSPORT
 ```

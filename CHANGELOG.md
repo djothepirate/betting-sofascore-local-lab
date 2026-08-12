@@ -18,6 +18,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - politique de décision J3 hors ligne avec résultats `USE_CACHE`, `BLOCKED` et `TRANSPORT_ELIGIBLE` ;
 - circuit J3 en mémoire à activation explicite, incidents typés et absence de réouverture automatique ;
 - garde atomique limitant à un le nombre de permis d’appel simultanés ;
+- migration Flyway V2 append-only conservant les octets exacts, leur taille et la provenance `DIRECT_LOCAL_ENDPOINT` ;
+- port et adaptateur JDBC de persistance des snapshots manuels bruts, avec résultat explicite `INSERTED` ou `DEDUPLICATED` ;
+- validation bornée des métadonnées et payloads bruts, calcul SHA-256 et déduplication par endpoint, requête et hash ;
+- tests PostgreSQL/Testcontainers de la migration V2, de la fidélité binaire, de la séparation brut/normalisé et de la déduplication ;
 
 ### Documentation
 
@@ -28,6 +32,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - ouverture du Work Order `WO-SS-20260812-003` sur la branche `feat/j3-manual-call` depuis le commit de fusion `b2561e542b1f893ec2f15c5eaeb67a361ee551ea` ;
 - périmètre J3 découpé en unités hors ligne avec un point de décision explicite avant toute URI ou requête réelle.
 - contrat d’architecture de la politique réseau J3 hors ligne, de son ordre d’évaluation et de ses transitions de circuit.
+- contrat de persistance J3 du snapshot brut, de ses contraintes, de sa clé de déduplication et de ses limites de sécurité.
 
 ### Modifié
 
@@ -35,12 +40,16 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - renommage du groupId `com.geoffrey.betting` vers `com.bettingproject` dans le pom.xml
 - tableau de bord enrichi avec le compteur des neuf fixtures hors ligne et leur état de validation synthétique.
 - mode visible du verrou mis à jour vers `LOCKED_OFFLINE_J3_POLICY` sans ouvrir le transport.
+- phase applicative avancée à `J3-OFFLINE-RAW-PERSISTENCE` sans modifier l’état du connecteur.
+- calcul SHA-256 et détection de contenu sensible mutualisés entre les fixtures hors ligne et les futures preuves brutes.
 
 ### Sécurité
 
 - maintien du verrouillage réseau pendant J2 : aucune URI d’endpoint réelle et aucun appel SofaScore réel ne sont autorisés.
 - maintien du connecteur et du profil réel bloqués au démarrage de J3 ; la revue des conditions officielles impose une décision humaine préalable avant tout appel.
 - résultat `TRANSPORT_ELIGIBLE` explicitement sans effet : aucun client HTTP, aucune URI réelle et aucun appel fournisseur ne sont introduits.
+- rejet avant persistance des payloads dépassant 5 Mio ou contenant des motifs de secret, cookie, jeton ou clé privée ; aucun octet brut n’est journalisé ou versionné.
+- maintien de `payload_jsonb` à `NULL` pour les snapshots bruts afin d’éviter toute normalisation implicite avant parsing.
 
 ## [0.1.0] — 2026-08-08
 
