@@ -135,6 +135,19 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
   -File .\scripts\Verify-Local.ps1 -WithIntegrationTests
 ```
 
+### 4.4 Transport J3 simulé
+
+La suite standard exerce un `RestClient` avec `MockRestServiceServer`. Aucun serveur public ni
+SofaScore n’est contacté. Le contrat autorise seulement :
+
+```text
+http://127.0.0.1:<port>/simulated/scheduled-events?date=AAAA-MM-JJ
+```
+
+Toute autre origine, tout chemin libre, proxy, redirection ou retry doit faire échouer la revue. Le
+transport n’est pas un bean Spring et ne peut pas être déclenché depuis l’interface. Ne pas ajouter
+une base URL réelle pour « essayer » cette unité.
+
 ## 5. Arrêt
 
 Arrêt conservant les données :

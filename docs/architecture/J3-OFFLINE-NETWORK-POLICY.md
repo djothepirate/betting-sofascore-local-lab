@@ -155,3 +155,11 @@ Les tests couvrent :
 
 Ces tests ne construisent ni serveur simulé ni client. Le transport simulé appartient à une unité J3
 ultérieure.
+
+## 10. Évolution après cette unité
+
+L’unité ultérieure `feat: add guarded scheduled-events transport` compose désormais cette politique
+avec un transport HTTP limité à `127.0.0.1` et testé par serveur simulé. Elle ne modifie pas les
+règles décrites ici : `TRANSPORT_ELIGIBLE` ne peut produire une entrée/sortie qu’après l’acquisition
+de la garde atomique, et aucun transport fournisseur n’est activé. Le détail figure dans
+`docs/architecture/J3-GUARDED-SCHEDULED-EVENTS-TRANSPORT.md`.

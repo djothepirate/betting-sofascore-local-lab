@@ -9,6 +9,7 @@
 - **Commit de base :** `b2561e542b1f893ec2f15c5eaeb67a361ee551ea`
 - **Base de l’unité de politique réseau hors ligne :** `c51c45f4831dad2922018e25baee97dcf7bbcf5c`
 - **Base de l’unité de persistance brute :** `1a9ca0e753cedf1ac4730adea865bd7ea3369660`
+- **Base de l’unité de transport simulé :** `f8f01225bd4efa0eead432c90899d6c9e1f293b9`
 - **Famille initiale :** `SCHEDULED_EVENTS`
 - **Mode d’acquisition prévu :** `DIRECT_LOCAL_ENDPOINT`
 - **Développement hors ligne J3 autorisé :** `YES`
@@ -125,7 +126,7 @@ validation juridique ou contractuelle. En conséquence :
    - ajouter uniquement les évolutions append-only nécessaires ;
    - tester avec Testcontainers ;
    - garantir la déduplication par hash et la séparation brut/normalisé.
-4. `feat: add guarded scheduled-events transport`
+4. `feat: add guarded scheduled-events transport` — terminé
    - introduire le transport derrière les politiques ;
    - utiliser un serveur simulé dans les tests ;
    - conserver le profil réel bloqué.
@@ -256,7 +257,8 @@ J3_RAW_SNAPSHOT_PERSISTENCE=IMPLEMENTED
 J3_DATABASE_MIGRATION=V2
 J3_RAW_PAYLOAD_LIMIT_BYTES=5242880
 J3_RAW_SNAPSHOT_DEDUPLICATION=IMPLEMENTED
-J3_TRANSPORT=NOT_STARTED
+J3_SIMULATED_LOOPBACK_TRANSPORT=IMPLEMENTED
+J3_PROVIDER_TRANSPORT=BLOCKED
 J3_REAL_ENDPOINT_URI_AUTHORIZED=NO
 J3_REAL_CALL_AUTHORIZED=NO
 ```
@@ -297,5 +299,48 @@ J3_RAW_BYTES=EXACT_BYTEA
 J3_NORMALIZED_PAYLOAD_WRITE=NO
 J3_RAW_PAYLOAD_GIT_STORAGE=NO
 J3_NETWORK_CALLS_EXECUTED=NO
-J3_NEXT_UNIT=GUARDED_SCHEDULED_EVENTS_TRANSPORT
+J3_GUARDED_SCHEDULED_EVENTS_TRANSPORT=IMPLEMENTED
+```
+
+## 13. Avancement du transport `SCHEDULED_EVENTS` protégé
+
+L’unité `feat: add guarded scheduled-events transport` introduit :
+
+- une requête de transport bornée à une date `LocalDate`, une clé canonique et la route fixe
+  `/simulated/scheduled-events` ;
+- une origine acceptée limitée exactement à `http://127.0.0.1:<port>` ;
+- un `RestClient` synchrone sans proxy ni redirection, avec délais de connexion et lecture positifs
+  plafonnés à dix secondes ;
+- une lecture limitée à 5 Mio, une copie défensive du brut et un SHA-256 calculé avant exposition ;
+- une réponse conservant les statuts hors `2xx` sans retry automatique ;
+- une orchestration qui applique `J3ManualCallPolicy`, puis acquiert le permis atomique avant toute
+  entrée/sortie ;
+- des tests avec `MockRestServiceServer` qui ne créent aucune route vers Internet ;
+- un scanner PowerShell maintenant l’interdiction générale de construction d’un client HTTP, avec
+  une exception limitée à l’unique classe loopback revue.
+
+Le transport n’est volontairement pas enregistré comme bean Spring. `DisabledSofascoreDataProvider`
+reste l’adaptateur actif, `ConnectorGate` reste bloquant, le catalogue demeure `callable=false` sans
+URI et le profil `sofascore-live-test` échoue toujours. Aucun appel réel n’est autorisé ou exécuté.
+
+Le contrat détaillé est consigné dans
+`docs/architecture/J3-GUARDED-SCHEDULED-EVENTS-TRANSPORT.md`.
+
+Validation exécutée le 2026-08-12 :
+
+- tests ciblés transport, garde et identité de build : `9` tests, `0` échec, `0` erreur,
+  `0` ignoré ;
+- `scripts/Verify-Local.ps1` : préflight Java 25 et scanner de garde-fous réussis ;
+- `mvnw.cmd clean verify` exécuté par le script : `83` tests, `0` échec, `0` erreur,
+  `0` ignoré ;
+- `target/classes/META-INF/build-info.properties` : `build.group=com.bettingproject` ;
+- appels réseau SofaScore exécutés : `0`.
+
+```text
+J3_GUARDED_TRANSPORT=IMPLEMENTED
+J3_TRANSPORT_DESTINATION=SIMULATED_LOOPBACK_ONLY
+J3_REAL_ENDPOINT_URI=ABSENT
+J3_PROVIDER_TRANSPORT_ACTIVE=NO
+J3_RETRY_POLICY=NONE
+J3_NEXT_UNIT=EXPLICIT_MANUAL_CALL_CONFIRMATION
 ```

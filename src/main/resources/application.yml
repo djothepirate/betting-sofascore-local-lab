@@ -62,7 +62,7 @@ info:
   app:
     name: SofaScore Local Lab
     version: 0.1.0-SNAPSHOT
-    phase: J3-OFFLINE-RAW-PERSISTENCE
+    phase: J3-GUARDED-SIMULATED-TRANSPORT
     status: EXPERIMENTAL_LOCAL_ONLY
 
 sofascore:

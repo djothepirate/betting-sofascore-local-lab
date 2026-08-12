@@ -23,10 +23,11 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
 - politique J3 hors ligne pour l’activation explicite, la confirmation par appel, le cache préalable, le délai minimal et l’arrêt global ;
 - circuit J3 en mémoire initialisé à `LOCKED`, incidents typés et garde atomique limitant la concurrence à un appel ;
 - persistance J3 des octets bruts avec taille, SHA-256, métadonnées bornées et déduplication par requête ;
+- transport J3 simulé limité à `127.0.0.1`, derrière la politique manuelle et la garde de concurrence ;
 
 ## Limite essentielle du bootstrap
 
-**Aucun appel SofaScore réel n’est implémenté.** Le dépôt ne contient ni chemin d’endpoint SofaScore, ni adaptateur de transport actif, ni polling. Le profil Maven `sofascore-live-test` échoue volontairement jusqu’au jalon J3 et à un Work Order dédié.
+**Aucun appel SofaScore réel n’est implémenté.** Le dépôt ne contient aucun chemin d’endpoint SofaScore, aucun adaptateur fournisseur actif et aucun polling. Le transport J3 présent ne peut cibler que l’adresse littérale `127.0.0.1` et une route de simulation fixe ; il n’est pas enregistré comme bean Spring. Le profil Maven `sofascore-live-test` reste volontairement bloqué jusqu’au point de décision du Work Order J3.
 
 Cette limite préserve la règle du Betting Project principal : aucun composant du VPS ne dépend du laboratoire, et l’arrêt du poste Windows ne doit avoir aucun effet sur la chaîne globale.
 
@@ -189,6 +190,7 @@ Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces
 - [Contrat hors ligne scheduled-events-v1](docs/architecture/SCHEDULED-EVENTS-V1.md)
 - [Politique réseau J3 hors ligne](docs/architecture/J3-OFFLINE-NETWORK-POLICY.md)
 - [Persistance des snapshots bruts J3](docs/architecture/J3-RAW-SNAPSHOT-PERSISTENCE.md)
+- [Transport scheduled-events J3 protégé et simulé](docs/architecture/J3-GUARDED-SCHEDULED-EVENTS-TRANSPORT.md)
 - [Runbook local](docs/runbooks/RUNBOOK-LOCAL.md)
 - [Cadrage PDF](docs/reference/Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf)
 - [Rapport de validation du bootstrap](docs/validation/J0-J1-VALIDATION-REPORT.md)
@@ -199,4 +201,4 @@ Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces
 
 ## Prochaine frontière
 
-La prochaine frontière est le transport `SCHEDULED_EVENTS` protégé par les politiques J3 et testé exclusivement contre un serveur simulé. Le Work Order J3 impose toujours un point de décision humain distinct avant toute URI réelle ou requête fournisseur. Dans l’état actuel, le connecteur, le profil réel et toutes les actions réseau restent bloqués.
+La prochaine frontière est la confirmation explicite d’appel manuel dans l’interface locale. Le Work Order J3 impose toujours un point de décision humain distinct avant toute URI réelle ou requête fournisseur. Dans l’état actuel, le connecteur, le profil réel, l’adaptateur fournisseur et toutes les actions réseau de l’interface restent bloqués.

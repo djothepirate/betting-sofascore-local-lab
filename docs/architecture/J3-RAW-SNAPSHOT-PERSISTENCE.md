@@ -101,8 +101,10 @@ Commandes de qualification :
 Ces suites n’effectuent aucun appel SofaScore. Le profil réel, `ConnectorGate`, le catalogue et les
 actions réseau de l’interface restent bloqués.
 
-## 7. Suite prévue
+## 7. Unité suivante réalisée
 
-La prochaine unité du Work Order est `feat: add guarded scheduled-events transport`. Elle devra
-utiliser un serveur simulé dans les tests et conserver le profil réel bloqué. La persistance des
-incidents, la confirmation dans l’interface et tout appel réel restent des unités distinctes.
+L’unité `feat: add guarded scheduled-events transport` fournit désormais un résultat brut compatible
+avec ce contrat, exclusivement depuis un serveur simulé sur `127.0.0.1`. Elle ne raccorde pas encore
+automatiquement le transport au magasin JDBC : la composition persistance–parsing et les incidents
+restent des étapes distinctes. La confirmation dans l’interface et tout appel réel restent également
+bloqués.

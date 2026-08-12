@@ -30,7 +30,8 @@ La relation future autorisée est un export JSON normalisé et versionné. Aucun
 │  ├─ Spring MVC + Thymeleaf                                │
 │  ├─ DashboardService                                      │
 │  ├─ ConnectorGate = LOCKED_OFFLINE_J3_POLICY              │
-│  ├─ Politique J3 hors ligne et circuit en mémoire         │
+│  ├─ Politique J3 et circuit en mémoire                    │
+│  ├─ Transport HTTP simulé, loopback strict uniquement     │
 │  ├─ Catalogue logique sans URI                            │
 │  ├─ Flyway / JDBC / JPA                                   │
 │  └─ Actuator                                              │
@@ -43,7 +44,7 @@ La relation future autorisée est un export JSON normalisé et versionné. Aucun
 │  exports/                                                 │
 └───────────────────────────────────────────────────────────┘
 
-SofaScore : aucune connexion dans l’unité de politique J3
+SofaScore : aucune connexion ; transport J3 limité à la simulation loopback
 VPS       : aucune connexion
 ```
 
@@ -54,7 +55,7 @@ VPS       : aucune connexion
 | `config` | propriétés typées, garde de liaison locale, initialisation du dossier d’export, en-têtes de sécurité |
 | `domain.provider` | types logiques, définition de catalogue et mode du connecteur |
 | `application` | verrou logiciel de tout appel externe |
-| `adapter.sofascore` | catalogue logique, sans URI ni client actif |
+| `adapter.sofascore` | catalogue logique sans URI fournisseur, adaptateur fournisseur bloqué et transport loopback simulé non enregistré |
 | `adapter.persistence` | conservation JDBC des preuves brutes et déduplication atomique |
 | `adapter.web` | tableau de bord et vues locales |
 | `resources/db/migration` | schéma brut V1/V2, manifeste d’export et état persistant |
@@ -74,7 +75,7 @@ Catalogue logique               callable=false, URI absente
 ConnectorGate                   exception systématique
           │
           ▼
-Politique hors ligne            aucune URI, aucun transport
+Politique J3                    simulation loopback seulement
           │
           ▼
 Profil Maven réel               alwaysFail
@@ -83,7 +84,8 @@ Profil Maven réel               alwaysFail
 Interface                       boutons réseau désactivés
 ```
 
-La suppression d’une seule barrière ne permet donc pas un appel accidentel.
+La suppression d’une seule barrière ne permet donc pas un appel accidentel. Le transport simulé
+ajoute en outre une validation finale de l’origine littérale `127.0.0.1` et d’une route fixe.
 
 ## 5. Données
 
@@ -137,6 +139,7 @@ Les paramètres canoniques, limites de payload et parseurs hors ligne sont intro
 - catalogue complet mais non appelable ;
 - verrou du connecteur ;
 - validation des métadonnées et des preuves brutes ;
+- orchestration et transport HTTP simulé sur boucle locale ;
 - rendu du contrôleur.
 
 ### Intégration
@@ -151,7 +154,7 @@ suffit pas à l’activer : le point de décision humain et les autres unités t
 ## 8. Décisions différées
 
 - modèles d’URI réels ;
-- `RestClient` et timeouts réseau ;
+- `RestClient` fournisseur et timeouts d’un endpoint réel ;
 - stockage de headers autorisés ;
 - normalisation persistée après parsing ;
 - parseurs et DTO externes au-delà de `scheduled-events-v1` ;
@@ -165,5 +168,6 @@ Chaque décision doit être introduite par un Work Order, avec critères d’acc
 
 Le modèle de décision et le circuit J3 désormais actés sont détaillés dans
 `docs/architecture/J3-OFFLINE-NETWORK-POLICY.md`. La conservation des preuves est détaillée dans
-`docs/architecture/J3-RAW-SNAPSHOT-PERSISTENCE.md`. Ces composants restent sans client HTTP et
-sans URI réelle.
+`docs/architecture/J3-RAW-SNAPSHOT-PERSISTENCE.md`. Le transport loopback est détaillé dans
+`docs/architecture/J3-GUARDED-SCHEDULED-EVENTS-TRANSPORT.md`. Aucun de ces composants ne contient
+une URI SofaScore ou n’active l’adaptateur fournisseur.
