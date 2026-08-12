@@ -11,7 +11,7 @@
   <div class="shell">
     <p class="eyebrow">BETTING PROJECT / SOFASCORE LOCAL LAB</p>
     <h1>Tableau de bord local</h1>
-    <p class="subtitle">Bootstrap J0/J1 — aucun appel SofaScore réel n’est implémenté.</p>
+    <p class="subtitle">J2 Fixtures — corpus synthétique vérifié hors ligne, sans appel SofaScore réel.</p>
   </div>
 </header>
 
@@ -56,7 +56,7 @@
       <p class="label">Dernier appel enregistré</p>
       <div th:if="${dashboard.lastCall == null}">
         <p class="metric muted">AUCUN</p>
-        <p>État attendu au jalon J1.</p>
+        <p>État attendu tant qu’aucun appel J3 n’est autorisé.</p>
       </div>
       <dl th:if="${dashboard.lastCall != null}">
         <div><dt>Reçu à</dt><dd th:text="${dashboard.lastCall.receivedAt}">—</dd></div>
@@ -66,6 +66,47 @@
         <div><dt>Hash</dt><dd class="mono" th:text="${dashboard.lastCall.payloadHash}">—</dd></div>
       </dl>
     </article>
+  </section>
+
+  <section class="panel fixture-panel" aria-labelledby="fixture-corpus-title">
+    <div class="panel-heading">
+      <div>
+        <p class="label">J2 / Fixtures hors ligne</p>
+        <h2 id="fixture-corpus-title">Corpus <span th:text="${dashboard.fixtureCorpus.family}">SCHEDULED_EVENTS</span></h2>
+      </div>
+      <span class="chip"
+            th:classappend="${dashboard.fixtureCorpus.availability == 'AVAILABLE_OFFLINE'} ? ' chip-safe' : ' chip-danger'"
+            th:text="${dashboard.fixtureCorpus.availability}">AVAILABLE_OFFLINE</span>
+    </div>
+
+    <p class="metric safe"
+       th:text="${dashboard.fixtureCorpus.availableCount + ' / ' + dashboard.fixtureCorpus.declaredCount + ' disponibles'}">9 / 9 disponibles</p>
+
+    <div class="fixture-counts" aria-label="Résultats du corpus hors ligne">
+      <div class="fixture-count">
+        <strong th:text="${dashboard.fixtureCorpus.parsedCount}">5</strong>
+        <span>Parsing réussi</span>
+      </div>
+      <div class="fixture-count">
+        <strong th:text="${dashboard.fixtureCorpus.schemaIncompatibleCount}">3</strong>
+        <span>Ruptures de schéma prévues</span>
+      </div>
+      <div class="fixture-count">
+        <strong th:text="${dashboard.fixtureCorpus.unexpectedContentCount}">1</strong>
+        <span>Contenu inattendu prévu</span>
+      </div>
+      <div class="fixture-count">
+        <strong th:text="${dashboard.fixtureCorpus.loadingFailureCount}">0</strong>
+        <span>Échec de chargement</span>
+      </div>
+    </div>
+
+    <dl class="fixture-metadata">
+      <div><dt>Origine</dt><dd th:text="${dashboard.fixtureCorpus.origin}">SYNTHETIC</dd></div>
+      <div><dt>Parseur</dt><dd class="mono" th:text="${dashboard.fixtureCorpus.parserVersion}">scheduled-events-v1</dd></div>
+      <div><dt>Schéma fournisseur</dt><dd th:text="${dashboard.fixtureCorpus.providerSchemaValidated ? 'VALIDÉ' : 'NON VALIDÉ'}">NON VALIDÉ</dd></div>
+    </dl>
+    <p class="fixture-note">Les incompatibilités font partie du corpus de test. Elles ne représentent ni des appels réseau ni des incidents fournisseur observés.</p>
   </section>
 
   <section class="panel" aria-labelledby="catalog-title">
@@ -105,7 +146,7 @@
   <section class="grid two-columns">
     <article class="panel">
       <p class="label">Actions réseau</p>
-      <h2>Verrouillées au jalon J1</h2>
+      <h2>Toujours verrouillées pendant J2</h2>
       <p>Le code ne contient ni chemin d’endpoint SofaScore, ni adaptateur de transport actif, ni profil de test réel utilisable.</p>
       <div class="actions">
         <button type="button" disabled>Activer le connecteur</button>
@@ -140,7 +181,7 @@
 </main>
 
 <footer>
-  <div class="shell">SofaScore Local Lab v0.1.0-SNAPSHOT — J0/J1</div>
+  <div class="shell">SofaScore Local Lab v0.1.0-SNAPSHOT — J2 Fixtures hors ligne</div>
 </footer>
 </body>
 </html>

@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "scheduled-events-numeric-field-as-string",
+  "endpointType": "SCHEDULED_EVENTS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-12T00:00:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "scheduled-events-v1",
+  "payloadResource": "fixtures/schema-breaks/scheduled-events-numeric-field-as-string.json",
+  "maximumBytes": 4096,
+  "expectedRawSha256": "b241b8282454264676bc811fe8b12e60b211e96b4481cedcc5326e650e294b54",
+  "expectedCanonicalJsonSha256": "337cb1b46aa3fa8264074b021421f26681fb400c771bdddd7983b51f21ad6449",
+  "minimized": false,
+  "removedFields": []
+}

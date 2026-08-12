@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "scheduled-events-nominal-property-order-variant",
+  "endpointType": "SCHEDULED_EVENTS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-12T00:00:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "scheduled-events-v1",
+  "payloadResource": "fixtures/scheduled-events/nominal-property-order-variant.json",
+  "maximumBytes": 4096,
+  "expectedRawSha256": "a78ffbe2a744831541277f02d6813a625a2b14d3762a0f8cac74b4d4a9c5a5cd",
+  "expectedCanonicalJsonSha256": "fbf6395ac9621a8228813f6a28172c26d0dcaf7ab76f9c983c14fe9ddb568d48",
+  "minimized": false,
+  "removedFields": []
+}

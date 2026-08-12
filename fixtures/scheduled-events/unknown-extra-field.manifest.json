@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "scheduled-events-unknown-extra-field",
+  "endpointType": "SCHEDULED_EVENTS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-12T00:00:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "scheduled-events-v1",
+  "payloadResource": "fixtures/scheduled-events/unknown-extra-field.json",
+  "maximumBytes": 4096,
+  "expectedRawSha256": "b95979041eaf424f344822a7c2ce5bba0a927478f1416e9e0574dc9a54c0525e",
+  "expectedCanonicalJsonSha256": "c99c924b800bb5905d3873220f0a46afe22233296ef48cf49552cd96dd551a33",
+  "minimized": false,
+  "removedFields": []
+}

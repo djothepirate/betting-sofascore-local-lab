@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "scheduled-events-empty-events-array",
+  "endpointType": "SCHEDULED_EVENTS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-12T00:00:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "scheduled-events-v1",
+  "payloadResource": "fixtures/scheduled-events/empty-events-array.json",
+  "maximumBytes": 4096,
+  "expectedRawSha256": "a09d3c19894be8d66f4c8de6c7e99c9b2183433170f541fd333f6b45c2d37613",
+  "expectedCanonicalJsonSha256": "0cc165b8f9edbe60c8e15b09e297126f46039d412a8e64d3c9732515ca1d25a7",
+  "minimized": false,
+  "removedFields": []
+}
