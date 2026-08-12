@@ -32,6 +32,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 ### Modifié
 
 - renommage du package Java de base de `com.geoffrey.betting.sofascorelocal` vers `com.bettingproject.sofascorelocal`.
+- renommage du groupId `com.geoffrey.betting` vers `com.bettingproject` dans le pom.xml
 - tableau de bord enrichi avec le compteur des neuf fixtures hors ligne et leur état de validation synthétique.
 - mode visible du verrou mis à jour vers `LOCKED_OFFLINE_J3_POLICY` sans ouvrir le transport.
 

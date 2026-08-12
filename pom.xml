@@ -11,7 +11,7 @@
     <relativePath/>
   </parent>
 
-  <groupId>com.geoffrey.betting</groupId>
+  <groupId>com.bettingproject</groupId>
   <artifactId>betting-sofascore-local-lab</artifactId>
   <version>0.1.0-SNAPSHOT</version>
   <name>SofaScore Local Lab</name>
