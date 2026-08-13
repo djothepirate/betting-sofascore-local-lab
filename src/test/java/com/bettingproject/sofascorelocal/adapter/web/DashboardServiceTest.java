@@ -43,10 +43,10 @@ class DashboardServiceTest {
                         "SYNTHETIC",
                         true,
                         "scheduled-events-v1",
-                        10,
-                        10,
-                        6,
-                        3,
+                        12,
+                        12,
+                        7,
+                        4,
                         1,
                         0));
         assertThat(dashboard.endpoints()).hasSize(7);

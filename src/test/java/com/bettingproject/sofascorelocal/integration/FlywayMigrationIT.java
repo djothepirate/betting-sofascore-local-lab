@@ -1,5 +1,7 @@
 package com.bettingproject.sofascorelocal.integration;
 
+import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsParseStatus;
+import com.bettingproject.sofascorelocal.application.network.J3QualificationCheckpointReparser;
 import com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceOutcome;
@@ -20,6 +22,8 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
 
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -54,6 +58,9 @@ class FlywayMigrationIT {
 
     @Autowired
     J3QualificationCheckpointStore checkpointStore;
+
+    @Autowired
+    J3QualificationCheckpointReparser checkpointReparser;
 
     @Test
     void createsTheJ3RawSnapshotSchemaAndKeepsNetworkDisabled() {
@@ -207,7 +214,38 @@ class FlywayMigrationIT {
                     .isEqualTo("SCHEDULED_EVENTS|date=2026-08-13|page=1");
             assertThat(page.payload().bytes()).isEqualTo(rawPayload);
             assertThat(page.payload().sha256()).isEqualTo(persisted.payloadSha256());
+            assertThat(page.historicalSchemaStatus())
+                    .isEqualTo(RawSnapshotSchemaStatus.PARSED);
         });
+    }
+
+    @Test
+    void reparsesTwoHistoricalIncompatibilitiesWithoutMutatingTheirStatuses() throws Exception {
+        byte[] pageOnePayload = Files.readAllBytes(Path.of(
+                "fixtures/scheduled-events/qualified-provider-shape.json"));
+        byte[] pageTwoPayload = Files.readAllBytes(Path.of(
+                "fixtures/scheduled-events/qualified-page-two-shape.json"));
+        var pageOne = snapshotStore.save(snapshot(
+                "SCHEDULED_EVENTS|date=2026-08-13|page=1",
+                pageOnePayload,
+                RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE,
+                "SCHEMA_INCOMPATIBLE"));
+        var pageTwo = snapshotStore.save(snapshot(
+                "SCHEDULED_EVENTS|date=2026-08-13|page=2",
+                pageTwoPayload,
+                RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE,
+                "SCHEMA_INCOMPATIBLE"));
+
+        var results = checkpointReparser.reparseStoredPages(LocalDate.parse("2026-08-13"));
+
+        assertThat(results).hasSize(2).allSatisfy(result -> {
+            assertThat(result.historicalSchemaStatus())
+                    .isEqualTo(RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE);
+            assertThat(result.currentParseStatus()).isEqualTo(ScheduledEventsParseStatus.PARSED);
+            assertThat(result.hasNextPage()).isTrue();
+        });
+        assertThat(schemaStatus(pageOne.snapshotId())).isEqualTo("SCHEMA_INCOMPATIBLE");
+        assertThat(schemaStatus(pageTwo.snapshotId())).isEqualTo("SCHEMA_INCOMPATIBLE");
     }
 
     @Test

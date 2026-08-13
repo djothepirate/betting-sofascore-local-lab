@@ -1,0 +1,12 @@
+{
+  "scheduled": [
+    {
+      "tournament": {
+        "id": 990001,
+        "name": "Synthetic Invalid Count Shape"
+      },
+      "timezoneEventCount": [1]
+    }
+  ],
+  "hasNextPage": true
+}

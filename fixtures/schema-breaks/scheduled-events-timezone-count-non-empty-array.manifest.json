@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "scheduled-events-timezone-count-non-empty-array",
+  "endpointType": "SCHEDULED_EVENTS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-13T00:00:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "scheduled-events-v1",
+  "payloadResource": "fixtures/schema-breaks/scheduled-events-timezone-count-non-empty-array.json",
+  "maximumBytes": 4096,
+  "expectedRawSha256": "9f28c5c2f504c9e86eb4d1e90f8a8f95774c5c3433bfadc29dad576064f4e282",
+  "expectedCanonicalJsonSha256": "6826abb61e1db661b81e386de29ca0e9e8ae5bc6e754e612b8d86591c3bd7986",
+  "minimized": false,
+  "removedFields": []
+}

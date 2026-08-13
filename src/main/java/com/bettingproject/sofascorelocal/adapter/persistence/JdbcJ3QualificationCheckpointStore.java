@@ -2,6 +2,7 @@ package com.bettingproject.sofascorelocal.adapter.persistence;
 
 import com.bettingproject.sofascorelocal.domain.provider.J3StoredQualificationPage;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
+import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.port.J3QualificationCheckpointStore;
@@ -30,6 +31,7 @@ public class JdbcJ3QualificationCheckpointStore implements J3QualificationCheckp
                 http_status,
                 content_type,
                 latency_ms,
+                schema_status,
                 payload_raw,
                 payload_size_bytes,
                 payload_sha256
@@ -82,6 +84,7 @@ public class JdbcJ3QualificationCheckpointStore implements J3QualificationCheckp
                     OffsetDateTime receivedAt = resultSet.getObject(
                             "received_at", OffsetDateTime.class);
                     String contentType = resultSet.getString("content_type");
+                    String historicalSchemaStatus = resultSet.getString("schema_status");
                     String storedSha256 = resultSet.getString("payload_sha256");
                     if (rawBytes == null
                             || storedSizeValue == null
@@ -90,6 +93,7 @@ public class JdbcJ3QualificationCheckpointStore implements J3QualificationCheckp
                             || requestedAt == null
                             || receivedAt == null
                             || contentType == null
+                            || historicalSchemaStatus == null
                             || storedSha256 == null) {
                         throw new IllegalStateException(
                                 "stored qualification checkpoint is incomplete");
@@ -111,6 +115,7 @@ public class JdbcJ3QualificationCheckpointStore implements J3QualificationCheckp
                             httpStatusValue.intValue(),
                             contentType,
                             Duration.ofMillis(latencyValue.longValue()),
+                            RawSnapshotSchemaStatus.valueOf(historicalSchemaStatus),
                             payload);
                 }));
     }

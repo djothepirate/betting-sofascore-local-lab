@@ -23,6 +23,8 @@ class ScheduledEventsV1SchemaIncompatibilityTest {
             "fixtures/schema-breaks/scheduled-events-unexpected-object.manifest.json";
     private static final String UNEXPECTED_HTML =
             "fixtures/schema-breaks/scheduled-events-unexpected-html.manifest.json";
+    private static final String NON_EMPTY_TIMEZONE_COUNT_ARRAY =
+            "fixtures/schema-breaks/scheduled-events-timezone-count-non-empty-array.manifest.json";
 
     private static final ClasspathFixtureLoader LOADER = new ClasspathFixtureLoader();
     private static final ScheduledEventsV1Parser PARSER = new ScheduledEventsV1Parser();
@@ -179,6 +181,25 @@ class ScheduledEventsV1SchemaIncompatibilityTest {
                         "$"));
     }
 
+    @Test
+    void rejectsANonEmptyTimezoneCountArrayWithoutCoercion() {
+        LoadedFixture fixture = LOADER.load(NON_EMPTY_TIMEZONE_COUNT_ARRAY);
+
+        ScheduledEventsParseResult result = PARSER.parse(fixture);
+
+        assertFailedResult(
+                result,
+                fixture,
+                ScheduledEventsParseStatus.SCHEMA_INCOMPATIBLE);
+        assertThat(result.problems())
+                .extracting(
+                        ScheduledEventsParseProblem::code,
+                        ScheduledEventsParseProblem::path)
+                .containsExactly(tuple(
+                        ScheduledEventsParseProblem.Code.TYPE_MISMATCH,
+                        "$.scheduled[0].timezoneEventCount"));
+    }
+
     private static void assertFailedResult(
             ScheduledEventsParseResult result,
             LoadedFixture fixture,
@@ -193,7 +214,7 @@ class ScheduledEventsV1SchemaIncompatibilityTest {
                         fixture.manifest().fixtureId(),
                         fixture.rawSha256(),
                         fixture.canonicalJsonSha256(),
-                        Instant.parse("2026-08-12T00:00:00Z"),
+                        fixture.manifest().recordedAt(),
                         ScheduledEventsV1Parser.PARSER_VERSION));
     }
 

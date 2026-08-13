@@ -345,7 +345,32 @@ public final class ScheduledEventsV1Parser {
             String path,
             List<ScheduledEventsParseWarning> warnings,
             List<ScheduledEventsParseProblem> problems) {
-        if (!requireObject(countsNode, path, problems)) {
+        if (countsNode == null) {
+            problems.add(problem(
+                    ScheduledEventsParseProblem.Code.REQUIRED_FIELD_MISSING,
+                    path,
+                    "Required timezone event-count value is missing"));
+            return Map.of();
+        }
+        if (countsNode.isArray()) {
+            if (countsNode.isEmpty()) {
+                warnings.add(warning(
+                        ScheduledEventsParseWarning.Code.EMPTY_TIMEZONE_EVENT_COUNT,
+                        path,
+                        "An empty timezone event-count array represents no counts"));
+                return Map.of();
+            }
+            problems.add(problem(
+                    ScheduledEventsParseProblem.Code.TYPE_MISMATCH,
+                    path,
+                    "Timezone event counts must be an object or an empty array"));
+            return Map.of();
+        }
+        if (!countsNode.isObject()) {
+            problems.add(problem(
+                    ScheduledEventsParseProblem.Code.TYPE_MISMATCH,
+                    path,
+                    "Timezone event counts must be an object or an empty array"));
             return Map.of();
         }
         if (countsNode.isEmpty()) {

@@ -803,3 +803,115 @@ le compte sandbox n’avait pas accès au tube Windows `docker_engine`. L’éch
 l’exécution de `FlywayMigrationIT` et ne constitue donc pas un résultat fonctionnel du lecteur de
 checkpoint. Ce profil devra être rejoué dans le terminal Windows utilisateur avant la fusion ; il
 ne nécessite et ne doit déclencher aucun appel SofaScore.
+
+## 23. Adaptation hors ligne au schéma qualifié de la page 2
+
+Le rapport
+`docs/validation/J3-WINDOWS-PAGE-TWO-PROVIDER-RESUME-QUALIFICATION-20260813.md` établit que la page
+2 a été reçue et conservée, puis classée historiquement `SCHEMA_INCOMPATIBLE`. Le propriétaire
+autorise l’unité `fix: adapt scheduled-events-v1 to qualified page-two schema` exclusivement sur ce
+snapshot local. Aucun nouvel appel fournisseur n’est autorisé ou exécuté.
+
+L’analyse structurelle en lecture seule, sans restitution du payload ou de ses valeurs métier,
+compare les deux checkpoints :
+
+```text
+PAGE_1_SCHEDULED_ENTRIES=100
+PAGE_1_TIMEZONE_EVENT_COUNT_OBJECTS=100
+PAGE_1_TIMEZONE_EVENT_COUNT_EMPTY_ARRAYS=0
+PAGE_2_SCHEDULED_ENTRIES=100
+PAGE_2_TIMEZONE_EVENT_COUNT_OBJECTS=94
+PAGE_2_TIMEZONE_EVENT_COUNT_EMPTY_ARRAYS=6
+PAGE_2_TIMEZONE_EVENT_COUNT_NON_EMPTY_ARRAYS=0
+PAGE_2_HAS_NEXT_PAGE=true
+```
+
+La correction accepte `timezoneEventCount=[]` uniquement lorsqu’il est strictement vide. Il devient
+une table locale vide avec l’avertissement `EMPTY_TIMEZONE_EVENT_COUNT`. Un tableau non vide reste
+`SCHEMA_INCOMPATIBLE`, comme les clés non numériques, les valeurs négatives, les scalaires et les
+champs absents. Cette règle ne modifie ni la racine qualifiée, ni la compatibilité J2, ni le refus
+d’une page partielle.
+
+L’unité ajoute :
+
+- une fixture locale synthétique représentant l’objet et le tableau vide de la page 2 ;
+- une fixture de rupture représentant un tableau non vide, explicitement rejeté ;
+- les contrôles de hash, de provenance synthétique et d’absence de donnée sensible ;
+- des tests positifs, de rupture et de relecture de checkpoints ;
+- un résultat applicatif de reparsing limité aux métadonnées, distinct de la classification
+  historique persistée ;
+- la lecture de `schema_status` par le checkpoint store, sans port d’écriture ni migration.
+
+La relecture hors ligne des snapshots réels confirme :
+
+```text
+PAGE_1_SNAPSHOT_ID=1
+PAGE_1_HISTORICAL_STATUS=SCHEMA_INCOMPATIBLE
+PAGE_1_CURRENT_PARSE_STATUS=PARSED
+PAGE_1_SCHEDULED_ENTRY_COUNT=100
+PAGE_1_HAS_NEXT_PAGE=true
+PAGE_2_SNAPSHOT_ID=2
+PAGE_2_HISTORICAL_STATUS=SCHEMA_INCOMPATIBLE
+PAGE_2_CURRENT_PARSE_STATUS=PARSED
+PAGE_2_SCHEDULED_ENTRY_COUNT=100
+PAGE_2_HAS_NEXT_PAGE=true
+HISTORICAL_STATUSES_UNCHANGED=true
+DATABASE_MUTATION_EXECUTED=NO
+PROVIDER_NETWORK_CALL_EXECUTED=NO
+RAW_PAYLOAD_PRINTED=NO
+```
+
+Cette unité n’autorise pas la reprise fournisseur. La présence de la page 2 continue donc de
+bloquer le chemin actuel. Une unité ultérieure `feat: resume J3 qualification from page three`
+nécessitera une nouvelle décision explicite et devra imposer :
+
+```text
+PAGE_1_CHECKPOINT=PRESENT_AND_REPARSEABLE
+PAGE_2_CHECKPOINT=PRESENT_AND_REPARSEABLE
+PAGES_3_TO_5=ABSENT
+PROVIDER_FIRST_PAGE=3
+PAGE_1_REPEATED=NO
+PAGE_2_REPEATED=NO
+```
+
+```text
+J3_PAGE_TWO_SCHEMA_ADAPTATION=IMPLEMENTED
+J3_PAGE_TWO_EMPTY_TIMEZONE_COUNT_ARRAY=SUPPORTED_EXACTLY
+J3_NON_EMPTY_TIMEZONE_COUNT_ARRAY=REJECTED
+J3_SYNTHETIC_FIXTURE_CORPUS=12
+J3_PROVIDER_RAW_PAYLOAD_IN_GIT=NO
+J3_HISTORICAL_SNAPSHOT_STATUS_MUTATED=NO
+J3_PROVIDER_PAGE_THREE_AUTHORIZED=NO
+J3_NEW_NETWORK_CALLS=0
+J3_WORK_ORDER=IN_DEVELOPMENT
+```
+
+### 23.1 Validation technique de l’unité
+
+Validation consolidée exécutée le 2026-08-14 :
+
+```text
+WINDOWS_PREFLIGHT=PASS
+SOURCE_GUARDRAIL_SCAN=PASS
+STANDARD_TESTS=145
+STANDARD_FAILURES=0
+STANDARD_ERRORS=0
+STANDARD_SKIPPED=0
+SPRING_BOOT_JAR=BUILT
+BUILD_GROUP=com.bettingproject
+DIFF_CHECK=PASS
+SECRET_SCAN=PASS
+SERVER_ADDRESS=127.0.0.1
+SOFASCORE_NETWORK_CALLS_EXECUTED=NO
+```
+
+Le profil `integration-tests` a également été lancé. Les `145` tests standards ont de nouveau
+réussi, puis Testcontainers n’a pas pu accéder au moteur Docker de la session. L’unique erreur est
+survenue avant le démarrage de `FlywayMigrationIT` (`Could not find a valid Docker environment`) :
+aucune assertion PostgreSQL n’a échoué et aucun appel fournisseur n’a été tenté.
+
+En complément, le lecteur et le parseur ont été exécutés directement contre le PostgreSQL local
+existant dans une connexion explicitement `readOnly`, terminée par `rollback`. Cette validation a
+reparsé les deux snapshots réels avec `PARSED`, confirmé `hasNextPage=true` sur la page 2, comparé
+les statuts avant et après, puis confirmé `HISTORICAL_STATUSES_UNCHANGED=true` sans afficher le
+payload.

@@ -55,6 +55,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   parseur et `hasNextPage=true`, avec blocage persistant dès qu’une page 2 existe ;
 - intention, action graphique et preuve minimisée v2 dédiées à la reprise, sans ouvrir la future
   interrogation complète répétable ;
+- fixtures synthétiques de la forme qualifiée page 2 et de sa rupture par tableau non vide, sans
+  donnée fournisseur, URI, cookie, jeton, compte ou session ;
+- reparsing applicatif en lecture seule des checkpoints J3, avec séparation explicite entre statut
+  historique persisté et résultat courant en mémoire ;
 
 ### Documentation
 
@@ -84,6 +88,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   incompatibilité, puis diagnostic structurel hors ligne du snapshot local conservé.
 - contrat d’architecture et procédure Windows de la reprise explicite à la page 2, sans appel réel
   pendant l’implémentation ni les tests.
+- diagnostic et contrat d’adaptation hors ligne du schéma qualifié de la page 2, avec frontière
+  explicite interdisant la reprise à la page 3 sans nouvelle décision.
 
 ### Modifié
 
@@ -117,6 +123,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `scheduled` et `hasNextPage`, tout en conservant la compatibilité du corpus J2 `events` ;
 - inventaire hors ligne porté à dix fixtures et indicateur de schéma fournisseur validé après
   relecture locale réussie du snapshot qualifié, sans nouvel appel réseau.
+- parseur `scheduled-events-v1` adapté à la représentation `[]` strictement vide observée pour
+  `timezoneEventCount` en page 2, tout tableau non vide restant incompatible ;
+- inventaire hors ligne porté à douze fixtures (`7` parsées, `4` incompatibles et `1` contenu
+  inattendu) et phase applicative avancée à `J3-PAGE-TWO-SCHEMA-ADAPTATION`.
 
 ### Sécurité
 
@@ -142,6 +152,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - maintien de tous les tests Maven hors ligne et absence d’appel SofaScore pendant l’implémentation.
 - qualification Windows arrêtée avant le bouton final : aucune page fournisseur demandée, aucun
   snapshot réel persisté et aucune preuve de sortie fournisseur ajoutée au dépôt.
+- relecture locale des snapshots 1 et 2 sans transport ni écriture, avec confirmation que leur
+  statut historique `SCHEMA_INCOMPATIBLE` reste inchangé.
 
 ## [0.1.0] — 2026-08-08
 

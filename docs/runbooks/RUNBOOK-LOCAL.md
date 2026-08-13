@@ -100,8 +100,8 @@ Vérifier :
 - migration Flyway `2` ;
 - snapshots `0` sur une base neuve ;
 - corpus hors ligne `AVAILABLE_OFFLINE` ;
-- fixtures `10 / 10 disponibles` ;
-- résultats du corpus : `5` parsés, `3` incompatibilités de schéma prévues et `1` contenu inattendu prévu ;
+- fixtures `12 / 12 disponibles` ;
+- résultats du corpus : `7` parsés, `4` incompatibilités de schéma prévues et `1` contenu inattendu prévu ;
 - origine `SYNTHETIC` et schéma fournisseur `NON VALIDÉ` ;
 - toutes les familles `Appelable = NON` et `URI = ABSENTE`.
 - contrôle manuel J3 avec `ARRÊT GLOBAL ACTIF`, circuit `LOCKED` et transport fournisseur

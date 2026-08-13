@@ -6,22 +6,28 @@
 s’applique aux fixtures chargées par `ClasspathFixtureLoader` et aux octets d’une réponse de
 transport déjà conservés avant parsing.
 
-Le corpus Git reste intégralement synthétique. La séquence J3 du 2026-08-13 a toutefois qualifié,
-puis conservé localement, une réponse réelle dont la structure utile a été examinée hors ligne :
+Le corpus Git reste intégralement synthétique. Les séquences J3 du 2026-08-13 ont toutefois
+qualifié, puis conservé localement, les réponses réelles des pages 1 et 2 dont la structure utile a
+été examinée hors ligne :
 
 ```text
 FIXTURE_ORIGIN=SYNTHETIC
 PROVIDER_RAW_PAYLOAD_IN_GIT=NO
 QUALIFIED_PROVIDER_ROOT_FIELDS=scheduled,hasNextPage
 QUALIFIED_PROVIDER_ENTRY_FIELDS=tournament,timezoneEventCount
-QUALIFIED_PROVIDER_SNAPSHOT_OFFLINE_PARSE=PARSED
+QUALIFIED_PROVIDER_SNAPSHOTS=1,2
+QUALIFIED_PROVIDER_SNAPSHOT_1_OFFLINE_PARSE=PARSED
+QUALIFIED_PROVIDER_SNAPSHOT_2_OFFLINE_PARSE=PARSED
+QUALIFIED_PROVIDER_SNAPSHOT_2_HAS_NEXT_PAGE=true
+HISTORICAL_SCHEMA_STATUS_MUTATED=NO
 NETWORK_AUTHORIZED=NO
 NEW_REAL_SOFASCORE_CALL_EXECUTED=NO
 ```
 
-La fixture `qualified-provider-shape` contient uniquement des identités et nombres synthétiques.
-Elle ne se substitue pas au snapshot local comme preuve d’observation, mais permet de rejouer le
-contrat utile sans PostgreSQL, Internet, URI ou donnée de session.
+Les fixtures `qualified-provider-shape` et `qualified-page-two-shape` contiennent uniquement des
+identités et nombres synthétiques. Elles ne se substituent pas aux snapshots locaux comme preuve
+d’observation, mais permettent de rejouer le contrat utile sans PostgreSQL, Internet, URI ou donnée
+de session.
 
 Les champs structuraux observés mais non retenus dans le modèle minimal sont connus et ignorés sans
 avertissement : `category`, `fieldTranslations`, `priority`, `qualificationOrPreliminary`, `slug`,
@@ -76,13 +82,15 @@ La forme fournisseur qualifiée ajoute le contrat suivant :
 | `tournament.uniqueTournament` | objet | facultatif | `ScheduledTournamentAvailability.uniqueTournament` |
 | `uniqueTournament.id` | entier 64 bits positif | obligatoire si l’objet existe | `ScheduledTournament.providerTournamentId` |
 | `uniqueTournament.name` | texte non vide | obligatoire si l’objet existe | `ScheduledTournament.name` |
-| `$.scheduled[*].timezoneEventCount` | objet | obligatoire, peut être vide | `ScheduledTournamentAvailability.timezoneEventCount` |
+| `$.scheduled[*].timezoneEventCount` | objet ou tableau vide | obligatoire ; seul `[]` est accepté comme seconde forme | `ScheduledTournamentAvailability.timezoneEventCount` |
 | clé de `timezoneEventCount` | texte représentant un entier 32 bits | obligatoire | décalage horaire en secondes |
 | valeur de `timezoneEventCount` | entier 32 bits positif ou nul | obligatoire | nombre d’événements |
 
-Un champ numérique sous forme de chaîne n'est jamais converti implicitement. Une valeur
-facultative explicitement présente avec un type incorrect reste une incompatibilité : elle n'est
-pas assimilée à un champ absent.
+Le tableau vide qualifié sur la page 2 devient une table locale vide et produit
+`EMPTY_TIMEZONE_EVENT_COUNT`. Un tableau non vide reste une incompatibilité de type : son contenu
+n’est jamais converti ou ignoré. Un champ numérique sous forme de chaîne n'est jamais converti
+implicitement. Une valeur facultative explicitement présente avec un type incorrect reste une
+incompatibilité : elle n'est pas assimilée à un champ absent.
 
 ## Champs inconnus et avertissements
 
@@ -137,8 +145,8 @@ La couverture du contrat est répartie entre deux classes de test :
 
 - `ScheduledEventsV1ParserTest` couvre le nominal J2, la stabilité face à l'ordre des propriétés,
   les champs facultatifs absents, le tableau vide, les champs inconnus et la forme fournisseur
-  qualifiée synthétique ;
-- `ScheduledEventsV1SchemaIncompatibilityTest` couvre les quatre fixtures de rupture, les codes et
+  qualifiée synthétique des pages 1 et 2 ;
+- `ScheduledEventsV1SchemaIncompatibilityTest` couvre les cinq fixtures de rupture, les codes et
   chemins de chaque problème, l’absence d’identité de tournoi, les compteurs devenus texte,
   l’ambiguïté des deux racines, l'absence de page partielle et la conservation de la traçabilité.
 
@@ -147,24 +155,25 @@ La couverture du contrat est répartie entre deux classes de test :
 | champ obligatoire absent | `SCHEMA_INCOMPATIBLE` | `REQUIRED_FIELD_MISSING` pour `event.id` et `event.status` |
 | identifiant numérique devenu texte | `SCHEMA_INCOMPATIBLE` | `TYPE_MISMATCH` pour `event.id`, sans coercition, et `REQUIRED_FIELD_MISSING` pour `event.status` |
 | `events` devenu objet | `SCHEMA_INCOMPATIBLE` | `TYPE_MISMATCH` sur `$.events` |
+| `timezoneEventCount` devenu tableau non vide | `SCHEMA_INCOMPATIBLE` | `TYPE_MISMATCH` sur le champ complet, sans coercition |
 | HTML inattendu | `UNEXPECTED_CONTENT` | `UNEXPECTED_CONTENT_KIND` sur `$` |
 
-Les quatre résultats en échec conservent l'identifiant de fixture, les hashes disponibles, la date
+Les cinq résultats en échec conservent l'identifiant de fixture, les hashes disponibles, la date
 du manifeste et la version du parseur. Les tests standards restent sans Internet et sans
 PostgreSQL.
 
 ## Projection dans le tableau de bord
 
-`OfflineFixtureCorpusService` constitue l’inventaire du corpus depuis une liste fermée de dix
+`OfflineFixtureCorpusService` constitue l’inventaire du corpus depuis une liste fermée de douze
 manifestes classpath. Pour chaque entrée, il réutilise `ClasspathFixtureLoader`, puis
 `ScheduledEventsV1Parser`. Le tableau de bord expose uniquement des compteurs et métadonnées :
 
 ```text
 availability=AVAILABLE_OFFLINE
-declared=10
-available=10
-parsed=6
-schemaIncompatible=3
+declared=12
+available=12
+parsed=7
+schemaIncompatible=4
 unexpectedContent=1
 loadingFailures=0
 origin=SYNTHETIC
@@ -172,10 +181,11 @@ providerSchemaValidated=true
 ```
 
 `origin=SYNTHETIC` décrit les ressources versionnées. `providerSchemaValidated=true` décrit la
-validation distincte du contrat structurel : le snapshot local `1`, acquis par la qualification
-J3, est relu par le parseur adapté avec `PARSED`, `100` entrées `scheduled`, aucun problème et sans
-nouvel accès réseau. Le payload brut, ses valeurs et ses hashes ne sont jamais rendus par le tableau
-de bord.
+validation distincte du contrat structurel : les snapshots locaux `1` et `2`, acquis par la
+qualification J3, sont relus par le parseur adapté avec `PARSED`, `100` entrées `scheduled` chacun
+et `hasNextPage=true`, sans nouvel accès réseau. Leur statut historique
+`SCHEMA_INCOMPATIBLE` reste inchangé. Le payload brut, ses valeurs et ses hashes ne sont jamais
+rendus par le tableau de bord.
 
 Les payloads, leurs champs et leurs hashes ne sont pas affichés. Une erreur de chargement ne rend
 pas le tableau de bord indisponible : l’état devient `INCOMPLETE` et le compteur d’échecs augmente.

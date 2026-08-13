@@ -94,10 +94,11 @@ Les catégories sensibles bloquantes couvrent les en-têtes d’autorisation, le
 
 ## Corpus synthétique `SCHEDULED_EVENTS`
 
-Le corpus contient désormais dix scénarios créés de zéro. Aucun payload fournisseur n’est versionné.
-Le dixième scénario reproduit uniquement la structure utile qualifiée hors ligne après la séquence
-J3 : racine `scheduled`, identité minimale de tournoi, identité facultative `uniqueTournament`,
-compteurs numériques `timezoneEventCount` et pagination. Toutes ses valeurs sont synthétiques.
+Le corpus contient désormais douze scénarios créés de zéro. Aucun payload fournisseur n’est
+versionné. Le dixième scénario reproduit uniquement la structure utile qualifiée hors ligne après
+la page 1 J3. Le onzième représente la divergence bornée de la page 2 : un objet de compteurs suivi
+d’un tableau strictement vide. Le douzième est le contre-exemple avec tableau non vide. Toutes les
+identités et valeurs sont synthétiques.
 
 Tous les manifestes conservent :
 
@@ -121,9 +122,11 @@ minimized=false
 | tableau vide | `scheduled-events/empty-events-array.json` | `PARSED`, liste vide et avertissement `EMPTY_EVENTS` |
 | champ inconnu | `scheduled-events/unknown-extra-field.json` | `PARSED`, propriétés ignorées et chemins signalés par `UNKNOWN_FIELD` |
 | forme fournisseur qualifiée | `scheduled-events/qualified-provider-shape.json` | `PARSED`, disponibilités de tournois sans événement inventé |
+| forme qualifiée page 2 | `scheduled-events/qualified-page-two-shape.json` | `PARSED`, objet de compteurs conservé, `[]` projeté en table vide avec avertissement et `hasNextPage=true` |
 | champ obligatoire absent | `schema-breaks/scheduled-events-required-field-missing.json` | `SCHEMA_INCOMPATIBLE` pour `event.id` et `event.status` absents |
 | nombre devenu texte | `schema-breaks/scheduled-events-numeric-field-as-string.json` | `SCHEMA_INCOMPATIBLE` pour `event.id`, sans conversion implicite, et pour `event.status` absent |
 | objet inattendu | `schema-breaks/scheduled-events-unexpected-object.json` | `SCHEMA_INCOMPATIBLE` car `events` n’est pas un tableau |
+| compteurs devenus tableau non vide | `schema-breaks/scheduled-events-timezone-count-non-empty-array.json` | `SCHEMA_INCOMPATIBLE`, sans coercition ni page partielle |
 | HTML inattendu | `schema-breaks/scheduled-events-unexpected-html.html` | `UNEXPECTED_CONTENT`, classé `HTML` avant parsing |
 
 Les manifestes portent les hashes réels calculés par `FixturePayloadHasher`. Le nominal et sa variante d’ordre ont des hashes bruts différents et le même hash JSON canonique.
@@ -131,11 +134,11 @@ Les manifestes portent les hashes réels calculés par `FixturePayloadHasher`. L
 Le contrat détaillé des champs obligatoires, facultatifs et ignorés, ainsi que les résultats
 structurés, est décrit dans `docs/architecture/SCHEDULED-EVENTS-V1.md`.
 
-Les quatre scénarios de rupture sont exécutés par
+Les cinq scénarios de rupture sont exécutés par
 `ScheduledEventsV1SchemaIncompatibilityTest`. Chaque test vérifie le statut, les codes et chemins
 de problèmes, l'absence de page locale partielle et la preuve de traçabilité.
 
-Le tableau de bord inventorie les dix manifestes classpath avec les mêmes contrôles. Il affiche
+Le tableau de bord inventorie les douze manifestes classpath avec les mêmes contrôles. Il affiche
 uniquement leur disponibilité et la répartition des résultats du parseur ; aucun payload ni hash
 n’est rendu dans l’interface.
 

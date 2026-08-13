@@ -25,6 +25,8 @@ class ScheduledEventsV1ParserTest {
             "fixtures/scheduled-events/unknown-extra-field.manifest.json";
     private static final String QUALIFIED_PROVIDER_SHAPE =
             "fixtures/scheduled-events/qualified-provider-shape.manifest.json";
+    private static final String QUALIFIED_PAGE_TWO_SHAPE =
+            "fixtures/scheduled-events/qualified-page-two-shape.manifest.json";
 
     private static final ClasspathFixtureLoader LOADER = new ClasspathFixtureLoader();
     private static final ScheduledEventsV1Parser PARSER = new ScheduledEventsV1Parser();
@@ -168,6 +170,32 @@ class ScheduledEventsV1ParserTest {
         assertThat(second.uniqueTournament()).isEmpty();
         assertThat(second.timezoneEventCount())
                 .containsExactlyInAnyOrderEntriesOf(java.util.Map.of(-10800, 1, 0, 1));
+    }
+
+    @Test
+    void parsesTheQualifiedPageTwoEmptyCountArrayWithoutWeakeningOtherCounts() {
+        ScheduledEventsParseResult result = parse(QUALIFIED_PAGE_TWO_SHAPE);
+
+        assertThat(result.status()).isEqualTo(ScheduledEventsParseStatus.PARSED);
+        assertThat(result.problems()).isEmpty();
+        assertThat(result.warnings())
+                .extracting(
+                        ScheduledEventsParseWarning::code,
+                        ScheduledEventsParseWarning::path)
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple(
+                                ScheduledEventsParseWarning.Code.OPTIONAL_FIELD_MISSING,
+                                "$.scheduled[1].tournament.uniqueTournament"),
+                        org.assertj.core.groups.Tuple.tuple(
+                                ScheduledEventsParseWarning.Code.EMPTY_TIMEZONE_EVENT_COUNT,
+                                "$.scheduled[1].timezoneEventCount"));
+
+        ScheduledEventsPage page = result.page().orElseThrow();
+        assertThat(page.hasNextPage()).isTrue();
+        assertThat(page.scheduledTournaments()).hasSize(2);
+        assertThat(page.scheduledTournaments().getFirst().timezoneEventCount())
+                .containsExactlyInAnyOrderEntriesOf(java.util.Map.of(0, 2, 3600, 1));
+        assertThat(page.scheduledTournaments().get(1).timezoneEventCount()).isEmpty();
     }
 
     private static ScheduledEventsParseResult parse(String manifestResource) {

@@ -17,7 +17,7 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
 - tests unitaires hors ligne et test Flyway/Testcontainers dans un profil explicite ;
 - scripts PowerShell de configuration, préflight, démarrage, arrêt et vérification.
-- corpus synthétique `SCHEDULED_EVENTS` de dix fixtures classpath avec hashes vérifiés ;
+- corpus synthétique `SCHEDULED_EVENTS` de douze fixtures classpath avec hashes vérifiés ;
 - parseur hors ligne `scheduled-events-v1`, compatible avec le corpus J2 `events` et avec la forme
   fournisseur qualifiée `scheduled`, modèle local et tests de rupture de schéma ;
 - inventaire du corpus visible dans le tableau de bord, sans dépendance à PostgreSQL.
@@ -206,6 +206,7 @@ Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces
 - [Politiques d’arrêt et d’incident J3](docs/architecture/J3-TRANSPORT-STOP-AND-INCIDENT-POLICIES.md)
 - [Chemin fournisseur J3 borné à cinq pages](docs/architecture/J3-FIVE-PAGE-PROVIDER-QUALIFICATION.md)
 - [Reprise fournisseur J3 contrôlée à la page 2](docs/architecture/J3-PAGE-TWO-PROVIDER-RESUME.md)
+- [Adaptation hors ligne au schéma qualifié de la page 2](docs/architecture/J3-PAGE-TWO-SCHEMA-ADAPTATION.md)
 - [Runbook local](docs/runbooks/RUNBOOK-LOCAL.md)
 - [Cadrage PDF](docs/reference/Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf)
 - [Rapport de validation du bootstrap](docs/validation/J0-J1-VALIDATION-REPORT.md)
@@ -217,15 +218,16 @@ Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces
 
 ## Prochaine frontière
 
-La qualification réelle unique a atteint et persisté la page 1, puis s’est arrêtée sûrement sur
-`SCHEMA_INCOMPATIBLE`, sans demander les pages 2 à 5 et sans retry. L’analyse suivante a été menée
-entièrement hors ligne sur le snapshot local : le parseur accepte désormais la racine qualifiée
-`scheduled`, ses identités de tournoi et `timezoneEventCount`, sans inventer d’événements.
+La reprise réelle a persisté la page 2, puis s’est arrêtée sûrement sur son statut historique
+`SCHEMA_INCOMPATIBLE`, sans demander les pages 3 à 5 et sans retry. L’analyse suivante a été menée
+entièrement hors ligne : six entrées de la page 2 utilisent un tableau vide pour
+`timezoneEventCount`, tandis que les autres entrées et la page 1 utilisent un objet.
 
-J3 demeure ouvert. La décision propriétaire suivante autorise désormais une reprise unique à la
-page 2 : l’application doit vérifier localement le snapshot 1, puis l’action finale peut demander
-uniquement les pages 2 à 5. Le développement et les tests n’exécutent aucun appel fournisseur ; le
-déclenchement réel reste une action humaine depuis l’interface.
+Le parseur accepte désormais cette seule forme vide sans affaiblir ses autres contrôles. Les
+snapshots 1 et 2 sont relus localement avec `PARSED`, `100` entrées et `hasNextPage=true` chacun ;
+leurs classifications historiques restent intactes. J3 demeure ouvert, mais aucune reprise à la
+page 3 n’est autorisée dans cette unité. Une décision propriétaire ultérieure devra vérifier les
+deux checkpoints et interdire explicitement leur répétition.
 
 La possibilité de répéter ultérieurement une interrogation complète depuis l’interface reste hors
 de cette unité et devra disposer de ses propres limites de fréquence et de qualification.

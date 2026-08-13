@@ -19,6 +19,7 @@ public record J3StoredQualificationPage(
         int httpStatus,
         String contentType,
         Duration latency,
+        RawSnapshotSchemaStatus historicalSchemaStatus,
         RawPayloadEvidence payload) {
 
     public J3StoredQualificationPage {
@@ -29,6 +30,7 @@ public record J3StoredQualificationPage(
         Objects.requireNonNull(requestedAt, "requestedAt");
         Objects.requireNonNull(receivedAt, "receivedAt");
         Objects.requireNonNull(latency, "latency");
+        Objects.requireNonNull(historicalSchemaStatus, "historicalSchemaStatus");
         Objects.requireNonNull(payload, "payload");
         contentType = requireText(contentType, "contentType");
         requestKey = requireText(requestKey, "requestKey");

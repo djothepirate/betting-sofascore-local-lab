@@ -70,10 +70,10 @@ class DashboardControllerTest {
                         "SYNTHETIC",
                         true,
                         "scheduled-events-v1",
-                        10,
-                        10,
-                        6,
-                        3,
+                        12,
+                        12,
+                        7,
+                        4,
                         1,
                         0),
                 null,
@@ -105,7 +105,7 @@ class DashboardControllerTest {
                 .andExpect(model().attribute("manualCall", manualCallView))
                 .andExpect(model().attribute("localFormToken", "local-form-token"))
                 .andExpect(content().string(containsString("LOCKED_OFFLINE_J3_POLICY")))
-                .andExpect(content().string(containsString("10 / 10 disponibles")))
+                .andExpect(content().string(containsString("12 / 12 disponibles")))
                 .andExpect(content().string(containsString("scheduled-events-v1")))
                 .andExpect(content().string(containsString("VALIDÉ")))
                 .andExpect(content().string(containsString("ARRÊT GLOBAL ACTIF")))

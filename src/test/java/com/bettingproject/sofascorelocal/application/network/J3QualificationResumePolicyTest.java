@@ -3,6 +3,7 @@ package com.bettingproject.sofascorelocal.application.network;
 import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.provider.J3StoredQualificationPage;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
+import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 
@@ -157,6 +158,7 @@ class J3QualificationResumePolicyTest {
                 httpStatus,
                 "application/json",
                 Duration.ofMillis(640),
+                RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE,
                 RawPayloadEvidence.capture(payload));
     }
 }
