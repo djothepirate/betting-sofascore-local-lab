@@ -11,7 +11,7 @@
   <div class="shell">
     <p class="eyebrow">BETTING PROJECT / SOFASCORE LOCAL LAB</p>
     <h1>Tableau de bord local</h1>
-    <p class="subtitle">J3 — confirmation manuelle explicite, avec transport fournisseur toujours bloqué.</p>
+    <p class="subtitle">J3 — qualification manuelle explicite, bornée aux pages fournisseur 1 à 5.</p>
   </div>
 </header>
 
@@ -27,7 +27,9 @@
   <section class="grid cards" aria-label="État du laboratoire">
     <article class="card">
       <p class="label">Connecteur</p>
-      <p class="metric danger" th:text="${dashboard.configurationEnabled ? 'CONFIG_ENABLED_BUT_CODE_LOCKED' : 'DISABLED'}">DISABLED</p>
+      <p class="metric danger"
+         th:classappend="${dashboard.qualificationTransportAvailable} ? ' safe' : ''"
+         th:text="${dashboard.qualificationTransportAvailable ? 'J3_QUALIFICATION_READY' : (dashboard.configurationEnabled ? 'CONFIG_ENABLED_BUT_QUALIFICATION_BLOCKED' : 'DISABLED')}">DISABLED</p>
       <dl>
         <div><dt>Base URL</dt><dd th:text="${dashboard.baseUrlState}">NON_CONFIGURED</dd></div>
         <div><dt>Concurrence max.</dt><dd th:text="${dashboard.maximumConcurrency}">1</dd></div>
@@ -120,7 +122,7 @@
             th:text="${manualCall.globalStopActive ? 'ARRÊT GLOBAL ACTIF' : 'ARRÊT GLOBAL LEVÉ'}">ARRÊT GLOBAL ACTIF</span>
     </div>
 
-    <p class="control-intro">Cette séquence enregistre uniquement une intention locale. Même confirmée, elle ne résout aucune URI et ne déclenche aucun transport fournisseur.</p>
+    <p class="control-intro">Une confirmation ne déclenche rien à elle seule. Lorsque la configuration J3 dédiée est disponible, une action séparée lance au plus les pages 1 à 5, dans l’ordre, sans cookie, jeton, compte, session ni retry.</p>
 
     <div th:if="${manualCallMessage != null}"
          class="notice"
@@ -138,7 +140,10 @@
           <div><dt>Motif</dt><dd class="mono" th:text="${manualCall.circuitReason}">STARTUP_LOCK</dd></div>
           <div><dt>Activation opérateur</dt><dd th:text="${manualCall.operatorActivated ? 'OUI' : 'NON'}">NON</dd></div>
           <div><dt>Incident actif</dt><dd th:text="${manualCall.incidentActive ? 'OUI' : 'NON'}">NON</dd></div>
-          <div><dt>Transport fournisseur</dt><dd class="danger">INDISPONIBLE</dd></div>
+          <div><dt>Transport fournisseur</dt>
+            <dd th:class="${manualCall.providerTransportAvailable ? 'safe' : 'danger'}"
+                th:text="${manualCall.realCallEnabled ? 'PRÊT POUR ACTION UNIQUE' : (manualCall.providerTransportAvailable ? 'CONFIGURÉ — CONFIRMATION REQUISE' : 'INDISPONIBLE')}">INDISPONIBLE</dd>
+          </div>
         </dl>
 
         <div class="control-actions">
@@ -167,8 +172,11 @@
               th:action="@{/manual-call/prepare}"
               method="post">
           <input type="hidden" name="localFormToken" th:value="${localFormToken}">
-          <label for="manual-call-date">Date unique</label>
-          <input id="manual-call-date" type="date" name="date" required th:value="${manualCall.suggestedDate}">
+          <label for="manual-call-date">Date unique — pages fixes 1 à 5</label>
+          <input id="manual-call-date" type="date" name="date" required
+                 th:value="${manualCall.suggestedDate}"
+                 th:min="${manualCall.suggestedDate}"
+                 th:max="${manualCall.suggestedDate}">
           <button class="button-primary" type="submit">3. Préparer l’intention</button>
         </form>
 
@@ -192,12 +200,12 @@
             <input type="hidden" name="localFormToken" th:value="${localFormToken}">
             <input type="hidden" name="requestId" th:value="${manualCall.intent.requestId}">
             <p>Recopiez exactement cette phrase à usage unique avant son expiration :</p>
-            <code class="confirmation-phrase" th:text="${manualCall.intent.confirmationPhrase}">CONFIRMER SCHEDULED_EVENTS 2026-08-12 000042</code>
+            <code class="confirmation-phrase" th:text="${manualCall.intent.confirmationPhrase}">CONFIRMER SCHEDULED_EVENTS 2026-08-13 PAGES 1-5 000042</code>
             <label for="confirmation-text">Phrase de confirmation</label>
             <input id="confirmation-text" type="text" name="confirmationText" maxlength="128" autocomplete="off" required>
             <label class="acknowledgement" for="acknowledged">
               <input id="acknowledged" type="checkbox" name="acknowledged" value="true" required>
-              Je confirme la date et comprends qu’aucun appel fournisseur n’est encore autorisé.
+              Je confirme la date, les cinq pages, l’absence de données de session et comprends que le déclenchement reste une action séparée.
             </label>
             <button class="button-primary" type="submit">4. Confirmer l’intention locale</button>
           </form>
@@ -206,17 +214,50 @@
             Intention confirmée et arrêtée avant transport. L’action réelle reste désactivée.
           </div>
 
-          <div th:if="${!manualCall.intent.awaitingConfirmation and !manualCall.intent.confirmedBlocked}"
+          <div th:if="${manualCall.intent.confirmedReady}" class="notice notice-warning">
+            Intention confirmée. Vérifiez une dernière fois la date : le bouton ci-dessous déclenchera une seule séquence, pages 1 à 5, avec arrêt au premier incident.
+          </div>
+
+          <div th:if="${manualCall.intent.executing}" class="notice notice-warning">
+            Lot en cours. N’actualisez pas la page ; l’arrêt global reste prioritaire entre deux pages.
+          </div>
+
+          <div th:if="${manualCall.intent.completed}" class="notice notice-safe">
+            Qualification terminée : cinq pages ont été conservées et classées localement.
+          </div>
+
+          <div th:if="${manualCall.intent.failed}" class="notice notice-danger">
+            Lot arrêté sans retry à la page <span th:text="${manualCall.intent.failedPage}">1</span>
+            — <span class="mono" th:text="${manualCall.intent.terminalCode}">INCIDENT</span>.
+          </div>
+
+          <p th:if="${manualCall.intent.executing or manualCall.intent.completed or manualCall.intent.failed}">
+            Pages terminées : <strong th:text="${manualCall.intent.completedPages}">0</strong> / 5
+          </p>
+
+          <div th:if="${!manualCall.intent.awaitingConfirmation
+                       and !manualCall.intent.confirmedBlocked
+                       and !manualCall.intent.confirmedReady
+                       and !manualCall.intent.executing
+                       and !manualCall.intent.completed
+                       and !manualCall.intent.failed}"
                class="notice notice-danger">
             Cette intention n’est plus active. Une nouvelle séquence explicite est nécessaire.
           </div>
         </div>
 
-        <button type="button" class="real-call-button" disabled>Lancer l’appel fournisseur — BLOQUÉ</button>
+        <form th:if="${manualCall.realCallEnabled}"
+              th:action="@{/manual-call/execute}"
+              method="post">
+          <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+          <input type="hidden" name="requestId" th:value="${manualCall.intent.requestId}">
+          <button type="submit" class="real-call-button">5. Lancer le lot fournisseur unique — PAGES 1 À 5</button>
+        </form>
+        <button th:if="${!manualCall.realCallEnabled}" type="button" class="real-call-button" disabled>Lancer le lot fournisseur — BLOQUÉ</button>
       </div>
     </div>
 
-    <div class="provider-blockers">
+    <div class="provider-blockers" th:if="${!manualCall.providerBlockers.isEmpty()}">
       <p class="label">Verrous fournisseur maintenus</p>
       <ul>
         <li th:each="blocker : ${manualCall.providerBlockers}" class="mono" th:text="${blocker}">REAL_CALL_NOT_AUTHORIZED</li>
@@ -230,7 +271,9 @@
         <p class="label">Catalogue logique</p>
         <h2 id="catalog-title">Familles prévues</h2>
       </div>
-      <span class="chip chip-warning">URI NON CONFIGURÉES</span>
+      <span class="chip"
+            th:classappend="${dashboard.qualificationTransportAvailable} ? ' chip-safe' : ' chip-warning'"
+            th:text="${dashboard.qualificationTransportAvailable ? 'URI J3 PAGES 1 À 5 CONFIGURÉES' : 'URI NON CONFIGURÉES'}">URI NON CONFIGURÉES</span>
     </div>
     <div class="table-scroll">
       <table>
@@ -261,8 +304,8 @@
   <section class="grid two-columns">
     <article class="panel">
       <p class="label">Actions réseau</p>
-      <h2>Toujours verrouillées pendant cette unité J3</h2>
-      <p>La confirmation locale ne retire aucun verrou fournisseur : aucune URI réelle, aucun adaptateur actif et aucun profil réel utilisable.</p>
+      <h2>Connecteur général toujours verrouillé</h2>
+      <p>Seul le formulaire J3 ci-dessus peut ouvrir le chemin dédié aux cinq URI approuvées. Aucun autre endpoint, profil réel ou adaptateur général n’est activé.</p>
       <div class="actions">
         <button type="button" disabled>Configurer une URI réelle</button>
         <button type="button" disabled>Lancer un appel fournisseur</button>

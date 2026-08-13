@@ -17,8 +17,11 @@ class SofascorePropertiesTest {
         SofascoreProperties properties = new SofascoreProperties();
 
         assertThat(properties.isEnabled()).isFalse();
+        assertThat(properties.isJ3QualificationEnabled()).isFalse();
         assertThat(properties.getMaximumConcurrency()).isEqualTo(1);
         assertThat(properties.getMinimumDelay()).isEqualTo(Duration.ofSeconds(3));
+        assertThat(properties.getConnectTimeout()).isEqualTo(Duration.ofSeconds(5));
+        assertThat(properties.getReadTimeout()).isEqualTo(Duration.ofSeconds(10));
         assertThat(properties.isAutomaticRefreshEnabled()).isFalse();
         assertThat(properties.isLivePollingEnabled()).isFalse();
         assertThat(properties.getAllowedEndpoints()).isEmpty();
@@ -38,5 +41,20 @@ class SofascorePropertiesTest {
                 .anyMatch(violation -> violation.getPropertyPath().toString().equals("maximumConcurrency"));
         assertThat(violations)
                 .anyMatch(violation -> violation.getMessage().contains("minimum-delay"));
+    }
+
+    @Test
+    void rejectsAnIncompleteOrExpandedQualificationOptIn() {
+        SofascoreProperties properties = new SofascoreProperties();
+        properties.setJ3QualificationEnabled(true);
+
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getMessage().contains("J3 qualification"));
+
+        properties.setEnabled(true);
+        properties.setAllowedEndpoints(java.util.Set.of(
+                com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType.SCHEDULED_EVENTS));
+
+        assertThat(validator.validate(properties)).isEmpty();
     }
 }

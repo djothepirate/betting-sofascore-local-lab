@@ -3,6 +3,7 @@ package com.bettingproject.sofascorelocal.adapter.web;
 import com.bettingproject.sofascorelocal.adapter.sofascore.SofascoreEndpointCatalog;
 import com.bettingproject.sofascorelocal.application.ConnectorGate;
 import com.bettingproject.sofascorelocal.application.fixture.OfflineFixtureCorpusService;
+import com.bettingproject.sofascorelocal.application.network.J3ProviderQualificationPolicy;
 import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataAccessResourceFailureException;
@@ -24,7 +25,8 @@ class DashboardServiceTest {
                 new SofascoreEndpointCatalog(),
                 new ConnectorGate(),
                 jdbcTemplate,
-                new OfflineFixtureCorpusService());
+                new OfflineFixtureCorpusService(),
+                new J3ProviderQualificationPolicy(new SofascoreProperties()));
 
         DashboardView dashboard = service.load();
 

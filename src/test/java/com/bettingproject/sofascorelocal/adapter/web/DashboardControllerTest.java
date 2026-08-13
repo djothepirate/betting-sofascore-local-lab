@@ -51,6 +51,7 @@ class DashboardControllerTest {
                 "EXPERIMENTAL",
                 "LOCKED_OFFLINE_J3_POLICY",
                 false,
+                false,
                 "127.0.0.1:8087",
                 "NON_CONFIGURED",
                 1,
@@ -105,6 +106,6 @@ class DashboardControllerTest {
                 .andExpect(content().string(containsString("NON VALIDÉ")))
                 .andExpect(content().string(containsString("ARRÊT GLOBAL ACTIF")))
                 .andExpect(content().string(containsString("REAL_CALL_NOT_AUTHORIZED")))
-                .andExpect(content().string(containsString("Lancer l’appel fournisseur — BLOQUÉ")));
+                .andExpect(content().string(containsString("Lancer le lot fournisseur — BLOQUÉ")));
     }
 }

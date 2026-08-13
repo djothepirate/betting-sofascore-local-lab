@@ -33,6 +33,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - couverture des arrêts sur `400`, `401`, `403`, `429`, `5xx`, timeout, erreur d’entrée/sortie, taille excessive, HTML et schéma incompatible ;
 - conservation bornée de `Retry-After` comme frontière de blocage, sans programmation de retry ni réouverture automatique ;
 - preuve automatisée de déduplication et d’absence de valeur sensible dans les sorties capturées ;
+- chemin fournisseur J3 opt-in limité à l’origine exacte `https://www.sofascore.com`, à la date
+  `2026-08-13` et aux pages `1` à `5` de `SCHEDULED_EVENTS` ;
+- orchestrateur d’une action manuelle unique exécutant les pages séquentiellement, avec concurrence
+  `1`, délai minimal de trois secondes, conservation avant parsing et arrêt au premier incident ;
+- action Web distincte après confirmation, états `CONFIRMED_READY`, `EXECUTING`, `COMPLETED` et
+  `FAILED`, et interdiction d’une seconde exécution dans le même processus ;
+- client fournisseur sans proxy, redirection, cookie, jeton, compte ou donnée de session, couvert
+  hors ligne avec `MockRestServiceServer` ;
 
 ### Documentation
 
@@ -49,6 +57,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - matrice d’architecture des politiques J3 d’arrêt, d’incident, de conservation du brut et d’absence de retry.
 - qualification Windows J3 du parcours opérateur local, de l’arrêt global et des politiques simulées,
   avec déclaration distincte de l’absence d’appel réel et de preuve de sortie fournisseur.
+- amendement du Work Order J3 avec le périmètre cinq pages, la source
+  `OBSERVATION_MANUELLE_DANS_LE_NAVIGATEUR`, la décision propriétaire et l’interdiction d’exécuter
+  un appel pendant l’implémentation ;
+- contrat d’architecture et procédure opérateur du chemin fournisseur J3 borné.
 
 ### Modifié
 
@@ -60,6 +72,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - phase applicative avancée à `J3-GUARDED-SIMULATED-TRANSPORT`, toujours sans transport fournisseur actif.
 - phase applicative avancée à `J3-EXPLICIT-MANUAL-CONFIRMATION`, avec confirmation d’intention uniquement.
 - phase applicative avancée à `J3-TRANSPORT-STOP-INCIDENT-POLICIES`, toujours sans transport fournisseur actif.
+- phase applicative avancée à `J3-FIVE-PAGE-PROVIDER-QUALIFICATION-PATH`, avec chemin dédié
+  désactivé par défaut et connecteur général toujours verrouillé.
 - identité de build Maven protégée par Enforcer et par un test des métadonnées Actuator générées,
   afin d’empêcher la réapparition de `com.geoffrey.betting` depuis un dossier `target` obsolète.
 - calcul SHA-256 et détection de contenu sensible mutualisés entre les fixtures hors ligne et les futures preuves brutes.
@@ -70,16 +84,24 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 - maintien du verrouillage réseau pendant J2 : aucune URI d’endpoint réelle et aucun appel SofaScore réel ne sont autorisés.
 - maintien du connecteur et du profil réel bloqués au démarrage de J3 ; la revue des conditions officielles impose une décision humaine préalable avant tout appel.
-- résultat `TRANSPORT_ELIGIBLE` explicitement sans effet : aucun client HTTP, aucune URI réelle et aucun appel fournisseur ne sont introduits.
+- dans l’unité de politique hors ligne, résultat `TRANSPORT_ELIGIBLE` explicitement sans effet :
+  aucun client HTTP, aucune URI réelle et aucun appel fournisseur n’y étaient introduits.
 - rejet avant persistance des payloads dépassant 5 Mio ou contenant des motifs de secret, cookie, jeton ou clé privée ; aucun octet brut n’est journalisé ou versionné.
 - maintien de `payload_jsonb` à `NULL` pour les snapshots bruts afin d’éviter toute normalisation implicite avant parsing.
-- maintien de `ConnectorGate`, du catalogue, du profil réel et de l’adaptateur fournisseur en état bloqué ; le seul chemin HTTP introduit cible strictement une simulation sur `127.0.0.1`.
+- maintien de `ConnectorGate`, du profil réel et de l’adaptateur fournisseur général en état
+  bloqué ; le transport simulé reste strictement limité à `127.0.0.1` et le chemin J3 dédié ne peut
+  être activé que par sa politique distincte.
 - formulaires opérateur protégés par un jeton aléatoire lié à la session et à usage unique, avec cookie `HttpOnly` et `SameSite=Strict`.
 - suppression de la phrase de confirmation après usage, expiration ou arrêt global ; aucun contenu saisi n’est journalisé.
 - exceptions de transport réduites à des codes sûrs, sans URI, payload ou diagnostic interne ; aucune donnée partielle n’est persistée après un échec de lecture.
 - maintien de tous les incidents en circuit `OPEN` jusqu’à un arrêt et une nouvelle activation explicites, y compris après `Retry-After`.
 - arrêt de la qualification Windows avant transport tant que le point de décision réel reste incomplet ;
   aucune phrase active, jeton, URI fournisseur ou donnée brute n’est versionné comme preuve.
+- activation du chemin fournisseur subordonnée à quatre propriétés concordantes, à une origine
+  exacte, à l’unique famille `SCHEDULED_EVENTS`, au stockage brut actif et à l’absence de mode live ;
+- validation de domaine de la date et des cinq pages, sans chemin libre, redirection, proxy,
+  pagination découverte, retry ni donnée de session ;
+- maintien de tous les tests Maven hors ligne et absence d’appel SofaScore pendant l’implémentation.
 
 ## [0.1.0] — 2026-08-08
 

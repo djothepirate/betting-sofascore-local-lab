@@ -129,6 +129,50 @@ autorisation ni une tentative d’appel réel.
 une page historique ou réutiliser un formulaire déjà envoyé. Un redémarrage de l’application remet
 toujours l’arrêt global à l’état actif.
 
+### 3.5 Préparer la qualification fournisseur cinq pages
+
+Cette procédure rend le bouton réel disponible mais ne doit pas être utilisée pendant une validation
+automatisée. La dernière action décrite ci-dessous exécute réellement les cinq URI autorisées. Ne la
+sélectionner qu’après décision explicite du propriétaire de passer de l’implémentation à l’exécution.
+
+1. arrêter l’application ;
+2. vérifier que PostgreSQL local est disponible et sauvegarder les snapshots utiles ;
+3. modifier uniquement le fichier local ignoré `.env` avec les valeurs suivantes :
+
+```text
+SOFASCORE_ENABLED=true
+SOFASCORE_J3_QUALIFICATION_ENABLED=true
+SOFASCORE_BASE_URL=https://www.sofascore.com
+SOFASCORE_ALLOWED_ENDPOINTS=SCHEDULED_EVENTS
+```
+
+4. redémarrer l’application avec le profil `local` ;
+5. vérifier dans le tableau de bord :
+   - `J3_QUALIFICATION_READY` ;
+   - date unique `2026-08-13` non élargissable ;
+   - `SCHEDULED_EVENTS` appelable avec URI configurée ;
+   - concurrence `1` et délai minimal `3 s` ;
+6. lever l’arrêt global puis activer le circuit ;
+7. préparer l’intention, recopier exactement la phrase à usage unique et cocher l’acquittement ;
+8. vérifier `CONFIRMED_READY` et relire la date ainsi que la portée `PAGES 1-5` ;
+9. seulement après autorisation d’exécution, sélectionner
+   **« 5. Lancer le lot fournisseur unique — PAGES 1 À 5 »** une seule fois ;
+10. attendre le retour de la même requête Web sans actualiser la page ;
+11. vérifier soit `COMPLETED` avec `5 / 5`, soit `FAILED` avec la première page en incident ;
+12. appliquer l’arrêt global, arrêter l’application puis remettre dans `.env` :
+
+```text
+SOFASCORE_ENABLED=false
+SOFASCORE_J3_QUALIFICATION_ENABLED=false
+SOFASCORE_BASE_URL=
+SOFASCORE_ALLOWED_ENDPOINTS=
+```
+
+Ne jamais redémarrer pour contourner `FAILED`, répéter une séquence ou reprendre à la page suivante.
+Ne jamais ajouter de cookie, jeton, compte, en-tête de navigateur, proxy ou autre origine. Le brut
+reste uniquement dans PostgreSQL local et ne doit être copié ni dans Git, ni dans un chat, ni dans
+les logs.
+
 ## 4. Validation
 
 ### 4.1 Suite standard
@@ -165,14 +209,17 @@ http://127.0.0.1:<port>/simulated/scheduled-events?date=AAAA-MM-JJ
 ```
 
 Toute autre origine, tout chemin libre, proxy, redirection ou retry doit faire échouer la revue. Le
-transport n’est pas un bean Spring et ne peut pas être déclenché depuis l’interface. Ne pas ajouter
-une base URL réelle pour « essayer » cette unité.
+transport simulé n’est pas un bean Spring et ne peut pas être déclenché depuis l’interface. Le
+transport fournisseur distinct reste inéligible avec la configuration par défaut et ses tests sont
+interceptés par `MockRestServiceServer`.
 
 ### 4.5 Confirmation J3
 
 La suite standard couvre l’ordre des transitions, l’expiration à cinq minutes, la comparaison exacte,
-l’arrêt global, le jeton lié à la session et son usage unique. La confirmation finale produit
-`CONFIRMED_BLOCKED` : elle ne branche pas le transport simulé et ne peut pas joindre un fournisseur.
+l’arrêt global, le jeton lié à la session et son usage unique. Avec la configuration normale, la
+confirmation finale produit `CONFIRMED_BLOCKED`. Avec les quatre propriétés exactes de la section
+3.5, elle produit `CONFIRMED_READY`, sans exécuter de transport tant que l’action séparée n’est pas
+soumise.
 
 ### 4.6 Politiques d’arrêt et d’incident J3
 
@@ -199,10 +246,10 @@ résultats :
 - `PASS` pour le parcours opérateur local, l’arrêt global et les politiques simulées ;
 - `NOT_EXECUTED` pour l’appel réel et `NOT_AVAILABLE` pour sa preuve de sortie.
 
-Si le point de décision du Work Order n’est pas entièrement satisfait, exécuter seulement la
-séquence locale de la section 3.4, vérifier `CONFIRMED_BLOCKED`, appliquer l’arrêt global puis arrêter
-la qualification. Ne pas ajouter une URI, activer un profil réel ou rendre le bouton fournisseur
-disponible pour compléter artificiellement la preuve.
+Le point de décision est désormais satisfait pour le développement du chemin exact, mais pas pour
+une exécution automatique pendant l’implémentation. La qualification réelle doit suivre la section
+3.5 et rester un geste ultérieur du propriétaire. Le profil Maven `sofascore-live-test` demeure
+bloqué : il n’est pas nécessaire au chemin manuel de l’interface et ne doit pas être contourné.
 
 La synthèse versionnée peut contenir les états du circuit, les codes d’incident et les comptes de
 tests. Elle ne doit jamais reproduire une phrase de confirmation active, un UUID, un jeton de

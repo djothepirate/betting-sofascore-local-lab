@@ -219,6 +219,12 @@ button:focus-visible {
   border-color: #a9d8c6;
 }
 
+.notice-warning {
+  background: #fff5d6;
+  border-color: #e5b23d;
+  color: #6f4b00;
+}
+
 .notice-danger {
   color: var(--danger);
   background: #fff0f0;

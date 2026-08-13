@@ -3,6 +3,8 @@ package com.bettingproject.sofascorelocal.adapter.web;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlError;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlException;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlService;
+import com.bettingproject.sofascorelocal.application.network.J3FivePageManualCallService;
+import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallExecutionResult;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -20,12 +22,15 @@ public class ManualCallController {
     private static final String REDIRECT_DASHBOARD = "redirect:/dashboard#manual-call-control";
 
     private final J3ManualCallControlService controlService;
+    private final J3FivePageManualCallService fivePageManualCallService;
     private final LocalFormTokenService formTokenService;
 
     public ManualCallController(
             J3ManualCallControlService controlService,
+            J3FivePageManualCallService fivePageManualCallService,
             LocalFormTokenService formTokenService) {
         this.controlService = controlService;
+        this.fivePageManualCallService = fivePageManualCallService;
         this.formTokenService = formTokenService;
     }
 
@@ -49,7 +54,7 @@ public class ManualCallController {
         formTokenService.consume(session, localFormToken);
         return perform(
                 controlService::activateByOperator,
-                "Circuit activé localement. Aucun transport fournisseur n’est autorisé.",
+                "Circuit activé localement. Aucun transport n’a encore été exécuté ; préparez et confirmez l’intention avant toute action fournisseur.",
                 redirectAttributes);
     }
 
@@ -78,8 +83,46 @@ public class ManualCallController {
         formTokenService.consume(session, localFormToken);
         return perform(
                 () -> controlService.confirm(requestId, confirmationText, acknowledged),
-                "Confirmation enregistrée. L’appel réel reste bloqué et aucun transport n’a été exécuté.",
+                "Confirmation enregistrée. Aucun transport n’a été exécuté ; le déclenchement fournisseur reste une action distincte.",
                 redirectAttributes);
+    }
+
+    @PostMapping("/manual-call/execute")
+    public String execute(
+            @RequestParam("localFormToken") String localFormToken,
+            @RequestParam("requestId") UUID requestId,
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
+        formTokenService.consume(session, localFormToken);
+        try {
+            J3ManualCallExecutionResult result = fivePageManualCallService.execute(requestId);
+            if (result.completed()) {
+                redirectAttributes.addFlashAttribute(
+                        "manualCallMessage",
+                        "Lot fournisseur terminé : cinq pages conservées et classées localement.");
+                redirectAttributes.addFlashAttribute("manualCallMessageKind", "safe");
+            }
+            else {
+                redirectAttributes.addFlashAttribute(
+                        "manualCallMessage",
+                        "Lot arrêté avant la page " + result.failedPage()
+                                + " (" + result.terminalCode() + "). Aucun retry n’a été lancé.");
+                redirectAttributes.addFlashAttribute("manualCallMessageKind", "danger");
+            }
+        }
+        catch (J3ManualCallControlException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "manualCallMessage",
+                    messageFor(exception.error()));
+            redirectAttributes.addFlashAttribute("manualCallMessageKind", "danger");
+        }
+        catch (RuntimeException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "manualCallMessage",
+                    "Le lot fournisseur a été interrompu par une erreur locale sûre. L’arrêt global a été réappliqué et aucun retry n’a été lancé.");
+            redirectAttributes.addFlashAttribute("manualCallMessageKind", "danger");
+        }
+        return REDIRECT_DASHBOARD;
     }
 
     @PostMapping("/manual-call/stop")
@@ -125,6 +168,13 @@ public class ManualCallController {
             case ACKNOWLEDGEMENT_REQUIRED -> "La case de confirmation explicite est obligatoire.";
             case CONFIRMATION_TEXT_MISMATCH -> "La phrase recopiée ne correspond pas exactement.";
             case INTENT_ALREADY_CONFIRMED -> "Cette intention a déjà été confirmée.";
+            case PROVIDER_TRANSPORT_UNAVAILABLE -> "Le chemin fournisseur J3 n’est pas disponible dans cette configuration.";
+            case INTENT_NOT_READY -> "L’intention doit être confirmée et prête avant le déclenchement.";
+            case EXECUTION_ALREADY_STARTED -> "Cette qualification a déjà été déclenchée.";
+            case EXECUTION_NOT_ACTIVE -> "Aucun lot fournisseur actif ne correspond à cette intention.";
+            case PAGE_SEQUENCE_INVALID -> "La séquence de pages ne respecte pas l’ordre fixe 1 à 5.";
+            case QUALIFICATION_ALREADY_CONSUMED -> "La qualification fournisseur unique a déjà été consommée depuis ce démarrage.";
+            case DATE_NOT_AUTHORIZED -> "Seule la date de qualification 2026-08-13 est autorisée pour ce lot.";
         };
     }
 

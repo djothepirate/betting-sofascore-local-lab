@@ -3,9 +3,11 @@ package com.bettingproject.sofascorelocal.adapter.web;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlError;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlException;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlService;
+import com.bettingproject.sofascorelocal.application.network.J3FivePageManualCallService;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallControlSnapshot;
+import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallExecutionResult;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -46,6 +48,9 @@ class ManualCallControllerTest {
     private J3ManualCallControlService controlService;
 
     @MockitoBean
+    private J3FivePageManualCallService fivePageManualCallService;
+
+    @MockitoBean
     private CacheManager cacheManager;
 
     @Test
@@ -73,7 +78,7 @@ class ManualCallControllerTest {
     void forwardsTheExactConfirmationAndAcknowledgementWithoutTransport() throws Exception {
         MockHttpSession session = new MockHttpSession();
         String token = formTokenService.issue(session);
-        String phrase = "CONFIRMER SCHEDULED_EVENTS 2026-08-12 000042";
+        String phrase = "CONFIRMER SCHEDULED_EVENTS 2026-08-12 PAGES 1-5 000042";
         when(controlService.confirm(REQUEST_ID, phrase, true))
                 .thenReturn(rearmedSnapshot());
 
@@ -88,7 +93,7 @@ class ManualCallControllerTest {
                 .andExpect(flash().attribute("manualCallMessageKind", "safe"))
                 .andExpect(flash().attribute(
                         "manualCallMessage",
-                        "Confirmation enregistrée. L’appel réel reste bloqué et aucun transport n’a été exécuté."));
+                        "Confirmation enregistrée. Aucun transport n’a été exécuté ; le déclenchement fournisseur reste une action distincte."));
 
         verify(controlService).confirm(REQUEST_ID, phrase, true);
     }
@@ -138,6 +143,48 @@ class ManualCallControllerTest {
 
         verify(controlService).prepare(date);
         verify(controlService).stopGlobally();
+    }
+
+    @Test
+    void executesTheFivePageBatchOnlyThroughItsOwnSingleUseSubmission() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        String token = formTokenService.issue(session);
+        when(fivePageManualCallService.execute(REQUEST_ID))
+                .thenReturn(J3ManualCallExecutionResult.successful());
+
+        mockMvc.perform(post("/manual-call/execute")
+                        .session(session)
+                        .param("localFormToken", token)
+                        .param("requestId", REQUEST_ID.toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/dashboard#manual-call-control"))
+                .andExpect(flash().attribute("manualCallMessageKind", "safe"))
+                .andExpect(flash().attribute(
+                        "manualCallMessage",
+                        "Lot fournisseur terminé : cinq pages conservées et classées localement."));
+
+        verify(fivePageManualCallService).execute(REQUEST_ID);
+    }
+
+    @Test
+    void exposesOnlyASafeMessageWhenTheBatchFailsLocally() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        String token = formTokenService.issue(session);
+        when(fivePageManualCallService.execute(REQUEST_ID))
+                .thenThrow(new IllegalStateException("database diagnostic must stay hidden"));
+
+        mockMvc.perform(post("/manual-call/execute")
+                        .session(session)
+                        .param("localFormToken", token)
+                        .param("requestId", REQUEST_ID.toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/dashboard#manual-call-control"))
+                .andExpect(flash().attribute("manualCallMessageKind", "danger"))
+                .andExpect(flash().attribute(
+                        "manualCallMessage",
+                        "Le lot fournisseur a été interrompu par une erreur locale sûre. L’arrêt global a été réappliqué et aucun retry n’a été lancé."));
+
+        verify(fivePageManualCallService).execute(REQUEST_ID);
     }
 
     private static J3ManualCallControlSnapshot rearmedSnapshot() {

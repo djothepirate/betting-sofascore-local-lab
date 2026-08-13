@@ -13,7 +13,10 @@ public record J3ManualCallIntentSnapshot(
         String confirmationPhrase,
         Instant preparedAt,
         Instant expiresAt,
-        Instant confirmedAt) {
+        Instant confirmedAt,
+        int completedPages,
+        Integer failedPage,
+        String terminalCode) {
 
     public J3ManualCallIntentSnapshot {
         Objects.requireNonNull(requestId, "requestId");
@@ -25,8 +28,16 @@ public record J3ManualCallIntentSnapshot(
         if (!expiresAt.isAfter(preparedAt)) {
             throw new IllegalArgumentException("expiresAt must be after preparedAt");
         }
-        if (!requestKey.equals(SofascoreEndpointType.SCHEDULED_EVENTS.name() + "|date=" + date)) {
-            throw new IllegalArgumentException("requestKey must match the scheduled-events date");
+        if (!requestKey.equals(SofascoreEndpointType.SCHEDULED_EVENTS.name()
+                + "|date=" + date + "|pages=1-5")) {
+            throw new IllegalArgumentException(
+                    "requestKey must match the scheduled-events five-page batch");
+        }
+        if (completedPages < 0 || completedPages > 5) {
+            throw new IllegalArgumentException("completedPages must be between 0 and 5");
+        }
+        if (failedPage != null && (failedPage < 1 || failedPage > 5)) {
+            throw new IllegalArgumentException("failedPage must be between 1 and 5");
         }
 
         if (state == J3ManualCallIntentState.AWAITING_CONFIRMATION) {
@@ -41,11 +52,28 @@ public record J3ManualCallIntentSnapshot(
                 throw new IllegalArgumentException(
                         "only an awaiting intent may expose its confirmation phrase");
             }
-            if ((state == J3ManualCallIntentState.CONFIRMED_BLOCKED)
-                    != (confirmedAt != null)) {
+            boolean confirmedState = state == J3ManualCallIntentState.CONFIRMED_BLOCKED
+                    || state == J3ManualCallIntentState.CONFIRMED_READY
+                    || state == J3ManualCallIntentState.EXECUTING
+                    || state == J3ManualCallIntentState.COMPLETED
+                    || state == J3ManualCallIntentState.FAILED;
+            if (confirmedState != (confirmedAt != null)) {
                 throw new IllegalArgumentException(
-                        "only a confirmed intent requires a confirmation time");
+                        "only confirmed and execution states require a confirmation time");
             }
+        }
+        if (state == J3ManualCallIntentState.COMPLETED && completedPages != 5) {
+            throw new IllegalArgumentException("a completed batch requires five completed pages");
+        }
+        if (state == J3ManualCallIntentState.FAILED) {
+            if (failedPage == null || terminalCode == null || terminalCode.isBlank()) {
+                throw new IllegalArgumentException(
+                        "a failed batch requires a failed page and terminal code");
+            }
+        }
+        else if (failedPage != null || terminalCode != null) {
+            throw new IllegalArgumentException(
+                    "only a failed batch may carry failure details");
         }
     }
 

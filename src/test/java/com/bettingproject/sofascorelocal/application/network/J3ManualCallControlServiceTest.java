@@ -3,6 +3,7 @@ package com.bettingproject.sofascorelocal.application.network;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState;
+import com.bettingproject.sofascorelocal.domain.provider.J3ProviderQualificationSnapshot;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -11,6 +12,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.net.URI;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -20,6 +22,7 @@ class J3ManualCallControlServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-08-12T12:00:00Z");
     private static final LocalDate DATE = LocalDate.parse("2026-08-12");
+    private static final LocalDate QUALIFICATION_DATE = LocalDate.parse("2026-08-13");
     private static final UUID REQUEST_ID = UUID.fromString(
             "d476ba08-abaa-451a-b4cc-cf077f3d6833");
 
@@ -61,11 +64,11 @@ class J3ManualCallControlServiceTest {
         var prepared = service.prepare(DATE);
         assertThat(prepared.intent().requestId()).isEqualTo(REQUEST_ID);
         assertThat(prepared.intent().requestKey())
-                .isEqualTo("SCHEDULED_EVENTS|date=2026-08-12");
+                .isEqualTo("SCHEDULED_EVENTS|date=2026-08-12|pages=1-5");
         assertThat(prepared.intent().state())
                 .isEqualTo(J3ManualCallIntentState.AWAITING_CONFIRMATION);
         assertThat(prepared.intent().confirmationPhrase())
-                .isEqualTo("CONFIRMER SCHEDULED_EVENTS 2026-08-12 000042");
+                .isEqualTo("CONFIRMER SCHEDULED_EVENTS 2026-08-12 PAGES 1-5 000042");
         assertThat(prepared.intent().expiresAt())
                 .isEqualTo(NOW.plus(J3ManualCallControlService.CONFIRMATION_TTL));
 
@@ -139,6 +142,38 @@ class J3ManualCallControlServiceTest {
         assertRejected(
                 () -> service.confirm(REQUEST_ID, "unused", true),
                 J3ManualCallControlError.GLOBAL_STOP_ACTIVE);
+    }
+
+    @Test
+    void exposesAReadyIntentOnlyForTheExactProviderOptInAndConsumesItOnce() {
+        MutableClock clock = new MutableClock(NOW);
+        var service = new J3ManualCallControlService(
+                clock,
+                () -> REQUEST_ID,
+                () -> 42,
+                () -> J3ProviderQualificationSnapshot.available(
+                        URI.create("https://www.sofascore.com")));
+        service.rearmAfterGlobalStop();
+        service.activateByOperator();
+        var prepared = service.prepare(QUALIFICATION_DATE);
+
+        var confirmed = service.confirm(
+                REQUEST_ID,
+                prepared.intent().confirmationPhrase(),
+                true);
+
+        assertThat(confirmed.providerTransportAvailable()).isTrue();
+        assertThat(confirmed.providerBlockers()).isEmpty();
+        assertThat(confirmed.intent().state())
+                .isEqualTo(J3ManualCallIntentState.CONFIRMED_READY);
+
+        var claim = service.claimExecution(REQUEST_ID);
+
+        assertThat(claim.date()).isEqualTo(QUALIFICATION_DATE);
+        assertThat(claim.providerOrigin()).hasToString("https://www.sofascore.com");
+        assertThat(service.snapshot().providerTransportAvailable()).isFalse();
+        assertThat(service.snapshot().providerBlockers())
+                .containsExactly("J3_QUALIFICATION_ALREADY_CONSUMED");
     }
 
     private static J3ManualCallControlService service(Clock clock) {

@@ -7,6 +7,7 @@ public record DashboardView(
         String projectStatus,
         String connectorMode,
         boolean configurationEnabled,
+        boolean qualificationTransportAvailable,
         String binding,
         String baseUrlState,
         int maximumConcurrency,
