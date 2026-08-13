@@ -627,3 +627,55 @@ J3_RAW_PROVIDER_SNAPSHOTS_PERSISTED=0
 J3_REAL_PROVIDER_OUTPUT_PROOF=NOT_AVAILABLE
 J3_WORK_ORDER=IN_DEVELOPMENT
 ```
+
+## 20. Unité B — déclenchement réel et collecte de la preuve minimisée
+
+Le propriétaire autorise l’implémentation de l’unité qui rend le bouton terminal exploitable pour
+la qualification réelle et prépare la collecte d’une preuve minimisée. Cette autorisation porte sur
+le développement et les tests hors ligne ; elle ne demande pas à l’agent d’exécuter le lot
+fournisseur pendant l’implémentation.
+
+L’unité ajoute :
+
+- une preuve terminale en mémoire, dérivée seulement des métadonnées de transport et du résultat de
+  persistance de chacune des pages effectivement tentées ;
+- l’affichage et le téléchargement local de cette preuve, sans payload, URI, en-tête, cookie, jeton,
+  compte, session ou identifiant de confirmation ;
+- le verrouillage automatique `LOCKED / QUALIFICATION_TERMINAL_LOCK` après `COMPLETED` ou `FAILED` ;
+- le refus d’un réarmement dans le même processus après consommation de la qualification ;
+- une procédure Windows imposant la collecte de la preuve avant l’arrêt de l’application et le
+  retour de la configuration locale aux valeurs désactivées.
+
+Les scénarios automatisés restent hors ligne et couvrent les cinq pages nominales, un incident HTTP
+persisté, un échec de transport avant snapshot, la minimisation, le téléchargement et le verrou
+terminal. Aucun contrat de persistance ni migration n’est modifié.
+
+Validation consolidée exécutée le 2026-08-13 :
+
+- `scripts/Verify-Local.ps1` : préflight Java 25 et scanner de garde-fous réussis ;
+- `mvnw.cmd clean verify` exécuté par le script : `132` tests, `0` échec, `0` erreur,
+  `0` ignoré ;
+- JAR Spring Boot construit avec succès et identité Maven `com.bettingproject` conservée ;
+- tests d’intégration non rejoués, cette unité ne modifiant ni migration ni contrat de persistance ;
+- appels réseau SofaScore exécutés : `0`.
+
+Cette livraison ne clôt pas J3 : le propriétaire doit encore déclencher l’unique lot depuis
+l’interface, télécharger la preuve, remettre la configuration locale en état sûr puis fournir la
+qualification humaine terminale.
+
+```text
+J3_UNIT_B_IMPLEMENTATION=AUTHORIZED
+J3_MINIMIZED_EVIDENCE=IMPLEMENTED
+J3_EVIDENCE_STORAGE=IN_MEMORY_METADATA_ONLY
+J3_EVIDENCE_DOWNLOAD=LOCAL_NO_STORE
+J3_RAW_PAYLOAD_EXPOSED=NO
+J3_TERMINAL_GLOBAL_STOP=AUTOMATIC
+J3_TERMINAL_CIRCUIT_REASON=QUALIFICATION_TERMINAL_LOCK
+J3_TERMINAL_REARM_SAME_PROCESS=FORBIDDEN
+J3_IMPLEMENTATION_PROVIDER_CALLS=0
+J3_STANDARD_TESTS=132
+J3_STANDARD_TEST_RESULT=PASS
+J3_INTEGRATION_TESTS_EXECUTED=NO_PERSISTENCE_CHANGE
+J3_REAL_PROVIDER_QUALIFICATION=PENDING_OWNER_ACTION
+J3_WORK_ORDER=IN_DEVELOPMENT
+```

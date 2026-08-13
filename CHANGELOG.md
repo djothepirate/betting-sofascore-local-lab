@@ -41,6 +41,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `FAILED`, et interdiction d’une seconde exécution dans le même processus ;
 - client fournisseur sans proxy, redirection, cookie, jeton, compte ou donnée de session, couvert
   hors ligne avec `MockRestServiceServer` ;
+- preuve terminale J3 minimisée, affichable et téléchargeable localement, composée uniquement des
+  métadonnées de transport, de persistance et de classement des pages effectivement tentées ;
+- verrou terminal automatique `QUALIFICATION_TERMINAL_LOCK` après succès ou incident, avec refus
+  du réarmement dans le même processus après consommation de la qualification ;
 
 ### Documentation
 
@@ -64,6 +68,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - rapport Windows de qualification pré-exécution du chemin cinq pages, couvrant la liaison de la
   configuration locale, l’injection Spring, le parcours opérateur jusqu’à `CONFIRMED_READY` et la
   disponibilité du bouton final sans l’exécuter.
+- contrat et procédure de collecte de la preuve minimisée après l’unique lot réel, sans copie du
+  payload brut et avec réapplication automatique de l’arrêt global.
 
 ### Modifié
 
@@ -77,6 +83,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - phase applicative avancée à `J3-TRANSPORT-STOP-INCIDENT-POLICIES`, toujours sans transport fournisseur actif.
 - phase applicative avancée à `J3-FIVE-PAGE-PROVIDER-QUALIFICATION-PATH`, avec chemin dédié
   désactivé par défaut et connecteur général toujours verrouillé.
+- phase applicative avancée à `J3-MINIMIZED-PROVIDER-EVIDENCE`, sans modifier la désactivation par
+  défaut du chemin fournisseur.
 - identité de build Maven protégée par Enforcer et par un test des métadonnées Actuator générées,
   afin d’empêcher la réapparition de `com.geoffrey.betting` depuis un dossier `target` obsolète.
 - calcul SHA-256 et détection de contenu sensible mutualisés entre les fixtures hors ligne et les futures preuves brutes.

@@ -159,7 +159,17 @@ SOFASCORE_ALLOWED_ENDPOINTS=SCHEDULED_EVENTS
    **« 5. Lancer le lot fournisseur unique — PAGES 1 À 5 »** une seule fois ;
 10. attendre le retour de la même requête Web sans actualiser la page ;
 11. vérifier soit `COMPLETED` avec `5 / 5`, soit `FAILED` avec la première page en incident ;
-12. appliquer l’arrêt global, arrêter l’application puis remettre dans `.env` :
+12. vérifier que l’arrêt global a été réappliqué automatiquement, que le circuit affiche
+    `LOCKED / QUALIFICATION_TERMINAL_LOCK` et qu’aucun bouton de réarmement n’est disponible ;
+13. dans « Preuve terminale minimisée », contrôler les pages tentées, les statuts, tailles,
+    SHA-256 et classifications, puis sélectionner « Télécharger la preuve minimisée (.txt) » ;
+14. vérifier dans le fichier téléchargé :
+    - `RAW_PAYLOAD_INCLUDED=NO` ;
+    - `PROVIDER_URI_INCLUDED=NO` ;
+    - `REQUEST_OR_RESPONSE_HEADERS_INCLUDED=NO` ;
+    - `COOKIES_TOKENS_ACCOUNT_SESSION_USED=NO` ;
+    - `AUTOMATIC_RETRY_EXECUTED=NO` ;
+15. arrêter l’application puis remettre dans `.env` :
 
 ```text
 SOFASCORE_ENABLED=false
@@ -172,6 +182,9 @@ Ne jamais redémarrer pour contourner `FAILED`, répéter une séquence ou repre
 Ne jamais ajouter de cookie, jeton, compte, en-tête de navigateur, proxy ou autre origine. Le brut
 reste uniquement dans PostgreSQL local et ne doit être copié ni dans Git, ni dans un chat, ni dans
 les logs.
+
+La preuve minimisée est gardée en mémoire uniquement : la télécharger avant d’arrêter
+l’application. Ne pas joindre les snapshots bruts au rapport de qualification.
 
 ## 4. Validation
 

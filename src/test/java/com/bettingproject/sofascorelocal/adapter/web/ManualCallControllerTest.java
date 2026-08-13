@@ -4,6 +4,7 @@ import com.bettingproject.sofascorelocal.application.network.J3ManualCallControl
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlException;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlService;
 import com.bettingproject.sofascorelocal.application.network.J3FivePageManualCallService;
+import com.bettingproject.sofascorelocal.application.network.J3QualificationEvidenceService;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallControlSnapshot;
@@ -27,6 +28,9 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -49,6 +53,9 @@ class ManualCallControllerTest {
 
     @MockitoBean
     private J3FivePageManualCallService fivePageManualCallService;
+
+    @MockitoBean
+    private J3QualificationEvidenceService qualificationEvidenceService;
 
     @MockitoBean
     private CacheManager cacheManager;
@@ -161,7 +168,7 @@ class ManualCallControllerTest {
                 .andExpect(flash().attribute("manualCallMessageKind", "safe"))
                 .andExpect(flash().attribute(
                         "manualCallMessage",
-                        "Lot fournisseur terminé : cinq pages conservées et classées localement."));
+                        "Lot fournisseur terminé : cinq pages conservées et classées localement. L’arrêt global a été réappliqué et la preuve minimisée est prête."));
 
         verify(fivePageManualCallService).execute(REQUEST_ID);
     }
@@ -185,6 +192,37 @@ class ManualCallControllerTest {
                         "Le lot fournisseur a été interrompu par une erreur locale sûre. L’arrêt global a été réappliqué et aucun retry n’a été lancé."));
 
         verify(fivePageManualCallService).execute(REQUEST_ID);
+    }
+
+    @Test
+    void downloadsOnlyTheAlreadyMinimizedEvidenceDocument() throws Exception {
+        var evidence = new com.bettingproject.sofascorelocal.domain.provider.J3MinimizedQualificationEvidence(
+                LocalDate.parse("2026-08-13"),
+                com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState.CANCELLED_BY_GLOBAL_STOP,
+                0,
+                1,
+                "GLOBAL_STOP_OR_CIRCUIT_BLOCK",
+                Instant.parse("2026-08-13T12:00:20Z"),
+                true,
+                J3CircuitState.LOCKED,
+                J3CircuitReason.OPERATOR_STOP,
+                List.of());
+        var document = new J3QualificationEvidenceService.EvidenceDocument(
+                evidence,
+                "RAW_PAYLOAD_INCLUDED=NO\nPROVIDER_URI_INCLUDED=NO\n",
+                "J3-MINIMIZED-EVIDENCE-2026-08-13.txt");
+        when(qualificationEvidenceService.latestDocument())
+                .thenReturn(java.util.Optional.of(document));
+
+        mockMvc.perform(get("/manual-call/evidence"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", "no-store"))
+                .andExpect(header().string(
+                        "Content-Disposition",
+                        "attachment; filename=\"J3-MINIMIZED-EVIDENCE-2026-08-13.txt\""))
+                .andExpect(content().contentType("text/plain;charset=UTF-8"))
+                .andExpect(content().string(
+                        "RAW_PAYLOAD_INCLUDED=NO\nPROVIDER_URI_INCLUDED=NO\n"));
     }
 
     private static J3ManualCallControlSnapshot rearmedSnapshot() {

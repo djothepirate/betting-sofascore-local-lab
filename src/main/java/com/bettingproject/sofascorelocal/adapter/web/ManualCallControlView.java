@@ -49,7 +49,7 @@ public record ManualCallControlView(
                 source.circuitChangedAt().toString(),
                 source.retryNotBefore() == null ? "NONE" : source.retryNotBefore().toString(),
                 source.suggestedDate().toString(),
-                source.globalStopActive(),
+                source.globalStopActive() && !qualificationConsumed,
                 !source.globalStopActive() && source.circuitState() == J3CircuitState.LOCKED,
                 source.operatorActivated() && !activeIntent && !qualificationConsumed,
                 source.providerTransportAvailable(),

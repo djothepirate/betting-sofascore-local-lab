@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlService;
+import com.bettingproject.sofascorelocal.application.network.J3QualificationEvidenceService;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallControlSnapshot;
@@ -40,6 +41,9 @@ class DashboardControllerTest {
 
     @MockitoBean
     private J3ManualCallControlService manualCallControlService;
+
+    @MockitoBean
+    private J3QualificationEvidenceService qualificationEvidenceService;
 
     @MockitoBean
     private LocalFormTokenService formTokenService;

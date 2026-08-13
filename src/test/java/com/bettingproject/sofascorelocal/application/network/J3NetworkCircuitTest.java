@@ -43,6 +43,18 @@ class J3NetworkCircuitTest {
     }
 
     @Test
+    void terminalQualificationLockIsDistinctFromAnOperatorStop() {
+        J3NetworkCircuit circuit = activeCircuit();
+
+        var locked = circuit.lockAfterQualification(STARTED_AT.plusSeconds(2));
+
+        assertThat(locked.state()).isEqualTo(J3CircuitState.LOCKED);
+        assertThat(locked.reason())
+                .isEqualTo(J3CircuitReason.QUALIFICATION_TERMINAL_LOCK);
+        assertThat(locked.transportMayBeEvaluated()).isFalse();
+    }
+
+    @Test
     void alreadyClosedCircuitCannotBeActivatedAgainImplicitly() {
         J3NetworkCircuit circuit = activeCircuit();
 

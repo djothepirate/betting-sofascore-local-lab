@@ -176,6 +176,35 @@ class J3ManualCallControlServiceTest {
                 .containsExactly("J3_QUALIFICATION_ALREADY_CONSUMED");
     }
 
+    @Test
+    void terminalQualificationLockCannotBeRearmedInTheSameProcess() {
+        MutableClock clock = new MutableClock(NOW);
+        var service = new J3ManualCallControlService(
+                clock,
+                () -> REQUEST_ID,
+                () -> 42,
+                () -> J3ProviderQualificationSnapshot.available(
+                        URI.create("https://www.sofascore.com")));
+        service.rearmAfterGlobalStop();
+        service.activateByOperator();
+        var prepared = service.prepare(QUALIFICATION_DATE);
+        service.confirm(REQUEST_ID, prepared.intent().confirmationPhrase(), true);
+        service.claimExecution(REQUEST_ID);
+        for (int page = 1; page <= 5; page++) {
+            service.recordPageCompleted(REQUEST_ID, page);
+        }
+        service.completeExecution(REQUEST_ID);
+
+        var locked = service.lockAfterQualification(REQUEST_ID);
+
+        assertThat(locked.globalStopActive()).isTrue();
+        assertThat(locked.circuitReason())
+                .isEqualTo(J3CircuitReason.QUALIFICATION_TERMINAL_LOCK);
+        assertRejected(
+                service::rearmAfterGlobalStop,
+                J3ManualCallControlError.QUALIFICATION_ALREADY_CONSUMED);
+    }
+
     private static J3ManualCallControlService service(Clock clock) {
         return new J3ManualCallControlService(clock, () -> REQUEST_ID, () -> 42);
     }

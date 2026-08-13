@@ -4,11 +4,16 @@ import com.bettingproject.sofascorelocal.application.network.J3ManualCallControl
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlException;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlService;
 import com.bettingproject.sofascorelocal.application.network.J3FivePageManualCallService;
+import com.bettingproject.sofascorelocal.application.network.J3QualificationEvidenceService;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallExecutionResult;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -23,14 +28,17 @@ public class ManualCallController {
 
     private final J3ManualCallControlService controlService;
     private final J3FivePageManualCallService fivePageManualCallService;
+    private final J3QualificationEvidenceService qualificationEvidenceService;
     private final LocalFormTokenService formTokenService;
 
     public ManualCallController(
             J3ManualCallControlService controlService,
             J3FivePageManualCallService fivePageManualCallService,
+            J3QualificationEvidenceService qualificationEvidenceService,
             LocalFormTokenService formTokenService) {
         this.controlService = controlService;
         this.fivePageManualCallService = fivePageManualCallService;
+        this.qualificationEvidenceService = qualificationEvidenceService;
         this.formTokenService = formTokenService;
     }
 
@@ -99,14 +107,14 @@ public class ManualCallController {
             if (result.completed()) {
                 redirectAttributes.addFlashAttribute(
                         "manualCallMessage",
-                        "Lot fournisseur terminé : cinq pages conservées et classées localement.");
+                        "Lot fournisseur terminé : cinq pages conservées et classées localement. L’arrêt global a été réappliqué et la preuve minimisée est prête.");
                 redirectAttributes.addFlashAttribute("manualCallMessageKind", "safe");
             }
             else {
                 redirectAttributes.addFlashAttribute(
                         "manualCallMessage",
                         "Lot arrêté avant la page " + result.failedPage()
-                                + " (" + result.terminalCode() + "). Aucun retry n’a été lancé.");
+                                + " (" + result.terminalCode() + "). Aucun retry n’a été lancé ; l’arrêt global est réappliqué et la preuve minimisée est prête.");
                 redirectAttributes.addFlashAttribute("manualCallMessageKind", "danger");
             }
         }
@@ -123,6 +131,18 @@ public class ManualCallController {
             redirectAttributes.addFlashAttribute("manualCallMessageKind", "danger");
         }
         return REDIRECT_DASHBOARD;
+    }
+
+    @GetMapping(value = "/manual-call/evidence", produces = "text/plain;charset=UTF-8")
+    public ResponseEntity<String> downloadEvidence() {
+        return qualificationEvidenceService.latestDocument()
+                .map(document -> ResponseEntity.ok()
+                        .cacheControl(CacheControl.noStore())
+                        .header(
+                                HttpHeaders.CONTENT_DISPOSITION,
+                                "attachment; filename=\"" + document.filename() + "\"")
+                        .body(document.reportText()))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping("/manual-call/stop")

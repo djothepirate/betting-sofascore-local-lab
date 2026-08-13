@@ -77,6 +77,9 @@ POST /manual-call/execute (action distincte)
         |
         v
 page 1 -> délai -> page 2 -> délai -> ... -> page 5
+        |
+        v
+preuve minimisée + QUALIFICATION_TERMINAL_LOCK
 ```
 
 La confirmation est valable cinq minutes avant usage. Elle est supprimée après confirmation et ne
@@ -106,6 +109,10 @@ Le comportement terminal est :
 - `CANCELLED_BY_GLOBAL_STOP` si l’opérateur applique l’arrêt global ;
 - aucun retry, aucune reprise automatique et aucune bascule vers un autre endpoint.
 
+Après `COMPLETED` ou `FAILED`, l’arrêt global est réappliqué automatiquement et le circuit passe à
+`LOCKED / QUALIFICATION_TERMINAL_LOCK`. La preuve minimisée est alors affichée et téléchargeable ;
+son contrat d’exclusion est défini dans `J3-MINIMIZED-PROVIDER-EVIDENCE.md`.
+
 ## 6. Tests hors ligne
 
 Les tests standards n’activent pas la configuration réelle. Ils couvrent :
@@ -118,6 +125,7 @@ Les tests standards n’activent pas la configuration réelle. Ils couvrent :
 - l’usage unique de la confirmation ;
 - l’arrêt sur `403` avant la page suivante ;
 - la route MVC distincte du geste de confirmation.
+- la preuve terminale sans payload, URI, en-tête ou donnée de session et le verrou automatique.
 
 Le client HTTP réel est testé avec `MockRestServiceServer`. Aucune suite Maven standard ou
 d’intégration ne contacte SofaScore.

@@ -94,6 +94,9 @@ public class J3ManualCallControlService {
         if (!globalStopActive) {
             throw rejected(J3ManualCallControlError.GLOBAL_STOP_ALREADY_CLEARED);
         }
+        if (qualificationConsumed) {
+            throw rejected(J3ManualCallControlError.QUALIFICATION_ALREADY_CONSUMED);
+        }
         globalStopActive = false;
         return toSnapshot();
     }
@@ -200,13 +203,13 @@ public class J3ManualCallControlService {
 
     public synchronized J3ManualCallExecutionClaim claimExecution(UUID requestId) {
         Objects.requireNonNull(requestId, "requestId");
-        requireReadyForIntent();
         requireMatchingIntent(requestId);
         if (intent.state() == J3ManualCallIntentState.EXECUTING
                 || intent.state() == J3ManualCallIntentState.COMPLETED
                 || intent.state() == J3ManualCallIntentState.FAILED) {
             throw rejected(J3ManualCallControlError.EXECUTION_ALREADY_STARTED);
         }
+        requireReadyForIntent();
         if (intent.state() != J3ManualCallIntentState.CONFIRMED_READY) {
             throw rejected(J3ManualCallControlError.INTENT_NOT_READY);
         }
@@ -279,6 +282,18 @@ public class J3ManualCallControlService {
                 intent.completedPages(),
                 failedPage,
                 requireSafeCode(terminalCode));
+        return toSnapshot();
+    }
+
+    public synchronized J3ManualCallControlSnapshot lockAfterQualification(UUID requestId) {
+        Objects.requireNonNull(requestId, "requestId");
+        requireMatchingIntent(requestId);
+        if (intent.state() != J3ManualCallIntentState.COMPLETED
+                && intent.state() != J3ManualCallIntentState.FAILED) {
+            throw rejected(J3ManualCallControlError.EXECUTION_NOT_ACTIVE);
+        }
+        globalStopActive = true;
+        circuit.lockAfterQualification(clock.instant());
         return toSnapshot();
     }
 

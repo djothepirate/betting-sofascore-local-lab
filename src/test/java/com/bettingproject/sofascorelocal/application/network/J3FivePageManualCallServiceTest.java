@@ -1,6 +1,8 @@
 package com.bettingproject.sofascorelocal.application.network;
 
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.transport.ScheduledEventsTransportException;
+import com.bettingproject.sofascorelocal.adapter.sofascore.transport.ScheduledEventsTransportFailure;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState;
@@ -56,7 +58,8 @@ class J3FivePageManualCallServiceTest {
             return response(request, requestedAt, clock.instant(), 200, body);
         };
         J3ManualCallControlService control = readyControl(clock);
-        var service = service(control, transport, store, clock, duration -> {
+        J3QualificationEvidenceService evidenceService = new J3QualificationEvidenceService();
+        var service = service(control, transport, store, evidenceService, clock, duration -> {
             waits.add(duration);
             clock.advance(duration);
         });
@@ -77,6 +80,19 @@ class J3FivePageManualCallServiceTest {
         assertThat(control.snapshot().intent().state())
                 .isEqualTo(J3ManualCallIntentState.COMPLETED);
         assertThat(control.snapshot().intent().completedPages()).isEqualTo(5);
+        assertThat(control.snapshot().globalStopActive()).isTrue();
+        assertThat(control.snapshot().circuitState()).isEqualTo(J3CircuitState.LOCKED);
+        assertThat(control.snapshot().circuitReason())
+                .isEqualTo(J3CircuitReason.QUALIFICATION_TERMINAL_LOCK);
+        var evidence = evidenceService.latestDocument().orElseThrow();
+        assertThat(evidence.evidence().pageAttempts()).hasSize(5);
+        assertThat(evidence.reportText())
+                .contains("PAGES_ATTEMPTED=1,2,3,4,5")
+                .contains("FINAL_GLOBAL_STOP=ACTIVE")
+                .contains("FINAL_CIRCUIT_REASON=QUALIFICATION_TERMINAL_LOCK")
+                .contains("RAW_PAYLOAD_INCLUDED=NO")
+                .doesNotContain("https://www.sofascore.com")
+                .doesNotContain("\"events\"");
 
         assertThatThrownBy(() -> service.execute(REQUEST_ID))
                 .isInstanceOfSatisfying(
@@ -104,10 +120,12 @@ class J3FivePageManualCallServiceTest {
                     request.page() == 2 ? forbiddenBody : validBody);
         };
         J3ManualCallControlService control = readyControl(clock);
+        J3QualificationEvidenceService evidenceService = new J3QualificationEvidenceService();
         var service = service(
                 control,
                 transport,
                 store,
+                evidenceService,
                 clock,
                 clock::advance);
 
@@ -121,16 +139,60 @@ class J3FivePageManualCallServiceTest {
         assertThat(store.saved).hasSize(2);
         assertThat(store.saved.get(1).schemaStatus())
                 .isEqualTo(RawSnapshotSchemaStatus.TRANSPORT_ERROR);
-        assertThat(control.snapshot().circuitState()).isEqualTo(J3CircuitState.OPEN);
-        assertThat(control.snapshot().circuitReason()).isEqualTo(J3CircuitReason.HTTP_FORBIDDEN);
+        assertThat(control.snapshot().circuitState()).isEqualTo(J3CircuitState.LOCKED);
+        assertThat(control.snapshot().circuitReason())
+                .isEqualTo(J3CircuitReason.QUALIFICATION_TERMINAL_LOCK);
         assertThat(control.snapshot().intent().state())
                 .isEqualTo(J3ManualCallIntentState.FAILED);
+        var evidence = evidenceService.latestDocument().orElseThrow();
+        assertThat(evidence.reportText())
+                .contains("TERMINAL_CODE=HTTP_FORBIDDEN")
+                .contains("PAGE_2_SCHEMA_STATUS=TRANSPORT_ERROR")
+                .contains("PAGE_2_TERMINAL_CODE=HTTP_FORBIDDEN")
+                .contains("PAGE_2_SNAPSHOT_RECORDED=YES")
+                .doesNotContain("forbidden");
+    }
+
+    @Test
+    void recordsOnlyMinimizedAttemptMetadataWhenTransportFailsBeforeSnapshot() {
+        MutableClock clock = new MutableClock(NOW);
+        RecordingStore store = new RecordingStore();
+        J3QualificationEvidenceService evidenceService = new J3QualificationEvidenceService();
+        ScheduledEventsProviderPageTransport transport = request -> {
+            throw new ScheduledEventsTransportException(
+                    ScheduledEventsTransportFailure.TIMEOUT);
+        };
+        J3ManualCallControlService control = readyControl(clock);
+        var service = service(
+                control,
+                transport,
+                store,
+                evidenceService,
+                clock,
+                clock::advance);
+
+        var result = service.execute(REQUEST_ID);
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.failedPage()).isEqualTo(1);
+        assertThat(result.terminalCode()).isEqualTo("TIMEOUT");
+        assertThat(store.saved).isEmpty();
+        assertThat(control.snapshot().globalStopActive()).isTrue();
+        assertThat(control.snapshot().circuitReason())
+                .isEqualTo(J3CircuitReason.QUALIFICATION_TERMINAL_LOCK);
+        assertThat(evidenceService.latestDocument().orElseThrow().reportText())
+                .contains("PAGES_ATTEMPTED=1")
+                .contains("PAGE_1_SNAPSHOT_RECORDED=NO")
+                .contains("PAGE_1_HTTP_STATUS=NONE")
+                .contains("PAGE_1_PAYLOAD_SHA256=NONE")
+                .contains("PAGE_1_TERMINAL_CODE=TIMEOUT");
     }
 
     private static J3FivePageManualCallService service(
             J3ManualCallControlService control,
             ScheduledEventsProviderPageTransport transport,
             RecordingStore store,
+            J3QualificationEvidenceService evidenceService,
             Clock clock,
             J3FivePageManualCallService.InterPageDelay delay) {
         return new J3FivePageManualCallService(
@@ -141,6 +203,7 @@ class J3FivePageManualCallServiceTest {
                         new ScheduledEventsV1Parser(),
                         control.circuit()),
                 new J3SingleCallGuard(),
+                evidenceService,
                 clock,
                 Duration.ofSeconds(3),
                 delay);
