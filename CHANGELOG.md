@@ -61,6 +61,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `OBSERVATION_MANUELLE_DANS_LE_NAVIGATEUR`, la décision propriétaire et l’interdiction d’exécuter
   un appel pendant l’implémentation ;
 - contrat d’architecture et procédure opérateur du chemin fournisseur J3 borné.
+- rapport Windows de qualification pré-exécution du chemin cinq pages, couvrant la liaison de la
+  configuration locale, l’injection Spring, le parcours opérateur jusqu’à `CONFIRMED_READY` et la
+  disponibilité du bouton final sans l’exécuter.
 
 ### Modifié
 
@@ -79,6 +82,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - calcul SHA-256 et détection de contenu sensible mutualisés entre les fixtures hors ligne et les futures preuves brutes.
 - classification JSON/HTML/OTHER mutualisée entre le corpus hors ligne et les réponses du transport simulé.
 - adaptateur JDBC étendu avec une transition contrôlée de `RAW_ONLY` vers le résultat final du parseur.
+- liaison explicite de `SOFASCORE_ENABLED`, `SOFASCORE_J3_QUALIFICATION_ENABLED`,
+  `SOFASCORE_BASE_URL` et `SOFASCORE_ALLOWED_ENDPOINTS` vers les propriétés Spring, avec valeurs
+  versionnées toujours sûres par défaut ;
+- sélection explicite des constructeurs Spring de production du transport, de l’orchestrateur cinq
+  pages et du contrôle manuel ;
+- présentation du connecteur prête en vert avec un libellé humain et classes CSS exclusives.
 
 ### Sécurité
 
@@ -102,6 +111,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - validation de domaine de la date et des cinq pages, sans chemin libre, redirection, proxy,
   pagination découverte, retry ni donnée de session ;
 - maintien de tous les tests Maven hors ligne et absence d’appel SofaScore pendant l’implémentation.
+- qualification Windows arrêtée avant le bouton final : aucune page fournisseur demandée, aucun
+  snapshot réel persisté et aucune preuve de sortie fournisseur ajoutée au dépôt.
 
 ## [0.1.0] — 2026-08-08
 

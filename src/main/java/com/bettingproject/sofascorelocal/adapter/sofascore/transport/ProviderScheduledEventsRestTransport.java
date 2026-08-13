@@ -5,6 +5,8 @@ import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportResponse;
 import com.bettingproject.sofascorelocal.port.ScheduledEventsProviderPageTransport;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.JdkClientHttpRequestFactory;
@@ -40,6 +42,7 @@ public class ProviderScheduledEventsRestTransport
     private final RestClient restClient;
     private final Clock clock;
 
+    @Autowired
     public ProviderScheduledEventsRestTransport(SofascoreProperties properties) {
         this(createRestClient(
                 properties.getConnectTimeout(),

@@ -9,6 +9,8 @@ import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState
 import com.bettingproject.sofascorelocal.domain.provider.J3ProviderQualificationSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
@@ -46,6 +48,7 @@ public class J3ManualCallControlService {
     private boolean qualificationConsumed;
     private Intent intent;
 
+    @Autowired
     public J3ManualCallControlService(J3ProviderQualificationPolicy qualificationPolicy) {
         this(
                 Clock.systemUTC(),

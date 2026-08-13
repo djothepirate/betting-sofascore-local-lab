@@ -71,8 +71,8 @@ info:
     status: EXPERIMENTAL_LOCAL_ONLY
 
 sofascore:
-  enabled: false
-  j3-qualification-enabled: false
+  enabled: ${SOFASCORE_ENABLED:false}
+  j3-qualification-enabled: ${SOFASCORE_J3_QUALIFICATION_ENABLED:false}
   base-url: ${SOFASCORE_BASE_URL:}
   maximum-concurrency: 1
   minimum-delay: 3s
@@ -83,7 +83,7 @@ sofascore:
   store-raw-payloads: true
   raw-payload-retention-days: 30
   export-directory: ${SOFASCORE_EXPORT_DIR:./exports}
-  allowed-endpoints: []
+  allowed-endpoints: ${SOFASCORE_ALLOWED_ENDPOINTS:}
 
 logging:
   level:

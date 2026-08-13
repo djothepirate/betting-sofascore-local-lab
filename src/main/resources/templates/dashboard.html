@@ -27,9 +27,14 @@
   <section class="grid cards" aria-label="État du laboratoire">
     <article class="card">
       <p class="label">Connecteur</p>
-      <p class="metric danger"
-         th:classappend="${dashboard.qualificationTransportAvailable} ? ' safe' : ''"
-         th:text="${dashboard.qualificationTransportAvailable ? 'J3_QUALIFICATION_READY' : (dashboard.configurationEnabled ? 'CONFIG_ENABLED_BUT_QUALIFICATION_BLOCKED' : 'DISABLED')}">DISABLED</p>
+      <p th:class="${dashboard.qualificationTransportAvailable}
+             ? 'metric safe'
+             : 'metric danger'"
+         th:text="${dashboard.qualificationTransportAvailable
+             ? 'QUALIFICATION J3 PRÊTE'
+             : (dashboard.configurationEnabled
+                ? 'CONFIG_ENABLED_BUT_QUALIFICATION_BLOCKED'
+                : 'DISABLED')}">DISABLED</p>
       <dl>
         <div><dt>Base URL</dt><dd th:text="${dashboard.baseUrlState}">NON_CONFIGURED</dd></div>
         <div><dt>Concurrence max.</dt><dd th:text="${dashboard.maximumConcurrency}">1</dd></div>

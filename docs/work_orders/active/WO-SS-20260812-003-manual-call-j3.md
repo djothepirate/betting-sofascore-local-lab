@@ -576,3 +576,54 @@ J3_STANDARD_TEST_RESULT=PASS
 J3_INTEGRATION_TESTS_EXECUTED=NO_PERSISTENCE_CHANGE
 J3_WORK_ORDER=IN_DEVELOPMENT
 ```
+
+## 19. Qualification Windows pré-exécution du chemin cinq pages
+
+Le 2026-08-13, le propriétaire a validé sous Windows l’état issu du commit
+`e2769cae1e1ce1499e33a045a411820e3d505382`, complété par les corrections de liaison Spring, de
+sélection des constructeurs de production, de non-régression et de présentation consignées dans :
+
+```text
+docs/validation/J3-WINDOWS-FIVE-PAGE-PROVIDER-READINESS-20260813.md
+```
+
+Cette qualification confirme :
+
+- la liaison effective des quatre variables locales `SOFASCORE_*` documentées ;
+- le démarrage du contexte Spring et l’injection déterministe des trois composants possédant des
+  constructeurs de test secondaires ;
+- l’affichage `QUALIFICATION J3 PRÊTE` lorsque la politique spécialisée est disponible ;
+- le démarrage sous arrêt global, puis les gestes séparés de réarmement et d’activation ;
+- la préparation de la date exacte `2026-08-13` et des pages fixes `1` à `5` ;
+- le passage à `CONFIRMED_READY` après phrase exacte et acquittement ;
+- la disponibilité du bouton final uniquement après confirmation ;
+- le maintien du connecteur général verrouillé et de `SCHEDULED_EVENTS` comme seule famille
+  appelable dans ce mode ;
+- l’arrêt volontaire de la session avant le clic final.
+
+La validation automatisée a été reproduite après réception du rapport avec
+`scripts/Verify-Local.ps1` : Java 25, scanner de garde-fous, `128` tests standards, build du JAR et
+identité Maven sont passés sans échec. Les tests d’intégration ne sont pas requis pour ces
+corrections, qui ne modifient ni migration ni contrat de persistance.
+
+Cette preuve porte exclusivement sur la préparation technique et humaine avant exécution. Elle ne
+contient aucune preuve de réponse fournisseur, de page effectivement atteinte, de snapshot brut
+réel ou d’incident observé. Le Work Order reste donc ouvert jusqu’à une qualification réelle
+séparée, explicitement déclenchée par le propriétaire.
+
+```text
+J3_WINDOWS_PRE_EXECUTION_QUALIFICATION=PASS
+J3_CONFIGURATION_BINDING=PASS
+J3_SPRING_CONSTRUCTOR_INJECTION=PASS
+J3_CONNECTOR_READY_PRESENTATION=PASS
+J3_DEDICATED_PATH=CONFIRMED_READY
+J3_FINAL_PROVIDER_BUTTON=AVAILABLE
+J3_GENERAL_CONNECTOR=LOCKED
+J3_STANDARD_TESTS=128
+J3_STANDARD_TEST_RESULT=PASS
+J3_REAL_PROVIDER_CALL=NOT_EXECUTED
+J3_PROVIDER_PAGES_REQUESTED=0
+J3_RAW_PROVIDER_SNAPSHOTS_PERSISTED=0
+J3_REAL_PROVIDER_OUTPUT_PROOF=NOT_AVAILABLE
+J3_WORK_ORDER=IN_DEVELOPMENT
+```

@@ -10,6 +10,8 @@ import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProvider
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportResponse;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import com.bettingproject.sofascorelocal.port.ScheduledEventsProviderPageTransport;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -29,6 +31,7 @@ public class J3FivePageManualCallService {
     private final Duration minimumDelay;
     private final InterPageDelay interPageDelay;
 
+    @Autowired
     public J3FivePageManualCallService(
             J3ManualCallControlService controlService,
             ScheduledEventsProviderPageTransport transport,
