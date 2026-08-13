@@ -6,6 +6,8 @@ public record ScheduledEventsParseWarning(Code code, String path, String message
 
     public enum Code {
         EMPTY_EVENTS,
+        EMPTY_SCHEDULED_TOURNAMENTS,
+        EMPTY_TIMEZONE_EVENT_COUNT,
         OPTIONAL_FIELD_MISSING,
         UNKNOWN_FIELD
     }

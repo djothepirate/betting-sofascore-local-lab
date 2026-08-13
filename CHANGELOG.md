@@ -45,6 +45,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   métadonnées de transport, de persistance et de classement des pages effectivement tentées ;
 - verrou terminal automatique `QUALIFICATION_TERMINAL_LOCK` après succès ou incident, avec refus
   du réarmement dans le même processus après consommation de la qualification ;
+- fixture synthétique minimisée au contrat utile observé `scheduled` / `tournament` /
+  `timezoneEventCount`, sans valeur, URI, en-tête ou donnée de session fournisseur ;
+- modèle local explicite des disponibilités de tournois et des compteurs d’événements par décalage
+  horaire, distinct de l’ancien modèle synthétique `events` ;
 
 ### Documentation
 
@@ -70,12 +74,15 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   disponibilité du bouton final sans l’exécuter.
 - contrat et procédure de collecte de la preuve minimisée après l’unique lot réel, sans copie du
   payload brut et avec réapplication automatique de l’arrêt global.
+- rapport terminal de la qualification réelle cinq pages, limité à la page 1 par l’arrêt sûr sur
+  incompatibilité, puis diagnostic structurel hors ligne du snapshot local conservé.
 
 ### Modifié
 
 - renommage du package Java de base de `com.geoffrey.betting.sofascorelocal` vers `com.bettingproject.sofascorelocal`.
 - renommage du groupId `com.geoffrey.betting` vers `com.bettingproject` dans le pom.xml
-- tableau de bord enrichi avec le compteur des neuf fixtures hors ligne et leur état de validation synthétique.
+- tableau de bord enrichi avec le compteur des dix fixtures hors ligne et l’état distinct de
+  validation structurelle du schéma fournisseur.
 - mode visible du verrou mis à jour vers `LOCKED_OFFLINE_J3_POLICY` sans ouvrir le transport.
 - phase applicative avancée à `J3-OFFLINE-RAW-PERSISTENCE` sans modifier l’état du connecteur.
 - phase applicative avancée à `J3-GUARDED-SIMULATED-TRANSPORT`, toujours sans transport fournisseur actif.
@@ -96,6 +103,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - sélection explicite des constructeurs Spring de production du transport, de l’orchestrateur cinq
   pages et du contrôle manuel ;
 - présentation du connecteur prête en vert avec un libellé humain et classes CSS exclusives.
+- parseur `scheduled-events-v1` étendu au schéma fournisseur qualifié dont la racine contient
+  `scheduled` et `hasNextPage`, tout en conservant la compatibilité du corpus J2 `events` ;
+- inventaire hors ligne porté à dix fixtures et indicateur de schéma fournisseur validé après
+  relecture locale réussie du snapshot qualifié, sans nouvel appel réseau.
 
 ### Sécurité
 

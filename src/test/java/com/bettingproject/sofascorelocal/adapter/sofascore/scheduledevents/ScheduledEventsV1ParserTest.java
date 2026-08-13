@@ -2,6 +2,7 @@ package com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents;
 
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEvent;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEventsPage;
+import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTournamentAvailability;
 import com.bettingproject.sofascorelocal.fixture.ClasspathFixtureLoader;
 import com.bettingproject.sofascorelocal.fixture.LoadedFixture;
 import org.junit.jupiter.api.Test;
@@ -22,6 +23,8 @@ class ScheduledEventsV1ParserTest {
             "fixtures/scheduled-events/empty-events-array.manifest.json";
     private static final String UNKNOWN_EXTRA_FIELD =
             "fixtures/scheduled-events/unknown-extra-field.manifest.json";
+    private static final String QUALIFIED_PROVIDER_SHAPE =
+            "fixtures/scheduled-events/qualified-provider-shape.manifest.json";
 
     private static final ClasspathFixtureLoader LOADER = new ClasspathFixtureLoader();
     private static final ScheduledEventsV1Parser PARSER = new ScheduledEventsV1Parser();
@@ -128,6 +131,43 @@ class ScheduledEventsV1ParserTest {
                         "$.events[0].syntheticExtra");
         assertThat(result.page())
                 .isEqualTo(parse(NOMINAL).page());
+    }
+
+    @Test
+    void parsesTheQualifiedScheduledTournamentShapeWithoutInventingEvents() {
+        ScheduledEventsParseResult result = parse(QUALIFIED_PROVIDER_SHAPE);
+
+        assertThat(result.status()).isEqualTo(ScheduledEventsParseStatus.PARSED);
+        assertThat(result.problems()).isEmpty();
+        assertThat(result.warnings())
+                .extracting(
+                        ScheduledEventsParseWarning::code,
+                        ScheduledEventsParseWarning::path)
+                .containsExactly(org.assertj.core.groups.Tuple.tuple(
+                        ScheduledEventsParseWarning.Code.OPTIONAL_FIELD_MISSING,
+                        "$.scheduled[1].tournament.uniqueTournament"));
+
+        ScheduledEventsPage page = result.page().orElseThrow();
+        assertThat(page.payloadShape())
+                .isEqualTo(ScheduledEventsPage.PayloadShape.SCHEDULED_TOURNAMENT_LIST);
+        assertThat(page.events()).isEmpty();
+        assertThat(page.hasNextPage()).isTrue();
+        assertThat(page.scheduledTournaments()).hasSize(2);
+
+        ScheduledTournamentAvailability first = page.scheduledTournaments().getFirst();
+        assertThat(first.tournament().providerTournamentId()).isEqualTo(970001L);
+        assertThat(first.tournament().name()).isEqualTo("Synthetic Regional League");
+        assertThat(first.uniqueTournament()).hasValueSatisfying(tournament -> {
+            assertThat(tournament.providerTournamentId()).isEqualTo(970101L);
+            assertThat(tournament.name()).isEqualTo("Synthetic National Competition");
+        });
+        assertThat(first.timezoneEventCount())
+                .containsExactlyInAnyOrderEntriesOf(java.util.Map.of(0, 3, 3600, 2));
+
+        ScheduledTournamentAvailability second = page.scheduledTournaments().get(1);
+        assertThat(second.uniqueTournament()).isEmpty();
+        assertThat(second.timezoneEventCount())
+                .containsExactlyInAnyOrderEntriesOf(java.util.Map.of(-10800, 1, 0, 1));
     }
 
     private static ScheduledEventsParseResult parse(String manifestResource) {

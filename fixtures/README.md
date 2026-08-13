@@ -94,7 +94,10 @@ Les catégories sensibles bloquantes couvrent les en-têtes d’autorisation, le
 
 ## Corpus synthétique `SCHEDULED_EVENTS`
 
-Le corpus initial contient neuf scénarios créés de zéro. Il ne reproduit pas et ne prétend pas valider un schéma SofaScore observé.
+Le corpus contient désormais dix scénarios créés de zéro. Aucun payload fournisseur n’est versionné.
+Le dixième scénario reproduit uniquement la structure utile qualifiée hors ligne après la séquence
+J3 : racine `scheduled`, identité minimale de tournoi, identité facultative `uniqueTournament`,
+compteurs numériques `timezoneEventCount` et pagination. Toutes ses valeurs sont synthétiques.
 
 Tous les manifestes conservent :
 
@@ -117,6 +120,7 @@ minimized=false
 | champ facultatif absent | `scheduled-events/optional-field-missing.json` | `PARSED` avec avertissements pour `tournament` et `status.description` |
 | tableau vide | `scheduled-events/empty-events-array.json` | `PARSED`, liste vide et avertissement `EMPTY_EVENTS` |
 | champ inconnu | `scheduled-events/unknown-extra-field.json` | `PARSED`, propriétés ignorées et chemins signalés par `UNKNOWN_FIELD` |
+| forme fournisseur qualifiée | `scheduled-events/qualified-provider-shape.json` | `PARSED`, disponibilités de tournois sans événement inventé |
 | champ obligatoire absent | `schema-breaks/scheduled-events-required-field-missing.json` | `SCHEMA_INCOMPATIBLE` pour `event.id` et `event.status` absents |
 | nombre devenu texte | `schema-breaks/scheduled-events-numeric-field-as-string.json` | `SCHEMA_INCOMPATIBLE` pour `event.id`, sans conversion implicite, et pour `event.status` absent |
 | objet inattendu | `schema-breaks/scheduled-events-unexpected-object.json` | `SCHEMA_INCOMPATIBLE` car `events` n’est pas un tableau |
@@ -131,7 +135,7 @@ Les quatre scénarios de rupture sont exécutés par
 `ScheduledEventsV1SchemaIncompatibilityTest`. Chaque test vérifie le statut, les codes et chemins
 de problèmes, l'absence de page locale partielle et la preuve de traçabilité.
 
-Le tableau de bord inventorie les neuf manifestes classpath avec les mêmes contrôles. Il affiche
+Le tableau de bord inventorie les dix manifestes classpath avec les mêmes contrôles. Il affiche
 uniquement leur disponibilité et la répartition des résultats du parseur ; aucun payload ni hash
 n’est rendu dans l’interface.
 

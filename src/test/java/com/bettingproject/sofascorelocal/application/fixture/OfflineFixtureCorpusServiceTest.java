@@ -18,11 +18,11 @@ class OfflineFixtureCorpusServiceTest {
 
         assertThat(overview.family()).isEqualTo(SofascoreEndpointType.SCHEDULED_EVENTS);
         assertThat(overview.origin()).isEqualTo(FixtureOrigin.SYNTHETIC);
-        assertThat(overview.providerSchemaValidated()).isFalse();
+        assertThat(overview.providerSchemaValidated()).isTrue();
         assertThat(overview.parserVersion()).isEqualTo("scheduled-events-v1");
-        assertThat(overview.declaredCount()).isEqualTo(9);
-        assertThat(overview.availableCount()).isEqualTo(9);
-        assertThat(overview.parsedCount()).isEqualTo(5);
+        assertThat(overview.declaredCount()).isEqualTo(10);
+        assertThat(overview.availableCount()).isEqualTo(10);
+        assertThat(overview.parsedCount()).isEqualTo(6);
         assertThat(overview.schemaIncompatibleCount()).isEqualTo(3);
         assertThat(overview.unexpectedContentCount()).isEqualTo(1);
         assertThat(overview.loadingFailureCount()).isZero();
@@ -39,12 +39,12 @@ class OfflineFixtureCorpusServiceTest {
 
         FixtureCorpusOverview overview = service.loadOverview();
 
-        assertThat(overview.declaredCount()).isEqualTo(9);
+        assertThat(overview.declaredCount()).isEqualTo(10);
         assertThat(overview.availableCount()).isZero();
         assertThat(overview.parsedCount()).isZero();
         assertThat(overview.schemaIncompatibleCount()).isZero();
         assertThat(overview.unexpectedContentCount()).isZero();
-        assertThat(overview.loadingFailureCount()).isEqualTo(9);
+        assertThat(overview.loadingFailureCount()).isEqualTo(10);
         assertThat(overview.availability())
                 .isEqualTo(FixtureCorpusOverview.Availability.INCOMPLETE);
     }

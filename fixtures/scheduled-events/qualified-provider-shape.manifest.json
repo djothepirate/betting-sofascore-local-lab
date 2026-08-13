@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "scheduled-events-qualified-provider-shape",
+  "endpointType": "SCHEDULED_EVENTS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-13T00:00:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "scheduled-events-v1",
+  "payloadResource": "fixtures/scheduled-events/qualified-provider-shape.json",
+  "maximumBytes": 4096,
+  "expectedRawSha256": "298abfb69412e2f87d1895500f21c0837450cd2ea7bf60567ba26adfe4abb80b",
+  "expectedCanonicalJsonSha256": "ef457b2581c0a6c8ff9d67f91a02aa36fb359237322d2efd55a60809030ca265",
+  "minimized": false,
+  "removedFields": []
+}

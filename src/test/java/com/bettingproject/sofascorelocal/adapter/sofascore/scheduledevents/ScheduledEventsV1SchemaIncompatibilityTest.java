@@ -1,9 +1,13 @@
 package com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents;
 
+import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
+import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportResponse;
 import com.bettingproject.sofascorelocal.fixture.ClasspathFixtureLoader;
 import com.bettingproject.sofascorelocal.fixture.LoadedFixture;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+import java.time.Duration;
 import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -124,6 +128,57 @@ class ScheduledEventsV1SchemaIncompatibilityTest {
         assertThat(result.evidence().canonicalJsonSha256()).isEmpty();
     }
 
+    @Test
+    void rejectsQualifiedProviderEntriesWithMissingIdentityAndStringCounts() {
+        ScheduledEventsParseResult result = parseTransportJson("""
+                {
+                  "scheduled": [
+                    {
+                      "timezoneEventCount": {
+                        "0": "1"
+                      }
+                    }
+                  ],
+                  "hasNextPage": false
+                }
+                """);
+
+        assertThat(result.status()).isEqualTo(ScheduledEventsParseStatus.SCHEMA_INCOMPATIBLE);
+        assertThat(result.page()).isEmpty();
+        assertThat(result.problems())
+                .extracting(
+                        ScheduledEventsParseProblem::code,
+                        ScheduledEventsParseProblem::path)
+                .containsExactly(
+                        tuple(
+                                ScheduledEventsParseProblem.Code.REQUIRED_FIELD_MISSING,
+                                "$.scheduled[0].tournament"),
+                        tuple(
+                                ScheduledEventsParseProblem.Code.TYPE_MISMATCH,
+                                "$.scheduled[0].timezoneEventCount.0"));
+    }
+
+    @Test
+    void rejectsAnAmbiguousRootContainingBothSupportedShapes() {
+        ScheduledEventsParseResult result = parseTransportJson("""
+                {
+                  "events": [],
+                  "scheduled": [],
+                  "hasNextPage": false
+                }
+                """);
+
+        assertThat(result.status()).isEqualTo(ScheduledEventsParseStatus.SCHEMA_INCOMPATIBLE);
+        assertThat(result.page()).isEmpty();
+        assertThat(result.problems())
+                .extracting(
+                        ScheduledEventsParseProblem::code,
+                        ScheduledEventsParseProblem::path)
+                .containsExactly(tuple(
+                        ScheduledEventsParseProblem.Code.TYPE_MISMATCH,
+                        "$"));
+    }
+
     private static void assertFailedResult(
             ScheduledEventsParseResult result,
             LoadedFixture fixture,
@@ -140,5 +195,18 @@ class ScheduledEventsV1SchemaIncompatibilityTest {
                         fixture.canonicalJsonSha256(),
                         Instant.parse("2026-08-12T00:00:00Z"),
                         ScheduledEventsV1Parser.PARSER_VERSION));
+    }
+
+    private static ScheduledEventsParseResult parseTransportJson(String json) {
+        Instant requestedAt = Instant.parse("2026-08-13T12:00:00Z");
+        byte[] payload = json.getBytes(StandardCharsets.UTF_8);
+        return PARSER.parseTransportResponse(new ScheduledEventsTransportResponse(
+                "SCHEDULED_EVENTS|date=2026-08-13|page=1",
+                requestedAt,
+                requestedAt.plusMillis(25),
+                200,
+                "application/json",
+                Duration.ofMillis(25),
+                RawPayloadEvidence.capture(payload)));
     }
 }

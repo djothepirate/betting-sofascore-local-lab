@@ -2,22 +2,31 @@
 
 ## Statut et portée
 
-`scheduled-events-v1` est le premier contrat de parsing J2 pour la famille logique
-`SCHEDULED_EVENTS`. Il s'applique exclusivement aux fixtures chargées et vérifiées par
-`ClasspathFixtureLoader`.
+`scheduled-events-v1` est le contrat de parsing de la famille logique `SCHEDULED_EVENTS`. Il
+s’applique aux fixtures chargées par `ClasspathFixtureLoader` et aux octets d’une réponse de
+transport déjà conservés avant parsing.
 
-Le corpus actuel est intégralement synthétique :
+Le corpus Git reste intégralement synthétique. La séquence J3 du 2026-08-13 a toutefois qualifié,
+puis conservé localement, une réponse réelle dont la structure utile a été examinée hors ligne :
 
 ```text
 FIXTURE_ORIGIN=SYNTHETIC
-PROVIDER_SCHEMA_VALIDATED=NO
+PROVIDER_RAW_PAYLOAD_IN_GIT=NO
+QUALIFIED_PROVIDER_ROOT_FIELDS=scheduled,hasNextPage
+QUALIFIED_PROVIDER_ENTRY_FIELDS=tournament,timezoneEventCount
+QUALIFIED_PROVIDER_SNAPSHOT_OFFLINE_PARSE=PARSED
 NETWORK_AUTHORIZED=NO
-REAL_ENDPOINT_URI_AUTHORIZED=NO
-REAL_SOFASCORE_CALL_EXECUTED=NO
+NEW_REAL_SOFASCORE_CALL_EXECUTED=NO
 ```
 
-Ce contrat démontre un comportement logiciel reproductible. Il ne constitue pas une preuve du
-schéma réellement exposé par le fournisseur.
+La fixture `qualified-provider-shape` contient uniquement des identités et nombres synthétiques.
+Elle ne se substitue pas au snapshot local comme preuve d’observation, mais permet de rejouer le
+contrat utile sans PostgreSQL, Internet, URI ou donnée de session.
+
+Les champs structuraux observés mais non retenus dans le modèle minimal sont connus et ignorés sans
+avertissement : `category`, `fieldTranslations`, `priority`, `qualificationOrPreliminary`, `slug`,
+`displayInverseHomeAwayTeams`, `hasEventPlayerStatistics`, `hasPerformanceGraphFeature` et
+`userCount`. Toute nouvelle propriété extérieure à cette liste reste signalée par `UNKNOWN_FIELD`.
 
 ## Chaîne de traitement
 
@@ -25,14 +34,16 @@ schéma réellement exposé par le fournisseur.
 LoadedFixture vérifiée
     -> classification du contenu
     -> validation structurale stricte
+    -> sélection non ambiguë de la forme events ou scheduled
     -> DTO externe ScheduledEventsEnvelopeDto
     -> ScheduledEventsMapper
     -> modèle local ScheduledEventsPage
 ```
 
-Les DTO externes conservent les noms et types du contrat JSON v1. Le modèle local utilise des noms
-métier et convertit uniquement `startTimestamp`, exprimé en secondes Unix, vers `Instant`. Aucun
-objet local n'est exposé lorsque la validation rencontre au moins un problème.
+La forme J2 `events` reste prise en charge pour préserver le corpus validé. La forme qualifiée J3
+`scheduled` est représentée séparément par `SCHEDULED_TOURNAMENT_LIST` ; elle ne fabrique jamais de
+`ScheduledEvent`. Un payload contenant simultanément `events` et `scheduled` est rejeté comme
+ambigu. Aucun objet local n’est exposé lorsque la validation rencontre au moins un problème.
 
 ## Champs retenus
 
@@ -53,6 +64,22 @@ objet local n'est exposé lorsque la validation rencontre au moins un problème.
 | `tournament.id` | entier 64 bits positif | obligatoire si l'objet existe | `ScheduledTournament.providerTournamentId` |
 | `tournament.name` | texte non vide | obligatoire si l'objet existe | `ScheduledTournament.name` |
 
+La forme fournisseur qualifiée ajoute le contrat suivant :
+
+| Chemin | Type v1 qualifié | Règle | Modèle local |
+|---|---|---|---|
+| `$.scheduled` | tableau | obligatoire pour cette forme, peut être vide | `ScheduledEventsPage.scheduledTournaments` |
+| `$.hasNextPage` | booléen | obligatoire | `ScheduledEventsPage.hasNextPage` |
+| `$.scheduled[*].tournament` | objet | obligatoire | `ScheduledTournamentAvailability.tournament` |
+| `tournament.id` | entier 64 bits positif | obligatoire | `ScheduledTournament.providerTournamentId` |
+| `tournament.name` | texte non vide | obligatoire | `ScheduledTournament.name` |
+| `tournament.uniqueTournament` | objet | facultatif | `ScheduledTournamentAvailability.uniqueTournament` |
+| `uniqueTournament.id` | entier 64 bits positif | obligatoire si l’objet existe | `ScheduledTournament.providerTournamentId` |
+| `uniqueTournament.name` | texte non vide | obligatoire si l’objet existe | `ScheduledTournament.name` |
+| `$.scheduled[*].timezoneEventCount` | objet | obligatoire, peut être vide | `ScheduledTournamentAvailability.timezoneEventCount` |
+| clé de `timezoneEventCount` | texte représentant un entier 32 bits | obligatoire | décalage horaire en secondes |
+| valeur de `timezoneEventCount` | entier 32 bits positif ou nul | obligatoire | nombre d’événements |
+
 Un champ numérique sous forme de chaîne n'est jamais converti implicitement. Une valeur
 facultative explicitement présente avec un type incorrect reste une incompatibilité : elle n'est
 pas assimilée à un champ absent.
@@ -68,6 +95,8 @@ Les autres avertissements v1 sont :
 |---|---|
 | `OPTIONAL_FIELD_MISSING` | un champ facultatif documenté est absent |
 | `EMPTY_EVENTS` | le tableau `events` est valide mais vide |
+| `EMPTY_SCHEDULED_TOURNAMENTS` | le tableau `scheduled` est valide mais vide |
+| `EMPTY_TIMEZONE_EVENT_COUNT` | la table de compteurs est valide mais vide |
 
 Un résultat `PARSED` peut donc contenir des avertissements. Ceux-ci ne modifient pas les valeurs
 et ne sont pas des erreurs silencieusement corrigées.
@@ -106,10 +135,12 @@ et ne journalise aucune valeur de payload.
 
 La couverture du contrat est répartie entre deux classes de test :
 
-- `ScheduledEventsV1ParserTest` couvre le nominal, la stabilité face à l'ordre des propriétés,
-  les champs facultatifs absents, le tableau vide et les champs inconnus ;
+- `ScheduledEventsV1ParserTest` couvre le nominal J2, la stabilité face à l'ordre des propriétés,
+  les champs facultatifs absents, le tableau vide, les champs inconnus et la forme fournisseur
+  qualifiée synthétique ;
 - `ScheduledEventsV1SchemaIncompatibilityTest` couvre les quatre fixtures de rupture, les codes et
-  chemins de chaque problème, l'absence de page partielle et la conservation de la traçabilité.
+  chemins de chaque problème, l’absence d’identité de tournoi, les compteurs devenus texte,
+  l’ambiguïté des deux racines, l'absence de page partielle et la conservation de la traçabilité.
 
 | Fixture de rupture | Statut vérifié | Problèmes vérifiés |
 |---|---|---|
@@ -124,21 +155,27 @@ PostgreSQL.
 
 ## Projection dans le tableau de bord
 
-`OfflineFixtureCorpusService` constitue l’inventaire du corpus depuis une liste fermée de neuf
+`OfflineFixtureCorpusService` constitue l’inventaire du corpus depuis une liste fermée de dix
 manifestes classpath. Pour chaque entrée, il réutilise `ClasspathFixtureLoader`, puis
 `ScheduledEventsV1Parser`. Le tableau de bord expose uniquement des compteurs et métadonnées :
 
 ```text
 availability=AVAILABLE_OFFLINE
-declared=9
-available=9
-parsed=5
+declared=10
+available=10
+parsed=6
 schemaIncompatible=3
 unexpectedContent=1
 loadingFailures=0
 origin=SYNTHETIC
-providerSchemaValidated=false
+providerSchemaValidated=true
 ```
+
+`origin=SYNTHETIC` décrit les ressources versionnées. `providerSchemaValidated=true` décrit la
+validation distincte du contrat structurel : le snapshot local `1`, acquis par la qualification
+J3, est relu par le parseur adapté avec `PARSED`, `100` entrées `scheduled`, aucun problème et sans
+nouvel accès réseau. Le payload brut, ses valeurs et ses hashes ne sont jamais rendus par le tableau
+de bord.
 
 Les payloads, leurs champs et leurs hashes ne sont pas affichés. Une erreur de chargement ne rend
 pas le tableau de bord indisponible : l’état devient `INCOMPLETE` et le compteur d’échecs augmente.

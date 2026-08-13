@@ -17,8 +17,9 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
 - tests unitaires hors ligne et test Flyway/Testcontainers dans un profil explicite ;
 - scripts PowerShell de configuration, préflight, démarrage, arrêt et vérification.
-- corpus synthétique `SCHEDULED_EVENTS` de neuf fixtures classpath avec hashes vérifiés ;
-- parseur hors ligne `scheduled-events-v1`, modèle local et tests de rupture de schéma ;
+- corpus synthétique `SCHEDULED_EVENTS` de dix fixtures classpath avec hashes vérifiés ;
+- parseur hors ligne `scheduled-events-v1`, compatible avec le corpus J2 `events` et avec la forme
+  fournisseur qualifiée `scheduled`, modèle local et tests de rupture de schéma ;
 - inventaire du corpus visible dans le tableau de bord, sans dépendance à PostgreSQL.
 - politique J3 hors ligne pour l’activation explicite, la confirmation par appel, le cache préalable, le délai minimal et l’arrêt global ;
 - circuit J3 en mémoire initialisé à `LOCKED`, incidents typés et garde atomique limitant la concurrence à un appel ;
@@ -215,8 +216,11 @@ Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces
 
 ## Prochaine frontière
 
-La qualification technique Windows locale est enregistrée avec le résultat `PASS` et le chemin
-fournisseur borné est implémenté sans appel réel pendant le développement. La prochaine frontière
-est la validation humaine de cette nouvelle interface, puis une décision séparée du propriétaire de
-cliquer sur l’action réelle. Tant que cette action n’est pas exécutée, la preuve de sortie fournisseur
-reste `NOT_AVAILABLE` et J3 demeure ouvert.
+La qualification réelle unique a atteint et persisté la page 1, puis s’est arrêtée sûrement sur
+`SCHEMA_INCOMPATIBLE`, sans demander les pages 2 à 5 et sans retry. L’analyse suivante a été menée
+entièrement hors ligne sur le snapshot local : le parseur accepte désormais la racine qualifiée
+`scheduled`, ses identités de tournoi et `timezoneEventCount`, sans inventer d’événements.
+
+J3 demeure ouvert. Un nouvel appel fournisseur n’est ni nécessaire pour valider cette adaptation
+locale, ni autorisé par cette unité. Toute requalification réelle des pages 1 à 5 exige une décision
+ultérieure distincte du propriétaire.

@@ -68,11 +68,11 @@ class DashboardControllerTest {
                         "AVAILABLE_OFFLINE",
                         "SCHEDULED_EVENTS",
                         "SYNTHETIC",
-                        false,
+                        true,
                         "scheduled-events-v1",
-                        9,
-                        9,
-                        5,
+                        10,
+                        10,
+                        6,
                         3,
                         1,
                         0),
@@ -105,9 +105,9 @@ class DashboardControllerTest {
                 .andExpect(model().attribute("manualCall", manualCallView))
                 .andExpect(model().attribute("localFormToken", "local-form-token"))
                 .andExpect(content().string(containsString("LOCKED_OFFLINE_J3_POLICY")))
-                .andExpect(content().string(containsString("9 / 9 disponibles")))
+                .andExpect(content().string(containsString("10 / 10 disponibles")))
                 .andExpect(content().string(containsString("scheduled-events-v1")))
-                .andExpect(content().string(containsString("NON VALIDÉ")))
+                .andExpect(content().string(containsString("VALIDÉ")))
                 .andExpect(content().string(containsString("ARRÊT GLOBAL ACTIF")))
                 .andExpect(content().string(containsString("REAL_CALL_NOT_AUTHORIZED")))
                 .andExpect(content().string(containsString("Lancer le lot fournisseur — BLOQUÉ")));

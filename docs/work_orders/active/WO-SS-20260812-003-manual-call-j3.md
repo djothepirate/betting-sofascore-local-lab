@@ -679,3 +679,67 @@ J3_INTEGRATION_TESTS_EXECUTED=NO_PERSISTENCE_CHANGE
 J3_REAL_PROVIDER_QUALIFICATION=PENDING_OWNER_ACTION
 J3_WORK_ORDER=IN_DEVELOPMENT
 ```
+
+## 21. Adaptation hors ligne au schéma fournisseur qualifié
+
+L’unité `fix: adapt scheduled-events-v1 to qualified provider schema`, fondée sur le commit
+`8bcbd46595773800f8759ce5761d35a4b1c75220`, traite l’incompatibilité observée pendant l’unique
+séquence réelle. Elle n’effectue aucun nouvel appel fournisseur.
+
+Le diagnostic structurel du snapshot local `1` a établi que la réponse expose `scheduled` et
+`hasNextPage`, et non `events`. Chaque entrée utile contient une identité `tournament`, une identité
+`uniqueTournament` facultative et un objet `timezoneEventCount` dont les clés sont des décalages en
+secondes et les valeurs des nombres d’événements.
+
+L’unité introduit :
+
+- une seconde forme explicite `SCHEDULED_TOURNAMENT_LIST` dans le DTO externe et le modèle local ;
+- un modèle immuable `ScheduledTournamentAvailability` conservant les identités minimales et les
+  compteurs par décalage horaire ;
+- la sélection stricte d’une seule racine parmi `events` et `scheduled` ;
+- le rejet des identités absentes, types numériques devenus texte, nombres négatifs et racines
+  ambiguës, sans page partielle ;
+- la compatibilité maintenue avec les neuf scénarios historiques J2 ;
+- une dixième fixture entièrement synthétique représentant uniquement la forme utile qualifiée ;
+- le passage du tableau de bord à `10 / 10`, dont `6` résultats `PARSED`, et l’indication distincte
+  que la structure fournisseur a été validée par relecture locale du snapshot ;
+- la conservation intacte du snapshot brut et de son statut historique de qualification.
+
+Validation consolidée exécutée le 2026-08-13 :
+
+- `scripts/Verify-Local.ps1` : préflight Java 25 et scanner de garde-fous réussis ;
+- `mvnw.cmd clean verify` : `135` tests, `0` échec, `0` erreur, `0` ignoré ;
+- JAR Spring Boot construit avec succès et identité Maven `com.bettingproject` conservée ;
+- tests d’intégration non rejoués, cette unité ne modifiant ni migration ni persistance ;
+- appels réseau SofaScore exécutés : `0`.
+
+La relecture technique locale du snapshot par le parseur adapté donne :
+
+```text
+OFFLINE_REPARSE_STATUS=PARSED
+OFFLINE_REPARSE_PROBLEMS=0
+OFFLINE_REPARSE_SCHEDULED_ENTRY_COUNT=100
+OFFLINE_REPARSE_EVENTS_INVENTED=0
+OFFLINE_REPARSE_HAS_NEXT_PAGE=true
+ORIGINAL_SNAPSHOT_STATUS_MUTATED=NO
+NEW_PROVIDER_CALLS_EXECUTED=0
+```
+
+Cette unité rétablit la compatibilité hors ligne du parseur avec la page 1 conservée. Elle ne clôt
+pas J3 et n’autorise ni répétition de la séquence consommée, ni reprise à la page 2. Une éventuelle
+requalification réelle reste une décision propriétaire distincte.
+
+```text
+J3_QUALIFIED_PROVIDER_SCHEMA_ADAPTATION=IMPLEMENTED
+J3_PROVIDER_ROOT_SCHEDULED=SUPPORTED
+J3_LEGACY_EVENTS_ROOT=SUPPORTED
+J3_AMBIGUOUS_ROOT=REJECTED
+J3_SYNTHETIC_FIXTURE_CORPUS=10
+J3_STANDARD_TESTS=135
+J3_STANDARD_TEST_RESULT=PASS
+J3_INTEGRATION_TESTS_EXECUTED=NO_PERSISTENCE_CHANGE
+J3_PROVIDER_RAW_PAYLOAD_IN_GIT=NO
+J3_NEW_NETWORK_CALLS=0
+J3_REAL_REQUALIFICATION=PENDING_SEPARATE_DECISION
+J3_WORK_ORDER=IN_DEVELOPMENT
+```
