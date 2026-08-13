@@ -224,6 +224,48 @@ La présence d’un snapshot de page 2 bloque toute nouvelle reprise, même apr�
 effacer ou modifier les snapshots pour contourner ce verrou. L’interrogation complète répétable
 depuis l’interface fera l’objet d’une unité ultérieure distincte.
 
+### 3.7 Reprendre explicitement la qualification à la page 3
+
+Cette procédure succède historiquement à la section 3.6. Elle applique la nouvelle décision
+propriétaire prise après la qualification de la page 2 et son adaptation hors ligne. Elle n’est
+disponible que si PostgreSQL contient exactement les checkpoints des pages 1 et 2 pour la date
+`2026-08-13`, que chacun se reparcourt avec `PARSED` et `hasNextPage=true`, et qu’aucune page 3, 4
+ou 5 n’est encore conservée.
+
+1. conserver intacts les snapshots locaux des pages 1 et 2 et démarrer PostgreSQL ;
+2. activer dans `.env` les quatre valeurs J3 documentées à la section 3.5, sans cookie, jeton,
+   compte ni donnée de session ;
+3. démarrer l’application avec le profil `local` ;
+4. vérifier `REPRISE J3 PAGE 3 PRÊTE` et
+   `CHECKPOINTS PAGES 1 ET 2 VALIDÉS — CONFIRMATION REQUISE` ;
+5. vérifier que l’interface indique `pages 1 et 2 conservées, reprise pages 3 à 5` ;
+6. lever l’arrêt global puis activer le circuit ;
+7. préparer la reprise et vérifier la clé
+   `SCHEDULED_EVENTS|date=2026-08-13|pages=3-5` ;
+8. recopier exactement la phrase contenant `REPRISE PAGES 3-5`, cocher l’acquittement et confirmer ;
+9. vérifier `CONFIRMED_READY`, puis sélectionner une seule fois
+   **« 5. Lancer la reprise fournisseur unique — PAGES 3 À 5 »** ;
+10. attendre le retour sans actualiser la page ;
+11. vérifier soit `COMPLETED` avec `5 / 5`, soit l’arrêt sans retry sur la première page en incident ;
+12. télécharger la preuve minimisée et contrôler au minimum :
+
+```text
+J3_MINIMIZED_EVIDENCE_VERSION=2
+VERIFIED_LOCAL_CHECKPOINT_PAGES=1,2
+PROVIDER_RESUME_FIRST_PAGE=3
+PAGES_ATTEMPTED=3,4,5
+RAW_PAYLOAD_INCLUDED=NO
+PROVIDER_URI_INCLUDED=NO
+AUTOMATIC_RETRY_EXECUTED=NO
+```
+
+13. remettre immédiatement la configuration `.env` en état sûr comme à la section 3.5.
+
+Une page 1 ou 2 ne doit jamais apparaître dans `PAGES_ATTEMPTED` ni dans les lignes d’horodatage des
+tentatives de cette reprise. La présence d’un snapshot de page 3, 4 ou 5 bloque toute nouvelle
+reprise, même après redémarrage. Ne pas effacer ou modifier un snapshot pour contourner ce verrou.
+L’interrogation complète répétable depuis l’interface demeure hors périmètre.
+
 ## 4. Validation
 
 ### 4.1 Suite standard

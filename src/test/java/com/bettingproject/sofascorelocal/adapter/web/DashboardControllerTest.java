@@ -5,6 +5,8 @@ import com.bettingproject.sofascorelocal.application.network.J3QualificationEvid
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallControlSnapshot;
+import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentSnapshot;
+import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.Test;
@@ -17,6 +19,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
@@ -112,5 +115,74 @@ class DashboardControllerTest {
                 .andExpect(content().string(containsString("REAL_CALL_NOT_AUTHORIZED")))
                 .andExpect(content().string(containsString(
                         "Lancer la reprise fournisseur — BLOQUÉE")));
+    }
+
+    @Test
+    void rendersOnlyThePageThreeToFiveActionAfterBothVerifiedCheckpoints() throws Exception {
+        DashboardView dashboardView = new DashboardView(
+                "2026-08-14T00:00:00Z",
+                "EXPERIMENTAL",
+                "LOCKED_OFFLINE_J3_POLICY",
+                true,
+                true,
+                "127.0.0.1:8087",
+                "CONFIGURED",
+                1,
+                "3 s",
+                "AVAILABLE",
+                "2",
+                2L,
+                0L,
+                new DashboardView.FixtureCorpusView(
+                        "AVAILABLE_OFFLINE",
+                        "SCHEDULED_EVENTS",
+                        "SYNTHETIC",
+                        true,
+                        "scheduled-events-v1",
+                        12,
+                        12,
+                        7,
+                        4,
+                        1,
+                        0),
+                null,
+                List.of());
+        Instant preparedAt = Instant.parse("2026-08-14T00:00:00Z");
+        J3ManualCallIntentSnapshot intent = new J3ManualCallIntentSnapshot(
+                UUID.fromString("3ccfd0a0-7825-4bfa-977b-358be086b1e2"),
+                LocalDate.parse("2026-08-13"),
+                "SCHEDULED_EVENTS|date=2026-08-13|pages=3-5",
+                3,
+                J3ManualCallIntentState.CONFIRMED_READY,
+                null,
+                preparedAt,
+                preparedAt.plusSeconds(300),
+                preparedAt.plusSeconds(30),
+                2,
+                null,
+                null);
+        J3ManualCallControlSnapshot manualCallSnapshot = new J3ManualCallControlSnapshot(
+                false,
+                J3CircuitState.CLOSED,
+                J3CircuitReason.NONE,
+                preparedAt,
+                null,
+                LocalDate.parse("2026-08-13"),
+                intent,
+                true,
+                List.of());
+        when(dashboardService.load()).thenReturn(dashboardView);
+        when(manualCallControlService.snapshot()).thenReturn(manualCallSnapshot);
+        when(formTokenService.issue(any(HttpSession.class))).thenReturn("local-form-token");
+
+        mockMvc.perform(get("/dashboard"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("REPRISE J3 PAGE 3 PRÊTE")))
+                .andExpect(content().string(containsString(
+                        "SCHEDULED_EVENTS|date=2026-08-13|pages=3-5")))
+                .andExpect(content().string(containsString(
+                        "Lancer la reprise fournisseur unique — PAGES 3 À 5")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(
+                        "Lancer la reprise fournisseur unique — PAGES 2 À 5"))));
     }
 }

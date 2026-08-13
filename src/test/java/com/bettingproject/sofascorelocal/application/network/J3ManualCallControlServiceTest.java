@@ -177,7 +177,7 @@ class J3ManualCallControlServiceTest {
     }
 
     @Test
-    void preparesAndExecutesAnExplicitResumeFromPageTwo() {
+    void preparesAndExecutesAnExplicitResumeFromPageThree() {
         MutableClock clock = new MutableClock(NOW);
         var service = new J3ManualCallControlService(
                 clock,
@@ -185,28 +185,28 @@ class J3ManualCallControlServiceTest {
                 () -> 42,
                 () -> J3ProviderQualificationSnapshot.available(
                         URI.create("https://www.sofascore.com"),
-                        2));
+                        3));
         service.rearmAfterGlobalStop();
         service.activateByOperator();
 
         var prepared = service.prepare(QUALIFICATION_DATE);
 
-        assertThat(prepared.intent().firstPage()).isEqualTo(2);
-        assertThat(prepared.intent().completedPages()).isEqualTo(1);
+        assertThat(prepared.intent().firstPage()).isEqualTo(3);
+        assertThat(prepared.intent().completedPages()).isEqualTo(2);
         assertThat(prepared.intent().requestKey())
-                .isEqualTo("SCHEDULED_EVENTS|date=2026-08-13|pages=2-5");
+                .isEqualTo("SCHEDULED_EVENTS|date=2026-08-13|pages=3-5");
         assertThat(prepared.intent().confirmationPhrase())
                 .isEqualTo(
-                        "CONFIRMER SCHEDULED_EVENTS 2026-08-13 REPRISE PAGES 2-5 000042");
+                        "CONFIRMER SCHEDULED_EVENTS 2026-08-13 REPRISE PAGES 3-5 000042");
 
         service.confirm(REQUEST_ID, prepared.intent().confirmationPhrase(), true);
         var claim = service.claimExecution(REQUEST_ID);
 
-        assertThat(claim.firstPage()).isEqualTo(2);
+        assertThat(claim.firstPage()).isEqualTo(3);
         assertRejected(
-                () -> service.recordPageCompleted(REQUEST_ID, 1),
+                () -> service.recordPageCompleted(REQUEST_ID, 2),
                 J3ManualCallControlError.PAGE_SEQUENCE_INVALID);
-        for (int page = 2; page <= 5; page++) {
+        for (int page = 3; page <= 5; page++) {
             service.recordPageCompleted(REQUEST_ID, page);
         }
         service.completeExecution(REQUEST_ID);

@@ -915,3 +915,83 @@ existant dans une connexion explicitement `readOnly`, terminée par `rollback`. 
 reparsé les deux snapshots réels avec `PARSED`, confirmé `hasNextPage=true` sur la page 2, comparé
 les statuts avant et après, puis confirmé `HISTORICAL_STATUSES_UNCHANGED=true` sans afficher le
 payload.
+
+## 24. Reprise contrôlée à la page 3
+
+Le propriétaire autorise explicitement l’unité `feat: resume J3 qualification from page three` à
+partir du commit `067276956bdec5da3185f3417155cd740ee7170d`. Cette décision succède à la
+qualification humaine de la page 2 et à son adaptation hors ligne. L’implémentation et les tests de
+cette unité n’exécutent aucun nouvel appel fournisseur.
+
+La politique de reprise impose exactement :
+
+```text
+PAGE_1_CHECKPOINT=PRESENT_AND_REPARSEABLE
+PAGE_2_CHECKPOINT=PRESENT_AND_REPARSEABLE
+PAGES_3_TO_5=ABSENT
+PROVIDER_FIRST_PAGE=3
+PAGE_1_REPEATED=NO
+PAGE_2_REPEATED=NO
+```
+
+Chaque checkpoint doit être unique, intègre, associé à un statut HTTP `2xx`, reparsé localement
+avec `PARSED` et annoncer `hasNextPage=true`. Toute page 3, 4 ou 5 déjà conservée bloque la reprise.
+Les statuts historiques `SCHEMA_INCOMPATIBLE` des pages 1 et 2 restent immuables : la politique ne
+dispose d’aucun port d’écriture et utilise le résultat courant du parseur uniquement en mémoire.
+
+L’unité adapte :
+
+- la politique persistante pour retourner `PROVIDER_FIRST_PAGE=3` seulement après validation des
+  deux checkpoints et absence des pages suivantes ;
+- l’intention explicite vers `SCHEDULED_EVENTS|date=2026-08-13|pages=3-5`, avec phrase
+  `REPRISE PAGES 3-5` et compteur initial à `2` ;
+- l’orchestrateur pour demander exactement les pages 3, 4 et 5, dans l’ordre, avec concurrence `1`,
+  délai minimal de trois secondes, persistance avant parsing, arrêt au premier incident et aucun
+  retry ;
+- le tableau de bord, les messages opérateur et le runbook afin d’identifier les deux checkpoints
+  conservés et le bouton final limité aux pages 3 à 5 ;
+- la preuve minimisée v2 afin d’annoncer `VERIFIED_LOCAL_CHECKPOINT_PAGES=1,2`,
+  `PROVIDER_RESUME_FIRST_PAGE=3` et uniquement les pages 3 à 5 dans `PAGES_ATTEMPTED`.
+
+La possibilité de répéter une interrogation complète depuis l’interface reste hors périmètre et
+nécessitera une unité et une décision distinctes.
+
+```text
+J3_PAGE_THREE_RESUME_IMPLEMENTATION=AUTHORIZED
+J3_PAGE_1_CHECKPOINT=REQUIRED_AND_REPARSED_LOCALLY
+J3_PAGE_2_CHECKPOINT=REQUIRED_AND_REPARSED_LOCALLY
+J3_PAGES_3_TO_5_PREEXISTING=FORBIDDEN
+J3_RESUME_FIRST_PROVIDER_PAGE=3
+J3_RESUME_LAST_PROVIDER_PAGE=5
+J3_RESUME_PAGE_1_REPEATED=NO
+J3_RESUME_PAGE_2_REPEATED=NO
+J3_RESUME_AUTOMATIC_RETRY=NO
+J3_IMPLEMENTATION_PROVIDER_CALLS=0
+J3_REPEATABLE_GUI_QUERY=OUT_OF_SCOPE_NEXT_UNIT
+J3_WORK_ORDER=IN_DEVELOPMENT
+```
+
+### 24.1 Validation technique de l’unité
+
+Validation consolidée exécutée le 2026-08-14 avec le dépôt Maven local en mode hors ligne :
+
+```text
+WINDOWS_PREFLIGHT=PASS
+JAVA_TARGET=25
+SOURCE_GUARDRAIL_SCAN=PASS
+STANDARD_TESTS=147
+STANDARD_FAILURES=0
+STANDARD_ERRORS=0
+STANDARD_SKIPPED=0
+SPRING_BOOT_JAR=BUILT
+BUILD_GROUP=com.bettingproject
+SERVER_ADDRESS=127.0.0.1
+INTEGRATION_TESTS_EXECUTED=NO_PERSISTENCE_OR_MIGRATION_CHANGE
+SOFASCORE_NETWORK_CALLS_EXECUTED=NO
+```
+
+Les tests ciblés prouvent également que le transport simulé reçoit exactement `3,4,5`, que deux
+délais inter-pages sont appliqués, que la preuve annonce les checkpoints `1,2` et qu’elle ne
+contient aucun horodatage de tentative pour les pages 1 ou 2. Le test Web confirme que l’interface
+rend le bouton `PAGES 3 À 5` et n’expose plus l’ancien bouton `PAGES 2 À 5` dans l’état
+`CONFIRMED_READY`.

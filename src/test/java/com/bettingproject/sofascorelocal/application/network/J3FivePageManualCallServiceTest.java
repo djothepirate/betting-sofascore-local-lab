@@ -102,7 +102,7 @@ class J3FivePageManualCallServiceTest {
     }
 
     @Test
-    void resumesAtPageTwoAndIncludesTheVerifiedCheckpointInTerminalEvidence()
+    void resumesAtPageThreeAndIncludesBothVerifiedCheckpointsInTerminalEvidence()
             throws Exception {
         MutableClock clock = new MutableClock(NOW);
         RecordingStore store = new RecordingStore();
@@ -115,7 +115,7 @@ class J3FivePageManualCallServiceTest {
             clock.advance(Duration.ofMillis(25));
             return response(request, requestedAt, clock.instant(), 200, body);
         };
-        J3ManualCallControlService control = readyControl(clock, 2);
+        J3ManualCallControlService control = readyControl(clock, 3);
         J3QualificationEvidenceService evidenceService = new J3QualificationEvidenceService();
         var service = service(control, transport, store, evidenceService, clock, duration -> {
             waits.add(duration);
@@ -125,18 +125,19 @@ class J3FivePageManualCallServiceTest {
         var result = service.execute(REQUEST_ID);
 
         assertThat(result.completed()).isTrue();
-        assertThat(pages).containsExactly(2, 3, 4, 5);
-        assertThat(waits).hasSize(3);
-        assertThat(store.saved).hasSize(4);
-        assertThat(control.snapshot().intent().firstPage()).isEqualTo(2);
+        assertThat(pages).containsExactly(3, 4, 5);
+        assertThat(waits).hasSize(2);
+        assertThat(store.saved).hasSize(3);
+        assertThat(control.snapshot().intent().firstPage()).isEqualTo(3);
         assertThat(control.snapshot().intent().completedPages()).isEqualTo(5);
         assertThat(evidenceService.latestDocument().orElseThrow().reportText())
                 .contains("J3_MINIMIZED_EVIDENCE_VERSION=2")
-                .contains("VERIFIED_LOCAL_CHECKPOINT_PAGES=1")
-                .contains("PROVIDER_RESUME_FIRST_PAGE=2")
-                .contains("PAGES_ATTEMPTED=2,3,4,5")
+                .contains("VERIFIED_LOCAL_CHECKPOINT_PAGES=1,2")
+                .contains("PROVIDER_RESUME_FIRST_PAGE=3")
+                .contains("PAGES_ATTEMPTED=3,4,5")
                 .contains("PAGES_COMPLETED=5")
-                .doesNotContain("PAGE_1_PAYLOAD");
+                .doesNotContain("PAGE_1_REQUESTED_AT")
+                .doesNotContain("PAGE_2_REQUESTED_AT");
     }
 
     @Test

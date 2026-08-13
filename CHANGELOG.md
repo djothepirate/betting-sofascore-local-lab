@@ -59,6 +59,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   donnée fournisseur, URI, cookie, jeton, compte ou session ;
 - reparsing applicatif en lecture seule des checkpoints J3, avec séparation explicite entre statut
   historique persisté et résultat courant en mémoire ;
+- politique de reprise J3 à la page 3 exigeant les deux checkpoints locaux reparsables et l’absence
+  persistée des pages 3 à 5 avant de rendre le transport éligible ;
+- intention et orchestration bornées aux pages 3, 4 et 5, avec compteur initial à deux, absence de
+  répétition des pages 1 et 2 et preuve minimisée distinguant checkpoints et tentatives réseau ;
 
 ### Documentation
 
@@ -90,6 +94,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   pendant l’implémentation ni les tests.
 - diagnostic et contrat d’adaptation hors ligne du schéma qualifié de la page 2, avec frontière
   explicite interdisant la reprise à la page 3 sans nouvelle décision.
+- contrat d’architecture et procédure Windows de la reprise explicitement autorisée à la page 3,
+  sans appel réel pendant l’implémentation ou les tests.
 
 ### Modifié
 

@@ -15,12 +15,13 @@ import java.util.Objects;
 
 /**
  * Authorizes only the explicitly approved continuation of the consumed J3 sequence.
- * The historical page-one payload is reparsed locally; this policy never performs transport.
+ * The historical page-one and page-two payloads are reparsed locally; this policy never performs
+ * transport.
  */
 @Component
 public class J3QualificationResumePolicy {
 
-    public static final int RESUME_FIRST_PAGE = 2;
+    public static final int RESUME_FIRST_PAGE = 3;
 
     private final J3ProviderQualificationPolicy providerPolicy;
     private final J3QualificationCheckpointStore checkpointStore;
@@ -57,34 +58,52 @@ public class J3QualificationResumePolicy {
             return blocked("J3_CHECKPOINT_READ_UNAVAILABLE");
         }
 
-        List<J3StoredQualificationPage> pageOne = pages.stream()
-                .filter(page -> page.page() == ScheduledEventsProviderPageRequest.FIRST_PAGE)
-                .toList();
-        if (pageOne.isEmpty()) {
-            return blocked("J3_PAGE_1_CHECKPOINT_MISSING");
-        }
-        if (pageOne.size() != 1) {
-            return blocked("J3_PAGE_1_CHECKPOINT_AMBIGUOUS");
-        }
         if (pages.stream().anyMatch(page -> page.page() >= RESUME_FIRST_PAGE)) {
             return blocked("J3_RESUME_ALREADY_ATTEMPTED");
         }
 
-        J3StoredQualificationPage checkpoint = pageOne.getFirst();
-        if (checkpoint.httpStatus() < 200 || checkpoint.httpStatus() >= 300) {
-            return blocked("J3_PAGE_1_CHECKPOINT_HTTP_INVALID");
-        }
-        var parsing = parser.parseTransportResponse(checkpoint.toTransportResponse());
-        if (parsing.status() != ScheduledEventsParseStatus.PARSED) {
-            return blocked("J3_PAGE_1_CHECKPOINT_NOT_PARSEABLE");
-        }
-        if (!parsing.page().orElseThrow().hasNextPage()) {
-            return blocked("J3_PAGE_1_CHECKPOINT_HAS_NO_NEXT_PAGE");
+        for (int checkpointPage = ScheduledEventsProviderPageRequest.FIRST_PAGE;
+                checkpointPage < RESUME_FIRST_PAGE;
+                checkpointPage++) {
+            J3ProviderQualificationSnapshot invalid = validateCheckpoint(
+                    pages,
+                    checkpointPage);
+            if (invalid != null) {
+                return invalid;
+            }
         }
 
         return J3ProviderQualificationSnapshot.available(
                 provider.providerOrigin(),
                 RESUME_FIRST_PAGE);
+    }
+
+    private J3ProviderQualificationSnapshot validateCheckpoint(
+            List<J3StoredQualificationPage> pages,
+            int checkpointPage) {
+        List<J3StoredQualificationPage> matches = pages.stream()
+                .filter(page -> page.page() == checkpointPage)
+                .toList();
+        String blockerPrefix = "J3_PAGE_" + checkpointPage + "_CHECKPOINT_";
+        if (matches.isEmpty()) {
+            return blocked(blockerPrefix + "MISSING");
+        }
+        if (matches.size() != 1) {
+            return blocked(blockerPrefix + "AMBIGUOUS");
+        }
+
+        J3StoredQualificationPage checkpoint = matches.getFirst();
+        if (checkpoint.httpStatus() < 200 || checkpoint.httpStatus() >= 300) {
+            return blocked(blockerPrefix + "HTTP_INVALID");
+        }
+        var parsing = parser.parseTransportResponse(checkpoint.toTransportResponse());
+        if (parsing.status() != ScheduledEventsParseStatus.PARSED) {
+            return blocked(blockerPrefix + "NOT_PARSEABLE");
+        }
+        if (!parsing.page().orElseThrow().hasNextPage()) {
+            return blocked(blockerPrefix + "HAS_NO_NEXT_PAGE");
+        }
+        return null;
     }
 
     private static J3ProviderQualificationSnapshot blocked(String blocker) {

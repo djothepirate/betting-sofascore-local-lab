@@ -168,7 +168,7 @@ class ManualCallControllerTest {
                 .andExpect(flash().attribute("manualCallMessageKind", "safe"))
                 .andExpect(flash().attribute(
                         "manualCallMessage",
-                        "Reprise terminée : la page 1 conservée et les pages 2 à 5 nouvellement collectées forment le lot complet. L’arrêt global a été réappliqué et la preuve minimisée est prête."));
+                        "Reprise terminée : les pages 1 et 2 conservées et les pages 3 à 5 nouvellement collectées forment le lot complet. L’arrêt global a été réappliqué et la preuve minimisée est prête."));
 
         verify(fivePageManualCallService).execute(REQUEST_ID);
     }

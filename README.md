@@ -34,6 +34,8 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
   `2026-08-13`, activable uniquement par quatre propriétés locales concordantes ;
 - client fournisseur sans proxy, redirection, cookie, jeton, compte ou donnée de session, avec arrêt
   au premier incident et aucun retry ;
+- reprise J3 explicitement bornée aux pages `3` à `5`, disponible seulement après relecture locale
+  réussie des checkpoints 1 et 2 et absence persistée des pages 3 à 5 ;
 
 ## Limite essentielle du bootstrap
 
@@ -207,6 +209,7 @@ Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces
 - [Chemin fournisseur J3 borné à cinq pages](docs/architecture/J3-FIVE-PAGE-PROVIDER-QUALIFICATION.md)
 - [Reprise fournisseur J3 contrôlée à la page 2](docs/architecture/J3-PAGE-TWO-PROVIDER-RESUME.md)
 - [Adaptation hors ligne au schéma qualifié de la page 2](docs/architecture/J3-PAGE-TWO-SCHEMA-ADAPTATION.md)
+- [Reprise fournisseur J3 contrôlée à la page 3](docs/architecture/J3-PAGE-THREE-PROVIDER-RESUME.md)
 - [Runbook local](docs/runbooks/RUNBOOK-LOCAL.md)
 - [Cadrage PDF](docs/reference/Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf)
 - [Rapport de validation du bootstrap](docs/validation/J0-J1-VALIDATION-REPORT.md)
@@ -225,9 +228,13 @@ entièrement hors ligne : six entrées de la page 2 utilisent un tableau vide po
 
 Le parseur accepte désormais cette seule forme vide sans affaiblir ses autres contrôles. Les
 snapshots 1 et 2 sont relus localement avec `PARSED`, `100` entrées et `hasNextPage=true` chacun ;
-leurs classifications historiques restent intactes. J3 demeure ouvert, mais aucune reprise à la
-page 3 n’est autorisée dans cette unité. Une décision propriétaire ultérieure devra vérifier les
-deux checkpoints et interdire explicitement leur répétition.
+leurs classifications historiques restent intactes. La décision propriétaire suivante autorise
+désormais une reprise unique à la page 3. La politique exige les deux checkpoints reparsables,
+l’absence des pages 3 à 5 et interdit explicitement de redemander les pages 1 et 2. L’interface
+prépare donc uniquement `SCHEDULED_EVENTS|date=2026-08-13|pages=3-5`.
+
+Cette livraison n’exécute aucun appel fournisseur : le déclenchement réel reste une action humaine
+ultérieure par le bouton final, après vérification des préconditions visibles.
 
 La possibilité de répéter ultérieurement une interrogation complète depuis l’interface reste hors
 de cette unité et devra disposer de ses propres limites de fréquence et de qualification.

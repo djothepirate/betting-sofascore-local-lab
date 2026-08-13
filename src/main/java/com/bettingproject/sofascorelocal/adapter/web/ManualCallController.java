@@ -107,7 +107,7 @@ public class ManualCallController {
             if (result.completed()) {
                 redirectAttributes.addFlashAttribute(
                         "manualCallMessage",
-                        "Reprise terminée : la page 1 conservée et les pages 2 à 5 nouvellement collectées forment le lot complet. L’arrêt global a été réappliqué et la preuve minimisée est prête.");
+                        "Reprise terminée : les pages 1 et 2 conservées et les pages 3 à 5 nouvellement collectées forment le lot complet. L’arrêt global a été réappliqué et la preuve minimisée est prête.");
                 redirectAttributes.addFlashAttribute("manualCallMessageKind", "safe");
             }
             else {
@@ -188,11 +188,11 @@ public class ManualCallController {
             case ACKNOWLEDGEMENT_REQUIRED -> "La case de confirmation explicite est obligatoire.";
             case CONFIRMATION_TEXT_MISMATCH -> "La phrase recopiée ne correspond pas exactement.";
             case INTENT_ALREADY_CONFIRMED -> "Cette intention a déjà été confirmée.";
-            case PROVIDER_TRANSPORT_UNAVAILABLE -> "La reprise J3 n’est pas disponible : vérifiez la configuration et le checkpoint local de page 1.";
+            case PROVIDER_TRANSPORT_UNAVAILABLE -> "La reprise J3 n’est pas disponible : vérifiez la configuration et les checkpoints locaux des pages 1 et 2.";
             case INTENT_NOT_READY -> "L’intention doit être confirmée et prête avant le déclenchement.";
             case EXECUTION_ALREADY_STARTED -> "Cette qualification a déjà été déclenchée.";
             case EXECUTION_NOT_ACTIVE -> "Aucun lot fournisseur actif ne correspond à cette intention.";
-            case PAGE_SEQUENCE_INVALID -> "La reprise ne respecte pas l’ordre fixe des pages 2 à 5 après le checkpoint local de page 1.";
+            case PAGE_SEQUENCE_INVALID -> "La reprise ne respecte pas l’ordre fixe des pages 3 à 5 après les checkpoints locaux des pages 1 et 2.";
             case QUALIFICATION_ALREADY_CONSUMED -> "La reprise fournisseur unique a déjà été consommée depuis ce démarrage.";
             case DATE_NOT_AUTHORIZED -> "Seule la date de qualification 2026-08-13 est autorisée pour ce lot.";
         };
