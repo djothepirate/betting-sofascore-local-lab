@@ -49,7 +49,7 @@ public class J3ManualCallControlService {
     private Intent intent;
 
     @Autowired
-    public J3ManualCallControlService(J3ProviderQualificationPolicy qualificationPolicy) {
+    public J3ManualCallControlService(J3QualificationResumePolicy qualificationPolicy) {
         this(
                 Clock.systemUTC(),
                 UUID::randomUUID,
@@ -135,19 +135,27 @@ public class J3ManualCallControlService {
 
         UUID requestId = Objects.requireNonNull(requestIdSupplier.get(), "requestId");
         int code = Math.floorMod(confirmationCodeSupplier.getAsInt(), 1_000_000);
+        int firstPage = qualification.available()
+                ? qualification.firstPage()
+                : ScheduledEventsProviderPageRequest.FIRST_PAGE;
+        String pageRange = firstPage + "-" + ScheduledEventsProviderPageRequest.LAST_PAGE;
         String phrase = "CONFIRMER SCHEDULED_EVENTS " + date
-                + " PAGES 1-5 " + "%06d".formatted(code);
+                + (firstPage == ScheduledEventsProviderPageRequest.FIRST_PAGE
+                        ? " PAGES "
+                        : " REPRISE PAGES ")
+                + pageRange + " " + "%06d".formatted(code);
         intent = new Intent(
                 requestId,
                 date,
                 SofascoreEndpointType.SCHEDULED_EVENTS.name()
-                        + "|date=" + date + "|pages=1-5",
+                        + "|date=" + date + "|pages=" + pageRange,
+                firstPage,
                 J3ManualCallIntentState.AWAITING_CONFIRMATION,
                 phrase,
                 now,
                 now.plus(CONFIRMATION_TTL),
                 null,
-                0,
+                firstPage - 1,
                 null,
                 null);
         return toSnapshot();
@@ -188,6 +196,7 @@ public class J3ManualCallControlService {
                 intent.requestId(),
                 intent.date(),
                 intent.requestKey(),
+                intent.firstPage(),
                 qualification.available()
                         ? J3ManualCallIntentState.CONFIRMED_READY
                         : J3ManualCallIntentState.CONFIRMED_BLOCKED,
@@ -195,7 +204,7 @@ public class J3ManualCallControlService {
                 intent.preparedAt(),
                 intent.expiresAt(),
                 now,
-                0,
+                intent.completedPages(),
                 null,
                 null);
         return toSnapshot();
@@ -230,7 +239,8 @@ public class J3ManualCallControlService {
         return new J3ManualCallExecutionClaim(
                 intent.requestId(),
                 intent.date(),
-                qualification.providerOrigin());
+                qualification.providerOrigin(),
+                intent.firstPage());
     }
 
     public synchronized boolean executionMayContinue(UUID requestId) {
@@ -306,6 +316,7 @@ public class J3ManualCallControlService {
                     intent.requestId(),
                     intent.date(),
                     intent.requestKey(),
+                    intent.firstPage(),
                     J3ManualCallIntentState.CANCELLED_BY_GLOBAL_STOP,
                     null,
                     intent.preparedAt(),
@@ -335,12 +346,13 @@ public class J3ManualCallControlService {
                     intent.requestId(),
                     intent.date(),
                     intent.requestKey(),
+                    intent.firstPage(),
                     J3ManualCallIntentState.EXPIRED,
                     null,
                     intent.preparedAt(),
                     intent.expiresAt(),
                     null,
-                    0,
+                    intent.completedPages(),
                     null,
                     null);
         }
@@ -404,6 +416,7 @@ public class J3ManualCallControlService {
                 source.requestId(),
                 source.date(),
                 source.requestKey(),
+                source.firstPage(),
                 state,
                 null,
                 source.preparedAt(),
@@ -442,6 +455,7 @@ public class J3ManualCallControlService {
             UUID requestId,
             LocalDate date,
             String requestKey,
+            int firstPage,
             J3ManualCallIntentState state,
             String confirmationPhrase,
             Instant preparedAt,
@@ -456,6 +470,7 @@ public class J3ManualCallControlService {
                     requestId,
                     date,
                     requestKey,
+                    firstPage,
                     state,
                     confirmationPhrase,
                     preparedAt,

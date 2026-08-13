@@ -177,6 +177,46 @@ class J3ManualCallControlServiceTest {
     }
 
     @Test
+    void preparesAndExecutesAnExplicitResumeFromPageTwo() {
+        MutableClock clock = new MutableClock(NOW);
+        var service = new J3ManualCallControlService(
+                clock,
+                () -> REQUEST_ID,
+                () -> 42,
+                () -> J3ProviderQualificationSnapshot.available(
+                        URI.create("https://www.sofascore.com"),
+                        2));
+        service.rearmAfterGlobalStop();
+        service.activateByOperator();
+
+        var prepared = service.prepare(QUALIFICATION_DATE);
+
+        assertThat(prepared.intent().firstPage()).isEqualTo(2);
+        assertThat(prepared.intent().completedPages()).isEqualTo(1);
+        assertThat(prepared.intent().requestKey())
+                .isEqualTo("SCHEDULED_EVENTS|date=2026-08-13|pages=2-5");
+        assertThat(prepared.intent().confirmationPhrase())
+                .isEqualTo(
+                        "CONFIRMER SCHEDULED_EVENTS 2026-08-13 REPRISE PAGES 2-5 000042");
+
+        service.confirm(REQUEST_ID, prepared.intent().confirmationPhrase(), true);
+        var claim = service.claimExecution(REQUEST_ID);
+
+        assertThat(claim.firstPage()).isEqualTo(2);
+        assertRejected(
+                () -> service.recordPageCompleted(REQUEST_ID, 1),
+                J3ManualCallControlError.PAGE_SEQUENCE_INVALID);
+        for (int page = 2; page <= 5; page++) {
+            service.recordPageCompleted(REQUEST_ID, page);
+        }
+        service.completeExecution(REQUEST_ID);
+
+        assertThat(service.snapshot().intent().state())
+                .isEqualTo(J3ManualCallIntentState.COMPLETED);
+        assertThat(service.snapshot().intent().completedPages()).isEqualTo(5);
+    }
+
+    @Test
     void terminalQualificationLockCannotBeRearmedInTheSameProcess() {
         MutableClock clock = new MutableClock(NOW);
         var service = new J3ManualCallControlService(

@@ -49,6 +49,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `timezoneEventCount`, sans valeur, URI, en-tête ou donnée de session fournisseur ;
 - modèle local explicite des disponibilités de tournois et des compteurs d’événements par décalage
   horaire, distinct de l’ancien modèle synthétique `events` ;
+- politique de reprise J3 relisant et reparsant localement l’unique snapshot de page 1 avant
+  d’autoriser une séquence fournisseur strictement limitée aux pages 2 à 5 ;
+- checkpoint PostgreSQL contrôlant l’unicité, l’intégrité brute, le succès HTTP, la compatibilité du
+  parseur et `hasNextPage=true`, avec blocage persistant dès qu’une page 2 existe ;
+- intention, action graphique et preuve minimisée v2 dédiées à la reprise, sans ouvrir la future
+  interrogation complète répétable ;
 
 ### Documentation
 
@@ -76,6 +82,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   payload brut et avec réapplication automatique de l’arrêt global.
 - rapport terminal de la qualification réelle cinq pages, limité à la page 1 par l’arrêt sûr sur
   incompatibilité, puis diagnostic structurel hors ligne du snapshot local conservé.
+- contrat d’architecture et procédure Windows de la reprise explicite à la page 2, sans appel réel
+  pendant l’implémentation ni les tests.
 
 ### Modifié
 
@@ -92,6 +100,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   désactivé par défaut et connecteur général toujours verrouillé.
 - phase applicative avancée à `J3-MINIMIZED-PROVIDER-EVIDENCE`, sans modifier la désactivation par
   défaut du chemin fournisseur.
+- phase applicative avancée à `J3-PAGE-TWO-PROVIDER-RESUME`, avec checkpoint local obligatoire et
+  reprise fournisseur limitée aux pages 2 à 5.
 - identité de build Maven protégée par Enforcer et par un test des métadonnées Actuator générées,
   afin d’empêcher la réapparition de `com.geoffrey.betting` depuis un dossier `target` obsolète.
 - calcul SHA-256 et détection de contenu sensible mutualisés entre les fixtures hors ligne et les futures preuves brutes.

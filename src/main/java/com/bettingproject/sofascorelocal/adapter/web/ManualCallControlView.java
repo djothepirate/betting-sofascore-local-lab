@@ -51,7 +51,10 @@ public record ManualCallControlView(
                 source.suggestedDate().toString(),
                 source.globalStopActive() && !qualificationConsumed,
                 !source.globalStopActive() && source.circuitState() == J3CircuitState.LOCKED,
-                source.operatorActivated() && !activeIntent && !qualificationConsumed,
+                source.operatorActivated()
+                        && source.providerTransportAvailable()
+                        && !activeIntent
+                        && !qualificationConsumed,
                 source.providerTransportAvailable(),
                 realCallEnabled,
                 source.providerBlockers(),
@@ -62,6 +65,9 @@ public record ManualCallControlView(
             String requestId,
             String date,
             String requestKey,
+            int firstPage,
+            String pageRange,
+            boolean resumed,
             String state,
             String confirmationPhrase,
             String preparedAt,
@@ -82,6 +88,9 @@ public record ManualCallControlView(
                     source.requestId().toString(),
                     source.date().toString(),
                     source.requestKey(),
+                    source.firstPage(),
+                    source.firstPage() + "-5",
+                    source.firstPage() > 1,
                     source.state().name(),
                     source.confirmationPhrase(),
                     source.preparedAt().toString(),

@@ -168,7 +168,7 @@ class ManualCallControllerTest {
                 .andExpect(flash().attribute("manualCallMessageKind", "safe"))
                 .andExpect(flash().attribute(
                         "manualCallMessage",
-                        "Lot fournisseur terminé : cinq pages conservées et classées localement. L’arrêt global a été réappliqué et la preuve minimisée est prête."));
+                        "Reprise terminée : la page 1 conservée et les pages 2 à 5 nouvellement collectées forment le lot complet. L’arrêt global a été réappliqué et la preuve minimisée est prête."));
 
         verify(fivePageManualCallService).execute(REQUEST_ID);
     }
@@ -199,6 +199,7 @@ class ManualCallControllerTest {
         var evidence = new com.bettingproject.sofascorelocal.domain.provider.J3MinimizedQualificationEvidence(
                 LocalDate.parse("2026-08-13"),
                 com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState.CANCELLED_BY_GLOBAL_STOP,
+                0,
                 0,
                 1,
                 "GLOBAL_STOP_OR_CIRCUIT_BLOCK",

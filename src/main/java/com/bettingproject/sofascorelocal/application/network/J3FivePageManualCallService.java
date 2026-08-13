@@ -94,25 +94,26 @@ public class J3FivePageManualCallService {
             J3ManualCallExecutionClaim claim = controlService.claimExecution(requestId);
             List<J3MinimizedPageEvidence> pageAttempts = new ArrayList<>();
             Instant lastStartedAt = null;
-            int completedPages = 0;
+            int initialCompletedPages = claim.firstPage() - 1;
+            int completedPages = initialCompletedPages;
 
-            for (int page = ScheduledEventsProviderPageRequest.FIRST_PAGE;
+            for (int page = claim.firstPage();
                     page <= ScheduledEventsProviderPageRequest.LAST_PAGE;
                     page++) {
                 if (!controlService.executionMayContinue(requestId)) {
                     return publishAlreadyLockedFailure(
-                            claim.date(), completedPages, page,
+                            claim.date(), initialCompletedPages, completedPages, page,
                             "GLOBAL_STOP_OR_CIRCUIT_BLOCK", pageAttempts);
                 }
                 if (!awaitMinimumDelay(lastStartedAt)) {
                     controlService.stopGlobally();
                     return publishAlreadyLockedFailure(
-                            claim.date(), completedPages, page,
+                            claim.date(), initialCompletedPages, completedPages, page,
                             "EXECUTION_INTERRUPTED", pageAttempts);
                 }
                 if (!controlService.executionMayContinue(requestId)) {
                     return publishAlreadyLockedFailure(
-                            claim.date(), completedPages, page,
+                            claim.date(), initialCompletedPages, completedPages, page,
                             "GLOBAL_STOP_OR_CIRCUIT_BLOCK", pageAttempts);
                 }
 
@@ -139,6 +140,7 @@ public class J3FivePageManualCallService {
                         return publishAndLock(
                                 requestId,
                                 claim.date(),
+                                initialCompletedPages,
                                 J3ManualCallExecutionResult.failed(
                                         completedPages, page, terminalCode),
                                 pageAttempts);
@@ -156,6 +158,7 @@ public class J3FivePageManualCallService {
                     return publishAndLock(
                             requestId,
                             claim.date(),
+                            initialCompletedPages,
                             J3ManualCallExecutionResult.failed(
                                     completedPages, page, terminalCode),
                             pageAttempts);
@@ -166,6 +169,7 @@ public class J3FivePageManualCallService {
             return publishAndLock(
                     requestId,
                     claim.date(),
+                    initialCompletedPages,
                     J3ManualCallExecutionResult.successful(),
                     pageAttempts);
         }
@@ -183,33 +187,47 @@ public class J3FivePageManualCallService {
     private J3ManualCallExecutionResult publishAndLock(
             UUID requestId,
             LocalDate qualificationDate,
+            int initialCompletedPages,
             J3ManualCallExecutionResult result,
             List<J3MinimizedPageEvidence> pageAttempts) {
         J3ManualCallControlSnapshot locked = controlService.lockAfterQualification(requestId);
-        publishEvidence(qualificationDate, result, pageAttempts, locked);
+        publishEvidence(
+                qualificationDate,
+                initialCompletedPages,
+                result,
+                pageAttempts,
+                locked);
         return result;
     }
 
     private J3ManualCallExecutionResult publishAlreadyLockedFailure(
             LocalDate qualificationDate,
+            int initialCompletedPages,
             int completedPages,
             int failedPage,
             String terminalCode,
             List<J3MinimizedPageEvidence> pageAttempts) {
         J3ManualCallExecutionResult result = J3ManualCallExecutionResult.failed(
                 completedPages, failedPage, terminalCode);
-        publishEvidence(qualificationDate, result, pageAttempts, controlService.snapshot());
+        publishEvidence(
+                qualificationDate,
+                initialCompletedPages,
+                result,
+                pageAttempts,
+                controlService.snapshot());
         return result;
     }
 
     private void publishEvidence(
             LocalDate qualificationDate,
+            int initialCompletedPages,
             J3ManualCallExecutionResult result,
             List<J3MinimizedPageEvidence> pageAttempts,
             J3ManualCallControlSnapshot terminalSnapshot) {
         evidenceService.publish(new J3MinimizedQualificationEvidence(
                 qualificationDate,
                 terminalSnapshot.intent().state(),
+                initialCompletedPages,
                 result.completedPages(),
                 result.failedPage(),
                 result.completed() ? "NONE" : result.terminalCode(),

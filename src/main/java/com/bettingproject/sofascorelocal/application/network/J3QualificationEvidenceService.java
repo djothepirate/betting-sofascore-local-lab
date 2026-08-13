@@ -31,10 +31,14 @@ public class J3QualificationEvidenceService {
 
     private static String format(J3MinimizedQualificationEvidence evidence) {
         StringBuilder report = new StringBuilder();
-        line(report, "J3_MINIMIZED_EVIDENCE_VERSION", "1");
+        line(report, "J3_MINIMIZED_EVIDENCE_VERSION", "2");
         line(report, "GENERATED_AT", evidence.generatedAt());
         line(report, "QUALIFICATION_DATE", evidence.qualificationDate());
         line(report, "QUALIFICATION_SCOPE", "PAGES_1_2_3_4_5");
+        line(report, "VERIFIED_LOCAL_CHECKPOINT_PAGES", pageRange(
+                1,
+                evidence.initialCompletedPages()));
+        line(report, "PROVIDER_RESUME_FIRST_PAGE", evidence.initialCompletedPages() + 1);
         line(report, "TERMINAL_STATE", evidence.terminalState());
         line(report, "PAGES_ATTEMPTED", evidence.pageAttempts().stream()
                 .map(attempt -> Integer.toString(attempt.page()))
@@ -68,6 +72,15 @@ public class J3QualificationEvidenceService {
         line(report, "REQUEST_OR_RESPONSE_HEADERS_INCLUDED", "NO");
         line(report, "CONFIRMATION_IDENTIFIER_INCLUDED", "NO");
         return report.toString();
+    }
+
+    private static String pageRange(int firstPage, int lastPage) {
+        if (lastPage < firstPage) {
+            return "NONE";
+        }
+        return java.util.stream.IntStream.rangeClosed(firstPage, lastPage)
+                .mapToObj(Integer::toString)
+                .collect(Collectors.joining(","));
     }
 
     private static void line(StringBuilder report, String key, Object value) {

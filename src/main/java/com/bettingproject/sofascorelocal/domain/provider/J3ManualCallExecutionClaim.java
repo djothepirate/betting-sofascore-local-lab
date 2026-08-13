@@ -8,7 +8,8 @@ import java.util.UUID;
 public record J3ManualCallExecutionClaim(
         UUID requestId,
         LocalDate date,
-        URI providerOrigin) {
+        URI providerOrigin,
+        int firstPage) {
 
     public J3ManualCallExecutionClaim {
         Objects.requireNonNull(requestId, "requestId");
@@ -16,5 +17,9 @@ public record J3ManualCallExecutionClaim(
         Objects.requireNonNull(providerOrigin, "providerOrigin");
         ScheduledEventsProviderPageRequest.parseExactProviderOrigin(
                 providerOrigin.toString());
+        if (firstPage < ScheduledEventsProviderPageRequest.FIRST_PAGE
+                || firstPage > ScheduledEventsProviderPageRequest.LAST_PAGE) {
+            throw new IllegalArgumentException("firstPage must be between 1 and 5");
+        }
     }
 }

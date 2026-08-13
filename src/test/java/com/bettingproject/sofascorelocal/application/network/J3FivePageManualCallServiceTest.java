@@ -102,6 +102,44 @@ class J3FivePageManualCallServiceTest {
     }
 
     @Test
+    void resumesAtPageTwoAndIncludesTheVerifiedCheckpointInTerminalEvidence()
+            throws Exception {
+        MutableClock clock = new MutableClock(NOW);
+        RecordingStore store = new RecordingStore();
+        List<Integer> pages = new ArrayList<>();
+        List<Duration> waits = new ArrayList<>();
+        byte[] body = Files.readAllBytes(Path.of("fixtures/scheduled-events/nominal.json"));
+        ScheduledEventsProviderPageTransport transport = request -> {
+            pages.add(request.page());
+            Instant requestedAt = clock.instant();
+            clock.advance(Duration.ofMillis(25));
+            return response(request, requestedAt, clock.instant(), 200, body);
+        };
+        J3ManualCallControlService control = readyControl(clock, 2);
+        J3QualificationEvidenceService evidenceService = new J3QualificationEvidenceService();
+        var service = service(control, transport, store, evidenceService, clock, duration -> {
+            waits.add(duration);
+            clock.advance(duration);
+        });
+
+        var result = service.execute(REQUEST_ID);
+
+        assertThat(result.completed()).isTrue();
+        assertThat(pages).containsExactly(2, 3, 4, 5);
+        assertThat(waits).hasSize(3);
+        assertThat(store.saved).hasSize(4);
+        assertThat(control.snapshot().intent().firstPage()).isEqualTo(2);
+        assertThat(control.snapshot().intent().completedPages()).isEqualTo(5);
+        assertThat(evidenceService.latestDocument().orElseThrow().reportText())
+                .contains("J3_MINIMIZED_EVIDENCE_VERSION=2")
+                .contains("VERIFIED_LOCAL_CHECKPOINT_PAGES=1")
+                .contains("PROVIDER_RESUME_FIRST_PAGE=2")
+                .contains("PAGES_ATTEMPTED=2,3,4,5")
+                .contains("PAGES_COMPLETED=5")
+                .doesNotContain("PAGE_1_PAYLOAD");
+    }
+
+    @Test
     void persistsTheFailingPageAndStopsBeforePageThreeWithoutRetry() throws Exception {
         MutableClock clock = new MutableClock(NOW);
         RecordingStore store = new RecordingStore();
@@ -210,11 +248,15 @@ class J3FivePageManualCallServiceTest {
     }
 
     private static J3ManualCallControlService readyControl(Clock clock) {
+        return readyControl(clock, 1);
+    }
+
+    private static J3ManualCallControlService readyControl(Clock clock, int firstPage) {
         J3ManualCallControlService control = new J3ManualCallControlService(
                 clock,
                 () -> REQUEST_ID,
                 () -> 42,
-                () -> J3ProviderQualificationSnapshot.available(ORIGIN));
+                () -> J3ProviderQualificationSnapshot.available(ORIGIN, firstPage));
         control.rearmAfterGlobalStop();
         control.activateByOperator();
         var prepared = control.prepare(DATE);

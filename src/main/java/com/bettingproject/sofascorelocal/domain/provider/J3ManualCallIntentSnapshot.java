@@ -9,6 +9,7 @@ public record J3ManualCallIntentSnapshot(
         UUID requestId,
         LocalDate date,
         String requestKey,
+        int firstPage,
         J3ManualCallIntentState state,
         String confirmationPhrase,
         Instant preparedAt,
@@ -28,16 +29,21 @@ public record J3ManualCallIntentSnapshot(
         if (!expiresAt.isAfter(preparedAt)) {
             throw new IllegalArgumentException("expiresAt must be after preparedAt");
         }
+        if (firstPage < ScheduledEventsProviderPageRequest.FIRST_PAGE
+                || firstPage > ScheduledEventsProviderPageRequest.LAST_PAGE) {
+            throw new IllegalArgumentException("firstPage must be between 1 and 5");
+        }
         if (!requestKey.equals(SofascoreEndpointType.SCHEDULED_EVENTS.name()
-                + "|date=" + date + "|pages=1-5")) {
+                + "|date=" + date + "|pages=" + firstPage + "-5")) {
             throw new IllegalArgumentException(
                     "requestKey must match the scheduled-events five-page batch");
         }
-        if (completedPages < 0 || completedPages > 5) {
-            throw new IllegalArgumentException("completedPages must be between 0 and 5");
+        if (completedPages < firstPage - 1 || completedPages > 5) {
+            throw new IllegalArgumentException(
+                    "completedPages must include the verified local checkpoint");
         }
-        if (failedPage != null && (failedPage < 1 || failedPage > 5)) {
-            throw new IllegalArgumentException("failedPage must be between 1 and 5");
+        if (failedPage != null && (failedPage < firstPage || failedPage > 5)) {
+            throw new IllegalArgumentException("failedPage must be in the execution range");
         }
 
         if (state == J3ManualCallIntentState.AWAITING_CONFIRMATION) {

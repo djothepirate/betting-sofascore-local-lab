@@ -62,7 +62,7 @@ public class ManualCallController {
         formTokenService.consume(session, localFormToken);
         return perform(
                 controlService::activateByOperator,
-                "Circuit activé localement. Aucun transport n’a encore été exécuté ; préparez et confirmez l’intention avant toute action fournisseur.",
+                "Circuit activé localement. Aucun transport n’a encore été exécuté ; préparez et confirmez la reprise avant toute action fournisseur.",
                 redirectAttributes);
     }
 
@@ -76,7 +76,7 @@ public class ManualCallController {
         formTokenService.consume(session, localFormToken);
         return perform(
                 () -> controlService.prepare(date),
-                "Intention préparée. Recopiez exactement la phrase affichée pour confirmer.",
+                "Intention de reprise préparée. Recopiez exactement la phrase affichée pour confirmer.",
                 redirectAttributes);
     }
 
@@ -107,13 +107,13 @@ public class ManualCallController {
             if (result.completed()) {
                 redirectAttributes.addFlashAttribute(
                         "manualCallMessage",
-                        "Lot fournisseur terminé : cinq pages conservées et classées localement. L’arrêt global a été réappliqué et la preuve minimisée est prête.");
+                        "Reprise terminée : la page 1 conservée et les pages 2 à 5 nouvellement collectées forment le lot complet. L’arrêt global a été réappliqué et la preuve minimisée est prête.");
                 redirectAttributes.addFlashAttribute("manualCallMessageKind", "safe");
             }
             else {
                 redirectAttributes.addFlashAttribute(
                         "manualCallMessage",
-                        "Lot arrêté avant la page " + result.failedPage()
+                        "Reprise arrêtée avant la page " + result.failedPage()
                                 + " (" + result.terminalCode() + "). Aucun retry n’a été lancé ; l’arrêt global est réappliqué et la preuve minimisée est prête.");
                 redirectAttributes.addFlashAttribute("manualCallMessageKind", "danger");
             }
@@ -188,12 +188,12 @@ public class ManualCallController {
             case ACKNOWLEDGEMENT_REQUIRED -> "La case de confirmation explicite est obligatoire.";
             case CONFIRMATION_TEXT_MISMATCH -> "La phrase recopiée ne correspond pas exactement.";
             case INTENT_ALREADY_CONFIRMED -> "Cette intention a déjà été confirmée.";
-            case PROVIDER_TRANSPORT_UNAVAILABLE -> "Le chemin fournisseur J3 n’est pas disponible dans cette configuration.";
+            case PROVIDER_TRANSPORT_UNAVAILABLE -> "La reprise J3 n’est pas disponible : vérifiez la configuration et le checkpoint local de page 1.";
             case INTENT_NOT_READY -> "L’intention doit être confirmée et prête avant le déclenchement.";
             case EXECUTION_ALREADY_STARTED -> "Cette qualification a déjà été déclenchée.";
             case EXECUTION_NOT_ACTIVE -> "Aucun lot fournisseur actif ne correspond à cette intention.";
-            case PAGE_SEQUENCE_INVALID -> "La séquence de pages ne respecte pas l’ordre fixe 1 à 5.";
-            case QUALIFICATION_ALREADY_CONSUMED -> "La qualification fournisseur unique a déjà été consommée depuis ce démarrage.";
+            case PAGE_SEQUENCE_INVALID -> "La reprise ne respecte pas l’ordre fixe des pages 2 à 5 après le checkpoint local de page 1.";
+            case QUALIFICATION_ALREADY_CONSUMED -> "La reprise fournisseur unique a déjà été consommée depuis ce démarrage.";
             case DATE_NOT_AUTHORIZED -> "Seule la date de qualification 2026-08-13 est autorisée pour ce lot.";
         };
     }

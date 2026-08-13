@@ -6,6 +6,7 @@ import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceO
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
+import com.bettingproject.sofascorelocal.port.J3QualificationCheckpointStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,6 +22,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -49,6 +51,9 @@ class FlywayMigrationIT {
 
     @Autowired
     RawManualCallSnapshotStore snapshotStore;
+
+    @Autowired
+    J3QualificationCheckpointStore checkpointStore;
 
     @Test
     void createsTheJ3RawSnapshotSchemaAndKeepsNetworkDisabled() {
@@ -179,6 +184,30 @@ class FlywayMigrationIT {
                 .hasRootCauseInstanceOf(IllegalStateException.class)
                 .hasRootCauseMessage(
                         "raw snapshot classification requires one RAW_ONLY or identical row");
+    }
+
+    @Test
+    void reloadsTheExactRawPageOneAsALocalResumeCheckpoint() {
+        byte[] rawPayload = """
+                {
+                  "scheduled": [],
+                  "hasNextPage": true
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+        var persisted = snapshotStore.save(snapshot(
+                "SCHEDULED_EVENTS|date=2026-08-13|page=1",
+                rawPayload));
+
+        var pages = checkpointStore.findStoredPages(LocalDate.parse("2026-08-13"));
+
+        assertThat(pages).singleElement().satisfies(page -> {
+            assertThat(page.snapshotId()).isEqualTo(persisted.snapshotId());
+            assertThat(page.page()).isEqualTo(1);
+            assertThat(page.requestKey())
+                    .isEqualTo("SCHEDULED_EVENTS|date=2026-08-13|page=1");
+            assertThat(page.payload().bytes()).isEqualTo(rawPayload);
+            assertThat(page.payload().sha256()).isEqualTo(persisted.payloadSha256());
+        });
     }
 
     @Test

@@ -743,3 +743,63 @@ J3_NEW_NETWORK_CALLS=0
 J3_REAL_REQUALIFICATION=PENDING_SEPARATE_DECISION
 J3_WORK_ORDER=IN_DEVELOPMENT
 ```
+
+## 22. Reprise contrôlée à la page 2
+
+Après la qualification humaine du schéma corrigé, le propriétaire autorise une unité distincte de
+reprise réelle à la page 2. L’objectif est de compléter la même qualification avec les pages 2 à 5,
+sans redemander la page 1. La possibilité de répéter ultérieurement une interrogation complète
+depuis l’interface reste explicitement hors périmètre.
+
+L’unité introduit :
+
+- un port de lecture local des checkpoints de qualification, sans migration ni mutation du snapshot
+  historique ;
+- une politique exigeant exactement une page 1, aucune page 2 à 5, une intégrité taille/SHA-256, un
+  statut HTTP `2xx`, une relecture `PARSED` par le parseur corrigé et `hasNextPage=true` ;
+- une intention explicite `SCHEDULED_EVENTS|date=2026-08-13|pages=2-5`, dont le compteur démarre à
+  `1` grâce au checkpoint vérifié ;
+- un orchestrateur qui commence réellement à la page 2 et conserve les garde-fous existants : ordre
+  fixe, concurrence `1`, délai minimal de trois secondes, persistance avant parsing, arrêt au premier
+  incident et absence de retry ;
+- un verrou persistant par présence de la page 2, empêchant de répéter la reprise après redémarrage ;
+- une interface et une preuve minimisée v2 distinguant la page 1 locale des pages 2 à 5 réellement
+  tentées pendant la reprise.
+
+Le développement, les tests ciblés et les validations consolidées de cette unité n’exécutent aucun
+appel SofaScore. L’appel réel reste une action humaine ultérieure via le bouton final.
+
+```text
+J3_PAGE_1_CHECKPOINT=REQUIRED_AND_REPARSED_LOCALLY
+J3_RESUME_FIRST_PROVIDER_PAGE=2
+J3_RESUME_LAST_PROVIDER_PAGE=5
+J3_RESUME_PAGE_1_REPEATED=NO
+J3_RESUME_AUTOMATIC_RETRY=NO
+J3_RESUME_REPEAT_AFTER_PAGE_2=BLOCKED
+J3_MINIMIZED_EVIDENCE_VERSION=2
+J3_IMPLEMENTATION_PROVIDER_CALLS=0
+J3_REPEATABLE_GUI_QUERY=OUT_OF_SCOPE_NEXT_UNIT
+J3_WORK_ORDER=IN_DEVELOPMENT
+```
+
+### 22.1 Validation technique de l’unité
+
+La validation hors ligne du 2026-08-13 confirme :
+
+```text
+WINDOWS_PREFLIGHT=PASS
+SOURCE_GUARDRAIL_SCAN=PASS
+STANDARD_TESTS=142
+STANDARD_FAILURES=0
+STANDARD_ERRORS=0
+DIFF_CHECK=PASS
+SECRET_SCAN=PASS
+SERVER_ADDRESS=127.0.0.1
+SOFASCORE_NETWORK_CALLS_EXECUTED=NO
+```
+
+Le profil `integration-tests` a été lancé, mais Testcontainers n’a pas pu créer sa base éphémère :
+le compte sandbox n’avait pas accès au tube Windows `docker_engine`. L’échec intervient avant
+l’exécution de `FlywayMigrationIT` et ne constitue donc pas un résultat fonctionnel du lecteur de
+checkpoint. Ce profil devra être rejoué dans le terminal Windows utilisateur avant la fusion ; il
+ne nécessite et ne doit déclencher aucun appel SofaScore.

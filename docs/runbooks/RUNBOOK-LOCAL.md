@@ -186,6 +186,44 @@ les logs.
 La preuve minimisée est gardée en mémoire uniquement : la télécharger avant d’arrêter
 l’application. Ne pas joindre les snapshots bruts au rapport de qualification.
 
+### 3.6 Reprendre explicitement la qualification à la page 2
+
+Cette procédure ne remplace pas historiquement la section 3.5 : elle applique la décision
+propriétaire distincte prise après l’adaptation hors ligne du parseur. Elle n’est disponible que si
+PostgreSQL contient exactement le snapshot de page 1 qualifié et aucune page 2 à 5 pour la date
+`2026-08-13`.
+
+1. conserver intact le snapshot local de page 1 et démarrer PostgreSQL ;
+2. activer dans `.env` les quatre valeurs J3 documentées à la section 3.5, sans cookie, jeton,
+   compte ni donnée de session ;
+3. démarrer l’application avec le profil `local` ;
+4. vérifier `REPRISE J3 PAGE 2 PRÊTE` et `CHECKPOINT PAGE 1 VALIDÉ` ;
+5. vérifier que l’interface indique `page 1 conservée, reprise pages 2 à 5` ;
+6. lever l’arrêt global puis activer le circuit ;
+7. préparer la reprise et vérifier la clé
+   `SCHEDULED_EVENTS|date=2026-08-13|pages=2-5` ;
+8. recopier exactement la phrase contenant `REPRISE PAGES 2-5`, cocher l’acquittement et confirmer ;
+9. vérifier `CONFIRMED_READY`, puis sélectionner une seule fois
+   **« 5. Lancer la reprise fournisseur unique — PAGES 2 À 5 »** ;
+10. attendre le retour sans actualiser la page ;
+11. vérifier soit `COMPLETED` avec `5 / 5`, soit l’arrêt sans retry sur la première page en incident ;
+12. télécharger la preuve minimisée et contrôler au minimum :
+
+```text
+J3_MINIMIZED_EVIDENCE_VERSION=2
+VERIFIED_LOCAL_CHECKPOINT_PAGES=1
+PROVIDER_RESUME_FIRST_PAGE=2
+RAW_PAYLOAD_INCLUDED=NO
+PROVIDER_URI_INCLUDED=NO
+AUTOMATIC_RETRY_EXECUTED=NO
+```
+
+13. remettre immédiatement la configuration `.env` en état sûr comme à la section 3.5.
+
+La présence d’un snapshot de page 2 bloque toute nouvelle reprise, même après redémarrage. Ne pas
+effacer ou modifier les snapshots pour contourner ce verrou. L’interrogation complète répétable
+depuis l’interface fera l’objet d’une unité ultérieure distincte.
+
 ## 4. Validation
 
 ### 4.1 Suite standard

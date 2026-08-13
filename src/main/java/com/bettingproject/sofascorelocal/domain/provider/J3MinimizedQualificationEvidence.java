@@ -11,6 +11,7 @@ import java.util.Objects;
 public record J3MinimizedQualificationEvidence(
         LocalDate qualificationDate,
         J3ManualCallIntentState terminalState,
+        int initialCompletedPages,
         int completedPages,
         Integer failedPage,
         String terminalCode,
@@ -33,7 +34,10 @@ public record J3MinimizedQualificationEvidence(
                 && terminalState != J3ManualCallIntentState.CANCELLED_BY_GLOBAL_STOP) {
             throw new IllegalArgumentException("evidence requires a terminal intent state");
         }
-        if (completedPages < 0 || completedPages > 5) {
+        if (initialCompletedPages < 0 || initialCompletedPages > 4) {
+            throw new IllegalArgumentException("initialCompletedPages must be between 0 and 4");
+        }
+        if (completedPages < initialCompletedPages || completedPages > 5) {
             throw new IllegalArgumentException("completedPages must be between 0 and 5");
         }
         if (!globalStopActive || finalCircuitState != J3CircuitState.LOCKED) {
@@ -43,13 +47,14 @@ public record J3MinimizedQualificationEvidence(
             throw new IllegalArgumentException("at most five page attempts are allowed");
         }
         for (int index = 0; index < pageAttempts.size(); index++) {
-            if (pageAttempts.get(index).page() != index + 1) {
-                throw new IllegalArgumentException("page evidence must be ordered from page one");
+            if (pageAttempts.get(index).page() != initialCompletedPages + index + 1) {
+                throw new IllegalArgumentException(
+                        "page evidence must follow the verified local checkpoint");
             }
         }
         if (terminalState == J3ManualCallIntentState.COMPLETED) {
             if (completedPages != 5 || failedPage != null || !"NONE".equals(terminalCode)
-                    || pageAttempts.size() != 5
+                    || pageAttempts.size() != 5 - initialCompletedPages
                     || pageAttempts.stream().anyMatch(attempt -> !attempt.snapshotRecorded())
                     || finalCircuitReason != J3CircuitReason.QUALIFICATION_TERMINAL_LOCK) {
                 throw new IllegalArgumentException(
@@ -62,8 +67,9 @@ public record J3MinimizedQualificationEvidence(
                 throw new IllegalArgumentException(
                         "failed or cancelled evidence requires the next page and a terminal code");
             }
-            if (pageAttempts.size() != completedPages
-                    && pageAttempts.size() != failedPage) {
+            int completedAttempts = completedPages - initialCompletedPages;
+            if (pageAttempts.size() != completedAttempts
+                    && pageAttempts.size() != completedAttempts + 1) {
                 throw new IllegalArgumentException(
                         "page attempts must stop before or on the terminal page");
             }

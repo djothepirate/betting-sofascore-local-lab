@@ -110,6 +110,7 @@ class DashboardControllerTest {
                 .andExpect(content().string(containsString("VALIDÉ")))
                 .andExpect(content().string(containsString("ARRÊT GLOBAL ACTIF")))
                 .andExpect(content().string(containsString("REAL_CALL_NOT_AUTHORIZED")))
-                .andExpect(content().string(containsString("Lancer le lot fournisseur — BLOQUÉ")));
+                .andExpect(content().string(containsString(
+                        "Lancer la reprise fournisseur — BLOQUÉE")));
     }
 }
