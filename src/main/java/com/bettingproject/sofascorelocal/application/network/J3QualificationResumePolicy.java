@@ -7,6 +7,7 @@ import com.bettingproject.sofascorelocal.domain.provider.J3StoredQualificationPa
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 import com.bettingproject.sofascorelocal.port.J3QualificationCheckpointStore;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -25,6 +26,7 @@ public class J3QualificationResumePolicy {
     private final J3QualificationCheckpointStore checkpointStore;
     private final ScheduledEventsV1Parser parser;
 
+    @Autowired
     public J3QualificationResumePolicy(
             J3ProviderQualificationPolicy providerPolicy,
             J3QualificationCheckpointStore checkpointStore) {
