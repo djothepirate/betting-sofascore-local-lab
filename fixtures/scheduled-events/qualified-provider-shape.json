@@ -1,0 +1,29 @@
+{
+  "scheduled": [
+    {
+      "tournament": {
+        "id": 970001,
+        "name": "Synthetic Regional League",
+        "uniqueTournament": {
+          "id": 970101,
+          "name": "Synthetic National Competition"
+        }
+      },
+      "timezoneEventCount": {
+        "0": 3,
+        "3600": 2
+      }
+    },
+    {
+      "tournament": {
+        "id": 970002,
+        "name": "Synthetic Qualification Round"
+      },
+      "timezoneEventCount": {
+        "-10800": 1,
+        "0": 1
+      }
+    }
+  ],
+  "hasNextPage": true
+}

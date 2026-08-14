@@ -20,9 +20,12 @@ public class OfflineFixtureCorpusService {
             "fixtures/scheduled-events/optional-field-missing.manifest.json",
             "fixtures/scheduled-events/empty-events-array.manifest.json",
             "fixtures/scheduled-events/unknown-extra-field.manifest.json",
+            "fixtures/scheduled-events/qualified-provider-shape.manifest.json",
+            "fixtures/scheduled-events/qualified-page-two-shape.manifest.json",
             "fixtures/schema-breaks/scheduled-events-required-field-missing.manifest.json",
             "fixtures/schema-breaks/scheduled-events-numeric-field-as-string.manifest.json",
             "fixtures/schema-breaks/scheduled-events-unexpected-object.manifest.json",
+            "fixtures/schema-breaks/scheduled-events-timezone-count-non-empty-array.manifest.json",
             "fixtures/schema-breaks/scheduled-events-unexpected-html.manifest.json");
 
     private final ClasspathFixtureLoader fixtureLoader;
@@ -65,7 +68,7 @@ public class OfflineFixtureCorpusService {
         return new FixtureCorpusOverview(
                 SofascoreEndpointType.SCHEDULED_EVENTS,
                 FixtureOrigin.SYNTHETIC,
-                false,
+                true,
                 ScheduledEventsV1Parser.PARSER_VERSION,
                 SCHEDULED_EVENTS_MANIFESTS.size(),
                 availableCount,

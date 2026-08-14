@@ -4,7 +4,7 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap** et **J2 — Fixtures**. Le Work Order **J3 — Appel manuel** est ouvert pour le développement hors ligne des protections et de la conservation des preuves brutes, sans autorisation actuelle d’URI réelle ni d’appel fournisseur, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap** et **J2 — Fixtures**. Le Work Order **J3 — Appel manuel** contient désormais un chemin fournisseur opt-in de collecte complète, démarrant en page 1 et progressant selon le booléen qualifié `hasNextPage`, avec un plafond local de 25 pages. Ce chemin reste désactivé par défaut et aucun appel fournisseur n’est exécuté par les tests, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
 ## Ce qui est livré localement
 
@@ -17,8 +17,9 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
 - tests unitaires hors ligne et test Flyway/Testcontainers dans un profil explicite ;
 - scripts PowerShell de configuration, préflight, démarrage, arrêt et vérification.
-- corpus synthétique `SCHEDULED_EVENTS` de neuf fixtures classpath avec hashes vérifiés ;
-- parseur hors ligne `scheduled-events-v1`, modèle local et tests de rupture de schéma ;
+- corpus synthétique `SCHEDULED_EVENTS` de douze fixtures classpath avec hashes vérifiés ;
+- parseur hors ligne `scheduled-events-v1`, compatible avec le corpus J2 `events` et avec la forme
+  fournisseur qualifiée `scheduled`, modèle local et tests de rupture de schéma ;
 - inventaire du corpus visible dans le tableau de bord, sans dépendance à PostgreSQL.
 - politique J3 hors ligne pour l’activation explicite, la confirmation par appel, le cache préalable, le délai minimal et l’arrêt global ;
 - circuit J3 en mémoire initialisé à `LOCKED`, incidents typés et garde atomique limitant la concurrence à un appel ;
@@ -29,10 +30,16 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
 - matrice J3 d’incidents simulés avec conservation du brut avant parsing, circuit ouvert et aucun retry automatique ;
 - qualification Windows du parcours opérateur local et des politiques simulées, avec preuve explicite
   que l’action fournisseur reste indisponible ;
+- chemin J3 dédié à une collecte manuelle explicite démarrant toujours en page `1`, poursuivie
+  uniquement tant que le parseur retourne `hasNextPage=true` et bornée localement à 25 pages ;
+- client fournisseur sans proxy, redirection, cookie, jeton, compte ou donnée de session, avec arrêt
+  au premier incident et aucun retry ;
+- parcours répétable uniquement après réarmement, activation, nouvelle intention datée,
+  confirmation exacte et action finale distincte, sans polling ni retry ;
 
 ## Limite essentielle du bootstrap
 
-**Aucun appel SofaScore réel n’est implémenté.** Le dépôt ne contient aucun chemin d’endpoint SofaScore, aucun adaptateur fournisseur actif et aucun polling. Le transport J3 présent ne peut cibler que l’adresse littérale `127.0.0.1` et une route de simulation fixe ; il n’est pas enregistré comme bean Spring. Le profil Maven `sofascore-live-test` reste volontairement bloqué jusqu’au point de décision du Work Order J3.
+**Aucun appel SofaScore réel n’est actif par défaut et aucun n’est exécuté par les tests.** Le connecteur général, `ConnectorGate` et le profil Maven `sofascore-live-test` restent bloqués. Le seul chemin fournisseur est une exception J3 dédiée, inactive tant que `SOFASCORE_ENABLED`, `SOFASCORE_J3_QUALIFICATION_ENABLED`, l’origine exacte et l’unique famille autorisée ne concordent pas. Il ne prend en charge ni polling, ni planification, ni autre sport, ni autre endpoint ; chaque collecte reste manuelle, séquentielle et plafonnée.
 
 Cette limite préserve la règle du Betting Project principal : aucun composant du VPS ne dépend du laboratoire, et l’arrêt du poste Windows ne doit avoir aucun effet sur la chaîne globale.
 
@@ -179,8 +186,9 @@ Le bootstrap cumule plusieurs barrières :
 
 1. `sofascore.enabled=false` par défaut ;
 2. aucune base URL par défaut ;
-3. aucune URI d’endpoint dans le catalogue ;
-4. toutes les définitions sont `callable=false` ;
+3. aucune origine fournisseur dans la configuration par défaut ;
+4. toutes les définitions restent `callable=false`, sauf `SCHEDULED_EVENTS` dans le seul mode de
+   qualification J3 explicitement armé ;
 5. `ConnectorGate` refuse systématiquement les appels ;
 6. le profil `sofascore-live-test` échoue volontairement ;
 7. l’application n’écoute que sur une adresse de boucle locale ;
@@ -198,6 +206,11 @@ Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces
 - [Transport scheduled-events J3 protégé et simulé](docs/architecture/J3-GUARDED-SCHEDULED-EVENTS-TRANSPORT.md)
 - [Confirmation explicite d’appel manuel J3](docs/architecture/J3-EXPLICIT-MANUAL-CALL-CONFIRMATION.md)
 - [Politiques d’arrêt et d’incident J3](docs/architecture/J3-TRANSPORT-STOP-AND-INCIDENT-POLICIES.md)
+- [Chemin fournisseur J3 borné à cinq pages](docs/architecture/J3-FIVE-PAGE-PROVIDER-QUALIFICATION.md)
+- [Reprise fournisseur J3 contrôlée à la page 2](docs/architecture/J3-PAGE-TWO-PROVIDER-RESUME.md)
+- [Adaptation hors ligne au schéma qualifié de la page 2](docs/architecture/J3-PAGE-TWO-SCHEMA-ADAPTATION.md)
+- [Reprise fournisseur J3 contrôlée à la page 3](docs/architecture/J3-PAGE-THREE-PROVIDER-RESUME.md)
+- [Collecte manuelle J3 répétable à pagination dynamique](docs/architecture/J3-DYNAMIC-MANUAL-PAGINATION.md)
 - [Runbook local](docs/runbooks/RUNBOOK-LOCAL.md)
 - [Cadrage PDF](docs/reference/Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf)
 - [Rapport de validation du bootstrap](docs/validation/J0-J1-VALIDATION-REPORT.md)
@@ -205,12 +218,15 @@ Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces
 - [Rapport de validation J2](docs/validation/J2-WINDOWS-VALIDATION-20260812.md)
 - [Work Order J2 validé](docs/work_orders/completed/WO-SS-20260808-002-fixtures-j2.md)
 - [Qualification Windows J3 — contrôle local et politiques simulées](docs/validation/J3-WINDOWS-MANUAL-CALL-QUALIFICATION-20260812.md)
+- [Qualification Windows J3 — pagination dynamique](docs/validation/J3-WINDOWS-DYNAMIC-PAGINATION-QUALIFICATION-20260814.md)
 - [Work Order J3 actif](docs/work_orders/active/WO-SS-20260812-003-manual-call-j3.md)
 
 ## Prochaine frontière
 
-La qualification technique Windows locale est enregistrée avec le résultat `PASS`. La prochaine
-frontière reste le point de décision humain du Work Order avant toute qualification réelle. Aucun
-appel ne peut être déduit de cette réussite : la preuve de sortie fournisseur est `NOT_AVAILABLE` et
-l’URI réelle, le connecteur, le profil live, l’adaptateur fournisseur et l’action réseau de
-l’interface restent bloqués, même après confirmation d’une intention.
+La qualification humaine du `2026-08-14` a collecté dix pages sur dix, après les cinq pages
+observées le `2026-08-13`. Elle confirme que le parcours repart de la page 1, persiste avant
+parsing, continue uniquement sur `hasNextPage=true` et s’arrête normalement sur `false`, sans
+conserver l’ancienne hypothèse fixe de cinq pages. Une barrière locale interdit toute page 26.
+
+La pagination dynamique est désormais qualifiée dans le périmètre manuel J3. Toute automatisation,
+planification, collecte live ou généralisation à une autre famille reste hors périmètre.

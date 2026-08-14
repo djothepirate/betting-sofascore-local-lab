@@ -27,12 +27,18 @@ class SyntheticScheduledEventsFixtureCorpusTest {
             "fixtures/scheduled-events/empty-events-array.manifest.json";
     private static final String UNKNOWN_EXTRA_FIELD =
             "fixtures/scheduled-events/unknown-extra-field.manifest.json";
+    private static final String QUALIFIED_PROVIDER_SHAPE =
+            "fixtures/scheduled-events/qualified-provider-shape.manifest.json";
+    private static final String QUALIFIED_PAGE_TWO_SHAPE =
+            "fixtures/scheduled-events/qualified-page-two-shape.manifest.json";
     private static final String REQUIRED_FIELD_MISSING =
             "fixtures/schema-breaks/scheduled-events-required-field-missing.manifest.json";
     private static final String NUMERIC_FIELD_AS_STRING =
             "fixtures/schema-breaks/scheduled-events-numeric-field-as-string.manifest.json";
     private static final String UNEXPECTED_OBJECT =
             "fixtures/schema-breaks/scheduled-events-unexpected-object.manifest.json";
+    private static final String NON_EMPTY_TIMEZONE_COUNT_ARRAY =
+            "fixtures/schema-breaks/scheduled-events-timezone-count-non-empty-array.manifest.json";
     private static final String UNEXPECTED_HTML =
             "fixtures/schema-breaks/scheduled-events-unexpected-html.manifest.json";
 
@@ -55,6 +61,14 @@ class SyntheticScheduledEventsFixtureCorpusTest {
                     "scheduled-events-unknown-extra-field",
                     FixtureContentKind.JSON),
             new Scenario(
+                    QUALIFIED_PROVIDER_SHAPE,
+                    "scheduled-events-qualified-provider-shape",
+                    FixtureContentKind.JSON),
+            new Scenario(
+                    QUALIFIED_PAGE_TWO_SHAPE,
+                    "scheduled-events-qualified-page-two-shape",
+                    FixtureContentKind.JSON),
+            new Scenario(
                     REQUIRED_FIELD_MISSING,
                     "scheduled-events-required-field-missing",
                     FixtureContentKind.JSON),
@@ -67,6 +81,10 @@ class SyntheticScheduledEventsFixtureCorpusTest {
                     "scheduled-events-unexpected-object",
                     FixtureContentKind.JSON),
             new Scenario(
+                    NON_EMPTY_TIMEZONE_COUNT_ARRAY,
+                    "scheduled-events-timezone-count-non-empty-array",
+                    FixtureContentKind.JSON),
+            new Scenario(
                     UNEXPECTED_HTML,
                     "scheduled-events-unexpected-html",
                     FixtureContentKind.HTML));
@@ -77,7 +95,7 @@ class SyntheticScheduledEventsFixtureCorpusTest {
                 .map(scenario -> LOADER.load(scenario.manifestResource()))
                 .toList();
 
-        assertThat(fixtures).hasSize(9);
+        assertThat(fixtures).hasSize(12);
         assertThat(fixtures)
                 .extracting(fixture -> fixture.manifest().fixtureId())
                 .containsExactlyElementsOf(SCENARIOS.stream().map(Scenario::fixtureId).toList())
@@ -99,7 +117,9 @@ class SyntheticScheduledEventsFixtureCorpusTest {
             assertThat(fixture.manifest().fixtureOrigin()).isEqualTo(FixtureOrigin.SYNTHETIC);
             assertThat(fixture.manifest().providerSchemaValidated()).isFalse();
             assertThat(fixture.manifest().recordedAt())
-                    .isEqualTo(Instant.parse("2026-08-12T00:00:00Z"));
+                    .isEqualTo(isJ3QualifiedShape(scenario.manifestResource())
+                            ? Instant.parse("2026-08-13T00:00:00Z")
+                            : Instant.parse("2026-08-12T00:00:00Z"));
             assertThat(fixture.manifest().httpStatus()).isNull();
             assertThat(fixture.manifest().parserVersion()).isEqualTo("scheduled-events-v1");
             assertThat(fixture.manifest().maximumBytes()).isEqualTo(4096);
@@ -161,6 +181,27 @@ class SyntheticScheduledEventsFixtureCorpusTest {
         JsonNode unexpectedObject = json(UNEXPECTED_OBJECT);
         assertThat(unexpectedObject.get("events").isObject()).isTrue();
 
+        JsonNode qualifiedProviderShape = json(QUALIFIED_PROVIDER_SHAPE);
+        assertThat(qualifiedProviderShape.has("events")).isFalse();
+        assertThat(qualifiedProviderShape.get("scheduled").isArray()).isTrue();
+        assertThat(qualifiedProviderShape.get("scheduled").get(0).has("tournament")).isTrue();
+        assertThat(qualifiedProviderShape.get("scheduled").get(0)
+                .get("timezoneEventCount").isObject()).isTrue();
+
+        JsonNode qualifiedPageTwoShape = json(QUALIFIED_PAGE_TWO_SHAPE);
+        assertThat(qualifiedPageTwoShape.get("scheduled").get(0)
+                .get("timezoneEventCount").isObject()).isTrue();
+        assertThat(qualifiedPageTwoShape.get("scheduled").get(1)
+                .get("timezoneEventCount").isArray()).isTrue();
+        assertThat(qualifiedPageTwoShape.get("scheduled").get(1)
+                .get("timezoneEventCount").isEmpty()).isTrue();
+
+        JsonNode nonEmptyTimezoneCountArray = json(NON_EMPTY_TIMEZONE_COUNT_ARRAY);
+        assertThat(nonEmptyTimezoneCountArray.get("scheduled").get(0)
+                .get("timezoneEventCount").isArray()).isTrue();
+        assertThat(nonEmptyTimezoneCountArray.get("scheduled").get(0)
+                .get("timezoneEventCount").isEmpty()).isFalse();
+
         assertThat(LOADER.load(UNEXPECTED_HTML).contentKind())
                 .isEqualTo(FixtureContentKind.HTML);
     }
@@ -171,6 +212,12 @@ class SyntheticScheduledEventsFixtureCorpusTest {
 
     private static JsonNode json(String manifestResource) throws JacksonException {
         return JSON_MAPPER.readTree(LOADER.load(manifestResource).rawPayload());
+    }
+
+    private static boolean isJ3QualifiedShape(String manifestResource) {
+        return manifestResource.equals(QUALIFIED_PROVIDER_SHAPE)
+                || manifestResource.equals(QUALIFIED_PAGE_TWO_SHAPE)
+                || manifestResource.equals(NON_EMPTY_TIMEZONE_COUNT_ARRAY);
     }
 
     private record Scenario(

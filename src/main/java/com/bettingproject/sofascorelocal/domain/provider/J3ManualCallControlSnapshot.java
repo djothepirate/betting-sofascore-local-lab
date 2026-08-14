@@ -24,9 +24,9 @@ public record J3ManualCallControlSnapshot(
         providerBlockers = List.copyOf(Objects.requireNonNull(
                 providerBlockers,
                 "providerBlockers"));
-        if (providerTransportAvailable || providerBlockers.isEmpty()) {
+        if (providerTransportAvailable == !providerBlockers.isEmpty()) {
             throw new IllegalArgumentException(
-                    "J3 manual confirmation must keep provider transport blocked");
+                    "provider availability and blockers must be mutually exclusive");
         }
     }
 

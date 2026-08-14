@@ -33,6 +33,42 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - couverture des arrêts sur `400`, `401`, `403`, `429`, `5xx`, timeout, erreur d’entrée/sortie, taille excessive, HTML et schéma incompatible ;
 - conservation bornée de `Retry-After` comme frontière de blocage, sans programmation de retry ni réouverture automatique ;
 - preuve automatisée de déduplication et d’absence de valeur sensible dans les sorties capturées ;
+- chemin fournisseur J3 opt-in limité à l’origine exacte `https://www.sofascore.com`, à la date
+  `2026-08-13` et aux pages `1` à `5` de `SCHEDULED_EVENTS` ;
+- orchestrateur d’une action manuelle unique exécutant les pages séquentiellement, avec concurrence
+  `1`, délai minimal de trois secondes, conservation avant parsing et arrêt au premier incident ;
+- action Web distincte après confirmation, états `CONFIRMED_READY`, `EXECUTING`, `COMPLETED` et
+  `FAILED`, et interdiction d’une seconde exécution dans le même processus ;
+- client fournisseur sans proxy, redirection, cookie, jeton, compte ou donnée de session, couvert
+  hors ligne avec `MockRestServiceServer` ;
+- preuve terminale J3 minimisée, affichable et téléchargeable localement, composée uniquement des
+  métadonnées de transport, de persistance et de classement des pages effectivement tentées ;
+- verrou terminal automatique `QUALIFICATION_TERMINAL_LOCK` après succès ou incident, avec refus
+  du réarmement dans le même processus après consommation de la qualification ;
+- fixture synthétique minimisée au contrat utile observé `scheduled` / `tournament` /
+  `timezoneEventCount`, sans valeur, URI, en-tête ou donnée de session fournisseur ;
+- modèle local explicite des disponibilités de tournois et des compteurs d’événements par décalage
+  horaire, distinct de l’ancien modèle synthétique `events` ;
+- politique de reprise J3 relisant et reparsant localement l’unique snapshot de page 1 avant
+  d’autoriser une séquence fournisseur strictement limitée aux pages 2 à 5 ;
+- checkpoint PostgreSQL contrôlant l’unicité, l’intégrité brute, le succès HTTP, la compatibilité du
+  parseur et `hasNextPage=true`, avec blocage persistant dès qu’une page 2 existe ;
+- intention, action graphique et preuve minimisée v2 dédiées à la reprise, sans ouvrir la future
+  interrogation complète répétable ;
+- fixtures synthétiques de la forme qualifiée page 2 et de sa rupture par tableau non vide, sans
+  donnée fournisseur, URI, cookie, jeton, compte ou session ;
+- reparsing applicatif en lecture seule des checkpoints J3, avec séparation explicite entre statut
+  historique persisté et résultat courant en mémoire ;
+- politique de reprise J3 à la page 3 exigeant les deux checkpoints locaux reparsables et l’absence
+  persistée des pages 3 à 5 avant de rendre le transport éligible ;
+- intention et orchestration bornées aux pages 3, 4 et 5, avec compteur initial à deux, absence de
+  répétition des pages 1 et 2 et preuve minimisée distinguant checkpoints et tentatives réseau ;
+- collecte manuelle répétable depuis le tableau de bord, repartant obligatoirement de la page 1 et
+  progressant uniquement selon le booléen `hasNextPage` produit par `scheduled-events-v1` ;
+- plafond local de 25 pages avec arrêt `PAGINATION_LIMIT_REACHED` avant toute tentative de page 26,
+  réarmement explicite entre deux collectes et maintien de la concurrence à un ;
+- preuve minimisée v3 indiquant le mode de pagination, la limite locale et `hasNextPage` pour les
+  pages parsées, sans payload, URI, en-tête, secret ou donnée de session ;
 
 ### Documentation
 
@@ -49,37 +85,97 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - matrice d’architecture des politiques J3 d’arrêt, d’incident, de conservation du brut et d’absence de retry.
 - qualification Windows J3 du parcours opérateur local, de l’arrêt global et des politiques simulées,
   avec déclaration distincte de l’absence d’appel réel et de preuve de sortie fournisseur.
+- amendement du Work Order J3 avec le périmètre cinq pages, la source
+  `OBSERVATION_MANUELLE_DANS_LE_NAVIGATEUR`, la décision propriétaire et l’interdiction d’exécuter
+  un appel pendant l’implémentation ;
+- contrat d’architecture et procédure opérateur du chemin fournisseur J3 borné.
+- rapport Windows de qualification pré-exécution du chemin cinq pages, couvrant la liaison de la
+  configuration locale, l’injection Spring, le parcours opérateur jusqu’à `CONFIRMED_READY` et la
+  disponibilité du bouton final sans l’exécuter.
+- contrat et procédure de collecte de la preuve minimisée après l’unique lot réel, sans copie du
+  payload brut et avec réapplication automatique de l’arrêt global.
+- rapport terminal de la qualification réelle cinq pages, limité à la page 1 par l’arrêt sûr sur
+  incompatibilité, puis diagnostic structurel hors ligne du snapshot local conservé.
+- contrat d’architecture et procédure Windows de la reprise explicite à la page 2, sans appel réel
+  pendant l’implémentation ni les tests.
+- diagnostic et contrat d’adaptation hors ligne du schéma qualifié de la page 2, avec frontière
+  explicite interdisant la reprise à la page 3 sans nouvelle décision.
+- contrat d’architecture et procédure Windows de la reprise explicitement autorisée à la page 3,
+  sans appel réel pendant l’implémentation ou les tests.
+- contrat d’architecture et procédure opérateur de la collecte manuelle répétable à pagination
+  dynamique, sans appel fournisseur pendant l’implémentation ou les tests.
+- rapport Windows de qualification humaine de la pagination dynamique, confirmant dix pages sur
+  dix pour le `2026-08-14`, la progression `hasNextPage=true` des pages 1 à 9, la terminaison sur
+  `false` en page 10, la persistance avant parsing et la réapplication du verrou terminal.
 
 ### Modifié
 
 - renommage du package Java de base de `com.geoffrey.betting.sofascorelocal` vers `com.bettingproject.sofascorelocal`.
 - renommage du groupId `com.geoffrey.betting` vers `com.bettingproject` dans le pom.xml
-- tableau de bord enrichi avec le compteur des neuf fixtures hors ligne et leur état de validation synthétique.
+- tableau de bord enrichi avec le compteur des dix fixtures hors ligne et l’état distinct de
+  validation structurelle du schéma fournisseur.
 - mode visible du verrou mis à jour vers `LOCKED_OFFLINE_J3_POLICY` sans ouvrir le transport.
 - phase applicative avancée à `J3-OFFLINE-RAW-PERSISTENCE` sans modifier l’état du connecteur.
 - phase applicative avancée à `J3-GUARDED-SIMULATED-TRANSPORT`, toujours sans transport fournisseur actif.
 - phase applicative avancée à `J3-EXPLICIT-MANUAL-CONFIRMATION`, avec confirmation d’intention uniquement.
 - phase applicative avancée à `J3-TRANSPORT-STOP-INCIDENT-POLICIES`, toujours sans transport fournisseur actif.
+- phase applicative avancée à `J3-FIVE-PAGE-PROVIDER-QUALIFICATION-PATH`, avec chemin dédié
+  désactivé par défaut et connecteur général toujours verrouillé.
+- phase applicative avancée à `J3-MINIMIZED-PROVIDER-EVIDENCE`, sans modifier la désactivation par
+  défaut du chemin fournisseur.
+- phase applicative avancée à `J3-PAGE-TWO-PROVIDER-RESUME`, avec checkpoint local obligatoire et
+  reprise fournisseur limitée aux pages 2 à 5.
 - identité de build Maven protégée par Enforcer et par un test des métadonnées Actuator générées,
   afin d’empêcher la réapparition de `com.geoffrey.betting` depuis un dossier `target` obsolète.
 - calcul SHA-256 et détection de contenu sensible mutualisés entre les fixtures hors ligne et les futures preuves brutes.
 - classification JSON/HTML/OTHER mutualisée entre le corpus hors ligne et les réponses du transport simulé.
 - adaptateur JDBC étendu avec une transition contrôlée de `RAW_ONLY` vers le résultat final du parseur.
+- liaison explicite de `SOFASCORE_ENABLED`, `SOFASCORE_J3_QUALIFICATION_ENABLED`,
+  `SOFASCORE_BASE_URL` et `SOFASCORE_ALLOWED_ENDPOINTS` vers les propriétés Spring, avec valeurs
+  versionnées toujours sûres par défaut ;
+- sélection explicite des constructeurs Spring de production du transport, de l’orchestrateur cinq
+  pages et du contrôle manuel ;
+- présentation du connecteur prête en vert avec un libellé humain et classes CSS exclusives.
+- parseur `scheduled-events-v1` étendu au schéma fournisseur qualifié dont la racine contient
+  `scheduled` et `hasNextPage`, tout en conservant la compatibilité du corpus J2 `events` ;
+- inventaire hors ligne porté à dix fixtures et indicateur de schéma fournisseur validé après
+  relecture locale réussie du snapshot qualifié, sans nouvel appel réseau.
+- parseur `scheduled-events-v1` adapté à la représentation `[]` strictement vide observée pour
+  `timezoneEventCount` en page 2, tout tableau non vide restant incompatible ;
+- inventaire hors ligne porté à douze fixtures (`7` parsées, `4` incompatibles et `1` contenu
+  inattendu) et phase applicative avancée à `J3-PAGE-TWO-SCHEMA-ADAPTATION`.
+- phase applicative avancée à `J3-DYNAMIC-MANUAL-PAGINATION` ; le chemin actif n’est plus limité à
+  la date qualifiée ni aux cinq pages observées le `2026-08-13`.
 
 ### Sécurité
 
 - maintien du verrouillage réseau pendant J2 : aucune URI d’endpoint réelle et aucun appel SofaScore réel ne sont autorisés.
 - maintien du connecteur et du profil réel bloqués au démarrage de J3 ; la revue des conditions officielles impose une décision humaine préalable avant tout appel.
-- résultat `TRANSPORT_ELIGIBLE` explicitement sans effet : aucun client HTTP, aucune URI réelle et aucun appel fournisseur ne sont introduits.
+- dans l’unité de politique hors ligne, résultat `TRANSPORT_ELIGIBLE` explicitement sans effet :
+  aucun client HTTP, aucune URI réelle et aucun appel fournisseur n’y étaient introduits.
 - rejet avant persistance des payloads dépassant 5 Mio ou contenant des motifs de secret, cookie, jeton ou clé privée ; aucun octet brut n’est journalisé ou versionné.
 - maintien de `payload_jsonb` à `NULL` pour les snapshots bruts afin d’éviter toute normalisation implicite avant parsing.
-- maintien de `ConnectorGate`, du catalogue, du profil réel et de l’adaptateur fournisseur en état bloqué ; le seul chemin HTTP introduit cible strictement une simulation sur `127.0.0.1`.
+- maintien de `ConnectorGate`, du profil réel et de l’adaptateur fournisseur général en état
+  bloqué ; le transport simulé reste strictement limité à `127.0.0.1` et le chemin J3 dédié ne peut
+  être activé que par sa politique distincte.
 - formulaires opérateur protégés par un jeton aléatoire lié à la session et à usage unique, avec cookie `HttpOnly` et `SameSite=Strict`.
 - suppression de la phrase de confirmation après usage, expiration ou arrêt global ; aucun contenu saisi n’est journalisé.
 - exceptions de transport réduites à des codes sûrs, sans URI, payload ou diagnostic interne ; aucune donnée partielle n’est persistée après un échec de lecture.
 - maintien de tous les incidents en circuit `OPEN` jusqu’à un arrêt et une nouvelle activation explicites, y compris après `Retry-After`.
 - arrêt de la qualification Windows avant transport tant que le point de décision réel reste incomplet ;
   aucune phrase active, jeton, URI fournisseur ou donnée brute n’est versionné comme preuve.
+- activation du chemin fournisseur subordonnée à quatre propriétés concordantes, à une origine
+  exacte, à l’unique famille `SCHEDULED_EVENTS`, au stockage brut actif et à l’absence de mode live ;
+- validation de domaine de la date et des cinq pages, sans chemin libre, redirection, proxy,
+  pagination découverte, retry ni donnée de session ;
+- maintien de tous les tests Maven hors ligne et absence d’appel SofaScore pendant l’implémentation.
+- qualification Windows arrêtée avant le bouton final : aucune page fournisseur demandée, aucun
+  snapshot réel persisté et aucune preuve de sortie fournisseur ajoutée au dépôt.
+- relecture locale des snapshots 1 et 2 sans transport ni écriture, avec confirmation que leur
+  statut historique `SCHEMA_INCOMPATIBLE` reste inchangé.
+- arrêt normal uniquement sur `hasNextPage=false`, rupture sûre si ce champ n’est pas un booléen,
+  arrêt au premier incident, délai inter-pages minimal de trois secondes et absence de retry,
+  polling ou planification dans le parcours répétable.
 
 ## [0.1.0] — 2026-08-08
 

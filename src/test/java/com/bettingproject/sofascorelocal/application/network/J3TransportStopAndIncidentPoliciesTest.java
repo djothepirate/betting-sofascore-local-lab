@@ -213,6 +213,7 @@ class J3TransportStopAndIncidentPoliciesTest {
 
         assertThatThrownBy(() -> new J3ScheduledEventsOutcome(
                 java.util.Optional.empty(),
+                java.util.Optional.empty(),
                 circuit.snapshot(),
                 true))
                 .isInstanceOf(IllegalArgumentException.class)

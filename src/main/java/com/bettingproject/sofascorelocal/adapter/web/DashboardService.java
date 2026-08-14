@@ -4,6 +4,7 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.SofascoreEndpointCata
 import com.bettingproject.sofascorelocal.application.ConnectorGate;
 import com.bettingproject.sofascorelocal.application.fixture.FixtureCorpusOverview;
 import com.bettingproject.sofascorelocal.application.fixture.OfflineFixtureCorpusService;
+import com.bettingproject.sofascorelocal.application.network.J3ProviderQualificationPolicy;
 import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointDefinition;
 import org.slf4j.Logger;
@@ -28,25 +29,29 @@ public class DashboardService {
     private final ConnectorGate connectorGate;
     private final JdbcTemplate jdbcTemplate;
     private final OfflineFixtureCorpusService fixtureCorpusService;
+    private final J3ProviderQualificationPolicy providerPolicy;
 
     public DashboardService(
             SofascoreProperties properties,
             SofascoreEndpointCatalog endpointCatalog,
             ConnectorGate connectorGate,
             JdbcTemplate jdbcTemplate,
-            OfflineFixtureCorpusService fixtureCorpusService) {
+            OfflineFixtureCorpusService fixtureCorpusService,
+            J3ProviderQualificationPolicy providerPolicy) {
         this.properties = properties;
         this.endpointCatalog = endpointCatalog;
         this.connectorGate = connectorGate;
         this.jdbcTemplate = jdbcTemplate;
         this.fixtureCorpusService = fixtureCorpusService;
+        this.providerPolicy = providerPolicy;
     }
 
     public DashboardView load() {
         DatabaseOverview database = loadDatabaseOverview();
         FixtureCorpusOverview fixtureCorpus = fixtureCorpusService.loadOverview();
+        boolean manualCollectionAvailable = providerPolicy.snapshot().available();
         List<DashboardView.EndpointRowView> endpointRows = endpointCatalog.list().stream()
-                .map(this::toEndpointRow)
+                .map(definition -> toEndpointRow(definition, manualCollectionAvailable))
                 .toList();
 
         return new DashboardView(
@@ -54,6 +59,7 @@ public class DashboardService {
                 "EXPERIMENTAL / LOCAL_ONLY / NOT_PRODUCTION_APPROVED / NO_CRITICAL_DEPENDENCY",
                 connectorGate.mode().name(),
                 properties.isEnabled(),
+                manualCollectionAvailable,
                 "127.0.0.1:8087",
                 properties.getBaseUrl().isBlank() ? "NON_CONFIGURED" : "CONFIGURED_NOT_DISPLAYED",
                 properties.getMaximumConcurrency(),
@@ -143,13 +149,18 @@ public class DashboardService {
         }
     }
 
-    private DashboardView.EndpointRowView toEndpointRow(SofascoreEndpointDefinition definition) {
+    private DashboardView.EndpointRowView toEndpointRow(
+            SofascoreEndpointDefinition definition,
+            boolean manualCollectionAvailable) {
+        boolean manuallyCallable = definition.type()
+                == com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType.SCHEDULED_EVENTS
+                && manualCollectionAvailable;
         return new DashboardView.EndpointRowView(
                 definition.type().name(),
                 formatDuration(definition.cacheTtl()),
                 definition.manualOnly(),
-                definition.callable(),
-                definition.uriTemplateConfigured(),
+                definition.callable() || manuallyCallable,
+                definition.uriTemplateConfigured() || manuallyCallable,
                 definition.purpose());
     }
 

@@ -1,9 +1,12 @@
 package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlService;
+import com.bettingproject.sofascorelocal.application.network.J3ManualCollectionEvidenceService;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallControlSnapshot;
+import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentSnapshot;
+import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.Test;
@@ -16,6 +19,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
@@ -42,6 +46,9 @@ class DashboardControllerTest {
     private J3ManualCallControlService manualCallControlService;
 
     @MockitoBean
+    private J3ManualCollectionEvidenceService collectionEvidenceService;
+
+    @MockitoBean
     private LocalFormTokenService formTokenService;
 
     @Test
@@ -50,6 +57,7 @@ class DashboardControllerTest {
                 "2026-08-08T00:00:00Z",
                 "EXPERIMENTAL",
                 "LOCKED_OFFLINE_J3_POLICY",
+                false,
                 false,
                 "127.0.0.1:8087",
                 "NON_CONFIGURED",
@@ -63,12 +71,12 @@ class DashboardControllerTest {
                         "AVAILABLE_OFFLINE",
                         "SCHEDULED_EVENTS",
                         "SYNTHETIC",
-                        false,
+                        true,
                         "scheduled-events-v1",
-                        9,
-                        9,
-                        5,
-                        3,
+                        12,
+                        12,
+                        7,
+                        4,
                         1,
                         0),
                 null,
@@ -100,11 +108,82 @@ class DashboardControllerTest {
                 .andExpect(model().attribute("manualCall", manualCallView))
                 .andExpect(model().attribute("localFormToken", "local-form-token"))
                 .andExpect(content().string(containsString("LOCKED_OFFLINE_J3_POLICY")))
-                .andExpect(content().string(containsString("9 / 9 disponibles")))
+                .andExpect(content().string(containsString("12 / 12 disponibles")))
                 .andExpect(content().string(containsString("scheduled-events-v1")))
-                .andExpect(content().string(containsString("NON VALIDÉ")))
+                .andExpect(content().string(containsString("VALIDÉ")))
                 .andExpect(content().string(containsString("ARRÊT GLOBAL ACTIF")))
                 .andExpect(content().string(containsString("REAL_CALL_NOT_AUTHORIZED")))
-                .andExpect(content().string(containsString("Lancer l’appel fournisseur — BLOQUÉ")));
+                .andExpect(content().string(containsString(
+                        "Lancer la collecte fournisseur — BLOQUÉE")));
+    }
+
+    @Test
+    void rendersTheConfirmedDynamicManualCollectionAction() throws Exception {
+        DashboardView dashboardView = new DashboardView(
+                "2026-08-14T00:00:00Z",
+                "EXPERIMENTAL",
+                "LOCKED_OFFLINE_J3_POLICY",
+                true,
+                true,
+                "127.0.0.1:8087",
+                "CONFIGURED",
+                1,
+                "3 s",
+                "AVAILABLE",
+                "2",
+                2L,
+                0L,
+                new DashboardView.FixtureCorpusView(
+                        "AVAILABLE_OFFLINE",
+                        "SCHEDULED_EVENTS",
+                        "SYNTHETIC",
+                        true,
+                        "scheduled-events-v1",
+                        12,
+                        12,
+                        7,
+                        4,
+                        1,
+                        0),
+                null,
+                List.of());
+        Instant preparedAt = Instant.parse("2026-08-14T00:00:00Z");
+        J3ManualCallIntentSnapshot intent = new J3ManualCallIntentSnapshot(
+                UUID.fromString("3ccfd0a0-7825-4bfa-977b-358be086b1e2"),
+                LocalDate.parse("2026-08-13"),
+                "SCHEDULED_EVENTS|date=2026-08-13|pagination=has-next-page|max=25",
+                1,
+                J3ManualCallIntentState.CONFIRMED_READY,
+                null,
+                preparedAt,
+                preparedAt.plusSeconds(300),
+                preparedAt.plusSeconds(30),
+                0,
+                null,
+                null);
+        J3ManualCallControlSnapshot manualCallSnapshot = new J3ManualCallControlSnapshot(
+                false,
+                J3CircuitState.CLOSED,
+                J3CircuitReason.NONE,
+                preparedAt,
+                null,
+                LocalDate.parse("2026-08-13"),
+                intent,
+                true,
+                List.of());
+        when(dashboardService.load()).thenReturn(dashboardView);
+        when(manualCallControlService.snapshot()).thenReturn(manualCallSnapshot);
+        when(formTokenService.issue(any(HttpSession.class))).thenReturn("local-form-token");
+
+        mockMvc.perform(get("/dashboard"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(
+                        "COLLECTE MANUELLE DYNAMIQUE PRÊTE")))
+                .andExpect(content().string(containsString(
+                        "SCHEDULED_EVENTS|date=2026-08-13|pagination=has-next-page|max=25")))
+                .andExpect(content().string(containsString(
+                        "Lancer la collecte manuelle paginée — PAGE 1 À N")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(
+                        "REPRISE PAGES 3-5"))));
     }
 }

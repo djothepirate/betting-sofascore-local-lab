@@ -1,6 +1,8 @@
 package com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents;
 
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsEnvelopeDto.ScheduledEventDto;
+import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsEnvelopeDto.PayloadShape;
+import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsEnvelopeDto.ScheduledTournamentAvailabilityDto;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsEnvelopeDto.StatusDto;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsEnvelopeDto.TeamDto;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsEnvelopeDto.TournamentDto;
@@ -22,15 +24,20 @@ import java.time.DateTimeException;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.TreeMap;
 
 public final class ScheduledEventsV1Parser {
 
     public static final String PARSER_VERSION = "scheduled-events-v1";
 
-    private static final Set<String> ROOT_FIELDS = Set.of("events", "hasNextPage");
+    private static final Set<String> ROOT_FIELDS = Set.of(
+            "events",
+            "scheduled",
+            "hasNextPage");
     private static final Set<String> EVENT_FIELDS = Set.of(
             "id",
             "startTimestamp",
@@ -41,6 +48,28 @@ public final class ScheduledEventsV1Parser {
     private static final Set<String> TEAM_FIELDS = Set.of("id", "name");
     private static final Set<String> STATUS_FIELDS = Set.of("type", "description");
     private static final Set<String> TOURNAMENT_FIELDS = Set.of("id", "name");
+    private static final Set<String> SCHEDULED_ENTRY_FIELDS = Set.of(
+            "tournament",
+            "timezoneEventCount");
+    private static final Set<String> QUALIFIED_TOURNAMENT_FIELDS = Set.of(
+            "category",
+            "fieldTranslations",
+            "id",
+            "name",
+            "priority",
+            "qualificationOrPreliminary",
+            "slug",
+            "uniqueTournament");
+    private static final Set<String> QUALIFIED_UNIQUE_TOURNAMENT_FIELDS = Set.of(
+            "category",
+            "displayInverseHomeAwayTeams",
+            "fieldTranslations",
+            "hasEventPlayerStatistics",
+            "hasPerformanceGraphFeature",
+            "id",
+            "name",
+            "slug",
+            "userCount");
 
     private static final ObjectMapper JSON_MAPPER = JsonMapper.builder()
             .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
@@ -143,20 +172,265 @@ public final class ScheduledEventsV1Parser {
         }
 
         warnUnknownFields(root, ROOT_FIELDS, "$", warnings);
-        List<ScheduledEventDto> events = parseEvents(root.get("events"), warnings, problems);
         Boolean hasNextPage = requiredBoolean(root.get("hasNextPage"), "$.hasNextPage", problems);
+        boolean hasLegacyEvents = root.has("events");
+        boolean hasQualifiedScheduled = root.has("scheduled");
+
+        if (hasLegacyEvents && hasQualifiedScheduled) {
+            problems.add(problem(
+                    ScheduledEventsParseProblem.Code.TYPE_MISMATCH,
+                    "$",
+                    "The payload must expose either 'events' or 'scheduled', not both"));
+        }
+
+        ScheduledEventsEnvelopeDto externalValue;
+        if (hasQualifiedScheduled && !hasLegacyEvents) {
+            List<ScheduledTournamentAvailabilityDto> scheduledTournaments =
+                    parseScheduledTournaments(root.get("scheduled"), warnings, problems);
+            externalValue = new ScheduledEventsEnvelopeDto(
+                    PayloadShape.SCHEDULED_TOURNAMENT_LIST,
+                    List.of(),
+                    scheduledTournaments,
+                    Boolean.TRUE.equals(hasNextPage));
+        }
+        else {
+            List<ScheduledEventDto> events = parseEvents(
+                    root.get("events"),
+                    warnings,
+                    problems);
+            externalValue = new ScheduledEventsEnvelopeDto(
+                    PayloadShape.EVENT_LIST,
+                    events,
+                    List.of(),
+                    Boolean.TRUE.equals(hasNextPage));
+        }
 
         if (!problems.isEmpty()) {
             return incompatible(evidence, warnings, problems);
         }
 
-        ScheduledEventsEnvelopeDto externalValue = new ScheduledEventsEnvelopeDto(
-                events,
-                hasNextPage);
         return ScheduledEventsParseResult.parsed(
                 evidence,
                 mapper.map(externalValue),
                 warnings);
+    }
+
+    private static List<ScheduledTournamentAvailabilityDto> parseScheduledTournaments(
+            JsonNode scheduledNode,
+            List<ScheduledEventsParseWarning> warnings,
+            List<ScheduledEventsParseProblem> problems) {
+        if (scheduledNode == null) {
+            problems.add(problem(
+                    ScheduledEventsParseProblem.Code.REQUIRED_FIELD_MISSING,
+                    "$.scheduled",
+                    "Required field 'scheduled' is missing"));
+            return List.of();
+        }
+        if (!scheduledNode.isArray()) {
+            problems.add(problem(
+                    ScheduledEventsParseProblem.Code.TYPE_MISMATCH,
+                    "$.scheduled",
+                    "Field 'scheduled' must be an array"));
+            return List.of();
+        }
+        if (scheduledNode.isEmpty()) {
+            warnings.add(warning(
+                    ScheduledEventsParseWarning.Code.EMPTY_SCHEDULED_TOURNAMENTS,
+                    "$.scheduled",
+                    "The scheduled-tournament page contains no entries"));
+        }
+
+        List<ScheduledTournamentAvailabilityDto> scheduledTournaments = new ArrayList<>();
+        for (int index = 0; index < scheduledNode.size(); index++) {
+            ScheduledTournamentAvailabilityDto scheduledTournament = parseScheduledTournament(
+                    scheduledNode.get(index),
+                    "$.scheduled[" + index + "]",
+                    warnings,
+                    problems);
+            if (scheduledTournament != null) {
+                scheduledTournaments.add(scheduledTournament);
+            }
+        }
+        return List.copyOf(scheduledTournaments);
+    }
+
+    private static ScheduledTournamentAvailabilityDto parseScheduledTournament(
+            JsonNode scheduledTournamentNode,
+            String path,
+            List<ScheduledEventsParseWarning> warnings,
+            List<ScheduledEventsParseProblem> problems) {
+        if (!requireObject(scheduledTournamentNode, path, problems)) {
+            return null;
+        }
+
+        int problemCountBeforeEntry = problems.size();
+        warnUnknownFields(scheduledTournamentNode, SCHEDULED_ENTRY_FIELDS, path, warnings);
+        QualifiedTournament qualifiedTournament = parseQualifiedTournament(
+                scheduledTournamentNode.get("tournament"),
+                path + ".tournament",
+                warnings,
+                problems);
+        Map<Integer, Integer> timezoneEventCount = parseTimezoneEventCount(
+                scheduledTournamentNode.get("timezoneEventCount"),
+                path + ".timezoneEventCount",
+                warnings,
+                problems);
+
+        if (problems.size() != problemCountBeforeEntry || qualifiedTournament == null) {
+            return null;
+        }
+        return new ScheduledTournamentAvailabilityDto(
+                qualifiedTournament.tournament(),
+                qualifiedTournament.uniqueTournament(),
+                timezoneEventCount);
+    }
+
+    private static QualifiedTournament parseQualifiedTournament(
+            JsonNode tournamentNode,
+            String path,
+            List<ScheduledEventsParseWarning> warnings,
+            List<ScheduledEventsParseProblem> problems) {
+        if (!requireObject(tournamentNode, path, problems)) {
+            return null;
+        }
+
+        int problemCountBeforeTournament = problems.size();
+        warnUnknownFields(tournamentNode, QUALIFIED_TOURNAMENT_FIELDS, path, warnings);
+        Long id = requiredPositiveLong(tournamentNode.get("id"), path + ".id", problems);
+        String name = requiredText(tournamentNode.get("name"), path + ".name", problems);
+        TournamentDto uniqueTournament = parseOptionalTournamentIdentity(
+                tournamentNode.get("uniqueTournament"),
+                path + ".uniqueTournament",
+                warnings,
+                problems);
+
+        if (problems.size() != problemCountBeforeTournament) {
+            return null;
+        }
+        return new QualifiedTournament(new TournamentDto(id, name), uniqueTournament);
+    }
+
+    private static TournamentDto parseOptionalTournamentIdentity(
+            JsonNode tournamentNode,
+            String path,
+            List<ScheduledEventsParseWarning> warnings,
+            List<ScheduledEventsParseProblem> problems) {
+        if (tournamentNode == null) {
+            warnings.add(warning(
+                    ScheduledEventsParseWarning.Code.OPTIONAL_FIELD_MISSING,
+                    path,
+                    "Optional field 'uniqueTournament' is absent"));
+            return null;
+        }
+        if (!requireObject(tournamentNode, path, problems)) {
+            return null;
+        }
+
+        int problemCountBeforeTournament = problems.size();
+        warnUnknownFields(
+                tournamentNode,
+                QUALIFIED_UNIQUE_TOURNAMENT_FIELDS,
+                path,
+                warnings);
+        Long id = requiredPositiveLong(tournamentNode.get("id"), path + ".id", problems);
+        String name = requiredText(tournamentNode.get("name"), path + ".name", problems);
+        if (problems.size() != problemCountBeforeTournament) {
+            return null;
+        }
+        return new TournamentDto(id, name);
+    }
+
+    private static Map<Integer, Integer> parseTimezoneEventCount(
+            JsonNode countsNode,
+            String path,
+            List<ScheduledEventsParseWarning> warnings,
+            List<ScheduledEventsParseProblem> problems) {
+        if (countsNode == null) {
+            problems.add(problem(
+                    ScheduledEventsParseProblem.Code.REQUIRED_FIELD_MISSING,
+                    path,
+                    "Required timezone event-count value is missing"));
+            return Map.of();
+        }
+        if (countsNode.isArray()) {
+            if (countsNode.isEmpty()) {
+                warnings.add(warning(
+                        ScheduledEventsParseWarning.Code.EMPTY_TIMEZONE_EVENT_COUNT,
+                        path,
+                        "An empty timezone event-count array represents no counts"));
+                return Map.of();
+            }
+            problems.add(problem(
+                    ScheduledEventsParseProblem.Code.TYPE_MISMATCH,
+                    path,
+                    "Timezone event counts must be an object or an empty array"));
+            return Map.of();
+        }
+        if (!countsNode.isObject()) {
+            problems.add(problem(
+                    ScheduledEventsParseProblem.Code.TYPE_MISMATCH,
+                    path,
+                    "Timezone event counts must be an object or an empty array"));
+            return Map.of();
+        }
+        if (countsNode.isEmpty()) {
+            warnings.add(warning(
+                    ScheduledEventsParseWarning.Code.EMPTY_TIMEZONE_EVENT_COUNT,
+                    path,
+                    "The timezone event-count map is empty"));
+        }
+
+        Map<Integer, Integer> counts = new TreeMap<>();
+        countsNode.properties().forEach(entry -> {
+            String entryPath = path + "." + entry.getKey();
+            Integer offset = parseTimezoneOffset(entry.getKey(), entryPath, problems);
+            Integer count = requiredNonNegativeInt(entry.getValue(), entryPath, problems);
+            if (offset != null && count != null && counts.put(offset, count) != null) {
+                problems.add(problem(
+                        ScheduledEventsParseProblem.Code.TYPE_MISMATCH,
+                        entryPath,
+                        "Timezone offsets must be unique after integer normalization"));
+            }
+        });
+        return Map.copyOf(counts);
+    }
+
+    private static Integer parseTimezoneOffset(
+            String rawOffset,
+            String path,
+            List<ScheduledEventsParseProblem> problems) {
+        try {
+            return Integer.valueOf(rawOffset);
+        }
+        catch (NumberFormatException exception) {
+            problems.add(problem(
+                    ScheduledEventsParseProblem.Code.TYPE_MISMATCH,
+                    path,
+                    "Timezone offset keys must be 32-bit integers"));
+            return null;
+        }
+    }
+
+    private static Integer requiredNonNegativeInt(
+            JsonNode node,
+            String path,
+            List<ScheduledEventsParseProblem> problems) {
+        if (node == null || !node.isIntegralNumber() || !node.canConvertToInt()) {
+            problems.add(problem(
+                    ScheduledEventsParseProblem.Code.TYPE_MISMATCH,
+                    path,
+                    "Timezone event counts must be 32-bit integers"));
+            return null;
+        }
+        int value = node.intValue();
+        if (value < 0) {
+            problems.add(problem(
+                    ScheduledEventsParseProblem.Code.VALUE_OUT_OF_RANGE,
+                    path,
+                    "Timezone event counts must be non-negative"));
+            return null;
+        }
+        return value;
     }
 
     private static List<ScheduledEventDto> parseEvents(
@@ -520,5 +794,10 @@ public final class ScheduledEventsV1Parser {
             String path,
             String message) {
         return new ScheduledEventsParseProblem(code, path, message);
+    }
+
+    private record QualifiedTournament(
+            TournamentDto tournament,
+            TournamentDto uniqueTournament) {
     }
 }

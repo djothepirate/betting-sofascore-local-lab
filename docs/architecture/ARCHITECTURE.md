@@ -10,7 +10,7 @@ Betting Project principal          SofaScore Local Lab
 VPS permanent                      Windows local uniquement
 Production indépendante            Prototype non approuvé production
 Modèle canonique multi-source      Modèle local de benchmark
-Aucun appel SofaScore VPS          Aucun appel implémenté au J1
+Aucun appel SofaScore VPS          Qualification J3 manuelle et bornée
 Fonctionne poste éteint             Disponible seulement poste allumé
 ```
 
@@ -31,8 +31,9 @@ La relation future autorisée est un export JSON normalisé et versionné. Aucun
 │  ├─ DashboardService                                      │
 │  ├─ ConnectorGate = LOCKED_OFFLINE_J3_POLICY              │
 │  ├─ Politique J3 et circuit en mémoire                    │
-│  ├─ Transport HTTP simulé, loopback strict uniquement     │
-│  ├─ Catalogue logique sans URI                            │
+│  ├─ Transport HTTP simulé, loopback strict                │
+│  ├─ Collecte J3 manuelle 1..N, opt-in et plafonnée        │
+│  ├─ Catalogue logique fermé par défaut                    │
 │  ├─ Flyway / JDBC / JPA                                   │
 │  └─ Actuator                                              │
 │       │                                                   │
@@ -44,7 +45,7 @@ La relation future autorisée est un export JSON normalisé et versionné. Aucun
 │  exports/                                                 │
 └───────────────────────────────────────────────────────────┘
 
-SofaScore : aucune connexion ; transport J3 limité à la simulation loopback
+SofaScore : aucune connexion par défaut ; qualification J3 manuelle uniquement
 VPS       : aucune connexion
 ```
 
@@ -53,39 +54,43 @@ VPS       : aucune connexion
 | Couche | Responsabilité actuelle |
 |---|---|
 | `config` | propriétés typées, garde de liaison locale, initialisation du dossier d’export, en-têtes de sécurité |
-| `domain.provider` | types logiques, définition de catalogue et mode du connecteur |
-| `application` | verrou logiciel de tout appel externe |
-| `adapter.sofascore` | catalogue logique sans URI fournisseur, adaptateur fournisseur bloqué et transport loopback simulé non enregistré |
+| `domain.provider` | types logiques, définition de catalogue, mode du connecteur et requête fournisseur J3 fermée |
+| `application` | verrou général, politique J3, confirmation à usage unique et orchestration séquentielle pilotée par `hasNextPage` |
+| `adapter.sofascore` | catalogue fermé par défaut, adaptateur fournisseur général bloqué, transport loopback simulé et client J3 exact sans proxy ni redirection |
 | `adapter.persistence` | conservation JDBC des preuves brutes et déduplication atomique |
 | `adapter.web` | tableau de bord et vues locales |
 | `resources/db/migration` | schéma brut V1/V2, manifeste d’export et état persistant |
 | `fixtures` | corpus synthétique et parsing hors ligne J2 |
 
-Le starter `RestClient` est présent pour figer le choix technologique, mais aucun `RestClient` n’est encore construit pour SofaScore.
+Le connecteur général demeure bloqué. Un `RestClient` distinct est construit uniquement pour le
+chemin manuel J3 borné ; il ne reçoit qu’une requête de domaine validée et ne peut viser que
+l’origine `https://www.sofascore.com`, une date ISO explicite et les pages `1` à `25`.
 
-## 4. Défense en profondeur J3 hors ligne
+## 4. Défense en profondeur J3
 
 ```text
-Configuration par défaut        sofascore.enabled=false
+Configuration par défaut        enabled=false + j3-qualification-enabled=false
           │
           ▼
-Catalogue logique               callable=false, URI absente
+Configuration opt-in            origine exacte + SCHEDULED_EVENTS seul
           │
           ▼
-ConnectorGate                   exception systématique
+Contrôle opérateur              arrêt global + circuit + confirmation unique
           │
           ▼
-Politique J3                    simulation loopback seulement
+Requête de domaine              date ISO + pages 1..25 + chemin fermé
           │
           ▼
-Profil Maven réel               alwaysFail
+Transport J3                    sans proxy, redirection, cookie ni jeton
           │
           ▼
-Interface                       boutons réseau désactivés
+Orchestrateur                   page 1, hasNextPage, délai >= 3 s, plafond 25
 ```
 
-La suppression d’une seule barrière ne permet donc pas un appel accidentel. Le transport simulé
-ajoute en outre une validation finale de l’origine littérale `127.0.0.1` et d’une route fixe.
+La suppression d’une seule barrière ne permet donc pas un appel accidentel. Le bouton réel reste
+absent tant que les quatre propriétés d’activation ne concordent pas. Même après confirmation, une
+action Web distincte est nécessaire. Le connecteur général, `ConnectorGate` et le profil Maven réel
+restent bloqués ; le transport loopback simulé conserve par ailleurs sa frontière propre.
 
 ## 5. Données
 
@@ -118,7 +123,7 @@ n’autorise toujours aucun appel.
 
 | Type | Cache initial | Déclenchement prévu | Appelable actuellement |
 |---|---:|---|---|
-| `SCHEDULED_EVENTS` | 10 min | manuel prévu | non |
+| `SCHEDULED_EVENTS` | 10 min | manuel | uniquement par séquence J3 opt-in |
 | `EVENT_DETAILS` | 15 min | manuel prévu | non |
 | `EVENT_STATISTICS` | 30 min | manuel prévu | non |
 | `EVENT_INCIDENTS` | 15 min | manuel prévu | non |
@@ -126,7 +131,10 @@ n’autorise toujours aucun appel.
 | `TOURNAMENT_STANDINGS` | 6 h | manuel prévu | non |
 | `TEAM_RECENT_EVENTS` | 1 h | manuel prévu | non |
 
-Les paramètres canoniques, limites de payload et parseurs hors ligne sont introduits progressivement. Les modèles d’URI réels restent absents jusqu’au point de décision J3.
+Les autres familles restent non appelables. Le chemin J3 ne constitue pas un modèle d’URI général :
+seuls une date ISO, l’origine et le chemin `scheduled-tournaments` sont acceptés. La pagination
+commence obligatoirement à 1, continue uniquement sur `hasNextPage=true` et s’arrête avant la page
+26 même si le fournisseur annonce encore une suite.
 
 ## 7. Tests
 
@@ -140,6 +148,9 @@ Les paramètres canoniques, limites de payload et parseurs hors ligne sont intro
 - verrou du connecteur ;
 - validation des métadonnées et des preuves brutes ;
 - orchestration et transport HTTP simulé sur boucle locale ;
+- validation du transport fournisseur avec `MockRestServiceServer`, sans connexion réseau ;
+- ordre dynamique depuis la page 1, terminaison par `hasNextPage=false`, plafond 25, délai minimal,
+  persistance avant parsing et arrêt au premier incident ;
 - rendu du contrôleur.
 
 ### Intégration
@@ -148,18 +159,17 @@ Les paramètres canoniques, limites de payload et parseurs hors ligne sont intro
 
 ### Réel
 
-Le profil `sofascore-live-test` reste bloqué avec `alwaysFail`. L’ouverture du Work Order J3 ne
-suffit pas à l’activer : le point de décision humain et les autres unités techniques restent requis.
+Le profil `sofascore-live-test` reste bloqué avec `alwaysFail` et n’est pas utilisé par le chemin J3.
+Une qualification réelle éventuelle est un geste humain séparé dans l’interface locale après
+activation explicite de la configuration. Aucune suite Maven ne réalise ce geste.
 
 ## 8. Décisions différées
 
-- modèles d’URI réels ;
-- `RestClient` fournisseur et timeouts d’un endpoint réel ;
 - stockage de headers autorisés ;
 - normalisation persistée après parsing ;
 - parseurs et DTO externes au-delà de `scheduled-events-v1` ;
 - persistance du circuit et des incidents ;
-- écran de confirmation d’appel ;
+- ajout d’autres endpoints, sports ou origines au-delà du chemin J3 qualifié ;
 - export canonique ;
 - push HTTPS vers le Betting Project ;
 - tout polling ou usage live.
@@ -169,5 +179,7 @@ Chaque décision doit être introduite par un Work Order, avec critères d’acc
 Le modèle de décision et le circuit J3 désormais actés sont détaillés dans
 `docs/architecture/J3-OFFLINE-NETWORK-POLICY.md`. La conservation des preuves est détaillée dans
 `docs/architecture/J3-RAW-SNAPSHOT-PERSISTENCE.md`. Le transport loopback est détaillé dans
-`docs/architecture/J3-GUARDED-SCHEDULED-EVENTS-TRANSPORT.md`. Aucun de ces composants ne contient
-une URI SofaScore ou n’active l’adaptateur fournisseur.
+`docs/architecture/J3-GUARDED-SCHEDULED-EVENTS-TRANSPORT.md`. Le chemin fournisseur strictement
+borné est détaillé dans `docs/architecture/J3-FIVE-PAGE-PROVIDER-QUALIFICATION.md`. Il ne déverrouille
+ni le connecteur général, ni le profil live, ni les autres familles du catalogue. Le parcours actif
+répétable est détaillé dans `docs/architecture/J3-DYNAMIC-MANUAL-PAGINATION.md`.

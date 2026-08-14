@@ -100,8 +100,8 @@ Vérifier :
 - migration Flyway `2` ;
 - snapshots `0` sur une base neuve ;
 - corpus hors ligne `AVAILABLE_OFFLINE` ;
-- fixtures `9 / 9 disponibles` ;
-- résultats du corpus : `5` parsés, `3` incompatibilités de schéma prévues et `1` contenu inattendu prévu ;
+- fixtures `12 / 12 disponibles` ;
+- résultats du corpus : `7` parsés, `4` incompatibilités de schéma prévues et `1` contenu inattendu prévu ;
 - origine `SYNTHETIC` et schéma fournisseur `NON VALIDÉ` ;
 - toutes les familles `Appelable = NON` et `URI = ABSENTE`.
 - contrôle manuel J3 avec `ARRÊT GLOBAL ACTIF`, circuit `LOCKED` et transport fournisseur
@@ -128,6 +128,183 @@ autorisation ni une tentative d’appel réel.
 À chaque rechargement après une commande, un nouveau jeton de formulaire est émis. Ne pas rejouer
 une page historique ou réutiliser un formulaire déjà envoyé. Un redémarrage de l’application remet
 toujours l’arrêt global à l’état actif.
+
+### 3.5 Préparer la qualification fournisseur cinq pages
+
+Cette procédure rend le bouton réel disponible mais ne doit pas être utilisée pendant une validation
+automatisée. La dernière action décrite ci-dessous exécute réellement les cinq URI autorisées. Ne la
+sélectionner qu’après décision explicite du propriétaire de passer de l’implémentation à l’exécution.
+
+1. arrêter l’application ;
+2. vérifier que PostgreSQL local est disponible et sauvegarder les snapshots utiles ;
+3. modifier uniquement le fichier local ignoré `.env` avec les valeurs suivantes :
+
+```text
+SOFASCORE_ENABLED=true
+SOFASCORE_J3_QUALIFICATION_ENABLED=true
+SOFASCORE_BASE_URL=https://www.sofascore.com
+SOFASCORE_ALLOWED_ENDPOINTS=SCHEDULED_EVENTS
+```
+
+4. redémarrer l’application avec le profil `local` ;
+5. vérifier dans le tableau de bord :
+   - `J3_QUALIFICATION_READY` ;
+   - date unique `2026-08-13` non élargissable ;
+   - `SCHEDULED_EVENTS` appelable avec URI configurée ;
+   - concurrence `1` et délai minimal `3 s` ;
+6. lever l’arrêt global puis activer le circuit ;
+7. préparer l’intention, recopier exactement la phrase à usage unique et cocher l’acquittement ;
+8. vérifier `CONFIRMED_READY` et relire la date ainsi que la portée `PAGES 1-5` ;
+9. seulement après autorisation d’exécution, sélectionner
+   **« 5. Lancer le lot fournisseur unique — PAGES 1 À 5 »** une seule fois ;
+10. attendre le retour de la même requête Web sans actualiser la page ;
+11. vérifier soit `COMPLETED` avec `5 / 5`, soit `FAILED` avec la première page en incident ;
+12. vérifier que l’arrêt global a été réappliqué automatiquement, que le circuit affiche
+    `LOCKED / QUALIFICATION_TERMINAL_LOCK` et qu’aucun bouton de réarmement n’est disponible ;
+13. dans « Preuve terminale minimisée », contrôler les pages tentées, les statuts, tailles,
+    SHA-256 et classifications, puis sélectionner « Télécharger la preuve minimisée (.txt) » ;
+14. vérifier dans le fichier téléchargé :
+    - `RAW_PAYLOAD_INCLUDED=NO` ;
+    - `PROVIDER_URI_INCLUDED=NO` ;
+    - `REQUEST_OR_RESPONSE_HEADERS_INCLUDED=NO` ;
+    - `COOKIES_TOKENS_ACCOUNT_SESSION_USED=NO` ;
+    - `AUTOMATIC_RETRY_EXECUTED=NO` ;
+15. arrêter l’application puis remettre dans `.env` :
+
+```text
+SOFASCORE_ENABLED=false
+SOFASCORE_J3_QUALIFICATION_ENABLED=false
+SOFASCORE_BASE_URL=
+SOFASCORE_ALLOWED_ENDPOINTS=
+```
+
+Ne jamais redémarrer pour contourner `FAILED`, répéter une séquence ou reprendre à la page suivante.
+Ne jamais ajouter de cookie, jeton, compte, en-tête de navigateur, proxy ou autre origine. Le brut
+reste uniquement dans PostgreSQL local et ne doit être copié ni dans Git, ni dans un chat, ni dans
+les logs.
+
+La preuve minimisée est gardée en mémoire uniquement : la télécharger avant d’arrêter
+l’application. Ne pas joindre les snapshots bruts au rapport de qualification.
+
+### 3.6 Reprendre explicitement la qualification à la page 2
+
+Cette procédure ne remplace pas historiquement la section 3.5 : elle applique la décision
+propriétaire distincte prise après l’adaptation hors ligne du parseur. Elle n’est disponible que si
+PostgreSQL contient exactement le snapshot de page 1 qualifié et aucune page 2 à 5 pour la date
+`2026-08-13`.
+
+1. conserver intact le snapshot local de page 1 et démarrer PostgreSQL ;
+2. activer dans `.env` les quatre valeurs J3 documentées à la section 3.5, sans cookie, jeton,
+   compte ni donnée de session ;
+3. démarrer l’application avec le profil `local` ;
+4. vérifier `REPRISE J3 PAGE 2 PRÊTE` et `CHECKPOINT PAGE 1 VALIDÉ` ;
+5. vérifier que l’interface indique `page 1 conservée, reprise pages 2 à 5` ;
+6. lever l’arrêt global puis activer le circuit ;
+7. préparer la reprise et vérifier la clé
+   `SCHEDULED_EVENTS|date=2026-08-13|pages=2-5` ;
+8. recopier exactement la phrase contenant `REPRISE PAGES 2-5`, cocher l’acquittement et confirmer ;
+9. vérifier `CONFIRMED_READY`, puis sélectionner une seule fois
+   **« 5. Lancer la reprise fournisseur unique — PAGES 2 À 5 »** ;
+10. attendre le retour sans actualiser la page ;
+11. vérifier soit `COMPLETED` avec `5 / 5`, soit l’arrêt sans retry sur la première page en incident ;
+12. télécharger la preuve minimisée et contrôler au minimum :
+
+```text
+J3_MINIMIZED_EVIDENCE_VERSION=2
+VERIFIED_LOCAL_CHECKPOINT_PAGES=1
+PROVIDER_RESUME_FIRST_PAGE=2
+RAW_PAYLOAD_INCLUDED=NO
+PROVIDER_URI_INCLUDED=NO
+AUTOMATIC_RETRY_EXECUTED=NO
+```
+
+13. remettre immédiatement la configuration `.env` en état sûr comme à la section 3.5.
+
+La présence d’un snapshot de page 2 bloque toute nouvelle reprise, même après redémarrage. Ne pas
+effacer ou modifier les snapshots pour contourner ce verrou. L’interrogation complète répétable
+depuis l’interface fera l’objet d’une unité ultérieure distincte.
+
+### 3.7 Reprendre explicitement la qualification à la page 3
+
+Cette procédure succède historiquement à la section 3.6. Elle applique la nouvelle décision
+propriétaire prise après la qualification de la page 2 et son adaptation hors ligne. Elle n’est
+disponible que si PostgreSQL contient exactement les checkpoints des pages 1 et 2 pour la date
+`2026-08-13`, que chacun se reparcourt avec `PARSED` et `hasNextPage=true`, et qu’aucune page 3, 4
+ou 5 n’est encore conservée.
+
+1. conserver intacts les snapshots locaux des pages 1 et 2 et démarrer PostgreSQL ;
+2. activer dans `.env` les quatre valeurs J3 documentées à la section 3.5, sans cookie, jeton,
+   compte ni donnée de session ;
+3. démarrer l’application avec le profil `local` ;
+4. vérifier `REPRISE J3 PAGE 3 PRÊTE` et
+   `CHECKPOINTS PAGES 1 ET 2 VALIDÉS — CONFIRMATION REQUISE` ;
+5. vérifier que l’interface indique `pages 1 et 2 conservées, reprise pages 3 à 5` ;
+6. lever l’arrêt global puis activer le circuit ;
+7. préparer la reprise et vérifier la clé
+   `SCHEDULED_EVENTS|date=2026-08-13|pages=3-5` ;
+8. recopier exactement la phrase contenant `REPRISE PAGES 3-5`, cocher l’acquittement et confirmer ;
+9. vérifier `CONFIRMED_READY`, puis sélectionner une seule fois
+   **« 5. Lancer la reprise fournisseur unique — PAGES 3 À 5 »** ;
+10. attendre le retour sans actualiser la page ;
+11. vérifier soit `COMPLETED` avec `5 / 5`, soit l’arrêt sans retry sur la première page en incident ;
+12. télécharger la preuve minimisée et contrôler au minimum :
+
+```text
+J3_MINIMIZED_EVIDENCE_VERSION=2
+VERIFIED_LOCAL_CHECKPOINT_PAGES=1,2
+PROVIDER_RESUME_FIRST_PAGE=3
+PAGES_ATTEMPTED=3,4,5
+RAW_PAYLOAD_INCLUDED=NO
+PROVIDER_URI_INCLUDED=NO
+AUTOMATIC_RETRY_EXECUTED=NO
+```
+
+13. remettre immédiatement la configuration `.env` en état sûr comme à la section 3.5.
+
+Une page 1 ou 2 ne doit jamais apparaître dans `PAGES_ATTEMPTED` ni dans les lignes d’horodatage des
+tentatives de cette reprise. La présence d’un snapshot de page 3, 4 ou 5 bloque toute nouvelle
+reprise, même après redémarrage. Ne pas effacer ou modifier un snapshot pour contourner ce verrou.
+L’interrogation complète répétable depuis l’interface demeure hors périmètre.
+
+### 3.8 Effectuer une collecte manuelle répétable à pagination dynamique
+
+Cette procédure remplace fonctionnellement la reprise fixe de la section 3.7. Elle démarre toujours
+à la page 1 et laisse `scheduled-events-v1` décider de la terminaison à partir du booléen
+`hasNextPage`. Les anciennes preuves et classifications de qualification restent historiques.
+
+1. vérifier PostgreSQL local, l’exposition `127.0.0.1:8087` et les quatre valeurs J3 de la section
+   3.5 ;
+2. vérifier qu’aucun cookie, jeton, compte, donnée de session ou proxy n’est configuré ;
+3. démarrer l’application avec le profil `local` ;
+4. vérifier `COLLECTE MANUELLE DYNAMIQUE PRÊTE` et
+   `PAGINATION DYNAMIQUE — CONFIRMATION REQUISE` ;
+5. lever l’arrêt global puis activer le circuit ;
+6. choisir la date au format `AAAA-MM-JJ` et sélectionner **« 3. Préparer la collecte »** ;
+7. vérifier la clé `SCHEDULED_EVENTS|date=<date>|pagination=has-next-page|max=25` ;
+8. recopier exactement la phrase, acquitter le départ page 1, `hasNextPage` et le plafond 25,
+   puis confirmer ;
+9. vérifier `CONFIRMED_READY`, puis sélectionner une seule fois
+   **« 5. Lancer la collecte manuelle paginée — PAGE 1 À N »** ;
+10. attendre le retour sans actualiser la page ;
+11. vérifier soit `COMPLETED`, soit l’arrêt sans retry au premier incident ou avant la page 26 ;
+12. télécharger la preuve et contrôler au minimum :
+
+```text
+J3_MINIMIZED_EVIDENCE_VERSION=3
+PAGINATION_MODE=HAS_NEXT_PAGE
+PROVIDER_FIRST_PAGE=1
+MAXIMUM_PAGE_LIMIT=25
+FINAL_GLOBAL_STOP=ACTIVE
+AUTOMATIC_RETRY_EXECUTED=NO
+POLLING_OR_SCHEDULE_EXECUTED=NO
+RAW_PAYLOAD_INCLUDED=NO
+PROVIDER_URI_INCLUDED=NO
+```
+
+Pour répéter l’interrogation, lever à nouveau l’arrêt global : l’intention terminale précédente est
+alors retirée. Réactiver le circuit et recommencer depuis l’étape 6. Ne jamais contourner un
+incident en modifiant ou supprimant un snapshot ; analyser d’abord la preuve et la classification
+locale. Remettre la configuration `.env` en état sûr après la séance.
 
 ## 4. Validation
 
@@ -165,14 +342,17 @@ http://127.0.0.1:<port>/simulated/scheduled-events?date=AAAA-MM-JJ
 ```
 
 Toute autre origine, tout chemin libre, proxy, redirection ou retry doit faire échouer la revue. Le
-transport n’est pas un bean Spring et ne peut pas être déclenché depuis l’interface. Ne pas ajouter
-une base URL réelle pour « essayer » cette unité.
+transport simulé n’est pas un bean Spring et ne peut pas être déclenché depuis l’interface. Le
+transport fournisseur distinct reste inéligible avec la configuration par défaut et ses tests sont
+interceptés par `MockRestServiceServer`.
 
 ### 4.5 Confirmation J3
 
 La suite standard couvre l’ordre des transitions, l’expiration à cinq minutes, la comparaison exacte,
-l’arrêt global, le jeton lié à la session et son usage unique. La confirmation finale produit
-`CONFIRMED_BLOCKED` : elle ne branche pas le transport simulé et ne peut pas joindre un fournisseur.
+l’arrêt global, le jeton lié à la session et son usage unique. Avec la configuration normale, la
+confirmation finale produit `CONFIRMED_BLOCKED`. Avec les quatre propriétés exactes de la section
+3.5, elle produit `CONFIRMED_READY`, sans exécuter de transport tant que l’action séparée n’est pas
+soumise.
 
 ### 4.6 Politiques d’arrêt et d’incident J3
 
@@ -199,10 +379,10 @@ résultats :
 - `PASS` pour le parcours opérateur local, l’arrêt global et les politiques simulées ;
 - `NOT_EXECUTED` pour l’appel réel et `NOT_AVAILABLE` pour sa preuve de sortie.
 
-Si le point de décision du Work Order n’est pas entièrement satisfait, exécuter seulement la
-séquence locale de la section 3.4, vérifier `CONFIRMED_BLOCKED`, appliquer l’arrêt global puis arrêter
-la qualification. Ne pas ajouter une URI, activer un profil réel ou rendre le bouton fournisseur
-disponible pour compléter artificiellement la preuve.
+Le point de décision est désormais satisfait pour le développement du chemin exact, mais pas pour
+une exécution automatique pendant l’implémentation. La qualification réelle doit suivre la section
+3.5 et rester un geste ultérieur du propriétaire. Le profil Maven `sofascore-live-test` demeure
+bloqué : il n’est pas nécessaire au chemin manuel de l’interface et ne doit pas être contourné.
 
 La synthèse versionnée peut contenir les états du circuit, les codes d’incident et les comptes de
 tests. Elle ne doit jamais reproduire une phrase de confirmation active, un UUID, un jeton de

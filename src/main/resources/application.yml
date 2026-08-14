@@ -67,20 +67,23 @@ info:
   app:
     name: SofaScore Local Lab
     version: 0.1.0-SNAPSHOT
-    phase: J3-TRANSPORT-STOP-INCIDENT-POLICIES
+    phase: J3-DYNAMIC-MANUAL-PAGINATION
     status: EXPERIMENTAL_LOCAL_ONLY
 
 sofascore:
-  enabled: false
+  enabled: ${SOFASCORE_ENABLED:false}
+  j3-qualification-enabled: ${SOFASCORE_J3_QUALIFICATION_ENABLED:false}
   base-url: ${SOFASCORE_BASE_URL:}
   maximum-concurrency: 1
   minimum-delay: 3s
+  connect-timeout: 5s
+  read-timeout: 10s
   automatic-refresh-enabled: false
   live-polling-enabled: false
   store-raw-payloads: true
   raw-payload-retention-days: 30
   export-directory: ${SOFASCORE_EXPORT_DIR:./exports}
-  allowed-endpoints: []
+  allowed-endpoints: ${SOFASCORE_ALLOWED_ENDPOINTS:}
 
 logging:
   level:

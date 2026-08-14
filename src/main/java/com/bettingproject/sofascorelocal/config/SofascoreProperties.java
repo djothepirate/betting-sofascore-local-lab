@@ -18,12 +18,15 @@ public class SofascoreProperties {
 
     private boolean enabled;
     private String baseUrl = "";
+    private boolean j3QualificationEnabled;
 
     @Min(1)
     @Max(1)
     private int maximumConcurrency = 1;
 
     private Duration minimumDelay = Duration.ofSeconds(3);
+    private Duration connectTimeout = Duration.ofSeconds(5);
+    private Duration readTimeout = Duration.ofSeconds(10);
     private boolean automaticRefreshEnabled;
     private boolean livePollingEnabled;
     private boolean storeRawPayloads = true;
@@ -55,6 +58,14 @@ public class SofascoreProperties {
         return maximumConcurrency;
     }
 
+    public boolean isJ3QualificationEnabled() {
+        return j3QualificationEnabled;
+    }
+
+    public void setJ3QualificationEnabled(boolean j3QualificationEnabled) {
+        this.j3QualificationEnabled = j3QualificationEnabled;
+    }
+
     public void setMaximumConcurrency(int maximumConcurrency) {
         this.maximumConcurrency = maximumConcurrency;
     }
@@ -65,6 +76,22 @@ public class SofascoreProperties {
 
     public void setMinimumDelay(Duration minimumDelay) {
         this.minimumDelay = minimumDelay;
+    }
+
+    public Duration getConnectTimeout() {
+        return connectTimeout;
+    }
+
+    public void setConnectTimeout(Duration connectTimeout) {
+        this.connectTimeout = connectTimeout;
+    }
+
+    public Duration getReadTimeout() {
+        return readTimeout;
+    }
+
+    public void setReadTimeout(Duration readTimeout) {
+        this.readTimeout = readTimeout;
     }
 
     public boolean isAutomaticRefreshEnabled() {
@@ -122,6 +149,11 @@ public class SofascoreProperties {
         return minimumDelay != null && minimumDelay.compareTo(Duration.ofSeconds(3)) >= 0;
     }
 
+    @AssertTrue(message = "connect and read timeouts must be positive and no greater than 10 seconds")
+    public boolean isTransportTimeoutsSafe() {
+        return isBoundedTimeout(connectTimeout) && isBoundedTimeout(readTimeout);
+    }
+
     @AssertTrue(message = "automatic refresh and live polling must stay disabled during manual J3")
     public boolean isAutomaticNetworkActivityDisabled() {
         return !automaticRefreshEnabled && !livePollingEnabled;
@@ -130,5 +162,23 @@ public class SofascoreProperties {
     @AssertTrue(message = "an export directory is required")
     public boolean isExportDirectoryConfigured() {
         return exportDirectory != null;
+    }
+
+    @AssertTrue(message = "J3 qualification requires explicit connector, raw storage and only SCHEDULED_EVENTS")
+    public boolean isJ3QualificationConfigurationSafe() {
+        return !j3QualificationEnabled
+                || (enabled
+                && maximumConcurrency == 1
+                && storeRawPayloads
+                && !automaticRefreshEnabled
+                && !livePollingEnabled
+                && allowedEndpoints.equals(Set.of(SofascoreEndpointType.SCHEDULED_EVENTS)));
+    }
+
+    private static boolean isBoundedTimeout(Duration timeout) {
+        return timeout != null
+                && !timeout.isZero()
+                && !timeout.isNegative()
+                && timeout.compareTo(Duration.ofSeconds(10)) <= 0;
     }
 }

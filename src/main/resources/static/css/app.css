@@ -219,6 +219,12 @@ button:focus-visible {
   border-color: #a9d8c6;
 }
 
+.notice-warning {
+  background: #fff5d6;
+  border-color: #e5b23d;
+  color: #6f4b00;
+}
+
 .notice-danger {
   color: var(--danger);
   background: #fff0f0;
@@ -282,6 +288,49 @@ button:focus-visible {
   background: #f7dddd;
   border-radius: 6px;
   font-size: 0.78rem;
+}
+
+.qualification-evidence {
+  margin-top: 20px;
+  padding: 18px;
+  background: #f3faf7;
+  border: 1px solid #a9d8c6;
+  border-radius: 12px;
+}
+
+.qualification-evidence h3 {
+  margin: 0;
+}
+
+.evidence-report {
+  max-height: 440px;
+  padding: 14px;
+  overflow: auto;
+  color: var(--ink-strong);
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 0.78rem;
+  line-height: 1.55;
+  user-select: all;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.evidence-download {
+  display: inline-flex;
+  padding: 10px 14px;
+  color: white;
+  background: var(--ink);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.evidence-download:focus-visible,
+.evidence-download:hover {
+  outline: 3px solid rgba(0, 143, 140, 0.35);
+  outline-offset: 2px;
 }
 
 .fixture-counts {

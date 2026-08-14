@@ -7,6 +7,7 @@ public record DashboardView(
         String projectStatus,
         String connectorMode,
         boolean configurationEnabled,
+        boolean manualCollectionTransportAvailable,
         String binding,
         String baseUrlState,
         int maximumConcurrency,

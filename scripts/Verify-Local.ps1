@@ -25,21 +25,35 @@ $forbiddenPatterns = @(
     '\bcom\.microsoft\.playwright\b',
     '\bWebClient\s*\.(?:builder|create)\b'
 )
+$approvedProviderOriginDeclaration = Join-Path $sourceRoot `
+    'java\com\bettingproject\sofascorelocal\domain\provider\ScheduledEventsProviderPageRequest.java'
+$approvedProviderOriginLine =
+    'public static final String EXPECTED_ORIGIN = "https://www.sofascore.com";'
 
 $violations = @()
 foreach ($pattern in $forbiddenPatterns) {
     $matches = $sourceFiles |
         Select-String -Pattern $pattern -CaseSensitive:$false
+    if ($pattern -eq $forbiddenPatterns[0]) {
+        $matches = $matches | Where-Object {
+            -not ($_.Path -eq $approvedProviderOriginDeclaration -and
+                $_.Line.Trim() -ceq $approvedProviderOriginLine)
+        }
+    }
     if ($matches) {
         $violations += $matches
     }
 }
 
-$approvedRestClientConstruction = Join-Path $sourceRoot `
-    'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\LoopbackScheduledEventsRestTransport.java'
+$approvedRestClientConstructions = @(
+    (Join-Path $sourceRoot `
+        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\LoopbackScheduledEventsRestTransport.java'),
+    (Join-Path $sourceRoot `
+        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderScheduledEventsRestTransport.java')
+)
 $restClientConstructions = $sourceFiles |
     Select-String -Pattern '\bRestClient\s*\.(?:builder|create)\b' -CaseSensitive:$false |
-    Where-Object { $_.Path -ne $approvedRestClientConstruction }
+    Where-Object { $_.Path -notin $approvedRestClientConstructions }
 if ($restClientConstructions) {
     $violations += $restClientConstructions
 }

@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "scheduled-events-qualified-page-two-shape",
+  "endpointType": "SCHEDULED_EVENTS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-13T00:00:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "scheduled-events-v1",
+  "payloadResource": "fixtures/scheduled-events/qualified-page-two-shape.json",
+  "maximumBytes": 4096,
+  "expectedRawSha256": "ae47699313985909db515caa836ce0542a51ce754e5ee28af3d326781c4784d9",
+  "expectedCanonicalJsonSha256": "f0aca8a270069dac827ab697c9bb34836ca4ab7a46f2125d5260b2db5f9761e1",
+  "minimized": false,
+  "removedFields": []
+}

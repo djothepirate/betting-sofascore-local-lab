@@ -1,0 +1,26 @@
+{
+  "scheduled": [
+    {
+      "tournament": {
+        "id": 980001,
+        "name": "Synthetic Page Two League",
+        "uniqueTournament": {
+          "id": 980101,
+          "name": "Synthetic Page Two Competition"
+        }
+      },
+      "timezoneEventCount": {
+        "0": 2,
+        "3600": 1
+      }
+    },
+    {
+      "tournament": {
+        "id": 980002,
+        "name": "Synthetic Page Two Empty Availability"
+      },
+      "timezoneEventCount": []
+    }
+  ],
+  "hasNextPage": true
+}

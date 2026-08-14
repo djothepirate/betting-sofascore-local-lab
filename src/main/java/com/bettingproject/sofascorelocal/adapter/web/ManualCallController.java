@@ -3,10 +3,17 @@ package com.bettingproject.sofascorelocal.adapter.web;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlError;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlException;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlService;
+import com.bettingproject.sofascorelocal.application.network.J3DynamicManualCallService;
+import com.bettingproject.sofascorelocal.application.network.J3ManualCollectionEvidenceService;
+import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallExecutionResult;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.stereotype.Controller;
+import org.springframework.http.CacheControl;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
@@ -20,12 +27,18 @@ public class ManualCallController {
     private static final String REDIRECT_DASHBOARD = "redirect:/dashboard#manual-call-control";
 
     private final J3ManualCallControlService controlService;
+    private final J3DynamicManualCallService dynamicManualCallService;
+    private final J3ManualCollectionEvidenceService collectionEvidenceService;
     private final LocalFormTokenService formTokenService;
 
     public ManualCallController(
             J3ManualCallControlService controlService,
+            J3DynamicManualCallService dynamicManualCallService,
+            J3ManualCollectionEvidenceService collectionEvidenceService,
             LocalFormTokenService formTokenService) {
         this.controlService = controlService;
+        this.dynamicManualCallService = dynamicManualCallService;
+        this.collectionEvidenceService = collectionEvidenceService;
         this.formTokenService = formTokenService;
     }
 
@@ -49,7 +62,7 @@ public class ManualCallController {
         formTokenService.consume(session, localFormToken);
         return perform(
                 controlService::activateByOperator,
-                "Circuit activé localement. Aucun transport fournisseur n’est autorisé.",
+                "Circuit activé localement. Aucun transport n’a encore été exécuté ; préparez et confirmez la collecte avant toute action fournisseur.",
                 redirectAttributes);
     }
 
@@ -63,7 +76,7 @@ public class ManualCallController {
         formTokenService.consume(session, localFormToken);
         return perform(
                 () -> controlService.prepare(date),
-                "Intention préparée. Recopiez exactement la phrase affichée pour confirmer.",
+                "Intention de collecte préparée. Recopiez exactement la phrase affichée pour confirmer.",
                 redirectAttributes);
     }
 
@@ -78,8 +91,59 @@ public class ManualCallController {
         formTokenService.consume(session, localFormToken);
         return perform(
                 () -> controlService.confirm(requestId, confirmationText, acknowledged),
-                "Confirmation enregistrée. L’appel réel reste bloqué et aucun transport n’a été exécuté.",
+                "Confirmation enregistrée. Aucun transport n’a été exécuté ; le déclenchement fournisseur reste une action distincte.",
                 redirectAttributes);
+    }
+
+    @PostMapping("/manual-call/execute")
+    public String execute(
+            @RequestParam("localFormToken") String localFormToken,
+            @RequestParam("requestId") UUID requestId,
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
+        formTokenService.consume(session, localFormToken);
+        try {
+            J3ManualCallExecutionResult result = dynamicManualCallService.execute(requestId);
+            if (result.completed()) {
+                redirectAttributes.addFlashAttribute(
+                        "manualCallMessage",
+                        "Collecte terminée : " + result.completedPages()
+                                + " page(s) ont été collectées dans l’ordre jusqu’à hasNextPage=false. L’arrêt global a été réappliqué et la preuve minimisée est prête.");
+                redirectAttributes.addFlashAttribute("manualCallMessageKind", "safe");
+            }
+            else {
+                redirectAttributes.addFlashAttribute(
+                        "manualCallMessage",
+                        "Collecte arrêtée avant la page " + result.failedPage()
+                                + " (" + result.terminalCode() + "). Aucun retry n’a été lancé ; l’arrêt global est réappliqué et la preuve minimisée est prête.");
+                redirectAttributes.addFlashAttribute("manualCallMessageKind", "danger");
+            }
+        }
+        catch (J3ManualCallControlException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "manualCallMessage",
+                    messageFor(exception.error()));
+            redirectAttributes.addFlashAttribute("manualCallMessageKind", "danger");
+        }
+        catch (RuntimeException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "manualCallMessage",
+                    "La collecte fournisseur a été interrompue par une erreur locale sûre. L’arrêt global a été réappliqué et aucun retry n’a été lancé.");
+            redirectAttributes.addFlashAttribute("manualCallMessageKind", "danger");
+        }
+        return REDIRECT_DASHBOARD;
+    }
+
+    @GetMapping(value = "/manual-call/evidence", produces = "text/plain;charset=UTF-8")
+    public ResponseEntity<String> downloadEvidence() {
+        return collectionEvidenceService.latestDocument()
+                .map(document -> ResponseEntity.ok()
+                        .cacheControl(CacheControl.noStore())
+                        .header(
+                                HttpHeaders.CONTENT_DISPOSITION,
+                                "attachment; filename=\"" + document.filename() + "\"")
+                        .body(document.reportText()))
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     @PostMapping("/manual-call/stop")
@@ -125,6 +189,11 @@ public class ManualCallController {
             case ACKNOWLEDGEMENT_REQUIRED -> "La case de confirmation explicite est obligatoire.";
             case CONFIRMATION_TEXT_MISMATCH -> "La phrase recopiée ne correspond pas exactement.";
             case INTENT_ALREADY_CONFIRMED -> "Cette intention a déjà été confirmée.";
+            case PROVIDER_TRANSPORT_UNAVAILABLE -> "La collecte manuelle J3 n’est pas disponible : vérifiez la configuration fournisseur locale.";
+            case INTENT_NOT_READY -> "L’intention doit être confirmée et prête avant le déclenchement.";
+            case EXECUTION_ALREADY_STARTED -> "Cette collecte a déjà été déclenchée. Réarmez ensuite une nouvelle séquence explicite.";
+            case EXECUTION_NOT_ACTIVE -> "Aucun lot fournisseur actif ne correspond à cette intention.";
+            case PAGE_SEQUENCE_INVALID -> "La collecte ne respecte pas l’ordre dynamique des pages à partir de la page 1.";
         };
     }
 
