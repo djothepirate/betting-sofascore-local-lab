@@ -4,7 +4,7 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap** et **J2 — Fixtures**. Le Work Order **J3 — Appel manuel** contient désormais un chemin fournisseur opt-in de collecte complète, démarrant en page 1 et progressant selon le booléen qualifié `hasNextPage`, avec un plafond local de 25 pages. Ce chemin reste désactivé par défaut et aucun appel fournisseur n’est exécuté par les tests, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures** et **J3 — Appel manuel**. J3 fournit un chemin fournisseur opt-in de collecte complète, démarrant en page 1 et progressant selon le booléen qualifié `hasNextPage`, avec un plafond local de 25 pages. Ce chemin reste désactivé par défaut et aucun appel fournisseur n’est exécuté par les tests, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
 ## Ce qui est livré localement
 
@@ -204,7 +204,8 @@ Le bootstrap cumule plusieurs barrières :
 7. l’application n’écoute que sur une adresse de boucle locale ;
 8. les paramètres imposent concurrence `1`, délai minimal `3s`, rafraîchissement et live désactivés.
 
-Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces barrières qu’une par une, conformément au Work Order borné et au point de décision humain.
+Après la clôture de J3, aucune de ces barrières ne peut être retirée sans un nouveau Work Order,
+une décision de gouvernance explicite et une qualification humaine dédiée.
 
 ## Documentation de référence
 
@@ -230,9 +231,9 @@ Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces
 - [Work Order J2 validé](docs/work_orders/completed/WO-SS-20260808-002-fixtures-j2.md)
 - [Qualification Windows J3 — contrôle local et politiques simulées](docs/validation/J3-WINDOWS-MANUAL-CALL-QUALIFICATION-20260812.md)
 - [Qualification Windows J3 — pagination dynamique](docs/validation/J3-WINDOWS-DYNAMIC-PAGINATION-QUALIFICATION-20260814.md)
-- [Work Order J3 actif](docs/work_orders/active/WO-SS-20260812-003-manual-call-j3.md)
+- [Work Order J3 validé](docs/work_orders/completed/WO-SS-20260812-003-manual-call-j3.md)
 
-## Prochaine frontière
+## J3 clôturé et prochaine frontière
 
 La qualification humaine du `2026-08-14` a collecté dix pages sur dix, après les cinq pages
 observées le `2026-08-13`. Elle confirme que le parcours repart de la page 1, persiste avant
@@ -255,3 +256,9 @@ rafraîchit ni n’invalide un checkpoint de cache, ne modifie aucune classifica
 rend pas un snapshot incompatible éligible. La matrice technique et les observations humaines sont
 consignées dans
 [`docs/validation/J3-WINDOWS-CACHE-AND-LOCAL-SNAPSHOT-INSPECTION-QUALIFICATION-20260814.md`](docs/validation/J3-WINDOWS-CACHE-AND-LOCAL-SNAPSHOT-INSPECTION-QUALIFICATION-20260814.md).
+
+Le jalon J3 est validé et son Work Order est archivé dans `docs/work_orders/completed`. Cette
+clôture ne change pas les statuts `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
+`NO_CRITICAL_DEPENDENCY`. Le polling, la planification, le déploiement VPS, une nouvelle famille
+d’endpoint ou l’intégration au Betting Project principal restent interdits tant qu’un nouveau Work
+Order et une décision de gouvernance dédiée ne les autorisent pas.

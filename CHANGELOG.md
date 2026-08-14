@@ -121,6 +121,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - qualification complémentaire Windows du cache et de l’inspection JSON locale, avec preuve
   PostgreSQL de non-mutation entre les deux fonctions et matrice humaine minimisée des snapshots
   historiques déjà présents.
+- clôture du Work Order `WO-SS-20260812-003` au statut `VALIDATED` après qualification du chemin
+  manuel, de la pagination dynamique, du cache et de l’inspection JSON locale ;
+- archivage du Work Order J3 dans `docs/work_orders/completed`, sans appel fournisseur pendant la
+  clôture et sans étendre l’autorisation au polling, à la production ou au VPS.
 
 ### Modifié
 

@@ -1,11 +1,13 @@
 # WO-SS-20260812-003 — J3 Appel manuel borné et conservation du brut
 
-- **Statut :** `IN_DEVELOPMENT`
+- **Statut :** `VALIDATED`
 - **Date :** 2026-08-12
 - **Date de démarrage :** 2026-08-12
+- **Date de clôture :** 2026-08-14
 - **Prérequis :** WO-SS-20260808-002 validé sous Windows et fusionné sur `main`
 - **Jalon :** J3 — Appel manuel
 - **Branche :** `feat/j3-manual-call`
+- **Branche de clôture :** `feat/j3-dynamic-cache-policy`
 - **Commit de base :** `b2561e542b1f893ec2f15c5eaeb67a361ee551ea`
 - **Base de l’unité de politique réseau hors ligne :** `c51c45f4831dad2922018e25baee97dcf7bbcf5c`
 - **Base de l’unité de persistance brute :** `1a9ca0e753cedf1ac4730adea865bd7ea3369660`
@@ -14,6 +16,7 @@
 - **Base de l’unité de politiques d’arrêt et d’incident :** `e555a13bc8023ebb3dd7a9454719dd16144210e2`
 - **Base de l’unité de qualification Windows :** `f0cd29ccc40ac7c430130630f6e55f17b09f6968`
 - **Base du chemin fournisseur cinq pages :** `9b1441c367d1e72282fbc563a340bcd1644f3b06`
+- **Base de la clôture documentaire :** `35a8d34b4ab534d254d077942052860f66eebb0d`
 - **Famille initiale :** `SCHEDULED_EVENTS`
 - **Mode d’acquisition prévu :** `DIRECT_LOCAL_ENDPOINT`
 - **Développement hors ligne J3 autorisé :** `YES`
@@ -212,23 +215,24 @@ LIVE_TEST_PROFILE=BLOCKED
 
 ## 9. Critères d’acceptation J3
 
-- [ ] activation explicite nécessaire avant tout transport ;
-- [ ] concurrence maximale égale à `1` ;
-- [ ] cache et délai minimal vérifiés avant chaque appel ;
-- [ ] une requête manuelle conserve statut, horaires, latence, taille, hash et parseur ;
-- [ ] déduplication d’une réponse identique ;
-- [ ] arrêt sans retry sur `400`, `401` et `403` ;
-- [ ] suspension respectueuse de `Retry-After` sur `429` ;
-- [ ] HTML inattendu visible et circuit ouvert ;
-- [ ] schéma inconnu conservé brut et classé incompatible ;
-- [ ] aucun test standard ne contacte Internet ;
-- [ ] données brutes et normalisées séparées ;
-- [ ] acquisition enregistrée comme `DIRECT_LOCAL_ENDPOINT` ;
-- [ ] aucun secret, cookie ou jeton stocké ou journalisé ;
-- [ ] aucun mécanisme de contournement ;
-- [ ] derniers appels et incidents visibles dans le tableau de bord ;
-- [ ] procédure Windows d’arrêt et de preuve exécutée ;
-- [ ] appel réel, s’il est autorisé, limité à une requête unique.
+- [x] activation explicite nécessaire avant tout transport ;
+- [x] concurrence maximale égale à `1` ;
+- [x] cache et délai minimal vérifiés avant chaque départ fournisseur ;
+- [x] chaque page manuelle conserve statut, horaires, latence, taille, hash et parseur ;
+- [x] déduplication d’une réponse identique ;
+- [x] arrêt sans retry sur `400`, `401` et `403` ;
+- [x] suspension respectueuse de `Retry-After` sur `429` ;
+- [x] HTML inattendu visible et circuit ouvert ;
+- [x] schéma inconnu conservé brut et classé incompatible ;
+- [x] aucun test standard ne contacte Internet ;
+- [x] données brutes et normalisées séparées ;
+- [x] acquisition enregistrée comme `DIRECT_LOCAL_ENDPOINT` ;
+- [x] aucun secret, cookie ou jeton stocké ou journalisé ;
+- [x] aucun mécanisme de contournement ;
+- [x] derniers appels et incidents visibles dans le tableau de bord ;
+- [x] procédure Windows d’arrêt et de preuve exécutée ;
+- [x] collecte réelle limitée à une séquence manuelle explicitement confirmée, démarrant en page 1,
+  pilotée par `hasNextPage` et bornée localement à 25 pages.
 
 ## 10. Définition de fini
 
@@ -1386,4 +1390,75 @@ INCOMPATIBLE_SNAPSHOT_CACHE_ELIGIBILITY=NO
 SERVER_ADDRESS=127.0.0.1
 SOFASCORE_NETWORK_CALLS_EXECUTED=NO
 VERIFY_RESULT=PASS
+```
+
+## 30. Unité 4 — clôture documentaire du jalon J3
+
+L’unité `docs: close J3 manual-call milestone` clôt le jalon après qualification technique et
+humaine de toutes ses frontières. Elle n’ajoute aucun comportement applicatif, n’exécute aucun
+appel fournisseur et ne modifie aucun snapshot, checkpoint ou incident historique.
+
+Le périmètre initial, volontairement limité à cinq pages pour la première qualification, a été
+étendu par décisions explicites successives. Le résultat final qualifié reste une collecte
+strictement manuelle et locale : l’opérateur choisit une date, lève l’arrêt global, active le
+circuit, prépare puis confirme une intention à usage unique. Une action distincte collecte les
+pages dans l’ordre depuis la page 1, poursuit seulement tant que `hasNextPage=true`, s’arrête sur
+`false` ou au premier incident, et refuse toute page au-delà de la limite locale de 25.
+
+Les objectifs J3 validés sont :
+
+- politique d’activation, circuit, concurrence `1`, délai minimal, arrêt global et incidents ;
+- persistance append-only du brut exact, SHA-256, déduplication et séparation du normalisé ;
+- transport fournisseur manuel sans cookie, jeton, compte, session, proxy, redirection ou retry ;
+- confirmation explicite et action finale distincte depuis l’interface liée à `127.0.0.1` ;
+- adaptation stricte de `scheduled-events-v1` aux schémas fournisseur qualifiés ;
+- pagination dynamique démarrant en page 1 et gouvernée par `hasNextPage` ;
+- politique de cache réelle, avec fraîcheur de dix minutes et provenance visible dans la preuve ;
+- inspection JSON locale en lecture seule, avec contrôle d’intégrité, échappement HTML et
+  `Cache-Control: no-store` ;
+- preuve terminale minimisée excluant payload, URI, en-tête et donnée de session ;
+- qualification Windows de cinq pages sur cinq le 2026-08-13 puis de dix pages sur dix le
+  2026-08-14 ;
+- qualification complémentaire du cache et de l’inspection locale, sans mutation croisée.
+
+Les preuves consolidées de clôture sont :
+
+```text
+docs/validation/J3-WINDOWS-MANUAL-CALL-QUALIFICATION-20260812.md
+docs/validation/J3-WINDOWS-FIVE-PAGE-PROVIDER-QUALIFICATION-20260813.md
+docs/validation/J3-WINDOWS-PAGE-TWO-PROVIDER-RESUME-QUALIFICATION-20260813.md
+docs/validation/J3-WINDOWS-PAGE-THREE-PROVIDER-RESUME-QUALIFICATION-20260814.md
+docs/validation/J3-WINDOWS-DYNAMIC-PAGINATION-QUALIFICATION-20260814.md
+docs/validation/J3-WINDOWS-CACHE-AND-LOCAL-SNAPSHOT-INSPECTION-QUALIFICATION-20260814.md
+```
+
+La dernière qualification consolidée a validé `159` tests standards et `11` tests
+PostgreSQL/Testcontainers, Flyway V3, la non-mutation du cache par l’inspection et l’absence
+d’appel fournisseur. Les exécutions humaines réelles restent documentées séparément et ne sont
+jamais rejouées par Maven.
+
+La clôture J3 ne constitue ni une autorisation de polling, ni une approbation de production, ni une
+autorisation VPS. Toute automatisation, nouvelle famille d’endpoint, normalisation enrichie ou
+intégration au Betting Project principal exige un nouveau Work Order, une nouvelle branche et une
+décision de gouvernance dédiée. La promotion GitHub de la branche de clôture reste une opération de
+livraison distincte de la validation technique du jalon.
+
+```text
+J3_STATUS=VALIDATED
+J3_WORK_ORDER=COMPLETED
+J3_MANUAL_CALL_PATH=QUALIFIED
+J3_DYNAMIC_PAGINATION=QUALIFIED
+J3_CACHE_POLICY=QUALIFIED
+J3_LOCAL_RAW_JSON_INSPECTION=QUALIFIED
+J3_WINDOWS_FIVE_PAGE_QUALIFICATION=5_OF_5_PASS
+J3_WINDOWS_DYNAMIC_QUALIFICATION=10_OF_10_PASS
+J3_STANDARD_TESTS=159
+J3_INTEGRATION_TESTS=11
+J3_FLYWAY_SCHEMA=V3
+J3_CLOSURE_BASE_COMMIT=35a8d34b4ab534d254d077942052860f66eebb0d
+J3_CLOSURE_PROVIDER_CALLS=0
+POLLING_AUTHORIZED=NO
+PRODUCTION_AUTHORIZED=NO
+VPS_DEPLOYMENT_AUTHORIZED=NO
+NEXT_MILESTONE_REQUIRES_NEW_WORK_ORDER=YES
 ```
