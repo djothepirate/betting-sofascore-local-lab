@@ -98,6 +98,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `b79ccd62e7863718f49a22b6c54a7fc73cf87986` ;
 - contrats J4 de l’identité canonique, de la normalisation versionnée et du détail synthétique hors
   ligne, avec rapport de qualification technique Windows ;
+- validation fonctionnelle humaine J4 sous Windows, sans modification de `.env`, confirmant le
+  verrouillage visible du connecteur, la recherche locale, l'identité synthétique stable, ses deux
+  versions et son détail hors ligne ;
 - démarrage du Work Order `WO-SS-20260808-002` sur la branche `feat/j2-scheduled-events-fixtures` depuis le tag `j0-j1-v0.1.1` ;
 - passage du jalon J2 au statut `IN_DEVELOPMENT` avec `SCHEDULED_EVENTS` comme première famille de fixtures hors ligne.
 - contrat d’architecture `scheduled-events-v1` détaillant les champs obligatoires, facultatifs et inconnus.

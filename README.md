@@ -4,7 +4,7 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures** et **J3 — Appel manuel**, puis le jalon **J4 — Événements** en cours de qualification humaine. J4 ajoute une recherche locale par date, une identité canonique stable, un historique append-only et un premier détail de rencontre strictement hors ligne. Le chemin fournisseur J3 reste désactivé par défaut et aucun appel fournisseur n’est exécuté par les tests, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures** et **J3 — Appel manuel**, puis le jalon **J4 — Événements** techniquement et fonctionnellement qualifié, en attente de revue et de fusion. J4 ajoute une recherche locale par date, une identité canonique stable, un historique append-only et un premier détail de rencontre strictement hors ligne. Le chemin fournisseur J3 reste désactivé par défaut et aucun appel fournisseur n’est exécuté par les tests, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
 ## Ce qui est livré localement
 
@@ -287,5 +287,6 @@ Order et une décision de gouvernance dédiée ne les autorisent pas.
 Le jalon J4 construit désormais une vue métier locale sur les seules sources déjà présentes ou
 synthétiques. Une normalisation manuelle d’un snapshot `SCHEDULED_EVENTS` compatible vérifie son
 intégrité et le reparse sans modifier sa classification historique ; le corpus de démonstration
-reste explicitement `SYNTHETIC_FIXTURE`. La qualification technique est acquise, mais le Work Order
-reste `IN_DEVELOPMENT` jusqu’à la revue humaine Windows et à la décision explicite de clôture.
+reste explicitement `SYNTHETIC_FIXTURE`. La qualification technique et le test fonctionnel humain
+sont acquis sans modification de `.env`. Le Work Order reste actif au statut `READY_FOR_REVIEW`
+jusqu’à la revue du diff, la fusion et la décision explicite de clôture.

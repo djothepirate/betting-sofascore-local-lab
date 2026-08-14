@@ -1,18 +1,20 @@
-# Qualification technique Windows J4 — 2026-08-15
+# Qualification technique et humaine Windows J4 — 2026-08-15
 
 ## 1. Statut
 
 ```text
 TECHNICAL_QUALIFICATION=PASS
-HUMAN_WINDOWS_VALIDATION=PENDING
-WORK_ORDER_STATUS=IN_DEVELOPMENT
+HUMAN_WINDOWS_VALIDATION=PASS
+FUNCTIONAL_TEST=PASS
+ENV_FILE_MODIFIED=NO
+WORK_ORDER_STATUS=READY_FOR_REVIEW
 REAL_SOFASCORE_CALLS=0
 EVENT_DETAILS_PROVIDER_TRANSPORT=NOT_IMPLEMENTED
 ```
 
-Cette qualification couvre l’implémentation, PostgreSQL et le parcours graphique local du Work
-Order `WO-SS-20260815-004`. Elle ne constitue ni une validation humaine finale, ni une approbation
-de production, ni une autorisation réseau supplémentaire.
+Cette qualification couvre l’implémentation, PostgreSQL, le parcours graphique local assisté et le
+test fonctionnel humain du Work Order `WO-SS-20260815-004`. Elle ne constitue ni une approbation de
+production, ni une autorisation réseau supplémentaire.
 
 ## 2. Environnement
 
@@ -99,6 +101,24 @@ Parcours exécuté dans le navigateur intégré, à une largeur de 1280 pixels :
 Les valeurs sont toutes synthétiques. Aucun payload fournisseur brut n’a été rendu ou copié dans
 ce rapport. L’application a été arrêtée après le parcours.
 
+### 4.1 Validation humaine fournie par le propriétaire
+
+Le propriétaire a ensuite exécuté le test fonctionnel sans modifier `.env` et a fourni quatre
+captures d'écran. Elles confirment visuellement :
+
+- le connecteur général toujours verrouillé et les deux actions fournisseur désactivées ;
+- l'accès `/events`, le badge **« AUCUN TRANSPORT FOURNISSEUR »** et zéro résultat pour la date
+  initiale du `2026-08-15` ;
+- le chargement synthétique, puis un résultat pour le `2026-08-12` avec le même UUID canonique,
+  `providerEventId=900001`, `SYNTHETIC_FIXTURE` et deux versions ;
+- le détail `event-details-v1`, le stade `Synthetic Park`, la ville `Local City`, la saison `2026`,
+  le tour `1`, les deux SHA-256 et les deux observations append-only.
+
+Les captures restent des pièces temporaires de la tâche Codex et ne sont pas versionnées. Elles ne
+montrent aucun secret, cookie, jeton, payload fournisseur brut ou contenu de `.env`. Le statut Git
+`!! .env` confirme uniquement que le fichier demeure ignoré et non versionné ; son contenu n'a pas
+été lu ou modifié par l'agent.
+
 ## 5. Matrice J4
 
 | Contrôle | Résultat | Preuve |
@@ -114,6 +134,9 @@ ce rapport. L’application a été arrêtée après le parcours.
 | recherche date + zone IANA | PASS | tests service et parcours graphique |
 | détail absent | LOCAL_ONLY_STATE | test MVC, aucun repli réseau |
 | console navigateur | PASS | zéro erreur/avertissement |
+| test fonctionnel humain | PASS | quatre captures fournies par le propriétaire |
+| connecteur général visible | LOCKED | actions URI et fournisseur désactivées |
+| fichier `.env` | UNCHANGED | déclaration du propriétaire, fichier toujours ignoré par Git |
 
 ## 6. Garde-fous vérifiés
 
@@ -131,10 +154,10 @@ ce rapport. L’application a été arrêtée après le parcours.
 
 ## 7. Conclusion et reste à faire
 
-L’implémentation J4 est techniquement qualifiée dans son périmètre hors ligne. Le Work Order reste
-dans `docs/work_orders/active` et au statut `IN_DEVELOPMENT` jusqu’à ce que le propriétaire réalise
-et consigne la validation humaine Windows, relise le diff puis décide explicitement de la fusion et
-de la clôture.
+L’implémentation J4 et son parcours fonctionnel humain sont qualifiés dans le périmètre hors ligne.
+Le Work Order reste dans `docs/work_orders/active` au statut `READY_FOR_REVIEW` jusqu'à la relecture
+du diff et à la décision explicite de pousser, ouvrir une Pull Request, fusionner puis clôturer.
 
-Cette étape restante ne peut pas être déduite du succès des tests. Les statuts du dépôt restent
-`EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et `NO_CRITICAL_DEPENDENCY`.
+La validation humaine ne vaut pas autorisation de production ou d'appel fournisseur. Les statuts
+du dépôt restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
+`NO_CRITICAL_DEPENDENCY`.
