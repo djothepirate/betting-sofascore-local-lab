@@ -64,11 +64,13 @@ class J3ManualCallControlServiceTest {
         var prepared = service.prepare(DATE);
         assertThat(prepared.intent().requestId()).isEqualTo(REQUEST_ID);
         assertThat(prepared.intent().requestKey())
-                .isEqualTo("SCHEDULED_EVENTS|date=2026-08-12|pages=1-5");
+                .isEqualTo(
+                        "SCHEDULED_EVENTS|date=2026-08-12|pagination=has-next-page|max=25");
         assertThat(prepared.intent().state())
                 .isEqualTo(J3ManualCallIntentState.AWAITING_CONFIRMATION);
         assertThat(prepared.intent().confirmationPhrase())
-                .isEqualTo("CONFIRMER SCHEDULED_EVENTS 2026-08-12 PAGES 1-5 000042");
+                .isEqualTo(
+                        "CONFIRMER SCHEDULED_EVENTS 2026-08-12 PAGINATION DYNAMIQUE MAX 25 000042");
         assertThat(prepared.intent().expiresAt())
                 .isEqualTo(NOW.plus(J3ManualCallControlService.CONFIRMATION_TTL));
 
@@ -145,7 +147,7 @@ class J3ManualCallControlServiceTest {
     }
 
     @Test
-    void exposesAReadyIntentOnlyForTheExactProviderOptInAndConsumesItOnce() {
+    void exposesAReadyIntentOnlyForTheExactProviderOptIn() {
         MutableClock clock = new MutableClock(NOW);
         var service = new J3ManualCallControlService(
                 clock,
@@ -171,13 +173,13 @@ class J3ManualCallControlServiceTest {
 
         assertThat(claim.date()).isEqualTo(QUALIFICATION_DATE);
         assertThat(claim.providerOrigin()).hasToString("https://www.sofascore.com");
-        assertThat(service.snapshot().providerTransportAvailable()).isFalse();
-        assertThat(service.snapshot().providerBlockers())
-                .containsExactly("J3_QUALIFICATION_ALREADY_CONSUMED");
+        assertThat(claim.firstPage()).isEqualTo(1);
+        assertThat(service.snapshot().providerTransportAvailable()).isTrue();
+        assertThat(service.snapshot().providerBlockers()).isEmpty();
     }
 
     @Test
-    void preparesAndExecutesAnExplicitResumeFromPageThree() {
+    void alwaysStartsAtPageOneAndAllowsAnyExplicitIsoDate() {
         MutableClock clock = new MutableClock(NOW);
         var service = new J3ManualCallControlService(
                 clock,
@@ -191,33 +193,33 @@ class J3ManualCallControlServiceTest {
 
         var prepared = service.prepare(QUALIFICATION_DATE);
 
-        assertThat(prepared.intent().firstPage()).isEqualTo(3);
-        assertThat(prepared.intent().completedPages()).isEqualTo(2);
+        assertThat(prepared.intent().firstPage()).isEqualTo(1);
+        assertThat(prepared.intent().completedPages()).isZero();
         assertThat(prepared.intent().requestKey())
-                .isEqualTo("SCHEDULED_EVENTS|date=2026-08-13|pages=3-5");
+                .isEqualTo(
+                        "SCHEDULED_EVENTS|date=2026-08-13|pagination=has-next-page|max=25");
         assertThat(prepared.intent().confirmationPhrase())
                 .isEqualTo(
-                        "CONFIRMER SCHEDULED_EVENTS 2026-08-13 REPRISE PAGES 3-5 000042");
+                        "CONFIRMER SCHEDULED_EVENTS 2026-08-13 PAGINATION DYNAMIQUE MAX 25 000042");
 
         service.confirm(REQUEST_ID, prepared.intent().confirmationPhrase(), true);
         var claim = service.claimExecution(REQUEST_ID);
 
-        assertThat(claim.firstPage()).isEqualTo(3);
+        assertThat(claim.firstPage()).isEqualTo(1);
         assertRejected(
                 () -> service.recordPageCompleted(REQUEST_ID, 2),
                 J3ManualCallControlError.PAGE_SEQUENCE_INVALID);
-        for (int page = 3; page <= 5; page++) {
-            service.recordPageCompleted(REQUEST_ID, page);
-        }
+        service.recordPageCompleted(REQUEST_ID, 1);
+        service.recordPageCompleted(REQUEST_ID, 2);
         service.completeExecution(REQUEST_ID);
 
         assertThat(service.snapshot().intent().state())
                 .isEqualTo(J3ManualCallIntentState.COMPLETED);
-        assertThat(service.snapshot().intent().completedPages()).isEqualTo(5);
+        assertThat(service.snapshot().intent().completedPages()).isEqualTo(2);
     }
 
     @Test
-    void terminalQualificationLockCannotBeRearmedInTheSameProcess() {
+    void terminalCollectionCanBeRearmedForANewExplicitSequence() {
         MutableClock clock = new MutableClock(NOW);
         var service = new J3ManualCallControlService(
                 clock,
@@ -230,19 +232,23 @@ class J3ManualCallControlServiceTest {
         var prepared = service.prepare(QUALIFICATION_DATE);
         service.confirm(REQUEST_ID, prepared.intent().confirmationPhrase(), true);
         service.claimExecution(REQUEST_ID);
-        for (int page = 1; page <= 5; page++) {
-            service.recordPageCompleted(REQUEST_ID, page);
-        }
+        service.recordPageCompleted(REQUEST_ID, 1);
         service.completeExecution(REQUEST_ID);
 
-        var locked = service.lockAfterQualification(REQUEST_ID);
+        var locked = service.lockAfterCollection(REQUEST_ID);
 
         assertThat(locked.globalStopActive()).isTrue();
         assertThat(locked.circuitReason())
-                .isEqualTo(J3CircuitReason.QUALIFICATION_TERMINAL_LOCK);
-        assertRejected(
-                service::rearmAfterGlobalStop,
-                J3ManualCallControlError.QUALIFICATION_ALREADY_CONSUMED);
+                .isEqualTo(J3CircuitReason.MANUAL_COLLECTION_TERMINAL_LOCK);
+
+        var rearmed = service.rearmAfterGlobalStop();
+        assertThat(rearmed.intent()).isNull();
+        service.activateByOperator();
+        var secondPrepared = service.prepare(QUALIFICATION_DATE.plusDays(1));
+
+        assertThat(secondPrepared.intent().date()).isEqualTo(QUALIFICATION_DATE.plusDays(1));
+        assertThat(secondPrepared.intent().state())
+                .isEqualTo(J3ManualCallIntentState.AWAITING_CONFIRMATION);
     }
 
     private static J3ManualCallControlService service(Clock clock) {

@@ -29,20 +29,23 @@ public record J3ManualCallIntentSnapshot(
         if (!expiresAt.isAfter(preparedAt)) {
             throw new IllegalArgumentException("expiresAt must be after preparedAt");
         }
-        if (firstPage < ScheduledEventsProviderPageRequest.FIRST_PAGE
-                || firstPage > ScheduledEventsProviderPageRequest.LAST_PAGE) {
-            throw new IllegalArgumentException("firstPage must be between 1 and 5");
+        if (firstPage != ScheduledEventsProviderPageRequest.FIRST_PAGE) {
+            throw new IllegalArgumentException("a dynamic collection must start at page 1");
         }
         if (!requestKey.equals(SofascoreEndpointType.SCHEDULED_EVENTS.name()
-                + "|date=" + date + "|pages=" + firstPage + "-5")) {
+                + "|date=" + date + "|pagination=has-next-page|max="
+                + ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE)) {
             throw new IllegalArgumentException(
-                    "requestKey must match the scheduled-events five-page batch");
+                    "requestKey must match the bounded dynamic collection");
         }
-        if (completedPages < firstPage - 1 || completedPages > 5) {
+        if (completedPages < 0
+                || completedPages > ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE) {
             throw new IllegalArgumentException(
-                    "completedPages must include the verified local checkpoint");
+                    "completedPages must be in the bounded dynamic range");
         }
-        if (failedPage != null && (failedPage < firstPage || failedPage > 5)) {
+        if (failedPage != null && (failedPage < firstPage
+                || failedPage
+                        > ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE + 1)) {
             throw new IllegalArgumentException("failedPage must be in the execution range");
         }
 
@@ -68,8 +71,9 @@ public record J3ManualCallIntentSnapshot(
                         "only confirmed and execution states require a confirmation time");
             }
         }
-        if (state == J3ManualCallIntentState.COMPLETED && completedPages != 5) {
-            throw new IllegalArgumentException("a completed batch requires five completed pages");
+        if (state == J3ManualCallIntentState.COMPLETED && completedPages < 1) {
+            throw new IllegalArgumentException(
+                    "a completed collection requires at least one completed page");
         }
         if (state == J3ManualCallIntentState.FAILED) {
             if (failedPage == null || terminalCode == null || terminalCode.isBlank()) {

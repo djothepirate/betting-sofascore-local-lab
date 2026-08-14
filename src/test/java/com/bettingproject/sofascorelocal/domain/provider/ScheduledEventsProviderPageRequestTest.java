@@ -13,8 +13,8 @@ class ScheduledEventsProviderPageRequestTest {
     private static final LocalDate DATE = LocalDate.parse("2026-08-13");
 
     @Test
-    void buildsOnlyTheObservedProviderPathForPagesOneToFive() {
-        for (int page = 1; page <= 5; page++) {
+    void buildsTheQualifiedProviderPathForAnyDateWithinTheLocalPageLimit() {
+        for (int page : new int[] {1, 5, 25}) {
             ScheduledEventsProviderPageRequest request =
                     new ScheduledEventsProviderPageRequest(
                             URI.create("https://www.sofascore.com"), DATE, page);
@@ -28,7 +28,7 @@ class ScheduledEventsProviderPageRequestTest {
     }
 
     @Test
-    void rejectsEveryDecoratedOriginAndPageOutsideTheDecision() {
+    void rejectsEveryDecoratedOriginAndPageOutsideTheLocalLimit() {
         assertRejectedOrigin("http://www.sofascore.com");
         assertRejectedOrigin("https://sofascore.com");
         assertRejectedOrigin("https://www.sofascore.com:443");
@@ -39,16 +39,18 @@ class ScheduledEventsProviderPageRequestTest {
 
         assertThatThrownBy(() -> request(0))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("between 1 and 5");
-        assertThatThrownBy(() -> request(6))
+                .hasMessageContaining("between 1 and 25");
+        assertThatThrownBy(() -> request(26))
                 .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("between 1 and 5");
-        assertThatThrownBy(() -> new ScheduledEventsProviderPageRequest(
+                .hasMessageContaining("between 1 and 25");
+
+        var anotherDate = new ScheduledEventsProviderPageRequest(
                 URI.create("https://www.sofascore.com"),
                 LocalDate.parse("2026-08-14"),
-                1))
-                .isInstanceOf(IllegalArgumentException.class)
-                .hasMessageContaining("2026-08-13");
+                1);
+        assertThat(anotherDate.targetUri()).hasToString(
+                "https://www.sofascore.com/api/v1/sport/football/"
+                        + "scheduled-tournaments/2026-08-14/page/1");
     }
 
     private static ScheduledEventsProviderPageRequest request(int page) {

@@ -89,7 +89,10 @@ public final class J3ScheduledEventsOutcomeProcessor {
         snapshotStore.classify(persistence.snapshotId(), schemaStatus, errorCode);
 
         if (parsing.status() == ScheduledEventsParseStatus.PARSED) {
-            return J3ScheduledEventsOutcome.recorded(persistence, circuit.snapshot());
+            return J3ScheduledEventsOutcome.parsed(
+                    persistence,
+                    parsing.page().orElseThrow().hasNextPage(),
+                    circuit.snapshot());
         }
         J3CircuitReason reason = parsing.status() == ScheduledEventsParseStatus.SCHEMA_INCOMPATIBLE
                 ? J3CircuitReason.SCHEMA_INCOMPATIBLE

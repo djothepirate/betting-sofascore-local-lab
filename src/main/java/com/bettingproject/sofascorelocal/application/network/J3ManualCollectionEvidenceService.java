@@ -1,7 +1,8 @@
 package com.bettingproject.sofascorelocal.application.network;
 
 import com.bettingproject.sofascorelocal.domain.provider.J3MinimizedPageEvidence;
-import com.bettingproject.sofascorelocal.domain.provider.J3MinimizedQualificationEvidence;
+import com.bettingproject.sofascorelocal.domain.provider.J3MinimizedCollectionEvidence;
+import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 
 import org.springframework.stereotype.Service;
 
@@ -13,43 +14,45 @@ import java.util.stream.Collectors;
  * Keeps only the latest minimized proof in memory. It never reads or renders raw payload bytes.
  */
 @Service
-public class J3QualificationEvidenceService {
+public class J3ManualCollectionEvidenceService {
 
     private EvidenceDocument latest;
 
-    public synchronized void publish(J3MinimizedQualificationEvidence evidence) {
+    public synchronized void publish(J3MinimizedCollectionEvidence evidence) {
         Objects.requireNonNull(evidence, "evidence");
         latest = new EvidenceDocument(
                 evidence,
                 format(evidence),
-                "J3-MINIMIZED-EVIDENCE-" + evidence.qualificationDate() + ".txt");
+                "J3-MINIMIZED-EVIDENCE-" + evidence.collectionDate() + ".txt");
     }
 
     public synchronized Optional<EvidenceDocument> latestDocument() {
         return Optional.ofNullable(latest);
     }
 
-    private static String format(J3MinimizedQualificationEvidence evidence) {
+    private static String format(J3MinimizedCollectionEvidence evidence) {
         StringBuilder report = new StringBuilder();
-        line(report, "J3_MINIMIZED_EVIDENCE_VERSION", "2");
+        line(report, "J3_MINIMIZED_EVIDENCE_VERSION", "3");
         line(report, "GENERATED_AT", evidence.generatedAt());
-        line(report, "QUALIFICATION_DATE", evidence.qualificationDate());
-        line(report, "QUALIFICATION_SCOPE", "PAGES_1_2_3_4_5");
-        line(report, "VERIFIED_LOCAL_CHECKPOINT_PAGES", pageRange(
-                1,
-                evidence.initialCompletedPages()));
-        line(report, "PROVIDER_RESUME_FIRST_PAGE", evidence.initialCompletedPages() + 1);
+        line(report, "COLLECTION_DATE", evidence.collectionDate());
+        line(report, "PAGINATION_MODE", "HAS_NEXT_PAGE");
+        line(report, "PROVIDER_FIRST_PAGE", ScheduledEventsProviderPageRequest.FIRST_PAGE);
+        line(report, "MAXIMUM_PAGE_LIMIT",
+                ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE);
         line(report, "TERMINAL_STATE", evidence.terminalState());
         line(report, "PAGES_ATTEMPTED", evidence.pageAttempts().stream()
                 .map(attempt -> Integer.toString(attempt.page()))
                 .collect(Collectors.joining(",")));
-        line(report, "PAGES_COMPLETED", evidence.completedPages());
+        line(report, "PAGES_COMPLETED_COUNT", evidence.completedPages());
+        line(report, "LAST_COMPLETED_PAGE",
+                evidence.completedPages() == 0 ? "NONE" : evidence.completedPages());
         line(report, "FAILED_PAGE", value(evidence.failedPage()));
         line(report, "TERMINAL_CODE", evidence.terminalCode());
         line(report, "FINAL_GLOBAL_STOP", evidence.globalStopActive() ? "ACTIVE" : "INACTIVE");
         line(report, "FINAL_CIRCUIT_STATE", evidence.finalCircuitState());
         line(report, "FINAL_CIRCUIT_REASON", evidence.finalCircuitReason());
         line(report, "AUTOMATIC_RETRY_EXECUTED", "NO");
+        line(report, "POLLING_OR_SCHEDULE_EXECUTED", "NO");
         line(report, "COOKIES_TOKENS_ACCOUNT_SESSION_USED", "NO");
 
         for (J3MinimizedPageEvidence attempt : evidence.pageAttempts()) {
@@ -64,6 +67,7 @@ public class J3QualificationEvidenceService {
             line(report, prefix + "PAYLOAD_SIZE_BYTES", value(attempt.payloadSizeBytes()));
             line(report, prefix + "PAYLOAD_SHA256", value(attempt.payloadSha256()));
             line(report, prefix + "SCHEMA_STATUS", value(attempt.schemaStatus()));
+            line(report, prefix + "HAS_NEXT_PAGE", value(attempt.hasNextPage()));
             line(report, prefix + "TERMINAL_CODE", value(attempt.terminalCode()));
         }
 
@@ -72,15 +76,6 @@ public class J3QualificationEvidenceService {
         line(report, "REQUEST_OR_RESPONSE_HEADERS_INCLUDED", "NO");
         line(report, "CONFIRMATION_IDENTIFIER_INCLUDED", "NO");
         return report.toString();
-    }
-
-    private static String pageRange(int firstPage, int lastPage) {
-        if (lastPage < firstPage) {
-            return "NONE";
-        }
-        return java.util.stream.IntStream.rangeClosed(firstPage, lastPage)
-                .mapToObj(Integer::toString)
-                .collect(Collectors.joining(","));
     }
 
     private static void line(StringBuilder report, String key, Object value) {
@@ -92,7 +87,7 @@ public class J3QualificationEvidenceService {
     }
 
     public record EvidenceDocument(
-            J3MinimizedQualificationEvidence evidence,
+            J3MinimizedCollectionEvidence evidence,
             String reportText,
             String filename) {
 

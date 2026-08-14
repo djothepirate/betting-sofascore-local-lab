@@ -3,8 +3,8 @@ package com.bettingproject.sofascorelocal.adapter.web;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlError;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlException;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlService;
-import com.bettingproject.sofascorelocal.application.network.J3FivePageManualCallService;
-import com.bettingproject.sofascorelocal.application.network.J3QualificationEvidenceService;
+import com.bettingproject.sofascorelocal.application.network.J3DynamicManualCallService;
+import com.bettingproject.sofascorelocal.application.network.J3ManualCollectionEvidenceService;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallExecutionResult;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
@@ -27,18 +27,18 @@ public class ManualCallController {
     private static final String REDIRECT_DASHBOARD = "redirect:/dashboard#manual-call-control";
 
     private final J3ManualCallControlService controlService;
-    private final J3FivePageManualCallService fivePageManualCallService;
-    private final J3QualificationEvidenceService qualificationEvidenceService;
+    private final J3DynamicManualCallService dynamicManualCallService;
+    private final J3ManualCollectionEvidenceService collectionEvidenceService;
     private final LocalFormTokenService formTokenService;
 
     public ManualCallController(
             J3ManualCallControlService controlService,
-            J3FivePageManualCallService fivePageManualCallService,
-            J3QualificationEvidenceService qualificationEvidenceService,
+            J3DynamicManualCallService dynamicManualCallService,
+            J3ManualCollectionEvidenceService collectionEvidenceService,
             LocalFormTokenService formTokenService) {
         this.controlService = controlService;
-        this.fivePageManualCallService = fivePageManualCallService;
-        this.qualificationEvidenceService = qualificationEvidenceService;
+        this.dynamicManualCallService = dynamicManualCallService;
+        this.collectionEvidenceService = collectionEvidenceService;
         this.formTokenService = formTokenService;
     }
 
@@ -62,7 +62,7 @@ public class ManualCallController {
         formTokenService.consume(session, localFormToken);
         return perform(
                 controlService::activateByOperator,
-                "Circuit activé localement. Aucun transport n’a encore été exécuté ; préparez et confirmez la reprise avant toute action fournisseur.",
+                "Circuit activé localement. Aucun transport n’a encore été exécuté ; préparez et confirmez la collecte avant toute action fournisseur.",
                 redirectAttributes);
     }
 
@@ -76,7 +76,7 @@ public class ManualCallController {
         formTokenService.consume(session, localFormToken);
         return perform(
                 () -> controlService.prepare(date),
-                "Intention de reprise préparée. Recopiez exactement la phrase affichée pour confirmer.",
+                "Intention de collecte préparée. Recopiez exactement la phrase affichée pour confirmer.",
                 redirectAttributes);
     }
 
@@ -103,17 +103,18 @@ public class ManualCallController {
             RedirectAttributes redirectAttributes) {
         formTokenService.consume(session, localFormToken);
         try {
-            J3ManualCallExecutionResult result = fivePageManualCallService.execute(requestId);
+            J3ManualCallExecutionResult result = dynamicManualCallService.execute(requestId);
             if (result.completed()) {
                 redirectAttributes.addFlashAttribute(
                         "manualCallMessage",
-                        "Reprise terminée : les pages 1 et 2 conservées et les pages 3 à 5 nouvellement collectées forment le lot complet. L’arrêt global a été réappliqué et la preuve minimisée est prête.");
+                        "Collecte terminée : " + result.completedPages()
+                                + " page(s) ont été collectées dans l’ordre jusqu’à hasNextPage=false. L’arrêt global a été réappliqué et la preuve minimisée est prête.");
                 redirectAttributes.addFlashAttribute("manualCallMessageKind", "safe");
             }
             else {
                 redirectAttributes.addFlashAttribute(
                         "manualCallMessage",
-                        "Reprise arrêtée avant la page " + result.failedPage()
+                        "Collecte arrêtée avant la page " + result.failedPage()
                                 + " (" + result.terminalCode() + "). Aucun retry n’a été lancé ; l’arrêt global est réappliqué et la preuve minimisée est prête.");
                 redirectAttributes.addFlashAttribute("manualCallMessageKind", "danger");
             }
@@ -127,7 +128,7 @@ public class ManualCallController {
         catch (RuntimeException exception) {
             redirectAttributes.addFlashAttribute(
                     "manualCallMessage",
-                    "Le lot fournisseur a été interrompu par une erreur locale sûre. L’arrêt global a été réappliqué et aucun retry n’a été lancé.");
+                    "La collecte fournisseur a été interrompue par une erreur locale sûre. L’arrêt global a été réappliqué et aucun retry n’a été lancé.");
             redirectAttributes.addFlashAttribute("manualCallMessageKind", "danger");
         }
         return REDIRECT_DASHBOARD;
@@ -135,7 +136,7 @@ public class ManualCallController {
 
     @GetMapping(value = "/manual-call/evidence", produces = "text/plain;charset=UTF-8")
     public ResponseEntity<String> downloadEvidence() {
-        return qualificationEvidenceService.latestDocument()
+        return collectionEvidenceService.latestDocument()
                 .map(document -> ResponseEntity.ok()
                         .cacheControl(CacheControl.noStore())
                         .header(
@@ -188,13 +189,11 @@ public class ManualCallController {
             case ACKNOWLEDGEMENT_REQUIRED -> "La case de confirmation explicite est obligatoire.";
             case CONFIRMATION_TEXT_MISMATCH -> "La phrase recopiée ne correspond pas exactement.";
             case INTENT_ALREADY_CONFIRMED -> "Cette intention a déjà été confirmée.";
-            case PROVIDER_TRANSPORT_UNAVAILABLE -> "La reprise J3 n’est pas disponible : vérifiez la configuration et les checkpoints locaux des pages 1 et 2.";
+            case PROVIDER_TRANSPORT_UNAVAILABLE -> "La collecte manuelle J3 n’est pas disponible : vérifiez la configuration fournisseur locale.";
             case INTENT_NOT_READY -> "L’intention doit être confirmée et prête avant le déclenchement.";
-            case EXECUTION_ALREADY_STARTED -> "Cette qualification a déjà été déclenchée.";
+            case EXECUTION_ALREADY_STARTED -> "Cette collecte a déjà été déclenchée. Réarmez ensuite une nouvelle séquence explicite.";
             case EXECUTION_NOT_ACTIVE -> "Aucun lot fournisseur actif ne correspond à cette intention.";
-            case PAGE_SEQUENCE_INVALID -> "La reprise ne respecte pas l’ordre fixe des pages 3 à 5 après les checkpoints locaux des pages 1 et 2.";
-            case QUALIFICATION_ALREADY_CONSUMED -> "La reprise fournisseur unique a déjà été consommée depuis ce démarrage.";
-            case DATE_NOT_AUTHORIZED -> "Seule la date de qualification 2026-08-13 est autorisée pour ce lot.";
+            case PAGE_SEQUENCE_INVALID -> "La collecte ne respecte pas l’ordre dynamique des pages à partir de la page 1.";
         };
     }
 

@@ -1,7 +1,7 @@
 package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlService;
-import com.bettingproject.sofascorelocal.application.network.J3QualificationEvidenceService;
+import com.bettingproject.sofascorelocal.application.network.J3ManualCollectionEvidenceService;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Controller;
@@ -13,17 +13,17 @@ public class DashboardController {
 
     private final DashboardService dashboardService;
     private final J3ManualCallControlService manualCallControlService;
-    private final J3QualificationEvidenceService qualificationEvidenceService;
+    private final J3ManualCollectionEvidenceService collectionEvidenceService;
     private final LocalFormTokenService formTokenService;
 
     public DashboardController(
             DashboardService dashboardService,
             J3ManualCallControlService manualCallControlService,
-            J3QualificationEvidenceService qualificationEvidenceService,
+            J3ManualCollectionEvidenceService collectionEvidenceService,
             LocalFormTokenService formTokenService) {
         this.dashboardService = dashboardService;
         this.manualCallControlService = manualCallControlService;
-        this.qualificationEvidenceService = qualificationEvidenceService;
+        this.collectionEvidenceService = collectionEvidenceService;
         this.formTokenService = formTokenService;
     }
 
@@ -34,8 +34,8 @@ public class DashboardController {
                 "manualCall",
                 ManualCallControlView.from(manualCallControlService.snapshot()));
         model.addAttribute(
-                "qualificationEvidence",
-                qualificationEvidenceService.latestDocument().orElse(null));
+                "collectionEvidence",
+                collectionEvidenceService.latestDocument().orElse(null));
         model.addAttribute("localFormToken", formTokenService.issue(session));
         return "dashboard";
     }

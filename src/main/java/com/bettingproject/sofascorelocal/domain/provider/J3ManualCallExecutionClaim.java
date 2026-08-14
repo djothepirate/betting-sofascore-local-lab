@@ -17,9 +17,8 @@ public record J3ManualCallExecutionClaim(
         Objects.requireNonNull(providerOrigin, "providerOrigin");
         ScheduledEventsProviderPageRequest.parseExactProviderOrigin(
                 providerOrigin.toString());
-        if (firstPage < ScheduledEventsProviderPageRequest.FIRST_PAGE
-                || firstPage > ScheduledEventsProviderPageRequest.LAST_PAGE) {
-            throw new IllegalArgumentException("firstPage must be between 1 and 5");
+        if (firstPage != ScheduledEventsProviderPageRequest.FIRST_PAGE) {
+            throw new IllegalArgumentException("a dynamic collection must start at page 1");
         }
     }
 }

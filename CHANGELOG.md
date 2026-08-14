@@ -63,6 +63,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   persistée des pages 3 à 5 avant de rendre le transport éligible ;
 - intention et orchestration bornées aux pages 3, 4 et 5, avec compteur initial à deux, absence de
   répétition des pages 1 et 2 et preuve minimisée distinguant checkpoints et tentatives réseau ;
+- collecte manuelle répétable depuis le tableau de bord, repartant obligatoirement de la page 1 et
+  progressant uniquement selon le booléen `hasNextPage` produit par `scheduled-events-v1` ;
+- plafond local de 25 pages avec arrêt `PAGINATION_LIMIT_REACHED` avant toute tentative de page 26,
+  réarmement explicite entre deux collectes et maintien de la concurrence à un ;
+- preuve minimisée v3 indiquant le mode de pagination, la limite locale et `hasNextPage` pour les
+  pages parsées, sans payload, URI, en-tête, secret ou donnée de session ;
 
 ### Documentation
 
@@ -96,6 +102,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   explicite interdisant la reprise à la page 3 sans nouvelle décision.
 - contrat d’architecture et procédure Windows de la reprise explicitement autorisée à la page 3,
   sans appel réel pendant l’implémentation ou les tests.
+- contrat d’architecture et procédure opérateur de la collecte manuelle répétable à pagination
+  dynamique, sans appel fournisseur pendant l’implémentation ou les tests.
 
 ### Modifié
 
@@ -133,6 +141,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `timezoneEventCount` en page 2, tout tableau non vide restant incompatible ;
 - inventaire hors ligne porté à douze fixtures (`7` parsées, `4` incompatibles et `1` contenu
   inattendu) et phase applicative avancée à `J3-PAGE-TWO-SCHEMA-ADAPTATION`.
+- phase applicative avancée à `J3-DYNAMIC-MANUAL-PAGINATION` ; le chemin actif n’est plus limité à
+  la date qualifiée ni aux cinq pages observées le `2026-08-13`.
 
 ### Sécurité
 
@@ -160,6 +170,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   snapshot réel persisté et aucune preuve de sortie fournisseur ajoutée au dépôt.
 - relecture locale des snapshots 1 et 2 sans transport ni écriture, avec confirmation que leur
   statut historique `SCHEMA_INCOMPATIBLE` reste inchangé.
+- arrêt normal uniquement sur `hasNextPage=false`, rupture sûre si ce champ n’est pas un booléen,
+  arrêt au premier incident, délai inter-pages minimal de trois secondes et absence de retry,
+  polling ou planification dans le parcours répétable.
 
 ## [0.1.0] — 2026-08-08
 

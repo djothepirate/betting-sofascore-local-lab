@@ -4,7 +4,7 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap** et **J2 — Fixtures**. Le Work Order **J3 — Appel manuel** contient désormais un chemin fournisseur opt-in limité aux cinq URI approuvées pour le `2026-08-13`. Ce chemin reste désactivé par défaut et aucun appel fournisseur n’est exécuté pendant son implémentation, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap** et **J2 — Fixtures**. Le Work Order **J3 — Appel manuel** contient désormais un chemin fournisseur opt-in de collecte complète, démarrant en page 1 et progressant selon le booléen qualifié `hasNextPage`, avec un plafond local de 25 pages. Ce chemin reste désactivé par défaut et aucun appel fournisseur n’est exécuté par les tests, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
 ## Ce qui est livré localement
 
@@ -30,16 +30,16 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
 - matrice J3 d’incidents simulés avec conservation du brut avant parsing, circuit ouvert et aucun retry automatique ;
 - qualification Windows du parcours opérateur local et des politiques simulées, avec preuve explicite
   que l’action fournisseur reste indisponible ;
-- chemin J3 dédié à une action manuelle unique couvrant strictement les pages `1` à `5` de la date
-  `2026-08-13`, activable uniquement par quatre propriétés locales concordantes ;
+- chemin J3 dédié à une collecte manuelle explicite démarrant toujours en page `1`, poursuivie
+  uniquement tant que le parseur retourne `hasNextPage=true` et bornée localement à 25 pages ;
 - client fournisseur sans proxy, redirection, cookie, jeton, compte ou donnée de session, avec arrêt
   au premier incident et aucun retry ;
-- reprise J3 explicitement bornée aux pages `3` à `5`, disponible seulement après relecture locale
-  réussie des checkpoints 1 et 2 et absence persistée des pages 3 à 5 ;
+- parcours répétable uniquement après réarmement, activation, nouvelle intention datée,
+  confirmation exacte et action finale distincte, sans polling ni retry ;
 
 ## Limite essentielle du bootstrap
 
-**Aucun appel SofaScore réel n’est actif par défaut et aucun n’est exécuté par les tests.** Le connecteur général, `ConnectorGate` et le profil Maven `sofascore-live-test` restent bloqués. Le seul chemin fournisseur est une exception J3 dédiée, inactive tant que `SOFASCORE_ENABLED`, `SOFASCORE_J3_QUALIFICATION_ENABLED`, l’origine exacte et l’unique famille autorisée ne concordent pas. Il ne prend en charge ni polling, ni autre date, ni autre page, ni autre endpoint.
+**Aucun appel SofaScore réel n’est actif par défaut et aucun n’est exécuté par les tests.** Le connecteur général, `ConnectorGate` et le profil Maven `sofascore-live-test` restent bloqués. Le seul chemin fournisseur est une exception J3 dédiée, inactive tant que `SOFASCORE_ENABLED`, `SOFASCORE_J3_QUALIFICATION_ENABLED`, l’origine exacte et l’unique famille autorisée ne concordent pas. Il ne prend en charge ni polling, ni planification, ni autre sport, ni autre endpoint ; chaque collecte reste manuelle, séquentielle et plafonnée.
 
 Cette limite préserve la règle du Betting Project principal : aucun composant du VPS ne dépend du laboratoire, et l’arrêt du poste Windows ne doit avoir aucun effet sur la chaîne globale.
 
@@ -210,6 +210,7 @@ Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces
 - [Reprise fournisseur J3 contrôlée à la page 2](docs/architecture/J3-PAGE-TWO-PROVIDER-RESUME.md)
 - [Adaptation hors ligne au schéma qualifié de la page 2](docs/architecture/J3-PAGE-TWO-SCHEMA-ADAPTATION.md)
 - [Reprise fournisseur J3 contrôlée à la page 3](docs/architecture/J3-PAGE-THREE-PROVIDER-RESUME.md)
+- [Collecte manuelle J3 répétable à pagination dynamique](docs/architecture/J3-DYNAMIC-MANUAL-PAGINATION.md)
 - [Runbook local](docs/runbooks/RUNBOOK-LOCAL.md)
 - [Cadrage PDF](docs/reference/Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf)
 - [Rapport de validation du bootstrap](docs/validation/J0-J1-VALIDATION-REPORT.md)
@@ -221,20 +222,12 @@ Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces
 
 ## Prochaine frontière
 
-La reprise réelle a persisté la page 2, puis s’est arrêtée sûrement sur son statut historique
-`SCHEMA_INCOMPATIBLE`, sans demander les pages 3 à 5 et sans retry. L’analyse suivante a été menée
-entièrement hors ligne : six entrées de la page 2 utilisent un tableau vide pour
-`timezoneEventCount`, tandis que les autres entrées et la page 1 utilisent un objet.
+La qualification humaine du `2026-08-13` a collecté les cinq pages attendues et confirmé que
+`hasNextPage` est le signal de pagination. Le parcours actif est désormais dynamique et répétable :
+chaque intention repart de la page 1, persiste avant parsing, continue uniquement sur
+`hasNextPage=true` et s’arrête normalement sur `false`. Une barrière locale interdit toute page 26.
 
-Le parseur accepte désormais cette seule forme vide sans affaiblir ses autres contrôles. Les
-snapshots 1 et 2 sont relus localement avec `PARSED`, `100` entrées et `hasNextPage=true` chacun ;
-leurs classifications historiques restent intactes. La décision propriétaire suivante autorise
-désormais une reprise unique à la page 3. La politique exige les deux checkpoints reparsables,
-l’absence des pages 3 à 5 et interdit explicitement de redemander les pages 1 et 2. L’interface
-prépare donc uniquement `SCHEDULED_EVENTS|date=2026-08-13|pages=3-5`.
-
-Cette livraison n’exécute aucun appel fournisseur : le déclenchement réel reste une action humaine
-ultérieure par le bouton final, après vérification des préconditions visibles.
-
-La possibilité de répéter ultérieurement une interrogation complète depuis l’interface reste hors
-de cette unité et devra disposer de ses propres limites de fréquence et de qualification.
+Cette implémentation et ses tests n’exécutent aucun appel fournisseur. Le prochain contrôle utile
+est une qualification humaine du nouveau parcours depuis l’interface, avec examen de la preuve
+minimisée v3 et retour immédiat à la configuration désactivée. Toute automatisation, planification,
+collecte live ou généralisation à une autre famille reste hors périmètre.

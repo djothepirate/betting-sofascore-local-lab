@@ -11,7 +11,10 @@ public record ScheduledEventsProviderPageRequest(
         int page) {
 
     public static final int FIRST_PAGE = 1;
+    /** Historical upper bound of the completed five-page J3 qualification. */
     public static final int LAST_PAGE = 5;
+    /** Fail-safe bound for one explicit dynamic manual collection. */
+    public static final int MAXIMUM_COLLECTION_PAGE = 25;
     public static final String EXPECTED_ORIGIN = "https://www.sofascore.com";
     public static final LocalDate QUALIFICATION_DATE = LocalDate.parse("2026-08-13");
 
@@ -19,12 +22,8 @@ public record ScheduledEventsProviderPageRequest(
         Objects.requireNonNull(providerOrigin, "providerOrigin");
         Objects.requireNonNull(date, "date");
         requireExactProviderOrigin(providerOrigin);
-        if (!QUALIFICATION_DATE.equals(date)) {
-            throw new IllegalArgumentException(
-                    "date must be the authorized qualification date 2026-08-13");
-        }
-        if (page < FIRST_PAGE || page > LAST_PAGE) {
-            throw new IllegalArgumentException("page must be between 1 and 5");
+        if (page < FIRST_PAGE || page > MAXIMUM_COLLECTION_PAGE) {
+            throw new IllegalArgumentException("page must be between 1 and 25");
         }
     }
 

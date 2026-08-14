@@ -8,7 +8,7 @@ import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallExecutionCl
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallExecutionResult;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallControlSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.J3MinimizedPageEvidence;
-import com.bettingproject.sofascorelocal.domain.provider.J3MinimizedQualificationEvidence;
+import com.bettingproject.sofascorelocal.domain.provider.J3MinimizedCollectionEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportResponse;
@@ -28,23 +28,23 @@ import java.util.Objects;
 import java.util.UUID;
 
 @Service
-public class J3FivePageManualCallService {
+public class J3DynamicManualCallService {
 
     private final J3ManualCallControlService controlService;
     private final ScheduledEventsProviderPageTransport transport;
     private final J3ScheduledEventsOutcomeProcessor outcomeProcessor;
     private final J3SingleCallGuard callGuard;
-    private final J3QualificationEvidenceService evidenceService;
+    private final J3ManualCollectionEvidenceService evidenceService;
     private final Clock clock;
     private final Duration minimumDelay;
     private final InterPageDelay interPageDelay;
 
     @Autowired
-    public J3FivePageManualCallService(
+    public J3DynamicManualCallService(
             J3ManualCallControlService controlService,
             ScheduledEventsProviderPageTransport transport,
             RawManualCallSnapshotStore snapshotStore,
-            J3QualificationEvidenceService evidenceService,
+            J3ManualCollectionEvidenceService evidenceService,
             SofascoreProperties properties) {
         this(
                 controlService,
@@ -60,12 +60,12 @@ public class J3FivePageManualCallService {
                 duration -> Thread.sleep(duration));
     }
 
-    J3FivePageManualCallService(
+    J3DynamicManualCallService(
             J3ManualCallControlService controlService,
             ScheduledEventsProviderPageTransport transport,
             J3ScheduledEventsOutcomeProcessor outcomeProcessor,
             J3SingleCallGuard callGuard,
-            J3QualificationEvidenceService evidenceService,
+            J3ManualCollectionEvidenceService evidenceService,
             Clock clock,
             Duration minimumDelay,
             InterPageDelay interPageDelay) {
@@ -94,11 +94,11 @@ public class J3FivePageManualCallService {
             J3ManualCallExecutionClaim claim = controlService.claimExecution(requestId);
             List<J3MinimizedPageEvidence> pageAttempts = new ArrayList<>();
             Instant lastStartedAt = null;
-            int initialCompletedPages = claim.firstPage() - 1;
+            int initialCompletedPages = 0;
             int completedPages = initialCompletedPages;
 
             for (int page = claim.firstPage();
-                    page <= ScheduledEventsProviderPageRequest.LAST_PAGE;
+                    page <= ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE;
                     page++) {
                 if (!controlService.executionMayContinue(requestId)) {
                     return publishAlreadyLockedFailure(
@@ -133,7 +133,17 @@ public class J3FivePageManualCallService {
                             response,
                             outcome.persistence().orElseThrow(),
                             schemaStatus(outcome),
+                            outcome.hasNextPage().orElse(null),
                             pageTerminalCode));
+                    if (controlService.snapshot().globalStopActive()) {
+                        return publishAlreadyLockedFailure(
+                                claim.date(),
+                                initialCompletedPages,
+                                completedPages,
+                                page,
+                                "GLOBAL_STOP_OR_CIRCUIT_BLOCK",
+                                pageAttempts);
+                    }
                     if (outcome.circuit().state() != J3CircuitState.CLOSED) {
                         String terminalCode = outcome.circuit().reason().name();
                         controlService.failExecution(requestId, page, terminalCode);
@@ -147,6 +157,33 @@ public class J3FivePageManualCallService {
                     }
                     controlService.recordPageCompleted(requestId, page);
                     completedPages = page;
+                    boolean hasNextPage = outcome.hasNextPage().orElseThrow(
+                            () -> new IllegalStateException(
+                                    "a parsed page must expose hasNextPage"));
+                    if (!hasNextPage) {
+                        controlService.completeExecution(requestId);
+                        return publishAndLock(
+                                requestId,
+                                claim.date(),
+                                initialCompletedPages,
+                                J3ManualCallExecutionResult.successful(completedPages),
+                                pageAttempts);
+                    }
+                    if (page == ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE) {
+                        int blockedNextPage = page + 1;
+                        String terminalCode = "PAGINATION_LIMIT_REACHED";
+                        controlService.failExecution(
+                                requestId, blockedNextPage, terminalCode);
+                        return publishAndLock(
+                                requestId,
+                                claim.date(),
+                                initialCompletedPages,
+                                J3ManualCallExecutionResult.failed(
+                                        completedPages,
+                                        blockedNextPage,
+                                        terminalCode),
+                                pageAttempts);
+                    }
                 }
                 catch (ScheduledEventsTransportException exception) {
                     J3ScheduledEventsOutcome outcome = outcomeProcessor.processFailure(
@@ -165,13 +202,7 @@ public class J3FivePageManualCallService {
                 }
             }
 
-            controlService.completeExecution(requestId);
-            return publishAndLock(
-                    requestId,
-                    claim.date(),
-                    initialCompletedPages,
-                    J3ManualCallExecutionResult.successful(),
-                    pageAttempts);
+            throw new IllegalStateException("dynamic pagination terminated unexpectedly");
         }
         catch (J3ManualCallControlException exception) {
             throw exception;
@@ -186,13 +217,13 @@ public class J3FivePageManualCallService {
 
     private J3ManualCallExecutionResult publishAndLock(
             UUID requestId,
-            LocalDate qualificationDate,
+            LocalDate collectionDate,
             int initialCompletedPages,
             J3ManualCallExecutionResult result,
             List<J3MinimizedPageEvidence> pageAttempts) {
-        J3ManualCallControlSnapshot locked = controlService.lockAfterQualification(requestId);
+        J3ManualCallControlSnapshot locked = controlService.lockAfterCollection(requestId);
         publishEvidence(
-                qualificationDate,
+                collectionDate,
                 initialCompletedPages,
                 result,
                 pageAttempts,
@@ -201,7 +232,7 @@ public class J3FivePageManualCallService {
     }
 
     private J3ManualCallExecutionResult publishAlreadyLockedFailure(
-            LocalDate qualificationDate,
+            LocalDate collectionDate,
             int initialCompletedPages,
             int completedPages,
             int failedPage,
@@ -210,7 +241,7 @@ public class J3FivePageManualCallService {
         J3ManualCallExecutionResult result = J3ManualCallExecutionResult.failed(
                 completedPages, failedPage, terminalCode);
         publishEvidence(
-                qualificationDate,
+                collectionDate,
                 initialCompletedPages,
                 result,
                 pageAttempts,
@@ -219,13 +250,13 @@ public class J3FivePageManualCallService {
     }
 
     private void publishEvidence(
-            LocalDate qualificationDate,
+            LocalDate collectionDate,
             int initialCompletedPages,
             J3ManualCallExecutionResult result,
             List<J3MinimizedPageEvidence> pageAttempts,
             J3ManualCallControlSnapshot terminalSnapshot) {
-        evidenceService.publish(new J3MinimizedQualificationEvidence(
-                qualificationDate,
+        evidenceService.publish(new J3MinimizedCollectionEvidence(
+                collectionDate,
                 terminalSnapshot.intent().state(),
                 initialCompletedPages,
                 result.completedPages(),

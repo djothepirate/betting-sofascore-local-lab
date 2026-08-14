@@ -3,8 +3,8 @@ package com.bettingproject.sofascorelocal.adapter.web;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlError;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlException;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlService;
-import com.bettingproject.sofascorelocal.application.network.J3FivePageManualCallService;
-import com.bettingproject.sofascorelocal.application.network.J3QualificationEvidenceService;
+import com.bettingproject.sofascorelocal.application.network.J3DynamicManualCallService;
+import com.bettingproject.sofascorelocal.application.network.J3ManualCollectionEvidenceService;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallControlSnapshot;
@@ -52,10 +52,10 @@ class ManualCallControllerTest {
     private J3ManualCallControlService controlService;
 
     @MockitoBean
-    private J3FivePageManualCallService fivePageManualCallService;
+    private J3DynamicManualCallService dynamicManualCallService;
 
     @MockitoBean
-    private J3QualificationEvidenceService qualificationEvidenceService;
+    private J3ManualCollectionEvidenceService collectionEvidenceService;
 
     @MockitoBean
     private CacheManager cacheManager;
@@ -85,7 +85,7 @@ class ManualCallControllerTest {
     void forwardsTheExactConfirmationAndAcknowledgementWithoutTransport() throws Exception {
         MockHttpSession session = new MockHttpSession();
         String token = formTokenService.issue(session);
-        String phrase = "CONFIRMER SCHEDULED_EVENTS 2026-08-12 PAGES 1-5 000042";
+        String phrase = "CONFIRMER SCHEDULED_EVENTS 2026-08-12 PAGINATION DYNAMIQUE MAX 25 000042";
         when(controlService.confirm(REQUEST_ID, phrase, true))
                 .thenReturn(rearmedSnapshot());
 
@@ -153,11 +153,11 @@ class ManualCallControllerTest {
     }
 
     @Test
-    void executesTheFivePageBatchOnlyThroughItsOwnSingleUseSubmission() throws Exception {
+    void executesTheDynamicCollectionOnlyThroughItsOwnSingleUseSubmission() throws Exception {
         MockHttpSession session = new MockHttpSession();
         String token = formTokenService.issue(session);
-        when(fivePageManualCallService.execute(REQUEST_ID))
-                .thenReturn(J3ManualCallExecutionResult.successful());
+        when(dynamicManualCallService.execute(REQUEST_ID))
+                .thenReturn(J3ManualCallExecutionResult.successful(5));
 
         mockMvc.perform(post("/manual-call/execute")
                         .session(session)
@@ -168,16 +168,16 @@ class ManualCallControllerTest {
                 .andExpect(flash().attribute("manualCallMessageKind", "safe"))
                 .andExpect(flash().attribute(
                         "manualCallMessage",
-                        "Reprise terminée : les pages 1 et 2 conservées et les pages 3 à 5 nouvellement collectées forment le lot complet. L’arrêt global a été réappliqué et la preuve minimisée est prête."));
+                        "Collecte terminée : 5 page(s) ont été collectées dans l’ordre jusqu’à hasNextPage=false. L’arrêt global a été réappliqué et la preuve minimisée est prête."));
 
-        verify(fivePageManualCallService).execute(REQUEST_ID);
+        verify(dynamicManualCallService).execute(REQUEST_ID);
     }
 
     @Test
     void exposesOnlyASafeMessageWhenTheBatchFailsLocally() throws Exception {
         MockHttpSession session = new MockHttpSession();
         String token = formTokenService.issue(session);
-        when(fivePageManualCallService.execute(REQUEST_ID))
+        when(dynamicManualCallService.execute(REQUEST_ID))
                 .thenThrow(new IllegalStateException("database diagnostic must stay hidden"));
 
         mockMvc.perform(post("/manual-call/execute")
@@ -189,14 +189,14 @@ class ManualCallControllerTest {
                 .andExpect(flash().attribute("manualCallMessageKind", "danger"))
                 .andExpect(flash().attribute(
                         "manualCallMessage",
-                        "Le lot fournisseur a été interrompu par une erreur locale sûre. L’arrêt global a été réappliqué et aucun retry n’a été lancé."));
+                        "La collecte fournisseur a été interrompue par une erreur locale sûre. L’arrêt global a été réappliqué et aucun retry n’a été lancé."));
 
-        verify(fivePageManualCallService).execute(REQUEST_ID);
+        verify(dynamicManualCallService).execute(REQUEST_ID);
     }
 
     @Test
     void downloadsOnlyTheAlreadyMinimizedEvidenceDocument() throws Exception {
-        var evidence = new com.bettingproject.sofascorelocal.domain.provider.J3MinimizedQualificationEvidence(
+        var evidence = new com.bettingproject.sofascorelocal.domain.provider.J3MinimizedCollectionEvidence(
                 LocalDate.parse("2026-08-13"),
                 com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState.CANCELLED_BY_GLOBAL_STOP,
                 0,
@@ -208,11 +208,11 @@ class ManualCallControllerTest {
                 J3CircuitState.LOCKED,
                 J3CircuitReason.OPERATOR_STOP,
                 List.of());
-        var document = new J3QualificationEvidenceService.EvidenceDocument(
+        var document = new J3ManualCollectionEvidenceService.EvidenceDocument(
                 evidence,
                 "RAW_PAYLOAD_INCLUDED=NO\nPROVIDER_URI_INCLUDED=NO\n",
                 "J3-MINIMIZED-EVIDENCE-2026-08-13.txt");
-        when(qualificationEvidenceService.latestDocument())
+        when(collectionEvidenceService.latestDocument())
                 .thenReturn(java.util.Optional.of(document));
 
         mockMvc.perform(get("/manual-call/evidence"))

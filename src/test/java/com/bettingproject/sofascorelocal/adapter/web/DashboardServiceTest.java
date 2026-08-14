@@ -4,7 +4,6 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.SofascoreEndpointCata
 import com.bettingproject.sofascorelocal.application.ConnectorGate;
 import com.bettingproject.sofascorelocal.application.fixture.OfflineFixtureCorpusService;
 import com.bettingproject.sofascorelocal.application.network.J3ProviderQualificationPolicy;
-import com.bettingproject.sofascorelocal.application.network.J3QualificationResumePolicy;
 import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.dao.DataAccessResourceFailureException;
@@ -27,9 +26,7 @@ class DashboardServiceTest {
                 new ConnectorGate(),
                 jdbcTemplate,
                 new OfflineFixtureCorpusService(),
-                new J3QualificationResumePolicy(
-                        new J3ProviderQualificationPolicy(new SofascoreProperties()),
-                        qualificationDate -> java.util.List.of()));
+                new J3ProviderQualificationPolicy(new SofascoreProperties()));
 
         DashboardView dashboard = service.load();
 

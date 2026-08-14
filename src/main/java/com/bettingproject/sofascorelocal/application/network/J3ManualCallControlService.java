@@ -41,20 +41,19 @@ public class J3ManualCallControlService {
     private final Clock clock;
     private final Supplier<UUID> requestIdSupplier;
     private final IntSupplier confirmationCodeSupplier;
-    private final Supplier<J3ProviderQualificationSnapshot> qualificationSupplier;
+    private final Supplier<J3ProviderQualificationSnapshot> providerAvailabilitySupplier;
     private final J3NetworkCircuit circuit;
 
     private boolean globalStopActive = true;
-    private boolean qualificationConsumed;
     private Intent intent;
 
     @Autowired
-    public J3ManualCallControlService(J3QualificationResumePolicy qualificationPolicy) {
+    public J3ManualCallControlService(J3ProviderQualificationPolicy providerPolicy) {
         this(
                 Clock.systemUTC(),
                 UUID::randomUUID,
                 new SecureRandom()::nextInt,
-                Objects.requireNonNull(qualificationPolicy, "qualificationPolicy")::snapshot);
+                Objects.requireNonNull(providerPolicy, "providerPolicy")::snapshot);
     }
 
     J3ManualCallControlService(
@@ -72,15 +71,15 @@ public class J3ManualCallControlService {
             Clock clock,
             Supplier<UUID> requestIdSupplier,
             IntSupplier confirmationCodeSupplier,
-            Supplier<J3ProviderQualificationSnapshot> qualificationSupplier) {
+            Supplier<J3ProviderQualificationSnapshot> providerAvailabilitySupplier) {
         this.clock = Objects.requireNonNull(clock, "clock");
         this.requestIdSupplier = Objects.requireNonNull(requestIdSupplier, "requestIdSupplier");
         this.confirmationCodeSupplier = Objects.requireNonNull(
                 confirmationCodeSupplier,
                 "confirmationCodeSupplier");
-        this.qualificationSupplier = Objects.requireNonNull(
-                qualificationSupplier,
-                "qualificationSupplier");
+        this.providerAvailabilitySupplier = Objects.requireNonNull(
+                providerAvailabilitySupplier,
+                "providerAvailabilitySupplier");
         circuit = J3NetworkCircuit.lockedAt(clock.instant());
     }
 
@@ -94,8 +93,8 @@ public class J3ManualCallControlService {
         if (!globalStopActive) {
             throw rejected(J3ManualCallControlError.GLOBAL_STOP_ALREADY_CLEARED);
         }
-        if (qualificationConsumed) {
-            throw rejected(J3ManualCallControlError.QUALIFICATION_ALREADY_CONSUMED);
+        if (intent != null && !isActive(intent.state())) {
+            intent = null;
         }
         globalStopActive = false;
         return toSnapshot();
@@ -121,41 +120,30 @@ public class J3ManualCallControlService {
         Instant now = clock.instant();
         expireIntentIfNecessary(now);
         requireReadyForIntent();
-        J3ProviderQualificationSnapshot qualification = qualificationSupplier.get();
-        if (qualification.available()
-                && !ScheduledEventsProviderPageRequest.QUALIFICATION_DATE.equals(date)) {
-            throw rejected(J3ManualCallControlError.DATE_NOT_AUTHORIZED);
-        }
-        if (qualificationConsumed && qualification.available()) {
-            throw rejected(J3ManualCallControlError.QUALIFICATION_ALREADY_CONSUMED);
-        }
         if (intent != null && isActive(intent.state())) {
             throw rejected(J3ManualCallControlError.ACTIVE_INTENT_ALREADY_EXISTS);
         }
 
         UUID requestId = Objects.requireNonNull(requestIdSupplier.get(), "requestId");
         int code = Math.floorMod(confirmationCodeSupplier.getAsInt(), 1_000_000);
-        int firstPage = qualification.available()
-                ? qualification.firstPage()
-                : ScheduledEventsProviderPageRequest.FIRST_PAGE;
-        String pageRange = firstPage + "-" + ScheduledEventsProviderPageRequest.LAST_PAGE;
+        int firstPage = ScheduledEventsProviderPageRequest.FIRST_PAGE;
         String phrase = "CONFIRMER SCHEDULED_EVENTS " + date
-                + (firstPage == ScheduledEventsProviderPageRequest.FIRST_PAGE
-                        ? " PAGES "
-                        : " REPRISE PAGES ")
-                + pageRange + " " + "%06d".formatted(code);
+                + " PAGINATION DYNAMIQUE MAX "
+                + ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE
+                + " " + "%06d".formatted(code);
         intent = new Intent(
                 requestId,
                 date,
                 SofascoreEndpointType.SCHEDULED_EVENTS.name()
-                        + "|date=" + date + "|pages=" + pageRange,
+                        + "|date=" + date + "|pagination=has-next-page|max="
+                        + ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE,
                 firstPage,
                 J3ManualCallIntentState.AWAITING_CONFIRMATION,
                 phrase,
                 now,
                 now.plus(CONFIRMATION_TTL),
                 null,
-                firstPage - 1,
+                0,
                 null,
                 null);
         return toSnapshot();
@@ -191,7 +179,7 @@ public class J3ManualCallControlService {
             throw rejected(J3ManualCallControlError.CONFIRMATION_TEXT_MISMATCH);
         }
 
-        J3ProviderQualificationSnapshot qualification = qualificationSupplier.get();
+        J3ProviderQualificationSnapshot qualification = providerAvailabilitySupplier.get();
         intent = new Intent(
                 intent.requestId(),
                 intent.date(),
@@ -222,14 +210,10 @@ public class J3ManualCallControlService {
         if (intent.state() != J3ManualCallIntentState.CONFIRMED_READY) {
             throw rejected(J3ManualCallControlError.INTENT_NOT_READY);
         }
-        J3ProviderQualificationSnapshot qualification = qualificationSupplier.get();
+        J3ProviderQualificationSnapshot qualification = providerAvailabilitySupplier.get();
         if (!qualification.available()) {
             throw rejected(J3ManualCallControlError.PROVIDER_TRANSPORT_UNAVAILABLE);
         }
-        if (qualificationConsumed) {
-            throw rejected(J3ManualCallControlError.QUALIFICATION_ALREADY_CONSUMED);
-        }
-        qualificationConsumed = true;
         intent = copyWithState(
                 intent,
                 J3ManualCallIntentState.EXECUTING,
@@ -253,7 +237,8 @@ public class J3ManualCallControlService {
 
     public synchronized void recordPageCompleted(UUID requestId, int page) {
         requireMatchingExecutingIntent(requestId);
-        if (page != intent.completedPages() + 1 || page > 5) {
+        if (page != intent.completedPages() + 1
+                || page > ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE) {
             throw rejected(J3ManualCallControlError.PAGE_SEQUENCE_INVALID);
         }
         intent = copyWithState(
@@ -266,13 +251,13 @@ public class J3ManualCallControlService {
 
     public synchronized J3ManualCallControlSnapshot completeExecution(UUID requestId) {
         requireMatchingExecutingIntent(requestId);
-        if (intent.completedPages() != 5) {
+        if (intent.completedPages() < ScheduledEventsProviderPageRequest.FIRST_PAGE) {
             throw rejected(J3ManualCallControlError.PAGE_SEQUENCE_INVALID);
         }
         intent = copyWithState(
                 intent,
                 J3ManualCallIntentState.COMPLETED,
-                5,
+                intent.completedPages(),
                 null,
                 null);
         return toSnapshot();
@@ -283,7 +268,9 @@ public class J3ManualCallControlService {
             int failedPage,
             String terminalCode) {
         requireMatchingExecutingIntent(requestId);
-        if (failedPage != intent.completedPages() + 1 || failedPage > 5) {
+        if (failedPage != intent.completedPages() + 1
+                || failedPage
+                        > ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE + 1) {
             throw rejected(J3ManualCallControlError.PAGE_SEQUENCE_INVALID);
         }
         intent = copyWithState(
@@ -295,7 +282,7 @@ public class J3ManualCallControlService {
         return toSnapshot();
     }
 
-    public synchronized J3ManualCallControlSnapshot lockAfterQualification(UUID requestId) {
+    public synchronized J3ManualCallControlSnapshot lockAfterCollection(UUID requestId) {
         Objects.requireNonNull(requestId, "requestId");
         requireMatchingIntent(requestId);
         if (intent.state() != J3ManualCallIntentState.COMPLETED
@@ -303,7 +290,7 @@ public class J3ManualCallControlService {
             throw rejected(J3ManualCallControlError.EXECUTION_NOT_ACTIVE);
         }
         globalStopActive = true;
-        circuit.lockAfterQualification(clock.instant());
+        circuit.lockAfterCollection(clock.instant());
         return toSnapshot();
     }
 
@@ -360,20 +347,14 @@ public class J3ManualCallControlService {
 
     private J3ManualCallControlSnapshot toSnapshot() {
         J3CircuitSnapshot circuitSnapshot = circuit.snapshot();
-        J3ProviderQualificationSnapshot qualification = qualificationSupplier.get();
-        if (qualificationConsumed && qualification.available()) {
-            qualification = J3ProviderQualificationSnapshot.blocked(
-                    List.of("J3_QUALIFICATION_ALREADY_CONSUMED"));
-        }
+        J3ProviderQualificationSnapshot qualification = providerAvailabilitySupplier.get();
         return new J3ManualCallControlSnapshot(
                 globalStopActive,
                 circuitSnapshot.state(),
                 circuitSnapshot.reason(),
                 circuitSnapshot.changedAt(),
                 circuitSnapshot.retryNotBefore(),
-                qualification.available()
-                        ? ScheduledEventsProviderPageRequest.QUALIFICATION_DATE
-                        : LocalDate.now(clock),
+                LocalDate.now(clock),
                 intent == null ? null : intent.toSnapshot(),
                 qualification.available(),
                 qualification.blockers());

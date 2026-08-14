@@ -6,10 +6,10 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Terminal, metadata-only proof of the one bounded J3 qualification sequence.
+ * Terminal, metadata-only proof of one bounded explicit manual collection.
  */
-public record J3MinimizedQualificationEvidence(
-        LocalDate qualificationDate,
+public record J3MinimizedCollectionEvidence(
+        LocalDate collectionDate,
         J3ManualCallIntentState terminalState,
         int initialCompletedPages,
         int completedPages,
@@ -21,8 +21,8 @@ public record J3MinimizedQualificationEvidence(
         J3CircuitReason finalCircuitReason,
         List<J3MinimizedPageEvidence> pageAttempts) {
 
-    public J3MinimizedQualificationEvidence {
-        Objects.requireNonNull(qualificationDate, "qualificationDate");
+    public J3MinimizedCollectionEvidence {
+        Objects.requireNonNull(collectionDate, "collectionDate");
         Objects.requireNonNull(terminalState, "terminalState");
         terminalCode = requireSafeCode(terminalCode);
         Objects.requireNonNull(generatedAt, "generatedAt");
@@ -34,31 +34,38 @@ public record J3MinimizedQualificationEvidence(
                 && terminalState != J3ManualCallIntentState.CANCELLED_BY_GLOBAL_STOP) {
             throw new IllegalArgumentException("evidence requires a terminal intent state");
         }
-        if (initialCompletedPages < 0 || initialCompletedPages > 4) {
-            throw new IllegalArgumentException("initialCompletedPages must be between 0 and 4");
+        if (initialCompletedPages != 0) {
+            throw new IllegalArgumentException("a dynamic collection must start at page 1");
         }
-        if (completedPages < initialCompletedPages || completedPages > 5) {
-            throw new IllegalArgumentException("completedPages must be between 0 and 5");
+        if (completedPages < 0
+                || completedPages > ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE) {
+            throw new IllegalArgumentException("completedPages must be between 0 and 25");
         }
         if (!globalStopActive || finalCircuitState != J3CircuitState.LOCKED) {
             throw new IllegalArgumentException("terminal evidence requires a locked global stop");
         }
-        if (pageAttempts.size() > 5) {
-            throw new IllegalArgumentException("at most five page attempts are allowed");
+        if (pageAttempts.size()
+                > ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE) {
+            throw new IllegalArgumentException("too many page attempts");
         }
         for (int index = 0; index < pageAttempts.size(); index++) {
             if (pageAttempts.get(index).page() != initialCompletedPages + index + 1) {
                 throw new IllegalArgumentException(
-                        "page evidence must follow the verified local checkpoint");
+                        "page evidence must be sequential and start at page 1");
             }
         }
         if (terminalState == J3ManualCallIntentState.COMPLETED) {
-            if (completedPages != 5 || failedPage != null || !"NONE".equals(terminalCode)
-                    || pageAttempts.size() != 5 - initialCompletedPages
+            if (completedPages < 1 || failedPage != null || !"NONE".equals(terminalCode)
+                    || pageAttempts.size() != completedPages
                     || pageAttempts.stream().anyMatch(attempt -> !attempt.snapshotRecorded())
-                    || finalCircuitReason != J3CircuitReason.QUALIFICATION_TERMINAL_LOCK) {
+                    || !Boolean.FALSE.equals(pageAttempts.getLast().hasNextPage())
+                    || pageAttempts.stream().limit(pageAttempts.size() - 1L)
+                            .anyMatch(attempt -> !Boolean.TRUE.equals(
+                                    attempt.hasNextPage()))
+                    || finalCircuitReason
+                            != J3CircuitReason.MANUAL_COLLECTION_TERMINAL_LOCK) {
                 throw new IllegalArgumentException(
-                        "completed evidence requires five persisted pages and a terminal lock");
+                        "completed evidence requires persisted pages and a terminal lock");
             }
         }
         else {
@@ -72,6 +79,14 @@ public record J3MinimizedQualificationEvidence(
                     && pageAttempts.size() != completedAttempts + 1) {
                 throw new IllegalArgumentException(
                         "page attempts must stop before or on the terminal page");
+            }
+            if ("PAGINATION_LIMIT_REACHED".equals(terminalCode)
+                    && (completedPages
+                                    != ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE
+                            || pageAttempts.stream().anyMatch(
+                                    attempt -> !Boolean.TRUE.equals(attempt.hasNextPage())))) {
+                throw new IllegalArgumentException(
+                        "the pagination limit requires 25 continuing parsed pages");
             }
         }
     }

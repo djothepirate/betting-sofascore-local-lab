@@ -32,7 +32,7 @@ La relation future autorisée est un export JSON normalisé et versionné. Aucun
 │  ├─ ConnectorGate = LOCKED_OFFLINE_J3_POLICY              │
 │  ├─ Politique J3 et circuit en mémoire                    │
 │  ├─ Transport HTTP simulé, loopback strict                │
-│  ├─ Chemin J3 fournisseur cinq pages, opt-in              │
+│  ├─ Collecte J3 manuelle 1..N, opt-in et plafonnée        │
 │  ├─ Catalogue logique fermé par défaut                    │
 │  ├─ Flyway / JDBC / JPA                                   │
 │  └─ Actuator                                              │
@@ -55,7 +55,7 @@ VPS       : aucune connexion
 |---|---|
 | `config` | propriétés typées, garde de liaison locale, initialisation du dossier d’export, en-têtes de sécurité |
 | `domain.provider` | types logiques, définition de catalogue, mode du connecteur et requête fournisseur J3 fermée |
-| `application` | verrou général, politique J3, confirmation à usage unique et orchestration séquentielle des cinq pages |
+| `application` | verrou général, politique J3, confirmation à usage unique et orchestration séquentielle pilotée par `hasNextPage` |
 | `adapter.sofascore` | catalogue fermé par défaut, adaptateur fournisseur général bloqué, transport loopback simulé et client J3 exact sans proxy ni redirection |
 | `adapter.persistence` | conservation JDBC des preuves brutes et déduplication atomique |
 | `adapter.web` | tableau de bord et vues locales |
@@ -63,8 +63,8 @@ VPS       : aucune connexion
 | `fixtures` | corpus synthétique et parsing hors ligne J2 |
 
 Le connecteur général demeure bloqué. Un `RestClient` distinct est construit uniquement pour le
-chemin de qualification J3 borné ; il ne reçoit qu’une requête de domaine validée et ne peut viser
-que l’origine `https://www.sofascore.com`, la date `2026-08-13` et les pages `1` à `5`.
+chemin manuel J3 borné ; il ne reçoit qu’une requête de domaine validée et ne peut viser que
+l’origine `https://www.sofascore.com`, une date ISO explicite et les pages `1` à `25`.
 
 ## 4. Défense en profondeur J3
 
@@ -78,13 +78,13 @@ Configuration opt-in            origine exacte + SCHEDULED_EVENTS seul
 Contrôle opérateur              arrêt global + circuit + confirmation unique
           │
           ▼
-Requête de domaine              date fixe + pages 1..5 + chemin fermé
+Requête de domaine              date ISO + pages 1..25 + chemin fermé
           │
           ▼
 Transport J3                    sans proxy, redirection, cookie ni jeton
           │
           ▼
-Orchestrateur                   séquentiel, délai >= 3 s, arrêt au 1er incident
+Orchestrateur                   page 1, hasNextPage, délai >= 3 s, plafond 25
 ```
 
 La suppression d’une seule barrière ne permet donc pas un appel accidentel. Le bouton réel reste
@@ -123,7 +123,7 @@ n’autorise toujours aucun appel.
 
 | Type | Cache initial | Déclenchement prévu | Appelable actuellement |
 |---|---:|---|---|
-| `SCHEDULED_EVENTS` | 10 min | manuel | uniquement en qualification J3 opt-in |
+| `SCHEDULED_EVENTS` | 10 min | manuel | uniquement par séquence J3 opt-in |
 | `EVENT_DETAILS` | 15 min | manuel prévu | non |
 | `EVENT_STATISTICS` | 30 min | manuel prévu | non |
 | `EVENT_INCIDENTS` | 15 min | manuel prévu | non |
@@ -132,8 +132,9 @@ n’autorise toujours aucun appel.
 | `TEAM_RECENT_EVENTS` | 1 h | manuel prévu | non |
 
 Les autres familles restent non appelables. Le chemin J3 ne constitue pas un modèle d’URI général :
-la date `2026-08-13`, les cinq pages, l’origine et le chemin sont fermés dans le domaine, et aucune
-pagination supplémentaire ne peut être découverte depuis une réponse.
+seuls une date ISO, l’origine et le chemin `scheduled-tournaments` sont acceptés. La pagination
+commence obligatoirement à 1, continue uniquement sur `hasNextPage=true` et s’arrête avant la page
+26 même si le fournisseur annonce encore une suite.
 
 ## 7. Tests
 
@@ -148,7 +149,8 @@ pagination supplémentaire ne peut être découverte depuis une réponse.
 - validation des métadonnées et des preuves brutes ;
 - orchestration et transport HTTP simulé sur boucle locale ;
 - validation du transport fournisseur avec `MockRestServiceServer`, sans connexion réseau ;
-- ordre des cinq pages, délai minimal, persistance avant parsing et arrêt au premier incident ;
+- ordre dynamique depuis la page 1, terminaison par `hasNextPage=false`, plafond 25, délai minimal,
+  persistance avant parsing et arrêt au premier incident ;
 - rendu du contrôleur.
 
 ### Intégration
@@ -167,7 +169,7 @@ activation explicite de la configuration. Aucune suite Maven ne réalise ce gest
 - normalisation persistée après parsing ;
 - parseurs et DTO externes au-delà de `scheduled-events-v1` ;
 - persistance du circuit et des incidents ;
-- généralisation des dates, pages, endpoints ou origines au-delà de la qualification J3 ;
+- ajout d’autres endpoints, sports ou origines au-delà du chemin J3 qualifié ;
 - export canonique ;
 - push HTTPS vers le Betting Project ;
 - tout polling ou usage live.
@@ -179,4 +181,5 @@ Le modèle de décision et le circuit J3 désormais actés sont détaillés dans
 `docs/architecture/J3-RAW-SNAPSHOT-PERSISTENCE.md`. Le transport loopback est détaillé dans
 `docs/architecture/J3-GUARDED-SCHEDULED-EVENTS-TRANSPORT.md`. Le chemin fournisseur strictement
 borné est détaillé dans `docs/architecture/J3-FIVE-PAGE-PROVIDER-QUALIFICATION.md`. Il ne déverrouille
-ni le connecteur général, ni le profil live, ni les autres familles du catalogue.
+ni le connecteur général, ni le profil live, ni les autres familles du catalogue. Le parcours actif
+répétable est détaillé dans `docs/architecture/J3-DYNAMIC-MANUAL-PAGINATION.md`.

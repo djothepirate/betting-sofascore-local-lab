@@ -34,7 +34,7 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-class J3FivePageManualCallServiceTest {
+class J3DynamicManualCallServiceTest {
 
     private static final Instant NOW = Instant.parse("2026-08-13T10:00:00Z");
     private static final LocalDate DATE = LocalDate.parse("2026-08-13");
@@ -43,22 +43,29 @@ class J3FivePageManualCallServiceTest {
     private static final URI ORIGIN = URI.create("https://www.sofascore.com");
 
     @Test
-    void executesExactlyFivePagesInOrderWithThreeSecondsBetweenStarts() throws Exception {
+    void followsHasNextPageUntilFalseWithThreeSecondsBetweenStarts() throws Exception {
         MutableClock clock = new MutableClock(NOW);
         RecordingStore store = new RecordingStore();
         List<Integer> pages = new ArrayList<>();
         List<Instant> starts = new ArrayList<>();
         List<Duration> waits = new ArrayList<>();
-        byte[] body = Files.readAllBytes(Path.of("fixtures/scheduled-events/nominal.json"));
+        byte[] terminalBody = Files.readAllBytes(
+                Path.of("fixtures/scheduled-events/nominal.json"));
         ScheduledEventsProviderPageTransport transport = request -> {
             pages.add(request.page());
             starts.add(clock.instant());
             Instant requestedAt = clock.instant();
             clock.advance(Duration.ofMillis(25));
-            return response(request, requestedAt, clock.instant(), 200, body);
+            return response(
+                    request,
+                    requestedAt,
+                    clock.instant(),
+                    200,
+                    withHasNextPage(terminalBody, request.page() < 5));
         };
         J3ManualCallControlService control = readyControl(clock);
-        J3QualificationEvidenceService evidenceService = new J3QualificationEvidenceService();
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
         var service = service(control, transport, store, evidenceService, clock, duration -> {
             waits.add(duration);
             clock.advance(duration);
@@ -83,13 +90,17 @@ class J3FivePageManualCallServiceTest {
         assertThat(control.snapshot().globalStopActive()).isTrue();
         assertThat(control.snapshot().circuitState()).isEqualTo(J3CircuitState.LOCKED);
         assertThat(control.snapshot().circuitReason())
-                .isEqualTo(J3CircuitReason.QUALIFICATION_TERMINAL_LOCK);
+                .isEqualTo(J3CircuitReason.MANUAL_COLLECTION_TERMINAL_LOCK);
         var evidence = evidenceService.latestDocument().orElseThrow();
         assertThat(evidence.evidence().pageAttempts()).hasSize(5);
         assertThat(evidence.reportText())
                 .contains("PAGES_ATTEMPTED=1,2,3,4,5")
+                .contains("PAGINATION_MODE=HAS_NEXT_PAGE")
+                .contains("MAXIMUM_PAGE_LIMIT=25")
+                .contains("PAGE_1_HAS_NEXT_PAGE=true")
+                .contains("PAGE_5_HAS_NEXT_PAGE=false")
                 .contains("FINAL_GLOBAL_STOP=ACTIVE")
-                .contains("FINAL_CIRCUIT_REASON=QUALIFICATION_TERMINAL_LOCK")
+                .contains("FINAL_CIRCUIT_REASON=MANUAL_COLLECTION_TERMINAL_LOCK")
                 .contains("RAW_PAYLOAD_INCLUDED=NO")
                 .doesNotContain("https://www.sofascore.com")
                 .doesNotContain("\"events\"");
@@ -102,12 +113,11 @@ class J3FivePageManualCallServiceTest {
     }
 
     @Test
-    void resumesAtPageThreeAndIncludesBothVerifiedCheckpointsInTerminalEvidence()
+    void stopsNormallyAfterPageOneWhenItIsTheLastAvailablePage()
             throws Exception {
         MutableClock clock = new MutableClock(NOW);
         RecordingStore store = new RecordingStore();
         List<Integer> pages = new ArrayList<>();
-        List<Duration> waits = new ArrayList<>();
         byte[] body = Files.readAllBytes(Path.of("fixtures/scheduled-events/nominal.json"));
         ScheduledEventsProviderPageTransport transport = request -> {
             pages.add(request.page());
@@ -115,28 +125,26 @@ class J3FivePageManualCallServiceTest {
             clock.advance(Duration.ofMillis(25));
             return response(request, requestedAt, clock.instant(), 200, body);
         };
-        J3ManualCallControlService control = readyControl(clock, 3);
-        J3QualificationEvidenceService evidenceService = new J3QualificationEvidenceService();
-        var service = service(control, transport, store, evidenceService, clock, duration -> {
-            waits.add(duration);
-            clock.advance(duration);
-        });
+        J3ManualCallControlService control = readyControl(clock);
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
+        var service = service(control, transport, store, evidenceService, clock, clock::advance);
 
         var result = service.execute(REQUEST_ID);
 
         assertThat(result.completed()).isTrue();
-        assertThat(pages).containsExactly(3, 4, 5);
-        assertThat(waits).hasSize(2);
-        assertThat(store.saved).hasSize(3);
-        assertThat(control.snapshot().intent().firstPage()).isEqualTo(3);
-        assertThat(control.snapshot().intent().completedPages()).isEqualTo(5);
+        assertThat(result.completedPages()).isEqualTo(1);
+        assertThat(pages).containsExactly(1);
+        assertThat(store.saved).hasSize(1);
+        assertThat(control.snapshot().intent().firstPage()).isEqualTo(1);
+        assertThat(control.snapshot().intent().completedPages()).isEqualTo(1);
         assertThat(evidenceService.latestDocument().orElseThrow().reportText())
-                .contains("J3_MINIMIZED_EVIDENCE_VERSION=2")
-                .contains("VERIFIED_LOCAL_CHECKPOINT_PAGES=1,2")
-                .contains("PROVIDER_RESUME_FIRST_PAGE=3")
-                .contains("PAGES_ATTEMPTED=3,4,5")
-                .contains("PAGES_COMPLETED=5")
-                .doesNotContain("PAGE_1_REQUESTED_AT")
+                .contains("J3_MINIMIZED_EVIDENCE_VERSION=3")
+                .contains("PROVIDER_FIRST_PAGE=1")
+                .contains("PAGES_ATTEMPTED=1")
+                .contains("PAGES_COMPLETED_COUNT=1")
+                .contains("LAST_COMPLETED_PAGE=1")
+                .contains("PAGE_1_HAS_NEXT_PAGE=false")
                 .doesNotContain("PAGE_2_REQUESTED_AT");
     }
 
@@ -145,7 +153,9 @@ class J3FivePageManualCallServiceTest {
         MutableClock clock = new MutableClock(NOW);
         RecordingStore store = new RecordingStore();
         List<Integer> pages = new ArrayList<>();
-        byte[] validBody = Files.readAllBytes(Path.of("fixtures/scheduled-events/nominal.json"));
+        byte[] terminalBody = Files.readAllBytes(
+                Path.of("fixtures/scheduled-events/nominal.json"));
+        byte[] validBody = withHasNextPage(terminalBody, true);
         byte[] forbiddenBody = "{\"error\":\"forbidden\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8);
         ScheduledEventsProviderPageTransport transport = request -> {
             pages.add(request.page());
@@ -159,7 +169,8 @@ class J3FivePageManualCallServiceTest {
                     request.page() == 2 ? forbiddenBody : validBody);
         };
         J3ManualCallControlService control = readyControl(clock);
-        J3QualificationEvidenceService evidenceService = new J3QualificationEvidenceService();
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
         var service = service(
                 control,
                 transport,
@@ -180,7 +191,7 @@ class J3FivePageManualCallServiceTest {
                 .isEqualTo(RawSnapshotSchemaStatus.TRANSPORT_ERROR);
         assertThat(control.snapshot().circuitState()).isEqualTo(J3CircuitState.LOCKED);
         assertThat(control.snapshot().circuitReason())
-                .isEqualTo(J3CircuitReason.QUALIFICATION_TERMINAL_LOCK);
+                .isEqualTo(J3CircuitReason.MANUAL_COLLECTION_TERMINAL_LOCK);
         assertThat(control.snapshot().intent().state())
                 .isEqualTo(J3ManualCallIntentState.FAILED);
         var evidence = evidenceService.latestDocument().orElseThrow();
@@ -196,7 +207,8 @@ class J3FivePageManualCallServiceTest {
     void recordsOnlyMinimizedAttemptMetadataWhenTransportFailsBeforeSnapshot() {
         MutableClock clock = new MutableClock(NOW);
         RecordingStore store = new RecordingStore();
-        J3QualificationEvidenceService evidenceService = new J3QualificationEvidenceService();
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
         ScheduledEventsProviderPageTransport transport = request -> {
             throw new ScheduledEventsTransportException(
                     ScheduledEventsTransportFailure.TIMEOUT);
@@ -218,7 +230,7 @@ class J3FivePageManualCallServiceTest {
         assertThat(store.saved).isEmpty();
         assertThat(control.snapshot().globalStopActive()).isTrue();
         assertThat(control.snapshot().circuitReason())
-                .isEqualTo(J3CircuitReason.QUALIFICATION_TERMINAL_LOCK);
+                .isEqualTo(J3CircuitReason.MANUAL_COLLECTION_TERMINAL_LOCK);
         assertThat(evidenceService.latestDocument().orElseThrow().reportText())
                 .contains("PAGES_ATTEMPTED=1")
                 .contains("PAGE_1_SNAPSHOT_RECORDED=NO")
@@ -227,14 +239,50 @@ class J3FivePageManualCallServiceTest {
                 .contains("PAGE_1_TERMINAL_CODE=TIMEOUT");
     }
 
-    private static J3FivePageManualCallService service(
+    @Test
+    void stopsBeforePageTwentySixWhenProviderStillAnnouncesAnotherPage()
+            throws Exception {
+        MutableClock clock = new MutableClock(NOW);
+        RecordingStore store = new RecordingStore();
+        List<Integer> pages = new ArrayList<>();
+        byte[] terminalBody = Files.readAllBytes(
+                Path.of("fixtures/scheduled-events/nominal.json"));
+        byte[] continuingBody = withHasNextPage(terminalBody, true);
+        ScheduledEventsProviderPageTransport transport = request -> {
+            pages.add(request.page());
+            Instant requestedAt = clock.instant();
+            clock.advance(Duration.ofMillis(10));
+            return response(request, requestedAt, clock.instant(), 200, continuingBody);
+        };
+        J3ManualCallControlService control = readyControl(clock);
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
+        var service = service(
+                control, transport, store, evidenceService, clock, clock::advance);
+
+        var result = service.execute(REQUEST_ID);
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.completedPages()).isEqualTo(25);
+        assertThat(result.failedPage()).isEqualTo(26);
+        assertThat(result.terminalCode()).isEqualTo("PAGINATION_LIMIT_REACHED");
+        assertThat(pages).containsExactlyElementsOf(
+                java.util.stream.IntStream.rangeClosed(1, 25).boxed().toList());
+        assertThat(evidenceService.latestDocument().orElseThrow().reportText())
+                .contains("MAXIMUM_PAGE_LIMIT=25")
+                .contains("FAILED_PAGE=26")
+                .contains("PAGE_25_HAS_NEXT_PAGE=true")
+                .doesNotContain("PAGE_26_REQUESTED_AT");
+    }
+
+    private static J3DynamicManualCallService service(
             J3ManualCallControlService control,
             ScheduledEventsProviderPageTransport transport,
             RecordingStore store,
-            J3QualificationEvidenceService evidenceService,
+            J3ManualCollectionEvidenceService evidenceService,
             Clock clock,
-            J3FivePageManualCallService.InterPageDelay delay) {
-        return new J3FivePageManualCallService(
+            J3DynamicManualCallService.InterPageDelay delay) {
+        return new J3DynamicManualCallService(
                 control,
                 transport,
                 new J3ScheduledEventsOutcomeProcessor(
@@ -249,15 +297,11 @@ class J3FivePageManualCallServiceTest {
     }
 
     private static J3ManualCallControlService readyControl(Clock clock) {
-        return readyControl(clock, 1);
-    }
-
-    private static J3ManualCallControlService readyControl(Clock clock, int firstPage) {
         J3ManualCallControlService control = new J3ManualCallControlService(
                 clock,
                 () -> REQUEST_ID,
                 () -> 42,
-                () -> J3ProviderQualificationSnapshot.available(ORIGIN, firstPage));
+                () -> J3ProviderQualificationSnapshot.available(ORIGIN));
         control.rearmAfterGlobalStop();
         control.activateByOperator();
         var prepared = control.prepare(DATE);
@@ -268,6 +312,14 @@ class J3FivePageManualCallServiceTest {
         assertThat(control.snapshot().intent().state())
                 .isEqualTo(J3ManualCallIntentState.CONFIRMED_READY);
         return control;
+    }
+
+    private static byte[] withHasNextPage(byte[] source, boolean value) {
+        String json = new String(source, java.nio.charset.StandardCharsets.UTF_8);
+        return json.replace(
+                        "\"hasNextPage\": false",
+                        "\"hasNextPage\": " + value)
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8);
     }
 
     private static ScheduledEventsTransportResponse response(

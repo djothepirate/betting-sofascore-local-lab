@@ -35,8 +35,6 @@ public record ManualCallControlView(
                 || sourceIntent.state() == J3ManualCallIntentState.CONFIRMED_BLOCKED
                 || sourceIntent.state() == J3ManualCallIntentState.CONFIRMED_READY
                 || sourceIntent.state() == J3ManualCallIntentState.EXECUTING);
-        boolean qualificationConsumed = source.providerBlockers().contains(
-                "J3_QUALIFICATION_ALREADY_CONSUMED");
         boolean realCallEnabled = source.providerTransportAvailable()
                 && sourceIntent != null
                 && sourceIntent.state() == J3ManualCallIntentState.CONFIRMED_READY;
@@ -49,12 +47,11 @@ public record ManualCallControlView(
                 source.circuitChangedAt().toString(),
                 source.retryNotBefore() == null ? "NONE" : source.retryNotBefore().toString(),
                 source.suggestedDate().toString(),
-                source.globalStopActive() && !qualificationConsumed,
+                source.globalStopActive(),
                 !source.globalStopActive() && source.circuitState() == J3CircuitState.LOCKED,
                 source.operatorActivated()
                         && source.providerTransportAvailable()
-                        && !activeIntent
-                        && !qualificationConsumed,
+                        && !activeIntent,
                 source.providerTransportAvailable(),
                 realCallEnabled,
                 source.providerBlockers(),
@@ -89,8 +86,8 @@ public record ManualCallControlView(
                     source.date().toString(),
                     source.requestKey(),
                     source.firstPage(),
-                    source.firstPage() + "-5",
-                    source.firstPage() > 1,
+                    "1-N (max 25)",
+                    false,
                     source.state().name(),
                     source.confirmationPhrase(),
                     source.preparedAt().toString(),

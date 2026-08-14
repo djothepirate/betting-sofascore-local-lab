@@ -266,6 +266,46 @@ tentatives de cette reprise. La présence d’un snapshot de page 3, 4 ou 5 bloq
 reprise, même après redémarrage. Ne pas effacer ou modifier un snapshot pour contourner ce verrou.
 L’interrogation complète répétable depuis l’interface demeure hors périmètre.
 
+### 3.8 Effectuer une collecte manuelle répétable à pagination dynamique
+
+Cette procédure remplace fonctionnellement la reprise fixe de la section 3.7. Elle démarre toujours
+à la page 1 et laisse `scheduled-events-v1` décider de la terminaison à partir du booléen
+`hasNextPage`. Les anciennes preuves et classifications de qualification restent historiques.
+
+1. vérifier PostgreSQL local, l’exposition `127.0.0.1:8087` et les quatre valeurs J3 de la section
+   3.5 ;
+2. vérifier qu’aucun cookie, jeton, compte, donnée de session ou proxy n’est configuré ;
+3. démarrer l’application avec le profil `local` ;
+4. vérifier `COLLECTE MANUELLE DYNAMIQUE PRÊTE` et
+   `PAGINATION DYNAMIQUE — CONFIRMATION REQUISE` ;
+5. lever l’arrêt global puis activer le circuit ;
+6. choisir la date au format `AAAA-MM-JJ` et sélectionner **« 3. Préparer la collecte »** ;
+7. vérifier la clé `SCHEDULED_EVENTS|date=<date>|pagination=has-next-page|max=25` ;
+8. recopier exactement la phrase, acquitter le départ page 1, `hasNextPage` et le plafond 25,
+   puis confirmer ;
+9. vérifier `CONFIRMED_READY`, puis sélectionner une seule fois
+   **« 5. Lancer la collecte manuelle paginée — PAGE 1 À N »** ;
+10. attendre le retour sans actualiser la page ;
+11. vérifier soit `COMPLETED`, soit l’arrêt sans retry au premier incident ou avant la page 26 ;
+12. télécharger la preuve et contrôler au minimum :
+
+```text
+J3_MINIMIZED_EVIDENCE_VERSION=3
+PAGINATION_MODE=HAS_NEXT_PAGE
+PROVIDER_FIRST_PAGE=1
+MAXIMUM_PAGE_LIMIT=25
+FINAL_GLOBAL_STOP=ACTIVE
+AUTOMATIC_RETRY_EXECUTED=NO
+POLLING_OR_SCHEDULE_EXECUTED=NO
+RAW_PAYLOAD_INCLUDED=NO
+PROVIDER_URI_INCLUDED=NO
+```
+
+Pour répéter l’interrogation, lever à nouveau l’arrêt global : l’intention terminale précédente est
+alors retirée. Réactiver le circuit et recommencer depuis l’étape 6. Ne jamais contourner un
+incident en modifiant ou supprimant un snapshot ; analyser d’abord la preuve et la classification
+locale. Remettre la configuration `.env` en état sûr après la séance.
+
 ## 4. Validation
 
 ### 4.1 Suite standard

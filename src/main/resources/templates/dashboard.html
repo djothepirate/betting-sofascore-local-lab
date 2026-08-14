@@ -11,7 +11,7 @@
   <div class="shell">
     <p class="eyebrow">BETTING PROJECT / SOFASCORE LOCAL LAB</p>
     <h1>Tableau de bord local</h1>
-    <p class="subtitle">J3 — reprise manuelle explicite à la page 3, après vérification locale des pages 1 et 2.</p>
+    <p class="subtitle">J3 — collecte manuelle répétable, paginée dynamiquement par <span class="mono">hasNextPage</span>.</p>
   </div>
 </header>
 
@@ -27,11 +27,11 @@
   <section class="grid cards" aria-label="État du laboratoire">
     <article class="card">
       <p class="label">Connecteur</p>
-      <p th:class="${dashboard.qualificationTransportAvailable}
+      <p th:class="${dashboard.manualCollectionTransportAvailable}
              ? 'metric safe'
              : 'metric danger'"
-         th:text="${dashboard.qualificationTransportAvailable
-             ? 'REPRISE J3 PAGE 3 PRÊTE'
+         th:text="${dashboard.manualCollectionTransportAvailable
+             ? 'COLLECTE MANUELLE DYNAMIQUE PRÊTE'
              : (dashboard.configurationEnabled
                 ? 'CONFIG_ENABLED_BUT_QUALIFICATION_BLOCKED'
                 : 'DISABLED')}">DISABLED</p>
@@ -127,7 +127,7 @@
             th:text="${manualCall.globalStopActive ? 'ARRÊT GLOBAL ACTIF' : 'ARRÊT GLOBAL LEVÉ'}">ARRÊT GLOBAL ACTIF</span>
     </div>
 
-    <p class="control-intro">Une confirmation ne déclenche rien à elle seule. La reprise exige les snapshots locaux qualifiés des pages 1 et 2 puis une action séparée lance uniquement les pages 3 à 5, dans l’ordre, sans cookie, jeton, compte, session ni retry.</p>
+    <p class="control-intro">Une confirmation ne déclenche rien à elle seule. Chaque collecte repart de la page 1 et continue strictement tant que le JSON parsé indique <span class="mono">hasNextPage=true</span>, dans l’ordre, sans cookie, jeton, compte, session ni retry. Le plafond local est fixé à 25 pages.</p>
 
     <div th:if="${manualCallMessage != null}"
          class="notice"
@@ -147,7 +147,7 @@
           <div><dt>Incident actif</dt><dd th:text="${manualCall.incidentActive ? 'OUI' : 'NON'}">NON</dd></div>
           <div><dt>Transport fournisseur</dt>
             <dd th:class="${manualCall.providerTransportAvailable ? 'safe' : 'danger'}"
-                th:text="${manualCall.realCallEnabled ? 'PRÊT POUR REPRISE UNIQUE' : (manualCall.providerTransportAvailable ? 'CHECKPOINTS PAGES 1 ET 2 VALIDÉS — CONFIRMATION REQUISE' : 'INDISPONIBLE')}">INDISPONIBLE</dd>
+                th:text="${manualCall.realCallEnabled ? 'PRÊT POUR COLLECTE MANUELLE' : (manualCall.providerTransportAvailable ? 'PAGINATION DYNAMIQUE — CONFIRMATION REQUISE' : 'INDISPONIBLE')}">INDISPONIBLE</dd>
           </div>
         </dl>
 
@@ -177,12 +177,10 @@
               th:action="@{/manual-call/prepare}"
               method="post">
           <input type="hidden" name="localFormToken" th:value="${localFormToken}">
-          <label for="manual-call-date">Date qualifiée — pages 1 et 2 conservées, reprise pages 3 à 5</label>
+          <label for="manual-call-date">Date à collecter — départ page 1, fin pilotée par hasNextPage</label>
           <input id="manual-call-date" type="date" name="date" required
-                 th:value="${manualCall.suggestedDate}"
-                 th:min="${manualCall.suggestedDate}"
-                 th:max="${manualCall.suggestedDate}">
-          <button class="button-primary" type="submit">3. Préparer la reprise</button>
+                 th:value="${manualCall.suggestedDate}">
+          <button class="button-primary" type="submit">3. Préparer la collecte</button>
         </form>
 
         <div th:if="${manualCall.intent == null}" class="empty-state">
@@ -205,12 +203,12 @@
             <input type="hidden" name="localFormToken" th:value="${localFormToken}">
             <input type="hidden" name="requestId" th:value="${manualCall.intent.requestId}">
             <p>Recopiez exactement cette phrase à usage unique avant son expiration :</p>
-            <code class="confirmation-phrase" th:text="${manualCall.intent.confirmationPhrase}">CONFIRMER SCHEDULED_EVENTS 2026-08-13 REPRISE PAGES 3-5 000042</code>
+            <code class="confirmation-phrase" th:text="${manualCall.intent.confirmationPhrase}">CONFIRMER SCHEDULED_EVENTS 2026-08-14 PAGINATION DYNAMIQUE MAX 25 000042</code>
             <label for="confirmation-text">Phrase de confirmation</label>
             <input id="confirmation-text" type="text" name="confirmationText" maxlength="128" autocomplete="off" required>
             <label class="acknowledgement" for="acknowledged">
               <input id="acknowledged" type="checkbox" name="acknowledged" value="true" required>
-              Je confirme la date, les checkpoints locaux des pages 1 et 2, la reprise des pages 3 à 5, l’absence de données de session et comprends que le déclenchement reste une action séparée.
+              Je confirme la date, le départ obligatoire en page 1, la pagination pilotée par hasNextPage, le plafond de 25 pages, l’absence de données de session et comprends que le déclenchement reste une action séparée.
             </label>
             <button class="button-primary" type="submit">4. Confirmer l’intention locale</button>
           </form>
@@ -220,24 +218,24 @@
           </div>
 
           <div th:if="${manualCall.intent.confirmedReady}" class="notice notice-warning">
-            Reprise confirmée. Vérifiez une dernière fois la date : le bouton ci-dessous déclenchera une seule séquence, pages <span th:text="${manualCall.intent.pageRange}">3-5</span>, avec arrêt au premier incident.
+            Collecte confirmée. Vérifiez une dernière fois la date : le bouton ci-dessous déclenchera une seule séquence <span th:text="${manualCall.intent.pageRange}">1-N (max 25)</span>, avec arrêt sur hasNextPage=false ou au premier incident.
           </div>
 
           <div th:if="${manualCall.intent.executing}" class="notice notice-warning">
-            Reprise en cours. N’actualisez pas la page ; l’arrêt global reste prioritaire entre deux pages.
+            Collecte en cours. N’actualisez pas la page ; l’arrêt global reste prioritaire entre deux pages.
           </div>
 
           <div th:if="${manualCall.intent.completed}" class="notice notice-safe">
-            Reprise terminée : les cinq pages sont conservées et classées localement.
+            Collecte terminée : toutes les pages annoncées sont conservées et classées localement.
           </div>
 
           <div th:if="${manualCall.intent.failed}" class="notice notice-danger">
-            Reprise arrêtée sans retry à la page <span th:text="${manualCall.intent.failedPage}">3</span>
+            Collecte arrêtée sans retry avant la page <span th:text="${manualCall.intent.failedPage}">2</span>
             — <span class="mono" th:text="${manualCall.intent.terminalCode}">INCIDENT</span>.
           </div>
 
           <p th:if="${manualCall.intent.executing or manualCall.intent.completed or manualCall.intent.failed}">
-            Pages disponibles, checkpoints inclus : <strong th:text="${manualCall.intent.completedPages}">2</strong> / 5
+            Pages collectées dans cette séquence : <strong th:text="${manualCall.intent.completedPages}">1</strong>
           </p>
 
           <div th:if="${!manualCall.intent.awaitingConfirmation
@@ -256,9 +254,9 @@
               method="post">
           <input type="hidden" name="localFormToken" th:value="${localFormToken}">
           <input type="hidden" name="requestId" th:value="${manualCall.intent.requestId}">
-          <button type="submit" class="real-call-button">5. Lancer la reprise fournisseur unique — PAGES 3 À 5</button>
+          <button type="submit" class="real-call-button">5. Lancer la collecte manuelle paginée — PAGE 1 À N</button>
         </form>
-        <button th:if="${!manualCall.realCallEnabled}" type="button" class="real-call-button" disabled>Lancer la reprise fournisseur — BLOQUÉE</button>
+        <button th:if="${!manualCall.realCallEnabled}" type="button" class="real-call-button" disabled>Lancer la collecte fournisseur — BLOQUÉE</button>
       </div>
     </div>
 
@@ -270,18 +268,18 @@
     </div>
 
     <section class="qualification-evidence"
-             th:if="${qualificationEvidence != null}"
+             th:if="${collectionEvidence != null}"
              aria-labelledby="qualification-evidence-title">
       <div class="panel-heading">
         <div>
           <p class="label">J3 / Preuve terminale minimisée</p>
-          <h3 id="qualification-evidence-title">Métadonnées de qualification collectées</h3>
+          <h3 id="qualification-evidence-title">Métadonnées de collecte minimisées</h3>
         </div>
         <span class="chip chip-safe">ARRÊT GLOBAL RÉAPPLIQUÉ</span>
       </div>
       <p>Cette preuve est produite après la séquence terminale. Elle contient les statuts, horodatages,
         tailles et empreintes SHA-256 de persistance, sans payload JSON, URI, en-tête ni donnée de session.</p>
-      <pre class="evidence-report" th:text="${qualificationEvidence.reportText}">J3_MINIMIZED_EVIDENCE_VERSION=1</pre>
+      <pre class="evidence-report" th:text="${collectionEvidence.reportText}">J3_MINIMIZED_EVIDENCE_VERSION=3</pre>
       <a class="evidence-download" th:href="@{/manual-call/evidence}" href="/manual-call/evidence">
         Télécharger la preuve minimisée (.txt)
       </a>
@@ -295,8 +293,8 @@
         <h2 id="catalog-title">Familles prévues</h2>
       </div>
       <span class="chip"
-            th:classappend="${dashboard.qualificationTransportAvailable} ? ' chip-safe' : ' chip-warning'"
-            th:text="${dashboard.qualificationTransportAvailable ? 'CHECKPOINTS PAGES 1 ET 2 ET REPRISE 3 À 5 PRÊTS' : 'REPRISE NON DISPONIBLE'}">REPRISE NON DISPONIBLE</span>
+            th:classappend="${dashboard.manualCollectionTransportAvailable} ? ' chip-safe' : ' chip-warning'"
+            th:text="${dashboard.manualCollectionTransportAvailable ? 'COLLECTE MANUELLE 1 À N PRÊTE' : 'COLLECTE NON DISPONIBLE'}">COLLECTE NON DISPONIBLE</span>
     </div>
     <div class="table-scroll">
       <table>

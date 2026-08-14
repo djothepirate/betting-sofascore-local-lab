@@ -995,3 +995,80 @@ délais inter-pages sont appliqués, que la preuve annonce les checkpoints `1,2`
 contient aucun horodatage de tentative pour les pages 1 ou 2. Le test Web confirme que l’interface
 rend le bouton `PAGES 3 À 5` et n’expose plus l’ancien bouton `PAGES 2 À 5` dans l’état
 `CONFIRMED_READY`.
+
+## 25. Collecte manuelle répétable à pagination dynamique
+
+Après la qualification humaine concluante des cinq pages du `2026-08-13`, le propriétaire conclut
+que la pagination réelle n’est pas fixée à cinq pages. L’endpoint qualifié suit le modèle :
+
+```text
+https://www.sofascore.com/api/v1/sport/football/scheduled-tournaments/<date>/page/<page_number>
+```
+
+La racine JSON expose `hasNextPage=true` lorsqu’une page suivante existe et `false` sur la dernière
+page. Le propriétaire autorise donc l’objectif précédemment annoncé : dynamiser ce processus dans
+l’interface et permettre sa répétition par de nouvelles séquences manuelles explicites.
+
+L’unité impose :
+
+```text
+PROVIDER_FIRST_PAGE=1
+PAGINATION_DRIVER=PARSED_HAS_NEXT_PAGE
+NORMAL_TERMINATION=HAS_NEXT_PAGE_FALSE
+LOCAL_MAXIMUM_PAGE=25
+PAGE_26_REQUEST_ALLOWED=NO
+MAXIMUM_CONCURRENCY=1
+MINIMUM_INTER_PAGE_DELAY=3_SECONDS
+PERSISTENCE_BEFORE_PARSING=YES
+STOP_ON_FIRST_INCIDENT=YES
+AUTOMATIC_RETRY=NO
+POLLING_OR_SCHEDULE=NO
+REPEAT_REQUIRES_NEW_EXPLICIT_SEQUENCE=YES
+IMPLEMENTATION_PROVIDER_CALLS=0
+```
+
+Une valeur `hasNextPage` absente ou non booléenne reste `SCHEMA_INCOMPATIBLE`. Après succès,
+incident ou plafond, l’arrêt global est réappliqué et le circuit reçoit
+`MANUAL_COLLECTION_TERMINAL_LOCK`. La levée explicite suivante retire l’intention terminale et
+permet une nouvelle date ou une nouvelle interrogation de la même date. La configuration J3 reste
+désactivée par défaut.
+
+La preuve minimisée v3 ajoute le mode de pagination, le plafond local et la valeur booléenne parsée
+pour chaque page. Elle n’expose toujours ni payload, ni URI, ni en-tête, ni phrase/identifiant de
+confirmation, ni donnée de session.
+
+L’unité modifie l’interface, le contrôle opérateur, l’orchestrateur, le résultat du parseur transmis
+à l’orchestration et les modèles de preuve. Elle ne modifie aucune migration ni aucun snapshot
+existant et n’exécute aucun appel fournisseur pendant ses tests.
+
+```text
+J3_DYNAMIC_MANUAL_PAGINATION=IMPLEMENTED
+J3_REPEATABLE_GUI_COLLECTION=IMPLEMENTED
+J3_FIXED_FIVE_PAGE_ASSUMPTION=REMOVED_FROM_ACTIVE_PATH
+J3_HISTORICAL_QUALIFICATION_EVIDENCE=PRESERVED
+J3_WORK_ORDER=IN_DEVELOPMENT
+```
+
+### 25.1 Validation technique de l’unité
+
+Validation consolidée exécutée le 2026-08-14 sur une copie locale sans `.env`, avec préflight et
+garde-fous source, puis Maven standard :
+
+```text
+PREFLIGHT_RESULT=PASS
+JAVA_TARGET=25
+SOURCE_GUARDRAIL_SCAN=PASS
+STANDARD_TESTS=148
+STANDARD_FAILURES=0
+STANDARD_ERRORS=0
+STANDARD_SKIPPED=0
+SPRING_BOOT_JAR=BUILT
+BUILD_GROUP=com.bettingproject
+SERVER_ADDRESS=127.0.0.1
+INTEGRATION_TESTS_EXECUTED=NO_PERSISTENCE_OR_MIGRATION_CHANGE
+SOFASCORE_NETWORK_CALLS_EXECUTED=NO
+```
+
+Les tests ciblés confirment une page terminale unique, une séquence `1,2,3,4,5` pilotée par
+`true,true,true,true,false`, les délais inter-pages, l’arrêt au premier incident, le refus de la
+page 26 après 25 valeurs `true`, la preuve v3 et le réarmement d’une nouvelle séquence explicite.

@@ -22,7 +22,8 @@ public record J3CircuitSnapshot(
         } else if (state == J3CircuitState.LOCKED) {
             if (reason != J3CircuitReason.STARTUP_LOCK
                     && reason != J3CircuitReason.OPERATOR_STOP
-                    && reason != J3CircuitReason.QUALIFICATION_TERMINAL_LOCK) {
+                    && reason != J3CircuitReason.QUALIFICATION_TERMINAL_LOCK
+                    && reason != J3CircuitReason.MANUAL_COLLECTION_TERMINAL_LOCK) {
                 throw new IllegalArgumentException(
                         "a locked circuit requires a recognized lock reason");
             }
@@ -33,7 +34,8 @@ public record J3CircuitSnapshot(
             if (reason == J3CircuitReason.NONE
                     || reason == J3CircuitReason.STARTUP_LOCK
                     || reason == J3CircuitReason.OPERATOR_STOP
-                    || reason == J3CircuitReason.QUALIFICATION_TERMINAL_LOCK) {
+                    || reason == J3CircuitReason.QUALIFICATION_TERMINAL_LOCK
+                    || reason == J3CircuitReason.MANUAL_COLLECTION_TERMINAL_LOCK) {
                 throw new IllegalArgumentException("an open circuit requires an incident reason");
             }
             if ((reason == J3CircuitReason.HTTP_TOO_MANY_REQUESTS)

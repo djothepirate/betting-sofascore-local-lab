@@ -19,14 +19,15 @@ public record J3MinimizedPageEvidence(
         Integer payloadSizeBytes,
         String payloadSha256,
         RawSnapshotSchemaStatus schemaStatus,
+        Boolean hasNextPage,
         String terminalCode) {
 
     private static final Pattern SHA256_PATTERN = Pattern.compile("^[0-9a-f]{64}$");
 
     public J3MinimizedPageEvidence {
         if (page < ScheduledEventsProviderPageRequest.FIRST_PAGE
-                || page > ScheduledEventsProviderPageRequest.LAST_PAGE) {
-            throw new IllegalArgumentException("page must be in the fixed qualification range");
+                || page > ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE) {
+            throw new IllegalArgumentException("page must be in the bounded collection range");
         }
         Objects.requireNonNull(requestedAt, "requestedAt");
         terminalCode = normalizeCode(terminalCode);
@@ -49,10 +50,14 @@ public record J3MinimizedPageEvidence(
             if (receivedAt.isBefore(requestedAt)) {
                 throw new IllegalArgumentException("receivedAt cannot precede requestedAt");
             }
+            if ((schemaStatus == RawSnapshotSchemaStatus.PARSED) != (hasNextPage != null)) {
+                throw new IllegalArgumentException(
+                        "only a parsed page may expose hasNextPage");
+            }
         }
         else if (receivedAt != null || httpStatus != null || latencyMillis != null
                 || persistenceOutcome != null || payloadSizeBytes != null
-                || payloadSha256 != null || schemaStatus != null) {
+                || payloadSha256 != null || schemaStatus != null || hasNextPage != null) {
             throw new IllegalArgumentException(
                     "a page without a snapshot cannot expose response metadata");
         }
@@ -63,6 +68,7 @@ public record J3MinimizedPageEvidence(
             ScheduledEventsTransportResponse response,
             RawSnapshotPersistenceResult persistence,
             RawSnapshotSchemaStatus schemaStatus,
+            Boolean hasNextPage,
             String terminalCode) {
         Objects.requireNonNull(response, "response");
         Objects.requireNonNull(persistence, "persistence");
@@ -77,6 +83,7 @@ public record J3MinimizedPageEvidence(
                 persistence.payloadSizeBytes(),
                 persistence.payloadSha256(),
                 schemaStatus,
+                hasNextPage,
                 terminalCode);
     }
 
@@ -87,6 +94,7 @@ public record J3MinimizedPageEvidence(
         return new J3MinimizedPageEvidence(
                 page,
                 requestedAt,
+                null,
                 null,
                 null,
                 null,

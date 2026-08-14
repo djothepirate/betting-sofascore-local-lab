@@ -58,14 +58,14 @@ public final class J3NetworkCircuit {
         return snapshot;
     }
 
-    public synchronized J3CircuitSnapshot lockAfterQualification(Instant lockedAt) {
+    public synchronized J3CircuitSnapshot lockAfterCollection(Instant lockedAt) {
         requireChronological(lockedAt);
         if (snapshot.state() == J3CircuitState.LOCKED) {
             throw new IllegalStateException("a locked circuit cannot be terminally locked again");
         }
         snapshot = new J3CircuitSnapshot(
                 J3CircuitState.LOCKED,
-                J3CircuitReason.QUALIFICATION_TERMINAL_LOCK,
+                J3CircuitReason.MANUAL_COLLECTION_TERMINAL_LOCK,
                 lockedAt,
                 null);
         return snapshot;
