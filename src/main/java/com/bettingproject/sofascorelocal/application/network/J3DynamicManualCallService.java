@@ -1,17 +1,22 @@
 package com.bettingproject.sofascorelocal.application.network;
 
+import com.bettingproject.sofascorelocal.adapter.sofascore.SofascoreEndpointCatalog;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.ScheduledEventsTransportException;
 import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
+import com.bettingproject.sofascorelocal.domain.provider.J3CachedScheduledEventsPage;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallExecutionClaim;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallExecutionResult;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallControlSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.J3MinimizedPageEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.J3MinimizedCollectionEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
+import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportResponse;
+import com.bettingproject.sofascorelocal.port.J3ScheduledEventsPageCache;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import com.bettingproject.sofascorelocal.port.ScheduledEventsProviderPageTransport;
 
@@ -32,10 +37,13 @@ public class J3DynamicManualCallService {
 
     private final J3ManualCallControlService controlService;
     private final ScheduledEventsProviderPageTransport transport;
+    private final J3ScheduledEventsPageCache pageCache;
+    private final ScheduledEventsV1Parser parser;
     private final J3ScheduledEventsOutcomeProcessor outcomeProcessor;
     private final J3SingleCallGuard callGuard;
     private final J3ManualCollectionEvidenceService evidenceService;
     private final Clock clock;
+    private final Duration cacheTtl;
     private final Duration minimumDelay;
     private final InterPageDelay interPageDelay;
 
@@ -44,7 +52,9 @@ public class J3DynamicManualCallService {
             J3ManualCallControlService controlService,
             ScheduledEventsProviderPageTransport transport,
             RawManualCallSnapshotStore snapshotStore,
+            J3ScheduledEventsPageCache pageCache,
             J3ManualCollectionEvidenceService evidenceService,
+            SofascoreEndpointCatalog endpointCatalog,
             SofascoreProperties properties) {
         this(
                 controlService,
@@ -53,9 +63,12 @@ public class J3DynamicManualCallService {
                         snapshotStore,
                         new ScheduledEventsV1Parser(),
                         controlService.circuit()),
+                pageCache,
+                new ScheduledEventsV1Parser(),
                 new J3SingleCallGuard(),
                 evidenceService,
                 Clock.systemUTC(),
+                endpointCatalog.get(SofascoreEndpointType.SCHEDULED_EVENTS).cacheTtl(),
                 properties.getMinimumDelay(),
                 duration -> Thread.sleep(duration));
     }
@@ -64,21 +77,30 @@ public class J3DynamicManualCallService {
             J3ManualCallControlService controlService,
             ScheduledEventsProviderPageTransport transport,
             J3ScheduledEventsOutcomeProcessor outcomeProcessor,
+            J3ScheduledEventsPageCache pageCache,
+            ScheduledEventsV1Parser parser,
             J3SingleCallGuard callGuard,
             J3ManualCollectionEvidenceService evidenceService,
             Clock clock,
+            Duration cacheTtl,
             Duration minimumDelay,
             InterPageDelay interPageDelay) {
         this.controlService = Objects.requireNonNull(controlService, "controlService");
         this.transport = Objects.requireNonNull(transport, "transport");
         this.outcomeProcessor = Objects.requireNonNull(outcomeProcessor, "outcomeProcessor");
+        this.pageCache = Objects.requireNonNull(pageCache, "pageCache");
+        this.parser = Objects.requireNonNull(parser, "parser");
         this.callGuard = Objects.requireNonNull(callGuard, "callGuard");
         this.evidenceService = Objects.requireNonNull(evidenceService, "evidenceService");
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.cacheTtl = Objects.requireNonNull(cacheTtl, "cacheTtl");
         this.minimumDelay = Objects.requireNonNull(minimumDelay, "minimumDelay");
         this.interPageDelay = Objects.requireNonNull(interPageDelay, "interPageDelay");
         if (minimumDelay.compareTo(Duration.ofSeconds(3)) < 0) {
             throw new IllegalArgumentException("minimumDelay must be at least three seconds");
+        }
+        if (cacheTtl.isZero() || cacheTtl.isNegative()) {
+            throw new IllegalArgumentException("cacheTtl must be positive");
         }
     }
 
@@ -96,6 +118,8 @@ public class J3DynamicManualCallService {
             Instant lastStartedAt = null;
             int initialCompletedPages = 0;
             int completedPages = initialCompletedPages;
+            int providerRequests = 0;
+            int cacheHits = 0;
 
             for (int page = claim.firstPage();
                     page <= ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE;
@@ -103,28 +127,86 @@ public class J3DynamicManualCallService {
                 if (!controlService.executionMayContinue(requestId)) {
                     return publishAlreadyLockedFailure(
                             claim.date(), initialCompletedPages, completedPages, page,
-                            "GLOBAL_STOP_OR_CIRCUIT_BLOCK", pageAttempts);
-                }
-                if (!awaitMinimumDelay(lastStartedAt)) {
-                    controlService.stopGlobally();
-                    return publishAlreadyLockedFailure(
-                            claim.date(), initialCompletedPages, completedPages, page,
-                            "EXECUTION_INTERRUPTED", pageAttempts);
-                }
-                if (!controlService.executionMayContinue(requestId)) {
-                    return publishAlreadyLockedFailure(
-                            claim.date(), initialCompletedPages, completedPages, page,
-                            "GLOBAL_STOP_OR_CIRCUIT_BLOCK", pageAttempts);
+                            "GLOBAL_STOP_OR_CIRCUIT_BLOCK", providerRequests, cacheHits,
+                            pageAttempts);
                 }
 
                 ScheduledEventsProviderPageRequest request =
                         new ScheduledEventsProviderPageRequest(
                                 claim.providerOrigin(), claim.date(), page);
+                Instant cacheEvaluatedAt = clock.instant();
+                var cachedPage = pageCache.findFreshParsed(
+                        request,
+                        cacheEvaluatedAt,
+                        cacheTtl,
+                        ScheduledEventsV1Parser.PARSER_VERSION);
+                if (cachedPage.isPresent()) {
+                    boolean hasNextPage = reparseCachedPage(cachedPage.orElseThrow());
+                    cacheHits++;
+                    pageAttempts.add(J3MinimizedPageEvidence.cached(
+                            page,
+                            cachedPage.orElseThrow(),
+                            hasNextPage,
+                            clock.instant()));
+                    controlService.recordPageCompleted(requestId, page);
+                    completedPages = page;
+                    if (!hasNextPage) {
+                        controlService.completeExecution(requestId);
+                        return publishAndLock(
+                                requestId,
+                                claim.date(),
+                                initialCompletedPages,
+                                J3ManualCallExecutionResult.successful(
+                                        completedPages, providerRequests, cacheHits),
+                                pageAttempts);
+                    }
+                    if (page == ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE) {
+                        int blockedNextPage = page + 1;
+                        String terminalCode = "PAGINATION_LIMIT_REACHED";
+                        controlService.failExecution(
+                                requestId, blockedNextPage, terminalCode);
+                        return publishAndLock(
+                                requestId,
+                                claim.date(),
+                                initialCompletedPages,
+                                J3ManualCallExecutionResult.failed(
+                                        completedPages,
+                                        blockedNextPage,
+                                        terminalCode,
+                                        providerRequests,
+                                        cacheHits),
+                                pageAttempts);
+                    }
+                    continue;
+                }
+
+                if (!awaitMinimumDelay(lastStartedAt)) {
+                    controlService.stopGlobally();
+                    return publishAlreadyLockedFailure(
+                            claim.date(), initialCompletedPages, completedPages, page,
+                            "EXECUTION_INTERRUPTED", providerRequests, cacheHits,
+                            pageAttempts);
+                }
+                if (!controlService.executionMayContinue(requestId)) {
+                    return publishAlreadyLockedFailure(
+                            claim.date(), initialCompletedPages, completedPages, page,
+                            "GLOBAL_STOP_OR_CIRCUIT_BLOCK", providerRequests, cacheHits,
+                            pageAttempts);
+                }
+
                 Instant attemptedAt = clock.instant();
+                providerRequests++;
                 try {
                     ScheduledEventsTransportResponse response = transport.execute(request);
                     lastStartedAt = response.requestedAt();
                     J3ScheduledEventsOutcome outcome = outcomeProcessor.processResponse(response);
+                    if (outcome.circuit().state() == J3CircuitState.CLOSED) {
+                        pageCache.recordParsed(
+                                request,
+                                response,
+                                outcome.persistence().orElseThrow(),
+                                ScheduledEventsV1Parser.PARSER_VERSION);
+                    }
                     String pageTerminalCode = outcome.circuit().state() == J3CircuitState.CLOSED
                             ? null
                             : outcome.circuit().reason().name();
@@ -142,6 +224,8 @@ public class J3DynamicManualCallService {
                                 completedPages,
                                 page,
                                 "GLOBAL_STOP_OR_CIRCUIT_BLOCK",
+                                providerRequests,
+                                cacheHits,
                                 pageAttempts);
                     }
                     if (outcome.circuit().state() != J3CircuitState.CLOSED) {
@@ -152,7 +236,11 @@ public class J3DynamicManualCallService {
                                 claim.date(),
                                 initialCompletedPages,
                                 J3ManualCallExecutionResult.failed(
-                                        completedPages, page, terminalCode),
+                                        completedPages,
+                                        page,
+                                        terminalCode,
+                                        providerRequests,
+                                        cacheHits),
                                 pageAttempts);
                     }
                     controlService.recordPageCompleted(requestId, page);
@@ -166,7 +254,8 @@ public class J3DynamicManualCallService {
                                 requestId,
                                 claim.date(),
                                 initialCompletedPages,
-                                J3ManualCallExecutionResult.successful(completedPages),
+                                J3ManualCallExecutionResult.successful(
+                                        completedPages, providerRequests, cacheHits),
                                 pageAttempts);
                     }
                     if (page == ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE) {
@@ -181,7 +270,9 @@ public class J3DynamicManualCallService {
                                 J3ManualCallExecutionResult.failed(
                                         completedPages,
                                         blockedNextPage,
-                                        terminalCode),
+                                        terminalCode,
+                                        providerRequests,
+                                        cacheHits),
                                 pageAttempts);
                     }
                 }
@@ -197,7 +288,11 @@ public class J3DynamicManualCallService {
                             claim.date(),
                             initialCompletedPages,
                             J3ManualCallExecutionResult.failed(
-                                    completedPages, page, terminalCode),
+                                    completedPages,
+                                    page,
+                                    terminalCode,
+                                    providerRequests,
+                                    cacheHits),
                             pageAttempts);
                 }
             }
@@ -213,6 +308,15 @@ public class J3DynamicManualCallService {
             }
             throw exception;
         }
+    }
+
+    private boolean reparseCachedPage(J3CachedScheduledEventsPage cachedPage) {
+        var parseResult = parser.parseTransportResponse(cachedPage.asTransportResponse());
+        if (parseResult.status() != ScheduledEventsParseStatus.PARSED) {
+            throw new IllegalStateException(
+                    "a fresh PARSED cache entry must remain compatible with its parser version");
+        }
+        return parseResult.page().orElseThrow().hasNextPage();
     }
 
     private J3ManualCallExecutionResult publishAndLock(
@@ -237,9 +341,15 @@ public class J3DynamicManualCallService {
             int completedPages,
             int failedPage,
             String terminalCode,
+            int providerRequests,
+            int cacheHits,
             List<J3MinimizedPageEvidence> pageAttempts) {
         J3ManualCallExecutionResult result = J3ManualCallExecutionResult.failed(
-                completedPages, failedPage, terminalCode);
+                completedPages,
+                failedPage,
+                terminalCode,
+                providerRequests,
+                cacheHits);
         publishEvidence(
                 collectionDate,
                 initialCompletedPages,
@@ -266,6 +376,7 @@ public class J3DynamicManualCallService {
                 terminalSnapshot.globalStopActive(),
                 terminalSnapshot.circuitState(),
                 terminalSnapshot.circuitReason(),
+                cacheTtl,
                 pageAttempts));
     }
 

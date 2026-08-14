@@ -4,14 +4,14 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap** et **J2 — Fixtures**. Le Work Order **J3 — Appel manuel** contient désormais un chemin fournisseur opt-in de collecte complète, démarrant en page 1 et progressant selon le booléen qualifié `hasNextPage`, avec un plafond local de 25 pages. Ce chemin reste désactivé par défaut et aucun appel fournisseur n’est exécuté par les tests, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures** et **J3 — Appel manuel**. J3 fournit un chemin fournisseur opt-in de collecte complète, démarrant en page 1 et progressant selon le booléen qualifié `hasNextPage`, avec un plafond local de 25 pages. Ce chemin reste désactivé par défaut et aucun appel fournisseur n’est exécuté par les tests, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
 ## Ce qui est livré localement
 
 - dépôt Git autonome, documentation, ADR, règles agent et Work Orders ;
 - Java **25 LTS**, Spring Boot **4.1.0** et Maven Wrapper versionné ;
 - interface Spring MVC + Thymeleaf sur `127.0.0.1:8087` ;
-- PostgreSQL local dans Docker Desktop, migrations Flyway V1/V2 et stockage brut séparé ;
+- PostgreSQL local dans Docker Desktop, migrations Flyway V1/V2/V3 et stockage brut séparé ;
 - Actuator, Caffeine, validation de configuration et garde de liaison locale ;
 - catalogue logique des familles d’endpoints, sans URI réelle ;
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
@@ -36,6 +36,12 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
   au premier incident et aucun retry ;
 - parcours répétable uniquement après réarmement, activation, nouvelle intention datée,
   confirmation exacte et action finale distincte, sans polling ni retry ;
+- cache réel du parcours dynamique consulté avant chaque transport sur la clé exacte date/page :
+  seuls les snapshots `PARSED` frais selon le TTL de dix minutes et le parseur courant sont relus
+  hors ligne ; un cache hit ne déclenche ni transport, ni attente, ni mutation de persistance ;
+- catalogue local limité à 50 métadonnées de snapshots bruts et inspection JSON explicite d’une
+  ligne, avec contrôle taille/SHA-256, blocage des contenus sensibles, parsing strict, rendu HTML
+  échappé et réponse `no-store`, sans transport, téléchargement ou mutation ;
 
 ## Limite essentielle du bootstrap
 
@@ -178,6 +184,10 @@ La migration `V1__bootstrap_schema.sql` crée :
 
 La migration append-only `V2__raw_manual_call_snapshots.sql` ajoute à `provider_snapshot` les octets exacts dans `payload_raw` (`bytea`), leur taille et le mode de provenance obligatoire `DIRECT_LOCAL_ENDPOINT`. Le brut reste distinct de `payload_jsonb`, qui n’est pas alimenté par cette unité. La taille est limitée à 5 Mio et une même combinaison fournisseur, endpoint logique, clé de requête et SHA-256 est dédupliquée.
 
+La migration append-only `V3__dynamic_manual_collection_cache.sql` ajoute uniquement un checkpoint
+de fraîcheur par clé date/page. Il référence le snapshot brut immuable et permet de rafraîchir le
+TTL après une nouvelle réponse identique dédupliquée, sans recopier ni modifier le payload.
+
 Le mode `DIRECT_LOCAL_ENDPOINT` ne doit jamais être confondu avec une `VisualObservation` du projet global. Cette persistance est prête pour un transport futur, mais n’effectue elle-même aucun appel.
 
 ## Politique réseau J1
@@ -194,7 +204,8 @@ Le bootstrap cumule plusieurs barrières :
 7. l’application n’écoute que sur une adresse de boucle locale ;
 8. les paramètres imposent concurrence `1`, délai minimal `3s`, rafraîchissement et live désactivés.
 
-Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces barrières qu’une par une, conformément au Work Order borné et au point de décision humain.
+Après la clôture de J3, aucune de ces barrières ne peut être retirée sans un nouveau Work Order,
+une décision de gouvernance explicite et une qualification humaine dédiée.
 
 ## Documentation de référence
 
@@ -211,6 +222,7 @@ Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces
 - [Adaptation hors ligne au schéma qualifié de la page 2](docs/architecture/J3-PAGE-TWO-SCHEMA-ADAPTATION.md)
 - [Reprise fournisseur J3 contrôlée à la page 3](docs/architecture/J3-PAGE-THREE-PROVIDER-RESUME.md)
 - [Collecte manuelle J3 répétable à pagination dynamique](docs/architecture/J3-DYNAMIC-MANUAL-PAGINATION.md)
+- [Inspection JSON locale des snapshots bruts J3](docs/architecture/J3-LOCAL-RAW-SNAPSHOT-JSON-INSPECTION.md)
 - [Runbook local](docs/runbooks/RUNBOOK-LOCAL.md)
 - [Cadrage PDF](docs/reference/Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf)
 - [Rapport de validation du bootstrap](docs/validation/J0-J1-VALIDATION-REPORT.md)
@@ -219,9 +231,9 @@ Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces
 - [Work Order J2 validé](docs/work_orders/completed/WO-SS-20260808-002-fixtures-j2.md)
 - [Qualification Windows J3 — contrôle local et politiques simulées](docs/validation/J3-WINDOWS-MANUAL-CALL-QUALIFICATION-20260812.md)
 - [Qualification Windows J3 — pagination dynamique](docs/validation/J3-WINDOWS-DYNAMIC-PAGINATION-QUALIFICATION-20260814.md)
-- [Work Order J3 actif](docs/work_orders/active/WO-SS-20260812-003-manual-call-j3.md)
+- [Work Order J3 validé](docs/work_orders/completed/WO-SS-20260812-003-manual-call-j3.md)
 
-## Prochaine frontière
+## J3 clôturé et prochaine frontière
 
 La qualification humaine du `2026-08-14` a collecté dix pages sur dix, après les cinq pages
 observées le `2026-08-13`. Elle confirme que le parcours repart de la page 1, persiste avant
@@ -230,3 +242,23 @@ conserver l’ancienne hypothèse fixe de cinq pages. Une barrière locale inter
 
 La pagination dynamique est désormais qualifiée dans le périmètre manuel J3. Toute automatisation,
 planification, collecte live ou généralisation à une autre famille reste hors périmètre.
+
+La première unité post-qualification applique désormais la politique de cache au chemin dynamique.
+La preuve minimisée v4 distingue explicitement les pages demandées au fournisseur des pages
+résolues depuis un snapshot local frais, sans introduire de contournement manuel du TTL.
+
+L’inspection JSON locale permet maintenant de relire explicitement un snapshot brut déjà persisté,
+après vérification de son intégrité et de son innocuité. Elle reste une aide opérateur en lecture
+seule : le brut n’est ni téléchargé, ni réécrit, ni ajouté aux rapports de qualification.
+
+La qualification complémentaire du cache et de cette inspection confirme que le formatage local ne
+rafraîchit ni n’invalide un checkpoint de cache, ne modifie aucune classification historique et ne
+rend pas un snapshot incompatible éligible. La matrice technique et les observations humaines sont
+consignées dans
+[`docs/validation/J3-WINDOWS-CACHE-AND-LOCAL-SNAPSHOT-INSPECTION-QUALIFICATION-20260814.md`](docs/validation/J3-WINDOWS-CACHE-AND-LOCAL-SNAPSHOT-INSPECTION-QUALIFICATION-20260814.md).
+
+Le jalon J3 est validé et son Work Order est archivé dans `docs/work_orders/completed`. Cette
+clôture ne change pas les statuts `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
+`NO_CRITICAL_DEPENDENCY`. Le polling, la planification, le déploiement VPS, une nouvelle famille
+d’endpoint ou l’intégration au Betting Project principal restent interdits tant qu’un nouveau Work
+Order et une décision de gouvernance dédiée ne les autorisent pas.

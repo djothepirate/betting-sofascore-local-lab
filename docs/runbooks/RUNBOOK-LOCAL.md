@@ -290,10 +290,14 @@ Cette procédure remplace fonctionnellement la reprise fixe de la section 3.7. E
 12. télécharger la preuve et contrôler au minimum :
 
 ```text
-J3_MINIMIZED_EVIDENCE_VERSION=3
+J3_MINIMIZED_EVIDENCE_VERSION=4
 PAGINATION_MODE=HAS_NEXT_PAGE
+CACHE_POLICY=FRESH_PARSED_SNAPSHOT_FIRST
+CACHE_TTL_SECONDS=600
 PROVIDER_FIRST_PAGE=1
 MAXIMUM_PAGE_LIMIT=25
+PROVIDER_PAGES_REQUESTED=<liste ou NONE>
+CACHE_HIT_PAGES=<liste ou NONE>
 FINAL_GLOBAL_STOP=ACTIVE
 AUTOMATIC_RETRY_EXECUTED=NO
 POLLING_OR_SCHEDULE_EXECUTED=NO
@@ -301,10 +305,48 @@ RAW_PAYLOAD_INCLUDED=NO
 PROVIDER_URI_INCLUDED=NO
 ```
 
+Avant chaque page, l’application recherche la clé exacte
+`SCHEDULED_EVENTS|date=<date>|page=<page>` parmi les snapshots HTTP réussis, `PARSED`, intègres et
+produits par `scheduled-events-v1`. Un checkpoint de cache actualisé depuis strictement moins de dix
+minutes est reparsé localement puis utilisé sans transport, sans attente et sans nouvelle écriture.
+La preuve
+doit alors indiquer `PAGE_<n>_RESOLUTION_SOURCE=CACHE` et
+`PAGE_<n>_PROVIDER_REQUEST_EXECUTED=NO`, ainsi que l’instant `PAGE_<n>_CACHE_STORED_AT`.
+
+Un cache miss conserve le comportement fournisseur manuel. Le délai minimal est mesuré entre les
+départs fournisseur réels : une page intermédiaire servie par le cache ne remet pas cette horloge à
+zéro. Il n’existe aucun bouton de contournement du cache ni du TTL. Pour observer volontairement un
+nouveau transport sur la même date, attendre l’expiration normale ; ne jamais supprimer, modifier
+ou reclasser un snapshot.
+
 Pour répéter l’interrogation, lever à nouveau l’arrêt global : l’intention terminale précédente est
 alors retirée. Réactiver le circuit et recommencer depuis l’étape 6. Ne jamais contourner un
 incident en modifiant ou supprimant un snapshot ; analyser d’abord la preuve et la classification
 locale. Remettre la configuration `.env` en état sûr après la séance.
+
+### 3.9 Inspecter localement le JSON brut d’un snapshot
+
+Cette opération ne contacte pas le fournisseur et ne nécessite pas d’armer le circuit J3. Elle
+exige uniquement l’application et PostgreSQL locaux :
+
+1. ouvrir `http://127.0.0.1:8087/dashboard#snapshot-inspection` ;
+2. repérer le snapshot à partir de son identifiant, de sa clé date/page et de son horodatage ;
+3. vérifier que la ligne ne contient que les métadonnées attendues ;
+4. sélectionner **« Inspecter le JSON »** sur cette ligne uniquement ;
+5. vérifier sur la page distincte l’identifiant, la taille et le SHA-256 avant de lire la vue
+   formatée ;
+6. revenir au tableau de bord avec **« Retour aux snapshots locaux »**.
+
+Le catalogue est limité aux 50 snapshots récents et ne charge pas leurs payloads. L’action utilise
+le jeton de formulaire lié à la session et à usage unique. Le serveur relit uniquement la ligne
+choisie, recalcule la taille et le SHA-256, applique le détecteur de contenu sensible, exige un JSON
+strict puis produit un formatage temporaire en mémoire.
+
+Ne pas copier le JSON brut dans un rapport, un commit, un ticket, une capture destinée au partage
+ou un journal. Utiliser la preuve minimisée téléchargeable pour la qualification. Il n’existe aucun
+bouton de téléchargement brut, aucune modification de classification et aucun contournement du
+cache. Un refus `PAYLOAD_INTEGRITY_FAILURE`, `SENSITIVE_CONTENT_BLOCKED` ou `INVALID_JSON` doit
+rester bloquant et être analysé hors ligne sans modifier la ligne persistée.
 
 ## 4. Validation
 

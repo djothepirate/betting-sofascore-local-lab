@@ -279,11 +279,76 @@
       </div>
       <p>Cette preuve est produite après la séquence terminale. Elle contient les statuts, horodatages,
         tailles et empreintes SHA-256 de persistance, sans payload JSON, URI, en-tête ni donnée de session.</p>
-      <pre class="evidence-report" th:text="${collectionEvidence.reportText}">J3_MINIMIZED_EVIDENCE_VERSION=3</pre>
+      <pre class="evidence-report" th:text="${collectionEvidence.reportText}">J3_MINIMIZED_EVIDENCE_VERSION=4</pre>
       <a class="evidence-download" th:href="@{/manual-call/evidence}" href="/manual-call/evidence">
         Télécharger la preuve minimisée (.txt)
       </a>
     </section>
+  </section>
+
+  <section class="panel snapshot-inspection-panel"
+           id="snapshot-inspection"
+           aria-labelledby="snapshot-inspection-title">
+    <div class="panel-heading">
+      <div>
+        <p class="label">J3 / Inspection locale en lecture seule</p>
+        <h2 id="snapshot-inspection-title">Snapshots bruts JSON</h2>
+      </div>
+      <span class="chip"
+            th:classappend="${snapshotInspectionCatalog.available} ? ' chip-safe' : ' chip-danger'"
+            th:text="${snapshotInspectionCatalog.available ? 'LOCAL_ONLY' : 'INDISPONIBLE'}">LOCAL_ONLY</span>
+    </div>
+
+    <p>La liste ci-dessous ne charge aucun payload. L’inspection d’un snapshot précis exige une
+      action locale explicite, vérifie sa taille et son SHA-256, refuse les contenus sensibles ou
+      non JSON, puis affiche une vue formatée sans modifier les octets conservés.</p>
+
+    <div th:if="${!snapshotInspectionCatalog.available}" class="notice notice-danger">
+      La base PostgreSQL locale n’est pas disponible pour l’inspection des snapshots.
+    </div>
+
+    <div th:if="${snapshotInspectionCatalog.available and snapshotInspectionCatalog.snapshots.empty}"
+         class="empty-state">
+      <p class="metric muted">AUCUN SNAPSHOT BRUT</p>
+      <p>Aucun payload n’est chargé automatiquement.</p>
+    </div>
+
+    <div class="table-scroll"
+         th:if="${snapshotInspectionCatalog.available and !snapshotInspectionCatalog.snapshots.empty}">
+      <table>
+        <thead>
+        <tr>
+          <th>ID</th>
+          <th>Clé locale</th>
+          <th>Reçu à</th>
+          <th>HTTP</th>
+          <th>Taille</th>
+          <th>Schéma</th>
+          <th>Action locale</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="snapshot : ${snapshotInspectionCatalog.snapshots}">
+          <td class="mono" th:text="${snapshot.snapshotId}">1</td>
+          <td class="mono" th:text="${snapshot.requestKey}">SCHEDULED_EVENTS|date=2026-08-14|page=1</td>
+          <td th:text="${snapshot.receivedAt}">—</td>
+          <td th:text="${snapshot.httpStatus}">200</td>
+          <td th:text="${snapshot.payloadSizeBytes + ' octets'}">0 octet</td>
+          <td class="mono" th:text="${snapshot.schemaStatus}">PARSED</td>
+          <td>
+            <form th:action="@{/snapshot-inspection}" method="post">
+              <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+              <input type="hidden" name="snapshotId" th:value="${snapshot.snapshotId}">
+              <button class="button-primary inspection-button" type="submit">Inspecter le JSON</button>
+            </form>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="fixture-note">Maximum affiché : 50 snapshots récents. Aucun URI, en-tête HTTP,
+      cookie, jeton, compte ou donnée de session n’est ajouté à cette liste.</p>
   </section>
 
   <section class="panel" aria-labelledby="catalog-title">
@@ -326,7 +391,8 @@
     <article class="panel">
       <p class="label">Actions réseau</p>
       <h2>Connecteur général toujours verrouillé</h2>
-      <p>Seul le formulaire J3 ci-dessus peut ouvrir le chemin dédié aux cinq URI approuvées. Aucun autre endpoint, profil réel ou adaptateur général n’est activé.</p>
+      <p>Seul le formulaire J3 ci-dessus peut ouvrir le chemin manuel à pagination dynamique
+        approuvé. Aucun autre endpoint, profil réel ou adaptateur général n’est activé.</p>
       <div class="actions">
         <button type="button" disabled>Configurer une URI réelle</button>
         <button type="button" disabled>Lancer un appel fournisseur</button>

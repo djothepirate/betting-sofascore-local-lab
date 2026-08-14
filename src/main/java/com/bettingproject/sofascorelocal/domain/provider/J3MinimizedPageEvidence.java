@@ -10,6 +10,9 @@ import java.util.regex.Pattern;
  */
 public record J3MinimizedPageEvidence(
         int page,
+        J3PageResolutionSource resolutionSource,
+        Instant resolvedAt,
+        Instant cacheStoredAt,
         Instant requestedAt,
         Instant receivedAt,
         Integer httpStatus,
@@ -29,6 +32,8 @@ public record J3MinimizedPageEvidence(
                 || page > ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE) {
             throw new IllegalArgumentException("page must be in the bounded collection range");
         }
+        Objects.requireNonNull(resolutionSource, "resolutionSource");
+        Objects.requireNonNull(resolvedAt, "resolvedAt");
         Objects.requireNonNull(requestedAt, "requestedAt");
         terminalCode = normalizeCode(terminalCode);
 
@@ -50,16 +55,35 @@ public record J3MinimizedPageEvidence(
             if (receivedAt.isBefore(requestedAt)) {
                 throw new IllegalArgumentException("receivedAt cannot precede requestedAt");
             }
+            if (resolvedAt.isBefore(receivedAt)) {
+                throw new IllegalArgumentException("resolvedAt cannot precede receivedAt");
+            }
+            if (cacheStoredAt != null
+                    && (cacheStoredAt.isBefore(receivedAt)
+                            || resolvedAt.isBefore(cacheStoredAt))) {
+                throw new IllegalArgumentException(
+                        "cacheStoredAt must be between receipt and resolution");
+            }
             if ((schemaStatus == RawSnapshotSchemaStatus.PARSED) != (hasNextPage != null)) {
                 throw new IllegalArgumentException(
                         "only a parsed page may expose hasNextPage");
             }
         }
-        else if (receivedAt != null || httpStatus != null || latencyMillis != null
+        else if (cacheStoredAt != null || receivedAt != null || httpStatus != null
+                || latencyMillis != null
                 || persistenceOutcome != null || payloadSizeBytes != null
                 || payloadSha256 != null || schemaStatus != null || hasNextPage != null) {
             throw new IllegalArgumentException(
                     "a page without a snapshot cannot expose response metadata");
+        }
+        if (resolutionSource == J3PageResolutionSource.CACHE
+                && (persistenceOutcome != RawSnapshotPersistenceOutcome.CACHE_HIT
+                        || cacheStoredAt == null)) {
+            throw new IllegalArgumentException("a cache resolution requires CACHE_HIT evidence");
+        }
+        if (resolutionSource == J3PageResolutionSource.PROVIDER
+                && persistenceOutcome == RawSnapshotPersistenceOutcome.CACHE_HIT) {
+            throw new IllegalArgumentException("provider evidence cannot be a cache hit");
         }
     }
 
@@ -74,6 +98,11 @@ public record J3MinimizedPageEvidence(
         Objects.requireNonNull(persistence, "persistence");
         return new J3MinimizedPageEvidence(
                 page,
+                J3PageResolutionSource.PROVIDER,
+                response.receivedAt(),
+                schemaStatus == RawSnapshotSchemaStatus.PARSED
+                        ? response.receivedAt()
+                        : null,
                 response.requestedAt(),
                 response.receivedAt(),
                 response.httpStatus(),
@@ -87,12 +116,39 @@ public record J3MinimizedPageEvidence(
                 terminalCode);
     }
 
+    public static J3MinimizedPageEvidence cached(
+            int page,
+            J3CachedScheduledEventsPage cachedPage,
+            boolean hasNextPage,
+            Instant resolvedAt) {
+        Objects.requireNonNull(cachedPage, "cachedPage");
+        return new J3MinimizedPageEvidence(
+                page,
+                J3PageResolutionSource.CACHE,
+                resolvedAt,
+                cachedPage.cachedAt(),
+                cachedPage.requestedAt(),
+                cachedPage.receivedAt(),
+                cachedPage.httpStatus(),
+                cachedPage.latency().toMillis(),
+                cachedPage.snapshotId(),
+                RawSnapshotPersistenceOutcome.CACHE_HIT,
+                cachedPage.payload().sizeBytes(),
+                cachedPage.payload().sha256(),
+                RawSnapshotSchemaStatus.PARSED,
+                hasNextPage,
+                null);
+    }
+
     public static J3MinimizedPageEvidence failedBeforeSnapshot(
             int page,
             Instant requestedAt,
             String terminalCode) {
         return new J3MinimizedPageEvidence(
                 page,
+                J3PageResolutionSource.PROVIDER,
+                requestedAt,
+                null,
                 requestedAt,
                 null,
                 null,

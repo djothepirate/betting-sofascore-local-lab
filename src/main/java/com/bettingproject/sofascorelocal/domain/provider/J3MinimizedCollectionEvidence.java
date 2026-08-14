@@ -1,5 +1,6 @@
 package com.bettingproject.sofascorelocal.domain.provider;
 
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -19,6 +20,7 @@ public record J3MinimizedCollectionEvidence(
         boolean globalStopActive,
         J3CircuitState finalCircuitState,
         J3CircuitReason finalCircuitReason,
+        Duration cacheTtl,
         List<J3MinimizedPageEvidence> pageAttempts) {
 
     public J3MinimizedCollectionEvidence {
@@ -28,6 +30,10 @@ public record J3MinimizedCollectionEvidence(
         Objects.requireNonNull(generatedAt, "generatedAt");
         Objects.requireNonNull(finalCircuitState, "finalCircuitState");
         Objects.requireNonNull(finalCircuitReason, "finalCircuitReason");
+        Objects.requireNonNull(cacheTtl, "cacheTtl");
+        if (cacheTtl.isZero() || cacheTtl.isNegative()) {
+            throw new IllegalArgumentException("cacheTtl must be positive");
+        }
         pageAttempts = List.copyOf(pageAttempts);
         if (terminalState != J3ManualCallIntentState.COMPLETED
                 && terminalState != J3ManualCallIntentState.FAILED

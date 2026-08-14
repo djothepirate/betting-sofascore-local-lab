@@ -69,6 +69,17 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   réarmement explicite entre deux collectes et maintien de la concurrence à un ;
 - preuve minimisée v3 indiquant le mode de pagination, la limite locale et `hasNextPage` pour les
   pages parsées, sans payload, URI, en-tête, secret ou donnée de session ;
+- cache PostgreSQL du parcours manuel dynamique, indexé par la clé exacte date/page, limité aux
+  snapshots HTTP réussis classés `PARSED`, frais pendant les dix minutes du catalogue et produits
+  par la version courante de `scheduled-events-v1` ;
+- migration Flyway V3 append-only séparant le checkpoint de fraîcheur du snapshot brut : une
+  nouvelle observation identique peut rafraîchir le cache sans réécrire ni dupliquer le payload ;
+- preuve minimisée v4 distinguant `CACHE` et `PROVIDER`, les pages réellement demandées au
+  fournisseur et les cache hits locaux, sans inclure le payload ou l’URI ;
+- catalogue borné des 50 snapshots bruts locaux les plus récents, sans chargement automatique des
+  payloads, et action explicite permettant d’inspecter une seule ligne à la fois ;
+- vue JSON formatée en mémoire après contrôle de la taille, du SHA-256, des motifs sensibles et du
+  JSON strict, avec échappement HTML et en-têtes `no-store` ;
 
 ### Documentation
 
@@ -107,6 +118,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - rapport Windows de qualification humaine de la pagination dynamique, confirmant dix pages sur
   dix pour le `2026-08-14`, la progression `hasNextPage=true` des pages 1 à 9, la terminaison sur
   `false` en page 10, la persistance avant parsing et la réapplication du verrou terminal.
+- qualification complémentaire Windows du cache et de l’inspection JSON locale, avec preuve
+  PostgreSQL de non-mutation entre les deux fonctions et matrice humaine minimisée des snapshots
+  historiques déjà présents.
+- clôture du Work Order `WO-SS-20260812-003` au statut `VALIDATED` après qualification du chemin
+  manuel, de la pagination dynamique, du cache et de l’inspection JSON locale ;
+- archivage du Work Order J3 dans `docs/work_orders/completed`, sans appel fournisseur pendant la
+  clôture et sans étendre l’autorisation au polling, à la production ou au VPS.
 
 ### Modifié
 
@@ -146,6 +164,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   inattendu) et phase applicative avancée à `J3-PAGE-TWO-SCHEMA-ADAPTATION`.
 - phase applicative avancée à `J3-DYNAMIC-MANUAL-PAGINATION` ; le chemin actif n’est plus limité à
   la date qualifiée ni aux cinq pages observées le `2026-08-13`.
+- phase applicative avancée à `J3-DYNAMIC-CACHE-POLICY` ; le cache frais est désormais évalué et
+  reparsé avant le délai et avant tout transport du chemin réel dynamique.
+- phase applicative avancée à `J3-LOCAL-RAW-JSON-INSPECTION`, sans modification de la politique
+  réseau, de la persistance brute ou du cache dynamique.
 
 ### Sécurité
 
@@ -176,6 +198,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - arrêt normal uniquement sur `hasNextPage=false`, rupture sûre si ce champ n’est pas un booléen,
   arrêt au premier incident, délai inter-pages minimal de trois secondes et absence de retry,
   polling ou planification dans le parcours répétable.
+- un cache hit ne déclenche aucun appel fournisseur, aucune attente inter-page et aucune écriture ;
+  le délai minimal reste calculé exclusivement entre deux départs fournisseur réels, y compris
+  lorsqu’une page intermédiaire est résolue depuis le cache.
+- l’inspection brute reste une opération PostgreSQL locale en lecture seule, soumise au jeton Web
+  à usage unique ; elle refuse toute divergence d’intégrité, contenu sensible ou JSON ambigu et ne
+  propose aucun téléchargement du payload.
+- l’inspection d’un snapshot n’altère ni son statut historique, ni le nombre de lignes brutes, ni le
+  checkpoint de cache ; un snapshot `SCHEMA_INCOMPATIBLE` inspectable reste inéligible au cache.
 
 ## [0.1.0] — 2026-08-08
 

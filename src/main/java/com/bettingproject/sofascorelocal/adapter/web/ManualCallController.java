@@ -108,7 +108,9 @@ public class ManualCallController {
                 redirectAttributes.addFlashAttribute(
                         "manualCallMessage",
                         "Collecte terminée : " + result.completedPages()
-                                + " page(s) ont été collectées dans l’ordre jusqu’à hasNextPage=false. L’arrêt global a été réappliqué et la preuve minimisée est prête.");
+                                + " page(s) ont été résolues dans l’ordre jusqu’à hasNextPage=false ("
+                                + result.providerRequests() + " transport(s) fournisseur, "
+                                + result.cacheHits() + " cache hit(s) local(aux)). L’arrêt global a été réappliqué et la preuve minimisée est prête.");
                 redirectAttributes.addFlashAttribute("manualCallMessageKind", "safe");
             }
             else {

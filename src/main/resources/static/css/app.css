@@ -534,6 +534,49 @@ button:disabled {
   border-left: 7px solid var(--warning);
 }
 
+.snapshot-inspection-panel {
+  border-left: 7px solid var(--teal);
+}
+
+.inspection-button {
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.compact-topbar {
+  padding-bottom: 34px;
+}
+
+.inspection-page {
+  min-height: 62vh;
+}
+
+.snapshot-json-panel {
+  border-left: 7px solid var(--safe);
+}
+
+.inspection-metadata {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 24px;
+  margin-bottom: 18px;
+}
+
+.snapshot-json {
+  max-height: 68vh;
+  margin: 18px 0;
+  padding: 16px;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #f7fafb;
+  color: var(--ink-strong);
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  white-space: pre;
+}
+
 .guardrails ul {
   margin-bottom: 0;
 }
@@ -558,7 +601,8 @@ footer {
 
   .fixture-counts,
   .control-grid,
-  .fixture-metadata {
+  .fixture-metadata,
+  .inspection-metadata {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
@@ -569,10 +613,11 @@ footer {
   }
 
   .cards,
-    .two-columns,
-    .control-grid,
-    .fixture-counts,
-  .fixture-metadata {
+  .two-columns,
+  .control-grid,
+  .fixture-counts,
+  .fixture-metadata,
+  .inspection-metadata {
     grid-template-columns: 1fr;
   }
 

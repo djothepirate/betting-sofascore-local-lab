@@ -1,11 +1,13 @@
 # WO-SS-20260812-003 — J3 Appel manuel borné et conservation du brut
 
-- **Statut :** `IN_DEVELOPMENT`
+- **Statut :** `VALIDATED`
 - **Date :** 2026-08-12
 - **Date de démarrage :** 2026-08-12
+- **Date de clôture :** 2026-08-14
 - **Prérequis :** WO-SS-20260808-002 validé sous Windows et fusionné sur `main`
 - **Jalon :** J3 — Appel manuel
 - **Branche :** `feat/j3-manual-call`
+- **Branche de clôture :** `feat/j3-dynamic-cache-policy`
 - **Commit de base :** `b2561e542b1f893ec2f15c5eaeb67a361ee551ea`
 - **Base de l’unité de politique réseau hors ligne :** `c51c45f4831dad2922018e25baee97dcf7bbcf5c`
 - **Base de l’unité de persistance brute :** `1a9ca0e753cedf1ac4730adea865bd7ea3369660`
@@ -14,6 +16,7 @@
 - **Base de l’unité de politiques d’arrêt et d’incident :** `e555a13bc8023ebb3dd7a9454719dd16144210e2`
 - **Base de l’unité de qualification Windows :** `f0cd29ccc40ac7c430130630f6e55f17b09f6968`
 - **Base du chemin fournisseur cinq pages :** `9b1441c367d1e72282fbc563a340bcd1644f3b06`
+- **Base de la clôture documentaire :** `35a8d34b4ab534d254d077942052860f66eebb0d`
 - **Famille initiale :** `SCHEDULED_EVENTS`
 - **Mode d’acquisition prévu :** `DIRECT_LOCAL_ENDPOINT`
 - **Développement hors ligne J3 autorisé :** `YES`
@@ -212,23 +215,24 @@ LIVE_TEST_PROFILE=BLOCKED
 
 ## 9. Critères d’acceptation J3
 
-- [ ] activation explicite nécessaire avant tout transport ;
-- [ ] concurrence maximale égale à `1` ;
-- [ ] cache et délai minimal vérifiés avant chaque appel ;
-- [ ] une requête manuelle conserve statut, horaires, latence, taille, hash et parseur ;
-- [ ] déduplication d’une réponse identique ;
-- [ ] arrêt sans retry sur `400`, `401` et `403` ;
-- [ ] suspension respectueuse de `Retry-After` sur `429` ;
-- [ ] HTML inattendu visible et circuit ouvert ;
-- [ ] schéma inconnu conservé brut et classé incompatible ;
-- [ ] aucun test standard ne contacte Internet ;
-- [ ] données brutes et normalisées séparées ;
-- [ ] acquisition enregistrée comme `DIRECT_LOCAL_ENDPOINT` ;
-- [ ] aucun secret, cookie ou jeton stocké ou journalisé ;
-- [ ] aucun mécanisme de contournement ;
-- [ ] derniers appels et incidents visibles dans le tableau de bord ;
-- [ ] procédure Windows d’arrêt et de preuve exécutée ;
-- [ ] appel réel, s’il est autorisé, limité à une requête unique.
+- [x] activation explicite nécessaire avant tout transport ;
+- [x] concurrence maximale égale à `1` ;
+- [x] cache et délai minimal vérifiés avant chaque départ fournisseur ;
+- [x] chaque page manuelle conserve statut, horaires, latence, taille, hash et parseur ;
+- [x] déduplication d’une réponse identique ;
+- [x] arrêt sans retry sur `400`, `401` et `403` ;
+- [x] suspension respectueuse de `Retry-After` sur `429` ;
+- [x] HTML inattendu visible et circuit ouvert ;
+- [x] schéma inconnu conservé brut et classé incompatible ;
+- [x] aucun test standard ne contacte Internet ;
+- [x] données brutes et normalisées séparées ;
+- [x] acquisition enregistrée comme `DIRECT_LOCAL_ENDPOINT` ;
+- [x] aucun secret, cookie ou jeton stocké ou journalisé ;
+- [x] aucun mécanisme de contournement ;
+- [x] derniers appels et incidents visibles dans le tableau de bord ;
+- [x] procédure Windows d’arrêt et de preuve exécutée ;
+- [x] collecte réelle limitée à une séquence manuelle explicitement confirmée, démarrant en page 1,
+  pilotée par `hasNextPage` et bornée localement à 25 pages.
 
 ## 10. Définition de fini
 
@@ -1144,4 +1148,317 @@ SPRING_BOOT_JAR=BUILT
 VERIFY_RESULT=PASS
 INTEGRATION_TESTS_EXECUTED=NO_DOCUMENTATION_ONLY_CHANGE
 SOFASCORE_NETWORK_CALLS_EXECUTED=NO
+```
+
+## 27. Unité 1 — cache du chemin réel dynamique
+
+L’unité `feat: enforce cache policy in dynamic manual collection` démarre depuis le commit de
+fusion `e27c96574aa75095d91e16c16f0a21913ac8cd5b` sur la branche
+`feat/j3-dynamic-cache-policy`. Elle rend effective, dans l’orchestrateur dynamique, la priorité de
+cache déjà définie par la politique J3. Son implémentation et ses tests n’exécutent aucun appel
+fournisseur.
+
+Le contrat appliqué avant chaque transport est :
+
+```text
+CACHE_KEY=SCHEDULED_EVENTS|date=<date>|page=<page>
+CACHE_TTL=PT10M
+CACHE_HTTP_STATUS=2XX
+CACHE_HISTORICAL_SCHEMA_STATUS=PARSED
+CACHE_PARSER_VERSION=scheduled-events-v1
+CACHE_RAW_INTEGRITY_CHECK=SIZE_AND_SHA256
+CACHE_FRESHNESS_CHECKPOINT=FLYWAY_V3_SEPARATE_FROM_RAW
+CACHE_REPARSE_BEFORE_USE=YES
+CACHE_LOOKUP_BEFORE_PROVIDER_DELAY=YES
+CACHE_HIT_PROVIDER_TRANSPORT=NO
+CACHE_HIT_PERSISTENCE_MUTATION=NO
+CACHE_HIT_INTER_PAGE_WAIT=NO
+DELAY_MEASURED_BETWEEN_PROVIDER_STARTS=YES
+EXACT_TTL_BOUNDARY=EXPIRED
+```
+
+Le cache ne se contente pas de la classification historique : les octets sont relus et reparsés
+avec la version courante avant que `hasNextPage` soit accepté. Une incompatibilité ne peut donc pas
+être masquée par une ancienne classification. En cas de cache miss, le chemin existant conserve la
+persistance brute avant parsing, l’arrêt au premier incident et l’absence de retry.
+
+La preuve terminale passe à la version 4 et distingue pour chaque page `CACHE` et `PROVIDER`. Elle
+indique séparément `PROVIDER_PAGES_REQUESTED`, `CACHE_HIT_PAGES`, leurs compteurs et l’absence de
+transport sur un cache hit, sans ajouter de payload, URI, en-tête ou donnée de session.
+
+```text
+J3_DYNAMIC_CACHE_POLICY=IMPLEMENTED
+J3_CACHE_PERSISTENCE_MIGRATION=V3_APPEND_ONLY
+J3_IMPLEMENTATION_PROVIDER_CALLS=0
+J3_WORK_ORDER=IN_DEVELOPMENT
+```
+
+### 27.1 Validation technique de l’unité
+
+La validation a été exécutée le 2026-08-14 sur une copie locale isolée sans `.env`, avec le dépôt
+Maven local en mode hors ligne. La suite standard, le scan des garde-fous et la suite PostgreSQL
+ont tous abouti sans appel fournisseur :
+
+```text
+PREFLIGHT_RESULT=PASS
+JAVA_TARGET=25
+SOURCE_GUARDRAIL_SCAN=PASS
+STANDARD_TESTS=150
+STANDARD_FAILURES=0
+STANDARD_ERRORS=0
+STANDARD_SKIPPED=0
+SPRING_BOOT_JAR=BUILT
+INTEGRATION_TESTS=8
+INTEGRATION_FAILURES=0
+INTEGRATION_ERRORS=0
+INTEGRATION_SKIPPED=0
+FLYWAY_LATEST_VERSION=3
+POSTGRESQL_CACHE_SELECTION=PASS
+DEDUPLICATED_RESPONSE_REFRESHES_CACHE=PASS
+EXACT_TTL_BOUNDARY_REJECTED=PASS
+PARSER_VERSION_MISMATCH_REJECTED=PASS
+SERVER_ADDRESS=127.0.0.1
+SOFASCORE_NETWORK_CALLS_EXECUTED=NO
+```
+
+Les tests unitaires prouvent qu’une collecte entièrement servie par le cache exécute zéro
+transport, zéro attente et zéro mutation de persistance. Le scénario mixte `PROVIDER(1)`,
+`CACHE(2)`, `PROVIDER(3)` confirme que le second départ fournisseur reste séparé du premier par
+trois secondes et que le cache hit intermédiaire ne réinitialise pas ce délai. La preuve v4
+distingue les deux sources. Le test PostgreSQL confirme la sélection du snapshot exact, son rejet
+à dix minutes révolues, le refus d’une autre version de parseur et le rafraîchissement du checkpoint
+après une nouvelle observation dont le payload brut a été dédupliqué.
+
+## 28. Unité 2 — inspection JSON locale des snapshots bruts
+
+L’unité `feat: add local raw snapshot JSON inspection` complète l’exploitation locale du chemin
+J3 sans ajouter ni exécuter de transport fournisseur. Elle fournit une inspection humaine en
+lecture seule d’un snapshot déjà présent dans PostgreSQL.
+
+Le tableau de bord interroge uniquement les métadonnées des 50 lignes récentes. Le champ
+`payload_raw` n’est relu qu’après une action explicite sur un identifiant précis et consommation du
+jeton de formulaire local à usage unique. Le contrat est :
+
+```text
+CATALOG_MAXIMUM_ROWS=50
+CATALOG_LOADS_RAW_PAYLOAD=NO
+RAW_READ_REQUIRES_EXPLICIT_POST=YES
+RAW_SELECTION=EXACT_LOCAL_SNAPSHOT_ID
+DATABASE_TRANSACTION=READ_ONLY
+INTEGRITY_CHECK=PAYLOAD_SIZE_AND_SHA256
+SENSITIVE_CONTENT_SCAN=REQUIRED
+JSON_MODE=STRICT_DUPLICATES_AND_TRAILING_CONTENT_REJECTED
+PRETTY_PRINT=IN_MEMORY_ONLY
+HTML_OUTPUT=ESCAPED_TEXT
+HTTP_CACHE_CONTROL=NO_STORE
+RAW_DOWNLOAD_AVAILABLE=NO
+SNAPSHOT_MUTATION=NO
+CACHE_MUTATION=NO
+PROVIDER_TRANSPORT=NO
+```
+
+Seules les lignes `SOFASCORE` de provenance `DIRECT_LOCAL_ENDPOINT` disposant de toutes les
+métadonnées brutes requises sont inspectables. Une divergence d’intégrité, un motif sensible ou un
+JSON invalide empêche tout affichage. Les erreurs exposées à l’opérateur sont des codes bornés et
+ne contiennent ni diagnostic JDBC, ni extrait de payload.
+
+La page d’inspection est distincte du tableau de bord, marquée `Cache-Control: no-store`,
+`Pragma: no-cache`, `Expires: 0` et `X-Robots-Tag: noindex, nofollow, noarchive`. Le formatage ne
+réécrit ni les octets, ni la classification historique, ni le checkpoint de cache.
+
+Le contrat complet est documenté dans :
+
+```text
+docs/architecture/J3-LOCAL-RAW-SNAPSHOT-JSON-INSPECTION.md
+```
+
+```text
+J3_LOCAL_RAW_JSON_INSPECTION=IMPLEMENTED
+J3_RAW_PAYLOAD_DOWNLOAD=NOT_AVAILABLE
+J3_SNAPSHOT_OR_CACHE_MUTATION=NO
+J3_IMPLEMENTATION_PROVIDER_CALLS=0
+J3_WORK_ORDER=IN_DEVELOPMENT
+```
+
+### 28.1 Validation technique de l’unité
+
+La validation a été exécutée le 2026-08-14 sur une copie locale isolée sans `.env`. Le script
+consolidé a validé Java 25, le preflight et les garde-fous source ; Maven a ensuite validé la suite
+standard et la suite PostgreSQL/Testcontainers sans appel fournisseur :
+
+```text
+PREFLIGHT_RESULT=PASS
+JAVA_TARGET=25
+SOURCE_GUARDRAIL_SCAN=PASS
+STANDARD_TESTS=159
+STANDARD_FAILURES=0
+STANDARD_ERRORS=0
+STANDARD_SKIPPED=0
+SPRING_BOOT_JAR=BUILT
+INTEGRATION_TESTS=9
+INTEGRATION_FAILURES=0
+INTEGRATION_ERRORS=0
+INTEGRATION_SKIPPED=0
+FLYWAY_LATEST_VERSION=3
+EXACT_RAW_BYTES_READ=PASS
+SNAPSHOT_ROW_COUNT_UNCHANGED=PASS
+HTML_ESCAPING=PASS
+NO_STORE_HEADERS=PASS
+SERVER_ADDRESS=127.0.0.1
+VERIFY_RESULT=PASS
+SOFASCORE_NETWORK_CALLS_EXECUTED=NO
+```
+
+Les tests ciblés couvrent 11 scénarios. Ils prouvent que le catalogue ne charge pas les octets,
+que les écarts de taille ou de SHA-256 sont bloqués, que les motifs sensibles et le JSON ambigu ne
+sont pas rendus, que les balises sont échappées, et que l’erreur Web reste bornée. Le test
+PostgreSQL relit le payload exact par identifiant et vérifie que l’inspection ne crée, ne modifie et
+ne supprime aucune ligne.
+
+## 29. Unité 3 — qualification complémentaire du cache et de l’inspection locale
+
+L’unité `test: qualify J3 cache and local snapshot inspection` qualifie ensemble les commits
+`7f4c84b60a6a283ac9ba8b1da4f564c76d0322e9` et
+`ac4cb9ff64df0bd3346b0934fea8ed77f8b3f6b4`. Elle n’ajoute aucun chemin fournisseur et ne réalise
+aucun nouvel appel. Son objectif transversal est de prouver qu’une inspection JSON locale reste
+sans effet sur la décision de cache et sur l’histoire du snapshot.
+
+Le contrat qualifié est :
+
+```text
+FRESH_PARSED_CACHE_REMAINS_ELIGIBLE_AFTER_INSPECTION=YES
+CACHE_TIMESTAMP_REFRESHED_BY_INSPECTION=NO
+CACHE_CHECKPOINT_CREATED_BY_INSPECTION=NO
+SNAPSHOT_ROW_CREATED_BY_INSPECTION=NO
+SNAPSHOT_CLASSIFICATION_CHANGED_BY_INSPECTION=NO
+SCHEMA_INCOMPATIBLE_VISIBLE_TO_LOCAL_OPERATOR=YES
+SCHEMA_INCOMPATIBLE_CACHE_ELIGIBLE=NO
+RAW_PAYLOAD_INCLUDED_IN_QUALIFICATION_REPORT=NO
+PROVIDER_TRANSPORT_DURING_QUALIFICATION=NO
+```
+
+Deux scénarios PostgreSQL complètent les tests existants. Le premier conserve un cache frais
+`PARSED`, inspecte son snapshot puis vérifie que l’identifiant, les octets, `cached_at`, le nombre de
+snapshots et le nombre de checkpoints sont inchangés. Le second inspecte un snapshot historiquement
+`SCHEMA_INCOMPATIBLE`, confirme la conservation de ce statut et vérifie l’absence de candidat de
+cache.
+
+La qualification humaine complémentaire repose sur six captures locales non versionnées. Elles
+confirment le catalogue borné de métadonnées, l’action explicite, le rendu Unicode, la conservation
+visuelle de `SCHEMA_INCOMPATIBLE`, la lecture de `hasNextPage=true` sur une page intermédiaire et de
+`hasNextPage=false` sur la page terminale, ainsi que l’absence de téléchargement brut. Aucun
+payload ou URI n’est recopié dans le rapport.
+
+Le rapport complet est :
+
+```text
+docs/validation/J3-WINDOWS-CACHE-AND-LOCAL-SNAPSHOT-INSPECTION-QUALIFICATION-20260814.md
+```
+
+```text
+J3_CACHE_TECHNICAL_QUALIFICATION=PASS
+J3_LOCAL_RAW_JSON_INSPECTION_TECHNICAL_QUALIFICATION=PASS
+J3_LOCAL_RAW_JSON_INSPECTION_HUMAN_QUALIFICATION=PASS
+J3_CACHE_AND_INSPECTION_CROSS_BOUNDARY=PASS
+J3_COMPLEMENTARY_PROVIDER_CALLS=0
+J3_WORK_ORDER=IN_DEVELOPMENT
+```
+
+### 29.1 Validation technique consolidée
+
+La validation est exécutée hors ligne, sans `.env` et sans appel fournisseur. Elle confirme Java
+25, les garde-fous source, la suite standard, la suite PostgreSQL/Testcontainers et Flyway V3 :
+
+```text
+PREFLIGHT_RESULT=PASS
+JAVA_TARGET=25
+SOURCE_GUARDRAIL_SCAN=PASS
+STANDARD_TESTS=159
+STANDARD_FAILURES=0
+STANDARD_ERRORS=0
+STANDARD_SKIPPED=0
+SPRING_BOOT_JAR=BUILT
+INTEGRATION_TESTS=11
+INTEGRATION_FAILURES=0
+INTEGRATION_ERRORS=0
+INTEGRATION_SKIPPED=0
+FLYWAY_LATEST_VERSION=3
+FRESH_CACHE_STILL_ELIGIBLE_AFTER_INSPECTION=PASS
+CACHE_TIMESTAMP_UNCHANGED_AFTER_INSPECTION=PASS
+HISTORICAL_INCOMPATIBILITY_PRESERVED=PASS
+INCOMPATIBLE_SNAPSHOT_CACHE_ELIGIBILITY=NO
+SERVER_ADDRESS=127.0.0.1
+SOFASCORE_NETWORK_CALLS_EXECUTED=NO
+VERIFY_RESULT=PASS
+```
+
+## 30. Unité 4 — clôture documentaire du jalon J3
+
+L’unité `docs: close J3 manual-call milestone` clôt le jalon après qualification technique et
+humaine de toutes ses frontières. Elle n’ajoute aucun comportement applicatif, n’exécute aucun
+appel fournisseur et ne modifie aucun snapshot, checkpoint ou incident historique.
+
+Le périmètre initial, volontairement limité à cinq pages pour la première qualification, a été
+étendu par décisions explicites successives. Le résultat final qualifié reste une collecte
+strictement manuelle et locale : l’opérateur choisit une date, lève l’arrêt global, active le
+circuit, prépare puis confirme une intention à usage unique. Une action distincte collecte les
+pages dans l’ordre depuis la page 1, poursuit seulement tant que `hasNextPage=true`, s’arrête sur
+`false` ou au premier incident, et refuse toute page au-delà de la limite locale de 25.
+
+Les objectifs J3 validés sont :
+
+- politique d’activation, circuit, concurrence `1`, délai minimal, arrêt global et incidents ;
+- persistance append-only du brut exact, SHA-256, déduplication et séparation du normalisé ;
+- transport fournisseur manuel sans cookie, jeton, compte, session, proxy, redirection ou retry ;
+- confirmation explicite et action finale distincte depuis l’interface liée à `127.0.0.1` ;
+- adaptation stricte de `scheduled-events-v1` aux schémas fournisseur qualifiés ;
+- pagination dynamique démarrant en page 1 et gouvernée par `hasNextPage` ;
+- politique de cache réelle, avec fraîcheur de dix minutes et provenance visible dans la preuve ;
+- inspection JSON locale en lecture seule, avec contrôle d’intégrité, échappement HTML et
+  `Cache-Control: no-store` ;
+- preuve terminale minimisée excluant payload, URI, en-tête et donnée de session ;
+- qualification Windows de cinq pages sur cinq le 2026-08-13 puis de dix pages sur dix le
+  2026-08-14 ;
+- qualification complémentaire du cache et de l’inspection locale, sans mutation croisée.
+
+Les preuves consolidées de clôture sont :
+
+```text
+docs/validation/J3-WINDOWS-MANUAL-CALL-QUALIFICATION-20260812.md
+docs/validation/J3-WINDOWS-FIVE-PAGE-PROVIDER-QUALIFICATION-20260813.md
+docs/validation/J3-WINDOWS-PAGE-TWO-PROVIDER-RESUME-QUALIFICATION-20260813.md
+docs/validation/J3-WINDOWS-PAGE-THREE-PROVIDER-RESUME-QUALIFICATION-20260814.md
+docs/validation/J3-WINDOWS-DYNAMIC-PAGINATION-QUALIFICATION-20260814.md
+docs/validation/J3-WINDOWS-CACHE-AND-LOCAL-SNAPSHOT-INSPECTION-QUALIFICATION-20260814.md
+```
+
+La dernière qualification consolidée a validé `159` tests standards et `11` tests
+PostgreSQL/Testcontainers, Flyway V3, la non-mutation du cache par l’inspection et l’absence
+d’appel fournisseur. Les exécutions humaines réelles restent documentées séparément et ne sont
+jamais rejouées par Maven.
+
+La clôture J3 ne constitue ni une autorisation de polling, ni une approbation de production, ni une
+autorisation VPS. Toute automatisation, nouvelle famille d’endpoint, normalisation enrichie ou
+intégration au Betting Project principal exige un nouveau Work Order, une nouvelle branche et une
+décision de gouvernance dédiée. La promotion GitHub de la branche de clôture reste une opération de
+livraison distincte de la validation technique du jalon.
+
+```text
+J3_STATUS=VALIDATED
+J3_WORK_ORDER=COMPLETED
+J3_MANUAL_CALL_PATH=QUALIFIED
+J3_DYNAMIC_PAGINATION=QUALIFIED
+J3_CACHE_POLICY=QUALIFIED
+J3_LOCAL_RAW_JSON_INSPECTION=QUALIFIED
+J3_WINDOWS_FIVE_PAGE_QUALIFICATION=5_OF_5_PASS
+J3_WINDOWS_DYNAMIC_QUALIFICATION=10_OF_10_PASS
+J3_STANDARD_TESTS=159
+J3_INTEGRATION_TESTS=11
+J3_FLYWAY_SCHEMA=V3
+J3_CLOSURE_BASE_COMMIT=35a8d34b4ab534d254d077942052860f66eebb0d
+J3_CLOSURE_PROVIDER_CALLS=0
+POLLING_AUTHORIZED=NO
+PRODUCTION_AUTHORIZED=NO
+VPS_DEPLOYMENT_AUTHORIZED=NO
+NEXT_MILESTONE_REQUIRES_NEW_WORK_ORDER=YES
 ```

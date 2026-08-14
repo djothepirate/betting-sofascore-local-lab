@@ -20,6 +20,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.Instant;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -168,7 +169,7 @@ class ManualCallControllerTest {
                 .andExpect(flash().attribute("manualCallMessageKind", "safe"))
                 .andExpect(flash().attribute(
                         "manualCallMessage",
-                        "Collecte terminée : 5 page(s) ont été collectées dans l’ordre jusqu’à hasNextPage=false. L’arrêt global a été réappliqué et la preuve minimisée est prête."));
+                        "Collecte terminée : 5 page(s) ont été résolues dans l’ordre jusqu’à hasNextPage=false (5 transport(s) fournisseur, 0 cache hit(s) local(aux)). L’arrêt global a été réappliqué et la preuve minimisée est prête."));
 
         verify(dynamicManualCallService).execute(REQUEST_ID);
     }
@@ -207,6 +208,7 @@ class ManualCallControllerTest {
                 true,
                 J3CircuitState.LOCKED,
                 J3CircuitReason.OPERATOR_STOP,
+                Duration.ofMinutes(10),
                 List.of());
         var document = new J3ManualCollectionEvidenceService.EvidenceDocument(
                 evidence,
