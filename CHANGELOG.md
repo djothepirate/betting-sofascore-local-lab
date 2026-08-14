@@ -6,6 +6,17 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Ajouté
 
+- migration Flyway V4 créant les identités canoniques d’événements et leurs observations
+  append-only, avec UUID déterministe, provenance complète, déduplication et trigger d’immuabilité ;
+- migration Flyway V5 conservant les détails J4 hors ligne sous forme d’observations append-only ;
+- corpus synthétique `EVENT_DETAILS`, parseur strict `event-details-v1` et couverture des champs
+  inconnus, absents ou de type incompatible ;
+- import transactionnel et idempotent du corpus J4, avec validation du rattachement à la même
+  identité fournisseur avant toute écriture ;
+- normalisation manuelle d’un snapshot local `SCHEDULED_EVENTS` après contrôle de son intégrité,
+  sans mutation de sa classification historique et sans résultat partiel ;
+- recherche locale par date civile et zone IANA, page de résultat et page de détail exposant
+  identité, provenance et chronologie des observations ;
 - manifeste de fixture v1 avec origine, preuve de schéma, taille maximale, hashes attendus et traçabilité de minimisation ;
 - chargeur de fixtures classpath entièrement hors ligne, avec classification `JSON`, `HTML` ou `OTHER` ;
 - calcul SHA-256 brut et JSON canonique stable malgré l’ordre des propriétés ;
@@ -83,6 +94,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Documentation
 
+- ouverture du Work Order `WO-SS-20260815-004` sur la branche `codex/j4-events` depuis le merge J3
+  `b79ccd62e7863718f49a22b6c54a7fc73cf87986` ;
+- contrats J4 de l’identité canonique, de la normalisation versionnée et du détail synthétique hors
+  ligne, avec rapport de qualification technique Windows ;
 - démarrage du Work Order `WO-SS-20260808-002` sur la branche `feat/j2-scheduled-events-fixtures` depuis le tag `j0-j1-v0.1.1` ;
 - passage du jalon J2 au statut `IN_DEVELOPMENT` avec `SCHEDULED_EVENTS` comme première famille de fixtures hors ligne.
 - contrat d’architecture `scheduled-events-v1` détaillant les champs obligatoires, facultatifs et inconnus.
@@ -128,6 +143,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Modifié
 
+- tableau de bord enrichi d’un accès à l’explorateur J4, sans modifier les contrôles réseau J3 ;
+- modèle de données local étendu aux observations normalisées tout en conservant une séparation
+  stricte avec les octets bruts de `provider_snapshot` ;
 - renommage du package Java de base de `com.geoffrey.betting.sofascorelocal` vers `com.bettingproject.sofascorelocal`.
 - renommage du groupId `com.geoffrey.betting` vers `com.bettingproject` dans le pom.xml
 - tableau de bord enrichi avec le compteur des dix fixtures hors ligne et l’état distinct de
@@ -171,6 +189,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Sécurité
 
+- maintien de `EVENT_DETAILS` sans URI et `callable=false` : le parcours J4 ne possède aucun client
+  HTTP, polling, retry ou repli fournisseur ;
+- protection des actions J4 par jeton de formulaire local à usage unique, et réponses de lecture
+  marquées `no-store`/`noindex` ;
 - maintien du verrouillage réseau pendant J2 : aucune URI d’endpoint réelle et aucun appel SofaScore réel ne sont autorisés.
 - maintien du connecteur et du profil réel bloqués au démarrage de J3 ; la revue des conditions officielles impose une décision humaine préalable avant tout appel.
 - dans l’unité de politique hors ligne, résultat `TRANSPORT_ELIGIBLE` explicitement sans effet :

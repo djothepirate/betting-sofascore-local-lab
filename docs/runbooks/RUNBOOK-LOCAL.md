@@ -2,7 +2,7 @@
 
 ## 1. Objectif
 
-Démarrer, vérifier, exploiter et arrêter le bootstrap J0/J1 sur Windows sans créer d’accès SofaScore et sans exposer de service hors de la machine locale.
+Démarrer, vérifier, exploiter et arrêter les jalons J0 à J4 sur Windows sans exposer de service hors de la machine locale. Le parcours J4 décrit ici est entièrement local et n’ajoute aucun accès SofaScore.
 
 ## 2. Première installation
 
@@ -348,6 +348,32 @@ bouton de téléchargement brut, aucune modification de classification et aucun 
 cache. Un refus `PAYLOAD_INTEGRITY_FAILURE`, `SENSITIVE_CONTENT_BLOCKED` ou `INVALID_JSON` doit
 rester bloquant et être analysé hors ligne sans modifier la ligne persistée.
 
+### 3.10 Rechercher et consulter un événement J4 hors ligne
+
+Ce parcours ne requiert ni activation J3, ni origine fournisseur, ni réseau. Avec PostgreSQL et
+l’application démarrés :
+
+1. ouvrir `http://127.0.0.1:8087/events` depuis le lien **« Événements locaux J4 »** du tableau de bord ;
+2. choisir une date civile et saisir explicitement une zone IANA, par exemple `Europe/Paris` ;
+3. sélectionner **« Rechercher localement »** ;
+4. pour une preuve reproductible sans donnée fournisseur, sélectionner
+   **« Charger la démonstration J4 »** ; l’import est idempotent et sa provenance reste
+   `SYNTHETIC_FIXTURE` ;
+5. ouvrir la rencontre pour vérifier l’UUID canonique, la provenance du détail et les observations
+   historiques append-only ;
+6. revenir à la recherche et confirmer que la même paire fournisseur/identifiant conserve le même
+   UUID.
+
+Un snapshot J3 local peut être normalisé manuellement en recopiant son identifiant numérique dans
+**« Normaliser une ligne locale »**. Le service relit uniquement un snapshot `SCHEDULED_EVENTS`,
+recalcule son SHA-256 et applique le parseur courant. Une forme `scheduled` sans liste `events`
+n’invente aucun événement ; une incompatibilité ne produit aucune écriture partielle et ne modifie
+jamais le statut historique du snapshot.
+
+L’absence de détail s’affiche comme un état local explicite. Elle ne déclenche aucun repli réseau.
+Ne pas ajouter une URI `EVENT_DETAILS`, activer le connecteur ou réutiliser le transport J3 pour
+compléter l’écran.
+
 ## 4. Validation
 
 ### 4.1 Suite standard
@@ -429,6 +455,24 @@ bloqué : il n’est pas nécessaire au chemin manuel de l’interface et ne doi
 La synthèse versionnée peut contenir les états du circuit, les codes d’incident et les comptes de
 tests. Elle ne doit jamais reproduire une phrase de confirmation active, un UUID, un jeton de
 formulaire, un cookie, un header, une URI fournisseur, un payload brut ou une donnée de session.
+
+### 4.8 Qualification technique Windows J4
+
+Exécuter les deux suites :
+
+```powershell
+.\mvnw.cmd clean verify
+.\mvnw.cmd -Pintegration-tests verify
+```
+
+Puis suivre la section 3.10 avec le corpus synthétique. Vérifier que l’écran affiche une seule
+identité stable, deux observations sources, le détail `event-details-v1` et aucune erreur de
+navigateur. Le rapport technique est conservé dans
+`docs/validation/J4-WINDOWS-TECHNICAL-QUALIFICATION-20260815.md`.
+
+Cette qualification technique ne clôture pas le Work Order : la revue humaine Windows reste un
+geste distinct avant fusion. Elle ne doit jamais inclure un payload brut, une valeur de `.env`, un
+cookie ou une donnée de session.
 
 ## 5. Arrêt
 

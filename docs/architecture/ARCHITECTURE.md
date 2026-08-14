@@ -1,4 +1,4 @@
-# Architecture J0 à J3 — SofaScore Local Lab
+# Architecture J0 à J4 — SofaScore Local Lab
 
 ## 1. Positionnement
 
@@ -10,7 +10,7 @@ Betting Project principal          SofaScore Local Lab
 VPS permanent                      Windows local uniquement
 Production indépendante            Prototype non approuvé production
 Modèle canonique multi-source      Modèle local de benchmark
-Aucun appel SofaScore VPS          Qualification J3 manuelle et bornée
+Aucun appel SofaScore VPS          J3 manuel borné + J4 local hors ligne
 Fonctionne poste éteint             Disponible seulement poste allumé
 ```
 
@@ -33,6 +33,8 @@ La relation future autorisée est un export JSON normalisé et versionné. Aucun
 │  ├─ Politique J3 et circuit en mémoire                    │
 │  ├─ Transport HTTP simulé, loopback strict                │
 │  ├─ Collecte J3 manuelle 1..N, opt-in et plafonnée        │
+│  ├─ Identités et observations J4 append-only              │
+│  ├─ Recherche par date et détail J4 hors ligne            │
 │  ├─ Catalogue logique fermé par défaut                    │
 │  ├─ Flyway / JDBC / JPA                                   │
 │  └─ Actuator                                              │
@@ -45,7 +47,7 @@ La relation future autorisée est un export JSON normalisé et versionné. Aucun
 │  exports/                                                 │
 └───────────────────────────────────────────────────────────┘
 
-SofaScore : aucune connexion par défaut ; qualification J3 manuelle uniquement
+SofaScore : aucune connexion par défaut ; J4 n’ajoute aucun transport
 VPS       : aucune connexion
 ```
 
@@ -55,12 +57,13 @@ VPS       : aucune connexion
 |---|---|
 | `config` | propriétés typées, garde de liaison locale, initialisation du dossier d’export, en-têtes de sécurité |
 | `domain.provider` | types logiques, définition de catalogue, mode du connecteur et requête fournisseur J3 fermée |
-| `application` | verrou général, politique J3, confirmation à usage unique et orchestration séquentielle pilotée par `hasNextPage` |
-| `adapter.sofascore` | catalogue fermé par défaut, adaptateur fournisseur général bloqué, transport loopback simulé et client J3 exact sans proxy ni redirection |
-| `adapter.persistence` | conservation JDBC des preuves brutes et déduplication atomique |
-| `adapter.web` | tableau de bord et vues locales |
-| `resources/db/migration` | schéma brut V1/V2, manifeste d’export et état persistant |
-| `fixtures` | corpus synthétique et parsing hors ligne J2 |
+| `domain.event` / `domain.eventdetails` | identité canonique, observation versionnée, provenance et détail immuables J4 |
+| `application` | verrou général, politique J3, orchestration manuelle J3 et services locaux de normalisation/recherche J4 |
+| `adapter.sofascore` | catalogue fermé par défaut, transport J3 borné, parseurs hors ligne `scheduled-events-v1` et `event-details-v1` |
+| `adapter.persistence` | preuves brutes J3, identités et observations normalisées J4, avec déduplication atomique |
+| `adapter.web` | tableau de bord, recherche locale par date et détail en lecture seule |
+| `resources/db/migration` | schémas V1 à V5, migrations append-only et triggers d’immuabilité |
+| `fixtures` | corpus synthétiques hors ligne J2 et J4 |
 
 Le connecteur général demeure bloqué. Un `RestClient` distinct est construit uniquement pour le
 chemin manuel J3 borné ; il ne reçoit qu’une requête de domaine validée et ne peut viser que
@@ -119,12 +122,32 @@ last_reason     = J1 bootstrap: network calls are not implemented
 Cette table ne remplace pas le verrou logiciel. Pendant l’unité de politique J3, modifier cette ligne
 n’autorise toujours aucun appel.
 
+### 5.4 `canonical_event` et `canonical_event_observation`
+
+`canonical_event` associe une unique identité UUID locale à la paire
+`(provider, provider_event_id)`. L’UUID est calculé dans un espace de noms versionné et ne dépend
+jamais d’un libellé, d’un horaire, d’une compétition ou d’un statut.
+
+`canonical_event_observation` conserve chaque version métier avec sa source exacte, son SHA-256,
+son parseur et son heure de réception. Les observations sont dédupliquées uniquement lorsqu’elles
+sont strictement identiques ; un trigger interdit `UPDATE` et `DELETE`. Pour une recherche, la
+dernière observation de chaque identité est sélectionnée avant d’appliquer les bornes de date afin
+qu’un événement déplacé ne réapparaisse pas à son ancien horaire.
+
+### 5.5 `event_detail_observation`
+
+Le détail J4 est append-only et rattaché par clé étrangère à l’identité canonique. À ce jalon, sa
+provenance autorisée est exclusivement `SYNTHETIC_FIXTURE`. Le service d’import valide entièrement
+les deux fixtures et l’égalité des identifiants fournisseur avant toute écriture transactionnelle.
+Le payload source demeure dans le corpus classpath ; la table ne stocke que les champs normalisés
+et la preuve de provenance.
+
 ## 6. Catalogue logique
 
 | Type | Cache initial | Déclenchement prévu | Appelable actuellement |
 |---|---:|---|---|
 | `SCHEDULED_EVENTS` | 10 min | manuel | uniquement par séquence J3 opt-in |
-| `EVENT_DETAILS` | 15 min | manuel prévu | non |
+| `EVENT_DETAILS` | 15 min | fixture J4 hors ligne uniquement | non |
 | `EVENT_STATISTICS` | 30 min | manuel prévu | non |
 | `EVENT_INCIDENTS` | 15 min | manuel prévu | non |
 | `EVENT_LINEUPS` | 15 min | manuel prévu | non |
@@ -152,10 +175,16 @@ commence obligatoirement à 1, continue uniquement sur `hasNextPage=true` et s�
 - ordre dynamique depuis la page 1, terminaison par `hasNextPage=false`, plafond 25, délai minimal,
   persistance avant parsing et arrêt au premier incident ;
 - rendu du contrôleur.
+- identité canonique déterministe, versions et provenance J4 ;
+- parseur `event-details-v1`, refus des ruptures de schéma et rattachement strict ;
+- recherche par date/zone, rendu des résultats et détail local ;
+- absence de transport ou de résolution d’URI dans tout le parcours J4.
 
 ### Intégration
 
-`mvnw -Pintegration-tests verify` démarre PostgreSQL avec Testcontainers et vérifie les migrations V1/V2, la fidélité binaire, les contraintes et la déduplication. Aucun appel SofaScore n’est exécuté.
+`mvnw -Pintegration-tests verify` démarre PostgreSQL avec Testcontainers et vérifie les migrations
+V1 à V5, la fidélité binaire, les contraintes, la déduplication et l’immuabilité des observations
+J4. Aucun appel SofaScore n’est exécuté.
 
 ### Réel
 
@@ -166,8 +195,8 @@ activation explicite de la configuration. Aucune suite Maven ne réalise ce gest
 ## 8. Décisions différées
 
 - stockage de headers autorisés ;
-- normalisation persistée après parsing ;
-- parseurs et DTO externes au-delà de `scheduled-events-v1` ;
+- transport réel ou URI `EVENT_DETAILS` ;
+- parseurs et DTO externes au-delà de `scheduled-events-v1` et `event-details-v1` ;
 - persistance du circuit et des incidents ;
 - ajout d’autres endpoints, sports ou origines au-delà du chemin J3 qualifié ;
 - export canonique ;
@@ -183,3 +212,8 @@ Le modèle de décision et le circuit J3 désormais actés sont détaillés dans
 borné est détaillé dans `docs/architecture/J3-FIVE-PAGE-PROVIDER-QUALIFICATION.md`. Il ne déverrouille
 ni le connecteur général, ni le profil live, ni les autres familles du catalogue. Le parcours actif
 répétable est détaillé dans `docs/architecture/J3-DYNAMIC-MANUAL-PAGINATION.md`.
+
+Le modèle J4, ses frontières de normalisation, son identité stable et son détail hors ligne sont
+détaillés dans `docs/architecture/J4-CANONICAL-EVENTS-AND-LOCAL-DETAIL.md`. Le contrat JSON minimal
+du détail est défini dans `docs/architecture/EVENT-DETAILS-V1.md`. Aucun de ces deux documents
+n’autorise une URI ou un appel `EVENT_DETAILS` réel.

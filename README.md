@@ -4,14 +4,14 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures** et **J3 — Appel manuel**. J3 fournit un chemin fournisseur opt-in de collecte complète, démarrant en page 1 et progressant selon le booléen qualifié `hasNextPage`, avec un plafond local de 25 pages. Ce chemin reste désactivé par défaut et aucun appel fournisseur n’est exécuté par les tests, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures** et **J3 — Appel manuel**, puis le jalon **J4 — Événements** en cours de qualification humaine. J4 ajoute une recherche locale par date, une identité canonique stable, un historique append-only et un premier détail de rencontre strictement hors ligne. Le chemin fournisseur J3 reste désactivé par défaut et aucun appel fournisseur n’est exécuté par les tests, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
 ## Ce qui est livré localement
 
 - dépôt Git autonome, documentation, ADR, règles agent et Work Orders ;
 - Java **25 LTS**, Spring Boot **4.1.0** et Maven Wrapper versionné ;
 - interface Spring MVC + Thymeleaf sur `127.0.0.1:8087` ;
-- PostgreSQL local dans Docker Desktop, migrations Flyway V1/V2/V3 et stockage brut séparé ;
+- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V5 et stockage brut séparé ;
 - Actuator, Caffeine, validation de configuration et garde de liaison locale ;
 - catalogue logique des familles d’endpoints, sans URI réelle ;
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
@@ -42,6 +42,14 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
 - catalogue local limité à 50 métadonnées de snapshots bruts et inspection JSON explicite d’une
   ligne, avec contrôle taille/SHA-256, blocage des contenus sensibles, parsing strict, rendu HTML
   échappé et réponse `no-store`, sans transport, téléchargement ou mutation ;
+- identité canonique J4 déterministe par paire `(provider, providerEventId)`, indépendante des
+  noms, horaires et statuts mutables ;
+- observations normalisées J4 append-only, dédupliquées par empreinte et toujours reliées à leur
+  snapshot ou fixture, leur SHA-256, leur parseur et leur heure de réception ;
+- contrat synthétique `event-details-v1`, rattachement strict à l’identité locale et stockage du
+  détail sans URI, transport ou donnée fournisseur réelle ;
+- recherche locale `/events` par date civile et zone IANA, page de détail et chronologie des
+  observations, avec import de démonstration synthétique idempotent ;
 
 ## Limite essentielle du bootstrap
 
@@ -174,7 +182,7 @@ betting-sofascore-local-lab/
 └── src/
 ```
 
-## Modèle de données J1 à J3
+## Modèle de données J1 à J4
 
 La migration `V1__bootstrap_schema.sql` crée :
 
@@ -187,6 +195,15 @@ La migration append-only `V2__raw_manual_call_snapshots.sql` ajoute à `provider
 La migration append-only `V3__dynamic_manual_collection_cache.sql` ajoute uniquement un checkpoint
 de fraîcheur par clé date/page. Il référence le snapshot brut immuable et permet de rafraîchir le
 TTL après une nouvelle réponse identique dédupliquée, sans recopier ni modifier le payload.
+
+La migration append-only `V4__canonical_events_and_observations.sql` introduit
+`canonical_event` et `canonical_event_observation`. L’identité UUID reste stable pour la paire
+fournisseur/identifiant ; les observations successives conservent les changements métier et leur
+provenance. Un trigger PostgreSQL bloque toute mise à jour ou suppression d’une observation.
+
+La migration append-only `V5__offline_event_details.sql` ajoute `event_detail_observation`. Cette
+table conserve uniquement les détails issus des fixtures synthétiques J4, avec hash, parseur et
+heure source obligatoires. Elle est elle aussi protégée contre `UPDATE` et `DELETE`.
 
 Le mode `DIRECT_LOCAL_ENDPOINT` ne doit jamais être confondu avec une `VisualObservation` du projet global. Cette persistance est prête pour un transport futur, mais n’effectue elle-même aucun appel.
 
@@ -212,6 +229,8 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [ADR-SS-001](ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md)
 - [Architecture J0/J1](docs/architecture/ARCHITECTURE.md)
 - [Contrat hors ligne scheduled-events-v1](docs/architecture/SCHEDULED-EVENTS-V1.md)
+- [Contrat hors ligne event-details-v1](docs/architecture/EVENT-DETAILS-V1.md)
+- [Architecture des événements canoniques J4](docs/architecture/J4-CANONICAL-EVENTS-AND-LOCAL-DETAIL.md)
 - [Politique réseau J3 hors ligne](docs/architecture/J3-OFFLINE-NETWORK-POLICY.md)
 - [Persistance des snapshots bruts J3](docs/architecture/J3-RAW-SNAPSHOT-PERSISTENCE.md)
 - [Transport scheduled-events J3 protégé et simulé](docs/architecture/J3-GUARDED-SCHEDULED-EVENTS-TRANSPORT.md)
@@ -232,8 +251,10 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Qualification Windows J3 — contrôle local et politiques simulées](docs/validation/J3-WINDOWS-MANUAL-CALL-QUALIFICATION-20260812.md)
 - [Qualification Windows J3 — pagination dynamique](docs/validation/J3-WINDOWS-DYNAMIC-PAGINATION-QUALIFICATION-20260814.md)
 - [Work Order J3 validé](docs/work_orders/completed/WO-SS-20260812-003-manual-call-j3.md)
+- [Qualification technique Windows J4](docs/validation/J4-WINDOWS-TECHNICAL-QUALIFICATION-20260815.md)
+- [Work Order J4 actif](docs/work_orders/active/WO-SS-20260815-004-events-j4.md)
 
-## J3 clôturé et prochaine frontière
+## J3 clôturé, J4 en qualification
 
 La qualification humaine du `2026-08-14` a collecté dix pages sur dix, après les cinq pages
 observées le `2026-08-13`. Elle confirme que le parcours repart de la page 1, persiste avant
@@ -262,3 +283,9 @@ clôture ne change pas les statuts `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION
 `NO_CRITICAL_DEPENDENCY`. Le polling, la planification, le déploiement VPS, une nouvelle famille
 d’endpoint ou l’intégration au Betting Project principal restent interdits tant qu’un nouveau Work
 Order et une décision de gouvernance dédiée ne les autorisent pas.
+
+Le jalon J4 construit désormais une vue métier locale sur les seules sources déjà présentes ou
+synthétiques. Une normalisation manuelle d’un snapshot `SCHEDULED_EVENTS` compatible vérifie son
+intégrité et le reparse sans modifier sa classification historique ; le corpus de démonstration
+reste explicitement `SYNTHETIC_FIXTURE`. La qualification technique est acquise, mais le Work Order
+reste `IN_DEVELOPMENT` jusqu’à la revue humaine Windows et à la décision explicite de clôture.
