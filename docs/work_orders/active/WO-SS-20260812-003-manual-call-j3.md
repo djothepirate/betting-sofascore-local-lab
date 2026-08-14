@@ -1072,3 +1072,76 @@ SOFASCORE_NETWORK_CALLS_EXECUTED=NO
 Les tests ciblés confirment une page terminale unique, une séquence `1,2,3,4,5` pilotée par
 `true,true,true,true,false`, les délais inter-pages, l’arrêt au premier incident, le refus de la
 page 26 après 25 valeurs `true`, la preuve v3 et le réarmement d’une nouvelle séquence explicite.
+
+## 26. Qualification humaine Windows de la pagination dynamique
+
+La qualification humaine du parcours dynamique a été exécutée le 2026-08-14 sur le commit
+`57a187315a106bcb8aaf180dd2446edb0546318b`. L’opérateur a sélectionné la date `2026-08-14`,
+préparé et confirmé une intention explicite, puis déclenché l’action finale distincte depuis
+l’interface locale.
+
+La preuve minimisée v3 établit :
+
+```text
+COLLECTION_DATE=2026-08-14
+PAGINATION_MODE=HAS_NEXT_PAGE
+PROVIDER_FIRST_PAGE=1
+MAXIMUM_PAGE_LIMIT=25
+PAGES_ATTEMPTED=1,2,3,4,5,6,7,8,9,10
+PAGES_COMPLETED_COUNT=10
+LAST_COMPLETED_PAGE=10
+FAILED_PAGE=NONE
+TERMINAL_CODE=NONE
+PAGE_1_TO_9_HAS_NEXT_PAGE=true
+PAGE_10_HAS_NEXT_PAGE=false
+FINAL_GLOBAL_STOP=ACTIVE
+FINAL_CIRCUIT_STATE=LOCKED
+FINAL_CIRCUIT_REASON=MANUAL_COLLECTION_TERMINAL_LOCK
+AUTOMATIC_RETRY_EXECUTED=NO
+POLLING_OR_SCHEDULE_EXECUTED=NO
+COOKIES_TOKENS_ACCOUNT_SESSION_USED=NO
+```
+
+Les dix réponses ont reçu un statut HTTP `200`, ont été persistées avec `INSERTED`, puis classées
+`PARSED`. Les snapshots `6` à `15` ont été ajoutés sans réécriture des cinq snapshots historiques.
+L’intervalle minimal observé entre deux départs est de `3000.140 ms`. Aucune page 11 n’a été
+demandée après la valeur terminale `hasNextPage=false` de la page 10.
+
+Le rapport détaillé est conservé dans :
+
+```text
+docs/validation/J3-WINDOWS-DYNAMIC-PAGINATION-QUALIFICATION-20260814.md
+```
+
+```text
+J3_DYNAMIC_PAGINATION_HUMAN_QUALIFICATION=PASS
+J3_2026_08_13_OBSERVED_PAGES=5
+J3_2026_08_14_OBSERVED_PAGES=10
+J3_FIXED_FIVE_PAGE_ASSUMPTION=INVALIDATED
+J3_HAS_NEXT_PAGE_DRIVER=QUALIFIED
+J3_PAGE_AFTER_TERMINAL_FALSE_REQUESTED=NO
+J3_MINIMIZED_EVIDENCE_V3=PASS
+J3_WORK_ORDER=IN_DEVELOPMENT
+```
+
+Cette qualification ne modifie pas les statuts `EXPERIMENTAL`, `LOCAL_ONLY`,
+`NOT_PRODUCTION_APPROVED` et `NO_CRITICAL_DEPENDENCY`. Elle n’autorise aucun polling, live,
+traitement planifié ou usage par le Betting Project principal.
+
+### 26.1 Validation du changement documentaire
+
+La validation consolidée a été rejouée après enregistrement du rapport :
+
+```text
+PREFLIGHT_RESULT=PASS
+JAVA_TARGET=25
+SOURCE_GUARDRAIL_SCAN=PASS
+STANDARD_TESTS=148
+STANDARD_FAILURES=0
+STANDARD_ERRORS=0
+STANDARD_SKIPPED=0
+SPRING_BOOT_JAR=BUILT
+VERIFY_RESULT=PASS
+INTEGRATION_TESTS_EXECUTED=NO_DOCUMENTATION_ONLY_CHANGE
+SOFASCORE_NETWORK_CALLS_EXECUTED=NO
+```

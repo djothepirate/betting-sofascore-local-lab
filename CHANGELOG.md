@@ -104,6 +104,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   sans appel réel pendant l’implémentation ou les tests.
 - contrat d’architecture et procédure opérateur de la collecte manuelle répétable à pagination
   dynamique, sans appel fournisseur pendant l’implémentation ou les tests.
+- rapport Windows de qualification humaine de la pagination dynamique, confirmant dix pages sur
+  dix pour le `2026-08-14`, la progression `hasNextPage=true` des pages 1 à 9, la terminaison sur
+  `false` en page 10, la persistance avant parsing et la réapplication du verrou terminal.
 
 ### Modifié
 

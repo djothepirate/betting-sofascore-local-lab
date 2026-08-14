@@ -218,16 +218,15 @@ Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces
 - [Rapport de validation J2](docs/validation/J2-WINDOWS-VALIDATION-20260812.md)
 - [Work Order J2 validé](docs/work_orders/completed/WO-SS-20260808-002-fixtures-j2.md)
 - [Qualification Windows J3 — contrôle local et politiques simulées](docs/validation/J3-WINDOWS-MANUAL-CALL-QUALIFICATION-20260812.md)
+- [Qualification Windows J3 — pagination dynamique](docs/validation/J3-WINDOWS-DYNAMIC-PAGINATION-QUALIFICATION-20260814.md)
 - [Work Order J3 actif](docs/work_orders/active/WO-SS-20260812-003-manual-call-j3.md)
 
 ## Prochaine frontière
 
-La qualification humaine du `2026-08-13` a collecté les cinq pages attendues et confirmé que
-`hasNextPage` est le signal de pagination. Le parcours actif est désormais dynamique et répétable :
-chaque intention repart de la page 1, persiste avant parsing, continue uniquement sur
-`hasNextPage=true` et s’arrête normalement sur `false`. Une barrière locale interdit toute page 26.
+La qualification humaine du `2026-08-14` a collecté dix pages sur dix, après les cinq pages
+observées le `2026-08-13`. Elle confirme que le parcours repart de la page 1, persiste avant
+parsing, continue uniquement sur `hasNextPage=true` et s’arrête normalement sur `false`, sans
+conserver l’ancienne hypothèse fixe de cinq pages. Une barrière locale interdit toute page 26.
 
-Cette implémentation et ses tests n’exécutent aucun appel fournisseur. Le prochain contrôle utile
-est une qualification humaine du nouveau parcours depuis l’interface, avec examen de la preuve
-minimisée v3 et retour immédiat à la configuration désactivée. Toute automatisation, planification,
-collecte live ou généralisation à une autre famille reste hors périmètre.
+La pagination dynamique est désormais qualifiée dans le périmètre manuel J3. Toute automatisation,
+planification, collecte live ou généralisation à une autre famille reste hors périmètre.
