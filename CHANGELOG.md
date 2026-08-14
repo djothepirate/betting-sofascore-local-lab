@@ -69,6 +69,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   réarmement explicite entre deux collectes et maintien de la concurrence à un ;
 - preuve minimisée v3 indiquant le mode de pagination, la limite locale et `hasNextPage` pour les
   pages parsées, sans payload, URI, en-tête, secret ou donnée de session ;
+- cache PostgreSQL du parcours manuel dynamique, indexé par la clé exacte date/page, limité aux
+  snapshots HTTP réussis classés `PARSED`, frais pendant les dix minutes du catalogue et produits
+  par la version courante de `scheduled-events-v1` ;
+- migration Flyway V3 append-only séparant le checkpoint de fraîcheur du snapshot brut : une
+  nouvelle observation identique peut rafraîchir le cache sans réécrire ni dupliquer le payload ;
+- preuve minimisée v4 distinguant `CACHE` et `PROVIDER`, les pages réellement demandées au
+  fournisseur et les cache hits locaux, sans inclure le payload ou l’URI ;
 
 ### Documentation
 
@@ -146,6 +153,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   inattendu) et phase applicative avancée à `J3-PAGE-TWO-SCHEMA-ADAPTATION`.
 - phase applicative avancée à `J3-DYNAMIC-MANUAL-PAGINATION` ; le chemin actif n’est plus limité à
   la date qualifiée ni aux cinq pages observées le `2026-08-13`.
+- phase applicative avancée à `J3-DYNAMIC-CACHE-POLICY` ; le cache frais est désormais évalué et
+  reparsé avant le délai et avant tout transport du chemin réel dynamique.
 
 ### Sécurité
 
@@ -176,6 +185,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - arrêt normal uniquement sur `hasNextPage=false`, rupture sûre si ce champ n’est pas un booléen,
   arrêt au premier incident, délai inter-pages minimal de trois secondes et absence de retry,
   polling ou planification dans le parcours répétable.
+- un cache hit ne déclenche aucun appel fournisseur, aucune attente inter-page et aucune écriture ;
+  le délai minimal reste calculé exclusivement entre deux départs fournisseur réels, y compris
+  lorsqu’une page intermédiaire est résolue depuis le cache.
 
 ## [0.1.0] — 2026-08-08
 

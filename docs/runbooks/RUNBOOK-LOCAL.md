@@ -290,16 +290,34 @@ Cette procédure remplace fonctionnellement la reprise fixe de la section 3.7. E
 12. télécharger la preuve et contrôler au minimum :
 
 ```text
-J3_MINIMIZED_EVIDENCE_VERSION=3
+J3_MINIMIZED_EVIDENCE_VERSION=4
 PAGINATION_MODE=HAS_NEXT_PAGE
+CACHE_POLICY=FRESH_PARSED_SNAPSHOT_FIRST
+CACHE_TTL_SECONDS=600
 PROVIDER_FIRST_PAGE=1
 MAXIMUM_PAGE_LIMIT=25
+PROVIDER_PAGES_REQUESTED=<liste ou NONE>
+CACHE_HIT_PAGES=<liste ou NONE>
 FINAL_GLOBAL_STOP=ACTIVE
 AUTOMATIC_RETRY_EXECUTED=NO
 POLLING_OR_SCHEDULE_EXECUTED=NO
 RAW_PAYLOAD_INCLUDED=NO
 PROVIDER_URI_INCLUDED=NO
 ```
+
+Avant chaque page, l’application recherche la clé exacte
+`SCHEDULED_EVENTS|date=<date>|page=<page>` parmi les snapshots HTTP réussis, `PARSED`, intègres et
+produits par `scheduled-events-v1`. Un checkpoint de cache actualisé depuis strictement moins de dix
+minutes est reparsé localement puis utilisé sans transport, sans attente et sans nouvelle écriture.
+La preuve
+doit alors indiquer `PAGE_<n>_RESOLUTION_SOURCE=CACHE` et
+`PAGE_<n>_PROVIDER_REQUEST_EXECUTED=NO`, ainsi que l’instant `PAGE_<n>_CACHE_STORED_AT`.
+
+Un cache miss conserve le comportement fournisseur manuel. Le délai minimal est mesuré entre les
+départs fournisseur réels : une page intermédiaire servie par le cache ne remet pas cette horloge à
+zéro. Il n’existe aucun bouton de contournement du cache ni du TTL. Pour observer volontairement un
+nouveau transport sur la même date, attendre l’expiration normale ; ne jamais supprimer, modifier
+ou reclasser un snapshot.
 
 Pour répéter l’interrogation, lever à nouveau l’arrêt global : l’intention terminale précédente est
 alors retirée. Réactiver le circuit et recommencer depuis l’étape 6. Ne jamais contourner un

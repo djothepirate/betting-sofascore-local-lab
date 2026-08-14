@@ -1,12 +1,16 @@
 package com.bettingproject.sofascorelocal.integration;
 
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsParseStatus;
+import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1Parser;
 import com.bettingproject.sofascorelocal.application.network.J3QualificationCheckpointReparser;
 import com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceOutcome;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
+import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
+import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportResponse;
+import com.bettingproject.sofascorelocal.port.J3ScheduledEventsPageCache;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import com.bettingproject.sofascorelocal.port.J3QualificationCheckpointStore;
 import org.junit.jupiter.api.Test;
@@ -24,6 +28,7 @@ import org.testcontainers.postgresql.PostgreSQLContainer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -62,6 +67,9 @@ class FlywayMigrationIT {
     @Autowired
     J3QualificationCheckpointReparser checkpointReparser;
 
+    @Autowired
+    J3ScheduledEventsPageCache scheduledEventsPageCache;
+
     @Test
     void createsTheJ3RawSnapshotSchemaAndKeepsNetworkDisabled() {
         String snapshotTable = jdbcTemplate.queryForObject(
@@ -93,7 +101,7 @@ class FlywayMigrationIT {
         assertThat(snapshotTable).isEqualTo("provider_snapshot");
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("2");
+        assertThat(flywayVersion).isEqualTo("3");
         assertThat(rawColumn).isEqualTo("bytea");
     }
 
@@ -216,6 +224,93 @@ class FlywayMigrationIT {
             assertThat(page.payload().sha256()).isEqualTo(persisted.payloadSha256());
             assertThat(page.historicalSchemaStatus())
                     .isEqualTo(RawSnapshotSchemaStatus.PARSED);
+        });
+    }
+
+    @Test
+    void selectsOnlyAnExactFreshParsedPageAsDynamicCache() {
+        byte[] rawPayload = """
+                {
+                  "scheduled": [],
+                  "hasNextPage": false
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+        var persisted = snapshotStore.save(snapshot(
+                "SCHEDULED_EVENTS|date=2026-08-13|page=1",
+                rawPayload));
+        var request = new ScheduledEventsProviderPageRequest(
+                URI.create(ScheduledEventsProviderPageRequest.EXPECTED_ORIGIN),
+                LocalDate.parse("2026-08-13"),
+                1);
+        var initialResponse = new ScheduledEventsTransportResponse(
+                request.requestKey(),
+                Instant.parse("2026-08-12T12:00:00Z"),
+                Instant.parse("2026-08-12T12:00:00.275Z"),
+                200,
+                "application/json; charset=utf-8",
+                Duration.ofMillis(275),
+                RawPayloadEvidence.capture(rawPayload));
+        scheduledEventsPageCache.recordParsed(
+                request,
+                initialResponse,
+                persisted,
+                ScheduledEventsV1Parser.PARSER_VERSION);
+
+        var fresh = scheduledEventsPageCache.findFreshParsed(
+                request,
+                Instant.parse("2026-08-12T12:05:00Z"),
+                Duration.ofMinutes(10),
+                ScheduledEventsV1Parser.PARSER_VERSION);
+        var expired = scheduledEventsPageCache.findFreshParsed(
+                request,
+                Instant.parse("2026-08-12T12:10:00.275Z"),
+                Duration.ofMinutes(10),
+                ScheduledEventsV1Parser.PARSER_VERSION);
+        var otherParser = scheduledEventsPageCache.findFreshParsed(
+                request,
+                Instant.parse("2026-08-12T12:05:00Z"),
+                Duration.ofMinutes(10),
+                "scheduled-events-v2");
+
+        assertThat(fresh).hasValueSatisfying(cached -> {
+            assertThat(cached.snapshotId()).isEqualTo(persisted.snapshotId());
+            assertThat(cached.requestKey()).isEqualTo(request.requestKey());
+            assertThat(cached.payload().bytes()).isEqualTo(rawPayload);
+            assertThat(cached.payload().sha256()).isEqualTo(persisted.payloadSha256());
+        });
+        assertThat(expired).isEmpty();
+        assertThat(otherParser).isEmpty();
+
+        var deduplicated = snapshotStore.save(snapshot(
+                request.requestKey(),
+                rawPayload));
+        var refreshedResponse = new ScheduledEventsTransportResponse(
+                request.requestKey(),
+                Instant.parse("2026-08-12T12:20:00Z"),
+                Instant.parse("2026-08-12T12:20:00.100Z"),
+                200,
+                "application/json; charset=utf-8",
+                Duration.ofMillis(100),
+                RawPayloadEvidence.capture(rawPayload));
+        scheduledEventsPageCache.recordParsed(
+                request,
+                refreshedResponse,
+                deduplicated,
+                ScheduledEventsV1Parser.PARSER_VERSION);
+        var refreshed = scheduledEventsPageCache.findFreshParsed(
+                request,
+                Instant.parse("2026-08-12T12:25:00Z"),
+                Duration.ofMinutes(10),
+                ScheduledEventsV1Parser.PARSER_VERSION);
+
+        assertThat(deduplicated.outcome())
+                .isEqualTo(RawSnapshotPersistenceOutcome.DEDUPLICATED);
+        assertThat(refreshed).hasValueSatisfying(cached -> {
+            assertThat(cached.snapshotId()).isEqualTo(persisted.snapshotId());
+            assertThat(cached.receivedAt())
+                    .isEqualTo(Instant.parse("2026-08-12T12:00:00.275Z"));
+            assertThat(cached.cachedAt())
+                    .isEqualTo(Instant.parse("2026-08-12T12:20:00.100Z"));
         });
     }
 

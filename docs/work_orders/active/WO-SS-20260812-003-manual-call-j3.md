@@ -1145,3 +1145,82 @@ VERIFY_RESULT=PASS
 INTEGRATION_TESTS_EXECUTED=NO_DOCUMENTATION_ONLY_CHANGE
 SOFASCORE_NETWORK_CALLS_EXECUTED=NO
 ```
+
+## 27. Unité 1 — cache du chemin réel dynamique
+
+L’unité `feat: enforce cache policy in dynamic manual collection` démarre depuis le commit de
+fusion `e27c96574aa75095d91e16c16f0a21913ac8cd5b` sur la branche
+`feat/j3-dynamic-cache-policy`. Elle rend effective, dans l’orchestrateur dynamique, la priorité de
+cache déjà définie par la politique J3. Son implémentation et ses tests n’exécutent aucun appel
+fournisseur.
+
+Le contrat appliqué avant chaque transport est :
+
+```text
+CACHE_KEY=SCHEDULED_EVENTS|date=<date>|page=<page>
+CACHE_TTL=PT10M
+CACHE_HTTP_STATUS=2XX
+CACHE_HISTORICAL_SCHEMA_STATUS=PARSED
+CACHE_PARSER_VERSION=scheduled-events-v1
+CACHE_RAW_INTEGRITY_CHECK=SIZE_AND_SHA256
+CACHE_FRESHNESS_CHECKPOINT=FLYWAY_V3_SEPARATE_FROM_RAW
+CACHE_REPARSE_BEFORE_USE=YES
+CACHE_LOOKUP_BEFORE_PROVIDER_DELAY=YES
+CACHE_HIT_PROVIDER_TRANSPORT=NO
+CACHE_HIT_PERSISTENCE_MUTATION=NO
+CACHE_HIT_INTER_PAGE_WAIT=NO
+DELAY_MEASURED_BETWEEN_PROVIDER_STARTS=YES
+EXACT_TTL_BOUNDARY=EXPIRED
+```
+
+Le cache ne se contente pas de la classification historique : les octets sont relus et reparsés
+avec la version courante avant que `hasNextPage` soit accepté. Une incompatibilité ne peut donc pas
+être masquée par une ancienne classification. En cas de cache miss, le chemin existant conserve la
+persistance brute avant parsing, l’arrêt au premier incident et l’absence de retry.
+
+La preuve terminale passe à la version 4 et distingue pour chaque page `CACHE` et `PROVIDER`. Elle
+indique séparément `PROVIDER_PAGES_REQUESTED`, `CACHE_HIT_PAGES`, leurs compteurs et l’absence de
+transport sur un cache hit, sans ajouter de payload, URI, en-tête ou donnée de session.
+
+```text
+J3_DYNAMIC_CACHE_POLICY=IMPLEMENTED
+J3_CACHE_PERSISTENCE_MIGRATION=V3_APPEND_ONLY
+J3_IMPLEMENTATION_PROVIDER_CALLS=0
+J3_WORK_ORDER=IN_DEVELOPMENT
+```
+
+### 27.1 Validation technique de l’unité
+
+La validation a été exécutée le 2026-08-14 sur une copie locale isolée sans `.env`, avec le dépôt
+Maven local en mode hors ligne. La suite standard, le scan des garde-fous et la suite PostgreSQL
+ont tous abouti sans appel fournisseur :
+
+```text
+PREFLIGHT_RESULT=PASS
+JAVA_TARGET=25
+SOURCE_GUARDRAIL_SCAN=PASS
+STANDARD_TESTS=150
+STANDARD_FAILURES=0
+STANDARD_ERRORS=0
+STANDARD_SKIPPED=0
+SPRING_BOOT_JAR=BUILT
+INTEGRATION_TESTS=8
+INTEGRATION_FAILURES=0
+INTEGRATION_ERRORS=0
+INTEGRATION_SKIPPED=0
+FLYWAY_LATEST_VERSION=3
+POSTGRESQL_CACHE_SELECTION=PASS
+DEDUPLICATED_RESPONSE_REFRESHES_CACHE=PASS
+EXACT_TTL_BOUNDARY_REJECTED=PASS
+PARSER_VERSION_MISMATCH_REJECTED=PASS
+SERVER_ADDRESS=127.0.0.1
+SOFASCORE_NETWORK_CALLS_EXECUTED=NO
+```
+
+Les tests unitaires prouvent qu’une collecte entièrement servie par le cache exécute zéro
+transport, zéro attente et zéro mutation de persistance. Le scénario mixte `PROVIDER(1)`,
+`CACHE(2)`, `PROVIDER(3)` confirme que le second départ fournisseur reste séparé du premier par
+trois secondes et que le cache hit intermédiaire ne réinitialise pas ce délai. La preuve v4
+distingue les deux sources. Le test PostgreSQL confirme la sélection du snapshot exact, son rejet
+à dix minutes révolues, le refus d’une autre version de parseur et le rafraîchissement du checkpoint
+après une nouvelle observation dont le payload brut a été dédupliqué.

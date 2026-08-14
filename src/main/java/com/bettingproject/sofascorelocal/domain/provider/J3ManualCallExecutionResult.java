@@ -6,15 +6,26 @@ public record J3ManualCallExecutionResult(
         boolean completed,
         int completedPages,
         Integer failedPage,
-        String terminalCode) {
+        String terminalCode,
+        int providerRequests,
+        int cacheHits) {
 
     public J3ManualCallExecutionResult {
         if (completedPages < 0
                 || completedPages > ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE) {
             throw new IllegalArgumentException("completedPages must be between 0 and 25");
         }
+        if (providerRequests < 0 || cacheHits < 0 || cacheHits > completedPages) {
+            throw new IllegalArgumentException("resolution counters must be non-negative");
+        }
+        int resolvedPages = providerRequests + cacheHits;
+        if (resolvedPages < completedPages || resolvedPages > completedPages + 1) {
+            throw new IllegalArgumentException(
+                    "resolution counters must cover completed pages and at most one failed page");
+        }
         if (completed) {
-            if (completedPages < 1 || failedPage != null || terminalCode != null) {
+            if (completedPages < 1 || failedPage != null || terminalCode != null
+                    || resolvedPages != completedPages) {
                 throw new IllegalArgumentException(
                         "a completed result requires at least one page and no failure");
             }
@@ -33,14 +44,36 @@ public record J3ManualCallExecutionResult(
     }
 
     public static J3ManualCallExecutionResult successful(int completedPages) {
-        return new J3ManualCallExecutionResult(true, completedPages, null, null);
+        return successful(completedPages, completedPages, 0);
+    }
+
+    public static J3ManualCallExecutionResult successful(
+            int completedPages,
+            int providerRequests,
+            int cacheHits) {
+        return new J3ManualCallExecutionResult(
+                true, completedPages, null, null, providerRequests, cacheHits);
     }
 
     public static J3ManualCallExecutionResult failed(
             int completedPages,
             int failedPage,
             String terminalCode) {
+        return failed(completedPages, failedPage, terminalCode, completedPages, 0);
+    }
+
+    public static J3ManualCallExecutionResult failed(
+            int completedPages,
+            int failedPage,
+            String terminalCode,
+            int providerRequests,
+            int cacheHits) {
         return new J3ManualCallExecutionResult(
-                false, completedPages, failedPage, terminalCode);
+                false,
+                completedPages,
+                failedPage,
+                terminalCode,
+                providerRequests,
+                cacheHits);
     }
 }

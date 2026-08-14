@@ -11,7 +11,7 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
 - dépôt Git autonome, documentation, ADR, règles agent et Work Orders ;
 - Java **25 LTS**, Spring Boot **4.1.0** et Maven Wrapper versionné ;
 - interface Spring MVC + Thymeleaf sur `127.0.0.1:8087` ;
-- PostgreSQL local dans Docker Desktop, migrations Flyway V1/V2 et stockage brut séparé ;
+- PostgreSQL local dans Docker Desktop, migrations Flyway V1/V2/V3 et stockage brut séparé ;
 - Actuator, Caffeine, validation de configuration et garde de liaison locale ;
 - catalogue logique des familles d’endpoints, sans URI réelle ;
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
@@ -36,6 +36,9 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
   au premier incident et aucun retry ;
 - parcours répétable uniquement après réarmement, activation, nouvelle intention datée,
   confirmation exacte et action finale distincte, sans polling ni retry ;
+- cache réel du parcours dynamique consulté avant chaque transport sur la clé exacte date/page :
+  seuls les snapshots `PARSED` frais selon le TTL de dix minutes et le parseur courant sont relus
+  hors ligne ; un cache hit ne déclenche ni transport, ni attente, ni mutation de persistance ;
 
 ## Limite essentielle du bootstrap
 
@@ -178,6 +181,10 @@ La migration `V1__bootstrap_schema.sql` crée :
 
 La migration append-only `V2__raw_manual_call_snapshots.sql` ajoute à `provider_snapshot` les octets exacts dans `payload_raw` (`bytea`), leur taille et le mode de provenance obligatoire `DIRECT_LOCAL_ENDPOINT`. Le brut reste distinct de `payload_jsonb`, qui n’est pas alimenté par cette unité. La taille est limitée à 5 Mio et une même combinaison fournisseur, endpoint logique, clé de requête et SHA-256 est dédupliquée.
 
+La migration append-only `V3__dynamic_manual_collection_cache.sql` ajoute uniquement un checkpoint
+de fraîcheur par clé date/page. Il référence le snapshot brut immuable et permet de rafraîchir le
+TTL après une nouvelle réponse identique dédupliquée, sans recopier ni modifier le payload.
+
 Le mode `DIRECT_LOCAL_ENDPOINT` ne doit jamais être confondu avec une `VisualObservation` du projet global. Cette persistance est prête pour un transport futur, mais n’effectue elle-même aucun appel.
 
 ## Politique réseau J1
@@ -230,3 +237,7 @@ conserver l’ancienne hypothèse fixe de cinq pages. Une barrière locale inter
 
 La pagination dynamique est désormais qualifiée dans le périmètre manuel J3. Toute automatisation,
 planification, collecte live ou généralisation à une autre famille reste hors périmètre.
+
+La première unité post-qualification applique désormais la politique de cache au chemin dynamique.
+La preuve minimisée v4 distingue explicitement les pages demandées au fournisseur des pages
+résolues depuis un snapshot local frais, sans introduire de contournement manuel du TTL.
