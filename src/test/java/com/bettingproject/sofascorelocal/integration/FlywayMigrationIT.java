@@ -4,6 +4,7 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.Sched
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1Parser;
 import com.bettingproject.sofascorelocal.application.network.J3QualificationCheckpointReparser;
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
+import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportService;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservation;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
 import com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot;
@@ -18,6 +19,7 @@ import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEventSt
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTeam;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTournament;
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
+import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J3ScheduledEventsPageCache;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import com.bettingproject.sofascorelocal.port.J3QualificationCheckpointStore;
@@ -89,6 +91,12 @@ class FlywayMigrationIT {
     @Autowired
     CanonicalEventStore canonicalEventStore;
 
+    @Autowired
+    EventDetailsStore eventDetailsStore;
+
+    @Autowired
+    J4OfflineFixtureImportService j4OfflineFixtureImportService;
+
     @Test
     void createsTheJ3RawSnapshotSchemaAndKeepsNetworkDisabled() {
         String snapshotTable = jdbcTemplate.queryForObject(
@@ -120,7 +128,7 @@ class FlywayMigrationIT {
         assertThat(snapshotTable).isEqualTo("provider_snapshot");
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("4");
+        assertThat(flywayVersion).isEqualTo("5");
         assertThat(rawColumn).isEqualTo("bytea");
     }
 
@@ -605,6 +613,51 @@ class FlywayMigrationIT {
                 .isInstanceOf(RuntimeException.class)
                 .hasStackTraceContaining(
                         "canonical_event_observation is append-only");
+    }
+
+    @Test
+    void importsOneOfflineEventDetailIdempotentlyWithoutCreatingProviderSnapshots() {
+        Long snapshotsBefore = snapshotRowCount();
+
+        var first = j4OfflineFixtureImportService.importNominalCorpus();
+        var repeated = j4OfflineFixtureImportService.importNominalCorpus();
+
+        assertThat(first.scheduledObservationInserted()).isTrue();
+        assertThat(first.detailEventObservationInserted()).isTrue();
+        assertThat(first.detailInserted()).isTrue();
+        assertThat(first.canonicalObservationCount()).isEqualTo(2L);
+        assertThat(repeated.scheduledObservationInserted()).isFalse();
+        assertThat(repeated.detailEventObservationInserted()).isFalse();
+        assertThat(repeated.detailInserted()).isFalse();
+        assertThat(repeated.canonicalObservationCount()).isEqualTo(2L);
+        assertThat(snapshotRowCount()).isEqualTo(snapshotsBefore);
+
+        assertThat(canonicalEventStore.findHistory(first.canonicalEventId()))
+                .hasSize(2)
+                .extracting(view -> view.source().fixtureId().orElseThrow())
+                .containsExactly("event-details-nominal", "scheduled-events-nominal");
+        assertThat(eventDetailsStore.findLatest(first.canonicalEventId()))
+                .hasValueSatisfying(detail -> {
+                    assertThat(detail.details().providerEventId()).isEqualTo(900001L);
+                    assertThat(detail.details().venue()).hasValueSatisfying(venue ->
+                            assertThat(venue.name()).isEqualTo("Synthetic Park"));
+                    assertThat(detail.details().season()).hasValueSatisfying(season ->
+                            assertThat(season.name()).isEqualTo("2026"));
+                    assertThat(detail.details().round()).contains("1");
+                    assertThat(detail.source().fixtureId())
+                            .contains("event-details-nominal");
+                    assertThat(detail.source().payloadSha256()).hasSize(64);
+                });
+
+        Long detailObservationId = jdbcTemplate.queryForObject(
+                "select id from event_detail_observation where canonical_event_id = ?",
+                Long.class,
+                first.canonicalEventId());
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                "delete from event_detail_observation where id = ?",
+                detailObservationId))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("canonical_event_observation is append-only");
     }
 
     private static RawManualCallSnapshot snapshot(String requestKey, byte[] rawPayload) {
