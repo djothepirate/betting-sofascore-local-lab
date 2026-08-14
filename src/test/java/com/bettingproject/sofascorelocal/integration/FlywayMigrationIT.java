@@ -6,6 +6,7 @@ import com.bettingproject.sofascorelocal.application.network.J3QualificationChec
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportService;
 import com.bettingproject.sofascorelocal.application.event.J4ScheduledEventsSnapshotNormalizationService;
+import com.bettingproject.sofascorelocal.application.event.J4EventQueryService;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservation;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
 import com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot;
@@ -100,6 +101,9 @@ class FlywayMigrationIT {
 
     @Autowired
     J4ScheduledEventsSnapshotNormalizationService j4SnapshotNormalizationService;
+
+    @Autowired
+    J4EventQueryService j4EventQueryService;
 
     @Test
     void createsTheJ3RawSnapshotSchemaAndKeepsNetworkDisabled() {
@@ -651,6 +655,24 @@ class FlywayMigrationIT {
                     assertThat(detail.source().fixtureId())
                             .contains("event-details-nominal");
                     assertThat(detail.source().payloadSha256()).hasSize(64);
+                });
+        assertThat(j4EventQueryService.search(
+                LocalDate.parse("2026-08-12"),
+                "Europe/Paris").events())
+                .singleElement()
+                .satisfies(item -> {
+                    assertThat(item.event().identity().value())
+                            .isEqualTo(first.canonicalEventId());
+                    assertThat(item.startsAtInZone().toString())
+                            .isEqualTo("2026-08-12T16:00+02:00[Europe/Paris]");
+                    assertThat(item.event().observationCount()).isEqualTo(2L);
+                });
+        assertThat(j4EventQueryService.findDetail(
+                first.canonicalEventId(),
+                "Europe/Paris"))
+                .hasValueSatisfying(detail -> {
+                    assertThat(detail.history()).hasSize(2);
+                    assertThat(detail.offlineDetail()).isPresent();
                 });
 
         Long detailObservationId = jdbcTemplate.queryForObject(

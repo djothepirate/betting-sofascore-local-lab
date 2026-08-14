@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Événements locaux — SofaScore Local Lab</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar compact-topbar">
+  <div class="shell">
+    <p class="eyebrow">J4 · Événements locaux</p>
+    <h1>Recherche par date</h1>
+    <p class="subtitle">Identité canonique, versions append-only et détail hors ligne.</p>
+  </div>
+</header>
+
+<main class="shell event-page">
+  <nav class="links page-links" aria-label="Navigation locale">
+    <a th:href="@{/}" href="/">← Tableau de bord</a>
+  </nav>
+
+  <section class="panel event-panel" aria-labelledby="search-title">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Lecture locale uniquement</p>
+        <h2 id="search-title">Date civile et zone explicite</h2>
+      </div>
+      <span class="chip chip-safe">AUCUN TRANSPORT FOURNISSEUR</span>
+    </div>
+
+    <form class="event-search-form" method="get" th:action="@{/events}">
+      <label for="event-date">Date</label>
+      <input id="event-date" type="date" name="date" required th:value="${selectedDate}">
+      <label for="event-zone">Zone IANA</label>
+      <input id="event-zone" type="text" name="zone" maxlength="64" required
+             th:value="${selectedZone}" value="Europe/Paris">
+      <button class="button-primary" type="submit">Rechercher localement</button>
+    </form>
+
+    <p class="fixture-note">La recherche utilise la dernière observation de chaque identité.
+      Aucun changement d’horaire ou de statut n’efface les versions antérieures.</p>
+  </section>
+
+  <p class="notice notice-danger" th:if="${eventErrorCode == 'INVALID_DATE_OR_ZONE'}">
+    Date ou zone invalide. Utiliser une date ISO et une zone IANA, par exemple Europe/Paris.
+  </p>
+  <p class="notice notice-danger" th:if="${eventErrorCode == 'LOCAL_DATABASE_UNAVAILABLE'}">
+    La base PostgreSQL locale n’est pas disponible pour cette recherche.
+  </p>
+  <p class="notice notice-safe" th:if="${fixtureImport != null}">
+    Corpus synthétique J4 chargé localement pour l’identité
+    <span class="mono" th:text="${fixtureImport.canonicalEventId}">UUID</span>.
+  </p>
+  <p class="notice notice-danger" th:if="${fixtureImportErrorCode != null}"
+     th:text="${'Import hors ligne refusé : ' + fixtureImportErrorCode}">
+    Import hors ligne refusé.
+  </p>
+  <p class="notice notice-safe" th:if="${snapshotNormalization != null}">
+    Snapshot <span th:text="${snapshotNormalization.snapshotId}">0</span> reparsé :
+    <span th:text="${snapshotNormalization.parsedEventCount}">0</span> événement(s),
+    <span th:text="${snapshotNormalization.insertedObservationCount}">0</span> nouvelle(s)
+    observation(s), <span th:text="${snapshotNormalization.deduplicatedObservationCount}">0</span>
+    déjà présente(s).
+  </p>
+  <p class="notice notice-danger" th:if="${snapshotNormalizationErrorCode != null}"
+     th:text="${'Normalisation refusée : ' + snapshotNormalizationErrorCode}">
+    Normalisation refusée.
+  </p>
+
+  <section class="grid two-columns event-actions-grid">
+    <article class="panel">
+      <p class="label">Preuve reproductible</p>
+      <h2>Charger le corpus synthétique</h2>
+      <p>Ajoute de façon idempotente une rencontre et son détail `event-details-v1`. Les sources
+        restent marquées `SYNTHETIC_FIXTURE`.</p>
+      <form method="post" th:action="@{/events/offline-demo}">
+        <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+        <button class="button-primary" type="submit">Charger la démonstration J4</button>
+      </form>
+    </article>
+
+    <article class="panel">
+      <p class="label">Snapshots J3 existants</p>
+      <h2>Normaliser une ligne locale</h2>
+      <p>Relit un snapshot `SCHEDULED_EVENTS` par son identifiant, contrôle son hash et le reparse
+        sans modifier sa classification historique.</p>
+      <form class="event-normalization-form" method="post"
+            th:action="@{/events/normalize-snapshot}">
+        <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+        <input type="hidden" name="date" th:value="${selectedDate}">
+        <input type="hidden" name="zone" th:value="${selectedZone}">
+        <label for="snapshot-id">Identifiant du snapshot</label>
+        <input id="snapshot-id" type="number" name="snapshotId" min="1" required>
+        <button class="button-primary" type="submit">Normaliser ce snapshot</button>
+      </form>
+    </article>
+  </section>
+
+  <section class="panel event-results" th:if="${search != null}" aria-labelledby="results-title">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Résultats normalisés</p>
+        <h2 id="results-title">
+          <span th:text="${search.date}">2026-08-12</span>
+          · <span th:text="${search.zoneId.id}">Europe/Paris</span>
+        </h2>
+      </div>
+      <span class="chip chip-safe" th:text="${search.events.size()} + ' ÉVÉNEMENT(S)'">0 ÉVÉNEMENT</span>
+    </div>
+
+    <p class="empty-state muted" th:if="${search.events.isEmpty()}">
+      Aucun événement normalisé pour cette date. Charger le corpus synthétique ou normaliser un
+      snapshot local compatible.
+    </p>
+
+    <div class="table-scroll" th:unless="${search.events.isEmpty()}">
+      <table>
+        <thead>
+        <tr>
+          <th>Heure locale</th>
+          <th>Rencontre</th>
+          <th>Compétition</th>
+          <th>Statut</th>
+          <th>Identité locale</th>
+          <th>Provenance</th>
+          <th>Détail</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="item : ${search.events}">
+          <td class="mono" th:text="${item.startsAtInZone}">2026-08-12T16:00+02:00</td>
+          <td>
+            <strong th:text="${item.event.homeTeam.name}">Home</strong>
+            <span> — </span>
+            <strong th:text="${item.event.awayTeam.name}">Away</strong>
+          </td>
+          <td th:text="${item.event.tournament.isPresent() ? item.event.tournament.get().name : '—'}">—</td>
+          <td><span class="chip chip-warning" th:text="${item.event.status.type}">notstarted</span></td>
+          <td>
+            <span class="mono" th:text="${item.event.identity.value}">UUID</span><br>
+            <span class="muted" th:text="${'providerEventId=' + item.event.identity.providerEventId}">providerEventId</span>
+          </td>
+          <td>
+            <span th:text="${item.event.source.kind}">SYNTHETIC_FIXTURE</span><br>
+            <span class="mono" th:text="${item.event.source.sourceReference()}">source</span><br>
+            <span class="muted" th:text="${item.event.observationCount} + ' version(s)'">1 version</span>
+          </td>
+          <td>
+            <a class="table-link"
+               th:href="@{/events/{id}(id=${item.event.identity.value},zone=${search.zoneId.id})}">
+              Ouvrir
+            </a>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel guardrails">
+    <p class="label">Frontière J4</p>
+    <h2>Ce parcours reste local</h2>
+    <ul>
+      <li>aucune URI `EVENT_DETAILS`, aucun appel fournisseur et aucun polling ;</li>
+      <li>aucune réécriture ou suppression d’une observation historique ;</li>
+      <li>aucun payload brut rendu ou envoyé hors du poste Windows ;</li>
+      <li>les définitions du catalogue restent `callable=false`.</li>
+    </ul>
+  </section>
+</main>
+
+<footer>
+  <div class="shell">SofaScore Local Lab — J4 Événements locaux</div>
+</footer>
+</body>
+</html>
