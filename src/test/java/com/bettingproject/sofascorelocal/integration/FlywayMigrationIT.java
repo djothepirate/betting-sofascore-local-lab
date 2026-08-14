@@ -4,6 +4,11 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.Sched
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1Parser;
 import com.bettingproject.sofascorelocal.application.network.J3QualificationCheckpointReparser;
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
+import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportService;
+import com.bettingproject.sofascorelocal.application.event.J4ScheduledEventsSnapshotNormalizationService;
+import com.bettingproject.sofascorelocal.application.event.J4EventQueryService;
+import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservation;
+import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
 import com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceOutcome;
@@ -11,6 +16,12 @@ import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportResponse;
+import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEvent;
+import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEventStatus;
+import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTeam;
+import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTournament;
+import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
+import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J3ScheduledEventsPageCache;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import com.bettingproject.sofascorelocal.port.J3QualificationCheckpointStore;
@@ -34,6 +45,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -78,6 +90,21 @@ class FlywayMigrationIT {
     @Autowired
     RawSnapshotJsonInspectionService snapshotInspectionService;
 
+    @Autowired
+    CanonicalEventStore canonicalEventStore;
+
+    @Autowired
+    EventDetailsStore eventDetailsStore;
+
+    @Autowired
+    J4OfflineFixtureImportService j4OfflineFixtureImportService;
+
+    @Autowired
+    J4ScheduledEventsSnapshotNormalizationService j4SnapshotNormalizationService;
+
+    @Autowired
+    J4EventQueryService j4EventQueryService;
+
     @Test
     void createsTheJ3RawSnapshotSchemaAndKeepsNetworkDisabled() {
         String snapshotTable = jdbcTemplate.queryForObject(
@@ -109,7 +136,7 @@ class FlywayMigrationIT {
         assertThat(snapshotTable).isEqualTo("provider_snapshot");
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("3");
+        assertThat(flywayVersion).isEqualTo("5");
         assertThat(rawColumn).isEqualTo("bytea");
     }
 
@@ -511,6 +538,188 @@ class FlywayMigrationIT {
                 "scheduled-events-v1",
                 "RAW_ONLY"))
                 .isInstanceOf(DataIntegrityViolationException.class);
+    }
+
+    @Test
+    void persistsCanonicalIdentityAndAppendOnlyEventVersionsWithCompleteSnapshotTraceability() {
+        byte[] firstPayload = "{\"events\":[{\"id\":9001}]}"
+                .getBytes(StandardCharsets.UTF_8);
+        var firstSnapshot = snapshotStore.save(snapshot(
+                "SCHEDULED_EVENTS|date=2026-08-15|page=1",
+                firstPayload));
+        EventSourceTrace firstSource = EventSourceTrace.providerSnapshot(
+                firstSnapshot.snapshotId(),
+                firstSnapshot.payloadSha256(),
+                ScheduledEventsV1Parser.PARSER_VERSION,
+                Instant.parse("2026-08-12T12:00:00.275Z"));
+        ScheduledEvent original = new ScheduledEvent(
+                9001L,
+                Instant.parse("2026-08-15T18:45:00Z"),
+                new ScheduledTeam(101L, "Local FC"),
+                new ScheduledTeam(202L, "Visitor FC"),
+                new ScheduledEventStatus("scheduled", Optional.empty()),
+                Optional.of(new ScheduledTournament(301L, "Local Cup")));
+
+        var first = canonicalEventStore.save(CanonicalEventObservation.from(
+                original,
+                firstSource));
+        var duplicate = canonicalEventStore.save(CanonicalEventObservation.from(
+                original,
+                firstSource));
+
+        byte[] changedPayload = "{\"events\":[{\"id\":9001,\"changed\":true}]}"
+                .getBytes(StandardCharsets.UTF_8);
+        var changedSnapshot = snapshotStore.save(snapshot(
+                "SCHEDULED_EVENTS|date=2026-08-15|page=1",
+                changedPayload));
+        EventSourceTrace changedSource = EventSourceTrace.providerSnapshot(
+                changedSnapshot.snapshotId(),
+                changedSnapshot.payloadSha256(),
+                ScheduledEventsV1Parser.PARSER_VERSION,
+                Instant.parse("2026-08-12T12:05:00Z"));
+        ScheduledEvent postponed = new ScheduledEvent(
+                original.providerEventId(),
+                Instant.parse("2026-08-16T19:00:00Z"),
+                new ScheduledTeam(101L, "Local United"),
+                original.awayTeam(),
+                new ScheduledEventStatus("postponed", Optional.of("Postponed")),
+                original.tournament());
+        var second = canonicalEventStore.save(CanonicalEventObservation.from(
+                postponed,
+                changedSource));
+
+        assertThat(first.inserted()).isTrue();
+        assertThat(duplicate.inserted()).isFalse();
+        assertThat(duplicate.observationId()).isEqualTo(first.observationId());
+        assertThat(second.canonicalEventId()).isEqualTo(first.canonicalEventId());
+        assertThat(second.observationCount()).isEqualTo(2L);
+        assertThat(canonicalEventStore.findHistory(first.canonicalEventId()))
+                .hasSize(2)
+                .extracting(view -> view.source().snapshotId().orElseThrow())
+                .containsExactly(changedSnapshot.snapshotId(), firstSnapshot.snapshotId());
+        assertThat(canonicalEventStore.findLatestStartingBetween(
+                Instant.parse("2026-08-15T00:00:00Z"),
+                Instant.parse("2026-08-16T00:00:00Z")))
+                .isEmpty();
+        assertThat(canonicalEventStore.findLatestStartingBetween(
+                Instant.parse("2026-08-16T00:00:00Z"),
+                Instant.parse("2026-08-17T00:00:00Z")))
+                .singleElement()
+                .satisfies(view -> {
+                    assertThat(view.identity().value()).isEqualTo(first.canonicalEventId());
+                    assertThat(view.homeTeam().name()).isEqualTo("Local United");
+                    assertThat(view.status().type()).isEqualTo("postponed");
+                    assertThat(view.observationCount()).isEqualTo(2L);
+                    assertThat(view.source().snapshotId())
+                            .hasValue(changedSnapshot.snapshotId());
+                });
+
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                "update canonical_event_observation set status_type = ? where id = ?",
+                "changed",
+                second.observationId()))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining(
+                        "canonical_event_observation is append-only");
+    }
+
+    @Test
+    void importsOneOfflineEventDetailIdempotentlyWithoutCreatingProviderSnapshots() {
+        Long snapshotsBefore = snapshotRowCount();
+
+        var first = j4OfflineFixtureImportService.importNominalCorpus();
+        var repeated = j4OfflineFixtureImportService.importNominalCorpus();
+
+        assertThat(first.scheduledObservationInserted()).isTrue();
+        assertThat(first.detailEventObservationInserted()).isTrue();
+        assertThat(first.detailInserted()).isTrue();
+        assertThat(first.canonicalObservationCount()).isEqualTo(2L);
+        assertThat(repeated.scheduledObservationInserted()).isFalse();
+        assertThat(repeated.detailEventObservationInserted()).isFalse();
+        assertThat(repeated.detailInserted()).isFalse();
+        assertThat(repeated.canonicalObservationCount()).isEqualTo(2L);
+        assertThat(snapshotRowCount()).isEqualTo(snapshotsBefore);
+
+        assertThat(canonicalEventStore.findHistory(first.canonicalEventId()))
+                .hasSize(2)
+                .extracting(view -> view.source().fixtureId().orElseThrow())
+                .containsExactly("event-details-nominal", "scheduled-events-nominal");
+        assertThat(eventDetailsStore.findLatest(first.canonicalEventId()))
+                .hasValueSatisfying(detail -> {
+                    assertThat(detail.details().providerEventId()).isEqualTo(900001L);
+                    assertThat(detail.details().venue()).hasValueSatisfying(venue ->
+                            assertThat(venue.name()).isEqualTo("Synthetic Park"));
+                    assertThat(detail.details().season()).hasValueSatisfying(season ->
+                            assertThat(season.name()).isEqualTo("2026"));
+                    assertThat(detail.details().round()).contains("1");
+                    assertThat(detail.source().fixtureId())
+                            .contains("event-details-nominal");
+                    assertThat(detail.source().payloadSha256()).hasSize(64);
+                });
+        assertThat(j4EventQueryService.search(
+                LocalDate.parse("2026-08-12"),
+                "Europe/Paris").events())
+                .singleElement()
+                .satisfies(item -> {
+                    assertThat(item.event().identity().value())
+                            .isEqualTo(first.canonicalEventId());
+                    assertThat(item.startsAtInZone().toString())
+                            .isEqualTo("2026-08-12T16:00+02:00[Europe/Paris]");
+                    assertThat(item.event().observationCount()).isEqualTo(2L);
+                });
+        assertThat(j4EventQueryService.findDetail(
+                first.canonicalEventId(),
+                "Europe/Paris"))
+                .hasValueSatisfying(detail -> {
+                    assertThat(detail.history()).hasSize(2);
+                    assertThat(detail.offlineDetail()).isPresent();
+                });
+
+        Long detailObservationId = jdbcTemplate.queryForObject(
+                "select id from event_detail_observation where canonical_event_id = ?",
+                Long.class,
+                first.canonicalEventId());
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                "delete from event_detail_observation where id = ?",
+                detailObservationId))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("canonical_event_observation is append-only");
+    }
+
+    @Test
+    void normalizesAnExistingSnapshotWithoutChangingItsHistoricalClassification()
+            throws Exception {
+        byte[] nominalPayload = Files.readAllBytes(Path.of(
+                "fixtures/scheduled-events/nominal.json"));
+        var snapshot = snapshotStore.save(snapshot(
+                "SCHEDULED_EVENTS|date=2026-08-12|page=1",
+                nominalPayload,
+                RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE,
+                "SCHEMA_INCOMPATIBLE"));
+
+        var first = j4SnapshotNormalizationService.normalize(snapshot.snapshotId());
+        var repeated = j4SnapshotNormalizationService.normalize(snapshot.snapshotId());
+
+        assertThat(first.historicalSchemaStatus())
+                .isEqualTo(RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE);
+        assertThat(first.currentParseStatus()).isEqualTo(ScheduledEventsParseStatus.PARSED);
+        assertThat(first.payloadShape()).isEqualTo("EVENT_LIST");
+        assertThat(first.parsedEventCount()).isEqualTo(1);
+        assertThat(first.insertedObservationCount()).isEqualTo(1);
+        assertThat(repeated.insertedObservationCount()).isZero();
+        assertThat(repeated.deduplicatedObservationCount()).isEqualTo(1);
+        assertThat(schemaStatus(snapshot.snapshotId()))
+                .isEqualTo("SCHEMA_INCOMPATIBLE");
+        assertThat(canonicalEventStore.findLatestByCanonicalId(
+                first.canonicalEventIds().getFirst()))
+                .hasValueSatisfying(event -> {
+                    assertThat(event.source().snapshotId())
+                            .hasValue(snapshot.snapshotId());
+                    assertThat(event.source().payloadSha256())
+                            .isEqualTo(snapshot.payloadSha256());
+                    assertThat(event.source().parserVersion())
+                            .isEqualTo("scheduled-events-v1");
+                });
     }
 
     private static RawManualCallSnapshot snapshot(String requestKey, byte[] rawPayload) {

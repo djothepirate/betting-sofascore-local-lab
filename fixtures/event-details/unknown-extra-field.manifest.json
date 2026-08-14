@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "event-details-unknown-extra-field",
+  "endpointType": "EVENT_DETAILS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-15T00:01:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "event-details-v1",
+  "payloadResource": "fixtures/event-details/unknown-extra-field.json",
+  "maximumBytes": 4096,
+  "expectedRawSha256": "2f79e94206730022d778c6ff852d83c49e2b86d96cdac3da18d83e3c85c4839e",
+  "expectedCanonicalJsonSha256": "b60072ea39d9e356565baec3baec739bbe8382b8d93e042b258639aa781aee33",
+  "minimized": false,
+  "removedFields": []
+}

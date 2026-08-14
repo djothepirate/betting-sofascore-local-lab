@@ -1,0 +1,11 @@
+{
+  "id": 900001,
+  "startTimestamp": 1786543200,
+  "homeTeam": {
+    "id": 9101,
+    "name": "Synthetic Home FC"
+  },
+  "status": {
+    "type": "notstarted"
+  }
+}

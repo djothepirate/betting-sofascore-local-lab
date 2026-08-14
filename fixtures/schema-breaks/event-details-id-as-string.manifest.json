@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "event-details-id-as-string",
+  "endpointType": "EVENT_DETAILS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-15T00:03:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "event-details-v1",
+  "payloadResource": "fixtures/schema-breaks/event-details-id-as-string.json",
+  "maximumBytes": 4096,
+  "expectedRawSha256": "e66d84bb3c794842b45d055bc486ca6336cec3c3dfcb920ab305701aa444fe32",
+  "expectedCanonicalJsonSha256": "ca362c7e0b183acc208d5ced004540cf35108394596c6e130411d9ed185cf5d9",
+  "minimized": false,
+  "removedFields": []
+}

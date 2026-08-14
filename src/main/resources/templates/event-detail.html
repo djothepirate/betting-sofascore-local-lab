@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Détail local — SofaScore Local Lab</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar compact-topbar">
+  <div class="shell">
+    <p class="eyebrow">J4 · Détail hors ligne</p>
+    <h1>Détail d’une rencontre</h1>
+    <p class="subtitle">Version courante, provenance et chronologie immuable.</p>
+  </div>
+</header>
+
+<main class="shell event-page">
+  <nav class="links page-links" aria-label="Navigation locale">
+    <a th:href="@{/events(zone=${detail != null ? detail.zoneId.id : 'Europe/Paris'})}"
+       href="/events">← Recherche par date</a>
+    <a th:href="@{/}" href="/">Tableau de bord</a>
+  </nav>
+
+  <p class="notice notice-danger" th:if="${eventErrorCode == 'EVENT_NOT_FOUND'}">
+    Cette identité canonique n’existe pas dans la base locale.
+  </p>
+  <p class="notice notice-danger" th:if="${eventErrorCode == 'INVALID_ZONE'}">
+    La zone demandée n’est pas valide.
+  </p>
+  <p class="notice notice-danger" th:if="${eventErrorCode == 'LOCAL_DATABASE_UNAVAILABLE'}">
+    La base PostgreSQL locale n’est pas disponible.
+  </p>
+
+  <div th:if="${detail != null}">
+    <section class="panel event-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Identité canonique locale</p>
+          <h2>
+            <span th:text="${detail.current.event.homeTeam.name}">Home</span>
+            <span> — </span>
+            <span th:text="${detail.current.event.awayTeam.name}">Away</span>
+          </h2>
+        </div>
+        <span class="chip chip-safe" th:text="${detail.current.event.status.type}">notstarted</span>
+      </div>
+      <dl class="detail-grid">
+        <div><dt>UUID local</dt><dd class="mono" th:text="${detail.current.event.identity.value}">UUID</dd></div>
+        <div><dt>Identifiant fournisseur</dt><dd th:text="${detail.current.event.identity.providerEventId}">900001</dd></div>
+        <div><dt>Horaire local</dt><dd class="mono" th:text="${detail.current.startsAtInZone}">date</dd></div>
+        <div><dt>Zone</dt><dd th:text="${detail.zoneId.id}">Europe/Paris</dd></div>
+        <div><dt>Compétition</dt><dd th:text="${detail.current.event.tournament.isPresent() ? detail.current.event.tournament.get().name : '—'}">—</dd></div>
+        <div><dt>Versions conservées</dt><dd th:text="${detail.history.size()}">1</dd></div>
+      </dl>
+    </section>
+
+    <section class="panel event-detail-panel" th:if="${offlineDetail != null}">
+      <div class="panel-heading">
+        <div>
+          <p class="label">`event-details-v1`</p>
+          <h2>Enrichissement hors ligne</h2>
+        </div>
+        <span class="chip chip-warning">SYNTHETIC_FIXTURE</span>
+      </div>
+      <dl class="detail-grid">
+        <div><dt>Stade</dt><dd th:text="${offlineDetail.details.venue.isPresent() ? offlineDetail.details.venue.get().name : '—'}">—</dd></div>
+        <div><dt>Ville</dt><dd th:text="${offlineDetail.details.venue.isPresent() && offlineDetail.details.venue.get().city.isPresent() ? offlineDetail.details.venue.get().city.get() : '—'}">—</dd></div>
+        <div><dt>Saison</dt><dd th:text="${offlineDetail.details.season.isPresent() ? offlineDetail.details.season.get().name : '—'}">—</dd></div>
+        <div><dt>Tour</dt><dd th:text="${offlineDetail.details.round.orElse('—')}">—</dd></div>
+        <div><dt>Fixture source</dt><dd class="mono" th:text="${offlineDetail.source.fixtureId.orElse('—')}">fixture</dd></div>
+        <div><dt>Parseur</dt><dd class="mono" th:text="${offlineDetail.source.parserVersion}">event-details-v1</dd></div>
+        <div><dt>Réception source</dt><dd class="mono" th:text="${offlineDetail.source.receivedAt}">instant</dd></div>
+        <div><dt>SHA-256 source</dt><dd class="mono hash-value" th:text="${offlineDetail.source.payloadSha256}">hash</dd></div>
+      </dl>
+    </section>
+
+    <section class="panel" th:unless="${offlineDetail != null}">
+      <p class="label">Détail local</p>
+      <h2>Aucun détail importé</h2>
+      <p>L’absence est explicite. Aucun transport `EVENT_DETAILS` n’est tenté pour compléter la vue.</p>
+    </section>
+
+    <section class="panel event-history-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Historique append-only</p>
+          <h2>Observations de cette identité</h2>
+        </div>
+        <span class="chip chip-safe" th:text="${detail.history.size()} + ' VERSION(S)'">1 VERSION</span>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+          <tr>
+            <th>Reçue à</th>
+            <th>Horaire observé</th>
+            <th>Équipes</th>
+            <th>Statut</th>
+            <th>Source</th>
+            <th>Parseur</th>
+            <th>SHA-256</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="item : ${detail.history}">
+            <td class="mono" th:text="${item.event.source.receivedAt}">instant</td>
+            <td class="mono" th:text="${item.startsAtInZone}">date</td>
+            <td th:text="${item.event.homeTeam.name + ' — ' + item.event.awayTeam.name}">match</td>
+            <td th:text="${item.event.status.type}">status</td>
+            <td class="mono" th:text="${item.event.source.sourceReference()}">source</td>
+            <td class="mono" th:text="${item.event.source.parserVersion}">parser</td>
+            <td class="mono hash-value" th:text="${item.event.source.payloadSha256}">hash</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="shell">SofaScore Local Lab — J4 Détail local en lecture seule</div>
+</footer>
+</body>
+</html>
