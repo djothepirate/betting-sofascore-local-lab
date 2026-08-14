@@ -1310,3 +1310,80 @@ que les écarts de taille ou de SHA-256 sont bloqués, que les motifs sensibles 
 sont pas rendus, que les balises sont échappées, et que l’erreur Web reste bornée. Le test
 PostgreSQL relit le payload exact par identifiant et vérifie que l’inspection ne crée, ne modifie et
 ne supprime aucune ligne.
+
+## 29. Unité 3 — qualification complémentaire du cache et de l’inspection locale
+
+L’unité `test: qualify J3 cache and local snapshot inspection` qualifie ensemble les commits
+`7f4c84b60a6a283ac9ba8b1da4f564c76d0322e9` et
+`ac4cb9ff64df0bd3346b0934fea8ed77f8b3f6b4`. Elle n’ajoute aucun chemin fournisseur et ne réalise
+aucun nouvel appel. Son objectif transversal est de prouver qu’une inspection JSON locale reste
+sans effet sur la décision de cache et sur l’histoire du snapshot.
+
+Le contrat qualifié est :
+
+```text
+FRESH_PARSED_CACHE_REMAINS_ELIGIBLE_AFTER_INSPECTION=YES
+CACHE_TIMESTAMP_REFRESHED_BY_INSPECTION=NO
+CACHE_CHECKPOINT_CREATED_BY_INSPECTION=NO
+SNAPSHOT_ROW_CREATED_BY_INSPECTION=NO
+SNAPSHOT_CLASSIFICATION_CHANGED_BY_INSPECTION=NO
+SCHEMA_INCOMPATIBLE_VISIBLE_TO_LOCAL_OPERATOR=YES
+SCHEMA_INCOMPATIBLE_CACHE_ELIGIBLE=NO
+RAW_PAYLOAD_INCLUDED_IN_QUALIFICATION_REPORT=NO
+PROVIDER_TRANSPORT_DURING_QUALIFICATION=NO
+```
+
+Deux scénarios PostgreSQL complètent les tests existants. Le premier conserve un cache frais
+`PARSED`, inspecte son snapshot puis vérifie que l’identifiant, les octets, `cached_at`, le nombre de
+snapshots et le nombre de checkpoints sont inchangés. Le second inspecte un snapshot historiquement
+`SCHEMA_INCOMPATIBLE`, confirme la conservation de ce statut et vérifie l’absence de candidat de
+cache.
+
+La qualification humaine complémentaire repose sur six captures locales non versionnées. Elles
+confirment le catalogue borné de métadonnées, l’action explicite, le rendu Unicode, la conservation
+visuelle de `SCHEMA_INCOMPATIBLE`, la lecture de `hasNextPage=true` sur une page intermédiaire et de
+`hasNextPage=false` sur la page terminale, ainsi que l’absence de téléchargement brut. Aucun
+payload ou URI n’est recopié dans le rapport.
+
+Le rapport complet est :
+
+```text
+docs/validation/J3-WINDOWS-CACHE-AND-LOCAL-SNAPSHOT-INSPECTION-QUALIFICATION-20260814.md
+```
+
+```text
+J3_CACHE_TECHNICAL_QUALIFICATION=PASS
+J3_LOCAL_RAW_JSON_INSPECTION_TECHNICAL_QUALIFICATION=PASS
+J3_LOCAL_RAW_JSON_INSPECTION_HUMAN_QUALIFICATION=PASS
+J3_CACHE_AND_INSPECTION_CROSS_BOUNDARY=PASS
+J3_COMPLEMENTARY_PROVIDER_CALLS=0
+J3_WORK_ORDER=IN_DEVELOPMENT
+```
+
+### 29.1 Validation technique consolidée
+
+La validation est exécutée hors ligne, sans `.env` et sans appel fournisseur. Elle confirme Java
+25, les garde-fous source, la suite standard, la suite PostgreSQL/Testcontainers et Flyway V3 :
+
+```text
+PREFLIGHT_RESULT=PASS
+JAVA_TARGET=25
+SOURCE_GUARDRAIL_SCAN=PASS
+STANDARD_TESTS=159
+STANDARD_FAILURES=0
+STANDARD_ERRORS=0
+STANDARD_SKIPPED=0
+SPRING_BOOT_JAR=BUILT
+INTEGRATION_TESTS=11
+INTEGRATION_FAILURES=0
+INTEGRATION_ERRORS=0
+INTEGRATION_SKIPPED=0
+FLYWAY_LATEST_VERSION=3
+FRESH_CACHE_STILL_ELIGIBLE_AFTER_INSPECTION=PASS
+CACHE_TIMESTAMP_UNCHANGED_AFTER_INSPECTION=PASS
+HISTORICAL_INCOMPATIBILITY_PRESERVED=PASS
+INCOMPATIBLE_SNAPSHOT_CACHE_ELIGIBILITY=NO
+SERVER_ADDRESS=127.0.0.1
+SOFASCORE_NETWORK_CALLS_EXECUTED=NO
+VERIFY_RESULT=PASS
+```

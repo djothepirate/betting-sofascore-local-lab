@@ -3,6 +3,7 @@ package com.bettingproject.sofascorelocal.integration;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1Parser;
 import com.bettingproject.sofascorelocal.application.network.J3QualificationCheckpointReparser;
+import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
 import com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceOutcome;
@@ -73,6 +74,9 @@ class FlywayMigrationIT {
 
     @Autowired
     RawSnapshotInspectionStore snapshotInspectionStore;
+
+    @Autowired
+    RawSnapshotJsonInspectionService snapshotInspectionService;
 
     @Test
     void createsTheJ3RawSnapshotSchemaAndKeepsNetworkDisabled() {
@@ -172,6 +176,99 @@ class FlywayMigrationIT {
         assertThat(jdbcTemplate.queryForObject(
                 "select count(*) from provider_snapshot",
                 Long.class)).isEqualTo(countBefore);
+    }
+
+    @Test
+    void keepsAFreshParsedCacheCheckpointUnchangedAfterJsonInspection() {
+        byte[] rawPayload = """
+                {
+                  "scheduled": [],
+                  "hasNextPage": false
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+        String requestKey = "SCHEDULED_EVENTS|date=2026-08-14|page=1";
+        var persisted = snapshotStore.save(snapshot(requestKey, rawPayload));
+        var request = new ScheduledEventsProviderPageRequest(
+                URI.create(ScheduledEventsProviderPageRequest.EXPECTED_ORIGIN),
+                LocalDate.parse("2026-08-14"),
+                1);
+        var response = new ScheduledEventsTransportResponse(
+                requestKey,
+                Instant.parse("2026-08-14T09:31:22Z"),
+                Instant.parse("2026-08-14T09:31:23Z"),
+                200,
+                "application/json; charset=utf-8",
+                Duration.ofSeconds(1),
+                RawPayloadEvidence.capture(rawPayload));
+        scheduledEventsPageCache.recordParsed(
+                request,
+                response,
+                persisted,
+                ScheduledEventsV1Parser.PARSER_VERSION);
+        Long snapshotsBefore = snapshotRowCount();
+        Long checkpointsBefore = cacheCheckpointRowCount();
+        Instant cachedAtBefore = cacheTimestamp(requestKey);
+
+        var inspection = snapshotInspectionService.inspect(persisted.snapshotId());
+        var cachedAfterInspection = scheduledEventsPageCache.findFreshParsed(
+                request,
+                Instant.parse("2026-08-14T09:36:23Z"),
+                Duration.ofMinutes(10),
+                ScheduledEventsV1Parser.PARSER_VERSION);
+
+        assertThat(inspection.summary().snapshotId()).isEqualTo(persisted.snapshotId());
+        assertThat(inspection.summary().schemaStatus())
+                .isEqualTo(RawSnapshotSchemaStatus.PARSED);
+        assertThat(inspection.formattedJson())
+                .contains("\"hasNextPage\" : false");
+        assertThat(cachedAfterInspection).hasValueSatisfying(cached -> {
+            assertThat(cached.snapshotId()).isEqualTo(persisted.snapshotId());
+            assertThat(cached.payload().bytes()).isEqualTo(rawPayload);
+            assertThat(cached.cachedAt()).isEqualTo(cachedAtBefore);
+        });
+        assertThat(snapshotRowCount()).isEqualTo(snapshotsBefore);
+        assertThat(cacheCheckpointRowCount()).isEqualTo(checkpointsBefore);
+        assertThat(cacheTimestamp(requestKey)).isEqualTo(cachedAtBefore);
+        assertThat(schemaStatus(persisted.snapshotId())).isEqualTo("PARSED");
+    }
+
+    @Test
+    void keepsHistoricalIncompatibilityVisibleButIneligibleForCacheAfterInspection() {
+        byte[] rawPayload = """
+                {
+                  "scheduled": [],
+                  "hasNextPage": true
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+        String requestKey = "SCHEDULED_EVENTS|date=2026-08-13|page=1";
+        var persisted = snapshotStore.save(snapshot(
+                requestKey,
+                rawPayload,
+                RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE,
+                "SCHEMA_INCOMPATIBLE"));
+        var request = new ScheduledEventsProviderPageRequest(
+                URI.create(ScheduledEventsProviderPageRequest.EXPECTED_ORIGIN),
+                LocalDate.parse("2026-08-13"),
+                1);
+        Long snapshotsBefore = snapshotRowCount();
+        Long checkpointsBefore = cacheCheckpointRowCount();
+
+        var inspection = snapshotInspectionService.inspect(persisted.snapshotId());
+        var cacheCandidate = scheduledEventsPageCache.findFreshParsed(
+                request,
+                Instant.parse("2026-08-13T13:30:00Z"),
+                Duration.ofMinutes(10),
+                ScheduledEventsV1Parser.PARSER_VERSION);
+
+        assertThat(inspection.summary().schemaStatus())
+                .isEqualTo(RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE);
+        assertThat(inspection.formattedJson())
+                .contains("\"hasNextPage\" : true");
+        assertThat(cacheCandidate).isEmpty();
+        assertThat(snapshotRowCount()).isEqualTo(snapshotsBefore);
+        assertThat(cacheCheckpointRowCount()).isEqualTo(checkpointsBefore);
+        assertThat(schemaStatus(persisted.snapshotId()))
+                .isEqualTo("SCHEMA_INCOMPATIBLE");
     }
 
     @Test
@@ -449,5 +546,32 @@ class FlywayMigrationIT {
                 "select schema_status from provider_snapshot where id = ?",
                 String.class,
                 snapshotId);
+    }
+
+    private Long snapshotRowCount() {
+        return jdbcTemplate.queryForObject(
+                "select count(*) from provider_snapshot",
+                Long.class);
+    }
+
+    private Long cacheCheckpointRowCount() {
+        return jdbcTemplate.queryForObject(
+                "select count(*) from provider_response_cache",
+                Long.class);
+    }
+
+    private Instant cacheTimestamp(String requestKey) {
+        return jdbcTemplate.queryForObject(
+                """
+                select cached_at
+                from provider_response_cache
+                where provider = 'SOFASCORE'
+                  and logical_endpoint = 'SCHEDULED_EVENTS'
+                  and request_key = ?
+                """,
+                (resultSet, rowNumber) -> resultSet.getObject(
+                        "cached_at",
+                        java.time.OffsetDateTime.class).toInstant(),
+                requestKey);
     }
 }

@@ -118,6 +118,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - rapport Windows de qualification humaine de la pagination dynamique, confirmant dix pages sur
   dix pour le `2026-08-14`, la progression `hasNextPage=true` des pages 1 à 9, la terminaison sur
   `false` en page 10, la persistance avant parsing et la réapplication du verrou terminal.
+- qualification complémentaire Windows du cache et de l’inspection JSON locale, avec preuve
+  PostgreSQL de non-mutation entre les deux fonctions et matrice humaine minimisée des snapshots
+  historiques déjà présents.
 
 ### Modifié
 
@@ -197,6 +200,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - l’inspection brute reste une opération PostgreSQL locale en lecture seule, soumise au jeton Web
   à usage unique ; elle refuse toute divergence d’intégrité, contenu sensible ou JSON ambigu et ne
   propose aucun téléchargement du payload.
+- l’inspection d’un snapshot n’altère ni son statut historique, ni le nombre de lignes brutes, ni le
+  checkpoint de cache ; un snapshot `SCHEMA_INCOMPATIBLE` inspectable reste inéligible au cache.
 
 ## [0.1.0] — 2026-08-08
 

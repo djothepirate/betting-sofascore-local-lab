@@ -249,3 +249,9 @@ résolues depuis un snapshot local frais, sans introduire de contournement manue
 L’inspection JSON locale permet maintenant de relire explicitement un snapshot brut déjà persisté,
 après vérification de son intégrité et de son innocuité. Elle reste une aide opérateur en lecture
 seule : le brut n’est ni téléchargé, ni réécrit, ni ajouté aux rapports de qualification.
+
+La qualification complémentaire du cache et de cette inspection confirme que le formatage local ne
+rafraîchit ni n’invalide un checkpoint de cache, ne modifie aucune classification historique et ne
+rend pas un snapshot incompatible éligible. La matrice technique et les observations humaines sont
+consignées dans
+[`docs/validation/J3-WINDOWS-CACHE-AND-LOCAL-SNAPSHOT-INSPECTION-QUALIFICATION-20260814.md`](docs/validation/J3-WINDOWS-CACHE-AND-LOCAL-SNAPSHOT-INSPECTION-QUALIFICATION-20260814.md).
