@@ -1,4 +1,4 @@
-# Fixtures — infrastructure hors ligne J2
+# Fixtures — corpus hors ligne J2 à J4
 
 Les répertoires ont été créés au J1. Ils ne contiennent encore aucun payload SofaScore observé. Le jalon J2 charge les fixtures versionnées depuis le classpath, sans connexion réseau et sans dépendance à PostgreSQL.
 
@@ -143,3 +143,30 @@ uniquement leur disponibilité et la répartition des résultats du parseur ; au
 n’est rendu dans l’interface.
 
 Les tests doivent rester reproductibles sans connexion à la source externe.
+
+## Corpus synthétique `EVENT_DETAILS`
+
+J4 ajoute cinq scénarios créés de zéro. Ils ne contiennent aucune URI, aucun en-tête, aucune
+donnée de session et aucune valeur issue d'un payload fournisseur. Tous les manifestes conservent :
+
+```text
+endpointType=EVENT_DETAILS
+fixtureOrigin=SYNTHETIC
+providerSchemaValidated=false
+httpStatus=null
+parserVersion=event-details-v1
+maximumBytes=4096
+minimized=false
+```
+
+| Scénario | Ressource | Comportement `event-details-v1` |
+|---|---|---|
+| nominal | `event-details/nominal.json` | `PARSED`, détail complet sans avertissement |
+| champs inconnus | `event-details/unknown-extra-field.json` | `PARSED`, chemins `$.coverage` et `$.venue.capacity` signalés |
+| autre identité valide | `event-details/other-event.json` | `PARSED`, identifiant conservé pour tester le refus d'un mauvais rattachement |
+| champ obligatoire absent | `schema-breaks/event-details-required-field-missing.json` | `SCHEMA_INCOMPATIBLE`, aucun détail partiel |
+| identifiant devenu texte | `schema-breaks/event-details-id-as-string.json` | `SCHEMA_INCOMPATIBLE`, aucune coercition numérique |
+
+Le contrat détaillé est décrit dans `docs/architecture/EVENT-DETAILS-V1.md`. Une fixture synthétique
+qualifie le comportement hors ligne du parseur ; elle ne valide pas le schéma réel du fournisseur
+et n'autorise aucun transport `EVENT_DETAILS`.

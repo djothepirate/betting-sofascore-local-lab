@@ -1,0 +1,19 @@
+{
+  "id": 900002,
+  "startTimestamp": 1786543200,
+  "homeTeam": {
+    "id": 9101,
+    "name": "Synthetic Home FC"
+  },
+  "awayTeam": {
+    "id": 9202,
+    "name": "Synthetic Away FC"
+  },
+  "status": {
+    "type": "notstarted"
+  },
+  "venue": {
+    "id": 9404,
+    "name": "Synthetic Park"
+  }
+}

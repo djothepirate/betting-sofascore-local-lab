@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "event-details-required-field-missing",
+  "endpointType": "EVENT_DETAILS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-15T00:02:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "event-details-v1",
+  "payloadResource": "fixtures/schema-breaks/event-details-required-field-missing.json",
+  "maximumBytes": 4096,
+  "expectedRawSha256": "7317aa09773c7cbd82ff29a07997a395386a65acb7395f3a1914ab5b11251291",
+  "expectedCanonicalJsonSha256": "4adee774bf5f890157c986fde11634016b22bc767434486d9ff356d74bce358b",
+  "minimized": false,
+  "removedFields": []
+}

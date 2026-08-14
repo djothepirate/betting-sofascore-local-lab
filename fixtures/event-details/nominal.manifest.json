@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "event-details-nominal",
+  "endpointType": "EVENT_DETAILS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-15T00:00:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "event-details-v1",
+  "payloadResource": "fixtures/event-details/nominal.json",
+  "maximumBytes": 4096,
+  "expectedRawSha256": "824a54db1aecddab300bcf0b5fb35c4224c5fbc9c70884f962f651e0e62f3341",
+  "expectedCanonicalJsonSha256": "aa06a0275ff9f74d859b5f07b8789d26bb7187c96b683f12f13eaad0e4ce5815",
+  "minimized": false,
+  "removedFields": []
+}
