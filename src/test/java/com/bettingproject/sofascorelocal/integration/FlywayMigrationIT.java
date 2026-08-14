@@ -5,6 +5,7 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.Sched
 import com.bettingproject.sofascorelocal.application.network.J3QualificationCheckpointReparser;
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportService;
+import com.bettingproject.sofascorelocal.application.event.J4ScheduledEventsSnapshotNormalizationService;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservation;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
 import com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot;
@@ -96,6 +97,9 @@ class FlywayMigrationIT {
 
     @Autowired
     J4OfflineFixtureImportService j4OfflineFixtureImportService;
+
+    @Autowired
+    J4ScheduledEventsSnapshotNormalizationService j4SnapshotNormalizationService;
 
     @Test
     void createsTheJ3RawSnapshotSchemaAndKeepsNetworkDisabled() {
@@ -658,6 +662,42 @@ class FlywayMigrationIT {
                 detailObservationId))
                 .isInstanceOf(RuntimeException.class)
                 .hasStackTraceContaining("canonical_event_observation is append-only");
+    }
+
+    @Test
+    void normalizesAnExistingSnapshotWithoutChangingItsHistoricalClassification()
+            throws Exception {
+        byte[] nominalPayload = Files.readAllBytes(Path.of(
+                "fixtures/scheduled-events/nominal.json"));
+        var snapshot = snapshotStore.save(snapshot(
+                "SCHEDULED_EVENTS|date=2026-08-12|page=1",
+                nominalPayload,
+                RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE,
+                "SCHEMA_INCOMPATIBLE"));
+
+        var first = j4SnapshotNormalizationService.normalize(snapshot.snapshotId());
+        var repeated = j4SnapshotNormalizationService.normalize(snapshot.snapshotId());
+
+        assertThat(first.historicalSchemaStatus())
+                .isEqualTo(RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE);
+        assertThat(first.currentParseStatus()).isEqualTo(ScheduledEventsParseStatus.PARSED);
+        assertThat(first.payloadShape()).isEqualTo("EVENT_LIST");
+        assertThat(first.parsedEventCount()).isEqualTo(1);
+        assertThat(first.insertedObservationCount()).isEqualTo(1);
+        assertThat(repeated.insertedObservationCount()).isZero();
+        assertThat(repeated.deduplicatedObservationCount()).isEqualTo(1);
+        assertThat(schemaStatus(snapshot.snapshotId()))
+                .isEqualTo("SCHEMA_INCOMPATIBLE");
+        assertThat(canonicalEventStore.findLatestByCanonicalId(
+                first.canonicalEventIds().getFirst()))
+                .hasValueSatisfying(event -> {
+                    assertThat(event.source().snapshotId())
+                            .hasValue(snapshot.snapshotId());
+                    assertThat(event.source().payloadSha256())
+                            .isEqualTo(snapshot.payloadSha256());
+                    assertThat(event.source().parserVersion())
+                            .isEqualTo("scheduled-events-v1");
+                });
     }
 
     private static RawManualCallSnapshot snapshot(String requestKey, byte[] rawPayload) {
