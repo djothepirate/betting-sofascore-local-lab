@@ -7,7 +7,7 @@ TECHNICAL_QUALIFICATION=PASS
 HUMAN_WINDOWS_VALIDATION=PASS
 FUNCTIONAL_TEST=PASS
 ENV_FILE_MODIFIED=NO
-WORK_ORDER_STATUS=READY_FOR_REVIEW
+WORK_ORDER_STATUS=VALIDATED
 REAL_SOFASCORE_CALLS=0
 EVENT_DETAILS_PROVIDER_TRANSPORT=NOT_IMPLEMENTED
 ```
@@ -155,8 +155,10 @@ montrent aucun secret, cookie, jeton, payload fournisseur brut ou contenu de `.e
 ## 7. Conclusion et reste à faire
 
 L’implémentation J4 et son parcours fonctionnel humain sont qualifiés dans le périmètre hors ligne.
-Le Work Order reste dans `docs/work_orders/active` au statut `READY_FOR_REVIEW` jusqu'à la relecture
-du diff et à la décision explicite de pousser, ouvrir une Pull Request, fusionner puis clôturer.
+La branche a été poussée et la Pull Request GitHub `#6` a été déclarée `MERGEABLE` et `CLEAN`, sans
+check distant rapporté. Le Work Order est archivé dans `docs/work_orders/completed` au statut
+`VALIDATED`. Les validations Maven finales ont ensuite confirmé 180 tests standards et 14 tests
+d'intégration sans échec ni erreur avant la fusion autorisée vers `main`.
 
 La validation humaine ne vaut pas autorisation de production ou d'appel fournisseur. Les statuts
 du dépôt restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et

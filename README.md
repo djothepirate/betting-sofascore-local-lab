@@ -4,7 +4,7 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures** et **J3 — Appel manuel**, puis le jalon **J4 — Événements** techniquement et fonctionnellement qualifié, en attente de revue et de fusion. J4 ajoute une recherche locale par date, une identité canonique stable, un historique append-only et un premier détail de rencontre strictement hors ligne. Le chemin fournisseur J3 reste désactivé par défaut et aucun appel fournisseur n’est exécuté par les tests, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**, **J3 — Appel manuel** et **J4 — Événements**. J4 ajoute une recherche locale par date, une identité canonique stable, un historique append-only et un premier détail de rencontre strictement hors ligne. Le chemin fournisseur J3 reste désactivé par défaut et aucun appel fournisseur n’est exécuté par les tests, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
 ## Ce qui est livré localement
 
@@ -252,9 +252,9 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Qualification Windows J3 — pagination dynamique](docs/validation/J3-WINDOWS-DYNAMIC-PAGINATION-QUALIFICATION-20260814.md)
 - [Work Order J3 validé](docs/work_orders/completed/WO-SS-20260812-003-manual-call-j3.md)
 - [Qualification technique Windows J4](docs/validation/J4-WINDOWS-TECHNICAL-QUALIFICATION-20260815.md)
-- [Work Order J4 actif](docs/work_orders/active/WO-SS-20260815-004-events-j4.md)
+- [Work Order J4 validé](docs/work_orders/completed/WO-SS-20260815-004-events-j4.md)
 
-## J3 clôturé, J4 en qualification
+## J3 et J4 clôturés, prochaine frontière
 
 La qualification humaine du `2026-08-14` a collecté dix pages sur dix, après les cinq pages
 observées le `2026-08-13`. Elle confirme que le parcours repart de la page 1, persiste avant
@@ -288,5 +288,6 @@ Le jalon J4 construit désormais une vue métier locale sur les seules sources d
 synthétiques. Une normalisation manuelle d’un snapshot `SCHEDULED_EVENTS` compatible vérifie son
 intégrité et le reparse sans modifier sa classification historique ; le corpus de démonstration
 reste explicitement `SYNTHETIC_FIXTURE`. La qualification technique et le test fonctionnel humain
-sont acquis sans modification de `.env`. Le Work Order reste actif au statut `READY_FOR_REVIEW`
-jusqu’à la revue du diff, la fusion et la décision explicite de clôture.
+sont acquis sans modification de `.env`. Le Work Order est archivé dans
+`docs/work_orders/completed` au statut `VALIDATED`. Cette clôture ne déverrouille aucune nouvelle
+famille, automatisation ou dépendance de production.
