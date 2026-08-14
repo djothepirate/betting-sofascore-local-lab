@@ -1224,3 +1224,89 @@ trois secondes et que le cache hit intermédiaire ne réinitialise pas ce délai
 distingue les deux sources. Le test PostgreSQL confirme la sélection du snapshot exact, son rejet
 à dix minutes révolues, le refus d’une autre version de parseur et le rafraîchissement du checkpoint
 après une nouvelle observation dont le payload brut a été dédupliqué.
+
+## 28. Unité 2 — inspection JSON locale des snapshots bruts
+
+L’unité `feat: add local raw snapshot JSON inspection` complète l’exploitation locale du chemin
+J3 sans ajouter ni exécuter de transport fournisseur. Elle fournit une inspection humaine en
+lecture seule d’un snapshot déjà présent dans PostgreSQL.
+
+Le tableau de bord interroge uniquement les métadonnées des 50 lignes récentes. Le champ
+`payload_raw` n’est relu qu’après une action explicite sur un identifiant précis et consommation du
+jeton de formulaire local à usage unique. Le contrat est :
+
+```text
+CATALOG_MAXIMUM_ROWS=50
+CATALOG_LOADS_RAW_PAYLOAD=NO
+RAW_READ_REQUIRES_EXPLICIT_POST=YES
+RAW_SELECTION=EXACT_LOCAL_SNAPSHOT_ID
+DATABASE_TRANSACTION=READ_ONLY
+INTEGRITY_CHECK=PAYLOAD_SIZE_AND_SHA256
+SENSITIVE_CONTENT_SCAN=REQUIRED
+JSON_MODE=STRICT_DUPLICATES_AND_TRAILING_CONTENT_REJECTED
+PRETTY_PRINT=IN_MEMORY_ONLY
+HTML_OUTPUT=ESCAPED_TEXT
+HTTP_CACHE_CONTROL=NO_STORE
+RAW_DOWNLOAD_AVAILABLE=NO
+SNAPSHOT_MUTATION=NO
+CACHE_MUTATION=NO
+PROVIDER_TRANSPORT=NO
+```
+
+Seules les lignes `SOFASCORE` de provenance `DIRECT_LOCAL_ENDPOINT` disposant de toutes les
+métadonnées brutes requises sont inspectables. Une divergence d’intégrité, un motif sensible ou un
+JSON invalide empêche tout affichage. Les erreurs exposées à l’opérateur sont des codes bornés et
+ne contiennent ni diagnostic JDBC, ni extrait de payload.
+
+La page d’inspection est distincte du tableau de bord, marquée `Cache-Control: no-store`,
+`Pragma: no-cache`, `Expires: 0` et `X-Robots-Tag: noindex, nofollow, noarchive`. Le formatage ne
+réécrit ni les octets, ni la classification historique, ni le checkpoint de cache.
+
+Le contrat complet est documenté dans :
+
+```text
+docs/architecture/J3-LOCAL-RAW-SNAPSHOT-JSON-INSPECTION.md
+```
+
+```text
+J3_LOCAL_RAW_JSON_INSPECTION=IMPLEMENTED
+J3_RAW_PAYLOAD_DOWNLOAD=NOT_AVAILABLE
+J3_SNAPSHOT_OR_CACHE_MUTATION=NO
+J3_IMPLEMENTATION_PROVIDER_CALLS=0
+J3_WORK_ORDER=IN_DEVELOPMENT
+```
+
+### 28.1 Validation technique de l’unité
+
+La validation a été exécutée le 2026-08-14 sur une copie locale isolée sans `.env`. Le script
+consolidé a validé Java 25, le preflight et les garde-fous source ; Maven a ensuite validé la suite
+standard et la suite PostgreSQL/Testcontainers sans appel fournisseur :
+
+```text
+PREFLIGHT_RESULT=PASS
+JAVA_TARGET=25
+SOURCE_GUARDRAIL_SCAN=PASS
+STANDARD_TESTS=159
+STANDARD_FAILURES=0
+STANDARD_ERRORS=0
+STANDARD_SKIPPED=0
+SPRING_BOOT_JAR=BUILT
+INTEGRATION_TESTS=9
+INTEGRATION_FAILURES=0
+INTEGRATION_ERRORS=0
+INTEGRATION_SKIPPED=0
+FLYWAY_LATEST_VERSION=3
+EXACT_RAW_BYTES_READ=PASS
+SNAPSHOT_ROW_COUNT_UNCHANGED=PASS
+HTML_ESCAPING=PASS
+NO_STORE_HEADERS=PASS
+SERVER_ADDRESS=127.0.0.1
+VERIFY_RESULT=PASS
+SOFASCORE_NETWORK_CALLS_EXECUTED=NO
+```
+
+Les tests ciblés couvrent 11 scénarios. Ils prouvent que le catalogue ne charge pas les octets,
+que les écarts de taille ou de SHA-256 sont bloqués, que les motifs sensibles et le JSON ambigu ne
+sont pas rendus, que les balises sont échappées, et que l’erreur Web reste bornée. Le test
+PostgreSQL relit le payload exact par identifiant et vérifie que l’inspection ne crée, ne modifie et
+ne supprime aucune ligne.

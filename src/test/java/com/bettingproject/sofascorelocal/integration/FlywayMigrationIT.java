@@ -13,6 +13,7 @@ import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTranspor
 import com.bettingproject.sofascorelocal.port.J3ScheduledEventsPageCache;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import com.bettingproject.sofascorelocal.port.J3QualificationCheckpointStore;
+import com.bettingproject.sofascorelocal.port.RawSnapshotInspectionStore;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -69,6 +70,9 @@ class FlywayMigrationIT {
 
     @Autowired
     J3ScheduledEventsPageCache scheduledEventsPageCache;
+
+    @Autowired
+    RawSnapshotInspectionStore snapshotInspectionStore;
 
     @Test
     void createsTheJ3RawSnapshotSchemaAndKeepsNetworkDisabled() {
@@ -137,6 +141,37 @@ class FlywayMigrationIT {
                 "select payload_jsonb is null from provider_snapshot where id = ?",
                 Boolean.class,
                 result.snapshotId())).isTrue();
+    }
+
+    @Test
+    void readsAnExplicitRawSnapshotForInspectionWithoutMutatingPersistence() {
+        byte[] rawPayload = "{\"events\":[],\"hasNextPage\":false}"
+                .getBytes(StandardCharsets.UTF_8);
+        var persisted = snapshotStore.save(snapshot(
+                "SCHEDULED_EVENTS|date=2026-08-14|page=1",
+                rawPayload));
+        Long countBefore = jdbcTemplate.queryForObject(
+                "select count(*) from provider_snapshot",
+                Long.class);
+
+        var summaries = snapshotInspectionStore.findRecent(50);
+        var selected = snapshotInspectionStore.findById(persisted.snapshotId());
+
+        assertThat(summaries)
+                .extracting(summary -> summary.snapshotId())
+                .contains(persisted.snapshotId());
+        assertThat(selected).hasValueSatisfying(source -> {
+            assertThat(source.summary().snapshotId()).isEqualTo(persisted.snapshotId());
+            assertThat(source.summary().requestKey())
+                    .isEqualTo("SCHEDULED_EVENTS|date=2026-08-14|page=1");
+            assertThat(source.summary().payloadSha256())
+                    .isEqualTo(persisted.payloadSha256());
+            assertThat(source.payloadRaw()).isEqualTo(rawPayload);
+        });
+        assertThat(snapshotInspectionStore.findById(Long.MAX_VALUE)).isEmpty();
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from provider_snapshot",
+                Long.class)).isEqualTo(countBefore);
     }
 
     @Test

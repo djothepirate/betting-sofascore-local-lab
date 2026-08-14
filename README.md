@@ -39,6 +39,9 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
 - cache réel du parcours dynamique consulté avant chaque transport sur la clé exacte date/page :
   seuls les snapshots `PARSED` frais selon le TTL de dix minutes et le parseur courant sont relus
   hors ligne ; un cache hit ne déclenche ni transport, ni attente, ni mutation de persistance ;
+- catalogue local limité à 50 métadonnées de snapshots bruts et inspection JSON explicite d’une
+  ligne, avec contrôle taille/SHA-256, blocage des contenus sensibles, parsing strict, rendu HTML
+  échappé et réponse `no-store`, sans transport, téléchargement ou mutation ;
 
 ## Limite essentielle du bootstrap
 
@@ -218,6 +221,7 @@ Les prochaines unités J3 ne pourront retirer **explicitement** certaines de ces
 - [Adaptation hors ligne au schéma qualifié de la page 2](docs/architecture/J3-PAGE-TWO-SCHEMA-ADAPTATION.md)
 - [Reprise fournisseur J3 contrôlée à la page 3](docs/architecture/J3-PAGE-THREE-PROVIDER-RESUME.md)
 - [Collecte manuelle J3 répétable à pagination dynamique](docs/architecture/J3-DYNAMIC-MANUAL-PAGINATION.md)
+- [Inspection JSON locale des snapshots bruts J3](docs/architecture/J3-LOCAL-RAW-SNAPSHOT-JSON-INSPECTION.md)
 - [Runbook local](docs/runbooks/RUNBOOK-LOCAL.md)
 - [Cadrage PDF](docs/reference/Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf)
 - [Rapport de validation du bootstrap](docs/validation/J0-J1-VALIDATION-REPORT.md)
@@ -241,3 +245,7 @@ planification, collecte live ou généralisation à une autre famille reste hors
 La première unité post-qualification applique désormais la politique de cache au chemin dynamique.
 La preuve minimisée v4 distingue explicitement les pages demandées au fournisseur des pages
 résolues depuis un snapshot local frais, sans introduire de contournement manuel du TTL.
+
+L’inspection JSON locale permet maintenant de relire explicitement un snapshot brut déjà persisté,
+après vérification de son intégrité et de son innocuité. Elle reste une aide opérateur en lecture
+seule : le brut n’est ni téléchargé, ni réécrit, ni ajouté aux rapports de qualification.

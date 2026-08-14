@@ -76,6 +76,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   nouvelle observation identique peut rafraîchir le cache sans réécrire ni dupliquer le payload ;
 - preuve minimisée v4 distinguant `CACHE` et `PROVIDER`, les pages réellement demandées au
   fournisseur et les cache hits locaux, sans inclure le payload ou l’URI ;
+- catalogue borné des 50 snapshots bruts locaux les plus récents, sans chargement automatique des
+  payloads, et action explicite permettant d’inspecter une seule ligne à la fois ;
+- vue JSON formatée en mémoire après contrôle de la taille, du SHA-256, des motifs sensibles et du
+  JSON strict, avec échappement HTML et en-têtes `no-store` ;
 
 ### Documentation
 
@@ -155,6 +159,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   la date qualifiée ni aux cinq pages observées le `2026-08-13`.
 - phase applicative avancée à `J3-DYNAMIC-CACHE-POLICY` ; le cache frais est désormais évalué et
   reparsé avant le délai et avant tout transport du chemin réel dynamique.
+- phase applicative avancée à `J3-LOCAL-RAW-JSON-INSPECTION`, sans modification de la politique
+  réseau, de la persistance brute ou du cache dynamique.
 
 ### Sécurité
 
@@ -188,6 +194,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - un cache hit ne déclenche aucun appel fournisseur, aucune attente inter-page et aucune écriture ;
   le délai minimal reste calculé exclusivement entre deux départs fournisseur réels, y compris
   lorsqu’une page intermédiaire est résolue depuis le cache.
+- l’inspection brute reste une opération PostgreSQL locale en lecture seule, soumise au jeton Web
+  à usage unique ; elle refuse toute divergence d’intégrité, contenu sensible ou JSON ambigu et ne
+  propose aucun téléchargement du payload.
 
 ## [0.1.0] — 2026-08-08
 

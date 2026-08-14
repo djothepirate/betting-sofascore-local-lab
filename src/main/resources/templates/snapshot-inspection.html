@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SofaScore Local Lab — Inspection JSON locale</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar compact-topbar">
+  <div class="shell">
+    <p class="eyebrow">BETTING PROJECT / SOFASCORE LOCAL LAB</p>
+    <h1>Inspection JSON locale</h1>
+    <p class="subtitle">Lecture seule d’un snapshot brut PostgreSQL, sans transport fournisseur.</p>
+  </div>
+</header>
+
+<main class="shell inspection-page">
+  <section class="status-banner status-safe">
+    <div>
+      <p class="label">Statut de gouvernance</p>
+      <p class="status-value">EXPERIMENTAL / LOCAL_ONLY / NOT_PRODUCTION_APPROVED / NO_CRITICAL_DEPENDENCY</p>
+    </div>
+    <span class="chip chip-safe">NO_STORE / READ_ONLY</span>
+  </section>
+
+  <section class="panel" th:if="${inspectionErrorCode != null}" aria-labelledby="inspection-error-title">
+    <p class="label">Inspection refusée en sécurité</p>
+    <h2 id="inspection-error-title" class="danger" th:text="${inspectionErrorCode}">INVALID_JSON</h2>
+    <p th:text="${inspectionErrorMessage}">Le snapshot ne peut pas être affiché.</p>
+    <a class="evidence-download" th:href="@{/dashboard#snapshot-inspection}" href="/dashboard#snapshot-inspection">
+      Retour aux snapshots locaux
+    </a>
+  </section>
+
+  <section class="panel snapshot-json-panel"
+           th:if="${inspection != null}"
+           aria-labelledby="snapshot-json-title">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Snapshot brut <span class="mono" th:text="${'#' + inspection.summary.snapshotId}">#1</span></p>
+        <h2 id="snapshot-json-title">Vue JSON formatée</h2>
+      </div>
+      <span class="chip chip-safe" th:text="${inspection.summary.schemaStatus}">PARSED</span>
+    </div>
+
+    <p>Le formatage ci-dessous est produit en mémoire pour la lecture humaine. Il ne réécrit ni le
+      payload brut, ni sa classification, ni son checkpoint de cache.</p>
+
+    <dl class="inspection-metadata">
+      <div><dt>Endpoint logique</dt><dd class="mono" th:text="${inspection.summary.logicalEndpoint}">SCHEDULED_EVENTS</dd></div>
+      <div><dt>Clé locale</dt><dd class="mono" th:text="${inspection.summary.requestKey}">—</dd></div>
+      <div><dt>Reçu à</dt><dd th:text="${inspection.summary.receivedAt}">—</dd></div>
+      <div><dt>HTTP</dt><dd th:text="${inspection.summary.httpStatus}">200</dd></div>
+      <div><dt>Content-Type</dt><dd class="mono" th:text="${inspection.summary.contentType}">application/json</dd></div>
+      <div><dt>Taille brute</dt><dd th:text="${inspection.summary.payloadSizeBytes + ' octets'}">0 octet</dd></div>
+      <div><dt>SHA-256</dt><dd class="mono" th:text="${inspection.summary.payloadSha256}">—</dd></div>
+      <div><dt>Parseur</dt><dd class="mono" th:text="${inspection.summary.parserVersion}">scheduled-events-v1</dd></div>
+      <div><dt>Inspecté à</dt><dd th:text="${inspection.inspectedAt}">—</dd></div>
+    </dl>
+
+    <pre class="snapshot-json" th:text="${inspection.formattedJson}">{
+  "hasNextPage" : false
+}</pre>
+
+    <p class="fixture-note">Le rendu HTML échappe le contenu JSON. La réponse est marquée
+      <span class="mono">Cache-Control: no-store</span> et ne propose aucun téléchargement brut.</p>
+    <a class="evidence-download" th:href="@{/dashboard#snapshot-inspection}" href="/dashboard#snapshot-inspection">
+      Retour aux snapshots locaux
+    </a>
+  </section>
+</main>
+
+<footer>
+  <div class="shell">SofaScore Local Lab v0.1.0-SNAPSHOT — inspection locale uniquement</div>
+</footer>
+</body>
+</html>

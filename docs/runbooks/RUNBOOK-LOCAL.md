@@ -324,6 +324,30 @@ alors retirée. Réactiver le circuit et recommencer depuis l’étape 6. Ne jam
 incident en modifiant ou supprimant un snapshot ; analyser d’abord la preuve et la classification
 locale. Remettre la configuration `.env` en état sûr après la séance.
 
+### 3.9 Inspecter localement le JSON brut d’un snapshot
+
+Cette opération ne contacte pas le fournisseur et ne nécessite pas d’armer le circuit J3. Elle
+exige uniquement l’application et PostgreSQL locaux :
+
+1. ouvrir `http://127.0.0.1:8087/dashboard#snapshot-inspection` ;
+2. repérer le snapshot à partir de son identifiant, de sa clé date/page et de son horodatage ;
+3. vérifier que la ligne ne contient que les métadonnées attendues ;
+4. sélectionner **« Inspecter le JSON »** sur cette ligne uniquement ;
+5. vérifier sur la page distincte l’identifiant, la taille et le SHA-256 avant de lire la vue
+   formatée ;
+6. revenir au tableau de bord avec **« Retour aux snapshots locaux »**.
+
+Le catalogue est limité aux 50 snapshots récents et ne charge pas leurs payloads. L’action utilise
+le jeton de formulaire lié à la session et à usage unique. Le serveur relit uniquement la ligne
+choisie, recalcule la taille et le SHA-256, applique le détecteur de contenu sensible, exige un JSON
+strict puis produit un formatage temporaire en mémoire.
+
+Ne pas copier le JSON brut dans un rapport, un commit, un ticket, une capture destinée au partage
+ou un journal. Utiliser la preuve minimisée téléchargeable pour la qualification. Il n’existe aucun
+bouton de téléchargement brut, aucune modification de classification et aucun contournement du
+cache. Un refus `PAYLOAD_INTEGRITY_FAILURE`, `SENSITIVE_CONTENT_BLOCKED` ou `INVALID_JSON` doit
+rester bloquant et être analysé hors ligne sans modifier la ligne persistée.
+
 ## 4. Validation
 
 ### 4.1 Suite standard

@@ -2,13 +2,18 @@ package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlService;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCollectionEvidenceService;
+import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotInspectionCatalog;
+import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallControlSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState;
+import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotInspectionSummary;
+import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -50,6 +55,15 @@ class DashboardControllerTest {
 
     @MockitoBean
     private LocalFormTokenService formTokenService;
+
+    @MockitoBean
+    private RawSnapshotJsonInspectionService snapshotInspectionService;
+
+    @BeforeEach
+    void snapshotInspectionIsUnavailableByDefault() {
+        when(snapshotInspectionService.loadCatalog())
+                .thenReturn(RawSnapshotInspectionCatalog.unavailable());
+    }
 
     @Test
     void rendersTheDashboardModel() throws Exception {
@@ -100,6 +114,19 @@ class DashboardControllerTest {
         when(dashboardService.load()).thenReturn(dashboardView);
         when(manualCallControlService.snapshot()).thenReturn(manualCallSnapshot);
         when(formTokenService.issue(any(HttpSession.class))).thenReturn("local-form-token");
+        RawSnapshotInspectionSummary inspectionSummary = new RawSnapshotInspectionSummary(
+                41L,
+                "SCHEDULED_EVENTS",
+                "SCHEDULED_EVENTS|date=2026-08-14|page=1",
+                Instant.parse("2026-08-14T09:31:23Z"),
+                200,
+                "application/json; charset=utf-8",
+                39L,
+                "a".repeat(64),
+                "scheduled-events-v1",
+                RawSnapshotSchemaStatus.PARSED);
+        when(snapshotInspectionService.loadCatalog()).thenReturn(
+                RawSnapshotInspectionCatalog.available(List.of(inspectionSummary)));
 
         mockMvc.perform(get("/dashboard"))
                 .andExpect(status().isOk())
@@ -113,6 +140,11 @@ class DashboardControllerTest {
                 .andExpect(content().string(containsString("VALIDÉ")))
                 .andExpect(content().string(containsString("ARRÊT GLOBAL ACTIF")))
                 .andExpect(content().string(containsString("REAL_CALL_NOT_AUTHORIZED")))
+                .andExpect(content().string(containsString(
+                        "J3 / Inspection locale en lecture seule")))
+                .andExpect(content().string(containsString(
+                        "SCHEDULED_EVENTS|date=2026-08-14|page=1")))
+                .andExpect(content().string(containsString("Inspecter le JSON")))
                 .andExpect(content().string(containsString(
                         "Lancer la collecte fournisseur — BLOQUÉE")));
     }
