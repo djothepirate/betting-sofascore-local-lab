@@ -3,7 +3,9 @@ package com.bettingproject.sofascorelocal.config;
 import com.bettingproject.sofascorelocal.application.network.J3ProviderQualificationPolicy;
 import com.bettingproject.sofascorelocal.application.network.J4EventDetailsQualificationPolicy;
 import com.bettingproject.sofascorelocal.application.network.J4EventDetailsPhase2QualificationPolicy;
+import com.bettingproject.sofascorelocal.application.network.J5RealQualificationPolicy;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
+import com.bettingproject.sofascorelocal.domain.provider.J5EventDataProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import jakarta.validation.Validation;
@@ -24,7 +26,7 @@ class SofascorePropertiesTest {
 
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            // A locally armed J3/J4 campaign must not override the scenario under test.
+            // A locally armed J3/J4/J5 campaign must not override the scenario under test.
             .withInitializer(context -> context.getEnvironment().getPropertySources()
                     .remove(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME))
             .withInitializer(new ConfigDataApplicationContextInitializer())
@@ -38,6 +40,7 @@ class SofascorePropertiesTest {
         assertThat(properties.isJ3QualificationEnabled()).isFalse();
         assertThat(properties.isJ4EventDetailsQualificationEnabled()).isFalse();
         assertThat(properties.isJ4EventDetailsPhase2Enabled()).isFalse();
+        assertThat(properties.isJ5EventDataQualificationEnabled()).isFalse();
         assertThat(properties.getMaximumConcurrency()).isEqualTo(1);
         assertThat(properties.getMinimumDelay()).isEqualTo(Duration.ofSeconds(3));
         assertThat(properties.getConnectTimeout()).isEqualTo(Duration.ofSeconds(5));
@@ -191,12 +194,40 @@ class SofascorePropertiesTest {
                 .anyMatch(violation -> violation.getMessage().contains("phase 2"));
     }
 
+    @Test
+    void bindsOnlyTheDocumentedJ5RealQualificationEnvironmentKeys() {
+        contextRunner
+                .withSystemProperties(
+                        "SOFASCORE_ENABLED=true",
+                        "SOFASCORE_J3_QUALIFICATION_ENABLED=false",
+                        "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=false",
+                        "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false",
+                        "SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=true",
+                        "SOFASCORE_BASE_URL=" + EventDetailsProviderRequest.EXPECTED_ORIGIN,
+                        "SOFASCORE_ALLOWED_ENDPOINTS="
+                                + "EVENT_STATISTICS,EVENT_INCIDENTS,EVENT_LINEUPS")
+                .run(context -> {
+                    assertThat(context.getStartupFailure()).isNull();
+                    SofascoreProperties properties = context.getBean(SofascoreProperties.class);
+                    assertThat(properties.isJ5EventDataQualificationEnabled()).isTrue();
+                    assertThat(properties.isJ3QualificationEnabled()).isFalse();
+                    assertThat(properties.isJ4EventDetailsQualificationEnabled()).isFalse();
+                    assertThat(properties.isJ4EventDetailsPhase2Enabled()).isFalse();
+                    assertThat(properties.getAllowedEndpoints())
+                            .containsExactlyInAnyOrderElementsOf(
+                                    J5EventDataProviderRequest.ALLOWED_ENDPOINTS);
+                    assertThat(context.getBean(J5RealQualificationPolicy.class)
+                            .snapshot().available()).isTrue();
+                });
+    }
+
     @Configuration(proxyBeanMethods = false)
     @EnableConfigurationProperties(SofascoreProperties.class)
     @Import({
             J3ProviderQualificationPolicy.class,
             J4EventDetailsQualificationPolicy.class,
-            J4EventDetailsPhase2QualificationPolicy.class})
+            J4EventDetailsPhase2QualificationPolicy.class,
+            J5RealQualificationPolicy.class})
     static class EnvironmentBindingConfiguration {
     }
 }

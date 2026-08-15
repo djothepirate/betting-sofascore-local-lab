@@ -6,6 +6,7 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDet
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV1Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV1Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV1Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceService;
 import com.bettingproject.sofascorelocal.application.event.J5OfflineFixtureImportService;
 import com.bettingproject.sofascorelocal.application.network.J3QualificationCheckpointReparser;
@@ -172,7 +173,7 @@ class FlywayMigrationIT {
         assertThat(snapshotTable).isEqualTo("provider_snapshot");
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("7");
+        assertThat(flywayVersion).isEqualTo("8");
         assertThat(rawColumn).isEqualTo("bytea");
     }
 
@@ -1091,6 +1092,55 @@ class FlywayMigrationIT {
                 first.statisticsObservationId()))
                 .isInstanceOf(RuntimeException.class)
                 .hasStackTraceContaining("J5 normalized event data is append-only");
+    }
+
+    @Test
+    void persistsAProviderJ5ObservationWithV2ParserAndSnapshotProvenance() {
+        var j4Import = j4OfflineFixtureImportService.importNominalCorpus();
+        long eventId = 900001L;
+        Instant requestedAt = Instant.parse("2026-08-15T14:00:00Z");
+        RawPayloadEvidence payload = RawPayloadEvidence.capture(
+                "{\"statistics\":[]}".getBytes(StandardCharsets.UTF_8));
+        var raw = snapshotStore.save(new RawManualCallSnapshot(
+                SofascoreEndpointType.EVENT_STATISTICS,
+                "EVENT_STATISTICS|eventId=900001",
+                requestedAt,
+                requestedAt.plusMillis(100),
+                200,
+                "application/json",
+                Duration.ofMillis(100),
+                payload,
+                EventStatisticsV2Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.RAW_ONLY,
+                null));
+        var parsed = new EventStatisticsV2Parser().parse(
+                raw.snapshotId(), eventId, payload, requestedAt.plusMillis(100));
+        var identity = canonicalEventStore.findLatestByCanonicalId(
+                        j4Import.canonicalEventId())
+                .orElseThrow()
+                .identity();
+
+        var persisted = j5EventDataStore.save(J5EventDataObservation.from(
+                identity,
+                parsed.data().orElseThrow(),
+                EventSourceTrace.providerSnapshot(
+                        raw.snapshotId(),
+                        raw.payloadSha256(),
+                        EventStatisticsV2Parser.PARSER_VERSION,
+                        requestedAt.plusMillis(100)),
+                parsed.completeness().orElseThrow()));
+        snapshotStore.classify(raw.snapshotId(), RawSnapshotSchemaStatus.PARSED, null);
+
+        assertThat(persisted.inserted()).isTrue();
+        assertThat(schemaStatus(raw.snapshotId())).isEqualTo("PARSED");
+        assertThat(j5EventDataStore.findLatest(j4Import.canonicalEventId()).statistics())
+                .hasValueSatisfying(observation -> {
+                    assertThat(observation.source().snapshotId()).hasValue(raw.snapshotId());
+                    assertThat(observation.source().parserVersion())
+                            .isEqualTo(EventStatisticsV2Parser.PARSER_VERSION);
+                    assertThat(observation.completeness().status())
+                            .isEqualTo(J5CompletenessStatus.EMPTY_VALID);
+                });
     }
 
     @Test

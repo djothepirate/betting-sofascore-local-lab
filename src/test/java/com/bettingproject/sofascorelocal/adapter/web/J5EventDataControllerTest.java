@@ -5,6 +5,13 @@ import com.bettingproject.sofascorelocal.application.event.J5EventDataPage;
 import com.bettingproject.sofascorelocal.application.event.J5EventDataQueryService;
 import com.bettingproject.sofascorelocal.application.event.J5OfflineFixtureImportService;
 import com.bettingproject.sofascorelocal.application.event.J5OfflineImportResult;
+import com.bettingproject.sofascorelocal.application.network.J5RealCampaignResult;
+import com.bettingproject.sofascorelocal.application.network.J5RealControlService;
+import com.bettingproject.sofascorelocal.application.network.J5RealEventDataService;
+import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
+import com.bettingproject.sofascorelocal.domain.provider.J5RealControlSnapshot;
+import com.bettingproject.sofascorelocal.domain.provider.J5RealControlState;
+import com.bettingproject.sofascorelocal.domain.provider.J5RealExecutionClaim;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
@@ -26,6 +33,7 @@ import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTournam
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.cache.CacheManager;
@@ -33,18 +41,22 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.net.URI;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -64,10 +76,33 @@ class J5EventDataControllerTest {
     J5OfflineFixtureImportService fixtureImportService;
 
     @MockitoBean
+    J5RealControlService realControlService;
+
+    @MockitoBean
+    J5RealEventDataService realEventDataService;
+
+    @MockitoBean
     LocalFormTokenService formTokenService;
 
     @MockitoBean
     CacheManager cacheManager;
+
+    @BeforeEach
+    void defaultRealQualificationIsSafelyBlocked() {
+        when(realControlService.snapshot()).thenReturn(new J5RealControlSnapshot(
+                J5RealControlState.LOCKED,
+                Instant.parse("2026-08-15T14:00:00Z"),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                List.of(),
+                null,
+                false,
+                List.of("J5_EVENT_DATA_QUALIFICATION_DISABLED")));
+    }
 
     @Test
     void rendersAllThreeFamiliesWithCompletenessAndNoStoreHeaders() throws Exception {
@@ -89,6 +124,8 @@ class J5EventDataControllerTest {
                 .andExpect(content().string(containsString("Synthetic Home Striker")))
                 .andExpect(content().string(containsString("4-3-3")))
                 .andExpect(content().string(containsString("PROVIDER_SCHEMA_VALIDATED=NO")))
+                .andExpect(content().string(containsString("Trois endpoints, une confirmation, aucun retry")))
+                .andExpect(content().string(containsString("J5_EVENT_DATA_QUALIFICATION_DISABLED")))
                 .andExpect(content().string(containsString("COMPLETE · 100%")))
                 .andExpect(content().string(containsString("PARTIAL · 0%")))
                 .andExpect(content().string(containsString("$.incidents[0].isHome")))
@@ -148,6 +185,82 @@ class J5EventDataControllerTest {
                 any(HttpSession.class),
                 org.mockito.ArgumentMatchers.eq("one-use-token"));
         verify(fixtureImportService).importNominalCorpus(current.event().identity().value());
+    }
+
+    @Test
+    void preparesTheDisplayedCanonicalIdentityOnlyAfterConsumingTheToken() throws Exception {
+        J4EventSearchItem current = currentEvent();
+
+        mockMvc.perform(post(
+                        "/events/{id}/statistics/real/prepare",
+                        current.event().identity().value())
+                        .param("localFormToken", "one-use-token")
+                        .param("eventId", "900001")
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl(
+                        "/events/" + current.event().identity().value()
+                                + "/statistics?zone=Europe%2FParis"));
+
+        verify(formTokenService).consume(any(HttpSession.class), eq("one-use-token"));
+        verify(realControlService).prepare(current.event().identity().value(), 900001L);
+    }
+
+    @Test
+    void executesOnlyTheClaimProducedByTheProtectedConfirmation() throws Exception {
+        J4EventSearchItem current = currentEvent();
+        UUID requestId = UUID.fromString("80000000-0000-0000-0000-000000000008");
+        J5RealExecutionClaim claim = new J5RealExecutionClaim(
+                requestId,
+                URI.create(EventDetailsProviderRequest.EXPECTED_ORIGIN),
+                current.event().identity().value(),
+                900001L);
+        when(realControlService.confirmAndClaim(requestId, "exact phrase", true))
+                .thenReturn(claim);
+        when(realEventDataService.execute(claim)).thenReturn(new J5RealCampaignResult(
+                requestId,
+                current.event().identity().value(),
+                900001L,
+                false,
+                "HTTP_429",
+                1,
+                List.of()));
+
+        mockMvc.perform(post(
+                        "/events/{id}/statistics/real/execute",
+                        current.event().identity().value())
+                        .param("localFormToken", "one-use-token")
+                        .param("requestId", requestId.toString())
+                        .param("confirmationText", "exact phrase")
+                        .param("acknowledged", "true")
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("j5RealErrorCode", "HTTP_429"))
+                .andExpect(redirectedUrl(
+                        "/events/" + current.event().identity().value()
+                                + "/statistics?zone=Europe%2FParis"));
+
+        verify(formTokenService).consume(any(HttpSession.class), eq("one-use-token"));
+        verify(realControlService).confirmAndClaim(requestId, "exact phrase", true);
+        verify(realEventDataService).execute(claim);
+    }
+
+    @Test
+    void appliesTheJ5GlobalStopOnlyAfterConsumingTheToken() throws Exception {
+        J4EventSearchItem current = currentEvent();
+
+        mockMvc.perform(post(
+                        "/events/{id}/statistics/real/stop",
+                        current.event().identity().value())
+                        .param("localFormToken", "one-use-token")
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl(
+                        "/events/" + current.event().identity().value()
+                                + "/statistics?zone=Europe%2FParis"));
+
+        verify(formTokenService).consume(any(HttpSession.class), eq("one-use-token"));
+        verify(realControlService).stop();
     }
 
     private static J5EventDataPage pageWithData() {
