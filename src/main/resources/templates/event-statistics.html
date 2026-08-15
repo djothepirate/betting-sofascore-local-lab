@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Statistiques J5 — SofaScore Local Lab</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar compact-topbar">
+  <div class="shell">
+    <p class="eyebrow">J5 · Contrats hors ligne</p>
+    <h1>Statistiques, incidents et compositions</h1>
+    <p class="subtitle">
+      Données normalisées, complétude mesurée et provenance locale sans repli réseau.
+    </p>
+  </div>
+</header>
+
+<main class="shell event-page">
+  <nav class="links page-links" aria-label="Navigation locale">
+    <a th:if="${page != null}"
+       th:href="@{/events/{id}(id=${page.current.event.identity.value},zone=${page.zoneId.id})}"
+       href="/events">← Détail de la rencontre</a>
+    <a th:href="@{/}" href="/">Tableau de bord</a>
+  </nav>
+
+  <p class="notice notice-danger" th:if="${eventDataErrorCode == 'EVENT_NOT_FOUND'}">
+    Cette identité canonique n’existe pas dans la base locale.
+  </p>
+  <p class="notice notice-danger" th:if="${eventDataErrorCode == 'INVALID_ZONE'}">
+    La zone demandée n’est pas valide.
+  </p>
+  <p class="notice notice-danger"
+     th:if="${eventDataErrorCode == 'LOCAL_DATABASE_UNAVAILABLE'}">
+    La base PostgreSQL locale n’est pas disponible.
+  </p>
+
+  <div th:if="${page != null}">
+    <section class="panel event-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Identité canonique J4 réutilisée</p>
+          <h2>
+            <span th:text="${page.current.event.homeTeam.name}">Home</span>
+            <span> — </span>
+            <span th:text="${page.current.event.awayTeam.name}">Away</span>
+          </h2>
+        </div>
+        <span class="chip chip-safe">LECTURE LOCALE</span>
+      </div>
+      <dl class="detail-grid">
+        <div><dt>UUID local</dt><dd class="mono" th:text="${page.current.event.identity.value}">UUID</dd></div>
+        <div><dt>Identifiant fournisseur</dt><dd th:text="${page.current.event.identity.providerEventId}">900001</dd></div>
+        <div><dt>Horaire local</dt><dd class="mono" th:text="${page.current.startsAtInZone}">date</dd></div>
+        <div><dt>Zone</dt><dd th:text="${page.zoneId.id}">Europe/Paris</dd></div>
+      </dl>
+    </section>
+
+    <p class="notice notice-safe" th:if="${j5FixtureImport != null}">
+      Corpus J5 importé. Les trois familles ont été parsées et rattachées à cette identité.
+    </p>
+    <p class="notice notice-danger" th:if="${j5FixtureImportErrorCode != null}"
+       th:text="${'Import J5 refusé : ' + j5FixtureImportErrorCode}">
+      Import J5 refusé.
+    </p>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Action explicite sans réseau</p>
+          <h2>Corpus synthétique J5</h2>
+        </div>
+        <span class="chip chip-warning">PROVIDER_SCHEMA_VALIDATED=NO</span>
+      </div>
+      <p>
+        Cette action charge uniquement les fixtures classpath de l’événement synthétique
+        <code>900001</code>. Elle ne résout aucune URI et ne tente aucun appel fournisseur.
+      </p>
+      <form method="post"
+            th:action="@{/events/{id}/statistics/offline-demo(id=${page.current.event.identity.value})}">
+        <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+        <input type="hidden" name="zone" th:value="${page.zoneId.id}">
+        <button type="submit">Importer les trois familles hors ligne</button>
+      </form>
+    </section>
+
+    <section class="panel" th:if="${statistics != null}">
+      <div class="panel-heading">
+        <div>
+          <p class="label">EVENT_STATISTICS · <span th:text="${statistics.source.parserVersion}">parser</span></p>
+          <h2>Statistiques d’équipe</h2>
+        </div>
+        <span class="chip"
+              th:classappend="${statistics.completeness.status.name() == 'PARTIAL'} ? 'chip-warning' : 'chip-safe'"
+              th:text="${statistics.completeness.status + ' · ' + statistics.completeness.scorePercent + '%'}">
+          COMPLETE · 100%
+        </span>
+      </div>
+      <dl class="detail-grid">
+        <div><dt>Source</dt><dd class="mono" th:text="${statistics.source.sourceReference()}">fixture</dd></div>
+        <div><dt>Réception</dt><dd class="mono" th:text="${statistics.source.receivedAt}">instant</dd></div>
+        <div><dt>Signaux</dt><dd th:text="${statistics.completeness.presentSignals + '/' + statistics.completeness.expectedSignals}">6/6</dd></div>
+        <div><dt>SHA-256 source</dt><dd class="mono hash-value" th:text="${statistics.source.payloadSha256}">hash</dd></div>
+        <div><dt>SHA-256 normalisé</dt><dd class="mono hash-value" th:text="${statistics.normalizedSha256}">hash</dd></div>
+      </dl>
+      <ul th:if="${!statistics.completeness.missingPaths.isEmpty()}">
+        <li class="mono" th:each="path : ${statistics.completeness.missingPaths}" th:text="${path}">path</li>
+      </ul>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Période</th><th>Groupe</th><th>Métrique</th><th>Domicile</th><th>Extérieur</th></tr></thead>
+          <tbody>
+          <tr th:each="metric : ${statisticsData.metrics}">
+            <td th:text="${metric.period}">ALL</td>
+            <td th:text="${metric.groupName}">Overview</td>
+            <td><span th:text="${metric.metricName}">Metric</span><br><code th:text="${metric.metricCode}">code</code></td>
+            <td th:text="${metric.homeValue.orElse('—')}">—</td>
+            <td th:text="${metric.awayValue.orElse('—')}">—</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" th:unless="${statistics != null}">
+      <p class="label">EVENT_STATISTICS</p>
+      <h2>Aucune statistique locale</h2>
+      <p>L’absence est explicite et ne déclenche aucun transport.</p>
+    </section>
+
+    <section class="panel" th:if="${incidents != null}">
+      <div class="panel-heading">
+        <div>
+          <p class="label">EVENT_INCIDENTS · <span th:text="${incidents.source.parserVersion}">parser</span></p>
+          <h2>Incidents ordonnés</h2>
+        </div>
+        <span class="chip"
+              th:classappend="${incidents.completeness.status.name() == 'PARTIAL'} ? 'chip-warning' : 'chip-safe'"
+              th:text="${incidents.completeness.status + ' · ' + incidents.completeness.scorePercent + '%'}">
+          COMPLETE · 100%
+        </span>
+      </div>
+      <dl class="detail-grid">
+        <div><dt>Source</dt><dd class="mono" th:text="${incidents.source.sourceReference()}">fixture</dd></div>
+        <div><dt>Réception</dt><dd class="mono" th:text="${incidents.source.receivedAt}">instant</dd></div>
+        <div><dt>Incidents</dt><dd th:text="${incidentsData.incidents.size()}">0</dd></div>
+        <div><dt>Signaux</dt><dd th:text="${incidents.completeness.presentSignals + '/' + incidents.completeness.expectedSignals}">0/0</dd></div>
+        <div><dt>SHA-256 source</dt><dd class="mono hash-value" th:text="${incidents.source.payloadSha256}">hash</dd></div>
+        <div><dt>SHA-256 normalisé</dt><dd class="mono hash-value" th:text="${incidents.normalizedSha256}">hash</dd></div>
+      </dl>
+      <ul th:if="${!incidents.completeness.missingPaths.isEmpty()}">
+        <li class="mono" th:each="path : ${incidents.completeness.missingPaths}" th:text="${path}">path</li>
+      </ul>
+      <p th:if="${incidentsData.incidents.isEmpty()}">La liste source est explicitement vide.</p>
+      <div class="table-scroll" th:unless="${incidentsData.incidents.isEmpty()}">
+        <table>
+          <thead><tr><th>Minute</th><th>Type</th><th>Côté</th><th>Joueur</th><th>Score</th></tr></thead>
+          <tbody>
+          <tr th:each="incident : ${incidentsData.incidents}">
+            <td th:text="${incident.addedTime.isPresent() ? incident.minute + '+' + incident.addedTime.get() : incident.minute}">18</td>
+            <td th:text="${incident.incidentType}">goal</td>
+            <td th:text="${incident.sideLabel()}">HOME</td>
+            <td th:text="${incident.playerName.orElse('—')}">—</td>
+            <td th:text="${incident.homeScore.isPresent() ? incident.homeScore.get() + '–' + incident.awayScore.get() : '—'}">—</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" th:unless="${incidents != null}">
+      <p class="label">EVENT_INCIDENTS</p>
+      <h2>Aucun incident local</h2>
+      <p>L’absence d’observation est distincte d’une liste observée et vide.</p>
+    </section>
+
+    <section class="panel" th:if="${lineups != null}">
+      <div class="panel-heading">
+        <div>
+          <p class="label">EVENT_LINEUPS · <span th:text="${lineups.source.parserVersion}">parser</span></p>
+          <h2>Compositions</h2>
+        </div>
+        <span class="chip"
+              th:classappend="${lineups.completeness.status.name() == 'PARTIAL'} ? 'chip-warning' : 'chip-safe'"
+              th:text="${lineups.completeness.status + ' · ' + lineups.completeness.scorePercent + '%'}">
+          COMPLETE · 100%
+        </span>
+      </div>
+      <dl class="detail-grid">
+        <div><dt>Confirmées</dt><dd th:text="${lineupsData.confirmed ? 'OUI' : 'NON'}">OUI</dd></div>
+        <div><dt>Signaux</dt><dd th:text="${lineups.completeness.presentSignals + '/' + lineups.completeness.expectedSignals}">13/13</dd></div>
+        <div><dt>Source</dt><dd class="mono" th:text="${lineups.source.sourceReference()}">fixture</dd></div>
+        <div><dt>Réception</dt><dd class="mono" th:text="${lineups.source.receivedAt}">instant</dd></div>
+        <div><dt>SHA-256 source</dt><dd class="mono hash-value" th:text="${lineups.source.payloadSha256}">hash</dd></div>
+        <div><dt>SHA-256 normalisé</dt><dd class="mono hash-value" th:text="${lineups.normalizedSha256}">hash</dd></div>
+      </dl>
+      <ul th:if="${!lineups.completeness.missingPaths.isEmpty()}">
+        <li class="mono" th:each="path : ${lineups.completeness.missingPaths}" th:text="${path}">path</li>
+      </ul>
+
+      <h3>Domicile · <span th:text="${lineupsData.home.formation.orElse('formation absente')}">4-3-3</span></h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Joueur</th><th>Numéro</th><th>Poste</th><th>Rôle</th></tr></thead>
+          <tbody>
+          <tr th:each="player : ${lineupsData.home.players}">
+            <td th:text="${player.name}">Player</td>
+            <td th:text="${player.shirtNumber.orElse(null)}">1</td>
+            <td th:text="${player.position.orElse('—')}">G</td>
+            <td th:text="${player.starter ? 'Titulaire' : 'Banc'}">Titulaire</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Extérieur · <span th:text="${lineupsData.away.formation.orElse('formation absente')}">4-4-2</span></h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Joueur</th><th>Numéro</th><th>Poste</th><th>Rôle</th></tr></thead>
+          <tbody>
+          <tr th:each="player : ${lineupsData.away.players}">
+            <td th:text="${player.name}">Player</td>
+            <td th:text="${player.shirtNumber.orElse(null)}">1</td>
+            <td th:text="${player.position.orElse('—')}">G</td>
+            <td th:text="${player.starter ? 'Titulaire' : 'Banc'}">Titulaire</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" th:unless="${lineups != null}">
+      <p class="label">EVENT_LINEUPS</p>
+      <h2>Aucune composition locale</h2>
+      <p>Aucun joueur ou formation n’est synthétisé pour combler cette absence.</p>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="shell">SofaScore Local Lab — J5 Données locales avec complétude explicite</div>
+</footer>
+</body>
+</html>

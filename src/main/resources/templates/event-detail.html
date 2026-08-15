@@ -55,6 +55,13 @@
         <div><dt>Compétition</dt><dd th:text="${detail.current.event.tournament.isPresent() ? detail.current.event.tournament.get().name : '—'}">—</dd></div>
         <div><dt>Versions conservées</dt><dd th:text="${detail.history.size()}">1</dd></div>
       </dl>
+      <div class="actions">
+        <a class="button button-secondary"
+           th:href="@{/events/{id}/statistics(id=${detail.current.event.identity.value},zone=${detail.zoneId.id})}"
+           href="/events/00000000-0000-0000-0000-000000000000/statistics">
+          Statistiques, incidents et compositions J5
+        </a>
+      </div>
     </section>
 
     <section class="panel event-detail-panel" th:if="${offlineDetail != null}">

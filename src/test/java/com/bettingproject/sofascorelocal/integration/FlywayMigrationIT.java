@@ -3,7 +3,11 @@ package com.bettingproject.sofascorelocal.integration;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV2Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV1Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV1Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV1Parser;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceService;
+import com.bettingproject.sofascorelocal.application.event.J5OfflineFixtureImportService;
 import com.bettingproject.sofascorelocal.application.network.J3QualificationCheckpointReparser;
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportService;
@@ -14,6 +18,13 @@ import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetails;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventSeason;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventVenue;
+import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
+import com.bettingproject.sofascorelocal.domain.eventdata.EventLineups;
+import com.bettingproject.sofascorelocal.domain.eventdata.EventStatistics;
+import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessStatus;
+import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservation;
+import com.bettingproject.sofascorelocal.fixture.ClasspathFixtureLoader;
+import com.bettingproject.sofascorelocal.fixture.LoadedFixture;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsTransportResponse;
 import com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot;
@@ -31,6 +42,7 @@ import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J3ScheduledEventsPageCache;
 import com.bettingproject.sofascorelocal.port.J4EventDetailsCache;
+import com.bettingproject.sofascorelocal.port.J5EventDataStore;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import com.bettingproject.sofascorelocal.port.J3QualificationCheckpointStore;
 import com.bettingproject.sofascorelocal.port.RawSnapshotInspectionStore;
@@ -123,6 +135,12 @@ class FlywayMigrationIT {
     @Autowired
     J4ParsedEventDetailsPersistenceService j4ParsedEventDetailsPersistenceService;
 
+    @Autowired
+    J5OfflineFixtureImportService j5OfflineFixtureImportService;
+
+    @Autowired
+    J5EventDataStore j5EventDataStore;
+
     @Test
     void createsTheJ3RawSnapshotSchemaAndKeepsNetworkDisabled() {
         String snapshotTable = jdbcTemplate.queryForObject(
@@ -154,7 +172,7 @@ class FlywayMigrationIT {
         assertThat(snapshotTable).isEqualTo("provider_snapshot");
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("6");
+        assertThat(flywayVersion).isEqualTo("7");
         assertThat(rawColumn).isEqualTo("bytea");
     }
 
@@ -933,6 +951,149 @@ class FlywayMigrationIT {
     }
 
     @Test
+    void persistsJ5FamiliesIdempotentlyAndSelectsTheLatestCompletenessEvidence() {
+        Long snapshotsBefore = snapshotRowCount();
+        var j4Import = j4OfflineFixtureImportService.importNominalCorpus();
+
+        var first = j5OfflineFixtureImportService.importNominalCorpus(
+                j4Import.canonicalEventId());
+        var repeated = j5OfflineFixtureImportService.importNominalCorpus(
+                j4Import.canonicalEventId());
+
+        assertThat(first.statisticsInserted()).isTrue();
+        assertThat(first.incidentsInserted()).isTrue();
+        assertThat(first.lineupsInserted()).isTrue();
+        assertThat(repeated.statisticsInserted()).isFalse();
+        assertThat(repeated.incidentsInserted()).isFalse();
+        assertThat(repeated.lineupsInserted()).isFalse();
+        assertThat(first.statisticsCompleteness()).isEqualTo(J5CompletenessStatus.COMPLETE);
+        assertThat(first.incidentsCompleteness()).isEqualTo(J5CompletenessStatus.COMPLETE);
+        assertThat(first.lineupsCompleteness()).isEqualTo(J5CompletenessStatus.COMPLETE);
+        assertThat(snapshotRowCount()).isEqualTo(snapshotsBefore);
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from j5_event_data_observation",
+                Long.class)).isEqualTo(3L);
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from j5_event_metric",
+                Long.class)).isEqualTo(3L);
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from j5_event_incident",
+                Long.class)).isEqualTo(3L);
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from j5_event_lineup_side",
+                Long.class)).isEqualTo(2L);
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from j5_event_lineup_player",
+                Long.class)).isEqualTo(4L);
+
+        var nominalBundle = j5EventDataStore.findLatest(j4Import.canonicalEventId());
+        assertThat(nominalBundle.statistics()).hasValueSatisfying(observation -> {
+            assertThat(observation.completeness().status())
+                    .isEqualTo(J5CompletenessStatus.COMPLETE);
+            assertThat(observation.source().fixtureId())
+                    .contains("event-statistics-nominal");
+            assertThat(observation.data()).isInstanceOfSatisfying(
+                    EventStatistics.class,
+                    statistics -> assertThat(statistics.metrics()).hasSize(3));
+        });
+        assertThat(nominalBundle.incidents()).hasValueSatisfying(observation ->
+                assertThat(observation.data()).isInstanceOfSatisfying(
+                        EventIncidents.class,
+                        incidents -> assertThat(incidents.incidents()).hasSize(3)));
+        assertThat(nominalBundle.lineups()).hasValueSatisfying(observation ->
+                assertThat(observation.data()).isInstanceOfSatisfying(
+                        EventLineups.class,
+                        lineups -> {
+                            assertThat(lineups.confirmed()).isTrue();
+                            assertThat(lineups.home().players()).hasSize(2);
+                            assertThat(lineups.away().players()).hasSize(2);
+                        }));
+
+        var identity = canonicalEventStore.findLatestByCanonicalId(
+                        j4Import.canonicalEventId())
+                .orElseThrow()
+                .identity();
+        var fixtureLoader = new ClasspathFixtureLoader();
+        LoadedFixture partialStatisticsFixture = fixtureLoader.load(
+                "fixtures/event-statistics/partial-missing-away.manifest.json");
+        var partialStatistics = new EventStatisticsV1Parser().parse(
+                partialStatisticsFixture);
+        j5EventDataStore.save(J5EventDataObservation.from(
+                identity,
+                partialStatistics.data().orElseThrow(),
+                fixtureSource(partialStatisticsFixture),
+                partialStatistics.completeness().orElseThrow()));
+
+        LoadedFixture emptyIncidentsFixture = fixtureLoader.load(
+                "fixtures/event-incidents/empty.manifest.json");
+        var emptyIncidents = new EventIncidentsV1Parser().parse(emptyIncidentsFixture);
+        j5EventDataStore.save(J5EventDataObservation.from(
+                identity,
+                emptyIncidents.data().orElseThrow(),
+                fixtureSource(emptyIncidentsFixture),
+                emptyIncidents.completeness().orElseThrow()));
+
+        LoadedFixture partialLineupsFixture = fixtureLoader.load(
+                "fixtures/event-lineups/partial-unconfirmed.manifest.json");
+        var partialLineups = new EventLineupsV1Parser().parse(partialLineupsFixture);
+        j5EventDataStore.save(J5EventDataObservation.from(
+                identity,
+                partialLineups.data().orElseThrow(),
+                fixtureSource(partialLineupsFixture),
+                partialLineups.completeness().orElseThrow()));
+
+        var latestBundle = j5EventDataStore.findLatest(j4Import.canonicalEventId());
+        assertThat(latestBundle.statistics()).hasValueSatisfying(observation -> {
+            assertThat(observation.completeness().status())
+                    .isEqualTo(J5CompletenessStatus.PARTIAL);
+            assertThat(observation.completeness().scorePercent()).isEqualTo(75);
+            assertThat(observation.completeness().missingPaths()).isNotEmpty();
+            assertThat(observation.data()).isInstanceOfSatisfying(
+                    EventStatistics.class,
+                    statistics -> assertThat(statistics.metrics()).hasSize(2));
+        });
+        assertThat(latestBundle.incidents()).hasValueSatisfying(observation -> {
+            assertThat(observation.completeness().status())
+                    .isEqualTo(J5CompletenessStatus.EMPTY_VALID);
+            assertThat(observation.data()).isInstanceOfSatisfying(
+                    EventIncidents.class,
+                    incidents -> assertThat(incidents.incidents()).isEmpty());
+        });
+        assertThat(latestBundle.lineups()).hasValueSatisfying(observation -> {
+            assertThat(observation.completeness().status())
+                    .isEqualTo(J5CompletenessStatus.PARTIAL);
+            assertThat(observation.data()).isInstanceOfSatisfying(
+                    EventLineups.class,
+                    lineups -> {
+                        assertThat(lineups.confirmed()).isFalse();
+                        assertThat(lineups.home().players()).hasSize(1);
+                        assertThat(lineups.away().players()).isEmpty();
+                    });
+        });
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from j5_event_data_observation",
+                Long.class)).isEqualTo(6L);
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from j5_event_metric",
+                Long.class)).isEqualTo(5L);
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from j5_event_incident",
+                Long.class)).isEqualTo(3L);
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from j5_event_lineup_side",
+                Long.class)).isEqualTo(4L);
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from j5_event_lineup_player",
+                Long.class)).isEqualTo(5L);
+
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                "update j5_event_data_observation set completeness_score = 99 where id = ?",
+                first.statisticsObservationId()))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("J5 normalized event data is append-only");
+    }
+
+    @Test
     void persistsProviderEventDetailsWithSnapshotProvenanceAndParsedCache() {
         var request = EventDetailsProviderRequest.phase1(
                 URI.create(EventDetailsProviderRequest.EXPECTED_ORIGIN),
@@ -1046,6 +1207,14 @@ class FlywayMigrationIT {
                 rawPayload,
                 RawSnapshotSchemaStatus.PARSED,
                 null);
+    }
+
+    private static EventSourceTrace fixtureSource(LoadedFixture fixture) {
+        return EventSourceTrace.syntheticFixture(
+                fixture.manifest().fixtureId(),
+                fixture.rawSha256(),
+                fixture.manifest().parserVersion(),
+                fixture.manifest().recordedAt());
     }
 
     private static RawManualCallSnapshot snapshot(
