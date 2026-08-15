@@ -4,7 +4,7 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures** et **J3 — Appel manuel**. L'implémentation de **J4 — Événements**, son parcours hors ligne et ses deux sous-étapes réelles bornées sont désormais qualifiés humainement. La sous-étape 1 a validé `16386245` et `16421052` après correction du retour par date. La sous-étape 2 a validé la saisie d'identifiants, le rappel manuel avec une nouvelle confirmation, la déduplication d'une réponse inchangée et la création d'une observation append-only lorsque `16412917` est passé de `notstarted` à `inprogress`. Après l'arrêt global, la configuration a été remise à l'état bloqué, ce verrouillage a été vérifié après redémarrage et l'application a été arrêtée gracieusement. Le Work Order reste actif uniquement jusqu'à la fusion de la Pull Request `#8`, puis sera archivé `VALIDATED`. Les voies fournisseur J3 et J4 restent désactivées par défaut, mutuellement exclusives, et aucun appel fournisseur n’est exécuté par Maven, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**, **J3 — Appel manuel** et **J4 — Événements**. L'implémentation J4, son parcours hors ligne et ses deux sous-étapes réelles bornées sont qualifiés humainement. La sous-étape 1 a validé `16386245` et `16421052` après correction du retour par date. La sous-étape 2 a validé la saisie d'identifiants, le rappel manuel avec une nouvelle confirmation, la déduplication d'une réponse inchangée et la création d'une observation append-only lorsque `16412917` est passé de `notstarted` à `inprogress`. Après l'arrêt global, la configuration a été remise à l'état bloqué, ce verrouillage a été vérifié après redémarrage et l'application a été arrêtée gracieusement. La Pull Request `#8` a été fusionnée et le Work Order J4 est archivé `VALIDATED`. Les voies fournisseur J3 et J4 restent désactivées par défaut, mutuellement exclusives, et aucun appel fournisseur n’est exécuté par Maven, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
 ## Ce qui est livré localement
 
@@ -277,9 +277,9 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Préparation technique J4 réelle — sous-étape 2](docs/validation/J4-REAL-EVENT-DETAILS-PHASE2-READINESS-20260815.md)
 - [Campagne humaine J4 réelle — sous-étape 2 et actualisation](docs/validation/J4-REAL-EVENT-DETAILS-PHASE2-CAMPAIGN-20260815.md)
 - [Incident et correction de l’upgrade V5 préremplie vers V6](docs/validation/J4-V6-PREFILLED-UPGRADE-INCIDENT-20260815.md)
-- [Work Order J4 actif](docs/work_orders/active/WO-SS-20260815-004-events-j4.md)
+- [Work Order J4 validé](docs/work_orders/completed/WO-SS-20260815-004-events-j4.md)
 
-## J3 clôturé, J4 qualifié et en attente d'intégration finale
+## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 
 La qualification humaine du `2026-08-14` a collecté dix pages sur dix, après les cinq pages
 observées le `2026-08-13`. Elle confirme que le parcours repart de la page 1, persiste avant
@@ -326,8 +326,9 @@ rappel de `16412917` avant le coup d'envoi a effectué un nouvel appel mais déd
 inchangée sur le snapshot 19. Un second rappel après le coup d'envoi a persisté le snapshot 23,
 fait évoluer le statut à `inprogress` et conservé les deux observations consultables sous la même
 identité canonique. L'arrêt global, le reverrouillage des six paramètres, le contrôle `LOCKED`
-après redémarrage et l'arrêt gracieux final ont été confirmés. Le Work Order reste dans
-`docs/work_orders/active` uniquement jusqu'à la fusion de la Pull Request `#8`.
+après redémarrage et l'arrêt gracieux final ont été confirmés. La Pull Request `#8`, déclarée
+`MERGEABLE` et `CLEAN`, a été fusionnée sur `main` par le commit
+`950bb0f0ddd0edfe2a5e7d1e768498c049a86467`, puis le Work Order a été archivé `VALIDATED`.
 
 ```text
 J4_IMPLEMENTATION_STATUS=IMPLEMENTATION_MERGED
@@ -344,8 +345,11 @@ J4_FINAL_APPLICATION_SHUTDOWN_STATUS=PASS
 J4_FINAL_STANDARD_TESTS=212
 J4_FINAL_INTEGRATION_TESTS=16
 J4_FINAL_MAVEN_PROVIDER_CALLS=0
-J4_WORK_ORDER_STATUS=ACTIVE_PENDING_PR8_MERGE
-J4_CAN_BE_CLOSED=YES_AFTER_PR8_MERGE
+J4_PULL_REQUEST=8
+J4_MERGE_COMMIT=950bb0f0ddd0edfe2a5e7d1e768498c049a86467
+J4_WORK_ORDER_STATUS=VALIDATED
+J4_CAN_BE_CLOSED=YES
+J4_CLOSED=YES
 ```
 
 Cette situation ne déverrouille aucune nouvelle famille, automatisation ou dépendance de

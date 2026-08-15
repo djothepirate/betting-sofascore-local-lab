@@ -178,8 +178,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - arrêt gracieux final de Tomcat, JPA et Hikari après la vérification du reverrouillage ;
 - vérification Maven finale en configuration bloquée : 212 tests standards et 16 tests
   PostgreSQL/Testcontainers réussis, Flyway V6 validé et aucun appel fournisseur ;
-- préparation de la clôture du Work Order `WO-SS-20260815-004` après fusion de la Pull Request
-  `#8`, sans autoriser polling, production ou déploiement VPS ;
+- fusion sans conflit de la Pull Request `#8` par le commit
+  `950bb0f0ddd0edfe2a5e7d1e768498c049a86467`, après qualification humaine réelle et réussite des
+  vérifications Maven finales ;
+- clôture du Work Order `WO-SS-20260815-004` au statut `VALIDATED` et archivage dans
+  `docs/work_orders/completed`, sans autoriser polling, production ou déploiement VPS ;
 - ouverture du Work Order `WO-SS-20260815-004` sur la branche `codex/j4-events` depuis le merge J3
   `b79ccd62e7863718f49a22b6c54a7fc73cf87986` ;
 - contrats J4 de l’identité canonique, de la normalisation versionnée et du détail synthétique hors
@@ -191,7 +194,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   tests standards, 14 tests d'intégration et du parcours fonctionnel hors ligne ;
 - réouverture corrective du Work Order `WO-SS-20260815-004` au statut `IN_DEVELOPMENT` : J4 est
   `IMPLEMENTATION_MERGED` et `OFFLINE_PATH_QUALIFIED`, tandis que
-  `REAL_MATCH_QUALIFICATION_PENDING` interdit encore sa clôture définitive ;
+  `REAL_MATCH_QUALIFICATION_PENDING` interdisait alors sa clôture définitive ;
 - démarrage du Work Order `WO-SS-20260808-002` sur la branche `feat/j2-scheduled-events-fixtures` depuis le tag `j0-j1-v0.1.1` ;
 - passage du jalon J2 au statut `IN_DEVELOPMENT` avec `SCHEDULED_EVENTS` comme première famille de fixtures hors ligne.
 - contrat d’architecture `scheduled-events-v1` détaillant les champs obligatoires, facultatifs et inconnus.
