@@ -3,12 +3,13 @@
 - **Date :** 2026-08-15
 - **Work Order :** `WO-SS-20260815-004`
 - **Branche :** `codex/j4-real-event-details-phase1`
-- **Pull Request :** `#8` — `DRAFT` au moment de la consolidation des preuves
+- **Pull Request :** `#8` — `MERGED`
+- **Commit de fusion :** `950bb0f0ddd0edfe2a5e7d1e768498c049a86467`
 - **Qualification technique hors ligne :** `PASS`
 - **Qualification humaine réelle :** `PASS`
 - **État terminal de la campagne :** `STOPPED_LOCKED`
 - **Configuration locale finale :** `LOCKED`
-- **Statut :** `PASS_READY_FOR_PR8_MERGE`
+- **Statut :** `VALIDATED`
 
 ## 1. Périmètre humain exécuté
 
@@ -161,16 +162,21 @@ FINAL_FLYWAY_SCHEMA=V6
 REAL_PROVIDER_CALLS_DURING_FINAL_MAVEN=0
 ```
 
-## 8. État avant fusion de la Pull Request
+## 8. Clôture après fusion de la Pull Request
 
-La qualification humaine permet la clôture, mais le Work Order reste actif jusqu'à l'intégration
-de la Pull Request `#8` dans `main`. Son archivage `VALIDATED` sera effectué après cette fusion afin
-de consigner le véritable commit de merge.
+GitHub a confirmé la Pull Request `#8` `MERGEABLE` et `CLEAN`, sans check distant déclaré, puis l'a
+fusionnée sur `main` par le commit `950bb0f0ddd0edfe2a5e7d1e768498c049a86467`. Les preuves
+techniques et humaines étant complètes, le Work Order est archivé au statut `VALIDATED` dans
+`docs/work_orders/completed`.
 
 ```text
 TECHNICAL_OFFLINE_QUALIFICATION=PASS
 REAL_PROVIDER_QUALIFICATION=PASS
-WORK_ORDER_STATUS=IN_DEVELOPMENT_PENDING_PR8_MERGE
-J4_WORK_ORDER=ACTIVE_PENDING_PR8_MERGE
-J4_CAN_BE_CLOSED=YES_AFTER_PR8_MERGE
+PULL_REQUEST=8
+PULL_REQUEST_STATE=MERGED
+MERGE_COMMIT=950bb0f0ddd0edfe2a5e7d1e768498c049a86467
+WORK_ORDER_STATUS=VALIDATED
+J4_WORK_ORDER=COMPLETED
+J4_CAN_BE_CLOSED=YES
+J4_CLOSED=YES
 ```
