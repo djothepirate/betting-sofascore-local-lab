@@ -13,6 +13,7 @@ import org.springframework.boot.test.context.ConfigDataApplicationContextInitial
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
+import org.springframework.core.env.StandardEnvironment;
 
 import java.time.Duration;
 
@@ -23,6 +24,9 @@ class SofascorePropertiesTest {
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
             .withInitializer(new ConfigDataApplicationContextInitializer())
+            // A locally armed J3/J4 campaign must not override the scenario under test.
+            .withInitializer(context -> context.getEnvironment().getPropertySources()
+                    .remove(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME))
             .withUserConfiguration(EnvironmentBindingConfiguration.class);
 
     @Test
@@ -45,19 +49,32 @@ class SofascorePropertiesTest {
     @Test
     void bindsDocumentedJ3EnvironmentKeysThroughApplicationYaml() {
         contextRunner
-                .withPropertyValues(
+                .withSystemProperties(
                         "SOFASCORE_ENABLED=true",
                         "SOFASCORE_J3_QUALIFICATION_ENABLED=true",
+                        "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=false",
                         "SOFASCORE_BASE_URL="
                                 + ScheduledEventsProviderPageRequest.EXPECTED_ORIGIN,
                         "SOFASCORE_ALLOWED_ENDPOINTS=SCHEDULED_EVENTS")
                 .run(context -> {
                     assertThat(context.getStartupFailure()).isNull();
+                    assertThat(System.getProperty("SOFASCORE_J3_QUALIFICATION_ENABLED"))
+                            .as("isolated J3 system property")
+                            .isEqualTo("true");
+                    assertThat(context.getEnvironment().getProperty(
+                            "SOFASCORE_J3_QUALIFICATION_ENABLED"))
+                            .as("resolved J3 placeholder input")
+                            .isEqualTo("true");
+                    assertThat(context.getEnvironment().getProperty(
+                            "sofascore.j3-qualification-enabled"))
+                            .as("bound J3 configuration property")
+                            .isEqualTo("true");
 
                     SofascoreProperties properties = context.getBean(
                             SofascoreProperties.class);
                     assertThat(properties.isEnabled()).isTrue();
                     assertThat(properties.isJ3QualificationEnabled()).isTrue();
+                    assertThat(properties.isJ4EventDetailsQualificationEnabled()).isFalse();
                     assertThat(properties.getBaseUrl())
                             .isEqualTo(ScheduledEventsProviderPageRequest.EXPECTED_ORIGIN);
                     assertThat(properties.getAllowedEndpoints())
@@ -102,8 +119,9 @@ class SofascorePropertiesTest {
     @Test
     void bindsTheDisabledByDefaultJ4EventDetailsQualificationKeys() {
         contextRunner
-                .withPropertyValues(
+                .withSystemProperties(
                         "SOFASCORE_ENABLED=true",
+                        "SOFASCORE_J3_QUALIFICATION_ENABLED=false",
                         "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true",
                         "SOFASCORE_BASE_URL=" + EventDetailsProviderRequest.EXPECTED_ORIGIN,
                         "SOFASCORE_ALLOWED_ENDPOINTS=EVENT_DETAILS")
