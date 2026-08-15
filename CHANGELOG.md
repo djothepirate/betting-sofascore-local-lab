@@ -27,9 +27,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   réussie avec les verrous réseau actifs, identité et deux versions synthétiques toujours
   consultables, puis arrêt gracieux complet de l’application sans appel fournisseur ;
 - isolation des scénarios de binding J3/J4 vis-à-vis d’une configuration opérateur déjà armée :
-  chaque mini-contexte retire la source d’environnement ambiante, injecte explicitement les deux
-  opt-ins mutuellement exclusifs et conserve inchangées les validations du runtime. Les 198 tests
-  standards passent avec la configuration J4 réelle activée, sans appel fournisseur.
+  chaque mini-contexte retire la source d’environnement ambiante avant le chargement
+  d’`application.yml` et fixe explicitement les opt-ins J3, J4 et J4 sous-étape 2. Les 212 tests
+  standards passent avec la configuration J4 sous-étape 2 activée, sans appel fournisseur.
 
 ### Ajouté
 

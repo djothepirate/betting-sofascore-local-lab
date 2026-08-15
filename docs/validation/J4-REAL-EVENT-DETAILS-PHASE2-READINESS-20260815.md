@@ -49,11 +49,26 @@ INTEGRATION_TESTS=16
 INTEGRATION_FAILURES=0
 INTEGRATION_ERRORS=0
 INTEGRATION_SKIPPED=0
+ACTIVE_OPERATOR_CONFIGURATION=J4_EVENT_DETAILS_PHASE_2
+ACTIVE_CONFIGURATION_BINDING_TESTS=8
+ACTIVE_CONFIGURATION_STANDARD_TESTS=212
+ACTIVE_CONFIGURATION_FAILURES=0
+ACTIVE_CONFIGURATION_ERRORS=0
+ACTIVE_CONFIGURATION_SKIPPED=0
 REAL_PROVIDER_CALLS_DURING_AUTOMATED_TESTS=0
 ```
 
 Les transports des tests sont des mocks ou `MockRestServiceServer`. Maven ne dispose d'aucun
 scénario autorisé à contacter SofaScore.
+
+La première exécution opérateur de `clean verify` avec la sous-étape 2 armée a révélé une fuite de
+la variable `SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED` dans deux assertions du même test de
+binding. Le retrait de l'environnement intervenait après le chargement d'`application.yml`. Le
+mini-contexte retire désormais cette source avant le chargement de la configuration et les
+scénarios J3 et J4 sous-étape 1 imposent explicitement la valeur `false` du nouvel opt-in. Le test
+ciblé puis les 212 tests standards ont été rejoués avec les six valeurs de sous-étape 2 actives.
+Il s'agissait uniquement d'un défaut d'isolation de test ; aucun transport fournisseur n'a été
+créé ou exécuté.
 
 ## 4. Qualification humaine encore requise
 

@@ -24,10 +24,10 @@ class SofascorePropertiesTest {
 
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            .withInitializer(new ConfigDataApplicationContextInitializer())
             // A locally armed J3/J4 campaign must not override the scenario under test.
             .withInitializer(context -> context.getEnvironment().getPropertySources()
                     .remove(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME))
+            .withInitializer(new ConfigDataApplicationContextInitializer())
             .withUserConfiguration(EnvironmentBindingConfiguration.class);
 
     @Test
@@ -55,6 +55,7 @@ class SofascorePropertiesTest {
                         "SOFASCORE_ENABLED=true",
                         "SOFASCORE_J3_QUALIFICATION_ENABLED=true",
                         "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=false",
+                        "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false",
                         "SOFASCORE_BASE_URL="
                                 + ScheduledEventsProviderPageRequest.EXPECTED_ORIGIN,
                         "SOFASCORE_ALLOWED_ENDPOINTS=SCHEDULED_EVENTS")
@@ -125,6 +126,7 @@ class SofascorePropertiesTest {
                         "SOFASCORE_ENABLED=true",
                         "SOFASCORE_J3_QUALIFICATION_ENABLED=false",
                         "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true",
+                        "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false",
                         "SOFASCORE_BASE_URL=" + EventDetailsProviderRequest.EXPECTED_ORIGIN,
                         "SOFASCORE_ALLOWED_ENDPOINTS=EVENT_DETAILS")
                 .run(context -> {
