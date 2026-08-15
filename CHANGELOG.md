@@ -6,6 +6,15 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Corrigé
 
+- correction du faux positif `SCHEMA_INCOMPATIBLE` sur les réponses réelles `EVENT_INCIDENTS` :
+  `event-incidents-v3` reconnaît `addedTime=999` comme une sentinelle fournisseur uniquement sur
+  un marqueur `period`, conserve les octets bruts inchangés, omet la sentinelle de la valeur
+  normalisée et continue de refuser `999` sur tout incident métier latéralisé ;
+- comptage de complétude des marqueurs techniques `period` et `injuryTime` sans exiger le champ
+  latéral `isHome`, afin de ne pas inventer de côté pour un événement global à la période ;
+- isolation du contexte PostgreSQL/Testcontainers vis-à-vis des opt-ins opérateur J3/J4/J5 : la
+  suite d'intégration force désormais toutes les voies réseau à l'état désactivé sans lire ni
+  modifier `.env` ;
 - correction de la politique J5 qui traitait tout statut non `2xx` comme terminal : un HTTP `404`
   sur `EVENT_STATISTICS`, `EVENT_INCIDENTS` ou `EVENT_LINEUPS` devient une indisponibilité de
   famille persistée, sans retry, puis la campagne continue dans l'ordre prévu ;
@@ -45,6 +54,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Ajouté
 
+- migration Flyway V10 append-only autorisant la provenance `event-incidents-v3` sans réécrire les
+  observations historiques V1/V2, avec test d'upgrade V9 → V10 sur PostgreSQL 18.4 ;
+- fixture synthétique minimale et tests de régression du marqueur de période fournisseur, ainsi
+  que couverture du parcours ordonné prouvant que les compositions sont atteintes après parsing
+  compatible des incidents ;
 - tests hors ligne du scénario mixte « statistiques HTTP `404`, incidents et compositions `2xx` »,
   de l'affichage d'indisponibilité, de la persistance PostgreSQL `UNAVAILABLE` et de l'upgrade
   V8 → V9 d'un snapshot historique mal classé ;
@@ -189,6 +203,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Documentation
 
+- diagnostic minimisé des snapshots réels 32 et 34 : réponses incidents HTTP `200`, respectivement
+  20 et 22 objets, deux sentinelles de période `addedTime=999` dans chaque réponse, arrêt terminal
+  avant les compositions sous V2, puis correction versionnée V3 validée exclusivement hors ligne ;
 - consignation minimisée de la première campagne réelle J5 : détail J4 préalable dans le snapshot
   28, réponse JSON HTTP `404` de `EVENT_STATISTICS` conservée dans le snapshot 30, arrêt
   `FAILED_LOCKED` après un seul appel, zéro retry et aucune tentative `incidents` ou `lineups` ;

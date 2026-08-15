@@ -156,13 +156,13 @@ campagne réussie passe à `COMPLETED_LOCKED` et ne peut pas être rejouée dans
 
 - les octets exacts sont enregistrés dans `provider_snapshot` avant parsing ;
 - la clé brute contient le type logique et l'identifiant d'événement ;
-- les parseurs fournisseur sont versionnés `event-statistics-v2`, `event-incidents-v2` et
+- les parseurs fournisseur courants sont versionnés `event-statistics-v2`, `event-incidents-v3` et
   `event-lineups-v2`, distincts des contrats synthétiques V1 ;
 - l'identifiant attendu vient du claim et de la requête, car les enveloppes de famille peuvent ne
   pas répéter l'identifiant d'événement ;
 - un HTTP `404` ne déclenche aucun parsing du corps : il produit un snapshot
   `ENDPOINT_UNAVAILABLE`, une observation `UNAVAILABLE · N/A` et la poursuite sans retry ;
-- un résultat compatible produit une observation V7/V8/V9 liée au snapshot brut ;
+- un résultat compatible produit une observation V7/V8/V9/V10 liée au snapshot brut ;
 - une réponse identique est dédupliquée sans réécriture ;
 - aucune donnée partielle n'est persistée après une incompatibilité structurelle ;
 - les absences métier compatibles restent `PARTIAL` ou `EMPTY_VALID` selon la famille ;
@@ -194,10 +194,12 @@ reverrouillée avant toute nouvelle décision.
 - contrôle en mémoire à confirmation unique et verrou terminal ;
 - requêtes exactes et transport `RestClient` sans proxy ni redirection ;
 - réponse bornée par `RawPayloadEvidence` ;
-- trois parseurs fournisseur V2 et fixtures de forme créées de zéro ;
+- parseurs fournisseur versionnés et fixtures de forme créées de zéro ;
 - migration Flyway V8 append-only autorisant les versions V2 sans modifier V7 ;
 - migration Flyway V9 append-only ajoutant l'indisponibilité explicite et corrigeant la
   classification des anciens snapshots J5 HTTP `404` sans modifier leur brut ;
+- migration Flyway V10 append-only autorisant `event-incidents-v3`, sans reclasser ni réécrire les
+  snapshots et observations historiques V2 ;
 - persistance normalisée liée à `PROVIDER_SNAPSHOT` ;
 - résultat minimisé affichant endpoint, snapshot, taille, hash, statut, complétude et insertion ;
 - arrêt global J5 ;
@@ -253,6 +255,8 @@ reverrouillée avant toute nouvelle décision.
 | phrase, UUID, acquittement ou TTL invalide | refus sans transport |
 | exécution nominale simulée | trois transports dans l'ordre, délai appliqué |
 | HTTP `404` sur statistiques | observation `UNAVAILABLE`, puis incidents et compositions appelés une fois |
+| marqueur incidents `period` avec `addedTime=999` | brut conservé, avertissement explicite, temps additionnel normalisé absent, compositions appelées |
+| incident métier avec `addedTime=999` | `SCHEMA_INCOMPATIBLE`, aucune normalisation partielle |
 | réponse `403` sur statistiques | un appel, brut classé, deux familles non appelées |
 | réponse `429` sur incidents | deux appels, troisième famille non appelée |
 | HTML ou schéma incompatible | brut conservé, aucune normalisation partielle de la famille |
@@ -263,7 +267,8 @@ reverrouillée avant toute nouvelle décision.
 | arrêt global | appels suivants refusés |
 | suite Maven | zéro appel Internet |
 | upgrade V8 contenant un HTTP `404` J5 mal classé | V9 reclasse le snapshot sans modifier son brut |
-| Flyway V1 → V9 | migrations et append-only valides |
+| upgrade V9 contenant des observations incidents V1/V2 | V10 autorise V3 sans réécrire l'historique |
+| Flyway V1 → V10 | migrations et append-only valides |
 
 ## 10. Critères d'acceptation
 
@@ -275,8 +280,8 @@ reverrouillée avant toute nouvelle décision.
 - [x] contrôle de préparation, confirmation et verrou terminal implémenté ;
 - [x] trois transports exacts et bornés implémentés ;
 - [x] brut persisté avant parsing ;
-- [x] parseurs V2 et complétude qualifiés hors ligne ;
-- [x] migrations V8/V9 et provenance `PROVIDER_SNAPSHOT` qualifiées ;
+- [x] parseurs fournisseur versionnés et complétude qualifiés hors ligne ;
+- [x] migrations V8/V9/V10 et provenance `PROVIDER_SNAPSHOT` qualifiées ;
 - [x] interface et résultat minimisé qualifiés ;
 - [x] poursuite après HTTP `404` sans retry et arrêt au premier incident réel prouvés ;
 - [x] `mvnw.cmd clean verify` réussi ;
@@ -286,7 +291,10 @@ reverrouillée avant toute nouvelle décision.
 - [x] comportement historique de la première campagne et snapshot 30 consignés sans payload brut ;
 - [x] cause racine du verrouillage HTTP `404` identifiée ;
 - [x] distinction `UNAVAILABLE` / `EMPTY_VALID` / `TRANSPORT_ERROR` implémentée et testée ;
-- [ ] campagne humaine corrective exécutée après application de V9 ;
+- [x] campagnes humaines correctives exécutées après application de V9 ;
+- [x] cause du faux positif incidents V2 identifiée sur deux snapshots réels indépendants ;
+- [x] `event-incidents-v3` et l'upgrade V9 → V10 validés hors ligne ;
+- [ ] campagne humaine corrective exécutée après application de V10 ;
 - [ ] configuration locale reverrouillée et arrêt final confirmés après le retest.
 
 ## 11. Unités de livraison prévues
@@ -300,19 +308,21 @@ reverrouillée avant toute nouvelle décision.
 7. `docs: record the failed-locked J5 real campaign`
 8. `fix: continue J5 after an unavailable optional family`
 9. `docs: record the J5 HTTP 404 policy correction`
+10. `fix: accept provider incident period markers`
+11. `docs: record the J5 incident parser correction`
 
 ## 12. Readiness technique hors ligne
 
 ```text
-STANDARD_TESTS=261
+STANDARD_TESTS=263
 STANDARD_FAILURES=0
 STANDARD_ERRORS=0
 STANDARD_SKIPPED=0
-INTEGRATION_TESTS=20
+INTEGRATION_TESTS=21
 INTEGRATION_FAILURES=0
 INTEGRATION_ERRORS=0
 INTEGRATION_SKIPPED=0
-FLYWAY_MIGRATIONS=9
+FLYWAY_MIGRATIONS=10
 POSTGRESQL=18.4_TESTCONTAINERS
 SOFASCORE_PROVIDER_CALLS=0
 J5_REAL_TECHNICAL_READINESS=PASS
@@ -448,3 +458,65 @@ revue de ce Work Order, préparation sans réseau, nouvelle confirmation exacte 
 appels ordonnés. Le succès attendu peut combiner `UNAVAILABLE` et des familles parsées ; seul un
 incident réel doit produire `FAILED_LOCKED`. Après le geste, le propriétaire reverrouille `.env`
 et arrête l'application. L'agent ne lit ni ne modifie ce fichier et n'exécute aucun appel réel.
+
+## 17. Amendement correctif — sentinelle des marqueurs de période
+
+Deux campagnes humaines exécutées après V9 ont dépassé l'étape des statistiques puis se sont
+arrêtées sur `EVENT_INCIDENTS` :
+
+- pour `16412917`, le snapshot 30 conserve l'indisponibilité HTTP `404` des statistiques et le
+  snapshot 32 conserve une réponse incidents HTTP `200` de 22 945 octets contenant 20 objets ;
+- pour `16391135`, le snapshot 33 contient des statistiques parsées `COMPLETE · 100%` avec
+  `268/268` signaux, puis le snapshot 34 conserve une réponse incidents HTTP `200` de 48 690
+  octets contenant 22 objets ;
+- dans les deux réponses incidents, V2 signalait exactement deux valeurs hors plage :
+  `addedTime=999` sur des objets `incidentType=period` ;
+- `SCHEMA_INCOMPATIBLE` étant un incident terminal réel, `EVENT_LINEUPS` n'a été appelé dans
+  aucune de ces deux campagnes. Il ne s'agit donc pas d'une absence de compositions en base, mais
+  de la conséquence directe du verrouillage après parsing des incidents.
+
+L'interruption signalée par l'opérateur peut expliquer le contexte temporel de `16412917`, mais
+la même convention est présente dans l'autre rencontre. Aucune durée n'est donc déduite : `999`
+est traité comme une sentinelle fournisseur, uniquement sur un marqueur de période. Les snapshots
+32 et 34 restent immuables et conservent leur classification historique V2.
+
+Le correctif versionné introduit `event-incidents-v3` :
+
+- le brut et son SHA-256 restent inchangés ;
+- `addedTime=999` sur `period` produit l'avertissement `PROVIDER_SENTINEL_NORMALIZED` et une valeur
+  normalisée absente, jamais `999` minutes ;
+- la même valeur reste incompatible pour un carton, un but, un remplacement ou tout incident
+  métier ;
+- les objets globaux `period` et `injuryTime` ne sont pas artificiellement rattachés à domicile ou
+  extérieur pour le calcul de complétude ;
+- V10 autorise la provenance V3 sans modifier les observations V1/V2 existantes ;
+- les tests de service atteignent bien `EVENT_LINEUPS` après un résultat incidents V3 compatible.
+
+La première exécution d'intégration a été bloquée avant les tests Flyway parce que le contexte
+héritait des opt-ins opérateur J4/J5 simultanés. Le test PostgreSQL force désormais toutes les
+voies réseau à `false`, sans lire ni modifier `.env`. La relance a validé les 21 tests et les
+upgrades V1 → V10 et V9 → V10.
+
+```text
+J5_INCIDENT_V2_ROOT_CAUSE=PERIOD_ADDED_TIME_SENTINEL_999_REJECTED_BY_GLOBAL_RANGE
+J5_INCIDENT_REAL_EVIDENCE=SNAPSHOTS_32_AND_34_HTTP_200
+J5_INCIDENT_REAL_OBJECT_COUNTS=20_AND_22
+J5_INCIDENT_V3_IMPLEMENTATION=PASS_OFFLINE
+J5_INCIDENT_V3_PARSER=event-incidents-v3
+J5_INCIDENT_V3_STANDARD_TESTS=263
+J5_INCIDENT_V3_INTEGRATION_TESTS=21
+J5_INCIDENT_V3_FLYWAY_VERSION=10
+J5_INCIDENT_V3_PROVIDER_CALLS_BY_AGENT=0
+J5_STATISTICS_REAL_COMPATIBILITY=OBSERVED_ON_16391135
+J5_LINEUPS_REAL_COMPATIBILITY=NOT_YET_OBSERVED
+J5_INCIDENT_V3_CORRECTIVE_RETEST=NOT_RUN_OPERATOR_ONLY
+J5_PROVIDER_SCHEMA_VALIDATED=NO
+J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
+```
+
+Le rapport minimisé est conservé dans
+`docs/validation/J5-REAL-INCIDENT-PERIOD-MARKER-CORRECTION-20260816.md`. Le prochain geste réel
+exige un redémarrage ayant appliqué V10, une nouvelle préparation et une nouvelle confirmation.
+Il doit vérifier que les incidents deviennent parsables, que la troisième requête
+`EVENT_LINEUPS` est effectivement tentée et que son schéma est qualifié ou classé selon les règles
+existantes, toujours sans retry. Le reverrouillage local et l'arrêt final restent obligatoires.

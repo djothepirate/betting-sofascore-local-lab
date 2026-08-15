@@ -17,15 +17,21 @@ a été conservée dans le snapshot 30, puis le circuit s'est verrouillé sans a
 `lineups` et sans retry. Cette réaction a révélé un défaut de politique : les statistiques sont
 facultatives et un `404` peut signifier « famille indisponible », notamment pour une compétition
 non majeure. La migration V9 et le correctif J5 distinguent désormais `UNAVAILABLE` d'un incident
-et d'une liste vide valide, puis poursuivent les familles restantes sans retry. Aucun schéma
-nominal n'a été validé ; `providerSchemaValidated=false` reste donc obligatoire.
+et d'une liste vide valide, puis poursuivent les familles restantes sans retry. Deux campagnes
+humaines ultérieures ont atteint `EVENT_INCIDENTS` : les snapshots 32 et 34 ont révélé que
+`event-incidents-v2` rejetait à tort la sentinelle fournisseur `addedTime=999` sur les seuls
+marqueurs `period`, ce qui empêchait ensuite l'appel `EVENT_LINEUPS`. Le parseur versionné
+`event-incidents-v3` et la migration V10 corrigent ce faux positif sans modifier le brut ni
+interpréter `999` comme une durée. Les statistiques réelles de `16391135` ont été parsées ; la
+compatibilité réelle des incidents V3 et des compositions attend encore un retest humain, donc
+`providerSchemaValidated=false` reste obligatoire au niveau global J5.
 
 ## Ce qui est livré localement
 
 - dépôt Git autonome, documentation, ADR, règles agent et Work Orders ;
 - Java **25 LTS**, Spring Boot **4.1.0** et Maven Wrapper versionné ;
 - interface Spring MVC + Thymeleaf sur `127.0.0.1:8087` ;
-- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V9 et stockage brut séparé ;
+- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V10 et stockage brut séparé ;
 - Actuator, Caffeine, validation de configuration et garde de liaison locale ;
 - catalogue logique des familles d’endpoints, sans URI réelle ;
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
@@ -91,7 +97,7 @@ nominal n'a été validé ; `providerSchemaValidated=false` reste donc obligatoi
   identité canonique déjà persistée ;
 - préparation J5 sans réseau, confirmation exacte de cinq minutes, acquittement, trois appels
   séquentiels au maximum, délai minimal de trois secondes et verrou terminal dans le processus ;
-- parseurs fournisseur `event-statistics-v2`, `event-incidents-v2` et `event-lineups-v2`, brut
+- parseurs fournisseur `event-statistics-v2`, `event-incidents-v3` et `event-lineups-v2`, brut
   persisté avant parsing, provenance `PROVIDER_SNAPSHOT` et résultat d'écran minimisé ;
 - traitement borné du HTTP `404` sur les trois chemins J5 exacts : snapshot
   `ENDPOINT_UNAVAILABLE`, observation `UNAVAILABLE · N/A`, aucun parsing du corps, aucun retry et
@@ -282,6 +288,12 @@ publiée d'un incident de transport et d'une liste vide valide. Elle ajoute les 
 reclasse les anciens snapshots J5 HTTP `404` marqués `TRANSPORT_ERROR/HTTP_STATUS_404`, sans
 modifier leurs octets, hashes, heures ou identifiants et sans fabriquer d'observation rétroactive.
 
+La migration append-only `V10__j5_incident_period_marker_parser.sql` autorise
+`event-incidents-v3` dans la contrainte de provenance sans réécrire les observations V1/V2. Ce
+parseur conserve `addedTime=999` dans le snapshot brut mais omet cette sentinelle de la valeur
+normalisée uniquement pour un incident `period`, avec un avertissement explicite. La même valeur
+reste incompatible sur un but, un carton, un remplacement ou tout autre incident latéralisé.
+
 Le mode `DIRECT_LOCAL_ENDPOINT` ne doit jamais être confondu avec une `VisualObservation` du projet
 global. La persistance n'effectue elle-même aucun appel : les écritures J5 réelles éventuelles sont
 initiées uniquement par la voie humaine gardée, puis référencent le brut séparé avec
@@ -345,6 +357,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order J5 validé](docs/work_orders/completed/WO-SS-20260815-005-statistics-j5.md)
 - [Observation préalable à la qualification réelle J5](docs/validation/J5-REAL-EVENT-DATA-PREREQUISITE-OBSERVATION-20260815.md)
 - [Readiness technique de la qualification réelle J5](docs/validation/J5-REAL-EVENT-DATA-TECHNICAL-READINESS-20260815.md)
+- [Correction du marqueur de période incidents J5](docs/validation/J5-REAL-INCIDENT-PERIOD-MARKER-CORRECTION-20260816.md)
 - [Work Order actif de qualification réelle J5](docs/work_orders/active/WO-SS-20260815-006-j5-real-event-data-qualification.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
@@ -439,18 +452,22 @@ J5_APPLICATION_TRANSPORT=IMPLEMENTED_GUARDED_DEFAULT_OFF
 J5_DISCOVERY_ATTEMPTS=1
 J5_DISCOVERY_RESULT=HTTP_403_STOPPED_NO_RETRY
 J5_FIXTURE_ORIGIN=SYNTHETIC
-J5_FLYWAY_VERSION=9
+J5_FLYWAY_VERSION=10
 J5_MAVEN_PROVIDER_CALLS=0
 J5_REAL_TECHNICAL_READINESS=PASS
 J5_REAL_FIRST_CAMPAIGN=HTTP_404_MISCLASSIFIED_AND_LOCKED
-J5_REAL_PROVIDER_CALLS=1
-J5_REAL_STATISTICS_SNAPSHOT=30
-J5_REAL_INCIDENTS=NOT_ATTEMPTED
-J5_REAL_LINEUPS=NOT_ATTEMPTED
+J5_REAL_FIRST_CAMPAIGN_PROVIDER_CALLS=1
+J5_REAL_FIRST_STATISTICS_SNAPSHOT=30
+J5_REAL_LATEST_CAMPAIGN_PROVIDER_CALLS=2
+J5_REAL_STATISTICS_LATEST=PARSED_ON_EVENT_16391135
+J5_REAL_INCIDENTS=HTTP_200_SCHEMA_INCOMPATIBLE_V2_SNAPSHOTS_32_AND_34
+J5_REAL_INCIDENTS_ROOT_CAUSE=PERIOD_ADDED_TIME_SENTINEL_999
+J5_REAL_INCIDENTS_CORRECTIVE_PARSER=event-incidents-v3
+J5_REAL_LINEUPS=NOT_ATTEMPTED_AFTER_TERMINAL_INCIDENT_PARSE
 J5_HTTP_404_POLICY=ENDPOINT_UNAVAILABLE_CONTINUE_NO_RETRY
-J5_CORRECTIVE_RETEST=NOT_RUN
+J5_CORRECTIVE_V3_RETEST=NOT_RUN
 J5_OFFLINE_WORK_ORDER_STATUS=VALIDATED
-J5_REAL_WORK_ORDER_STATUS=CORRECTIVE_IMPLEMENTATION_VALIDATED_OFFLINE
+J5_REAL_WORK_ORDER_STATUS=INCIDENT_V3_CORRECTIVE_IMPLEMENTATION_VALIDATED_OFFLINE
 J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
 ```
 
@@ -459,5 +476,5 @@ par le cadrage et son ajout aurait étendu le corpus alors que les schémas des 
 principales n'ont pas pu être observés. Les captures de validation humaine ne sont pas versionnées ;
 leur constat minimisé est conservé dans les rapports J5. Le processus utilisé par la première
 campagne est arrêté. Le correctif ne déclenche aucun appel : une nouvelle qualification reste un
-geste humain explicite après application de V9, revue du Work Order amendé et configuration locale
+geste humain explicite après application de V10, revue du Work Order amendé et configuration locale
 manuelle. Le fichier `.env` demeure ignoré et n'est ni lu ni modifié par l'agent.

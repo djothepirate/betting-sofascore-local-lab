@@ -83,13 +83,14 @@ Pour chaque famille :
    normaliseur d'indisponibilité de la famille ; le snapshot devient `ENDPOINT_UNAVAILABLE` et la
    campagne continue ;
 4. pour une réponse `2xx`, le type de contenu et le JSON sont contrôlés ;
-5. le parseur fournisseur V2 produit soit un résultat complet, soit aucun objet normalisé ;
+5. le parseur fournisseur versionné produit soit un résultat complet, soit aucun objet normalisé ;
 6. la normalisation J5 est liée par `PROVIDER_SNAPSHOT` au snapshot, au hash, au parseur ou
    normaliseur et à l'heure de réception ;
 7. un snapshot `2xx` est classé `PARSED` après la persistance normalisée.
 
-Les parseurs sont `event-statistics-v2`, `event-incidents-v2` et `event-lineups-v2`. L'identifiant
-d'événement vient du claim et non du JSON. Les champs inconnus génèrent au plus 256 avertissements.
+Les parseurs courants sont `event-statistics-v2`, `event-incidents-v3` et `event-lineups-v2`.
+L'identifiant d'événement vient du claim et non du JSON. Les champs inconnus génèrent au plus 256
+avertissements.
 Une liste vide structurellement valide reste `EMPTY_VALID`; une absence facultative mesurée reste
 `PARTIAL`. Une famille non publiée en HTTP `404` reste `UNAVAILABLE · N/A`, ce qui est distinct
 d'une liste présente et vide. Aucune valeur n'est inventée.
@@ -102,6 +103,15 @@ La migration append-only V9 ajoute `ENDPOINT_UNAVAILABLE`, `UNAVAILABLE` et les 
 HTTP `404` marqués `TRANSPORT_ERROR/HTTP_STATUS_404`; les octets, hashes, heures et identifiants de
 snapshot restent inchangés. Elle ne fabrique pas rétroactivement d'observation normalisée.
 
+Le fournisseur peut porter `addedTime=999` sur un objet technique `incidentType=period`. Cette
+valeur est une sentinelle et non une durée littérale à afficher ou à additionner. Le parseur
+`event-incidents-v3` la conserve exclusivement dans le snapshot brut, omet le temps additionnel
+normalisé et ajoute l'avertissement `PROVIDER_SENTINEL_NORMALIZED`. Le traitement est strict :
+`999` reste une incompatibilité de schéma sur un carton, un but, un remplacement ou tout autre
+incident. Les marqueurs globaux `period` et `injuryTime` participent à la complétude sans exiger
+`isHome`. La migration append-only V10 autorise cette nouvelle provenance sans modifier V8/V9 ni
+reclasser les snapshots historiques V2.
+
 ## 6. Résultat et confidentialité
 
 L'interface affiche uniquement le code terminal, le nombre de tentatives et, pour chaque famille
@@ -111,9 +121,13 @@ texte de confirmation consommé n'est journalisé ou ajouté aux preuves.
 
 ## 7. État de qualification
 
-Les formes V2 ont été qualifiées exclusivement avec des fixtures minimales créées localement.
-Elles ne prouvent pas encore la compatibilité du fournisseur. La première campagne humaine a
+Les formes fournisseur ont d'abord été qualifiées avec des fixtures minimales créées localement.
+La première campagne humaine a
 montré qu'un HTTP `404` de `EVENT_STATISTICS` peut exprimer une famille indisponible, notamment
 dans le contexte opérateur d'une compétition non majeure. Ce signal ne valide pas le schéma
 nominal de statistiques ; seule une réponse `2xx` effectivement parsée peut faire évoluer
-`PROVIDER_SCHEMA_VALIDATED`.
+`PROVIDER_SCHEMA_VALIDATED`. Une campagne ultérieure a effectivement parsé les statistiques de
+`16391135`, puis deux réponses incidents réelles distinctes ont révélé la sentinelle de période
+rejetée par V2. V3 est validé hors ligne contre une forme synthétique représentative ; un nouveau
+geste humain doit encore confirmer V3 et atteindre `EVENT_LINEUPS`. Le statut global reste donc
+`PROVIDER_SCHEMA_VALIDATED=NO`.
