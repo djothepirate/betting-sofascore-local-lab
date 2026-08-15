@@ -4,7 +4,7 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures** et **J3 — Appel manuel**. L'implémentation de **J4 — Événements** est fusionnée et son parcours hors ligne est qualifié. La sous-étape 1 réelle a été validée humainement sur `16386245` et `16421052` après correction du retour par date. La sous-étape 2, désormais autorisée, ajoute un identifiant graphique et des rafraîchissements manuels répétables, mais sa qualification sur un événement réel n'est pas encore exécutée : J4 reste `IN_DEVELOPMENT` et ne peut pas être clôturé. J4 conserve la recherche locale par date, l’identité canonique stable et l’historique append-only. Les voies fournisseur J3 et J4 restent désactivées par défaut, mutuellement exclusives, et aucun appel fournisseur n’est exécuté par les tests, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures** et **J3 — Appel manuel**. L'implémentation de **J4 — Événements**, son parcours hors ligne et ses deux sous-étapes réelles bornées sont désormais qualifiés humainement. La sous-étape 1 a validé `16386245` et `16421052` après correction du retour par date. La sous-étape 2 a validé la saisie d'identifiants, le rappel manuel avec une nouvelle confirmation, la déduplication d'une réponse inchangée et la création d'une observation append-only lorsque `16412917` est passé de `notstarted` à `inprogress`. Après l'arrêt global, la configuration a été remise à l'état bloqué, ce verrouillage a été vérifié après redémarrage et l'application a été arrêtée gracieusement. Le Work Order reste actif uniquement jusqu'à la fusion de la Pull Request `#8`, puis sera archivé `VALIDATED`. Les voies fournisseur J3 et J4 restent désactivées par défaut, mutuellement exclusives, et aucun appel fournisseur n’est exécuté par Maven, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
 ## Ce qui est livré localement
 
@@ -274,10 +274,12 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Qualification technique Windows J4](docs/validation/J4-WINDOWS-TECHNICAL-QUALIFICATION-20260815.md)
 - [Préparation technique J4 réelle — sous-étape 1](docs/validation/J4-REAL-EVENT-DETAILS-PHASE1-READINESS-20260815.md)
 - [Campagne humaine J4 réelle — sous-étape 1 et anomalie de navigation](docs/validation/J4-REAL-EVENT-DETAILS-PHASE1-CAMPAIGN-20260815.md)
+- [Préparation technique J4 réelle — sous-étape 2](docs/validation/J4-REAL-EVENT-DETAILS-PHASE2-READINESS-20260815.md)
+- [Campagne humaine J4 réelle — sous-étape 2 et actualisation](docs/validation/J4-REAL-EVENT-DETAILS-PHASE2-CAMPAIGN-20260815.md)
 - [Incident et correction de l’upgrade V5 préremplie vers V6](docs/validation/J4-V6-PREFILLED-UPGRADE-INCIDENT-20260815.md)
 - [Work Order J4 actif](docs/work_orders/active/WO-SS-20260815-004-events-j4.md)
 
-## J3 clôturé, J4 en requalification locale après la campagne réelle
+## J3 clôturé, J4 qualifié et en attente d'intégration finale
 
 La qualification humaine du `2026-08-14` a collecté dix pages sur dix, après les cinq pages
 observées le `2026-08-13`. Elle confirme que le parcours repart de la page 1, persiste avant
@@ -317,20 +319,33 @@ ont été persistés, classés `PARSED` et ouverts localement. Un défaut de nav
 toutefois la fiche de Saint-Étienne — Clermont Foot au 15 août au lieu de sa date civile du 14
 août, et la fiche utilisait des libellés synthétiques statiques pour une provenance fournisseur.
 Le correctif conserve maintenant la date du match et affiche la provenance réellement persistée.
-Le retest humain sans réseau a confirmé les deux retours par date et la provenance, avec la
-configuration reverrouillée. La sous-étape 1 est donc qualifiée. La sous-étape 2 paramétrable et
-répétable reste à tester sur un ID choisi par l'opérateur ; le Work Order reste actif dans
-`docs/work_orders/active` au statut `IN_DEVELOPMENT`.
+Le retest humain sans réseau a confirmé les deux retours par date et la provenance.
+
+La sous-étape 2 a ensuite qualifié les événements paramétrables `16483632` et `16412917`. Un
+rappel de `16412917` avant le coup d'envoi a effectué un nouvel appel mais dédupliqué la réponse
+inchangée sur le snapshot 19. Un second rappel après le coup d'envoi a persisté le snapshot 23,
+fait évoluer le statut à `inprogress` et conservé les deux observations consultables sous la même
+identité canonique. L'arrêt global, le reverrouillage des six paramètres, le contrôle `LOCKED`
+après redémarrage et l'arrêt gracieux final ont été confirmés. Le Work Order reste dans
+`docs/work_orders/active` uniquement jusqu'à la fusion de la Pull Request `#8`.
 
 ```text
 J4_IMPLEMENTATION_STATUS=IMPLEMENTATION_MERGED
 J4_OFFLINE_STATUS=OFFLINE_PATH_QUALIFIED
 J4_REAL_PHASE1_CAMPAIGN_STATUS=EXECUTED
 J4_REAL_PHASE1_HUMAN_STATUS=PASS_AFTER_CORRECTIVE_LOCAL_RETEST
-J4_CONFIGURATION_RELOCK_STATUS=YES
-J4_REAL_PHASE2_STATUS=AUTHORIZED_IMPLEMENTED_OFFLINE_QUALIFIED
-J4_REAL_PHASE2_PROVIDER_STATUS=NOT_RUN
-J4_CAN_BE_CLOSED=NO
+J4_REAL_PHASE2_PARAMETERIZED_EVENT_STATUS=PASS
+J4_REAL_PHASE2_MANUAL_RECALL_STATUS=PASS
+J4_REAL_PHASE2_PRE_KICKOFF_DEDUPLICATION_STATUS=PASS
+J4_REAL_PHASE2_IN_MATCH_REFRESH_STATUS=PASS
+J4_APPEND_ONLY_HISTORY_STATUS=PASS
+J4_CONFIGURATION_RELOCK_STATUS=PASS
+J4_FINAL_APPLICATION_SHUTDOWN_STATUS=PASS
+J4_FINAL_STANDARD_TESTS=212
+J4_FINAL_INTEGRATION_TESTS=16
+J4_FINAL_MAVEN_PROVIDER_CALLS=0
+J4_WORK_ORDER_STATUS=ACTIVE_PENDING_PR8_MERGE
+J4_CAN_BE_CLOSED=YES_AFTER_PR8_MERGE
 ```
 
 Cette situation ne déverrouille aucune nouvelle famille, automatisation ou dépendance de

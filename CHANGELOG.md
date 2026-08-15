@@ -157,12 +157,29 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   l’arrêt au premier incident et la remise obligatoire de la configuration à l’état bloqué ;
 - amendement du Work Order après qualification humaine de la sous-étape 1, autorisant la
   sous-étape 2 paramétrable et les rappels manuels unitaires avec une nouvelle confirmation par
-  appel, tout en laissant sa qualification fournisseur réelle à `NOT_RUN` ;
+  appel, avec une qualification fournisseur réelle alors encore à `NOT_RUN` au moment de cette
+  autorisation ;
 - revue de l'ADR-SS-001 concluant `COMPATIBLE_NO_CHANGE_REQUIRED` pour le parcours paramétrable :
   appel manuel, concurrence unitaire, absence de polling, compte, cookie, jeton, proxy ou retry ;
 - qualification technique hors ligne de la sous-étape 2 avec 212 tests standards et 16 tests
-  d'intégration réussis, sans appel fournisseur ; sa qualification humaine et réelle reste en
-  attente ;
+  d'intégration réussis, sans appel fournisseur ; sa qualification humaine et réelle était encore
+  en attente au stade de cette readiness ;
+- qualification humaine réelle de la sous-étape 2 sur les identifiants paramétrables `16483632`
+  et `16412917`, avec une préparation, une confirmation et exactement un transport fournisseur
+  par cycle ;
+- validation du rappel manuel de `16412917` : réponse inchangée dédupliquée avant le coup d'envoi,
+  puis nouvelle observation `inprogress` issue du snapshot 23 après le coup d'envoi, sans
+  réécriture du snapshot 19 `notstarted` ;
+- confirmation que les deux versions restent consultables dans l'historique append-only et que
+  les snapshots bruts demeurent inspectables localement, sans intégrer le JSON aux preuves ;
+- arrêt global J4, arrêt de l'instance de campagne, remise des six paramètres locaux à l'état
+  bloqué, puis vérification après redémarrage du statut `LOCKED`, du champ d'identifiant
+  insaisissable et de l'action de préparation désactivée ;
+- arrêt gracieux final de Tomcat, JPA et Hikari après la vérification du reverrouillage ;
+- vérification Maven finale en configuration bloquée : 212 tests standards et 16 tests
+  PostgreSQL/Testcontainers réussis, Flyway V6 validé et aucun appel fournisseur ;
+- préparation de la clôture du Work Order `WO-SS-20260815-004` après fusion de la Pull Request
+  `#8`, sans autoriser polling, production ou déploiement VPS ;
 - ouverture du Work Order `WO-SS-20260815-004` sur la branche `codex/j4-events` depuis le merge J3
   `b79ccd62e7863718f49a22b6c54a7fc73cf87986` ;
 - contrats J4 de l’identité canonique, de la normalisation versionnée et du détail synthétique hors
