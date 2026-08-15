@@ -75,8 +75,13 @@ annulés. L’application a ensuite fermé Hikari et Tomcat ; aucun transport `E
 V6 n’ayant pas été poussée, appliquée avec succès sur un environnement partagé ou publiée, son SQL
 a été corrigé avant publication. Le trigger de la seule table migrée est désormais suspendu
 pendant le backfill structurel et réactivé dans la même transaction. Le test V5 préremplie → V6
-valide ce chemin absent de la qualification initiale. La base persistante de l’opérateur doit
-encore appliquer cette version corrigée avec les cinq clés réseau bloquées, selon le runbook.
+valide ce chemin absent de la qualification initiale.
+
+La reprise humaine du 2026-08-15 a ensuite appliqué V6 sur la base persistante avec les cinq clés
+réseau bloquées. L’application a démarré, l’interface a confirmé l’état `LOCKED`, puis la recherche
+locale du `2026-08-12` a retrouvé l’identité synthétique, son détail et ses deux versions. L’arrêt
+gracieux de Tomcat, JPA et Hikari a été confirmé à `08:34:52+02:00`. Aucun transport fournisseur
+n’a été déclenché.
 
 ```text
 INCIDENT_TYPE=LOCAL_DATABASE_MIGRATION
@@ -85,8 +90,11 @@ FLYWAY_ROLLBACK=CONFIRMED_BY_STARTUP_LOG
 PROVIDER_CALL_ATTEMPTS=0
 RAW_PROVIDER_SNAPSHOT_CREATED_BY_INCIDENT=NO
 REAL_PROVIDER_QUALIFICATION=NOT_RUN
-LOCAL_V5_TO_V6_CORRECTIVE_RETRY=PENDING_HUMAN
-LOCAL_CONFIGURATION_RELOCKED_AFTER_INCIDENT=PENDING_USER_CONFIRMATION
+DATABASE_VERSION_AFTER_CORRECTIVE_RETRY=V6
+LOCAL_V5_TO_V6_CORRECTIVE_RETRY=PASS
+LOCAL_CONFIGURATION_RELOCKED_AFTER_INCIDENT=YES
+SYNTHETIC_HISTORY_PRESERVED=YES
+APPLICATION_STOPPED=YES
 ```
 
 ## 4. État de qualification
@@ -104,8 +112,10 @@ HUMAN_REAL_EVENT_16386245_QUALIFICATION=PENDING
 HUMAN_REAL_EVENT_16421052_QUALIFICATION=PENDING
 HUMAN_REAL_PHASE1_QUALIFICATION=PENDING
 CONFIGURATION_RELOCK_AFTER_CAMPAIGN=PENDING_NOT_RUN
-LOCAL_V5_TO_V6_CORRECTIVE_RETRY=PENDING_HUMAN
-LOCAL_CONFIGURATION_RELOCKED_AFTER_INCIDENT=PENDING_USER_CONFIRMATION
+LOCAL_V5_TO_V6_CORRECTIVE_RETRY=PASS
+LOCAL_CONFIGURATION_RELOCKED_AFTER_INCIDENT=YES
+SYNTHETIC_HISTORY_PRESERVED=YES
+APPLICATION_STOPPED=YES
 WORK_ORDER_STATUS=IN_DEVELOPMENT
 J4_WORK_ORDER=ACTIVE
 J4_CAN_BE_CLOSED=NO

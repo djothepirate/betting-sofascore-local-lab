@@ -82,18 +82,34 @@ REAL_PROVIDER_CALLS=0
 
 ## 5. Reprise humaine sûre
 
-Avant tout redémarrage, les cinq clés réseau doivent être confirmées à l’état bloqué. La base
-persistante doit ensuite appliquer V6 corrigée au cours d’un démarrage sans transport autorisé.
-Après vérification de Flyway V6, de l’interface bloquée et de la présence des observations
-synthétiques historiques, l’application doit être arrêtée. La campagne réelle ne pourra être
-réactivée qu’au démarrage suivant, selon le runbook.
+La reprise corrective a été exécutée le 2026-08-15 avec les cinq clés réseau à l’état bloqué. À
+`08:27:12+02:00`, Flyway a appliqué une migration de V5 vers V6 sur la base persistante, puis
+l’application a terminé son démarrage. L’interface a affiché l’état `LOCKED` et les quatre
+bloqueurs attendus ; aucune action de préparation ou de confirmation fournisseur n’était
+disponible.
+
+La recherche locale du `2026-08-12` en zone `Europe/Paris` a ensuite retrouvé l’identité
+`9740bb59-0207-31a3-a6ae-5c8463255887`, le match `Synthetic Home FC — Synthetic Away FC`, la
+provenance `SYNTHETIC_FIXTURE`, le détail `event-details-nominal` et les deux versions append-only.
+Le détail affiché conserve le parseur `event-details-v1`, les métadonnées de fixture et son hash.
+
+À `08:34:52+02:00`, l’arrêt demandé par l’opérateur s’est terminé proprement : Tomcat a confirmé
+son arrêt gracieux, puis JPA et Hikari ont fermé leurs ressources. Aucun appel fournisseur ni
+snapshot fournisseur n’a été produit pendant cette reprise. La campagne réelle pourra être
+réactivée uniquement lors d’un démarrage distinct, selon le runbook.
 
 Ne pas exécuter `flyway repair`, ne pas supprimer la base ou ses observations et ne pas modifier le
 schéma manuellement.
 
 ```text
-LOCAL_CONFIGURATION_RELOCKED_AFTER_INCIDENT=PENDING_USER_CONFIRMATION
-LOCAL_V5_TO_V6_CORRECTIVE_RETRY=PENDING_HUMAN
+DATABASE_VERSION_AFTER_CORRECTIVE_RETRY=V6
+LOCAL_CONFIGURATION_RELOCKED_AFTER_INCIDENT=YES
+LOCAL_V5_TO_V6_CORRECTIVE_RETRY=PASS
+SYNTHETIC_HISTORY_PRESERVED=YES
+APPLICATION_STARTED_AFTER_CORRECTIVE_MIGRATION=YES
+APPLICATION_STOPPED=YES
+PROVIDER_CALL_ATTEMPTS=0
+RAW_PROVIDER_SNAPSHOT_CREATED_DURING_RETRY=NO
 J4_REAL_EVENT_16386245_HUMAN_QUALIFICATION=NOT_RUN
 J4_REAL_EVENT_16421052_HUMAN_QUALIFICATION=NOT_RUN
 J4_REAL_PHASE_1_HUMAN_QUALIFICATION=PENDING

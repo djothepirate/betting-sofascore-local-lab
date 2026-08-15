@@ -14,7 +14,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   historiques, l’absence de ligne ajoutée ou supprimée et le refus persistant de `UPDATE`/`DELETE` ;
 - qualification de l’échec de démarrage local du 2026-08-15 comme incident de migration avant
   campagne : rollback Flyway réussi, zéro appel fournisseur et aucune qualification réelle
-  exécutée.
+  exécutée ;
+- qualification humaine de la reprise corrective sur la base persistante : migration V5 → V6
+  réussie avec les verrous réseau actifs, identité et deux versions synthétiques toujours
+  consultables, puis arrêt gracieux complet de l’application sans appel fournisseur.
 
 ### Ajouté
 
