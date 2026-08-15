@@ -6,6 +6,10 @@ import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImpor
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportService;
 import com.bettingproject.sofascorelocal.application.event.J4ScheduledEventsSnapshotNormalizationService;
 import com.bettingproject.sofascorelocal.application.event.J4SnapshotNormalizationException;
+import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase1Service;
+import com.bettingproject.sofascorelocal.application.network.J4RealPhase1ControlException;
+import com.bettingproject.sofascorelocal.application.network.J4RealPhase1ControlService;
+import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
@@ -33,16 +37,22 @@ public class EventExplorerController {
     private final J4EventQueryService queryService;
     private final J4OfflineFixtureImportService fixtureImportService;
     private final J4ScheduledEventsSnapshotNormalizationService normalizationService;
+    private final J4RealPhase1ControlService realPhase1ControlService;
+    private final J4RealEventDetailsPhase1Service realPhase1Service;
     private final LocalFormTokenService formTokenService;
 
     public EventExplorerController(
             J4EventQueryService queryService,
             J4OfflineFixtureImportService fixtureImportService,
             J4ScheduledEventsSnapshotNormalizationService normalizationService,
+            J4RealPhase1ControlService realPhase1ControlService,
+            J4RealEventDetailsPhase1Service realPhase1Service,
             LocalFormTokenService formTokenService) {
         this.queryService = queryService;
         this.fixtureImportService = fixtureImportService;
         this.normalizationService = normalizationService;
+        this.realPhase1ControlService = realPhase1ControlService;
+        this.realPhase1Service = realPhase1Service;
         this.formTokenService = formTokenService;
     }
 
@@ -62,6 +72,10 @@ public class EventExplorerController {
         model.addAttribute("selectedDate", selectedDate);
         model.addAttribute("selectedZone", zone);
         model.addAttribute("localFormToken", formTokenService.issue(session));
+        model.addAttribute("realPhase1Control", realPhase1ControlService.snapshot());
+        model.addAttribute(
+                "realPhase1EventIds",
+                EventDetailsProviderRequest.PHASE_1_EVENT_IDS);
         try {
             model.addAttribute("search", queryService.search(selectedDate, zone));
         }
@@ -164,6 +178,100 @@ public class EventExplorerController {
                     exception.error().name());
         }
         return "redirect:/events";
+    }
+
+    @PostMapping("/real-phase1/prepare")
+    public String prepareRealPhase1(
+            @RequestParam("localFormToken") String localFormToken,
+            @RequestParam(name = "date", required = false) LocalDate date,
+            @RequestParam(
+                    name = "zone",
+                    defaultValue = J4EventQueryService.DEFAULT_ZONE_ID) String zone,
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
+        formTokenService.consume(session, localFormToken);
+        try {
+            queryService.resolveZone(zone);
+            redirectAttributes.addFlashAttribute(
+                    "realPhase1Prepared",
+                    realPhase1ControlService.prepare());
+        }
+        catch (IllegalArgumentException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "realPhase1ErrorCode", "INVALID_DATE_OR_ZONE");
+        }
+        catch (J4RealPhase1ControlException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "realPhase1ErrorCode", exception.error().name());
+        }
+        addSearchRedirectAttributes(date, zone, redirectAttributes);
+        return "redirect:/events";
+    }
+
+    @PostMapping("/real-phase1/execute")
+    public String executeRealPhase1(
+            @RequestParam("localFormToken") String localFormToken,
+            @RequestParam("requestId") UUID requestId,
+            @RequestParam("confirmationText") String confirmationText,
+            @RequestParam(name = "acknowledged", defaultValue = "false")
+                    boolean acknowledged,
+            @RequestParam(name = "date", required = false) LocalDate date,
+            @RequestParam(
+                    name = "zone",
+                    defaultValue = J4EventQueryService.DEFAULT_ZONE_ID) String zone,
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
+        formTokenService.consume(session, localFormToken);
+        try {
+            queryService.resolveZone(zone);
+            var claim = realPhase1ControlService.confirmAndClaim(
+                    requestId,
+                    confirmationText,
+                    acknowledged);
+            var result = realPhase1Service.execute(claim);
+            redirectAttributes.addFlashAttribute("realPhase1Result", result);
+            if (!result.completed()) {
+                redirectAttributes.addFlashAttribute(
+                        "realPhase1ErrorCode", result.terminalCode());
+            }
+        }
+        catch (IllegalArgumentException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "realPhase1ErrorCode", "INVALID_DATE_OR_ZONE");
+        }
+        catch (J4RealPhase1ControlException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "realPhase1ErrorCode", exception.error().name());
+        }
+        addSearchRedirectAttributes(date, zone, redirectAttributes);
+        return "redirect:/events";
+    }
+
+    @PostMapping("/real-phase1/stop")
+    public String stopRealPhase1(
+            @RequestParam("localFormToken") String localFormToken,
+            @RequestParam(name = "date", required = false) LocalDate date,
+            @RequestParam(
+                    name = "zone",
+                    defaultValue = J4EventQueryService.DEFAULT_ZONE_ID) String zone,
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
+        formTokenService.consume(session, localFormToken);
+        realPhase1ControlService.stop();
+        redirectAttributes.addFlashAttribute("realPhase1Stopped", true);
+        addSearchRedirectAttributes(date, zone, redirectAttributes);
+        return "redirect:/events";
+    }
+
+    private static void addSearchRedirectAttributes(
+            LocalDate date,
+            String zone,
+            RedirectAttributes redirectAttributes) {
+        LocalDate selectedDate = date == null
+                ? LocalDate.now(ZoneId.of(J4EventQueryService.DEFAULT_ZONE_ID))
+                : date;
+        redirectAttributes.addAttribute("date", selectedDate.toString());
+        redirectAttributes.addAttribute("zone", zone);
     }
 
     private static void applyNoStoreHeaders(HttpServletResponse response) {

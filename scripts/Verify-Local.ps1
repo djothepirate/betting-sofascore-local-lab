@@ -25,8 +25,12 @@ $forbiddenPatterns = @(
     '\bcom\.microsoft\.playwright\b',
     '\bWebClient\s*\.(?:builder|create)\b'
 )
-$approvedProviderOriginDeclaration = Join-Path $sourceRoot `
-    'java\com\bettingproject\sofascorelocal\domain\provider\ScheduledEventsProviderPageRequest.java'
+$approvedProviderOriginDeclarations = @(
+    (Join-Path $sourceRoot `
+        'java\com\bettingproject\sofascorelocal\domain\provider\ScheduledEventsProviderPageRequest.java'),
+    (Join-Path $sourceRoot `
+        'java\com\bettingproject\sofascorelocal\domain\provider\EventDetailsProviderRequest.java')
+)
 $approvedProviderOriginLine =
     'public static final String EXPECTED_ORIGIN = "https://www.sofascore.com";'
 
@@ -36,7 +40,7 @@ foreach ($pattern in $forbiddenPatterns) {
         Select-String -Pattern $pattern -CaseSensitive:$false
     if ($pattern -eq $forbiddenPatterns[0]) {
         $matches = $matches | Where-Object {
-            -not ($_.Path -eq $approvedProviderOriginDeclaration -and
+            -not ($_.Path -in $approvedProviderOriginDeclarations -and
                 $_.Line.Trim() -ceq $approvedProviderOriginLine)
         }
     }
@@ -49,7 +53,9 @@ $approvedRestClientConstructions = @(
     (Join-Path $sourceRoot `
         'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\LoopbackScheduledEventsRestTransport.java'),
     (Join-Path $sourceRoot `
-        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderScheduledEventsRestTransport.java')
+        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderScheduledEventsRestTransport.java'),
+    (Join-Path $sourceRoot `
+        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderEventDetailsRestTransport.java')
 )
 $restClientConstructions = $sourceFiles |
     Select-String -Pattern '\bRestClient\s*\.(?:builder|create)\b' -CaseSensitive:$false |
@@ -59,7 +65,7 @@ if ($restClientConstructions) {
 }
 if ($violations.Count -gt 0) {
     $violations | ForEach-Object { Write-Error ($_.ToString()) }
-    throw 'J3 source guardrail scan failed'
+    throw 'J3/J4 source guardrail scan failed'
 }
 
 Push-Location $repositoryRoot
