@@ -383,7 +383,7 @@ exemples d'URL J5. Avec PostgreSQL et l'application démarrés :
 2. si l'identité synthétique `900001` n'existe pas, sélectionner **« Charger la démonstration J4 »** ;
 3. ouvrir sa fiche, puis **« Statistiques, incidents et compositions J5 »** ;
 4. vérifier l'état initial explicitement absent des familles qui ne sont pas encore importées ;
-5. sélectionner **« Charger la démonstration J5 »** ;
+5. sélectionner **« Importer les trois familles hors ligne »** ;
 6. vérifier trois panneaux distincts, chacun avec sa complétude, sa source, son parseur et ses
    hashes : trois métriques, trois incidents et deux compositions de deux joueurs ;
 7. vérifier `COMPLETE · 100%`, `SYNTHETIC_FIXTURE` et

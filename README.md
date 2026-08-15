@@ -4,13 +4,14 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**, **J3 — Appel manuel** et **J4 — Événements**. L'implémentation J4, son parcours hors ligne et ses deux sous-étapes réelles bornées sont qualifiés humainement. La sous-étape 1 a validé `16386245` et `16421052` après correction du retour par date. La sous-étape 2 a validé la saisie d'identifiants, le rappel manuel avec une nouvelle confirmation, la déduplication d'une réponse inchangée et la création d'une observation append-only lorsque `16412917` est passé de `notstarted` à `inprogress`. Après l'arrêt global, la configuration a été remise à l'état bloqué, ce verrouillage a été vérifié après redémarrage et l'application a été arrêtée gracieusement. La Pull Request `#8` a été fusionnée et le Work Order J4 est archivé `VALIDATED`. Les voies fournisseur J3 et J4 restent désactivées par défaut, mutuellement exclusives, et aucun appel fournisseur n’est exécuté par Maven, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**, **J3 — Appel manuel**, **J4 — Événements** et **J5 — Statistiques**. L'implémentation J4, son parcours hors ligne et ses deux sous-étapes réelles bornées sont qualifiés humainement. La sous-étape 1 a validé `16386245` et `16421052` après correction du retour par date. La sous-étape 2 a validé la saisie d'identifiants, le rappel manuel avec une nouvelle confirmation, la déduplication d'une réponse inchangée et la création d'une observation append-only lorsque `16412917` est passé de `notstarted` à `inprogress`. Après l'arrêt global, la configuration a été remise à l'état bloqué, ce verrouillage a été vérifié après redémarrage et l'application a été arrêtée gracieusement. La Pull Request `#8` a été fusionnée et le Work Order J4 est archivé `VALIDATED`. Les voies fournisseur J3 et J4 restent désactivées par défaut, mutuellement exclusives, et aucun appel fournisseur n’est exécuté par Maven, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
-Le jalon **J5 — Statistiques** est en qualification technique sur une frontière exclusivement hors
-ligne : statistiques, incidents et compositions synthétiques, contrôles explicites de complétude,
-persistance append-only V7 et écran local. La découverte des schémas réels s'est arrêtée dès le
-premier `HTTP 403`; aucun transport J5 n'est implémenté et `providerSchemaValidated=false` reste
-affiché sur les preuves synthétiques.
+Le jalon **J5 — Statistiques** est validé techniquement et humainement sur une frontière
+exclusivement hors ligne : statistiques, incidents et compositions synthétiques, contrôles
+explicites de complétude, persistance append-only V7 et écran local. La découverte des schémas
+réels s'est arrêtée dès le premier `HTTP 403`; aucun transport J5 n'est implémenté et
+`providerSchemaValidated=false` reste affiché sur les preuves synthétiques. Une future campagne en
+conditions réelles exigera une autorisation et un Work Order distincts.
 
 ## Ce qui est livré localement
 
@@ -301,7 +302,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Incident et correction de l’upgrade V5 préremplie vers V6](docs/validation/J4-V6-PREFILLED-UPGRADE-INCIDENT-20260815.md)
 - [Work Order J4 validé](docs/work_orders/completed/WO-SS-20260815-004-events-j4.md)
 - [Qualification technique Windows J5](docs/validation/J5-WINDOWS-TECHNICAL-QUALIFICATION-20260815.md)
-- [Work Order J5 actif](docs/work_orders/active/WO-SS-20260815-005-statistics-j5.md)
+- [Work Order J5 validé](docs/work_orders/completed/WO-SS-20260815-005-statistics-j5.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 
@@ -379,7 +380,7 @@ J4_CLOSED=YES
 Cette situation ne déverrouille aucune nouvelle famille, automatisation ou dépendance de
 production. Les rappels de sous-étape 2 restent exclusivement manuels et unitaires.
 
-## J5 hors ligne en qualification technique
+## J5 hors ligne validé
 
 J5 réutilise l'identité synthétique `900001` de J4 pour démontrer les trois familles demandées. Les
 neuf fixtures J5 sont explicitement synthétiques et ne valident aucun schéma fournisseur. La page
@@ -387,7 +388,8 @@ locale distingue une rupture structurelle, une famille partielle et une liste vi
 affiche chaque chemin manquant avec les métadonnées de provenance.
 
 ```text
-J5_IMPLEMENTATION_STATUS=TECHNICALLY_QUALIFIED_PENDING_FINAL_REVIEW
+J5_IMPLEMENTATION_STATUS=VALIDATED_OFFLINE
+J5_HUMAN_OFFLINE_QUALIFICATION=PASS
 J5_PROVIDER_SCHEMA_VALIDATED=NO
 J5_APPLICATION_TRANSPORT=NOT_IMPLEMENTED
 J5_DISCOVERY_ATTEMPTS=1
@@ -395,10 +397,14 @@ J5_DISCOVERY_RESULT=HTTP_403_STOPPED_NO_RETRY
 J5_FIXTURE_ORIGIN=SYNTHETIC
 J5_FLYWAY_VERSION=7
 J5_MAVEN_PROVIDER_CALLS=0
-J5_WORK_ORDER_STATUS=IN_DEVELOPMENT
+J5_REAL_CONDITIONS_CAMPAIGN=NOT_RUN
+J5_REAL_CONDITIONS_AUTHORIZED_BY_CURRENT_WORK_ORDER=NO
+J5_WORK_ORDER_STATUS=VALIDATED
+J5_CAN_BE_CLOSED=YES
 ```
 
 `TOURNAMENT_STANDINGS` demeure différé : il ne fait pas partie de la preuve de sortie J5 définie
 par le cadrage et son ajout aurait étendu le corpus alors que les schémas des trois familles
-principales n'ont pas pu être observés. La qualification humaine locale et la revue finale du Work
-Order restent nécessaires avant archivage du jalon.
+principales n'ont pas pu être observés. Les huit captures de validation humaine ne sont pas
+versionnées ; leur constat minimisé est conservé dans le rapport J5. La prochaine étape réelle ne
+peut pas réutiliser l'autorisation de découverte consommée et devra être cadrée séparément.

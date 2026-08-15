@@ -1,8 +1,12 @@
 # WO-SS-20260815-005 — J5 Statistiques, incidents, compositions et complétude
 
-- **Statut :** `IN_DEVELOPMENT`
+- **Statut :** `VALIDATED`
 - **Date :** 2026-08-15
 - **Date de démarrage :** 2026-08-15
+- **Date de clôture :** 2026-08-15
+- **Qualification technique hors ligne :** `PASS`
+- **Qualification humaine hors ligne :** `PASS`
+- **Clôture :** `COMPLETED`
 - **Prérequis :** WO-SS-20260815-004 validé et fusionné sur `main`
 - **Jalon :** J5 — Statistiques
 - **Branche :** `codex/j5-statistics-completeness`
@@ -180,7 +184,7 @@ réouvrir une voie réseau et sans anticiper la comparaison sémantique complèt
 - [x] `ConnectorGate`, profil live et valeurs par défaut inchangés ;
 - [x] `mvnw.cmd clean verify` réussi ;
 - [x] `mvnw.cmd -Pintegration-tests verify` réussi ;
-- [ ] validation humaine locale consignée ;
+- [x] validation humaine locale consignée ;
 - [x] README, changelog, architecture et rapport de validation mis à jour.
 
 ## 9. État initial
@@ -244,7 +248,7 @@ cadrage et aurait élargi le corpus alors que les trois schémas réels principa
 validés.
 
 ```text
-J5_IMPLEMENTATION_STATUS=TECHNICALLY_QUALIFIED
+J5_IMPLEMENTATION_STATUS=VALIDATED_OFFLINE
 J5_PARSERS=event-statistics-v1,event-incidents-v1,event-lineups-v1
 J5_FIXTURES=9_SYNTHETIC
 J5_COMPLETENESS_STATUSES=COMPLETE,PARTIAL,EMPTY_VALID
@@ -253,10 +257,64 @@ J5_STANDARD_TESTS=232
 J5_INTEGRATION_TESTS=17
 J5_MAVEN_PROVIDER_CALLS=0
 J5_APPLICATION_PROVIDER_CALLS=0
-J5_HUMAN_OFFLINE_QUALIFICATION=PENDING
-J5_CAN_BE_ARCHIVED=NO
+J5_HUMAN_OFFLINE_QUALIFICATION=PASS
+J5_HUMAN_EVIDENCE=8_SCREENSHOTS_REVIEWED_NOT_VERSIONED
+J5_REAL_CONDITIONS_CAMPAIGN_STATUS=NOT_RUN_SEPARATE_WORK_ORDER_REQUIRED
+J5_WORK_ORDER_STATUS=VALIDATED
+J5_CAN_BE_ARCHIVED=YES
 ```
 
-Les preuves et le parcours humain restant sont consignés dans
-`docs/validation/J5-WINDOWS-TECHNICAL-QUALIFICATION-20260815.md` et dans la section **3.10 bis** du
-runbook local. Le statut demeure `IN_DEVELOPMENT` jusqu'à leur validation par le propriétaire.
+Les preuves automatisées et humaines sont consignées dans
+`docs/validation/J5-WINDOWS-TECHNICAL-QUALIFICATION-20260815.md`. Le parcours exécuté est celui de
+la section **3.10 bis** du runbook local.
+
+## 12. Qualification humaine hors ligne et clôture — 2026-08-15
+
+Le propriétaire a déclaré les tests hors ligne concluants et a fourni huit captures d'écran de
+l'application locale. Elles ont été utilisées comme preuves visuelles, sans être copiées dans le
+dépôt : les fichiers temporaires et l'habillage du navigateur ne constituent pas des artefacts de
+qualification versionnés.
+
+La revue confirme :
+
+- la navigation depuis une identité J4 persistée vers la page J5 ;
+- l'affichage explicite des trois absences avant import, sans repli réseau ;
+- la réutilisation de l'identité synthétique canonique `900001` ;
+- l'import explicite du corpus avec le message de rattachement des trois familles ;
+- les statistiques `event-statistics-v1` à `COMPLETE · 100%`, avec `6/6` signaux ;
+- les incidents `event-incidents-v1` à `COMPLETE · 100%`, avec `3/3` signaux et trois lignes ;
+- les compositions `event-lineups-v1` à `COMPLETE · 100%`, avec `13/13` signaux, deux côtés et
+  leurs formations ;
+- la présence des références de source, heures de réception, SHA-256 source et SHA-256 normalisé ;
+- l'indication persistante `PROVIDER_SCHEMA_VALIDATED=NO` ;
+- l'absence de bouton fournisseur J5 et le maintien des bloqueurs réseau J4 visibles ;
+- le comportement d'import déclaré concluant par l'opérateur, complété par la preuve automatisée
+  PostgreSQL d'idempotence et de déduplication.
+
+Une fiche J4 issue de `PROVIDER_SNAPSHOT` pour l'événement `16412917`, alors `inprogress`, montre
+également que le lien J5 est disponible sur une identité réelle déjà persistée. Cette consultation
+reste strictement locale : elle ne crée aucune observation J5 réelle et ne qualifie aucun des
+trois schémas fournisseur.
+
+La prochaine campagne annoncée « en conditions réelles » ne fait pas partie de ce Work Order.
+L'autorisation de découverte initiale a été consommée par le premier `HTTP 403` et demeure
+`STOPPED_LOCKED`. Un Work Order ou amendement distinct devra préciser les identifiants, les routes,
+les opt-ins, le nombre maximal d'appels, les confirmations, les règles d'arrêt et le
+reverrouillage avant tout nouveau transport.
+
+```text
+J5_TECHNICAL_OFFLINE_QUALIFICATION=PASS
+J5_HUMAN_OFFLINE_QUALIFICATION=PASS
+J5_OFFLINE_MILESTONE=PASS
+J5_PROVIDER_SCHEMA_VALIDATED=NO
+J5_APPLICATION_TRANSPORT=NOT_IMPLEMENTED
+J5_REAL_CONDITIONS_CAMPAIGN=NOT_RUN
+J5_REAL_CONDITIONS_AUTHORIZED_BY_THIS_WORK_ORDER=NO
+J5_STATUS=VALIDATED
+J5_WORK_ORDER=COMPLETED
+J5_CAN_BE_CLOSED=YES
+J5_CLOSED=YES
+POLLING_AUTHORIZED=NO
+PRODUCTION_AUTHORIZED=NO
+VPS_DEPLOYMENT_AUTHORIZED=NO
+```

@@ -157,6 +157,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Documentation
 
+- qualification humaine hors ligne de J5 à partir de huit captures opérateur non versionnées :
+  navigation J4 → J5, absences explicites avant import, trois familles à `COMPLETE · 100%`,
+  provenance, parseurs et hashes visibles, avec `PROVIDER_SCHEMA_VALIDATED=NO` et voies réseau
+  toujours bloquées ;
+- archivage du Work Order J5 au statut `VALIDATED`, tout en conservant la future campagne en
+  conditions réelles à `NOT_RUN` et hors autorisation de ce Work Order ;
 - architecture et runbook J5 précisant les trois formes de chemins cibles, l'absence de transport
   applicatif, les algorithmes de complétude, la séparation source/normalisé et le schéma V7 ;
 - consignation minimisée de l'unique tentative de découverte J5 : `HTTP 403`, zéro retry, arrêt

@@ -4,7 +4,7 @@
 
 ```text
 TECHNICAL_OFFLINE_QUALIFICATION=PASS
-HUMAN_OFFLINE_QUALIFICATION=PENDING
+HUMAN_OFFLINE_QUALIFICATION=PASS
 PROVIDER_SCHEMA_VALIDATED=NO
 APPLICATION_PROVIDER_TRANSPORT=NOT_IMPLEMENTED
 DISCOVERY_PROVIDER_CALL_ATTEMPTS=1
@@ -12,7 +12,9 @@ DISCOVERY_PROVIDER_CALL_SUCCESSES=0
 DISCOVERY_STOP_REASON=HTTP_403
 MAVEN_PROVIDER_CALLS=0
 ENV_FILE_READ_OR_MODIFIED=NO
-WORK_ORDER_STATUS=IN_DEVELOPMENT
+HUMAN_EVIDENCE=8_SCREENSHOTS_REVIEWED_NOT_VERSIONED
+REAL_CONDITIONS_CAMPAIGN=NOT_RUN
+WORK_ORDER_STATUS=VALIDATED
 ```
 
 Cette qualification couvre l'implémentation hors ligne du Work Order
@@ -20,9 +22,9 @@ Cette qualification couvre l'implémentation hors ligne du Work Order
 déduplication, append-only et rendu MVC local. Elle ne qualifie ni le schéma réel actuel des trois
 familles, ni un transport J5, ni un usage de production.
 
-La preuve de sortie technique du cadrage — statistiques, incidents et compositions avec contrôles
-de complétude — est satisfaite sur le corpus synthétique. L'archivage du Work Order reste soumis à
-la validation humaine locale et à la revue finale du propriétaire.
+La preuve de sortie du cadrage — statistiques, incidents et compositions avec contrôles de
+complétude — est satisfaite sur le corpus synthétique. La validation humaine locale du
+2026-08-15 complète désormais la qualification technique et permet l'archivage du Work Order.
 
 ## 2. Environnement
 
@@ -161,30 +163,54 @@ client, d'agent utilisateur, d'adresse, d'en-tête ou d'identité n'a été tent
 - `.env`, l'ADR-SS-001 et le PDF de référence n'ont pas été modifiés ;
 - `git diff --check` ne signale aucune erreur.
 
-## 7. Validation humaine locale restante
+## 7. Validation humaine locale — `PASS`
 
-Avec toutes les propriétés réseau bloquées, suivre la section **3.10 bis** du runbook :
+Le propriétaire a exécuté le parcours de la section **3.10 bis** du runbook avec les propriétés
+réseau bloquées, puis a déclaré les tests hors ligne concluants. Huit captures ont été revues dans
+la conversation de qualification ; elles ne sont pas copiées dans Git et aucun payload brut n'est
+repris dans ce rapport.
 
-1. charger la démonstration J4 pour l'identité `900001` si nécessaire ;
-2. ouvrir la fiche puis la page J5 ;
-3. constater les trois absences initiales ou les versions déjà présentes ;
-4. importer le corpus J5 ;
-5. vérifier trois panneaux `COMPLETE · 100%`, les métriques, les incidents, les deux compositions,
-   `SYNTHETIC_FIXTURE` et `PROVIDER_SCHEMA_VALIDATED=NO` ;
-6. répéter l'import et vérifier l'idempotence ;
-7. confirmer l'absence d'erreur navigateur et de tout bouton fournisseur.
+Les écrans attestent successivement :
 
-Cette validation ne doit pas appeler les six exemples réels, modifier `.env`, copier un payload ou
-être interprétée comme une approbation de production.
+1. la navigation depuis les fiches J4 vers la page J5 ;
+2. l'état initial avec trois absences locales explicites et aucun repli réseau ;
+3. l'identité synthétique canonique `900001` et son historique J4 append-only ;
+4. l'import réussi des trois familles et leur rattachement à cette identité ;
+5. `EVENT_STATISTICS · EVENT-STATISTICS-V1`, `COMPLETE · 100%`, `6/6` signaux ;
+6. `EVENT_INCIDENTS · EVENT-INCIDENTS-V1`, `COMPLETE · 100%`, `3/3` signaux et trois incidents ;
+7. `EVENT_LINEUPS · EVENT-LINEUPS-V1`, `COMPLETE · 100%`, `13/13` signaux, compositions
+   confirmées et deux formations ;
+8. les sources synthétiques, les parseurs, les heures de réception et les deux SHA-256 ;
+9. `PROVIDER_SCHEMA_VALIDATED=NO`, sans action fournisseur J5 disponible ;
+10. les bloqueurs réseau J4 toujours visibles dans le parcours local.
+
+La répétition de l'import est déclarée concluante par l'opérateur et sa propriété d'idempotence est
+également prouvée par la suite PostgreSQL/Testcontainers. Une fiche J4 réelle déjà persistée pour
+`16412917`, au statut `inprogress`, montre que le lien J5 est disponible sans lancer de transport :
+aucune donnée J5 fournisseur n'est créée et les trois familles y restent explicitement absentes.
+
+Cette validation n'a pas appelé les six exemples réels, modifié `.env`, copié un payload ou
+qualifié un usage de production.
 
 ## 8. Conclusion
 
-L'implémentation J5 est techniquement qualifiée dans sa frontière hors ligne. La preuve principale
-du jalon existe pour les trois familles avec une complétude explicite, une provenance vérifiable et
-une persistance append-only. `TOURNAMENT_STANDINGS` est différé : il n'est pas requis par la preuve
-de sortie du cadrage et n'a pas été ajouté pendant que les schémas réels principaux restent non
-validés.
+L'implémentation J5 est qualifiée humainement et techniquement dans sa frontière hors ligne. La
+preuve principale du jalon existe pour les trois familles avec une complétude explicite, une
+provenance vérifiable et une persistance append-only. `TOURNAMENT_STANDINGS` est différé : il n'est
+pas requis par la preuve de sortie du cadrage et n'a pas été ajouté pendant que les schémas réels
+principaux restent non validés.
 
-Le Work Order reste `IN_DEVELOPMENT` tant que le propriétaire n'a pas consigné la validation
-humaine locale et décidé de l'archivage. Les statuts du dépôt restent `EXPERIMENTAL`, `LOCAL_ONLY`,
-`NOT_PRODUCTION_APPROVED` et `NO_CRITICAL_DEPENDENCY`.
+Le Work Order est archivable au statut `VALIDATED`. La campagne suivante annoncée en conditions
+réelles reste `NOT_RUN` et n'est pas autorisée par ce Work Order : l'autorisation de découverte est
+consommée et verrouillée depuis le `HTTP 403`. Une autorisation distincte devra précéder tout nouvel
+appel. Les statuts du dépôt restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
+`NO_CRITICAL_DEPENDENCY`.
+
+```text
+J5_OFFLINE_MILESTONE=PASS
+J5_HUMAN_OFFLINE_QUALIFICATION=PASS
+J5_REAL_CONDITIONS_CAMPAIGN=NOT_RUN
+J5_REAL_CONDITIONS_AUTHORIZED_BY_THIS_WORK_ORDER=NO
+J5_WORK_ORDER_STATUS=VALIDATED
+J5_CAN_BE_CLOSED=YES
+```
