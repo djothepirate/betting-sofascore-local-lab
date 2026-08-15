@@ -4,8 +4,9 @@
 - **Work Order :** `WO-SS-20260815-004`
 - **Branche :** `codex/j4-real-event-details-phase1`
 - **Nature de la preuve :** qualification technique hors ligne de la voie réelle bornée
-- **Appel fournisseur exécuté :** `NO`
-- **Validation humaine des matches :** `PENDING`
+- **Appel fournisseur exécuté pendant cette préparation :** `NO`
+- **Validation humaine des matches :** `PENDING_CORRECTIVE_LOCAL_RETEST`
+- **Suivi post-campagne :** `PENDING_CORRECTIVE_LOCAL_RETEST`
 
 ## 1. Portée vérifiée
 
@@ -89,7 +90,7 @@ INCIDENT_CODE=V6_BACKFILL_BLOCKED_BY_APPEND_ONLY_TRIGGER
 FLYWAY_ROLLBACK=CONFIRMED_BY_STARTUP_LOG
 PROVIDER_CALL_ATTEMPTS=0
 RAW_PROVIDER_SNAPSHOT_CREATED_BY_INCIDENT=NO
-REAL_PROVIDER_QUALIFICATION=NOT_RUN
+REAL_PROVIDER_QUALIFICATION_AT_MIGRATION_INCIDENT=NOT_RUN
 DATABASE_VERSION_AFTER_CORRECTIVE_RETRY=V6
 LOCAL_V5_TO_V6_CORRECTIVE_RETRY=PASS
 LOCAL_CONFIGURATION_RELOCKED_AFTER_INCIDENT=YES
@@ -138,10 +139,10 @@ décrite dans le runbook.
 ```text
 TECHNICAL_PHASE1_READINESS=PASS_AFTER_V6_UPGRADE_FIX
 TECHNICAL_OFFLINE_QUALIFICATION=PASS
-REAL_PROVIDER_QUALIFICATION=NOT_RUN
-HUMAN_REAL_EVENT_16386245_QUALIFICATION=PENDING
-HUMAN_REAL_EVENT_16421052_QUALIFICATION=PENDING
-HUMAN_REAL_PHASE1_QUALIFICATION=PENDING
+REAL_PROVIDER_QUALIFICATION_AT_READINESS=NOT_RUN
+HUMAN_REAL_EVENT_16386245_QUALIFICATION_AT_READINESS=PENDING
+HUMAN_REAL_EVENT_16421052_QUALIFICATION_AT_READINESS=PENDING
+HUMAN_REAL_PHASE1_QUALIFICATION_AT_READINESS=PENDING
 CONFIGURATION_RELOCK_AFTER_CAMPAIGN=PENDING_NOT_RUN
 LOCAL_V5_TO_V6_CORRECTIVE_RETRY=PASS
 LOCAL_CONFIGURATION_RELOCKED_AFTER_INCIDENT=YES
@@ -166,3 +167,29 @@ Au premier incident, aucun deuxième essai ni contournement n'est autorisé. L'o
 l'application, remet les variables locales J3/J4 à l'état bloqué selon le runbook et consigne
 l'incident. Même après deux résultats humains réussis, la sous-étape 2 reste interdite jusqu'à la
 communication et l'autorisation explicites de son identifiant.
+
+## 6. Mise à jour post-campagne
+
+La campagne a ensuite été exécutée une seule fois sur les deux identifiants autorisés et a produit
+deux snapshots `PARSED`. Une anomalie locale de retour par date et des libellés de provenance
+statiques ont empêché de prononcer la qualification humaine définitive. Le correctif et la
+procédure de retest local sans transport sont consignés dans
+`J4-REAL-EVENT-DETAILS-PHASE1-CAMPAIGN-20260815.md`.
+
+Les valeurs `REAL_PROVIDER_CALLS=0` des sections précédentes décrivent exclusivement les suites
+automatisées de préparation ; elles ne prétendent pas que la campagne humaine ultérieure n'a pas
+eu lieu.
+
+```text
+REAL_PROVIDER_CAMPAIGN_EXECUTION=COMPLETED
+REAL_PROVIDER_TRANSPORT_COUNT=2
+CORRECTIVE_STANDARD_TESTS=199
+CORRECTIVE_STANDARD_FAILURES=0
+HUMAN_REAL_PHASE1_QUALIFICATION=PENDING_CORRECTIVE_LOCAL_RETEST
+CORRECTIVE_RETEST_PROVIDER_CALLS_AUTHORIZED=0
+LOCAL_CONFIGURATION_RELOCKED=PENDING_HUMAN_CONFIRMATION
+APPLICATION_STOPPED_AFTER_CAMPAIGN=PENDING_HUMAN_CONFIRMATION
+J4_REAL_PHASE2_AUTHORIZED=NO
+J4_WORK_ORDER=ACTIVE
+J4_CAN_BE_CLOSED=NO
+```

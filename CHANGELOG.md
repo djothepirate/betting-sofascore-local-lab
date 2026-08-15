@@ -6,6 +6,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Corrigé
 
+- conservation de la date civile du match et de la zone IANA dans le lien de retour de la fiche
+  J4 : Saint-Étienne — Clermont Foot revient désormais sur le `2026-08-14` au lieu de la date
+  locale courante du `2026-08-15` ;
+- remplacement des libellés statiques `SYNTHETIC_FIXTURE` et `event-details-v1` de la fiche par la
+  provenance, la référence de source et le parseur réellement persistés, notamment
+  `PROVIDER_SNAPSHOT`, `snapshot:16` ou `snapshot:17`, et `event-details-v2` ;
+- ajout d’un test MVC de régression reproduisant localement l’événement `16386245`, sa date en
+  `Europe/Paris` et sa provenance fournisseur, sans résolution d’URI ni appel réseau ;
 - correction de l’upgrade Flyway V5 préremplie vers V6 : le trigger
   `event_detail_observation_append_only` est suspendu uniquement pendant le backfill transactionnel
   des nouvelles colonnes de provenance, puis réactivé avant les contraintes finales ;
@@ -125,6 +133,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Documentation
 
+- consignation minimisée de la campagne humaine J4 sous-étape 1 : deux transports autorisés, deux
+  snapshots HTTP `200` classés `PARSED`, arrêt global appliqué, puis anomalie locale de retour par
+  date ; la validation humaine reste `PENDING_CORRECTIVE_LOCAL_RETEST`, sans assimiler la réussite
+  du transport à une qualification réelle complète ;
+- procédure de requalification utilisant exclusivement les snapshots locaux 16 et 17 après
+  reverrouillage de la configuration, sans préparation ni réexécution de la campagne ;
 - protocole correctif imposant une première application de V6 avec les cinq clés réseau remises à
   l’état bloqué, avant toute nouvelle activation de la campagne réelle ;
 - amendement du Work Order J4 autorisant uniquement la campagne réelle sous-étape 1 et consignant

@@ -269,10 +269,11 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order J3 validé](docs/work_orders/completed/WO-SS-20260812-003-manual-call-j3.md)
 - [Qualification technique Windows J4](docs/validation/J4-WINDOWS-TECHNICAL-QUALIFICATION-20260815.md)
 - [Préparation technique J4 réelle — sous-étape 1](docs/validation/J4-REAL-EVENT-DETAILS-PHASE1-READINESS-20260815.md)
+- [Campagne humaine J4 réelle — sous-étape 1 et anomalie de navigation](docs/validation/J4-REAL-EVENT-DETAILS-PHASE1-CAMPAIGN-20260815.md)
 - [Incident et correction de l’upgrade V5 préremplie vers V6](docs/validation/J4-V6-PREFILLED-UPGRADE-INCIDENT-20260815.md)
 - [Work Order J4 actif](docs/work_orders/active/WO-SS-20260815-004-events-j4.md)
 
-## J3 clôturé, J4 en attente de qualification sur matches réels
+## J3 clôturé, J4 en requalification locale après la campagne réelle
 
 La qualification humaine du `2026-08-14` a collecté dix pages sur dix, après les cinq pages
 observées le `2026-08-13`. Elle confirme que le parcours repart de la page 1, persiste avant
@@ -302,20 +303,29 @@ clôture ne change pas les statuts `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION
 d’endpoint ou l’intégration au Betting Project principal restent interdits tant qu’un nouveau Work
 Order et une décision de gouvernance dédiée ne les autorisent pas.
 
-L'implémentation J4 construit désormais une vue métier locale sur les seules sources déjà présentes ou
-synthétiques. Une normalisation manuelle d’un snapshot `SCHEDULED_EVENTS` compatible vérifie son
-intégrité et le reparse sans modifier sa classification historique ; le corpus de démonstration
-reste explicitement `SYNTHETIC_FIXTURE`. La qualification technique et le test fonctionnel humain
-hors ligne sont acquis sans modification de `.env`, mais aucun match réel ni détail fournisseur
-réel n'a encore été qualifié. Le Work Order reste actif dans `docs/work_orders/active` au statut
-`IN_DEVELOPMENT`.
+L'implémentation J4 construit désormais une vue métier locale sur les sources déjà présentes,
+synthétiques ou issues de la campagne réelle strictement bornée. Une normalisation manuelle d’un
+snapshot `SCHEDULED_EVENTS` compatible vérifie son intégrité et le reparse sans modifier sa
+classification historique ; le corpus de démonstration reste explicitement `SYNTHETIC_FIXTURE`.
+
+La campagne J4 sous-étape 1 a exécuté les deux seuls événements autorisés. Les snapshots 16 et 17
+ont été persistés, classés `PARSED` et ouverts localement. Un défaut de navigation ramenait
+toutefois la fiche de Saint-Étienne — Clermont Foot au 15 août au lieu de sa date civile du 14
+août, et la fiche utilisait des libellés synthétiques statiques pour une provenance fournisseur.
+Le correctif conserve maintenant la date du match et affiche la provenance réellement persistée.
+La qualification humaine reste en attente d’un retest local des deux snapshots, sans nouvel appel
+fournisseur, ainsi que de la confirmation du reverrouillage de la configuration. Le Work Order
+reste actif dans `docs/work_orders/active` au statut `IN_DEVELOPMENT`.
 
 ```text
 J4_IMPLEMENTATION_STATUS=IMPLEMENTATION_MERGED
 J4_OFFLINE_STATUS=OFFLINE_PATH_QUALIFIED
+J4_REAL_PHASE1_CAMPAIGN_STATUS=EXECUTED
 J4_REAL_MATCH_STATUS=REAL_MATCH_QUALIFICATION_PENDING
+J4_REAL_PHASE1_RETEST_STATUS=PENDING_CORRECTIVE_LOCAL_RETEST
+J4_CONFIGURATION_RELOCK_STATUS=PENDING_HUMAN_CONFIRMATION
 J4_CAN_BE_CLOSED=NO
 ```
 
 Cette situation ne déverrouille aucune nouvelle famille, automatisation ou dépendance de
-production. Toute qualification fournisseur réelle exige une autorisation explicite préalable.
+production. La sous-étape 2 reste non autorisée.

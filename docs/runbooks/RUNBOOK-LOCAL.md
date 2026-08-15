@@ -460,6 +460,44 @@ La confirmation humaine doit inclure `LOCAL_CONFIGURATION_RELOCKED=YES` et
 La sous-étape 2 n’est pas accessible. Aucun troisième ID ne doit être testé en modifiant le code,
 le formulaire, l’URL ou les outils de développement du navigateur.
 
+### 3.12 Requalifier localement les snapshots J4 après la correction de navigation
+
+La campagne réelle du 2026-08-15 a déjà consommé les deux identifiants autorisés et produit les
+snapshots 16 et 17. Le retest correctif ne doit effectuer aucun transport : ne pas sélectionner
+**« Préparer les deux événements »**, ne pas recopier de phrase de confirmation et ne pas réarmer
+la campagne.
+
+Application arrêtée, remettre d’abord les cinq clés de la section 3.11 à leur état bloqué. Démarrer
+ensuite PostgreSQL et l’application corrigée, puis effectuer uniquement les lectures locales
+suivantes :
+
+1. rechercher `2026-08-14` avec la zone `Europe/Paris` ;
+2. ouvrir Saint-Étienne — Clermont Foot et vérifier la provenance `PROVIDER_SNAPSHOT`, la source
+   `snapshot:16` et le parseur `event-details-v2` ;
+3. utiliser **« Recherche par date »** et confirmer que le formulaire reste au `2026-08-14` et que
+   le match demeure affiché ;
+4. rechercher `2026-08-15`, ouvrir Sevilla — Rayo Vallecano et vérifier
+   `PROVIDER_SNAPSHOT`, `snapshot:17` et `event-details-v2` ;
+5. utiliser le même retour et confirmer que la recherche reste au `2026-08-15` ;
+6. vérifier que le panneau de qualification réelle signale la configuration bloquée, puis arrêter
+   l’application.
+
+La preuve humaine doit rester minimisée. Elle peut mentionner l’identifiant fournisseur,
+l’identité canonique, la date civile, le type et la référence de provenance, le parseur et le
+résultat du retour. Elle ne doit contenir ni JSON brut, ni URI, ni en-tête, ni valeur non documentée
+de `.env`.
+
+```text
+CORRECTIVE_RETEST_PROVIDER_CALLS_AUTHORIZED=0
+CORRECTIVE_RETEST_EXPECTED_SNAPSHOTS=16,17
+CORRECTIVE_RETEST_EXPECTED_DATES=2026-08-14,2026-08-15
+LOCAL_CONFIGURATION_RELOCKED=YES
+APPLICATION_STOPPED=YES
+```
+
+Au moindre écart, arrêter l’application et conserver J4 au statut `IN_DEVELOPMENT`. Ne pas
+rejouer la campagne pour corriger un défaut d’affichage ou de navigation locale.
+
 ## 4. Validation
 
 ### 4.1 Suite standard
