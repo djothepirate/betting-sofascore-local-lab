@@ -4,21 +4,22 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**, **J3 — Appel manuel**, **J4 — Événements** et **J5 — Statistiques**. L'implémentation J4, son parcours hors ligne et ses deux sous-étapes réelles bornées sont qualifiés humainement. La sous-étape 1 a validé `16386245` et `16421052` après correction du retour par date. La sous-étape 2 a validé la saisie d'identifiants, le rappel manuel avec une nouvelle confirmation, la déduplication d'une réponse inchangée et la création d'une observation append-only lorsque `16412917` est passé de `notstarted` à `inprogress`. Après l'arrêt global, la configuration a été remise à l'état bloqué, ce verrouillage a été vérifié après redémarrage et l'application a été arrêtée gracieusement. La Pull Request `#8` a été fusionnée et le Work Order J4 est archivé `VALIDATED`. Les voies fournisseur J3 et J4 restent désactivées par défaut, mutuellement exclusives, et aucun appel fournisseur n’est exécuté par Maven, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**, **J3 — Appel manuel**, **J4 — Événements** et **J5 — Statistiques**. L'implémentation J4, son parcours hors ligne et ses deux sous-étapes réelles bornées sont qualifiés humainement. La sous-étape 1 a validé `16386245` et `16421052` après correction du retour par date. La sous-étape 2 a validé la saisie d'identifiants, le rappel manuel avec une nouvelle confirmation, la déduplication d'une réponse inchangée et la création d'une observation append-only lorsque `16412917` est passé de `notstarted` à `inprogress`. Après l'arrêt global, la configuration a été remise à l'état bloqué, ce verrouillage a été vérifié après redémarrage et l'application a été arrêtée gracieusement. La Pull Request `#8` a été fusionnée et le Work Order J4 est archivé `VALIDATED`. Les voies fournisseur J3, J4 et J5 restent désactivées par défaut et mutuellement exclusives, et aucun appel fournisseur n’est exécuté par Maven, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
-Le jalon **J5 — Statistiques** est validé techniquement et humainement sur une frontière
-exclusivement hors ligne : statistiques, incidents et compositions synthétiques, contrôles
-explicites de complétude, persistance append-only V7 et écran local. La découverte des schémas
-réels s'est arrêtée dès le premier `HTTP 403`; aucun transport J5 n'est implémenté et
-`providerSchemaValidated=false` reste affiché sur les preuves synthétiques. Une future campagne en
-conditions réelles exigera une autorisation et un Work Order distincts.
+Le jalon **J5 — Statistiques** est validé techniquement et humainement sur sa frontière hors ligne :
+statistiques, incidents et compositions synthétiques, contrôles explicites de complétude,
+persistance append-only V7 et écran local. La première découverte des schémas réels s'est arrêtée
+dès le premier `HTTP 403`. Le Work Order séparé `WO-SS-20260815-006` a depuis ajouté une voie de
+qualification réelle gardée, désactivée par défaut, limitée à une identité canonique et à trois
+appels confirmés. Son implémentation et la migration V8 sont qualifiées hors ligne ; aucune campagne
+J5 réelle n'a encore été exécutée et `providerSchemaValidated=false` reste donc obligatoire.
 
 ## Ce qui est livré localement
 
 - dépôt Git autonome, documentation, ADR, règles agent et Work Orders ;
 - Java **25 LTS**, Spring Boot **4.1.0** et Maven Wrapper versionné ;
 - interface Spring MVC + Thymeleaf sur `127.0.0.1:8087` ;
-- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V7 et stockage brut séparé ;
+- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V8 et stockage brut séparé ;
 - Actuator, Caffeine, validation de configuration et garde de liaison locale ;
 - catalogue logique des familles d’endpoints, sans URI réelle ;
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
@@ -79,10 +80,26 @@ conditions réelles exigera une autorisation et un Work Order distincts.
   append-only, dédupliquées et rattachées à l'identité canonique J4 ;
 - page locale `/events/{canonicalEventId}/statistics` avec import synthétique idempotent, valeurs,
   complétude, provenance, parseur et hashes, sans payload ni repli fournisseur ;
+- voie J5 réelle opt-in, désactivée par défaut et exclusive de J3/J4, limitée à l'origine exacte
+  `https://www.sofascore.com` et aux trois chemins statistiques, incidents et compositions d'une
+  identité canonique déjà persistée ;
+- préparation J5 sans réseau, confirmation exacte de cinq minutes, acquittement, trois appels
+  séquentiels au maximum, délai minimal de trois secondes et verrou terminal dans le processus ;
+- parseurs fournisseur `event-statistics-v2`, `event-incidents-v2` et `event-lineups-v2`, brut
+  persisté avant parsing, provenance `PROVIDER_SNAPSHOT` et résultat d'écran minimisé ;
 
 ## Limite essentielle du bootstrap
 
-**Aucun appel SofaScore réel n’est actif par défaut et aucun n’est exécuté par les tests.** Le connecteur général, `ConnectorGate`, le catalogue `callable=false` et le profil Maven `sofascore-live-test` restent bloqués. Deux voies de qualification spéciales peuvent être activées séparément : J3 pour `SCHEDULED_EVENTS`, ou J4 pour `EVENT_DETAILS`. Dans J4, `SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED` sélectionne exclusivement le formulaire paramétrable ; sinon seule la campagne fixe de sous-étape 1 peut être disponible. La voie J4 exige l’opt-in principal, l’origine exacte et `EVENT_DETAILS` comme unique famille. La sous-étape 2 accepte un ID borné par confirmation et un seul transport par cycle ; elle n’autorise ni polling, ni planification, ni retry. Son protocole temporaire et sa remise à l’état bloqué sont décrits dans `docs/runbooks/RUNBOOK-LOCAL.md`.
+**Aucun appel SofaScore réel n’est actif par défaut et aucun n’est exécuté par les tests.** Le
+connecteur général, `ConnectorGate`, le catalogue `callable=false` et le profil Maven
+`sofascore-live-test` restent bloqués. Trois voies de qualification spéciales sont mutuellement
+exclusives : J3 pour `SCHEDULED_EVENTS`, J4 pour `EVENT_DETAILS`, ou J5 pour les trois familles
+`EVENT_STATISTICS`, `EVENT_INCIDENTS` et `EVENT_LINEUPS`. Dans J4,
+`SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED` sélectionne exclusivement le formulaire paramétrable.
+Dans J5, l'action finale réutilise l'identité canonique affichée et autorise au maximum trois
+transports ordonnés après une confirmation humaine unique. Toutes ces voies interdisent polling,
+planification et retry. Leurs configurations temporaires et leur remise à l'état bloqué sont
+décrites dans `docs/runbooks/RUNBOOK-LOCAL.md`.
 
 Cette limite préserve la règle du Betting Project principal : aucun composant du VPS ne dépend du laboratoire, et l’arrêt du poste Windows ne doit avoir aucun effet sur la chaîne globale.
 
@@ -246,7 +263,14 @@ Les cinq tables refusent `UPDATE` et `DELETE`; une nouvelle version est ajoutée
 identique est dédupliquée. Les octets de fixture restent dans le corpus classpath et ne sont jamais
 recopiés dans ces tables.
 
-Le mode `DIRECT_LOCAL_ENDPOINT` ne doit jamais être confondu avec une `VisualObservation` du projet global. Cette persistance est prête pour un transport futur, mais n’effectue elle-même aucun appel.
+La migration append-only `V8__guarded_real_j5_event_data.sql` étend uniquement les contraintes de
+parseur et de provenance J5 afin d'accepter les versions fournisseur V2 rattachées à un snapshot
+brut. Elle ne modifie aucune migration antérieure ni aucune observation existante.
+
+Le mode `DIRECT_LOCAL_ENDPOINT` ne doit jamais être confondu avec une `VisualObservation` du projet
+global. La persistance n'effectue elle-même aucun appel : les écritures J5 réelles éventuelles sont
+initiées uniquement par la voie humaine gardée, puis référencent le brut séparé avec
+`PROVIDER_SNAPSHOT`.
 
 ## Politique réseau J1
 
@@ -273,6 +297,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Contrat hors ligne event-details-v1](docs/architecture/EVENT-DETAILS-V1.md)
 - [Architecture des événements canoniques J4](docs/architecture/J4-CANONICAL-EVENTS-AND-LOCAL-DETAIL.md)
 - [Architecture J5 hors ligne et contrôles de complétude](docs/architecture/J5-OFFLINE-EVENT-DATA-AND-COMPLETENESS.md)
+- [Architecture de la qualification réelle gardée J5](docs/architecture/J5-GUARDED-REAL-EVENT-DATA.md)
 - [Voie réelle bornée J4 — sous-étape 1](docs/architecture/J4-GUARDED-REAL-EVENT-DETAILS-PHASE1.md)
 - [Politique réseau J3 hors ligne](docs/architecture/J3-OFFLINE-NETWORK-POLICY.md)
 - [Persistance des snapshots bruts J3](docs/architecture/J3-RAW-SNAPSHOT-PERSISTENCE.md)
@@ -303,6 +328,9 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order J4 validé](docs/work_orders/completed/WO-SS-20260815-004-events-j4.md)
 - [Qualification technique Windows J5](docs/validation/J5-WINDOWS-TECHNICAL-QUALIFICATION-20260815.md)
 - [Work Order J5 validé](docs/work_orders/completed/WO-SS-20260815-005-statistics-j5.md)
+- [Observation préalable à la qualification réelle J5](docs/validation/J5-REAL-EVENT-DATA-PREREQUISITE-OBSERVATION-20260815.md)
+- [Readiness technique de la qualification réelle J5](docs/validation/J5-REAL-EVENT-DATA-TECHNICAL-READINESS-20260815.md)
+- [Work Order actif de qualification réelle J5](docs/work_orders/active/WO-SS-20260815-006-j5-real-event-data-qualification.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 
@@ -380,7 +408,7 @@ J4_CLOSED=YES
 Cette situation ne déverrouille aucune nouvelle famille, automatisation ou dépendance de
 production. Les rappels de sous-étape 2 restent exclusivement manuels et unitaires.
 
-## J5 hors ligne validé
+## J5 hors ligne validé, voie réelle prête mais non exécutée
 
 J5 réutilise l'identité synthétique `900001` de J4 pour démontrer les trois familles demandées. Les
 neuf fixtures J5 sont explicitement synthétiques et ne valident aucun schéma fournisseur. La page
@@ -391,20 +419,24 @@ affiche chaque chemin manquant avec les métadonnées de provenance.
 J5_IMPLEMENTATION_STATUS=VALIDATED_OFFLINE
 J5_HUMAN_OFFLINE_QUALIFICATION=PASS
 J5_PROVIDER_SCHEMA_VALIDATED=NO
-J5_APPLICATION_TRANSPORT=NOT_IMPLEMENTED
+J5_APPLICATION_TRANSPORT=IMPLEMENTED_GUARDED_DEFAULT_OFF
 J5_DISCOVERY_ATTEMPTS=1
 J5_DISCOVERY_RESULT=HTTP_403_STOPPED_NO_RETRY
 J5_FIXTURE_ORIGIN=SYNTHETIC
-J5_FLYWAY_VERSION=7
+J5_FLYWAY_VERSION=8
 J5_MAVEN_PROVIDER_CALLS=0
+J5_REAL_TECHNICAL_READINESS=PASS
 J5_REAL_CONDITIONS_CAMPAIGN=NOT_RUN
-J5_REAL_CONDITIONS_AUTHORIZED_BY_CURRENT_WORK_ORDER=NO
-J5_WORK_ORDER_STATUS=VALIDATED
-J5_CAN_BE_CLOSED=YES
+J5_REAL_CONDITIONS_AUTHORIZED_BY_WO_006=YES_AFTER_HUMAN_REVIEW
+J5_OFFLINE_WORK_ORDER_STATUS=VALIDATED
+J5_REAL_WORK_ORDER_STATUS=READY_FOR_HUMAN_REAL_QUALIFICATION
+J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
 ```
 
 `TOURNAMENT_STANDINGS` demeure différé : il ne fait pas partie de la preuve de sortie J5 définie
 par le cadrage et son ajout aurait étendu le corpus alors que les schémas des trois familles
 principales n'ont pas pu être observés. Les huit captures de validation humaine ne sont pas
-versionnées ; leur constat minimisé est conservé dans le rapport J5. La prochaine étape réelle ne
-peut pas réutiliser l'autorisation de découverte consommée et devra être cadrée séparément.
+versionnées ; leur constat minimisé est conservé dans le rapport J5. La prochaine étape réelle est
+cadrée par `WO-SS-20260815-006` et par le runbook, mais reste un geste humain distinct : elle exige
+une revue du diff, l'application manuelle de la configuration temporaire, une seule campagne puis
+le reverrouillage de `.env` et l'arrêt de l'application.

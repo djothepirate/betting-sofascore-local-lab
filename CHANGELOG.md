@@ -33,6 +33,23 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Ajouté
 
+- voie de qualification réelle J5, désactivée par défaut et mutuellement exclusive de J3/J4,
+  limitée à l'origine exacte `https://www.sofascore.com` et aux trois endpoints logiques
+  `EVENT_STATISTICS`, `EVENT_INCIDENTS` et `EVENT_LINEUPS` ;
+- contrôle humain J5 avec préparation sans réseau, phrase exacte valable cinq minutes,
+  acquittement, claim immuable, trois appels séquentiels maximum et verrou terminal dans le
+  processus après succès, incident, expiration ou arrêt ;
+- transport J5 sans proxy, redirection, cookie, jeton, compte, en-tête de navigateur ou retry,
+  avec réponse bornée, délai minimal de trois secondes et arrêt avant toute famille restante au
+  premier incident ;
+- parseurs fournisseur `event-statistics-v2`, `event-incidents-v2` et `event-lineups-v2`,
+  persistance brute avant parsing, normalisation `PROVIDER_SNAPSHOT` et migration Flyway V8
+  append-only étendant les contraintes V7 sans modifier une migration partagée ;
+- panneau J5 local de qualification gardée et résultat minimisé, protégés par le jeton de formulaire
+  à usage unique, sans payload brut ni identifiant libre dans l'action finale ;
+- couverture hors ligne de la configuration, de la confirmation, de l'ordre des trois transports,
+  des `429`, des incompatibilités sans objet partiel, de la provenance PostgreSQL V8 et de
+  l'absence de credentials ou d'en-tête navigateur ;
 - jalon J5 hors ligne pour `EVENT_STATISTICS`, `EVENT_INCIDENTS` et `EVENT_LINEUPS`, rattaché aux
   identités canoniques J4 sans ajouter de transport fournisseur ;
 - contrats synthétiques versionnés `event-statistics-v1`, `event-incidents-v1` et
@@ -157,14 +174,26 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Documentation
 
+- Work Order séparé `WO-SS-20260815-006` pour la qualification réelle J5, avec revue de
+  l'ADR-SS-001, configuration temporaire exacte, politique d'arrêt, preuve minimisée et obligation
+  de reverrouillage avant tout redémarrage ;
+- consignation minimisée du second test J4 fourni par l'opérateur : snapshot 25 de `16412917`,
+  acquisition réussie de `16391135` dans le snapshot 26 et refus `EVENT_ID_MISMATCH` de l'import
+  synthétique J5 sur cette identité réelle ;
+- architecture et readiness de la voie réelle J5 : `257` tests standards, `18` tests
+  PostgreSQL/Testcontainers, huit migrations Flyway et zéro appel fournisseur pendant la
+  réalisation ;
+- procédure humaine J5 définissant l'activation temporaire, l'ordre des trois appels, l'arrêt sans
+  retry, les champs de preuve autorisés et l'état bloqué à restaurer après succès ou incident ;
 - qualification humaine hors ligne de J5 à partir de huit captures opérateur non versionnées :
   navigation J4 → J5, absences explicites avant import, trois familles à `COMPLETE · 100%`,
   provenance, parseurs et hashes visibles, avec `PROVIDER_SCHEMA_VALIDATED=NO` et voies réseau
   toujours bloquées ;
 - archivage du Work Order J5 au statut `VALIDATED`, tout en conservant la future campagne en
   conditions réelles à `NOT_RUN` et hors autorisation de ce Work Order ;
-- architecture et runbook J5 précisant les trois formes de chemins cibles, l'absence de transport
-  applicatif, les algorithmes de complétude, la séparation source/normalisé et le schéma V7 ;
+- architecture hors ligne historique J5 précisant les trois formes de chemins cibles, l'absence de
+  transport dans le périmètre du Work Order 005, les algorithmes de complétude, la séparation
+  source/normalisé et le schéma V7 ;
 - consignation minimisée de l'unique tentative de découverte J5 : `HTTP 403`, zéro retry, arrêt
   immédiat, cinq exemples non appelés et `providerSchemaValidated=false` maintenu ;
 - rapport de qualification technique J5 couvrant parsing, MVC, Flyway/PostgreSQL, déduplication,
@@ -311,8 +340,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Sécurité
 
-- maintien des trois définitions J5 `callable=false` et sans URI ; aucun `RestClient`, opt-in,
-  polling, retry ou appel fournisseur n'est ajouté à l'application ou aux tests ;
+- maintien des trois définitions J5 `callable=false` et sans URI dans le catalogue général ; la
+  voie spécialisée est désactivée par défaut, exige l'opt-in J5 et les trois familles exactes, et
+  reste inaccessible si J3 ou J4 est actif ;
+- aucun appel fournisseur dans Maven ou pendant l'implémentation J5 ; les tests du `RestClient`
+  dédié sont interceptés localement par `MockRestServiceServer`, et la campagne humaine réelle
+  demeure `NOT_RUN` avec `providerSchemaValidated=false` ;
 - arrêt de la découverte J5 au premier `HTTP 403`, sans variation d'en-tête, de client, d'adresse
   ou d'identité, et maintien de toutes les fixtures à `providerSchemaValidated=false` ;
 - séparation des octets de fixture et des données J5 normalisées, conservation obligatoire de la

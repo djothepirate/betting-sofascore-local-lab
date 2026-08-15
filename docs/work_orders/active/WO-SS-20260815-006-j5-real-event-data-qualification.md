@@ -1,6 +1,6 @@
 # WO-SS-20260815-006 — Qualification réelle bornée des données événement J5
 
-- **Statut :** `IN_DEVELOPMENT`
+- **Statut :** `READY_FOR_HUMAN_REAL_QUALIFICATION`
 - **Date :** 2026-08-15
 - **Date de démarrage :** 2026-08-15
 - **Prérequis fonctionnel :** WO-SS-20260815-005 validé et archivé
@@ -10,7 +10,7 @@
 - **Familles :** `EVENT_STATISTICS`, `EVENT_INCIDENTS`, `EVENT_LINEUPS`
 - **Développement et tests hors ligne :** `AUTHORIZED`
 - **Appel fournisseur pendant l'implémentation :** `NOT_AUTHORIZED`
-- **Campagne humaine future :** `PENDING_TECHNICAL_READINESS`
+- **Campagne humaine future :** `AUTHORIZED_AFTER_HUMAN_REVIEW_NOT_RUN`
 - **Modification directe de `.env` par l'agent :** `NOT_AUTHORIZED`
 - **Polling, planification ou retry :** `NOT_AUTHORIZED`
 - **Déploiement VPS :** `NOT_AUTHORIZED`
@@ -254,19 +254,19 @@ reverrouillée avant toute nouvelle décision.
 - [x] captures opérateur antérieures minimisées et frontière J4/J5 qualifiée ;
 - [x] revue ADR-SS-001 consignée sans modification ;
 - [x] futur paramétrage `.env` déterminé sans lire ou modifier `.env` ;
-- [ ] Work Order et architecture relus dans le diff ;
-- [ ] propriétés sûres et sélection exclusive implémentées ;
-- [ ] contrôle de préparation, confirmation et verrou terminal implémenté ;
-- [ ] trois transports exacts et bornés implémentés ;
-- [ ] brut persisté avant parsing ;
-- [ ] parseurs V2 et complétude qualifiés hors ligne ;
-- [ ] migration V8 et provenance `PROVIDER_SNAPSHOT` qualifiées ;
-- [ ] interface et résultat minimisé qualifiés ;
-- [ ] arrêt au premier incident sans retry prouvé ;
-- [ ] `mvnw.cmd clean verify` réussi ;
-- [ ] `mvnw.cmd -Pintegration-tests verify` réussi ;
-- [ ] readiness humaine publiée ;
-- [ ] configuration réelle toujours non exécutée pendant l'implémentation.
+- [x] Work Order et architecture relus dans le diff ;
+- [x] propriétés sûres et sélection exclusive implémentées ;
+- [x] contrôle de préparation, confirmation et verrou terminal implémenté ;
+- [x] trois transports exacts et bornés implémentés ;
+- [x] brut persisté avant parsing ;
+- [x] parseurs V2 et complétude qualifiés hors ligne ;
+- [x] migration V8 et provenance `PROVIDER_SNAPSHOT` qualifiées ;
+- [x] interface et résultat minimisé qualifiés ;
+- [x] arrêt au premier incident sans retry prouvé ;
+- [x] `mvnw.cmd clean verify` réussi ;
+- [x] `mvnw.cmd -Pintegration-tests verify` réussi ;
+- [x] readiness humaine publiée ;
+- [x] configuration réelle toujours non exécutée pendant l'implémentation.
 
 ## 11. Unités de livraison prévues
 
@@ -276,19 +276,43 @@ reverrouillée avant toute nouvelle décision.
 4. `test: qualify J5 real path offline`
 5. `docs: publish J5 real campaign readiness`
 
-## 12. État initial
+## 12. Readiness technique hors ligne
+
+```text
+STANDARD_TESTS=257
+STANDARD_FAILURES=0
+STANDARD_ERRORS=0
+STANDARD_SKIPPED=0
+INTEGRATION_TESTS=18
+INTEGRATION_FAILURES=0
+INTEGRATION_ERRORS=0
+INTEGRATION_SKIPPED=0
+FLYWAY_MIGRATIONS=8
+POSTGRESQL=18.4_TESTCONTAINERS
+SOFASCORE_PROVIDER_CALLS=0
+J5_REAL_TECHNICAL_READINESS=PASS
+```
+
+La preuve détaillée est conservée dans
+`docs/validation/J5-REAL-EVENT-DATA-TECHNICAL-READINESS-20260815.md`. Elle qualifie le code et les
+garde-fous hors ligne ; elle ne qualifie pas les trois formes de réponse actuelles du fournisseur.
+Le Work Order reste actif jusqu'à la campagne humaine, au reverrouillage de `.env`, à l'arrêt de
+l'application et à la revue de la preuve minimisée.
+
+## 13. État de préparation
 
 ```text
 WO_ID=WO-SS-20260815-006
-WO_STATUS=IN_DEVELOPMENT
+WO_STATUS=READY_FOR_HUMAN_REAL_QUALIFICATION
 BASE_COMMIT=5063ac8e
 BRANCH=codex/j5-real-event-data-qualification
 J5_OFFLINE_STATUS=VALIDATED
-J5_REAL_IMPLEMENTATION_STATUS=NOT_STARTED
+J5_REAL_IMPLEMENTATION_STATUS=PASS
 J5_REAL_PROVIDER_CALLS=0
 J5_REAL_CAMPAIGN_STATUS=NOT_RUN
 J5_REAL_ENV_CONFIGURATION=DEFINED_NOT_APPLIED
 J5_REAL_PROVIDER_SCHEMA_VALIDATED=NO
-J5_REAL_APPLICATION_TRANSPORT=NOT_IMPLEMENTED
-J5_REAL_CAN_BE_EXECUTED=NO
+J5_REAL_APPLICATION_TRANSPORT=IMPLEMENTED_GUARDED_DEFAULT_OFF
+J5_REAL_CAN_BE_EXECUTED=YES_AFTER_HUMAN_REVIEW_AND_MANUAL_ENV
+J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
 ```
