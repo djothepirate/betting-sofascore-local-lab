@@ -30,6 +30,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   chaque mini-contexte retire la source d’environnement ambiante avant le chargement
   d’`application.yml` et fixe explicitement les opt-ins J3, J4 et J4 sous-étape 2. Les 212 tests
   standards passent avec la configuration J4 sous-étape 2 activée, sans appel fournisseur.
+- extension de cette isolation au nouvel opt-in J5 : les trois scénarios historiques J3/J4 fixent
+  désormais explicitement `SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=false` et vérifient que
+  J5 reste inactif. La commande `mvnw.cmd clean verify`, initialement en échec sur ces trois tests
+  avec la configuration opérateur J5 armée, repasse avec 257 tests et zéro appel fournisseur.
 
 ### Ajouté
 

@@ -49,6 +49,32 @@ POSTGRESQL=18.4_TESTCONTAINERS
 SOFASCORE_PROVIDER_CALLS=0
 ```
 
+### 2.1 Revalidation avec la configuration opérateur J5 armée
+
+Une première exécution opérateur de `mvnw.cmd clean verify`, après activation locale de J5 mais
+avant toute action Web, a mis en évidence un défaut d'isolation de trois tests historiques de
+binding. Les scénarios J3, J4 sous-étape 1 et J4 sous-étape 2 surchargeaient leurs anciens opt-ins,
+mais héritaient encore de l'opt-in J5 importé depuis la configuration locale. La validation
+d'exclusivité bloquait correctement leur démarrage ; aucun transport fournisseur n'était engagé.
+
+Les trois scénarios fixent désormais explicitement l'opt-in J5 à `false` et vérifient cette valeur.
+La commande ayant échoué a été rejouée sans désarmer la configuration opérateur :
+
+```text
+COMMAND=.\mvnw.cmd clean verify
+RESULT=PASS
+STANDARD_TESTS=257
+STANDARD_FAILURES=0
+STANDARD_ERRORS=0
+STANDARD_SKIPPED=0
+SOFASCORE_PROVIDER_CALLS=0
+LOCAL_J5_CONFIGURATION=ARMED_FOR_OFFLINE_PRECHECK
+REAL_J5_CAMPAIGN_EXECUTED=NO
+```
+
+Les avertissements Jansi sur l'accès natif et Mockito/Byte Buddy sur le chargement dynamique de
+l'agent sont non bloquants et indépendants de ce correctif. Ils n'expliquent pas l'échec initial.
+
 Les tests de transport utilisent `MockRestServiceServer`. Les fixtures V2 sont locales et ne sont
 pas des payloads fournisseur. Le test PostgreSQL prouve qu'une observation V2 peut référencer un
 snapshot brut et être relue avec sa provenance.

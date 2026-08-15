@@ -275,6 +275,7 @@ reverrouillée avant toute nouvelle décision.
 3. `feat: execute one confirmed J5 real campaign`
 4. `test: qualify J5 real path offline`
 5. `docs: publish J5 real campaign readiness`
+6. `test: isolate historical bindings from armed J5 configuration`
 
 ## 12. Readiness technique hors ligne
 
@@ -310,9 +311,36 @@ J5_OFFLINE_STATUS=VALIDATED
 J5_REAL_IMPLEMENTATION_STATUS=PASS
 J5_REAL_PROVIDER_CALLS=0
 J5_REAL_CAMPAIGN_STATUS=NOT_RUN
-J5_REAL_ENV_CONFIGURATION=DEFINED_NOT_APPLIED
+J5_REAL_ENV_CONFIGURATION=APPLIED_FOR_OFFLINE_PRECHECK
 J5_REAL_PROVIDER_SCHEMA_VALIDATED=NO
 J5_REAL_APPLICATION_TRANSPORT=IMPLEMENTED_GUARDED_DEFAULT_OFF
 J5_REAL_CAN_BE_EXECUTED=YES_AFTER_HUMAN_REVIEW_AND_MANUAL_ENV
 J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
 ```
+
+## 14. Précontrôle opérateur avec J5 armé
+
+Le 2026-08-15, l'opérateur a exécuté `mvnw.cmd clean verify` avec la configuration locale J5
+armée, avant toute préparation ou confirmation Web. Les 257 tests ont été exécutés, mais trois
+scénarios historiques de `SofascorePropertiesTest` ont échoué au démarrage parce qu'ils
+héritaient de l'opt-in J5 tout en activant leur propre voie J3 ou J4. La contrainte d'exclusivité a
+donc joué son rôle ; aucun endpoint fournisseur n'a été appelé.
+
+Le correctif fixe explicitement J5 à `false` dans chacun de ces trois mini-contextes et en vérifie
+la valeur. Le test ciblé puis la commande complète ont été rejoués avec la configuration J5
+toujours armée :
+
+```text
+TARGETED_CONFIGURATION_TESTS=9
+TARGETED_FAILURES=0
+STANDARD_TESTS=257
+STANDARD_FAILURES=0
+STANDARD_ERRORS=0
+STANDARD_SKIPPED=0
+BUILD_RESULT=SUCCESS
+SOFASCORE_PROVIDER_CALLS=0
+J5_REAL_CAMPAIGN_STATUS=NOT_RUN
+```
+
+Cette correction qualifie uniquement l'isolation de la suite Maven. La campagne humaine réelle,
+la validation des trois schémas fournisseur et le reverrouillage final restent à exécuter.

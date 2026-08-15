@@ -59,6 +59,7 @@ class SofascorePropertiesTest {
                         "SOFASCORE_J3_QUALIFICATION_ENABLED=true",
                         "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=false",
                         "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false",
+                        "SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=false",
                         "SOFASCORE_BASE_URL="
                                 + ScheduledEventsProviderPageRequest.EXPECTED_ORIGIN,
                         "SOFASCORE_ALLOWED_ENDPOINTS=SCHEDULED_EVENTS")
@@ -81,6 +82,7 @@ class SofascorePropertiesTest {
                     assertThat(properties.isEnabled()).isTrue();
                     assertThat(properties.isJ3QualificationEnabled()).isTrue();
                     assertThat(properties.isJ4EventDetailsQualificationEnabled()).isFalse();
+                    assertThat(properties.isJ5EventDataQualificationEnabled()).isFalse();
                     assertThat(properties.getBaseUrl())
                             .isEqualTo(ScheduledEventsProviderPageRequest.EXPECTED_ORIGIN);
                     assertThat(properties.getAllowedEndpoints())
@@ -130,6 +132,7 @@ class SofascorePropertiesTest {
                         "SOFASCORE_J3_QUALIFICATION_ENABLED=false",
                         "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true",
                         "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false",
+                        "SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=false",
                         "SOFASCORE_BASE_URL=" + EventDetailsProviderRequest.EXPECTED_ORIGIN,
                         "SOFASCORE_ALLOWED_ENDPOINTS=EVENT_DETAILS")
                 .run(context -> {
@@ -139,6 +142,7 @@ class SofascorePropertiesTest {
                     assertThat(properties.isJ4EventDetailsQualificationEnabled()).isTrue();
                     assertThat(properties.isJ4EventDetailsPhase2Enabled()).isFalse();
                     assertThat(properties.isJ3QualificationEnabled()).isFalse();
+                    assertThat(properties.isJ5EventDataQualificationEnabled()).isFalse();
                     assertThat(properties.getAllowedEndpoints())
                             .containsExactly(SofascoreEndpointType.EVENT_DETAILS);
                     assertThat(context.getBean(J4EventDetailsQualificationPolicy.class)
@@ -154,12 +158,14 @@ class SofascorePropertiesTest {
                         "SOFASCORE_J3_QUALIFICATION_ENABLED=false",
                         "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true",
                         "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=true",
+                        "SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=false",
                         "SOFASCORE_BASE_URL=" + EventDetailsProviderRequest.EXPECTED_ORIGIN,
                         "SOFASCORE_ALLOWED_ENDPOINTS=EVENT_DETAILS")
                 .run(context -> {
                     assertThat(context.getStartupFailure()).isNull();
                     SofascoreProperties properties = context.getBean(SofascoreProperties.class);
                     assertThat(properties.isJ4EventDetailsPhase2Enabled()).isTrue();
+                    assertThat(properties.isJ5EventDataQualificationEnabled()).isFalse();
                     assertThat(context.getBean(J4EventDetailsQualificationPolicy.class)
                             .snapshot().available()).isFalse();
                     assertThat(context.getBean(J4EventDetailsPhase2QualificationPolicy.class)
