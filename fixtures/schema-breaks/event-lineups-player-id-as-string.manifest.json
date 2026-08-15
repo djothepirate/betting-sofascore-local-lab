@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "event-lineups-player-id-as-string",
+  "endpointType": "EVENT_LINEUPS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-15T12:38:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "event-lineups-v1",
+  "payloadResource": "fixtures/schema-breaks/event-lineups-player-id-as-string.json",
+  "maximumBytes": 8192,
+  "expectedRawSha256": "a771ac01e688460554edd0514a3cf943f1e9981357838589a7b1dc05a57a3aa2",
+  "expectedCanonicalJsonSha256": "118f567e40577ec12a2577b94e001dfc2769f0c6f8c7b8508ab1acef5cb910d6",
+  "minimized": false,
+  "removedFields": []
+}

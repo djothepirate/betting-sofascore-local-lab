@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "event-statistics-partial-missing-away",
+  "endpointType": "EVENT_STATISTICS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-15T12:31:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "event-statistics-v1",
+  "payloadResource": "fixtures/event-statistics/partial-missing-away.json",
+  "maximumBytes": 8192,
+  "expectedRawSha256": "7141835c495561a5ef344a45883449d1293fb591daf8e9e5cc8ad936b0e78032",
+  "expectedCanonicalJsonSha256": "798ff3c8f8e51378a6db8d5ccfbafe99cf11afca0ed599a7fed9144a1f179f25",
+  "minimized": false,
+  "removedFields": []
+}

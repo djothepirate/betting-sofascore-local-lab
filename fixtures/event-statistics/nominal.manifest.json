@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "event-statistics-nominal",
+  "endpointType": "EVENT_STATISTICS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-15T12:30:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "event-statistics-v1",
+  "payloadResource": "fixtures/event-statistics/nominal.json",
+  "maximumBytes": 8192,
+  "expectedRawSha256": "4193086c42276d7f76d12bac3197a13b2b212f92a758bb30a8e3468e9b90aee6",
+  "expectedCanonicalJsonSha256": "c8400ffad08765fed5cec6be9b7924687091c32131ec737da8844953bb21f9b1",
+  "minimized": false,
+  "removedFields": []
+}

@@ -1,0 +1,27 @@
+{
+  "eventId": 900001,
+  "statistics": [
+    {
+      "period": "ALL",
+      "groups": [
+        {
+          "groupName": "Match overview",
+          "statisticsItems": [
+            {
+              "key": "ballPossession",
+              "name": "Ball possession",
+              "home": "54%"
+            },
+            {
+              "key": "totalShots",
+              "name": "Total shots",
+              "home": 12,
+              "away": 8
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "coverage": "synthetic-partial"
+}

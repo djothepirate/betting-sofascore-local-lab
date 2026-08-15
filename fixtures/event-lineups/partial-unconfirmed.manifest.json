@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "event-lineups-partial-unconfirmed",
+  "endpointType": "EVENT_LINEUPS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-15T12:37:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "event-lineups-v1",
+  "payloadResource": "fixtures/event-lineups/partial-unconfirmed.json",
+  "maximumBytes": 8192,
+  "expectedRawSha256": "ef2a8db15bf2fb9a56936d181f9a39a45f89ca6dc6a1c4fa423edc6a832dd377",
+  "expectedCanonicalJsonSha256": "3277b08c08a85d8ca2fa1d4c161c60c13dda15ed749c314a7131f66e3a56ceeb",
+  "minimized": false,
+  "removedFields": []
+}

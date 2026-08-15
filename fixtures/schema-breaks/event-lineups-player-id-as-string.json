@@ -1,0 +1,22 @@
+{
+  "eventId": 900001,
+  "confirmed": true,
+  "home": {
+    "formation": "4-3-3",
+    "players": [
+      {
+        "player": {
+          "id": "9700",
+          "name": "Synthetic Home Keeper"
+        },
+        "shirtNumber": 1,
+        "position": "G",
+        "substitute": false
+      }
+    ]
+  },
+  "away": {
+    "formation": "4-4-2",
+    "players": []
+  }
+}
