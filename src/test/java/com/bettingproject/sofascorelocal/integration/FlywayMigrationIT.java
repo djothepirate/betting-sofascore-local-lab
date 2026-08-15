@@ -2,6 +2,8 @@ package com.bettingproject.sofascorelocal.integration;
 
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV2Parser;
+import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceService;
 import com.bettingproject.sofascorelocal.application.network.J3QualificationCheckpointReparser;
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportService;
@@ -9,6 +11,11 @@ import com.bettingproject.sofascorelocal.application.event.J4ScheduledEventsSnap
 import com.bettingproject.sofascorelocal.application.event.J4EventQueryService;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservation;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetails;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventSeason;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventVenue;
+import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
+import com.bettingproject.sofascorelocal.domain.provider.EventDetailsTransportResponse;
 import com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceOutcome;
@@ -23,6 +30,7 @@ import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTournam
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J3ScheduledEventsPageCache;
+import com.bettingproject.sofascorelocal.port.J4EventDetailsCache;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import com.bettingproject.sofascorelocal.port.J3QualificationCheckpointStore;
 import com.bettingproject.sofascorelocal.port.RawSnapshotInspectionStore;
@@ -85,6 +93,9 @@ class FlywayMigrationIT {
     J3ScheduledEventsPageCache scheduledEventsPageCache;
 
     @Autowired
+    J4EventDetailsCache eventDetailsCache;
+
+    @Autowired
     RawSnapshotInspectionStore snapshotInspectionStore;
 
     @Autowired
@@ -104,6 +115,9 @@ class FlywayMigrationIT {
 
     @Autowired
     J4EventQueryService j4EventQueryService;
+
+    @Autowired
+    J4ParsedEventDetailsPersistenceService j4ParsedEventDetailsPersistenceService;
 
     @Test
     void createsTheJ3RawSnapshotSchemaAndKeepsNetworkDisabled() {
@@ -136,7 +150,7 @@ class FlywayMigrationIT {
         assertThat(snapshotTable).isEqualTo("provider_snapshot");
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("5");
+        assertThat(flywayVersion).isEqualTo("6");
         assertThat(rawColumn).isEqualTo("bytea");
     }
 
@@ -684,6 +698,78 @@ class FlywayMigrationIT {
                 detailObservationId))
                 .isInstanceOf(RuntimeException.class)
                 .hasStackTraceContaining("canonical_event_observation is append-only");
+    }
+
+    @Test
+    void persistsProviderEventDetailsWithSnapshotProvenanceAndParsedCache() {
+        var request = new EventDetailsProviderRequest(
+                URI.create(EventDetailsProviderRequest.EXPECTED_ORIGIN),
+                16386245L);
+        byte[] rawBytes = "{\"event\":{\"id\":16386245}}"
+                .getBytes(StandardCharsets.UTF_8);
+        RawPayloadEvidence payload = RawPayloadEvidence.capture(rawBytes);
+        Instant requestedAt = Instant.parse("2026-08-15T10:00:00Z");
+        var response = new EventDetailsTransportResponse(
+                request.requestKey(),
+                requestedAt,
+                requestedAt.plusMillis(275),
+                200,
+                "application/json; charset=utf-8",
+                Duration.ofMillis(275),
+                payload);
+        var rawPersistence = snapshotStore.save(new RawManualCallSnapshot(
+                SofascoreEndpointType.EVENT_DETAILS,
+                response.requestKey(),
+                response.requestedAt(),
+                response.receivedAt(),
+                response.httpStatus(),
+                response.contentType(),
+                response.latency(),
+                response.payload(),
+                EventDetailsV2Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.RAW_ONLY,
+                null));
+        EventDetails details = new EventDetails(
+                16386245L,
+                Instant.parse("2026-08-14T18:00:00Z"),
+                new ScheduledTeam(101L, "Saint-Etienne"),
+                new ScheduledTeam(102L, "Clermont Foot"),
+                new ScheduledEventStatus("finished", Optional.of("Ended")),
+                Optional.of(new ScheduledTournament(103L, "Ligue 2")),
+                Optional.of(new EventVenue(
+                        104L,
+                        "Stade local",
+                        Optional.of("Saint-Etienne"))),
+                Optional.of(new EventSeason(105L, "2026")),
+                Optional.of("1"));
+
+        var stored = j4ParsedEventDetailsPersistenceService.persistParsed(
+                request,
+                response,
+                rawPersistence,
+                details);
+
+        assertThat(schemaStatus(rawPersistence.snapshotId())).isEqualTo("PARSED");
+        assertThat(eventDetailsStore.findLatest(stored.canonicalEventId()))
+                .hasValueSatisfying(detail -> {
+                    assertThat(detail.source().snapshotId())
+                            .hasValue(rawPersistence.snapshotId());
+                    assertThat(detail.source().fixtureId()).isEmpty();
+                    assertThat(detail.source().parserVersion())
+                            .isEqualTo(EventDetailsV2Parser.PARSER_VERSION);
+                    assertThat(detail.details().homeTeam().name())
+                            .isEqualTo("Saint-Etienne");
+                });
+        assertThat(eventDetailsCache.findFreshParsed(
+                request,
+                response.receivedAt(),
+                Duration.ofMinutes(15),
+                EventDetailsV2Parser.PARSER_VERSION))
+                .hasValueSatisfying(candidate -> {
+                    assertThat(candidate.snapshotId())
+                            .isEqualTo(rawPersistence.snapshotId());
+                    assertThat(candidate.payload().sha256()).isEqualTo(payload.sha256());
+                });
     }
 
     @Test
