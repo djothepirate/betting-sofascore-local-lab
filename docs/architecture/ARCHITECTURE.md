@@ -1,4 +1,4 @@
-# Architecture J0 à J4 — SofaScore Local Lab
+# Architecture J0 à J5 — SofaScore Local Lab
 
 ## 1. Positionnement
 
@@ -36,6 +36,8 @@ La relation future autorisée est un export JSON normalisé et versionné. Aucun
 │  ├─ Identités et observations J4 append-only              │
 │  ├─ Recherche locale + détail J4 fixture ou snapshot      │
 │  ├─ Circuit J4 phase 1 : deux IDs compilés, verrou terminal│
+│  ├─ Données de rencontre J5 + complétude, hors ligne      │
+│  ├─ Persistance J5 normalisée append-only                 │
 │  ├─ Catalogue logique fermé par défaut                    │
 │  ├─ Flyway / JDBC / JPA                                   │
 │  └─ Actuator                                              │
@@ -58,13 +60,13 @@ VPS       : aucune connexion
 |---|---|
 | `config` | propriétés typées, garde de liaison locale, initialisation du dossier d’export, en-têtes de sécurité |
 | `domain.provider` | types logiques, catalogue et requêtes fournisseur J3/J4 fermées par valeur |
-| `domain.event` / `domain.eventdetails` | identité canonique, observation versionnée, provenance et détail immuables J4 |
-| `application` | verrou général, politiques J3/J4, orchestration manuelle et services de normalisation/recherche |
-| `adapter.sofascore` | catalogue fermé, transports spéciaux bornés, parseurs `scheduled-events-v1` et `event-details-v1/v2` |
+| `domain.event` / `domain.eventdetails` / `domain.eventdata` | identité canonique, détail J4, familles J5 et complétude immuables |
+| `application` | verrou général, politiques J3/J4, orchestration manuelle et services de normalisation/recherche/import J5 |
+| `adapter.sofascore` | catalogue fermé, transports spéciaux bornés et parseurs hors ligne J2/J4/J5 |
 | `adapter.persistence` | preuves brutes, cache, identités et observations normalisées, avec déduplication atomique |
-| `adapter.web` | tableau de bord, recherche locale, contrôle J4 phase 1 et détail en lecture seule |
-| `resources/db/migration` | schémas V1 à V6, migrations append-only et triggers d’immuabilité |
-| `fixtures` | corpus synthétiques hors ligne J2 et J4 |
+| `adapter.web` | tableau de bord, recherche locale, contrôles J4 et vues J4/J5 en lecture locale |
+| `resources/db/migration` | schémas V1 à V7, migrations append-only et triggers d’immuabilité |
+| `fixtures` | corpus synthétiques hors ligne J2, J4 et J5 |
 
 Le connecteur général demeure bloqué. Un `RestClient` distinct est construit uniquement pour le
 chemin manuel J3 borné ; il ne reçoit qu’une requête de domaine validée et ne peut viser que
@@ -74,6 +76,10 @@ J4 ajoute un second `RestClient` spécial qui ne reçoit que `EventDetailsProvid
 refuse toute origine autre que `https://www.sofascore.com` et tout identifiant différent de
 `16386245` ou `16421052` avant la construction de l’URI. Les opt-ins J3 et J4 sont mutuellement
 exclusifs. Ni l’un ni l’autre ne déverrouille `ConnectorGate` ou le catalogue général.
+
+J5 n'ajoute aucun `RestClient`, requête fournisseur ou propriété d'activation. Ses trois parseurs
+reçoivent exclusivement des fixtures classpath déjà contrôlées. Les formes de chemins cibles sont
+documentées dans le Work Order et l'architecture J5, mais restent absentes du catalogue exécutable.
 
 ## 4. Défense en profondeur J3
 
@@ -155,6 +161,17 @@ partir de `source_fixture_id`, puis réactive immédiatement le trigger avant de
 obligatoires. Les équipes, horaires, statuts, hashes, parseurs et horodatages historiques ne sont
 pas modifiés.
 
+### 5.6 Données de rencontre et complétude J5
+
+`j5_event_data_observation` rattache chaque lot de statistiques, d'incidents ou de compositions à
+l'identité canonique J4. Il conserve la source, le hash brut, le parseur, l'heure, le statut et le
+score de complétude, les signaux présents/attendus, les chemins manquants et le hash normalisé.
+
+Les tables enfants `j5_event_metric`, `j5_event_incident`, `j5_event_lineup_side` et
+`j5_event_lineup_player` contiennent uniquement les champs métier normalisés et leur ordre. Des
+clés étrangères composites empêchent de mélanger les familles. V7 applique des triggers
+append-only aux cinq tables et déduplique les lots identiques sans recopier les octets sources.
+
 ## 6. Catalogue logique
 
 | Type | Cache initial | Déclenchement prévu | Appelable actuellement |
@@ -195,14 +212,19 @@ commence obligatoirement à 1, continue uniquement sur `hasNextPage=true` et s�
 - allowlist J4 de deux IDs, cache avant transport, brut avant parsing, délai de trois secondes et
   arrêt sans retry au premier incident ;
 - sélection exclusive de la sous-étape 2, ID lié à une confirmation, un transport simulé sans
-  cache par cycle et répétition manuelle avec délai minimal, sans polling ni retry.
+  cache par cycle et répétition manuelle avec délai minimal, sans polling ni retry ;
+- parseurs J5 stricts, complétude `COMPLETE`/`PARTIAL`/`EMPTY_VALID`, corpus synthétique et ruptures
+  de schéma sans donnée partielle ;
+- import J5 transactionnel et idempotent, rattachement à J4, requête des dernières familles et rendu
+  MVC local protégé par jeton à usage unique.
 
 ### Intégration
 
 `mvnw -Pintegration-tests verify` démarre PostgreSQL avec Testcontainers et vérifie les migrations
-V1 à V6, la fidélité binaire, les contraintes, la déduplication et l’immuabilité des observations
-J4. Deux chemins Flyway sont couverts : installation vide V1 → V6 et upgrade V5 préremplie → V6
-avec conservation des lignes et réactivation du trigger. Aucun appel SofaScore n’est exécuté.
+V1 à V7, la fidélité binaire, les contraintes, la déduplication et l’immuabilité des observations
+J4/J5. Les chemins Flyway historiques restent couverts, ainsi que l'installation vide jusqu'à V7,
+les trois formes de complétude J5 et la reconstruction des tables enfants. Aucun appel SofaScore
+n’est exécuté.
 
 ### Réel
 
@@ -211,10 +233,14 @@ J3/J4. La sous-étape 1 J4 a été qualifiée humainement après correction de n
 sous-étape 2 reste un geste humain séparé dans l’interface locale après activation explicite de sa
 configuration et n'a encore exécuté aucun ID réel. Aucune suite Maven ne réalise ce geste.
 
+J5 ne possède aucune voie réelle : sa découverte de schéma s'est arrêtée au premier `HTTP 403` et
+toutes ses preuves versionnées restent synthétiques. Aucune suite Maven ne résout ou n'appelle les
+formes de chemins J5 communiquées par l'opérateur.
+
 ## 8. Décisions différées
 
 - stockage de headers autorisés ;
-- parseurs et DTO externes au-delà de `scheduled-events-v1` et `event-details-v1/v2` ;
+- parseurs fournisseur J5 issus d'une observation réelle réussie ;
 - persistance du circuit et des incidents ;
 - ajout d’autres endpoints, sports ou origines au-delà du chemin J3 qualifié ;
 - export canonique ;
@@ -239,3 +265,6 @@ et sa politique d’arrêt sont détaillées dans
 `docs/architecture/J4-GUARDED-REAL-EVENT-DETAILS-PHASE1.md`. Le paramètre graphique et les
 rafraîchissements manuels confirmés sont détaillés dans
 `docs/architecture/J4-GUARDED-REAL-EVENT-DETAILS-PHASE2.md`.
+
+Les trois contrats synthétiques J5, les signaux de complétude, la migration V7 et l'interface locale
+sont détaillés dans `docs/architecture/J5-OFFLINE-EVENT-DATA-AND-COMPLETENESS.md`.

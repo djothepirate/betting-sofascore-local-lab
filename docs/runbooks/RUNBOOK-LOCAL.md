@@ -2,7 +2,7 @@
 
 ## 1. Objectif
 
-Démarrer, vérifier, exploiter et arrêter les jalons J0 à J4 sur Windows sans exposer de service hors de la machine locale. Le parcours J4 décrit ici est entièrement local et n’ajoute aucun accès SofaScore.
+Démarrer, vérifier, exploiter et arrêter les jalons J0 à J5 sur Windows sans exposer de service hors de la machine locale. Le parcours J5 décrit ici est entièrement local et n’ajoute aucun accès SofaScore.
 
 ## 2. Première installation
 
@@ -374,6 +374,31 @@ L’absence de détail s’affiche comme un état local explicite. Elle ne décl
 Ne pas réutiliser le transport J3 pour compléter l’écran. La seule voie réelle autorisée est la
 campagne fixe décrite ci-dessous ; elle n’est jamais déclenchée comme repli de la recherche.
 
+### 3.10 bis Consulter les statistiques, incidents et compositions J5 hors ligne
+
+Ce parcours ne demande aucune propriété réseau J3/J4 et ne doit jamais utiliser directement les
+exemples d'URL J5. Avec PostgreSQL et l'application démarrés :
+
+1. ouvrir `/events?date=2026-08-12&zone=Europe%2FParis` ;
+2. si l'identité synthétique `900001` n'existe pas, sélectionner **« Charger la démonstration J4 »** ;
+3. ouvrir sa fiche, puis **« Statistiques, incidents et compositions J5 »** ;
+4. vérifier l'état initial explicitement absent des familles qui ne sont pas encore importées ;
+5. sélectionner **« Charger la démonstration J5 »** ;
+6. vérifier trois panneaux distincts, chacun avec sa complétude, sa source, son parseur et ses
+   hashes : trois métriques, trois incidents et deux compositions de deux joueurs ;
+7. vérifier `COMPLETE · 100%`, `SYNTHETIC_FIXTURE` et
+   `PROVIDER_SCHEMA_VALIDATED=NO` ;
+8. répéter l'import et confirmer que l'écran reste identique : l'opération est idempotente.
+
+Le POST d'import exige le jeton de formulaire local lié à la session et à usage unique. La page ne
+contient aucun bouton fournisseur, aucun payload brut et aucun repli lorsque les données sont
+absentes. Les variantes `PARTIAL` et `EMPTY_VALID` sont qualifiées par les tests automatisés ; elles
+peuvent être ajoutées comme nouvelles observations hors ligne sans modifier les versions nominales.
+
+La tentative de découverte du schéma réel s'est arrêtée sur `HTTP 403`, sans retry. Ne pas changer
+de client, d'en-tête, d'adresse ou d'identité et ne pas appeler les cinq autres exemples sans nouvel
+amendement explicite du Work Order.
+
 ### 3.11 Qualifier réellement les deux événements J4 — sous-étape 1
 
 Cette campagne est un geste humain exceptionnel. Ne jamais l’exécuter depuis Maven, un script, un
@@ -667,6 +692,21 @@ Cette preuve historique hors ligne ne clôture pas le Work Order. La campagne r�
 est qualifiée techniquement par les tests V6, puis doit être validée humainement selon la section
 3.11. Elle ne doit jamais inclure un payload brut, une valeur de `.env`, un cookie ou une donnée de
 session.
+
+### 4.8 bis Qualification technique Windows J5
+
+Exécuter les deux suites avec toutes les propriétés réseau dans leur état bloqué :
+
+```powershell
+.\mvnw.cmd clean verify
+.\mvnw.cmd -Pintegration-tests verify
+```
+
+Puis suivre la section **3.10 bis**. Vérifier Flyway V7, l'import idempotent, les trois panneaux à
+`COMPLETE · 100%`, les références de fixtures et l'absence d'erreur dans le navigateur. Consigner
+uniquement les métadonnées minimisées dans
+`docs/validation/J5-WINDOWS-TECHNICAL-QUALIFICATION-20260815.md` ; ne jamais y copier un payload,
+une valeur de `.env`, un cookie, un jeton ou une donnée de session.
 
 ### 4.9 Qualification réelle J4 sous-étape 1
 

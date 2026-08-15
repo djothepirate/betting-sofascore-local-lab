@@ -33,6 +33,19 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Ajouté
 
+- jalon J5 hors ligne pour `EVENT_STATISTICS`, `EVENT_INCIDENTS` et `EVENT_LINEUPS`, rattaché aux
+  identités canoniques J4 sans ajouter de transport fournisseur ;
+- contrats synthétiques versionnés `event-statistics-v1`, `event-incidents-v1` et
+  `event-lineups-v1`, corpus nominal/partiel/vide et ruptures de type sans coercition ;
+- rapports déterministes `COMPLETE`, `PARTIAL` et `EMPTY_VALID`, avec score, nombres de signaux et
+  chemins JSON manquants, sans donnée inventée ;
+- migration Flyway V7 créant les observations J5, les métriques, les incidents, les deux côtés de
+  composition et leurs joueurs, avec provenance, deux hashes, déduplication et triggers
+  append-only ;
+- import transactionnel et idempotent des trois fixtures nominales sur l'identité synthétique J4,
+  et lecture de la dernière version de chaque famille ;
+- page locale `/events/{canonicalEventId}/statistics` présentant valeurs, complétude et provenance,
+  avec action d'import synthétique protégée par jeton de formulaire à usage unique ;
 - sous-étape 2 J4 paramétrable dans `/events`, protégée par un opt-in distinct qui rend la
   sous-étape 1 indisponible pendant son activation ;
 - préparation sans réseau d'un ID `EVENT_DETAILS` borné, phrase exacte liée à cet ID, acquittement
@@ -144,6 +157,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Documentation
 
+- architecture et runbook J5 précisant les trois formes de chemins cibles, l'absence de transport
+  applicatif, les algorithmes de complétude, la séparation source/normalisé et le schéma V7 ;
+- consignation minimisée de l'unique tentative de découverte J5 : `HTTP 403`, zéro retry, arrêt
+  immédiat, cinq exemples non appelés et `providerSchemaValidated=false` maintenu ;
+- rapport de qualification technique J5 couvrant parsing, MVC, Flyway/PostgreSQL, déduplication,
+  append-only et invariants réseau ;
 - consignation minimisée de la campagne humaine J4 sous-étape 1 : deux transports autorisés, deux
   snapshots HTTP `200` classés `PARSED`, arrêt global appliqué, anomalie locale corrigée puis retest
   humain concluant des deux retours par date et des provenances ;
@@ -286,6 +305,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Sécurité
 
+- maintien des trois définitions J5 `callable=false` et sans URI ; aucun `RestClient`, opt-in,
+  polling, retry ou appel fournisseur n'est ajouté à l'application ou aux tests ;
+- arrêt de la découverte J5 au premier `HTTP 403`, sans variation d'en-tête, de client, d'adresse
+  ou d'identité, et maintien de toutes les fixtures à `providerSchemaValidated=false` ;
+- séparation des octets de fixture et des données J5 normalisées, conservation obligatoire de la
+  source, du SHA-256, du parseur et de l'heure, et refus SQL de toute mutation ;
 - maintien de `EVENT_DETAILS` sans URI et `callable=false` dans le catalogue général ; seule la
   voie spéciale J4 sous-étape 1 possède un transport HTTP, limité à l'origine, au chemin et aux
   deux identifiants autorisés, sans polling, retry ou repli fournisseur ;
