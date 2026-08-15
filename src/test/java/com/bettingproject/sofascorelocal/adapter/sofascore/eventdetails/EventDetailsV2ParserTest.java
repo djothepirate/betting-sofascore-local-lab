@@ -27,8 +27,10 @@ class EventDetailsV2ParserTest {
             assertThat(details.status().type()).isEqualTo("finished");
             assertThat(details.tournament()).hasValueSatisfying(tournament ->
                     assertThat(tournament.name()).isEqualTo("Ligue 2"));
-            assertThat(details.venue()).hasValueSatisfying(venue ->
-                    assertThat(venue.city()).contains("Saint-Etienne"));
+            assertThat(details.venue()).hasValueSatisfying(venue -> {
+                assertThat(venue.name()).isEqualTo("Stade local");
+                assertThat(venue.city()).contains("Saint-Etienne");
+            });
             assertThat(details.season()).hasValueSatisfying(season ->
                     assertThat(season.name()).isEqualTo("2026"));
             assertThat(details.round()).contains("1");
@@ -73,7 +75,7 @@ class EventDetailsV2ParserTest {
                     "tournament": {"id": 3, "name": "Ligue 2", "slug": "ignored"},
                     "venue": {
                       "id": 4,
-                      "name": "Stade local",
+                      "stadium": {"name": "Stade local", "capacity": 42000},
                       "city": {"name": "Saint-Etienne", "country": "ignored"}
                     },
                     "season": {"id": 5, "name": "2026", "year": "2026"},

@@ -46,8 +46,9 @@ public final class EventDetailsV2Parser {
     private static final Set<String> TEAM_FIELDS = Set.of("id", "name");
     private static final Set<String> STATUS_FIELDS = Set.of("type", "description");
     private static final Set<String> TOURNAMENT_FIELDS = Set.of("id", "name");
-    private static final Set<String> VENUE_FIELDS = Set.of("id", "name", "city");
+    private static final Set<String> VENUE_FIELDS = Set.of("id", "name", "city", "stadium");
     private static final Set<String> CITY_FIELDS = Set.of("name");
+    private static final Set<String> STADIUM_FIELDS = Set.of("name");
     private static final Set<String> SEASON_FIELDS = Set.of("id", "name");
     private static final Set<String> ROUND_INFO_FIELDS = Set.of("round");
 
@@ -199,12 +200,37 @@ public final class EventDetailsV2Parser {
         }
         warnUnknownFields(node, VENUE_FIELDS, path, warnings);
         Long id = requiredPositiveLong(node.get("id"), path + ".id", problems);
-        String name = requiredText(node.get("name"), path + ".name", 200, problems);
+        String name = requiredVenueName(node, path, warnings, problems);
         Optional<String> city = optionalCity(
                 node.get("city"), path + ".city", warnings, problems);
         return id == null || name == null
                 ? Optional.empty()
                 : Optional.of(new EventVenue(id, name, city));
+    }
+
+    private static String requiredVenueName(
+            JsonNode venue,
+            String path,
+            List<EventDetailsParseWarning> warnings,
+            List<EventDetailsParseProblem> problems) {
+        JsonNode directName = venue.get("name");
+        if (directName != null && !directName.isNull()) {
+            return requiredText(directName, path + ".name", 200, problems);
+        }
+        JsonNode stadium = venue.get("stadium");
+        if (stadium == null || stadium.isNull()) {
+            problems.add(problem(
+                    EventDetailsParseProblem.Code.REQUIRED_FIELD_MISSING,
+                    path + ".name",
+                    "Venue name is absent from both supported provider locations"));
+            return null;
+        }
+        if (!object(stadium, path + ".stadium", problems)) {
+            return null;
+        }
+        warnUnknownFields(stadium, STADIUM_FIELDS, path + ".stadium", warnings);
+        return requiredText(
+                stadium.get("name"), path + ".stadium.name", 200, problems);
     }
 
     private static Optional<String> optionalCity(
