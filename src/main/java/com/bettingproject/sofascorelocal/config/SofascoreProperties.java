@@ -21,6 +21,7 @@ public class SofascoreProperties {
     private boolean j3QualificationEnabled;
     private boolean j4EventDetailsQualificationEnabled;
     private boolean j4EventDetailsPhase2Enabled;
+    private boolean j5EventDataQualificationEnabled;
 
     @Min(1)
     @Max(1)
@@ -83,6 +84,15 @@ public class SofascoreProperties {
 
     public void setJ4EventDetailsPhase2Enabled(boolean j4EventDetailsPhase2Enabled) {
         this.j4EventDetailsPhase2Enabled = j4EventDetailsPhase2Enabled;
+    }
+
+    public boolean isJ5EventDataQualificationEnabled() {
+        return j5EventDataQualificationEnabled;
+    }
+
+    public void setJ5EventDataQualificationEnabled(
+            boolean j5EventDataQualificationEnabled) {
+        this.j5EventDataQualificationEnabled = j5EventDataQualificationEnabled;
     }
 
     public void setMaximumConcurrency(int maximumConcurrency) {
@@ -199,6 +209,7 @@ public class SofascoreProperties {
         return !j4EventDetailsQualificationEnabled
                 || (enabled
                 && !j3QualificationEnabled
+                && !j5EventDataQualificationEnabled
                 && maximumConcurrency == 1
                 && storeRawPayloads
                 && !automaticRefreshEnabled
@@ -206,9 +217,29 @@ public class SofascoreProperties {
                 && allowedEndpoints.equals(Set.of(SofascoreEndpointType.EVENT_DETAILS)));
     }
 
-    @AssertTrue(message = "J3 and J4 provider qualification paths are mutually exclusive")
+    @AssertTrue(message = "J5 event-data qualification requires its three exact endpoints and no other provider qualification")
+    public boolean isJ5EventDataQualificationConfigurationSafe() {
+        return !j5EventDataQualificationEnabled
+                || (enabled
+                && !j3QualificationEnabled
+                && !j4EventDetailsQualificationEnabled
+                && !j4EventDetailsPhase2Enabled
+                && maximumConcurrency == 1
+                && storeRawPayloads
+                && !automaticRefreshEnabled
+                && !livePollingEnabled
+                && allowedEndpoints.equals(Set.of(
+                        SofascoreEndpointType.EVENT_STATISTICS,
+                        SofascoreEndpointType.EVENT_INCIDENTS,
+                        SofascoreEndpointType.EVENT_LINEUPS)));
+    }
+
+    @AssertTrue(message = "J3, J4 and J5 provider qualification paths are mutually exclusive")
     public boolean isOnlyOneProviderQualificationPathEnabled() {
-        return !(j3QualificationEnabled && j4EventDetailsQualificationEnabled);
+        int enabledPaths = (j3QualificationEnabled ? 1 : 0)
+                + (j4EventDetailsQualificationEnabled ? 1 : 0)
+                + (j5EventDataQualificationEnabled ? 1 : 0);
+        return enabledPaths <= 1;
     }
 
     @AssertTrue(message = "J4 phase 2 requires the J4 EVENT_DETAILS qualification path")

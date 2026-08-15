@@ -14,6 +14,8 @@ import java.util.Set;
 
 final class J5JsonParserSupport {
 
+    private static final int MAXIMUM_WARNINGS = 256;
+
     private static final ObjectMapper JSON_MAPPER = JsonMapper.builder()
             .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
             .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
@@ -35,10 +37,11 @@ final class J5JsonParserSupport {
                 .map(entry -> entry.getKey())
                 .filter(field -> !knownFields.contains(field))
                 .sorted()
+                .limit(Math.max(0, MAXIMUM_WARNINGS - warnings.size()))
                 .forEach(field -> warnings.add(warning(
                         J5ParseWarning.Code.UNKNOWN_FIELD,
                         path + "." + field,
-                        "Unknown field ignored by the J5 offline parser")));
+                        "Unknown field ignored by the selected J5 parser")));
     }
 
     static boolean requiredObject(
@@ -313,10 +316,12 @@ final class J5JsonParserSupport {
             String path,
             List<J5ParseWarning> warnings) {
         if (isAbsent(node)) {
-            warnings.add(warning(
-                    J5ParseWarning.Code.OPTIONAL_FIELD_MISSING,
-                    path,
-                    "Optional J5 field is absent"));
+            if (warnings.size() < MAXIMUM_WARNINGS) {
+                warnings.add(warning(
+                        J5ParseWarning.Code.OPTIONAL_FIELD_MISSING,
+                        path,
+                        "Optional J5 field is absent"));
+            }
             return true;
         }
         return false;

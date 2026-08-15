@@ -31,12 +31,30 @@ public record J5EventDataObservation(
             throw new IllegalArgumentException(
                     "J5 data provider identity must match its canonical event");
         }
-        if (source.kind() != EventSourceKind.SYNTHETIC_FIXTURE) {
-            throw new IllegalArgumentException(
-                    "the initial J5 milestone accepts synthetic fixture provenance only");
-        }
+        requireCompatibleProvenance(data, source);
         if (!SHA_256_PATTERN.matcher(normalizedSha256).matches()) {
             throw new IllegalArgumentException("normalizedSha256 must be a lower-case SHA-256");
+        }
+    }
+
+    private static void requireCompatibleProvenance(
+            J5EventData data,
+            EventSourceTrace source) {
+        String expectedParserVersion = switch (data.endpointType()) {
+            case EVENT_STATISTICS -> source.kind() == EventSourceKind.PROVIDER_SNAPSHOT
+                    ? "event-statistics-v2"
+                    : "event-statistics-v1";
+            case EVENT_INCIDENTS -> source.kind() == EventSourceKind.PROVIDER_SNAPSHOT
+                    ? "event-incidents-v2"
+                    : "event-incidents-v1";
+            case EVENT_LINEUPS -> source.kind() == EventSourceKind.PROVIDER_SNAPSHOT
+                    ? "event-lineups-v2"
+                    : "event-lineups-v1";
+            default -> throw new IllegalArgumentException("unsupported J5 endpoint provenance");
+        };
+        if (!expectedParserVersion.equals(source.parserVersion())) {
+            throw new IllegalArgumentException(
+                    "J5 source kind, endpoint and parser version must match");
         }
     }
 

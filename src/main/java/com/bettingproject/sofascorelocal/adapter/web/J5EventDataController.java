@@ -4,6 +4,9 @@ import com.bettingproject.sofascorelocal.application.event.J4EventQueryService;
 import com.bettingproject.sofascorelocal.application.event.J5EventDataQueryService;
 import com.bettingproject.sofascorelocal.application.event.J5OfflineFixtureImportService;
 import com.bettingproject.sofascorelocal.application.event.J5OfflineImportException;
+import com.bettingproject.sofascorelocal.application.network.J5RealControlException;
+import com.bettingproject.sofascorelocal.application.network.J5RealControlService;
+import com.bettingproject.sofascorelocal.application.network.J5RealEventDataService;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventLineups;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventStatistics;
@@ -31,14 +34,20 @@ public class J5EventDataController {
 
     private final J5EventDataQueryService queryService;
     private final J5OfflineFixtureImportService fixtureImportService;
+    private final J5RealControlService realControlService;
+    private final J5RealEventDataService realEventDataService;
     private final LocalFormTokenService formTokenService;
 
     public J5EventDataController(
             J5EventDataQueryService queryService,
             J5OfflineFixtureImportService fixtureImportService,
+            J5RealControlService realControlService,
+            J5RealEventDataService realEventDataService,
             LocalFormTokenService formTokenService) {
         this.queryService = queryService;
         this.fixtureImportService = fixtureImportService;
+        this.realControlService = realControlService;
+        this.realEventDataService = realEventDataService;
         this.formTokenService = formTokenService;
     }
 
@@ -73,6 +82,7 @@ public class J5EventDataController {
                     model.addAttribute("lineupsData", (EventLineups) value.data());
                 });
                 model.addAttribute("localFormToken", formTokenService.issue(session));
+                model.addAttribute("j5RealControl", realControlService.snapshot());
             }
         }
         catch (IllegalArgumentException exception) {
@@ -84,6 +94,106 @@ public class J5EventDataController {
             model.addAttribute("eventDataErrorCode", "LOCAL_DATABASE_UNAVAILABLE");
         }
         return "event-statistics";
+    }
+
+    @PostMapping("/real/prepare")
+    public String prepareRealCampaign(
+            @PathVariable UUID canonicalEventId,
+            @RequestParam("localFormToken") String localFormToken,
+            @RequestParam("eventId") long eventId,
+            @RequestParam(
+                    name = "zone",
+                    defaultValue = J4EventQueryService.DEFAULT_ZONE_ID) String zone,
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
+        formTokenService.consume(session, localFormToken);
+        try {
+            realControlService.prepare(canonicalEventId, eventId);
+            redirectAttributes.addFlashAttribute(
+                    "j5RealMessage",
+                    "Campagne préparée sans transport. Recopiez exactement la phrase affichée pour autoriser les trois appels ordonnés.");
+            redirectAttributes.addFlashAttribute("j5RealMessageKind", "safe");
+        }
+        catch (J5RealControlException exception) {
+            addRealError(redirectAttributes, exception.error().name());
+        }
+        redirectAttributes.addAttribute("zone", zone);
+        return "redirect:/events/{canonicalEventId}/statistics";
+    }
+
+    @PostMapping("/real/execute")
+    public String executeRealCampaign(
+            @PathVariable UUID canonicalEventId,
+            @RequestParam("localFormToken") String localFormToken,
+            @RequestParam("requestId") UUID requestId,
+            @RequestParam("confirmationText") String confirmationText,
+            @RequestParam(name = "acknowledged", defaultValue = "false") boolean acknowledged,
+            @RequestParam(
+                    name = "zone",
+                    defaultValue = J4EventQueryService.DEFAULT_ZONE_ID) String zone,
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
+        formTokenService.consume(session, localFormToken);
+        try {
+            var claim = realControlService.confirmAndClaim(
+                    requestId, confirmationText, acknowledged);
+            if (!claim.canonicalEventId().equals(canonicalEventId)) {
+                realControlService.fail(requestId, "EVENT_ID_MISMATCH");
+                addRealError(redirectAttributes, "EVENT_ID_MISMATCH");
+            }
+            else {
+                var result = realEventDataService.execute(claim);
+                redirectAttributes.addFlashAttribute("j5RealResult", result);
+                if (result.completed()) {
+                    redirectAttributes.addFlashAttribute(
+                            "j5RealMessage",
+                            "Campagne J5 terminée : trois appels fournisseur ordonnés, trois snapshots bruts et trois observations locales. Le circuit est reverrouillé jusqu’au redémarrage.");
+                    redirectAttributes.addFlashAttribute("j5RealMessageKind", "safe");
+                }
+                else {
+                    addRealError(redirectAttributes, result.terminalCode());
+                }
+            }
+        }
+        catch (J5RealControlException exception) {
+            addRealError(redirectAttributes, exception.error().name());
+        }
+        catch (RuntimeException exception) {
+            if (realControlService.executionMayContinue(requestId)) {
+                realControlService.fail(requestId, "LOCAL_EXECUTION_FAILURE");
+            }
+            addRealError(redirectAttributes, "LOCAL_EXECUTION_FAILURE");
+        }
+        redirectAttributes.addAttribute("zone", zone);
+        return "redirect:/events/{canonicalEventId}/statistics";
+    }
+
+    @PostMapping("/real/stop")
+    public String stopRealCampaign(
+            @PathVariable UUID canonicalEventId,
+            @RequestParam("localFormToken") String localFormToken,
+            @RequestParam(
+                    name = "zone",
+                    defaultValue = J4EventQueryService.DEFAULT_ZONE_ID) String zone,
+            HttpSession session,
+            RedirectAttributes redirectAttributes) {
+        formTokenService.consume(session, localFormToken);
+        realControlService.stop();
+        redirectAttributes.addFlashAttribute(
+                "j5RealMessage",
+                "Arrêt global J5 appliqué. Aucun nouvel appel n’est autorisé avant redémarrage.");
+        redirectAttributes.addFlashAttribute("j5RealMessageKind", "danger");
+        redirectAttributes.addAttribute("zone", zone);
+        return "redirect:/events/{canonicalEventId}/statistics";
+    }
+
+    private static void addRealError(
+            RedirectAttributes redirectAttributes,
+            String code) {
+        redirectAttributes.addFlashAttribute(
+                "j5RealMessage", "Campagne J5 arrêtée sans retry : " + code);
+        redirectAttributes.addFlashAttribute("j5RealMessageKind", "danger");
+        redirectAttributes.addFlashAttribute("j5RealErrorCode", code);
     }
 
     @PostMapping("/offline-demo")

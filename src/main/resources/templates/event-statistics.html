@@ -9,7 +9,7 @@
 <body>
 <header class="topbar compact-topbar">
   <div class="shell">
-    <p class="eyebrow">J5 · Contrats hors ligne</p>
+    <p class="eyebrow">J5 · Données locales et qualification gardée</p>
     <h1>Statistiques, incidents et compositions</h1>
     <p class="subtitle">
       Données normalisées, complétude mesurée et provenance locale sans repli réseau.
@@ -64,6 +64,122 @@
        th:text="${'Import J5 refusé : ' + j5FixtureImportErrorCode}">
       Import J5 refusé.
     </p>
+    <p class="notice notice-safe"
+       th:if="${j5RealMessage != null and j5RealMessageKind == 'safe'}"
+       th:text="${j5RealMessage}">Campagne J5 préparée.</p>
+    <p class="notice notice-danger"
+       th:if="${j5RealMessage != null and j5RealMessageKind == 'danger'}"
+       th:text="${j5RealMessage}">Campagne J5 arrêtée.</p>
+
+    <section class="panel manual-call-panel" aria-labelledby="j5-real-title">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Qualification réelle J5 · Work Order séparé</p>
+          <h2 id="j5-real-title">Trois endpoints, une confirmation, aucun retry</h2>
+        </div>
+        <span class="chip"
+              th:classappend="${j5RealControl.providerTransportAvailable} ? ' chip-warning' : ' chip-danger'"
+              th:text="${j5RealControl.state}">LOCKED</span>
+      </div>
+      <p class="control-intro">
+        Une campagne autorise au plus trois requêtes séquentielles pour cette identité :
+        statistiques, incidents, puis compositions. Le brut est persisté avant parsing,
+        un délai minimal de trois secondes sépare les tentatives et le premier incident
+        verrouille immédiatement la campagne sans retry.
+      </p>
+      <p class="notice notice-warning" th:if="${!j5RealControl.providerTransportAvailable}">
+        Configuration locale bloquée. Conditions encore absentes :
+        <span class="mono" th:text="${#strings.listJoin(j5RealControl.providerBlockers, ', ')}">blockers</span>
+      </p>
+
+      <div class="control-grid">
+        <article class="control-stage">
+          <h3>1. Préparer sans réseau</h3>
+          <p>
+            La préparation reprend l’identifiant fournisseur déjà lié à l’UUID local.
+            Elle ne résout aucune URI et n’exécute aucun transport.
+          </p>
+          <dl class="detail-grid">
+            <div><dt>Identifiant</dt><dd th:text="${page.current.event.identity.providerEventId}">900001</dd></div>
+            <div><dt>Ordre</dt><dd class="mono">STATISTICS → INCIDENTS → LINEUPS</dd></div>
+          </dl>
+          <form class="control-form" method="post"
+                th:action="@{/events/{id}/statistics/real/prepare(id=${page.current.event.identity.value})}">
+            <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+            <input type="hidden" name="zone" th:value="${page.zoneId.id}">
+            <input type="hidden" name="eventId"
+                   th:value="${page.current.event.identity.providerEventId}">
+            <button type="submit"
+                    th:disabled="${!j5RealControl.preparationAllowed()}">
+              Préparer la campagne J5
+            </button>
+          </form>
+        </article>
+
+        <article class="control-stage" th:if="${j5RealControl.awaitingConfirmation()}">
+          <h3>2. Confirmer puis appeler au plus trois fois</h3>
+          <p>Phrase exacte liée à cette identité et valable cinq minutes :</p>
+          <code class="confirmation-phrase"
+                th:text="${j5RealControl.confirmationPhrase}">CONFIRMER J5 REAL</code>
+          <form class="control-form" method="post"
+                th:action="@{/events/{id}/statistics/real/execute(id=${page.current.event.identity.value})}">
+            <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+            <input type="hidden" name="zone" th:value="${page.zoneId.id}">
+            <input type="hidden" name="requestId" th:value="${j5RealControl.requestId}">
+            <label for="j5-real-confirmation">Recopier la phrase</label>
+            <input id="j5-real-confirmation" type="text" name="confirmationText"
+                   autocomplete="off" spellcheck="false" maxlength="160" required>
+            <label>
+              <input type="checkbox" name="acknowledged" value="true" required>
+              Je confirme au plus trois appels fournisseur, l’arrêt au premier incident
+              et le verrouillage terminal sans retry.
+            </label>
+            <button class="button-danger" type="submit">
+              Appeler les trois familles une fois
+            </button>
+          </form>
+        </article>
+
+        <article class="control-stage" th:unless="${j5RealControl.awaitingConfirmation()}">
+          <h3>2. Confirmation protégée</h3>
+          <p>
+            La phrase n’apparaît qu’après une préparation valide. Une campagne terminée,
+            échouée, expirée ou arrêtée reste verrouillée jusqu’au redémarrage du processus.
+          </p>
+          <p th:if="${j5RealControl.terminalCode != null}">
+            Dernier état terminal : <span class="mono" th:text="${j5RealControl.terminalCode}">CODE</span>
+          </p>
+        </article>
+      </div>
+
+      <form class="control-actions" method="post"
+            th:if="${j5RealControl.awaitingConfirmation() or j5RealControl.executing()}"
+            th:action="@{/events/{id}/statistics/real/stop(id=${page.current.event.identity.value})}">
+        <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+        <input type="hidden" name="zone" th:value="${page.zoneId.id}">
+        <button class="button-danger" type="submit">Arrêt global J5</button>
+      </form>
+
+      <div th:if="${j5RealResult != null}" class="table-scroll">
+        <h3>Résultat minimisé de la campagne</h3>
+        <p>
+          <span th:text="${j5RealResult.terminalCode}">COMPLETED</span> ·
+          <span th:text="${j5RealResult.providerCallAttempts + ' appel(s) fournisseur'}">3 appels</span>
+        </p>
+        <table th:unless="${j5RealResult.endpoints.isEmpty()}">
+          <thead><tr><th>Endpoint</th><th>Snapshot</th><th>Taille</th><th>Complétude</th><th>Observation</th></tr></thead>
+          <tbody>
+          <tr th:each="endpoint : ${j5RealResult.endpoints}">
+            <td class="mono" th:text="${endpoint.endpointType}">EVENT_STATISTICS</td>
+            <td><span th:text="${endpoint.snapshotId}">1</span><br><code th:text="${endpoint.payloadSha256}">hash</code></td>
+            <td th:text="${endpoint.payloadSizeBytes + ' octets'}">0 octet</td>
+            <td th:text="${endpoint.completenessStatus + ' · ' + endpoint.completenessScore + '%'}">COMPLETE</td>
+            <td th:text="${endpoint.observationId}">1</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
 
     <section class="panel">
       <div class="panel-heading">
@@ -239,7 +355,7 @@
 </main>
 
 <footer>
-  <div class="shell">SofaScore Local Lab — J5 Données locales avec complétude explicite</div>
+  <div class="shell">SofaScore Local Lab — J5 local, manuel, borné et sans retry</div>
 </footer>
 </body>
 </html>

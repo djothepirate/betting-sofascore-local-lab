@@ -67,7 +67,7 @@ info:
   app:
     name: SofaScore Local Lab
     version: 0.1.0-SNAPSHOT
-    phase: J4-BOUNDED-REAL-EVENT-DETAILS-PHASE-2
+    phase: J5-GUARDED-REAL-EVENT-DATA-READINESS
     status: EXPERIMENTAL_LOCAL_ONLY
 
 sofascore:
@@ -75,6 +75,7 @@ sofascore:
   j3-qualification-enabled: ${SOFASCORE_J3_QUALIFICATION_ENABLED:false}
   j4-event-details-qualification-enabled: ${SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED:false}
   j4-event-details-phase2-enabled: ${SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED:false}
+  j5-event-data-qualification-enabled: ${SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED:false}
   base-url: ${SOFASCORE_BASE_URL:}
   maximum-concurrency: 1
   minimum-delay: 3s
