@@ -381,12 +381,13 @@ navigateur automatisé ou une tâche planifiée. Ne pas commencer tant que la br
 revue et que les tests hors ligne V6 ne sont pas réussis.
 
 À la suite de l’incident de migration V5 → V6 du 2026-08-15, appliquer d’abord la migration avec
-le réseau bloqué. Application arrêtée, remettre ou conserver les cinq clés suivantes :
+le réseau bloqué. Application arrêtée, remettre ou conserver les six clés suivantes :
 
 ```properties
 SOFASCORE_ENABLED=false
 SOFASCORE_J3_QUALIFICATION_ENABLED=false
 SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=false
+SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false
 SOFASCORE_BASE_URL=
 SOFASCORE_ALLOWED_ENDPOINTS=
 ```
@@ -410,6 +411,7 @@ copier dans une preuve, puis régler temporairement les seules clés réseau ain
 SOFASCORE_ENABLED=true
 SOFASCORE_J3_QUALIFICATION_ENABLED=false
 SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true
+SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false
 SOFASCORE_BASE_URL=https://www.sofascore.com
 SOFASCORE_ALLOWED_ENDPOINTS=EVENT_DETAILS
 ```
@@ -448,6 +450,7 @@ Après succès ou incident, remettre les clés locales à l’état bloqué avan
 SOFASCORE_ENABLED=false
 SOFASCORE_J3_QUALIFICATION_ENABLED=false
 SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=false
+SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false
 SOFASCORE_BASE_URL=
 SOFASCORE_ALLOWED_ENDPOINTS=
 ```
@@ -457,8 +460,9 @@ Un contrôle facultatif peut redémarrer l’application puis vérifier que le p
 La confirmation humaine doit inclure `LOCAL_CONFIGURATION_RELOCKED=YES` et
 `APPLICATION_STOPPED=YES`, sans divulguer les valeurs du reste de `.env`.
 
-La sous-étape 2 n’est pas accessible. Aucun troisième ID ne doit être testé en modifiant le code,
-le formulaire, l’URL ou les outils de développement du navigateur.
+Cette procédure de sous-étape 1 ne permet aucun troisième ID. La sous-étape 2 désormais autorisée
+dispose de son propre opt-in, de son propre contrôle et de la procédure 3.13 ; ne pas la simuler en
+modifiant l’URL ou les outils de développement du navigateur.
 
 ### 3.12 Requalifier localement les snapshots J4 après la correction de navigation
 
@@ -467,7 +471,7 @@ snapshots 16 et 17. Le retest correctif ne doit effectuer aucun transport : ne p
 **« Préparer les deux événements »**, ne pas recopier de phrase de confirmation et ne pas réarmer
 la campagne.
 
-Application arrêtée, remettre d’abord les cinq clés de la section 3.11 à leur état bloqué. Démarrer
+Application arrêtée, remettre d’abord les six clés de la section 3.11 à leur état bloqué. Démarrer
 ensuite PostgreSQL et l’application corrigée, puis effectuer uniquement les lectures locales
 suivantes :
 
@@ -497,6 +501,71 @@ APPLICATION_STOPPED=YES
 
 Au moindre écart, arrêter l’application et conserver J4 au statut `IN_DEVELOPMENT`. Ne pas
 rejouer la campagne pour corriger un défaut d’affichage ou de navigation locale.
+
+### 3.13 Qualifier un identifiant paramétrable et ses rafraîchissements manuels — sous-étape 2
+
+Cette sous-étape est un geste humain explicite. Elle autorise un ID numérique par cycle confirmé et
+peut être répétée manuellement pour actualiser un match. Elle n’autorise aucun polling, timer,
+script, navigateur automatisé, retry ou rafraîchissement automatique.
+
+Application arrêtée, partir des six valeurs bloquées de la section 3.11, puis régler temporairement
+uniquement :
+
+```properties
+SOFASCORE_ENABLED=true
+SOFASCORE_J3_QUALIFICATION_ENABLED=false
+SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true
+SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=true
+SOFASCORE_BASE_URL=https://www.sofascore.com
+SOFASCORE_ALLOWED_ENDPOINTS=EVENT_DETAILS
+```
+
+Ne pas copier les autres valeurs de `.env` dans une preuve et ne jamais ajouter ce fichier à Git.
+Démarrer PostgreSQL puis l’application sur `127.0.0.1`. Sur `/events` :
+
+1. vérifier que la sous-étape 1 affiche `J4_PHASE_2_MUST_BE_DISABLED` et que la sous-étape 2 ne
+   présente plus de bloqueur ;
+2. saisir un identifiant compris entre `1` et `999999999` dans **« Identifiant fournisseur de
+   l’événement »** ;
+3. sélectionner **« Préparer un rafraîchissement »** et vérifier qu’aucune requête n’est partie ;
+4. contrôler que la phrase affichée contient exactement l’ID saisi ;
+5. recopier la phrase, cocher l’acquittement puis sélectionner
+   **« Appeler et actualiser une fois »** ;
+6. attendre l’état terminal sans recharger ni resoumettre le formulaire ;
+7. si le résultat est `COMPLETED`, contrôler les équipes, l’horaire, le statut, la compétition, le
+   snapshot, le SHA-256, `PROVIDER` et l’absence de payload brut ;
+8. ouvrir le détail, utiliser **« Recherche par date »** et confirmer que l’événement reste
+   consultable à sa date civile ;
+9. sélectionner **« Arrêt global J4 »** à la fin de la campagne.
+
+Pour actualiser le même match, attendre le résultat `COMPLETED_LOCKED` puis recommencer les étapes
+2 à 7.
+Chaque rappel exige une nouvelle préparation et une nouvelle confirmation. Le service ne consulte
+pas le cache sur cette voie et impose au moins trois secondes entre deux transports. Une réponse
+identique peut être dédupliquée dans la vue normalisée ; une évolution de statut ou d’horaire doit
+ajouter une nouvelle observation sans modifier les versions antérieures.
+
+Au premier incident, `403`, `429`, `5xx`, timeout, contenu inattendu, incompatibilité, incohérence
+d’ID ou erreur de persistance : ne pas réessayer, appliquer l’arrêt global, arrêter l’application et
+soumettre le code terminal à une décision humaine. `FAILED_LOCKED` et `STOPPED_LOCKED` refusent une
+nouvelle préparation dans le même processus. La permission générale de rappels manuels ne
+constitue jamais une autorisation de retry après incident.
+
+Après succès ou incident, arrêter l’application, remettre exactement les six valeurs bloquées de
+la section 3.11, redémarrer facultativement pour vérifier les bloqueurs, puis arrêter de nouveau.
+La preuve doit rester minimisée : ID, identité canonique, champs normalisés, statut, snapshot,
+taille, SHA-256, parseur, heure de réception, nombre de cycles humains et résultat. Aucun JSON brut,
+URI, header, secret ou valeur non documentée de `.env` ne doit y figurer.
+
+```text
+PHASE_2_PROVIDER_CALLS_PER_CONFIRMED_CYCLE=1
+PHASE_2_MANUAL_CYCLES=OPERATOR_REPORTED
+PHASE_2_AUTOMATIC_REFRESH=NO
+PHASE_2_RETRY=NO
+PHASE_2_HUMAN_QUALIFICATION=PENDING_UNTIL_EXECUTED
+LOCAL_CONFIGURATION_RELOCKED=PENDING_UNTIL_CONFIRMED
+APPLICATION_STOPPED=PENDING_UNTIL_CONFIRMED
+```
 
 ## 4. Validation
 
@@ -611,9 +680,29 @@ J4_REAL_MATCH_QUALIFICATION=PENDING
 J4_REAL_EVENT_DETAILS_QUALIFICATION=PENDING
 ```
 
-Elles ne passent à `PASS` qu’après validation des deux événements. La sous-étape 2, la clôture du
-Work Order et son déplacement vers `completed` restent interdits avant cette confirmation et la
-preuve de reverrouillage local.
+La campagne et le retest correctif ont désormais permis de passer ces deux lignes à `PASS`. La
+sous-étape 2 a ensuite été autorisée ; la clôture du Work Order et son déplacement vers `completed`
+restent interdits tant que la procédure 3.13 n’a pas été qualifiée humainement et que la preuve de
+reverrouillage final n’est pas consignée.
+
+### 4.10 Qualification réelle J4 sous-étape 2
+
+Les tests Maven de la sous-étape 2 sont exclusivement hors ligne. Ils prouvent le binding de
+l’opt-in distinct, l’exclusion de la sous-étape 1, la liaison de la confirmation à l’ID, un seul
+transport simulé par cycle, le délai minimal, la persistance brute avant parsing, l’arrêt sans retry
+et la répétition manuelle de deux cycles. Ils ne prouvent pas la compatibilité d’un nouvel événement
+réel.
+
+Après la procédure 3.13, consigner séparément :
+
+```text
+J4_REAL_PHASE_2_EVENT_ID=<id saisi>
+J4_REAL_PHASE_2_MANUAL_REFRESH_COUNT=<nombre de cycles confirmés>
+J4_REAL_PHASE_2_EVENT_DETAILS_QUALIFICATION=PASS|FAIL
+J4_REAL_PHASE_2_REFRESH_QUALIFICATION=PASS|FAIL
+J4_CONFIGURATION_RELOCK_AFTER_PHASE_2=YES|NO
+J4_APPLICATION_STOPPED_AFTER_PHASE_2=YES|NO
+```
 
 ## 5. Arrêt
 

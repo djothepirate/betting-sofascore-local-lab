@@ -193,7 +193,9 @@ commence obligatoirement à 1, continue uniquement sur `hasNextPage=true` et s�
 - parseurs `event-details-v1/v2`, refus des ruptures de schéma et rattachement strict ;
 - recherche par date/zone, rendu des résultats et détail local ;
 - allowlist J4 de deux IDs, cache avant transport, brut avant parsing, délai de trois secondes et
-  arrêt sans retry au premier incident.
+  arrêt sans retry au premier incident ;
+- sélection exclusive de la sous-étape 2, ID lié à une confirmation, un transport simulé sans
+  cache par cycle et répétition manuelle avec délai minimal, sans polling ni retry.
 
 ### Intégration
 
@@ -204,20 +206,21 @@ avec conservation des lignes et réactivation du trigger. Aucun appel SofaScore 
 
 ### Réel
 
-Le profil `sofascore-live-test` reste bloqué avec `alwaysFail` et n’est pas utilisé par le chemin J3.
-Une qualification réelle éventuelle est un geste humain séparé dans l’interface locale après
-activation explicite de la configuration. Aucune suite Maven ne réalise ce geste.
+Le profil `sofascore-live-test` reste bloqué avec `alwaysFail` et n’est pas utilisé par les chemins
+J3/J4. La sous-étape 1 J4 a été qualifiée humainement après correction de navigation. La
+sous-étape 2 reste un geste humain séparé dans l’interface locale après activation explicite de sa
+configuration et n'a encore exécuté aucun ID réel. Aucune suite Maven ne réalise ce geste.
 
 ## 8. Décisions différées
 
 - stockage de headers autorisés ;
-- paramètre graphique ou troisième identifiant `EVENT_DETAILS` de la sous-étape 2 ;
 - parseurs et DTO externes au-delà de `scheduled-events-v1` et `event-details-v1/v2` ;
 - persistance du circuit et des incidents ;
 - ajout d’autres endpoints, sports ou origines au-delà du chemin J3 qualifié ;
 - export canonique ;
 - push HTTPS vers le Betting Project ;
-- tout polling ou usage live.
+- tout polling ou rafraîchissement automatique ; les rappels `EVENT_DETAILS` autorisés restent
+  manuels, unitaires et nouvellement confirmés.
 
 Chaque décision doit être introduite par un Work Order, avec critères d’acceptation et tests de non-régression des garde-fous.
 
@@ -233,4 +236,6 @@ Le modèle J4, ses frontières de normalisation, son identité stable et son dé
 détaillés dans `docs/architecture/J4-CANONICAL-EVENTS-AND-LOCAL-DETAIL.md`. Le contrat JSON minimal
 du détail synthétique est défini dans `docs/architecture/EVENT-DETAILS-V1.md`. La voie réelle bornée
 et sa politique d’arrêt sont détaillées dans
-`docs/architecture/J4-GUARDED-REAL-EVENT-DETAILS-PHASE1.md`.
+`docs/architecture/J4-GUARDED-REAL-EVENT-DETAILS-PHASE1.md`. Le paramètre graphique et les
+rafraîchissements manuels confirmés sont détaillés dans
+`docs/architecture/J4-GUARDED-REAL-EVENT-DETAILS-PHASE2.md`.

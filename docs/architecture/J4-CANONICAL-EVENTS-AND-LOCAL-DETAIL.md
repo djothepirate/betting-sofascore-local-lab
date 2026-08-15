@@ -141,10 +141,14 @@ Les tests Testcontainers vérifient notamment :
 
 J4 ne modifie pas `ConnectorGate`, le profil `sofascore-live-test` ou le transport J3.
 `server.address=127.0.0.1` demeure obligatoire. Le drapeau
-`j4-event-details-qualification-enabled` vaut `false` par défaut et ne peut coexister avec l’opt-in
-J3. Aucun test standard ou d’intégration n’effectue un appel SofaScore.
+`j4-event-details-qualification-enabled` et l'opt-in distinct
+`j4-event-details-phase2-enabled` valent `false` par défaut. J4 ne peut coexister avec l’opt-in J3,
+et la sélection de la sous-étape 2 bloque la sous-étape 1. Aucun test standard ou d’intégration
+n’effectue un appel SofaScore.
 
-La sous-étape 1 s’arrête et se verrouille au premier incident, au premier `403`, `429`, `5xx`,
-timeout, contenu inattendu ou schéma incompatible. Elle n’effectue aucun retry. Un troisième ID,
-le paramètre graphique de sous-étape 2, un polling, une planification ou un export vers le Betting
-Project exigent une nouvelle autorisation explicite.
+Les deux sous-étapes s’arrêtent et se verrouillent au premier incident, au premier `403`, `429`,
+`5xx`, timeout, contenu inattendu ou schéma incompatible. Elles n’effectuent aucun retry. La
+sous-étape 2 autorisée reçoit un ID borné et réalise un seul nouvel appel sans cache par
+confirmation ; le même ID peut être rappelé uniquement par un nouveau geste humain. Un polling,
+une planification, un rafraîchissement automatique ou un export vers le Betting Project exigent
+une nouvelle autorisation explicite.

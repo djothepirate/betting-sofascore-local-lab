@@ -117,10 +117,9 @@ Le payload brut n’est ni journalisé, ni inclus dans la preuve, ni envoyé hor
 consultable uniquement par le mécanisme local de snapshot déjà protégé, qui n’est pas nécessaire à
 la qualification humaine des champs normalisés.
 
-## 6. Frontière de la sous-étape 2
+## 6. Frontière historique de la sous-étape 2
 
-La sous-étape 2 devra accepter un événement communiqué par le porteur comme paramètre graphique.
-Elle n’est pas incluse dans ce code :
+Lors de la livraison initiale de la sous-étape 1, la sous-étape 2 n'était pas incluse :
 
 ```text
 PHASE_2_GUI_PARAMETER=NOT_IMPLEMENTED
@@ -128,5 +127,7 @@ PHASE_2_EVENT_ID=NOT_AUTHORIZED
 PHASE_2_PROVIDER_CALL=BLOCKED
 ```
 
-Elle ne pourra être ouverte qu’après validation humaine des deux événements de la sous-étape 1 et
-amendement explicite de l’allowlist.
+Cette frontière historique a ensuite été satisfaite : le retest humain correctif des deux
+événements est `PASS` et le porteur a explicitement autorisé la sous-étape 2 ainsi que les rappels
+manuels. Le contrat actuel, qui ne modifie pas le comportement fixe décrit dans ce document, est
+consigné dans `J4-GUARDED-REAL-EVENT-DETAILS-PHASE2.md`.

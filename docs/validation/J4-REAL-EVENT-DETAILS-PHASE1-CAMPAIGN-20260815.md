@@ -6,8 +6,8 @@
 - **Pull Request :** `#8` — `DRAFT`
 - **Périmètre réseau exécuté :** événements `16386245` puis `16421052` uniquement
 - **État de la campagne :** `COMPLETED_LOCKED`
-- **État de la qualification humaine :** `PENDING_CORRECTIVE_LOCAL_RETEST`
-- **Sous-étape 2 :** `NOT_AUTHORIZED`
+- **État de la qualification humaine :** `PASS_AFTER_CORRECTIVE_LOCAL_RETEST`
+- **Sous-étape 2 :** `AUTHORIZED_PENDING_HUMAN_EXECUTION`
 
 ## 1. Résultat minimisé de la campagne
 
@@ -101,10 +101,11 @@ INTEGRATION_TESTS_NOT_RERUN=NO_PERSISTENCE_OR_MIGRATION_CHANGE
 REAL_PROVIDER_CALLS_DURING_CORRECTIVE_TESTS=0
 ```
 
-## 4. Retest humain correctif requis, sans réseau
+## 4. Retest humain correctif exécuté, sans réseau
 
-Ce retest doit relire uniquement les données déjà persistées. Il ne faut ni préparer ni exécuter
-une nouvelle campagne.
+Ce retest a relu uniquement les données déjà persistées, sans préparer ni exécuter une nouvelle
+campagne. Le porteur a confirmé que les captures 4 et 5 ont été prises après retour arrière
+navigateur et a déclaré le test concluant.
 
 1. application arrêtée, remettre d'abord la configuration locale à l'état bloqué décrit dans le
    runbook ;
@@ -120,28 +121,35 @@ une nouvelle campagne.
 ```text
 CORRECTIVE_RETEST_PROVIDER_CALLS_AUTHORIZED=0
 CORRECTIVE_RETEST_USES_PERSISTED_SNAPSHOTS_ONLY=YES
-HUMAN_REAL_EVENT_16386245_QUALIFICATION=PENDING_CORRECTIVE_LOCAL_RETEST
-HUMAN_REAL_EVENT_16421052_QUALIFICATION=PENDING_CORRECTIVE_LOCAL_RETEST
-HUMAN_REAL_PHASE1_QUALIFICATION=PENDING_CORRECTIVE_LOCAL_RETEST
-J4_REAL_PHASE2_AUTHORIZED=NO
+HUMAN_REAL_EVENT_16386245_QUALIFICATION=PASS
+HUMAN_REAL_EVENT_16421052_QUALIFICATION=PASS
+HUMAN_REAL_PHASE1_QUALIFICATION=PASS
+LOCAL_NAVIGATION_QUALIFICATION=PASS_AFTER_CORRECTION
+PROVENANCE_DISPLAY_QUALIFICATION=PASS_AFTER_CORRECTION
+LOCAL_CONFIGURATION_RELOCKED=YES
+APPLICATION_STOPPED_AFTER_CORRECTIVE_RETEST=PENDING_HUMAN_CONFIRMATION
+J4_REAL_PHASE2_AUTHORIZED=YES
 J4_WORK_ORDER=ACTIVE
 J4_CAN_BE_CLOSED=NO
 ```
 
 ## 5. Décision de qualification
 
-La campagne réseau bornée a bien été exécutée et les deux réponses ont été conservées puis
-parsées. Cela ne suffit pas à valider définitivement la sous-étape 1 : l'anomalie de navigation et
-les libellés de provenance doivent être requalifiés humainement sur les snapshots locaux, et la
-remise de la configuration à l'état bloqué doit être confirmée. Le Work Order reste donc
-`IN_DEVELOPMENT` et ne peut pas être clôturé.
+La campagne réseau bornée a bien été exécutée, les deux réponses ont été conservées puis parsées,
+et le retest local a confirmé la correction de navigation ainsi que les libellés de provenance.
+La sous-étape 1 est donc humainement qualifiée. Le Work Order reste néanmoins `IN_DEVELOPMENT` :
+la sous-étape 2 paramétrable et répétable est autorisée mais n'a encore exécuté aucun événement
+réel, et l'arrêt de l'application après le dernier retest doit encore être confirmé.
 
 ```text
 REAL_PROVIDER_QUALIFICATION=EXECUTED_PHASE1
-LOCAL_NAVIGATION_QUALIFICATION=FAIL_CORRECTIVE_RETEST_REQUIRED
-HUMAN_REAL_PHASE1_QUALIFICATION=PENDING_CORRECTIVE_LOCAL_RETEST
+LOCAL_NAVIGATION_QUALIFICATION=PASS_AFTER_CORRECTION
+HUMAN_REAL_PHASE1_QUALIFICATION=PASS
 J4_REAL_PHASE1_PULL_REQUEST=8
 J4_REAL_PHASE1_PULL_REQUEST_STATE=DRAFT
+J4_REAL_PHASE2_AUTHORIZED=YES
+J4_REAL_PHASE2_PROVIDER_QUALIFICATION=NOT_RUN
+APPLICATION_STOPPED_AFTER_CORRECTIVE_RETEST=PENDING_HUMAN_CONFIRMATION
 WORK_ORDER_STATUS=IN_DEVELOPMENT
 J4_WORK_ORDER=ACTIVE
 J4_CAN_BE_CLOSED=NO

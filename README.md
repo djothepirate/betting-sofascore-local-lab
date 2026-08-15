@@ -4,7 +4,7 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures** et **J3 — Appel manuel**. L'implémentation de **J4 — Événements** est fusionnée et son parcours hors ligne est qualifié. Une voie réelle J4 sous-étape 1 est désormais implémentée pour les seuls événements `16386245` et `16421052`, mais sa qualification humaine n’est pas encore exécutée : J4 reste `IN_DEVELOPMENT` et ne peut pas être clôturé. J4 conserve la recherche locale par date, l’identité canonique stable et l’historique append-only. Les voies fournisseur J3 et J4 restent désactivées par défaut, mutuellement exclusives, et aucun appel fournisseur n’est exécuté par les tests, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures** et **J3 — Appel manuel**. L'implémentation de **J4 — Événements** est fusionnée et son parcours hors ligne est qualifié. La sous-étape 1 réelle a été validée humainement sur `16386245` et `16421052` après correction du retour par date. La sous-étape 2, désormais autorisée, ajoute un identifiant graphique et des rafraîchissements manuels répétables, mais sa qualification sur un événement réel n'est pas encore exécutée : J4 reste `IN_DEVELOPMENT` et ne peut pas être clôturé. J4 conserve la recherche locale par date, l’identité canonique stable et l’historique append-only. Les voies fournisseur J3 et J4 restent désactivées par défaut, mutuellement exclusives, et aucun appel fournisseur n’est exécuté par les tests, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
 ## Ce qui est livré localement
 
@@ -59,11 +59,15 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
 - circuit J4 local avec préparation, confirmation exacte, cache préalable, délai minimal de trois
   secondes, deux tentatives maximum, persistance brute avant parsing et verrou terminal ;
 - arrêt sans retry au premier incident, `403`, `429`, `5xx`, timeout, contenu non JSON,
-  incompatibilité ou incohérence d’identifiant ; la sous-étape 2 paramétrable reste non autorisée ;
+  incompatibilité ou incohérence d’identifiant ;
+- voie J4 sous-étape 2 sélectionnée par un opt-in distinct, avec un ID numérique saisi dans
+  l'interface et lié à une confirmation de cinq minutes ;
+- rafraîchissements manuels répétables du même événement : un nouvel appel sans cache par cycle,
+  nouvelle confirmation obligatoire, délai minimal de trois secondes et aucune boucle automatique ;
 
 ## Limite essentielle du bootstrap
 
-**Aucun appel SofaScore réel n’est actif par défaut et aucun n’est exécuté par les tests.** Le connecteur général, `ConnectorGate`, le catalogue `callable=false` et le profil Maven `sofascore-live-test` restent bloqués. Deux voies de qualification spéciales peuvent être activées séparément : J3 pour `SCHEDULED_EVENTS`, ou J4 sous-étape 1 pour les deux IDs `EVENT_DETAILS` compilés dans l’allowlist. Les deux opt-ins sont mutuellement exclusifs. La voie J4 exige `SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true`, l’origine exacte et `EVENT_DETAILS` comme unique famille ; elle n’accepte ni troisième ID, ni polling, ni planification, ni retry. Son protocole temporaire et sa remise à l’état bloqué sont décrits dans `docs/runbooks/RUNBOOK-LOCAL.md`.
+**Aucun appel SofaScore réel n’est actif par défaut et aucun n’est exécuté par les tests.** Le connecteur général, `ConnectorGate`, le catalogue `callable=false` et le profil Maven `sofascore-live-test` restent bloqués. Deux voies de qualification spéciales peuvent être activées séparément : J3 pour `SCHEDULED_EVENTS`, ou J4 pour `EVENT_DETAILS`. Dans J4, `SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED` sélectionne exclusivement le formulaire paramétrable ; sinon seule la campagne fixe de sous-étape 1 peut être disponible. La voie J4 exige l’opt-in principal, l’origine exacte et `EVENT_DETAILS` comme unique famille. La sous-étape 2 accepte un ID borné par confirmation et un seul transport par cycle ; elle n’autorise ni polling, ni planification, ni retry. Son protocole temporaire et sa remise à l’état bloqué sont décrits dans `docs/runbooks/RUNBOOK-LOCAL.md`.
 
 Cette limite préserve la règle du Betting Project principal : aucun composant du VPS ne dépend du laboratoire, et l’arrêt du poste Windows ne doit avoir aucun effet sur la chaîne globale.
 
@@ -308,24 +312,26 @@ synthétiques ou issues de la campagne réelle strictement bornée. Une normalis
 snapshot `SCHEDULED_EVENTS` compatible vérifie son intégrité et le reparse sans modifier sa
 classification historique ; le corpus de démonstration reste explicitement `SYNTHETIC_FIXTURE`.
 
-La campagne J4 sous-étape 1 a exécuté les deux seuls événements autorisés. Les snapshots 16 et 17
+La campagne J4 sous-étape 1 a exécuté les deux événements fixes autorisés. Les snapshots 16 et 17
 ont été persistés, classés `PARSED` et ouverts localement. Un défaut de navigation ramenait
 toutefois la fiche de Saint-Étienne — Clermont Foot au 15 août au lieu de sa date civile du 14
 août, et la fiche utilisait des libellés synthétiques statiques pour une provenance fournisseur.
 Le correctif conserve maintenant la date du match et affiche la provenance réellement persistée.
-La qualification humaine reste en attente d’un retest local des deux snapshots, sans nouvel appel
-fournisseur, ainsi que de la confirmation du reverrouillage de la configuration. Le Work Order
-reste actif dans `docs/work_orders/active` au statut `IN_DEVELOPMENT`.
+Le retest humain sans réseau a confirmé les deux retours par date et la provenance, avec la
+configuration reverrouillée. La sous-étape 1 est donc qualifiée. La sous-étape 2 paramétrable et
+répétable reste à tester sur un ID choisi par l'opérateur ; le Work Order reste actif dans
+`docs/work_orders/active` au statut `IN_DEVELOPMENT`.
 
 ```text
 J4_IMPLEMENTATION_STATUS=IMPLEMENTATION_MERGED
 J4_OFFLINE_STATUS=OFFLINE_PATH_QUALIFIED
 J4_REAL_PHASE1_CAMPAIGN_STATUS=EXECUTED
-J4_REAL_MATCH_STATUS=REAL_MATCH_QUALIFICATION_PENDING
-J4_REAL_PHASE1_RETEST_STATUS=PENDING_CORRECTIVE_LOCAL_RETEST
-J4_CONFIGURATION_RELOCK_STATUS=PENDING_HUMAN_CONFIRMATION
+J4_REAL_PHASE1_HUMAN_STATUS=PASS_AFTER_CORRECTIVE_LOCAL_RETEST
+J4_CONFIGURATION_RELOCK_STATUS=YES
+J4_REAL_PHASE2_STATUS=AUTHORIZED_IMPLEMENTED_OFFLINE_QUALIFIED
+J4_REAL_PHASE2_PROVIDER_STATUS=NOT_RUN
 J4_CAN_BE_CLOSED=NO
 ```
 
 Cette situation ne déverrouille aucune nouvelle famille, automatisation ou dépendance de
-production. La sous-étape 2 reste non autorisée.
+production. Les rappels de sous-étape 2 restent exclusivement manuels et unitaires.

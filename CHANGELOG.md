@@ -33,6 +33,17 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Ajouté
 
+- sous-étape 2 J4 paramétrable dans `/events`, protégée par un opt-in distinct qui rend la
+  sous-étape 1 indisponible pendant son activation ;
+- préparation sans réseau d'un ID `EVENT_DETAILS` borné, phrase exacte liée à cet ID, acquittement
+  et claim immuable empêchant de remplacer l'identifiant lors de l'action finale ;
+- rafraîchissements manuels répétables du même match, avec exactement un nouvel appel fournisseur
+  sans cache par cycle, nouvelle confirmation obligatoire et délai minimal de trois secondes ;
+- persistance brute avant parsing sur chaque rafraîchissement, affichage minimisé du snapshot et
+  indication `NOUVELLE_VERSION` ou `DÉDUPLIQUÉE` sans exposer le payload ;
+- arrêt global commun aux deux sous-étapes et tests hors ligne des `429`, de l'absence de retry, de
+  la répétition manuelle, de l'exclusion de configuration et du binding Web sans ID libre lors de
+  l'exécution ;
 - voie de qualification réelle J4 sous-étape 1, désactivée par défaut et limitée par construction
   aux événements `16386245` et `16421052` sur le chemin exact `/api/v1/event/{eventId}` ;
 - parseur fournisseur versionné `event-details-v2`, distinct du contrat synthétique historique V1,
@@ -134,9 +145,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 ### Documentation
 
 - consignation minimisée de la campagne humaine J4 sous-étape 1 : deux transports autorisés, deux
-  snapshots HTTP `200` classés `PARSED`, arrêt global appliqué, puis anomalie locale de retour par
-  date ; la validation humaine reste `PENDING_CORRECTIVE_LOCAL_RETEST`, sans assimiler la réussite
-  du transport à une qualification réelle complète ;
+  snapshots HTTP `200` classés `PARSED`, arrêt global appliqué, anomalie locale corrigée puis retest
+  humain concluant des deux retours par date et des provenances ;
 - procédure de requalification utilisant exclusivement les snapshots locaux 16 et 17 après
   reverrouillage de la configuration, sans préparation ni réexécution de la campagne ;
 - protocole correctif imposant une première application de V6 avec les cinq clés réseau remises à
@@ -145,8 +155,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   la revue compatible de l’ADR-SS-001, avec politique J4 plus stricte sans retry sur `5xx` ;
 - protocole Windows J4 pour l’activation temporaire, la validation humaine des deux matches,
   l’arrêt au premier incident et la remise obligatoire de la configuration à l’état bloqué ;
-- maintien explicite de la sous-étape 2 paramétrable au statut `NOT_AUTHORIZED` jusqu’à validation
-  humaine de la sous-étape 1 et communication d’un nouvel identifiant ;
+- amendement du Work Order après qualification humaine de la sous-étape 1, autorisant la
+  sous-étape 2 paramétrable et les rappels manuels unitaires avec une nouvelle confirmation par
+  appel, tout en laissant sa qualification fournisseur réelle à `NOT_RUN` ;
+- revue de l'ADR-SS-001 concluant `COMPATIBLE_NO_CHANGE_REQUIRED` pour le parcours paramétrable :
+  appel manuel, concurrence unitaire, absence de polling, compte, cookie, jeton, proxy ou retry ;
+- qualification technique hors ligne de la sous-étape 2 avec 212 tests standards et 16 tests
+  d'intégration réussis, sans appel fournisseur ; sa qualification humaine et réelle reste en
+  attente ;
 - ouverture du Work Order `WO-SS-20260815-004` sur la branche `codex/j4-events` depuis le merge J3
   `b79ccd62e7863718f49a22b6c54a7fc73cf87986` ;
 - contrats J4 de l’identité canonique, de la normalisation versionnée et du détail synthétique hors

@@ -165,8 +165,9 @@ Pour chaque événement, la preuve doit rester minimisée et ne contenir que :
 
 Au premier incident, aucun deuxième essai ni contournement n'est autorisé. L'opérateur arrête
 l'application, remet les variables locales J3/J4 à l'état bloqué selon le runbook et consigne
-l'incident. Même après deux résultats humains réussis, la sous-étape 2 reste interdite jusqu'à la
-communication et l'autorisation explicites de son identifiant.
+l'incident. Au stade de cette readiness, la sous-étape 2 restait interdite jusqu'à une autorisation
+explicite. Cette autorisation a été donnée après le retest correctif réussi et est documentée dans
+le Work Order et le contrat de sous-étape 2.
 
 ## 6. Mise à jour post-campagne
 
@@ -185,11 +186,12 @@ REAL_PROVIDER_CAMPAIGN_EXECUTION=COMPLETED
 REAL_PROVIDER_TRANSPORT_COUNT=2
 CORRECTIVE_STANDARD_TESTS=199
 CORRECTIVE_STANDARD_FAILURES=0
-HUMAN_REAL_PHASE1_QUALIFICATION=PENDING_CORRECTIVE_LOCAL_RETEST
+HUMAN_REAL_PHASE1_QUALIFICATION=PASS_AFTER_CORRECTIVE_LOCAL_RETEST
 CORRECTIVE_RETEST_PROVIDER_CALLS_AUTHORIZED=0
-LOCAL_CONFIGURATION_RELOCKED=PENDING_HUMAN_CONFIRMATION
+LOCAL_CONFIGURATION_RELOCKED=YES
 APPLICATION_STOPPED_AFTER_CAMPAIGN=PENDING_HUMAN_CONFIRMATION
-J4_REAL_PHASE2_AUTHORIZED=NO
+J4_REAL_PHASE2_AUTHORIZED=YES_AFTER_PHASE1_QUALIFICATION
+J4_REAL_PHASE2_PROVIDER_QUALIFICATION=NOT_RUN
 J4_WORK_ORDER=ACTIVE
 J4_CAN_BE_CLOSED=NO
 ```
