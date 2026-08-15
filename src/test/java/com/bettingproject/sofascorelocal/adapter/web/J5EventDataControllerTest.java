@@ -12,6 +12,7 @@ import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderReq
 import com.bettingproject.sofascorelocal.domain.provider.J5RealControlSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.J5RealControlState;
 import com.bettingproject.sofascorelocal.domain.provider.J5RealExecutionClaim;
+import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
@@ -25,6 +26,7 @@ import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessReport;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessStatus;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataBundle;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservationView;
+import com.bettingproject.sofascorelocal.domain.eventdata.J5UnavailableFamily;
 import com.bettingproject.sofascorelocal.domain.eventdata.LineupSide;
 import com.bettingproject.sofascorelocal.domain.eventdata.TeamLineup;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEventStatus;
@@ -49,6 +51,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -153,6 +156,48 @@ class J5EventDataControllerTest {
                 .andExpect(content().string(containsString("Aucune statistique locale")))
                 .andExpect(content().string(containsString("Aucun incident local")))
                 .andExpect(content().string(containsString("Aucune composition locale")));
+    }
+
+    @Test
+    void rendersAProvider404AsUnavailableRatherThanAsAnEmptyStatisticsList()
+            throws Exception {
+        J4EventSearchItem current = currentEvent();
+        EventSourceTrace source = EventSourceTrace.providerSnapshot(
+                30L,
+                "e".repeat(64),
+                J5UnavailableFamily.normalizerVersion(
+                        SofascoreEndpointType.EVENT_STATISTICS),
+                Instant.parse("2026-08-15T19:50:46Z"));
+        var statistics = new J5EventDataObservationView(
+                30L,
+                current.event().identity(),
+                new EventStatistics(900001L, List.of()),
+                source,
+                J5CompletenessReport.unavailable(),
+                "f".repeat(64));
+        J5EventDataPage page = new J5EventDataPage(
+                ZoneId.of("Europe/Paris"),
+                current,
+                new J5EventDataBundle(
+                        Optional.of(statistics),
+                        Optional.empty(),
+                        Optional.empty()));
+        when(formTokenService.issue(any(HttpSession.class))).thenReturn("one-use-token");
+        when(queryService.find(current.event().identity().value(), "Europe/Paris"))
+                .thenReturn(Optional.of(page));
+
+        mockMvc.perform(get(
+                        "/events/{id}/statistics",
+                        current.event().identity().value())
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(
+                        "Statistiques indisponibles chez le fournisseur")))
+                .andExpect(content().string(containsString("UNAVAILABLE · N/A")))
+                .andExpect(content().string(containsString(
+                        "elle n’est ni une panne de transport ni une liste vide valide")))
+                .andExpect(content().string(not(containsString("Aucune statistique locale"))))
+                .andExpect(content().string(not(containsString("<th>Métrique</th>"))));
     }
 
     @Test

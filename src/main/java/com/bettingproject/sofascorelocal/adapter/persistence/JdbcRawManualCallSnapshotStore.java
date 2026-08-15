@@ -167,16 +167,18 @@ public class JdbcRawManualCallSnapshotStore implements RawManualCallSnapshotStor
         }
         Objects.requireNonNull(schemaStatus, "schemaStatus");
         if (schemaStatus != RawSnapshotSchemaStatus.PARSED
+                && schemaStatus != RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE
                 && schemaStatus != RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE
                 && schemaStatus != RawSnapshotSchemaStatus.UNEXPECTED_CONTENT
                 && schemaStatus != RawSnapshotSchemaStatus.TRANSPORT_ERROR) {
             throw new IllegalArgumentException(
                     "raw snapshot classification must be a parser outcome");
         }
-        if (schemaStatus == RawSnapshotSchemaStatus.PARSED) {
+        if (schemaStatus == RawSnapshotSchemaStatus.PARSED
+                || schemaStatus == RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE) {
             if (errorCode != null) {
                 throw new IllegalArgumentException(
-                        "a parsed snapshot cannot have an error code");
+                        "a parsed or unavailable snapshot cannot have an error code");
             }
         }
         else if (schemaStatus == RawSnapshotSchemaStatus.TRANSPORT_ERROR) {

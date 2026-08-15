@@ -7,6 +7,8 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventData
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportFailure;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
+import com.bettingproject.sofascorelocal.domain.eventdata.EventStatistics;
+import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessStatus;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservation;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataPersistenceResult;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
@@ -64,6 +66,7 @@ class J5RealEventDataServiceTest {
     private CanonicalEventStore canonicalStore;
     private J5EventDataStore dataStore;
     private List<String> operations;
+    private List<J5EventDataObservation> observations;
     private List<Duration> pauses;
     private J5RealEventDataService service;
 
@@ -81,6 +84,7 @@ class J5RealEventDataServiceTest {
         when(control.executionMayContinue(any())).thenReturn(true);
 
         operations = new ArrayList<>();
+        observations = new ArrayList<>();
         pauses = new ArrayList<>();
         AtomicLong snapshotIds = new AtomicLong(100L);
         when(rawStore.save(any())).thenAnswer(invocation -> {
@@ -99,6 +103,7 @@ class J5RealEventDataServiceTest {
         AtomicLong observationIds = new AtomicLong(200L);
         when(dataStore.save(any())).thenAnswer(invocation -> {
             J5EventDataObservation observation = invocation.getArgument(0);
+            observations.add(observation);
             operations.add("normalized:" + observation.data().endpointType());
             return new J5EventDataPersistenceResult(
                     observationIds.incrementAndGet(),
@@ -139,6 +144,59 @@ class J5RealEventDataServiceTest {
                     pauses.add(delay);
                     time.set(time.get().plus(delay));
                 });
+    }
+
+    @Test
+    void persistsAStatistics404AsUnavailableThenContinuesTheOrderedCampaign()
+            throws Exception {
+        when(transport.execute(any())).thenAnswer(invocation -> {
+            J5EventDataProviderRequest request = invocation.getArgument(0);
+            operations.add("transport:" + request.endpointType());
+            if (request.endpointType() == SofascoreEndpointType.EVENT_STATISTICS) {
+                return response(request, 404, "{\"error\":\"statistics unavailable\"}");
+            }
+            return response(request, 200, fixtureFor(request.endpointType()));
+        });
+
+        var result = service.execute(claim());
+
+        assertThat(result.completed()).isTrue();
+        assertThat(result.terminalCode()).isEqualTo("COMPLETED");
+        assertThat(result.providerCallAttempts()).isEqualTo(3);
+        assertThat(result.endpoints())
+                .extracting(J5RealEndpointResult::completenessStatus)
+                .containsExactly(
+                        J5CompletenessStatus.UNAVAILABLE,
+                        J5CompletenessStatus.COMPLETE,
+                        J5CompletenessStatus.COMPLETE);
+        assertThat(result.endpoints().getFirst().completenessLabel())
+                .isEqualTo("UNAVAILABLE · N/A");
+        assertThat(observations.getFirst().data()).isInstanceOfSatisfying(
+                EventStatistics.class,
+                statistics -> assertThat(statistics.metrics()).isEmpty());
+        assertThat(observations.getFirst().completeness().status())
+                .isEqualTo(J5CompletenessStatus.UNAVAILABLE);
+        assertThat(operations).containsExactly(
+                "transport:EVENT_STATISTICS",
+                "raw:EVENT_STATISTICS",
+                "normalized:EVENT_STATISTICS",
+                "classify:ENDPOINT_UNAVAILABLE",
+                "transport:EVENT_INCIDENTS",
+                "raw:EVENT_INCIDENTS",
+                "normalized:EVENT_INCIDENTS",
+                "classify:PARSED",
+                "transport:EVENT_LINEUPS",
+                "raw:EVENT_LINEUPS",
+                "normalized:EVENT_LINEUPS",
+                "classify:PARSED");
+        verify(rawStore).classify(
+                101L, RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE, null);
+        verify(transport, times(3)).execute(any());
+        verify(control, times(3)).recordEndpointCompleted(any(), any());
+        verify(control).complete(REQUEST_ID);
+        assertThat(pauses).containsExactly(
+                Duration.ofSeconds(3),
+                Duration.ofSeconds(3));
     }
 
     @Test

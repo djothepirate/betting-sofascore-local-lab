@@ -43,4 +43,10 @@ public record J5RealEndpointResult(
             throw new IllegalArgumentException("result counters are outside bounds");
         }
     }
+
+    public String completenessLabel() {
+        return completenessStatus == J5CompletenessStatus.UNAVAILABLE
+                ? "UNAVAILABLE · N/A"
+                : completenessStatus + " · " + completenessScore + "%";
+    }
 }

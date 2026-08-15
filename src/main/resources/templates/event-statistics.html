@@ -85,7 +85,9 @@
         Une campagne autorise au plus trois requêtes séquentielles pour cette identité :
         statistiques, incidents, puis compositions. Le brut est persisté avant parsing,
         un délai minimal de trois secondes sépare les tentatives et le premier incident
-        verrouille immédiatement la campagne sans retry.
+        verrouille immédiatement la campagne sans retry. Un HTTP 404 sur une famille signifie
+        « indisponible pour cet événement » : il est conservé, normalisé explicitement et la
+        campagne poursuit la famille suivante sans répéter l’appel.
       </p>
       <p class="notice notice-warning" th:if="${!j5RealControl.providerTransportAvailable}">
         Configuration locale bloquée. Conditions encore absentes :
@@ -132,7 +134,8 @@
             <label>
               <input type="checkbox" name="acknowledged" value="true" required>
               Je confirme au plus trois appels fournisseur, l’arrêt au premier incident
-              et le verrouillage terminal sans retry.
+              réel, la poursuite après une famille indisponible en HTTP 404 et le verrouillage
+              terminal sans retry.
             </label>
             <button class="button-danger" type="submit">
               Appeler les trois familles une fois
@@ -173,7 +176,7 @@
             <td class="mono" th:text="${endpoint.endpointType}">EVENT_STATISTICS</td>
             <td><span th:text="${endpoint.snapshotId}">1</span><br><code th:text="${endpoint.payloadSha256}">hash</code></td>
             <td th:text="${endpoint.payloadSizeBytes + ' octets'}">0 octet</td>
-            <td th:text="${endpoint.completenessStatus + ' · ' + endpoint.completenessScore + '%'}">COMPLETE</td>
+            <td th:text="${endpoint.completenessLabel()}">COMPLETE · 100%</td>
             <td th:text="${endpoint.observationId}">1</td>
           </tr>
           </tbody>
@@ -205,25 +208,33 @@
       <div class="panel-heading">
         <div>
           <p class="label">EVENT_STATISTICS · <span th:text="${statistics.source.parserVersion}">parser</span></p>
-          <h2>Statistiques d’équipe</h2>
+          <h2 th:text="${statistics.completeness.status.name() == 'UNAVAILABLE' ? 'Statistiques indisponibles chez le fournisseur' : 'Statistiques d’équipe'}">
+            Statistiques d’équipe
+          </h2>
         </div>
         <span class="chip"
-              th:classappend="${statistics.completeness.status.name() == 'PARTIAL'} ? 'chip-warning' : 'chip-safe'"
-              th:text="${statistics.completeness.status + ' · ' + statistics.completeness.scorePercent + '%'}">
+              th:classappend="${statistics.completeness.status.name() == 'PARTIAL' or statistics.completeness.status.name() == 'UNAVAILABLE'} ? 'chip-warning' : 'chip-safe'"
+              th:text="${statistics.completeness.status.name() == 'UNAVAILABLE' ? 'UNAVAILABLE · N/A' : statistics.completeness.status + ' · ' + statistics.completeness.scorePercent + '%'}">
           COMPLETE · 100%
         </span>
       </div>
+      <p class="notice notice-warning"
+         th:if="${statistics.completeness.status.name() == 'UNAVAILABLE'}">
+        L’endpoint exact a répondu HTTP 404 pour cet événement. Cette observation indique une
+        indisponibilité fournisseur ; elle n’est ni une panne de transport ni une liste vide valide.
+      </p>
       <dl class="detail-grid">
         <div><dt>Source</dt><dd class="mono" th:text="${statistics.source.sourceReference()}">fixture</dd></div>
         <div><dt>Réception</dt><dd class="mono" th:text="${statistics.source.receivedAt}">instant</dd></div>
-        <div><dt>Signaux</dt><dd th:text="${statistics.completeness.presentSignals + '/' + statistics.completeness.expectedSignals}">6/6</dd></div>
+        <div><dt>Signaux</dt><dd th:text="${statistics.completeness.status.name() == 'UNAVAILABLE' ? 'N/A' : statistics.completeness.presentSignals + '/' + statistics.completeness.expectedSignals}">6/6</dd></div>
         <div><dt>SHA-256 source</dt><dd class="mono hash-value" th:text="${statistics.source.payloadSha256}">hash</dd></div>
         <div><dt>SHA-256 normalisé</dt><dd class="mono hash-value" th:text="${statistics.normalizedSha256}">hash</dd></div>
       </dl>
       <ul th:if="${!statistics.completeness.missingPaths.isEmpty()}">
         <li class="mono" th:each="path : ${statistics.completeness.missingPaths}" th:text="${path}">path</li>
       </ul>
-      <div class="table-scroll">
+      <div class="table-scroll"
+           th:unless="${statistics.completeness.status.name() == 'UNAVAILABLE'}">
         <table>
           <thead><tr><th>Période</th><th>Groupe</th><th>Métrique</th><th>Domicile</th><th>Extérieur</th></tr></thead>
           <tbody>
@@ -249,27 +260,34 @@
       <div class="panel-heading">
         <div>
           <p class="label">EVENT_INCIDENTS · <span th:text="${incidents.source.parserVersion}">parser</span></p>
-          <h2>Incidents ordonnés</h2>
+          <h2 th:text="${incidents.completeness.status.name() == 'UNAVAILABLE' ? 'Incidents indisponibles chez le fournisseur' : 'Incidents ordonnés'}">
+            Incidents ordonnés
+          </h2>
         </div>
         <span class="chip"
-              th:classappend="${incidents.completeness.status.name() == 'PARTIAL'} ? 'chip-warning' : 'chip-safe'"
-              th:text="${incidents.completeness.status + ' · ' + incidents.completeness.scorePercent + '%'}">
+              th:classappend="${incidents.completeness.status.name() == 'PARTIAL' or incidents.completeness.status.name() == 'UNAVAILABLE'} ? 'chip-warning' : 'chip-safe'"
+              th:text="${incidents.completeness.status.name() == 'UNAVAILABLE' ? 'UNAVAILABLE · N/A' : incidents.completeness.status + ' · ' + incidents.completeness.scorePercent + '%'}">
           COMPLETE · 100%
         </span>
       </div>
+      <p class="notice notice-warning"
+         th:if="${incidents.completeness.status.name() == 'UNAVAILABLE'}">
+        L’endpoint exact a répondu HTTP 404 pour cet événement. Aucune liste d’incidents n’est
+        synthétisée pour remplacer cette indisponibilité.
+      </p>
       <dl class="detail-grid">
         <div><dt>Source</dt><dd class="mono" th:text="${incidents.source.sourceReference()}">fixture</dd></div>
         <div><dt>Réception</dt><dd class="mono" th:text="${incidents.source.receivedAt}">instant</dd></div>
-        <div><dt>Incidents</dt><dd th:text="${incidentsData.incidents.size()}">0</dd></div>
-        <div><dt>Signaux</dt><dd th:text="${incidents.completeness.presentSignals + '/' + incidents.completeness.expectedSignals}">0/0</dd></div>
+        <div><dt>Incidents</dt><dd th:text="${incidents.completeness.status.name() == 'UNAVAILABLE' ? 'N/A' : incidentsData.incidents.size()}">0</dd></div>
+        <div><dt>Signaux</dt><dd th:text="${incidents.completeness.status.name() == 'UNAVAILABLE' ? 'N/A' : incidents.completeness.presentSignals + '/' + incidents.completeness.expectedSignals}">0/0</dd></div>
         <div><dt>SHA-256 source</dt><dd class="mono hash-value" th:text="${incidents.source.payloadSha256}">hash</dd></div>
         <div><dt>SHA-256 normalisé</dt><dd class="mono hash-value" th:text="${incidents.normalizedSha256}">hash</dd></div>
       </dl>
       <ul th:if="${!incidents.completeness.missingPaths.isEmpty()}">
         <li class="mono" th:each="path : ${incidents.completeness.missingPaths}" th:text="${path}">path</li>
       </ul>
-      <p th:if="${incidentsData.incidents.isEmpty()}">La liste source est explicitement vide.</p>
-      <div class="table-scroll" th:unless="${incidentsData.incidents.isEmpty()}">
+      <p th:if="${incidentsData.incidents.isEmpty() and incidents.completeness.status.name() != 'UNAVAILABLE'}">La liste source est explicitement vide.</p>
+      <div class="table-scroll" th:unless="${incidentsData.incidents.isEmpty() or incidents.completeness.status.name() == 'UNAVAILABLE'}">
         <table>
           <thead><tr><th>Minute</th><th>Type</th><th>Côté</th><th>Joueur</th><th>Score</th></tr></thead>
           <tbody>
@@ -295,17 +313,24 @@
       <div class="panel-heading">
         <div>
           <p class="label">EVENT_LINEUPS · <span th:text="${lineups.source.parserVersion}">parser</span></p>
-          <h2>Compositions</h2>
+          <h2 th:text="${lineups.completeness.status.name() == 'UNAVAILABLE' ? 'Compositions indisponibles chez le fournisseur' : 'Compositions'}">
+            Compositions
+          </h2>
         </div>
         <span class="chip"
-              th:classappend="${lineups.completeness.status.name() == 'PARTIAL'} ? 'chip-warning' : 'chip-safe'"
-              th:text="${lineups.completeness.status + ' · ' + lineups.completeness.scorePercent + '%'}">
+              th:classappend="${lineups.completeness.status.name() == 'PARTIAL' or lineups.completeness.status.name() == 'UNAVAILABLE'} ? 'chip-warning' : 'chip-safe'"
+              th:text="${lineups.completeness.status.name() == 'UNAVAILABLE' ? 'UNAVAILABLE · N/A' : lineups.completeness.status + ' · ' + lineups.completeness.scorePercent + '%'}">
           COMPLETE · 100%
         </span>
       </div>
+      <p class="notice notice-warning"
+         th:if="${lineups.completeness.status.name() == 'UNAVAILABLE'}">
+        L’endpoint exact a répondu HTTP 404 pour cet événement. Aucun joueur, rôle ou dispositif
+        tactique n’est inventé pour combler cette indisponibilité.
+      </p>
       <dl class="detail-grid">
-        <div><dt>Confirmées</dt><dd th:text="${lineupsData.confirmed ? 'OUI' : 'NON'}">OUI</dd></div>
-        <div><dt>Signaux</dt><dd th:text="${lineups.completeness.presentSignals + '/' + lineups.completeness.expectedSignals}">13/13</dd></div>
+        <div><dt>Confirmées</dt><dd th:text="${lineups.completeness.status.name() == 'UNAVAILABLE' ? 'N/A' : (lineupsData.confirmed ? 'OUI' : 'NON')}">OUI</dd></div>
+        <div><dt>Signaux</dt><dd th:text="${lineups.completeness.status.name() == 'UNAVAILABLE' ? 'N/A' : lineups.completeness.presentSignals + '/' + lineups.completeness.expectedSignals}">13/13</dd></div>
         <div><dt>Source</dt><dd class="mono" th:text="${lineups.source.sourceReference()}">fixture</dd></div>
         <div><dt>Réception</dt><dd class="mono" th:text="${lineups.source.receivedAt}">instant</dd></div>
         <div><dt>SHA-256 source</dt><dd class="mono hash-value" th:text="${lineups.source.payloadSha256}">hash</dd></div>
@@ -315,6 +340,7 @@
         <li class="mono" th:each="path : ${lineups.completeness.missingPaths}" th:text="${path}">path</li>
       </ul>
 
+      <div th:unless="${lineups.completeness.status.name() == 'UNAVAILABLE'}">
       <h3>Domicile · <span th:text="${lineupsData.home.formation.orElse('formation absente')}">4-3-3</span></h3>
       <div class="table-scroll">
         <table>
@@ -343,6 +369,7 @@
           </tr>
           </tbody>
         </table>
+      </div>
       </div>
     </section>
 

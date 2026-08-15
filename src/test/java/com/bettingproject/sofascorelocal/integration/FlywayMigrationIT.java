@@ -22,8 +22,10 @@ import com.bettingproject.sofascorelocal.domain.eventdetails.EventVenue;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventLineups;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventStatistics;
+import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessReport;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessStatus;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservation;
+import com.bettingproject.sofascorelocal.domain.eventdata.J5UnavailableFamily;
 import com.bettingproject.sofascorelocal.fixture.ClasspathFixtureLoader;
 import com.bettingproject.sofascorelocal.fixture.LoadedFixture;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
@@ -173,8 +175,101 @@ class FlywayMigrationIT {
         assertThat(snapshotTable).isEqualTo("provider_snapshot");
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("8");
+        assertThat(flywayVersion).isEqualTo("9");
         assertThat(rawColumn).isEqualTo("bytea");
+    }
+
+    @Test
+    void upgradesAStoredJ5Http404FromTransportErrorToEndpointUnavailable() {
+        String schema = "upgrade_v8_to_v9";
+        String separator = POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
+        var dataSource = new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema,
+                POSTGRES.getUsername(),
+                POSTGRES.getPassword());
+        Flyway flywayV8 = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .createSchemas(true)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("8"))
+                .load();
+
+        assertThat(flywayV8.migrate().migrationsExecuted).isEqualTo(8);
+
+        JdbcTemplate upgradeJdbc = new JdbcTemplate(dataSource);
+        upgradeJdbc.update("""
+                insert into provider_snapshot (
+                    provider,
+                    logical_endpoint,
+                    request_key,
+                    requested_at,
+                    received_at,
+                    http_status,
+                    content_type,
+                    latency_ms,
+                    payload_raw,
+                    payload_size_bytes,
+                    payload_sha256,
+                    parser_version,
+                    schema_status,
+                    error_code
+                ) values (
+                    'SOFASCORE',
+                    'EVENT_STATISTICS',
+                    'EVENT_STATISTICS|eventId=16412917',
+                    '2026-08-15T19:50:46Z',
+                    '2026-08-15T19:50:47Z',
+                    404,
+                    'application/json',
+                    1000,
+                    decode('7b7d', 'hex'),
+                    2,
+                    repeat('a', 64),
+                    'event-statistics-v2',
+                    'TRANSPORT_ERROR',
+                    'HTTP_STATUS_404'
+                )
+                """);
+        Map<String, Object> evidenceBeforeMigration = upgradeJdbc.queryForMap("""
+                select
+                    id,
+                    encode(payload_raw, 'hex') as payload_hex,
+                    payload_sha256,
+                    received_at
+                from provider_snapshot
+                where request_key = 'EVENT_STATISTICS|eventId=16412917'
+                """);
+
+        Flyway flywayV9 = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration")
+                .load();
+
+        assertThat(flywayV9.migrate().migrationsExecuted).isEqualTo(1);
+        assertThat(flywayV9.info().current().getVersion().getVersion()).isEqualTo("9");
+        Map<String, Object> evidenceAfterMigration = upgradeJdbc.queryForMap("""
+                select
+                    id,
+                    schema_status,
+                    error_code,
+                    encode(payload_raw, 'hex') as payload_hex,
+                    payload_sha256,
+                    received_at
+                from provider_snapshot
+                where request_key = 'EVENT_STATISTICS|eventId=16412917'
+                """);
+        assertThat(evidenceAfterMigration)
+                .containsEntry("schema_status", "ENDPOINT_UNAVAILABLE")
+                .containsEntry("error_code", null);
+        assertThat(evidenceAfterMigration)
+                .containsAllEntriesOf(evidenceBeforeMigration);
+        assertThat(upgradeJdbc.queryForObject(
+                "select count(*) from j5_event_data_observation",
+                Long.class)).isZero();
     }
 
     @Test
@@ -1141,6 +1236,61 @@ class FlywayMigrationIT {
                     assertThat(observation.completeness().status())
                             .isEqualTo(J5CompletenessStatus.EMPTY_VALID);
                 });
+    }
+
+    @Test
+    void persistsAProvider404AsAnUnavailableJ5Observation() {
+        var j4Import = j4OfflineFixtureImportService.importNominalCorpus();
+        long eventId = 900001L;
+        Instant requestedAt = Instant.parse("2026-08-15T14:30:00Z");
+        RawPayloadEvidence payload = RawPayloadEvidence.capture(
+                "{\"error\":\"statistics unavailable\"}"
+                        .getBytes(StandardCharsets.UTF_8));
+        var raw = snapshotStore.save(new RawManualCallSnapshot(
+                SofascoreEndpointType.EVENT_STATISTICS,
+                "EVENT_STATISTICS|eventId=900001",
+                requestedAt,
+                requestedAt.plusMillis(100),
+                404,
+                "application/json",
+                Duration.ofMillis(100),
+                payload,
+                EventStatisticsV2Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.RAW_ONLY,
+                null));
+        var identity = canonicalEventStore.findLatestByCanonicalId(
+                        j4Import.canonicalEventId())
+                .orElseThrow()
+                .identity();
+
+        var persisted = j5EventDataStore.save(J5EventDataObservation.from(
+                identity,
+                new EventStatistics(eventId, java.util.List.of()),
+                EventSourceTrace.providerSnapshot(
+                        raw.snapshotId(),
+                        raw.payloadSha256(),
+                        J5UnavailableFamily.normalizerVersion(
+                                SofascoreEndpointType.EVENT_STATISTICS),
+                        requestedAt.plusMillis(100)),
+                J5CompletenessReport.unavailable()));
+        snapshotStore.classify(
+                raw.snapshotId(), RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE, null);
+
+        assertThat(persisted.inserted()).isTrue();
+        assertThat(schemaStatus(raw.snapshotId())).isEqualTo("ENDPOINT_UNAVAILABLE");
+        assertThat(j5EventDataStore.findLatest(j4Import.canonicalEventId()).statistics())
+                .hasValueSatisfying(observation -> {
+                    assertThat(observation.completeness().status())
+                            .isEqualTo(J5CompletenessStatus.UNAVAILABLE);
+                    assertThat(observation.completeness().scorePercent()).isZero();
+                    assertThat(observation.data()).isInstanceOfSatisfying(
+                            EventStatistics.class,
+                            statistics -> assertThat(statistics.metrics()).isEmpty());
+                });
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from j5_event_metric where observation_id = ?",
+                Long.class,
+                persisted.observationId())).isZero();
     }
 
     @Test

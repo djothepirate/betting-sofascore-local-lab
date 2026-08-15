@@ -59,6 +59,15 @@ public record J5CompletenessReport(
                             "EMPTY_VALID represents an explicit structurally valid empty list");
                 }
             }
+            case UNAVAILABLE -> {
+                if (expectedSignals != 0
+                        || presentSignals != 0
+                        || scorePercent != 0
+                        || !missingPaths.isEmpty()) {
+                    throw new IllegalArgumentException(
+                            "UNAVAILABLE represents a provider family unavailable for the event");
+                }
+            }
         }
     }
 
@@ -66,6 +75,15 @@ public record J5CompletenessReport(
         return new J5CompletenessReport(
                 J5CompletenessStatus.EMPTY_VALID,
                 100,
+                0,
+                0,
+                List.of());
+    }
+
+    public static J5CompletenessReport unavailable() {
+        return new J5CompletenessReport(
+                J5CompletenessStatus.UNAVAILABLE,
+                0,
                 0,
                 0,
                 List.of());

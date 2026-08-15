@@ -8,9 +8,11 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseStat
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportException;
 import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
+import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessReport;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventData;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservation;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataPersistenceResult;
+import com.bettingproject.sofascorelocal.domain.eventdata.J5UnavailableFamily;
 import com.bettingproject.sofascorelocal.domain.provider.J5EventDataProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.J5EventDataTransportResponse;
 import com.bettingproject.sofascorelocal.domain.provider.J5RealExecutionClaim;
@@ -139,6 +141,46 @@ public class J5RealEventDataService {
             }
             catch (RuntimeException exception) {
                 return failAndLock(claim, "RAW_PERSISTENCE_ERROR", attempts, results);
+            }
+            if (response.httpStatus() == 404) {
+                J5CompletenessReport completeness = J5CompletenessReport.unavailable();
+                EventSourceTrace source = EventSourceTrace.providerSnapshot(
+                        raw.snapshotId(), raw.payloadSha256(),
+                        J5UnavailableFamily.normalizerVersion(endpoint),
+                        response.receivedAt());
+                J5EventDataPersistenceResult persisted;
+                try {
+                    persisted = eventDataStore.save(J5EventDataObservation.from(
+                            canonical.orElseThrow().identity(),
+                            J5UnavailableFamily.emptyObservation(endpoint, claim.eventId()),
+                            source,
+                            completeness));
+                }
+                catch (RuntimeException exception) {
+                    return failAndLock(
+                            claim, "NORMALIZATION_PERSISTENCE_ERROR", attempts, results);
+                }
+                if (!classifySafely(
+                        raw.snapshotId(), RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE, null)) {
+                    return failAndLock(claim, "RAW_CLASSIFICATION_ERROR", attempts, results);
+                }
+                results.add(new J5RealEndpointResult(
+                        endpoint,
+                        raw.snapshotId(),
+                        raw.payloadSha256(),
+                        raw.payloadSizeBytes(),
+                        persisted.observationId(),
+                        persisted.inserted(),
+                        completeness.status(),
+                        completeness.scorePercent(),
+                        0));
+                try {
+                    controlService.recordEndpointCompleted(claim.requestId(), endpoint);
+                }
+                catch (J5RealControlException exception) {
+                    return failed(claim, "OPERATOR_STOP", attempts, results);
+                }
+                continue;
             }
             if (response.httpStatus() < 200 || response.httpStatus() >= 300) {
                 String code = httpTerminalCode(response.httpStatus());

@@ -56,4 +56,26 @@ class J5CompletenessReportTest {
                 List.of("$.away")))
                 .isInstanceOf(IllegalArgumentException.class);
     }
+
+    @Test
+    void distinguishesProviderUnavailabilityFromAValidEmptyList() {
+        var unavailable = J5CompletenessReport.unavailable();
+        var emptyValid = J5CompletenessReport.emptyValid();
+
+        assertThat(unavailable.status()).isEqualTo(J5CompletenessStatus.UNAVAILABLE);
+        assertThat(unavailable.scorePercent()).isZero();
+        assertThat(emptyValid.status()).isEqualTo(J5CompletenessStatus.EMPTY_VALID);
+        assertThat(emptyValid.scorePercent()).isEqualTo(100);
+    }
+
+    @Test
+    void rejectsUnavailableDataWithACompletenessPercentage() {
+        assertThatThrownBy(() -> new J5CompletenessReport(
+                J5CompletenessStatus.UNAVAILABLE,
+                100,
+                0,
+                0,
+                List.of()))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
 }

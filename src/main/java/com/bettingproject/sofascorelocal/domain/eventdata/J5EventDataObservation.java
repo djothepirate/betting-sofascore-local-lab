@@ -31,15 +31,37 @@ public record J5EventDataObservation(
             throw new IllegalArgumentException(
                     "J5 data provider identity must match its canonical event");
         }
-        requireCompatibleProvenance(data, source);
+        requireUnavailableShape(data, completeness);
+        requireCompatibleProvenance(data, source, completeness);
         if (!SHA_256_PATTERN.matcher(normalizedSha256).matches()) {
             throw new IllegalArgumentException("normalizedSha256 must be a lower-case SHA-256");
         }
     }
 
+    private static void requireUnavailableShape(
+            J5EventData data,
+            J5CompletenessReport completeness) {
+        if (completeness.status() != J5CompletenessStatus.UNAVAILABLE) {
+            return;
+        }
+        if (!J5UnavailableFamily.matchesEmptyObservation(data)) {
+            throw new IllegalArgumentException(
+                    "UNAVAILABLE J5 observations cannot contain normalized provider values");
+        }
+    }
+
     private static void requireCompatibleProvenance(
             J5EventData data,
-            EventSourceTrace source) {
+            EventSourceTrace source,
+            J5CompletenessReport completeness) {
+        if (completeness.status() == J5CompletenessStatus.UNAVAILABLE) {
+            if (!J5UnavailableFamily.normalizerVersion(data.endpointType())
+                    .equals(source.parserVersion())) {
+                throw new IllegalArgumentException(
+                        "unavailable J5 observations require their availability normalizer");
+            }
+            return;
+        }
         String expectedParserVersion = switch (data.endpointType()) {
             case EVENT_STATISTICS -> source.kind() == EventSourceKind.PROVIDER_SNAPSHOT
                     ? "event-statistics-v2"
