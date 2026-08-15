@@ -93,6 +93,11 @@ class FlywayMigrationIT {
         registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
         registry.add("spring.datasource.username", POSTGRES::getUsername);
         registry.add("spring.datasource.password", POSTGRES::getPassword);
+        registry.add("sofascore.enabled", () -> false);
+        registry.add("sofascore.j3-qualification-enabled", () -> false);
+        registry.add("sofascore.j4-event-details-qualification-enabled", () -> false);
+        registry.add("sofascore.j4-event-details-phase2-enabled", () -> false);
+        registry.add("sofascore.j5-event-data-qualification-enabled", () -> false);
         registry.add("sofascore.export-directory", () -> "target/integration-test-exports");
     }
 
@@ -175,7 +180,7 @@ class FlywayMigrationIT {
         assertThat(snapshotTable).isEqualTo("provider_snapshot");
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("9");
+        assertThat(flywayVersion).isEqualTo("10");
         assertThat(rawColumn).isEqualTo("bytea");
     }
 
@@ -247,6 +252,7 @@ class FlywayMigrationIT {
                 .schemas(schema)
                 .defaultSchema(schema)
                 .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("9"))
                 .load();
 
         assertThat(flywayV9.migrate().migrationsExecuted).isEqualTo(1);
@@ -267,6 +273,67 @@ class FlywayMigrationIT {
                 .containsEntry("error_code", null);
         assertThat(evidenceAfterMigration)
                 .containsAllEntriesOf(evidenceBeforeMigration);
+        assertThat(upgradeJdbc.queryForObject(
+                "select count(*) from j5_event_data_observation",
+                Long.class)).isZero();
+    }
+
+    @Test
+    void upgradesV9ToTheVersionedIncidentPeriodMarkerParserWithoutRewritingData() {
+        String schema = "upgrade_v9_to_v10";
+        String separator = POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
+        var dataSource = new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema,
+                POSTGRES.getUsername(),
+                POSTGRES.getPassword());
+        Flyway flywayV9 = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .createSchemas(true)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("9"))
+                .load();
+
+        assertThat(flywayV9.migrate().migrationsExecuted).isEqualTo(9);
+
+        JdbcTemplate upgradeJdbc = new JdbcTemplate(dataSource);
+        String constraintBefore = upgradeJdbc.queryForObject(
+                """
+                select pg_get_constraintdef(oid)
+                from pg_constraint
+                where connamespace = ?::regnamespace
+                  and conname = 'ck_j5_event_data_parser'
+                """,
+                String.class,
+                schema);
+        assertThat(constraintBefore)
+                .contains("event-incidents-v2")
+                .doesNotContain("event-incidents-v3");
+
+        Flyway flywayV10 = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration")
+                .load();
+
+        assertThat(flywayV10.migrate().migrationsExecuted).isEqualTo(1);
+        assertThat(flywayV10.info().current().getVersion().getVersion()).isEqualTo("10");
+        String constraintAfter = upgradeJdbc.queryForObject(
+                """
+                select pg_get_constraintdef(oid)
+                from pg_constraint
+                where connamespace = ?::regnamespace
+                  and conname = 'ck_j5_event_data_parser'
+                """,
+                String.class,
+                schema);
+        assertThat(constraintAfter)
+                .contains("event-incidents-v1")
+                .contains("event-incidents-v2")
+                .contains("event-incidents-v3")
+                .contains("event-incidents-unavailable-v1");
         assertThat(upgradeJdbc.queryForObject(
                 "select count(*) from j5_event_data_observation",
                 Long.class)).isZero();

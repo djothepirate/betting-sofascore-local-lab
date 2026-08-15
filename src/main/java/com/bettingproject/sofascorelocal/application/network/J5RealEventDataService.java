@@ -1,6 +1,6 @@
 package com.bettingproject.sofascorelocal.application.network;
 
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV2Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV3Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseResult;
@@ -45,7 +45,7 @@ public class J5RealEventDataService {
     private final CanonicalEventStore canonicalEventStore;
     private final J5EventDataStore eventDataStore;
     private final EventStatisticsV2Parser statisticsParser;
-    private final EventIncidentsV2Parser incidentsParser;
+    private final EventIncidentsV3Parser incidentsParser;
     private final EventLineupsV2Parser lineupsParser;
     private final Clock clock;
     private final Duration minimumDelay;
@@ -61,7 +61,7 @@ public class J5RealEventDataService {
             J5EventDataStore eventDataStore,
             SofascoreProperties properties) {
         this(controlService, transport, rawSnapshotStore, canonicalEventStore, eventDataStore,
-                new EventStatisticsV2Parser(), new EventIncidentsV2Parser(),
+                new EventStatisticsV2Parser(), new EventIncidentsV3Parser(),
                 new EventLineupsV2Parser(), Clock.systemUTC(), properties.getMinimumDelay(),
                 J5RealEventDataService::sleepSafely);
     }
@@ -73,7 +73,7 @@ public class J5RealEventDataService {
             CanonicalEventStore canonicalEventStore,
             J5EventDataStore eventDataStore,
             EventStatisticsV2Parser statisticsParser,
-            EventIncidentsV2Parser incidentsParser,
+            EventIncidentsV3Parser incidentsParser,
             EventLineupsV2Parser lineupsParser,
             Clock clock,
             Duration minimumDelay,
@@ -318,7 +318,7 @@ public class J5RealEventDataService {
     private static String parserVersion(SofascoreEndpointType endpoint) {
         return switch (endpoint) {
             case EVENT_STATISTICS -> EventStatisticsV2Parser.PARSER_VERSION;
-            case EVENT_INCIDENTS -> EventIncidentsV2Parser.PARSER_VERSION;
+            case EVENT_INCIDENTS -> EventIncidentsV3Parser.PARSER_VERSION;
             case EVENT_LINEUPS -> EventLineupsV2Parser.PARSER_VERSION;
             default -> throw new IllegalArgumentException("unsupported J5 endpoint");
         };

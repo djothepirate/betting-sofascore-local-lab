@@ -67,7 +67,7 @@ public record J5EventDataObservation(
                     ? "event-statistics-v2"
                     : "event-statistics-v1";
             case EVENT_INCIDENTS -> source.kind() == EventSourceKind.PROVIDER_SNAPSHOT
-                    ? "event-incidents-v2"
+                    ? "event-incidents-v3"
                     : "event-incidents-v1";
             case EVENT_LINEUPS -> source.kind() == EventSourceKind.PROVIDER_SNAPSHOT
                     ? "event-lineups-v2"

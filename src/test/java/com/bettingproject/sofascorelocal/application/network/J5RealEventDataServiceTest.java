@@ -1,6 +1,6 @@
 package com.bettingproject.sofascorelocal.application.network;
 
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV2Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV3Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportException;
@@ -136,7 +136,7 @@ class J5RealEventDataServiceTest {
                 canonicalStore,
                 dataStore,
                 new EventStatisticsV2Parser(),
-                new EventIncidentsV2Parser(),
+                new EventIncidentsV3Parser(),
                 new EventLineupsV2Parser(),
                 clock,
                 Duration.ofSeconds(3),
@@ -338,7 +338,7 @@ class J5RealEventDataServiceTest {
     private String fixtureFor(SofascoreEndpointType endpoint) throws IOException {
         String name = switch (endpoint) {
             case EVENT_STATISTICS -> "statistics-nominal.json";
-            case EVENT_INCIDENTS -> "incidents-nominal.json";
+            case EVENT_INCIDENTS -> "incidents-provider-period-markers.json";
             case EVENT_LINEUPS -> "lineups-nominal.json";
             default -> throw new IllegalArgumentException("unsupported endpoint");
         };
