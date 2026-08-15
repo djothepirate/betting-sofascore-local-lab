@@ -4,14 +4,14 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures** et **J3 — Appel manuel**. L'implémentation de **J4 — Événements** est fusionnée et son parcours hors ligne est qualifié, mais sa qualification sur des matches réels reste à effectuer avant toute clôture. J4 ajoute une recherche locale par date, une identité canonique stable, un historique append-only et un premier détail de rencontre strictement hors ligne. Le chemin fournisseur J3 reste désactivé par défaut et aucun appel fournisseur n’est exécuté par les tests, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures** et **J3 — Appel manuel**. L'implémentation de **J4 — Événements** est fusionnée et son parcours hors ligne est qualifié. Une voie réelle J4 sous-étape 1 est désormais implémentée pour les seuls événements `16386245` et `16421052`, mais sa qualification humaine n’est pas encore exécutée : J4 reste `IN_DEVELOPMENT` et ne peut pas être clôturé. J4 conserve la recherche locale par date, l’identité canonique stable et l’historique append-only. Les voies fournisseur J3 et J4 restent désactivées par défaut, mutuellement exclusives, et aucun appel fournisseur n’est exécuté par les tests, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
 ## Ce qui est livré localement
 
 - dépôt Git autonome, documentation, ADR, règles agent et Work Orders ;
 - Java **25 LTS**, Spring Boot **4.1.0** et Maven Wrapper versionné ;
 - interface Spring MVC + Thymeleaf sur `127.0.0.1:8087` ;
-- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V5 et stockage brut séparé ;
+- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V6 et stockage brut séparé ;
 - Actuator, Caffeine, validation de configuration et garde de liaison locale ;
 - catalogue logique des familles d’endpoints, sans URI réelle ;
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
@@ -50,10 +50,20 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
   détail sans URI, transport ou donnée fournisseur réelle ;
 - recherche locale `/events` par date civile et zone IANA, page de détail et chronologie des
   observations, avec import de démonstration synthétique idempotent ;
+- parseur fournisseur `event-details-v2` séparé du contrat historique V1, acceptant uniquement
+  l’enveloppe `event` et produisant une incompatibilité explicite sans objet partiel ;
+- migration V6 ajoutant la provenance `PROVIDER_SNAPSHOT` aux détails sans modifier V1–V5, et
+  cache `EVENT_DETAILS` de quinze minutes pointant toujours vers le brut séparé ;
+- voie J4 sous-étape 1 limitée par construction à `https://www.sofascore.com`, au chemin exact
+  `/api/v1/event/{eventId}` et aux seuls IDs `16386245` et `16421052` ;
+- circuit J4 local avec préparation, confirmation exacte, cache préalable, délai minimal de trois
+  secondes, deux tentatives maximum, persistance brute avant parsing et verrou terminal ;
+- arrêt sans retry au premier incident, `403`, `429`, `5xx`, timeout, contenu non JSON,
+  incompatibilité ou incohérence d’identifiant ; la sous-étape 2 paramétrable reste non autorisée ;
 
 ## Limite essentielle du bootstrap
 
-**Aucun appel SofaScore réel n’est actif par défaut et aucun n’est exécuté par les tests.** Le connecteur général, `ConnectorGate` et le profil Maven `sofascore-live-test` restent bloqués. Le seul chemin fournisseur est une exception J3 dédiée, inactive tant que `SOFASCORE_ENABLED`, `SOFASCORE_J3_QUALIFICATION_ENABLED`, l’origine exacte et l’unique famille autorisée ne concordent pas. Il ne prend en charge ni polling, ni planification, ni autre sport, ni autre endpoint ; chaque collecte reste manuelle, séquentielle et plafonnée.
+**Aucun appel SofaScore réel n’est actif par défaut et aucun n’est exécuté par les tests.** Le connecteur général, `ConnectorGate`, le catalogue `callable=false` et le profil Maven `sofascore-live-test` restent bloqués. Deux voies de qualification spéciales peuvent être activées séparément : J3 pour `SCHEDULED_EVENTS`, ou J4 sous-étape 1 pour les deux IDs `EVENT_DETAILS` compilés dans l’allowlist. Les deux opt-ins sont mutuellement exclusifs. La voie J4 exige `SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true`, l’origine exacte et `EVENT_DETAILS` comme unique famille ; elle n’accepte ni troisième ID, ni polling, ni planification, ni retry. Son protocole temporaire et sa remise à l’état bloqué sont décrits dans `docs/runbooks/RUNBOOK-LOCAL.md`.
 
 Cette limite préserve la règle du Betting Project principal : aucun composant du VPS ne dépend du laboratoire, et l’arrêt du poste Windows ne doit avoir aucun effet sur la chaîne globale.
 
@@ -201,9 +211,12 @@ La migration append-only `V4__canonical_events_and_observations.sql` introduit
 fournisseur/identifiant ; les observations successives conservent les changements métier et leur
 provenance. Un trigger PostgreSQL bloque toute mise à jour ou suppression d’une observation.
 
-La migration append-only `V5__offline_event_details.sql` ajoute `event_detail_observation`. Cette
-table conserve uniquement les détails issus des fixtures synthétiques J4, avec hash, parseur et
-heure source obligatoires. Elle est elle aussi protégée contre `UPDATE` et `DELETE`.
+La migration append-only `V5__offline_event_details.sql` ajoute `event_detail_observation` pour
+les fixtures synthétiques J4. La migration append-only
+`V6__guarded_real_event_details.sql` étend ensuite sa provenance aux snapshots fournisseur réels
+de la voie bornée, sans réécrire les lignes V5. Fixture ou snapshot, chaque détail conserve hash,
+parseur et heure source obligatoires ; les observations restent protégées contre `UPDATE` et
+`DELETE`.
 
 Le mode `DIRECT_LOCAL_ENDPOINT` ne doit jamais être confondu avec une `VisualObservation` du projet global. Cette persistance est prête pour un transport futur, mais n’effectue elle-même aucun appel.
 
@@ -231,6 +244,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Contrat hors ligne scheduled-events-v1](docs/architecture/SCHEDULED-EVENTS-V1.md)
 - [Contrat hors ligne event-details-v1](docs/architecture/EVENT-DETAILS-V1.md)
 - [Architecture des événements canoniques J4](docs/architecture/J4-CANONICAL-EVENTS-AND-LOCAL-DETAIL.md)
+- [Voie réelle bornée J4 — sous-étape 1](docs/architecture/J4-GUARDED-REAL-EVENT-DETAILS-PHASE1.md)
 - [Politique réseau J3 hors ligne](docs/architecture/J3-OFFLINE-NETWORK-POLICY.md)
 - [Persistance des snapshots bruts J3](docs/architecture/J3-RAW-SNAPSHOT-PERSISTENCE.md)
 - [Transport scheduled-events J3 protégé et simulé](docs/architecture/J3-GUARDED-SCHEDULED-EVENTS-TRANSPORT.md)
@@ -252,6 +266,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Qualification Windows J3 — pagination dynamique](docs/validation/J3-WINDOWS-DYNAMIC-PAGINATION-QUALIFICATION-20260814.md)
 - [Work Order J3 validé](docs/work_orders/completed/WO-SS-20260812-003-manual-call-j3.md)
 - [Qualification technique Windows J4](docs/validation/J4-WINDOWS-TECHNICAL-QUALIFICATION-20260815.md)
+- [Préparation technique J4 réelle — sous-étape 1](docs/validation/J4-REAL-EVENT-DETAILS-PHASE1-READINESS-20260815.md)
 - [Work Order J4 actif](docs/work_orders/active/WO-SS-20260815-004-events-j4.md)
 
 ## J3 clôturé, J4 en attente de qualification sur matches réels

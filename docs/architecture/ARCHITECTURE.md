@@ -10,7 +10,7 @@ Betting Project principal          SofaScore Local Lab
 VPS permanent                      Windows local uniquement
 Production indépendante            Prototype non approuvé production
 Modèle canonique multi-source      Modèle local de benchmark
-Aucun appel SofaScore VPS          J3 manuel borné + J4 local hors ligne
+Aucun appel SofaScore VPS          J3 manuel + J4 phase 1, opt-in et bornés
 Fonctionne poste éteint             Disponible seulement poste allumé
 ```
 
@@ -34,7 +34,8 @@ La relation future autorisée est un export JSON normalisé et versionné. Aucun
 │  ├─ Transport HTTP simulé, loopback strict                │
 │  ├─ Collecte J3 manuelle 1..N, opt-in et plafonnée        │
 │  ├─ Identités et observations J4 append-only              │
-│  ├─ Recherche par date et détail J4 hors ligne            │
+│  ├─ Recherche locale + détail J4 fixture ou snapshot      │
+│  ├─ Circuit J4 phase 1 : deux IDs compilés, verrou terminal│
 │  ├─ Catalogue logique fermé par défaut                    │
 │  ├─ Flyway / JDBC / JPA                                   │
 │  └─ Actuator                                              │
@@ -47,7 +48,7 @@ La relation future autorisée est un export JSON normalisé et versionné. Aucun
 │  exports/                                                 │
 └───────────────────────────────────────────────────────────┘
 
-SofaScore : aucune connexion par défaut ; J4 n’ajoute aucun transport
+SofaScore : aucune connexion par défaut ; J4 phase 1 exige un opt-in temporaire exact
 VPS       : aucune connexion
 ```
 
@@ -56,18 +57,23 @@ VPS       : aucune connexion
 | Couche | Responsabilité actuelle |
 |---|---|
 | `config` | propriétés typées, garde de liaison locale, initialisation du dossier d’export, en-têtes de sécurité |
-| `domain.provider` | types logiques, définition de catalogue, mode du connecteur et requête fournisseur J3 fermée |
+| `domain.provider` | types logiques, catalogue et requêtes fournisseur J3/J4 fermées par valeur |
 | `domain.event` / `domain.eventdetails` | identité canonique, observation versionnée, provenance et détail immuables J4 |
-| `application` | verrou général, politique J3, orchestration manuelle J3 et services locaux de normalisation/recherche J4 |
-| `adapter.sofascore` | catalogue fermé par défaut, transport J3 borné, parseurs hors ligne `scheduled-events-v1` et `event-details-v1` |
-| `adapter.persistence` | preuves brutes J3, identités et observations normalisées J4, avec déduplication atomique |
-| `adapter.web` | tableau de bord, recherche locale par date et détail en lecture seule |
-| `resources/db/migration` | schémas V1 à V5, migrations append-only et triggers d’immuabilité |
+| `application` | verrou général, politiques J3/J4, orchestration manuelle et services de normalisation/recherche |
+| `adapter.sofascore` | catalogue fermé, transports spéciaux bornés, parseurs `scheduled-events-v1` et `event-details-v1/v2` |
+| `adapter.persistence` | preuves brutes, cache, identités et observations normalisées, avec déduplication atomique |
+| `adapter.web` | tableau de bord, recherche locale, contrôle J4 phase 1 et détail en lecture seule |
+| `resources/db/migration` | schémas V1 à V6, migrations append-only et triggers d’immuabilité |
 | `fixtures` | corpus synthétiques hors ligne J2 et J4 |
 
 Le connecteur général demeure bloqué. Un `RestClient` distinct est construit uniquement pour le
 chemin manuel J3 borné ; il ne reçoit qu’une requête de domaine validée et ne peut viser que
 l’origine `https://www.sofascore.com`, une date ISO explicite et les pages `1` à `25`.
+
+J4 ajoute un second `RestClient` spécial qui ne reçoit que `EventDetailsProviderRequest`. Ce type
+refuse toute origine autre que `https://www.sofascore.com` et tout identifiant différent de
+`16386245` ou `16421052` avant la construction de l’URI. Les opt-ins J3 et J4 sont mutuellement
+exclusifs. Ni l’un ni l’autre ne déverrouille `ConnectorGate` ou le catalogue général.
 
 ## 4. Défense en profondeur J3
 
@@ -136,25 +142,26 @@ qu’un événement déplacé ne réapparaisse pas à son ancien horaire.
 
 ### 5.5 `event_detail_observation`
 
-Le détail J4 est append-only et rattaché par clé étrangère à l’identité canonique. À ce jalon, sa
-provenance autorisée est exclusivement `SYNTHETIC_FIXTURE`. Le service d’import valide entièrement
-les deux fixtures et l’égalité des identifiants fournisseur avant toute écriture transactionnelle.
-Le payload source demeure dans le corpus classpath ; la table ne stocke que les champs normalisés
-et la preuve de provenance.
+Le détail J4 est append-only et rattaché par clé étrangère à l’identité canonique. V5 conserve la
+provenance historique `SYNTHETIC_FIXTURE`. V6 ajoute `PROVIDER_SNAPSHOT` avec une clé étrangère vers
+le brut inséré avant parsing. Les deux formes sont exclusives par contrainte SQL. La table de détail
+ne stocke que les champs normalisés et la preuve de provenance ; les octets restent dans la fixture
+classpath ou `provider_snapshot`.
 
 ## 6. Catalogue logique
 
 | Type | Cache initial | Déclenchement prévu | Appelable actuellement |
 |---|---:|---|---|
 | `SCHEDULED_EVENTS` | 10 min | manuel | uniquement par séquence J3 opt-in |
-| `EVENT_DETAILS` | 15 min | fixture J4 hors ligne uniquement | non |
+| `EVENT_DETAILS` | 15 min | fixture locale ou campagne J4 phase 1 | voie spéciale : IDs `16386245`, `16421052` |
 | `EVENT_STATISTICS` | 30 min | manuel prévu | non |
 | `EVENT_INCIDENTS` | 15 min | manuel prévu | non |
 | `EVENT_LINEUPS` | 15 min | manuel prévu | non |
 | `TOURNAMENT_STANDINGS` | 6 h | manuel prévu | non |
 | `TEAM_RECENT_EVENTS` | 1 h | manuel prévu | non |
 
-Les autres familles restent non appelables. Le chemin J3 ne constitue pas un modèle d’URI général :
+Toutes les définitions du catalogue restent `callable=false`. Les voies J3/J4 ne constituent pas
+des modèles d’URI généraux. Le chemin J3 :
 seuls une date ISO, l’origine et le chemin `scheduled-tournaments` sont acceptés. La pagination
 commence obligatoirement à 1, continue uniquement sur `hasNextPage=true` et s’arrête avant la page
 26 même si le fournisseur annonce encore une suite.
@@ -176,14 +183,15 @@ commence obligatoirement à 1, continue uniquement sur `hasNextPage=true` et s�
   persistance avant parsing et arrêt au premier incident ;
 - rendu du contrôleur.
 - identité canonique déterministe, versions et provenance J4 ;
-- parseur `event-details-v1`, refus des ruptures de schéma et rattachement strict ;
+- parseurs `event-details-v1/v2`, refus des ruptures de schéma et rattachement strict ;
 - recherche par date/zone, rendu des résultats et détail local ;
-- absence de transport ou de résolution d’URI dans tout le parcours J4.
+- allowlist J4 de deux IDs, cache avant transport, brut avant parsing, délai de trois secondes et
+  arrêt sans retry au premier incident.
 
 ### Intégration
 
 `mvnw -Pintegration-tests verify` démarre PostgreSQL avec Testcontainers et vérifie les migrations
-V1 à V5, la fidélité binaire, les contraintes, la déduplication et l’immuabilité des observations
+V1 à V6, la fidélité binaire, les contraintes, la déduplication et l’immuabilité des observations
 J4. Aucun appel SofaScore n’est exécuté.
 
 ### Réel
@@ -195,8 +203,8 @@ activation explicite de la configuration. Aucune suite Maven ne réalise ce gest
 ## 8. Décisions différées
 
 - stockage de headers autorisés ;
-- transport réel ou URI `EVENT_DETAILS` ;
-- parseurs et DTO externes au-delà de `scheduled-events-v1` et `event-details-v1` ;
+- paramètre graphique ou troisième identifiant `EVENT_DETAILS` de la sous-étape 2 ;
+- parseurs et DTO externes au-delà de `scheduled-events-v1` et `event-details-v1/v2` ;
 - persistance du circuit et des incidents ;
 - ajout d’autres endpoints, sports ou origines au-delà du chemin J3 qualifié ;
 - export canonique ;
@@ -215,5 +223,6 @@ répétable est détaillé dans `docs/architecture/J3-DYNAMIC-MANUAL-PAGINATION.
 
 Le modèle J4, ses frontières de normalisation, son identité stable et son détail hors ligne sont
 détaillés dans `docs/architecture/J4-CANONICAL-EVENTS-AND-LOCAL-DETAIL.md`. Le contrat JSON minimal
-du détail est défini dans `docs/architecture/EVENT-DETAILS-V1.md`. Aucun de ces deux documents
-n’autorise une URI ou un appel `EVENT_DETAILS` réel.
+du détail synthétique est défini dans `docs/architecture/EVENT-DETAILS-V1.md`. La voie réelle bornée
+et sa politique d’arrêt sont détaillées dans
+`docs/architecture/J4-GUARDED-REAL-EVENT-DETAILS-PHASE1.md`.

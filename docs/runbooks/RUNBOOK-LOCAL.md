@@ -371,8 +371,71 @@ n’invente aucun événement ; une incompatibilité ne produit aucune écriture
 jamais le statut historique du snapshot.
 
 L’absence de détail s’affiche comme un état local explicite. Elle ne déclenche aucun repli réseau.
-Ne pas ajouter une URI `EVENT_DETAILS`, activer le connecteur ou réutiliser le transport J3 pour
-compléter l’écran.
+Ne pas réutiliser le transport J3 pour compléter l’écran. La seule voie réelle autorisée est la
+campagne fixe décrite ci-dessous ; elle n’est jamais déclenchée comme repli de la recherche.
+
+### 3.11 Qualifier réellement les deux événements J4 — sous-étape 1
+
+Cette campagne est un geste humain exceptionnel. Ne jamais l’exécuter depuis Maven, un script, un
+navigateur automatisé ou une tâche planifiée. Ne pas commencer tant que la branche n’a pas été
+revue et que les tests hors ligne V6 ne sont pas réussis.
+
+Application arrêtée, conserver localement les anciennes valeurs sans les copier dans une preuve,
+puis régler temporairement les seules clés réseau ainsi :
+
+```properties
+SOFASCORE_ENABLED=true
+SOFASCORE_J3_QUALIFICATION_ENABLED=false
+SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true
+SOFASCORE_BASE_URL=https://www.sofascore.com
+SOFASCORE_ALLOWED_ENDPOINTS=EVENT_DETAILS
+```
+
+Ne pas modifier les autres clés de `.env`. Ne jamais ajouter ce fichier à Git. Démarrer ensuite
+PostgreSQL puis l’application locale avec les commandes normales. Sur
+`http://127.0.0.1:8087/events` :
+
+1. vérifier que le panneau **« Qualification réelle · sous-étape 1 »** affiche les deux seuls IDs
+   `16386245` et `16421052` et aucun champ libre ;
+2. vérifier que les bloqueurs de configuration ont disparu ;
+3. sélectionner **« Préparer les deux événements »** : cette action ne contacte pas le fournisseur ;
+4. recopier la phrase exacte, cocher l’acquittement et sélectionner
+   **« Exécuter la sous-étape 1 »** une seule fois ;
+5. attendre le résultat terminal sans recharger ni resoumettre le formulaire ;
+6. si le résultat est `COMPLETED`, ouvrir chacun des deux détails locaux et vérifier humainement
+   équipes, horaire, statut, compétition, saison, tour et provenance ;
+7. vérifier que chaque détail référence un snapshot `event-details-v2`, un SHA-256 et une heure de
+   réception, sans payload brut dans l’écran ou les logs ;
+8. sélectionner **« Arrêt global J4 »**, même après un succès terminal ;
+9. arrêter l’application.
+
+Au premier incident, `403`, `429`, `5xx`, timeout, contenu inattendu, incompatibilité ou incohérence
+d’ID :
+
+1. ne pas réarmer ;
+2. ne pas relancer la campagne ou le second événement ;
+3. sélectionner l’arrêt global si l’interface répond encore ;
+4. consigner uniquement le code terminal, l’ID tenté, l’identifiant du snapshot s’il existe, sa
+   taille et son SHA-256 ;
+5. arrêter l’application et soumettre l’incident à une décision humaine.
+
+Après succès ou incident, remettre les clés locales à l’état bloqué avant tout autre démarrage :
+
+```properties
+SOFASCORE_ENABLED=false
+SOFASCORE_J3_QUALIFICATION_ENABLED=false
+SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=false
+SOFASCORE_BASE_URL=
+SOFASCORE_ALLOWED_ENDPOINTS=
+```
+
+Un contrôle facultatif peut redémarrer l’application puis vérifier que le panneau affiche
+`J4_EVENT_DETAILS_QUALIFICATION_DISABLED` et `CONNECTOR_DISABLED`. Arrêter ensuite l’application.
+La confirmation humaine doit inclure `LOCAL_CONFIGURATION_RELOCKED=YES` et
+`APPLICATION_STOPPED=YES`, sans divulguer les valeurs du reste de `.env`.
+
+La sous-étape 2 n’est pas accessible. Aucun troisième ID ne doit être testé en modifiant le code,
+le formulaire, l’URL ou les outils de développement du navigateur.
 
 ## 4. Validation
 
@@ -390,8 +453,8 @@ Aucun Docker ni accès SofaScore n’est requis par les tests standards.
 .\mvnw.cmd -Pintegration-tests verify
 ```
 
-Docker doit être disponible. Testcontainers vérifie les migrations V1/V2, l’état initial du
-connecteur, la conservation exacte du brut et sa déduplication.
+Docker doit être disponible. Testcontainers vérifie les migrations V1 à V6, l’état initial du
+connecteur, la conservation exacte du brut, sa déduplication et la provenance J4.
 
 ### 4.3 Script consolidé
 
@@ -470,9 +533,26 @@ identité stable, deux observations sources, le détail `event-details-v1` et au
 navigateur. Le rapport technique est conservé dans
 `docs/validation/J4-WINDOWS-TECHNICAL-QUALIFICATION-20260815.md`.
 
-Cette qualification technique ne clôture pas le Work Order : la revue humaine Windows reste un
-geste distinct avant fusion. Elle ne doit jamais inclure un payload brut, une valeur de `.env`, un
-cookie ou une donnée de session.
+Cette preuve historique hors ligne ne clôture pas le Work Order. La campagne réelle sous-étape 1
+est qualifiée techniquement par les tests V6, puis doit être validée humainement selon la section
+3.11. Elle ne doit jamais inclure un payload brut, une valeur de `.env`, un cookie ou une donnée de
+session.
+
+### 4.9 Qualification réelle J4 sous-étape 1
+
+Avant exécution humaine, vérifier la preuve de readiness
+`docs/validation/J4-REAL-EVENT-DETAILS-PHASE1-READINESS-20260815.md`. Après la campagne, compléter
+un rapport distinct avec les deux lignes suivantes laissées à `PENDING` tant que le propriétaire
+n’a pas contrôlé les écrans :
+
+```text
+J4_REAL_MATCH_QUALIFICATION=PENDING
+J4_REAL_EVENT_DETAILS_QUALIFICATION=PENDING
+```
+
+Elles ne passent à `PASS` qu’après validation des deux événements. La sous-étape 2, la clôture du
+Work Order et son déplacement vers `completed` restent interdits avant cette confirmation et la
+preuve de reverrouillage local.
 
 ## 5. Arrêt
 

@@ -6,6 +6,18 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Ajouté
 
+- voie de qualification réelle J4 sous-étape 1, désactivée par défaut et limitée par construction
+  aux événements `16386245` et `16421052` sur le chemin exact `/api/v1/event/{eventId}` ;
+- parseur fournisseur versionné `event-details-v2`, distinct du contrat synthétique historique V1,
+  avec enveloppe `event`, tour imbriqué, champs facultatifs et incompatibilité sans objet partiel ;
+- migration Flyway V6 append-only ajoutant la provenance `PROVIDER_SNAPSHOT` aux observations de
+  détail et étendant le cache local à `EVENT_DETAILS` sans déplacer les octets bruts ;
+- circuit opérateur J4 à confirmation exacte, expiration cinq minutes, arrêt global et verrou
+  terminal automatique après succès, incident ou expiration ;
+- orchestration de deux événements maximum avec cache préalable, délai minimal de trois secondes,
+  persistance brute avant parsing, normalisation atomique et aucun retry ;
+- arrêt au premier `403`, `429`, `5xx`, timeout, contenu inattendu, rupture de schéma ou incohérence
+  d’identifiant, couvert sans appel Internet par transport simulé et tests PostgreSQL ;
 - migration Flyway V4 créant les identités canoniques d’événements et leurs observations
   append-only, avec UUID déterministe, provenance complète, déduplication et trigger d’immuabilité ;
 - migration Flyway V5 conservant les détails J4 hors ligne sous forme d’observations append-only ;
@@ -94,6 +106,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Documentation
 
+- amendement du Work Order J4 autorisant uniquement la campagne réelle sous-étape 1 et consignant
+  la revue compatible de l’ADR-SS-001, avec politique J4 plus stricte sans retry sur `5xx` ;
+- protocole Windows J4 pour l’activation temporaire, la validation humaine des deux matches,
+  l’arrêt au premier incident et la remise obligatoire de la configuration à l’état bloqué ;
+- maintien explicite de la sous-étape 2 paramétrable au statut `NOT_AUTHORIZED` jusqu’à validation
+  humaine de la sous-étape 1 et communication d’un nouvel identifiant ;
 - ouverture du Work Order `WO-SS-20260815-004` sur la branche `codex/j4-events` depuis le merge J3
   `b79ccd62e7863718f49a22b6c54a7fc73cf87986` ;
 - contrats J4 de l’identité canonique, de la normalisation versionnée et du détail synthétique hors
@@ -197,8 +215,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Sécurité
 
-- maintien de `EVENT_DETAILS` sans URI et `callable=false` : le parcours J4 ne possède aucun client
-  HTTP, polling, retry ou repli fournisseur ;
+- maintien de `EVENT_DETAILS` sans URI et `callable=false` dans le catalogue général ; seule la
+  voie spéciale J4 sous-étape 1 possède un transport HTTP, limité à l'origine, au chemin et aux
+  deux identifiants autorisés, sans polling, retry ou repli fournisseur ;
 - protection des actions J4 par jeton de formulaire local à usage unique, et réponses de lecture
   marquées `no-store`/`noindex` ;
 - maintien du verrouillage réseau pendant J2 : aucune URI d’endpoint réelle et aucun appel SofaScore réel ne sont autorisés.
