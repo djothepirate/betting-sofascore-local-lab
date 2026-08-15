@@ -23,7 +23,7 @@ import java.util.Objects;
 
 /**
  * Exact-host J4 EVENT_DETAILS transport. Redirects and proxies are disabled and
- * the request type makes every event outside the phase-1 allow-list unrepresentable.
+ * the request type can only be created through an explicit J4 qualification scope.
  */
 @Component
 public class ProviderEventDetailsRestTransport implements EventDetailsProviderTransport {

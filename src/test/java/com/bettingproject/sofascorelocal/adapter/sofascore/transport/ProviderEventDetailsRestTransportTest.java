@@ -28,7 +28,7 @@ class ProviderEventDetailsRestTransportTest {
         MockRestServiceServer server = MockRestServiceServer.bindTo(builder).build();
         byte[] body = "{\"event\":{\"id\":16386245}}"
                 .getBytes(StandardCharsets.UTF_8);
-        var request = new EventDetailsProviderRequest(
+        var request = EventDetailsProviderRequest.phase1(
                 URI.create(EventDetailsProviderRequest.EXPECTED_ORIGIN),
                 16386245L);
         server.expect(requestTo(request.targetUri()))

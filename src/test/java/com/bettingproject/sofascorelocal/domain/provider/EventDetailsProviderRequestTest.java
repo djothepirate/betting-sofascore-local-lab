@@ -13,10 +13,10 @@ class EventDetailsProviderRequestTest {
 
     @Test
     void constructsOnlyTheTwoAuthorizedExactTargets() {
-        var first = new EventDetailsProviderRequest(
+        var first = EventDetailsProviderRequest.phase1(
                 ORIGIN,
                 EventDetailsProviderRequest.SAINT_ETIENNE_CLERMONT_EVENT_ID);
-        var second = new EventDetailsProviderRequest(
+        var second = EventDetailsProviderRequest.phase1(
                 ORIGIN,
                 EventDetailsProviderRequest.SEVILLA_RAYO_EVENT_ID);
 
@@ -30,28 +30,43 @@ class EventDetailsProviderRequestTest {
 
     @Test
     void rejectsEveryOtherEventBeforeAnUriCanBeResolved() {
-        assertThatThrownBy(() -> new EventDetailsProviderRequest(ORIGIN, 16421053L))
+        assertThatThrownBy(() -> EventDetailsProviderRequest.phase1(ORIGIN, 16421053L))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("not authorized");
-        assertThatThrownBy(() -> new EventDetailsProviderRequest(ORIGIN, -1L))
+        assertThatThrownBy(() -> EventDetailsProviderRequest.phase1(ORIGIN, -1L))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void constructsOneBoundedPhaseTwoTargetAndCanRefreshAFixedEvent() {
+        var request = EventDetailsProviderRequest.phase2(ORIGIN, 17000001L);
+        var fixedRefresh = EventDetailsProviderRequest.phase2(ORIGIN, 16386245L);
+
+        assertThat(request.targetUri().toString())
+                .isEqualTo("https://www.sofascore.com/api/v1/event/17000001");
+        assertThat(request.requestKey()).isEqualTo("EVENT_DETAILS|eventId=17000001");
+        assertThat(fixedRefresh.requestKey()).isEqualTo("EVENT_DETAILS|eventId=16386245");
+        assertThatThrownBy(() -> EventDetailsProviderRequest.phase2(ORIGIN, 0L))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> EventDetailsProviderRequest.phase2(ORIGIN, 1_000_000_000L))
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test
     void rejectsOriginAliasesPortsPathsQueriesAndNonHttpsSchemes() {
-        assertThatThrownBy(() -> new EventDetailsProviderRequest(
+        assertThatThrownBy(() -> EventDetailsProviderRequest.phase1(
                 URI.create("http://www.sofascore.com"), 16386245L))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new EventDetailsProviderRequest(
+        assertThatThrownBy(() -> EventDetailsProviderRequest.phase1(
                 URI.create("https://sofascore.com"), 16386245L))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new EventDetailsProviderRequest(
+        assertThatThrownBy(() -> EventDetailsProviderRequest.phase1(
                 URI.create("https://www.sofascore.com:443"), 16386245L))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new EventDetailsProviderRequest(
+        assertThatThrownBy(() -> EventDetailsProviderRequest.phase1(
                 URI.create("https://www.sofascore.com/api"), 16386245L))
                 .isInstanceOf(IllegalArgumentException.class);
-        assertThatThrownBy(() -> new EventDetailsProviderRequest(
+        assertThatThrownBy(() -> EventDetailsProviderRequest.phase1(
                 URI.create("https://www.sofascore.com?event=16386245"), 16386245L))
                 .isInstanceOf(IllegalArgumentException.class);
     }

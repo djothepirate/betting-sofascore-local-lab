@@ -7,9 +7,11 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Phase-1 J4 request whose allow-list is part of the compiled contract.
+ * Exact-host J4 request. Construction is restricted to one of the two explicit
+ * qualification scopes so a phase-1 caller cannot accidentally create a
+ * parameterized request.
  */
-public record EventDetailsProviderRequest(URI providerOrigin, long eventId) {
+public final class EventDetailsProviderRequest {
 
     public static final String EXPECTED_ORIGIN = "https://www.sofascore.com";
     public static final long SAINT_ETIENNE_CLERMONT_EVENT_ID = 16386245L;
@@ -17,15 +19,45 @@ public record EventDetailsProviderRequest(URI providerOrigin, long eventId) {
     public static final List<Long> PHASE_1_EVENT_IDS = List.of(
             SAINT_ETIENNE_CLERMONT_EVENT_ID,
             SEVILLA_RAYO_EVENT_ID);
-    private static final Set<Long> AUTHORIZED_EVENT_IDS = Set.copyOf(PHASE_1_EVENT_IDS);
+    public static final long MAXIMUM_PARAMETERIZED_EVENT_ID = 999_999_999L;
+    private static final Set<Long> PHASE_1_AUTHORIZED_EVENT_IDS = Set.copyOf(PHASE_1_EVENT_IDS);
 
-    public EventDetailsProviderRequest {
-        Objects.requireNonNull(providerOrigin, "providerOrigin");
+    private final URI providerOrigin;
+    private final long eventId;
+
+    private EventDetailsProviderRequest(URI providerOrigin, long eventId) {
+        this.providerOrigin = Objects.requireNonNull(providerOrigin, "providerOrigin");
         requireExactProviderOrigin(providerOrigin);
-        if (!AUTHORIZED_EVENT_IDS.contains(eventId)) {
+        this.eventId = eventId;
+    }
+
+    public static EventDetailsProviderRequest phase1(URI providerOrigin, long eventId) {
+        if (!PHASE_1_AUTHORIZED_EVENT_IDS.contains(eventId)) {
             throw new IllegalArgumentException(
                     "eventId is not authorized by J4 real qualification phase 1");
         }
+        return new EventDetailsProviderRequest(providerOrigin, eventId);
+    }
+
+    public static EventDetailsProviderRequest phase2(URI providerOrigin, long eventId) {
+        requirePhase2EventId(eventId);
+        return new EventDetailsProviderRequest(providerOrigin, eventId);
+    }
+
+    public static long requirePhase2EventId(long eventId) {
+        if (eventId < 1 || eventId > MAXIMUM_PARAMETERIZED_EVENT_ID) {
+            throw new IllegalArgumentException(
+                    "phase-2 eventId must be between 1 and " + MAXIMUM_PARAMETERIZED_EVENT_ID);
+        }
+        return eventId;
+    }
+
+    public URI providerOrigin() {
+        return providerOrigin;
+    }
+
+    public long eventId() {
+        return eventId;
     }
 
     public SofascoreEndpointType endpointType() {
@@ -50,6 +82,28 @@ public record EventDetailsProviderRequest(URI providerOrigin, long eventId) {
         catch (URISyntaxException exception) {
             throw new IllegalStateException("authorized event request is not a valid URI", exception);
         }
+    }
+
+    @Override
+    public boolean equals(Object other) {
+        if (this == other) {
+            return true;
+        }
+        if (!(other instanceof EventDetailsProviderRequest that)) {
+            return false;
+        }
+        return eventId == that.eventId && providerOrigin.equals(that.providerOrigin);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(providerOrigin, eventId);
+    }
+
+    @Override
+    public String toString() {
+        return "EventDetailsProviderRequest[providerOrigin=" + providerOrigin
+                + ", eventId=" + eventId + "]";
     }
 
     public static URI parseExactProviderOrigin(String value) {

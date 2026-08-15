@@ -17,13 +17,15 @@ public record J4RealEventDetailsEventResult(
         int payloadSizeBytes,
         RawSnapshotSchemaStatus schemaStatus,
         EventDetails details,
+        boolean eventObservationInserted,
+        boolean detailObservationInserted,
         int warningCount) {
 
     private static final Pattern SHA_256 = Pattern.compile("[0-9a-f]{64}");
 
     public J4RealEventDetailsEventResult {
-        if (!EventDetailsProviderRequest.PHASE_1_EVENT_IDS.contains(eventId)) {
-            throw new IllegalArgumentException("event result is outside J4 phase 1");
+        if (eventId < 1 || eventId > EventDetailsProviderRequest.MAXIMUM_PARAMETERIZED_EVENT_ID) {
+            throw new IllegalArgumentException("event result is outside J4 bounds");
         }
         Objects.requireNonNull(resolutionSource, "resolutionSource");
         if (snapshotId < 1) {

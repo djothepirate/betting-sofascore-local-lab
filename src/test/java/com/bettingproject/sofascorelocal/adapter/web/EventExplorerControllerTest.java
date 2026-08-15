@@ -9,7 +9,10 @@ import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImpor
 import com.bettingproject.sofascorelocal.application.event.J4ScheduledEventsSnapshotNormalizationService;
 import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase1Service;
 import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase1Result;
+import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase2Result;
+import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase2Service;
 import com.bettingproject.sofascorelocal.application.network.J4RealPhase1ControlService;
+import com.bettingproject.sofascorelocal.application.network.J4RealPhase2ControlService;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
@@ -20,6 +23,9 @@ import com.bettingproject.sofascorelocal.domain.eventdetails.EventVenue;
 import com.bettingproject.sofascorelocal.domain.provider.J4RealPhase1ControlSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.J4RealPhase1State;
 import com.bettingproject.sofascorelocal.domain.provider.J4RealPhase1ExecutionClaim;
+import com.bettingproject.sofascorelocal.domain.provider.J4RealPhase2ControlSnapshot;
+import com.bettingproject.sofascorelocal.domain.provider.J4RealPhase2ExecutionClaim;
+import com.bettingproject.sofascorelocal.domain.provider.J4RealPhase2State;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEventStatus;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTeam;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTournament;
@@ -77,6 +83,12 @@ class EventExplorerControllerTest {
     private J4RealEventDetailsPhase1Service realPhase1Service;
 
     @MockitoBean
+    private J4RealPhase2ControlService realPhase2ControlService;
+
+    @MockitoBean
+    private J4RealEventDetailsPhase2Service realPhase2Service;
+
+    @MockitoBean
     private LocalFormTokenService formTokenService;
 
     @MockitoBean
@@ -96,6 +108,19 @@ class EventExplorerControllerTest {
                         null,
                         false,
                         List.of("J4_EVENT_DETAILS_QUALIFICATION_DISABLED")));
+        when(realPhase2ControlService.snapshot()).thenReturn(
+                new J4RealPhase2ControlSnapshot(
+                        J4RealPhase2State.LOCKED,
+                        Instant.parse("2026-08-15T00:00:00Z"),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        false,
+                        null,
+                        false,
+                        List.of("J4_EVENT_DETAILS_PHASE_2_DISABLED")));
     }
 
     @Test
@@ -124,7 +149,10 @@ class EventExplorerControllerTest {
                 .andExpect(content().string(containsString(event.identity().value().toString())))
                 .andExpect(content().string(containsString("LECTURE LOCALE")))
                 .andExpect(content().string(containsString("16386245")))
-                .andExpect(content().string(containsString("NON AUTORISÉ")));
+                .andExpect(content().string(containsString(
+                        "Un identifiant paramétrable, un appel confirmé")))
+                .andExpect(content().string(containsString(
+                        "J4_EVENT_DETAILS_PHASE_2_DISABLED")));
     }
 
     @Test
@@ -286,6 +314,87 @@ class EventExplorerControllerTest {
                         "/events?date=2026-08-15&zone=Europe%2FParis"));
 
         verify(realPhase1Service).execute(claim);
+    }
+
+    @Test
+    void preparesOneParameterizedEventWithoutCallingTheProvider() throws Exception {
+        when(realPhase2ControlService.prepare(17000001L)).thenReturn(
+                new J4RealPhase2ControlSnapshot(
+                        J4RealPhase2State.AWAITING_CONFIRMATION,
+                        Instant.parse("2026-08-15T12:00:00Z"),
+                        UUID.fromString("60000000-0000-0000-0000-000000000004"),
+                        "CONFIRMER EVENT_DETAILS 17000001 000042",
+                        Instant.parse("2026-08-15T12:00:00Z"),
+                        Instant.parse("2026-08-15T12:05:00Z"),
+                        17000001L,
+                        false,
+                        null,
+                        true,
+                        List.of()));
+
+        mockMvc.perform(post("/events/real-phase2/prepare")
+                        .param("localFormToken", "one-use-token")
+                        .param("eventId", "17000001")
+                        .param("date", "2026-08-15")
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl(
+                        "/events?date=2026-08-15&zone=Europe%2FParis"));
+
+        verify(realPhase2ControlService).prepare(17000001L);
+        verify(realPhase2Service, org.mockito.Mockito.never()).execute(any());
+    }
+
+    @Test
+    void executesOnlyTheEventBoundToThePreparedPhaseTwoClaim() throws Exception {
+        UUID requestId = UUID.fromString("60000000-0000-0000-0000-000000000004");
+        var claim = new J4RealPhase2ExecutionClaim(
+                requestId,
+                URI.create("https://www.sofascore.com"),
+                17000001L);
+        when(realPhase2ControlService.confirmAndClaim(
+                requestId,
+                "CONFIRMER EVENT_DETAILS 17000001 000042",
+                true)).thenReturn(claim);
+        when(realPhase2Service.execute(claim)).thenReturn(
+                new J4RealEventDetailsPhase2Result(
+                        requestId,
+                        17000001L,
+                        false,
+                        "HTTP_429",
+                        1,
+                        List.of()));
+
+        mockMvc.perform(post("/events/real-phase2/execute")
+                        .param("localFormToken", "one-use-token")
+                        .param("requestId", requestId.toString())
+                        .param("confirmationText", "CONFIRMER EVENT_DETAILS 17000001 000042")
+                        .param("acknowledged", "true")
+                        .param("date", "2026-08-15")
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl(
+                        "/events?date=2026-08-15&zone=Europe%2FParis"));
+
+        verify(realPhase2ControlService).confirmAndClaim(
+                requestId,
+                "CONFIRMER EVENT_DETAILS 17000001 000042",
+                true);
+        verify(realPhase2Service).execute(claim);
+    }
+
+    @Test
+    void globalStopLocksBothRealQualificationPaths() throws Exception {
+        mockMvc.perform(post("/events/real/stop")
+                        .param("localFormToken", "one-use-token")
+                        .param("date", "2026-08-15")
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl(
+                        "/events?date=2026-08-15&zone=Europe%2FParis"));
+
+        verify(realPhase1ControlService).stop();
+        verify(realPhase2ControlService).stop();
     }
 
     private static CanonicalEventObservationView event() {

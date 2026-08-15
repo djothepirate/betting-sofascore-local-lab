@@ -22,9 +22,9 @@ public record EventDetailsTransportResponse(
         contentType = requireText(contentType, "contentType", MAXIMUM_CONTENT_TYPE_LENGTH);
         Objects.requireNonNull(latency, "latency");
         Objects.requireNonNull(payload, "payload");
-        if (!requestKey.matches("EVENT_DETAILS\\|eventId=(16386245|16421052)")) {
+        if (!requestKey.matches("EVENT_DETAILS\\|eventId=[1-9][0-9]{0,8}")) {
             throw new IllegalArgumentException(
-                    "requestKey must identify an authorized J4 phase-1 event");
+                    "requestKey must identify one bounded J4 event");
         }
         if (httpStatus < 100 || httpStatus > 599) {
             throw new IllegalArgumentException("httpStatus must be between 100 and 599");

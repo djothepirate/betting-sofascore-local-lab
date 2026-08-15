@@ -31,8 +31,8 @@ public record J4CachedEventDetails(
         Objects.requireNonNull(latency, "latency");
         Objects.requireNonNull(payload, "payload");
         parserVersion = requireText(parserVersion, "parserVersion");
-        if (!requestKey.matches("EVENT_DETAILS\\|eventId=(16386245|16421052)")) {
-            throw new IllegalArgumentException("cache key is outside J4 phase 1");
+        if (!requestKey.matches("EVENT_DETAILS\\|eventId=[1-9][0-9]{0,8}")) {
+            throw new IllegalArgumentException("cache key is outside bounded J4 events");
         }
         if (receivedAt.isBefore(requestedAt) || cachedAt.isBefore(receivedAt)) {
             throw new IllegalArgumentException("cache timestamps are inconsistent");

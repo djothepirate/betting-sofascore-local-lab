@@ -101,7 +101,7 @@ public class J4RealEventDetailsPhase1Service {
             if (!controlService.executionMayContinue(claim.requestId())) {
                 return failed(claim.requestId(), "OPERATOR_STOP", counters, results);
             }
-            EventDetailsProviderRequest request = new EventDetailsProviderRequest(
+            EventDetailsProviderRequest request = EventDetailsProviderRequest.phase1(
                     claim.providerOrigin(), eventId);
 
             Optional<J4CachedEventDetails> cached;
@@ -278,6 +278,8 @@ public class J4RealEventDetailsPhase1Service {
                     rawPersistence.payloadSizeBytes(),
                     RawSnapshotSchemaStatus.PARSED,
                     details,
+                    normalized.eventObservationInserted(),
+                    normalized.detailObservationInserted(),
                     parseResult.warnings().size()));
         }
 

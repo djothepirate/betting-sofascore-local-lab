@@ -13,11 +13,11 @@ import java.util.Objects;
 import java.util.Set;
 
 @Component
-public class J4EventDetailsQualificationPolicy {
+public class J4EventDetailsPhase2QualificationPolicy {
 
     private final SofascoreProperties properties;
 
-    public J4EventDetailsQualificationPolicy(SofascoreProperties properties) {
+    public J4EventDetailsPhase2QualificationPolicy(SofascoreProperties properties) {
         this.properties = Objects.requireNonNull(properties, "properties");
     }
 
@@ -26,8 +26,8 @@ public class J4EventDetailsQualificationPolicy {
         if (!properties.isJ4EventDetailsQualificationEnabled()) {
             blockers.add("J4_EVENT_DETAILS_QUALIFICATION_DISABLED");
         }
-        if (properties.isJ4EventDetailsPhase2Enabled()) {
-            blockers.add("J4_PHASE_2_MUST_BE_DISABLED");
+        if (!properties.isJ4EventDetailsPhase2Enabled()) {
+            blockers.add("J4_EVENT_DETAILS_PHASE_2_DISABLED");
         }
         if (!properties.isEnabled()) {
             blockers.add("CONNECTOR_DISABLED");

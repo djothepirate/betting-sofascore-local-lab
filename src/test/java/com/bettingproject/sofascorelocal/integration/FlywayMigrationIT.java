@@ -934,7 +934,7 @@ class FlywayMigrationIT {
 
     @Test
     void persistsProviderEventDetailsWithSnapshotProvenanceAndParsedCache() {
-        var request = new EventDetailsProviderRequest(
+        var request = EventDetailsProviderRequest.phase1(
                 URI.create(EventDetailsProviderRequest.EXPECTED_ORIGIN),
                 16386245L);
         byte[] rawBytes = "{\"event\":{\"id\":16386245}}"

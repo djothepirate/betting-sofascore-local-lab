@@ -2,6 +2,7 @@ package com.bettingproject.sofascorelocal.config;
 
 import com.bettingproject.sofascorelocal.application.network.J3ProviderQualificationPolicy;
 import com.bettingproject.sofascorelocal.application.network.J4EventDetailsQualificationPolicy;
+import com.bettingproject.sofascorelocal.application.network.J4EventDetailsPhase2QualificationPolicy;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
@@ -36,6 +37,7 @@ class SofascorePropertiesTest {
         assertThat(properties.isEnabled()).isFalse();
         assertThat(properties.isJ3QualificationEnabled()).isFalse();
         assertThat(properties.isJ4EventDetailsQualificationEnabled()).isFalse();
+        assertThat(properties.isJ4EventDetailsPhase2Enabled()).isFalse();
         assertThat(properties.getMaximumConcurrency()).isEqualTo(1);
         assertThat(properties.getMinimumDelay()).isEqualTo(Duration.ofSeconds(3));
         assertThat(properties.getConnectTimeout()).isEqualTo(Duration.ofSeconds(5));
@@ -130,10 +132,32 @@ class SofascorePropertiesTest {
                     SofascoreProperties properties = context.getBean(
                             SofascoreProperties.class);
                     assertThat(properties.isJ4EventDetailsQualificationEnabled()).isTrue();
+                    assertThat(properties.isJ4EventDetailsPhase2Enabled()).isFalse();
                     assertThat(properties.isJ3QualificationEnabled()).isFalse();
                     assertThat(properties.getAllowedEndpoints())
                             .containsExactly(SofascoreEndpointType.EVENT_DETAILS);
                     assertThat(context.getBean(J4EventDetailsQualificationPolicy.class)
+                            .snapshot().available()).isTrue();
+                });
+    }
+
+    @Test
+    void bindsTheDedicatedPhaseTwoOptInWithoutMakingPhaseOneAvailable() {
+        contextRunner
+                .withSystemProperties(
+                        "SOFASCORE_ENABLED=true",
+                        "SOFASCORE_J3_QUALIFICATION_ENABLED=false",
+                        "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true",
+                        "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=true",
+                        "SOFASCORE_BASE_URL=" + EventDetailsProviderRequest.EXPECTED_ORIGIN,
+                        "SOFASCORE_ALLOWED_ENDPOINTS=EVENT_DETAILS")
+                .run(context -> {
+                    assertThat(context.getStartupFailure()).isNull();
+                    SofascoreProperties properties = context.getBean(SofascoreProperties.class);
+                    assertThat(properties.isJ4EventDetailsPhase2Enabled()).isTrue();
+                    assertThat(context.getBean(J4EventDetailsQualificationPolicy.class)
+                            .snapshot().available()).isFalse();
+                    assertThat(context.getBean(J4EventDetailsPhase2QualificationPolicy.class)
                             .snapshot().available()).isTrue();
                 });
     }
@@ -156,9 +180,21 @@ class SofascorePropertiesTest {
                 .anyMatch(violation -> violation.getMessage().contains("mutually exclusive"));
     }
 
+    @Test
+    void rejectsPhaseTwoWithoutTheMainJ4QualificationOptIn() {
+        SofascoreProperties properties = new SofascoreProperties();
+        properties.setJ4EventDetailsPhase2Enabled(true);
+
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getMessage().contains("phase 2"));
+    }
+
     @Configuration(proxyBeanMethods = false)
     @EnableConfigurationProperties(SofascoreProperties.class)
-    @Import({J3ProviderQualificationPolicy.class, J4EventDetailsQualificationPolicy.class})
+    @Import({
+            J3ProviderQualificationPolicy.class,
+            J4EventDetailsQualificationPolicy.class,
+            J4EventDetailsPhase2QualificationPolicy.class})
     static class EnvironmentBindingConfiguration {
     }
 }
