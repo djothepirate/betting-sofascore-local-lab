@@ -4,7 +4,7 @@
 - **Work Order :** `WO-SS-20260815-006`
 - **Branche :** `codex/j5-real-event-data-qualification`
 - **Qualification technique :** `PASS`
-- **Qualification humaine réelle :** `PENDING`
+- **Qualification humaine réelle :** `FAILED_LOCKED_HTTP_404`
 - **Appels SofaScore pendant la réalisation :** `0`
 - **Lecture ou modification de `.env` par l'agent :** `NO`
 - **Schémas fournisseur J5 validés :** `NO`
@@ -102,13 +102,15 @@ V1_TO_V8_MIGRATION=PASS
 
 ```text
 J5_REAL_TECHNICAL_READINESS=PASS
-J5_REAL_CAMPAIGN_AUTHORIZED_BY_WORK_ORDER=YES_AFTER_HUMAN_REVIEW
-J5_REAL_CAMPAIGN_EXECUTED=NO
+J5_REAL_CAMPAIGN_AUTHORIZATION=CONSUMED
+J5_REAL_CAMPAIGN_EXECUTED=YES_FAILED_LOCKED_HTTP_404
 J5_REAL_PROVIDER_SCHEMA_VALIDATED=NO
+J5_REAL_CAMPAIGN_RETRY_AUTHORIZED=NO
 WORK_ORDER_CAN_BE_ARCHIVED=NO
 ```
 
-Le prochain geste appartient à l'opérateur : relire le diff et le runbook, choisir une identité
-canonique, appliquer manuellement la configuration temporaire, exécuter une seule campagne puis
-reverrouiller `.env` avant tout redémarrage. Succès et incident exigent tous deux une preuve
-minimisée et l'arrêt de l'application.
+Cette readiness a été utilisée par l'opérateur pour une campagne réelle ultérieure. Le premier
+endpoint a renvoyé HTTP `404` et le contrôle a correctement arrêté puis verrouillé la campagne
+après un seul appel. La preuve est conservée dans
+`J5-REAL-EVENT-DATA-CAMPAIGN-20260815.md`. Le prochain geste est l'arrêt de l'application et le
+reverrouillage de `.env`, puis la revue de l'incident sans nouvel appel fournisseur.

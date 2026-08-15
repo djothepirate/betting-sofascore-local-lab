@@ -178,6 +178,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Documentation
 
+- consignation minimisée de la première campagne réelle J5 : détail J4 préalable dans le snapshot
+  28, réponse JSON HTTP `404` de `EVENT_STATISTICS` conservée dans le snapshot 30, arrêt
+  `FAILED_LOCKED` après un seul appel, zéro retry et aucune tentative `incidents` ou `lineups` ;
 - Work Order séparé `WO-SS-20260815-006` pour la qualification réelle J5, avec revue de
   l'ADR-SS-001, configuration temporaire exacte, politique d'arrêt, preuve minimisée et obligation
   de reverrouillage avant tout redémarrage ;

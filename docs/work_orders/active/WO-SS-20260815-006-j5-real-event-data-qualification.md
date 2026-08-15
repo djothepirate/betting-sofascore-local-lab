@@ -1,6 +1,6 @@
 # WO-SS-20260815-006 — Qualification réelle bornée des données événement J5
 
-- **Statut :** `READY_FOR_HUMAN_REAL_QUALIFICATION`
+- **Statut :** `REAL_CAMPAIGN_FAILED_LOCKED_REVIEW_REQUIRED`
 - **Date :** 2026-08-15
 - **Date de démarrage :** 2026-08-15
 - **Prérequis fonctionnel :** WO-SS-20260815-005 validé et archivé
@@ -10,7 +10,7 @@
 - **Familles :** `EVENT_STATISTICS`, `EVENT_INCIDENTS`, `EVENT_LINEUPS`
 - **Développement et tests hors ligne :** `AUTHORIZED`
 - **Appel fournisseur pendant l'implémentation :** `NOT_AUTHORIZED`
-- **Campagne humaine future :** `AUTHORIZED_AFTER_HUMAN_REVIEW_NOT_RUN`
+- **Campagne humaine réelle :** `EXECUTED_ONE_CALL_FAILED_HTTP_404`
 - **Modification directe de `.env` par l'agent :** `NOT_AUTHORIZED`
 - **Polling, planification ou retry :** `NOT_AUTHORIZED`
 - **Déploiement VPS :** `NOT_AUTHORIZED`
@@ -26,8 +26,9 @@ Chaque réponse doit être persistée brute avant toute interprétation. Une ré
 ensuite normalisée dans les tables append-only J5 avec une provenance `PROVIDER_SNAPSHOT`. Le
 premier incident arrête la campagne, verrouille le contrôle et interdit tout appel restant.
 
-La réalisation de ce Work Order n'exécute aucune requête réelle. La compatibilité actuelle des
-trois réponses fournisseur demeure non qualifiée jusqu'à une campagne humaine ultérieure.
+La réalisation logicielle de ce Work Order n'a exécuté aucune requête réelle. La campagne humaine
+ultérieure est consignée à la section 15 : elle s'est arrêtée sur un HTTP `404` au premier endpoint
+et n'a validé aucun des trois schémas fournisseur.
 
 ## 2. Contexte opérateur reçu le 2026-08-15
 
@@ -266,7 +267,9 @@ reverrouillée avant toute nouvelle décision.
 - [x] `mvnw.cmd clean verify` réussi ;
 - [x] `mvnw.cmd -Pintegration-tests verify` réussi ;
 - [x] readiness humaine publiée ;
-- [x] configuration réelle toujours non exécutée pendant l'implémentation.
+- [x] configuration réelle toujours non exécutée pendant l'implémentation ;
+- [x] campagne humaine réelle arrêtée au premier HTTP `404`, sans retry ni endpoint restant ;
+- [x] snapshot d'incident et preuve minimisée consignés sans payload brut.
 
 ## 11. Unités de livraison prévues
 
@@ -276,6 +279,7 @@ reverrouillée avant toute nouvelle décision.
 4. `test: qualify J5 real path offline`
 5. `docs: publish J5 real campaign readiness`
 6. `test: isolate historical bindings from armed J5 configuration`
+7. `docs: record the failed-locked J5 real campaign`
 
 ## 12. Readiness technique hors ligne
 
@@ -297,24 +301,25 @@ J5_REAL_TECHNICAL_READINESS=PASS
 La preuve détaillée est conservée dans
 `docs/validation/J5-REAL-EVENT-DATA-TECHNICAL-READINESS-20260815.md`. Elle qualifie le code et les
 garde-fous hors ligne ; elle ne qualifie pas les trois formes de réponse actuelles du fournisseur.
-Le Work Order reste actif jusqu'à la campagne humaine, au reverrouillage de `.env`, à l'arrêt de
-l'application et à la revue de la preuve minimisée.
+La campagne humaine a maintenant été exécutée et arrêtée au premier incident. Le Work Order reste
+actif jusqu'au reverrouillage de `.env`, à l'arrêt de l'application et à la revue de la preuve
+minimisée.
 
 ## 13. État de préparation
 
 ```text
 WO_ID=WO-SS-20260815-006
-WO_STATUS=READY_FOR_HUMAN_REAL_QUALIFICATION
+WO_STATUS=REAL_CAMPAIGN_FAILED_LOCKED_REVIEW_REQUIRED
 BASE_COMMIT=5063ac8e
 BRANCH=codex/j5-real-event-data-qualification
 J5_OFFLINE_STATUS=VALIDATED
 J5_REAL_IMPLEMENTATION_STATUS=PASS
-J5_REAL_PROVIDER_CALLS=0
-J5_REAL_CAMPAIGN_STATUS=NOT_RUN
-J5_REAL_ENV_CONFIGURATION=APPLIED_FOR_OFFLINE_PRECHECK
+J5_REAL_PROVIDER_CALLS=1
+J5_REAL_CAMPAIGN_STATUS=FAILED_LOCKED_HTTP_404
+J5_REAL_ENV_CONFIGURATION=APPLIED_FOR_REAL_CAMPAIGN_RELOCK_PENDING
 J5_REAL_PROVIDER_SCHEMA_VALIDATED=NO
 J5_REAL_APPLICATION_TRANSPORT=IMPLEMENTED_GUARDED_DEFAULT_OFF
-J5_REAL_CAN_BE_EXECUTED=YES_AFTER_HUMAN_REVIEW_AND_MANUAL_ENV
+J5_REAL_CAN_BE_EXECUTED=NO_INCIDENT_REVIEW_REQUIRED
 J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
 ```
 
@@ -339,8 +344,46 @@ STANDARD_ERRORS=0
 STANDARD_SKIPPED=0
 BUILD_RESULT=SUCCESS
 SOFASCORE_PROVIDER_CALLS=0
-J5_REAL_CAMPAIGN_STATUS=NOT_RUN
+PRECHECK_REAL_CAMPAIGN_STATUS=NOT_RUN
 ```
 
 Cette correction qualifie uniquement l'isolation de la suite Maven. La campagne humaine réelle,
 la validation des trois schémas fournisseur et le reverrouillage final restent à exécuter.
+
+## 15. Campagne humaine réelle et arrêt terminal
+
+Le 2026-08-15, l'opérateur a préparé puis confirmé une campagne pour l'identité canonique
+`9b9e7909-62e7-3985-bc34-759ad8684224`, fournisseur `16412917`. Le prérequis J4 était le
+`snapshot:28`, HTTP `200`, parsé par `event-details-v2`, et la rencontre était au statut
+`finished`.
+
+Le premier endpoint `EVENT_STATISTICS` a renvoyé HTTP `404` avec un contenu JSON de 44 octets. Le
+brut a été conservé dans le snapshot 30 puis classé `TRANSPORT_ERROR` avec le code
+`HTTP_STATUS_404`. Le contrôle est passé à `FAILED_LOCKED` après exactement un appel. Aucun appel
+`EVENT_INCIDENTS` ou `EVENT_LINEUPS` n'a été tenté et aucun retry n'a été effectué.
+
+L'ouverture ultérieure de la page de `16391135` a montré le même verrou terminal global et n'a
+créé aucun snapshot J5 supplémentaire. Les trois schémas restent non validés. La phrase de
+confirmation, le jeton local et le payload brut ne sont pas reproduits.
+
+La preuve détaillée est conservée dans
+`docs/validation/J5-REAL-EVENT-DATA-CAMPAIGN-20260815.md`.
+
+```text
+J5_REAL_EVENT_ID=16412917
+J5_REAL_CANONICAL_EVENT_ID=9b9e7909-62e7-3985-bc34-759ad8684224
+J5_REAL_TERMINAL_STATE=FAILED_LOCKED
+J5_REAL_TERMINAL_CODE=HTTP_STATUS_404
+J5_REAL_PROVIDER_CALLS=1
+J5_REAL_STATISTICS_QUALIFICATION=FAIL_HTTP_404
+J5_REAL_INCIDENTS_QUALIFICATION=NOT_ATTEMPTED
+J5_REAL_LINEUPS_QUALIFICATION=NOT_ATTEMPTED
+J5_REAL_SNAPSHOT_ID=30
+J5_REAL_PROVIDER_SCHEMA_VALIDATED=NO
+J5_REAL_RETRY=0
+J5_REAL_ADDITIONAL_CALL_AUTHORIZED=NO
+J5_REAL_ENV_RELOCK=PENDING_OPERATOR_CONFIRMATION
+```
+
+Le Work Order reste actif pour la revue de l'incident et la confirmation du reverrouillage. Toute
+nouvelle campagne exige une autorisation et un Work Order correctif séparés.

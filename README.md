@@ -11,8 +11,11 @@ statistiques, incidents et compositions synthétiques, contrôles explicites de 
 persistance append-only V7 et écran local. La première découverte des schémas réels s'est arrêtée
 dès le premier `HTTP 403`. Le Work Order séparé `WO-SS-20260815-006` a depuis ajouté une voie de
 qualification réelle gardée, désactivée par défaut, limitée à une identité canonique et à trois
-appels confirmés. Son implémentation et la migration V8 sont qualifiées hors ligne ; aucune campagne
-J5 réelle n'a encore été exécutée et `providerSchemaValidated=false` reste donc obligatoire.
+appels confirmés. Son implémentation et la migration V8 sont qualifiées hors ligne. Une campagne
+réelle a ensuite tenté uniquement `EVENT_STATISTICS` pour `16412917` : la réponse JSON HTTP `404`
+a été conservée dans le snapshot 30, puis le circuit s'est verrouillé sans appeler `incidents` ou
+`lineups` et sans retry. Aucun schéma nominal n'a été validé ; `providerSchemaValidated=false`
+reste donc obligatoire.
 
 ## Ce qui est livré localement
 
@@ -408,7 +411,7 @@ J4_CLOSED=YES
 Cette situation ne déverrouille aucune nouvelle famille, automatisation ou dépendance de
 production. Les rappels de sous-étape 2 restent exclusivement manuels et unitaires.
 
-## J5 hors ligne validé, voie réelle prête mais non exécutée
+## J5 hors ligne validé, première campagne réelle arrêtée
 
 J5 réutilise l'identité synthétique `900001` de J4 pour démontrer les trois familles demandées. Les
 neuf fixtures J5 sont explicitement synthétiques et ne valident aucun schéma fournisseur. La page
@@ -426,17 +429,21 @@ J5_FIXTURE_ORIGIN=SYNTHETIC
 J5_FLYWAY_VERSION=8
 J5_MAVEN_PROVIDER_CALLS=0
 J5_REAL_TECHNICAL_READINESS=PASS
-J5_REAL_CONDITIONS_CAMPAIGN=NOT_RUN
-J5_REAL_CONDITIONS_AUTHORIZED_BY_WO_006=YES_AFTER_HUMAN_REVIEW
+J5_REAL_CONDITIONS_CAMPAIGN=FAILED_LOCKED_HTTP_404
+J5_REAL_PROVIDER_CALLS=1
+J5_REAL_STATISTICS_SNAPSHOT=30
+J5_REAL_INCIDENTS=NOT_ATTEMPTED
+J5_REAL_LINEUPS=NOT_ATTEMPTED
+J5_REAL_CONDITIONS_AUTHORIZED_BY_WO_006=CONSUMED
 J5_OFFLINE_WORK_ORDER_STATUS=VALIDATED
-J5_REAL_WORK_ORDER_STATUS=READY_FOR_HUMAN_REAL_QUALIFICATION
+J5_REAL_WORK_ORDER_STATUS=REAL_CAMPAIGN_FAILED_LOCKED_REVIEW_REQUIRED
 J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
 ```
 
 `TOURNAMENT_STANDINGS` demeure différé : il ne fait pas partie de la preuve de sortie J5 définie
 par le cadrage et son ajout aurait étendu le corpus alors que les schémas des trois familles
-principales n'ont pas pu être observés. Les huit captures de validation humaine ne sont pas
-versionnées ; leur constat minimisé est conservé dans le rapport J5. La prochaine étape réelle est
-cadrée par `WO-SS-20260815-006` et par le runbook, mais reste un geste humain distinct : elle exige
-une revue du diff, l'application manuelle de la configuration temporaire, une seule campagne puis
-le reverrouillage de `.env` et l'arrêt de l'application.
+principales n'ont pas pu être observés. Les captures de validation humaine ne sont pas versionnées ;
+leur constat minimisé est conservé dans les rapports J5. Après le HTTP `404`, aucune nouvelle
+tentative n'est autorisée par `WO-SS-20260815-006`. L'étape immédiate est le reverrouillage de
+`.env`, l'arrêt de l'application et la revue de l'incident. Toute autre campagne exige un Work
+Order correctif séparé.
