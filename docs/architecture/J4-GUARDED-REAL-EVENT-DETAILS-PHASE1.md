@@ -48,6 +48,20 @@ EXECUTING
 Une nouvelle campagne exige toujours une nouvelle préparation et une nouvelle phrase. Les opt-ins
 J3 et J4 sont mutuellement exclusifs par validation de configuration.
 
+### 2.1 Prérequis d’upgrade V5 → V6
+
+La campagne ne doit pas être activée tant que la base locale n’a pas atteint V6 avec le réseau
+bloqué. Une base V5 peut contenir des détails synthétiques protégés par le trigger append-only.
+V6 suspend ce seul trigger dans sa transaction, complète `source_kind` et `source_reference` à
+partir de la provenance V5, puis le réactive avant toute sortie de migration. Un test dédié crée
+une base V5 préremplie et vérifie la conservation de chaque champ historique, des identifiants et
+des nombres de lignes, ainsi que le refus de `UPDATE` et `DELETE` après V6.
+
+Un échec de migration précède nécessairement la disponibilité du formulaire et ne constitue pas
+une tentative fournisseur. Il impose néanmoins l’arrêt, le maintien des clés réseau bloquées et
+une revue humaine ; aucun `flyway repair`, reset de base ou changement manuel de schéma n’est
+autorisé.
+
 ## 3. Ordre de traitement d’un événement
 
 Pour chaque ID fixe, l’orchestrateur suit cet ordre :

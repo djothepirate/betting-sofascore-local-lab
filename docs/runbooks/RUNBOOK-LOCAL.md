@@ -380,8 +380,31 @@ Cette campagne est un geste humain exceptionnel. Ne jamais l’exécuter depuis 
 navigateur automatisé ou une tâche planifiée. Ne pas commencer tant que la branche n’a pas été
 revue et que les tests hors ligne V6 ne sont pas réussis.
 
-Application arrêtée, conserver localement les anciennes valeurs sans les copier dans une preuve,
-puis régler temporairement les seules clés réseau ainsi :
+À la suite de l’incident de migration V5 → V6 du 2026-08-15, appliquer d’abord la migration avec
+le réseau bloqué. Application arrêtée, remettre ou conserver les cinq clés suivantes :
+
+```properties
+SOFASCORE_ENABLED=false
+SOFASCORE_J3_QUALIFICATION_ENABLED=false
+SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=false
+SOFASCORE_BASE_URL=
+SOFASCORE_ALLOWED_ENDPOINTS=
+```
+
+Avec le code correctif, démarrer PostgreSQL puis l’application une première fois. Vérifier :
+
+1. que Flyway annonce la migration de la version 5 vers la version 6 puis un démarrage réussi ;
+2. que `/events` est disponible avec les bloqueurs `J4_EVENT_DETAILS_QUALIFICATION_DISABLED` et
+   `CONNECTOR_DISABLED` ;
+3. que les observations synthétiques historiques restent consultables ;
+4. qu’aucune action fournisseur n’est disponible.
+
+Arrêter ensuite l’application. Si V6 échoue encore, ne pas exécuter `flyway repair`, ne pas
+supprimer la base ou ses observations, ne pas modifier le schéma manuellement et ne pas activer la
+campagne. Conserver uniquement le code d’erreur de migration et soumettre l’incident à une revue.
+
+Après réussite de cette mise à niveau bloquée, conserver localement les anciennes valeurs sans les
+copier dans une preuve, puis régler temporairement les seules clés réseau ainsi :
 
 ```properties
 SOFASCORE_ENABLED=true

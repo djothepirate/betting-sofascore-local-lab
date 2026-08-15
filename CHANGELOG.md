@@ -4,6 +4,18 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Corrigé
+
+- correction de l’upgrade Flyway V5 préremplie vers V6 : le trigger
+  `event_detail_observation_append_only` est suspendu uniquement pendant le backfill transactionnel
+  des nouvelles colonnes de provenance, puis réactivé avant les contraintes finales ;
+- ajout d’un test PostgreSQL reproduisant une base V5 contenant déjà une identité, une observation
+  canonique et un détail synthétique, puis vérifiant après V6 l’égalité des champs
+  historiques, l’absence de ligne ajoutée ou supprimée et le refus persistant de `UPDATE`/`DELETE` ;
+- qualification de l’échec de démarrage local du 2026-08-15 comme incident de migration avant
+  campagne : rollback Flyway réussi, zéro appel fournisseur et aucune qualification réelle
+  exécutée.
+
 ### Ajouté
 
 - voie de qualification réelle J4 sous-étape 1, désactivée par défaut et limitée par construction
@@ -106,6 +118,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Documentation
 
+- protocole correctif imposant une première application de V6 avec les cinq clés réseau remises à
+  l’état bloqué, avant toute nouvelle activation de la campagne réelle ;
 - amendement du Work Order J4 autorisant uniquement la campagne réelle sous-étape 1 et consignant
   la revue compatible de l’ADR-SS-001, avec politique J4 plus stricte sans retry sur `5xx` ;
 - protocole Windows J4 pour l’activation temporaire, la validation humaine des deux matches,

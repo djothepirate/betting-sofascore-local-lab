@@ -214,9 +214,11 @@ provenance. Un trigger PostgreSQL bloque toute mise à jour ou suppression d’u
 La migration append-only `V5__offline_event_details.sql` ajoute `event_detail_observation` pour
 les fixtures synthétiques J4. La migration append-only
 `V6__guarded_real_event_details.sql` étend ensuite sa provenance aux snapshots fournisseur réels
-de la voie bornée, sans réécrire les lignes V5. Fixture ou snapshot, chaque détail conserve hash,
-parseur et heure source obligatoires ; les observations restent protégées contre `UPDATE` et
-`DELETE`.
+de la voie bornée. Pour les lignes V5 existantes, V6 complète uniquement les deux colonnes de
+provenance structurelle dans sa transaction : le trigger de cette table est suspendu pendant ce
+backfill borné, puis réactivé avant la fin de la migration. Aucun champ métier historique n’est
+modifié. Fixture ou snapshot, chaque détail conserve hash, parseur et heure source obligatoires ;
+les observations restent protégées contre `UPDATE` et `DELETE` après V6.
 
 Le mode `DIRECT_LOCAL_ENDPOINT` ne doit jamais être confondu avec une `VisualObservation` du projet global. Cette persistance est prête pour un transport futur, mais n’effectue elle-même aucun appel.
 
@@ -267,6 +269,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order J3 validé](docs/work_orders/completed/WO-SS-20260812-003-manual-call-j3.md)
 - [Qualification technique Windows J4](docs/validation/J4-WINDOWS-TECHNICAL-QUALIFICATION-20260815.md)
 - [Préparation technique J4 réelle — sous-étape 1](docs/validation/J4-REAL-EVENT-DETAILS-PHASE1-READINESS-20260815.md)
+- [Incident et correction de l’upgrade V5 préremplie vers V6](docs/validation/J4-V6-PREFILLED-UPGRADE-INCIDENT-20260815.md)
 - [Work Order J4 actif](docs/work_orders/active/WO-SS-20260815-004-events-j4.md)
 
 ## J3 clôturé, J4 en attente de qualification sur matches réels

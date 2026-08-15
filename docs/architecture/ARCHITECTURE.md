@@ -148,6 +148,13 @@ le brut inséré avant parsing. Les deux formes sont exclusives par contrainte S
 ne stocke que les champs normalisés et la preuve de provenance ; les octets restent dans la fixture
 classpath ou `provider_snapshot`.
 
+Une base V5 peut déjà contenir des détails alors que les colonnes `source_kind` et
+`source_reference` n’existent pas encore. V6 désactive donc, dans sa transaction et pour cette
+seule table, le trigger `event_detail_observation_append_only`, renseigne ces deux métadonnées à
+partir de `source_fixture_id`, puis réactive immédiatement le trigger avant de rendre les colonnes
+obligatoires. Les équipes, horaires, statuts, hashes, parseurs et horodatages historiques ne sont
+pas modifiés.
+
 ## 6. Catalogue logique
 
 | Type | Cache initial | Déclenchement prévu | Appelable actuellement |
@@ -192,7 +199,8 @@ commence obligatoirement à 1, continue uniquement sur `hasNextPage=true` et s�
 
 `mvnw -Pintegration-tests verify` démarre PostgreSQL avec Testcontainers et vérifie les migrations
 V1 à V6, la fidélité binaire, les contraintes, la déduplication et l’immuabilité des observations
-J4. Aucun appel SofaScore n’est exécuté.
+J4. Deux chemins Flyway sont couverts : installation vide V1 → V6 et upgrade V5 préremplie → V6
+avec conservation des lignes et réactivation du trigger. Aucun appel SofaScore n’est exécuté.
 
 ### Réel
 

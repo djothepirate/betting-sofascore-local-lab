@@ -118,7 +118,10 @@ Le rendu ne contient aucun payload brut et les réponses portent `no-store` et `
 
 La migration V4 ajoute `canonical_event` et `canonical_event_observation`. La migration V5 ajoute
 `event_detail_observation`. V6 étend sa provenance aux snapshots fournisseur et le cache local à
-`EVENT_DETAILS`. Elles sont append-only : aucune migration V1 à V5 n’est modifiée.
+`EVENT_DETAILS`. Aucune migration V1 à V5 n’est modifiée. Pour une base V5 déjà alimentée, V6
+suspend uniquement le trigger append-only de `event_detail_observation` pendant le backfill
+transactionnel de `source_kind` et `source_reference`, puis le réactive avant les contraintes
+finales. Les champs métier historiques restent inchangés.
 
 Les tests Testcontainers vérifient notamment :
 
@@ -130,6 +133,8 @@ Les tests Testcontainers vérifient notamment :
 - la normalisation idempotente d’un snapshot compatible ;
 - la provenance fournisseur du détail et la clé étrangère vers le brut préalable ;
 - le cache `EVENT_DETAILS` sans duplication des octets ;
+- l’upgrade V5 préremplie → V6, la conservation de toutes les valeurs existantes et la
+  réactivation du trigger append-only ;
 - l’absence d’écriture partielle sur erreur d’intégrité ou de schéma.
 
 ## 8. Invariants de sécurité

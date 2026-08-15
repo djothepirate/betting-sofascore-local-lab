@@ -48,7 +48,7 @@ REAL_PROVIDER_CALLS=0
 ```text
 COMMAND=mvnw.cmd -Pintegration-tests verify
 STANDARD_TESTS=198
-INTEGRATION_TESTS=15
+INTEGRATION_TESTS=16
 FAILURES=0
 ERRORS=0
 SKIPPED=0
@@ -60,9 +60,36 @@ REAL_PROVIDER_CALLS=0
 Les tests du transport utilisent un serveur simulé local. Ils couvrent le chemin exact, l'absence
 de redirection et l'absence d'accès Internet. Les tests d'orchestration couvrent l'ordre
 « persistance brute puis parsing », le cache, le délai, la limite de deux appels et l'arrêt sans
-second appel après un `429` ou une incompatibilité de schéma.
+second appel après un `429` ou une incompatibilité de schéma. Le seizième test d’intégration
+reproduit une base V5 préremplie, applique V6, compare tous les champs historiques avant/après et
+confirme que le trigger append-only réactivé refuse encore `UPDATE` et `DELETE`.
 
-## 3. État de qualification
+## 3. Incident de migration locale et correction
+
+Le démarrage humain du 2026-08-15 à `08:03:29+02:00` a échoué avant disponibilité de l’interface :
+la base locale était en V5 avec une observation synthétique et le backfill initial de V6 a été
+bloqué par `event_detail_observation_append_only`. Flyway a indiqué que les changements avaient été
+annulés. L’application a ensuite fermé Hikari et Tomcat ; aucun transport `EVENT_DETAILS` n’a pu
+être exécuté.
+
+V6 n’ayant pas été poussée, appliquée avec succès sur un environnement partagé ou publiée, son SQL
+a été corrigé avant publication. Le trigger de la seule table migrée est désormais suspendu
+pendant le backfill structurel et réactivé dans la même transaction. Le test V5 préremplie → V6
+valide ce chemin absent de la qualification initiale. La base persistante de l’opérateur doit
+encore appliquer cette version corrigée avec les cinq clés réseau bloquées, selon le runbook.
+
+```text
+INCIDENT_TYPE=LOCAL_DATABASE_MIGRATION
+INCIDENT_CODE=V6_BACKFILL_BLOCKED_BY_APPEND_ONLY_TRIGGER
+FLYWAY_ROLLBACK=CONFIRMED_BY_STARTUP_LOG
+PROVIDER_CALL_ATTEMPTS=0
+RAW_PROVIDER_SNAPSHOT_CREATED_BY_INCIDENT=NO
+REAL_PROVIDER_QUALIFICATION=NOT_RUN
+LOCAL_V5_TO_V6_CORRECTIVE_RETRY=PENDING_HUMAN
+LOCAL_CONFIGURATION_RELOCKED_AFTER_INCIDENT=PENDING_USER_CONFIRMATION
+```
+
+## 4. État de qualification
 
 La réussite de Maven établit que le code est prêt pour une campagne humaine contrôlée. Elle
 n'établit ni la disponibilité actuelle du fournisseur, ni la compatibilité de ses réponses
@@ -70,19 +97,21 @@ réelles, ni la justesse métier des deux matches. Ces trois points nécessitent
 décrite dans le runbook.
 
 ```text
-TECHNICAL_PHASE1_READINESS=PASS
+TECHNICAL_PHASE1_READINESS=PASS_AFTER_V6_UPGRADE_FIX
 TECHNICAL_OFFLINE_QUALIFICATION=PASS
 REAL_PROVIDER_QUALIFICATION=NOT_RUN
 HUMAN_REAL_EVENT_16386245_QUALIFICATION=PENDING
 HUMAN_REAL_EVENT_16421052_QUALIFICATION=PENDING
 HUMAN_REAL_PHASE1_QUALIFICATION=PENDING
 CONFIGURATION_RELOCK_AFTER_CAMPAIGN=PENDING_NOT_RUN
+LOCAL_V5_TO_V6_CORRECTIVE_RETRY=PENDING_HUMAN
+LOCAL_CONFIGURATION_RELOCKED_AFTER_INCIDENT=PENDING_USER_CONFIRMATION
 WORK_ORDER_STATUS=IN_DEVELOPMENT
 J4_WORK_ORDER=ACTIVE
 J4_CAN_BE_CLOSED=NO
 ```
 
-## 4. Preuve humaine à consigner après la campagne
+## 5. Preuve humaine à consigner après la campagne
 
 Pour chaque événement, la preuve doit rester minimisée et ne contenir que :
 
