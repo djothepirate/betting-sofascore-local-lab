@@ -17,7 +17,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   exécutée ;
 - qualification humaine de la reprise corrective sur la base persistante : migration V5 → V6
   réussie avec les verrous réseau actifs, identité et deux versions synthétiques toujours
-  consultables, puis arrêt gracieux complet de l’application sans appel fournisseur.
+  consultables, puis arrêt gracieux complet de l’application sans appel fournisseur ;
+- isolation des scénarios de binding J3/J4 vis-à-vis d’une configuration opérateur déjà armée :
+  chaque mini-contexte retire la source d’environnement ambiante, injecte explicitement les deux
+  opt-ins mutuellement exclusifs et conserve inchangées les validations du runtime. Les 198 tests
+  standards passent avec la configuration J4 réelle activée, sans appel fournisseur.
 
 ### Ajouté
 

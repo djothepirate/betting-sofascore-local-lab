@@ -97,6 +97,37 @@ SYNTHETIC_HISTORY_PRESERVED=YES
 APPLICATION_STOPPED=YES
 ```
 
+### 3.1 Isolation de la validation automatisée sous configuration J4 armée
+
+Après activation locale des cinq clés de la sous-étape 1, un premier `clean verify` a produit un
+unique échec dans `SofascorePropertiesTest.bindsDocumentedJ3EnvironmentKeysThroughApplicationYaml`.
+Le mini-contexte J3 héritait directement des variables J4 de l’opérateur pendant le binding Spring
+et déclenchait correctement la règle d’exclusivité J3/J4. Aucun code de transport, parseur ou
+persistance n’était en défaut et aucun appel fournisseur n’a été tenté.
+
+Les deux scénarios de binding utilisent désormais des propriétés système temporaires pour leurs
+cinq clés documentées, fixent explicitement l’opt-in opposé à `false` et retirent uniquement la
+source `systemEnvironment` de leur mini-contexte. Le runtime conserve ses sources réelles, ses
+validations et ses valeurs par défaut inchangées.
+
+Le test ciblé puis `Verify-Local.ps1` ont été rejoués dans un processus possédant exactement la
+configuration J4 active communiquée par l’opérateur.
+
+```text
+INCIDENT_TYPE=AUTOMATED_TEST_ENVIRONMENT_LEAK
+AFFECTED_TEST=SofascorePropertiesTest.bindsDocumentedJ3EnvironmentKeysThroughApplicationYaml
+RUNTIME_CONFIGURATION_CHANGED=NO
+J3_J4_MUTUAL_EXCLUSION_CHANGED=NO
+TARGETED_PROPERTIES_TESTS=6
+TARGETED_FAILURES=0
+STANDARD_TESTS_WITH_J4_CONFIGURATION_ACTIVE=198
+FAILURES=0
+ERRORS=0
+SKIPPED=0
+REAL_PROVIDER_CALLS=0
+ACTIVE_J4_ENVIRONMENT_TEST_ISOLATION=PASS
+```
+
 ## 4. État de qualification
 
 La réussite de Maven établit que le code est prêt pour une campagne humaine contrôlée. Elle
@@ -116,6 +147,7 @@ LOCAL_V5_TO_V6_CORRECTIVE_RETRY=PASS
 LOCAL_CONFIGURATION_RELOCKED_AFTER_INCIDENT=YES
 SYNTHETIC_HISTORY_PRESERVED=YES
 APPLICATION_STOPPED=YES
+ACTIVE_J4_ENVIRONMENT_TEST_ISOLATION=PASS
 WORK_ORDER_STATUS=IN_DEVELOPMENT
 J4_WORK_ORDER=ACTIVE
 J4_CAN_BE_CLOSED=NO
