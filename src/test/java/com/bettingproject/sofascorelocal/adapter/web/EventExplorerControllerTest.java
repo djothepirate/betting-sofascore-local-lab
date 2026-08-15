@@ -13,6 +13,10 @@ import com.bettingproject.sofascorelocal.application.network.J4RealPhase1Control
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservationView;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetails;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventSeason;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventVenue;
 import com.bettingproject.sofascorelocal.domain.provider.J4RealPhase1ControlSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.J4RealPhase1State;
 import com.bettingproject.sofascorelocal.domain.provider.J4RealPhase1ExecutionClaim;
@@ -148,6 +152,56 @@ class EventExplorerControllerTest {
     }
 
     @Test
+    void returnsToTheProviderEventsCivilDateAndRendersItsRealProvenance() throws Exception {
+        var event = providerEvent();
+        var source = EventSourceTrace.providerSnapshot(
+                16L,
+                "c".repeat(64),
+                "event-details-v2",
+                Instant.parse("2026-08-15T06:59:05.791963Z"));
+        var details = new EventDetailObservationView(
+                2L,
+                event.identity(),
+                new EventDetails(
+                        16386245L,
+                        event.startsAt(),
+                        event.homeTeam(),
+                        event.awayTeam(),
+                        event.status(),
+                        event.tournament(),
+                        Optional.of(new EventVenue(
+                                101L,
+                                "Stade Geoffroy Guichard",
+                                Optional.of("Saint Etienne"))),
+                        Optional.of(new EventSeason(2026L, "Ligue 2 26/27")),
+                        Optional.of("2")),
+                source,
+                "d".repeat(64));
+        var current = new J4EventSearchItem(
+                event,
+                event.startsAt().atZone(ZoneId.of("Europe/Paris")));
+        var detail = new J4EventDetailResult(
+                ZoneId.of("Europe/Paris"),
+                current,
+                List.of(current),
+                Optional.of(details));
+        when(queryService.findDetail(event.identity().value(), "Europe/Paris"))
+                .thenReturn(Optional.of(detail));
+
+        mockMvc.perform(get("/events/{id}", event.identity().value())
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().isOk())
+                .andExpect(view().name("event-detail"))
+                .andExpect(model().attribute(
+                        "detailSearchDate", LocalDate.parse("2026-08-14")))
+                .andExpect(content().string(containsString(
+                        "/events?date=2026-08-14&amp;zone=Europe/Paris")))
+                .andExpect(content().string(containsString("PROVIDER_SNAPSHOT")))
+                .andExpect(content().string(containsString("snapshot:16")))
+                .andExpect(content().string(containsString("event-details-v2")));
+    }
+
+    @Test
     void importsTheOfflineDemoOnlyAfterConsumingTheLocalFormToken() throws Exception {
         var event = event();
         when(fixtureImportService.importNominalCorpus()).thenReturn(
@@ -250,5 +304,23 @@ class EventExplorerControllerTest {
                         Instant.parse("2026-08-15T00:00:00Z")),
                 "b".repeat(64),
                 2L);
+    }
+
+    private static CanonicalEventObservationView providerEvent() {
+        return new CanonicalEventObservationView(
+                2L,
+                CanonicalEventIdentity.sofascore(16386245L),
+                Instant.parse("2026-08-14T18:45:00Z"),
+                new ScheduledTeam(1001L, "Saint-Étienne"),
+                new ScheduledTeam(1002L, "Clermont Foot"),
+                new ScheduledEventStatus("finished", Optional.of("Finished")),
+                Optional.of(new ScheduledTournament(7L, "Ligue 2")),
+                EventSourceTrace.providerSnapshot(
+                        16L,
+                        "c".repeat(64),
+                        "event-details-v2",
+                        Instant.parse("2026-08-15T06:59:05.791963Z")),
+                "d".repeat(64),
+                1L);
     }
 }

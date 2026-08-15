@@ -108,6 +108,9 @@ public class EventExplorerController {
             }
             else {
                 model.addAttribute("detail", detail);
+                model.addAttribute(
+                        "detailSearchDate",
+                        detail.current().startsAtInZone().toLocalDate());
                 model.addAttribute("offlineDetail", detail.offlineDetail().orElse(null));
             }
         }
