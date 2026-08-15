@@ -100,7 +100,7 @@ Vérifier :
 - connecteur `DISABLED` ;
 - base URL `NON_CONFIGURED` ;
 - PostgreSQL `AVAILABLE` ;
-- migration Flyway `2` ;
+- migration Flyway `9` ;
 - snapshots `0` sur une base neuve ;
 - corpus hors ligne `AVAILABLE_OFFLINE` ;
 - fixtures `12 / 12 disponibles` ;
@@ -436,19 +436,22 @@ ouvrir la fiche d'une identité canonique J4 existante puis sélectionner
 5. ne pas recharger, revenir en arrière ou resoumettre le formulaire pendant l'exécution ;
 6. attendre l'état terminal ; le chemin nominal tente au maximum `statistics`, puis `incidents`,
    puis `lineups`, avec au moins trois secondes entre deux départs ;
-7. si le résultat est `COMPLETED_LOCKED`, vérifier les trois panneaux locaux, leur complétude, leur
-   source `PROVIDER_SNAPSHOT`, leur parseur V2, leur snapshot, leur SHA-256 et leur heure de
-   réception, sans ouvrir ou copier le payload brut ;
+7. si le résultat est `COMPLETED_LOCKED`, vérifier les trois panneaux locaux, leur complétude ou
+   leur statut `UNAVAILABLE · N/A`, leur source `PROVIDER_SNAPSHOT`, leur parseur V2 ou normaliseur
+   `event-*-unavailable-v1`, leur snapshot, leur SHA-256 et leur heure de réception, sans ouvrir ou
+   copier le payload brut ;
 8. si la campagne doit être abandonnée alors qu'elle est encore `AWAITING_CONFIRMATION` ou
    `EXECUTING`, sélectionner **« Arrêt global J5 »** ; après un état terminal, aucun nouvel appel
    n'est possible dans le processus et il suffit d'arrêter l'application.
 
-Au premier incident — notamment `403`, `429`, `5xx`, timeout, contenu non JSON, contenu sensible,
-réponse trop volumineuse, incohérence d'identité, incompatibilité de schéma ou erreur de
-persistance — ne pas réessayer et ne pas tenter les familles restantes. Appliquer l'arrêt global si
-l'interface répond encore, arrêter l'application et soumettre l'incident à une décision humaine.
-Un nouvel en-tête, un autre client, une autre adresse ou un redémarrage pour rejouer la campagne ne
-sont pas autorisés par ce Work Order.
+Un HTTP `404` sur l'un des trois endpoints exacts est une indisponibilité de famille : vérifier
+`ENDPOINT_UNAVAILABLE` et `UNAVAILABLE · N/A`, puis laisser la campagne poursuivre sans recharger
+la page et sans répéter l'appel. Au premier incident réel — notamment `403`, `429`, `5xx`, timeout,
+contenu non JSON sur une réponse `2xx`, contenu sensible, réponse trop volumineuse, incohérence
+d'identité, incompatibilité de schéma ou erreur de persistance — ne pas réessayer et ne pas tenter
+les familles restantes. Appliquer l'arrêt global si l'interface répond encore, arrêter
+l'application et soumettre l'incident à une décision humaine. Un nouvel en-tête, un autre client
+ou une autre adresse reste interdit.
 
 Après succès, incident ou abandon, et avant tout autre redémarrage, remettre exactement :
 
@@ -474,9 +477,9 @@ J5_REAL_EVENT_ID=<identifiant confirmé>
 J5_REAL_CANONICAL_EVENT_ID=<UUID affiché>
 J5_REAL_TERMINAL_STATE=COMPLETED_LOCKED|FAILED_LOCKED|STOPPED_LOCKED
 J5_REAL_PROVIDER_CALLS=<0..3>
-J5_REAL_STATISTICS_QUALIFICATION=PASS|FAIL|NOT_ATTEMPTED
-J5_REAL_INCIDENTS_QUALIFICATION=PASS|FAIL|NOT_ATTEMPTED
-J5_REAL_LINEUPS_QUALIFICATION=PASS|FAIL|NOT_ATTEMPTED
+J5_REAL_STATISTICS_QUALIFICATION=PASS|UNAVAILABLE|FAIL|NOT_ATTEMPTED
+J5_REAL_INCIDENTS_QUALIFICATION=PASS|UNAVAILABLE|FAIL|NOT_ATTEMPTED
+J5_REAL_LINEUPS_QUALIFICATION=PASS|UNAVAILABLE|FAIL|NOT_ATTEMPTED
 J5_PROVIDER_SCHEMA_VALIDATED=YES|NO
 LOCAL_CONFIGURATION_RELOCKED=YES|NO
 APPLICATION_STOPPED=YES|NO
@@ -695,7 +698,7 @@ Aucun Docker ni accès SofaScore n’est requis par les tests standards.
 .\mvnw.cmd -Pintegration-tests verify
 ```
 
-Docker doit être disponible. Testcontainers vérifie les migrations V1 à V8, l’état initial du
+Docker doit être disponible. Testcontainers vérifie les migrations V1 à V9, l’état initial du
 connecteur, la conservation exacte du brut, sa déduplication et les provenances J4/J5.
 
 ### 4.3 Script consolidé
@@ -797,13 +800,14 @@ une valeur de `.env`, un cookie, un jeton ou une donnée de session.
 
 ### 4.8 ter Readiness technique de la qualification réelle J5
 
-La voie réelle J5 est qualifiée hors ligne par `257` tests standards et `18` tests
-PostgreSQL/Testcontainers, avec Flyway V8 et zéro appel fournisseur. La preuve est
+La voie réelle J5 corrigée est qualifiée hors ligne par `261` tests standards et `20` tests
+PostgreSQL/Testcontainers, avec Flyway V9 et zéro appel fournisseur. La preuve est
 `docs/validation/J5-REAL-EVENT-DATA-TECHNICAL-READINESS-20260815.md`.
 
 Ces résultats valident les garde-fous, l'ordre des transports simulés, la persistance brute avant
-parsing, les parseurs V2, l'arrêt sans retry et le verrou terminal. Ils ne valident pas les schémas
-actuels du fournisseur. Seule la procédure 3.10 ter peut faire évoluer
+parsing, les parseurs V2, l'arrêt sans retry, le verrou terminal et la poursuite après un HTTP
+`404` de famille explicitement classé `UNAVAILABLE`. Ils ne valident pas les schémas actuels du
+fournisseur. Seule la procédure 3.10 ter peut faire évoluer
 `J5_PROVIDER_SCHEMA_VALIDATED`, après revue humaine et avec le Work Order 006 toujours actif.
 
 ### 4.9 Qualification réelle J4 sous-étape 1

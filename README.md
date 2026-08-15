@@ -14,15 +14,18 @@ qualification réelle gardée, désactivée par défaut, limitée à une identit
 appels confirmés. Son implémentation et la migration V8 sont qualifiées hors ligne. Une campagne
 réelle a ensuite tenté uniquement `EVENT_STATISTICS` pour `16412917` : la réponse JSON HTTP `404`
 a été conservée dans le snapshot 30, puis le circuit s'est verrouillé sans appeler `incidents` ou
-`lineups` et sans retry. Aucun schéma nominal n'a été validé ; `providerSchemaValidated=false`
-reste donc obligatoire.
+`lineups` et sans retry. Cette réaction a révélé un défaut de politique : les statistiques sont
+facultatives et un `404` peut signifier « famille indisponible », notamment pour une compétition
+non majeure. La migration V9 et le correctif J5 distinguent désormais `UNAVAILABLE` d'un incident
+et d'une liste vide valide, puis poursuivent les familles restantes sans retry. Aucun schéma
+nominal n'a été validé ; `providerSchemaValidated=false` reste donc obligatoire.
 
 ## Ce qui est livré localement
 
 - dépôt Git autonome, documentation, ADR, règles agent et Work Orders ;
 - Java **25 LTS**, Spring Boot **4.1.0** et Maven Wrapper versionné ;
 - interface Spring MVC + Thymeleaf sur `127.0.0.1:8087` ;
-- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V8 et stockage brut séparé ;
+- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V9 et stockage brut séparé ;
 - Actuator, Caffeine, validation de configuration et garde de liaison locale ;
 - catalogue logique des familles d’endpoints, sans URI réelle ;
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
@@ -77,8 +80,8 @@ reste donc obligatoire.
   nouvelle confirmation obligatoire, délai minimal de trois secondes et aucune boucle automatique ;
 - contrats synthétiques J5 `event-statistics-v1`, `event-incidents-v1` et `event-lineups-v1`, avec
   parsing JSON strict, avertissements bornés et aucune coercition de type ;
-- contrôles J5 `COMPLETE`, `PARTIAL` et `EMPTY_VALID`, score déterministe et chemins manquants,
-  sans valeur, incident ou joueur inventé ;
+- contrôles J5 `COMPLETE`, `PARTIAL`, `EMPTY_VALID` et `UNAVAILABLE`, score déterministe et chemins
+  manquants, sans valeur, incident ou joueur inventé ;
 - migration V7 conservant les trois familles sous forme d'observations et de lignes normalisées
   append-only, dédupliquées et rattachées à l'identité canonique J4 ;
 - page locale `/events/{canonicalEventId}/statistics` avec import synthétique idempotent, valeurs,
@@ -90,6 +93,9 @@ reste donc obligatoire.
   séquentiels au maximum, délai minimal de trois secondes et verrou terminal dans le processus ;
 - parseurs fournisseur `event-statistics-v2`, `event-incidents-v2` et `event-lineups-v2`, brut
   persisté avant parsing, provenance `PROVIDER_SNAPSHOT` et résultat d'écran minimisé ;
+- traitement borné du HTTP `404` sur les trois chemins J5 exacts : snapshot
+  `ENDPOINT_UNAVAILABLE`, observation `UNAVAILABLE · N/A`, aucun parsing du corps, aucun retry et
+  poursuite ordonnée vers la famille suivante ;
 
 ## Limite essentielle du bootstrap
 
@@ -270,6 +276,12 @@ La migration append-only `V8__guarded_real_j5_event_data.sql` étend uniquement 
 parseur et de provenance J5 afin d'accepter les versions fournisseur V2 rattachées à un snapshot
 brut. Elle ne modifie aucune migration antérieure ni aucune observation existante.
 
+La migration append-only `V9__j5_optional_family_unavailable.sql` distingue une famille non
+publiée d'un incident de transport et d'une liste vide valide. Elle ajoute les statuts
+`ENDPOINT_UNAVAILABLE` et `UNAVAILABLE`, autorise les normaliseurs d'indisponibilité versionnés et
+reclasse les anciens snapshots J5 HTTP `404` marqués `TRANSPORT_ERROR/HTTP_STATUS_404`, sans
+modifier leurs octets, hashes, heures ou identifiants et sans fabriquer d'observation rétroactive.
+
 Le mode `DIRECT_LOCAL_ENDPOINT` ne doit jamais être confondu avec une `VisualObservation` du projet
 global. La persistance n'effectue elle-même aucun appel : les écritures J5 réelles éventuelles sont
 initiées uniquement par la voie humaine gardée, puis référencent le brut séparé avec
@@ -411,12 +423,13 @@ J4_CLOSED=YES
 Cette situation ne déverrouille aucune nouvelle famille, automatisation ou dépendance de
 production. Les rappels de sous-étape 2 restent exclusivement manuels et unitaires.
 
-## J5 hors ligne validé, première campagne réelle arrêtée
+## J5 hors ligne validé, politique HTTP 404 corrigée
 
 J5 réutilise l'identité synthétique `900001` de J4 pour démontrer les trois familles demandées. Les
 neuf fixtures J5 sont explicitement synthétiques et ne valident aucun schéma fournisseur. La page
-locale distingue une rupture structurelle, une famille partielle et une liste vide valide, puis
-affiche chaque chemin manquant avec les métadonnées de provenance.
+locale distingue une rupture structurelle, une famille partielle, une liste vide valide et une
+famille fournisseur indisponible, puis affiche chaque chemin manquant avec les métadonnées de
+provenance.
 
 ```text
 J5_IMPLEMENTATION_STATUS=VALIDATED_OFFLINE
@@ -426,24 +439,25 @@ J5_APPLICATION_TRANSPORT=IMPLEMENTED_GUARDED_DEFAULT_OFF
 J5_DISCOVERY_ATTEMPTS=1
 J5_DISCOVERY_RESULT=HTTP_403_STOPPED_NO_RETRY
 J5_FIXTURE_ORIGIN=SYNTHETIC
-J5_FLYWAY_VERSION=8
+J5_FLYWAY_VERSION=9
 J5_MAVEN_PROVIDER_CALLS=0
 J5_REAL_TECHNICAL_READINESS=PASS
-J5_REAL_CONDITIONS_CAMPAIGN=FAILED_LOCKED_HTTP_404
+J5_REAL_FIRST_CAMPAIGN=HTTP_404_MISCLASSIFIED_AND_LOCKED
 J5_REAL_PROVIDER_CALLS=1
 J5_REAL_STATISTICS_SNAPSHOT=30
 J5_REAL_INCIDENTS=NOT_ATTEMPTED
 J5_REAL_LINEUPS=NOT_ATTEMPTED
-J5_REAL_CONDITIONS_AUTHORIZED_BY_WO_006=CONSUMED
+J5_HTTP_404_POLICY=ENDPOINT_UNAVAILABLE_CONTINUE_NO_RETRY
+J5_CORRECTIVE_RETEST=NOT_RUN
 J5_OFFLINE_WORK_ORDER_STATUS=VALIDATED
-J5_REAL_WORK_ORDER_STATUS=REAL_CAMPAIGN_FAILED_LOCKED_REVIEW_REQUIRED
+J5_REAL_WORK_ORDER_STATUS=CORRECTIVE_IMPLEMENTATION_VALIDATED_OFFLINE
 J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
 ```
 
 `TOURNAMENT_STANDINGS` demeure différé : il ne fait pas partie de la preuve de sortie J5 définie
 par le cadrage et son ajout aurait étendu le corpus alors que les schémas des trois familles
 principales n'ont pas pu être observés. Les captures de validation humaine ne sont pas versionnées ;
-leur constat minimisé est conservé dans les rapports J5. Après le HTTP `404`, aucune nouvelle
-tentative n'est autorisée par `WO-SS-20260815-006`. L'étape immédiate est le reverrouillage de
-`.env`, l'arrêt de l'application et la revue de l'incident. Toute autre campagne exige un Work
-Order correctif séparé.
+leur constat minimisé est conservé dans les rapports J5. Le processus utilisé par la première
+campagne est arrêté. Le correctif ne déclenche aucun appel : une nouvelle qualification reste un
+geste humain explicite après application de V9, revue du Work Order amendé et configuration locale
+manuelle. Le fichier `.env` demeure ignoré et n'est ni lu ni modifié par l'agent.

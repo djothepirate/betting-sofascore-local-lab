@@ -1,6 +1,6 @@
 # WO-SS-20260815-006 — Qualification réelle bornée des données événement J5
 
-- **Statut :** `REAL_CAMPAIGN_FAILED_LOCKED_REVIEW_REQUIRED`
+- **Statut :** `CORRECTIVE_IMPLEMENTATION_VALIDATED_OFFLINE_RETEST_REQUIRED`
 - **Date :** 2026-08-15
 - **Date de démarrage :** 2026-08-15
 - **Prérequis fonctionnel :** WO-SS-20260815-005 validé et archivé
@@ -10,7 +10,9 @@
 - **Familles :** `EVENT_STATISTICS`, `EVENT_INCIDENTS`, `EVENT_LINEUPS`
 - **Développement et tests hors ligne :** `AUTHORIZED`
 - **Appel fournisseur pendant l'implémentation :** `NOT_AUTHORIZED`
-- **Campagne humaine réelle :** `EXECUTED_ONE_CALL_FAILED_HTTP_404`
+- **Première campagne humaine réelle :** `EXECUTED_ONE_CALL_HTTP_404_MISCLASSIFIED`
+- **Amendement correctif demandé par le propriétaire :** `AUTHORIZED`
+- **Campagne corrective réelle :** `NOT_RUN_OPERATOR_ONLY`
 - **Modification directe de `.env` par l'agent :** `NOT_AUTHORIZED`
 - **Polling, planification ou retry :** `NOT_AUTHORIZED`
 - **Déploiement VPS :** `NOT_AUTHORIZED`
@@ -23,12 +25,14 @@ confirmer exactement cette identité, puis effectuer au maximum trois lectures f
 séquentielles : statistiques, incidents et compositions.
 
 Chaque réponse doit être persistée brute avant toute interprétation. Une réponse compatible est
-ensuite normalisée dans les tables append-only J5 avec une provenance `PROVIDER_SNAPSHOT`. Le
-premier incident arrête la campagne, verrouille le contrôle et interdit tout appel restant.
+ensuite normalisée dans les tables append-only J5 avec une provenance `PROVIDER_SNAPSHOT`. Un HTTP
+`404` sur une famille facultative produit une indisponibilité explicite et n'est pas un incident ;
+le premier incident réel arrête la campagne, verrouille le contrôle et interdit tout appel restant.
 
-La réalisation logicielle de ce Work Order n'a exécuté aucune requête réelle. La campagne humaine
-ultérieure est consignée à la section 15 : elle s'est arrêtée sur un HTTP `404` au premier endpoint
-et n'a validé aucun des trois schémas fournisseur.
+La réalisation logicielle de ce Work Order n'a exécuté aucune requête réelle. La première campagne
+humaine est consignée à la section 15 : l'ancienne politique s'est arrêtée sur un HTTP `404` au
+premier endpoint et n'a validé aucun des trois schémas fournisseur. L'amendement demandé par le
+propriétaire corrige cette classification sans exécuter de nouvelle requête réelle.
 
 ## 2. Contexte opérateur reçu le 2026-08-15
 
@@ -79,7 +83,8 @@ Les sections 3.4 à 3.8, 3.10 et 9 de l'ADR-SS-001 ont été relues. Le parcours
 - sans polling, tâche planifiée, cache implicite ou retry ;
 - avec trois secondes au minimum entre deux tentatives ;
 - avec brut local avant parsing et données normalisées séparées ;
-- arrêté et verrouillé au premier incident ;
+- arrêté et verrouillé au premier incident réel, un HTTP `404` de famille étant une disponibilité
+  négative observée et non un incident ;
 - sans dépendance de production ni transmission au VPS.
 
 Comme pour le rappel manuel J4 qualifié, l'absence de cache est volontaire : une campagne confirmée
@@ -106,7 +111,7 @@ SOFASCORE_BASE_URL=https://www.sofascore.com
 SOFASCORE_ALLOWED_ENDPOINTS=EVENT_STATISTICS,EVENT_INCIDENTS,EVENT_LINEUPS
 ```
 
-L'opt-in J5 sera ajouté avec la valeur par défaut `false`. Les chemins J3, J4 et J5 seront
+L'opt-in J5 est défini avec la valeur par défaut `false`. Les chemins J3, J4 et J5 sont
 mutuellement exclusifs. L'origine avec un slash terminal pourra être normalisée comme origine
 racine, mais la forme recommandée reste sans slash.
 
@@ -155,10 +160,14 @@ campagne réussie passe à `COMPLETED_LOCKED` et ne peut pas être rejouée dans
   `event-lineups-v2`, distincts des contrats synthétiques V1 ;
 - l'identifiant attendu vient du claim et de la requête, car les enveloppes de famille peuvent ne
   pas répéter l'identifiant d'événement ;
-- un résultat compatible produit une observation V7/V8 liée au snapshot brut ;
+- un HTTP `404` ne déclenche aucun parsing du corps : il produit un snapshot
+  `ENDPOINT_UNAVAILABLE`, une observation `UNAVAILABLE · N/A` et la poursuite sans retry ;
+- un résultat compatible produit une observation V7/V8/V9 liée au snapshot brut ;
 - une réponse identique est dédupliquée sans réécriture ;
 - aucune donnée partielle n'est persistée après une incompatibilité structurelle ;
-- les absences métier compatibles restent `PARTIAL` ou `EMPTY_VALID` selon la famille.
+- les absences métier compatibles restent `PARTIAL` ou `EMPTY_VALID` selon la famille ;
+- `UNAVAILABLE` reste distinct de `EMPTY_VALID` et utilise un normaliseur
+  `event-*-unavailable-v1` explicite.
 
 ### 5.4 Arrêt terminal
 
@@ -168,8 +177,9 @@ La campagne s'arrête avant tout appel restant sur :
 - échec du délai minimal ;
 - timeout ou erreur d'entrée/sortie ;
 - payload trop volumineux ou contenu sensible ;
-- statut HTTP hors `2xx`, notamment `400`, `401`, `403`, `404`, `429` ou `5xx` ;
-- contenu non JSON ou HTML inattendu ;
+- statut HTTP hors `2xx`, notamment `400`, `401`, `403`, `408`, `429` ou `5xx`, à l'exception du
+  seul HTTP `404` des trois endpoints exacts J5 ;
+- contenu non JSON ou HTML inattendu sur une réponse `2xx` ;
 - JSON ambigu, tronqué ou incompatible ;
 - incohérence entre identité canonique et claim ;
 - erreur de persistance brute, normalisée ou de classification.
@@ -186,6 +196,8 @@ reverrouillée avant toute nouvelle décision.
 - réponse bornée par `RawPayloadEvidence` ;
 - trois parseurs fournisseur V2 et fixtures de forme créées de zéro ;
 - migration Flyway V8 append-only autorisant les versions V2 sans modifier V7 ;
+- migration Flyway V9 append-only ajoutant l'indisponibilité explicite et corrigeant la
+  classification des anciens snapshots J5 HTTP `404` sans modifier leur brut ;
 - persistance normalisée liée à `PROVIDER_SNAPSHOT` ;
 - résultat minimisé affichant endpoint, snapshot, taille, hash, statut, complétude et insertion ;
 - arrêt global J5 ;
@@ -202,7 +214,7 @@ reverrouillée avant toute nouvelle décision.
 - polling, planification, boucle live, cache implicite ou retry ;
 - proxy, cookie, jeton, compte, en-tête personnalisé ou navigateur automatisé ;
 - réutilisation du transport J4 pour les familles J5 ;
-- modification d'une migration V1 à V7 déjà partagée ;
+- modification d'une migration V1 à V8 déjà partagée ;
 - copie d'un payload réel dans Git, un rapport, les logs ou l'interface ;
 - activation de `TOURNAMENT_STANDINGS` ;
 - export J7, VPS, production ou intégration au Betting Project principal ;
@@ -222,7 +234,8 @@ reverrouillée avant toute nouvelle décision.
 10. Persistance brute avant parsing ; sources brutes et normalisées séparées.
 11. Chaque normalisation conserve identité, snapshot, hash, parseur et heure de réception.
 12. Aucune donnée partielle après incompatibilité de schéma.
-13. Le premier incident bloque les appels restants.
+13. Un HTTP `404` de famille est conservé puis la séquence continue sans retry ; le premier
+    incident réel bloque les appels restants.
 14. Les observations normalisées restent append-only.
 15. Aucun payload brut, cookie, jeton, secret ou valeur `.env` sensible dans les sorties.
 16. `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
@@ -239,6 +252,7 @@ reverrouillée avant toute nouvelle décision.
 | préparation d'une identité absente | refus sans transport |
 | phrase, UUID, acquittement ou TTL invalide | refus sans transport |
 | exécution nominale simulée | trois transports dans l'ordre, délai appliqué |
+| HTTP `404` sur statistiques | observation `UNAVAILABLE`, puis incidents et compositions appelés une fois |
 | réponse `403` sur statistiques | un appel, brut classé, deux familles non appelées |
 | réponse `429` sur incidents | deux appels, troisième famille non appelée |
 | HTML ou schéma incompatible | brut conservé, aucune normalisation partielle de la famille |
@@ -248,7 +262,8 @@ reverrouillée avant toute nouvelle décision.
 | second déclenchement même processus | refus terminal |
 | arrêt global | appels suivants refusés |
 | suite Maven | zéro appel Internet |
-| Flyway V1 → V8 | migrations et append-only valides |
+| upgrade V8 contenant un HTTP `404` J5 mal classé | V9 reclasse le snapshot sans modifier son brut |
+| Flyway V1 → V9 | migrations et append-only valides |
 
 ## 10. Critères d'acceptation
 
@@ -261,15 +276,18 @@ reverrouillée avant toute nouvelle décision.
 - [x] trois transports exacts et bornés implémentés ;
 - [x] brut persisté avant parsing ;
 - [x] parseurs V2 et complétude qualifiés hors ligne ;
-- [x] migration V8 et provenance `PROVIDER_SNAPSHOT` qualifiées ;
+- [x] migrations V8/V9 et provenance `PROVIDER_SNAPSHOT` qualifiées ;
 - [x] interface et résultat minimisé qualifiés ;
-- [x] arrêt au premier incident sans retry prouvé ;
+- [x] poursuite après HTTP `404` sans retry et arrêt au premier incident réel prouvés ;
 - [x] `mvnw.cmd clean verify` réussi ;
 - [x] `mvnw.cmd -Pintegration-tests verify` réussi ;
 - [x] readiness humaine publiée ;
 - [x] configuration réelle toujours non exécutée pendant l'implémentation ;
-- [x] campagne humaine réelle arrêtée au premier HTTP `404`, sans retry ni endpoint restant ;
-- [x] snapshot d'incident et preuve minimisée consignés sans payload brut.
+- [x] comportement historique de la première campagne et snapshot 30 consignés sans payload brut ;
+- [x] cause racine du verrouillage HTTP `404` identifiée ;
+- [x] distinction `UNAVAILABLE` / `EMPTY_VALID` / `TRANSPORT_ERROR` implémentée et testée ;
+- [ ] campagne humaine corrective exécutée après application de V9 ;
+- [ ] configuration locale reverrouillée et arrêt final confirmés après le retest.
 
 ## 11. Unités de livraison prévues
 
@@ -280,19 +298,21 @@ reverrouillée avant toute nouvelle décision.
 5. `docs: publish J5 real campaign readiness`
 6. `test: isolate historical bindings from armed J5 configuration`
 7. `docs: record the failed-locked J5 real campaign`
+8. `fix: continue J5 after an unavailable optional family`
+9. `docs: record the J5 HTTP 404 policy correction`
 
 ## 12. Readiness technique hors ligne
 
 ```text
-STANDARD_TESTS=257
+STANDARD_TESTS=261
 STANDARD_FAILURES=0
 STANDARD_ERRORS=0
 STANDARD_SKIPPED=0
-INTEGRATION_TESTS=18
+INTEGRATION_TESTS=20
 INTEGRATION_FAILURES=0
 INTEGRATION_ERRORS=0
 INTEGRATION_SKIPPED=0
-FLYWAY_MIGRATIONS=8
+FLYWAY_MIGRATIONS=9
 POSTGRESQL=18.4_TESTCONTAINERS
 SOFASCORE_PROVIDER_CALLS=0
 J5_REAL_TECHNICAL_READINESS=PASS
@@ -300,26 +320,28 @@ J5_REAL_TECHNICAL_READINESS=PASS
 
 La preuve détaillée est conservée dans
 `docs/validation/J5-REAL-EVENT-DATA-TECHNICAL-READINESS-20260815.md`. Elle qualifie le code et les
-garde-fous hors ligne ; elle ne qualifie pas les trois formes de réponse actuelles du fournisseur.
-La campagne humaine a maintenant été exécutée et arrêtée au premier incident. Le Work Order reste
-actif jusqu'au reverrouillage de `.env`, à l'arrêt de l'application et à la revue de la preuve
-minimisée.
+garde-fous hors ligne ; elle ne qualifie pas les trois formes de réponse nominales actuelles du
+fournisseur. La première campagne humaine a révélé une indisponibilité HTTP `404` mal classée. Le
+correctif est validé hors ligne ; le Work Order reste actif jusqu'au retest humain, au
+reverrouillage de `.env` et à l'arrêt final.
 
 ## 13. État de préparation
 
 ```text
 WO_ID=WO-SS-20260815-006
-WO_STATUS=REAL_CAMPAIGN_FAILED_LOCKED_REVIEW_REQUIRED
+WO_STATUS=CORRECTIVE_IMPLEMENTATION_VALIDATED_OFFLINE_RETEST_REQUIRED
 BASE_COMMIT=5063ac8e
 BRANCH=codex/j5-real-event-data-qualification
 J5_OFFLINE_STATUS=VALIDATED
 J5_REAL_IMPLEMENTATION_STATUS=PASS
 J5_REAL_PROVIDER_CALLS=1
-J5_REAL_CAMPAIGN_STATUS=FAILED_LOCKED_HTTP_404
+J5_REAL_FIRST_CAMPAIGN_STATUS=HTTP_404_MISCLASSIFIED_AND_LOCKED
+J5_REAL_HTTP_404_POLICY=ENDPOINT_UNAVAILABLE_CONTINUE_NO_RETRY
+J5_REAL_CORRECTIVE_RETEST=NOT_RUN_OPERATOR_ONLY
 J5_REAL_ENV_CONFIGURATION=APPLIED_FOR_REAL_CAMPAIGN_RELOCK_PENDING
 J5_REAL_PROVIDER_SCHEMA_VALIDATED=NO
 J5_REAL_APPLICATION_TRANSPORT=IMPLEMENTED_GUARDED_DEFAULT_OFF
-J5_REAL_CAN_BE_EXECUTED=NO_INCIDENT_REVIEW_REQUIRED
+J5_REAL_CAN_BE_EXECUTED=PENDING_HUMAN_REVIEW_AND_LOCAL_CONFIGURATION
 J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
 ```
 
@@ -350,7 +372,7 @@ PRECHECK_REAL_CAMPAIGN_STATUS=NOT_RUN
 Cette correction qualifie uniquement l'isolation de la suite Maven. La campagne humaine réelle,
 la validation des trois schémas fournisseur et le reverrouillage final restent à exécuter.
 
-## 15. Campagne humaine réelle et arrêt terminal
+## 15. Première campagne humaine et comportement historique
 
 Le 2026-08-15, l'opérateur a préparé puis confirmé une campagne pour l'identité canonique
 `9b9e7909-62e7-3985-bc34-759ad8684224`, fournisseur `16412917`. Le prérequis J4 était le
@@ -358,9 +380,9 @@ Le 2026-08-15, l'opérateur a préparé puis confirmé une campagne pour l'ident
 `finished`.
 
 Le premier endpoint `EVENT_STATISTICS` a renvoyé HTTP `404` avec un contenu JSON de 44 octets. Le
-brut a été conservé dans le snapshot 30 puis classé `TRANSPORT_ERROR` avec le code
-`HTTP_STATUS_404`. Le contrôle est passé à `FAILED_LOCKED` après exactement un appel. Aucun appel
-`EVENT_INCIDENTS` ou `EVENT_LINEUPS` n'a été tenté et aucun retry n'a été effectué.
+brut a été conservé dans le snapshot 30 puis l'ancienne politique l'a classé `TRANSPORT_ERROR`
+avec le code `HTTP_STATUS_404`. Le contrôle est passé à `FAILED_LOCKED` après exactement un appel.
+Aucun appel `EVENT_INCIDENTS` ou `EVENT_LINEUPS` n'a été tenté et aucun retry n'a été effectué.
 
 L'ouverture ultérieure de la page de `16391135` a montré le même verrou terminal global et n'a
 créé aucun snapshot J5 supplémentaire. Les trois schémas restent non validés. La phrase de
@@ -372,18 +394,57 @@ La preuve détaillée est conservée dans
 ```text
 J5_REAL_EVENT_ID=16412917
 J5_REAL_CANONICAL_EVENT_ID=9b9e7909-62e7-3985-bc34-759ad8684224
-J5_REAL_TERMINAL_STATE=FAILED_LOCKED
-J5_REAL_TERMINAL_CODE=HTTP_STATUS_404
+J5_REAL_ORIGINAL_TERMINAL_STATE=FAILED_LOCKED
+J5_REAL_ORIGINAL_TERMINAL_CODE=HTTP_STATUS_404
 J5_REAL_PROVIDER_CALLS=1
-J5_REAL_STATISTICS_QUALIFICATION=FAIL_HTTP_404
+J5_REAL_STATISTICS_OBSERVATION=NOT_PERSISTED_BY_HISTORICAL_EXECUTION
+J5_REAL_STATISTICS_AVAILABILITY=UNAVAILABLE_HTTP_404
 J5_REAL_INCIDENTS_QUALIFICATION=NOT_ATTEMPTED
 J5_REAL_LINEUPS_QUALIFICATION=NOT_ATTEMPTED
 J5_REAL_SNAPSHOT_ID=30
 J5_REAL_PROVIDER_SCHEMA_VALIDATED=NO
 J5_REAL_RETRY=0
-J5_REAL_ADDITIONAL_CALL_AUTHORIZED=NO
+J5_REAL_CORRECTIVE_RETEST=NOT_RUN_OPERATOR_ONLY
+J5_REAL_APPLICATION_STOP=CONFIRMED_LOCAL_PORT_CLOSED
 J5_REAL_ENV_RELOCK=PENDING_OPERATOR_CONFIRMATION
 ```
 
-Le Work Order reste actif pour la revue de l'incident et la confirmation du reverrouillage. Toute
-nouvelle campagne exige une autorisation et un Work Order correctif séparés.
+Le processus local de cette première campagne est arrêté. Cette section reste immuable comme preuve
+du comportement historique ; la section 16 consigne la décision corrective ultérieure.
+
+## 16. Amendement correctif — famille facultative indisponible
+
+Le propriétaire a précisé que les statistiques ne sont pas obligatoirement disponibles dans
+toutes les compétitions et que, dans ce cas, le championnat d'Ukraine n'est pas considéré comme un
+championnat majeur. La requête avait atteint le bon chemin et le bon identifiant : la cause se
+trouve dans `J5RealEventDataService`, qui envoyait tout statut non `2xx` vers
+`failAndLock(...)` avant toute distinction de disponibilité.
+
+Le correctif autorisé par cet amendement est strictement borné :
+
+- le seul HTTP `404` des trois endpoints J5 exacts devient `ENDPOINT_UNAVAILABLE` ;
+- une observation append-only vide de valeurs et de statut `UNAVAILABLE` conserve snapshot, hash,
+  normaliseur `event-*-unavailable-v1` et heure de réception ;
+- `UNAVAILABLE · N/A` reste distinct de `EMPTY_VALID · 100%` ;
+- aucun corps `404` n'est parsé et aucune valeur n'est inventée ;
+- le même endpoint n'est jamais rappelé ; la campagne attend le délai prévu puis poursuit ;
+- `403`, `408`, `429`, `5xx`, transport, contenu ou schéma incompatible restent terminaux ;
+- V9 reclasse les anciens snapshots J5 `TRANSPORT_ERROR/HTTP_STATUS_404` sans modifier le brut et
+  sans créer de normalisation rétroactive.
+
+```text
+J5_HTTP_404_ROOT_CAUSE=NON_2XX_POLICY_TOO_BROAD
+J5_HTTP_404_CORRECTIVE_IMPLEMENTATION=PASS
+J5_HTTP_404_CORRECTIVE_STANDARD_TESTS=261
+J5_HTTP_404_CORRECTIVE_INTEGRATION_TESTS=20
+J5_HTTP_404_CORRECTIVE_FLYWAY_VERSION=9
+J5_HTTP_404_CORRECTIVE_PROVIDER_CALLS_BY_AGENT=0
+J5_HTTP_404_CORRECTIVE_RETEST=NOT_RUN_OPERATOR_ONLY
+J5_PROVIDER_SCHEMA_VALIDATED=NO
+```
+
+La campagne corrective reste un geste humain séparé dans le temps : application préalable de V9,
+revue de ce Work Order, préparation sans réseau, nouvelle confirmation exacte et au plus trois
+appels ordonnés. Le succès attendu peut combiner `UNAVAILABLE` et des familles parsées ; seul un
+incident réel doit produire `FAILED_LOCKED`. Après le geste, le propriétaire reverrouille `.env`
+et arrête l'application. L'agent ne lit ni ne modifie ce fichier et n'exécute aucun appel réel.

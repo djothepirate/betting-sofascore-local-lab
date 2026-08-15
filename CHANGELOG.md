@@ -6,6 +6,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Corrigé
 
+- correction de la politique J5 qui traitait tout statut non `2xx` comme terminal : un HTTP `404`
+  sur `EVENT_STATISTICS`, `EVENT_INCIDENTS` ou `EVENT_LINEUPS` devient une indisponibilité de
+  famille persistée, sans retry, puis la campagne continue dans l'ordre prévu ;
+- distinction explicite entre `UNAVAILABLE`, `EMPTY_VALID` et `TRANSPORT_ERROR`, avec normaliseur
+  de provenance par famille, rendu `UNAVAILABLE · N/A` et absence de valeur synthétisée ;
+- migration Flyway V9 reclassant les anciens snapshots J5 HTTP `404` de
+  `TRANSPORT_ERROR/HTTP_STATUS_404` vers `ENDPOINT_UNAVAILABLE`, sans modifier les octets bruts ni
+  créer rétroactivement une observation normalisée ;
 - conservation de la date civile du match et de la zone IANA dans le lien de retour de la fiche
   J4 : Saint-Étienne — Clermont Foot revient désormais sur le `2026-08-14` au lieu de la date
   locale courante du `2026-08-15` ;
@@ -37,6 +45,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Ajouté
 
+- tests hors ligne du scénario mixte « statistiques HTTP `404`, incidents et compositions `2xx` »,
+  de l'affichage d'indisponibilité, de la persistance PostgreSQL `UNAVAILABLE` et de l'upgrade
+  V8 → V9 d'un snapshot historique mal classé ;
 - voie de qualification réelle J5, désactivée par défaut et mutuellement exclusive de J3/J4,
   limitée à l'origine exacte `https://www.sofascore.com` et aux trois endpoints logiques
   `EVENT_STATISTICS`, `EVENT_INCIDENTS` et `EVENT_LINEUPS` ;

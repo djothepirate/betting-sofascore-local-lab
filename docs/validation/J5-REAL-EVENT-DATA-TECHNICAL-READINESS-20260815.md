@@ -4,7 +4,8 @@
 - **Work Order :** `WO-SS-20260815-006`
 - **Branche :** `codex/j5-real-event-data-qualification`
 - **Qualification technique :** `PASS`
-- **Qualification humaine réelle :** `FAILED_LOCKED_HTTP_404`
+- **Qualification humaine réelle :** `HTTP_404_AVAILABILITY_SIGNAL_OBSERVED`
+- **Correctif de politique :** `PASS_OFFLINE_RETEST_NOT_RUN`
 - **Appels SofaScore pendant la réalisation :** `0`
 - **Lecture ou modification de `.env` par l'agent :** `NO`
 - **Schémas fournisseur J5 validés :** `NO`
@@ -20,8 +21,10 @@
 - persistance des octets bruts avant parsing ;
 - parseurs V2 sans résultat partiel sur incompatibilité ;
 - provenance normalisée `PROVIDER_SNAPSHOT` ;
-- migration append-only V8 ;
-- arrêt au premier incident, sans retry ;
+- migrations append-only V8 et V9 ;
+- HTTP `404` d'une famille classé `ENDPOINT_UNAVAILABLE` / `UNAVAILABLE`, sans retry et avec
+  poursuite ordonnée ;
+- arrêt au premier incident réel, sans retry ;
 - interface locale protégée par jeton de formulaire et résultat minimisé.
 
 ## 2. Vérifications exécutées
@@ -29,7 +32,7 @@
 ```text
 COMMAND=.\mvnw.cmd clean verify
 RESULT=PASS
-STANDARD_TESTS=257
+STANDARD_TESTS=261
 STANDARD_FAILURES=0
 STANDARD_ERRORS=0
 STANDARD_SKIPPED=0
@@ -39,12 +42,12 @@ SOFASCORE_PROVIDER_CALLS=0
 ```text
 COMMAND=.\mvnw.cmd -Pintegration-tests verify
 RESULT=PASS
-STANDARD_TESTS=257
-INTEGRATION_TESTS=18
+STANDARD_TESTS=261
+INTEGRATION_TESTS=20
 INTEGRATION_FAILURES=0
 INTEGRATION_ERRORS=0
 INTEGRATION_SKIPPED=0
-FLYWAY_MIGRATIONS=8
+FLYWAY_MIGRATIONS=9
 POSTGRESQL=18.4_TESTCONTAINERS
 SOFASCORE_PROVIDER_CALLS=0
 ```
@@ -77,7 +80,9 @@ l'agent sont non bloquants et indépendants de ce correctif. Ils n'expliquent pa
 
 Les tests de transport utilisent `MockRestServiceServer`. Les fixtures V2 sont locales et ne sont
 pas des payloads fournisseur. Le test PostgreSQL prouve qu'une observation V2 peut référencer un
-snapshot brut et être relue avec sa provenance.
+snapshot brut et être relue avec sa provenance. Le correctif ajoute la preuve qu'une observation
+`UNAVAILABLE` est persistée sans ligne métier, ainsi qu'un scénario d'upgrade V8 → V9 reclassant
+un ancien HTTP `404` J5 sans modifier son brut.
 
 ## 3. Invariants audités
 
@@ -95,22 +100,28 @@ MAXIMUM_CONCURRENCY=1
 MINIMUM_DELAY=3s
 RETRY=ABSENT
 RAW_BEFORE_PARSE=PASS
-V1_TO_V8_MIGRATION=PASS
+J5_HTTP_404_CONTINUES_WITHOUT_RETRY=PASS
+UNAVAILABLE_DISTINCT_FROM_EMPTY_VALID=PASS
+V1_TO_V9_MIGRATION=PASS
 ```
 
 ## 4. Décision
 
 ```text
 J5_REAL_TECHNICAL_READINESS=PASS
-J5_REAL_CAMPAIGN_AUTHORIZATION=CONSUMED
-J5_REAL_CAMPAIGN_EXECUTED=YES_FAILED_LOCKED_HTTP_404
+J5_REAL_FIRST_CAMPAIGN=YES_HTTP_404_MISCLASSIFIED_AND_LOCKED
+J5_REAL_HTTP_404_POLICY_CORRECTED=YES
+J5_REAL_CORRECTIVE_RETEST=NOT_RUN
 J5_REAL_PROVIDER_SCHEMA_VALIDATED=NO
 J5_REAL_CAMPAIGN_RETRY_AUTHORIZED=NO
 WORK_ORDER_CAN_BE_ARCHIVED=NO
 ```
 
 Cette readiness a été utilisée par l'opérateur pour une campagne réelle ultérieure. Le premier
-endpoint a renvoyé HTTP `404` et le contrôle a correctement arrêté puis verrouillé la campagne
-après un seul appel. La preuve est conservée dans
-`J5-REAL-EVENT-DATA-CAMPAIGN-20260815.md`. Le prochain geste est l'arrêt de l'application et le
-reverrouillage de `.env`, puis la revue de l'incident sans nouvel appel fournisseur.
+endpoint a renvoyé HTTP `404`; l'ancienne politique l'a conservé puis a verrouillé la campagne
+après un seul appel. La revue fonctionnelle a établi que les statistiques sont facultatives et
+qu'une compétition non majeure peut ne pas les publier. V9 et le service corrigé enregistrent
+donc ce signal comme indisponibilité, puis poursuivent sans retry. La preuve historique est
+conservée dans `J5-REAL-EVENT-DATA-CAMPAIGN-20260815.md`. Le processus de la première campagne est
+arrêté. Le fichier `.env` reste hors Git et n'a été ni lu ni modifié par l'agent ; la campagne
+corrective réelle demeure `NOT_RUN` et relève d'un nouveau geste humain explicite.
