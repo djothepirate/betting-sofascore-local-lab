@@ -3,6 +3,7 @@
 - **Date :** 2026-08-15
 - **Work Order :** `WO-SS-20260815-004`
 - **Branche corrective :** `codex/j4-real-event-details-phase1`
+- **Pull Request :** `#8` — `DRAFT`
 - **Périmètre réseau exécuté :** événements `16386245` puis `16421052` uniquement
 - **État de la campagne :** `COMPLETED_LOCKED`
 - **État de la qualification humaine :** `PENDING_CORRECTIVE_LOCAL_RETEST`
@@ -139,6 +140,8 @@ remise de la configuration à l'état bloqué doit être confirmée. Le Work Ord
 REAL_PROVIDER_QUALIFICATION=EXECUTED_PHASE1
 LOCAL_NAVIGATION_QUALIFICATION=FAIL_CORRECTIVE_RETEST_REQUIRED
 HUMAN_REAL_PHASE1_QUALIFICATION=PENDING_CORRECTIVE_LOCAL_RETEST
+J4_REAL_PHASE1_PULL_REQUEST=8
+J4_REAL_PHASE1_PULL_REQUEST_STATE=DRAFT
 WORK_ORDER_STATUS=IN_DEVELOPMENT
 J4_WORK_ORDER=ACTIVE
 J4_CAN_BE_CLOSED=NO
