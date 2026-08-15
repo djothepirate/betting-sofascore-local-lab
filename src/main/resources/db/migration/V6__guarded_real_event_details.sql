@@ -3,9 +3,18 @@ alter table event_detail_observation
     add column source_reference varchar(128),
     add column source_snapshot_id bigint;
 
+-- V5 made this table append-only before these provenance columns existed.
+-- Suspend only its mutation trigger, inside the transactional Flyway migration,
+-- while completing the structural provenance of the existing V5 rows.
+alter table event_detail_observation
+    disable trigger event_detail_observation_append_only;
+
 update event_detail_observation
 set source_kind = 'SYNTHETIC_FIXTURE',
     source_reference = source_fixture_id;
+
+alter table event_detail_observation
+    enable trigger event_detail_observation_append_only;
 
 alter table event_detail_observation
     alter column source_kind set not null,
