@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.adapter.persistence;
 
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
+import com.bettingproject.sofascorelocal.domain.event.EventSourceKind;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservation;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservationView;
@@ -33,6 +34,9 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
     private static final String INSERT_SQL = """
             insert into event_detail_observation (
                 canonical_event_id,
+                source_kind,
+                source_reference,
+                source_snapshot_id,
                 source_fixture_id,
                 source_payload_sha256,
                 parser_version,
@@ -55,6 +59,9 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
                 normalized_sha256
             ) values (
                 :canonicalEventId,
+                :sourceKind,
+                :sourceReference,
+                :sourceSnapshotId,
                 :sourceFixtureId,
                 :sourcePayloadSha256,
                 :parserVersion,
@@ -76,7 +83,12 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
                 :eventRound,
                 :normalizedSha256
             )
-            on conflict (canonical_event_id, source_fixture_id, normalized_sha256)
+            on conflict (
+                canonical_event_id,
+                source_kind,
+                source_reference,
+                normalized_sha256
+            )
             do nothing
             """;
 
@@ -84,7 +96,8 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
             select id
             from event_detail_observation
             where canonical_event_id = :canonicalEventId
-              and source_fixture_id = :sourceFixtureId
+              and source_kind = :sourceKind
+              and source_reference = :sourceReference
               and normalized_sha256 = :normalizedSha256
             """;
 
@@ -94,6 +107,9 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
                 e.id as canonical_event_id,
                 e.provider,
                 e.provider_event_id,
+                d.source_kind,
+                d.source_reference,
+                d.source_snapshot_id,
                 d.source_fixture_id,
                 d.source_payload_sha256,
                 d.parser_version,
@@ -164,7 +180,18 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
         EventSeason season = details.season().orElse(null);
         return new MapSqlParameterSource()
                 .addValue("canonicalEventId", observation.identity().value())
-                .addValue("sourceFixtureId", observation.source().fixtureId().orElseThrow())
+                .addValue("sourceKind", observation.source().kind().name())
+                .addValue("sourceReference", observation.source().sourceReference())
+                .addValue(
+                        "sourceSnapshotId",
+                        observation.source().snapshotId().isPresent()
+                                ? observation.source().snapshotId().getAsLong()
+                                : null,
+                        Types.BIGINT)
+                .addValue(
+                        "sourceFixtureId",
+                        observation.source().fixtureId().orElse(null),
+                        Types.VARCHAR)
                 .addValue("sourcePayloadSha256", observation.source().payloadSha256())
                 .addValue("parserVersion", observation.source().parserVersion())
                 .addValue(
@@ -253,11 +280,20 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
                                 seasonId,
                                 resultSet.getString("season_name"))),
                 Optional.ofNullable(resultSet.getString("event_round")));
-        EventSourceTrace source = EventSourceTrace.syntheticFixture(
-                resultSet.getString("source_fixture_id"),
-                resultSet.getString("source_payload_sha256"),
-                resultSet.getString("parser_version"),
-                receivedAt.toInstant());
+        EventSourceKind sourceKind = EventSourceKind.valueOf(
+                resultSet.getString("source_kind"));
+        EventSourceTrace source = switch (sourceKind) {
+            case PROVIDER_SNAPSHOT -> EventSourceTrace.providerSnapshot(
+                    resultSet.getLong("source_snapshot_id"),
+                    resultSet.getString("source_payload_sha256"),
+                    resultSet.getString("parser_version"),
+                    receivedAt.toInstant());
+            case SYNTHETIC_FIXTURE -> EventSourceTrace.syntheticFixture(
+                    resultSet.getString("source_fixture_id"),
+                    resultSet.getString("source_payload_sha256"),
+                    resultSet.getString("parser_version"),
+                    receivedAt.toInstant());
+        };
         return new EventDetailObservationView(
                 resultSet.getLong("observation_id"),
                 identity,

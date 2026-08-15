@@ -20,7 +20,7 @@ class EventDetailsV1ParserTest {
         assertThat(result.status()).isEqualTo(EventDetailsParseStatus.PARSED);
         assertThat(result.problems()).isEmpty();
         assertThat(result.warnings()).isEmpty();
-        assertThat(result.evidence().fixtureId()).isEqualTo("event-details-nominal");
+        assertThat(result.evidence().sourceReference()).isEqualTo("event-details-nominal");
         assertThat(result.evidence().rawSha256())
                 .isEqualTo("824a54db1aecddab300bcf0b5fb35c4224c5fbc9c70884f962f651e0e62f3341");
         assertThat(result.evidence().parserVersion()).isEqualTo("event-details-v1");

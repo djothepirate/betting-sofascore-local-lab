@@ -2,37 +2,41 @@
 
 ## 1. Frontière du jalon
 
-J4 transforme des sources déjà locales en une vue métier consultable. Il n’étend pas le périmètre
-réseau J3.
+J4 transforme des sources locales en une vue métier consultable. Son parcours historique demeure
+hors ligne. L’amendement du Work Order du 2026-08-15 ajoute une voie réseau spéciale, indépendante
+du transport J3 et limitée à deux événements pour la qualification humaine sous-étape 1.
 
 ```text
-SOURCES_ACCEPTED=SCHEDULED_EVENTS_LOCAL_SNAPSHOT,SYNTHETIC_FIXTURE
-EVENT_DETAILS_REAL_URI_CONFIGURED=NO
-EVENT_DETAILS_PROVIDER_TRANSPORT=NO
+SOURCES_ACCEPTED=SCHEDULED_EVENTS_LOCAL_SNAPSHOT,SYNTHETIC_FIXTURE,EVENT_DETAILS_PROVIDER_SNAPSHOT
+EVENT_DETAILS_PHASE_1_EVENT_IDS=16386245,16421052
+EVENT_DETAILS_PROVIDER_TRANSPORT=DISABLED_BY_DEFAULT
+GENERAL_CATALOG_CALLABLE=FALSE
 AUTOMATIC_FALLBACK=NO
 POLLING_OR_SCHEDULING=NO
 ```
 
-Le catalogue conserve toutes ses définitions `callable=false` et sans URI. L’absence d’un détail ou
-d’un événement compatible est un résultat local normal, jamais un motif d’appel fournisseur.
+Le catalogue conserve toutes ses définitions `callable=false` et sans URI générale. L’absence d’un
+détail ou d’un événement compatible reste un résultat local normal : aucun repli réseau n’est
+déclenché. Seule l’action humaine de campagne, précédée de l’opt-in exact et de la confirmation,
+peut atteindre les deux requêtes compilées dans l’allowlist.
 
 ## 2. Flux de normalisation
 
 ```text
-snapshot local J3                         fixtures synthétiques J4
-SCHEDULED_EVENTS                          scheduled-events + event-details
-        │                                             │
-        ├─ taille + SHA-256                           ├─ manifests + SHA-256
-        ├─ endpoint logique exact                     ├─ parsing intégral des deux sources
-        └─ scheduled-events-v1                        └─ égalité providerEventId
-        │                                             │
-        └────────────────────┬────────────────────────┘
+snapshot local J3            fixtures synthétiques J4        campagne J4 phase 1
+SCHEDULED_EVENTS             scheduled + event-details-v1    EVENT_DETAILS, 2 IDs
+        │                              │                              │
+        ├─ taille + SHA-256            ├─ manifests + SHA-256        ├─ cache préalable
+        └─ scheduled-events-v1         └─ égalité providerEventId    ├─ brut persisté
+                                                                      └─ event-details-v2
+        │                              │                              │
+        └──────────────────────┬───────┴──────────────────────────────┘
                              ▼
                    identité canonique stable
                              │
               observations d’événement append-only
                              │
-              détail synthétique append-only éventuel
+              détail append-only, fixture ou snapshot
                              │
                    recherche et vues locales
 ```
@@ -93,11 +97,13 @@ La requête SQL choisit d’abord la dernière observation de chaque identité, 
 un autre jour, son ancienne version reste dans l’historique mais ne doit plus apparaître dans les
 résultats courants de l’ancienne date.
 
-## 6. Détail hors ligne
+## 6. Détail local hors ligne ou issu de la campagne bornée
 
-Le contrat `event-details-v1` est décrit séparément dans `EVENT-DETAILS-V1.md`. La ligne de détail
-stocke les champs normalisés de stade, ville, saison et tour avec sa preuve synthétique. Le service
-exige que l’identifiant du détail corresponde exactement à l’identité canonique ciblée.
+Le contrat `event-details-v1` est décrit séparément dans `EVENT-DETAILS-V1.md` et reste associé aux
+fixtures historiques. `event-details-v2` parse l’enveloppe fournisseur `event` depuis un snapshot
+brut déjà inséré. La ligne de détail stocke les champs normalisés de stade, ville, saison et tour
+avec une provenance exclusive `SYNTHETIC_FIXTURE` ou `PROVIDER_SNAPSHOT`. Dans les deux cas, le
+service exige que l’identifiant du détail corresponde exactement à l’identité canonique ciblée.
 
 La page `/events/{canonicalId}` rend :
 
@@ -111,7 +117,11 @@ Le rendu ne contient aucun payload brut et les réponses portent `no-store` et `
 ## 7. Schéma PostgreSQL
 
 La migration V4 ajoute `canonical_event` et `canonical_event_observation`. La migration V5 ajoute
-`event_detail_observation`. Elles sont append-only : aucune migration V1 à V3 n’est modifiée.
+`event_detail_observation`. V6 étend sa provenance aux snapshots fournisseur et le cache local à
+`EVENT_DETAILS`. Aucune migration V1 à V5 n’est modifiée. Pour une base V5 déjà alimentée, V6
+suspend uniquement le trigger append-only de `event_detail_observation` pendant le backfill
+transactionnel de `source_kind` et `source_reference`, puis le réactive avant les contraintes
+finales. Les champs métier historiques restent inchangés.
 
 Les tests Testcontainers vérifient notamment :
 
@@ -121,13 +131,24 @@ Les tests Testcontainers vérifient notamment :
 - la persistance transactionnelle du corpus hors ligne ;
 - le refus SQL des mises à jour et suppressions ;
 - la normalisation idempotente d’un snapshot compatible ;
+- la provenance fournisseur du détail et la clé étrangère vers le brut préalable ;
+- le cache `EVENT_DETAILS` sans duplication des octets ;
+- l’upgrade V5 préremplie → V6, la conservation de toutes les valeurs existantes et la
+  réactivation du trigger append-only ;
 - l’absence d’écriture partielle sur erreur d’intégrité ou de schéma.
 
 ## 8. Invariants de sécurité
 
-J4 ne modifie pas `ConnectorGate`, le profil `sofascore-live-test`, la configuration sûre par défaut
-ou le transport J3. `server.address=127.0.0.1` demeure obligatoire. Aucun test standard ou
-d’intégration n’effectue un appel SofaScore.
+J4 ne modifie pas `ConnectorGate`, le profil `sofascore-live-test` ou le transport J3.
+`server.address=127.0.0.1` demeure obligatoire. Le drapeau
+`j4-event-details-qualification-enabled` et l'opt-in distinct
+`j4-event-details-phase2-enabled` valent `false` par défaut. J4 ne peut coexister avec l’opt-in J3,
+et la sélection de la sous-étape 2 bloque la sous-étape 1. Aucun test standard ou d’intégration
+n’effectue un appel SofaScore.
 
-Une future URI `EVENT_DETAILS`, une collecte réelle, un polling, une planification ou un export
-vers le Betting Project exigeraient un Work Order et une décision de gouvernance séparés.
+Les deux sous-étapes s’arrêtent et se verrouillent au premier incident, au premier `403`, `429`,
+`5xx`, timeout, contenu inattendu ou schéma incompatible. Elles n’effectuent aucun retry. La
+sous-étape 2 autorisée reçoit un ID borné et réalise un seul nouvel appel sans cache par
+confirmation ; le même ID peut être rappelé uniquement par un nouveau geste humain. Un polling,
+une planification, un rafraîchissement automatique ou un export vers le Betting Project exigent
+une nouvelle autorisation explicite.

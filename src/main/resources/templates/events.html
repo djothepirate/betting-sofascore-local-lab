@@ -11,7 +11,7 @@
   <div class="shell">
     <p class="eyebrow">J4 · Événements locaux</p>
     <h1>Recherche par date</h1>
-    <p class="subtitle">Identité canonique, versions append-only et détail hors ligne.</p>
+    <p class="subtitle">Identité canonique, versions append-only et qualification réelle bornée.</p>
   </div>
 </header>
 
@@ -26,7 +26,7 @@
         <p class="label">Lecture locale uniquement</p>
         <h2 id="search-title">Date civile et zone explicite</h2>
       </div>
-      <span class="chip chip-safe">AUCUN TRANSPORT FOURNISSEUR</span>
+      <span class="chip chip-safe">LECTURE LOCALE</span>
     </div>
 
     <form class="event-search-form" method="get" th:action="@{/events}">
@@ -67,6 +67,35 @@
      th:text="${'Normalisation refusée : ' + snapshotNormalizationErrorCode}">
     Normalisation refusée.
   </p>
+  <p class="notice notice-safe" th:if="${realPhase1Prepared != null}">
+    Campagne J4 sous-étape 1 préparée. Recopier la phrase de confirmation avant son expiration.
+  </p>
+  <p class="notice notice-safe" th:if="${realPhase1Result != null and realPhase1Result.completed}">
+    Campagne réelle terminée et circuit automatiquement reverrouillé :
+    <span th:text="${realPhase1Result.providerCallAttempts}">0</span> appel(s) fournisseur,
+    <span th:text="${realPhase1Result.cacheHits}">0</span> réponse(s) de cache.
+  </p>
+  <p class="notice notice-warning" th:if="${realPhase1Stopped}">
+    Arrêt global appliqué. La sous-étape 2 exige désormais un redémarrage avant toute nouvelle
+    préparation.
+  </p>
+  <p class="notice notice-danger" th:if="${realPhase1ErrorCode != null}"
+     th:text="${'Campagne réelle arrêtée : ' + realPhase1ErrorCode}">
+    Campagne réelle arrêtée.
+  </p>
+  <p class="notice notice-safe" th:if="${realPhase2Prepared != null}">
+    Rafraîchissement J4 sous-étape 2 préparé pour l’événement
+    <span class="mono" th:text="${realPhase2Prepared.eventId}">0</span>.
+    Recopier la phrase de confirmation avant son expiration.
+  </p>
+  <p class="notice notice-safe" th:if="${realPhase2Result != null and realPhase2Result.completed}">
+    Rafraîchissement manuel terminé et circuit automatiquement reverrouillé pour l’événement
+    <span class="mono" th:text="${realPhase2Result.requestedEventId}">0</span>.
+  </p>
+  <p class="notice notice-danger" th:if="${realPhase2ErrorCode != null}"
+     th:text="${'Rafraîchissement manuel arrêté : ' + realPhase2ErrorCode}">
+    Rafraîchissement manuel arrêté.
+  </p>
 
   <section class="grid two-columns event-actions-grid">
     <article class="panel">
@@ -95,6 +124,287 @@
         <button class="button-primary" type="submit">Normaliser ce snapshot</button>
       </form>
     </article>
+  </section>
+
+  <section class="panel manual-call-panel" aria-labelledby="real-phase1-title">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Qualification réelle · sous-étape 1</p>
+        <h2 id="real-phase1-title">Deux événements fixes, aucun identifiant libre</h2>
+      </div>
+      <span class="chip"
+            th:classappend="${realPhase1Control.locked()} ? ' chip-safe' : ' chip-warning'"
+            th:text="${realPhase1Control.state}">LOCKED</span>
+    </div>
+
+    <p class="control-intro">
+      Le transport spécial accepte uniquement les événements
+      <span class="mono">16386245</span> et <span class="mono">16421052</span>. Le brut est
+      persisté avant parsing ; le premier incident bloque la suite sans retry. Le catalogue général
+      et <span class="mono">ConnectorGate</span> restent verrouillés.
+    </p>
+
+    <div class="provider-blockers" th:unless="${realPhase1Control.providerTransportAvailable}">
+      <p><strong>Configuration locale bloquée.</strong> Conditions encore absentes :</p>
+      <ul>
+        <li th:each="blocker : ${realPhase1Control.providerBlockers}"
+            th:text="${blocker}">BLOCKER</li>
+      </ul>
+    </div>
+
+    <div class="control-grid">
+      <article class="control-stage">
+        <h3>1. Préparer la campagne fixe</h3>
+        <p>Cette action crée une intention locale valable cinq minutes. Elle n’envoie aucune
+          requête.</p>
+        <form method="post" th:action="@{/events/real-phase1/prepare}">
+          <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+          <input type="hidden" name="date" th:value="${selectedDate}">
+          <input type="hidden" name="zone" th:value="${selectedZone}">
+          <button class="button-warning" type="submit"
+                  th:disabled="${!realPhase1Control.providerTransportAvailable or !realPhase1Control.locked()}">
+            Préparer les deux événements
+          </button>
+        </form>
+      </article>
+
+      <article class="control-stage" th:if="${realPhase1Control.awaitingConfirmation()}">
+        <h3>2. Confirmer puis exécuter</h3>
+        <p>Phrase exacte, liée à cette intention :</p>
+        <code class="confirmation-phrase"
+              th:text="${realPhase1Control.confirmationPhrase}">CONFIRMER EVENT_DETAILS</code>
+        <form class="control-form" method="post"
+              th:action="@{/events/real-phase1/execute}">
+          <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+          <input type="hidden" name="requestId" th:value="${realPhase1Control.requestId}">
+          <input type="hidden" name="date" th:value="${selectedDate}">
+          <input type="hidden" name="zone" th:value="${selectedZone}">
+          <label for="real-confirmation">Recopier la phrase</label>
+          <input id="real-confirmation" type="text" name="confirmationText"
+                 maxlength="128" autocomplete="off" required>
+          <label class="acknowledgement">
+            <input type="checkbox" name="acknowledged" value="true" required>
+            <span>Je confirme deux événements maximum, l’arrêt au premier incident et le
+              reverrouillage terminal.</span>
+          </label>
+          <button class="button-danger" type="submit">Exécuter la sous-étape 1</button>
+        </form>
+      </article>
+
+      <article class="control-stage" th:unless="${realPhase1Control.awaitingConfirmation()}">
+        <h3>2. Confirmation protégée</h3>
+        <p>La confirmation n’apparaît qu’après préparation et seulement lorsque les quatre verrous
+          de configuration sont satisfaits.</p>
+        <p class="muted" th:if="${realPhase1Control.terminalCode != null}"
+           th:text="${'Dernier état terminal : ' + realPhase1Control.terminalCode}">
+          Dernier état terminal.
+        </p>
+      </article>
+    </div>
+
+    <form class="control-actions" method="post" th:action="@{/events/real/stop}">
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <input type="hidden" name="date" th:value="${selectedDate}">
+      <input type="hidden" name="zone" th:value="${selectedZone}">
+      <button class="button-danger" type="submit">Arrêt global J4</button>
+    </form>
+
+    <div class="qualification-evidence" th:if="${realPhase1Result != null}">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Résultat minimisé de la campagne</p>
+          <h3 th:text="${realPhase1Result.terminalCode}">COMPLETED</h3>
+        </div>
+        <span class="chip chip-safe"
+              th:text="${realPhase1Result.events.size()} + ' ÉVÉNEMENT(S) PARSÉ(S)'">
+          0 ÉVÉNEMENT
+        </span>
+      </div>
+      <div class="table-scroll" th:unless="${realPhase1Result.events.isEmpty()}">
+        <table>
+          <thead>
+          <tr>
+            <th>Événement</th>
+            <th>Rencontre normalisée</th>
+            <th>Statut</th>
+            <th>Provenance</th>
+            <th>Snapshot</th>
+            <th>Détail local</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="event : ${realPhase1Result.events}">
+            <td class="mono" th:text="${event.eventId}">0</td>
+            <td>
+              <strong th:text="${event.details.homeTeam.name}">Home</strong>
+              <span> — </span>
+              <strong th:text="${event.details.awayTeam.name}">Away</strong><br>
+              <span class="muted" th:text="${event.details.startsAt}">Instant</span>
+            </td>
+            <td th:text="${event.details.status.type}">status</td>
+            <td th:text="${event.resolutionSource}">PROVIDER</td>
+            <td>
+              <span class="mono" th:text="${event.snapshotId}">0</span><br>
+              <span class="muted" th:text="${event.payloadSizeBytes} + ' octets'">0 octet</span><br>
+              <span class="mono hash-value" th:text="${event.payloadSha256}">sha256</span>
+            </td>
+            <td>
+              <a class="table-link"
+                 th:href="@{/events/{id}(id=${event.canonicalEventId},zone=${selectedZone})}">
+                Ouvrir
+              </a>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </section>
+
+  <section class="panel manual-call-panel" aria-labelledby="real-phase2-title">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Qualification réelle · sous-étape 2</p>
+        <h2 id="real-phase2-title">Un identifiant paramétrable, un appel confirmé</h2>
+      </div>
+      <span class="chip"
+            th:classappend="${realPhase2Control.locked()} ? ' chip-safe' : ' chip-warning'"
+            th:text="${realPhase2Control.state}">LOCKED</span>
+    </div>
+
+    <p class="control-intro">
+      Chaque campagne lie un identifiant numérique à une confirmation valable cinq minutes et
+      force exactement un nouvel appel fournisseur. Le même identifiant peut être rappelé
+      manuellement autant de fois que nécessaire, avec une nouvelle confirmation à chaque fois.
+      Aucun cache, retry, polling ou rafraîchissement automatique n’est utilisé.
+    </p>
+
+    <div class="provider-blockers" th:unless="${realPhase2Control.providerTransportAvailable}">
+      <p><strong>Configuration locale bloquée.</strong> Conditions encore absentes :</p>
+      <ul>
+        <li th:each="blocker : ${realPhase2Control.providerBlockers}"
+            th:text="${blocker}">BLOCKER</li>
+      </ul>
+    </div>
+
+    <div class="control-grid">
+      <article class="control-stage">
+        <h3>1. Paramétrer puis préparer</h3>
+        <p>La préparation ne contacte pas le fournisseur. Un même identifiant — y compris l’un des
+          exemples de sous-étape 1 — peut être préparé de nouveau pour actualiser un match.</p>
+        <form class="control-form" method="post" th:action="@{/events/real-phase2/prepare}">
+          <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+          <input type="hidden" name="date" th:value="${selectedDate}">
+          <input type="hidden" name="zone" th:value="${selectedZone}">
+          <label for="real-phase2-event-id">Identifiant fournisseur de l’événement</label>
+          <input id="real-phase2-event-id" type="number" name="eventId"
+                 min="1" max="999999999" step="1" required
+                 th:value="${realPhase2Control.eventId}"
+                 th:disabled="${!realPhase2Control.providerTransportAvailable or !realPhase2Control.preparationAllowed()}">
+          <button class="button-warning" type="submit"
+                  th:disabled="${!realPhase2Control.providerTransportAvailable or !realPhase2Control.preparationAllowed()}">
+            Préparer un rafraîchissement
+          </button>
+        </form>
+      </article>
+
+      <article class="control-stage" th:if="${realPhase2Control.awaitingConfirmation()}">
+        <h3>2. Confirmer puis appeler une fois</h3>
+        <p>Phrase exacte, liée à l’identifiant affiché :</p>
+        <code class="confirmation-phrase"
+              th:text="${realPhase2Control.confirmationPhrase}">CONFIRMER EVENT_DETAILS</code>
+        <form class="control-form" method="post" th:action="@{/events/real-phase2/execute}">
+          <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+          <input type="hidden" name="requestId" th:value="${realPhase2Control.requestId}">
+          <input type="hidden" name="date" th:value="${selectedDate}">
+          <input type="hidden" name="zone" th:value="${selectedZone}">
+          <label for="real-phase2-confirmation">Recopier la phrase</label>
+          <input id="real-phase2-confirmation" type="text" name="confirmationText"
+                 maxlength="128" autocomplete="off" required>
+          <label class="acknowledgement">
+            <input type="checkbox" name="acknowledged" value="true" required>
+            <span>Je confirme un appel fournisseur maximum pour cet identifiant, l’arrêt au
+              premier incident et le reverrouillage terminal.</span>
+          </label>
+          <button class="button-danger" type="submit">Appeler et actualiser une fois</button>
+        </form>
+      </article>
+
+      <article class="control-stage" th:unless="${realPhase2Control.awaitingConfirmation()}">
+        <h3>2. Confirmation protégée</h3>
+        <p>Une nouvelle préparation et une nouvelle confirmation sont exigées pour chaque rappel,
+          y compris pour le même match en cours.</p>
+        <p class="muted" th:if="${realPhase2Control.terminalCode != null}"
+           th:text="${'Dernier état terminal : ' + realPhase2Control.terminalCode}">
+          Dernier état terminal.
+        </p>
+        <p class="notice notice-danger"
+           th:if="${realPhase2Control.locked() and !realPhase2Control.preparationAllowed()}">
+          Verrou terminal : revue et redémarrage requis avant toute nouvelle campagne.
+        </p>
+      </article>
+    </div>
+
+    <form class="control-actions" method="post" th:action="@{/events/real/stop}">
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <input type="hidden" name="date" th:value="${selectedDate}">
+      <input type="hidden" name="zone" th:value="${selectedZone}">
+      <button class="button-danger" type="submit">Arrêt global J4</button>
+    </form>
+
+    <div class="qualification-evidence" th:if="${realPhase2Result != null}">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Résultat minimisé du rafraîchissement</p>
+          <h3 th:text="${realPhase2Result.terminalCode}">COMPLETED</h3>
+        </div>
+        <span class="chip chip-safe"
+              th:text="${realPhase2Result.providerCallAttempts} + ' APPEL(S) FOURNISSEUR'">
+          0 APPEL
+        </span>
+      </div>
+      <div class="table-scroll" th:unless="${realPhase2Result.events.isEmpty()}">
+        <table>
+          <thead>
+          <tr>
+            <th>Événement</th>
+            <th>Rencontre normalisée</th>
+            <th>Statut</th>
+            <th>Observation</th>
+            <th>Snapshot</th>
+            <th>Détail local</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="event : ${realPhase2Result.events}">
+            <td class="mono" th:text="${event.eventId}">0</td>
+            <td>
+              <strong th:text="${event.details.homeTeam.name}">Home</strong>
+              <span> — </span>
+              <strong th:text="${event.details.awayTeam.name}">Away</strong><br>
+              <span class="muted" th:text="${event.details.startsAt}">Instant</span>
+            </td>
+            <td th:text="${event.details.status.type}">status</td>
+            <td th:text="${event.eventObservationInserted ? 'NOUVELLE_VERSION' : 'DÉDUPLIQUÉE'}">
+              NOUVELLE_VERSION
+            </td>
+            <td>
+              <span class="mono" th:text="${event.snapshotId}">0</span><br>
+              <span class="muted" th:text="${event.payloadSizeBytes} + ' octets'">0 octet</span><br>
+              <span class="mono hash-value" th:text="${event.payloadSha256}">sha256</span>
+            </td>
+            <td>
+              <a class="table-link"
+                 th:href="@{/events/{id}(id=${event.canonicalEventId},zone=${selectedZone})}">
+                Ouvrir
+              </a>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </section>
 
   <section class="panel event-results" th:if="${search != null}" aria-labelledby="results-title">
@@ -162,9 +472,11 @@
     <p class="label">Frontière J4</p>
     <h2>Ce parcours reste local</h2>
     <ul>
-      <li>aucune URI `EVENT_DETAILS`, aucun appel fournisseur et aucun polling ;</li>
+      <li>la sous-étape 1 reste limitée aux IDs `16386245` et `16421052` ;</li>
+      <li>la sous-étape 2 accepte un seul identifiant numérique lié à chaque confirmation ;</li>
+      <li>chaque rappel est manuel, unitaire et sans cache, polling, retry ni planification ;</li>
       <li>aucune réécriture ou suppression d’une observation historique ;</li>
-      <li>aucun payload brut rendu ou envoyé hors du poste Windows ;</li>
+      <li>aucun payload brut rendu, journalisé ou envoyé hors du poste Windows ;</li>
       <li>les définitions du catalogue restent `callable=false`.</li>
     </ul>
   </section>

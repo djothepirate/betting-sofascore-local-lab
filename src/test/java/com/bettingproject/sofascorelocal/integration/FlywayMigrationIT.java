@@ -2,6 +2,8 @@ package com.bettingproject.sofascorelocal.integration;
 
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV2Parser;
+import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceService;
 import com.bettingproject.sofascorelocal.application.network.J3QualificationCheckpointReparser;
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportService;
@@ -9,6 +11,11 @@ import com.bettingproject.sofascorelocal.application.event.J4ScheduledEventsSnap
 import com.bettingproject.sofascorelocal.application.event.J4EventQueryService;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservation;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetails;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventSeason;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventVenue;
+import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
+import com.bettingproject.sofascorelocal.domain.provider.EventDetailsTransportResponse;
 import com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceOutcome;
@@ -23,14 +30,18 @@ import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTournam
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J3ScheduledEventsPageCache;
+import com.bettingproject.sofascorelocal.port.J4EventDetailsCache;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import com.bettingproject.sofascorelocal.port.J3QualificationCheckpointStore;
 import com.bettingproject.sofascorelocal.port.RawSnapshotInspectionStore;
+import org.flywaydb.core.Flyway;
+import org.flywaydb.core.api.MigrationVersion;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Transactional;
@@ -45,6 +56,7 @@ import java.net.URI;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -85,6 +97,9 @@ class FlywayMigrationIT {
     J3ScheduledEventsPageCache scheduledEventsPageCache;
 
     @Autowired
+    J4EventDetailsCache eventDetailsCache;
+
+    @Autowired
     RawSnapshotInspectionStore snapshotInspectionStore;
 
     @Autowired
@@ -104,6 +119,9 @@ class FlywayMigrationIT {
 
     @Autowired
     J4EventQueryService j4EventQueryService;
+
+    @Autowired
+    J4ParsedEventDetailsPersistenceService j4ParsedEventDetailsPersistenceService;
 
     @Test
     void createsTheJ3RawSnapshotSchemaAndKeepsNetworkDisabled() {
@@ -136,8 +154,236 @@ class FlywayMigrationIT {
         assertThat(snapshotTable).isEqualTo("provider_snapshot");
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("5");
+        assertThat(flywayVersion).isEqualTo("6");
         assertThat(rawColumn).isEqualTo("bytea");
+    }
+
+    @Test
+    void upgradesAPrepopulatedV5EventDetailToV6WithoutRewritingHistory() {
+        String schema = "upgrade_v5_to_v6";
+        String separator = POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
+        var dataSource = new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema,
+                POSTGRES.getUsername(),
+                POSTGRES.getPassword());
+        Flyway flywayV5 = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .createSchemas(true)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("5"))
+                .load();
+
+        assertThat(flywayV5.migrate().migrationsExecuted).isEqualTo(5);
+
+        JdbcTemplate upgradeJdbc = new JdbcTemplate(dataSource);
+        upgradeJdbc.update("""
+                insert into canonical_event (
+                    id,
+                    provider,
+                    provider_event_id,
+                    created_at
+                ) values (
+                    '11111111-1111-1111-1111-111111111111',
+                    'SOFASCORE',
+                    900001,
+                    '2026-08-12T12:00:00Z'
+                )
+                """);
+        upgradeJdbc.update("""
+                insert into canonical_event_observation (
+                    canonical_event_id,
+                    source_kind,
+                    source_reference,
+                    source_fixture_id,
+                    source_payload_sha256,
+                    parser_version,
+                    source_received_at,
+                    starts_at,
+                    home_team_provider_id,
+                    home_team_name,
+                    away_team_provider_id,
+                    away_team_name,
+                    status_type,
+                    status_description,
+                    tournament_provider_id,
+                    tournament_name,
+                    normalized_sha256,
+                    created_at
+                ) values (
+                    '11111111-1111-1111-1111-111111111111',
+                    'SYNTHETIC_FIXTURE',
+                    'scheduled-events-nominal',
+                    'scheduled-events-nominal',
+                    repeat('a', 64),
+                    'scheduled-events-v1',
+                    '2026-08-12T12:00:01Z',
+                    '2026-08-12T14:00:00Z',
+                    101,
+                    'Synthetic Home FC',
+                    202,
+                    'Synthetic Away FC',
+                    'notstarted',
+                    'Not started',
+                    301,
+                    'Synthetic League',
+                    repeat('b', 64),
+                    '2026-08-12T12:00:02Z'
+                )
+                """);
+        upgradeJdbc.update("""
+                insert into event_detail_observation (
+                    canonical_event_id,
+                    source_fixture_id,
+                    source_payload_sha256,
+                    parser_version,
+                    source_received_at,
+                    starts_at,
+                    home_team_provider_id,
+                    home_team_name,
+                    away_team_provider_id,
+                    away_team_name,
+                    status_type,
+                    status_description,
+                    tournament_provider_id,
+                    tournament_name,
+                    venue_provider_id,
+                    venue_name,
+                    venue_city,
+                    season_provider_id,
+                    season_name,
+                    event_round,
+                    normalized_sha256,
+                    created_at
+                ) values (
+                    '11111111-1111-1111-1111-111111111111',
+                    'event-details-nominal',
+                    repeat('c', 64),
+                    'event-details-v1',
+                    '2026-08-12T12:00:03Z',
+                    '2026-08-12T14:00:00Z',
+                    101,
+                    'Synthetic Home FC',
+                    202,
+                    'Synthetic Away FC',
+                    'notstarted',
+                    'Not started',
+                    301,
+                    'Synthetic League',
+                    401,
+                    'Synthetic Park',
+                    'Local City',
+                    501,
+                    '2026',
+                    '1',
+                    repeat('d', 64),
+                    '2026-08-12T12:00:04Z'
+                )
+                """);
+
+        Map<String, Object> canonicalBefore = upgradeJdbc.queryForMap(
+                "select * from canonical_event_observation");
+        Map<String, Object> detailBefore = upgradeJdbc.queryForMap("""
+                select
+                    id,
+                    canonical_event_id,
+                    source_fixture_id,
+                    source_payload_sha256,
+                    parser_version,
+                    source_received_at,
+                    starts_at,
+                    home_team_provider_id,
+                    home_team_name,
+                    away_team_provider_id,
+                    away_team_name,
+                    status_type,
+                    status_description,
+                    tournament_provider_id,
+                    tournament_name,
+                    venue_provider_id,
+                    venue_name,
+                    venue_city,
+                    season_provider_id,
+                    season_name,
+                    event_round,
+                    normalized_sha256,
+                    created_at
+                from event_detail_observation
+                """);
+
+        Flyway flywayV6 = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .createSchemas(true)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("6"))
+                .load();
+
+        assertThat(flywayV6.migrate().migrationsExecuted).isEqualTo(1);
+        assertThat(flywayV6.info().current().getVersion().getVersion()).isEqualTo("6");
+        assertThat(upgradeJdbc.queryForObject(
+                "select count(*) from canonical_event", Long.class)).isEqualTo(1L);
+        assertThat(upgradeJdbc.queryForObject(
+                "select count(*) from canonical_event_observation", Long.class)).isEqualTo(1L);
+        assertThat(upgradeJdbc.queryForObject(
+                "select count(*) from event_detail_observation", Long.class)).isEqualTo(1L);
+        assertThat(upgradeJdbc.queryForMap(
+                "select * from canonical_event_observation"))
+                .isEqualTo(canonicalBefore);
+        assertThat(upgradeJdbc.queryForMap("""
+                select
+                    id,
+                    canonical_event_id,
+                    source_fixture_id,
+                    source_payload_sha256,
+                    parser_version,
+                    source_received_at,
+                    starts_at,
+                    home_team_provider_id,
+                    home_team_name,
+                    away_team_provider_id,
+                    away_team_name,
+                    status_type,
+                    status_description,
+                    tournament_provider_id,
+                    tournament_name,
+                    venue_provider_id,
+                    venue_name,
+                    venue_city,
+                    season_provider_id,
+                    season_name,
+                    event_round,
+                    normalized_sha256,
+                    created_at
+                from event_detail_observation
+                """))
+                .isEqualTo(detailBefore);
+        assertThat(upgradeJdbc.queryForObject(
+                "select source_kind from event_detail_observation", String.class))
+                .isEqualTo("SYNTHETIC_FIXTURE");
+        assertThat(upgradeJdbc.queryForObject(
+                "select source_reference from event_detail_observation", String.class))
+                .isEqualTo("event-details-nominal");
+        assertThat(upgradeJdbc.queryForObject(
+                "select source_snapshot_id is null from event_detail_observation", Boolean.class))
+                .isTrue();
+        assertThat(upgradeJdbc.queryForObject("""
+                select tgenabled::text
+                from pg_trigger
+                where tgrelid = 'event_detail_observation'::regclass
+                  and tgname = 'event_detail_observation_append_only'
+                """, String.class))
+                .isEqualTo("O");
+        assertThatThrownBy(() -> upgradeJdbc.update(
+                "update event_detail_observation set status_type = 'changed'"))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("canonical_event_observation is append-only");
+        assertThatThrownBy(() -> upgradeJdbc.update(
+                "delete from event_detail_observation"))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("canonical_event_observation is append-only");
     }
 
     @Test
@@ -684,6 +930,78 @@ class FlywayMigrationIT {
                 detailObservationId))
                 .isInstanceOf(RuntimeException.class)
                 .hasStackTraceContaining("canonical_event_observation is append-only");
+    }
+
+    @Test
+    void persistsProviderEventDetailsWithSnapshotProvenanceAndParsedCache() {
+        var request = EventDetailsProviderRequest.phase1(
+                URI.create(EventDetailsProviderRequest.EXPECTED_ORIGIN),
+                16386245L);
+        byte[] rawBytes = "{\"event\":{\"id\":16386245}}"
+                .getBytes(StandardCharsets.UTF_8);
+        RawPayloadEvidence payload = RawPayloadEvidence.capture(rawBytes);
+        Instant requestedAt = Instant.parse("2026-08-15T10:00:00Z");
+        var response = new EventDetailsTransportResponse(
+                request.requestKey(),
+                requestedAt,
+                requestedAt.plusMillis(275),
+                200,
+                "application/json; charset=utf-8",
+                Duration.ofMillis(275),
+                payload);
+        var rawPersistence = snapshotStore.save(new RawManualCallSnapshot(
+                SofascoreEndpointType.EVENT_DETAILS,
+                response.requestKey(),
+                response.requestedAt(),
+                response.receivedAt(),
+                response.httpStatus(),
+                response.contentType(),
+                response.latency(),
+                response.payload(),
+                EventDetailsV2Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.RAW_ONLY,
+                null));
+        EventDetails details = new EventDetails(
+                16386245L,
+                Instant.parse("2026-08-14T18:00:00Z"),
+                new ScheduledTeam(101L, "Saint-Etienne"),
+                new ScheduledTeam(102L, "Clermont Foot"),
+                new ScheduledEventStatus("finished", Optional.of("Ended")),
+                Optional.of(new ScheduledTournament(103L, "Ligue 2")),
+                Optional.of(new EventVenue(
+                        104L,
+                        "Stade local",
+                        Optional.of("Saint-Etienne"))),
+                Optional.of(new EventSeason(105L, "2026")),
+                Optional.of("1"));
+
+        var stored = j4ParsedEventDetailsPersistenceService.persistParsed(
+                request,
+                response,
+                rawPersistence,
+                details);
+
+        assertThat(schemaStatus(rawPersistence.snapshotId())).isEqualTo("PARSED");
+        assertThat(eventDetailsStore.findLatest(stored.canonicalEventId()))
+                .hasValueSatisfying(detail -> {
+                    assertThat(detail.source().snapshotId())
+                            .hasValue(rawPersistence.snapshotId());
+                    assertThat(detail.source().fixtureId()).isEmpty();
+                    assertThat(detail.source().parserVersion())
+                            .isEqualTo(EventDetailsV2Parser.PARSER_VERSION);
+                    assertThat(detail.details().homeTeam().name())
+                            .isEqualTo("Saint-Etienne");
+                });
+        assertThat(eventDetailsCache.findFreshParsed(
+                request,
+                response.receivedAt(),
+                Duration.ofMinutes(15),
+                EventDetailsV2Parser.PARSER_VERSION))
+                .hasValueSatisfying(candidate -> {
+                    assertThat(candidate.snapshotId())
+                            .isEqualTo(rawPersistence.snapshotId());
+                    assertThat(candidate.payload().sha256()).isEqualTo(payload.sha256());
+                });
     }
 
     @Test

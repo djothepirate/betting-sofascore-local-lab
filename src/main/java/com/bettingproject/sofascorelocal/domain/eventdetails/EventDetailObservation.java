@@ -2,7 +2,6 @@ package com.bettingproject.sofascorelocal.domain.eventdetails;
 
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservation;
-import com.bettingproject.sofascorelocal.domain.event.EventSourceKind;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
 import com.bettingproject.sofascorelocal.security.Sha256;
 
@@ -28,10 +27,6 @@ public record EventDetailObservation(
         if (identity.providerEventId() != details.providerEventId()) {
             throw new IllegalArgumentException(
                     "event detail provider identity must match its canonical event");
-        }
-        if (source.kind() != EventSourceKind.SYNTHETIC_FIXTURE) {
-            throw new IllegalArgumentException(
-                    "J4 event details accept synthetic fixture provenance only");
         }
         if (!SHA_256_PATTERN.matcher(normalizedSha256).matches()) {
             throw new IllegalArgumentException("normalizedSha256 must be a lower-case SHA-256");

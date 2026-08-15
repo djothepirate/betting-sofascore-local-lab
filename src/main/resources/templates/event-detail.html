@@ -17,7 +17,9 @@
 
 <main class="shell event-page">
   <nav class="links page-links" aria-label="Navigation locale">
-    <a th:href="@{/events(zone=${detail != null ? detail.zoneId.id : 'Europe/Paris'})}"
+    <a th:href="${detail != null}
+          ? @{/events(date=${detailSearchDate},zone=${detail.zoneId.id})}
+          : @{/events(zone='Europe/Paris')}"
        href="/events">← Recherche par date</a>
     <a th:href="@{/}" href="/">Tableau de bord</a>
   </nav>
@@ -58,17 +60,20 @@
     <section class="panel event-detail-panel" th:if="${offlineDetail != null}">
       <div class="panel-heading">
         <div>
-          <p class="label">`event-details-v1`</p>
-          <h2>Enrichissement hors ligne</h2>
+          <p class="label"
+             th:text="${'`' + offlineDetail.source.parserVersion + '`'}">`event-details-v1`</p>
+          <h2>Détail local persisté</h2>
         </div>
-        <span class="chip chip-warning">SYNTHETIC_FIXTURE</span>
+        <span class="chip"
+              th:classappend="${offlineDetail.source.kind.name() == 'PROVIDER_SNAPSHOT'} ? 'chip-safe' : 'chip-warning'"
+              th:text="${offlineDetail.source.kind}">SYNTHETIC_FIXTURE</span>
       </div>
       <dl class="detail-grid">
         <div><dt>Stade</dt><dd th:text="${offlineDetail.details.venue.isPresent() ? offlineDetail.details.venue.get().name : '—'}">—</dd></div>
         <div><dt>Ville</dt><dd th:text="${offlineDetail.details.venue.isPresent() && offlineDetail.details.venue.get().city.isPresent() ? offlineDetail.details.venue.get().city.get() : '—'}">—</dd></div>
         <div><dt>Saison</dt><dd th:text="${offlineDetail.details.season.isPresent() ? offlineDetail.details.season.get().name : '—'}">—</dd></div>
         <div><dt>Tour</dt><dd th:text="${offlineDetail.details.round.orElse('—')}">—</dd></div>
-        <div><dt>Fixture source</dt><dd class="mono" th:text="${offlineDetail.source.fixtureId.orElse('—')}">fixture</dd></div>
+        <div><dt>Source</dt><dd class="mono" th:text="${offlineDetail.source.sourceReference()}">source</dd></div>
         <div><dt>Parseur</dt><dd class="mono" th:text="${offlineDetail.source.parserVersion}">event-details-v1</dd></div>
         <div><dt>Réception source</dt><dd class="mono" th:text="${offlineDetail.source.receivedAt}">instant</dd></div>
         <div><dt>SHA-256 source</dt><dd class="mono hash-value" th:text="${offlineDetail.source.payloadSha256}">hash</dd></div>

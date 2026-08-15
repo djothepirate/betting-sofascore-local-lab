@@ -4,8 +4,58 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Corrigé
+
+- conservation de la date civile du match et de la zone IANA dans le lien de retour de la fiche
+  J4 : Saint-Étienne — Clermont Foot revient désormais sur le `2026-08-14` au lieu de la date
+  locale courante du `2026-08-15` ;
+- remplacement des libellés statiques `SYNTHETIC_FIXTURE` et `event-details-v1` de la fiche par la
+  provenance, la référence de source et le parseur réellement persistés, notamment
+  `PROVIDER_SNAPSHOT`, `snapshot:16` ou `snapshot:17`, et `event-details-v2` ;
+- ajout d’un test MVC de régression reproduisant localement l’événement `16386245`, sa date en
+  `Europe/Paris` et sa provenance fournisseur, sans résolution d’URI ni appel réseau ;
+- correction de l’upgrade Flyway V5 préremplie vers V6 : le trigger
+  `event_detail_observation_append_only` est suspendu uniquement pendant le backfill transactionnel
+  des nouvelles colonnes de provenance, puis réactivé avant les contraintes finales ;
+- ajout d’un test PostgreSQL reproduisant une base V5 contenant déjà une identité, une observation
+  canonique et un détail synthétique, puis vérifiant après V6 l’égalité des champs
+  historiques, l’absence de ligne ajoutée ou supprimée et le refus persistant de `UPDATE`/`DELETE` ;
+- qualification de l’échec de démarrage local du 2026-08-15 comme incident de migration avant
+  campagne : rollback Flyway réussi, zéro appel fournisseur et aucune qualification réelle
+  exécutée ;
+- qualification humaine de la reprise corrective sur la base persistante : migration V5 → V6
+  réussie avec les verrous réseau actifs, identité et deux versions synthétiques toujours
+  consultables, puis arrêt gracieux complet de l’application sans appel fournisseur ;
+- isolation des scénarios de binding J3/J4 vis-à-vis d’une configuration opérateur déjà armée :
+  chaque mini-contexte retire la source d’environnement ambiante avant le chargement
+  d’`application.yml` et fixe explicitement les opt-ins J3, J4 et J4 sous-étape 2. Les 212 tests
+  standards passent avec la configuration J4 sous-étape 2 activée, sans appel fournisseur.
+
 ### Ajouté
 
+- sous-étape 2 J4 paramétrable dans `/events`, protégée par un opt-in distinct qui rend la
+  sous-étape 1 indisponible pendant son activation ;
+- préparation sans réseau d'un ID `EVENT_DETAILS` borné, phrase exacte liée à cet ID, acquittement
+  et claim immuable empêchant de remplacer l'identifiant lors de l'action finale ;
+- rafraîchissements manuels répétables du même match, avec exactement un nouvel appel fournisseur
+  sans cache par cycle, nouvelle confirmation obligatoire et délai minimal de trois secondes ;
+- persistance brute avant parsing sur chaque rafraîchissement, affichage minimisé du snapshot et
+  indication `NOUVELLE_VERSION` ou `DÉDUPLIQUÉE` sans exposer le payload ;
+- arrêt global commun aux deux sous-étapes et tests hors ligne des `429`, de l'absence de retry, de
+  la répétition manuelle, de l'exclusion de configuration et du binding Web sans ID libre lors de
+  l'exécution ;
+- voie de qualification réelle J4 sous-étape 1, désactivée par défaut et limitée par construction
+  aux événements `16386245` et `16421052` sur le chemin exact `/api/v1/event/{eventId}` ;
+- parseur fournisseur versionné `event-details-v2`, distinct du contrat synthétique historique V1,
+  avec enveloppe `event`, tour imbriqué, champs facultatifs et incompatibilité sans objet partiel ;
+- migration Flyway V6 append-only ajoutant la provenance `PROVIDER_SNAPSHOT` aux observations de
+  détail et étendant le cache local à `EVENT_DETAILS` sans déplacer les octets bruts ;
+- circuit opérateur J4 à confirmation exacte, expiration cinq minutes, arrêt global et verrou
+  terminal automatique après succès, incident ou expiration ;
+- orchestration de deux événements maximum avec cache préalable, délai minimal de trois secondes,
+  persistance brute avant parsing, normalisation atomique et aucun retry ;
+- arrêt au premier `403`, `429`, `5xx`, timeout, contenu inattendu, rupture de schéma ou incohérence
+  d’identifiant, couvert sans appel Internet par transport simulé et tests PostgreSQL ;
 - migration Flyway V4 créant les identités canoniques d’événements et leurs observations
   append-only, avec UUID déterministe, provenance complète, déduplication et trigger d’immuabilité ;
 - migration Flyway V5 conservant les détails J4 hors ligne sous forme d’observations append-only ;
@@ -94,6 +144,42 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Documentation
 
+- consignation minimisée de la campagne humaine J4 sous-étape 1 : deux transports autorisés, deux
+  snapshots HTTP `200` classés `PARSED`, arrêt global appliqué, anomalie locale corrigée puis retest
+  humain concluant des deux retours par date et des provenances ;
+- procédure de requalification utilisant exclusivement les snapshots locaux 16 et 17 après
+  reverrouillage de la configuration, sans préparation ni réexécution de la campagne ;
+- protocole correctif imposant une première application de V6 avec les cinq clés réseau remises à
+  l’état bloqué, avant toute nouvelle activation de la campagne réelle ;
+- amendement du Work Order J4 autorisant uniquement la campagne réelle sous-étape 1 et consignant
+  la revue compatible de l’ADR-SS-001, avec politique J4 plus stricte sans retry sur `5xx` ;
+- protocole Windows J4 pour l’activation temporaire, la validation humaine des deux matches,
+  l’arrêt au premier incident et la remise obligatoire de la configuration à l’état bloqué ;
+- amendement du Work Order après qualification humaine de la sous-étape 1, autorisant la
+  sous-étape 2 paramétrable et les rappels manuels unitaires avec une nouvelle confirmation par
+  appel, avec une qualification fournisseur réelle alors encore à `NOT_RUN` au moment de cette
+  autorisation ;
+- revue de l'ADR-SS-001 concluant `COMPATIBLE_NO_CHANGE_REQUIRED` pour le parcours paramétrable :
+  appel manuel, concurrence unitaire, absence de polling, compte, cookie, jeton, proxy ou retry ;
+- qualification technique hors ligne de la sous-étape 2 avec 212 tests standards et 16 tests
+  d'intégration réussis, sans appel fournisseur ; sa qualification humaine et réelle était encore
+  en attente au stade de cette readiness ;
+- qualification humaine réelle de la sous-étape 2 sur les identifiants paramétrables `16483632`
+  et `16412917`, avec une préparation, une confirmation et exactement un transport fournisseur
+  par cycle ;
+- validation du rappel manuel de `16412917` : réponse inchangée dédupliquée avant le coup d'envoi,
+  puis nouvelle observation `inprogress` issue du snapshot 23 après le coup d'envoi, sans
+  réécriture du snapshot 19 `notstarted` ;
+- confirmation que les deux versions restent consultables dans l'historique append-only et que
+  les snapshots bruts demeurent inspectables localement, sans intégrer le JSON aux preuves ;
+- arrêt global J4, arrêt de l'instance de campagne, remise des six paramètres locaux à l'état
+  bloqué, puis vérification après redémarrage du statut `LOCKED`, du champ d'identifiant
+  insaisissable et de l'action de préparation désactivée ;
+- arrêt gracieux final de Tomcat, JPA et Hikari après la vérification du reverrouillage ;
+- vérification Maven finale en configuration bloquée : 212 tests standards et 16 tests
+  PostgreSQL/Testcontainers réussis, Flyway V6 validé et aucun appel fournisseur ;
+- préparation de la clôture du Work Order `WO-SS-20260815-004` après fusion de la Pull Request
+  `#8`, sans autoriser polling, production ou déploiement VPS ;
 - ouverture du Work Order `WO-SS-20260815-004` sur la branche `codex/j4-events` depuis le merge J3
   `b79ccd62e7863718f49a22b6c54a7fc73cf87986` ;
 - contrats J4 de l’identité canonique, de la normalisation versionnée et du détail synthétique hors
@@ -197,8 +283,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Sécurité
 
-- maintien de `EVENT_DETAILS` sans URI et `callable=false` : le parcours J4 ne possède aucun client
-  HTTP, polling, retry ou repli fournisseur ;
+- maintien de `EVENT_DETAILS` sans URI et `callable=false` dans le catalogue général ; seule la
+  voie spéciale J4 sous-étape 1 possède un transport HTTP, limité à l'origine, au chemin et aux
+  deux identifiants autorisés, sans polling, retry ou repli fournisseur ;
 - protection des actions J4 par jeton de formulaire local à usage unique, et réponses de lecture
   marquées `no-store`/`noindex` ;
 - maintien du verrouillage réseau pendant J2 : aucune URI d’endpoint réelle et aucun appel SofaScore réel ne sont autorisés.

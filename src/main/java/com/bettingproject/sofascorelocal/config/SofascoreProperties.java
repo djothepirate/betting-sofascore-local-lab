@@ -19,6 +19,8 @@ public class SofascoreProperties {
     private boolean enabled;
     private String baseUrl = "";
     private boolean j3QualificationEnabled;
+    private boolean j4EventDetailsQualificationEnabled;
+    private boolean j4EventDetailsPhase2Enabled;
 
     @Min(1)
     @Max(1)
@@ -64,6 +66,23 @@ public class SofascoreProperties {
 
     public void setJ3QualificationEnabled(boolean j3QualificationEnabled) {
         this.j3QualificationEnabled = j3QualificationEnabled;
+    }
+
+    public boolean isJ4EventDetailsQualificationEnabled() {
+        return j4EventDetailsQualificationEnabled;
+    }
+
+    public void setJ4EventDetailsQualificationEnabled(
+            boolean j4EventDetailsQualificationEnabled) {
+        this.j4EventDetailsQualificationEnabled = j4EventDetailsQualificationEnabled;
+    }
+
+    public boolean isJ4EventDetailsPhase2Enabled() {
+        return j4EventDetailsPhase2Enabled;
+    }
+
+    public void setJ4EventDetailsPhase2Enabled(boolean j4EventDetailsPhase2Enabled) {
+        this.j4EventDetailsPhase2Enabled = j4EventDetailsPhase2Enabled;
     }
 
     public void setMaximumConcurrency(int maximumConcurrency) {
@@ -173,6 +192,28 @@ public class SofascoreProperties {
                 && !automaticRefreshEnabled
                 && !livePollingEnabled
                 && allowedEndpoints.equals(Set.of(SofascoreEndpointType.SCHEDULED_EVENTS)));
+    }
+
+    @AssertTrue(message = "J4 EVENT_DETAILS qualification requires explicit connector, raw storage and only EVENT_DETAILS")
+    public boolean isJ4EventDetailsQualificationConfigurationSafe() {
+        return !j4EventDetailsQualificationEnabled
+                || (enabled
+                && !j3QualificationEnabled
+                && maximumConcurrency == 1
+                && storeRawPayloads
+                && !automaticRefreshEnabled
+                && !livePollingEnabled
+                && allowedEndpoints.equals(Set.of(SofascoreEndpointType.EVENT_DETAILS)));
+    }
+
+    @AssertTrue(message = "J3 and J4 provider qualification paths are mutually exclusive")
+    public boolean isOnlyOneProviderQualificationPathEnabled() {
+        return !(j3QualificationEnabled && j4EventDetailsQualificationEnabled);
+    }
+
+    @AssertTrue(message = "J4 phase 2 requires the J4 EVENT_DETAILS qualification path")
+    public boolean isJ4EventDetailsPhase2SelectionSafe() {
+        return !j4EventDetailsPhase2Enabled || j4EventDetailsQualificationEnabled;
     }
 
     private static boolean isBoundedTimeout(Duration timeout) {
