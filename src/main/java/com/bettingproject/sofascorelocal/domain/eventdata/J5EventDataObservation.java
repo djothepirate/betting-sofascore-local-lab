@@ -62,13 +62,24 @@ public record J5EventDataObservation(
             }
             return;
         }
+        if (data instanceof EventIncidents incidents
+                && source.kind() == EventSourceKind.PROVIDER_SNAPSHOT) {
+            boolean hasReplacementPlayers = incidents.incidents().stream()
+                    .anyMatch(EventIncident::hasReplacementPlayers);
+            boolean compatible = "event-incidents-v4".equals(source.parserVersion())
+                    || (!hasReplacementPlayers
+                            && "event-incidents-v3".equals(source.parserVersion()));
+            if (!compatible) {
+                throw new IllegalArgumentException(
+                        "provider incidents require a compatible versioned parser");
+            }
+            return;
+        }
         String expectedParserVersion = switch (data.endpointType()) {
             case EVENT_STATISTICS -> source.kind() == EventSourceKind.PROVIDER_SNAPSHOT
                     ? "event-statistics-v2"
                     : "event-statistics-v1";
-            case EVENT_INCIDENTS -> source.kind() == EventSourceKind.PROVIDER_SNAPSHOT
-                    ? "event-incidents-v3"
-                    : "event-incidents-v1";
+            case EVENT_INCIDENTS -> "event-incidents-v1";
             case EVENT_LINEUPS -> source.kind() == EventSourceKind.PROVIDER_SNAPSHOT
                     ? "event-lineups-v2"
                     : "event-lineups-v1";
@@ -97,12 +108,18 @@ public record J5EventDataObservation(
         try {
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
             try (DataOutputStream output = new DataOutputStream(bytes)) {
-                output.writeUTF("j5-event-data-observation-v1");
+                boolean includesReplacementPlayers = data instanceof EventIncidents incidents
+                        && incidents.incidents().stream()
+                                .anyMatch(EventIncident::hasReplacementPlayers);
+                output.writeUTF(includesReplacementPlayers
+                        ? "j5-event-data-observation-v2"
+                        : "j5-event-data-observation-v1");
                 output.writeUTF(data.endpointType().name());
                 output.writeLong(data.providerEventId());
                 switch (data) {
                     case EventStatistics statistics -> writeStatistics(output, statistics);
-                    case EventIncidents incidents -> writeIncidents(output, incidents);
+                    case EventIncidents incidents -> writeIncidents(
+                            output, incidents, includesReplacementPlayers);
                     case EventLineups lineups -> writeLineups(output, lineups);
                 }
             }
@@ -129,7 +146,8 @@ public record J5EventDataObservation(
 
     private static void writeIncidents(
             DataOutputStream output,
-            EventIncidents incidents) throws IOException {
+            EventIncidents incidents,
+            boolean includesReplacementPlayers) throws IOException {
         output.writeInt(incidents.incidents().size());
         for (EventIncident incident : incidents.incidents()) {
             output.writeInt(incident.sequence());
@@ -140,6 +158,12 @@ public record J5EventDataObservation(
             writeOptionalLong(output, incident.participantProviderId());
             writeOptionalLong(output, incident.playerProviderId());
             writeOptionalText(output, incident.playerName());
+            if (includesReplacementPlayers) {
+                writeOptionalLong(output, incident.playerInProviderId());
+                writeOptionalText(output, incident.playerInName());
+                writeOptionalLong(output, incident.playerOutProviderId());
+                writeOptionalText(output, incident.playerOutName());
+            }
             writeOptionalInteger(output, incident.homeScore());
             writeOptionalInteger(output, incident.awayScore());
         }

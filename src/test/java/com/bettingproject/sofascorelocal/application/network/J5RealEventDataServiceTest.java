@@ -1,6 +1,6 @@
 package com.bettingproject.sofascorelocal.application.network;
 
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV3Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV4Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportException;
@@ -87,7 +87,7 @@ class J5RealEventDataServiceTest {
         observations = new ArrayList<>();
         pauses = new ArrayList<>();
         AtomicLong snapshotIds = new AtomicLong(100L);
-        when(rawStore.save(any())).thenAnswer(invocation -> {
+        doAnswer(invocation -> {
             RawManualCallSnapshot snapshot = invocation.getArgument(0);
             operations.add("raw:" + snapshot.endpointType());
             return new RawSnapshotPersistenceResult(
@@ -95,7 +95,7 @@ class J5RealEventDataServiceTest {
                     RawSnapshotPersistenceOutcome.INSERTED,
                     snapshot.payload().sha256(),
                     snapshot.payload().sizeBytes());
-        });
+        }).when(rawStore).save(any());
         doAnswer(invocation -> {
             operations.add("classify:" + invocation.getArgument(1));
             return null;
@@ -136,7 +136,7 @@ class J5RealEventDataServiceTest {
                 canonicalStore,
                 dataStore,
                 new EventStatisticsV2Parser(),
-                new EventIncidentsV3Parser(),
+                new EventIncidentsV4Parser(),
                 new EventLineupsV2Parser(),
                 clock,
                 Duration.ofSeconds(3),
@@ -197,6 +197,86 @@ class J5RealEventDataServiceTest {
         assertThat(pauses).containsExactly(
                 Duration.ofSeconds(3),
                 Duration.ofSeconds(3));
+    }
+
+    @Test
+    void continuesToLineupsAfterReparsingDeduplicatedHistoricalIncidentEvidence()
+            throws Exception {
+        when(transport.execute(any())).thenAnswer(invocation -> {
+            J5EventDataProviderRequest request = invocation.getArgument(0);
+            operations.add("transport:" + request.endpointType());
+            if (request.endpointType() == SofascoreEndpointType.EVENT_STATISTICS) {
+                return response(request, 404, "{\"error\":\"statistics unavailable\"}");
+            }
+            return response(request, 200, fixtureFor(request.endpointType()));
+        });
+        doAnswer(invocation -> {
+            RawManualCallSnapshot snapshot = invocation.getArgument(0);
+            operations.add("raw:" + snapshot.endpointType());
+            long snapshotId = switch (snapshot.endpointType()) {
+                case EVENT_STATISTICS -> 30L;
+                case EVENT_INCIDENTS -> 32L;
+                case EVENT_LINEUPS -> 35L;
+                default -> throw new IllegalArgumentException("unsupported J5 endpoint");
+            };
+            RawSnapshotPersistenceOutcome outcome =
+                    snapshot.endpointType() == SofascoreEndpointType.EVENT_LINEUPS
+                            ? RawSnapshotPersistenceOutcome.INSERTED
+                            : RawSnapshotPersistenceOutcome.DEDUPLICATED;
+            return new RawSnapshotPersistenceResult(
+                    snapshotId,
+                    outcome,
+                    snapshot.payload().sha256(),
+                    snapshot.payload().sizeBytes());
+        }).when(rawStore).save(any());
+        doAnswer(invocation -> {
+            long snapshotId = invocation.getArgument(0);
+            if (snapshotId == 30L || snapshotId == 32L) {
+                throw new IllegalStateException(
+                        "historical raw classification must not be rewritten");
+            }
+            operations.add("classify:" + invocation.getArgument(1));
+            return null;
+        }).when(rawStore).classify(anyLong(), any(), any());
+
+        var result = service.execute(claim());
+
+        assertThat(result.completed()).isTrue();
+        assertThat(result.terminalCode()).isEqualTo("COMPLETED");
+        assertThat(result.providerCallAttempts()).isEqualTo(3);
+        assertThat(result.endpoints())
+                .extracting(J5RealEndpointResult::snapshotId)
+                .containsExactly(30L, 32L, 35L);
+        assertThat(observations.get(1).source().parserVersion())
+                .isEqualTo(EventIncidentsV4Parser.PARSER_VERSION);
+        assertThat(observations.get(1).data()).isInstanceOfSatisfying(
+                com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents.class,
+                incidents -> {
+                    var substitution = incidents.incidents().get(2);
+                    assertThat(substitution.playerInName())
+                            .contains("Synthetic Incoming Player");
+                    assertThat(substitution.playerOutName())
+                            .contains("Synthetic Outgoing Player");
+                });
+        assertThat(operations).containsExactly(
+                "transport:EVENT_STATISTICS",
+                "raw:EVENT_STATISTICS",
+                "normalized:EVENT_STATISTICS",
+                "transport:EVENT_INCIDENTS",
+                "raw:EVENT_INCIDENTS",
+                "normalized:EVENT_INCIDENTS",
+                "transport:EVENT_LINEUPS",
+                "raw:EVENT_LINEUPS",
+                "normalized:EVENT_LINEUPS",
+                "classify:PARSED");
+        verify(rawStore, never()).classify(
+                30L, RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE, null);
+        verify(rawStore, never()).classify(
+                32L, RawSnapshotSchemaStatus.PARSED, null);
+        verify(rawStore).classify(35L, RawSnapshotSchemaStatus.PARSED, null);
+        verify(transport, times(3)).execute(any());
+        verify(control, times(3)).recordEndpointCompleted(any(), any());
+        verify(control).complete(REQUEST_ID);
     }
 
     @Test

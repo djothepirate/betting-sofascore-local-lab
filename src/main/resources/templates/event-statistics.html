@@ -289,13 +289,20 @@
       <p th:if="${incidentsData.incidents.isEmpty() and incidents.completeness.status.name() != 'UNAVAILABLE'}">La liste source est explicitement vide.</p>
       <div class="table-scroll" th:unless="${incidentsData.incidents.isEmpty() or incidents.completeness.status.name() == 'UNAVAILABLE'}">
         <table>
-          <thead><tr><th>Minute</th><th>Type</th><th>Côté</th><th>Joueur</th><th>Score</th></tr></thead>
+          <thead>
+          <tr>
+            <th>Minute</th><th>Type</th><th>Côté</th><th>Joueur</th>
+            <th>Entrant</th><th>Sortant</th><th>Score</th>
+          </tr>
+          </thead>
           <tbody>
           <tr th:each="incident : ${incidentsData.incidents}">
             <td th:text="${incident.addedTime.isPresent() ? incident.minute + '+' + incident.addedTime.get() : incident.minute}">18</td>
             <td th:text="${incident.incidentType}">goal</td>
             <td th:text="${incident.sideLabel()}">HOME</td>
             <td th:text="${incident.playerName.orElse('—')}">—</td>
+            <td th:text="${incident.playerInName.orElse('—')}">—</td>
+            <td th:text="${incident.playerOutName.orElse('—')}">—</td>
             <td th:text="${incident.homeScore.isPresent() ? incident.homeScore.get() + '–' + incident.awayScore.get() : '—'}">—</td>
           </tr>
           </tbody>

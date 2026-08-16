@@ -12,6 +12,10 @@ public record EventIncident(
         Optional<Long> participantProviderId,
         Optional<Long> playerProviderId,
         Optional<String> playerName,
+        Optional<Long> playerInProviderId,
+        Optional<String> playerInName,
+        Optional<Long> playerOutProviderId,
+        Optional<String> playerOutName,
         Optional<Integer> homeScore,
         Optional<Integer> awayScore) {
 
@@ -32,11 +36,49 @@ public record EventIncident(
         if (playerProviderId.isPresent() != playerName.isPresent()) {
             throw new IllegalArgumentException("player id and name must be present together");
         }
+        playerInProviderId = positiveLong(playerInProviderId, "playerInProviderId");
+        playerInName = boundedOptionalText(playerInName, "playerInName", 200);
+        requirePlayerPair(playerInProviderId, playerInName, "incoming player");
+        playerOutProviderId = positiveLong(playerOutProviderId, "playerOutProviderId");
+        playerOutName = boundedOptionalText(playerOutName, "playerOutName", 200);
+        requirePlayerPair(playerOutProviderId, playerOutName, "outgoing player");
         homeScore = boundedInteger(homeScore, "homeScore", 0, 99);
         awayScore = boundedInteger(awayScore, "awayScore", 0, 99);
         if (homeScore.isPresent() != awayScore.isPresent()) {
             throw new IllegalArgumentException("home and away scores must be present together");
         }
+    }
+
+    public EventIncident(
+            int sequence,
+            String incidentType,
+            int minute,
+            Optional<Integer> addedTime,
+            Optional<Boolean> home,
+            Optional<Long> participantProviderId,
+            Optional<Long> playerProviderId,
+            Optional<String> playerName,
+            Optional<Integer> homeScore,
+            Optional<Integer> awayScore) {
+        this(
+                sequence,
+                incidentType,
+                minute,
+                addedTime,
+                home,
+                participantProviderId,
+                playerProviderId,
+                playerName,
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                homeScore,
+                awayScore);
+    }
+
+    public boolean hasReplacementPlayers() {
+        return playerInProviderId.isPresent() || playerOutProviderId.isPresent();
     }
 
     public String sideLabel() {
@@ -49,6 +91,23 @@ public record EventIncident(
             throw new IllegalArgumentException(name + " must be positive when present");
         }
         return normalized;
+    }
+
+    private static Optional<String> boundedOptionalText(
+            Optional<String> value,
+            String name,
+            int maximumLength) {
+        return Objects.requireNonNull(value, name)
+                .map(item -> boundedText(item, name, maximumLength));
+    }
+
+    private static void requirePlayerPair(
+            Optional<Long> providerId,
+            Optional<String> name,
+            String label) {
+        if (providerId.isPresent() != name.isPresent()) {
+            throw new IllegalArgumentException(label + " id and name must be present together");
+        }
     }
 
     private static Optional<Integer> boundedInteger(

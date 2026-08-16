@@ -1,6 +1,6 @@
 package com.bettingproject.sofascorelocal.application.network;
 
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV3Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV4Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseResult;
@@ -45,7 +45,7 @@ public class J5RealEventDataService {
     private final CanonicalEventStore canonicalEventStore;
     private final J5EventDataStore eventDataStore;
     private final EventStatisticsV2Parser statisticsParser;
-    private final EventIncidentsV3Parser incidentsParser;
+    private final EventIncidentsV4Parser incidentsParser;
     private final EventLineupsV2Parser lineupsParser;
     private final Clock clock;
     private final Duration minimumDelay;
@@ -61,7 +61,7 @@ public class J5RealEventDataService {
             J5EventDataStore eventDataStore,
             SofascoreProperties properties) {
         this(controlService, transport, rawSnapshotStore, canonicalEventStore, eventDataStore,
-                new EventStatisticsV2Parser(), new EventIncidentsV3Parser(),
+                new EventStatisticsV2Parser(), new EventIncidentsV4Parser(),
                 new EventLineupsV2Parser(), Clock.systemUTC(), properties.getMinimumDelay(),
                 J5RealEventDataService::sleepSafely);
     }
@@ -73,7 +73,7 @@ public class J5RealEventDataService {
             CanonicalEventStore canonicalEventStore,
             J5EventDataStore eventDataStore,
             EventStatisticsV2Parser statisticsParser,
-            EventIncidentsV3Parser incidentsParser,
+            EventIncidentsV4Parser incidentsParser,
             EventLineupsV2Parser lineupsParser,
             Clock clock,
             Duration minimumDelay,
@@ -160,8 +160,8 @@ public class J5RealEventDataService {
                     return failAndLock(
                             claim, "NORMALIZATION_PERSISTENCE_ERROR", attempts, results);
                 }
-                if (!classifySafely(
-                        raw.snapshotId(), RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE, null)) {
+                if (!classifyInsertedSafely(
+                        raw, RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE, null)) {
                     return failAndLock(claim, "RAW_CLASSIFICATION_ERROR", attempts, results);
                 }
                 results.add(new J5RealEndpointResult(
@@ -184,14 +184,14 @@ public class J5RealEventDataService {
             }
             if (response.httpStatus() < 200 || response.httpStatus() >= 300) {
                 String code = httpTerminalCode(response.httpStatus());
-                if (!classifySafely(raw.snapshotId(), RawSnapshotSchemaStatus.TRANSPORT_ERROR,
-                        code)) {
+                if (!classifyInsertedSafely(
+                        raw, RawSnapshotSchemaStatus.TRANSPORT_ERROR, code)) {
                     code = "RAW_CLASSIFICATION_ERROR";
                 }
                 return failAndLock(claim, code, attempts, results);
             }
             if (!isJsonContentType(response.contentType())) {
-                if (!classifySafely(raw.snapshotId(),
+                if (!classifyInsertedSafely(raw,
                         RawSnapshotSchemaStatus.UNEXPECTED_CONTENT,
                         RawSnapshotSchemaStatus.UNEXPECTED_CONTENT.name())) {
                     return failAndLock(
@@ -213,7 +213,7 @@ public class J5RealEventDataService {
                                 ? RawSnapshotSchemaStatus.UNEXPECTED_CONTENT
                                 : RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE;
                 String code = status.name();
-                if (!classifySafely(raw.snapshotId(), status, code)) {
+                if (!classifyInsertedSafely(raw, status, code)) {
                     code = "RAW_CLASSIFICATION_ERROR";
                 }
                 return failAndLock(claim, code, attempts, results);
@@ -233,7 +233,7 @@ public class J5RealEventDataService {
                 return failAndLock(
                         claim, "NORMALIZATION_PERSISTENCE_ERROR", attempts, results);
             }
-            if (!classifySafely(raw.snapshotId(), RawSnapshotSchemaStatus.PARSED, null)) {
+            if (!classifyInsertedSafely(raw, RawSnapshotSchemaStatus.PARSED, null)) {
                 return failAndLock(claim, "RAW_CLASSIFICATION_ERROR", attempts, results);
             }
             results.add(new J5RealEndpointResult(
@@ -318,7 +318,7 @@ public class J5RealEventDataService {
     private static String parserVersion(SofascoreEndpointType endpoint) {
         return switch (endpoint) {
             case EVENT_STATISTICS -> EventStatisticsV2Parser.PARSER_VERSION;
-            case EVENT_INCIDENTS -> EventIncidentsV3Parser.PARSER_VERSION;
+            case EVENT_INCIDENTS -> EventIncidentsV4Parser.PARSER_VERSION;
             case EVENT_LINEUPS -> EventLineupsV2Parser.PARSER_VERSION;
             default -> throw new IllegalArgumentException("unsupported J5 endpoint");
         };
@@ -335,6 +335,19 @@ public class J5RealEventDataService {
         catch (RuntimeException exception) {
             return false;
         }
+    }
+
+    private boolean classifyInsertedSafely(
+            RawSnapshotPersistenceResult raw,
+            RawSnapshotSchemaStatus status,
+            String errorCode) {
+        // A deduplicated result points to immutable historical evidence. The current parser
+        // outcome belongs to the new normalized observation and must not rewrite that evidence.
+        return switch (raw.outcome()) {
+            case INSERTED -> classifySafely(raw.snapshotId(), status, errorCode);
+            case DEDUPLICATED -> true;
+            case CACHE_HIT -> false;
+        };
     }
 
     private static boolean isJsonContentType(String contentType) {

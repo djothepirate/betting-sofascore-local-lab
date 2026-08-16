@@ -180,6 +180,10 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 participant_provider_id,
                 player_provider_id,
                 player_name,
+                player_in_provider_id,
+                player_in_name,
+                player_out_provider_id,
+                player_out_name,
                 home_score,
                 away_score
             ) values (
@@ -193,6 +197,10 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 :participantProviderId,
                 :playerProviderId,
                 :playerName,
+                :playerInProviderId,
+                :playerInName,
+                :playerOutProviderId,
+                :playerOutName,
                 :homeScore,
                 :awayScore
             )
@@ -208,6 +216,10 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 participant_provider_id,
                 player_provider_id,
                 player_name,
+                player_in_provider_id,
+                player_in_name,
+                player_out_provider_id,
+                player_out_name,
                 home_score,
                 away_score
             from j5_event_incident
@@ -402,6 +414,22 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                             incident.playerProviderId().orElse(null),
                             Types.BIGINT)
                     .addValue("playerName", incident.playerName().orElse(null), Types.VARCHAR)
+                    .addValue(
+                            "playerInProviderId",
+                            incident.playerInProviderId().orElse(null),
+                            Types.BIGINT)
+                    .addValue(
+                            "playerInName",
+                            incident.playerInName().orElse(null),
+                            Types.VARCHAR)
+                    .addValue(
+                            "playerOutProviderId",
+                            incident.playerOutProviderId().orElse(null),
+                            Types.BIGINT)
+                    .addValue(
+                            "playerOutName",
+                            incident.playerOutName().orElse(null),
+                            Types.VARCHAR)
                     .addValue("homeScore", incident.homeScore().orElse(null), Types.SMALLINT)
                     .addValue("awayScore", incident.awayScore().orElse(null), Types.SMALLINT);
         }
@@ -535,6 +563,10 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                         optionalLong(resultSet, "participant_provider_id"),
                         optionalLong(resultSet, "player_provider_id"),
                         Optional.ofNullable(resultSet.getString("player_name")),
+                        optionalLong(resultSet, "player_in_provider_id"),
+                        Optional.ofNullable(resultSet.getString("player_in_name")),
+                        optionalLong(resultSet, "player_out_provider_id"),
+                        Optional.ofNullable(resultSet.getString("player_out_name")),
                         optionalInteger(resultSet, "home_score"),
                         optionalInteger(resultSet, "away_score")));
         return new EventIncidents(parent.identity().providerEventId(), incidents);

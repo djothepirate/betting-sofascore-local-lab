@@ -125,6 +125,10 @@ class J5EventDataControllerTest {
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("no-store")))
                 .andExpect(content().string(containsString("Ball possession")))
                 .andExpect(content().string(containsString("Synthetic Home Striker")))
+                .andExpect(content().string(containsString("Synthetic Incoming Player")))
+                .andExpect(content().string(containsString("Synthetic Outgoing Player")))
+                .andExpect(content().string(containsString("Entrant")))
+                .andExpect(content().string(containsString("Sortant")))
                 .andExpect(content().string(containsString("4-3-3")))
                 .andExpect(content().string(containsString("PROVIDER_SCHEMA_VALIDATED=NO")))
                 .andExpect(content().string(containsString("Trois endpoints, une confirmation, aucun retry")))
@@ -339,17 +343,33 @@ class J5EventDataControllerTest {
                 current.event().identity(),
                 new EventIncidents(
                         900001L,
-                        List.of(new EventIncident(
-                                0,
-                                "goal",
-                                18,
-                                Optional.empty(),
-                                Optional.empty(),
-                                Optional.of(9101L),
-                                Optional.of(9701L),
-                                Optional.of("Synthetic Home Striker"),
-                                Optional.of(1),
-                                Optional.of(0)))),
+                        List.of(
+                                new EventIncident(
+                                        0,
+                                        "goal",
+                                        18,
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.of(9101L),
+                                        Optional.of(9701L),
+                                        Optional.of("Synthetic Home Striker"),
+                                        Optional.of(1),
+                                        Optional.of(0)),
+                                new EventIncident(
+                                        1,
+                                        "substitution",
+                                        83,
+                                        Optional.empty(),
+                                        Optional.of(true),
+                                        Optional.of(9101L),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.of(9702L),
+                                        Optional.of("Synthetic Incoming Player"),
+                                        Optional.of(9703L),
+                                        Optional.of("Synthetic Outgoing Player"),
+                                        Optional.empty(),
+                                        Optional.empty()))),
                 incidentsSource,
                 J5CompletenessReport.measured(
                         0,
