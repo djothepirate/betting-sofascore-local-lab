@@ -17,7 +17,9 @@ public record EventIncident(
         Optional<Long> playerOutProviderId,
         Optional<String> playerOutName,
         Optional<Integer> homeScore,
-        Optional<Integer> awayScore) {
+        Optional<Integer> awayScore,
+        Optional<String> incidentClass,
+        Optional<String> reason) {
 
     public EventIncident {
         if (sequence < 0) {
@@ -47,6 +49,42 @@ public record EventIncident(
         if (homeScore.isPresent() != awayScore.isPresent()) {
             throw new IllegalArgumentException("home and away scores must be present together");
         }
+        incidentClass = boundedOptionalText(incidentClass, "incidentClass", 64);
+        reason = boundedOptionalText(reason, "reason", 200);
+    }
+
+    public EventIncident(
+            int sequence,
+            String incidentType,
+            int minute,
+            Optional<Integer> addedTime,
+            Optional<Boolean> home,
+            Optional<Long> participantProviderId,
+            Optional<Long> playerProviderId,
+            Optional<String> playerName,
+            Optional<Long> playerInProviderId,
+            Optional<String> playerInName,
+            Optional<Long> playerOutProviderId,
+            Optional<String> playerOutName,
+            Optional<Integer> homeScore,
+            Optional<Integer> awayScore) {
+        this(
+                sequence,
+                incidentType,
+                minute,
+                addedTime,
+                home,
+                participantProviderId,
+                playerProviderId,
+                playerName,
+                playerInProviderId,
+                playerInName,
+                playerOutProviderId,
+                playerOutName,
+                homeScore,
+                awayScore,
+                Optional.empty(),
+                Optional.empty());
     }
 
     public EventIncident(

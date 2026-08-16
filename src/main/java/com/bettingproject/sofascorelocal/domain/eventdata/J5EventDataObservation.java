@@ -66,7 +66,8 @@ public record J5EventDataObservation(
                 && source.kind() == EventSourceKind.PROVIDER_SNAPSHOT) {
             boolean hasReplacementPlayers = incidents.incidents().stream()
                     .anyMatch(EventIncident::hasReplacementPlayers);
-            boolean compatible = "event-incidents-v4".equals(source.parserVersion())
+            boolean compatible = "event-incidents-v5".equals(source.parserVersion())
+                    || "event-incidents-v4".equals(source.parserVersion())
                     || (!hasReplacementPlayers
                             && "event-incidents-v3".equals(source.parserVersion()));
             if (!compatible) {
@@ -111,15 +112,24 @@ public record J5EventDataObservation(
                 boolean includesReplacementPlayers = data instanceof EventIncidents incidents
                         && incidents.incidents().stream()
                                 .anyMatch(EventIncident::hasReplacementPlayers);
-                output.writeUTF(includesReplacementPlayers
-                        ? "j5-event-data-observation-v2"
-                        : "j5-event-data-observation-v1");
+                boolean includesIncidentDetails = data instanceof EventIncidents incidents
+                        && incidents.incidents().stream()
+                                .anyMatch(incident -> incident.incidentClass().isPresent()
+                                        || incident.reason().isPresent());
+                output.writeUTF(includesIncidentDetails
+                        ? "j5-event-data-observation-v3"
+                        : includesReplacementPlayers
+                                ? "j5-event-data-observation-v2"
+                                : "j5-event-data-observation-v1");
                 output.writeUTF(data.endpointType().name());
                 output.writeLong(data.providerEventId());
                 switch (data) {
                     case EventStatistics statistics -> writeStatistics(output, statistics);
                     case EventIncidents incidents -> writeIncidents(
-                            output, incidents, includesReplacementPlayers);
+                            output,
+                            incidents,
+                            includesReplacementPlayers,
+                            includesIncidentDetails);
                     case EventLineups lineups -> writeLineups(output, lineups);
                 }
             }
@@ -147,7 +157,8 @@ public record J5EventDataObservation(
     private static void writeIncidents(
             DataOutputStream output,
             EventIncidents incidents,
-            boolean includesReplacementPlayers) throws IOException {
+            boolean includesReplacementPlayers,
+            boolean includesIncidentDetails) throws IOException {
         output.writeInt(incidents.incidents().size());
         for (EventIncident incident : incidents.incidents()) {
             output.writeInt(incident.sequence());
@@ -166,6 +177,10 @@ public record J5EventDataObservation(
             }
             writeOptionalInteger(output, incident.homeScore());
             writeOptionalInteger(output, incident.awayScore());
+            if (includesIncidentDetails) {
+                writeOptionalText(output, incident.incidentClass());
+                writeOptionalText(output, incident.reason());
+            }
         }
     }
 

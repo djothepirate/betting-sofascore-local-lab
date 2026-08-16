@@ -185,7 +185,9 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 player_out_provider_id,
                 player_out_name,
                 home_score,
-                away_score
+                away_score,
+                incident_class,
+                reason
             ) values (
                 :observationId,
                 'EVENT_INCIDENTS',
@@ -202,7 +204,9 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 :playerOutProviderId,
                 :playerOutName,
                 :homeScore,
-                :awayScore
+                :awayScore,
+                :incidentClass,
+                :reason
             )
             """;
 
@@ -221,7 +225,9 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 player_out_provider_id,
                 player_out_name,
                 home_score,
-                away_score
+                away_score,
+                incident_class,
+                reason
             from j5_event_incident
             where observation_id = :observationId
             order by incident_order
@@ -431,7 +437,12 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                             incident.playerOutName().orElse(null),
                             Types.VARCHAR)
                     .addValue("homeScore", incident.homeScore().orElse(null), Types.SMALLINT)
-                    .addValue("awayScore", incident.awayScore().orElse(null), Types.SMALLINT);
+                    .addValue("awayScore", incident.awayScore().orElse(null), Types.SMALLINT)
+                    .addValue(
+                            "incidentClass",
+                            incident.incidentClass().orElse(null),
+                            Types.VARCHAR)
+                    .addValue("reason", incident.reason().orElse(null), Types.VARCHAR);
         }
         if (batches.length > 0) {
             jdbcTemplate.batchUpdate(INSERT_INCIDENT_SQL, batches);
@@ -568,7 +579,9 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                         optionalLong(resultSet, "player_out_provider_id"),
                         Optional.ofNullable(resultSet.getString("player_out_name")),
                         optionalInteger(resultSet, "home_score"),
-                        optionalInteger(resultSet, "away_score")));
+                        optionalInteger(resultSet, "away_score"),
+                        Optional.ofNullable(resultSet.getString("incident_class")),
+                        Optional.ofNullable(resultSet.getString("reason"))));
         return new EventIncidents(parent.identity().providerEventId(), incidents);
     }
 

@@ -23,13 +23,13 @@ import java.util.Set;
  * remains immutable in its snapshot; the normalized incident deliberately leaves added time empty.
  * Substitutions preserve the distinct {@code playerIn} and {@code playerOut} identities.</p>
  */
-public final class EventIncidentsV4Parser {
+public class EventIncidentsV4Parser {
 
     public static final String PARSER_VERSION = "event-incidents-v4";
     private static final int PERIOD_ADDED_TIME_SENTINEL = 999;
     private static final Set<String> ROOT_FIELDS = Set.of("incidents", "home", "away");
     private static final Set<String> SIDELESS_INCIDENT_TYPES = Set.of("period", "injuryTime");
-    private static final Set<String> INCIDENT_FIELDS = Set.of(
+    protected static final Set<String> INCIDENT_FIELDS = Set.of(
             "incidentType", "incidentClass", "time", "addedTime", "isHome",
             "team", "teamId", "player", "playerIn", "playerOut", "playerName",
             "assist1", "homeScore", "awayScore", "id", "reason", "rescinded",
@@ -82,11 +82,15 @@ public final class EventIncidentsV4Parser {
             if (!J5JsonParserSupport.requiredObject(item, path, problems)) {
                 continue;
             }
-            J5JsonParserSupport.warnUnknownFields(item, INCIDENT_FIELDS, path, warnings);
+            J5JsonParserSupport.warnUnknownFields(
+                    item, incidentFields(), path, warnings);
             String type = J5JsonParserSupport.requiredText(
                     item.get("incidentType"), path + ".incidentType", 64, problems);
-            Integer minute = J5JsonParserSupport.requiredInteger(
-                    item.get("time"), path + ".time", 0, 300, problems);
+            Integer minute = normalizedMinute(type, item, path, warnings, problems);
+            Optional<String> incidentClass = normalizedIncidentClass(
+                    type, item, path, warnings, problems);
+            Optional<String> reason = normalizedReason(
+                    type, item, path, warnings, problems);
             Optional<Integer> added = optionalAddedTime(
                     type, item.get("addedTime"), path + ".addedTime", warnings, problems);
             Optional<Boolean> home = J5JsonParserSupport.optionalBoolean(
@@ -153,7 +157,9 @@ public final class EventIncidentsV4Parser {
                         playerOut.id(),
                         playerOut.name(),
                         homeScore,
-                        awayScore));
+                        awayScore,
+                        incidentClass,
+                        reason));
             }
         }
         if (!problems.isEmpty()) {
@@ -241,7 +247,7 @@ public final class EventIncidentsV4Parser {
         return id == null || name == null ? Player.invalid() : Player.of(id, name);
     }
 
-    private static J5ParseEvidence evidence(
+    private J5ParseEvidence evidence(
             long snapshotId,
             RawPayloadEvidence payload,
             Instant receivedAt) {
@@ -254,7 +260,43 @@ public final class EventIncidentsV4Parser {
                 Objects.requireNonNull(payload, "payload").sha256(),
                 Optional.empty(),
                 Objects.requireNonNull(receivedAt, "receivedAt"),
-                PARSER_VERSION);
+                parserVersion());
+    }
+
+    protected Set<String> incidentFields() {
+        return INCIDENT_FIELDS;
+    }
+
+    protected Integer normalizedMinute(
+            String incidentType,
+            JsonNode item,
+            String path,
+            List<J5ParseWarning> warnings,
+            List<J5ParseProblem> problems) {
+        return J5JsonParserSupport.requiredInteger(
+                item.get("time"), path + ".time", 0, 300, problems);
+    }
+
+    protected Optional<String> normalizedIncidentClass(
+            String incidentType,
+            JsonNode item,
+            String path,
+            List<J5ParseWarning> warnings,
+            List<J5ParseProblem> problems) {
+        return Optional.empty();
+    }
+
+    protected Optional<String> normalizedReason(
+            String incidentType,
+            JsonNode item,
+            String path,
+            List<J5ParseWarning> warnings,
+            List<J5ParseProblem> problems) {
+        return Optional.empty();
+    }
+
+    protected String parserVersion() {
+        return PARSER_VERSION;
     }
 
     private static J5ParseResult<EventIncidents> incompatible(

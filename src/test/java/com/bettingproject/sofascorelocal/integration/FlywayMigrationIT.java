@@ -6,6 +6,7 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDet
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV1Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV4Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV5Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV1Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV1Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
@@ -182,7 +183,7 @@ class FlywayMigrationIT {
         assertThat(snapshotTable).isEqualTo("provider_snapshot");
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("11");
+        assertThat(flywayVersion).isEqualTo("12");
         assertThat(rawColumn).isEqualTo("bytea");
     }
 
@@ -380,6 +381,7 @@ class FlywayMigrationIT {
                 .schemas(schema)
                 .defaultSchema(schema)
                 .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("11"))
                 .load();
 
         assertThat(flywayV11.migrate().migrationsExecuted).isEqualTo(1);
@@ -416,6 +418,86 @@ class FlywayMigrationIT {
         assertThat(constraintAfter)
                 .contains("event-incidents-v3")
                 .contains("event-incidents-v4");
+        assertThat(upgradeJdbc.queryForObject(
+                "select count(*) from j5_event_data_observation",
+                Long.class)).isZero();
+    }
+
+    @Test
+    void upgradesV11WithBenchIncidentDetailsAndNoHistoricalRewrite() {
+        String schema = "upgrade_v11_to_v12";
+        String separator = POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
+        var dataSource = new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema,
+                POSTGRES.getUsername(),
+                POSTGRES.getPassword());
+        Flyway flywayV11 = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .createSchemas(true)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("11"))
+                .load();
+
+        assertThat(flywayV11.migrate().migrationsExecuted).isEqualTo(11);
+
+        JdbcTemplate upgradeJdbc = new JdbcTemplate(dataSource);
+        String parserConstraintBefore = upgradeJdbc.queryForObject(
+                """
+                select pg_get_constraintdef(oid)
+                from pg_constraint
+                where connamespace = ?::regnamespace
+                  and conname = 'ck_j5_event_data_parser'
+                """,
+                String.class,
+                schema);
+        assertThat(upgradeJdbc.queryForObject(
+                """
+                select count(*)
+                from information_schema.columns
+                where table_schema = ?
+                  and table_name = 'j5_event_incident'
+                  and column_name in ('incident_class', 'reason')
+                """,
+                Long.class,
+                schema)).isZero();
+        assertThat(parserConstraintBefore)
+                .contains("event-incidents-v4")
+                .doesNotContain("event-incidents-v5");
+
+        Flyway flywayV12 = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration")
+                .load();
+
+        assertThat(flywayV12.migrate().migrationsExecuted).isEqualTo(1);
+        assertThat(flywayV12.info().current().getVersion().getVersion()).isEqualTo("12");
+        assertThat(upgradeJdbc.queryForList(
+                """
+                select column_name
+                from information_schema.columns
+                where table_schema = ?
+                  and table_name = 'j5_event_incident'
+                  and column_name in ('incident_class', 'reason')
+                order by column_name
+                """,
+                String.class,
+                schema)).containsExactly("incident_class", "reason");
+        String parserConstraintAfter = upgradeJdbc.queryForObject(
+                """
+                select pg_get_constraintdef(oid)
+                from pg_constraint
+                where connamespace = ?::regnamespace
+                  and conname = 'ck_j5_event_data_parser'
+                """,
+                String.class,
+                schema);
+        assertThat(parserConstraintAfter)
+                .contains("event-incidents-v4")
+                .contains("event-incidents-v5");
         assertThat(upgradeJdbc.queryForObject(
                 "select count(*) from j5_event_data_observation",
                 Long.class)).isZero();
@@ -1479,6 +1561,98 @@ class FlywayMigrationIT {
                                         .contains("Synthetic Incoming Player");
                                 assertThat(substitution.playerOutName())
                                         .contains("Synthetic Outgoing Player");
+                            });
+                });
+    }
+
+    @Test
+    void reparsesADeduplicatedBenchIncidentWithProviderMinuteAndReason() {
+        var j4Import = j4OfflineFixtureImportService.importNominalCorpus();
+        long eventId = 900001L;
+        Instant requestedAt = Instant.parse("2026-08-16T09:16:58Z");
+        RawPayloadEvidence payload = RawPayloadEvidence.capture("""
+                {"incidents":[{
+                  "incidentType":"card",
+                  "incidentClass":"yellow",
+                  "time":-5,
+                  "benchTime":58,
+                  "reversedPeriodTime":6,
+                  "isHome":false,
+                  "reason":"Argument",
+                  "player":{"id":1053241,"name":"Provider Player"}
+                }]}
+                """.getBytes(StandardCharsets.UTF_8));
+        String requestKey = "EVENT_INCIDENTS|eventId=900001";
+        var historical = snapshotStore.save(new RawManualCallSnapshot(
+                SofascoreEndpointType.EVENT_INCIDENTS,
+                requestKey,
+                requestedAt.minusSeconds(60),
+                requestedAt.minusSeconds(60).plusMillis(100),
+                200,
+                "application/json",
+                Duration.ofMillis(100),
+                payload,
+                EventIncidentsV4Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE,
+                "SCHEMA_INCOMPATIBLE"));
+        var deduplicated = snapshotStore.save(new RawManualCallSnapshot(
+                SofascoreEndpointType.EVENT_INCIDENTS,
+                requestKey,
+                requestedAt,
+                requestedAt.plusMillis(100),
+                200,
+                "application/json",
+                Duration.ofMillis(100),
+                payload,
+                EventIncidentsV5Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.RAW_ONLY,
+                null));
+        var parsed = new EventIncidentsV5Parser().parse(
+                deduplicated.snapshotId(), eventId, payload, requestedAt.plusMillis(100));
+        var identity = canonicalEventStore.findLatestByCanonicalId(
+                        j4Import.canonicalEventId())
+                .orElseThrow()
+                .identity();
+
+        var persisted = j5EventDataStore.save(J5EventDataObservation.from(
+                identity,
+                parsed.data().orElseThrow(),
+                EventSourceTrace.providerSnapshot(
+                        deduplicated.snapshotId(),
+                        deduplicated.payloadSha256(),
+                        EventIncidentsV5Parser.PARSER_VERSION,
+                        requestedAt.plusMillis(100)),
+                parsed.completeness().orElseThrow()));
+
+        assertThat(deduplicated.outcome())
+                .isEqualTo(RawSnapshotPersistenceOutcome.DEDUPLICATED);
+        assertThat(deduplicated.snapshotId()).isEqualTo(historical.snapshotId());
+        assertThat(persisted.inserted()).isTrue();
+        assertThat(schemaStatus(historical.snapshotId()))
+                .isEqualTo("SCHEMA_INCOMPATIBLE");
+        assertThat(jdbcTemplate.queryForMap(
+                """
+                select minute, incident_class, reason
+                from j5_event_incident
+                where observation_id = ?
+                """,
+                persisted.observationId()))
+                .containsEntry("minute", 58)
+                .containsEntry("incident_class", "yellow")
+                .containsEntry("reason", "Argument");
+        assertThat(j5EventDataStore.findLatest(j4Import.canonicalEventId()).incidents())
+                .hasValueSatisfying(observation -> {
+                    assertThat(observation.source().parserVersion())
+                            .isEqualTo(EventIncidentsV5Parser.PARSER_VERSION);
+                    assertThat(observation.completeness().status())
+                            .isEqualTo(J5CompletenessStatus.COMPLETE);
+                    assertThat(observation.data()).isInstanceOfSatisfying(
+                            EventIncidents.class,
+                            incidents -> {
+                                var incident = incidents.incidents().getFirst();
+                                assertThat(incident.minute()).isEqualTo(58);
+                                assertThat(incident.incidentClass()).contains("yellow");
+                                assertThat(incident.reason()).contains("Argument");
                             });
                 });
     }

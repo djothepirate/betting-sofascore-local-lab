@@ -130,6 +130,10 @@ class J5EventDataControllerTest {
                 .andExpect(content().string(containsString("Synthetic Outgoing Player")))
                 .andExpect(content().string(containsString("Entrant")))
                 .andExpect(content().string(containsString("Sortant")))
+                .andExpect(content().string(containsString("Classe")))
+                .andExpect(content().string(containsString("Motif")))
+                .andExpect(content().string(containsString("yellow")))
+                .andExpect(content().string(containsString("Argument")))
                 .andExpect(content().string(containsString("4-3-3")))
                 .andExpect(content().string(containsString("PROVIDER_SCHEMA_VALIDATED=NO")))
                 .andExpect(content().string(containsString("Trois endpoints, une confirmation, aucun retry")))
@@ -411,7 +415,24 @@ class J5EventDataControllerTest {
                                         Optional.of(9703L),
                                         Optional.of("Synthetic Outgoing Player"),
                                         Optional.empty(),
-                                        Optional.empty()))),
+                                        Optional.empty()),
+                                new EventIncident(
+                                        2,
+                                        "card",
+                                        58,
+                                        Optional.empty(),
+                                        Optional.of(false),
+                                        Optional.empty(),
+                                        Optional.of(9704L),
+                                        Optional.of("Provider Player"),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.of("yellow"),
+                                        Optional.of("Argument")))),
                 incidentsSource,
                 J5CompletenessReport.measured(
                         0,

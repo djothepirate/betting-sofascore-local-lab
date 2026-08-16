@@ -1,12 +1,14 @@
 package com.bettingproject.sofascorelocal.application.network;
 
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV4Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV5Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportException;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportFailure;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
+import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
+import com.bettingproject.sofascorelocal.domain.eventdata.EventLineups;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventStatistics;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessStatus;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservation;
@@ -136,7 +138,7 @@ class J5RealEventDataServiceTest {
                 canonicalStore,
                 dataStore,
                 new EventStatisticsV2Parser(),
-                new EventIncidentsV4Parser(),
+                new EventIncidentsV5Parser(),
                 new EventLineupsV2Parser(),
                 clock,
                 Duration.ofSeconds(3),
@@ -248,7 +250,7 @@ class J5RealEventDataServiceTest {
                 .extracting(J5RealEndpointResult::snapshotId)
                 .containsExactly(30L, 32L, 35L);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV4Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV5Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents.class,
                 incidents -> {
@@ -295,6 +297,70 @@ class J5RealEventDataServiceTest {
         assertThat(result.endpoints()).extracting(J5RealEndpointResult::endpointType)
                 .containsExactlyElementsOf(J5RealControlService.ORDERED_ENDPOINTS);
         assertThat(pauses).containsExactly(Duration.ofSeconds(3), Duration.ofSeconds(3));
+        assertThat(operations).containsExactly(
+                "transport:EVENT_STATISTICS",
+                "raw:EVENT_STATISTICS",
+                "normalized:EVENT_STATISTICS",
+                "classify:PARSED",
+                "transport:EVENT_INCIDENTS",
+                "raw:EVENT_INCIDENTS",
+                "normalized:EVENT_INCIDENTS",
+                "classify:PARSED",
+                "transport:EVENT_LINEUPS",
+                "raw:EVENT_LINEUPS",
+                "normalized:EVENT_LINEUPS",
+                "classify:PARSED");
+        verify(transport, times(3)).execute(any());
+        verify(control, times(3)).recordEndpointCompleted(any(), any());
+        verify(control).complete(REQUEST_ID);
+    }
+
+    @Test
+    void continuesToLineupsAfterNormalizingAProviderBenchIncident()
+            throws Exception {
+        when(transport.execute(any())).thenAnswer(invocation -> {
+            J5EventDataProviderRequest request = invocation.getArgument(0);
+            operations.add("transport:" + request.endpointType());
+            String body = request.endpointType() == SofascoreEndpointType.EVENT_INCIDENTS
+                    ? """
+                            {"incidents":[{
+                              "incidentType":"card",
+                              "incidentClass":"yellow",
+                              "time":-5,
+                              "benchTime":58,
+                              "reversedPeriodTime":6,
+                              "isHome":false,
+                              "reason":"Argument",
+                              "player":{"id":1053241,"name":"Provider Player"}
+                            }]}
+                            """
+                    : fixtureFor(request.endpointType());
+            return response(request, 200, body);
+        });
+
+        var result = service.execute(claim());
+
+        assertThat(result.completed()).isTrue();
+        assertThat(result.terminalCode()).isEqualTo("COMPLETED");
+        assertThat(result.providerCallAttempts()).isEqualTo(3);
+        assertThat(result.endpoints())
+                .extracting(J5RealEndpointResult::endpointType)
+                .containsExactly(
+                        SofascoreEndpointType.EVENT_STATISTICS,
+                        SofascoreEndpointType.EVENT_INCIDENTS,
+                        SofascoreEndpointType.EVENT_LINEUPS);
+        assertThat(result.endpoints().get(1).warningCount()).isPositive();
+        assertThat(observations.get(1).source().parserVersion())
+                .isEqualTo(EventIncidentsV5Parser.PARSER_VERSION);
+        assertThat(observations.get(1).data()).isInstanceOfSatisfying(
+                EventIncidents.class,
+                incidents -> {
+                    var incident = incidents.incidents().getFirst();
+                    assertThat(incident.minute()).isEqualTo(58);
+                    assertThat(incident.incidentClass()).contains("yellow");
+                    assertThat(incident.reason()).contains("Argument");
+                });
+        assertThat(observations.get(2).data()).isInstanceOf(EventLineups.class);
         assertThat(operations).containsExactly(
                 "transport:EVENT_STATISTICS",
                 "raw:EVENT_STATISTICS",

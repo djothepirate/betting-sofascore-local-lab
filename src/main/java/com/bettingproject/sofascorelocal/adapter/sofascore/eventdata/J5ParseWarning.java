@@ -7,7 +7,8 @@ public record J5ParseWarning(Code code, String path, String message) {
     public enum Code {
         UNKNOWN_FIELD,
         OPTIONAL_FIELD_MISSING,
-        PROVIDER_SENTINEL_NORMALIZED
+        PROVIDER_SENTINEL_NORMALIZED,
+        PROVIDER_BENCH_CARD_MINUTE_USED
     }
 
     public J5ParseWarning {
