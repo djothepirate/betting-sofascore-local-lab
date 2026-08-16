@@ -146,8 +146,10 @@
         <article class="control-stage" th:unless="${j5RealControl.awaitingConfirmation()}">
           <h3>2. Confirmation protégée</h3>
           <p>
-            La phrase n’apparaît qu’après une préparation valide. Une campagne terminée,
-            échouée, expirée ou arrêtée reste verrouillée jusqu’au redémarrage du processus.
+            La phrase n’apparaît qu’après une préparation valide. Une campagne réussie reste
+            verrouillée contre tout rejeu, mais une nouvelle préparation explicite peut créer
+            une campagne et une confirmation distinctes. Une campagne échouée, expirée ou
+            arrêtée reste verrouillée jusqu’au redémarrage du processus.
           </p>
           <p th:if="${j5RealControl.terminalCode != null}">
             Dernier état terminal : <span class="mono" th:text="${j5RealControl.terminalCode}">CODE</span>

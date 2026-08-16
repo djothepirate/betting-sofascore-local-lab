@@ -69,7 +69,9 @@ public record J5RealControlSnapshot(
     }
 
     public boolean preparationAllowed() {
-        return state == J5RealControlState.LOCKED && providerTransportAvailable;
+        return (state == J5RealControlState.LOCKED
+                || state == J5RealControlState.COMPLETED_LOCKED)
+                && providerTransportAvailable;
     }
 
     public boolean terminal() {

@@ -83,7 +83,8 @@ public class J5RealControlService {
                 || state == J5RealControlState.EXECUTING) {
             throw rejected(J5RealControlError.ACTIVE_CAMPAIGN_EXISTS);
         }
-        if (state != J5RealControlState.LOCKED) {
+        if (state != J5RealControlState.LOCKED
+                && state != J5RealControlState.COMPLETED_LOCKED) {
             throw rejected(J5RealControlError.TERMINAL_LOCK_REQUIRES_RESTART);
         }
         J5RealQualificationSnapshot qualification = qualificationSupplier.get();

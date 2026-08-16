@@ -55,6 +55,7 @@ import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -163,6 +164,46 @@ class J5EventDataControllerTest {
     }
 
     @Test
+    void rendersANewPreparationForAnotherEventAfterACompletedCampaign() throws Exception {
+        J4EventSearchItem current = currentEvent();
+        J5EventDataPage page = new J5EventDataPage(
+                ZoneId.of("Europe/Paris"),
+                current,
+                J5EventDataBundle.empty());
+        long completedEventId = 16391135L;
+        when(formTokenService.issue(any(HttpSession.class))).thenReturn("one-use-token");
+        when(queryService.find(current.event().identity().value(), "Europe/Paris"))
+                .thenReturn(Optional.of(page));
+        when(realControlService.snapshot()).thenReturn(new J5RealControlSnapshot(
+                J5RealControlState.COMPLETED_LOCKED,
+                Instant.parse("2026-08-16T06:25:38Z"),
+                UUID.fromString("60000000-0000-0000-0000-000000000006"),
+                null,
+                Instant.parse("2026-08-16T06:25:30Z"),
+                null,
+                CanonicalEventIdentity.sofascore(completedEventId).value(),
+                completedEventId,
+                J5RealControlService.ORDERED_ENDPOINTS,
+                "COMPLETED",
+                true,
+                List.of()));
+
+        mockMvc.perform(get(
+                        "/events/{id}/statistics",
+                        current.event().identity().value())
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("COMPLETED_LOCKED")))
+                .andExpect(content().string(containsString(
+                        "une nouvelle préparation explicite peut créer")))
+                .andExpect(content().string(containsString("value=\"900001\"")))
+                .andExpect(content().string(not(containsString("disabled=\"disabled\""))))
+                .andExpect(content().string(not(containsString("CONFIRMER J5 REAL"))));
+
+        verifyNoInteractions(realEventDataService);
+    }
+
+    @Test
     void rendersAProvider404AsUnavailableRatherThanAsAnEmptyStatisticsList()
             throws Exception {
         J4EventSearchItem current = currentEvent();
@@ -253,6 +294,7 @@ class J5EventDataControllerTest {
 
         verify(formTokenService).consume(any(HttpSession.class), eq("one-use-token"));
         verify(realControlService).prepare(current.event().identity().value(), 900001L);
+        verifyNoInteractions(realEventDataService);
     }
 
     @Test

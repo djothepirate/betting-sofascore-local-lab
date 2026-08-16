@@ -147,7 +147,7 @@ public class J5EventDataController {
                 if (result.completed()) {
                     redirectAttributes.addFlashAttribute(
                             "j5RealMessage",
-                            "Campagne J5 terminée : trois appels fournisseur ordonnés, trois snapshots bruts et trois observations locales, y compris toute indisponibilité explicite. Le circuit est reverrouillé jusqu’au redémarrage.");
+                            "Campagne J5 terminée : trois appels fournisseur ordonnés, trois snapshots bruts et trois observations locales, y compris toute indisponibilité explicite. Le circuit est reverrouillé ; une nouvelle préparation explicite créera une campagne et une confirmation distinctes.");
                     redirectAttributes.addFlashAttribute("j5RealMessageKind", "safe");
                 }
                 else {
