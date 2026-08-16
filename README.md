@@ -8,30 +8,21 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
 
 Le jalon **J5 — Statistiques** est validé techniquement et humainement sur sa frontière hors ligne :
 statistiques, incidents et compositions synthétiques, contrôles explicites de complétude,
-persistance append-only V7 et écran local. La première découverte des schémas réels s'est arrêtée
-dès le premier `HTTP 403`. Le Work Order séparé `WO-SS-20260815-006` a depuis ajouté une voie de
-qualification réelle gardée, désactivée par défaut, limitée à une identité canonique et à trois
-appels confirmés. Son implémentation et la migration V8 sont qualifiées hors ligne. Une campagne
-réelle a ensuite tenté uniquement `EVENT_STATISTICS` pour `16412917` : la réponse JSON HTTP `404`
-a été conservée dans le snapshot 30, puis le circuit s'est verrouillé sans appeler `incidents` ou
-`lineups` et sans retry. Cette réaction a révélé un défaut de politique : les statistiques sont
-facultatives et un `404` peut signifier « famille indisponible », notamment pour une compétition
-non majeure. La migration V9 et le correctif J5 distinguent désormais `UNAVAILABLE` d'un incident
-et d'une liste vide valide, puis poursuivent les familles restantes sans retry. Deux campagnes
-humaines ultérieures ont atteint `EVENT_INCIDENTS` : les snapshots 32 et 34 ont révélé que
-`event-incidents-v2` rejetait à tort la sentinelle fournisseur `addedTime=999` sur les seuls
-marqueurs `period`, ce qui empêchait ensuite l'appel `EVENT_LINEUPS`. Le parseur versionné
-`event-incidents-v3` et la migration V10 ont corrigé ce faux positif sans modifier le brut ni
-interpréter `999` comme une durée. Un retest réel a ensuite validé V3 sur le snapshot dédupliqué
-32, avec 20 incidents visibles, mais la campagne s'est arrêtée avant `EVENT_LINEUPS` : le service
-tentait de reclasser cette preuve historique V2 déjà figée et obtenait
-`RAW_CLASSIFICATION_ERROR`. La correction conserve désormais la classification historique lors
-d'une déduplication et porte le résultat courant dans une nouvelle observation normalisée. Elle
-introduit aussi `event-incidents-v4` et la migration V11 afin de conserver et d'afficher les deux
-identités `playerIn` et `playerOut` de chaque remplacement. Les statistiques réelles de
-`16391135` ont été parsées et les incidents réels de `16412917` ont été validés sous V3 ; la
-compatibilité réelle des compositions attend encore un retest humain, donc
-`providerSchemaValidated=false` reste obligatoire au niveau global J5.
+persistance append-only V7 et écran local. Le Work Order séparé `WO-SS-20260815-006` a ajouté une
+voie de qualification réelle gardée, désactivée par défaut, limitée à une identité canonique par
+campagne et à trois appels confirmés. Les campagnes humaines ont successivement qualifié le HTTP
+`404` d'une famille facultative, la sentinelle fournisseur `addedTime=999` sur les marqueurs de
+période, le reparsing append-only d'un brut dédupliqué et les participants `playerIn` / `playerOut`
+des remplacements. Le retest V4 sur `16412917` a ensuite terminé les trois appels sans retry : les
+statistiques sont restées explicitement indisponibles, les incidents V4 ont été normalisés avec
+les joueurs entrant et sortant, puis les compositions V2 ont été récupérées avec leurs deux
+formations. Ce succès a révélé une dernière anomalie de cycle de vie : le verrou
+`COMPLETED_LOCKED` de la campagne terminée désactivait aussi la préparation d'une campagne
+distincte dans la même instance. Le correctif conserve le verrou anti-rejeu de l'ancien claim,
+mais autorise une nouvelle préparation locale explicite avec nouvel identifiant de requête,
+nouvelle phrase et nouvel acquittement. Les états d'échec, d'arrêt et d'expiration restent
+verrouillés jusqu'au redémarrage. Le retest humain de ce réarmement et le reverrouillage final
+restent requis ; `providerSchemaValidated=false` demeure donc obligatoire au niveau global J5.
 
 ## Ce qui est livré localement
 
@@ -103,7 +94,8 @@ compatibilité réelle des compositions attend encore un retest humain, donc
   `https://www.sofascore.com` et aux trois chemins statistiques, incidents et compositions d'une
   identité canonique déjà persistée ;
 - préparation J5 sans réseau, confirmation exacte de cinq minutes, acquittement, trois appels
-  séquentiels au maximum, délai minimal de trois secondes et verrou terminal dans le processus ;
+  séquentiels au maximum et délai minimal de trois secondes ; après succès, l'ancien claim reste
+  non rejouable mais une nouvelle campagne explicite peut être préparée dans la même instance ;
 - parseurs fournisseur `event-statistics-v2`, `event-incidents-v4` et `event-lineups-v2`, brut
   persisté avant parsing, provenance `PROVIDER_SNAPSHOT` et résultat d'écran minimisé ;
 - traitement borné du HTTP `404` sur les trois chemins J5 exacts : snapshot
@@ -378,6 +370,8 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Observation préalable à la qualification réelle J5](docs/validation/J5-REAL-EVENT-DATA-PREREQUISITE-OBSERVATION-20260815.md)
 - [Readiness technique de la qualification réelle J5](docs/validation/J5-REAL-EVENT-DATA-TECHNICAL-READINESS-20260815.md)
 - [Correction du marqueur de période incidents J5](docs/validation/J5-REAL-INCIDENT-PERIOD-MARKER-CORRECTION-20260816.md)
+- [Correction de la déduplication et des remplacements J5](docs/validation/J5-REAL-DEDUPLICATION-AND-SUBSTITUTION-CORRECTION-20260816.md)
+- [Retest réel V4, compositions et correction du réarmement J5](docs/validation/J5-REAL-V4-LINEUPS-AND-REARM-CORRECTION-20260816.md)
 - [Work Order actif de qualification réelle J5](docs/work_orders/active/WO-SS-20260815-006-j5-real-event-data-qualification.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
@@ -456,7 +450,7 @@ J4_CLOSED=YES
 Cette situation ne déverrouille aucune nouvelle famille, automatisation ou dépendance de
 production. Les rappels de sous-étape 2 restent exclusivement manuels et unitaires.
 
-## J5 hors ligne validé, politique HTTP 404 corrigée
+## J5 réel V4 et compositions qualifiés, réarmement après succès à retester
 
 J5 réutilise l'identité synthétique `900001` de J4 pour démontrer les trois familles demandées. Les
 neuf fixtures J5 sont explicitement synthétiques et ne valident aucun schéma fournisseur. La page
@@ -478,26 +472,28 @@ J5_REAL_TECHNICAL_READINESS=PASS
 J5_REAL_FIRST_CAMPAIGN=HTTP_404_MISCLASSIFIED_AND_LOCKED
 J5_REAL_FIRST_CAMPAIGN_PROVIDER_CALLS=1
 J5_REAL_FIRST_STATISTICS_SNAPSHOT=30
-J5_REAL_LATEST_CAMPAIGN_PROVIDER_CALLS=2
+J5_REAL_LATEST_CAMPAIGN_PROVIDER_CALLS=3
 J5_REAL_STATISTICS_LATEST=PARSED_ON_EVENT_16391135
-J5_REAL_INCIDENTS=V3_REAL_PASS_20_OF_20_ON_DEDUPLICATED_SNAPSHOT_32
+J5_REAL_STATISTICS_ON_EVENT_16412917=UNAVAILABLE_HTTP_404_SNAPSHOT_30
+J5_REAL_INCIDENTS=V4_REAL_PASS_36_OF_36_ON_DEDUPLICATED_SNAPSHOT_32
 J5_REAL_INCIDENTS_ROOT_CAUSE=PERIOD_ADDED_TIME_SENTINEL_999
 J5_REAL_INCIDENTS_CORRECTIVE_PARSER=event-incidents-v4
-J5_REAL_SUBSTITUTION_PLAYERS=V4_IMPLEMENTED_OFFLINE
-J5_REAL_LATEST_STOP=RAW_CLASSIFICATION_ERROR_ON_HISTORICAL_DEDUPLICATION
-J5_REAL_LINEUPS=NOT_ATTEMPTED_AFTER_HISTORICAL_RAW_RECLASSIFICATION
+J5_REAL_SUBSTITUTION_PLAYERS=PASS_REAL_RENDERED
+J5_REAL_LATEST_TERMINAL=COMPLETED_LOCKED
+J5_REAL_LINEUPS=V2_REAL_PASS_85_OF_85_SNAPSHOT_55
 J5_HTTP_404_POLICY=ENDPOINT_UNAVAILABLE_CONTINUE_NO_RETRY
 J5_CORRECTIVE_V3_RETEST=PASS_REAL
-J5_CORRECTIVE_V4_RETEST=NOT_RUN
+J5_CORRECTIVE_V4_RETEST=PASS_REAL_THREE_CALLS
+J5_COMPLETED_CAMPAIGN_REARM=PASS_OFFLINE_RETEST_REQUIRED
 J5_OFFLINE_WORK_ORDER_STATUS=VALIDATED
-J5_REAL_WORK_ORDER_STATUS=DEDUP_AND_SUBSTITUTION_V4_CORRECTIVE_IMPLEMENTATION_VALIDATED_OFFLINE
+J5_REAL_WORK_ORDER_STATUS=V4_REAL_PASS_REARM_CORRECTIVE_IMPLEMENTATION_VALIDATED_OFFLINE
 J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
 ```
 
 `TOURNAMENT_STANDINGS` demeure différé : il ne fait pas partie de la preuve de sortie J5 définie
 par le cadrage et son ajout aurait étendu le corpus alors que les schémas des trois familles
 principales n'ont pas pu être observés. Les captures de validation humaine ne sont pas versionnées ;
-leur constat minimisé est conservé dans les rapports J5. Le processus utilisé par la première
-campagne est arrêté. Le correctif ne déclenche aucun appel : une nouvelle qualification reste un
-geste humain explicite après application de V11, revue du Work Order amendé et configuration locale
-manuelle. Le fichier `.env` demeure ignoré et n'est ni lu ni modifié par l'agent.
+leur constat minimisé est conservé dans les rapports J5. Le correctif de réarmement ne déclenche
+aucun appel : il faut redémarrer une fois pour charger le nouveau binaire, puis préparer et
+confirmer explicitement chaque nouvelle campagne. Le fichier `.env` demeure ignoré et n'est ni lu
+ni modifié par l'agent.

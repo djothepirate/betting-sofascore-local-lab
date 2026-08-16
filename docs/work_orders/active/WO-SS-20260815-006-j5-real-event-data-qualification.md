@@ -1,6 +1,6 @@
 # WO-SS-20260815-006 — Qualification réelle bornée des données événement J5
 
-- **Statut :** `V4_CORRECTIVE_IMPLEMENTATION_VALIDATED_OFFLINE_RETEST_REQUIRED`
+- **Statut :** `V4_REAL_PASS_REARM_CORRECTIVE_IMPLEMENTATION_VALIDATED_OFFLINE`
 - **Date :** 2026-08-15
 - **Date de démarrage :** 2026-08-15
 - **Prérequis fonctionnel :** WO-SS-20260815-005 validé et archivé
@@ -13,7 +13,8 @@
 - **Première campagne humaine réelle :** `EXECUTED_ONE_CALL_HTTP_404_MISCLASSIFIED`
 - **Amendement correctif demandé par le propriétaire :** `AUTHORIZED`
 - **Campagne corrective réelle V3 :** `EXECUTED_INCIDENTS_PASS_LINEUPS_NOT_ATTEMPTED`
-- **Campagne corrective réelle V4 :** `NOT_RUN_OPERATOR_ONLY`
+- **Campagne corrective réelle V4 :** `EXECUTED_THREE_CALLS_INCIDENTS_AND_LINEUPS_PASS`
+- **Correction du réarmement après succès :** `IMPLEMENTED_VALIDATED_OFFLINE_RETEST_REQUIRED`
 - **Modification directe de `.env` par l'agent :** `NOT_AUTHORIZED`
 - **Polling, planification ou retry :** `NOT_AUTHORIZED`
 - **Déploiement VPS :** `NOT_AUTHORIZED`
@@ -30,10 +31,11 @@ ensuite normalisée dans les tables append-only J5 avec une provenance `PROVIDER
 `404` sur une famille facultative produit une indisponibilité explicite et n'est pas un incident ;
 le premier incident réel arrête la campagne, verrouille le contrôle et interdit tout appel restant.
 
-La réalisation logicielle de ce Work Order n'a exécuté aucune requête réelle. La première campagne
-humaine est consignée à la section 15 : l'ancienne politique s'est arrêtée sur un HTTP `404` au
-premier endpoint et n'a validé aucun des trois schémas fournisseur. L'amendement demandé par le
-propriétaire corrige cette classification sans exécuter de nouvelle requête réelle.
+La réalisation logicielle de ce Work Order n'a exécuté aucune requête réelle. Les campagnes
+humaines et leurs corrections successives sont consignées aux sections 15 à 19. Le dernier retest
+V4 a terminé les trois appels et qualifié incidents et compositions, puis révélé que le verrou de
+succès empêchait à tort la préparation d'une campagne distincte dans la même instance. Le présent
+amendement corrige ce cycle de vie sans exécuter de nouvelle requête réelle.
 
 ## 2. Contexte opérateur reçu le 2026-08-15
 
@@ -90,7 +92,10 @@ Les sections 3.4 à 3.8, 3.10 et 9 de l'ADR-SS-001 ont été relues. Le parcours
 
 Comme pour le rappel manuel J4 qualifié, l'absence de cache est volontaire : une campagne confirmée
 constitue une acquisition réelle unique de chaque famille. Aucun second appel à une même famille
-n'est possible dans le processus courant. Aucun déclencheur de nouvel ADR n'est atteint.
+n'est possible dans un claim. Après un succès uniquement, une nouvelle campagne exige une
+préparation explicite, un nouvel identifiant de requête, une nouvelle phrase et un nouvel
+acquittement ; elle reste exclusive de toute autre campagne active. Aucun déclencheur de nouvel
+ADR n'est atteint.
 
 ```text
 ADR_SS_001_J5_REAL_REVIEW=COMPATIBLE_NO_CHANGE_REQUIRED
@@ -116,7 +121,8 @@ L'opt-in J5 est défini avec la valeur par défaut `false`. Les chemins J3, J4 e
 mutuellement exclusifs. L'origine avec un slash terminal pourra être normalisée comme origine
 racine, mais la forme recommandée reste sans slash.
 
-Après succès, incident ou abandon, et avant tout redémarrage ordinaire :
+Après la dernière campagne de la session, ou immédiatement après incident ou abandon, et avant
+tout redémarrage ordinaire :
 
 ```properties
 SOFASCORE_ENABLED=false
@@ -151,7 +157,10 @@ Une confirmation valide autorise exactement, dans cet ordre :
 3. `GET /api/v1/event/<event_id>/lineups`.
 
 La concurrence reste égale à un et un délai d'au moins trois secondes sépare deux tentatives. Une
-campagne réussie passe à `COMPLETED_LOCKED` et ne peut pas être rejouée dans le même processus.
+campagne réussie passe à `COMPLETED_LOCKED` : son claim ne peut pas être rejoué, mais une nouvelle
+préparation locale explicite peut créer une campagne distincte dans le même processus. Elle remet
+les endpoints terminés et le code terminal à zéro, produit une nouvelle phrase et ne déclenche
+aucun transport avant une nouvelle confirmation.
 
 ### 5.3 Persistance et parsing
 
@@ -194,7 +203,8 @@ reverrouillée avant toute nouvelle décision.
 
 - nouvel opt-in J5 sûr par défaut ;
 - politique de configuration exclusive et origine exacte ;
-- contrôle en mémoire à confirmation unique et verrou terminal ;
+- contrôle en mémoire à confirmation unique, verrou anti-rejeu après succès et réarmement local
+  explicite d'une campagne distincte ;
 - requêtes exactes et transport `RestClient` sans proxy ni redirection ;
 - réponse bornée par `RawPayloadEvidence` ;
 - parseurs fournisseur versionnés et fixtures de forme créées de zéro ;
@@ -217,7 +227,8 @@ reverrouillée avant toute nouvelle décision.
 - un endpoint autre que les trois familles ;
 - une URL, un chemin ou un identifiant fourni librement à l'action finale ;
 - plusieurs événements dans une campagne ;
-- rappel ou rafraîchissement J5 dans le même processus ;
+- rejeu automatique, réutilisation d'un ancien claim ou campagnes parallèles dans le même
+  processus ;
 - polling, planification, boucle live, cache implicite ou retry ;
 - proxy, cookie, jeton, compte, en-tête personnalisé ou navigateur automatisé ;
 - réutilisation du transport J4 pour les familles J5 ;
@@ -270,8 +281,11 @@ reverrouillée avant toute nouvelle décision.
 | réponse incidents dédupliquée vers un snapshot V2 terminal | nouvelle observation V4, classification historique inchangée, compositions appelées |
 | remplacement avec `playerIn` et `playerOut` | deux identités conservées et affichées pour chaque substitution |
 | remplacement avec une identité absente | observation `PARTIAL`, chemin manquant, aucun joueur inventé |
-| campagne réussie | `COMPLETED_LOCKED`, trois familles consultables |
-| second déclenchement même processus | refus terminal |
+| campagne réussie | `COMPLETED_LOCKED`, ancien claim non rejouable, trois familles consultables |
+| préparation explicite après succès | nouveau requestId et nouvelle phrase, endpoints remis à zéro, aucun transport |
+| ancienne phrase ou ancien claim après réarmement | refus par identité de requête, aucune exécution |
+| préparation pendant une campagne active | refus `ACTIVE_CAMPAIGN_EXISTS` |
+| préparation après échec, arrêt ou expiration | refus terminal jusqu'au redémarrage |
 | arrêt global | appels suivants refusés |
 | suite Maven | zéro appel Internet |
 | upgrade V8 contenant un HTTP `404` J5 mal classé | V9 reclasse le snapshot sans modifier son brut |
@@ -307,7 +321,10 @@ reverrouillée avant toute nouvelle décision.
 - [x] incidents V3 réels visibles avec `20/20` signaux sur le snapshot dédupliqué 32 ;
 - [x] cause de `RAW_CLASSIFICATION_ERROR` identifiée avant le troisième appel ;
 - [x] déduplication historique, parseur V4 et joueurs entrant/sortant validés hors ligne ;
-- [ ] campagne humaine corrective exécutée après application de V11 ;
+- [x] campagne humaine corrective exécutée après application de V11 ;
+- [x] incidents V4 réels avec joueurs entrant/sortant et compositions V2 réelles qualifiés ;
+- [x] cause du verrou global après succès identifiée et réarmement explicite validé hors ligne ;
+- [ ] nouvelle campagne préparée dans la même instance après un succès, avec nouveau claim ;
 - [ ] configuration locale reverrouillée et arrêt final confirmés après le retest.
 
 ## 11. Unités de livraison prévues
@@ -325,11 +342,13 @@ reverrouillée avant toute nouvelle décision.
 11. `docs: record the J5 incident parser correction`
 12. `fix: preserve reparsed J5 evidence and substitution players`
 13. `docs: record the J5 deduplication and substitution correction`
+14. `fix: rearm J5 after a completed campaign`
+15. `docs: record J5 V4 qualification and rearm correction`
 
 ## 12. Readiness technique hors ligne
 
 ```text
-STANDARD_TESTS=268
+STANDARD_TESTS=270
 STANDARD_FAILURES=0
 STANDARD_ERRORS=0
 STANDARD_SKIPPED=0
@@ -354,19 +373,20 @@ reverrouillage de `.env` et à l'arrêt final.
 
 ```text
 WO_ID=WO-SS-20260815-006
-WO_STATUS=CORRECTIVE_IMPLEMENTATION_VALIDATED_OFFLINE_RETEST_REQUIRED
+WO_STATUS=V4_REAL_PASS_REARM_CORRECTIVE_IMPLEMENTATION_VALIDATED_OFFLINE
 BASE_COMMIT=5063ac8e
 BRANCH=codex/j5-real-event-data-qualification
 J5_OFFLINE_STATUS=VALIDATED
 J5_REAL_IMPLEMENTATION_STATUS=PASS
-J5_REAL_PROVIDER_CALLS=1
+J5_REAL_PROVIDER_CALLS_LATEST_CAMPAIGN=3
 J5_REAL_FIRST_CAMPAIGN_STATUS=HTTP_404_MISCLASSIFIED_AND_LOCKED
 J5_REAL_HTTP_404_POLICY=ENDPOINT_UNAVAILABLE_CONTINUE_NO_RETRY
-J5_REAL_CORRECTIVE_RETEST=NOT_RUN_OPERATOR_ONLY
+J5_REAL_V4_CORRECTIVE_RETEST=PASS_THREE_CALLS
+J5_REAL_REARM_RETEST=NOT_RUN_OPERATOR_ONLY
 J5_REAL_ENV_CONFIGURATION=APPLIED_FOR_REAL_CAMPAIGN_RELOCK_PENDING
 J5_REAL_PROVIDER_SCHEMA_VALIDATED=NO
 J5_REAL_APPLICATION_TRANSPORT=IMPLEMENTED_GUARDED_DEFAULT_OFF
-J5_REAL_CAN_BE_EXECUTED=PENDING_HUMAN_REVIEW_AND_LOCAL_CONFIGURATION
+J5_REAL_CAN_BE_EXECUTED=PENDING_REARM_RETEST_AND_LOCAL_CONFIGURATION
 J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
 ```
 
@@ -564,7 +584,8 @@ Le correctif distingue désormais le résultat de persistance brute :
 - un brut `DEDUPLICATED` conserve sa classification historique ; le résultat du parseur courant
   est représenté exclusivement par la nouvelle observation normalisée append-only ;
 - le chemin direct J5 n'accepte toujours pas de résultat de cache implicite ;
-- aucune famille n'est rappelée et tous les délais, verrous et règles d'arrêt restent inchangés.
+- aucune famille n'est rappelée et tous les délais ainsi que les règles d'arrêt réseau restent
+  inchangés.
 
 Le test de service reproduit exactement la séquence minimisée : snapshot 30 dédupliqué en
 `ENDPOINT_UNAVAILABLE`, snapshot 32 dédupliqué et reparsé, puis snapshot compositions nouvellement
@@ -591,9 +612,9 @@ réponse afin de garantir que la règle ne s'applique pas seulement au premier o
 
 ```text
 J5_INCIDENT_V3_REAL_RETEST=PASS_20_OF_20_ON_SNAPSHOT_32
-J5_LATEST_REAL_PROVIDER_CALLS=2
-J5_LATEST_REAL_TERMINAL_CODE=RAW_CLASSIFICATION_ERROR
-J5_LINEUPS_REAL_STATUS=NOT_ATTEMPTED
+J5_SECTION_18_REAL_PROVIDER_CALLS=2
+J5_SECTION_18_REAL_TERMINAL_CODE=RAW_CLASSIFICATION_ERROR
+J5_SECTION_18_LINEUPS_REAL_STATUS=NOT_ATTEMPTED
 J5_DEDUPLICATED_RAW_RECLASSIFICATION=DISABLED
 J5_INCIDENT_CURRENT_PARSER=event-incidents-v4
 J5_SUBSTITUTION_PARTICIPANTS=PERSISTED_AND_RENDERED
@@ -601,15 +622,83 @@ J5_FLYWAY_VERSION=11
 J5_STANDARD_TESTS=268
 J5_INTEGRATION_TESTS=23
 J5_PROVIDER_CALLS_BY_AGENT=0
-J5_V4_REAL_RETEST=NOT_RUN_OPERATOR_ONLY
+J5_V4_REAL_RETEST_AT_SECTION_18=NOT_RUN_OPERATOR_ONLY
 J5_PROVIDER_SCHEMA_VALIDATED=NO
 J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
 ```
 
 Le rapport minimisé détaillé est conservé dans
-`docs/validation/J5-REAL-DEDUPLICATION-AND-SUBSTITUTION-CORRECTION-20260816.md`. Le prochain geste
-réel exige un redémarrage ayant appliqué V11, une nouvelle préparation et une nouvelle
-confirmation. Il doit vérifier l'observation incidents V4 avec joueurs entrant/sortant, puis
-l'unique tentative `EVENT_LINEUPS` et sa classification effective. Le reverrouillage local et
-l'arrêt final restent obligatoires. L'agent ne lit ni ne modifie `.env` et n'exécute aucun appel
+`docs/validation/J5-REAL-DEDUPLICATION-AND-SUBSTITUTION-CORRECTION-20260816.md`. Le geste réel qui
+était alors requis — redémarrage avec V11, nouvelle préparation et nouvelle confirmation — a
+depuis qualifié incidents V4 et compositions V2 ; son résultat et la nouvelle anomalie de cycle
+de vie sont consignés à la section 19. L'agent ne lit ni ne modifie `.env` et n'exécute aucun appel
 fournisseur.
+
+## 19. Retest réel V4, compositions et réarmement après succès
+
+Le retest humain exécuté après application de V11 sur `16412917` a terminé la campagne sans
+incident bloquant et sans retry. Les captures opérateur, non versionnées, établissent les preuves
+minimisées suivantes :
+
+| Ordre | Famille | Snapshot | HTTP | Parseur / normaliseur | Complétude | Observation |
+|---:|---|---:|---:|---|---|---:|
+| 1 | `EVENT_STATISTICS` | 30 | 404 | `event-statistics-unavailable-v1` | `UNAVAILABLE · N/A` | 7 |
+| 2 | `EVENT_INCIDENTS` | 32 | 200 | `event-incidents-v4` | `COMPLETE · 36/36` | 12 |
+| 3 | `EVENT_LINEUPS` | 55 | 200 | `event-lineups-v2` | `COMPLETE · 85/85` | 13 |
+
+Le snapshot statistiques conserve 44 octets et représente l'indisponibilité attendue pour cette
+rencontre. Le snapshot incidents conserve 22 945 octets ; toutes les lignes `substitution`
+affichent le joueur entrant et le joueur sortant lorsque le fournisseur les fournit. Le snapshot
+compositions conserve 35 669 octets ; les deux côtés sont visibles, avec les formations domicile
+`4-1-4-1` et extérieur `4-3-3`. Le contrôle a terminé en `COMPLETED_LOCKED` après exactement trois
+appels. Aucun quatrième appel, retry ou rappel d'une famille n'est observé. La phrase ponctuelle de
+confirmation n'est ni reproduite ni conservée.
+
+### 19.1 Nouvelle anomalie de cycle de vie
+
+Après ce succès, l'ouverture de la page de `16391135` dans la même instance affichait encore le
+snapshot global `COMPLETED_LOCKED` de `16412917` et désactivait « Préparer la campagne J5 ». La
+cause est le contrôle J5 singleton : il impose volontairement une concurrence globale égale à un,
+mais son garde historique confondait le verrou anti-rejeu d'un succès avec les verrous de
+processus issus d'un échec, d'un arrêt ou d'une expiration.
+
+La correction conserve un seul contrôle global et applique désormais les règles suivantes :
+
+- `LOCKED` et `COMPLETED_LOCKED` autorisent une préparation locale explicite si la politique
+  fournisseur reste disponible ;
+- cette préparation crée un nouvel identifiant de requête et une nouvelle phrase, remplace
+  l'identité ciblée, vide les endpoints terminés et efface le code terminal ;
+- elle ne résout aucune URI et n'appelle jamais le service d'exécution ;
+- l'ancienne phrase est refusée et l'ancien claim ne peut plus continuer ;
+- `AWAITING_CONFIRMATION` et `EXECUTING` refusent une campagne concurrente ;
+- `FAILED_LOCKED`, `STOPPED_LOCKED` et `EXPIRED_LOCKED` exigent toujours un redémarrage.
+
+Cette distinction n'ajoute ni retry, ni cache, ni polling, ni exécution automatique. Chaque
+nouvelle campagne réussie exige un nouveau jeton de formulaire local, une préparation, une phrase
+exacte, un acquittement et une action finale distincte.
+
+### 19.2 Validation hors ligne et suite humaine
+
+```text
+J5_V4_REAL_RETEST=PASS_THREE_CALLS_NO_RETRY
+J5_REAL_STATISTICS=UNAVAILABLE_HTTP_404_SNAPSHOT_30_OBSERVATION_7
+J5_REAL_INCIDENTS=EVENT_INCIDENTS_V4_COMPLETE_36_OF_36_SNAPSHOT_32_OBSERVATION_12
+J5_REAL_SUBSTITUTION_PARTICIPANTS=PASS_RENDERED
+J5_REAL_LINEUPS=EVENT_LINEUPS_V2_COMPLETE_85_OF_85_SNAPSHOT_55_OBSERVATION_13
+J5_REAL_TERMINAL_STATE=COMPLETED_LOCKED
+J5_COMPLETED_CAMPAIGN_REARM=PASS_OFFLINE_RETEST_REQUIRED
+J5_STANDARD_TESTS=270
+J5_INTEGRATION_TESTS=23
+J5_FLYWAY_VERSION=11
+J5_PROVIDER_CALLS_BY_AGENT=0
+J5_PROVIDER_SCHEMA_VALIDATED=NO
+J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
+```
+
+Le rapport minimisé détaillé est
+`docs/validation/J5-REAL-V4-LINEUPS-AND-REARM-CORRECTION-20260816.md`. Après chargement du nouveau
+binaire, le prochain contrôle humain doit terminer une campagne A, puis préparer explicitement une
+campagne B dans la même instance. Il doit vérifier un nouvel identifiant et une nouvelle phrase,
+l'absence de transport pendant la préparation, le refus de l'ancien claim et le maintien du
+verrou de processus après tout échec, arrêt ou expiration. Le reverrouillage local et l'arrêt final
+restent obligatoires. L'agent ne lit ni ne modifie `.env` et n'exécute aucun appel fournisseur.

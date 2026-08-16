@@ -10,9 +10,10 @@ NO_CRITICAL_DEPENDENCY
 PROVIDER_SCHEMA_VALIDATED=NO
 ```
 
-Cette architecture complète le contrat synthétique J5 V1 sans le remplacer. Elle prépare une
-campagne humaine unique sur une identité canonique J4 existante. Le développement, Maven et les
-fixtures ne contactent jamais SofaScore.
+Cette architecture complète le contrat synthétique J5 V1 sans le remplacer. Elle autorise une
+seule campagne humaine active à la fois sur une identité canonique J4 existante. Une campagne
+réussie peut être suivie d'une nouvelle campagne explicitement préparée et confirmée ; le
+développement, Maven et les fixtures ne contactent jamais SofaScore.
 
 ## 2. Frontière d'autorisation
 
@@ -42,9 +43,12 @@ cinq minutes. La confirmation exige :
 - un acquittement explicite ;
 - une politique de configuration encore valide.
 
-Une confirmation produit un claim immuable. Les états terminaux
-`COMPLETED_LOCKED`, `FAILED_LOCKED`, `STOPPED_LOCKED` et `EXPIRED_LOCKED` ne permettent aucune
-nouvelle préparation dans le même processus.
+Une confirmation produit un claim immuable. `COMPLETED_LOCKED` interdit tout rejeu de ce claim,
+mais autorise une nouvelle préparation explicite dans le même processus. Cette préparation ne
+contacte pas le fournisseur, crée un nouvel identifiant de requête et une nouvelle phrase, remet
+la liste des familles terminées à zéro et exige un nouvel acquittement avant tout transport.
+`FAILED_LOCKED`, `STOPPED_LOCKED` et `EXPIRED_LOCKED` restent des verrous de processus et exigent
+un redémarrage.
 
 ## 4. Séquence réseau bornée
 
@@ -154,6 +158,11 @@ rejetée par V2. Un retest humain a ensuite confirmé V3 sur la réponse réelle
 snapshot 32 : 20 incidents sur 20 sont visibles. Il a aussi révélé que la tentative de reclasser
 ce snapshot historique arrêtait la campagne avec `RAW_CLASSIFICATION_ERROR` avant
 `EVENT_LINEUPS`, ainsi que l'absence de conservation de `playerIn` et `playerOut`. V4, V11 et la
-politique de déduplication corrigent ces deux défauts hors ligne. Un nouveau geste humain doit
-encore atteindre et qualifier `EVENT_LINEUPS`; le statut global reste donc
-`PROVIDER_SCHEMA_VALIDATED=NO`.
+politique de déduplication ont corrigé ces deux défauts. Le retest humain suivant a confirmé le
+parcours complet sur `16412917` : statistiques HTTP `404` normalisées en indisponibilité,
+incidents parsés par V4 avec joueurs entrant et sortant, puis compositions parsées par V2, après
+exactement trois appels sans retry. Il a aussi révélé que `COMPLETED_LOCKED` empêchait à tort de
+préparer une campagne distincte pour `16391135` dans la même instance. Le contrôle autorise
+désormais ce nouveau départ explicite après un succès, sans ouvrir les verrous d'échec, d'arrêt ou
+d'expiration. Le statut global reste `PROVIDER_SCHEMA_VALIDATED=NO` jusqu'au retest humain de ce
+cycle de réarmement, au reverrouillage local et à la clôture du Work Order.

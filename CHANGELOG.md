@@ -6,6 +6,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Corrigé
 
+- réarmement explicite de J5 après une campagne réussie : `COMPLETED_LOCKED` continue d'interdire
+  tout rejeu de l'ancien claim, mais permet une nouvelle préparation locale avec nouvel identifiant
+  de requête, nouvelle phrase et nouvel acquittement ; `FAILED_LOCKED`, `STOPPED_LOCKED` et
+  `EXPIRED_LOCKED` restent verrouillés jusqu'au redémarrage ;
 - poursuite de la campagne J5 lorsqu'une réponse brute identique est dédupliquée vers une preuve
   historique déjà classée : la classification V1/V2 reste immuable, le résultat du parseur courant
   est porté par une nouvelle observation append-only et `EVENT_LINEUPS` n'est plus bloqué par un
@@ -62,6 +66,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Ajouté
 
+- preuve minimisée du retest réel V4 sur `16412917` : statistiques HTTP `404` indisponibles,
+  incidents V4 `36/36` avec joueurs entrant/sortant, compositions V2 `85/85`, exactement trois
+  appels ordonnés sans retry, puis régression hors ligne du nouveau cycle après succès ;
 - migration Flyway V11 append-only ajoutant les couples identifiant/nom des joueurs entrant et
   sortant, autorisant `event-incidents-v4` et qualifiant l'upgrade V10 → V11 sans réécriture de
   l'historique ;
@@ -80,8 +87,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   limitée à l'origine exacte `https://www.sofascore.com` et aux trois endpoints logiques
   `EVENT_STATISTICS`, `EVENT_INCIDENTS` et `EVENT_LINEUPS` ;
 - contrôle humain J5 avec préparation sans réseau, phrase exacte valable cinq minutes,
-  acquittement, claim immuable, trois appels séquentiels maximum et verrou terminal dans le
-  processus après succès, incident, expiration ou arrêt ;
+  acquittement, claim immuable et trois appels séquentiels maximum ; le succès verrouille le claim
+  terminé tout en autorisant une campagne ultérieure distincte, tandis qu'incident, expiration ou
+  arrêt verrouillent le processus ;
 - transport J5 sans proxy, redirection, cookie, jeton, compte, en-tête de navigateur ou retry,
   avec réponse bornée, délai minimal de trois secondes et arrêt avant toute famille restante au
   premier incident ;
