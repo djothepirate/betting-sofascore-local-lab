@@ -15,7 +15,7 @@ PROVIDER_SCHEMA_VALIDATED=NO
 - **Appel fournisseur par l'agent :** `0`
 - **Payload brut versionné ou reproduit :** `NO`
 - **Correctif :** `event-incidents-v3` et Flyway V10
-- **Retest réel V3 :** `NOT_RUN_OPERATOR_ONLY`
+- **Retest réel V3 :** `PASS_20_OF_20_ON_SNAPSHOT_32`
 
 ## 2. Preuves opérateur minimisées
 
@@ -94,13 +94,17 @@ relance a validé 21/21 tests sans appel fournisseur et sans lecture ou modifica
 ## 6. Limites et prochain contrôle humain
 
 Les snapshots 32 et 34 restent des preuves historiques V2 `SCHEMA_INCOMPATIBLE`; V10 ne les
-réécrit pas. Le correctif V3 est qualifié hors ligne, mais il n'a pas encore traité une nouvelle
-réponse réelle. Le schéma réel `EVENT_LINEUPS` demeure inconnu localement parce que les deux
-campagnes précédentes se sont arrêtées avant le troisième appel.
+réécrit pas. Un retest humain ultérieur a reparsé la réponse réelle dédupliquée du snapshot 32 par
+V3 et rendu visibles 20 incidents sur 20. Il a toutefois révélé un second défaut : la tentative de
+reclasser le snapshot historique produisait `RAW_CLASSIFICATION_ERROR` et arrêtait encore la
+campagne avant le troisième appel. Il a aussi confirmé que V3 ne conservait pas les objets
+`playerIn` et `playerOut` des remplacements.
 
-Après application de V10 et redémarrage, une nouvelle campagne humaine séparée doit confirmer :
+Ces constats et leur correction V4/V11 sont détaillés dans
+`J5-REAL-DEDUPLICATION-AND-SUBSTITUTION-CORRECTION-20260816.md`. Après application de V11 et
+redémarrage, une nouvelle campagne humaine séparée doit confirmer :
 
-- incidents HTTP `200` parsés par `event-incidents-v3` ;
+- incidents HTTP `200` parsés par `event-incidents-v4` avec joueurs entrant/sortant ;
 - conservation du brut et présence de l'avertissement de sentinelle ;
 - tentative unique de `EVENT_LINEUPS` après le délai minimal ;
 - classification compatible, indisponible ou terminale de cette troisième famille sans retry ;
@@ -109,8 +113,9 @@ Après application de V10 et redémarrage, une nouvelle campagne humaine sépar�
 ```text
 J5_INCIDENT_V3_TECHNICAL_STATUS=PASS_OFFLINE
 J5_STATISTICS_REAL_STATUS=PARSED_ON_16391135
-J5_INCIDENT_V3_REAL_STATUS=NOT_RUN
+J5_INCIDENT_V3_REAL_STATUS=PASS_20_OF_20
 J5_LINEUPS_REAL_STATUS=NOT_OBSERVED
+J5_INCIDENT_V4_REAL_STATUS=NOT_RUN
 J5_WORK_ORDER_STATUS=ACTIVE
 J5_WORK_ORDER_CAN_BE_ARCHIVED=NO
 ```

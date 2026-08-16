@@ -6,6 +6,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Corrigé
 
+- poursuite de la campagne J5 lorsqu'une réponse brute identique est dédupliquée vers une preuve
+  historique déjà classée : la classification V1/V2 reste immuable, le résultat du parseur courant
+  est porté par une nouvelle observation append-only et `EVENT_LINEUPS` n'est plus bloqué par un
+  faux `RAW_CLASSIFICATION_ERROR` ;
+- conservation de l'identité des joueurs entrant et sortant sur tous les incidents
+  `substitution` : `event-incidents-v4` lit séparément `playerIn` et `playerOut`, conserve leurs
+  identifiants et noms, mesure toute absence comme `PARTIAL` et les affiche dans deux colonnes
+  dédiées sans synthétiser de joueur ;
 - correction du faux positif `SCHEMA_INCOMPATIBLE` sur les réponses réelles `EVENT_INCIDENTS` :
   `event-incidents-v3` reconnaît `addedTime=999` comme une sentinelle fournisseur uniquement sur
   un marqueur `period`, conserve les octets bruts inchangés, omet la sentinelle de la valeur
@@ -54,6 +62,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Ajouté
 
+- migration Flyway V11 append-only ajoutant les couples identifiant/nom des joueurs entrant et
+  sortant, autorisant `event-incidents-v4` et qualifiant l'upgrade V10 → V11 sans réécriture de
+  l'historique ;
+- régression hors ligne du retest réel : statistiques 404 dédupliquées, incidents 200
+  dédupliqués et reparsés par V4, puis unique appel compositions, ainsi qu'une preuve PostgreSQL
+  que le snapshot V2 conserve `SCHEMA_INCOMPATIBLE` pendant qu'une observation V4 est ajoutée ;
 - migration Flyway V10 append-only autorisant la provenance `event-incidents-v3` sans réécrire les
   observations historiques V1/V2, avec test d'upgrade V9 → V10 sur PostgreSQL 18.4 ;
 - fixture synthétique minimale et tests de régression du marqueur de période fournisseur, ainsi

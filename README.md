@@ -21,9 +21,16 @@ et d'une liste vide valide, puis poursuivent les familles restantes sans retry. 
 humaines ultérieures ont atteint `EVENT_INCIDENTS` : les snapshots 32 et 34 ont révélé que
 `event-incidents-v2` rejetait à tort la sentinelle fournisseur `addedTime=999` sur les seuls
 marqueurs `period`, ce qui empêchait ensuite l'appel `EVENT_LINEUPS`. Le parseur versionné
-`event-incidents-v3` et la migration V10 corrigent ce faux positif sans modifier le brut ni
-interpréter `999` comme une durée. Les statistiques réelles de `16391135` ont été parsées ; la
-compatibilité réelle des incidents V3 et des compositions attend encore un retest humain, donc
+`event-incidents-v3` et la migration V10 ont corrigé ce faux positif sans modifier le brut ni
+interpréter `999` comme une durée. Un retest réel a ensuite validé V3 sur le snapshot dédupliqué
+32, avec 20 incidents visibles, mais la campagne s'est arrêtée avant `EVENT_LINEUPS` : le service
+tentait de reclasser cette preuve historique V2 déjà figée et obtenait
+`RAW_CLASSIFICATION_ERROR`. La correction conserve désormais la classification historique lors
+d'une déduplication et porte le résultat courant dans une nouvelle observation normalisée. Elle
+introduit aussi `event-incidents-v4` et la migration V11 afin de conserver et d'afficher les deux
+identités `playerIn` et `playerOut` de chaque remplacement. Les statistiques réelles de
+`16391135` ont été parsées et les incidents réels de `16412917` ont été validés sous V3 ; la
+compatibilité réelle des compositions attend encore un retest humain, donc
 `providerSchemaValidated=false` reste obligatoire au niveau global J5.
 
 ## Ce qui est livré localement
@@ -31,7 +38,7 @@ compatibilité réelle des incidents V3 et des compositions attend encore un ret
 - dépôt Git autonome, documentation, ADR, règles agent et Work Orders ;
 - Java **25 LTS**, Spring Boot **4.1.0** et Maven Wrapper versionné ;
 - interface Spring MVC + Thymeleaf sur `127.0.0.1:8087` ;
-- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V10 et stockage brut séparé ;
+- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V11 et stockage brut séparé ;
 - Actuator, Caffeine, validation de configuration et garde de liaison locale ;
 - catalogue logique des familles d’endpoints, sans URI réelle ;
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
@@ -97,11 +104,16 @@ compatibilité réelle des incidents V3 et des compositions attend encore un ret
   identité canonique déjà persistée ;
 - préparation J5 sans réseau, confirmation exacte de cinq minutes, acquittement, trois appels
   séquentiels au maximum, délai minimal de trois secondes et verrou terminal dans le processus ;
-- parseurs fournisseur `event-statistics-v2`, `event-incidents-v3` et `event-lineups-v2`, brut
+- parseurs fournisseur `event-statistics-v2`, `event-incidents-v4` et `event-lineups-v2`, brut
   persisté avant parsing, provenance `PROVIDER_SNAPSHOT` et résultat d'écran minimisé ;
 - traitement borné du HTTP `404` sur les trois chemins J5 exacts : snapshot
   `ENDPOINT_UNAVAILABLE`, observation `UNAVAILABLE · N/A`, aucun parsing du corps, aucun retry et
   poursuite ordonnée vers la famille suivante ;
+- reparsing d'un brut dédupliqué sans reclassification de sa preuve historique : le résultat du
+  parseur courant est une nouvelle observation append-only et la séquence peut atteindre la
+  famille suivante ;
+- conservation V4 des deux participants d'un remplacement (`playerIn` et `playerOut`), avec
+  identifiants fournisseur, noms, complétude explicite et affichage « Entrant / Sortant » ;
 
 ## Limite essentielle du bootstrap
 
@@ -294,6 +306,14 @@ parseur conserve `addedTime=999` dans le snapshot brut mais omet cette sentinell
 normalisée uniquement pour un incident `period`, avec un avertissement explicite. La même valeur
 reste incompatible sur un but, un carton, un remplacement ou tout autre incident latéralisé.
 
+La migration append-only `V11__j5_incident_substitution_players.sql` ajoute les couples facultatifs
+identifiant/nom des joueurs entrant et sortant aux incidents et autorise la provenance
+`event-incidents-v4`. V4 reprend strictement la règle de sentinelle V3, lit séparément
+`playerIn` et `playerOut` pour tous les remplacements et classe une identité manquante comme une
+complétude `PARTIAL` sans fabriquer de joueur. Une réponse brute identique peut être reparsée par
+V4 et produire une nouvelle observation normalisée tout en conservant le statut historique du
+snapshot dédupliqué.
+
 Le mode `DIRECT_LOCAL_ENDPOINT` ne doit jamais être confondu avec une `VisualObservation` du projet
 global. La persistance n'effectue elle-même aucun appel : les écritures J5 réelles éventuelles sont
 initiées uniquement par la voie humaine gardée, puis référencent le brut séparé avec
@@ -452,7 +472,7 @@ J5_APPLICATION_TRANSPORT=IMPLEMENTED_GUARDED_DEFAULT_OFF
 J5_DISCOVERY_ATTEMPTS=1
 J5_DISCOVERY_RESULT=HTTP_403_STOPPED_NO_RETRY
 J5_FIXTURE_ORIGIN=SYNTHETIC
-J5_FLYWAY_VERSION=10
+J5_FLYWAY_VERSION=11
 J5_MAVEN_PROVIDER_CALLS=0
 J5_REAL_TECHNICAL_READINESS=PASS
 J5_REAL_FIRST_CAMPAIGN=HTTP_404_MISCLASSIFIED_AND_LOCKED
@@ -460,14 +480,17 @@ J5_REAL_FIRST_CAMPAIGN_PROVIDER_CALLS=1
 J5_REAL_FIRST_STATISTICS_SNAPSHOT=30
 J5_REAL_LATEST_CAMPAIGN_PROVIDER_CALLS=2
 J5_REAL_STATISTICS_LATEST=PARSED_ON_EVENT_16391135
-J5_REAL_INCIDENTS=HTTP_200_SCHEMA_INCOMPATIBLE_V2_SNAPSHOTS_32_AND_34
+J5_REAL_INCIDENTS=V3_REAL_PASS_20_OF_20_ON_DEDUPLICATED_SNAPSHOT_32
 J5_REAL_INCIDENTS_ROOT_CAUSE=PERIOD_ADDED_TIME_SENTINEL_999
-J5_REAL_INCIDENTS_CORRECTIVE_PARSER=event-incidents-v3
-J5_REAL_LINEUPS=NOT_ATTEMPTED_AFTER_TERMINAL_INCIDENT_PARSE
+J5_REAL_INCIDENTS_CORRECTIVE_PARSER=event-incidents-v4
+J5_REAL_SUBSTITUTION_PLAYERS=V4_IMPLEMENTED_OFFLINE
+J5_REAL_LATEST_STOP=RAW_CLASSIFICATION_ERROR_ON_HISTORICAL_DEDUPLICATION
+J5_REAL_LINEUPS=NOT_ATTEMPTED_AFTER_HISTORICAL_RAW_RECLASSIFICATION
 J5_HTTP_404_POLICY=ENDPOINT_UNAVAILABLE_CONTINUE_NO_RETRY
-J5_CORRECTIVE_V3_RETEST=NOT_RUN
+J5_CORRECTIVE_V3_RETEST=PASS_REAL
+J5_CORRECTIVE_V4_RETEST=NOT_RUN
 J5_OFFLINE_WORK_ORDER_STATUS=VALIDATED
-J5_REAL_WORK_ORDER_STATUS=INCIDENT_V3_CORRECTIVE_IMPLEMENTATION_VALIDATED_OFFLINE
+J5_REAL_WORK_ORDER_STATUS=DEDUP_AND_SUBSTITUTION_V4_CORRECTIVE_IMPLEMENTATION_VALIDATED_OFFLINE
 J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
 ```
 
@@ -476,5 +499,5 @@ par le cadrage et son ajout aurait étendu le corpus alors que les schémas des 
 principales n'ont pas pu être observés. Les captures de validation humaine ne sont pas versionnées ;
 leur constat minimisé est conservé dans les rapports J5. Le processus utilisé par la première
 campagne est arrêté. Le correctif ne déclenche aucun appel : une nouvelle qualification reste un
-geste humain explicite après application de V10, revue du Work Order amendé et configuration locale
+geste humain explicite après application de V11, revue du Work Order amendé et configuration locale
 manuelle. Le fichier `.env` demeure ignoré et n'est ni lu ni modifié par l'agent.

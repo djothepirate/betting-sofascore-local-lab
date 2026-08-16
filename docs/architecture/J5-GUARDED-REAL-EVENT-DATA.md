@@ -86,9 +86,12 @@ Pour chaque famille :
 5. le parseur fournisseur versionné produit soit un résultat complet, soit aucun objet normalisé ;
 6. la normalisation J5 est liée par `PROVIDER_SNAPSHOT` au snapshot, au hash, au parseur ou
    normaliseur et à l'heure de réception ;
-7. un snapshot `2xx` est classé `PARSED` après la persistance normalisée.
+7. un snapshot `2xx` nouvellement inséré est classé `PARSED` après la persistance normalisée ;
+8. si les octets sont dédupliqués vers un snapshot historique déjà terminal, sa classification
+   reste immuable et le résultat du parseur courant est porté uniquement par l'observation
+   normalisée append-only.
 
-Les parseurs courants sont `event-statistics-v2`, `event-incidents-v3` et `event-lineups-v2`.
+Les parseurs courants sont `event-statistics-v2`, `event-incidents-v4` et `event-lineups-v2`.
 L'identifiant d'événement vient du claim et non du JSON. Les champs inconnus génèrent au plus 256
 avertissements.
 Une liste vide structurellement valide reste `EMPTY_VALID`; une absence facultative mesurée reste
@@ -112,12 +115,31 @@ incident. Les marqueurs globaux `period` et `injuryTime` participent à la compl
 `isHome`. La migration append-only V10 autorise cette nouvelle provenance sans modifier V8/V9 ni
 reclasser les snapshots historiques V2.
 
+Le fournisseur représente un remplacement par deux objets distincts : `playerIn` et
+`playerOut`. Le parseur `event-incidents-v4` reprend sans élargissement la règle de sentinelle V3,
+puis conserve pour chaque incident `substitution` l'identifiant et le nom du joueur entrant et du
+joueur sortant. Chaque identité est atomique : identifiant et nom sont présents ensemble. Si le
+fournisseur omet l'un des deux objets, l'incident reste compatible mais la complétude devient
+`PARTIAL` avec le chemin manquant ; aucune identité n'est inventée. La migration append-only V11
+ajoute ces quatre colonnes facultatives et autorise la provenance V4 sans modifier les
+observations historiques.
+
+La déduplication brute est indépendante du parseur courant. Une réponse incidents identique peut
+donc résoudre un snapshot V2 historiquement `SCHEMA_INCOMPATIBLE` alors que V4 la parse avec
+succès. Dans ce cas, la campagne ne tente ni `UPDATE` ni reclassification du snapshot : elle ajoute
+une observation V4 liée à la même preuve et poursuit vers `EVENT_LINEUPS`. Seul un brut
+nouvellement inséré reçoit la classification de la campagne courante.
+
 ## 6. Résultat et confidentialité
 
 L'interface affiche uniquement le code terminal, le nombre de tentatives et, pour chaque famille
 traitée, l'endpoint logique, l'identifiant du snapshot, la taille, le SHA-256, la complétude ou
 `UNAVAILABLE · N/A`, et l'identifiant d'observation. Aucun octet brut, URI complète, en-tête ou
 texte de confirmation consommé n'est journalisé ou ajouté aux preuves.
+
+La vue locale des incidents affiche séparément le joueur générique, le joueur entrant et le
+joueur sortant. Ces valeurs proviennent exclusivement de l'observation normalisée ; un tiret
+signifie que le fournisseur n'a pas fourni l'identité correspondante.
 
 ## 7. État de qualification
 
@@ -128,6 +150,10 @@ dans le contexte opérateur d'une compétition non majeure. Ce signal ne valide 
 nominal de statistiques ; seule une réponse `2xx` effectivement parsée peut faire évoluer
 `PROVIDER_SCHEMA_VALIDATED`. Une campagne ultérieure a effectivement parsé les statistiques de
 `16391135`, puis deux réponses incidents réelles distinctes ont révélé la sentinelle de période
-rejetée par V2. V3 est validé hors ligne contre une forme synthétique représentative ; un nouveau
-geste humain doit encore confirmer V3 et atteindre `EVENT_LINEUPS`. Le statut global reste donc
+rejetée par V2. Un retest humain a ensuite confirmé V3 sur la réponse réelle dédupliquée du
+snapshot 32 : 20 incidents sur 20 sont visibles. Il a aussi révélé que la tentative de reclasser
+ce snapshot historique arrêtait la campagne avec `RAW_CLASSIFICATION_ERROR` avant
+`EVENT_LINEUPS`, ainsi que l'absence de conservation de `playerIn` et `playerOut`. V4, V11 et la
+politique de déduplication corrigent ces deux défauts hors ligne. Un nouveau geste humain doit
+encore atteindre et qualifier `EVENT_LINEUPS`; le statut global reste donc
 `PROVIDER_SCHEMA_VALIDATED=NO`.

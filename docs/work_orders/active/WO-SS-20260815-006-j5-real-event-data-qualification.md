@@ -1,6 +1,6 @@
 # WO-SS-20260815-006 — Qualification réelle bornée des données événement J5
 
-- **Statut :** `CORRECTIVE_IMPLEMENTATION_VALIDATED_OFFLINE_RETEST_REQUIRED`
+- **Statut :** `V4_CORRECTIVE_IMPLEMENTATION_VALIDATED_OFFLINE_RETEST_REQUIRED`
 - **Date :** 2026-08-15
 - **Date de démarrage :** 2026-08-15
 - **Prérequis fonctionnel :** WO-SS-20260815-005 validé et archivé
@@ -12,7 +12,8 @@
 - **Appel fournisseur pendant l'implémentation :** `NOT_AUTHORIZED`
 - **Première campagne humaine réelle :** `EXECUTED_ONE_CALL_HTTP_404_MISCLASSIFIED`
 - **Amendement correctif demandé par le propriétaire :** `AUTHORIZED`
-- **Campagne corrective réelle :** `NOT_RUN_OPERATOR_ONLY`
+- **Campagne corrective réelle V3 :** `EXECUTED_INCIDENTS_PASS_LINEUPS_NOT_ATTEMPTED`
+- **Campagne corrective réelle V4 :** `NOT_RUN_OPERATOR_ONLY`
 - **Modification directe de `.env` par l'agent :** `NOT_AUTHORIZED`
 - **Polling, planification ou retry :** `NOT_AUTHORIZED`
 - **Déploiement VPS :** `NOT_AUTHORIZED`
@@ -156,14 +157,16 @@ campagne réussie passe à `COMPLETED_LOCKED` et ne peut pas être rejouée dans
 
 - les octets exacts sont enregistrés dans `provider_snapshot` avant parsing ;
 - la clé brute contient le type logique et l'identifiant d'événement ;
-- les parseurs fournisseur courants sont versionnés `event-statistics-v2`, `event-incidents-v3` et
+- les parseurs fournisseur courants sont versionnés `event-statistics-v2`, `event-incidents-v4` et
   `event-lineups-v2`, distincts des contrats synthétiques V1 ;
 - l'identifiant attendu vient du claim et de la requête, car les enveloppes de famille peuvent ne
   pas répéter l'identifiant d'événement ;
 - un HTTP `404` ne déclenche aucun parsing du corps : il produit un snapshot
   `ENDPOINT_UNAVAILABLE`, une observation `UNAVAILABLE · N/A` et la poursuite sans retry ;
-- un résultat compatible produit une observation V7/V8/V9/V10 liée au snapshot brut ;
-- une réponse identique est dédupliquée sans réécriture ;
+- un résultat compatible produit une observation V7/V8/V9/V10/V11 liée au snapshot brut ;
+- une réponse identique est dédupliquée sans réécriture ; si elle résout une preuve historique
+  déjà classée, la nouvelle observation porte le résultat du parseur courant sans reclasser le
+  snapshot ;
 - aucune donnée partielle n'est persistée après une incompatibilité structurelle ;
 - les absences métier compatibles restent `PARTIAL` ou `EMPTY_VALID` selon la famille ;
 - `UNAVAILABLE` reste distinct de `EMPTY_VALID` et utilise un normaliseur
@@ -200,6 +203,8 @@ reverrouillée avant toute nouvelle décision.
   classification des anciens snapshots J5 HTTP `404` sans modifier leur brut ;
 - migration Flyway V10 append-only autorisant `event-incidents-v3`, sans reclasser ni réécrire les
   snapshots et observations historiques V2 ;
+- migration Flyway V11 append-only autorisant `event-incidents-v4` et conservant les identités
+  `playerIn` / `playerOut` sans réécrire les observations historiques ;
 - persistance normalisée liée à `PROVIDER_SNAPSHOT` ;
 - résultat minimisé affichant endpoint, snapshot, taille, hash, statut, complétude et insertion ;
 - arrêt global J5 ;
@@ -262,13 +267,17 @@ reverrouillée avant toute nouvelle décision.
 | HTML ou schéma incompatible | brut conservé, aucune normalisation partielle de la famille |
 | événement du claim incohérent | refus avant transport ou normalisation |
 | réponse nominale répétée en persistance | déduplication brute et normalisée |
+| réponse incidents dédupliquée vers un snapshot V2 terminal | nouvelle observation V4, classification historique inchangée, compositions appelées |
+| remplacement avec `playerIn` et `playerOut` | deux identités conservées et affichées pour chaque substitution |
+| remplacement avec une identité absente | observation `PARTIAL`, chemin manquant, aucun joueur inventé |
 | campagne réussie | `COMPLETED_LOCKED`, trois familles consultables |
 | second déclenchement même processus | refus terminal |
 | arrêt global | appels suivants refusés |
 | suite Maven | zéro appel Internet |
 | upgrade V8 contenant un HTTP `404` J5 mal classé | V9 reclasse le snapshot sans modifier son brut |
 | upgrade V9 contenant des observations incidents V1/V2 | V10 autorise V3 sans réécrire l'historique |
-| Flyway V1 → V10 | migrations et append-only valides |
+| upgrade V10 contenant des observations V1/V2/V3 | V11 autorise V4 sans réécrire l'historique |
+| Flyway V1 → V11 | migrations et append-only valides |
 
 ## 10. Critères d'acceptation
 
@@ -281,7 +290,7 @@ reverrouillée avant toute nouvelle décision.
 - [x] trois transports exacts et bornés implémentés ;
 - [x] brut persisté avant parsing ;
 - [x] parseurs fournisseur versionnés et complétude qualifiés hors ligne ;
-- [x] migrations V8/V9/V10 et provenance `PROVIDER_SNAPSHOT` qualifiées ;
+- [x] migrations V8/V9/V10/V11 et provenance `PROVIDER_SNAPSHOT` qualifiées ;
 - [x] interface et résultat minimisé qualifiés ;
 - [x] poursuite après HTTP `404` sans retry et arrêt au premier incident réel prouvés ;
 - [x] `mvnw.cmd clean verify` réussi ;
@@ -294,7 +303,11 @@ reverrouillée avant toute nouvelle décision.
 - [x] campagnes humaines correctives exécutées après application de V9 ;
 - [x] cause du faux positif incidents V2 identifiée sur deux snapshots réels indépendants ;
 - [x] `event-incidents-v3` et l'upgrade V9 → V10 validés hors ligne ;
-- [ ] campagne humaine corrective exécutée après application de V10 ;
+- [x] campagne humaine corrective exécutée après application de V10 ;
+- [x] incidents V3 réels visibles avec `20/20` signaux sur le snapshot dédupliqué 32 ;
+- [x] cause de `RAW_CLASSIFICATION_ERROR` identifiée avant le troisième appel ;
+- [x] déduplication historique, parseur V4 et joueurs entrant/sortant validés hors ligne ;
+- [ ] campagne humaine corrective exécutée après application de V11 ;
 - [ ] configuration locale reverrouillée et arrêt final confirmés après le retest.
 
 ## 11. Unités de livraison prévues
@@ -310,19 +323,21 @@ reverrouillée avant toute nouvelle décision.
 9. `docs: record the J5 HTTP 404 policy correction`
 10. `fix: accept provider incident period markers`
 11. `docs: record the J5 incident parser correction`
+12. `fix: preserve reparsed J5 evidence and substitution players`
+13. `docs: record the J5 deduplication and substitution correction`
 
 ## 12. Readiness technique hors ligne
 
 ```text
-STANDARD_TESTS=263
+STANDARD_TESTS=268
 STANDARD_FAILURES=0
 STANDARD_ERRORS=0
 STANDARD_SKIPPED=0
-INTEGRATION_TESTS=21
+INTEGRATION_TESTS=23
 INTEGRATION_FAILURES=0
 INTEGRATION_ERRORS=0
 INTEGRATION_SKIPPED=0
-FLYWAY_MIGRATIONS=10
+FLYWAY_MIGRATIONS=11
 POSTGRESQL=18.4_TESTCONTAINERS
 SOFASCORE_PROVIDER_CALLS=0
 J5_REAL_TECHNICAL_READINESS=PASS
@@ -509,14 +524,92 @@ J5_INCIDENT_V3_FLYWAY_VERSION=10
 J5_INCIDENT_V3_PROVIDER_CALLS_BY_AGENT=0
 J5_STATISTICS_REAL_COMPATIBILITY=OBSERVED_ON_16391135
 J5_LINEUPS_REAL_COMPATIBILITY=NOT_YET_OBSERVED
-J5_INCIDENT_V3_CORRECTIVE_RETEST=NOT_RUN_OPERATOR_ONLY
+J5_INCIDENT_V3_CORRECTIVE_RETEST=PASS_REAL_20_OF_20
 J5_PROVIDER_SCHEMA_VALIDATED=NO
 J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
 ```
 
 Le rapport minimisé est conservé dans
-`docs/validation/J5-REAL-INCIDENT-PERIOD-MARKER-CORRECTION-20260816.md`. Le prochain geste réel
-exige un redémarrage ayant appliqué V10, une nouvelle préparation et une nouvelle confirmation.
-Il doit vérifier que les incidents deviennent parsables, que la troisième requête
-`EVENT_LINEUPS` est effectivement tentée et que son schéma est qualifié ou classé selon les règles
-existantes, toujours sans retry. Le reverrouillage local et l'arrêt final restent obligatoires.
+`docs/validation/J5-REAL-INCIDENT-PERIOD-MARKER-CORRECTION-20260816.md`. Le retest réel V3 a
+confirmé ensuite que les incidents devenaient parsables, mais a révélé un second verrou de
+déduplication avant `EVENT_LINEUPS`, consigné à la section 18.
+
+## 18. Amendement correctif — déduplication historique et participants des remplacements
+
+Le retest humain exécuté après application de V10 sur `16412917` a confirmé les points suivants :
+
+- les statistiques restent `UNAVAILABLE · N/A` sur le snapshot 30, conformément au HTTP `404`
+  attendu pour cette rencontre ;
+- `event-incidents-v3` parse correctement le snapshot dédupliqué 32 et rend visibles 20 incidents
+  avec une complétude `20/20` ;
+- la campagne s'arrête néanmoins avec `RAW_CLASSIFICATION_ERROR` après exactement deux appels ;
+- `EVENT_LINEUPS` n'est donc toujours pas appelé ; son absence locale ne démontre aucune
+  incompatibilité de son endpoint ;
+- les remplacements sont présents, mais V3 ne conserve pas les objets distincts `playerIn` et
+  `playerOut`, de sorte que les identités du joueur entrant et du joueur sortant ne sont pas
+  affichées.
+
+### 18.1 Cause racine de l'arrêt avant compositions
+
+La réponse incidents est identique à celle déjà conservée au snapshot 32. La persistance brute la
+déduplique correctement vers cette preuve historique, dont le statut V2
+`SCHEMA_INCOMPATIBLE` est immuable. Après le succès V3, le service tentait pourtant de remplacer ce
+statut par `PARSED`. Le stockage refusait cette réécriture append-only et le service transformait
+ce refus attendu en `RAW_CLASSIFICATION_ERROR`, puis verrouillait la campagne avant le troisième
+appel.
+
+Le correctif distingue désormais le résultat de persistance brute :
+
+- un brut `INSERTED` reçoit sa classification terminale après persistance normalisée ;
+- un brut `DEDUPLICATED` conserve sa classification historique ; le résultat du parseur courant
+  est représenté exclusivement par la nouvelle observation normalisée append-only ;
+- le chemin direct J5 n'accepte toujours pas de résultat de cache implicite ;
+- aucune famille n'est rappelée et tous les délais, verrous et règles d'arrêt restent inchangés.
+
+Le test de service reproduit exactement la séquence minimisée : snapshot 30 dédupliqué en
+`ENDPOINT_UNAVAILABLE`, snapshot 32 dédupliqué et reparsé, puis snapshot compositions nouvellement
+inséré. Toute tentative de classification des snapshots 30 ou 32 fait échouer le test ; la
+campagne doit malgré cela terminer ses trois appels ordonnés.
+
+### 18.2 Cause racine et décision V4 pour les remplacements
+
+V3 ne lisait que l'objet générique `player`. La forme fournisseur d'un remplacement contient
+deux objets sémantiquement distincts : `playerIn` et `playerOut`. `event-incidents-v4` reprend la
+règle V3 de `addedTime=999` et ajoute, pour chaque objet `incidentType=substitution` :
+
+- identifiant fournisseur et nom du joueur entrant ;
+- identifiant fournisseur et nom du joueur sortant ;
+- deux signaux de complétude indépendants ;
+- un statut `PARTIAL` et le chemin exact lorsqu'une identité manque, sans identité synthétique.
+
+La migration append-only V11 ajoute quatre colonnes facultatives liées par paires, autorise la
+provenance `event-incidents-v4` et ne réécrit aucune observation V1/V2/V3. La vue locale ajoute les
+colonnes « Entrant » et « Sortant ». Les tests couvrent plusieurs remplacements dans une même
+réponse afin de garantir que la règle ne s'applique pas seulement au premier objet.
+
+### 18.3 Validation hors ligne et suite humaine
+
+```text
+J5_INCIDENT_V3_REAL_RETEST=PASS_20_OF_20_ON_SNAPSHOT_32
+J5_LATEST_REAL_PROVIDER_CALLS=2
+J5_LATEST_REAL_TERMINAL_CODE=RAW_CLASSIFICATION_ERROR
+J5_LINEUPS_REAL_STATUS=NOT_ATTEMPTED
+J5_DEDUPLICATED_RAW_RECLASSIFICATION=DISABLED
+J5_INCIDENT_CURRENT_PARSER=event-incidents-v4
+J5_SUBSTITUTION_PARTICIPANTS=PERSISTED_AND_RENDERED
+J5_FLYWAY_VERSION=11
+J5_STANDARD_TESTS=268
+J5_INTEGRATION_TESTS=23
+J5_PROVIDER_CALLS_BY_AGENT=0
+J5_V4_REAL_RETEST=NOT_RUN_OPERATOR_ONLY
+J5_PROVIDER_SCHEMA_VALIDATED=NO
+J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
+```
+
+Le rapport minimisé détaillé est conservé dans
+`docs/validation/J5-REAL-DEDUPLICATION-AND-SUBSTITUTION-CORRECTION-20260816.md`. Le prochain geste
+réel exige un redémarrage ayant appliqué V11, une nouvelle préparation et une nouvelle
+confirmation. Il doit vérifier l'observation incidents V4 avec joueurs entrant/sortant, puis
+l'unique tentative `EVENT_LINEUPS` et sa classification effective. Le reverrouillage local et
+l'arrêt final restent obligatoires. L'agent ne lit ni ne modifie `.env` et n'exécute aucun appel
+fournisseur.
