@@ -16,20 +16,26 @@ période, le reparsing append-only d'un brut dédupliqué et les participants `p
 des remplacements. Le retest V4 sur `16412917` a ensuite terminé les trois appels sans retry : les
 statistiques sont restées explicitement indisponibles, les incidents V4 ont été normalisés avec
 les joueurs entrant et sortant, puis les compositions V2 ont été récupérées avec leurs deux
-formations. Ce succès a révélé une dernière anomalie de cycle de vie : le verrou
-`COMPLETED_LOCKED` de la campagne terminée désactivait aussi la préparation d'une campagne
-distincte dans la même instance. Le correctif conserve le verrou anti-rejeu de l'ancien claim,
-mais autorise une nouvelle préparation locale explicite avec nouvel identifiant de requête,
-nouvelle phrase et nouvel acquittement. Les états d'échec, d'arrêt et d'expiration restent
-verrouillés jusqu'au redémarrage. Le retest humain de ce réarmement et le reverrouillage final
-restent requis ; `providerSchemaValidated=false` demeure donc obligatoire au niveau global J5.
+  formations. Ce succès a révélé une anomalie de cycle de vie : le verrou
+  `COMPLETED_LOCKED` de la campagne terminée désactivait aussi la préparation d'une campagne
+  distincte dans la même instance. Le correctif conserve le verrou anti-rejeu de l'ancien claim,
+  mais autorise une nouvelle préparation locale explicite avec nouvel identifiant de requête,
+  nouvelle phrase et nouvel acquittement. Les états d'échec, d'arrêt et d'expiration restent
+  verrouillés jusqu'au redémarrage. Le retest humain a ensuite qualifié ce réarmement : après une
+  première campagne réussie sur `16391135`, une seconde campagne distincte a été préparée puis
+  exécutée sur `16483632` dans la même instance. Cette seconde campagne a normalisé les statistiques,
+  puis s'est arrêtée sur un carton de banc réel dont `time=-5` est un marqueur technique et dont la
+  minute métier est portée par `benchTime=58`. Le correctif étroit `event-incidents-v5` conserve
+  aussi la classe et le motif du carton, sans élargir les règles des autres types d'incidents. Il est
+  validé hors ligne et attend un retest humain ; le reverrouillage final reste requis et
+  `providerSchemaValidated=false` demeure donc obligatoire au niveau global J5.
 
 ## Ce qui est livré localement
 
 - dépôt Git autonome, documentation, ADR, règles agent et Work Orders ;
 - Java **25 LTS**, Spring Boot **4.1.0** et Maven Wrapper versionné ;
 - interface Spring MVC + Thymeleaf sur `127.0.0.1:8087` ;
-- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V11 et stockage brut séparé ;
+- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V12 et stockage brut séparé ;
 - Actuator, Caffeine, validation de configuration et garde de liaison locale ;
 - catalogue logique des familles d’endpoints, sans URI réelle ;
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
@@ -96,7 +102,7 @@ restent requis ; `providerSchemaValidated=false` demeure donc obligatoire au niv
 - préparation J5 sans réseau, confirmation exacte de cinq minutes, acquittement, trois appels
   séquentiels au maximum et délai minimal de trois secondes ; après succès, l'ancien claim reste
   non rejouable mais une nouvelle campagne explicite peut être préparée dans la même instance ;
-- parseurs fournisseur `event-statistics-v2`, `event-incidents-v4` et `event-lineups-v2`, brut
+- parseurs fournisseur `event-statistics-v2`, `event-incidents-v5` et `event-lineups-v2`, brut
   persisté avant parsing, provenance `PROVIDER_SNAPSHOT` et résultat d'écran minimisé ;
 - traitement borné du HTTP `404` sur les trois chemins J5 exacts : snapshot
   `ENDPOINT_UNAVAILABLE`, observation `UNAVAILABLE · N/A`, aucun parsing du corps, aucun retry et
@@ -106,6 +112,9 @@ restent requis ; `providerSchemaValidated=false` demeure donc obligatoire au niv
   famille suivante ;
 - conservation V4 des deux participants d'un remplacement (`playerIn` et `playerOut`), avec
   identifiants fournisseur, noms, complétude explicite et affichage « Entrant / Sortant » ;
+- normalisation V5 strictement limitée à la forme de carton de banc observée : le marqueur exact
+  `time=-5` exige un `benchTime` valide utilisé comme minute métier ; la classe et le motif du
+  carton sont conservés, tandis que toute autre valeur négative reste incompatible ;
 
 ## Limite essentielle du bootstrap
 
@@ -306,6 +315,13 @@ complétude `PARTIAL` sans fabriquer de joueur. Une réponse brute identique peu
 V4 et produire une nouvelle observation normalisée tout en conservant le statut historique du
 snapshot dédupliqué.
 
+La migration append-only `V12__j5_incident_bench_card_details.sql` ajoute la classe et le motif
+facultatifs d'un carton, autorise `event-incidents-v5` et conserve une minute normalisée comprise
+entre 0 et 300. V5 ne traite qu'une forme observée : pour un `card` dont `time` vaut exactement
+`-5`, `benchTime` doit être présent et devient la minute normalisée. Le brut reste inchangé ; aucune
+autre valeur négative ni aucun autre type d'incident ne bénéficie d'une règle nouvelle avant la
+définition de la fiche de gestion métier dédiée aux incidents de football.
+
 Le mode `DIRECT_LOCAL_ENDPOINT` ne doit jamais être confondu avec une `VisualObservation` du projet
 global. La persistance n'effectue elle-même aucun appel : les écritures J5 réelles éventuelles sont
 initiées uniquement par la voie humaine gardée, puis référencent le brut séparé avec
@@ -372,6 +388,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Correction du marqueur de période incidents J5](docs/validation/J5-REAL-INCIDENT-PERIOD-MARKER-CORRECTION-20260816.md)
 - [Correction de la déduplication et des remplacements J5](docs/validation/J5-REAL-DEDUPLICATION-AND-SUBSTITUTION-CORRECTION-20260816.md)
 - [Retest réel V4, compositions et correction du réarmement J5](docs/validation/J5-REAL-V4-LINEUPS-AND-REARM-CORRECTION-20260816.md)
+- [Qualification du réarmement réel et correction V5 du carton de banc J5](docs/validation/J5-REAL-V5-BENCH-CARD-CORRECTION-20260816.md)
 - [Work Order actif de qualification réelle J5](docs/work_orders/active/WO-SS-20260815-006-j5-real-event-data-qualification.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
@@ -450,7 +467,7 @@ J4_CLOSED=YES
 Cette situation ne déverrouille aucune nouvelle famille, automatisation ou dépendance de
 production. Les rappels de sous-étape 2 restent exclusivement manuels et unitaires.
 
-## J5 réel V4 et compositions qualifiés, réarmement après succès à retester
+## J5 réel : réarmement qualifié, correction V5 du carton de banc à retester
 
 J5 réutilise l'identité synthétique `900001` de J4 pour démontrer les trois familles demandées. Les
 neuf fixtures J5 sont explicitement synthétiques et ne valident aucun schéma fournisseur. La page
@@ -466,34 +483,42 @@ J5_APPLICATION_TRANSPORT=IMPLEMENTED_GUARDED_DEFAULT_OFF
 J5_DISCOVERY_ATTEMPTS=1
 J5_DISCOVERY_RESULT=HTTP_403_STOPPED_NO_RETRY
 J5_FIXTURE_ORIGIN=SYNTHETIC
-J5_FLYWAY_VERSION=11
+J5_FLYWAY_VERSION=12
 J5_MAVEN_PROVIDER_CALLS=0
 J5_REAL_TECHNICAL_READINESS=PASS
 J5_REAL_FIRST_CAMPAIGN=HTTP_404_MISCLASSIFIED_AND_LOCKED
 J5_REAL_FIRST_CAMPAIGN_PROVIDER_CALLS=1
 J5_REAL_FIRST_STATISTICS_SNAPSHOT=30
-J5_REAL_LATEST_CAMPAIGN_PROVIDER_CALLS=3
+J5_REAL_LAST_SUCCESSFUL_CAMPAIGN_PROVIDER_CALLS=3
 J5_REAL_STATISTICS_LATEST=PARSED_ON_EVENT_16391135
 J5_REAL_STATISTICS_ON_EVENT_16412917=UNAVAILABLE_HTTP_404_SNAPSHOT_30
 J5_REAL_INCIDENTS=V4_REAL_PASS_36_OF_36_ON_DEDUPLICATED_SNAPSHOT_32
 J5_REAL_INCIDENTS_ROOT_CAUSE=PERIOD_ADDED_TIME_SENTINEL_999
 J5_REAL_INCIDENTS_CORRECTIVE_PARSER=event-incidents-v4
 J5_REAL_SUBSTITUTION_PLAYERS=PASS_REAL_RENDERED
-J5_REAL_LATEST_TERMINAL=COMPLETED_LOCKED
+J5_REAL_LAST_SUCCESSFUL_TERMINAL=COMPLETED_LOCKED
 J5_REAL_LINEUPS=V2_REAL_PASS_85_OF_85_SNAPSHOT_55
 J5_HTTP_404_POLICY=ENDPOINT_UNAVAILABLE_CONTINUE_NO_RETRY
 J5_CORRECTIVE_V3_RETEST=PASS_REAL
 J5_CORRECTIVE_V4_RETEST=PASS_REAL_THREE_CALLS
-J5_COMPLETED_CAMPAIGN_REARM=PASS_OFFLINE_RETEST_REQUIRED
+J5_COMPLETED_CAMPAIGN_REARM=PASS_REAL_SECOND_CAMPAIGN_STARTED
+J5_REAL_SECOND_CAMPAIGN=STATISTICS_PASS_INCIDENTS_SCHEMA_INCOMPATIBLE_LINEUPS_NOT_ATTEMPTED
+J5_REAL_SECOND_CAMPAIGN_EVENT_ID=16483632
+J5_REAL_SECOND_STATISTICS_SNAPSHOT=59
+J5_REAL_SECOND_INCIDENTS_SNAPSHOT=60
+J5_REAL_SECOND_CAMPAIGN_PROVIDER_CALLS=2
+J5_REAL_BENCH_CARD_CORRECTIVE_PARSER=event-incidents-v5
+J5_REAL_BENCH_CARD_CORRECTION=PASS_OFFLINE_RETEST_REQUIRED
 J5_OFFLINE_WORK_ORDER_STATUS=VALIDATED
-J5_REAL_WORK_ORDER_STATUS=V4_REAL_PASS_REARM_CORRECTIVE_IMPLEMENTATION_VALIDATED_OFFLINE
+J5_REAL_WORK_ORDER_STATUS=REARM_REAL_PASS_V5_BENCH_CARD_CORRECTION_VALIDATED_OFFLINE
 J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
 ```
 
 `TOURNAMENT_STANDINGS` demeure différé : il ne fait pas partie de la preuve de sortie J5 définie
 par le cadrage et son ajout aurait étendu le corpus alors que les schémas des trois familles
 principales n'ont pas pu être observés. Les captures de validation humaine ne sont pas versionnées ;
-leur constat minimisé est conservé dans les rapports J5. Le correctif de réarmement ne déclenche
-aucun appel : il faut redémarrer une fois pour charger le nouveau binaire, puis préparer et
-confirmer explicitement chaque nouvelle campagne. Le fichier `.env` demeure ignoré et n'est ni lu
-ni modifié par l'agent.
+ leur constat minimisé est conservé dans les rapports J5. Le réarmement réel est qualifié. Le
+ correctif V5 ne déclenche aucun appel : après le verrou `FAILED_LOCKED` observé sur la seconde
+ campagne, il faut redémarrer une fois pour charger le nouveau binaire, puis préparer et confirmer
+ explicitement une nouvelle campagne. Le fichier `.env` demeure ignoré et n'est ni lu ni modifié
+ par l'agent.

@@ -95,7 +95,7 @@ Pour chaque famille :
    reste immuable et le résultat du parseur courant est porté uniquement par l'observation
    normalisée append-only.
 
-Les parseurs courants sont `event-statistics-v2`, `event-incidents-v4` et `event-lineups-v2`.
+Les parseurs courants sont `event-statistics-v2`, `event-incidents-v5` et `event-lineups-v2`.
 L'identifiant d'événement vient du claim et non du JSON. Les champs inconnus génèrent au plus 256
 avertissements.
 Une liste vide structurellement valide reste `EMPTY_VALID`; une absence facultative mesurée reste
@@ -128,6 +128,17 @@ fournisseur omet l'un des deux objets, l'incident reste compatible mais la compl
 ajoute ces quatre colonnes facultatives et autorise la provenance V4 sans modifier les
 observations historiques.
 
+Un carton attribué à un joueur du banc peut porter un `time` fournisseur technique qui n'est pas une
+minute de match. La seule forme réelle qualifiée porte simultanément `incidentType=card`, le
+marqueur exact `time=-5` et un `benchTime` valide. `event-incidents-v5` conserve les octets bruts,
+utilise exclusivement `benchTime` comme minute normalisée et ajoute l'avertissement
+`PROVIDER_BENCH_CARD_MINUTE_USED`. La classe et le motif du carton sont conservés lorsqu'ils sont
+fournis. Cette règle est volontairement limitée à cette combinaison exacte : toute autre valeur
+négative, y compris sur un `card`, demeure `SCHEMA_INCOMPATIBLE`, et aucun champ temporel indirect
+n'est interprété. La migration append-only V12 ajoute `incident_class` et `reason`, autorise la
+provenance V5 et ne réécrit aucune observation historique. Les autres variantes d'incidents
+restent strictes jusqu'à l'adoption d'une fiche de règles de gestion par type d'incident football.
+
 La déduplication brute est indépendante du parseur courant. Une réponse incidents identique peut
 donc résoudre un snapshot V2 historiquement `SCHEMA_INCOMPATIBLE` alors que V4 la parse avec
 succès. Dans ce cas, la campagne ne tente ni `UPDATE` ni reclassification du snapshot : elle ajoute
@@ -141,9 +152,10 @@ traitée, l'endpoint logique, l'identifiant du snapshot, la taille, le SHA-256, 
 `UNAVAILABLE · N/A`, et l'identifiant d'observation. Aucun octet brut, URI complète, en-tête ou
 texte de confirmation consommé n'est journalisé ou ajouté aux preuves.
 
-La vue locale des incidents affiche séparément le joueur générique, le joueur entrant et le
-joueur sortant. Ces valeurs proviennent exclusivement de l'observation normalisée ; un tiret
-signifie que le fournisseur n'a pas fourni l'identité correspondante.
+La vue locale des incidents affiche séparément le joueur générique, le joueur entrant, le joueur
+sortant, la classe et le motif. Ces valeurs proviennent exclusivement de l'observation normalisée ;
+un tiret signifie que le fournisseur n'a pas fourni la donnée correspondante ou que le champ ne
+s'applique pas au type d'incident.
 
 ## 7. État de qualification
 
@@ -164,5 +176,10 @@ incidents parsés par V4 avec joueurs entrant et sortant, puis compositions pars
 exactement trois appels sans retry. Il a aussi révélé que `COMPLETED_LOCKED` empêchait à tort de
 préparer une campagne distincte pour `16391135` dans la même instance. Le contrôle autorise
 désormais ce nouveau départ explicite après un succès, sans ouvrir les verrous d'échec, d'arrêt ou
-d'expiration. Le statut global reste `PROVIDER_SCHEMA_VALIDATED=NO` jusqu'au retest humain de ce
-cycle de réarmement, au reverrouillage local et à la clôture du Work Order.
+d'expiration. Le retest humain a qualifié ce cycle : une campagne réussie sur `16391135` a été
+suivie, dans la même instance, d'une campagne distincte sur `16483632`. Celle-ci a parsé les
+statistiques, puis son snapshot incidents 60 a révélé un carton de banc avec `time=-5`,
+`benchTime=58`, une classe jaune et le motif `Argument`. V4 a arrêté la campagne avant les
+compositions conformément à sa règle stricte. V5 et V12 corrigent uniquement cette forme et sont
+validés hors ligne. Le statut global reste `PROVIDER_SCHEMA_VALIDATED=NO` jusqu'au retest humain de
+V5, au reverrouillage local et à la clôture du Work Order.

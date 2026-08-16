@@ -6,6 +6,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Corrigé
 
+- correction bornée du carton de banc réel qui arrêtait la seconde campagne J5 après les
+  statistiques : `event-incidents-v5` traite uniquement un `card` portant le marqueur exact
+  `time=-5` avec un `benchTime` valide, conserve le brut, normalise la minute depuis `benchTime` et
+  retient la classe ainsi que le motif ; toute autre valeur négative reste incompatible dans
+  l'attente de la fiche de règles de gestion des incidents football ;
 - réarmement explicite de J5 après une campagne réussie : `COMPLETED_LOCKED` continue d'interdire
   tout rejeu de l'ancien claim, mais permet une nouvelle préparation locale avec nouvel identifiant
   de requête, nouvelle phrase et nouvel acquittement ; `FAILED_LOCKED`, `STOPPED_LOCKED` et
@@ -66,6 +71,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Ajouté
 
+- preuve minimisée du retest réel du réarmement : une première campagne sur `16391135` a terminé
+  ses trois appels, puis une seconde campagne distincte sur `16483632` a été préparée et exécutée
+  dans la même instance ; les statistiques du snapshot 59 ont été normalisées avant l'arrêt strict
+  de V4 sur le snapshot incidents 60, sans appel compositions ni retry ;
+- migration Flyway V12 append-only ajoutant `incident_class` et `reason`, autorisant
+  `event-incidents-v5` et qualifiant les upgrades V1/V11 → V12 sans réécriture de l'historique ;
+- tests hors ligne du carton de banc (`benchTime=58`, classe jaune, motif `Argument`), de la
+  persistance PostgreSQL, du rendu MVC et de la poursuite ordonnée vers les compositions avec V5 ;
 - preuve minimisée du retest réel V4 sur `16412917` : statistiques HTTP `404` indisponibles,
   incidents V4 `36/36` avec joueurs entrant/sortant, compositions V2 `85/85`, exactement trois
   appels ordonnés sans retry, puis régression hors ligne du nouveau cycle après succès ;

@@ -1,6 +1,6 @@
 # WO-SS-20260815-006 — Qualification réelle bornée des données événement J5
 
-- **Statut :** `V4_REAL_PASS_REARM_CORRECTIVE_IMPLEMENTATION_VALIDATED_OFFLINE`
+- **Statut :** `REARM_REAL_PASS_V5_BENCH_CARD_CORRECTION_VALIDATED_OFFLINE`
 - **Date :** 2026-08-15
 - **Date de démarrage :** 2026-08-15
 - **Prérequis fonctionnel :** WO-SS-20260815-005 validé et archivé
@@ -14,7 +14,9 @@
 - **Amendement correctif demandé par le propriétaire :** `AUTHORIZED`
 - **Campagne corrective réelle V3 :** `EXECUTED_INCIDENTS_PASS_LINEUPS_NOT_ATTEMPTED`
 - **Campagne corrective réelle V4 :** `EXECUTED_THREE_CALLS_INCIDENTS_AND_LINEUPS_PASS`
-- **Correction du réarmement après succès :** `IMPLEMENTED_VALIDATED_OFFLINE_RETEST_REQUIRED`
+- **Correction du réarmement après succès :** `PASS_REAL_SECOND_CAMPAIGN_STARTED`
+- **Seconde campagne après réarmement :** `STATISTICS_PASS_INCIDENTS_SCHEMA_INCOMPATIBLE`
+- **Correction ciblée du carton de banc V5 :** `IMPLEMENTED_VALIDATED_OFFLINE_RETEST_REQUIRED`
 - **Modification directe de `.env` par l'agent :** `NOT_AUTHORIZED`
 - **Polling, planification ou retry :** `NOT_AUTHORIZED`
 - **Déploiement VPS :** `NOT_AUTHORIZED`
@@ -32,10 +34,13 @@ ensuite normalisée dans les tables append-only J5 avec une provenance `PROVIDER
 le premier incident réel arrête la campagne, verrouille le contrôle et interdit tout appel restant.
 
 La réalisation logicielle de ce Work Order n'a exécuté aucune requête réelle. Les campagnes
-humaines et leurs corrections successives sont consignées aux sections 15 à 19. Le dernier retest
-V4 a terminé les trois appels et qualifié incidents et compositions, puis révélé que le verrou de
-succès empêchait à tort la préparation d'une campagne distincte dans la même instance. Le présent
-amendement corrige ce cycle de vie sans exécuter de nouvelle requête réelle.
+  humaines et leurs corrections successives sont consignées aux sections 15 à 20. Le retest
+  V4 a terminé les trois appels et qualifié incidents et compositions, puis révélé que le verrou de
+  succès empêchait à tort la préparation d'une campagne distincte dans la même instance. Le présent
+  amendement a corrigé ce cycle de vie sans exécuter de requête réelle. Le retest humain du
+  réarmement a démarré une seconde campagne dans la même instance ; celle-ci a parsé les
+  statistiques, puis révélé une forme réelle de carton de banc que V5 traite de façon strictement
+  bornée. La correction V5 est validée hors ligne et attend son retest humain.
 
 ## 2. Contexte opérateur reçu le 2026-08-15
 
@@ -166,13 +171,13 @@ aucun transport avant une nouvelle confirmation.
 
 - les octets exacts sont enregistrés dans `provider_snapshot` avant parsing ;
 - la clé brute contient le type logique et l'identifiant d'événement ;
-- les parseurs fournisseur courants sont versionnés `event-statistics-v2`, `event-incidents-v4` et
+- les parseurs fournisseur courants sont versionnés `event-statistics-v2`, `event-incidents-v5` et
   `event-lineups-v2`, distincts des contrats synthétiques V1 ;
 - l'identifiant attendu vient du claim et de la requête, car les enveloppes de famille peuvent ne
   pas répéter l'identifiant d'événement ;
 - un HTTP `404` ne déclenche aucun parsing du corps : il produit un snapshot
   `ENDPOINT_UNAVAILABLE`, une observation `UNAVAILABLE · N/A` et la poursuite sans retry ;
-- un résultat compatible produit une observation V7/V8/V9/V10/V11 liée au snapshot brut ;
+- un résultat compatible produit une observation V7/V8/V9/V10/V11/V12 liée au snapshot brut ;
 - une réponse identique est dédupliquée sans réécriture ; si elle résout une preuve historique
   déjà classée, la nouvelle observation porte le résultat du parseur courant sans reclasser le
   snapshot ;
@@ -215,6 +220,8 @@ reverrouillée avant toute nouvelle décision.
   snapshots et observations historiques V2 ;
 - migration Flyway V11 append-only autorisant `event-incidents-v4` et conservant les identités
   `playerIn` / `playerOut` sans réécrire les observations historiques ;
+- migration Flyway V12 append-only autorisant `event-incidents-v5`, conservant la classe et le
+  motif facultatifs d'un carton et laissant intactes toutes les observations historiques ;
 - persistance normalisée liée à `PROVIDER_SNAPSHOT` ;
 - résultat minimisé affichant endpoint, snapshot, taille, hash, statut, complétude et insertion ;
 - arrêt global J5 ;
@@ -281,6 +288,8 @@ reverrouillée avant toute nouvelle décision.
 | réponse incidents dédupliquée vers un snapshot V2 terminal | nouvelle observation V4, classification historique inchangée, compositions appelées |
 | remplacement avec `playerIn` et `playerOut` | deux identités conservées et affichées pour chaque substitution |
 | remplacement avec une identité absente | observation `PARTIAL`, chemin manquant, aucun joueur inventé |
+| carton de banc avec `time=-5` et `benchTime=58` | brut intact, minute normalisée 58, classe et motif conservés |
+| temps négatif sur un incident autre que `card` | `SCHEMA_INCOMPATIBLE`, aucune règle extrapolée |
 | campagne réussie | `COMPLETED_LOCKED`, ancien claim non rejouable, trois familles consultables |
 | préparation explicite après succès | nouveau requestId et nouvelle phrase, endpoints remis à zéro, aucun transport |
 | ancienne phrase ou ancien claim après réarmement | refus par identité de requête, aucune exécution |
@@ -291,7 +300,8 @@ reverrouillée avant toute nouvelle décision.
 | upgrade V8 contenant un HTTP `404` J5 mal classé | V9 reclasse le snapshot sans modifier son brut |
 | upgrade V9 contenant des observations incidents V1/V2 | V10 autorise V3 sans réécrire l'historique |
 | upgrade V10 contenant des observations V1/V2/V3 | V11 autorise V4 sans réécrire l'historique |
-| Flyway V1 → V11 | migrations et append-only valides |
+| upgrade V11 contenant des observations V1/V2/V3/V4 | V12 autorise V5 sans réécrire l'historique |
+| Flyway V1 → V12 | migrations et append-only valides |
 
 ## 10. Critères d'acceptation
 
@@ -304,7 +314,7 @@ reverrouillée avant toute nouvelle décision.
 - [x] trois transports exacts et bornés implémentés ;
 - [x] brut persisté avant parsing ;
 - [x] parseurs fournisseur versionnés et complétude qualifiés hors ligne ;
-- [x] migrations V8/V9/V10/V11 et provenance `PROVIDER_SNAPSHOT` qualifiées ;
+- [x] migrations V8/V9/V10/V11/V12 et provenance `PROVIDER_SNAPSHOT` qualifiées ;
 - [x] interface et résultat minimisé qualifiés ;
 - [x] poursuite après HTTP `404` sans retry et arrêt au premier incident réel prouvés ;
 - [x] `mvnw.cmd clean verify` réussi ;
@@ -324,7 +334,10 @@ reverrouillée avant toute nouvelle décision.
 - [x] campagne humaine corrective exécutée après application de V11 ;
 - [x] incidents V4 réels avec joueurs entrant/sortant et compositions V2 réelles qualifiés ;
 - [x] cause du verrou global après succès identifiée et réarmement explicite validé hors ligne ;
-- [ ] nouvelle campagne préparée dans la même instance après un succès, avec nouveau claim ;
+- [x] nouvelle campagne préparée et exécutée dans la même instance après un succès, avec nouveau claim ;
+- [x] cause du blocage de la seconde campagne localisée sur le carton de banc du snapshot 60 ;
+- [x] règle V5 étroite et migration V12 validées hors ligne, sans extrapolation aux autres incidents ;
+- [ ] campagne humaine corrective exécutée avec `event-incidents-v5` ;
 - [ ] configuration locale reverrouillée et arrêt final confirmés après le retest.
 
 ## 11. Unités de livraison prévues
@@ -348,15 +361,15 @@ reverrouillée avant toute nouvelle décision.
 ## 12. Readiness technique hors ligne
 
 ```text
-STANDARD_TESTS=270
+STANDARD_TESTS=278
 STANDARD_FAILURES=0
 STANDARD_ERRORS=0
 STANDARD_SKIPPED=0
-INTEGRATION_TESTS=23
+INTEGRATION_TESTS=25
 INTEGRATION_FAILURES=0
 INTEGRATION_ERRORS=0
 INTEGRATION_SKIPPED=0
-FLYWAY_MIGRATIONS=11
+FLYWAY_MIGRATIONS=12
 POSTGRESQL=18.4_TESTCONTAINERS
 SOFASCORE_PROVIDER_CALLS=0
 J5_REAL_TECHNICAL_READINESS=PASS
@@ -373,20 +386,23 @@ reverrouillage de `.env` et à l'arrêt final.
 
 ```text
 WO_ID=WO-SS-20260815-006
-WO_STATUS=V4_REAL_PASS_REARM_CORRECTIVE_IMPLEMENTATION_VALIDATED_OFFLINE
+WO_STATUS=REARM_REAL_PASS_V5_BENCH_CARD_CORRECTION_VALIDATED_OFFLINE
 BASE_COMMIT=5063ac8e
 BRANCH=codex/j5-real-event-data-qualification
 J5_OFFLINE_STATUS=VALIDATED
 J5_REAL_IMPLEMENTATION_STATUS=PASS
-J5_REAL_PROVIDER_CALLS_LATEST_CAMPAIGN=3
+J5_REAL_PROVIDER_CALLS_LAST_SUCCESSFUL_CAMPAIGN=3
 J5_REAL_FIRST_CAMPAIGN_STATUS=HTTP_404_MISCLASSIFIED_AND_LOCKED
 J5_REAL_HTTP_404_POLICY=ENDPOINT_UNAVAILABLE_CONTINUE_NO_RETRY
 J5_REAL_V4_CORRECTIVE_RETEST=PASS_THREE_CALLS
-J5_REAL_REARM_RETEST=NOT_RUN_OPERATOR_ONLY
+J5_REAL_REARM_RETEST=PASS_SECOND_CAMPAIGN_STARTED
+J5_REAL_SECOND_CAMPAIGN=STATISTICS_PASS_INCIDENTS_SCHEMA_INCOMPATIBLE_LINEUPS_NOT_ATTEMPTED
+J5_REAL_SECOND_CAMPAIGN_PROVIDER_CALLS=2
+J5_REAL_BENCH_CARD_CORRECTION=PASS_OFFLINE_RETEST_REQUIRED
 J5_REAL_ENV_CONFIGURATION=APPLIED_FOR_REAL_CAMPAIGN_RELOCK_PENDING
 J5_REAL_PROVIDER_SCHEMA_VALIDATED=NO
 J5_REAL_APPLICATION_TRANSPORT=IMPLEMENTED_GUARDED_DEFAULT_OFF
-J5_REAL_CAN_BE_EXECUTED=PENDING_REARM_RETEST_AND_LOCAL_CONFIGURATION
+J5_REAL_CAN_BE_EXECUTED=PENDING_V5_RETEST_AFTER_RESTART_AND_LOCAL_CONFIGURATION
 J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
 ```
 
@@ -702,3 +718,75 @@ campagne B dans la même instance. Il doit vérifier un nouvel identifiant et un
 l'absence de transport pendant la préparation, le refus de l'ancien claim et le maintien du
 verrou de processus après tout échec, arrêt ou expiration. Le reverrouillage local et l'arrêt final
 restent obligatoires. L'agent ne lit ni ne modifie `.env` et n'exécute aucun appel fournisseur.
+
+## 20. Retest réel du réarmement et correction V5 du carton de banc
+
+Le retest humain du correctif de cycle de vie a qualifié son objectif : après une première campagne
+réussie sur `16391135`, l'opérateur a préparé, confirmé puis exécuté une campagne distincte sur
+`16483632` sans redémarrer l'instance. Le nouvel identifiant de requête et la nouvelle confirmation
+ont donc effectivement remplacé le claim terminé sans le rejouer.
+
+La seconde campagne a ensuite fourni les preuves minimisées suivantes :
+
+| Ordre | Famille | Snapshot | HTTP | Taille | Résultat |
+|---:|---|---:|---:|---:|---|
+| 1 | `EVENT_STATISTICS` | 59 | 200 | 25 562 octets | `event-statistics-v2`, `COMPLETE · 100 %` |
+| 2 | `EVENT_INCIDENTS` | 60 | 200 | 47 092 octets | V4 `SCHEMA_INCOMPATIBLE` sur un incident parmi 17 |
+| 3 | `EVENT_LINEUPS` | — | — | — | non appelé après l'arrêt strict |
+
+Il n'y a eu que deux appels fournisseur, sans retry. Le brut incidents a été persisté avant parsing.
+La seule rupture V4 est portée par un carton dont `time=-5` n'est pas une minute de match. La règle
+métier confirmée par le propriétaire est la suivante : le joueur Kerem Aktürkoğlu reçoit un carton
+jaune à la 58e minute, minute portée par `benchTime=58`, avec le motif `Argument`. Aucun calcul à
+partir de `reversedPeriodTime` n'est autorisé.
+
+### 20.1 Correction strictement bornée
+
+`event-incidents-v5` hérite de toutes les règles V4 et ajoute uniquement cette forme de carton :
+
+- `incidentType` doit être exactement `card` ;
+- `time` doit porter exactement le marqueur technique observé `-5` et exige alors un `benchTime`
+  compris entre 0 et 300 ;
+- `benchTime` devient la minute normalisée et produit l'avertissement
+  `PROVIDER_BENCH_CARD_MINUTE_USED` ;
+- `incidentClass` et `reason` sont conservés uniquement pour un carton ;
+- le snapshot, son hash, son heure et sa classification historique restent immuables ;
+- toute autre valeur négative, y compris sur un `card`, demeure `SCHEMA_INCOMPATIBLE`.
+
+La migration append-only V12 ajoute les colonnes facultatives `incident_class` et `reason`, autorise
+la provenance `event-incidents-v5` et ne modifie aucune migration antérieure. La minute persistée
+reste contrainte entre 0 et 300. Une réponse brute dédupliquée vers le snapshot 60 pourra ainsi
+produire une nouvelle observation V5 sans reclasser V4, puis permettre l'unique appel
+`EVENT_LINEUPS` restant dans une nouvelle campagne explicitement confirmée.
+
+Les autres formes d'incidents restent volontairement inchangées. La fiche de règles de gestion par
+type d'incident football annoncée par le propriétaire deviendra la source de vérité pour toute
+évolution ultérieure ; aucune heuristique générale n'est introduite dans ce correctif.
+
+### 20.2 Validation hors ligne et suite humaine
+
+```text
+J5_REAL_REARM_RETEST=PASS_SECOND_CAMPAIGN_STARTED
+J5_REAL_SECOND_EVENT_ID=16483632
+J5_REAL_SECOND_STATISTICS=EVENT_STATISTICS_V2_COMPLETE_SNAPSHOT_59_OBSERVATION_17
+J5_REAL_SECOND_INCIDENTS=EVENT_INCIDENTS_V4_SCHEMA_INCOMPATIBLE_SNAPSHOT_60
+J5_REAL_SECOND_LINEUPS=NOT_ATTEMPTED
+J5_REAL_SECOND_PROVIDER_CALLS=2
+J5_INCIDENT_CURRENT_PARSER=event-incidents-v5
+J5_BENCH_CARD_NORMALIZED_MINUTE_SOURCE=benchTime
+J5_BENCH_CARD_CORRECTION=PASS_OFFLINE_RETEST_REQUIRED
+J5_STANDARD_TESTS=278
+J5_INTEGRATION_TESTS=25
+J5_FLYWAY_VERSION=12
+J5_PROVIDER_CALLS_BY_AGENT=0
+J5_PROVIDER_SCHEMA_VALIDATED=NO
+J5_REAL_WORK_ORDER_CAN_BE_ARCHIVED=NO
+```
+
+Le rapport minimisé détaillé est
+`docs/validation/J5-REAL-V5-BENCH-CARD-CORRECTION-20260816.md`. Le prochain geste réel nécessite un
+redémarrage, car la campagne V4 s'est correctement verrouillée en `FAILED_LOCKED`, puis une nouvelle
+préparation et une nouvelle confirmation opérateur. Il doit vérifier le reparsing V5 du snapshot 60,
+l'affichage de la minute 58, de la classe jaune et du motif `Argument`, puis l'appel unique des
+compositions. Le reverrouillage local et l'arrêt final restent obligatoires. L'agent ne lit ni ne
+modifie `.env` et n'exécute aucun appel fournisseur.
