@@ -44,6 +44,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   mesures source/restauration, couverture jusqu'au snapshot 272, contrôle d'intégrité brut sans
   échec, suppression de la base temporaire et refus d'écraser les artefacts lors d'un second
   lancement ; aucune purge de la base primaire n'a été exécutée ou autorisée ;
+- contrôle visuel complémentaire sur cinq captures opérateur non versionnées du snapshot réel 32
+  de l'événement `16412917` : même brut et même SHA-256 source pour les observations incidents 10
+  et 12, passage de `event-incidents-v3` à `event-incidents-v4`, complétude `20/20` → `36/36`,
+  classification `LOCAL_REPARSE` et 18 écarts prudents correspondant à huit retraits, huit ajouts et
+  deux compteurs ; aucun appariement ambigu, appel fournisseur ou changement du brut n'est inventé ;
 - J6 passe à `VALIDATED`, la phase applicative devient
   `J6-HISTORY-AND-GUARDED-RETENTION-VALIDATED` et le Work Order rejoint `completed`.
 
