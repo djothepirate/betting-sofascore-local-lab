@@ -56,6 +56,10 @@
      th:text="${'Import hors ligne refusé : ' + fixtureImportErrorCode}">
     Import hors ligne refusé.
   </p>
+  <p class="notice notice-danger" th:if="${j6HistoryImportErrorCode != null}"
+     th:text="${'Import du corpus J6 refusé : ' + j6HistoryImportErrorCode}">
+    Import du corpus J6 refusé.
+  </p>
   <p class="notice notice-safe" th:if="${snapshotNormalization != null}">
     Snapshot <span th:text="${snapshotNormalization.snapshotId}">0</span> reparsé :
     <span th:text="${snapshotNormalization.parsedEventCount}">0</span> événement(s),
@@ -124,6 +128,24 @@
         <button class="button-primary" type="submit">Normaliser ce snapshot</button>
       </form>
     </article>
+  </section>
+
+  <section class="panel j6-demo-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="label">J6 · Démonstration hors ligne</p>
+        <h2>Charger une chronologie avec correction tardive</h2>
+      </div>
+      <span class="chip chip-warning">SYNTHETIC_FIXTURE</span>
+    </div>
+    <p>Ajoute de façon idempotente douze observations normalisées couvrant les cinq flux J6.
+      Le corpus contient un état final puis des valeurs corrigées, sans appel réseau ni payload
+      fournisseur.</p>
+    <form method="post" th:action="@{/events/history/offline-demo}">
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <input type="hidden" name="zone" th:value="${selectedZone}">
+      <button class="button-primary" type="submit">Charger la démonstration J6</button>
+    </form>
   </section>
 
   <section class="panel manual-call-panel" aria-labelledby="real-phase1-title">

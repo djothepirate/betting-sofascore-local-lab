@@ -1,4 +1,4 @@
-# Architecture J0 à J5 — SofaScore Local Lab
+# Architecture J0 à J6 — SofaScore Local Lab
 
 ## 1. Positionnement
 
@@ -10,7 +10,7 @@ Betting Project principal          SofaScore Local Lab
 VPS permanent                      Windows local uniquement
 Production indépendante            Prototype non approuvé production
 Modèle canonique multi-source      Modèle local de benchmark
-Aucun appel SofaScore VPS          J3 manuel + J4 phase 1, opt-in et bornés
+Aucun appel SofaScore VPS          J3/J4/J5 manuels, opt-in et bornés
 Fonctionne poste éteint             Disponible seulement poste allumé
 ```
 
@@ -38,6 +38,8 @@ La relation future autorisée est un export JSON normalisé et versionné. Aucun
 │  ├─ Circuit J4 phase 1 : deux IDs compilés, verrou terminal│
 │  ├─ Données de rencontre J5 + complétude, hors ligne      │
 │  ├─ Persistance J5 normalisée append-only                 │
+│  ├─ Historique et différences sémantiques J6              │
+│  ├─ Rétention J6 manuelle, auditée et hors interface      │
 │  ├─ Catalogue logique fermé par défaut                    │
 │  ├─ Flyway / JDBC / JPA                                   │
 │  └─ Actuator                                              │
@@ -61,12 +63,13 @@ VPS       : aucune connexion
 | `config` | propriétés typées, garde de liaison locale, initialisation du dossier d’export, en-têtes de sécurité |
 | `domain.provider` | types logiques, catalogue et requêtes fournisseur J3/J4 fermées par valeur |
 | `domain.event` / `domain.eventdetails` / `domain.eventdata` | identité canonique, détail J4, familles J5 et complétude immuables |
-| `application` | verrou général, politiques J3/J4, orchestration manuelle et services de normalisation/recherche/import J5 |
+| `domain.history` / `domain.retention` | versions, changements, traces de snapshots et plans de rétention J6 |
+| `application` | politiques réseau, orchestration manuelle, normalisation, historique, diff et rétention gardée |
 | `adapter.sofascore` | catalogue fermé, transports spéciaux bornés et parseurs hors ligne J2/J4/J5 |
-| `adapter.persistence` | preuves brutes, cache, identités et observations normalisées, avec déduplication atomique |
-| `adapter.web` | tableau de bord, recherche locale, contrôles J4 et vues J4/J5 en lecture locale |
-| `resources/db/migration` | schémas V1 à V7, migrations append-only et triggers d’immuabilité |
-| `fixtures` | corpus synthétiques hors ligne J2, J4 et J5 |
+| `adapter.persistence` | preuves brutes, occurrences, observations normalisées, historique et audit de rétention |
+| `adapter.web` | tableau de bord, recherche, contrôles et vues J4/J5/J6 en lecture locale |
+| `resources/db/migration` | schémas V1 à V22, migrations append-only et triggers d’immuabilité |
+| `fixtures` | corpus synthétiques hors ligne J2, J4, J5 et J6 |
 
 Le connecteur général demeure bloqué. Un `RestClient` distinct est construit uniquement pour le
 chemin manuel J3 borné ; il ne reçoit qu’une requête de domaine validée et ne peut viser que
@@ -77,9 +80,14 @@ refuse toute origine autre que `https://www.sofascore.com` et tout identifiant d
 `16386245` ou `16421052` avant la construction de l’URI. Les opt-ins J3 et J4 sont mutuellement
 exclusifs. Ni l’un ni l’autre ne déverrouille `ConnectorGate` ou le catalogue général.
 
-J5 n'ajoute aucun `RestClient`, requête fournisseur ou propriété d'activation. Ses trois parseurs
-reçoivent exclusivement des fixtures classpath déjà contrôlées. Les formes de chemins cibles sont
-documentées dans le Work Order et l'architecture J5, mais restent absentes du catalogue exécutable.
+J5 possède une voie fournisseur distincte, désactivée par défaut et bornée aux trois familles d'une
+identité canonique déjà présente. Elle reste manuelle, séquentielle, sans retry et peut être réunie
+uniquement avec J4 phase 2 dans une session explicitement armée. Maven intercepte ses transports et
+n'effectue aucun appel réel.
+
+J6 n'ajoute aucun `RestClient`. Il lit les observations existantes et son import de démonstration
+utilise seulement des fixtures synthétiques. La rétention est une commande non Web ponctuelle qui
+force toutes les voies réseau à l'arrêt et exige le verrou persistant `LOCKED`.
 
 ## 4. Défense en profondeur J3
 
@@ -116,6 +124,10 @@ Preuve brute prête pour un futur transport : fournisseur, provenance, endpoint 
 La migration V2 append-only conserve les octets dans `payload_raw` (`bytea`) avant parsing, impose une taille maximale de 5 Mio et fixe la provenance à `DIRECT_LOCAL_ENDPOINT`. `payload_jsonb` reste `NULL` dans cette unité : aucune représentation normalisée n’est fabriquée à partir du brut.
 
 La contrainte d’unicité partielle empêche de conserver plusieurs fois le même hash pour une même combinaison fournisseur, endpoint logique et clé de requête. L’adaptateur retourne soit `INSERTED`, soit `DEDUPLICATED` avec l’identifiant stable du snapshot.
+
+V21 ajoute une occurrence append-only pour chaque tentative future, afin qu'une déduplication ne
+masque plus l'appel observé. V22 autorise uniquement la suppression auditée des octets bruts après
+sauvegarde restaurée ; la ligne, sa taille, son SHA-256 et sa provenance restent conservés.
 
 ### 5.2 `export_manifest`
 
@@ -172,6 +184,14 @@ Les tables enfants `j5_event_metric`, `j5_event_incident`, `j5_event_lineup_side
 clés étrangères composites empêchent de mélanger les familles. V7 applique des triggers
 append-only aux cinq tables et déduplique les lots identiques sans recopier les octets sources.
 
+### 5.7 Occurrences et audit de rétention J6
+
+`provider_snapshot_occurrence` conserve `BASELINE`, `INSERTED` ou `DEDUPLICATED` sans recopier les
+octets. `j6_raw_payload_purge_audit` conserve le plan, les métadonnées antérieures et les hashes de
+la sauvegarde qualifiée. Les deux tables sont append-only. Un trigger V22 interdit toute suppression
+de snapshot et toute mise à jour autre qu'une classification initiale ou une purge auditée dans la
+même transaction.
+
 ## 6. Catalogue logique
 
 | Type | Cache initial | Déclenchement prévu | Appelable actuellement |
@@ -217,25 +237,25 @@ commence obligatoirement à 1, continue uniquement sur `hasNextPage=true` et s�
   de schéma sans donnée partielle ;
 - import J5 transactionnel et idempotent, rattachement à J4, requête des dernières familles et rendu
   MVC local protégé par jeton à usage unique.
+- occurrences J6, chronologie des cinq flux, diff sémantique, appariement prudent des incidents,
+  score, classifications tardives, corpus idempotent et absence de payload dans le rendu ;
+- aperçu, hash et confirmation de rétention, refus des preuves invalides et commande non Web.
 
 ### Intégration
 
 `mvnw -Pintegration-tests verify` démarre PostgreSQL avec Testcontainers et vérifie les migrations
-V1 à V7, la fidélité binaire, les contraintes, la déduplication et l’immuabilité des observations
-J4/J5. Les chemins Flyway historiques restent couverts, ainsi que l'installation vide jusqu'à V7,
-les trois formes de complétude J5 et la reconstruction des tables enfants. Aucun appel SofaScore
-n’est exécuté.
+V1 à V22, les upgrades historiques, la fidélité binaire, les contraintes, la déduplication et
+l'immuabilité. J6 ajoute les occurrences prospectives, les exclusions de rétention, la purge des
+seuls octets dans une base éphémère, l'audit et la conservation de la provenance. Aucun appel
+SofaScore n'est exécuté.
 
 ### Réel
 
-Le profil `sofascore-live-test` reste bloqué avec `alwaysFail` et n’est pas utilisé par les chemins
-J3/J4. La sous-étape 1 J4 a été qualifiée humainement après correction de navigation. La
-sous-étape 2 reste un geste humain séparé dans l’interface locale après activation explicite de sa
-configuration et n'a encore exécuté aucun ID réel. Aucune suite Maven ne réalise ce geste.
-
-J5 ne possède aucune voie réelle : sa découverte de schéma s'est arrêtée au premier `HTTP 403` et
-toutes ses preuves versionnées restent synthétiques. Aucune suite Maven ne résout ou n'appelle les
-formes de chemins J5 communiquées par l'opérateur.
+Le profil `sofascore-live-test` reste bloqué avec `alwaysFail`. Les voies J3, J4 et J5 ont été
+qualifiées humainement dans leurs périmètres bornés, puis reverrouillées. Elles restent désactivées
+par défaut et aucune suite Maven ne réalise un geste fournisseur. J6 ne nécessite aucun nouveau
+geste réel : ses deux validations humaines portent uniquement sur l'interface locale et la
+sauvegarde/restauration chiffrée.
 
 ## 8. Décisions différées
 

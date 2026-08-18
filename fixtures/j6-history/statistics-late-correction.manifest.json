@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "j6-statistics-late-correction",
+  "endpointType": "EVENT_STATISTICS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-16T08:10:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "event-statistics-v1",
+  "payloadResource": "fixtures/j6-history/statistics-late-correction.json",
+  "maximumBytes": 8192,
+  "expectedRawSha256": "c613f26ef663d45ba5999e422e1b337345f7468d0c57d75da867a0e47044b981",
+  "expectedCanonicalJsonSha256": "d0eac277b79c84f83769815bc3d9e5654d86d817fc2ba62eab71c0bc353fe466",
+  "minimized": false,
+  "removedFields": []
+}

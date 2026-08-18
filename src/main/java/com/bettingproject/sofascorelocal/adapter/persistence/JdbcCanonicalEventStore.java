@@ -171,6 +171,15 @@ public class JdbcCanonicalEventStore implements CanonicalEventStore {
             order by o.source_received_at desc, o.id desc
             """;
 
+    private static final String FIND_BY_OBSERVATION_ID_SQL = """
+            select
+                """ + VIEW_COLUMNS + """
+            from canonical_event_observation o
+            join canonical_event e on e.id = o.canonical_event_id
+            where e.id = :canonicalEventId
+              and o.id = :observationId
+            """;
+
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
     public JdbcCanonicalEventStore(NamedParameterJdbcTemplate jdbcTemplate) {
@@ -252,6 +261,24 @@ public class JdbcCanonicalEventStore implements CanonicalEventStore {
                 FIND_HISTORY_SQL,
                 new MapSqlParameterSource("canonicalEventId", canonicalEventId),
                 this::mapView);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<CanonicalEventObservationView> findByObservationId(
+            UUID canonicalEventId,
+            long observationId) {
+        Objects.requireNonNull(canonicalEventId, "canonicalEventId");
+        if (observationId < 1) {
+            throw new IllegalArgumentException("observationId must be positive");
+        }
+        List<CanonicalEventObservationView> matches = jdbcTemplate.query(
+                FIND_BY_OBSERVATION_ID_SQL,
+                new MapSqlParameterSource()
+                        .addValue("canonicalEventId", canonicalEventId)
+                        .addValue("observationId", observationId),
+                this::mapView);
+        return matches.stream().findFirst();
     }
 
     private static MapSqlParameterSource parameters(CanonicalEventObservation observation) {

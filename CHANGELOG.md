@@ -4,8 +4,61 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### J6 — Historique et rétention gardée
+
+- migration Flyway V21 ajoutant une occurrence append-only pour chaque tentative de persistance
+  brute future, y compris les réponses dédupliquées, et un backfill `BASELINE` prudent pour les
+  snapshots antérieurs ;
+- agrégation locale des cinq flux `EVENT_STATE`, `EVENT_DETAILS`, `EVENT_STATISTICS`,
+  `EVENT_INCIDENTS` et `EVENT_LINEUPS`, avec ordre stable, pagination bornée, provenance complète et
+  état explicite des octets bruts ;
+- différences sémantiques calculées à la demande pour les champs scalaires, métriques, incidents,
+  compositions, score et complétude, sans relecture du JSON brut ni mutation de l'historique ;
+- classification `BASELINE`, `TECHNICAL_DUPLICATE`, `LOCAL_REPARSE`,
+  `SEMANTICALLY_UNCHANGED`, `SYNTHETIC_CHANGE`, `PROVIDER_UPDATE`, `LATE_ENRICHMENT` ou
+  `LATE_CORRECTION`, avec prise en compte du dernier état terminal strictement antérieur ;
+- pages Thymeleaf d'historique et de comparaison sur boucle locale, réponses `no-store`, contenu
+  échappé, pagination et erreurs explicites, sans endpoint JSON, export ni téléchargement brut ;
+- corpus synthétique J6 idempotent ajoutant un état final et quatre changements postérieurs à cet
+  état aux fixtures nominales J4/J5, classés `SYNTHETIC_CHANGE` et sans transport fournisseur ;
+- migration Flyway V22 limitant la rétention aux seuls octets `payload_raw` éligibles, avec
+  conservation des lignes, hashes, tailles, métadonnées, occurrences et observations normalisées,
+  audit append-only et trigger bloquant toute mutation non auditée ;
+- aperçu Web en lecture seule et commande non Web limitée à 500 éléments, avec plan SHA-256,
+  phrase exacte, relecture transactionnelle `SERIALIZABLE` et refus sur dérive ou couverture de
+  sauvegarde insuffisante ;
+- scripts PowerShell de sauvegarde PostgreSQL directement chiffrée par `age`, restauration dans
+  une base temporaire, comparaison des empreintes, manifeste qualifié et invocation manuelle de la
+  rétention ; aucun dump clair, secret en argument, bouton de purge ou planification ;
+- phase applicative d'abord avancée à `J6-HISTORY-AND-GUARDED-RETENTION-READINESS`, avec
+  documentation d'architecture, runbook opérateur et rapport de readiness ;
+- première phase humaine de l'interface J6 acceptée sur seize captures opérateur non versionnées :
+  cinq flux, douze versions, différences sémantiques, trois comparaisons dont l'état 2 → 96,
+  pagination à trois éléments sur quatre pages et aperçu de rétention sans purge Web ; le second
+  import idempotent et la sauvegarde/restauration restent ouverts ;
+- qualification humaine finale de l'interface J6 sur deux captures supplémentaires : second import
+  à `0 ajoutée / 12 déjà présentes`, total stable, comparaison d'état 96 → 97 correctement
+  `SEMANTICALLY_UNCHANGED`, puis absence de listener sur le port 8087 ;
+- qualification opératoire finale de la sauvegarde/restauration chiffrée : archive `age` et
+  manifeste créés hors dépôt, restauration PostgreSQL temporaire qualifiée par égalité des treize
+  mesures source/restauration, couverture jusqu'au snapshot 272, contrôle d'intégrité brut sans
+  échec, suppression de la base temporaire et refus d'écraser les artefacts lors d'un second
+  lancement ; aucune purge de la base primaire n'a été exécutée ou autorisée ;
+- contrôle visuel complémentaire sur cinq captures opérateur non versionnées du snapshot réel 32
+  de l'événement `16412917` : même brut et même SHA-256 source pour les observations incidents 10
+  et 12, passage de `event-incidents-v3` à `event-incidents-v4`, complétude `20/20` → `36/36`,
+  classification `LOCAL_REPARSE` et 18 écarts prudents correspondant à huit retraits, huit ajouts et
+  deux compteurs ; aucun appariement ambigu, appel fournisseur ou changement du brut n'est inventé ;
+- J6 passe à `VALIDATED`, la phase applicative devient
+  `J6-HISTORY-AND-GUARDED-RETENTION-VALIDATED` et le Work Order rejoint `completed`.
+
 ### Corrigé
 
+- correction de l'empreinte des provenances normalisées dans le script de sauvegarde/restauration
+  J6 : les trois tables d'observations utilisent désormais leur colonne réelle
+  `source_payload_sha256` au lieu de `payload_sha256` ; une régression d'intégration extrait les
+  requêtes du script et les exécute contre le schéma Flyway V22 afin de détecter toute nouvelle
+  dérive avant la qualification opérateur ;
 - retrait de la liste technique des chemins JSON manquants au-dessus des tableaux
   `EVENT_INCIDENTS` et `EVENT_LINEUPS` : les rapports de complétude, badges, compteurs, données et
   lignes des tableaux restent inchangés ; une régression MVC alimente volontairement les deux

@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "j6-scheduled-finished",
+  "endpointType": "SCHEDULED_EVENTS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-15T14:00:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "scheduled-events-v1",
+  "payloadResource": "fixtures/j6-history/scheduled-finished.json",
+  "maximumBytes": 4096,
+  "expectedRawSha256": "f388f5fba888810da44ea4637390ac7456ef3350e94ef6ff6f0f19755bfd6651",
+  "expectedCanonicalJsonSha256": "5b75b815c56d543fef483522f183787ac501f796ac677fb25a3c5d5cd66b8809",
+  "minimized": false,
+  "removedFields": []
+}

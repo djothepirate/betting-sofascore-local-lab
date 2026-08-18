@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "j6-incidents-late-correction",
+  "endpointType": "EVENT_INCIDENTS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-16T08:15:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "event-incidents-v1",
+  "payloadResource": "fixtures/j6-history/incidents-late-correction.json",
+  "maximumBytes": 8192,
+  "expectedRawSha256": "a4f47243e963c302d56c3fa8204d137f3247d3ef8c3c27f4a95d523406aaac7d",
+  "expectedCanonicalJsonSha256": "3c9a35b595770c7188b058223202e8d9c4aec67d1dce654cea1d7a7294ec8119",
+  "minimized": false,
+  "removedFields": []
+}

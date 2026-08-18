@@ -11,7 +11,7 @@
   <div class="shell">
     <p class="eyebrow">BETTING PROJECT / SOFASCORE LOCAL LAB</p>
     <h1>Tableau de bord local</h1>
-    <p class="subtitle">J3 — collecte manuelle répétable, paginée dynamiquement par <span class="mono">hasNextPage</span>.</p>
+    <p class="subtitle">J6 — historique local, corrections tardives et rétention brute gardée.</p>
   </div>
 </header>
 
@@ -351,6 +351,64 @@
       cookie, jeton, compte ou donnée de session n’est ajouté à cette liste.</p>
   </section>
 
+  <section class="panel retention-preview-panel"
+           id="j6-retention-preview"
+           aria-labelledby="j6-retention-title">
+    <div class="panel-heading">
+      <div>
+        <p class="label">J6 / Rétention des payloads bruts</p>
+        <h2 id="j6-retention-title">Aperçu en lecture seule</h2>
+      </div>
+      <span class="chip chip-warning">AUCUNE PURGE WEB</span>
+    </div>
+    <p>Seuls les snapshots strictement plus anciens que la durée configurée, déjà normalisés et
+      classés <span class="mono">PARSED</span> ou <span class="mono">ENDPOINT_UNAVAILABLE</span>
+      peuvent entrer dans un plan. L’exécution reste réservée au script opérateur, après sauvegarde
+      chiffrée et restauration qualifiée.</p>
+
+    <p class="notice notice-danger" th:if="${retentionPreviewUnavailable}">
+      L’aperçu de rétention est indisponible ; aucune action n’est possible.
+    </p>
+
+    <div th:if="${retentionPreview != null}">
+      <dl class="detail-grid">
+        <div><dt>Durée</dt><dd th:text="${retentionPreview.retentionDays + ' jours'}">30 jours</dd></div>
+        <div><dt>Cutoff strict</dt><dd class="mono" th:text="${retentionPreview.cutoffAt}">instant</dd></div>
+        <div><dt>Payloads éligibles</dt><dd th:text="${retentionPreview.totalEligibleCount}">0</dd></div>
+        <div><dt>Octets éligibles</dt><dd th:text="${retentionPreview.totalEligibleBytes}">0</dd></div>
+        <div><dt>Lot borné</dt><dd th:text="${retentionPreview.selectedCount() + ' / 500'}">0 / 500</dd></div>
+        <div><dt>Plus ancien</dt><dd class="mono" th:text="${retentionPreview.oldestEligibleReceivedAt.orElse(null)}">—</dd></div>
+        <div><dt>Plan SHA-256</dt><dd class="mono hash-value" th:text="${retentionPreview.planSha256}">hash</dd></div>
+        <div><dt>Lot tronqué</dt><dd th:text="${retentionPreview.truncated() ? 'OUI' : 'NON'}">NON</dd></div>
+      </dl>
+      <p class="notice notice-warning" th:if="${retentionPreview.selectedCount() > 0}">
+        Phrase exigée par l’outil opérateur :
+        <span class="mono" th:text="${retentionPreview.confirmationPhrase()}">phrase</span>
+      </p>
+      <p class="notice" th:if="${retentionPreview.selectedCount() == 0}">
+        Aucun payload ne satisfait actuellement toutes les conditions de rétention.
+      </p>
+      <div class="table-scroll" th:if="${!retentionPreviewCandidates.isEmpty()}">
+        <table>
+          <thead><tr><th>Snapshot</th><th>Reçu à</th><th>Flux</th><th>Statut</th><th>Octets</th><th>SHA-256</th></tr></thead>
+          <tbody>
+            <tr th:each="candidate : ${retentionPreviewCandidates}">
+              <td class="mono" th:text="${candidate.snapshotId}">1</td>
+              <td th:text="${candidate.receivedAt}">instant</td>
+              <td class="mono" th:text="${candidate.logicalEndpoint}">EVENT_DETAILS</td>
+              <td th:text="${candidate.schemaStatus.name()}">PARSED</td>
+              <td th:text="${candidate.payloadSizeBytes}">0</td>
+              <td class="mono hash-value" th:text="${candidate.payloadSha256}">hash</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fixture-note" th:if="${retentionPreview.selectedCount() > 25}">
+        Le tableau de bord montre les 25 premières lignes du lot ; le plan signé en couvre jusqu’à 500.
+      </p>
+    </div>
+  </section>
+
   <section class="panel" aria-labelledby="catalog-title">
     <div class="panel-heading">
       <div>
@@ -427,7 +485,7 @@
 </main>
 
 <footer>
-  <div class="shell">SofaScore Local Lab v0.1.0-SNAPSHOT — J3 Appel manuel hors ligne</div>
+  <div class="shell">SofaScore Local Lab v0.1.0-SNAPSHOT — J6 Historique local et rétention gardée</div>
 </footer>
 </body>
 </html>

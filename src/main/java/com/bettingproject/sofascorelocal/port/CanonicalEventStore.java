@@ -20,4 +20,8 @@ public interface CanonicalEventStore {
     Optional<CanonicalEventObservationView> findLatestByCanonicalId(UUID canonicalEventId);
 
     List<CanonicalEventObservationView> findHistory(UUID canonicalEventId);
+
+    Optional<CanonicalEventObservationView> findByObservationId(
+            UUID canonicalEventId,
+            long observationId);
 }

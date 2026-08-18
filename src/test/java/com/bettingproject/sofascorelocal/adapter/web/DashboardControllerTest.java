@@ -4,6 +4,8 @@ import com.bettingproject.sofascorelocal.application.network.J3ManualCallControl
 import com.bettingproject.sofascorelocal.application.network.J3ManualCollectionEvidenceService;
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotInspectionCatalog;
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
+import com.bettingproject.sofascorelocal.application.retention.J6RawPayloadRetentionService;
+import com.bettingproject.sofascorelocal.domain.retention.J6RetentionPreview;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallControlSnapshot;
@@ -24,6 +26,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
@@ -59,10 +62,22 @@ class DashboardControllerTest {
     @MockitoBean
     private RawSnapshotJsonInspectionService snapshotInspectionService;
 
+    @MockitoBean
+    private J6RawPayloadRetentionService retentionService;
+
     @BeforeEach
     void snapshotInspectionIsUnavailableByDefault() {
         when(snapshotInspectionService.loadCatalog())
                 .thenReturn(RawSnapshotInspectionCatalog.unavailable());
+        when(retentionService.preview()).thenReturn(new J6RetentionPreview(
+                30,
+                Instant.parse("2026-08-18T12:00:00Z"),
+                Instant.parse("2026-07-19T12:00:00Z"),
+                0,
+                0,
+                Optional.empty(),
+                List.of(),
+                "a".repeat(64)));
     }
 
     @Test
@@ -142,6 +157,9 @@ class DashboardControllerTest {
                 .andExpect(content().string(containsString("REAL_CALL_NOT_AUTHORIZED")))
                 .andExpect(content().string(containsString(
                         "J3 / Inspection locale en lecture seule")))
+                .andExpect(content().string(containsString(
+                        "J6 / Rétention des payloads bruts")))
+                .andExpect(content().string(containsString("AUCUNE PURGE WEB")))
                 .andExpect(content().string(containsString(
                         "SCHEDULED_EVENTS|date=2026-08-14|page=1")))
                 .andExpect(content().string(containsString("Inspecter le JSON")))

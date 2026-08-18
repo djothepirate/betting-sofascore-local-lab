@@ -55,6 +55,13 @@
         <div><dt>Horaire local</dt><dd class="mono" th:text="${page.current.startsAtInZone}">date</dd></div>
         <div><dt>Zone</dt><dd th:text="${page.zoneId.id}">Europe/Paris</dd></div>
       </dl>
+      <div class="actions">
+        <a class="button button-secondary"
+           th:href="@{/events/{id}/history(id=${page.current.event.identity.value},zone=${page.zoneId.id})}"
+           href="/events/00000000-0000-0000-0000-000000000000/history">
+          Historique et comparaisons J6
+        </a>
+      </div>
     </section>
 
     <p class="notice notice-safe" th:if="${j5FixtureImport != null}">
