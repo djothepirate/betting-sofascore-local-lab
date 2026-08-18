@@ -65,10 +65,12 @@ try {
                 [string]::IsNullOrWhiteSpace($ConfirmationPhrase)) {
             throw 'Execute requires -BackupManifest, -CutoffAt, -PlanSha256 and -ConfirmationPhrase.'
         }
+        if (-not [IO.Path]::IsPathFullyQualified($BackupManifest)) {
+            throw 'The backup manifest must be an absolute path outside the repository.'
+        }
         $manifestPath = [IO.Path]::GetFullPath($BackupManifest)
         $repositoryPrefix = $repositoryRoot.TrimEnd('\') + '\'
-        if (-not [IO.Path]::IsPathFullyQualified($manifestPath) -or
-                $manifestPath.StartsWith($repositoryPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+        if ($manifestPath.StartsWith($repositoryPrefix, [StringComparison]::OrdinalIgnoreCase)) {
             throw 'The backup manifest must be an absolute path outside the repository.'
         }
         if (-not (Test-Path -LiteralPath $manifestPath -PathType Leaf)) {
@@ -81,8 +83,44 @@ try {
                 [string]::IsNullOrWhiteSpace($manifest.qualifiedAt)) {
             throw 'The backup manifest is not a qualified J6 restore proof.'
         }
-        $cipherPath = Join-Path (Split-Path -Parent $manifestPath) `
-            $manifest.encryptedBackupFileName
+        $cipherFileName = $manifest.encryptedBackupFileName
+        if ([string]::IsNullOrWhiteSpace($cipherFileName) -or
+                [IO.Path]::GetFileName($cipherFileName) -cne $cipherFileName -or
+                -not $cipherFileName.EndsWith('.age', [StringComparison]::OrdinalIgnoreCase)) {
+            throw 'The qualified manifest contains an invalid encrypted backup file name.'
+        }
+        $qualificationFields = @(
+            'flywayVersion',
+            'snapshotCount',
+            'occurrenceCount',
+            'canonicalObservationCount',
+            'detailObservationCount',
+            'eventDataObservationCount',
+            'purgeAuditCount',
+            'coverageMaxSnapshotId',
+            'coverageReceivedAt',
+            'rawPayloadIntegrityFailures',
+            'snapshotMetadataSha256',
+            'occurrenceSha256',
+            'normalizedProvenanceSha256'
+        )
+        if ($null -eq $manifest.source -or $null -eq $manifest.restored) {
+            throw 'The qualified manifest must contain source and restored evidence.'
+        }
+        foreach ($field in $qualificationFields) {
+            $sourceValue = $manifest.source.$field
+            $restoredValue = $manifest.restored.$field
+            if ($null -eq $sourceValue -or $null -eq $restoredValue -or
+                    $sourceValue.ToString() -cne $restoredValue.ToString()) {
+                throw "The qualified manifest source/restore evidence differs: $field"
+            }
+        }
+        if ($manifest.source.flywayVersion.ToString() -cne '22' -or
+                [long]$manifest.source.rawPayloadIntegrityFailures -ne 0) {
+            throw 'The qualified manifest does not prove a valid Flyway V22 raw-payload restore.'
+        }
+        $cipherPath = [IO.Path]::GetFullPath((Join-Path `
+            (Split-Path -Parent $manifestPath) $cipherFileName))
         if (-not (Test-Path -LiteralPath $cipherPath -PathType Leaf)) {
             throw 'The encrypted backup referenced by the manifest is missing.'
         }

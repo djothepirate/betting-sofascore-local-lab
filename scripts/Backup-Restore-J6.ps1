@@ -12,15 +12,15 @@ Set-StrictMode -Version 3.0
 if ($PSVersionTable.PSVersion -lt [version]'7.4') {
     throw 'PowerShell 7.4 or newer is required to preserve native binary pipelines.'
 }
+if (-not [IO.Path]::IsPathFullyQualified($Destination)) {
+    throw 'The encrypted backup destination must be absolute.'
+}
 
 $repositoryRoot = [IO.Path]::GetFullPath((Split-Path -Parent $PSScriptRoot))
 $destinationPath = [IO.Path]::GetFullPath($Destination)
 $repositoryPrefix = $repositoryRoot.TrimEnd('\') + '\'
 if ($destinationPath.StartsWith($repositoryPrefix, [StringComparison]::OrdinalIgnoreCase)) {
     throw 'The encrypted backup destination must be outside the repository.'
-}
-if (-not [IO.Path]::IsPathFullyQualified($destinationPath)) {
-    throw 'The encrypted backup destination must be absolute.'
 }
 if (-not $destinationPath.EndsWith('.age', [StringComparison]::OrdinalIgnoreCase)) {
     throw 'The encrypted backup destination must use the .age extension.'
