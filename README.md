@@ -122,8 +122,9 @@ chronologie locale des cinq flux d'un événement, des différences sémantiques
 détection des enrichissements et corrections tardifs, ainsi qu'une rétention manuelle des seuls
 octets bruts. Cette rétention reste sans bouton Web, limitée à 500 snapshots par lot, protégée par
 un aperçu haché, une confirmation exacte et une sauvegarde chiffrée restaurée avec succès. La
-qualification humaine de l'interface et la qualification opératoire sauvegarde/restauration
-restent requises avant de déclarer J6 `VALIDATED`.
+première phase humaine de l'interface est acceptée sur seize captures hors dépôt ; le second import
+idempotent et la qualification opératoire sauvegarde/restauration restent requis avant de déclarer
+J6 `VALIDATED`.
 
 ## Ce qui est livré localement
 
@@ -583,6 +584,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Qualification hors ligne de la session combinée J4 phase 2 + J5](docs/validation/J4-J5-COMBINED-QUALIFICATION-SESSION-20260818.md)
 - [Work Order validé de qualification réelle J5](docs/work_orders/completed/WO-SS-20260815-006-j5-real-event-data-qualification.md)
 - [Readiness technique J6](docs/validation/J6-TECHNICAL-READINESS-20260818.md)
+- [Qualification humaine J6 de l'interface — phase 1](docs/validation/J6-HUMAN-HISTORY-UI-PHASE1-20260819.md)
 - [Work Order J6 actif](docs/work_orders/active/WO-SS-20260818-007-history-j6.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
@@ -824,6 +826,13 @@ dans `docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md`; elle exige PowerShell 7
 destination absolue hors dépôt, une restauration temporaire qualifiée, puis la reprise exacte du
 cutoff, du SHA-256 de plan et de la phrase de confirmation issus d'un même aperçu.
 
+La première phase humaine de l'interface a confirmé sur seize captures externes les cinq flux, les
+baselines, les changements synthétiques, les états sémantiquement inchangés, trois comparaisons —
+dont l'état non adjacent 2 → 96 — et la pagination à trois éléments sur quatre pages. Le premier
+chargement a ajouté six versions J6 tout en retrouvant les six versions nominales J4/J5. Un second
+clic doit encore confirmer `0 ajoutée / 12 déjà présentes` avant la qualification finale de
+l'interface.
+
 ```text
 J6_IMPLEMENTATION_STATUS=TECHNICAL_READINESS_PASS
 J6_FLYWAY_VERSION=22
@@ -837,11 +846,12 @@ J6_RETENTION_AUTOMATIC_SCHEDULING=ABSENT
 J6_BACKUP_FORMAT=PG_DUMP_CUSTOM_ENCRYPTED_WITH_AGE
 J6_PRIMARY_DATABASE_PURGE_EXECUTED=NO
 J6_PROVIDER_CALLS_DURING_IMPLEMENTATION=0
-J6_HUMAN_UI_QUALIFICATION=PENDING
+J6_HUMAN_UI_PHASE1=PASS
+J6_HUMAN_UI_QUALIFICATION=IN_PROGRESS_IDEMPOTENCE_RETEST_PENDING
 J6_OPERATIONAL_BACKUP_RESTORE_QUALIFICATION=PENDING
 J6_WORK_ORDER_STATUS=IN_DEVELOPMENT
 ```
 
-Ces deux validations humaines sont volontairement laissées ouvertes. Elles ne nécessitent aucun
-appel fournisseur, mais elles impliquent une action opérateur interactive et, pour la rétention,
-une autorisation distincte avant toute suppression d'octets sur la base locale primaire.
+Le rejeu idempotent et la validation sauvegarde/restauration sont volontairement laissés ouverts.
+Ils ne nécessitent aucun appel fournisseur, mais impliquent une action opérateur interactive et,
+pour toute rétention de la base primaire, une autorisation distincte avant suppression d'octets.

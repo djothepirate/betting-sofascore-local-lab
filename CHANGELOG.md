@@ -32,7 +32,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   rétention ; aucun dump clair, secret en argument, bouton de purge ou planification ;
 - phase applicative avancée à `J6-HISTORY-AND-GUARDED-RETENTION-READINESS`, documentation
   d'architecture, runbook opérateur et rapport de readiness ; le Work Order reste actif jusqu'aux
-  qualifications humaines de l'interface et de la sauvegarde/restauration.
+  qualifications humaines de l'interface et de la sauvegarde/restauration ;
+- première phase humaine de l'interface J6 acceptée sur seize captures opérateur non versionnées :
+  cinq flux, douze versions, différences sémantiques, trois comparaisons dont l'état 2 → 96,
+  pagination à trois éléments sur quatre pages et aperçu de rétention sans purge Web ; le second
+  import idempotent et la sauvegarde/restauration restent ouverts.
 
 ### Corrigé
 

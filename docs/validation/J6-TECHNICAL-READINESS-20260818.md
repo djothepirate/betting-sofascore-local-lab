@@ -4,7 +4,8 @@
 
 ```text
 J6_TECHNICAL_READINESS=PASS
-J6_HUMAN_HISTORY_UI_QUALIFICATION=PENDING
+J6_HUMAN_HISTORY_UI_PHASE1=PASS
+J6_HUMAN_HISTORY_UI_QUALIFICATION=IN_PROGRESS_IDEMPOTENCE_RETEST_PENDING
 J6_OPERATIONAL_BACKUP_RESTORE_QUALIFICATION=PENDING
 J6_PRIMARY_DATABASE_PURGE=NOT_EXECUTED_NOT_AUTHORIZED
 J6_WORK_ORDER_STATUS=IN_DEVELOPMENT
@@ -162,10 +163,16 @@ base éphémère. L'exécution interactive réelle avec `age` reste `PENDING`.
 
 ### 7.1 Interface
 
-L'opérateur doit charger le corpus J6, parcourir les cinq flux, vérifier les comparaisons, la
-chronologie postérieure à l'état terminal et les classifications `SYNTHETIC_CHANGE`, relancer
-l'import pour l'idempotence et confirmer l'absence de payload brut et de bouton de purge. Les
-classifications tardives de provenance fournisseur sont qualifiées par les tests automatisés.
+La phase 1 est acceptée sur seize captures opérateur externes : chargement du corpus, cinq flux,
+chronologie postérieure à l'état terminal, différences, comparaisons consécutives et arbitraires,
+pagination, provenance, absence de payload brut et absence de bouton de purge. Le rapport détaillé
+est `J6-HUMAN-HISTORY-UI-PHASE1-20260819.md`.
+
+Le premier résultat affiche six versions ajoutées et six déjà présentes. L'opérateur doit encore
+relancer l'import pour prouver `0 ajoutée / 12 déjà présentes`, confirmer que le total reste à
+douze, puis arrêter l'application. La confirmation visuelle du verrou persistant pourra être jointe
+au même lot final. Les classifications tardives de provenance fournisseur restent qualifiées par
+les tests automatisés.
 
 ### 7.2 Sauvegarde/restauration
 
@@ -187,8 +194,11 @@ LATE_CORRECTIONS=TECHNICALLY_DETECTED
 HISTORICAL_RECORDS_MUTATED=NO
 BACKUP_AND_RESTORE_IMPLEMENTATION=READY_FOR_HUMAN_QUALIFICATION
 RAW_RETENTION=MANUAL_BACKUP_GATED
+HUMAN_HISTORY_UI_PHASE1=PASS
+HUMAN_HISTORY_UI_FINAL=PENDING_IDEMPOTENCE_RETEST
 J6_CAN_BE_CLOSED=NO
 ```
 
-J6 est prêt pour les deux qualifications humaines sans appel fournisseur. Le Work Order doit
-rester dans `docs/work_orders/active` et conserver le statut `IN_DEVELOPMENT` jusque-là.
+J6 a franchi la première phase de qualification humaine de l'interface sans appel fournisseur. Le
+rejeu idempotent et la qualification opératoire de sauvegarde/restauration restent ouverts. Le Work
+Order doit rester dans `docs/work_orders/active` et conserver le statut `IN_DEVELOPMENT` jusque-là.
