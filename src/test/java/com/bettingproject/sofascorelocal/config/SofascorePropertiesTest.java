@@ -188,7 +188,7 @@ class SofascorePropertiesTest {
         properties.setAllowedEndpoints(java.util.Set.of(SofascoreEndpointType.EVENT_DETAILS));
         properties.setJ3QualificationEnabled(true);
         assertThat(validator.validate(properties))
-                .anyMatch(violation -> violation.getMessage().contains("mutually exclusive"));
+                .anyMatch(violation -> violation.getMessage().contains("J3 remains exclusive"));
     }
 
     @Test
@@ -225,6 +225,65 @@ class SofascorePropertiesTest {
                     assertThat(context.getBean(J5RealQualificationPolicy.class)
                             .snapshot().available()).isTrue();
                 });
+    }
+
+    @Test
+    void bindsOneCombinedJ4PhaseTwoAndJ5QualificationSession() {
+        contextRunner
+                .withSystemProperties(
+                        "SOFASCORE_ENABLED=true",
+                        "SOFASCORE_J3_QUALIFICATION_ENABLED=false",
+                        "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true",
+                        "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=true",
+                        "SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=true",
+                        "SOFASCORE_BASE_URL=" + EventDetailsProviderRequest.EXPECTED_ORIGIN,
+                        "SOFASCORE_ALLOWED_ENDPOINTS="
+                                + "EVENT_DETAILS,EVENT_STATISTICS,EVENT_INCIDENTS,EVENT_LINEUPS")
+                .run(context -> {
+                    assertThat(context.getStartupFailure()).isNull();
+                    SofascoreProperties properties = context.getBean(SofascoreProperties.class);
+                    assertThat(properties.activeQualificationEndpoints())
+                            .containsExactlyInAnyOrder(
+                                    SofascoreEndpointType.EVENT_DETAILS,
+                                    SofascoreEndpointType.EVENT_STATISTICS,
+                                    SofascoreEndpointType.EVENT_INCIDENTS,
+                                    SofascoreEndpointType.EVENT_LINEUPS);
+                    assertThat(properties.hasExactActiveQualificationEndpoints()).isTrue();
+                    assertThat(context.getBean(J4EventDetailsQualificationPolicy.class)
+                            .snapshot().available()).isFalse();
+                    assertThat(context.getBean(J4EventDetailsPhase2QualificationPolicy.class)
+                            .snapshot().available()).isTrue();
+                    assertThat(context.getBean(J5RealQualificationPolicy.class)
+                            .snapshot().available()).isTrue();
+                });
+    }
+
+    @Test
+    void rejectsSharingJ4PhaseOneWithJ5OrExpandingTheCombinedEndpointUnion() {
+        SofascoreProperties properties = new SofascoreProperties();
+        properties.setEnabled(true);
+        properties.setJ4EventDetailsQualificationEnabled(true);
+        properties.setJ5EventDataQualificationEnabled(true);
+        properties.setAllowedEndpoints(java.util.Set.of(
+                SofascoreEndpointType.EVENT_DETAILS,
+                SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_LINEUPS));
+
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getMessage()
+                        .contains("combined J4/J5 session requires J4 phase 2"));
+
+        properties.setJ4EventDetailsPhase2Enabled(true);
+        properties.setAllowedEndpoints(java.util.Set.of(
+                SofascoreEndpointType.EVENT_DETAILS,
+                SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_LINEUPS,
+                SofascoreEndpointType.SCHEDULED_EVENTS));
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getMessage()
+                        .contains("exact active qualification endpoints"));
     }
 
     @Configuration(proxyBeanMethods = false)

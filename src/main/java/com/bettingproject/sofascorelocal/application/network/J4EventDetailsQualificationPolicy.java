@@ -3,14 +3,12 @@ package com.bettingproject.sofascorelocal.application.network;
 import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.J4EventDetailsQualificationSnapshot;
-import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 @Component
 public class J4EventDetailsQualificationPolicy {
@@ -35,8 +33,11 @@ public class J4EventDetailsQualificationPolicy {
         if (properties.isJ3QualificationEnabled()) {
             blockers.add("J3_QUALIFICATION_MUST_BE_DISABLED");
         }
-        if (!properties.getAllowedEndpoints().equals(Set.of(SofascoreEndpointType.EVENT_DETAILS))) {
-            blockers.add("EVENT_DETAILS_NOT_EXCLUSIVELY_ALLOWED");
+        if (properties.isJ5EventDataQualificationEnabled()) {
+            blockers.add("J5_MUST_BE_DISABLED_FOR_J4_PHASE_1");
+        }
+        if (!properties.hasExactActiveQualificationEndpoints()) {
+            blockers.add("QUALIFICATION_ENDPOINTS_NOT_EXACTLY_ALLOWED");
         }
         if (!properties.isStoreRawPayloads()) {
             blockers.add("RAW_SNAPSHOT_STORAGE_DISABLED");

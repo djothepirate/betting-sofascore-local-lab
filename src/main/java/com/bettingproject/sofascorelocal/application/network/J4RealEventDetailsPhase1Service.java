@@ -7,7 +7,6 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDet
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.EventDetailsTransportException;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceResult;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceService;
-import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsTransportResponse;
 import com.bettingproject.sofascorelocal.domain.provider.J4CachedEventDetails;
@@ -43,8 +42,7 @@ public class J4RealEventDetailsPhase1Service {
     private final EventDetailsV2Parser parser;
     private final Clock clock;
     private final Duration cacheTtl;
-    private final Duration minimumDelay;
-    private final Pause pause;
+    private final J4J5ProviderRequestCoordinator requestCoordinator;
 
     @Autowired
     public J4RealEventDetailsPhase1Service(
@@ -54,7 +52,7 @@ public class J4RealEventDetailsPhase1Service {
             J4EventDetailsCache cache,
             J4ParsedEventDetailsPersistenceService parsedPersistenceService,
             SofascoreEndpointCatalog endpointCatalog,
-            SofascoreProperties properties) {
+            J4J5ProviderRequestCoordinator requestCoordinator) {
         this(
                 controlService,
                 transport,
@@ -64,8 +62,7 @@ public class J4RealEventDetailsPhase1Service {
                 new EventDetailsV2Parser(),
                 Clock.systemUTC(),
                 endpointCatalog.get(SofascoreEndpointType.EVENT_DETAILS).cacheTtl(),
-                properties.getMinimumDelay(),
-                J4RealEventDetailsPhase1Service::sleepSafely);
+                requestCoordinator);
     }
 
     J4RealEventDetailsPhase1Service(
@@ -79,6 +76,28 @@ public class J4RealEventDetailsPhase1Service {
             Duration cacheTtl,
             Duration minimumDelay,
             Pause pause) {
+        this(
+                controlService,
+                transport,
+                rawSnapshotStore,
+                cache,
+                parsedPersistenceService,
+                parser,
+                clock,
+                cacheTtl,
+                new J4J5ProviderRequestCoordinator(clock, minimumDelay, pause::pause));
+    }
+
+    private J4RealEventDetailsPhase1Service(
+            J4RealPhase1ControlService controlService,
+            EventDetailsProviderTransport transport,
+            RawManualCallSnapshotStore rawSnapshotStore,
+            J4EventDetailsCache cache,
+            J4ParsedEventDetailsPersistenceService parsedPersistenceService,
+            EventDetailsV2Parser parser,
+            Clock clock,
+            Duration cacheTtl,
+            J4J5ProviderRequestCoordinator requestCoordinator) {
         this.controlService = Objects.requireNonNull(controlService, "controlService");
         this.transport = Objects.requireNonNull(transport, "transport");
         this.rawSnapshotStore = Objects.requireNonNull(rawSnapshotStore, "rawSnapshotStore");
@@ -88,8 +107,8 @@ public class J4RealEventDetailsPhase1Service {
         this.parser = Objects.requireNonNull(parser, "parser");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.cacheTtl = requirePositive(cacheTtl, "cacheTtl");
-        this.minimumDelay = requireAtLeastThreeSeconds(minimumDelay);
-        this.pause = Objects.requireNonNull(pause, "pause");
+        this.requestCoordinator = Objects.requireNonNull(
+                requestCoordinator, "requestCoordinator");
     }
 
     public J4RealEventDetailsPhase1Result execute(J4RealPhase1ExecutionClaim claim) {
@@ -128,25 +147,19 @@ public class J4RealEventDetailsPhase1Service {
                 counters.cacheHits++;
             }
             else {
-                if (counters.providerCallAttempts > 0) {
-                    try {
-                        pause.pause(minimumDelay);
+                try (var ignored = requestCoordinator.acquire()) {
+                    if (!controlService.executionMayContinue(claim.requestId())) {
+                        return failed(claim.requestId(), "OPERATOR_STOP", counters, results);
                     }
-                    catch (RuntimeException exception) {
-                        return failAndLock(
-                                claim.requestId(),
-                                "MINIMUM_DELAY_INTERRUPTED",
-                                counters,
-                                results);
-                    }
-                }
-                if (!controlService.executionMayContinue(claim.requestId())) {
-                    return failed(claim.requestId(), "OPERATOR_STOP", counters, results);
-                }
-
-                counters.providerCallAttempts++;
-                try {
+                    counters.providerCallAttempts++;
                     response = transport.execute(request);
+                }
+                catch (J4J5ProviderRequestCoordinator.CoordinationException exception) {
+                    return failAndLock(
+                            claim.requestId(),
+                            "MINIMUM_DELAY_INTERRUPTED",
+                            counters,
+                            results);
                 }
                 catch (EventDetailsTransportException exception) {
                     return failAndLock(
@@ -390,30 +403,9 @@ public class J4RealEventDetailsPhase1Service {
         return value;
     }
 
-    private static Duration requireAtLeastThreeSeconds(Duration value) {
-        Objects.requireNonNull(value, "minimumDelay");
-        if (value.compareTo(Duration.ofSeconds(3)) < 0) {
-            throw new IllegalArgumentException("minimumDelay must be at least three seconds");
-        }
-        return value;
-    }
-
-    private static void sleepSafely(Duration delay) {
-        try {
-            Thread.sleep(delay.toMillis());
-        }
-        catch (InterruptedException exception) {
-            Thread.currentThread().interrupt();
-            throw new MinimumDelayInterruptedException();
-        }
-    }
-
     @FunctionalInterface
     interface Pause {
         void pause(Duration delay);
-    }
-
-    private static final class MinimumDelayInterruptedException extends RuntimeException {
     }
 
     private static final class Counters {

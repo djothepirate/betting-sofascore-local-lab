@@ -437,10 +437,14 @@ ouvrir la fiche d'une identité canonique J4 existante puis sélectionner
 6. attendre l'état terminal ; le chemin nominal tente au maximum `statistics`, puis `incidents`,
    puis `lineups`, avec au moins trois secondes entre deux départs ;
 7. si le résultat est `COMPLETED_LOCKED`, vérifier les trois panneaux locaux, leur complétude ou
-   leur statut `UNAVAILABLE · N/A`, leur source `PROVIDER_SNAPSHOT`, leur parseur V2 ou normaliseur
+   leur statut `UNAVAILABLE · N/A`, leur source `PROVIDER_SNAPSHOT`, leur parseur courant
+   (`event-statistics-v2`, `event-incidents-v13`, `event-lineups-v2`) ou normaliseur
    `event-*-unavailable-v1`, leur snapshot, leur SHA-256 et leur heure de réception, sans ouvrir ou
    copier le payload brut ;
-8. si la campagne doit être abandonnée alors qu'elle est encore `AWAITING_CONFIRMATION` ou
+8. dans les panneaux incidents et compositions, vérifier qu'une complétude `PARTIAL` conserve son
+   badge et son compteur de signaux, mais n'affiche plus la liste technique des chemins JSON
+   manquants au-dessus du tableau ; vérifier que le contenu du tableau reste inchangé ;
+9. si la campagne doit être abandonnée alors qu'elle est encore `AWAITING_CONFIRMATION` ou
    `EXECUTING`, sélectionner **« Arrêt global J5 »** ; après un état terminal, aucun nouvel appel
    n'est possible dans le processus et il suffit d'arrêter l'application.
 
@@ -452,6 +456,17 @@ d'identité, incompatibilité de schéma ou erreur de persistance — ne pas ré
 les familles restantes. Appliquer l'arrêt global si l'interface répond encore, arrêter
 l'application et soumettre l'incident à une décision humaine. Un nouvel en-tête, un autre client
 ou une autre adresse reste interdit.
+
+Sous `event-incidents-v13`, qui hérite sans modification de la règle V12, une séance terminale
+entièrement non minutée peut être compatible à
+`PARTIAL`. Vérifier alors que le marqueur `PEN` et chaque `penaltyShootout` sans minute affichent
+`—`, que les tirs `missed` sans `reason` ni `description` sont conservés sans motif inventé, et que
+la campagne atteint les compositions. Ne jamais interpréter l'ordre de séance comme une minute.
+
+Pour un carton portant `reason="Leaving field"`, vérifier que le motif exact est conservé et rendu
+dans la colonne `MOTIF`, puis que la campagne atteint les compositions. Toute autre valeur de motif
+non documentée doit encore arrêter la campagne en `SCHEMA_INCOMPATIBLE`.
+Toute séance mixte ou incohérente doit rester `SCHEMA_INCOMPATIBLE` et verrouiller la campagne.
 
 Après succès, incident ou abandon, et avant tout autre redémarrage, remettre exactement :
 
@@ -465,8 +480,9 @@ SOFASCORE_BASE_URL=
 SOFASCORE_ALLOWED_ENDPOINTS=
 ```
 
-Un redémarrage local facultatif peut confirmer que le panneau J5 est bloqué ; arrêter ensuite
-l'application. La preuve humaine doit rester minimisée : identifiant fournisseur, UUID canonique,
+Pour la clôture du Work Order réel J5, un redémarrage local de contrôle doit confirmer que les
+panneaux J4 et J5 sont bloqués ; arrêter ensuite l'application. La preuve humaine doit rester
+minimisée : identifiant fournisseur, UUID canonique,
 code terminal, nombre de tentatives et, pour chaque famille réellement reçue, identifiant du
 snapshot, taille, SHA-256, parseur, complétude et identifiant d'observation. Ne jamais consigner le
 JSON brut, l'URI complète, les en-têtes, la phrase de confirmation, un secret ou une autre valeur de
@@ -481,6 +497,65 @@ J5_REAL_STATISTICS_QUALIFICATION=PASS|UNAVAILABLE|FAIL|NOT_ATTEMPTED
 J5_REAL_INCIDENTS_QUALIFICATION=PASS|UNAVAILABLE|FAIL|NOT_ATTEMPTED
 J5_REAL_LINEUPS_QUALIFICATION=PASS|UNAVAILABLE|FAIL|NOT_ATTEMPTED
 J5_PROVIDER_SCHEMA_VALIDATED=YES|NO
+LOCAL_CONFIGURATION_RELOCKED=YES|NO
+APPLICATION_STOPPED=YES|NO
+```
+
+### 3.10 quater Enchaîner J4 phase 2 et J5 dans une même session
+
+Ce mode remplace le double cycle de build/démarrage lorsque l'objectif est de créer une identité
+avec un identifiant J4 choisi, puis d'exécuter J5 sur cette même identité. Il n'automatise aucune
+étape : les deux préparations, phrases, acquittements et confirmations restent distincts.
+
+Application arrêtée, le propriétaire règle temporairement uniquement les clés réseau documentées :
+
+```properties
+SOFASCORE_ENABLED=true
+SOFASCORE_J3_QUALIFICATION_ENABLED=false
+SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true
+SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=true
+SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=true
+SOFASCORE_BASE_URL=https://www.sofascore.com
+SOFASCORE_ALLOWED_ENDPOINTS=EVENT_DETAILS,EVENT_STATISTICS,EVENT_INCIDENTS,EVENT_LINEUPS
+```
+
+Cette combinaison est limitée à J4 sous-étape 2. J3 et J4 sous-étape 1 restent incompatibles avec
+elle. Une famille absente ou supplémentaire bloque le démarrage. Ne pas modifier les autres valeurs
+de `.env`, ne pas les copier dans une preuve et ne jamais ajouter ce fichier à Git.
+
+Effectuer un seul build, puis démarrer PostgreSQL et une seule instance de l'application sur
+`127.0.0.1` :
+
+1. suivre la procédure J4 sous-étape 2 de la section 3.13 jusqu'au résultat terminal de l'identifiant
+   choisi ;
+2. ouvrir le détail de l'identité canonique créée et contrôler son identifiant fournisseur ;
+3. l'arrêt global J4 peut être appliqué à ce stade : il verrouille uniquement J4 et ne doit pas
+   faire apparaître de bloqueur J5 ;
+4. sans arrêter ni reconstruire l'application, ouvrir **« Statistiques, incidents et compositions
+   J5 »** ;
+5. vérifier que la préparation J5 est disponible, puis suivre les étapes 3 à 9 de la section
+   3.10 ter ;
+6. ne jamais ouvrir les deux confirmations dans des onglets concurrents. Un coordinateur commun
+   sérialise néanmoins les transports et impose au moins trois secondes entre deux départs, y
+   compris entre J4 et J5 ;
+7. au premier incident, ne pas réessayer : appliquer uniquement l'arrêt correspondant au jalon en
+   cours, puis arrêter l'application ;
+8. après le dernier test, remettre les sept valeurs bloquées de la section 3.10 ter, redémarrer une
+   fois pour constater les bloqueurs J4 et J5, puis arrêter gracieusement.
+
+La preuve minimale doit montrer un seul démarrage d'application, le résultat J4, la disponibilité
+de la préparation J5 après J4, le résultat J5 et l'absence de retry. Elle ne doit contenir ni JSON
+brut, ni phrase de confirmation, ni URI complète, ni en-tête, ni autre valeur de `.env`.
+
+```text
+COMBINED_SESSION_APPLICATION_STARTS=1
+COMBINED_SESSION_J4_EVENT_ID=<identifiant choisi>
+COMBINED_SESSION_J4_TERMINAL=COMPLETED_LOCKED|FAILED_LOCKED|STOPPED_LOCKED
+COMBINED_SESSION_J4_GLOBAL_STOP_APPLIED=YES|NO
+COMBINED_SESSION_J5_PREPARATION_AFTER_J4=AVAILABLE
+COMBINED_SESSION_J5_TERMINAL=COMPLETED_LOCKED|FAILED_LOCKED|STOPPED_LOCKED
+COMBINED_SESSION_RESTART_BETWEEN_J4_AND_J5=NO
+COMBINED_SESSION_RETRY=0
 LOCAL_CONFIGURATION_RELOCKED=YES|NO
 APPLICATION_STOPPED=YES|NO
 ```

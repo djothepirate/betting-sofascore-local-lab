@@ -130,17 +130,28 @@ class J5EventDataControllerTest {
                 .andExpect(content().string(containsString("Synthetic Outgoing Player")))
                 .andExpect(content().string(containsString("Entrant")))
                 .andExpect(content().string(containsString("Sortant")))
+                .andExpect(content().string(containsString("Passeur")))
                 .andExpect(content().string(containsString("Classe")))
                 .andExpect(content().string(containsString("Motif")))
+                .andExpect(content().string(containsString("Détail")))
+                .andExpect(content().string(containsString("Ordre TAB")))
+                .andExpect(content().string(containsString("Synthetic Goal Assistant")))
+                .andExpect(content().string(containsString("Carton annulé")))
+                .andExpect(content().string(containsString("Woodwork")))
+                .andExpect(content().string(containsString(
+                        "<td>—</td>\n            <td>penaltyShootout</td>")))
                 .andExpect(content().string(containsString("yellow")))
                 .andExpect(content().string(containsString("Argument")))
                 .andExpect(content().string(containsString("4-3-3")))
+                .andExpect(content().string(containsString("4-4-2")))
+                .andExpect(content().string(containsString("Synthetic Away Defender")))
                 .andExpect(content().string(containsString("PROVIDER_SCHEMA_VALIDATED=NO")))
                 .andExpect(content().string(containsString("Trois endpoints, une confirmation, aucun retry")))
                 .andExpect(content().string(containsString("J5_EVENT_DATA_QUALIFICATION_DISABLED")))
                 .andExpect(content().string(containsString("COMPLETE · 100%")))
                 .andExpect(content().string(containsString("PARTIAL · 0%")))
-                .andExpect(content().string(containsString("$.incidents[0].isHome")))
+                .andExpect(content().string(not(containsString("$.incidents["))))
+                .andExpect(content().string(not(containsString("$.home.players["))))
                 .andExpect(content().string(containsString("b".repeat(64))))
                 .andExpect(content().string(containsString("c".repeat(64))))
                 .andExpect(content().string(containsString("d".repeat(64))));
@@ -399,8 +410,24 @@ class J5EventDataControllerTest {
                                         Optional.of(9101L),
                                         Optional.of(9701L),
                                         Optional.of("Synthetic Home Striker"),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
                                         Optional.of(1),
-                                        Optional.of(0)),
+                                        Optional.of(0),
+                                        Optional.of("regular"),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.of(9705L),
+                                        Optional.of("Synthetic Goal Assistant"),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty()),
                                 new EventIncident(
                                         1,
                                         "substitution",
@@ -432,7 +459,44 @@ class J5EventDataControllerTest {
                                         Optional.empty(),
                                         Optional.empty(),
                                         Optional.of("yellow"),
-                                        Optional.of("Argument")))),
+                                        Optional.of("Argument"),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.of(true),
+                                        Optional.empty(),
+                                        Optional.empty()),
+                                new EventIncident(
+                                        3,
+                                        "penaltyShootout",
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.of(true),
+                                        Optional.empty(),
+                                        Optional.of(9706L),
+                                        Optional.of("Synthetic Shootout Taker"),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.of(5),
+                                        Optional.of(4),
+                                        Optional.of("missed"),
+                                        Optional.of("woodwork"),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.empty(),
+                                        Optional.of("Woodwork"),
+                                        Optional.of(9)))),
                 incidentsSource,
                 J5CompletenessReport.measured(
                         0,
@@ -464,7 +528,10 @@ class J5EventDataControllerTest {
                                         Optional.of("D"),
                                         false)))),
                 lineupsSource,
-                J5CompletenessReport.measured(9, 9, List.of()),
+                J5CompletenessReport.measured(
+                        8,
+                        9,
+                        List.of("$.home.players[12].jerseyNumber")),
                 "d".repeat(64));
         return new J5EventDataPage(
                 ZoneId.of("Europe/Paris"),

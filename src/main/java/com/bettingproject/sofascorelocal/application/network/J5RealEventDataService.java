@@ -1,12 +1,12 @@
 package com.bettingproject.sofascorelocal.application.network;
 
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV5Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV6Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV13Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseResult;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportException;
-import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessReport;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventData;
@@ -29,7 +29,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -45,12 +44,9 @@ public class J5RealEventDataService {
     private final CanonicalEventStore canonicalEventStore;
     private final J5EventDataStore eventDataStore;
     private final EventStatisticsV2Parser statisticsParser;
-    private final EventIncidentsV5Parser incidentsParser;
+    private final EventIncidentsV6Parser incidentsParser;
     private final EventLineupsV2Parser lineupsParser;
-    private final Clock clock;
-    private final Duration minimumDelay;
-    private final Pause pause;
-    private Instant lastProviderAttemptAt;
+    private final J4J5ProviderRequestCoordinator requestCoordinator;
 
     @Autowired
     public J5RealEventDataService(
@@ -59,11 +55,10 @@ public class J5RealEventDataService {
             RawManualCallSnapshotStore rawSnapshotStore,
             CanonicalEventStore canonicalEventStore,
             J5EventDataStore eventDataStore,
-            SofascoreProperties properties) {
+            J4J5ProviderRequestCoordinator requestCoordinator) {
         this(controlService, transport, rawSnapshotStore, canonicalEventStore, eventDataStore,
-                new EventStatisticsV2Parser(), new EventIncidentsV5Parser(),
-                new EventLineupsV2Parser(), Clock.systemUTC(), properties.getMinimumDelay(),
-                J5RealEventDataService::sleepSafely);
+                new EventStatisticsV2Parser(), new EventIncidentsV13Parser(),
+                new EventLineupsV2Parser(), requestCoordinator);
     }
 
     J5RealEventDataService(
@@ -73,11 +68,33 @@ public class J5RealEventDataService {
             CanonicalEventStore canonicalEventStore,
             J5EventDataStore eventDataStore,
             EventStatisticsV2Parser statisticsParser,
-            EventIncidentsV5Parser incidentsParser,
+            EventIncidentsV6Parser incidentsParser,
             EventLineupsV2Parser lineupsParser,
             Clock clock,
             Duration minimumDelay,
             Pause pause) {
+        this(
+                controlService,
+                transport,
+                rawSnapshotStore,
+                canonicalEventStore,
+                eventDataStore,
+                statisticsParser,
+                incidentsParser,
+                lineupsParser,
+                new J4J5ProviderRequestCoordinator(clock, minimumDelay, pause::pause));
+    }
+
+    private J5RealEventDataService(
+            J5RealControlService controlService,
+            J5EventDataProviderTransport transport,
+            RawManualCallSnapshotStore rawSnapshotStore,
+            CanonicalEventStore canonicalEventStore,
+            J5EventDataStore eventDataStore,
+            EventStatisticsV2Parser statisticsParser,
+            EventIncidentsV6Parser incidentsParser,
+            EventLineupsV2Parser lineupsParser,
+            J4J5ProviderRequestCoordinator requestCoordinator) {
         this.controlService = Objects.requireNonNull(controlService, "controlService");
         this.transport = Objects.requireNonNull(transport, "transport");
         this.rawSnapshotStore = Objects.requireNonNull(rawSnapshotStore, "rawSnapshotStore");
@@ -86,9 +103,8 @@ public class J5RealEventDataService {
         this.statisticsParser = Objects.requireNonNull(statisticsParser, "statisticsParser");
         this.incidentsParser = Objects.requireNonNull(incidentsParser, "incidentsParser");
         this.lineupsParser = Objects.requireNonNull(lineupsParser, "lineupsParser");
-        this.clock = Objects.requireNonNull(clock, "clock");
-        this.minimumDelay = requireAtLeastThreeSeconds(minimumDelay);
-        this.pause = Objects.requireNonNull(pause, "pause");
+        this.requestCoordinator = Objects.requireNonNull(
+                requestCoordinator, "requestCoordinator");
     }
 
     public synchronized J5RealCampaignResult execute(J5RealExecutionClaim claim) {
@@ -109,23 +125,19 @@ public class J5RealEventDataService {
             if (!controlService.executionMayContinue(claim.requestId())) {
                 return failed(claim, "OPERATOR_STOP", attempts, results);
             }
-            try {
-                awaitMinimumDelay();
-            }
-            catch (RuntimeException exception) {
-                return failAndLock(
-                        claim, "MINIMUM_DELAY_INTERRUPTED", attempts, results);
-            }
-            if (!controlService.executionMayContinue(claim.requestId())) {
-                return failed(claim, "OPERATOR_STOP", attempts, results);
-            }
-
             J5EventDataProviderRequest request = new J5EventDataProviderRequest(
                     claim.providerOrigin(), claim.eventId(), endpoint);
             J5EventDataTransportResponse response;
-            try {
+            try (var ignored = requestCoordinator.acquire()) {
+                if (!controlService.executionMayContinue(claim.requestId())) {
+                    return failed(claim, "OPERATOR_STOP", attempts, results);
+                }
                 response = transport.execute(request);
                 attempts++;
+            }
+            catch (J4J5ProviderRequestCoordinator.CoordinationException exception) {
+                return failAndLock(
+                        claim, "MINIMUM_DELAY_INTERRUPTED", attempts, results);
             }
             catch (J5EventDataTransportException exception) {
                 return failAndLock(claim,
@@ -318,7 +330,7 @@ public class J5RealEventDataService {
     private static String parserVersion(SofascoreEndpointType endpoint) {
         return switch (endpoint) {
             case EVENT_STATISTICS -> EventStatisticsV2Parser.PARSER_VERSION;
-            case EVENT_INCIDENTS -> EventIncidentsV5Parser.PARSER_VERSION;
+            case EVENT_INCIDENTS -> EventIncidentsV13Parser.PARSER_VERSION;
             case EVENT_LINEUPS -> EventLineupsV2Parser.PARSER_VERSION;
             default -> throw new IllegalArgumentException("unsupported J5 endpoint");
         };
@@ -376,44 +388,8 @@ public class J5RealEventDataService {
         return "HTTP_STATUS_" + status;
     }
 
-    private synchronized void awaitMinimumDelay() {
-        Instant now = clock.instant();
-        if (lastProviderAttemptAt != null) {
-            Instant earliest = lastProviderAttemptAt.plus(minimumDelay);
-            if (now.isBefore(earliest)) {
-                pause.pause(Duration.between(now, earliest));
-                now = clock.instant();
-                if (now.isBefore(earliest)) {
-                    now = earliest;
-                }
-            }
-        }
-        lastProviderAttemptAt = now;
-    }
-
-    private static Duration requireAtLeastThreeSeconds(Duration value) {
-        Objects.requireNonNull(value, "minimumDelay");
-        if (value.compareTo(Duration.ofSeconds(3)) < 0) {
-            throw new IllegalArgumentException("minimumDelay must be at least three seconds");
-        }
-        return value;
-    }
-
-    private static void sleepSafely(Duration delay) {
-        try {
-            Thread.sleep(delay.toMillis());
-        }
-        catch (InterruptedException exception) {
-            Thread.currentThread().interrupt();
-            throw new MinimumDelayInterruptedException();
-        }
-    }
-
     @FunctionalInterface
     interface Pause {
         void pause(Duration delay);
-    }
-
-    private static final class MinimumDelayInterruptedException extends RuntimeException {
     }
 }

@@ -54,7 +54,7 @@ class EventIncidentsV5ParserTest {
         });
         assertThat(result.data()).hasValueSatisfying(incidents -> {
             assertThat(incidents.incidents()).hasSize(1);
-            assertThat(incidents.incidents().getFirst().minute()).isEqualTo(58);
+            assertThat(incidents.incidents().getFirst().minute()).contains(58);
             assertThat(incidents.incidents().getFirst().incidentClass())
                     .contains("yellow");
             assertThat(incidents.incidents().getFirst().reason()).contains("Argument");

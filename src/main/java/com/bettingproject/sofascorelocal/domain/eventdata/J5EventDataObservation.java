@@ -66,9 +66,22 @@ public record J5EventDataObservation(
                 && source.kind() == EventSourceKind.PROVIDER_SNAPSHOT) {
             boolean hasReplacementPlayers = incidents.incidents().stream()
                     .anyMatch(EventIncident::hasReplacementPlayers);
-            boolean compatible = "event-incidents-v5".equals(source.parserVersion())
-                    || "event-incidents-v4".equals(source.parserVersion())
-                    || (!hasReplacementPlayers
+            boolean hasComprehensiveDetails = incidents.incidents().stream()
+                    .anyMatch(EventIncident::hasComprehensiveDetails);
+            boolean compatible = "event-incidents-v13".equals(source.parserVersion())
+                    || "event-incidents-v12".equals(source.parserVersion())
+                    || "event-incidents-v11".equals(source.parserVersion())
+                    || "event-incidents-v10".equals(source.parserVersion())
+                    || "event-incidents-v9".equals(source.parserVersion())
+                    || "event-incidents-v8".equals(source.parserVersion())
+                    || "event-incidents-v7".equals(source.parserVersion())
+                    || "event-incidents-v6".equals(source.parserVersion())
+                    || (!hasComprehensiveDetails
+                            && "event-incidents-v5".equals(source.parserVersion()))
+                    || (!hasComprehensiveDetails
+                            && "event-incidents-v4".equals(source.parserVersion()))
+                    || (!hasComprehensiveDetails
+                            && !hasReplacementPlayers
                             && "event-incidents-v3".equals(source.parserVersion()));
             if (!compatible) {
                 throw new IllegalArgumentException(
@@ -116,7 +129,13 @@ public record J5EventDataObservation(
                         && incidents.incidents().stream()
                                 .anyMatch(incident -> incident.incidentClass().isPresent()
                                         || incident.reason().isPresent());
-                output.writeUTF(includesIncidentDetails
+                boolean includesComprehensiveIncidentDetails =
+                        data instanceof EventIncidents incidents
+                                && incidents.incidents().stream()
+                                        .anyMatch(EventIncident::hasComprehensiveDetails);
+                output.writeUTF(includesComprehensiveIncidentDetails
+                        ? "j5-event-data-observation-v4"
+                        : includesIncidentDetails
                         ? "j5-event-data-observation-v3"
                         : includesReplacementPlayers
                                 ? "j5-event-data-observation-v2"
@@ -129,7 +148,8 @@ public record J5EventDataObservation(
                             output,
                             incidents,
                             includesReplacementPlayers,
-                            includesIncidentDetails);
+                            includesIncidentDetails,
+                            includesComprehensiveIncidentDetails);
                     case EventLineups lineups -> writeLineups(output, lineups);
                 }
             }
@@ -158,12 +178,13 @@ public record J5EventDataObservation(
             DataOutputStream output,
             EventIncidents incidents,
             boolean includesReplacementPlayers,
-            boolean includesIncidentDetails) throws IOException {
+            boolean includesIncidentDetails,
+            boolean includesComprehensiveIncidentDetails) throws IOException {
         output.writeInt(incidents.incidents().size());
         for (EventIncident incident : incidents.incidents()) {
             output.writeInt(incident.sequence());
             output.writeUTF(incident.incidentType());
-            output.writeInt(incident.minute());
+            output.writeInt(incident.minute().orElse(-1));
             writeOptionalInteger(output, incident.addedTime());
             writeOptionalBoolean(output, incident.home());
             writeOptionalLong(output, incident.participantProviderId());
@@ -180,6 +201,18 @@ public record J5EventDataObservation(
             if (includesIncidentDetails) {
                 writeOptionalText(output, incident.incidentClass());
                 writeOptionalText(output, incident.reason());
+            }
+            if (includesComprehensiveIncidentDetails) {
+                writeOptionalText(output, incident.periodText());
+                writeOptionalBoolean(output, incident.injury());
+                writeOptionalLong(output, incident.assistProviderId());
+                writeOptionalText(output, incident.assistName());
+                writeOptionalText(output, incident.goalOrigin());
+                writeOptionalInteger(output, incident.injuryTimeLength());
+                writeOptionalBoolean(output, incident.varConfirmed());
+                writeOptionalBoolean(output, incident.rescinded());
+                writeOptionalText(output, incident.description());
+                writeOptionalInteger(output, incident.shootoutSequence());
             }
         }
     }

@@ -41,7 +41,7 @@ class EventIncidentsV3ParserTest {
         assertThat(result.data()).hasValueSatisfying(incidents -> {
             assertThat(incidents.incidents()).hasSize(4);
             assertThat(incidents.incidents().getFirst().incidentType()).isEqualTo("period");
-            assertThat(incidents.incidents().getFirst().minute()).isEqualTo(90);
+            assertThat(incidents.incidents().getFirst().minute()).contains(90);
             assertThat(incidents.incidents().getFirst().addedTime()).isEmpty();
             assertThat(incidents.incidents().get(1).addedTime()).contains(5);
         });

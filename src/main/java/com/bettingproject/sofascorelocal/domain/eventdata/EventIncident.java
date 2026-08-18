@@ -6,7 +6,7 @@ import java.util.Optional;
 public record EventIncident(
         int sequence,
         String incidentType,
-        int minute,
+        Optional<Integer> minute,
         Optional<Integer> addedTime,
         Optional<Boolean> home,
         Optional<Long> participantProviderId,
@@ -19,31 +19,37 @@ public record EventIncident(
         Optional<Integer> homeScore,
         Optional<Integer> awayScore,
         Optional<String> incidentClass,
-        Optional<String> reason) {
+        Optional<String> reason,
+        Optional<String> periodText,
+        Optional<Boolean> injury,
+        Optional<Long> assistProviderId,
+        Optional<String> assistName,
+        Optional<String> goalOrigin,
+        Optional<Integer> injuryTimeLength,
+        Optional<Boolean> varConfirmed,
+        Optional<Boolean> rescinded,
+        Optional<String> description,
+        Optional<Integer> shootoutSequence) {
 
     public EventIncident {
         if (sequence < 0) {
             throw new IllegalArgumentException("sequence cannot be negative");
         }
         incidentType = boundedText(incidentType, "incidentType", 64);
-        if (minute < 0 || minute > 300) {
-            throw new IllegalArgumentException("minute must be between 0 and 300");
-        }
-        addedTime = boundedInteger(addedTime, "addedTime", 0, 30);
+        minute = boundedInteger(minute, "minute", 0, 300);
+        addedTime = boundedInteger(addedTime, "addedTime", 0, 300);
         home = Objects.requireNonNull(home, "home");
         participantProviderId = positiveLong(participantProviderId, "participantProviderId");
         playerProviderId = positiveLong(playerProviderId, "playerProviderId");
         playerName = Objects.requireNonNull(playerName, "playerName")
                 .map(value -> boundedText(value, "playerName", 200));
-        if (playerProviderId.isPresent() != playerName.isPresent()) {
-            throw new IllegalArgumentException("player id and name must be present together");
-        }
+        requireNameWhenIdPresent(playerProviderId, playerName, "player");
         playerInProviderId = positiveLong(playerInProviderId, "playerInProviderId");
         playerInName = boundedOptionalText(playerInName, "playerInName", 200);
-        requirePlayerPair(playerInProviderId, playerInName, "incoming player");
+        requireNameWhenIdPresent(playerInProviderId, playerInName, "incoming player");
         playerOutProviderId = positiveLong(playerOutProviderId, "playerOutProviderId");
         playerOutName = boundedOptionalText(playerOutName, "playerOutName", 200);
-        requirePlayerPair(playerOutProviderId, playerOutName, "outgoing player");
+        requireNameWhenIdPresent(playerOutProviderId, playerOutName, "outgoing player");
         homeScore = boundedInteger(homeScore, "homeScore", 0, 99);
         awayScore = boundedInteger(awayScore, "awayScore", 0, 99);
         if (homeScore.isPresent() != awayScore.isPresent()) {
@@ -51,6 +57,128 @@ public record EventIncident(
         }
         incidentClass = boundedOptionalText(incidentClass, "incidentClass", 64);
         reason = boundedOptionalText(reason, "reason", 200);
+        periodText = boundedOptionalText(periodText, "periodText", 64);
+        injury = Objects.requireNonNull(injury, "injury");
+        assistProviderId = positiveLong(assistProviderId, "assistProviderId");
+        assistName = boundedOptionalText(assistName, "assistName", 200);
+        requireNameWhenIdPresent(assistProviderId, assistName, "assist");
+        goalOrigin = boundedOptionalText(goalOrigin, "goalOrigin", 64);
+        injuryTimeLength = boundedInteger(injuryTimeLength, "injuryTimeLength", 0, 300);
+        varConfirmed = Objects.requireNonNull(varConfirmed, "varConfirmed");
+        rescinded = Objects.requireNonNull(rescinded, "rescinded");
+        description = boundedOptionalText(description, "description", 200);
+        shootoutSequence = boundedInteger(shootoutSequence, "shootoutSequence", 1, 999);
+        boolean minuteMayBeAbsent = "penaltyShootout".equals(incidentType)
+                || ("period".equals(incidentType) && periodText.filter("PEN"::equals).isPresent());
+        if (minute.isEmpty() && !minuteMayBeAbsent) {
+            throw new IllegalArgumentException(
+                    "minute may be absent only for a penalty shootout or its PEN marker");
+        }
+        if (minute.isEmpty() && addedTime.isPresent()) {
+            throw new IllegalArgumentException("addedTime requires a normalized minute");
+        }
+    }
+
+    public EventIncident(
+            int sequence,
+            String incidentType,
+            int minute,
+            Optional<Integer> addedTime,
+            Optional<Boolean> home,
+            Optional<Long> participantProviderId,
+            Optional<Long> playerProviderId,
+            Optional<String> playerName,
+            Optional<Long> playerInProviderId,
+            Optional<String> playerInName,
+            Optional<Long> playerOutProviderId,
+            Optional<String> playerOutName,
+            Optional<Integer> homeScore,
+            Optional<Integer> awayScore,
+            Optional<String> incidentClass,
+            Optional<String> reason,
+            Optional<String> periodText,
+            Optional<Boolean> injury,
+            Optional<Long> assistProviderId,
+            Optional<String> assistName,
+            Optional<String> goalOrigin,
+            Optional<Integer> injuryTimeLength,
+            Optional<Boolean> varConfirmed,
+            Optional<Boolean> rescinded,
+            Optional<String> description,
+            Optional<Integer> shootoutSequence) {
+        this(
+                sequence,
+                incidentType,
+                Optional.of(minute),
+                addedTime,
+                home,
+                participantProviderId,
+                playerProviderId,
+                playerName,
+                playerInProviderId,
+                playerInName,
+                playerOutProviderId,
+                playerOutName,
+                homeScore,
+                awayScore,
+                incidentClass,
+                reason,
+                periodText,
+                injury,
+                assistProviderId,
+                assistName,
+                goalOrigin,
+                injuryTimeLength,
+                varConfirmed,
+                rescinded,
+                description,
+                shootoutSequence);
+    }
+
+    public EventIncident(
+            int sequence,
+            String incidentType,
+            int minute,
+            Optional<Integer> addedTime,
+            Optional<Boolean> home,
+            Optional<Long> participantProviderId,
+            Optional<Long> playerProviderId,
+            Optional<String> playerName,
+            Optional<Long> playerInProviderId,
+            Optional<String> playerInName,
+            Optional<Long> playerOutProviderId,
+            Optional<String> playerOutName,
+            Optional<Integer> homeScore,
+            Optional<Integer> awayScore,
+            Optional<String> incidentClass,
+            Optional<String> reason) {
+        this(
+                sequence,
+                incidentType,
+                minute,
+                addedTime,
+                home,
+                participantProviderId,
+                playerProviderId,
+                playerName,
+                playerInProviderId,
+                playerInName,
+                playerOutProviderId,
+                playerOutName,
+                homeScore,
+                awayScore,
+                incidentClass,
+                reason,
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty());
     }
 
     public EventIncident(
@@ -116,7 +244,62 @@ public record EventIncident(
     }
 
     public boolean hasReplacementPlayers() {
-        return playerInProviderId.isPresent() || playerOutProviderId.isPresent();
+        return playerInName.isPresent() || playerOutName.isPresent();
+    }
+
+    public boolean hasComprehensiveDetails() {
+        return periodText.isPresent()
+                || injury.isPresent()
+                || assistName.isPresent()
+                || goalOrigin.isPresent()
+                || injuryTimeLength.isPresent()
+                || varConfirmed.isPresent()
+                || rescinded.isPresent()
+                || description.isPresent()
+                || shootoutSequence.isPresent();
+    }
+
+    public String detailLabel() {
+        if (periodText.isPresent()) {
+            return periodText.orElseThrow();
+        }
+        if ("substitution".equals(incidentType) && injury.orElse(false)) {
+            return "Remplacement sur blessure";
+        }
+        if (goalOrigin.isPresent()) {
+            return goalOrigin.orElseThrow();
+        }
+        if (injuryTimeLength.isPresent()) {
+            return injuryTimeLength.orElseThrow() + " min";
+        }
+        if (varConfirmed.isPresent()) {
+            return varConfirmed.orElseThrow()
+                    ? "Décision confirmée"
+                    : "Décision rejetée";
+        }
+        if (rescinded.orElse(false)) {
+            return "Carton annulé";
+        }
+        return "—";
+    }
+
+    /**
+     * Human-readable business reason shown in the incident table.
+     *
+     * <p>Cards expose their provider {@code reason}; penalty incidents expose the more readable
+     * provider {@code description}. Keeping this choice in the domain view avoids duplicating the
+     * same penalty value in both the Motif and Détail columns.</p>
+     */
+    public String motifLabel() {
+        return description.or(() -> reason).orElse("—");
+    }
+
+    public String minuteLabel() {
+        return minute
+                .map(value -> addedTime
+                        .map(additional -> value + "+" + additional)
+                        .orElse(Integer.toString(value)))
+                .orElse("—");
     }
 
     public String sideLabel() {
@@ -139,12 +322,12 @@ public record EventIncident(
                 .map(item -> boundedText(item, name, maximumLength));
     }
 
-    private static void requirePlayerPair(
+    private static void requireNameWhenIdPresent(
             Optional<Long> providerId,
             Optional<String> name,
             String label) {
-        if (providerId.isPresent() != name.isPresent()) {
-            throw new IllegalArgumentException(label + " id and name must be present together");
+        if (providerId.isPresent() && name.isEmpty()) {
+            throw new IllegalArgumentException(label + " name is required with its id");
         }
     }
 

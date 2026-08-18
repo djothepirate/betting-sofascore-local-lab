@@ -39,6 +39,7 @@
     },
     {
       "incidentType": "substitution",
+      "incidentClass": "regular",
       "time": 70,
       "isHome": false,
       "playerIn": {

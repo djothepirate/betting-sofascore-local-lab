@@ -187,7 +187,17 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 home_score,
                 away_score,
                 incident_class,
-                reason
+                reason,
+                period_text,
+                injury,
+                assist_provider_id,
+                assist_name,
+                goal_origin,
+                injury_time_length,
+                var_confirmed,
+                rescinded,
+                description,
+                shootout_sequence
             ) values (
                 :observationId,
                 'EVENT_INCIDENTS',
@@ -206,7 +216,17 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 :homeScore,
                 :awayScore,
                 :incidentClass,
-                :reason
+                :reason,
+                :periodText,
+                :injury,
+                :assistProviderId,
+                :assistName,
+                :goalOrigin,
+                :injuryTimeLength,
+                :varConfirmed,
+                :rescinded,
+                :description,
+                :shootoutSequence
             )
             """;
 
@@ -227,7 +247,17 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 home_score,
                 away_score,
                 incident_class,
-                reason
+                reason,
+                period_text,
+                injury,
+                assist_provider_id,
+                assist_name,
+                goal_origin,
+                injury_time_length,
+                var_confirmed,
+                rescinded,
+                description,
+                shootout_sequence
             from j5_event_incident
             where observation_id = :observationId
             order by incident_order
@@ -408,7 +438,7 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                     .addValue("observationId", observationId)
                     .addValue("incidentOrder", incident.sequence())
                     .addValue("incidentType", incident.incidentType())
-                    .addValue("minute", incident.minute())
+                    .addValue("minute", incident.minute().orElse(null), Types.SMALLINT)
                     .addValue("addedTime", incident.addedTime().orElse(null), Types.SMALLINT)
                     .addValue("isHome", incident.home().orElse(null), Types.BOOLEAN)
                     .addValue(
@@ -442,7 +472,26 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                             "incidentClass",
                             incident.incidentClass().orElse(null),
                             Types.VARCHAR)
-                    .addValue("reason", incident.reason().orElse(null), Types.VARCHAR);
+                    .addValue("reason", incident.reason().orElse(null), Types.VARCHAR)
+                    .addValue("periodText", incident.periodText().orElse(null), Types.VARCHAR)
+                    .addValue("injury", incident.injury().orElse(null), Types.BOOLEAN)
+                    .addValue(
+                            "assistProviderId",
+                            incident.assistProviderId().orElse(null),
+                            Types.BIGINT)
+                    .addValue("assistName", incident.assistName().orElse(null), Types.VARCHAR)
+                    .addValue("goalOrigin", incident.goalOrigin().orElse(null), Types.VARCHAR)
+                    .addValue(
+                            "injuryTimeLength",
+                            incident.injuryTimeLength().orElse(null),
+                            Types.SMALLINT)
+                    .addValue("varConfirmed", incident.varConfirmed().orElse(null), Types.BOOLEAN)
+                    .addValue("rescinded", incident.rescinded().orElse(null), Types.BOOLEAN)
+                    .addValue("description", incident.description().orElse(null), Types.VARCHAR)
+                    .addValue(
+                            "shootoutSequence",
+                            incident.shootoutSequence().orElse(null),
+                            Types.SMALLINT);
         }
         if (batches.length > 0) {
             jdbcTemplate.batchUpdate(INSERT_INCIDENT_SQL, batches);
@@ -568,7 +617,7 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 (resultSet, rowNumber) -> new EventIncident(
                         resultSet.getInt("incident_order"),
                         resultSet.getString("incident_type"),
-                        resultSet.getInt("minute"),
+                        optionalInteger(resultSet, "minute"),
                         optionalInteger(resultSet, "added_time"),
                         Optional.ofNullable(resultSet.getObject("is_home", Boolean.class)),
                         optionalLong(resultSet, "participant_provider_id"),
@@ -581,7 +630,17 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                         optionalInteger(resultSet, "home_score"),
                         optionalInteger(resultSet, "away_score"),
                         Optional.ofNullable(resultSet.getString("incident_class")),
-                        Optional.ofNullable(resultSet.getString("reason"))));
+                        Optional.ofNullable(resultSet.getString("reason")),
+                        Optional.ofNullable(resultSet.getString("period_text")),
+                        Optional.ofNullable(resultSet.getObject("injury", Boolean.class)),
+                        optionalLong(resultSet, "assist_provider_id"),
+                        Optional.ofNullable(resultSet.getString("assist_name")),
+                        Optional.ofNullable(resultSet.getString("goal_origin")),
+                        optionalInteger(resultSet, "injury_time_length"),
+                        Optional.ofNullable(resultSet.getObject("var_confirmed", Boolean.class)),
+                        Optional.ofNullable(resultSet.getObject("rescinded", Boolean.class)),
+                        Optional.ofNullable(resultSet.getString("description")),
+                        optionalInteger(resultSet, "shootout_sequence")));
         return new EventIncidents(parent.identity().providerEventId(), incidents);
     }
 

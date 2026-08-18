@@ -204,47 +204,69 @@ public class SofascoreProperties {
                 && allowedEndpoints.equals(Set.of(SofascoreEndpointType.SCHEDULED_EVENTS)));
     }
 
-    @AssertTrue(message = "J4 EVENT_DETAILS qualification requires explicit connector, raw storage and only EVENT_DETAILS")
+    @AssertTrue(message = "J4 EVENT_DETAILS qualification requires explicit connector, raw storage and the exact active qualification endpoints")
     public boolean isJ4EventDetailsQualificationConfigurationSafe() {
         return !j4EventDetailsQualificationEnabled
                 || (enabled
                 && !j3QualificationEnabled
-                && !j5EventDataQualificationEnabled
+                && (!j5EventDataQualificationEnabled || j4EventDetailsPhase2Enabled)
                 && maximumConcurrency == 1
                 && storeRawPayloads
                 && !automaticRefreshEnabled
                 && !livePollingEnabled
-                && allowedEndpoints.equals(Set.of(SofascoreEndpointType.EVENT_DETAILS)));
+                && hasExactActiveQualificationEndpoints());
     }
 
-    @AssertTrue(message = "J5 event-data qualification requires its three exact endpoints and no other provider qualification")
+    @AssertTrue(message = "J5 event-data qualification requires its exact endpoints; it may share one session with J4 phase 2 only")
     public boolean isJ5EventDataQualificationConfigurationSafe() {
         return !j5EventDataQualificationEnabled
                 || (enabled
                 && !j3QualificationEnabled
-                && !j4EventDetailsQualificationEnabled
-                && !j4EventDetailsPhase2Enabled
+                && (!j4EventDetailsQualificationEnabled || j4EventDetailsPhase2Enabled)
                 && maximumConcurrency == 1
                 && storeRawPayloads
                 && !automaticRefreshEnabled
                 && !livePollingEnabled
-                && allowedEndpoints.equals(Set.of(
-                        SofascoreEndpointType.EVENT_STATISTICS,
-                        SofascoreEndpointType.EVENT_INCIDENTS,
-                        SofascoreEndpointType.EVENT_LINEUPS)));
+                && hasExactActiveQualificationEndpoints());
     }
 
-    @AssertTrue(message = "J3, J4 and J5 provider qualification paths are mutually exclusive")
+    @AssertTrue(message = "J3 remains exclusive; only J4 phase 2 and J5 may share a provider qualification session")
     public boolean isOnlyOneProviderQualificationPathEnabled() {
-        int enabledPaths = (j3QualificationEnabled ? 1 : 0)
-                + (j4EventDetailsQualificationEnabled ? 1 : 0)
-                + (j5EventDataQualificationEnabled ? 1 : 0);
-        return enabledPaths <= 1;
+        return !j3QualificationEnabled
+                || (!j4EventDetailsQualificationEnabled
+                && !j5EventDataQualificationEnabled);
+    }
+
+    @AssertTrue(message = "a combined J4/J5 session requires J4 phase 2")
+    public boolean isCombinedJ4J5SelectionSafe() {
+        return !j4EventDetailsQualificationEnabled
+                || !j5EventDataQualificationEnabled
+                || j4EventDetailsPhase2Enabled;
     }
 
     @AssertTrue(message = "J4 phase 2 requires the J4 EVENT_DETAILS qualification path")
     public boolean isJ4EventDetailsPhase2SelectionSafe() {
         return !j4EventDetailsPhase2Enabled || j4EventDetailsQualificationEnabled;
+    }
+
+    public boolean hasExactActiveQualificationEndpoints() {
+        return allowedEndpoints.equals(activeQualificationEndpoints());
+    }
+
+    public Set<SofascoreEndpointType> activeQualificationEndpoints() {
+        Set<SofascoreEndpointType> expected = new LinkedHashSet<>();
+        if (j3QualificationEnabled) {
+            expected.add(SofascoreEndpointType.SCHEDULED_EVENTS);
+        }
+        if (j4EventDetailsQualificationEnabled) {
+            expected.add(SofascoreEndpointType.EVENT_DETAILS);
+        }
+        if (j5EventDataQualificationEnabled) {
+            expected.add(SofascoreEndpointType.EVENT_STATISTICS);
+            expected.add(SofascoreEndpointType.EVENT_INCIDENTS);
+            expected.add(SofascoreEndpointType.EVENT_LINEUPS);
+        }
+        return Set.copyOf(expected);
     }
 
     private static boolean isBoundedTimeout(Duration timeout) {
