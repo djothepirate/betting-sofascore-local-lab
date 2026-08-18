@@ -90,6 +90,8 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -2141,6 +2143,38 @@ class FlywayMigrationIT {
                 snapshotId))
                 .isInstanceOf(RuntimeException.class)
                 .hasStackTraceContaining("provider_snapshot deletion is forbidden");
+    }
+
+    @Test
+    void executesJ6BackupFingerprintQueriesAgainstTheMigratedSchema() throws Exception {
+        String script = Files.readString(
+                Path.of("scripts", "Backup-Restore-J6.ps1"),
+                StandardCharsets.UTF_8);
+
+        assertThat(jdbcTemplate.queryForObject(
+                powerShellHereString(script, "$flywaySql"),
+                String.class)).isEqualTo("22");
+        assertThat(jdbcTemplate.queryForObject(
+                powerShellHereString(script, "$snapshotFingerprintSql"),
+                String.class)).isNotNull();
+        assertThat(jdbcTemplate.queryForObject(
+                powerShellHereString(script, "$occurrenceFingerprintSql"),
+                String.class)).isNotNull();
+        assertThat(jdbcTemplate.queryForObject(
+                powerShellHereString(script, "$normalizedFingerprintSql"),
+                String.class)).isNotNull();
+    }
+
+    private static String powerShellHereString(String script, String variableName) {
+        Pattern assignment = Pattern.compile(
+                "^" + Pattern.quote(variableName) + "\\s*=\\s*@'\\R(.*?)\\R'@$",
+                Pattern.MULTILINE | Pattern.DOTALL);
+        Matcher matcher = assignment.matcher(script);
+        if (!matcher.find()) {
+            throw new IllegalArgumentException(
+                    "PowerShell here-string not found: " + variableName);
+        }
+        return matcher.group(1);
     }
 
     private static String parserConstraint(JdbcTemplate jdbcTemplate, String schema) {

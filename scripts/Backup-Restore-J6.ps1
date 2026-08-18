@@ -118,17 +118,21 @@ from provider_snapshot_occurrence
 $normalizedFingerprintSql = @'
 select coalesce(string_agg(value, E'\n' order by value), '')
 from (
-    select concat_ws('|', 'STATE', id, source_snapshot_id, source_reference,
-        payload_sha256, parser_version, normalized_sha256) as value
-    from canonical_event_observation
+    select concat_ws('|', 'STATE', observation.id, observation.source_snapshot_id,
+        observation.source_reference, observation.source_payload_sha256,
+        observation.parser_version, observation.normalized_sha256) as value
+    from canonical_event_observation observation
     union all
-    select concat_ws('|', 'DETAILS', id, source_snapshot_id, source_reference,
-        payload_sha256, parser_version, normalized_sha256) as value
-    from event_detail_observation
+    select concat_ws('|', 'DETAILS', observation.id, observation.source_snapshot_id,
+        observation.source_reference, observation.source_payload_sha256,
+        observation.parser_version, observation.normalized_sha256) as value
+    from event_detail_observation observation
     union all
-    select concat_ws('|', endpoint_type, id, source_snapshot_id, source_reference,
-        payload_sha256, parser_version, normalized_sha256) as value
-    from j5_event_data_observation
+    select concat_ws('|', observation.endpoint_type, observation.id,
+        observation.source_snapshot_id, observation.source_reference,
+        observation.source_payload_sha256, observation.parser_version,
+        observation.normalized_sha256) as value
+    from j5_event_data_observation observation
 ) normalized
 '@
 

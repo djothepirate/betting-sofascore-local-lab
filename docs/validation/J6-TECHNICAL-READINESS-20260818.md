@@ -74,12 +74,13 @@ Résultat :
 ```text
 BUILD=SUCCESS
 STANDARD_TESTS=394
-INTEGRATION_TESTS=38
+INTEGRATION_TESTS=39
 FAILURES=0
 ERRORS=0
 SKIPPED=0
 FLYWAY_FRESH_SCHEMA=V1_TO_V22_PASS
 FLYWAY_UPGRADE=V21_TO_V22_PASS
+BACKUP_SCRIPT_SQL_AGAINST_V22=PASS
 POSTGRESQL=18.4
 SOFASCORE_CALLS=0
 ```
@@ -122,6 +123,7 @@ livraison du lot documentaire.
 | audit de purge | append-only et complet | intégration V22 |
 | modification arbitraire d'un snapshot | refus PostgreSQL | trigger V22 |
 | suppression d'un snapshot | refus PostgreSQL | trigger V22 |
+| requêtes de qualification de sauvegarde | exécutables sur le schéma V22 | script + intégration |
 
 ## 5. Sauvegarde et restauration
 
@@ -144,7 +146,9 @@ manifeste, Flyway V22, la couverture, tous les opt-ins réseau et le verrou pers
 Java s'exécute avec `WebApplicationType.NONE`.
 
 Ces propriétés sont qualifiées par analyse syntaxique, revue de code et tests du service/de la
-base éphémère. L'exécution interactive réelle avec `age` reste `PENDING`.
+base éphémère. Après la détection opérateur d'un ancien nom de colonne, le test d'intégration extrait
+également les quatre requêtes multi-lignes du script et les exécute contre PostgreSQL 18.4 au schéma
+V22. L'exécution interactive réelle complète avec `age` reste `PENDING`.
 
 ## 6. Garde-fous maintenus
 
@@ -177,6 +181,13 @@ fournisseur restent qualifiées par les tests automatisés.
 
 L'opérateur doit exécuter le script avec `age`, conserver les deux fichiers hors dépôt, vérifier le
 résultat `J6_BACKUP_RESULT=QUALIFIED` et confirmer que la base temporaire a été supprimée.
+
+Une préqualification du 2026-08-19 confirme PowerShell `7.6.5 Core`, `age v1.3.1`, Docker `29.6.2`
+et PostgreSQL `18.4 healthy`. Le premier essai a validé le refus lorsque l'application écoutait
+encore sur 8087. Le second, application arrêtée, a détecté avant toute sauvegarde que l'empreinte
+normalisée référençait `payload_sha256` au lieu de `source_payload_sha256`. Aucun fichier `.age`,
+manifeste, base temporaire ou purge n'a résulté de ces essais. Le défaut et sa régression sont
+corrigés ; une nouvelle exécution interactive reste requise.
 
 ### 7.3 Purge primaire
 

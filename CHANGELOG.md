@@ -44,6 +44,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Corrigé
 
+- correction de l'empreinte des provenances normalisées dans le script de sauvegarde/restauration
+  J6 : les trois tables d'observations utilisent désormais leur colonne réelle
+  `source_payload_sha256` au lieu de `payload_sha256` ; une régression d'intégration extrait les
+  requêtes du script et les exécute contre le schéma Flyway V22 afin de détecter toute nouvelle
+  dérive avant la qualification opérateur ;
 - retrait de la liste technique des chemins JSON manquants au-dessus des tableaux
   `EVENT_INCIDENTS` et `EVENT_LINEUPS` : les rapports de complétude, badges, compteurs, données et
   lignes des tableaux restent inchangés ; une régression MVC alimente volontairement les deux
