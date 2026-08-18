@@ -1,0 +1,23 @@
+{
+  "incidents": [
+    {
+      "incidentType": "goal",
+      "time": 18,
+      "isHome": true,
+      "team": {"id": 101, "name": "Home"},
+      "player": {"id": 1001, "name": "Home Striker"},
+      "homeScore": 1,
+      "awayScore": 0,
+      "id": 7001
+    },
+    {
+      "incidentType": "card",
+      "incidentClass": "yellow",
+      "time": 41,
+      "addedTime": 1,
+      "isHome": false,
+      "teamId": 102,
+      "player": {"id": 1002, "name": "Away Defender"}
+    }
+  ]
+}

@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Statistiques J5 — SofaScore Local Lab</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar compact-topbar">
+  <div class="shell">
+    <p class="eyebrow">J5 · Données locales et qualification gardée</p>
+    <h1>Statistiques, incidents et compositions</h1>
+    <p class="subtitle">
+      Données normalisées, complétude mesurée et provenance locale sans repli réseau.
+    </p>
+  </div>
+</header>
+
+<main class="shell event-page">
+  <nav class="links page-links" aria-label="Navigation locale">
+    <a th:if="${page != null}"
+       th:href="@{/events/{id}(id=${page.current.event.identity.value},zone=${page.zoneId.id})}"
+       href="/events">← Détail de la rencontre</a>
+    <a th:href="@{/}" href="/">Tableau de bord</a>
+  </nav>
+
+  <p class="notice notice-danger" th:if="${eventDataErrorCode == 'EVENT_NOT_FOUND'}">
+    Cette identité canonique n’existe pas dans la base locale.
+  </p>
+  <p class="notice notice-danger" th:if="${eventDataErrorCode == 'INVALID_ZONE'}">
+    La zone demandée n’est pas valide.
+  </p>
+  <p class="notice notice-danger"
+     th:if="${eventDataErrorCode == 'LOCAL_DATABASE_UNAVAILABLE'}">
+    La base PostgreSQL locale n’est pas disponible.
+  </p>
+
+  <div th:if="${page != null}">
+    <section class="panel event-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Identité canonique J4 réutilisée</p>
+          <h2>
+            <span th:text="${page.current.event.homeTeam.name}">Home</span>
+            <span> — </span>
+            <span th:text="${page.current.event.awayTeam.name}">Away</span>
+          </h2>
+        </div>
+        <span class="chip chip-safe">LECTURE LOCALE</span>
+      </div>
+      <dl class="detail-grid">
+        <div><dt>UUID local</dt><dd class="mono" th:text="${page.current.event.identity.value}">UUID</dd></div>
+        <div><dt>Identifiant fournisseur</dt><dd th:text="${page.current.event.identity.providerEventId}">900001</dd></div>
+        <div><dt>Horaire local</dt><dd class="mono" th:text="${page.current.startsAtInZone}">date</dd></div>
+        <div><dt>Zone</dt><dd th:text="${page.zoneId.id}">Europe/Paris</dd></div>
+      </dl>
+    </section>
+
+    <p class="notice notice-safe" th:if="${j5FixtureImport != null}">
+      Corpus J5 importé. Les trois familles ont été parsées et rattachées à cette identité.
+    </p>
+    <p class="notice notice-danger" th:if="${j5FixtureImportErrorCode != null}"
+       th:text="${'Import J5 refusé : ' + j5FixtureImportErrorCode}">
+      Import J5 refusé.
+    </p>
+    <p class="notice notice-safe"
+       th:if="${j5RealMessage != null and j5RealMessageKind == 'safe'}"
+       th:text="${j5RealMessage}">Campagne J5 préparée.</p>
+    <p class="notice notice-danger"
+       th:if="${j5RealMessage != null and j5RealMessageKind == 'danger'}"
+       th:text="${j5RealMessage}">Campagne J5 arrêtée.</p>
+
+    <section class="panel manual-call-panel" aria-labelledby="j5-real-title">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Qualification réelle J5 · Work Order séparé</p>
+          <h2 id="j5-real-title">Trois endpoints, une confirmation, aucun retry</h2>
+        </div>
+        <span class="chip"
+              th:classappend="${j5RealControl.providerTransportAvailable} ? ' chip-warning' : ' chip-danger'"
+              th:text="${j5RealControl.state}">LOCKED</span>
+      </div>
+      <p class="control-intro">
+        Une campagne autorise au plus trois requêtes séquentielles pour cette identité :
+        statistiques, incidents, puis compositions. Le brut est persisté avant parsing,
+        un délai minimal de trois secondes sépare les tentatives et le premier incident
+        verrouille immédiatement la campagne sans retry. Un HTTP 404 sur une famille signifie
+        « indisponible pour cet événement » : il est conservé, normalisé explicitement et la
+        campagne poursuit la famille suivante sans répéter l’appel.
+      </p>
+      <p class="notice notice-warning" th:if="${!j5RealControl.providerTransportAvailable}">
+        Configuration locale bloquée. Conditions encore absentes :
+        <span class="mono" th:text="${#strings.listJoin(j5RealControl.providerBlockers, ', ')}">blockers</span>
+      </p>
+
+      <div class="control-grid">
+        <article class="control-stage">
+          <h3>1. Préparer sans réseau</h3>
+          <p>
+            La préparation reprend l’identifiant fournisseur déjà lié à l’UUID local.
+            Elle ne résout aucune URI et n’exécute aucun transport.
+          </p>
+          <dl class="detail-grid">
+            <div><dt>Identifiant</dt><dd th:text="${page.current.event.identity.providerEventId}">900001</dd></div>
+            <div><dt>Ordre</dt><dd class="mono">STATISTICS → INCIDENTS → LINEUPS</dd></div>
+          </dl>
+          <form class="control-form" method="post"
+                th:action="@{/events/{id}/statistics/real/prepare(id=${page.current.event.identity.value})}">
+            <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+            <input type="hidden" name="zone" th:value="${page.zoneId.id}">
+            <input type="hidden" name="eventId"
+                   th:value="${page.current.event.identity.providerEventId}">
+            <button type="submit"
+                    th:disabled="${!j5RealControl.preparationAllowed()}">
+              Préparer la campagne J5
+            </button>
+          </form>
+        </article>
+
+        <article class="control-stage" th:if="${j5RealControl.awaitingConfirmation()}">
+          <h3>2. Confirmer puis appeler au plus trois fois</h3>
+          <p>Phrase exacte liée à cette identité et valable cinq minutes :</p>
+          <code class="confirmation-phrase"
+                th:text="${j5RealControl.confirmationPhrase}">CONFIRMER J5 REAL</code>
+          <form class="control-form" method="post"
+                th:action="@{/events/{id}/statistics/real/execute(id=${page.current.event.identity.value})}">
+            <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+            <input type="hidden" name="zone" th:value="${page.zoneId.id}">
+            <input type="hidden" name="requestId" th:value="${j5RealControl.requestId}">
+            <label for="j5-real-confirmation">Recopier la phrase</label>
+            <input id="j5-real-confirmation" type="text" name="confirmationText"
+                   autocomplete="off" spellcheck="false" maxlength="160" required>
+            <label>
+              <input type="checkbox" name="acknowledged" value="true" required>
+              Je confirme au plus trois appels fournisseur, l’arrêt au premier incident
+              réel, la poursuite après une famille indisponible en HTTP 404 et le verrouillage
+              terminal sans retry.
+            </label>
+            <button class="button-danger" type="submit">
+              Appeler les trois familles une fois
+            </button>
+          </form>
+        </article>
+
+        <article class="control-stage" th:unless="${j5RealControl.awaitingConfirmation()}">
+          <h3>2. Confirmation protégée</h3>
+          <p>
+            La phrase n’apparaît qu’après une préparation valide. Une campagne réussie reste
+            verrouillée contre tout rejeu, mais une nouvelle préparation explicite peut créer
+            une campagne et une confirmation distinctes. Une campagne échouée, expirée ou
+            arrêtée reste verrouillée jusqu’au redémarrage du processus.
+          </p>
+          <p th:if="${j5RealControl.terminalCode != null}">
+            Dernier état terminal : <span class="mono" th:text="${j5RealControl.terminalCode}">CODE</span>
+          </p>
+        </article>
+      </div>
+
+      <form class="control-actions" method="post"
+            th:if="${j5RealControl.awaitingConfirmation() or j5RealControl.executing()}"
+            th:action="@{/events/{id}/statistics/real/stop(id=${page.current.event.identity.value})}">
+        <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+        <input type="hidden" name="zone" th:value="${page.zoneId.id}">
+        <button class="button-danger" type="submit">Arrêt global J5</button>
+      </form>
+
+      <div th:if="${j5RealResult != null}" class="table-scroll">
+        <h3>Résultat minimisé de la campagne</h3>
+        <p>
+          <span th:text="${j5RealResult.terminalCode}">COMPLETED</span> ·
+          <span th:text="${j5RealResult.providerCallAttempts + ' appel(s) fournisseur'}">3 appels</span>
+        </p>
+        <table th:unless="${j5RealResult.endpoints.isEmpty()}">
+          <thead><tr><th>Endpoint</th><th>Snapshot</th><th>Taille</th><th>Complétude</th><th>Observation</th></tr></thead>
+          <tbody>
+          <tr th:each="endpoint : ${j5RealResult.endpoints}">
+            <td class="mono" th:text="${endpoint.endpointType}">EVENT_STATISTICS</td>
+            <td><span th:text="${endpoint.snapshotId}">1</span><br><code th:text="${endpoint.payloadSha256}">hash</code></td>
+            <td th:text="${endpoint.payloadSizeBytes + ' octets'}">0 octet</td>
+            <td th:text="${endpoint.completenessLabel()}">COMPLETE · 100%</td>
+            <td th:text="${endpoint.observationId}">1</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Action explicite sans réseau</p>
+          <h2>Corpus synthétique J5</h2>
+        </div>
+        <span class="chip chip-warning">PROVIDER_SCHEMA_VALIDATED=NO</span>
+      </div>
+      <p>
+        Cette action charge uniquement les fixtures classpath de l’événement synthétique
+        <code>900001</code>. Elle ne résout aucune URI et ne tente aucun appel fournisseur.
+      </p>
+      <form method="post"
+            th:action="@{/events/{id}/statistics/offline-demo(id=${page.current.event.identity.value})}">
+        <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+        <input type="hidden" name="zone" th:value="${page.zoneId.id}">
+        <button type="submit">Importer les trois familles hors ligne</button>
+      </form>
+    </section>
+
+    <section class="panel" th:if="${statistics != null}">
+      <div class="panel-heading">
+        <div>
+          <p class="label">EVENT_STATISTICS · <span th:text="${statistics.source.parserVersion}">parser</span></p>
+          <h2 th:text="${statistics.completeness.status.name() == 'UNAVAILABLE' ? 'Statistiques indisponibles chez le fournisseur' : 'Statistiques d’équipe'}">
+            Statistiques d’équipe
+          </h2>
+        </div>
+        <span class="chip"
+              th:classappend="${statistics.completeness.status.name() == 'PARTIAL' or statistics.completeness.status.name() == 'UNAVAILABLE'} ? 'chip-warning' : 'chip-safe'"
+              th:text="${statistics.completeness.status.name() == 'UNAVAILABLE' ? 'UNAVAILABLE · N/A' : statistics.completeness.status + ' · ' + statistics.completeness.scorePercent + '%'}">
+          COMPLETE · 100%
+        </span>
+      </div>
+      <p class="notice notice-warning"
+         th:if="${statistics.completeness.status.name() == 'UNAVAILABLE'}">
+        L’endpoint exact a répondu HTTP 404 pour cet événement. Cette observation indique une
+        indisponibilité fournisseur ; elle n’est ni une panne de transport ni une liste vide valide.
+      </p>
+      <dl class="detail-grid">
+        <div><dt>Source</dt><dd class="mono" th:text="${statistics.source.sourceReference()}">fixture</dd></div>
+        <div><dt>Réception</dt><dd class="mono" th:text="${statistics.source.receivedAt}">instant</dd></div>
+        <div><dt>Signaux</dt><dd th:text="${statistics.completeness.status.name() == 'UNAVAILABLE' ? 'N/A' : statistics.completeness.presentSignals + '/' + statistics.completeness.expectedSignals}">6/6</dd></div>
+        <div><dt>SHA-256 source</dt><dd class="mono hash-value" th:text="${statistics.source.payloadSha256}">hash</dd></div>
+        <div><dt>SHA-256 normalisé</dt><dd class="mono hash-value" th:text="${statistics.normalizedSha256}">hash</dd></div>
+      </dl>
+      <ul th:if="${!statistics.completeness.missingPaths.isEmpty()}">
+        <li class="mono" th:each="path : ${statistics.completeness.missingPaths}" th:text="${path}">path</li>
+      </ul>
+      <div class="table-scroll"
+           th:unless="${statistics.completeness.status.name() == 'UNAVAILABLE'}">
+        <table>
+          <thead><tr><th>Période</th><th>Groupe</th><th>Métrique</th><th>Domicile</th><th>Extérieur</th></tr></thead>
+          <tbody>
+          <tr th:each="metric : ${statisticsData.metrics}">
+            <td th:text="${metric.period}">ALL</td>
+            <td th:text="${metric.groupName}">Overview</td>
+            <td><span th:text="${metric.metricName}">Metric</span><br><code th:text="${metric.metricCode}">code</code></td>
+            <td th:text="${metric.homeValue.orElse('—')}">—</td>
+            <td th:text="${metric.awayValue.orElse('—')}">—</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" th:unless="${statistics != null}">
+      <p class="label">EVENT_STATISTICS</p>
+      <h2>Aucune statistique locale</h2>
+      <p>L’absence est explicite et ne déclenche aucun transport.</p>
+    </section>
+
+    <section class="panel" th:if="${incidents != null}">
+      <div class="panel-heading">
+        <div>
+          <p class="label">EVENT_INCIDENTS · <span th:text="${incidents.source.parserVersion}">parser</span></p>
+          <h2 th:text="${incidents.completeness.status.name() == 'UNAVAILABLE' ? 'Incidents indisponibles chez le fournisseur' : 'Incidents ordonnés'}">
+            Incidents ordonnés
+          </h2>
+        </div>
+        <span class="chip"
+              th:classappend="${incidents.completeness.status.name() == 'PARTIAL' or incidents.completeness.status.name() == 'UNAVAILABLE'} ? 'chip-warning' : 'chip-safe'"
+              th:text="${incidents.completeness.status.name() == 'UNAVAILABLE' ? 'UNAVAILABLE · N/A' : incidents.completeness.status + ' · ' + incidents.completeness.scorePercent + '%'}">
+          COMPLETE · 100%
+        </span>
+      </div>
+      <p class="notice notice-warning"
+         th:if="${incidents.completeness.status.name() == 'UNAVAILABLE'}">
+        L’endpoint exact a répondu HTTP 404 pour cet événement. Aucune liste d’incidents n’est
+        synthétisée pour remplacer cette indisponibilité.
+      </p>
+      <dl class="detail-grid">
+        <div><dt>Source</dt><dd class="mono" th:text="${incidents.source.sourceReference()}">fixture</dd></div>
+        <div><dt>Réception</dt><dd class="mono" th:text="${incidents.source.receivedAt}">instant</dd></div>
+        <div><dt>Incidents</dt><dd th:text="${incidents.completeness.status.name() == 'UNAVAILABLE' ? 'N/A' : incidentsData.incidents.size()}">0</dd></div>
+        <div><dt>Signaux</dt><dd th:text="${incidents.completeness.status.name() == 'UNAVAILABLE' ? 'N/A' : incidents.completeness.presentSignals + '/' + incidents.completeness.expectedSignals}">0/0</dd></div>
+        <div><dt>SHA-256 source</dt><dd class="mono hash-value" th:text="${incidents.source.payloadSha256}">hash</dd></div>
+        <div><dt>SHA-256 normalisé</dt><dd class="mono hash-value" th:text="${incidents.normalizedSha256}">hash</dd></div>
+      </dl>
+      <p th:if="${incidentsData.incidents.isEmpty() and incidents.completeness.status.name() != 'UNAVAILABLE'}">La liste source est explicitement vide.</p>
+      <div class="table-scroll" th:unless="${incidentsData.incidents.isEmpty() or incidents.completeness.status.name() == 'UNAVAILABLE'}">
+        <table>
+          <thead>
+          <tr>
+            <th>Minute</th><th>Type</th><th>Classe</th><th>Côté</th><th>Joueur</th>
+            <th>Entrant</th><th>Sortant</th><th>Passeur</th><th>Motif</th><th>Détail</th>
+            <th>Ordre TAB</th><th>Score</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="incident : ${incidentsData.incidents}">
+            <td th:text="${incident.minuteLabel()}">18</td>
+            <td th:text="${incident.incidentType}">goal</td>
+            <td th:text="${incident.incidentClass.orElse('—')}">—</td>
+            <td th:text="${incident.sideLabel()}">HOME</td>
+            <td th:text="${incident.playerName.orElse('—')}">—</td>
+            <td th:text="${incident.playerInName.orElse('—')}">—</td>
+            <td th:text="${incident.playerOutName.orElse('—')}">—</td>
+            <td th:text="${incident.assistName.orElse('—')}">—</td>
+            <td th:text="${incident.motifLabel()}">—</td>
+            <td th:text="${incident.detailLabel()}">—</td>
+            <td th:text="${incident.shootoutSequence.isPresent() ? incident.shootoutSequence.get() : '—'}">—</td>
+            <td th:text="${incident.homeScore.isPresent() ? incident.homeScore.get() + '–' + incident.awayScore.get() : '—'}">—</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel" th:unless="${incidents != null}">
+      <p class="label">EVENT_INCIDENTS</p>
+      <h2>Aucun incident local</h2>
+      <p>L’absence d’observation est distincte d’une liste observée et vide.</p>
+    </section>
+
+    <section class="panel" th:if="${lineups != null}">
+      <div class="panel-heading">
+        <div>
+          <p class="label">EVENT_LINEUPS · <span th:text="${lineups.source.parserVersion}">parser</span></p>
+          <h2 th:text="${lineups.completeness.status.name() == 'UNAVAILABLE' ? 'Compositions indisponibles chez le fournisseur' : 'Compositions'}">
+            Compositions
+          </h2>
+        </div>
+        <span class="chip"
+              th:classappend="${lineups.completeness.status.name() == 'PARTIAL' or lineups.completeness.status.name() == 'UNAVAILABLE'} ? 'chip-warning' : 'chip-safe'"
+              th:text="${lineups.completeness.status.name() == 'UNAVAILABLE' ? 'UNAVAILABLE · N/A' : lineups.completeness.status + ' · ' + lineups.completeness.scorePercent + '%'}">
+          COMPLETE · 100%
+        </span>
+      </div>
+      <p class="notice notice-warning"
+         th:if="${lineups.completeness.status.name() == 'UNAVAILABLE'}">
+        L’endpoint exact a répondu HTTP 404 pour cet événement. Aucun joueur, rôle ou dispositif
+        tactique n’est inventé pour combler cette indisponibilité.
+      </p>
+      <dl class="detail-grid">
+        <div><dt>Confirmées</dt><dd th:text="${lineups.completeness.status.name() == 'UNAVAILABLE' ? 'N/A' : (lineupsData.confirmed ? 'OUI' : 'NON')}">OUI</dd></div>
+        <div><dt>Signaux</dt><dd th:text="${lineups.completeness.status.name() == 'UNAVAILABLE' ? 'N/A' : lineups.completeness.presentSignals + '/' + lineups.completeness.expectedSignals}">13/13</dd></div>
+        <div><dt>Source</dt><dd class="mono" th:text="${lineups.source.sourceReference()}">fixture</dd></div>
+        <div><dt>Réception</dt><dd class="mono" th:text="${lineups.source.receivedAt}">instant</dd></div>
+        <div><dt>SHA-256 source</dt><dd class="mono hash-value" th:text="${lineups.source.payloadSha256}">hash</dd></div>
+        <div><dt>SHA-256 normalisé</dt><dd class="mono hash-value" th:text="${lineups.normalizedSha256}">hash</dd></div>
+      </dl>
+      <div th:unless="${lineups.completeness.status.name() == 'UNAVAILABLE'}">
+      <h3>Domicile · <span th:text="${lineupsData.home.formation.orElse('formation absente')}">4-3-3</span></h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Joueur</th><th>Numéro</th><th>Poste</th><th>Rôle</th></tr></thead>
+          <tbody>
+          <tr th:each="player : ${lineupsData.home.players}">
+            <td th:text="${player.name}">Player</td>
+            <td th:text="${player.shirtNumber.orElse(null)}">1</td>
+            <td th:text="${player.position.orElse('—')}">G</td>
+            <td th:text="${player.starter ? 'Titulaire' : 'Banc'}">Titulaire</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>Extérieur · <span th:text="${lineupsData.away.formation.orElse('formation absente')}">4-4-2</span></h3>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Joueur</th><th>Numéro</th><th>Poste</th><th>Rôle</th></tr></thead>
+          <tbody>
+          <tr th:each="player : ${lineupsData.away.players}">
+            <td th:text="${player.name}">Player</td>
+            <td th:text="${player.shirtNumber.orElse(null)}">1</td>
+            <td th:text="${player.position.orElse('—')}">G</td>
+            <td th:text="${player.starter ? 'Titulaire' : 'Banc'}">Titulaire</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+      </div>
+    </section>
+
+    <section class="panel" th:unless="${lineups != null}">
+      <p class="label">EVENT_LINEUPS</p>
+      <h2>Aucune composition locale</h2>
+      <p>Aucun joueur ou formation n’est synthétisé pour combler cette absence.</p>
+    </section>
+  </div>
+</main>
+
+<footer>
+  <div class="shell">SofaScore Local Lab — J5 local, manuel, borné et sans retry</div>
+</footer>
+</body>
+</html>

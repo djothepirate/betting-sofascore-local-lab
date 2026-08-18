@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "event-statistics-id-as-string",
+  "endpointType": "EVENT_STATISTICS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-15T12:32:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "event-statistics-v1",
+  "payloadResource": "fixtures/schema-breaks/event-statistics-id-as-string.json",
+  "maximumBytes": 4096,
+  "expectedRawSha256": "8eda714fcddea0d3c312d935c30b46d9dfc11853b3ece9ab5a6d4ee0b4c96dce",
+  "expectedCanonicalJsonSha256": "6c57df4378ded1967ff928f20312e1c14aba63fcabc0c95609435648410e8f5a",
+  "minimized": false,
+  "removedFields": []
+}

@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "event-lineups-nominal",
+  "endpointType": "EVENT_LINEUPS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-15T12:36:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "event-lineups-v1",
+  "payloadResource": "fixtures/event-lineups/nominal.json",
+  "maximumBytes": 8192,
+  "expectedRawSha256": "08646326609e9631b6c4a2bad2464c00c23fde94bdd434513f4deb0ab254fd6b",
+  "expectedCanonicalJsonSha256": "57b535f5827d6d64918d4e8c763a2e7bc759e197f357059fa816a23697ee7422",
+  "minimized": false,
+  "removedFields": []
+}

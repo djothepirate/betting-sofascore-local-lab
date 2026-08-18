@@ -1,4 +1,4 @@
-# Fixtures — corpus hors ligne J2 à J4
+# Fixtures — corpus hors ligne J2 à J5
 
 Les répertoires ont été créés au J1. Ils ne contiennent encore aucun payload SofaScore observé. Le jalon J2 charge les fixtures versionnées depuis le classpath, sans connexion réseau et sans dépendance à PostgreSQL.
 
@@ -6,6 +6,9 @@ Les répertoires ont été créés au J1. Ils ne contiennent encore aucun payloa
 fixtures/
 ├── scheduled-events/
 ├── event-details/
+├── event-statistics/
+├── event-incidents/
+├── event-lineups/
 └── schema-breaks/
 ```
 
@@ -170,3 +173,37 @@ minimized=false
 Le contrat détaillé est décrit dans `docs/architecture/EVENT-DETAILS-V1.md`. Une fixture synthétique
 qualifie le comportement hors ligne du parseur ; elle ne valide pas le schéma réel du fournisseur
 et n'autorise aucun transport `EVENT_DETAILS`.
+
+## Corpus synthétique J5 des données de rencontre
+
+J5 ajoute neuf scénarios créés de zéro pour les trois familles liées à l'événement synthétique
+`900001`. Ils qualifient le modèle local et ses contrôles de complétude sans prétendre reproduire
+les réponses SofaScore actuelles. La première et unique tentative de découverte réelle autorisée a
+reçu `HTTP 403` ; la campagne a été arrêtée sans retry et les cinq autres exemples n'ont pas été
+appelés.
+
+Tous les manifestes J5 conservent :
+
+```text
+fixtureOrigin=SYNTHETIC
+providerSchemaValidated=false
+httpStatus=null
+minimized=false
+```
+
+| Famille | Scénario | Ressource | Résultat attendu |
+|---|---|---|---|
+| statistiques | nominal | `event-statistics/nominal.json` | `PARSED`, `COMPLETE`, trois métriques |
+| statistiques | valeur extérieure absente | `event-statistics/partial-missing-away.json` | `PARSED`, `PARTIAL`, chemin manquant |
+| statistiques | identifiant devenu texte | `schema-breaks/event-statistics-id-as-string.json` | `SCHEMA_INCOMPATIBLE`, aucune donnée |
+| incidents | nominal | `event-incidents/nominal.json` | `PARSED`, `COMPLETE`, trois incidents ordonnés |
+| incidents | tableau vide | `event-incidents/empty.json` | `PARSED`, `EMPTY_VALID` |
+| incidents | minute devenue texte | `schema-breaks/event-incidents-time-as-string.json` | `SCHEMA_INCOMPATIBLE`, aucune donnée |
+| compositions | nominal | `event-lineups/nominal.json` | `PARSED`, `COMPLETE`, deux côtés et quatre joueurs |
+| compositions | non confirmée et incomplète | `event-lineups/partial-unconfirmed.json` | `PARSED`, `PARTIAL`, absences visibles |
+| compositions | identifiant joueur devenu texte | `schema-breaks/event-lineups-player-id-as-string.json` | `SCHEMA_INCOMPATIBLE`, aucune donnée |
+
+Les versions de parseur sont respectivement `event-statistics-v1`, `event-incidents-v1` et
+`event-lineups-v1`. Les hashes bruts et JSON canoniques sont vérifiés avant parsing. Le détail des
+signaux de complétude, de la provenance, de la persistance V7 et de l'affichage local est décrit
+dans `docs/architecture/J5-OFFLINE-EVENT-DATA-AND-COMPLETENESS.md`.

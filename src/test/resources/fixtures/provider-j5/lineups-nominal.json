@@ -1,0 +1,26 @@
+{
+  "confirmed": true,
+  "home": {
+    "formation": "4-3-3",
+    "players": [
+      {
+        "player": {"id": 1001, "name": "Home Keeper", "position": "G"},
+        "jerseyNumber": "1",
+        "substitute": false,
+        "statistics": {"rating": 7.1}
+      }
+    ],
+    "supportStaff": []
+  },
+  "away": {
+    "formation": "4-4-2",
+    "players": [
+      {
+        "player": {"id": 2001, "name": "Away Defender"},
+        "shirtNumber": 4,
+        "position": "D",
+        "substitute": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,64 @@
+{
+  "home": 101,
+  "away": 102,
+  "incidents": [
+    {
+      "text": "FT",
+      "homeScore": 1,
+      "awayScore": 1,
+      "isLive": false,
+      "time": 90,
+      "addedTime": 999,
+      "timeSeconds": 5400,
+      "incidentType": "period",
+      "reversedPeriodTime": 1,
+      "reversedPeriodTimeSeconds": 0,
+      "periodTimeSeconds": 2700
+    },
+    {
+      "incidentType": "card",
+      "incidentClass": "yellow",
+      "time": 45,
+      "addedTime": 5,
+      "isHome": true,
+      "player": {
+        "id": 1001,
+        "name": "Synthetic Home Player",
+        "firstName": "Synthetic",
+        "slug": "synthetic-home-player",
+        "shortName": "S. Player",
+        "position": "M",
+        "jerseyNumber": "8",
+        "height": 180,
+        "userCount": 1,
+        "gender": "M",
+        "fieldTranslations": {}
+      },
+      "rescinded": false,
+      "reversedPeriodTime": 1
+    },
+    {
+      "incidentType": "substitution",
+      "incidentClass": "regular",
+      "time": 70,
+      "isHome": false,
+      "playerIn": {
+        "id": 2001,
+        "name": "Synthetic Incoming Player"
+      },
+      "playerOut": {
+        "id": 2002,
+        "name": "Synthetic Outgoing Player"
+      },
+      "injury": false,
+      "reversedPeriodTime": 21
+    },
+    {
+      "incidentType": "injuryTime",
+      "time": 45,
+      "addedTime": 0,
+      "length": 5,
+      "reversedPeriodTime": 1
+    }
+  ]
+}

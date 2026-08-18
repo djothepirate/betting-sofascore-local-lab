@@ -2,7 +2,10 @@
 
 ## 1. Objectif
 
-Démarrer, vérifier, exploiter et arrêter les jalons J0 à J4 sur Windows sans exposer de service hors de la machine locale. Le parcours J4 décrit ici est entièrement local et n’ajoute aucun accès SofaScore.
+Démarrer, vérifier, exploiter et arrêter les jalons J0 à J5 sur Windows sans exposer de service
+hors de la machine locale. J5 conserve son parcours synthétique entièrement hors ligne et ajoute
+une qualification réelle exceptionnelle, désactivée par défaut et exécutable uniquement par le
+protocole humain gardé de la section 3.10 ter.
 
 ## 2. Première installation
 
@@ -97,7 +100,7 @@ Vérifier :
 - connecteur `DISABLED` ;
 - base URL `NON_CONFIGURED` ;
 - PostgreSQL `AVAILABLE` ;
-- migration Flyway `2` ;
+- migration Flyway `9` ;
 - snapshots `0` sur une base neuve ;
 - corpus hors ligne `AVAILABLE_OFFLINE` ;
 - fixtures `12 / 12 disponibles` ;
@@ -374,6 +377,189 @@ L’absence de détail s’affiche comme un état local explicite. Elle ne décl
 Ne pas réutiliser le transport J3 pour compléter l’écran. La seule voie réelle autorisée est la
 campagne fixe décrite ci-dessous ; elle n’est jamais déclenchée comme repli de la recherche.
 
+### 3.10 bis Consulter les statistiques, incidents et compositions J5 hors ligne
+
+Ce parcours ne demande aucune propriété réseau J3/J4 et ne doit jamais utiliser directement les
+exemples d'URL J5. Avec PostgreSQL et l'application démarrés :
+
+1. ouvrir `/events?date=2026-08-12&zone=Europe%2FParis` ;
+2. si l'identité synthétique `900001` n'existe pas, sélectionner **« Charger la démonstration J4 »** ;
+3. ouvrir sa fiche, puis **« Statistiques, incidents et compositions J5 »** ;
+4. vérifier l'état initial explicitement absent des familles qui ne sont pas encore importées ;
+5. sélectionner **« Importer les trois familles hors ligne »** ;
+6. vérifier trois panneaux distincts, chacun avec sa complétude, sa source, son parseur et ses
+   hashes : trois métriques, trois incidents et deux compositions de deux joueurs ;
+7. vérifier `COMPLETE · 100%`, `SYNTHETIC_FIXTURE` et
+   `PROVIDER_SCHEMA_VALIDATED=NO` ;
+8. répéter l'import et confirmer que l'écran reste identique : l'opération est idempotente.
+
+Le POST d'import exige le jeton de formulaire local lié à la session et à usage unique. Avec la
+configuration normale, le panneau de qualification réelle reste bloqué et aucune action fournisseur
+n'est éligible. La page ne contient aucun payload brut et n'effectue aucun repli lorsque les données
+sont absentes. Les variantes `PARTIAL` et `EMPTY_VALID` sont qualifiées par les tests automatisés ;
+elles peuvent être ajoutées comme nouvelles observations hors ligne sans modifier les versions
+nominales.
+
+La tentative de découverte du schéma réel s'est arrêtée sur `HTTP 403`, sans retry. Ne pas changer
+de client, d'en-tête, d'adresse ou d'identité. La campagne distincte désormais autorisable reste
+strictement limitée par le Work Order `WO-SS-20260815-006` et par la procédure suivante.
+
+### 3.10 ter Qualifier réellement les trois familles J5
+
+Cette campagne est un geste humain exceptionnel. Ne jamais l'exécuter depuis Maven, un script, un
+navigateur automatisé, une tâche planifiée ou un mécanisme de rafraîchissement. Avant toute
+activation, relire le Work Order actif, l'architecture J5 réelle, la readiness technique et le diff.
+Les deux suites Maven doivent être vertes ; elles n'effectuent aucun appel fournisseur.
+
+Application arrêtée, le propriétaire règle manuellement uniquement les clés réseau documentées :
+
+```properties
+SOFASCORE_ENABLED=true
+SOFASCORE_J3_QUALIFICATION_ENABLED=false
+SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=false
+SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false
+SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=true
+SOFASCORE_BASE_URL=https://www.sofascore.com
+SOFASCORE_ALLOWED_ENDPOINTS=EVENT_STATISTICS,EVENT_INCIDENTS,EVENT_LINEUPS
+```
+
+Ne pas modifier les autres valeurs de `.env`, ne pas les copier dans une preuve et ne jamais ajouter
+ce fichier à Git. Démarrer PostgreSQL puis l'application sur `127.0.0.1`. Depuis la recherche locale,
+ouvrir la fiche d'une identité canonique J4 existante puis sélectionner
+**« Statistiques, incidents et compositions J5 »** :
+
+1. vérifier que l'UUID, l'identifiant fournisseur et la zone correspondent à la fiche J4 choisie ;
+2. vérifier que tous les bloqueurs de qualification J5 ont disparu ;
+3. sélectionner **« Préparer la campagne J5 »** : cette action ne contacte pas le fournisseur ;
+4. recopier exactement la phrase affichée, cocher l'acquittement puis sélectionner
+   **« Appeler les trois familles une fois »** une seule fois ;
+5. ne pas recharger, revenir en arrière ou resoumettre le formulaire pendant l'exécution ;
+6. attendre l'état terminal ; le chemin nominal tente au maximum `statistics`, puis `incidents`,
+   puis `lineups`, avec au moins trois secondes entre deux départs ;
+7. si le résultat est `COMPLETED_LOCKED`, vérifier les trois panneaux locaux, leur complétude ou
+   leur statut `UNAVAILABLE · N/A`, leur source `PROVIDER_SNAPSHOT`, leur parseur courant
+   (`event-statistics-v2`, `event-incidents-v13`, `event-lineups-v2`) ou normaliseur
+   `event-*-unavailable-v1`, leur snapshot, leur SHA-256 et leur heure de réception, sans ouvrir ou
+   copier le payload brut ;
+8. dans les panneaux incidents et compositions, vérifier qu'une complétude `PARTIAL` conserve son
+   badge et son compteur de signaux, mais n'affiche plus la liste technique des chemins JSON
+   manquants au-dessus du tableau ; vérifier que le contenu du tableau reste inchangé ;
+9. si la campagne doit être abandonnée alors qu'elle est encore `AWAITING_CONFIRMATION` ou
+   `EXECUTING`, sélectionner **« Arrêt global J5 »** ; après un état terminal, aucun nouvel appel
+   n'est possible dans le processus et il suffit d'arrêter l'application.
+
+Un HTTP `404` sur l'un des trois endpoints exacts est une indisponibilité de famille : vérifier
+`ENDPOINT_UNAVAILABLE` et `UNAVAILABLE · N/A`, puis laisser la campagne poursuivre sans recharger
+la page et sans répéter l'appel. Au premier incident réel — notamment `403`, `429`, `5xx`, timeout,
+contenu non JSON sur une réponse `2xx`, contenu sensible, réponse trop volumineuse, incohérence
+d'identité, incompatibilité de schéma ou erreur de persistance — ne pas réessayer et ne pas tenter
+les familles restantes. Appliquer l'arrêt global si l'interface répond encore, arrêter
+l'application et soumettre l'incident à une décision humaine. Un nouvel en-tête, un autre client
+ou une autre adresse reste interdit.
+
+Sous `event-incidents-v13`, qui hérite sans modification de la règle V12, une séance terminale
+entièrement non minutée peut être compatible à
+`PARTIAL`. Vérifier alors que le marqueur `PEN` et chaque `penaltyShootout` sans minute affichent
+`—`, que les tirs `missed` sans `reason` ni `description` sont conservés sans motif inventé, et que
+la campagne atteint les compositions. Ne jamais interpréter l'ordre de séance comme une minute.
+
+Pour un carton portant `reason="Leaving field"`, vérifier que le motif exact est conservé et rendu
+dans la colonne `MOTIF`, puis que la campagne atteint les compositions. Toute autre valeur de motif
+non documentée doit encore arrêter la campagne en `SCHEMA_INCOMPATIBLE`.
+Toute séance mixte ou incohérente doit rester `SCHEMA_INCOMPATIBLE` et verrouiller la campagne.
+
+Après succès, incident ou abandon, et avant tout autre redémarrage, remettre exactement :
+
+```properties
+SOFASCORE_ENABLED=false
+SOFASCORE_J3_QUALIFICATION_ENABLED=false
+SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=false
+SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false
+SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=false
+SOFASCORE_BASE_URL=
+SOFASCORE_ALLOWED_ENDPOINTS=
+```
+
+Pour la clôture du Work Order réel J5, un redémarrage local de contrôle doit confirmer que les
+panneaux J4 et J5 sont bloqués ; arrêter ensuite l'application. La preuve humaine doit rester
+minimisée : identifiant fournisseur, UUID canonique,
+code terminal, nombre de tentatives et, pour chaque famille réellement reçue, identifiant du
+snapshot, taille, SHA-256, parseur, complétude et identifiant d'observation. Ne jamais consigner le
+JSON brut, l'URI complète, les en-têtes, la phrase de confirmation, un secret ou une autre valeur de
+`.env`.
+
+```text
+J5_REAL_EVENT_ID=<identifiant confirmé>
+J5_REAL_CANONICAL_EVENT_ID=<UUID affiché>
+J5_REAL_TERMINAL_STATE=COMPLETED_LOCKED|FAILED_LOCKED|STOPPED_LOCKED
+J5_REAL_PROVIDER_CALLS=<0..3>
+J5_REAL_STATISTICS_QUALIFICATION=PASS|UNAVAILABLE|FAIL|NOT_ATTEMPTED
+J5_REAL_INCIDENTS_QUALIFICATION=PASS|UNAVAILABLE|FAIL|NOT_ATTEMPTED
+J5_REAL_LINEUPS_QUALIFICATION=PASS|UNAVAILABLE|FAIL|NOT_ATTEMPTED
+J5_PROVIDER_SCHEMA_VALIDATED=YES|NO
+LOCAL_CONFIGURATION_RELOCKED=YES|NO
+APPLICATION_STOPPED=YES|NO
+```
+
+### 3.10 quater Enchaîner J4 phase 2 et J5 dans une même session
+
+Ce mode remplace le double cycle de build/démarrage lorsque l'objectif est de créer une identité
+avec un identifiant J4 choisi, puis d'exécuter J5 sur cette même identité. Il n'automatise aucune
+étape : les deux préparations, phrases, acquittements et confirmations restent distincts.
+
+Application arrêtée, le propriétaire règle temporairement uniquement les clés réseau documentées :
+
+```properties
+SOFASCORE_ENABLED=true
+SOFASCORE_J3_QUALIFICATION_ENABLED=false
+SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true
+SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=true
+SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=true
+SOFASCORE_BASE_URL=https://www.sofascore.com
+SOFASCORE_ALLOWED_ENDPOINTS=EVENT_DETAILS,EVENT_STATISTICS,EVENT_INCIDENTS,EVENT_LINEUPS
+```
+
+Cette combinaison est limitée à J4 sous-étape 2. J3 et J4 sous-étape 1 restent incompatibles avec
+elle. Une famille absente ou supplémentaire bloque le démarrage. Ne pas modifier les autres valeurs
+de `.env`, ne pas les copier dans une preuve et ne jamais ajouter ce fichier à Git.
+
+Effectuer un seul build, puis démarrer PostgreSQL et une seule instance de l'application sur
+`127.0.0.1` :
+
+1. suivre la procédure J4 sous-étape 2 de la section 3.13 jusqu'au résultat terminal de l'identifiant
+   choisi ;
+2. ouvrir le détail de l'identité canonique créée et contrôler son identifiant fournisseur ;
+3. l'arrêt global J4 peut être appliqué à ce stade : il verrouille uniquement J4 et ne doit pas
+   faire apparaître de bloqueur J5 ;
+4. sans arrêter ni reconstruire l'application, ouvrir **« Statistiques, incidents et compositions
+   J5 »** ;
+5. vérifier que la préparation J5 est disponible, puis suivre les étapes 3 à 9 de la section
+   3.10 ter ;
+6. ne jamais ouvrir les deux confirmations dans des onglets concurrents. Un coordinateur commun
+   sérialise néanmoins les transports et impose au moins trois secondes entre deux départs, y
+   compris entre J4 et J5 ;
+7. au premier incident, ne pas réessayer : appliquer uniquement l'arrêt correspondant au jalon en
+   cours, puis arrêter l'application ;
+8. après le dernier test, remettre les sept valeurs bloquées de la section 3.10 ter, redémarrer une
+   fois pour constater les bloqueurs J4 et J5, puis arrêter gracieusement.
+
+La preuve minimale doit montrer un seul démarrage d'application, le résultat J4, la disponibilité
+de la préparation J5 après J4, le résultat J5 et l'absence de retry. Elle ne doit contenir ni JSON
+brut, ni phrase de confirmation, ni URI complète, ni en-tête, ni autre valeur de `.env`.
+
+```text
+COMBINED_SESSION_APPLICATION_STARTS=1
+COMBINED_SESSION_J4_EVENT_ID=<identifiant choisi>
+COMBINED_SESSION_J4_TERMINAL=COMPLETED_LOCKED|FAILED_LOCKED|STOPPED_LOCKED
+COMBINED_SESSION_J4_GLOBAL_STOP_APPLIED=YES|NO
+COMBINED_SESSION_J5_PREPARATION_AFTER_J4=AVAILABLE
+COMBINED_SESSION_J5_TERMINAL=COMPLETED_LOCKED|FAILED_LOCKED|STOPPED_LOCKED
+COMBINED_SESSION_RESTART_BETWEEN_J4_AND_J5=NO
+COMBINED_SESSION_RETRY=0
+LOCAL_CONFIGURATION_RELOCKED=YES|NO
+APPLICATION_STOPPED=YES|NO
+```
+
 ### 3.11 Qualifier réellement les deux événements J4 — sous-étape 1
 
 Cette campagne est un geste humain exceptionnel. Ne jamais l’exécuter depuis Maven, un script, un
@@ -381,13 +567,14 @@ navigateur automatisé ou une tâche planifiée. Ne pas commencer tant que la br
 revue et que les tests hors ligne V6 ne sont pas réussis.
 
 À la suite de l’incident de migration V5 → V6 du 2026-08-15, appliquer d’abord la migration avec
-le réseau bloqué. Application arrêtée, remettre ou conserver les six clés suivantes :
+le réseau bloqué. Application arrêtée, remettre ou conserver les sept clés suivantes :
 
 ```properties
 SOFASCORE_ENABLED=false
 SOFASCORE_J3_QUALIFICATION_ENABLED=false
 SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=false
 SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false
+SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=false
 SOFASCORE_BASE_URL=
 SOFASCORE_ALLOWED_ENDPOINTS=
 ```
@@ -412,6 +599,7 @@ SOFASCORE_ENABLED=true
 SOFASCORE_J3_QUALIFICATION_ENABLED=false
 SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true
 SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false
+SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=false
 SOFASCORE_BASE_URL=https://www.sofascore.com
 SOFASCORE_ALLOWED_ENDPOINTS=EVENT_DETAILS
 ```
@@ -451,6 +639,7 @@ SOFASCORE_ENABLED=false
 SOFASCORE_J3_QUALIFICATION_ENABLED=false
 SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=false
 SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false
+SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=false
 SOFASCORE_BASE_URL=
 SOFASCORE_ALLOWED_ENDPOINTS=
 ```
@@ -471,7 +660,7 @@ snapshots 16 et 17. Le retest correctif ne doit effectuer aucun transport : ne p
 **« Préparer les deux événements »**, ne pas recopier de phrase de confirmation et ne pas réarmer
 la campagne.
 
-Application arrêtée, remettre d’abord les six clés de la section 3.11 à leur état bloqué. Démarrer
+Application arrêtée, remettre d’abord les sept clés de la section 3.11 à leur état bloqué. Démarrer
 ensuite PostgreSQL et l’application corrigée, puis effectuer uniquement les lectures locales
 suivantes :
 
@@ -508,7 +697,7 @@ Cette sous-étape est un geste humain explicite. Elle autorise un ID numérique 
 peut être répétée manuellement pour actualiser un match. Elle n’autorise aucun polling, timer,
 script, navigateur automatisé, retry ou rafraîchissement automatique.
 
-Application arrêtée, partir des six valeurs bloquées de la section 3.11, puis régler temporairement
+Application arrêtée, partir des sept valeurs bloquées de la section 3.11, puis régler temporairement
 uniquement :
 
 ```properties
@@ -516,6 +705,7 @@ SOFASCORE_ENABLED=true
 SOFASCORE_J3_QUALIFICATION_ENABLED=false
 SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true
 SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=true
+SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=false
 SOFASCORE_BASE_URL=https://www.sofascore.com
 SOFASCORE_ALLOWED_ENDPOINTS=EVENT_DETAILS
 ```
@@ -551,7 +741,7 @@ soumettre le code terminal à une décision humaine. `FAILED_LOCKED` et `STOPPED
 nouvelle préparation dans le même processus. La permission générale de rappels manuels ne
 constitue jamais une autorisation de retry après incident.
 
-Après succès ou incident, arrêter l’application, remettre exactement les six valeurs bloquées de
+Après succès ou incident, arrêter l’application, remettre exactement les sept valeurs bloquées de
 la section 3.11, redémarrer facultativement pour vérifier les bloqueurs, puis arrêter de nouveau.
 La preuve doit rester minimisée : ID, identité canonique, champs normalisés, statut, snapshot,
 taille, SHA-256, parseur, heure de réception, nombre de cycles humains et résultat. Aucun JSON brut,
@@ -583,8 +773,8 @@ Aucun Docker ni accès SofaScore n’est requis par les tests standards.
 .\mvnw.cmd -Pintegration-tests verify
 ```
 
-Docker doit être disponible. Testcontainers vérifie les migrations V1 à V6, l’état initial du
-connecteur, la conservation exacte du brut, sa déduplication et la provenance J4.
+Docker doit être disponible. Testcontainers vérifie les migrations V1 à V9, l’état initial du
+connecteur, la conservation exacte du brut, sa déduplication et les provenances J4/J5.
 
 ### 4.3 Script consolidé
 
@@ -667,6 +857,33 @@ Cette preuve historique hors ligne ne clôture pas le Work Order. La campagne r�
 est qualifiée techniquement par les tests V6, puis doit être validée humainement selon la section
 3.11. Elle ne doit jamais inclure un payload brut, une valeur de `.env`, un cookie ou une donnée de
 session.
+
+### 4.8 bis Qualification technique Windows J5
+
+Exécuter les deux suites avec toutes les propriétés réseau dans leur état bloqué :
+
+```powershell
+.\mvnw.cmd clean verify
+.\mvnw.cmd -Pintegration-tests verify
+```
+
+Puis suivre la section **3.10 bis**. Vérifier Flyway V7, l'import idempotent, les trois panneaux à
+`COMPLETE · 100%`, les références de fixtures et l'absence d'erreur dans le navigateur. Consigner
+uniquement les métadonnées minimisées dans
+`docs/validation/J5-WINDOWS-TECHNICAL-QUALIFICATION-20260815.md` ; ne jamais y copier un payload,
+une valeur de `.env`, un cookie, un jeton ou une donnée de session.
+
+### 4.8 ter Readiness technique de la qualification réelle J5
+
+La voie réelle J5 corrigée est qualifiée hors ligne par `261` tests standards et `20` tests
+PostgreSQL/Testcontainers, avec Flyway V9 et zéro appel fournisseur. La preuve est
+`docs/validation/J5-REAL-EVENT-DATA-TECHNICAL-READINESS-20260815.md`.
+
+Ces résultats valident les garde-fous, l'ordre des transports simulés, la persistance brute avant
+parsing, les parseurs V2, l'arrêt sans retry, le verrou terminal et la poursuite après un HTTP
+`404` de famille explicitement classé `UNAVAILABLE`. Ils ne valident pas les schémas actuels du
+fournisseur. Seule la procédure 3.10 ter peut faire évoluer
+`J5_PROVIDER_SCHEMA_VALIDATED`, après revue humaine et avec le Work Order 006 toujours actif.
 
 ### 4.9 Qualification réelle J4 sous-étape 1
 

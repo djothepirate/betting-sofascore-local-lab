@@ -6,6 +6,146 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Corrigé
 
+- retrait de la liste technique des chemins JSON manquants au-dessus des tableaux
+  `EVENT_INCIDENTS` et `EVENT_LINEUPS` : les rapports de complétude, badges, compteurs, données et
+  lignes des tableaux restent inchangés ; une régression MVC alimente volontairement les deux
+  familles avec des chemins manquants et vérifie leur absence dans le HTML ;
+- qualification humaine V13 des deux formes courantes : Cittadella — Atalanta U23 (`16691018`)
+  termine trois appels avec incidents snapshot 189 / observation 100 à
+  `PARTIAL · 83% · 142/171` et compositions snapshot 192 / observation 101 à `94/95`, puis
+  Shanghai Shenhua — Beijing Guoan (`16851672`) termine trois appels avec incidents snapshot 195 /
+  observation 103 à `COMPLETE · 81/81`, motif `Leaving field` rendu à la minute 74 et compositions
+  snapshot 196 / observation 104 à `97/97` ; `PROVIDER_SCHEMA_VALIDATED=YES` dans cette portée
+  bornée ;
+- clôture fonctionnelle J5 sur neuf captures opérateur conservées hors dépôt : listes de chemins
+  techniques absentes, tableaux incidents/compositions inchangés, motif `Leaving field` conservé,
+  configuration locale reverrouillée, contrôles J4/J5 `LOCKED` après redémarrage et application
+  finalement arrêtée ; le Work Order réel J5 passe à `VALIDATED` et rejoint `completed` ;
+- correction versionnée `event-incidents-v13` de la valeur fournisseur
+  `reason="Leaving field"` sur un carton jaune : le libellé exact rejoint le vocabulaire fermé,
+  reste persisté et affiché comme motif, tandis que V12 rejette encore la même forme et que toute
+  autre valeur non documentée demeure `SCHEMA_INCOMPATIBLE` ; V13 conserve sans modification la
+  règle stricte V12 des séances terminales entièrement non minutées ;
+- qualification hors ligne de la structure opérateur de Yongjing Cao à la minute 74, de la
+  poursuite ordonnée jusqu'aux compositions après trois transports sans retry et de la fermeture
+  du vocabulaire ; cette preuve hors ligne est désormais complétée par les deux campagnes humaines
+  V13 consignées ci-dessus ;
+- correction versionnée `event-incidents-v12` de la séance terminale entièrement non minutée
+  observée dans le snapshot 189 de l'événement `16691018` : V11 rejetait exactement le marqueur
+  `PEN` et quatorze `penaltyShootout` sans minute globale ni action imbriquée ; V12 conserve la
+  minute absente, la persiste en `NULL` et l'affiche par `—` sans jamais la déduire de la séquence ;
+- validation contextuelle stricte de cette exception temporelle : marqueur `PEN` inactif et score
+  complet, marqueur `FT` ou `ET` minuté, totalité de la séance non minutée, séquences uniques et
+  contiguës, scores présents et score final concordant ; les séances mixtes, isolées, lacunaires ou
+  contradictoires ainsi qu'un `inGamePenalty` sans minute restent `SCHEMA_INCOMPATIBLE` ;
+- régression explicite de l'absence simultanée de `reason` et `description` sur un penalty
+  `missed` : elle produit `PARTIAL` sans motif inventé pour `inGamePenalty` comme pour
+  `penaltyShootout`, tandis que les tuples fournis, dont `Woodwork/woodwork`, restent stricts ;
+- retour du statut courant à `PROVIDER_SCHEMA_VALIDATED=NO` après la campagne `16691018` :
+  statistiques snapshot 188 indisponibles, incidents snapshot 189 persistés avant rejet V11,
+  verrou `FAILED_LOCKED` après deux appels, zéro retry et compositions non tentées ; le payload
+  complet passe hors ligne sous V12 avec 33 incidents, quatorze tirs au but, quinze avertissements
+  temporels et aucun problème de schéma ;
+- qualification humaine réelle du mode combiné J4 phase 2 + J5 sur Barracas Central — Rosario
+  Central (`16671566`) dans un même démarrage : J4 termine après un appel et le snapshot 183, puis
+  J5 termine trois appels ordonnés sans retry avec les snapshots 184/185/186 et atteint les
+  compositions à `COMPLETE · 95/95` ;
+- qualification réelle du motif V11 `Off the ball foul` dans le snapshot incidents 185,
+  observation append-only 96 : `event-incidents-v11` traite 18 incidents à `COMPLETE · 69/69` et
+  rend le carton jaune extérieur de Facundo Mallo à la minute 77 sans modifier le libellé ; les
+  onze preuves PNG restent hors dépôt et leur inventaire minimisé est consigné dans les rapports de
+  validation ;
+- constat d'arrêt postérieur à la campagne combinée, sans listener local ni processus Java du
+  laboratoire ; le Work Order reste actif uniquement pour la remise de la configuration locale à
+  l'état bloqué, sa vérification après redémarrage et l'arrêt final de l'instance de contrôle ;
+- correction versionnée `event-incidents-v11` de la nouvelle valeur fournisseur
+  `reason="Off the ball foul"` sur un carton : le libellé exact rejoint le vocabulaire fermé, reste
+  persisté et affiché comme motif, tandis que toute autre valeur non attestée demeure
+  `SCHEMA_INCOMPATIBLE` ; son sens métier est documenté comme obstruction ou faute loin du ballon ;
+- première qualification humaine bornée du parseur courant V11 sur Al Tai — Al-Qadsiah : campagne
+  `COMPLETED_LOCKED`, trois appels sans retry, snapshot incidents historique 179 reparsé dans
+  l'observation append-only 93 à `COMPLETE · 24/24`, cinq buts `regular/from=regular` visibles, puis
+  compositions snapshot 182 / observation 94 à `COMPLETE · 67/67` ; cette campagne intermédiaire
+  ne contenait pas le nouveau motif `Off the ball foul`, qualifié depuis sur l'événement `16671566` ;
+- correction versionnée `event-incidents-v10` des cinq buts du snapshot 179 portant le tuple
+  fournisseur redondant `incidentClass="regular"` / `from="regular"` : la valeur reste dans le
+  brut, elle est omise de l'origine spéciale normalisée et toute combinaison croisée ou nouvelle
+  valeur inconnue reste `SCHEMA_INCOMPATIBLE` ;
+- retour du statut courant à `PROVIDER_SCHEMA_VALIDATED=NO` après la campagne de l'événement
+  `16251993` : statistiques snapshot 178 et observation 91 complètes, incidents snapshot 179
+  conservés avant le rejet V9, verrou `FAILED_LOCKED` après exactement deux appels, zéro retry et
+  compositions non tentées ; le payload opérateur complet passe hors ligne sous V10 avec sept
+  incidents sur sept et `24/24` signaux ;
+- correction versionnée `event-incidents-v9` du carton de banc observé dans le snapshot 162 :
+  `Other reason` rejoint le vocabulaire fermé des motifs et `benchAddedTime` est accepté uniquement
+  avec un `card`, un `time` technique négatif, un `benchTime` présent et aucun `addedTime`
+  concurrent ; le cas attesté est normalisé à `90+9`, tandis que tout usage hors contexte et tout
+  nouveau motif inconnu restent `SCHEMA_INCOMPATIBLE` ;
+- retour du statut courant à `PROVIDER_SCHEMA_VALIDATED=NO` après la campagne Cardiff City —
+  Wrexham : statistiques snapshot 161 compatibles, incidents snapshot 162 conservés avant le rejet
+  V8, verrou `FAILED_LOCKED` après exactement deux appels, zéro retry et compositions non tentées ;
+  le payload complet passe hors ligne sous V9 avec 20 incidents sur 20 ;
+- restauration bornée de `PROVIDER_SCHEMA_VALIDATED=YES` après le retest humain V9 de Cardiff City
+  — Wrexham : `COMPLETED_LOCKED`, trois appels sans retry, snapshot incidents 162 reparsé dans
+  l'observation 77 à `COMPLETE · 100%`, carton `Other reason` rendu à `90+9`, puis compositions
+  snapshot 165, observation 78, `event-lineups-v2`, `85/85` ;
+- correction versionnée `event-incidents-v8` du marqueur terminal de séance de tirs au but : la
+  sentinelle `time=999` n'est acceptée que pour la combinaison exacte `period/PEN/penalties`,
+  inactive, avec score complet et tirs au but minutés ; elle reste dans le brut tandis que la
+  minute normalisée devient la dernière minute effective de la séance ;
+- confirmation par rejeu hors ligne que les neuf `penaltyShootout` sans minute globale sont déjà
+  normalisés depuis leur première action imbriquée et que les trois cartons sans `reason` restent
+  valides, persistés sans motif et affichés par `—` ;
+- prise en charge bornée du champ fournisseur `from="shot"` sur un but `regular`, conservé dans le
+  brut mais omis de l'origine spéciale normalisée ; cette variante connexe empêchait encore le
+  payload comportant les cartons sans motif d'être accepté intégralement ;
+- ajout du résultat cohérent `incidentClass="missed"`, `description="Woodwork"`,
+  `reason="woodwork"` pour `inGamePenalty` et `penaltyShootout`, avec rejet maintenu des tuples
+  incomplets, croisés ou inconnus ;
+- remplacement de la règle incidents V5 volontairement étroite par le contrat métier V6 couvrant
+  les huit types de faits de jeu documentés ; les métadonnées d'affichage facultatives manquantes
+  produisent désormais `PARTIAL`, tandis que les contradictions atomiques, types inconnus et
+  valeurs hors vocabulaire restent bloquants en `SCHEMA_INCOMPATIBLE` ;
+- clarification du temps des cartons de banc : un `time` technique négatif exige `benchTime`, qui
+  devient la minute métier ; à l'inverse, un carton portant déjà une minute non négative ne peut pas
+  aussi porter `benchTime` ; le brut, notamment `time=-5`, reste inchangé ;
+- correction de la fiche métier incidents : sous-sections `10.2` et `10.3` du chapitre 10,
+  libellés entrant/sortant, vocabulaire `Forward`, distinction brute `owngoal` / canonique
+  `ownGoal`, règles VAR et correspondance des résultats de séance de tirs au but ;
+- correction bornée du carton de banc réel qui arrêtait la seconde campagne J5 après les
+  statistiques : `event-incidents-v5` traite uniquement un `card` portant le marqueur exact
+  `time=-5` avec un `benchTime` valide, conserve le brut, normalise la minute depuis `benchTime` et
+  retient la classe ainsi que le motif ; toute autre valeur négative reste incompatible dans
+  l'attente de la fiche de règles de gestion des incidents football ;
+- réarmement explicite de J5 après une campagne réussie : `COMPLETED_LOCKED` continue d'interdire
+  tout rejeu de l'ancien claim, mais permet une nouvelle préparation locale avec nouvel identifiant
+  de requête, nouvelle phrase et nouvel acquittement ; `FAILED_LOCKED`, `STOPPED_LOCKED` et
+  `EXPIRED_LOCKED` restent verrouillés jusqu'au redémarrage ;
+- poursuite de la campagne J5 lorsqu'une réponse brute identique est dédupliquée vers une preuve
+  historique déjà classée : la classification V1/V2 reste immuable, le résultat du parseur courant
+  est porté par une nouvelle observation append-only et `EVENT_LINEUPS` n'est plus bloqué par un
+  faux `RAW_CLASSIFICATION_ERROR` ;
+- conservation de l'identité des joueurs entrant et sortant sur tous les incidents
+  `substitution` : `event-incidents-v4` lit séparément `playerIn` et `playerOut`, conserve leurs
+  identifiants et noms, mesure toute absence comme `PARTIAL` et les affiche dans deux colonnes
+  dédiées sans synthétiser de joueur ;
+- correction du faux positif `SCHEMA_INCOMPATIBLE` sur les réponses réelles `EVENT_INCIDENTS` :
+  `event-incidents-v3` reconnaît `addedTime=999` comme une sentinelle fournisseur uniquement sur
+  un marqueur `period`, conserve les octets bruts inchangés, omet la sentinelle de la valeur
+  normalisée et continue de refuser `999` sur tout incident métier latéralisé ;
+- comptage de complétude des marqueurs techniques `period` et `injuryTime` sans exiger le champ
+  latéral `isHome`, afin de ne pas inventer de côté pour un événement global à la période ;
+- isolation du contexte PostgreSQL/Testcontainers vis-à-vis des opt-ins opérateur J3/J4/J5 : la
+  suite d'intégration force désormais toutes les voies réseau à l'état désactivé sans lire ni
+  modifier `.env` ;
+- correction de la politique J5 qui traitait tout statut non `2xx` comme terminal : un HTTP `404`
+  sur `EVENT_STATISTICS`, `EVENT_INCIDENTS` ou `EVENT_LINEUPS` devient une indisponibilité de
+  famille persistée, sans retry, puis la campagne continue dans l'ordre prévu ;
+- distinction explicite entre `UNAVAILABLE`, `EMPTY_VALID` et `TRANSPORT_ERROR`, avec normaliseur
+  de provenance par famille, rendu `UNAVAILABLE · N/A` et absence de valeur synthétisée ;
+- migration Flyway V9 reclassant les anciens snapshots J5 HTTP `404` de
+  `TRANSPORT_ERROR/HTTP_STATUS_404` vers `ENDPOINT_UNAVAILABLE`, sans modifier les octets bruts ni
+  créer rétroactivement une observation normalisée ;
 - conservation de la date civile du match et de la zone IANA dans le lien de retour de la fiche
   J4 : Saint-Étienne — Clermont Foot revient désormais sur le `2026-08-14` au lieu de la date
   locale courante du `2026-08-15` ;
@@ -30,9 +170,152 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   chaque mini-contexte retire la source d’environnement ambiante avant le chargement
   d’`application.yml` et fixe explicitement les opt-ins J3, J4 et J4 sous-étape 2. Les 212 tests
   standards passent avec la configuration J4 sous-étape 2 activée, sans appel fournisseur.
+- extension de cette isolation au nouvel opt-in J5 : les trois scénarios historiques J3/J4 fixent
+  désormais explicitement `SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=false` et vérifient que
+  J5 reste inactif. La commande `mvnw.cmd clean verify`, initialement en échec sur ces trois tests
+  avec la configuration opérateur J5 armée, repasse avec 257 tests et zéro appel fournisseur.
 
 ### Ajouté
 
+- migration Flyway V20 append-only autorisant `event-incidents-v13`, avec preuve V19 → V20 sans
+  réécriture d'une observation V12 ni de sa minute nulle ; un carton `Leaving field` est ensuite
+  persisté et relu avec son motif exact ;
+- rapport minimisé `J5-OBSERVED-V13-LEAVING-FIELD-CARD-REASON-20260818.md`, règle métier,
+  comparaison historique V12, poursuite de service, upgrade PostgreSQL et bilan courant de 369
+  tests standards plus 35 tests d'intégration réussis sans appel fournisseur ;
+- migration Flyway V19 append-only autorisant `event-incidents-v12`, rendant la minute nullable
+  sous une contrainte réservée aux seuls tirs au but et marqueurs `PEN`, avec preuve V18 → V19 sans
+  réécriture de l'historique V11 et round-trip PostgreSQL d'une minute absente ;
+- rapport minimisé `J5-REAL-V12-UNMINUTED-SHOOTOUT-20260818.md`, inventaire SHA-256 des trois
+  captures conservées hors dépôt, diagnostic V11 des quinze chemins temporels, rejeu V12 de la
+  pièce opérateur, 366 tests standards et 34 tests PostgreSQL/Testcontainers réussis, puis nouvelle
+  séquence de retest humain avant reverrouillage ;
+- mode de qualification combiné J4 phase 2 + J5 dans un même processus : union exacte des quatre
+  familles, J3 et J4 phase 1 toujours exclus, contrôles terminaux indépendants et preuve que
+  l'arrêt global J4 n'empêche pas une préparation J5 sans redémarrage ;
+- coordinateur de requêtes partagé par les services réels J4/J5, maintenant une seule section HTTP
+  active et le délai minimal de trois secondes entre deux départs, y compris entre les jalons ;
+- rapport `J4-J5-COMBINED-QUALIFICATION-SESSION-20260818.md`, configuration temporaire bornée,
+  procédure humaine en un seul démarrage et bilan de 358 tests standards plus 32 tests
+  d'intégration réussis sans appel fournisseur ;
+- migration Flyway V18 append-only autorisant `event-incidents-v11`, avec preuve d'upgrade V17 →
+  V18 sans réécriture d'une observation ni d'un incident V10 ;
+- rapport minimisé `J5-REAL-V11-OFF-BALL-CARD-REASON-20260818.md`, régression sur la structure JSON
+  fournie par l'opérateur, comparaison historique V10, poursuite de service jusqu'aux compositions
+  et bilan courant de 358 tests standards plus 32 tests d'intégration réussis sans appel
+  fournisseur ;
+- migration Flyway V17 append-only autorisant `event-incidents-v10`, avec preuve d'upgrade V16 →
+  V17 sans réécriture d'une observation ni d'un incident V9 ;
+- rapport minimisé `J5-REAL-V10-REGULAR-GOAL-ORIGIN-20260818.md`, trois captures de preuve
+  conservées hors dépôt, rejeu exact de la transcription opérateur hors réseau, régressions V10 et
+  bilan de 348 tests standards plus 31 tests d'intégration réussis ; ce retest a ensuite été
+  remplacé par la qualification humaine du parseur courant V11 ;
+- qualification fonctionnelle humaine V9 à partir de cinq captures conservées hors dépôt :
+  préparation sans transport, campagne à trois appels, observation incidents append-only et
+  compositions complètes ; le reverrouillage, alors encore attendu, est couvert par la preuve de
+  clôture finale J5 ;
+- migration Flyway V16 append-only autorisant `event-incidents-v9`, avec preuve d'upgrade V15 →
+  V16 sans réécriture d'une observation V8 et persistance du carton à la minute `90+9` avec le
+  motif `Other reason` ;
+- rapport minimisé `J5-REAL-V9-BENCH-CARD-OTHER-REASON-20260818.md`, tests de contrat V9, rejeu
+  opérateur complet hors dépôt et bilan de 344 tests standard plus 30 tests d'intégration réussis ;
+- qualification fonctionnelle humaine V8 à partir d'un lot externe de 48 captures, conservé hors
+  dépôt : trois campagnes `COMPLETED_LOCKED` le 2026-08-18, dont le rejeu réussi par V8 du snapshot
+  139 contenant neuf tirs au but et `PEN/time=999`, les cartons sans motif du snapshot 144 et le
+  `inGamePenalty/missed/Woodwork` du snapshot 150 ; les deux campagnes entièrement disponibles
+  qualifient de façon bornée les trois schémas courants ; l'arrêt local est confirmé par l'absence
+  de listener 8087 et de processus Java du laboratoire, tandis que le reverrouillage de la
+  configuration reste à confirmer avant archivage ;
+- migration Flyway V15 append-only autorisant la provenance `event-incidents-v8`, avec preuve
+  d'upgrade V14 → V15 sans réécriture d'une observation V7 ni modification de ses incidents ;
+- régressions hors ligne V8 sur les deux payloads opérateur conservés hors dépôt : 36 incidents
+  dont neuf tirs au but et un marqueur `PEN` normalisé à 146, puis 16 incidents dont trois cartons
+  sans motif et trois buts ordinaires `from="shot"` ;
+- rapport `J5-REAL-V8-PENALTY-INCIDENT-VARIANTS-20260818.md` et extension de la fiche métier aux
+  résultats sur le poteau ou la barre transversale pour les deux familles de pénalty ;
+- parseur `event-incidents-v7` limité à la classe fournisseur de substitution sur blessure
+  `incidentClass="injury"`, conservation de `injury`, du joueur entrant et du joueur sortant,
+  rejet de la contradiction explicite `injury=false`, et régression prouvant la poursuite vers
+  `EVENT_LINEUPS` sans retry ;
+- migration Flyway V14 append-only autorisant la provenance V7, avec preuve d'upgrade V13 → V14
+  sans réécriture d'une observation V6 ni modification de ses incidents ;
+- preuve minimisée Arsenal — Manchester City : statistiques snapshot 70 compatibles, brut
+  incidents snapshot 71 persisté avant le rejet V6, cause isolée sur le remplacement sur blessure
+  de Jérémy Doku par Jack Grealish parmi 23 incidents, puis validation hors ligne intégrale par V7 ;
+- qualification humaine V6 de Lens — Paris Saint-Germain : marqueurs `HT`/`FT`, carton de
+  l'entraîneur, temps additionnels de trois et cinq minutes et participants visibles ; campagne
+  terminée avec les snapshots dédupliqués 64/65 et le snapshot compositions 69 ;
+- rapport de validation `J5-REAL-V6-LENS-PASS-AND-V7-INJURY-SUBSTITUTION-CORRECTION-20260817.md`
+  réunissant la preuve réelle V6, la cause exacte du rejet Arsenal — Manchester City, la
+  validation hors ligne V7 des 23 incidents sur 23, la poursuite vers les compositions, les 330
+  tests standards et les 28 tests d'intégration, tous réussis sans appel fournisseur ;
+- fiche canonique `docs/requirements/J5-FOOTBALL-INCIDENT-RULES.md`, parseur
+  `event-incidents-v6` et matrice hors ligne couvrant `period`, `substitution`, `goal`, `card`,
+  `injuryTime`, `varDecision`, `inGamePenalty` et `penaltyShootout` ;
+- migration Flyway V13 append-only conservant texte de période, blessure, passeur, origine du but,
+  temps additionnel, décision VAR, description et ordre de séance de tirs au but, sans réécriture
+  des observations V1–V12 ;
+- affichage J5 étendu aux colonnes passeur, détail et ordre de séance, avec participants et motifs
+  issus exclusivement des observations normalisées ;
+- preuve minimisée de Paris Saint-Germain — Lens : campagne réussie en première mi-temps sur les
+  snapshots 61/62/63, puis rejeu manuel réussi à la fin du match sur les snapshots 64/65/66 ;
+- preuve minimisée du retest réel du réarmement : une première campagne sur `16391135` a terminé
+  ses trois appels, puis une seconde campagne distincte sur `16483632` a été préparée et exécutée
+  dans la même instance ; les statistiques du snapshot 59 ont été normalisées avant l'arrêt strict
+  de V4 sur le snapshot incidents 60, sans appel compositions ni retry ;
+- migration Flyway V12 append-only ajoutant `incident_class` et `reason`, autorisant
+  `event-incidents-v5` et qualifiant les upgrades V1/V11 → V12 sans réécriture de l'historique ;
+- tests hors ligne du carton de banc (`benchTime=58`, classe jaune, motif `Argument`), de la
+  persistance PostgreSQL, du rendu MVC et de la poursuite ordonnée vers les compositions avec V5 ;
+- preuve minimisée du retest réel V4 sur `16412917` : statistiques HTTP `404` indisponibles,
+  incidents V4 `36/36` avec joueurs entrant/sortant, compositions V2 `85/85`, exactement trois
+  appels ordonnés sans retry, puis régression hors ligne du nouveau cycle après succès ;
+- migration Flyway V11 append-only ajoutant les couples identifiant/nom des joueurs entrant et
+  sortant, autorisant `event-incidents-v4` et qualifiant l'upgrade V10 → V11 sans réécriture de
+  l'historique ;
+- régression hors ligne du retest réel : statistiques 404 dédupliquées, incidents 200
+  dédupliqués et reparsés par V4, puis unique appel compositions, ainsi qu'une preuve PostgreSQL
+  que le snapshot V2 conserve `SCHEMA_INCOMPATIBLE` pendant qu'une observation V4 est ajoutée ;
+- migration Flyway V10 append-only autorisant la provenance `event-incidents-v3` sans réécrire les
+  observations historiques V1/V2, avec test d'upgrade V9 → V10 sur PostgreSQL 18.4 ;
+- fixture synthétique minimale et tests de régression du marqueur de période fournisseur, ainsi
+  que couverture du parcours ordonné prouvant que les compositions sont atteintes après parsing
+  compatible des incidents ;
+- tests hors ligne du scénario mixte « statistiques HTTP `404`, incidents et compositions `2xx` »,
+  de l'affichage d'indisponibilité, de la persistance PostgreSQL `UNAVAILABLE` et de l'upgrade
+  V8 → V9 d'un snapshot historique mal classé ;
+- voie de qualification réelle J5, désactivée par défaut et exclusive de J3, mais partageable avec
+  J4 phase 2 sous l'union exacte des quatre endpoints,
+  limitée à l'origine exacte `https://www.sofascore.com` et aux trois endpoints logiques
+  `EVENT_STATISTICS`, `EVENT_INCIDENTS` et `EVENT_LINEUPS` ;
+- contrôle humain J5 avec préparation sans réseau, phrase exacte valable cinq minutes,
+  acquittement, claim immuable et trois appels séquentiels maximum ; le succès verrouille le claim
+  terminé tout en autorisant une campagne ultérieure distincte, tandis qu'incident, expiration ou
+  arrêt verrouillent le processus ;
+- transport J5 sans proxy, redirection, cookie, jeton, compte, en-tête de navigateur ou retry,
+  avec réponse bornée, délai minimal de trois secondes et arrêt avant toute famille restante au
+  premier incident ;
+- parseurs fournisseur `event-statistics-v2`, `event-incidents-v2` et `event-lineups-v2`,
+  persistance brute avant parsing, normalisation `PROVIDER_SNAPSHOT` et migration Flyway V8
+  append-only étendant les contraintes V7 sans modifier une migration partagée ;
+- panneau J5 local de qualification gardée et résultat minimisé, protégés par le jeton de formulaire
+  à usage unique, sans payload brut ni identifiant libre dans l'action finale ;
+- couverture hors ligne de la configuration, de la confirmation, de l'ordre des trois transports,
+  des `429`, des incompatibilités sans objet partiel, de la provenance PostgreSQL V8 et de
+  l'absence de credentials ou d'en-tête navigateur ;
+- jalon J5 hors ligne pour `EVENT_STATISTICS`, `EVENT_INCIDENTS` et `EVENT_LINEUPS`, rattaché aux
+  identités canoniques J4 sans ajouter de transport fournisseur ;
+- contrats synthétiques versionnés `event-statistics-v1`, `event-incidents-v1` et
+  `event-lineups-v1`, corpus nominal/partiel/vide et ruptures de type sans coercition ;
+- rapports déterministes `COMPLETE`, `PARTIAL` et `EMPTY_VALID`, avec score, nombres de signaux et
+  chemins JSON manquants, sans donnée inventée ;
+- migration Flyway V7 créant les observations J5, les métriques, les incidents, les deux côtés de
+  composition et leurs joueurs, avec provenance, deux hashes, déduplication et triggers
+  append-only ;
+- import transactionnel et idempotent des trois fixtures nominales sur l'identité synthétique J4,
+  et lecture de la dernière version de chaque famille ;
+- page locale `/events/{canonicalEventId}/statistics` présentant valeurs, complétude et provenance,
+  avec action d'import synthétique protégée par jeton de formulaire à usage unique ;
 - sous-étape 2 J4 paramétrable dans `/events`, protégée par un opt-in distinct qui rend la
   sous-étape 1 indisponible pendant son activation ;
 - préparation sans réseau d'un ID `EVENT_DETAILS` borné, phrase exacte liée à cet ID, acquittement
@@ -144,6 +427,36 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Documentation
 
+- diagnostic minimisé des snapshots réels 32 et 34 : réponses incidents HTTP `200`, respectivement
+  20 et 22 objets, deux sentinelles de période `addedTime=999` dans chaque réponse, arrêt terminal
+  avant les compositions sous V2, puis correction versionnée V3 validée exclusivement hors ligne ;
+- consignation minimisée de la première campagne réelle J5 : détail J4 préalable dans le snapshot
+  28, réponse JSON HTTP `404` de `EVENT_STATISTICS` conservée dans le snapshot 30, arrêt
+  `FAILED_LOCKED` après un seul appel, zéro retry et aucune tentative `incidents` ou `lineups` ;
+- Work Order séparé `WO-SS-20260815-006` pour la qualification réelle J5, avec revue de
+  l'ADR-SS-001, configuration temporaire exacte, politique d'arrêt, preuve minimisée et obligation
+  de reverrouillage avant tout redémarrage ;
+- consignation minimisée du second test J4 fourni par l'opérateur : snapshot 25 de `16412917`,
+  acquisition réussie de `16391135` dans le snapshot 26 et refus `EVENT_ID_MISMATCH` de l'import
+  synthétique J5 sur cette identité réelle ;
+- architecture et readiness de la voie réelle J5 : `257` tests standards, `18` tests
+  PostgreSQL/Testcontainers, huit migrations Flyway et zéro appel fournisseur pendant la
+  réalisation ;
+- procédure humaine J5 définissant l'activation temporaire, l'ordre des trois appels, l'arrêt sans
+  retry, les champs de preuve autorisés et l'état bloqué à restaurer après succès ou incident ;
+- qualification humaine hors ligne de J5 à partir de huit captures opérateur non versionnées :
+  navigation J4 → J5, absences explicites avant import, trois familles à `COMPLETE · 100%`,
+  provenance, parseurs et hashes visibles, avec `PROVIDER_SCHEMA_VALIDATED=NO` et voies réseau
+  toujours bloquées ;
+- archivage du Work Order J5 au statut `VALIDATED`, tout en conservant la future campagne en
+  conditions réelles à `NOT_RUN` et hors autorisation de ce Work Order ;
+- architecture hors ligne historique J5 précisant les trois formes de chemins cibles, l'absence de
+  transport dans le périmètre du Work Order 005, les algorithmes de complétude, la séparation
+  source/normalisé et le schéma V7 ;
+- consignation minimisée de l'unique tentative de découverte J5 : `HTTP 403`, zéro retry, arrêt
+  immédiat, cinq exemples non appelés et `providerSchemaValidated=false` maintenu ;
+- rapport de qualification technique J5 couvrant parsing, MVC, Flyway/PostgreSQL, déduplication,
+  append-only et invariants réseau ;
 - consignation minimisée de la campagne humaine J4 sous-étape 1 : deux transports autorisés, deux
   snapshots HTTP `200` classés `PARSED`, arrêt global appliqué, anomalie locale corrigée puis retest
   humain concluant des deux retours par date et des provenances ;
@@ -286,6 +599,18 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Sécurité
 
+- maintien des trois définitions J5 `callable=false` et sans URI dans le catalogue général ; la
+  voie spécialisée est désactivée par défaut, exige l'opt-in J5 et l'ensemble exact des familles
+  actives, reste inaccessible si J3 ou J4 phase 1 est actif et n'accepte J4 que dans sa phase 2 ;
+- sérialisation commune des transports réels J4/J5 avec concurrence maximale de un, verrou détenu
+  pendant l'échange et délai minimal partagé, sans polling, automatisation ni retry ajouté ;
+- aucun appel fournisseur dans Maven ou pendant l'implémentation J5 ; les tests du `RestClient`
+  dédié sont interceptés localement par `MockRestServiceServer`, et la campagne humaine réelle
+  demeure `NOT_RUN` avec `providerSchemaValidated=false` ;
+- arrêt de la découverte J5 au premier `HTTP 403`, sans variation d'en-tête, de client, d'adresse
+  ou d'identité, et maintien de toutes les fixtures à `providerSchemaValidated=false` ;
+- séparation des octets de fixture et des données J5 normalisées, conservation obligatoire de la
+  source, du SHA-256, du parseur et de l'heure, et refus SQL de toute mutation ;
 - maintien de `EVENT_DETAILS` sans URI et `callable=false` dans le catalogue général ; seule la
   voie spéciale J4 sous-étape 1 possède un transport HTTP, limité à l'origine, au chemin et aux
   deux identifiants autorisés, sans polling, retry ou repli fournisseur ;

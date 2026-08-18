@@ -1,0 +1,10 @@
+{
+  "eventId": 900001,
+  "incidents": [
+    {
+      "incidentType": "goal",
+      "time": "18",
+      "isHome": true
+    }
+  ]
+}

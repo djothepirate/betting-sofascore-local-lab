@@ -1,0 +1,38 @@
+{
+  "eventId": 900001,
+  "incidents": [
+    {
+      "incidentType": "goal",
+      "time": 18,
+      "isHome": true,
+      "teamId": 9101,
+      "player": {
+        "id": 9701,
+        "name": "Synthetic Home Striker"
+      },
+      "homeScore": 1,
+      "awayScore": 0
+    },
+    {
+      "incidentType": "card",
+      "time": 41,
+      "isHome": false,
+      "teamId": 9202,
+      "player": {
+        "id": 9802,
+        "name": "Synthetic Away Defender"
+      }
+    },
+    {
+      "incidentType": "substitution",
+      "time": 68,
+      "addedTime": 1,
+      "isHome": true,
+      "teamId": 9101,
+      "player": {
+        "id": 9703,
+        "name": "Synthetic Home Midfielder"
+      }
+    }
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "eventId": 900001,
+  "confirmed": true,
+  "home": {
+    "formation": "4-3-3",
+    "players": [
+      {
+        "player": {
+          "id": 9700,
+          "name": "Synthetic Home Keeper"
+        },
+        "shirtNumber": 1,
+        "position": "G",
+        "substitute": false
+      },
+      {
+        "player": {
+          "id": 9701,
+          "name": "Synthetic Home Striker"
+        },
+        "shirtNumber": 9,
+        "position": "F",
+        "substitute": false
+      }
+    ]
+  },
+  "away": {
+    "formation": "4-4-2",
+    "players": [
+      {
+        "player": {
+          "id": 9800,
+          "name": "Synthetic Away Keeper"
+        },
+        "shirtNumber": 1,
+        "position": "G",
+        "substitute": false
+      },
+      {
+        "player": {
+          "id": 9802,
+          "name": "Synthetic Away Defender"
+        },
+        "shirtNumber": 4,
+        "position": "D",
+        "substitute": true
+      }
+    ]
+  }
+}

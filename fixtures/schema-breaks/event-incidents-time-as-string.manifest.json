@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "event-incidents-time-as-string",
+  "endpointType": "EVENT_INCIDENTS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-15T12:35:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "event-incidents-v1",
+  "payloadResource": "fixtures/schema-breaks/event-incidents-time-as-string.json",
+  "maximumBytes": 4096,
+  "expectedRawSha256": "c1667f028d10bb54c2e300d7210e2a5da033cc4e1025a1a814cddbb4f7ea8f8c",
+  "expectedCanonicalJsonSha256": "2ef551f55d4cc34726489881ed0ec88c43a761aa9cfec115e7df01387f7b2db1",
+  "minimized": false,
+  "removedFields": []
+}
