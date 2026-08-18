@@ -131,6 +131,62 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
             order by d.endpoint_type, d.source_received_at desc, d.id desc
             """;
 
+    private static final String FIND_HISTORY_SQL = """
+            select
+                d.id as observation_id,
+                d.canonical_event_id,
+                e.provider,
+                e.provider_event_id,
+                d.endpoint_type,
+                d.source_kind,
+                d.source_reference,
+                d.source_snapshot_id,
+                d.source_fixture_id,
+                d.source_payload_sha256,
+                d.parser_version,
+                d.source_received_at,
+                d.completeness_status,
+                d.completeness_score,
+                d.present_signals,
+                d.expected_signals,
+                d.missing_paths_json::text as missing_paths_json,
+                d.lineups_confirmed,
+                d.normalized_sha256
+            from j5_event_data_observation d
+            join canonical_event e on e.id = d.canonical_event_id
+            where d.canonical_event_id = :canonicalEventId
+              and d.endpoint_type = :endpointType
+            order by d.source_received_at desc, d.id desc
+            """;
+
+    private static final String FIND_BY_OBSERVATION_ID_SQL = """
+            select
+                d.id as observation_id,
+                d.canonical_event_id,
+                e.provider,
+                e.provider_event_id,
+                d.endpoint_type,
+                d.source_kind,
+                d.source_reference,
+                d.source_snapshot_id,
+                d.source_fixture_id,
+                d.source_payload_sha256,
+                d.parser_version,
+                d.source_received_at,
+                d.completeness_status,
+                d.completeness_score,
+                d.present_signals,
+                d.expected_signals,
+                d.missing_paths_json::text as missing_paths_json,
+                d.lineups_confirmed,
+                d.normalized_sha256
+            from j5_event_data_observation d
+            join canonical_event e on e.id = d.canonical_event_id
+            where d.canonical_event_id = :canonicalEventId
+              and d.endpoint_type = :endpointType
+              and d.id = :observationId
+            """;
+
     private static final String INSERT_METRIC_SQL = """
             insert into j5_event_metric (
                 observation_id,
@@ -370,6 +426,52 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 Optional.ofNullable(views.get(SofascoreEndpointType.EVENT_STATISTICS)),
                 Optional.ofNullable(views.get(SofascoreEndpointType.EVENT_INCIDENTS)),
                 Optional.ofNullable(views.get(SofascoreEndpointType.EVENT_LINEUPS)));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<J5EventDataObservationView> findHistory(
+            UUID canonicalEventId,
+            SofascoreEndpointType endpointType) {
+        Objects.requireNonNull(canonicalEventId, "canonicalEventId");
+        requireJ5Endpoint(endpointType);
+        List<StoredParent> parents = jdbcTemplate.query(
+                FIND_HISTORY_SQL,
+                new MapSqlParameterSource()
+                        .addValue("canonicalEventId", canonicalEventId)
+                        .addValue("endpointType", endpointType.name()),
+                this::mapParent);
+        return parents.stream().map(this::toView).toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<J5EventDataObservationView> findByObservationId(
+            UUID canonicalEventId,
+            SofascoreEndpointType endpointType,
+            long observationId) {
+        Objects.requireNonNull(canonicalEventId, "canonicalEventId");
+        requireJ5Endpoint(endpointType);
+        if (observationId < 1) {
+            throw new IllegalArgumentException("observationId must be positive");
+        }
+        List<StoredParent> parents = jdbcTemplate.query(
+                FIND_BY_OBSERVATION_ID_SQL,
+                new MapSqlParameterSource()
+                        .addValue("canonicalEventId", canonicalEventId)
+                        .addValue("endpointType", endpointType.name())
+                        .addValue("observationId", observationId),
+                this::mapParent);
+        return parents.stream().findFirst().map(this::toView);
+    }
+
+    private static void requireJ5Endpoint(SofascoreEndpointType endpointType) {
+        Objects.requireNonNull(endpointType, "endpointType");
+        if (endpointType != SofascoreEndpointType.EVENT_STATISTICS
+                && endpointType != SofascoreEndpointType.EVENT_INCIDENTS
+                && endpointType != SofascoreEndpointType.EVENT_LINEUPS) {
+            throw new IllegalArgumentException("endpointType must identify a J5 family");
+        }
     }
 
     private static MapSqlParameterSource observationParameters(

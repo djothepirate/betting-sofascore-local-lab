@@ -57,6 +57,7 @@ import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J3ScheduledEventsPageCache;
 import com.bettingproject.sofascorelocal.port.J4EventDetailsCache;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
+import com.bettingproject.sofascorelocal.port.J6SnapshotHistoryStore;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import com.bettingproject.sofascorelocal.port.J3QualificationCheckpointStore;
 import com.bettingproject.sofascorelocal.port.RawSnapshotInspectionStore;
@@ -84,6 +85,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -159,6 +161,9 @@ class FlywayMigrationIT {
 
     @Autowired
     J5EventDataStore j5EventDataStore;
+
+    @Autowired
+    J6SnapshotHistoryStore j6SnapshotHistoryStore;
 
     @Test
     void createsTheJ3RawSnapshotSchemaAndKeepsNetworkDisabled() {
@@ -2462,6 +2467,17 @@ class FlywayMigrationIT {
                 from provider_snapshot_occurrence
                 where snapshot_id = ?
                 """, Long.class, inserted.snapshotId())).isEqualTo(2L);
+        assertThat(j6SnapshotHistoryStore.findTraces(Set.of(
+                inserted.snapshotId(),
+                secondVersion.snapshotId())))
+                .hasEntrySatisfying(inserted.snapshotId(), trace -> {
+                    assertThat(trace.occurrenceCount()).isEqualTo(2);
+                    assertThat(trace.deduplicatedOccurrenceCount()).isEqualTo(1);
+                    assertThat(trace.latestOutcome().name()).isEqualTo("DEDUPLICATED");
+                    assertThat(trace.rawPayloadState().name()).isEqualTo("RETAINED");
+                })
+                .hasEntrySatisfying(secondVersion.snapshotId(), trace ->
+                        assertThat(trace.occurrenceCount()).isEqualTo(1));
     }
 
     @Test
@@ -2738,6 +2754,11 @@ class FlywayMigrationIT {
                 .hasSize(2)
                 .extracting(view -> view.source().snapshotId().orElseThrow())
                 .containsExactly(changedSnapshot.snapshotId(), firstSnapshot.snapshotId());
+        assertThat(canonicalEventStore.findByObservationId(
+                first.canonicalEventId(),
+                first.observationId()))
+                .hasValueSatisfying(view ->
+                        assertThat(view.homeTeam().name()).isEqualTo("Local FC"));
         assertThat(canonicalEventStore.findLatestStartingBetween(
                 Instant.parse("2026-08-15T00:00:00Z"),
                 Instant.parse("2026-08-16T00:00:00Z")))
@@ -2797,6 +2818,11 @@ class FlywayMigrationIT {
                             .contains("event-details-nominal");
                     assertThat(detail.source().payloadSha256()).hasSize(64);
                 });
+        assertThat(eventDetailsStore.findHistory(first.canonicalEventId()))
+                .singleElement()
+                .satisfies(detail -> assertThat(eventDetailsStore.findByObservationId(
+                        first.canonicalEventId(),
+                        detail.observationId())).contains(detail));
         assertThat(j4EventQueryService.search(
                 LocalDate.parse("2026-08-12"),
                 "Europe/Paris").events())
@@ -2895,7 +2921,7 @@ class FlywayMigrationIT {
                 "fixtures/event-statistics/partial-missing-away.manifest.json");
         var partialStatistics = new EventStatisticsV1Parser().parse(
                 partialStatisticsFixture);
-        j5EventDataStore.save(J5EventDataObservation.from(
+        var partialStatisticsPersistence = j5EventDataStore.save(J5EventDataObservation.from(
                 identity,
                 partialStatistics.data().orElseThrow(),
                 fixtureSource(partialStatisticsFixture),
@@ -2962,6 +2988,20 @@ class FlywayMigrationIT {
         assertThat(jdbcTemplate.queryForObject(
                 "select count(*) from j5_event_lineup_player",
                 Long.class)).isEqualTo(5L);
+        assertThat(j5EventDataStore.findHistory(
+                j4Import.canonicalEventId(),
+                SofascoreEndpointType.EVENT_STATISTICS))
+                .hasSize(2)
+                .extracting(view -> view.observationId())
+                .containsExactly(
+                        partialStatisticsPersistence.observationId(),
+                        first.statisticsObservationId());
+        assertThat(j5EventDataStore.findByObservationId(
+                j4Import.canonicalEventId(),
+                SofascoreEndpointType.EVENT_STATISTICS,
+                partialStatisticsPersistence.observationId()))
+                .hasValueSatisfying(view -> assertThat(view.completeness().status())
+                        .isEqualTo(J5CompletenessStatus.PARTIAL));
 
         assertThatThrownBy(() -> jdbcTemplate.update(
                 "update j5_event_data_observation set completeness_score = 99 where id = ?",

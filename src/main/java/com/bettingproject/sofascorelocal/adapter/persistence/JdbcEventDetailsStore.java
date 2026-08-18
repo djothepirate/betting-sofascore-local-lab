@@ -101,8 +101,7 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
               and normalized_sha256 = :normalizedSha256
             """;
 
-    private static final String FIND_LATEST_SQL = """
-            select
+    private static final String VIEW_COLUMNS = """
                 d.id as observation_id,
                 e.id as canonical_event_id,
                 e.provider,
@@ -130,11 +129,34 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
                 d.season_name,
                 d.event_round,
                 d.normalized_sha256
+            """;
+
+    private static final String FIND_LATEST_SQL = """
+            select
+                """ + VIEW_COLUMNS + """
             from event_detail_observation d
             join canonical_event e on e.id = d.canonical_event_id
             where d.canonical_event_id = :canonicalEventId
             order by d.source_received_at desc, d.id desc
             limit 1
+            """;
+
+    private static final String FIND_HISTORY_SQL = """
+            select
+                """ + VIEW_COLUMNS + """
+            from event_detail_observation d
+            join canonical_event e on e.id = d.canonical_event_id
+            where d.canonical_event_id = :canonicalEventId
+            order by d.source_received_at desc, d.id desc
+            """;
+
+    private static final String FIND_BY_OBSERVATION_ID_SQL = """
+            select
+                """ + VIEW_COLUMNS + """
+            from event_detail_observation d
+            join canonical_event e on e.id = d.canonical_event_id
+            where d.canonical_event_id = :canonicalEventId
+              and d.id = :observationId
             """;
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
@@ -169,6 +191,34 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
         List<EventDetailObservationView> matches = jdbcTemplate.query(
                 FIND_LATEST_SQL,
                 new MapSqlParameterSource("canonicalEventId", canonicalEventId),
+                this::mapView);
+        return matches.stream().findFirst();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EventDetailObservationView> findHistory(UUID canonicalEventId) {
+        Objects.requireNonNull(canonicalEventId, "canonicalEventId");
+        return jdbcTemplate.query(
+                FIND_HISTORY_SQL,
+                new MapSqlParameterSource("canonicalEventId", canonicalEventId),
+                this::mapView);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Optional<EventDetailObservationView> findByObservationId(
+            UUID canonicalEventId,
+            long observationId) {
+        Objects.requireNonNull(canonicalEventId, "canonicalEventId");
+        if (observationId < 1) {
+            throw new IllegalArgumentException("observationId must be positive");
+        }
+        List<EventDetailObservationView> matches = jdbcTemplate.query(
+                FIND_BY_OBSERVATION_ID_SQL,
+                new MapSqlParameterSource()
+                        .addValue("canonicalEventId", canonicalEventId)
+                        .addValue("observationId", observationId),
                 this::mapView);
         return matches.stream().findFirst();
     }
