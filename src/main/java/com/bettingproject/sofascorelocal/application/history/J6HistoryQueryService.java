@@ -131,7 +131,7 @@ public class J6HistoryQueryService {
                                 : Optional.of(previous.signature()),
                         version.signature(),
                         previous != null
-                                && terminalBeforeCurrent(previous, version, stateHistory),
+                                && terminalBeforeCurrent(version, stateHistory),
                         changes);
                 Optional<J6SnapshotTrace> trace = trace(version, traces);
                 versions.add(new J6HistoryVersion(
@@ -213,7 +213,7 @@ public class J6HistoryQueryService {
         J6HistoryClassification classification = classifier.classify(
                 Optional.of(oldVersion.signature()),
                 newVersion.signature(),
-                terminalBeforeCurrent(oldVersion, newVersion, stateHistory),
+                terminalBeforeCurrent(newVersion, stateHistory),
                 changes);
         Map<Long, J6SnapshotTrace> traces = traces(List.of(oldVersion, newVersion));
         return Optional.of(new J6HistoryComparison(
@@ -286,19 +286,10 @@ public class J6HistoryQueryService {
     }
 
     private boolean terminalBeforeCurrent(
-            LoadedVersion previous,
             LoadedVersion current,
             List<CanonicalEventObservationView> stateHistory) {
-        if (current.stream() == J6HistoryStream.EVENT_STATE) {
-            return switch (previous.value()) {
-                case CanonicalEventObservationView value ->
-                    classifier.isTerminalStatus(value.status().type());
-                default -> false;
-            };
-        }
         return stateHistory.stream()
-                .filter(state -> state.source().receivedAt()
-                        .isBefore(current.source().receivedAt()))
+                .filter(state -> precedesCurrent(state, current))
                 .max(Comparator.comparing(
                                 (CanonicalEventObservationView state) ->
                                         state.source().receivedAt())
@@ -306,6 +297,19 @@ public class J6HistoryQueryService {
                                 CanonicalEventObservationView::observationId))
                 .map(state -> classifier.isTerminalStatus(state.status().type()))
                 .orElse(false);
+    }
+
+    private static boolean precedesCurrent(
+            CanonicalEventObservationView state,
+            LoadedVersion current) {
+        int receivedAtOrder = state.source().receivedAt()
+                .compareTo(current.source().receivedAt());
+        if (receivedAtOrder < 0) {
+            return true;
+        }
+        return receivedAtOrder == 0
+                && current.stream() == J6HistoryStream.EVENT_STATE
+                && state.observationId() < current.observationId();
     }
 
     private Map<Long, J6SnapshotTrace> traces(List<LoadedVersion> versions) {

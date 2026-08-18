@@ -176,6 +176,38 @@ class J6HistoryQueryServiceTest {
     }
 
     @Test
+    void detectsAnIntermediateTerminalStateWhenComparingNonAdjacentStateVersions() {
+        CanonicalEventObservationView initial = providerState(
+                1, 201, "notstarted", 'a', 'd', 1);
+        CanonicalEventObservationView finished = providerState(
+                2, 202, "finished", 'b', 'e', 2);
+        CanonicalEventObservationView corrected = providerState(
+                3, 203, "canceled", 'c', 'f', 3);
+        when(canonicalEventStore.findLatestByCanonicalId(IDENTITY.value()))
+                .thenReturn(Optional.of(corrected));
+        when(canonicalEventStore.findHistory(IDENTITY.value()))
+                .thenReturn(List.of(corrected, finished, initial));
+        when(canonicalEventStore.findByObservationId(IDENTITY.value(), 1))
+                .thenReturn(Optional.of(initial));
+        when(canonicalEventStore.findByObservationId(IDENTITY.value(), 3))
+                .thenReturn(Optional.of(corrected));
+        when(snapshotHistoryStore.findTraces(anySet())).thenReturn(Map.of(
+                201L, trace(201, 1, 0, J6SnapshotOccurrenceOutcome.INSERTED),
+                203L, trace(203, 1, 0, J6SnapshotOccurrenceOutcome.INSERTED)));
+
+        var comparison = service.compare(
+                IDENTITY.value(),
+                J6HistoryStream.EVENT_STATE,
+                1,
+                3).orElseThrow();
+
+        assertThat(comparison.classification())
+                .isEqualTo(J6HistoryClassification.LATE_CORRECTION);
+        assertThat(comparison.changes())
+                .anySatisfy(change -> assertThat(change.field()).isEqualTo("status.type"));
+    }
+
+    @Test
     void classifiesTheFirstPostTerminalProviderVersionAsLate() {
         CanonicalEventObservationView initial = state(1, "notstarted", 1);
         CanonicalEventObservationView finished = state(2, "finished", 2);
@@ -247,6 +279,32 @@ class J6HistoryQueryServiceTest {
                         receivedAt),
                 hash(status.equals("finished") ? 'b' : 'a'),
                 2);
+    }
+
+    private static CanonicalEventObservationView providerState(
+            long observationId,
+            long snapshotId,
+            String status,
+            char payloadHash,
+            char normalizedHash,
+            long hour) {
+        Instant receivedAt = Instant.parse("2026-08-18T10:00:00Z")
+                .plusSeconds(hour * 3_600);
+        return new CanonicalEventObservationView(
+                observationId,
+                IDENTITY,
+                Instant.parse("2026-08-20T18:00:00Z"),
+                new ScheduledTeam(1, "Home"),
+                new ScheduledTeam(2, "Away"),
+                new ScheduledEventStatus(status, Optional.empty()),
+                Optional.empty(),
+                EventSourceTrace.providerSnapshot(
+                        snapshotId,
+                        hash(payloadHash),
+                        "scheduled-events-v1",
+                        receivedAt),
+                hash(normalizedHash),
+                observationId);
     }
 
     private static J5EventDataObservationView incidents(
