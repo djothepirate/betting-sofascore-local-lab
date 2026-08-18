@@ -36,7 +36,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - première phase humaine de l'interface J6 acceptée sur seize captures opérateur non versionnées :
   cinq flux, douze versions, différences sémantiques, trois comparaisons dont l'état 2 → 96,
   pagination à trois éléments sur quatre pages et aperçu de rétention sans purge Web ; le second
-  import idempotent et la sauvegarde/restauration restent ouverts.
+  import idempotent et la sauvegarde/restauration restent ouverts ;
+- qualification humaine finale de l'interface J6 sur deux captures supplémentaires : second import
+  à `0 ajoutée / 12 déjà présentes`, total stable, comparaison d'état 96 → 97 correctement
+  `SEMANTICALLY_UNCHANGED`, puis absence de listener sur le port 8087 ; la
+  sauvegarde/restauration reste la dernière qualification opératoire ouverte.
 
 ### Corrigé
 
