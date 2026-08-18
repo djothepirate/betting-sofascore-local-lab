@@ -83,6 +83,28 @@ public class JdbcRawManualCallSnapshotStore implements RawManualCallSnapshotStor
               )
             """;
 
+    private static final String INSERT_OCCURRENCE_SQL = """
+            insert into provider_snapshot_occurrence (
+                snapshot_id,
+                requested_at,
+                received_at,
+                http_status,
+                content_type,
+                latency_ms,
+                parser_version,
+                persistence_outcome
+            ) values (
+                :snapshotId,
+                :requestedAt,
+                :receivedAt,
+                :httpStatus,
+                :contentType,
+                :latencyMs,
+                :parserVersion,
+                :persistenceOutcome
+            )
+            """;
+
     private final NamedParameterJdbcTemplate jdbcTemplate;
 
     public JdbcRawManualCallSnapshotStore(NamedParameterJdbcTemplate jdbcTemplate) {
@@ -110,11 +132,22 @@ public class JdbcRawManualCallSnapshotStore implements RawManualCallSnapshotStor
             throw new IllegalStateException("raw snapshot persistence did not resolve an identifier");
         }
 
+        RawSnapshotPersistenceOutcome outcome = insertedRows == 1
+                ? RawSnapshotPersistenceOutcome.INSERTED
+                : RawSnapshotPersistenceOutcome.DEDUPLICATED;
+        parameters
+                .addValue("snapshotId", snapshotId)
+                .addValue("persistenceOutcome", outcome.name());
+        int occurrenceRows = jdbcTemplate.update(INSERT_OCCURRENCE_SQL, parameters);
+        if (occurrenceRows != 1) {
+            throw new IllegalStateException(
+                    "raw snapshot occurrence insert affected an unexpected number of rows: "
+                            + occurrenceRows);
+        }
+
         return new RawSnapshotPersistenceResult(
                 snapshotId,
-                insertedRows == 1
-                        ? RawSnapshotPersistenceOutcome.INSERTED
-                        : RawSnapshotPersistenceOutcome.DEDUPLICATED,
+                outcome,
                 payload.sha256(),
                 payload.sizeBytes());
     }

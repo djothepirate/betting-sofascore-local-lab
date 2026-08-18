@@ -191,7 +191,7 @@ class FlywayMigrationIT {
         assertThat(snapshotTable).isEqualTo("provider_snapshot");
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("20");
+        assertThat(flywayVersion).isEqualTo("21");
         assertThat(rawColumn).isEqualTo("bytea");
     }
 
@@ -1872,6 +1872,7 @@ class FlywayMigrationIT {
                 .schemas(schema)
                 .defaultSchema(schema)
                 .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("20"))
                 .load();
 
         assertThat(flywayV20.migrate().migrationsExecuted).isEqualTo(1);
@@ -1934,6 +1935,97 @@ class FlywayMigrationIT {
                 .containsEntry("player_name", "Yongjing Cao")
                 .containsEntry("incident_class", "yellow")
                 .containsEntry("reason", "Leaving field");
+    }
+
+    @Test
+    void upgradesV20WithOneImmutableBaselineOccurrencePerHistoricalSnapshot() {
+        String schema = "upgrade_v20_to_v21";
+        String separator = POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
+        var dataSource = new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema,
+                POSTGRES.getUsername(),
+                POSTGRES.getPassword());
+        Flyway flywayV20 = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .createSchemas(true)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("20"))
+                .load();
+
+        assertThat(flywayV20.migrate().migrationsExecuted).isEqualTo(20);
+
+        JdbcTemplate upgradeJdbc = new JdbcTemplate(dataSource);
+        Long snapshotId = upgradeJdbc.queryForObject("""
+                insert into provider_snapshot (
+                    provider, acquisition_mode, logical_endpoint, request_key,
+                    requested_at, received_at, http_status, content_type, latency_ms,
+                    payload_raw, payload_size_bytes, payload_sha256,
+                    parser_version, schema_status
+                ) values (
+                    'SOFASCORE', 'DIRECT_LOCAL_ENDPOINT', 'EVENT_DETAILS',
+                    'EVENT_DETAILS|eventId=16671566',
+                    '2026-08-18T12:00:00Z', '2026-08-18T12:00:01Z',
+                    200, 'application/json', 1000,
+                    decode('7b7d', 'hex'), 2, repeat('a', 64),
+                    'event-details-v2', 'PARSED'
+                )
+                returning id
+                """, Long.class);
+        Map<String, Object> snapshotBefore = upgradeJdbc.queryForMap("""
+                select id, request_key, requested_at, received_at, http_status,
+                       content_type, latency_ms, payload_size_bytes, payload_sha256,
+                       parser_version, schema_status
+                from provider_snapshot
+                where id = ?
+                """, snapshotId);
+
+        Flyway flywayV21 = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("21"))
+                .load();
+
+        assertThat(flywayV21.migrate().migrationsExecuted).isEqualTo(1);
+        assertThat(flywayV21.info().current().getVersion().getVersion()).isEqualTo("21");
+        assertThat(upgradeJdbc.queryForMap("""
+                select id, request_key, requested_at, received_at, http_status,
+                       content_type, latency_ms, payload_size_bytes, payload_sha256,
+                       parser_version, schema_status
+                from provider_snapshot
+                where id = ?
+                """, snapshotId)).containsAllEntriesOf(snapshotBefore);
+        assertThat(upgradeJdbc.queryForMap("""
+                select snapshot_id, requested_at, received_at, http_status,
+                       content_type, latency_ms, parser_version, persistence_outcome
+                from provider_snapshot_occurrence
+                where snapshot_id = ?
+                """, snapshotId))
+                .containsEntry("snapshot_id", snapshotId)
+                .containsEntry("http_status", 200)
+                .containsEntry("content_type", "application/json")
+                .containsEntry("latency_ms", 1000L)
+                .containsEntry("parser_version", "event-details-v2")
+                .containsEntry("persistence_outcome", "BASELINE");
+        assertThat(upgradeJdbc.queryForObject(
+                "select count(*) from provider_snapshot_occurrence where snapshot_id = ?",
+                Long.class,
+                snapshotId)).isEqualTo(1L);
+        assertThatThrownBy(() -> upgradeJdbc.update("""
+                update provider_snapshot_occurrence
+                set persistence_outcome = 'INSERTED'
+                where snapshot_id = ?
+                """, snapshotId))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("provider_snapshot_occurrence is append-only");
+        assertThatThrownBy(() -> upgradeJdbc.update(
+                "delete from provider_snapshot_occurrence where snapshot_id = ?",
+                snapshotId))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("provider_snapshot_occurrence is append-only");
     }
 
     private static String parserConstraint(JdbcTemplate jdbcTemplate, String schema) {
@@ -2357,6 +2449,19 @@ class FlywayMigrationIT {
                 "select count(*) from provider_snapshot where request_key = ?",
                 Long.class,
                 requestKey)).isEqualTo(2L);
+        assertThat(jdbcTemplate.queryForList("""
+                select persistence_outcome
+                from provider_snapshot_occurrence occurrence
+                join provider_snapshot snapshot on snapshot.id = occurrence.snapshot_id
+                where snapshot.request_key = ?
+                order by occurrence.id
+                """, String.class, requestKey))
+                .containsExactly("INSERTED", "DEDUPLICATED", "INSERTED");
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from provider_snapshot_occurrence
+                where snapshot_id = ?
+                """, Long.class, inserted.snapshotId())).isEqualTo(2L);
     }
 
     @Test
