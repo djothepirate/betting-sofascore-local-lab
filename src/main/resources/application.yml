@@ -67,7 +67,7 @@ info:
   app:
     name: SofaScore Local Lab
     version: 0.1.0-SNAPSHOT
-    phase: J6-HISTORY-AND-GUARDED-RETENTION-READINESS
+    phase: J6-HISTORY-AND-GUARDED-RETENTION-VALIDATED
     status: EXPERIMENTAL_LOCAL_ONLY
 
 sofascore:

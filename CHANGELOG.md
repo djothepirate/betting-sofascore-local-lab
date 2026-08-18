@@ -30,17 +30,22 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - scripts PowerShell de sauvegarde PostgreSQL directement chiffrée par `age`, restauration dans
   une base temporaire, comparaison des empreintes, manifeste qualifié et invocation manuelle de la
   rétention ; aucun dump clair, secret en argument, bouton de purge ou planification ;
-- phase applicative avancée à `J6-HISTORY-AND-GUARDED-RETENTION-READINESS`, documentation
-  d'architecture, runbook opérateur et rapport de readiness ; le Work Order reste actif jusqu'aux
-  qualifications humaines de l'interface et de la sauvegarde/restauration ;
+- phase applicative d'abord avancée à `J6-HISTORY-AND-GUARDED-RETENTION-READINESS`, avec
+  documentation d'architecture, runbook opérateur et rapport de readiness ;
 - première phase humaine de l'interface J6 acceptée sur seize captures opérateur non versionnées :
   cinq flux, douze versions, différences sémantiques, trois comparaisons dont l'état 2 → 96,
   pagination à trois éléments sur quatre pages et aperçu de rétention sans purge Web ; le second
   import idempotent et la sauvegarde/restauration restent ouverts ;
 - qualification humaine finale de l'interface J6 sur deux captures supplémentaires : second import
   à `0 ajoutée / 12 déjà présentes`, total stable, comparaison d'état 96 → 97 correctement
-  `SEMANTICALLY_UNCHANGED`, puis absence de listener sur le port 8087 ; la
-  sauvegarde/restauration reste la dernière qualification opératoire ouverte.
+  `SEMANTICALLY_UNCHANGED`, puis absence de listener sur le port 8087 ;
+- qualification opératoire finale de la sauvegarde/restauration chiffrée : archive `age` et
+  manifeste créés hors dépôt, restauration PostgreSQL temporaire qualifiée par égalité des treize
+  mesures source/restauration, couverture jusqu'au snapshot 272, contrôle d'intégrité brut sans
+  échec, suppression de la base temporaire et refus d'écraser les artefacts lors d'un second
+  lancement ; aucune purge de la base primaire n'a été exécutée ou autorisée ;
+- J6 passe à `VALIDATED`, la phase applicative devient
+  `J6-HISTORY-AND-GUARDED-RETENTION-VALIDATED` et le Work Order rejoint `completed`.
 
 ### Corrigé
 

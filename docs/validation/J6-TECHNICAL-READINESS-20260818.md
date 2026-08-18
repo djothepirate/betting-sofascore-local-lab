@@ -6,16 +6,16 @@
 J6_TECHNICAL_READINESS=PASS
 J6_HUMAN_HISTORY_UI_PHASE1=PASS
 J6_HUMAN_HISTORY_UI_QUALIFICATION=PASS
-J6_OPERATIONAL_BACKUP_RESTORE_QUALIFICATION=PENDING
+J6_OPERATIONAL_BACKUP_RESTORE_QUALIFICATION=PASS
 J6_PRIMARY_DATABASE_PURGE=NOT_EXECUTED_NOT_AUTHORIZED
-J6_WORK_ORDER_STATUS=IN_DEVELOPMENT
+J6_WORK_ORDER_STATUS=VALIDATED
 PROVIDER_CALLS_DURING_IMPLEMENTATION_AND_TESTS=0
 ```
 
 Cette preuve qualifie l'implémentation automatisée de l'historique, des différences, des
-corrections tardives et de la rétention gardée. Elle ne transforme pas une restauration
-Testcontainers en preuve de restauration de la base locale de l'opérateur et n'autorise aucune
-purge sur cette base.
+corrections tardives et de la rétention gardée, puis consolide les qualifications humaine de
+l'interface et opératoire de la sauvegarde/restauration. Elle n'autorise aucune purge sur la base
+locale primaire.
 
 ## 2. Environnement
 
@@ -148,7 +148,9 @@ Java s'exécute avec `WebApplicationType.NONE`.
 Ces propriétés sont qualifiées par analyse syntaxique, revue de code et tests du service/de la
 base éphémère. Après la détection opérateur d'un ancien nom de colonne, le test d'intégration extrait
 également les quatre requêtes multi-lignes du script et les exécute contre PostgreSQL 18.4 au schéma
-V22. L'exécution interactive réelle complète avec `age` reste `PENDING`.
+V22. L'exécution interactive réelle avec `age` a ensuite produit `J6_BACKUP_RESULT=QUALIFIED` et
+confirmé l'égalité des treize mesures source/restauration. Le rapport opératoire détaillé est
+`J6-BACKUP-RESTORE-QUALIFICATION-20260819.md`.
 
 ## 6. Garde-fous maintenus
 
@@ -163,7 +165,7 @@ V22. L'exécution interactive réelle complète avec `age` reste `PENDING`.
 - migrations V1 à V20 non modifiées ; V21 et V22 ajoutées en append-only ;
 - `.env`, l'ADR et le PDF de référence non versionnés ou réécrits par J6.
 
-## 7. Validations humaines restantes
+## 7. Validations humaines et opératoires
 
 ### 7.1 Interface
 
@@ -179,15 +181,21 @@ fournisseur restent qualifiées par les tests automatisés.
 
 ### 7.2 Sauvegarde/restauration
 
-L'opérateur doit exécuter le script avec `age`, conserver les deux fichiers hors dépôt, vérifier le
-résultat `J6_BACKUP_RESULT=QUALIFIED` et confirmer que la base temporaire a été supprimée.
-
 Une préqualification du 2026-08-19 confirme PowerShell `7.6.5 Core`, `age v1.3.1`, Docker `29.6.2`
 et PostgreSQL `18.4 healthy`. Le premier essai a validé le refus lorsque l'application écoutait
 encore sur 8087. Le second, application arrêtée, a détecté avant toute sauvegarde que l'empreinte
 normalisée référençait `payload_sha256` au lieu de `source_payload_sha256`. Aucun fichier `.age`,
 manifeste, base temporaire ou purge n'a résulté de ces essais. Le défaut et sa régression sont
-corrigés ; une nouvelle exécution interactive reste requise.
+corrigés par `714ec1c`.
+
+Après correction, l'exécution interactive a créé hors dépôt l'archive chiffrée de 1 645 333 octets
+et son manifeste de 1 692 octets. Les SHA-256 réels sont respectivement
+`a6be0577a50f2c11d8745b04d9bbae9e5283320009903d86205d47a5a83358f8` et
+`b86497876598196e8930b5cfe7c10c53eaca8a3624e797c949b2f47887329cb5`. Le manifeste qualifié couvre
+le snapshot 272 reçu à `2026-08-18T21:44:27.857664Z`, ne compte aucun échec d'intégrité de payload
+et rend identiques les treize mesures de la source et de la restauration. La base temporaire a été
+supprimée. Un second lancement avec la même destination a été refusé parce que l'archive ou son
+manifeste existait déjà, confirmant la protection contre l'écrasement.
 
 ### 7.3 Purge primaire
 
@@ -202,13 +210,16 @@ SNAPSHOT_HISTORY=TECHNICALLY_TRACEABLE
 SEMANTIC_DIFF=TECHNICALLY_AVAILABLE
 LATE_CORRECTIONS=TECHNICALLY_DETECTED
 HISTORICAL_RECORDS_MUTATED=NO
-BACKUP_AND_RESTORE_IMPLEMENTATION=READY_FOR_HUMAN_QUALIFICATION
+BACKUP_AND_RESTORE_IMPLEMENTATION=QUALIFIED
 RAW_RETENTION=MANUAL_BACKUP_GATED
 HUMAN_HISTORY_UI_PHASE1=PASS
 HUMAN_HISTORY_UI_FINAL=PASS
-J6_CAN_BE_CLOSED=NO
+BACKUP_AND_RESTORE_QUALIFICATION=PASS
+PRIMARY_DATABASE_PURGE=NOT_EXECUTED_NOT_AUTHORIZED
+J6_CAN_BE_CLOSED=YES
 ```
 
-J6 a franchi la qualification humaine complète de l'interface sans appel fournisseur. Seule la
-qualification opératoire de sauvegarde/restauration et sa revue finale restent ouvertes. Le Work
-Order doit rester dans `docs/work_orders/active` et conserver le statut `IN_DEVELOPMENT` jusque-là.
+J6 a franchi la qualification humaine complète de l'interface et la qualification opératoire de la
+sauvegarde/restauration sans appel fournisseur. Les preuves automatisées, humaines et opératoires
+sont closes ; le Work Order passe à `VALIDATED` et rejoint `docs/work_orders/completed`. La purge
+primaire reste une opération future distincte, non exécutée et non autorisée par J6.

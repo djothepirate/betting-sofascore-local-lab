@@ -117,14 +117,16 @@ formes V13 sont donc qualifiées dans cette portée réelle bornée. Le contrôl
 également la présentation corrigée, le reverrouillage local, les états J4/J5 `LOCKED` après
 redémarrage et l'arrêt final de l'application.
 
-Le jalon **J6 — Historique** est désormais implémenté et qualifié techniquement. Il ajoute une
+Le jalon **J6 — Historique** est désormais implémenté et validé. Il ajoute une
 chronologie locale des cinq flux d'un événement, des différences sémantiques entre versions, la
 détection des enrichissements et corrections tardifs, ainsi qu'une rétention manuelle des seuls
 octets bruts. Cette rétention reste sans bouton Web, limitée à 500 snapshots par lot, protégée par
 un aperçu haché, une confirmation exacte et une sauvegarde chiffrée restaurée avec succès. La
 qualification humaine complète de l'interface est acceptée sur dix-huit captures hors dépôt, avec
-un second import à zéro ajout. La qualification opératoire sauvegarde/restauration reste requise
-avant de déclarer J6 `VALIDATED`.
+un second import à zéro ajout. La qualification opératoire sauvegarde/restauration est également
+acceptée : l'archive `age` couvre le snapshot 272, les treize mesures restaurées sont identiques à
+la source, la base temporaire a été supprimée et un second lancement refuse tout écrasement. J6 est
+donc `VALIDATED`, sans purge de la base primaire.
 
 ## Ce qui est livré localement
 
@@ -586,7 +588,8 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Readiness technique J6](docs/validation/J6-TECHNICAL-READINESS-20260818.md)
 - [Qualification humaine J6 de l'interface — phase 1](docs/validation/J6-HUMAN-HISTORY-UI-PHASE1-20260819.md)
 - [Qualification humaine finale de l'interface J6](docs/validation/J6-HUMAN-HISTORY-UI-QUALIFICATION-20260819.md)
-- [Work Order J6 actif](docs/work_orders/active/WO-SS-20260818-007-history-j6.md)
+- [Qualification opératoire J6 de la sauvegarde/restauration](docs/validation/J6-BACKUP-RESTORE-QUALIFICATION-20260819.md)
+- [Work Order J6 validé](docs/work_orders/completed/WO-SS-20260818-007-history-j6.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 
@@ -811,7 +814,7 @@ J4/J5 sont `LOCKED` après redémarrage. Le fichier `.env` demeure ignoré et n'
 par l'agent. Aucun listener n'est présent sur `127.0.0.1:8087` après l'arrêt final ; le Work Order
 réel J5 est `VALIDATED` et archivé dans `completed`.
 
-## J6 : historique livré, validation humaine encore ouverte
+## J6 : historique et sauvegarde/restauration validés
 
 La démonstration J6 part de l'identité synthétique J4/J5 et ajoute des versions postérieures à un
 état `finished`. Les cinq flux peuvent être filtrés et paginés ; deux versions du même flux peuvent
@@ -834,8 +837,15 @@ pages. Le premier chargement a ajouté six versions J6 sur les six versions nomi
 second a confirmé `0 ajoutée / 12 déjà présentes`, avec un total stable à douze. L'application a
 ensuite été trouvée arrêtée sur le port 8087.
 
+La qualification opératoire a ensuite créé hors dépôt une archive chiffrée et son manifeste,
+restauré le dump dans une base PostgreSQL temporaire puis comparé treize mesures de structure,
+d'intégrité et de provenance. Toutes sont identiques entre la source et la restauration. Le
+manifeste couvre le snapshot 272 reçu à `2026-08-18T21:44:27.857664Z`, la base temporaire ne subsiste
+plus et une seconde invocation avec le même nom est refusée avant toute écriture. Cette preuve ne
+contient aucun secret et n'autorise aucune purge.
+
 ```text
-J6_IMPLEMENTATION_STATUS=TECHNICAL_READINESS_PASS
+J6_IMPLEMENTATION_STATUS=VALIDATED
 J6_FLYWAY_VERSION=22
 J6_HISTORY_STREAMS=5
 J6_HISTORY_PAGE_SIZE_DEFAULT=25
@@ -849,10 +859,11 @@ J6_PRIMARY_DATABASE_PURGE_EXECUTED=NO
 J6_PROVIDER_CALLS_DURING_IMPLEMENTATION=0
 J6_HUMAN_UI_PHASE1=PASS
 J6_HUMAN_UI_QUALIFICATION=PASS
-J6_OPERATIONAL_BACKUP_RESTORE_QUALIFICATION=PENDING
-J6_WORK_ORDER_STATUS=IN_DEVELOPMENT
+J6_OPERATIONAL_BACKUP_RESTORE_QUALIFICATION=PASS
+J6_BACKUP_COVERAGE_MAX_SNAPSHOT_ID=272
+J6_WORK_ORDER_STATUS=VALIDATED
 ```
 
-La validation sauvegarde/restauration reste volontairement ouverte. Elle ne nécessite aucun appel
-fournisseur, mais implique une action opérateur interactive et, pour toute rétention de la base
-primaire, une autorisation distincte avant suppression d'octets.
+Le Work Order J6 est clos. La purge de la base primaire demeure hors périmètre, non exécutée et non
+autorisée ; toute suppression future d'octets exige une autorisation et un Work Order distincts,
+puis la reprise exacte d'un nouvel aperçu de rétention.
