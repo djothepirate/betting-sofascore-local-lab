@@ -538,6 +538,11 @@ button:disabled {
   border-left: 7px solid var(--teal);
 }
 
+.retention-preview-panel {
+  margin-top: 22px;
+  border-left: 7px solid var(--warning);
+}
+
 .inspection-button {
   padding: 8px 10px;
   white-space: nowrap;

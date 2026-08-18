@@ -176,6 +176,48 @@ class J6HistoryQueryServiceTest {
     }
 
     @Test
+    void classifiesTheFirstPostTerminalProviderVersionAsLate() {
+        CanonicalEventObservationView initial = state(1, "notstarted", 1);
+        CanonicalEventObservationView finished = state(2, "finished", 2);
+        J5EventDataObservationView before = incidents(
+                10,
+                101,
+                'a',
+                'b',
+                1,
+                List.of(incident(0, "goal", 10L, 1, 0)));
+        J5EventDataObservationView after = incidents(
+                11,
+                102,
+                'c',
+                'd',
+                3,
+                List.of(
+                        incident(0, "goal", 10L, 1, 0),
+                        incident(1, "card", 20L, null, null)));
+        when(canonicalEventStore.findLatestByCanonicalId(IDENTITY.value()))
+                .thenReturn(Optional.of(finished));
+        when(canonicalEventStore.findHistory(IDENTITY.value()))
+                .thenReturn(List.of(finished, initial));
+        when(eventDataStore.findHistory(
+                IDENTITY.value(),
+                SofascoreEndpointType.EVENT_INCIDENTS))
+                .thenReturn(List.of(after, before));
+        when(snapshotHistoryStore.findTraces(anySet())).thenReturn(Map.of(
+                101L, trace(101, 1, 0, J6SnapshotOccurrenceOutcome.INSERTED),
+                102L, trace(102, 1, 0, J6SnapshotOccurrenceOutcome.INSERTED)));
+
+        var page = service.findHistory(
+                IDENTITY.value(),
+                Optional.of(J6HistoryStream.EVENT_INCIDENTS),
+                0,
+                25).orElseThrow();
+
+        assertThat(page.versions().getFirst().classification())
+                .isEqualTo(J6HistoryClassification.LATE_ENRICHMENT);
+    }
+
+    @Test
     void enforcesTheBoundedPaginationContract() {
         assertThatThrownBy(() -> service.findHistory(
                 IDENTITY.value(), Optional.empty(), -1, 25))

@@ -48,6 +48,7 @@ import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportResponse;
+import com.bettingproject.sofascorelocal.domain.retention.J6BackupEvidence;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEvent;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEventStatus;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTeam;
@@ -58,6 +59,7 @@ import com.bettingproject.sofascorelocal.port.J3ScheduledEventsPageCache;
 import com.bettingproject.sofascorelocal.port.J4EventDetailsCache;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
 import com.bettingproject.sofascorelocal.port.J6SnapshotHistoryStore;
+import com.bettingproject.sofascorelocal.port.J6RawPayloadRetentionStore;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import com.bettingproject.sofascorelocal.port.J3QualificationCheckpointStore;
 import com.bettingproject.sofascorelocal.port.RawSnapshotInspectionStore;
@@ -80,12 +82,14 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.net.URI;
+import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -165,6 +169,9 @@ class FlywayMigrationIT {
     @Autowired
     J6SnapshotHistoryStore j6SnapshotHistoryStore;
 
+    @Autowired
+    J6RawPayloadRetentionStore j6RawPayloadRetentionStore;
+
     @Test
     void createsTheJ3RawSnapshotSchemaAndKeepsNetworkDisabled() {
         String snapshotTable = jdbcTemplate.queryForObject(
@@ -196,7 +203,7 @@ class FlywayMigrationIT {
         assertThat(snapshotTable).isEqualTo("provider_snapshot");
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("21");
+        assertThat(flywayVersion).isEqualTo("22");
         assertThat(rawColumn).isEqualTo("bytea");
     }
 
@@ -2033,6 +2040,109 @@ class FlywayMigrationIT {
                 .hasStackTraceContaining("provider_snapshot_occurrence is append-only");
     }
 
+    @Test
+    void upgradesV21WithGuardedPayloadRetentionWithoutRewritingSnapshots() {
+        String schema = "upgrade_v21_to_v22";
+        String separator = POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
+        var dataSource = new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema,
+                POSTGRES.getUsername(),
+                POSTGRES.getPassword());
+        Flyway flywayV21 = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .createSchemas(true)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("21"))
+                .load();
+
+        assertThat(flywayV21.migrate().migrationsExecuted).isEqualTo(21);
+        JdbcTemplate upgradeJdbc = new JdbcTemplate(dataSource);
+        Long snapshotId = upgradeJdbc.queryForObject("""
+                insert into provider_snapshot (
+                    provider, acquisition_mode, logical_endpoint, request_key,
+                    requested_at, received_at, http_status, content_type, latency_ms,
+                    payload_raw, payload_size_bytes, payload_sha256,
+                    parser_version, schema_status
+                ) values (
+                    'SOFASCORE', 'DIRECT_LOCAL_ENDPOINT', 'EVENT_DETAILS',
+                    'EVENT_DETAILS|eventId=16671566|j6-retention',
+                    '2026-06-01T12:00:00Z', '2026-06-01T12:00:01Z',
+                    200, 'application/json', 1000,
+                    decode('7b7d', 'hex'), 2, repeat('a', 64),
+                    'event-details-v2', 'PARSED'
+                )
+                returning id
+                """, Long.class);
+        Map<String, Object> before = upgradeJdbc.queryForMap("""
+                select id, request_key, payload_size_bytes, payload_sha256,
+                       encode(payload_raw, 'hex') as payload_hex, schema_status
+                from provider_snapshot
+                where id = ?
+                """, snapshotId);
+
+        Flyway flywayV22 = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("22"))
+                .load();
+
+        assertThat(flywayV22.migrate().migrationsExecuted).isEqualTo(1);
+        assertThat(flywayV22.info().current().getVersion().getVersion()).isEqualTo("22");
+        assertThat(upgradeJdbc.queryForMap("""
+                select id, request_key, payload_size_bytes, payload_sha256,
+                       encode(payload_raw, 'hex') as payload_hex, schema_status
+                from provider_snapshot
+                where id = ?
+                """, snapshotId)).containsAllEntriesOf(before);
+        assertThat(upgradeJdbc.queryForObject(
+                "select payload_purged_at is null from provider_snapshot where id = ?",
+                Boolean.class,
+                snapshotId)).isTrue();
+        assertThat(upgradeJdbc.queryForObject(
+                "select to_regclass(? || '.j6_raw_payload_purge_audit')",
+                String.class,
+                schema)).isEqualTo("j6_raw_payload_purge_audit");
+
+        Long rawOnlyId = upgradeJdbc.queryForObject("""
+                insert into provider_snapshot (
+                    provider, acquisition_mode, logical_endpoint, request_key,
+                    requested_at, received_at, http_status, content_type, latency_ms,
+                    payload_raw, payload_size_bytes, payload_sha256,
+                    parser_version, schema_status
+                ) values (
+                    'SOFASCORE', 'DIRECT_LOCAL_ENDPOINT', 'EVENT_DETAILS',
+                    'EVENT_DETAILS|eventId=16671567|j6-classification',
+                    '2026-06-01T12:00:00Z', '2026-06-01T12:00:01Z',
+                    200, 'application/json', 1000,
+                    decode('7b7d', 'hex'), 2, repeat('b', 64),
+                    'event-details-v2', 'RAW_ONLY'
+                )
+                returning id
+                """, Long.class);
+        assertThat(upgradeJdbc.update(
+                "update provider_snapshot set schema_status = 'PARSED' where id = ?",
+                rawOnlyId)).isEqualTo(1);
+        assertThatThrownBy(() -> upgradeJdbc.update(
+                "update provider_snapshot set request_key = request_key || '-changed' where id = ?",
+                snapshotId))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("provider_snapshot is immutable");
+        assertThatThrownBy(() -> upgradeJdbc.update(
+                "update provider_snapshot set payload_raw = null where id = ?",
+                snapshotId))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("audited J6 payload purge");
+        assertThatThrownBy(() -> upgradeJdbc.update(
+                "delete from provider_snapshot where id = ?",
+                snapshotId))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("provider_snapshot deletion is forbidden");
+    }
+
     private static String parserConstraint(JdbcTemplate jdbcTemplate, String schema) {
         return jdbcTemplate.queryForObject(
                 """
@@ -3698,6 +3808,96 @@ class FlywayMigrationIT {
                     assertThat(event.source().parserVersion())
                             .isEqualTo("scheduled-events-v1");
                 });
+    }
+
+    @Test
+    void previewsAndExecutesOnlyAnAuditedBackupCoveredRetentionPlan()
+            throws Exception {
+        byte[] nominalPayload = Files.readAllBytes(Path.of(
+                "fixtures/scheduled-events/nominal.json"));
+        var snapshot = snapshotStore.save(snapshot(
+                "SCHEDULED_EVENTS|date=2026-08-12|page=1",
+                nominalPayload));
+        j4SnapshotNormalizationService.normalize(snapshot.snapshotId());
+        var unnormalized = snapshotStore.save(snapshot(
+                "SCHEDULED_EVENTS|date=2026-08-12|page=2",
+                nominalPayload));
+        var excludedStatus = snapshotStore.save(snapshot(
+                "SCHEDULED_EVENTS|date=2026-08-12|page=3",
+                nominalPayload,
+                RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE,
+                "SCHEMA_INCOMPATIBLE"));
+        j4SnapshotNormalizationService.normalize(excludedStatus.snapshotId());
+
+        Instant generatedAt = Instant.parse("2026-09-20T12:00:00Z");
+        Instant cutoffAt = Instant.parse("2026-08-21T12:00:00Z");
+        var preview = j6RawPayloadRetentionStore.preview(
+                30,
+                generatedAt,
+                cutoffAt,
+                500);
+
+        assertThat(preview.totalEligibleCount()).isEqualTo(1);
+        assertThat(preview.candidates())
+                .extracting(candidate -> candidate.snapshotId())
+                .containsExactly(snapshot.snapshotId());
+        assertThat(preview.candidates())
+                .extracting(candidate -> candidate.snapshotId())
+                .doesNotContain(unnormalized.snapshotId(), excludedStatus.snapshotId());
+        assertThat(preview.confirmationPhrase())
+                .startsWith("PURGER 1 PAYLOADS J6 ");
+
+        Instant executedAt = generatedAt.plusSeconds(60);
+        J6BackupEvidence backup = new J6BackupEvidence(
+                "b".repeat(64),
+                "c".repeat(64),
+                generatedAt,
+                excludedStatus.snapshotId(),
+                generatedAt,
+                true);
+        UUID batchId = UUID.fromString("70000000-0000-0000-0000-000000000007");
+        var execution = j6RawPayloadRetentionStore.purge(
+                30,
+                cutoffAt,
+                500,
+                preview.planSha256(),
+                backup,
+                batchId,
+                executedAt);
+
+        assertThat(execution.purgedPayloadCount()).isEqualTo(1);
+        assertThat(execution.purgedPayloadBytes()).isEqualTo(nominalPayload.length);
+        assertThat(jdbcTemplate.queryForMap("""
+                select payload_raw, payload_size_bytes, payload_sha256, payload_purged_at
+                from provider_snapshot
+                where id = ?
+                """, snapshot.snapshotId()))
+                .containsEntry("payload_raw", null)
+                .containsEntry("payload_size_bytes", (long) nominalPayload.length)
+                .containsEntry("payload_sha256", snapshot.payloadSha256());
+        Map<String, Object> auditEvidence = jdbcTemplate.queryForMap("""
+                select batch_id, snapshot_id, snapshot_received_at_before,
+                       payload_size_bytes_before,
+                       payload_sha256_before, plan_sha256,
+                       backup_manifest_sha256, backup_cipher_sha256
+                from j6_raw_payload_purge_audit
+                where snapshot_id = ?
+                """, snapshot.snapshotId());
+        assertThat(auditEvidence)
+                .containsEntry("batch_id", batchId)
+                .containsEntry("snapshot_id", snapshot.snapshotId())
+                .containsEntry("payload_size_bytes_before", (long) nominalPayload.length)
+                .containsEntry("payload_sha256_before", snapshot.payloadSha256())
+                .containsEntry("plan_sha256", preview.planSha256())
+                .containsEntry("backup_manifest_sha256", "b".repeat(64))
+                .containsEntry("backup_cipher_sha256", "c".repeat(64));
+        assertThat(((Timestamp) auditEvidence.get("snapshot_received_at_before")).toInstant())
+                .isEqualTo(Instant.parse("2026-08-12T12:00:00.275Z"));
+        assertThat(snapshotInspectionStore.findById(snapshot.snapshotId())).isEmpty();
+        assertThat(j6SnapshotHistoryStore.findTraces(Set.of(snapshot.snapshotId())))
+                .hasEntrySatisfying(snapshot.snapshotId(), trace ->
+                        assertThat(trace.rawPayloadState().name())
+                                .isEqualTo("PAYLOAD_PURGED"));
     }
 
     private static RawManualCallSnapshot snapshot(String requestKey, byte[] rawPayload) {

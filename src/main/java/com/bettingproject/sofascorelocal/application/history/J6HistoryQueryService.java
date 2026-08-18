@@ -130,7 +130,8 @@ public class J6HistoryQueryService {
                                 ? Optional.empty()
                                 : Optional.of(previous.signature()),
                         version.signature(),
-                        previous != null && terminalBefore(previous, stateHistory),
+                        previous != null
+                                && terminalBeforeCurrent(previous, version, stateHistory),
                         changes);
                 Optional<J6SnapshotTrace> trace = trace(version, traces);
                 versions.add(new J6HistoryVersion(
@@ -212,7 +213,7 @@ public class J6HistoryQueryService {
         J6HistoryClassification classification = classifier.classify(
                 Optional.of(oldVersion.signature()),
                 newVersion.signature(),
-                terminalBefore(oldVersion, stateHistory),
+                terminalBeforeCurrent(oldVersion, newVersion, stateHistory),
                 changes);
         Map<Long, J6SnapshotTrace> traces = traces(List.of(oldVersion, newVersion));
         return Optional.of(new J6HistoryComparison(
@@ -284,26 +285,27 @@ public class J6HistoryQueryService {
         };
     }
 
-    private boolean terminalBefore(
-            LoadedVersion before,
+    private boolean terminalBeforeCurrent(
+            LoadedVersion previous,
+            LoadedVersion current,
             List<CanonicalEventObservationView> stateHistory) {
-        return switch (before.value()) {
-            case CanonicalEventObservationView value ->
+        if (current.stream() == J6HistoryStream.EVENT_STATE) {
+            return switch (previous.value()) {
+                case CanonicalEventObservationView value ->
                     classifier.isTerminalStatus(value.status().type());
-            case EventDetailObservationView value ->
-                    classifier.isTerminalStatus(value.details().status().type());
-            case J5EventDataObservationView ignored -> stateHistory.stream()
-                    .filter(state -> !state.source().receivedAt()
-                            .isAfter(before.source().receivedAt()))
-                    .max(Comparator.comparing(
-                                    (CanonicalEventObservationView state) ->
-                                            state.source().receivedAt())
-                            .thenComparingLong(
-                                    CanonicalEventObservationView::observationId))
-                    .map(state -> classifier.isTerminalStatus(state.status().type()))
-                    .orElse(false);
-            default -> false;
-        };
+                default -> false;
+            };
+        }
+        return stateHistory.stream()
+                .filter(state -> state.source().receivedAt()
+                        .isBefore(current.source().receivedAt()))
+                .max(Comparator.comparing(
+                                (CanonicalEventObservationView state) ->
+                                        state.source().receivedAt())
+                        .thenComparingLong(
+                                CanonicalEventObservationView::observationId))
+                .map(state -> classifier.isTerminalStatus(state.status().type()))
+                .orElse(false);
     }
 
     private Map<Long, J6SnapshotTrace> traces(List<LoadedVersion> versions) {

@@ -2,9 +2,11 @@ package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlService;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCollectionEvidenceService;
+import com.bettingproject.sofascorelocal.application.retention.J6RawPayloadRetentionService;
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
+import org.springframework.dao.DataAccessException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -16,6 +18,7 @@ public class DashboardController {
     private final J3ManualCallControlService manualCallControlService;
     private final J3ManualCollectionEvidenceService collectionEvidenceService;
     private final RawSnapshotJsonInspectionService snapshotInspectionService;
+    private final J6RawPayloadRetentionService retentionService;
     private final LocalFormTokenService formTokenService;
 
     public DashboardController(
@@ -23,11 +26,13 @@ public class DashboardController {
             J3ManualCallControlService manualCallControlService,
             J3ManualCollectionEvidenceService collectionEvidenceService,
             RawSnapshotJsonInspectionService snapshotInspectionService,
+            J6RawPayloadRetentionService retentionService,
             LocalFormTokenService formTokenService) {
         this.dashboardService = dashboardService;
         this.manualCallControlService = manualCallControlService;
         this.collectionEvidenceService = collectionEvidenceService;
         this.snapshotInspectionService = snapshotInspectionService;
+        this.retentionService = retentionService;
         this.formTokenService = formTokenService;
     }
 
@@ -43,6 +48,16 @@ public class DashboardController {
         model.addAttribute(
                 "snapshotInspectionCatalog",
                 snapshotInspectionService.loadCatalog());
+        try {
+            var retentionPreview = retentionService.preview();
+            model.addAttribute("retentionPreview", retentionPreview);
+            model.addAttribute(
+                    "retentionPreviewCandidates",
+                    retentionPreview.candidates().stream().limit(25).toList());
+        }
+        catch (DataAccessException | IllegalArgumentException | IllegalStateException exception) {
+            model.addAttribute("retentionPreviewUnavailable", true);
+        }
         model.addAttribute("localFormToken", formTokenService.issue(session));
         return "dashboard";
     }
