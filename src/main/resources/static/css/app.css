@@ -637,6 +637,77 @@ button:disabled {
   margin-top: 22px;
 }
 
+.j6-demo-panel,
+.history-controls,
+.history-version,
+.history-pagination {
+  margin-top: 22px;
+}
+
+.j6-demo-panel,
+.history-version {
+  border-left: 7px solid var(--warning);
+}
+
+.inline-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 12px;
+}
+
+.comparison-form {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+
+.inline-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.inline-form input,
+.inline-form select {
+  min-height: 42px;
+  padding: 9px 11px;
+  color: var(--ink-strong);
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.snapshot-trace,
+.history-diff {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.history-compare-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 24px;
+}
+
+.single-column {
+  grid-template-columns: 1fr;
+}
+
+.history-pagination {
+  justify-content: space-between;
+}
+
 .table-link {
   display: inline-flex;
   padding: 7px 10px;
@@ -674,6 +745,7 @@ footer {
   .control-grid,
   .fixture-metadata,
   .inspection-metadata,
+  .history-compare-grid,
   .detail-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -694,6 +766,7 @@ footer {
   .fixture-counts,
   .fixture-metadata,
   .inspection-metadata,
+  .history-compare-grid,
   .detail-grid,
   .event-search-form {
     grid-template-columns: 1fr;

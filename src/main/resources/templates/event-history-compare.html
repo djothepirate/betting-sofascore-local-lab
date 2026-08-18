@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comparaison J6 — SofaScore Local Lab</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar compact-topbar">
+  <div class="shell">
+    <p class="eyebrow">J6 · Comparaison locale</p>
+    <h1>Écart entre deux versions</h1>
+    <p class="subtitle">Lecture sémantique bornée ; aucun payload JSON brut n’est rendu ici.</p>
+  </div>
+</header>
+
+<main class="shell event-page">
+  <nav class="links page-links" aria-label="Navigation locale">
+    <a th:href="${comparison != null}
+          ? @{/events/{id}/history(id=${canonicalEventId},stream=${comparison.stream.name()},zone=${selectedZone.id})}
+          : @{/events(zone='Europe/Paris')}"
+       href="/events">← Historique</a>
+    <a th:href="@{/}" href="/">Tableau de bord</a>
+  </nav>
+
+  <p class="notice notice-danger" th:if="${comparisonErrorCode == 'VERSION_NOT_FOUND'}">
+    L’événement ou l’une des observations demandées n’existe pas dans ce flux.
+  </p>
+  <p class="notice notice-danger" th:if="${comparisonErrorCode == 'INVALID_COMPARISON'}">
+    La comparaison est invalide : utilisez deux observations distinctes du même flux, dans l’ordre chronologique.
+  </p>
+  <p class="notice notice-danger" th:if="${comparisonErrorCode == 'LOCAL_DATABASE_UNAVAILABLE'}">
+    La base PostgreSQL locale n’est pas disponible.
+  </p>
+
+  <div th:if="${comparison != null}">
+    <section class="panel">
+      <div class="panel-heading">
+        <div>
+          <p class="label" th:text="${comparison.stream.name()}">EVENT_STATE</p>
+          <h2 th:text="${'Observation ' + comparison.fromVersion.observationId + ' → ' + comparison.toVersion.observationId}">Comparaison</h2>
+        </div>
+        <span class="chip chip-warning" th:text="${comparison.classification.name()}">LATE_CORRECTION</span>
+      </div>
+      <div class="history-compare-grid">
+        <article>
+          <h3>Avant</h3>
+          <dl class="detail-grid single-column">
+            <div><dt>Réception</dt><dd th:text="${comparison.fromVersion.source.receivedAt.atZone(selectedZone)}">date</dd></div>
+            <div><dt>Source</dt><dd class="mono" th:text="${comparison.fromVersion.source.sourceReference()}">source</dd></div>
+            <div><dt>Parseur</dt><dd class="mono" th:text="${comparison.fromVersion.source.parserVersion}">parser</dd></div>
+            <div><dt>SHA-256 source</dt><dd class="mono hash-value" th:text="${comparison.fromVersion.source.payloadSha256}">hash</dd></div>
+            <div><dt>SHA-256 normalisé</dt><dd class="mono hash-value" th:text="${comparison.fromVersion.normalizedSha256}">hash</dd></div>
+            <div th:if="${comparison.fromVersion.score.isPresent()}"><dt>Score</dt><dd th:text="${comparison.fromVersion.score.get().label()}">1–0</dd></div>
+            <div th:if="${comparison.fromVersion.completeness.isPresent()}"><dt>Complétude</dt><dd th:text="${comparison.fromVersion.completeness.get().status.name() + ' · ' + comparison.fromVersion.completeness.get().scorePercent + '%'}">COMPLETE</dd></div>
+            <div th:if="${comparison.fromVersion.snapshotTrace.isPresent()}"><dt>Payload</dt><dd th:text="${comparison.fromVersion.snapshotTrace.get().rawPayloadState.name()}">RETAINED</dd></div>
+          </dl>
+        </article>
+        <article>
+          <h3>Après</h3>
+          <dl class="detail-grid single-column">
+            <div><dt>Réception</dt><dd th:text="${comparison.toVersion.source.receivedAt.atZone(selectedZone)}">date</dd></div>
+            <div><dt>Source</dt><dd class="mono" th:text="${comparison.toVersion.source.sourceReference()}">source</dd></div>
+            <div><dt>Parseur</dt><dd class="mono" th:text="${comparison.toVersion.source.parserVersion}">parser</dd></div>
+            <div><dt>SHA-256 source</dt><dd class="mono hash-value" th:text="${comparison.toVersion.source.payloadSha256}">hash</dd></div>
+            <div><dt>SHA-256 normalisé</dt><dd class="mono hash-value" th:text="${comparison.toVersion.normalizedSha256}">hash</dd></div>
+            <div th:if="${comparison.toVersion.score.isPresent()}"><dt>Score</dt><dd th:text="${comparison.toVersion.score.get().label()}">2–1</dd></div>
+            <div th:if="${comparison.toVersion.completeness.isPresent()}"><dt>Complétude</dt><dd th:text="${comparison.toVersion.completeness.get().status.name() + ' · ' + comparison.toVersion.completeness.get().scorePercent + '%'}">COMPLETE</dd></div>
+            <div th:if="${comparison.toVersion.snapshotTrace.isPresent()}"><dt>Payload</dt><dd th:text="${comparison.toVersion.snapshotTrace.get().rawPayloadState.name()}">PAYLOAD_PURGED</dd></div>
+          </dl>
+        </article>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="panel-heading">
+        <div><p class="label">Diff sémantique</p><h2>Champs modifiés</h2></div>
+        <span class="chip" th:text="${comparison.changes.size() + ' changement(s)'}">0 changement</span>
+      </div>
+      <p th:if="${comparison.changes.isEmpty()}">Aucun écart sémantique normalisé.</p>
+      <div class="table-wrap" th:if="${!comparison.changes.isEmpty()}">
+        <table>
+          <thead><tr><th>Champ</th><th>Avant</th><th>Après</th><th>Nature</th></tr></thead>
+          <tbody>
+            <tr th:each="change : ${comparison.changes}">
+              <td class="mono" th:text="${change.field}">field</td>
+              <td th:text="${change.beforeValue.orElse('—')}">—</td>
+              <td th:text="${change.afterValue.orElse('—')}">—</td>
+              <td th:text="${change.kind.name()}">CHANGED</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  </div>
+</main>
+</body>
+</html>

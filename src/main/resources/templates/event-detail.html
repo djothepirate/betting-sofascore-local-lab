@@ -61,6 +61,11 @@
            href="/events/00000000-0000-0000-0000-000000000000/statistics">
           Statistiques, incidents et compositions J5
         </a>
+        <a class="button button-secondary"
+           th:href="@{/events/{id}/history(id=${detail.current.event.identity.value},zone=${detail.zoneId.id})}"
+           href="/events/00000000-0000-0000-0000-000000000000/history">
+          Historique et comparaisons J6
+        </a>
       </div>
     </section>
 

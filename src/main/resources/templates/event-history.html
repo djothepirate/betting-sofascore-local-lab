@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Historique J6 — SofaScore Local Lab</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar compact-topbar">
+  <div class="shell">
+    <p class="eyebrow">J6 · Historique local immuable</p>
+    <h1>Versions et corrections tardives</h1>
+    <p class="subtitle">Comparaisons sémantiques normalisées, provenance et état de conservation du payload.</p>
+  </div>
+</header>
+
+<main class="shell event-page">
+  <nav class="links page-links" aria-label="Navigation locale">
+    <a th:href="${historyPage != null}
+          ? @{/events/{id}(id=${historyPage.currentEvent.identity.value},zone=${selectedZone.id})}
+          : @{/events(zone='Europe/Paris')}"
+       href="/events">← Détail de la rencontre</a>
+    <a th:href="@{/}" href="/">Tableau de bord</a>
+  </nav>
+
+  <p class="notice notice-danger" th:if="${historyErrorCode == 'EVENT_NOT_FOUND'}">
+    Cette identité canonique n’existe pas dans la base locale.
+  </p>
+  <p class="notice notice-danger" th:if="${historyErrorCode == 'INVALID_HISTORY_QUERY'}">
+    Le flux, la zone ou la pagination demandée n’est pas valide.
+  </p>
+  <p class="notice notice-danger" th:if="${historyErrorCode == 'LOCAL_DATABASE_UNAVAILABLE'}">
+    La base PostgreSQL locale n’est pas disponible.
+  </p>
+
+  <div th:if="${historyPage != null}">
+    <p class="notice notice-safe" th:if="${j6HistoryImport != null}">
+      Corpus J6 traité :
+      <strong th:text="${j6HistoryImport.insertedObservations}">0</strong> version(s) ajoutée(s),
+      <strong th:text="${j6HistoryImport.deduplicatedObservations}">0</strong> déjà présente(s).
+    </p>
+
+    <section class="panel event-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Identité canonique locale</p>
+          <h2>
+            <span th:text="${historyPage.currentEvent.homeTeam.name}">Home</span>
+            <span> — </span>
+            <span th:text="${historyPage.currentEvent.awayTeam.name}">Away</span>
+          </h2>
+        </div>
+        <span class="chip chip-safe" th:text="${historyPage.currentEvent.status.type}">finished</span>
+      </div>
+      <dl class="detail-grid">
+        <div><dt>UUID local</dt><dd class="mono" th:text="${historyPage.currentEvent.identity.value}">UUID</dd></div>
+        <div><dt>Identifiant fournisseur</dt><dd th:text="${historyPage.currentEvent.identity.providerEventId}">900001</dd></div>
+        <div><dt>Zone d’affichage</dt><dd th:text="${selectedZone.id}">Europe/Paris</dd></div>
+        <div><dt>Versions sélectionnées</dt><dd th:text="${historyPage.totalVersions}">0</dd></div>
+      </dl>
+    </section>
+
+    <section class="panel history-controls">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Navigation bornée</p>
+          <h2>Filtrer et comparer</h2>
+        </div>
+      </div>
+      <form class="inline-form" method="get"
+            th:action="@{/events/{id}/history(id=${historyPage.currentEvent.identity.value})}">
+        <label>Flux
+          <select name="stream">
+            <option value="" th:selected="${historyPage.selectedStream.isEmpty()}">Tous les flux</option>
+            <option th:each="candidate : ${historyStreams}"
+                    th:value="${candidate.name()}"
+                    th:text="${candidate.name()}"
+                    th:selected="${historyPage.selectedStream.isPresent() and historyPage.selectedStream.get() == candidate}">
+              EVENT_STATE
+            </option>
+          </select>
+        </label>
+        <label>Taille
+          <input type="number" name="size" min="1" max="100" th:value="${historyPage.size}">
+        </label>
+        <input type="hidden" name="zone" th:value="${selectedZone.id}">
+        <button class="button button-secondary" type="submit">Appliquer</button>
+      </form>
+
+      <form class="inline-form comparison-form" method="get"
+            th:action="@{/events/{id}/history/compare(id=${historyPage.currentEvent.identity.value})}">
+        <label>Flux
+          <select name="stream" required>
+            <option th:each="candidate : ${historyStreams}"
+                    th:value="${candidate.name()}"
+                    th:text="${candidate.name()}">EVENT_STATE</option>
+          </select>
+        </label>
+        <label>Observation avant
+          <input type="number" name="fromObservationId" min="1" required>
+        </label>
+        <label>Observation après
+          <input type="number" name="toObservationId" min="1" required>
+        </label>
+        <input type="hidden" name="zone" th:value="${selectedZone.id}">
+        <button class="button button-secondary" type="submit">Comparer deux versions</button>
+      </form>
+    </section>
+
+    <p class="notice" th:if="${historyPage.versions.isEmpty()}">
+      Aucune version locale n’est disponible pour ce flux.
+    </p>
+
+    <section class="panel history-version" th:each="version : ${historyPage.versions}">
+      <div class="panel-heading">
+        <div>
+          <p class="label" th:text="${version.stream.name() + ' · observation ' + version.observationId}">Flux</p>
+          <h2 th:text="${version.source.receivedAt.atZone(selectedZone)}">Réception</h2>
+        </div>
+        <div class="chip-list">
+          <span class="chip"
+                th:each="classification : ${version.classifications}"
+                th:classappend="${classification.name() == 'LATE_CORRECTION'} ? 'chip-danger' : (${classification.name() == 'LATE_ENRICHMENT'} ? 'chip-safe' : 'chip-warning')"
+                th:text="${classification.name()}">BASELINE</span>
+        </div>
+      </div>
+
+      <dl class="detail-grid">
+        <div><dt>Source</dt><dd class="mono" th:text="${version.source.sourceReference()}">fixture</dd></div>
+        <div><dt>Nature</dt><dd th:text="${version.source.kind.name()}">SYNTHETIC_FIXTURE</dd></div>
+        <div><dt>Parseur</dt><dd class="mono" th:text="${version.source.parserVersion}">parser-v1</dd></div>
+        <div><dt>SHA-256 source</dt><dd class="mono hash-value" th:text="${version.source.payloadSha256}">hash</dd></div>
+        <div><dt>SHA-256 normalisé</dt><dd class="mono hash-value" th:text="${version.normalizedSha256}">hash</dd></div>
+        <div th:if="${version.score.isPresent()}"><dt>Score dérivé</dt><dd th:text="${version.score.get().label()}">2–1</dd></div>
+        <div th:if="${version.completeness.isPresent()}"><dt>Complétude</dt><dd th:text="${version.completeness.get().status.name() + ' · ' + version.completeness.get().scorePercent + '% · ' + version.completeness.get().presentSignals + '/' + version.completeness.get().expectedSignals}">COMPLETE</dd></div>
+      </dl>
+
+      <div th:if="${version.snapshotTrace.isPresent()}" class="snapshot-trace">
+        <dl class="detail-grid">
+          <div><dt>Snapshot</dt><dd th:text="${version.snapshotTrace.get().snapshotId}">1</dd></div>
+          <div><dt>Occurrences</dt><dd th:text="${version.snapshotTrace.get().occurrenceCount}">1</dd></div>
+          <div><dt>Déduplications</dt><dd th:text="${version.snapshotTrace.get().deduplicatedOccurrenceCount}">0</dd></div>
+          <div><dt>Dernier résultat</dt><dd th:text="${version.snapshotTrace.get().latestOutcome.name()}">INSERTED</dd></div>
+          <div><dt>Payload brut</dt><dd th:text="${version.snapshotTrace.get().rawPayloadState.name()}">RETAINED</dd></div>
+        </dl>
+        <form th:if="${version.snapshotTrace.get().rawPayloadState.name() == 'RETAINED'}"
+              method="post" th:action="@{/snapshot-inspection}">
+          <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+          <input type="hidden" name="snapshotId" th:value="${version.snapshotTrace.get().snapshotId}">
+          <button class="button button-secondary" type="submit">Inspecter ce snapshot</button>
+        </form>
+        <p class="notice notice-warning"
+           th:if="${version.snapshotTrace.get().rawPayloadState.name() == 'PAYLOAD_PURGED'}">
+          Payload purgé selon la politique J6 : inspection brute indisponible, provenance et données normalisées conservées.
+        </p>
+        <p class="notice notice-warning"
+           th:if="${version.snapshotTrace.get().rawPayloadState.name() == 'LEGACY_ABSENT'}">
+          Payload absent d’un enregistrement historique antérieur ; aucune inspection brute n’est possible.
+        </p>
+      </div>
+
+      <div class="history-diff">
+        <h3>Écarts avec la version précédente</h3>
+        <p th:if="${version.previousObservationId.isEmpty()}">Version de référence du flux.</p>
+        <p th:if="${version.previousObservationId.isPresent() and version.changesFromPrevious.isEmpty()}">
+          Aucun écart sémantique normalisé.
+        </p>
+        <div class="table-wrap" th:if="${!version.changesFromPrevious.isEmpty()}">
+          <table>
+            <thead><tr><th>Champ</th><th>Avant</th><th>Après</th><th>Nature</th></tr></thead>
+            <tbody>
+              <tr th:each="change : ${version.changesFromPrevious}">
+                <td class="mono" th:text="${change.field}">field</td>
+                <td th:text="${change.beforeValue.orElse('—')}">—</td>
+                <td th:text="${change.afterValue.orElse('—')}">—</td>
+                <td th:text="${change.kind.name()}">CHANGED</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <a class="button button-secondary"
+           th:if="${version.previousObservationId.isPresent()}"
+           th:href="@{/events/{id}/history/compare(id=${historyPage.currentEvent.identity.value},stream=${version.stream.name()},fromObservationId=${version.previousObservationId.getAsLong()},toObservationId=${version.observationId},zone=${selectedZone.id})}">
+          Ouvrir la comparaison dédiée
+        </a>
+      </div>
+    </section>
+
+    <nav class="links page-links history-pagination" aria-label="Pagination de l’historique">
+      <a th:if="${historyPage.hasPreviousPage()}"
+         th:href="@{/events/{id}/history(id=${historyPage.currentEvent.identity.value},stream=${historyPage.selectedStream.orElse(null)},page=${historyPage.page - 1},size=${historyPage.size},zone=${selectedZone.id})}">
+        ← Page précédente
+      </a>
+      <span th:text="${historyPage.totalPages == 0 ? '0 / 0' : (historyPage.page + 1) + ' / ' + historyPage.totalPages}">1 / 1</span>
+      <a th:if="${historyPage.hasNextPage()}"
+         th:href="@{/events/{id}/history(id=${historyPage.currentEvent.identity.value},stream=${historyPage.selectedStream.orElse(null)},page=${historyPage.page + 1},size=${historyPage.size},zone=${selectedZone.id})}">
+        Page suivante →
+      </a>
+    </nav>
+  </div>
+</main>
+</body>
+</html>

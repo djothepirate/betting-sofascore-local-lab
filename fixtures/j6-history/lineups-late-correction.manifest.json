@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "j6-lineups-late-correction",
+  "endpointType": "EVENT_LINEUPS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-16T08:20:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "event-lineups-v1",
+  "payloadResource": "fixtures/j6-history/lineups-late-correction.json",
+  "maximumBytes": 8192,
+  "expectedRawSha256": "a7aa865e7f4eccd843de6ab9612aa7628fb193c0905a87bf6f4d1e690ede23b2",
+  "expectedCanonicalJsonSha256": "91bd713db30f10b50ab2187b1b5c7ff2f8f7626ddf766cf5fbcc70aa8c860b7f",
+  "minimized": false,
+  "removedFields": []
+}
