@@ -117,12 +117,20 @@ formes V13 sont donc qualifiées dans cette portée réelle bornée. Le contrôl
 également la présentation corrigée, le reverrouillage local, les états J4/J5 `LOCKED` après
 redémarrage et l'arrêt final de l'application.
 
+Le jalon **J6 — Historique** est désormais implémenté et qualifié techniquement. Il ajoute une
+chronologie locale des cinq flux d'un événement, des différences sémantiques entre versions, la
+détection des enrichissements et corrections tardifs, ainsi qu'une rétention manuelle des seuls
+octets bruts. Cette rétention reste sans bouton Web, limitée à 500 snapshots par lot, protégée par
+un aperçu haché, une confirmation exacte et une sauvegarde chiffrée restaurée avec succès. La
+qualification humaine de l'interface et la qualification opératoire sauvegarde/restauration
+restent requises avant de déclarer J6 `VALIDATED`.
+
 ## Ce qui est livré localement
 
 - dépôt Git autonome, documentation, ADR, règles agent et Work Orders ;
 - Java **25 LTS**, Spring Boot **4.1.0** et Maven Wrapper versionné ;
 - interface Spring MVC + Thymeleaf sur `127.0.0.1:8087` ;
-- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V20 et stockage brut séparé ;
+- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V22 et stockage brut séparé ;
 - Actuator, Caffeine, validation de configuration et garde de liaison locale ;
 - catalogue logique des familles d’endpoints, sans URI réelle ;
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
@@ -210,6 +218,17 @@ redémarrage et l'arrêt final de l'application.
   `incidentClass="injury"` est conservé avec `injury=true`, les joueurs entrant et sortant restent
   rattachés au remplacement, et une contradiction booléenne explicite reste
   `SCHEMA_INCOMPATIBLE` ;
+- occurrence J6 append-only à chaque tentative future de persistance brute, avec résultat
+  `INSERTED` ou `DEDUPLICATED` et une occurrence `BASELINE` pour chaque snapshot antérieur ;
+- chronologie paginée des flux état, détails, statistiques, incidents et compositions, avec
+  comparaison sémantique calculée à la demande et classification des changements tardifs ;
+- corpus synthétique J6 idempotent couvrant un état terminal puis des corrections sur les quatre
+  autres familles, sans appel réseau ni copie d'un payload fournisseur ;
+- aperçu de rétention en lecture seule dans le tableau de bord et commande opérateur non Web : la
+  suppression est limitée aux octets `payload_raw`, tandis que lignes, taille, SHA-256, provenance,
+  occurrences, observations normalisées et audit append-only sont conservés ;
+- sauvegarde PostgreSQL chiffrée directement par `age`, restauration de qualification dans une
+  base temporaire et vérification des empreintes avant toute commande de purge.
 
 ## Limite essentielle du bootstrap
 
@@ -352,7 +371,7 @@ betting-sofascore-local-lab/
 └── src/
 ```
 
-## Modèle de données J1 à J5
+## Modèle de données J1 à J6
 
 La migration `V1__bootstrap_schema.sql` crée :
 
@@ -470,6 +489,19 @@ le contrat complet V12 et ajoute seulement `Leaving field` au vocabulaire fermé
 carton. Le libellé exact est persisté et affiché ; toute autre valeur non documentée reste
 `SCHEMA_INCOMPATIBLE`. Les observations V1–V19 restent inchangées pendant l'upgrade.
 
+La migration append-only `V21__j6_snapshot_occurrences.sql` ajoute
+`provider_snapshot_occurrence`. Une occurrence `BASELINE` décrit chaque snapshot déjà présent,
+sans prétendre reconstruire les tentatives historiques inconnues. Chaque sauvegarde future ajoute
+ensuite une occurrence `INSERTED` ou `DEDUPLICATED`, même si les octets sont identiques et que la
+ligne `provider_snapshot` est réutilisée. La table est immuable et ne contient aucun payload.
+
+La migration append-only `V22__j6_guarded_raw_payload_retention.sql` ajoute la date de purge des
+octets et l'audit `j6_raw_payload_purge_audit`. Elle interdit la suppression d'une ligne snapshot,
+les modifications arbitraires et toute purge non reliée, dans la même transaction, à un lot
+d'audit et à une preuve de sauvegarde restaurée. Après purge, le SHA-256, la taille, les métadonnées,
+les occurrences et toutes les observations normalisées restent consultables ; seul
+`payload_raw` devient absent avec un état explicite `PAYLOAD_PURGED`.
+
 Le mode `DIRECT_LOCAL_ENDPOINT` ne doit jamais être confondu avec une `VisualObservation` du projet
 global. La persistance n'effectue elle-même aucun appel : les écritures J5 réelles éventuelles sont
 initiées uniquement par la voie humaine gardée, puis référencent le brut séparé avec
@@ -501,6 +533,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Architecture des événements canoniques J4](docs/architecture/J4-CANONICAL-EVENTS-AND-LOCAL-DETAIL.md)
 - [Architecture J5 hors ligne et contrôles de complétude](docs/architecture/J5-OFFLINE-EVENT-DATA-AND-COMPLETENESS.md)
 - [Architecture de la qualification réelle gardée J5](docs/architecture/J5-GUARDED-REAL-EVENT-DATA.md)
+- [Architecture J6 — historique et rétention gardée](docs/architecture/J6-HISTORY-AND-GUARDED-RETENTION.md)
 - [Règles métier des incidents de football J5](docs/requirements/J5-FOOTBALL-INCIDENT-RULES.md)
 - [Voie réelle bornée J4 — sous-étape 1](docs/architecture/J4-GUARDED-REAL-EVENT-DETAILS-PHASE1.md)
 - [Politique réseau J3 hors ligne](docs/architecture/J3-OFFLINE-NETWORK-POLICY.md)
@@ -515,6 +548,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Collecte manuelle J3 répétable à pagination dynamique](docs/architecture/J3-DYNAMIC-MANUAL-PAGINATION.md)
 - [Inspection JSON locale des snapshots bruts J3](docs/architecture/J3-LOCAL-RAW-SNAPSHOT-JSON-INSPECTION.md)
 - [Runbook local](docs/runbooks/RUNBOOK-LOCAL.md)
+- [Runbook J6 — sauvegarde, restauration et rétention](docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md)
 - [Cadrage PDF](docs/reference/Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf)
 - [Rapport de validation du bootstrap](docs/validation/J0-J1-VALIDATION-REPORT.md)
 - [Work Order J0/J1](docs/work_orders/completed/WO-SS-20260808-001-bootstrap-j0-j1.md)
@@ -548,6 +582,8 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Correction V13 du motif de carton `Leaving field`](docs/validation/J5-OBSERVED-V13-LEAVING-FIELD-CARD-REASON-20260818.md)
 - [Qualification hors ligne de la session combinée J4 phase 2 + J5](docs/validation/J4-J5-COMBINED-QUALIFICATION-SESSION-20260818.md)
 - [Work Order validé de qualification réelle J5](docs/work_orders/completed/WO-SS-20260815-006-j5-real-event-data-qualification.md)
+- [Readiness technique J6](docs/validation/J6-TECHNICAL-READINESS-20260818.md)
+- [Work Order J6 actif](docs/work_orders/active/WO-SS-20260818-007-history-j6.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 
@@ -771,3 +807,41 @@ tableaux, que `Leaving field` reste visible, que la configuration locale a été
 J4/J5 sont `LOCKED` après redémarrage. Le fichier `.env` demeure ignoré et n'est ni lu ni modifié
 par l'agent. Aucun listener n'est présent sur `127.0.0.1:8087` après l'arrêt final ; le Work Order
 réel J5 est `VALIDATED` et archivé dans `completed`.
+
+## J6 : historique livré, validation humaine encore ouverte
+
+La démonstration J6 part de l'identité synthétique J4/J5 et ajoute des versions postérieures à un
+état `finished`. Les cinq flux peuvent être filtrés et paginés ; deux versions du même flux peuvent
+être comparées sans relire le JSON brut. Chaque version est associée à une classification primaire
+parmi `BASELINE`, `TECHNICAL_DUPLICATE`, `LOCAL_REPARSE`, `SEMANTICALLY_UNCHANGED`,
+`SYNTHETIC_CHANGE`, `PROVIDER_UPDATE`, `LATE_ENRICHMENT` et `LATE_CORRECTION`.
+Les corrections du corpus restent explicitement `SYNTHETIC_CHANGE`; les classifications `LATE_*`
+sont réservées à la provenance fournisseur et couvertes hors réseau par les tests.
+
+Le tableau de bord n'expose qu'un aperçu de rétention. L'exécution demeure une commande locale
+ponctuelle, application arrêtée et connecteurs verrouillés. La procédure complète est documentée
+dans `docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md`; elle exige PowerShell 7.4, `age`, une
+destination absolue hors dépôt, une restauration temporaire qualifiée, puis la reprise exacte du
+cutoff, du SHA-256 de plan et de la phrase de confirmation issus d'un même aperçu.
+
+```text
+J6_IMPLEMENTATION_STATUS=TECHNICAL_READINESS_PASS
+J6_FLYWAY_VERSION=22
+J6_HISTORY_STREAMS=5
+J6_HISTORY_PAGE_SIZE_DEFAULT=25
+J6_HISTORY_PAGE_SIZE_MAXIMUM=100
+J6_RETENTION_DAYS_DEFAULT=30
+J6_RETENTION_BATCH_MAXIMUM=500
+J6_RETENTION_WEB_EXECUTION=ABSENT
+J6_RETENTION_AUTOMATIC_SCHEDULING=ABSENT
+J6_BACKUP_FORMAT=PG_DUMP_CUSTOM_ENCRYPTED_WITH_AGE
+J6_PRIMARY_DATABASE_PURGE_EXECUTED=NO
+J6_PROVIDER_CALLS_DURING_IMPLEMENTATION=0
+J6_HUMAN_UI_QUALIFICATION=PENDING
+J6_OPERATIONAL_BACKUP_RESTORE_QUALIFICATION=PENDING
+J6_WORK_ORDER_STATUS=IN_DEVELOPMENT
+```
+
+Ces deux validations humaines sont volontairement laissées ouvertes. Elles ne nécessitent aucun
+appel fournisseur, mais elles impliquent une action opérateur interactive et, pour la rétention,
+une autorisation distincte avant toute suppression d'octets sur la base locale primaire.

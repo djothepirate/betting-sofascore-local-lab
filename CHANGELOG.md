@@ -4,6 +4,36 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### J6 — Historique et rétention gardée
+
+- migration Flyway V21 ajoutant une occurrence append-only pour chaque tentative de persistance
+  brute future, y compris les réponses dédupliquées, et un backfill `BASELINE` prudent pour les
+  snapshots antérieurs ;
+- agrégation locale des cinq flux `EVENT_STATE`, `EVENT_DETAILS`, `EVENT_STATISTICS`,
+  `EVENT_INCIDENTS` et `EVENT_LINEUPS`, avec ordre stable, pagination bornée, provenance complète et
+  état explicite des octets bruts ;
+- différences sémantiques calculées à la demande pour les champs scalaires, métriques, incidents,
+  compositions, score et complétude, sans relecture du JSON brut ni mutation de l'historique ;
+- classification `BASELINE`, `TECHNICAL_DUPLICATE`, `LOCAL_REPARSE`,
+  `SEMANTICALLY_UNCHANGED`, `SYNTHETIC_CHANGE`, `PROVIDER_UPDATE`, `LATE_ENRICHMENT` ou
+  `LATE_CORRECTION`, avec prise en compte du dernier état terminal strictement antérieur ;
+- pages Thymeleaf d'historique et de comparaison sur boucle locale, réponses `no-store`, contenu
+  échappé, pagination et erreurs explicites, sans endpoint JSON, export ni téléchargement brut ;
+- corpus synthétique J6 idempotent ajoutant un état final et quatre changements postérieurs à cet
+  état aux fixtures nominales J4/J5, classés `SYNTHETIC_CHANGE` et sans transport fournisseur ;
+- migration Flyway V22 limitant la rétention aux seuls octets `payload_raw` éligibles, avec
+  conservation des lignes, hashes, tailles, métadonnées, occurrences et observations normalisées,
+  audit append-only et trigger bloquant toute mutation non auditée ;
+- aperçu Web en lecture seule et commande non Web limitée à 500 éléments, avec plan SHA-256,
+  phrase exacte, relecture transactionnelle `SERIALIZABLE` et refus sur dérive ou couverture de
+  sauvegarde insuffisante ;
+- scripts PowerShell de sauvegarde PostgreSQL directement chiffrée par `age`, restauration dans
+  une base temporaire, comparaison des empreintes, manifeste qualifié et invocation manuelle de la
+  rétention ; aucun dump clair, secret en argument, bouton de purge ou planification ;
+- phase applicative avancée à `J6-HISTORY-AND-GUARDED-RETENTION-READINESS`, documentation
+  d'architecture, runbook opérateur et rapport de readiness ; le Work Order reste actif jusqu'aux
+  qualifications humaines de l'interface et de la sauvegarde/restauration.
+
 ### Corrigé
 
 - retrait de la liste technique des chemins JSON manquants au-dessus des tableaux

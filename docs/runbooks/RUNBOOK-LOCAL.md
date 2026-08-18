@@ -773,8 +773,9 @@ Aucun Docker ni accès SofaScore n’est requis par les tests standards.
 .\mvnw.cmd -Pintegration-tests verify
 ```
 
-Docker doit être disponible. Testcontainers vérifie les migrations V1 à V9, l’état initial du
-connecteur, la conservation exacte du brut, sa déduplication et les provenances J4/J5.
+Docker doit être disponible. Testcontainers vérifie les migrations V1 à V22, l’état initial du
+connecteur, la conservation exacte du brut, sa déduplication, les provenances J4/J5, les occurrences
+J6 et la rétention auditée dans une base éphémère.
 
 ### 4.3 Script consolidé
 
@@ -875,15 +876,34 @@ une valeur de `.env`, un cookie, un jeton ou une donnée de session.
 
 ### 4.8 ter Readiness technique de la qualification réelle J5
 
-La voie réelle J5 corrigée est qualifiée hors ligne par `261` tests standards et `20` tests
-PostgreSQL/Testcontainers, avec Flyway V9 et zéro appel fournisseur. La preuve est
+Cette étape historique de la voie réelle J5 avait été qualifiée hors ligne par `261` tests
+standards et `20` tests PostgreSQL/Testcontainers, avec Flyway V9 et zéro appel fournisseur. Sa
+preuve est
 `docs/validation/J5-REAL-EVENT-DATA-TECHNICAL-READINESS-20260815.md`.
 
 Ces résultats valident les garde-fous, l'ordre des transports simulés, la persistance brute avant
 parsing, les parseurs V2, l'arrêt sans retry, le verrou terminal et la poursuite après un HTTP
-`404` de famille explicitement classé `UNAVAILABLE`. Ils ne valident pas les schémas actuels du
-fournisseur. Seule la procédure 3.10 ter peut faire évoluer
-`J5_PROVIDER_SCHEMA_VALIDATED`, après revue humaine et avec le Work Order 006 toujours actif.
+`404` de famille explicitement classé `UNAVAILABLE`. À cette date, ils ne validaient pas les
+schémas fournisseur. Les campagnes humaines ultérieures ont depuis qualifié V13 et le Work Order
+006 est archivé ; ce paragraphe reste la procédure historique de readiness, pas l'état courant.
+
+### 4.8 quater Readiness technique J6
+
+Exécuter les deux suites avec toutes les voies fournisseur bloquées :
+
+```powershell
+.\mvnw.cmd clean verify
+.\mvnw.cmd -Pintegration-tests verify
+```
+
+Le rapport `docs/validation/J6-TECHNICAL-READINESS-20260818.md` couvre Flyway V22, 394 tests
+standards et 38 tests PostgreSQL/Testcontainers. La qualification humaine de l'historique et la
+qualification interactive de sauvegarde/restauration suivent exclusivement
+`docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md`.
+
+L'aperçu de rétention est sans mutation. Le mode `Execute` reste interdit tant que le propriétaire
+n'a pas donné une autorisation distincte après revue d'une sauvegarde restaurée et de l'aperçu
+final. Il n'est pas nécessaire pour qualifier l'interface historique.
 
 ### 4.9 Qualification réelle J4 sous-étape 1
 
@@ -1015,6 +1035,11 @@ Avant que les données réelles n’existent, le volume PostgreSQL reste recréa
 Les octets bruts résident uniquement dans la colonne locale `provider_snapshot.payload_raw`. Ne pas
 les copier dans Git, un ticket, un chat ou les logs. `payload_jsonb` reste réservé à une évolution
 distincte de normalisation et ne doit pas servir de duplicata du brut.
+
+À partir de Flyway V22, toute sauvegarde destinée à autoriser une rétention doit suivre le runbook
+J6. Il impose un chiffrement direct par `age`, une restauration dans une base temporaire, des
+empreintes identiques et un manifeste qualifié. La procédure générique ci-dessus ne constitue pas,
+à elle seule, une preuve suffisante pour une purge J6.
 
 ## 8. Interdictions d’exploitation
 
