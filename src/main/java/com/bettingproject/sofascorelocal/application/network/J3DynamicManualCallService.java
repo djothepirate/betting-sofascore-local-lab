@@ -46,6 +46,7 @@ public class J3DynamicManualCallService {
     private final Duration cacheTtl;
     private final Duration minimumDelay;
     private final InterPageDelay interPageDelay;
+    private final ManualProviderRequestCoordinator requestCoordinator;
 
     @Autowired
     public J3DynamicManualCallService(
@@ -55,7 +56,8 @@ public class J3DynamicManualCallService {
             J3ScheduledEventsPageCache pageCache,
             J3ManualCollectionEvidenceService evidenceService,
             SofascoreEndpointCatalog endpointCatalog,
-            SofascoreProperties properties) {
+            SofascoreProperties properties,
+            ManualProviderRequestCoordinator requestCoordinator) {
         this(
                 controlService,
                 transport,
@@ -70,7 +72,8 @@ public class J3DynamicManualCallService {
                 Clock.systemUTC(),
                 endpointCatalog.get(SofascoreEndpointType.SCHEDULED_EVENTS).cacheTtl(),
                 properties.getMinimumDelay(),
-                duration -> Thread.sleep(duration));
+                duration -> Thread.sleep(duration),
+                requestCoordinator);
     }
 
     J3DynamicManualCallService(
@@ -85,6 +88,35 @@ public class J3DynamicManualCallService {
             Duration cacheTtl,
             Duration minimumDelay,
             InterPageDelay interPageDelay) {
+        this(
+                controlService,
+                transport,
+                outcomeProcessor,
+                pageCache,
+                parser,
+                callGuard,
+                evidenceService,
+                clock,
+                cacheTtl,
+                minimumDelay,
+                interPageDelay,
+                new ManualProviderRequestCoordinator(
+                        clock, minimumDelay, ignored -> { }));
+    }
+
+    J3DynamicManualCallService(
+            J3ManualCallControlService controlService,
+            ScheduledEventsProviderPageTransport transport,
+            J3ScheduledEventsOutcomeProcessor outcomeProcessor,
+            J3ScheduledEventsPageCache pageCache,
+            ScheduledEventsV1Parser parser,
+            J3SingleCallGuard callGuard,
+            J3ManualCollectionEvidenceService evidenceService,
+            Clock clock,
+            Duration cacheTtl,
+            Duration minimumDelay,
+            InterPageDelay interPageDelay,
+            ManualProviderRequestCoordinator requestCoordinator) {
         this.controlService = Objects.requireNonNull(controlService, "controlService");
         this.transport = Objects.requireNonNull(transport, "transport");
         this.outcomeProcessor = Objects.requireNonNull(outcomeProcessor, "outcomeProcessor");
@@ -96,6 +128,8 @@ public class J3DynamicManualCallService {
         this.cacheTtl = Objects.requireNonNull(cacheTtl, "cacheTtl");
         this.minimumDelay = Objects.requireNonNull(minimumDelay, "minimumDelay");
         this.interPageDelay = Objects.requireNonNull(interPageDelay, "interPageDelay");
+        this.requestCoordinator = Objects.requireNonNull(
+                requestCoordinator, "requestCoordinator");
         if (minimumDelay.compareTo(Duration.ofSeconds(3)) < 0) {
             throw new IllegalArgumentException("minimumDelay must be at least three seconds");
         }
@@ -195,9 +229,24 @@ public class J3DynamicManualCallService {
                 }
 
                 Instant attemptedAt = clock.instant();
-                providerRequests++;
                 try {
-                    ScheduledEventsTransportResponse response = transport.execute(request);
+                    ScheduledEventsTransportResponse response;
+                    try (var providerLease = requestCoordinator.acquire()) {
+                        if (!controlService.executionMayContinue(requestId)) {
+                            return publishAlreadyLockedFailure(
+                                    claim.date(),
+                                    initialCompletedPages,
+                                    completedPages,
+                                    page,
+                                    "GLOBAL_STOP_OR_CIRCUIT_BLOCK",
+                                    providerRequests,
+                                    cacheHits,
+                                    pageAttempts);
+                        }
+                        attemptedAt = clock.instant();
+                        providerRequests++;
+                        response = transport.execute(request);
+                    }
                     lastStartedAt = response.requestedAt();
                     J3ScheduledEventsOutcome outcome = outcomeProcessor.processResponse(response);
                     if (outcome.circuit().state() == J3CircuitState.CLOSED) {
@@ -275,6 +324,13 @@ public class J3DynamicManualCallService {
                                         cacheHits),
                                 pageAttempts);
                     }
+                }
+                catch (ManualProviderRequestCoordinator.CoordinationException exception) {
+                    controlService.stopGlobally();
+                    return publishAlreadyLockedFailure(
+                            claim.date(), initialCompletedPages, completedPages, page,
+                            "MINIMUM_DELAY_INTERRUPTED", providerRequests, cacheHits,
+                            pageAttempts);
                 }
                 catch (ScheduledEventsTransportException exception) {
                     J3ScheduledEventsOutcome outcome = outcomeProcessor.processFailure(

@@ -60,12 +60,26 @@
      th:text="${'Import du corpus J6 refusé : ' + j6HistoryImportErrorCode}">
     Import du corpus J6 refusé.
   </p>
-  <p class="notice notice-safe" th:if="${snapshotNormalization != null}">
+  <p id="snapshot-event-normalization" class="notice notice-safe"
+     th:if="${snapshotNormalization != null and snapshotNormalization.payloadShape == 'EVENT_LIST'}">
     Snapshot <span th:text="${snapshotNormalization.snapshotId}">0</span> reparsé :
     <span th:text="${snapshotNormalization.parsedEventCount}">0</span> événement(s),
     <span th:text="${snapshotNormalization.insertedObservationCount}">0</span> nouvelle(s)
     observation(s), <span th:text="${snapshotNormalization.deduplicatedObservationCount}">0</span>
     déjà présente(s).
+  </p>
+  <p id="snapshot-competition-normalization" class="notice notice-safe"
+     th:if="${snapshotNormalization != null and snapshotNormalization.payloadShape == 'SCHEDULED_TOURNAMENT_LIST'}">
+    Snapshot <span th:text="${snapshotNormalization.snapshotId}">0</span> reparsé :
+    <span th:text="${snapshotNormalization.scheduledTournamentCount}">0</span> compétition(s)
+    trouvée(s) pour cette date. Cet endpoint ne fournit aucune rencontre programmée ; aucun match
+    n’est inventé et aucune observation J4 n’est créée.
+  </p>
+  <p id="snapshot-normalization-status" class="notice notice-warning"
+     th:if="${snapshotNormalization != null and snapshotNormalization.payloadShape == 'NONE'}">
+    Snapshot <span th:text="${snapshotNormalization.snapshotId}">0</span> relu sans création
+    d’observation J4. Statut du reparsage :
+    <span class="mono" th:text="${snapshotNormalization.currentParseStatus}">INCOMPATIBLE</span>.
   </p>
   <p class="notice notice-danger" th:if="${snapshotNormalizationErrorCode != null}"
      th:text="${'Normalisation refusée : ' + snapshotNormalizationErrorCode}">

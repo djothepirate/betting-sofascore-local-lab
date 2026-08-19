@@ -57,6 +57,7 @@ class J4ScheduledEventsSnapshotNormalizationServiceTest {
         assertThat(result.currentParseStatus()).isEqualTo(ScheduledEventsParseStatus.PARSED);
         assertThat(result.payloadShape()).isEqualTo("EVENT_LIST");
         assertThat(result.parsedEventCount()).isEqualTo(1);
+        assertThat(result.scheduledTournamentCount()).isZero();
         assertThat(result.insertedObservationCount()).isEqualTo(1);
         assertThat(result.canonicalEventIds()).containsExactly(identity.value());
         verify(canonicalEventStore).save(org.mockito.ArgumentMatchers.argThat(observation ->
@@ -79,6 +80,9 @@ class J4ScheduledEventsSnapshotNormalizationServiceTest {
         assertThat(result.currentParseStatus()).isEqualTo(ScheduledEventsParseStatus.PARSED);
         assertThat(result.payloadShape()).isEqualTo("SCHEDULED_TOURNAMENT_LIST");
         assertThat(result.parsedEventCount()).isZero();
+        assertThat(result.scheduledTournamentCount()).isEqualTo(2);
+        assertThat(result.insertedObservationCount()).isZero();
+        assertThat(result.deduplicatedObservationCount()).isZero();
         assertThat(result.canonicalEventIds()).isEmpty();
         verify(canonicalEventStore, never()).save(any());
     }

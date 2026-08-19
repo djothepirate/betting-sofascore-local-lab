@@ -46,7 +46,7 @@ public class J5RealEventDataService {
     private final EventStatisticsV2Parser statisticsParser;
     private final EventIncidentsV6Parser incidentsParser;
     private final EventLineupsV2Parser lineupsParser;
-    private final J4J5ProviderRequestCoordinator requestCoordinator;
+    private final ManualProviderRequestCoordinator requestCoordinator;
 
     @Autowired
     public J5RealEventDataService(
@@ -55,7 +55,7 @@ public class J5RealEventDataService {
             RawManualCallSnapshotStore rawSnapshotStore,
             CanonicalEventStore canonicalEventStore,
             J5EventDataStore eventDataStore,
-            J4J5ProviderRequestCoordinator requestCoordinator) {
+            ManualProviderRequestCoordinator requestCoordinator) {
         this(controlService, transport, rawSnapshotStore, canonicalEventStore, eventDataStore,
                 new EventStatisticsV2Parser(), new EventIncidentsV13Parser(),
                 new EventLineupsV2Parser(), requestCoordinator);
@@ -82,7 +82,7 @@ public class J5RealEventDataService {
                 statisticsParser,
                 incidentsParser,
                 lineupsParser,
-                new J4J5ProviderRequestCoordinator(clock, minimumDelay, pause::pause));
+                new ManualProviderRequestCoordinator(clock, minimumDelay, pause::pause));
     }
 
     private J5RealEventDataService(
@@ -94,7 +94,7 @@ public class J5RealEventDataService {
             EventStatisticsV2Parser statisticsParser,
             EventIncidentsV6Parser incidentsParser,
             EventLineupsV2Parser lineupsParser,
-            J4J5ProviderRequestCoordinator requestCoordinator) {
+            ManualProviderRequestCoordinator requestCoordinator) {
         this.controlService = Objects.requireNonNull(controlService, "controlService");
         this.transport = Objects.requireNonNull(transport, "transport");
         this.rawSnapshotStore = Objects.requireNonNull(rawSnapshotStore, "rawSnapshotStore");
@@ -135,7 +135,7 @@ public class J5RealEventDataService {
                 response = transport.execute(request);
                 attempts++;
             }
-            catch (J4J5ProviderRequestCoordinator.CoordinationException exception) {
+            catch (ManualProviderRequestCoordinator.CoordinationException exception) {
                 return failAndLock(
                         claim, "MINIMUM_DELAY_INTERRUPTED", attempts, results);
             }

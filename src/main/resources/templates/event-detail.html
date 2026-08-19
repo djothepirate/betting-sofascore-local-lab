@@ -66,6 +66,11 @@
            href="/events/00000000-0000-0000-0000-000000000000/history">
           Historique et comparaisons J6
         </a>
+        <a class="button button-secondary"
+           th:href="@{/events/{id}/exports(id=${detail.current.event.identity.value})}"
+           href="/events/00000000-0000-0000-0000-000000000000/exports">
+          Export canonique J7
+        </a>
       </div>
     </section>
 

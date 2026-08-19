@@ -29,9 +29,9 @@ WORK_ORDER_STATUS=VALIDATED
 ```
 
 Cette architecture complète le contrat synthétique J5 V1 sans le remplacer. Elle autorise une
-seule requête fournisseur active à la fois, y compris lorsque J4 phase 2 et J5 sont armés dans une
-même session. Une campagne réussie peut être suivie d'une nouvelle campagne explicitement préparée
-et confirmée ; le
+seule requête fournisseur active à la fois, y compris lorsque J3, J4 phase 2 et J5 sont armés dans
+une même session. Une campagne réussie peut être suivie d'une nouvelle campagne explicitement
+préparée et confirmée ; le
 développement, Maven et les fixtures ne contactent jamais SofaScore. Les campagnes V8 restent des
 preuves réelles bornées. V9 a été validé hors ligne puis en conditions réelles avec poursuite
 jusqu'aux compositions. Un payload ultérieur a toutefois introduit `from="regular"` sur cinq buts
@@ -60,21 +60,23 @@ La voie réelle n'est disponible que si les conditions suivantes sont simultané
 
 - `SOFASCORE_ENABLED=true` ;
 - `SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=true` ;
-- l'opt-in J3 est `false` ;
-- soit J4 est désactivé et les endpoints J5 sont les trois seules familles autorisées, soit J4
-  phase 2 est activé et l'ensemble autorisé est exactement l'union de `EVENT_DETAILS` et des trois
-  familles J5 ; J4 phase 1 ne peut pas partager cette session ;
+- J3 peut être désactivé ou explicitement activé ; dans ce dernier cas `SCHEDULED_EVENTS` appartient
+  obligatoirement à l'union exacte des endpoints actifs ;
+- soit J4 est désactivé, soit J4 phase 2 est activé avec `EVENT_DETAILS` ; J4 phase 1 ne peut pas
+  partager une session J3 ou J5 ;
 - l'origine est exactement `https://www.sofascore.com`, avec un slash racine facultatif ;
-- les endpoints autorisés sont exactement `EVENT_STATISTICS`, `EVENT_INCIDENTS` et
-  `EVENT_LINEUPS` ;
+- les endpoints autorisés sont exactement l'union des familles sélectionnées parmi
+  `SCHEDULED_EVENTS`, `EVENT_DETAILS`, `EVENT_STATISTICS`, `EVENT_INCIDENTS` et `EVENT_LINEUPS` ;
 - le stockage brut est actif, la concurrence vaut un, le polling et le rafraîchissement
   automatique sont désactivés.
 
-Les propriétés Spring maintiennent J3 comme voie exclusive. Elles autorisent une seule combinaison
-supplémentaire, J4 phase 2 + J5, avec l'union exacte des quatre endpoints ; toute famille absente ou
-supplémentaire bloque le démarrage. Le catalogue général reste `callable=false`, sans URI, et
-`ConnectorGate` reste bloquant. Les chemins J4/J5 sont des exceptions spécialisées, temporaires et
-contrôlées par leurs Work Orders.
+Les propriétés Spring autorisent J3, J4 phase 2 et J5 dans la même instance uniquement avec leur
+union exacte de cinq endpoints ; toute famille absente ou supplémentaire bloque le démarrage. Le
+coordinateur partagé sérialise les sections HTTP de ces trois voies et impose le même délai minimal
+entre deux départs. Le catalogue général reste `callable=false`, sans URI, et `ConnectorGate` reste
+bloquant. Les chemins J3/J4/J5 sont des exceptions spécialisées, temporaires et contrôlées par
+leurs Work Orders. Les résultats historiques du Work Order J5 restent inchangés ; cette extension
+est tracée par l'amendement opérateur du Work Order J7.
 
 ## 3. Contrôle humain
 

@@ -27,9 +27,6 @@ public class J5RealQualificationPolicy {
         if (!properties.isEnabled()) {
             blockers.add("CONNECTOR_DISABLED");
         }
-        if (properties.isJ3QualificationEnabled()) {
-            blockers.add("J3_QUALIFICATION_MUST_BE_DISABLED");
-        }
         if (properties.isJ4EventDetailsQualificationEnabled()
                 && !properties.isJ4EventDetailsPhase2Enabled()) {
             blockers.add("J4_PHASE_1_CANNOT_SHARE_J5_SESSION");

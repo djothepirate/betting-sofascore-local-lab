@@ -31,6 +31,25 @@ class J4EventDetailsPhase2QualificationPolicyTest {
                 .isEqualTo(EventDetailsProviderRequest.EXPECTED_ORIGIN);
     }
 
+    @Test
+    void phaseTwoRemainsAvailableInTheExactCombinedJ3J4J5Session() {
+        SofascoreProperties properties = safeJ4Properties();
+        properties.setJ3QualificationEnabled(true);
+        properties.setJ4EventDetailsPhase2Enabled(true);
+        properties.setJ5EventDataQualificationEnabled(true);
+        properties.setAllowedEndpoints(Set.of(
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                SofascoreEndpointType.EVENT_DETAILS,
+                SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_LINEUPS));
+
+        var snapshot = new J4EventDetailsPhase2QualificationPolicy(properties).snapshot();
+
+        assertThat(snapshot.available()).isTrue();
+        assertThat(properties.isJ4EventDetailsQualificationConfigurationSafe()).isTrue();
+    }
+
     private static SofascoreProperties safeJ4Properties() {
         SofascoreProperties properties = new SofascoreProperties();
         properties.setEnabled(true);

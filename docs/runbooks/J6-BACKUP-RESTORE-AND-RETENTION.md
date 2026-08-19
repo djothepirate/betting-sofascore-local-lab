@@ -25,7 +25,8 @@ NORMALIZED_OBSERVATION_DELETION=IMPOSSIBLE_BY_DESIGN
 - PowerShell 7.4 ou plus récent pour préserver les pipelines binaires natifs ;
 - exécutable `age` disponible dans `PATH` ou fourni avec `-AgePath` ;
 - PostgreSQL local démarré et sain ;
-- Flyway V22 appliqué ;
+- Flyway V23 appliqué ; la rétention reste définie par V22, tandis que V23 étend seulement
+  `export_manifest` pour J7 ;
 - application liée uniquement à `127.0.0.1` ;
 - toutes les voies J3/J4/J5 désactivées et `connector_control` à `LOCKED` ;
 - destination de sauvegarde absolue, existante et située hors du dépôt ;
@@ -136,7 +137,7 @@ conserver dans `.env`.
 Le script :
 
 1. refuse une application encore à l'écoute sur le port 8087 ;
-2. vérifie Compose, le verrou réseau et Flyway V22 ;
+2. vérifie Compose, le verrou réseau et la version courante Flyway V23 ;
 3. vérifie le SHA-256 réel de chaque payload retenu ;
 4. dirige `pg_dump --format=custom` directement vers `age -p` ;
 5. crée un manifeste initial non qualifié ;
@@ -208,7 +209,7 @@ pwsh -NoProfile -File .\scripts\Invoke-J6Retention.ps1 `
   -ConfirmationPhrase 'PURGER <N> PAYLOADS J6 <J6_RETENTION_PLAN_SHA256>'
 ```
 
-Le script revérifie le nom du fichier chiffré, son hash, Flyway V22, l'égalité complète des preuves
+Le script revérifie le nom du fichier chiffré, son hash, Flyway V23, l'égalité complète des preuves
 source/restauration et la couverture. Le service recalcule ensuite le plan, la phrase et la
 couverture avant que l'adaptateur ne les revérifie sous verrou transactionnel.
 

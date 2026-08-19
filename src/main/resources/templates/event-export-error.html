@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Export J7 refusé — SofaScore Local Lab</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar compact-topbar">
+  <div class="shell">
+    <p class="eyebrow">J7 · Refus sûr</p>
+    <h1>L’action d’export n’a pas été exécutée</h1>
+    <p class="subtitle">Aucun transport fournisseur, transfert externe ou retry automatique n’a été lancé.</p>
+  </div>
+</header>
+
+<main class="shell inspection-page">
+  <section class="status-banner status-safe">
+    <div>
+      <p class="label">Statut de gouvernance</p>
+      <p class="status-value">EXPERIMENTAL / LOCAL_ONLY / NOT_PRODUCTION_APPROVED / NO_CRITICAL_DEPENDENCY</p>
+    </div>
+    <span class="chip chip-warning">NO_STORE</span>
+  </section>
+
+  <section class="panel">
+    <p class="label">Contrôle J7</p>
+    <h2 class="danger" th:text="${exportErrorCode}">EXPORT_NOT_FOUND</h2>
+    <p th:text="${exportErrorMessage}">L’action locale ne peut pas continuer.</p>
+    <p>Le jeton du formulaire a été consommé lorsque l’action provenait d’un POST. Revenez à la
+      liste pour obtenir un nouveau jeton avant une éventuelle nouvelle tentative.</p>
+    <nav class="links page-links" aria-label="Navigation locale">
+      <a th:href="@{/events/{id}/exports(id=${canonicalEventId})}"
+         href="/events/00000000-0000-0000-0000-000000000000/exports">Retour aux exports J7</a>
+      <a th:if="${exportId != null}"
+         th:href="@{/events/{id}/exports/{exportId}(id=${canonicalEventId},exportId=${exportId})}">
+        Revenir à l’aperçu
+      </a>
+      <a th:href="@{/events/{id}(id=${canonicalEventId},zone='Europe/Paris')}">Détail de la rencontre</a>
+    </nav>
+  </section>
+</main>
+
+<footer>
+  <div class="shell">SofaScore Local Lab — erreur locale minimisée</div>
+</footer>
+</body>
+</html>

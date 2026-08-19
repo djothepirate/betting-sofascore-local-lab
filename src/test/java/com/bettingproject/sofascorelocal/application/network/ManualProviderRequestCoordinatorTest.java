@@ -14,15 +14,15 @@ import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-class J4J5ProviderRequestCoordinatorTest {
+class ManualProviderRequestCoordinatorTest {
 
     private static final Clock CLOCK = Clock.fixed(
             Instant.parse("2026-08-18T11:00:00Z"), ZoneOffset.UTC);
 
     @Test
-    void sharesTheMinimumDelayAcrossSuccessiveJ4AndJ5RequestLeases() {
+    void sharesTheMinimumDelayAcrossSuccessiveJ3J4AndJ5RequestLeases() {
         List<Duration> pauses = new ArrayList<>();
-        var coordinator = new J4J5ProviderRequestCoordinator(
+        var coordinator = new ManualProviderRequestCoordinator(
                 CLOCK, Duration.ofSeconds(3), pauses::add);
 
         try (var ignored = coordinator.acquire()) {
@@ -38,8 +38,8 @@ class J4J5ProviderRequestCoordinatorTest {
     }
 
     @Test
-    void keepsASecondBrowserRequestOutsideTheProviderSectionUntilRelease() throws Exception {
-        var coordinator = new J4J5ProviderRequestCoordinator(
+    void keepsASecondCampaignOutsideTheProviderSectionUntilRelease() throws Exception {
+        var coordinator = new ManualProviderRequestCoordinator(
                 CLOCK, Duration.ofSeconds(3), ignored -> { });
         CountDownLatch attempting = new CountDownLatch(1);
         CountDownLatch entered = new CountDownLatch(1);
