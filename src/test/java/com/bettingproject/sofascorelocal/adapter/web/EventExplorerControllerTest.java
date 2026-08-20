@@ -1,5 +1,6 @@
 package com.bettingproject.sofascorelocal.adapter.web;
 
+import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsParseStatus;
 import com.bettingproject.sofascorelocal.application.event.J4EventDetailResult;
 import com.bettingproject.sofascorelocal.application.event.J4EventQueryService;
 import com.bettingproject.sofascorelocal.application.event.J4EventSearchItem;
@@ -7,6 +8,7 @@ import com.bettingproject.sofascorelocal.application.event.J4EventSearchResult;
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportResult;
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportService;
 import com.bettingproject.sofascorelocal.application.event.J4ScheduledEventsSnapshotNormalizationService;
+import com.bettingproject.sofascorelocal.application.event.J4SnapshotNormalizationResult;
 import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase1Service;
 import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase1Result;
 import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase2Result;
@@ -26,6 +28,7 @@ import com.bettingproject.sofascorelocal.domain.provider.J4RealPhase1ExecutionCl
 import com.bettingproject.sofascorelocal.domain.provider.J4RealPhase2ControlSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.J4RealPhase2ExecutionClaim;
 import com.bettingproject.sofascorelocal.domain.provider.J4RealPhase2State;
+import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEventStatus;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTeam;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTournament;
@@ -156,6 +159,47 @@ class EventExplorerControllerTest {
     }
 
     @Test
+    void explainsThatAScheduledTournamentSnapshotContainsCompetitionsButNoMatches() throws Exception {
+        var event = event();
+        var search = new J4EventSearchResult(
+                LocalDate.parse("2026-08-19"),
+                ZoneId.of("Europe/Paris"),
+                Instant.parse("2026-08-18T22:00:00Z"),
+                Instant.parse("2026-08-19T22:00:00Z"),
+                List.of(new J4EventSearchItem(
+                        event,
+                        event.startsAt().atZone(ZoneId.of("Europe/Paris")))));
+        var normalization = new J4SnapshotNormalizationResult(
+                308L,
+                RawSnapshotSchemaStatus.PARSED,
+                ScheduledEventsParseStatus.PARSED,
+                "SCHEDULED_TOURNAMENT_LIST",
+                0,
+                2,
+                0,
+                0,
+                List.of());
+        when(queryService.search(LocalDate.parse("2026-08-19"), "Europe/Paris"))
+                .thenReturn(search);
+
+        mockMvc.perform(get("/events")
+                        .param("date", "2026-08-19")
+                        .param("zone", "Europe/Paris")
+                        .flashAttr("snapshotNormalization", normalization))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(
+                        "id=\"snapshot-competition-normalization\"")))
+                .andExpect(content().string(containsString(
+                        "Snapshot <span>308</span>")))
+                .andExpect(content().string(containsString(
+                        "<span>2</span> comp")))
+                .andExpect(content().string(containsString(
+                        "Cet endpoint ne fournit aucune rencontre programm")))
+                .andExpect(content().string(containsString(
+                        "aucune observation J4 n")));
+    }
+
+    @Test
     void rendersCurrentEventAndExplicitlyMissingOfflineDetail() throws Exception {
         var event = event();
         var detail = new J4EventDetailResult(
@@ -176,6 +220,9 @@ class EventExplorerControllerTest {
                 .andExpect(view().name("event-detail"))
                 .andExpect(model().attribute("detail", detail))
                 .andExpect(content().string(containsString("Aucun détail importé")))
+                .andExpect(content().string(containsString("Export canonique J7")))
+                .andExpect(content().string(containsString(
+                        "/events/" + event.identity().value() + "/exports")))
                 .andExpect(content().string(containsString("event-details-nominal")));
     }
 

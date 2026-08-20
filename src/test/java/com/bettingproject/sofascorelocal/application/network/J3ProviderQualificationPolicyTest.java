@@ -52,7 +52,45 @@ class J3ProviderQualificationPolicyTest {
 
         assertThat(snapshot.available()).isFalse();
         assertThat(snapshot.blockers()).containsExactly(
-                "SCHEDULED_EVENTS_NOT_EXCLUSIVELY_ALLOWED",
+                "QUALIFICATION_ENDPOINTS_NOT_EXACTLY_ALLOWED",
                 "PROVIDER_ORIGIN_NOT_EXACT");
+    }
+
+    @Test
+    void acceptsJ3InsideTheExactJ3J4PhaseTwoAndJ5EndpointUnion() {
+        SofascoreProperties properties = new SofascoreProperties();
+        properties.setEnabled(true);
+        properties.setJ3QualificationEnabled(true);
+        properties.setJ4EventDetailsQualificationEnabled(true);
+        properties.setJ4EventDetailsPhase2Enabled(true);
+        properties.setJ5EventDataQualificationEnabled(true);
+        properties.setBaseUrl("https://www.sofascore.com");
+        properties.setAllowedEndpoints(Set.of(
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                SofascoreEndpointType.EVENT_DETAILS,
+                SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_LINEUPS));
+
+        var snapshot = new J3ProviderQualificationPolicy(properties).snapshot();
+
+        assertThat(snapshot.available()).isTrue();
+        assertThat(properties.isJ3QualificationConfigurationSafe()).isTrue();
+        assertThat(properties.isCombinedJ3J4SelectionSafe()).isTrue();
+    }
+
+    @Test
+    void blocksJ4PhaseOneFromSharingTheJ3SessionEvenWithAnExactUnion() {
+        SofascoreProperties properties = new SofascoreProperties();
+        properties.setEnabled(true);
+        properties.setJ3QualificationEnabled(true);
+        properties.setJ4EventDetailsQualificationEnabled(true);
+        properties.setBaseUrl("https://www.sofascore.com");
+        properties.setAllowedEndpoints(Set.of(
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                SofascoreEndpointType.EVENT_DETAILS));
+
+        assertThat(new J3ProviderQualificationPolicy(properties).snapshot().blockers())
+                .contains("J4_PHASE_1_CANNOT_SHARE_J3_SESSION");
     }
 }

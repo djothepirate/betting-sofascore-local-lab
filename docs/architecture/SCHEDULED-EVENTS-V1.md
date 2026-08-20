@@ -51,6 +51,13 @@ La forme J2 `events` reste prise en charge pour préserver le corpus validé. La
 `ScheduledEvent`. Un payload contenant simultanément `events` et `scheduled` est rejeté comme
 ambigu. Aucun objet local n’est exposé lorsque la validation rencontre au moins un problème.
 
+Le résultat de reparsage manuel J4 conserve cette distinction jusque dans l'interface :
+`parsedEventCount` compte uniquement les entrées de la forme `events`, tandis que
+`scheduledTournamentCount` compte les compétitions de la forme `scheduled`. Pour cette seconde
+forme, l'écran indique explicitement que l'endpoint ne fournit aucune rencontre programmée et
+qu'aucune observation J4 n'est créée. Un total de zéro événement n'est donc ni une perte de
+données, ni une invitation à déduire ou inventer des matchs depuis les compétitions.
+
 ## Champs retenus
 
 | Chemin | Type v1 | Règle | Modèle local |

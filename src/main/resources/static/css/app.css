@@ -582,6 +582,61 @@ button:disabled {
   white-space: pre;
 }
 
+.j7-create-panel,
+.j7-manifest-panel,
+.j7-terminal-panel {
+  border-left: 7px solid var(--safe);
+}
+
+.j7-history-panel,
+.j7-evidence-panel,
+.j7-decision-panel {
+  border-left: 7px solid var(--warning);
+}
+
+.j7-decision-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.j7-reject-stage {
+  border-color: #e7bcbc;
+}
+
+.control-form textarea {
+  width: 100%;
+  padding: 9px 11px;
+  resize: vertical;
+  color: var(--ink-strong);
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font: inherit;
+}
+
+.control-form textarea:focus-visible {
+  outline: 3px solid rgba(0, 143, 140, 0.35);
+  outline-offset: 2px;
+}
+
+.j7-evidence-json {
+  max-height: 240px;
+  padding: 12px;
+  overflow: auto;
+  background: #f7fafb;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 0.78rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.j7-export-json {
+  user-select: all;
+}
+
 .guardrails ul {
   margin-bottom: 0;
 }
@@ -772,6 +827,7 @@ footer {
   .fixture-metadata,
   .inspection-metadata,
   .history-compare-grid,
+  .j7-decision-grid,
   .detail-grid,
   .event-search-form {
     grid-template-columns: 1fr;

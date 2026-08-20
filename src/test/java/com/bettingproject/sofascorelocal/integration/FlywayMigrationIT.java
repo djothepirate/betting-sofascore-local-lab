@@ -16,6 +16,7 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncide
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV12Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV13Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV1Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV1Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceService;
@@ -25,8 +26,10 @@ import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonIns
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportService;
 import com.bettingproject.sofascorelocal.application.event.J4ScheduledEventsSnapshotNormalizationService;
 import com.bettingproject.sofascorelocal.application.event.J4EventQueryService;
+import com.bettingproject.sofascorelocal.application.export.J7CanonicalExportService;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservation;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservation;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetails;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventSeason;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventVenue;
@@ -37,6 +40,11 @@ import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessReport;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessStatus;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservation;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5UnavailableFamily;
+import com.bettingproject.sofascorelocal.domain.eventdata.LineupSide;
+import com.bettingproject.sofascorelocal.domain.eventdata.TeamLineup;
+import com.bettingproject.sofascorelocal.domain.export.J7ExportError;
+import com.bettingproject.sofascorelocal.domain.export.J7ExportException;
+import com.bettingproject.sofascorelocal.domain.export.J7ExportStatus;
 import com.bettingproject.sofascorelocal.fixture.ClasspathFixtureLoader;
 import com.bettingproject.sofascorelocal.fixture.LoadedFixture;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
@@ -44,6 +52,7 @@ import com.bettingproject.sofascorelocal.domain.provider.EventDetailsTransportRe
 import com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceOutcome;
+import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceResult;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
@@ -60,6 +69,7 @@ import com.bettingproject.sofascorelocal.port.J4EventDetailsCache;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
 import com.bettingproject.sofascorelocal.port.J6SnapshotHistoryStore;
 import com.bettingproject.sofascorelocal.port.J6RawPayloadRetentionStore;
+import com.bettingproject.sofascorelocal.port.J7ExportManifestStore;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import com.bettingproject.sofascorelocal.port.J3QualificationCheckpointStore;
 import com.bettingproject.sofascorelocal.port.RawSnapshotInspectionStore;
@@ -73,23 +83,35 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
 
+import javax.sql.DataSource;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.net.URI;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -122,6 +144,9 @@ class FlywayMigrationIT {
 
     @Autowired
     JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    DataSource dataSource;
 
     @Autowired
     RawManualCallSnapshotStore snapshotStore;
@@ -174,6 +199,12 @@ class FlywayMigrationIT {
     @Autowired
     J6RawPayloadRetentionStore j6RawPayloadRetentionStore;
 
+    @Autowired
+    J7CanonicalExportService j7CanonicalExportService;
+
+    @Autowired
+    J7ExportManifestStore j7ExportManifestStore;
+
     @Test
     void createsTheJ3RawSnapshotSchemaAndKeepsNetworkDisabled() {
         String snapshotTable = jdbcTemplate.queryForObject(
@@ -205,7 +236,7 @@ class FlywayMigrationIT {
         assertThat(snapshotTable).isEqualTo("provider_snapshot");
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("22");
+        assertThat(flywayVersion).isEqualTo("23");
         assertThat(rawColumn).isEqualTo("bytea");
     }
 
@@ -2146,6 +2177,1436 @@ class FlywayMigrationIT {
     }
 
     @Test
+    void upgradesV22WithGuardedJ7ExportsWithoutChangingLegacyRows() {
+        String schema = "upgrade_v22_to_v23";
+        String separator = POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
+        var dataSource = new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema,
+                POSTGRES.getUsername(),
+                POSTGRES.getPassword());
+        Flyway flywayV22 = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .createSchemas(true)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("22"))
+                .load();
+
+        assertThat(flywayV22.migrate().migrationsExecuted).isEqualTo(22);
+        JdbcTemplate upgradeJdbc = new JdbcTemplate(dataSource);
+        upgradeJdbc.update("""
+                insert into export_manifest (
+                    schema_version, export_path, content_sha256,
+                    validation_status, warnings
+                ) values (
+                    'legacy-v1', 'legacy-export.json', repeat('a', 64),
+                    'RAW_ONLY', '["legacy"]'::jsonb
+                )
+                """);
+        Map<String, Object> legacyBefore = upgradeJdbc.queryForMap("""
+                select schema_version, export_path, content_sha256,
+                       validation_status, source_snapshot_ids::text as source_snapshot_ids,
+                       warnings::text as warnings
+                from export_manifest
+                where export_path = 'legacy-export.json'
+                """);
+        UUID canonicalEventId = UUID.fromString(
+                "71000000-0000-0000-0000-000000000007");
+        upgradeJdbc.update("""
+                insert into canonical_event (id, provider, provider_event_id)
+                values (?, 'SOFASCORE', 17000007)
+                """, canonicalEventId);
+        upgradeJdbc.update("""
+                insert into provider_snapshot (
+                    provider, logical_endpoint, request_key,
+                    requested_at, received_at, http_status, content_type,
+                    latency_ms, payload_jsonb, payload_sha256, parser_version,
+                    schema_status, acquisition_mode, payload_raw,
+                    payload_size_bytes
+                ) values
+                (
+                    'SOFASCORE', 'EVENT_DETAILS',
+                    'J7_UPGRADE|EVENT_DETAILS|eventId=17000007',
+                    '2026-08-18T07:59:59Z', '2026-08-18T08:00:00Z',
+                    200, 'application/json', 1000,
+                    '{"event":{"id":17000007}}'::jsonb, repeat('1', 64),
+                    'event-details-v2', 'PARSED', 'DIRECT_LOCAL_ENDPOINT',
+                    convert_to('{"event":{"id":17000007}}', 'UTF8'),
+                    octet_length(convert_to('{"event":{"id":17000007}}', 'UTF8'))
+                ),
+                (
+                    'SOFASCORE', 'EVENT_STATISTICS',
+                    'J7_UPGRADE|EVENT_STATISTICS|eventId=17000007',
+                    '2026-08-18T08:00:59Z', '2026-08-18T08:01:00Z',
+                    200, 'application/json', 1000,
+                    '{"statistics":[{"period":"ALL"}]}'::jsonb, repeat('2', 64),
+                    'event-statistics-v2', 'PARSED', 'DIRECT_LOCAL_ENDPOINT',
+                    convert_to('{"statistics":[{"period":"ALL"}]}', 'UTF8'),
+                    octet_length(convert_to(
+                        '{"statistics":[{"period":"ALL"}]}', 'UTF8'))
+                ),
+                (
+                    'SOFASCORE', 'EVENT_INCIDENTS',
+                    'J7_UPGRADE|EVENT_INCIDENTS|eventId=17000007',
+                    '2026-08-18T08:01:59Z', '2026-08-18T08:02:00Z',
+                    200, 'application/json', 1000,
+                    '{"incidents":[{"incidentType":"goal","time":24}]}'::jsonb,
+                    repeat('3', 64), 'event-incidents-v4', 'PARSED',
+                    'DIRECT_LOCAL_ENDPOINT',
+                    convert_to(
+                        '{"incidents":[{"incidentType":"goal","time":24}]}',
+                        'UTF8'),
+                    octet_length(convert_to(
+                        '{"incidents":[{"incidentType":"goal","time":24}]}',
+                        'UTF8'))
+                ),
+                (
+                    'SOFASCORE', 'EVENT_LINEUPS',
+                    'J7_UPGRADE|EVENT_LINEUPS|eventId=17000007',
+                    '2026-08-18T08:02:59Z', '2026-08-18T08:03:00Z',
+                    200, 'application/json', 1000,
+                    ('{"confirmed":true,"home":{"formation":"4-3-3"},'
+                        || '"away":{"formation":"4-4-2"}}')::jsonb,
+                    repeat('4', 64), 'event-lineups-v2', 'PARSED',
+                    'DIRECT_LOCAL_ENDPOINT',
+                    convert_to(
+                        '{"confirmed":true,"home":{"formation":"4-3-3"},'
+                            || '"away":{"formation":"4-4-2"}}',
+                        'UTF8'),
+                    octet_length(convert_to(
+                        '{"confirmed":true,"home":{"formation":"4-3-3"},'
+                            || '"away":{"formation":"4-4-2"}}',
+                        'UTF8'))
+                )
+                """);
+        Long detailsSnapshotId = upgradeJdbc.queryForObject("""
+                select id from provider_snapshot
+                where request_key = 'J7_UPGRADE|EVENT_DETAILS|eventId=17000007'
+                """, Long.class);
+        Long statisticsSnapshotId = upgradeJdbc.queryForObject("""
+                select id from provider_snapshot
+                where request_key = 'J7_UPGRADE|EVENT_STATISTICS|eventId=17000007'
+                """, Long.class);
+        Long incidentsSnapshotId = upgradeJdbc.queryForObject("""
+                select id from provider_snapshot
+                where request_key = 'J7_UPGRADE|EVENT_INCIDENTS|eventId=17000007'
+                """, Long.class);
+        Long lineupsSnapshotId = upgradeJdbc.queryForObject("""
+                select id from provider_snapshot
+                where request_key = 'J7_UPGRADE|EVENT_LINEUPS|eventId=17000007'
+                """, Long.class);
+        upgradeJdbc.update("""
+                insert into provider_snapshot_occurrence (
+                    snapshot_id, requested_at, received_at, http_status,
+                    content_type, latency_ms, parser_version,
+                    persistence_outcome
+                )
+                select id, requested_at, received_at, http_status,
+                       content_type, latency_ms, parser_version, 'INSERTED'
+                from provider_snapshot
+                where request_key like 'J7_UPGRADE|%'
+                """);
+        upgradeJdbc.update("""
+                insert into canonical_event_observation (
+                    canonical_event_id, source_kind, source_reference,
+                    source_snapshot_id, source_fixture_id,
+                    source_payload_sha256, parser_version, source_received_at,
+                    starts_at, home_team_provider_id, home_team_name,
+                    away_team_provider_id, away_team_name, status_type,
+                    status_description, tournament_provider_id,
+                    tournament_name, normalized_sha256
+                ) values (
+                    ?, 'PROVIDER_SNAPSHOT', 'snapshot:' || ?::text, ?, null,
+                    repeat('1', 64), 'event-details-v2',
+                    '2026-08-18T08:00:00Z', '2026-08-20T19:00:00Z',
+                    17000101, 'J7 Upgrade Home', 17000102, 'J7 Upgrade Away',
+                    'scheduled', 'Not started', 17000103,
+                    'J7 Upgrade League', repeat('5', 64)
+                )
+                """, canonicalEventId, detailsSnapshotId, detailsSnapshotId);
+        upgradeJdbc.update("""
+                insert into event_detail_observation (
+                    canonical_event_id, source_fixture_id,
+                    source_payload_sha256, parser_version, source_received_at,
+                    starts_at, home_team_provider_id, home_team_name,
+                    away_team_provider_id, away_team_name, status_type,
+                    status_description, tournament_provider_id,
+                    tournament_name, venue_provider_id, venue_name, venue_city,
+                    season_provider_id, season_name, event_round,
+                    normalized_sha256, source_kind, source_reference,
+                    source_snapshot_id
+                ) values (
+                    ?, null, repeat('1', 64), 'event-details-v2',
+                    '2026-08-18T08:00:00Z', '2026-08-20T19:00:00Z',
+                    17000101, 'J7 Upgrade Home', 17000102, 'J7 Upgrade Away',
+                    'scheduled', 'Not started', 17000103,
+                    'J7 Upgrade League', 17000104, 'J7 Upgrade Stadium',
+                    'Paris', 17000105, '2026/2027', '3', repeat('6', 64),
+                    'PROVIDER_SNAPSHOT', 'snapshot:' || ?::text, ?
+                )
+                """, canonicalEventId, detailsSnapshotId, detailsSnapshotId);
+        upgradeJdbc.update("""
+                insert into j5_event_data_observation (
+                    canonical_event_id, endpoint_type, source_kind,
+                    source_reference, source_snapshot_id, source_fixture_id,
+                    source_payload_sha256, parser_version, source_received_at,
+                    completeness_status, completeness_score, present_signals,
+                    expected_signals, missing_paths_json, lineups_confirmed,
+                    normalized_sha256
+                ) values
+                (?, 'EVENT_STATISTICS', 'PROVIDER_SNAPSHOT',
+                    'snapshot:' || ?::text, ?, null, repeat('2', 64),
+                    'event-statistics-v2', '2026-08-18T08:01:00Z',
+                    'COMPLETE', 100, 2, 2, '[]'::jsonb, null, repeat('7', 64)),
+                (?, 'EVENT_INCIDENTS', 'PROVIDER_SNAPSHOT',
+                    'snapshot:' || ?::text, ?, null, repeat('3', 64),
+                    'event-incidents-v4', '2026-08-18T08:02:00Z',
+                    'COMPLETE', 100, 1, 1, '[]'::jsonb, null, repeat('8', 64)),
+                (?, 'EVENT_LINEUPS', 'PROVIDER_SNAPSHOT',
+                    'snapshot:' || ?::text, ?, null, repeat('4', 64),
+                    'event-lineups-v2', '2026-08-18T08:03:00Z',
+                    'COMPLETE', 100, 4, 4, '[]'::jsonb, true, repeat('9', 64))
+                """,
+                canonicalEventId,
+                statisticsSnapshotId,
+                statisticsSnapshotId,
+                canonicalEventId,
+                incidentsSnapshotId,
+                incidentsSnapshotId,
+                canonicalEventId,
+                lineupsSnapshotId,
+                lineupsSnapshotId);
+        Long statisticsObservationId = upgradeJdbc.queryForObject("""
+                select id from j5_event_data_observation
+                where canonical_event_id = ? and endpoint_type = 'EVENT_STATISTICS'
+                """, Long.class, canonicalEventId);
+        Long incidentsObservationId = upgradeJdbc.queryForObject("""
+                select id from j5_event_data_observation
+                where canonical_event_id = ? and endpoint_type = 'EVENT_INCIDENTS'
+                """, Long.class, canonicalEventId);
+        Long lineupsObservationId = upgradeJdbc.queryForObject("""
+                select id from j5_event_data_observation
+                where canonical_event_id = ? and endpoint_type = 'EVENT_LINEUPS'
+                """, Long.class, canonicalEventId);
+        upgradeJdbc.update("""
+                insert into j5_event_metric (
+                    observation_id, metric_order, period, group_name,
+                    metric_code, metric_name, home_value, away_value
+                ) values (?, 0, 'ALL', 'Match overview', 'ballPossession',
+                    'Ball possession', '54%', '46%')
+                """, statisticsObservationId);
+        upgradeJdbc.update("""
+                insert into j5_event_incident (
+                    observation_id, incident_order, incident_type, minute,
+                    is_home, participant_provider_id, player_provider_id,
+                    player_name, home_score, away_score
+                ) values (?, 0, 'goal', 24, true, 17000101, 17000301,
+                    'J7 Upgrade Scorer', 1, 0)
+                """, incidentsObservationId);
+        upgradeJdbc.update("""
+                insert into j5_event_lineup_side (
+                    observation_id, side, formation
+                ) values (?, 'HOME', '4-3-3'), (?, 'AWAY', '4-4-2')
+                """, lineupsObservationId, lineupsObservationId);
+        upgradeJdbc.update("""
+                insert into j5_event_lineup_player (
+                    observation_id, side, player_order, player_provider_id,
+                    player_name, shirt_number, position, starter
+                ) values
+                (?, 'HOME', 0, 17000401, 'J7 Upgrade Home Keeper', 1, 'G', true),
+                (?, 'AWAY', 0, 17000402, 'J7 Upgrade Away Keeper', 1, 'G', true)
+                """, lineupsObservationId, lineupsObservationId);
+
+        List<Map<String, Object>> snapshotsBeforeV23 = upgradeJdbc.queryForList("""
+                select snapshot.id, snapshot.logical_endpoint, snapshot.request_key,
+                       snapshot.received_at, snapshot.payload_jsonb::text as payload_jsonb,
+                       snapshot.payload_sha256, snapshot.parser_version,
+                       snapshot.schema_status,
+                       convert_from(snapshot.payload_raw, 'UTF8') as payload_raw,
+                       snapshot.payload_size_bytes, snapshot.payload_purged_at,
+                       occurrence.persistence_outcome,
+                       occurrence.received_at as occurrence_received_at
+                from provider_snapshot snapshot
+                join provider_snapshot_occurrence occurrence
+                  on occurrence.snapshot_id = snapshot.id
+                where snapshot.request_key like 'J7_UPGRADE|%'
+                order by snapshot.logical_endpoint
+                """);
+        List<Map<String, Object>> eventStateBeforeV23 = upgradeJdbc.queryForList("""
+                select event.provider, event.provider_event_id,
+                       observation.source_kind, observation.source_reference,
+                       observation.source_snapshot_id,
+                       observation.source_payload_sha256,
+                       observation.parser_version, observation.source_received_at,
+                       observation.home_team_name, observation.away_team_name,
+                       observation.status_type, observation.tournament_name,
+                       observation.normalized_sha256
+                from canonical_event event
+                join canonical_event_observation observation
+                  on observation.canonical_event_id = event.id
+                where event.id = ?
+                """, canonicalEventId);
+        List<Map<String, Object>> detailsBeforeV23 = upgradeJdbc.queryForList("""
+                select source_kind, source_reference, source_snapshot_id,
+                       source_payload_sha256, parser_version, source_received_at,
+                       venue_name, venue_city, season_name, event_round,
+                       normalized_sha256
+                from event_detail_observation
+                where canonical_event_id = ?
+                """, canonicalEventId);
+        List<Map<String, Object>> j5BeforeV23 = upgradeJdbc.queryForList("""
+                select endpoint_type, source_kind, source_reference,
+                       source_snapshot_id, source_payload_sha256, parser_version,
+                       source_received_at, completeness_status,
+                       completeness_score, present_signals, expected_signals,
+                       missing_paths_json::text as missing_paths_json,
+                       lineups_confirmed, normalized_sha256
+                from j5_event_data_observation
+                where canonical_event_id = ?
+                order by endpoint_type
+                """, canonicalEventId);
+        List<Map<String, Object>> metricsBeforeV23 = upgradeJdbc.queryForList("""
+                select metric_order, period, group_name, metric_code,
+                       metric_name, home_value, away_value
+                from j5_event_metric where observation_id = ?
+                order by metric_order
+                """, statisticsObservationId);
+        List<Map<String, Object>> incidentsBeforeV23 = upgradeJdbc.queryForList("""
+                select incident_order, incident_type, minute, is_home,
+                       participant_provider_id, player_provider_id, player_name,
+                       home_score, away_score
+                from j5_event_incident where observation_id = ?
+                order by incident_order
+                """, incidentsObservationId);
+        List<Map<String, Object>> lineupsBeforeV23 = upgradeJdbc.queryForList("""
+                select side.side, side.formation, player.player_order,
+                       player.player_provider_id, player.player_name,
+                       player.shirt_number, player.position, player.starter
+                from j5_event_lineup_side side
+                join j5_event_lineup_player player
+                  on player.observation_id = side.observation_id
+                 and player.side = side.side
+                where side.observation_id = ?
+                order by side.side, player.player_order
+                """, lineupsObservationId);
+
+        Flyway flywayV23 = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("23"))
+                .load();
+
+        assertThat(flywayV23.migrate().migrationsExecuted).isEqualTo(1);
+        assertThat(flywayV23.info().current().getVersion().getVersion()).isEqualTo("23");
+        assertThat(snapshotsBeforeV23).hasSize(4);
+        assertThat(eventStateBeforeV23).hasSize(1);
+        assertThat(detailsBeforeV23).hasSize(1);
+        assertThat(j5BeforeV23)
+                .extracting(row -> row.get("completeness_status"))
+                .containsExactly("COMPLETE", "COMPLETE", "COMPLETE");
+        assertThat(metricsBeforeV23).singleElement().satisfies(metric ->
+                assertThat(metric)
+                        .containsEntry("metric_code", "ballPossession")
+                        .containsEntry("home_value", "54%")
+                        .containsEntry("away_value", "46%"));
+        assertThat(incidentsBeforeV23).singleElement().satisfies(incident ->
+                assertThat(incident)
+                        .containsEntry("incident_type", "goal")
+                        .containsEntry("player_name", "J7 Upgrade Scorer"));
+        assertThat(lineupsBeforeV23)
+                .extracting(row -> row.get("side"), row -> row.get("formation"))
+                .containsExactly(
+                        org.assertj.core.groups.Tuple.tuple("AWAY", "4-4-2"),
+                        org.assertj.core.groups.Tuple.tuple("HOME", "4-3-3"));
+        assertThat(upgradeJdbc.queryForList("""
+                select snapshot.id, snapshot.logical_endpoint, snapshot.request_key,
+                       snapshot.received_at, snapshot.payload_jsonb::text as payload_jsonb,
+                       snapshot.payload_sha256, snapshot.parser_version,
+                       snapshot.schema_status,
+                       convert_from(snapshot.payload_raw, 'UTF8') as payload_raw,
+                       snapshot.payload_size_bytes, snapshot.payload_purged_at,
+                       occurrence.persistence_outcome,
+                       occurrence.received_at as occurrence_received_at
+                from provider_snapshot snapshot
+                join provider_snapshot_occurrence occurrence
+                  on occurrence.snapshot_id = snapshot.id
+                where snapshot.request_key like 'J7_UPGRADE|%'
+                order by snapshot.logical_endpoint
+                """)).containsExactlyElementsOf(snapshotsBeforeV23);
+        assertThat(upgradeJdbc.queryForList("""
+                select event.provider, event.provider_event_id,
+                       observation.source_kind, observation.source_reference,
+                       observation.source_snapshot_id,
+                       observation.source_payload_sha256,
+                       observation.parser_version, observation.source_received_at,
+                       observation.home_team_name, observation.away_team_name,
+                       observation.status_type, observation.tournament_name,
+                       observation.normalized_sha256
+                from canonical_event event
+                join canonical_event_observation observation
+                  on observation.canonical_event_id = event.id
+                where event.id = ?
+                """, canonicalEventId)).containsExactlyElementsOf(eventStateBeforeV23);
+        assertThat(upgradeJdbc.queryForList("""
+                select source_kind, source_reference, source_snapshot_id,
+                       source_payload_sha256, parser_version, source_received_at,
+                       venue_name, venue_city, season_name, event_round,
+                       normalized_sha256
+                from event_detail_observation
+                where canonical_event_id = ?
+                """, canonicalEventId)).containsExactlyElementsOf(detailsBeforeV23);
+        assertThat(upgradeJdbc.queryForList("""
+                select endpoint_type, source_kind, source_reference,
+                       source_snapshot_id, source_payload_sha256, parser_version,
+                       source_received_at, completeness_status,
+                       completeness_score, present_signals, expected_signals,
+                       missing_paths_json::text as missing_paths_json,
+                       lineups_confirmed, normalized_sha256
+                from j5_event_data_observation
+                where canonical_event_id = ?
+                order by endpoint_type
+                """, canonicalEventId)).containsExactlyElementsOf(j5BeforeV23);
+        assertThat(upgradeJdbc.queryForList("""
+                select metric_order, period, group_name, metric_code,
+                       metric_name, home_value, away_value
+                from j5_event_metric where observation_id = ?
+                order by metric_order
+                """, statisticsObservationId))
+                .containsExactlyElementsOf(metricsBeforeV23);
+        assertThat(upgradeJdbc.queryForList("""
+                select incident_order, incident_type, minute, is_home,
+                       participant_provider_id, player_provider_id, player_name,
+                       home_score, away_score
+                from j5_event_incident where observation_id = ?
+                order by incident_order
+                """, incidentsObservationId))
+                .containsExactlyElementsOf(incidentsBeforeV23);
+        assertThat(upgradeJdbc.queryForList("""
+                select side.side, side.formation, player.player_order,
+                       player.player_provider_id, player.player_name,
+                       player.shirt_number, player.position, player.starter
+                from j5_event_lineup_side side
+                join j5_event_lineup_player player
+                  on player.observation_id = side.observation_id
+                 and player.side = side.side
+                where side.observation_id = ?
+                order by side.side, player.player_order
+                """, lineupsObservationId))
+                .containsExactlyElementsOf(lineupsBeforeV23);
+        assertThat(upgradeJdbc.queryForMap("""
+                select schema_version, export_path, content_sha256,
+                       validation_status, source_snapshot_ids::text as source_snapshot_ids,
+                       warnings::text as warnings
+                from export_manifest
+                where export_path = 'legacy-export.json'
+                """)).containsAllEntriesOf(legacyBefore);
+        assertThat(upgradeJdbc.queryForMap("""
+                select export_kind, export_uuid, canonical_event_id, schema_id,
+                       generated_at, data_sha256, source_set_sha256,
+                       candidate_content_sha256, content_size_bytes,
+                       source_observations, decided_at, decision_reason,
+                       decision_intent_status, decision_intent_at,
+                       decision_intent_reason, decision_intent_path,
+                       decision_intent_content_sha256,
+                       decision_intent_content_size_bytes
+                from export_manifest
+                where export_path = 'legacy-export.json'
+                """)).allSatisfy((column, value) -> assertThat(value).isNull());
+        assertThat(upgradeJdbc.update("""
+                update export_manifest
+                set warnings = '["legacy", "still-generic"]'::jsonb
+                where export_path = 'legacy-export.json'
+                """)).isEqualTo(1);
+
+        UUID firstExportId = UUID.fromString(
+                "72000000-0000-0000-0000-000000000007");
+        insertJ7Candidate(
+                upgradeJdbc,
+                canonicalEventId,
+                firstExportId,
+                "b".repeat(64),
+                "c".repeat(64),
+                "d".repeat(64));
+        Map<String, Object> candidate = upgradeJdbc.queryForMap("""
+                select export_kind, schema_id, schema_version, validation_status,
+                       data_sha256, source_set_sha256, candidate_content_sha256,
+                       content_sha256, content_size_bytes, export_path,
+                       source_observations::text as source_observations,
+                       source_snapshot_ids, warnings::text as warnings
+                from export_manifest
+                where export_uuid = ?
+                """, firstExportId);
+        assertThat(candidate)
+                .containsEntry("export_kind", "J7_CANONICAL_EVENT")
+                .containsEntry(
+                        "schema_id",
+                        "urn:betting-project:sofascore-local-lab:j7:canonical-event-export:v1")
+                .containsEntry("schema_version", "1.0.0")
+                .containsEntry("validation_status", "COHERENCE_CHECKED")
+                .containsEntry("data_sha256", "b".repeat(64))
+                .containsEntry("source_set_sha256", "c".repeat(64))
+                .containsEntry("candidate_content_sha256", "d".repeat(64))
+                .containsEntry("content_sha256", "d".repeat(64))
+                .containsEntry("content_size_bytes", 1024L)
+                .containsEntry(
+                        "export_path",
+                        "j7-" + canonicalEventId + "-" + firstExportId + ".candidate.json")
+                .containsEntry("warnings", "[]");
+
+        assertThatThrownBy(() -> insertJ7Candidate(
+                upgradeJdbc,
+                canonicalEventId,
+                UUID.fromString("73000000-0000-0000-0000-000000000007"),
+                "e".repeat(64),
+                "f".repeat(64),
+                "1".repeat(64)))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("uq_export_manifest_j7_pending");
+
+        String validatedPath =
+                "j7-" + canonicalEventId + "-" + firstExportId + ".validated.json";
+        recordJ7DecisionIntent(
+                upgradeJdbc,
+                firstExportId,
+                J7ExportStatus.HUMAN_VALIDATED,
+                Instant.parse("2026-08-19T10:01:00Z"),
+                null,
+                validatedPath,
+                "e".repeat(64),
+                1100);
+        assertThat(upgradeJdbc.update("""
+                update export_manifest
+                set export_path = ?,
+                    content_sha256 = ?,
+                    content_size_bytes = 1100,
+                    validation_status = 'HUMAN_VALIDATED',
+                    decided_at = '2026-08-19T10:01:00Z',
+                    decision_reason = null
+                where export_uuid = ?
+                """, validatedPath, "e".repeat(64), firstExportId)).isEqualTo(1);
+        assertThat(upgradeJdbc.queryForMap("""
+                select validation_status, export_path, content_sha256,
+                       candidate_content_sha256, content_size_bytes, decided_at,
+                       decision_reason
+                from export_manifest
+                where export_uuid = ?
+                """, firstExportId))
+                .containsEntry("validation_status", "HUMAN_VALIDATED")
+                .containsEntry("export_path", validatedPath)
+                .containsEntry("content_sha256", "e".repeat(64))
+                .containsEntry("candidate_content_sha256", "d".repeat(64))
+                .containsEntry("content_size_bytes", 1100L)
+                .containsEntry("decision_reason", null);
+
+        assertThatThrownBy(() -> upgradeJdbc.update("""
+                update export_manifest
+                set validation_status = 'REJECTED',
+                    export_path = ?,
+                    content_sha256 = ?,
+                    decided_at = '2026-08-19T10:02:00Z',
+                    decision_reason = 'second terminal decision'
+                where export_uuid = ?
+                """,
+                "j7-" + canonicalEventId + "-" + firstExportId + ".rejected.json",
+                "f".repeat(64),
+                firstExportId))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("J7 export terminal transition is not allowed");
+        assertThatThrownBy(() -> upgradeJdbc.update(
+                "delete from export_manifest where export_uuid = ?",
+                firstExportId))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("J7 export manifests cannot be deleted");
+
+        UUID duplicateDataExportId = UUID.fromString(
+                "74000000-0000-0000-0000-000000000007");
+        insertJ7Candidate(
+                upgradeJdbc,
+                canonicalEventId,
+                duplicateDataExportId,
+                "b".repeat(64),
+                "2".repeat(64),
+                "3".repeat(64));
+        String duplicateValidatedPath =
+                "j7-" + canonicalEventId + "-" + duplicateDataExportId + ".validated.json";
+        recordJ7DecisionIntent(
+                upgradeJdbc,
+                duplicateDataExportId,
+                J7ExportStatus.HUMAN_VALIDATED,
+                Instant.parse("2026-08-19T10:03:00Z"),
+                null,
+                duplicateValidatedPath,
+                "4".repeat(64),
+                1200);
+        assertThatThrownBy(() -> upgradeJdbc.update("""
+                update export_manifest
+                set export_path = ?,
+                    content_sha256 = ?,
+                    content_size_bytes = 1200,
+                    validation_status = 'HUMAN_VALIDATED',
+                    decided_at = '2026-08-19T10:03:00Z'
+                where export_uuid = ?
+                """,
+                duplicateValidatedPath,
+                "4".repeat(64),
+                duplicateDataExportId))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("uq_export_manifest_j7_validated_data");
+        assertThatThrownBy(() -> upgradeJdbc.update("""
+                update export_manifest
+                set data_sha256 = ?,
+                    export_path = ?,
+                    content_sha256 = ?,
+                    content_size_bytes = 1200,
+                    validation_status = 'REJECTED',
+                    decided_at = '2026-08-19T10:03:00Z',
+                    decision_reason = 'immutable evidence mutation'
+                where export_uuid = ?
+                """,
+                "5".repeat(64),
+                "j7-" + canonicalEventId + "-" + duplicateDataExportId + ".rejected.json",
+                "6".repeat(64),
+                duplicateDataExportId))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("J7 export immutable evidence cannot be changed");
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void persistsAndReloadsTheCompleteJ7CandidateRejectAndValidationLifecycle()
+            throws Exception {
+        long providerEventId = 17670022L;
+        var startsAt = Instant.parse("2026-08-20T16:00:00Z");
+        var homeTeam = new ScheduledTeam(111L, "J7 Synthetic Home");
+        var awayTeam = new ScheduledTeam(112L, "J7 Synthetic Away");
+        var status = new ScheduledEventStatus("scheduled", Optional.empty());
+        var tournament = Optional.of(new ScheduledTournament(
+                113L,
+                "J7 Synthetic League"));
+        var details = new EventDetails(
+                providerEventId,
+                startsAt,
+                homeTeam,
+                awayTeam,
+                status,
+                tournament,
+                Optional.of(new EventVenue(
+                        114L,
+                        "J7 Synthetic Stadium",
+                        Optional.of("Local City"))),
+                Optional.of(new EventSeason(115L, "2026/2027")),
+                Optional.of("8"));
+        var stateSource = EventSourceTrace.syntheticFixture(
+                "j7-lifecycle-state",
+                "1".repeat(64),
+                "scheduled-events-v1",
+                Instant.parse("2026-08-19T10:00:00Z"));
+        var eventPersistence = canonicalEventStore.save(CanonicalEventObservation.from(
+                details.asScheduledEvent(),
+                stateSource));
+        UUID canonicalEventId = eventPersistence.canonicalEventId();
+        var identity = canonicalEventStore.findLatestByCanonicalId(canonicalEventId)
+                .orElseThrow()
+                .identity();
+        eventDetailsStore.save(EventDetailObservation.from(
+                identity,
+                details,
+                EventSourceTrace.syntheticFixture(
+                        "j7-lifecycle-details",
+                        "2".repeat(64),
+                        "event-details-v1",
+                        Instant.parse("2026-08-19T10:01:00Z"))));
+        j5EventDataStore.save(J5EventDataObservation.from(
+                identity,
+                new EventStatistics(providerEventId, List.of()),
+                EventSourceTrace.syntheticFixture(
+                        "j7-lifecycle-statistics",
+                        "3".repeat(64),
+                        "event-statistics-v1",
+                        Instant.parse("2026-08-19T10:02:00Z")),
+                J5CompletenessReport.emptyValid()));
+        j5EventDataStore.save(J5EventDataObservation.from(
+                identity,
+                new EventIncidents(providerEventId, List.of()),
+                EventSourceTrace.syntheticFixture(
+                        "j7-lifecycle-incidents",
+                        "4".repeat(64),
+                        "event-incidents-v1",
+                        Instant.parse("2026-08-19T10:03:00Z")),
+                J5CompletenessReport.emptyValid()));
+        j5EventDataStore.save(J5EventDataObservation.from(
+                identity,
+                new EventLineups(
+                        providerEventId,
+                        false,
+                        new TeamLineup(LineupSide.HOME, Optional.empty(), List.of()),
+                        new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of())),
+                EventSourceTrace.syntheticFixture(
+                        "j7-lifecycle-lineups",
+                        "5".repeat(64),
+                        "event-lineups-v1",
+                        Instant.parse("2026-08-19T10:04:00Z")),
+                J5CompletenessReport.emptyValid()));
+        Path exportDirectory = Path.of("target/integration-test-exports")
+                .toAbsolutePath()
+                .normalize();
+
+        var firstCandidate = j7CanonicalExportService.createCandidate(
+                canonicalEventId);
+        Path firstCandidatePath = exportDirectory.resolve(firstCandidate.relativePath());
+        assertThat(firstCandidate.status()).isEqualTo(J7ExportStatus.COHERENCE_CHECKED);
+        assertThat(Files.isRegularFile(firstCandidatePath)).isTrue();
+        assertThat(j7CanonicalExportService.preview(
+                canonicalEventId,
+                firstCandidate.exportId()).prettyJson())
+                .contains("\"EVENT_STATE\"")
+                .contains("\"SYNTHETIC_SOURCE\"")
+                .doesNotContain("payload_raw", "requestUri", "sessionId", ".env");
+
+        String rejectionReason = "Rejet local de qualification J7";
+        var rejected = j7CanonicalExportService.reject(
+                canonicalEventId,
+                firstCandidate.exportId(),
+                "REJETER EXPORT J7 " + firstCandidate.exportId(),
+                rejectionReason);
+        Path rejectedPath = exportDirectory.resolve(rejected.relativePath());
+        assertThat(rejected.status()).isEqualTo(J7ExportStatus.REJECTED);
+        assertThat(rejected.decisionReason()).contains(rejectionReason);
+        assertThat(rejected.candidateContentSha256())
+                .isEqualTo(firstCandidate.candidateContentSha256());
+        assertThat(rejected.dataSha256()).isEqualTo(firstCandidate.dataSha256());
+        assertThat(Files.exists(firstCandidatePath)).isFalse();
+        assertThat(Files.isRegularFile(rejectedPath)).isTrue();
+        assertThatThrownBy(() -> j7CanonicalExportService.download(
+                canonicalEventId,
+                rejected.exportId()))
+                .isInstanceOfSatisfying(J7ExportException.class, exception ->
+                        assertThat(exception.error()).isEqualTo(J7ExportError.NOT_DOWNLOADABLE));
+
+        var secondCandidate = j7CanonicalExportService.createCandidate(
+                canonicalEventId);
+        Path secondCandidatePath = exportDirectory.resolve(secondCandidate.relativePath());
+        var validated = j7CanonicalExportService.validate(
+                canonicalEventId,
+                secondCandidate.exportId(),
+                "VALIDER EXPORT J7 " + secondCandidate.exportId()
+                        + " " + secondCandidate.dataSha256());
+        Path validatedPath = exportDirectory.resolve(validated.relativePath());
+        var download = j7CanonicalExportService.download(
+                canonicalEventId,
+                validated.exportId());
+
+        assertThat(validated.status()).isEqualTo(J7ExportStatus.HUMAN_VALIDATED);
+        assertThat(validated.dataSha256()).isEqualTo(secondCandidate.dataSha256());
+        assertThat(validated.candidateContentSha256())
+                .isEqualTo(secondCandidate.candidateContentSha256());
+        assertThat(validated.currentContentSha256())
+                .isNotEqualTo(validated.candidateContentSha256());
+        assertThat(Files.exists(secondCandidatePath)).isFalse();
+        assertThat(Files.isRegularFile(validatedPath)).isTrue();
+        assertThat(download.fileName()).isEqualTo(validated.relativePath());
+        assertThat(download.sha256()).isEqualTo(validated.currentContentSha256());
+        assertThat(com.bettingproject.sofascorelocal.security.Sha256.hex(download.content()))
+                .isEqualTo(download.sha256());
+        assertThat(j7ExportManifestStore.findByExportId(validated.exportId()))
+                .contains(validated);
+        assertThat(j7ExportManifestStore.findByCanonicalEventId(canonicalEventId))
+                .extracting(item -> item.status())
+                .containsExactly(
+                        J7ExportStatus.HUMAN_VALIDATED,
+                        J7ExportStatus.REJECTED);
+
+        Files.deleteIfExists(rejectedPath);
+        Files.deleteIfExists(validatedPath);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void j7DecisionLockBlocksEverySourceWriteUntilTheDecisionCommits()
+            throws Exception {
+        UUID canonicalEventId = UUID.randomUUID();
+        jdbcTemplate.update("""
+                insert into canonical_event (id, provider, provider_event_id)
+                values (?, 'SOFASCORE', ?)
+                """, canonicalEventId, 17670023L);
+
+        assertSourceInsertWaitsForJ7Decision(
+                canonicalEventId,
+                connection -> {
+                    try (PreparedStatement statement = connection.prepareStatement("""
+                            insert into canonical_event_observation (
+                                canonical_event_id,
+                                source_kind,
+                                source_reference,
+                                source_snapshot_id,
+                                source_fixture_id,
+                                source_payload_sha256,
+                                parser_version,
+                                source_received_at,
+                                starts_at,
+                                home_team_provider_id,
+                                home_team_name,
+                                away_team_provider_id,
+                                away_team_name,
+                                status_type,
+                                status_description,
+                                tournament_provider_id,
+                                tournament_name,
+                                normalized_sha256
+                            ) values (
+                                ?, 'SYNTHETIC_FIXTURE', 'j7-lock-j4', null,
+                                'j7-lock-j4', ?, 'scheduled-events-v1',
+                                '2026-08-19T12:00:01Z', '2026-08-20T18:00:00Z',
+                                101, 'J7 Lock Home', 102, 'J7 Lock Away',
+                                'scheduled', null, 103, 'J7 Lock League', ?
+                            )
+                            """)) {
+                        statement.setObject(1, canonicalEventId);
+                        statement.setString(2, "a".repeat(64));
+                        statement.setString(3, "b".repeat(64));
+                        return statement.executeUpdate();
+                    }
+                },
+                "canonical_event_observation");
+
+        assertSourceInsertWaitsForJ7Decision(
+                canonicalEventId,
+                connection -> {
+                    try (PreparedStatement statement = connection.prepareStatement("""
+                            insert into event_detail_observation (
+                                canonical_event_id,
+                                source_fixture_id,
+                                source_payload_sha256,
+                                parser_version,
+                                source_received_at,
+                                starts_at,
+                                home_team_provider_id,
+                                home_team_name,
+                                away_team_provider_id,
+                                away_team_name,
+                                status_type,
+                                status_description,
+                                tournament_provider_id,
+                                tournament_name,
+                                venue_provider_id,
+                                venue_name,
+                                venue_city,
+                                season_provider_id,
+                                season_name,
+                                event_round,
+                                normalized_sha256,
+                                source_kind,
+                                source_reference,
+                                source_snapshot_id
+                            ) values (
+                                ?, 'j7-lock-detail', ?, 'event-details-v1',
+                                '2026-08-19T12:00:02Z',
+                                '2026-08-20T18:00:00Z',
+                                101, 'J7 Lock Home', 102, 'J7 Lock Away',
+                                'scheduled', null, 103, 'J7 Lock League',
+                                104, 'J7 Lock Stadium', 'Paris',
+                                105, '2026/2027', '1', ?,
+                                'SYNTHETIC_FIXTURE', 'j7-lock-detail', null
+                            )
+                            """)) {
+                        statement.setObject(1, canonicalEventId);
+                        statement.setString(2, "e".repeat(64));
+                        statement.setString(3, "f".repeat(64));
+                        return statement.executeUpdate();
+                    }
+                },
+                "event_detail_observation");
+
+        assertSourceInsertWaitsForJ7Decision(
+                canonicalEventId,
+                connection -> {
+                    try (PreparedStatement statement = connection.prepareStatement("""
+                            insert into j5_event_data_observation (
+                                canonical_event_id,
+                                endpoint_type,
+                                source_kind,
+                                source_reference,
+                                source_snapshot_id,
+                                source_fixture_id,
+                                source_payload_sha256,
+                                parser_version,
+                                source_received_at,
+                                completeness_status,
+                                completeness_score,
+                                present_signals,
+                                expected_signals,
+                                missing_paths_json,
+                                lineups_confirmed,
+                                normalized_sha256
+                            ) values (
+                                ?, 'EVENT_STATISTICS', 'SYNTHETIC_FIXTURE',
+                                'j7-lock-j5', null, 'j7-lock-j5', ?,
+                                'event-statistics-v1', '2026-08-19T12:00:02Z',
+                                'COMPLETE', 100, 2, 2, '[]'::jsonb, null, ?
+                            )
+                            """)) {
+                        statement.setObject(1, canonicalEventId);
+                        statement.setString(2, "c".repeat(64));
+                        statement.setString(3, "d".repeat(64));
+                        return statement.executeUpdate();
+                    }
+                },
+                "j5_event_data_observation");
+
+        Long statisticsObservationId = jdbcTemplate.queryForObject("""
+                select id
+                from j5_event_data_observation
+                where canonical_event_id = ?
+                  and endpoint_type = 'EVENT_STATISTICS'
+                  and source_fixture_id = 'j7-lock-j5'
+                """, Long.class, canonicalEventId);
+        jdbcTemplate.update("""
+                insert into j5_event_data_observation (
+                    canonical_event_id,
+                    endpoint_type,
+                    source_kind,
+                    source_reference,
+                    source_snapshot_id,
+                    source_fixture_id,
+                    source_payload_sha256,
+                    parser_version,
+                    source_received_at,
+                    completeness_status,
+                    completeness_score,
+                    present_signals,
+                    expected_signals,
+                    missing_paths_json,
+                    lineups_confirmed,
+                    normalized_sha256
+                ) values
+                (
+                    ?, 'EVENT_INCIDENTS', 'SYNTHETIC_FIXTURE',
+                    'j7-lock-j5-incidents', null, 'j7-lock-j5-incidents',
+                    ?, 'event-incidents-v4', '2026-08-19T12:00:03Z',
+                    'COMPLETE', 100, 1, 1, '[]'::jsonb, null, ?
+                ),
+                (
+                    ?, 'EVENT_LINEUPS', 'SYNTHETIC_FIXTURE',
+                    'j7-lock-j5-lineups', null, 'j7-lock-j5-lineups',
+                    ?, 'event-lineups-v2', '2026-08-19T12:00:04Z',
+                    'COMPLETE', 100, 1, 1, '[]'::jsonb, true, ?
+                )
+                """,
+                canonicalEventId,
+                "6".repeat(64),
+                "7".repeat(64),
+                canonicalEventId,
+                "8".repeat(64),
+                "0".repeat(64));
+        Long incidentsObservationId = jdbcTemplate.queryForObject("""
+                select id
+                from j5_event_data_observation
+                where canonical_event_id = ?
+                  and endpoint_type = 'EVENT_INCIDENTS'
+                  and source_fixture_id = 'j7-lock-j5-incidents'
+                """, Long.class, canonicalEventId);
+        Long lineupsObservationId = jdbcTemplate.queryForObject("""
+                select id
+                from j5_event_data_observation
+                where canonical_event_id = ?
+                  and endpoint_type = 'EVENT_LINEUPS'
+                  and source_fixture_id = 'j7-lock-j5-lineups'
+                """, Long.class, canonicalEventId);
+
+        assertJ5ChildInsertWaitsForJ7Decision(
+                canonicalEventId,
+                statisticsObservationId,
+                connection -> {
+                    try (PreparedStatement statement = connection.prepareStatement("""
+                            insert into j5_event_metric (
+                                observation_id, metric_order, period, group_name,
+                                metric_code, metric_name, home_value, away_value
+                            ) values (
+                                ?, 7007, 'ALL', 'J7 lock group',
+                                'j7LockMetric', 'J7 lock metric', '1', '0'
+                            )
+                            """)) {
+                        statement.setLong(1, statisticsObservationId);
+                        return statement.executeUpdate();
+                    }
+                },
+                "j5_event_metric");
+        assertJ5ChildInsertWaitsForJ7Decision(
+                canonicalEventId,
+                incidentsObservationId,
+                connection -> {
+                    try (PreparedStatement statement = connection.prepareStatement("""
+                            insert into j5_event_incident (
+                                observation_id, incident_order, incident_type,
+                                minute, is_home, participant_provider_id,
+                                player_provider_id, player_name,
+                                home_score, away_score
+                            ) values (
+                                ?, 7007, 'goal', 70, true, 17670101,
+                                17670301, 'J7 Lock Scorer', 1, 0
+                            )
+                            """)) {
+                        statement.setLong(1, incidentsObservationId);
+                        return statement.executeUpdate();
+                    }
+                },
+                "j5_event_incident");
+        assertJ5ChildInsertWaitsForJ7Decision(
+                canonicalEventId,
+                lineupsObservationId,
+                connection -> {
+                    try (PreparedStatement statement = connection.prepareStatement("""
+                            insert into j5_event_lineup_side (
+                                observation_id, side, formation
+                            ) values (?, 'HOME', '4-3-3')
+                            """)) {
+                        statement.setLong(1, lineupsObservationId);
+                        return statement.executeUpdate();
+                    }
+                },
+                "j5_event_lineup_side");
+        assertJ5ChildInsertWaitsForJ7Decision(
+                canonicalEventId,
+                lineupsObservationId,
+                connection -> {
+                    try (PreparedStatement statement = connection.prepareStatement("""
+                            insert into j5_event_lineup_player (
+                                observation_id, side, player_order,
+                                player_provider_id, player_name, shirt_number,
+                                position, starter
+                            ) values (
+                                ?, 'HOME', 7007, 17670401,
+                                'J7 Lock Keeper', 1, 'G', true
+                            )
+                            """)) {
+                        statement.setLong(1, lineupsObservationId);
+                        return statement.executeUpdate();
+                    }
+                },
+                "j5_event_lineup_player");
+        assertInvisibleJ5ParentRejectsChildInsert(canonicalEventId);
+
+        var mutableSourceSnapshot = saveProviderSnapshot(
+                SofascoreEndpointType.EVENT_DETAILS,
+                17670023L,
+                EventDetailsV2Parser.PARSER_VERSION,
+                Instant.parse("2026-08-19T12:00:04Z"),
+                "{\"event\":{\"id\":17670023},\"lockQualification\":true}");
+        jdbcTemplate.update("""
+                insert into canonical_event_observation (
+                    canonical_event_id, source_kind, source_reference,
+                    source_snapshot_id, source_fixture_id,
+                    source_payload_sha256, parser_version, source_received_at,
+                    starts_at, home_team_provider_id, home_team_name,
+                    away_team_provider_id, away_team_name, status_type,
+                    status_description, tournament_provider_id,
+                    tournament_name, normalized_sha256
+                ) values (
+                    ?, 'PROVIDER_SNAPSHOT', 'snapshot:' || ?::text, ?, null,
+                    ?, 'event-details-v2', '2026-08-19T12:00:04Z',
+                    '2026-08-20T18:00:00Z',
+                    101, 'J7 Lock Home', 102, 'J7 Lock Away',
+                    'scheduled', null, 103, 'J7 Lock League', ?
+                )
+                """,
+                canonicalEventId,
+                mutableSourceSnapshot.snapshotId(),
+                mutableSourceSnapshot.snapshotId(),
+                mutableSourceSnapshot.payloadSha256(),
+                "9".repeat(64));
+        assertProviderSnapshotMutationWaitsForJ7Decision(
+                canonicalEventId,
+                mutableSourceSnapshot.snapshotId());
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void persistsAndReloadsExactProviderSourcesWithoutReadingRawPayloads()
+            throws Exception {
+        long providerEventId = 17670024L;
+        Instant detailsReceivedAt = Instant.parse("2026-08-19T11:00:00.100Z");
+        var detailsSnapshot = saveProviderSnapshot(
+                SofascoreEndpointType.EVENT_DETAILS,
+                providerEventId,
+                EventDetailsV2Parser.PARSER_VERSION,
+                detailsReceivedAt,
+                "{\"event\":{\"id\":17670024},"
+                        + "\"privateMarker\":\"PROVIDER_RAW_MUST_NOT_LEAK_J7\"}");
+        EventDetails details = new EventDetails(
+                providerEventId,
+                Instant.parse("2026-08-20T18:00:00Z"),
+                new ScheduledTeam(201L, "Provider Home"),
+                new ScheduledTeam(202L, "Provider Away"),
+                new ScheduledEventStatus("scheduled", Optional.empty()),
+                Optional.of(new ScheduledTournament(203L, "Provider League")),
+                Optional.of(new EventVenue(
+                        204L,
+                        "Provider Stadium",
+                        Optional.of("Paris"))),
+                Optional.of(new EventSeason(205L, "2026/2027")),
+                Optional.of("7"));
+        EventSourceTrace detailsSource = EventSourceTrace.providerSnapshot(
+                detailsSnapshot.snapshotId(),
+                detailsSnapshot.payloadSha256(),
+                EventDetailsV2Parser.PARSER_VERSION,
+                detailsReceivedAt);
+        var eventPersistence = canonicalEventStore.save(CanonicalEventObservation.from(
+                details.asScheduledEvent(),
+                detailsSource));
+        var identity = canonicalEventStore.findLatestByCanonicalId(
+                        eventPersistence.canonicalEventId())
+                .orElseThrow()
+                .identity();
+        var detailPersistence = eventDetailsStore.save(EventDetailObservation.from(
+                identity,
+                details,
+                detailsSource));
+        snapshotStore.classify(
+                detailsSnapshot.snapshotId(),
+                RawSnapshotSchemaStatus.PARSED,
+                null);
+
+        Instant statisticsReceivedAt = Instant.parse("2026-08-19T11:01:00.100Z");
+        String statisticsRaw = """
+                {
+                  "statistics":[{
+                    "period":"ALL",
+                    "groups":[{
+                      "groupName":"Match overview",
+                      "statisticsItems":[{
+                        "key":"ballPossession",
+                        "name":"Ball possession",
+                        "home":"54%",
+                        "away":"46%"
+                      }]
+                    }]
+                  }],
+                  "privateMarker":"PROVIDER_RAW_MUST_NOT_LEAK_J7"
+                }
+                """;
+        RawPayloadEvidence statisticsPayload = RawPayloadEvidence.capture(
+                statisticsRaw.getBytes(StandardCharsets.UTF_8));
+        var statisticsSnapshot = saveProviderSnapshot(
+                SofascoreEndpointType.EVENT_STATISTICS,
+                providerEventId,
+                EventStatisticsV2Parser.PARSER_VERSION,
+                statisticsReceivedAt,
+                statisticsRaw);
+        var parsedStatistics = new EventStatisticsV2Parser().parse(
+                statisticsSnapshot.snapshotId(),
+                providerEventId,
+                statisticsPayload,
+                statisticsReceivedAt);
+        var statisticsPersistence = j5EventDataStore.save(J5EventDataObservation.from(
+                identity,
+                parsedStatistics.data().orElseThrow(),
+                EventSourceTrace.providerSnapshot(
+                        statisticsSnapshot.snapshotId(),
+                        statisticsSnapshot.payloadSha256(),
+                        EventStatisticsV2Parser.PARSER_VERSION,
+                        statisticsReceivedAt),
+                parsedStatistics.completeness().orElseThrow()));
+        snapshotStore.classify(
+                statisticsSnapshot.snapshotId(),
+                RawSnapshotSchemaStatus.PARSED,
+                null);
+
+        Instant incidentsReceivedAt = Instant.parse("2026-08-19T11:02:00.100Z");
+        String incidentsRaw = """
+                {
+                  "incidents":[{
+                    "incidentType":"goal",
+                    "time":32,
+                    "isHome":true,
+                    "teamId":201,
+                    "player":{"id":301,"name":"Provider Scorer"},
+                    "homeScore":1,
+                    "awayScore":0
+                  }],
+                  "privateMarker":"PROVIDER_RAW_MUST_NOT_LEAK_J7"
+                }
+                """;
+        RawPayloadEvidence incidentsPayload = RawPayloadEvidence.capture(
+                incidentsRaw.getBytes(StandardCharsets.UTF_8));
+        var incidentsSnapshot = saveProviderSnapshot(
+                SofascoreEndpointType.EVENT_INCIDENTS,
+                providerEventId,
+                EventIncidentsV4Parser.PARSER_VERSION,
+                incidentsReceivedAt,
+                incidentsRaw);
+        var parsedIncidents = new EventIncidentsV4Parser().parse(
+                incidentsSnapshot.snapshotId(),
+                providerEventId,
+                incidentsPayload,
+                incidentsReceivedAt);
+        var incidentsPersistence = j5EventDataStore.save(J5EventDataObservation.from(
+                identity,
+                parsedIncidents.data().orElseThrow(),
+                EventSourceTrace.providerSnapshot(
+                        incidentsSnapshot.snapshotId(),
+                        incidentsSnapshot.payloadSha256(),
+                        EventIncidentsV4Parser.PARSER_VERSION,
+                        incidentsReceivedAt),
+                parsedIncidents.completeness().orElseThrow()));
+        snapshotStore.classify(
+                incidentsSnapshot.snapshotId(),
+                RawSnapshotSchemaStatus.PARSED,
+                null);
+
+        Instant lineupsReceivedAt = Instant.parse("2026-08-19T11:03:00.100Z");
+        String lineupsRaw = """
+                {
+                  "confirmed":true,
+                  "home":{
+                    "formation":"4-3-3",
+                    "players":[{
+                      "player":{"id":401,"name":"Provider Home Keeper"},
+                      "shirtNumber":1,
+                      "position":"G",
+                      "substitute":false
+                    }]
+                  },
+                  "away":{
+                    "formation":"4-4-2",
+                    "players":[{
+                      "player":{"id":402,"name":"Provider Away Keeper"},
+                      "shirtNumber":1,
+                      "position":"G",
+                      "substitute":false
+                    }]
+                  },
+                  "privateMarker":"PROVIDER_RAW_MUST_NOT_LEAK_J7"
+                }
+                """;
+        RawPayloadEvidence lineupsPayload = RawPayloadEvidence.capture(
+                lineupsRaw.getBytes(StandardCharsets.UTF_8));
+        var lineupsSnapshot = saveProviderSnapshot(
+                SofascoreEndpointType.EVENT_LINEUPS,
+                providerEventId,
+                EventLineupsV2Parser.PARSER_VERSION,
+                lineupsReceivedAt,
+                lineupsRaw);
+        var parsedLineups = new EventLineupsV2Parser().parse(
+                lineupsSnapshot.snapshotId(),
+                providerEventId,
+                lineupsPayload,
+                lineupsReceivedAt);
+        var lineupsPersistence = j5EventDataStore.save(J5EventDataObservation.from(
+                identity,
+                parsedLineups.data().orElseThrow(),
+                EventSourceTrace.providerSnapshot(
+                        lineupsSnapshot.snapshotId(),
+                        lineupsSnapshot.payloadSha256(),
+                        EventLineupsV2Parser.PARSER_VERSION,
+                        lineupsReceivedAt),
+                parsedLineups.completeness().orElseThrow()));
+        snapshotStore.classify(
+                lineupsSnapshot.snapshotId(),
+                RawSnapshotSchemaStatus.PARSED,
+                null);
+
+        var currentEvent = canonicalEventStore.findLatestByCanonicalId(
+                        eventPersistence.canonicalEventId())
+                .orElseThrow();
+        var currentDetails = eventDetailsStore.findLatest(
+                        eventPersistence.canonicalEventId())
+                .orElseThrow();
+        var currentJ5 = j5EventDataStore.findLatest(eventPersistence.canonicalEventId());
+        assertThat(parsedStatistics.completeness().orElseThrow().status())
+                .isEqualTo(J5CompletenessStatus.COMPLETE);
+        assertThat(parsedIncidents.completeness().orElseThrow().status())
+                .isEqualTo(J5CompletenessStatus.COMPLETE);
+        assertThat(parsedLineups.completeness().orElseThrow().status())
+                .isEqualTo(J5CompletenessStatus.COMPLETE);
+        assertThat(currentJ5.statistics()).hasValueSatisfying(observation -> {
+            assertThat(observation.completeness().status())
+                    .isEqualTo(J5CompletenessStatus.COMPLETE);
+            assertThat(observation.data()).isInstanceOfSatisfying(
+                    EventStatistics.class,
+                    statistics -> assertThat(statistics.metrics()).singleElement()
+                            .satisfies(metric -> {
+                                assertThat(metric.metricCode())
+                                        .isEqualTo("ballPossession");
+                                assertThat(metric.homeValue()).contains("54%");
+                                assertThat(metric.awayValue()).contains("46%");
+                            }));
+        });
+        assertThat(currentJ5.incidents()).hasValueSatisfying(observation -> {
+            assertThat(observation.completeness().status())
+                    .isEqualTo(J5CompletenessStatus.COMPLETE);
+            assertThat(observation.data()).isInstanceOfSatisfying(
+                    EventIncidents.class,
+                    incidents -> assertThat(incidents.incidents()).singleElement()
+                            .satisfies(incident -> {
+                                assertThat(incident.incidentType()).isEqualTo("goal");
+                                assertThat(incident.minute()).contains(32);
+                                assertThat(incident.playerName())
+                                        .contains("Provider Scorer");
+                            }));
+        });
+        assertThat(currentJ5.lineups()).hasValueSatisfying(observation -> {
+            assertThat(observation.completeness().status())
+                    .isEqualTo(J5CompletenessStatus.COMPLETE);
+            assertThat(observation.data()).isInstanceOfSatisfying(
+                    EventLineups.class,
+                    lineups -> {
+                        assertThat(lineups.confirmed()).isTrue();
+                        assertThat(lineups.home().formation()).contains("4-3-3");
+                        assertThat(lineups.home().players()).singleElement()
+                                .satisfies(player -> assertThat(player.name())
+                                        .isEqualTo("Provider Home Keeper"));
+                        assertThat(lineups.away().formation()).contains("4-4-2");
+                        assertThat(lineups.away().players()).singleElement()
+                                .satisfies(player -> assertThat(player.name())
+                                        .isEqualTo("Provider Away Keeper"));
+                    });
+        });
+        var candidate = j7CanonicalExportService.createCandidate(
+                eventPersistence.canonicalEventId());
+        var reloaded = j7ExportManifestStore.findByExportId(candidate.exportId())
+                .orElseThrow();
+
+        List<Long> expectedSnapshotIds = List.of(
+                        detailsSnapshot.snapshotId(),
+                        statisticsSnapshot.snapshotId(),
+                        incidentsSnapshot.snapshotId(),
+                        lineupsSnapshot.snapshotId())
+                .stream()
+                .sorted()
+                .toList();
+        assertThat(candidate.sourceSnapshotIds()).containsExactlyElementsOf(expectedSnapshotIds);
+        assertThat(reloaded).isEqualTo(candidate);
+        assertThat(reloaded.sourceSnapshotIds()).containsExactlyElementsOf(expectedSnapshotIds);
+        assertThat(reloaded.warningsJson()).isEqualTo("[]");
+
+        JsonNode sources = JsonMapper.builder().build()
+                .readTree(reloaded.sourceObservationsJson());
+        assertThat(sources.valueStream()
+                .map(source -> source.get("component").stringValue())
+                .toList())
+                .containsExactly(
+                        "EVENT_STATE",
+                        "EVENT_DETAILS",
+                        "EVENT_STATISTICS",
+                        "EVENT_INCIDENTS",
+                        "EVENT_LINEUPS");
+        assertProviderSource(
+                sources.get(0),
+                "EVENT_STATE",
+                eventPersistence.observationId(),
+                detailsSnapshot.snapshotId(),
+                detailsSnapshot.payloadSha256(),
+                currentEvent.normalizedSha256(),
+                EventDetailsV2Parser.PARSER_VERSION,
+                detailsReceivedAt,
+                "PRESENT",
+                Optional.empty());
+        assertProviderSource(
+                sources.get(1),
+                "EVENT_DETAILS",
+                detailPersistence.observationId(),
+                detailsSnapshot.snapshotId(),
+                detailsSnapshot.payloadSha256(),
+                currentDetails.normalizedSha256(),
+                EventDetailsV2Parser.PARSER_VERSION,
+                detailsReceivedAt,
+                "PRESENT",
+                Optional.empty());
+        assertProviderSource(
+                sources.get(2),
+                "EVENT_STATISTICS",
+                statisticsPersistence.observationId(),
+                statisticsSnapshot.snapshotId(),
+                statisticsSnapshot.payloadSha256(),
+                currentJ5.statistics().orElseThrow().normalizedSha256(),
+                EventStatisticsV2Parser.PARSER_VERSION,
+                statisticsReceivedAt,
+                "PRESENT",
+                parsedStatistics.completeness());
+        assertProviderSource(
+                sources.get(3),
+                "EVENT_INCIDENTS",
+                incidentsPersistence.observationId(),
+                incidentsSnapshot.snapshotId(),
+                incidentsSnapshot.payloadSha256(),
+                currentJ5.incidents().orElseThrow().normalizedSha256(),
+                EventIncidentsV4Parser.PARSER_VERSION,
+                incidentsReceivedAt,
+                "PRESENT",
+                parsedIncidents.completeness());
+        assertProviderSource(
+                sources.get(4),
+                "EVENT_LINEUPS",
+                lineupsPersistence.observationId(),
+                lineupsSnapshot.snapshotId(),
+                lineupsSnapshot.payloadSha256(),
+                currentJ5.lineups().orElseThrow().normalizedSha256(),
+                EventLineupsV2Parser.PARSER_VERSION,
+                lineupsReceivedAt,
+                "PRESENT",
+                parsedLineups.completeness());
+
+        Map<Long, String> expectedSourceHashes = Map.of(
+                detailsSnapshot.snapshotId(), detailsSnapshot.payloadSha256(),
+                statisticsSnapshot.snapshotId(), statisticsSnapshot.payloadSha256(),
+                incidentsSnapshot.snapshotId(), incidentsSnapshot.payloadSha256(),
+                lineupsSnapshot.snapshotId(), lineupsSnapshot.payloadSha256());
+        assertThat(j6SnapshotHistoryStore.findTraces(Set.copyOf(expectedSnapshotIds)))
+                .hasSize(4)
+                .allSatisfy((snapshotId, trace) -> {
+                    assertThat(trace.payloadSha256())
+                            .isEqualTo(expectedSourceHashes.get(snapshotId));
+                    assertThat(trace.rawPayloadState().name()).isEqualTo("RETAINED");
+                    assertThat(trace.occurrenceCount()).isEqualTo(1);
+                });
+
+        String preview = j7CanonicalExportService.preview(
+                eventPersistence.canonicalEventId(),
+                candidate.exportId()).prettyJson();
+        JsonNode exported = JsonMapper.builder().build().readTree(preview);
+        JsonNode exportedData = exported.get("data");
+        assertThat(exportedData.get("statistics").get("availability").stringValue())
+                .isEqualTo("PRESENT");
+        assertThat(exportedData.get("statistics").get("completeness")
+                .get("status").stringValue()).isEqualTo("COMPLETE");
+        assertThat(exportedData.get("statistics").get("metrics").get(0)
+                .get("metricCode").stringValue()).isEqualTo("ballPossession");
+        assertThat(exportedData.get("statistics").get("metrics").get(0)
+                .get("homeValue").stringValue()).isEqualTo("54%");
+        assertThat(exportedData.get("incidents").get("availability").stringValue())
+                .isEqualTo("PRESENT");
+        assertThat(exportedData.get("incidents").get("completeness")
+                .get("status").stringValue()).isEqualTo("COMPLETE");
+        assertThat(exportedData.get("incidents").get("incidents").get(0)
+                .get("playerName").stringValue()).isEqualTo("Provider Scorer");
+        assertThat(exportedData.get("lineups").get("availability").stringValue())
+                .isEqualTo("PRESENT");
+        assertThat(exportedData.get("lineups").get("completeness")
+                .get("status").stringValue()).isEqualTo("COMPLETE");
+        assertThat(exportedData.get("lineups").get("lineups").get("home")
+                .get("players").get(0).get("name").stringValue())
+                .isEqualTo("Provider Home Keeper");
+        assertThat(exportedData.get("lineups").get("lineups").get("away")
+                .get("formation").stringValue()).isEqualTo("4-4-2");
+        assertThat(preview)
+                .contains("\"sourceKind\" : \"PROVIDER_SNAPSHOT\"")
+                .doesNotContain("PROVIDER_RAW_MUST_NOT_LEAK_J7", "payload_raw");
+
+        var rejected = j7CanonicalExportService.reject(
+                eventPersistence.canonicalEventId(),
+                candidate.exportId(),
+                "REJETER EXPORT J7 " + candidate.exportId(),
+                "Fin du test PostgreSQL fournisseur J7");
+        Files.deleteIfExists(Path.of("target/integration-test-exports")
+                .toAbsolutePath()
+                .normalize()
+                .resolve(rejected.relativePath()));
+    }
+
+    @Test
     void executesJ6BackupFingerprintQueriesAgainstTheMigratedSchema() throws Exception {
         String script = Files.readString(
                 Path.of("scripts", "Backup-Restore-J6.ps1"),
@@ -2153,7 +3614,7 @@ class FlywayMigrationIT {
 
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$flywaySql"),
-                String.class)).isEqualTo("22");
+                String.class)).isEqualTo("23");
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$snapshotFingerprintSql"),
                 String.class)).isNotNull();
@@ -2615,13 +4076,16 @@ class FlywayMigrationIT {
                 inserted.snapshotId(),
                 secondVersion.snapshotId())))
                 .hasEntrySatisfying(inserted.snapshotId(), trace -> {
+                    assertThat(trace.payloadSha256()).isEqualTo(inserted.payloadSha256());
                     assertThat(trace.occurrenceCount()).isEqualTo(2);
                     assertThat(trace.deduplicatedOccurrenceCount()).isEqualTo(1);
                     assertThat(trace.latestOutcome().name()).isEqualTo("DEDUPLICATED");
                     assertThat(trace.rawPayloadState().name()).isEqualTo("RETAINED");
                 })
-                .hasEntrySatisfying(secondVersion.snapshotId(), trace ->
-                        assertThat(trace.occurrenceCount()).isEqualTo(1));
+                .hasEntrySatisfying(secondVersion.snapshotId(), trace -> {
+                    assertThat(trace.payloadSha256()).isEqualTo(secondVersion.payloadSha256());
+                    assertThat(trace.occurrenceCount()).isEqualTo(1);
+                });
     }
 
     @Test
@@ -3018,20 +4482,53 @@ class FlywayMigrationIT {
         assertThat(first.lineupsCompleteness()).isEqualTo(J5CompletenessStatus.COMPLETE);
         assertThat(snapshotRowCount()).isEqualTo(snapshotsBefore);
         assertThat(jdbcTemplate.queryForObject(
-                "select count(*) from j5_event_data_observation",
-                Long.class)).isEqualTo(3L);
+                """
+                select count(*)
+                from j5_event_data_observation
+                where canonical_event_id = ?
+                """,
+                Long.class,
+                j4Import.canonicalEventId())).isEqualTo(3L);
         assertThat(jdbcTemplate.queryForObject(
-                "select count(*) from j5_event_metric",
-                Long.class)).isEqualTo(3L);
+                """
+                select count(*)
+                from j5_event_metric metric
+                join j5_event_data_observation observation
+                  on observation.id = metric.observation_id
+                where observation.canonical_event_id = ?
+                """,
+                Long.class,
+                j4Import.canonicalEventId())).isEqualTo(3L);
         assertThat(jdbcTemplate.queryForObject(
-                "select count(*) from j5_event_incident",
-                Long.class)).isEqualTo(3L);
+                """
+                select count(*)
+                from j5_event_incident incident
+                join j5_event_data_observation observation
+                  on observation.id = incident.observation_id
+                where observation.canonical_event_id = ?
+                """,
+                Long.class,
+                j4Import.canonicalEventId())).isEqualTo(3L);
         assertThat(jdbcTemplate.queryForObject(
-                "select count(*) from j5_event_lineup_side",
-                Long.class)).isEqualTo(2L);
+                """
+                select count(*)
+                from j5_event_lineup_side lineup_side
+                join j5_event_data_observation observation
+                  on observation.id = lineup_side.observation_id
+                where observation.canonical_event_id = ?
+                """,
+                Long.class,
+                j4Import.canonicalEventId())).isEqualTo(2L);
         assertThat(jdbcTemplate.queryForObject(
-                "select count(*) from j5_event_lineup_player",
-                Long.class)).isEqualTo(4L);
+                """
+                select count(*)
+                from j5_event_lineup_player player
+                join j5_event_data_observation observation
+                  on observation.id = player.observation_id
+                where observation.canonical_event_id = ?
+                """,
+                Long.class,
+                j4Import.canonicalEventId())).isEqualTo(4L);
 
         var nominalBundle = j5EventDataStore.findLatest(j4Import.canonicalEventId());
         assertThat(nominalBundle.statistics()).hasValueSatisfying(observation -> {
@@ -3118,20 +4615,53 @@ class FlywayMigrationIT {
                     });
         });
         assertThat(jdbcTemplate.queryForObject(
-                "select count(*) from j5_event_data_observation",
-                Long.class)).isEqualTo(6L);
+                """
+                select count(*)
+                from j5_event_data_observation
+                where canonical_event_id = ?
+                """,
+                Long.class,
+                j4Import.canonicalEventId())).isEqualTo(6L);
         assertThat(jdbcTemplate.queryForObject(
-                "select count(*) from j5_event_metric",
-                Long.class)).isEqualTo(5L);
+                """
+                select count(*)
+                from j5_event_metric metric
+                join j5_event_data_observation observation
+                  on observation.id = metric.observation_id
+                where observation.canonical_event_id = ?
+                """,
+                Long.class,
+                j4Import.canonicalEventId())).isEqualTo(5L);
         assertThat(jdbcTemplate.queryForObject(
-                "select count(*) from j5_event_incident",
-                Long.class)).isEqualTo(3L);
+                """
+                select count(*)
+                from j5_event_incident incident
+                join j5_event_data_observation observation
+                  on observation.id = incident.observation_id
+                where observation.canonical_event_id = ?
+                """,
+                Long.class,
+                j4Import.canonicalEventId())).isEqualTo(3L);
         assertThat(jdbcTemplate.queryForObject(
-                "select count(*) from j5_event_lineup_side",
-                Long.class)).isEqualTo(4L);
+                """
+                select count(*)
+                from j5_event_lineup_side lineup_side
+                join j5_event_data_observation observation
+                  on observation.id = lineup_side.observation_id
+                where observation.canonical_event_id = ?
+                """,
+                Long.class,
+                j4Import.canonicalEventId())).isEqualTo(4L);
         assertThat(jdbcTemplate.queryForObject(
-                "select count(*) from j5_event_lineup_player",
-                Long.class)).isEqualTo(5L);
+                """
+                select count(*)
+                from j5_event_lineup_player player
+                join j5_event_data_observation observation
+                  on observation.id = player.observation_id
+                where observation.canonical_event_id = ?
+                """,
+                Long.class,
+                j4Import.canonicalEventId())).isEqualTo(5L);
         assertThat(j5EventDataStore.findHistory(
                 j4Import.canonicalEventId(),
                 SofascoreEndpointType.EVENT_STATISTICS))
@@ -3929,9 +5459,11 @@ class FlywayMigrationIT {
                 .isEqualTo(Instant.parse("2026-08-12T12:00:00.275Z"));
         assertThat(snapshotInspectionStore.findById(snapshot.snapshotId())).isEmpty();
         assertThat(j6SnapshotHistoryStore.findTraces(Set.of(snapshot.snapshotId())))
-                .hasEntrySatisfying(snapshot.snapshotId(), trace ->
-                        assertThat(trace.rawPayloadState().name())
-                                .isEqualTo("PAYLOAD_PURGED"));
+                .hasEntrySatisfying(snapshot.snapshotId(), trace -> {
+                    assertThat(trace.payloadSha256()).isEqualTo(snapshot.payloadSha256());
+                    assertThat(trace.rawPayloadState().name())
+                            .isEqualTo("PAYLOAD_PURGED");
+                });
     }
 
     private static RawManualCallSnapshot snapshot(String requestKey, byte[] rawPayload) {
@@ -3968,6 +5500,415 @@ class FlywayMigrationIT {
                 "scheduled-events-v1",
                 schemaStatus,
                 errorCode);
+    }
+
+    private RawSnapshotPersistenceResult saveProviderSnapshot(
+            SofascoreEndpointType endpointType,
+            long providerEventId,
+            String parserVersion,
+            Instant receivedAt,
+            String rawJson) {
+        Instant requestedAt = receivedAt.minusMillis(100);
+        RawPayloadEvidence payload = RawPayloadEvidence.capture(
+                rawJson.getBytes(StandardCharsets.UTF_8));
+        return snapshotStore.save(new RawManualCallSnapshot(
+                endpointType,
+                endpointType.name() + "|eventId=" + providerEventId,
+                requestedAt,
+                receivedAt,
+                200,
+                "application/json; charset=utf-8",
+                Duration.ofMillis(100),
+                payload,
+                parserVersion,
+                RawSnapshotSchemaStatus.RAW_ONLY,
+                null));
+    }
+
+    private void assertSourceInsertWaitsForJ7Decision(
+            UUID canonicalEventId,
+            ConnectionInsert sourceInsert,
+            String observationTable) throws Exception {
+        assertWriteWaitsForJ7Decision(
+                canonicalEventId,
+                sourceInsert,
+                () -> assertThat(jdbcTemplate.queryForObject(
+                        "select count(*) from " + observationTable
+                                + " where canonical_event_id = ?",
+                        Long.class,
+                        canonicalEventId)).isZero(),
+                () -> assertThat(jdbcTemplate.queryForObject(
+                        "select count(*) from " + observationTable
+                                + " where canonical_event_id = ?",
+                        Long.class,
+                        canonicalEventId)).isEqualTo(1L));
+    }
+
+    private void assertProviderSnapshotMutationWaitsForJ7Decision(
+            UUID canonicalEventId,
+            long snapshotId) throws Exception {
+        assertWriteWaitsForJ7Decision(
+                canonicalEventId,
+                connection -> {
+                    try (PreparedStatement statement = connection.prepareStatement("""
+                            update provider_snapshot
+                            set schema_status = 'PARSED'
+                            where id = ?
+                            """)) {
+                        statement.setLong(1, snapshotId);
+                        return statement.executeUpdate();
+                    }
+                },
+                () -> assertThat(schemaStatus(snapshotId)).isEqualTo("RAW_ONLY"),
+                () -> assertThat(schemaStatus(snapshotId)).isEqualTo("PARSED"));
+    }
+
+    private void assertJ5ChildInsertWaitsForJ7Decision(
+            UUID canonicalEventId,
+            long observationId,
+            ConnectionInsert childInsert,
+            String childTable) throws Exception {
+        assertWriteWaitsForJ7Decision(
+                canonicalEventId,
+                childInsert,
+                () -> assertThat(jdbcTemplate.queryForObject(
+                        "select count(*) from " + childTable
+                                + " where observation_id = ?",
+                        Long.class,
+                        observationId)).isZero(),
+                () -> assertThat(jdbcTemplate.queryForObject(
+                        "select count(*) from " + childTable
+                                + " where observation_id = ?",
+                        Long.class,
+                        observationId)).isEqualTo(1L));
+    }
+
+    private void assertInvisibleJ5ParentRejectsChildInsert(UUID canonicalEventId)
+            throws Exception {
+        long parentObservationId;
+        try (Connection parentConnection = dataSource.getConnection();
+                Connection childConnection = dataSource.getConnection()) {
+            parentConnection.setAutoCommit(false);
+            childConnection.setAutoCommit(false);
+            try {
+                try (PreparedStatement parentInsert = parentConnection.prepareStatement("""
+                        insert into j5_event_data_observation (
+                            canonical_event_id,
+                            endpoint_type,
+                            source_kind,
+                            source_reference,
+                            source_snapshot_id,
+                            source_fixture_id,
+                            source_payload_sha256,
+                            parser_version,
+                            source_received_at,
+                            completeness_status,
+                            completeness_score,
+                            present_signals,
+                            expected_signals,
+                            missing_paths_json,
+                            lineups_confirmed,
+                            normalized_sha256
+                        ) values (
+                            ?, 'EVENT_STATISTICS', 'SYNTHETIC_FIXTURE',
+                            'j7-lock-j5-uncommitted-parent', null,
+                            'j7-lock-j5-uncommitted-parent', repeat('a', 64),
+                            'event-statistics-v1', '2026-08-19T12:00:05Z',
+                            'COMPLETE', 100, 2, 2, '[]'::jsonb, null,
+                            repeat('b', 64)
+                        )
+                        returning id
+                        """)) {
+                    parentInsert.setObject(1, canonicalEventId);
+                    try (var resultSet = parentInsert.executeQuery()) {
+                        assertThat(resultSet.next()).isTrue();
+                        parentObservationId = resultSet.getLong(1);
+                    }
+                }
+                assertThat(jdbcTemplate.queryForObject("""
+                        select count(*)
+                        from j5_event_data_observation
+                        where id = ?
+                        """, Long.class, parentObservationId)).isZero();
+
+                try (PreparedStatement timeout = childConnection.prepareStatement(
+                        "set local statement_timeout = '2s'")) {
+                    timeout.execute();
+                }
+                try (PreparedStatement childInsert = childConnection.prepareStatement("""
+                        insert into j5_event_metric (
+                            observation_id, metric_order, period, group_name,
+                            metric_code, metric_name, home_value, away_value
+                        ) values (
+                            ?, 7017, 'ALL', 'J7 invisible parent group',
+                            'j7InvisibleParent', 'J7 invisible parent', '1', '0'
+                        )
+                        """)) {
+                    childInsert.setLong(1, parentObservationId);
+                    assertThatThrownBy(childInsert::executeUpdate)
+                            .isInstanceOf(java.sql.SQLException.class)
+                            .hasStackTraceContaining(
+                                    "J5 child source parent observation must be visible");
+                }
+                childConnection.rollback();
+                assertThat(jdbcTemplate.queryForObject("""
+                        select count(*)
+                        from j5_event_metric
+                        where observation_id = ?
+                        """, Long.class, parentObservationId)).isZero();
+            }
+            finally {
+                childConnection.rollback();
+                parentConnection.rollback();
+            }
+        }
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from j5_event_data_observation
+                where source_fixture_id = 'j7-lock-j5-uncommitted-parent'
+                """, Long.class)).isZero();
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from j5_event_metric metric
+                join j5_event_data_observation observation
+                  on observation.id = metric.observation_id
+                where observation.source_fixture_id =
+                    'j7-lock-j5-uncommitted-parent'
+                """, Long.class)).isZero();
+    }
+
+    private void assertWriteWaitsForJ7Decision(
+            UUID canonicalEventId,
+            ConnectionInsert sourceWrite,
+            Runnable assertBeforeCommit,
+            Runnable assertAfterCommit) throws Exception {
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        try (Connection decisionConnection = dataSource.getConnection();
+                Connection writerConnection = dataSource.getConnection()) {
+            decisionConnection.setAutoCommit(false);
+            writerConnection.setAutoCommit(false);
+            try (PreparedStatement timeout = writerConnection.prepareStatement(
+                    "set local statement_timeout = '10s'")) {
+                timeout.execute();
+            }
+            int writerPid;
+            try (PreparedStatement pidStatement = writerConnection.prepareStatement(
+                    "select pg_backend_pid()")) {
+                try (var resultSet = pidStatement.executeQuery()) {
+                    assertThat(resultSet.next()).isTrue();
+                    writerPid = resultSet.getInt(1);
+                }
+            }
+            try (PreparedStatement lockStatement = decisionConnection.prepareStatement("""
+                    select pg_advisory_xact_lock(hashtextextended(id::text, 7007))
+                    from canonical_event
+                    where id = ?
+                    for update
+                    """)) {
+                lockStatement.setObject(1, canonicalEventId);
+                try (var resultSet = lockStatement.executeQuery()) {
+                    assertThat(resultSet.next()).isTrue();
+                }
+            }
+
+            CountDownLatch writeStarted = new CountDownLatch(1);
+            Future<Integer> writer = executor.submit(() -> {
+                writeStarted.countDown();
+                int rows = sourceWrite.execute(writerConnection);
+                writerConnection.commit();
+                return rows;
+            });
+            try {
+                assertThat(writeStarted.await(2, TimeUnit.SECONDS)).isTrue();
+                assertThat(awaitAdvisoryLockWait(writerPid, Duration.ofSeconds(5))).isTrue();
+                assertThat(writer.isDone()).isFalse();
+                assertBeforeCommit.run();
+
+                decisionConnection.commit();
+
+                assertThat(writer.get(5, TimeUnit.SECONDS)).isEqualTo(1);
+                assertAfterCommit.run();
+            }
+            finally {
+                if (!decisionConnection.getAutoCommit()) {
+                    decisionConnection.rollback();
+                }
+                if (!writer.isDone()) {
+                    writer.get(5, TimeUnit.SECONDS);
+                }
+            }
+        }
+        finally {
+            executor.shutdownNow();
+            assertThat(executor.awaitTermination(5, TimeUnit.SECONDS)).isTrue();
+        }
+    }
+
+    private boolean awaitAdvisoryLockWait(int writerPid, Duration maximumWait)
+            throws InterruptedException {
+        Instant deadline = Instant.now().plus(maximumWait);
+        while (Instant.now().isBefore(deadline)) {
+            Boolean waiting = jdbcTemplate.queryForObject("""
+                    select exists (
+                        select 1
+                        from pg_stat_activity
+                        where pid = ?
+                          and wait_event_type = 'Lock'
+                          and wait_event = 'advisory'
+                    )
+                    """, Boolean.class, writerPid);
+            if (Boolean.TRUE.equals(waiting)) {
+                return true;
+            }
+            Thread.sleep(20);
+        }
+        return false;
+    }
+
+    private static void assertProviderSource(
+            JsonNode source,
+            String component,
+            long observationId,
+            long snapshotId,
+            String sourceSha256,
+            String normalizedSha256,
+            String parserVersion,
+            Instant receivedAt,
+            String availability,
+            Optional<J5CompletenessReport> expectedCompleteness) {
+        assertThat(source.get("component").stringValue()).isEqualTo(component);
+        assertThat(source.get("availability").stringValue()).isEqualTo(availability);
+        assertThat(source.get("observationId").longValue()).isEqualTo(observationId);
+        assertThat(source.get("sourceKind").stringValue())
+                .isEqualTo("PROVIDER_SNAPSHOT");
+        assertThat(source.get("sourceReference").stringValue())
+                .isEqualTo("snapshot:" + snapshotId);
+        assertThat(source.get("snapshotId").longValue()).isEqualTo(snapshotId);
+        assertThat(source.get("fixtureId").isNull()).isTrue();
+        assertThat(source.get("sourceSha256").stringValue()).isEqualTo(sourceSha256);
+        assertThat(source.get("normalizedSha256").stringValue())
+                .isEqualTo(normalizedSha256);
+        assertThat(source.get("parserVersion").stringValue()).isEqualTo(parserVersion);
+        assertThat(Instant.parse(source.get("receivedAt").stringValue()))
+                .isEqualTo(receivedAt);
+        assertThat(source.get("rawPayloadState").stringValue()).isEqualTo("RETAINED");
+        if (expectedCompleteness.isPresent()) {
+            J5CompletenessReport expected = expectedCompleteness.orElseThrow();
+            JsonNode completeness = source.get("completeness");
+            assertThat(completeness.get("status").stringValue())
+                    .isEqualTo(expected.status().name());
+            assertThat(completeness.get("scorePercent").intValue())
+                    .isEqualTo(expected.scorePercent());
+            assertThat(completeness.get("presentSignals").intValue())
+                    .isEqualTo(expected.presentSignals());
+            assertThat(completeness.get("expectedSignals").intValue())
+                    .isEqualTo(expected.expectedSignals());
+            assertThat(completeness.get("missingPaths").valueStream()
+                    .map(JsonNode::stringValue)
+                    .toList()).containsExactlyElementsOf(expected.missingPaths());
+        }
+        else {
+            assertThat(source.get("completeness").isNull()).isTrue();
+        }
+    }
+
+    @FunctionalInterface
+    private interface ConnectionInsert {
+
+        int execute(Connection connection) throws Exception;
+    }
+
+    private static void insertJ7Candidate(
+            JdbcTemplate jdbcTemplate,
+            UUID canonicalEventId,
+            UUID exportId,
+            String dataSha256,
+            String sourceSetSha256,
+            String contentSha256) {
+        String relativePath =
+                "j7-" + canonicalEventId + "-" + exportId + ".candidate.json";
+        jdbcTemplate.update("""
+                insert into export_manifest (
+                    export_kind,
+                    export_uuid,
+                    canonical_event_id,
+                    schema_id,
+                    schema_version,
+                    generated_at,
+                    data_sha256,
+                    source_set_sha256,
+                    candidate_content_sha256,
+                    content_size_bytes,
+                    source_observations,
+                    export_path,
+                    content_sha256,
+                    validation_status,
+                    source_snapshot_ids,
+                    warnings
+                ) values (
+                    'J7_CANONICAL_EVENT',
+                    ?,
+                    ?,
+                    'urn:betting-project:sofascore-local-lab:j7:canonical-event-export:v1',
+                    '1.0.0',
+                    '2026-08-19T10:00:00Z',
+                    ?,
+                    ?,
+                    ?,
+                    1024,
+                    cast(? as jsonb),
+                    ?,
+                    ?,
+                    'COHERENCE_CHECKED',
+                    '{}'::bigint[],
+                    '[]'::jsonb
+                )
+                """,
+                exportId,
+                canonicalEventId,
+                dataSha256,
+                sourceSetSha256,
+                contentSha256,
+                """
+                        [
+                          {"component":"EVENT_STATE","snapshotId":null},
+                          {"component":"EVENT_DETAILS","snapshotId":null},
+                          {"component":"EVENT_STATISTICS","snapshotId":null},
+                          {"component":"EVENT_INCIDENTS","snapshotId":null},
+                          {"component":"EVENT_LINEUPS","snapshotId":null}
+                        ]
+                        """,
+                relativePath,
+                contentSha256);
+    }
+
+    private static void recordJ7DecisionIntent(
+            JdbcTemplate jdbcTemplate,
+            UUID exportId,
+            J7ExportStatus status,
+            Instant decidedAt,
+            String reason,
+            String relativePath,
+            String contentSha256,
+            long contentSizeBytes) {
+        assertThat(jdbcTemplate.update("""
+                update export_manifest
+                set decision_intent_status = ?,
+                    decision_intent_at = ?,
+                    decision_intent_reason = ?,
+                    decision_intent_path = ?,
+                    decision_intent_content_sha256 = ?,
+                    decision_intent_content_size_bytes = ?
+                where export_uuid = ?
+                  and validation_status = 'COHERENCE_CHECKED'
+                """,
+                status.name(),
+                java.sql.Timestamp.from(decidedAt),
+                reason,
+                relativePath,
+                contentSha256,
+                contentSizeBytes,
+                exportId)).isEqualTo(1);
     }
 
     private String schemaStatus(long snapshotId) {

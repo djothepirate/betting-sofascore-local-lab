@@ -11,12 +11,12 @@ import java.util.Objects;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
- * Serializes the real J4/J5 provider transports and applies one shared delay
- * between request starts. The lease deliberately covers the HTTP exchange so
- * two browser sessions cannot create concurrent provider calls.
+ * Serializes every explicitly confirmed J3, J4 and J5 provider transport and
+ * applies one shared delay between request starts. The lease covers the HTTP
+ * exchange so separate browser sessions cannot create concurrent provider calls.
  */
 @Component
-public final class J4J5ProviderRequestCoordinator {
+public final class ManualProviderRequestCoordinator {
 
     private final ReentrantLock requestLock = new ReentrantLock(true);
     private final Clock clock;
@@ -25,14 +25,14 @@ public final class J4J5ProviderRequestCoordinator {
     private Instant lastStartedAt;
 
     @Autowired
-    public J4J5ProviderRequestCoordinator(SofascoreProperties properties) {
+    public ManualProviderRequestCoordinator(SofascoreProperties properties) {
         this(
                 Clock.systemUTC(),
                 Objects.requireNonNull(properties, "properties").getMinimumDelay(),
-                J4J5ProviderRequestCoordinator::sleepSafely);
+                ManualProviderRequestCoordinator::sleepSafely);
     }
 
-    J4J5ProviderRequestCoordinator(Clock clock, Duration minimumDelay, Pause pause) {
+    ManualProviderRequestCoordinator(Clock clock, Duration minimumDelay, Pause pause) {
         this.clock = Objects.requireNonNull(clock, "clock");
         this.minimumDelay = requireAtLeastThreeSeconds(minimumDelay);
         this.pause = Objects.requireNonNull(pause, "pause");
@@ -103,15 +103,15 @@ public final class J4J5ProviderRequestCoordinator {
 
     public static final class Lease implements AutoCloseable {
 
-        private J4J5ProviderRequestCoordinator owner;
+        private ManualProviderRequestCoordinator owner;
 
-        private Lease(J4J5ProviderRequestCoordinator owner) {
+        private Lease(ManualProviderRequestCoordinator owner) {
             this.owner = owner;
         }
 
         @Override
         public void close() {
-            J4J5ProviderRequestCoordinator current = owner;
+            ManualProviderRequestCoordinator current = owner;
             if (current != null) {
                 owner = null;
                 current.release();

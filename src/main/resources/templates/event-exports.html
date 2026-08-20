@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Exports J7 — SofaScore Local Lab</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar compact-topbar">
+  <div class="shell">
+    <p class="eyebrow">J7 · Export canonique local</p>
+    <h1>Candidats et décisions humaines</h1>
+    <p class="subtitle">Création locale contrôlée, inspection explicite et téléchargement après validation seulement.</p>
+  </div>
+</header>
+
+<main class="shell event-page">
+  <nav class="links page-links" aria-label="Navigation locale">
+    <a th:href="@{/events/{id}(id=${canonicalEventId},zone='Europe/Paris')}"
+       href="/events/00000000-0000-0000-0000-000000000000">← Détail de la rencontre</a>
+    <a th:href="@{/}" href="/">Tableau de bord</a>
+  </nav>
+
+  <section class="status-banner status-safe">
+    <div>
+      <p class="label">Statut de gouvernance</p>
+      <p class="status-value">EXPERIMENTAL / LOCAL_ONLY / NOT_PRODUCTION_APPROVED / NO_CRITICAL_DEPENDENCY</p>
+    </div>
+    <span class="chip chip-safe">AUCUN TRANSPORT FOURNISSEUR</span>
+  </section>
+
+  <section class="panel event-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Identité canonique locale</p>
+        <h2>
+          <span th:text="${exportHistory.currentEvent.homeTeam.name}">Home</span>
+          <span> — </span>
+          <span th:text="${exportHistory.currentEvent.awayTeam.name}">Away</span>
+        </h2>
+      </div>
+      <span class="chip chip-safe" th:text="${exportHistory.currentEvent.status.type}">finished</span>
+    </div>
+    <dl class="detail-grid">
+      <div><dt>UUID local</dt><dd class="mono" th:text="${exportHistory.currentEvent.identity.value}">UUID</dd></div>
+      <div><dt>Identifiant fournisseur</dt><dd th:text="${exportHistory.currentEvent.identity.providerEventId}">900001</dd></div>
+      <div><dt>Observation d’état courante</dt><dd th:text="${exportHistory.currentEvent.observationId}">1</dd></div>
+      <div><dt>Horaire UTC</dt><dd class="mono" th:text="${exportHistory.currentEvent.startsAt}">instant</dd></div>
+    </dl>
+  </section>
+
+  <section class="panel j7-create-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Geste 1 · Contrôle automatique</p>
+        <h2>Créer un candidat à partir de l’état courant</h2>
+      </div>
+      <span class="chip chip-warning">LATEST_AVAILABLE</span>
+    </div>
+    <p>Le candidat reprend uniquement les dernières observations locales J4/J5. Cette action ne
+      collecte rien, ne contacte aucun service et ne transfère aucune donnée.</p>
+    <p class="notice notice-warning" th:if="${candidatePending}">
+      Un candidat attend déjà une validation ou un rejet. Ouvrez son aperçu avant toute nouvelle création.
+    </p>
+    <form method="post" class="control-form"
+          th:unless="${candidatePending}"
+          th:action="@{/events/{id}/exports/candidates(id=${canonicalEventId})}">
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <button class="button-primary" type="submit">Créer et contrôler le candidat J7</button>
+    </form>
+  </section>
+
+  <section class="panel j7-history-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Historique J7 local</p>
+        <h2>Exports de cette identité</h2>
+      </div>
+      <span class="chip chip-safe" th:text="${exportHistory.exports.size()} + ' EXPORT(S)'">0 EXPORT</span>
+    </div>
+
+    <p class="notice" th:if="${exportHistory.exports.isEmpty()}">
+      Aucun export J7 n’a encore été créé pour cet événement.
+    </p>
+
+    <div class="table-scroll" th:unless="${exportHistory.exports.isEmpty()}">
+      <table>
+        <thead>
+        <tr>
+          <th>Généré à</th>
+          <th>Export</th>
+          <th>Statut</th>
+          <th>Données</th>
+          <th>Fichier courant</th>
+          <th>Action</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="export : ${exportHistory.exports}">
+          <td class="mono" th:text="${export.generatedAt}">instant</td>
+          <td class="mono" th:text="${export.exportId}">UUID</td>
+          <td>
+            <span class="chip"
+                  th:classappend="${export.status.name() == 'HUMAN_VALIDATED'} ? 'chip-safe' : (${export.status.name() == 'REJECTED'} ? 'chip-danger' : 'chip-warning')"
+                  th:text="${export.status}">COHERENCE_CHECKED</span>
+          </td>
+          <td>
+            <span class="mono hash-value" th:text="${export.dataSha256}">hash</span>
+          </td>
+          <td>
+            <span th:text="${export.currentSizeBytes + ' octets'}">0 octet</span><br>
+            <span class="mono hash-value" th:text="${export.currentContentSha256}">hash</span>
+          </td>
+          <td>
+            <a class="table-link"
+               th:href="@{/events/{id}/exports/{exportId}(id=${canonicalEventId},exportId=${export.exportId})}">
+              Inspecter
+            </a>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="shell">SofaScore Local Lab — J7 export local sans intégration externe</div>
+</footer>
+</body>
+</html>

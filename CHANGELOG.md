@@ -4,6 +4,93 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### J7 — Export canonique local validé, PR #12 propre et fusionnable
+
+- contrat JSON Draft 2020-12 v1 fermé, identifié par
+  `urn:betting-project:sofascore-local-lab:j7:canonical-event-export:v1`, chargé depuis le
+  classpath sans résolution réseau et limité à une enveloppe déterministe `{manifest,data}` de
+  5 Mio ;
+- assemblage en lecture seule `REPEATABLE_READ` des cinq composants courants d'un événement,
+  avec provenance complète, états `PRESENT`/`UNAVAILABLE`/`MISSING`/`EMPTY_VALID`, complétude J5
+  et avertissements structurés sans lecture ni copie de `payload_raw`, puis verrou d'événement
+  partagé avec les écritures d'observation, leurs lignes métier J5 et les mutations autorisées de
+  snapshots pendant la validation de fraîcheur ;
+- trois preuves distinctes : `dataSha256` invariant à la décision, `sourceSetSha256` recalculé
+  avant validation et SHA-256 du fichier complet conservé hors enveloppe ;
+- identifiants numériques positifs bornés à `Long.MAX_VALUE`, UTF-8 strict et scanner renforcé sur
+  les octets, textes et clés JSON, bloquant payloads bruts, URL/URI, headers, cookies, credentials,
+  JWT, clés privées, sessions, `.env`, preuves de sauvegarde et phrases secrètes ;
+- cycle local `COHERENCE_CHECKED` vers une unique décision `HUMAN_VALIDATED` ou `REJECTED`, avec
+  jeton de formulaire à usage unique, confirmations exactes, motif de rejet borné et
+  téléchargement réservé au seul statut validé ;
+- migration append-only V23 étendant `export_manifest` tout en préservant ses lignes génériques,
+  avec unicités partielles, verrou de fraîcheur des sources jusque dans les quatre tables filles
+  J5, refus fermé d'un parent non visible, intention terminale write-ahead, transition
+  authentifiée, immutabilité et interdiction de suppression des lignes J7 ;
+- fichiers exclusivement sous `sofascore.export-directory`, noms générés par le serveur,
+  temporaire synchronisé puis publication atomique create-new par lien physique sur le même
+  système de fichiers et refus de traversée, lien symbolique, écrasement ou altération ;
+- pages HTML locales d'historique et d'aperçu, lien depuis la fiche événement, contenu échappé et
+  en-têtes `no-store`/`noindex`, sans endpoint JSON général, collecte, polling, planification,
+  retry réseau ou transfert vers le Betting Project ;
+- amendement opérateur permettant d'enchaîner, dans une même instance locale, les campagnes
+  manuelles J3, J4 phase 2 et J5 puis les parcours locaux J6/J7 : union exacte des cinq familles
+  déjà approuvées, opt-ins toujours désactivés par défaut, J4 phase 1 toujours exclusif, et
+  coordinateur commun sérialisant toute requête fournisseur J3/J4/J5 avec un délai minimal partagé
+  de trois secondes ; la configuration locale combinée réelle démarre sur `127.0.0.1:8087` sans
+  appel automatique ni nouvel endpoint fournisseur ;
+- qualification opérateur du mode combiné : une première séquence a terminé J3 sur six pages et
+  J4 phase 2 avant de s'arrêter sans retry sur un timeout J5 ; après redémarrage, la même instance a
+  terminé J4 phase 2 sur le snapshot 315, J5 sur les snapshots 316/317/318, puis J3 sur les six
+  pages 319 à 324, toujours sans activité automatique ;
+- résultat de reparsage J4 clarifié pour la forme J3 `SCHEDULED_TOURNAMENT_LIST` : le nombre de
+  compétitions est affiché séparément et l'écran précise que cet endpoint ne fournit aucune
+  rencontre programmée, n'invente aucun match et ne crée aucune observation J4 ; la forme
+  `EVENT_LIST` conserve ses compteurs de rencontres insérées ou dédupliquées ;
+- documentation d'architecture, runbook opérateur et rapport de readiness J7 ajoutés ; la suite
+  standard finale recense 457 tests, avec 0 échec, 0 erreur et 2 scénarios de création de liens symboliques
+  ignorés faute de permission Windows ; la suite PostgreSQL/Testcontainers passe 43 tests avec
+  0 échec, 0 erreur et 0 test ignoré, y compris l'upgrade V22→V23 avec corpus J4/J5/J6 préexistant,
+  l'export fournisseur complet et les verrous concurrents de toutes les écritures sources, y
+  compris les quatre tables filles J5 ; la revue technique passe,
+- première preuve opérateur partielle réussie sur l'événement fournisseur complet `16707704` :
+  candidat inspecté, décision `HUMAN_VALIDATED`, téléchargement de 34 739 octets sans erreur,
+  SHA-256 `2f60b37151e81625a96ab9426f5474f4600191d102c398a4be8cfd96c5a230a9` identique au terminal,
+  historique relu avec une ligne terminale identique, empreintes de données et de sources
+  cohérentes, cinq provenances fournisseur `COMPLETE`, aucun avertissement ni contenu sensible et
+  aucun artefact de recette versionné ;
+- preuve opérateur de rejet réussie sur l'événement fournisseur ciblé `16691018` : les trois
+  avertissements attendus (`EVENT_STATISTICS` indisponible, incidents et compositions partiels)
+  sont visibles, le terminal de 28 767 octets est seul conservé sous l'extension `.rejected.json`,
+  ses hashes de données et de sources se recalculent à l'identique, son scan sensible est vide et
+  la tentative locale de téléchargement renvoie `404` avec un corps vide ;
+- preuve opérateur bout en bout dans une seule instance, commencée avant minuit le 19 août et
+  terminée après minuit le 20 août en heure de Paris : J3 a persisté les six pages 325 à 330, J5 a
+  terminé les trois familles sur 331/332/333, J6 a comparé localement les incidents append-only,
+  J4 phase 2 a créé la version courante depuis 334, puis J7 a validé et téléchargé l'export
+  `696c1965-183e-43ba-ba47-4ee4d2ad5481` de l'événement `16421055` ; le fichier de 37 239 octets
+  porte le SHA-256 `37784bb4187fb80de06b765d8a9cb54b36f8035ed24eee82f9d6791c5a388880`,
+  cinq sources fournisseur complètes, aucun avertissement et aucun contenu sensible ; les dix
+  transports de cette séquence sont exclusivement les gestes humains J3/J5/J4, tandis que J6 et
+  J7 restent sans transport et que les trois campagnes réseau finissent verrouillées ;
+- recette humaine obligatoire fermée : `16691018` a été recréé, validé et téléchargé sous l'export
+  `af9735bc-ccfa-419e-bfea-fb6e500bc5bb` ; son fichier de 28 701 octets porte le SHA-256
+  `87ed3d0e17a3150bf3a7aee1834da35e40a8dbcafecb037032cdf893ec543063` et conserve les trois
+  avertissements attendus, sans constat sensible ni transport J7 ;
+- rejet puis validation synthétiques fermés sur l'événement `900001` : le terminal rejeté
+  `e6bd61ab-80e2-4a9d-854c-015ea37521a1` est conservé mais non téléchargeable, le terminal validé
+  `563dbeb8-8660-422b-b214-e3b1b306aa6d` est téléchargé à l'identique, et les deux décisions
+  conservent le même `dataSha256` et le même jeu de cinq sources `SYNTHETIC_FIXTURE` ; le fichier
+  validé de 8 707 octets porte le SHA-256
+  `fb637b4c87fc6a8cba230c6d4ad0928af3d52c1a793d379ae6ac9b9d1888b1f4`, avec cinq avertissements
+  `SYNTHETIC_SOURCE` et zéro constat sensible ;
+- la branche `codex/j7-canonical-export` est publiée avec les commits `46d633b` et `cd30fca` ; la
+  PR `#12` en brouillon est confirmée par GitHub `mergeable=true` et `mergeable_state=clean`, sans
+  contrôle distant en attente ; le Work Order passe donc à `VALIDATED` et rejoint `completed` ;
+  aucune fusion vers `main` n'est exécutée sans confirmation humaine explicite, et la phase
+  applicative demeure volontairement `J6-HISTORY-AND-GUARDED-RETENTION-VALIDATED` jusqu'à cette
+  fusion.
+
 ### J6 — Historique et rétention gardée
 
 - migration Flyway V21 ajoutant une occurrence append-only pour chaque tentative de persistance

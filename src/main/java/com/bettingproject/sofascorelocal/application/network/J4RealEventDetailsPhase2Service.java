@@ -38,7 +38,7 @@ public class J4RealEventDetailsPhase2Service {
     private final RawManualCallSnapshotStore rawSnapshotStore;
     private final J4ParsedEventDetailsPersistenceService parsedPersistenceService;
     private final EventDetailsV2Parser parser;
-    private final J4J5ProviderRequestCoordinator requestCoordinator;
+    private final ManualProviderRequestCoordinator requestCoordinator;
 
     @Autowired
     public J4RealEventDetailsPhase2Service(
@@ -46,7 +46,7 @@ public class J4RealEventDetailsPhase2Service {
             EventDetailsProviderTransport transport,
             RawManualCallSnapshotStore rawSnapshotStore,
             J4ParsedEventDetailsPersistenceService parsedPersistenceService,
-            J4J5ProviderRequestCoordinator requestCoordinator) {
+            ManualProviderRequestCoordinator requestCoordinator) {
         this(
                 controlService,
                 transport,
@@ -71,7 +71,7 @@ public class J4RealEventDetailsPhase2Service {
                 rawSnapshotStore,
                 parsedPersistenceService,
                 parser,
-                new J4J5ProviderRequestCoordinator(clock, minimumDelay, pause::pause));
+                new ManualProviderRequestCoordinator(clock, minimumDelay, pause::pause));
     }
 
     private J4RealEventDetailsPhase2Service(
@@ -80,7 +80,7 @@ public class J4RealEventDetailsPhase2Service {
             RawManualCallSnapshotStore rawSnapshotStore,
             J4ParsedEventDetailsPersistenceService parsedPersistenceService,
             EventDetailsV2Parser parser,
-            J4J5ProviderRequestCoordinator requestCoordinator) {
+            ManualProviderRequestCoordinator requestCoordinator) {
         this.controlService = Objects.requireNonNull(controlService, "controlService");
         this.transport = Objects.requireNonNull(transport, "transport");
         this.rawSnapshotStore = Objects.requireNonNull(rawSnapshotStore, "rawSnapshotStore");
@@ -106,7 +106,7 @@ public class J4RealEventDetailsPhase2Service {
             }
             response = transport.execute(request);
         }
-        catch (J4J5ProviderRequestCoordinator.CoordinationException exception) {
+        catch (ManualProviderRequestCoordinator.CoordinationException exception) {
             return failAndLock(claim, "MINIMUM_DELAY_INTERRUPTED", 0);
         }
         catch (EventDetailsTransportException exception) {

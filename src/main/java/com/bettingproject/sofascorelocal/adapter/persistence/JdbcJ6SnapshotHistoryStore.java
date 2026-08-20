@@ -25,8 +25,9 @@ public class JdbcJ6SnapshotHistoryStore implements J6SnapshotHistoryStore {
     private static final String FIND_TRACES_SQL = """
             select
                 snapshot.id as snapshot_id,
-                snapshot.payload_raw is not null as payload_retained,
+                snapshot.payload_sha256,
                 snapshot.payload_size_bytes,
+                snapshot.payload_purged_at is not null as payload_purged,
                 occurrence.id as occurrence_id,
                 occurrence.received_at,
                 occurrence.persistence_outcome
@@ -73,15 +74,16 @@ public class JdbcJ6SnapshotHistoryStore implements J6SnapshotHistoryStore {
                     .count());
             traces.put(entry.getKey(), new J6SnapshotTrace(
                     entry.getKey(),
+                    latest.payloadSha256(),
                     occurrences.size(),
                     duplicateCount,
                     latest.outcome(),
                     java.util.Optional.ofNullable(latest.receivedAt()),
-                    latest.payloadRetained()
-                            ? J6RawPayloadState.RETAINED
-                            : latest.payloadSizeBytes() == null
-                                    ? J6RawPayloadState.LEGACY_ABSENT
-                                    : J6RawPayloadState.PAYLOAD_PURGED));
+                    latest.payloadSizeBytes() == null
+                            ? J6RawPayloadState.LEGACY_ABSENT
+                            : latest.payloadPurged()
+                                    ? J6RawPayloadState.PAYLOAD_PURGED
+                                    : J6RawPayloadState.RETAINED));
         }
         return Map.copyOf(traces);
     }
@@ -91,8 +93,9 @@ public class JdbcJ6SnapshotHistoryStore implements J6SnapshotHistoryStore {
         OffsetDateTime receivedAt = resultSet.getObject("received_at", OffsetDateTime.class);
         return new StoredOccurrence(
                 resultSet.getLong("snapshot_id"),
-                resultSet.getBoolean("payload_retained"),
+                resultSet.getString("payload_sha256"),
                 resultSet.getObject("payload_size_bytes", Long.class),
+                resultSet.getBoolean("payload_purged"),
                 receivedAt == null ? null : receivedAt.toInstant(),
                 J6SnapshotOccurrenceOutcome.valueOf(
                         resultSet.getString("persistence_outcome")));
@@ -100,8 +103,9 @@ public class JdbcJ6SnapshotHistoryStore implements J6SnapshotHistoryStore {
 
     private record StoredOccurrence(
             long snapshotId,
-            boolean payloadRetained,
+            String payloadSha256,
             Long payloadSizeBytes,
+            boolean payloadPurged,
             java.time.Instant receivedAt,
             J6SnapshotOccurrenceOutcome outcome) {
     }

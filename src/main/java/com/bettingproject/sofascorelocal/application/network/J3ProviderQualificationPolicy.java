@@ -3,7 +3,6 @@ package com.bettingproject.sofascorelocal.application.network;
 import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.provider.J3ProviderQualificationSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
-import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
@@ -28,12 +27,21 @@ public class J3ProviderQualificationPolicy {
         if (!properties.isEnabled()) {
             blockers.add("CONNECTOR_DISABLED");
         }
-        if (!properties.getAllowedEndpoints().equals(
-                java.util.Set.of(SofascoreEndpointType.SCHEDULED_EVENTS))) {
-            blockers.add("SCHEDULED_EVENTS_NOT_EXCLUSIVELY_ALLOWED");
+        if (!properties.hasExactActiveQualificationEndpoints()) {
+            blockers.add("QUALIFICATION_ENDPOINTS_NOT_EXACTLY_ALLOWED");
+        }
+        if (properties.isJ4EventDetailsQualificationEnabled()
+                && !properties.isJ4EventDetailsPhase2Enabled()) {
+            blockers.add("J4_PHASE_1_CANNOT_SHARE_J3_SESSION");
         }
         if (!properties.isStoreRawPayloads()) {
             blockers.add("RAW_SNAPSHOT_STORAGE_DISABLED");
+        }
+        if (properties.getMaximumConcurrency() != 1) {
+            blockers.add("MAXIMUM_CONCURRENCY_NOT_ONE");
+        }
+        if (properties.isAutomaticRefreshEnabled() || properties.isLivePollingEnabled()) {
+            blockers.add("AUTOMATIC_NETWORK_ACTIVITY_ENABLED");
         }
 
         URI providerOrigin = null;

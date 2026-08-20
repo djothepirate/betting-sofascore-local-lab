@@ -21,6 +21,7 @@
     <java.version>25</java.version>
     <maven.minimum.version>3.9.0</maven.minimum.version>
     <testcontainers.version>2.0.5</testcontainers.version>
+    <json-schema-validator.version>3.0.6</json-schema-validator.version>
   </properties>
 
   <dependencies>
@@ -69,6 +70,17 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-actuator</artifactId>
+    </dependency>
+    <dependency>
+      <groupId>com.networknt</groupId>
+      <artifactId>json-schema-validator</artifactId>
+      <version>${json-schema-validator.version}</version>
+      <exclusions>
+        <exclusion>
+          <groupId>tools.jackson.dataformat</groupId>
+          <artifactId>jackson-dataformat-yaml</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
     <dependency>
       <groupId>org.springframework.boot</groupId>

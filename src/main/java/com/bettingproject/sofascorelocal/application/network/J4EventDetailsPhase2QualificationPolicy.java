@@ -30,9 +30,6 @@ public class J4EventDetailsPhase2QualificationPolicy {
         if (!properties.isEnabled()) {
             blockers.add("CONNECTOR_DISABLED");
         }
-        if (properties.isJ3QualificationEnabled()) {
-            blockers.add("J3_QUALIFICATION_MUST_BE_DISABLED");
-        }
         if (!properties.hasExactActiveQualificationEndpoints()) {
             blockers.add("QUALIFICATION_ENDPOINTS_NOT_EXACTLY_ALLOWED");
         }

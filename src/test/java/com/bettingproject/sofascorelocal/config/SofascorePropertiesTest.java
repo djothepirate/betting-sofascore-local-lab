@@ -174,7 +174,7 @@ class SofascorePropertiesTest {
     }
 
     @Test
-    void rejectsExpandedOrConcurrentJ4ProviderQualification() {
+    void rejectsExpandedJ4OrCombiningJ3WithJ4PhaseOne() {
         SofascoreProperties properties = new SofascoreProperties();
         properties.setEnabled(true);
         properties.setJ4EventDetailsQualificationEnabled(true);
@@ -185,10 +185,12 @@ class SofascorePropertiesTest {
         assertThat(validator.validate(properties))
                 .anyMatch(violation -> violation.getMessage().contains("J4 EVENT_DETAILS"));
 
-        properties.setAllowedEndpoints(java.util.Set.of(SofascoreEndpointType.EVENT_DETAILS));
         properties.setJ3QualificationEnabled(true);
+        properties.setAllowedEndpoints(java.util.Set.of(
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                SofascoreEndpointType.EVENT_DETAILS));
         assertThat(validator.validate(properties))
-                .anyMatch(violation -> violation.getMessage().contains("J3 remains exclusive"));
+                .anyMatch(violation -> violation.getMessage().contains("never J4 phase 1"));
     }
 
     @Test
@@ -249,6 +251,41 @@ class SofascorePropertiesTest {
                                     SofascoreEndpointType.EVENT_INCIDENTS,
                                     SofascoreEndpointType.EVENT_LINEUPS);
                     assertThat(properties.hasExactActiveQualificationEndpoints()).isTrue();
+                    assertThat(context.getBean(J4EventDetailsQualificationPolicy.class)
+                            .snapshot().available()).isFalse();
+                    assertThat(context.getBean(J4EventDetailsPhase2QualificationPolicy.class)
+                            .snapshot().available()).isTrue();
+                    assertThat(context.getBean(J5RealQualificationPolicy.class)
+                            .snapshot().available()).isTrue();
+                });
+    }
+
+    @Test
+    void bindsOneCombinedJ3J4PhaseTwoAndJ5QualificationSession() {
+        contextRunner
+                .withSystemProperties(
+                        "SOFASCORE_ENABLED=true",
+                        "SOFASCORE_J3_QUALIFICATION_ENABLED=true",
+                        "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true",
+                        "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=true",
+                        "SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=true",
+                        "SOFASCORE_BASE_URL=" + EventDetailsProviderRequest.EXPECTED_ORIGIN,
+                        "SOFASCORE_ALLOWED_ENDPOINTS="
+                                + "SCHEDULED_EVENTS,EVENT_DETAILS,EVENT_STATISTICS,"
+                                + "EVENT_INCIDENTS,EVENT_LINEUPS")
+                .run(context -> {
+                    assertThat(context.getStartupFailure()).isNull();
+                    SofascoreProperties properties = context.getBean(SofascoreProperties.class);
+                    assertThat(properties.activeQualificationEndpoints())
+                            .containsExactlyInAnyOrder(
+                                    SofascoreEndpointType.SCHEDULED_EVENTS,
+                                    SofascoreEndpointType.EVENT_DETAILS,
+                                    SofascoreEndpointType.EVENT_STATISTICS,
+                                    SofascoreEndpointType.EVENT_INCIDENTS,
+                                    SofascoreEndpointType.EVENT_LINEUPS);
+                    assertThat(properties.hasExactActiveQualificationEndpoints()).isTrue();
+                    assertThat(context.getBean(J3ProviderQualificationPolicy.class)
+                            .snapshot().available()).isTrue();
                     assertThat(context.getBean(J4EventDetailsQualificationPolicy.class)
                             .snapshot().available()).isFalse();
                     assertThat(context.getBean(J4EventDetailsPhase2QualificationPolicy.class)

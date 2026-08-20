@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Aperçu export J7 — SofaScore Local Lab</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar compact-topbar">
+  <div class="shell">
+    <p class="eyebrow">J7 · Aperçu contrôlé</p>
+    <h1>Inspection de l’export canonique</h1>
+    <p class="subtitle">Le fichier courant a été relu, rehaché et revalidé avant cet affichage.</p>
+  </div>
+</header>
+
+<main class="shell event-page">
+  <nav class="links page-links" aria-label="Navigation locale">
+    <a th:href="@{/events/{id}/exports(id=${canonicalEventId})}"
+       href="/events/00000000-0000-0000-0000-000000000000/exports">← Historique des exports</a>
+    <a th:href="@{/events/{id}(id=${canonicalEventId},zone='Europe/Paris')}"
+       href="/events/00000000-0000-0000-0000-000000000000">Détail de la rencontre</a>
+  </nav>
+
+  <section class="status-banner status-safe">
+    <div>
+      <p class="label">Statut de gouvernance</p>
+      <p class="status-value">EXPERIMENTAL / LOCAL_ONLY / NOT_PRODUCTION_APPROVED / NO_CRITICAL_DEPENDENCY</p>
+    </div>
+    <span class="chip"
+          th:classappend="${exportPreview.manifest.status.name() == 'HUMAN_VALIDATED'} ? 'chip-safe' : (${exportPreview.manifest.status.name() == 'REJECTED'} ? 'chip-danger' : 'chip-warning')"
+          th:text="${exportPreview.manifest.status}">COHERENCE_CHECKED</span>
+  </section>
+
+  <section class="panel j7-manifest-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Manifeste persisté</p>
+        <h2 th:text="${'Export ' + exportPreview.manifest.exportId}">Export UUID</h2>
+      </div>
+      <span class="chip chip-safe">SCHÉMA V1</span>
+    </div>
+    <dl class="detail-grid">
+      <div><dt>Schéma</dt><dd class="mono" th:text="${exportPreview.manifest.schemaId}">urn</dd></div>
+      <div><dt>Version</dt><dd class="mono" th:text="${exportPreview.manifest.schemaVersion}">1.0.0</dd></div>
+      <div><dt>Généré à</dt><dd class="mono" th:text="${exportPreview.manifest.generatedAt}">instant</dd></div>
+      <div><dt>Taille courante</dt><dd th:text="${exportPreview.manifest.currentSizeBytes + ' octets'}">0 octet</dd></div>
+      <div><dt>Chemin relatif</dt><dd class="mono" th:text="${exportPreview.manifest.relativePath}">fichier</dd></div>
+      <div><dt>Snapshots sources</dt><dd class="mono" th:text="${exportPreview.manifest.sourceSnapshotIds.isEmpty() ? '—' : #strings.listJoin(exportPreview.manifest.sourceSnapshotIds, ', ')}">—</dd></div>
+      <div><dt>SHA-256 des données</dt><dd class="mono hash-value" th:text="${exportPreview.manifest.dataSha256}">hash</dd></div>
+      <div><dt>SHA-256 du jeu de sources</dt><dd class="mono hash-value" th:text="${exportPreview.manifest.sourceSetSha256}">hash</dd></div>
+      <div><dt>SHA-256 du candidat initial</dt><dd class="mono hash-value" th:text="${exportPreview.manifest.candidateContentSha256}">hash</dd></div>
+      <div><dt>SHA-256 du fichier courant</dt><dd class="mono hash-value" th:text="${exportPreview.manifest.currentContentSha256}">hash</dd></div>
+      <div th:if="${exportPreview.manifest.decidedAt.isPresent()}"><dt>Décidé à</dt><dd class="mono" th:text="${exportPreview.manifest.decidedAt.orElse(null)}">instant</dd></div>
+      <div th:if="${exportPreview.manifest.decisionReason.isPresent()}"><dt>Motif de rejet</dt><dd th:text="${exportPreview.manifest.decisionReason.orElse('—')}">motif</dd></div>
+    </dl>
+  </section>
+
+  <section class="panel j7-evidence-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Preuves minimisées</p>
+        <h2>Sources et avertissements persistés</h2>
+      </div>
+    </div>
+    <h3>Observations sources</h3>
+    <pre class="j7-evidence-json" th:text="${exportPreview.manifest.sourceObservationsJson}">[]</pre>
+    <h3>Avertissements</h3>
+    <pre class="j7-evidence-json" th:text="${exportPreview.manifest.warningsJson}">[]</pre>
+  </section>
+
+  <section class="panel j7-decision-panel"
+           th:if="${exportPreview.manifest.status.name() == 'COHERENCE_CHECKED'}">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Geste 2 · Décision humaine</p>
+        <h2>Valider ou rejeter après inspection</h2>
+      </div>
+      <span class="chip chip-warning">DÉCISION IRRÉVERSIBLE</span>
+    </div>
+    <p>La validation sera refusée si une observation locale plus récente est devenue courante.</p>
+    <div class="j7-decision-grid">
+      <div class="control-stage">
+        <h3>Valider</h3>
+        <p>Recopiez exactement :</p>
+        <code class="confirmation-phrase" th:text="${exportPreview.validationConfirmation}">VALIDER EXPORT J7</code>
+        <form method="post" class="control-form"
+              th:action="@{/events/{id}/exports/{exportId}/validate(id=${canonicalEventId},exportId=${exportId})}">
+          <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+          <label for="j7-validation-confirmation">Confirmation exacte</label>
+          <input id="j7-validation-confirmation" type="text" name="confirmationText"
+                 maxlength="160" autocomplete="off" spellcheck="false" required>
+          <button class="button-primary" type="submit">Valider humainement l’export</button>
+        </form>
+      </div>
+
+      <div class="control-stage j7-reject-stage">
+        <h3>Rejeter</h3>
+        <p>Recopiez exactement :</p>
+        <code class="confirmation-phrase" th:text="${exportPreview.rejectionConfirmation}">REJETER EXPORT J7</code>
+        <form method="post" class="control-form"
+              th:action="@{/events/{id}/exports/{exportId}/reject(id=${canonicalEventId},exportId=${exportId})}">
+          <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+          <label for="j7-rejection-confirmation">Confirmation exacte</label>
+          <input id="j7-rejection-confirmation" type="text" name="confirmationText"
+                 maxlength="100" autocomplete="off" spellcheck="false" required>
+          <label for="j7-rejection-reason">Motif local, 1 à 500 caractères</label>
+          <textarea id="j7-rejection-reason" name="reason" rows="5" maxlength="500" required></textarea>
+          <button class="button-danger" type="submit">Rejeter et conserver le fichier marqué</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <section class="panel j7-terminal-panel"
+           th:if="${exportPreview.manifest.status.name() == 'HUMAN_VALIDATED'}">
+    <p class="label">Décision terminale</p>
+    <h2>Export validé humainement</h2>
+    <p>Le téléchargement relira le fichier, recalculera sa taille et son SHA-256, puis revalidera le schéma.</p>
+    <a class="evidence-download"
+       th:href="@{/events/{id}/exports/{exportId}/download(id=${canonicalEventId},exportId=${exportId})}">
+      Télécharger le JSON validé
+    </a>
+  </section>
+
+  <section class="panel j7-terminal-panel"
+           th:if="${exportPreview.manifest.status.name() == 'REJECTED'}">
+    <p class="label">Décision terminale</p>
+    <h2>Export rejeté et conservé localement</h2>
+    <p>Ce fichier marqué <span class="mono">REJECTED</span> ne peut pas être téléchargé.</p>
+  </section>
+
+  <section class="panel snapshot-json-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Aperçu HTML échappé</p>
+        <h2>Enveloppe JSON contrôlée</h2>
+      </div>
+      <span class="chip chip-safe">UTF-8 / LF</span>
+    </div>
+    <pre class="snapshot-json j7-export-json" th:text="${exportPreview.prettyJson}">{}</pre>
+  </section>
+</main>
+
+<footer>
+  <div class="shell">SofaScore Local Lab — J7 validation locale uniquement</div>
+</footer>
+</body>
+</html>

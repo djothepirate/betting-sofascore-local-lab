@@ -46,7 +46,8 @@ EXECUTING
 ```
 
 Une nouvelle campagne exige toujours une nouvelle préparation et une nouvelle phrase. Les opt-ins
-J3 et J4 sont mutuellement exclusifs par validation de configuration.
+J3 et J4 phase 1 sont mutuellement exclusifs par validation de configuration. La coexistence
+ultérieure autorisée concerne uniquement J4 phase 2 et conserve donc cet invariant de phase 1.
 
 ### 2.1 Prérequis d’upgrade V5 → V6
 

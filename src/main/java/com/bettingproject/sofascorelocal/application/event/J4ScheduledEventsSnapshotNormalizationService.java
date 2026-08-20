@@ -82,6 +82,7 @@ public class J4ScheduledEventsSnapshotNormalizationService {
                     0,
                     0,
                     0,
+                    0,
                     List.of());
         }
 
@@ -111,6 +112,7 @@ public class J4ScheduledEventsSnapshotNormalizationService {
                 parseResult.status(),
                 page.payloadShape().name(),
                 page.events().size(),
+                page.scheduledTournaments().size(),
                 inserted,
                 deduplicated,
                 canonicalIds);

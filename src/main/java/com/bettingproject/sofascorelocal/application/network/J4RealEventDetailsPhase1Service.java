@@ -42,7 +42,7 @@ public class J4RealEventDetailsPhase1Service {
     private final EventDetailsV2Parser parser;
     private final Clock clock;
     private final Duration cacheTtl;
-    private final J4J5ProviderRequestCoordinator requestCoordinator;
+    private final ManualProviderRequestCoordinator requestCoordinator;
 
     @Autowired
     public J4RealEventDetailsPhase1Service(
@@ -52,7 +52,7 @@ public class J4RealEventDetailsPhase1Service {
             J4EventDetailsCache cache,
             J4ParsedEventDetailsPersistenceService parsedPersistenceService,
             SofascoreEndpointCatalog endpointCatalog,
-            J4J5ProviderRequestCoordinator requestCoordinator) {
+            ManualProviderRequestCoordinator requestCoordinator) {
         this(
                 controlService,
                 transport,
@@ -85,7 +85,7 @@ public class J4RealEventDetailsPhase1Service {
                 parser,
                 clock,
                 cacheTtl,
-                new J4J5ProviderRequestCoordinator(clock, minimumDelay, pause::pause));
+                new ManualProviderRequestCoordinator(clock, minimumDelay, pause::pause));
     }
 
     private J4RealEventDetailsPhase1Service(
@@ -97,7 +97,7 @@ public class J4RealEventDetailsPhase1Service {
             EventDetailsV2Parser parser,
             Clock clock,
             Duration cacheTtl,
-            J4J5ProviderRequestCoordinator requestCoordinator) {
+            ManualProviderRequestCoordinator requestCoordinator) {
         this.controlService = Objects.requireNonNull(controlService, "controlService");
         this.transport = Objects.requireNonNull(transport, "transport");
         this.rawSnapshotStore = Objects.requireNonNull(rawSnapshotStore, "rawSnapshotStore");
@@ -154,7 +154,7 @@ public class J4RealEventDetailsPhase1Service {
                     counters.providerCallAttempts++;
                     response = transport.execute(request);
                 }
-                catch (J4J5ProviderRequestCoordinator.CoordinationException exception) {
+                catch (ManualProviderRequestCoordinator.CoordinationException exception) {
                     return failAndLock(
                             claim.requestId(),
                             "MINIMUM_DELAY_INTERRUPTED",

@@ -73,6 +73,29 @@ class J5RealQualificationPolicyTest {
     }
 
     @Test
+    void acceptsJ5InsideTheExactCombinedJ3J4PhaseTwoAndJ5Session() {
+        SofascoreProperties properties = new SofascoreProperties();
+        properties.setEnabled(true);
+        properties.setJ3QualificationEnabled(true);
+        properties.setJ4EventDetailsQualificationEnabled(true);
+        properties.setJ4EventDetailsPhase2Enabled(true);
+        properties.setJ5EventDataQualificationEnabled(true);
+        properties.setBaseUrl(EventDetailsProviderRequest.EXPECTED_ORIGIN);
+        properties.setAllowedEndpoints(Set.of(
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                SofascoreEndpointType.EVENT_DETAILS,
+                SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_LINEUPS));
+
+        var snapshot = new J5RealQualificationPolicy(properties).snapshot();
+
+        assertThat(snapshot.available()).isTrue();
+        assertThat(properties.isJ5EventDataQualificationConfigurationSafe()).isTrue();
+        assertThat(properties.isCombinedJ3J4SelectionSafe()).isTrue();
+    }
+
+    @Test
     void blocksJ4PhaseOneFromSharingTheJ5Session() {
         SofascoreProperties properties = new SofascoreProperties();
         properties.setEnabled(true);

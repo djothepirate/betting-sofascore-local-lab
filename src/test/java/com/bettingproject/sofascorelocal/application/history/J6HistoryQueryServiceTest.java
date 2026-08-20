@@ -370,6 +370,7 @@ class J6HistoryQueryServiceTest {
             J6SnapshotOccurrenceOutcome latest) {
         return new J6SnapshotTrace(
                 snapshotId,
+                hash('a'),
                 occurrences,
                 duplicates,
                 latest,

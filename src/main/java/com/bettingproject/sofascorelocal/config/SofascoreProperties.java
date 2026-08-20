@@ -193,7 +193,7 @@ public class SofascoreProperties {
         return exportDirectory != null;
     }
 
-    @AssertTrue(message = "J3 qualification requires explicit connector, raw storage and only SCHEDULED_EVENTS")
+    @AssertTrue(message = "J3 qualification requires explicit connector, raw storage and the exact active qualification endpoints")
     public boolean isJ3QualificationConfigurationSafe() {
         return !j3QualificationEnabled
                 || (enabled
@@ -201,14 +201,13 @@ public class SofascoreProperties {
                 && storeRawPayloads
                 && !automaticRefreshEnabled
                 && !livePollingEnabled
-                && allowedEndpoints.equals(Set.of(SofascoreEndpointType.SCHEDULED_EVENTS)));
+                && hasExactActiveQualificationEndpoints());
     }
 
     @AssertTrue(message = "J4 EVENT_DETAILS qualification requires explicit connector, raw storage and the exact active qualification endpoints")
     public boolean isJ4EventDetailsQualificationConfigurationSafe() {
         return !j4EventDetailsQualificationEnabled
                 || (enabled
-                && !j3QualificationEnabled
                 && (!j5EventDataQualificationEnabled || j4EventDetailsPhase2Enabled)
                 && maximumConcurrency == 1
                 && storeRawPayloads
@@ -221,7 +220,6 @@ public class SofascoreProperties {
     public boolean isJ5EventDataQualificationConfigurationSafe() {
         return !j5EventDataQualificationEnabled
                 || (enabled
-                && !j3QualificationEnabled
                 && (!j4EventDetailsQualificationEnabled || j4EventDetailsPhase2Enabled)
                 && maximumConcurrency == 1
                 && storeRawPayloads
@@ -230,11 +228,11 @@ public class SofascoreProperties {
                 && hasExactActiveQualificationEndpoints());
     }
 
-    @AssertTrue(message = "J3 remains exclusive; only J4 phase 2 and J5 may share a provider qualification session")
-    public boolean isOnlyOneProviderQualificationPathEnabled() {
+    @AssertTrue(message = "J3 may share a provider qualification session with J4 phase 2, never J4 phase 1")
+    public boolean isCombinedJ3J4SelectionSafe() {
         return !j3QualificationEnabled
-                || (!j4EventDetailsQualificationEnabled
-                && !j5EventDataQualificationEnabled);
+                || !j4EventDetailsQualificationEnabled
+                || j4EventDetailsPhase2Enabled;
     }
 
     @AssertTrue(message = "a combined J4/J5 session requires J4 phase 2")

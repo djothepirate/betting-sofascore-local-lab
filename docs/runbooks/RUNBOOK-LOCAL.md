@@ -2,10 +2,10 @@
 
 ## 1. Objectif
 
-Démarrer, vérifier, exploiter et arrêter les jalons J0 à J5 sur Windows sans exposer de service
-hors de la machine locale. J5 conserve son parcours synthétique entièrement hors ligne et ajoute
-une qualification réelle exceptionnelle, désactivée par défaut et exécutable uniquement par le
-protocole humain gardé de la section 3.10 ter.
+Démarrer, vérifier, exploiter et arrêter les jalons J0 à J7 sur Windows sans exposer de service
+hors de la machine locale. J5 conserve sa qualification réelle exceptionnelle désactivée par
+défaut ; J6 consulte l'historique et garde sa rétention hors interface ; J7 assemble uniquement les
+données locales courantes et exige une décision humaine avant téléchargement.
 
 ## 2. Première installation
 
@@ -100,7 +100,7 @@ Vérifier :
 - connecteur `DISABLED` ;
 - base URL `NON_CONFIGURED` ;
 - PostgreSQL `AVAILABLE` ;
-- migration Flyway `9` ;
+- migration Flyway `23` ;
 - snapshots `0` sur une base neuve ;
 - corpus hors ligne `AVAILABLE_OFFLINE` ;
 - fixtures `12 / 12 disponibles` ;
@@ -370,8 +370,11 @@ l’application démarrés :
 Un snapshot J3 local peut être normalisé manuellement en recopiant son identifiant numérique dans
 **« Normaliser une ligne locale »**. Le service relit uniquement un snapshot `SCHEDULED_EVENTS`,
 recalcule son SHA-256 et applique le parseur courant. Une forme `scheduled` sans liste `events`
-n’invente aucun événement ; une incompatibilité ne produit aucune écriture partielle et ne modifie
-jamais le statut historique du snapshot.
+n’invente aucun événement : le résultat affiche le nombre de compétitions trouvé pour la date et
+précise que cet endpoint ne fournit aucune rencontre programmée, donc qu'aucune observation J4
+n'est créée. Une forme `events` continue d'afficher séparément les rencontres parsées, insérées ou
+dédupliquées. Une incompatibilité ne produit aucune écriture partielle et ne modifie jamais le
+statut historique du snapshot.
 
 L’absence de détail s’affiche comme un état local explicite. Elle ne déclenche aucun repli réseau.
 Ne pas réutiliser le transport J3 pour compléter l’écran. La seule voie réelle autorisée est la
@@ -519,9 +522,11 @@ SOFASCORE_BASE_URL=https://www.sofascore.com
 SOFASCORE_ALLOWED_ENDPOINTS=EVENT_DETAILS,EVENT_STATISTICS,EVENT_INCIDENTS,EVENT_LINEUPS
 ```
 
-Cette combinaison est limitée à J4 sous-étape 2. J3 et J4 sous-étape 1 restent incompatibles avec
-elle. Une famille absente ou supplémentaire bloque le démarrage. Ne pas modifier les autres valeurs
-de `.env`, ne pas les copier dans une preuve et ne jamais ajouter ce fichier à Git.
+Ce profil à quatre endpoints est limité à J4 sous-étape 2 + J5 et laisse volontairement J3
+désactivé. Pour ajouter J3 à la même instance, utiliser exclusivement le profil à cinq endpoints de
+la section 3.10 quinquies. J4 sous-étape 1 reste incompatible avec tout mode combiné. Une famille
+absente ou supplémentaire bloque le démarrage. Ne pas modifier les autres valeurs de `.env`, ne pas
+les copier dans une preuve et ne jamais ajouter ce fichier à Git.
 
 Effectuer un seul build, puis démarrer PostgreSQL et une seule instance de l'application sur
 `127.0.0.1` :
@@ -556,6 +561,72 @@ COMBINED_SESSION_J5_PREPARATION_AFTER_J4=AVAILABLE
 COMBINED_SESSION_J5_TERMINAL=COMPLETED_LOCKED|FAILED_LOCKED|STOPPED_LOCKED
 COMBINED_SESSION_RESTART_BETWEEN_J4_AND_J5=NO
 COMBINED_SESSION_RETRY=0
+LOCAL_CONFIGURATION_RELOCKED=YES|NO
+APPLICATION_STOPPED=YES|NO
+```
+
+### 3.10 quinquies Enchaîner J3, J4 phase 2, J5, J6 et J7 dans une même instance
+
+Ce mode répond au besoin de mener plusieurs campagnes manuelles puis leurs inspections locales
+sans reconstruire ni redémarrer entre les jalons. Il n'automatise aucun geste : J3, J4 phase 2 et
+J5 conservent chacun leur préparation, leur phrase exacte, leur acquittement, leur limite d'appels
+et leur verrou terminal. J6 et J7 ne réalisent aucun transport fournisseur.
+
+Application arrêtée, armer temporairement uniquement l'union exacte suivante :
+
+```properties
+SOFASCORE_ENABLED=true
+SOFASCORE_J3_QUALIFICATION_ENABLED=true
+SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true
+SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=true
+SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=true
+SOFASCORE_BASE_URL=https://www.sofascore.com
+SOFASCORE_ALLOWED_ENDPOINTS=SCHEDULED_EVENTS,EVENT_DETAILS,EVENT_STATISTICS,EVENT_INCIDENTS,EVENT_LINEUPS
+```
+
+J4 phase 1 est interdit dans cette combinaison. Une famille absente, supplémentaire ou non liée à
+un opt-in bloque le démarrage. Tous les opt-ins restent `false` par défaut dans l'application. Ne
+jamais recopier le reste de `.env`, et ne jamais ajouter ce fichier à Git.
+
+Après un seul build et un seul démarrage sur `127.0.0.1:8087` :
+
+1. exécuter la campagne J3 depuis le tableau de bord, avec sa préparation et sa confirmation
+   exactes ; attendre son état terminal `COMPLETED`, `FAILED` ou `STOPPED` et son verrou J3 avant de
+   poursuivre ;
+2. ouvrir la recherche événement et exécuter une campagne J4 phase 2 explicitement préparée sur
+   l'identifiant choisi ; attendre son état terminal verrouillé ;
+3. depuis l'identité canonique correspondante, exécuter J5 après une nouvelle préparation et une
+   nouvelle confirmation ; attendre la fin des trois familles ou le premier état terminal d'échec ;
+4. consulter ensuite J6 et réaliser les gestes J7 nécessaires. Ces deux parcours lisent ou écrivent
+   uniquement les données locales déjà persistées et ne consomment aucune autorisation réseau ;
+5. ne pas soumettre deux confirmations fournisseur en parallèle. En défense supplémentaire,
+   `ManualProviderRequestCoordinator` maintient une seule section HTTP active et au moins trois
+   secondes entre tous les départs J3/J4/J5, y compris entre deux jalons ;
+6. ne jamais réessayer automatiquement après un incident. Appliquer l'arrêt du jalon concerné,
+   conserver uniquement les preuves minimisées et décider humainement de la suite ;
+7. à la fin de la session complète, remettre les sept valeurs réseau à leur configuration bloquée,
+   redémarrer une fois pour contrôler l'indisponibilité des préparations fournisseur, puis arrêter
+   gracieusement l'application.
+
+Le verrou terminal de J3 ne verrouille pas J4/J5 ; le verrou terminal J4 ne verrouille pas J5 ; et
+aucun verrou fournisseur ne bloque les consultations J6/J7. Inversement, une consultation ou une
+décision J7 n'arme jamais un transport J3/J4/J5.
+
+Preuve minimale à conserver, sans JSON brut, URI, phrase de confirmation ni valeur `.env` :
+
+```text
+FULL_COMBINED_SESSION_APPLICATION_STARTS=1
+FULL_COMBINED_SESSION_J3_TERMINAL=COMPLETED_LOCKED|FAILED_LOCKED|STOPPED_LOCKED
+FULL_COMBINED_SESSION_J3_PROVIDER_CALLS=<compteur explicite>
+FULL_COMBINED_SESSION_J4_PHASE2_TERMINAL=COMPLETED_LOCKED|FAILED_LOCKED|STOPPED_LOCKED
+FULL_COMBINED_SESSION_J4_PROVIDER_CALLS=<0..1>
+FULL_COMBINED_SESSION_J5_TERMINAL=COMPLETED_LOCKED|FAILED_LOCKED|STOPPED_LOCKED
+FULL_COMBINED_SESSION_J5_PROVIDER_CALLS=<0..3>
+FULL_COMBINED_SESSION_J6_LOCAL_INSPECTION=PASS|NOT_RUN
+FULL_COMBINED_SESSION_J7_LOCAL_DECISION=HUMAN_VALIDATED|REJECTED|NOT_RUN
+FULL_COMBINED_SESSION_RESTART_BETWEEN_JALONS=NO
+FULL_COMBINED_SESSION_CONCURRENT_PROVIDER_CALLS=0
+FULL_COMBINED_SESSION_AUTOMATIC_PROVIDER_CALLS=0
 LOCAL_CONFIGURATION_RELOCKED=YES|NO
 APPLICATION_STOPPED=YES|NO
 ```
@@ -773,7 +844,7 @@ Aucun Docker ni accès SofaScore n’est requis par les tests standards.
 .\mvnw.cmd -Pintegration-tests verify
 ```
 
-Docker doit être disponible. Testcontainers vérifie les migrations V1 à V22, l’état initial du
+Docker doit être disponible. Testcontainers vérifie les migrations V1 à V23, l’état initial du
 connecteur, la conservation exacte du brut, sa déduplication, les provenances J4/J5, les occurrences
 J6 et la rétention auditée dans une base éphémère.
 
@@ -904,6 +975,35 @@ qualification interactive de sauvegarde/restauration suivent exclusivement
 L'aperçu de rétention est sans mutation. Le mode `Execute` reste interdit tant que le propriétaire
 n'a pas donné une autorisation distincte après revue d'une sauvegarde restaurée et de l'aperçu
 final. Il n'est pas nécessaire pour qualifier l'interface historique.
+
+### 4.8 quinquies Readiness et recette J7
+
+J7 ne requiert aucun opt-in ou appel fournisseur. Exécuter les deux suites avec J3/J4/J5
+verrouillés :
+
+```powershell
+.\mvnw.cmd clean verify
+.\mvnw.cmd -Pintegration-tests verify
+```
+
+Consigner les résultats dans
+`docs/validation/J7-TECHNICAL-READINESS-20260819.md`, puis suivre exclusivement
+`docs/runbooks/J7-CANONICAL-EVENT-EXPORT.md`. La recette crée et rejette un premier candidat
+synthétique, recrée et valide un second candidat, puis inspecte l'événement fournisseur local déjà
+persisté `16691018`. Elle ne doit jamais activer une voie fournisseur pour obtenir ou rafraîchir
+cet événement.
+
+Un candidat `COHERENCE_CHECKED` n'est pas utilisable en dehors de l'aperçu. Seul
+`HUMAN_VALIDATED` est téléchargeable après contrôle du hash. Le Work Order J7 reste actif tant que
+les suites, le rejet/validation synthétiques, la validation locale de `16691018`, l'absence de
+brut/secrets/sessions, les verrous J3/J4/J5 et zéro appel SofaScore ne sont pas tous prouvés.
+
+La validation de fraîcheur tient un verrou PostgreSQL par événement partagé avec toutes les
+écritures d'observation. Une décision persiste ensuite une intention write-ahead complète avant le
+fichier terminal ; en cas d'erreur, répéter exactement la même décision afin que statut, heure,
+motif, chemin, hash et taille authentifient la reprise. Le stockage synchronise un temporaire dans
+la racine puis le publie, sans remplacement, par lien physique atomique sur le même système de
+fichiers ; ne jamais renommer ni remplacer manuellement un fichier J7.
 
 ### 4.9 Qualification réelle J4 sous-étape 1
 

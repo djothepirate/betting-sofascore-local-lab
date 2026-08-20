@@ -1,4 +1,4 @@
-# Architecture J0 à J6 — SofaScore Local Lab
+# Architecture J0 à J7 — SofaScore Local Lab
 
 ## 1. Positionnement
 
@@ -14,7 +14,9 @@ Aucun appel SofaScore VPS          J3/J4/J5 manuels, opt-in et bornés
 Fonctionne poste éteint             Disponible seulement poste allumé
 ```
 
-La relation future autorisée est un export JSON normalisé et versionné. Aucun import n’est inclus au J1.
+J7 matérialise la relation autorisée sous la forme d'un fichier JSON normalisé, versionné et
+validé humainement. Aucun import, transfert automatique ou composant du Betting Project principal
+n'est ajouté.
 
 ## 2. Topologie locale
 
@@ -40,6 +42,7 @@ La relation future autorisée est un export JSON normalisé et versionné. Aucun
 │  ├─ Persistance J5 normalisée append-only                 │
 │  ├─ Historique et différences sémantiques J6              │
 │  ├─ Rétention J6 manuelle, auditée et hors interface      │
+│  ├─ Export canonique J7 local + décision humaine          │
 │  ├─ Catalogue logique fermé par défaut                    │
 │  ├─ Flyway / JDBC / JPA                                   │
 │  └─ Actuator                                              │
@@ -64,11 +67,13 @@ VPS       : aucune connexion
 | `domain.provider` | types logiques, catalogue et requêtes fournisseur J3/J4 fermées par valeur |
 | `domain.event` / `domain.eventdetails` / `domain.eventdata` | identité canonique, détail J4, familles J5 et complétude immuables |
 | `domain.history` / `domain.retention` | versions, changements, traces de snapshots et plans de rétention J6 |
-| `application` | politiques réseau, orchestration manuelle, normalisation, historique, diff et rétention gardée |
+| `domain.export` | statut, manifeste, décision, composant et preuves de fichier J7 |
+| `application` | politiques réseau, orchestration manuelle, normalisation, historique, diff, rétention et export J7 |
 | `adapter.sofascore` | catalogue fermé, transports spéciaux bornés et parseurs hors ligne J2/J4/J5 |
-| `adapter.persistence` | preuves brutes, occurrences, observations normalisées, historique et audit de rétention |
-| `adapter.web` | tableau de bord, recherche, contrôles et vues J4/J5/J6 en lecture locale |
-| `resources/db/migration` | schémas V1 à V22, migrations append-only et triggers d’immuabilité |
+| `adapter.persistence` | preuves brutes, occurrences, observations normalisées, historique, rétention et manifestes J7 |
+| `adapter.file` | publication J7 create-new par lien physique atomique, bornée à la racine locale |
+| `adapter.web` | tableau de bord, recherche, contrôles et vues J4/J5/J6/J7 locales |
+| `resources/db/migration` | schémas V1 à V23, migrations append-only et triggers d’immuabilité |
 | `fixtures` | corpus synthétiques hors ligne J2, J4, J5 et J6 |
 
 Le connecteur général demeure bloqué. Un `RestClient` distinct est construit uniquement pour le
@@ -76,18 +81,26 @@ chemin manuel J3 borné ; il ne reçoit qu’une requête de domaine validée et
 l’origine `https://www.sofascore.com`, une date ISO explicite et les pages `1` à `25`.
 
 J4 ajoute un second `RestClient` spécial qui ne reçoit que `EventDetailsProviderRequest`. Ce type
-refuse toute origine autre que `https://www.sofascore.com` et tout identifiant différent de
-`16386245` ou `16421052` avant la construction de l’URI. Les opt-ins J3 et J4 sont mutuellement
-exclusifs. Ni l’un ni l’autre ne déverrouille `ConnectorGate` ou le catalogue général.
+refuse toute origine autre que `https://www.sofascore.com` et tout identifiant hors de la portée
+bornée par son mode avant la construction de l’URI. J4 phase 1 reste exclusif ; J4 phase 2 peut
+partager une instance explicitement armée avec J3 et J5. Aucun de ces opt-ins ne déverrouille
+`ConnectorGate` ou le catalogue général.
 
 J5 possède une voie fournisseur distincte, désactivée par défaut et bornée aux trois familles d'une
 identité canonique déjà présente. Elle reste manuelle, séquentielle, sans retry et peut être réunie
-uniquement avec J4 phase 2 dans une session explicitement armée. Maven intercepte ses transports et
-n'effectue aucun appel réel.
+avec J3 et J4 phase 2 dans une session explicitement armée. L'ensemble autorisé doit être exactement
+l'union des endpoints correspondant aux opt-ins. `ManualProviderRequestCoordinator`, injecté dans
+les services réels J3/J4/J5, garantit une seule section HTTP active et un délai minimal commun entre
+deux départs, même depuis plusieurs onglets. Maven intercepte ces transports et n'effectue aucun
+appel réel.
 
 J6 n'ajoute aucun `RestClient`. Il lit les observations existantes et son import de démonstration
 utilise seulement des fixtures synthétiques. La rétention est une commande non Web ponctuelle qui
 force toutes les voies réseau à l'arrêt et exige le verrou persistant `LOCKED`.
+
+J7 n'ajoute lui non plus aucun `RestClient`. Il sélectionne seulement les observations courantes
+déjà persistées, sans lire le brut, et écrit un fichier local après validation du contrat, des
+hashes et du contenu sensible. Une décision humaine J7 n'ouvre aucun verrou J3/J4/J5.
 
 ## 4. Défense en profondeur J3
 
@@ -131,7 +144,18 @@ sauvegarde restaurée ; la ligne, sa taille, son SHA-256 et sa provenance resten
 
 ### 5.2 `export_manifest`
 
-Prépare J7 : version de schéma, chemin local, hash du contenu, validation, snapshots sources et avertissements.
+La structure générique V1 conserve version de schéma, chemin local, hash courant, statut,
+snapshots sources et avertissements. V23 l'étend, uniquement pour les lignes distinguées par
+`J7_CANONICAL_EVENT`, avec UUID d'export et d'événement, identifiant stable du schéma, génération,
+`dataSha256`, `sourceSetSha256`, hash candidat initial, taille courante, cinq sources structurées,
+décision et intention terminale write-ahead (statut, heure, motif, chemin, hash et taille).
+
+Les anciennes lignes génériques gardent leurs colonnes J7 à `NULL`. Pour J7, les contraintes et le
+trigger imposent un candidat initial, un seul candidat par événement/schéma/version, l'unicité des
+données déjà validées, une transition terminale identique à son intention write-ahead,
+l'immuabilité des preuves et l'interdiction de suppression. Les triggers d'observation partagent
+en outre un verrou consultatif par événement avec la relecture de fraîcheur J7, empêchant une
+nouvelle version de s'intercaler avant la décision.
 
 ### 5.3 `connector_control`
 
@@ -192,6 +216,28 @@ la sauvegarde qualifiée. Les deux tables sont append-only. Un trigger V22 inter
 de snapshot et toute mise à jour autre qu'une classification initiale ou une purge auditée dans la
 même transaction.
 
+### 5.8 Fichiers et enveloppe J7
+
+Le schéma classpath Draft 2020-12
+`urn:betting-project:sofascore-local-lab:j7:canonical-event-export:v1` ferme l'enveloppe à
+`manifest` et `data`. Le manifeste contient cinq sources dans l'ordre état, détail, statistiques,
+incidents et compositions. Le modèle distingue `PRESENT`, `UNAVAILABLE`, `MISSING` et
+`EMPTY_VALID`; les observations partielles restent accompagnées de leur complétude. Les
+identifiants numériques positifs sont bornés à `Long.MAX_VALUE`. Le garde impose UTF-8 strict et
+combine scanner des octets/textes et refus récursif des clés JSON sensibles.
+
+`dataSha256` couvre uniquement `data`; `sourceSetSha256` couvre les cinq emplacements, absences
+comprises ; le SHA-256 du fichier entier reste en base pour éviter toute autoréférence. Les
+fichiers sont UTF-8/LF, bornés à 5 Mio et écrits sous `sofascore.export-directory` avec un nom
+serveur. Le temporaire est synchronisé, puis son inode est publié sans remplacement par création
+atomique d'un lien physique sur le même système de fichiers ; le nom temporaire est ensuite retiré.
+`ATOMIC_MOVE` n'est pas utilisé. Chemin utilisateur, sortie de racine, lien symbolique, écrasement
+et fichier non régulier sont refusés.
+
+Avant de publier un fichier terminal, l'orchestrateur persiste une intention write-ahead contenant
+le statut, l'heure, le motif éventuel, le chemin, le SHA-256 et la taille attendus. Une reprise doit
+reproduire exactement cette preuve et la transition PostgreSQL terminale doit lui être identique.
+
 ## 6. Catalogue logique
 
 | Type | Cache initial | Déclenchement prévu | Appelable actuellement |
@@ -240,14 +286,20 @@ commence obligatoirement à 1, continue uniquement sur `hasNextPage=true` et s�
 - occurrences J6, chronologie des cinq flux, diff sémantique, appariement prudent des incidents,
   score, classifications tardives, corpus idempotent et absence de payload dans le rendu ;
 - aperçu, hash et confirmation de rétention, refus des preuves invalides et commande non Web.
+- enveloppes J7 candidates et terminales, schéma et formats, déterminisme, mapping des cinq flux,
+  complétude, avertissements, contenus sensibles, dérive des sources et invariance des données ;
+- fichiers J7 publiés atomiquement en create-new et bornés, chemins/liens/altérations refusés,
+  intentions/reprises terminales authentifiées, jetons et confirmations, aperçu échappé, en-têtes
+  sans cache et téléchargement validé seul.
 
 ### Intégration
 
 `mvnw -Pintegration-tests verify` démarre PostgreSQL avec Testcontainers et vérifie les migrations
-V1 à V22, les upgrades historiques, la fidélité binaire, les contraintes, la déduplication et
+V1 à V23, les upgrades historiques, la fidélité binaire, les contraintes, la déduplication et
 l'immuabilité. J6 ajoute les occurrences prospectives, les exclusions de rétention, la purge des
 seuls octets dans une base éphémère, l'audit et la conservation de la provenance. Aucun appel
-SofaScore n'est exécuté.
+SofaScore n'est exécuté. J7 ajoute l'upgrade V22→V23 prérempli, ses contraintes de cycle et la
+relecture exacte du manifeste et de ses preuves.
 
 ### Réel
 
@@ -255,7 +307,9 @@ Le profil `sofascore-live-test` reste bloqué avec `alwaysFail`. Les voies J3, J
 qualifiées humainement dans leurs périmètres bornés, puis reverrouillées. Elles restent désactivées
 par défaut et aucune suite Maven ne réalise un geste fournisseur. J6 ne nécessite aucun nouveau
 geste réel : ses deux validations humaines portent uniquement sur l'interface locale et la
-sauvegarde/restauration chiffrée.
+sauvegarde/restauration chiffrée. J7 ne nécessite aucune nouvelle collecte : sa recette utilise le
+corpus synthétique et l'événement fournisseur `16691018` déjà persisté. Cette recette reste
+obligatoire avant de déclarer J7 validé.
 
 ## 8. Décisions différées
 
@@ -263,7 +317,7 @@ sauvegarde/restauration chiffrée.
 - parseurs fournisseur J5 issus d'une observation réelle réussie ;
 - persistance du circuit et des incidents ;
 - ajout d’autres endpoints, sports ou origines au-delà du chemin J3 qualifié ;
-- export canonique ;
+- export de l'historique complet, lots par date ou multi-événements ;
 - push HTTPS vers le Betting Project ;
 - tout polling ou rafraîchissement automatique ; les rappels `EVENT_DETAILS` autorisés restent
   manuels, unitaires et nouvellement confirmés.
@@ -288,3 +342,7 @@ rafraîchissements manuels confirmés sont détaillés dans
 
 Les trois contrats synthétiques J5, les signaux de complétude, la migration V7 et l'interface locale
 sont détaillés dans `docs/architecture/J5-OFFLINE-EVENT-DATA-AND-COMPLETENESS.md`.
+L'historique et la rétention gardée sont détaillés dans
+`docs/architecture/J6-HISTORY-AND-GUARDED-RETENTION.md`. Le contrat, les empreintes, le cycle de
+décision et le stockage J7 sont détaillés dans
+`docs/architecture/J7-CANONICAL-EVENT-EXPORT.md`.

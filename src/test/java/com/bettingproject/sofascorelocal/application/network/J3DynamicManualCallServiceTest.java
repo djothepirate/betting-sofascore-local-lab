@@ -6,6 +6,7 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.transport.ScheduledEv
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3CachedScheduledEventsPage;
+import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallExecutionResult;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ProviderQualificationSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot;
@@ -35,6 +36,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -46,6 +51,58 @@ class J3DynamicManualCallServiceTest {
     private static final UUID REQUEST_ID = UUID.fromString(
             "3ccfd0a0-7825-4bfa-977b-358be086b1e2");
     private static final URI ORIGIN = URI.create("https://www.sofascore.com");
+
+    @Test
+    void waitsForTheSharedManualProviderCoordinatorBeforeStartingJ3Transport()
+            throws Exception {
+        MutableClock clock = new MutableClock(NOW);
+        RecordingStore store = new RecordingStore();
+        J3ManualCallControlService control = readyControl(clock);
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
+        CountDownLatch transportEntered = new CountDownLatch(1);
+        byte[] body = Files.readAllBytes(Path.of("fixtures/scheduled-events/nominal.json"));
+        ScheduledEventsProviderPageTransport transport = request -> {
+            transportEntered.countDown();
+            Instant requestedAt = clock.instant();
+            clock.advance(Duration.ofMillis(25));
+            return response(request, requestedAt, clock.instant(), 200, body);
+        };
+        var coordinator = new ManualProviderRequestCoordinator(
+                clock, Duration.ofSeconds(3), ignored -> { });
+        var service = new J3DynamicManualCallService(
+                control,
+                transport,
+                new J3ScheduledEventsOutcomeProcessor(
+                        store,
+                        new ScheduledEventsV1Parser(),
+                        control.circuit()),
+                new RecordingCache(),
+                new ScheduledEventsV1Parser(),
+                new J3SingleCallGuard(),
+                evidenceService,
+                clock,
+                Duration.ofMinutes(10),
+                Duration.ofSeconds(3),
+                ignored -> { },
+                coordinator);
+        var executor = Executors.newSingleThreadExecutor();
+
+        try {
+            Future<J3ManualCallExecutionResult> future;
+            try (var heldByAnotherCampaign = coordinator.acquire()) {
+                future = executor.submit(() -> service.execute(REQUEST_ID));
+                assertThat(transportEntered.await(100, TimeUnit.MILLISECONDS)).isFalse();
+            }
+
+            assertThat(transportEntered.await(1, TimeUnit.SECONDS)).isTrue();
+            assertThat(future.get(1, TimeUnit.SECONDS).completed()).isTrue();
+        }
+        finally {
+            executor.shutdownNow();
+            assertThat(executor.awaitTermination(1, TimeUnit.SECONDS)).isTrue();
+        }
+    }
 
     @Test
     void followsHasNextPageUntilFalseWithThreeSecondsBetweenStarts() throws Exception {
