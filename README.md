@@ -4,7 +4,7 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**, **J3 — Appel manuel**, **J4 — Événements**, **J5 — Statistiques** et **J6 — Historique**. Le jalon **J7 — Export canonique** est techniquement et humainement qualifié ; il reste non validé tant que la branche et sa PR ne sont pas revues `CLEAN/MERGEABLE`. L'implémentation J4, son parcours hors ligne et ses deux sous-étapes réelles bornées sont qualifiés humainement. La sous-étape 1 a validé `16386245` et `16421052` après correction du retour par date. La sous-étape 2 a validé la saisie d'identifiants, le rappel manuel avec une nouvelle confirmation, la déduplication d'une réponse inchangée et la création d'une observation append-only lorsque `16412917` est passé de `notstarted` à `inprogress`. Après l'arrêt global, la configuration a été remise à l'état bloqué, ce verrouillage a été vérifié après redémarrage et l'application a été arrêtée gracieusement. La Pull Request `#8` a été fusionnée et le Work Order J4 est archivé `VALIDATED`. Les voies fournisseur restent désactivées par défaut ; une configuration locale explicitement armée peut réunir J3, J4 phase 2 et J5 dans une même instance, avec une seule requête fournisseur active et un délai minimal partagé. Une recette réelle a depuis achevé, dans un même démarrage, J4 phase 2, les trois familles J5 puis une collecte J3 paginée sur six pages. La forme J3 `scheduled` compte des compétitions disponibles pour la date et ne fournit pas de rencontres programmées ; le reparsage J4 l'indique désormais sans présenter son total nul de matchs comme une anomalie. Aucun appel fournisseur n’est exécuté par Maven, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**, **J3 — Appel manuel**, **J4 — Événements**, **J5 — Statistiques**, **J6 — Historique** et **J7 — Export canonique**. J7 a franchi les portes techniques, la recette humaine et la revue de publication : la PR `#12` est `CLEAN/MERGEABLE`, mais reste en brouillon et n'est pas fusionnée sans confirmation explicite. L'implémentation J4, son parcours hors ligne et ses deux sous-étapes réelles bornées sont qualifiés humainement. La sous-étape 1 a validé `16386245` et `16421052` après correction du retour par date. La sous-étape 2 a validé la saisie d'identifiants, le rappel manuel avec une nouvelle confirmation, la déduplication d'une réponse inchangée et la création d'une observation append-only lorsque `16412917` est passé de `notstarted` à `inprogress`. Après l'arrêt global, la configuration a été remise à l'état bloqué, ce verrouillage a été vérifié après redémarrage et l'application a été arrêtée gracieusement. La Pull Request `#8` a été fusionnée et le Work Order J4 est archivé `VALIDATED`. Les voies fournisseur restent désactivées par défaut ; une configuration locale explicitement armée peut réunir J3, J4 phase 2 et J5 dans une même instance, avec une seule requête fournisseur active et un délai minimal partagé. Une recette réelle a depuis achevé, dans un même démarrage, J4 phase 2, les trois familles J5 puis une collecte J3 paginée sur six pages. La forme J3 `scheduled` compte des compétitions disponibles pour la date et ne fournit pas de rencontres programmées ; le reparsage J4 l'indique désormais sans présenter son total nul de matchs comme une anomalie. Aucun appel fournisseur n’est exécuté par Maven, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
 Le jalon **J5 — Statistiques** est validé techniquement et humainement sur sa frontière hors ligne :
 statistiques, incidents et compositions synthétiques, contrôles explicites de complétude,
@@ -133,9 +133,9 @@ seul événement dans une enveloppe JSON v1 autonome. Le parcours crée d'abord 
 `COHERENCE_CHECKED`, puis exige une validation ou un rejet humain explicite après aperçu. Seul
 `HUMAN_VALIDATED` est téléchargeable. Les cinq provenances, la complétude, les avertissements et
 les hashes restent auditables ; aucun payload brut, secret, session, transport vers le Betting
-Project ou appel SofaScore n'est inclus. L'implémentation est
-`HUMAN_QUALIFIED_AWAITING_PR_REVIEW` après passage des portes techniques et de la recette du
-runbook J7 ; la validation du jalon reste suspendue à la revue de publication.
+Project ou appel SofaScore n'est inclus. L'implémentation est `VALIDATED` après passage des portes
+techniques, de la recette du runbook J7 et de la revue de publication. La PR `#12` est confirmée
+`CLEAN/MERGEABLE` ; sa fusion vers `main` reste une décision humaine séparée.
 
 ## Ce qui est livré localement
 
@@ -623,7 +623,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Qualification opératoire J6 de la sauvegarde/restauration](docs/validation/J6-BACKUP-RESTORE-QUALIFICATION-20260819.md)
 - [Work Order J6 validé](docs/work_orders/completed/WO-SS-20260818-007-history-j6.md)
 - [Readiness technique J7 — acquise](docs/validation/J7-TECHNICAL-READINESS-20260819.md)
-- [Work Order J7 actif](docs/work_orders/active/WO-SS-20260819-008-canonical-export-j7.md)
+- [Work Order J7 validé](docs/work_orders/completed/WO-SS-20260819-008-canonical-export-j7.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 
@@ -902,7 +902,7 @@ Le Work Order J6 est clos. La purge de la base primaire demeure hors périmètre
 autorisée ; toute suppression future d'octets exige une autorisation et un Work Order distincts,
 puis la reprise exacte d'un nouvel aperçu de rétention.
 
-## J7 : export canonique techniquement et humainement qualifié, publication en attente
+## J7 : export canonique validé, PR #12 propre et fusionnable
 
 J7 sélectionne sous transaction locale en lecture seule les dernières observations des cinq
 composants `EVENT_STATE`, `EVENT_DETAILS`, `EVENT_STATISTICS`, `EVENT_INCIDENTS` et
@@ -926,7 +926,7 @@ n'est repris qu'après reconstruction courante et égalité octet par octet. Seu
 est téléchargeable après nouvelle vérification de son schéma, sa taille et son SHA-256.
 
 ```text
-J7_IMPLEMENTATION_STATUS=HUMAN_QUALIFIED_AWAITING_PR_REVIEW
+J7_IMPLEMENTATION_STATUS=VALIDATED
 J7_SCHEMA_VERSION=1.0.0
 J7_FLYWAY_VERSION=23
 J7_CURRENT_ONLY=YES
@@ -950,7 +950,10 @@ J7_PROVIDER_16691018_VALIDATION=PASS_HUMAN_VALIDATED_DOWNLOADED_SHA256_VERIFIED
 J7_SYNTHETIC_REJECTION=PASS_REJECTED_RETAINED_NOT_DOWNLOADABLE
 J7_SYNTHETIC_VALIDATION=PASS_HUMAN_VALIDATED_DOWNLOADED_SHA256_VERIFIED
 J7_HUMAN_QUALIFICATION=PASS
-J7_WORK_ORDER_STATUS=READY_FOR_PR_REVIEW
+J7_WORK_ORDER_STATUS=VALIDATED
+J7_PR_NUMBER=12
+J7_PR_STATE=DRAFT_CLEAN_MERGEABLE
+J7_MAIN_MERGE=AWAITING_EXPLICIT_CONFIRMATION
 ```
 
 Un premier export fournisseur complet `16707704` a été validé humainement et téléchargé sans
@@ -984,5 +987,6 @@ téléchargé. Les deux terminaux conservent le même `dataSha256`
 le fichier validé de 8 707 octets porte le SHA-256
 `fb637b4c87fc6a8cba230c6d4ad0928af3d52c1a793d379ae6ac9b9d1888b1f4`. Les cinq provenances et
 avertissements synthétiques sont explicites, et les scans sensibles sont vides. Les deux suites
-Maven, la revue technique et la recette humaine sont acquises ; le Work Order reste dans `active`
-uniquement jusqu'à une PR `CLEAN/MERGEABLE`.
+Maven, la revue technique et la recette humaine sont acquises. La PR `#12` pointe sur la branche
+publiée, GitHub la déclare `mergeable=true` avec `mergeable_state=clean`, et le Work Order est
+archivé `VALIDATED`. La PR reste en brouillon et aucune fusion vers `main` n'a été effectuée.

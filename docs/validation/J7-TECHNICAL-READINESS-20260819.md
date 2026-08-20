@@ -3,21 +3,20 @@
 ## 1. Statut
 
 ```text
-J7_TECHNICAL_IMPLEMENTATION=HUMAN_QUALIFIED_AWAITING_PR_REVIEW
+J7_TECHNICAL_IMPLEMENTATION=VALIDATED
 J7_STANDARD_SUITE=PASS
 J7_INTEGRATION_SUITE=PASS
 J7_DIFF_REVIEW=PASS
 J7_HUMAN_QUALIFICATION=PASS
-J7_WORK_ORDER_STATUS=READY_FOR_PR_REVIEW
+J7_WORK_ORDER_STATUS=VALIDATED
 J7_APPLICATION_PHASE=J6-HISTORY-AND-GUARDED-RETENTION-VALIDATED
 ```
 
 Ce rapport consigne les portes techniques et la recette humaine du Work Order
-`WO-SS-20260819-008`. Il ne constitue aucune autorisation de transfert. Le seul résultat encore
-`PENDING` est la publication de la branche avec une PR revue `CLEAN/MERGEABLE`.
-La phase exposée par l'application reste volontairement celle de J6, dernier jalon humainement
-validé ; elle ne doit passer à J7 qu'après la recette, la clôture du Work Order et la publication
-revue.
+`WO-SS-20260819-008`. Il ne constitue aucune autorisation de transfert. La branche a été publiée
+et la PR `#12` est confirmée `mergeable=true` avec `mergeable_state=clean`. La phase exposée par
+l'application reste volontairement celle de J6 tant que cette PR en brouillon n'est pas fusionnée ;
+le passage de `main` à J7 demeure une décision humaine séparée.
 
 ## 2. Base et frontière
 
@@ -297,8 +296,8 @@ J7_AUTOMATIC_PROVIDER_CALLS=0
 J7_HUMAN_QUALIFICATION=PASS
 ```
 
-La recette humaine est fermée. Le Work Order demeure dans `active` uniquement jusqu'à la branche
-poussée, la PR revue et son état `CLEAN/MERGEABLE`.
+La recette humaine est fermée. La branche est poussée et la PR `#12` est revue
+`CLEAN/MERGEABLE` ; le Work Order peut donc être archivé `VALIDATED`.
 
 ## 7. Première preuve humaine partielle — fournisseur complet `16707704`
 
@@ -482,11 +481,17 @@ J7_SYNTHETIC_ARTIFACTS_VERSIONED=NO
 Les gestes obligatoires du runbook sont tous acquis : rejet et validation synthétiques, validation
 du cas fournisseur ciblé avec ses avertissements, vérification des téléchargements, invariance des
 données, absence de contenu sensible, parcours combiné J3/J4/J5/J6/J7 et absence de transport J7.
-La qualification humaine passe à `PASS`. La branche et la PR restent la seule porte ouverte avant
-le passage du Work Order à `VALIDATED`.
+La qualification humaine passe à `PASS`. La branche est publiée et GitHub confirme la PR `#12`
+propre et fusionnable ; le Work Order passe à `VALIDATED`. La fusion vers `main` reste explicitement
+hors de cette décision et n'est pas exécutée automatiquement.
 
 ```text
 J7_HUMAN_QUALIFICATION=PASS
-J7_WORK_ORDER_STATUS=READY_FOR_PR_REVIEW
-J7_PR_CLEAN_MERGEABLE=PENDING
+J7_WORK_ORDER_STATUS=VALIDATED
+J7_PR_NUMBER=12
+J7_PR_HEAD=cd30fca0f13d788f0862d2e91de11193da8bd793
+J7_PR_DRAFT=YES
+J7_PR_CLEAN_MERGEABLE=PASS
+J7_PR_REMOTE_CHECKS=NONE
+J7_MAIN_MERGE=PENDING_EXPLICIT_CONFIRMATION
 ```

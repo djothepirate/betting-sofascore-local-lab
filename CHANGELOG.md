@@ -4,7 +4,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
-### J7 — Export canonique local qualifié humainement, publication en attente
+### J7 — Export canonique local validé, PR #12 propre et fusionnable
 
 - contrat JSON Draft 2020-12 v1 fermé, identifié par
   `urn:betting-project:sofascore-local-lab:j7:canonical-event-export:v1`, chargé depuis le
@@ -84,10 +84,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   validé de 8 707 octets porte le SHA-256
   `fb637b4c87fc6a8cba230c6d4ad0928af3d52c1a793d379ae6ac9b9d1888b1f4`, avec cinq avertissements
   `SYNTHETIC_SOURCE` et zéro constat sensible ;
-- le Work Order est `READY_FOR_PR_REVIEW` après réussite des deux suites Maven, de la revue
-  technique et de la recette humaine ; seule une PR `CLEAN/MERGEABLE` reste requise avant
-  `VALIDATED`, et la phase applicative demeure
-  volontairement `J6-HISTORY-AND-GUARDED-RETENTION-VALIDATED` jusqu'à cette publication revue.
+- la branche `codex/j7-canonical-export` est publiée avec les commits `46d633b` et `cd30fca` ; la
+  PR `#12` en brouillon est confirmée par GitHub `mergeable=true` et `mergeable_state=clean`, sans
+  contrôle distant en attente ; le Work Order passe donc à `VALIDATED` et rejoint `completed` ;
+  aucune fusion vers `main` n'est exécutée sans confirmation humaine explicite, et la phase
+  applicative demeure volontairement `J6-HISTORY-AND-GUARDED-RETENTION-VALIDATED` jusqu'à cette
+  fusion.
 
 ### J6 — Historique et rétention gardée
 

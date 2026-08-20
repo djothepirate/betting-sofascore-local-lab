@@ -1,8 +1,9 @@
 # WO-SS-20260819-008 — Export canonique local J7
 
-- **Statut :** `READY_FOR_PR_REVIEW`
+- **Statut :** `VALIDATED`
 - **Date :** 2026-08-19
 - **Date de démarrage :** 2026-08-19
+- **Date de validation :** 2026-08-20
 - **Prérequis :** J6 fusionné et validé (`d24e812a35467297eebf254b36ec5913b29c71cf`)
 - **Base locale :** `d24e812a35467297eebf254b36ec5913b29c71cf`
 - **Jalon :** J7 — Export canonique
@@ -135,10 +136,10 @@ ADR_SS_001_COMBINED_SESSION_REVIEW=COMPATIBLE_EXISTING_MANUAL_PATHS_NO_CHANGE_RE
 - [x] contrôle absence de contenu brut, secret ou session sur l'export fournisseur complet ;
 - [x] contrôle des états terminaux J3/J4/J5 `LOCKED`, absence d'activité automatique et comptage
   explicite des appels SofaScore humains ;
-- [ ] revue finale du diff, branche poussée et PR `CLEAN/MERGEABLE`.
+- [x] revue finale du diff, branche poussée et PR `CLEAN/MERGEABLE`.
 
-Le Work Order reste dans `active` et ne passe à `VALIDATED` qu'après toutes ces preuves. La recette
-humaine ne sera pas remplacée par un test automatisé.
+Toutes les preuves sont acquises. Le Work Order est `VALIDATED` et archivé dans `completed`. La
+recette humaine n'a pas été remplacée par un test automatisé.
 
 ## 8. État initial vérifié
 
@@ -182,7 +183,7 @@ Le 2026-08-19, l'implémentation technique couvre désormais :
   `SCHEDULED_TOURNAMENT_LIST`, sans créer de rencontre ni d'observation J4, avec formulation
   opérateur explicite et conservation inchangée de la branche `EVENT_LIST`.
 
-Les preuves techniques et humaines sont acquises ; seule la publication reste ouverte :
+Les preuves techniques, humaines et de publication sont acquises :
 
 ```text
 J7_STANDARD_SUITE=PASS_457_TESTS_0_FAILURES_0_ERRORS_2_SKIPPED_WINDOWS_SYMLINK
@@ -235,11 +236,18 @@ J7_J3_J4_J5_RELOCK_REVIEW=PASS
 J7_EXPORT_GESTURE_PROVIDER_CALLS=0
 J7_AUTOMATIC_PROVIDER_CALLS_DURING_QUALIFICATION=0
 J7_PRIMARY_DATABASE_PURGE=NO
-J7_PR_CLEAN_MERGEABLE=PENDING
+J7_BRANCH_PUSHED=PASS_CODEX_J7_CANONICAL_EXPORT
+J7_PR_NUMBER=12
+J7_PR_HEAD=cd30fca0f13d788f0862d2e91de11193da8bd793
+J7_PR_DRAFT=YES
+J7_PR_CLEAN_MERGEABLE=PASS
+J7_PR_REMOTE_CHECKS=NONE
+J7_MAIN_MERGE=PENDING_EXPLICIT_CONFIRMATION
 ```
 
-Le statut est `READY_FOR_PR_REVIEW`. La recette humaine est complète ; seule une branche poussée et
-une PR revue `CLEAN/MERGEABLE` permettent désormais `VALIDATED` et le déplacement dans `completed`.
+Le statut est `VALIDATED`. La branche est poussée et la PR `#12` est confirmée par GitHub
+`mergeable=true` avec `mergeable_state=clean`. Le déplacement dans `completed` est effectué ; la
+fusion vers `main` reste soumise à une confirmation humaine explicite.
 
 Le premier parcours opérateur a réussi le 2026-08-19 sur l'événement fournisseur complet
 `16707704` : candidat inspecté, confirmation exacte acceptée, statut `HUMAN_VALIDATED`, puis
@@ -311,5 +319,8 @@ J7_SYNTHETIC_VALIDATED_EXPORT_ID=563dbeb8-8660-422b-b214-e3b1b306aa6d
 J7_SYNTHETIC_VALIDATED_FILE_SHA256=fb637b4c87fc6a8cba230c6d4ad0928af3d52c1a793d379ae6ac9b9d1888b1f4
 J7_HUMAN_QUALIFICATION_SENSITIVE_FINDINGS=0
 J7_HUMAN_QUALIFICATION_J7_TRANSPORTS=0
-J7_STATUS=READY_FOR_PR_REVIEW
+J7_STATUS=VALIDATED
+J7_PR_NUMBER=12
+J7_PR_CLEAN_MERGEABLE=PASS
+J7_MAIN_MERGE=PENDING_EXPLICIT_CONFIRMATION
 ```
