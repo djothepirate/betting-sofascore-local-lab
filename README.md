@@ -4,7 +4,7 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**, **J3 — Appel manuel**, **J4 — Événements**, **J5 — Statistiques** et **J6 — Historique**. L'implémentation J4, son parcours hors ligne et ses deux sous-étapes réelles bornées sont qualifiés humainement. La sous-étape 1 a validé `16386245` et `16421052` après correction du retour par date. La sous-étape 2 a validé la saisie d'identifiants, le rappel manuel avec une nouvelle confirmation, la déduplication d'une réponse inchangée et la création d'une observation append-only lorsque `16412917` est passé de `notstarted` à `inprogress`. Après l'arrêt global, la configuration a été remise à l'état bloqué, ce verrouillage a été vérifié après redémarrage et l'application a été arrêtée gracieusement. La Pull Request `#8` a été fusionnée et le Work Order J4 est archivé `VALIDATED`. Les voies fournisseur restent désactivées par défaut ; J3 demeure exclusif, tandis qu'une configuration bornée peut désormais réunir J4 phase 2 et J5 dans une même session. Aucun appel fournisseur n’est exécuté par Maven, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**, **J3 — Appel manuel**, **J4 — Événements**, **J5 — Statistiques** et **J6 — Historique**. Le jalon **J7 — Export canonique** est techniquement et humainement qualifié ; il reste non validé tant que la branche et sa PR ne sont pas revues `CLEAN/MERGEABLE`. L'implémentation J4, son parcours hors ligne et ses deux sous-étapes réelles bornées sont qualifiés humainement. La sous-étape 1 a validé `16386245` et `16421052` après correction du retour par date. La sous-étape 2 a validé la saisie d'identifiants, le rappel manuel avec une nouvelle confirmation, la déduplication d'une réponse inchangée et la création d'une observation append-only lorsque `16412917` est passé de `notstarted` à `inprogress`. Après l'arrêt global, la configuration a été remise à l'état bloqué, ce verrouillage a été vérifié après redémarrage et l'application a été arrêtée gracieusement. La Pull Request `#8` a été fusionnée et le Work Order J4 est archivé `VALIDATED`. Les voies fournisseur restent désactivées par défaut ; une configuration locale explicitement armée peut réunir J3, J4 phase 2 et J5 dans une même instance, avec une seule requête fournisseur active et un délai minimal partagé. Une recette réelle a depuis achevé, dans un même démarrage, J4 phase 2, les trois familles J5 puis une collecte J3 paginée sur six pages. La forme J3 `scheduled` compte des compétitions disponibles pour la date et ne fournit pas de rencontres programmées ; le reparsage J4 l'indique désormais sans présenter son total nul de matchs comme une anomalie. Aucun appel fournisseur n’est exécuté par Maven, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
 Le jalon **J5 — Statistiques** est validé techniquement et humainement sur sa frontière hors ligne :
 statistiques, incidents et compositions synthétiques, contrôles explicites de complétude,
@@ -128,12 +128,21 @@ acceptée : l'archive `age` couvre le snapshot 272, les treize mesures restauré
 la source, la base temporaire a été supprimée et un second lancement refuse tout écrasement. J6 est
 donc `VALIDATED`, sans purge de la base primaire.
 
+Le jalon **J7 — Export canonique** assemble, sans réseau, les dernières observations locales d'un
+seul événement dans une enveloppe JSON v1 autonome. Le parcours crée d'abord un candidat
+`COHERENCE_CHECKED`, puis exige une validation ou un rejet humain explicite après aperçu. Seul
+`HUMAN_VALIDATED` est téléchargeable. Les cinq provenances, la complétude, les avertissements et
+les hashes restent auditables ; aucun payload brut, secret, session, transport vers le Betting
+Project ou appel SofaScore n'est inclus. L'implémentation est
+`HUMAN_QUALIFIED_AWAITING_PR_REVIEW` après passage des portes techniques et de la recette du
+runbook J7 ; la validation du jalon reste suspendue à la revue de publication.
+
 ## Ce qui est livré localement
 
 - dépôt Git autonome, documentation, ADR, règles agent et Work Orders ;
 - Java **25 LTS**, Spring Boot **4.1.0** et Maven Wrapper versionné ;
 - interface Spring MVC + Thymeleaf sur `127.0.0.1:8087` ;
-- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V22 et stockage brut séparé ;
+- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V23 et stockage brut séparé ;
 - Actuator, Caffeine, validation de configuration et garde de liaison locale ;
 - catalogue logique des familles d’endpoints, sans URI réelle ;
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
@@ -194,11 +203,12 @@ donc `VALIDATED`, sans purge de la base primaire.
   append-only, dédupliquées et rattachées à l'identité canonique J4 ;
 - page locale `/events/{canonicalEventId}/statistics` avec import synthétique idempotent, valeurs,
   complétude, provenance, parseur et hashes, sans payload ni repli fournisseur ;
-- voie J5 réelle opt-in, désactivée par défaut et exclusive de J3 ; utilisable seule ou avec J4
-  phase 2, limitée à l'origine exacte `https://www.sofascore.com` et à l'ensemble exact des chemins
-  actifs d'une identité canonique déjà persistée ;
-- coordinateur commun J4/J5 sérialisant les transports et appliquant le délai minimal entre leurs
-  départs, y compris lors du passage de `EVENT_DETAILS` à `EVENT_STATISTICS` ;
+- voie J5 réelle opt-in, désactivée par défaut, utilisable seule ou dans l'union exacte J3 + J4
+  phase 2 + J5, limitée à l'origine exacte `https://www.sofascore.com` et aux chemins actifs d'une
+  identité canonique déjà persistée ; J4 phase 1 reste incompatible avec cette session combinée ;
+- coordinateur commun J3/J4/J5 sérialisant tous les transports manuels et appliquant le délai
+  minimal entre leurs départs, y compris lors du passage de `SCHEDULED_EVENTS` à `EVENT_DETAILS`
+  puis à `EVENT_STATISTICS` ;
 - préparation J5 sans réseau, confirmation exacte de cinq minutes, acquittement, trois appels
   séquentiels au maximum et délai minimal de trois secondes ; après succès, l'ancien claim reste
   non rejouable mais une nouvelle campagne explicite peut être préparée dans la même instance ;
@@ -232,20 +242,30 @@ donc `VALIDATED`, sans purge de la base primaire.
   occurrences, observations normalisées et audit append-only sont conservés ;
 - sauvegarde PostgreSQL chiffrée directement par `age`, restauration de qualification dans une
   base temporaire et vérification des empreintes avant toute commande de purge.
+- export J7 d'un événement courant à la fois, avec contrat Draft 2020-12 classpath, cinq sources
+  ordonnées, états d'absence explicites, complétude et avertissements sans données inventées ;
+- cycle local J7 candidat puis décision humaine, empreintes séparées des données, sources et
+  fichier, intention terminale write-ahead, persistance V23 gardée et téléchargement réservé à
+  `HUMAN_VALIDATED` ;
+- stockage J7 uniquement sous la racine configurée, noms serveur, temporaire synchronisé puis lien
+  physique atomique create-new sur le même système de fichiers, avec refus des chemins
+  utilisateurs, liens symboliques, écrasements, altérations et contenus sensibles.
 
 ## Limite essentielle du bootstrap
 
 **Aucun appel SofaScore réel n’est actif par défaut et aucun n’est exécuté par les tests.** Le
 connecteur général, `ConnectorGate`, le catalogue `callable=false` et le profil Maven
-`sofascore-live-test` restent bloqués. J3 pour `SCHEDULED_EVENTS` demeure exclusif. J4 pour
-`EVENT_DETAILS` et J5 pour `EVENT_STATISTICS`, `EVENT_INCIDENTS` et `EVENT_LINEUPS` restent des
-voies distinctes, mais J4 phase 2 et J5 peuvent être armés ensemble avec l'union exacte des quatre
-familles. Dans J4, `SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED` sélectionne exclusivement le
-formulaire paramétrable et est obligatoire pour ce mode combiné.
+`sofascore-live-test` restent bloqués. J3 pour `SCHEDULED_EVENTS`, J4 phase 2 pour `EVENT_DETAILS`
+et J5 pour `EVENT_STATISTICS`, `EVENT_INCIDENTS` et `EVENT_LINEUPS` restent des voies manuelles
+distinctes, mais peuvent être armés ensemble avec l'union exacte des cinq familles. Dans J4,
+`SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED` sélectionne exclusivement le formulaire paramétrable
+et est obligatoire dès que J4 partage la session avec J3 ou J5. J4 phase 1 reste exclusif.
 Dans J5, l'action finale réutilise l'identité canonique affichée et autorise au maximum trois
-transports ordonnés après une confirmation humaine unique. Toutes ces voies interdisent polling,
-planification et retry. Leurs configurations temporaires et leur remise à l'état bloqué sont
-décrites dans `docs/runbooks/RUNBOOK-LOCAL.md`.
+transports ordonnés après une confirmation humaine unique. Un coordinateur commun sérialise tous
+les transports J3/J4/J5 et impose au moins trois secondes entre leurs départs, y compris entre
+jalons. Toutes ces voies interdisent polling, planification et retry. J6/J7 restent locaux et sans
+transport. Les configurations temporaires et leur remise à l'état bloqué sont décrites dans
+`docs/runbooks/RUNBOOK-LOCAL.md`.
 
 Cette limite préserve la règle du Betting Project principal : aucun composant du VPS ne dépend du laboratoire, et l’arrêt du poste Windows ne doit avoir aucun effet sur la chaîne globale.
 
@@ -374,12 +394,12 @@ betting-sofascore-local-lab/
 └── src/
 ```
 
-## Modèle de données J1 à J6
+## Modèle de données J1 à J7
 
 La migration `V1__bootstrap_schema.sql` crée :
 
 - `provider_snapshot` : métadonnées de transport, emplacement normalisé JSONB, hash, parseur et statut de schéma ;
-- `export_manifest` : manifeste des futurs exports normalisés ;
+- `export_manifest` : registre générique étendu par V23 pour les exports canoniques J7 gardés ;
 - `connector_control` : état opérateur persistant, initialisé à `network_enabled=false` et `circuit_state=LOCKED`.
 
 La migration append-only `V2__raw_manual_call_snapshots.sql` ajoute à `provider_snapshot` les octets exacts dans `payload_raw` (`bytea`), leur taille et le mode de provenance obligatoire `DIRECT_LOCAL_ENDPOINT`. Le brut reste distinct de `payload_jsonb`, qui n’est pas alimenté par cette unité. La taille est limitée à 5 Mio et une même combinaison fournisseur, endpoint logique, clé de requête et SHA-256 est dédupliquée.
@@ -505,6 +525,16 @@ d'audit et à une preuve de sauvegarde restaurée. Après purge, le SHA-256, la 
 les occurrences et toutes les observations normalisées restent consultables ; seul
 `payload_raw` devient absent avec un état explicite `PAYLOAD_PURGED`.
 
+La migration append-only `V23__j7_canonical_event_exports.sql` étend exclusivement
+`export_manifest`. Les lignes génériques historiques restent valides ; les lignes
+`J7_CANONICAL_EVENT` conservent UUID d'export et d'événement, schéma, génération, empreintes des
+données/sources/candidat/fichier courant, taille, chemin, cinq sources structurées, snapshots,
+avertissements, décision et intention terminale write-ahead. Cette intention fixe statut, heure,
+motif éventuel, chemin, hash et taille attendus avant l'écriture du fichier. Des index partiels et
+des triggers imposent un seul candidat courant, l'unicité d'un `dataSha256` validé, une transition
+terminale identique à l'intention, l'immuabilité des preuves, le verrou de fraîcheur par événement
+sur les écritures d'observation et l'interdiction de supprimer une ligne J7.
+
 Le mode `DIRECT_LOCAL_ENDPOINT` ne doit jamais être confondu avec une `VisualObservation` du projet
 global. La persistance n'effectue elle-même aucun appel : les écritures J5 réelles éventuelles sont
 initiées uniquement par la voie humaine gardée, puis référencent le brut séparé avec
@@ -537,6 +567,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Architecture J5 hors ligne et contrôles de complétude](docs/architecture/J5-OFFLINE-EVENT-DATA-AND-COMPLETENESS.md)
 - [Architecture de la qualification réelle gardée J5](docs/architecture/J5-GUARDED-REAL-EVENT-DATA.md)
 - [Architecture J6 — historique et rétention gardée](docs/architecture/J6-HISTORY-AND-GUARDED-RETENTION.md)
+- [Architecture J7 — export canonique local et audité](docs/architecture/J7-CANONICAL-EVENT-EXPORT.md)
 - [Règles métier des incidents de football J5](docs/requirements/J5-FOOTBALL-INCIDENT-RULES.md)
 - [Voie réelle bornée J4 — sous-étape 1](docs/architecture/J4-GUARDED-REAL-EVENT-DETAILS-PHASE1.md)
 - [Politique réseau J3 hors ligne](docs/architecture/J3-OFFLINE-NETWORK-POLICY.md)
@@ -552,6 +583,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Inspection JSON locale des snapshots bruts J3](docs/architecture/J3-LOCAL-RAW-SNAPSHOT-JSON-INSPECTION.md)
 - [Runbook local](docs/runbooks/RUNBOOK-LOCAL.md)
 - [Runbook J6 — sauvegarde, restauration et rétention](docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md)
+- [Runbook J7 — candidat, décision humaine et téléchargement](docs/runbooks/J7-CANONICAL-EVENT-EXPORT.md)
 - [Cadrage PDF](docs/reference/Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf)
 - [Rapport de validation du bootstrap](docs/validation/J0-J1-VALIDATION-REPORT.md)
 - [Work Order J0/J1](docs/work_orders/completed/WO-SS-20260808-001-bootstrap-j0-j1.md)
@@ -590,6 +622,8 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Qualification humaine finale de l'interface J6](docs/validation/J6-HUMAN-HISTORY-UI-QUALIFICATION-20260819.md)
 - [Qualification opératoire J6 de la sauvegarde/restauration](docs/validation/J6-BACKUP-RESTORE-QUALIFICATION-20260819.md)
 - [Work Order J6 validé](docs/work_orders/completed/WO-SS-20260818-007-history-j6.md)
+- [Readiness technique J7 — acquise](docs/validation/J7-TECHNICAL-READINESS-20260819.md)
+- [Work Order J7 actif](docs/work_orders/active/WO-SS-20260819-008-canonical-export-j7.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 
@@ -867,3 +901,88 @@ J6_WORK_ORDER_STATUS=VALIDATED
 Le Work Order J6 est clos. La purge de la base primaire demeure hors périmètre, non exécutée et non
 autorisée ; toute suppression future d'octets exige une autorisation et un Work Order distincts,
 puis la reprise exacte d'un nouvel aperçu de rétention.
+
+## J7 : export canonique techniquement et humainement qualifié, publication en attente
+
+J7 sélectionne sous transaction locale en lecture seule les dernières observations des cinq
+composants `EVENT_STATE`, `EVENT_DETAILS`, `EVENT_STATISTICS`, `EVENT_INCIDENTS` et
+`EVENT_LINEUPS`. Le JSON respecte le schéma Draft 2020-12
+`urn:betting-project:sofascore-local-lab:j7:canonical-event-export:v1`. Les absences,
+indisponibilités et listes vides valides sont explicites ; les origines synthétiques ou fournisseur
+et l'état de rétention du brut restent visibles sans recopier aucun octet brut. Les identifiants
+numériques sont positifs et bornés à `Long.MAX_VALUE` ; le scanner applique UTF-8 strict et contrôle
+à la fois les octets, le texte et les clés JSON sensibles.
+
+La création n'accorde que `COHERENCE_CHECKED`. L'aperçu HTML permet ensuite de saisir une phrase
+exacte pour `HUMAN_VALIDATED` ou `REJECTED`; une dérive des observations courantes bloque la
+validation avec `SOURCE_SET_CHANGED`. Le recalcul de fraîcheur tient un verrou PostgreSQL partagé
+avec les écritures d'observation et les mutations autorisées des snapshots qu'elles référencent.
+Avant le fichier terminal, une intention write-ahead persiste le
+statut, l'heure, le motif éventuel, le chemin, le hash et la taille afin d'authentifier tout retry.
+Les fichiers candidats, validés et rejetés restent sous la racine locale configurée ; ils sont
+publiés sans remplacement par lien physique atomique après synchronisation d'un temporaire sur le
+même système de fichiers. Un candidat resté sans ligne après un résultat PostgreSQL indéterminé
+n'est repris qu'après reconstruction courante et égalité octet par octet. Seul le fichier validé
+est téléchargeable après nouvelle vérification de son schéma, sa taille et son SHA-256.
+
+```text
+J7_IMPLEMENTATION_STATUS=HUMAN_QUALIFIED_AWAITING_PR_REVIEW
+J7_SCHEMA_VERSION=1.0.0
+J7_FLYWAY_VERSION=23
+J7_CURRENT_ONLY=YES
+J7_HISTORY_INCLUDED=NO
+J7_HUMAN_DECISION_REQUIRED=YES
+J7_AUTOMATIC_PROVIDER_CALLS=0
+J7_AUTOMATIC_TRANSFER=ABSENT
+J7_PRIMARY_DATABASE_PURGE=NO
+J7_STANDARD_SUITE=PASS_457_TESTS_0_FAILURES_0_ERRORS_2_SKIPPED_WINDOWS_SYMLINK
+J7_INTEGRATION_SUITE=PASS_43_TESTS_0_FAILURES_0_ERRORS_0_SKIPPED
+J7_COMBINED_SESSION_TARGETED_TESTS=PASS_55_TESTS_0_FAILURES_0_ERRORS_0_SKIPPED
+J7_COMBINED_SESSION_ACTUAL_CONFIG_STARTUP=PASS_127_0_0_1_8087
+J7_COMBINED_SESSION_MANUAL_COORDINATOR=PASS_J3_J4_J5
+J7_COMBINED_SESSION_AUTOMATIC_PROVIDER_CALLS=0
+J7_COMBINED_SESSION_NEW_PROVIDER_ENDPOINTS=0
+J7_COMBINED_HUMAN_SINGLE_INSTANCE_J3_J4_J5_J6_J7=PASS
+J7_FIRST_HUMAN_EXPORT=PASS_PROVIDER_EVENT_16707704_HUMAN_VALIDATED_DOWNLOADED
+J7_PROVIDER_16421055_EXPORT=PASS_HUMAN_VALIDATED_DOWNLOADED_SHA256_VERIFIED
+J7_PROVIDER_16691018_REJECTION=PASS_REJECTED_RETAINED_NOT_DOWNLOADABLE
+J7_PROVIDER_16691018_VALIDATION=PASS_HUMAN_VALIDATED_DOWNLOADED_SHA256_VERIFIED
+J7_SYNTHETIC_REJECTION=PASS_REJECTED_RETAINED_NOT_DOWNLOADABLE
+J7_SYNTHETIC_VALIDATION=PASS_HUMAN_VALIDATED_DOWNLOADED_SHA256_VERIFIED
+J7_HUMAN_QUALIFICATION=PASS
+J7_WORK_ORDER_STATUS=READY_FOR_PR_REVIEW
+```
+
+Un premier export fournisseur complet `16707704` a été validé humainement et téléchargé sans
+erreur le 2026-08-19. Le fichier téléchargé est identique au terminal local, ses trois empreintes
+sont cohérentes et le scan sensible est vide. Cette preuve complémentaire ne remplace pas les
+scénarios obligatoires ci-dessous et ne change donc pas le statut global.
+
+Le parcours ciblé `16691018` a ensuite confirmé l'inspection des avertissements attendus
+(`EVENT_STATISTICS` indisponible, incidents et compositions partiels), le rejet motivé, la
+conservation d'un unique fichier `.rejected.json` et son refus de téléchargement avec une réponse
+locale `404` vide. Les hashes de données et de sources ont été recalculés à l'identique et le scan
+sensible du terminal est vide. L'événement a ensuite été recréé, validé puis téléchargé sous
+l'export `af9735bc-ccfa-419e-bfea-fb6e500bc5bb`. Son fichier de 28 701 octets est identique au
+terminal, avec le SHA-256
+`87ed3d0e17a3150bf3a7aee1834da35e40a8dbcafecb037032cdf893ec543063`.
+
+Une séquence supplémentaire, commencée avant minuit le 19 août et terminée après minuit le 20 août
+en heure de Paris, a enchaîné dans une seule instance J3 sur six pages, J5 complet, une comparaison
+locale J6, J4 phase 2 puis un export J7 validé et téléchargé pour l'événement `16421055`. Les dix
+appels fournisseur de cette séquence sont uniquement ceux explicitement confirmés pour J3, J5 et
+J4 ; J6 et J7 n'ont exécuté aucun transport. Le fichier J7 de 37 239 octets a été relu hors de
+l'application et son SHA-256
+`37784bb4187fb80de06b765d8a9cb54b36f8035ed24eee82f9d6791c5a388880` correspond au manifeste
+persisté, sans clé interdite, contenu sensible ni avertissement. J3, J4 et J5 sont revenus à leurs
+états terminaux verrouillés.
+
+Le runbook synthétique est également fermé sur l'événement `900001` : un premier export est
+`REJECTED`, conservé localement et non téléchargeable, puis un second est `HUMAN_VALIDATED` et
+téléchargé. Les deux terminaux conservent le même `dataSha256`
+`1a30148f03efce117bbe1cb8b30308eeab338741bbec392a4b5c58de488984a5` et le même jeu de sources ;
+le fichier validé de 8 707 octets porte le SHA-256
+`fb637b4c87fc6a8cba230c6d4ad0928af3d52c1a793d379ae6ac9b9d1888b1f4`. Les cinq provenances et
+avertissements synthétiques sont explicites, et les scans sensibles sont vides. Les deux suites
+Maven, la revue technique et la recette humaine sont acquises ; le Work Order reste dans `active`
+uniquement jusqu'à une PR `CLEAN/MERGEABLE`.
