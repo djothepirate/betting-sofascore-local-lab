@@ -1,0 +1,10 @@
+package com.bettingproject.sofascorelocal.application.network;
+
+public enum J5LocalJsonImportError {
+    NO_PENDING_CAMPAIGN,
+    REQUEST_ID_MISMATCH,
+    CANONICAL_EVENT_MISMATCH,
+    STATISTICS_PAYLOAD_INCOMPATIBLE,
+    INCIDENTS_PAYLOAD_INCOMPATIBLE,
+    LINEUPS_PAYLOAD_INCOMPATIBLE
+}

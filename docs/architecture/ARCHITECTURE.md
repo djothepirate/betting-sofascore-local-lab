@@ -35,6 +35,7 @@ n'est ajouté.
 │  ├─ Politique J3 et circuit en mémoire                    │
 │  ├─ Transport HTTP simulé, loopback strict                │
 │  ├─ Collecte J3 manuelle 1..N, opt-in et plafonnée        │
+│  ├─ Catalogue J3 exact + découverte tournoi → rencontres  │
 │  ├─ Identités et observations J4 append-only              │
 │  ├─ Recherche locale + détail J4 fixture ou snapshot      │
 │  ├─ Circuit J4 phase 1 : deux IDs compilés, verrou terminal│
@@ -55,7 +56,7 @@ n'est ajouté.
 │  exports/                                                 │
 └───────────────────────────────────────────────────────────┘
 
-SofaScore : aucune connexion par défaut ; J4 phase 1 exige un opt-in temporaire exact
+SofaScore : aucune connexion par défaut ; chaque voie manuelle exige son opt-in temporaire exact
 VPS       : aucune connexion
 ```
 
@@ -64,21 +65,37 @@ VPS       : aucune connexion
 | Couche | Responsabilité actuelle |
 |---|---|
 | `config` | propriétés typées, garde de liaison locale, initialisation du dossier d’export, en-têtes de sécurité |
-| `domain.provider` | types logiques, catalogue et requêtes fournisseur J3/J4 fermées par valeur |
+| `domain.provider` | types logiques, catalogue et requêtes fournisseur J3/J4 fermées par valeur, dont la découverte tournoi |
 | `domain.event` / `domain.eventdetails` / `domain.eventdata` | identité canonique, détail J4, familles J5 et complétude immuables |
 | `domain.history` / `domain.retention` | versions, changements, traces de snapshots et plans de rétention J6 |
 | `domain.export` | statut, manifeste, décision, composant et preuves de fichier J7 |
 | `application` | politiques réseau, orchestration manuelle, normalisation, historique, diff, rétention et export J7 |
-| `adapter.sofascore` | catalogue fermé, transports spéciaux bornés et parseurs hors ligne J2/J4/J5 |
+| `adapter.sofascore` | catalogue fermé, transports spéciaux bornés et parseurs hors ligne J2/J4/J5/découverte tournoi |
 | `adapter.persistence` | preuves brutes, occurrences, observations normalisées, historique, rétention et manifestes J7 |
 | `adapter.file` | publication J7 create-new par lien physique atomique, bornée à la racine locale |
 | `adapter.web` | tableau de bord, recherche, contrôles et vues J4/J5/J6/J7 locales |
-| `resources/db/migration` | schémas V1 à V23, migrations append-only et triggers d’immuabilité |
+| `resources/db/migration` | schémas V1 à V25, migrations append-only et triggers d’immuabilité |
 | `fixtures` | corpus synthétiques hors ligne J2, J4, J5 et J6 |
 
 Le connecteur général demeure bloqué. Un `RestClient` distinct est construit uniquement pour le
 chemin manuel J3 borné ; il ne reçoit qu’une requête de domaine validée et ne peut viser que
 l’origine `https://www.sofascore.com`, une date ISO explicite et les pages `1` à `25`.
+Après la confirmation, une action alternative accepte localement un lot complet de corps JSON
+J3 1 à N. Elle partage le contrôle et la garde de concurrence, mais ne construit aucune requête,
+ne lit ni n'écrit le cache fournisseur et persiste avec `MANUAL_LOCAL_JSON_IMPORT`.
+
+La découverte tournoi → rencontres prolonge ce chemin sans ouvrir le catalogue général. Elle
+reconstruit ses options depuis les snapshots exacts de la preuve J3 `COMPLETED` la plus récente du
+processus courant, puis utilise un transport dédié vers
+`/api/v1/unique-tournament/{uniqueTournament.id}/scheduled-events/{date}`. Le navigateur poste
+seulement `tournament.id`; date et identifiant numérique du tournoi unique sont résolus et
+revalidés côté serveur. Le libellé de la liste associe exactement `tournament.name`, le séparateur
+` - ` et la portée descriptive `tournament.category.name`; la catégorie ne participe jamais à
+l'identité ni à l'URI. Avant publication, les options exigent cette catégorie puis sont filtrées par
+intersection entre les clés de `timezoneEventCount` et les offsets réellement applicables à la
+date J3 dans `Europe/Paris` ; ce calcul couvre l'heure d'été, l'heure d'hiver et les deux offsets
+d'une journée de bascule sans dépendre du fuseau système. Après redémarrage, aucune liste n'est
+recomposée implicitement depuis des snapshots historiques.
 
 J4 ajoute un second `RestClient` spécial qui ne reçoit que `EventDetailsProviderRequest`. Ce type
 refuse toute origine autre que `https://www.sofascore.com` et tout identifiant hors de la portée
@@ -108,12 +125,17 @@ hashes et du contenu sensible. Une décision humaine J7 n'ouvre aucun verrou J3/
 Configuration par défaut        enabled=false + j3-qualification-enabled=false
           │
           ▼
-Configuration opt-in            origine exacte + SCHEDULED_EVENTS seul
+Configuration opt-in            origine exacte + union exacte des endpoints actifs
           │
           ▼
 Contrôle opérateur              arrêt global + circuit + confirmation unique
           │
           ▼
+Choix exclusif                  pagination directe OU lot JSON local complet
+          │
+          ├── import            1..25, 5 Mio/page, 25 Mio/lot, scan sensible
+          │                     parser + hasNextPage validés avant claim, zéro réseau/cache
+          ▼ direct
 Requête de domaine              date ISO + pages 1..25 + chemin fermé
           │
           ▼
@@ -127,6 +149,14 @@ La suppression d’une seule barrière ne permet donc pas un appel accidentel. L
 absent tant que les quatre propriétés d’activation ne concordent pas. Même après confirmation, une
 action Web distincte est nécessaire. Le connecteur général, `ConnectorGate` et le profil Maven réel
 restent bloqués ; le transport loopback simulé conserve par ailleurs sa frontière propre.
+La voie locale n'est pas un retry d'une voie directe terminale : après un `HTTP_FORBIDDEN`, une
+nouvelle préparation et une nouvelle confirmation restent obligatoires.
+
+Pour la découverte tournoi, les opt-ins général, J3 et découverte doivent être vrais ensemble et
+l'allowlist doit être exactement
+`SCHEDULED_EVENTS,TOURNAMENT_SCHEDULED_EVENTS`. Cette cohérence de configuration ne vaut jamais
+autorisation fournisseur : la sélection et la préparation restent sans réseau, puis une décision
+humaine distincte précède l'action confirmée.
 
 ## 5. Données
 
@@ -238,11 +268,35 @@ Avant de publier un fichier terminal, l'orchestrateur persiste une intention wri
 le statut, l'heure, le motif éventuel, le chemin, le SHA-256 et la taille attendus. Une reprise doit
 reproduire exactement cette preuve et la transition PostgreSQL terminale doit lui être identique.
 
+### 5.9 Cache de découverte tournoi V24
+
+V24 ne crée aucune table métier et ne modifie aucun historique J7. Elle élargit uniquement la
+contrainte de `provider_response_cache.logical_endpoint` pour admettre
+`TOURNAMENT_SCHEDULED_EVENTS` aux côtés de `SCHEDULED_EVENTS` et `EVENT_DETAILS`.
+
+Le checkpoint de découverte est indexé par la date et le `uniqueTournament.id` numérique, avec un
+TTL de dix minutes. Il référence toujours un snapshot brut `PARSED` dont endpoint, clé, parseur,
+taille et SHA-256 sont revérifiés. Un cache hit ne déclenche ni transport ni nouvelle persistance
+brute ; il n'évite jamais le parsing, la projection `Europe/Paris` ou le contrôle du nombre.
+
+### 5.10 Provenance d'import JSON local V25
+
+V25 ne crée aucune table métier. Elle autorise `MANUAL_LOCAL_JSON_IMPORT` dans la contrainte
+fermée de `provider_snapshot.acquisition_mode` et ajoute le mode d'acquisition à l'index unique des
+snapshots bruts. Une réponse directe et un import du même corps restent ainsi deux preuves
+distinctes, tandis que deux imports identiques sous la même clé sont dédupliqués.
+
+L'import est une action locale explicite après confirmation : fichier vide ou supérieur à 5 Mio
+refusé, scanner de contenu sensible avant consommation du claim, aucun HAR/en-tête/cookie, aucun
+transport et aucune lecture/écriture du cache fournisseur. Les caches restent limités à
+`DIRECT_LOCAL_ENDPOINT`; l'inspection locale et la rétention J6 admettent les deux modes.
+
 ## 6. Catalogue logique
 
 | Type | Cache initial | Déclenchement prévu | Appelable actuellement |
 |---|---:|---|---|
 | `SCHEDULED_EVENTS` | 10 min | manuel | uniquement par séquence J3 opt-in |
+| `TOURNAMENT_SCHEDULED_EVENTS` | 10 min | manuel après une collecte J3 `COMPLETED` | uniquement par séquence de découverte opt-in |
 | `EVENT_DETAILS` | 15 min | fixture locale ou campagne J4 phase 1 | voie spéciale : IDs `16386245`, `16421052` |
 | `EVENT_STATISTICS` | 30 min | manuel prévu | non |
 | `EVENT_INCIDENTS` | 15 min | manuel prévu | non |
@@ -255,6 +309,13 @@ des modèles d’URI généraux. Le chemin J3 :
 seuls une date ISO, l’origine et le chemin `scheduled-tournaments` sont acceptés. La pagination
 commence obligatoirement à 1, continue uniquement sur `hasNextPage=true` et s’arrête avant la page
 26 même si le fournisseur annonce encore une suite.
+
+Le chemin de découverte est lui aussi fermé : l'identifiant de l'URI est exclusivement
+`tournament.uniqueTournament.id`, résolu depuis la liste J3 côté serveur. Le parseur
+`tournament-scheduled-v1` contrôle la racine `events`, puis la projection conserve uniquement la
+phase `tournament.id` et la journée civile semi-ouverte dans `Europe/Paris`. Les observations
+canoniques sont écrites dans une transaction unique ; un conflit d'identité ou un
+`COUNT_MISMATCH` en interdit toute publication partielle.
 
 ## 7. Tests
 
@@ -271,6 +332,8 @@ commence obligatoirement à 1, continue uniquement sur `hasNextPage=true` et s�
 - validation du transport fournisseur avec `MockRestServiceServer`, sans connexion réseau ;
 - ordre dynamique depuis la page 1, terminaison par `hasNextPage=false`, plafond 25, délai minimal,
   persistance avant parsing et arrêt au premier incident ;
+- catalogue tournoi issu des snapshots exacts d'une collecte `COMPLETED`, sélection serveur,
+  requête numérique, parser `tournament-scheduled-v1`, cache, projection Paris et atomicité ;
 - rendu du contrôleur.
 - identité canonique déterministe, versions et provenance J4 ;
 - parseurs `event-details-v1/v2`, refus des ruptures de schéma et rattachement strict ;
@@ -295,11 +358,13 @@ commence obligatoirement à 1, continue uniquement sur `hasNextPage=true` et s�
 ### Intégration
 
 `mvnw -Pintegration-tests verify` démarre PostgreSQL avec Testcontainers et vérifie les migrations
-V1 à V23, les upgrades historiques, la fidélité binaire, les contraintes, la déduplication et
+V1 à V25, les upgrades historiques, la fidélité binaire, les contraintes, la déduplication et
 l'immuabilité. J6 ajoute les occurrences prospectives, les exclusions de rétention, la purge des
 seuls octets dans une base éphémère, l'audit et la conservation de la provenance. Aucun appel
 SofaScore n'est exécuté. J7 ajoute l'upgrade V22→V23 prérempli, ses contraintes de cycle et la
-relecture exacte du manifeste et de ses preuves.
+relecture exacte du manifeste et de ses preuves. La découverte tournoi ajoute l'installation V24
+et l'upgrade V23→V24 pour le cache, puis V25 pour distinguer la provenance d'une réponse directe et
+celle d'un corps JSON importé localement.
 
 ### Réel
 
@@ -310,6 +375,11 @@ geste réel : ses deux validations humaines portent uniquement sur l'interface l
 sauvegarde/restauration chiffrée. J7 ne nécessite aucune nouvelle collecte : sa recette utilise le
 corpus synthétique et l'événement fournisseur `16691018` déjà persisté. Cette recette reste
 obligatoire avant de déclarer J7 validé.
+
+La découverte tournoi → rencontres est `VALIDATED` depuis la décision propriétaire du 2026-08-21.
+Son implémentation et ses tests automatisés ont exécuté zéro appel fournisseur ; cette clôture ne
+transforme aucun bloc de configuration ou mode opératoire documentaire en autorisation d'une
+nouvelle recette réelle.
 
 ## 8. Décisions différées
 
@@ -331,6 +401,11 @@ Le modèle de décision et le circuit J3 désormais actés sont détaillés dans
 borné est détaillé dans `docs/architecture/J3-FIVE-PAGE-PROVIDER-QUALIFICATION.md`. Il ne déverrouille
 ni le connecteur général, ni le profil live, ni les autres familles du catalogue. Le parcours actif
 répétable est détaillé dans `docs/architecture/J3-DYNAMIC-MANUAL-PAGINATION.md`.
+
+Le catalogue exact issu de cette collecte, la requête numérique par tournoi unique, le cache V24,
+la provenance d'import V25, la projection `Europe/Paris`, l'atomicité canonique et le lien direct
+vers J5 sans J4 sont détaillés
+dans `docs/architecture/J3-J5-TOURNAMENT-EVENT-DISCOVERY.md`.
 
 Le modèle J4, ses frontières de normalisation, son identité stable et son détail hors ligne sont
 détaillés dans `docs/architecture/J4-CANONICAL-EVENTS-AND-LOCAL-DETAIL.md`. Le contrat JSON minimal

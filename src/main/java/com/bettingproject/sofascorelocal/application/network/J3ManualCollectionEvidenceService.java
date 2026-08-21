@@ -33,7 +33,7 @@ public class J3ManualCollectionEvidenceService {
 
     private static String format(J3MinimizedCollectionEvidence evidence) {
         StringBuilder report = new StringBuilder();
-        line(report, "J3_MINIMIZED_EVIDENCE_VERSION", "4");
+        line(report, "J3_MINIMIZED_EVIDENCE_VERSION", "5");
         line(report, "GENERATED_AT", evidence.generatedAt());
         line(report, "COLLECTION_DATE", evidence.collectionDate());
         line(report, "PAGINATION_MODE", "HAS_NEXT_PAGE");
@@ -50,6 +50,8 @@ public class J3ManualCollectionEvidenceService {
                 evidence, J3PageResolutionSource.PROVIDER));
         line(report, "CACHE_HIT_PAGES", pagesForSource(
                 evidence, J3PageResolutionSource.CACHE));
+        line(report, "LOCAL_JSON_IMPORT_PAGES", pagesForSource(
+                evidence, J3PageResolutionSource.LOCAL_JSON_IMPORT));
         line(report, "PROVIDER_REQUEST_COUNT", evidence.pageAttempts().stream()
                 .filter(attempt -> attempt.resolutionSource()
                         == J3PageResolutionSource.PROVIDER)
@@ -57,6 +59,10 @@ public class J3ManualCollectionEvidenceService {
         line(report, "CACHE_HIT_COUNT", evidence.pageAttempts().stream()
                 .filter(attempt -> attempt.resolutionSource()
                         == J3PageResolutionSource.CACHE)
+                .count());
+        line(report, "LOCAL_JSON_IMPORT_COUNT", evidence.pageAttempts().stream()
+                .filter(attempt -> attempt.resolutionSource()
+                        == J3PageResolutionSource.LOCAL_JSON_IMPORT)
                 .count());
         line(report, "PAGES_COMPLETED_COUNT", evidence.completedPages());
         line(report, "LAST_COMPLETED_PAGE",
@@ -77,6 +83,9 @@ public class J3ManualCollectionEvidenceService {
             line(report, prefix + "CACHE_STORED_AT", value(attempt.cacheStoredAt()));
             line(report, prefix + "PROVIDER_REQUEST_EXECUTED",
                     attempt.resolutionSource() == J3PageResolutionSource.PROVIDER
+                            ? "YES" : "NO");
+            line(report, prefix + "LOCAL_JSON_IMPORT_EXECUTED",
+                    attempt.resolutionSource() == J3PageResolutionSource.LOCAL_JSON_IMPORT
                             ? "YES" : "NO");
             line(report, prefix + "REQUESTED_AT", attempt.requestedAt());
             line(report, prefix + "SNAPSHOT_RECORDED", attempt.snapshotRecorded() ? "YES" : "NO");

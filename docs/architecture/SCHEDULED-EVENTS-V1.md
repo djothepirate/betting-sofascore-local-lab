@@ -29,10 +29,13 @@ identités et nombres synthétiques. Elles ne se substituent pas aux snapshots l
 d’observation, mais permettent de rejouer le contrat utile sans PostgreSQL, Internet, URI ou donnée
 de session.
 
-Les champs structuraux observés mais non retenus dans le modèle minimal sont connus et ignorés sans
-avertissement : `category`, `fieldTranslations`, `priority`, `qualificationOrPreliminary`, `slug`,
-`displayInverseHomeAwayTeams`, `hasEventPlayerStatistics`, `hasPerformanceGraphFeature` et
-`userCount`. Toute nouvelle propriété extérieure à cette liste reste signalée par `UNKNOWN_FIELD`.
+`tournament.category.name` est maintenant retenu comme portée géographique descriptive pour le
+catalogue J3 → J5. Les autres champs structuraux observés mais non retenus dans le modèle minimal
+sont connus et ignorés sans avertissement : `fieldTranslations`, `priority`,
+`qualificationOrPreliminary`, `slug`, `displayInverseHomeAwayTeams`,
+`hasEventPlayerStatistics`, `hasPerformanceGraphFeature` et `userCount`. Dans l'objet `category`,
+`alpha2`, `country`, `fieldTranslations`, `flag`, `id`, `slug` et `sport` restent connus mais non
+projetés. Toute nouvelle propriété extérieure à ces listes reste signalée par `UNKNOWN_FIELD`.
 
 ## Chaîne de traitement
 
@@ -86,6 +89,8 @@ La forme fournisseur qualifiée ajoute le contrat suivant :
 | `$.scheduled[*].tournament` | objet | obligatoire | `ScheduledTournamentAvailability.tournament` |
 | `tournament.id` | entier 64 bits positif | obligatoire | `ScheduledTournament.providerTournamentId` |
 | `tournament.name` | texte non vide | obligatoire | `ScheduledTournament.name` |
+| `tournament.category` | objet | facultatif pour préserver le contrat J3 historique ; requis pour une option de découverte actionnable | `ScheduledTournamentAvailability.tournamentCategoryName` |
+| `tournament.category.name` | texte non vide | obligatoire si l'objet existe | `ScheduledTournamentAvailability.tournamentCategoryName` |
 | `tournament.uniqueTournament` | objet | facultatif | `ScheduledTournamentAvailability.uniqueTournament` |
 | `uniqueTournament.id` | entier 64 bits positif | obligatoire si l’objet existe | `ScheduledTournament.providerTournamentId` |
 | `uniqueTournament.name` | texte non vide | obligatoire si l’objet existe | `ScheduledTournament.name` |
@@ -98,6 +103,13 @@ Le tableau vide qualifié sur la page 2 devient une table locale vide et produit
 n’est jamais converti ou ignoré. Un champ numérique sous forme de chaîne n'est jamais converti
 implicitement. Une valeur facultative explicitement présente avec un type incorrect reste une
 incompatibilité : elle n'est pas assimilée à un champ absent.
+
+L'absence complète de `tournament.category` produit une valeur locale optionnelle vide sans
+avertissement nouveau, afin que les snapshots synthétiques et historiques restent parsables sous
+`scheduled-events-v1`. Le catalogue de découverte applique ensuite une règle plus forte : il
+exclut cette occurrence, car le libellé `tournament.name - tournament.category.name` ne peut pas
+être construit sans inventer de portée. Un objet `category` présent mais dont `name` est absent ou
+incompatible reste, lui, une rupture structurelle atomique.
 
 ## Champs inconnus et avertissements
 

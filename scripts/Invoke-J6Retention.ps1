@@ -35,7 +35,8 @@ $environmentNames = @(
     'SOFASCORE_J3_QUALIFICATION_ENABLED',
     'SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED',
     'SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED',
-    'SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED'
+    'SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED',
+    'SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED'
 )
 $previousEnvironment = @{}
 foreach ($name in $environmentNames) {
@@ -54,7 +55,8 @@ try {
             'SOFASCORE_J3_QUALIFICATION_ENABLED',
             'SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED',
             'SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED',
-            'SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED')) {
+            'SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED',
+            'SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED')) {
         Set-ProcessEnvironment -Name $name -Value 'false'
     }
 
@@ -115,9 +117,9 @@ try {
                 throw "The qualified manifest source/restore evidence differs: $field"
             }
         }
-        if ($manifest.source.flywayVersion.ToString() -cne '22' -or
+        if ($manifest.source.flywayVersion.ToString() -cne '25' -or
                 [long]$manifest.source.rawPayloadIntegrityFailures -ne 0) {
-            throw 'The qualified manifest does not prove a valid Flyway V22 raw-payload restore.'
+            throw 'The qualified manifest does not prove a valid Flyway V25 raw-payload restore.'
         }
         $cipherPath = [IO.Path]::GetFullPath((Join-Path `
             (Split-Path -Parent $manifestPath) $cipherFileName))

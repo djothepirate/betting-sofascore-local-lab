@@ -19,6 +19,9 @@ public class SofascoreEndpointCatalog {
                 new EnumMap<>(SofascoreEndpointType.class);
         register(values, SofascoreEndpointType.SCHEDULED_EVENTS, Duration.ofMinutes(10),
                 "Recherche manuelle par date et contrôle des identités");
+        register(values, SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
+                Duration.ofMinutes(10),
+                "Événements datés d'un tournoi sélectionné après une collecte J3");
         register(values, SofascoreEndpointType.EVENT_DETAILS, Duration.ofMinutes(15),
                 "Détail d'un événement retenu");
         register(values, SofascoreEndpointType.EVENT_STATISTICS, Duration.ofMinutes(30),

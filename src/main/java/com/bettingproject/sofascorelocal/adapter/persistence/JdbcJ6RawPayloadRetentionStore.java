@@ -30,7 +30,10 @@ public class JdbcJ6RawPayloadRetentionStore implements J6RawPayloadRetentionStor
 
     private static final String ELIGIBLE_PREDICATE = """
             snapshot.provider = 'SOFASCORE'
-            and snapshot.acquisition_mode = 'DIRECT_LOCAL_ENDPOINT'
+            and snapshot.acquisition_mode in (
+                'DIRECT_LOCAL_ENDPOINT',
+                'MANUAL_LOCAL_JSON_IMPORT'
+            )
             and snapshot.payload_raw is not null
             and snapshot.payload_size_bytes is not null
             and snapshot.payload_sha256 is not null

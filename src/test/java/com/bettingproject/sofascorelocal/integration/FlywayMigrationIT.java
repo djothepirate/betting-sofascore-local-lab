@@ -1,7 +1,10 @@
 package com.bettingproject.sofascorelocal.integration;
 
+import com.bettingproject.sofascorelocal.adapter.persistence.JdbcRawManualCallSnapshotStore;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.tournamentevents.TournamentScheduledEventsParseEvidence;
+import com.bettingproject.sofascorelocal.adapter.sofascore.tournamentevents.TournamentScheduledEventsV1Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV1Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV2Parser;
@@ -21,6 +24,11 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatis
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceService;
 import com.bettingproject.sofascorelocal.application.event.J5OfflineFixtureImportService;
+import com.bettingproject.sofascorelocal.application.event.J5EventDataQueryService;
+import com.bettingproject.sofascorelocal.application.event.TournamentCanonicalEventPersistenceService;
+import com.bettingproject.sofascorelocal.application.network.TournamentScheduledEventsProjectionService;
+import com.bettingproject.sofascorelocal.application.network.J3ManualCollectionEvidenceService;
+import com.bettingproject.sofascorelocal.application.network.J3TournamentCatalogService;
 import com.bettingproject.sofascorelocal.application.network.J3QualificationCheckpointReparser;
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportService;
@@ -49,23 +57,34 @@ import com.bettingproject.sofascorelocal.fixture.ClasspathFixtureLoader;
 import com.bettingproject.sofascorelocal.fixture.LoadedFixture;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsTransportResponse;
+import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
+import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
+import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState;
+import com.bettingproject.sofascorelocal.domain.provider.J3MinimizedCollectionEvidence;
+import com.bettingproject.sofascorelocal.domain.provider.J3MinimizedPageEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
+import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotAcquisitionMode;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceOutcome;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceResult;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportResponse;
+import com.bettingproject.sofascorelocal.domain.provider.TournamentScheduledEventsProviderRequest;
+import com.bettingproject.sofascorelocal.domain.provider.TournamentScheduledEventsTransportResponse;
 import com.bettingproject.sofascorelocal.domain.retention.J6BackupEvidence;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEvent;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEventStatus;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTeam;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTournament;
+import com.bettingproject.sofascorelocal.domain.scheduledevents.J3TournamentCatalogOption;
+import com.bettingproject.sofascorelocal.domain.scheduledevents.J3TournamentCatalogStatus;
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J3ScheduledEventsPageCache;
 import com.bettingproject.sofascorelocal.port.J4EventDetailsCache;
+import com.bettingproject.sofascorelocal.port.TournamentScheduledEventsCache;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
 import com.bettingproject.sofascorelocal.port.J6SnapshotHistoryStore;
 import com.bettingproject.sofascorelocal.port.J6RawPayloadRetentionStore;
@@ -139,6 +158,7 @@ class FlywayMigrationIT {
         registry.add("sofascore.j4-event-details-qualification-enabled", () -> false);
         registry.add("sofascore.j4-event-details-phase2-enabled", () -> false);
         registry.add("sofascore.j5-event-data-qualification-enabled", () -> false);
+        registry.add("sofascore.tournament-event-discovery-enabled", () -> false);
         registry.add("sofascore.export-directory", () -> "target/integration-test-exports");
     }
 
@@ -162,6 +182,9 @@ class FlywayMigrationIT {
 
     @Autowired
     J4EventDetailsCache eventDetailsCache;
+
+    @Autowired
+    TournamentScheduledEventsCache tournamentScheduledEventsCache;
 
     @Autowired
     RawSnapshotInspectionStore snapshotInspectionStore;
@@ -189,6 +212,15 @@ class FlywayMigrationIT {
 
     @Autowired
     J5OfflineFixtureImportService j5OfflineFixtureImportService;
+
+    @Autowired
+    J5EventDataQueryService j5EventDataQueryService;
+
+    @Autowired
+    TournamentCanonicalEventPersistenceService tournamentCanonicalPersistenceService;
+
+    @Autowired
+    TournamentScheduledEventsProjectionService tournamentProjectionService;
 
     @Autowired
     J5EventDataStore j5EventDataStore;
@@ -236,8 +268,301 @@ class FlywayMigrationIT {
         assertThat(snapshotTable).isEqualTo("provider_snapshot");
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("23");
+        assertThat(flywayVersion).isEqualTo("25");
         assertThat(rawColumn).isEqualTo("bytea");
+    }
+
+    @Test
+    void extendsOnlyTheParsedResponseCacheScopeForTournamentDiscovery() {
+        String definition = jdbcTemplate.queryForObject(
+                """
+                select pg_get_constraintdef(oid)
+                from pg_constraint
+                where conrelid = 'provider_response_cache'::regclass
+                  and conname = 'ck_provider_response_cache_scope'
+                """,
+                String.class);
+
+        assertThat(definition)
+                .contains("SCHEDULED_EVENTS")
+                .contains("EVENT_DETAILS")
+                .contains("TOURNAMENT_SCHEDULED_EVENTS");
+    }
+
+    @Test
+    void upgradesV23ToV24WithoutLosingAnExistingJ3CacheCheckpoint() {
+        String schema = "upgrade_v23_to_v24_tournament_cache";
+        String separator = POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
+        var upgradeDataSource = new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema,
+                POSTGRES.getUsername(),
+                POSTGRES.getPassword());
+        Flyway toV23 = Flyway.configure()
+                .dataSource(upgradeDataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .createSchemas(true)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("23"))
+                .load();
+        assertThat(toV23.migrate().migrationsExecuted).isEqualTo(23);
+
+        JdbcTemplate upgradeJdbc = new JdbcTemplate(upgradeDataSource);
+        byte[] bytes = "{\"scheduled\":[],\"hasNextPage\":false}"
+                .getBytes(StandardCharsets.UTF_8);
+        String sha256 = com.bettingproject.sofascorelocal.security.Sha256.hex(bytes);
+        Long snapshotId = upgradeJdbc.queryForObject(
+                """
+                insert into provider_snapshot (
+                    provider, logical_endpoint, request_key,
+                    requested_at, received_at, http_status, content_type, latency_ms,
+                    payload_raw, payload_size_bytes, payload_sha256,
+                    parser_version, schema_status
+                ) values (
+                    'SOFASCORE', 'SCHEDULED_EVENTS',
+                    'SCHEDULED_EVENTS|date=2026-08-18|page=1',
+                    ?, ?, 200, 'application/json', 25,
+                    ?, ?, ?, 'scheduled-events-v1', 'PARSED'
+                )
+                returning id
+                """,
+                Long.class,
+                Timestamp.from(Instant.parse("2026-08-18T08:00:00Z")),
+                Timestamp.from(Instant.parse("2026-08-18T08:00:00.025Z")),
+                bytes,
+                bytes.length,
+                sha256);
+        upgradeJdbc.update(
+                """
+                insert into provider_response_cache (
+                    provider, logical_endpoint, request_key,
+                    snapshot_id, cached_at, parser_version
+                ) values (
+                    'SOFASCORE', 'SCHEDULED_EVENTS',
+                    'SCHEDULED_EVENTS|date=2026-08-18|page=1',
+                    ?, ?, 'scheduled-events-v1'
+                )
+                """,
+                snapshotId,
+                Timestamp.from(Instant.parse("2026-08-18T08:00:00.025Z")));
+
+        Flyway toV24 = Flyway.configure()
+                .dataSource(upgradeDataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("24"))
+                .load();
+        assertThat(toV24.migrate().migrationsExecuted).isEqualTo(1);
+        assertThat(toV24.info().current().getVersion().getVersion()).isEqualTo("24");
+        assertThat(upgradeJdbc.queryForObject(
+                "select count(*) from provider_response_cache",
+                Long.class)).isEqualTo(1L);
+        assertThat(upgradeJdbc.queryForObject(
+                """
+                select pg_get_constraintdef(oid)
+                from pg_constraint
+                where conrelid = 'provider_response_cache'::regclass
+                  and conname = 'ck_provider_response_cache_scope'
+                """,
+                String.class)).contains("TOURNAMENT_SCHEDULED_EVENTS");
+    }
+
+    @Test
+    void upgradesV24ToV25AndSeparatesDirectResponsesFromManualJsonImports() {
+        String schema = "upgrade_v24_to_v25_local_import";
+        String separator = POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
+        var upgradeDataSource = new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema,
+                POSTGRES.getUsername(),
+                POSTGRES.getPassword());
+        Flyway toV24 = Flyway.configure()
+                .dataSource(upgradeDataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .createSchemas(true)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("24"))
+                .load();
+        assertThat(toV24.migrate().migrationsExecuted).isEqualTo(24);
+
+        Flyway latest = Flyway.configure()
+                .dataSource(upgradeDataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration")
+                .load();
+        assertThat(latest.migrate().migrationsExecuted).isEqualTo(1);
+        assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("25");
+
+        JdbcRawManualCallSnapshotStore upgradeStore =
+                new JdbcRawManualCallSnapshotStore(
+                        new org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate(
+                                upgradeDataSource));
+        Instant importedAt = Instant.parse("2026-08-20T18:00:00Z");
+        byte[] bytes = "{\"events\":[]}".getBytes(StandardCharsets.UTF_8);
+        RawPayloadEvidence payload = RawPayloadEvidence.capture(bytes);
+        String requestKey =
+                "TOURNAMENT_SCHEDULED_EVENTS|date=2026-08-20|uniqueTournamentId=8";
+        RawManualCallSnapshot direct = new RawManualCallSnapshot(
+                SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
+                RawSnapshotAcquisitionMode.DIRECT_LOCAL_ENDPOINT,
+                requestKey,
+                importedAt.minusMillis(20),
+                importedAt,
+                200,
+                "application/json",
+                Duration.ofMillis(20),
+                payload,
+                TournamentScheduledEventsV1Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.RAW_ONLY,
+                null);
+        RawManualCallSnapshot imported = new RawManualCallSnapshot(
+                SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
+                RawSnapshotAcquisitionMode.MANUAL_LOCAL_JSON_IMPORT,
+                requestKey,
+                importedAt,
+                importedAt,
+                200,
+                "application/json",
+                Duration.ZERO,
+                payload,
+                TournamentScheduledEventsV1Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.RAW_ONLY,
+                null);
+
+        var directFirst = upgradeStore.save(direct);
+        var directSecond = upgradeStore.save(direct);
+        var importFirst = upgradeStore.save(imported);
+        var importSecond = upgradeStore.save(imported);
+
+        assertThat(directFirst.outcome()).isEqualTo(RawSnapshotPersistenceOutcome.INSERTED);
+        assertThat(directSecond.outcome()).isEqualTo(RawSnapshotPersistenceOutcome.DEDUPLICATED);
+        assertThat(importFirst.outcome()).isEqualTo(RawSnapshotPersistenceOutcome.INSERTED);
+        assertThat(importSecond.outcome()).isEqualTo(RawSnapshotPersistenceOutcome.DEDUPLICATED);
+        assertThat(directSecond.snapshotId()).isEqualTo(directFirst.snapshotId());
+        assertThat(importSecond.snapshotId()).isEqualTo(importFirst.snapshotId());
+        assertThat(importFirst.snapshotId()).isNotEqualTo(directFirst.snapshotId());
+
+        JdbcTemplate upgradeJdbc = new JdbcTemplate(upgradeDataSource);
+        assertThat(upgradeJdbc.queryForObject(
+                "select count(*) from provider_snapshot where request_key = ?",
+                Long.class,
+                requestKey)).isEqualTo(2L);
+        assertThat(upgradeJdbc.queryForList(
+                "select acquisition_mode from provider_snapshot where request_key = ? "
+                        + "order by acquisition_mode",
+                String.class,
+                requestKey)).containsExactly(
+                        "DIRECT_LOCAL_ENDPOINT",
+                        "MANUAL_LOCAL_JSON_IMPORT");
+    }
+
+    @Test
+    void persistsTournamentDiscoveryThenOpensJ5WithoutAnyEventDetailsObservation() {
+        LocalDate date = LocalDate.of(2026, 8, 18);
+        Instant requestedAt = Instant.parse("2026-08-20T08:00:00Z");
+        Instant receivedAt = requestedAt.plusMillis(25);
+        TournamentScheduledEventsProviderRequest request =
+                new TournamentScheduledEventsProviderRequest(
+                        URI.create(EventDetailsProviderRequest.EXPECTED_ORIGIN),
+                        date,
+                        7);
+        RawPayloadEvidence payload = RawPayloadEvidence.capture("""
+                {
+                  "events": [{
+                    "id": 981001,
+                    "startTimestamp": 1787079600,
+                    "homeTeam": {"id": 181, "name": "J3 Home"},
+                    "awayTeam": {"id": 182, "name": "J3 Away"},
+                    "status": {"type": "notstarted"},
+                    "tournament": {
+                      "id": 119880,
+                      "name": "UEFA Champions League, Playoff Round",
+                      "uniqueTournament": {
+                        "id": 7,
+                        "name": "UEFA Champions League"
+                      }
+                    }
+                  }]
+                }
+                """.getBytes(StandardCharsets.UTF_8));
+        TournamentScheduledEventsTransportResponse response =
+                new TournamentScheduledEventsTransportResponse(
+                        request.requestKey(),
+                        requestedAt,
+                        receivedAt,
+                        200,
+                        "application/json",
+                        Duration.ofMillis(25),
+                        payload);
+        RawSnapshotPersistenceResult raw = snapshotStore.save(new RawManualCallSnapshot(
+                SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
+                request.requestKey(),
+                requestedAt,
+                receivedAt,
+                200,
+                "application/json",
+                Duration.ofMillis(25),
+                payload,
+                TournamentScheduledEventsV1Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.RAW_ONLY,
+                null));
+        snapshotStore.classify(
+                raw.snapshotId(),
+                RawSnapshotSchemaStatus.PARSED,
+                null);
+        tournamentScheduledEventsCache.recordParsed(
+                request,
+                response,
+                raw,
+                TournamentScheduledEventsV1Parser.PARSER_VERSION);
+
+        var cached = tournamentScheduledEventsCache.findFreshParsed(
+                request,
+                receivedAt.plusSeconds(1),
+                Duration.ofMinutes(10),
+                TournamentScheduledEventsV1Parser.PARSER_VERSION).orElseThrow();
+        var parsed = new TournamentScheduledEventsV1Parser().parse(
+                cached.payload().bytes(),
+                cached.contentType(),
+                new TournamentScheduledEventsParseEvidence(
+                        "snapshot:" + cached.snapshotId(),
+                        cached.payload().sha256(),
+                        Optional.empty(),
+                        cached.receivedAt(),
+                        TournamentScheduledEventsV1Parser.PARSER_VERSION));
+        var option = new J3TournamentCatalogOption(
+                119_880,
+                "UEFA Champions League, Playoff Round",
+                "Europe",
+                7,
+                "UEFA Champions League",
+                Map.of(7200, 1),
+                List.of(41L));
+        var projection = tournamentProjectionService.project(
+                date,
+                option,
+                parsed.candidates().orElseThrow());
+        var persisted = tournamentCanonicalPersistenceService.persist(
+                projection,
+                cached.snapshotId(),
+                cached.payload().sha256(),
+                cached.receivedAt());
+        UUID canonicalEventId = persisted.events().getFirst().canonicalEventId();
+
+        assertThat(persisted.insertedObservations()).isEqualTo(1);
+        assertThat(eventDetailsStore.findLatest(canonicalEventId)).isEmpty();
+        assertThat(j5EventDataQueryService.find(canonicalEventId, "Europe/Paris"))
+                .isPresent()
+                .get()
+                .satisfies(page -> {
+                    assertThat(page.current().event().identity().providerEventId())
+                            .isEqualTo(981001);
+                    assertThat(page.data().statistics()).isEmpty();
+                    assertThat(page.data().incidents()).isEmpty();
+                    assertThat(page.data().lineups()).isEmpty();
+                });
     }
 
     @Test
@@ -3614,7 +3939,7 @@ class FlywayMigrationIT {
 
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$flywaySql"),
-                String.class)).isEqualTo("23");
+                String.class)).isEqualTo("25");
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$snapshotFingerprintSql"),
                 String.class)).isNotNull();
@@ -3626,6 +3951,31 @@ class FlywayMigrationIT {
                 String.class)).isNotNull();
     }
 
+    @Test
+    void j6RetentionLauncherRequiresCurrentFlywayAndDisablesTournamentDiscovery() throws Exception {
+        String script = Files.readString(
+                Path.of("scripts", "Invoke-J6Retention.ps1"),
+                StandardCharsets.UTF_8);
+
+        assertThat(script)
+                .contains("$manifest.source.flywayVersion.ToString() -cne '25'")
+                .contains("valid Flyway V25 raw-payload restore");
+
+        String environmentNames = powerShellArray(script, "$environmentNames");
+        assertThat(environmentNames)
+                .contains("'SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED'");
+
+        Pattern forcedFalseNames = Pattern.compile(
+                "foreach\\s*\\(\\$name\\s+in\\s+@\\((.*?)\\)\\)\\s*\\{\\R"
+                        + "\\s*Set-ProcessEnvironment\\s+-Name\\s+\\$name"
+                        + "\\s+-Value\\s+'false'",
+                Pattern.DOTALL);
+        Matcher forcedFalseMatcher = forcedFalseNames.matcher(script);
+        assertThat(forcedFalseMatcher.find()).isTrue();
+        assertThat(forcedFalseMatcher.group(1))
+                .contains("'SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED'");
+    }
+
     private static String powerShellHereString(String script, String variableName) {
         Pattern assignment = Pattern.compile(
                 "^" + Pattern.quote(variableName) + "\\s*=\\s*@'\\R(.*?)\\R'@$",
@@ -3634,6 +3984,18 @@ class FlywayMigrationIT {
         if (!matcher.find()) {
             throw new IllegalArgumentException(
                     "PowerShell here-string not found: " + variableName);
+        }
+        return matcher.group(1);
+    }
+
+    private static String powerShellArray(String script, String variableName) {
+        Pattern assignment = Pattern.compile(
+                "^" + Pattern.quote(variableName) + "\\s*=\\s*@\\(\\R(.*?)^\\)$",
+                Pattern.MULTILINE | Pattern.DOTALL);
+        Matcher matcher = assignment.matcher(script);
+        if (!matcher.find()) {
+            throw new IllegalArgumentException(
+                    "PowerShell array not found: " + variableName);
         }
         return matcher.group(1);
     }
@@ -3941,6 +4303,101 @@ class FlywayMigrationIT {
         assertThat(jdbcTemplate.queryForObject(
                 "select count(*) from provider_snapshot",
                 Long.class)).isEqualTo(countBefore);
+    }
+
+    @Test
+    void rebuildsJ3TournamentCatalogAfterPostgresRoundsReceivedAtToMicroseconds() {
+        LocalDate collectionDate = LocalDate.parse("2026-08-20");
+        String requestKey = "SCHEDULED_EVENTS|date=" + collectionDate + "|page=1";
+        Instant receivedAt = Instant.parse("2026-08-20T11:18:19.049495700Z");
+        Instant requestedAt = receivedAt.minusMillis(20);
+        byte[] rawPayload = """
+                {
+                  "scheduled": [
+                    {
+                      "tournament": {
+                        "id": 119880,
+                        "name": "UEFA Champions League, Playoff Round",
+                        "category": {
+                          "name": "Europe"
+                        },
+                        "uniqueTournament": {
+                          "id": 7,
+                          "name": "UEFA Champions League"
+                        }
+                      },
+                      "timezoneEventCount": {"7200": 1}
+                    }
+                  ],
+                  "hasNextPage": false
+                }
+                """.getBytes(StandardCharsets.UTF_8);
+        RawPayloadEvidence payload = RawPayloadEvidence.capture(rawPayload);
+        ScheduledEventsTransportResponse response = new ScheduledEventsTransportResponse(
+                requestKey,
+                requestedAt,
+                receivedAt,
+                200,
+                "application/json; charset=utf-8",
+                Duration.ofMillis(20),
+                payload);
+        RawSnapshotPersistenceResult persisted = snapshotStore.save(new RawManualCallSnapshot(
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                requestKey,
+                requestedAt,
+                receivedAt,
+                200,
+                "application/json; charset=utf-8",
+                Duration.ofMillis(20),
+                payload,
+                ScheduledEventsV1Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.PARSED,
+                null));
+        J3MinimizedPageEvidence pageEvidence = J3MinimizedPageEvidence.recorded(
+                1,
+                response,
+                persisted,
+                RawSnapshotSchemaStatus.PARSED,
+                false,
+                null);
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
+        evidenceService.publish(new J3MinimizedCollectionEvidence(
+                collectionDate,
+                J3ManualCallIntentState.COMPLETED,
+                0,
+                1,
+                null,
+                "NONE",
+                receivedAt.plusSeconds(1),
+                true,
+                J3CircuitState.LOCKED,
+                J3CircuitReason.MANUAL_COLLECTION_TERMINAL_LOCK,
+                Duration.ofMinutes(10),
+                List.of(pageEvidence)));
+        J3TournamentCatalogService catalogService = new J3TournamentCatalogService(
+                evidenceService,
+                snapshotInspectionStore);
+
+        Instant persistedReceivedAt = snapshotInspectionStore
+                .findById(persisted.snapshotId())
+                .orElseThrow()
+                .summary()
+                .receivedAt();
+        var catalog = catalogService.latest();
+
+        assertThat(persistedReceivedAt).isNotEqualTo(receivedAt);
+        assertThat(Duration.between(persistedReceivedAt, receivedAt).abs())
+                .isLessThan(Duration.ofNanos(1_000));
+        assertThat(catalog.status()).isEqualTo(J3TournamentCatalogStatus.AVAILABLE);
+        assertThat(catalog.options()).singleElement().satisfies(option -> {
+            assertThat(option.tournamentId()).isEqualTo(119880L);
+            assertThat(option.tournamentCategoryName()).isEqualTo("Europe");
+            assertThat(option.displayLabel())
+                    .isEqualTo("UEFA Champions League, Playoff Round - Europe");
+            assertThat(option.uniqueTournamentId()).isEqualTo(7L);
+            assertThat(option.sourceSnapshotIds()).containsExactly(persisted.snapshotId());
+        });
     }
 
     @Test

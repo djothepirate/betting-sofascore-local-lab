@@ -159,6 +159,7 @@ class ScheduledEventsV1ParserTest {
         ScheduledTournamentAvailability first = page.scheduledTournaments().getFirst();
         assertThat(first.tournament().providerTournamentId()).isEqualTo(970001L);
         assertThat(first.tournament().name()).isEqualTo("Synthetic Regional League");
+        assertThat(first.tournamentCategoryName()).isEmpty();
         assertThat(first.uniqueTournament()).hasValueSatisfying(tournament -> {
             assertThat(tournament.providerTournamentId()).isEqualTo(970101L);
             assertThat(tournament.name()).isEqualTo("Synthetic National Competition");

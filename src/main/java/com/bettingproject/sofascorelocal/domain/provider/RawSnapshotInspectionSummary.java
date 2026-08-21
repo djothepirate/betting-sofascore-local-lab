@@ -9,6 +9,7 @@ import java.util.regex.Pattern;
  */
 public record RawSnapshotInspectionSummary(
         long snapshotId,
+        RawSnapshotAcquisitionMode acquisitionMode,
         String logicalEndpoint,
         String requestKey,
         Instant receivedAt,
@@ -25,6 +26,7 @@ public record RawSnapshotInspectionSummary(
         if (snapshotId < 1) {
             throw new IllegalArgumentException("snapshotId must be positive");
         }
+        Objects.requireNonNull(acquisitionMode, "acquisitionMode");
         logicalEndpoint = requireSafeText(logicalEndpoint, "logicalEndpoint");
         requestKey = requireSafeText(requestKey, "requestKey");
         Objects.requireNonNull(receivedAt, "receivedAt");
@@ -41,6 +43,31 @@ public record RawSnapshotInspectionSummary(
         if (!SHA256_PATTERN.matcher(payloadSha256).matches()) {
             throw new IllegalArgumentException("payloadSha256 must be a lowercase SHA-256");
         }
+    }
+
+    public RawSnapshotInspectionSummary(
+            long snapshotId,
+            String logicalEndpoint,
+            String requestKey,
+            Instant receivedAt,
+            Integer httpStatus,
+            String contentType,
+            long payloadSizeBytes,
+            String payloadSha256,
+            String parserVersion,
+            RawSnapshotSchemaStatus schemaStatus) {
+        this(
+                snapshotId,
+                RawSnapshotAcquisitionMode.DIRECT_LOCAL_ENDPOINT,
+                logicalEndpoint,
+                requestKey,
+                receivedAt,
+                httpStatus,
+                contentType,
+                payloadSizeBytes,
+                payloadSha256,
+                parserVersion,
+                schemaStatus);
     }
 
     private static String requireSafeText(String value, String name) {

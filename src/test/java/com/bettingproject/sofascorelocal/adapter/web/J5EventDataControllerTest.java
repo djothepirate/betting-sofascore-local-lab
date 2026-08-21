@@ -5,13 +5,16 @@ import com.bettingproject.sofascorelocal.application.event.J5EventDataPage;
 import com.bettingproject.sofascorelocal.application.event.J5EventDataQueryService;
 import com.bettingproject.sofascorelocal.application.event.J5OfflineFixtureImportService;
 import com.bettingproject.sofascorelocal.application.event.J5OfflineImportResult;
+import com.bettingproject.sofascorelocal.application.network.J5LocalJsonImportService;
 import com.bettingproject.sofascorelocal.application.network.J5RealCampaignResult;
 import com.bettingproject.sofascorelocal.application.network.J5RealControlService;
+import com.bettingproject.sofascorelocal.application.network.J5RealEndpointResult;
 import com.bettingproject.sofascorelocal.application.network.J5RealEventDataService;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.J5RealControlSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.J5RealControlState;
 import com.bettingproject.sofascorelocal.domain.provider.J5RealExecutionClaim;
+import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
@@ -40,6 +43,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.cache.CacheManager;
 import org.springframework.http.HttpHeaders;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -58,6 +62,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
@@ -84,6 +89,9 @@ class J5EventDataControllerTest {
 
     @MockitoBean
     J5RealEventDataService realEventDataService;
+
+    @MockitoBean
+    J5LocalJsonImportService localJsonImportService;
 
     @MockitoBean
     LocalFormTokenService formTokenService;
@@ -146,7 +154,7 @@ class J5EventDataControllerTest {
                 .andExpect(content().string(containsString("4-4-2")))
                 .andExpect(content().string(containsString("Synthetic Away Defender")))
                 .andExpect(content().string(containsString("PROVIDER_SCHEMA_VALIDATED=NO")))
-                .andExpect(content().string(containsString("Trois endpoints, une confirmation, aucun retry")))
+                .andExpect(content().string(containsString("Trois familles, une confirmation, aucun retry")))
                 .andExpect(content().string(containsString("J5_EVENT_DATA_QUALIFICATION_DISABLED")))
                 .andExpect(content().string(containsString("COMPLETE · 100%")))
                 .andExpect(content().string(containsString("PARTIAL · 0%")))
@@ -176,6 +184,51 @@ class J5EventDataControllerTest {
                 .andExpect(content().string(containsString("Aucune statistique locale")))
                 .andExpect(content().string(containsString("Aucun incident local")))
                 .andExpect(content().string(containsString("Aucune composition locale")));
+    }
+
+    @Test
+    void rendersTheThreeFileImportChoiceForAnAwaitingCampaign() throws Exception {
+        J4EventSearchItem current = currentEvent();
+        J5EventDataPage page = new J5EventDataPage(
+                ZoneId.of("Europe/Paris"),
+                current,
+                J5EventDataBundle.empty());
+        UUID requestId = UUID.fromString("82000000-0000-0000-0000-000000000008");
+        when(formTokenService.issue(any(HttpSession.class))).thenReturn("one-use-token");
+        when(queryService.find(current.event().identity().value(), "Europe/Paris"))
+                .thenReturn(Optional.of(page));
+        when(realControlService.snapshot()).thenReturn(new J5RealControlSnapshot(
+                J5RealControlState.AWAITING_CONFIRMATION,
+                Instant.parse("2026-08-21T07:00:00Z"),
+                requestId,
+                "CONFIRMER J5 REAL 900001 STATISTICS INCIDENTS LINEUPS 123456",
+                Instant.parse("2026-08-21T07:00:00Z"),
+                Instant.parse("2026-08-21T07:05:00Z"),
+                current.event().identity().value(),
+                900001L,
+                List.of(),
+                null,
+                true,
+                List.of()));
+
+        mockMvc.perform(get(
+                        "/events/{id}/statistics",
+                        current.event().identity().value())
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(
+                        "Option B — Trois corps JSON, zéro appel")))
+                .andExpect(content().string(containsString("name=\"statisticsFile\"")))
+                .andExpect(content().string(containsString("name=\"incidentsFile\"")))
+                .andExpect(content().string(containsString("name=\"lineupsFile\"")))
+                .andExpect(content().string(containsString(
+                        "https://www.sofascore.com/api/v1/event/900001/statistics")))
+                .andExpect(content().string(containsString(
+                        "https://www.sofascore.com/api/v1/event/900001/incidents")))
+                .andExpect(content().string(containsString(
+                        "https://www.sofascore.com/api/v1/event/900001/lineups")))
+                .andExpect(content().string(containsString(
+                        "Importer les trois familles — ZÉRO APPEL")));
     }
 
     @Test
@@ -330,6 +383,7 @@ class J5EventDataControllerTest {
                 false,
                 "HTTP_429",
                 1,
+                0,
                 List.of()));
 
         mockMvc.perform(post(
@@ -352,6 +406,65 @@ class J5EventDataControllerTest {
     }
 
     @Test
+    void importsTheThreeLocalJsonBodiesWithoutExecutingTheProviderService() throws Exception {
+        J4EventSearchItem current = currentEvent();
+        UUID requestId = UUID.fromString("81000000-0000-0000-0000-000000000008");
+        String confirmation =
+                "CONFIRMER J5 REAL 900001 STATISTICS INCIDENTS LINEUPS 123456";
+        RawPayloadEvidence statistics = RawPayloadEvidence.capture(
+                "{\"statistics\":[]}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        RawPayloadEvidence incidents = RawPayloadEvidence.capture(
+                "{\"incidents\":[]}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        RawPayloadEvidence lineups = RawPayloadEvidence.capture(
+                "{\"confirmed\":false}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        J5RealCampaignResult result = localImportResult(
+                requestId, current.event().identity().value());
+        when(localJsonImportService.importCampaign(
+                current.event().identity().value(),
+                requestId,
+                confirmation,
+                true,
+                statistics,
+                incidents,
+                lineups)).thenReturn(result);
+
+        mockMvc.perform(multipart(
+                        "/events/{id}/statistics/real/import-json",
+                        current.event().identity().value())
+                        .file(new MockMultipartFile(
+                                "statisticsFile", "statistics.json", "application/json",
+                                statistics.bytes()))
+                        .file(new MockMultipartFile(
+                                "incidentsFile", "incidents.json", "application/json",
+                                incidents.bytes()))
+                        .file(new MockMultipartFile(
+                                "lineupsFile", "lineups.json", "application/json",
+                                lineups.bytes()))
+                        .param("localFormToken", "one-use-token")
+                        .param("requestId", requestId.toString())
+                        .param("confirmationText", confirmation)
+                        .param("acknowledged", "true")
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("j5RealResult", result))
+                .andExpect(flash().attribute("j5RealMessageKind", "safe"))
+                .andExpect(redirectedUrl(
+                        "/events/" + current.event().identity().value()
+                                + "/statistics?zone=Europe%2FParis"));
+
+        verify(formTokenService).consume(any(HttpSession.class), eq("one-use-token"));
+        verify(localJsonImportService).importCampaign(
+                current.event().identity().value(),
+                requestId,
+                confirmation,
+                true,
+                statistics,
+                incidents,
+                lineups);
+        verifyNoInteractions(realEventDataService);
+    }
+
+    @Test
     void appliesTheJ5GlobalStopOnlyAfterConsumingTheToken() throws Exception {
         J4EventSearchItem current = currentEvent();
 
@@ -367,6 +480,41 @@ class J5EventDataControllerTest {
 
         verify(formTokenService).consume(any(HttpSession.class), eq("one-use-token"));
         verify(realControlService).stop();
+    }
+
+    private static J5RealCampaignResult localImportResult(
+            UUID requestId,
+            UUID canonicalEventId) {
+        List<J5RealEndpointResult> endpoints = List.of(
+                localEndpoint(SofascoreEndpointType.EVENT_STATISTICS, 410L, 510L, 'a'),
+                localEndpoint(SofascoreEndpointType.EVENT_INCIDENTS, 411L, 511L, 'b'),
+                localEndpoint(SofascoreEndpointType.EVENT_LINEUPS, 412L, 512L, 'c'));
+        return new J5RealCampaignResult(
+                requestId,
+                canonicalEventId,
+                900001L,
+                true,
+                "COMPLETED",
+                0,
+                3,
+                endpoints);
+    }
+
+    private static J5RealEndpointResult localEndpoint(
+            SofascoreEndpointType endpointType,
+            long snapshotId,
+            long observationId,
+            char hashCharacter) {
+        return new J5RealEndpointResult(
+                endpointType,
+                snapshotId,
+                String.valueOf(hashCharacter).repeat(64),
+                24,
+                observationId,
+                true,
+                J5CompletenessStatus.EMPTY_VALID,
+                100,
+                0);
     }
 
     private static J5EventDataPage pageWithData() {

@@ -142,14 +142,20 @@ main {
 }
 
 .control-stage {
+  min-width: 0;
   padding: 18px;
   background: #f8fbfb;
   border: 1px solid var(--line);
   border-radius: 12px;
 }
 
+.control-stage-full {
+  grid-column: 1 / -1;
+}
+
 .control-actions,
 .control-form {
+  min-width: 0;
   display: grid;
   gap: 12px;
   margin-top: 18px;
@@ -165,7 +171,11 @@ main {
 }
 
 .control-form input[type="date"],
-.control-form input[type="text"] {
+.control-form input[type="text"],
+.control-form input[type="file"],
+.control-form select {
+  max-width: 100%;
+  min-width: 0;
   width: 100%;
   min-height: 42px;
   padding: 9px 11px;
@@ -176,7 +186,27 @@ main {
   font: inherit;
 }
 
+.discovery-execution-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
+}
+
+.discovery-execution-grid > *,
+.control-stage h3,
+.control-stage h4,
+.endpoint-uri {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.endpoint-uri {
+  display: block;
+}
+
 .control-form input:focus-visible,
+.control-form select:focus-visible,
 button:focus-visible {
   outline: 3px solid rgba(0, 143, 140, 0.35);
   outline-offset: 2px;
@@ -804,8 +834,9 @@ footer {
   .fixture-counts,
   .control-grid,
   .fixture-metadata,
-  .inspection-metadata,
-  .history-compare-grid,
+    .inspection-metadata,
+    .discovery-execution-grid,
+    .history-compare-grid,
   .detail-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -825,7 +856,8 @@ footer {
   .control-grid,
   .fixture-counts,
   .fixture-metadata,
-  .inspection-metadata,
+    .inspection-metadata,
+    .discovery-execution-grid,
   .history-compare-grid,
   .j7-decision-grid,
   .detail-grid,

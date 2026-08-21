@@ -8,17 +8,23 @@ public record J3ManualCallExecutionResult(
         Integer failedPage,
         String terminalCode,
         int providerRequests,
-        int cacheHits) {
+        int cacheHits,
+        int localJsonImports) {
 
     public J3ManualCallExecutionResult {
         if (completedPages < 0
                 || completedPages > ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE) {
             throw new IllegalArgumentException("completedPages must be between 0 and 25");
         }
-        if (providerRequests < 0 || cacheHits < 0 || cacheHits > completedPages) {
+        if (providerRequests < 0 || cacheHits < 0 || localJsonImports < 0
+                || cacheHits > completedPages) {
             throw new IllegalArgumentException("resolution counters must be non-negative");
         }
-        int resolvedPages = providerRequests + cacheHits;
+        if (localJsonImports > 0 && (providerRequests > 0 || cacheHits > 0)) {
+            throw new IllegalArgumentException(
+                    "a collection cannot mix local imports with provider or cache resolutions");
+        }
+        int resolvedPages = providerRequests + cacheHits + localJsonImports;
         if (resolvedPages < completedPages || resolvedPages > completedPages + 1) {
             throw new IllegalArgumentException(
                     "resolution counters must cover completed pages and at most one failed page");
@@ -52,7 +58,12 @@ public record J3ManualCallExecutionResult(
             int providerRequests,
             int cacheHits) {
         return new J3ManualCallExecutionResult(
-                true, completedPages, null, null, providerRequests, cacheHits);
+                true, completedPages, null, null, providerRequests, cacheHits, 0);
+    }
+
+    public static J3ManualCallExecutionResult successfulLocalImport(int completedPages) {
+        return new J3ManualCallExecutionResult(
+                true, completedPages, null, null, 0, 0, completedPages);
     }
 
     public static J3ManualCallExecutionResult failed(
@@ -74,6 +85,22 @@ public record J3ManualCallExecutionResult(
                 failedPage,
                 terminalCode,
                 providerRequests,
-                cacheHits);
+                cacheHits,
+                0);
+    }
+
+    public static J3ManualCallExecutionResult failedLocalImport(
+            int completedPages,
+            int failedPage,
+            String terminalCode,
+            int localJsonImports) {
+        return new J3ManualCallExecutionResult(
+                false,
+                completedPages,
+                failedPage,
+                terminalCode,
+                0,
+                0,
+                localJsonImports);
     }
 }

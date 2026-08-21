@@ -55,8 +55,12 @@ public record ScheduledEventsEnvelopeDto(
     public record TournamentDto(long id, String name) {
     }
 
+    public record TournamentCategoryDto(String name) {
+    }
+
     public record ScheduledTournamentAvailabilityDto(
             TournamentDto tournament,
+            TournamentCategoryDto tournamentCategory,
             TournamentDto uniqueTournament,
             Map<Integer, Integer> timezoneEventCount) {
 

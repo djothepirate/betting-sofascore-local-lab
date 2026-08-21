@@ -26,6 +26,8 @@ class SofascoreEndpointCatalogTest {
     void usesTheInitialCachePolicyFromTheScopingDocument() {
         assertThat(catalog.get(SofascoreEndpointType.SCHEDULED_EVENTS).cacheTtl())
                 .isEqualTo(Duration.ofMinutes(10));
+        assertThat(catalog.get(SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS).cacheTtl())
+                .isEqualTo(Duration.ofMinutes(10));
         assertThat(catalog.get(SofascoreEndpointType.TOURNAMENT_STANDINGS).cacheTtl())
                 .isEqualTo(Duration.ofHours(6));
     }

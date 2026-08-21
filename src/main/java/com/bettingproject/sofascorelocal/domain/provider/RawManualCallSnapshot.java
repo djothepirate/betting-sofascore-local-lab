@@ -7,6 +7,7 @@ import java.util.regex.Pattern;
 
 public record RawManualCallSnapshot(
         SofascoreEndpointType endpointType,
+        RawSnapshotAcquisitionMode acquisitionMode,
         String requestKey,
         Instant requestedAt,
         Instant receivedAt,
@@ -29,6 +30,7 @@ public record RawManualCallSnapshot(
 
     public RawManualCallSnapshot {
         Objects.requireNonNull(endpointType, "endpointType");
+        Objects.requireNonNull(acquisitionMode, "acquisitionMode");
         requestKey = requireText(requestKey, "requestKey", MAXIMUM_REQUEST_KEY_LENGTH);
         Objects.requireNonNull(requestedAt, "requestedAt");
         Objects.requireNonNull(receivedAt, "receivedAt");
@@ -70,6 +72,33 @@ public record RawManualCallSnapshot(
                 throw new IllegalArgumentException("errorCode contains unsafe characters");
             }
         }
+    }
+
+    public RawManualCallSnapshot(
+            SofascoreEndpointType endpointType,
+            String requestKey,
+            Instant requestedAt,
+            Instant receivedAt,
+            int httpStatus,
+            String contentType,
+            Duration latency,
+            RawPayloadEvidence payload,
+            String parserVersion,
+            RawSnapshotSchemaStatus schemaStatus,
+            String errorCode) {
+        this(
+                endpointType,
+                RawSnapshotAcquisitionMode.DIRECT_LOCAL_ENDPOINT,
+                requestKey,
+                requestedAt,
+                receivedAt,
+                httpStatus,
+                contentType,
+                latency,
+                payload,
+                parserVersion,
+                schemaStatus,
+                errorCode);
     }
 
     public long latencyMillis() {

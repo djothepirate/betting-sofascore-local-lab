@@ -5,6 +5,7 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.Sched
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsEnvelopeDto.ScheduledTournamentAvailabilityDto;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsEnvelopeDto.StatusDto;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsEnvelopeDto.TeamDto;
+import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsEnvelopeDto.TournamentCategoryDto;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsEnvelopeDto.TournamentDto;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportResponse;
@@ -70,6 +71,15 @@ public final class ScheduledEventsV1Parser {
             "name",
             "slug",
             "userCount");
+    private static final Set<String> TOURNAMENT_CATEGORY_FIELDS = Set.of(
+            "alpha2",
+            "country",
+            "fieldTranslations",
+            "flag",
+            "id",
+            "name",
+            "slug",
+            "sport");
 
     private static final ObjectMapper JSON_MAPPER = JsonMapper.builder()
             .enable(StreamReadFeature.STRICT_DUPLICATE_DETECTION)
@@ -281,6 +291,7 @@ public final class ScheduledEventsV1Parser {
         }
         return new ScheduledTournamentAvailabilityDto(
                 qualifiedTournament.tournament(),
+                qualifiedTournament.category(),
                 qualifiedTournament.uniqueTournament(),
                 timezoneEventCount);
     }
@@ -298,6 +309,11 @@ public final class ScheduledEventsV1Parser {
         warnUnknownFields(tournamentNode, QUALIFIED_TOURNAMENT_FIELDS, path, warnings);
         Long id = requiredPositiveLong(tournamentNode.get("id"), path + ".id", problems);
         String name = requiredText(tournamentNode.get("name"), path + ".name", problems);
+        TournamentCategoryDto category = parseOptionalTournamentCategory(
+                tournamentNode.get("category"),
+                path + ".category",
+                warnings,
+                problems);
         TournamentDto uniqueTournament = parseOptionalTournamentIdentity(
                 tournamentNode.get("uniqueTournament"),
                 path + ".uniqueTournament",
@@ -307,7 +323,31 @@ public final class ScheduledEventsV1Parser {
         if (problems.size() != problemCountBeforeTournament) {
             return null;
         }
-        return new QualifiedTournament(new TournamentDto(id, name), uniqueTournament);
+        return new QualifiedTournament(
+                new TournamentDto(id, name),
+                category,
+                uniqueTournament);
+    }
+
+    private static TournamentCategoryDto parseOptionalTournamentCategory(
+            JsonNode categoryNode,
+            String path,
+            List<ScheduledEventsParseWarning> warnings,
+            List<ScheduledEventsParseProblem> problems) {
+        if (categoryNode == null) {
+            return null;
+        }
+        if (!requireObject(categoryNode, path, problems)) {
+            return null;
+        }
+
+        int problemCountBeforeCategory = problems.size();
+        warnUnknownFields(categoryNode, TOURNAMENT_CATEGORY_FIELDS, path, warnings);
+        String name = requiredText(categoryNode.get("name"), path + ".name", problems);
+        if (problems.size() != problemCountBeforeCategory) {
+            return null;
+        }
+        return new TournamentCategoryDto(name);
     }
 
     private static TournamentDto parseOptionalTournamentIdentity(
@@ -798,6 +838,7 @@ public final class ScheduledEventsV1Parser {
 
     private record QualifiedTournament(
             TournamentDto tournament,
+            TournamentCategoryDto category,
             TournamentDto uniqueTournament) {
     }
 }

@@ -26,7 +26,8 @@ Chaque collecte est une nouvelle séquence opérateur explicite :
 3. choisir une date ;
 4. préparer une intention éphémère ;
 5. recopier exactement la phrase et acquitter les limites ;
-6. utiliser le bouton de déclenchement distinct.
+6. choisir une seule action de déclenchement distincte : pagination directe ou import du lot JSON
+   complet.
 
 L’intention porte la clé suivante :
 
@@ -39,7 +40,7 @@ confirmation ne produit aucun transport. Une intention ne peut être exécutée 
 un succès ou un incident, l’arrêt global est réappliqué ; sa levée efface l’intention terminale et
 permet de préparer une nouvelle séquence, y compris pour une autre date.
 
-## 3. Algorithme de pagination
+## 3. Algorithme de pagination directe
 
 Une collecte suit exclusivement cet ordre :
 
@@ -85,6 +86,20 @@ logiques. Ainsi, une page servie par le cache n’attend pas trois secondes ; si
 deux cache misses, le second transport attend néanmoins jusqu’à trois secondes après le départ du
 transport précédent.
 
+### 3.1 Variante locale sans transport
+
+Après la même confirmation, l'opérateur peut sélectionner en une fois les seuls corps JSON des
+pages J3 obtenus hors de l'application. Les fichiers nommés `page-1.json` à `page-N.json` sont
+triés par leur numéro et le lot entier est validé avant que l'intention soit réclamée : une à
+25 pages contiguës, 5 Mio maximum par page, 25 Mio maximum au total, forme
+`SCHEDULED_TOURNAMENT_LIST`, `hasNextPage=true` avant N puis `false` à N, et aucun motif sensible.
+
+Une fois le lot accepté, chaque page est persistée sous la clé date/page habituelle avec le mode
+`MANUAL_LOCAL_JSON_IMPORT`, puis classée par `scheduled-events-v1`. Cette variante ne consulte ni
+n'alimente le cache fournisseur, ne déclenche aucun transport et n'attend pas le délai inter-appels.
+Elle partage toutefois la même garde de concurrence, le même contrôle opérateur et le même verrou
+terminal que la voie directe. Les deux sources ne peuvent pas être mélangées dans une collecte.
+
 ## 4. Invariants réseau et de persistance
 
 Les invariants précédents restent obligatoires :
@@ -99,17 +114,22 @@ Les invariants précédents restent obligatoires :
 - exposition Web et Actuator limitée à `127.0.0.1` ;
 - chemin désactivé par défaut par la configuration locale.
 
+L'import local est un mode d'acquisition distinct, pas une imitation de navigateur : seuls les
+corps JSON sont acceptés ; HAR, en-têtes, cookies, jetons et données de session sont refusés avant
+la réclamation de l'intention. Un échec direct déjà terminal ne bascule jamais automatiquement vers
+l'import : l'opérateur doit réarmer, préparer et confirmer une nouvelle intention.
+
 La déduplication existante peut retourner `DEDUPLICATED` lors d’une nouvelle collecte identique.
 Ce résultat reste une persistance valide et ne contourne aucun contrôle de schéma. Un cache hit
 porte au contraire l’issue de preuve `CACHE_HIT` : aucune méthode de sauvegarde ou de classement
 n’est invoquée et le snapshot historique reste immuable.
 
-## 5. Preuve terminale minimisée v4
+## 5. Preuve terminale minimisée v5
 
 La preuve téléchargeable contient seulement les métadonnées nécessaires :
 
 ```text
-J3_MINIMIZED_EVIDENCE_VERSION=4
+J3_MINIMIZED_EVIDENCE_VERSION=5
 COLLECTION_DATE=<date>
 PAGINATION_MODE=HAS_NEXT_PAGE
 CACHE_POLICY=FRESH_PARSED_SNAPSHOT_FIRST
@@ -119,25 +139,31 @@ MAXIMUM_PAGE_LIMIT=25
 PAGES_RESOLVED=<liste ordonnée>
 PROVIDER_PAGES_REQUESTED=<liste ou NONE>
 CACHE_HIT_PAGES=<liste ou NONE>
+LOCAL_JSON_IMPORT_PAGES=<liste ou NONE>
 PROVIDER_REQUEST_COUNT=<nombre>
 CACHE_HIT_COUNT=<nombre>
+LOCAL_JSON_IMPORT_COUNT=<nombre>
 PAGES_COMPLETED_COUNT=<nombre>
 LAST_COMPLETED_PAGE=<page ou NONE>
-PAGE_<n>_RESOLUTION_SOURCE=<PROVIDER|CACHE>
+PAGE_<n>_RESOLUTION_SOURCE=<PROVIDER|CACHE|LOCAL_JSON_IMPORT>
 PAGE_<n>_CACHE_STORED_AT=<instant|NONE>
 PAGE_<n>_PROVIDER_REQUEST_EXECUTED=<YES|NO>
+PAGE_<n>_LOCAL_JSON_IMPORT_EXECUTED=<YES|NO>
 PAGE_<n>_HAS_NEXT_PAGE=<true|false|NONE>
 AUTOMATIC_RETRY_EXECUTED=NO
 POLLING_OR_SCHEDULE_EXECUTED=NO
 COOKIES_TOKENS_ACCOUNT_SESSION_USED=NO
 ```
 
-Un succès exige `hasNextPage=false` sur la dernière page et `true` sur toutes les précédentes. Un
+Un succès exige `hasNextPage=false` sur la dernière page et `true` sur toutes les précédentes. La
+preuve distingue sans ambiguïté les transports, cache hits et imports ; les compteurs de résultat
+ne peuvent ni les mélanger ni présenter un import comme un appel fournisseur. Un
 arrêt `PAGINATION_LIMIT_REACHED` exige 25 pages parsées annonçant toutes une suite, sans tentative
 de page 26. La preuve exclut le payload, l’URI, les en-têtes et l’identifiant de confirmation.
 
 ## 6. Hors périmètre
 
 Cette unité n’ajoute ni tâche planifiée, ni polling, ni collecte multi-sport, ni endpoint libre,
-ni traitement normalisé métier, ni envoi vers le VPS. Les tests de la politique de cache sont
-entièrement hors ligne et n’exécutent aucun appel fournisseur.
+ni récupération automatique de corps JSON hors de l'application, ni traitement normalisé métier,
+ni envoi vers le VPS. Les tests de la politique de cache et de l'import local sont entièrement
+hors ligne et n’exécutent aucun appel fournisseur.

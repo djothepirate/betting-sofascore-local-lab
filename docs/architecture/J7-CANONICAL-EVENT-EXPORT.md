@@ -179,7 +179,7 @@ mutation autorisée de `provider_snapshot` prend également, dans un ordre stabl
 événements qui référencent ce snapshot ; l'état de rétention du brut ne peut donc pas changer au
 milieu d'une décision. Cela n'autorise ni n'exécute la purge primaire J6.
 
-Les scripts J6 de sauvegarde/restauration attendent désormais Flyway V23. Cette compatibilité ne
+Les scripts J6 de sauvegarde/restauration attendent désormais Flyway V25. Cette compatibilité ne
 constitue pas une autorisation de purge : la purge de la base primaire reste non exécutée et hors
 du Work Order J7.
 

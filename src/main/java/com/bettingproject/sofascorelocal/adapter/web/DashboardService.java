@@ -5,11 +5,13 @@ import com.bettingproject.sofascorelocal.application.ConnectorGate;
 import com.bettingproject.sofascorelocal.application.fixture.FixtureCorpusOverview;
 import com.bettingproject.sofascorelocal.application.fixture.OfflineFixtureCorpusService;
 import com.bettingproject.sofascorelocal.application.network.J3ProviderQualificationPolicy;
+import com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryQualificationPolicy;
 import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointDefinition;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataAccessException;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
@@ -30,28 +32,53 @@ public class DashboardService {
     private final JdbcTemplate jdbcTemplate;
     private final OfflineFixtureCorpusService fixtureCorpusService;
     private final J3ProviderQualificationPolicy providerPolicy;
+    private final TournamentEventDiscoveryQualificationPolicy tournamentDiscoveryPolicy;
 
+    @Autowired
     public DashboardService(
             SofascoreProperties properties,
             SofascoreEndpointCatalog endpointCatalog,
             ConnectorGate connectorGate,
             JdbcTemplate jdbcTemplate,
             OfflineFixtureCorpusService fixtureCorpusService,
-            J3ProviderQualificationPolicy providerPolicy) {
+            J3ProviderQualificationPolicy providerPolicy,
+            TournamentEventDiscoveryQualificationPolicy tournamentDiscoveryPolicy) {
         this.properties = properties;
         this.endpointCatalog = endpointCatalog;
         this.connectorGate = connectorGate;
         this.jdbcTemplate = jdbcTemplate;
         this.fixtureCorpusService = fixtureCorpusService;
         this.providerPolicy = providerPolicy;
+        this.tournamentDiscoveryPolicy = tournamentDiscoveryPolicy;
+    }
+
+    DashboardService(
+            SofascoreProperties properties,
+            SofascoreEndpointCatalog endpointCatalog,
+            ConnectorGate connectorGate,
+            JdbcTemplate jdbcTemplate,
+            OfflineFixtureCorpusService fixtureCorpusService,
+            J3ProviderQualificationPolicy providerPolicy) {
+        this(
+                properties,
+                endpointCatalog,
+                connectorGate,
+                jdbcTemplate,
+                fixtureCorpusService,
+                providerPolicy,
+                new TournamentEventDiscoveryQualificationPolicy(properties));
     }
 
     public DashboardView load() {
         DatabaseOverview database = loadDatabaseOverview();
         FixtureCorpusOverview fixtureCorpus = fixtureCorpusService.loadOverview();
         boolean manualCollectionAvailable = providerPolicy.snapshot().available();
+        boolean tournamentDiscoveryAvailable = tournamentDiscoveryPolicy.snapshot().available();
         List<DashboardView.EndpointRowView> endpointRows = endpointCatalog.list().stream()
-                .map(definition -> toEndpointRow(definition, manualCollectionAvailable))
+                .map(definition -> toEndpointRow(
+                        definition,
+                        manualCollectionAvailable,
+                        tournamentDiscoveryAvailable))
                 .toList();
 
         return new DashboardView(
@@ -151,10 +178,13 @@ public class DashboardService {
 
     private DashboardView.EndpointRowView toEndpointRow(
             SofascoreEndpointDefinition definition,
-            boolean manualCollectionAvailable) {
-        boolean manuallyCallable = definition.type()
-                == com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType.SCHEDULED_EVENTS
-                && manualCollectionAvailable;
+            boolean manualCollectionAvailable,
+            boolean tournamentDiscoveryAvailable) {
+        boolean manuallyCallable = switch (definition.type()) {
+            case SCHEDULED_EVENTS -> manualCollectionAvailable;
+            case TOURNAMENT_SCHEDULED_EVENTS -> tournamentDiscoveryAvailable;
+            default -> false;
+        };
         return new DashboardView.EndpointRowView(
                 definition.type().name(),
                 formatDuration(definition.cacheTtl()),

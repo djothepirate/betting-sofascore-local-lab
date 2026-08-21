@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.adapter.persistence;
 
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
+import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotAcquisitionMode;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotInspectionSource;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotInspectionSummary;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
@@ -24,6 +25,7 @@ public class JdbcRawSnapshotInspectionStore implements RawSnapshotInspectionStor
     private static final String SELECT_RECENT_SQL = """
             select
                 id,
+                acquisition_mode,
                 logical_endpoint,
                 request_key,
                 received_at,
@@ -35,7 +37,7 @@ public class JdbcRawSnapshotInspectionStore implements RawSnapshotInspectionStor
                 schema_status
             from provider_snapshot
             where provider = 'SOFASCORE'
-              and acquisition_mode = 'DIRECT_LOCAL_ENDPOINT'
+              and acquisition_mode in ('DIRECT_LOCAL_ENDPOINT', 'MANUAL_LOCAL_JSON_IMPORT')
               and payload_raw is not null
               and payload_size_bytes is not null
               and payload_sha256 is not null
@@ -50,6 +52,7 @@ public class JdbcRawSnapshotInspectionStore implements RawSnapshotInspectionStor
     private static final String SELECT_ONE_SQL = """
             select
                 id,
+                acquisition_mode,
                 logical_endpoint,
                 request_key,
                 received_at,
@@ -63,7 +66,7 @@ public class JdbcRawSnapshotInspectionStore implements RawSnapshotInspectionStor
             from provider_snapshot
             where id = :snapshotId
               and provider = 'SOFASCORE'
-              and acquisition_mode = 'DIRECT_LOCAL_ENDPOINT'
+              and acquisition_mode in ('DIRECT_LOCAL_ENDPOINT', 'MANUAL_LOCAL_JSON_IMPORT')
               and payload_raw is not null
               and payload_size_bytes is not null
               and payload_sha256 is not null
@@ -125,6 +128,8 @@ public class JdbcRawSnapshotInspectionStore implements RawSnapshotInspectionStor
         }
         return new RawSnapshotInspectionSummary(
                 resultSet.getLong("id"),
+                RawSnapshotAcquisitionMode.valueOf(
+                        resultSet.getString("acquisition_mode")),
                 resultSet.getString("logical_endpoint"),
                 resultSet.getString("request_key"),
                 receivedAt.toInstant(),

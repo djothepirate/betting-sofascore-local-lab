@@ -4,6 +4,78 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Évolution J3 → J5 — découverte tournoi → rencontres
+
+- catalogue de sélection reconstruit exclusivement depuis les snapshots exacts de la preuve J3
+  la plus récente du processus courant lorsqu'elle est terminale `COMPLETED`, avec contrôle des
+  pages contiguës, clés date/page, statuts, tailles, SHA-256, parseur et forme `scheduled` ; aucun
+  lot historique n'est recomposé implicitement après redémarrage ;
+- liste déroulante libellée exactement par
+  `tournament.name - tournament.category.name` afin d'exposer la portée géographique, tout en
+  postant seulement `tournament.id` ; une catégorie absente rend l'occurrence non actionnable et
+  une contradiction de catégorie pour le même identifiant refuse le catalogue ; le serveur résout
+  et revalide la date ainsi que `tournament.uniqueTournament.id`, seul identifiant numérique
+  autorisé dans le nouveau chemin fermé
+  `/api/v1/unique-tournament/{id}/scheduled-events/{date}` ;
+- filtrage de cette liste par présence, dans `timezoneEventCount`, d'un offset réellement
+  applicable pendant la date J3 dans `Europe/Paris` : `7200` en été, `3600` en hiver et l'une des
+  deux clés le jour d'une bascule ; une table vide ou limitée à d'autres fuseaux est exclue jusque
+  dans la résolution serveur, tandis qu'une valeur de compteur zéro reste éligible si sa clé est
+  présente ;
+- endpoint logique distinct `TOURNAMENT_SCHEDULED_EVENTS`, opt-in
+  `SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED=false` par défaut, sélection et préparation sans
+  réseau, confirmation exacte de cinq minutes, un GET au maximum, coordinateur partagé, délai
+  minimal, arrêt terminal et aucun retry, polling ou ordonnancement ;
+- solution hors réseau lorsque la collecte J3 directe est arrêtée par le fournisseur : après une
+  nouvelle intention explicite, import atomique des corps `page-1.json` à `page-N.json`, contrôlés
+  ensemble par `scheduled-events-v1` avant persistance ; la voie est bornée à 25 pages, 5 Mio par
+  page et 25 Mio par lot, refuse les contenus sensibles, partage la garde J3, exécute zéro
+  transport/cache et publie une preuve minimisée v5 distinguant `LOCAL_JSON_IMPORT` des appels et
+  cache hits ;
+- action alternative après la même confirmation : import local du seul corps JSON, borné à 5 Mio
+  et scanné avant consommation de l'intention ; cette voie refuse HAR, en-têtes, cookies et
+  secrets, exécute zéro transport, n'utilise pas le cache fournisseur et réemploie le même parseur,
+  la même projection et la même transaction canonique ;
+- extension de l'alternative hors réseau jusqu'à J5 : après une nouvelle préparation, l'opérateur
+  peut choisir les trois corps JSON statistiques, incidents et compositions au lieu des trois GET ;
+  le lot est scanné puis prévalidé atomiquement avant claim, conserve trois snapshots sous
+  `MANUAL_LOCAL_JSON_IMPORT`, réemploie les parseurs J5 courants et expose séparément zéro appel
+  fournisseur et trois imports locaux ; seule une enveloppe JSON fermée `error.code=404` représente
+  une famille indisponible, tandis qu'un 403 reste refusé et qu'aucun terminal direct ne bascule
+  automatiquement vers l'import ;
+- correctif visuel des grilles d'exécution et champs fichier : les cartes J3/J5, leurs URL longues
+  et les sélecteurs multipart peuvent désormais se rétracter dans leur colonne sans déborder du
+  premier bloc d'import ;
+- parser strict `tournament-scheduled-v1` à racine `events`, contrôle de l'identité du tournoi
+  unique, filtre de la phase `tournament.id`, fenêtre semi-ouverte `Europe/Paris`, déduplication par
+  `event.id` et états explicites de cohérence `timezoneEventCount` ; un `COUNT_MISMATCH` interdit
+  toute observation canonique ;
+- persistance du brut avant parsing, projection entièrement validée avant une transaction unique
+  d'identités et d'observations canoniques, provenance snapshot/hash/parseur/heure conservée et
+  résultat MVC minimisé ;
+- liens directs `/events/{canonicalEventId}/statistics?zone=Europe%2FParis` vers J5 sans appel
+  `EVENT_DETAILS`, campagne J4, saisie manuelle d'identifiant ou lancement automatique de J5 ;
+- migration append-only `V24__j3_j5_tournament_scheduled_events_cache.sql` élargissant uniquement
+  la portée fermée de `provider_response_cache` à `TOURNAMENT_SCHEDULED_EVENTS`, avec TTL de dix
+  minutes et sans réécriture de V1–V23 ni modification de l'historique J7 ;
+- migration append-only `V25__manual_local_json_import_provenance.sql` ajoutant la provenance
+  `MANUAL_LOCAL_JSON_IMPORT` et séparant sa déduplication de `DIRECT_LOCAL_ENDPOINT`, sans rendre
+  les snapshots importés éligibles au cache fournisseur ; cette provenance couvre maintenant le
+  lot J3 et le second endpoint, sans les confondre grâce aux clés et endpoints logiques ;
+- architecture, règles structurelles et runbook actualisés ; après les portes Maven/PostgreSQL et
+  les vérifications fonctionnelles J3/J5 consignées, le propriétaire a qualifié l'évolution le
+  2026-08-21, clôturé le Work Order au statut `VALIDATED` et autorisé son déplacement vers
+  `docs/work_orders/completed` ;
+- correctif de reproductibilité : les tests de binding sont désormais isolés du `.env` local même
+  lorsque la découverte tournoi y est armée ; le profil combiné J3 + découverte + J4 phase 2 + J5
+  est couvert avec son union exacte de six endpoints, tandis que `TOURNAMENT_STANDINGS` et
+  `TEAM_RECENT_EVENTS` restent explicitement refusés comme familles supplémentaires différées ;
+- correctif du catalogue après collecte J3 réelle : PostgreSQL restitue les `timestamptz` à la
+  microseconde alors que la preuve terminale en mémoire conserve les nanosecondes de l'`Instant` ;
+  la relecture accepte désormais uniquement un écart absolu strictement inférieur à une
+  microseconde pour `receivedAt`, tandis que l'identifiant du snapshot, l'endpoint, la clé, le
+  statut HTTP, le parseur, la classification, la taille et le SHA-256 restent comparés exactement.
+
 ### J7 — Export canonique local validé, PR #12 propre et fusionnable
 
 - contrat JSON Draft 2020-12 v1 fermé, identifié par

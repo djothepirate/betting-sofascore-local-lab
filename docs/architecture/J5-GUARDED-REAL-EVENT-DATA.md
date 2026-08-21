@@ -96,6 +96,30 @@ la liste des familles terminées à zéro et exige un nouvel acquittement avant 
 `FAILED_LOCKED`, `STOPPED_LOCKED` et `EXPIRED_LOCKED` restent des verrous de processus et exigent
 un redémarrage.
 
+### 3.1 Alternative locale des trois corps JSON
+
+L'évolution J3 → J5 du Work Order validé `WO-SS-20260820-009` ajoute une seconde action après la
+même préparation : au lieu de réclamer le claim pour les trois GET, l'opérateur peut fournir les
+trois seuls corps JSON des familles `EVENT_STATISTICS`, `EVENT_INCIDENTS` et `EVENT_LINEUPS`.
+Cette extension ne change ni la qualification historique des parseurs ni l'ordre de campagne.
+
+Le navigateur transmet les trois fichiers ensemble. Le contrôleur applique la limite existante de
+5 Mio et le scanner sensible à chaque fichier. Le service prévalide ensuite la totalité du lot avec
+les parseurs courants avant `confirmAndClaim`. Ainsi, un troisième corps incompatible ne consomme
+pas une confirmation après validation des deux premiers et n'écrit aucun snapshot partiel.
+
+La seule représentation locale d'une famille indisponible est une enveloppe JSON fermée
+`{"error":{"code":404,...}}`. Le code doit être l'entier 404 ; seuls `message` et `reason`,
+textuels et bornés, sont facultatifs. Un code 403 ou une propriété supplémentaire est refusé avant
+claim. Le statut 404 du snapshot est donc inféré uniquement de cette forme fermée ; aucun champ de
+statut, d'URI ou d'en-tête n'est accepté depuis le formulaire.
+
+Après confirmation, les trois snapshots sont écrits sous le mode immuable
+`MANUAL_LOCAL_JSON_IMPORT`, puis reparsés et normalisés dans l'ordre existant. Le compteur de
+résultat sépare `localJsonImports=3` de `providerCallAttempts=0`. Le cache et le coordinateur réseau
+ne sont jamais consultés. Un échec direct terminal ne peut pas être repris par cette voie : il faut
+un redémarrage, une nouvelle préparation et une nouvelle confirmation.
+
 ## 4. Séquence réseau bornée
 
 ```text
@@ -112,6 +136,10 @@ Chaque requête est un `GET` vers un chemin construit localement. Le client n'ut
 ni redirection, ni cookie, ni jeton, ni compte, ni en-tête de navigateur. Les délais de connexion
 et de lecture sont plafonnés à dix secondes, la réponse à cinq Mio et aucune API de retry n'est
 exposée.
+
+La voie d'import local remplace toute cette séquence réseau pour la campagne concernée. Elle ne
+simule pas ces GET et n'ajoute aucun délai artificiel ; elle conserve toutefois le même ordre de
+persistance et de normalisation ainsi que les mêmes états terminaux.
 
 Les services réels J4 et J5 partagent un coordinateur de requêtes dans le processus. Il sérialise
 les échanges, maintient `maximumConcurrency=1` même avec plusieurs onglets et applique le délai
@@ -131,9 +159,10 @@ ambigu, schéma incompatible et erreur de persistance.
 
 ## 5. Pipeline de données
 
-Pour chaque famille :
+Pour chaque famille, qu'elle soit acquise directement ou importée localement :
 
-1. le transport capture les octets et leur SHA-256 ;
+1. le transport capture les octets et leur SHA-256, ou l'import local fournit des octets déjà
+   scannés et prévalidés ;
 2. `provider_snapshot` reçoit la ligne `RAW_ONLY` ;
 3. un HTTP `404` produit une observation vide de valeurs, de statut `UNAVAILABLE`, via le
    normaliseur d'indisponibilité de la famille ; le snapshot devient `ENDPOINT_UNAVAILABLE` et la

@@ -14,6 +14,7 @@ public record J5RealCampaignResult(
         boolean completed,
         String terminalCode,
         int providerCallAttempts,
+        int localJsonImports,
         List<J5RealEndpointResult> endpoints) {
 
     public J5RealCampaignResult {
@@ -27,7 +28,10 @@ public record J5RealCampaignResult(
         endpoints = List.copyOf(Objects.requireNonNull(endpoints, "endpoints"));
         if (providerCallAttempts < 0
                 || providerCallAttempts > 3
-                || endpoints.size() > providerCallAttempts
+                || localJsonImports < 0
+                || localJsonImports > 3
+                || (providerCallAttempts > 0 && localJsonImports > 0)
+                || endpoints.size() > providerCallAttempts + localJsonImports
                 || endpoints.size() > 3) {
             throw new IllegalArgumentException("campaign counts are outside bounds");
         }
@@ -38,7 +42,7 @@ public record J5RealCampaignResult(
             }
         }
         if (completed && (!"COMPLETED".equals(terminalCode)
-                || providerCallAttempts != 3
+                || providerCallAttempts + localJsonImports != 3
                 || endpoints.size() != 3)) {
             throw new IllegalArgumentException("completed campaign is inconsistent");
         }

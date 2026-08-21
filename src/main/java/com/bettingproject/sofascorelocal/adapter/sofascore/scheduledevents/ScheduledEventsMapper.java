@@ -54,6 +54,8 @@ public final class ScheduledEventsMapper {
             ScheduledTournamentAvailabilityDto source) {
         return new ScheduledTournamentAvailability(
                 mapTournament(source.tournament()),
+                Optional.ofNullable(source.tournamentCategory())
+                        .map(category -> category.name()),
                 Optional.ofNullable(source.uniqueTournament()).map(this::mapTournament),
                 source.timezoneEventCount());
     }

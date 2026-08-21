@@ -29,7 +29,9 @@ $approvedProviderOriginDeclarations = @(
     (Join-Path $sourceRoot `
         'java\com\bettingproject\sofascorelocal\domain\provider\ScheduledEventsProviderPageRequest.java'),
     (Join-Path $sourceRoot `
-        'java\com\bettingproject\sofascorelocal\domain\provider\EventDetailsProviderRequest.java')
+        'java\com\bettingproject\sofascorelocal\domain\provider\EventDetailsProviderRequest.java'),
+    (Join-Path $sourceRoot `
+        'java\com\bettingproject\sofascorelocal\domain\provider\TournamentScheduledEventsProviderRequest.java')
 )
 $approvedProviderOriginLine =
     'public static final String EXPECTED_ORIGIN = "https://www.sofascore.com";'
@@ -55,7 +57,11 @@ $approvedRestClientConstructions = @(
     (Join-Path $sourceRoot `
         'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderScheduledEventsRestTransport.java'),
     (Join-Path $sourceRoot `
-        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderEventDetailsRestTransport.java')
+        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderEventDetailsRestTransport.java'),
+    (Join-Path $sourceRoot `
+        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderJ5EventDataRestTransport.java'),
+    (Join-Path $sourceRoot `
+        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderTournamentScheduledEventsRestTransport.java')
 )
 $restClientConstructions = $sourceFiles |
     Select-String -Pattern '\bRestClient\s*\.(?:builder|create)\b' -CaseSensitive:$false |

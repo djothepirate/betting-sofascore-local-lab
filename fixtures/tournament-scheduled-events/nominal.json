@@ -1,0 +1,86 @@
+{
+  "events": [
+    {
+      "eventState": {},
+      "tournament": {
+        "name": "Synthetic Champions League, Playoff Round",
+        "slug": "synthetic-champions-league-playoff-round",
+        "uniqueTournament": {
+          "name": "Synthetic Champions League",
+          "slug": "synthetic-champions-league",
+          "id": 7
+        },
+        "id": 119880
+      },
+      "season": {
+        "name": "Synthetic Champions League 26/27",
+        "id": 96518
+      },
+      "status": {
+        "code": 100,
+        "description": "Ended",
+        "type": "finished"
+      },
+      "homeTeam": {
+        "name": "Synthetic Bosphorus FC",
+        "slug": "synthetic-bosphorus-fc",
+        "id": 3052
+      },
+      "awayTeam": {
+        "name": "Synthetic Rhone FC",
+        "slug": "synthetic-rhone-fc",
+        "id": 1649
+      },
+      "id": 16707704,
+      "startTimestamp": 1787079600
+    },
+    {
+      "tournament": {
+        "name": "Synthetic Champions League, League Phase",
+        "uniqueTournament": {
+          "name": "Synthetic Champions League",
+          "id": 7
+        },
+        "id": 119881
+      },
+      "status": {
+        "type": "notstarted"
+      },
+      "homeTeam": {
+        "name": "Synthetic Alpine FC",
+        "id": 4101
+      },
+      "awayTeam": {
+        "name": "Synthetic Baltic FC",
+        "id": 4102
+      },
+      "id": 16707705,
+      "startTimestamp": 1787086800
+    },
+    {
+      "tournament": {
+        "name": "Synthetic Champions League, Playoff Round",
+        "uniqueTournament": {
+          "name": "Synthetic Champions League",
+          "id": 7
+        },
+        "id": 119880
+      },
+      "status": {
+        "description": "Not started",
+        "type": "notstarted"
+      },
+      "homeTeam": {
+        "name": "Synthetic Atlantic FC",
+        "id": 4201
+      },
+      "awayTeam": {
+        "name": "Synthetic Danube FC",
+        "id": 4202
+      },
+      "id": 16707706,
+      "startTimestamp": 1787162400
+    }
+  ],
+  "hasNextPage": false
+}

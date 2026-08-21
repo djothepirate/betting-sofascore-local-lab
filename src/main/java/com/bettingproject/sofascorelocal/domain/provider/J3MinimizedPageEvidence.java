@@ -85,6 +85,12 @@ public record J3MinimizedPageEvidence(
                 && persistenceOutcome == RawSnapshotPersistenceOutcome.CACHE_HIT) {
             throw new IllegalArgumentException("provider evidence cannot be a cache hit");
         }
+        if (resolutionSource == J3PageResolutionSource.LOCAL_JSON_IMPORT
+                && (persistenceOutcome == RawSnapshotPersistenceOutcome.CACHE_HIT
+                        || cacheStoredAt != null)) {
+            throw new IllegalArgumentException(
+                    "a local JSON import cannot be a cache resolution");
+        }
     }
 
     public static J3MinimizedPageEvidence recorded(
@@ -138,6 +144,33 @@ public record J3MinimizedPageEvidence(
                 RawSnapshotSchemaStatus.PARSED,
                 hasNextPage,
                 null);
+    }
+
+    public static J3MinimizedPageEvidence imported(
+            int page,
+            ScheduledEventsTransportResponse response,
+            RawSnapshotPersistenceResult persistence,
+            RawSnapshotSchemaStatus schemaStatus,
+            Boolean hasNextPage,
+            String terminalCode) {
+        Objects.requireNonNull(response, "response");
+        Objects.requireNonNull(persistence, "persistence");
+        return new J3MinimizedPageEvidence(
+                page,
+                J3PageResolutionSource.LOCAL_JSON_IMPORT,
+                response.receivedAt(),
+                null,
+                response.requestedAt(),
+                response.receivedAt(),
+                response.httpStatus(),
+                response.latency().toMillis(),
+                persistence.snapshotId(),
+                persistence.outcome(),
+                persistence.payloadSizeBytes(),
+                persistence.payloadSha256(),
+                schemaStatus,
+                hasNextPage,
+                terminalCode);
     }
 
     public static J3MinimizedPageEvidence failedBeforeSnapshot(

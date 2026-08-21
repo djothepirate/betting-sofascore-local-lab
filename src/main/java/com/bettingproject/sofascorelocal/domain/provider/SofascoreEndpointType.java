@@ -2,6 +2,7 @@ package com.bettingproject.sofascorelocal.domain.provider;
 
 public enum SofascoreEndpointType {
     SCHEDULED_EVENTS,
+    TOURNAMENT_SCHEDULED_EVENTS,
     EVENT_DETAILS,
     EVENT_STATISTICS,
     EVENT_INCIDENTS,

@@ -138,6 +138,7 @@ class J3DynamicManualCallServiceTest {
         assertThat(result.completed()).isTrue();
         assertThat(result.providerRequests()).isEqualTo(5);
         assertThat(result.cacheHits()).isZero();
+        assertThat(result.localJsonImports()).isZero();
         assertThat(pages).containsExactly(1, 2, 3, 4, 5);
         assertThat(starts).hasSize(5);
         for (int index = 1; index < starts.size(); index++) {
@@ -207,7 +208,7 @@ class J3DynamicManualCallServiceTest {
         assertThat(control.snapshot().intent().firstPage()).isEqualTo(1);
         assertThat(control.snapshot().intent().completedPages()).isEqualTo(1);
         assertThat(evidenceService.latestDocument().orElseThrow().reportText())
-                .contains("J3_MINIMIZED_EVIDENCE_VERSION=4")
+                .contains("J3_MINIMIZED_EVIDENCE_VERSION=5")
                 .contains("PROVIDER_FIRST_PAGE=1")
                 .contains("PAGES_RESOLVED=1")
                 .contains("PAGES_COMPLETED_COUNT=1")

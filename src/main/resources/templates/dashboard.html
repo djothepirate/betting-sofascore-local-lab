@@ -127,7 +127,7 @@
             th:text="${manualCall.globalStopActive ? 'ARRÊT GLOBAL ACTIF' : 'ARRÊT GLOBAL LEVÉ'}">ARRÊT GLOBAL ACTIF</span>
     </div>
 
-    <p class="control-intro">Une confirmation ne déclenche rien à elle seule. Chaque collecte repart de la page 1 et continue strictement tant que le JSON parsé indique <span class="mono">hasNextPage=true</span>, dans l’ordre, sans cookie, jeton, compte, session ni retry. Le plafond local est fixé à 25 pages.</p>
+    <p class="control-intro">Une confirmation ne déclenche rien à elle seule. Chaque collecte repart de la page 1 et continue strictement tant que le JSON parsé indique <span class="mono">hasNextPage=true</span>, dans l’ordre, sans cookie, jeton, compte, session ni retry. Le plafond local est fixé à 25 pages. Après confirmation, l’opérateur choisit une seule voie : transport direct ou import local de toutes les pages JSON 1 à N.</p>
 
     <div th:if="${manualCallMessage != null}"
          class="notice"
@@ -218,7 +218,7 @@
           </div>
 
           <div th:if="${manualCall.intent.confirmedReady}" class="notice notice-warning">
-            Collecte confirmée. Vérifiez une dernière fois la date : le bouton ci-dessous déclenchera une seule séquence <span th:text="${manualCall.intent.pageRange}">1-N (max 25)</span>, avec arrêt sur hasNextPage=false ou au premier incident.
+            Collecte confirmée. Vérifiez une dernière fois la date puis choisissez une seule action : une séquence fournisseur <span th:text="${manualCall.intent.pageRange}">1-N (max 25)</span>, ou l’import hors réseau des corps JSON de toutes les pages 1 à N.
           </div>
 
           <div th:if="${manualCall.intent.executing}" class="notice notice-warning">
@@ -249,13 +249,36 @@
           </div>
         </div>
 
-        <form th:if="${manualCall.realCallEnabled}"
-              th:action="@{/manual-call/execute}"
-              method="post">
-          <input type="hidden" name="localFormToken" th:value="${localFormToken}">
-          <input type="hidden" name="requestId" th:value="${manualCall.intent.requestId}">
-          <button type="submit" class="real-call-button">5. Lancer la collecte manuelle paginée — PAGE 1 À N</button>
-        </form>
+        <div th:if="${manualCall.realCallEnabled}" class="discovery-execution-grid">
+          <form class="control-form control-stage"
+                th:action="@{/manual-call/execute}"
+                method="post">
+            <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+            <input type="hidden" name="requestId" th:value="${manualCall.intent.requestId}">
+            <h3>Option A — Collecte fournisseur directe</h3>
+            <p class="fixture-note">Déclenche les GET ordonnés page 1 à N, sans retry, avec arrêt au premier incident.</p>
+            <button type="submit" class="real-call-button">5A. Lancer la collecte paginée — APPELS FOURNISSEUR</button>
+          </form>
+
+          <form class="control-form control-stage"
+                th:action="@{/manual-call/import-json-pages}"
+                method="post"
+                enctype="multipart/form-data">
+            <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+            <input type="hidden" name="requestId" th:value="${manualCall.intent.requestId}">
+            <h3>Option B — Import J3 paginé sans réseau</h3>
+            <p class="fixture-note">Ouvrez manuellement
+              <code>https://www.sofascore.com/api/v1/sport/football/scheduled-tournaments/<span th:text="${manualCall.intent.date}">2026-08-21</span>/page/1</code>,
+              puis les pages suivantes tant que <code>hasNextPage=true</code>. Enregistrez uniquement
+              chaque corps JSON sous <code>page-1.json</code>, <code>page-2.json</code>, … et sélectionnez
+              tous les fichiers en une fois. Aucun HAR, en-tête, cookie ou export DevTools.</p>
+            <label for="j3-page-files">Pages JSON contiguës 1 à N</label>
+            <input id="j3-page-files" type="file" name="pageFiles"
+                   accept="application/json,.json" multiple required>
+            <p class="fixture-note">5 Mio maximum par page, 25 Mio pour le lot, 25 pages maximum. La dernière page doit annoncer <code>hasNextPage=false</code>.</p>
+            <button type="submit" class="button-primary">5B. Importer et valider J3 — ZÉRO APPEL</button>
+          </form>
+        </div>
         <button th:if="${!manualCall.realCallEnabled}" type="button" class="real-call-button" disabled>Lancer la collecte fournisseur — BLOQUÉE</button>
       </div>
     </div>
@@ -279,11 +302,203 @@
       </div>
       <p>Cette preuve est produite après la séquence terminale. Elle contient les statuts, horodatages,
         tailles et empreintes SHA-256 de persistance, sans payload JSON, URI, en-tête ni donnée de session.</p>
-      <pre class="evidence-report" th:text="${collectionEvidence.reportText}">J3_MINIMIZED_EVIDENCE_VERSION=4</pre>
+      <pre class="evidence-report" th:text="${collectionEvidence.reportText}">J3_MINIMIZED_EVIDENCE_VERSION=5</pre>
       <a class="evidence-download" th:href="@{/manual-call/evidence}" href="/manual-call/evidence">
         Télécharger la preuve minimisée (.txt)
       </a>
     </section>
+  </section>
+
+  <section class="panel manual-call-panel"
+           id="tournament-event-discovery"
+           aria-labelledby="tournament-event-discovery-title">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Évolution J3 → J5 / Tournoi sélectionné</p>
+        <h2 id="tournament-event-discovery-title">Rencontres datées et accès direct à J5</h2>
+      </div>
+      <span class="chip"
+            th:classappend="${tournamentDiscoveryControl.providerTransportAvailable} ? ' chip-safe' : ' chip-danger'"
+            th:text="${tournamentDiscoveryControl.providerTransportAvailable ? 'OPT-IN PRÊT' : 'RÉSEAU VERROUILLÉ'}">RÉSEAU VERROUILLÉ</span>
+    </div>
+
+    <p class="control-intro">Le catalogue ci-dessous est reconstruit uniquement depuis les pages
+      exactes de la dernière collecte J3 complète du processus courant. Le libellé associe
+      <span class="mono">tournament.name</span> et <span class="mono">tournament.category.name</span>,
+      tandis que la route utilise exclusivement
+      <span class="mono">uniqueTournament.id</span> numérique. Une occurrence n'est proposée que si
+      <span class="mono">timezoneEventCount</span> contient l'offset applicable à la date J3 dans
+      <span class="mono">Europe/Paris</span>. Sélectionner ou préparer ne produit aucun trafic réseau.
+      Après préparation, l’opérateur choisit une seule action : le GET protégé ou l’import local du
+      seul corps JSON obtenu manuellement.</p>
+
+    <div th:if="${tournamentDiscoveryMessage != null}"
+         class="notice"
+         th:classappend="${tournamentDiscoveryMessageKind == 'safe'} ? ' notice-safe' : ' notice-danger'"
+         role="status"
+         aria-live="polite"
+         th:text="${tournamentDiscoveryMessage}">État mis à jour.</div>
+
+    <div class="notice notice-danger" th:if="${tournamentCatalogUnavailable}">
+      Le catalogue local ne peut pas être reconstruit. Aucun choix et aucun transport ne sont autorisés.
+    </div>
+
+    <div th:if="${tournamentCatalog != null}">
+      <dl class="detail-grid">
+        <div><dt>État catalogue</dt><dd class="mono" th:text="${tournamentCatalog.status}">NO_COLLECTION_EVIDENCE</dd></div>
+        <div><dt>Date J3</dt><dd th:text="${tournamentCatalog.collectionDate.orElse(null)}">—</dd></div>
+        <div><dt>Pages sources</dt><dd th:text="${tournamentCatalog.pageSnapshotIds.size()}">0</dd></div>
+        <div><dt>Tournois actionnables</dt><dd th:text="${tournamentCatalog.options.size()}">0</dd></div>
+        <div><dt>Occurrences exclues (identité/portée/fuseau)</dt><dd th:text="${tournamentCatalog.excludedNonActionableCount}">0</dd></div>
+        <div><dt>Contrôle</dt><dd class="mono" th:text="${tournamentDiscoveryControl.state}">LOCKED</dd></div>
+      </dl>
+
+      <div class="empty-state" th:if="${!tournamentCatalog.available}">
+        <p class="metric muted">AUCUN CATALOGUE ACTIONNABLE</p>
+        <p>Une collecte J3 terminale <span class="mono">COMPLETED</span> est requise dans ce processus.
+          Après redémarrage, relancez explicitement J3 ; le cache frais peut éviter un transport.</p>
+      </div>
+
+      <form class="control-form"
+            th:if="${tournamentCatalog.available
+                     and !tournamentCatalog.options.empty
+                     and tournamentDiscoveryControl.providerTransportAvailable
+                     and !tournamentDiscoveryControl.awaitingConfirmation()
+                     and !tournamentDiscoveryControl.executing()
+                     and !tournamentDiscoveryControl.terminalLocked()}"
+            th:action="@{/tournament-event-discovery/prepare}"
+            method="post">
+        <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+        <label for="tournament-selection">Tournoi ou phase — libellé fournisseur contrôlé</label>
+        <select id="tournament-selection" name="tournamentId" required>
+          <option value="" selected disabled>Choisir un tournoi</option>
+          <option th:each="option : ${tournamentCatalog.options}"
+                  th:value="${option.tournamentId}"
+                  th:text="${option.displayLabel}">Nom du tournoi - portée géographique</option>
+        </select>
+        <p class="fixture-note">La valeur postée est l’identité de phase. La date, l’identité du tournoi
+          unique, les compteurs et les snapshots sources sont toujours résolus à nouveau côté serveur.</p>
+        <button class="button-primary" type="submit">Préparer sans réseau</button>
+      </form>
+    </div>
+
+    <div th:if="${tournamentDiscoveryControl.selection != null}">
+      <dl class="intent-metadata">
+        <div><dt>Phase</dt><dd th:text="${tournamentDiscoveryControl.selection.tournamentName}">Tournoi</dd></div>
+        <div><dt>Portée géographique</dt><dd th:text="${tournamentDiscoveryControl.selection.tournamentCategoryName}">Pays</dd></div>
+        <div><dt>ID phase</dt><dd class="mono" th:text="${tournamentDiscoveryControl.selection.tournamentId}">1</dd></div>
+        <div><dt>Tournoi unique</dt><dd th:text="${tournamentDiscoveryControl.selection.uniqueTournamentName}">Tournoi unique</dd></div>
+        <div><dt>ID de route</dt><dd class="mono" th:text="${tournamentDiscoveryControl.selection.uniqueTournamentId}">7</dd></div>
+        <div><dt>Date</dt><dd th:text="${tournamentDiscoveryControl.collectionDate}">2026-08-18</dd></div>
+        <div><dt>Expiration</dt><dd th:text="${tournamentDiscoveryControl.expiresAt}">—</dd></div>
+      </dl>
+    </div>
+
+    <div th:if="${tournamentDiscoveryControl.awaitingConfirmation()}">
+      <p>Recopiez exactement la phrase à usage unique dans l’action choisie :</p>
+      <code class="confirmation-phrase" th:text="${tournamentDiscoveryControl.confirmationPhrase}">CONFIRMER EVENEMENTS TOURNOI 119880 UNIQUE 7 DATE 2026-08-18 000042</code>
+
+      <div class="discovery-execution-grid">
+        <form class="control-form confirmation-form control-stage"
+              th:action="@{/tournament-event-discovery/execute}"
+              method="post">
+          <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+          <input type="hidden" name="requestId" th:value="${tournamentDiscoveryControl.requestId}">
+          <h3>Option A — Appel fournisseur direct</h3>
+          <label for="tournament-confirmation-text">Phrase de confirmation</label>
+          <input id="tournament-confirmation-text" type="text" name="confirmationText"
+                 maxlength="200" autocomplete="off" required>
+          <label class="acknowledgement" for="tournament-acknowledged">
+            <input id="tournament-acknowledged" type="checkbox" name="acknowledged" value="true" required>
+            Je confirme la phase, l’ID numérique du tournoi unique, la date, un GET au maximum,
+            l’absence de retry et la création locale d’identités permettant ensuite une campagne J5 séparée.
+          </label>
+          <button class="real-call-button" type="submit">Confirmer et résoudre — UN GET MAXIMUM</button>
+        </form>
+
+        <form class="control-form confirmation-form control-stage"
+              th:action="@{/tournament-event-discovery/import-json}"
+              method="post"
+              enctype="multipart/form-data">
+          <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+          <input type="hidden" name="requestId" th:value="${tournamentDiscoveryControl.requestId}">
+          <h3>Option B — Import JSON local sans réseau</h3>
+          <p class="fixture-note">Enregistrez uniquement le corps JSON de la réponse. N’importez
+            jamais une capture HAR, des en-têtes, des cookies ou des données de session. Taille
+            maximale : 5 Mio.</p>
+          <label for="tournament-import-file">Fichier JSON local</label>
+          <input id="tournament-import-file" type="file" name="jsonFile"
+                 accept="application/json,.json" required>
+          <label for="tournament-import-confirmation-text">Phrase de confirmation</label>
+          <input id="tournament-import-confirmation-text" type="text" name="confirmationText"
+                 maxlength="200" autocomplete="off" required>
+          <label class="acknowledgement" for="tournament-import-acknowledged">
+            <input id="tournament-import-acknowledged" type="checkbox" name="acknowledged"
+                   value="true" required>
+            Je confirme la phase, la date, un import local sans appel fournisseur, le contrôle du
+            fichier et la création d’identités permettant ensuite une campagne J5 séparée.
+          </label>
+          <button class="button-primary" type="submit">Importer, valider et relier à J5 — ZÉRO APPEL</button>
+        </form>
+      </div>
+    </div>
+
+    <form th:if="${tournamentDiscoveryControl.awaitingConfirmation() or tournamentDiscoveryControl.executing()}"
+          th:action="@{/tournament-event-discovery/stop}"
+          method="post">
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <button class="button-danger" type="submit">Arrêt global immédiat</button>
+    </form>
+
+    <div class="provider-blockers"
+         th:if="${!tournamentDiscoveryControl.providerBlockers.empty}">
+      <p class="label">Verrous de découverte maintenus</p>
+      <ul>
+        <li th:each="blocker : ${tournamentDiscoveryControl.providerBlockers}"
+            class="mono" th:text="${blocker}">TOURNAMENT_EVENT_DISCOVERY_DISABLED</li>
+      </ul>
+    </div>
+
+    <div th:if="${tournamentDiscoveryResult != null}" class="qualification-evidence">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Résultat minimisé</p>
+          <h3>Validation et observations canoniques</h3>
+        </div>
+        <span class="chip"
+              th:classappend="${tournamentDiscoveryResult.completed} ? ' chip-safe' : ' chip-danger'"
+              th:text="${tournamentDiscoveryResult.terminalCode}">COMPLETED</span>
+      </div>
+      <dl class="detail-grid">
+        <div><dt>Snapshot</dt><dd class="mono" th:text="${tournamentDiscoveryResult.snapshotId}">0</dd></div>
+        <div><dt>Empreinte brute</dt><dd class="mono hash-value" th:text="${tournamentDiscoveryResult.payloadSha256}">—</dd></div>
+        <div><dt>Source</dt><dd class="mono" th:text="${tournamentDiscoveryResult.source}">CACHE</dd></div>
+        <div><dt>Appels fournisseur</dt><dd th:text="${tournamentDiscoveryResult.providerCallAttempts}">0</dd></div>
+        <div><dt>Contrôle de compte</dt><dd class="mono" th:text="${tournamentDiscoveryResult.countStatus}">COUNT_VERIFIED</dd></div>
+        <div><dt>Attendu / retenu</dt><dd th:text="${(tournamentDiscoveryResult.expectedCount == null ? 'NON VÉRIFIABLE' : tournamentDiscoveryResult.expectedCount) + ' / ' + tournamentDiscoveryResult.actualCount}">0 / 0</dd></div>
+        <div><dt>Observations ajoutées</dt><dd th:text="${tournamentDiscoveryResult.insertedObservations}">0</dd></div>
+        <div><dt>Observations dédupliquées</dt><dd th:text="${tournamentDiscoveryResult.deduplicatedObservations}">0</dd></div>
+      </dl>
+
+      <div class="empty-state" th:if="${tournamentDiscoveryResult.completed and tournamentDiscoveryResult.events.empty}">
+        <p class="metric muted">AUCUNE RENCONTRE POUR CETTE PHASE ET CETTE DATE</p>
+        <p>La réponse vide a été validée explicitement ; aucun événement n’a été inventé.</p>
+      </div>
+
+      <div class="table-scroll" th:if="${!tournamentDiscoveryResult.events.empty}">
+        <table>
+          <thead><tr><th>Début UTC</th><th>Rencontre</th><th>Statut</th><th>Étape J5</th></tr></thead>
+          <tbody>
+          <tr th:each="event : ${tournamentDiscoveryResult.events}">
+            <td class="mono" th:text="${event.startsAt}">instant</td>
+            <td th:text="${event.homeTeamName + ' — ' + event.awayTeamName}">Équipe — Équipe</td>
+            <td class="mono" th:text="${event.statusType}">notstarted</td>
+            <td><a th:href="${'/events/' + event.canonicalEventId + '/statistics?zone=Europe%2FParis'}">Ouvrir J5 sans saisie d’ID</a></td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
   </section>
 
   <section class="panel snapshot-inspection-panel"
@@ -319,6 +534,7 @@
         <thead>
         <tr>
           <th>ID</th>
+          <th>Acquisition</th>
           <th>Clé locale</th>
           <th>Reçu à</th>
           <th>HTTP</th>
@@ -330,6 +546,7 @@
         <tbody>
         <tr th:each="snapshot : ${snapshotInspectionCatalog.snapshots}">
           <td class="mono" th:text="${snapshot.snapshotId}">1</td>
+          <td class="mono" th:text="${snapshot.acquisitionMode}">DIRECT_LOCAL_ENDPOINT</td>
           <td class="mono" th:text="${snapshot.requestKey}">SCHEDULED_EVENTS|date=2026-08-14|page=1</td>
           <td th:text="${snapshot.receivedAt}">—</td>
           <td th:text="${snapshot.httpStatus}">200</td>
@@ -449,8 +666,9 @@
     <article class="panel">
       <p class="label">Actions réseau</p>
       <h2>Connecteur général toujours verrouillé</h2>
-      <p>Seul le formulaire J3 ci-dessus peut ouvrir le chemin manuel à pagination dynamique
-        approuvé. Aucun autre endpoint, profil réel ou adaptateur général n’est activé.</p>
+      <p>Seuls le formulaire J3 à pagination dynamique et la découverte manuelle de rencontres par
+        tournoi peuvent ouvrir leurs chemins dédiés après confirmation. Aucun profil réel ni
+        adaptateur général n’est activé.</p>
       <div class="actions">
         <button type="button" disabled>Configurer une URI réelle</button>
         <button type="button" disabled>Lancer un appel fournisseur</button>
