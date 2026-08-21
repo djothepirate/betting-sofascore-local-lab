@@ -4,6 +4,7 @@ import com.bettingproject.sofascorelocal.application.network.J3ProviderQualifica
 import com.bettingproject.sofascorelocal.application.network.J4EventDetailsQualificationPolicy;
 import com.bettingproject.sofascorelocal.application.network.J4EventDetailsPhase2QualificationPolicy;
 import com.bettingproject.sofascorelocal.application.network.J5RealQualificationPolicy;
+import com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryQualificationPolicy;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.J5EventDataProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
@@ -26,7 +27,18 @@ class SofascorePropertiesTest {
 
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
-            // A locally armed J3/J4/J5 campaign must not override the scenario under test.
+            // application.yml imports the local .env. Explicit safe system properties keep every
+            // binding scenario deterministic even while a local J3/J4/J5/discovery campaign is
+            // armed; scenario-specific values added below override these defaults.
+            .withSystemProperties(
+                    "SOFASCORE_ENABLED=false",
+                    "SOFASCORE_J3_QUALIFICATION_ENABLED=false",
+                    "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=false",
+                    "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false",
+                    "SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=false",
+                    "SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED=false",
+                    "SOFASCORE_BASE_URL=",
+                    "SOFASCORE_ALLOWED_ENDPOINTS=")
             .withInitializer(context -> context.getEnvironment().getPropertySources()
                     .remove(StandardEnvironment.SYSTEM_ENVIRONMENT_PROPERTY_SOURCE_NAME))
             .withInitializer(new ConfigDataApplicationContextInitializer())
@@ -41,6 +53,7 @@ class SofascorePropertiesTest {
         assertThat(properties.isJ4EventDetailsQualificationEnabled()).isFalse();
         assertThat(properties.isJ4EventDetailsPhase2Enabled()).isFalse();
         assertThat(properties.isJ5EventDataQualificationEnabled()).isFalse();
+        assertThat(properties.isTournamentEventDiscoveryEnabled()).isFalse();
         assertThat(properties.getMaximumConcurrency()).isEqualTo(1);
         assertThat(properties.getMinimumDelay()).isEqualTo(Duration.ofSeconds(3));
         assertThat(properties.getConnectTimeout()).isEqualTo(Duration.ofSeconds(5));
@@ -122,6 +135,48 @@ class SofascorePropertiesTest {
                 com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType.SCHEDULED_EVENTS));
 
         assertThat(validator.validate(properties)).isEmpty();
+    }
+
+    @Test
+    void bindsTournamentDiscoveryOnlyWithJ3AndTheExactEndpointUnion() {
+        contextRunner
+                .withSystemProperties(
+                        "SOFASCORE_ENABLED=true",
+                        "SOFASCORE_J3_QUALIFICATION_ENABLED=true",
+                        "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=false",
+                        "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false",
+                        "SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=false",
+                        "SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED=true",
+                        "SOFASCORE_BASE_URL="
+                                + ScheduledEventsProviderPageRequest.EXPECTED_ORIGIN,
+                        "SOFASCORE_ALLOWED_ENDPOINTS="
+                                + "SCHEDULED_EVENTS,TOURNAMENT_SCHEDULED_EVENTS")
+                .run(context -> {
+                    assertThat(context.getStartupFailure()).isNull();
+                    SofascoreProperties properties = context.getBean(
+                            SofascoreProperties.class);
+                    assertThat(properties.isTournamentEventDiscoveryEnabled()).isTrue();
+                    assertThat(properties.activeQualificationEndpoints())
+                            .containsExactlyInAnyOrder(
+                                    SofascoreEndpointType.SCHEDULED_EVENTS,
+                                    SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS);
+                    assertThat(context.getBean(
+                            TournamentEventDiscoveryQualificationPolicy.class)
+                            .snapshot().available()).isTrue();
+                });
+    }
+
+    @Test
+    void rejectsTournamentDiscoveryWithoutJ3() {
+        SofascoreProperties properties = new SofascoreProperties();
+        properties.setEnabled(true);
+        properties.setTournamentEventDiscoveryEnabled(true);
+        properties.setAllowedEndpoints(java.util.Set.of(
+                SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS));
+
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getMessage()
+                        .contains("tournament event discovery requires J3"));
     }
 
     @Test
@@ -261,7 +316,7 @@ class SofascorePropertiesTest {
     }
 
     @Test
-    void bindsOneCombinedJ3J4PhaseTwoAndJ5QualificationSession() {
+    void bindsOneCombinedJ3TournamentDiscoveryJ4PhaseTwoAndJ5QualificationSession() {
         contextRunner
                 .withSystemProperties(
                         "SOFASCORE_ENABLED=true",
@@ -269,22 +324,27 @@ class SofascorePropertiesTest {
                         "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true",
                         "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=true",
                         "SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=true",
+                        "SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED=true",
                         "SOFASCORE_BASE_URL=" + EventDetailsProviderRequest.EXPECTED_ORIGIN,
                         "SOFASCORE_ALLOWED_ENDPOINTS="
-                                + "SCHEDULED_EVENTS,EVENT_DETAILS,EVENT_STATISTICS,"
+                                + "SCHEDULED_EVENTS,TOURNAMENT_SCHEDULED_EVENTS,"
+                                + "EVENT_DETAILS,EVENT_STATISTICS,"
                                 + "EVENT_INCIDENTS,EVENT_LINEUPS")
                 .run(context -> {
                     assertThat(context.getStartupFailure()).isNull();
                     SofascoreProperties properties = context.getBean(SofascoreProperties.class);
                     assertThat(properties.activeQualificationEndpoints())
-                            .containsExactlyInAnyOrder(
-                                    SofascoreEndpointType.SCHEDULED_EVENTS,
-                                    SofascoreEndpointType.EVENT_DETAILS,
-                                    SofascoreEndpointType.EVENT_STATISTICS,
-                                    SofascoreEndpointType.EVENT_INCIDENTS,
+                        .containsExactlyInAnyOrder(
+                                SofascoreEndpointType.SCHEDULED_EVENTS,
+                                SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
+                                SofascoreEndpointType.EVENT_DETAILS,
+                                SofascoreEndpointType.EVENT_STATISTICS,
+                                SofascoreEndpointType.EVENT_INCIDENTS,
                                     SofascoreEndpointType.EVENT_LINEUPS);
                     assertThat(properties.hasExactActiveQualificationEndpoints()).isTrue();
                     assertThat(context.getBean(J3ProviderQualificationPolicy.class)
+                            .snapshot().available()).isTrue();
+                    assertThat(context.getBean(TournamentEventDiscoveryQualificationPolicy.class)
                             .snapshot().available()).isTrue();
                     assertThat(context.getBean(J4EventDetailsQualificationPolicy.class)
                             .snapshot().available()).isFalse();
@@ -321,6 +381,21 @@ class SofascorePropertiesTest {
         assertThat(validator.validate(properties))
                 .anyMatch(violation -> violation.getMessage()
                         .contains("exact active qualification endpoints"));
+
+        properties.setJ3QualificationEnabled(true);
+        properties.setTournamentEventDiscoveryEnabled(true);
+        properties.setAllowedEndpoints(java.util.Set.of(
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
+                SofascoreEndpointType.EVENT_DETAILS,
+                SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_LINEUPS,
+                SofascoreEndpointType.TOURNAMENT_STANDINGS,
+                SofascoreEndpointType.TEAM_RECENT_EVENTS));
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getMessage()
+                        .contains("exact active qualification endpoints"));
     }
 
     @Configuration(proxyBeanMethods = false)
@@ -329,7 +404,8 @@ class SofascorePropertiesTest {
             J3ProviderQualificationPolicy.class,
             J4EventDetailsQualificationPolicy.class,
             J4EventDetailsPhase2QualificationPolicy.class,
-            J5RealQualificationPolicy.class})
+            J5RealQualificationPolicy.class,
+            TournamentEventDiscoveryQualificationPolicy.class})
     static class EnvironmentBindingConfiguration {
     }
 }

@@ -46,6 +46,6 @@ class DashboardServiceTest {
                         4,
                         1,
                         0));
-        assertThat(dashboard.endpoints()).hasSize(7);
+        assertThat(dashboard.endpoints()).hasSize(8);
     }
 }

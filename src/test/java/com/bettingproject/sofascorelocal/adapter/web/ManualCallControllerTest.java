@@ -4,6 +4,7 @@ import com.bettingproject.sofascorelocal.application.network.J3ManualCallControl
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlException;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlService;
 import com.bettingproject.sofascorelocal.application.network.J3DynamicManualCallService;
+import com.bettingproject.sofascorelocal.application.network.J3LocalJsonImportService;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCollectionEvidenceService;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
@@ -15,6 +16,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.cache.CacheManager;
 import org.springframework.context.annotation.Import;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.mock.web.MockHttpSession;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
@@ -22,14 +24,19 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.Instant;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
@@ -54,6 +61,9 @@ class ManualCallControllerTest {
 
     @MockitoBean
     private J3DynamicManualCallService dynamicManualCallService;
+
+    @MockitoBean
+    private J3LocalJsonImportService localJsonImportService;
 
     @MockitoBean
     private J3ManualCollectionEvidenceService collectionEvidenceService;
@@ -101,7 +111,7 @@ class ManualCallControllerTest {
                 .andExpect(flash().attribute("manualCallMessageKind", "safe"))
                 .andExpect(flash().attribute(
                         "manualCallMessage",
-                        "Confirmation enregistrée. Aucun transport n’a été exécuté ; le déclenchement fournisseur reste une action distincte."));
+                        "Confirmation enregistrée. Aucun transport n’a été exécuté ; choisissez une seule action distincte : collecte directe ou import J3 sans réseau."));
 
         verify(controlService).confirm(REQUEST_ID, phrase, true);
     }
@@ -172,6 +182,98 @@ class ManualCallControllerTest {
                         "Collecte terminée : 5 page(s) ont été résolues dans l’ordre jusqu’à hasNextPage=false (5 transport(s) fournisseur, 0 cache hit(s) local(aux)). L’arrêt global a été réappliqué et la preuve minimisée est prête."));
 
         verify(dynamicManualCallService).execute(REQUEST_ID);
+    }
+
+    @Test
+    void importsOrderedJ3JsonPagesWithoutCallingTheDynamicTransportService()
+            throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        String token = formTokenService.issue(session);
+        when(localJsonImportService.importPages(
+                eq(REQUEST_ID),
+                argThat(payloads -> payloads.size() == 2)))
+                .thenReturn(J3ManualCallExecutionResult.successfulLocalImport(2));
+        MockMultipartFile pageOne = new MockMultipartFile(
+                "pageFiles",
+                "page-1.json",
+                "application/json",
+                "{\"scheduled\":[],\"hasNextPage\":true}"
+                        .getBytes(StandardCharsets.UTF_8));
+        MockMultipartFile pageTwo = new MockMultipartFile(
+                "pageFiles",
+                "page-2.json",
+                "application/json",
+                "{\"scheduled\":[],\"hasNextPage\":false}"
+                        .getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(multipart("/manual-call/import-json-pages")
+                        .file(pageTwo)
+                        .file(pageOne)
+                        .session(session)
+                        .param("localFormToken", token)
+                        .param("requestId", REQUEST_ID.toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/dashboard#manual-call-control"))
+                .andExpect(flash().attribute("manualCallMessageKind", "safe"))
+                .andExpect(flash().attribute(
+                        "manualCallMessage",
+                        "Collecte J3 importée et validée : 2 page(s) JSON 1 à N, 0 appel fournisseur et 0 accès au cache. L’arrêt global a été réappliqué et le catalogue de tournois peut être reconstruit."));
+
+        verify(localJsonImportService).importPages(
+                eq(REQUEST_ID),
+                argThat(payloads -> payloads.size() == 2));
+        verifyNoInteractions(dynamicManualCallService);
+    }
+
+    @Test
+    void rejectsMissingPageNumbersBeforeTheImportServiceClaimsExecution()
+            throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        String token = formTokenService.issue(session);
+        MockMultipartFile pageOne = new MockMultipartFile(
+                "pageFiles", "page-1.json", "application/json", "{}".getBytes(StandardCharsets.UTF_8));
+        MockMultipartFile pageThree = new MockMultipartFile(
+                "pageFiles", "page-3.json", "application/json", "{}".getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(multipart("/manual-call/import-json-pages")
+                        .file(pageOne)
+                        .file(pageThree)
+                        .session(session)
+                        .param("localFormToken", token)
+                        .param("requestId", REQUEST_ID.toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("manualCallMessageKind", "danger"))
+                .andExpect(flash().attribute(
+                        "manualCallMessage",
+                        "Le lot doit contenir exactement les pages contiguës 1 à N."));
+
+        verifyNoInteractions(localJsonImportService);
+    }
+
+    @Test
+    void rejectsCookieMaterialBeforeTheImportServiceClaimsExecution()
+            throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        String token = formTokenService.issue(session);
+        MockMultipartFile pageOne = new MockMultipartFile(
+                "pageFiles",
+                "page-1.json",
+                "application/json",
+                "Cookie: session=forbidden\n{\"scheduled\":[]}"
+                        .getBytes(StandardCharsets.UTF_8));
+
+        mockMvc.perform(multipart("/manual-call/import-json-pages")
+                        .file(pageOne)
+                        .session(session)
+                        .param("localFormToken", token)
+                        .param("requestId", REQUEST_ID.toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("manualCallMessageKind", "danger"))
+                .andExpect(flash().attribute(
+                        "manualCallMessage",
+                        "Un fichier a été refusé car il contient des données sensibles ou dépasse les limites autorisées."));
+
+        verifyNoInteractions(localJsonImportService);
     }
 
     @Test

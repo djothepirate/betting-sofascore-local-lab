@@ -274,7 +274,7 @@ public class J5RealEventDataService {
         }
         return new J5RealCampaignResult(
                 claim.requestId(), claim.canonicalEventId(), claim.eventId(), true,
-                "COMPLETED", attempts, results);
+                "COMPLETED", attempts, 0, results);
     }
 
     private J5ParseResult<? extends J5EventData> parse(
@@ -316,7 +316,7 @@ public class J5RealEventDataService {
             List<J5RealEndpointResult> results) {
         return new J5RealCampaignResult(
                 claim.requestId(), claim.canonicalEventId(), claim.eventId(), false,
-                code, attempts, results);
+                code, attempts, 0, results);
     }
 
     private static RawManualCallSnapshot rawOnly(J5EventDataTransportResponse response) {

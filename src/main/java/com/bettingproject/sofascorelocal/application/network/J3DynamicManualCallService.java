@@ -57,6 +57,7 @@ public class J3DynamicManualCallService {
             J3ManualCollectionEvidenceService evidenceService,
             SofascoreEndpointCatalog endpointCatalog,
             SofascoreProperties properties,
+            J3SingleCallGuard callGuard,
             ManualProviderRequestCoordinator requestCoordinator) {
         this(
                 controlService,
@@ -67,7 +68,7 @@ public class J3DynamicManualCallService {
                         controlService.circuit()),
                 pageCache,
                 new ScheduledEventsV1Parser(),
-                new J3SingleCallGuard(),
+                callGuard,
                 evidenceService,
                 Clock.systemUTC(),
                 endpointCatalog.get(SofascoreEndpointType.SCHEDULED_EVENTS).cacheTtl(),

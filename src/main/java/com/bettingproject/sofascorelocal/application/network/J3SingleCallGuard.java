@@ -1,11 +1,14 @@
 package com.bettingproject.sofascorelocal.application.network;
 
+import org.springframework.stereotype.Component;
+
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Final in-memory exclusion guard for the J3 maximum concurrency of one.
  */
+@Component
 public final class J3SingleCallGuard {
 
     private final AtomicBoolean callInProgress = new AtomicBoolean();

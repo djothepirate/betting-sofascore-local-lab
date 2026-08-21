@@ -304,6 +304,7 @@ class J5RealEventDataServiceTest {
 
         assertThat(result.completed()).isTrue();
         assertThat(result.providerCallAttempts()).isEqualTo(3);
+        assertThat(result.localJsonImports()).isZero();
         assertThat(result.endpoints()).extracting(J5RealEndpointResult::endpointType)
                 .containsExactlyElementsOf(J5RealControlService.ORDERED_ENDPOINTS);
         assertThat(pauses).containsExactly(Duration.ofSeconds(3), Duration.ofSeconds(3));

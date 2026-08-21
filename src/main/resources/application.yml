@@ -37,6 +37,10 @@ spring:
       spec: maximumSize=500,expireAfterWrite=30m
   thymeleaf:
     cache: true
+  servlet:
+    multipart:
+      max-file-size: 6MB
+      max-request-size: 32MB
 
 server:
   address: 127.0.0.1
@@ -76,6 +80,7 @@ sofascore:
   j4-event-details-qualification-enabled: ${SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED:false}
   j4-event-details-phase2-enabled: ${SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED:false}
   j5-event-data-qualification-enabled: ${SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED:false}
+  tournament-event-discovery-enabled: ${SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED:false}
   base-url: ${SOFASCORE_BASE_URL:}
   maximum-concurrency: 1
   minimum-delay: 3s

@@ -48,6 +48,7 @@
       payload brut, ni sa classification, ni son checkpoint de cache.</p>
 
     <dl class="inspection-metadata">
+      <div><dt>Acquisition</dt><dd class="mono" th:text="${inspection.summary.acquisitionMode}">DIRECT_LOCAL_ENDPOINT</dd></div>
       <div><dt>Endpoint logique</dt><dd class="mono" th:text="${inspection.summary.logicalEndpoint}">SCHEDULED_EVENTS</dd></div>
       <div><dt>Clé locale</dt><dd class="mono" th:text="${inspection.summary.requestKey}">—</dd></div>
       <div><dt>Reçu à</dt><dd th:text="${inspection.summary.receivedAt}">—</dd></div>

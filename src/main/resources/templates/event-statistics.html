@@ -40,7 +40,7 @@
     <section class="panel event-panel">
       <div class="panel-heading">
         <div>
-          <p class="label">Identité canonique J4 réutilisée</p>
+          <p class="label">Identité canonique locale réutilisée</p>
           <h2>
             <span th:text="${page.current.event.homeTeam.name}">Home</span>
             <span> — </span>
@@ -55,6 +55,9 @@
         <div><dt>Horaire local</dt><dd class="mono" th:text="${page.current.startsAtInZone}">date</dd></div>
         <div><dt>Zone</dt><dd th:text="${page.zoneId.id}">Europe/Paris</dd></div>
       </dl>
+      <p class="fixture-note">Cette identité peut provenir directement d’une découverte de
+        rencontres par tournoi J3. Un détail J4 <span class="mono">EVENT_DETAILS</span> n’est pas
+        requis pour préparer la campagne J5.</p>
       <div class="actions">
         <a class="button button-secondary"
            th:href="@{/events/{id}/history(id=${page.current.event.identity.value},zone=${page.zoneId.id})}"
@@ -81,20 +84,20 @@
     <section class="panel manual-call-panel" aria-labelledby="j5-real-title">
       <div class="panel-heading">
         <div>
-          <p class="label">Qualification réelle J5 · Work Order séparé</p>
-          <h2 id="j5-real-title">Trois endpoints, une confirmation, aucun retry</h2>
+          <p class="label">Qualification J5 gardée · voie directe ou import local</p>
+          <h2 id="j5-real-title">Trois familles, une confirmation, aucun retry</h2>
         </div>
         <span class="chip"
               th:classappend="${j5RealControl.providerTransportAvailable} ? ' chip-warning' : ' chip-danger'"
               th:text="${j5RealControl.state}">LOCKED</span>
       </div>
       <p class="control-intro">
-        Une campagne autorise au plus trois requêtes séquentielles pour cette identité :
-        statistiques, incidents, puis compositions. Le brut est persisté avant parsing,
-        un délai minimal de trois secondes sépare les tentatives et le premier incident
-        verrouille immédiatement la campagne sans retry. Un HTTP 404 sur une famille signifie
-        « indisponible pour cet événement » : il est conservé, normalisé explicitement et la
-        campagne poursuit la famille suivante sans répéter l’appel.
+        Après préparation, l’opérateur choisit une seule voie pour cette identité : au plus trois
+        requêtes séquentielles, ou l’import local des trois corps JSON statistiques, incidents et
+        compositions. Dans les deux cas, le brut est persisté avant le parsing de normalisation,
+        l’ordre est imposé et le premier incident verrouille la campagne sans retry. Une enveloppe
+        fournisseur JSON portant explicitement le code 404 signifie « indisponible pour cet
+        événement » : elle est conservée et normalisée avant de poursuivre la famille suivante.
       </p>
       <p class="notice notice-warning" th:if="${!j5RealControl.providerTransportAvailable}">
         Configuration locale bloquée. Conditions encore absentes :
@@ -125,29 +128,73 @@
           </form>
         </article>
 
-        <article class="control-stage" th:if="${j5RealControl.awaitingConfirmation()}">
-          <h3>2. Confirmer puis appeler au plus trois fois</h3>
-          <p>Phrase exacte liée à cette identité et valable cinq minutes :</p>
+        <article class="control-stage control-stage-full"
+                 th:if="${j5RealControl.awaitingConfirmation()}">
+          <h3>2. Recopier la phrase puis choisir une seule voie</h3>
+          <p>Phrase exacte liée à cette identité et valable cinq minutes pour une seule action :</p>
           <code class="confirmation-phrase"
                 th:text="${j5RealControl.confirmationPhrase}">CONFIRMER J5 REAL</code>
-          <form class="control-form" method="post"
-                th:action="@{/events/{id}/statistics/real/execute(id=${page.current.event.identity.value})}">
-            <input type="hidden" name="localFormToken" th:value="${localFormToken}">
-            <input type="hidden" name="zone" th:value="${page.zoneId.id}">
-            <input type="hidden" name="requestId" th:value="${j5RealControl.requestId}">
-            <label for="j5-real-confirmation">Recopier la phrase</label>
-            <input id="j5-real-confirmation" type="text" name="confirmationText"
-                   autocomplete="off" spellcheck="false" maxlength="160" required>
-            <label>
-              <input type="checkbox" name="acknowledged" value="true" required>
-              Je confirme au plus trois appels fournisseur, l’arrêt au premier incident
-              réel, la poursuite après une famille indisponible en HTTP 404 et le verrouillage
-              terminal sans retry.
-            </label>
-            <button class="button-danger" type="submit">
-              Appeler les trois familles une fois
-            </button>
-          </form>
+          <div class="discovery-execution-grid">
+            <form class="control-form control-stage" method="post"
+                  th:action="@{/events/{id}/statistics/real/execute(id=${page.current.event.identity.value})}">
+              <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+              <input type="hidden" name="zone" th:value="${page.zoneId.id}">
+              <input type="hidden" name="requestId" th:value="${j5RealControl.requestId}">
+              <h4>Option A — Trois appels fournisseur</h4>
+              <label for="j5-real-confirmation">Phrase de confirmation</label>
+              <input id="j5-real-confirmation" type="text" name="confirmationText"
+                     autocomplete="off" spellcheck="false" maxlength="160" required>
+              <label class="acknowledgement">
+                <input type="checkbox" name="acknowledged" value="true" required>
+                <span>Je confirme au plus trois appels fournisseur, l’arrêt au premier incident
+                  réel, la poursuite après une famille indisponible en HTTP 404 et le verrouillage
+                  terminal sans retry.</span>
+              </label>
+              <button class="button-danger" type="submit">
+                Appeler les trois familles une fois
+              </button>
+            </form>
+
+            <form class="control-form control-stage" method="post"
+                  enctype="multipart/form-data"
+                  th:action="@{/events/{id}/statistics/real/import-json(id=${page.current.event.identity.value})}">
+              <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+              <input type="hidden" name="zone" th:value="${page.zoneId.id}">
+              <input type="hidden" name="requestId" th:value="${j5RealControl.requestId}">
+              <h4>Option B — Trois corps JSON, zéro appel</h4>
+              <p class="fixture-note">Ouvrez manuellement les trois URL exactes et enregistrez
+                uniquement chaque corps JSON. Aucun HAR, en-tête, cookie ou export DevTools.</p>
+              <code class="endpoint-uri"
+                    th:text="${'https://www.sofascore.com/api/v1/event/' + page.current.event.identity.providerEventId + '/statistics'}">statistics</code>
+              <label for="j5-statistics-file">Statistiques</label>
+              <input id="j5-statistics-file" type="file" name="statisticsFile"
+                     accept="application/json,.json" required>
+              <code class="endpoint-uri"
+                    th:text="${'https://www.sofascore.com/api/v1/event/' + page.current.event.identity.providerEventId + '/incidents'}">incidents</code>
+              <label for="j5-incidents-file">Incidents</label>
+              <input id="j5-incidents-file" type="file" name="incidentsFile"
+                     accept="application/json,.json" required>
+              <code class="endpoint-uri"
+                    th:text="${'https://www.sofascore.com/api/v1/event/' + page.current.event.identity.providerEventId + '/lineups'}">lineups</code>
+              <label for="j5-lineups-file">Compositions</label>
+              <input id="j5-lineups-file" type="file" name="lineupsFile"
+                     accept="application/json,.json" required>
+              <p class="fixture-note">5 Mio maximum par fichier. Une enveloppe JSON exacte avec
+                <code>error.code=404</code> est conservée comme famille indisponible.</p>
+              <label for="j5-local-confirmation">Phrase de confirmation</label>
+              <input id="j5-local-confirmation" type="text" name="confirmationText"
+                     autocomplete="off" spellcheck="false" maxlength="160" required>
+              <label class="acknowledgement">
+                <input type="checkbox" name="acknowledged" value="true" required>
+                <span>Je confirme l’identité, les trois corps JSON, zéro appel fournisseur,
+                  la validation complète avant consommation et le verrouillage terminal sans
+                  retry.</span>
+              </label>
+              <button class="button-primary" type="submit">
+                Importer les trois familles — ZÉRO APPEL
+              </button>
+            </form>
+          </div>
         </article>
 
         <article class="control-stage" th:unless="${j5RealControl.awaitingConfirmation()}">
@@ -176,7 +223,8 @@
         <h3>Résultat minimisé de la campagne</h3>
         <p>
           <span th:text="${j5RealResult.terminalCode}">COMPLETED</span> ·
-          <span th:text="${j5RealResult.providerCallAttempts + ' appel(s) fournisseur'}">3 appels</span>
+          <span th:text="${j5RealResult.providerCallAttempts + ' appel(s) fournisseur'}">3 appels</span> ·
+          <span th:text="${j5RealResult.localJsonImports + ' import(s) JSON local(aux)'}">0 import</span>
         </p>
         <table th:unless="${j5RealResult.endpoints.isEmpty()}">
           <thead><tr><th>Endpoint</th><th>Snapshot</th><th>Taille</th><th>Complétude</th><th>Observation</th></tr></thead>

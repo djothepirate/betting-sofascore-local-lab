@@ -23,10 +23,11 @@ supplémentaire. Les statuts du laboratoire restent `EXPERIMENTAL`, `LOCAL_ONLY`
 
 - Windows 11, Java 25 et Docker Desktop ;
 - branche J7 et Work Order actif ;
-- PostgreSQL local sain avec Flyway V23 ;
+- PostgreSQL local sain avec Flyway V25 ;
 - application liée exclusivement à `127.0.0.1:8087` ;
 - répertoire `sofascore.export-directory` local, accessible en écriture et ignoré par Git ;
-- configurations J3/J4/J5 désactivées et états persistants `LOCKED` ;
+- configurations J3/J4/J5, y compris la découverte tournoi, désactivées et états persistants
+  `LOCKED` ;
 - corpus synthétique J4/J5 déjà importable hors ligne ;
 - événement fournisseur `16691018` déjà présent avec ses observations J4/J5/J6 ;
 - aucune application modifiant simultanément les mêmes observations pendant la revue.
@@ -57,10 +58,12 @@ git check-ignore .env exports\j7-control.json
 Select-String -Path .\src\main\resources\application.yml -Pattern '127\.0\.0\.1'
 ```
 
-Contrôler que seule V23 est ajoutée après V22, qu'aucun ancien fichier de migration n'a été
-modifié, qu'aucun export runtime n'est suivi par Git et que `.env` demeure ignoré. Le rapport de
-readiness J7 doit consigner les résultats réels ; une valeur `PENDING` interdit la clôture du Work
-Order.
+Pour la preuve historique J7, contrôler que seule V23 avait été ajoutée après V22 et qu'aucun
+ancien fichier de migration n'avait été modifié. Dans le schéma courant, V24 suit V23 et élargit
+uniquement la portée du cache `TOURNAMENT_SCHEDULED_EVENTS`; elle ne modifie ni le contrat ni les
+données J7. Vérifier également qu'aucun export runtime n'est suivi par Git et que `.env` demeure
+ignoré. Le rapport de readiness J7 doit consigner les résultats réels ; une valeur `PENDING`
+interdit la clôture du Work Order.
 
 ## 4. Démarrer sans réseau
 
@@ -76,7 +79,8 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 Ouvrir `http://127.0.0.1:8087`. Avant toute création :
 
 1. vérifier `127.0.0.1:8087` dans la barre d'adresse ;
-2. vérifier les contrôles J3, J4 et J5 à l'état `LOCKED`, sans intention `READY` ou `EXECUTING` ;
+2. vérifier les contrôles J3, découverte tournoi, J4 et J5 à l'état `LOCKED`, sans intention
+   `READY` ou `EXECUTING` ;
    leurs opt-ins peuvent être configurés pour la session multi-campagnes, mais aucune action
    fournisseur ne doit être en cours pendant un geste J7 ;
 3. vérifier l'absence de collecte, polling ou tâche planifiée ;

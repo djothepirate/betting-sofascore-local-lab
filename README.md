@@ -6,6 +6,20 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**, **J3 — Appel manuel**, **J4 — Événements**, **J5 — Statistiques**, **J6 — Historique** et **J7 — Export canonique**. J7 a franchi les portes techniques, la recette humaine et la revue de publication : la PR `#12` est `CLEAN/MERGEABLE`, mais reste en brouillon et n'est pas fusionnée sans confirmation explicite. L'implémentation J4, son parcours hors ligne et ses deux sous-étapes réelles bornées sont qualifiés humainement. La sous-étape 1 a validé `16386245` et `16421052` après correction du retour par date. La sous-étape 2 a validé la saisie d'identifiants, le rappel manuel avec une nouvelle confirmation, la déduplication d'une réponse inchangée et la création d'une observation append-only lorsque `16412917` est passé de `notstarted` à `inprogress`. Après l'arrêt global, la configuration a été remise à l'état bloqué, ce verrouillage a été vérifié après redémarrage et l'application a été arrêtée gracieusement. La Pull Request `#8` a été fusionnée et le Work Order J4 est archivé `VALIDATED`. Les voies fournisseur restent désactivées par défaut ; une configuration locale explicitement armée peut réunir J3, J4 phase 2 et J5 dans une même instance, avec une seule requête fournisseur active et un délai minimal partagé. Une recette réelle a depuis achevé, dans un même démarrage, J4 phase 2, les trois familles J5 puis une collecte J3 paginée sur six pages. La forme J3 `scheduled` compte des compétitions disponibles pour la date et ne fournit pas de rencontres programmées ; le reparsage J4 l'indique désormais sans présenter son total nul de matchs comme une anomalie. Aucun appel fournisseur n’est exécuté par Maven, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
+L'évolution **J3 → J5 — découverte tournoi → rencontres** est `VALIDATED` depuis le 2026-08-21 et
+son Work Order est clôturé dans `docs/work_orders/completed`. Après une collecte J3 `COMPLETED` du processus courant,
+elle expose les occurrences de tournois observées, résout côté serveur le
+`tournament.uniqueTournament.id` numérique, normalise atomiquement les rencontres de la phase et
+de la journée `Europe/Paris`, puis affiche leurs liens J5 sans exiger J4. Après confirmation,
+l'opérateur choisit soit au plus un GET direct, soit l'import local du seul corps JSON obtenu
+manuellement. Cette seconde voie exécute zéro transport, refuse HAR/en-têtes/cookies, reste bornée
+à 5 Mio et conserve une provenance distincte. Les tests automatisés exécutent zéro appel
+fournisseur ; toutes les voies restent désactivées par défaut. Depuis chaque rencontre retenue,
+la campagne J5 propose également un choix explicite : trois GET ordonnés, ou l'import local des
+trois seuls corps JSON statistiques, incidents et compositions. Ce lot est prévalidé avant la
+confirmation, conserve trois snapshots de provenance locale et exécute zéro appel fournisseur ;
+un terminal direct sur 403 exige toujours un redémarrage et une nouvelle préparation.
+
 Le jalon **J5 — Statistiques** est validé techniquement et humainement sur sa frontière hors ligne :
 statistiques, incidents et compositions synthétiques, contrôles explicites de complétude,
 persistance append-only V7 et écran local. Le Work Order séparé `WO-SS-20260815-006` a ajouté une
@@ -142,7 +156,7 @@ techniques, de la recette du runbook J7 et de la revue de publication. La PR `#1
 - dépôt Git autonome, documentation, ADR, règles agent et Work Orders ;
 - Java **25 LTS**, Spring Boot **4.1.0** et Maven Wrapper versionné ;
 - interface Spring MVC + Thymeleaf sur `127.0.0.1:8087` ;
-- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V23 et stockage brut séparé ;
+- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V25 et stockage brut séparé ;
 - Actuator, Caffeine, validation de configuration et garde de liaison locale ;
 - catalogue logique des familles d’endpoints, sans URI réelle ;
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
@@ -170,6 +184,26 @@ techniques, de la recette du runbook J7 et de la revue de publication. La PR `#1
 - cache réel du parcours dynamique consulté avant chaque transport sur la clé exacte date/page :
   seuls les snapshots `PARSED` frais selon le TTL de dix minutes et le parseur courant sont relus
   hors ligne ; un cache hit ne déclenche ni transport, ni attente, ni mutation de persistance ;
+- alternative J3 après la même confirmation : import atomique des seuls corps JSON
+  `page-1.json` à `page-N.json`, avec prévalidation de la pagination, 5 Mio maximum par page,
+  25 Mio maximum au total, zéro transport/cache et preuve minimisée v5 portant
+  `LOCAL_JSON_IMPORT` ;
+- catalogue de tournoi reconstruit uniquement depuis les snapshots exacts de la dernière preuve J3
+  `COMPLETED` du processus courant, avec contrôle pages/clé/hash/parseur et aucune reconstruction
+  implicite après redémarrage ;
+- liste déroulante au libellé exact `tournament.name - tournament.category.name`, postant seulement
+  `tournament.id`, résolution serveur du `tournament.uniqueTournament.id` numérique et requête fermée
+  `/api/v1/unique-tournament/{id}/scheduled-events/{date}` ;
+- parser `tournament-scheduled-v1`, cache de dix minutes étendu par V24, projection de la phase sur
+  la journée semi-ouverte `Europe/Paris`, contrôle du nombre et canonicalisation transactionnelle ;
+- import alternatif du seul corps JSON du second endpoint après sa confirmation : zéro transport,
+  zéro cache fournisseur, limite 5 Mio, scanner sensible et provenance
+  `MANUAL_LOCAL_JSON_IMPORT` distincte de `DIRECT_LOCAL_ENDPOINT` ;
+- liens directs vers J5 pour les rencontres retenues, sans appel `EVENT_DETAILS`, campagne J4,
+  saisie manuelle d'identifiant ou lancement automatique de J5 ;
+- alternative J5 après sa confirmation : import atomique de trois corps JSON, 5 Mio maximum par
+  fichier, scanner sensible, validation complète avant claim, zéro transport/cache et snapshots
+  `MANUAL_LOCAL_JSON_IMPORT` normalisés dans l'ordre statistiques → incidents → compositions ;
 - catalogue local limité à 50 métadonnées de snapshots bruts et inspection JSON explicite d’une
   ligne, avec contrôle taille/SHA-256, blocage des contenus sensibles, parsing strict, rendu HTML
   échappé et réponse `no-store`, sans transport, téléchargement ou mutation ;
@@ -266,6 +300,35 @@ les transports J3/J4/J5 et impose au moins trois secondes entre leurs départs, 
 jalons. Toutes ces voies interdisent polling, planification et retry. J6/J7 restent locaux et sans
 transport. Les configurations temporaires et leur remise à l'état bloqué sont décrites dans
 `docs/runbooks/RUNBOOK-LOCAL.md`.
+
+La découverte tournoi est une autre voie spéciale : elle exige ensemble
+`SOFASCORE_ENABLED=true`, `SOFASCORE_J3_QUALIFICATION_ENABLED=true` et
+`SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED=true`, l'origine exacte
+`https://www.sofascore.com` et l'allowlist exacte
+`SCHEDULED_EVENTS,TOURNAMENT_SCHEDULED_EVENTS`. Ce contrat ne vaut pas autorisation d'appel réel ;
+sélection et préparation restent sans réseau, et l'action finale exige une décision humaine
+distincte. J4 et J5 demeurent désactivés dans cette configuration isolée.
+
+La confirmation J3 permet de choisir soit la pagination directe existante, soit l'import local
+d'un lot complet de pages 1 à N obtenu manuellement. L'import J3 ne lit ni n'alimente le cache,
+n'exécute aucun transport, refuse HAR/en-têtes/cookies et exige une suite `hasNextPage` terminale.
+Un `HTTP_FORBIDDEN` direct reste terminal et ne bascule pas automatiquement : il faut réarmer,
+préparer et confirmer une nouvelle intention avant de sélectionner le lot local. La procédure
+exacte et les limites sont décrites dans le runbook.
+
+Après une collecte J3 `COMPLETED`, la liste de découverte ne conserve que les occurrences portant
+un `tournament.category.name` exploitable et dont `timezoneEventCount` contient l'offset applicable
+à la date collectée dans `Europe/Paris` : `7200` en heure d'été, `3600` en heure d'hiver, ou l'un des
+deux le jour d'une bascule. Le libellé associe le nom de phase et cette portée géographique avec
+` - `, sans modifier l'identité postée. Cette éligibilité est recalculée côté serveur ; un
+`tournament.id` exclu ne peut pas être préparé par un POST manuel.
+
+Si J3, la découverte tournoi, J4 phase 2 et J5 sont armés dans une même instance, l'allowlist
+exacte devient `SCHEDULED_EVENTS,TOURNAMENT_SCHEDULED_EVENTS,EVENT_DETAILS,EVENT_STATISTICS,`
+`EVENT_INCIDENTS,EVENT_LINEUPS`. `TOURNAMENT_STANDINGS` et `TEAM_RECENT_EVENTS` restent différés et
+ne doivent pas être ajoutés : une famille supplémentaire rend volontairement la configuration
+invalide. Le build Maven reste indépendant des opt-ins présents dans le `.env` local et n'exécute
+aucun appel fournisseur.
 
 Cette limite préserve la règle du Betting Project principal : aucun composant du VPS ne dépend du laboratoire, et l’arrêt du poste Windows ne doit avoir aucun effet sur la chaîne globale.
 
@@ -402,7 +465,7 @@ La migration `V1__bootstrap_schema.sql` crée :
 - `export_manifest` : registre générique étendu par V23 pour les exports canoniques J7 gardés ;
 - `connector_control` : état opérateur persistant, initialisé à `network_enabled=false` et `circuit_state=LOCKED`.
 
-La migration append-only `V2__raw_manual_call_snapshots.sql` ajoute à `provider_snapshot` les octets exacts dans `payload_raw` (`bytea`), leur taille et le mode de provenance obligatoire `DIRECT_LOCAL_ENDPOINT`. Le brut reste distinct de `payload_jsonb`, qui n’est pas alimenté par cette unité. La taille est limitée à 5 Mio et une même combinaison fournisseur, endpoint logique, clé de requête et SHA-256 est dédupliquée.
+La migration append-only `V2__raw_manual_call_snapshots.sql` ajoute à `provider_snapshot` les octets exacts dans `payload_raw` (`bytea`), leur taille et le mode de provenance obligatoire `DIRECT_LOCAL_ENDPOINT`. Le brut reste distinct de `payload_jsonb`, qui n’est pas alimenté par cette unité. La taille est limitée à 5 Mio. Depuis V25, la déduplication porte sur le fournisseur, le mode d'acquisition, l'endpoint logique, la clé de requête et le SHA-256 afin de ne pas confondre réponse directe et import manuel.
 
 La migration append-only `V3__dynamic_manual_collection_cache.sql` ajoute uniquement un checkpoint
 de fraîcheur par clé date/page. Il référence le snapshot brut immuable et permet de rafraîchir le
@@ -535,6 +598,18 @@ des triggers imposent un seul candidat courant, l'unicité d'un `dataSha256` val
 terminale identique à l'intention, l'immuabilité des preuves, le verrou de fraîcheur par événement
 sur les écritures d'observation et l'interdiction de supprimer une ligne J7.
 
+La migration append-only `V24__j3_j5_tournament_scheduled_events_cache.sql` ne modifie aucune
+donnée canonique ni preuve J7. Elle étend uniquement la contrainte fermée de
+`provider_response_cache.logical_endpoint` à `TOURNAMENT_SCHEDULED_EVENTS`, afin que le cache de
+dix minutes de la découverte tournoi référence ses snapshots bruts intègres.
+
+La migration append-only `V25__manual_local_json_import_provenance.sql` autorise uniquement le
+mode brut `MANUAL_LOCAL_JSON_IMPORT` et l'ajoute à la clé de déduplication des snapshots. Elle ne
+transforme pas un import en réponse fournisseur : les caches restent limités aux snapshots
+`DIRECT_LOCAL_ENDPOINT`, tandis que l'inspection et la rétention J6 couvrent les deux provenances.
+Ce mode est utilisé aussi bien pour le lot paginé J3 que pour le corps importé du second endpoint,
+avec des endpoints logiques et des clés distincts.
+
 Le mode `DIRECT_LOCAL_ENDPOINT` ne doit jamais être confondu avec une `VisualObservation` du projet
 global. La persistance n'effectue elle-même aucun appel : les écritures J5 réelles éventuelles sont
 initiées uniquement par la voie humaine gardée, puis référencent le brut séparé avec
@@ -547,8 +622,9 @@ Le bootstrap cumule plusieurs barrières :
 1. `sofascore.enabled=false` par défaut ;
 2. aucune base URL par défaut ;
 3. aucune origine fournisseur dans la configuration par défaut ;
-4. toutes les définitions restent `callable=false`, sauf `SCHEDULED_EVENTS` dans le seul mode de
-   qualification J3 explicitement armé ;
+4. toutes les définitions du catalogue restent `callable=false` ; les voies spéciales J3 et
+   découverte ne deviennent éligibles qu'avec leurs opt-ins et l'union exacte
+   `SCHEDULED_EVENTS,TOURNAMENT_SCHEDULED_EVENTS` ;
 5. `ConnectorGate` refuse systématiquement les appels ;
 6. le profil `sofascore-live-test` échoue volontairement ;
 7. l’application n’écoute que sur une adresse de boucle locale ;
@@ -568,6 +644,9 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Architecture de la qualification réelle gardée J5](docs/architecture/J5-GUARDED-REAL-EVENT-DATA.md)
 - [Architecture J6 — historique et rétention gardée](docs/architecture/J6-HISTORY-AND-GUARDED-RETENTION.md)
 - [Architecture J7 — export canonique local et audité](docs/architecture/J7-CANONICAL-EVENT-EXPORT.md)
+- [Architecture J3 → J5 — découverte tournoi → rencontres](docs/architecture/J3-J5-TOURNAMENT-EVENT-DISCOVERY.md)
+- [Règles structurelles de découverte tournoi → rencontres](docs/requirements/J3-J5-TOURNAMENT-EVENT-DISCOVERY-RULES.md)
+- [Readiness technique de la découverte tournoi → rencontres](docs/validation/J3-J5-TOURNAMENT-EVENT-DISCOVERY-TECHNICAL-READINESS-20260820.md)
 - [Règles métier des incidents de football J5](docs/requirements/J5-FOOTBALL-INCIDENT-RULES.md)
 - [Voie réelle bornée J4 — sous-étape 1](docs/architecture/J4-GUARDED-REAL-EVENT-DETAILS-PHASE1.md)
 - [Politique réseau J3 hors ligne](docs/architecture/J3-OFFLINE-NETWORK-POLICY.md)

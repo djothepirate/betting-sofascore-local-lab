@@ -5,7 +5,8 @@
 Démarrer, vérifier, exploiter et arrêter les jalons J0 à J7 sur Windows sans exposer de service
 hors de la machine locale. J5 conserve sa qualification réelle exceptionnelle désactivée par
 défaut ; J6 consulte l'historique et garde sa rétention hors interface ; J7 assemble uniquement les
-données locales courantes et exige une décision humaine avant téléchargement.
+données locales courantes et exige une décision humaine avant téléchargement. La découverte
+tournoi → rencontres est qualifiée et son Work Order est clôturé depuis le 2026-08-21.
 
 ## 2. Première installation
 
@@ -100,7 +101,7 @@ Vérifier :
 - connecteur `DISABLED` ;
 - base URL `NON_CONFIGURED` ;
 - PostgreSQL `AVAILABLE` ;
-- migration Flyway `23` ;
+- migration Flyway `25` ;
 - snapshots `0` sur une base neuve ;
 - corpus hors ligne `AVAILABLE_OFFLINE` ;
 - fixtures `12 / 12 disponibles` ;
@@ -286,14 +287,21 @@ Cette procédure remplace fonctionnellement la reprise fixe de la section 3.7. E
 7. vérifier la clé `SCHEDULED_EVENTS|date=<date>|pagination=has-next-page|max=25` ;
 8. recopier exactement la phrase, acquitter le départ page 1, `hasNextPage` et le plafond 25,
    puis confirmer ;
-9. vérifier `CONFIRMED_READY`, puis sélectionner une seule fois
-   **« 5. Lancer la collecte manuelle paginée — PAGE 1 À N »** ;
+9. vérifier `CONFIRMED_READY`, puis choisir exactement une voie :
+   - **Option A — collecte fournisseur directe** : sélectionner une seule fois
+     **« 5A. Lancer la collecte paginée — APPELS FOURNISSEUR »** ;
+   - **Option B — import J3 paginé sans réseau** : ouvrir manuellement, hors de l'application,
+     `https://www.sofascore.com/api/v1/sport/football/scheduled-tournaments/<date>/page/1`,
+     enregistrer uniquement le corps JSON sous `page-1.json`, puis répéter avec `page-2.json`, …
+     tant que le corps précédent porte `hasNextPage=true`. Sélectionner ensemble toutes les pages
+     contiguës 1 à N. Ne jamais fournir HAR, export DevTools, en-tête, cookie, jeton ou donnée de
+     session ;
 10. attendre le retour sans actualiser la page ;
 11. vérifier soit `COMPLETED`, soit l’arrêt sans retry au premier incident ou avant la page 26 ;
 12. télécharger la preuve et contrôler au minimum :
 
 ```text
-J3_MINIMIZED_EVIDENCE_VERSION=4
+J3_MINIMIZED_EVIDENCE_VERSION=5
 PAGINATION_MODE=HAS_NEXT_PAGE
 CACHE_POLICY=FRESH_PARSED_SNAPSHOT_FIRST
 CACHE_TTL_SECONDS=600
@@ -301,6 +309,8 @@ PROVIDER_FIRST_PAGE=1
 MAXIMUM_PAGE_LIMIT=25
 PROVIDER_PAGES_REQUESTED=<liste ou NONE>
 CACHE_HIT_PAGES=<liste ou NONE>
+LOCAL_JSON_IMPORT_PAGES=<liste ou NONE>
+LOCAL_JSON_IMPORT_COUNT=<nombre>
 FINAL_GLOBAL_STOP=ACTIVE
 AUTOMATIC_RETRY_EXECUTED=NO
 POLLING_OR_SCHEDULE_EXECUTED=NO
@@ -322,10 +332,31 @@ zéro. Il n’existe aucun bouton de contournement du cache ni du TTL. Pour obse
 nouveau transport sur la même date, attendre l’expiration normale ; ne jamais supprimer, modifier
 ou reclasser un snapshot.
 
+Pour l'Option B, l'application prévalide le lot entier avant de réclamer l'exécution : fichiers
+numérotés sans doublon ni trou, 1 à 25 pages, 5 Mio maximum par fichier, 25 Mio maximum au total,
+forme J3 `scheduled`, puis `hasNextPage=true` avant la dernière page et `false` sur celle-ci. Un
+refus à ce stade laisse l'intention `CONFIRMED_READY` afin de corriger le lot. Un succès doit
+afficher zéro transport et zéro cache hit, ainsi que :
+
+```text
+LOCAL_JSON_IMPORT_PAGES=1,...,N
+LOCAL_JSON_IMPORT_COUNT=N
+PAGE_<n>_RESOLUTION_SOURCE=LOCAL_JSON_IMPORT
+PAGE_<n>_PROVIDER_REQUEST_EXECUTED=NO
+PAGE_<n>_LOCAL_JSON_IMPORT_EXECUTED=YES
+```
+
+Chaque page acceptée est conservée avec `MANUAL_LOCAL_JSON_IMPORT`; elle ne crée aucun checkpoint
+de cache fournisseur. Le statut local `HTTP 200` et la latence nulle signifient « corps JSON
+accepté localement », pas « réponse reçue par le client Java ». Cette voie ne récupère rien à la
+place de l'opérateur et n'imite pas Chrome.
+
 Pour répéter l’interrogation, lever à nouveau l’arrêt global : l’intention terminale précédente est
 alors retirée. Réactiver le circuit et recommencer depuis l’étape 6. Ne jamais contourner un
 incident en modifiant ou supprimant un snapshot ; analyser d’abord la preuve et la classification
-locale. Remettre la configuration `.env` en état sûr après la séance.
+locale. En particulier, un `HTTP_FORBIDDEN` direct est terminal : l'Option B exige une nouvelle
+intention et ne constitue jamais le retry de celle qui a échoué. Remettre la configuration `.env`
+en état sûr après la séance.
 
 ### 3.9 Inspecter localement le JSON brut d’un snapshot
 
@@ -350,6 +381,92 @@ ou un journal. Utiliser la preuve minimisée téléchargeable pour la qualificat
 bouton de téléchargement brut, aucune modification de classification et aucun contournement du
 cache. Un refus `PAYLOAD_INTEGRITY_FAILURE`, `SENSITIVE_CONTENT_BLOCKED` ou `INVALID_JSON` doit
 rester bloquant et être analysé hors ligne sans modifier la ligne persistée.
+
+### 3.9 bis Préparer une éventuelle nouvelle recette de découverte tournoi → rencontres
+
+Cette section conserve le contrat opérateur de l'évolution `VALIDATED`. Sa clôture
+**n'autorise aucun nouvel appel fournisseur**. Tant que le propriétaire n'a pas autorisé
+séparément une date J3, sa pagination bornée et l'unique requête de découverte, conserver la
+configuration par défaut bloquée et ne sélectionner aucune action finale.
+
+Après autorisation explicite seulement, application arrêtée, la configuration minimale de cette
+session est exactement :
+
+```text
+SOFASCORE_ENABLED=true
+SOFASCORE_J3_QUALIFICATION_ENABLED=true
+SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED=true
+SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=false
+SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false
+SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=false
+SOFASCORE_BASE_URL=https://www.sofascore.com
+SOFASCORE_ALLOWED_ENDPOINTS=SCHEDULED_EVENTS,TOURNAMENT_SCHEDULED_EVENTS
+```
+
+Ce bloc rend la configuration cohérente avec les gardes ; il ne vaut pas permission d'exécution.
+Ne pas y ajouter `EVENT_DETAILS`, `EVENT_STATISTICS`, `EVENT_INCIDENTS` ou `EVENT_LINEUPS` pour
+cette qualification isolée.
+
+La recette humaine autorisée devra respecter l'ordre suivant :
+
+1. démarrer l'application sur `127.0.0.1` et vérifier les deux endpoints actifs exacts, la
+   concurrence `1`, le délai minimal `3 s`, l'absence de polling/live et le stockage brut ;
+2. exécuter une collecte J3 explicitement autorisée selon la section 3.8 — voie directe ou lot
+   JSON local 1 à N — et obtenir `COMPLETED` dans le processus courant ;
+3. sans redémarrer, vérifier que « Rencontres datées et accès direct à J5 » propose toutes les
+   occurrences actionnables des pages exactes, avec le libellé exact
+   `tournament.name - tournament.category.name` ; une occurrence sans portée géographique n'est pas
+   proposée, et une occurrence restante n'est actionnable que si `timezoneEventCount` contient
+   l'offset applicable à la date J3 dans `Europe/Paris` (`7200` en été, `3600` en hiver, l'un ou
+   l'autre le jour d'une bascule) ;
+4. choisir une occurrence et sélectionner **Préparer** ; vérifier qu'aucun transport n'est parti,
+   que la date, `tournament.id`, `tournament.category.name` et le `uniqueTournament.id` numérique
+   sont affichés, puis relire la phrase et l'expiration de cinq minutes ;
+5. choisir une seule voie, sans resoumettre le formulaire :
+   - **A — GET direct** : s'arrêter en l'absence d'une autorisation humaine distincte pour cet
+     appel ; si elle est acquise, recopier la phrase, acquitter et soumettre une seule fois ;
+   - **B — import JSON local** : enregistrer hors de l'application uniquement le corps JSON de la
+     réponse correspondant exactement à la date et au tournoi unique affichés, puis sélectionner
+     ce fichier, recopier la même phrase et acquitter. Ne jamais importer une capture HAR, des
+     en-têtes, des cookies, un export de DevTools ou une donnée de session. La limite est 5 Mio ;
+6. vérifier `COMPLETED` ou le premier code terminal verrouillé, le nombre d'appels `0` sur cache hit
+   ou import local, ou `1` sur cache miss direct, la source affichée, les exclusions, le contrôle de
+   compte et l'absence de retry ; un import doit afficher `LOCAL_JSON_IMPORT` et son snapshot
+   `MANUAL_LOCAL_JSON_IMPORT` dans l'inspection locale ;
+7. vérifier qu'un import local n'a créé aucun checkpoint de cache fournisseur et qu'il a suivi le
+   même parseur `tournament-scheduled-v1`, la même projection et la même transaction canonique ;
+8. pour chaque rencontre retenue, vérifier le lien
+   `/events/{canonicalEventId}/statistics?zone=Europe%2FParis`. Avec l'opt-in J5 à `false`, ouvrir ce
+   lien ne doit exécuter aucun appel fournisseur ; J4 et `EVENT_DETAILS` ne sont pas requis ;
+9. ne jamais relancer après erreur, expiration ou arrêt. Un échec du GET ne donne pas accès à
+   l'import dans la même intention : un tel terminal exige revue et redémarrage, pas un
+   contournement automatique ;
+10. arrêter l'application et restaurer immédiatement :
+
+```text
+SOFASCORE_ENABLED=false
+SOFASCORE_J3_QUALIFICATION_ENABLED=false
+SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED=false
+SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=false
+SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false
+SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=false
+SOFASCORE_BASE_URL=
+SOFASCORE_ALLOWED_ENDPOINTS=
+```
+
+Après redémarrage, la liste de tournois doit redevenir indisponible : la preuve J3 terminale reste
+en mémoire et n'est pas reconstruite implicitement depuis des snapshots historiques. Une nouvelle
+collecte J3 explicite, éventuellement résolue par son cache frais ou par un nouveau lot JSON local
+complet, est requise pour recréer un catalogue. Ne jamais supprimer ou fusionner manuellement des
+snapshots pour contourner cette frontière.
+
+Après le correctif de précision PostgreSQL du 2026-08-20, une collecte J3 `COMPLETED` dans le
+processus courant doit rendre le catalogue `AVAILABLE` même si `receivedAt` a été arrondi à la
+microseconde lors de sa relecture. Seul un écart absolu strictement inférieur à une microseconde est
+admis. Si `SNAPSHOT_METADATA_MISMATCH` persiste, ne pas relancer la découverte : conserver la preuve
+minimisée et vérifier l'identifiant, l'endpoint, la clé date/page, le statut HTTP, le parseur et la
+classification du snapshot. La taille ou le SHA-256 incohérent relève de
+`SNAPSHOT_INTEGRITY_FAILURE`, jamais de cette tolérance temporelle.
 
 ### 3.10 Rechercher et consulter un événement J4 hors ligne
 
@@ -434,20 +551,30 @@ ouvrir la fiche d'une identité canonique J4 existante puis sélectionner
 1. vérifier que l'UUID, l'identifiant fournisseur et la zone correspondent à la fiche J4 choisie ;
 2. vérifier que tous les bloqueurs de qualification J5 ont disparu ;
 3. sélectionner **« Préparer la campagne J5 »** : cette action ne contacte pas le fournisseur ;
-4. recopier exactement la phrase affichée, cocher l'acquittement puis sélectionner
-   **« Appeler les trois familles une fois »** une seule fois ;
-5. ne pas recharger, revenir en arrière ou resoumettre le formulaire pendant l'exécution ;
-6. attendre l'état terminal ; le chemin nominal tente au maximum `statistics`, puis `incidents`,
-   puis `lineups`, avec au moins trois secondes entre deux départs ;
-7. si le résultat est `COMPLETED_LOCKED`, vérifier les trois panneaux locaux, leur complétude ou
+4. choisir une seule voie avant de soumettre la phrase :
+   - **A — trois appels fournisseur** : recopier exactement la phrase, acquitter puis sélectionner
+     **« Appeler les trois familles une fois »** une seule fois ;
+   - **B — trois corps JSON, zéro appel** : ouvrir manuellement les trois URL exactes affichées,
+     enregistrer seulement leurs corps JSON, choisir respectivement les fichiers statistiques,
+     incidents et compositions, recopier la phrase dans le formulaire B, acquitter puis sélectionner
+     **« Importer les trois familles — ZÉRO APPEL »**. Chaque fichier est limité à 5 Mio. Ne jamais
+     importer HAR, en-têtes, cookies, jetons, données de session ou export DevTools ;
+5. pour la voie B, une réponse d'indisponibilité est admise uniquement si le fichier contient une
+   enveloppe JSON fermée dont `error.code` est l'entier `404`. Ne pas modifier un corps 403 pour le
+   faire passer pour un 404 et ne pas saisir un statut séparément ;
+6. ne pas recharger, revenir en arrière ou resoumettre le formulaire pendant l'exécution ;
+7. attendre l'état terminal ; la voie directe tente au maximum `statistics`, puis `incidents`,
+   puis `lineups`, avec au moins trois secondes entre deux départs. La voie locale produit zéro
+   appel, `localJsonImports=3`, trois snapshots et trois observations dans le même ordre ;
+8. si le résultat est `COMPLETED_LOCKED`, vérifier les trois panneaux locaux, leur complétude ou
    leur statut `UNAVAILABLE · N/A`, leur source `PROVIDER_SNAPSHOT`, leur parseur courant
    (`event-statistics-v2`, `event-incidents-v13`, `event-lineups-v2`) ou normaliseur
    `event-*-unavailable-v1`, leur snapshot, leur SHA-256 et leur heure de réception, sans ouvrir ou
    copier le payload brut ;
-8. dans les panneaux incidents et compositions, vérifier qu'une complétude `PARTIAL` conserve son
+9. dans les panneaux incidents et compositions, vérifier qu'une complétude `PARTIAL` conserve son
    badge et son compteur de signaux, mais n'affiche plus la liste technique des chemins JSON
    manquants au-dessus du tableau ; vérifier que le contenu du tableau reste inchangé ;
-9. si la campagne doit être abandonnée alors qu'elle est encore `AWAITING_CONFIRMATION` ou
+10. si la campagne doit être abandonnée alors qu'elle est encore `AWAITING_CONFIRMATION` ou
    `EXECUTING`, sélectionner **« Arrêt global J5 »** ; après un état terminal, aucun nouvel appel
    n'est possible dans le processus et il suffit d'arrêter l'application.
 
@@ -459,6 +586,11 @@ d'identité, incompatibilité de schéma ou erreur de persistance — ne pas ré
 les familles restantes. Appliquer l'arrêt global si l'interface répond encore, arrêter
 l'application et soumettre l'incident à une décision humaine. Un nouvel en-tête, un autre client
 ou une autre adresse reste interdit.
+
+Un terminal direct `HTTP_403` ne rend pas le formulaire d'import disponible dans la même campagne.
+Ce verrou est volontaire : arrêter l'application, la redémarrer, préparer une nouvelle campagne,
+obtenir une nouvelle phrase et choisir immédiatement l'option B. L'import n'est jamais un retry ni
+un fallback automatique de la campagne échouée.
 
 Sous `event-incidents-v13`, qui hérite sans modification de la règle V12, une séance terminale
 entièrement non minutée peut être compatible à
@@ -630,6 +762,36 @@ FULL_COMBINED_SESSION_AUTOMATIC_PROVIDER_CALLS=0
 LOCAL_CONFIGURATION_RELOCKED=YES|NO
 APPLICATION_STOPPED=YES|NO
 ```
+
+### 3.10 sexies Ajouter la découverte tournoi à la session combinée
+
+Pour enchaîner J3, la découverte tournoi, J4 phase 2 et J5 dans la même instance, application
+arrêtée, utiliser exclusivement le profil suivant :
+
+```properties
+SOFASCORE_ENABLED=true
+SOFASCORE_J3_QUALIFICATION_ENABLED=true
+SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true
+SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=true
+SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=true
+SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED=true
+SOFASCORE_BASE_URL=https://www.sofascore.com
+SOFASCORE_ALLOWED_ENDPOINTS=SCHEDULED_EVENTS,TOURNAMENT_SCHEDULED_EVENTS,EVENT_DETAILS,EVENT_STATISTICS,EVENT_INCIDENTS,EVENT_LINEUPS
+```
+
+L'union doit rester exacte. Ne pas ajouter `TOURNAMENT_STANDINGS` ni `TEAM_RECENT_EVENTS` : ces
+familles sont différées, ne sont liées à aucun opt-in qualifié et leur présence bloque
+volontairement le démarrage. Modifier `.env` ne recharge pas une application déjà démarrée : après
+un changement, arrêter puis redémarrer depuis la racine du dépôt. Le build Maven et les tests ne
+constituent jamais une autorisation d'appel réel et restent isolés des opt-ins du `.env` local.
+
+Après une collecte J3 terminale `COMPLETED`, sélectionner le tournoi, préparer puis confirmer la
+découverte. Cette action reste distincte et autorise soit au plus un GET sur cache miss, soit un
+import local du seul corps JSON avec zéro transport et sans cache fournisseur. Les liens J5
+créés n'exécutent rien automatiquement : J4 phase 2 et J5 conservent chacun leur propre préparation,
+confirmation et verrou terminal. Au premier incident, ne pas réessayer. À la fin de la campagne,
+restaurer tous les opt-ins à `false`, vider l'origine et l'allowlist, redémarrer pour constater les
+verrous, puis arrêter l'application.
 
 ### 3.11 Qualifier réellement les deux événements J4 — sous-étape 1
 
@@ -844,9 +1006,9 @@ Aucun Docker ni accès SofaScore n’est requis par les tests standards.
 .\mvnw.cmd -Pintegration-tests verify
 ```
 
-Docker doit être disponible. Testcontainers vérifie les migrations V1 à V23, l’état initial du
+Docker doit être disponible. Testcontainers vérifie les migrations V1 à V25, l’état initial du
 connecteur, la conservation exacte du brut, sa déduplication, les provenances J4/J5, les occurrences
-J6 et la rétention auditée dans une base éphémère.
+J6, la rétention auditée et la portée cache `TOURNAMENT_SCHEDULED_EVENTS` dans une base éphémère.
 
 ### 4.3 Script consolidé
 
@@ -1004,6 +1166,30 @@ fichier terminal ; en cas d'erreur, répéter exactement la même décision afin
 motif, chemin, hash et taille authentifient la reprise. Le stockage synchronise un temporaire dans
 la racine puis le publie, sans remplacement, par lien physique atomique sur le même système de
 fichiers ; ne jamais renommer ni remplacer manuellement un fichier J7.
+
+### 4.8 sexies Readiness découverte tournoi → rencontres
+
+Cette readiness reste entièrement hors ligne. Exécuter les deux suites avec toutes les propriétés
+réseau dans leur état bloqué :
+
+```powershell
+.\mvnw.cmd clean verify
+.\mvnw.cmd -Pintegration-tests verify
+```
+
+Le rapport de readiness et de clôture
+`docs/validation/J3-J5-TOURNAMENT-EVENT-DISCOVERY-TECHNICAL-READINESS-20260820.md` consigne le
+catalogue exact issu d'une preuve J3 `COMPLETED`, la requête par
+`tournament.uniqueTournament.id`, le parser `tournament-scheduled-v1`, le cache V24, la provenance
+V25, le contrôle,
+la projection `Europe/Paris`, l'atomicité et les liens J5 sans J4. L'ajout V25 a été revalidé par
+les suites finales avant la décision propriétaire de clôture du 2026-08-21.
+
+Les suites n'autorisent et n'exécutent aucun appel fournisseur. Leur réussite ne qualifie pas à
+elle seule le fournisseur, l'import local ou la sémantique de `timezoneEventCount` ; la qualification
+du Work Order résulte de la décision explicite du propriétaire appuyée sur ces preuves et sur les
+vérifications fonctionnelles consignées. Toute nouvelle recette appartient encore explicitement au
+propriétaire.
 
 ### 4.9 Qualification réelle J4 sous-étape 1
 

@@ -9,6 +9,7 @@ import com.bettingproject.sofascorelocal.domain.provider.J3CircuitIncident;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot;
+import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotAcquisitionMode;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceResult;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportResponse;
@@ -43,7 +44,9 @@ public final class J3ScheduledEventsOutcomeProcessor {
             ScheduledEventsTransportResponse response) {
         Objects.requireNonNull(response, "response");
         if (response.httpStatus() >= 200 && response.httpStatus() < 300) {
-            return processSuccessfulStatus(response);
+            return processSuccessfulStatus(
+                    response,
+                    RawSnapshotAcquisitionMode.DIRECT_LOCAL_ENDPOINT);
         }
 
         J3CircuitReason reason = reasonForHttpStatus(response.httpStatus());
@@ -53,6 +56,18 @@ public final class J3ScheduledEventsOutcomeProcessor {
                 reason.name()));
         J3CircuitSnapshot opened = recordHttpIncident(response, reason);
         return J3ScheduledEventsOutcome.recorded(persistence, opened);
+    }
+
+    public J3ScheduledEventsOutcome processImportedResponse(
+            ScheduledEventsTransportResponse response) {
+        Objects.requireNonNull(response, "response");
+        if (response.httpStatus() < 200 || response.httpStatus() >= 300) {
+            throw new IllegalArgumentException(
+                    "a local JSON import must model a successful response body");
+        }
+        return processSuccessfulStatus(
+                response,
+                RawSnapshotAcquisitionMode.MANUAL_LOCAL_JSON_IMPORT);
     }
 
     public J3ScheduledEventsOutcome processFailure(
@@ -72,9 +87,11 @@ public final class J3ScheduledEventsOutcomeProcessor {
     }
 
     private J3ScheduledEventsOutcome processSuccessfulStatus(
-            ScheduledEventsTransportResponse response) {
+            ScheduledEventsTransportResponse response,
+            RawSnapshotAcquisitionMode acquisitionMode) {
         RawSnapshotPersistenceResult persistence = snapshotStore.save(snapshot(
                 response,
+                acquisitionMode,
                 RawSnapshotSchemaStatus.RAW_ONLY,
                 null));
         ScheduledEventsParseResult parsing = parser.parseTransportResponse(response);
@@ -132,8 +149,21 @@ public final class J3ScheduledEventsOutcomeProcessor {
             ScheduledEventsTransportResponse response,
             RawSnapshotSchemaStatus schemaStatus,
             String errorCode) {
+        return snapshot(
+                response,
+                RawSnapshotAcquisitionMode.DIRECT_LOCAL_ENDPOINT,
+                schemaStatus,
+                errorCode);
+    }
+
+    private static RawManualCallSnapshot snapshot(
+            ScheduledEventsTransportResponse response,
+            RawSnapshotAcquisitionMode acquisitionMode,
+            RawSnapshotSchemaStatus schemaStatus,
+            String errorCode) {
         return new RawManualCallSnapshot(
                 response.endpointType(),
+                acquisitionMode,
                 response.requestKey(),
                 response.requestedAt(),
                 response.receivedAt(),

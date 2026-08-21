@@ -19,7 +19,6 @@ import java.util.Objects;
 public class JdbcRawManualCallSnapshotStore implements RawManualCallSnapshotStore {
 
     static final String PROVIDER = "SOFASCORE";
-    static final String ACQUISITION_MODE = "DIRECT_LOCAL_ENDPOINT";
 
     private static final String INSERT_SQL = """
             insert into provider_snapshot (
@@ -55,7 +54,13 @@ public class JdbcRawManualCallSnapshotStore implements RawManualCallSnapshotStor
                 :schemaStatus,
                 :errorCode
             )
-            on conflict (provider, logical_endpoint, request_key, payload_sha256)
+            on conflict (
+                provider,
+                acquisition_mode,
+                logical_endpoint,
+                request_key,
+                payload_sha256
+            )
                 where payload_sha256 is not null
             do nothing
             """;
@@ -64,6 +69,7 @@ public class JdbcRawManualCallSnapshotStore implements RawManualCallSnapshotStor
             select id
             from provider_snapshot
             where provider = :provider
+              and acquisition_mode = :acquisitionMode
               and logical_endpoint = :logicalEndpoint
               and request_key = :requestKey
               and payload_sha256 = :payloadSha256
@@ -175,7 +181,7 @@ public class JdbcRawManualCallSnapshotStore implements RawManualCallSnapshotStor
             RawPayloadEvidence payload) {
         return new MapSqlParameterSource()
                 .addValue("provider", PROVIDER)
-                .addValue("acquisitionMode", ACQUISITION_MODE)
+                .addValue("acquisitionMode", snapshot.acquisitionMode().name())
                 .addValue("logicalEndpoint", snapshot.endpointType().name())
                 .addValue("requestKey", snapshot.requestKey())
                 .addValue("requestedAt", snapshot.requestedAt().atOffset(ZoneOffset.UTC))

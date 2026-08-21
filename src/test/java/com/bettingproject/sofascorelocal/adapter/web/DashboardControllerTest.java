@@ -2,6 +2,10 @@ package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlService;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCollectionEvidenceService;
+import com.bettingproject.sofascorelocal.application.network.J3TournamentCatalogService;
+import com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryControlService;
+import com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryResult;
+import com.bettingproject.sofascorelocal.application.event.TournamentDiscoveredEventView;
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotInspectionCatalog;
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
 import com.bettingproject.sofascorelocal.application.retention.J6RawPayloadRetentionService;
@@ -13,6 +17,12 @@ import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentSnaps
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotInspectionSummary;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
+import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryControlSnapshot;
+import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryState;
+import com.bettingproject.sofascorelocal.domain.scheduledevents.J3TournamentCatalog;
+import com.bettingproject.sofascorelocal.domain.scheduledevents.J3TournamentCatalogStatus;
+import com.bettingproject.sofascorelocal.domain.scheduledevents.J3TournamentCatalogOption;
+import com.bettingproject.sofascorelocal.domain.scheduledevents.TournamentEventCountStatus;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +36,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -57,6 +68,12 @@ class DashboardControllerTest {
     private J3ManualCollectionEvidenceService collectionEvidenceService;
 
     @MockitoBean
+    private J3TournamentCatalogService tournamentCatalogService;
+
+    @MockitoBean
+    private TournamentEventDiscoveryControlService tournamentDiscoveryControlService;
+
+    @MockitoBean
     private LocalFormTokenService formTokenService;
 
     @MockitoBean
@@ -67,6 +84,22 @@ class DashboardControllerTest {
 
     @BeforeEach
     void snapshotInspectionIsUnavailableByDefault() {
+        when(tournamentCatalogService.latest()).thenReturn(J3TournamentCatalog.unavailable(
+                J3TournamentCatalogStatus.NO_COLLECTION_EVIDENCE,
+                Optional.empty()));
+        when(tournamentDiscoveryControlService.snapshot()).thenReturn(
+                new TournamentEventDiscoveryControlSnapshot(
+                        TournamentEventDiscoveryState.LOCKED,
+                        Instant.parse("2026-08-18T12:00:00Z"),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        false,
+                        List.of("TOURNAMENT_EVENT_DISCOVERY_DISABLED")));
         when(snapshotInspectionService.loadCatalog())
                 .thenReturn(RawSnapshotInspectionCatalog.unavailable());
         when(retentionService.preview()).thenReturn(new J6RetentionPreview(
@@ -142,8 +175,63 @@ class DashboardControllerTest {
                 RawSnapshotSchemaStatus.PARSED);
         when(snapshotInspectionService.loadCatalog()).thenReturn(
                 RawSnapshotInspectionCatalog.available(List.of(inspectionSummary)));
+        J3TournamentCatalogOption tournamentOption = new J3TournamentCatalogOption(
+                119_880,
+                "UEFA Champions League, Playoff Round",
+                "Europe",
+                7,
+                "UEFA Champions League",
+                Map.of(7200, 2),
+                List.of(41L));
+        when(tournamentCatalogService.latest()).thenReturn(J3TournamentCatalog.available(
+                LocalDate.of(2026, 8, 14),
+                List.of(41L),
+                List.of(tournamentOption),
+                1));
+        when(tournamentDiscoveryControlService.snapshot()).thenReturn(
+                new TournamentEventDiscoveryControlSnapshot(
+                        TournamentEventDiscoveryState.LOCKED,
+                        Instant.parse("2026-08-18T12:00:00Z"),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        true,
+                        List.of()));
+        UUID discoveredEventId = UUID.fromString(
+                "c9cbad3e-b46b-55df-94f7-f55bd4f23999");
+        TournamentEventDiscoveryResult discoveryResult =
+                new TournamentEventDiscoveryResult(
+                        UUID.fromString("28776548-1f0e-43cf-a277-cf048a919c21"),
+                        true,
+                        "COMPLETED",
+                        0,
+                        true,
+                        81,
+                        "b".repeat(64),
+                        512,
+                        TournamentEventCountStatus.COUNT_VERIFIED,
+                        1,
+                        1,
+                        0,
+                        0,
+                        0,
+                        1,
+                        0,
+                        0,
+                        List.of(new TournamentDiscoveredEventView(
+                                discoveredEventId,
+                                16_707_704,
+                                Instant.parse("2026-08-18T19:00:00Z"),
+                                "Fenerbahçe",
+                                "Olympique Lyonnais",
+                                "notstarted")));
 
-        mockMvc.perform(get("/dashboard"))
+        mockMvc.perform(get("/dashboard")
+                        .flashAttr("tournamentDiscoveryResult", discoveryResult))
                 .andExpect(status().isOk())
                 .andExpect(view().name("dashboard"))
                 .andExpect(model().attribute("dashboard", dashboardView))
@@ -164,7 +252,54 @@ class DashboardControllerTest {
                         "SCHEDULED_EVENTS|date=2026-08-14|page=1")))
                 .andExpect(content().string(containsString("Inspecter le JSON")))
                 .andExpect(content().string(containsString(
-                        "Lancer la collecte fournisseur — BLOQUÉE")));
+                        "Lancer la collecte fournisseur — BLOQUÉE")))
+                .andExpect(content().string(containsString(
+                        "Rencontres datées et accès direct à J5")))
+                .andExpect(content().string(containsString("value=\"119880\"")))
+                .andExpect(content().string(containsString(
+                        "UEFA Champions League, Playoff Round - Europe")))
+                .andExpect(content().string(containsString(
+                        "tournament.category.name")))
+                .andExpect(content().string(containsString("uniqueTournament.id")))
+                .andExpect(content().string(containsString(
+                        "Occurrences exclues (identité/portée/fuseau)")))
+                .andExpect(content().string(containsString(
+                        "timezoneEventCount")))
+                .andExpect(content().string(containsString(
+                        "seul corps JSON obtenu manuellement")))
+                .andExpect(content().string(containsString(
+                        "/events/" + discoveredEventId
+                                + "/statistics?zone=Europe%2FParis")))
+                .andExpect(content().string(containsString(
+                        "Ouvrir J5 sans saisie d’ID")));
+
+        UUID preparedRequestId = UUID.fromString(
+                "c15b0969-03b2-47e4-a651-77eef7c4ed4d");
+        when(tournamentDiscoveryControlService.snapshot()).thenReturn(
+                new TournamentEventDiscoveryControlSnapshot(
+                        TournamentEventDiscoveryState.AWAITING_CONFIRMATION,
+                        Instant.parse("2026-08-18T12:00:00Z"),
+                        preparedRequestId,
+                        "CONFIRMER EVENEMENTS TOURNOI 119880 UNIQUE 7 DATE 2026-08-14 000042",
+                        Instant.parse("2026-08-18T12:00:00Z"),
+                        Instant.parse("2026-08-18T12:05:00Z"),
+                        LocalDate.of(2026, 8, 14),
+                        tournamentOption,
+                        null,
+                        true,
+                        List.of()));
+
+        mockMvc.perform(get("/dashboard"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString(
+                        "action=\"/tournament-event-discovery/import-json\"")))
+                .andExpect(content().string(containsString(
+                        "enctype=\"multipart/form-data\"")))
+                .andExpect(content().string(containsString("name=\"jsonFile\"")))
+                .andExpect(content().string(containsString(preparedRequestId.toString())))
+                .andExpect(content().string(containsString(
+                        "Importer, valider et relier à J5")));
+
     }
 
     @Test
@@ -232,7 +367,17 @@ class DashboardControllerTest {
                 .andExpect(content().string(containsString(
                         "SCHEDULED_EVENTS|date=2026-08-13|pagination=has-next-page|max=25")))
                 .andExpect(content().string(containsString(
-                        "Lancer la collecte manuelle paginée — PAGE 1 À N")))
+                        "Option A — Collecte fournisseur directe")))
+                .andExpect(content().string(containsString(
+                        "action=\"/manual-call/import-json-pages\"")))
+                .andExpect(content().string(containsString(
+                        "enctype=\"multipart/form-data\"")))
+                .andExpect(content().string(containsString(
+                        "name=\"pageFiles\"")))
+                .andExpect(content().string(containsString(
+                        "Option B — Import J3 paginé sans réseau")))
+                .andExpect(content().string(containsString(
+                        "Importer et valider J3 — ZÉRO APPEL")))
                 .andExpect(content().string(org.hamcrest.Matchers.not(containsString(
                         "REPRISE PAGES 3-5"))));
     }

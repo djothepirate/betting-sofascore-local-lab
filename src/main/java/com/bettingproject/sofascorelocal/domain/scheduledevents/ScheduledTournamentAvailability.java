@@ -7,11 +7,21 @@ import java.util.TreeMap;
 
 public record ScheduledTournamentAvailability(
         ScheduledTournament tournament,
+        Optional<String> tournamentCategoryName,
         Optional<ScheduledTournament> uniqueTournament,
         Map<Integer, Integer> timezoneEventCount) {
 
     public ScheduledTournamentAvailability {
         tournament = Objects.requireNonNull(tournament, "tournament");
+        tournamentCategoryName = Objects.requireNonNull(
+                tournamentCategoryName,
+                "tournamentCategoryName");
+        tournamentCategoryName.ifPresent(name -> {
+            if (name.isBlank() || name.chars().anyMatch(Character::isISOControl)) {
+                throw new IllegalArgumentException(
+                        "tournamentCategoryName must be safe non-blank text");
+            }
+        });
         uniqueTournament = Objects.requireNonNull(uniqueTournament, "uniqueTournament");
         Objects.requireNonNull(timezoneEventCount, "timezoneEventCount");
         timezoneEventCount = Map.copyOf(new TreeMap<>(timezoneEventCount));

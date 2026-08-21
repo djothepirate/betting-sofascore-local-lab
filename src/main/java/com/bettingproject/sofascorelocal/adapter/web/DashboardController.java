@@ -2,6 +2,8 @@ package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.network.J3ManualCallControlService;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCollectionEvidenceService;
+import com.bettingproject.sofascorelocal.application.network.J3TournamentCatalogService;
+import com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryControlService;
 import com.bettingproject.sofascorelocal.application.retention.J6RawPayloadRetentionService;
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
@@ -17,6 +19,8 @@ public class DashboardController {
     private final DashboardService dashboardService;
     private final J3ManualCallControlService manualCallControlService;
     private final J3ManualCollectionEvidenceService collectionEvidenceService;
+    private final J3TournamentCatalogService tournamentCatalogService;
+    private final TournamentEventDiscoveryControlService tournamentDiscoveryControlService;
     private final RawSnapshotJsonInspectionService snapshotInspectionService;
     private final J6RawPayloadRetentionService retentionService;
     private final LocalFormTokenService formTokenService;
@@ -25,12 +29,16 @@ public class DashboardController {
             DashboardService dashboardService,
             J3ManualCallControlService manualCallControlService,
             J3ManualCollectionEvidenceService collectionEvidenceService,
+            J3TournamentCatalogService tournamentCatalogService,
+            TournamentEventDiscoveryControlService tournamentDiscoveryControlService,
             RawSnapshotJsonInspectionService snapshotInspectionService,
             J6RawPayloadRetentionService retentionService,
             LocalFormTokenService formTokenService) {
         this.dashboardService = dashboardService;
         this.manualCallControlService = manualCallControlService;
         this.collectionEvidenceService = collectionEvidenceService;
+        this.tournamentCatalogService = tournamentCatalogService;
+        this.tournamentDiscoveryControlService = tournamentDiscoveryControlService;
         this.snapshotInspectionService = snapshotInspectionService;
         this.retentionService = retentionService;
         this.formTokenService = formTokenService;
@@ -45,6 +53,15 @@ public class DashboardController {
         model.addAttribute(
                 "collectionEvidence",
                 collectionEvidenceService.latestDocument().orElse(null));
+        try {
+            model.addAttribute("tournamentCatalog", tournamentCatalogService.latest());
+        }
+        catch (DataAccessException | IllegalArgumentException | IllegalStateException exception) {
+            model.addAttribute("tournamentCatalogUnavailable", true);
+        }
+        model.addAttribute(
+                "tournamentDiscoveryControl",
+                tournamentDiscoveryControlService.snapshot());
         model.addAttribute(
                 "snapshotInspectionCatalog",
                 snapshotInspectionService.loadCatalog());

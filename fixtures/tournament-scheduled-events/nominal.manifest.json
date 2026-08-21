@@ -1,0 +1,17 @@
+{
+  "manifestVersion": 1,
+  "fixtureId": "tournament-scheduled-events-nominal",
+  "endpointType": "TOURNAMENT_SCHEDULED_EVENTS",
+  "fixtureOrigin": "SYNTHETIC",
+  "providerSchemaValidated": false,
+  "recordedAt": "2026-08-18T18:00:00Z",
+  "httpStatus": null,
+  "contentType": "application/json",
+  "parserVersion": "tournament-scheduled-v1",
+  "payloadResource": "fixtures/tournament-scheduled-events/nominal.json",
+  "maximumBytes": 8192,
+  "expectedRawSha256": "3bf1b8ea884dcc99a4c246b643d3e3de4ce554014ff3be5548aaa2c86a908aa6",
+  "expectedCanonicalJsonSha256": "a1f29b313c4a72b52081212da8004b79722b069878521c32b6d84219e3d677eb",
+  "minimized": false,
+  "removedFields": []
+}

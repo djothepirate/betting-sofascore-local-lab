@@ -22,6 +22,7 @@ public class SofascoreProperties {
     private boolean j4EventDetailsQualificationEnabled;
     private boolean j4EventDetailsPhase2Enabled;
     private boolean j5EventDataQualificationEnabled;
+    private boolean tournamentEventDiscoveryEnabled;
 
     @Min(1)
     @Max(1)
@@ -93,6 +94,15 @@ public class SofascoreProperties {
     public void setJ5EventDataQualificationEnabled(
             boolean j5EventDataQualificationEnabled) {
         this.j5EventDataQualificationEnabled = j5EventDataQualificationEnabled;
+    }
+
+    public boolean isTournamentEventDiscoveryEnabled() {
+        return tournamentEventDiscoveryEnabled;
+    }
+
+    public void setTournamentEventDiscoveryEnabled(
+            boolean tournamentEventDiscoveryEnabled) {
+        this.tournamentEventDiscoveryEnabled = tournamentEventDiscoveryEnabled;
     }
 
     public void setMaximumConcurrency(int maximumConcurrency) {
@@ -228,6 +238,18 @@ public class SofascoreProperties {
                 && hasExactActiveQualificationEndpoints());
     }
 
+    @AssertTrue(message = "tournament event discovery requires J3, the connector, raw storage and the exact active qualification endpoints")
+    public boolean isTournamentEventDiscoveryConfigurationSafe() {
+        return !tournamentEventDiscoveryEnabled
+                || (j3QualificationEnabled
+                && enabled
+                && maximumConcurrency == 1
+                && storeRawPayloads
+                && !automaticRefreshEnabled
+                && !livePollingEnabled
+                && hasExactActiveQualificationEndpoints());
+    }
+
     @AssertTrue(message = "J3 may share a provider qualification session with J4 phase 2, never J4 phase 1")
     public boolean isCombinedJ3J4SelectionSafe() {
         return !j3QualificationEnabled
@@ -255,6 +277,9 @@ public class SofascoreProperties {
         Set<SofascoreEndpointType> expected = new LinkedHashSet<>();
         if (j3QualificationEnabled) {
             expected.add(SofascoreEndpointType.SCHEDULED_EVENTS);
+        }
+        if (tournamentEventDiscoveryEnabled) {
+            expected.add(SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS);
         }
         if (j4EventDetailsQualificationEnabled) {
             expected.add(SofascoreEndpointType.EVENT_DETAILS);
