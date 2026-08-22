@@ -41,6 +41,7 @@ n'est ajouté.
 │  ├─ Circuit J4 phase 1 : deux IDs compilés, verrou terminal│
 │  ├─ Données de rencontre J5 + complétude, hors ligne      │
 │  ├─ Persistance J5 normalisée append-only                 │
+│  ├─ Lot J5 hors ligne 1..25, contrôle et transaction 3N   │
 │  ├─ Historique et différences sémantiques J6              │
 │  ├─ Rétention J6 manuelle, auditée et hors interface      │
 │  ├─ Export canonique J7 local + décision humaine          │
@@ -69,11 +70,11 @@ VPS       : aucune connexion
 | `domain.event` / `domain.eventdetails` / `domain.eventdata` | identité canonique, détail J4, familles J5 et complétude immuables |
 | `domain.history` / `domain.retention` | versions, changements, traces de snapshots et plans de rétention J6 |
 | `domain.export` | statut, manifeste, décision, composant et preuves de fichier J7 |
-| `application` | politiques réseau, orchestration manuelle, normalisation, historique, diff, rétention et export J7 |
+| `application` | politiques réseau, orchestration manuelle et lot J5 hors ligne, normalisation, historique, diff, rétention et export J7 |
 | `adapter.sofascore` | catalogue fermé, transports spéciaux bornés et parseurs hors ligne J2/J4/J5/découverte tournoi |
 | `adapter.persistence` | preuves brutes, occurrences, observations normalisées, historique, rétention et manifestes J7 |
 | `adapter.file` | publication J7 create-new par lien physique atomique, bornée à la racine locale |
-| `adapter.web` | tableau de bord, recherche, contrôles et vues J4/J5/J6/J7 locales |
+| `adapter.web` | tableau de bord, recherche, contrôle de lot et vues J4/J5/J6/J7 locales |
 | `resources/db/migration` | schémas V1 à V25, migrations append-only et triggers d’immuabilité |
 | `fixtures` | corpus synthétiques hors ligne J2, J4, J5 et J6 |
 
@@ -110,6 +111,15 @@ l'union des endpoints correspondant aux opt-ins. `ManualProviderRequestCoordinat
 les services réels J3/J4/J5, garantit une seule section HTTP active et un délai minimal commun entre
 deux départs, même depuis plusieurs onglets. Maven intercepte ces transports et n'effectue aucun
 appel réel.
+
+J5 possède également un lot multi-match strictement hors ligne sous `/j5-import-batches`. Son
+contrôle mémoire, sa politique et son importeur sont séparés de `J5RealControlService` et du
+coordinateur. L'état de `sofascore.enabled` est orthogonal à son éligibilité : les opt-ins,
+l'origine et l'allowlist peuvent rester armés pour les gestes fournisseur manuels. Il prévalide
+exactement trois preuves par événement avant un claim unique. Chaque preuve est un fichier JSON ou
+une déclaration 404 fermée portant un marqueur opérateur local. Les `3N` traitements sont committés
+dans une seule transaction ou intégralement annulés ; aucun transport ni cache fournisseur n'est
+présent dans son graphe de dépendances.
 
 J6 n'ajoute aucun `RestClient`. Il lit les observations existantes et son import de démonstration
 utilise seulement des fixtures synthétiques. La rétention est une commande non Web ponctuelle qui
@@ -286,10 +296,15 @@ fermée de `provider_snapshot.acquisition_mode` et ajoute le mode d'acquisition 
 snapshots bruts. Une réponse directe et un import du même corps restent ainsi deux preuves
 distinctes, tandis que deux imports identiques sous la même clé sont dédupliqués.
 
-L'import est une action locale explicite après confirmation : fichier vide ou supérieur à 5 Mio
-refusé, scanner de contenu sensible avant consommation du claim, aucun HAR/en-tête/cookie, aucun
-transport et aucune lecture/écriture du cache fournisseur. Les caches restent limités à
+L'import est une action locale explicite après confirmation : exactement une preuve fichier ou
+déclaration 404 par famille, fichier vide ou supérieur à 5 Mio refusé, scanner de contenu sensible
+avant consommation du claim, aucun HAR/en-tête/cookie, aucun transport et aucune lecture/écriture du cache fournisseur. Les caches restent limités à
 `DIRECT_LOCAL_ENDPOINT`; l'inspection locale et la rétention J6 admettent les deux modes.
+
+WO-010 réutilise cette provenance pour un plan de 1 à 25 événements et les occurrences J6 pour
+chaque snapshot committé. Aucun schéma V26 n'est nécessaire : le plan, le contrôle et le résultat
+du lot restent uniquement en mémoire, tandis que snapshots et observations conservent leur modèle
+append-only existant.
 
 ## 6. Catalogue logique
 
@@ -346,6 +361,9 @@ canoniques sont écrites dans une transaction unique ; un conflit d'identité ou
   de schéma sans donnée partielle ;
 - import J5 transactionnel et idempotent, rattachement à J4, requête des dernières familles et rendu
   MVC local protégé par jeton à usage unique.
+- lot J5 hors ligne : sélections 1 et 25, tri et hash déterministes, transitions DST, expiration,
+  claim concurrent unique, connecteur maître indifférent, manifeste multipart hostile,
+  prévalidation intégrale, dérive canonique et rendu MVC minimisé ;
 - occurrences J6, chronologie des cinq flux, diff sémantique, appariement prudent des incidents,
   score, classifications tardives, corpus idempotent et absence de payload dans le rendu ;
 - aperçu, hash et confirmation de rétention, refus des preuves invalides et commande non Web.
@@ -365,12 +383,16 @@ SofaScore n'est exécuté. J7 ajoute l'upgrade V22→V23 prérempli, ses contrai
 relecture exacte du manifeste et de ses preuves. La découverte tournoi ajoute l'installation V24
 et l'upgrade V23→V24 pour le cache, puis V25 pour distinguer la provenance d'une réponse directe et
 celle d'un corps JSON importé localement.
+Le lot J5 ajoute le commit atomique des `3N` familles, le réimport avec snapshots et observations
+dédupliqués mais occurrences nouvelles, puis le rollback global provoqué sur la dernière famille
+du dernier événement. Aucune migration supplémentaire n'est créée.
 
 ### Réel
 
-Le profil `sofascore-live-test` reste bloqué avec `alwaysFail`. Les voies J3, J4 et J5 ont été
-qualifiées humainement dans leurs périmètres bornés, puis reverrouillées. Elles restent désactivées
-par défaut et aucune suite Maven ne réalise un geste fournisseur. J6 ne nécessite aucun nouveau
+Le profil `sofascore-live-test` reste bloqué avec `alwaysFail`. Les voies fournisseur historiques
+J3, J4 et J5 ont été qualifiées humainement dans leurs périmètres bornés, puis reverrouillées. Cette
+qualification ne couvre pas le lot hors ligne WO-010, dont la recette propriétaire reste requise.
+Elles restent désactivées par défaut et aucune suite Maven ne réalise un geste fournisseur. J6 ne nécessite aucun nouveau
 geste réel : ses deux validations humaines portent uniquement sur l'interface locale et la
 sauvegarde/restauration chiffrée. J7 ne nécessite aucune nouvelle collecte : sa recette utilise le
 corpus synthétique et l'événement fournisseur `16691018` déjà persisté. Cette recette reste

@@ -1,5 +1,15 @@
 # J5 — Données de rencontre hors ligne et contrôles de complétude
 
+> **Portée historique :** ce document décrit le socle synthétique J5 v1 tel qu'il existait avant
+> les Work Orders de qualification réelle et d'import local ultérieurs. Ses statuts initiaux sont
+> conservés comme preuve et ne décrivent pas à eux seuls l'état courant de toutes les voies J5.
+
+```text
+HISTORICAL_SCOPE=J5_V1_SYNTHETIC_BASELINE
+CURRENT_GUARDED_REAL_PATH=SEE_J5-GUARDED-REAL-EVENT-DATA
+CURRENT_OFFLINE_MULTI_MATCH_PATH=SEE_J5-OFFLINE-MULTI-MATCH-IMPORT
+```
+
 ## 1. Frontière du jalon
 
 J5 enrichit l'identité canonique J4 avec trois familles normalisées : statistiques, incidents et
@@ -190,3 +200,20 @@ Les éléments suivants exigent un nouveau Work Order ou un amendement explicite
 - ajouter `TOURNAMENT_STANDINGS`, qui n'est pas requis par la preuve de sortie J5 ;
 - comparer des versions et corrections tardives dans J6 ;
 - exporter les données canoniques vers le pipeline J7.
+
+Cette liste consigne les décisions différées à la clôture du socle synthétique. Les Work Orders
+ultérieurs ont traité, dans leurs périmètres propres, la qualification réelle gardée J5
+(`WO-SS-20260815-006`), l'historique J6 (`WO-SS-20260818-007`), l'export J7
+(`WO-SS-20260819-008`) et l'import J5 hors ligne multi-match (`WO-SS-20260822-010`). Ils ne
+modifient pas rétroactivement les statuts, contrats v1 ou résultats consignés ici.
+
+`TOURNAMENT_STANDINGS` et toute nouvelle famille fournisseur restent différés. Les contrats
+courants du lot multi-match sont définis dans
+`docs/requirements/J5-OFFLINE-MULTI-MATCH-IMPORT-RULES.md` et
+`docs/architecture/J5-OFFLINE-MULTI-MATCH-IMPORT.md`.
+
+L'amendement WO-010 du 2026-08-22 permet désormais, dans les imports locaux unitaire et multi-match,
+de remplacer le fichier d'une famille dont le HTTP 404 a été observé par une déclaration fermée.
+Elle produit l'enveloppe canonique locale marquée `LOCAL_OPERATOR_DECLARED_HTTP_404`, sans transport
+et sans prétendre reproduire le corps fournisseur. Le contrat reste exactement une preuve par
+famille ; fichier plus déclaration et absence des deux sont refusés.

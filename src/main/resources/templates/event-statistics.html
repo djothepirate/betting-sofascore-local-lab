@@ -22,6 +22,12 @@
     <a th:if="${page != null}"
        th:href="@{/events/{id}(id=${page.current.event.identity.value},zone=${page.zoneId.id})}"
        href="/events">← Détail de la rencontre</a>
+    <a th:if="${page != null}"
+       th:href="@{/j5-import-batches(date=${page.current.startsAtInZone.toLocalDate()},zone=${page.zoneId.id})}"
+       href="/j5-import-batches">Imports J5 multi-match</a>
+    <a th:unless="${page != null}"
+       th:href="@{/j5-import-batches}"
+       href="/j5-import-batches">Imports J5 multi-match</a>
     <a th:href="@{/}" href="/">Tableau de bord</a>
   </nav>
 
@@ -93,11 +99,12 @@
       </div>
       <p class="control-intro">
         Après préparation, l’opérateur choisit une seule voie pour cette identité : au plus trois
-        requêtes séquentielles, ou l’import local des trois corps JSON statistiques, incidents et
-        compositions. Dans les deux cas, le brut est persisté avant le parsing de normalisation,
+        requêtes séquentielles, ou l’import local de trois preuves JSON, chacune fournie par fichier
+        ou par déclaration 404. Dans les deux cas, le brut est persisté avant le parsing de normalisation,
         l’ordre est imposé et le premier incident verrouille la campagne sans retry. Une enveloppe
-        fournisseur JSON portant explicitement le code 404 signifie « indisponible pour cet
-        événement » : elle est conservée et normalisée avant de poursuivre la famille suivante.
+        JSON portant explicitement le code 404, importée ou déclarée localement, signifie
+        « indisponible pour cet événement » : elle est conservée et normalisée avant de poursuivre
+        la famille suivante.
       </p>
       <p class="notice notice-warning" th:if="${!j5RealControl.providerTransportAvailable}">
         Configuration locale bloquée. Conditions encore absentes :
@@ -161,34 +168,50 @@
               <input type="hidden" name="localFormToken" th:value="${localFormToken}">
               <input type="hidden" name="zone" th:value="${page.zoneId.id}">
               <input type="hidden" name="requestId" th:value="${j5RealControl.requestId}">
-              <h4>Option B — Trois corps JSON, zéro appel</h4>
-              <p class="fixture-note">Ouvrez manuellement les trois URL exactes et enregistrez
-                uniquement chaque corps JSON. Aucun HAR, en-tête, cookie ou export DevTools.</p>
+              <h4>Option B — Trois preuves locales, zéro appel</h4>
+              <p class="fixture-note">Ouvrez manuellement les trois URL exactes. Pour chaque
+                famille, fournissez le corps JSON ou déclarez explicitement le HTTP 404 observé.
+                Aucun HAR, en-tête, cookie ou export DevTools.</p>
               <code class="endpoint-uri"
                     th:text="${'https://www.sofascore.com/api/v1/event/' + page.current.event.identity.providerEventId + '/statistics'}">statistics</code>
               <label for="j5-statistics-file">Statistiques</label>
               <input id="j5-statistics-file" type="file" name="statisticsFile"
-                     accept="application/json,.json" required>
+                     accept="application/json,.json">
+              <label class="acknowledgement">
+                <input type="checkbox" name="statisticsUnavailable404" value="true">
+                <span>404 observé — créer la preuve locale canonique sans fichier de
+                  statistiques.</span>
+              </label>
               <code class="endpoint-uri"
                     th:text="${'https://www.sofascore.com/api/v1/event/' + page.current.event.identity.providerEventId + '/incidents'}">incidents</code>
               <label for="j5-incidents-file">Incidents</label>
               <input id="j5-incidents-file" type="file" name="incidentsFile"
-                     accept="application/json,.json" required>
+                     accept="application/json,.json">
+              <label class="acknowledgement">
+                <input type="checkbox" name="incidentsUnavailable404" value="true">
+                <span>404 observé — créer la preuve locale canonique sans fichier
+                  d’incidents.</span>
+              </label>
               <code class="endpoint-uri"
                     th:text="${'https://www.sofascore.com/api/v1/event/' + page.current.event.identity.providerEventId + '/lineups'}">lineups</code>
               <label for="j5-lineups-file">Compositions</label>
               <input id="j5-lineups-file" type="file" name="lineupsFile"
-                     accept="application/json,.json" required>
-              <p class="fixture-note">5 Mio maximum par fichier. Une enveloppe JSON exacte avec
-                <code>error.code=404</code> est conservée comme famille indisponible.</p>
+                     accept="application/json,.json">
+              <label class="acknowledgement">
+                <input type="checkbox" name="lineupsUnavailable404" value="true">
+                <span>404 observé — créer la preuve locale canonique sans fichier de
+                  compositions.</span>
+              </label>
+              <p class="fixture-note">Exactement une preuve par famille : fichier ou déclaration
+                404. Les deux ensemble sont refusés. 5 Mio maximum par fichier.</p>
               <label for="j5-local-confirmation">Phrase de confirmation</label>
               <input id="j5-local-confirmation" type="text" name="confirmationText"
                      autocomplete="off" spellcheck="false" maxlength="160" required>
               <label class="acknowledgement">
                 <input type="checkbox" name="acknowledged" value="true" required>
-                <span>Je confirme l’identité, les trois corps JSON, zéro appel fournisseur,
-                  la validation complète avant consommation et le verrouillage terminal sans
-                  retry.</span>
+                <span>Je confirme l’identité, les trois preuves locales, zéro appel fournisseur,
+                  les déclarations 404 éventuelles, la validation complète avant consommation
+                  et le verrouillage terminal sans retry.</span>
               </label>
               <button class="button-primary" type="submit">
                 Importer les trois familles — ZÉRO APPEL
@@ -277,8 +300,8 @@
       </div>
       <p class="notice notice-warning"
          th:if="${statistics.completeness.status.name() == 'UNAVAILABLE'}">
-        L’endpoint exact a répondu HTTP 404 pour cet événement. Cette observation indique une
-        indisponibilité fournisseur ; elle n’est ni une panne de transport ni une liste vide valide.
+        Un HTTP 404 a été importé ou explicitement déclaré localement pour cette famille. Cette
+        observation indique une indisponibilité ; elle n’est ni une panne de transport ni une liste vide valide.
       </p>
       <dl class="detail-grid">
         <div><dt>Source</dt><dd class="mono" th:text="${statistics.source.sourceReference()}">fixture</dd></div>

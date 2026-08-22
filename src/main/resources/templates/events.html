@@ -18,6 +18,8 @@
 <main class="shell event-page">
   <nav class="links page-links" aria-label="Navigation locale">
     <a th:href="@{/}" href="/">← Tableau de bord</a>
+    <a th:href="@{/j5-import-batches(date=${selectedDate},zone=${selectedZone})}"
+       href="/j5-import-batches">Imports J5 multi-match</a>
   </nav>
 
   <section class="panel event-panel" aria-labelledby="search-title">

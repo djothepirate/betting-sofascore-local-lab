@@ -250,6 +250,18 @@ PROVIDER_CALL_AUTHORIZED_BY_THIS_REVIEW=NO
 - appel réel pendant l'implémentation ou les tests ;
 - transfert vers le VPS, le cloud ou le Betting Project.
 
+### 5.1 Note postérieure de portée — 2026-08-22
+
+L'exclusion « lancement automatique ou par lot de J5 » ci-dessus appartient au périmètre historique
+de WO-009. Elle signifie que ce Work Order n'autorisait que la campagne J5 unitaire associée à une
+rencontre, avec son choix exclusif entre acquisition directe et import local de trois corps.
+
+WO-010 autorise séparément un lot J5 multi-match strictement manuel, local et atomique, avec un
+contrôle mémoire dédié et tous les flags réseau désarmés. Cette autorisation postérieure ne rouvre
+pas WO-009, ne modifie aucun de ses statuts, comptes ou résultats de qualification et ne transforme
+pas un échec unitaire en fallback ou retry. Le lancement automatique, le scheduler, le watcher, le
+polling et l'acquisition automatique des fichiers demeurent interdits.
+
 ## 6. Contrats de sécurité et de cohérence
 
 ### 6.1 Configuration

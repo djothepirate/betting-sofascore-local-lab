@@ -3,7 +3,6 @@ package com.bettingproject.sofascorelocal.adapter.sofascore.eventdata;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncident;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessReport;
-import com.bettingproject.sofascorelocal.domain.provider.J5EventDataProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import tools.jackson.core.JacksonException;
@@ -50,7 +49,7 @@ public final class EventIncidentsV3Parser {
             long expectedEventId,
             RawPayloadEvidence payload,
             Instant receivedAt) {
-        J5EventDataProviderRequest.requireEventId(expectedEventId);
+        J5JsonParserSupport.requirePositiveEventId(expectedEventId);
         J5ParseEvidence evidence = evidence(snapshotId, payload, receivedAt);
         JsonNode root;
         try {

@@ -395,6 +395,20 @@ redémarrage et une nouvelle préparation sont obligatoires.
 L'évolution réduit donc la dépendance fonctionnelle à la saisie J4 sans élargir l'autorisation
 réseau de J5 et fournit une voie de qualification manuelle qui ne simule aucun navigateur.
 
+### 11.1 Portée postérieure de WO-010
+
+Le flux décrit ci-dessus reste la campagne J5 unitaire contrôlée par `J5RealControlService`. Son
+choix exclusif entre trois GET et trois corps locaux, ainsi que le redémarrage après terminal direct,
+ne sont ni étendus ni assouplis par WO-010.
+
+WO-010 ajoute sous `/j5-import-batches` un flux manuel hors ligne distinct pour `1..25` événements
+canoniques existants d'une date et d'une zone. Il utilise son propre contrôle mémoire, accepte
+`sofascore.enabled=false` comme `true` et ne dépend ni du transport, ni du cache, ni du coordinateur,
+ni de `J5RealControlService`. Un nouveau plan y est
+permis après tout état terminal ; ce comportement ne constitue jamais un fallback ou un retry de
+la campagne unitaire. L'architecture détaillée est définie dans
+`docs/architecture/J5-OFFLINE-MULTI-MATCH-IMPORT.md`.
+
 ## 12. Validation et frontières
 
 Les suites standard et PostgreSQL doivent couvrir : catalogue exact multi-pages, intégrité des
@@ -412,6 +426,10 @@ interceptés ou simulés ; Maven ne contacte jamais le fournisseur.
 Restent hors périmètre : manifeste J3 durable, cascade sur tous les tournois, pagination inventée
 du second endpoint, lancement automatique de J5, appel implicite J4, autre sport ou origine,
 polling, planification, retry, export brut et transfert vers le VPS.
+
+Le lot multi-match de WO-010 ne contredit pas l'exclusion du lancement automatique : sa sélection,
+sa préparation, sa confirmation et son exécution restent quatre gestes Web locaux explicites, sans
+scheduler, watcher, polling ou acquisition automatique de fichiers.
 
 La readiness technique est consignée dans
 `docs/validation/J3-J5-TOURNAMENT-EVENT-DISCOVERY-TECHNICAL-READINESS-20260820.md`.

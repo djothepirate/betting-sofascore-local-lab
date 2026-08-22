@@ -28,6 +28,13 @@ final class J5JsonParserSupport {
         return JSON_MAPPER.readTree(payload);
     }
 
+    static long requirePositiveEventId(long eventId) {
+        if (eventId < 1) {
+            throw new IllegalArgumentException("eventId must be positive");
+        }
+        return eventId;
+    }
+
     static void warnUnknownFields(
             JsonNode node,
             Set<String> knownFields,
