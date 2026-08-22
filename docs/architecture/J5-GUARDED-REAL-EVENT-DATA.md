@@ -80,6 +80,10 @@ est tracée par l'amendement opérateur du Work Order J7.
 
 ## 3. Contrôle humain
 
+Cette section décrit exclusivement la campagne J5 unitaire d'une identité canonique, dont le cycle
+de vie appartient à `J5RealControlService`. Les règles de claim, de réarmement et de redémarrage
+ci-dessous ne décrivent pas le contrôle hors ligne multi-match ajouté ultérieurement par WO-010.
+
 La préparation est locale et sans réseau. Elle reçoit l'UUID de la page et l'identifiant déjà
 persisté ; leur relation déterministe est vérifiée avant de produire une phrase aléatoire valable
 cinq minutes. La confirmation exige :
@@ -96,29 +100,39 @@ la liste des familles terminées à zéro et exige un nouvel acquittement avant 
 `FAILED_LOCKED`, `STOPPED_LOCKED` et `EXPIRED_LOCKED` restent des verrous de processus et exigent
 un redémarrage.
 
-### 3.1 Alternative locale des trois corps JSON
+### 3.1 Alternative locale des trois preuves JSON
 
-L'évolution J3 → J5 du Work Order validé `WO-SS-20260820-009` ajoute une seconde action après la
-même préparation : au lieu de réclamer le claim pour les trois GET, l'opérateur peut fournir les
-trois seuls corps JSON des familles `EVENT_STATISTICS`, `EVENT_INCIDENTS` et `EVENT_LINEUPS`.
+L'évolution J3 → J5 du Work Order validé `WO-SS-20260820-009`, amendée par WO-010 après la recette
+du 2026-08-22, ajoute une seconde action après la même préparation : au lieu de réclamer le claim
+pour les trois GET, l'opérateur fournit exactement une preuve locale pour chacune des familles
+`EVENT_STATISTICS`, `EVENT_INCIDENTS` et `EVENT_LINEUPS`.
 Cette extension ne change ni la qualification historique des parseurs ni l'ordre de campagne.
 
-Le navigateur transmet les trois fichiers ensemble. Le contrôleur applique la limite existante de
-5 Mio et le scanner sensible à chaque fichier. Le service prévalide ensuite la totalité du lot avec
-les parseurs courants avant `confirmAndClaim`. Ainsi, un troisième corps incompatible ne consomme
-pas une confirmation après validation des deux premiers et n'écrit aucun snapshot partiel.
+Une preuve est soit un fichier JSON, soit la case fermée « 404 observé ». Les deux ensemble et
+l'absence des deux sont refusés. Le contrôleur applique la limite existante de 5 Mio et le scanner
+sensible à chaque fichier. Le service prévalide ensuite la totalité du lot avec les parseurs
+courants avant `confirmAndClaim`. Ainsi, une troisième preuve incompatible ne consomme pas une
+confirmation après validation des deux premières et n'écrit aucun snapshot partiel.
 
 La seule représentation locale d'une famille indisponible est une enveloppe JSON fermée
 `{"error":{"code":404,...}}`. Le code doit être l'entier 404 ; seuls `message` et `reason`,
 textuels et bornés, sont facultatifs. Un code 403 ou une propriété supplémentaire est refusé avant
-claim. Le statut 404 du snapshot est donc inféré uniquement de cette forme fermée ; aucun champ de
-statut, d'URI ou d'en-tête n'est accepté depuis le formulaire.
+claim. Si aucun téléchargement du corps 404 n'est possible, la case produit localement
+`{"error":{"code":404,"message":"LOCAL_OPERATOR_DECLARED_HTTP_404"}}`. Ce marqueur atteste une
+déclaration opérateur et ne prétend pas reproduire le corps fournisseur. Aucun statut libre, URI ou
+en-tête n'est accepté, et l'état `notstarted` ne déclenche aucune inférence.
 
 Après confirmation, les trois snapshots sont écrits sous le mode immuable
 `MANUAL_LOCAL_JSON_IMPORT`, puis reparsés et normalisés dans l'ordre existant. Le compteur de
 résultat sépare `localJsonImports=3` de `providerCallAttempts=0`. Le cache et le coordinateur réseau
 ne sont jamais consultés. Un échec direct terminal ne peut pas être repris par cette voie : il faut
 un redémarrage, une nouvelle préparation et une nouvelle confirmation.
+
+WO-010 ajoute un flux distinct sous `/j5-import-batches`, pour `1..25` événements canoniques et
+avec un `J5OfflineBatchControlService` séparé. Ce flux reste éligible quel que soit l'état de
+`sofascore.enabled`, ne lit ni ne modifie `J5RealControlService` et n'est ni le
+fallback ni le retry d'une campagne unitaire. Contrairement à cette dernière, chacun de ses états
+terminaux autorise une nouvelle préparation explicite sans redémarrage.
 
 ## 4. Séquence réseau bornée
 

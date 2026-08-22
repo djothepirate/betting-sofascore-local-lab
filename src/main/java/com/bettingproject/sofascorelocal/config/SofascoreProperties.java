@@ -203,22 +203,22 @@ public class SofascoreProperties {
         return exportDirectory != null;
     }
 
-    @AssertTrue(message = "J3 qualification requires explicit connector, raw storage and the exact active qualification endpoints")
+    @AssertTrue(message = "active J3 qualification requires raw storage and the exact active qualification endpoints")
     public boolean isJ3QualificationConfigurationSafe() {
-        return !j3QualificationEnabled
-                || (enabled
-                && maximumConcurrency == 1
+        return !enabled
+                || !j3QualificationEnabled
+                || (maximumConcurrency == 1
                 && storeRawPayloads
                 && !automaticRefreshEnabled
                 && !livePollingEnabled
                 && hasExactActiveQualificationEndpoints());
     }
 
-    @AssertTrue(message = "J4 EVENT_DETAILS qualification requires explicit connector, raw storage and the exact active qualification endpoints")
+    @AssertTrue(message = "active J4 EVENT_DETAILS qualification requires raw storage and the exact active qualification endpoints")
     public boolean isJ4EventDetailsQualificationConfigurationSafe() {
-        return !j4EventDetailsQualificationEnabled
-                || (enabled
-                && (!j5EventDataQualificationEnabled || j4EventDetailsPhase2Enabled)
+        return !enabled
+                || !j4EventDetailsQualificationEnabled
+                || ((!j5EventDataQualificationEnabled || j4EventDetailsPhase2Enabled)
                 && maximumConcurrency == 1
                 && storeRawPayloads
                 && !automaticRefreshEnabled
@@ -226,11 +226,11 @@ public class SofascoreProperties {
                 && hasExactActiveQualificationEndpoints());
     }
 
-    @AssertTrue(message = "J5 event-data qualification requires its exact endpoints; it may share one session with J4 phase 2 only")
+    @AssertTrue(message = "active J5 event-data qualification requires its exact endpoints; it may share one session with J4 phase 2 only")
     public boolean isJ5EventDataQualificationConfigurationSafe() {
-        return !j5EventDataQualificationEnabled
-                || (enabled
-                && (!j4EventDetailsQualificationEnabled || j4EventDetailsPhase2Enabled)
+        return !enabled
+                || !j5EventDataQualificationEnabled
+                || ((!j4EventDetailsQualificationEnabled || j4EventDetailsPhase2Enabled)
                 && maximumConcurrency == 1
                 && storeRawPayloads
                 && !automaticRefreshEnabled
@@ -238,11 +238,11 @@ public class SofascoreProperties {
                 && hasExactActiveQualificationEndpoints());
     }
 
-    @AssertTrue(message = "tournament event discovery requires J3, the connector, raw storage and the exact active qualification endpoints")
+    @AssertTrue(message = "active tournament event discovery requires J3, raw storage and the exact active qualification endpoints")
     public boolean isTournamentEventDiscoveryConfigurationSafe() {
-        return !tournamentEventDiscoveryEnabled
+        return !enabled
+                || !tournamentEventDiscoveryEnabled
                 || (j3QualificationEnabled
-                && enabled
                 && maximumConcurrency == 1
                 && storeRawPayloads
                 && !automaticRefreshEnabled
@@ -252,21 +252,25 @@ public class SofascoreProperties {
 
     @AssertTrue(message = "J3 may share a provider qualification session with J4 phase 2, never J4 phase 1")
     public boolean isCombinedJ3J4SelectionSafe() {
-        return !j3QualificationEnabled
+        return !enabled
+                || !j3QualificationEnabled
                 || !j4EventDetailsQualificationEnabled
                 || j4EventDetailsPhase2Enabled;
     }
 
     @AssertTrue(message = "a combined J4/J5 session requires J4 phase 2")
     public boolean isCombinedJ4J5SelectionSafe() {
-        return !j4EventDetailsQualificationEnabled
+        return !enabled
+                || !j4EventDetailsQualificationEnabled
                 || !j5EventDataQualificationEnabled
                 || j4EventDetailsPhase2Enabled;
     }
 
     @AssertTrue(message = "J4 phase 2 requires the J4 EVENT_DETAILS qualification path")
     public boolean isJ4EventDetailsPhase2SelectionSafe() {
-        return !j4EventDetailsPhase2Enabled || j4EventDetailsQualificationEnabled;
+        return !enabled
+                || !j4EventDetailsPhase2Enabled
+                || j4EventDetailsQualificationEnabled;
     }
 
     public boolean hasExactActiveQualificationEndpoints() {

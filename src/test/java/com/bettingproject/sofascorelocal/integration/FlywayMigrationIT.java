@@ -24,12 +24,20 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatis
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceService;
 import com.bettingproject.sofascorelocal.application.event.J5OfflineFixtureImportService;
+import com.bettingproject.sofascorelocal.application.event.J5OfflineBatchControlService;
+import com.bettingproject.sofascorelocal.application.event.J5OfflineBatchError;
+import com.bettingproject.sofascorelocal.application.event.J5OfflineBatchException;
+import com.bettingproject.sofascorelocal.application.event.J5OfflineBatchImportService;
+import com.bettingproject.sofascorelocal.application.event.J5OfflineBatchPlan;
+import com.bettingproject.sofascorelocal.application.event.J5OfflineBatchUpload;
+import com.bettingproject.sofascorelocal.application.event.J5OfflineBatchUploadService;
 import com.bettingproject.sofascorelocal.application.event.J5EventDataQueryService;
 import com.bettingproject.sofascorelocal.application.event.TournamentCanonicalEventPersistenceService;
 import com.bettingproject.sofascorelocal.application.network.TournamentScheduledEventsProjectionService;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCollectionEvidenceService;
 import com.bettingproject.sofascorelocal.application.network.J3TournamentCatalogService;
 import com.bettingproject.sofascorelocal.application.network.J3QualificationCheckpointReparser;
+import com.bettingproject.sofascorelocal.application.network.J5LocalUnavailableEvidence;
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportService;
 import com.bettingproject.sofascorelocal.application.event.J4ScheduledEventsSnapshotNormalizationService;
@@ -121,6 +129,7 @@ import java.sql.Timestamp;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -159,6 +168,11 @@ class FlywayMigrationIT {
         registry.add("sofascore.j4-event-details-phase2-enabled", () -> false);
         registry.add("sofascore.j5-event-data-qualification-enabled", () -> false);
         registry.add("sofascore.tournament-event-discovery-enabled", () -> false);
+        registry.add("sofascore.base-url", () -> "");
+        registry.add("sofascore.allowed-endpoints", () -> "");
+        registry.add("sofascore.automatic-refresh-enabled", () -> false);
+        registry.add("sofascore.live-polling-enabled", () -> false);
+        registry.add("sofascore.store-raw-payloads", () -> true);
         registry.add("sofascore.export-directory", () -> "target/integration-test-exports");
     }
 
@@ -212,6 +226,15 @@ class FlywayMigrationIT {
 
     @Autowired
     J5OfflineFixtureImportService j5OfflineFixtureImportService;
+
+    @Autowired
+    J5OfflineBatchControlService j5OfflineBatchControlService;
+
+    @Autowired
+    J5OfflineBatchImportService j5OfflineBatchImportService;
+
+    @Autowired
+    J5OfflineBatchUploadService j5OfflineBatchUploadService;
 
     @Autowired
     J5EventDataQueryService j5EventDataQueryService;
@@ -5921,6 +5944,337 @@ class FlywayMigrationIT {
                     assertThat(trace.rawPayloadState().name())
                             .isEqualTo("PAYLOAD_PURGED");
                 });
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void importsAndReimportsAnOfflineMultiMatchBatchWithAppendOnlyOccurrences()
+            throws Exception {
+        long firstProviderEventId = 1_000_000_001L;
+        long secondProviderEventId = 1_000_000_002L;
+        LocalDate date = LocalDate.parse("2026-10-10");
+        UUID firstCanonicalEventId = persistOfflineBatchEvent(
+                firstProviderEventId, Instant.parse("2026-10-10T14:00:00Z"));
+        UUID secondCanonicalEventId = persistOfflineBatchEvent(
+                secondProviderEventId, Instant.parse("2026-10-10T18:00:00Z"));
+        byte[] statistics = Files.readAllBytes(Path.of(
+                "src/test/resources/fixtures/provider-j5/statistics-nominal.json"));
+        byte[] incidents = Files.readAllBytes(Path.of(
+                "src/test/resources/fixtures/provider-j5/incidents-nominal.json"));
+        byte[] lineups = Files.readAllBytes(Path.of(
+                "src/test/resources/fixtures/provider-j5/lineups-nominal.json"));
+        Instant seededAt = Instant.parse("2026-10-10T13:55:00Z");
+        RawSnapshotPersistenceResult seededRawOnly = snapshotStore.save(
+                new RawManualCallSnapshot(
+                        SofascoreEndpointType.EVENT_INCIDENTS,
+                        RawSnapshotAcquisitionMode.MANUAL_LOCAL_JSON_IMPORT,
+                        "EVENT_INCIDENTS|eventId=" + firstProviderEventId,
+                        seededAt,
+                        seededAt,
+                        200,
+                        "application/json",
+                        Duration.ZERO,
+                        RawPayloadEvidence.capture(incidents),
+                        EventIncidentsV13Parser.PARSER_VERSION,
+                        RawSnapshotSchemaStatus.RAW_ONLY,
+                        null));
+        assertThat(seededRawOnly.outcome())
+                .isEqualTo(RawSnapshotPersistenceOutcome.INSERTED);
+        assertThat(jdbcTemplate.queryForObject(
+                "select schema_status from provider_snapshot where id = ?",
+                String.class,
+                seededRawOnly.snapshotId())).isEqualTo("RAW_ONLY");
+
+        J5OfflineBatchPlan firstPlan = j5OfflineBatchControlService.prepare(
+                date,
+                "Europe/Paris",
+                List.of(secondCanonicalEventId, firstCanonicalEventId)).plan();
+        List<J5OfflineBatchUpload> firstUploads = new ArrayList<>(offlineBatchUploads(
+                firstPlan, statistics, incidents, lineups));
+        firstUploads.set(0, j5OfflineBatchUploadService.declareUnavailable404(
+                firstPlan.events().getFirst().expectedFileNames().getFirst()));
+        var first = j5OfflineBatchImportService.execute(
+                firstPlan.requestId(),
+                firstPlan.confirmationPhrase(),
+                true,
+                firstUploads);
+
+        assertThat(first.completed()).isTrue();
+        assertThat(first.localJsonImports()).isEqualTo(6);
+        assertThat(first.events())
+                .extracting(event -> event.providerEventId())
+                .containsExactly(firstProviderEventId, secondProviderEventId);
+        assertThat(first.events()).allSatisfy(event ->
+                assertThat(event.endpoints()).allSatisfy(endpoint ->
+                        assertThat(endpoint.observationInserted()).isTrue()));
+        assertThat(first.events().getFirst().endpoints().getFirst().completenessStatus())
+                .isEqualTo(J5CompletenessStatus.UNAVAILABLE);
+        Map<String, Object> unavailableSnapshot = jdbcTemplate.queryForMap("""
+                select http_status, schema_status, acquisition_mode, payload_raw
+                from provider_snapshot
+                where request_key = ?
+                  and acquisition_mode = 'MANUAL_LOCAL_JSON_IMPORT'
+                """, "EVENT_STATISTICS|eventId=" + firstProviderEventId);
+        assertThat(unavailableSnapshot)
+                .containsEntry("http_status", 404)
+                .containsEntry("schema_status", "ENDPOINT_UNAVAILABLE")
+                .containsEntry("acquisition_mode", "MANUAL_LOCAL_JSON_IMPORT");
+        assertThat(new String(
+                (byte[]) unavailableSnapshot.get("payload_raw"),
+                StandardCharsets.UTF_8))
+                .contains(J5LocalUnavailableEvidence.OPERATOR_MARKER);
+        assertThat(offlineBatchSnapshotCount(
+                firstProviderEventId, secondProviderEventId)).isEqualTo(6L);
+        assertThat(offlineBatchOccurrenceCount(
+                firstProviderEventId, secondProviderEventId)).isEqualTo(7L);
+        assertThat(offlineBatchObservationCount(
+                firstCanonicalEventId, secondCanonicalEventId)).isEqualTo(6L);
+        assertThat(jdbcTemplate.queryForObject(
+                "select schema_status from provider_snapshot where id = ?",
+                String.class,
+                seededRawOnly.snapshotId())).isEqualTo("PARSED");
+
+        J5OfflineBatchPlan secondPlan = j5OfflineBatchControlService.prepare(
+                date,
+                "Europe/Paris",
+                List.of(firstCanonicalEventId, secondCanonicalEventId)).plan();
+        assertThat(secondPlan.planSha256()).isEqualTo(firstPlan.planSha256());
+        List<J5OfflineBatchUpload> repeatedUploads = new ArrayList<>(offlineBatchUploads(
+                secondPlan, statistics, incidents, lineups));
+        repeatedUploads.set(0, j5OfflineBatchUploadService.declareUnavailable404(
+                secondPlan.events().getFirst().expectedFileNames().getFirst()));
+        var repeated = j5OfflineBatchImportService.execute(
+                secondPlan.requestId(),
+                secondPlan.confirmationPhrase(),
+                true,
+                repeatedUploads);
+
+        assertThat(repeated.completed()).isTrue();
+        assertThat(repeated.localJsonImports()).isEqualTo(6);
+        assertThat(repeated.events()).allSatisfy(event ->
+                assertThat(event.endpoints()).allSatisfy(endpoint ->
+                        assertThat(endpoint.observationInserted()).isFalse()));
+        assertThat(offlineBatchSnapshotCount(
+                firstProviderEventId, secondProviderEventId)).isEqualTo(6L);
+        assertThat(offlineBatchOccurrenceCount(
+                firstProviderEventId, secondProviderEventId)).isEqualTo(13L);
+        assertThat(offlineBatchObservationCount(
+                firstCanonicalEventId, secondCanonicalEventId)).isEqualTo(6L);
+        assertThat(jdbcTemplate.queryForObject("""
+                select schema_status
+                from provider_snapshot
+                where request_key = ?
+                  and acquisition_mode = 'MANUAL_LOCAL_JSON_IMPORT'
+                """, String.class, "EVENT_INCIDENTS|eventId=" + firstProviderEventId))
+                .isEqualTo("PARSED");
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void rejectsTheWholeOfflineBatchDuringPrevalidationWithoutPersistence()
+            throws Exception {
+        long firstProviderEventId = 9_710_001L;
+        long secondProviderEventId = 9_710_002L;
+        LocalDate date = LocalDate.parse("2026-10-09");
+        UUID firstCanonicalEventId = persistOfflineBatchEvent(
+                firstProviderEventId, Instant.parse("2026-10-09T14:00:00Z"));
+        UUID secondCanonicalEventId = persistOfflineBatchEvent(
+                secondProviderEventId, Instant.parse("2026-10-09T18:00:00Z"));
+        byte[] statistics = Files.readAllBytes(Path.of(
+                "src/test/resources/fixtures/provider-j5/statistics-nominal.json"));
+        byte[] incidents = Files.readAllBytes(Path.of(
+                "src/test/resources/fixtures/provider-j5/incidents-nominal.json"));
+        byte[] lineups = Files.readAllBytes(Path.of(
+                "src/test/resources/fixtures/provider-j5/lineups-nominal.json"));
+
+        J5OfflineBatchPlan plan = j5OfflineBatchControlService.prepare(
+                date,
+                "Europe/Paris",
+                List.of(firstCanonicalEventId, secondCanonicalEventId)).plan();
+        List<J5OfflineBatchUpload> uploads = new ArrayList<>(offlineBatchUploads(
+                plan, statistics, incidents, lineups));
+        String lastLineupsFileName = plan.events().getLast().expectedFileNames().get(2);
+        uploads.set(uploads.size() - 1, j5OfflineBatchUploadService.capture(
+                lastLineupsFileName,
+                "{\"confirmed\":true}".getBytes(StandardCharsets.UTF_8)));
+
+        long snapshotsBefore = offlineBatchSnapshotCount(
+                firstProviderEventId, secondProviderEventId);
+        long occurrencesBefore = offlineBatchOccurrenceCount(
+                firstProviderEventId, secondProviderEventId);
+        long observationsBefore = offlineBatchObservationCount(
+                firstCanonicalEventId, secondCanonicalEventId);
+
+        assertThatThrownBy(() -> j5OfflineBatchImportService.execute(
+                plan.requestId(),
+                plan.confirmationPhrase(),
+                true,
+                uploads))
+                .isInstanceOf(J5OfflineBatchException.class)
+                .extracting(exception -> ((J5OfflineBatchException) exception).error())
+                .isEqualTo(J5OfflineBatchError.LINEUPS_PAYLOAD_INCOMPATIBLE);
+
+        assertThat(offlineBatchSnapshotCount(
+                firstProviderEventId, secondProviderEventId)).isEqualTo(snapshotsBefore);
+        assertThat(offlineBatchOccurrenceCount(
+                firstProviderEventId, secondProviderEventId)).isEqualTo(occurrencesBefore);
+        assertThat(offlineBatchObservationCount(
+                firstCanonicalEventId, secondCanonicalEventId)).isEqualTo(observationsBefore);
+        assertThat(j5OfflineBatchControlService.snapshot().awaitingConfirmation()).isTrue();
+        j5OfflineBatchControlService.stop(plan.requestId());
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void rollsBackTheWholeOfflineBatchWhenTheLastFamilyOfTheLastEventFails()
+            throws Exception {
+        long firstProviderEventId = 9_720_001L;
+        long secondProviderEventId = 9_720_002L;
+        LocalDate date = LocalDate.parse("2026-10-11");
+        UUID firstCanonicalEventId = persistOfflineBatchEvent(
+                firstProviderEventId, Instant.parse("2026-10-11T14:00:00Z"));
+        UUID secondCanonicalEventId = persistOfflineBatchEvent(
+                secondProviderEventId, Instant.parse("2026-10-11T18:00:00Z"));
+        byte[] statistics = Files.readAllBytes(Path.of(
+                "src/test/resources/fixtures/provider-j5/statistics-nominal.json"));
+        byte[] incidents = Files.readAllBytes(Path.of(
+                "src/test/resources/fixtures/provider-j5/incidents-nominal.json"));
+        byte[] lineups = Files.readAllBytes(Path.of(
+                "src/test/resources/fixtures/provider-j5/lineups-nominal.json"));
+        String triggerName = "trg_fail_j5_offline_batch_it";
+        String functionName = "fail_j5_offline_batch_it";
+        jdbcTemplate.execute("""
+                create or replace function fail_j5_offline_batch_it()
+                returns trigger
+                language plpgsql
+                as $function$
+                begin
+                    raise exception 'forced offline batch rollback';
+                end;
+                $function$
+                """);
+        jdbcTemplate.execute("""
+                create trigger trg_fail_j5_offline_batch_it
+                before insert on j5_event_data_observation
+                for each row
+                when (
+                    new.canonical_event_id = '%s'::uuid
+                    and new.endpoint_type = 'EVENT_LINEUPS'
+                )
+                execute function fail_j5_offline_batch_it()
+                """.formatted(secondCanonicalEventId));
+        try {
+            J5OfflineBatchPlan plan = j5OfflineBatchControlService.prepare(
+                    date,
+                    "Europe/Paris",
+                    List.of(firstCanonicalEventId, secondCanonicalEventId)).plan();
+            List<J5OfflineBatchUpload> uploads = offlineBatchUploads(
+                    plan, statistics, incidents, lineups);
+
+            assertThatThrownBy(() -> j5OfflineBatchImportService.execute(
+                    plan.requestId(),
+                    plan.confirmationPhrase(),
+                    true,
+                    uploads))
+                    .isInstanceOf(J5OfflineBatchException.class)
+                    .extracting(exception -> ((J5OfflineBatchException) exception).error())
+                    .isEqualTo(J5OfflineBatchError.STORAGE_UNAVAILABLE);
+
+            assertThat(offlineBatchSnapshotCount(
+                    firstProviderEventId, secondProviderEventId)).isZero();
+            assertThat(offlineBatchOccurrenceCount(
+                    firstProviderEventId, secondProviderEventId)).isZero();
+            assertThat(offlineBatchObservationCount(
+                    firstCanonicalEventId, secondCanonicalEventId)).isZero();
+            assertThat(j5OfflineBatchControlService.snapshot().result().localJsonImports())
+                    .isZero();
+        }
+        finally {
+            jdbcTemplate.execute("drop trigger if exists " + triggerName
+                    + " on j5_event_data_observation");
+            jdbcTemplate.execute("drop function if exists " + functionName + "()");
+        }
+    }
+
+    private UUID persistOfflineBatchEvent(long providerEventId, Instant startsAt) {
+        ScheduledEvent event = new ScheduledEvent(
+                providerEventId,
+                startsAt,
+                new ScheduledTeam(providerEventId * 10, "Batch Home " + providerEventId),
+                new ScheduledTeam(providerEventId * 10 + 1, "Batch Away " + providerEventId),
+                new ScheduledEventStatus("notstarted", Optional.of("Not started")),
+                Optional.of(new ScheduledTournament(97_000L, "Batch League")));
+        EventSourceTrace source = EventSourceTrace.syntheticFixture(
+                "j5-offline-batch-it-" + providerEventId,
+                "%064x".formatted(providerEventId),
+                ScheduledEventsV1Parser.PARSER_VERSION,
+                Instant.parse("2026-08-22T10:00:00Z"));
+        return canonicalEventStore.save(CanonicalEventObservation.from(event, source))
+                .canonicalEventId();
+    }
+
+    private List<J5OfflineBatchUpload> offlineBatchUploads(
+            J5OfflineBatchPlan plan,
+            byte[] statistics,
+            byte[] incidents,
+            byte[] lineups) {
+        return plan.events().stream()
+                .flatMap(event -> java.util.stream.Stream.of(
+                        j5OfflineBatchUploadService.capture(
+                                event.expectedFileNames().get(0), statistics),
+                        j5OfflineBatchUploadService.capture(
+                                event.expectedFileNames().get(1), incidents),
+                        j5OfflineBatchUploadService.capture(
+                                event.expectedFileNames().get(2), lineups)))
+                .toList();
+    }
+
+    private long offlineBatchSnapshotCount(long... providerEventIds) {
+        long count = 0;
+        for (long providerEventId : providerEventIds) {
+            count += jdbcTemplate.queryForObject("""
+                    select count(*)
+                    from provider_snapshot
+                    where acquisition_mode = 'MANUAL_LOCAL_JSON_IMPORT'
+                      and request_key in (?, ?, ?)
+                    """,
+                    Long.class,
+                    "EVENT_STATISTICS|eventId=" + providerEventId,
+                    "EVENT_INCIDENTS|eventId=" + providerEventId,
+                    "EVENT_LINEUPS|eventId=" + providerEventId);
+        }
+        return count;
+    }
+
+    private long offlineBatchOccurrenceCount(long... providerEventIds) {
+        long count = 0;
+        for (long providerEventId : providerEventIds) {
+            count += jdbcTemplate.queryForObject("""
+                    select count(*)
+                    from provider_snapshot_occurrence occurrence
+                    join provider_snapshot snapshot on snapshot.id = occurrence.snapshot_id
+                    where snapshot.acquisition_mode = 'MANUAL_LOCAL_JSON_IMPORT'
+                      and snapshot.request_key in (?, ?, ?)
+                    """,
+                    Long.class,
+                    "EVENT_STATISTICS|eventId=" + providerEventId,
+                    "EVENT_INCIDENTS|eventId=" + providerEventId,
+                    "EVENT_LINEUPS|eventId=" + providerEventId);
+        }
+        return count;
+    }
+
+    private long offlineBatchObservationCount(UUID... canonicalEventIds) {
+        long count = 0;
+        for (UUID canonicalEventId : canonicalEventIds) {
+            count += jdbcTemplate.queryForObject("""
+                    select count(*)
+                    from j5_event_data_observation
+                    where canonical_event_id = ?
+                      and source_kind = 'PROVIDER_SNAPSHOT'
+                    """, Long.class, canonicalEventId);
+        }
+        return count;
     }
 
     private static RawManualCallSnapshot snapshot(String requestKey, byte[] rawPayload) {

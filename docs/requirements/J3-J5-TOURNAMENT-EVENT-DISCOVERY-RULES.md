@@ -582,6 +582,24 @@ l'import dans la même campagne. Il faut arrêter puis redémarrer le processus,
 campagne, obtenir une nouvelle phrase et choisir explicitement la voie locale. Cette règle évite
 qu'un import soit présenté comme un retry ou comme le succès d'un appel fournisseur.
 
+### 10.2 Portée postérieure de l'import J5 multi-match
+
+La section 10.1 décrit exclusivement la campagne J5 unitaire issue d'un lien de rencontre et
+contrôlée par `J5RealControlService`. WO-010 n'étend ni son claim, ni son choix exclusif
+direct/import, ni ses règles de redémarrage.
+
+WO-010 autorise séparément `/j5-import-batches` pour sélectionner `1..25` UUID canoniques déjà
+présents sur une date et une zone, sans saisie libre de `event.id`. Son contrôle vit uniquement en
+mémoire, reste indépendant de `J5RealControlService` et accepte `sofascore.enabled=false` comme
+`true`. Les opt-ins peuvent rester armés sans donner de voie réseau au lot. Il n'est
+jamais un fallback ou un retry de la campagne unitaire ; chacun de ses états terminaux permet une
+nouvelle préparation explicite. Son contrat complet est porté par
+`docs/requirements/J5-OFFLINE-MULTI-MATCH-IMPORT-RULES.md`.
+
+En conséquence, la règle de la section 11 selon laquelle seul un succès autorise une nouvelle
+préparation dans le processus reste limitée aux contrôles historiques décrits par le présent
+document et ne doit pas être appliquée au contrôle multi-match de WO-010.
+
 ## 11. Garde-fous réseau
 
 - endpoint logique distinct `TOURNAMENT_SCHEDULED_EVENTS` ;

@@ -36,6 +36,19 @@ ayant reçu exactement les mêmes octets.
 Le backfill `BASELINE` ne reconstitue pas un nombre de tentatives que l'ancien schéma ne connaissait
 pas. Il établit seulement une origine explicite pour chaque snapshot déjà présent.
 
+### 2.1 Effets de l'import J5 multi-match WO-010
+
+WO-010 réutilise sans nouvelle table le mécanisme d'occurrences J6. Un lot committé traite les trois
+familles de chacun de ses `N` événements : chaque sauvegarde brute produit donc une occurrence
+`INSERTED` ou `DEDUPLICATED`, soit `3N` occurrences pour le lot réussi. Un réimport par un nouveau
+plan ajoute encore `3N` occurrences, même lorsque les snapshots ou observations normalisées sont
+dédupliqués par les règles existantes.
+
+La transaction WO-010 englobe snapshots, classifications, occurrences et observations. Son rollback
+ne laisse aucun de ces éléments pour le lot échoué. Le plan, l'état du contrôle et son résultat
+restent uniquement en mémoire et ne créent aucun historique durable de lot ; cette absence de suivi
+du contrôle ne supprime pas l'historique métier J6 des données effectivement committées.
+
 ## 3. Flux historiques
 
 La chronologie agrège les tables append-only existantes en cinq flux :
@@ -136,7 +149,13 @@ Un snapshot est éligible si et seulement si :
 2. `received_at` est strictement antérieur au cutoff de rétention ;
 3. son statut est `PARSED` ou `ENDPOINT_UNAVAILABLE` ;
 4. il est référencé par au moins une observation normalisée J4 ou J5 ;
-5. il provient de `SOFASCORE` et de `DIRECT_LOCAL_ENDPOINT`.
+5. il provient de `SOFASCORE` et son mode d'acquisition vaut `DIRECT_LOCAL_ENDPOINT` ou
+   `MANUAL_LOCAL_JSON_IMPORT`.
+
+Cette éligibilité correspond au prédicat du store courant. Elle soumet les octets importés
+manuellement aux mêmes garanties de plan, de sauvegarde, de restauration et d'audit J6 que les
+octets acquis directement. Elle ne rend jamais un snapshot `MANUAL_LOCAL_JSON_IMPORT` éligible au
+cache fournisseur et n'autorise aucune collecte ou suppression automatique.
 
 Le lot est ordonné par heure puis identifiant et limité à 500 candidats. Son SHA-256 inclut la
 version de format, la durée de rétention, le cutoff et, pour chaque candidat, l'identifiant,

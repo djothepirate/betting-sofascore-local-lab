@@ -554,19 +554,21 @@ ouvrir la fiche d'une identité canonique J4 existante puis sélectionner
 4. choisir une seule voie avant de soumettre la phrase :
    - **A — trois appels fournisseur** : recopier exactement la phrase, acquitter puis sélectionner
      **« Appeler les trois familles une fois »** une seule fois ;
-   - **B — trois corps JSON, zéro appel** : ouvrir manuellement les trois URL exactes affichées,
-     enregistrer seulement leurs corps JSON, choisir respectivement les fichiers statistiques,
-     incidents et compositions, recopier la phrase dans le formulaire B, acquitter puis sélectionner
-     **« Importer les trois familles — ZÉRO APPEL »**. Chaque fichier est limité à 5 Mio. Ne jamais
-     importer HAR, en-têtes, cookies, jetons, données de session ou export DevTools ;
-5. pour la voie B, une réponse d'indisponibilité est admise uniquement si le fichier contient une
-   enveloppe JSON fermée dont `error.code` est l'entier `404`. Ne pas modifier un corps 403 pour le
-   faire passer pour un 404 et ne pas saisir un statut séparément ;
+   - **B — trois preuves locales, zéro appel** : ouvrir manuellement les trois URL exactes affichées
+     et, pour chaque famille, choisir le fichier JSON disponible ou la case **« 404 observé »**.
+     Recopier la phrase dans le formulaire B, acquitter puis sélectionner **« Importer les trois
+     familles — ZÉRO APPEL »**. Chaque fichier est limité à 5 Mio. Ne jamais importer HAR, en-têtes,
+     cookies, jetons, données de session ou export DevTools ;
+5. pour la voie B, cocher « 404 observé » seulement après avoir constaté ce code sur l'URL exacte et
+   lorsque le navigateur ne permet pas d'enregistrer le corps JSON. Le serveur crée alors la preuve
+   locale canonique marquée `LOCAL_OPERATOR_DECLARED_HTTP_404`. Cette case n'est pas un statut libre :
+   ne jamais l'utiliser pour un 403 ni la déduire de `notstarted`. Un fichier et la case de la même
+   famille, ou l'absence des deux, sont refusés ;
 6. ne pas recharger, revenir en arrière ou resoumettre le formulaire pendant l'exécution ;
 7. attendre l'état terminal ; la voie directe tente au maximum `statistics`, puis `incidents`,
    puis `lineups`, avec au moins trois secondes entre deux départs. La voie locale produit zéro
    appel, `localJsonImports=3`, trois snapshots et trois observations dans le même ordre ;
-8. si le résultat est `COMPLETED_LOCKED`, vérifier les trois panneaux locaux, leur complétude ou
+8. si l'état du contrôle est `COMPLETED_LOCKED`, vérifier les trois panneaux locaux, leur complétude ou
    leur statut `UNAVAILABLE · N/A`, leur source `PROVIDER_SNAPSHOT`, leur parseur courant
    (`event-statistics-v2`, `event-incidents-v13`, `event-lineups-v2`) ou normaliseur
    `event-*-unavailable-v1`, leur snapshot, leur SHA-256 et leur heure de réception, sans ouvrir ou
@@ -793,6 +795,95 @@ confirmation et verrou terminal. Au premier incident, ne pas réessayer. À la f
 restaurer tous les opt-ins à `false`, vider l'origine et l'allowlist, redémarrer pour constater les
 verrous, puis arrêter l'application.
 
+### 3.10 septies Importer un lot J5 multi-match strictement hors ligne
+
+Ce parcours automatise uniquement la validation et l'ingestion de preuves remises ou déclarées
+manuellement. Il reste strictement hors ligne même lorsque le connecteur maître et les voies
+manuelles fournisseur sont armés. La configuration `.env` suivante est explicitement supportée :
+
+```dotenv
+SOFASCORE_ENABLED=true
+SOFASCORE_J3_QUALIFICATION_ENABLED=true
+SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true
+SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=true
+SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=true
+SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED=true
+SOFASCORE_BASE_URL=https://www.sofascore.com
+SOFASCORE_ALLOWED_ENDPOINTS=SCHEDULED_EVENTS,TOURNAMENT_SCHEDULED_EVENTS,EVENT_DETAILS,EVENT_STATISTICS,EVENT_INCIDENTS,EVENT_LINEUPS
+```
+
+`sofascore.automatic-refresh-enabled=false`, `sofascore.live-polling-enabled=false` et
+`sofascore.store-raw-payloads=true` restent imposés par `application.yml`. Le lot refuse la
+préparation et l'exécution si une automatisation est activée ou si la conservation brute est
+coupée. `SOFASCORE_ENABLED=false` reste également accepté, mais n'est pas une condition du lot.
+Après toute modification de `.env`, redémarrer l'application : aucune propriété de sécurité n'est
+rechargée à chaud.
+
+1. ouvrir `http://127.0.0.1:8087/j5-import-batches` ;
+2. choisir une date et une zone IANA, puis rechercher les identités canoniques déjà persistées ;
+3. cocher entre 1 et 25 rencontres dans la liste, sans saisir d'identifiant fournisseur ;
+4. sélectionner **« Préparer le plan J5 sans importer »**, puis contrôler l'ordre par
+   `providerEventId`, les `3N` noms, l'expiration à quinze minutes et le SHA-256 ;
+5. contrôler les trois noms de preuves attendus pour chaque match :
+
+```text
+event-<providerEventId>-statistics.json
+event-<providerEventId>-incidents.json
+event-<providerEventId>-lineups.json
+```
+
+6. pour chaque nom, sélectionner le fichier JSON dans `batchFiles` ou cocher sa case 404, jamais les
+   deux. Une case est autorisée seulement après un HTTP 404 réellement observé lorsque le corps ne
+   peut pas être téléchargé ; elle crée le JSON local canonique portant
+   `LOCAL_OPERATOR_DECLARED_HTTP_404`. Chaque fichier doit être non vide et limité à 5 Mio, le lot
+   entier à 25 Mio ; aucun HAR, en-tête, cookie, jeton ou export DevTools n'est accepté. Avant de
+   poursuivre, contrôler la synthèse `fichiers · déclarations 404 · saisies / 3N` et vérifier que
+   chaque ligne porte `FICHIER` ou `404`. `CONFLIT`, `DOUBLON`, `INVALIDE` ou `À FOURNIR` maintient
+   le bouton désactivé et nomme l'anomalie à corriger ;
+7. recopier exactement `IMPORTER {N} MATCHS J5 HORS LIGNE {PLAN_SHA256}`, cocher
+   l'acquittement et exécuter une seule fois ;
+8. après succès, vérifier l'état de contrôle `COMPLETED_LOCKED`, le résultat
+   `terminalCode=COMPLETED`, `localJsonImports=3N` et les compteurs fournisseur, cache et
+   coordinateur tous à zéro ;
+9. consulter les fiches J5/J6 locales. Un nouveau plan explicite permet un réimport : snapshots et
+   observations peuvent être dédupliqués, mais chaque acquisition committée ajoute une occurrence
+   J6 ;
+10. sur erreur de manifeste, contenu ou dérive canonique avant claim, corriger puis resoumettre le
+    même plan encore en attente. Après claim, toute erreur verrouille le contrôle et rollbacke le
+    lot entier ; préparer alors un nouveau plan, sans retry automatique ;
+11. un redémarrage efface le plan, son état et son résultat en mémoire. Il ne supprime aucune donnée
+    committée et ne reprend jamais un lot interrompu.
+
+La prévalidation sans écriture et le rollback tardif ne nécessitent ni pgAdmin ni console
+PostgreSQL. Docker Desktop doit simplement être démarré ; Maven compile le test, Testcontainers
+lance une base PostgreSQL éphémère et les assertions JDBC comparent les comptes avant/après :
+
+```powershell
+.\mvnw.cmd -Pintegration-tests "-Dit.test=FlywayMigrationIT#rejectsTheWholeOfflineBatchDuringPrevalidationWithoutPersistence+rollsBackTheWholeOfflineBatchWhenTheLastFamilyOfTheLastEventFails" test-compile failsafe:integration-test failsafe:verify
+```
+
+Le résultat attendu est `Tests run: 2, Failures: 0, Errors: 0` puis `BUILD SUCCESS`. Le premier
+scénario remplace la composition du dernier match par un JSON incompatible et vérifie que les
+comptes filtrés de `provider_snapshot`, `provider_snapshot_occurrence` et
+`j5_event_data_observation` sont strictement identiques avant et après le refus. Le second installe
+temporairement un trigger sur la dernière famille du dernier match, provoque l'échec après les
+écritures précédentes, vérifie leur rollback global, puis supprime automatiquement le trigger et sa
+fonction. Aucune commande `psql` et aucune inspection manuelle de la base ne sont requises.
+
+Preuve minimisée à conserver, sans nom local reçu, payload, phrase, chemin, URI ou secret :
+
+```text
+J5_OFFLINE_BATCH_CONTROL_STATE=COMPLETED_LOCKED|FAILED_LOCKED|STOPPED_LOCKED|EXPIRED_LOCKED
+J5_OFFLINE_BATCH_TERMINAL_CODE=<code borne>
+J5_OFFLINE_BATCH_EVENT_COUNT=<1..25>
+J5_OFFLINE_BATCH_LOCAL_JSON_IMPORTS=<0|3N>
+J5_OFFLINE_BATCH_DECLARED_404=<0..3N>
+J5_OFFLINE_BATCH_PROVIDER_CALLS=0
+J5_OFFLINE_BATCH_CACHE_OPERATIONS=0
+J5_OFFLINE_BATCH_COORDINATOR_ACQUISITIONS=0
+J5_OFFLINE_BATCH_AUTOMATIC_RETRY=0
+```
+
 ### 3.11 Qualifier réellement les deux événements J4 — sous-étape 1
 
 Cette campagne est un geste humain exceptionnel. Ne jamais l’exécuter depuis Maven, un script, un
@@ -961,8 +1052,8 @@ Démarrer PostgreSQL puis l’application sur `127.0.0.1`. Sur `/events` :
    consultable à sa date civile ;
 9. sélectionner **« Arrêt global J4 »** à la fin de la campagne.
 
-Pour actualiser le même match, attendre le résultat `COMPLETED_LOCKED` puis recommencer les étapes
-2 à 7.
+Pour actualiser le même match, attendre l'état du contrôle `COMPLETED_LOCKED` puis recommencer les
+étapes 2 à 7.
 Chaque rappel exige une nouvelle préparation et une nouvelle confirmation. Le service ne consulte
 pas le cache sur cette voie et impose au moins trois secondes entre deux transports. Une réponse
 identique peut être dédupliquée dans la vue normalisée ; une évolution de statut ou d’horaire doit
@@ -1009,6 +1100,8 @@ Aucun Docker ni accès SofaScore n’est requis par les tests standards.
 Docker doit être disponible. Testcontainers vérifie les migrations V1 à V25, l’état initial du
 connecteur, la conservation exacte du brut, sa déduplication, les provenances J4/J5, les occurrences
 J6, la rétention auditée et la portée cache `TOURNAMENT_SCHEDULED_EVENTS` dans une base éphémère.
+Pour WO-010, il vérifie aussi le commit atomique des `3N` familles, le réimport avec occurrences
+append-only et le rollback intégral lors d'une panne sur la dernière famille du dernier événement.
 
 ### 4.3 Script consolidé
 
@@ -1191,6 +1284,25 @@ du Work Order résulte de la décision explicite du propriétaire appuyée sur c
 vérifications fonctionnelles consignées. Toute nouvelle recette appartient encore explicitement au
 propriétaire.
 
+### 4.8 septies Readiness du lot J5 hors ligne multi-match
+
+Exécuter les trois portes avec toutes les propriétés de la section 3.10 septies dans leur état
+strictement hors ligne :
+
+```powershell
+.\mvnw.cmd clean verify
+.\mvnw.cmd -Pintegration-tests verify
+.\scripts\Verify-Local.ps1 -WithIntegrationTests
+```
+
+Consigner commandes, compteurs et audits dans
+`docs/validation/J5-OFFLINE-MULTI-MATCH-IMPORT-TECHNICAL-READINESS-20260822.md`. Les tests doivent
+prouver sélection et hash, manifeste et limites, claim unique, prévalidation avant claim,
+transaction atomique, réimport/occurrences, rollback tardif, en-têtes Web et zéro dépendance
+transport/cache/coordinateur. Leur réussite autorise au plus le statut
+`IMPLEMENTED_AWAITING_HUMAN_QUALIFICATION` : la recette hors ligne de la section 3.10 septies et la
+décision de clôture restent au propriétaire.
+
 ### 4.9 Qualification réelle J4 sous-étape 1
 
 Avant exécution humaine, vérifier la preuve de readiness
@@ -1334,4 +1446,6 @@ empreintes identiques et un manifeste qualifié. La procédure générique ci-de
 - ne pas ajouter de proxy, tunnel ou reverse proxy ;
 - ne pas insérer une URI SofaScore dans les propriétés au J1 ;
 - ne pas envoyer le contenu de `.env`, les dumps ou payloads bruts dans Chat, Git ou les logs ;
+- ne pas transformer le lot J5 hors ligne en acquisition automatique, watcher, scheduler, retry,
+  staging, archive ou tâche de fond ;
 - ne pas transformer une réussite technique locale en validation de production.

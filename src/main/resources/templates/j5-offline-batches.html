@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Lots J5 hors ligne — SofaScore Local Lab</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+  <script defer th:src="@{/js/j5-offline-batch-manifest.js}"
+          src="/js/j5-offline-batch-manifest.js"></script>
+</head>
+<body>
+<header class="topbar compact-topbar">
+  <div class="shell">
+    <p class="eyebrow">J5 · Import local multi-match</p>
+    <h1>Lots de statistiques, incidents et compositions</h1>
+    <p class="subtitle">Une sélection canonique, un plan borné et une confirmation humaine pour tout le lot.</p>
+  </div>
+</header>
+
+<main class="shell event-page">
+  <nav class="links page-links" aria-label="Navigation locale">
+    <a th:href="@{/events(date=${selectedDate},zone=${selectedZone})}" href="/events">← Événements locaux</a>
+    <a th:href="@{/}" href="/">Tableau de bord</a>
+  </nav>
+
+  <section class="status-banner status-safe">
+    <div>
+      <p class="label">Statut de gouvernance</p>
+      <p class="status-value">EXPERIMENTAL / LOCAL_ONLY / NOT_PRODUCTION_APPROVED / NO_CRITICAL_DEPENDENCY</p>
+    </div>
+    <span class="chip chip-safe">ZÉRO APPEL FOURNISSEUR</span>
+  </section>
+
+  <p class="notice"
+     th:if="${batchMessage != null}"
+     role="status"
+     aria-live="polite"
+     th:classappend="${batchMessageKind == 'safe'} ? ' notice-safe' : (${batchMessageKind == 'warning'} ? ' notice-warning' : ' notice-danger')"
+     th:text="${batchMessage}">
+    Message local minimisé.
+  </p>
+  <p class="notice notice-danger" th:if="${batchErrorCode != null}"
+     role="alert" aria-live="assertive">
+    Code local : <span class="mono" th:text="${batchErrorCode}">ERROR_CODE</span>
+  </p>
+
+  <section class="panel event-panel" aria-labelledby="batch-search-title">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Geste 1 · Périmètre local</p>
+        <h2 id="batch-search-title">Rechercher les rencontres à sélectionner</h2>
+      </div>
+      <span class="chip chip-safe">LECTURE LOCALE</span>
+    </div>
+    <form class="event-search-form" method="get" th:action="@{/j5-import-batches}">
+      <label for="batch-date">Date</label>
+      <input id="batch-date" type="date" name="date" required th:value="${selectedDate}">
+      <label for="batch-zone">Zone IANA</label>
+      <input id="batch-zone" type="text" name="zone" maxlength="64" required
+             th:value="${selectedZone}" value="Europe/Paris">
+      <button class="button-primary" type="submit">Rechercher localement</button>
+    </form>
+  </section>
+
+  <section class="panel manual-call-panel" aria-labelledby="batch-control-title">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Circuit d’import hors ligne</p>
+        <h2 id="batch-control-title">État du lot J5</h2>
+      </div>
+      <span class="chip"
+            th:classappend="${control.state.name() == 'COMPLETED_LOCKED'} ? ' chip-safe' : (${control.state.name() == 'LOCKED'} ? ' chip-safe' : (${control.state.name() == 'AWAITING_CONFIRMATION' or control.state.name() == 'EXECUTING'} ? ' chip-warning' : ' chip-danger'))"
+            th:text="${control.state}">LOCKED</span>
+    </div>
+    <p>Ce circuit ne résout aucune URI et ne possède aucune voie de transport. Il accepte uniquement
+      les identités cochées dans le résultat local courant.</p>
+    <div class="provider-blockers" th:unless="${control.offlineAvailable}">
+      <p><strong>Import local verrouillé.</strong> Conditions encore absentes :</p>
+      <ul>
+        <li class="mono" th:each="blocker : ${control.offlineBlockers}" th:text="${blocker}">BLOCKER</li>
+      </ul>
+    </div>
+  </section>
+
+  <section class="panel event-results"
+           th:if="${search != null}"
+           aria-labelledby="batch-selection-title">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Geste 2 · Sélection canonique</p>
+        <h2 id="batch-selection-title">
+          <span th:text="${search.date}">2026-08-22</span>
+          · <span th:text="${search.zoneId.id}">Europe/Paris</span>
+        </h2>
+      </div>
+      <span class="chip chip-safe" th:text="${search.events.size()} + ' ÉVÉNEMENT(S)'">0 ÉVÉNEMENT</span>
+    </div>
+
+    <p class="notice" th:if="${search.events.isEmpty()}">
+      Aucun événement canonique local n’est disponible pour cette date.
+    </p>
+
+    <form method="post" th:action="@{/j5-import-batches/prepare}"
+          th:unless="${search.events.isEmpty()}">
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <input type="hidden" name="date" th:value="${search.date}">
+      <input type="hidden" name="zone" th:value="${search.zoneId.id}">
+      <p class="fixture-note">
+        Cochez de 1 à <span th:text="${maximumEvents}">25</span> rencontres. Une identité non affichée
+        ne peut pas être saisie librement ; la sélection est de nouveau contrôlée côté serveur.
+      </p>
+      <div class="table-scroll">
+        <table>
+          <thead>
+          <tr>
+            <th>Sélection</th>
+            <th>Heure locale</th>
+            <th>Rencontre</th>
+            <th>Compétition</th>
+            <th>Statut</th>
+            <th>Identité canonique</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="item : ${search.events}">
+            <td>
+              <input type="checkbox" name="eventIds"
+                     th:value="${item.event.identity.value}"
+                     th:disabled="${!control.preparationAllowed()}"
+                     th:attr="aria-label=${'Sélectionner ' + item.event.homeTeam.name + ' contre ' + item.event.awayTeam.name}">
+            </td>
+            <td class="mono" th:text="${item.startsAtInZone}">2026-08-22T16:00+02:00</td>
+            <td>
+              <strong th:text="${item.event.homeTeam.name}">Home</strong>
+              <span> — </span>
+              <strong th:text="${item.event.awayTeam.name}">Away</strong>
+            </td>
+            <td th:text="${item.event.tournament.isPresent() ? item.event.tournament.get().name : '—'}">—</td>
+            <td><span class="chip chip-warning" th:text="${item.event.status.type}">notstarted</span></td>
+            <td>
+              <span class="mono" th:text="${item.event.identity.value}">UUID</span><br>
+              <span class="muted" th:text="${'providerEventId=' + item.event.identity.providerEventId}">providerEventId</span>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="actions">
+        <button class="button-primary" type="submit"
+                th:disabled="${!control.preparationAllowed()}">
+          Préparer le plan J5 sans importer
+        </button>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel manual-call-panel"
+           th:if="${control.plan != null and (control.awaitingConfirmation() or control.executing())}"
+           aria-labelledby="batch-plan-title">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Geste 3 · Aperçu et confirmation</p>
+        <h2 id="batch-plan-title">Plan multi-match immuable</h2>
+      </div>
+      <span class="chip chip-warning" th:text="${control.state}">AWAITING_CONFIRMATION</span>
+    </div>
+
+    <dl class="detail-grid">
+      <div><dt>Demande</dt><dd class="mono" th:text="${control.plan.requestId}">UUID</dd></div>
+      <div><dt>Rencontres</dt><dd th:text="${control.plan.events.size()}">1</dd></div>
+      <div><dt>Corps JSON attendus</dt><dd th:text="${control.plan.payloadCount()}">3</dd></div>
+      <div><dt>Préparé à</dt><dd class="mono" th:text="${control.plan.preparedAt}">instant</dd></div>
+      <div><dt>Expire à</dt><dd class="mono" th:text="${control.plan.expiresAt}">instant</dd></div>
+      <div><dt>SHA-256 du plan</dt><dd class="mono hash-value" th:text="${control.plan.planSha256}">hash</dd></div>
+    </dl>
+
+    <div class="table-scroll">
+      <table>
+        <thead>
+        <tr>
+          <th>Ordre</th>
+          <th>Rencontre</th>
+          <th>Identité</th>
+          <th>Début UTC</th>
+          <th>Trois noms attendus</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr th:each="event, iteration : ${control.plan.events}">
+          <td th:text="${iteration.count}">1</td>
+          <td>
+            <strong th:text="${event.homeTeamName}">Home</strong>
+            <span> — </span>
+            <strong th:text="${event.awayTeamName}">Away</strong>
+          </td>
+          <td>
+            <span class="mono" th:text="${event.canonicalEventId}">UUID</span><br>
+            <span class="muted" th:text="${'providerEventId=' + event.providerEventId}">providerEventId</span>
+          </td>
+          <td class="mono" th:text="${event.startsAt}">instant</td>
+          <td>
+            <div class="mono" th:each="fileName : ${event.expectedFileNames}" th:text="${fileName}">event-1-statistics.json</div>
+          </td>
+        </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p class="notice notice-warning" th:if="${control.executing()}"
+       role="status" aria-live="polite">
+      Import local en cours dans une autre requête. Le plan reste visible en lecture seule.
+    </p>
+
+    <div class="control-grid" th:if="${control.awaitingConfirmation()}">
+      <form class="control-form control-stage"
+            method="post"
+            enctype="multipart/form-data"
+            data-batch-manifest-form="true"
+            th:attr="data-expected-count=${control.plan.payloadCount()},
+                     data-maximum-files=${maximumFiles},
+                     data-maximum-file-bytes=${maximumFileBytes},
+                     data-maximum-total-bytes=${maximumTotalBytes}"
+            th:action="@{/j5-import-batches/execute}">
+        <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+        <input type="hidden" name="requestId" th:value="${control.plan.requestId}">
+        <input type="hidden" name="date" th:value="${control.plan.date}">
+        <input type="hidden" name="zone" th:value="${control.plan.zoneId.id}">
+        <h3>Importer le lot local</h3>
+        <p>Fournissez exactement les <strong th:text="${control.plan.payloadCount()}">3</strong>
+          preuves affichées : un fichier JSON ou une déclaration 404 par famille.</p>
+        <label for="batch-files">Fichiers JSON disponibles</label>
+        <input id="batch-files" type="file" name="batchFiles"
+               accept="application/json,.json" multiple data-batch-files="true"
+               aria-describedby="batch-file-limits batch-manifest-summary batch-manifest-issues">
+        <p id="batch-file-limits" class="fixture-note">
+          De 0 à <span th:text="${control.plan.payloadCount()}">3</span> fichiers pour ce plan,
+          5 Mio par fichier et
+          <span th:text="${maximumTotalMebibytes}">25</span> Mio cumulés. Aucun HAR, en-tête,
+          cookie, jeton ou export DevTools.
+        </p>
+        <p id="batch-manifest-summary"
+           class="batch-manifest-status notice notice-warning"
+           data-batch-manifest-summary="true"
+           role="status" aria-live="polite" tabindex="-1"
+           th:text="${'Manifeste à compléter : 0 fichier · 0 déclaration 404 · 0 saisie / '
+                    + control.plan.payloadCount() + '.'}">
+          Manifeste à compléter.
+        </p>
+        <ul id="batch-manifest-issues" class="batch-manifest-issues"
+            data-batch-manifest-issues="true" hidden></ul>
+        <fieldset class="batch-unavailable-options">
+          <legend>404 observés sans fichier téléchargeable</legend>
+          <p class="fixture-note">Cochez uniquement les familles dont l’URL exacte a répondu
+            HTTP 404. Un fichier et une case cochée pour le même nom sont refusés.</p>
+          <div class="batch-unavailable-list">
+            <th:block th:each="event : ${control.plan.events}">
+              <label class="acknowledgement batch-evidence-row"
+                     data-batch-evidence-row="true"
+                     th:each="fileName : ${event.expectedFileNames}">
+                <input type="checkbox" name="unavailable404" th:value="${fileName}"
+                       data-batch-404-declaration="true">
+                <span class="batch-evidence-label">
+                  <strong th:text="${event.homeTeamName + ' — ' + event.awayTeamName}">Match</strong><br>
+                  <code th:text="${fileName}">event-1-statistics.json</code>
+                </span>
+                <span class="batch-evidence-state" data-batch-evidence-state="true">À FOURNIR</span>
+              </label>
+            </th:block>
+          </div>
+        </fieldset>
+        <p>Phrase exacte liée au SHA-256 du plan :</p>
+        <code class="confirmation-phrase" th:text="${control.plan.confirmationPhrase}">IMPORTER MATCHS J5 HORS LIGNE</code>
+        <label for="batch-confirmation">Recopier la phrase</label>
+        <input id="batch-confirmation" type="text" name="confirmationText"
+               maxlength="160" autocomplete="off" required>
+        <label class="acknowledgement">
+          <input type="checkbox" name="acknowledged" value="true" required>
+          <span>Je confirme les rencontres, une preuve par famille, les déclarations 404
+            éventuelles, zéro appel fournisseur, l’ordre séquentiel, l’arrêt au premier incident
+            et l’absence de retry.</span>
+        </label>
+        <button class="button-primary" type="submit" data-batch-submit="true">
+          Importer le lot — ZÉRO APPEL
+        </button>
+      </form>
+
+      <form class="control-form control-stage"
+            method="post"
+            th:action="@{/j5-import-batches/stop}">
+        <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+        <input type="hidden" name="requestId" th:value="${control.plan.requestId}">
+        <input type="hidden" name="date" th:value="${control.plan.date}">
+        <input type="hidden" name="zone" th:value="${control.plan.zoneId.id}">
+        <h3>Annuler avant import</h3>
+        <p>Cette action verrouille ce plan sans lire ni persister de corps JSON.</p>
+        <button class="button-danger" type="submit">Annuler ce plan J5</button>
+      </form>
+    </div>
+  </section>
+
+  <section class="panel"
+           th:if="${batchResult != null or control.result != null}"
+           th:with="result=${batchResult != null ? batchResult : control.result}"
+           aria-labelledby="batch-result-title">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Preuve terminale minimisée</p>
+        <h2 id="batch-result-title">Résultat du dernier lot</h2>
+      </div>
+      <span class="chip"
+            th:classappend="${result.completed} ? ' chip-safe' : ' chip-danger'"
+            th:text="${result.terminalCode}">COMPLETED</span>
+    </div>
+    <dl class="detail-grid">
+      <div><dt>Demande</dt><dd class="mono" th:text="${result.requestId}">UUID</dd></div>
+      <div><dt>Rencontres planifiées</dt><dd th:text="${result.eventCount}">1</dd></div>
+      <div><dt>Preuves JSON locales</dt><dd th:text="${result.localJsonImports}">3</dd></div>
+      <div><dt>Octets contrôlés</dt><dd th:text="${result.totalBytes}">0</dd></div>
+      <div><dt>Appels fournisseur</dt><dd>0</dd></div>
+      <div><dt>Opérations cache fournisseur</dt><dd>0</dd></div>
+      <div><dt>Acquisitions coordinateur</dt><dd>0</dd></div>
+      <div><dt>Retry automatique</dt><dd>0</dd></div>
+    </dl>
+
+    <p class="notice notice-warning" th:if="${result.events.isEmpty()}">
+      Aucun résultat par famille n’est disponible pour ce lot terminal.
+    </p>
+    <div class="table-scroll" th:unless="${result.events.isEmpty()}">
+      <table>
+        <thead>
+        <tr>
+          <th>Rencontre</th>
+          <th>Famille</th>
+          <th>Snapshot</th>
+          <th>Taille / SHA-256</th>
+          <th>Complétude</th>
+          <th>Observation</th>
+        </tr>
+        </thead>
+        <tbody>
+        <th:block th:each="event : ${result.events}">
+          <tr th:each="endpoint : ${event.endpoints}">
+            <td>
+              <strong th:text="${event.homeTeamName}">Home</strong>
+              <span> — </span>
+              <strong th:text="${event.awayTeamName}">Away</strong><br>
+              <span class="muted" th:text="${'providerEventId=' + event.providerEventId}">providerEventId</span>
+            </td>
+            <td class="mono" th:text="${endpoint.endpointType}">EVENT_STATISTICS</td>
+            <td th:text="${endpoint.snapshotId}">1</td>
+            <td>
+              <span th:text="${endpoint.payloadSizeBytes + ' octets'}">0 octet</span><br>
+              <span class="mono hash-value" th:text="${endpoint.payloadSha256}">hash</span>
+            </td>
+            <td th:text="${endpoint.completenessLabel()}">COMPLETE · 100%</td>
+            <td>
+              <span th:text="${endpoint.observationId}">1</span><br>
+              <span class="muted" th:text="${endpoint.observationInserted ? 'NOUVELLE_VERSION' : 'DÉDUPLIQUÉE'}">NOUVELLE_VERSION</span>
+            </td>
+          </tr>
+        </th:block>
+        </tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="shell">SofaScore Local Lab — J5 import multi-match local uniquement</div>
+</footer>
+</body>
+</html>

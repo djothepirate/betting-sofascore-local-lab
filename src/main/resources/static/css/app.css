@@ -224,6 +224,83 @@ button:focus-visible {
   margin-top: 5px;
 }
 
+.batch-unavailable-options {
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
+  border: 1px solid var(--line);
+}
+
+.batch-unavailable-options legend {
+  padding: 0 6px;
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.batch-unavailable-list {
+  display: grid;
+  gap: 10px;
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.batch-unavailable-list code {
+  overflow-wrap: anywhere;
+}
+
+.batch-evidence-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  padding: 8px 0;
+  border-bottom: 1px solid #dfe9eb;
+}
+
+.batch-evidence-row:last-child {
+  border-bottom: 0;
+}
+
+.batch-evidence-state {
+  min-width: 76px;
+  padding: 3px 6px;
+  color: var(--muted);
+  background: #edf3f4;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  line-height: 1.25;
+  text-align: center;
+}
+
+.batch-evidence-row[data-evidence-state="file"] .batch-evidence-state,
+.batch-evidence-row[data-evidence-state="declared"] .batch-evidence-state {
+  color: var(--safe);
+  background: #e8f7f0;
+  border-color: #a9d8c6;
+}
+
+.batch-evidence-row[data-evidence-state="conflict"] .batch-evidence-state,
+.batch-evidence-row[data-evidence-state="duplicate"] .batch-evidence-state,
+.batch-evidence-row[data-evidence-state="invalid"] .batch-evidence-state {
+  color: var(--danger);
+  background: #fff0f0;
+  border-color: #efb8b8;
+}
+
+.batch-manifest-status {
+  margin: 4px 0 0;
+}
+
+.batch-manifest-issues {
+  margin: 0;
+  padding: 10px 0 4px 22px;
+  color: var(--danger);
+  font-weight: 650;
+}
+
+.batch-manifest-issues li + li {
+  margin-top: 5px;
+}
+
 .confirmation-phrase {
   display: block;
   padding: 12px;
@@ -869,5 +946,14 @@ footer {
   .panel-heading {
     align-items: flex-start;
     flex-direction: column;
+  }
+
+  .batch-evidence-row {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .batch-evidence-state {
+    grid-column: 2;
+    justify-self: start;
   }
 }

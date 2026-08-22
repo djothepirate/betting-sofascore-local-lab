@@ -6,6 +6,7 @@ import com.bettingproject.sofascorelocal.application.event.J5EventDataQueryServi
 import com.bettingproject.sofascorelocal.application.event.J5OfflineFixtureImportService;
 import com.bettingproject.sofascorelocal.application.event.J5OfflineImportResult;
 import com.bettingproject.sofascorelocal.application.network.J5LocalJsonImportService;
+import com.bettingproject.sofascorelocal.application.network.J5LocalUnavailableEvidence;
 import com.bettingproject.sofascorelocal.application.network.J5RealCampaignResult;
 import com.bettingproject.sofascorelocal.application.network.J5RealControlService;
 import com.bettingproject.sofascorelocal.application.network.J5RealEndpointResult;
@@ -217,10 +218,16 @@ class J5EventDataControllerTest {
                         .param("zone", "Europe/Paris"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(
-                        "Option B — Trois corps JSON, zéro appel")))
+                        "Option B — Trois preuves locales, zéro appel")))
                 .andExpect(content().string(containsString("name=\"statisticsFile\"")))
+                .andExpect(content().string(containsString(
+                        "name=\"statisticsUnavailable404\"")))
                 .andExpect(content().string(containsString("name=\"incidentsFile\"")))
+                .andExpect(content().string(containsString(
+                        "name=\"incidentsUnavailable404\"")))
                 .andExpect(content().string(containsString("name=\"lineupsFile\"")))
+                .andExpect(content().string(containsString(
+                        "name=\"lineupsUnavailable404\"")))
                 .andExpect(content().string(containsString(
                         "https://www.sofascore.com/api/v1/event/900001/statistics")))
                 .andExpect(content().string(containsString(
@@ -462,6 +469,115 @@ class J5EventDataControllerTest {
                 incidents,
                 lineups);
         verifyNoInteractions(realEventDataService);
+    }
+
+    @Test
+    void replacesAnExplicitlyObserved404WithCanonicalLocalEvidence() throws Exception {
+        J4EventSearchItem current = currentEvent();
+        UUID requestId = UUID.fromString("81000000-0000-0000-0000-000000000009");
+        String confirmation =
+                "CONFIRMER J5 REAL 900001 STATISTICS INCIDENTS LINEUPS 654321";
+        RawPayloadEvidence incidents = RawPayloadEvidence.capture(
+                "{\"incidents\":[]}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        RawPayloadEvidence lineups = RawPayloadEvidence.capture(
+                "{\"confirmed\":false}".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+        J5RealCampaignResult result = localImportResult(
+                requestId, current.event().identity().value());
+        when(localJsonImportService.importCampaign(
+                current.event().identity().value(),
+                requestId,
+                confirmation,
+                true,
+                J5LocalUnavailableEvidence.declared404(),
+                incidents,
+                lineups)).thenReturn(result);
+
+        mockMvc.perform(multipart(
+                        "/events/{id}/statistics/real/import-json",
+                        current.event().identity().value())
+                        .file(new MockMultipartFile(
+                                "incidentsFile", "incidents.json", "application/json",
+                                incidents.bytes()))
+                        .file(new MockMultipartFile(
+                                "lineupsFile", "lineups.json", "application/json",
+                                lineups.bytes()))
+                        .param("localFormToken", "one-use-token")
+                        .param("requestId", requestId.toString())
+                        .param("confirmationText", confirmation)
+                        .param("acknowledged", "true")
+                        .param("statisticsUnavailable404", "true")
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("j5RealResult", result))
+                .andExpect(flash().attribute(
+                        "j5RealMessage", containsString("1 déclaration(s) 404")))
+                .andExpect(redirectedUrl(
+                        "/events/" + current.event().identity().value()
+                                + "/statistics?zone=Europe%2FParis"));
+
+        verify(localJsonImportService).importCampaign(
+                current.event().identity().value(),
+                requestId,
+                confirmation,
+                true,
+                J5LocalUnavailableEvidence.declared404(),
+                incidents,
+                lineups);
+        verifyNoInteractions(realEventDataService);
+    }
+
+    @Test
+    void rejectsAFileAndA404DeclarationForTheSameFamily() throws Exception {
+        J4EventSearchItem current = currentEvent();
+
+        mockMvc.perform(multipart(
+                        "/events/{id}/statistics/real/import-json",
+                        current.event().identity().value())
+                        .file(new MockMultipartFile(
+                                "statisticsFile", "statistics.json", "application/json",
+                                "{}".getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                        .file(new MockMultipartFile(
+                                "incidentsFile", "incidents.json", "application/json",
+                                "{}".getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                        .file(new MockMultipartFile(
+                                "lineupsFile", "lineups.json", "application/json",
+                                "{}".getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                        .param("localFormToken", "one-use-token")
+                        .param("requestId", UUID.randomUUID().toString())
+                        .param("confirmationText", "exact phrase")
+                        .param("acknowledged", "true")
+                        .param("statisticsUnavailable404", "true")
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute(
+                        "j5RealMessage", containsString("jamais les deux")));
+
+        verifyNoInteractions(localJsonImportService, realEventDataService);
+    }
+
+    @Test
+    void rejectsAMissingFamilyWithoutA404Declaration() throws Exception {
+        J4EventSearchItem current = currentEvent();
+
+        mockMvc.perform(multipart(
+                        "/events/{id}/statistics/real/import-json",
+                        current.event().identity().value())
+                        .file(new MockMultipartFile(
+                                "incidentsFile", "incidents.json", "application/json",
+                                "{}".getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                        .file(new MockMultipartFile(
+                                "lineupsFile", "lineups.json", "application/json",
+                                "{}".getBytes(java.nio.charset.StandardCharsets.UTF_8)))
+                        .param("localFormToken", "one-use-token")
+                        .param("requestId", UUID.randomUUID().toString())
+                        .param("confirmationText", "exact phrase")
+                        .param("acknowledged", "true")
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute(
+                        "j5RealMessage", containsString("sauf si le 404 observé")));
+
+        verifyNoInteractions(localJsonImportService, realEventDataService);
     }
 
     @Test

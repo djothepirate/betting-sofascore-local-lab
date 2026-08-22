@@ -14,11 +14,37 @@ de la journée `Europe/Paris`, puis affiche leurs liens J5 sans exiger J4. Aprè
 l'opérateur choisit soit au plus un GET direct, soit l'import local du seul corps JSON obtenu
 manuellement. Cette seconde voie exécute zéro transport, refuse HAR/en-têtes/cookies, reste bornée
 à 5 Mio et conserve une provenance distincte. Les tests automatisés exécutent zéro appel
-fournisseur ; toutes les voies restent désactivées par défaut. Depuis chaque rencontre retenue,
-la campagne J5 propose également un choix explicite : trois GET ordonnés, ou l'import local des
-trois seuls corps JSON statistiques, incidents et compositions. Ce lot est prévalidé avant la
-confirmation, conserve trois snapshots de provenance locale et exécute zéro appel fournisseur ;
+  fournisseur ; toutes les voies restent désactivées par défaut. Depuis chaque rencontre retenue,
+  la campagne J5 propose également un choix explicite : trois GET ordonnés, ou l'import local de
+  trois preuves statistiques, incidents et compositions. Chaque preuve est un fichier JSON ou une
+  déclaration fermée « 404 observé » produisant une enveloppe locale canonique. Le lot est prévalidé
+  avant la confirmation, conserve trois snapshots de provenance locale et exécute zéro appel fournisseur ;
 un terminal direct sur 403 exige toujours un redémarrage et une nouvelle préparation.
+
+Le Work Order `WO-SS-20260822-010`, `VALIDATED` et clôturé le 2026-08-23, ajoute un parcours J5
+distinct, exclusivement hors ligne, pour les journées chargées. La page `/j5-import-batches`
+permet de cocher de 1 à 25
+événements canoniques issus d'une recherche date/zone, prépare pendant quinze minutes un plan
+  mémoire déterministe, puis accepte exactement les `3N` preuves nommées par le serveur, sous forme
+  de fichier JSON XOR déclaration 404. Toutes les preuves et l'état canonique sont prévalidés avant
+  le claim ; une transaction PostgreSQL unique
+écrit ensuite le lot ou le rollback intégralement. Ce parcours accepte
+`SOFASCORE_ENABLED=false` comme `SOFASCORE_ENABLED=true`, exige les automatisations coupées et la
+conservation brute active. Même lorsque les voies fournisseur sont armées, le parcours local
+n'invoque ni transport, ni cache fournisseur, ni coordinateur réseau.
+
+La qualification humaine couvre les lots nominaux, les déclarations 404, les manifestes en conflit
+ou incomplets, leur correction avant envoi, l'annulation, le redémarrage sans reprise et le réimport
+dédupliqué avec occurrences append-only. Les tests PostgreSQL comparent les comptes avant et après
+une prévalidation refusée et provoquent un incident sur la dernière famille du dernier match pour
+confirmer le rollback atomique de tout le lot.
+
+La configuration combinée J3/J4/J5 peut rester armée pendant l'import : avec
+`SOFASCORE_ENABLED=true`, les opt-ins, l'origine et les six endpoints autorisés peuvent rendre les
+voies manuelles fournisseur disponibles sans rendre le lot local inéligible. La campagne terminale
+de qualification a importé trois rencontres et neuf fichiers, contrôlé 450 124 octets, produit six
+nouvelles versions et trois déduplications, avec neuf familles `COMPLETE · 100%` et zéro appel
+fournisseur, cache, coordinateur ou retry.
 
 Le jalon **J5 — Statistiques** est validé techniquement et humainement sur sa frontière hors ligne :
 statistiques, incidents et compositions synthétiques, contrôles explicites de complétude,
@@ -201,9 +227,15 @@ techniques, de la recette du runbook J7 et de la revue de publication. La PR `#1
   `MANUAL_LOCAL_JSON_IMPORT` distincte de `DIRECT_LOCAL_ENDPOINT` ;
 - liens directs vers J5 pour les rencontres retenues, sans appel `EVENT_DETAILS`, campagne J4,
   saisie manuelle d'identifiant ou lancement automatique de J5 ;
-- alternative J5 après sa confirmation : import atomique de trois corps JSON, 5 Mio maximum par
-  fichier, scanner sensible, validation complète avant claim, zéro transport/cache et snapshots
+- alternative J5 après sa confirmation : import atomique de trois preuves locales, chacune fournie
+  par fichier JSON ou déclaration 404 explicite, 5 Mio maximum par fichier, scanner sensible,
+  validation complète avant claim, zéro transport/cache et snapshots
   `MANUAL_LOCAL_JSON_IMPORT` normalisés dans l'ordre statistiques → incidents → compositions ;
+- lot J5 multi-match hors ligne séparé sous `/j5-import-batches` : sélection de 1 à 25 UUID
+  canoniques depuis une recherche date/zone, plan mémoire de quinze minutes, `3N` noms stricts et
+  exactement une preuve fichier XOR déclaration 404 par nom, 5 Mio par fichier et 25 Mio cumulés,
+  prévalidation complète puis transaction atomique unique ;
+  provenance V25 et occurrences J6 sont réutilisées sans migration ni historique durable du lot ;
 - catalogue local limité à 50 métadonnées de snapshots bruts et inspection JSON explicite d’une
   ligne, avec contrôle taille/SHA-256, blocage des contenus sensibles, parsing strict, rendu HTML
   échappé et réponse `no-store`, sans transport, téléchargement ou mutation ;
@@ -300,6 +332,12 @@ les transports J3/J4/J5 et impose au moins trois secondes entre leurs départs, 
 jalons. Toutes ces voies interdisent polling, planification et retry. J6/J7 restent locaux et sans
 transport. Les configurations temporaires et leur remise à l'état bloqué sont décrites dans
 `docs/runbooks/RUNBOOK-LOCAL.md`.
+
+Le lot multi-match WO-010 reste indépendant de ces voies armables : l'état de
+`SOFASCORE_ENABLED` n'entre pas dans sa décision d'éligibilité. Son automatisation s'arrête à la
+validation et à l'ingestion synchrones de preuves remises ou déclarées manuellement ; elle
+n'observe aucun répertoire et ne lance aucune acquisition, tâche planifiée ou reprise automatique,
+même lorsque le connecteur et les qualifications manuelles sont activés.
 
 La découverte tournoi est une autre voie spéciale : elle exige ensemble
 `SOFASCORE_ENABLED=true`, `SOFASCORE_J3_QUALIFICATION_ENABLED=true` et
@@ -642,6 +680,10 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Architecture des événements canoniques J4](docs/architecture/J4-CANONICAL-EVENTS-AND-LOCAL-DETAIL.md)
 - [Architecture J5 hors ligne et contrôles de complétude](docs/architecture/J5-OFFLINE-EVENT-DATA-AND-COMPLETENESS.md)
 - [Architecture de la qualification réelle gardée J5](docs/architecture/J5-GUARDED-REAL-EVENT-DATA.md)
+- [Architecture du lot J5 hors ligne multi-match](docs/architecture/J5-OFFLINE-MULTI-MATCH-IMPORT.md)
+- [Règles du lot J5 hors ligne multi-match](docs/requirements/J5-OFFLINE-MULTI-MATCH-IMPORT-RULES.md)
+- [Readiness du lot J5 hors ligne multi-match](docs/validation/J5-OFFLINE-MULTI-MATCH-IMPORT-TECHNICAL-READINESS-20260822.md)
+- [Work Order validé du lot J5 hors ligne multi-match](docs/work_orders/completed/WO-SS-20260822-010-j5-offline-multi-match-import.md)
 - [Architecture J6 — historique et rétention gardée](docs/architecture/J6-HISTORY-AND-GUARDED-RETENTION.md)
 - [Architecture J7 — export canonique local et audité](docs/architecture/J7-CANONICAL-EVENT-EXPORT.md)
 - [Architecture J3 → J5 — découverte tournoi → rencontres](docs/architecture/J3-J5-TOURNAMENT-EVENT-DISCOVERY.md)

@@ -4,6 +4,131 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### J5 — import hors ligne multi-match atomique
+
+- correction issue de la recette Borussia Dortmund — FC Bayern München (`16248441`) : chaque
+  famille de l'import J5 unitaire et multi-match accepte désormais exactement une preuve, soit un
+  fichier JSON, soit une case « 404 observé ». La case crée sans réseau l'enveloppe canonique locale
+  `{"error":{"code":404,"message":"LOCAL_OPERATOR_DECLARED_HTTP_404"}}`; fichier plus case,
+  famille sans preuve, code libre et inférence depuis l'état du match restent refusés avant claim ;
+- assistance de manifeste avant envoi : la page affiche les comptes fichiers, déclarations 404 et
+  saisies sur `3N`, marque chaque preuve `FICHIER`, `404`, `CONFLIT`, `DOUBLON`, `INVALIDE` ou
+  `À FOURNIR`, nomme les anomalies et désactive localement l'import tant que l'ensemble n'est pas
+  exact. Le script ne lit que noms et tailles, reste de même origine et la validation serveur garde
+  seule autorité ; les autres pages conservent `script-src 'none'` ;
+- nouvelle page locale `/j5-import-batches`, liée depuis la recherche et les fiches J5, permettant
+  de cocher de 1 à 25 UUID canoniques déjà présents pour une date et une zone, sans champ
+  d'identifiant fournisseur libre ;
+- plan déterministe conservé quinze minutes en mémoire, trié par `providerEventId`, lié aux
+  observations canoniques courantes, aux trois noms attendus par match, à un SHA-256 versionné et
+  à la phrase exacte `IMPORTER {N} MATCHS J5 HORS LIGNE {PLAN_SHA256}` ;
+- multipart plat composé de 0 à 75 `batchFiles` et de déclarations `unavailable404`, pour exactement
+  `3N` preuves strictes, 5 Mio par fichier et 25 Mio cumulés ; manifeste, tailles, contenu sensible,
+  enveloppe 404, JSON, parseurs et état
+  canonique sont tous contrôlés avant claim et avant écriture ; le seuil multipart mémoire de
+  32 MB empêche le conteneur de créer un fichier temporaire avant ces contrôles, et la borne
+  Tomcat de 82 parties autorise 75 preuves, les six champs du lot maximal et l'éventuelle sentinelle
+  vide du sélecteur de fichiers ; toutes
+  les parties natives sont énumérées, les six contrôles doivent être uniques et la disposition
+  ASCII brute refuse `filename*`, les encodages et toute partie inconnue avant capture ;
+- contrôle mémoire `J5OfflineBatchControlService` indépendant du contrôle réel, accessible avec
+  `SOFASCORE_ENABLED=false` ou `true` lorsque le rafraîchissement et le polling sont désarmés et la
+  conservation brute active. Les qualifications, la découverte, l'origine et l'allowlist peuvent
+  rester armées ; un test de contexte reprend exactement la configuration combinée J3/J4 phase
+  2/J5/découverte avec le connecteur activé ;
+- réutilisation du processeur local J5 pour écrire les `3N` traitements dans l'ordre stable au
+  sein d'une transaction PostgreSQL `REPEATABLE_READ` unique ; toute erreur tardive annule
+  snapshots, occurrences et observations de l'ensemble du lot ;
+- provenance `MANUAL_LOCAL_JSON_IMPORT`, déduplication V25 et occurrences J6 conservées sans
+  migration nouvelle ; un réimport explicite peut dédupliquer les données tout en ajoutant les
+  occurrences, et un snapshot dédupliqué encore `RAW_ONLY` est reclassifié dans la transaction,
+  sans persister de plan ou d'historique propre au lot ;
+- zéro transport, cache fournisseur ou coordinateur réseau, et aucun scheduler, watcher, retry,
+  staging, archive, tâche de fond ou reprise après redémarrage ;
+- validation corrective du 2026-08-22 : 64 tests ciblés, puis `clean verify` à 609 tests, 2 ignorés,
+  et 51 tests PostgreSQL d'intégration sur PostgreSQL 18.4 et 25 migrations jusqu'à V25 ; le script
+  `Verify-Local.ps1 -WithIntegrationTests` rend `PASS` et confirme zéro appel SofaScore. Les
+  validations finales portent `clean verify` à 614 tests, 2 ignorés, et la suite PostgreSQL à
+  52 tests. Le navigateur local valide
+  `CONFLIT`, `DOUBLON`, le retour exact `FICHIER / 404 / 404`, les vues desktop/mobile sans
+  débordement et zéro erreur console, sans soumettre le formulaire ; la CSP couvre aussi l'URL
+  locale réécrite avec `;jsessionid` sans élargir les autres routes. La qualification humaine hors
+  ligne complète reste en attente et le Work Order demeure actif ;
+- première recette humaine nominale positive sur Olympique de Marseille — RC Strasbourg
+  (`16310922`) : plan d'une rencontre, trois imports locaux, 146 706 octets, snapshots 417/418/419
+  et observations 222/223/224 tous `COMPLETE · 100%`, avec zéro appel fournisseur, cache,
+  coordinateur ou retry. La relecture SQL confirme `MANUAL_LOCAL_JSON_IMPORT`, HTTP 200, `PARSED`
+  et une occurrence `INSERTED` par snapshot. Cette preuve reste partielle : le lot multi-match avec
+  404, les comptes avant/après d'un refus, le rollback tardif, le réimport dédupliqué et le
+  redémarrage sans reprise restent requis avant `VALIDATED`.
+- recette complémentaire sur Borussia Dortmund — FC Bayern München (`16248441`) : statistiques
+  snapshot 473 / observation 225 `UNAVAILABLE · N/A`, incidents snapshot 474 / observation 226
+  `EMPTY_VALID · 100%`, compositions snapshot 475 / observation 227 `PARTIAL · 97%`, zéro appel
+  fournisseur. Le traitement était correct, mais la création manuelle obligatoire d'un fichier
+  depuis le corps 404 non téléchargeable a déclenché le correctif de déclaration locale ci-dessus ;
+- requalification multi-match positive : demande `465f6849-e585-4b3f-9182-a21f91770dea`, quatre
+  rencontres, douze preuves dont trois déclarations 404, 363 863 octets contrôlés, résultat
+  `COMPLETED` et zéro appel fournisseur, cache, coordinateur ou retry. Le Work Order revient à
+  `IMPLEMENTED_AWAITING_HUMAN_QUALIFICATION` pour les portes de clôture restantes ;
+- qualification propriétaire du parcours d'import multi-match : demande
+  `7ecf9176-79c4-49bf-89cd-5a39e5ce3634`, deux rencontres, quatre fichiers plus deux déclarations
+  404, six preuves, 106 210 octets contrôlés, résultat `COMPLETED` et tous les compteurs réseau à
+  zéro. Le terminal affiche trois `NOUVELLE_VERSION` et trois `DÉDUPLIQUÉE` ; un second plan valide
+  humainement les états de manifeste `À FOURNIR` puis `404`. Le parcours et son assistance sont
+  concluants, sans assimiler cette preuve aux comptes SQL, au rollback tardif ou au redémarrage
+  sans reprise encore requis pour la clôture ;
+- recette négative puis corrective du manifeste sur Saint-Étienne — Grenoble Foot 38 : un nom hors
+  plan et un fichier combiné à une déclaration 404 sont nommés avant envoi, la famille est marquée
+  `CONFLIT` et l'import reste désactivé. Les trois fichiers attendus rétablissent ensuite, sur le
+  même plan, un manifeste exact et permettent un import réussi d'une rencontre et trois preuves,
+  sans déclaration 404 ni appel fournisseur. Cette preuve qualifie le garde-fou local et sa reprise,
+  mais pas encore les comptes SQL avant/après un rejet serveur ;
+- qualification propriétaire de l'annulation avant import : la demande
+  `7b929722-2808-41c2-b20f-24dd1c61b5ce` termine en `OPERATOR_STOP` pour une rencontre planifiée,
+  zéro preuve, zéro octet, aucun résultat par famille et tous les compteurs réseau à zéro. Aucun
+  corps JSON n'est persisté ; le scénario de redémarrage sans reprise reste une porte distincte ;
+- qualification propriétaire du redémarrage sans reprise : après interruption du processus, la
+  recherche restitue les événements canoniques persistés mais aucun plan, formulaire de confirmation
+  ni résultat terminal antérieur. Le contrôle du lot est recalculé en `LOCKED`, aucune reprise
+  automatique n'apparaît et le listener de validation n'est plus actif après les captures. Cette
+  porte passe à `PASS` ; restent les comptes SQL, le rollback tardif et le comptage d'occurrences
+  du réimport dédupliqué ;
+- qualification propriétaire et SQL du réimport dédupliqué : deux demandes successives importent
+  le même manifeste de deux rencontres, six fichiers et 318 884 octets avec zéro réseau. La première
+  crée les snapshots 508 à 513 et observations 252 à 257 ; la seconde réutilise les mêmes objets et
+  les marque tous `DÉDUPLIQUÉE`. Une lecture JDBC PostgreSQL confirme, pour chaque snapshot, deux
+  occurrences append-only ordonnées `INSERTED,DEDUPLICATED`, sans nouveau snapshot ni nouvelle
+  observation ;
+- compatibilité de configuration corrigée : le lot hors ligne reste disponible avec
+  `SOFASCORE_ENABLED=true` lorsque les opt-ins J3, J4 phase 2, J5 et découverte tournoi, l'origine
+  et les six endpoints sont configurés. Les politiques manuelles réelles peuvent alors être
+  éligibles, mais le lot ne dépend toujours d'aucun transport, cache ou coordinateur. Ses seules
+  causes de blocage propres restent une automatisation active ou la désactivation de la
+  conservation brute ;
+- preuves de résilience complémentaires automatisées :
+  `rejectsTheWholeOfflineBatchDuringPrevalidationWithoutPersistence` relève par JDBC les comptes
+  `provider_snapshot`, `provider_snapshot_occurrence` et `j5_event_data_observation` avant et après
+  un refus `LINEUPS_PAYLOAD_INCOMPATIBLE`, puis exige leur égalité et un plan encore
+  `AWAITING_CONFIRMATION`. Le test
+  `rollsBackTheWholeOfflineBatchWhenTheLastFamilyOfTheLastEventFails` injecte ensuite un incident
+  PostgreSQL sur la dernière famille du dernier match et exige zéro écriture résiduelle pour tout le
+  lot. Les deux tests ciblés et les 52 tests d'intégration passent sur PostgreSQL 18.4, sans pgAdmin
+  ni client `psql` ;
+- validation runtime de la configuration combinée avec `SOFASCORE_ENABLED=true` sur
+  `127.0.0.1:8091` : HTTP 200, recherche et préparation locales présentes, badge
+  `ZÉRO APPEL FOURNISSEUR`, aucun verrouillage du lot et aucun bloqueur lié au connecteur maître ;
+- qualification propriétaire effective de cette configuration armée : demande
+  `fd7b7833-5d5c-464c-bcf8-d7a2aa26e90b`, trois rencontres, neuf fichiers, zéro déclaration 404 et
+  450 124 octets contrôlés. Le lot termine `COMPLETED_LOCKED` avec neuf résultats
+  `COMPLETE · 100%`, six `NOUVELLE_VERSION`, trois `DÉDUPLIQUÉE` et zéro appel fournisseur,
+  opération cache fournisseur, acquisition coordinateur ou retry automatique. Cette preuve ferme
+  la qualification humaine de compatibilité avec `SOFASCORE_ENABLED=true` ; seule la décision
+  explicite de clôture du Work Order reste en attente.
+- clôture propriétaire du 2026-08-23 : toutes les portes automatisées, PostgreSQL et humaines sont
+  acceptées ; `WO-SS-20260822-010` passe à `VALIDATED` et rejoint `docs/work_orders/completed`.
+  Cette décision n'autorise aucun appel fournisseur supplémentaire et ne modifie aucun statut de
+  gouvernance du laboratoire.
+
 ### Évolution J3 → J5 — découverte tournoi → rencontres
 
 - catalogue de sélection reconstruit exclusivement depuis les snapshots exacts de la preuve J3
@@ -36,8 +161,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   et scanné avant consommation de l'intention ; cette voie refuse HAR, en-têtes, cookies et
   secrets, exécute zéro transport, n'utilise pas le cache fournisseur et réemploie le même parseur,
   la même projection et la même transaction canonique ;
-- extension de l'alternative hors réseau jusqu'à J5 : après une nouvelle préparation, l'opérateur
-  peut choisir les trois corps JSON statistiques, incidents et compositions au lieu des trois GET ;
+- extension unitaire de l'alternative hors réseau jusqu'à J5, pour une seule rencontre : après une nouvelle préparation, l'opérateur
+  peut choisir trois preuves locales statistiques, incidents et compositions au lieu des trois GET ;
   le lot est scanné puis prévalidé atomiquement avant claim, conserve trois snapshots sous
   `MANUAL_LOCAL_JSON_IMPORT`, réemploie les parseurs J5 courants et expose séparément zéro appel
   fournisseur et trois imports locaux ; seule une enveloppe JSON fermée `error.code=404` représente

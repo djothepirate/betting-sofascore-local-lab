@@ -5,6 +5,7 @@ import com.bettingproject.sofascorelocal.application.network.J4EventDetailsQuali
 import com.bettingproject.sofascorelocal.application.network.J4EventDetailsPhase2QualificationPolicy;
 import com.bettingproject.sofascorelocal.application.network.J5RealQualificationPolicy;
 import com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryQualificationPolicy;
+import com.bettingproject.sofascorelocal.application.event.J5OfflineBatchPolicy;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.J5EventDataProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
@@ -62,6 +63,21 @@ class SofascorePropertiesTest {
         assertThat(properties.isLivePollingEnabled()).isFalse();
         assertThat(properties.getAllowedEndpoints()).isEmpty();
         assertThat(validator.validate(properties)).isEmpty();
+    }
+
+    @Test
+    void keepsMultipartPartsInMemoryWithinTheBoundedRequest() {
+        contextRunner.run(context -> {
+            assertThat(context.getStartupFailure()).isNull();
+            assertThat(context.getEnvironment().getProperty(
+                    "spring.servlet.multipart.max-file-size")).isEqualTo("6MB");
+            assertThat(context.getEnvironment().getProperty(
+                    "spring.servlet.multipart.max-request-size")).isEqualTo("32MB");
+            assertThat(context.getEnvironment().getProperty(
+                    "spring.servlet.multipart.file-size-threshold")).isEqualTo("32MB");
+            assertThat(context.getEnvironment().getProperty(
+                    "server.tomcat.max-part-count")).isEqualTo("82");
+        });
     }
 
     @Test
@@ -123,18 +139,70 @@ class SofascorePropertiesTest {
     }
 
     @Test
-    void rejectsAnIncompleteOrExpandedQualificationOptIn() {
+    void treatsQualificationSettingsAsDormantUntilTheMasterConnectorIsEnabled() {
         SofascoreProperties properties = new SofascoreProperties();
         properties.setJ3QualificationEnabled(true);
+
+        assertThat(validator.validate(properties)).isEmpty();
+
+        properties.setEnabled(true);
 
         assertThat(validator.validate(properties))
                 .anyMatch(violation -> violation.getMessage().contains("J3 qualification"));
 
-        properties.setEnabled(true);
         properties.setAllowedEndpoints(java.util.Set.of(
                 com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType.SCHEDULED_EVENTS));
 
         assertThat(validator.validate(properties)).isEmpty();
+    }
+
+    @Test
+    void bindsTheDocumentedCombinedProviderConfigurationForTheOfflineBatch() {
+        contextRunner
+                .withSystemProperties(
+                        "SOFASCORE_ENABLED=true",
+                        "SOFASCORE_J3_QUALIFICATION_ENABLED=true",
+                        "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true",
+                        "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=true",
+                        "SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=true",
+                        "SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED=true",
+                        "SOFASCORE_BASE_URL=https://www.sofascore.com",
+                        "SOFASCORE_ALLOWED_ENDPOINTS="
+                                + "SCHEDULED_EVENTS,TOURNAMENT_SCHEDULED_EVENTS,"
+                                + "EVENT_DETAILS,EVENT_STATISTICS,EVENT_INCIDENTS,EVENT_LINEUPS")
+                .run(context -> {
+                    assertThat(context.getStartupFailure()).isNull();
+
+                    SofascoreProperties properties = context.getBean(SofascoreProperties.class);
+                    assertThat(properties.isEnabled()).isTrue();
+                    assertThat(properties.isJ3QualificationEnabled()).isTrue();
+                    assertThat(properties.isJ4EventDetailsQualificationEnabled()).isTrue();
+                    assertThat(properties.isJ4EventDetailsPhase2Enabled()).isTrue();
+                    assertThat(properties.isJ5EventDataQualificationEnabled()).isTrue();
+                    assertThat(properties.isTournamentEventDiscoveryEnabled()).isTrue();
+                    assertThat(properties.getBaseUrl())
+                            .isEqualTo("https://www.sofascore.com");
+                    assertThat(properties.getAllowedEndpoints())
+                            .containsExactlyInAnyOrder(
+                                    SofascoreEndpointType.SCHEDULED_EVENTS,
+                                    SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
+                                    SofascoreEndpointType.EVENT_DETAILS,
+                                    SofascoreEndpointType.EVENT_STATISTICS,
+                                    SofascoreEndpointType.EVENT_INCIDENTS,
+                                    SofascoreEndpointType.EVENT_LINEUPS);
+
+                    assertThat(context.getBean(J5OfflineBatchPolicy.class)
+                            .snapshot().available()).isTrue();
+                    assertThat(context.getBean(J3ProviderQualificationPolicy.class)
+                            .snapshot().available()).isTrue();
+                    assertThat(context.getBean(J4EventDetailsPhase2QualificationPolicy.class)
+                            .snapshot().available()).isTrue();
+                    assertThat(context.getBean(J5RealQualificationPolicy.class)
+                            .snapshot().available()).isTrue();
+                    assertThat(context.getBean(
+                            TournamentEventDiscoveryQualificationPolicy.class)
+                            .snapshot().available()).isTrue();
+                });
     }
 
     @Test
@@ -249,9 +317,13 @@ class SofascorePropertiesTest {
     }
 
     @Test
-    void rejectsPhaseTwoWithoutTheMainJ4QualificationOptIn() {
+    void rejectsPhaseTwoWithoutTheMainJ4QualificationOptInWhenTheConnectorIsEnabled() {
         SofascoreProperties properties = new SofascoreProperties();
         properties.setJ4EventDetailsPhase2Enabled(true);
+
+        assertThat(validator.validate(properties)).isEmpty();
+
+        properties.setEnabled(true);
 
         assertThat(validator.validate(properties))
                 .anyMatch(violation -> violation.getMessage().contains("phase 2"));
@@ -405,7 +477,8 @@ class SofascorePropertiesTest {
             J4EventDetailsQualificationPolicy.class,
             J4EventDetailsPhase2QualificationPolicy.class,
             J5RealQualificationPolicy.class,
-            TournamentEventDiscoveryQualificationPolicy.class})
+            TournamentEventDiscoveryQualificationPolicy.class,
+            J5OfflineBatchPolicy.class})
     static class EnvironmentBindingConfiguration {
     }
 }

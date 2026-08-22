@@ -7,6 +7,7 @@ import com.bettingproject.sofascorelocal.application.event.J5OfflineImportExcept
 import com.bettingproject.sofascorelocal.application.network.J5LocalJsonImportError;
 import com.bettingproject.sofascorelocal.application.network.J5LocalJsonImportException;
 import com.bettingproject.sofascorelocal.application.network.J5LocalJsonImportService;
+import com.bettingproject.sofascorelocal.application.network.J5LocalUnavailableEvidence;
 import com.bettingproject.sofascorelocal.application.network.J5RealControlException;
 import com.bettingproject.sofascorelocal.application.network.J5RealControlService;
 import com.bettingproject.sofascorelocal.application.network.J5RealEventDataService;
@@ -121,7 +122,7 @@ public class J5EventDataController {
             realControlService.prepare(canonicalEventId, eventId);
             redirectAttributes.addFlashAttribute(
                     "j5RealMessage",
-                    "Campagne préparée sans transport. Recopiez exactement la phrase affichée puis choisissez une seule voie : trois appels ordonnés ou l’import local des trois corps JSON.");
+                    "Campagne préparée sans transport. Recopiez exactement la phrase affichée puis choisissez une seule voie : trois appels ordonnés ou l’import local de trois preuves JSON.");
             redirectAttributes.addFlashAttribute("j5RealMessageKind", "safe");
         }
         catch (J5RealControlException exception) {
@@ -140,21 +141,39 @@ public class J5EventDataController {
             @RequestParam("requestId") UUID requestId,
             @RequestParam("confirmationText") String confirmationText,
             @RequestParam(name = "acknowledged", defaultValue = "false") boolean acknowledged,
-            @RequestParam("statisticsFile") MultipartFile statisticsFile,
-            @RequestParam("incidentsFile") MultipartFile incidentsFile,
-            @RequestParam("lineupsFile") MultipartFile lineupsFile,
+            @RequestParam(name = "statisticsFile", required = false)
+                    MultipartFile statisticsFile,
+            @RequestParam(name = "statisticsUnavailable404", defaultValue = "false")
+                    boolean statisticsUnavailable404,
+            @RequestParam(name = "incidentsFile", required = false)
+                    MultipartFile incidentsFile,
+            @RequestParam(name = "incidentsUnavailable404", defaultValue = "false")
+                    boolean incidentsUnavailable404,
+            @RequestParam(name = "lineupsFile", required = false)
+                    MultipartFile lineupsFile,
+            @RequestParam(name = "lineupsUnavailable404", defaultValue = "false")
+                    boolean lineupsUnavailable404,
             @RequestParam(
                     name = "zone",
                     defaultValue = J4EventQueryService.DEFAULT_ZONE_ID) String zone,
             HttpSession session,
             RedirectAttributes redirectAttributes) {
         formTokenService.consume(session, localFormToken);
-        RawPayloadEvidence statistics = readLocalJson(
-                statisticsFile, "statistiques", redirectAttributes);
-        RawPayloadEvidence incidents = readLocalJson(
-                incidentsFile, "incidents", redirectAttributes);
-        RawPayloadEvidence lineups = readLocalJson(
-                lineupsFile, "compositions", redirectAttributes);
+        RawPayloadEvidence statistics = readLocalEvidence(
+                statisticsFile,
+                statisticsUnavailable404,
+                "statistiques",
+                redirectAttributes);
+        RawPayloadEvidence incidents = readLocalEvidence(
+                incidentsFile,
+                incidentsUnavailable404,
+                "incidents",
+                redirectAttributes);
+        RawPayloadEvidence lineups = readLocalEvidence(
+                lineupsFile,
+                lineupsUnavailable404,
+                "compositions",
+                redirectAttributes);
         if (statistics != null && incidents != null && lineups != null) {
             try {
                 var result = localJsonImportService.importCampaign(
@@ -167,9 +186,14 @@ public class J5EventDataController {
                         lineups);
                 redirectAttributes.addFlashAttribute("j5RealResult", result);
                 if (result.completed()) {
+                    int declarations = (statisticsUnavailable404 ? 1 : 0)
+                            + (incidentsUnavailable404 ? 1 : 0)
+                            + (lineupsUnavailable404 ? 1 : 0);
                     redirectAttributes.addFlashAttribute(
                             "j5RealMessage",
-                            "Campagne J5 importée et validée : 0 appel fournisseur, trois snapshots JSON locaux et trois observations ordonnées. Le circuit est reverrouillé.");
+                            "Campagne J5 importée et validée : 0 appel fournisseur, trois preuves JSON locales dont "
+                                    + declarations
+                                    + " déclaration(s) 404, et trois observations ordonnées. Le circuit est reverrouillé.");
                     redirectAttributes.addFlashAttribute("j5RealMessageKind", "safe");
                 }
                 else {
@@ -268,14 +292,27 @@ public class J5EventDataController {
         redirectAttributes.addFlashAttribute("j5RealErrorCode", code);
     }
 
-    private static RawPayloadEvidence readLocalJson(
+    private static RawPayloadEvidence readLocalEvidence(
             MultipartFile file,
+            boolean unavailable404,
             String familyLabel,
             RedirectAttributes redirectAttributes) {
-        if (file == null || file.isEmpty()) {
+        boolean fileSelected = file != null && !file.isEmpty();
+        if (fileSelected && unavailable404) {
             addLocalImportError(
                     redirectAttributes,
-                    "Le fichier JSON des " + familyLabel + " est obligatoire.");
+                    "Choisissez pour les " + familyLabel
+                            + " soit un fichier JSON, soit la déclaration 404, jamais les deux.");
+            return null;
+        }
+        if (unavailable404) {
+            return J5LocalUnavailableEvidence.declared404();
+        }
+        if (!fileSelected) {
+            addLocalImportError(
+                    redirectAttributes,
+                    "Le fichier JSON des " + familyLabel
+                            + " est obligatoire sauf si le 404 observé est explicitement déclaré.");
             return null;
         }
         if (file.getSize() > RawPayloadEvidence.MAXIMUM_BYTES) {
