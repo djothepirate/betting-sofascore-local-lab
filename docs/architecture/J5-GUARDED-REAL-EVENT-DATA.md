@@ -7,9 +7,12 @@ EXPERIMENTAL
 LOCAL_ONLY
 NOT_PRODUCTION_APPROVED
 NO_CRITICAL_DEPENDENCY
-PROVIDER_SCHEMA_VALIDATED=YES
-PROVIDER_SCHEMA_VALIDATION_SCOPE=V13_EVENTS_16691018_AND_16851672
-CURRENT_INCIDENT_PARSER=event-incidents-v13
+V13_PROVIDER_SCHEMA_VALIDATED=YES
+V13_PROVIDER_SCHEMA_VALIDATION_SCOPE=EVENTS_16691018_AND_16851672
+CURRENT_INCIDENT_PARSER=event-incidents-v14
+V14_PROVIDER_SCHEMA_VALIDATED=YES_OWNER_LOCAL_JSON_IMPORT
+V14_PROVIDER_SCHEMA_VALIDATION_SCOPE=EVENT_16809018_OBSERVATIONS_567_AND_570
+V14_HUMAN_FUNCTIONAL_QUALIFICATION=PASS
 V12_OFFLINE_QUALIFICATION=PASS_33_INCIDENTS_14_UNMINUTED_SHOOTOUTS
 V13_LEAVING_FIELD_OFFLINE_QUALIFICATION=PASS_EXACT_CARD_REASON
 V12_REAL_QUALIFICATION=PASS_UNDER_V13_EVENT_16691018_SNAPSHOT_189_OBSERVATION_100
@@ -24,8 +27,9 @@ J4_LOCKED_AFTER_RESTART=PASS
 J5_LOCKED_AFTER_RESTART=PASS
 CURRENT_APPLICATION_LISTENER=ABSENT_127_0_0_1_8087
 FINAL_APPLICATION_STOPPED_AFTER_RELOCK=PASS
-WORK_ORDER_ARCHIVABLE=YES
-WORK_ORDER_STATUS=VALIDATED
+V13_WORK_ORDER_ARCHIVABLE=YES
+V13_WORK_ORDER_STATUS=VALIDATED
+V14_WORK_ORDER_STATUS=VALIDATED
 ```
 
 Cette architecture complète le contrat synthétique J5 V1 sans le remplacer. Elle autorise une
@@ -190,7 +194,7 @@ Pour chaque famille, qu'elle soit acquise directement ou importée localement :
    reste immuable et le résultat du parseur courant est porté uniquement par l'observation
    normalisée append-only.
 
-Les parseurs courants sont `event-statistics-v2`, `event-incidents-v13` et `event-lineups-v2`.
+Les parseurs courants sont `event-statistics-v2`, `event-incidents-v14` et `event-lineups-v2`.
 L'identifiant d'événement vient du claim et non du JSON. Les champs inconnus génèrent au plus 256
 avertissements.
 Une liste vide structurellement valide reste `EMPTY_VALID`; une absence facultative mesurée reste
@@ -319,6 +323,13 @@ le snapshot brut, la raison normalisée et la colonne `MOTIF`; aucune traduction
 large n'est déduite. V12 rejette encore cette forme sur le chemin `reason`, V13 l'accepte, et une
 valeur future non documentée reste `SCHEMA_INCOMPATIBLE`. La migration append-only V20 autorise
 V13 sans modifier la contrainte temporelle de V19 et sans réécrire les observations V1–V19.
+
+`event-incidents-v14` conserve toutes les règles V13 et ajoute uniquement le libellé exact
+`text="Extra time"` aux incidents `period` live. Cette valeur représente une prolongation en cours,
+reste distincte du marqueur terminal `ET` et est conservée sans traduction. Une valeur
+`isLive=false` explicite produit `SCHEMA_INCOMPATIBLE`; l'absence de `isLive` reste une donnée
+partielle mesurée. La migration append-only V26 autorise V14 sans colonne nouvelle et sans
+réécrire les observations V1–V25.
 
 La déduplication brute est indépendante du parseur courant. Une réponse incidents identique peut
 donc résoudre un snapshot V2 historiquement `SCHEMA_INCOMPATIBLE` alors que V4 la parse avec

@@ -577,7 +577,7 @@ ouvrir la fiche d'une identité canonique J4 existante puis sélectionner
    appel, `localJsonImports=3`, trois snapshots et trois observations dans le même ordre ;
 8. si l'état du contrôle est `COMPLETED_LOCKED`, vérifier les trois panneaux locaux, leur complétude ou
    leur statut `UNAVAILABLE · N/A`, leur source `PROVIDER_SNAPSHOT`, leur parseur courant
-   (`event-statistics-v2`, `event-incidents-v13`, `event-lineups-v2`) ou normaliseur
+   (`event-statistics-v2`, `event-incidents-v14`, `event-lineups-v2`) ou normaliseur
    `event-*-unavailable-v1`, leur snapshot, leur SHA-256 et leur heure de réception, sans ouvrir ou
    copier le payload brut ;
 9. dans les panneaux incidents et compositions, vérifier qu'une complétude `PARTIAL` conserve son
@@ -601,7 +601,7 @@ Ce verrou est volontaire : arrêter l'application, la redémarrer, préparer une
 obtenir une nouvelle phrase et choisir immédiatement l'option B. L'import n'est jamais un retry ni
 un fallback automatique de la campagne échouée.
 
-Sous `event-incidents-v13`, qui hérite sans modification de la règle V12, une séance terminale
+Sous `event-incidents-v14`, qui hérite sans modification de la règle V12, une séance terminale
 entièrement non minutée peut être compatible à
 `PARTIAL`. Vérifier alors que le marqueur `PEN` et chaque `penaltyShootout` sans minute affichent
 `—`, que les tirs `missed` sans `reason` ni `description` sont conservés sans motif inventé, et que
@@ -611,6 +611,11 @@ Pour un carton portant `reason="Leaving field"`, vérifier que le motif exact es
 dans la colonne `MOTIF`, puis que la campagne atteint les compositions. Toute autre valeur de motif
 non documentée doit encore arrêter la campagne en `SCHEMA_INCOMPATIBLE`.
 Toute séance mixte ou incohérente doit rester `SCHEMA_INCOMPATIBLE` et verrouiller la campagne.
+
+Pour un incident `period` portant `text="Extra time"`, vérifier que le libellé exact est conservé
+dans `DÉTAIL`, que la minute fournisseur reste affichée et que la campagne atteint les
+compositions. Ce marqueur exige `isLive=true` lorsqu'il est fourni et ne doit pas être confondu
+avec le marqueur terminal `ET`.
 
 Après succès, incident ou abandon, et avant tout autre redémarrage, remettre exactement :
 
@@ -1288,7 +1293,7 @@ Aucun Docker ni accès SofaScore n’est requis par les tests standards.
 .\mvnw.cmd -Pintegration-tests verify
 ```
 
-Docker doit être disponible. Testcontainers vérifie les migrations V1 à V25, l’état initial du
+Docker doit être disponible. Testcontainers vérifie les migrations V1 à V26, l’état initial du
 connecteur, la conservation exacte du brut, sa déduplication, les provenances J4/J5, les occurrences
 J6, la rétention auditée et la portée cache `TOURNAMENT_SCHEDULED_EVENTS` dans une base éphémère.
 Pour WO-010, il vérifie aussi le commit atomique des `3N` familles, le réimport avec occurrences

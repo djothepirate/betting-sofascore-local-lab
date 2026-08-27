@@ -1,0 +1,43 @@
+{
+  "incidents": [
+    {
+      "text": "Extra time",
+      "homeScore": 1,
+      "awayScore": 1,
+      "isLive": true,
+      "time": 120,
+      "addedTime": 999,
+      "timeSeconds": 7200,
+      "incidentType": "period",
+      "reversedPeriodTime": 1,
+      "reversedPeriodTimeSeconds": 0,
+      "periodTimeSeconds": 900
+    },
+    {
+      "text": "FT",
+      "homeScore": 1,
+      "awayScore": 1,
+      "isLive": false,
+      "time": 90,
+      "addedTime": 999,
+      "timeSeconds": 5400,
+      "incidentType": "period",
+      "reversedPeriodTime": 1,
+      "reversedPeriodTimeSeconds": 0,
+      "periodTimeSeconds": 2700
+    },
+    {
+      "text": "HT",
+      "homeScore": 1,
+      "awayScore": 0,
+      "isLive": false,
+      "time": 45,
+      "addedTime": 999,
+      "timeSeconds": 2700,
+      "incidentType": "period",
+      "reversedPeriodTime": 1,
+      "reversedPeriodTimeSeconds": 0,
+      "periodTimeSeconds": 2700
+    }
+  ]
+}

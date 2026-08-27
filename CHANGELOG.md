@@ -66,7 +66,25 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   L'application est arrêtée gracieusement, sans listener `127.0.0.1:8087`, JVM applicatif ou worker
   Playwright résiduel. Le Work Order rejoint `docs/work_orders/completed`; aucun appel supplémentaire
   n'est autorisé par cette clôture.
+### J5 — marqueur de prolongation live `Extra time`
 
+- nouvelle règle incidents : le parseur versionné `event-incidents-v14` accepte exactement
+  `incidentType="period"`, `text="Extra time"`, `isLive=true`, conserve le libellé brut dans le
+  détail J5 et le distingue du marqueur terminal `ET` ;
+- V6 à V13 restent immuables. V13 rejette encore la nouvelle valeur sur
+  `$.incidents[0].text`, une valeur V14 explicitement associée à `isLive=false` reste
+  `SCHEMA_INCOMPATIBLE`, et l'absence de `isLive` produit une complétude `PARTIAL` ;
+- les parcours J5 direct, import JSON local unitaire et lot hors ligne utilisent désormais V14 ;
+  aucune URI, permission réseau, boucle, retry ou automatisation navigateur n'est ajouté ;
+- migration append-only `V26__j5_live_extra_time_period.sql` ajoutant uniquement V14 à la
+  contrainte de version de parseur, sans colonne ni réécriture des observations V1–V25 ;
+- fixture minimale anonymisée et tests dédiés couvrant la fidélité du SHA-256, la sentinelle
+  `addedTime=999`, la minute 120, les voies directe et zéro appel, la compatibilité V13 ainsi que
+  l'upgrade PostgreSQL V25→V26 ;
+- qualification fonctionnelle propriétaire finale : deux imports locaux zéro appel sont
+  `COMPLETE · 100%` sous `event-incidents-v14`, avec 24 incidents et `86/86` signaux puis
+  28 incidents et `99/99` signaux. `Extra time` reste affiché à la minute 120 tandis que le score
+  évolue de `1-1` à `1-2`. `WO-SS-20260827-012` est validé, fermé et déplacé vers `completed`.
 ### J5 — import hors ligne multi-match atomique
 
 - correction issue de la recette Borussia Dortmund — FC Bayern München (`16248441`) : chaque

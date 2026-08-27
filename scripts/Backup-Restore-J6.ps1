@@ -155,8 +155,8 @@ try {
     }
 
     $sourceFlywayVersion = Invoke-PrimaryScalar -Sql $flywaySql
-    if ($sourceFlywayVersion -cne '25') {
-        throw 'Flyway V25 must be applied before the J6 backup/restore qualification.'
+    if ($sourceFlywayVersion -cne '26') {
+        throw 'Flyway V26 must be applied before the J6 backup/restore qualification.'
     }
     $coverageReceivedSql = @'
 select coalesce(

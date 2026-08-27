@@ -27,8 +27,9 @@ NO_CRITICAL_DEPENDENCY
 ```
 
 En cas de divergence, le présent document fait autorité sur l'interface et l'implémentation de ce
-nouveau flux. Les règles métier J5, les schémas de persistance, V25, J6 et J7 existants continuent
-de faire autorité dans leur périmètre. Aucun élément de cette fiche n'autorise un appel fournisseur.
+nouveau flux. Les règles métier J5, les schémas de persistance, les migrations append-only V25 et
+V26, J6 et J7 existants continuent de faire autorité dans leur périmètre. Aucun élément de cette
+fiche n'autorise un appel fournisseur.
 
 ## 2. Vocabulaire
 
@@ -393,7 +394,7 @@ Chaque réponse locale synthétique porte :
 | parseur | version J5 courante de la famille |
 
 Au moment de la rédaction, les versions courantes sont
-`event-statistics-v2`, `event-incidents-v13` et `event-lineups-v2`. L'implémentation doit référencer
+`event-statistics-v2`, `event-incidents-v14` et `event-lineups-v2`. L'implémentation doit référencer
 les constantes des parseurs courants plutôt que dupliquer ces chaînes dans le flux.
 
 ### 9.3 Atomicité et échec

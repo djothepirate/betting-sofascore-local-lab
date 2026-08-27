@@ -75,7 +75,7 @@ VPS       : aucune connexion
 | `adapter.persistence` | preuves brutes, occurrences, observations normalisées, historique, rétention et manifestes J7 |
 | `adapter.file` | publication J7 create-new par lien physique atomique, bornée à la racine locale |
 | `adapter.web` | tableau de bord, recherche, contrôle de lot et vues J4/J5/J6/J7 locales |
-| `resources/db/migration` | schémas V1 à V25, migrations append-only et triggers d’immuabilité |
+| `resources/db/migration` | schémas V1 à V26, migrations append-only et triggers d’immuabilité |
 | `fixtures` | corpus synthétiques hors ligne J2, J4, J5 et J6 |
 
 Le connecteur général demeure bloqué. Le chemin manuel J3 borné délègue ses deux familles
@@ -316,9 +316,10 @@ avant consommation du claim, aucun HAR/en-tête/cookie, aucun transport et aucun
 `DIRECT_LOCAL_ENDPOINT`; l'inspection locale et la rétention J6 admettent les deux modes.
 
 WO-010 réutilise cette provenance pour un plan de 1 à 25 événements et les occurrences J6 pour
-chaque snapshot committé. Aucun schéma V26 n'est nécessaire : le plan, le contrôle et le résultat
-du lot restent uniquement en mémoire, tandis que snapshots et observations conservent leur modèle
-append-only existant.
+chaque snapshot committé. Aucune migration propre au plan multi-match n'est nécessaire : le plan,
+le contrôle et le résultat du lot restent uniquement en mémoire, tandis que snapshots et
+observations conservent leur modèle append-only existant. La migration transverse V26 étend
+ultérieurement la version du parseur d'incidents J5 sans créer de stockage propre au lot.
 
 ## 6. Catalogue logique
 
@@ -390,13 +391,14 @@ canoniques sont écrites dans une transaction unique ; un conflit d'identité ou
 ### Intégration
 
 `mvnw -Pintegration-tests verify` démarre PostgreSQL avec Testcontainers et vérifie les migrations
-V1 à V25, les upgrades historiques, la fidélité binaire, les contraintes, la déduplication et
+V1 à V26, les upgrades historiques, la fidélité binaire, les contraintes, la déduplication et
 l'immuabilité. J6 ajoute les occurrences prospectives, les exclusions de rétention, la purge des
 seuls octets dans une base éphémère, l'audit et la conservation de la provenance. Aucun appel
 SofaScore n'est exécuté. J7 ajoute l'upgrade V22→V23 prérempli, ses contraintes de cycle et la
 relecture exacte du manifeste et de ses preuves. La découverte tournoi ajoute l'installation V24
 et l'upgrade V23→V24 pour le cache, puis V25 pour distinguer la provenance d'une réponse directe et
-celle d'un corps JSON importé localement.
+celle d'un corps JSON importé localement. J5 ajoute l'upgrade V25→V26 qui autorise le parseur
+`event-incidents-v14` sans réécrire l'historique.
 Le lot J5 ajoute le commit atomique des `3N` familles, le réimport avec snapshots et observations
 dédupliqués mais occurrences nouvelles, puis le rollback global provoqué sur la dernière famille
 du dernier événement. Aucune migration supplémentaire n'est créée.

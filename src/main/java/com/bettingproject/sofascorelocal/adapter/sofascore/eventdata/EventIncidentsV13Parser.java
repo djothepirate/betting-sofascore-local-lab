@@ -12,7 +12,7 @@ import java.util.Set;
  * and the normalized card reason. Every other undocumented card reason remains a schema
  * incompatibility.</p>
  */
-public final class EventIncidentsV13Parser extends EventIncidentsV12Parser {
+public class EventIncidentsV13Parser extends EventIncidentsV12Parser {
 
     public static final String PARSER_VERSION = "event-incidents-v13";
 
