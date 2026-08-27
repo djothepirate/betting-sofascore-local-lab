@@ -23,7 +23,7 @@ supplémentaire. Les statuts du laboratoire restent `EXPERIMENTAL`, `LOCAL_ONLY`
 
 - Windows 11, Java 25 et Docker Desktop ;
 - branche J7 et Work Order actif ;
-- PostgreSQL local sain avec Flyway V25 ;
+- PostgreSQL local sain avec Flyway V26 ;
 - application liée exclusivement à `127.0.0.1:8087` ;
 - répertoire `sofascore.export-directory` local, accessible en écriture et ignoré par Git ;
 - configurations J3/J4/J5, y compris la découverte tournoi, désactivées et états persistants

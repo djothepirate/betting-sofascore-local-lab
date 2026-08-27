@@ -558,7 +558,7 @@ La voie locale demande les seuls corps JSON obtenus manuellement aux chemins exa
 
 Elle n'accepte ni HAR, ni en-tête, ni cookie, ni jeton, ni donnée de session. Chaque fichier est
 non vide et borné à 5 Mio. Les trois fichiers sont scannés et prévalidés avec les parseurs courants
-`event-statistics-v2`, `event-incidents-v13` et `event-lineups-v2` **avant** que la confirmation ne
+`event-statistics-v2`, `event-incidents-v14` et `event-lineups-v2` **avant** que la confirmation ne
 soit réclamée. Un fichier incompatible refuse donc atomiquement le lot, ne crée aucun snapshot et
 laisse l'intention en attente pour correction.
 

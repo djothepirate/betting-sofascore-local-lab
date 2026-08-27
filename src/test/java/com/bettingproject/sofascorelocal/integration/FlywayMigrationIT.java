@@ -18,6 +18,7 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncide
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV11Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV12Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV13Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV14Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV1Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV1Parser;
@@ -291,7 +292,7 @@ class FlywayMigrationIT {
         assertThat(snapshotTable).isEqualTo("provider_snapshot");
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("25");
+        assertThat(flywayVersion).isEqualTo("26");
         assertThat(rawColumn).isEqualTo("bytea");
     }
 
@@ -414,6 +415,7 @@ class FlywayMigrationIT {
                 .schemas(schema)
                 .defaultSchema(schema)
                 .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("25"))
                 .load();
         assertThat(latest.migrate().migrationsExecuted).isEqualTo(1);
         assertThat(latest.info().current().getVersion().getVersion()).isEqualTo("25");
@@ -479,6 +481,139 @@ class FlywayMigrationIT {
                 requestKey)).containsExactly(
                         "DIRECT_LOCAL_ENDPOINT",
                         "MANUAL_LOCAL_JSON_IMPORT");
+    }
+
+    @Test
+    void upgradesV25ForTheLiveExtraTimePeriodWithoutRewritingV13History() {
+        String schema = "upgrade_v25_to_v26_live_extra_time";
+        String separator = POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
+        var dataSource = new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema,
+                POSTGRES.getUsername(),
+                POSTGRES.getPassword());
+        Flyway flywayV25 = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .createSchemas(true)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("25"))
+                .load();
+
+        assertThat(flywayV25.migrate().migrationsExecuted).isEqualTo(25);
+
+        JdbcTemplate upgradeJdbc = new JdbcTemplate(dataSource);
+        upgradeJdbc.update("""
+                insert into canonical_event (
+                    id, provider, provider_event_id, created_at
+                ) values (
+                    '26262626-2626-2626-2626-262626262626',
+                    'SOFASCORE',
+                    16717086,
+                    '2026-08-27T10:00:00Z'
+                )
+                """);
+        Long historicalObservationId = upgradeJdbc.queryForObject("""
+                insert into j5_event_data_observation (
+                    canonical_event_id, endpoint_type, source_kind, source_reference,
+                    source_fixture_id, source_payload_sha256, parser_version,
+                    source_received_at, completeness_status, completeness_score,
+                    present_signals, expected_signals, missing_paths_json,
+                    normalized_sha256
+                ) values (
+                    '26262626-2626-2626-2626-262626262626', 'EVENT_INCIDENTS',
+                    'SYNTHETIC_FIXTURE', 'historical-v13-card', 'historical-v13-card',
+                    repeat('a', 64), ?, '2026-08-27T10:00:01Z', 'COMPLETE', 100,
+                    3, 3, '[]'::jsonb, repeat('b', 64)
+                )
+                returning id
+                """, Long.class, EventIncidentsV13Parser.PARSER_VERSION);
+        Map<String, Object> historicalBefore = upgradeJdbc.queryForMap("""
+                select id, canonical_event_id, endpoint_type, source_kind, source_reference,
+                       source_fixture_id, source_payload_sha256, parser_version,
+                       source_received_at, completeness_status, completeness_score,
+                       present_signals, expected_signals, missing_paths_json,
+                       normalized_sha256
+                from j5_event_data_observation
+                where id = ?
+                """, historicalObservationId);
+
+        assertThat(parserConstraint(upgradeJdbc, schema))
+                .contains(EventIncidentsV13Parser.PARSER_VERSION)
+                .doesNotContain(EventIncidentsV14Parser.PARSER_VERSION);
+        assertThatThrownBy(() -> upgradeJdbc.update("""
+                insert into j5_event_data_observation (
+                    canonical_event_id, endpoint_type, source_kind, source_reference,
+                    source_fixture_id, source_payload_sha256, parser_version,
+                    source_received_at, completeness_status, completeness_score,
+                    present_signals, expected_signals, missing_paths_json,
+                    normalized_sha256
+                ) values (
+                    '26262626-2626-2626-2626-262626262626', 'EVENT_INCIDENTS',
+                    'SYNTHETIC_FIXTURE', 'v14-before-migration', 'v14-before-migration',
+                    repeat('c', 64), ?, '2026-08-27T10:00:02Z', 'COMPLETE', 100,
+                    3, 3, '[]'::jsonb, repeat('d', 64)
+                )
+                """, EventIncidentsV14Parser.PARSER_VERSION))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        Flyway flywayV26 = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("26"))
+                .load();
+
+        assertThat(flywayV26.migrate().migrationsExecuted).isEqualTo(1);
+        assertThat(flywayV26.info().current().getVersion().getVersion()).isEqualTo("26");
+        assertThat(parserConstraint(upgradeJdbc, schema))
+                .contains(EventIncidentsV13Parser.PARSER_VERSION)
+                .contains(EventIncidentsV14Parser.PARSER_VERSION);
+        assertThat(upgradeJdbc.queryForMap("""
+                select id, canonical_event_id, endpoint_type, source_kind, source_reference,
+                       source_fixture_id, source_payload_sha256, parser_version,
+                       source_received_at, completeness_status, completeness_score,
+                       present_signals, expected_signals, missing_paths_json,
+                       normalized_sha256
+                from j5_event_data_observation
+                where id = ?
+                """, historicalObservationId)).containsAllEntriesOf(historicalBefore);
+
+        Long v14ObservationId = upgradeJdbc.queryForObject("""
+                insert into j5_event_data_observation (
+                    canonical_event_id, endpoint_type, source_kind, source_reference,
+                    source_fixture_id, source_payload_sha256, parser_version,
+                    source_received_at, completeness_status, completeness_score,
+                    present_signals, expected_signals, missing_paths_json,
+                    normalized_sha256
+                ) values (
+                    '26262626-2626-2626-2626-262626262626', 'EVENT_INCIDENTS',
+                    'SYNTHETIC_FIXTURE', 'v14-live-extra-time', 'v14-live-extra-time',
+                    repeat('e', 64), ?, '2026-08-27T10:00:03Z', 'COMPLETE', 100,
+                    3, 3, '[]'::jsonb, repeat('f', 64)
+                )
+                returning id
+                """, Long.class, EventIncidentsV14Parser.PARSER_VERSION);
+        upgradeJdbc.update("""
+                insert into j5_event_incident (
+                    observation_id, incident_order, incident_type, minute,
+                    home_score, away_score, period_text
+                ) values (?, 0, 'period', 120, 1, 1, 'Extra time')
+                """, v14ObservationId);
+        assertThat(upgradeJdbc.queryForMap("""
+                select parser_version, incident_type, minute,
+                       home_score, away_score, period_text
+                from j5_event_data_observation observation
+                join j5_event_incident incident on incident.observation_id = observation.id
+                where observation.id = ?
+                """, v14ObservationId))
+                .containsEntry("parser_version", EventIncidentsV14Parser.PARSER_VERSION)
+                .containsEntry("incident_type", "period")
+                .containsEntry("minute", 120)
+                .containsEntry("home_score", 1)
+                .containsEntry("away_score", 1)
+                .containsEntry("period_text", "Extra time");
     }
 
     @Test
@@ -3962,7 +4097,7 @@ class FlywayMigrationIT {
 
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$flywaySql"),
-                String.class)).isEqualTo("25");
+                String.class)).isEqualTo("26");
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$snapshotFingerprintSql"),
                 String.class)).isNotNull();
@@ -3981,8 +4116,8 @@ class FlywayMigrationIT {
                 StandardCharsets.UTF_8);
 
         assertThat(script)
-                .contains("$manifest.source.flywayVersion.ToString() -cne '25'")
-                .contains("valid Flyway V25 raw-payload restore");
+                .contains("$manifest.source.flywayVersion.ToString() -cne '26'")
+                .contains("valid Flyway V26 raw-payload restore");
 
         String environmentNames = powerShellArray(script, "$environmentNames");
         assertThat(environmentNames)
@@ -5960,7 +6095,8 @@ class FlywayMigrationIT {
         byte[] statistics = Files.readAllBytes(Path.of(
                 "src/test/resources/fixtures/provider-j5/statistics-nominal.json"));
         byte[] incidents = Files.readAllBytes(Path.of(
-                "src/test/resources/fixtures/provider-j5/incidents-nominal.json"));
+                "src/test/resources/fixtures/provider-j5/"
+                        + "incidents-provider-live-extra-time.json"));
         byte[] lineups = Files.readAllBytes(Path.of(
                 "src/test/resources/fixtures/provider-j5/lineups-nominal.json"));
         Instant seededAt = Instant.parse("2026-10-10T13:55:00Z");
@@ -5975,7 +6111,7 @@ class FlywayMigrationIT {
                         "application/json",
                         Duration.ZERO,
                         RawPayloadEvidence.capture(incidents),
-                        EventIncidentsV13Parser.PARSER_VERSION,
+                        EventIncidentsV14Parser.PARSER_VERSION,
                         RawSnapshotSchemaStatus.RAW_ONLY,
                         null));
         assertThat(seededRawOnly.outcome())
@@ -6033,6 +6169,23 @@ class FlywayMigrationIT {
                 "select schema_status from provider_snapshot where id = ?",
                 String.class,
                 seededRawOnly.snapshotId())).isEqualTo("PARSED");
+        assertThat(jdbcTemplate.queryForList("""
+                select observation.parser_version, incident.period_text, incident.minute
+                from j5_event_data_observation observation
+                join j5_event_incident incident
+                  on incident.observation_id = observation.id
+                where observation.canonical_event_id in (?, ?)
+                  and observation.endpoint_type = 'EVENT_INCIDENTS'
+                  and incident.incident_type = 'period'
+                  and incident.period_text = 'Extra time'
+                order by observation.canonical_event_id
+                """, firstCanonicalEventId, secondCanonicalEventId))
+                .hasSize(2)
+                .allSatisfy(row -> assertThat(row)
+                        .containsEntry(
+                                "parser_version", EventIncidentsV14Parser.PARSER_VERSION)
+                        .containsEntry("period_text", "Extra time")
+                        .containsEntry("minute", 120));
 
         J5OfflineBatchPlan secondPlan = j5OfflineBatchControlService.prepare(
                 date,

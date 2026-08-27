@@ -1,6 +1,6 @@
 package com.bettingproject.sofascorelocal.application.network;
 
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV13Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV14Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportException;
@@ -138,7 +138,7 @@ class J5RealEventDataServiceTest {
                 canonicalStore,
                 dataStore,
                 new EventStatisticsV2Parser(),
-                new EventIncidentsV13Parser(),
+                new EventIncidentsV14Parser(),
                 new EventLineupsV2Parser(),
                 clock,
                 Duration.ofSeconds(3),
@@ -179,7 +179,7 @@ class J5RealEventDataServiceTest {
         assertThat(observations.getFirst().completeness().status())
                 .isEqualTo(J5CompletenessStatus.UNAVAILABLE);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV13Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -260,7 +260,7 @@ class J5RealEventDataServiceTest {
                 .extracting(J5RealEndpointResult::snapshotId)
                 .containsExactly(30L, 32L, 35L);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV13Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents.class,
                 incidents -> {
@@ -362,7 +362,7 @@ class J5RealEventDataServiceTest {
                         SofascoreEndpointType.EVENT_LINEUPS);
         assertThat(result.endpoints().get(1).warningCount()).isPositive();
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV13Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -424,7 +424,7 @@ class J5RealEventDataServiceTest {
                         SofascoreEndpointType.EVENT_INCIDENTS,
                         SofascoreEndpointType.EVENT_LINEUPS);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV13Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -477,7 +477,7 @@ class J5RealEventDataServiceTest {
                         SofascoreEndpointType.EVENT_INCIDENTS,
                         SofascoreEndpointType.EVENT_LINEUPS);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV13Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -538,7 +538,7 @@ class J5RealEventDataServiceTest {
                         J5CompletenessStatus.COMPLETE);
         assertThat(result.endpoints().get(1).warningCount()).isGreaterThanOrEqualTo(3);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV13Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -611,7 +611,7 @@ class J5RealEventDataServiceTest {
                         SofascoreEndpointType.EVENT_LINEUPS);
         assertThat(result.endpoints().get(1).warningCount()).isEqualTo(1);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV13Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -672,7 +672,7 @@ class J5RealEventDataServiceTest {
                         SofascoreEndpointType.EVENT_INCIDENTS,
                         SofascoreEndpointType.EVENT_LINEUPS);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV13Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -734,7 +734,7 @@ class J5RealEventDataServiceTest {
                         SofascoreEndpointType.EVENT_INCIDENTS,
                         SofascoreEndpointType.EVENT_LINEUPS);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV13Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -743,6 +743,39 @@ class J5RealEventDataServiceTest {
                     assertThat(card.incidentClass()).contains("yellow");
                     assertThat(card.reason()).contains("Leaving field");
                     assertThat(card.motifLabel()).isEqualTo("Leaving field");
+                });
+        assertThat(observations.get(2).data()).isInstanceOf(EventLineups.class);
+        verify(transport, times(3)).execute(any());
+        verify(control, times(3)).recordEndpointCompleted(any(), any());
+        verify(control).complete(REQUEST_ID);
+    }
+
+    @Test
+    void continuesToLineupsAfterAcceptingTheObservedLiveExtraTimeMarker()
+            throws Exception {
+        when(transport.execute(any())).thenAnswer(invocation -> {
+            J5EventDataProviderRequest request = invocation.getArgument(0);
+            operations.add("transport:" + request.endpointType());
+            String body = request.endpointType() == SofascoreEndpointType.EVENT_INCIDENTS
+                    ? fixture("incidents-provider-live-extra-time.json")
+                    : fixtureFor(request.endpointType());
+            return response(request, 200, body);
+        });
+
+        var result = service.execute(claim());
+
+        assertThat(result.completed()).isTrue();
+        assertThat(result.terminalCode()).isEqualTo("COMPLETED");
+        assertThat(result.providerCallAttempts()).isEqualTo(3);
+        assertThat(observations.get(1).source().parserVersion())
+                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
+        assertThat(observations.get(1).data()).isInstanceOfSatisfying(
+                EventIncidents.class,
+                incidents -> {
+                    var period = incidents.incidents().getFirst();
+                    assertThat(period.periodText()).contains("Extra time");
+                    assertThat(period.minute()).contains(120);
+                    assertThat(period.addedTime()).isEmpty();
                 });
         assertThat(observations.get(2).data()).isInstanceOf(EventLineups.class);
         verify(transport, times(3)).execute(any());
@@ -859,8 +892,14 @@ class J5RealEventDataServiceTest {
             case EVENT_LINEUPS -> "lineups-nominal.json";
             default -> throw new IllegalArgumentException("unsupported endpoint");
         };
+        return fixture(name);
+    }
+
+    private String fixture(String name) throws IOException {
         try (var input = getClass().getResourceAsStream("/fixtures/provider-j5/" + name)) {
-            return new String(input.readAllBytes(), java.nio.charset.StandardCharsets.UTF_8);
+            return new String(
+                    java.util.Objects.requireNonNull(input).readAllBytes(),
+                    java.nio.charset.StandardCharsets.UTF_8);
         }
     }
 

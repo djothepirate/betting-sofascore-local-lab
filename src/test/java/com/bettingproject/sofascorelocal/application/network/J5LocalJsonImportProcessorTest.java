@@ -1,6 +1,6 @@
 package com.bettingproject.sofascorelocal.application.network;
 
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV13Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV14Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
@@ -99,7 +99,7 @@ class J5LocalJsonImportProcessorTest {
                 canonicalStore,
                 dataStore,
                 new EventStatisticsV2Parser(),
-                new EventIncidentsV13Parser(),
+                new EventIncidentsV14Parser(),
                 new EventLineupsV2Parser(),
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
@@ -136,7 +136,41 @@ class J5LocalJsonImportProcessorTest {
                         SofascoreEndpointType.EVENT_INCIDENTS,
                         SofascoreEndpointType.EVENT_LINEUPS);
         assertThat(observations).hasSize(3);
+        assertThat(observations.get(1).source().parserVersion())
+                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
         verify(canonicalStore, times(2)).findLatestByCanonicalId(IDENTITY.value());
+    }
+
+    @Test
+    void acceptsTheLiveExtraTimeMarkerThroughTheZeroNetworkImportPath() {
+        J5LocalJsonImportProcessingPlan prepared = processor.prepare(
+                IDENTITY.value(),
+                EVENT_ID,
+                payload("{\"statistics\":[]}"),
+                payload("""
+                        {"incidents":[{
+                          "incidentType":"period","text":"Extra time","isLive":true,
+                          "time":120,"addedTime":999,"periodTimeSeconds":900,
+                          "homeScore":1,"awayScore":1
+                        }]}
+                        """),
+                payload("{\"confirmed\":false}"));
+
+        J5LocalJsonImportProcessingResult result = processor.execute(prepared, () -> true);
+
+        assertThat(result.localJsonImports()).isEqualTo(3);
+        assertThat(result.endpoints().get(1).endpointType())
+                .isEqualTo(SofascoreEndpointType.EVENT_INCIDENTS);
+        assertThat(observations.get(1).source().parserVersion())
+                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
+        assertThat(observations.get(1).data())
+                .isInstanceOfSatisfying(
+                        com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents.class,
+                        incidents -> assertThat(incidents.incidents().getFirst().periodText())
+                                .contains("Extra time"));
+        assertThat(rawSnapshots)
+                .extracting(RawManualCallSnapshot::acquisitionMode)
+                .containsOnly(RawSnapshotAcquisitionMode.MANUAL_LOCAL_JSON_IMPORT);
     }
 
     @Test

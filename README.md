@@ -157,6 +157,16 @@ formes V13 sont donc qualifiées dans cette portée réelle bornée. Le contrôl
 également la présentation corrigée, le reverrouillage local, les états J4/J5 `LOCKED` après
 redémarrage et l'arrêt final de l'application.
 
+Deux nouvelles preuves opérateur ont ensuite attesté le marqueur de période
+`text="Extra time"`, `isLive=true` pendant une prolongation. `event-incidents-v14` hérite de V13,
+ajoute seulement ce libellé live exact, le conserve sans le transformer en `ET` et refuse la
+contradiction explicite `isLive=false`. V13 reste immuable et rejette encore la forme. La migration
+append-only V26 autorise la nouvelle version de parseur sans colonne ni réécriture historique. La
+qualification fonctionnelle propriétaire finale du 2026-08-27 valide deux imports locaux à zéro
+appel fournisseur : 24 incidents et `86/86` signaux, puis 28 incidents et `99/99` signaux. Les
+deux observations restent `COMPLETE · 100%` sous `event-incidents-v14` et conservent `Extra time`
+à la minute 120, avec un score évoluant de `1-1` à `1-2`.
+
 Le jalon **J6 — Historique** est désormais implémenté et validé. Il ajoute une
 chronologie locale des cinq flux d'un événement, des différences sémantiques entre versions, la
 détection des enrichissements et corrections tardifs, ainsi qu'une rétention manuelle des seuls
@@ -182,7 +192,7 @@ techniques, de la recette du runbook J7 et de la revue de publication. La PR `#1
 - dépôt Git autonome, documentation, ADR, règles agent et Work Orders ;
 - Java **25 LTS**, Spring Boot **4.1.0** et Maven Wrapper versionné ;
 - interface Spring MVC + Thymeleaf sur `127.0.0.1:8087` ;
-- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V25 et stockage brut séparé ;
+- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V26 et stockage brut séparé ;
 - Actuator, Caffeine, validation de configuration et garde de liaison locale ;
 - catalogue logique des familles d’endpoints, sans URI réelle ;
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
@@ -278,7 +288,7 @@ techniques, de la recette du runbook J7 et de la revue de publication. La PR `#1
 - préparation J5 sans réseau, confirmation exacte de cinq minutes, acquittement, trois appels
   séquentiels au maximum et délai minimal de trois secondes ; après succès, l'ancien claim reste
   non rejouable mais une nouvelle campagne explicite peut être préparée dans la même instance ;
-- parseurs fournisseur `event-statistics-v2`, `event-incidents-v13` et `event-lineups-v2`, brut
+- parseurs fournisseur `event-statistics-v2`, `event-incidents-v14` et `event-lineups-v2`, brut
   persisté avant parsing, provenance `PROVIDER_SNAPSHOT` et résultat d'écran minimisé ;
 - traitement borné du HTTP `404` sur les trois chemins J5 exacts : snapshot
   `ENDPOINT_UNAVAILABLE`, observation `UNAVAILABLE · N/A`, aucun parsing du corps, aucun retry et
@@ -648,6 +658,11 @@ transforme pas un import en réponse fournisseur : les caches restent limités a
 Ce mode est utilisé aussi bien pour le lot paginé J3 que pour le corps importé du second endpoint,
 avec des endpoints logiques et des clés distincts.
 
+La migration append-only `V26__j5_live_extra_time_period.sql` autorise
+`event-incidents-v14` dans la contrainte de version de parseur J5. V14 conserve toutes les règles V13 et
+ajoute uniquement `text="Extra time"` comme marqueur `period` live, distinct du marqueur terminal
+`ET`. Aucune colonne, observation historique ni donnée normalisée existante n'est réécrite.
+
 Le mode `DIRECT_LOCAL_ENDPOINT` ne doit jamais être confondu avec une `VisualObservation` du projet
 global. La persistance n'effectue elle-même aucun appel : les écritures J5 réelles éventuelles sont
 initiées uniquement par la voie humaine gardée, puis référencent le brut séparé avec
@@ -736,6 +751,8 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Correction V11 du motif de carton `Off the ball foul`](docs/validation/J5-REAL-V11-OFF-BALL-CARD-REASON-20260818.md)
 - [Correction V12 d'une séance terminale entièrement non minutée](docs/validation/J5-REAL-V12-UNMINUTED-SHOOTOUT-20260818.md)
 - [Correction V13 du motif de carton `Leaving field`](docs/validation/J5-OBSERVED-V13-LEAVING-FIELD-CARD-REASON-20260818.md)
+- [Qualification V14 du marqueur live `Extra time`](docs/validation/J5-OBSERVED-V14-LIVE-EXTRA-TIME-PERIOD-20260827.md)
+- [Work Order V14 validé](docs/work_orders/completed/WO-SS-20260827-012-j5-live-extra-time-period.md)
 - [Qualification hors ligne de la session combinée J4 phase 2 + J5](docs/validation/J4-J5-COMBINED-QUALIFICATION-SESSION-20260818.md)
 - [Work Order validé de qualification réelle J5](docs/work_orders/completed/WO-SS-20260815-006-j5-real-event-data-qualification.md)
 - [Readiness technique J6](docs/validation/J6-TECHNICAL-READINESS-20260818.md)
@@ -822,7 +839,7 @@ J4_CLOSED=YES
 Cette situation ne déverrouille aucune nouvelle famille, automatisation ou dépendance de
 production. Les rappels de sous-étape 2 restent exclusivement manuels et unitaires.
 
-## J5 réel : V13 qualifié et Work Order validé
+## J5 réel : V14 qualifié sur import JSON local
 
 J5 réutilise l'identité synthétique `900001` de J4 pour démontrer les trois familles demandées. Les
 neuf fixtures J5 sont explicitement synthétiques et ne valident aucun schéma fournisseur. La page
@@ -832,16 +849,19 @@ rapport de complétude, mais ne sont plus affichés au-dessus des tableaux d'inc
 compositions ; les badges, compteurs, données et lignes des tableaux restent inchangés.
 
 ```text
-J5_IMPLEMENTATION_STATUS=VALIDATED
-J5_HUMAN_OFFLINE_QUALIFICATION=PASS
-J5_PROVIDER_SCHEMA_VALIDATED=YES
-J5_PROVIDER_SCHEMA_VALIDATION_SCOPE=V13_EVENTS_16691018_AND_16851672
+J5_V13_IMPLEMENTATION_STATUS=VALIDATED
+J5_V13_HUMAN_OFFLINE_QUALIFICATION=PASS
+J5_V13_PROVIDER_SCHEMA_VALIDATED=YES
+J5_V13_PROVIDER_SCHEMA_VALIDATION_SCOPE=EVENTS_16691018_AND_16851672
+J5_V14_PROVIDER_SCHEMA_VALIDATED=YES_OWNER_LOCAL_JSON_IMPORT
+J5_V14_PROVIDER_SCHEMA_VALIDATION_SCOPE=EVENT_16809018_OBSERVATIONS_567_AND_570
 J5_SYNTHETIC_FIXTURES_PROVIDER_SCHEMA_VALIDATED=NO
 J5_APPLICATION_TRANSPORT=IMPLEMENTED_GUARDED_DEFAULT_OFF
 J5_DISCOVERY_ATTEMPTS=1
 J5_DISCOVERY_RESULT=HTTP_403_STOPPED_NO_RETRY
 J5_FIXTURE_ORIGIN=SYNTHETIC
-J5_FLYWAY_VERSION=20
+J5_V13_FLYWAY_VERSION=20
+J5_FLYWAY_VERSION=26
 J5_MAVEN_PROVIDER_CALLS=0
 J5_REAL_TECHNICAL_READINESS=PASS
 J5_REAL_FIRST_CAMPAIGN=HTTP_404_MISCLASSIFIED_AND_LOCKED
@@ -853,7 +873,7 @@ J5_REAL_STATISTICS_LATEST=V2_COMPLETE_SNAPSHOT_194_OBSERVATION_102_256_OF_256
 J5_REAL_STATISTICS_UNAVAILABLE_RETEST=SNAPSHOT_118_CONTINUED_TO_INCIDENTS_AND_LINEUPS
 J5_REAL_INCIDENTS_LAST_PASS=V13_COMPLETE_SNAPSHOT_195_OBSERVATION_103_81_OF_81
 J5_REAL_INCIDENTS_LATEST=V13_COMPLETE_SNAPSHOT_195_EVENT_16851672
-J5_REAL_INCIDENTS_CURRENT_PARSER=event-incidents-v13
+J5_REAL_INCIDENTS_CURRENT_PARSER=event-incidents-v14
 J5_REAL_SUBSTITUTION_PLAYERS=PASS_REAL_RENDERED
 J5_REAL_LAST_SUCCESSFUL_TERMINAL=COMPLETED_LOCKED
 J5_REAL_LINEUPS=V2_COMPLETE_SNAPSHOT_196_OBSERVATION_104_97_OF_97
@@ -866,7 +886,10 @@ J5_REAL_V5_FULL_TIME_REPLAY=PASS_SNAPSHOTS_64_65_66
 J5_REAL_BENCH_CARD_CORRECTIVE_PARSER=event-incidents-v5
 J5_REAL_BENCH_CARD_CORRECTION=PASS_REAL
 J5_INCIDENT_RULES_SOURCE=docs/requirements/J5-FOOTBALL-INCIDENT-RULES.md
-J5_INCIDENT_CURRENT_PARSER=event-incidents-v13
+J5_INCIDENT_CURRENT_PARSER=event-incidents-v14
+J5_INCIDENT_V14_STATUS=VALIDATED
+J5_INCIDENT_V14_HUMAN_FUNCTIONAL_QUALIFICATION=PASS
+J5_INCIDENT_V14_LIVE_EXTRA_TIME=EXACT_TEXT_ACCEPTED_WHEN_LIVE
 J5_INCIDENT_V6_STATUS=PASS_REAL_LENS_PSG
 J5_INCIDENT_V7_STATUS=PASS_REAL_AND_INHERITED_BY_V8_V9_V10_V11_V12_V13
 J5_INCIDENT_V7_FULL_OPERATOR_PAYLOAD=PASS_23_OF_23
