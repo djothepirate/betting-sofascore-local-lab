@@ -8,10 +8,10 @@
 - **Worktree dedie :** `REQUIRED_NOT_CREATED`
 - **ADR applicable :** `ADR-SS-001 v1.3`
 - **Qualification de reference :** `WO-SS-20260823-011` (`VALIDATED`)
-- **Socle Playwright requis :** `WO-SS-20260827-013`
+- **Socle Playwright requis :** `WO-SS-20260827-013` (`VALIDATED`)
 - **Implementation par cette ouverture :** `NOT_STARTED`
 - **Restauration des adaptations POC proprietaire :** `AUTHORIZED_AT_WO_START_NOT_EXECUTED`
-- **Developpement et qualification loopback :** `AWAITING_WO_013_AND_CLEAN_BASE`
+- **Developpement et qualification loopback :** `AWAITING_CLEAN_BASE_AND_WORKTREE`
 - **Appel fournisseur :** `NOT_AUTHORIZED`
 - **Polling, scheduler, retry ou fallback :** `NOT_AUTHORIZED`
 - **Production, VPS ou dependance critique :** `NOT_AUTHORIZED`
@@ -289,6 +289,7 @@ WORK_ORDER_STATUS=OPEN_AWAITING_PREREQUISITES
 IMPLEMENTATION_STARTED=NO
 PROVIDER_CALL_AUTHORIZED=NO
 SHARED_RUNTIME_DEPENDENCY=WO-SS-20260827-013
+SHARED_RUNTIME_DEPENDENCY_STATUS=VALIDATED
 OWNER_POC_RESTORATION=AUTHORIZED_PENDING_EXECUTION_AT_WO_START
 OWNER_POC_FILES_TOUCHED_DURING_OPENING=NO
 ONLINE_MULTI_MATCH_SCOPE=EXCLUDED

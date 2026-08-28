@@ -9,9 +9,9 @@
 - **ADR applicable :** `ADR-SS-001 v1.3`, avec deux decisions J4 encore requises
 - **Qualification de reference :** `WO-SS-20260823-011` (`VALIDATED`)
 - **Contrat metier J4 de reference :** `WO-SS-20260815-004` (`VALIDATED`)
-- **Socle Playwright requis :** `WO-SS-20260827-013`
+- **Socle Playwright requis :** `WO-SS-20260827-013` (`VALIDATED`)
 - **Implementation par cette ouverture :** `NOT_STARTED`
-- **Developpement et qualification loopback :** `AWAITING_WO_013`
+- **Developpement et qualification loopback :** `AWAITING_J4_ADR_DECISIONS_AND_WORKTREE`
 - **Appel fournisseur :** `NOT_AUTHORIZED`
 - **Polling, scheduler, retry ou fallback :** `NOT_AUTHORIZED`
 - **Production, VPS ou dependance critique :** `NOT_AUTHORIZED`
@@ -263,6 +263,7 @@ WORK_ORDER_STATUS=OPEN_AWAITING_PREREQUISITES
 IMPLEMENTATION_STARTED=NO
 PROVIDER_CALL_AUTHORIZED=NO
 SHARED_RUNTIME_DEPENDENCY=WO-SS-20260827-013
+SHARED_RUNTIME_DEPENDENCY_STATUS=VALIDATED
 J4_404_POLICY=PENDING_ADR_REVIEW
 J4_PHASE2_CACHE_POLICY=PENDING_SCOPED_ADR_DECISION
 LOCAL_READINESS=NOT_RUN

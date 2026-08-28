@@ -1,6 +1,6 @@
 # WO-SS-20260827-013 - Migration Playwright des parcours fournisseur manuels J3
 
-- **Statut :** `IN_PROGRESS`
+- **Statut :** `VALIDATED`
 - **Jalon :** `J3`
 - **Date d'ouverture :** `2026-08-27`
 - **Decision d'ouverture :** proprietaire du Betting Project
@@ -8,11 +8,13 @@
 - **Worktree dedie :** `CREATED` (`.tmp/wo013-playwright`)
 - **ADR applicable :** `ADR-SS-001 v1.3`
 - **Qualification de reference :** `WO-SS-20260823-011` (`VALIDATED`)
-- **Implementation par cette ouverture :** `STARTED`
+- **Implementation par cette ouverture :** `COMPLETED`
 - **Developpement et qualification loopback :** `LOCAL_READINESS_PASS`
-- **Appel fournisseur :** `NOT_AUTHORIZED`
+- **Qualification fournisseur humaine :** `PASS_BY_OWNER_EXECUTION_2026-08-28`
+- **Appel fournisseur supplementaire :** `NOT_AUTHORIZED`
 - **Polling, scheduler, retry ou fallback :** `NOT_AUTHORIZED`
 - **Production, VPS ou dependance critique :** `NOT_AUTHORIZED`
+- **Decision de cloture :** `OWNER_CONFIRMED_2026-08-28`
 
 ## 1. Objectif
 
@@ -172,10 +174,11 @@ strictement sans navigateur, sans cache fournisseur et sans transport.
    raccorder les arrets Web au superviseur.
 6. **Qualification loopback** : exercer le vrai Chromium uniquement contre `127.0.0.1`.
 7. **Documentation et readiness** : architecture J3, runbook, rapport, README, changelog et WO.
-8. **Qualification fournisseur optionnelle** : uniquement apres un nouveau go proprietaire exact.
+8. **Qualification fournisseur bornee** : deux actions J3 distinctes, uniquement apres preparation,
+   confirmation et geste final proprietaire.
 
-Les lots 1 a 7 sont implementes et qualifies localement. Le lot 8 n'a pas ete execute : aucun
-appel fournisseur n'est autorise par ce Work Order.
+Les lots 1 a 8 sont implementes et qualifies. Aucun appel fournisseur supplementaire n'est autorise
+par la cloture.
 
 ## 8. Matrice de validation minimale
 
@@ -195,6 +198,8 @@ appel fournisseur n'est autorise par ce Work Order.
 | timeout, corps > 5 Mio ou canari sensible | fermeture sure, aucune reprise |
 | arret pendant une reponse lente | bornes 500 ms / 2 s / 5 s et zero residu |
 | campagne J3 face a une tentative J4/J5 | aucune intercalation |
+| qualification humaine `SCHEDULED_EVENTS` | pages 1 a 12 HTTP 200, `PARSED`, terminal `hasNextPage=false` |
+| qualification humaine `TOURNAMENT_SCHEDULED_EVENTS` | cinq actions confirmees, snapshots 584 a 588, comptes verifies |
 
 Commandes requises avant proposition de cloture :
 
@@ -212,7 +217,7 @@ jamais a SofaScore.
 Readiness technique executee le 28 aout 2026 :
 
 ```text
-STANDARD_TESTS=687 (2 SKIPPED)
+STANDARD_TESTS=691 (2 SKIPPED)
 INTEGRATION_TESTS=52
 WORKER_PROTOCOL_AND_SECURITY_TESTS=9
 REAL_CHROMIUM_LOOPBACK_TESTS=11
@@ -221,14 +226,46 @@ PROFILE_CONTAMINATION_GATE=PASS
 PROVIDER_ACCESS_PERFORMED=NO
 ```
 
+Correctif de recette du 28 aout 2026 : le premier essai operateur a echoue avant `READY` et avant
+tout GET SofaScore, car `Playwright.create()` tentait d'installer implicitement Firefox et WebKit
+apres l'installation explicite de Chromium. Le superviseur impose maintenant
+`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1`, le lanceur exige un cache Chromium complet et la fermeture
+accepte la disparition du PID racine seulement apres une trame terminale authentifiee. La preuve
+minimisee v6 n'annonce plus de requete fournisseur lorsque l'ouverture du worker echoue. Apres
+correction, `clean verify` passe a 691 tests (2 ignores) et deux executions consecutives du banc
+Chromium loopback passent a 11/11.
+
+Le nouvel essai operateur du 28 aout 2026 qualifie `SCHEDULED_EVENTS`. Apres une preparation, une
+confirmation et une action finale distincte, les pages 1 a 12 sont demandees dans l'ordre. Les
+snapshots 572 a 583 sont tous HTTP `200`, `PARSED` et `INSERTED`; la page 12 termine normalement
+avec `hasNextPage=false`. La preuve minimisee v6 indique 12 requetes fournisseur, zero cache hit,
+zero import JSON local, aucun echec, retry, polling, scheduler, cookie, jeton, compte ou session.
+L'arret global est reapplique et le circuit revient a
+`LOCKED / MANUAL_COLLECTION_TERMINAL_LOCK`.
+
+Cinq preparations, confirmations et actions finales independantes qualifient ensuite
+`TOURNAMENT_SCHEDULED_EVENTS` pour Ligue 1, Premier League, LaLiga, Bundesliga et Serie A. Le
+catalogue issu des 12 pages expose 524 tournois actionnables apres exclusion de 648 occurrences.
+Les cinq requetes HTTP `200` conservent les snapshots 584 a 588, passent chacune le controle de
+compte et ajoutent six observations canoniques sans deduplication : Lille - Paris Saint-Germain,
+Crystal Palace - Manchester City, Real Racing Club - Elche, Deportivo Alaves - Villarreal,
+FC Bayern Munchen - VfB Stuttgart et AC Milan - Venezia. Les liens directs vers l'etape J5 sont
+disponibles sans saisie d'identifiant.
+
+La campagne complete represente 17 appels humains confirmes, sans appel automatique. La preuve v6
+ne contient aucun motif sensible. Apres la decision de cloture, l'application est arretee
+gracieusement; le listener `127.0.0.1:8087`, le JVM applicatif et le JVM worker Playwright sont
+absents.
+
 Le detail reproductible est conserve dans
 `docs/validation/J3-PLAYWRIGHT-TRANSPORT-TECHNICAL-READINESS-20260827.md`.
 
 ## 9. Qualification fournisseur separee
 
-La readiness locale ne vaut pas qualification fournisseur. Un futur go doit figer la campagne, la
-date, la ou les familles, le plafond d'appels et la fenetre horaire. La preparation reste sans
-reseau ; une phrase exacte, un acquittement et une action finale sont obligatoires.
+La qualification humaine du 28 aout 2026 est bornee aux actions decrites ci-dessus. Toute campagne
+future doit recevoir un nouveau go, figer la date, la ou les familles, le plafond d'appels et la
+fenetre horaire. La preparation reste sans reseau ; une phrase exacte, un acquittement et une action
+finale sont obligatoires.
 
 Le premier `403`, `429`, challenge, HTML, redirection, timeout, `5xx`, route inattendue ou anomalie
 sensible arrete la campagne sans retry. Le rapport final reste minimise et ne publie ni payload,
@@ -263,13 +300,21 @@ migration Flyway append-only separee.
 ## 12. Portes de statut
 
 ```text
-WORK_ORDER_STATUS=IN_PROGRESS
+WORK_ORDER_STATUS=VALIDATED
 IMPLEMENTATION_STARTED=YES
-IMPLEMENTATION_STATUS=COMPLETED_AWAITING_OWNER_VALIDATION
-PROVIDER_CALL_AUTHORIZED=NO
+IMPLEMENTATION_STATUS=COMPLETED
+PROVIDER_CALL_QUALIFICATION=PASS_BY_OWNER_EXECUTION_2026_08_28
+PROVIDER_CALLS_DURING_HUMAN_QUALIFICATION=17
+ADDITIONAL_PROVIDER_CALL_AUTHORIZED=NO
 ADR_REVIEW=COMPATIBLE_WITH_V1_3
 SHARED_RUNTIME_OWNER=WO-SS-20260827-013
 LOCAL_READINESS=PASS
-HUMAN_PROVIDER_QUALIFICATION=NOT_RUN_NOT_AUTHORIZED
-CLOSURE=NOT_AUTHORIZED
+HUMAN_PROVIDER_QUALIFICATION=PASS_SCHEDULED_AND_FIVE_TOURNAMENT_DISCOVERY_ACTIONS
+SCHEDULED_EVENTS_QUALIFICATION=PASS_12_PAGES_SNAPSHOTS_572_TO_583
+TOURNAMENT_SCHEDULED_EVENTS_QUALIFICATION=PASS_5_CALLS_SNAPSHOTS_584_TO_588
+CANONICAL_EVENTS_ADDED=6
+FINAL_APPLICATION_LISTENER=ABSENT_127_0_0_1_8087
+FINAL_APPLICATION_JVM_COUNT=0
+FINAL_PLAYWRIGHT_WORKER_JVM_COUNT=0
+CLOSURE=AUTHORIZED_BY_OWNER_2026_08_28
 ```

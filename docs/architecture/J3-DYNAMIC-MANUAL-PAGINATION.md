@@ -124,12 +124,12 @@ Ce résultat reste une persistance valide et ne contourne aucun contrôle de sch
 porte au contraire l’issue de preuve `CACHE_HIT` : aucune méthode de sauvegarde ou de classement
 n’est invoquée et le snapshot historique reste immuable.
 
-## 5. Preuve terminale minimisée v5
+## 5. Preuve terminale minimisée v6
 
 La preuve téléchargeable contient seulement les métadonnées nécessaires :
 
 ```text
-J3_MINIMIZED_EVIDENCE_VERSION=5
+J3_MINIMIZED_EVIDENCE_VERSION=6
 COLLECTION_DATE=<date>
 PAGINATION_MODE=HAS_NEXT_PAGE
 CACHE_POLICY=FRESH_PARSED_SNAPSHOT_FIRST
@@ -156,8 +156,10 @@ COOKIES_TOKENS_ACCOUNT_SESSION_USED=NO
 ```
 
 Un succès exige `hasNextPage=false` sur la dernière page et `true` sur toutes les précédentes. La
-preuve distingue sans ambiguïté les transports, cache hits et imports ; les compteurs de résultat
-ne peuvent ni les mélanger ni présenter un import comme un appel fournisseur. Un
+preuve distingue sans ambiguïté les transports, cache hits et imports ; une tentative échouée avant
+le frame `READY` reste une résolution fournisseur mais porte `PROVIDER_REQUEST_EXECUTED=NO` et ne
+rejoint pas `PROVIDER_PAGES_REQUESTED` ni `PROVIDER_REQUEST_COUNT`. Les compteurs de résultat ne
+peuvent ni mélanger les voies ni présenter un import comme un appel fournisseur. Un
 arrêt `PAGINATION_LIMIT_REACHED` exige 25 pages parsées annonçant toutes une suite, sans tentative
 de page 26. La preuve exclut le payload, l’URI, les en-têtes et l’identifiant de confirmation.
 

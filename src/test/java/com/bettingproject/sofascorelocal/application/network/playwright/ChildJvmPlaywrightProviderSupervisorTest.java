@@ -8,6 +8,7 @@ import org.junit.jupiter.api.io.TempDir;
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -19,6 +20,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -73,6 +75,29 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                 .extracting("failure")
                 .isEqualTo(PlaywrightProviderFailure.WORKER_ARTIFACT_INVALID);
         assertThat(starts).hasValue(0);
+    }
+
+    @Test
+    void workerAlwaysDisablesImplicitBrowserDownloads() throws Exception {
+        ProviderPlaywrightProperties properties = enabledProperties("no-download.jar");
+        AtomicReference<Map<String, String>> environment = new AtomicReference<>();
+        var supervisor = new ChildJvmPlaywrightProviderSupervisor(
+                properties,
+                Clock.systemUTC(),
+                new SecureRandom(),
+                builder -> {
+                    environment.set(Map.copyOf(builder.environment()));
+                    throw new IOException("expected test launch failure");
+                });
+
+        assertThatThrownBy(() -> supervisor.open(
+                UUID.randomUUID(), Set.of(SofascoreEndpointType.SCHEDULED_EVENTS)))
+                .isInstanceOf(PlaywrightProviderException.class)
+                .extracting("failure")
+                .isEqualTo(PlaywrightProviderFailure.STARTUP_FAILED);
+
+        assertThat(environment.get())
+                .containsEntry("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD", "1");
     }
 
     @Test
@@ -522,6 +547,33 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         assertThat(child.destroyCalls()).hasPositiveValue();
         assertThat(child.alive()).isFalse();
         assertThat(access.captureCalls()).hasPositiveValue();
+    }
+
+    @Test
+    void authenticatedTerminalFrameMakesAnAlreadyExitedRootConclusive() {
+        Instant rootStartedAt = Instant.parse("2026-08-27T08:00:00Z");
+        OwnedHandle root = ownedHandle(651L, rootStartedAt, true, true);
+        OwnedHandle child = ownedHandle(
+                652L, rootStartedAt.plusMillis(1), true, true);
+        Process process = process(root.handle());
+        var initialInventory =
+                ChildJvmPlaywrightProviderSupervisor.ProcessTreeSnapshot.exact(
+                        List.of(root.owned(), child.owned()));
+        root.alive().set(false);
+        var access = new RootGoneProcessTreeAccess();
+
+        var outcome = ChildJvmPlaywrightProviderSupervisor.terminateOwnedProcessTree(
+                process,
+                rootStartedAt,
+                initialInventory,
+                access,
+                true);
+
+        assertThat(outcome.identityComplete()).isTrue();
+        assertThat(outcome.cancellationWithinBound()).isTrue();
+        assertThat(outcome.residualOwnedProcessCount()).isZero();
+        assertThat(child.destroyCalls()).hasPositiveValue();
+        assertThat(child.alive()).isFalse();
     }
 
     @Test

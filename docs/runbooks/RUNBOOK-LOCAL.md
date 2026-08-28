@@ -82,6 +82,11 @@ Ou depuis PowerShell :
 .\mvnw.cmd -Dspring-boot.run.profiles=local spring-boot:run
 ```
 
+Ces deux démarrages sont volontairement inertes pour Playwright. Même si le `.env` contient une
+combinaison métier J3/J4/J5 valide, `SOFASCORE_PLAYWRIGHT_ENABLED=false` et l'absence de JAR worker
+maintiennent le transport J3 indisponible. Pour une campagne J3 explicitement autorisée, suivre la
+section 3.14 et démarrer l'application avec `scripts/Start-J3PlaywrightLocal.ps1` à la place.
+
 ### 3.3 Contrôles de santé
 
 ```powershell
@@ -150,7 +155,9 @@ SOFASCORE_BASE_URL=https://www.sofascore.com
 SOFASCORE_ALLOWED_ENDPOINTS=SCHEDULED_EVENTS
 ```
 
-4. redémarrer l’application avec le profil `local` ;
+4. installer une fois le runtime avec `scripts/Install-J3PlaywrightRuntime.ps1`, puis démarrer
+   l'application avec `scripts/Start-J3PlaywrightLocal.ps1` comme décrit en section 3.14 ; ne pas
+   utiliser en parallèle la commande Spring Boot générique ;
 5. vérifier dans le tableau de bord :
    - `J3_QUALIFICATION_READY` ;
    - date unique `2026-08-13` non élargissable ;
@@ -301,7 +308,7 @@ Cette procédure remplace fonctionnellement la reprise fixe de la section 3.7. E
 12. télécharger la preuve et contrôler au minimum :
 
 ```text
-J3_MINIMIZED_EVIDENCE_VERSION=5
+J3_MINIMIZED_EVIDENCE_VERSION=6
 PAGINATION_MODE=HAS_NEXT_PAGE
 CACHE_POLICY=FRESH_PARSED_SNAPSHOT_FIRST
 CACHE_TTL_SECONDS=600
@@ -784,8 +791,22 @@ SOFASCORE_ALLOWED_ENDPOINTS=SCHEDULED_EVENTS,TOURNAMENT_SCHEDULED_EVENTS,EVENT_D
 L'union doit rester exacte. Ne pas ajouter `TOURNAMENT_STANDINGS` ni `TEAM_RECENT_EVENTS` : ces
 familles sont différées, ne sont liées à aucun opt-in qualifié et leur présence bloque
 volontairement le démarrage. Modifier `.env` ne recharge pas une application déjà démarrée : après
-un changement, arrêter puis redémarrer depuis la racine du dépôt. Le build Maven et les tests ne
-constituent jamais une autorisation d'appel réel et restent isolés des opt-ins du `.env` local.
+un changement, arrêter puis redémarrer depuis la racine du dépôt. Cette configuration à six
+endpoints est le contrat métier valide ; elle n'active pas à elle seule le transport J3 Playwright.
+Un démarrage Spring Boot générique doit encore afficher un transport J3 indisponible. Pour exercer
+J3 après autorisation distincte, installer une fois le runtime puis lancer exclusivement :
+
+```powershell
+pwsh -NoProfile -File .\scripts\Install-J3PlaywrightRuntime.ps1
+pwsh -NoProfile -File .\scripts\Start-J3PlaywrightLocal.ps1
+```
+
+Le second script construit le worker, vérifie le cache Chromium et injecte dans son seul processus
+`SOFASCORE_PLAYWRIGHT_ENABLED=true`, le chemin absolu du JAR worker et
+`PLAYWRIGHT_BROWSERS_PATH`. Il ne contacte pas SofaScore au démarrage : l'accès reste impossible
+avant la préparation, la confirmation et l'action finale distincte dans l'interface. Le build Maven
+et les tests ne constituent jamais une autorisation d'appel réel et restent isolés des opt-ins du
+`.env` local.
 
 Après une collecte J3 terminale `COMPLETED`, sélectionner le tournoi, préparer puis confirmer la
 découverte. Cette action reste distincte et autorise soit au plus un GET sur cache miss, soit un
@@ -1087,7 +1108,8 @@ Cette procédure appartient à `WO-SS-20260827-013`. Elle installe puis exerce l
 Chromium uniquement contre un serveur éphémère lié à `127.0.0.1`. Elle ne contacte pas SofaScore,
 n’autorise aucune campagne réelle et ne valide pas humainement le Work Order.
 
-Le build et le démarrage habituels restent inertes :
+Le build et le démarrage habituels restent inertes. Conserver ces valeurs sûres dans `.env`, y
+compris lorsque la configuration métier combinée à six endpoints est armée :
 
 ```text
 SOFASCORE_PLAYWRIGHT_ENABLED=false
@@ -1125,21 +1147,35 @@ PROVIDER_ACCESS_PERFORMED=NO
 
 Ne pas copier ce cache dans Git, un profil navigateur personnel ou un répertoire partagé.
 
-Pour une future campagne fournisseur autorisée séparément, construire d'abord le worker avec le
-profil opt-in, puis renseigner des chemins absolus vers le JAR classifié et le cache dédié :
+Le packaging explicite produit le JAR classifié suivant :
 
 ```powershell
 .\mvnw.cmd -Pprovider-playwright-runtime -DskipTests package
-$env:SOFASCORE_PLAYWRIGHT_WORKER_JAR = (Resolve-Path '.\target\sofascore-local-lab-0.1.0-SNAPSHOT-provider-playwright-worker.jar').Path
-$env:PLAYWRIGHT_BROWSERS_PATH = (Resolve-Path '.\.tmp\provider-playwright-browsers').Path
-$env:SOFASCORE_PLAYWRIGHT_ENABLED = 'true'
+Resolve-Path '.\target\betting-sofascore-local-lab-0.1.0-SNAPSHOT-provider-playwright-worker.jar'
 ```
 
-Le JAR doit etre un fichier regulier lisible dont le manifeste porte exactement le `Start-Class`
-du worker J3. Un chemin absent, vide, non JAR ou un manifeste different maintient la qualification
-bloquee avant le claim. Ces variables ne demarrent rien : une confirmation operateur J3 valide et
-le premier cache miss restent necessaires. La campagne reelle demeure interdite tant qu'un go
-proprietaire distinct n'en a pas fige le perimetre.
+Le JAR doit être un fichier régulier lisible dont le manifeste porte exactement le `Start-Class`
+du worker J3. Un chemin absent, vide, non JAR ou un manifeste différent maintient la qualification
+bloquée avant le claim.
+
+Pour une campagne fournisseur J3 autorisée séparément, ne pas persister les chemins ni remplacer
+les valeurs sûres du `.env`. Depuis la racine du dépôt, utiliser le lanceur dédié :
+
+```powershell
+pwsh -NoProfile -File .\scripts\Start-J3PlaywrightLocal.ps1
+```
+
+Ce script reconstruit et vérifie le JAR classifié, exige une installation Chromium complète dans le
+cache dédié, puis affecte
+`SOFASCORE_PLAYWRIGHT_ENABLED=true`, `SOFASCORE_PLAYWRIGHT_WORKER_JAR` et
+`PLAYWRIGHT_BROWSERS_PATH` seulement dans le processus qui démarre l'application. Il force aussi
+les paramètres loopback de qualification à leur état inactif. Le superviseur du worker impose
+`PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` : une campagne ne télécharge jamais Firefox, WebKit ou une
+révision manquante et échoue fermée si Chromium n'est pas utilisable. Son terminal doit annoncer
+`J3_PLAYWRIGHT_LOCAL_LAUNCH=READY` et `PROVIDER_ACCESS_PERFORMED=NO` avant le démarrage Spring Boot.
+Ni le script, ni l'ouverture du tableau de bord ne contacte SofaScore : une intention valide, sa
+confirmation opérateur et l'action finale distincte sur cache miss restent nécessaires. La
+campagne réelle demeure interdite tant qu'un go propriétaire distinct n'en a pas figé le périmètre.
 
 Exécuter ensuite la qualification loopback :
 

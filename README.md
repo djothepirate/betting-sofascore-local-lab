@@ -39,9 +39,10 @@ dédupliqué avec occurrences append-only. Les tests PostgreSQL comparent les co
 une prévalidation refusée et provoquent un incident sur la dernière famille du dernier match pour
 confirmer le rollback atomique de tout le lot.
 
-La configuration combinée J3/J4/J5 peut rester armée pendant l'import : avec
-`SOFASCORE_ENABLED=true`, les opt-ins, l'origine et les six endpoints autorisés peuvent rendre les
-voies manuelles fournisseur disponibles sans rendre le lot local inéligible. La campagne terminale
+La configuration métier combinée J3/J4/J5 peut rester armée pendant l'import : avec
+`SOFASCORE_ENABLED=true`, les opt-ins, l'origine et les six endpoints autorisés, son périmètre est
+valide sans rendre le lot local inéligible. Elle n'arme toutefois pas à elle seule le transport J3
+Playwright : une campagne J3 exige le lanceur local explicite décrit plus bas. La campagne terminale
 de qualification a importé trois rencontres et neuf fichiers, contrôlé 450 124 octets, produit six
 nouvelles versions et trois déduplications, avec neuf familles `COMPLETE · 100%` et zéro appel
 fournisseur, cache, coordinateur ou retry.
@@ -333,16 +334,28 @@ jalons. Toutes ces voies interdisent polling, planification et retry. J6/J7 rest
 transport. Les configurations temporaires et leur remise à l'état bloqué sont décrites dans
 `docs/runbooks/RUNBOOK-LOCAL.md`.
 
-Le Work Order actif `WO-SS-20260827-013` implémente pour les deux familles J3 un transport Playwright
-dans un worker JVM enfant. Le build standard reste sans runtime Playwright et
-`SOFASCORE_PLAYWRIGHT_ENABLED=false` est la valeur par défaut. Le JAR worker doit en outre etre
-selectionne explicitement par `SOFASCORE_PLAYWRIGHT_WORKER_JAR`; sa valeur vide maintient le
-transport bloque. Le profil
+Le Work Order validé `WO-SS-20260827-013` implémente pour les deux familles J3 un transport Playwright
+dans un worker JVM enfant. Le build et le démarrage standards restent sans runtime Playwright et
+`SOFASCORE_PLAYWRIGHT_ENABLED=false` est la valeur persistée par défaut. Une configuration métier
+J3/J4/J5 valide peut donc afficher `CONFIG_ENABLED_BUT_QUALIFICATION_BLOCKED` et un transport J3
+`INDISPONIBLE` lorsqu'elle est lancée par la commande Spring Boot générique : c'est le verrou attendu.
+Après installation explicite du runtime, `scripts/Start-J3PlaywrightLocal.ps1` construit et vérifie
+`target/betting-sofascore-local-lab-0.1.0-SNAPSHOT-provider-playwright-worker.jar`, puis injecte
+`SOFASCORE_PLAYWRIGHT_ENABLED`, le JAR worker et le cache Chromium uniquement dans le processus de
+ce lancement. Le lanceur vérifie les marqueurs et exécutables Chromium ; le superviseur impose au
+worker l'absence de tout téléchargement implicite de navigateur. Le profil
 `provider-playwright-runtime` compile seulement le worker ; il ne démarre ni Chromium ni une
-campagne. Chaque campagne explicitement armée utilise un worker, un navigateur headless et un
-contexte non persistant neufs, puis un arrêt ciblé nettoie leur arbre de processus exact. La
-qualification fournie est exclusivement loopback sur `127.0.0.1` et ne vaut ni autorisation
-d’appel fournisseur, ni validation humaine, ni clôture du Work Order.
+campagne. Le lanceur n'appelle pas SofaScore : la préparation, la confirmation et l'action finale
+distincte dans l'interface restent indispensables. Chaque campagne explicitement armée utilise un
+worker, un navigateur headless et un contexte non persistant neufs, puis un arrêt ciblé nettoie
+leur arbre de processus exact. La qualification technique reste exclusivement loopback sur
+`127.0.0.1`. La qualification humaine bornée du 28 août 2026 est ensuite concluante pour les deux
+familles J3 : `SCHEDULED_EVENTS` conserve en HTTP `200` les douze pages et snapshots 572 à 583
+jusqu'à `hasNextPage=false`; cinq actions `TOURNAMENT_SCHEDULED_EVENTS` conservent les snapshots
+584 à 588, vérifient six rencontres canoniques et les relient à J5. Ces dix-sept requêtes ont exigé
+des préparations, confirmations et actions finales distinctes. L'application est ensuite arrêtée
+gracieusement, sans listener ni JVM applicatif ou worker résiduel. La décision propriétaire clôt le
+Work Order en `VALIDATED`; aucune nouvelle campagne fournisseur n'est autorisée par cette clôture.
 
 Le lot multi-match WO-010 reste indépendant de ces voies armables : l'état de
 `SOFASCORE_ENABLED` n'entre pas dans sa décision d'éligibilité. Son automatisation s'arrête à la
@@ -414,6 +427,19 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 # 5. Démarre l’application locale
 .\mvnw.cmd -Dspring-boot.run.profiles=local spring-boot:run
 ```
+
+Ce démarrage normal conserve Playwright désarmé, même si les opt-ins métier J3/J4/J5 du `.env`
+forment une combinaison valide. Pour un test fournisseur J3 explicitement autorisé, installer une
+fois le runtime puis utiliser le lanceur dédié à la place de la commande de l'étape 5 :
+
+```powershell
+pwsh -NoProfile -File .\scripts\Install-J3PlaywrightRuntime.ps1
+pwsh -NoProfile -File .\scripts\Start-J3PlaywrightLocal.ps1
+```
+
+Le lanceur fournit les chemins du worker et de Chromium seulement à son processus. Il démarre
+l'application, mais aucun accès SofaScore n'a lieu avant la préparation, la confirmation et la
+commande finale distincte de l'opérateur dans l'interface.
 
 Ouvrir ensuite :
 
@@ -709,7 +735,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Politiques d’arrêt et d’incident J3](docs/architecture/J3-TRANSPORT-STOP-AND-INCIDENT-POLICIES.md)
 - [Transport fournisseur manuel J3 Playwright](docs/architecture/J3-PLAYWRIGHT-PROVIDER-TRANSPORT.md)
 - [Readiness technique du transport J3 Playwright](docs/validation/J3-PLAYWRIGHT-TRANSPORT-TECHNICAL-READINESS-20260827.md)
-- [Work Order actif du transport J3 Playwright](docs/work_orders/active/WO-SS-20260827-013-j3-playwright-transport.md)
+- [Work Order validé du transport J3 Playwright](docs/work_orders/completed/WO-SS-20260827-013-j3-playwright-transport.md)
 - [Chemin fournisseur J3 borné à cinq pages](docs/architecture/J3-FIVE-PAGE-PROVIDER-QUALIFICATION.md)
 - [Reprise fournisseur J3 contrôlée à la page 2](docs/architecture/J3-PAGE-TWO-PROVIDER-RESUME.md)
 - [Adaptation hors ligne au schéma qualifié de la page 2](docs/architecture/J3-PAGE-TWO-SCHEMA-ADAPTATION.md)

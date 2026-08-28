@@ -1,0 +1,109 @@
+[CmdletBinding()]
+param()
+
+$ErrorActionPreference = 'Stop'
+Set-StrictMode -Version 2.0
+
+$repositoryRoot = Split-Path -Parent $PSScriptRoot
+$browserCache = Join-Path $repositoryRoot '.tmp\provider-playwright-browsers'
+$workerJar = Join-Path $repositoryRoot `
+    'target\betting-sofascore-local-lab-0.1.0-SNAPSHOT-provider-playwright-worker.jar'
+
+if (-not (Test-Path -LiteralPath $browserCache -PathType Container)) {
+    throw 'The dedicated Playwright browser cache is absent; run Install-J3PlaywrightRuntime.ps1 explicitly first'
+}
+$browserCache = (Resolve-Path -LiteralPath $browserCache).Path
+$chromiumInstallations = @(Get-ChildItem -LiteralPath $browserCache -Directory |
+    Where-Object {
+        $_.Name -like 'chromium-*' -and
+        (Test-Path -LiteralPath (Join-Path $_.FullName 'INSTALLATION_COMPLETE') -PathType Leaf) -and
+        @(Get-ChildItem -LiteralPath $_.FullName -Recurse -File -Filter 'chrome.exe').Count -gt 0
+    })
+$headlessShellInstallations = @(Get-ChildItem -LiteralPath $browserCache -Directory |
+    Where-Object {
+        $_.Name -like 'chromium_headless_shell-*' -and
+        (Test-Path -LiteralPath (Join-Path $_.FullName 'INSTALLATION_COMPLETE') -PathType Leaf) -and
+        @(Get-ChildItem -LiteralPath $_.FullName -Recurse -File -Filter 'chrome-headless-shell.exe').Count -gt 0
+    })
+if ($chromiumInstallations.Count -eq 0 -or $headlessShellInstallations.Count -eq 0) {
+    throw 'The dedicated Playwright cache has no complete Chromium installation; run Install-J3PlaywrightRuntime.ps1 explicitly first'
+}
+
+Push-Location $repositoryRoot
+try {
+    & .\mvnw.cmd '-Pprovider-playwright-runtime' '-DskipTests' package
+    if ($LASTEXITCODE -ne 0) {
+        throw 'The explicit J3 Playwright worker package failed'
+    }
+}
+finally {
+    Pop-Location
+}
+
+if (-not (Test-Path -LiteralPath $workerJar -PathType Leaf)) {
+    throw 'The classified J3 Playwright worker jar is absent after packaging'
+}
+$workerJar = (Resolve-Path -LiteralPath $workerJar).Path
+
+$environmentNames = @(
+    'PLAYWRIGHT_BROWSERS_PATH',
+    'SOFASCORE_PLAYWRIGHT_ENABLED',
+    'SOFASCORE_PLAYWRIGHT_WORKER_JAR',
+    'SOFASCORE_PLAYWRIGHT_LOOPBACK_QUALIFICATION',
+    'SOFASCORE_PLAYWRIGHT_LOOPBACK_ORIGIN'
+)
+$previousEnvironment = @{}
+foreach ($name in $environmentNames) {
+    $previousEnvironment[$name] = [Environment]::GetEnvironmentVariable(
+        $name,
+        'Process')
+}
+
+$applicationExitCode = 1
+try {
+    $env:PLAYWRIGHT_BROWSERS_PATH = $browserCache
+    $env:SOFASCORE_PLAYWRIGHT_ENABLED = 'true'
+    $env:SOFASCORE_PLAYWRIGHT_WORKER_JAR = $workerJar
+    $env:SOFASCORE_PLAYWRIGHT_LOOPBACK_QUALIFICATION = 'false'
+    $env:SOFASCORE_PLAYWRIGHT_LOOPBACK_ORIGIN = ''
+
+    Write-Host 'J3_PLAYWRIGHT_LOCAL_LAUNCH=READY'
+    Write-Host 'PLAYWRIGHT_RUNTIME_OPT_IN=TRUE'
+    Write-Host 'PLAYWRIGHT_WORKER_ARTIFACT=VERIFIED_PRESENT'
+    Write-Host 'PLAYWRIGHT_BROWSER_CACHE=VERIFIED_COMPLETE'
+    Write-Host 'PLAYWRIGHT_IMPLICIT_BROWSER_DOWNLOAD=DISABLED'
+    Write-Host 'PROVIDER_ACCESS_PERFORMED=NO'
+
+    & (Join-Path $PSScriptRoot 'Start-Local.ps1')
+    Write-Host 'APPLICATION_STARTING_WITH_J3_PLAYWRIGHT=YES'
+
+    Push-Location $repositoryRoot
+    try {
+        & .\mvnw.cmd `
+            '-Pprovider-playwright-runtime' `
+            '-Dspring-boot.run.profiles=local' `
+            spring-boot:run
+        $applicationExitCode = $LASTEXITCODE
+    }
+    finally {
+        Pop-Location
+    }
+}
+finally {
+    foreach ($name in $environmentNames) {
+        $previousValue = $previousEnvironment[$name]
+        if ($null -eq $previousValue) {
+            Remove-Item -LiteralPath "Env:$name" -ErrorAction SilentlyContinue
+        }
+        else {
+            [Environment]::SetEnvironmentVariable(
+                $name,
+                $previousValue,
+                'Process')
+        }
+    }
+}
+
+if ($applicationExitCode -ne 0) {
+    throw "The J3 Playwright local application exited with code $applicationExitCode"
+}

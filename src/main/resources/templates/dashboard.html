@@ -151,6 +151,14 @@
           </div>
         </dl>
 
+        <div class="provider-blockers" th:if="${!manualCall.providerBlockers.isEmpty()}">
+          <p class="label">Verrous du transport fournisseur</p>
+          <ul>
+            <li th:each="blocker : ${manualCall.providerBlockers}"
+                class="mono" th:text="${blocker}">PLAYWRIGHT_RUNTIME_DISABLED</li>
+          </ul>
+        </div>
+
         <div class="control-actions">
           <form th:if="${manualCall.canRearm}" th:action="@{/manual-call/rearm}" method="post">
             <input type="hidden" name="localFormToken" th:value="${localFormToken}">
@@ -286,13 +294,6 @@
       </div>
     </div>
 
-    <div class="provider-blockers" th:if="${!manualCall.providerBlockers.isEmpty()}">
-      <p class="label">Verrous fournisseur maintenus</p>
-      <ul>
-        <li th:each="blocker : ${manualCall.providerBlockers}" class="mono" th:text="${blocker}">REAL_CALL_NOT_AUTHORIZED</li>
-      </ul>
-    </div>
-
     <section class="qualification-evidence"
              th:if="${collectionEvidence != null}"
              aria-labelledby="qualification-evidence-title">
@@ -305,7 +306,7 @@
       </div>
       <p>Cette preuve est produite après la séquence terminale. Elle contient les statuts, horodatages,
         tailles et empreintes SHA-256 de persistance, sans payload JSON, URI, en-tête ni donnée de session.</p>
-      <pre class="evidence-report" th:text="${collectionEvidence.reportText}">J3_MINIMIZED_EVIDENCE_VERSION=5</pre>
+      <pre class="evidence-report" th:text="${collectionEvidence.reportText}">J3_MINIMIZED_EVIDENCE_VERSION=6</pre>
       <a class="evidence-download" th:href="@{/manual-call/evidence}" href="/manual-call/evidence">
         Télécharger la preuve minimisée (.txt)
       </a>

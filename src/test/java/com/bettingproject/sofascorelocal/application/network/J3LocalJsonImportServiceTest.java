@@ -83,7 +83,7 @@ class J3LocalJsonImportServiceTest {
         assertThat(control.snapshot().intent().state())
                 .isEqualTo(J3ManualCallIntentState.COMPLETED);
         assertThat(evidenceService.latestDocument().orElseThrow().reportText())
-                .contains("J3_MINIMIZED_EVIDENCE_VERSION=5")
+                .contains("J3_MINIMIZED_EVIDENCE_VERSION=6")
                 .contains("PROVIDER_PAGES_REQUESTED=NONE")
                 .contains("CACHE_HIT_PAGES=NONE")
                 .contains("LOCAL_JSON_IMPORT_PAGES=1,2")

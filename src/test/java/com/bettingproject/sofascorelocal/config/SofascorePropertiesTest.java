@@ -13,6 +13,7 @@ import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.ConfigDataApplicationContextInitializer;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -20,11 +21,23 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Import;
 import org.springframework.core.env.StandardEnvironment;
 
+import java.io.IOException;
+import java.nio.file.Path;
 import java.time.Duration;
+import java.util.jar.Attributes;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class SofascorePropertiesTest {
+
+    private static final String WORKER_START_CLASS =
+            "com.bettingproject.sofascorelocal.provider.playwright.worker."
+                    + "ProviderPlaywrightWorkerMain";
+
+    @TempDir
+    Path temporaryDirectory;
 
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
     private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
@@ -419,7 +432,10 @@ class SofascorePropertiesTest {
     }
 
     @Test
-    void bindsOneCombinedJ3TournamentDiscoveryJ4PhaseTwoAndJ5QualificationSession() {
+    void bindsOneCombinedJ3TournamentDiscoveryJ4PhaseTwoAndJ5QualificationSession()
+            throws Exception {
+        Path workerJar = writeWorkerJar("combined-worker.jar");
+
         contextRunner
                 .withSystemProperties(
                         "SOFASCORE_ENABLED=true",
@@ -428,6 +444,8 @@ class SofascorePropertiesTest {
                         "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=true",
                         "SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=true",
                         "SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED=true",
+                        "SOFASCORE_PLAYWRIGHT_ENABLED=true",
+                        "SOFASCORE_PLAYWRIGHT_WORKER_JAR=" + workerJar,
                         "SOFASCORE_BASE_URL=" + EventDetailsProviderRequest.EXPECTED_ORIGIN,
                         "SOFASCORE_ALLOWED_ENDPOINTS="
                                 + "SCHEDULED_EVENTS,TOURNAMENT_SCHEDULED_EVENTS,"
@@ -445,10 +463,14 @@ class SofascorePropertiesTest {
                                 SofascoreEndpointType.EVENT_INCIDENTS,
                                     SofascoreEndpointType.EVENT_LINEUPS);
                     assertThat(properties.hasExactActiveQualificationEndpoints()).isTrue();
+                    ProviderPlaywrightProperties playwright = context.getBean(
+                            ProviderPlaywrightProperties.class);
+                    assertThat(playwright.isEnabled()).isTrue();
+                    assertThat(playwright.getWorkerJar()).isEqualTo(workerJar);
                     assertThat(context.getBean(J3ProviderQualificationPolicy.class)
-                            .snapshot().available()).isFalse();
+                            .snapshot().available()).isTrue();
                     assertThat(context.getBean(TournamentEventDiscoveryQualificationPolicy.class)
-                            .snapshot().available()).isFalse();
+                            .snapshot().available()).isTrue();
                     assertThat(context.getBean(J4EventDetailsQualificationPolicy.class)
                             .snapshot().available()).isFalse();
                     assertThat(context.getBean(J4EventDetailsPhase2QualificationPolicy.class)
@@ -456,6 +478,19 @@ class SofascorePropertiesTest {
                     assertThat(context.getBean(J5RealQualificationPolicy.class)
                             .snapshot().available()).isTrue();
                 });
+    }
+
+    private Path writeWorkerJar(String fileName) throws IOException {
+        Path worker = temporaryDirectory.resolve(fileName);
+        Manifest manifest = new Manifest();
+        Attributes attributes = manifest.getMainAttributes();
+        attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
+        attributes.putValue("Start-Class", WORKER_START_CLASS);
+        try (JarOutputStream ignored = new JarOutputStream(
+                java.nio.file.Files.newOutputStream(worker), manifest)) {
+            // The policy authenticates only the bounded worker manifest in this binding test.
+        }
+        return worker;
     }
 
     @Test

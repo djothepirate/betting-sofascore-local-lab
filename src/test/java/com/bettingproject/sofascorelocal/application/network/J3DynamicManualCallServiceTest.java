@@ -237,7 +237,7 @@ class J3DynamicManualCallServiceTest {
         assertThat(control.snapshot().intent().firstPage()).isEqualTo(1);
         assertThat(control.snapshot().intent().completedPages()).isEqualTo(1);
         assertThat(evidenceService.latestDocument().orElseThrow().reportText())
-                .contains("J3_MINIMIZED_EVIDENCE_VERSION=5")
+                .contains("J3_MINIMIZED_EVIDENCE_VERSION=6")
                 .contains("PROVIDER_FIRST_PAGE=1")
                 .contains("PAGES_RESOLVED=1")
                 .contains("PAGES_COMPLETED_COUNT=1")
@@ -389,6 +389,44 @@ class J3DynamicManualCallServiceTest {
                 .contains("PAGE_1_HTTP_STATUS=NONE")
                 .contains("PAGE_1_PAYLOAD_SHA256=NONE")
                 .contains("PAGE_1_TERMINAL_CODE=TIMEOUT");
+    }
+
+    @Test
+    void workerStartupFailureDoesNotClaimThatAProviderRequestWasExecuted() {
+        MutableClock clock = new MutableClock(NOW);
+        RecordingStore store = new RecordingStore();
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
+        ScheduledEventsProviderPageTransport transport =
+                new ScheduledEventsProviderPageTransport() {
+
+            @Override
+            public Campaign openCampaign(UUID campaignId) {
+                throw new ScheduledEventsTransportException(
+                        ScheduledEventsTransportFailure.IO_FAILURE);
+            }
+        };
+        J3ManualCallControlService control = readyControl(clock);
+        var service = service(
+                control,
+                transport,
+                store,
+                evidenceService,
+                clock,
+                clock::advance);
+
+        var result = service.execute(REQUEST_ID);
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.providerRequests()).isZero();
+        assertThat(store.saved).isEmpty();
+        assertThat(evidenceService.latestDocument().orElseThrow().reportText())
+                .contains("J3_MINIMIZED_EVIDENCE_VERSION=6")
+                .contains("PROVIDER_PAGES_REQUESTED=NONE")
+                .contains("PROVIDER_REQUEST_COUNT=0")
+                .contains("PAGE_1_RESOLUTION_SOURCE=PROVIDER")
+                .contains("PAGE_1_PROVIDER_REQUEST_EXECUTED=NO")
+                .contains("PAGE_1_SNAPSHOT_RECORDED=NO");
     }
 
     @Test

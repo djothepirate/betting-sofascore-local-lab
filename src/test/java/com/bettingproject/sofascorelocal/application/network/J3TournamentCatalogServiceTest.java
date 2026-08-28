@@ -693,6 +693,7 @@ class J3TournamentCatalogServiceTest {
         return new J3MinimizedPageEvidence(
                 page.page(),
                 J3PageResolutionSource.PROVIDER,
+                true,
                 receivedAt,
                 null,
                 receivedAt.minusMillis(10),
@@ -713,6 +714,7 @@ class J3TournamentCatalogServiceTest {
         return new J3MinimizedPageEvidence(
                 page.page(),
                 J3PageResolutionSource.LOCAL_JSON_IMPORT,
+                false,
                 receivedAt,
                 null,
                 receivedAt,

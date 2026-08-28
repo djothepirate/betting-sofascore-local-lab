@@ -224,6 +224,7 @@ public class J3DynamicManualCallService {
                 }
 
                 Instant attemptedAt = clock.instant();
+                boolean providerRequestExecuted = false;
                 try {
                     ScheduledEventsTransportResponse response;
                     if (providerLease == null) {
@@ -255,6 +256,7 @@ public class J3DynamicManualCallService {
                     }
                     attemptedAt = clock.instant();
                     providerRequests++;
+                    providerRequestExecuted = true;
                     response = providerCampaign.execute(request);
                     J3ScheduledEventsOutcome outcome = outcomeProcessor.processResponse(response);
                     if (outcome.circuit().state() == J3CircuitState.CLOSED) {
@@ -344,7 +346,7 @@ public class J3DynamicManualCallService {
                     if (!controlService.executionMayContinue(requestId)) {
                         String terminalCode = "OPERATOR_STOP";
                         pageAttempts.add(J3MinimizedPageEvidence.failedBeforeSnapshot(
-                                page, attemptedAt, terminalCode));
+                                page, attemptedAt, terminalCode, providerRequestExecuted));
                         return publishAlreadyLockedFailure(
                                 claim.date(),
                                 initialCompletedPages,
@@ -359,7 +361,7 @@ public class J3DynamicManualCallService {
                             exception, clock.instant());
                     String terminalCode = outcome.circuit().reason().name();
                     pageAttempts.add(J3MinimizedPageEvidence.failedBeforeSnapshot(
-                            page, attemptedAt, terminalCode));
+                            page, attemptedAt, terminalCode, providerRequestExecuted));
                     controlService.failExecution(requestId, page, terminalCode);
                     return publishAndLock(
                             requestId,

@@ -76,16 +76,19 @@ class J3ProviderQualificationPolicyTest {
     }
 
     @Test
-    void acceptsJ3InsideTheExactJ3J4PhaseTwoAndJ5EndpointUnion() throws Exception {
+    void acceptsJ3InsideTheExactJ3TournamentJ4PhaseTwoAndJ5EndpointUnion()
+            throws Exception {
         SofascoreProperties properties = new SofascoreProperties();
         properties.setEnabled(true);
         properties.setJ3QualificationEnabled(true);
+        properties.setTournamentEventDiscoveryEnabled(true);
         properties.setJ4EventDetailsQualificationEnabled(true);
         properties.setJ4EventDetailsPhase2Enabled(true);
         properties.setJ5EventDataQualificationEnabled(true);
         properties.setBaseUrl("https://www.sofascore.com");
         properties.setAllowedEndpoints(Set.of(
                 SofascoreEndpointType.SCHEDULED_EVENTS,
+                SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
                 SofascoreEndpointType.EVENT_DETAILS,
                 SofascoreEndpointType.EVENT_STATISTICS,
                 SofascoreEndpointType.EVENT_INCIDENTS,
@@ -96,6 +99,7 @@ class J3ProviderQualificationPolicyTest {
 
         assertThat(snapshot.available()).isTrue();
         assertThat(properties.isJ3QualificationConfigurationSafe()).isTrue();
+        assertThat(properties.isTournamentEventDiscoveryConfigurationSafe()).isTrue();
         assertThat(properties.isCombinedJ3J4SelectionSafe()).isTrue();
     }
 

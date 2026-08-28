@@ -78,6 +78,8 @@ public final class ChildJvmPlaywrightProviderSupervisor
     private static final String LOOPBACK_QUALIFICATION =
             "SOFASCORE_PLAYWRIGHT_LOOPBACK_QUALIFICATION";
     private static final String LOOPBACK_ORIGIN = "SOFASCORE_PLAYWRIGHT_LOOPBACK_ORIGIN";
+    private static final String SKIP_BROWSER_DOWNLOAD =
+            "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD";
     private static final Set<SofascoreEndpointType> IMPLEMENTED_ENDPOINTS = Set.of(
             SofascoreEndpointType.SCHEDULED_EVENTS,
             SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS);
@@ -374,7 +376,9 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 output.flush();
                 int frame = input.readUnsignedByte();
                 if (frame == FAILURE) {
-                    throw workerFailure(input.readUTF());
+                    PlaywrightProviderException failure = workerFailure(input.readUTF());
+                    state.authenticatedTerminalFrameReceived.set(true);
+                    throw failure;
                 }
                 if (frame != RESPONSE) {
                     throw new PlaywrightProviderException(
@@ -477,11 +481,14 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     ProcessTreeSnapshot initialInventory = captureInitialProcessInventory(
                             state,
                             registration);
+                    boolean authenticatedWorkerExitExpected =
+                            state.authenticatedTerminalFrameReceived.get();
                     ProcessTreeSnapshot terminationInventory = captureTerminationProcessInventory(
                             registration,
-                            initialInventory);
+                            initialInventory,
+                            authenticatedWorkerExitExpected);
                     if (requestGracefulClose) {
-                        requestClose(state, mutationStarted);
+                        authenticatedWorkerExitExpected |= requestClose(state, mutationStarted);
                     }
                     ProcessTreeCleanupOutcome outcome = terminateOwnedProcessTree(
                             registration.process(),
@@ -489,7 +496,8 @@ public final class ChildJvmPlaywrightProviderSupervisor
                             terminationInventory,
                             processTreeAccess,
                             cleanupStartedAt,
-                            mutationStarted);
+                            mutationStarted,
+                            authenticatedWorkerExitExpected);
                     if (!outcome.identityComplete()
                             || !outcome.cancellationWithinBound()
                             || outcome.cleanupLatency().compareTo(PROCESS_TREE_CLEANUP_MAX) > 0
@@ -575,7 +583,8 @@ public final class ChildJvmPlaywrightProviderSupervisor
 
     private ProcessTreeSnapshot captureTerminationProcessInventory(
             ProcessRegistration registration,
-            ProcessTreeSnapshot initialInventory) {
+            ProcessTreeSnapshot initialInventory,
+            boolean authenticatedWorkerExitExpected) {
         if (!initialInventory.isExactFor(registration)) {
             throw new PlaywrightProviderException(
                     PlaywrightProviderFailure.RUNTIME_FAILURE);
@@ -591,7 +600,8 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     PlaywrightProviderFailure.RUNTIME_FAILURE,
                     exception);
         }
-        if (!current.isExactFor(registration)) {
+        if (!current.isExactFor(registration)
+                && !(authenticatedWorkerExitExpected && current.rootObservedAbsent())) {
             throw new PlaywrightProviderException(
                     PlaywrightProviderFailure.RUNTIME_FAILURE);
         }
@@ -711,6 +721,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
         Map<String, String> environment = builder.environment();
         environment.clear();
         copySafeEnvironment(environment);
+        environment.put(SKIP_BROWSER_DOWNLOAD, "1");
         environment.put(IPC_PORT, Integer.toString(port));
         environment.put(IPC_TOKEN, token);
         if (properties.isLoopbackQualification()) {
@@ -842,7 +853,8 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 initialInventory,
                 access,
                 access.nanoTime(),
-                new AtomicBoolean());
+                new AtomicBoolean(),
+                false);
     }
 
     static ProcessTreeCleanupOutcome terminateOwnedProcessTree(
@@ -856,7 +868,24 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 initialInventory,
                 access,
                 access.nanoTime(),
-                new AtomicBoolean());
+                new AtomicBoolean(),
+                false);
+    }
+
+    static ProcessTreeCleanupOutcome terminateOwnedProcessTree(
+            Process process,
+            Instant rootStartedAt,
+            ProcessTreeSnapshot initialInventory,
+            ProcessTreeAccess access,
+            boolean authenticatedWorkerExitExpected) {
+        return terminateOwnedProcessTree(
+                process,
+                rootStartedAt,
+                initialInventory,
+                access,
+                access.nanoTime(),
+                new AtomicBoolean(),
+                authenticatedWorkerExitExpected);
     }
 
     private static ProcessTreeCleanupOutcome terminateOwnedProcessTree(
@@ -865,7 +894,8 @@ public final class ChildJvmPlaywrightProviderSupervisor
             ProcessTreeSnapshot initialInventory,
             ProcessTreeAccess access,
             long startedAt,
-            AtomicBoolean mutationStarted) {
+            AtomicBoolean mutationStarted,
+            boolean authenticatedWorkerExitExpected) {
         Objects.requireNonNull(process, "process");
         Objects.requireNonNull(rootStartedAt, "rootStartedAt");
         Objects.requireNonNull(initialInventory, "initialInventory");
@@ -882,7 +912,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
         int capturePasses = 1;
         int unverifiedAliveProcessCount = initialInventory.unverifiedAliveProcessCount();
         boolean identityComplete = initialInventory.isExact();
-        boolean authenticatedRootTermination = false;
+        boolean authenticatedRootTermination = authenticatedWorkerExitExpected;
         long cancelledAt = -1L;
 
         try {
@@ -1213,6 +1243,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
         private final AtomicReference<CampaignPhase> phase =
                 new AtomicReference<>(CampaignPhase.STARTING);
         private final AtomicBoolean terminationRequested = new AtomicBoolean();
+        private final AtomicBoolean authenticatedTerminalFrameReceived = new AtomicBoolean();
         private final AtomicLong terminationStartedAtNanos = new AtomicLong(Long.MIN_VALUE);
         private final CompletableFuture<ProcessRegistration> processRegistration =
                 new CompletableFuture<>();

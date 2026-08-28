@@ -248,6 +248,8 @@ class DashboardControllerTest {
                 .andExpect(content().string(containsString("ARRÊT GLOBAL ACTIF")))
                 .andExpect(content().string(containsString("REAL_CALL_NOT_AUTHORIZED")))
                 .andExpect(content().string(containsString(
+                        "Verrous du transport fournisseur")))
+                .andExpect(content().string(containsString(
                         "J3 / Inspection locale en lecture seule")))
                 .andExpect(content().string(containsString(
                         "J6 / Rétention des payloads bruts")))
@@ -373,11 +375,19 @@ class DashboardControllerTest {
         mockMvc.perform(get("/dashboard"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(
+                        "LOCKED_OFFLINE_J3_POLICY")))
+                .andExpect(content().string(containsString(
                         "COLLECTE MANUELLE DYNAMIQUE PRÊTE")))
                 .andExpect(content().string(containsString(
                         "SCHEDULED_EVENTS|date=2026-08-13|pagination=has-next-page|max=25")))
                 .andExpect(content().string(containsString(
                         "Option A — Collecte fournisseur directe")))
+                .andExpect(content().string(containsString(
+                        "action=\"/manual-call/execute\"")))
+                .andExpect(content().string(containsString(
+                        "5A. Lancer la collecte paginée — APPELS FOURNISSEUR")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(
+                        "Lancer la collecte fournisseur — BLOQUÉE"))))
                 .andExpect(content().string(containsString(
                         "action=\"/manual-call/import-json-pages\"")))
                 .andExpect(content().string(containsString(

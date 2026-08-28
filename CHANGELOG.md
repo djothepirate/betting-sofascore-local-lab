@@ -6,7 +6,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### J3 — implémentation du transport fournisseur manuel Playwright
 
-- remplacement, dans le Work Order actif `WO-SS-20260827-013`, des deux adaptateurs J3
+- remplacement, dans le Work Order `WO-SS-20260827-013`, des deux adaptateurs J3
   `SCHEDULED_EVENTS` et `TOURNAMENT_SCHEDULED_EVENTS` par un worker Playwright JVM enfant commun,
   sans URI libre ni fallback `RestClient` ou FlareSolverr ;
 - ajout des profils Maven `provider-playwright-runtime` et
@@ -27,6 +27,24 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `ENDPOINT_UNAVAILABLE` avant tout parsing, sans retry, fallback ou page suivante ;
 - scripts explicites d’installation et de qualification loopback sur `127.0.0.1`. Cette
   qualification locale n’autorise aucun appel fournisseur et ne clôt pas le Work Order.
+- correction issue du premier essai opérateur J3 : le superviseur impose désormais
+  `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` dans l'environnement assaini du worker, afin que
+  `Playwright.create()` n'installe jamais implicitement Firefox ou WebKit avant le frame `READY` ;
+  les lanceurs refusent aussi un cache sans marqueurs et exécutables Chromium complets ;
+- la disparition attendue du PID racine après une trame terminale authentifiée est reconnue sans
+  relâcher l'authentification des autres chemins de nettoyage. La preuve minimisée v6 distingue une
+  ouverture de campagne échouée d'un GET réellement transmis et n'incrémente plus le compteur
+  fournisseur avant l'émission effective de la requête.
+- qualification humaine corrective du 28 août 2026 : `SCHEDULED_EVENTS` termine douze pages HTTP
+  `200` dans l'ordre, snapshots 572 à 583, avec `hasNextPage=false` en page 12, zéro cache, import,
+  retry, polling ou donnée de session et arrêt global réappliqué. Cinq actions distinctes
+  `TOURNAMENT_SCHEDULED_EVENTS` conservent ensuite les snapshots 584 à 588, vérifient six rencontres
+  canoniques sur Ligue 1, Premier League, LaLiga, Bundesliga et Serie A, puis rendent leurs liens J5
+  disponibles sans saisie d'identifiant ;
+- validation propriétaire et clôture de `WO-SS-20260827-013` après 17 appels humains confirmés.
+  L'application est arrêtée gracieusement, sans listener `127.0.0.1:8087`, JVM applicatif ou worker
+  Playwright résiduel. Le Work Order rejoint `docs/work_orders/completed`; aucun appel supplémentaire
+  n'est autorisé par cette clôture.
 
 ### J5 — import hors ligne multi-match atomique
 

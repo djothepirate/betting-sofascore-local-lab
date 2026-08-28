@@ -42,6 +42,29 @@ class TournamentEventDiscoveryQualificationPolicyTest {
     }
 
     @Test
+    void acceptsTournamentInsideTheExactJ3TournamentJ4PhaseTwoAndJ5EndpointUnion()
+            throws Exception {
+        SofascoreProperties properties = configured();
+        properties.setJ4EventDetailsQualificationEnabled(true);
+        properties.setJ4EventDetailsPhase2Enabled(true);
+        properties.setJ5EventDataQualificationEnabled(true);
+        properties.setAllowedEndpoints(Set.of(
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
+                SofascoreEndpointType.EVENT_DETAILS,
+                SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_LINEUPS));
+
+        var snapshot = new TournamentEventDiscoveryQualificationPolicy(
+                properties, configuredPlaywright("combined-worker.jar")).snapshot();
+
+        assertThat(snapshot.available()).isTrue();
+        assertThat(properties.hasExactActiveQualificationEndpoints()).isTrue();
+        assertThat(properties.isTournamentEventDiscoveryConfigurationSafe()).isTrue();
+    }
+
+    @Test
     void blocksTheDefaultAndAnExpandedEndpointUnion() throws Exception {
         SofascoreProperties defaults = new SofascoreProperties();
 

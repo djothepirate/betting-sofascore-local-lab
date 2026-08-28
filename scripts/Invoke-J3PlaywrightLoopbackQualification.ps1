@@ -10,6 +10,21 @@ if (-not (Test-Path -LiteralPath $browserCache -PathType Container)) {
     throw 'The dedicated Playwright browser cache is absent; run Install-J3PlaywrightRuntime.ps1 explicitly first'
 }
 $browserCache = (Resolve-Path -LiteralPath $browserCache).Path
+$chromiumInstallations = @(Get-ChildItem -LiteralPath $browserCache -Directory |
+    Where-Object {
+        $_.Name -like 'chromium-*' -and
+        (Test-Path -LiteralPath (Join-Path $_.FullName 'INSTALLATION_COMPLETE') -PathType Leaf) -and
+        @(Get-ChildItem -LiteralPath $_.FullName -Recurse -File -Filter 'chrome.exe').Count -gt 0
+    })
+$headlessShellInstallations = @(Get-ChildItem -LiteralPath $browserCache -Directory |
+    Where-Object {
+        $_.Name -like 'chromium_headless_shell-*' -and
+        (Test-Path -LiteralPath (Join-Path $_.FullName 'INSTALLATION_COMPLETE') -PathType Leaf) -and
+        @(Get-ChildItem -LiteralPath $_.FullName -Recurse -File -Filter 'chrome-headless-shell.exe').Count -gt 0
+    })
+if ($chromiumInstallations.Count -eq 0 -or $headlessShellInstallations.Count -eq 0) {
+    throw 'The dedicated Playwright cache has no complete Chromium installation; run Install-J3PlaywrightRuntime.ps1 explicitly first'
+}
 $previousBrowserCache = [Environment]::GetEnvironmentVariable(
     'PLAYWRIGHT_BROWSERS_PATH',
     'Process')

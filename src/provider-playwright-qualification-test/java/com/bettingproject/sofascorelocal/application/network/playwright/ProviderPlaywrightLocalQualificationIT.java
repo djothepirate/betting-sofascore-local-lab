@@ -607,6 +607,7 @@ class ProviderPlaywrightLocalQualificationIT {
                         || argument.contains("{\"")
                         || argument.contains("cookie"));
         Map<String, String> environment = builder.environment();
+        assertThat(environment.get("PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD")).isEqualTo("1");
         assertThat(environment.get("SOFASCORE_PLAYWRIGHT_LOOPBACK_QUALIFICATION"))
                 .isEqualTo("true");
         assertThat(environment.get("SOFASCORE_PLAYWRIGHT_LOOPBACK_ORIGIN"))

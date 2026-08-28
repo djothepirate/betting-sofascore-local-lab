@@ -5,18 +5,21 @@
 ```text
 REPORT_DATE=2026-08-28
 WORK_ORDER=WO-SS-20260827-013
-WORK_ORDER_STATUS=IN_PROGRESS
-IMPLEMENTATION_STATUS=COMPLETED_AWAITING_OWNER_VALIDATION
+WORK_ORDER_STATUS=VALIDATED
+IMPLEMENTATION_STATUS=COMPLETED
 ADR_REVIEW=COMPATIBLE_WITH_ADR_SS_001_V1_3
 LOCAL_READINESS=PASS
-HUMAN_PROVIDER_QUALIFICATION=NOT_RUN_NOT_AUTHORIZED
-PROVIDER_CALL_AUTHORIZED=NO
+HUMAN_PROVIDER_QUALIFICATION=PASS_SCHEDULED_AND_FIVE_TOURNAMENT_DISCOVERY_ACTIONS
+PROVIDER_CALL_QUALIFICATION=PASS_BY_OWNER_EXECUTION_2026_08_28
+PROVIDER_CALLS_DURING_HUMAN_QUALIFICATION=17
+ADDITIONAL_PROVIDER_CALL_AUTHORIZED=NO
 PROVIDER_CALLS_DURING_IMPLEMENTATION=0
 PROVIDER_CALLS_DURING_AUTOMATED_TESTS=0
+WORK_ORDER_CLOSURE=AUTHORIZED_BY_OWNER_2026_08_28
 ```
 
-Ce rapport consolide la readiness locale executee sur le diff d'implementation. Il ne qualifie ni
-le fournisseur, ni une campagne reelle SofaScore, ni la cloture du Work Order.
+Ce rapport consolide la readiness locale executee sur le diff d'implementation et la qualification
+humaine bornee des deux familles J3. Il n'autorise aucune nouvelle campagne SofaScore.
 
 ## 2. Portee a verifier
 
@@ -70,7 +73,7 @@ Resultats observes le 28 aout 2026 :
 
 ```text
 STANDARD_SUITE_RESULT=PASS
-STANDARD_TESTS_RUN=687
+STANDARD_TESTS_RUN=691
 STANDARD_TESTS_SKIPPED=2
 INTEGRATION_SUITE_RESULT=PASS
 INTEGRATION_TESTS_RUN=52
@@ -96,15 +99,57 @@ SERVER_ADDRESS_127_0_0_1=PASS
 DEFAULT_PLAYWRIGHT_INERT=PASS
 ```
 
-## 5. Portes qui restent humaines
+### 4.1 Revalidation apres le premier essai operateur
 
-Une readiness locale `PASS` autorisera au plus la proposition de validation technique du Work
-Order. Elle ne vaut pas :
+Le premier essai du 28 aout a atteint l'ouverture du worker mais pas son frame `READY`. Les
+horodatages de la preuve et du cache ont montre que Playwright installait implicitement Firefox et
+WebKit pendant les 30 secondes du timeout ; aucun Chromium et aucun GET SofaScore n'avaient alors
+ete lances. La correction impose `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` dans l'environnement enfant,
+verifie l'installation Chromium avant le demarrage et rend concluant le nettoyage d'un worker qui
+quitte apres une trame terminale authentifiee. La preuve minimisee v6 compte separement la tentative
+de resolution et le GET effectivement transmis.
 
-- autorisation d'appeler SofaScore ;
-- qualification de statuts ou d'octets fournisseur reels ;
+Apres cette correction, la suite standard a passe 691 tests avec 2 ignores et le banc reel Chromium
+loopback a passe deux fois de suite ses 11 scenarios, sans acces fournisseur ni donnee sensible dans
+les rapports. La readiness locale reste `PASS`.
+
+### 4.2 Qualification humaine fournisseur
+
+Le nouvel essai operateur du 28 aout 2026 est concluant pour `SCHEDULED_EVENTS`. Apres preparation,
+confirmation et action finale distincte, les pages 1 a 12 sont demandees au fournisseur puis
+conservees dans les snapshots 572 a 583. Chaque page est HTTP `200`, `PARSED` et `INSERTED`; les
+pages 1 a 11 annoncent `hasNextPage=true` et la page 12 termine avec `false`. La preuve minimisee v6
+se termine en `COMPLETED` avec 12 requetes fournisseur, zero cache hit, zero import JSON local,
+aucun echec, retry, polling, scheduler ou donnee de session. L'arret global est reapplique et le
+circuit est verrouille avec `MANUAL_COLLECTION_TERMINAL_LOCK`. Un scan de ses 8 643 octets ne
+detecte aucun motif d'URL, d'autorisation, de cookie, de jeton ou de mot de passe.
+
+Cinq preparations et confirmations distinctes qualifient ensuite `TOURNAMENT_SCHEDULED_EVENTS` :
+
+| Phase | Phase / route | Snapshot | Attendu / retenu | Rencontres |
+|---|---:|---:|---:|---:|
+| Ligue 1 - France | `4 / 34` | 584 | `1 / 1` | 1 |
+| Premier League - England | `1 / 17` | 585 | `1 / 1` | 1 |
+| LaLiga - Spain | `36 / 8` | 586 | `2 / 2` | 2 |
+| Bundesliga - Germany | `42 / 35` | 587 | `1 / 1` | 1 |
+| Serie A - Italy | `33 / 23` | 588 | `1 / 1` | 1 |
+
+Le catalogue des 12 pages contient 524 tournois actionnables apres exclusion de 648 occurrences.
+Les cinq resultats sont HTTP `200`, `COMPLETED`, de source `PROVIDER` et `COUNT_VERIFIED`. Ils
+ajoutent six observations canoniques sans deduplication et rendent leurs liens J5 disponibles sans
+saisie d'identifiant. La qualification humaine porte donc sur 17 appels confirmes au total.
+
+Apres confirmation proprietaire que ces tests suffisent a la cloture, l'application est arretee
+gracieusement. Le listener `127.0.0.1:8087`, le JVM applicatif et le JVM worker Playwright sont
+absents. Le Work Order passe a `VALIDATED` et rejoint `docs/work_orders/completed`.
+
+## 5. Limites apres validation
+
+La readiness locale, la qualification humaine et la cloture sont `PASS`. Elles ne valent pas :
+
+- autorisation d'une nouvelle campagne SofaScore ;
 - permission de retry apres incident ;
 - ajout d'un endpoint J4/J5 ;
-- cloture ou deplacement du Work Order vers `completed`.
+- approbation de production, de VPS ou de dependance critique.
 
-Ces decisions restent explicitement au proprietaire.
+Ces decisions restent explicitement au proprietaire et exigent leur Work Order applicable.
