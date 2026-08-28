@@ -15,6 +15,8 @@ import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceR
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryExecutionClaim;
+import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryClaim;
+import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryLocalImportClaim;
 import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoverySource;
 import com.bettingproject.sofascorelocal.domain.provider.TournamentScheduledEventsProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.TournamentScheduledEventsTransportResponse;
@@ -117,8 +119,8 @@ public class TournamentEventDiscoveryService {
                     claim.requestId(), "CACHE_LOOKUP_ERROR", 0, false, null, null, 0);
         }
 
-        TournamentScheduledEventsTransportResponse response;
-        RawSnapshotPersistenceResult rawPersistence;
+        TournamentScheduledEventsTransportResponse response = null;
+        RawSnapshotPersistenceResult rawPersistence = null;
         boolean cacheHit = cached != null;
         int providerCalls = 0;
         if (cached != null) {
@@ -126,13 +128,56 @@ public class TournamentEventDiscoveryService {
             rawPersistence = cached.asPersistenceResult();
         }
         else {
-            try (var ignored = requestCoordinator.acquire()) {
+            try (var providerLease = requestCoordinator.acquireCampaign(claim.requestId())) {
                 if (!controlService.executionMayContinue(claim.requestId())) {
                     return failAndLock(
                             claim.requestId(), "OPERATOR_STOP", 0, false, null, null, 0);
                 }
-                providerCalls = 1;
-                response = transport.execute(request);
+                TournamentScheduledEventsProviderTransport.Campaign providerCampaign = null;
+                try {
+                    providerCampaign = transport.openCampaign(claim.requestId());
+                    if (!controlService.executionMayContinue(claim.requestId())) {
+                        return failAndLock(
+                                claim.requestId(),
+                                "OPERATOR_STOP",
+                                0,
+                                false,
+                                null,
+                                null,
+                                0);
+                    }
+                    providerLease.beginRequest();
+                    if (!controlService.executionMayContinue(claim.requestId())) {
+                        return failAndLock(
+                                claim.requestId(),
+                                "OPERATOR_STOP",
+                                0,
+                                false,
+                                null,
+                                null,
+                                0);
+                    }
+                    providerCalls = 1;
+                    response = providerCampaign.execute(request);
+                    try {
+                        rawPersistence = rawSnapshotStore.save(rawOnly(response));
+                    }
+                    catch (RuntimeException exception) {
+                        return failAndLock(
+                                claim.requestId(),
+                                "RAW_PERSISTENCE_ERROR",
+                                1,
+                                false,
+                                null,
+                                response,
+                                0);
+                    }
+                }
+                finally {
+                    if (providerCampaign != null) {
+                        providerCampaign.close();
+                    }
+                }
             }
             catch (ManualProviderRequestCoordinator.CoordinationException exception) {
                 return failAndLock(
@@ -145,36 +190,28 @@ public class TournamentEventDiscoveryService {
                         0);
             }
             catch (ScheduledEventsTransportException exception) {
+                String code = controlService.executionMayContinue(claim.requestId())
+                        ? "TRANSPORT_" + exception.failure().name()
+                        : "OPERATOR_STOP";
                 return failAndLock(
                         claim.requestId(),
-                        "TRANSPORT_" + exception.failure().name(),
-                        1,
+                        code,
+                        providerCalls,
                         false,
-                        null,
-                        null,
+                        rawPersistence,
+                        response,
                         0);
             }
             catch (RuntimeException exception) {
+                String code = controlService.executionMayContinue(claim.requestId())
+                        ? "TRANSPORT_IO_FAILURE"
+                        : "OPERATOR_STOP";
                 return failAndLock(
                         claim.requestId(),
-                        "TRANSPORT_IO_FAILURE",
-                        1,
+                        code,
+                        providerCalls,
                         false,
-                        null,
-                        null,
-                        0);
-            }
-
-            try {
-                rawPersistence = rawSnapshotStore.save(rawOnly(response));
-            }
-            catch (RuntimeException exception) {
-                return failAndLock(
-                        claim.requestId(),
-                        "RAW_PERSISTENCE_ERROR",
-                        1,
-                        false,
-                        null,
+                        rawPersistence,
                         response,
                         0);
             }
@@ -195,7 +232,7 @@ public class TournamentEventDiscoveryService {
     }
 
     public TournamentEventDiscoveryResult importLocalJson(
-            TournamentEventDiscoveryExecutionClaim claim,
+            TournamentEventDiscoveryLocalImportClaim claim,
             RawPayloadEvidence payload) {
         Objects.requireNonNull(claim, "claim");
         Objects.requireNonNull(payload, "payload");
@@ -255,7 +292,7 @@ public class TournamentEventDiscoveryService {
     }
 
     private TournamentEventDiscoveryResult processResponse(
-            TournamentEventDiscoveryExecutionClaim claim,
+            TournamentEventDiscoveryClaim claim,
             TournamentScheduledEventsProviderRequest request,
             TournamentScheduledEventsTransportResponse response,
             RawSnapshotPersistenceResult rawPersistence,
@@ -272,9 +309,12 @@ public class TournamentEventDiscoveryService {
 
         if (response.httpStatus() < 200 || response.httpStatus() >= 300) {
             String code = httpTerminalCode(response.httpStatus());
+            RawSnapshotSchemaStatus schemaStatus = response.httpStatus() == 404
+                    ? RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE
+                    : RawSnapshotSchemaStatus.TRANSPORT_ERROR;
             if (!classifySafely(
                     rawPersistence.snapshotId(),
-                    RawSnapshotSchemaStatus.TRANSPORT_ERROR,
+                    schemaStatus,
                     code)) {
                 code = "RAW_CLASSIFICATION_ERROR";
             }
@@ -642,6 +682,9 @@ public class TournamentEventDiscoveryService {
     }
 
     private static String httpTerminalCode(int httpStatus) {
+        if (httpStatus == 404) {
+            return "ENDPOINT_UNAVAILABLE";
+        }
         if (httpStatus == 403) {
             return "HTTP_403";
         }

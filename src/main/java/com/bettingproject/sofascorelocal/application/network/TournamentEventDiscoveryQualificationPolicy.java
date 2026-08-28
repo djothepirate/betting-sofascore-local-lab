@@ -1,8 +1,11 @@
 package com.bettingproject.sofascorelocal.application.network;
 
+import com.bettingproject.sofascorelocal.config.ProviderPlaywrightProperties;
 import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryQualificationSnapshot;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
@@ -14,12 +17,37 @@ import java.util.Objects;
 public class TournamentEventDiscoveryQualificationPolicy {
 
     private final SofascoreProperties properties;
+    private final ProviderPlaywrightProperties playwrightProperties;
+
+    @Autowired
+    public TournamentEventDiscoveryQualificationPolicy(
+            SofascoreProperties properties,
+            ObjectProvider<ProviderPlaywrightProperties> playwrightProperties) {
+        this(properties, playwrightProperties.getIfAvailable(ProviderPlaywrightProperties::new));
+    }
+
+    public TournamentEventDiscoveryQualificationPolicy(
+            SofascoreProperties properties,
+            ProviderPlaywrightProperties playwrightProperties) {
+        this.properties = Objects.requireNonNull(properties, "properties");
+        this.playwrightProperties = Objects.requireNonNull(
+                playwrightProperties, "playwrightProperties");
+    }
 
     public TournamentEventDiscoveryQualificationPolicy(SofascoreProperties properties) {
-        this.properties = Objects.requireNonNull(properties, "properties");
+        this(properties, new ProviderPlaywrightProperties());
     }
 
     public TournamentEventDiscoveryQualificationSnapshot snapshot() {
+        return snapshot(true);
+    }
+
+    TournamentEventDiscoveryQualificationSnapshot localImportSnapshot() {
+        return snapshot(false);
+    }
+
+    private TournamentEventDiscoveryQualificationSnapshot snapshot(
+            boolean playwrightRequired) {
         List<String> blockers = new ArrayList<>();
         if (!properties.isTournamentEventDiscoveryEnabled()) {
             blockers.add("TOURNAMENT_EVENT_DISCOVERY_DISABLED");
@@ -29,6 +57,10 @@ public class TournamentEventDiscoveryQualificationPolicy {
         }
         if (!properties.isEnabled()) {
             blockers.add("CONNECTOR_DISABLED");
+        }
+        if (playwrightRequired) {
+            ProviderPlaywrightQualificationGuard.appendBlockers(
+                    playwrightProperties, blockers);
         }
         if (!properties.hasExactActiveQualificationEndpoints()) {
             blockers.add("QUALIFICATION_ENDPOINTS_NOT_EXACTLY_ALLOWED");

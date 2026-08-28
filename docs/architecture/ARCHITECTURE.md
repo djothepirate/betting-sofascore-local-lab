@@ -78,9 +78,13 @@ VPS       : aucune connexion
 | `resources/db/migration` | schémas V1 à V25, migrations append-only et triggers d’immuabilité |
 | `fixtures` | corpus synthétiques hors ligne J2, J4, J5 et J6 |
 
-Le connecteur général demeure bloqué. Un `RestClient` distinct est construit uniquement pour le
-chemin manuel J3 borné ; il ne reçoit qu’une requête de domaine validée et ne peut viser que
-l’origine `https://www.sofascore.com`, une date ISO explicite et les pages `1` à `25`.
+Le connecteur général demeure bloqué. Le chemin manuel J3 borné délègue ses deux familles
+`SCHEDULED_EVENTS` et `TOURNAMENT_SCHEDULED_EVENTS` à un worker Playwright JVM enfant commun. Le
+worker ne reçoit qu’une requête de domaine validée et ne peut viser que l’origine
+`https://www.sofascore.com`, les deux routes allowlistées, une date ISO explicite et, pour la
+pagination, les pages `1` à `25`. Le profil Maven `provider-playwright-runtime` ajoute le runtime à
+la compilation sans le démarrer ; `SOFASCORE_PLAYWRIGHT_ENABLED=false` maintient l’inertie par
+défaut. Il n’existe aucun fallback `RestClient` ou FlareSolverr.
 Après la confirmation, une action alternative accepte localement un lot complet de corps JSON
 J3 1 à N. Elle partage le contrôle et la garde de concurrence, mais ne construit aucune requête,
 ne lit ni n'écrit le cache fournisseur et persiste avec `MANUAL_LOCAL_JSON_IMPORT`.
@@ -97,6 +101,16 @@ intersection entre les clés de `timezoneEventCount` et les offsets réellement 
 date J3 dans `Europe/Paris` ; ce calcul couvre l'heure d'été, l'heure d'hiver et les deux offsets
 d'une journée de bascule sans dépendre du fuseau système. Après redémarrage, aucune liste n'est
 recomposée implicitement depuis des snapshots historiques.
+
+Une lease du coordinateur couvre toute campagne J3 Playwright et conserve le délai partagé de
+trois secondes entre départs fournisseur. Chaque campagne possède un worker, un Chromium headless
+et un `BrowserContext` non persistant neufs ; aucun profil, cookie, `storageState`, HAR, trace,
+vidéo, capture ou téléchargement n’est conservé. L’IPC est authentifié et lié uniquement à
+`127.0.0.1`. L’arrêt ferme la campagne et nettoie l’arbre exact attribué par PID et instant de
+création, jamais par nom de processus. Le statut, le type de contenu et les octets sont capturés
+avant parsing ; HTTP `404` est persisté puis classé `ENDPOINT_UNAVAILABLE`, sans retry ni page
+suivante. Le contrat complet et ses exclusions sont décrits dans
+[`J3-PLAYWRIGHT-PROVIDER-TRANSPORT.md`](J3-PLAYWRIGHT-PROVIDER-TRANSPORT.md).
 
 J4 ajoute un second `RestClient` spécial qui ne reçoit que `EventDetailsProviderRequest`. Ce type
 refuse toute origine autre que `https://www.sofascore.com` et tout identifiant hors de la portée

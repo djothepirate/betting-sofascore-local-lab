@@ -3,6 +3,8 @@ package com.bettingproject.sofascorelocal.application.network;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.ScheduledEventsTransportException;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.ScheduledEventsTransportFailure;
+import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderStopReceipt;
+import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderSupervisor;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3CachedScheduledEventsPage;
@@ -16,6 +18,7 @@ import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceR
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportResponse;
+import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.port.J3ScheduledEventsPageCache;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import com.bettingproject.sofascorelocal.port.ScheduledEventsProviderPageTransport;
@@ -35,14 +38,18 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.Mockito.mock;
 
 class J3DynamicManualCallServiceTest {
 
@@ -62,12 +69,12 @@ class J3DynamicManualCallServiceTest {
                 new J3ManualCollectionEvidenceService();
         CountDownLatch transportEntered = new CountDownLatch(1);
         byte[] body = Files.readAllBytes(Path.of("fixtures/scheduled-events/nominal.json"));
-        ScheduledEventsProviderPageTransport transport = request -> {
+        ScheduledEventsProviderPageTransport transport = campaignTransport(request -> {
             transportEntered.countDown();
             Instant requestedAt = clock.instant();
             clock.advance(Duration.ofMillis(25));
             return response(request, requestedAt, clock.instant(), 200, body);
-        };
+        });
         var coordinator = new ManualProviderRequestCoordinator(
                 clock, Duration.ofSeconds(3), ignored -> { });
         var service = new J3DynamicManualCallService(
@@ -111,19 +118,39 @@ class J3DynamicManualCallServiceTest {
         List<Integer> pages = new ArrayList<>();
         List<Instant> starts = new ArrayList<>();
         List<Duration> waits = new ArrayList<>();
+        AtomicInteger openedCampaigns = new AtomicInteger();
+        AtomicInteger closedCampaigns = new AtomicInteger();
         byte[] terminalBody = Files.readAllBytes(
                 Path.of("fixtures/scheduled-events/nominal.json"));
-        ScheduledEventsProviderPageTransport transport = request -> {
-            pages.add(request.page());
-            starts.add(clock.instant());
-            Instant requestedAt = clock.instant();
-            clock.advance(Duration.ofMillis(25));
-            return response(
-                    request,
-                    requestedAt,
-                    clock.instant(),
-                    200,
-                    withHasNextPage(terminalBody, request.page() < 5));
+        ScheduledEventsProviderPageTransport transport = new ScheduledEventsProviderPageTransport() {
+
+            @Override
+            public Campaign openCampaign(UUID campaignId) {
+                assertThat(campaignId).isEqualTo(REQUEST_ID);
+                openedCampaigns.incrementAndGet();
+                return new Campaign() {
+
+                    @Override
+                    public ScheduledEventsTransportResponse execute(
+                            ScheduledEventsProviderPageRequest request) {
+                        pages.add(request.page());
+                        starts.add(clock.instant());
+                        Instant requestedAt = clock.instant();
+                        clock.advance(Duration.ofMillis(25));
+                        return response(
+                                request,
+                                requestedAt,
+                                clock.instant(),
+                                200,
+                                withHasNextPage(terminalBody, request.page() < 5));
+                    }
+
+                    @Override
+                    public void close() {
+                        closedCampaigns.incrementAndGet();
+                    }
+                };
+            }
         };
         J3ManualCallControlService control = readyControl(clock);
         J3ManualCollectionEvidenceService evidenceService =
@@ -146,6 +173,8 @@ class J3DynamicManualCallServiceTest {
                     .isGreaterThanOrEqualTo(Duration.ofSeconds(3));
         }
         assertThat(waits).hasSize(4);
+        assertThat(openedCampaigns).hasValue(1);
+        assertThat(closedCampaigns).hasValue(1);
         assertThat(store.saved).hasSize(5);
         assertThat(store.classifiedStatuses)
                 .containsOnly(RawSnapshotSchemaStatus.PARSED);
@@ -188,12 +217,12 @@ class J3DynamicManualCallServiceTest {
         RecordingStore store = new RecordingStore();
         List<Integer> pages = new ArrayList<>();
         byte[] body = Files.readAllBytes(Path.of("fixtures/scheduled-events/nominal.json"));
-        ScheduledEventsProviderPageTransport transport = request -> {
+        ScheduledEventsProviderPageTransport transport = campaignTransport(request -> {
             pages.add(request.page());
             Instant requestedAt = clock.instant();
             clock.advance(Duration.ofMillis(25));
             return response(request, requestedAt, clock.instant(), 200, body);
-        };
+        });
         J3ManualCallControlService control = readyControl(clock);
         J3ManualCollectionEvidenceService evidenceService =
                 new J3ManualCollectionEvidenceService();
@@ -226,7 +255,7 @@ class J3DynamicManualCallServiceTest {
                 Path.of("fixtures/scheduled-events/nominal.json"));
         byte[] validBody = withHasNextPage(terminalBody, true);
         byte[] forbiddenBody = "{\"error\":\"forbidden\"}".getBytes(java.nio.charset.StandardCharsets.UTF_8);
-        ScheduledEventsProviderPageTransport transport = request -> {
+        ScheduledEventsProviderPageTransport transport = campaignTransport(request -> {
             pages.add(request.page());
             Instant requestedAt = clock.instant();
             clock.advance(Duration.ofMillis(10));
@@ -236,7 +265,7 @@ class J3DynamicManualCallServiceTest {
                     clock.instant(),
                     request.page() == 2 ? 403 : 200,
                     request.page() == 2 ? forbiddenBody : validBody);
-        };
+        });
         J3ManualCallControlService control = readyControl(clock);
         J3ManualCollectionEvidenceService evidenceService =
                 new J3ManualCollectionEvidenceService();
@@ -274,15 +303,68 @@ class J3DynamicManualCallServiceTest {
     }
 
     @Test
+    void persistsA404AsUnavailableAndStopsPaginationWithoutRetry() throws Exception {
+        MutableClock clock = new MutableClock(NOW);
+        RecordingStore store = new RecordingStore();
+        List<Integer> pages = new ArrayList<>();
+        byte[] unavailableBody = "{\"error\":\"not-found\"}"
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        ScheduledEventsProviderPageTransport transport = campaignTransport(request -> {
+            pages.add(request.page());
+            Instant requestedAt = clock.instant();
+            clock.advance(Duration.ofMillis(10));
+            return response(
+                    request,
+                    requestedAt,
+                    clock.instant(),
+                    404,
+                    unavailableBody);
+        });
+        J3ManualCallControlService control = readyControl(clock);
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
+        var service = service(
+                control,
+                transport,
+                store,
+                evidenceService,
+                clock,
+                clock::advance);
+
+        var result = service.execute(REQUEST_ID);
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.completedPages()).isZero();
+        assertThat(result.failedPage()).isEqualTo(1);
+        assertThat(result.terminalCode()).isEqualTo("ENDPOINT_UNAVAILABLE");
+        assertThat(result.providerRequests()).isEqualTo(1);
+        assertThat(pages).containsExactly(1);
+        assertThat(store.saved).singleElement().satisfies(snapshot -> {
+            assertThat(snapshot.httpStatus()).isEqualTo(404);
+            assertThat(snapshot.payload().bytes()).isEqualTo(unavailableBody);
+            assertThat(snapshot.schemaStatus())
+                    .isEqualTo(RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE);
+            assertThat(snapshot.errorCode()).isEqualTo("ENDPOINT_UNAVAILABLE");
+        });
+        var evidence = evidenceService.latestDocument().orElseThrow();
+        assertThat(evidence.reportText())
+                .contains("TERMINAL_CODE=ENDPOINT_UNAVAILABLE")
+                .contains("PAGE_1_SCHEMA_STATUS=ENDPOINT_UNAVAILABLE")
+                .contains("PAGE_1_TERMINAL_CODE=ENDPOINT_UNAVAILABLE")
+                .contains("PAGE_1_SNAPSHOT_RECORDED=YES")
+                .doesNotContain("not-found");
+    }
+
+    @Test
     void recordsOnlyMinimizedAttemptMetadataWhenTransportFailsBeforeSnapshot() {
         MutableClock clock = new MutableClock(NOW);
         RecordingStore store = new RecordingStore();
         J3ManualCollectionEvidenceService evidenceService =
                 new J3ManualCollectionEvidenceService();
-        ScheduledEventsProviderPageTransport transport = request -> {
+        ScheduledEventsProviderPageTransport transport = campaignTransport(request -> {
             throw new ScheduledEventsTransportException(
                     ScheduledEventsTransportFailure.TIMEOUT);
-        };
+        });
         J3ManualCallControlService control = readyControl(clock);
         var service = service(
                 control,
@@ -310,6 +392,139 @@ class J3DynamicManualCallServiceTest {
     }
 
     @Test
+    void operatorStopThatWinsDuringTransportRemainsTheTerminalOutcome() {
+        MutableClock clock = new MutableClock(NOW);
+        RecordingStore store = new RecordingStore();
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
+        J3ManualCallControlService control = readyControl(clock);
+        ScheduledEventsProviderPageTransport transport = campaignTransport(request -> {
+            control.stopGlobally();
+            throw new ScheduledEventsTransportException(
+                    ScheduledEventsTransportFailure.OPERATOR_STOP);
+        });
+        var service = service(
+                control,
+                transport,
+                store,
+                evidenceService,
+                clock,
+                clock::advance);
+
+        var result = service.execute(REQUEST_ID);
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.completedPages()).isZero();
+        assertThat(result.failedPage()).isEqualTo(1);
+        assertThat(result.terminalCode()).isEqualTo("OPERATOR_STOP");
+        assertThat(result.providerRequests()).isEqualTo(1);
+        assertThat(store.saved).isEmpty();
+        assertThat(control.snapshot().globalStopActive()).isTrue();
+        assertThat(control.snapshot().circuitReason())
+                .isEqualTo(J3CircuitReason.OPERATOR_STOP);
+        assertThat(evidenceService.latestDocument().orElseThrow().reportText())
+                .contains("TERMINAL_CODE=OPERATOR_STOP")
+                .contains("PAGE_1_SNAPSHOT_RECORDED=NO")
+                .contains("PAGE_1_TERMINAL_CODE=OPERATOR_STOP");
+    }
+
+    @Test
+    void concurrentOperatorStopSignalsTransportBeforeLockingTheBusinessControl()
+            throws Exception {
+        MutableClock clock = new MutableClock(NOW);
+        RecordingStore store = new RecordingStore();
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
+        J3ManualCallControlService control = readyControl(clock);
+        CountDownLatch transportEntered = new CountDownLatch(1);
+        CountDownLatch transportCancelled = new CountDownLatch(1);
+        ScheduledEventsProviderPageTransport transport =
+                new ScheduledEventsProviderPageTransport() {
+
+            @Override
+            public Campaign openCampaign(UUID campaignId) {
+                assertThat(campaignId).isEqualTo(REQUEST_ID);
+                return new Campaign() {
+
+                    @Override
+                    public ScheduledEventsTransportResponse execute(
+                            ScheduledEventsProviderPageRequest request) {
+                        transportEntered.countDown();
+                        try {
+                            assertThat(transportCancelled.await(2, TimeUnit.SECONDS))
+                                    .isTrue();
+                        }
+                        catch (InterruptedException exception) {
+                            Thread.currentThread().interrupt();
+                            throw new AssertionError(exception);
+                        }
+                        throw new ScheduledEventsTransportException(
+                                ScheduledEventsTransportFailure.OPERATOR_STOP);
+                    }
+
+                    @Override
+                    public void close() {
+                    }
+                };
+            }
+        };
+        PlaywrightProviderSupervisor supervisor = new PlaywrightProviderSupervisor() {
+
+            @Override
+            public PlaywrightProviderStopReceipt stopCampaign(
+                    UUID campaignId,
+                    Set<SofascoreEndpointType> allowedEndpoints) {
+                assertThat(campaignId).isEqualTo(REQUEST_ID);
+                assertThat(allowedEndpoints)
+                        .containsExactly(SofascoreEndpointType.SCHEDULED_EVENTS);
+                assertThat(control.executionMayContinue(REQUEST_ID)).isTrue();
+                transportCancelled.countDown();
+                return new PlaywrightProviderStopReceipt(
+                        campaignId, true, clock.instant(), Duration.ZERO);
+            }
+
+            @Override
+            public Optional<UUID> activeCampaignId() {
+                return Optional.of(REQUEST_ID);
+            }
+        };
+        var stopService = new J3ProviderCampaignStopService(
+                supervisor,
+                control,
+                mock(TournamentEventDiscoveryControlService.class));
+        var executionService = service(
+                control,
+                transport,
+                store,
+                evidenceService,
+                clock,
+                clock::advance);
+        var executor = Executors.newSingleThreadExecutor();
+
+        try {
+            Future<J3ManualCallExecutionResult> future = executor.submit(
+                    () -> executionService.execute(REQUEST_ID));
+            assertThat(transportEntered.await(1, TimeUnit.SECONDS)).isTrue();
+
+            stopService.stopScheduledEvents();
+            J3ManualCallExecutionResult result = future.get(2, TimeUnit.SECONDS);
+
+            assertThat(result.completed()).isFalse();
+            assertThat(result.terminalCode()).isEqualTo("OPERATOR_STOP");
+            assertThat(result.failedPage()).isEqualTo(1);
+            assertThat(store.saved).isEmpty();
+            assertThat(control.snapshot().globalStopActive()).isTrue();
+            assertThat(control.snapshot().circuitReason())
+                    .isEqualTo(J3CircuitReason.OPERATOR_STOP);
+        }
+        finally {
+            transportCancelled.countDown();
+            executor.shutdownNow();
+            assertThat(executor.awaitTermination(1, TimeUnit.SECONDS)).isTrue();
+        }
+    }
+
+    @Test
     void resolvesFreshParsedPagesFromCacheWithoutDelayTransportOrPersistence()
             throws Exception {
         MutableClock clock = new MutableClock(NOW);
@@ -320,8 +535,14 @@ class J3DynamicManualCallServiceTest {
         cache.put(cachedPage(1, withHasNextPage(terminalBody, true)));
         cache.put(cachedPage(2, withHasNextPage(terminalBody, false)));
         List<Duration> waits = new ArrayList<>();
-        ScheduledEventsProviderPageTransport transport = request -> {
-            throw new AssertionError("a fresh parsed cache hit must prevent transport");
+        AtomicInteger openedCampaigns = new AtomicInteger();
+        ScheduledEventsProviderPageTransport transport = new ScheduledEventsProviderPageTransport() {
+
+            @Override
+            public Campaign openCampaign(UUID campaignId) {
+                openedCampaigns.incrementAndGet();
+                throw new AssertionError("a cache-only J3 run must not open a campaign");
+            }
         };
         J3ManualCallControlService control = readyControl(clock);
         J3ManualCollectionEvidenceService evidenceService =
@@ -344,6 +565,7 @@ class J3DynamicManualCallServiceTest {
         assertThat(cache.lookups).containsExactly(1, 2);
         assertThat(cache.recordedPages).isEmpty();
         assertThat(waits).isEmpty();
+        assertThat(openedCampaigns).hasValue(0);
         assertThat(store.saved).isEmpty();
         assertThat(store.classifiedStatuses).isEmpty();
         assertThat(evidenceService.latestDocument().orElseThrow().reportText())
@@ -369,7 +591,7 @@ class J3DynamicManualCallServiceTest {
         List<Integer> transportedPages = new ArrayList<>();
         List<Instant> providerStarts = new ArrayList<>();
         List<Duration> waits = new ArrayList<>();
-        ScheduledEventsProviderPageTransport transport = request -> {
+        ScheduledEventsProviderPageTransport transport = campaignTransport(request -> {
             transportedPages.add(request.page());
             providerStarts.add(clock.instant());
             Instant requestedAt = clock.instant();
@@ -380,7 +602,7 @@ class J3DynamicManualCallServiceTest {
                     clock.instant(),
                     200,
                     withHasNextPage(terminalBody, request.page() == 1));
-        };
+        });
         J3ManualCallControlService control = readyControl(clock);
         J3ManualCollectionEvidenceService evidenceService =
                 new J3ManualCollectionEvidenceService();
@@ -426,12 +648,12 @@ class J3DynamicManualCallServiceTest {
         byte[] terminalBody = Files.readAllBytes(
                 Path.of("fixtures/scheduled-events/nominal.json"));
         byte[] continuingBody = withHasNextPage(terminalBody, true);
-        ScheduledEventsProviderPageTransport transport = request -> {
+        ScheduledEventsProviderPageTransport transport = campaignTransport(request -> {
             pages.add(request.page());
             Instant requestedAt = clock.instant();
             clock.advance(Duration.ofMillis(10));
             return response(request, requestedAt, clock.instant(), 200, continuingBody);
-        };
+        });
         J3ManualCallControlService control = readyControl(clock);
         J3ManualCollectionEvidenceService evidenceService =
                 new J3ManualCollectionEvidenceService();
@@ -451,6 +673,12 @@ class J3DynamicManualCallServiceTest {
                 .contains("FAILED_PAGE=26")
                 .contains("PAGE_25_HAS_NEXT_PAGE=true")
                 .doesNotContain("PAGE_26_REQUESTED_AT");
+    }
+
+    private static ScheduledEventsProviderPageTransport campaignTransport(
+            Function<ScheduledEventsProviderPageRequest, ScheduledEventsTransportResponse>
+                    execution) {
+        return ignoredCampaignId -> execution::apply;
     }
 
     private static J3DynamicManualCallService service(

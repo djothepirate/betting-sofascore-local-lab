@@ -333,6 +333,17 @@ jalons. Toutes ces voies interdisent polling, planification et retry. J6/J7 rest
 transport. Les configurations temporaires et leur remise à l'état bloqué sont décrites dans
 `docs/runbooks/RUNBOOK-LOCAL.md`.
 
+Le Work Order actif `WO-SS-20260827-013` implémente pour les deux familles J3 un transport Playwright
+dans un worker JVM enfant. Le build standard reste sans runtime Playwright et
+`SOFASCORE_PLAYWRIGHT_ENABLED=false` est la valeur par défaut. Le JAR worker doit en outre etre
+selectionne explicitement par `SOFASCORE_PLAYWRIGHT_WORKER_JAR`; sa valeur vide maintient le
+transport bloque. Le profil
+`provider-playwright-runtime` compile seulement le worker ; il ne démarre ni Chromium ni une
+campagne. Chaque campagne explicitement armée utilise un worker, un navigateur headless et un
+contexte non persistant neufs, puis un arrêt ciblé nettoie leur arbre de processus exact. La
+qualification fournie est exclusivement loopback sur `127.0.0.1` et ne vaut ni autorisation
+d’appel fournisseur, ni validation humaine, ni clôture du Work Order.
+
 Le lot multi-match WO-010 reste indépendant de ces voies armables : l'état de
 `SOFASCORE_ENABLED` n'entre pas dans sa décision d'éligibilité. Son automatisation s'arrête à la
 validation et à l'ingestion synchrones de preuves remises ou déclarées manuellement ; elle
@@ -696,6 +707,9 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Transport scheduled-events J3 protégé et simulé](docs/architecture/J3-GUARDED-SCHEDULED-EVENTS-TRANSPORT.md)
 - [Confirmation explicite d’appel manuel J3](docs/architecture/J3-EXPLICIT-MANUAL-CALL-CONFIRMATION.md)
 - [Politiques d’arrêt et d’incident J3](docs/architecture/J3-TRANSPORT-STOP-AND-INCIDENT-POLICIES.md)
+- [Transport fournisseur manuel J3 Playwright](docs/architecture/J3-PLAYWRIGHT-PROVIDER-TRANSPORT.md)
+- [Readiness technique du transport J3 Playwright](docs/validation/J3-PLAYWRIGHT-TRANSPORT-TECHNICAL-READINESS-20260827.md)
+- [Work Order actif du transport J3 Playwright](docs/work_orders/active/WO-SS-20260827-013-j3-playwright-transport.md)
 - [Chemin fournisseur J3 borné à cinq pages](docs/architecture/J3-FIVE-PAGE-PROVIDER-QUALIFICATION.md)
 - [Reprise fournisseur J3 contrôlée à la page 2](docs/architecture/J3-PAGE-TWO-PROVIDER-RESUME.md)
 - [Adaptation hors ligne au schéma qualifié de la page 2](docs/architecture/J3-PAGE-TWO-SCHEMA-ADAPTATION.md)

@@ -8,6 +8,8 @@ import com.bettingproject.sofascorelocal.application.network.J3LocalJsonImportEr
 import com.bettingproject.sofascorelocal.application.network.J3LocalJsonImportException;
 import com.bettingproject.sofascorelocal.application.network.J3LocalJsonImportService;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCollectionEvidenceService;
+import com.bettingproject.sofascorelocal.application.network.J3ProviderCampaignStopException;
+import com.bettingproject.sofascorelocal.application.network.J3ProviderCampaignStopService;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallExecutionResult;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
@@ -46,6 +48,7 @@ public class ManualCallController {
     private final J3DynamicManualCallService dynamicManualCallService;
     private final J3LocalJsonImportService localJsonImportService;
     private final J3ManualCollectionEvidenceService collectionEvidenceService;
+    private final J3ProviderCampaignStopService providerCampaignStopService;
     private final LocalFormTokenService formTokenService;
 
     public ManualCallController(
@@ -53,11 +56,13 @@ public class ManualCallController {
             J3DynamicManualCallService dynamicManualCallService,
             J3LocalJsonImportService localJsonImportService,
             J3ManualCollectionEvidenceService collectionEvidenceService,
+            J3ProviderCampaignStopService providerCampaignStopService,
             LocalFormTokenService formTokenService) {
         this.controlService = controlService;
         this.dynamicManualCallService = dynamicManualCallService;
         this.localJsonImportService = localJsonImportService;
         this.collectionEvidenceService = collectionEvidenceService;
+        this.providerCampaignStopService = providerCampaignStopService;
         this.formTokenService = formTokenService;
     }
 
@@ -222,7 +227,7 @@ public class ManualCallController {
             RedirectAttributes redirectAttributes) {
         formTokenService.consume(session, localFormToken);
         return perform(
-                controlService::stopGlobally,
+                providerCampaignStopService::stopScheduledEvents,
                 "Arrêt global appliqué. Toute intention active a été annulée.",
                 redirectAttributes);
     }
@@ -240,6 +245,12 @@ public class ManualCallController {
             redirectAttributes.addFlashAttribute(
                     "manualCallMessage",
                     messageFor(exception.error()));
+            redirectAttributes.addFlashAttribute("manualCallMessageKind", "danger");
+        }
+        catch (J3ProviderCampaignStopException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "manualCallMessage",
+                    "L’arrêt métier a été appliqué, mais le nettoyage du worker Playwright n’a pas pu être confirmé. Aucun nouvel appel n’est autorisé.");
             redirectAttributes.addFlashAttribute("manualCallMessageKind", "danger");
         }
         return REDIRECT_DASHBOARD;

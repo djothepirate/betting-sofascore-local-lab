@@ -14,6 +14,7 @@ public record J3ManualCallControlSnapshot(
         LocalDate suggestedDate,
         J3ManualCallIntentSnapshot intent,
         boolean providerTransportAvailable,
+        boolean localImportAvailable,
         List<String> providerBlockers) {
 
     public J3ManualCallControlSnapshot {
@@ -27,6 +28,10 @@ public record J3ManualCallControlSnapshot(
         if (providerTransportAvailable == !providerBlockers.isEmpty()) {
             throw new IllegalArgumentException(
                     "provider availability and blockers must be mutually exclusive");
+        }
+        if (providerTransportAvailable && !localImportAvailable) {
+            throw new IllegalArgumentException(
+                    "provider availability requires local import availability");
         }
     }
 

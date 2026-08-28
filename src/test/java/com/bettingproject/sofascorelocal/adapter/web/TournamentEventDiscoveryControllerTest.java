@@ -1,5 +1,7 @@
 package com.bettingproject.sofascorelocal.adapter.web;
 
+import com.bettingproject.sofascorelocal.application.network.J3ProviderCampaignStopException;
+import com.bettingproject.sofascorelocal.application.network.J3ProviderCampaignStopService;
 import com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryControlError;
 import com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryControlException;
 import com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryControlService;
@@ -8,6 +10,7 @@ import com.bettingproject.sofascorelocal.application.network.TournamentEventDisc
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryExecutionClaim;
+import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryLocalImportClaim;
 import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoverySource;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.J3TournamentCatalogOption;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.TournamentEventCountStatus;
@@ -52,6 +55,9 @@ class TournamentEventDiscoveryControllerTest {
 
     @MockitoBean
     private TournamentEventDiscoveryService discoveryService;
+
+    @MockitoBean
+    private J3ProviderCampaignStopService providerCampaignStopService;
 
     @MockitoBean
     private LocalFormTokenService formTokenService;
@@ -133,8 +139,8 @@ class TournamentEventDiscoveryControllerTest {
 
     @Test
     void importsOnlyTheJsonResponseBodyAfterTheExistingExactConfirmation() throws Exception {
-        TournamentEventDiscoveryExecutionClaim claim = claim();
-        when(controlService.confirmAndClaim(REQUEST_ID, "phrase exacte", true))
+        TournamentEventDiscoveryLocalImportClaim claim = localImportClaim();
+        when(controlService.confirmAndClaimLocalImport(REQUEST_ID, "phrase exacte", true))
                 .thenReturn(claim);
         TournamentEventDiscoveryResult result = localImportResult();
         when(discoveryService.importLocalJson(
@@ -158,7 +164,8 @@ class TournamentEventDiscoveryControllerTest {
                 .andExpect(flash().attribute("tournamentDiscoveryResult", result))
                 .andExpect(flash().attribute("tournamentDiscoveryMessageKind", "safe"));
 
-        verify(controlService).confirmAndClaim(REQUEST_ID, "phrase exacte", true);
+        verify(controlService).confirmAndClaimLocalImport(
+                REQUEST_ID, "phrase exacte", true);
         verify(discoveryService).importLocalJson(
                 org.mockito.ArgumentMatchers.eq(claim),
                 any(RawPayloadEvidence.class));
@@ -184,7 +191,7 @@ class TournamentEventDiscoveryControllerTest {
                         "tournamentDiscoveryErrorCode",
                         "LOCAL_IMPORT_SENSITIVE_CONTENT"));
 
-        verify(controlService, never()).confirmAndClaim(
+        verify(controlService, never()).confirmAndClaimLocalImport(
                 any(), any(), org.mockito.ArgumentMatchers.anyBoolean());
         verify(discoveryService, never()).importLocalJson(any(), any());
         verify(discoveryService, never()).execute(any());
@@ -209,9 +216,39 @@ class TournamentEventDiscoveryControllerTest {
                         "tournamentDiscoveryErrorCode",
                         "LOCAL_IMPORT_TOO_LARGE"));
 
-        verify(controlService, never()).confirmAndClaim(
+        verify(controlService, never()).confirmAndClaimLocalImport(
                 any(), any(), org.mockito.ArgumentMatchers.anyBoolean());
         verify(discoveryService, never()).importLocalJson(any(), any());
+    }
+
+    @Test
+    void delegatesTheStopToTheWorkerFirstApplicationOrchestrator() throws Exception {
+        mockMvc.perform(post("/tournament-event-discovery/stop")
+                        .param("localFormToken", "token"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/dashboard#tournament-event-discovery"))
+                .andExpect(flash().attribute(
+                        "tournamentDiscoveryMessageKind", "danger"));
+
+        verify(providerCampaignStopService).stopTournamentDiscovery();
+        verify(controlService, never()).stop();
+    }
+
+    @Test
+    void exposesOnlyASafeMessageWhenWorkerStopCannotBeConfirmed() throws Exception {
+        when(providerCampaignStopService.stopTournamentDiscovery())
+                .thenThrow(new J3ProviderCampaignStopException(
+                        new IllegalStateException("internal detail")));
+
+        mockMvc.perform(post("/tournament-event-discovery/stop")
+                        .param("localFormToken", "token"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/dashboard#tournament-event-discovery"))
+                .andExpect(flash().attribute(
+                        "tournamentDiscoveryMessageKind", "danger"))
+                .andExpect(flash().attribute(
+                        "tournamentDiscoveryMessage",
+                        "L’arrêt métier a été appliqué, mais le nettoyage du worker Playwright n’a pas pu être confirmé. Aucun nouvel appel n’est autorisé."));
     }
 
     private static TournamentEventDiscoveryResult localImportResult() {
@@ -250,5 +287,14 @@ class TournamentEventDiscoveryControllerTest {
                         "UEFA Champions League",
                         Map.of(),
                         List.of(41L)));
+    }
+
+    private static TournamentEventDiscoveryLocalImportClaim localImportClaim() {
+        TournamentEventDiscoveryExecutionClaim providerClaim = claim();
+        return new TournamentEventDiscoveryLocalImportClaim(
+                providerClaim.requestId(),
+                providerClaim.providerOrigin(),
+                providerClaim.collectionDate(),
+                providerClaim.selection());
     }
 }

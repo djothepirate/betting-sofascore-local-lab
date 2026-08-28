@@ -20,6 +20,7 @@ public record TournamentEventDiscoveryControlSnapshot(
         J3TournamentCatalogOption selection,
         String terminalCode,
         boolean providerTransportAvailable,
+        boolean localImportAvailable,
         List<String> providerBlockers) {
 
     public TournamentEventDiscoveryControlSnapshot {
@@ -30,6 +31,10 @@ public record TournamentEventDiscoveryControlSnapshot(
         if (providerTransportAvailable != providerBlockers.isEmpty()) {
             throw new IllegalArgumentException(
                     "provider availability and blockers must be mutually exclusive");
+        }
+        if (providerTransportAvailable && !localImportAvailable) {
+            throw new IllegalArgumentException(
+                    "provider availability requires local import availability");
         }
         if (state == TournamentEventDiscoveryState.AWAITING_CONFIRMATION) {
             if (requestId == null

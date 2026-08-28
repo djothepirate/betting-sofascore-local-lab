@@ -1,0 +1,20 @@
+package com.bettingproject.sofascorelocal.application.network.playwright;
+
+public enum PlaywrightProviderFailure {
+    DISABLED,
+    WORKER_ARTIFACT_INVALID,
+    CAMPAIGN_ALREADY_ACTIVE,
+    STARTUP_FAILED,
+    AUTHENTICATION_FAILED,
+    PROTOCOL_ERROR,
+    INVALID_ENDPOINT,
+    INVALID_REQUEST,
+    TIMEOUT,
+    PAYLOAD_TOO_LARGE,
+    SENSITIVE_CONTENT_REJECTED,
+    UNEXPECTED_ROUTE,
+    REDIRECT_BLOCKED,
+    UNEXPECTED_CONTENT,
+    OPERATOR_STOP,
+    RUNTIME_FAILURE
+}

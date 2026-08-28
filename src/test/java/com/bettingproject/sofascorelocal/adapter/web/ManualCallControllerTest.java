@@ -6,6 +6,8 @@ import com.bettingproject.sofascorelocal.application.network.J3ManualCallControl
 import com.bettingproject.sofascorelocal.application.network.J3DynamicManualCallService;
 import com.bettingproject.sofascorelocal.application.network.J3LocalJsonImportService;
 import com.bettingproject.sofascorelocal.application.network.J3ManualCollectionEvidenceService;
+import com.bettingproject.sofascorelocal.application.network.J3ProviderCampaignStopException;
+import com.bettingproject.sofascorelocal.application.network.J3ProviderCampaignStopService;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallControlSnapshot;
@@ -67,6 +69,9 @@ class ManualCallControllerTest {
 
     @MockitoBean
     private J3ManualCollectionEvidenceService collectionEvidenceService;
+
+    @MockitoBean
+    private J3ProviderCampaignStopService providerCampaignStopService;
 
     @MockitoBean
     private CacheManager cacheManager;
@@ -151,7 +156,8 @@ class ManualCallControllerTest {
 
         MockHttpSession stopSession = new MockHttpSession();
         String stopToken = formTokenService.issue(stopSession);
-        when(controlService.stopGlobally()).thenReturn(rearmedSnapshot());
+        when(providerCampaignStopService.stopScheduledEvents())
+                .thenReturn(rearmedSnapshot());
 
         mockMvc.perform(post("/manual-call/stop")
                         .session(stopSession)
@@ -160,7 +166,26 @@ class ManualCallControllerTest {
                 .andExpect(redirectedUrl("/dashboard#manual-call-control"));
 
         verify(controlService).prepare(date);
-        verify(controlService).stopGlobally();
+        verify(providerCampaignStopService).stopScheduledEvents();
+    }
+
+    @Test
+    void exposesOnlyASafeMessageWhenWorkerStopCannotBeConfirmed() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        String token = formTokenService.issue(session);
+        when(providerCampaignStopService.stopScheduledEvents())
+                .thenThrow(new J3ProviderCampaignStopException(
+                        new IllegalStateException("internal detail")));
+
+        mockMvc.perform(post("/manual-call/stop")
+                        .session(session)
+                        .param("localFormToken", token))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/dashboard#manual-call-control"))
+                .andExpect(flash().attribute("manualCallMessageKind", "danger"))
+                .andExpect(flash().attribute(
+                        "manualCallMessage",
+                        "L’arrêt métier a été appliqué, mais le nettoyage du worker Playwright n’a pas pu être confirmé. Aucun nouvel appel n’est autorisé."));
     }
 
     @Test
@@ -339,6 +364,7 @@ class ManualCallControllerTest {
                 null,
                 LocalDate.parse("2026-08-12"),
                 null,
+                false,
                 false,
                 List.of("REAL_CALL_NOT_AUTHORIZED"));
     }

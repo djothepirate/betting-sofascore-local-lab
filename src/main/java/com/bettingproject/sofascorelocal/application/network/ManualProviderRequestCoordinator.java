@@ -8,6 +8,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.UUID;
 import java.util.concurrent.locks.ReentrantLock;
 
 /**
@@ -39,10 +40,34 @@ public final class ManualProviderRequestCoordinator {
     }
 
     public Lease acquire() {
-        boolean acquired = false;
+        CampaignLease campaign = acquireCampaign(UUID.randomUUID());
+        try {
+            campaign.beginRequest();
+            return new Lease(campaign);
+        }
+        catch (RuntimeException exception) {
+            campaign.close();
+            throw exception;
+        }
+    }
+
+    public CampaignLease acquireCampaign(UUID campaignId) {
+        Objects.requireNonNull(campaignId, "campaignId");
+        if (requestLock.isHeldByCurrentThread()) {
+            throw new CoordinationException("nested provider campaign acquisition is forbidden");
+        }
         try {
             requestLock.lockInterruptibly();
-            acquired = true;
+            return new CampaignLease(this, campaignId, Thread.currentThread());
+        }
+        catch (InterruptedException exception) {
+            Thread.currentThread().interrupt();
+            throw new CoordinationException(exception);
+        }
+    }
+
+    private void beginRequest() {
+        try {
             Instant now = clock.instant();
             if (lastStartedAt != null) {
                 Instant earliest = lastStartedAt.plus(minimumDelay);
@@ -55,19 +80,8 @@ public final class ManualProviderRequestCoordinator {
                 }
             }
             lastStartedAt = now;
-            return new Lease(this);
-        }
-        catch (InterruptedException exception) {
-            Thread.currentThread().interrupt();
-            if (acquired) {
-                requestLock.unlock();
-            }
-            throw new CoordinationException(exception);
         }
         catch (RuntimeException exception) {
-            if (acquired) {
-                requestLock.unlock();
-            }
             throw exception instanceof CoordinationException
                     ? exception
                     : new CoordinationException(exception);
@@ -103,18 +117,70 @@ public final class ManualProviderRequestCoordinator {
 
     public static final class Lease implements AutoCloseable {
 
-        private ManualProviderRequestCoordinator owner;
+        private CampaignLease campaign;
 
-        private Lease(ManualProviderRequestCoordinator owner) {
+        private Lease(CampaignLease campaign) {
+            this.campaign = campaign;
+        }
+
+        @Override
+        public void close() {
+            CampaignLease current = campaign;
+            if (current != null) {
+                current.close();
+                campaign = null;
+            }
+        }
+    }
+
+    public static final class CampaignLease implements AutoCloseable {
+
+        private ManualProviderRequestCoordinator owner;
+        private final UUID campaignId;
+        private final Thread ownerThread;
+
+        private CampaignLease(
+                ManualProviderRequestCoordinator owner,
+                UUID campaignId,
+                Thread ownerThread) {
             this.owner = owner;
+            this.campaignId = campaignId;
+            this.ownerThread = ownerThread;
+        }
+
+        public UUID campaignId() {
+            return campaignId;
+        }
+
+        public void beginRequest() {
+            ManualProviderRequestCoordinator current = requireOpenOnOwnerThread();
+            current.beginRequest();
         }
 
         @Override
         public void close() {
             ManualProviderRequestCoordinator current = owner;
-            if (current != null) {
-                owner = null;
-                current.release();
+            if (current == null) {
+                return;
+            }
+            requireOwnerThread();
+            owner = null;
+            current.release();
+        }
+
+        private ManualProviderRequestCoordinator requireOpenOnOwnerThread() {
+            requireOwnerThread();
+            ManualProviderRequestCoordinator current = owner;
+            if (current == null) {
+                throw new CoordinationException("provider campaign lease is closed");
+            }
+            return current;
+        }
+
+        private void requireOwnerThread() {
+            if (Thread.currentThread() != ownerThread) {
+                throw new CoordinationException(
+                        "provider campaign lease belongs to another thread");
             }
         }
     }
@@ -123,6 +189,10 @@ public final class ManualProviderRequestCoordinator {
 
         private CoordinationException(Throwable cause) {
             super("provider request coordination interrupted", cause);
+        }
+
+        private CoordinationException(String message) {
+            super(message);
         }
     }
 }

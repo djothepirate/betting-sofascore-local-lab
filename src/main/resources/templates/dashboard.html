@@ -249,8 +249,10 @@
           </div>
         </div>
 
-        <div th:if="${manualCall.realCallEnabled}" class="discovery-execution-grid">
+        <div th:if="${manualCall.realCallEnabled or manualCall.localImportEnabled}"
+             class="discovery-execution-grid">
           <form class="control-form control-stage"
+                th:if="${manualCall.realCallEnabled}"
                 th:action="@{/manual-call/execute}"
                 method="post">
             <input type="hidden" name="localFormToken" th:value="${localFormToken}">
@@ -261,6 +263,7 @@
           </form>
 
           <form class="control-form control-stage"
+                th:if="${manualCall.localImportEnabled}"
                 th:action="@{/manual-call/import-json-pages}"
                 method="post"
                 enctype="multipart/form-data">
@@ -362,7 +365,7 @@
       <form class="control-form"
             th:if="${tournamentCatalog.available
                      and !tournamentCatalog.options.empty
-                     and tournamentDiscoveryControl.providerTransportAvailable
+                     and tournamentDiscoveryControl.localImportAvailable
                      and !tournamentDiscoveryControl.awaitingConfirmation()
                      and !tournamentDiscoveryControl.executing()
                      and !tournamentDiscoveryControl.terminalLocked()}"
@@ -400,6 +403,7 @@
 
       <div class="discovery-execution-grid">
         <form class="control-form confirmation-form control-stage"
+              th:if="${tournamentDiscoveryControl.providerTransportAvailable}"
               th:action="@{/tournament-event-discovery/execute}"
               method="post">
           <input type="hidden" name="localFormToken" th:value="${localFormToken}">
@@ -417,6 +421,7 @@
         </form>
 
         <form class="control-form confirmation-form control-stage"
+              th:if="${tournamentDiscoveryControl.localImportAvailable}"
               th:action="@{/tournament-event-discovery/import-json}"
               method="post"
               enctype="multipart/form-data">

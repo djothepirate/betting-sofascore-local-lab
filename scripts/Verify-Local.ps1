@@ -20,6 +20,8 @@ $sourceFiles = Get-ChildItem -LiteralPath $sourceRoot -Recurse -File |
 $forbiddenPatterns = @(
     'https?://[^\s"'']*sofascore',
     'api\.sofascore',
+    'flaresolverr',
+    'localhost:8191',
     '\bProxySelector\b',
     '\borg\.openqa\.selenium\b',
     '\bcom\.microsoft\.playwright\b',
@@ -55,19 +57,64 @@ $approvedRestClientConstructions = @(
     (Join-Path $sourceRoot `
         'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\LoopbackScheduledEventsRestTransport.java'),
     (Join-Path $sourceRoot `
-        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderScheduledEventsRestTransport.java'),
-    (Join-Path $sourceRoot `
         'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderEventDetailsRestTransport.java'),
     (Join-Path $sourceRoot `
-        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderJ5EventDataRestTransport.java'),
-    (Join-Path $sourceRoot `
-        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderTournamentScheduledEventsRestTransport.java')
+        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderJ5EventDataRestTransport.java')
 )
 $restClientConstructions = $sourceFiles |
     Select-String -Pattern '\bRestClient\s*\.(?:builder|create)\b' -CaseSensitive:$false |
     Where-Object { $_.Path -notin $approvedRestClientConstructions }
 if ($restClientConstructions) {
     $violations += $restClientConstructions
+}
+
+$removedJ3RestTransports = @(
+    (Join-Path $sourceRoot `
+        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderScheduledEventsRestTransport.java'),
+    (Join-Path $sourceRoot `
+        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderTournamentScheduledEventsRestTransport.java')
+)
+foreach ($removedTransport in $removedJ3RestTransports) {
+    if (Test-Path -LiteralPath $removedTransport) {
+        throw "Retired J3 RestClient transport is present: $removedTransport"
+    }
+}
+
+$requiredJ3PlaywrightTransports = @(
+    (Join-Path $sourceRoot `
+        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderScheduledEventsPlaywrightTransport.java'),
+    (Join-Path $sourceRoot `
+        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderTournamentScheduledEventsPlaywrightTransport.java')
+)
+foreach ($requiredTransport in $requiredJ3PlaywrightTransports) {
+    if (-not (Test-Path -LiteralPath $requiredTransport)) {
+        throw "Required J3 Playwright transport is absent: $requiredTransport"
+    }
+}
+
+$playwrightSourceRoot = Join-Path $repositoryRoot 'src\provider-playwright'
+$playwrightSourceFiles = Get-ChildItem -LiteralPath $playwrightSourceRoot -Recurse -File |
+    Where-Object { $_.Extension -eq '.java' }
+$forbiddenPlaywrightPatterns = @(
+    'flaresolverr',
+    'localhost:8191',
+    '\.setProxy\s*\(',
+    '--proxy',
+    '\.setUserAgent\s*\(',
+    '\bstorageState\b',
+    '\brecordHar',
+    '\brecordVideo',
+    '\.screenshot\s*\(',
+    '\bconnectOverCDP\b',
+    '\bpage\.content\s*\(',
+    '\bresponse\.text\s*\('
+)
+foreach ($pattern in $forbiddenPlaywrightPatterns) {
+    $matches = $playwrightSourceFiles |
+        Select-String -Pattern $pattern -CaseSensitive:$false
+    if ($matches) {
+        $violations += $matches
+    }
 }
 if ($violations.Count -gt 0) {
     $violations | ForEach-Object { Write-Error ($_.ToString()) }

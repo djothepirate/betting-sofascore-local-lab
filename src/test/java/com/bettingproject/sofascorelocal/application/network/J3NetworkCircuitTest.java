@@ -70,6 +70,7 @@ class J3NetworkCircuitTest {
                     "HTTP_BAD_REQUEST",
                     "HTTP_UNAUTHORIZED",
                     "HTTP_FORBIDDEN",
+                    "ENDPOINT_UNAVAILABLE",
                     "TIMEOUT",
                     "TRANSPORT_IO_FAILURE",
                     "PAYLOAD_TOO_LARGE",

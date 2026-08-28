@@ -4,8 +4,8 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.SofascoreEndpointCata
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1Parser;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
+import com.bettingproject.sofascorelocal.domain.provider.J3LocalJsonImportExecutionClaim;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallControlSnapshot;
-import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallExecutionClaim;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallExecutionResult;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState;
 import com.bettingproject.sofascorelocal.domain.provider.J3MinimizedCollectionEvidence;
@@ -100,9 +100,9 @@ public class J3LocalJsonImportService {
 
         List<J3MinimizedPageEvidence> attempts = new ArrayList<>();
         int completedPages = 0;
-        J3ManualCallExecutionClaim claim = null;
+        J3LocalJsonImportExecutionClaim claim = null;
         try (J3SingleCallGuard.Permit ignored = permit.orElseThrow()) {
-            claim = controlService.claimExecution(requestId);
+            claim = controlService.claimLocalImportExecution(requestId);
             for (int index = 0; index < validatedPayloads.size(); index++) {
                 int page = index + 1;
                 if (!controlService.executionMayContinue(requestId)) {

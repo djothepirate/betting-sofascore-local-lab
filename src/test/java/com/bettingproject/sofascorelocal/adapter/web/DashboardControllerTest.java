@@ -41,6 +41,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -99,6 +100,7 @@ class DashboardControllerTest {
                         null,
                         null,
                         false,
+                        false,
                         List.of("TOURNAMENT_EVENT_DISCOVERY_DISABLED")));
         when(snapshotInspectionService.loadCatalog())
                 .thenReturn(RawSnapshotInspectionCatalog.unavailable());
@@ -152,6 +154,7 @@ class DashboardControllerTest {
                 LocalDate.parse("2026-08-12"),
                 null,
                 false,
+                false,
                 List.of(
                         "REAL_ENDPOINT_URI_ABSENT",
                         "REAL_CALL_NOT_AUTHORIZED",
@@ -199,6 +202,7 @@ class DashboardControllerTest {
                         null,
                         null,
                         null,
+                        true,
                         true,
                         List.of()));
         UUID discoveredEventId = UUID.fromString(
@@ -286,13 +290,18 @@ class DashboardControllerTest {
                         LocalDate.of(2026, 8, 14),
                         tournamentOption,
                         null,
+                        false,
                         true,
-                        List.of()));
+                        List.of(
+                                "PLAYWRIGHT_RUNTIME_DISABLED",
+                                "PLAYWRIGHT_WORKER_ARTIFACT_INVALID")));
 
         mockMvc.perform(get("/dashboard"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(
                         "action=\"/tournament-event-discovery/import-json\"")))
+                .andExpect(content().string(not(containsString(
+                        "action=\"/tournament-event-discovery/execute\""))))
                 .andExpect(content().string(containsString(
                         "enctype=\"multipart/form-data\"")))
                 .andExpect(content().string(containsString("name=\"jsonFile\"")))
@@ -354,6 +363,7 @@ class DashboardControllerTest {
                 null,
                 LocalDate.parse("2026-08-13"),
                 intent,
+                true,
                 true,
                 List.of());
         when(dashboardService.load()).thenReturn(dashboardView);

@@ -22,6 +22,9 @@
     <maven.minimum.version>3.9.0</maven.minimum.version>
     <testcontainers.version>2.0.5</testcontainers.version>
     <json-schema-validator.version>3.0.6</json-schema-validator.version>
+    <playwright.version>1.62.0</playwright.version>
+    <main.output.directory>${project.build.directory}/classes</main.output.directory>
+    <test.output.directory>${project.build.directory}/test-classes</test.output.directory>
   </properties>
 
   <dependencies>
@@ -118,6 +121,8 @@
   </dependencies>
 
   <build>
+    <outputDirectory>${main.output.directory}</outputDirectory>
+    <testOutputDirectory>${test.output.directory}</testOutputDirectory>
     <resources>
       <resource>
         <directory>src/main/resources</directory>
@@ -191,6 +196,130 @@
                   <goal>integration-test</goal>
                   <goal>verify</goal>
                 </goals>
+                <configuration>
+                  <includes>
+                    <include>**/integration/**/*IT.java</include>
+                  </includes>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>provider-playwright-runtime</id>
+      <properties>
+        <main.output.directory>${project.build.directory}/provider-playwright-runtime/classes</main.output.directory>
+        <test.output.directory>${project.build.directory}/provider-playwright-runtime/test-classes</test.output.directory>
+      </properties>
+      <dependencies>
+        <dependency>
+          <groupId>com.microsoft.playwright</groupId>
+          <artifactId>playwright</artifactId>
+          <version>${playwright.version}</version>
+        </dependency>
+      </dependencies>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>3.6.1</version>
+            <executions>
+              <execution>
+                <id>add-provider-playwright-source</id>
+                <phase>generate-sources</phase>
+                <goals>
+                  <goal>add-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>src/provider-playwright/java</source>
+                  </sources>
+                </configuration>
+              </execution>
+              <execution>
+                <id>add-provider-playwright-test-source</id>
+                <phase>generate-test-sources</phase>
+                <goals>
+                  <goal>add-test-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>src/provider-playwright-test/java</source>
+                  </sources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-maven-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>package-provider-playwright-worker</id>
+                <phase>package</phase>
+                <goals>
+                  <goal>repackage</goal>
+                </goals>
+                <configuration>
+                  <classifier>provider-playwright-worker</classifier>
+                  <mainClass>com.bettingproject.sofascorelocal.provider.playwright.worker.ProviderPlaywrightWorkerMain</mainClass>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+
+    <profile>
+      <id>provider-playwright-local-qualification</id>
+      <properties>
+        <test.output.directory>${project.build.directory}/provider-playwright-runtime/test-classes</test.output.directory>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>build-helper-maven-plugin</artifactId>
+            <version>3.6.1</version>
+            <executions>
+              <execution>
+                <id>add-provider-playwright-qualification-test-source</id>
+                <phase>generate-test-sources</phase>
+                <goals>
+                  <goal>add-test-source</goal>
+                </goals>
+                <configuration>
+                  <sources>
+                    <source>src/provider-playwright-qualification-test/java</source>
+                  </sources>
+                </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-failsafe-plugin</artifactId>
+            <executions>
+              <execution>
+                <id>provider-playwright-loopback-qualification</id>
+                <goals>
+                  <goal>integration-test</goal>
+                  <goal>verify</goal>
+                </goals>
+                <configuration>
+                  <includes>
+                    <include>**/*LocalQualificationIT.java</include>
+                  </includes>
+                  <systemPropertyVariables>
+                    <provider.playwright.worker-jar>${project.build.directory}/${project.build.finalName}-provider-playwright-worker.jar</provider.playwright.worker-jar>
+                    <provider.playwright.browser-cache>${provider.playwright.browser-cache}</provider.playwright.browser-cache>
+                  </systemPropertyVariables>
+                </configuration>
               </execution>
             </executions>
           </plugin>

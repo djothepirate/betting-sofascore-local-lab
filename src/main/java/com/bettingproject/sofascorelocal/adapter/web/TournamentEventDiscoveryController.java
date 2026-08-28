@@ -1,5 +1,7 @@
 package com.bettingproject.sofascorelocal.adapter.web;
 
+import com.bettingproject.sofascorelocal.application.network.J3ProviderCampaignStopException;
+import com.bettingproject.sofascorelocal.application.network.J3ProviderCampaignStopService;
 import com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryControlException;
 import com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryControlService;
 import com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryResult;
@@ -25,14 +27,17 @@ public class TournamentEventDiscoveryController {
 
     private final TournamentEventDiscoveryControlService controlService;
     private final TournamentEventDiscoveryService discoveryService;
+    private final J3ProviderCampaignStopService providerCampaignStopService;
     private final LocalFormTokenService formTokenService;
 
     public TournamentEventDiscoveryController(
             TournamentEventDiscoveryControlService controlService,
             TournamentEventDiscoveryService discoveryService,
+            J3ProviderCampaignStopService providerCampaignStopService,
             LocalFormTokenService formTokenService) {
         this.controlService = controlService;
         this.discoveryService = discoveryService;
+        this.providerCampaignStopService = providerCampaignStopService;
         this.formTokenService = formTokenService;
     }
 
@@ -102,7 +107,7 @@ public class TournamentEventDiscoveryController {
             return REDIRECT;
         }
         try {
-            var claim = controlService.confirmAndClaim(
+            var claim = controlService.confirmAndClaimLocalImport(
                     requestId, confirmationText, acknowledged);
             var result = discoveryService.importLocalJson(claim, payload);
             addResult(redirectAttributes, result);
@@ -125,12 +130,22 @@ public class TournamentEventDiscoveryController {
             HttpSession session,
             RedirectAttributes redirectAttributes) {
         formTokenService.consume(session, localFormToken);
-        controlService.stop();
-        redirectAttributes.addFlashAttribute(
-                "tournamentDiscoveryMessage",
-                "Arrêt global appliqué à la découverte de rencontres. "
-                        + "Aucun nouvel appel n’est autorisé avant redémarrage.");
-        redirectAttributes.addFlashAttribute("tournamentDiscoveryMessageKind", "danger");
+        try {
+            providerCampaignStopService.stopTournamentDiscovery();
+            redirectAttributes.addFlashAttribute(
+                    "tournamentDiscoveryMessage",
+                    "Arrêt global appliqué à la découverte de rencontres. "
+                            + "Aucun nouvel appel n’est autorisé avant redémarrage.");
+            redirectAttributes.addFlashAttribute(
+                    "tournamentDiscoveryMessageKind", "danger");
+        }
+        catch (J3ProviderCampaignStopException exception) {
+            redirectAttributes.addFlashAttribute(
+                    "tournamentDiscoveryMessage",
+                    "L’arrêt métier a été appliqué, mais le nettoyage du worker Playwright n’a pas pu être confirmé. Aucun nouvel appel n’est autorisé.");
+            redirectAttributes.addFlashAttribute(
+                    "tournamentDiscoveryMessageKind", "danger");
+        }
         return REDIRECT;
     }
 

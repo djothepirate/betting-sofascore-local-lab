@@ -1081,6 +1081,96 @@ LOCAL_CONFIGURATION_RELOCKED=PENDING_UNTIL_CONFIRMED
 APPLICATION_STOPPED=PENDING_UNTIL_CONFIRMED
 ```
 
+### 3.14 Installer et qualifier localement le runtime Playwright J3
+
+Cette procédure appartient à `WO-SS-20260827-013`. Elle installe puis exerce le vrai worker et
+Chromium uniquement contre un serveur éphémère lié à `127.0.0.1`. Elle ne contacte pas SofaScore,
+n’autorise aucune campagne réelle et ne valide pas humainement le Work Order.
+
+Le build et le démarrage habituels restent inertes :
+
+```text
+SOFASCORE_PLAYWRIGHT_ENABLED=false
+SOFASCORE_PLAYWRIGHT_WORKER_JAR=
+SOFASCORE_PLAYWRIGHT_MAXIMUM_HEAP_MIB=192
+SOFASCORE_PLAYWRIGHT_STARTUP_TIMEOUT=30s
+SOFASCORE_PLAYWRIGHT_REQUEST_TIMEOUT=10s
+SOFASCORE_PLAYWRIGHT_GRACEFUL_CLOSE_TIMEOUT=5s
+SOFASCORE_PLAYWRIGHT_LOOPBACK_QUALIFICATION=false
+SOFASCORE_PLAYWRIGHT_LOOPBACK_ORIGIN=
+```
+
+Le profil `provider-playwright-runtime` ajoute Playwright Java `1.62.0` et les sources du worker à
+la compilation. L’activer ne démarre ni worker, ni navigateur, ni transport fournisseur. Pour
+vérifier le packaging sans exécuter la qualification :
+
+```powershell
+.\mvnw.cmd -Pprovider-playwright-runtime -DskipTests package
+```
+
+Installer explicitement le Chromium associé dans le cache local ignoré par Git :
+
+```powershell
+pwsh -NoProfile -File .\scripts\Install-J3PlaywrightRuntime.ps1
+```
+
+Le cache doit rester exactement sous `.tmp/provider-playwright-browsers`. Le script doit terminer
+avec :
+
+```text
+PLAYWRIGHT_RUNTIME_INSTALL=PASS
+PLAYWRIGHT_BROWSERS_PATH=<racine>\.tmp\provider-playwright-browsers
+PROVIDER_ACCESS_PERFORMED=NO
+```
+
+Ne pas copier ce cache dans Git, un profil navigateur personnel ou un répertoire partagé.
+
+Pour une future campagne fournisseur autorisée séparément, construire d'abord le worker avec le
+profil opt-in, puis renseigner des chemins absolus vers le JAR classifié et le cache dédié :
+
+```powershell
+.\mvnw.cmd -Pprovider-playwright-runtime -DskipTests package
+$env:SOFASCORE_PLAYWRIGHT_WORKER_JAR = (Resolve-Path '.\target\sofascore-local-lab-0.1.0-SNAPSHOT-provider-playwright-worker.jar').Path
+$env:PLAYWRIGHT_BROWSERS_PATH = (Resolve-Path '.\.tmp\provider-playwright-browsers').Path
+$env:SOFASCORE_PLAYWRIGHT_ENABLED = 'true'
+```
+
+Le JAR doit etre un fichier regulier lisible dont le manifeste porte exactement le `Start-Class`
+du worker J3. Un chemin absent, vide, non JAR ou un manifeste different maintient la qualification
+bloquee avant le claim. Ces variables ne demarrent rien : une confirmation operateur J3 valide et
+le premier cache miss restent necessaires. La campagne reelle demeure interdite tant qu'un go
+proprietaire distinct n'en a pas fige le perimetre.
+
+Exécuter ensuite la qualification loopback :
+
+```powershell
+pwsh -NoProfile -File .\scripts\Invoke-J3PlaywrightLoopbackQualification.ps1
+```
+
+Ce script active `provider-playwright-runtime` et
+`provider-playwright-local-qualification`. Il doit vérifier sur `127.0.0.1` :
+
+- un worker, un Chromium headless et un `BrowserContext` non persistant neufs par campagne ;
+- zéro réutilisation de profil, cookie, `storageState`, HAR, trace, vidéo, capture ou téléchargement ;
+- la fidélité du statut, du `Content-Type` et des octets, sans reconstruction DOM ;
+- la persistance raw-first d’un HTTP `404`, son classement `ENDPOINT_UNAVAILABLE` et l’absence de
+  parse, retry ou page suivante ;
+- l’arrêt ciblé de l’arbre attribué à la campagne, sans arrêt par nom, avec acquittement en 500 ms,
+  annulation en 2 s et nettoyage en 5 s au maximum ;
+- l’absence de payload, cookie, token, header ou URI complète dans les journaux.
+
+Le terminal attendu reste minimisé :
+
+```text
+J3_PLAYWRIGHT_LOOPBACK_QUALIFICATION=PASS
+ORIGIN=http://127.0.0.1:<ephemeral>
+PROVIDER_ACCESS_PERFORMED=NO
+```
+
+Un échec reste terminal pour cette qualification. Ne pas remplacer le worker par un transport
+HTTP direct ou FlareSolverr, ne pas réutiliser un contexte et ne pas transformer l’essai loopback
+en appel fournisseur.
+
 ## 4. Validation
 
 ### 4.1 Suite standard
@@ -1338,6 +1428,29 @@ J4_REAL_PHASE_2_REFRESH_QUALIFICATION=PASS|FAIL
 J4_CONFIGURATION_RELOCK_AFTER_PHASE_2=YES|NO
 J4_APPLICATION_STOPPED_AFTER_PHASE_2=YES|NO
 ```
+
+### 4.11 Readiness du transport J3 Playwright
+
+Sur le diff final du Work Order, exécuter dans cet ordre :
+
+```powershell
+.\mvnw.cmd clean verify
+.\mvnw.cmd -Pintegration-tests verify
+.\scripts\Verify-Local.ps1 -WithIntegrationTests
+pwsh -NoProfile -File .\scripts\Install-J3PlaywrightRuntime.ps1
+pwsh -NoProfile -File .\scripts\Invoke-J3PlaywrightLoopbackQualification.ps1
+git diff --check
+```
+
+Les trois premières commandes restent sans navigateur et sans appel fournisseur. Les deux scripts
+Playwright exigent une action opérateur explicite ; l’installation alimente seulement le cache
+local et la qualification utilise uniquement un serveur loopback éphémère. Une exécution locale
+réussie permet de renseigner la readiness technique, mais ne vaut ni autorisation d’appel réel, ni
+qualification humaine, ni déplacement du Work Order vers `completed`.
+
+Consigner les résultats dans
+[`J3-PLAYWRIGHT-TRANSPORT-TECHNICAL-READINESS-20260827.md`](../validation/J3-PLAYWRIGHT-TRANSPORT-TECHNICAL-READINESS-20260827.md)
+sans y inclure de payload, cookie, token, header ou URI complète.
 
 ## 5. Arrêt
 

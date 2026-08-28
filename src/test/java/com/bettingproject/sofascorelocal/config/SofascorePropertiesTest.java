@@ -38,6 +38,8 @@ class SofascorePropertiesTest {
                     "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false",
                     "SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=false",
                     "SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED=false",
+                    "SOFASCORE_PLAYWRIGHT_ENABLED=false",
+                    "SOFASCORE_PLAYWRIGHT_WORKER_JAR=",
                     "SOFASCORE_BASE_URL=",
                     "SOFASCORE_ALLOWED_ENDPOINTS=")
             .withInitializer(context -> context.getEnvironment().getPropertySources()
@@ -119,7 +121,36 @@ class SofascorePropertiesTest {
 
                     J3ProviderQualificationPolicy qualificationPolicy = context.getBean(
                             J3ProviderQualificationPolicy.class);
-                    assertThat(qualificationPolicy.snapshot().available()).isTrue();
+                    assertThat(qualificationPolicy.snapshot().available()).isFalse();
+                    assertThat(qualificationPolicy.snapshot().blockers())
+                            .contains("PLAYWRIGHT_RUNTIME_DISABLED",
+                                    "PLAYWRIGHT_WORKER_ARTIFACT_INVALID");
+                });
+    }
+
+    @Test
+    void bindsTheExplicitPlaywrightWorkerArtifactAndKeepsTheBlankDefaultInert() {
+        contextRunner.run(context -> {
+            assertThat(context.getStartupFailure()).isNull();
+            ProviderPlaywrightProperties properties = context.getBean(
+                    ProviderPlaywrightProperties.class);
+            assertThat(properties.isEnabled()).isFalse();
+            assertThat(properties.getWorkerJar()).isNull();
+        });
+
+        contextRunner
+                .withSystemProperties(
+                        "SOFASCORE_PLAYWRIGHT_ENABLED=true",
+                        "SOFASCORE_PLAYWRIGHT_WORKER_JAR="
+                                + "C:/local/playwright/provider-playwright-worker.jar")
+                .run(context -> {
+                    assertThat(context.getStartupFailure()).isNull();
+                    ProviderPlaywrightProperties properties = context.getBean(
+                            ProviderPlaywrightProperties.class);
+                    assertThat(properties.isEnabled()).isTrue();
+                    assertThat(properties.getWorkerJar())
+                            .isEqualTo(java.nio.file.Path.of(
+                                    "C:/local/playwright/provider-playwright-worker.jar"));
                 });
     }
 
@@ -194,14 +225,14 @@ class SofascorePropertiesTest {
                     assertThat(context.getBean(J5OfflineBatchPolicy.class)
                             .snapshot().available()).isTrue();
                     assertThat(context.getBean(J3ProviderQualificationPolicy.class)
-                            .snapshot().available()).isTrue();
+                            .snapshot().available()).isFalse();
                     assertThat(context.getBean(J4EventDetailsPhase2QualificationPolicy.class)
                             .snapshot().available()).isTrue();
                     assertThat(context.getBean(J5RealQualificationPolicy.class)
                             .snapshot().available()).isTrue();
                     assertThat(context.getBean(
                             TournamentEventDiscoveryQualificationPolicy.class)
-                            .snapshot().available()).isTrue();
+                            .snapshot().available()).isFalse();
                 });
     }
 
@@ -230,7 +261,7 @@ class SofascorePropertiesTest {
                                     SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS);
                     assertThat(context.getBean(
                             TournamentEventDiscoveryQualificationPolicy.class)
-                            .snapshot().available()).isTrue();
+                            .snapshot().available()).isFalse();
                 });
     }
 
@@ -415,9 +446,9 @@ class SofascorePropertiesTest {
                                     SofascoreEndpointType.EVENT_LINEUPS);
                     assertThat(properties.hasExactActiveQualificationEndpoints()).isTrue();
                     assertThat(context.getBean(J3ProviderQualificationPolicy.class)
-                            .snapshot().available()).isTrue();
+                            .snapshot().available()).isFalse();
                     assertThat(context.getBean(TournamentEventDiscoveryQualificationPolicy.class)
-                            .snapshot().available()).isTrue();
+                            .snapshot().available()).isFalse();
                     assertThat(context.getBean(J4EventDetailsQualificationPolicy.class)
                             .snapshot().available()).isFalse();
                     assertThat(context.getBean(J4EventDetailsPhase2QualificationPolicy.class)
@@ -471,7 +502,9 @@ class SofascorePropertiesTest {
     }
 
     @Configuration(proxyBeanMethods = false)
-    @EnableConfigurationProperties(SofascoreProperties.class)
+    @EnableConfigurationProperties({
+            SofascoreProperties.class,
+            ProviderPlaywrightProperties.class})
     @Import({
             J3ProviderQualificationPolicy.class,
             J4EventDetailsQualificationPolicy.class,

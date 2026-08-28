@@ -4,6 +4,30 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### J3 — implémentation du transport fournisseur manuel Playwright
+
+- remplacement, dans le Work Order actif `WO-SS-20260827-013`, des deux adaptateurs J3
+  `SCHEDULED_EVENTS` et `TOURNAMENT_SCHEDULED_EVENTS` par un worker Playwright JVM enfant commun,
+  sans URI libre ni fallback `RestClient` ou FlareSolverr ;
+- ajout des profils Maven `provider-playwright-runtime` et
+  `provider-playwright-local-qualification`, avec Playwright Java `1.62.0` et cache Chromium local
+  ignoré sous `.tmp/provider-playwright-browsers`. Le build standard reste sans source ni
+  dépendance Playwright et `SOFASCORE_PLAYWRIGHT_ENABLED=false` conserve l’inertie par défaut ;
+- un worker, un Chromium headless et un `BrowserContext` non persistant neufs par campagne ;
+  JavaScript et service workers bloqués, cookies effacés, téléchargements, popups, WebSockets,
+  routes secondaires, redirections et retries interdits, sans profil, proxy, `storageState`, HAR,
+  trace, vidéo ou capture ;
+- IPC privé et authentifié sur `127.0.0.1`, payload borné à 5 Mio, réponse issue exclusivement du
+  statut, du `Content-Type` borné et des octets de `Response.body()`, sans reconstruction DOM ;
+- lease exclusive couvrant toute la pagination J3 et délai minimal partagé de trois secondes entre
+  départs fournisseur ; les imports JSON locaux et les cache hits ne démarrent pas Playwright ;
+- arrêt ciblé de la campagne et de son arbre exact par PID et instant de création, avec bornes de
+  500 ms pour l’acquittement, 2 s pour l’annulation et 5 s pour le nettoyage, sans arrêt par nom ;
+- traitement raw-first des réponses, y compris HTTP `404` persisté et classé
+  `ENDPOINT_UNAVAILABLE` avant tout parsing, sans retry, fallback ou page suivante ;
+- scripts explicites d’installation et de qualification loopback sur `127.0.0.1`. Cette
+  qualification locale n’autorise aucun appel fournisseur et ne clôt pas le Work Order.
+
 ### J5 — import hors ligne multi-match atomique
 
 - correction issue de la recette Borussia Dortmund — FC Bayern München (`16248441`) : chaque

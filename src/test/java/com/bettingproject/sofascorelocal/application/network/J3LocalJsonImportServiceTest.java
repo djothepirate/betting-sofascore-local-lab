@@ -1,6 +1,8 @@
 package com.bettingproject.sofascorelocal.application.network;
 
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1Parser;
+import com.bettingproject.sofascorelocal.config.ProviderPlaywrightProperties;
+import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState;
@@ -11,6 +13,7 @@ import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotAcquisitionM
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceOutcome;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceResult;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
+import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import org.junit.jupiter.api.Test;
 
@@ -25,6 +28,7 @@ import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -90,6 +94,59 @@ class J3LocalJsonImportServiceTest {
                 .contains("PAGE_1_PROVIDER_REQUEST_EXECUTED=NO")
                 .contains("PAGE_1_LOCAL_JSON_IMPORT_EXECUTED=YES")
                 .contains("PAGE_2_HAS_NEXT_PAGE=false");
+    }
+
+    @Test
+    void importsLocallyWhenPlaywrightDefaultsAreDisabledAndWorkerJarIsEmpty()
+            throws Exception {
+        Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+        SofascoreProperties sofascore = new SofascoreProperties();
+        sofascore.setEnabled(true);
+        sofascore.setJ3QualificationEnabled(true);
+        sofascore.setBaseUrl(ORIGIN.toString());
+        sofascore.setAllowedEndpoints(Set.of(SofascoreEndpointType.SCHEDULED_EVENTS));
+        ProviderPlaywrightProperties playwrightDefaults =
+                new ProviderPlaywrightProperties();
+        J3ProviderQualificationPolicy policy = new J3ProviderQualificationPolicy(
+                sofascore, playwrightDefaults);
+        J3ManualCallControlService control = new J3ManualCallControlService(
+                clock,
+                () -> REQUEST_ID,
+                () -> 42,
+                policy::snapshot,
+                policy::localImportSnapshot);
+        control.rearmAfterGlobalStop();
+        control.activateByOperator();
+        var prepared = control.prepare(DATE);
+        control.confirm(
+                REQUEST_ID,
+                prepared.intent().confirmationPhrase(),
+                true);
+        RecordingStore store = new RecordingStore();
+        J3LocalJsonImportService service = service(
+                control,
+                store,
+                new J3ManualCollectionEvidenceService(),
+                clock);
+        byte[] providerShape = Files.readAllBytes(
+                Path.of("fixtures/scheduled-events/qualified-provider-shape.json"));
+
+        assertThat(control.snapshot().providerTransportAvailable()).isFalse();
+        assertThat(control.snapshot().localImportAvailable()).isTrue();
+        assertThat(control.snapshot().providerBlockers()).contains(
+                "PLAYWRIGHT_RUNTIME_DISABLED",
+                "PLAYWRIGHT_WORKER_ARTIFACT_INVALID");
+
+        var result = service.importPages(REQUEST_ID, List.of(
+                RawPayloadEvidence.capture(withHasNextPage(providerShape, false))));
+
+        assertThat(result.completed()).isTrue();
+        assertThat(result.providerRequests()).isZero();
+        assertThat(result.cacheHits()).isZero();
+        assertThat(result.localJsonImports()).isEqualTo(1);
+        assertThat(store.saved).singleElement()
+                .extracting(RawManualCallSnapshot::acquisitionMode)
+                .isEqualTo(RawSnapshotAcquisitionMode.MANUAL_LOCAL_JSON_IMPORT);
     }
 
     @Test

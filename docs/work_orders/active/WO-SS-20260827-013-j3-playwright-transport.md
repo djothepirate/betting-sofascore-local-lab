@@ -1,15 +1,15 @@
 # WO-SS-20260827-013 - Migration Playwright des parcours fournisseur manuels J3
 
-- **Statut :** `OPEN_AWAITING_PREREQUISITES`
+- **Statut :** `IN_PROGRESS`
 - **Jalon :** `J3`
 - **Date d'ouverture :** `2026-08-27`
 - **Decision d'ouverture :** proprietaire du Betting Project
 - **Branche cible :** `codex/j3-playwright-transport`
-- **Worktree dedie :** `REQUIRED_NOT_CREATED`
+- **Worktree dedie :** `CREATED` (`.tmp/wo013-playwright`)
 - **ADR applicable :** `ADR-SS-001 v1.3`
 - **Qualification de reference :** `WO-SS-20260823-011` (`VALIDATED`)
-- **Implementation par cette ouverture :** `NOT_STARTED`
-- **Developpement et qualification loopback :** `AWAITING_CLEAN_BASE`
+- **Implementation par cette ouverture :** `STARTED`
+- **Developpement et qualification loopback :** `LOCAL_READINESS_PASS`
 - **Appel fournisseur :** `NOT_AUTHORIZED`
 - **Polling, scheduler, retry ou fallback :** `NOT_AUTHORIZED`
 - **Production, VPS ou dependance critique :** `NOT_AUTHORIZED`
@@ -38,10 +38,9 @@ NOT_PRODUCTION_APPROVED
 NO_CRITICAL_DEPENDENCY
 ```
 
-## 2. Prerequis bloquants
+## 2. Prerequis d'implementation satisfaits
 
-L'implementation ne commence pas dans le worktree courant. Les conditions suivantes sont toutes
-obligatoires :
+L'implementation a commence uniquement apres verification des conditions bloquantes suivantes :
 
 1. l'ADR-SS-001 v1.3, les regles `AGENTS.md` et la cloture de `WO-SS-20260823-011` sont consolides
    sur une base Git propre ;
@@ -51,8 +50,9 @@ obligatoires :
 5. `mvnw.cmd clean verify` est vert avant la premiere modification d'implementation ;
 6. aucune edition simultanee du meme worktree n'est effectuee depuis Eclipse et par un agent.
 
-L'ouverture du present document autorise le cadrage. Elle ne vaut ni lancement de l'implementation,
-ni installation de navigateur, ni appel a SofaScore.
+Ces prerequis ont autorise l'implementation et la qualification loopback locale. Ils ne valent ni
+appel a SofaScore, ni qualification fournisseur, ni cloture du Work Order. L'installation du
+navigateur et chaque lancement du worker restent des actions operateur explicites.
 
 ## 3. Allowlist exacte
 
@@ -174,6 +174,9 @@ strictement sans navigateur, sans cache fournisseur et sans transport.
 7. **Documentation et readiness** : architecture J3, runbook, rapport, README, changelog et WO.
 8. **Qualification fournisseur optionnelle** : uniquement apres un nouveau go proprietaire exact.
 
+Les lots 1 a 7 sont implementes et qualifies localement. Le lot 8 n'a pas ete execute : aucun
+appel fournisseur n'est autorise par ce Work Order.
+
 ## 8. Matrice de validation minimale
 
 | Scenario | Resultat attendu |
@@ -205,6 +208,21 @@ git diff --check
 
 Les tests Maven standards et d'integration PostgreSQL ne lancent jamais Chromium et n'accedent
 jamais a SofaScore.
+
+Readiness technique executee le 28 aout 2026 :
+
+```text
+STANDARD_TESTS=687 (2 SKIPPED)
+INTEGRATION_TESTS=52
+WORKER_PROTOCOL_AND_SECURITY_TESTS=9
+REAL_CHROMIUM_LOOPBACK_TESTS=11
+VERIFY_LOCAL=PASS
+PROFILE_CONTAMINATION_GATE=PASS
+PROVIDER_ACCESS_PERFORMED=NO
+```
+
+Le detail reproductible est conserve dans
+`docs/validation/J3-PLAYWRIGHT-TRANSPORT-TECHNICAL-READINESS-20260827.md`.
 
 ## 9. Qualification fournisseur separee
 
@@ -245,12 +263,13 @@ migration Flyway append-only separee.
 ## 12. Portes de statut
 
 ```text
-WORK_ORDER_STATUS=OPEN_AWAITING_PREREQUISITES
-IMPLEMENTATION_STARTED=NO
+WORK_ORDER_STATUS=IN_PROGRESS
+IMPLEMENTATION_STARTED=YES
+IMPLEMENTATION_STATUS=COMPLETED_AWAITING_OWNER_VALIDATION
 PROVIDER_CALL_AUTHORIZED=NO
 ADR_REVIEW=COMPATIBLE_WITH_V1_3
 SHARED_RUNTIME_OWNER=WO-SS-20260827-013
-LOCAL_READINESS=NOT_RUN
+LOCAL_READINESS=PASS
 HUMAN_PROVIDER_QUALIFICATION=NOT_RUN_NOT_AUTHORIZED
 CLOSURE=NOT_AUTHORIZED
 ```
