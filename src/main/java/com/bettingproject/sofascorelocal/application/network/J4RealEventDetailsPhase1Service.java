@@ -5,6 +5,7 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDet
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.EventDetailsTransportException;
+import com.bettingproject.sofascorelocal.adapter.sofascore.transport.EventDetailsTransportFailure;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceResult;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceService;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
@@ -23,7 +24,6 @@ import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -114,231 +114,345 @@ public class J4RealEventDetailsPhase1Service {
     public J4RealEventDetailsPhase1Result execute(J4RealPhase1ExecutionClaim claim) {
         Objects.requireNonNull(claim, "claim");
         List<J4RealEventDetailsEventResult> results = new ArrayList<>();
+        List<J4RealEventDetailsUnavailableResult> unavailableResults = new ArrayList<>();
         Counters counters = new Counters();
+        CampaignResources resources = new CampaignResources();
 
-        for (long eventId : EventDetailsProviderRequest.PHASE_1_EVENT_IDS) {
+        try {
             if (!controlService.executionMayContinue(claim.requestId())) {
-                return failed(claim.requestId(), "OPERATOR_STOP", counters, results);
+                return failed(
+                        claim.requestId(), "OPERATOR_STOP", counters, results,
+                        unavailableResults);
             }
-            EventDetailsProviderRequest request = EventDetailsProviderRequest.phase1(
-                    claim.providerOrigin(), eventId);
-
-            Optional<J4CachedEventDetails> cached;
             try {
-                cached = cache.findFreshParsed(
-                        request,
-                        clock.instant(),
-                        cacheTtl,
-                        EventDetailsV2Parser.PARSER_VERSION);
+                resources.lease = requestCoordinator.acquireCampaign(claim.requestId());
             }
-            catch (RuntimeException exception) {
+            catch (ManualProviderRequestCoordinator.CoordinationException exception) {
                 return failAndLock(
-                        claim.requestId(), "CACHE_READ_ERROR", counters, results);
+                        claim.requestId(), "MINIMUM_DELAY_INTERRUPTED", counters, results,
+                        unavailableResults, resources);
             }
+            for (long eventId : EventDetailsProviderRequest.PHASE_1_EVENT_IDS) {
+                if (!controlService.executionMayContinue(claim.requestId())) {
+                    return failAndLock(
+                            claim.requestId(), "OPERATOR_STOP", counters, results,
+                            unavailableResults, resources);
+                }
+                EventDetailsProviderRequest request = EventDetailsProviderRequest.phase1(
+                        claim.providerOrigin(), eventId);
 
-            EventDetailsTransportResponse response;
-            RawSnapshotPersistenceResult rawPersistence;
-            J4RealEventDetailsResolutionSource resolutionSource;
-            if (cached.isPresent()) {
-                J4CachedEventDetails candidate = cached.orElseThrow();
-                response = candidate.asTransportResponse();
-                rawPersistence = candidate.asPersistenceResult();
-                resolutionSource = J4RealEventDetailsResolutionSource.CACHE;
-                counters.cacheHits++;
-            }
-            else {
-                try (var ignored = requestCoordinator.acquire()) {
-                    if (!controlService.executionMayContinue(claim.requestId())) {
-                        return failed(claim.requestId(), "OPERATOR_STOP", counters, results);
-                    }
-                    counters.providerCallAttempts++;
-                    response = transport.execute(request);
-                }
-                catch (ManualProviderRequestCoordinator.CoordinationException exception) {
-                    return failAndLock(
-                            claim.requestId(),
-                            "MINIMUM_DELAY_INTERRUPTED",
-                            counters,
-                            results);
-                }
-                catch (EventDetailsTransportException exception) {
-                    return failAndLock(
-                            claim.requestId(),
-                            "TRANSPORT_" + exception.failure().name(),
-                            counters,
-                            results);
+                Optional<J4CachedEventDetails> cached;
+                try {
+                    cached = cache.findFreshParsed(
+                            request,
+                            clock.instant(),
+                            cacheTtl,
+                            EventDetailsV2Parser.PARSER_VERSION);
                 }
                 catch (RuntimeException exception) {
                     return failAndLock(
-                            claim.requestId(),
-                            "TRANSPORT_IO_FAILURE",
-                            counters,
-                            results);
+                            claim.requestId(), "CACHE_READ_ERROR", counters, results,
+                            unavailableResults, resources);
+                }
+
+                EventDetailsTransportResponse response;
+                RawSnapshotPersistenceResult rawPersistence;
+                J4RealEventDetailsResolutionSource resolutionSource;
+                if (cached.isPresent()) {
+                    J4CachedEventDetails candidate = cached.orElseThrow();
+                    response = candidate.asTransportResponse();
+                    rawPersistence = candidate.asPersistenceResult();
+                    resolutionSource = J4RealEventDetailsResolutionSource.CACHE;
+                    counters.cacheHits++;
+                }
+                else {
+                    try {
+                        response = executeProvider(claim, request, resources, counters);
+                    }
+                    catch (ManualProviderRequestCoordinator.CoordinationException exception) {
+                        return failAndLock(
+                                claim.requestId(), "MINIMUM_DELAY_INTERRUPTED", counters,
+                                results, unavailableResults, resources);
+                    }
+                    catch (EventDetailsTransportException exception) {
+                        String code = controlService.executionMayContinue(claim.requestId())
+                                ? "TRANSPORT_" + exception.failure().name()
+                                : "OPERATOR_STOP";
+                        return failAndLock(
+                                claim.requestId(), code, counters, results, unavailableResults,
+                                resources);
+                    }
+                    catch (RuntimeException exception) {
+                        String code = controlService.executionMayContinue(claim.requestId())
+                                ? "TRANSPORT_IO_FAILURE"
+                                : "OPERATOR_STOP";
+                        return failAndLock(
+                                claim.requestId(), code, counters, results, unavailableResults,
+                                resources);
+                    }
+
+                    try {
+                        rawPersistence = rawSnapshotStore.save(rawOnly(response));
+                    }
+                    catch (RuntimeException exception) {
+                        return failAndLock(
+                                claim.requestId(), "RAW_PERSISTENCE_ERROR", counters, results,
+                                unavailableResults, resources);
+                    }
+                    resolutionSource = J4RealEventDetailsResolutionSource.PROVIDER;
+
+                    if (response.httpStatus() == 404) {
+                        if (!classifyInsertedSafely(
+                                rawPersistence,
+                                RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE,
+                                null)) {
+                            return failAndLock(
+                                    claim.requestId(), "RAW_CLASSIFICATION_ERROR", counters,
+                                    results, unavailableResults, resources);
+                        }
+                        unavailableResults.add(unavailable(eventId, rawPersistence));
+                        try {
+                            controlService.recordEventCompleted(claim.requestId(), eventId);
+                        }
+                        catch (J4RealPhase1ControlException exception) {
+                            return failAndLock(
+                                    claim.requestId(), "OPERATOR_STOP", counters, results,
+                                    unavailableResults, resources);
+                        }
+                        continue;
+                    }
+                    if (response.httpStatus() < 200 || response.httpStatus() >= 300) {
+                        String terminalCode = httpTerminalCode(response.httpStatus());
+                        if (!classifyInsertedSafely(
+                                rawPersistence,
+                                RawSnapshotSchemaStatus.TRANSPORT_ERROR,
+                                terminalCode)) {
+                            terminalCode = "RAW_CLASSIFICATION_ERROR";
+                        }
+                        return failAndLock(
+                                claim.requestId(), terminalCode, counters, results,
+                                unavailableResults, resources);
+                    }
+                    if (!isJsonContentType(response.contentType())) {
+                        if (!classifyInsertedSafely(
+                                rawPersistence,
+                                RawSnapshotSchemaStatus.UNEXPECTED_CONTENT,
+                                RawSnapshotSchemaStatus.UNEXPECTED_CONTENT.name())) {
+                            return failAndLock(
+                                    claim.requestId(), "RAW_CLASSIFICATION_ERROR", counters,
+                                    results, unavailableResults, resources);
+                        }
+                        return failAndLock(
+                                claim.requestId(), "UNEXPECTED_CONTENT", counters, results,
+                                unavailableResults, resources);
+                    }
+                }
+
+                EventDetailsParseResult parseResult;
+                try {
+                    parseResult = parser.parse(
+                            rawPersistence.snapshotId(),
+                            response.payload(),
+                            response.receivedAt());
+                }
+                catch (RuntimeException exception) {
+                    return failAndLock(
+                            claim.requestId(), "PARSER_FAILURE", counters, results,
+                            unavailableResults, resources);
+                }
+                if (parseResult.status() != EventDetailsParseStatus.PARSED) {
+                    String terminalCode = resolutionSource == J4RealEventDetailsResolutionSource.CACHE
+                            ? "CACHE_REPARSE_INCOMPATIBLE"
+                            : parseResult.status().name();
+                    if (resolutionSource == J4RealEventDetailsResolutionSource.PROVIDER) {
+                        RawSnapshotSchemaStatus schemaStatus = parseResult.status()
+                                == EventDetailsParseStatus.UNEXPECTED_CONTENT
+                                        ? RawSnapshotSchemaStatus.UNEXPECTED_CONTENT
+                                        : RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE;
+                        if (!classifyInsertedSafely(
+                                rawPersistence, schemaStatus, schemaStatus.name())) {
+                            terminalCode = "RAW_CLASSIFICATION_ERROR";
+                        }
+                    }
+                    return failAndLock(
+                            claim.requestId(), terminalCode, counters, results,
+                            unavailableResults, resources);
+                }
+                var details = parseResult.details().orElseThrow();
+                if (details.providerEventId() != eventId) {
+                    String terminalCode = "EVENT_ID_MISMATCH";
+                    if (resolutionSource == J4RealEventDetailsResolutionSource.PROVIDER) {
+                        if (!classifyInsertedSafely(
+                                rawPersistence,
+                                RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE,
+                                RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE.name())) {
+                            terminalCode = "RAW_CLASSIFICATION_ERROR";
+                        }
+                    }
+                    return failAndLock(
+                            claim.requestId(), terminalCode, counters, results,
+                            unavailableResults, resources);
+                }
+
+                J4ParsedEventDetailsPersistenceResult normalized;
+                try {
+                    normalized = parsedPersistenceService.persistParsed(
+                            request,
+                            response,
+                            rawPersistence,
+                            details);
+                }
+                catch (RuntimeException exception) {
+                    return failAndLock(
+                            claim.requestId(), "NORMALIZATION_PERSISTENCE_ERROR", counters,
+                            results, unavailableResults, resources);
                 }
 
                 try {
-                    rawPersistence = rawSnapshotStore.save(rawOnly(response));
+                    controlService.recordEventCompleted(claim.requestId(), eventId);
                 }
-                catch (RuntimeException exception) {
+                catch (J4RealPhase1ControlException exception) {
                     return failAndLock(
-                            claim.requestId(),
-                            "RAW_PERSISTENCE_ERROR",
-                            counters,
-                            results);
+                            claim.requestId(), "OPERATOR_STOP", counters, results,
+                            unavailableResults, resources);
                 }
-                resolutionSource = J4RealEventDetailsResolutionSource.PROVIDER;
-
-                if (response.httpStatus() < 200 || response.httpStatus() >= 300) {
-                    String terminalCode = httpTerminalCode(response.httpStatus());
-                    if (!classifySafely(
-                            rawPersistence.snapshotId(),
-                            RawSnapshotSchemaStatus.TRANSPORT_ERROR,
-                            terminalCode)) {
-                        terminalCode = "RAW_CLASSIFICATION_ERROR";
-                    }
-                    return failAndLock(
-                            claim.requestId(), terminalCode, counters, results);
-                }
-                if (!isJsonContentType(response.contentType())) {
-                    if (!classifySafely(
-                            rawPersistence.snapshotId(),
-                            RawSnapshotSchemaStatus.UNEXPECTED_CONTENT,
-                            RawSnapshotSchemaStatus.UNEXPECTED_CONTENT.name())) {
-                        return failAndLock(
-                                claim.requestId(),
-                                "RAW_CLASSIFICATION_ERROR",
-                                counters,
-                                results);
-                    }
-                    return failAndLock(
-                            claim.requestId(),
-                            "UNEXPECTED_CONTENT",
-                            counters,
-                            results);
-                }
-            }
-
-            EventDetailsParseResult parseResult;
-            try {
-                parseResult = parser.parse(
+                results.add(new J4RealEventDetailsEventResult(
+                        eventId,
+                        resolutionSource,
                         rawPersistence.snapshotId(),
-                        response.payload(),
-                        response.receivedAt());
-            }
-            catch (RuntimeException exception) {
-                return failAndLock(
-                        claim.requestId(), "PARSER_FAILURE", counters, results);
-            }
-            if (parseResult.status() != EventDetailsParseStatus.PARSED) {
-                String terminalCode = resolutionSource == J4RealEventDetailsResolutionSource.CACHE
-                        ? "CACHE_REPARSE_INCOMPATIBLE"
-                        : parseResult.status().name();
-                if (resolutionSource == J4RealEventDetailsResolutionSource.PROVIDER) {
-                    RawSnapshotSchemaStatus schemaStatus = parseResult.status()
-                            == EventDetailsParseStatus.UNEXPECTED_CONTENT
-                                    ? RawSnapshotSchemaStatus.UNEXPECTED_CONTENT
-                                    : RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE;
-                    if (!classifySafely(
-                            rawPersistence.snapshotId(),
-                            schemaStatus,
-                            schemaStatus.name())) {
-                        terminalCode = "RAW_CLASSIFICATION_ERROR";
-                    }
-                }
-                return failAndLock(
-                        claim.requestId(), terminalCode, counters, results);
-            }
-            var details = parseResult.details().orElseThrow();
-            if (details.providerEventId() != eventId) {
-                if (resolutionSource == J4RealEventDetailsResolutionSource.PROVIDER) {
-                    classifySafely(
-                            rawPersistence.snapshotId(),
-                            RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE,
-                            RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE.name());
-                }
-                return failAndLock(
-                        claim.requestId(), "EVENT_ID_MISMATCH", counters, results);
+                        normalized.canonicalEventId(),
+                        rawPersistence.payloadSha256(),
+                        rawPersistence.payloadSizeBytes(),
+                        RawSnapshotSchemaStatus.PARSED,
+                        details,
+                        normalized.eventObservationInserted(),
+                        normalized.detailObservationInserted(),
+                        parseResult.warnings().size()));
             }
 
-            J4ParsedEventDetailsPersistenceResult normalized;
-            try {
-                normalized = parsedPersistenceService.persistParsed(
-                        request,
-                        response,
-                        rawPersistence,
-                        details);
+            RuntimeException cleanupFailure = resources.closeSafely();
+            if (cleanupFailure != null) {
+                return failAndLockAfterCleanup(
+                        claim.requestId(), cleanupCode(cleanupFailure, "TRANSPORT_IO_FAILURE"),
+                        counters, results, unavailableResults, true);
             }
-            catch (RuntimeException exception) {
-                return failAndLock(
-                        claim.requestId(),
-                        "NORMALIZATION_PERSISTENCE_ERROR",
-                        counters,
-                        results);
-            }
-
             try {
-                controlService.recordEventCompleted(claim.requestId(), eventId);
+                controlService.complete(claim.requestId());
             }
             catch (J4RealPhase1ControlException exception) {
-                return failed(claim.requestId(), "OPERATOR_STOP", counters, results);
+                return failed(
+                        claim.requestId(), "OPERATOR_STOP", counters, results,
+                        unavailableResults);
             }
-            results.add(new J4RealEventDetailsEventResult(
-                    eventId,
-                    resolutionSource,
-                    rawPersistence.snapshotId(),
-                    normalized.canonicalEventId(),
-                    rawPersistence.payloadSha256(),
-                    rawPersistence.payloadSizeBytes(),
-                    RawSnapshotSchemaStatus.PARSED,
-                    details,
-                    normalized.eventObservationInserted(),
-                    normalized.detailObservationInserted(),
-                    parseResult.warnings().size()));
+            return new J4RealEventDetailsPhase1Result(
+                    claim.requestId(),
+                    true,
+                    "COMPLETED",
+                    counters.providerCallAttempts,
+                    counters.cacheHits,
+                    results,
+                    unavailableResults);
         }
+        finally {
+            resources.closeSafely();
+        }
+    }
 
-        try {
-            controlService.complete(claim.requestId());
+    private EventDetailsTransportResponse executeProvider(
+            J4RealPhase1ExecutionClaim claim,
+            EventDetailsProviderRequest request,
+            CampaignResources resources,
+            Counters counters) {
+        if (resources.campaign == null) {
+            if (!controlService.executionMayContinue(claim.requestId())) {
+                throw new EventDetailsTransportException(
+                        EventDetailsTransportFailure.OPERATOR_STOP);
+            }
+            resources.campaign = transport.openCampaign(claim.requestId());
         }
-        catch (J4RealPhase1ControlException exception) {
-            return failed(claim.requestId(), "OPERATOR_STOP", counters, results);
+        resources.lease.beginRequest();
+        if (!controlService.executionMayContinue(claim.requestId())) {
+            throw new EventDetailsTransportException(EventDetailsTransportFailure.OPERATOR_STOP);
         }
-        return new J4RealEventDetailsPhase1Result(
-                claim.requestId(),
-                true,
-                "COMPLETED",
-                counters.providerCallAttempts,
-                counters.cacheHits,
-                results);
+        counters.providerCallAttempts++;
+        return resources.campaign.execute(request);
     }
 
     private J4RealEventDetailsPhase1Result failAndLock(
             UUID requestId,
             String code,
             Counters counters,
-            List<J4RealEventDetailsEventResult> results) {
+            List<J4RealEventDetailsEventResult> results,
+            List<J4RealEventDetailsUnavailableResult> unavailableResults,
+            CampaignResources resources) {
+        RuntimeException cleanupFailure = resources.closeSafely();
+        String terminalCode = cleanupCode(cleanupFailure, code);
+        return failAndLockAfterCleanup(
+                requestId,
+                terminalCode,
+                counters,
+                results,
+                unavailableResults,
+                cleanupFailure != null);
+    }
+
+    private J4RealEventDetailsPhase1Result failAndLockAfterCleanup(
+            UUID requestId,
+            String terminalCode,
+            Counters counters,
+            List<J4RealEventDetailsEventResult> results,
+            List<J4RealEventDetailsUnavailableResult> unavailableResults,
+            boolean cleanupFailureKnown) {
         if (controlService.executionMayContinue(requestId)) {
             try {
-                controlService.fail(requestId, code);
+                controlService.fail(requestId, terminalCode);
             }
             catch (J4RealPhase1ControlException exception) {
-                return failed(requestId, "OPERATOR_STOP", counters, results);
+                return failed(
+                        requestId,
+                        cleanupFailureKnown ? terminalCode : "OPERATOR_STOP",
+                        counters,
+                        results,
+                        unavailableResults);
             }
         }
-        return failed(requestId, code, counters, results);
+        else {
+            return failed(
+                    requestId,
+                    cleanupFailureKnown ? terminalCode : "OPERATOR_STOP",
+                    counters,
+                    results,
+                    unavailableResults);
+        }
+        return failed(requestId, terminalCode, counters, results, unavailableResults);
     }
 
     private static J4RealEventDetailsPhase1Result failed(
             UUID requestId,
             String code,
             Counters counters,
-            List<J4RealEventDetailsEventResult> results) {
+            List<J4RealEventDetailsEventResult> results,
+            List<J4RealEventDetailsUnavailableResult> unavailableResults) {
         return new J4RealEventDetailsPhase1Result(
                 requestId,
                 false,
                 code,
                 counters.providerCallAttempts,
                 counters.cacheHits,
-                results);
+                results,
+                unavailableResults);
+    }
+
+    private static J4RealEventDetailsUnavailableResult unavailable(
+            long eventId,
+            RawSnapshotPersistenceResult rawPersistence) {
+        return new J4RealEventDetailsUnavailableResult(
+                eventId,
+                rawPersistence.snapshotId(),
+                404,
+                rawPersistence.payloadSha256(),
+                rawPersistence.payloadSizeBytes(),
+                RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE);
     }
 
     private static RawManualCallSnapshot rawOnly(EventDetailsTransportResponse response) {
@@ -367,6 +481,26 @@ public class J4RealEventDetailsPhase1Service {
         catch (RuntimeException exception) {
             return false;
         }
+    }
+
+    private boolean classifyInsertedSafely(
+            RawSnapshotPersistenceResult raw,
+            RawSnapshotSchemaStatus status,
+            String errorCode) {
+        return switch (raw.outcome()) {
+            case INSERTED, DEDUPLICATED -> classifySafely(
+                    raw.snapshotId(), status, errorCode);
+            case CACHE_HIT -> false;
+        };
+    }
+
+    private static String cleanupCode(RuntimeException cleanupFailure, String fallback) {
+        if (cleanupFailure == null) {
+            return fallback;
+        }
+        return cleanupFailure instanceof EventDetailsTransportException failure
+                ? "TRANSPORT_" + failure.failure().name()
+                : "TRANSPORT_IO_FAILURE";
     }
 
     private static boolean isJsonContentType(String contentType) {
@@ -411,5 +545,42 @@ public class J4RealEventDetailsPhase1Service {
     private static final class Counters {
         private int providerCallAttempts;
         private int cacheHits;
+    }
+
+    private static final class CampaignResources {
+        private ManualProviderRequestCoordinator.CampaignLease lease;
+        private EventDetailsProviderTransport.Campaign campaign;
+
+        private RuntimeException closeSafely() {
+            RuntimeException failure = null;
+            try {
+                if (campaign != null) {
+                    campaign.close();
+                }
+            }
+            catch (RuntimeException exception) {
+                failure = exception;
+            }
+            finally {
+                campaign = null;
+                try {
+                    if (lease != null) {
+                        lease.close();
+                    }
+                }
+                catch (RuntimeException exception) {
+                    if (failure == null) {
+                        failure = exception;
+                    }
+                    else {
+                        failure.addSuppressed(exception);
+                    }
+                }
+                finally {
+                    lease = null;
+                }
+            }
+            return failure;
+        }
     }
 }

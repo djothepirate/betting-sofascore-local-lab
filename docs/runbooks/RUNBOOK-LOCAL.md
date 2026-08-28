@@ -911,6 +911,11 @@ Cette campagne est un geste humain exceptionnel. Ne jamais l’exécuter depuis 
 navigateur automatisé ou une tâche planifiée. Ne pas commencer tant que la branche n’a pas été
 revue et que les tests hors ligne V6 ne sont pas réussis.
 
+`WO-SS-20260827-014` est valide depuis le `2026-08-28` et le transport fournisseur de cette
+procedure est Playwright. Ne pas rejouer la campagne historique pour maintenir son statut. Toute
+nouvelle execution exceptionnelle conserve les deux identifiants fixes, le plafond, la fenetre, la
+confirmation humaine et l'arret au premier incident.
+
 À la suite de l’incident de migration V5 → V6 du 2026-08-15, appliquer d’abord la migration avec
 le réseau bloqué. Application arrêtée, remettre ou conserver les sept clés suivantes :
 
@@ -966,6 +971,10 @@ PostgreSQL puis l’application locale avec les commandes normales. Sur
    réception, sans payload brut dans l’écran ou les logs ;
 8. sélectionner **« Arrêt global J4 »**, même après un succès terminal ;
 9. arrêter l’application.
+
+Sous le contrat Playwright de WO-014, un HTTP `404` complet est conserve
+`ENDPOINT_UNAVAILABLE`, sans parsing ni retry, puis autorise uniquement la cible fixe suivante. Il
+ne constitue pas un incident permettant de rearmer ou de modifier l'allowlist.
 
 Au premier incident, `403`, `429`, `5xx`, timeout, contenu inattendu, incompatibilité ou incohérence
 d’ID :
@@ -1033,14 +1042,20 @@ LOCAL_CONFIGURATION_RELOCKED=YES
 APPLICATION_STOPPED=YES
 ```
 
-Au moindre écart, arrêter l’application et conserver J4 au statut `IN_DEVELOPMENT`. Ne pas
+Au moindre écart, arrêter l’application et ouvrir un Work Order correctif sans modifier le statut
+historique `VALIDATED` de WO-014. Ne pas
 rejouer la campagne pour corriger un défaut d’affichage ou de navigation locale.
 
-### 3.13 Qualifier un identifiant paramétrable et ses rafraîchissements manuels — sous-étape 2
+### 3.13 Qualifier une identité canonique et ses rafraîchissements manuels — sous-étape 2
 
-Cette sous-étape est un geste humain explicite. Elle autorise un ID numérique par cycle confirmé et
-peut être répétée manuellement pour actualiser un match. Elle n’autorise aucun polling, timer,
-script, navigateur automatisé, retry ou rafraîchissement automatique.
+Cette sous-étape est un geste humain explicite. Elle autorise une identité canonique déjà affichée
+par cycle confirmé et peut être répétée manuellement pour actualiser un match. Elle n’autorise
+aucun polling, timer, script, navigateur automatisé, retry ou rafraîchissement automatique.
+
+Depuis la validation de `WO-SS-20260827-014`, cette procedure utilise la cible Playwright migree.
+Elle part d'une identite canonique deja affichee, impose son `providerEventId` cote serveur et
+n'accepte aucun identifiant fournisseur libre transmis par l'action finale. Chaque appel reste une
+action humaine unitaire explicitement preparee et confirmee.
 
 Application arrêtée, partir des sept valeurs bloquées de la section 3.11, puis régler temporairement
 uniquement :
@@ -1060,10 +1075,10 @@ Démarrer PostgreSQL puis l’application sur `127.0.0.1`. Sur `/events` :
 
 1. vérifier que la sous-étape 1 affiche `J4_PHASE_2_MUST_BE_DISABLED` et que la sous-étape 2 ne
    présente plus de bloqueur ;
-2. saisir un identifiant compris entre `1` et `999999999` dans **« Identifiant fournisseur de
-   l’événement »** ;
-3. sélectionner **« Préparer un rafraîchissement »** et vérifier qu’aucune requête n’est partie ;
-4. contrôler que la phrase affichée contient exactement l’ID saisi ;
+2. partir de la fiche d'une identité canonique existante et sélectionner l'action de préparation ;
+3. vérifier que la préparation n'exécute aucune requête ;
+4. contrôler que la phrase affichée contient exactement l'UUID canonique et l'ID fournisseur
+   résolu par le serveur ;
 5. recopier la phrase, cocher l’acquittement puis sélectionner
    **« Appeler et actualiser une fois »** ;
 6. attendre l’état terminal sans recharger ni resoumettre le formulaire ;
@@ -1074,7 +1089,7 @@ Démarrer PostgreSQL puis l’application sur `127.0.0.1`. Sur `/events` :
 9. sélectionner **« Arrêt global J4 »** à la fin de la campagne.
 
 Pour actualiser le même match, attendre l'état du contrôle `COMPLETED_LOCKED` puis recommencer les
-étapes 2 à 7.
+étapes 2 à 7 depuis sa fiche canonique.
 Chaque rappel exige une nouvelle préparation et une nouvelle confirmation. Le service ne consulte
 pas le cache sur cette voie et impose au moins trois secondes entre deux transports. Une réponse
 identique peut être dédupliquée dans la vue normalisée ; une évolution de statut ou d’horaire doit
@@ -1206,6 +1221,56 @@ PROVIDER_ACCESS_PERFORMED=NO
 Un échec reste terminal pour cette qualification. Ne pas remplacer le worker par un transport
 HTTP direct ou FlareSolverr, ne pas réutiliser un contexte et ne pas transformer l’essai loopback
 en appel fournisseur.
+
+### 3.15 Démarrer et qualifier localement le transport Playwright J4
+
+Cette procédure appartient à `WO-SS-20260827-014`, valide le `2026-08-28`. Les commandes de
+readiness restent exclusivement locales et loopback. Les valeurs sûres de la section 3.14 restent
+désactivées dans `.env` hors campagne humaine explicitement preparee.
+
+L'installateur historique de WO-013 fournit le Chromium du runtime commun :
+
+```powershell
+pwsh -NoProfile -File .\scripts\Install-J3PlaywrightRuntime.ps1
+```
+
+Ne pas répéter l'installation si le cache `.tmp/provider-playwright-browsers` est déjà complet et
+qualifié. L'installation ne doit jamais être déclenchée au démarrage ou par une suite standard.
+
+Le lanceur J4 dédié est :
+
+```powershell
+pwsh -NoProfile -File .\scripts\Start-J4PlaywrightLocal.ps1
+```
+
+Il construit et vérifie le JAR worker commun, refuse un cache Chromium incomplet et injecte les
+chemins Playwright uniquement dans le processus enfant qui démarre l'application. Il ne modifie pas
+`.env` et n'exécute aucun GET par lui-même. Une campagne reelle ne commence qu'apres la selection,
+la preparation, la phrase exacte, l'acquittement et l'action finale dans l'interface.
+
+La qualification technique autorisée utilise exclusivement :
+
+```powershell
+pwsh -NoProfile -File .\scripts\Invoke-J4PlaywrightLoopbackQualification.ps1
+```
+
+Le script exerce le vrai worker et Chromium uniquement sur un serveur éphémère lié à
+`127.0.0.1`. Il vérifie le protocole et la sécurité du worker, les routes `EVENT_DETAILS` exactes,
+les statuts et octets rendus par le serveur loopback, le renouvellement du worker et du contexte,
+ainsi que l'arrêt ciblé en vol. Les politiques de cache des deux phases et l'exclusivité de la lease
+partagée sont vérifiées séparément par la suite standard ; ce script loopback ne les certifie pas à
+lui seul. Le terminal attendu reste minimisé :
+
+```text
+J4_PLAYWRIGHT_LOOPBACK_QUALIFICATION=PASS
+ORIGIN=http://127.0.0.1:<ephemeral>
+PROVIDER_ACCESS_PERFORMED=NO
+```
+
+Consigner les résultats dans
+`docs/validation/J4-PLAYWRIGHT-EVENT-DETAILS-TECHNICAL-READINESS-20260828.md`. Le loopback seul ne
+vaut ni qualification humaine fournisseur, ni autorisation de cloture ; ces deux portes ont ete
+franchies separement par la decision proprietaire du `2026-08-28`.
 
 ## 4. Validation
 
@@ -1487,6 +1552,27 @@ qualification humaine, ni déplacement du Work Order vers `completed`.
 Consigner les résultats dans
 [`J3-PLAYWRIGHT-TRANSPORT-TECHNICAL-READINESS-20260827.md`](../validation/J3-PLAYWRIGHT-TRANSPORT-TECHNICAL-READINESS-20260827.md)
 sans y inclure de payload, cookie, token, header ou URI complète.
+
+### 4.12 Readiness du transport J4 Playwright
+
+Sur le diff final de `WO-SS-20260827-014`, exécuter dans cet ordre :
+
+```powershell
+.\mvnw.cmd clean verify
+.\mvnw.cmd -Pintegration-tests verify
+.\scripts\Verify-Local.ps1 -WithIntegrationTests
+pwsh -NoProfile -File .\scripts\Invoke-J4PlaywrightLoopbackQualification.ps1
+git diff --check
+```
+
+Les trois premières commandes ne chargent ni Playwright ni Chromium. La quatrième exige le cache
+Chromium commun déjà installé et contacte uniquement un serveur éphémère sur `127.0.0.1`. Aucun
+appel SofaScore n'est autorisé par cette séquence.
+
+Consigner les résultats dans
+[`J4-PLAYWRIGHT-EVENT-DETAILS-TECHNICAL-READINESS-20260828.md`](../validation/J4-PLAYWRIGHT-EVENT-DETAILS-TECHNICAL-READINESS-20260828.md).
+WO-014 est `VALIDATED` et archive sous `docs/work_orders/completed` depuis la decision proprietaire
+du `2026-08-28`. Toute regression future exige un Work Order correctif distinct.
 
 ## 5. Arrêt
 

@@ -51,6 +51,18 @@ class ProviderPlaywrightLocalQualificationIT {
     private static final byte[] TOURNAMENT_RESPONSE =
             "{\"events\":[],\"marker\":\"tournament-17\"}"
                     .getBytes(StandardCharsets.UTF_8);
+    private static final byte[] EVENT_DETAILS_ONE_RESPONSE =
+            "{\"event\":{\"id\":16386245},\"marker\":\"event-details-one\"}"
+                    .getBytes(StandardCharsets.UTF_8);
+    private static final byte[] EVENT_DETAILS_TWO_RESPONSE =
+            "{\"event\":{\"id\":16421052},\"marker\":\"event-details-two\"}"
+                    .getBytes(StandardCharsets.UTF_8);
+    private static final byte[] EVENT_DETAILS_NOT_FOUND_RESPONSE =
+            "{\"error\":{\"code\":404},\"eventId\":17000001}"
+                    .getBytes(StandardCharsets.UTF_8);
+    private static final byte[] EVENT_DETAILS_STOP_RESPONSE =
+            "{\"event\":{\"id\":17000002},\"marker\":\"event-details-stop\"}"
+                    .getBytes(StandardCharsets.UTF_8);
     private static final byte[] FORBIDDEN_RESPONSE =
             "{\"error\":{\"code\":403}}".getBytes(StandardCharsets.UTF_8);
     private static final byte[] RATE_LIMIT_RESPONSE =
@@ -169,6 +181,101 @@ class ProviderPlaywrightLocalQualificationIT {
 
             assertWorkerExited(supervisor, exactWorker, ownedProcesses, output, error);
             fixture.assertExactTraffic(FixtureServer.TOURNAMENT_PATH);
+            assertNoForbiddenRuntimeArtifacts(Path.of("target"));
+        }
+    }
+
+    @Test
+    @Timeout(120)
+    void routesEventDetailsAcrossFreshCampaignsAndPreservesA404Exactly()
+            throws Exception {
+        Path workerJar = requiredRegularFile("provider.playwright.worker-jar");
+        Path browserCache = requiredDirectory("provider.playwright.browser-cache");
+        AtomicReference<Process> worker = new AtomicReference<>();
+        AtomicReference<CompletableFuture<byte[]>> standardOutput = new AtomicReference<>();
+        AtomicReference<CompletableFuture<byte[]>> standardError = new AtomicReference<>();
+
+        try (FixtureServer fixture = FixtureServer.start();
+             ExecutorService streamReaders = Executors.newVirtualThreadPerTaskExecutor()) {
+            ChildJvmPlaywrightProviderSupervisor supervisor =
+                    new ChildJvmPlaywrightProviderSupervisor(
+                            properties(workerJar, fixture.origin()),
+                            Clock.systemUTC(),
+                            new SecureRandom(),
+                            builder -> startObservedWorker(
+                                    builder,
+                                    fixture.origin(),
+                                    browserCache,
+                                    worker,
+                                    standardOutput,
+                                    standardError,
+                                    streamReaders));
+
+            Process firstWorker;
+            ProcessIdentity firstIdentity;
+            List<ProcessIdentity> firstOwnedProcesses;
+            CompletableFuture<byte[]> firstOutput;
+            CompletableFuture<byte[]> firstError;
+            try (PlaywrightProviderCampaign campaign = supervisor.open(
+                    UUID.randomUUID(), Set.of(SofascoreEndpointType.EVENT_DETAILS))) {
+                firstWorker = worker.get();
+                assertExactResponse(
+                        campaign.execute(PlaywrightProviderRequest.eventDetails(16_386_245L)),
+                        200,
+                        "application/json",
+                        EVENT_DETAILS_ONE_RESPONSE);
+                assertExactResponse(
+                        campaign.execute(PlaywrightProviderRequest.eventDetails(16_421_052L)),
+                        200,
+                        "application/json",
+                        EVENT_DETAILS_TWO_RESPONSE);
+                assertThat(worker.get()).isSameAs(firstWorker);
+                firstIdentity = ProcessIdentity.capture(firstWorker.toHandle()).orElseThrow();
+                firstOwnedProcesses = captureOwnedProcessTree(firstWorker);
+                firstOutput = standardOutput.get();
+                firstError = standardError.get();
+            }
+
+            assertWorkerExited(
+                    supervisor,
+                    firstWorker,
+                    firstOwnedProcesses,
+                    firstOutput,
+                    firstError);
+
+            Process secondWorker;
+            ProcessIdentity secondIdentity;
+            List<ProcessIdentity> secondOwnedProcesses;
+            CompletableFuture<byte[]> secondOutput;
+            CompletableFuture<byte[]> secondError;
+            try (PlaywrightProviderCampaign campaign = supervisor.open(
+                    UUID.randomUUID(), Set.of(SofascoreEndpointType.EVENT_DETAILS))) {
+                PlaywrightProviderResponse notFound = campaign.execute(
+                        PlaywrightProviderRequest.eventDetails(17_000_001L));
+                assertExactResponse(
+                        notFound,
+                        404,
+                        "application/problem+json",
+                        EVENT_DETAILS_NOT_FOUND_RESPONSE);
+                secondWorker = worker.get();
+                secondIdentity = ProcessIdentity.capture(secondWorker.toHandle()).orElseThrow();
+                secondOwnedProcesses = captureOwnedProcessTree(secondWorker);
+                secondOutput = standardOutput.get();
+                secondError = standardError.get();
+            }
+
+            assertThat(secondWorker).isNotSameAs(firstWorker);
+            assertThat(secondIdentity).isNotEqualTo(firstIdentity);
+            assertWorkerExited(
+                    supervisor,
+                    secondWorker,
+                    secondOwnedProcesses,
+                    secondOutput,
+                    secondError);
+            fixture.assertExactTraffic(
+                    FixtureServer.EVENT_DETAILS_ONE_PATH,
+                    FixtureServer.EVENT_DETAILS_TWO_PATH,
+                    FixtureServer.EVENT_DETAILS_NOT_FOUND_PATH);
             assertNoForbiddenRuntimeArtifacts(Path.of("target"));
         }
     }
@@ -402,14 +509,15 @@ class ProviderPlaywrightLocalQualificationIT {
 
     @Test
     @Timeout(120)
-    void stopsARealInFlightWorkerWithinEveryBoundAndLeavesNoOwnedProcess() throws Exception {
+    void stopsARealInFlightEventDetailsWorkerWithinEveryBoundAndLeavesNoOwnedProcess()
+            throws Exception {
         Path workerJar = requiredRegularFile("provider.playwright.worker-jar");
         Path browserCache = requiredDirectory("provider.playwright.browser-cache");
         AtomicReference<Process> worker = new AtomicReference<>();
         AtomicReference<CompletableFuture<byte[]>> standardOutput = new AtomicReference<>();
         AtomicReference<CompletableFuture<byte[]>> standardError = new AtomicReference<>();
 
-        try (FixtureServer fixture = FixtureServer.startSlow();
+        try (FixtureServer fixture = FixtureServer.startSlowEventDetails();
              ExecutorService streamReaders = Executors.newVirtualThreadPerTaskExecutor()) {
             ChildJvmPlaywrightProviderSupervisor supervisor =
                     new ChildJvmPlaywrightProviderSupervisor(
@@ -426,13 +534,13 @@ class ProviderPlaywrightLocalQualificationIT {
                                     streamReaders));
             UUID campaignId = UUID.randomUUID();
             Set<SofascoreEndpointType> allowlist =
-                    Set.of(SofascoreEndpointType.SCHEDULED_EVENTS);
+                    Set.of(SofascoreEndpointType.EVENT_DETAILS);
             PlaywrightProviderCampaign campaign = supervisor.open(campaignId, allowlist);
             Process exactWorker = worker.get();
             List<ProcessIdentity> ownedProcesses = captureOwnedProcessTree(exactWorker);
             CompletableFuture<Throwable> execution = CompletableFuture.supplyAsync(() -> {
                 try {
-                    campaign.execute(PlaywrightProviderRequest.scheduledEvents(DATE, 1));
+                    campaign.execute(PlaywrightProviderRequest.eventDetails(17_000_002L));
                     return null;
                 }
                 catch (Throwable failure) {
@@ -462,7 +570,7 @@ class ProviderPlaywrightLocalQualificationIT {
                         .isLessThanOrEqualTo(Duration.ofSeconds(5));
                 assertThat(standardOutput.get().get(5, TimeUnit.SECONDS)).isEmpty();
                 assertThat(standardError.get().get(5, TimeUnit.SECONDS)).isEmpty();
-                fixture.assertExactTraffic(FixtureServer.PAGE_ONE_PATH);
+                fixture.assertExactTraffic(FixtureServer.EVENT_DETAILS_STOP_PATH);
                 assertNoForbiddenRuntimeArtifacts(Path.of("target"));
             }
             finally {
@@ -785,12 +893,17 @@ class ProviderPlaywrightLocalQualificationIT {
                 "/api/v1/sport/football/scheduled-tournaments/2026-08-27/page/12";
         private static final String TOURNAMENT_PATH =
                 "/api/v1/unique-tournament/17/scheduled-events/2026-08-27";
+        private static final String EVENT_DETAILS_ONE_PATH = "/api/v1/event/16386245";
+        private static final String EVENT_DETAILS_TWO_PATH = "/api/v1/event/16421052";
+        private static final String EVENT_DETAILS_NOT_FOUND_PATH = "/api/v1/event/17000001";
+        private static final String EVENT_DETAILS_STOP_PATH = "/api/v1/event/17000002";
         private static final String REDIRECT_TARGET_PATH = "/redirect-target";
         private static final String SECONDARY_TARGET_PATH = "/secondary-target";
 
         private final HttpServer server;
         private final ExecutorService executor;
         private final boolean slowPageOne;
+        private final boolean slowEventDetails;
         private final CountDownLatch slowRequestReceived = new CountDownLatch(1);
         private final CountDownLatch releaseSlowResponse = new CountDownLatch(1);
         private final List<ObservedRequest> requests = new CopyOnWriteArrayList<>();
@@ -798,25 +911,34 @@ class ProviderPlaywrightLocalQualificationIT {
         private FixtureServer(
                 HttpServer server,
                 ExecutorService executor,
-                boolean slowPageOne) {
+                boolean slowPageOne,
+                boolean slowEventDetails) {
             this.server = server;
             this.executor = executor;
             this.slowPageOne = slowPageOne;
+            this.slowEventDetails = slowEventDetails;
         }
 
         static FixtureServer start() throws IOException {
-            return start(false);
+            return start(false, false);
         }
 
         static FixtureServer startSlow() throws IOException {
-            return start(true);
+            return start(true, false);
         }
 
-        private static FixtureServer start(boolean slowPageOne) throws IOException {
+        static FixtureServer startSlowEventDetails() throws IOException {
+            return start(false, true);
+        }
+
+        private static FixtureServer start(
+                boolean slowPageOne,
+                boolean slowEventDetails) throws IOException {
             HttpServer server = HttpServer.create(
                     new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0), 0);
             ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
-            FixtureServer fixture = new FixtureServer(server, executor, slowPageOne);
+            FixtureServer fixture = new FixtureServer(
+                    server, executor, slowPageOne, slowEventDetails);
             server.createContext("/", fixture::handle);
             server.setExecutor(executor);
             server.start();
@@ -899,6 +1021,32 @@ class ProviderPlaywrightLocalQualificationIT {
                 }
                 else if (TOURNAMENT_PATH.equals(exchange.getRequestURI().getRawPath())) {
                     respond(exchange, 200, "application/json", TOURNAMENT_RESPONSE);
+                }
+                else if (EVENT_DETAILS_ONE_PATH.equals(exchange.getRequestURI().getRawPath())) {
+                    respond(exchange, 200, "application/json", EVENT_DETAILS_ONE_RESPONSE);
+                }
+                else if (EVENT_DETAILS_TWO_PATH.equals(exchange.getRequestURI().getRawPath())) {
+                    respond(exchange, 200, "application/json", EVENT_DETAILS_TWO_RESPONSE);
+                }
+                else if (EVENT_DETAILS_NOT_FOUND_PATH.equals(
+                        exchange.getRequestURI().getRawPath())) {
+                    respond(
+                            exchange,
+                            404,
+                            "application/problem+json",
+                            EVENT_DETAILS_NOT_FOUND_RESPONSE);
+                }
+                else if (EVENT_DETAILS_STOP_PATH.equals(exchange.getRequestURI().getRawPath())) {
+                    if (slowEventDetails) {
+                        slowRequestReceived.countDown();
+                        try {
+                            releaseSlowResponse.await(30, TimeUnit.SECONDS);
+                        }
+                        catch (InterruptedException exception) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+                    respond(exchange, 200, "application/json", EVENT_DETAILS_STOP_RESPONSE);
                 }
                 else {
                     respond(exchange, 500, "text/plain", new byte[0]);

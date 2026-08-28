@@ -1,6 +1,8 @@
 package com.bettingproject.sofascorelocal.application.network;
 
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV2Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.transport.EventDetailsTransportException;
+import com.bettingproject.sofascorelocal.adapter.sofascore.transport.EventDetailsTransportFailure;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceResult;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceService;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
@@ -31,6 +33,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -48,6 +51,7 @@ class J4RealEventDetailsPhase2ServiceTest {
 
     private J4RealPhase2ControlService control;
     private EventDetailsProviderTransport transport;
+    private EventDetailsProviderTransport.Campaign providerCampaign;
     private RawManualCallSnapshotStore rawStore;
     private J4ParsedEventDetailsPersistenceService parsedPersistence;
     private List<Duration> pauses;
@@ -57,10 +61,12 @@ class J4RealEventDetailsPhase2ServiceTest {
     void setUp() {
         control = mock(J4RealPhase2ControlService.class);
         transport = mock(EventDetailsProviderTransport.class);
+        providerCampaign = mock(EventDetailsProviderTransport.Campaign.class);
         rawStore = mock(RawManualCallSnapshotStore.class);
         parsedPersistence = mock(J4ParsedEventDetailsPersistenceService.class);
         pauses = new ArrayList<>();
         when(control.executionMayContinue(any())).thenReturn(true);
+        when(transport.openCampaign(any())).thenReturn(providerCampaign);
         AtomicLong snapshotIds = new AtomicLong(200L);
         when(rawStore.save(any())).thenAnswer(invocation -> {
             var snapshot = (com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot)
@@ -95,7 +101,7 @@ class J4RealEventDetailsPhase2ServiceTest {
     @Test
     void persistsRawBeforeParsingAndPerformsExactlyOneProviderCall() {
         EventDetailsProviderRequest request = request();
-        when(transport.execute(any())).thenReturn(
+        when(providerCampaign.execute(any())).thenReturn(
                 response(request, 200, nominal(request.eventId(), "inprogress")));
 
         var result = service.execute(claim(FIRST_REQUEST_ID));
@@ -109,7 +115,9 @@ class J4RealEventDetailsPhase2ServiceTest {
                             .isEqualTo(J4RealEventDetailsResolutionSource.PROVIDER);
                     assertThat(event.eventObservationInserted()).isTrue();
                 });
-        verify(transport, times(1)).execute(any());
+        verify(transport).openCampaign(FIRST_REQUEST_ID);
+        verify(providerCampaign, times(1)).execute(any());
+        verify(providerCampaign).close();
         verify(control).recordEventCompleted(FIRST_REQUEST_ID, EVENT_ID);
         verify(control).complete(FIRST_REQUEST_ID);
 
@@ -121,7 +129,7 @@ class J4RealEventDetailsPhase2ServiceTest {
     @Test
     void aSecondConfirmedCampaignForTheSameEventForcesAnotherProviderSnapshot() {
         EventDetailsProviderRequest request = request();
-        when(transport.execute(any())).thenReturn(
+        when(providerCampaign.execute(any())).thenReturn(
                 response(request, 200, nominal(request.eventId(), "inprogress")));
 
         var first = service.execute(claim(FIRST_REQUEST_ID));
@@ -131,7 +139,9 @@ class J4RealEventDetailsPhase2ServiceTest {
         assertThat(second.completed()).isTrue();
         assertThat(first.events().getFirst().snapshotId())
                 .isNotEqualTo(second.events().getFirst().snapshotId());
-        verify(transport, times(2)).execute(any());
+        verify(transport, times(2)).openCampaign(any());
+        verify(providerCampaign, times(2)).execute(any());
+        verify(providerCampaign, times(2)).close();
         verify(rawStore, times(2)).save(any());
         verify(parsedPersistence, times(2)).persistParsed(any(), any(), any(), any());
         assertThat(pauses).containsExactly(Duration.ofSeconds(3));
@@ -139,7 +149,7 @@ class J4RealEventDetailsPhase2ServiceTest {
 
     @Test
     void stopsOnTheFirst429WithoutRetryOrNormalization() {
-        when(transport.execute(any())).thenReturn(response(
+        when(providerCampaign.execute(any())).thenReturn(response(
                 request(),
                 429,
                 "{\"error\":\"rate-limited\"}"));
@@ -149,16 +159,141 @@ class J4RealEventDetailsPhase2ServiceTest {
         assertThat(result.completed()).isFalse();
         assertThat(result.terminalCode()).isEqualTo("HTTP_429");
         assertThat(result.providerCallAttempts()).isEqualTo(1);
-        verify(transport, times(1)).execute(any());
+        verify(providerCampaign, times(1)).execute(any());
         verify(rawStore).classify(201L, RawSnapshotSchemaStatus.TRANSPORT_ERROR, "HTTP_429");
         verify(parsedPersistence, never()).persistParsed(any(), any(), any(), any());
         verify(control).fail(FIRST_REQUEST_ID, "HTTP_429");
+    }
+
+    @Test
+    void reportsCleanupFailureInsteadOfMaskingAProviderTransportFailure() {
+        when(providerCampaign.execute(any())).thenThrow(
+                new EventDetailsTransportException(EventDetailsTransportFailure.TIMEOUT));
+        doThrow(new EventDetailsTransportException(EventDetailsTransportFailure.IO_FAILURE))
+                .when(providerCampaign).close();
+
+        var result = service.execute(claim(FIRST_REQUEST_ID));
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.terminalCode()).isEqualTo("TRANSPORT_IO_FAILURE");
+        assertThat(result.providerCallAttempts()).isEqualTo(1);
+        verify(rawStore, never()).save(any());
+        verify(parsedPersistence, never()).persistParsed(any(), any(), any(), any());
+        verify(control).fail(FIRST_REQUEST_ID, "TRANSPORT_IO_FAILURE");
+    }
+
+    @Test
+    void rejectsAConflictingClassificationForADeduplicated404Snapshot() {
+        when(providerCampaign.execute(any())).thenReturn(response(
+                request(),
+                404,
+                "{\"error\":\"not-found\"}"));
+        RawPayloadEvidence payload = RawPayloadEvidence.capture(
+                "{\"error\":\"not-found\"}".getBytes(StandardCharsets.UTF_8));
+        org.mockito.Mockito.doReturn(new RawSnapshotPersistenceResult(
+                201L,
+                RawSnapshotPersistenceOutcome.DEDUPLICATED,
+                payload.sha256(),
+                payload.sizeBytes())).when(rawStore).save(any());
+        doThrow(new IllegalStateException("classification divergence"))
+                .when(rawStore).classify(
+                        201L, RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE, null);
+
+        var result = service.execute(claim(FIRST_REQUEST_ID));
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.terminalCode()).isEqualTo("RAW_CLASSIFICATION_ERROR");
+        assertThat(result.unavailableEvents()).isEmpty();
+        verify(parsedPersistence, never()).persistParsed(any(), any(), any(), any());
+        verify(control).fail(FIRST_REQUEST_ID, "RAW_CLASSIFICATION_ERROR");
+    }
+
+    @Test
+    void promotesAnEventIdMismatchClassificationFailureToRawClassificationError() {
+        when(providerCampaign.execute(any())).thenReturn(response(
+                request(),
+                200,
+                nominal(EVENT_ID + 1, "inprogress")));
+        doThrow(new IllegalStateException("classification divergence"))
+                .when(rawStore).classify(
+                        201L,
+                        RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE,
+                        "SCHEMA_INCOMPATIBLE");
+
+        var result = service.execute(claim(FIRST_REQUEST_ID));
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.terminalCode()).isEqualTo("RAW_CLASSIFICATION_ERROR");
+        verify(parsedPersistence, never()).persistParsed(any(), any(), any(), any());
+        verify(control).fail(FIRST_REQUEST_ID, "RAW_CLASSIFICATION_ERROR");
+    }
+
+    @Test
+    void completesAnExact404AsUnavailableWithoutParsingOrRetrying() {
+        when(providerCampaign.execute(any())).thenReturn(response(
+                request(),
+                404,
+                "{\"error\":\"not-found\"}"));
+
+        var result = service.execute(claim(FIRST_REQUEST_ID));
+
+        assertThat(result.completed()).isTrue();
+        assertThat(result.terminalCode()).isEqualTo("COMPLETED_UNAVAILABLE");
+        assertThat(result.providerCallAttempts()).isEqualTo(1);
+        assertThat(result.events()).isEmpty();
+        assertThat(result.unavailableEvents()).singleElement().satisfies(unavailable -> {
+            assertThat(unavailable.eventId()).isEqualTo(EVENT_ID);
+            assertThat(unavailable.httpStatus()).isEqualTo(404);
+            assertThat(unavailable.schemaStatus())
+                    .isEqualTo(RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE);
+        });
+        verify(rawStore).classify(
+                201L, RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE, null);
+        verify(parsedPersistence, never()).persistParsed(any(), any(), any(), any());
+        verify(providerCampaign, times(1)).execute(any());
+        verify(control).recordEventCompleted(FIRST_REQUEST_ID, EVENT_ID);
+        verify(control).completeUnavailable(FIRST_REQUEST_ID);
+    }
+
+    @Test
+    void persistsTheRawResponseThenReportsCampaignCleanupFailure() {
+        when(providerCampaign.execute(any())).thenReturn(
+                response(request(), 200, nominal(EVENT_ID, "inprogress")));
+        doThrow(new EventDetailsTransportException(EventDetailsTransportFailure.IO_FAILURE))
+                .when(providerCampaign).close();
+
+        var result = service.execute(claim(FIRST_REQUEST_ID));
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.terminalCode()).isEqualTo("TRANSPORT_IO_FAILURE");
+        verify(rawStore).save(any());
+        verify(parsedPersistence, never()).persistParsed(any(), any(), any(), any());
+        verify(control).fail(FIRST_REQUEST_ID, "TRANSPORT_IO_FAILURE");
+    }
+
+    @Test
+    void preservesCleanupFailureWhenAnOperatorStopWinsTheControlRace() {
+        when(providerCampaign.execute(any())).thenReturn(
+                response(request(), 200, nominal(EVENT_ID, "inprogress")));
+        when(control.executionMayContinue(FIRST_REQUEST_ID)).thenReturn(
+                true, true, true, true, false);
+        doThrow(new EventDetailsTransportException(EventDetailsTransportFailure.IO_FAILURE))
+                .when(providerCampaign).close();
+
+        var result = service.execute(claim(FIRST_REQUEST_ID));
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.terminalCode()).isEqualTo("TRANSPORT_IO_FAILURE");
+        verify(rawStore).save(any());
+        verify(parsedPersistence, never()).persistParsed(any(), any(), any(), any());
+        verify(control, never()).fail(any(), any());
     }
 
     private static J4RealPhase2ExecutionClaim claim(UUID requestId) {
         return new J4RealPhase2ExecutionClaim(
                 requestId,
                 URI.create(EventDetailsProviderRequest.EXPECTED_ORIGIN),
+                CanonicalEventIdentity.sofascore(EVENT_ID).value(),
                 EVENT_ID);
     }
 

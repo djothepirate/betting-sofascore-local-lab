@@ -10,6 +10,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -79,11 +80,13 @@ class J4RealPhase1ControlServiceTest {
         var prepared = control.prepare();
         control.confirmAndClaim(REQUEST_ID, prepared.confirmationPhrase(), true);
 
-        var stopped = control.stop();
+        List<UUID> signaled = new ArrayList<>();
+        var stopped = control.stop(signaled::add);
 
         assertThat(stopped.state()).isEqualTo(J4RealPhase1State.STOPPED_LOCKED);
         assertThat(stopped.terminalCode()).isEqualTo("OPERATOR_STOP");
         assertThat(control.executionMayContinue(REQUEST_ID)).isFalse();
+        assertThat(signaled).containsExactly(REQUEST_ID);
     }
 
     private static J4RealPhase1ControlService availableControl() {

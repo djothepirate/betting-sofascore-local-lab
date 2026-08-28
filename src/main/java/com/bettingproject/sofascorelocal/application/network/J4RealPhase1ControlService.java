@@ -18,6 +18,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
+import java.util.function.Consumer;
 
 @Service
 public class J4RealPhase1ControlService {
@@ -160,10 +161,24 @@ public class J4RealPhase1ControlService {
     }
 
     public synchronized J4RealPhase1ControlSnapshot stop() {
-        state = J4RealPhase1State.STOPPED_LOCKED;
-        terminalCode = "OPERATOR_STOP";
-        changedAt = clock.instant();
-        clearActiveConfirmation();
+        return stop(ignored -> { });
+    }
+
+    public synchronized J4RealPhase1ControlSnapshot stop(Consumer<UUID> beforeLock) {
+        Objects.requireNonNull(beforeLock, "beforeLock");
+        try {
+            if (requestId != null
+                    && (state == J4RealPhase1State.AWAITING_CONFIRMATION
+                            || state == J4RealPhase1State.EXECUTING)) {
+                beforeLock.accept(requestId);
+            }
+        }
+        finally {
+            state = J4RealPhase1State.STOPPED_LOCKED;
+            terminalCode = "OPERATOR_STOP";
+            changedAt = clock.instant();
+            clearActiveConfirmation();
+        }
         return toSnapshot();
     }
 

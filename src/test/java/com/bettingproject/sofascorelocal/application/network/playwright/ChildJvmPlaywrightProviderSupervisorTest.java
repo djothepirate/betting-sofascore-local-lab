@@ -166,14 +166,14 @@ class ChildJvmPlaywrightProviderSupervisorTest {
     }
 
     @Test
-    void rejectsAnEndpointOutsideTheJ3WorkerAllowlistBeforeStartingAnyProcess() {
+    void rejectsAnEndpointOutsideTheImplementedWorkerAllowlistBeforeStartingAnyProcess() {
         ProviderPlaywrightProperties properties = new ProviderPlaywrightProperties();
         properties.setEnabled(true);
         AtomicInteger starts = new AtomicInteger();
         var supervisor = supervisor(properties, starts);
 
         assertThatThrownBy(() -> supervisor.open(
-                UUID.randomUUID(), Set.of(SofascoreEndpointType.EVENT_DETAILS)))
+                UUID.randomUUID(), Set.of(SofascoreEndpointType.EVENT_STATISTICS)))
                 .isInstanceOf(PlaywrightProviderException.class)
                 .extracting("failure")
                 .isEqualTo(PlaywrightProviderFailure.INVALID_ENDPOINT);
@@ -928,7 +928,7 @@ class ChildJvmPlaywrightProviderSupervisorTest {
     }
 
     @Test
-    void stopAttributionIsStrictAcrossScheduledAndTournamentCampaigns()
+    void stopAttributionIsStrictAcrossEveryImplementedEndpointCampaign()
             throws Exception {
         assertCrossEndpointStopIgnored(
                 SofascoreEndpointType.SCHEDULED_EVENTS,
@@ -938,6 +938,10 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                 SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
                 SofascoreEndpointType.SCHEDULED_EVENTS,
                 82L);
+        assertCrossEndpointStopIgnored(
+                SofascoreEndpointType.EVENT_DETAILS,
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                83L);
     }
 
     private void assertCrossEndpointStopIgnored(
@@ -986,12 +990,15 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         Set<SofascoreEndpointType> activeAllowlist = Set.of(activeEndpoint);
         PlaywrightProviderCampaign campaign = supervisor.open(
                 campaignId, activeAllowlist);
-        PlaywrightProviderRequest request = activeEndpoint
-                == SofascoreEndpointType.SCHEDULED_EVENTS
-                        ? PlaywrightProviderRequest.scheduledEvents(
-                                LocalDate.of(2026, 8, 27), 1)
-                        : PlaywrightProviderRequest.tournamentScheduledEvents(
-                                LocalDate.of(2026, 8, 27), 119_880L);
+        PlaywrightProviderRequest request = switch (activeEndpoint) {
+            case SCHEDULED_EVENTS -> PlaywrightProviderRequest.scheduledEvents(
+                    LocalDate.of(2026, 8, 27), 1);
+            case TOURNAMENT_SCHEDULED_EVENTS ->
+                    PlaywrightProviderRequest.tournamentScheduledEvents(
+                            LocalDate.of(2026, 8, 27), 119_880L);
+            case EVENT_DETAILS -> PlaywrightProviderRequest.eventDetails(16_386_245L);
+            default -> throw new IllegalArgumentException("unsupported test endpoint");
+        };
         CompletableFuture<Throwable> execution = CompletableFuture.supplyAsync(() -> {
             try {
                 campaign.execute(request);
@@ -1114,11 +1121,20 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                 output.flush();
                 assertThat(input.readUnsignedByte())
                         .isEqualTo(ChildJvmPlaywrightProviderSupervisor.GET);
-                input.readUTF();
-                input.readUTF();
-                input.readInt();
-                input.readLong();
-                input.readInt();
+                String endpoint = input.readUTF();
+                switch (SofascoreEndpointType.valueOf(endpoint)) {
+                    case SCHEDULED_EVENTS -> {
+                        assertThat(input.readUTF()).isEqualTo("2026-08-27");
+                        assertThat(input.readInt()).isEqualTo(1);
+                    }
+                    case TOURNAMENT_SCHEDULED_EVENTS -> {
+                        assertThat(input.readUTF()).isEqualTo("2026-08-27");
+                        assertThat(input.readLong()).isEqualTo(119_880L);
+                    }
+                    case EVENT_DETAILS -> assertThat(input.readLong()).isEqualTo(16_386_245L);
+                    default -> throw new AssertionError("unexpected endpoint: " + endpoint);
+                }
+                assertThat(input.readInt()).isEqualTo(2_000);
                 requestReceived.countDown();
                 assertThat(input.read()).isEqualTo(-1);
             }

@@ -8,7 +8,9 @@ import com.bettingproject.sofascorelocal.domain.provider.J4RealPhase2State;
 import com.bettingproject.sofascorelocal.domain.provider.J5RealControlState;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -23,11 +25,16 @@ class J4J5CombinedQualificationSessionTest {
     private static final Clock CLOCK = Clock.fixed(
             Instant.parse("2026-08-18T11:05:00Z"), ZoneOffset.UTC);
 
+    @TempDir
+    Path temporaryDirectory;
+
     @Test
-    void aGlobalJ4StopDoesNotPreventPreparingJ5InTheSameProcess() {
+    void aGlobalJ4StopDoesNotPreventPreparingJ5InTheSameProcess() throws Exception {
         SofascoreProperties properties = combinedProperties();
-        var j4PhaseOnePolicy = new J4EventDetailsQualificationPolicy(properties);
-        var j4Policy = new J4EventDetailsPhase2QualificationPolicy(properties);
+        var playwright = ProviderPlaywrightPolicyTestSupport.configured(
+                temporaryDirectory, "combined-j4-worker.jar");
+        var j4PhaseOnePolicy = new J4EventDetailsQualificationPolicy(properties, playwright);
+        var j4Policy = new J4EventDetailsPhase2QualificationPolicy(properties, playwright);
         var j5Policy = new J5RealQualificationPolicy(properties);
         var j4PhaseOneControl = new J4RealPhase1ControlService(
                 CLOCK,

@@ -55,7 +55,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
         implements PlaywrightProviderCampaignFactory, PlaywrightProviderSupervisor {
 
     static final int MAGIC = 0x53335057;
-    static final int VERSION = 3;
+    static final int VERSION = 4;
     static final byte GET = 1;
     static final byte CLOSE = 2;
     static final byte START = 3;
@@ -82,7 +82,8 @@ public final class ChildJvmPlaywrightProviderSupervisor
             "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD";
     private static final Set<SofascoreEndpointType> IMPLEMENTED_ENDPOINTS = Set.of(
             SofascoreEndpointType.SCHEDULED_EVENTS,
-            SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS);
+            SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
+            SofascoreEndpointType.EVENT_DETAILS);
     private static final List<String> SAFE_INHERITED_ENVIRONMENT = List.of(
             "SystemRoot", "WINDIR", "PATH", "PATHEXT", "TEMP", "TMP",
             "USERPROFILE", "LOCALAPPDATA", "ProgramFiles", "ProgramFiles(x86)",
@@ -369,9 +370,19 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 DataInputStream input = Objects.requireNonNull(state.input, "input");
                 output.writeByte(GET);
                 output.writeUTF(request.endpoint().name());
-                output.writeUTF(request.date().toString());
-                output.writeInt(request.page());
-                output.writeLong(request.uniqueTournamentId());
+                switch (request.endpoint()) {
+                    case SCHEDULED_EVENTS -> {
+                        output.writeUTF(request.date().toString());
+                        output.writeInt(request.page());
+                    }
+                    case TOURNAMENT_SCHEDULED_EVENTS -> {
+                        output.writeUTF(request.date().toString());
+                        output.writeLong(request.uniqueTournamentId());
+                    }
+                    case EVENT_DETAILS -> output.writeLong(request.eventId());
+                    default -> throw new PlaywrightProviderException(
+                            PlaywrightProviderFailure.INVALID_ENDPOINT);
+                }
                 output.writeInt(toMillis(properties.getRequestTimeout()));
                 output.flush();
                 int frame = input.readUnsignedByte();
@@ -833,7 +844,8 @@ public final class ChildJvmPlaywrightProviderSupervisor
             case "REDIRECT_BLOCKED" -> PlaywrightProviderFailure.REDIRECT_BLOCKED;
             case "CONTENT_TYPE_TOO_LONG" -> PlaywrightProviderFailure.UNEXPECTED_CONTENT;
             case "INVALID_ENDPOINT" -> PlaywrightProviderFailure.INVALID_ENDPOINT;
-            case "INVALID_DATE", "INVALID_PAGE", "INVALID_TOURNAMENT_ID", "INVALID_TIMEOUT" ->
+            case "INVALID_DATE", "INVALID_PAGE", "INVALID_TOURNAMENT_ID", "INVALID_EVENT_ID",
+                    "INVALID_TIMEOUT" ->
                     PlaywrightProviderFailure.INVALID_REQUEST;
             case "INVALID_CONFIGURATION", "RUNTIME_START_FAILED", "IPC_CONNECT_FAILED",
                     "RESPONSE_READ_FAILED", "PLAYWRIGHT_FAILURE" ->

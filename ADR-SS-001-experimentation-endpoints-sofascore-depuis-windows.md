@@ -1,8 +1,8 @@
 # ADR-SS-001 - Expérimentation des endpoints SofaScore depuis Windows
 
-- **Statut :** Accepté pour expérimentation locale contrôlée — amendé le 2026-08-27
-- **Version :** 1.3
-- **Amendement actif :** Playwright retenu comme transport cible local, manuel et opt-in pour J3, J4, J5 et tout futur jalon nécessitant un appel à un endpoint SofaScore ; FlareSolverr écarté
+- **Statut :** Accepté pour expérimentation locale contrôlée — amendé le 2026-08-28
+- **Version :** 1.4
+- **Amendement actif :** Playwright retenu comme transport cible local, manuel et opt-in ; décisions J4 `EVENT_DETAILS` de `WO-SS-20260827-014` approuvées ; FlareSolverr écarté
 - **Date :** 2026-08-08
 - **Décideur :** Porteur du Betting Project
 - **Portée :** projet séparé `betting-sofascore-local-lab`
@@ -132,6 +132,11 @@ Pour chaque parcours fournisseur migré vers Playwright par un Work Order dédi�
 
 Le banc comparatif historique de `WO-SS-20260823-011` ne lit ni n'alimente le cache métier, car il mesure chaque candidat contre le même manifeste gelé. Cette disposition, son plafond de `156` cibles et ses scénarios S1/S25 ne sont pas généralisés aux parcours métier : ceux-ci conservent leur politique cache-first et leurs propres bornes.
 
+L'unique exception métier à la lecture préalable du cache est la phase 2 J4 `EVENT_DETAILS`
+approuvée par `WO-SS-20260827-014`. Chaque rafraîchissement reste un geste humain unitaire,
+nouvellement préparé et confirmé, limité à l'identité canonique affichée et n'autorise ni polling,
+ni retry, ni généralisation à une autre famille.
+
 ### 3.6 Absence de contournement
 
 Le laboratoire ne doit pas intégrer :
@@ -172,6 +177,43 @@ Le statut, le `Content-Type` strictement utile et les octets sont lus depuis l'o
 L'arrêt opérateur ferme ou termine le processus enfant propriétaire du contexte, du navigateur et du worker. Aucun état de session ne subsiste. La fermeture cible exclusivement l'arbre de processus de la campagne identifiée, jamais l'ensemble des processus Chromium du poste.
 
 La qualification locale de `WO-SS-20260823-011` établit Playwright à `3/3` sur S1 et `75/75` sur S25 avec fidélité des statuts, types de contenu et octets. Elle ne constitue pas une qualification contre le fournisseur et n'autorise pas la production. Elle fournit la base technique de la décision propriétaire du 27 août 2026.
+
+#### 3.6.1.1 Décisions J4 `EVENT_DETAILS` de WO-014
+
+Le propriétaire approuve le 28 août 2026 les deux décisions nécessaires à la migration J4 vers le
+runtime Playwright commun :
+
+```text
+J4_404_CLASSIFICATION=ENDPOINT_UNAVAILABLE
+J4_404_PARSE_ATTEMPTED=NO
+J4_404_RETRY=NO
+J4_PHASE1_404_NEXT_FIXED_TARGET=YES
+J4_PHASE2_404_RESULT=COMPLETED_UNAVAILABLE
+J4_PHASE1_CACHE_POLICY=FRESH_PARSED_SNAPSHOT_FIRST
+J4_PHASE2_CACHE_POLICY=EXPLICIT_MANUAL_REFRESH_NO_CACHE_READ
+J4_PHASE2_CACHE_EXCEPTION_SCOPE=ONE_CONFIRMED_EVENT_DETAILS_GET
+```
+
+En phase 1, les deux identifiants fixes restent indépendants et ordonnés. Un `404` est une
+observation complète pour la cible courante : le brut est conservé et classé
+`ENDPOINT_UNAVAILABLE`, aucun parseur ni retry n'est lancé, puis la cible fixe suivante peut être
+traitée dans le même contexte de campagne. Tout autre incident terminal interdit la cible suivante.
+
+En phase 2, une confirmation porte sur l'UUID canonique affiché et sur son `providerEventId`
+positif résolu côté serveur. Elle autorise un unique GET de rafraîchissement sans lecture du cache.
+Un `404` produit un résultat complet indisponible, sans parsing ni retry. Cette exception ne permet
+ni identifiant réseau libre transmis à l'action finale, ni nouveau contexte après incident, ni
+rafraîchissement en arrière-plan.
+
+Ces décisions restent soumises au transport local, manuel, opt-in, à la lease exclusive commune et
+à tous les garde-fous du présent ADR. Elles autorisent l'implémentation et la qualification
+loopback de `WO-SS-20260827-014`, mais aucun appel fournisseur.
+
+Pour cette migration Playwright seulement, les décisions d'identité canonique et de `404`
+supersèdent les anciens détails de transport et de contrôle de `WO-SS-20260815-004` qui autorisaient
+une saisie numérique libre en phase 2 et rendaient tout non-`2xx` terminal en phase 1. Elles ne
+réécrivent pas l'historique validé de WO-004 et ne changent ni le parseur `event-details-v2`, ni la
+persistance, ni le modèle d'identité canonique.
 
 ### 3.6.2 FlareSolverr écarté
 
@@ -435,6 +477,7 @@ Un nouvel ADR est obligatoire si l'un des événements suivants survient :
 
 | Version | Date | Évolution |
 |---|---|---|
+| 1.4 | 2026-08-28 | Décisions J4 de `WO-SS-20260827-014` : `404` persisté sans parsing ni retry, poursuite de la seconde cible fixe en phase 1, résultat indisponible complet en phase 2 et exception strictement bornée de rafraîchissement manuel sans lecture du cache. |
 | 1.3 | 2026-08-27 | Déclencheurs d'usage hors WO-011 et d'intégration métier satisfaits par la décision propriétaire : Playwright devient le transport cible local, manuel et opt-in pour J3/J4/J5 et les futurs jalons sous Work Orders dédiés ; FlareSolverr est écarté et ses preuves restent historiques. |
 | 1.2 | 2026-08-24 | Vrai sidecar FlareSolverr v3.5.0 autorisé seulement contre les fixtures locales du WO-011 ; appel fournisseur interdit après échec de fidélité et tant que la résolution automatique de challenge n'est pas décidée séparément. |
 | 1.1 | 2026-08-23 | Exception locale, manuelle et bornée de qualification Playwright J5 pour `WO-SS-20260823-011` ; aucun contournement ni usage permanent autorisé. |

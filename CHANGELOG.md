@@ -4,6 +4,27 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### J4 — migration Playwright de `EVENT_DETAILS` validée
+
+- ouverture de l'implementation de `WO-SS-20260827-014` sur une baseline standard verte de 691
+  tests, 0 echec, 0 erreur et 2 ignores, sans appel fournisseur ;
+- amendement ADR-SS-001 v1.4 approuvant la persistance du `404` comme
+  `ENDPOINT_UNAVAILABLE` sans parsing ni retry, la poursuite de la seconde cible fixe en phase 1 et
+  le resultat `COMPLETED_UNAVAILABLE` en phase 2 ;
+- exception cache strictement bornee de phase 2 : un rafraichissement manuel confirme sur une
+  identite canonique imposee cote serveur realise au plus un GET sans lecture du cache ;
+- architecture cible fondee sur le worker, le superviseur, l'IPC, la lease et le nettoyage communs
+  de WO-013, avec un contexte neuf par campagne et aucune duplication de runtime J4 ;
+- remplacement du transport direct J4 par l'adaptateur Playwright commun, campagne phase 1 partagee
+  et paresseuse, campagne phase 2 neuve sans lecture cache, selection canonique imposee cote serveur
+  et arret cible avec nettoyage prioritaire ;
+- readiness finale verte : 728 tests standards, 52 tests PostgreSQL, 10 tests de protocole/securite
+  et 12 tests Chromium `EVENT_DETAILS`, sans appel fournisseur pendant les validations techniques ;
+- qualification fonctionnelle declaree concluante par le proprietaire le `2026-08-28` :
+  rafraichissement J4 phase 2 `COMPLETED`, snapshot conserve et reverrouillage terminal ;
+- controle de non-regression J3 Playwright concluant sur la collecte paginee de 12 pages et la
+  decouverte tournoi ; `WO-SS-20260827-014` passe a `VALIDATED` et rejoint `completed`.
+
 ### J3 — implémentation du transport fournisseur manuel Playwright
 
 - remplacement, dans le Work Order `WO-SS-20260827-013`, des deux adaptateurs J3

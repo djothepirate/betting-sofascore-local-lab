@@ -57,8 +57,6 @@ $approvedRestClientConstructions = @(
     (Join-Path $sourceRoot `
         'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\LoopbackScheduledEventsRestTransport.java'),
     (Join-Path $sourceRoot `
-        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderEventDetailsRestTransport.java'),
-    (Join-Path $sourceRoot `
         'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderJ5EventDataRestTransport.java')
 )
 $restClientConstructions = $sourceFiles |
@@ -90,6 +88,18 @@ foreach ($requiredTransport in $requiredJ3PlaywrightTransports) {
     if (-not (Test-Path -LiteralPath $requiredTransport)) {
         throw "Required J3 Playwright transport is absent: $requiredTransport"
     }
+}
+
+$removedJ4RestTransport = Join-Path $sourceRoot `
+    'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderEventDetailsRestTransport.java'
+if (Test-Path -LiteralPath $removedJ4RestTransport) {
+    throw "Retired J4 RestClient transport is present: $removedJ4RestTransport"
+}
+
+$requiredJ4PlaywrightTransport = Join-Path $sourceRoot `
+    'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderEventDetailsPlaywrightTransport.java'
+if (-not (Test-Path -LiteralPath $requiredJ4PlaywrightTransport)) {
+    throw "Required J4 Playwright transport is absent: $requiredJ4PlaywrightTransport"
 }
 
 $playwrightSourceRoot = Join-Path $repositoryRoot 'src\provider-playwright'

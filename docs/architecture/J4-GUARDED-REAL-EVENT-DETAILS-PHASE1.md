@@ -20,6 +20,11 @@ AUTOMATIC_RETRY=NO
 un port explicite, un chemin préalable, une query ou un fragment sont rejetés avant la résolution
 de l’URI. Il n’existe aucun champ graphique capable de transmettre un ID arbitraire.
 
+`WO-SS-20260827-014`, valide le `2026-08-28`, remplace le transport historique par le runtime
+Playwright commun. L'ADR-SS-001 v1.4 ajoute une seule evolution de resultat : un `404` complet sur
+la cible courante n'interdit plus la cible fixe suivante. Tous les autres incidents restent
+terminaux.
+
 ## 2. Séparation des verrous
 
 Le chemin ne modifie ni `ConnectorGate`, ni le catalogue général :
@@ -39,10 +44,11 @@ J4RealPhase1ControlService : AWAITING_CONFIRMATION
         ▼ phrase exacte + acquittement, validité 5 min
 EXECUTING
         │
-        ├─ succès des deux événements ──► COMPLETED_LOCKED
-        ├─ incident quelconque ─────────► FAILED_LOCKED
-        ├─ arrêt humain ────────────────► STOPPED_LOCKED
-        └─ expiration ──────────────────► EXPIRED_LOCKED
+        ├─ HTTP 404 ─► cible indisponible, puis cible fixe suivante
+        ├─ succès des deux cibles traitées ─► COMPLETED_LOCKED
+        ├─ autre incident ──────────────────► FAILED_LOCKED
+        ├─ arrêt humain ────────────────────► STOPPED_LOCKED
+        └─ expiration ──────────────────────► EXPIRED_LOCKED
 ```
 
 Une nouvelle campagne exige toujours une nouvelle préparation et une nouvelle phrase. Les opt-ins
@@ -75,11 +81,12 @@ Pour chaque ID fixe, l’orchestrateur suit cet ordre :
 5. calculer taille et SHA-256, puis **insérer et valider transactionnellement le brut** au statut
    `RAW_ONLY` ;
 6. seulement après le retour de cette persistance, contrôler HTTP et type de contenu ;
-7. parser l’enveloppe `event` en mémoire avec `event-details-v2` ;
-8. vérifier l’égalité entre l’ID demandé et l’ID parsé ;
-9. dans une transaction distincte, enregistrer l’observation canonique et le détail, classer le
+7. sur `404`, classer `ENDPOINT_UNAVAILABLE`, ne pas parser et passer à la cible fixe suivante ;
+8. sur `2xx`, parser l’enveloppe `event` en mémoire avec `event-details-v2` ;
+9. vérifier l’égalité entre l’ID demandé et l’ID parsé ;
+10. dans une transaction distincte, enregistrer l’observation canonique et le détail, classer le
    snapshot `PARSED`, puis pointer le cache vers ce snapshot ;
-10. passer à l’ID suivant uniquement si toutes les étapes ont réussi.
+11. passer à l’ID suivant uniquement après un `2xx` parse ou un `404` classé indisponible.
 
 La séparation des transactions garantit qu’une erreur de parseur ou de normalisation ne supprime
 pas le snapshot brut préalablement acquis. Les classifications finales sont idempotentes : une
@@ -89,6 +96,7 @@ ligne finale ne peut pas être reclassée vers un autre résultat.
 
 | Observation | Classification du brut | Code terminal | Suite |
 |---|---|---|---|
+| HTTP `404` | `ENDPOINT_UNAVAILABLE` | résultat indisponible | cible fixe suivante |
 | HTTP `403` | `TRANSPORT_ERROR` | `HTTP_403` | arrêt |
 | HTTP `429` | `TRANSPORT_ERROR` | `HTTP_429` | arrêt |
 | HTTP `5xx` | `TRANSPORT_ERROR` | `HTTP_5XX` | arrêt |
@@ -101,7 +109,8 @@ ligne finale ne peut pas être reclassée vers un autre résultat.
 | schéma incompatible | `SCHEMA_INCOMPATIBLE` | `SCHEMA_INCOMPATIBLE` | arrêt |
 | ID incohérent | `SCHEMA_INCOMPATIBLE` | `EVENT_ID_MISMATCH` | arrêt |
 
-Aucun de ces états ne contient de boucle de retry, de réouverture automatique ou de reprise sur le
+Le `404` ne contient ni parsing ni retry ; il permet seulement la cible fixe indépendante suivante.
+Aucun autre état ne contient de boucle de retry, de réouverture automatique ou de reprise sur le
 second événement.
 
 ## 5. Preuve et affichage

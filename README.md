@@ -6,6 +6,13 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**, **J3 — Appel manuel**, **J4 — Événements**, **J5 — Statistiques**, **J6 — Historique** et **J7 — Export canonique**. J7 a franchi les portes techniques, la recette humaine et la revue de publication : la PR `#12` est `CLEAN/MERGEABLE`, mais reste en brouillon et n'est pas fusionnée sans confirmation explicite. L'implémentation J4, son parcours hors ligne et ses deux sous-étapes réelles bornées sont qualifiés humainement. La sous-étape 1 a validé `16386245` et `16421052` après correction du retour par date. La sous-étape 2 a validé la saisie d'identifiants, le rappel manuel avec une nouvelle confirmation, la déduplication d'une réponse inchangée et la création d'une observation append-only lorsque `16412917` est passé de `notstarted` à `inprogress`. Après l'arrêt global, la configuration a été remise à l'état bloqué, ce verrouillage a été vérifié après redémarrage et l'application a été arrêtée gracieusement. La Pull Request `#8` a été fusionnée et le Work Order J4 est archivé `VALIDATED`. Les voies fournisseur restent désactivées par défaut ; une configuration locale explicitement armée peut réunir J3, J4 phase 2 et J5 dans une même instance, avec une seule requête fournisseur active et un délai minimal partagé. Une recette réelle a depuis achevé, dans un même démarrage, J4 phase 2, les trois familles J5 puis une collecte J3 paginée sur six pages. La forme J3 `scheduled` compte des compétitions disponibles pour la date et ne fournit pas de rencontres programmées ; le reparsage J4 l'indique désormais sans présenter son total nul de matchs comme une anomalie. Aucun appel fournisseur n’est exécuté par Maven, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
+Le Work Order `WO-SS-20260827-014` est `VALIDATED` depuis le `2026-08-28`. Il migre
+`EVENT_DETAILS` vers le runtime Playwright commun de WO-013, avec le `404` indisponible sans parsing
+ni retry, la poursuite de la seconde cible fixe en phase 1 et le rafraichissement manuel phase 2 sans
+lecture du cache. La readiness finale compte 728 tests standards, 52 tests PostgreSQL et 22 tests
+Playwright loopback, tous verts. La recette humaine a confirme un rafraichissement J4 termine et la
+non-regression de J3 Playwright sur la collecte paginee et la decouverte tournoi.
+
 L'évolution **J3 → J5 — découverte tournoi → rencontres** est `VALIDATED` depuis le 2026-08-21 et
 son Work Order est clôturé dans `docs/work_orders/completed`. Après une collecte J3 `COMPLETED` du processus courant,
 elle expose les occurrences de tournois observées, résout côté serveur le
@@ -325,8 +332,9 @@ connecteur général, `ConnectorGate`, le catalogue `callable=false` et le profi
 `sofascore-live-test` restent bloqués. J3 pour `SCHEDULED_EVENTS`, J4 phase 2 pour `EVENT_DETAILS`
 et J5 pour `EVENT_STATISTICS`, `EVENT_INCIDENTS` et `EVENT_LINEUPS` restent des voies manuelles
 distinctes, mais peuvent être armés ensemble avec l'union exacte des cinq familles. Dans J4,
-`SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED` sélectionne exclusivement le formulaire paramétrable
-et est obligatoire dès que J4 partage la session avec J3 ou J5. J4 phase 1 reste exclusif.
+`SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED` sélectionne exclusivement une identité canonique
+résolue côté serveur, laquelle impose le `providerEventId`, et est obligatoire dès que J4 partage
+la session avec J3 ou J5. J4 phase 1 reste exclusif.
 Dans J5, l'action finale réutilise l'identité canonique affichée et autorise au maximum trois
 transports ordonnés après une confirmation humaine unique. Un coordinateur commun sérialise tous
 les transports J3/J4/J5 et impose au moins trois secondes entre leurs départs, y compris entre
@@ -356,6 +364,13 @@ jusqu'à `hasNextPage=false`; cinq actions `TOURNAMENT_SCHEDULED_EVENTS` conserv
 des préparations, confirmations et actions finales distinctes. L'application est ensuite arrêtée
 gracieusement, sans listener ni JVM applicatif ou worker résiduel. La décision propriétaire clôt le
 Work Order en `VALIDATED`; aucune nouvelle campagne fournisseur n'est autorisée par cette clôture.
+
+WO-014 étend ce même worker à J4 sans créer de navigateur autonome. La phase 1 conserve ses deux
+IDs fixes et un seul contexte de campagne ; la phase 2 part d'une identité canonique affichée,
+résout son ID fournisseur côté serveur et ouvre un contexte neuf par confirmation. Les scripts
+J4 dédiés `Start-J4PlaywrightLocal.ps1` et `Invoke-J4PlaywrightLoopbackQualification.ps1` restent
+explicites, et la qualification technique utilise uniquement un serveur loopback éphémère sur
+`127.0.0.1`. Le lanceur n'autorise à lui seul aucun appel fournisseur.
 
 Le lot multi-match WO-010 reste indépendant de ces voies armables : l'état de
 `SOFASCORE_ENABLED` n'entre pas dans sa décision d'éligibilité. Son automatisation s'arrête à la
@@ -715,6 +730,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Contrat hors ligne scheduled-events-v1](docs/architecture/SCHEDULED-EVENTS-V1.md)
 - [Contrat hors ligne event-details-v1](docs/architecture/EVENT-DETAILS-V1.md)
 - [Architecture des événements canoniques J4](docs/architecture/J4-CANONICAL-EVENTS-AND-LOCAL-DETAIL.md)
+- [Transport fournisseur J4 Playwright validé](docs/architecture/J4-PLAYWRIGHT-EVENT-DETAILS.md)
 - [Architecture J5 hors ligne et contrôles de complétude](docs/architecture/J5-OFFLINE-EVENT-DATA-AND-COMPLETENESS.md)
 - [Architecture de la qualification réelle gardée J5](docs/architecture/J5-GUARDED-REAL-EVENT-DATA.md)
 - [Architecture du lot J5 hors ligne multi-match](docs/architecture/J5-OFFLINE-MULTI-MATCH-IMPORT.md)
@@ -736,6 +752,8 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Transport fournisseur manuel J3 Playwright](docs/architecture/J3-PLAYWRIGHT-PROVIDER-TRANSPORT.md)
 - [Readiness technique du transport J3 Playwright](docs/validation/J3-PLAYWRIGHT-TRANSPORT-TECHNICAL-READINESS-20260827.md)
 - [Work Order validé du transport J3 Playwright](docs/work_orders/completed/WO-SS-20260827-013-j3-playwright-transport.md)
+- [Readiness technique et qualification humaine J4 Playwright](docs/validation/J4-PLAYWRIGHT-EVENT-DETAILS-TECHNICAL-READINESS-20260828.md)
+- [Work Order validé du transport J4 Playwright](docs/work_orders/completed/WO-SS-20260827-014-j4-playwright-event-details.md)
 - [Chemin fournisseur J3 borné à cinq pages](docs/architecture/J3-FIVE-PAGE-PROVIDER-QUALIFICATION.md)
 - [Reprise fournisseur J3 contrôlée à la page 2](docs/architecture/J3-PAGE-TWO-PROVIDER-RESUME.md)
 - [Adaptation hors ligne au schéma qualifié de la page 2](docs/architecture/J3-PAGE-TWO-SCHEMA-ADAPTATION.md)

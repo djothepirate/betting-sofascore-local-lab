@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.application.network;
 
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
+import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.provider.J4EventDetailsQualificationSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.J4RealPhase2State;
 import org.junit.jupiter.api.Test;
@@ -10,6 +11,7 @@ import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -24,6 +26,8 @@ class J4RealPhase2ControlServiceTest {
     private static final UUID SECOND_REQUEST_ID = UUID.fromString(
             "40000000-0000-0000-0000-000000000005");
     private static final long EVENT_ID = 17000001L;
+    private static final CanonicalEventIdentity IDENTITY =
+            CanonicalEventIdentity.sofascore(EVENT_ID);
 
     @Test
     void bindsConfirmationToOneEventAndAllowsASeparateManualRefreshAfterCompletion() {
@@ -34,13 +38,14 @@ class J4RealPhase2ControlServiceTest {
                 () -> 42,
                 J4RealPhase2ControlServiceTest::available);
 
-        var first = control.prepare(EVENT_ID);
+        var first = control.prepare(IDENTITY);
         assertThat(first.state()).isEqualTo(J4RealPhase2State.AWAITING_CONFIRMATION);
         assertThat(first.confirmationPhrase())
-                .isEqualTo("CONFIRMER EVENT_DETAILS 17000001 000042");
+                .isEqualTo("CONFIRMER EVENT_DETAILS " + IDENTITY.value()
+                        + " 17000001 000042");
         assertThatThrownBy(() -> control.confirmAndClaim(
                 FIRST_REQUEST_ID,
-                "CONFIRMER EVENT_DETAILS 17000002 000042",
+                "CONFIRMER EVENT_DETAILS " + IDENTITY.value() + " 17000002 000042",
                 true))
                 .isInstanceOf(J4RealPhase2ControlException.class)
                 .extracting(exception -> ((J4RealPhase2ControlException) exception).error())
@@ -51,11 +56,12 @@ class J4RealPhase2ControlServiceTest {
                 first.confirmationPhrase(),
                 true);
         assertThat(firstClaim.eventId()).isEqualTo(EVENT_ID);
+        assertThat(firstClaim.canonicalEventId()).isEqualTo(IDENTITY.value());
         control.recordEventCompleted(FIRST_REQUEST_ID, EVENT_ID);
         assertThat(control.complete(FIRST_REQUEST_ID).state())
                 .isEqualTo(J4RealPhase2State.COMPLETED_LOCKED);
 
-        var second = control.prepare(EVENT_ID);
+        var second = control.prepare(IDENTITY);
         assertThat(second.requestId()).isEqualTo(SECOND_REQUEST_ID);
         assertThat(second.eventId()).isEqualTo(EVENT_ID);
         assertThat(second.state()).isEqualTo(J4RealPhase2State.AWAITING_CONFIRMATION);
@@ -65,20 +71,22 @@ class J4RealPhase2ControlServiceTest {
     @Test
     void acceptsAFixedPhaseOneIdForRefreshAndStopsAnExecutingCampaign() {
         var fixedControl = availableControl();
-        var fixedRefresh = fixedControl.prepare(16386245L);
+        var fixedRefresh = fixedControl.prepare(CanonicalEventIdentity.sofascore(16386245L));
         assertThat(fixedRefresh.eventId()).isEqualTo(16386245L);
         fixedControl.stop();
 
         var control = availableControl();
-        var prepared = control.prepare(EVENT_ID);
+        var prepared = control.prepare(IDENTITY);
         control.confirmAndClaim(FIRST_REQUEST_ID, prepared.confirmationPhrase(), true);
-        var stopped = control.stop();
+        List<UUID> signaled = new ArrayList<>();
+        var stopped = control.stop(signaled::add);
 
         assertThat(stopped.state()).isEqualTo(J4RealPhase2State.STOPPED_LOCKED);
         assertThat(stopped.terminalCode()).isEqualTo("OPERATOR_STOP");
         assertThat(control.executionMayContinue(FIRST_REQUEST_ID)).isFalse();
         assertThat(stopped.preparationAllowed()).isFalse();
-        assertThatThrownBy(() -> control.prepare(EVENT_ID))
+        assertThat(signaled).containsExactly(FIRST_REQUEST_ID);
+        assertThatThrownBy(() -> control.prepare(IDENTITY))
                 .isInstanceOf(J4RealPhase2ControlException.class)
                 .extracting(exception -> ((J4RealPhase2ControlException) exception).error())
                 .isEqualTo(J4RealPhase2ControlError.TERMINAL_LOCK_REQUIRES_RESTART);
@@ -93,10 +101,24 @@ class J4RealPhase2ControlServiceTest {
                 () -> J4EventDetailsQualificationSnapshot.blocked(List.of(
                         "J4_EVENT_DETAILS_PHASE_2_DISABLED")));
 
-        assertThatThrownBy(() -> control.prepare(EVENT_ID))
+        assertThatThrownBy(() -> control.prepare(IDENTITY))
                 .isInstanceOf(J4RealPhase2ControlException.class)
                 .extracting(exception -> ((J4RealPhase2ControlException) exception).error())
                 .isEqualTo(J4RealPhase2ControlError.PROVIDER_TRANSPORT_UNAVAILABLE);
+    }
+
+    @Test
+    void completesAConfirmed404AsUnavailable() {
+        var control = availableControl();
+        var prepared = control.prepare(IDENTITY);
+        control.confirmAndClaim(FIRST_REQUEST_ID, prepared.confirmationPhrase(), true);
+        control.recordEventCompleted(FIRST_REQUEST_ID, EVENT_ID);
+
+        var completed = control.completeUnavailable(FIRST_REQUEST_ID);
+
+        assertThat(completed.state()).isEqualTo(J4RealPhase2State.COMPLETED_LOCKED);
+        assertThat(completed.terminalCode()).isEqualTo("COMPLETED_UNAVAILABLE");
+        assertThat(completed.eventCompleted()).isTrue();
     }
 
     private static J4RealPhase2ControlService availableControl() {

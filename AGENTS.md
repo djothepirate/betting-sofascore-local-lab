@@ -39,7 +39,7 @@ Sous Windows, utiliser les variantes `mvnw.cmd` et les scripts `scripts/*.ps1`.
 
 1. Aucun appel réel vers SofaScore dans les tests standards.
 2. Aucun endpoint réel ajouté sans Work Order et revue de l’ADR-SS-001.
-3. Aucun proxy rotatif, changement automatique d’adresse, mécanisme furtif, résolution de challenge ou réutilisation de cookie/jeton. Playwright est le seul transport cible autorisé vers les endpoints SofaScore : il reste local, manuel, opt-in et limité aux parcours J3, J4, J5 ou futurs couverts par un Work Order et l'ADR-SS-001 v1.3. Chaque nouvel endpoint exige une allowlist et une revue dédiées. FlareSolverr est écarté comme transport et fallback ; ses preuves historiques restent conservées pour audit et toute réintroduction exige une nouvelle décision propriétaire explicite.
+3. Aucun proxy rotatif, changement automatique d’adresse, mécanisme furtif, résolution de challenge ou réutilisation de cookie/jeton. Playwright est le seul transport cible autorisé vers les endpoints SofaScore : il reste local, manuel, opt-in et limité aux parcours J3, J4, J5 ou futurs couverts par un Work Order et l'ADR-SS-001 v1.4. Chaque nouvel endpoint exige une allowlist et une revue dédiées. FlareSolverr est écarté comme transport et fallback ; ses preuves historiques restent conservées pour audit et toute réintroduction exige une nouvelle décision propriétaire explicite.
 4. Aucun payload complet, cookie, jeton ou secret dans les logs.
 5. Aucune écoute sur `0.0.0.0`, une IP LAN ou une interface publique.
 6. Aucune dépendance du Betting Project principal à ce dépôt.

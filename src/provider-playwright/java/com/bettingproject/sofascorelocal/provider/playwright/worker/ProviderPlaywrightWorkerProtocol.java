@@ -15,9 +15,11 @@ import java.util.Objects;
  * {@code int VERSION}, then {@code writeUTF(token)}. The parent must then write {@code byte START}
  * before the worker is allowed to create Playwright or Chromium. The worker acknowledges a
  * successful runtime creation with {@code byte READY}. The parent subsequently writes one command
- * at a time. A GET command is {@code byte GET}, {@code writeUTF(endpoint)},
- * {@code writeUTF(ISO date)}, {@code int page}, {@code long tournamentId}, and
- * {@code int timeoutMillis}. A CLOSE command contains only {@code byte CLOSE}.</p>
+ * at a time. A GET command starts with {@code byte GET} and {@code writeUTF(endpoint)}.
+ * The endpoint-specific arguments are an ISO date and page for scheduled events, an ISO date and
+ * tournament identifier for tournament events, or one event identifier for event details. The
+ * final field is always {@code int timeoutMillis}. A CLOSE command contains only
+ * {@code byte CLOSE}. No URI crosses the IPC boundary.</p>
  *
  * <p>A successful request response is {@code byte RESPONSE}, two epoch-millisecond timestamps,
  * {@code int HTTP status}, {@code writeUTF(content-type)}, {@code int bodyLength}, and the exact
@@ -29,7 +31,7 @@ import java.util.Objects;
 public final class ProviderPlaywrightWorkerProtocol {
 
     public static final int MAGIC = 0x53335057;
-    public static final int VERSION = 3;
+    public static final int VERSION = 4;
 
     public static final byte GET = 1;
     public static final byte CLOSE = 2;
@@ -44,13 +46,15 @@ public final class ProviderPlaywrightWorkerProtocol {
     public static final int MAX_TOKEN_BYTES = 512;
     public static final int MIN_TOKEN_BYTES = 32;
     public static final int MAX_TIMEOUT_MILLIS = 60_000;
+    public static final long MAX_EVENT_ID = 999_999_999L;
 
     private ProviderPlaywrightWorkerProtocol() {
     }
 
     public enum Endpoint {
         SCHEDULED_EVENTS,
-        TOURNAMENT_SCHEDULED_EVENTS
+        TOURNAMENT_SCHEDULED_EVENTS,
+        EVENT_DETAILS
     }
 
     public enum FailureCode {
@@ -62,6 +66,7 @@ public final class ProviderPlaywrightWorkerProtocol {
         INVALID_DATE,
         INVALID_PAGE,
         INVALID_TOURNAMENT_ID,
+        INVALID_EVENT_ID,
         INVALID_TIMEOUT,
         SENSITIVE_REQUEST_BLOCKED,
         UNEXPECTED_ROUTE,
@@ -78,31 +83,59 @@ public final class ProviderPlaywrightWorkerProtocol {
             LocalDate date,
             int page,
             long tournamentId,
+            long eventId,
             int timeoutMillis) {
 
         public GetCommand {
             Objects.requireNonNull(endpoint, "endpoint");
-            Objects.requireNonNull(date, "date");
             if (timeoutMillis < 1 || timeoutMillis > MAX_TIMEOUT_MILLIS) {
                 throw new IllegalArgumentException(FailureCode.INVALID_TIMEOUT.name());
             }
             switch (endpoint) {
                 case SCHEDULED_EVENTS -> {
+                    requireDate(date);
                     if (page < 1 || page > 25) {
                         throw new IllegalArgumentException(FailureCode.INVALID_PAGE.name());
                     }
                     if (tournamentId != 0) {
                         throw new IllegalArgumentException(FailureCode.INVALID_TOURNAMENT_ID.name());
                     }
+                    if (eventId != 0) {
+                        throw new IllegalArgumentException(FailureCode.INVALID_EVENT_ID.name());
+                    }
                 }
                 case TOURNAMENT_SCHEDULED_EVENTS -> {
+                    requireDate(date);
                     if (page != 0) {
                         throw new IllegalArgumentException(FailureCode.INVALID_PAGE.name());
                     }
                     if (tournamentId < 1) {
                         throw new IllegalArgumentException(FailureCode.INVALID_TOURNAMENT_ID.name());
                     }
+                    if (eventId != 0) {
+                        throw new IllegalArgumentException(FailureCode.INVALID_EVENT_ID.name());
+                    }
                 }
+                case EVENT_DETAILS -> {
+                    if (date != null) {
+                        throw new IllegalArgumentException(FailureCode.INVALID_DATE.name());
+                    }
+                    if (page != 0) {
+                        throw new IllegalArgumentException(FailureCode.INVALID_PAGE.name());
+                    }
+                    if (tournamentId != 0) {
+                        throw new IllegalArgumentException(FailureCode.INVALID_TOURNAMENT_ID.name());
+                    }
+                    if (eventId < 1 || eventId > MAX_EVENT_ID) {
+                        throw new IllegalArgumentException(FailureCode.INVALID_EVENT_ID.name());
+                    }
+                }
+            }
+        }
+
+        private static void requireDate(LocalDate date) {
+            if (date == null) {
+                throw new IllegalArgumentException(FailureCode.INVALID_DATE.name());
             }
         }
     }
@@ -143,12 +176,17 @@ public final class ProviderPlaywrightWorkerProtocol {
     public static GetCommand readGetCommand(DataInputStream input) throws IOException {
         Objects.requireNonNull(input, "input");
         Endpoint endpoint = readEndpoint(input.readUTF());
-        LocalDate date = readDate(input.readUTF());
-        int page = input.readInt();
-        long tournamentId = input.readLong();
-        int timeoutMillis = input.readInt();
         try {
-            return new GetCommand(endpoint, date, page, tournamentId, timeoutMillis);
+            return switch (endpoint) {
+                case SCHEDULED_EVENTS -> new GetCommand(
+                        endpoint, readDate(input.readUTF()), input.readInt(), 0, 0,
+                        input.readInt());
+                case TOURNAMENT_SCHEDULED_EVENTS -> new GetCommand(
+                        endpoint, readDate(input.readUTF()), 0, input.readLong(), 0,
+                        input.readInt());
+                case EVENT_DETAILS -> new GetCommand(
+                        endpoint, null, 0, 0, input.readLong(), input.readInt());
+            };
         }
         catch (IllegalArgumentException exception) {
             throw new ProtocolValidationException(readFailureCode(exception), exception);

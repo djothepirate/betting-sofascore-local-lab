@@ -1,18 +1,22 @@
 # WO-SS-20260827-014 - Migration Playwright du detail fournisseur J4
 
-- **Statut :** `OPEN_AWAITING_PREREQUISITES`
+- **Statut :** `VALIDATED`
 - **Jalon :** `J4`
 - **Date d'ouverture :** `2026-08-27`
+- **Date de demarrage :** `2026-08-28`
+- **Date de validation :** `2026-08-28`
 - **Decision d'ouverture :** proprietaire du Betting Project
 - **Branche cible :** `codex/j4-playwright-event-details`
-- **Worktree dedie :** `REQUIRED_NOT_CREATED`
-- **ADR applicable :** `ADR-SS-001 v1.3`, avec deux decisions J4 encore requises
+- **Branche / checkout au baseline :** `CURRENT_CHECKOUT_CLEAN_BASELINE`
+- **ADR applicable :** `ADR-SS-001 v1.4`, decisions J4 approuvees le `2026-08-28`
 - **Qualification de reference :** `WO-SS-20260823-011` (`VALIDATED`)
 - **Contrat metier J4 de reference :** `WO-SS-20260815-004` (`VALIDATED`)
 - **Socle Playwright requis :** `WO-SS-20260827-013` (`VALIDATED`)
-- **Implementation par cette ouverture :** `NOT_STARTED`
-- **Developpement et qualification loopback :** `AWAITING_J4_ADR_DECISIONS_AND_WORKTREE`
-- **Appel fournisseur :** `NOT_AUTHORIZED`
+- **Baseline avant implementation :** `PASS_691_TESTS_0_FAILURE_0_ERROR_2_SKIPPED`
+- **Implementation par cette ouverture :** `COMPLETE`
+- **Developpement et qualification loopback :** `AUTHORIZED_COMPLETED`
+- **Qualification fonctionnelle fournisseur :** `PASS_BY_OWNER_EXECUTION_2026_08_28`
+- **Decision de cloture :** `AUTHORIZED_BY_OWNER_2026_08_28`
 - **Polling, scheduler, retry ou fallback :** `NOT_AUTHORIZED`
 - **Production, VPS ou dependance critique :** `NOT_AUTHORIZED`
 
@@ -30,6 +34,11 @@ Le Work Order couvre les deux parcours J4 deja gouvernes :
 Il ne cree aucun runtime navigateur J4 autonome. Le worker, le superviseur, l'IPC prive, la lease de
 campagne et le nettoyage sont obligatoirement ceux de `WO-SS-20260827-013`.
 
+Pour cette migration seulement, l'ADR v1.4 supersede deux details historiques de transport et de
+controle de `WO-SS-20260815-004` : la saisie fournisseur libre de phase 2 et l'arret de phase 1 sur
+tout non-`2xx`. L'historique valide de WO-004 n'est pas reecrit et son parseur, sa persistance et
+son modele canonique restent inchanges.
+
 Les statuts du laboratoire restent :
 
 ```text
@@ -39,21 +48,25 @@ NOT_PRODUCTION_APPROVED
 NO_CRITICAL_DEPENDENCY
 ```
 
-## 2. Prerequis bloquants
+## 2. Prerequis d'implementation satisfaits
 
-L'implementation ne commence que lorsque toutes les conditions suivantes sont reunies :
+L'implementation a commence apres verification des conditions suivantes :
 
-1. `WO-SS-20260815-004` reste le contrat metier J4 immuable de reference ;
+1. `WO-SS-20260815-004` reste le contrat metier J4 historique de reference, sous les deux
+   supersessions bornees de l'ADR v1.4 ;
 2. `WO-SS-20260827-013` est integre et son runtime commun est qualifie en loopback ;
-3. l'ADR-SS-001 porte les decisions J4 de la section 5 du present document ;
-4. un worktree propre est cree depuis la base approuvee sur `codex/j4-playwright-event-details` ;
-5. `mvnw.cmd clean verify` est vert avant la premiere modification d'implementation ;
+3. l'ADR-SS-001 v1.4 porte les decisions J4 de la section 5 du present document ;
+4. le checkout courant etait propre sur la branche `codex/j4-playwright-event-details` au point de
+   baseline ;
+5. `mvnw.cmd clean verify` est vert avant la premiere modification d'implementation avec
+   `691` tests, `0` echec, `0` erreur et `2` ignores ;
 6. aucun fichier POC FlareSolverr ou source de qualification `src/j5-browser-qualification*` n'est
    copie dans le runtime applicatif ;
 7. aucune edition simultanee du meme worktree n'est effectuee depuis Eclipse et par un agent.
 
-L'ouverture de ce Work Order autorise uniquement le cadrage. Elle ne vaut ni implementation,
-installation de navigateur, preparation de campagne fournisseur, ni acces a SofaScore.
+Ces prerequis et la decision proprietaire autorisent l'implementation et la qualification
+loopback locale. Ils ne valent ni installation supplementaire de navigateur, ni preparation de
+campagne fournisseur, ni acces a SofaScore.
 
 ## 3. Allowlist exacte
 
@@ -106,13 +119,13 @@ J4 reutilise sans duplication le contrat de `WO-SS-20260827-013` :
 La phase 1 utilise un seul contexte neuf pour ses deux cibles ordonnees. La phase 2 utilise un autre
 contexte neuf pour son unique cible. Aucun etat ne traverse deux campagnes ou deux phases.
 
-## 5. Decisions J4 requises avant implementation
+## 5. Decisions J4 approuvees avant implementation
 
 ### 5.1 Semantique HTTP 404
 
-L'ADR-SS-001 v1.3 reconnait un `404` comme indisponibilite fournisseur persistable, alors que le
+L'ADR-SS-001 v1.4 reconnait un `404` comme indisponibilite fournisseur persistable, alors que le
 service J4 actuel traite tout non-`2xx` comme terminal et attend un detail parse pour produire son
-resultat. Le contrat recommande a faire valider est :
+resultat. Le contrat approuve et inscrit dans l'ADR-SS-001 v1.4 est :
 
 ```text
 J4_404_CLASSIFICATION=ENDPOINT_UNAVAILABLE
@@ -127,14 +140,13 @@ passer a l'autre cible independante. En phase 2, il termine la campagne avec une
 explicite. Tout `403`, `429`, `5xx`, timeout, redirection, HTML/challenge ou anomalie de contenu
 reste terminal au premier incident.
 
-Cette recommandation doit etre inscrite explicitement dans l'ADR ou refusee par une decision
-proprietaire avant le debut du code.
+Cette decision est bornee a J4 et ne generalise pas la poursuite apres `404` aux autres jalons.
 
 ### 5.2 Politique de cache de la phase 2
 
 La phase 1 reste `FRESH_PARSED_SNAPSHOT_FIRST`. La phase 2 actuelle est une action manuelle de
 rafraichissement qui interroge le fournisseur apres confirmation meme si une observation existe.
-Cette exception doit etre rendue explicite :
+L'exception approuvee est :
 
 ```text
 J4_PHASE1_CACHE_POLICY=FRESH_PARSED_SNAPSHOT_FIRST
@@ -143,7 +155,8 @@ J4_PHASE2_CACHE_EXCEPTION_SCOPE=ONE_CONFIRMED_EVENT_DETAILS_GET
 ```
 
 La phase 2 ne peut pas devenir un polling, une reprise automatique ou un rafraichissement en
-arriere-plan. Une decision ADR/proprietaire est requise avant implementation.
+arriere-plan. L'approbation ADR v1.4 autorise seulement son implementation et sa qualification
+loopback, sans appel fournisseur.
 
 ## 6. Coordination, arret et verrouillage
 
@@ -178,15 +191,19 @@ n'est cree.
 
 ## 8. Lots d'implementation
 
-1. **Decision ADR J4** : trancher et documenter le `404` et l'exception cache de phase 2.
-2. **Integration runtime** : brancher J4 sur les ports, la lease, le worker et le superviseur de
-   `WO-SS-20260827-013` sans les dupliquer.
-3. **Transport phase 1** : remplacer `ProviderEventDetailsRestTransport` pour les deux cibles fixes.
-4. **Transport phase 2** : utiliser le meme adaptateur avec une nouvelle campagne et l'identite
-   canonique confirmee.
-5. **Controle et arret** : relier les actions Web et services J4 au superviseur en vol.
-6. **Qualification loopback** : verifier les deux phases, les caches, les erreurs et l'arret reel.
-7. **Documentation et readiness** : architecture J4, runbook, rapport, README, changelog et WO.
+1. **Decision ADR J4** : `COMPLETED` - `404` et exception cache de phase 2 approuves en v1.4.
+2. **Integration runtime** : `COMPLETED` - J4 utilise les ports, la lease, le worker et le
+   superviseur de `WO-SS-20260827-013` sans duplication.
+3. **Transport phase 1** : `COMPLETED` - `ProviderEventDetailsRestTransport` est retire et les deux
+   cibles fixes utilisent une campagne Playwright partagee, ouverte paresseusement au premier miss.
+4. **Transport phase 2** : `COMPLETED` - une nouvelle campagne sans lecture cache utilise l'identite
+   canonique imposee par le serveur.
+5. **Controle et arret** : `COMPLETED` - les actions Web et services J4 ciblent le superviseur en vol
+   et conservent l'echec de nettoyage comme incident terminal prioritaire.
+6. **Qualification loopback** : `COMPLETED` - protocole, routes, `404`, contextes distincts, arret
+   borne, nettoyage et hygiene ont ete verifies sur `127.0.0.1`.
+7. **Documentation et readiness** : `COMPLETED` - architecture J4, runbook, rapport, README,
+   changelog, ADR et WO sont alignes.
 8. **Qualification fournisseur optionnelle** : seulement apres un nouveau go proprietaire exact.
 
 ## 9. Matrice de validation minimale
@@ -216,18 +233,28 @@ Commandes requises avant proposition de cloture :
 mvnw.cmd clean verify
 mvnw.cmd -Pintegration-tests verify
 scripts/Verify-Local.ps1 -WithIntegrationTests
-<commande loopback opt-in definie apres integration de WO-013>
+pwsh -NoProfile -File scripts/Invoke-J4PlaywrightLoopbackQualification.ps1
 git diff --check
 ```
 
 Les tests standards et d'integration PostgreSQL ne lancent jamais Chromium et n'accedent jamais a
 SofaScore.
 
-## 10. Qualification fournisseur separee
+## 10. Qualification fonctionnelle fournisseur et decision proprietaire
 
-La readiness loopback ne vaut pas autorisation fournisseur. Un futur go doit figer la phase, les
-identifiants exacts, le plafond d'appels et la fenetre horaire. Une phrase exacte, un acquittement et
-une action finale restent requis.
+La readiness loopback n'a produit aucun appel fournisseur. Le `2026-08-28`, le proprietaire a
+ensuite execute la qualification fonctionnelle depuis l'interface locale et valide le Work Order en
+l'etat. La preuve transmise montre notamment une identite canonique resolue cote serveur, une
+confirmation exacte, un rafraichissement J4 phase 2 termine avec un appel fournisseur et un snapshot
+brut conserve, puis la mise a jour de l'observation normalisee.
+
+Le meme essai a confirme la non-regression du transport J3 Playwright : la collecte paginee
+`SCHEDULED_EVENTS` a atteint `hasNextPage=false`, puis la decouverte tournoi a termine avec le
+controle de compte attendu et une observation canonique. Aucun comportement regressif J3 n'a ete
+identifie par l'operateur.
+
+Cette validation ne retire aucune barriere. Chaque appel futur conserve la preparation, la phrase
+exacte, l'acquittement, l'action finale unitaire, l'absence de retry et le reverrouillage terminal.
 
 Le premier `403`, `429`, challenge, HTML, redirection, timeout, `5xx`, route inattendue ou anomalie
 sensible arrete la campagne. Le rapport final est minimise et ne contient ni payload, cookie,
@@ -256,17 +283,55 @@ processus residuel est constatee.
 Aucune migration n'est attendue. Toute evolution de provenance ou de persistance exige une
 migration Flyway append-only separee.
 
-## 13. Portes de statut
+## 13. Portes de statut et cloture
 
 ```text
-WORK_ORDER_STATUS=OPEN_AWAITING_PREREQUISITES
-IMPLEMENTATION_STARTED=NO
-PROVIDER_CALL_AUTHORIZED=NO
+WORK_ORDER_STATUS=VALIDATED
+IMPLEMENTATION_STARTED=YES
+IMPLEMENTATION_STATUS=COMPLETED
+BRANCH_BASELINE_STATUS=CURRENT_CHECKOUT_CLEAN_BASELINE
+BASELINE_STANDARD_SUITE=PASS
+BASELINE_STANDARD_TESTS=691
+BASELINE_STANDARD_FAILURES=0
+BASELINE_STANDARD_ERRORS=0
+BASELINE_STANDARD_SKIPPED=2
+BASELINE_PROVIDER_CALLS=0
+TECHNICAL_QUALIFICATION_PROVIDER_CALLS=0
 SHARED_RUNTIME_DEPENDENCY=WO-SS-20260827-013
 SHARED_RUNTIME_DEPENDENCY_STATUS=VALIDATED
-J4_404_POLICY=PENDING_ADR_REVIEW
-J4_PHASE2_CACHE_POLICY=PENDING_SCOPED_ADR_DECISION
-LOCAL_READINESS=NOT_RUN
-HUMAN_PROVIDER_QUALIFICATION=NOT_RUN_NOT_AUTHORIZED
-CLOSURE=NOT_AUTHORIZED
+ADR_SS_001_VERSION=1.4
+J4_404_POLICY=APPROVED_BY_OWNER_2026_08_28
+J4_404_CLASSIFICATION=ENDPOINT_UNAVAILABLE
+J4_404_PARSE_ATTEMPTED=NO
+J4_404_RETRY=NO
+J4_PHASE1_404_NEXT_FIXED_TARGET=YES
+J4_PHASE2_404_RESULT=COMPLETED_UNAVAILABLE
+J4_PHASE1_CACHE_POLICY=FRESH_PARSED_SNAPSHOT_FIRST
+J4_PHASE2_CACHE_POLICY=EXPLICIT_MANUAL_REFRESH_NO_CACHE_READ
+J4_PHASE2_CACHE_EXCEPTION_SCOPE=ONE_CONFIRMED_EVENT_DETAILS_GET
+TECHNICAL_READINESS=PASS
+STANDARD_SUITE_RESULT=PASS
+STANDARD_TESTS_RUN=728
+STANDARD_TESTS_FAILURES=0
+STANDARD_TESTS_ERRORS=0
+STANDARD_TESTS_SKIPPED=2
+INTEGRATION_SUITE_RESULT=PASS
+INTEGRATION_TESTS_RUN=52
+INTEGRATION_TESTS_FAILURES=0
+INTEGRATION_TESTS_ERRORS=0
+INTEGRATION_TESTS_SKIPPED=0
+VERIFY_LOCAL_WITH_INTEGRATION_TESTS=PASS
+J4_PLAYWRIGHT_LOOPBACK_QUALIFICATION=PASS
+LOOPBACK_TESTS_RUN=22
+POWERSHELL_AST=PASS_12_SCRIPTS
+DIFF_CHECK=PASS
+SECRET_SIGNATURE_SCAN=PASS
+SERVER_ADDRESS_127_0_0_1=PASS
+CODEX_PROVIDER_ACCESS_PERFORMED=NO
+LOCAL_READINESS=PASS
+HUMAN_PROVIDER_QUALIFICATION=PASS_BY_OWNER_EXECUTION_2026_08_28
+J4_FUNCTIONAL_QUALIFICATION=PASS
+J4_PHASE2_CONFIRMED_PROVIDER_CALL=PASS_COMPLETED
+J3_PLAYWRIGHT_REGRESSION_CHECK=PASS_NO_REGRESSION_IDENTIFIED
+CLOSURE=AUTHORIZED_BY_OWNER_2026_08_28
 ```

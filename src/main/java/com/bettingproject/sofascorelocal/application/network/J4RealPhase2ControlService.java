@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.application.network;
 
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
+import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.provider.J4EventDetailsQualificationSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.J4RealPhase2ControlSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.J4RealPhase2ExecutionClaim;
@@ -18,6 +19,7 @@ import java.util.Objects;
 import java.util.UUID;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
+import java.util.function.Consumer;
 
 @Service
 public class J4RealPhase2ControlService {
@@ -35,6 +37,7 @@ public class J4RealPhase2ControlService {
     private String confirmationPhrase;
     private Instant preparedAt;
     private Instant expiresAt;
+    private UUID canonicalEventId;
     private Long eventId;
     private boolean eventCompleted;
     private String terminalCode;
@@ -67,7 +70,9 @@ public class J4RealPhase2ControlService {
         return toSnapshot();
     }
 
-    public synchronized J4RealPhase2ControlSnapshot prepare(long requestedEventId) {
+    public synchronized J4RealPhase2ControlSnapshot prepare(
+            CanonicalEventIdentity selection) {
+        Objects.requireNonNull(selection, "selection");
         Instant now = clock.instant();
         expireIfNecessary(now);
         if (state == J4RealPhase2State.AWAITING_CONFIRMATION
@@ -83,18 +88,23 @@ public class J4RealPhase2ControlService {
             throw rejected(J4RealPhase2ControlError.PROVIDER_TRANSPORT_UNAVAILABLE);
         }
         try {
-            EventDetailsProviderRequest.requirePhase2EventId(requestedEventId);
+            if (!CanonicalEventIdentity.SOFASCORE.equals(selection.provider())) {
+                throw new IllegalArgumentException("selection must belong to SOFASCORE");
+            }
+            EventDetailsProviderRequest.requirePhase2EventId(selection.providerEventId());
         }
         catch (IllegalArgumentException exception) {
             throw rejected(J4RealPhase2ControlError.EVENT_ID_NOT_ALLOWED);
         }
         requestId = Objects.requireNonNull(requestIdSupplier.get(), "requestId");
         int code = Math.floorMod(confirmationCodeSupplier.getAsInt(), 1_000_000);
-        confirmationPhrase = "CONFIRMER EVENT_DETAILS " + requestedEventId + " "
+        confirmationPhrase = "CONFIRMER EVENT_DETAILS " + selection.value() + " "
+                + selection.providerEventId() + " "
                 + "%06d".formatted(code);
         preparedAt = now;
         expiresAt = now.plus(CONFIRMATION_TTL);
-        eventId = requestedEventId;
+        canonicalEventId = selection.value();
+        eventId = selection.providerEventId();
         eventCompleted = false;
         terminalCode = null;
         state = J4RealPhase2State.AWAITING_CONFIRMATION;
@@ -114,6 +124,7 @@ public class J4RealPhase2ControlService {
         }
         if (state != J4RealPhase2State.AWAITING_CONFIRMATION
                 || requestId == null
+                || canonicalEventId == null
                 || eventId == null) {
             throw rejected(J4RealPhase2ControlError.NO_PENDING_CAMPAIGN);
         }
@@ -137,6 +148,7 @@ public class J4RealPhase2ControlService {
         return new J4RealPhase2ExecutionClaim(
                 requestId,
                 qualification.providerOrigin(),
+                canonicalEventId,
                 eventId);
     }
 
@@ -170,6 +182,18 @@ public class J4RealPhase2ControlService {
         return toSnapshot();
     }
 
+    public synchronized J4RealPhase2ControlSnapshot completeUnavailable(UUID requestedId) {
+        requireExecuting(requestedId);
+        if (!eventCompleted) {
+            throw rejected(J4RealPhase2ControlError.EVENT_ID_MISMATCH);
+        }
+        state = J4RealPhase2State.COMPLETED_LOCKED;
+        terminalCode = "COMPLETED_UNAVAILABLE";
+        changedAt = clock.instant();
+        clearActiveConfirmation();
+        return toSnapshot();
+    }
+
     public synchronized J4RealPhase2ControlSnapshot fail(UUID requestedId, String code) {
         requireExecuting(requestedId);
         lockFailed(clock.instant(), requireSafeCode(code));
@@ -177,10 +201,24 @@ public class J4RealPhase2ControlService {
     }
 
     public synchronized J4RealPhase2ControlSnapshot stop() {
-        state = J4RealPhase2State.STOPPED_LOCKED;
-        terminalCode = "OPERATOR_STOP";
-        changedAt = clock.instant();
-        clearActiveConfirmation();
+        return stop(ignored -> { });
+    }
+
+    public synchronized J4RealPhase2ControlSnapshot stop(Consumer<UUID> beforeLock) {
+        Objects.requireNonNull(beforeLock, "beforeLock");
+        try {
+            if (requestId != null
+                    && (state == J4RealPhase2State.AWAITING_CONFIRMATION
+                            || state == J4RealPhase2State.EXECUTING)) {
+                beforeLock.accept(requestId);
+            }
+        }
+        finally {
+            state = J4RealPhase2State.STOPPED_LOCKED;
+            terminalCode = "OPERATOR_STOP";
+            changedAt = clock.instant();
+            clearActiveConfirmation();
+        }
         return toSnapshot();
     }
 
@@ -226,6 +264,7 @@ public class J4RealPhase2ControlService {
                 confirmationPhrase,
                 preparedAt,
                 expiresAt,
+                canonicalEventId,
                 eventId,
                 eventCompleted,
                 terminalCode,

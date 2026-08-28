@@ -147,8 +147,16 @@ et la sélection de la sous-étape 2 bloque la sous-étape 1. Aucun test standar
 n’effectue un appel SofaScore.
 
 Les deux sous-étapes s’arrêtent et se verrouillent au premier incident, au premier `403`, `429`,
-`5xx`, timeout, contenu inattendu ou schéma incompatible. Elles n’effectuent aucun retry. La
-sous-étape 2 autorisée reçoit un ID borné et réalise un seul nouvel appel sans cache par
-confirmation ; le même ID peut être rappelé uniquement par un nouveau geste humain. Un polling,
-une planification, un rafraîchissement automatique ou un export vers le Betting Project exigent
-une nouvelle autorisation explicite.
+`5xx`, timeout, contenu inattendu ou schéma incompatible. Elles n’effectuent aucun retry. La seule
+exception est un `404` complet : `WO-SS-20260827-014` autorise la cible fixe suivante en phase 1 et
+un résultat `COMPLETED_UNAVAILABLE` sans parsing en phase 2.
+
+La sous-étape 2 migrée reçoit une identité canonique déjà affichée, résout son ID fournisseur côté
+serveur et réalise un seul nouvel appel sans cache par confirmation ; la même identité peut être
+rappelée uniquement par un nouveau geste humain. Un polling, une planification, un
+rafraîchissement automatique ou un export vers le Betting Project exigent une nouvelle
+autorisation explicite.
+
+Le transport cible de `EVENT_DETAILS` est le runtime Playwright commun de WO-013. Sa migration J4
+est en cours, désactivée par défaut et qualifiable uniquement contre une origine loopback avant
+toute décision fournisseur. Le contrat détaillé est `J4-PLAYWRIGHT-EVENT-DETAILS.md`.

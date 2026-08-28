@@ -1,4 +1,4 @@
-# J3 - transport fournisseur manuel Playwright
+# J3 - transport fournisseur manuel Playwright et socle commun
 
 ## 1. Decision et portee
 
@@ -18,6 +18,11 @@ l'interface ou le protocole du worker. Les deux routes admissibles restent :
 GET /api/v1/sport/football/scheduled-tournaments/{ISO_DATE}/page/{PAGE}
 GET /api/v1/unique-tournament/{UNIQUE_TOURNAMENT_ID}/scheduled-events/{ISO_DATE}
 ```
+
+`WO-SS-20260827-014`, valide le `2026-08-28`, reutilise ce socle pour J4 `EVENT_DETAILS`. Il
+n'alterne pas les campagnes J3 et J4 dans un meme contexte : chaque campagne conserve son worker,
+son navigateur, son contexte neuf et son allowlist propre. Le contrat J4 est documente dans
+`J4-PLAYWRIGHT-EVENT-DETAILS.md`.
 
 `PAGE` reste compris entre `1` et `25`, la date est une `LocalDate` rendue en ISO et l'identifiant
 de tournoi unique est strictement positif. Toute autre origine, methode, route, redirection ou
@@ -172,7 +177,8 @@ contacte pas SofaScore et ne vaut ni qualification humaine ni autorisation de ca
 
 ## 9. Exclusions
 
-- aucun endpoint J4 ou J5 dans le worker de WO-013 ;
+- la livraison WO-013 reste qualifiee uniquement sur ses endpoints J3 ; toute extension J4/J5 du
+  worker commun exige son propre Work Order, son allowlist et sa qualification loopback ;
 - aucun appel au demarrage, scheduler, polling, retry ou multi-campagne ;
 - aucun transport HTTP direct ou FlareSolverr de secours ;
 - aucun navigateur personnel, profil persistant ou reutilisation de session ;

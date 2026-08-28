@@ -201,7 +201,10 @@ class SofascorePropertiesTest {
     }
 
     @Test
-    void bindsTheDocumentedCombinedProviderConfigurationForTheOfflineBatch() {
+    void bindsTheDocumentedCombinedProviderConfigurationForTheOfflineBatch()
+            throws Exception {
+        Path workerJar = writeWorkerJar("documented-combined-worker.jar");
+
         contextRunner
                 .withSystemProperties(
                         "SOFASCORE_ENABLED=true",
@@ -210,6 +213,8 @@ class SofascorePropertiesTest {
                         "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=true",
                         "SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=true",
                         "SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED=true",
+                        "SOFASCORE_PLAYWRIGHT_ENABLED=true",
+                        "SOFASCORE_PLAYWRIGHT_WORKER_JAR=" + workerJar,
                         "SOFASCORE_BASE_URL=https://www.sofascore.com",
                         "SOFASCORE_ALLOWED_ENDPOINTS="
                                 + "SCHEDULED_EVENTS,TOURNAMENT_SCHEDULED_EVENTS,"
@@ -238,14 +243,14 @@ class SofascorePropertiesTest {
                     assertThat(context.getBean(J5OfflineBatchPolicy.class)
                             .snapshot().available()).isTrue();
                     assertThat(context.getBean(J3ProviderQualificationPolicy.class)
-                            .snapshot().available()).isFalse();
+                            .snapshot().available()).isTrue();
                     assertThat(context.getBean(J4EventDetailsPhase2QualificationPolicy.class)
                             .snapshot().available()).isTrue();
                     assertThat(context.getBean(J5RealQualificationPolicy.class)
                             .snapshot().available()).isTrue();
                     assertThat(context.getBean(
                             TournamentEventDiscoveryQualificationPolicy.class)
-                            .snapshot().available()).isFalse();
+                            .snapshot().available()).isTrue();
                 });
     }
 
@@ -292,7 +297,9 @@ class SofascorePropertiesTest {
     }
 
     @Test
-    void bindsTheDisabledByDefaultJ4EventDetailsQualificationKeys() {
+    void bindsTheDisabledByDefaultJ4EventDetailsQualificationKeys() throws Exception {
+        Path workerJar = writeWorkerJar("j4-phase1-worker.jar");
+
         contextRunner
                 .withSystemProperties(
                         "SOFASCORE_ENABLED=true",
@@ -300,6 +307,8 @@ class SofascorePropertiesTest {
                         "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true",
                         "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false",
                         "SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=false",
+                        "SOFASCORE_PLAYWRIGHT_ENABLED=true",
+                        "SOFASCORE_PLAYWRIGHT_WORKER_JAR=" + workerJar,
                         "SOFASCORE_BASE_URL=" + EventDetailsProviderRequest.EXPECTED_ORIGIN,
                         "SOFASCORE_ALLOWED_ENDPOINTS=EVENT_DETAILS")
                 .run(context -> {
@@ -318,7 +327,9 @@ class SofascorePropertiesTest {
     }
 
     @Test
-    void bindsTheDedicatedPhaseTwoOptInWithoutMakingPhaseOneAvailable() {
+    void bindsTheDedicatedPhaseTwoOptInWithoutMakingPhaseOneAvailable() throws Exception {
+        Path workerJar = writeWorkerJar("j4-phase2-worker.jar");
+
         contextRunner
                 .withSystemProperties(
                         "SOFASCORE_ENABLED=true",
@@ -326,6 +337,8 @@ class SofascorePropertiesTest {
                         "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true",
                         "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=true",
                         "SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=false",
+                        "SOFASCORE_PLAYWRIGHT_ENABLED=true",
+                        "SOFASCORE_PLAYWRIGHT_WORKER_JAR=" + workerJar,
                         "SOFASCORE_BASE_URL=" + EventDetailsProviderRequest.EXPECTED_ORIGIN,
                         "SOFASCORE_ALLOWED_ENDPOINTS=EVENT_DETAILS")
                 .run(context -> {
@@ -401,7 +414,9 @@ class SofascorePropertiesTest {
     }
 
     @Test
-    void bindsOneCombinedJ4PhaseTwoAndJ5QualificationSession() {
+    void bindsOneCombinedJ4PhaseTwoAndJ5QualificationSession() throws Exception {
+        Path workerJar = writeWorkerJar("combined-j4-j5-worker.jar");
+
         contextRunner
                 .withSystemProperties(
                         "SOFASCORE_ENABLED=true",
@@ -409,6 +424,8 @@ class SofascorePropertiesTest {
                         "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=true",
                         "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=true",
                         "SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=true",
+                        "SOFASCORE_PLAYWRIGHT_ENABLED=true",
+                        "SOFASCORE_PLAYWRIGHT_WORKER_JAR=" + workerJar,
                         "SOFASCORE_BASE_URL=" + EventDetailsProviderRequest.EXPECTED_ORIGIN,
                         "SOFASCORE_ALLOWED_ENDPOINTS="
                                 + "EVENT_DETAILS,EVENT_STATISTICS,EVENT_INCIDENTS,EVENT_LINEUPS")

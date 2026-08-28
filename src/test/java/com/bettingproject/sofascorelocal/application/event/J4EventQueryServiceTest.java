@@ -67,6 +67,33 @@ class J4EventQueryServiceTest {
         });
     }
 
+    @Test
+    void resolvesTheProviderIdOnlyFromTheServerComputedDateSelection() {
+        var event = event();
+        Instant from = Instant.parse("2026-08-11T22:00:00Z");
+        Instant to = Instant.parse("2026-08-12T22:00:00Z");
+        when(canonicalEventStore.findLatestStartingBetween(from, to))
+                .thenReturn(List.of(event));
+
+        assertThat(service.findSofascoreIdentityInSelection(
+                event.identity().value(), LocalDate.parse("2026-08-12"), "Europe/Paris"))
+                .contains(event.identity());
+
+        var unknown = java.util.UUID.fromString(
+                "70000000-0000-0000-0000-000000000004");
+        assertThat(service.findSofascoreIdentityInSelection(
+                unknown, LocalDate.parse("2026-08-12"), "Europe/Paris"))
+                .isEmpty();
+
+        when(canonicalEventStore.findLatestStartingBetween(
+                Instant.parse("2026-08-12T22:00:00Z"),
+                Instant.parse("2026-08-13T22:00:00Z")))
+                .thenReturn(List.of());
+        assertThat(service.findSofascoreIdentityInSelection(
+                event.identity().value(), LocalDate.parse("2026-08-13"), "Europe/Paris"))
+                .isEmpty();
+    }
+
     static CanonicalEventObservationView event() {
         return new CanonicalEventObservationView(
                 1L,

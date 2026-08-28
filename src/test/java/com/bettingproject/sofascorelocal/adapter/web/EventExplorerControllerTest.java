@@ -9,10 +9,13 @@ import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImpor
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportService;
 import com.bettingproject.sofascorelocal.application.event.J4ScheduledEventsSnapshotNormalizationService;
 import com.bettingproject.sofascorelocal.application.event.J4SnapshotNormalizationResult;
+import com.bettingproject.sofascorelocal.application.network.J4ProviderCampaignStopException;
+import com.bettingproject.sofascorelocal.application.network.J4ProviderCampaignStopService;
 import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase1Service;
 import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase1Result;
 import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase2Result;
 import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase2Service;
+import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsUnavailableResult;
 import com.bettingproject.sofascorelocal.application.network.J4RealPhase1ControlService;
 import com.bettingproject.sofascorelocal.application.network.J4RealPhase2ControlService;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
@@ -34,8 +37,8 @@ import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTeam;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTournament;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.cache.CacheManager;
@@ -43,8 +46,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.Instant;
 import java.net.URI;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
@@ -53,11 +56,13 @@ import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.flash;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.model;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrl;
@@ -92,6 +97,9 @@ class EventExplorerControllerTest {
     private J4RealEventDetailsPhase2Service realPhase2Service;
 
     @MockitoBean
+    private J4ProviderCampaignStopService providerCampaignStopService;
+
+    @MockitoBean
     private LocalFormTokenService formTokenService;
 
     @MockitoBean
@@ -115,6 +123,7 @@ class EventExplorerControllerTest {
                 new J4RealPhase2ControlSnapshot(
                         J4RealPhase2State.LOCKED,
                         Instant.parse("2026-08-15T00:00:00Z"),
+                        null,
                         null,
                         null,
                         null,
@@ -153,7 +162,10 @@ class EventExplorerControllerTest {
                 .andExpect(content().string(containsString("LECTURE LOCALE")))
                 .andExpect(content().string(containsString("16386245")))
                 .andExpect(content().string(containsString(
-                        "Un identifiant paramétrable, un appel confirmé")))
+                        "Une identité canonique, un appel confirmé")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(
+                        containsString("name=\"eventId\""))))
+                .andExpect(content().string(containsString("name=\"canonicalEventId\"")))
                 .andExpect(content().string(containsString(
                         "J4_EVENT_DETAILS_PHASE_2_DISABLED")));
     }
@@ -364,15 +376,21 @@ class EventExplorerControllerTest {
     }
 
     @Test
-    void preparesOneParameterizedEventWithoutCallingTheProvider() throws Exception {
-        when(realPhase2ControlService.prepare(17000001L)).thenReturn(
+    void preparesOneCanonicalEventWithoutCallingTheProvider() throws Exception {
+        CanonicalEventIdentity identity = CanonicalEventIdentity.sofascore(17000001L);
+        when(queryService.findSofascoreIdentityInSelection(
+                identity.value(), LocalDate.parse("2026-08-15"), "Europe/Paris"))
+                .thenReturn(Optional.of(identity));
+        when(realPhase2ControlService.prepare(identity)).thenReturn(
                 new J4RealPhase2ControlSnapshot(
                         J4RealPhase2State.AWAITING_CONFIRMATION,
                         Instant.parse("2026-08-15T12:00:00Z"),
                         UUID.fromString("60000000-0000-0000-0000-000000000004"),
-                        "CONFIRMER EVENT_DETAILS 17000001 000042",
+                        "CONFIRMER EVENT_DETAILS " + identity.value()
+                                + " 17000001 000042",
                         Instant.parse("2026-08-15T12:00:00Z"),
                         Instant.parse("2026-08-15T12:05:00Z"),
+                        identity.value(),
                         17000001L,
                         false,
                         null,
@@ -381,27 +399,55 @@ class EventExplorerControllerTest {
 
         mockMvc.perform(post("/events/real-phase2/prepare")
                         .param("localFormToken", "one-use-token")
-                        .param("eventId", "17000001")
+                        .param("canonicalEventId", identity.value().toString())
                         .param("date", "2026-08-15")
                         .param("zone", "Europe/Paris"))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl(
                         "/events?date=2026-08-15&zone=Europe%2FParis"));
 
-        verify(realPhase2ControlService).prepare(17000001L);
+        verify(queryService).findSofascoreIdentityInSelection(
+                identity.value(), LocalDate.parse("2026-08-15"), "Europe/Paris");
+        verify(realPhase2ControlService).prepare(identity);
+        verify(realPhase2Service, org.mockito.Mockito.never()).execute(any());
+    }
+
+    @Test
+    void rejectsAValidUuidThatIsAbsentFromTheServerComputedDateSelection() throws Exception {
+        UUID unknown = CanonicalEventIdentity.sofascore(17000002L).value();
+        when(queryService.findSofascoreIdentityInSelection(
+                unknown, LocalDate.parse("2026-08-15"), "Europe/Paris"))
+                .thenReturn(Optional.empty());
+
+        mockMvc.perform(post("/events/real-phase2/prepare")
+                        .param("localFormToken", "one-use-token")
+                        .param("canonicalEventId", unknown.toString())
+                        .param("date", "2026-08-15")
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl(
+                        "/events?date=2026-08-15&zone=Europe%2FParis"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .flash().attribute(
+                                "realPhase2ErrorCode",
+                                "CANONICAL_EVENT_NOT_IN_SELECTION"));
+
+        verify(realPhase2ControlService, org.mockito.Mockito.never()).prepare(any());
         verify(realPhase2Service, org.mockito.Mockito.never()).execute(any());
     }
 
     @Test
     void executesOnlyTheEventBoundToThePreparedPhaseTwoClaim() throws Exception {
         UUID requestId = UUID.fromString("60000000-0000-0000-0000-000000000004");
+        CanonicalEventIdentity identity = CanonicalEventIdentity.sofascore(17000001L);
         var claim = new J4RealPhase2ExecutionClaim(
                 requestId,
                 URI.create("https://www.sofascore.com"),
+                identity.value(),
                 17000001L);
         when(realPhase2ControlService.confirmAndClaim(
                 requestId,
-                "CONFIRMER EVENT_DETAILS 17000001 000042",
+                "CONFIRMER EVENT_DETAILS " + identity.value() + " 17000001 000042",
                 true)).thenReturn(claim);
         when(realPhase2Service.execute(claim)).thenReturn(
                 new J4RealEventDetailsPhase2Result(
@@ -415,7 +461,8 @@ class EventExplorerControllerTest {
         mockMvc.perform(post("/events/real-phase2/execute")
                         .param("localFormToken", "one-use-token")
                         .param("requestId", requestId.toString())
-                        .param("confirmationText", "CONFIRMER EVENT_DETAILS 17000001 000042")
+                        .param("confirmationText", "CONFIRMER EVENT_DETAILS "
+                                + identity.value() + " 17000001 000042")
                         .param("acknowledged", "true")
                         .param("date", "2026-08-15")
                         .param("zone", "Europe/Paris"))
@@ -425,9 +472,88 @@ class EventExplorerControllerTest {
 
         verify(realPhase2ControlService).confirmAndClaim(
                 requestId,
-                "CONFIRMER EVENT_DETAILS 17000001 000042",
+                "CONFIRMER EVENT_DETAILS " + identity.value() + " 17000001 000042",
                 true);
         verify(realPhase2Service).execute(claim);
+    }
+
+    @Test
+    void rendersAnExact404AsMinimizedUnavailableEvidence() throws Exception {
+        var unavailable = new J4RealEventDetailsUnavailableResult(
+                17000001L,
+                901L,
+                404,
+                "d".repeat(64),
+                21,
+                RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE);
+        var result = new J4RealEventDetailsPhase2Result(
+                UUID.fromString("60000000-0000-0000-0000-000000000004"),
+                17000001L,
+                true,
+                "COMPLETED_UNAVAILABLE",
+                1,
+                List.of(),
+                List.of(unavailable));
+        when(queryService.search(LocalDate.parse("2026-08-15"), "Europe/Paris"))
+                .thenReturn(new J4EventSearchResult(
+                        LocalDate.parse("2026-08-15"),
+                        ZoneId.of("Europe/Paris"),
+                        Instant.parse("2026-08-14T22:00:00Z"),
+                        Instant.parse("2026-08-15T22:00:00Z"),
+                        List.of()));
+
+        mockMvc.perform(get("/events")
+                        .param("date", "2026-08-15")
+                        .param("zone", "Europe/Paris")
+                        .flashAttr("realPhase2Result", result))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("COMPLETED_UNAVAILABLE")))
+                .andExpect(content().string(containsString("ENDPOINT_UNAVAILABLE")))
+                .andExpect(content().string(containsString(">404</td>")))
+                .andExpect(content().string(containsString("d".repeat(64))));
+    }
+
+    @Test
+    void rendersPhaseOneUnavailableTargetsAsCompletedOutcomes() throws Exception {
+        var first = new J4RealEventDetailsUnavailableResult(
+                16386245L,
+                911L,
+                404,
+                "e".repeat(64),
+                21,
+                RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE);
+        var second = new J4RealEventDetailsUnavailableResult(
+                16421052L,
+                912L,
+                404,
+                "f".repeat(64),
+                22,
+                RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE);
+        var result = new J4RealEventDetailsPhase1Result(
+                UUID.fromString("30000000-0000-0000-0000-000000000004"),
+                true,
+                "COMPLETED",
+                2,
+                0,
+                List.of(),
+                List.of(first, second));
+        when(queryService.search(LocalDate.parse("2026-08-15"), "Europe/Paris"))
+                .thenReturn(new J4EventSearchResult(
+                        LocalDate.parse("2026-08-15"),
+                        ZoneId.of("Europe/Paris"),
+                        Instant.parse("2026-08-14T22:00:00Z"),
+                        Instant.parse("2026-08-15T22:00:00Z"),
+                        List.of()));
+
+        mockMvc.perform(get("/events")
+                        .param("date", "2026-08-15")
+                        .param("zone", "Europe/Paris")
+                        .flashAttr("realPhase1Result", result))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("2 CIBLE(S) TRAIT")))
+                .andExpect(content().string(containsString("16386245")))
+                .andExpect(content().string(containsString("16421052")))
+                .andExpect(content().string(containsString("ENDPOINT_UNAVAILABLE")));
     }
 
     @Test
@@ -440,8 +566,28 @@ class EventExplorerControllerTest {
                 .andExpect(redirectedUrl(
                         "/events?date=2026-08-15&zone=Europe%2FParis"));
 
-        verify(realPhase1ControlService).stop();
-        verify(realPhase2ControlService).stop();
+        verify(providerCampaignStopService).stopAll();
+    }
+
+    @Test
+    void globalStopFailureDoesNotAlsoAdvertiseAConfirmedStop() throws Exception {
+        doThrow(new J4ProviderCampaignStopException(
+                new IllegalStateException("cleanup not confirmed")))
+                .when(providerCampaignStopService).stopAll();
+
+        mockMvc.perform(post("/events/real/stop")
+                        .param("localFormToken", "one-use-token")
+                        .param("date", "2026-08-15")
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl(
+                        "/events?date=2026-08-15&zone=Europe%2FParis"))
+                .andExpect(flash().attribute(
+                        "realPhase1ErrorCode",
+                        "PLAYWRIGHT_STOP_UNCONFIRMED"))
+                .andExpect(flash().attributeCount(1));
+
+        verify(providerCampaignStopService).stopAll();
     }
 
     private static CanonicalEventObservationView event() {
