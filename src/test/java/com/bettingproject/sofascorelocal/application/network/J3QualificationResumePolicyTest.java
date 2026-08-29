@@ -1,5 +1,6 @@
 package com.bettingproject.sofascorelocal.application.network;
 
+import com.bettingproject.sofascorelocal.config.ProviderPlaywrightProperties;
 import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.provider.J3StoredQualificationPage;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
@@ -8,6 +9,7 @@ import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProvider
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -17,6 +19,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Set;
+import java.util.jar.Attributes;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -24,6 +29,9 @@ class J3QualificationResumePolicyTest {
 
     private static final LocalDate DATE = ScheduledEventsProviderPageRequest.QUALIFICATION_DATE;
     private static final Instant REQUESTED_AT = Instant.parse("2026-08-13T13:28:17Z");
+
+    @TempDir
+    Path temporaryDirectory;
 
     @Test
     void authorizesOnlyPageThreeAfterReparsingTheTwoLocalCheckpoints() throws Exception {
@@ -214,13 +222,33 @@ class J3QualificationResumePolicyTest {
         assertThat(snapshot.blockers()).containsExactly("J3_CHECKPOINT_READ_UNAVAILABLE");
     }
 
-    private static J3ProviderQualificationPolicy configuredProviderPolicy() {
+    private J3ProviderQualificationPolicy configuredProviderPolicy() {
         SofascoreProperties properties = new SofascoreProperties();
         properties.setEnabled(true);
         properties.setJ3QualificationEnabled(true);
         properties.setBaseUrl("https://www.sofascore.com");
         properties.setAllowedEndpoints(Set.of(SofascoreEndpointType.SCHEDULED_EVENTS));
-        return new J3ProviderQualificationPolicy(properties);
+        ProviderPlaywrightProperties playwright = new ProviderPlaywrightProperties();
+        playwright.setEnabled(true);
+        Path worker = temporaryDirectory.resolve("resume-worker.jar");
+        if (!Files.exists(worker)) {
+            Manifest manifest = new Manifest();
+            Attributes attributes = manifest.getMainAttributes();
+            attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
+            attributes.putValue(
+                    "Start-Class",
+                    "com.bettingproject.sofascorelocal.provider.playwright.worker."
+                            + "ProviderPlaywrightWorkerMain");
+            try (JarOutputStream ignored = new JarOutputStream(
+                    Files.newOutputStream(worker), manifest)) {
+                // The resume policy must observe the same validated transport prerequisite.
+            }
+            catch (java.io.IOException exception) {
+                throw new IllegalStateException("Unable to create test worker artifact", exception);
+            }
+        }
+        playwright.setWorkerJar(worker);
+        return new J3ProviderQualificationPolicy(properties, playwright);
     }
 
     private static J3StoredQualificationPage storedPage(

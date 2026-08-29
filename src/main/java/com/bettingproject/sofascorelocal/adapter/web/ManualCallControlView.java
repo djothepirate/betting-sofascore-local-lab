@@ -21,6 +21,7 @@ public record ManualCallControlView(
         boolean canPrepare,
         boolean providerTransportAvailable,
         boolean realCallEnabled,
+        boolean localImportEnabled,
         List<String> providerBlockers,
         IntentView intent) {
 
@@ -38,6 +39,9 @@ public record ManualCallControlView(
         boolean realCallEnabled = source.providerTransportAvailable()
                 && sourceIntent != null
                 && sourceIntent.state() == J3ManualCallIntentState.CONFIRMED_READY;
+        boolean localImportEnabled = source.localImportAvailable()
+                && sourceIntent != null
+                && sourceIntent.state() == J3ManualCallIntentState.CONFIRMED_READY;
         return new ManualCallControlView(
                 source.globalStopActive(),
                 source.operatorActivated(),
@@ -50,10 +54,11 @@ public record ManualCallControlView(
                 source.globalStopActive(),
                 !source.globalStopActive() && source.circuitState() == J3CircuitState.LOCKED,
                 source.operatorActivated()
-                        && source.providerTransportAvailable()
+                        && source.localImportAvailable()
                         && !activeIntent,
                 source.providerTransportAvailable(),
                 realCallEnabled,
+                localImportEnabled,
                 source.providerBlockers(),
                 sourceIntent == null ? null : IntentView.from(sourceIntent));
     }

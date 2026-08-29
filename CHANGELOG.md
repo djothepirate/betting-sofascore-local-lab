@@ -4,6 +4,123 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### J5 — migration Playwright des donnees evenement validee
+
+- implementation de `WO-SS-20260827-015` sur la branche dediee
+  `codex/j5-playwright-event-data`, fondee sur le runtime commun valide par WO-013 et WO-014 et
+  conforme a l'ADR-SS-001 v1.4 ;
+- remplacement du transport J5 direct par `ProviderJ5EventDataPlaywrightTransport`, sans
+  `RestClient`, FlareSolverr ni fallback, avec un worker, un `BrowserContext` non persistant et une
+  lease dédiés à la même campagne pour `EVENT_STATISTICS`, `EVENT_INCIDENTS` puis
+  `EVENT_LINEUPS` ;
+- passage du protocole worker a v5 pour les routes J5 fermees, fidelite des statuts et octets issus
+  de `Response.body()`, poursuite apres un `404` raw-first et arret terminal sans retry pour tout
+  autre incident ;
+- raccordement de l'arret J5 a la campagne Playwright exacte : acquittement borne, annulation de
+  l'appel en vol, aucune famille suivante et nettoyage de l'arbre attribue sans arret par nom ;
+- latch d'arret global J5 independant de l'historique terminal : un succes conserve son etat et son
+  code `COMPLETED_LOCKED`/`COMPLETED`, mais aucune nouvelle preparation n'est acceptee avant le
+  redemarrage du processus ;
+- fermeture fail-closed : une erreur de nettoyage survenue avant toute mutation reste retentable
+  sur la meme campagne, la lease partagee n'est liberee qu'apres nettoyage confirme et un echec
+  persistant apres mutation bloque toute campagne J3/J4/J5 jusqu'au redemarrage du processus ;
+  l'arret exact reste routable sans reecrire l'issue terminale historique ;
+- lanceur J5 fonde sur un `clean package` obligatoire avec verification de l'absence du bytecode
+  historique direct, et preuves d'hygiene renforcees par scan XML decode des rapports Maven et
+  recherche d'un canari aleatoire par run dans le contenu effectif de toutes les racines runtime
+  isolées ; seules trois ressources exactes embarquees par le driver Playwright sont distinguees des
+  artefacts generes, apres comparaison octet pour octet avec le classpath ;
+- cache fournisseur J5 declare `NOT_APPLICABLE` : aucune lecture ni ecriture de cache pendant une
+  campagne, tandis que les imports locaux unitaires et multi-match restent strictement sans worker
+  ni transport ;
+- tests cibles du transport verts (`20` tests), exclusivite de lease J5/J3/J4 verte (`1` test) et
+  qualification Chromium loopback ciblee verte (`14` tests), dont une sequence `200/404/200` dans
+  un seul contexte et un arret pendant `INCIDENTS` avec zero `LINEUPS` et zero residu ; aucun acces
+  SofaScore n'a ete effectue ;
+- conservation intacte de la migration append-only V26 et du parseur `event-incidents-v14` de
+  WO-012 ; aucune migration n'est ajoutee par WO-015 ;
+- readiness technique finale verte : 765 tests standards (2 ignores), 53 tests PostgreSQL,
+  11 tests de protocole/securite et 14 tests Chromium loopback, puis
+  `Verify-Local.ps1 -WithIntegrationTests` en `PASS`, sans appel SofaScore ;
+- qualification fonctionnelle proprietaire du `2026-08-29` sur Lille - Paris Saint-Germain
+  (`providerEventId=16310930`) : terminal J5 `COMPLETED_LOCKED`, trois appels ordonnes, zero import
+  local et snapshots `603`, `604`, `605` complets pour statistiques, incidents et compositions ;
+- non-regression J4 confirmee dans la meme session avec `EVENT_DETAILS` conserve dans le snapshot
+  `606` et terminal `COMPLETED_LOCKED` ;
+- correction d'une indisponibilite du catalogue J3 provoquee par deux candidats dont les libelles
+  fournisseur contenaient une tabulation ou un saut de ligne : ces candidats sont maintenant
+  exclus individuellement, sans sanitisation ni modification des snapshots bruts, et un test de
+  regression couvre le maintien des options sures ;
+- reprise humaine J3 verte sur 18 pages : catalogue `AVAILABLE`, `1 428` tournois actionnables,
+  `338` occurrences exclues, liste deroulante visible, puis qualification Ligue 1 `5 / 5` dans le
+  snapshot `643` ;
+- `WO-SS-20260827-015` passe a `VALIDATED` et rejoint `completed`. La preuve est consommee et
+  n'autorise aucun appel fournisseur supplementaire. Les huit cles locales ont ete reverrouillees,
+  J4 et J5 ont ete constates `LOCKED` apres redemarrage, puis l'application de controle a ete
+  arretee sans JVM attribuee restante.
+
+### J4 — migration Playwright de `EVENT_DETAILS` validée
+
+- ouverture de l'implementation de `WO-SS-20260827-014` sur une baseline standard verte de 691
+  tests, 0 echec, 0 erreur et 2 ignores, sans appel fournisseur ;
+- amendement ADR-SS-001 v1.4 approuvant la persistance du `404` comme
+  `ENDPOINT_UNAVAILABLE` sans parsing ni retry, la poursuite de la seconde cible fixe en phase 1 et
+  le resultat `COMPLETED_UNAVAILABLE` en phase 2 ;
+- exception cache strictement bornee de phase 2 : un rafraichissement manuel confirme sur une
+  identite canonique imposee cote serveur realise au plus un GET sans lecture du cache ;
+- architecture cible fondee sur le worker, le superviseur, l'IPC, la lease et le nettoyage communs
+  de WO-013, avec un contexte neuf par campagne et aucune duplication de runtime J4 ;
+- remplacement du transport direct J4 par l'adaptateur Playwright commun, campagne phase 1 partagee
+  et paresseuse, campagne phase 2 neuve sans lecture cache, selection canonique imposee cote serveur
+  et arret cible avec nettoyage prioritaire ;
+- readiness finale verte : 728 tests standards, 52 tests PostgreSQL, 10 tests de protocole/securite
+  et 12 tests Chromium `EVENT_DETAILS`, sans appel fournisseur pendant les validations techniques ;
+- qualification fonctionnelle declaree concluante par le proprietaire le `2026-08-28` :
+  rafraichissement J4 phase 2 `COMPLETED`, snapshot conserve et reverrouillage terminal ;
+- controle de non-regression J3 Playwright concluant sur la collecte paginee de 12 pages et la
+  decouverte tournoi ; `WO-SS-20260827-014` passe a `VALIDATED` et rejoint `completed`.
+
+### J3 — implémentation du transport fournisseur manuel Playwright
+
+- remplacement, dans le Work Order `WO-SS-20260827-013`, des deux adaptateurs J3
+  `SCHEDULED_EVENTS` et `TOURNAMENT_SCHEDULED_EVENTS` par un worker Playwright JVM enfant commun,
+  sans URI libre ni fallback `RestClient` ou FlareSolverr ;
+- ajout des profils Maven `provider-playwright-runtime` et
+  `provider-playwright-local-qualification`, avec Playwright Java `1.62.0` et cache Chromium local
+  ignoré sous `.tmp/provider-playwright-browsers`. Le build standard reste sans source ni
+  dépendance Playwright et `SOFASCORE_PLAYWRIGHT_ENABLED=false` conserve l’inertie par défaut ;
+- un worker, un Chromium headless et un `BrowserContext` non persistant neufs par campagne ;
+  JavaScript et service workers bloqués, cookies effacés, téléchargements, popups, WebSockets,
+  routes secondaires, redirections et retries interdits, sans profil, proxy, `storageState`, HAR,
+  trace, vidéo ou capture ;
+- IPC privé et authentifié sur `127.0.0.1`, payload borné à 5 Mio, réponse issue exclusivement du
+  statut, du `Content-Type` borné et des octets de `Response.body()`, sans reconstruction DOM ;
+- lease exclusive couvrant toute la pagination J3 et délai minimal partagé de trois secondes entre
+  départs fournisseur ; les imports JSON locaux et les cache hits ne démarrent pas Playwright ;
+- arrêt ciblé de la campagne et de son arbre exact par PID et instant de création, avec bornes de
+  500 ms pour l’acquittement, 2 s pour l’annulation et 5 s pour le nettoyage, sans arrêt par nom ;
+- traitement raw-first des réponses, y compris HTTP `404` persisté et classé
+  `ENDPOINT_UNAVAILABLE` avant tout parsing, sans retry, fallback ou page suivante ;
+- scripts explicites d’installation et de qualification loopback sur `127.0.0.1`. Cette
+  qualification locale n’autorise aucun appel fournisseur et ne clôt pas le Work Order.
+- correction issue du premier essai opérateur J3 : le superviseur impose désormais
+  `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` dans l'environnement assaini du worker, afin que
+  `Playwright.create()` n'installe jamais implicitement Firefox ou WebKit avant le frame `READY` ;
+  les lanceurs refusent aussi un cache sans marqueurs et exécutables Chromium complets ;
+- la disparition attendue du PID racine après une trame terminale authentifiée est reconnue sans
+  relâcher l'authentification des autres chemins de nettoyage. La preuve minimisée v6 distingue une
+  ouverture de campagne échouée d'un GET réellement transmis et n'incrémente plus le compteur
+  fournisseur avant l'émission effective de la requête.
+- qualification humaine corrective du 28 août 2026 : `SCHEDULED_EVENTS` termine douze pages HTTP
+  `200` dans l'ordre, snapshots 572 à 583, avec `hasNextPage=false` en page 12, zéro cache, import,
+  retry, polling ou donnée de session et arrêt global réappliqué. Cinq actions distinctes
+  `TOURNAMENT_SCHEDULED_EVENTS` conservent ensuite les snapshots 584 à 588, vérifient six rencontres
+  canoniques sur Ligue 1, Premier League, LaLiga, Bundesliga et Serie A, puis rendent leurs liens J5
+  disponibles sans saisie d'identifiant ;
+- validation propriétaire et clôture de `WO-SS-20260827-013` après 17 appels humains confirmés.
+  L'application est arrêtée gracieusement, sans listener `127.0.0.1:8087`, JVM applicatif ou worker
+  Playwright résiduel. Le Work Order rejoint `docs/work_orders/completed`; aucun appel supplémentaire
+  n'est autorisé par cette clôture.
 ### J5 — marqueur de prolongation live `Extra time`
 
 - nouvelle règle incidents : le parseur versionné `event-incidents-v14` accepte exactement
@@ -23,7 +140,6 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `COMPLETE · 100%` sous `event-incidents-v14`, avec 24 incidents et `86/86` signaux puis
   28 incidents et `99/99` signaux. `Extra time` reste affiché à la minute 120 tandis que le score
   évolue de `1-1` à `1-2`. `WO-SS-20260827-012` est validé, fermé et déplacé vers `completed`.
-
 ### J5 — import hors ligne multi-match atomique
 
 - correction issue de la recette Borussia Dortmund — FC Bayern München (`16248441`) : chaque

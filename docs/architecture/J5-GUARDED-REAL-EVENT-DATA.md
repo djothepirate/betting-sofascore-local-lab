@@ -30,6 +30,18 @@ FINAL_APPLICATION_STOPPED_AFTER_RELOCK=PASS
 V13_WORK_ORDER_ARCHIVABLE=YES
 V13_WORK_ORDER_STATUS=VALIDATED
 V14_WORK_ORDER_STATUS=VALIDATED
+WO_015_STATUS=VALIDATED
+ADR_SS_001_VERSION=1.4
+J5_PROVIDER_TRANSPORT=PLAYWRIGHT_ONLY
+WORKER_PROTOCOL_VERSION=5
+J5_PROVIDER_CACHE=NOT_APPLICABLE
+WO_015_TECHNICAL_PROVIDER_ACCESS=NO
+WO_015_HUMAN_PROVIDER_QUALIFICATION=PASS_BY_OWNER_EXECUTION_2026_08_29
+WO_015_ADDITIONAL_PROVIDER_CALL_AUTHORIZED=NO
+WO_015_LOCAL_CONFIGURATION_RELOCKED=YES_8_KEYS
+WO_015_J4_LOCKED_AFTER_RESTART=PASS
+WO_015_J5_LOCKED_AFTER_RESTART=PASS
+WO_015_CLOSURE=AUTHORIZED_BY_OWNER_2026_08_29
 ```
 
 Cette architecture complète le contrat synthétique J5 V1 sans le remplacer. Elle autorise une
@@ -56,7 +68,49 @@ Les chemins techniques de complétude restent persistés mais ne sont plus rendu
 incidents et compositions ; badges, compteurs et tables restent inchangés. Le contrôle visuel final
 le confirme. Le propriétaire a également attesté le reverrouillage de la configuration et les
 états J4/J5 `LOCKED` après redémarrage ; l'absence de listener sur `127.0.0.1:8087` confirme l'arrêt
-final. Le Work Order est `VALIDATED` et archivable.
+final. Les Work Orders de parseur historiques sont `VALIDATED` et archivables ; ce statut ne
+valait pas, a lui seul, qualification du nouveau transport Playwright WO-015.
+
+### 1.1 Transport courant WO-015
+
+WO-015 remplace le transport fournisseur direct J5 par le runtime Playwright commun approuve par
+l'ADR-SS-001 v1.4. Une campagne confirmee acquiert une seule lease et ouvre paresseusement un seul
+worker JVM, un seul Chromium headless et un seul `BrowserContext` non persistant. Les commandes
+allowlistees `EVENT_STATISTICS`, `EVENT_INCIDENTS` et `EVENT_LINEUPS` sont envoyees dans cet ordre
+strict via le protocole IPC v5 ; aucune autre route, methode, query, redirection ou origine n'est
+admise.
+
+Le contexte est conserve jusqu'au terminal de la campagne et ferme sur chaque chemin de sortie.
+Il n'utilise aucun profil, cookie injecte, `storageState`, HAR, trace, video, capture,
+telechargement, proxy ou mecanisme de challenge. Les octets proviennent de `Response.body()` et ne
+sont jamais reconstruits depuis le DOM. Le cache fournisseur J5 est `NOT_APPLICABLE` : aucune
+lecture ou ecriture de cache ne precede ou ne suit les trois commandes.
+
+Un `404` est restitue au pipeline raw-first, conserve comme `ENDPOINT_UNAVAILABLE` et laisse la
+campagne poursuivre dans le meme worker, contexte et lease. Tout autre incident est terminal ; il
+n'existe ni retry, ni fallback `RestClient` ou FlareSolverr, ni import local de secours, ni second
+contexte. L'arret J5 signale le superviseur exact, interdit la commande suivante, puis nettoie
+l'arbre attribue par PID et instant de creation dans les bornes 500 ms / 2 s / 5 s.
+
+La demande de fermeture et la confirmation de nettoyage sont deux etats distincts. Des la premiere
+demande, aucune nouvelle commande n'est acceptee ; en revanche, le meme handle peut retenter la
+fermeture si la premiere tentative echoue avant toute mutation. La lease partagee n'est liberee
+qu'apres confirmation du nettoyage. Une erreur pre-mutation transitoire garde donc J3/J4 bloques
+jusqu'au succes du second passage. Une erreur apres mutation rend le nettoyage terminal et conserve
+la lease fail-closed jusqu'au redemarrage du processus, plutot que de permettre une campagne
+concurrente avec un worker potentiellement orphelin. L'arret exact reste routable apres un resultat
+terminal pour permettre le nettoyage du superviseur, sans modifier l'etat ni le code terminal
+historiques.
+
+Cette implementation n'ajoute aucune migration. La migration V26 et le parseur
+`event-incidents-v14` de WO-012 sont des prerequis conserves sans modification. Les validations
+ciblees et loopback ont execute zero acces fournisseur. La qualification humaine distincte du
+`2026-08-29` a ensuite termine J5 sur l'identifiant `16310930` avec trois appels ordonnes, zero
+import et les snapshots `603`, `604` et `605` complets. J4 est reste fonctionnel dans la meme
+session avec le snapshot `606`. Apres correction de deux libelles fournisseur J3 contenant des
+caracteres de controle, une nouvelle collecte de 18 pages a publie un catalogue `AVAILABLE` de
+`1 428` options et la qualification Ligue 1 a conserve `5 / 5` rencontres dans le snapshot `643`.
+Le Work Order est valide et clos ; cette preuve n'autorise aucun appel supplementaire.
 
 ## 2. Frontière d'autorisation
 
@@ -64,6 +118,8 @@ La voie réelle n'est disponible que si les conditions suivantes sont simultané
 
 - `SOFASCORE_ENABLED=true` ;
 - `SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=true` ;
+- le processus a été démarré explicitement par le lanceur J5 avec le runtime Playwright et son
+  worker vérifié ; les valeurs Playwright restent désactivées dans `.env` et au démarrage normal ;
 - J3 peut être désactivé ou explicitement activé ; dans ce dernier cas `SCHEDULED_EVENTS` appartient
   obligatoirement à l'union exacte des endpoints actifs ;
 - soit J4 est désactivé, soit J4 phase 2 est activé avec `EVENT_DETAILS` ; J4 phase 1 ne peut pas
@@ -76,9 +132,10 @@ La voie réelle n'est disponible que si les conditions suivantes sont simultané
 
 Les propriétés Spring autorisent J3, J4 phase 2 et J5 dans la même instance uniquement avec leur
 union exacte de cinq endpoints ; toute famille absente ou supplémentaire bloque le démarrage. Le
-coordinateur partagé sérialise les sections HTTP de ces trois voies et impose le même délai minimal
-entre deux départs. Le catalogue général reste `callable=false`, sans URI, et `ConnectorGate` reste
-bloquant. Les chemins J3/J4/J5 sont des exceptions spécialisées, temporaires et contrôlées par
+coordinateur partagé et la lease Playwright sérialisent les campagnes de ces trois voies et
+imposent le même délai minimal entre deux départs. Le catalogue général reste `callable=false`,
+sans URI, et `ConnectorGate` reste bloquant. Les chemins J3/J4/J5 sont des exceptions spécialisées,
+temporaires et contrôlées par
 leurs Work Orders. Les résultats historiques du Work Order J5 restent inchangés ; cette extension
 est tracée par l'amendement opérateur du Work Order J7.
 
@@ -97,12 +154,14 @@ cinq minutes. La confirmation exige :
 - un acquittement explicite ;
 - une politique de configuration encore valide.
 
-Une confirmation produit un claim immuable. `COMPLETED_LOCKED` interdit tout rejeu de ce claim,
-mais autorise une nouvelle préparation explicite dans le même processus. Cette préparation ne
-contacte pas le fournisseur, crée un nouvel identifiant de requête et une nouvelle phrase, remet
-la liste des familles terminées à zéro et exige un nouvel acquittement avant tout transport.
-`FAILED_LOCKED`, `STOPPED_LOCKED` et `EXPIRED_LOCKED` restent des verrous de processus et exigent
-un redémarrage.
+Une confirmation produit un claim immuable. `COMPLETED_LOCKED` interdit tout rejeu de ce claim et
+n'autorise une nouvelle préparation explicite dans le même processus que tant que l'arrêt global
+J5 n'a pas été appliqué. Cette préparation ne contacte pas le fournisseur, crée un nouvel
+identifiant de requête et une nouvelle phrase, remet la liste des familles terminées à zéro et exige
+un nouvel acquittement avant tout transport. Dès que l'arrêt global est appliqué, le latch
+`globalStopActive` interdit toute préparation jusqu'au redémarrage, y compris lorsque l'état et le
+code historiques restent `COMPLETED_LOCKED` et `COMPLETED`. `FAILED_LOCKED`, `STOPPED_LOCKED` et
+`EXPIRED_LOCKED` restent également des verrous de processus et exigent un redémarrage.
 
 ### 3.1 Alternative locale des trois preuves JSON
 
@@ -150,20 +209,23 @@ identité locale vérifiée
   → COMPLETED_LOCKED
 ```
 
-Chaque requête est un `GET` vers un chemin construit localement. Le client n'utilise ni proxy,
-ni redirection, ni cookie, ni jeton, ni compte, ni en-tête de navigateur. Les délais de connexion
-et de lecture sont plafonnés à dix secondes, la réponse à cinq Mio et aucune API de retry n'est
-exposée.
+Chaque commande est un `GET` vers un chemin construit localement et validé avant l'IPC. Le worker
+Playwright v5 ouvre les trois navigations dans le même `BrowserContext`, bloque redirections et
+routes secondaires, efface les cookies entre commandes et n'utilise ni proxy, jeton, compte ni
+donnée de session. Le timeout est plafonné à dix secondes, la réponse à cinq Mio et aucune API de
+retry n'est exposée. Le statut, le `Content-Type` borné et les octets proviennent de la réponse
+Playwright ; le DOM n'est jamais utilisé pour reconstruire le corps.
 
 La voie d'import local remplace toute cette séquence réseau pour la campagne concernée. Elle ne
 simule pas ces GET et n'ajoute aucun délai artificiel ; elle conserve toutefois le même ordre de
 persistance et de normalisation ainsi que les mêmes états terminaux.
 
-Les services réels J4 et J5 partagent un coordinateur de requêtes dans le processus. Il sérialise
-les échanges, maintient `maximumConcurrency=1` même avec plusieurs onglets et applique le délai
-minimal entre deux débuts de transport, y compris entre le dernier appel J4 et le premier appel J5.
-Le verrou couvre l'échange HTTP et est toujours libéré à sa sortie. Les contrôles terminaux restent
-séparés : un arrêt global J4 ne bloque pas la préparation J5, et inversement.
+Les services réels J3, J4 et J5 partagent un coordinateur et une lease de campagne. Ils maintiennent
+`maximumConcurrency=1` même avec plusieurs onglets et appliquent le délai minimal entre deux débuts
+de transport, y compris entre le dernier appel J4 et le premier appel J5. La lease J5 couvre les
+trois familles et la fermeture du worker : aucune autre campagne ne peut s'intercaler entre elles.
+Les contrôles terminaux restent séparés : un arrêt global J4 ne bloque pas la préparation J5, et
+inversement.
 
 Un HTTP `404` sur l'un des trois chemins exacts n'est pas un incident de transport : la famille est
 facultative et peut ne pas être publiée pour l'événement ou sa compétition. Le snapshot est

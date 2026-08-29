@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
 
+import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
+
 public record J4RealPhase2ControlSnapshot(
         J4RealPhase2State state,
         Instant changedAt,
@@ -12,6 +14,7 @@ public record J4RealPhase2ControlSnapshot(
         String confirmationPhrase,
         Instant preparedAt,
         Instant expiresAt,
+        UUID canonicalEventId,
         Long eventId,
         boolean eventCompleted,
         String terminalCode,
@@ -30,12 +33,21 @@ public record J4RealPhase2ControlSnapshot(
         if (eventId != null) {
             EventDetailsProviderRequest.requirePhase2EventId(eventId);
         }
+        if ((canonicalEventId == null) != (eventId == null)) {
+            throw new IllegalArgumentException(
+                    "canonical event id and provider event id must be present together");
+        }
+        if (canonicalEventId != null) {
+            new CanonicalEventIdentity(
+                    canonicalEventId, CanonicalEventIdentity.SOFASCORE, eventId);
+        }
         if (state == J4RealPhase2State.AWAITING_CONFIRMATION) {
             if (requestId == null
                     || confirmationPhrase == null
                     || preparedAt == null
                     || expiresAt == null
                     || !expiresAt.isAfter(preparedAt)
+                    || canonicalEventId == null
                     || eventId == null
                     || eventCompleted
                     || terminalCode != null) {
@@ -44,7 +56,7 @@ public record J4RealPhase2ControlSnapshot(
             }
         }
         if (state == J4RealPhase2State.EXECUTING
-                && (requestId == null || eventId == null)) {
+                && (requestId == null || canonicalEventId == null || eventId == null)) {
             throw new IllegalArgumentException(
                     "executing phase requires a request id and event id");
         }

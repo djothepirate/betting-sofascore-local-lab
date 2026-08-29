@@ -50,9 +50,12 @@ public final class J3ScheduledEventsOutcomeProcessor {
         }
 
         J3CircuitReason reason = reasonForHttpStatus(response.httpStatus());
+        RawSnapshotSchemaStatus schemaStatus = response.httpStatus() == 404
+                ? RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE
+                : RawSnapshotSchemaStatus.TRANSPORT_ERROR;
         RawSnapshotPersistenceResult persistence = snapshotStore.save(snapshot(
                 response,
-                RawSnapshotSchemaStatus.TRANSPORT_ERROR,
+                schemaStatus,
                 reason.name()));
         J3CircuitSnapshot opened = recordHttpIncident(response, reason);
         return J3ScheduledEventsOutcome.recorded(persistence, opened);
@@ -80,6 +83,8 @@ public final class J3ScheduledEventsOutcomeProcessor {
             case IO_FAILURE -> J3CircuitReason.TRANSPORT_IO_FAILURE;
             case PAYLOAD_TOO_LARGE -> J3CircuitReason.PAYLOAD_TOO_LARGE;
             case SENSITIVE_CONTENT_REJECTED -> J3CircuitReason.SENSITIVE_CONTENT_REJECTED;
+            case UNEXPECTED_CONTENT -> J3CircuitReason.UNEXPECTED_CONTENT;
+            case OPERATOR_STOP -> J3CircuitReason.TRANSPORT_IO_FAILURE;
         };
         J3CircuitSnapshot opened = circuit.recordIncident(
                 J3CircuitIncident.at(reason, occurredAt));
@@ -140,6 +145,7 @@ public final class J3ScheduledEventsOutcomeProcessor {
             case 400 -> J3CircuitReason.HTTP_BAD_REQUEST;
             case 401 -> J3CircuitReason.HTTP_UNAUTHORIZED;
             case 403 -> J3CircuitReason.HTTP_FORBIDDEN;
+            case 404 -> J3CircuitReason.ENDPOINT_UNAVAILABLE;
             case 429 -> J3CircuitReason.HTTP_TOO_MANY_REQUESTS;
             default -> J3CircuitReason.SERVER_ERROR;
         };

@@ -2,6 +2,7 @@ package com.bettingproject.sofascorelocal.application.network;
 
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
+import com.bettingproject.sofascorelocal.domain.provider.J3LocalJsonImportExecutionClaim;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallControlSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallExecutionClaim;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentSnapshot;
@@ -23,6 +24,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
@@ -42,6 +44,7 @@ public class J3ManualCallControlService {
     private final Supplier<UUID> requestIdSupplier;
     private final IntSupplier confirmationCodeSupplier;
     private final Supplier<J3ProviderQualificationSnapshot> providerAvailabilitySupplier;
+    private final Supplier<J3ProviderQualificationSnapshot> localImportAvailabilitySupplier;
     private final J3NetworkCircuit circuit;
 
     private boolean globalStopActive = true;
@@ -53,7 +56,8 @@ public class J3ManualCallControlService {
                 Clock.systemUTC(),
                 UUID::randomUUID,
                 new SecureRandom()::nextInt,
-                Objects.requireNonNull(providerPolicy, "providerPolicy")::snapshot);
+                Objects.requireNonNull(providerPolicy, "providerPolicy")::snapshot,
+                providerPolicy::localImportSnapshot);
     }
 
     J3ManualCallControlService(
@@ -64,6 +68,7 @@ public class J3ManualCallControlService {
                 clock,
                 requestIdSupplier,
                 confirmationCodeSupplier,
+                () -> J3ProviderQualificationSnapshot.blocked(PROVIDER_BLOCKERS),
                 () -> J3ProviderQualificationSnapshot.blocked(PROVIDER_BLOCKERS));
     }
 
@@ -72,6 +77,20 @@ public class J3ManualCallControlService {
             Supplier<UUID> requestIdSupplier,
             IntSupplier confirmationCodeSupplier,
             Supplier<J3ProviderQualificationSnapshot> providerAvailabilitySupplier) {
+        this(
+                clock,
+                requestIdSupplier,
+                confirmationCodeSupplier,
+                providerAvailabilitySupplier,
+                providerAvailabilitySupplier);
+    }
+
+    J3ManualCallControlService(
+            Clock clock,
+            Supplier<UUID> requestIdSupplier,
+            IntSupplier confirmationCodeSupplier,
+            Supplier<J3ProviderQualificationSnapshot> providerAvailabilitySupplier,
+            Supplier<J3ProviderQualificationSnapshot> localImportAvailabilitySupplier) {
         this.clock = Objects.requireNonNull(clock, "clock");
         this.requestIdSupplier = Objects.requireNonNull(requestIdSupplier, "requestIdSupplier");
         this.confirmationCodeSupplier = Objects.requireNonNull(
@@ -80,6 +99,9 @@ public class J3ManualCallControlService {
         this.providerAvailabilitySupplier = Objects.requireNonNull(
                 providerAvailabilitySupplier,
                 "providerAvailabilitySupplier");
+        this.localImportAvailabilitySupplier = Objects.requireNonNull(
+                localImportAvailabilitySupplier,
+                "localImportAvailabilitySupplier");
         circuit = J3NetworkCircuit.lockedAt(clock.instant());
     }
 
@@ -179,7 +201,7 @@ public class J3ManualCallControlService {
             throw rejected(J3ManualCallControlError.CONFIRMATION_TEXT_MISMATCH);
         }
 
-        J3ProviderQualificationSnapshot qualification = providerAvailabilitySupplier.get();
+        J3ProviderQualificationSnapshot qualification = localImportAvailabilitySupplier.get();
         intent = new Intent(
                 intent.requestId(),
                 intent.date(),
@@ -199,6 +221,34 @@ public class J3ManualCallControlService {
     }
 
     public synchronized J3ManualCallExecutionClaim claimExecution(UUID requestId) {
+        requireClaimableIntent(requestId);
+        J3ProviderQualificationSnapshot qualification = providerAvailabilitySupplier.get();
+        if (!qualification.available()) {
+            throw rejected(J3ManualCallControlError.PROVIDER_TRANSPORT_UNAVAILABLE);
+        }
+        beginExecution();
+        return new J3ManualCallExecutionClaim(
+                intent.requestId(),
+                intent.date(),
+                qualification.providerOrigin(),
+                intent.firstPage());
+    }
+
+    public synchronized J3LocalJsonImportExecutionClaim claimLocalImportExecution(
+            UUID requestId) {
+        requireClaimableIntent(requestId);
+        J3ProviderQualificationSnapshot qualification = localImportAvailabilitySupplier.get();
+        if (!qualification.available()) {
+            throw rejected(J3ManualCallControlError.PROVIDER_TRANSPORT_UNAVAILABLE);
+        }
+        beginExecution();
+        return new J3LocalJsonImportExecutionClaim(
+                intent.requestId(),
+                intent.date(),
+                intent.firstPage());
+    }
+
+    private void requireClaimableIntent(UUID requestId) {
         Objects.requireNonNull(requestId, "requestId");
         requireMatchingIntent(requestId);
         if (intent.state() == J3ManualCallIntentState.EXECUTING
@@ -210,21 +260,15 @@ public class J3ManualCallControlService {
         if (intent.state() != J3ManualCallIntentState.CONFIRMED_READY) {
             throw rejected(J3ManualCallControlError.INTENT_NOT_READY);
         }
-        J3ProviderQualificationSnapshot qualification = providerAvailabilitySupplier.get();
-        if (!qualification.available()) {
-            throw rejected(J3ManualCallControlError.PROVIDER_TRANSPORT_UNAVAILABLE);
-        }
+    }
+
+    private void beginExecution() {
         intent = copyWithState(
                 intent,
                 J3ManualCallIntentState.EXECUTING,
                 intent.completedPages(),
                 null,
                 null);
-        return new J3ManualCallExecutionClaim(
-                intent.requestId(),
-                intent.date(),
-                qualification.providerOrigin(),
-                intent.firstPage());
     }
 
     public synchronized boolean executionMayContinue(UUID requestId) {
@@ -295,6 +339,24 @@ public class J3ManualCallControlService {
     }
 
     public synchronized J3ManualCallControlSnapshot stopGlobally() {
+        return stopGlobally(ignored -> { });
+    }
+
+    public synchronized J3ManualCallControlSnapshot stopGlobally(
+            Consumer<UUID> beforeLock) {
+        Objects.requireNonNull(beforeLock, "beforeLock");
+        try {
+            if (intent != null) {
+                beforeLock.accept(intent.requestId());
+            }
+        }
+        finally {
+            lockByOperator();
+        }
+        return toSnapshot();
+    }
+
+    private void lockByOperator() {
         Instant now = clock.instant();
         globalStopActive = true;
         circuit.stopByOperator(now);
@@ -313,7 +375,6 @@ public class J3ManualCallControlService {
                     null,
                     null);
         }
-        return toSnapshot();
     }
 
     private void requireReadyForIntent() {
@@ -348,6 +409,8 @@ public class J3ManualCallControlService {
     private J3ManualCallControlSnapshot toSnapshot() {
         J3CircuitSnapshot circuitSnapshot = circuit.snapshot();
         J3ProviderQualificationSnapshot qualification = providerAvailabilitySupplier.get();
+        J3ProviderQualificationSnapshot localImportQualification =
+                localImportAvailabilitySupplier.get();
         return new J3ManualCallControlSnapshot(
                 globalStopActive,
                 circuitSnapshot.state(),
@@ -357,6 +420,7 @@ public class J3ManualCallControlService {
                 LocalDate.now(clock),
                 intent == null ? null : intent.toSnapshot(),
                 qualification.available(),
+                localImportQualification.available(),
                 qualification.blockers());
     }
 

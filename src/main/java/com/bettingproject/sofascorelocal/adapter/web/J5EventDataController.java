@@ -8,6 +8,8 @@ import com.bettingproject.sofascorelocal.application.network.J5LocalJsonImportEr
 import com.bettingproject.sofascorelocal.application.network.J5LocalJsonImportException;
 import com.bettingproject.sofascorelocal.application.network.J5LocalJsonImportService;
 import com.bettingproject.sofascorelocal.application.network.J5LocalUnavailableEvidence;
+import com.bettingproject.sofascorelocal.application.network.J5ProviderCampaignStopException;
+import com.bettingproject.sofascorelocal.application.network.J5ProviderCampaignStopService;
 import com.bettingproject.sofascorelocal.application.network.J5RealControlException;
 import com.bettingproject.sofascorelocal.application.network.J5RealControlService;
 import com.bettingproject.sofascorelocal.application.network.J5RealEventDataService;
@@ -45,6 +47,7 @@ public class J5EventDataController {
     private final J5RealControlService realControlService;
     private final J5RealEventDataService realEventDataService;
     private final J5LocalJsonImportService localJsonImportService;
+    private final J5ProviderCampaignStopService providerCampaignStopService;
     private final LocalFormTokenService formTokenService;
 
     public J5EventDataController(
@@ -53,12 +56,14 @@ public class J5EventDataController {
             J5RealControlService realControlService,
             J5RealEventDataService realEventDataService,
             J5LocalJsonImportService localJsonImportService,
+            J5ProviderCampaignStopService providerCampaignStopService,
             LocalFormTokenService formTokenService) {
         this.queryService = queryService;
         this.fixtureImportService = fixtureImportService;
         this.realControlService = realControlService;
         this.realEventDataService = realEventDataService;
         this.localJsonImportService = localJsonImportService;
+        this.providerCampaignStopService = providerCampaignStopService;
         this.formTokenService = formTokenService;
     }
 
@@ -274,10 +279,15 @@ public class J5EventDataController {
             HttpSession session,
             RedirectAttributes redirectAttributes) {
         formTokenService.consume(session, localFormToken);
-        realControlService.stop();
-        redirectAttributes.addFlashAttribute(
-                "j5RealMessage",
-                "Arrêt global J5 appliqué. Aucun nouvel appel n’est autorisé avant redémarrage.");
+        try {
+            providerCampaignStopService.stopAll();
+            redirectAttributes.addFlashAttribute(
+                    "j5RealMessage",
+                    "Arrêt global J5 appliqué. Aucun nouvel appel n’est autorisé avant redémarrage.");
+        }
+        catch (J5ProviderCampaignStopException exception) {
+            addRealError(redirectAttributes, "PLAYWRIGHT_STOP_UNCONFIRMED");
+        }
         redirectAttributes.addFlashAttribute("j5RealMessageKind", "danger");
         redirectAttributes.addAttribute("zone", zone);
         return "redirect:/events/{canonicalEventId}/statistics";

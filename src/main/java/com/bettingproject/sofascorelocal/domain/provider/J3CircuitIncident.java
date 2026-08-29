@@ -14,6 +14,7 @@ public record J3CircuitIncident(
             J3CircuitReason.HTTP_BAD_REQUEST,
             J3CircuitReason.HTTP_UNAUTHORIZED,
             J3CircuitReason.HTTP_FORBIDDEN,
+            J3CircuitReason.ENDPOINT_UNAVAILABLE,
             J3CircuitReason.HTTP_TOO_MANY_REQUESTS,
             J3CircuitReason.TIMEOUT,
             J3CircuitReason.TRANSPORT_IO_FAILURE,

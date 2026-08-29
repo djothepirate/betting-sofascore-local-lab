@@ -33,7 +33,7 @@ public class J3ManualCollectionEvidenceService {
 
     private static String format(J3MinimizedCollectionEvidence evidence) {
         StringBuilder report = new StringBuilder();
-        line(report, "J3_MINIMIZED_EVIDENCE_VERSION", "5");
+        line(report, "J3_MINIMIZED_EVIDENCE_VERSION", "6");
         line(report, "GENERATED_AT", evidence.generatedAt());
         line(report, "COLLECTION_DATE", evidence.collectionDate());
         line(report, "PAGINATION_MODE", "HAS_NEXT_PAGE");
@@ -46,15 +46,13 @@ public class J3ManualCollectionEvidenceService {
         line(report, "PAGES_RESOLVED", evidence.pageAttempts().stream()
                 .map(attempt -> Integer.toString(attempt.page()))
                 .collect(Collectors.joining(",")));
-        line(report, "PROVIDER_PAGES_REQUESTED", pagesForSource(
-                evidence, J3PageResolutionSource.PROVIDER));
+        line(report, "PROVIDER_PAGES_REQUESTED", providerRequestedPages(evidence));
         line(report, "CACHE_HIT_PAGES", pagesForSource(
                 evidence, J3PageResolutionSource.CACHE));
         line(report, "LOCAL_JSON_IMPORT_PAGES", pagesForSource(
                 evidence, J3PageResolutionSource.LOCAL_JSON_IMPORT));
         line(report, "PROVIDER_REQUEST_COUNT", evidence.pageAttempts().stream()
-                .filter(attempt -> attempt.resolutionSource()
-                        == J3PageResolutionSource.PROVIDER)
+                .filter(J3MinimizedPageEvidence::providerRequestExecuted)
                 .count());
         line(report, "CACHE_HIT_COUNT", evidence.pageAttempts().stream()
                 .filter(attempt -> attempt.resolutionSource()
@@ -82,8 +80,7 @@ public class J3ManualCollectionEvidenceService {
             line(report, prefix + "RESOLVED_AT", attempt.resolvedAt());
             line(report, prefix + "CACHE_STORED_AT", value(attempt.cacheStoredAt()));
             line(report, prefix + "PROVIDER_REQUEST_EXECUTED",
-                    attempt.resolutionSource() == J3PageResolutionSource.PROVIDER
-                            ? "YES" : "NO");
+                    attempt.providerRequestExecuted() ? "YES" : "NO");
             line(report, prefix + "LOCAL_JSON_IMPORT_EXECUTED",
                     attempt.resolutionSource() == J3PageResolutionSource.LOCAL_JSON_IMPORT
                             ? "YES" : "NO");
@@ -113,6 +110,14 @@ public class J3ManualCollectionEvidenceService {
             J3PageResolutionSource source) {
         String pages = evidence.pageAttempts().stream()
                 .filter(attempt -> attempt.resolutionSource() == source)
+                .map(attempt -> Integer.toString(attempt.page()))
+                .collect(Collectors.joining(","));
+        return pages.isEmpty() ? "NONE" : pages;
+    }
+
+    private static String providerRequestedPages(J3MinimizedCollectionEvidence evidence) {
+        String pages = evidence.pageAttempts().stream()
+                .filter(J3MinimizedPageEvidence::providerRequestExecuted)
                 .map(attempt -> Integer.toString(attempt.page()))
                 .collect(Collectors.joining(","));
         return pages.isEmpty() ? "NONE" : pages;

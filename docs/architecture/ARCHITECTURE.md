@@ -71,16 +71,20 @@ VPS       : aucune connexion
 | `domain.history` / `domain.retention` | versions, changements, traces de snapshots et plans de rétention J6 |
 | `domain.export` | statut, manifeste, décision, composant et preuves de fichier J7 |
 | `application` | politiques réseau, orchestration manuelle et lot J5 hors ligne, normalisation, historique, diff, rétention et export J7 |
-| `adapter.sofascore` | catalogue fermé, transports spéciaux bornés et parseurs hors ligne J2/J4/J5/découverte tournoi |
+| `adapter.sofascore` | catalogue fermé, adaptateurs Playwright bornés J3/J4/J5 et parseurs hors ligne J2/J4/J5/découverte tournoi |
 | `adapter.persistence` | preuves brutes, occurrences, observations normalisées, historique, rétention et manifestes J7 |
 | `adapter.file` | publication J7 create-new par lien physique atomique, bornée à la racine locale |
 | `adapter.web` | tableau de bord, recherche, contrôle de lot et vues J4/J5/J6/J7 locales |
 | `resources/db/migration` | schémas V1 à V26, migrations append-only et triggers d’immuabilité |
 | `fixtures` | corpus synthétiques hors ligne J2, J4, J5 et J6 |
 
-Le connecteur général demeure bloqué. Un `RestClient` distinct est construit uniquement pour le
-chemin manuel J3 borné ; il ne reçoit qu’une requête de domaine validée et ne peut viser que
-l’origine `https://www.sofascore.com`, une date ISO explicite et les pages `1` à `25`.
+Le connecteur général demeure bloqué. Le chemin manuel J3 borné délègue ses deux familles
+`SCHEDULED_EVENTS` et `TOURNAMENT_SCHEDULED_EVENTS` à un worker Playwright JVM enfant commun. Le
+worker ne reçoit qu’une requête de domaine validée et ne peut viser que l’origine
+`https://www.sofascore.com`, les deux routes allowlistées, une date ISO explicite et, pour la
+pagination, les pages `1` à `25`. Le profil Maven `provider-playwright-runtime` ajoute le runtime à
+la compilation sans le démarrer ; `SOFASCORE_PLAYWRIGHT_ENABLED=false` maintient l’inertie par
+défaut. Il n’existe aucun fallback `RestClient` ou FlareSolverr.
 Après la confirmation, une action alternative accepte localement un lot complet de corps JSON
 J3 1 à N. Elle partage le contrôle et la garde de concurrence, mais ne construit aucune requête,
 ne lit ni n'écrit le cache fournisseur et persiste avec `MANUAL_LOCAL_JSON_IMPORT`.
@@ -92,25 +96,52 @@ processus courant, puis utilise un transport dédié vers
 seulement `tournament.id`; date et identifiant numérique du tournoi unique sont résolus et
 revalidés côté serveur. Le libellé de la liste associe exactement `tournament.name`, le séparateur
 ` - ` et la portée descriptive `tournament.category.name`; la catégorie ne participe jamais à
-l'identité ni à l'URI. Avant publication, les options exigent cette catégorie puis sont filtrées par
-intersection entre les clés de `timezoneEventCount` et les offsets réellement applicables à la
-date J3 dans `Europe/Paris` ; ce calcul couvre l'heure d'été, l'heure d'hiver et les deux offsets
-d'une journée de bascule sans dépendre du fuseau système. Après redémarrage, aucune liste n'est
-recomposée implicitement depuis des snapshots historiques.
+l'identité ni à l'URI. Avant publication, une occurrence deja parsee dont le nom de phase ou de
+tournoi unique contient un caractere ISO de controle est exclue de la projection sans sanitiser ni
+reecrire les snapshots bruts. Les valeurs blanches, les categories invalides et les conflits
+restent des incompatibilites strictes en amont. Les options sures sont ensuite filtrees par
+intersection entre les cles de `timezoneEventCount` et les offsets reellement applicables a la
+date J3 dans `Europe/Paris` ; ce calcul couvre l'heure d'ete, l'heure d'hiver et les deux offsets
+d'une journee de bascule sans dependre du fuseau systeme. Apres redemarrage, aucune liste n'est
+recomposee implicitement depuis des snapshots historiques.
 
-J4 ajoute un second `RestClient` spécial qui ne reçoit que `EventDetailsProviderRequest`. Ce type
-refuse toute origine autre que `https://www.sofascore.com` et tout identifiant hors de la portée
-bornée par son mode avant la construction de l’URI. J4 phase 1 reste exclusif ; J4 phase 2 peut
-partager une instance explicitement armée avec J3 et J5. Aucun de ces opt-ins ne déverrouille
-`ConnectorGate` ou le catalogue général.
+Une lease du coordinateur couvre toute campagne J3 Playwright et conserve le délai partagé de
+trois secondes entre départs fournisseur. Chaque campagne possède un worker, un Chromium headless
+et un `BrowserContext` non persistant neufs ; le protocole IPC commun v5 transporte les commandes
+allowlistées J3, J4 et J5. Aucun profil, cookie, `storageState`, HAR, trace, vidéo, capture ou
+téléchargement n’est conservé. L’IPC est authentifié et lié uniquement à
+`127.0.0.1`. L’arrêt ferme la campagne et nettoie l’arbre exact attribué par PID et instant de
+création, jamais par nom de processus. Le statut, le type de contenu et les octets sont capturés
+avant parsing ; HTTP `404` est persisté puis classé `ENDPOINT_UNAVAILABLE`, sans retry ni page
+suivante. Le contrat complet et ses exclusions sont décrits dans
+[`J3-PLAYWRIGHT-PROVIDER-TRANSPORT.md`](J3-PLAYWRIGHT-PROVIDER-TRANSPORT.md).
 
-J5 possède une voie fournisseur distincte, désactivée par défaut et bornée aux trois familles d'une
-identité canonique déjà présente. Elle reste manuelle, séquentielle, sans retry et peut être réunie
-avec J3 et J4 phase 2 dans une session explicitement armée. L'ensemble autorisé doit être exactement
-l'union des endpoints correspondant aux opt-ins. `ManualProviderRequestCoordinator`, injecté dans
-les services réels J3/J4/J5, garantit une seule section HTTP active et un délai minimal commun entre
-deux départs, même depuis plusieurs onglets. Maven intercepte ces transports et n'effectue aucun
-appel réel.
+J4 réutilise le même runtime par l'adaptateur Playwright qui ne reçoit que
+`EventDetailsProviderRequest`. Ce type refuse toute origine autre que
+`https://www.sofascore.com` et tout identifiant hors de la portée bornée par son mode avant la
+construction de la commande worker. J4 phase 1 reste exclusif ; J4 phase 2 peut partager une
+instance explicitement armée avec J3 et J5. Aucun de ces opt-ins ne déverrouille `ConnectorGate`
+ou le catalogue général. Il n'existe aucun fallback `RestClient` ou FlareSolverr.
+
+WO-015 remplace également le transport direct J5 par l'adaptateur Playwright commun. La voie reste
+désactivée par défaut et bornée aux trois familles d'une identité canonique déjà présente. Une
+campagne acquiert la lease exclusive avant le démarrage paresseux, puis garde un seul worker, un
+seul Chromium et un seul `BrowserContext` non persistant pour les commandes strictement ordonnées
+`EVENT_STATISTICS`, `EVENT_INCIDENTS`, `EVENT_LINEUPS`. Le cache fournisseur J5 est
+`NOT_APPLICABLE` : il n'est ni lu ni écrit. Un `404` raw-first est conservé comme
+`ENDPOINT_UNAVAILABLE` et laisse passer la commande suivante ; tout autre incident ferme la
+campagne sans retry, fallback ou contexte de remplacement. L'arrêt J5 signale la campagne exacte,
+interdit toute commande suivante et nettoie l'arbre attribué par PID et instant de création.
+La lease n'est liberee qu'apres confirmation de ce nettoyage. Une erreur de fermeture survenue
+avant toute mutation reste retentable sur la meme campagne ; apres le debut d'une mutation, un
+nettoyage non confirme devient terminal et la lease est retenue jusqu'au redemarrage du processus
+afin qu'aucune campagne J3 ou J4 ne puisse chevaucher un worker potentiellement orphelin.
+
+J5 peut être réuni avec J3 et J4 phase 2 dans une instance explicitement armée. L'ensemble
+autorisé doit être exactement l'union des endpoints correspondant aux opt-ins.
+`ManualProviderRequestCoordinator` et la lease Playwright garantissent une seule campagne active
+et le délai minimal commun entre deux départs, même depuis plusieurs onglets. Les suites Maven
+standards n'activent ni Playwright ni Chromium et n'effectuent aucun appel réel.
 
 J5 possède également un lot multi-match strictement hors ligne sous `/j5-import-batches`. Son
 contrôle mémoire, sa politique et son importeur sont séparés de `J5RealControlService` et du

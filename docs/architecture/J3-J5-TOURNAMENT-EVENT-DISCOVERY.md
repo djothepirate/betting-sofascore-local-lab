@@ -87,8 +87,10 @@ considère donc identiques uniquement deux horodatages dont l'écart absolu est 
 `SNAPSHOT_METADATA_MISMATCH`. Tous les autres champs de métadonnées et d'intégrité restent exacts ;
 cette règle ne permet ni de substituer un snapshot, ni de relâcher la clé date/page ou le SHA-256.
 
-Une seule divergence rend le catalogue entier indisponible. Une collecte interrompue, échouée ou
-dont la pagination n'est pas terminale ne publie aucune option appelable.
+Une divergence de provenance, d'integrite, de pagination ou une contradiction entre occurrences
+rend le catalogue entier indisponible. Une collecte interrompue, echouee ou dont la pagination
+n'est pas terminale ne publie aucune option appelable. Le filtre correctif decrit ci-dessous
+s'applique aux occurrences distinctes deja parsees ; il ne relache pas ces invariants globaux.
 
 ### 3.1 bis Import atomique des pages J3
 
@@ -128,10 +130,14 @@ catégorie, les compteurs et les snapshots sources. Une valeur falsifiée ou dev
 donc refusée avant tout transport. La catégorie ne participe jamais à l'URI ni à l'identité.
 
 Deux phases partageant le même `uniqueTournament.id` restent deux options distinctes. Une
-occurrence sans tournoi unique ou sans `tournament.category.name` est parsable pour J3 mais exclue
-de la liste actionnable : aucune portée de remplacement n'est inventée. Un même `tournament.id`
-répété à l'identique est regroupé ; une contradiction sur son nom, sa catégorie, son tournoi unique
-ou ses compteurs invalide le catalogue.
+occurrence deja parsee dont `tournament.name` ou `tournament.uniqueTournament.name` contient un
+caractere ISO de controle n'est pas construite comme option et compte parmi les occurrences
+exclues. Ce cas borne couvre la tabulation et le saut de ligne observes sur deux `tournament.id`
+distincts pendant la recette. Les libelles et snapshots bruts ne sont jamais sanitises ni
+reecrits. Une valeur blanche, une categorie invalide ou absente, ou l'absence du tournoi unique
+reste soumise aux invariants stricts en amont : aucune portee ou valeur de remplacement n'est
+inventee. Un meme `tournament.id` repete a l'identique est regroupe ; une contradiction sur son
+nom, sa categorie, son tournoi unique ou ses compteurs invalide le catalogue.
 
 ### 3.3 Politique d'éligibilité par offset local
 
@@ -415,8 +421,10 @@ Les suites standard et PostgreSQL doivent couvrir : catalogue exact multi-pages,
 snapshots, aller-retour `timestamptz` à la microseconde, refus d'une dérive temporelle supérieure,
 import J3 atomique 1..N sans transport/cache, provenance et preuve v5, refus des lots troués ou
 non terminaux,
-conservation de `category.name`, libellé géographique exact, exclusion sans catégorie, conflit de
-catégorie, falsification MVC, requête numérique, origine fermée, parser strict, cache hit/miss,
+conservation de `category.name`, libelle geographique exact, exclusion sans categorie, exclusion
+des phases distinctes parsees dont le nom de phase ou de tournoi unique porte une tabulation ou un
+saut de ligne, conflit de categorie, falsification MVC, requete numerique, origine fermee, parser
+strict, cache hit/miss,
 contrôle et expiration, projection Paris et DST, compteurs, doublons, transaction canonique, liens
 J5, migration V23→V24, upgrade V24→V25, séparation des modes d'acquisition, refus des fichiers
 sensibles ou surdimensionnés, import local de découverte sans interaction de transport/cache et

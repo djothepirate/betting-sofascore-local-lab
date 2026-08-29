@@ -1,6 +1,9 @@
 package com.bettingproject.sofascorelocal.application.network;
 
+import com.bettingproject.sofascorelocal.config.ProviderPlaywrightProperties;
+import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
+import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryControlSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryQualificationSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryState;
@@ -16,6 +19,7 @@ import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
@@ -56,6 +60,56 @@ class TournamentEventDiscoveryControlServiceTest {
                 .isEqualTo(EventDetailsProviderRequest.EXPECTED_ORIGIN);
         assertThat(claim.collectionDate()).isEqualTo(LocalDate.of(2026, 8, 18));
         assertThat(claim.selection()).isEqualTo(option(7));
+        assertThat(control.executionMayContinue(REQUEST_ID)).isTrue();
+    }
+
+    @Test
+    void rejectsAProviderClaimWithoutConsumingThePlaywrightIndependentLocalClaim() {
+        MutableClock clock = new MutableClock(Instant.parse("2026-08-20T08:00:00Z"));
+        J3TournamentCatalogService catalogService = mock(J3TournamentCatalogService.class);
+        when(catalogService.latest()).thenReturn(catalog(option(7)));
+        SofascoreProperties sofascore = new SofascoreProperties();
+        sofascore.setEnabled(true);
+        sofascore.setJ3QualificationEnabled(true);
+        sofascore.setTournamentEventDiscoveryEnabled(true);
+        sofascore.setBaseUrl(EventDetailsProviderRequest.EXPECTED_ORIGIN);
+        sofascore.setAllowedEndpoints(Set.of(
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS));
+        TournamentEventDiscoveryQualificationPolicy policy =
+                new TournamentEventDiscoveryQualificationPolicy(
+                        sofascore, new ProviderPlaywrightProperties());
+        var control = new TournamentEventDiscoveryControlService(
+                clock,
+                () -> REQUEST_ID,
+                () -> 42,
+                policy::snapshot,
+                policy::localImportSnapshot,
+                catalogService);
+        var prepared = control.prepare(119_880);
+
+        assertThatThrownBy(() -> control.confirmAndClaim(
+                REQUEST_ID, prepared.confirmationPhrase(), true))
+                .isInstanceOf(TournamentEventDiscoveryControlException.class)
+                .extracting(exception -> ((TournamentEventDiscoveryControlException) exception)
+                        .error())
+                .isEqualTo(
+                        TournamentEventDiscoveryControlError.PROVIDER_TRANSPORT_UNAVAILABLE);
+
+        var afterProviderRejection = control.snapshot();
+        assertThat(afterProviderRejection.state())
+                .isEqualTo(TournamentEventDiscoveryState.AWAITING_CONFIRMATION);
+        assertThat(afterProviderRejection.confirmationPhrase())
+                .isEqualTo(prepared.confirmationPhrase());
+        assertThat(afterProviderRejection.providerTransportAvailable()).isFalse();
+        assertThat(afterProviderRejection.localImportAvailable()).isTrue();
+        assertThat(control.executionMayContinue(REQUEST_ID)).isFalse();
+
+        var localClaim = control.confirmAndClaimLocalImport(
+                REQUEST_ID, prepared.confirmationPhrase(), true);
+
+        assertThat(localClaim.requestId()).isEqualTo(REQUEST_ID);
+        assertThat(localClaim.selection()).isEqualTo(option(7));
         assertThat(control.executionMayContinue(REQUEST_ID)).isTrue();
     }
 
@@ -149,7 +203,9 @@ class TournamentEventDiscoveryControlServiceTest {
                     }));
             assertThat(persistenceEntered.await(5, TimeUnit.SECONDS)).isTrue();
 
-            var stop = executor.submit(control::stop);
+            var stop = executor.submit(() -> {
+                return control.stop();
+            });
             assertThat(stopAttempted.await(5, TimeUnit.SECONDS)).isTrue();
             assertThat(stop.isDone()).isFalse();
 
@@ -169,6 +225,47 @@ class TournamentEventDiscoveryControlServiceTest {
             executor.shutdownNow();
             executor.awaitTermination(5, TimeUnit.SECONDS);
         }
+    }
+
+    @Test
+    void signalsTheExactCampaignBeforeApplyingTheTournamentBusinessLock() {
+        MutableClock clock = new MutableClock(Instant.parse("2026-08-20T08:00:00Z"));
+        J3TournamentCatalogService catalogService = mock(J3TournamentCatalogService.class);
+        when(catalogService.latest()).thenReturn(catalog(option(7)));
+        TournamentEventDiscoveryControlService control = control(clock, catalogService);
+        var prepared = control.prepare(119_880);
+        control.confirmAndClaim(REQUEST_ID, prepared.confirmationPhrase(), true);
+
+        var stopped = control.stop(requestId -> {
+            assertThat(requestId).isEqualTo(REQUEST_ID);
+            assertThat(control.snapshot().state())
+                    .isEqualTo(TournamentEventDiscoveryState.EXECUTING);
+        });
+
+        assertThat(stopped.state())
+                .isEqualTo(TournamentEventDiscoveryState.STOPPED_LOCKED);
+        assertThat(stopped.terminalCode()).isEqualTo("OPERATOR_STOP");
+    }
+
+    @Test
+    void appliesTheTournamentBusinessLockEvenWhenTheCampaignSignalFails() {
+        MutableClock clock = new MutableClock(Instant.parse("2026-08-20T08:00:00Z"));
+        J3TournamentCatalogService catalogService = mock(J3TournamentCatalogService.class);
+        when(catalogService.latest()).thenReturn(catalog(option(7)));
+        TournamentEventDiscoveryControlService control = control(clock, catalogService);
+        var prepared = control.prepare(119_880);
+        control.confirmAndClaim(REQUEST_ID, prepared.confirmationPhrase(), true);
+
+        assertThatThrownBy(() -> control.stop(requestId -> {
+            assertThat(requestId).isEqualTo(REQUEST_ID);
+            throw new IllegalStateException("signal failed");
+        }))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("signal failed");
+
+        assertThat(control.snapshot().state())
+                .isEqualTo(TournamentEventDiscoveryState.STOPPED_LOCKED);
+        assertThat(control.snapshot().terminalCode()).isEqualTo("OPERATOR_STOP");
     }
 
     @Test

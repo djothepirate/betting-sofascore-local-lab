@@ -182,6 +182,89 @@ class J5RealControlServiceTest {
     }
 
     @Test
+    void signalsTheOwnedCampaignBeforeLockingAndLocksEvenWhenTheSignalFails() {
+        J5RealControlService control = availableControl();
+        var prepared = control.prepare(CANONICAL_ID, EVENT_ID);
+        control.confirmAndClaim(REQUEST_ID, prepared.confirmationPhrase(), true);
+        AtomicReference<J5RealControlState> stateSeenByStop = new AtomicReference<>();
+
+        var stopped = control.stop(requestId -> {
+            assertThat(requestId).isEqualTo(REQUEST_ID);
+            stateSeenByStop.set(control.snapshot().state());
+        });
+
+        assertThat(stateSeenByStop.get()).isEqualTo(J5RealControlState.EXECUTING);
+        assertThat(stopped.state()).isEqualTo(J5RealControlState.STOPPED_LOCKED);
+        AtomicReference<UUID> repeatedStopId = new AtomicReference<>();
+        var repeatedStop = control.stop(repeatedStopId::set);
+        assertThat(repeatedStopId.get()).isEqualTo(REQUEST_ID);
+        assertThat(repeatedStop.state()).isEqualTo(J5RealControlState.STOPPED_LOCKED);
+        assertThat(repeatedStop.terminalCode()).isEqualTo("OPERATOR_STOP");
+
+        J5RealControlService terminalFailure = availableControl();
+        var failedPreparation = terminalFailure.prepare(CANONICAL_ID, EVENT_ID);
+        terminalFailure.confirmAndClaim(
+                REQUEST_ID, failedPreparation.confirmationPhrase(), true);
+        terminalFailure.fail(REQUEST_ID, "TRANSPORT_IO_FAILURE");
+        AtomicReference<UUID> failedStopId = new AtomicReference<>();
+
+        var unchangedFailure = terminalFailure.stop(failedStopId::set);
+
+        assertThat(failedStopId.get()).isEqualTo(REQUEST_ID);
+        assertThat(unchangedFailure.state()).isEqualTo(J5RealControlState.FAILED_LOCKED);
+        assertThat(unchangedFailure.terminalCode()).isEqualTo("TRANSPORT_IO_FAILURE");
+
+        J5RealControlService failingControl = availableControl();
+        var second = failingControl.prepare(CANONICAL_ID, EVENT_ID);
+        failingControl.confirmAndClaim(REQUEST_ID, second.confirmationPhrase(), true);
+        assertThatThrownBy(() -> failingControl.stop(requestId -> {
+            throw new IllegalStateException("bounded stop failure");
+        })).isInstanceOf(IllegalStateException.class);
+        assertThat(failingControl.snapshot().state())
+                .isEqualTo(J5RealControlState.STOPPED_LOCKED);
+    }
+
+    @Test
+    void globalStopAfterCompletionPreservesHistoryAndBlocksRearmingUntilRestart() {
+        J5RealControlService control = availableControl();
+        var prepared = control.prepare(CANONICAL_ID, EVENT_ID);
+        control.confirmAndClaim(REQUEST_ID, prepared.confirmationPhrase(), true);
+        J5RealControlService.ORDERED_ENDPOINTS.forEach(
+                endpoint -> control.recordEndpointCompleted(REQUEST_ID, endpoint));
+        var completed = control.complete(REQUEST_ID);
+        AtomicReference<UUID> stoppedRequestId = new AtomicReference<>();
+
+        var stopped = control.stop(stoppedRequestId::set);
+
+        assertThat(stoppedRequestId.get()).isEqualTo(REQUEST_ID);
+        assertThat(stopped.state()).isEqualTo(J5RealControlState.COMPLETED_LOCKED);
+        assertThat(stopped.terminalCode()).isEqualTo("COMPLETED");
+        assertThat(stopped.globalStopActive()).isTrue();
+        assertThat(stopped.preparationAllowed()).isFalse();
+        assertThatThrownBy(() -> control.prepare(CANONICAL_ID, EVENT_ID))
+                .isInstanceOf(J5RealControlException.class)
+                .extracting(exception -> ((J5RealControlException) exception).error())
+                .isEqualTo(J5RealControlError.TERMINAL_LOCK_REQUIRES_RESTART);
+
+        J5RealControlService failingStop = availableControl();
+        var secondPrepared = failingStop.prepare(CANONICAL_ID, EVENT_ID);
+        failingStop.confirmAndClaim(
+                REQUEST_ID, secondPrepared.confirmationPhrase(), true);
+        J5RealControlService.ORDERED_ENDPOINTS.forEach(
+                endpoint -> failingStop.recordEndpointCompleted(REQUEST_ID, endpoint));
+        failingStop.complete(REQUEST_ID);
+
+        assertThatThrownBy(() -> failingStop.stop(requestId -> {
+            throw new IllegalStateException("bounded stop failure");
+        })).isInstanceOf(IllegalStateException.class);
+        assertThat(failingStop.snapshot().state())
+                .isEqualTo(J5RealControlState.COMPLETED_LOCKED);
+        assertThat(failingStop.snapshot().terminalCode()).isEqualTo("COMPLETED");
+        assertThat(failingStop.snapshot().globalStopActive()).isTrue();
+        assertThat(failingStop.snapshot().preparationAllowed()).isFalse();
+    }
+
+    @Test
     void keepsAnExecutionFailureLockedUntilRestart() {
         J5RealControlService control = availableControl();
         var prepared = control.prepare(CANONICAL_ID, EVENT_ID);

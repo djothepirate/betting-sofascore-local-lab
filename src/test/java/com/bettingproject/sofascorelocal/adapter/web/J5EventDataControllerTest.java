@@ -7,6 +7,7 @@ import com.bettingproject.sofascorelocal.application.event.J5OfflineFixtureImpor
 import com.bettingproject.sofascorelocal.application.event.J5OfflineImportResult;
 import com.bettingproject.sofascorelocal.application.network.J5LocalJsonImportService;
 import com.bettingproject.sofascorelocal.application.network.J5LocalUnavailableEvidence;
+import com.bettingproject.sofascorelocal.application.network.J5ProviderCampaignStopService;
 import com.bettingproject.sofascorelocal.application.network.J5RealCampaignResult;
 import com.bettingproject.sofascorelocal.application.network.J5RealControlService;
 import com.bettingproject.sofascorelocal.application.network.J5RealEndpointResult;
@@ -95,6 +96,9 @@ class J5EventDataControllerTest {
     J5LocalJsonImportService localJsonImportService;
 
     @MockitoBean
+    J5ProviderCampaignStopService providerCampaignStopService;
+
+    @MockitoBean
     LocalFormTokenService formTokenService;
 
     @MockitoBean
@@ -113,6 +117,7 @@ class J5EventDataControllerTest {
                 null,
                 List.of(),
                 null,
+                false,
                 false,
                 List.of("J5_EVENT_DATA_QUALIFICATION_DISABLED")));
     }
@@ -209,6 +214,7 @@ class J5EventDataControllerTest {
                 900001L,
                 List.of(),
                 null,
+                false,
                 true,
                 List.of()));
 
@@ -260,6 +266,7 @@ class J5EventDataControllerTest {
                 completedEventId,
                 J5RealControlService.ORDERED_ENDPOINTS,
                 "COMPLETED",
+                false,
                 true,
                 List.of()));
 
@@ -274,6 +281,47 @@ class J5EventDataControllerTest {
                 .andExpect(content().string(containsString("value=\"900001\"")))
                 .andExpect(content().string(not(containsString("disabled=\"disabled\""))))
                 .andExpect(content().string(not(containsString("CONFIRMER J5 REAL"))));
+
+        verifyNoInteractions(realEventDataService);
+    }
+
+    @Test
+    void rendersACompletedCampaignAsLockedAfterTheGlobalStop() throws Exception {
+        J4EventSearchItem current = currentEvent();
+        J5EventDataPage page = new J5EventDataPage(
+                ZoneId.of("Europe/Paris"),
+                current,
+                J5EventDataBundle.empty());
+        long completedEventId = 16391135L;
+        when(formTokenService.issue(any(HttpSession.class))).thenReturn("one-use-token");
+        when(queryService.find(current.event().identity().value(), "Europe/Paris"))
+                .thenReturn(Optional.of(page));
+        when(realControlService.snapshot()).thenReturn(new J5RealControlSnapshot(
+                J5RealControlState.COMPLETED_LOCKED,
+                Instant.parse("2026-08-16T06:25:38Z"),
+                UUID.fromString("60000000-0000-0000-0000-000000000006"),
+                null,
+                Instant.parse("2026-08-16T06:25:30Z"),
+                null,
+                CanonicalEventIdentity.sofascore(completedEventId).value(),
+                completedEventId,
+                J5RealControlService.ORDERED_ENDPOINTS,
+                "COMPLETED",
+                true,
+                true,
+                List.of()));
+
+        mockMvc.perform(get(
+                        "/events/{id}/statistics",
+                        current.event().identity().value())
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("COMPLETED_LOCKED")))
+                .andExpect(content().string(containsString(
+                        "L’arrêt global est actif")))
+                .andExpect(content().string(containsString("disabled=\"disabled\"")))
+                .andExpect(content().string(not(containsString(
+                        "une nouvelle préparation explicite peut créer"))));
 
         verifyNoInteractions(realEventDataService);
     }
@@ -595,7 +643,7 @@ class J5EventDataControllerTest {
                                 + "/statistics?zone=Europe%2FParis"));
 
         verify(formTokenService).consume(any(HttpSession.class), eq("one-use-token"));
-        verify(realControlService).stop();
+        verify(providerCampaignStopService).stopAll();
     }
 
     private static J5RealCampaignResult localImportResult(

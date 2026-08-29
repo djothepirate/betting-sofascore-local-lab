@@ -1,9 +1,12 @@
 package com.bettingproject.sofascorelocal.application.network;
 
+import com.bettingproject.sofascorelocal.config.ProviderPlaywrightProperties;
+import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ProviderQualificationSnapshot;
+import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import org.junit.jupiter.api.Test;
 
 import java.time.Clock;
@@ -13,6 +16,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.net.URI;
+import java.util.Set;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -147,6 +151,44 @@ class J3ManualCallControlServiceTest {
     }
 
     @Test
+    void signalsTheExactCampaignBeforeApplyingTheGlobalBusinessLock() {
+        J3ManualCallControlService service = executingService();
+
+        var stopped = service.stopGlobally(requestId -> {
+            assertThat(requestId).isEqualTo(REQUEST_ID);
+            var beforeLock = service.snapshot();
+            assertThat(beforeLock.globalStopActive()).isFalse();
+            assertThat(beforeLock.circuitState()).isEqualTo(J3CircuitState.CLOSED);
+            assertThat(beforeLock.intent().state())
+                    .isEqualTo(J3ManualCallIntentState.EXECUTING);
+        });
+
+        assertThat(stopped.globalStopActive()).isTrue();
+        assertThat(stopped.circuitState()).isEqualTo(J3CircuitState.LOCKED);
+        assertThat(stopped.intent().state())
+                .isEqualTo(J3ManualCallIntentState.CANCELLED_BY_GLOBAL_STOP);
+    }
+
+    @Test
+    void appliesTheGlobalBusinessLockEvenWhenTheCampaignSignalFails() {
+        J3ManualCallControlService service = executingService();
+
+        assertThatThrownBy(() -> service.stopGlobally(requestId -> {
+            assertThat(requestId).isEqualTo(REQUEST_ID);
+            throw new IllegalStateException("signal failed");
+        }))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("signal failed");
+
+        var stopped = service.snapshot();
+        assertThat(stopped.globalStopActive()).isTrue();
+        assertThat(stopped.circuitState()).isEqualTo(J3CircuitState.LOCKED);
+        assertThat(stopped.circuitReason()).isEqualTo(J3CircuitReason.OPERATOR_STOP);
+        assertThat(stopped.intent().state())
+                .isEqualTo(J3ManualCallIntentState.CANCELLED_BY_GLOBAL_STOP);
+    }
+
+    @Test
     void exposesAReadyIntentOnlyForTheExactProviderOptIn() {
         MutableClock clock = new MutableClock(NOW);
         var service = new J3ManualCallControlService(
@@ -176,6 +218,44 @@ class J3ManualCallControlServiceTest {
         assertThat(claim.firstPage()).isEqualTo(1);
         assertThat(service.snapshot().providerTransportAvailable()).isTrue();
         assertThat(service.snapshot().providerBlockers()).isEmpty();
+    }
+
+    @Test
+    void rejectsAProviderClaimBeforeExecutingWithoutConsumingTheLocalImportClaim() {
+        MutableClock clock = new MutableClock(NOW);
+        SofascoreProperties sofascore = new SofascoreProperties();
+        sofascore.setEnabled(true);
+        sofascore.setJ3QualificationEnabled(true);
+        sofascore.setBaseUrl("https://www.sofascore.com");
+        sofascore.setAllowedEndpoints(Set.of(SofascoreEndpointType.SCHEDULED_EVENTS));
+        J3ProviderQualificationPolicy policy = new J3ProviderQualificationPolicy(
+                sofascore, new ProviderPlaywrightProperties());
+        var service = new J3ManualCallControlService(
+                clock,
+                () -> REQUEST_ID,
+                () -> 42,
+                policy::snapshot,
+                policy::localImportSnapshot);
+        service.rearmAfterGlobalStop();
+        service.activateByOperator();
+        var prepared = service.prepare(QUALIFICATION_DATE);
+        service.confirm(REQUEST_ID, prepared.intent().confirmationPhrase(), true);
+
+        assertRejected(
+                () -> service.claimExecution(REQUEST_ID),
+                J3ManualCallControlError.PROVIDER_TRANSPORT_UNAVAILABLE);
+
+        assertThat(service.executionMayContinue(REQUEST_ID)).isFalse();
+        assertThat(service.snapshot().intent().state())
+                .isEqualTo(J3ManualCallIntentState.CONFIRMED_READY);
+        assertThat(service.snapshot().providerTransportAvailable()).isFalse();
+        assertThat(service.snapshot().localImportAvailable()).isTrue();
+
+        var localClaim = service.claimLocalImportExecution(REQUEST_ID);
+
+        assertThat(localClaim.requestId()).isEqualTo(REQUEST_ID);
+        assertThat(localClaim.date()).isEqualTo(QUALIFICATION_DATE);
+        assertThat(service.executionMayContinue(REQUEST_ID)).isTrue();
     }
 
     @Test
@@ -253,6 +333,21 @@ class J3ManualCallControlServiceTest {
 
     private static J3ManualCallControlService service(Clock clock) {
         return new J3ManualCallControlService(clock, () -> REQUEST_ID, () -> 42);
+    }
+
+    private static J3ManualCallControlService executingService() {
+        J3ManualCallControlService service = new J3ManualCallControlService(
+                new MutableClock(NOW),
+                () -> REQUEST_ID,
+                () -> 42,
+                () -> J3ProviderQualificationSnapshot.available(
+                        URI.create("https://www.sofascore.com")));
+        service.rearmAfterGlobalStop();
+        service.activateByOperator();
+        var prepared = service.prepare(QUALIFICATION_DATE);
+        service.confirm(REQUEST_ID, prepared.intent().confirmationPhrase(), true);
+        service.claimExecution(REQUEST_ID);
+        return service;
     }
 
     private static void assertRejected(

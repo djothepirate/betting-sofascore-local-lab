@@ -2,9 +2,13 @@ package com.bettingproject.sofascorelocal.application.network;
 
 import com.bettingproject.sofascorelocal.adapter.sofascore.tournamentevents.TournamentScheduledEventsV1Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.tournamentevents.TournamentScheduledEventsParseEvidence;
+import com.bettingproject.sofascorelocal.adapter.sofascore.transport.ScheduledEventsTransportException;
+import com.bettingproject.sofascorelocal.adapter.sofascore.transport.ScheduledEventsTransportFailure;
 import com.bettingproject.sofascorelocal.application.event.TournamentCanonicalEventPersistenceService;
 import com.bettingproject.sofascorelocal.application.event.TournamentCanonicalizationResult;
 import com.bettingproject.sofascorelocal.application.event.TournamentDiscoveredEventView;
+import com.bettingproject.sofascorelocal.config.ProviderPlaywrightProperties;
+import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.provider.CachedTournamentScheduledEventsResponse;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
@@ -14,7 +18,9 @@ import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotAcquisitionM
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceOutcome;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceResult;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
+import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryExecutionClaim;
+import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryLocalImportClaim;
 import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryQualificationSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoverySource;
 import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryState;
@@ -40,6 +46,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Supplier;
 
@@ -51,6 +58,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -62,6 +70,7 @@ class TournamentEventDiscoveryServiceTest {
 
     private TournamentEventDiscoveryControlService control;
     private TournamentScheduledEventsProviderTransport transport;
+    private TournamentScheduledEventsProviderTransport.Campaign providerCampaign;
     private TournamentScheduledEventsCache cache;
     private RawManualCallSnapshotStore rawStore;
     private TournamentCanonicalEventPersistenceService persistence;
@@ -71,6 +80,7 @@ class TournamentEventDiscoveryServiceTest {
     void setUp() {
         control = mock(TournamentEventDiscoveryControlService.class);
         transport = mock(TournamentScheduledEventsProviderTransport.class);
+        providerCampaign = mock(TournamentScheduledEventsProviderTransport.Campaign.class);
         cache = mock(TournamentScheduledEventsCache.class);
         rawStore = mock(RawManualCallSnapshotStore.class);
         persistence = mock(TournamentCanonicalEventPersistenceService.class);
@@ -84,6 +94,7 @@ class TournamentEventDiscoveryServiceTest {
                 any(), any(), eq(TournamentEventDiscoveryService.CACHE_TTL),
                 eq(TournamentScheduledEventsV1Parser.PARSER_VERSION)))
                 .thenReturn(Optional.empty());
+        when(transport.openCampaign(any())).thenReturn(providerCampaign);
         when(control.executeWhileActive(eq(REQUEST_ID), any()))
                 .thenAnswer(invocation -> invocation.<Supplier<?>>getArgument(1).get());
         when(control.executeAndComplete(eq(REQUEST_ID), any()))
@@ -95,7 +106,8 @@ class TournamentEventDiscoveryServiceTest {
         RawPayloadEvidence payload = payload(7);
         var response = response(200, payload);
         var raw = persistenceResult(81, payload);
-        when(transport.execute(any())).thenReturn(response);
+        when(transport.openCampaign(REQUEST_ID)).thenReturn(providerCampaign);
+        when(providerCampaign.execute(any())).thenReturn(response);
         when(rawStore.save(any())).thenReturn(raw);
         when(persistence.persist(any(), eq(81L), eq(payload.sha256()), eq(NOW)))
                 .thenReturn(canonicalization());
@@ -108,6 +120,9 @@ class TournamentEventDiscoveryServiceTest {
         assertThat(result.snapshotId()).isEqualTo(81);
         assertThat(result.countStatus()).isEqualTo(TournamentEventCountStatus.COUNT_VERIFIED);
         assertThat(result.events()).hasSize(1);
+        verify(transport).openCampaign(REQUEST_ID);
+        verify(providerCampaign).execute(any());
+        verify(providerCampaign).close();
         InOrder order = inOrder(rawStore, cache, persistence, control);
         order.verify(rawStore).save(any());
         order.verify(rawStore).classify(81, RawSnapshotSchemaStatus.PARSED, null);
@@ -119,6 +134,34 @@ class TournamentEventDiscoveryServiceTest {
     }
 
     @Test
+    void preservesRawResponseWhenCampaignCleanupFailsAfterProviderGet() {
+        RawPayloadEvidence payload = payload(7);
+        var response = response(200, payload);
+        var raw = persistenceResult(87, payload);
+        when(providerCampaign.execute(any())).thenReturn(response);
+        when(rawStore.save(any())).thenReturn(raw);
+        doThrow(new ScheduledEventsTransportException(
+                ScheduledEventsTransportFailure.IO_FAILURE))
+                .when(providerCampaign).close();
+
+        var result = service.execute(claim(Map.of(7200, 1)));
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.terminalCode()).isEqualTo("TRANSPORT_IO_FAILURE");
+        assertThat(result.providerCallAttempts()).isEqualTo(1);
+        assertThat(result.snapshotId()).isEqualTo(87);
+        assertThat(result.payloadSha256()).isEqualTo(payload.sha256());
+        assertThat(result.payloadSizeBytes()).isEqualTo(payload.sizeBytes());
+        InOrder order = inOrder(providerCampaign, rawStore);
+        order.verify(providerCampaign).execute(any());
+        order.verify(rawStore).save(any());
+        order.verify(providerCampaign).close();
+        verify(rawStore, never()).classify(anyLong(), any(), any());
+        verify(cache, never()).recordParsed(any(), any(), any(), any());
+        verify(persistence, never()).persist(any(), anyLong(), any(), any());
+    }
+
+    @Test
     void importsAResponseBodyLocallyWithDistinctProvenanceAndNoProviderOrCacheCall() {
         RawPayloadEvidence payload = payload(7);
         var raw = persistenceResult(90, payload);
@@ -126,7 +169,7 @@ class TournamentEventDiscoveryServiceTest {
         when(persistence.persist(any(), eq(90L), eq(payload.sha256()), eq(NOW)))
                 .thenReturn(canonicalization());
 
-        var result = service.importLocalJson(claim(Map.of(7200, 1)), payload);
+        var result = service.importLocalJson(localImportClaim(Map.of(7200, 1)), payload);
 
         assertThat(result.completed()).isTrue();
         assertThat(result.source()).isEqualTo(
@@ -149,10 +192,70 @@ class TournamentEventDiscoveryServiceTest {
         assertThat(snapshotCaptor.getValue().latency()).isZero();
         assertThat(snapshotCaptor.getValue().payload()).isEqualTo(payload);
         verify(rawStore).classify(90, RawSnapshotSchemaStatus.PARSED, null);
-        verify(transport, never()).execute(any());
+        verify(transport, never()).openCampaign(any());
         verify(cache, never()).findFreshParsed(any(), any(), any(), any());
         verify(cache, never()).recordParsed(any(), any(), any(), any());
         verify(persistence).persist(any(), eq(90L), eq(payload.sha256()), eq(NOW));
+    }
+
+    @Test
+    void importsTournamentJsonWhenPlaywrightDefaultsAreDisabledAndWorkerJarIsEmpty() {
+        Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+        J3TournamentCatalogService catalogService = mock(J3TournamentCatalogService.class);
+        when(catalogService.latest()).thenReturn(catalog());
+        SofascoreProperties sofascore = new SofascoreProperties();
+        sofascore.setEnabled(true);
+        sofascore.setJ3QualificationEnabled(true);
+        sofascore.setTournamentEventDiscoveryEnabled(true);
+        sofascore.setBaseUrl(EventDetailsProviderRequest.EXPECTED_ORIGIN);
+        sofascore.setAllowedEndpoints(Set.of(
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS));
+        TournamentEventDiscoveryQualificationPolicy policy =
+                new TournamentEventDiscoveryQualificationPolicy(
+                        sofascore, new ProviderPlaywrightProperties());
+        TournamentEventDiscoveryControlService realControl =
+                new TournamentEventDiscoveryControlService(
+                        clock,
+                        () -> REQUEST_ID,
+                        () -> 42,
+                        policy::snapshot,
+                        policy::localImportSnapshot,
+                        catalogService);
+        var prepared = realControl.prepare(119_880);
+        assertThat(prepared.providerTransportAvailable()).isFalse();
+        assertThat(prepared.localImportAvailable()).isTrue();
+        var localClaim = realControl.confirmAndClaimLocalImport(
+                REQUEST_ID, prepared.confirmationPhrase(), true);
+        RawPayloadEvidence payload = payload(7);
+        when(rawStore.save(any())).thenReturn(persistenceResult(92, payload));
+        when(persistence.persist(any(), eq(92L), eq(payload.sha256()), eq(NOW)))
+                .thenReturn(canonicalization());
+        TournamentEventDiscoveryService localService =
+                new TournamentEventDiscoveryService(
+                        realControl,
+                        transport,
+                        cache,
+                        rawStore,
+                        new TournamentScheduledEventsProjectionService(),
+                        persistence,
+                        new TournamentScheduledEventsV1Parser(),
+                        new ManualProviderRequestCoordinator(
+                                clock,
+                                Duration.ofSeconds(3),
+                                ignored -> { }),
+                        clock);
+
+        var result = localService.importLocalJson(localClaim, payload);
+
+        assertThat(result.completed()).isTrue();
+        assertThat(result.source())
+                .isEqualTo(TournamentEventDiscoverySource.LOCAL_JSON_IMPORT);
+        assertThat(result.providerCallAttempts()).isZero();
+        assertThat(result.cacheHit()).isFalse();
+        verify(transport, never()).openCampaign(any());
+        verify(cache, never()).findFreshParsed(any(), any(), any(), any());
+        verify(cache, never()).recordParsed(any(), any(), any(), any());
     }
 
     @Test
@@ -181,7 +284,7 @@ class TournamentEventDiscoveryServiceTest {
         assertThat(result.completed()).isTrue();
         assertThat(result.cacheHit()).isTrue();
         assertThat(result.providerCallAttempts()).isZero();
-        verify(transport, never()).execute(any());
+        verify(transport, never()).openCampaign(any());
         verify(rawStore, never()).save(any());
         verify(cache, never()).recordParsed(any(), any(), any(), any());
     }
@@ -191,7 +294,7 @@ class TournamentEventDiscoveryServiceTest {
         RawPayloadEvidence payload = payload(7);
         var response = response(200, payload);
         var raw = persistenceResult(83, payload);
-        when(transport.execute(any())).thenReturn(response);
+        when(providerCampaign.execute(any())).thenReturn(response);
         when(rawStore.save(any())).thenReturn(raw);
 
         var result = service.execute(claim(Map.of(7200, 2)));
@@ -212,7 +315,7 @@ class TournamentEventDiscoveryServiceTest {
     void rejectsAUniqueTournamentContradictionBeforeCacheOrCanonicalWrites() {
         RawPayloadEvidence payload = payload(8);
         var response = response(200, payload);
-        when(transport.execute(any())).thenReturn(response);
+        when(providerCampaign.execute(any())).thenReturn(response);
         when(rawStore.save(any())).thenReturn(persistenceResult(84, payload));
 
         var result = service.execute(claim(Map.of(7200, 1)));
@@ -232,7 +335,7 @@ class TournamentEventDiscoveryServiceTest {
         RawPayloadEvidence payload = RawPayloadEvidence.capture(
                 "{\"events\":{}}".getBytes(StandardCharsets.UTF_8));
         var response = response(200, payload);
-        when(transport.execute(any())).thenReturn(response);
+        when(providerCampaign.execute(any())).thenReturn(response);
         when(rawStore.save(any())).thenReturn(persistenceResult(87, payload));
 
         var result = service.execute(claim(Map.of()));
@@ -261,7 +364,7 @@ class TournamentEventDiscoveryServiceTest {
                 new TournamentScheduledEventsProjectionService(),
                 Clock.fixed(NOW, ZoneOffset.UTC));
         RawPayloadEvidence payload = payload(7);
-        when(transport.execute(any())).thenReturn(response(200, payload));
+        when(providerCampaign.execute(any())).thenReturn(response(200, payload));
         when(rawStore.save(any())).thenReturn(persistenceResult(88, payload));
 
         var result = service.execute(claim(Map.of(7200, 1)));
@@ -290,7 +393,7 @@ class TournamentEventDiscoveryServiceTest {
                 failingProjection,
                 Clock.fixed(NOW, ZoneOffset.UTC));
         RawPayloadEvidence payload = payload(7);
-        when(transport.execute(any())).thenReturn(response(200, payload));
+        when(providerCampaign.execute(any())).thenReturn(response(200, payload));
         when(rawStore.save(any())).thenReturn(persistenceResult(89, payload));
 
         var result = service.execute(claim(Map.of(7200, 1)));
@@ -310,7 +413,7 @@ class TournamentEventDiscoveryServiceTest {
         RawPayloadEvidence payload = RawPayloadEvidence.capture(
                 "{\"error\":\"forbidden\"}".getBytes(StandardCharsets.UTF_8));
         var response = response(403, payload);
-        when(transport.execute(any())).thenReturn(response);
+        when(providerCampaign.execute(any())).thenReturn(response);
         when(rawStore.save(any())).thenReturn(persistenceResult(85, payload));
 
         var result = service.execute(claim(Map.of()));
@@ -318,10 +421,34 @@ class TournamentEventDiscoveryServiceTest {
         assertThat(result.completed()).isFalse();
         assertThat(result.terminalCode()).isEqualTo("HTTP_403");
         assertThat(result.providerCallAttempts()).isEqualTo(1);
-        verify(transport).execute(any());
+        verify(providerCampaign).execute(any());
         verify(rawStore).classify(85, RawSnapshotSchemaStatus.TRANSPORT_ERROR, "HTTP_403");
         verify(cache, never()).recordParsed(any(), any(), any(), any());
         verify(persistence, never()).persist(any(), anyLong(), any(), any());
+    }
+
+    @Test
+    void classifiesA404AsEndpointUnavailableWithoutParsingOrRetry() {
+        RawPayloadEvidence payload = RawPayloadEvidence.capture(
+                "{\"error\":\"not-found\"}".getBytes(StandardCharsets.UTF_8));
+        var response = response(404, payload);
+        when(providerCampaign.execute(any())).thenReturn(response);
+        when(rawStore.save(any())).thenReturn(persistenceResult(91, payload));
+
+        var result = service.execute(claim(Map.of()));
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.terminalCode()).isEqualTo("ENDPOINT_UNAVAILABLE");
+        assertThat(result.providerCallAttempts()).isEqualTo(1);
+        assertThat(result.snapshotId()).isEqualTo(91);
+        verify(providerCampaign).execute(any());
+        verify(rawStore).classify(
+                91,
+                RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE,
+                "ENDPOINT_UNAVAILABLE");
+        verify(cache, never()).recordParsed(any(), any(), any(), any());
+        verify(persistence, never()).persist(any(), anyLong(), any(), any());
+        verify(control).fail(REQUEST_ID, "ENDPOINT_UNAVAILABLE");
     }
 
     @Test
@@ -341,7 +468,7 @@ class TournamentEventDiscoveryServiceTest {
                 REQUEST_ID, prepared.confirmationPhrase(), true);
         RawPayloadEvidence payload = payload(7);
         var response = response(200, payload);
-        when(transport.execute(any())).thenAnswer(invocation -> {
+        when(providerCampaign.execute(any())).thenAnswer(invocation -> {
             realControl.stop();
             return response;
         });
@@ -373,6 +500,52 @@ class TournamentEventDiscoveryServiceTest {
         verify(persistence, never()).persist(any(), anyLong(), any(), any());
     }
 
+    @Test
+    void operatorStopThatTerminatesTransportIsNotReclassifiedAsATransportFailure() {
+        Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+        J3TournamentCatalogService catalogService = mock(J3TournamentCatalogService.class);
+        when(catalogService.latest()).thenReturn(catalog());
+        var realControl = new TournamentEventDiscoveryControlService(
+                clock,
+                () -> REQUEST_ID,
+                () -> 42,
+                () -> TournamentEventDiscoveryQualificationSnapshot.available(
+                        URI.create(EventDetailsProviderRequest.EXPECTED_ORIGIN)),
+                catalogService);
+        var prepared = realControl.prepare(119_880);
+        var realClaim = realControl.confirmAndClaim(
+                REQUEST_ID, prepared.confirmationPhrase(), true);
+        when(providerCampaign.execute(any())).thenAnswer(invocation -> {
+            realControl.stop();
+            throw new ScheduledEventsTransportException(
+                    ScheduledEventsTransportFailure.OPERATOR_STOP);
+        });
+        var realService = new TournamentEventDiscoveryService(
+                realControl,
+                transport,
+                cache,
+                rawStore,
+                new TournamentScheduledEventsProjectionService(),
+                persistence,
+                new TournamentScheduledEventsV1Parser(),
+                new ManualProviderRequestCoordinator(
+                        clock,
+                        Duration.ofSeconds(3),
+                        ignored -> { }),
+                clock);
+
+        var result = realService.execute(realClaim);
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.terminalCode()).isEqualTo("OPERATOR_STOP");
+        assertThat(result.providerCallAttempts()).isEqualTo(1);
+        assertThat(realControl.snapshot().state())
+                .isEqualTo(TournamentEventDiscoveryState.STOPPED_LOCKED);
+        verify(rawStore, never()).save(any());
+        verify(cache, never()).recordParsed(any(), any(), any(), any());
+        verify(persistence, never()).persist(any(), anyLong(), any(), any());
+    }
+
     private static TournamentEventDiscoveryExecutionClaim claim(
             Map<Integer, Integer> counts) {
         return new TournamentEventDiscoveryExecutionClaim(
@@ -387,6 +560,16 @@ class TournamentEventDiscoveryServiceTest {
                         "UEFA Champions League",
                         counts,
                         List.of(41L)));
+    }
+
+    private static TournamentEventDiscoveryLocalImportClaim localImportClaim(
+            Map<Integer, Integer> counts) {
+        TournamentEventDiscoveryExecutionClaim providerClaim = claim(counts);
+        return new TournamentEventDiscoveryLocalImportClaim(
+                providerClaim.requestId(),
+                providerClaim.providerOrigin(),
+                providerClaim.collectionDate(),
+                providerClaim.selection());
     }
 
     private static J3TournamentCatalog catalog() {

@@ -41,6 +41,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -99,6 +100,7 @@ class DashboardControllerTest {
                         null,
                         null,
                         false,
+                        false,
                         List.of("TOURNAMENT_EVENT_DISCOVERY_DISABLED")));
         when(snapshotInspectionService.loadCatalog())
                 .thenReturn(RawSnapshotInspectionCatalog.unavailable());
@@ -152,6 +154,7 @@ class DashboardControllerTest {
                 LocalDate.parse("2026-08-12"),
                 null,
                 false,
+                false,
                 List.of(
                         "REAL_ENDPOINT_URI_ABSENT",
                         "REAL_CALL_NOT_AUTHORIZED",
@@ -200,6 +203,7 @@ class DashboardControllerTest {
                         null,
                         null,
                         true,
+                        true,
                         List.of()));
         UUID discoveredEventId = UUID.fromString(
                 "c9cbad3e-b46b-55df-94f7-f55bd4f23999");
@@ -244,6 +248,8 @@ class DashboardControllerTest {
                 .andExpect(content().string(containsString("ARRÊT GLOBAL ACTIF")))
                 .andExpect(content().string(containsString("REAL_CALL_NOT_AUTHORIZED")))
                 .andExpect(content().string(containsString(
+                        "Verrous du transport fournisseur")))
+                .andExpect(content().string(containsString(
                         "J3 / Inspection locale en lecture seule")))
                 .andExpect(content().string(containsString(
                         "J6 / Rétention des payloads bruts")))
@@ -286,13 +292,18 @@ class DashboardControllerTest {
                         LocalDate.of(2026, 8, 14),
                         tournamentOption,
                         null,
+                        false,
                         true,
-                        List.of()));
+                        List.of(
+                                "PLAYWRIGHT_RUNTIME_DISABLED",
+                                "PLAYWRIGHT_WORKER_ARTIFACT_INVALID")));
 
         mockMvc.perform(get("/dashboard"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(
                         "action=\"/tournament-event-discovery/import-json\"")))
+                .andExpect(content().string(not(containsString(
+                        "action=\"/tournament-event-discovery/execute\""))))
                 .andExpect(content().string(containsString(
                         "enctype=\"multipart/form-data\"")))
                 .andExpect(content().string(containsString("name=\"jsonFile\"")))
@@ -355,6 +366,7 @@ class DashboardControllerTest {
                 LocalDate.parse("2026-08-13"),
                 intent,
                 true,
+                true,
                 List.of());
         when(dashboardService.load()).thenReturn(dashboardView);
         when(manualCallControlService.snapshot()).thenReturn(manualCallSnapshot);
@@ -363,11 +375,19 @@ class DashboardControllerTest {
         mockMvc.perform(get("/dashboard"))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(
+                        "LOCKED_OFFLINE_J3_POLICY")))
+                .andExpect(content().string(containsString(
                         "COLLECTE MANUELLE DYNAMIQUE PRÊTE")))
                 .andExpect(content().string(containsString(
                         "SCHEDULED_EVENTS|date=2026-08-13|pagination=has-next-page|max=25")))
                 .andExpect(content().string(containsString(
                         "Option A — Collecte fournisseur directe")))
+                .andExpect(content().string(containsString(
+                        "action=\"/manual-call/execute\"")))
+                .andExpect(content().string(containsString(
+                        "5A. Lancer la collecte paginée — APPELS FOURNISSEUR")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(containsString(
+                        "Lancer la collecte fournisseur — BLOQUÉE"))))
                 .andExpect(content().string(containsString(
                         "action=\"/manual-call/import-json-pages\"")))
                 .andExpect(content().string(containsString(

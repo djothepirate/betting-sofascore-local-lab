@@ -5,6 +5,7 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineup
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportException;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportFailure;
+import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderSupervisor;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
@@ -40,6 +41,9 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.Executors;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -47,6 +51,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -64,18 +69,23 @@ class J5RealEventDataServiceTest {
 
     private J5RealControlService control;
     private J5EventDataProviderTransport transport;
+    private J5EventDataProviderTransport.Campaign campaign;
     private RawManualCallSnapshotStore rawStore;
     private CanonicalEventStore canonicalStore;
     private J5EventDataStore dataStore;
     private List<String> operations;
     private List<J5EventDataObservation> observations;
     private List<Duration> pauses;
+    private ManualProviderRequestCoordinator coordinator;
+    private PlaywrightProviderSupervisor providerSupervisor;
     private J5RealEventDataService service;
 
     @BeforeEach
     void setUp() {
         control = mock(J5RealControlService.class);
         transport = mock(J5EventDataProviderTransport.class);
+        campaign = mock(J5EventDataProviderTransport.Campaign.class);
+        when(transport.openCampaign(REQUEST_ID)).thenReturn(campaign);
         rawStore = mock(RawManualCallSnapshotStore.class);
         canonicalStore = mock(CanonicalEventStore.class);
         dataStore = mock(J5EventDataStore.class);
@@ -131,6 +141,15 @@ class J5RealEventDataServiceTest {
                 return time.get();
             }
         };
+        coordinator = new ManualProviderRequestCoordinator(
+                clock,
+                Duration.ofSeconds(3),
+                delay -> {
+                    pauses.add(delay);
+                    time.set(time.get().plus(delay));
+                });
+        providerSupervisor = mock(PlaywrightProviderSupervisor.class);
+        when(providerSupervisor.activeCampaignId()).thenReturn(Optional.empty());
         service = new J5RealEventDataService(
                 control,
                 transport,
@@ -140,18 +159,14 @@ class J5RealEventDataServiceTest {
                 new EventStatisticsV2Parser(),
                 new EventIncidentsV14Parser(),
                 new EventLineupsV2Parser(),
-                clock,
-                Duration.ofSeconds(3),
-                delay -> {
-                    pauses.add(delay);
-                    time.set(time.get().plus(delay));
-                });
+                coordinator,
+                providerSupervisor);
     }
 
     @Test
     void persistsAStatistics404AsUnavailableThenContinuesTheOrderedCampaign()
             throws Exception {
-        when(transport.execute(any())).thenAnswer(invocation -> {
+        when(campaign.execute(any())).thenAnswer(invocation -> {
             J5EventDataProviderRequest request = invocation.getArgument(0);
             operations.add("transport:" + request.endpointType());
             if (request.endpointType() == SofascoreEndpointType.EVENT_STATISTICS) {
@@ -203,7 +218,8 @@ class J5RealEventDataServiceTest {
                 "classify:PARSED");
         verify(rawStore).classify(
                 101L, RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE, null);
-        verify(transport, times(3)).execute(any());
+        verify(campaign, times(3)).execute(any());
+        verifySingleCampaignLifecycle();
         verify(control, times(3)).recordEndpointCompleted(any(), any());
         verify(control).complete(REQUEST_ID);
         assertThat(pauses).containsExactly(
@@ -214,7 +230,7 @@ class J5RealEventDataServiceTest {
     @Test
     void continuesToLineupsAfterReparsingDeduplicatedHistoricalIncidentEvidence()
             throws Exception {
-        when(transport.execute(any())).thenAnswer(invocation -> {
+        when(campaign.execute(any())).thenAnswer(invocation -> {
             J5EventDataProviderRequest request = invocation.getArgument(0);
             operations.add("transport:" + request.endpointType());
             if (request.endpointType() == SofascoreEndpointType.EVENT_STATISTICS) {
@@ -286,7 +302,8 @@ class J5RealEventDataServiceTest {
         verify(rawStore, never()).classify(
                 32L, RawSnapshotSchemaStatus.PARSED, null);
         verify(rawStore).classify(35L, RawSnapshotSchemaStatus.PARSED, null);
-        verify(transport, times(3)).execute(any());
+        verify(campaign, times(3)).execute(any());
+        verifySingleCampaignLifecycle();
         verify(control, times(3)).recordEndpointCompleted(any(), any());
         verify(control).complete(REQUEST_ID);
     }
@@ -294,7 +311,7 @@ class J5RealEventDataServiceTest {
     @Test
     void executesExactlyThreeOrderedCallsAndPersistsRawBeforeEachNormalization()
             throws Exception {
-        when(transport.execute(any())).thenAnswer(invocation -> {
+        when(campaign.execute(any())).thenAnswer(invocation -> {
             J5EventDataProviderRequest request = invocation.getArgument(0);
             operations.add("transport:" + request.endpointType());
             return response(request, 200, fixtureFor(request.endpointType()));
@@ -321,7 +338,8 @@ class J5RealEventDataServiceTest {
                 "raw:EVENT_LINEUPS",
                 "normalized:EVENT_LINEUPS",
                 "classify:PARSED");
-        verify(transport, times(3)).execute(any());
+        verify(campaign, times(3)).execute(any());
+        verifySingleCampaignLifecycle();
         verify(control, times(3)).recordEndpointCompleted(any(), any());
         verify(control).complete(REQUEST_ID);
     }
@@ -329,7 +347,7 @@ class J5RealEventDataServiceTest {
     @Test
     void continuesToLineupsAfterNormalizingAProviderBenchIncident()
             throws Exception {
-        when(transport.execute(any())).thenAnswer(invocation -> {
+        when(campaign.execute(any())).thenAnswer(invocation -> {
             J5EventDataProviderRequest request = invocation.getArgument(0);
             operations.add("transport:" + request.endpointType());
             String body = request.endpointType() == SofascoreEndpointType.EVENT_INCIDENTS
@@ -385,7 +403,8 @@ class J5RealEventDataServiceTest {
                 "raw:EVENT_LINEUPS",
                 "normalized:EVENT_LINEUPS",
                 "classify:PARSED");
-        verify(transport, times(3)).execute(any());
+        verify(campaign, times(3)).execute(any());
+        verifySingleCampaignLifecycle();
         verify(control, times(3)).recordEndpointCompleted(any(), any());
         verify(control).complete(REQUEST_ID);
     }
@@ -393,7 +412,7 @@ class J5RealEventDataServiceTest {
     @Test
     void continuesToLineupsAfterNormalizingAnInjuryClassSubstitution()
             throws Exception {
-        when(transport.execute(any())).thenAnswer(invocation -> {
+        when(campaign.execute(any())).thenAnswer(invocation -> {
             J5EventDataProviderRequest request = invocation.getArgument(0);
             operations.add("transport:" + request.endpointType());
             String body = request.endpointType() == SofascoreEndpointType.EVENT_INCIDENTS
@@ -448,7 +467,8 @@ class J5RealEventDataServiceTest {
                 "raw:EVENT_LINEUPS",
                 "normalized:EVENT_LINEUPS",
                 "classify:PARSED");
-        verify(transport, times(3)).execute(any());
+        verify(campaign, times(3)).execute(any());
+        verifySingleCampaignLifecycle();
         verify(control, times(3)).recordEndpointCompleted(any(), any());
         verify(control).complete(REQUEST_ID);
     }
@@ -456,7 +476,7 @@ class J5RealEventDataServiceTest {
     @Test
     void continuesToLineupsAfterNormalizingTheShootoutSentinelAndBothWoodworkFamilies()
             throws Exception {
-        when(transport.execute(any())).thenAnswer(invocation -> {
+        when(campaign.execute(any())).thenAnswer(invocation -> {
             J5EventDataProviderRequest request = invocation.getArgument(0);
             operations.add("transport:" + request.endpointType());
             String body = request.endpointType() == SofascoreEndpointType.EVENT_INCIDENTS
@@ -505,7 +525,8 @@ class J5RealEventDataServiceTest {
                 "raw:EVENT_LINEUPS",
                 "normalized:EVENT_LINEUPS",
                 "classify:PARSED");
-        verify(transport, times(3)).execute(any());
+        verify(campaign, times(3)).execute(any());
+        verifySingleCampaignLifecycle();
         verify(control, times(3)).recordEndpointCompleted(any(), any());
         verify(control).complete(REQUEST_ID);
     }
@@ -513,7 +534,7 @@ class J5RealEventDataServiceTest {
     @Test
     void continuesToLineupsAfterAnUnavailableStatisticsFamilyAndAnUnminutedTerminalShootout()
             throws Exception {
-        when(transport.execute(any())).thenAnswer(invocation -> {
+        when(campaign.execute(any())).thenAnswer(invocation -> {
             J5EventDataProviderRequest request = invocation.getArgument(0);
             operations.add("transport:" + request.endpointType());
             if (request.endpointType() == SofascoreEndpointType.EVENT_STATISTICS) {
@@ -571,7 +592,8 @@ class J5RealEventDataServiceTest {
                 "raw:EVENT_LINEUPS",
                 "normalized:EVENT_LINEUPS",
                 "classify:PARSED");
-        verify(transport, times(3)).execute(any());
+        verify(campaign, times(3)).execute(any());
+        verifySingleCampaignLifecycle();
         verify(control, times(3)).recordEndpointCompleted(any(), any());
         verify(control).complete(REQUEST_ID);
         assertThat(pauses).containsExactly(
@@ -582,7 +604,7 @@ class J5RealEventDataServiceTest {
     @Test
     void continuesToLineupsAfterNormalizingTheObservedRegularGoalOrigin()
             throws Exception {
-        when(transport.execute(any())).thenAnswer(invocation -> {
+        when(campaign.execute(any())).thenAnswer(invocation -> {
             J5EventDataProviderRequest request = invocation.getArgument(0);
             operations.add("transport:" + request.endpointType());
             String body = request.endpointType() == SofascoreEndpointType.EVENT_INCIDENTS
@@ -634,7 +656,8 @@ class J5RealEventDataServiceTest {
                 "raw:EVENT_LINEUPS",
                 "normalized:EVENT_LINEUPS",
                 "classify:PARSED");
-        verify(transport, times(3)).execute(any());
+        verify(campaign, times(3)).execute(any());
+        verifySingleCampaignLifecycle();
         verify(control, times(3)).recordEndpointCompleted(any(), any());
         verify(control).complete(REQUEST_ID);
     }
@@ -642,7 +665,7 @@ class J5RealEventDataServiceTest {
     @Test
     void continuesToLineupsAfterAcceptingTheObservedOffTheBallCardReason()
             throws Exception {
-        when(transport.execute(any())).thenAnswer(invocation -> {
+        when(campaign.execute(any())).thenAnswer(invocation -> {
             J5EventDataProviderRequest request = invocation.getArgument(0);
             operations.add("transport:" + request.endpointType());
             String body = request.endpointType() == SofascoreEndpointType.EVENT_INCIDENTS
@@ -696,7 +719,8 @@ class J5RealEventDataServiceTest {
                 "raw:EVENT_LINEUPS",
                 "normalized:EVENT_LINEUPS",
                 "classify:PARSED");
-        verify(transport, times(3)).execute(any());
+        verify(campaign, times(3)).execute(any());
+        verifySingleCampaignLifecycle();
         verify(control, times(3)).recordEndpointCompleted(any(), any());
         verify(control).complete(REQUEST_ID);
     }
@@ -704,7 +728,7 @@ class J5RealEventDataServiceTest {
     @Test
     void continuesToLineupsAfterAcceptingTheObservedLeavingFieldCardReason()
             throws Exception {
-        when(transport.execute(any())).thenAnswer(invocation -> {
+        when(campaign.execute(any())).thenAnswer(invocation -> {
             J5EventDataProviderRequest request = invocation.getArgument(0);
             operations.add("transport:" + request.endpointType());
             String body = request.endpointType() == SofascoreEndpointType.EVENT_INCIDENTS
@@ -745,7 +769,8 @@ class J5RealEventDataServiceTest {
                     assertThat(card.motifLabel()).isEqualTo("Leaving field");
                 });
         assertThat(observations.get(2).data()).isInstanceOf(EventLineups.class);
-        verify(transport, times(3)).execute(any());
+        verify(campaign, times(3)).execute(any());
+        verifySingleCampaignLifecycle();
         verify(control, times(3)).recordEndpointCompleted(any(), any());
         verify(control).complete(REQUEST_ID);
     }
@@ -753,7 +778,7 @@ class J5RealEventDataServiceTest {
     @Test
     void continuesToLineupsAfterAcceptingTheObservedLiveExtraTimeMarker()
             throws Exception {
-        when(transport.execute(any())).thenAnswer(invocation -> {
+        when(campaign.execute(any())).thenAnswer(invocation -> {
             J5EventDataProviderRequest request = invocation.getArgument(0);
             operations.add("transport:" + request.endpointType());
             String body = request.endpointType() == SofascoreEndpointType.EVENT_INCIDENTS
@@ -778,14 +803,15 @@ class J5RealEventDataServiceTest {
                     assertThat(period.addedTime()).isEmpty();
                 });
         assertThat(observations.get(2).data()).isInstanceOf(EventLineups.class);
-        verify(transport, times(3)).execute(any());
+        verify(campaign, times(3)).execute(any());
+        verifySingleCampaignLifecycle();
         verify(control, times(3)).recordEndpointCompleted(any(), any());
         verify(control).complete(REQUEST_ID);
     }
 
     @Test
     void stopsAtTheFirstHttpIncidentWithoutRetryOrLaterEndpoint() throws Exception {
-        when(transport.execute(any())).thenAnswer(invocation -> {
+        when(campaign.execute(any())).thenAnswer(invocation -> {
             J5EventDataProviderRequest request = invocation.getArgument(0);
             operations.add("transport:" + request.endpointType());
             return response(request, 429, "{\"error\":\"rate-limited\"}");
@@ -797,7 +823,8 @@ class J5RealEventDataServiceTest {
         assertThat(result.terminalCode()).isEqualTo("HTTP_429");
         assertThat(result.providerCallAttempts()).isEqualTo(1);
         assertThat(result.endpoints()).isEmpty();
-        verify(transport, times(1)).execute(any());
+        verify(campaign, times(1)).execute(any());
+        verifySingleCampaignLifecycle();
         verify(dataStore, never()).save(any());
         verify(control).fail(REQUEST_ID, "HTTP_429");
     }
@@ -805,7 +832,7 @@ class J5RealEventDataServiceTest {
     @Test
     void retainsTheFirstFamilyButDoesNotNormalizeAnIncompatibleSecondFamily()
             throws Exception {
-        when(transport.execute(any())).thenAnswer(invocation -> {
+        when(campaign.execute(any())).thenAnswer(invocation -> {
             J5EventDataProviderRequest request = invocation.getArgument(0);
             operations.add("transport:" + request.endpointType());
             String body = request.endpointType() == SofascoreEndpointType.EVENT_INCIDENTS
@@ -822,7 +849,8 @@ class J5RealEventDataServiceTest {
         assertThat(result.endpoints()).singleElement()
                 .extracting(J5RealEndpointResult::endpointType)
                 .isEqualTo(SofascoreEndpointType.EVENT_STATISTICS);
-        verify(transport, times(2)).execute(any());
+        verify(campaign, times(2)).execute(any());
+        verifySingleCampaignLifecycle();
         verify(dataStore, times(1)).save(any());
         verify(control).fail(REQUEST_ID, "SCHEMA_INCOMPATIBLE");
     }
@@ -837,7 +865,9 @@ class J5RealEventDataServiceTest {
         assertThat(result.completed()).isFalse();
         assertThat(result.terminalCode()).isEqualTo("EVENT_ID_MISMATCH");
         assertThat(result.providerCallAttempts()).isZero();
-        verify(transport, never()).execute(any());
+        verify(campaign, never()).execute(any());
+        verify(transport, never()).openCampaign(any());
+        verify(campaign, never()).close();
         verify(rawStore, never()).save(any());
         verify(dataStore, never()).save(any());
         verify(control).fail(REQUEST_ID, "EVENT_ID_MISMATCH");
@@ -845,7 +875,7 @@ class J5RealEventDataServiceTest {
 
     @Test
     void stopsAfterOneTimedOutAttemptWithoutRetryOrRawFabrication() {
-        when(transport.execute(any())).thenThrow(new J5EventDataTransportException(
+        when(campaign.execute(any())).thenThrow(new J5EventDataTransportException(
                 J5EventDataTransportFailure.TIMEOUT));
 
         var result = service.execute(claim());
@@ -854,10 +884,109 @@ class J5RealEventDataServiceTest {
         assertThat(result.terminalCode()).isEqualTo("TRANSPORT_TIMEOUT");
         assertThat(result.providerCallAttempts()).isEqualTo(1);
         assertThat(result.endpoints()).isEmpty();
-        verify(transport, times(1)).execute(any());
+        verify(campaign, times(1)).execute(any());
+        verifySingleCampaignLifecycle();
         verify(rawStore, never()).save(any());
         verify(dataStore, never()).save(any());
         verify(control).fail(REQUEST_ID, "TRANSPORT_TIMEOUT");
+    }
+
+    @Test
+    void keepsTheSharedLeaseUntilTheBoundedCleanupRetrySucceeds() throws Exception {
+        when(campaign.execute(any())).thenAnswer(invocation -> {
+            J5EventDataProviderRequest request = invocation.getArgument(0);
+            return response(request, 200, fixtureFor(request.endpointType()));
+        });
+        CountDownLatch cleanupRetryStarted = new CountDownLatch(1);
+        CountDownLatch releaseCleanupRetry = new CountDownLatch(1);
+        AtomicLong closeAttempts = new AtomicLong();
+        doAnswer(invocation -> {
+            if (closeAttempts.incrementAndGet() == 1) {
+                throw new J5EventDataTransportException(
+                        J5EventDataTransportFailure.IO_FAILURE);
+            }
+            cleanupRetryStarted.countDown();
+            if (!releaseCleanupRetry.await(2, TimeUnit.SECONDS)) {
+                throw new IllegalStateException("cleanup retry timed out");
+            }
+            return null;
+        }).when(campaign).close();
+        CountDownLatch contenderEntered = new CountDownLatch(1);
+        var executor = Executors.newFixedThreadPool(2);
+
+        try {
+            var j5Result = executor.submit(() -> service.execute(claim()));
+            assertThat(cleanupRetryStarted.await(1, TimeUnit.SECONDS)).isTrue();
+            var contender = executor.submit(() -> {
+                try (var ignored = coordinator.acquireCampaign(UUID.randomUUID())) {
+                    contenderEntered.countDown();
+                }
+            });
+
+            assertThat(contenderEntered.await(100, TimeUnit.MILLISECONDS)).isFalse();
+            releaseCleanupRetry.countDown();
+
+            var result = j5Result.get(2, TimeUnit.SECONDS);
+            assertThat(result.completed()).isFalse();
+            assertThat(result.terminalCode()).isEqualTo("TRANSPORT_IO_FAILURE");
+            assertThat(contenderEntered.await(1, TimeUnit.SECONDS)).isTrue();
+            contender.get(1, TimeUnit.SECONDS);
+            verify(campaign, times(2)).close();
+            verify(control, never()).complete(any());
+            verify(control).fail(REQUEST_ID, "TRANSPORT_IO_FAILURE");
+        }
+        finally {
+            releaseCleanupRetry.countDown();
+            executor.shutdownNow();
+            assertThat(executor.awaitTermination(1, TimeUnit.SECONDS)).isTrue();
+        }
+    }
+
+    @Test
+    void treatsPersistentCampaignCleanupFailureAsTerminalAndKeepsContendersOut()
+            throws Exception {
+        when(campaign.execute(any())).thenAnswer(invocation -> {
+            J5EventDataProviderRequest request = invocation.getArgument(0);
+            return response(request, 200, fixtureFor(request.endpointType()));
+        });
+        doThrow(new J5EventDataTransportException(J5EventDataTransportFailure.IO_FAILURE))
+                .when(campaign).close();
+
+        var result = service.execute(claim());
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.terminalCode()).isEqualTo("TRANSPORT_IO_FAILURE");
+        assertThat(result.providerCallAttempts()).isEqualTo(3);
+        assertThat(result.endpoints()).hasSize(3);
+        verify(campaign, times(3)).execute(any());
+        verify(transport).openCampaign(REQUEST_ID);
+        verify(campaign, times(2)).close();
+        verify(control, never()).complete(any());
+        verify(control).fail(REQUEST_ID, "TRANSPORT_IO_FAILURE");
+
+        CountDownLatch contenderAttempting = new CountDownLatch(1);
+        CountDownLatch contenderEntered = new CountDownLatch(1);
+        var executor = Executors.newSingleThreadExecutor();
+        try {
+            var contender = executor.submit(() -> {
+                contenderAttempting.countDown();
+                try (var ignored = coordinator.acquireCampaign(UUID.randomUUID())) {
+                    contenderEntered.countDown();
+                }
+            });
+            assertThat(contenderAttempting.await(1, TimeUnit.SECONDS)).isTrue();
+            assertThat(contenderEntered.await(100, TimeUnit.MILLISECONDS)).isFalse();
+            contender.cancel(true);
+        }
+        finally {
+            executor.shutdownNow();
+            assertThat(executor.awaitTermination(1, TimeUnit.SECONDS)).isTrue();
+        }
+    }
+
+    private void verifySingleCampaignLifecycle() {
+        verify(transport).openCampaign(REQUEST_ID);
+        verify(campaign).close();
     }
 
     private static J5RealExecutionClaim claim() {

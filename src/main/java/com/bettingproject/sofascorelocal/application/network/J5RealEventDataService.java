@@ -7,6 +7,7 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatis
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseResult;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportException;
+import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderSupervisor;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessReport;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventData;
@@ -33,6 +34,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.UUID;
 
 /** Executes one terminal, ordered, no-retry J5 provider campaign. */
 @Service
@@ -47,6 +49,7 @@ public class J5RealEventDataService {
     private final EventIncidentsV6Parser incidentsParser;
     private final EventLineupsV2Parser lineupsParser;
     private final ManualProviderRequestCoordinator requestCoordinator;
+    private final PlaywrightProviderSupervisor providerSupervisor;
 
     @Autowired
     public J5RealEventDataService(
@@ -55,10 +58,11 @@ public class J5RealEventDataService {
             RawManualCallSnapshotStore rawSnapshotStore,
             CanonicalEventStore canonicalEventStore,
             J5EventDataStore eventDataStore,
-            ManualProviderRequestCoordinator requestCoordinator) {
+            ManualProviderRequestCoordinator requestCoordinator,
+            PlaywrightProviderSupervisor providerSupervisor) {
         this(controlService, transport, rawSnapshotStore, canonicalEventStore, eventDataStore,
                 new EventStatisticsV2Parser(), new EventIncidentsV14Parser(),
-                new EventLineupsV2Parser(), requestCoordinator);
+                new EventLineupsV2Parser(), requestCoordinator, providerSupervisor);
     }
 
     J5RealEventDataService(
@@ -72,7 +76,8 @@ public class J5RealEventDataService {
             EventLineupsV2Parser lineupsParser,
             Clock clock,
             Duration minimumDelay,
-            Pause pause) {
+            Pause pause,
+            PlaywrightProviderSupervisor providerSupervisor) {
         this(
                 controlService,
                 transport,
@@ -82,10 +87,11 @@ public class J5RealEventDataService {
                 statisticsParser,
                 incidentsParser,
                 lineupsParser,
-                new ManualProviderRequestCoordinator(clock, minimumDelay, pause::pause));
+                new ManualProviderRequestCoordinator(clock, minimumDelay, pause::pause),
+                providerSupervisor);
     }
 
-    private J5RealEventDataService(
+    J5RealEventDataService(
             J5RealControlService controlService,
             J5EventDataProviderTransport transport,
             RawManualCallSnapshotStore rawSnapshotStore,
@@ -94,7 +100,8 @@ public class J5RealEventDataService {
             EventStatisticsV2Parser statisticsParser,
             EventIncidentsV6Parser incidentsParser,
             EventLineupsV2Parser lineupsParser,
-            ManualProviderRequestCoordinator requestCoordinator) {
+            ManualProviderRequestCoordinator requestCoordinator,
+            PlaywrightProviderSupervisor providerSupervisor) {
         this.controlService = Objects.requireNonNull(controlService, "controlService");
         this.transport = Objects.requireNonNull(transport, "transport");
         this.rawSnapshotStore = Objects.requireNonNull(rawSnapshotStore, "rawSnapshotStore");
@@ -105,6 +112,8 @@ public class J5RealEventDataService {
         this.lineupsParser = Objects.requireNonNull(lineupsParser, "lineupsParser");
         this.requestCoordinator = Objects.requireNonNull(
                 requestCoordinator, "requestCoordinator");
+        this.providerSupervisor = Objects.requireNonNull(
+                providerSupervisor, "providerSupervisor");
     }
 
     public synchronized J5RealCampaignResult execute(J5RealExecutionClaim claim) {
@@ -113,68 +122,213 @@ public class J5RealEventDataService {
         if (!controlService.executionMayContinue(claim.requestId())) {
             return failed(claim, "OPERATOR_STOP", 0, results);
         }
-        var canonical = canonicalEventStore.findLatestByCanonicalId(claim.canonicalEventId());
-        if (canonical.isEmpty()
-                || canonical.orElseThrow().identity().providerEventId() != claim.eventId()
-                || !canonical.orElseThrow().identity().value().equals(claim.canonicalEventId())) {
-            return failAndLock(claim, "EVENT_ID_MISMATCH", 0, results);
-        }
-
+        CampaignResources resources = new CampaignResources();
         int attempts = 0;
-        for (SofascoreEndpointType endpoint : J5RealControlService.ORDERED_ENDPOINTS) {
-            if (!controlService.executionMayContinue(claim.requestId())) {
-                return failed(claim, "OPERATOR_STOP", attempts, results);
+        try {
+            var canonical = canonicalEventStore.findLatestByCanonicalId(
+                    claim.canonicalEventId());
+            if (canonical.isEmpty()
+                    || canonical.orElseThrow().identity().providerEventId() != claim.eventId()
+                    || !canonical.orElseThrow().identity().value()
+                            .equals(claim.canonicalEventId())) {
+                return failAndLock(
+                        claim, "EVENT_ID_MISMATCH", attempts, results, resources);
             }
-            J5EventDataProviderRequest request = new J5EventDataProviderRequest(
-                    claim.providerOrigin(), claim.eventId(), endpoint);
-            J5EventDataTransportResponse response;
-            try (var ignored = requestCoordinator.acquire()) {
-                if (!controlService.executionMayContinue(claim.requestId())) {
-                    return failed(claim, "OPERATOR_STOP", attempts, results);
-                }
-                response = transport.execute(request);
-                attempts++;
+
+            try {
+                resources.lease = requestCoordinator.acquireCampaign(claim.requestId());
             }
             catch (ManualProviderRequestCoordinator.CoordinationException exception) {
                 return failAndLock(
-                        claim, "MINIMUM_DELAY_INTERRUPTED", attempts, results);
+                        claim, "MINIMUM_DELAY_INTERRUPTED", attempts, results, resources);
+            }
+            if (!controlService.executionMayContinue(claim.requestId())) {
+                return failAndLock(
+                        claim, "OPERATOR_STOP", attempts, results, resources);
+            }
+            try {
+                resources.campaign = transport.openCampaign(claim.requestId());
             }
             catch (J5EventDataTransportException exception) {
-                return failAndLock(claim,
-                        "TRANSPORT_" + exception.failure().name(), attempts + 1, results);
+                retainLeaseIfPublished(claim.requestId(), resources);
+                return failAndLock(
+                        claim,
+                        "TRANSPORT_" + exception.failure().name(),
+                        attempts,
+                        results,
+                        resources);
             }
             catch (RuntimeException exception) {
-                return failAndLock(claim, "TRANSPORT_IO_FAILURE", attempts + 1, results);
+                retainLeaseIfPublished(claim.requestId(), resources);
+                return failAndLock(
+                        claim, "TRANSPORT_IO_FAILURE", attempts, results, resources);
             }
 
-            RawSnapshotPersistenceResult raw;
-            try {
-                raw = rawSnapshotStore.save(rawOnly(response));
-            }
-            catch (RuntimeException exception) {
-                return failAndLock(claim, "RAW_PERSISTENCE_ERROR", attempts, results);
-            }
-            if (response.httpStatus() == 404) {
-                J5CompletenessReport completeness = J5CompletenessReport.unavailable();
+            for (SofascoreEndpointType endpoint : J5RealControlService.ORDERED_ENDPOINTS) {
+                if (!controlService.executionMayContinue(claim.requestId())) {
+                    return failAndLock(
+                            claim, "OPERATOR_STOP", attempts, results, resources);
+                }
+                J5EventDataProviderRequest request = new J5EventDataProviderRequest(
+                        claim.providerOrigin(), claim.eventId(), endpoint);
+                J5EventDataTransportResponse response;
+                try {
+                    resources.lease.beginRequest();
+                    if (!controlService.executionMayContinue(claim.requestId())) {
+                        return failAndLock(
+                                claim, "OPERATOR_STOP", attempts, results, resources);
+                    }
+                    attempts++;
+                    response = resources.campaign.execute(request);
+                }
+                catch (ManualProviderRequestCoordinator.CoordinationException exception) {
+                    return failAndLock(
+                            claim,
+                            "MINIMUM_DELAY_INTERRUPTED",
+                            attempts,
+                            results,
+                            resources);
+                }
+                catch (J5EventDataTransportException exception) {
+                    String code = controlService.executionMayContinue(claim.requestId())
+                            ? "TRANSPORT_" + exception.failure().name()
+                            : "OPERATOR_STOP";
+                    return failAndLock(claim, code, attempts, results, resources);
+                }
+                catch (RuntimeException exception) {
+                    String code = controlService.executionMayContinue(claim.requestId())
+                            ? "TRANSPORT_IO_FAILURE"
+                            : "OPERATOR_STOP";
+                    return failAndLock(claim, code, attempts, results, resources);
+                }
+
+                RawSnapshotPersistenceResult raw;
+                try {
+                    raw = rawSnapshotStore.save(rawOnly(response));
+                }
+                catch (RuntimeException exception) {
+                    return failAndLock(
+                            claim, "RAW_PERSISTENCE_ERROR", attempts, results, resources);
+                }
+                if (response.httpStatus() == 404) {
+                    J5CompletenessReport completeness = J5CompletenessReport.unavailable();
+                    EventSourceTrace source = EventSourceTrace.providerSnapshot(
+                            raw.snapshotId(), raw.payloadSha256(),
+                            J5UnavailableFamily.normalizerVersion(endpoint),
+                            response.receivedAt());
+                    J5EventDataPersistenceResult persisted;
+                    try {
+                        persisted = eventDataStore.save(J5EventDataObservation.from(
+                                canonical.orElseThrow().identity(),
+                                J5UnavailableFamily.emptyObservation(
+                                        endpoint, claim.eventId()),
+                                source,
+                                completeness));
+                    }
+                    catch (RuntimeException exception) {
+                        return failAndLock(
+                                claim,
+                                "NORMALIZATION_PERSISTENCE_ERROR",
+                                attempts,
+                                results,
+                                resources);
+                    }
+                    if (!classifyInsertedSafely(
+                            raw, RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE, null)) {
+                        return failAndLock(
+                                claim,
+                                "RAW_CLASSIFICATION_ERROR",
+                                attempts,
+                                results,
+                                resources);
+                    }
+                    results.add(new J5RealEndpointResult(
+                            endpoint,
+                            raw.snapshotId(),
+                            raw.payloadSha256(),
+                            raw.payloadSizeBytes(),
+                            persisted.observationId(),
+                            persisted.inserted(),
+                            completeness.status(),
+                            completeness.scorePercent(),
+                            0));
+                    try {
+                        controlService.recordEndpointCompleted(claim.requestId(), endpoint);
+                    }
+                    catch (J5RealControlException exception) {
+                        return failAndLock(
+                                claim, "OPERATOR_STOP", attempts, results, resources);
+                    }
+                    continue;
+                }
+                if (response.httpStatus() < 200 || response.httpStatus() >= 300) {
+                    String code = httpTerminalCode(response.httpStatus());
+                    if (!classifyInsertedSafely(
+                            raw, RawSnapshotSchemaStatus.TRANSPORT_ERROR, code)) {
+                        code = "RAW_CLASSIFICATION_ERROR";
+                    }
+                    return failAndLock(claim, code, attempts, results, resources);
+                }
+                if (!isJsonContentType(response.contentType())) {
+                    if (!classifyInsertedSafely(raw,
+                            RawSnapshotSchemaStatus.UNEXPECTED_CONTENT,
+                            RawSnapshotSchemaStatus.UNEXPECTED_CONTENT.name())) {
+                        return failAndLock(
+                                claim,
+                                "RAW_CLASSIFICATION_ERROR",
+                                attempts,
+                                results,
+                                resources);
+                    }
+                    return failAndLock(
+                            claim, "UNEXPECTED_CONTENT", attempts, results, resources);
+                }
+
+                J5ParseResult<? extends J5EventData> parsed;
+                try {
+                    parsed = parse(endpoint, raw.snapshotId(), claim.eventId(), response);
+                }
+                catch (RuntimeException exception) {
+                    return failAndLock(
+                            claim, "PARSER_FAILURE", attempts, results, resources);
+                }
+                if (parsed.status() != J5ParseStatus.PARSED) {
+                    RawSnapshotSchemaStatus status = parsed.status()
+                            == J5ParseStatus.UNEXPECTED_CONTENT
+                                    ? RawSnapshotSchemaStatus.UNEXPECTED_CONTENT
+                                    : RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE;
+                    String code = status.name();
+                    if (!classifyInsertedSafely(raw, status, code)) {
+                        code = "RAW_CLASSIFICATION_ERROR";
+                    }
+                    return failAndLock(claim, code, attempts, results, resources);
+                }
+
+                J5EventData data = parsed.data().orElseThrow();
+                var completeness = parsed.completeness().orElseThrow();
                 EventSourceTrace source = EventSourceTrace.providerSnapshot(
-                        raw.snapshotId(), raw.payloadSha256(),
-                        J5UnavailableFamily.normalizerVersion(endpoint),
+                        raw.snapshotId(), raw.payloadSha256(), parserVersion(endpoint),
                         response.receivedAt());
                 J5EventDataPersistenceResult persisted;
                 try {
                     persisted = eventDataStore.save(J5EventDataObservation.from(
-                            canonical.orElseThrow().identity(),
-                            J5UnavailableFamily.emptyObservation(endpoint, claim.eventId()),
-                            source,
-                            completeness));
+                            canonical.orElseThrow().identity(), data, source, completeness));
                 }
                 catch (RuntimeException exception) {
                     return failAndLock(
-                            claim, "NORMALIZATION_PERSISTENCE_ERROR", attempts, results);
+                            claim,
+                            "NORMALIZATION_PERSISTENCE_ERROR",
+                            attempts,
+                            results,
+                            resources);
                 }
-                if (!classifyInsertedSafely(
-                        raw, RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE, null)) {
-                    return failAndLock(claim, "RAW_CLASSIFICATION_ERROR", attempts, results);
+                if (!classifyInsertedSafely(raw, RawSnapshotSchemaStatus.PARSED, null)) {
+                    return failAndLock(
+                            claim,
+                            "RAW_CLASSIFICATION_ERROR",
+                            attempts,
+                            results,
+                            resources);
                 }
                 results.add(new J5RealEndpointResult(
                         endpoint,
@@ -185,96 +339,38 @@ public class J5RealEventDataService {
                         persisted.inserted(),
                         completeness.status(),
                         completeness.scorePercent(),
-                        0));
+                        parsed.warnings().size()));
                 try {
                     controlService.recordEndpointCompleted(claim.requestId(), endpoint);
                 }
                 catch (J5RealControlException exception) {
-                    return failed(claim, "OPERATOR_STOP", attempts, results);
-                }
-                continue;
-            }
-            if (response.httpStatus() < 200 || response.httpStatus() >= 300) {
-                String code = httpTerminalCode(response.httpStatus());
-                if (!classifyInsertedSafely(
-                        raw, RawSnapshotSchemaStatus.TRANSPORT_ERROR, code)) {
-                    code = "RAW_CLASSIFICATION_ERROR";
-                }
-                return failAndLock(claim, code, attempts, results);
-            }
-            if (!isJsonContentType(response.contentType())) {
-                if (!classifyInsertedSafely(raw,
-                        RawSnapshotSchemaStatus.UNEXPECTED_CONTENT,
-                        RawSnapshotSchemaStatus.UNEXPECTED_CONTENT.name())) {
                     return failAndLock(
-                            claim, "RAW_CLASSIFICATION_ERROR", attempts, results);
+                            claim, "OPERATOR_STOP", attempts, results, resources);
                 }
-                return failAndLock(claim, "UNEXPECTED_CONTENT", attempts, results);
             }
 
-            J5ParseResult<? extends J5EventData> parsed;
+            RuntimeException cleanupFailure = resources.closeSafely();
+            if (cleanupFailure != null) {
+                return failAndLockAfterCleanup(
+                        claim,
+                        cleanupCode(cleanupFailure, "TRANSPORT_IO_FAILURE"),
+                        attempts,
+                        results,
+                        true);
+            }
             try {
-                parsed = parse(endpoint, raw.snapshotId(), claim.eventId(), response);
-            }
-            catch (RuntimeException exception) {
-                return failAndLock(claim, "PARSER_FAILURE", attempts, results);
-            }
-            if (parsed.status() != J5ParseStatus.PARSED) {
-                RawSnapshotSchemaStatus status = parsed.status()
-                        == J5ParseStatus.UNEXPECTED_CONTENT
-                                ? RawSnapshotSchemaStatus.UNEXPECTED_CONTENT
-                                : RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE;
-                String code = status.name();
-                if (!classifyInsertedSafely(raw, status, code)) {
-                    code = "RAW_CLASSIFICATION_ERROR";
-                }
-                return failAndLock(claim, code, attempts, results);
-            }
-
-            J5EventData data = parsed.data().orElseThrow();
-            var completeness = parsed.completeness().orElseThrow();
-            EventSourceTrace source = EventSourceTrace.providerSnapshot(
-                    raw.snapshotId(), raw.payloadSha256(), parserVersion(endpoint),
-                    response.receivedAt());
-            J5EventDataPersistenceResult persisted;
-            try {
-                persisted = eventDataStore.save(J5EventDataObservation.from(
-                        canonical.orElseThrow().identity(), data, source, completeness));
-            }
-            catch (RuntimeException exception) {
-                return failAndLock(
-                        claim, "NORMALIZATION_PERSISTENCE_ERROR", attempts, results);
-            }
-            if (!classifyInsertedSafely(raw, RawSnapshotSchemaStatus.PARSED, null)) {
-                return failAndLock(claim, "RAW_CLASSIFICATION_ERROR", attempts, results);
-            }
-            results.add(new J5RealEndpointResult(
-                    endpoint,
-                    raw.snapshotId(),
-                    raw.payloadSha256(),
-                    raw.payloadSizeBytes(),
-                    persisted.observationId(),
-                    persisted.inserted(),
-                    completeness.status(),
-                    completeness.scorePercent(),
-                    parsed.warnings().size()));
-            try {
-                controlService.recordEndpointCompleted(claim.requestId(), endpoint);
+                controlService.complete(claim.requestId());
             }
             catch (J5RealControlException exception) {
                 return failed(claim, "OPERATOR_STOP", attempts, results);
             }
+            return new J5RealCampaignResult(
+                    claim.requestId(), claim.canonicalEventId(), claim.eventId(), true,
+                    "COMPLETED", attempts, 0, results);
         }
-
-        try {
-            controlService.complete(claim.requestId());
+        finally {
+            resources.closeSafely();
         }
-        catch (J5RealControlException exception) {
-            return failed(claim, "OPERATOR_STOP", attempts, results);
-        }
-        return new J5RealCampaignResult(
-                claim.requestId(), claim.canonicalEventId(), claim.eventId(), true,
-                "COMPLETED", attempts, 0, results);
     }
 
     private J5ParseResult<? extends J5EventData> parse(
@@ -297,16 +393,44 @@ public class J5RealEventDataService {
             J5RealExecutionClaim claim,
             String code,
             int attempts,
-            List<J5RealEndpointResult> results) {
+            List<J5RealEndpointResult> results,
+            CampaignResources resources) {
+        RuntimeException cleanupFailure = resources.closeSafely();
+        String terminalCode = cleanupCode(cleanupFailure, code);
+        return failAndLockAfterCleanup(
+                claim,
+                terminalCode,
+                attempts,
+                results,
+                cleanupFailure != null);
+    }
+
+    private J5RealCampaignResult failAndLockAfterCleanup(
+            J5RealExecutionClaim claim,
+            String terminalCode,
+            int attempts,
+            List<J5RealEndpointResult> results,
+            boolean cleanupFailureKnown) {
         if (controlService.executionMayContinue(claim.requestId())) {
             try {
-                controlService.fail(claim.requestId(), code);
+                controlService.fail(claim.requestId(), terminalCode);
             }
             catch (J5RealControlException exception) {
-                return failed(claim, "OPERATOR_STOP", attempts, results);
+                return failed(
+                        claim,
+                        cleanupFailureKnown ? terminalCode : "OPERATOR_STOP",
+                        attempts,
+                        results);
             }
         }
-        return failed(claim, code, attempts, results);
+        else {
+            return failed(
+                    claim,
+                    cleanupFailureKnown ? terminalCode : "OPERATOR_STOP",
+                    attempts,
+                    results);
+        }
+        return failed(claim, terminalCode, attempts, results);
     }
 
     private static J5RealCampaignResult failed(
@@ -388,8 +512,73 @@ public class J5RealEventDataService {
         return "HTTP_STATUS_" + status;
     }
 
+    private static String cleanupCode(RuntimeException cleanupFailure, String fallback) {
+        if (cleanupFailure == null) {
+            return fallback;
+        }
+        return cleanupFailure instanceof J5EventDataTransportException failure
+                ? "TRANSPORT_" + failure.failure().name()
+                : "TRANSPORT_IO_FAILURE";
+    }
+
+    private void retainLeaseIfPublished(UUID requestId, CampaignResources resources) {
+        try {
+            if (providerSupervisor.activeCampaignId().filter(requestId::equals).isPresent()) {
+                resources.retainLease();
+            }
+        }
+        catch (RuntimeException exception) {
+            resources.retainLease();
+        }
+    }
+
     @FunctionalInterface
     interface Pause {
         void pause(Duration delay);
+    }
+
+    private static final class CampaignResources {
+
+        private ManualProviderRequestCoordinator.CampaignLease lease;
+        private J5EventDataProviderTransport.Campaign campaign;
+        private boolean retainLease;
+
+        private void retainLease() {
+            if (lease != null) {
+                retainLease = true;
+            }
+        }
+
+        private RuntimeException closeSafely() {
+            RuntimeException failure = null;
+            try {
+                if (campaign != null) {
+                    campaign.close();
+                    campaign = null;
+                    retainLease = false;
+                }
+            }
+            catch (RuntimeException exception) {
+                failure = exception;
+                retainLease();
+            }
+            finally {
+                try {
+                    if (lease != null && !retainLease) {
+                        lease.close();
+                        lease = null;
+                    }
+                }
+                catch (RuntimeException exception) {
+                    if (failure == null) {
+                        failure = exception;
+                    }
+                    else {
+                        failure.addSuppressed(exception);
+                    }
+                }
+            }
+            return failure;
+        }
     }
 }

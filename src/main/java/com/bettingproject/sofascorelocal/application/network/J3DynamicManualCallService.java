@@ -44,8 +44,6 @@ public class J3DynamicManualCallService {
     private final J3ManualCollectionEvidenceService evidenceService;
     private final Clock clock;
     private final Duration cacheTtl;
-    private final Duration minimumDelay;
-    private final InterPageDelay interPageDelay;
     private final ManualProviderRequestCoordinator requestCoordinator;
 
     @Autowired
@@ -102,7 +100,9 @@ public class J3DynamicManualCallService {
                 minimumDelay,
                 interPageDelay,
                 new ManualProviderRequestCoordinator(
-                        clock, minimumDelay, ignored -> { }));
+                        clock,
+                        minimumDelay,
+                        duration -> awaitForCoordinator(interPageDelay, duration)));
     }
 
     J3DynamicManualCallService(
@@ -127,8 +127,8 @@ public class J3DynamicManualCallService {
         this.evidenceService = Objects.requireNonNull(evidenceService, "evidenceService");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.cacheTtl = Objects.requireNonNull(cacheTtl, "cacheTtl");
-        this.minimumDelay = Objects.requireNonNull(minimumDelay, "minimumDelay");
-        this.interPageDelay = Objects.requireNonNull(interPageDelay, "interPageDelay");
+        Objects.requireNonNull(minimumDelay, "minimumDelay");
+        Objects.requireNonNull(interPageDelay, "interPageDelay");
         this.requestCoordinator = Objects.requireNonNull(
                 requestCoordinator, "requestCoordinator");
         if (minimumDelay.compareTo(Duration.ofSeconds(3)) < 0) {
@@ -147,10 +147,11 @@ public class J3DynamicManualCallService {
                     J3ManualCallControlError.EXECUTION_ALREADY_STARTED);
         }
 
+        ManualProviderRequestCoordinator.CampaignLease providerLease = null;
+        ScheduledEventsProviderPageTransport.Campaign providerCampaign = null;
         try (J3SingleCallGuard.Permit ignored = permit.orElseThrow()) {
             J3ManualCallExecutionClaim claim = controlService.claimExecution(requestId);
             List<J3MinimizedPageEvidence> pageAttempts = new ArrayList<>();
-            Instant lastStartedAt = null;
             int initialCompletedPages = 0;
             int completedPages = initialCompletedPages;
             int providerRequests = 0;
@@ -215,13 +216,6 @@ public class J3DynamicManualCallService {
                     continue;
                 }
 
-                if (!awaitMinimumDelay(lastStartedAt)) {
-                    controlService.stopGlobally();
-                    return publishAlreadyLockedFailure(
-                            claim.date(), initialCompletedPages, completedPages, page,
-                            "EXECUTION_INTERRUPTED", providerRequests, cacheHits,
-                            pageAttempts);
-                }
                 if (!controlService.executionMayContinue(requestId)) {
                     return publishAlreadyLockedFailure(
                             claim.date(), initialCompletedPages, completedPages, page,
@@ -230,9 +224,11 @@ public class J3DynamicManualCallService {
                 }
 
                 Instant attemptedAt = clock.instant();
+                boolean providerRequestExecuted = false;
                 try {
                     ScheduledEventsTransportResponse response;
-                    try (var providerLease = requestCoordinator.acquire()) {
+                    if (providerLease == null) {
+                        providerLease = requestCoordinator.acquireCampaign(requestId);
                         if (!controlService.executionMayContinue(requestId)) {
                             return publishAlreadyLockedFailure(
                                     claim.date(),
@@ -244,11 +240,24 @@ public class J3DynamicManualCallService {
                                     cacheHits,
                                     pageAttempts);
                         }
-                        attemptedAt = clock.instant();
-                        providerRequests++;
-                        response = transport.execute(request);
+                        providerCampaign = transport.openCampaign(requestId);
                     }
-                    lastStartedAt = response.requestedAt();
+                    providerLease.beginRequest();
+                    if (!controlService.executionMayContinue(requestId)) {
+                        return publishAlreadyLockedFailure(
+                                claim.date(),
+                                initialCompletedPages,
+                                completedPages,
+                                page,
+                                "GLOBAL_STOP_OR_CIRCUIT_BLOCK",
+                                providerRequests,
+                                cacheHits,
+                                pageAttempts);
+                    }
+                    attemptedAt = clock.instant();
+                    providerRequests++;
+                    providerRequestExecuted = true;
+                    response = providerCampaign.execute(request);
                     J3ScheduledEventsOutcome outcome = outcomeProcessor.processResponse(response);
                     if (outcome.circuit().state() == J3CircuitState.CLOSED) {
                         pageCache.recordParsed(
@@ -334,11 +343,25 @@ public class J3DynamicManualCallService {
                             pageAttempts);
                 }
                 catch (ScheduledEventsTransportException exception) {
+                    if (!controlService.executionMayContinue(requestId)) {
+                        String terminalCode = "OPERATOR_STOP";
+                        pageAttempts.add(J3MinimizedPageEvidence.failedBeforeSnapshot(
+                                page, attemptedAt, terminalCode, providerRequestExecuted));
+                        return publishAlreadyLockedFailure(
+                                claim.date(),
+                                initialCompletedPages,
+                                completedPages,
+                                page,
+                                terminalCode,
+                                providerRequests,
+                                cacheHits,
+                                pageAttempts);
+                    }
                     J3ScheduledEventsOutcome outcome = outcomeProcessor.processFailure(
                             exception, clock.instant());
                     String terminalCode = outcome.circuit().reason().name();
                     pageAttempts.add(J3MinimizedPageEvidence.failedBeforeSnapshot(
-                            page, attemptedAt, terminalCode));
+                            page, attemptedAt, terminalCode, providerRequestExecuted));
                     controlService.failExecution(requestId, page, terminalCode);
                     return publishAndLock(
                             requestId,
@@ -364,6 +387,9 @@ public class J3DynamicManualCallService {
                 controlService.stopGlobally();
             }
             throw exception;
+        }
+        finally {
+            closeProviderCampaign(providerCampaign, providerLease);
         }
     }
 
@@ -442,28 +468,37 @@ public class J3DynamicManualCallService {
             return RawSnapshotSchemaStatus.PARSED;
         }
         return switch (outcome.circuit().reason()) {
+            case ENDPOINT_UNAVAILABLE -> RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE;
             case SCHEMA_INCOMPATIBLE -> RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE;
             case UNEXPECTED_CONTENT -> RawSnapshotSchemaStatus.UNEXPECTED_CONTENT;
             default -> RawSnapshotSchemaStatus.TRANSPORT_ERROR;
         };
     }
 
-    private boolean awaitMinimumDelay(Instant lastStartedAt) {
-        if (lastStartedAt == null) {
-            return true;
-        }
-        Instant nextEligibleAt = lastStartedAt.plus(minimumDelay);
-        Duration remaining = Duration.between(clock.instant(), nextEligibleAt);
-        if (remaining.isZero() || remaining.isNegative()) {
-            return true;
-        }
+    private static void awaitForCoordinator(
+            InterPageDelay delay,
+            Duration duration) {
         try {
-            interPageDelay.await(remaining);
-            return true;
+            delay.await(duration);
         }
         catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
-            return false;
+            throw new IllegalStateException("provider request delay interrupted", exception);
+        }
+    }
+
+    private static void closeProviderCampaign(
+            ScheduledEventsProviderPageTransport.Campaign campaign,
+            ManualProviderRequestCoordinator.CampaignLease lease) {
+        try {
+            if (campaign != null) {
+                campaign.close();
+            }
+        }
+        finally {
+            if (lease != null) {
+                lease.close();
+            }
         }
     }
 

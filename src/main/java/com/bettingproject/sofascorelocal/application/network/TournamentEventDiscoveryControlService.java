@@ -2,6 +2,7 @@ package com.bettingproject.sofascorelocal.application.network;
 
 import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryControlSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryExecutionClaim;
+import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryLocalImportClaim;
 import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryQualificationSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.TournamentEventDiscoveryState;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.J3TournamentCatalog;
@@ -19,6 +20,7 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
@@ -31,6 +33,8 @@ public class TournamentEventDiscoveryControlService {
     private final Supplier<UUID> requestIdSupplier;
     private final IntSupplier confirmationCodeSupplier;
     private final Supplier<TournamentEventDiscoveryQualificationSnapshot> qualificationSupplier;
+    private final Supplier<TournamentEventDiscoveryQualificationSnapshot>
+            localImportQualificationSupplier;
     private final J3TournamentCatalogService catalogService;
 
     private TournamentEventDiscoveryState state = TournamentEventDiscoveryState.LOCKED;
@@ -52,6 +56,7 @@ public class TournamentEventDiscoveryControlService {
                 UUID::randomUUID,
                 new SecureRandom()::nextInt,
                 Objects.requireNonNull(policy, "policy")::snapshot,
+                policy::localImportSnapshot,
                 catalogService);
     }
 
@@ -61,12 +66,31 @@ public class TournamentEventDiscoveryControlService {
             IntSupplier confirmationCodeSupplier,
             Supplier<TournamentEventDiscoveryQualificationSnapshot> qualificationSupplier,
             J3TournamentCatalogService catalogService) {
+        this(
+                clock,
+                requestIdSupplier,
+                confirmationCodeSupplier,
+                qualificationSupplier,
+                qualificationSupplier,
+                catalogService);
+    }
+
+    TournamentEventDiscoveryControlService(
+            Clock clock,
+            Supplier<UUID> requestIdSupplier,
+            IntSupplier confirmationCodeSupplier,
+            Supplier<TournamentEventDiscoveryQualificationSnapshot> qualificationSupplier,
+            Supplier<TournamentEventDiscoveryQualificationSnapshot>
+                    localImportQualificationSupplier,
+            J3TournamentCatalogService catalogService) {
         this.clock = Objects.requireNonNull(clock, "clock");
         this.requestIdSupplier = Objects.requireNonNull(requestIdSupplier, "requestIdSupplier");
         this.confirmationCodeSupplier = Objects.requireNonNull(
                 confirmationCodeSupplier, "confirmationCodeSupplier");
         this.qualificationSupplier = Objects.requireNonNull(
                 qualificationSupplier, "qualificationSupplier");
+        this.localImportQualificationSupplier = Objects.requireNonNull(
+                localImportQualificationSupplier, "localImportQualificationSupplier");
         this.catalogService = Objects.requireNonNull(catalogService, "catalogService");
         changedAt = clock.instant();
     }
@@ -90,7 +114,7 @@ public class TournamentEventDiscoveryControlService {
                     TournamentEventDiscoveryControlError.TERMINAL_LOCK_REQUIRES_RESTART);
         }
         TournamentEventDiscoveryQualificationSnapshot qualification =
-                qualificationSupplier.get();
+                localImportQualificationSupplier.get();
         if (!qualification.available()) {
             throw rejected(
                     TournamentEventDiscoveryControlError.PROVIDER_TRANSPORT_UNAVAILABLE);
@@ -122,8 +146,46 @@ public class TournamentEventDiscoveryControlService {
             UUID requestedId,
             String confirmationText,
             boolean acknowledged) {
-        Objects.requireNonNull(requestedId, "requestedId");
         Instant now = clock.instant();
+        validateLocalClaimPrerequisites(
+                requestedId, confirmationText, acknowledged, now);
+        TournamentEventDiscoveryQualificationSnapshot qualification =
+                qualificationSupplier.get();
+        if (!qualification.available()) {
+            throw rejected(
+                    TournamentEventDiscoveryControlError.PROVIDER_TRANSPORT_UNAVAILABLE);
+        }
+        beginExecution(now);
+        return new TournamentEventDiscoveryExecutionClaim(
+                requestId,
+                qualification.providerOrigin(),
+                collectionDate,
+                selection);
+    }
+
+    public synchronized TournamentEventDiscoveryLocalImportClaim
+            confirmAndClaimLocalImport(
+                    UUID requestedId,
+                    String confirmationText,
+                    boolean acknowledged) {
+        Instant now = clock.instant();
+        TournamentEventDiscoveryQualificationSnapshot qualification =
+                validateLocalClaimPrerequisites(
+                        requestedId, confirmationText, acknowledged, now);
+        beginExecution(now);
+        return new TournamentEventDiscoveryLocalImportClaim(
+                requestId,
+                qualification.providerOrigin(),
+                collectionDate,
+                selection);
+    }
+
+    private TournamentEventDiscoveryQualificationSnapshot validateLocalClaimPrerequisites(
+            UUID requestedId,
+            String confirmationText,
+            boolean acknowledged,
+            Instant now) {
+        Objects.requireNonNull(requestedId, "requestedId");
         expireIfNecessary(now);
         if (state == TournamentEventDiscoveryState.EXPIRED_LOCKED) {
             throw rejected(TournamentEventDiscoveryControlError.CONFIRMATION_EXPIRED);
@@ -144,7 +206,7 @@ public class TournamentEventDiscoveryControlService {
             throw rejected(TournamentEventDiscoveryControlError.CONFIRMATION_TEXT_MISMATCH);
         }
         TournamentEventDiscoveryQualificationSnapshot qualification =
-                qualificationSupplier.get();
+                localImportQualificationSupplier.get();
         if (!qualification.available()) {
             lockFailed(now, "PROVIDER_TRANSPORT_UNAVAILABLE");
             throw rejected(
@@ -169,15 +231,14 @@ public class TournamentEventDiscoveryControlService {
             throw rejected(TournamentEventDiscoveryControlError.CATALOG_CHANGED);
         }
 
+        return qualification;
+    }
+
+    private void beginExecution(Instant now) {
         confirmationPhrase = null;
         expiresAt = null;
         state = TournamentEventDiscoveryState.EXECUTING;
         changedAt = now;
-        return new TournamentEventDiscoveryExecutionClaim(
-                requestId,
-                qualification.providerOrigin(),
-                collectionDate,
-                selection);
     }
 
     public synchronized boolean executionMayContinue(UUID requestedId) {
@@ -227,17 +288,34 @@ public class TournamentEventDiscoveryControlService {
     }
 
     public synchronized TournamentEventDiscoveryControlSnapshot stop() {
+        return stop(ignored -> { });
+    }
+
+    public synchronized TournamentEventDiscoveryControlSnapshot stop(
+            Consumer<UUID> beforeLock) {
+        Objects.requireNonNull(beforeLock, "beforeLock");
+        try {
+            if (requestId != null) {
+                beforeLock.accept(requestId);
+            }
+        }
+        finally {
+            lockByOperator();
+        }
+        return toSnapshot();
+    }
+
+    private void lockByOperator() {
         if (state == TournamentEventDiscoveryState.FAILED_LOCKED
                 || state == TournamentEventDiscoveryState.STOPPED_LOCKED
                 || state == TournamentEventDiscoveryState.EXPIRED_LOCKED) {
-            return toSnapshot();
+            return;
         }
         state = TournamentEventDiscoveryState.STOPPED_LOCKED;
         terminalCode = "OPERATOR_STOP";
         confirmationPhrase = null;
         expiresAt = null;
         changedAt = clock.instant();
-        return toSnapshot();
     }
 
     private void requireExecuting(UUID requestedId) {
@@ -279,6 +357,8 @@ public class TournamentEventDiscoveryControlService {
     private TournamentEventDiscoveryControlSnapshot toSnapshot() {
         TournamentEventDiscoveryQualificationSnapshot qualification =
                 qualificationSupplier.get();
+        TournamentEventDiscoveryQualificationSnapshot localImportQualification =
+                localImportQualificationSupplier.get();
         return new TournamentEventDiscoveryControlSnapshot(
                 state,
                 changedAt,
@@ -290,6 +370,7 @@ public class TournamentEventDiscoveryControlService {
                 selection,
                 terminalCode,
                 qualification.available(),
+                localImportQualification.available(),
                 qualification.blockers());
     }
 

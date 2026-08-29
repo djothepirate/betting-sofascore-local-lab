@@ -1,6 +1,8 @@
 package com.bettingproject.sofascorelocal.application.event;
 
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
+import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
+import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import org.springframework.stereotype.Service;
@@ -62,6 +64,20 @@ public class J4EventQueryService {
                                 .map(event -> item(event, zone))
                                 .toList(),
                         eventDetailsStore.findLatest(canonicalEventId)));
+    }
+
+    public Optional<CanonicalEventIdentity> findSofascoreIdentityInSelection(
+            UUID canonicalEventId,
+            LocalDate date,
+            String zoneId) {
+        Objects.requireNonNull(canonicalEventId, "canonicalEventId");
+        return search(date, zoneId).events().stream()
+                .map(item -> item.event().identity())
+                .filter(identity -> identity.value().equals(canonicalEventId))
+                .filter(identity -> CanonicalEventIdentity.SOFASCORE.equals(identity.provider()))
+                .filter(identity -> identity.providerEventId()
+                        <= EventDetailsProviderRequest.MAXIMUM_PARAMETERIZED_EVENT_ID)
+                .findFirst();
     }
 
     public ZoneId resolveZone(String value) {

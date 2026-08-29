@@ -105,6 +105,33 @@ class J3TransportStopAndIncidentPoliciesTest {
     }
 
     @Test
+    void persistsA404AsEndpointUnavailableWithoutParsingOrRetry() {
+        RecordingStore store = new RecordingStore();
+        J3ScheduledEventsOutcomeProcessor processor = processor(store);
+        byte[] rawPayload = "{\"error\":\"not-found\"}"
+                .getBytes(StandardCharsets.UTF_8);
+
+        var outcome = processor.processResponse(response(
+                404,
+                "application/json",
+                rawPayload,
+                null));
+
+        assertThat(outcome.circuit().state()).isEqualTo(J3CircuitState.OPEN);
+        assertThat(outcome.circuit().reason())
+                .isEqualTo(J3CircuitReason.ENDPOINT_UNAVAILABLE);
+        assertThat(outcome.hasNextPage()).isEmpty();
+        assertThat(outcome.retryScheduled()).isFalse();
+        assertThat(store.transitions()).containsExactly("SAVE:ENDPOINT_UNAVAILABLE");
+        assertThat(store.uniqueSnapshots()).singleElement().satisfies(snapshot -> {
+            assertThat(snapshot.payload().bytes()).isEqualTo(rawPayload);
+            assertThat(snapshot.schemaStatus())
+                    .isEqualTo(RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE);
+            assertThat(snapshot.errorCode()).isEqualTo("ENDPOINT_UNAVAILABLE");
+        });
+    }
+
+    @Test
     void keepsRetryAfterAsABlockingBoundaryButNeverRetries() {
         RecordingStore store = new RecordingStore();
         J3ScheduledEventsOutcomeProcessor processor = processor(store);

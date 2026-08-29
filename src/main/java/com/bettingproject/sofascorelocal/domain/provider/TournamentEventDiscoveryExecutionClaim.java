@@ -11,7 +11,7 @@ public record TournamentEventDiscoveryExecutionClaim(
         UUID requestId,
         URI providerOrigin,
         LocalDate collectionDate,
-        J3TournamentCatalogOption selection) {
+        J3TournamentCatalogOption selection) implements TournamentEventDiscoveryClaim {
 
     public TournamentEventDiscoveryExecutionClaim {
         Objects.requireNonNull(requestId, "requestId");

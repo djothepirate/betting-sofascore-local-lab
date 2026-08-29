@@ -11,6 +11,7 @@ import java.util.regex.Pattern;
 public record J3MinimizedPageEvidence(
         int page,
         J3PageResolutionSource resolutionSource,
+        boolean providerRequestExecuted,
         Instant resolvedAt,
         Instant cacheStoredAt,
         Instant requestedAt,
@@ -85,6 +86,16 @@ public record J3MinimizedPageEvidence(
                 && persistenceOutcome == RawSnapshotPersistenceOutcome.CACHE_HIT) {
             throw new IllegalArgumentException("provider evidence cannot be a cache hit");
         }
+        if (providerRequestExecuted
+                && resolutionSource != J3PageResolutionSource.PROVIDER) {
+            throw new IllegalArgumentException(
+                    "only provider evidence can mark a provider request as executed");
+        }
+        if (recorded && resolutionSource == J3PageResolutionSource.PROVIDER
+                && !providerRequestExecuted) {
+            throw new IllegalArgumentException(
+                    "recorded provider evidence requires an executed request");
+        }
         if (resolutionSource == J3PageResolutionSource.LOCAL_JSON_IMPORT
                 && (persistenceOutcome == RawSnapshotPersistenceOutcome.CACHE_HIT
                         || cacheStoredAt != null)) {
@@ -105,6 +116,7 @@ public record J3MinimizedPageEvidence(
         return new J3MinimizedPageEvidence(
                 page,
                 J3PageResolutionSource.PROVIDER,
+                true,
                 response.receivedAt(),
                 schemaStatus == RawSnapshotSchemaStatus.PARSED
                         ? response.receivedAt()
@@ -131,6 +143,7 @@ public record J3MinimizedPageEvidence(
         return new J3MinimizedPageEvidence(
                 page,
                 J3PageResolutionSource.CACHE,
+                false,
                 resolvedAt,
                 cachedPage.cachedAt(),
                 cachedPage.requestedAt(),
@@ -158,6 +171,7 @@ public record J3MinimizedPageEvidence(
         return new J3MinimizedPageEvidence(
                 page,
                 J3PageResolutionSource.LOCAL_JSON_IMPORT,
+                false,
                 response.receivedAt(),
                 null,
                 response.requestedAt(),
@@ -176,10 +190,12 @@ public record J3MinimizedPageEvidence(
     public static J3MinimizedPageEvidence failedBeforeSnapshot(
             int page,
             Instant requestedAt,
-            String terminalCode) {
+            String terminalCode,
+            boolean providerRequestExecuted) {
         return new J3MinimizedPageEvidence(
                 page,
                 J3PageResolutionSource.PROVIDER,
+                providerRequestExecuted,
                 requestedAt,
                 null,
                 requestedAt,

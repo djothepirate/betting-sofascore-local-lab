@@ -1,8 +1,11 @@
 package com.bettingproject.sofascorelocal.application.network;
 
+import com.bettingproject.sofascorelocal.config.ProviderPlaywrightProperties;
 import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.J5RealQualificationSnapshot;
+import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import java.net.URI;
@@ -14,9 +17,25 @@ import java.util.Objects;
 public class J5RealQualificationPolicy {
 
     private final SofascoreProperties properties;
+    private final ProviderPlaywrightProperties playwrightProperties;
+
+    @Autowired
+    public J5RealQualificationPolicy(
+            SofascoreProperties properties,
+            ObjectProvider<ProviderPlaywrightProperties> playwrightProperties) {
+        this(properties, playwrightProperties.getIfAvailable(ProviderPlaywrightProperties::new));
+    }
+
+    public J5RealQualificationPolicy(
+            SofascoreProperties properties,
+            ProviderPlaywrightProperties playwrightProperties) {
+        this.properties = Objects.requireNonNull(properties, "properties");
+        this.playwrightProperties = Objects.requireNonNull(
+                playwrightProperties, "playwrightProperties");
+    }
 
     public J5RealQualificationPolicy(SofascoreProperties properties) {
-        this.properties = Objects.requireNonNull(properties, "properties");
+        this(properties, new ProviderPlaywrightProperties());
     }
 
     public J5RealQualificationSnapshot snapshot() {
@@ -27,6 +46,8 @@ public class J5RealQualificationPolicy {
         if (!properties.isEnabled()) {
             blockers.add("CONNECTOR_DISABLED");
         }
+        ProviderPlaywrightQualificationGuard.appendBlockers(
+                playwrightProperties, blockers);
         if (properties.isJ4EventDetailsQualificationEnabled()
                 && !properties.isJ4EventDetailsPhase2Enabled()) {
             blockers.add("J4_PHASE_1_CANNOT_SHARE_J5_SESSION");
