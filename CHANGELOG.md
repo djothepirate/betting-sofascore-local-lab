@@ -4,6 +4,27 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### J8 — benchmark local prêt pour qualification humaine
+
+- ouverture de `WO-SS-20260829-016` sur la branche `codex/j8-benchmark`, depuis la baseline propre
+  `67268d805a4ba8c7d4706be7c18f6ff78d3ec1fd`, après revue de l'ADR-SS-001 v1.4 : aucun endpoint,
+  aucune allowlist et aucun élément du protocole worker Playwright v5 ne changent ;
+- ajout de la migration append-only V27 et d'un ledger immuable séparant campagnes, unités,
+  tentatives directes et résultats terminaux, sans rétrocréer de coût d'appel historique ;
+- ajout des niveaux de preuve `FULL_ATTEMPT_LEDGER`, `RESPONSE_ONLY` et `LEGACY_BASELINE`, avec
+  `NOT_MEASURED` dès qu'un dénominateur exact ne peut pas être prouvé ;
+- ajout de la page HTML locale en lecture seule `GET /benchmark`, de l'agrégation reproductible et
+  de l'export Markdown explicite sous `exports/j8/`, tous sans appel fournisseur ni JavaScript ;
+- extension de la preuve sauvegarde/restauration J6 aux cinq tables J8 via comptes et fingerprint
+  déterministe, sans les inclure dans la purge des payloads bruts ;
+- readiness technique rejouée à zéro appel fournisseur : 912 tests standards et 66 tests
+  PostgreSQL/Testcontainers sans échec, `Verify-Local`, Compose silencieux et diff à `PASS`, deux
+  exports Markdown byte-identiques, puis contrôle visuel desktop/étroit sans JavaScript ni
+  débordement horizontal global ;
+- passage de la phase applicative à `J8-BENCHMARK-READY-FOR-HUMAN-QUALIFICATION`. Aucune campagne
+  réelle ni revue humaine n'a été exécutée : `VALIDATED`, le rapport gelé et la clôture du Work
+  Order restent conditionnés à un go propriétaire séparé et aux six lignes de preuve finales.
+
 ### J5 — migration Playwright des donnees evenement validee
 
 - implementation de `WO-SS-20260827-015` sur la branche dediee

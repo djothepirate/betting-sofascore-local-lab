@@ -40,6 +40,21 @@ import com.bettingproject.sofascorelocal.application.network.J3TournamentCatalog
 import com.bettingproject.sofascorelocal.application.network.J3QualificationCheckpointReparser;
 import com.bettingproject.sofascorelocal.application.network.J5LocalUnavailableEvidence;
 import com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionService;
+import com.bettingproject.sofascorelocal.application.benchmark.J8BenchmarkReadEvidence;
+import com.bettingproject.sofascorelocal.application.benchmark.J8BenchmarkReport;
+import com.bettingproject.sofascorelocal.application.benchmark.J8BenchmarkService;
+import com.bettingproject.sofascorelocal.application.benchmark.J8BenchmarkWindow;
+import com.bettingproject.sofascorelocal.application.benchmark.J8DirectObservationCohorts;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaign;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignResult;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignTerminalState;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkExecutionMode;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkOutcomeType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkResolutionSource;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkUnit;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkUnitResult;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8ProviderCallAttempt;
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportService;
 import com.bettingproject.sofascorelocal.application.event.J4ScheduledEventsSnapshotNormalizationService;
 import com.bettingproject.sofascorelocal.application.event.J4EventQueryService;
@@ -59,6 +74,7 @@ import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservation
 import com.bettingproject.sofascorelocal.domain.eventdata.J5UnavailableFamily;
 import com.bettingproject.sofascorelocal.domain.eventdata.LineupSide;
 import com.bettingproject.sofascorelocal.domain.eventdata.TeamLineup;
+import com.bettingproject.sofascorelocal.domain.history.J6HistoryStream;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportError;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportException;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportStatus;
@@ -98,6 +114,8 @@ import com.bettingproject.sofascorelocal.port.J5EventDataStore;
 import com.bettingproject.sofascorelocal.port.J6SnapshotHistoryStore;
 import com.bettingproject.sofascorelocal.port.J6RawPayloadRetentionStore;
 import com.bettingproject.sofascorelocal.port.J7ExportManifestStore;
+import com.bettingproject.sofascorelocal.port.J8BenchmarkEvidenceStore;
+import com.bettingproject.sofascorelocal.port.J8BenchmarkReadStore;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import com.bettingproject.sofascorelocal.port.J3QualificationCheckpointStore;
 import com.bettingproject.sofascorelocal.port.RawSnapshotInspectionStore;
@@ -134,6 +152,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -261,6 +281,15 @@ class FlywayMigrationIT {
     @Autowired
     J7ExportManifestStore j7ExportManifestStore;
 
+    @Autowired
+    J8BenchmarkEvidenceStore j8BenchmarkEvidenceStore;
+
+    @Autowired
+    J8BenchmarkReadStore j8BenchmarkReadStore;
+
+    @Autowired
+    J8BenchmarkService j8BenchmarkService;
+
     @Test
     void createsTheJ3RawSnapshotSchemaAndKeepsNetworkDisabled() {
         String snapshotTable = jdbcTemplate.queryForObject(
@@ -292,7 +321,7 @@ class FlywayMigrationIT {
         assertThat(snapshotTable).isEqualTo("provider_snapshot");
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("26");
+        assertThat(flywayVersion).isEqualTo("27");
         assertThat(rawColumn).isEqualTo("bytea");
     }
 
@@ -614,6 +643,2112 @@ class FlywayMigrationIT {
                 .containsEntry("home_score", 1)
                 .containsEntry("away_score", 1)
                 .containsEntry("period_text", "Extra time");
+    }
+
+    @Test
+    void upgradesV26ToV27WithoutBackfillingOrRewritingHistoricalEvidence() {
+        String schema = "upgrade_v26_to_v27_j8_evidence";
+        String separator = POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
+        var dataSource = new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema,
+                POSTGRES.getUsername(),
+                POSTGRES.getPassword());
+        Flyway flywayV26 = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .createSchemas(true)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("26"))
+                .load();
+
+        assertThat(flywayV26.migrate().migrationsExecuted).isEqualTo(26);
+        JdbcTemplate upgradeJdbc = new JdbcTemplate(dataSource);
+        Long snapshotId = upgradeJdbc.queryForObject("""
+                insert into provider_snapshot (
+                    provider, acquisition_mode, logical_endpoint, request_key,
+                    requested_at, received_at, http_status, content_type, latency_ms,
+                    payload_raw, payload_size_bytes, payload_sha256,
+                    parser_version, schema_status
+                ) values (
+                    'SOFASCORE', 'DIRECT_LOCAL_ENDPOINT', 'EVENT_DETAILS',
+                    'EVENT_DETAILS|eventId=27000001',
+                    '2026-08-28T10:00:00Z', '2026-08-28T10:00:00.025Z',
+                    200, 'application/json', 25,
+                    decode('7b7d', 'hex'), 2, repeat('a', 64),
+                    'event-details-v2', 'PARSED'
+                )
+                returning id
+                """, Long.class);
+        Long occurrenceId = upgradeJdbc.queryForObject("""
+                insert into provider_snapshot_occurrence (
+                    snapshot_id, requested_at, received_at, http_status,
+                    content_type, latency_ms, parser_version, persistence_outcome
+                ) values (
+                    ?, '2026-08-28T10:00:00Z', '2026-08-28T10:00:00.025Z',
+                    200, 'application/json', 25, 'event-details-v2', 'INSERTED'
+                )
+                returning id
+                """, Long.class, snapshotId);
+        Map<String, Object> snapshotBefore = upgradeJdbc.queryForMap("""
+                select id, provider, acquisition_mode, logical_endpoint, request_key,
+                       requested_at, received_at, http_status, content_type, latency_ms,
+                       payload_size_bytes, payload_sha256, parser_version, schema_status,
+                       error_code, payload_purged_at, created_at
+                from provider_snapshot
+                where id = ?
+                """, snapshotId);
+        Map<String, Object> occurrenceBefore = upgradeJdbc.queryForMap("""
+                select id, snapshot_id, requested_at, received_at, http_status,
+                       content_type, latency_ms, parser_version, persistence_outcome,
+                       created_at
+                from provider_snapshot_occurrence
+                where id = ?
+                """, occurrenceId);
+
+        Flyway flywayV27 = Flyway.configure()
+                .dataSource(dataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("27"))
+                .load();
+
+        assertThat(flywayV27.migrate().migrationsExecuted).isEqualTo(1);
+        assertThat(flywayV27.info().current().getVersion().getVersion()).isEqualTo("27");
+        assertThat(upgradeJdbc.queryForMap("""
+                select id, provider, acquisition_mode, logical_endpoint, request_key,
+                       requested_at, received_at, http_status, content_type, latency_ms,
+                       payload_size_bytes, payload_sha256, parser_version, schema_status,
+                       error_code, payload_purged_at, created_at
+                from provider_snapshot
+                where id = ?
+                """, snapshotId)).containsAllEntriesOf(snapshotBefore);
+        assertThat(upgradeJdbc.queryForMap("""
+                select id, snapshot_id, requested_at, received_at, http_status,
+                       content_type, latency_ms, parser_version, persistence_outcome,
+                       created_at
+                from provider_snapshot_occurrence
+                where id = ?
+                """, occurrenceId)).containsAllEntriesOf(occurrenceBefore);
+        assertThat(upgradeJdbc.queryForList("""
+                select to_regclass(table_name)::text
+                from (values
+                    ('j8_benchmark_campaign'),
+                    ('j8_benchmark_unit'),
+                    ('j8_provider_call_attempt'),
+                    ('j8_benchmark_unit_result'),
+                    ('j8_benchmark_campaign_result')
+                ) tables(table_name)
+                order by table_name
+                """, String.class)).containsExactly(
+                        "j8_benchmark_campaign",
+                        "j8_benchmark_campaign_result",
+                        "j8_benchmark_unit",
+                        "j8_benchmark_unit_result",
+                        "j8_provider_call_attempt");
+        assertThat(upgradeJdbc.queryForObject(
+                "select to_regclass('ix_provider_snapshot_occurrence_j8_requested')::text",
+                String.class))
+                .isEqualTo("ix_provider_snapshot_occurrence_j8_requested");
+        for (String table : List.of(
+                "j8_benchmark_campaign",
+                "j8_benchmark_unit",
+                "j8_provider_call_attempt",
+                "j8_benchmark_unit_result",
+                "j8_benchmark_campaign_result")) {
+            assertThat(upgradeJdbc.queryForObject(
+                    "select count(*) from " + table,
+                    Long.class)).isZero();
+        }
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void persistsExactJ8AttemptsOccurrencesResultsAndAppendOnlyEvidence() {
+        UUID campaignId = UUID.randomUUID();
+        UUID canonicalEventId = UUID.randomUUID();
+        long providerEventId = 27000002L;
+        Instant startedAt = Instant.parse("2026-08-29T09:00:00Z");
+        jdbcTemplate.update("""
+                insert into canonical_event (id, provider, provider_event_id)
+                values (?, 'SOFASCORE', ?)
+                """, canonicalEventId, providerEventId);
+        j8BenchmarkEvidenceStore.startCampaign(new J8BenchmarkCampaign(
+                campaignId,
+                J8BenchmarkCampaignType.J5_EVENT_DATA,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                startedAt,
+                3,
+                Optional.empty()));
+
+        String statisticsKey = "EVENT_STATISTICS|eventId=" + providerEventId;
+        long statisticsUnitId = j8BenchmarkEvidenceStore.declareUnit(new J8BenchmarkUnit(
+                campaignId,
+                1,
+                SofascoreEndpointType.EVENT_STATISTICS,
+                statisticsKey,
+                Optional.of(canonicalEventId),
+                OptionalLong.of(providerEventId),
+                startedAt.plusSeconds(1)));
+        long incidentsUnitId = j8BenchmarkEvidenceStore.declareUnit(new J8BenchmarkUnit(
+                campaignId,
+                2,
+                SofascoreEndpointType.EVENT_INCIDENTS,
+                "EVENT_INCIDENTS|eventId=" + providerEventId,
+                Optional.of(canonicalEventId),
+                OptionalLong.of(providerEventId),
+                startedAt.plusSeconds(1)));
+        long lineupsUnitId = j8BenchmarkEvidenceStore.declareUnit(new J8BenchmarkUnit(
+                campaignId,
+                3,
+                SofascoreEndpointType.EVENT_LINEUPS,
+                "EVENT_LINEUPS|eventId=" + providerEventId,
+                Optional.of(canonicalEventId),
+                OptionalLong.of(providerEventId),
+                startedAt.plusSeconds(1)));
+
+        long attemptId = j8BenchmarkEvidenceStore.startProviderAttempt(
+                new J8ProviderCallAttempt(statisticsUnitId, startedAt.plusSeconds(2)));
+        assertThatThrownBy(() -> j8BenchmarkEvidenceStore.startProviderAttempt(
+                new J8ProviderCallAttempt(statisticsUnitId, startedAt.plusSeconds(2))))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        RawSnapshotPersistenceResult persisted = snapshotStore.save(new RawManualCallSnapshot(
+                SofascoreEndpointType.EVENT_STATISTICS,
+                RawSnapshotAcquisitionMode.DIRECT_LOCAL_ENDPOINT,
+                statisticsKey,
+                startedAt.plusSeconds(2),
+                startedAt.plusSeconds(2).plusMillis(25),
+                200,
+                "application/json",
+                Duration.ofMillis(25),
+                RawPayloadEvidence.capture("{}".getBytes(StandardCharsets.UTF_8)),
+                EventStatisticsV2Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.PARSED,
+                null));
+        assertThat(persisted.occurrenceId()).isPresent();
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                insert into j8_benchmark_unit_result (
+                    unit_id, attempt_id, resolved_at, resolution_source, outcome_type,
+                    response_received, http_status, latency_ms, snapshot_id,
+                    parser_version, schema_status, parser_warning_count,
+                    completeness_status, completeness_score
+                ) values (
+                    ?, ?, ?, 'PROVIDER', 'PARSED', true, 200, 25, ?,
+                    ?, 'PARSED', 1, 'COMPLETE', 100
+                )
+                """,
+                statisticsUnitId,
+                attemptId,
+                Timestamp.from(startedAt.plusSeconds(3)),
+                persisted.snapshotId(),
+                EventStatisticsV2Parser.PARSER_VERSION))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        var parsedResult = new J8BenchmarkUnitResult(
+                statisticsUnitId,
+                OptionalLong.of(attemptId),
+                startedAt.plusSeconds(3),
+                J8BenchmarkResolutionSource.PROVIDER,
+                J8BenchmarkOutcomeType.PARSED,
+                true,
+                OptionalInt.of(200),
+                OptionalLong.of(25L),
+                OptionalLong.of(persisted.snapshotId()),
+                persisted.occurrenceId(),
+                Optional.of(EventStatisticsV2Parser.PARSER_VERSION),
+                Optional.of(RawSnapshotSchemaStatus.PARSED),
+                1,
+                Optional.of(J5CompletenessStatus.COMPLETE),
+                OptionalInt.of(100),
+                Optional.empty());
+        j8BenchmarkEvidenceStore.recordUnitResult(parsedResult);
+        assertThatThrownBy(() -> j8BenchmarkEvidenceStore.recordUnitResult(parsedResult))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        String incidentsKey = "EVENT_INCIDENTS|eventId=" + providerEventId;
+        RawSnapshotPersistenceResult cachedSnapshot = snapshotStore.save(
+                new RawManualCallSnapshot(
+                        SofascoreEndpointType.EVENT_INCIDENTS,
+                        RawSnapshotAcquisitionMode.DIRECT_LOCAL_ENDPOINT,
+                        incidentsKey,
+                        startedAt.plusSeconds(2),
+                        startedAt.plusSeconds(2).plusMillis(30),
+                        200,
+                        "application/json",
+                        Duration.ofMillis(30),
+                        RawPayloadEvidence.capture("{}".getBytes(StandardCharsets.UTF_8)),
+                        EventIncidentsV14Parser.PARSER_VERSION,
+                        RawSnapshotSchemaStatus.PARSED,
+                        null));
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                insert into j8_benchmark_unit_result (
+                    unit_id, resolved_at, resolution_source, outcome_type,
+                    response_received, snapshot_id, snapshot_occurrence_id,
+                    parser_version, schema_status, parser_warning_count,
+                    completeness_status, completeness_score
+                ) values (
+                    ?, ?, 'CACHE', 'PARSED', false, ?, ?, ?, 'PARSED', 0,
+                    'EMPTY_VALID', 100
+                )
+                """,
+                incidentsUnitId,
+                Timestamp.from(startedAt.plusSeconds(3)),
+                cachedSnapshot.snapshotId(),
+                cachedSnapshot.occurrenceId().orElseThrow(),
+                EventIncidentsV14Parser.PARSER_VERSION))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        j8BenchmarkEvidenceStore.recordUnitResult(blockedJ8Result(
+                incidentsUnitId, startedAt.plusSeconds(3)));
+        j8BenchmarkEvidenceStore.recordUnitResult(blockedJ8Result(
+                lineupsUnitId, startedAt.plusSeconds(3)));
+        j8BenchmarkEvidenceStore.finishCampaign(new J8BenchmarkCampaignResult(
+                campaignId,
+                startedAt.plusSeconds(4),
+                J8BenchmarkCampaignTerminalState.FAILED,
+                Optional.of("SCHEMA_STOP"),
+                3));
+
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from j8_provider_call_attempt attempt
+                join j8_benchmark_unit unit on unit.id = attempt.unit_id
+                where unit.campaign_id = ?
+                """, Long.class, campaignId)).isEqualTo(1L);
+        assertThat(jdbcTemplate.queryForMap("""
+                select result.resolution_source, result.outcome_type,
+                       result.response_received, result.http_status, result.latency_ms,
+                       result.snapshot_id, result.snapshot_occurrence_id,
+                       result.schema_status, result.completeness_status,
+                       result.completeness_score
+                from j8_benchmark_unit_result result
+                where result.unit_id = ?
+                """, statisticsUnitId))
+                .containsEntry("resolution_source", "PROVIDER")
+                .containsEntry("outcome_type", "PARSED")
+                .containsEntry("response_received", true)
+                .containsEntry("http_status", 200)
+                .containsEntry("latency_ms", 25L)
+                .containsEntry("snapshot_id", persisted.snapshotId())
+                .containsEntry(
+                        "snapshot_occurrence_id",
+                        persisted.occurrenceId().orElseThrow())
+                .containsEntry("schema_status", "PARSED")
+                .containsEntry("completeness_status", "COMPLETE")
+                .containsEntry("completeness_score", 100);
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from j8_benchmark_unit_result result
+                join j8_benchmark_unit unit on unit.id = result.unit_id
+                where unit.campaign_id = ?
+                  and result.resolution_source = 'BLOCKED'
+                  and result.outcome_type = 'NOT_REACHED_AFTER_TERMINAL_FAILURE'
+                """, Long.class, campaignId)).isEqualTo(2L);
+
+        assertJ8AppendOnly("j8_benchmark_campaign", "campaign_id", campaignId);
+        assertJ8AppendOnly("j8_benchmark_unit", "id", statisticsUnitId);
+        assertJ8AppendOnly("j8_provider_call_attempt", "id", attemptId);
+        assertJ8AppendOnly("j8_benchmark_unit_result", "unit_id", statisticsUnitId);
+        assertJ8AppendOnly("j8_benchmark_campaign_result", "campaign_id", campaignId);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void recordsTournamentDiscoveryManualImportWithoutAProviderAttempt() {
+        UUID campaignId = UUID.randomUUID();
+        LocalDate collectionDate = LocalDate.of(2026, 8, 29);
+        Instant startedAt = Instant.parse("2026-08-29T10:00:00Z");
+        String requestKey = "TOURNAMENT_SCHEDULED_EVENTS|date="
+                + collectionDate + "|uniqueTournamentId=7";
+        j8BenchmarkEvidenceStore.startCampaign(new J8BenchmarkCampaign(
+                campaignId,
+                J8BenchmarkCampaignType.J3_TOURNAMENT_DISCOVERY,
+                J8BenchmarkExecutionMode.MANUAL_LOCAL_JSON_IMPORT,
+                startedAt,
+                1,
+                Optional.of(collectionDate)));
+        long unitId = j8BenchmarkEvidenceStore.declareUnit(new J8BenchmarkUnit(
+                campaignId,
+                1,
+                SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
+                requestKey,
+                Optional.empty(),
+                OptionalLong.empty(),
+                startedAt.plusSeconds(1)));
+        RawSnapshotPersistenceResult imported = snapshotStore.save(new RawManualCallSnapshot(
+                SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
+                RawSnapshotAcquisitionMode.MANUAL_LOCAL_JSON_IMPORT,
+                requestKey,
+                startedAt.plusSeconds(2),
+                startedAt.plusSeconds(2),
+                200,
+                "application/json",
+                Duration.ZERO,
+                RawPayloadEvidence.capture("{}".getBytes(StandardCharsets.UTF_8)),
+                TournamentScheduledEventsV1Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.PARSED,
+                null));
+        j8BenchmarkEvidenceStore.recordUnitResult(new J8BenchmarkUnitResult(
+                unitId,
+                OptionalLong.empty(),
+                startedAt.plusSeconds(3),
+                J8BenchmarkResolutionSource.MANUAL_LOCAL_JSON_IMPORT,
+                J8BenchmarkOutcomeType.PARSED,
+                false,
+                OptionalInt.empty(),
+                OptionalLong.empty(),
+                OptionalLong.of(imported.snapshotId()),
+                imported.occurrenceId(),
+                Optional.of(TournamentScheduledEventsV1Parser.PARSER_VERSION),
+                Optional.of(RawSnapshotSchemaStatus.PARSED),
+                0,
+                Optional.empty(),
+                OptionalInt.empty(),
+                Optional.empty()));
+        j8BenchmarkEvidenceStore.finishCampaign(new J8BenchmarkCampaignResult(
+                campaignId,
+                startedAt.plusSeconds(4),
+                J8BenchmarkCampaignTerminalState.COMPLETED,
+                Optional.empty(),
+                1));
+
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from j8_provider_call_attempt attempt
+                join j8_benchmark_unit unit on unit.id = attempt.unit_id
+                where unit.campaign_id = ?
+                """, Long.class, campaignId)).isZero();
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from j8_benchmark_unit_result result
+                join j8_benchmark_unit unit on unit.id = result.unit_id
+                where unit.campaign_id = ?
+                  and result.resolution_source = 'MANUAL_LOCAL_JSON_IMPORT'
+                  and result.snapshot_occurrence_id is not null
+                """, Long.class, campaignId)).isEqualTo(1L);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void enforcesCanonicalJ8CampaignTargetsAtTheDatabaseBoundary() {
+        Instant startedAt = Instant.parse("2033-03-19T09:00:00Z");
+        LocalDate collectionDate = LocalDate.of(2033, 3, 19);
+
+        UUID scheduledCampaignId = UUID.randomUUID();
+        j8BenchmarkEvidenceStore.startCampaign(new J8BenchmarkCampaign(
+                scheduledCampaignId,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                startedAt,
+                25,
+                Optional.of(collectionDate)));
+        assertThatThrownBy(() -> insertJ8Unit(
+                scheduledCampaignId,
+                1,
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                "SCHEDULED_EVENTS|date=2033-03-18|page=1",
+                null,
+                null,
+                startedAt.plusSeconds(1)))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("must match campaign date and ordinal");
+        assertThatThrownBy(() -> insertJ8Unit(
+                scheduledCampaignId,
+                1,
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                "SCHEDULED_EVENTS|date=2033-03-19|page=2",
+                null,
+                null,
+                startedAt.plusSeconds(1)))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("must match campaign date and ordinal");
+
+        UUID tournamentCampaignId = UUID.randomUUID();
+        j8BenchmarkEvidenceStore.startCampaign(new J8BenchmarkCampaign(
+                tournamentCampaignId,
+                J8BenchmarkCampaignType.J3_TOURNAMENT_DISCOVERY,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                startedAt,
+                1,
+                Optional.of(collectionDate)));
+        assertThatThrownBy(() -> insertJ8Unit(
+                tournamentCampaignId,
+                1,
+                SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
+                "TOURNAMENT_SCHEDULED_EVENTS|date=2033-03-18|uniqueTournamentId=17",
+                null,
+                null,
+                startedAt.plusSeconds(1)))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("must match campaign date and numeric id");
+        assertThatThrownBy(() -> insertJ8Unit(
+                tournamentCampaignId,
+                1,
+                SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
+                "TOURNAMENT_SCHEDULED_EVENTS|date=2033-03-19|uniqueTournamentId=x",
+                null,
+                null,
+                startedAt.plusSeconds(1)))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("must match campaign date and numeric id");
+        assertThatThrownBy(() -> insertJ8Unit(
+                tournamentCampaignId,
+                1,
+                SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
+                "TOURNAMENT_SCHEDULED_EVENTS|date=2033-03-19"
+                        + "|uniqueTournamentId=9223372036854775808",
+                null,
+                null,
+                startedAt.plusSeconds(1)))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("exceeds signed bigint");
+
+        UUID phase2CampaignId = UUID.randomUUID();
+        j8BenchmarkEvidenceStore.startCampaign(new J8BenchmarkCampaign(
+                phase2CampaignId,
+                J8BenchmarkCampaignType.J4_EVENT_DETAILS_PHASE2,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                startedAt,
+                1,
+                Optional.empty()));
+        assertThatThrownBy(() -> insertJ8Unit(
+                phase2CampaignId,
+                1,
+                SofascoreEndpointType.EVENT_DETAILS,
+                "event:27000001:details",
+                null,
+                27_000_001L,
+                startedAt.plusSeconds(1)))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        assertThatThrownBy(() -> insertJ8Unit(
+                phase2CampaignId,
+                1,
+                SofascoreEndpointType.EVENT_DETAILS,
+                "EVENT_DETAILS|eventId=1000000000",
+                null,
+                1_000_000_000L,
+                startedAt.plusSeconds(1)))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        UUID phase1CampaignId = UUID.randomUUID();
+        j8BenchmarkEvidenceStore.startCampaign(new J8BenchmarkCampaign(
+                phase1CampaignId,
+                J8BenchmarkCampaignType.J4_EVENT_DETAILS_PHASE1,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                startedAt,
+                2,
+                Optional.empty()));
+        assertThatThrownBy(() -> insertJ8Unit(
+                phase1CampaignId,
+                1,
+                SofascoreEndpointType.EVENT_DETAILS,
+                "EVENT_DETAILS|eventId=16691018",
+                null,
+                16_691_018L,
+                startedAt.plusSeconds(1)))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("outside its fixed allowlist");
+        insertJ8Unit(
+                phase1CampaignId,
+                1,
+                SofascoreEndpointType.EVENT_DETAILS,
+                "EVENT_DETAILS|eventId=16386245",
+                null,
+                16_386_245L,
+                startedAt.plusSeconds(1));
+        insertJ8Unit(
+                phase1CampaignId,
+                2,
+                SofascoreEndpointType.EVENT_DETAILS,
+                "EVENT_DETAILS|eventId=16421052",
+                null,
+                16_421_052L,
+                startedAt.plusSeconds(1));
+        assertThat(jdbcTemplate.queryForList("""
+                select provider_event_id
+                from j8_benchmark_unit
+                where campaign_id = ?
+                order by unit_ordinal
+                """, Long.class, phase1CampaignId)).containsExactly(
+                        16_386_245L, 16_421_052L);
+
+        long j5EventId = 27_000_011L;
+        long otherEventId = 27_000_012L;
+        UUID canonicalEventId = UUID.randomUUID();
+        UUID otherCanonicalEventId = UUID.randomUUID();
+        jdbcTemplate.update("""
+                insert into canonical_event (id, provider, provider_event_id)
+                values (?, 'SOFASCORE', ?), (?, 'SOFASCORE', ?)
+                """,
+                canonicalEventId,
+                j5EventId,
+                otherCanonicalEventId,
+                otherEventId);
+        UUID j5CampaignId = UUID.randomUUID();
+        j8BenchmarkEvidenceStore.startCampaign(new J8BenchmarkCampaign(
+                j5CampaignId,
+                J8BenchmarkCampaignType.J5_EVENT_DATA,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                startedAt,
+                3,
+                Optional.empty()));
+        insertJ8Unit(
+                j5CampaignId,
+                1,
+                SofascoreEndpointType.EVENT_STATISTICS,
+                "EVENT_STATISTICS|eventId=" + j5EventId,
+                canonicalEventId,
+                j5EventId,
+                startedAt.plusSeconds(1));
+        assertThatThrownBy(() -> insertJ8Unit(
+                j5CampaignId,
+                2,
+                SofascoreEndpointType.EVENT_LINEUPS,
+                "EVENT_LINEUPS|eventId=" + j5EventId,
+                canonicalEventId,
+                j5EventId,
+                startedAt.plusSeconds(1)))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("fixed endpoint families");
+        assertThatThrownBy(() -> insertJ8Unit(
+                j5CampaignId,
+                2,
+                SofascoreEndpointType.EVENT_INCIDENTS,
+                "EVENT_INCIDENTS|eventId=" + otherEventId,
+                otherCanonicalEventId,
+                otherEventId,
+                startedAt.plusSeconds(1)))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("same canonical event");
+        assertThatThrownBy(() -> insertJ8Unit(
+                j5CampaignId,
+                2,
+                SofascoreEndpointType.EVENT_INCIDENTS,
+                "EVENT_INCIDENTS|eventId=" + j5EventId,
+                null,
+                j5EventId,
+                startedAt.plusSeconds(1)))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("same canonical event");
+        insertJ8Unit(
+                j5CampaignId,
+                2,
+                SofascoreEndpointType.EVENT_INCIDENTS,
+                "EVENT_INCIDENTS|eventId=" + j5EventId,
+                canonicalEventId,
+                j5EventId,
+                startedAt.plusSeconds(1));
+        insertJ8Unit(
+                j5CampaignId,
+                3,
+                SofascoreEndpointType.EVENT_LINEUPS,
+                "EVENT_LINEUPS|eventId=" + j5EventId,
+                canonicalEventId,
+                j5EventId,
+                startedAt.plusSeconds(1));
+        assertThat(jdbcTemplate.queryForList("""
+                select unit_ordinal::text || ':' || logical_endpoint
+                from j8_benchmark_unit
+                where campaign_id = ?
+                order by unit_ordinal
+                """, String.class, j5CampaignId)).containsExactly(
+                        "1:EVENT_STATISTICS",
+                        "2:EVENT_INCIDENTS",
+                        "3:EVENT_LINEUPS");
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void enforcesExactJ8OccurrenceChronologyAndTemporalCampaignCompletion() {
+        UUID campaignId = UUID.randomUUID();
+        LocalDate collectionDate = LocalDate.of(2034, 4, 20);
+        Instant startedAt = Instant.parse("2034-04-20T09:00:00Z");
+        j8BenchmarkEvidenceStore.startCampaign(new J8BenchmarkCampaign(
+                campaignId,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                startedAt,
+                25,
+                Optional.of(collectionDate)));
+
+        List<Long> unitIds = new ArrayList<>();
+        for (int ordinal = 1; ordinal <= 3; ordinal++) {
+            unitIds.add(j8BenchmarkEvidenceStore.declareUnit(new J8BenchmarkUnit(
+                    campaignId,
+                    ordinal,
+                    SofascoreEndpointType.SCHEDULED_EVENTS,
+                    "SCHEDULED_EVENTS|date=" + collectionDate + "|page=" + ordinal,
+                    Optional.empty(),
+                    OptionalLong.empty(),
+                    startedAt.plusSeconds(1))));
+        }
+
+        long firstUnitId = unitIds.get(0);
+        long firstAttemptId = j8BenchmarkEvidenceStore.startProviderAttempt(
+                new J8ProviderCallAttempt(firstUnitId, startedAt.plusSeconds(2)));
+        RawSnapshotPersistenceResult first = snapshotStore.save(j8ScheduledSnapshot(
+                "SCHEDULED_EVENTS|date=" + collectionDate + "|page=1",
+                startedAt.plusSeconds(2),
+                "{\"events\":[]}".getBytes(StandardCharsets.UTF_8)));
+        long firstOccurrenceId = first.occurrenceId().orElseThrow();
+
+        assertThatThrownBy(() -> insertJ8Result(
+                firstUnitId,
+                firstAttemptId,
+                startedAt.plusSeconds(4),
+                J8BenchmarkResolutionSource.PROVIDER,
+                J8BenchmarkOutcomeType.PROCESSING_FAILURE,
+                false,
+                null,
+                null,
+                first.snapshotId(),
+                firstOccurrenceId,
+                ScheduledEventsV1Parser.PARSER_VERSION,
+                null,
+                0))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("provider snapshots require a received response");
+        assertThatThrownBy(() -> insertJ8Result(
+                firstUnitId,
+                firstAttemptId,
+                startedAt.plusSeconds(4),
+                J8BenchmarkResolutionSource.PROVIDER,
+                J8BenchmarkOutcomeType.PARSED,
+                true,
+                200,
+                25L,
+                first.snapshotId(),
+                firstOccurrenceId,
+                "scheduled-events-v999",
+                RawSnapshotSchemaStatus.PARSED,
+                0))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("parser must match its occurrence");
+        assertThatThrownBy(() -> insertJ8Result(
+                firstUnitId,
+                firstAttemptId,
+                startedAt.plusSeconds(4),
+                J8BenchmarkResolutionSource.PROVIDER,
+                J8BenchmarkOutcomeType.PARSED,
+                true,
+                201,
+                25L,
+                first.snapshotId(),
+                firstOccurrenceId,
+                ScheduledEventsV1Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.PARSED,
+                0))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("match occurrence transport evidence");
+        assertThatThrownBy(() -> insertJ8Result(
+                firstUnitId,
+                firstAttemptId,
+                startedAt.plusSeconds(4),
+                J8BenchmarkResolutionSource.PROVIDER,
+                J8BenchmarkOutcomeType.PARSED,
+                true,
+                200,
+                26L,
+                first.snapshotId(),
+                firstOccurrenceId,
+                ScheduledEventsV1Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.PARSED,
+                0))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("match occurrence transport evidence");
+        assertThatThrownBy(() -> insertJ8Result(
+                firstUnitId,
+                firstAttemptId,
+                startedAt.plusSeconds(2).plusMillis(10),
+                J8BenchmarkResolutionSource.PROVIDER,
+                J8BenchmarkOutcomeType.PARSED,
+                true,
+                200,
+                25L,
+                first.snapshotId(),
+                firstOccurrenceId,
+                ScheduledEventsV1Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.PARSED,
+                0))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("occurrence chronology is inconsistent");
+        assertThatThrownBy(() -> insertJ8Result(
+                firstUnitId,
+                firstAttemptId,
+                startedAt.plusSeconds(4),
+                J8BenchmarkResolutionSource.PROVIDER,
+                J8BenchmarkOutcomeType.TRANSPORT_FAILURE,
+                false,
+                null,
+                null,
+                null,
+                null,
+                ScheduledEventsV1Parser.PARSER_VERSION,
+                null,
+                0))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        Long baselineOccurrenceId = jdbcTemplate.queryForObject("""
+                insert into provider_snapshot_occurrence (
+                    snapshot_id, requested_at, received_at, http_status,
+                    content_type, latency_ms, parser_version, persistence_outcome
+                ) values (?, ?, ?, 200, 'application/json', 25, ?, 'BASELINE')
+                returning id
+                """,
+                Long.class,
+                first.snapshotId(),
+                Timestamp.from(startedAt.plusSeconds(2)),
+                Timestamp.from(startedAt.plusSeconds(2).plusMillis(25)),
+                ScheduledEventsV1Parser.PARSER_VERSION);
+        assertThat(baselineOccurrenceId).isNotNull();
+        assertThatThrownBy(() -> insertJ8Result(
+                firstUnitId,
+                firstAttemptId,
+                startedAt.plusSeconds(4),
+                J8BenchmarkResolutionSource.PROVIDER,
+                J8BenchmarkOutcomeType.PARSED,
+                true,
+                200,
+                25L,
+                first.snapshotId(),
+                baselineOccurrenceId,
+                ScheduledEventsV1Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.PARSED,
+                0))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("requires a prospective occurrence");
+
+        Long earlyOccurrenceId = jdbcTemplate.queryForObject("""
+                insert into provider_snapshot_occurrence (
+                    snapshot_id, requested_at, received_at, http_status,
+                    content_type, latency_ms, parser_version, persistence_outcome
+                ) values (?, ?, ?, 200, 'application/json', 25, ?, 'DEDUPLICATED')
+                returning id
+                """,
+                Long.class,
+                first.snapshotId(),
+                Timestamp.from(startedAt.plusSeconds(1).plusMillis(500)),
+                Timestamp.from(startedAt.plusSeconds(1).plusMillis(525)),
+                ScheduledEventsV1Parser.PARSER_VERSION);
+        assertThat(earlyOccurrenceId).isNotNull();
+        assertThatThrownBy(() -> insertJ8Result(
+                firstUnitId,
+                firstAttemptId,
+                startedAt.plusSeconds(4),
+                J8BenchmarkResolutionSource.PROVIDER,
+                J8BenchmarkOutcomeType.PARSED,
+                true,
+                200,
+                25L,
+                first.snapshotId(),
+                earlyOccurrenceId,
+                ScheduledEventsV1Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.PARSED,
+                0))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("cannot predate its attempt");
+
+        j8BenchmarkEvidenceStore.recordUnitResult(providerJ8Result(
+                firstUnitId,
+                firstAttemptId,
+                startedAt.plusSeconds(5),
+                J8BenchmarkOutcomeType.PARSED,
+                OptionalInt.of(200),
+                OptionalLong.of(25L),
+                OptionalLong.of(first.snapshotId()),
+                OptionalLong.of(firstOccurrenceId),
+                Optional.of(ScheduledEventsV1Parser.PARSER_VERSION),
+                Optional.of(RawSnapshotSchemaStatus.PARSED),
+                null));
+
+        long secondUnitId = unitIds.get(1);
+        long secondAttemptId = j8BenchmarkEvidenceStore.startProviderAttempt(
+                new J8ProviderCallAttempt(secondUnitId, startedAt.plusSeconds(3)));
+        String secondRequestKey = "SCHEDULED_EVENTS|date=" + collectionDate + "|page=2";
+        RawSnapshotPersistenceResult second = snapshotStore.save(new RawManualCallSnapshot(
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                secondRequestKey,
+                startedAt.plusSeconds(3),
+                startedAt.plusSeconds(3).plusMillis(35),
+                500,
+                "application/json",
+                Duration.ofMillis(35),
+                RawPayloadEvidence.capture(
+                        "{\"error\":true}".getBytes(StandardCharsets.UTF_8)),
+                ScheduledEventsV1Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE,
+                "SCHEMA_INCOMPATIBLE"));
+        long secondOccurrenceId = second.occurrenceId().orElseThrow();
+        assertThatThrownBy(() -> insertJ8Result(
+                secondUnitId,
+                secondAttemptId,
+                startedAt.plusSeconds(6),
+                J8BenchmarkResolutionSource.PROVIDER,
+                J8BenchmarkOutcomeType.SCHEMA_INCOMPATIBLE,
+                true,
+                500,
+                35L,
+                second.snapshotId(),
+                secondOccurrenceId,
+                ScheduledEventsV1Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE,
+                0))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        j8BenchmarkEvidenceStore.recordUnitResult(providerJ8Result(
+                secondUnitId,
+                secondAttemptId,
+                startedAt.plusSeconds(6),
+                J8BenchmarkOutcomeType.HTTP_ERROR,
+                OptionalInt.of(500),
+                OptionalLong.of(35L),
+                OptionalLong.of(second.snapshotId()),
+                OptionalLong.of(secondOccurrenceId),
+                Optional.of(ScheduledEventsV1Parser.PARSER_VERSION),
+                Optional.empty(),
+                "HTTP_500"));
+
+        long thirdUnitId = unitIds.get(2);
+        String thirdRequestKey = "SCHEDULED_EVENTS|date=" + collectionDate + "|page=3";
+        RawSnapshotPersistenceResult cacheEvidence = snapshotStore.save(j8ScheduledSnapshot(
+                thirdRequestKey,
+                startedAt.minusSeconds(30),
+                "{\"events\":[]}".getBytes(StandardCharsets.UTF_8)));
+        assertThatThrownBy(() -> insertJ8Result(
+                thirdUnitId,
+                null,
+                startedAt.plusSeconds(7),
+                J8BenchmarkResolutionSource.CACHE,
+                J8BenchmarkOutcomeType.PROCESSING_FAILURE,
+                false,
+                null,
+                null,
+                cacheEvidence.snapshotId(),
+                null,
+                null,
+                null,
+                1))
+                .isInstanceOf(DataIntegrityViolationException.class);
+        j8BenchmarkEvidenceStore.recordUnitResult(blockedJ8Result(
+                thirdUnitId, startedAt.plusSeconds(7)));
+
+        assertThatThrownBy(() -> j8BenchmarkEvidenceStore.finishCampaign(
+                new J8BenchmarkCampaignResult(
+                        campaignId,
+                        startedAt.plusSeconds(6).plusMillis(500),
+                        J8BenchmarkCampaignTerminalState.FAILED,
+                        Optional.of("EARLY_FINISH"),
+                        3)))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("cannot finish before its latest unit result");
+        j8BenchmarkEvidenceStore.finishCampaign(new J8BenchmarkCampaignResult(
+                campaignId,
+                startedAt.plusSeconds(8),
+                J8BenchmarkCampaignTerminalState.FAILED,
+                Optional.of("EVIDENCE_COMPLETE"),
+                3));
+
+        J8BenchmarkWindow window = J8BenchmarkWindow.between(
+                startedAt.minusSeconds(1),
+                startedAt.plusSeconds(10));
+        J8BenchmarkReadEvidence beforeFinish = j8BenchmarkReadStore.readEvidence(
+                window, startedAt.plusSeconds(7).plusMillis(500));
+        assertThat(beforeFinish.campaigns()).filteredOn(campaign ->
+                campaign.campaignId().equals(campaignId))
+                .singleElement()
+                .satisfies(campaign -> {
+                    assertThat(campaign.finishedAt()).isEmpty();
+                    assertThat(campaign.terminalState()).isEmpty();
+                });
+        J8BenchmarkReadEvidence afterFinish = j8BenchmarkReadStore.readEvidence(
+                window, startedAt.plusSeconds(9));
+        assertThat(afterFinish.campaigns()).filteredOn(campaign ->
+                campaign.campaignId().equals(campaignId))
+                .singleElement()
+                .satisfies(campaign -> assertThat(campaign.finishedAt())
+                        .contains(startedAt.plusSeconds(8)));
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void persistsJ8TerminalOutcomeMatrixAndCacheWithoutOrphanAttempts() {
+        record TerminalCase(
+                OptionalInt httpStatus,
+                J8BenchmarkOutcomeType outcome,
+                Optional<RawSnapshotSchemaStatus> schemaStatus,
+                boolean persistsSnapshot,
+                String terminalCode) {
+        }
+
+        UUID campaignId = UUID.randomUUID();
+        LocalDate collectionDate = LocalDate.of(2031, 1, 17);
+        Instant startedAt = Instant.parse("2031-01-17T09:00:00Z");
+        j8BenchmarkEvidenceStore.startCampaign(new J8BenchmarkCampaign(
+                campaignId,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                startedAt,
+                25,
+                Optional.of(collectionDate)));
+
+        List<Long> unitIds = new ArrayList<>();
+        List<String> requestKeys = new ArrayList<>();
+        for (int ordinal = 1; ordinal <= 10; ordinal++) {
+            String requestKey = "SCHEDULED_EVENTS|date=" + collectionDate
+                    + "|page=" + ordinal;
+            requestKeys.add(requestKey);
+            unitIds.add(j8BenchmarkEvidenceStore.declareUnit(new J8BenchmarkUnit(
+                    campaignId,
+                    ordinal,
+                    SofascoreEndpointType.SCHEDULED_EVENTS,
+                    requestKey,
+                    Optional.empty(),
+                    OptionalLong.empty(),
+                    startedAt.plusSeconds(1))));
+        }
+
+        assertThatThrownBy(() -> jdbcTemplate.update("""
+                insert into j8_provider_call_attempt (unit_id, started_at)
+                values (?, ?)
+                """, Long.MAX_VALUE, Timestamp.from(startedAt.plusSeconds(2))))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("J8 benchmark unit does not exist");
+
+        List<TerminalCase> terminalCases = List.of(
+                new TerminalCase(
+                        OptionalInt.of(401), J8BenchmarkOutcomeType.HTTP_REFUSED,
+                        Optional.empty(), false, "HTTP_401"),
+                new TerminalCase(
+                        OptionalInt.of(403), J8BenchmarkOutcomeType.HTTP_REFUSED,
+                        Optional.empty(), false, "HTTP_403"),
+                new TerminalCase(
+                        OptionalInt.of(429), J8BenchmarkOutcomeType.HTTP_REFUSED,
+                        Optional.empty(), false, "HTTP_429"),
+                new TerminalCase(
+                        OptionalInt.of(404), J8BenchmarkOutcomeType.ENDPOINT_UNAVAILABLE,
+                        Optional.of(RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE),
+                        true, "HTTP_404"),
+                new TerminalCase(
+                        OptionalInt.of(503), J8BenchmarkOutcomeType.HTTP_ERROR,
+                        Optional.empty(), false, "HTTP_503"),
+                new TerminalCase(
+                        OptionalInt.of(200), J8BenchmarkOutcomeType.SCHEMA_INCOMPATIBLE,
+                        Optional.of(RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE),
+                        true, "SCHEMA_INCOMPATIBLE"),
+                new TerminalCase(
+                        OptionalInt.of(200), J8BenchmarkOutcomeType.UNEXPECTED_CONTENT,
+                        Optional.of(RawSnapshotSchemaStatus.UNEXPECTED_CONTENT),
+                        true, "UNEXPECTED_CONTENT"),
+                new TerminalCase(
+                        OptionalInt.empty(), J8BenchmarkOutcomeType.TRANSPORT_FAILURE,
+                        Optional.empty(), false, "TRANSPORT_FAILURE"),
+                new TerminalCase(
+                        OptionalInt.of(200), J8BenchmarkOutcomeType.PERSISTENCE_FAILURE,
+                        Optional.empty(), false, "RAW_SNAPSHOT_PERSISTENCE_FAILURE"));
+
+        long[] attemptIds = new long[terminalCases.size()];
+        for (int index = 0; index < terminalCases.size(); index++) {
+            long unitId = unitIds.get(index);
+            Instant attemptAt = startedAt.plusSeconds(2L + index);
+            if (index == 1) {
+                long foreignAttemptId = attemptIds[0];
+                assertThatThrownBy(() -> j8BenchmarkEvidenceStore.recordUnitResult(
+                        providerJ8Result(
+                                unitId,
+                                foreignAttemptId,
+                                attemptAt,
+                                J8BenchmarkOutcomeType.TRANSPORT_FAILURE,
+                                OptionalInt.empty(),
+                                OptionalLong.empty(),
+                                OptionalLong.empty(),
+                                OptionalLong.empty(),
+                                Optional.empty(),
+                                Optional.empty(),
+                                "ORPHAN_ATTEMPT")))
+                        .isInstanceOf(RuntimeException.class)
+                        .hasStackTraceContaining(
+                                "J8 benchmark result attempt does not belong to its unit");
+            }
+            attemptIds[index] = j8BenchmarkEvidenceStore.startProviderAttempt(
+                    new J8ProviderCallAttempt(unitId, attemptAt));
+
+            TerminalCase terminal = terminalCases.get(index);
+            OptionalLong snapshotId = OptionalLong.empty();
+            OptionalLong occurrenceId = OptionalLong.empty();
+            Optional<String> parserVersion = Optional.empty();
+            if (terminal.persistsSnapshot()) {
+                RawSnapshotPersistenceResult raw = snapshotStore.save(
+                        new RawManualCallSnapshot(
+                                SofascoreEndpointType.SCHEDULED_EVENTS,
+                                requestKeys.get(index),
+                                attemptAt,
+                                attemptAt.plusMillis(10L + index),
+                                terminal.httpStatus().orElseThrow(),
+                                "application/json",
+                                Duration.ofMillis(10L + index),
+                                RawPayloadEvidence.capture(
+                                        ("{\"terminalCase\":" + index + "}")
+                                                .getBytes(StandardCharsets.UTF_8)),
+                                ScheduledEventsV1Parser.PARSER_VERSION,
+                                terminal.schemaStatus().orElseThrow(),
+                                terminal.outcome() == J8BenchmarkOutcomeType.ENDPOINT_UNAVAILABLE
+                                        ? null
+                                        : terminal.terminalCode()));
+                snapshotId = OptionalLong.of(raw.snapshotId());
+                occurrenceId = raw.occurrenceId();
+                parserVersion = Optional.of(ScheduledEventsV1Parser.PARSER_VERSION);
+            }
+            boolean responseReceived = terminal.httpStatus().isPresent();
+            j8BenchmarkEvidenceStore.recordUnitResult(providerJ8Result(
+                    unitId,
+                    attemptIds[index],
+                    attemptAt.plusSeconds(1),
+                    terminal.outcome(),
+                    terminal.httpStatus(),
+                    responseReceived
+                            ? OptionalLong.of(10L + index)
+                            : OptionalLong.empty(),
+                    snapshotId,
+                    occurrenceId,
+                    parserVersion,
+                    terminal.schemaStatus(),
+                    terminal.terminalCode()));
+        }
+
+        long cacheUnitId = unitIds.get(9);
+        String cacheRequestKey = requestKeys.get(9);
+        RawSnapshotPersistenceResult cached = snapshotStore.save(
+                new RawManualCallSnapshot(
+                        SofascoreEndpointType.SCHEDULED_EVENTS,
+                        cacheRequestKey,
+                        startedAt.minusSeconds(30),
+                        startedAt.minusSeconds(30).plusMillis(5),
+                        200,
+                        "application/json",
+                        Duration.ofMillis(5),
+                        RawPayloadEvidence.capture(
+                                "{\"events\":[]}".getBytes(StandardCharsets.UTF_8)),
+                        ScheduledEventsV1Parser.PARSER_VERSION,
+                        RawSnapshotSchemaStatus.PARSED,
+                        null));
+        j8BenchmarkEvidenceStore.recordUnitResult(new J8BenchmarkUnitResult(
+                cacheUnitId,
+                OptionalLong.empty(),
+                startedAt.plusSeconds(20),
+                J8BenchmarkResolutionSource.CACHE,
+                J8BenchmarkOutcomeType.PARSED,
+                false,
+                OptionalInt.empty(),
+                OptionalLong.empty(),
+                OptionalLong.of(cached.snapshotId()),
+                OptionalLong.empty(),
+                Optional.of(ScheduledEventsV1Parser.PARSER_VERSION),
+                Optional.of(RawSnapshotSchemaStatus.PARSED),
+                0,
+                Optional.empty(),
+                OptionalInt.empty(),
+                Optional.empty()));
+        j8BenchmarkEvidenceStore.finishCampaign(new J8BenchmarkCampaignResult(
+                campaignId,
+                startedAt.plusSeconds(30),
+                J8BenchmarkCampaignTerminalState.FAILED,
+                Optional.of("TERMINAL_MATRIX"),
+                10));
+
+        assertThat(jdbcTemplate.queryForList("""
+                select coalesce(result.http_status::text, 'NONE')
+                       || ':' || result.outcome_type
+                from j8_benchmark_unit_result result
+                join j8_benchmark_unit unit on unit.id = result.unit_id
+                where unit.campaign_id = ?
+                order by unit.unit_ordinal
+                """, String.class, campaignId)).containsExactly(
+                        "401:HTTP_REFUSED",
+                        "403:HTTP_REFUSED",
+                        "429:HTTP_REFUSED",
+                        "404:ENDPOINT_UNAVAILABLE",
+                        "503:HTTP_ERROR",
+                        "200:SCHEMA_INCOMPATIBLE",
+                        "200:UNEXPECTED_CONTENT",
+                        "NONE:TRANSPORT_FAILURE",
+                        "200:PERSISTENCE_FAILURE",
+                        "NONE:PARSED");
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from j8_provider_call_attempt attempt
+                join j8_benchmark_unit unit on unit.id = attempt.unit_id
+                where unit.campaign_id = ?
+                """, Long.class, campaignId)).isEqualTo(9L);
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from j8_provider_call_attempt attempt
+                join j8_benchmark_unit unit on unit.id = attempt.unit_id
+                left join j8_benchmark_unit_result result
+                  on result.attempt_id = attempt.id
+                 and result.unit_id = attempt.unit_id
+                where unit.campaign_id = ?
+                  and result.unit_id is null
+                """, Long.class, campaignId)).isZero();
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from j8_benchmark_unit_result
+                where unit_id = ?
+                  and attempt_id is null
+                  and resolution_source = 'CACHE'
+                  and snapshot_id is not null
+                  and snapshot_occurrence_id is null
+                """, Long.class, cacheUnitId)).isEqualTo(1L);
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void keepsAnUnfinishedJ8AttemptVisibleWithoutInventingAResult() {
+        UUID campaignId = UUID.randomUUID();
+        LocalDate collectionDate = LocalDate.of(2032, 2, 18);
+        Instant startedAt = Instant.parse("2032-02-18T10:00:00Z");
+        j8BenchmarkEvidenceStore.startCampaign(new J8BenchmarkCampaign(
+                campaignId,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                startedAt,
+                25,
+                Optional.of(collectionDate)));
+        long unitId = j8BenchmarkEvidenceStore.declareUnit(new J8BenchmarkUnit(
+                campaignId,
+                1,
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                "SCHEDULED_EVENTS|date=" + collectionDate + "|page=1",
+                Optional.empty(),
+                OptionalLong.empty(),
+                startedAt.plusSeconds(1)));
+        Instant attemptStartedAt = startedAt.plusSeconds(2);
+        long attemptId = j8BenchmarkEvidenceStore.startProviderAttempt(
+                new J8ProviderCallAttempt(unitId, attemptStartedAt));
+
+        assertThatThrownBy(() -> j8BenchmarkEvidenceStore.startProviderAttempt(
+                new J8ProviderCallAttempt(unitId, attemptStartedAt.plusSeconds(1))))
+                .isInstanceOf(DataIntegrityViolationException.class);
+
+        J8BenchmarkReadEvidence evidence = j8BenchmarkReadStore.readEvidence(
+                J8BenchmarkWindow.between(
+                        startedAt.minusSeconds(1),
+                        startedAt.plusSeconds(10)),
+                Instant.parse("2099-01-01T00:00:00Z"));
+        J8BenchmarkReadEvidence.CampaignEvidence campaign = evidence.campaigns().stream()
+                .filter(value -> value.campaignId().equals(campaignId))
+                .findFirst()
+                .orElseThrow();
+        assertThat(campaign.finishedAt()).isEmpty();
+        assertThat(campaign.terminalState()).isEmpty();
+        assertThat(campaign.completedUnits()).isEmpty();
+
+        J8BenchmarkReadEvidence.UnitEvidence unit = evidence.units().stream()
+                .filter(value -> value.unitId() == unitId)
+                .findFirst()
+                .orElseThrow();
+        assertThat(unit.attemptId()).isEqualTo(OptionalLong.of(attemptId));
+        assertThat(unit.attemptStartedAt()).contains(attemptStartedAt);
+        assertThat(unit.resolvedAt()).isEmpty();
+        assertThat(unit.resolutionSource()).isEmpty();
+        assertThat(unit.outcomeType()).isEmpty();
+        assertThat(unit.responseReceived()).isFalse();
+        assertThat(unit.snapshotId()).isEmpty();
+        assertThat(unit.snapshotOccurrenceId()).isEmpty();
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from j8_benchmark_unit_result
+                where unit_id = ?
+                """, Long.class, unitId)).isZero();
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from j8_benchmark_campaign_result
+                where campaign_id = ?
+                """, Long.class, campaignId)).isZero();
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void correlatesDeduplicatedJ8ResponsesAndReadsEvidenceAfterRawPurge()
+            throws Exception {
+        LocalDate collectionDate = LocalDate.of(1800, 1, 1);
+        Instant firstStartedAt = Instant.parse("1800-01-01T00:00:00Z");
+        Instant secondStartedAt = firstStartedAt.plusSeconds(3600);
+        String requestKey = "SCHEDULED_EVENTS|date=" + collectionDate + "|page=1";
+        byte[] payload = Files.readString(
+                Path.of("fixtures/scheduled-events/nominal.json"),
+                StandardCharsets.UTF_8)
+                .replace("\"id\": 900001", "\"id\": 88880701")
+                .replace(
+                        "\"startTimestamp\": 1786543200",
+                        "\"startTimestamp\": 4070908800")
+                .getBytes(StandardCharsets.UTF_8);
+        UUID firstCampaignId = UUID.randomUUID();
+        UUID secondCampaignId = UUID.randomUUID();
+
+        j8BenchmarkEvidenceStore.startCampaign(new J8BenchmarkCampaign(
+                firstCampaignId,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                firstStartedAt,
+                25,
+                Optional.of(collectionDate)));
+        long firstUnitId = j8BenchmarkEvidenceStore.declareUnit(new J8BenchmarkUnit(
+                firstCampaignId,
+                1,
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                requestKey,
+                Optional.empty(),
+                OptionalLong.empty(),
+                firstStartedAt.plusSeconds(1)));
+        long firstAttemptId = j8BenchmarkEvidenceStore.startProviderAttempt(
+                new J8ProviderCallAttempt(firstUnitId, firstStartedAt.plusSeconds(2)));
+        RawSnapshotPersistenceResult first = snapshotStore.save(j8ScheduledSnapshot(
+                requestKey,
+                firstStartedAt.plusSeconds(2),
+                payload));
+
+        RawSnapshotPersistenceResult mismatchedOccurrence = snapshotStore.save(
+                j8ScheduledSnapshot(
+                        "SCHEDULED_EVENTS|date=" + collectionDate + "|page=99",
+                        firstStartedAt.plusSeconds(120),
+                        "{\"events\":[]}".getBytes(StandardCharsets.UTF_8)));
+        assertThatThrownBy(() -> j8BenchmarkEvidenceStore.recordUnitResult(
+                providerJ8Result(
+                        firstUnitId,
+                        firstAttemptId,
+                        firstStartedAt.plusSeconds(3),
+                        J8BenchmarkOutcomeType.PARSED,
+                        OptionalInt.of(200),
+                        OptionalLong.of(25),
+                        OptionalLong.of(first.snapshotId()),
+                        mismatchedOccurrence.occurrenceId(),
+                        Optional.of(ScheduledEventsV1Parser.PARSER_VERSION),
+                        Optional.of(RawSnapshotSchemaStatus.PARSED),
+                        "OCCURRENCE_SNAPSHOT_MISMATCH")))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining("occurrence does not belong to its snapshot");
+        j8BenchmarkEvidenceStore.recordUnitResult(providerJ8Result(
+                firstUnitId,
+                firstAttemptId,
+                firstStartedAt.plusSeconds(3),
+                J8BenchmarkOutcomeType.PARSED,
+                OptionalInt.of(200),
+                OptionalLong.of(25),
+                OptionalLong.of(first.snapshotId()),
+                first.occurrenceId(),
+                Optional.of(ScheduledEventsV1Parser.PARSER_VERSION),
+                Optional.of(RawSnapshotSchemaStatus.PARSED),
+                null));
+        j8BenchmarkEvidenceStore.finishCampaign(new J8BenchmarkCampaignResult(
+                firstCampaignId,
+                firstStartedAt.plusSeconds(4),
+                J8BenchmarkCampaignTerminalState.COMPLETED,
+                Optional.empty(),
+                1));
+        j4SnapshotNormalizationService.normalize(first.snapshotId());
+
+        j8BenchmarkEvidenceStore.startCampaign(new J8BenchmarkCampaign(
+                secondCampaignId,
+                J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                secondStartedAt,
+                25,
+                Optional.of(collectionDate)));
+        long secondUnitId = j8BenchmarkEvidenceStore.declareUnit(new J8BenchmarkUnit(
+                secondCampaignId,
+                1,
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                requestKey,
+                Optional.empty(),
+                OptionalLong.empty(),
+                secondStartedAt.plusSeconds(1)));
+        long secondAttemptId = j8BenchmarkEvidenceStore.startProviderAttempt(
+                new J8ProviderCallAttempt(secondUnitId, secondStartedAt.plusSeconds(2)));
+        RawSnapshotPersistenceResult second = snapshotStore.save(j8ScheduledSnapshot(
+                requestKey,
+                secondStartedAt.plusSeconds(2),
+                payload));
+        j8BenchmarkEvidenceStore.recordUnitResult(providerJ8Result(
+                secondUnitId,
+                secondAttemptId,
+                secondStartedAt.plusSeconds(3),
+                J8BenchmarkOutcomeType.PARSED,
+                OptionalInt.of(200),
+                OptionalLong.of(25),
+                OptionalLong.of(second.snapshotId()),
+                second.occurrenceId(),
+                Optional.of(ScheduledEventsV1Parser.PARSER_VERSION),
+                Optional.of(RawSnapshotSchemaStatus.PARSED),
+                null));
+        j8BenchmarkEvidenceStore.finishCampaign(new J8BenchmarkCampaignResult(
+                secondCampaignId,
+                secondStartedAt.plusSeconds(4),
+                J8BenchmarkCampaignTerminalState.COMPLETED,
+                Optional.empty(),
+                1));
+
+        assertThat(first.outcome()).isEqualTo(RawSnapshotPersistenceOutcome.INSERTED);
+        assertThat(second.outcome()).isEqualTo(RawSnapshotPersistenceOutcome.DEDUPLICATED);
+        assertThat(second.snapshotId()).isEqualTo(first.snapshotId());
+        assertThat(second.occurrenceId().orElseThrow())
+                .isNotEqualTo(first.occurrenceId().orElseThrow());
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from provider_snapshot
+                where request_key = ?
+                  and payload_sha256 = ?
+                """, Long.class, requestKey, first.payloadSha256())).isEqualTo(1L);
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from provider_snapshot_occurrence
+                where snapshot_id = ?
+                """, Long.class, first.snapshotId())).isEqualTo(2L);
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from j8_provider_call_attempt attempt
+                join j8_benchmark_unit unit on unit.id = attempt.unit_id
+                where unit.campaign_id in (?, ?)
+                """, Long.class, firstCampaignId, secondCampaignId)).isEqualTo(2L);
+
+        List<Map<String, Object>> versionLinks = jdbcTemplate.queryForList("""
+                select result.snapshot_id,
+                       occurrence.snapshot_id as occurrence_snapshot_id,
+                       result.parser_version as result_parser_version,
+                       occurrence.parser_version as occurrence_parser_version,
+                       snapshot.parser_version as snapshot_parser_version,
+                       occurrence.persistence_outcome
+                from j8_benchmark_unit_result result
+                join j8_benchmark_unit unit on unit.id = result.unit_id
+                join provider_snapshot_occurrence occurrence
+                  on occurrence.id = result.snapshot_occurrence_id
+                join provider_snapshot snapshot on snapshot.id = result.snapshot_id
+                where unit.campaign_id in (?, ?)
+                order by unit.declared_at
+                """, firstCampaignId, secondCampaignId);
+        assertThat(versionLinks).hasSize(2).allSatisfy(link -> {
+            assertThat(link)
+                    .containsEntry("snapshot_id", first.snapshotId())
+                    .containsEntry("occurrence_snapshot_id", first.snapshotId())
+                    .containsEntry(
+                            "result_parser_version",
+                            ScheduledEventsV1Parser.PARSER_VERSION)
+                    .containsEntry(
+                            "occurrence_parser_version",
+                            ScheduledEventsV1Parser.PARSER_VERSION)
+                    .containsEntry(
+                            "snapshot_parser_version",
+                            ScheduledEventsV1Parser.PARSER_VERSION);
+        });
+        assertThat(versionLinks)
+                .extracting(link -> link.get("persistence_outcome"))
+                .containsExactly("INSERTED", "DEDUPLICATED");
+
+        J8BenchmarkWindow window = J8BenchmarkWindow.between(
+                firstStartedAt.minusSeconds(1),
+                secondStartedAt.plusSeconds(5));
+        Instant asOf = Instant.parse("2099-01-01T00:00:00Z");
+        J8BenchmarkReadEvidence beforePurge = j8BenchmarkReadStore.readEvidence(window, asOf);
+        List<J8BenchmarkReadEvidence.UnitEvidence> beforeUnits = beforePurge.units().stream()
+                .filter(unit -> unit.campaignId().equals(firstCampaignId)
+                        || unit.campaignId().equals(secondCampaignId))
+                .toList();
+        assertThat(beforeUnits).hasSize(2);
+        assertThat(beforeUnits)
+                .extracting(J8BenchmarkReadEvidence.UnitEvidence::deduplicatedResponse)
+                .containsExactly(false, true);
+
+        Instant retentionPreviewAt = Instant.parse("2098-01-01T00:00:00Z");
+        Instant retentionCutoffAt = Instant.parse("1800-01-02T00:00:00Z");
+        var preview = j6RawPayloadRetentionStore.preview(
+                30,
+                retentionPreviewAt,
+                retentionCutoffAt,
+                1);
+        assertThat(preview.candidates())
+                .extracting(candidate -> candidate.snapshotId())
+                .containsExactly(first.snapshotId());
+        J6BackupEvidence backup = new J6BackupEvidence(
+                "d".repeat(64),
+                "e".repeat(64),
+                retentionPreviewAt,
+                Math.max(first.snapshotId(), mismatchedOccurrence.snapshotId()),
+                retentionPreviewAt,
+                true);
+        var purge = j6RawPayloadRetentionStore.purge(
+                30,
+                retentionCutoffAt,
+                1,
+                preview.planSha256(),
+                backup,
+                UUID.randomUUID(),
+                retentionPreviewAt.plusSeconds(60));
+        assertThat(purge.purgedPayloadCount()).isEqualTo(1);
+        Map<String, Object> purgedSnapshot = jdbcTemplate.queryForMap("""
+                select payload_raw, payload_sha256, parser_version, schema_status,
+                       payload_purged_at
+                from provider_snapshot
+                where id = ?
+                """, first.snapshotId());
+        assertThat(purgedSnapshot)
+                .containsEntry("payload_raw", null)
+                .containsEntry("payload_sha256", first.payloadSha256())
+                .containsEntry(
+                        "parser_version", ScheduledEventsV1Parser.PARSER_VERSION)
+                .containsEntry("schema_status", "PARSED");
+        assertThat(purgedSnapshot.get("payload_purged_at")).isNotNull();
+
+        J8BenchmarkReadEvidence afterPurge = j8BenchmarkReadStore.readEvidence(window, asOf);
+        assertThat(afterPurge).isEqualTo(beforePurge);
+    }
+
+    @Test
+    void excludesOccurrencesReceivedAfterAsOfFromEveryJ8ReadPopulation() {
+        Instant requestedAt = Instant.parse("2199-01-01T00:00:00Z");
+        Instant receivedAt = Instant.parse("2200-01-01T00:00:00Z");
+        Instant asOf = Instant.parse("2199-06-01T00:00:00Z");
+        Instant afterReceipt = Instant.parse("2201-01-01T00:00:00Z");
+        J8BenchmarkWindow window = J8BenchmarkWindow.between(
+                Instant.parse("2198-01-01T00:00:00Z"),
+                afterReceipt.plusSeconds(1));
+
+        RawSnapshotPersistenceResult direct = snapshotStore.save(new RawManualCallSnapshot(
+                SofascoreEndpointType.EVENT_STATISTICS,
+                RawSnapshotAcquisitionMode.DIRECT_LOCAL_ENDPOINT,
+                "EVENT_STATISTICS|eventId=88880999",
+                requestedAt,
+                receivedAt,
+                200,
+                "application/json; charset=utf-8",
+                Duration.ofMillis(25),
+                RawPayloadEvidence.capture("{}".getBytes(StandardCharsets.UTF_8)),
+                EventStatisticsV2Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.PARSED,
+                null));
+        RawSnapshotPersistenceResult imported = snapshotStore.save(new RawManualCallSnapshot(
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                RawSnapshotAcquisitionMode.MANUAL_LOCAL_JSON_IMPORT,
+                "SCHEDULED_EVENTS|date=2199-01-01|page=1",
+                requestedAt.plusSeconds(1),
+                receivedAt.plusSeconds(1),
+                200,
+                "application/json; charset=utf-8",
+                Duration.ofMillis(25),
+                RawPayloadEvidence.capture("{\"events\":[]}".getBytes(
+                        StandardCharsets.UTF_8)),
+                ScheduledEventsV1Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.PARSED,
+                null));
+
+        long directOccurrenceId = direct.occurrenceId().orElseThrow();
+        long importedOccurrenceId = imported.occurrenceId().orElseThrow();
+        J8BenchmarkReadEvidence frozenEvidence = j8BenchmarkReadStore.readEvidence(
+                window, asOf);
+        J8DirectObservationCohorts frozenCohorts =
+                j8BenchmarkReadStore.readDirectObservationCohorts(window, asOf);
+
+        assertThat(frozenEvidence.legacyResponses())
+                .noneMatch(row -> row.occurrenceId() == directOccurrenceId);
+        assertThat(frozenEvidence.manualImportOccurrenceCount()).isZero();
+        assertThat(frozenCohorts.historicalObservations())
+                .noneMatch(row -> row.occurrenceId() == directOccurrenceId);
+
+        J8BenchmarkReadEvidence visibleEvidence = j8BenchmarkReadStore.readEvidence(
+                window, afterReceipt);
+        J8DirectObservationCohorts visibleCohorts =
+                j8BenchmarkReadStore.readDirectObservationCohorts(window, afterReceipt);
+        assertThat(visibleEvidence.legacyResponses())
+                .anyMatch(row -> row.occurrenceId() == directOccurrenceId);
+        assertThat(visibleEvidence.manualImportOccurrenceCount()).isEqualTo(1);
+        assertThat(visibleCohorts.historicalObservations())
+                .anyMatch(row -> row.occurrenceId() == directOccurrenceId);
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from provider_snapshot_occurrence where id in (?, ?)",
+                Long.class,
+                directOccurrenceId,
+                importedOccurrenceId)).isEqualTo(2L);
+    }
+
+    @Test
+    void doesNotReuseAnOlderTerminalStateAfterANewerDirectNonTerminalState() {
+        UUID canonicalEventId = UUID.randomUUID();
+        long providerEventId = 88_880_991L;
+        Instant snapshotAt = Instant.parse("2300-01-01T00:00:00Z");
+        Instant terminalAt = snapshotAt.plusSeconds(10);
+        Instant firstDetailAt = snapshotAt.plusSeconds(20);
+        Instant reopenedAt = snapshotAt.plusSeconds(30);
+        Instant changedDetailAt = snapshotAt.plusSeconds(40);
+        Instant asOf = snapshotAt.plusSeconds(50);
+        String requestKey = "EVENT_DETAILS|eventId=" + providerEventId;
+        RawSnapshotPersistenceResult snapshot = snapshotStore.save(
+                new RawManualCallSnapshot(
+                        SofascoreEndpointType.EVENT_DETAILS,
+                        RawSnapshotAcquisitionMode.DIRECT_LOCAL_ENDPOINT,
+                        requestKey,
+                        snapshotAt.minusMillis(10),
+                        snapshotAt,
+                        200,
+                        "application/json; charset=utf-8",
+                        Duration.ofMillis(10),
+                        RawPayloadEvidence.capture(("{\"event\":{\"id\":"
+                                + providerEventId
+                                + ",\"marker\":\"terminal-reset-regression\"}}")
+                                .getBytes(StandardCharsets.UTF_8)),
+                        EventDetailsV2Parser.PARSER_VERSION,
+                        RawSnapshotSchemaStatus.PARSED,
+                        null));
+        jdbcTemplate.update("""
+                insert into canonical_event (id, provider, provider_event_id)
+                values (?, 'SOFASCORE', ?)
+                """, canonicalEventId, providerEventId);
+        jdbcTemplate.update("""
+                insert into canonical_event_observation (
+                    canonical_event_id, source_kind, source_reference,
+                    source_snapshot_id, source_fixture_id,
+                    source_payload_sha256, parser_version, source_received_at,
+                    starts_at, home_team_provider_id, home_team_name,
+                    away_team_provider_id, away_team_name, status_type,
+                    status_description, tournament_provider_id,
+                    tournament_name, normalized_sha256
+                ) values
+                (
+                    ?, 'PROVIDER_SNAPSHOT', 'snapshot:' || ?::text, ?, null,
+                    ?, ?, ?, '2300-01-02T18:00:00Z',
+                    88880911, 'Terminal Home', 88880912, 'Terminal Away',
+                    'finished', 'Finished', 88880913, 'Terminal League',
+                    repeat('1', 64)
+                ),
+                (
+                    ?, 'PROVIDER_SNAPSHOT', 'snapshot:' || ?::text, ?, null,
+                    ?, ?, ?, '2300-01-02T18:00:00Z',
+                    88880911, 'Terminal Home', 88880912, 'Terminal Away',
+                    'notstarted', 'Not started', 88880913, 'Terminal League',
+                    repeat('2', 64)
+                )
+                """,
+                canonicalEventId,
+                snapshot.snapshotId(),
+                snapshot.snapshotId(),
+                snapshot.payloadSha256(),
+                EventDetailsV2Parser.PARSER_VERSION,
+                Timestamp.from(terminalAt),
+                canonicalEventId,
+                snapshot.snapshotId(),
+                snapshot.snapshotId(),
+                snapshot.payloadSha256(),
+                EventDetailsV2Parser.PARSER_VERSION,
+                Timestamp.from(reopenedAt));
+        jdbcTemplate.update("""
+                insert into event_detail_observation (
+                    canonical_event_id, source_fixture_id,
+                    source_payload_sha256, parser_version, source_received_at,
+                    starts_at, home_team_provider_id, home_team_name,
+                    away_team_provider_id, away_team_name, status_type,
+                    status_description, tournament_provider_id,
+                    tournament_name, venue_provider_id, venue_name, venue_city,
+                    season_provider_id, season_name, event_round,
+                    normalized_sha256, source_kind, source_reference,
+                    source_snapshot_id
+                ) values
+                (
+                    ?, null, ?, ?, ?, '2300-01-02T18:00:00Z',
+                    88880911, 'Terminal Home', 88880912, 'Terminal Away',
+                    'finished', 'Finished', 88880913, 'Terminal League',
+                    88880914, 'Terminal Stadium', 'Paris',
+                    88880915, '2299/2300', '1', repeat('3', 64),
+                    'PROVIDER_SNAPSHOT', 'snapshot:' || ?::text, ?
+                ),
+                (
+                    ?, null, ?, ?, ?, '2300-01-02T18:00:00Z',
+                    88880911, 'Terminal Home corrected',
+                    88880912, 'Terminal Away',
+                    'notstarted', 'Not started', 88880913, 'Terminal League',
+                    88880914, 'Terminal Stadium', 'Paris',
+                    88880915, '2299/2300', '1', repeat('4', 64),
+                    'PROVIDER_SNAPSHOT', 'snapshot:' || ?::text, ?
+                )
+                """,
+                canonicalEventId,
+                snapshot.payloadSha256(),
+                EventDetailsV2Parser.PARSER_VERSION,
+                Timestamp.from(firstDetailAt),
+                snapshot.snapshotId(),
+                snapshot.snapshotId(),
+                canonicalEventId,
+                snapshot.payloadSha256(),
+                EventDetailsV2Parser.PARSER_VERSION,
+                Timestamp.from(changedDetailAt),
+                snapshot.snapshotId(),
+                snapshot.snapshotId());
+        jdbcTemplate.update("""
+                insert into event_detail_observation (
+                    canonical_event_id, source_fixture_id,
+                    source_payload_sha256, parser_version, source_received_at,
+                    starts_at, home_team_provider_id, home_team_name,
+                    away_team_provider_id, away_team_name, status_type,
+                    status_description, tournament_provider_id,
+                    tournament_name, venue_provider_id, venue_name, venue_city,
+                    season_provider_id, season_name, event_round,
+                    normalized_sha256, source_kind, source_reference,
+                    source_snapshot_id
+                ) values (
+                    ?, 'j8-interleaved-fixture', repeat('5', 64),
+                    'event-details-v1', ?, '2300-01-02T18:00:00Z',
+                    88880911, 'Fixture Home', 88880912, 'Fixture Away',
+                    'notstarted', 'Not started', 88880913, 'Terminal League',
+                    88880914, 'Terminal Stadium', 'Paris',
+                    88880915, '2299/2300', '1', repeat('6', 64),
+                    'SYNTHETIC_FIXTURE', 'j8-interleaved-fixture', null
+                )
+                """, canonicalEventId, Timestamp.from(firstDetailAt.plusSeconds(5)));
+        Long firstDirectDetailId = jdbcTemplate.queryForObject("""
+                select id
+                from event_detail_observation
+                where canonical_event_id = ?
+                  and source_received_at = ?
+                """, Long.class, canonicalEventId, Timestamp.from(firstDetailAt));
+        Long changedDetailId = jdbcTemplate.queryForObject("""
+                select id
+                from event_detail_observation
+                where canonical_event_id = ?
+                  and source_received_at = ?
+                """, Long.class, canonicalEventId, Timestamp.from(changedDetailAt));
+        Long reopenedStateId = jdbcTemplate.queryForObject("""
+                select id
+                from canonical_event_observation
+                where canonical_event_id = ?
+                  and source_received_at = ?
+                """, Long.class, canonicalEventId, Timestamp.from(reopenedAt));
+        J8BenchmarkWindow window = J8BenchmarkWindow.between(
+                reopenedAt.plusMillis(1), asOf);
+
+        assertThat(j8BenchmarkReadStore.readLateChanges(window, asOf))
+                .filteredOn(change -> change.canonicalEventId().equals(canonicalEventId))
+                .singleElement()
+                .satisfies(change -> {
+                    assertThat(change.stream())
+                            .isEqualTo(J6HistoryStream.EVENT_DETAILS);
+                    assertThat(change.observationId()).isEqualTo(changedDetailId);
+                    assertThat(change.previousObservationId())
+                            .isEqualTo(firstDirectDetailId);
+                    assertThat(change.previousDirectStateObservationId())
+                            .hasValue(reopenedStateId);
+                    assertThat(change.previousDirectStateStatus())
+                            .contains("notstarted");
+                    assertThat(change.previousDirectStateAt()).contains(reopenedAt);
+                });
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void latestDeduplicatedIncompatibleJ8OccurrenceInvalidatesCurrentDossierEvidence() {
+        UUID canonicalEventId = UUID.randomUUID();
+        long providerEventId = 88_880_801L;
+        Instant detailStartedAt = Instant.parse("1812-01-01T00:00:00Z");
+        Instant firstStatisticsStartedAt = detailStartedAt.plusSeconds(100);
+        Instant incompatibleStatisticsStartedAt = detailStartedAt.plusSeconds(200);
+        Instant windowEnd = detailStartedAt.plusSeconds(300);
+        String detailKey = "EVENT_DETAILS|eventId=" + providerEventId;
+        String statisticsKey = "EVENT_STATISTICS|eventId=" + providerEventId;
+        jdbcTemplate.update("""
+                insert into canonical_event (id, provider, provider_event_id)
+                values (?, 'SOFASCORE', ?)
+                """, canonicalEventId, providerEventId);
+
+        UUID detailCampaignId = UUID.randomUUID();
+        j8BenchmarkEvidenceStore.startCampaign(new J8BenchmarkCampaign(
+                detailCampaignId,
+                J8BenchmarkCampaignType.J4_EVENT_DETAILS_PHASE2,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                detailStartedAt,
+                1,
+                Optional.empty()));
+        long detailUnitId = j8BenchmarkEvidenceStore.declareUnit(new J8BenchmarkUnit(
+                detailCampaignId,
+                1,
+                SofascoreEndpointType.EVENT_DETAILS,
+                detailKey,
+                Optional.of(canonicalEventId),
+                OptionalLong.of(providerEventId),
+                detailStartedAt.plusSeconds(1)));
+        long detailAttemptId = j8BenchmarkEvidenceStore.startProviderAttempt(
+                new J8ProviderCallAttempt(detailUnitId, detailStartedAt.plusSeconds(2)));
+        Instant detailReceivedAt = detailStartedAt.plusSeconds(2).plusMillis(20);
+        RawSnapshotPersistenceResult detailSnapshot = snapshotStore.save(
+                new RawManualCallSnapshot(
+                        SofascoreEndpointType.EVENT_DETAILS,
+                        RawSnapshotAcquisitionMode.DIRECT_LOCAL_ENDPOINT,
+                        detailKey,
+                        detailStartedAt.plusSeconds(2),
+                        detailReceivedAt,
+                        200,
+                        "application/json",
+                        Duration.ofMillis(20),
+                        RawPayloadEvidence.capture(
+                                ("{\"event\":{\"id\":" + providerEventId + "}}")
+                                        .getBytes(StandardCharsets.UTF_8)),
+                        EventDetailsV2Parser.PARSER_VERSION,
+                        RawSnapshotSchemaStatus.PARSED,
+                        null));
+        j8BenchmarkEvidenceStore.recordUnitResult(providerJ8Result(
+                detailUnitId,
+                detailAttemptId,
+                detailStartedAt.plusSeconds(3),
+                J8BenchmarkOutcomeType.PARSED,
+                OptionalInt.of(200),
+                OptionalLong.of(20),
+                OptionalLong.of(detailSnapshot.snapshotId()),
+                detailSnapshot.occurrenceId(),
+                Optional.of(EventDetailsV2Parser.PARSER_VERSION),
+                Optional.of(RawSnapshotSchemaStatus.PARSED),
+                null));
+        j8BenchmarkEvidenceStore.finishCampaign(new J8BenchmarkCampaignResult(
+                detailCampaignId,
+                detailStartedAt.plusSeconds(4),
+                J8BenchmarkCampaignTerminalState.COMPLETED,
+                Optional.empty(),
+                1));
+        jdbcTemplate.update("""
+                insert into canonical_event_observation (
+                    canonical_event_id, source_kind, source_reference,
+                    source_snapshot_id, source_fixture_id,
+                    source_payload_sha256, parser_version, source_received_at,
+                    starts_at, home_team_provider_id, home_team_name,
+                    away_team_provider_id, away_team_name, status_type,
+                    status_description, tournament_provider_id,
+                    tournament_name, normalized_sha256
+                ) values (
+                    ?, 'PROVIDER_SNAPSHOT', 'snapshot:' || ?::text, ?, null,
+                    ?, ?, ?, '1812-01-02T18:00:00Z',
+                    88880101, 'J8 Current Home', 88880102, 'J8 Current Away',
+                    'ended', 'Ended', 88880103, 'J8 Current League', repeat('a', 64)
+                )
+                """,
+                canonicalEventId,
+                detailSnapshot.snapshotId(),
+                detailSnapshot.snapshotId(),
+                detailSnapshot.payloadSha256(),
+                EventDetailsV2Parser.PARSER_VERSION,
+                Timestamp.from(detailReceivedAt));
+        jdbcTemplate.update("""
+                insert into event_detail_observation (
+                    canonical_event_id, source_fixture_id,
+                    source_payload_sha256, parser_version, source_received_at,
+                    starts_at, home_team_provider_id, home_team_name,
+                    away_team_provider_id, away_team_name, status_type,
+                    status_description, tournament_provider_id,
+                    tournament_name, venue_provider_id, venue_name, venue_city,
+                    season_provider_id, season_name, event_round,
+                    normalized_sha256, source_kind, source_reference,
+                    source_snapshot_id
+                ) values (
+                    ?, null, ?, ?, ?, '1812-01-02T18:00:00Z',
+                    88880101, 'J8 Current Home', 88880102, 'J8 Current Away',
+                    'ended', 'Ended', 88880103, 'J8 Current League',
+                    88880104, 'J8 Current Stadium', 'Paris',
+                    88880105, '1811/1812', '1', repeat('b', 64),
+                    'PROVIDER_SNAPSHOT', 'snapshot:' || ?::text, ?
+                )
+                """,
+                canonicalEventId,
+                detailSnapshot.payloadSha256(),
+                EventDetailsV2Parser.PARSER_VERSION,
+                Timestamp.from(detailReceivedAt),
+                detailSnapshot.snapshotId(),
+                detailSnapshot.snapshotId());
+
+        byte[] statisticsPayload = "{\"statistics\":[]}".getBytes(StandardCharsets.UTF_8);
+        UUID firstStatisticsCampaignId = UUID.randomUUID();
+        j8BenchmarkEvidenceStore.startCampaign(new J8BenchmarkCampaign(
+                firstStatisticsCampaignId,
+                J8BenchmarkCampaignType.J5_EVENT_DATA,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                firstStatisticsStartedAt,
+                3,
+                Optional.empty()));
+        long firstStatisticsUnitId = j8BenchmarkEvidenceStore.declareUnit(
+                new J8BenchmarkUnit(
+                        firstStatisticsCampaignId,
+                        1,
+                        SofascoreEndpointType.EVENT_STATISTICS,
+                        statisticsKey,
+                        Optional.of(canonicalEventId),
+                        OptionalLong.of(providerEventId),
+                        firstStatisticsStartedAt.plusSeconds(1)));
+        long firstStatisticsAttemptId = j8BenchmarkEvidenceStore.startProviderAttempt(
+                new J8ProviderCallAttempt(
+                        firstStatisticsUnitId,
+                        firstStatisticsStartedAt.plusSeconds(2)));
+        Instant firstStatisticsReceivedAt = firstStatisticsStartedAt
+                .plusSeconds(2).plusMillis(25);
+        RawSnapshotPersistenceResult firstStatisticsSnapshot = snapshotStore.save(
+                new RawManualCallSnapshot(
+                        SofascoreEndpointType.EVENT_STATISTICS,
+                        RawSnapshotAcquisitionMode.DIRECT_LOCAL_ENDPOINT,
+                        statisticsKey,
+                        firstStatisticsStartedAt.plusSeconds(2),
+                        firstStatisticsReceivedAt,
+                        200,
+                        "application/json",
+                        Duration.ofMillis(25),
+                        RawPayloadEvidence.capture(statisticsPayload),
+                        EventStatisticsV2Parser.PARSER_VERSION,
+                        RawSnapshotSchemaStatus.PARSED,
+                        null));
+        j8BenchmarkEvidenceStore.recordUnitResult(new J8BenchmarkUnitResult(
+                firstStatisticsUnitId,
+                OptionalLong.of(firstStatisticsAttemptId),
+                firstStatisticsStartedAt.plusSeconds(3),
+                J8BenchmarkResolutionSource.PROVIDER,
+                J8BenchmarkOutcomeType.PARSED,
+                true,
+                OptionalInt.of(200),
+                OptionalLong.of(25),
+                OptionalLong.of(firstStatisticsSnapshot.snapshotId()),
+                firstStatisticsSnapshot.occurrenceId(),
+                Optional.of(EventStatisticsV2Parser.PARSER_VERSION),
+                Optional.of(RawSnapshotSchemaStatus.PARSED),
+                0,
+                Optional.of(J5CompletenessStatus.COMPLETE),
+                OptionalInt.of(100),
+                Optional.empty()));
+        j8BenchmarkEvidenceStore.finishCampaign(new J8BenchmarkCampaignResult(
+                firstStatisticsCampaignId,
+                firstStatisticsStartedAt.plusSeconds(4),
+                J8BenchmarkCampaignTerminalState.COMPLETED,
+                Optional.empty(),
+                1));
+        jdbcTemplate.update("""
+                insert into j5_event_data_observation (
+                    canonical_event_id, endpoint_type, source_kind,
+                    source_reference, source_snapshot_id, source_fixture_id,
+                    source_payload_sha256, parser_version, source_received_at,
+                    completeness_status, completeness_score, present_signals,
+                    expected_signals, missing_paths_json, lineups_confirmed,
+                    normalized_sha256
+                ) values (
+                    ?, 'EVENT_STATISTICS', 'PROVIDER_SNAPSHOT',
+                    'snapshot:' || ?::text, ?, null, ?, ?, ?,
+                    'COMPLETE', 100, 2, 2, '[]'::jsonb, null, repeat('c', 64)
+                )
+                """,
+                canonicalEventId,
+                firstStatisticsSnapshot.snapshotId(),
+                firstStatisticsSnapshot.snapshotId(),
+                firstStatisticsSnapshot.payloadSha256(),
+                EventStatisticsV2Parser.PARSER_VERSION,
+                Timestamp.from(firstStatisticsReceivedAt));
+
+        UUID incompatibleCampaignId = UUID.randomUUID();
+        j8BenchmarkEvidenceStore.startCampaign(new J8BenchmarkCampaign(
+                incompatibleCampaignId,
+                J8BenchmarkCampaignType.J5_EVENT_DATA,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                incompatibleStatisticsStartedAt,
+                3,
+                Optional.empty()));
+        long incompatibleUnitId = j8BenchmarkEvidenceStore.declareUnit(
+                new J8BenchmarkUnit(
+                        incompatibleCampaignId,
+                        1,
+                        SofascoreEndpointType.EVENT_STATISTICS,
+                        statisticsKey,
+                        Optional.of(canonicalEventId),
+                        OptionalLong.of(providerEventId),
+                        incompatibleStatisticsStartedAt.plusSeconds(1)));
+        long incompatibleAttemptId = j8BenchmarkEvidenceStore.startProviderAttempt(
+                new J8ProviderCallAttempt(
+                        incompatibleUnitId,
+                        incompatibleStatisticsStartedAt.plusSeconds(2)));
+        RawSnapshotPersistenceResult incompatibleSnapshot = snapshotStore.save(
+                new RawManualCallSnapshot(
+                        SofascoreEndpointType.EVENT_STATISTICS,
+                        RawSnapshotAcquisitionMode.DIRECT_LOCAL_ENDPOINT,
+                        statisticsKey,
+                        incompatibleStatisticsStartedAt.plusSeconds(2),
+                        incompatibleStatisticsStartedAt.plusSeconds(2).plusMillis(25),
+                        200,
+                        "application/json",
+                        Duration.ofMillis(25),
+                        RawPayloadEvidence.capture(statisticsPayload),
+                        EventStatisticsV2Parser.PARSER_VERSION,
+                        RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE,
+                        "SCHEMA_INCOMPATIBLE"));
+        assertThat(incompatibleSnapshot.outcome())
+                .isEqualTo(RawSnapshotPersistenceOutcome.DEDUPLICATED);
+        assertThat(incompatibleSnapshot.snapshotId())
+                .isEqualTo(firstStatisticsSnapshot.snapshotId());
+        j8BenchmarkEvidenceStore.recordUnitResult(providerJ8Result(
+                incompatibleUnitId,
+                incompatibleAttemptId,
+                incompatibleStatisticsStartedAt.plusSeconds(3),
+                J8BenchmarkOutcomeType.SCHEMA_INCOMPATIBLE,
+                OptionalInt.of(200),
+                OptionalLong.of(25),
+                OptionalLong.of(incompatibleSnapshot.snapshotId()),
+                incompatibleSnapshot.occurrenceId(),
+                Optional.of(EventStatisticsV2Parser.PARSER_VERSION),
+                Optional.of(RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE),
+                "SCHEMA_INCOMPATIBLE"));
+        j8BenchmarkEvidenceStore.finishCampaign(new J8BenchmarkCampaignResult(
+                incompatibleCampaignId,
+                incompatibleStatisticsStartedAt.plusSeconds(4),
+                J8BenchmarkCampaignTerminalState.FAILED,
+                Optional.of("SCHEMA_INCOMPATIBLE"),
+                1));
+
+        UUID orphanCanonicalEventId = UUID.randomUUID();
+        long orphanProviderEventId = providerEventId + 1;
+        Instant orphanStartedAt = detailStartedAt.plusSeconds(250);
+        String orphanStatisticsKey =
+                "EVENT_STATISTICS|eventId=" + orphanProviderEventId;
+        jdbcTemplate.update("""
+                insert into canonical_event (id, provider, provider_event_id)
+                values (?, 'SOFASCORE', ?)
+                """, orphanCanonicalEventId, orphanProviderEventId);
+        UUID orphanCampaignId = UUID.randomUUID();
+        j8BenchmarkEvidenceStore.startCampaign(new J8BenchmarkCampaign(
+                orphanCampaignId,
+                J8BenchmarkCampaignType.J5_EVENT_DATA,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                orphanStartedAt,
+                3,
+                Optional.empty()));
+        long orphanUnitId = j8BenchmarkEvidenceStore.declareUnit(new J8BenchmarkUnit(
+                orphanCampaignId,
+                1,
+                SofascoreEndpointType.EVENT_STATISTICS,
+                orphanStatisticsKey,
+                Optional.of(orphanCanonicalEventId),
+                OptionalLong.of(orphanProviderEventId),
+                orphanStartedAt.plusSeconds(1)));
+        long orphanAttemptId = j8BenchmarkEvidenceStore.startProviderAttempt(
+                new J8ProviderCallAttempt(orphanUnitId, orphanStartedAt.plusSeconds(2)));
+        RawSnapshotPersistenceResult orphanSnapshot = snapshotStore.save(
+                new RawManualCallSnapshot(
+                        SofascoreEndpointType.EVENT_STATISTICS,
+                        RawSnapshotAcquisitionMode.DIRECT_LOCAL_ENDPOINT,
+                        orphanStatisticsKey,
+                        orphanStartedAt.plusSeconds(2),
+                        orphanStartedAt.plusSeconds(2).plusMillis(15),
+                        200,
+                        "application/json",
+                        Duration.ofMillis(15),
+                        RawPayloadEvidence.capture(
+                                "{\"statistics\":[]}".getBytes(StandardCharsets.UTF_8)),
+                        EventStatisticsV2Parser.PARSER_VERSION,
+                        RawSnapshotSchemaStatus.RAW_ONLY,
+                        null));
+        long orphanOccurrenceId = orphanSnapshot.occurrenceId().orElseThrow();
+        jdbcTemplate.update("""
+                insert into j5_event_data_observation (
+                    canonical_event_id, endpoint_type, source_kind,
+                    source_reference, source_snapshot_id, source_fixture_id,
+                    source_payload_sha256, parser_version, source_received_at,
+                    completeness_status, completeness_score, present_signals,
+                    expected_signals, missing_paths_json, lineups_confirmed,
+                    normalized_sha256
+                ) values (
+                    ?, 'EVENT_STATISTICS', 'PROVIDER_SNAPSHOT',
+                    'snapshot:' || ?::text, ?, null, ?, ?, ?,
+                    'COMPLETE', 100, 2, 2, '[]'::jsonb, null, repeat('d', 64)
+                )
+                """,
+                orphanCanonicalEventId,
+                orphanSnapshot.snapshotId(),
+                orphanSnapshot.snapshotId(),
+                orphanSnapshot.payloadSha256(),
+                EventStatisticsV2Parser.PARSER_VERSION,
+                Timestamp.from(orphanStartedAt.plusSeconds(2).plusMillis(15)));
+
+        J8BenchmarkWindow window = J8BenchmarkWindow.between(
+                detailStartedAt.minusSeconds(1), windowEnd);
+        Instant asOf = Instant.now();
+        J8BenchmarkReadEvidence readEvidence =
+                j8BenchmarkReadStore.readEvidence(window, asOf);
+        assertThat(readEvidence.units()).filteredOn(unit -> unit.unitId() == orphanUnitId)
+                .singleElement()
+                .satisfies(unit -> {
+                    assertThat(unit.attemptId()).hasValue(orphanAttemptId);
+                    assertThat(unit.outcomeType()).isEmpty();
+                    assertThat(unit.snapshotOccurrenceId()).isEmpty();
+                });
+        assertThat(readEvidence.legacyResponses())
+                .noneMatch(response -> response.occurrenceId() == orphanOccurrenceId);
+        J8DirectObservationCohorts cohorts =
+                j8BenchmarkReadStore.readDirectObservationCohorts(window, asOf);
+        assertThat(cohorts.historicalObservations())
+                .noneMatch(observation -> observation.occurrenceId() == orphanOccurrenceId);
+        assertThat(cohorts.observations())
+                .filteredOn(cohort -> cohort.unitId() == orphanUnitId)
+                .singleElement()
+                .satisfies(cohort -> assertThat(cohort.currentStatistics())
+                        .isEqualTo(
+                                J8DirectObservationCohorts.DirectComponentState.INCOMPATIBLE));
+        List<J8DirectObservationCohorts.ObservationCohort> eventCohorts =
+                cohorts.observations().stream()
+                        .filter(cohort -> cohort.providerEventId() == providerEventId)
+                        .toList();
+        assertThat(eventCohorts).hasSize(3);
+        assertThat(eventCohorts)
+                .allSatisfy(cohort -> assertThat(cohort.currentStatistics())
+                        .isEqualTo(
+                                J8DirectObservationCohorts.DirectComponentState.INCOMPATIBLE));
+        assertThat(eventCohorts.stream()
+                .filter(cohort -> cohort.unitId() == detailUnitId)
+                .findFirst().orElseThrow().currentEventDetails())
+                .isEqualTo(J8DirectObservationCohorts.DirectComponentState.AVAILABLE);
+        assertThat(eventCohorts.stream()
+                .filter(cohort -> cohort.unitId() == incompatibleUnitId)
+                .findFirst().orElseThrow().normalizedObservationPresent()).isFalse();
+        assertThat(j8BenchmarkReadStore.readLateChanges(window, asOf))
+                .noneSatisfy(change -> assertThat(change.canonicalEventId())
+                        .isEqualTo(canonicalEventId));
+
+        J8BenchmarkReport firstReport = j8BenchmarkService.load(window, asOf);
+        J8BenchmarkReport secondReport = j8BenchmarkService.load(window, asOf);
+        assertThat(firstReport.populationHash()).isEqualTo(secondReport.populationHash());
+        assertThat(firstReport.callSummary().incompleteAttemptCount()).isOne();
+        assertThat(firstReport.dossierEfficiency().exploitableEventCount()).isZero();
+        assertThat(secondReport.dossierEfficiency()).isEqualTo(firstReport.dossierEfficiency());
+
+        UUID duplicateEvidenceCampaignId = UUID.randomUUID();
+        j8BenchmarkEvidenceStore.startCampaign(new J8BenchmarkCampaign(
+                duplicateEvidenceCampaignId,
+                J8BenchmarkCampaignType.J5_EVENT_DATA,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                incompatibleStatisticsStartedAt,
+                3,
+                Optional.empty()));
+        long duplicateEvidenceUnitId = j8BenchmarkEvidenceStore.declareUnit(
+                new J8BenchmarkUnit(
+                        duplicateEvidenceCampaignId,
+                        1,
+                        SofascoreEndpointType.EVENT_STATISTICS,
+                        statisticsKey,
+                        Optional.of(canonicalEventId),
+                        OptionalLong.of(providerEventId),
+                        incompatibleStatisticsStartedAt.plusSeconds(1)));
+        long duplicateEvidenceAttemptId = j8BenchmarkEvidenceStore.startProviderAttempt(
+                new J8ProviderCallAttempt(
+                        duplicateEvidenceUnitId,
+                        incompatibleStatisticsStartedAt.plusSeconds(2)));
+        assertThatThrownBy(() -> j8BenchmarkEvidenceStore.recordUnitResult(
+                providerJ8Result(
+                        duplicateEvidenceUnitId,
+                        duplicateEvidenceAttemptId,
+                        incompatibleStatisticsStartedAt.plusSeconds(3),
+                        J8BenchmarkOutcomeType.SCHEMA_INCOMPATIBLE,
+                        OptionalInt.of(200),
+                        OptionalLong.of(25),
+                        OptionalLong.of(incompatibleSnapshot.snapshotId()),
+                        incompatibleSnapshot.occurrenceId(),
+                        Optional.of(EventStatisticsV2Parser.PARSER_VERSION),
+                        Optional.of(RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE),
+                        "DUPLICATE_OCCURRENCE")))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasStackTraceContaining(
+                        "uq_j8_benchmark_unit_result_snapshot_occurrence");
     }
 
     @Test
@@ -4097,7 +6232,7 @@ class FlywayMigrationIT {
 
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$flywaySql"),
-                String.class)).isEqualTo("26");
+                String.class)).isEqualTo("27");
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$snapshotFingerprintSql"),
                 String.class)).isNotNull();
@@ -4107,6 +6242,191 @@ class FlywayMigrationIT {
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$normalizedFingerprintSql"),
                 String.class)).isNotNull();
+        assertThat(jdbcTemplate.queryForObject(
+                powerShellHereString(script, "$j8BenchmarkFingerprintSql"),
+                String.class)).isNotNull();
+        assertThat(script)
+                .contains("j8CampaignCount")
+                .contains("j8UnitCount")
+                .contains("j8ProviderAttemptCount")
+                .contains("j8UnitResultCount")
+                .contains("j8CampaignResultCount");
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void restoresAllFiveJ8EvidenceTablesWithAnIdenticalFingerprint() throws Exception {
+        String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
+        String sourceDatabase = "j8_backup_src_" + suffix;
+        String restoreDatabase = "j8_backup_dst_" + suffix;
+        String dumpPath = "/tmp/j8-backup-" + suffix + ".dump";
+        String script = Files.readString(
+                Path.of("scripts", "Backup-Restore-J6.ps1"),
+                StandardCharsets.UTF_8);
+        String fingerprintSql = powerShellHereString(script, "$j8BenchmarkFingerprintSql");
+
+        assertContainerCommandSucceeded(POSTGRES.execInContainer(
+                "createdb",
+                "--username", POSTGRES.getUsername(),
+                sourceDatabase));
+        try {
+            DataSource sourceDataSource = databaseDataSource(sourceDatabase);
+            Flyway sourceFlyway = Flyway.configure()
+                    .dataSource(sourceDataSource)
+                    .locations("classpath:db/migration")
+                    .load();
+            assertThat(sourceFlyway.migrate().migrationsExecuted).isEqualTo(27);
+            assertThat(sourceFlyway.info().current().getVersion().getVersion()).isEqualTo("27");
+
+            JdbcTemplate sourceJdbc = new JdbcTemplate(sourceDataSource);
+            UUID campaignId = UUID.randomUUID();
+            Instant startedAt = Instant.parse("2026-08-29T12:00:00Z");
+            sourceJdbc.update("""
+                    insert into j8_benchmark_campaign (
+                        campaign_id, campaign_type, execution_mode, started_at,
+                        maximum_units, collection_date
+                    ) values (?, 'J3_SCHEDULED_EVENTS', 'GUARDED_PROVIDER', ?, 25, ?)
+                    """, campaignId, Timestamp.from(startedAt), LocalDate.of(2026, 8, 29));
+            Long unitId = sourceJdbc.queryForObject("""
+                    insert into j8_benchmark_unit (
+                        campaign_id, unit_ordinal, logical_endpoint, request_key,
+                        declared_at
+                    ) values (?, 1, 'SCHEDULED_EVENTS',
+                              'SCHEDULED_EVENTS|date=2026-08-29|page=1', ?)
+                    returning id
+                    """, Long.class, campaignId, Timestamp.from(startedAt.plusSeconds(1)));
+            Long attemptId = sourceJdbc.queryForObject("""
+                    insert into j8_provider_call_attempt (unit_id, started_at)
+                    values (?, ?)
+                    returning id
+                    """, Long.class, unitId, Timestamp.from(startedAt.plusSeconds(2)));
+            sourceJdbc.update("""
+                    insert into j8_benchmark_unit_result (
+                        unit_id, attempt_id, resolved_at, resolution_source, outcome_type,
+                        response_received, parser_warning_count, terminal_code
+                    ) values (?, ?, ?, 'PROVIDER', 'TRANSPORT_FAILURE', false, 0,
+                              'BACKUP_RESTORE_TEST')
+                    """, unitId, attemptId, Timestamp.from(startedAt.plusSeconds(3)));
+            sourceJdbc.update("""
+                    insert into j8_benchmark_campaign_result (
+                        campaign_id, finished_at, terminal_state, terminal_code,
+                        completed_units
+                    ) values (?, ?, 'FAILED', 'BACKUP_RESTORE_TEST', 1)
+                    """, campaignId, Timestamp.from(startedAt.plusSeconds(4)));
+
+            String sourceFingerprint = sourceJdbc.queryForObject(fingerprintSql, String.class);
+            assertThat(sourceFingerprint).isNotBlank();
+            for (String table : List.of(
+                    "j8_benchmark_campaign",
+                    "j8_benchmark_unit",
+                    "j8_provider_call_attempt",
+                    "j8_benchmark_unit_result",
+                    "j8_benchmark_campaign_result")) {
+                assertThat(sourceJdbc.queryForObject(
+                        "select count(*) from " + table,
+                        Long.class)).isOne();
+            }
+
+            assertContainerCommandSucceeded(POSTGRES.execInContainer(
+                    "pg_dump",
+                    "--username", POSTGRES.getUsername(),
+                    "--dbname", sourceDatabase,
+                    "--format=custom",
+                    "--no-owner",
+                    "--no-privileges",
+                    "--file", dumpPath));
+            assertContainerCommandSucceeded(POSTGRES.execInContainer(
+                    "createdb",
+                    "--username", POSTGRES.getUsername(),
+                    restoreDatabase));
+            assertContainerCommandSucceeded(POSTGRES.execInContainer(
+                    "pg_restore",
+                    "--username", POSTGRES.getUsername(),
+                    "--dbname", restoreDatabase,
+                    "--exit-on-error",
+                    "--no-owner",
+                    "--no-privileges",
+                    dumpPath));
+
+            DataSource restoreDataSource = databaseDataSource(restoreDatabase);
+            JdbcTemplate restoreJdbc = new JdbcTemplate(restoreDataSource);
+            assertThat(restoreJdbc.queryForObject(
+                    """
+                    select version
+                    from flyway_schema_history
+                    where success and version is not null
+                    order by installed_rank desc
+                    limit 1
+                    """,
+                    String.class)).isEqualTo("27");
+            assertThat(restoreJdbc.queryForObject(fingerprintSql, String.class))
+                    .isEqualTo(sourceFingerprint);
+            for (String table : List.of(
+                    "j8_benchmark_campaign",
+                    "j8_benchmark_unit",
+                    "j8_provider_call_attempt",
+                    "j8_benchmark_unit_result",
+                    "j8_benchmark_campaign_result")) {
+                assertThat(restoreJdbc.queryForObject(
+                        "select count(*) from " + table,
+                        Long.class)).isOne();
+            }
+        }
+        finally {
+            assertContainerCommandSucceeded(POSTGRES.execInContainer(
+                    "dropdb",
+                    "--username", POSTGRES.getUsername(),
+                    "--if-exists",
+                    "--force",
+                    restoreDatabase));
+            assertContainerCommandSucceeded(POSTGRES.execInContainer(
+                    "dropdb",
+                    "--username", POSTGRES.getUsername(),
+                    "--if-exists",
+                    "--force",
+                    sourceDatabase));
+        }
+    }
+
+    @Test
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    void keepsJ8PopulationStableInsideAConcurrentPostgresqlRepeatableReadSnapshot()
+            throws Exception {
+        UUID campaignId = UUID.randomUUID();
+        Instant startedAt = Instant.parse("2026-08-29T12:30:00Z");
+
+        try (Connection reader = dataSource.getConnection();
+             Connection writer = dataSource.getConnection()) {
+            reader.setTransactionIsolation(Connection.TRANSACTION_REPEATABLE_READ);
+            reader.setReadOnly(true);
+            reader.setAutoCommit(false);
+            assertThat(reader.getTransactionIsolation())
+                    .isEqualTo(Connection.TRANSACTION_REPEATABLE_READ);
+            assertThat(countJ8Campaign(reader, campaignId)).isZero();
+
+            writer.setAutoCommit(false);
+            try (PreparedStatement insert = writer.prepareStatement("""
+                    insert into j8_benchmark_campaign (
+                        campaign_id, campaign_type, execution_mode, started_at,
+                        maximum_units, collection_date
+                    ) values (?, 'J3_SCHEDULED_EVENTS', 'GUARDED_PROVIDER', ?, 25, ?)
+                    """)) {
+                insert.setObject(1, campaignId);
+                insert.setTimestamp(2, Timestamp.from(startedAt));
+                insert.setObject(3, LocalDate.of(2026, 8, 29));
+                assertThat(insert.executeUpdate()).isOne();
+            }
+            writer.commit();
+
+            assertThat(countJ8Campaign(reader, campaignId)).isZero();
+            reader.commit();
+        }
+
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from j8_benchmark_campaign
+                where campaign_id = ?
+                """, Long.class, campaignId)).isOne();
     }
 
     @Test
@@ -4116,8 +6436,8 @@ class FlywayMigrationIT {
                 StandardCharsets.UTF_8);
 
         assertThat(script)
-                .contains("$manifest.source.flywayVersion.ToString() -cne '26'")
-                .contains("valid Flyway V26 raw-payload restore");
+                .contains("$manifest.source.flywayVersion.ToString() -cne '27'")
+                .contains("valid Flyway V27 raw-payload and J8 evidence restore");
 
         String environmentNames = powerShellArray(script, "$environmentNames");
         assertThat(environmentNames)
@@ -4156,6 +6476,41 @@ class FlywayMigrationIT {
                     "PowerShell array not found: " + variableName);
         }
         return matcher.group(1);
+    }
+
+    private static DataSource databaseDataSource(String databaseName) {
+        String sourceSegment = "/" + POSTGRES.getDatabaseName();
+        String targetSegment = "/" + databaseName;
+        String jdbcUrl = POSTGRES.getJdbcUrl();
+        assertThat(jdbcUrl).contains(sourceSegment);
+        return new DriverManagerDataSource(
+                jdbcUrl.replace(sourceSegment, targetSegment),
+                POSTGRES.getUsername(),
+                POSTGRES.getPassword());
+    }
+
+    private static void assertContainerCommandSucceeded(
+            org.testcontainers.containers.Container.ExecResult result) {
+        assertThat(result.getExitCode())
+                .as("container command stderr: %s; stdout: %s",
+                        result.getStderr(),
+                        result.getStdout())
+                .isZero();
+    }
+
+    private static long countJ8Campaign(Connection connection, UUID campaignId)
+            throws Exception {
+        try (PreparedStatement query = connection.prepareStatement("""
+                select count(*)
+                from j8_benchmark_campaign
+                where campaign_id = ?
+                """)) {
+            query.setObject(1, campaignId);
+            try (var result = query.executeQuery()) {
+                assertThat(result.next()).isTrue();
+                return result.getLong(1);
+            }
+        }
     }
 
     private static String parserConstraint(JdbcTemplate jdbcTemplate, String schema) {
@@ -4667,6 +7022,10 @@ class FlywayMigrationIT {
 
         assertThat(inserted.outcome()).isEqualTo(RawSnapshotPersistenceOutcome.INSERTED);
         assertThat(duplicate.outcome()).isEqualTo(RawSnapshotPersistenceOutcome.DEDUPLICATED);
+        assertThat(inserted.occurrenceId()).isPresent();
+        assertThat(duplicate.occurrenceId()).isPresent();
+        assertThat(duplicate.occurrenceId().orElseThrow())
+                .isNotEqualTo(inserted.occurrenceId().orElseThrow());
         assertThat(duplicate.snapshotId()).isEqualTo(inserted.snapshotId());
         assertThat(secondVersion.outcome()).isEqualTo(RawSnapshotPersistenceOutcome.INSERTED);
         assertThat(secondVersion.snapshotId()).isNotEqualTo(inserted.snapshotId());
@@ -6727,6 +9086,163 @@ class FlywayMigrationIT {
             Thread.sleep(20);
         }
         return false;
+    }
+
+    private static RawManualCallSnapshot j8ScheduledSnapshot(
+            String requestKey,
+            Instant requestedAt,
+            byte[] payload) {
+        return new RawManualCallSnapshot(
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                requestKey,
+                requestedAt,
+                requestedAt.plusMillis(25),
+                200,
+                "application/json; charset=utf-8",
+                Duration.ofMillis(25),
+                RawPayloadEvidence.capture(payload),
+                ScheduledEventsV1Parser.PARSER_VERSION,
+                RawSnapshotSchemaStatus.PARSED,
+                null);
+    }
+
+    private static J8BenchmarkUnitResult providerJ8Result(
+            long unitId,
+            long attemptId,
+            Instant resolvedAt,
+            J8BenchmarkOutcomeType outcome,
+            OptionalInt httpStatus,
+            OptionalLong latencyMillis,
+            OptionalLong snapshotId,
+            OptionalLong snapshotOccurrenceId,
+            Optional<String> parserVersion,
+            Optional<RawSnapshotSchemaStatus> schemaStatus,
+            String terminalCode) {
+        return new J8BenchmarkUnitResult(
+                unitId,
+                OptionalLong.of(attemptId),
+                resolvedAt,
+                J8BenchmarkResolutionSource.PROVIDER,
+                outcome,
+                httpStatus.isPresent(),
+                httpStatus,
+                latencyMillis,
+                snapshotId,
+                snapshotOccurrenceId,
+                parserVersion,
+                schemaStatus,
+                0,
+                Optional.empty(),
+                OptionalInt.empty(),
+                Optional.ofNullable(terminalCode));
+    }
+
+    private static J8BenchmarkUnitResult blockedJ8Result(long unitId, Instant resolvedAt) {
+        return new J8BenchmarkUnitResult(
+                unitId,
+                OptionalLong.empty(),
+                resolvedAt,
+                J8BenchmarkResolutionSource.BLOCKED,
+                J8BenchmarkOutcomeType.NOT_REACHED_AFTER_TERMINAL_FAILURE,
+                false,
+                OptionalInt.empty(),
+                OptionalLong.empty(),
+                OptionalLong.empty(),
+                OptionalLong.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                0,
+                Optional.empty(),
+                OptionalInt.empty(),
+                Optional.of("PRIOR_UNIT_FAILED"));
+    }
+
+    private void insertJ8Unit(
+            UUID campaignId,
+            int ordinal,
+            SofascoreEndpointType endpoint,
+            String requestKey,
+            UUID canonicalEventId,
+            Long providerEventId,
+            Instant declaredAt) {
+        jdbcTemplate.update("""
+                insert into j8_benchmark_unit (
+                    campaign_id, unit_ordinal, logical_endpoint, request_key,
+                    canonical_event_id, provider_event_id, declared_at
+                ) values (?, ?, ?, ?, ?, ?, ?)
+                """,
+                campaignId,
+                ordinal,
+                endpoint.name(),
+                requestKey,
+                canonicalEventId,
+                providerEventId,
+                Timestamp.from(declaredAt));
+    }
+
+    private void insertJ8Result(
+            long unitId,
+            Long attemptId,
+            Instant resolvedAt,
+            J8BenchmarkResolutionSource source,
+            J8BenchmarkOutcomeType outcome,
+            boolean responseReceived,
+            Integer httpStatus,
+            Long latencyMillis,
+            Long snapshotId,
+            Long occurrenceId,
+            String parserVersion,
+            RawSnapshotSchemaStatus schemaStatus,
+            int warningCount) {
+        jdbcTemplate.update("""
+                insert into j8_benchmark_unit_result (
+                    unit_id, attempt_id, resolved_at, resolution_source, outcome_type,
+                    response_received, http_status, latency_ms, snapshot_id,
+                    snapshot_occurrence_id, parser_version, schema_status,
+                    parser_warning_count, terminal_code
+                ) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'TEST_EVIDENCE')
+                """,
+                unitId,
+                attemptId,
+                Timestamp.from(resolvedAt),
+                source.name(),
+                outcome.name(),
+                responseReceived,
+                httpStatus,
+                latencyMillis,
+                snapshotId,
+                occurrenceId,
+                parserVersion,
+                schemaStatus == null ? null : schemaStatus.name(),
+                warningCount);
+    }
+
+    private void assertJ8AppendOnly(String table, String keyColumn, Object key) {
+        assertThat(table).matches("j8_[a-z_]+");
+        assertThat(keyColumn).matches("[a-z_]+");
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                "update " + table + " set created_at = created_at where "
+                        + keyColumn + " = ?",
+                key))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining(table + " is append-only");
+        assertThatThrownBy(() -> jdbcTemplate.update(
+                "delete from " + table + " where " + keyColumn + " = ?",
+                key))
+                .isInstanceOf(RuntimeException.class)
+                .hasStackTraceContaining(table + " is append-only");
+        assertThat(jdbcTemplate.queryForObject("""
+                select count(*)
+                from pg_trigger trigger_definition
+                join pg_class evidence_table
+                  on evidence_table.oid = trigger_definition.tgrelid
+                join pg_namespace evidence_schema
+                  on evidence_schema.oid = evidence_table.relnamespace
+                where evidence_table.relname = ?
+                  and evidence_schema.nspname = current_schema()
+                  and not trigger_definition.tgisinternal
+                  and pg_get_triggerdef(trigger_definition.oid) like '%BEFORE TRUNCATE%'
+                """, Long.class, table)).isOne();
     }
 
     private static void assertProviderSource(

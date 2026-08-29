@@ -4,7 +4,7 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**, **J3 — Appel manuel**, **J4 — Événements**, **J5 — Statistiques**, **J6 — Historique** et **J7 — Export canonique**. J7 a franchi les portes techniques, la recette humaine et la revue de publication : la PR `#12` est `CLEAN/MERGEABLE`, mais reste en brouillon et n'est pas fusionnée sans confirmation explicite. L'implémentation J4, son parcours hors ligne et ses deux sous-étapes réelles bornées sont qualifiés humainement. La sous-étape 1 a validé `16386245` et `16421052` après correction du retour par date. La sous-étape 2 a validé la saisie d'identifiants, le rappel manuel avec une nouvelle confirmation, la déduplication d'une réponse inchangée et la création d'une observation append-only lorsque `16412917` est passé de `notstarted` à `inprogress`. Après l'arrêt global, la configuration a été remise à l'état bloqué, ce verrouillage a été vérifié après redémarrage et l'application a été arrêtée gracieusement. La Pull Request `#8` a été fusionnée et le Work Order J4 est archivé `VALIDATED`. Les voies fournisseur restent désactivées par défaut ; une configuration locale explicitement armée peut réunir J3, J4 phase 2 et J5 dans une même instance, avec une seule requête fournisseur active et un délai minimal partagé. Une recette réelle a depuis achevé, dans un même démarrage, J4 phase 2, les trois familles J5 puis une collecte J3 paginée sur six pages. La forme J3 `scheduled` compte des compétitions disponibles pour la date et ne fournit pas de rencontres programmées ; le reparsage J4 l'indique désormais sans présenter son total nul de matchs comme une anomalie. Aucun appel fournisseur n’est exécuté par Maven, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**, **J3 — Appel manuel**, **J4 — Événements**, **J5 — Statistiques**, **J6 — Historique** et **J7 — Export canonique**. **J8 — Benchmark** est implémenté en état `READY_FOR_HUMAN_QUALIFICATION` : sa migration V27, son ledger d'appels, ses agrégats locaux, sa page en lecture seule et son export Markdown sont prêts, mais aucune campagne fournisseur J8 ni conclusion d'adoption J9 n'est autorisée par cette readiness. J7 a franchi les portes techniques, la recette humaine et la revue de publication et appartient désormais à la baseline `main`. L'implémentation J4, son parcours hors ligne et ses deux sous-étapes réelles bornées sont qualifiés humainement. La sous-étape 1 a validé `16386245` et `16421052` après correction du retour par date. La sous-étape 2 a validé la saisie d'identifiants, le rappel manuel avec une nouvelle confirmation, la déduplication d'une réponse inchangée et la création d'une observation append-only lorsque `16412917` est passé de `notstarted` à `inprogress`. Après l'arrêt global, la configuration a été remise à l'état bloqué, ce verrouillage a été vérifié après redémarrage et l'application a été arrêtée gracieusement. La Pull Request `#8` a été fusionnée et le Work Order J4 est archivé `VALIDATED`. Les voies fournisseur restent désactivées par défaut ; une configuration locale explicitement armée peut réunir J3, J4 phase 2 et J5 dans une même instance, avec une seule requête fournisseur active et un délai minimal partagé. Une recette réelle a depuis achevé, dans un même démarrage, J4 phase 2, les trois familles J5 puis une collecte J3 paginée sur six pages. La forme J3 `scheduled` compte des compétitions disponibles pour la date et ne fournit pas de rencontres programmées ; le reparsage J4 l'indique désormais sans présenter son total nul de matchs comme une anomalie. Aucun appel fournisseur n’est exécuté par Maven, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
 Le Work Order `WO-SS-20260827-014` est `VALIDATED` depuis le `2026-08-28`. Il migre
 `EVENT_DETAILS` vers le runtime Playwright commun de WO-013, avec le `404` indisponible sans parsing
@@ -217,15 +217,27 @@ seul événement dans une enveloppe JSON v1 autonome. Le parcours crée d'abord 
 `HUMAN_VALIDATED` est téléchargeable. Les cinq provenances, la complétude, les avertissements et
 les hashes restent auditables ; aucun payload brut, secret, session, transport vers le Betting
 Project ou appel SofaScore n'est inclus. L'implémentation est `VALIDATED` après passage des portes
-techniques, de la recette du runbook J7 et de la revue de publication. La PR `#12` est confirmée
-`CLEAN/MERGEABLE` ; sa fusion vers `main` reste une décision humaine séparée.
+techniques, de la recette du runbook J7 et de la revue de publication. La PR `#12` a été revue puis
+fusionnée vers `main` ; J7 constitue donc la baseline de départ de J8.
+
+Le jalon **J8 — Benchmark reproductible, audité et borné** ajoute une preuve prospective
+append-only au niveau de chaque campagne, unité, tentative fournisseur et issue terminale. La page
+locale `GET /benchmark` agrège sans réseau les niveaux `FULL_ATTEMPT_LEDGER`, `RESPONSE_ONLY` et
+`LEGACY_BASELINE` sans les promouvoir artificiellement en une mesure exacte. L'exporteur local
+explicite produit le même modèle numérique en Markdown sous `exports/j8/`. Toute valeur sans
+dénominateur fiable reste `NOT_MEASURED`. L'état courant est
+`J8-BENCHMARK-READY-FOR-HUMAN-QUALIFICATION` : la campagne réelle plafonnée à 30 tentatives et la
+revue humaine exigent un go propriétaire distinct ; le Work Order demeure donc actif et aucun
+rapport qualifié n'est encore versionné dans `docs/benchmark/`. La readiness technique finale est
+verte avec 912 tests standards, 66 tests PostgreSQL/Testcontainers, deux exports Markdown
+byte-identiques et un contrôle visuel desktop/étroit, le tout avec zéro appel fournisseur.
 
 ## Ce qui est livré localement
 
 - dépôt Git autonome, documentation, ADR, règles agent et Work Orders ;
 - Java **25 LTS**, Spring Boot **4.1.0** et Maven Wrapper versionné ;
 - interface Spring MVC + Thymeleaf sur `127.0.0.1:8087` ;
-- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V26 et stockage brut séparé ;
+- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V27 et stockage brut séparé ;
 - Actuator, Caffeine, validation de configuration et garde de liaison locale ;
 - catalogue logique des familles d’endpoints, sans URI réelle ;
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;
@@ -797,6 +809,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order validé du lot J5 hors ligne multi-match](docs/work_orders/completed/WO-SS-20260822-010-j5-offline-multi-match-import.md)
 - [Architecture J6 — historique et rétention gardée](docs/architecture/J6-HISTORY-AND-GUARDED-RETENTION.md)
 - [Architecture J7 — export canonique local et audité](docs/architecture/J7-CANONICAL-EVENT-EXPORT.md)
+- [Architecture J8 — métriques, preuves et formules](docs/architecture/J8-BENCHMARK-METRICS.md)
 - [Architecture J3 → J5 — découverte tournoi → rencontres](docs/architecture/J3-J5-TOURNAMENT-EVENT-DISCOVERY.md)
 - [Règles structurelles de découverte tournoi → rencontres](docs/requirements/J3-J5-TOURNAMENT-EVENT-DISCOVERY-RULES.md)
 - [Readiness technique de la découverte tournoi → rencontres](docs/validation/J3-J5-TOURNAMENT-EVENT-DISCOVERY-TECHNICAL-READINESS-20260820.md)
@@ -823,6 +836,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Runbook local](docs/runbooks/RUNBOOK-LOCAL.md)
 - [Runbook J6 — sauvegarde, restauration et rétention](docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md)
 - [Runbook J7 — candidat, décision humaine et téléchargement](docs/runbooks/J7-CANONICAL-EVENT-EXPORT.md)
+- [Runbook J8 — readiness, export et campagne bornée](docs/runbooks/J8-BENCHMARK.md)
 - [Cadrage PDF](docs/reference/Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf)
 - [Rapport de validation du bootstrap](docs/validation/J0-J1-VALIDATION-REPORT.md)
 - [Work Order J0/J1](docs/work_orders/completed/WO-SS-20260808-001-bootstrap-j0-j1.md)
@@ -865,6 +879,8 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order J6 validé](docs/work_orders/completed/WO-SS-20260818-007-history-j6.md)
 - [Readiness technique J7 — acquise](docs/validation/J7-TECHNICAL-READINESS-20260819.md)
 - [Work Order J7 validé](docs/work_orders/completed/WO-SS-20260819-008-canonical-export-j7.md)
+- [Readiness technique J8](docs/validation/J8-TECHNICAL-READINESS-20260829.md)
+- [Work Order J8 actif](docs/work_orders/active/WO-SS-20260829-016-benchmark-j8.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 

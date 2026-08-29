@@ -141,8 +141,9 @@ la qualification humaine et décision propriétaire.
 L'exporteur est un processus Spring one-shot `WebApplicationType.NONE`. Il exige `From`, `To` et
 `AsOf`, force tous les gates fournisseur à `false`, refuse `from >= to` ou `asOf < to`, puis écrit
 automatiquement sous `exports/j8/J8-BENCHMARK-REPORT-<asOf UTC compact>.md`. Aucun chemin de sortie
-arbitraire n'est accepté. L'application normale doit être arrêtée et aucune campagne ne doit être
-active ; le script affiche le chemin final et son SHA-256.
+arbitraire n'est accepté. L'application normale doit être arrêtée afin qu'aucune campagne ne soit
+en cours d'exécution ; une campagne inachevée après incident reste néanmoins exportable et apparaît
+comme preuve partielle avec `INCOMPLETE_ATTEMPT`. Le script affiche le chemin final et son SHA-256.
 
 ## 5. Hors périmètre
 
@@ -166,18 +167,28 @@ addition de données qui ne partagent pas le même dénominateur.
 
 ### 6.1 `FULL_ATTEMPT_LEDGER`
 
-Le registre J8 prospectif contient la campagne, toutes ses unités attendues et chaque tentative
-fournisseur, y compris une issue terminale sans snapshot. Ce niveau permet de mesurer exactement le
-nombre d'appels, le taux d'erreur, les refus, les indisponibilités, la couverture des unités et le
-coût par dossier exploitable dans la fenêtre de cette campagne.
+Le registre J8 prospectif contient la campagne, exactement les unités déclarées par le parcours et
+chaque tentative fournisseur, y compris une tentative sans issue terminale observable. J5
+pré-déclare ses trois familles ; J3 ne fabrique jamais les pages non atteintes. Une campagne
+inachevée reste donc `FULL_ATTEMPT_LEDGER` pour sa preuve instrumentée tout en publiant `PARTIAL` ou
+`INCOMPLETE_ATTEMPT`. Ce niveau permet de mesurer exactement le nombre d'appels observés, le taux
+d'erreur, les refus, les indisponibilités, la couverture des unités et le coût par dossier
+exploitable dans la fenêtre de cette campagne.
+
+Une tentative persistée sans résultat d'unité reste immuable et reçoit dans le rapport le code
+dérivé `INCOMPLETE_ATTEMPT`. Elle compte une fois dans le coût et le taux d'erreur, garde la campagne
+`PARTIAL` et n'autorise jamais un retry de l'unité.
 
 ### 6.2 `RESPONSE_ONLY`
 
 Les occurrences V21 `INSERTED` et `DEDUPLICATED` liées à un snapshot
 `DIRECT_LOCAL_ENDPOINT` prouvent uniquement les réponses ayant atteint la persistance. Elles
-permettent de mesurer la latence, HTTP, compatibilité du parseur et déduplication de cette population.
-Elles ne prouvent pas l'absence d'un timeout ou d'un arrêt antérieur à la persistance. Les taux
-d'essais ou d'erreurs restent donc `PARTIAL` et leur dénominateur est nommé « réponses persistées ».
+permettent de mesurer la latence, HTTP et déduplication de cette population. La compatibilité du
+parseur n'est retenue que lorsqu'une observation append-only est corrélée sans ambiguïté à
+l'occurrence ; sinon elle reste `NOT_MEASURED`. Elles ne prouvent pas l'absence d'un timeout ou d'un
+arrêt antérieur à la persistance. Aucun taux d'erreur ou de tentative n'est donc calculé pour cette
+strate ; ces métriques restent `NOT_MEASURED`, et « réponses persistées » nomme uniquement la
+population effectivement observée.
 
 ### 6.3 `LEGACY_BASELINE`
 
@@ -199,8 +210,8 @@ catégories distinctes ; ils ne sont jamais comptés comme appels fournisseur.
 
 - les bornes sont des `Instant` UTC et forment `[from,to)` ;
 - `from` et `to` sont absents ensemble ou présents ensemble ;
-- après trim, chaque valeur contient 1 à 64 caractères, aucun contrôle, finit par `Z` et est
-  acceptée par `Instant.parse` ;
+- chaque valeur brute reçue contient au plus 64 caractères ; après trim, elle reste non vide,
+  ne contient aucun contrôle, finit par `Z` et est acceptée par `Instant.parse` ;
 - un offset tel que `+01:00` est refusé : l'opérateur fournit l'équivalent UTC avec `Z` ;
 - `from < to` est obligatoire ;
 - sans borne, la fenêtre couvre tout l'historique mesurable jusqu'au `Clock.instant()` capturé une
@@ -247,20 +258,23 @@ commencé. Une unité bloquée avant transport reste un résultat terminal mais 
 résultats séparent succès compatible, `404`, autres HTTP, timeout,
 refus `401/403/429`, challenge/contenu inattendu, erreur de schéma, arrêt opérateur et erreur locale.
 
-Avec `RESPONSE_ONLY`, seul un taux sur réponses persistées est calculable et reste `PARTIAL`. Avec
-`LEGACY_BASELINE`, le taux d'erreur par tentative est `NOT_MEASURED`.
+Avec `RESPONSE_ONLY`, les distributions propres aux réponses persistées restent publiables, mais
+aucun taux d'erreur par tentative n'est calculable : il reste `NOT_MEASURED`. Avec
+`LEGACY_BASELINE`, le taux d'erreur par tentative est également `NOT_MEASURED`.
 
 ### 8.5 Corrections tardives
 
-Les corrections sont dérivées des classifications J6. Seules les observations de provenance
-fournisseur peuvent contribuer à `LATE_ENRICHMENT` et `LATE_CORRECTION`. Une fixture synthétique ou
-un reparsing local reste visible dans sa catégorie propre et n'est jamais assimilé à une correction
+Les corrections sont dérivées des classifications J6. La paire prédécesseur/version est calculée
+dans la sous-série `DIRECT_LOCAL_ENDPOINT`, et le dernier état direct précédent est interprété par
+le classifieur terminal J6 existant. Seules ces observations de provenance fournisseur peuvent
+contribuer à `LATE_ENRICHMENT` et `LATE_CORRECTION`. Un import, une fixture synthétique ou un
+reparsing local reste visible dans sa catégorie propre et n'est jamais assimilé à une correction
 fournisseur.
 
 ### 8.6 Coût en appels
 
 Le dénominateur est le nombre de `provider_event_id` distincts ciblés par une unité
-`GUARDED_PROVIDER` J4 phase 2 ou J5. Un dossier direct exploitable possède, à `asOf`, un état et un
+`GUARDED_PROVIDER` J4 ou J5. Un dossier direct exploitable possède, à `asOf`, un état et un
 détail directs ainsi que les trois familles J5 directes. Chaque famille J5 doit être `COMPLETE`,
 `PARTIAL` ou `EMPTY_VALID`. Une famille absente, `UNAVAILABLE` ou incompatible, une composante
 import-only ou une provenance synthétique exclut le dossier. Un dossier strictement complet a ses
@@ -321,8 +335,8 @@ payload, chemin local, stack trace ou détail PostgreSQL.
 
 ```text
 J8_STATUS=READY_FOR_HUMAN_QUALIFICATION
-COMPLETENESS_METRICS=AVAILABLE
-LATENCY_METRICS=AVAILABLE
+COMPLETENESS_FORMULA=IMPLEMENTED_PENDING_BOUNDED_CAMPAIGN
+LATENCY_FORMULA=IMPLEMENTED_PENDING_BOUNDED_CAMPAIGN
 SCHEMA_STABILITY=MEASURED_OR_EXPLICITLY_NOT_MEASURED
 ERROR_RATE=EVIDENCE_LEVEL_AWARE
 PROVIDER_CALL_COST=EVIDENCE_LEVEL_AWARE
@@ -338,7 +352,7 @@ RAW_PROVIDER_PAYLOAD_IN_REPORT=NO
 J9_DECISION_TAKEN=NO
 ```
 
-## 12. Validation technique requise
+## 12. Validation technique exécutée
 
 Avant toute qualification humaine, exécuter sur le diff final :
 
@@ -346,13 +360,17 @@ Avant toute qualification humaine, exécuter sur le diff final :
 .\mvnw.cmd clean verify
 .\mvnw.cmd -Pintegration-tests verify
 .\scripts\Verify-Local.ps1 -WithIntegrationTests
+docker compose --env-file .env config --quiet
 git diff --check
 ```
 
-Les résultats réels doivent être consignés dans
-`docs/validation/J8-TECHNICAL-READINESS-20260829.md`. Aucun résultat `PASS` n'est présumé par ce
-Work Order. Les tests Maven, y compris PostgreSQL/Testcontainers, doivent exécuter zéro appel
-SofaScore et ne doivent pas démarrer Playwright.
+Résultat du replay final après le correctif de lancement réel de l'exporteur : 912 tests standards,
+0 échec, 0 erreur, 4 ignorés prévus ; 66 tests PostgreSQL/Testcontainers, 0 échec et 0 erreur ;
+`Verify-Local.ps1` à `PASS` avec `SOFASCORE_NETWORK_CALLS_EXECUTED=NO` ; Compose silencieux et
+`git diff --check` à `PASS`. Les deux exports réels de la même fenêtre sont byte-identiques et
+déclarent zéro appel fournisseur. Les contrôles desktop 1280×720 et étroit 390×844 sont à `PASS`,
+sans JavaScript ni débordement horizontal global. Les résultats détaillés sont consignés dans
+`docs/validation/J8-TECHNICAL-READINESS-20260829.md`.
 
 ## 13. Qualification humaine et campagne éventuelle
 
@@ -366,10 +384,13 @@ La qualification humaine locale doit vérifier :
 6. l'absence de toute activité réseau J8 ;
 7. l'arrêt propre de l'application et la conservation des verrous réseau.
 
-État initial :
+État après readiness technique :
 
 ```text
 J8_HUMAN_QUALIFICATION=NOT_RUN
+J8_HTML_TECHNICAL_QA=PASS
+J8_MARKDOWN_REPRODUCIBILITY=PASS_BYTE_IDENTICAL
+J8_TECHNICAL_QA_PROVIDER_CALLS=0
 J8_PROVIDER_CAMPAIGN=NOT_AUTHORIZED
 J8_PROVIDER_CAMPAIGN_RESULT=NOT_RUN
 J8_FINAL_BENCHMARK_REPORT=NOT_CREATED
@@ -421,15 +442,15 @@ Le passage à `VALIDATED` et le déplacement vers `docs/work_orders/completed` e
 
 - résultats techniques finaux réels et sans échec ;
 - qualification humaine terminée ;
-- campagne réelle soit qualifiée après go séparé, soit explicitement déclarée non requise par le
-  propriétaire pour la clôture ;
+- campagne réelle bornée qualifiée après go séparé ; aucune réussite technique ou recette hors
+  ligne ne peut la remplacer ;
 - rapport final J8 complété dans `docs/benchmark` sans donnée interdite ;
 - revue du diff et des secrets ;
 - configuration sûre, listener et processus contrôlés après la séance ;
-- branche poussée et Pull Request revue ;
 - décision explicite du propriétaire.
 
-La fusion vers `main` reste une décision séparée. Ce Work Order demeure actif et ne doit pas être
+Tout push, toute Pull Request et toute fusion vers `main` exigent une demande explicite séparée et
+ne constituent pas une preuve de clôture J8. Ce Work Order demeure actif et ne doit pas être
 archivé tant que ces preuves et cette décision ne sont pas acquises.
 
 Le bloc de clôture ci-dessous doit être écrit exactement et entièrement prouvé après la campagne et

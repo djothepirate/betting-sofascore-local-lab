@@ -6,6 +6,9 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatis
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportException;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportFailure;
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderSupervisor;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignResult;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkOutcomeType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkUnitResult;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
@@ -27,9 +30,11 @@ import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.J5EventDataProviderTransport;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
+import com.bettingproject.sofascorelocal.port.J8BenchmarkEvidenceStore;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.io.IOException;
 import java.net.URI;
@@ -37,6 +42,7 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -102,11 +108,13 @@ class J5RealEventDataServiceTest {
         doAnswer(invocation -> {
             RawManualCallSnapshot snapshot = invocation.getArgument(0);
             operations.add("raw:" + snapshot.endpointType());
+            long snapshotId = snapshotIds.incrementAndGet();
             return new RawSnapshotPersistenceResult(
-                    snapshotIds.incrementAndGet(),
+                    snapshotId,
                     RawSnapshotPersistenceOutcome.INSERTED,
                     snapshot.payload().sha256(),
-                    snapshot.payload().sizeBytes());
+                    snapshot.payload().sizeBytes(),
+                    java.util.OptionalLong.of(snapshotId));
         }).when(rawStore).save(any());
         doAnswer(invocation -> {
             operations.add("classify:" + invocation.getArgument(1));
@@ -255,7 +263,8 @@ class J5RealEventDataServiceTest {
                     snapshotId,
                     outcome,
                     snapshot.payload().sha256(),
-                    snapshot.payload().sizeBytes());
+                    snapshot.payload().sizeBytes(),
+                    java.util.OptionalLong.of(snapshotId + 1000L));
         }).when(rawStore).save(any());
         doAnswer(invocation -> {
             long snapshotId = invocation.getArgument(0);
@@ -984,9 +993,144 @@ class J5RealEventDataServiceTest {
         }
     }
 
+    @Test
+    void aFailedAttemptAuditWritePreventsTheFirstProviderCall() {
+        J8BenchmarkEvidenceStore evidenceStore = auditStore();
+        when(evidenceStore.startProviderAttempt(any()))
+                .thenThrow(new IllegalStateException("audit unavailable"));
+        service = serviceWithAudit(evidenceStore);
+
+        J5RealCampaignResult result = service.execute(claim());
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.terminalCode()).isEqualTo("BENCHMARK_AUDIT_FAILURE");
+        assertThat(result.providerCallAttempts()).isZero();
+        verify(campaign, never()).execute(any());
+        verify(control).fail(REQUEST_ID, "BENCHMARK_AUDIT_FAILURE");
+    }
+
+    @Test
+    void aFailedProviderSnapshotAuditCapturePreventsEveryFollowingProviderCall()
+            throws Exception {
+        J8BenchmarkEvidenceStore evidenceStore = auditStore();
+        service = serviceWithAudit(evidenceStore);
+        when(campaign.execute(any())).thenAnswer(invocation -> {
+            J5EventDataProviderRequest request = invocation.getArgument(0);
+            return response(request, 200, fixtureFor(request.endpointType()));
+        });
+        doAnswer(invocation -> {
+            RawManualCallSnapshot snapshot = invocation.getArgument(0);
+            return new RawSnapshotPersistenceResult(
+                    901L,
+                    RawSnapshotPersistenceOutcome.CACHE_HIT,
+                    snapshot.payload().sha256(),
+                    snapshot.payload().sizeBytes(),
+                    java.util.OptionalLong.empty());
+        }).when(rawStore).save(any());
+
+        J5RealCampaignResult result = service.execute(claim());
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.terminalCode()).isEqualTo("BENCHMARK_AUDIT_FAILURE");
+        assertThat(result.providerCallAttempts()).isEqualTo(1);
+        ArgumentCaptor<J5EventDataProviderRequest> requests =
+                ArgumentCaptor.forClass(J5EventDataProviderRequest.class);
+        verify(campaign, times(1)).execute(requests.capture());
+        assertThat(requests.getValue().endpointType())
+                .isEqualTo(SofascoreEndpointType.EVENT_STATISTICS);
+        verify(evidenceStore, never()).recordUnitResult(any());
+        verify(control).fail(REQUEST_ID, "BENCHMARK_AUDIT_FAILURE");
+    }
+
+    @Test
+    void aFailedFirstUnitResultAuditWritePreventsEveryFollowingProviderCall()
+            throws Exception {
+        J8BenchmarkEvidenceStore evidenceStore = auditStore();
+        doThrow(new IllegalStateException("audit unavailable"))
+                .when(evidenceStore).recordUnitResult(any());
+        service = serviceWithAudit(evidenceStore);
+        when(campaign.execute(any())).thenAnswer(invocation -> {
+            J5EventDataProviderRequest request = invocation.getArgument(0);
+            return response(request, 200, fixtureFor(request.endpointType()));
+        });
+
+        J5RealCampaignResult result = service.execute(claim());
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.terminalCode()).isEqualTo("BENCHMARK_AUDIT_FAILURE");
+        assertThat(result.providerCallAttempts()).isEqualTo(1);
+        ArgumentCaptor<J5EventDataProviderRequest> requests =
+                ArgumentCaptor.forClass(J5EventDataProviderRequest.class);
+        verify(campaign, times(1)).execute(requests.capture());
+        assertThat(requests.getValue().endpointType())
+                .isEqualTo(SofascoreEndpointType.EVENT_STATISTICS);
+        verify(evidenceStore, times(1)).recordUnitResult(any());
+        verify(control).fail(REQUEST_ID, "BENCHMARK_AUDIT_FAILURE");
+    }
+
+    @Test
+    void aCanonicalReadFailureFinalizesAllThreeUnitsWithoutOpeningTransport() {
+        J8BenchmarkEvidenceStore evidenceStore = auditStore();
+        service = serviceWithAudit(evidenceStore);
+        when(canonicalStore.findLatestByCanonicalId(IDENTITY.value()))
+                .thenThrow(new IllegalStateException("database unavailable"));
+
+        J5RealCampaignResult result = service.execute(claim());
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.terminalCode()).isEqualTo("CANONICAL_EVENT_READ_ERROR");
+        verify(transport, never()).openCampaign(any());
+        ArgumentCaptor<J8BenchmarkUnitResult> unitResults =
+                ArgumentCaptor.forClass(J8BenchmarkUnitResult.class);
+        verify(evidenceStore, times(3)).recordUnitResult(unitResults.capture());
+        assertThat(unitResults.getAllValues())
+                .extracting(J8BenchmarkUnitResult::outcomeType)
+                .containsOnly(J8BenchmarkOutcomeType.NOT_REACHED_AFTER_TERMINAL_FAILURE);
+        verify(evidenceStore).finishCampaign(any(J8BenchmarkCampaignResult.class));
+    }
+
+    @Test
+    void aConsumedClaimWithAnotherRouteIdentityStillProducesATerminalLedger() {
+        J8BenchmarkEvidenceStore evidenceStore = auditStore();
+        service = serviceWithAudit(evidenceStore);
+
+        J5RealCampaignResult result = service.execute(claim(), UUID.randomUUID());
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.terminalCode()).isEqualTo("EVENT_ID_MISMATCH");
+        verify(canonicalStore, never()).findLatestByCanonicalId(any());
+        verify(transport, never()).openCampaign(any());
+        verify(evidenceStore, times(3)).recordUnitResult(any());
+        verify(evidenceStore).finishCampaign(any(J8BenchmarkCampaignResult.class));
+    }
+
     private void verifySingleCampaignLifecycle() {
         verify(transport).openCampaign(REQUEST_ID);
         verify(campaign).close();
+    }
+
+    private J8BenchmarkEvidenceStore auditStore() {
+        J8BenchmarkEvidenceStore store = mock(J8BenchmarkEvidenceStore.class);
+        when(store.declareUnit(any())).thenReturn(11L, 12L, 13L);
+        when(store.startProviderAttempt(any())).thenReturn(21L, 22L, 23L);
+        return store;
+    }
+
+    private J5RealEventDataService serviceWithAudit(J8BenchmarkEvidenceStore store) {
+        return new J5RealEventDataService(
+                control,
+                transport,
+                rawStore,
+                canonicalStore,
+                dataStore,
+                new EventStatisticsV2Parser(),
+                new EventIncidentsV14Parser(),
+                new EventLineupsV2Parser(),
+                coordinator,
+                providerSupervisor,
+                new J8BenchmarkAuditService(
+                        store,
+                        Clock.fixed(NOW, ZoneOffset.UTC)));
     }
 
     private static J5RealExecutionClaim claim() {

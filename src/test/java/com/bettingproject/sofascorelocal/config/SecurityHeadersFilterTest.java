@@ -40,6 +40,36 @@ class SecurityHeadersFilterTest {
                 .doesNotContain("script-src 'self'");
     }
 
+    @Test
+    void appliesStrictReadOnlyHeadersToTheBenchmarkRoute() throws Exception {
+        MockHttpServletResponse response = filter("/benchmark");
+
+        assertThat(response.getHeader("Cache-Control"))
+                .isEqualTo("no-store, no-cache, must-revalidate, max-age=0");
+        assertThat(response.getHeader("Pragma")).isEqualTo("no-cache");
+        assertThat(response.getHeader("Expires")).isEqualTo("0");
+        assertThat(response.getHeader("X-Robots-Tag"))
+                .isEqualTo("noindex, nofollow, noarchive");
+        assertThat(response.getHeader("Content-Security-Policy"))
+                .contains("script-src 'none'")
+                .doesNotContain("script-src 'self'");
+    }
+
+    @Test
+    void appliesStrictReadOnlyHeadersToARewrittenBenchmarkRoute() throws Exception {
+        MockHttpServletResponse response = filter(
+                "/benchmark;jsessionid=LOCAL_TEST_SESSION");
+
+        assertThat(response.getHeader("Cache-Control"))
+                .isEqualTo("no-store, no-cache, must-revalidate, max-age=0");
+        assertThat(response.getHeader("Pragma")).isEqualTo("no-cache");
+        assertThat(response.getHeader("Expires")).isEqualTo("0");
+        assertThat(response.getHeader("X-Robots-Tag"))
+                .isEqualTo("noindex, nofollow, noarchive");
+        assertThat(response.getHeader("Content-Security-Policy"))
+                .contains("script-src 'none'");
+    }
+
     private MockHttpServletResponse filter(String path) throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", path);
         MockHttpServletResponse response = new MockHttpServletResponse();

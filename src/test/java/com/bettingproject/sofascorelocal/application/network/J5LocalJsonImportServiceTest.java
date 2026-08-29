@@ -3,6 +3,9 @@ package com.bettingproject.sofascorelocal.application.network;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV14Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkOutcomeType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkResolutionSource;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkUnitResult;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessStatus;
@@ -19,10 +22,12 @@ import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceR
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
+import com.bettingproject.sofascorelocal.port.J8BenchmarkEvidenceStore;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -40,6 +45,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -87,11 +93,13 @@ class J5LocalJsonImportServiceTest {
         when(rawStore.save(any())).thenAnswer(invocation -> {
             RawManualCallSnapshot snapshot = invocation.getArgument(0);
             rawSnapshots.add(snapshot);
+            long snapshotId = snapshotIds.incrementAndGet();
             return new RawSnapshotPersistenceResult(
-                    snapshotIds.incrementAndGet(),
+                    snapshotId,
                     RawSnapshotPersistenceOutcome.INSERTED,
                     snapshot.payload().sha256(),
-                    snapshot.payload().sizeBytes());
+                    snapshot.payload().sizeBytes(),
+                    java.util.OptionalLong.of(snapshotId));
         });
 
         observations = new ArrayList<>();
@@ -220,6 +228,136 @@ class J5LocalJsonImportServiceTest {
 
         verify(control, never()).confirmAndClaim(any(), any(), any(Boolean.class));
         verifyNoInteractions(rawStore, dataStore, canonicalStore);
+    }
+
+    @Test
+    void aCanonicalReadFailureIsFinalizedAfterTheClaimWithoutReachingAnyFamily() {
+        J8BenchmarkEvidenceStore evidenceStore = mock(J8BenchmarkEvidenceStore.class);
+        when(evidenceStore.declareUnit(any())).thenReturn(11L, 12L, 13L);
+        when(canonicalStore.findLatestByCanonicalId(IDENTITY.value()))
+                .thenThrow(new IllegalStateException("database unavailable"));
+        J5LocalJsonImportService auditedService = new J5LocalJsonImportService(
+                control,
+                new J5LocalJsonImportProcessor(
+                        rawStore,
+                        canonicalStore,
+                        dataStore,
+                        new EventStatisticsV2Parser(),
+                        new EventIncidentsV14Parser(),
+                        new EventLineupsV2Parser(),
+                        Clock.fixed(NOW, ZoneOffset.UTC)),
+                new J8BenchmarkAuditService(
+                        evidenceStore, Clock.fixed(NOW, ZoneOffset.UTC)));
+
+        J5RealCampaignResult result = auditedService.importCampaign(
+                IDENTITY.value(),
+                REQUEST_ID,
+                CONFIRMATION,
+                true,
+                payload("{\"statistics\":[]}"),
+                payload("{\"incidents\":[]}"),
+                payload("{\"confirmed\":false}"));
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.terminalCode()).isEqualTo("CANONICAL_EVENT_LOOKUP_ERROR");
+        verify(control).confirmAndClaim(REQUEST_ID, CONFIRMATION, true);
+        verify(evidenceStore).startCampaign(any());
+        ArgumentCaptor<J8BenchmarkUnitResult> auditResults =
+                ArgumentCaptor.forClass(J8BenchmarkUnitResult.class);
+        verify(evidenceStore, times(3)).recordUnitResult(auditResults.capture());
+        assertThat(auditResults.getAllValues())
+                .extracting(J8BenchmarkUnitResult::resolutionSource)
+                .containsOnly(J8BenchmarkResolutionSource.BLOCKED);
+        assertThat(auditResults.getAllValues())
+                .extracting(J8BenchmarkUnitResult::outcomeType)
+                .containsOnly(J8BenchmarkOutcomeType.NOT_REACHED_AFTER_TERMINAL_FAILURE);
+        verify(evidenceStore).finishCampaign(any());
+        verifyNoInteractions(rawStore, dataStore);
+    }
+
+    @Test
+    void auditsTheReachedImportPersistenceFailureAndBlocksOnlyFutureFamilies() {
+        J8BenchmarkEvidenceStore evidenceStore = mock(J8BenchmarkEvidenceStore.class);
+        when(evidenceStore.declareUnit(any())).thenReturn(11L, 12L, 13L);
+        doThrow(new IllegalStateException("database unavailable"))
+                .when(rawStore).save(any());
+        J5LocalJsonImportProcessor processor = new J5LocalJsonImportProcessor(
+                rawStore,
+                canonicalStore,
+                dataStore,
+                new EventStatisticsV2Parser(),
+                new EventIncidentsV14Parser(),
+                new EventLineupsV2Parser(),
+                Clock.fixed(NOW, ZoneOffset.UTC));
+        J5LocalJsonImportService auditedService = new J5LocalJsonImportService(
+                control,
+                processor,
+                new J8BenchmarkAuditService(
+                        evidenceStore, Clock.fixed(NOW, ZoneOffset.UTC)));
+
+        J5RealCampaignResult result = auditedService.importCampaign(
+                IDENTITY.value(),
+                REQUEST_ID,
+                CONFIRMATION,
+                true,
+                payload("{\"statistics\":[]}"),
+                payload("{\"incidents\":[]}"),
+                payload("{\"confirmed\":false}"));
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.terminalCode()).isEqualTo("RAW_PERSISTENCE_ERROR");
+        ArgumentCaptor<J8BenchmarkUnitResult> auditResults =
+                ArgumentCaptor.forClass(J8BenchmarkUnitResult.class);
+        verify(evidenceStore, times(3)).recordUnitResult(auditResults.capture());
+        assertThat(auditResults.getAllValues())
+                .extracting(J8BenchmarkUnitResult::resolutionSource)
+                .containsExactly(
+                        J8BenchmarkResolutionSource.MANUAL_LOCAL_JSON_IMPORT,
+                        J8BenchmarkResolutionSource.BLOCKED,
+                        J8BenchmarkResolutionSource.BLOCKED);
+        assertThat(auditResults.getAllValues())
+                .extracting(J8BenchmarkUnitResult::outcomeType)
+                .containsExactly(
+                        J8BenchmarkOutcomeType.PERSISTENCE_FAILURE,
+                        J8BenchmarkOutcomeType.NOT_REACHED_AFTER_TERMINAL_FAILURE,
+                        J8BenchmarkOutcomeType.NOT_REACHED_AFTER_TERMINAL_FAILURE);
+    }
+
+    @Test
+    void aFailedFirstUnitResultAuditWritePreventsFollowingLocalImports() {
+        J8BenchmarkEvidenceStore evidenceStore = mock(J8BenchmarkEvidenceStore.class);
+        when(evidenceStore.declareUnit(any())).thenReturn(11L, 12L, 13L);
+        doThrow(new IllegalStateException("audit unavailable"))
+                .when(evidenceStore).recordUnitResult(any());
+        J5LocalJsonImportService auditedService = new J5LocalJsonImportService(
+                control,
+                new J5LocalJsonImportProcessor(
+                        rawStore,
+                        canonicalStore,
+                        dataStore,
+                        new EventStatisticsV2Parser(),
+                        new EventIncidentsV14Parser(),
+                        new EventLineupsV2Parser(),
+                        Clock.fixed(NOW, ZoneOffset.UTC)),
+                new J8BenchmarkAuditService(
+                        evidenceStore, Clock.fixed(NOW, ZoneOffset.UTC)));
+
+        J5RealCampaignResult result = auditedService.importCampaign(
+                IDENTITY.value(),
+                REQUEST_ID,
+                CONFIRMATION,
+                true,
+                payload("{\"statistics\":[]}"),
+                payload("{\"incidents\":[]}"),
+                payload("{\"confirmed\":false}"));
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.terminalCode()).isEqualTo("BENCHMARK_AUDIT_FAILURE");
+        assertThat(result.localJsonImports()).isEqualTo(1);
+        verify(rawStore, times(1)).save(any());
+        verify(dataStore, times(1)).save(any());
+        verify(evidenceStore, times(1)).recordUnitResult(any());
+        verify(control).fail(REQUEST_ID, "BENCHMARK_AUDIT_FAILURE");
     }
 
     private static J5RealControlSnapshot pending() {

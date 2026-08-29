@@ -9,6 +9,11 @@ import com.bettingproject.sofascorelocal.application.event.TournamentCanonicaliz
 import com.bettingproject.sofascorelocal.application.event.TournamentDiscoveredEventView;
 import com.bettingproject.sofascorelocal.config.ProviderPlaywrightProperties;
 import com.bettingproject.sofascorelocal.config.SofascoreProperties;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignResult;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignTerminalState;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkOutcomeType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkResolutionSource;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkUnitResult;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.provider.CachedTournamentScheduledEventsResponse;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
@@ -29,6 +34,7 @@ import com.bettingproject.sofascorelocal.domain.scheduledevents.J3TournamentCata
 import com.bettingproject.sofascorelocal.domain.scheduledevents.J3TournamentCatalogOption;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.TournamentEventCountStatus;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
+import com.bettingproject.sofascorelocal.port.J8BenchmarkEvidenceStore;
 import com.bettingproject.sofascorelocal.port.TournamentScheduledEventsCache;
 import com.bettingproject.sofascorelocal.port.TournamentScheduledEventsProviderTransport;
 import org.junit.jupiter.api.BeforeEach;
@@ -51,6 +57,7 @@ import java.util.UUID;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -103,6 +110,10 @@ class TournamentEventDiscoveryServiceTest {
 
     @Test
     void persistsRawBeforeClassificationCacheAndCanonicalizationForOneProviderGet() {
+        J8BenchmarkEvidenceStore evidenceStore = mock(J8BenchmarkEvidenceStore.class);
+        when(evidenceStore.declareUnit(any())).thenReturn(11L);
+        when(evidenceStore.startProviderAttempt(any())).thenReturn(12L);
+        service = auditedService(evidenceStore, Clock.fixed(NOW, ZoneOffset.UTC));
         RawPayloadEvidence payload = payload(7);
         var response = response(200, payload);
         var raw = persistenceResult(81, payload);
@@ -123,6 +134,26 @@ class TournamentEventDiscoveryServiceTest {
         verify(transport).openCampaign(REQUEST_ID);
         verify(providerCampaign).execute(any());
         verify(providerCampaign).close();
+        InOrder auditOrder = inOrder(evidenceStore, providerCampaign);
+        auditOrder.verify(evidenceStore).startCampaign(any());
+        auditOrder.verify(evidenceStore).declareUnit(any());
+        auditOrder.verify(evidenceStore).startProviderAttempt(any());
+        auditOrder.verify(providerCampaign).execute(any());
+        auditOrder.verify(providerCampaign).close();
+        auditOrder.verify(evidenceStore).recordUnitResult(any());
+        auditOrder.verify(evidenceStore).finishCampaign(any());
+        ArgumentCaptor<J8BenchmarkUnitResult> auditResult =
+                ArgumentCaptor.forClass(J8BenchmarkUnitResult.class);
+        verify(evidenceStore).recordUnitResult(auditResult.capture());
+        assertThat(auditResult.getValue().resolutionSource())
+                .isEqualTo(J8BenchmarkResolutionSource.PROVIDER);
+        assertThat(auditResult.getValue().outcomeType())
+                .isEqualTo(J8BenchmarkOutcomeType.PARSED);
+        ArgumentCaptor<J8BenchmarkCampaignResult> campaignResult =
+                ArgumentCaptor.forClass(J8BenchmarkCampaignResult.class);
+        verify(evidenceStore).finishCampaign(campaignResult.capture());
+        assertThat(campaignResult.getValue().terminalState())
+                .isEqualTo(J8BenchmarkCampaignTerminalState.COMPLETED);
         InOrder order = inOrder(rawStore, cache, persistence, control);
         order.verify(rawStore).save(any());
         order.verify(rawStore).classify(81, RawSnapshotSchemaStatus.PARSED, null);
@@ -135,6 +166,10 @@ class TournamentEventDiscoveryServiceTest {
 
     @Test
     void preservesRawResponseWhenCampaignCleanupFailsAfterProviderGet() {
+        J8BenchmarkEvidenceStore evidenceStore = mock(J8BenchmarkEvidenceStore.class);
+        when(evidenceStore.declareUnit(any())).thenReturn(21L);
+        when(evidenceStore.startProviderAttempt(any())).thenReturn(22L);
+        service = auditedService(evidenceStore, Clock.fixed(NOW, ZoneOffset.UTC));
         RawPayloadEvidence payload = payload(7);
         var response = response(200, payload);
         var raw = persistenceResult(87, payload);
@@ -159,6 +194,17 @@ class TournamentEventDiscoveryServiceTest {
         verify(rawStore, never()).classify(anyLong(), any(), any());
         verify(cache, never()).recordParsed(any(), any(), any(), any());
         verify(persistence, never()).persist(any(), anyLong(), any(), any());
+        verify(evidenceStore).startProviderAttempt(any());
+        ArgumentCaptor<J8BenchmarkUnitResult> auditResult =
+                ArgumentCaptor.forClass(J8BenchmarkUnitResult.class);
+        verify(evidenceStore).recordUnitResult(auditResult.capture());
+        assertThat(auditResult.getValue().outcomeType())
+                .isEqualTo(J8BenchmarkOutcomeType.PROCESSING_FAILURE);
+        ArgumentCaptor<J8BenchmarkCampaignResult> campaignResult =
+                ArgumentCaptor.forClass(J8BenchmarkCampaignResult.class);
+        verify(evidenceStore).finishCampaign(campaignResult.capture());
+        assertThat(campaignResult.getValue().terminalState())
+                .isEqualTo(J8BenchmarkCampaignTerminalState.FAILED);
     }
 
     @Test
@@ -260,6 +306,9 @@ class TournamentEventDiscoveryServiceTest {
 
     @Test
     void reparsesAFreshCacheHitWithoutExecutingOrPersistingTransport() {
+        J8BenchmarkEvidenceStore evidenceStore = mock(J8BenchmarkEvidenceStore.class);
+        when(evidenceStore.declareUnit(any())).thenReturn(31L);
+        service = auditedService(evidenceStore, Clock.fixed(NOW, ZoneOffset.UTC));
         RawPayloadEvidence payload = payload(7);
         var cached = new CachedTournamentScheduledEventsResponse(
                 82,
@@ -287,6 +336,39 @@ class TournamentEventDiscoveryServiceTest {
         verify(transport, never()).openCampaign(any());
         verify(rawStore, never()).save(any());
         verify(cache, never()).recordParsed(any(), any(), any(), any());
+        verify(evidenceStore, never()).startProviderAttempt(any());
+        ArgumentCaptor<J8BenchmarkUnitResult> auditResult =
+                ArgumentCaptor.forClass(J8BenchmarkUnitResult.class);
+        verify(evidenceStore).recordUnitResult(auditResult.capture());
+        assertThat(auditResult.getValue().resolutionSource())
+                .isEqualTo(J8BenchmarkResolutionSource.CACHE);
+        assertThat(auditResult.getValue().outcomeType())
+                .isEqualTo(J8BenchmarkOutcomeType.PARSED);
+        assertThat(auditResult.getValue().attemptId()).isEmpty();
+        verify(evidenceStore).finishCampaign(any());
+    }
+
+    @Test
+    void blocksTournamentTransportWhenAttemptAuditPersistenceFails() {
+        J8BenchmarkEvidenceStore evidenceStore = mock(J8BenchmarkEvidenceStore.class);
+        when(evidenceStore.declareUnit(any())).thenReturn(41L);
+        when(evidenceStore.startProviderAttempt(any()))
+                .thenThrow(new IllegalStateException("attempt audit unavailable"));
+        service = auditedService(evidenceStore, Clock.fixed(NOW, ZoneOffset.UTC));
+
+        assertThatThrownBy(() -> service.execute(claim(Map.of(7200, 1))))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("attempt audit unavailable");
+
+        InOrder order = inOrder(evidenceStore, providerCampaign);
+        order.verify(evidenceStore).declareUnit(any());
+        order.verify(evidenceStore).startProviderAttempt(any());
+        order.verify(providerCampaign).close();
+        verify(providerCampaign, never()).execute(any());
+        verify(rawStore, never()).save(any());
+        verify(evidenceStore, never()).recordUnitResult(any());
+        verify(evidenceStore, never()).finishCampaign(any());
+        verify(control).fail(REQUEST_ID, "BENCHMARK_AUDIT_FAILURE");
     }
 
     @Test
@@ -600,7 +682,8 @@ class TournamentEventDiscoveryServiceTest {
                 snapshotId,
                 RawSnapshotPersistenceOutcome.INSERTED,
                 payload.sha256(),
-                payload.sizeBytes());
+                payload.sizeBytes(),
+                java.util.OptionalLong.of(snapshotId + 1000L));
     }
 
     private static TournamentCanonicalizationResult canonicalization() {
@@ -658,5 +741,24 @@ class TournamentEventDiscoveryServiceTest {
                         Duration.ofSeconds(3),
                         ignored -> { }),
                 selectedClock);
+    }
+
+    private TournamentEventDiscoveryService auditedService(
+            J8BenchmarkEvidenceStore evidenceStore,
+            Clock selectedClock) {
+        return new TournamentEventDiscoveryService(
+                control,
+                transport,
+                cache,
+                rawStore,
+                new TournamentScheduledEventsProjectionService(),
+                persistence,
+                new TournamentScheduledEventsV1Parser(),
+                new ManualProviderRequestCoordinator(
+                        selectedClock,
+                        Duration.ofSeconds(3),
+                        ignored -> { }),
+                selectedClock,
+                new J8BenchmarkAuditService(evidenceStore, selectedClock));
     }
 }

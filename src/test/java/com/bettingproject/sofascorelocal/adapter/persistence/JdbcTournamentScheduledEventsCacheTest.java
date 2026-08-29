@@ -83,6 +83,9 @@ class JdbcTournamentScheduledEventsCacheTest {
                 .isEqualTo(request().requestKey());
         assertThat(candidate.orElseThrow().asPersistenceResult().payloadSha256())
                 .isEqualTo(payload.sha256());
+        assertThat(candidate.orElseThrow().asPersistenceResult().outcome())
+                .isEqualTo(RawSnapshotPersistenceOutcome.CACHE_HIT);
+        assertThat(candidate.orElseThrow().asPersistenceResult().occurrenceId()).isEmpty();
 
         ArgumentCaptor<String> sql = ArgumentCaptor.forClass(String.class);
         ArgumentCaptor<SqlParameterSource> parameters =
@@ -136,7 +139,8 @@ class JdbcTournamentScheduledEventsCacheTest {
                 41L,
                 RawSnapshotPersistenceOutcome.INSERTED,
                 payload.sha256(),
-                payload.sizeBytes());
+                payload.sizeBytes(),
+                java.util.OptionalLong.of(51L));
         when(jdbcTemplate.update(anyString(), any(SqlParameterSource.class)))
                 .thenReturn(1);
 
@@ -167,7 +171,8 @@ class JdbcTournamentScheduledEventsCacheTest {
                 41L,
                 RawSnapshotPersistenceOutcome.INSERTED,
                 payload.sha256(),
-                payload.sizeBytes());
+                payload.sizeBytes(),
+                java.util.OptionalLong.of(51L));
 
         assertThatThrownBy(() -> cache.findFreshParsed(
                 request(),
@@ -201,7 +206,8 @@ class JdbcTournamentScheduledEventsCacheTest {
                 41L,
                 RawSnapshotPersistenceOutcome.INSERTED,
                 "0".repeat(64),
-                payload.sizeBytes());
+                payload.sizeBytes(),
+                java.util.OptionalLong.of(51L));
         assertThatThrownBy(() -> cache.recordParsed(
                 request(),
                 response(request(), 200, payload),

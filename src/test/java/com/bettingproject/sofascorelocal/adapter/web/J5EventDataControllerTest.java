@@ -60,6 +60,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -431,7 +432,8 @@ class J5EventDataControllerTest {
                 900001L);
         when(realControlService.confirmAndClaim(requestId, "exact phrase", true))
                 .thenReturn(claim);
-        when(realEventDataService.execute(claim)).thenReturn(new J5RealCampaignResult(
+        when(realEventDataService.execute(
+                claim, current.event().identity().value())).thenReturn(new J5RealCampaignResult(
                 requestId,
                 current.event().identity().value(),
                 900001L,
@@ -457,7 +459,52 @@ class J5EventDataControllerTest {
 
         verify(formTokenService).consume(any(HttpSession.class), eq("one-use-token"));
         verify(realControlService).confirmAndClaim(requestId, "exact phrase", true);
-        verify(realEventDataService).execute(claim);
+        verify(realEventDataService).execute(claim, current.event().identity().value());
+    }
+
+    @Test
+    void delegatesAConsumedClaimRouteMismatchToTheAuditedService() throws Exception {
+        J4EventSearchItem current = currentEvent();
+        UUID requestId = UUID.fromString("80000000-0000-0000-0000-000000000009");
+        long claimedProviderEventId = 900002L;
+        UUID claimedCanonicalEventId =
+                CanonicalEventIdentity.sofascore(claimedProviderEventId).value();
+        J5RealExecutionClaim claim = new J5RealExecutionClaim(
+                requestId,
+                URI.create(EventDetailsProviderRequest.EXPECTED_ORIGIN),
+                claimedCanonicalEventId,
+                claimedProviderEventId);
+        J5RealCampaignResult mismatch = new J5RealCampaignResult(
+                requestId,
+                claimedCanonicalEventId,
+                claimedProviderEventId,
+                false,
+                "EVENT_ID_MISMATCH",
+                0,
+                0,
+                List.of());
+        when(realControlService.confirmAndClaim(requestId, "exact phrase", true))
+                .thenReturn(claim);
+        when(realEventDataService.execute(
+                claim, current.event().identity().value())).thenReturn(mismatch);
+
+        mockMvc.perform(post(
+                        "/events/{id}/statistics/real/execute",
+                        current.event().identity().value())
+                        .param("localFormToken", "one-use-token")
+                        .param("requestId", requestId.toString())
+                        .param("confirmationText", "exact phrase")
+                        .param("acknowledged", "true")
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(flash().attribute("j5RealErrorCode", "EVENT_ID_MISMATCH"))
+                .andExpect(redirectedUrl(
+                        "/events/" + current.event().identity().value()
+                                + "/statistics?zone=Europe%2FParis"));
+
+        verify(realControlService).confirmAndClaim(requestId, "exact phrase", true);
+        verify(realEventDataService).execute(claim, current.event().identity().value());
+        verify(realControlService, never()).fail(any(), any());
     }
 
     @Test
