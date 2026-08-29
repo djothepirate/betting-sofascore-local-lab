@@ -1,7 +1,7 @@
 package com.bettingproject.sofascorelocal.application.network;
 
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV6Parser;
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV13Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV14Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseResult;
@@ -57,7 +57,7 @@ public class J5RealEventDataService {
             J5EventDataStore eventDataStore,
             ManualProviderRequestCoordinator requestCoordinator) {
         this(controlService, transport, rawSnapshotStore, canonicalEventStore, eventDataStore,
-                new EventStatisticsV2Parser(), new EventIncidentsV13Parser(),
+                new EventStatisticsV2Parser(), new EventIncidentsV14Parser(),
                 new EventLineupsV2Parser(), requestCoordinator);
     }
 
@@ -330,7 +330,7 @@ public class J5RealEventDataService {
     private static String parserVersion(SofascoreEndpointType endpoint) {
         return switch (endpoint) {
             case EVENT_STATISTICS -> EventStatisticsV2Parser.PARSER_VERSION;
-            case EVENT_INCIDENTS -> EventIncidentsV13Parser.PARSER_VERSION;
+            case EVENT_INCIDENTS -> EventIncidentsV14Parser.PARSER_VERSION;
             case EVENT_LINEUPS -> EventLineupsV2Parser.PARSER_VERSION;
             default -> throw new IllegalArgumentException("unsupported J5 endpoint");
         };

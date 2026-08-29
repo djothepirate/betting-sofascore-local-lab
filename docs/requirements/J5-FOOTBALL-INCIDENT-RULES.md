@@ -68,15 +68,36 @@ Ci-dessous quelques exemples de blocs définissant une période d'un match de fo
     "periodTimeSeconds": 2700
 }
 
+{
+    "text": "Extra time",
+    "homeScore": 1,
+    "awayScore": 1,
+    "isLive": true,
+    "time": 120,
+    "addedTime": 999,
+    "timeSeconds": 7200,
+    "incidentType": "period",
+    "reversedPeriodTime": 1,
+    "reversedPeriodTimeSeconds": 0,
+    "periodTimeSeconds": 900
+}
+
 ### 3.2 Attributs
 
-- **text** : 6 valeurs possibles
+- **text** : 7 valeurs possibles
     1. "HT" : Mi-temps (Half-Time)
     2. "FT" : Fin du match (Full-Time)
     3. "ET" : Fin d'une période de prolongations (Extra-Time)
     4. "PEN" : Fin d'une séance de tirs au but (Penalties)
     5. "First half" : 1ère mi-temps (si isLive = true)
     6. "Second half" : 2ème mi-temps (si isLive = true)
+    7. "Extra time" : prolongation en cours (si isLive = true)
+- `"Extra time"` et `"ET"` sont deux valeurs distinctes. `"Extra time"` est un marqueur live
+  conservé tel quel ; il ne doit jamais être normalisé en `"ET"` ni être interprété comme une
+  preuve de fin de rencontre. Une valeur `isLive=false` explicitement associée à
+  `text="Extra time"` est contradictoire et produit `SCHEMA_INCOMPATIBLE`. Si `isLive` est absent,
+  l'incident reste conservé avec une complétude `PARTIAL`, conformément à la règle générale des
+  métadonnées métier facultatives.
 - homeScore : Score de l'équipe à domicile.
 - awayScore : Score de l'équipe à l'extérieur.
 - isLive : 2 valeurs possibles
@@ -89,6 +110,13 @@ Ci-dessous quelques exemples de blocs définissant une période d'un match de fo
 - reversedPeriodTime : Valorisé par défaut à 1 pour les matches sans séance de tirs au but
 - reversedPeriodTimeSeconds : Valorisé par défaut à 0 pour les matches sans séance de tirs au but
 - periodTimeSeconds : Durée de la période en secondes (hors temps additionnel).
+
+La forme fournisseur observée pour la prolongation live porte `time=120`, `timeSeconds=7200`,
+`periodTimeSeconds=900` et `addedTime=999`. Ces valeurs sont documentées comme observation et non
+comme invariants universels supplémentaires : la règle normative nouvelle porte sur la combinaison
+exacte `incidentType="period"`, `text="Extra time"`, `isLive=true`. En particulier, `time=120`
+reste une borne de phase annoncée par le fournisseur, pas l'indication que la rencontre est déjà
+terminée.
 
 ### 3.3 Valeurs à afficher pour J5
 

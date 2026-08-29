@@ -152,7 +152,8 @@ public class EventIncidentsV6Parser {
             Optional<String> reason = normalizedReason(
                     type, item.get("reason"), path + ".reason", problems);
             Optional<String> periodText = "period".equals(type)
-                    ? optionalEnumText(item.get("text"), path + ".text", 64, PERIOD_TEXTS, problems)
+                    ? optionalEnumText(
+                            item.get("text"), path + ".text", 64, periodTexts(), problems)
                     : Optional.empty();
             Optional<Boolean> periodLive = "period".equals(type)
                     ? optionalBoolean(item.get("isLive"), path + ".isLive", problems)
@@ -393,6 +394,14 @@ public class EventIncidentsV6Parser {
         return CARD_REASONS;
     }
 
+    protected Set<String> periodTexts() {
+        return PERIOD_TEXTS;
+    }
+
+    protected Set<String> livePeriodTexts() {
+        return Set.of("First half", "Second half");
+    }
+
     protected Set<String> substitutionClasses() {
         return SUBSTITUTION_CLASSES;
     }
@@ -443,7 +452,7 @@ public class EventIncidentsV6Parser {
         return Optional.empty();
     }
 
-    private static void validatePeriod(
+    protected void validatePeriod(
             String type,
             Optional<String> periodText,
             Optional<Boolean> periodLive,
@@ -451,7 +460,7 @@ public class EventIncidentsV6Parser {
             List<J5ParseProblem> problems) {
         if (!"period".equals(type)
                 || periodText.isEmpty()
-                || !Set.of("First half", "Second half").contains(periodText.orElseThrow())) {
+                || !livePeriodTexts().contains(periodText.orElseThrow())) {
             return;
         }
         if (periodLive.isPresent() && !periodLive.orElseThrow()) {
@@ -565,7 +574,7 @@ public class EventIncidentsV6Parser {
         };
     }
 
-    private static void measureCompleteness(
+    private void measureCompleteness(
             String type,
             String path,
             Player player,
@@ -591,7 +600,7 @@ public class EventIncidentsV6Parser {
             case "period" -> {
                 counter.expect(path + ".text", periodText.isPresent());
                 counter.expect(path + ".score", homeScore.isPresent() && awayScore.isPresent());
-                if (periodText.filter(Set.of("First half", "Second half")::contains).isPresent()) {
+                if (periodText.filter(livePeriodTexts()::contains).isPresent()) {
                     counter.expect(path + ".isLive", periodLive.isPresent());
                 }
             }
