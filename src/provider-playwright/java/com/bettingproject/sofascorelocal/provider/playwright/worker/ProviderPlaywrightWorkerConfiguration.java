@@ -48,6 +48,12 @@ final class ProviderPlaywrightWorkerConfiguration {
             case TOURNAMENT_SCHEDULED_EVENTS -> "/api/v1/unique-tournament/"
                     + command.tournamentId() + "/scheduled-events/" + isoDate(command.date());
             case EVENT_DETAILS -> "/api/v1/event/" + command.eventId();
+            case EVENT_STATISTICS ->
+                    "/api/v1/event/" + command.eventId() + "/statistics";
+            case EVENT_INCIDENTS ->
+                    "/api/v1/event/" + command.eventId() + "/incidents";
+            case EVENT_LINEUPS ->
+                    "/api/v1/event/" + command.eventId() + "/lineups";
         };
         return origin.resolve(path);
     }

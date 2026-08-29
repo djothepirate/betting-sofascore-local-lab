@@ -183,6 +183,66 @@ class J3TournamentCatalogServiceTest {
     }
 
     @Test
+    void excludesUnsafeProviderDisplayNamesWithoutRejectingTheCompletedPages() {
+        PageFixture only = page(103L, 1, false, """
+                {
+                  "scheduled": [
+                    {
+                      "tournament": {
+                        "id": 36,
+                        "name": "LaLiga",
+                        "category": {"name": "Spain"},
+                        "uniqueTournament": {
+                          "id": 8,
+                          "name": "LaLiga"
+                        }
+                      },
+                      "timezoneEventCount": {"7200": 1}
+                    },
+                    {
+                      "tournament": {
+                        "id": 194121,
+                        "name": "Unsafe\\tphase",
+                        "category": {"name": "Test category"},
+                        "uniqueTournament": {
+                          "id": 28397,
+                          "name": "Tab tournament"
+                        }
+                      },
+                      "timezoneEventCount": {"7200": 1}
+                    },
+                    {
+                      "tournament": {
+                        "id": 194136,
+                        "name": "Unsafe phase",
+                        "category": {"name": "Test category"},
+                        "uniqueTournament": {
+                          "id": 36532,
+                          "name": "Line\\nbreak tournament"
+                        }
+                      },
+                      "timezoneEventCount": {"7200": 1}
+                    }
+                  ],
+                  "hasNextPage": false
+                }
+                """);
+        snapshotStore.put(source(only));
+        publishCompleted(only);
+
+        var catalog = service.latest();
+
+        assertThat(catalog.status()).isEqualTo(J3TournamentCatalogStatus.AVAILABLE);
+        assertThat(catalog.pageSnapshotIds()).containsExactly(103L);
+        assertThat(catalog.options()).extracting(option -> option.tournamentId())
+                .containsExactly(36L);
+        assertThat(catalog.excludedNonActionableCount()).isEqualTo(2);
+        assertThat(service.resolve(36L)).isPresent();
+        assertThat(service.resolve(194121L)).isEmpty();
+        assertThat(service.resolve(194136L)).isEmpty();
+    }
+
+    @Test
     void filtersTheSummerCatalogByTheParisOffsetKeyAndRevalidatesServerSide() {
         PageFixture only = page(151L, 1, false, """
                 {

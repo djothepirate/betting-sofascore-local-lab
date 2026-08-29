@@ -84,8 +84,10 @@ Ou depuis PowerShell :
 
 Ces deux démarrages sont volontairement inertes pour Playwright. Même si le `.env` contient une
 combinaison métier J3/J4/J5 valide, `SOFASCORE_PLAYWRIGHT_ENABLED=false` et l'absence de JAR worker
-maintiennent le transport J3 indisponible. Pour une campagne J3 explicitement autorisée, suivre la
-section 3.14 et démarrer l'application avec `scripts/Start-J3PlaywrightLocal.ps1` à la place.
+maintiennent les transports J3/J4/J5 indisponibles. Pour une campagne explicitement autorisée,
+choisir un seul lanceur exact décrit en sections 3.14 à 3.16. Le go ponctuel de WO-015 a ete
+consomme lors de la qualification du `2026-08-29` ; toute nouvelle campagne J5 reste interdite
+sans nouvelle autorisation proprietaire distincte et tracee.
 
 ### 3.3 Contrôles de santé
 
@@ -533,10 +535,16 @@ strictement limitée par le Work Order `WO-SS-20260815-006` et par la procédure
 
 ### 3.10 ter Qualifier réellement les trois familles J5
 
-Cette campagne est un geste humain exceptionnel. Ne jamais l'exécuter depuis Maven, un script, un
-navigateur automatisé, une tâche planifiée ou un mécanisme de rafraîchissement. Avant toute
-activation, relire le Work Order actif, l'architecture J5 réelle, la readiness technique et le diff.
-Les deux suites Maven doivent être vertes ; elles n'effectuent aucun appel fournisseur.
+Cette campagne est un geste humain exceptionnel. Elle ne doit jamais être déclenchée depuis Maven,
+le script de qualification loopback, un navigateur automatisé, une tâche planifiée ou un mécanisme
+de rafraîchissement. Le seul script admis prépare et démarre l'application avec le runtime
+Playwright ; il n'exécute aucun GET. Avant toute activation, relire le Work Order applicable,
+l'architecture J5 réelle, la readiness technique et le diff. Les deux suites Maven doivent être
+vertes ; elles n'effectuent aucun appel fournisseur.
+
+WO-015 a ete qualifie et clos le `2026-08-29`. Son autorisation ponctuelle est consommee : la
+procedure ci-dessous reste reutilisable uniquement sous un nouveau Work Order ou une nouvelle
+autorisation proprietaire distincte et tracee. Elle ne constitue jamais elle-meme un go.
 
 Application arrêtée, le propriétaire règle manuellement uniquement les clés réseau documentées :
 
@@ -548,10 +556,21 @@ SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false
 SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=true
 SOFASCORE_BASE_URL=https://www.sofascore.com
 SOFASCORE_ALLOWED_ENDPOINTS=EVENT_STATISTICS,EVENT_INCIDENTS,EVENT_LINEUPS
+SOFASCORE_PLAYWRIGHT_ENABLED=false
+SOFASCORE_PLAYWRIGHT_WORKER_JAR=
 ```
 
 Ne pas modifier les autres valeurs de `.env`, ne pas les copier dans une preuve et ne jamais ajouter
-ce fichier à Git. Démarrer PostgreSQL puis l'application sur `127.0.0.1`. Depuis la recherche locale,
+ce fichier à Git. Vérifier le cache Chromium commun, puis démarrer PostgreSQL et l'application sur
+`127.0.0.1` uniquement avec :
+
+```powershell
+pwsh -NoProfile -File .\scripts\Start-J5PlaywrightLocal.ps1
+```
+
+Le lanceur construit le worker commun, vérifie le cache, injecte les opt-ins Playwright dans son
+seul processus et affiche `PROVIDER_ACCESS_PERFORMED=NO` avant Spring Boot. Il ne modifie pas
+`.env`, n'installe pas Chromium et n'envoie aucune requête. Depuis la recherche locale,
 ouvrir la fiche d'une identité canonique J4 existante puis sélectionner
 **« Statistiques, incidents et compositions J5 »** :
 
@@ -572,9 +591,11 @@ ouvrir la fiche d'une identité canonique J4 existante puis sélectionner
    ne jamais l'utiliser pour un 403 ni la déduire de `notstarted`. Un fichier et la case de la même
    famille, ou l'absence des deux, sont refusés ;
 6. ne pas recharger, revenir en arrière ou resoumettre le formulaire pendant l'exécution ;
-7. attendre l'état terminal ; la voie directe tente au maximum `statistics`, puis `incidents`,
-   puis `lineups`, avec au moins trois secondes entre deux départs. La voie locale produit zéro
-   appel, `localJsonImports=3`, trois snapshots et trois observations dans le même ordre ;
+7. attendre l'état terminal ; la voie Playwright tente au maximum `statistics`, puis `incidents`,
+   puis `lineups`, dans un seul worker, un seul contexte non persistant et une seule lease, avec au
+   moins trois secondes entre deux départs. Le cache fournisseur J5 est `NOT_APPLICABLE`. La voie
+   locale produit zéro appel, `localJsonImports=3`, trois snapshots et trois observations dans le
+   même ordre ;
 8. si l'état du contrôle est `COMPLETED_LOCKED`, vérifier les trois panneaux locaux, leur complétude ou
    leur statut `UNAVAILABLE · N/A`, leur source `PROVIDER_SNAPSHOT`, leur parseur courant
    (`event-statistics-v2`, `event-incidents-v14`, `event-lineups-v2`) ou normaliseur
@@ -583,9 +604,15 @@ ouvrir la fiche d'une identité canonique J4 existante puis sélectionner
 9. dans les panneaux incidents et compositions, vérifier qu'une complétude `PARTIAL` conserve son
    badge et son compteur de signaux, mais n'affiche plus la liste technique des chemins JSON
    manquants au-dessus du tableau ; vérifier que le contenu du tableau reste inchangé ;
-10. si la campagne doit être abandonnée alors qu'elle est encore `AWAITING_CONFIRMATION` ou
-   `EXECUTING`, sélectionner **« Arrêt global J5 »** ; après un état terminal, aucun nouvel appel
-   n'est possible dans le processus et il suffit d'arrêter l'application.
+ 10. si la campagne doit être abandonnée alors qu'elle est encore `AWAITING_CONFIRMATION` ou
+     `EXECUTING`, sélectionner **« Arrêt global J5 »**. Un succès `COMPLETED_LOCKED` n'est
+     techniquement réarmable par une nouvelle préparation explicite que si l'arrêt global n'a pas
+     été appliqué. Chaque nouvelle campagne exige une autorisation propriétaire fraîche et
+     distincte ainsi que sa propre confirmation ; ne jamais réutiliser le go d'une campagne
+     terminée. Dès que l'arrêt global est appliqué, le latch de processus interdit toute nouvelle
+     préparation jusqu'au redémarrage, même si l'état et le code historiques du succès restent
+     affichés. Les terminaux `FAILED_LOCKED`, `STOPPED_LOCKED` et `EXPIRED_LOCKED` restent eux aussi
+     verrouillés jusqu'au redémarrage du processus.
 
 Un HTTP `404` sur l'un des trois endpoints exacts est une indisponibilité de famille : vérifier
 `ENDPOINT_UNAVAILABLE` et `UNAVAILABLE · N/A`, puis laisser la campagne poursuivre sans recharger
@@ -649,6 +676,30 @@ J5_PROVIDER_SCHEMA_VALIDATED=YES|NO
 LOCAL_CONFIGURATION_RELOCKED=YES|NO
 APPLICATION_STOPPED=YES|NO
 ```
+
+La preuve historique minimisee de WO-015 est :
+
+```text
+J5_REAL_EVENT_ID=16310930
+J5_REAL_CANONICAL_EVENT_ID=c40066c9-987b-38d9-b415-869a453d2ad6
+J5_REAL_TERMINAL_STATE=COMPLETED_LOCKED
+J5_REAL_PROVIDER_CALLS=3
+J5_REAL_STATISTICS_QUALIFICATION=PASS_SNAPSHOT_603_OBSERVATION_298
+J5_REAL_INCIDENTS_QUALIFICATION=PASS_SNAPSHOT_604_OBSERVATION_299
+J5_REAL_LINEUPS_QUALIFICATION=PASS_SNAPSHOT_605_OBSERVATION_300
+J5_PROVIDER_SCHEMA_VALIDATED=YES_CURRENT_PARSERS
+J4_SAME_SESSION_REGRESSION=PASS_COMPLETED_LOCKED_SNAPSHOT_606
+J3_CORRECTIVE_RETEST=PASS_AVAILABLE_18_PAGES_1428_OPTIONS_338_EXCLUDED
+J3_TOURNAMENT_DISCOVERY_RETEST=PASS_COMPLETED_SNAPSHOT_643_5_OF_5
+LOCAL_CONFIGURATION_RELOCKED=YES_8_KEYS
+J4_LOCKED_AFTER_RESTART=PASS
+J5_LOCKED_AFTER_RESTART=PASS
+FINAL_APPLICATION_LISTENER=ABSENT_127_0_0_1_8087
+FINAL_OWNED_JAVA_PROCESS_COUNT=0
+```
+
+Le lanceur PowerShell 7 n'a modifie aucune valeur de `.env` : ses opt-ins etaient limites a
+l'arbre de processus de la recette, qui a ete arrete lors de la cloture.
 
 ### 3.10 quater Enchaîner J4 phase 2 et J5 dans une même session
 
@@ -1277,6 +1328,82 @@ Consigner les résultats dans
 vaut ni qualification humaine fournisseur, ni autorisation de cloture ; ces deux portes ont ete
 franchies separement par la decision proprietaire du `2026-08-28`.
 
+### 3.16 Démarrer et qualifier localement le transport Playwright J5
+
+Cette procedure a servi a la qualification de `WO-SS-20260827-015`, maintenant valide et archive.
+Elle n'autorise par elle-meme aucun appel SofaScore. Le cache Chromium commun de WO-013 doit deja
+etre present et complet sous `.tmp/provider-playwright-browsers` ; il n'est jamais installe au
+demarrage.
+
+Le lanceur canonique d'une future campagne humaine nouvellement autorisee est :
+
+```powershell
+pwsh -NoProfile -File .\scripts\Start-J5PlaywrightLocal.ps1
+```
+
+Il construit et vérifie le JAR worker commun, refuse un cache incomplet et injecte les chemins
+Playwright uniquement dans le processus qui démarre l'application. Il ne modifie pas `.env` et
+n'exécute aucun GET. Son terminal doit annoncer :
+
+```text
+J5_PLAYWRIGHT_LOCAL_LAUNCH=READY
+PLAYWRIGHT_RUNTIME_OPT_IN=TRUE
+PLAYWRIGHT_WORKER_ARTIFACT=VERIFIED_PRESENT
+PLAYWRIGHT_BROWSER_CACHE=VERIFIED_COMPLETE
+PLAYWRIGHT_IMPLICIT_BROWSER_DOWNLOAD=DISABLED
+LEGACY_J5_REST_BYTECODE=ABSENT
+PROVIDER_ACCESS_PERFORMED=NO
+```
+
+La qualification technique autorisée utilise uniquement le serveur éphémère loopback :
+
+```powershell
+pwsh -NoProfile -File .\scripts\Invoke-J5PlaywrightLoopbackQualification.ps1
+```
+
+Dans un worktree dont le cache ignore se trouve dans un autre checkout local, fournir son chemin
+canonique deja installe sans le copier ni le telecharger :
+
+```powershell
+pwsh -NoProfile -File .\scripts\Invoke-J5PlaywrightLoopbackQualification.ps1 `
+  -BrowserCachePath 'C:\chemin\absolu\provider-playwright-browsers'
+```
+
+Le meme parametre optionnel est accepte par `Start-J5PlaywrightLocal.ps1`. Il ne contourne aucun
+controle : le script verifie toujours les marqueurs d'installation et les executables Chromium.
+
+Elle exerce le protocole IPC v5 et les trois routes fermées J5 dans un seul worker et un seul
+`BrowserContext` non persistant. Elle doit prouver l'ordre
+`STATISTICS -> INCIDENTS -> LINEUPS`, la fidélité des statuts et des octets sur une séquence
+`200/404/200`, la poursuite après le seul `404` et l'absence de retry. Un second scénario arrête la
+campagne pendant un `INCIDENTS` lent : l'acquittement reste borné à 500 ms, l'annulation à 2 s, le
+nettoyage à 5 s, aucun `LINEUPS` n'est reçu et aucun processus attribué ne subsiste. Le cache
+fournisseur J5 est `NOT_APPLICABLE` dans tous ces scénarios. L'exclusivite de la lease partagee est
+prouvee separement par la suite standard `J5SharedLeaseExclusivityTest`.
+
+Le terminal attendu est minimisé :
+
+```text
+J5_PLAYWRIGHT_LOOPBACK_QUALIFICATION=PASS
+WORKER_PROTOCOL_AND_SECURITY_TESTS=PASS
+J5_EVENT_DATA_ROUTE_TESTS=PASS
+MAVEN_REPORT_SENSITIVE_SCANNER=PASS_SCANNER_PARITY_ENCODED_TEXT_ATTRIBUTES_PROPERTIES
+RUNTIME_FILE_CANARY_SCAN=PASS_ISOLATED_WRITABLE_ROOTS_PER_RUN_RANDOM_CANARY
+SENSITIVE_DATA_IN_TEST_REPORTS=NO
+ORIGIN=http://127.0.0.1:<ephemeral>
+PROVIDER_ACCESS_PERFORMED=NO
+```
+
+Ne jamais remplacer le worker par `RestClient`, FlareSolverr ou un autre navigateur, et ne jamais
+transformer un échec en import local, retry, fallback ou second contexte.
+
+Si le terminal signale un nettoyage non confirme, ne lancer aucune nouvelle campagne J3, J4 ou J5.
+Une seconde fermeture du meme handle est permise automatiquement lorsque l'echec precede toute
+mutation, mais la lease reste retenue tant que le nettoyage n'est pas confirme. Apres le debut d'une
+mutation, un echec devient terminal : arreter l'application, verifier l'absence de processus attribue
+residuel, puis redemarrer avant toute nouvelle preparation. Ne jamais contourner ce verrou par un
+autre processus applicatif.
+
 ## 4. Validation
 
 ### 4.1 Suite standard
@@ -1578,6 +1705,30 @@ Consigner les résultats dans
 [`J4-PLAYWRIGHT-EVENT-DETAILS-TECHNICAL-READINESS-20260828.md`](../validation/J4-PLAYWRIGHT-EVENT-DETAILS-TECHNICAL-READINESS-20260828.md).
 WO-014 est `VALIDATED` et archive sous `docs/work_orders/completed` depuis la decision proprietaire
 du `2026-08-28`. Toute regression future exige un Work Order correctif distinct.
+
+### 4.13 Readiness du transport J5 Playwright
+
+Sur le diff final de `WO-SS-20260827-015`, exécuter dans cet ordre :
+
+```powershell
+.\mvnw.cmd clean verify
+.\mvnw.cmd -Pintegration-tests verify
+.\scripts\Verify-Local.ps1 -WithIntegrationTests
+pwsh -NoProfile -File .\scripts\Invoke-J5PlaywrightLoopbackQualification.ps1
+git diff --check
+```
+
+Les trois premières commandes restent sans Playwright, Chromium et appel fournisseur. Le script
+J5 exige le cache Chromium commun déjà installé, mais vise uniquement un serveur éphémère sur
+`127.0.0.1`. Il ne consulte aucun cache fournisseur J5, ne contacte pas SofaScore et ne donne
+aucune autorisation de campagne humaine.
+
+Consigner les résultats dans
+[`J5-PLAYWRIGHT-EVENT-DATA-TECHNICAL-READINESS-20260828.md`](../validation/J5-PLAYWRIGHT-EVENT-DATA-TECHNICAL-READINESS-20260828.md).
+Les portes techniques du `2026-08-28` sont vertes avec `LOCAL_READINESS=PASS`. La qualification
+humaine distincte du `2026-08-29` est `PASS_BY_OWNER_EXECUTION` et le Work Order est `VALIDATED`.
+L'autorisation de cette recette est consommee : `ADDITIONAL_PROVIDER_CALL_AUTHORIZED=NO` reste la
+frontiere courante.
 
 ## 5. Arrêt
 

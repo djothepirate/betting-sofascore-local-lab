@@ -13,6 +13,24 @@ lecture du cache. La readiness finale compte 728 tests standards, 52 tests Postg
 Playwright loopback, tous verts. La recette humaine a confirme un rafraichissement J4 termine et la
 non-regression de J3 Playwright sur la collecte paginee et la decouverte tournoi.
 
+Le Work Order `WO-SS-20260827-015` est `VALIDATED` depuis le `2026-08-29`. Il migre J5 vers ce
+runtime commun. Les familles `EVENT_STATISTICS`,
+`EVENT_INCIDENTS` et `EVENT_LINEUPS` sont transmises dans cet ordre par un seul worker, un seul
+`BrowserContext` non persistant et une seule lease, via le protocole IPC v5. Un `404` raw-first est
+conserve comme `ENDPOINT_UNAVAILABLE` et la famille suivante continue ; tout autre incident est
+terminal. Le cache fournisseur J5 est `NOT_APPLICABLE`. Il n'existe aucun transport direct,
+fallback FlareSolverr, retry ou second contexte. Les tests cibles du transport et les scenarios
+Chromium loopback `200/404/200` et arret pendant `INCIDENTS` sont verts, sans acces fournisseur ;
+les portes globales finales comptent 765 tests standards, 53 tests PostgreSQL, 11 tests de
+protocole/securite et 14 tests Chromium loopback. La recette proprietaire a termine J5 en
+`COMPLETED_LOCKED` avec trois appels et trois familles completes, puis confirme J4 et J3 dans le
+meme environnement Playwright. Si le nettoyage du worker ne peut pas etre confirme, la lease fournisseur reste
+retenue et bloque J3/J4 jusqu'au redemarrage du processus. V26 et le parseur incidents V14 de WO-012
+restent intacts, et WO-015 n'ajoute aucune migration. L'arrêt global J5 pose en outre un latch de
+processus : il conserve l'état et le code terminaux historiques, mais interdit toute nouvelle
+préparation J5 jusqu'au redémarrage. La validation ponctuelle est consommee ; tout nouvel appel
+exige un go proprietaire distinct.
+
 L'évolution **J3 → J5 — découverte tournoi → rencontres** est `VALIDATED` depuis le 2026-08-21 et
 son Work Order est clôturé dans `docs/work_orders/completed`. Après une collecte J3 `COMPLETED` du processus courant,
 elle expose les occurrences de tournois observées, résout côté serveur le
@@ -27,6 +45,13 @@ manuellement. Cette seconde voie exécute zéro transport, refuse HAR/en-têtes/
   déclaration fermée « 404 observé » produisant une enveloppe locale canonique. Le lot est prévalidé
   avant la confirmation, conserve trois snapshots de provenance locale et exécute zéro appel fournisseur ;
 un terminal direct sur 403 exige toujours un redémarrage et une nouvelle préparation.
+
+Les noms fournisseur utilises dans le libelle du catalogue sont controles sans etre reecrits. Le
+correctif de recette exclut de la projection une occurrence deja parsee dont le nom de phase ou de
+tournoi unique contient un caractere ISO de controle, comme la tabulation et le saut de ligne
+observes sur deux phases distinctes. Les snapshots bruts et les options sures du meme catalogue
+restent inchanges. Les noms blancs, les categories invalides et les conflits entre occurrences
+restent soumis aux invariants stricts du parseur et du catalogue.
 
 Le Work Order `WO-SS-20260822-010`, `VALIDATED` et clôturé le 2026-08-23, ajoute un parcours J5
 distinct, exclusivement hors ligne, pour les journées chargées. La page `/j5-import-batches`
@@ -346,11 +371,11 @@ distinctes, mais peuvent être armés ensemble avec l'union exacte des cinq fami
 résolue côté serveur, laquelle impose le `providerEventId`, et est obligatoire dès que J4 partage
 la session avec J3 ou J5. J4 phase 1 reste exclusif.
 Dans J5, l'action finale réutilise l'identité canonique affichée et autorise au maximum trois
-transports ordonnés après une confirmation humaine unique. Un coordinateur commun sérialise tous
-les transports J3/J4/J5 et impose au moins trois secondes entre leurs départs, y compris entre
-jalons. Toutes ces voies interdisent polling, planification et retry. J6/J7 restent locaux et sans
-transport. Les configurations temporaires et leur remise à l'état bloqué sont décrites dans
-`docs/runbooks/RUNBOOK-LOCAL.md`.
+transports Playwright ordonnés après une confirmation humaine unique. Une lease et un coordinateur
+communs sérialisent toutes les campagnes J3/J4/J5 et imposent au moins trois secondes entre leurs
+départs, y compris entre jalons. Toutes ces voies interdisent polling, planification et retry.
+J6/J7 restent locaux et sans transport. Les configurations temporaires et leur remise à l'état
+bloqué sont décrites dans `docs/runbooks/RUNBOOK-LOCAL.md`.
 
 Le Work Order validé `WO-SS-20260827-013` implémente pour les deux familles J3 un transport Playwright
 dans un worker JVM enfant. Le build et le démarrage standards restent sans runtime Playwright et
@@ -381,6 +406,18 @@ résout son ID fournisseur côté serveur et ouvre un contexte neuf par confirma
 J4 dédiés `Start-J4PlaywrightLocal.ps1` et `Invoke-J4PlaywrightLoopbackQualification.ps1` restent
 explicites, et la qualification technique utilise uniquement un serveur loopback éphémère sur
 `127.0.0.1`. Le lanceur n'autorise à lui seul aucun appel fournisseur.
+
+WO-015 étend maintenant le protocole commun v5 aux trois familles J5. Les scripts dédiés
+`Start-J5PlaywrightLocal.ps1` et `Invoke-J5PlaywrightLoopbackQualification.ps1` vérifient le worker
+et le cache Chromium sans les persister dans `.env`; le second ne vise que loopback. Le premier ne
+doit être utilisé pour une campagne fournisseur qu'après une autorisation propriétaire distincte.
+La qualification humaine du `2026-08-29` a termine les trois familles sur Lille - Paris
+Saint-Germain avec les snapshots `603`, `604` et `605`, trois observations normalisees completes et
+le terminal `COMPLETED_LOCKED`. Dans la meme session, J4 a conserve le snapshot `606`. La reprise
+corrective J3 a ensuite affiche un catalogue `AVAILABLE` de `1 428` options sur 18 pages, puis la
+selection Ligue 1 a retenu `5 / 5` rencontres dans le snapshot `643`. La readiness finale est verte
+avec 765 tests standards, 53 tests PostgreSQL, 11 tests de protocole/securite et 14 tests Chromium
+loopback. WO-015 est clos ; cette preuve n'autorise aucun appel supplementaire.
 
 Le lot multi-match WO-010 reste indépendant de ces voies armables : l'état de
 `SOFASCORE_ENABLED` n'entre pas dans sa décision d'éligibilité. Son automatisation s'arrête à la
@@ -454,12 +491,18 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 ```
 
 Ce démarrage normal conserve Playwright désarmé, même si les opt-ins métier J3/J4/J5 du `.env`
-forment une combinaison valide. Pour un test fournisseur J3 explicitement autorisé, installer une
-fois le runtime puis utiliser le lanceur dédié à la place de la commande de l'étape 5 :
+forment une combinaison valide. Pour un test fournisseur nouvellement et explicitement autorisé,
+installer une fois le runtime puis utiliser le lanceur exact du jalon à la place de la commande de
+l'étape 5. La validation de WO-015 ne constitue pas ce nouveau go :
 
 ```powershell
 pwsh -NoProfile -File .\scripts\Install-J3PlaywrightRuntime.ps1
+# Choisir ensuite un seul lanceur autorisé :
 pwsh -NoProfile -File .\scripts\Start-J3PlaywrightLocal.ps1
+# ou J4 :
+pwsh -NoProfile -File .\scripts\Start-J4PlaywrightLocal.ps1
+# ou J5, seulement après un nouveau go propriétaire distinct :
+pwsh -NoProfile -File .\scripts\Start-J5PlaywrightLocal.ps1
 ```
 
 Le lanceur fournit les chemins du worker et de Chromium seulement à son processus. Il démarre
@@ -769,6 +812,8 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order validé du transport J3 Playwright](docs/work_orders/completed/WO-SS-20260827-013-j3-playwright-transport.md)
 - [Readiness technique et qualification humaine J4 Playwright](docs/validation/J4-PLAYWRIGHT-EVENT-DETAILS-TECHNICAL-READINESS-20260828.md)
 - [Work Order validé du transport J4 Playwright](docs/work_orders/completed/WO-SS-20260827-014-j4-playwright-event-details.md)
+- [Readiness technique et qualification humaine J5 Playwright](docs/validation/J5-PLAYWRIGHT-EVENT-DATA-TECHNICAL-READINESS-20260828.md)
+- [Work Order validé du transport J5 Playwright](docs/work_orders/completed/WO-SS-20260827-015-j5-playwright-event-data.md)
 - [Chemin fournisseur J3 borné à cinq pages](docs/architecture/J3-FIVE-PAGE-PROVIDER-QUALIFICATION.md)
 - [Reprise fournisseur J3 contrôlée à la page 2](docs/architecture/J3-PAGE-TWO-PROVIDER-RESUME.md)
 - [Adaptation hors ligne au schéma qualifié de la page 2](docs/architecture/J3-PAGE-TWO-SCHEMA-ADAPTATION.md)

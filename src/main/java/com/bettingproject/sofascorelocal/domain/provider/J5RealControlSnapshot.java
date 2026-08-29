@@ -18,6 +18,7 @@ public record J5RealControlSnapshot(
         Long eventId,
         List<SofascoreEndpointType> completedEndpoints,
         String terminalCode,
+        boolean globalStopActive,
         boolean providerTransportAvailable,
         List<String> providerBlockers) {
 
@@ -69,7 +70,8 @@ public record J5RealControlSnapshot(
     }
 
     public boolean preparationAllowed() {
-        return (state == J5RealControlState.LOCKED
+        return !globalStopActive
+                && (state == J5RealControlState.LOCKED
                 || state == J5RealControlState.COMPLETED_LOCKED)
                 && providerTransportAvailable;
     }

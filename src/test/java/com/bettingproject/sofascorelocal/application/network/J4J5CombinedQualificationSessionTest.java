@@ -35,7 +35,7 @@ class J4J5CombinedQualificationSessionTest {
                 temporaryDirectory, "combined-j4-worker.jar");
         var j4PhaseOnePolicy = new J4EventDetailsQualificationPolicy(properties, playwright);
         var j4Policy = new J4EventDetailsPhase2QualificationPolicy(properties, playwright);
-        var j5Policy = new J5RealQualificationPolicy(properties);
+        var j5Policy = new J5RealQualificationPolicy(properties, playwright);
         var j4PhaseOneControl = new J4RealPhase1ControlService(
                 CLOCK,
                 () -> UUID.fromString("30000000-0000-0000-0000-000000000001"),

@@ -16,14 +16,20 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class ProviderPlaywrightWorkerProtocolTest {
 
     @Test
-    void readsTheThreeExactGetShapesWithoutStartingChromium() throws Exception {
+    void readsTheSixExactGetShapesWithoutStartingChromium() throws Exception {
         ProviderPlaywrightWorkerProtocol.GetCommand scheduled = readScheduled(
                 "SCHEDULED_EVENTS", "2026-08-27", 25, 10_000);
         ProviderPlaywrightWorkerProtocol.GetCommand tournament = readTournament(
                 "TOURNAMENT_SCHEDULED_EVENTS", "2026-08-27", 17, 10_000);
-        ProviderPlaywrightWorkerProtocol.GetCommand eventDetails = readEventDetails(
+        ProviderPlaywrightWorkerProtocol.GetCommand eventDetails = readEvent(
                 "EVENT_DETAILS", 16_386_245L, 10_000);
-        ProviderPlaywrightWorkerProtocol.GetCommand maximumEventDetails = readEventDetails(
+        ProviderPlaywrightWorkerProtocol.GetCommand eventStatistics = readEvent(
+                "EVENT_STATISTICS", 16_386_245L, 10_000);
+        ProviderPlaywrightWorkerProtocol.GetCommand eventIncidents = readEvent(
+                "EVENT_INCIDENTS", 16_386_245L, 10_000);
+        ProviderPlaywrightWorkerProtocol.GetCommand eventLineups = readEvent(
+                "EVENT_LINEUPS", 16_386_245L, 10_000);
+        ProviderPlaywrightWorkerProtocol.GetCommand maximumEventDetails = readEvent(
                 "EVENT_DETAILS", ProviderPlaywrightWorkerProtocol.MAX_EVENT_ID, 10_000);
 
         assertThat(scheduled).isEqualTo(new ProviderPlaywrightWorkerProtocol.GetCommand(
@@ -35,13 +41,27 @@ class ProviderPlaywrightWorkerProtocolTest {
         assertThat(eventDetails).isEqualTo(new ProviderPlaywrightWorkerProtocol.GetCommand(
                 ProviderPlaywrightWorkerProtocol.Endpoint.EVENT_DETAILS,
                 null, 0, 0, 16_386_245L, 10_000));
+        assertThat(eventStatistics).isEqualTo(new ProviderPlaywrightWorkerProtocol.GetCommand(
+                ProviderPlaywrightWorkerProtocol.Endpoint.EVENT_STATISTICS,
+                null, 0, 0, 16_386_245L, 10_000));
+        assertThat(eventIncidents).isEqualTo(new ProviderPlaywrightWorkerProtocol.GetCommand(
+                ProviderPlaywrightWorkerProtocol.Endpoint.EVENT_INCIDENTS,
+                null, 0, 0, 16_386_245L, 10_000));
+        assertThat(eventLineups).isEqualTo(new ProviderPlaywrightWorkerProtocol.GetCommand(
+                ProviderPlaywrightWorkerProtocol.Endpoint.EVENT_LINEUPS,
+                null, 0, 0, 16_386_245L, 10_000));
         assertThat(maximumEventDetails.eventId())
                 .isEqualTo(ProviderPlaywrightWorkerProtocol.MAX_EVENT_ID);
     }
 
     @Test
+    void identifiesTheSixEndpointContractAsProtocolVersionFive() {
+        assertThat(ProviderPlaywrightWorkerProtocol.VERSION).isEqualTo(5);
+    }
+
+    @Test
     void failsClosedForEveryScalarOutsideTheAllowlist() {
-        assertThatThrownBy(() -> readUnknownEndpoint("EVENT_STATISTICS"))
+        assertThatThrownBy(() -> readUnknownEndpoint("TOURNAMENT_STANDINGS"))
                 .isInstanceOf(ProviderPlaywrightWorkerProtocol.ProtocolValidationException.class)
                 .hasMessage("INVALID_ENDPOINT");
         assertThatThrownBy(() -> readScheduled(
@@ -56,11 +76,11 @@ class ProviderPlaywrightWorkerProtocolTest {
                 "TOURNAMENT_SCHEDULED_EVENTS", "2026-08-27", 0, 1_000))
                 .isInstanceOf(ProviderPlaywrightWorkerProtocol.ProtocolValidationException.class)
                 .hasMessage("INVALID_TOURNAMENT_ID");
-        assertThatThrownBy(() -> readEventDetails("EVENT_DETAILS", 0, 1_000))
+        assertThatThrownBy(() -> readEvent("EVENT_DETAILS", 0, 1_000))
                 .isInstanceOf(ProviderPlaywrightWorkerProtocol.ProtocolValidationException.class)
                 .hasMessage("INVALID_EVENT_ID");
-        assertThatThrownBy(() -> readEventDetails(
-                "EVENT_DETAILS", ProviderPlaywrightWorkerProtocol.MAX_EVENT_ID + 1, 1_000))
+        assertThatThrownBy(() -> readEvent(
+                "EVENT_LINEUPS", ProviderPlaywrightWorkerProtocol.MAX_EVENT_ID + 1, 1_000))
                 .isInstanceOf(ProviderPlaywrightWorkerProtocol.ProtocolValidationException.class)
                 .hasMessage("INVALID_EVENT_ID");
         assertThatThrownBy(() -> readScheduled(
@@ -86,6 +106,16 @@ class ProviderPlaywrightWorkerProtocolTest {
                 LocalDate.of(2026, 8, 27), 0, 0, 12, 1_000))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("INVALID_DATE");
+        assertThatThrownBy(() -> new ProviderPlaywrightWorkerProtocol.GetCommand(
+                ProviderPlaywrightWorkerProtocol.Endpoint.EVENT_STATISTICS,
+                null, 1, 0, 12, 1_000))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("INVALID_PAGE");
+        assertThatThrownBy(() -> new ProviderPlaywrightWorkerProtocol.GetCommand(
+                ProviderPlaywrightWorkerProtocol.Endpoint.EVENT_INCIDENTS,
+                null, 0, 42, 12, 1_000))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("INVALID_TOURNAMENT_ID");
     }
 
     @Test
@@ -107,6 +137,18 @@ class ProviderPlaywrightWorkerProtocolTest {
                 ProviderPlaywrightWorkerProtocol.Endpoint.EVENT_DETAILS,
                 null, 0, 0, 16_386_245L, 5_000)).toASCIIString())
                 .isEqualTo("https://www.sofascore.com/api/v1/event/16386245");
+        assertThat(productionConfiguration.uriFor(new ProviderPlaywrightWorkerProtocol.GetCommand(
+                ProviderPlaywrightWorkerProtocol.Endpoint.EVENT_STATISTICS,
+                null, 0, 0, 16_386_245L, 5_000)).toASCIIString())
+                .isEqualTo("https://www.sofascore.com/api/v1/event/16386245/statistics");
+        assertThat(productionConfiguration.uriFor(new ProviderPlaywrightWorkerProtocol.GetCommand(
+                ProviderPlaywrightWorkerProtocol.Endpoint.EVENT_INCIDENTS,
+                null, 0, 0, 16_386_245L, 5_000)).toASCIIString())
+                .isEqualTo("https://www.sofascore.com/api/v1/event/16386245/incidents");
+        assertThat(productionConfiguration.uriFor(new ProviderPlaywrightWorkerProtocol.GetCommand(
+                ProviderPlaywrightWorkerProtocol.Endpoint.EVENT_LINEUPS,
+                null, 0, 0, 16_386_245L, 5_000)).toASCIIString())
+                .isEqualTo("https://www.sofascore.com/api/v1/event/16386245/lineups");
 
         Map<String, String> loopback = baseEnvironment();
         loopback.put(ProviderPlaywrightWorkerConfiguration.LOOPBACK_QUALIFICATION, "true");
@@ -225,7 +267,7 @@ class ProviderPlaywrightWorkerProtocolTest {
         return read(bytes);
     }
 
-    private static ProviderPlaywrightWorkerProtocol.GetCommand readEventDetails(
+    private static ProviderPlaywrightWorkerProtocol.GetCommand readEvent(
             String endpoint, long eventId, int timeoutMillis) throws Exception {
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         try (DataOutputStream output = new DataOutputStream(bytes)) {

@@ -5,6 +5,7 @@ import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.sun.net.httpserver.Headers;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
 
@@ -23,6 +24,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -42,6 +44,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ProviderPlaywrightLocalQualificationIT {
 
     private static final LocalDate DATE = LocalDate.of(2026, 8, 27);
+    private static final Path RUNTIME_SANDBOX_ROOT = Path.of(
+            "target", "provider-playwright-runtime", "qualification-sandboxes")
+            .toAbsolutePath().normalize();
     private static final byte[] PAGE_ONE =
             "{\"events\":[],\"hasNextPage\":true,\"marker\":\"caf\u00e9\"}"
                     .getBytes(StandardCharsets.UTF_8);
@@ -62,6 +67,26 @@ class ProviderPlaywrightLocalQualificationIT {
                     .getBytes(StandardCharsets.UTF_8);
     private static final byte[] EVENT_DETAILS_STOP_RESPONSE =
             "{\"event\":{\"id\":17000002},\"marker\":\"event-details-stop\"}"
+                    .getBytes(StandardCharsets.UTF_8);
+    private static final long J5_EVENT_ID = 17_000_003L;
+    private static final long J5_STOP_EVENT_ID = 17_000_004L;
+    private static final byte[] J5_STATISTICS_RESPONSE =
+            "{\"statistics\":[],\"marker\":\"j5-statistics\"}"
+                    .getBytes(StandardCharsets.UTF_8);
+    private static final byte[] J5_INCIDENTS_NOT_FOUND_RESPONSE =
+            "{\"error\":{\"code\":404},\"marker\":\"j5-incidents-unavailable\"}"
+                    .getBytes(StandardCharsets.UTF_8);
+    private static final byte[] J5_LINEUPS_RESPONSE =
+            "{\"confirmed\":true,\"marker\":\"j5-lineups\"}"
+                    .getBytes(StandardCharsets.UTF_8);
+    private static final byte[] J5_STOP_STATISTICS_RESPONSE =
+            "{\"statistics\":[],\"marker\":\"j5-stop-statistics\"}"
+                    .getBytes(StandardCharsets.UTF_8);
+    private static final byte[] J5_STOP_INCIDENTS_RESPONSE =
+            "{\"incidents\":[],\"marker\":\"j5-stop-incidents\"}"
+                    .getBytes(StandardCharsets.UTF_8);
+    private static final byte[] J5_STOP_LINEUPS_RESPONSE =
+            "{\"confirmed\":true,\"marker\":\"j5-stop-lineups\"}"
                     .getBytes(StandardCharsets.UTF_8);
     private static final byte[] FORBIDDEN_RESPONSE =
             "{\"error\":{\"code\":403}}".getBytes(StandardCharsets.UTF_8);
@@ -130,7 +155,7 @@ class ProviderPlaywrightLocalQualificationIT {
             assertThat(standardOutput.get().get(5, TimeUnit.SECONDS)).isEmpty();
             assertThat(standardError.get().get(5, TimeUnit.SECONDS)).isEmpty();
             fixture.assertExactTraffic(FixtureServer.PAGE_ONE_PATH, FixtureServer.PAGE_TWO_PATH);
-            assertNoForbiddenRuntimeArtifacts(Path.of("target"));
+            assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
         }
     }
 
@@ -181,7 +206,7 @@ class ProviderPlaywrightLocalQualificationIT {
 
             assertWorkerExited(supervisor, exactWorker, ownedProcesses, output, error);
             fixture.assertExactTraffic(FixtureServer.TOURNAMENT_PATH);
-            assertNoForbiddenRuntimeArtifacts(Path.of("target"));
+            assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
         }
     }
 
@@ -276,7 +301,87 @@ class ProviderPlaywrightLocalQualificationIT {
                     FixtureServer.EVENT_DETAILS_ONE_PATH,
                     FixtureServer.EVENT_DETAILS_TWO_PATH,
                     FixtureServer.EVENT_DETAILS_NOT_FOUND_PATH);
-            assertNoForbiddenRuntimeArtifacts(Path.of("target"));
+            assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
+        }
+    }
+
+    @Test
+    @Timeout(120)
+    void routesJ5StatisticsIncidentsAndLineupsThroughOneWorkerAndPreservesA404()
+            throws Exception {
+        Path workerJar = requiredRegularFile("provider.playwright.worker-jar");
+        Path browserCache = requiredDirectory("provider.playwright.browser-cache");
+        AtomicReference<Process> worker = new AtomicReference<>();
+        AtomicReference<CompletableFuture<byte[]>> standardOutput = new AtomicReference<>();
+        AtomicReference<CompletableFuture<byte[]>> standardError = new AtomicReference<>();
+
+        try (FixtureServer fixture = FixtureServer.start();
+             ExecutorService streamReaders = Executors.newVirtualThreadPerTaskExecutor()) {
+            ChildJvmPlaywrightProviderSupervisor supervisor =
+                    new ChildJvmPlaywrightProviderSupervisor(
+                            properties(workerJar, fixture.origin()),
+                            Clock.systemUTC(),
+                            new SecureRandom(),
+                            builder -> startObservedWorker(
+                                    builder,
+                                    fixture.origin(),
+                                    browserCache,
+                                    worker,
+                                    standardOutput,
+                                    standardError,
+                                    streamReaders));
+
+            Process exactWorker;
+            List<ProcessIdentity> ownedProcesses;
+            CompletableFuture<byte[]> output;
+            CompletableFuture<byte[]> error;
+            try (PlaywrightProviderCampaign campaign = supervisor.open(
+                    UUID.randomUUID(),
+                    Set.of(
+                            SofascoreEndpointType.EVENT_STATISTICS,
+                            SofascoreEndpointType.EVENT_INCIDENTS,
+                            SofascoreEndpointType.EVENT_LINEUPS))) {
+                exactWorker = worker.get();
+                assertThat(exactWorker).isNotNull();
+                assertThat(exactWorker.isAlive()).isTrue();
+
+                assertExactResponse(
+                        campaign.execute(PlaywrightProviderRequest.eventStatistics(J5_EVENT_ID)),
+                        200,
+                        "application/json; charset=utf-8",
+                        J5_STATISTICS_RESPONSE);
+                assertThat(worker.get()).isSameAs(exactWorker);
+
+                assertExactResponse(
+                        campaign.execute(PlaywrightProviderRequest.eventIncidents(J5_EVENT_ID)),
+                        404,
+                        "application/problem+json",
+                        J5_INCIDENTS_NOT_FOUND_RESPONSE);
+                assertThat(worker.get()).isSameAs(exactWorker);
+
+                assertExactResponse(
+                        campaign.execute(PlaywrightProviderRequest.eventLineups(J5_EVENT_ID)),
+                        200,
+                        "application/json",
+                        J5_LINEUPS_RESPONSE);
+                assertThat(worker.get()).isSameAs(exactWorker);
+
+                ownedProcesses = captureOwnedProcessTree(exactWorker);
+                output = standardOutput.get();
+                error = standardError.get();
+            }
+
+            assertWorkerExited(
+                    supervisor,
+                    exactWorker,
+                    ownedProcesses,
+                    output,
+                    error);
+            fixture.assertExactTraffic(
+                    FixtureServer.J5_STATISTICS_PATH,
+                    FixtureServer.J5_INCIDENTS_PATH,
+                    FixtureServer.J5_LINEUPS_PATH);
+            assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
         }
     }
 
@@ -308,7 +413,7 @@ class ProviderPlaywrightLocalQualificationIT {
                     FixtureServer.PAGE_FOUR_PATH,
                     FixtureServer.PAGE_FIVE_PATH,
                     FixtureServer.HTML_CHALLENGE_PATH);
-            assertNoForbiddenRuntimeArtifacts(Path.of("target"));
+            assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
         }
     }
 
@@ -328,7 +433,7 @@ class ProviderPlaywrightLocalQualificationIT {
                     PlaywrightProviderFailure.REDIRECT_BLOCKED);
             fixture.assertExactTraffic(FixtureServer.REDIRECT_PATH);
             assertThat(fixture.requestCount(FixtureServer.REDIRECT_TARGET_PATH)).isZero();
-            assertNoForbiddenRuntimeArtifacts(Path.of("target"));
+            assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
         }
     }
 
@@ -349,7 +454,7 @@ class ProviderPlaywrightLocalQualificationIT {
                     PlaywrightProviderFailure.UNEXPECTED_ROUTE);
             fixture.assertExactTraffic(FixtureServer.SECONDARY_ROUTE_PATH);
             assertThat(fixture.requestCount(FixtureServer.SECONDARY_TARGET_PATH)).isZero();
-            assertNoForbiddenRuntimeArtifacts(Path.of("target"));
+            assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
         }
     }
 
@@ -370,7 +475,7 @@ class ProviderPlaywrightLocalQualificationIT {
                     PlaywrightProviderFailure.UNEXPECTED_ROUTE);
             fixture.assertExactTraffic(FixtureServer.SAME_URI_SECONDARY_ROUTE_PATH);
             assertThat(fixture.requestCount(FixtureServer.SAME_URI_SECONDARY_ROUTE_PATH)).isOne();
-            assertNoForbiddenRuntimeArtifacts(Path.of("target"));
+            assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
         }
     }
 
@@ -390,7 +495,7 @@ class ProviderPlaywrightLocalQualificationIT {
                     Duration.ofMillis(250),
                     PlaywrightProviderFailure.TIMEOUT);
             fixture.assertExactTraffic(FixtureServer.TIMEOUT_PATH);
-            assertNoForbiddenRuntimeArtifacts(Path.of("target"));
+            assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
         }
     }
 
@@ -409,7 +514,7 @@ class ProviderPlaywrightLocalQualificationIT {
                     Duration.ofSeconds(10),
                     PlaywrightProviderFailure.PAYLOAD_TOO_LARGE);
             fixture.assertExactTraffic(FixtureServer.OVERSIZED_PATH);
-            assertNoForbiddenRuntimeArtifacts(Path.of("target"));
+            assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
         }
     }
 
@@ -421,15 +526,18 @@ class ProviderPlaywrightLocalQualificationIT {
         Path browserCache = requiredDirectory("provider.playwright.browser-cache");
 
         try (FixtureServer fixture = FixtureServer.start()) {
+            String sensitiveCanaryValue = fixture.sensitiveCanaryValue();
             assertFailureAndCleanup(
                     fixture,
                     workerJar,
                     browserCache,
                     PlaywrightProviderRequest.scheduledEvents(DATE, 11),
                     Duration.ofSeconds(10),
-                    PlaywrightProviderFailure.SENSITIVE_CONTENT_REJECTED);
+                    PlaywrightProviderFailure.SENSITIVE_CONTENT_REJECTED,
+                    sensitiveCanaryValue);
             fixture.assertExactTraffic(FixtureServer.SENSITIVE_CANARY_PATH);
-            assertNoForbiddenRuntimeArtifacts(Path.of("target"));
+            assertNoForbiddenRuntimeArtifacts(
+                    RUNTIME_SANDBOX_ROOT, sensitiveCanaryValue);
         }
     }
 
@@ -503,7 +611,7 @@ class ProviderPlaywrightLocalQualificationIT {
             fixture.assertExactTraffic(
                     FixtureServer.PAGE_ONE_PATH,
                     FixtureServer.PAGE_ONE_PATH);
-            assertNoForbiddenRuntimeArtifacts(Path.of("target"));
+            assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
         }
     }
 
@@ -571,7 +679,98 @@ class ProviderPlaywrightLocalQualificationIT {
                 assertThat(standardOutput.get().get(5, TimeUnit.SECONDS)).isEmpty();
                 assertThat(standardError.get().get(5, TimeUnit.SECONDS)).isEmpty();
                 fixture.assertExactTraffic(FixtureServer.EVENT_DETAILS_STOP_PATH);
-                assertNoForbiddenRuntimeArtifacts(Path.of("target"));
+                assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
+            }
+            finally {
+                fixture.releaseSlowResponse();
+                campaign.close();
+            }
+        }
+    }
+
+    @Test
+    @Timeout(120)
+    void stopsJ5DuringIncidentsWithinEveryBoundWithoutCallingLineupsOrLeavingResidue()
+            throws Exception {
+        Path workerJar = requiredRegularFile("provider.playwright.worker-jar");
+        Path browserCache = requiredDirectory("provider.playwright.browser-cache");
+        AtomicReference<Process> worker = new AtomicReference<>();
+        AtomicReference<CompletableFuture<byte[]>> standardOutput = new AtomicReference<>();
+        AtomicReference<CompletableFuture<byte[]>> standardError = new AtomicReference<>();
+
+        try (FixtureServer fixture = FixtureServer.startSlowJ5Incidents();
+             ExecutorService streamReaders = Executors.newVirtualThreadPerTaskExecutor()) {
+            ChildJvmPlaywrightProviderSupervisor supervisor =
+                    new ChildJvmPlaywrightProviderSupervisor(
+                            properties(workerJar, fixture.origin()),
+                            Clock.systemUTC(),
+                            new SecureRandom(),
+                            builder -> startObservedWorker(
+                                    builder,
+                                    fixture.origin(),
+                                    browserCache,
+                                    worker,
+                                    standardOutput,
+                                    standardError,
+                                    streamReaders));
+            UUID campaignId = UUID.randomUUID();
+            Set<SofascoreEndpointType> allowlist = Set.of(
+                    SofascoreEndpointType.EVENT_STATISTICS,
+                    SofascoreEndpointType.EVENT_INCIDENTS,
+                    SofascoreEndpointType.EVENT_LINEUPS);
+            PlaywrightProviderCampaign campaign = supervisor.open(campaignId, allowlist);
+            Process exactWorker = worker.get();
+            assertExactResponse(
+                    campaign.execute(PlaywrightProviderRequest.eventStatistics(
+                            J5_STOP_EVENT_ID)),
+                    200,
+                    "application/json",
+                    J5_STOP_STATISTICS_RESPONSE);
+            assertThat(worker.get()).isSameAs(exactWorker);
+            List<ProcessIdentity> ownedProcesses = captureOwnedProcessTree(exactWorker);
+            CompletableFuture<Throwable> execution = CompletableFuture.supplyAsync(() -> {
+                try {
+                    campaign.execute(PlaywrightProviderRequest.eventIncidents(
+                            J5_STOP_EVENT_ID));
+                    return null;
+                }
+                catch (Throwable failure) {
+                    return failure;
+                }
+            });
+            try {
+                assertThat(fixture.awaitSlowRequest(Duration.ofSeconds(10))).isTrue();
+                long stopStartedAt = System.nanoTime();
+                PlaywrightProviderStopReceipt receipt = supervisor.stopCampaign(
+                        campaignId, allowlist);
+                Duration acknowledgement = Duration.ofNanos(
+                        System.nanoTime() - stopStartedAt);
+                Throwable executionFailure = execution.get(2, TimeUnit.SECONDS);
+                Duration cancellation = Duration.ofNanos(System.nanoTime() - stopStartedAt);
+
+                assertThat(receipt.activeCampaignSignalled()).isTrue();
+                assertThat(receipt.acknowledgementLatency()).isLessThanOrEqualTo(
+                        Duration.ofMillis(500));
+                assertThat(acknowledgement).isLessThanOrEqualTo(Duration.ofMillis(500));
+                assertThat(executionFailure).isInstanceOf(PlaywrightProviderException.class);
+                assertThat(((PlaywrightProviderException) executionFailure).failure())
+                        .isEqualTo(PlaywrightProviderFailure.OPERATOR_STOP);
+                assertThat(cancellation).isLessThanOrEqualTo(Duration.ofSeconds(2));
+                assertThat(awaitCleanup(
+                        supervisor,
+                        exactWorker,
+                        ownedProcesses,
+                        Duration.ofSeconds(5))).isTrue();
+                assertThat(Duration.ofNanos(System.nanoTime() - stopStartedAt))
+                        .isLessThanOrEqualTo(Duration.ofSeconds(5));
+                assertThat(worker.get()).isSameAs(exactWorker);
+                assertThat(standardOutput.get().get(5, TimeUnit.SECONDS)).isEmpty();
+                assertThat(standardError.get().get(5, TimeUnit.SECONDS)).isEmpty();
+                fixture.assertExactTraffic(
+                        FixtureServer.J5_STOP_STATISTICS_PATH,
+                        FixtureServer.J5_STOP_INCIDENTS_PATH);
+                assertThat(fixture.requestCount(FixtureServer.J5_STOP_LINEUPS_PATH)).isZero();
+                assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
             }
             finally {
                 fixture.releaseSlowResponse();
@@ -634,6 +833,24 @@ class ProviderPlaywrightLocalQualificationIT {
             PlaywrightProviderRequest request,
             Duration requestTimeout,
             PlaywrightProviderFailure expectedFailure) throws Exception {
+        assertFailureAndCleanup(
+                fixture,
+                workerJar,
+                browserCache,
+                request,
+                requestTimeout,
+                expectedFailure,
+                null);
+    }
+
+    private static void assertFailureAndCleanup(
+            FixtureServer fixture,
+            Path workerJar,
+            Path browserCache,
+            PlaywrightProviderRequest request,
+            Duration requestTimeout,
+            PlaywrightProviderFailure expectedFailure,
+            String sensitiveCanaryValue) throws Exception {
         AtomicReference<Process> worker = new AtomicReference<>();
         AtomicReference<CompletableFuture<byte[]>> standardOutput = new AtomicReference<>();
         AtomicReference<CompletableFuture<byte[]>> standardError = new AtomicReference<>();
@@ -674,6 +891,9 @@ class ProviderPlaywrightLocalQualificationIT {
                 assertThat(observed.getMessage())
                         .doesNotContain("local-only-value")
                         .doesNotContain("access_token");
+                if (sensitiveCanaryValue != null) {
+                    assertThat(observed.getMessage()).doesNotContain(sensitiveCanaryValue);
+                }
             }
 
             assertWorkerExited(supervisor, exactWorker, ownedProcesses, output, error);
@@ -725,6 +945,20 @@ class ProviderPlaywrightLocalQualificationIT {
         assertThat(environment).doesNotContainKeys(
                 "HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY",
                 "SOFASCORE_BASE_URL", "SOFASCORE_ALLOWED_ENDPOINTS");
+
+        Path runtimeSandbox = Files.createDirectories(
+                RUNTIME_SANDBOX_ROOT.resolve(UUID.randomUUID().toString()));
+        Path temporaryDirectory = Files.createDirectory(runtimeSandbox.resolve("temp"));
+        Path profileDirectory = Files.createDirectory(runtimeSandbox.resolve("profile"));
+        Path localAppDataDirectory = Files.createDirectory(
+                runtimeSandbox.resolve("local-app-data"));
+        builder.directory(runtimeSandbox.toFile());
+        environment.put("TEMP", temporaryDirectory.toString());
+        environment.put("TMP", temporaryDirectory.toString());
+        environment.put("TMPDIR", temporaryDirectory.toString());
+        environment.put("USERPROFILE", profileDirectory.toString());
+        environment.put("HOME", profileDirectory.toString());
+        environment.put("LOCALAPPDATA", localAppDataDirectory.toString());
 
         builder.redirectOutput(ProcessBuilder.Redirect.PIPE);
         builder.redirectError(ProcessBuilder.Redirect.PIPE);
@@ -829,14 +1063,75 @@ class ProviderPlaywrightLocalQualificationIT {
     }
 
     private static void assertNoForbiddenRuntimeArtifacts(Path root) throws IOException {
-        if (!Files.exists(root)) {
+        assertNoForbiddenRuntimeArtifacts(root, null);
+    }
+
+    private static void assertNoForbiddenRuntimeArtifacts(
+            Path root,
+            String sensitiveCanaryValue) throws IOException {
+        assertThat(Files.isDirectory(root))
+                .as("the isolated worker runtime root must exist")
+                .isTrue();
+        List<Path> regularFiles;
+        try (Stream<Path> paths = Files.walk(root)) {
+            regularFiles = paths.filter(Files::isRegularFile).toList();
+            List<Path> forbiddenArtifacts = new ArrayList<>();
+            for (Path path : regularFiles) {
+                String name = path.getFileName().toString().toLowerCase(Locale.ROOT);
+                if (isForbiddenArtifact(name)
+                        && !isExactPackagedPlaywrightResource(root, path)) {
+                    forbiddenArtifacts.add(root.relativize(path));
+                }
+            }
+            assertThat(forbiddenArtifacts).isEmpty();
+        }
+        if (sensitiveCanaryValue == null) {
             return;
         }
-        try (Stream<Path> paths = Files.walk(root)) {
-            assertThat(paths.filter(Files::isRegularFile)
-                    .map(path -> path.getFileName().toString().toLowerCase(Locale.ROOT))
-                    .filter(ProviderPlaywrightLocalQualificationIT::isForbiddenArtifact)
-                    .toList()).isEmpty();
+        byte[] canary = sensitiveCanaryValue.getBytes(StandardCharsets.UTF_8);
+        try {
+            List<Path> containingCanary = new ArrayList<>();
+            for (Path file : regularFiles) {
+                if (containsSequence(file, canary)) {
+                    containingCanary.add(file);
+                }
+            }
+            assertThat(containingCanary)
+                    .as("the per-run sensitive canary must not be persisted in runtime files")
+                    .isEmpty();
+        }
+        finally {
+            Arrays.fill(canary, (byte) 0);
+        }
+    }
+
+    private static boolean containsSequence(Path file, byte[] needle) throws IOException {
+        int[] prefixLengths = new int[needle.length];
+        for (int i = 1, matched = 0; i < needle.length; i++) {
+            while (matched > 0 && needle[i] != needle[matched]) {
+                matched = prefixLengths[matched - 1];
+            }
+            if (needle[i] == needle[matched]) {
+                matched++;
+            }
+            prefixLengths[i] = matched;
+        }
+        try (java.io.InputStream input = new java.io.BufferedInputStream(
+                Files.newInputStream(file), 64 * 1024)) {
+            int matched = 0;
+            for (int value = input.read(); value >= 0; value = input.read()) {
+                byte current = (byte) value;
+                while (matched > 0 && current != needle[matched]) {
+                    matched = prefixLengths[matched - 1];
+                }
+                if (current == needle[matched]) {
+                    matched++;
+                }
+                if (matched == needle.length) {
+                    return true;
+                }
+            }
+            return false;
         }
     }
 
@@ -851,6 +1146,73 @@ class ProviderPlaywrightLocalQualificationIT {
                 || name.endsWith(".download")
                 || name.contains("storage-state")
                 || name.contains("storagestate");
+    }
+
+    private static boolean isExactPackagedPlaywrightResource(Path root, Path path)
+            throws IOException {
+        Path relative = root.relativize(path);
+        if (relative.getNameCount() < 5
+                || !"temp".equals(relative.getName(1).toString())
+                || !relative.getName(2).toString().startsWith("playwright-java-")) {
+            return false;
+        }
+        try {
+            UUID.fromString(relative.getName(0).toString());
+        }
+        catch (IllegalArgumentException exception) {
+            return false;
+        }
+
+        StringBuilder extractedResource = new StringBuilder();
+        for (int index = 3; index < relative.getNameCount(); index++) {
+            if (!extractedResource.isEmpty()) {
+                extractedResource.append('/');
+            }
+            extractedResource.append(relative.getName(index));
+        }
+        String classpathResource = "driver/" + extractedResource;
+        if (!List.of(
+                        "driver/package/lib/server/chromium/appIcon.png",
+                        "driver/package/lib/tools/dashboard/appIcon.png",
+                        "driver/package/lib/tools/skills/playwright-cli/references/storage-state.md")
+                .contains(classpathResource)) {
+            return false;
+        }
+        try (java.io.InputStream packaged = ProviderPlaywrightLocalQualificationIT.class
+                .getClassLoader()
+                .getResourceAsStream(classpathResource)) {
+            return packaged != null && Arrays.equals(Files.readAllBytes(path), packaged.readAllBytes());
+        }
+    }
+
+    @AfterEach
+    void removeIsolatedRuntimeSandboxes() throws IOException {
+        IOException lastFailure = null;
+        for (int attempt = 0; attempt < 20; attempt++) {
+            if (!Files.exists(RUNTIME_SANDBOX_ROOT)) {
+                return;
+            }
+            try (Stream<Path> paths = Files.walk(RUNTIME_SANDBOX_ROOT)) {
+                List<Path> pathsToDelete = paths
+                        .sorted(Comparator.reverseOrder())
+                        .toList();
+                for (Path path : pathsToDelete) {
+                    Files.deleteIfExists(path);
+                }
+                return;
+            }
+            catch (IOException exception) {
+                lastFailure = exception;
+                try {
+                    Thread.sleep(50L);
+                }
+                catch (InterruptedException interrupted) {
+                    Thread.currentThread().interrupt();
+                    throw new IOException("Interrupted while deleting the runtime sandbox", interrupted);
+                }
+            }
+        }
+        throw lastFailure;
     }
 
     private record ProcessIdentity(ProcessHandle handle, Instant startedAt) {
@@ -897,6 +1259,18 @@ class ProviderPlaywrightLocalQualificationIT {
         private static final String EVENT_DETAILS_TWO_PATH = "/api/v1/event/16421052";
         private static final String EVENT_DETAILS_NOT_FOUND_PATH = "/api/v1/event/17000001";
         private static final String EVENT_DETAILS_STOP_PATH = "/api/v1/event/17000002";
+        private static final String J5_STATISTICS_PATH =
+                "/api/v1/event/17000003/statistics";
+        private static final String J5_INCIDENTS_PATH =
+                "/api/v1/event/17000003/incidents";
+        private static final String J5_LINEUPS_PATH =
+                "/api/v1/event/17000003/lineups";
+        private static final String J5_STOP_STATISTICS_PATH =
+                "/api/v1/event/17000004/statistics";
+        private static final String J5_STOP_INCIDENTS_PATH =
+                "/api/v1/event/17000004/incidents";
+        private static final String J5_STOP_LINEUPS_PATH =
+                "/api/v1/event/17000004/lineups";
         private static final String REDIRECT_TARGET_PATH = "/redirect-target";
         private static final String SECONDARY_TARGET_PATH = "/secondary-target";
 
@@ -904,6 +1278,8 @@ class ProviderPlaywrightLocalQualificationIT {
         private final ExecutorService executor;
         private final boolean slowPageOne;
         private final boolean slowEventDetails;
+        private final boolean slowJ5Incidents;
+        private final String sensitiveCanaryValue;
         private final CountDownLatch slowRequestReceived = new CountDownLatch(1);
         private final CountDownLatch releaseSlowResponse = new CountDownLatch(1);
         private final List<ObservedRequest> requests = new CopyOnWriteArrayList<>();
@@ -912,33 +1288,41 @@ class ProviderPlaywrightLocalQualificationIT {
                 HttpServer server,
                 ExecutorService executor,
                 boolean slowPageOne,
-                boolean slowEventDetails) {
+                boolean slowEventDetails,
+                boolean slowJ5Incidents) {
             this.server = server;
             this.executor = executor;
             this.slowPageOne = slowPageOne;
             this.slowEventDetails = slowEventDetails;
+            this.slowJ5Incidents = slowJ5Incidents;
+            this.sensitiveCanaryValue = "local-canary-" + UUID.randomUUID();
         }
 
         static FixtureServer start() throws IOException {
-            return start(false, false);
+            return start(false, false, false);
         }
 
         static FixtureServer startSlow() throws IOException {
-            return start(true, false);
+            return start(true, false, false);
         }
 
         static FixtureServer startSlowEventDetails() throws IOException {
-            return start(false, true);
+            return start(false, true, false);
+        }
+
+        static FixtureServer startSlowJ5Incidents() throws IOException {
+            return start(false, false, true);
         }
 
         private static FixtureServer start(
                 boolean slowPageOne,
-                boolean slowEventDetails) throws IOException {
+                boolean slowEventDetails,
+                boolean slowJ5Incidents) throws IOException {
             HttpServer server = HttpServer.create(
                     new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0), 0);
             ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
             FixtureServer fixture = new FixtureServer(
-                    server, executor, slowPageOne, slowEventDetails);
+                    server, executor, slowPageOne, slowEventDetails, slowJ5Incidents);
             server.createContext("/", fixture::handle);
             server.setExecutor(executor);
             server.start();
@@ -947,6 +1331,10 @@ class ProviderPlaywrightLocalQualificationIT {
 
         String origin() {
             return "http://127.0.0.1:" + server.getAddress().getPort();
+        }
+
+        String sensitiveCanaryValue() {
+            return sensitiveCanaryValue;
         }
 
         private void handle(HttpExchange exchange) throws IOException {
@@ -1006,7 +1394,8 @@ class ProviderPlaywrightLocalQualificationIT {
                     respond(exchange, 200, "text/html; charset=utf-8", HTML_CHALLENGE_RESPONSE);
                 }
                 else if (SENSITIVE_CANARY_PATH.equals(exchange.getRequestURI().getRawPath())) {
-                    byte[] canary = ("{\"access_" + "token\":\"local-only-value\"}")
+                    byte[] canary = ("{\"access_" + "token\":\""
+                            + sensitiveCanaryValue + "\"}")
                             .getBytes(StandardCharsets.UTF_8);
                     try {
                         respond(exchange, 200, "application/json", canary);
@@ -1047,6 +1436,43 @@ class ProviderPlaywrightLocalQualificationIT {
                         }
                     }
                     respond(exchange, 200, "application/json", EVENT_DETAILS_STOP_RESPONSE);
+                }
+                else if (J5_STATISTICS_PATH.equals(exchange.getRequestURI().getRawPath())) {
+                    respond(
+                            exchange,
+                            200,
+                            "application/json; charset=utf-8",
+                            J5_STATISTICS_RESPONSE);
+                }
+                else if (J5_INCIDENTS_PATH.equals(exchange.getRequestURI().getRawPath())) {
+                    respond(
+                            exchange,
+                            404,
+                            "application/problem+json",
+                            J5_INCIDENTS_NOT_FOUND_RESPONSE);
+                }
+                else if (J5_LINEUPS_PATH.equals(exchange.getRequestURI().getRawPath())) {
+                    respond(exchange, 200, "application/json", J5_LINEUPS_RESPONSE);
+                }
+                else if (J5_STOP_STATISTICS_PATH.equals(
+                        exchange.getRequestURI().getRawPath())) {
+                    respond(exchange, 200, "application/json", J5_STOP_STATISTICS_RESPONSE);
+                }
+                else if (J5_STOP_INCIDENTS_PATH.equals(
+                        exchange.getRequestURI().getRawPath())) {
+                    if (slowJ5Incidents) {
+                        slowRequestReceived.countDown();
+                        try {
+                            releaseSlowResponse.await(30, TimeUnit.SECONDS);
+                        }
+                        catch (InterruptedException exception) {
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+                    respond(exchange, 200, "application/json", J5_STOP_INCIDENTS_RESPONSE);
+                }
+                else if (J5_STOP_LINEUPS_PATH.equals(exchange.getRequestURI().getRawPath())) {
+                    respond(exchange, 200, "application/json", J5_STOP_LINEUPS_RESPONSE);
                 }
                 else {
                     respond(exchange, 500, "text/plain", new byte[0]);

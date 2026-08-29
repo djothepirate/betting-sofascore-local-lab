@@ -387,7 +387,9 @@ class SofascorePropertiesTest {
     }
 
     @Test
-    void bindsOnlyTheDocumentedJ5RealQualificationEnvironmentKeys() {
+    void bindsOnlyTheDocumentedJ5RealQualificationEnvironmentKeys() throws Exception {
+        Path workerJar = writeWorkerJar("j5-worker.jar");
+
         contextRunner
                 .withSystemProperties(
                         "SOFASCORE_ENABLED=true",
@@ -395,6 +397,8 @@ class SofascorePropertiesTest {
                         "SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED=false",
                         "SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED=false",
                         "SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED=true",
+                        "SOFASCORE_PLAYWRIGHT_ENABLED=true",
+                        "SOFASCORE_PLAYWRIGHT_WORKER_JAR=" + workerJar,
                         "SOFASCORE_BASE_URL=" + EventDetailsProviderRequest.EXPECTED_ORIGIN,
                         "SOFASCORE_ALLOWED_ENDPOINTS="
                                 + "EVENT_STATISTICS,EVENT_INCIDENTS,EVENT_LINEUPS")

@@ -5,22 +5,27 @@ import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderReq
 import com.bettingproject.sofascorelocal.domain.provider.J5EventDataProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
+import java.nio.file.Path;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class J5RealQualificationPolicyTest {
 
+    @TempDir
+    Path temporaryDirectory;
+
     @Test
-    void acceptsTheDedicatedJ5Configuration() {
+    void acceptsTheDedicatedJ5Configuration() throws Exception {
         SofascoreProperties properties = new SofascoreProperties();
         properties.setEnabled(true);
         properties.setJ5EventDataQualificationEnabled(true);
         properties.setBaseUrl(EventDetailsProviderRequest.EXPECTED_ORIGIN + "/");
         properties.setAllowedEndpoints(J5EventDataProviderRequest.ALLOWED_ENDPOINTS);
 
-        var snapshot = new J5RealQualificationPolicy(properties).snapshot();
+        var snapshot = configuredPolicy(properties, "j5-worker.jar").snapshot();
 
         assertThat(snapshot.available()).isTrue();
         assertThat(snapshot.providerOrigin().toString())
@@ -29,7 +34,7 @@ class J5RealQualificationPolicyTest {
     }
 
     @Test
-    void blocksDisabledJ5AndAnyPartialJ5EndpointSelection() {
+    void blocksDisabledJ5AndAnyPartialJ5EndpointSelection() throws Exception {
         SofascoreProperties properties = new SofascoreProperties();
         properties.setEnabled(true);
         properties.setJ4EventDetailsQualificationEnabled(true);
@@ -37,7 +42,7 @@ class J5RealQualificationPolicyTest {
         properties.setBaseUrl(EventDetailsProviderRequest.EXPECTED_ORIGIN);
         properties.setAllowedEndpoints(Set.of(SofascoreEndpointType.EVENT_DETAILS));
 
-        var snapshot = new J5RealQualificationPolicy(properties).snapshot();
+        var snapshot = configuredPolicy(properties, "disabled-worker.jar").snapshot();
 
         assertThat(snapshot.available()).isFalse();
         assertThat(snapshot.blockers()).containsExactly(
@@ -51,7 +56,7 @@ class J5RealQualificationPolicyTest {
     }
 
     @Test
-    void acceptsJ5AlongsideJ4PhaseTwoWithTheExactEndpointUnion() {
+    void acceptsJ5AlongsideJ4PhaseTwoWithTheExactEndpointUnion() throws Exception {
         SofascoreProperties properties = new SofascoreProperties();
         properties.setEnabled(true);
         properties.setJ4EventDetailsQualificationEnabled(true);
@@ -64,7 +69,7 @@ class J5RealQualificationPolicyTest {
                 SofascoreEndpointType.EVENT_INCIDENTS,
                 SofascoreEndpointType.EVENT_LINEUPS));
 
-        var snapshot = new J5RealQualificationPolicy(properties).snapshot();
+        var snapshot = configuredPolicy(properties, "combined-j4-j5-worker.jar").snapshot();
 
         assertThat(snapshot.available()).isTrue();
         assertThat(properties.isJ4EventDetailsQualificationConfigurationSafe()).isTrue();
@@ -73,7 +78,7 @@ class J5RealQualificationPolicyTest {
     }
 
     @Test
-    void acceptsJ5InsideTheExactCombinedJ3J4PhaseTwoAndJ5Session() {
+    void acceptsJ5InsideTheExactCombinedJ3J4PhaseTwoAndJ5Session() throws Exception {
         SofascoreProperties properties = new SofascoreProperties();
         properties.setEnabled(true);
         properties.setJ3QualificationEnabled(true);
@@ -88,7 +93,7 @@ class J5RealQualificationPolicyTest {
                 SofascoreEndpointType.EVENT_INCIDENTS,
                 SofascoreEndpointType.EVENT_LINEUPS));
 
-        var snapshot = new J5RealQualificationPolicy(properties).snapshot();
+        var snapshot = configuredPolicy(properties, "combined-j3-j4-j5-worker.jar").snapshot();
 
         assertThat(snapshot.available()).isTrue();
         assertThat(properties.isJ5EventDataQualificationConfigurationSafe()).isTrue();
@@ -96,7 +101,7 @@ class J5RealQualificationPolicyTest {
     }
 
     @Test
-    void blocksJ4PhaseOneFromSharingTheJ5Session() {
+    void blocksJ4PhaseOneFromSharingTheJ5Session() throws Exception {
         SofascoreProperties properties = new SofascoreProperties();
         properties.setEnabled(true);
         properties.setJ4EventDetailsQualificationEnabled(true);
@@ -108,7 +113,32 @@ class J5RealQualificationPolicyTest {
                 SofascoreEndpointType.EVENT_INCIDENTS,
                 SofascoreEndpointType.EVENT_LINEUPS));
 
-        assertThat(new J5RealQualificationPolicy(properties).snapshot().blockers())
+        assertThat(configuredPolicy(properties, "phase-one-worker.jar").snapshot().blockers())
                 .contains("J4_PHASE_1_CANNOT_SHARE_J5_SESSION");
+    }
+
+    @Test
+    void remainsBlockedUntilThePlaywrightRuntimeAndWorkerAreExplicitlyAvailable() {
+        SofascoreProperties properties = new SofascoreProperties();
+        properties.setEnabled(true);
+        properties.setJ5EventDataQualificationEnabled(true);
+        properties.setBaseUrl(EventDetailsProviderRequest.EXPECTED_ORIGIN);
+        properties.setAllowedEndpoints(J5EventDataProviderRequest.ALLOWED_ENDPOINTS);
+
+        var snapshot = new J5RealQualificationPolicy(properties).snapshot();
+
+        assertThat(snapshot.available()).isFalse();
+        assertThat(snapshot.blockers()).contains(
+                "PLAYWRIGHT_RUNTIME_DISABLED",
+                "PLAYWRIGHT_WORKER_ARTIFACT_INVALID");
+    }
+
+    private J5RealQualificationPolicy configuredPolicy(
+            SofascoreProperties properties,
+            String workerName) throws Exception {
+        return new J5RealQualificationPolicy(
+                properties,
+                ProviderPlaywrightPolicyTestSupport.configured(
+                        temporaryDirectory, workerName));
     }
 }

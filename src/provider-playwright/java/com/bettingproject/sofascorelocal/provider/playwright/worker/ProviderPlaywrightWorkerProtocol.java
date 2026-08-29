@@ -31,7 +31,7 @@ import java.util.Objects;
 public final class ProviderPlaywrightWorkerProtocol {
 
     public static final int MAGIC = 0x53335057;
-    public static final int VERSION = 4;
+    public static final int VERSION = 5;
 
     public static final byte GET = 1;
     public static final byte CLOSE = 2;
@@ -54,7 +54,10 @@ public final class ProviderPlaywrightWorkerProtocol {
     public enum Endpoint {
         SCHEDULED_EVENTS,
         TOURNAMENT_SCHEDULED_EVENTS,
-        EVENT_DETAILS
+        EVENT_DETAILS,
+        EVENT_STATISTICS,
+        EVENT_INCIDENTS,
+        EVENT_LINEUPS
     }
 
     public enum FailureCode {
@@ -116,7 +119,7 @@ public final class ProviderPlaywrightWorkerProtocol {
                         throw new IllegalArgumentException(FailureCode.INVALID_EVENT_ID.name());
                     }
                 }
-                case EVENT_DETAILS -> {
+                case EVENT_DETAILS, EVENT_STATISTICS, EVENT_INCIDENTS, EVENT_LINEUPS -> {
                     if (date != null) {
                         throw new IllegalArgumentException(FailureCode.INVALID_DATE.name());
                     }
@@ -184,8 +187,8 @@ public final class ProviderPlaywrightWorkerProtocol {
                 case TOURNAMENT_SCHEDULED_EVENTS -> new GetCommand(
                         endpoint, readDate(input.readUTF()), 0, input.readLong(), 0,
                         input.readInt());
-                case EVENT_DETAILS -> new GetCommand(
-                        endpoint, null, 0, 0, input.readLong(), input.readInt());
+            case EVENT_DETAILS, EVENT_STATISTICS, EVENT_INCIDENTS, EVENT_LINEUPS -> new GetCommand(
+                    endpoint, null, 0, 0, input.readLong(), input.readInt());
             };
         }
         catch (IllegalArgumentException exception) {

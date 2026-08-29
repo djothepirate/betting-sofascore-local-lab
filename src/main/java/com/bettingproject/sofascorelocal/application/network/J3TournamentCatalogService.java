@@ -183,6 +183,11 @@ public class J3TournamentCatalogService {
                 ScheduledTournamentAvailability availability = candidate.availability();
                 if (availability.uniqueTournament().isEmpty()
                         || availability.tournamentCategoryName().isEmpty()
+                        || !isSafeDisplayName(availability.tournament().name())
+                        || !isSafeDisplayName(
+                                availability.tournamentCategoryName().orElseThrow())
+                        || !isSafeDisplayName(
+                                availability.uniqueTournament().orElseThrow().name())
                         || applicableOffsetSeconds.stream().noneMatch(
                                 availability.timezoneEventCount()::containsKey)) {
                     excludedNonActionableCount++;
@@ -210,6 +215,11 @@ public class J3TournamentCatalogService {
                 pageSnapshotIds,
                 options,
                 excludedNonActionableCount);
+    }
+
+    private static boolean isSafeDisplayName(String value) {
+        return !value.isBlank()
+                && value.chars().noneMatch(Character::isISOControl);
     }
 
     /**

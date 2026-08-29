@@ -234,6 +234,7 @@ class J5LocalJsonImportServiceTest {
                 EVENT_ID,
                 List.of(),
                 null,
+                false,
                 true,
                 List.of());
     }

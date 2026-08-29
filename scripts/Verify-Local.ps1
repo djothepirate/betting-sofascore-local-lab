@@ -55,9 +55,7 @@ foreach ($pattern in $forbiddenPatterns) {
 
 $approvedRestClientConstructions = @(
     (Join-Path $sourceRoot `
-        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\LoopbackScheduledEventsRestTransport.java'),
-    (Join-Path $sourceRoot `
-        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderJ5EventDataRestTransport.java')
+        'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\LoopbackScheduledEventsRestTransport.java')
 )
 $restClientConstructions = $sourceFiles |
     Select-String -Pattern '\bRestClient\s*\.(?:builder|create)\b' -CaseSensitive:$false |
@@ -102,6 +100,18 @@ if (-not (Test-Path -LiteralPath $requiredJ4PlaywrightTransport)) {
     throw "Required J4 Playwright transport is absent: $requiredJ4PlaywrightTransport"
 }
 
+$removedJ5RestTransport = Join-Path $sourceRoot `
+    'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderJ5EventDataRestTransport.java'
+if (Test-Path -LiteralPath $removedJ5RestTransport) {
+    throw "Retired J5 RestClient transport is present: $removedJ5RestTransport"
+}
+
+$requiredJ5PlaywrightTransport = Join-Path $sourceRoot `
+    'java\com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderJ5EventDataPlaywrightTransport.java'
+if (-not (Test-Path -LiteralPath $requiredJ5PlaywrightTransport)) {
+    throw "Required J5 Playwright transport is absent: $requiredJ5PlaywrightTransport"
+}
+
 $playwrightSourceRoot = Join-Path $repositoryRoot 'src\provider-playwright'
 $playwrightSourceFiles = Get-ChildItem -LiteralPath $playwrightSourceRoot -Recurse -File |
     Where-Object { $_.Extension -eq '.java' }
@@ -128,7 +138,7 @@ foreach ($pattern in $forbiddenPlaywrightPatterns) {
 }
 if ($violations.Count -gt 0) {
     $violations | ForEach-Object { Write-Error ($_.ToString()) }
-    throw 'J3/J4 source guardrail scan failed'
+    throw 'J3/J4/J5 source guardrail scan failed'
 }
 
 Push-Location $repositoryRoot

@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.function.IntSupplier;
 import java.util.function.Supplier;
 
@@ -47,6 +48,7 @@ public class J5RealControlService {
     private Long eventId;
     private final List<SofascoreEndpointType> completedEndpoints = new ArrayList<>();
     private String terminalCode;
+    private boolean globalStopActive;
 
     @Autowired
     public J5RealControlService(J5RealQualificationPolicy policy) {
@@ -79,6 +81,9 @@ public class J5RealControlService {
         Objects.requireNonNull(requestedCanonicalEventId, "requestedCanonicalEventId");
         Instant now = clock.instant();
         expireIfNecessary(now);
+        if (globalStopActive) {
+            throw rejected(J5RealControlError.TERMINAL_LOCK_REQUIRES_RESTART);
+        }
         if (state == J5RealControlState.AWAITING_CONFIRMATION
                 || state == J5RealControlState.EXECUTING) {
             throw rejected(J5RealControlError.ACTIVE_CAMPAIGN_EXISTS);
@@ -197,14 +202,30 @@ public class J5RealControlService {
     }
 
     public synchronized J5RealControlSnapshot stop() {
-        if (toSnapshot().terminal()) {
-            return toSnapshot();
+        return stop(ignored -> { });
+    }
+
+    public synchronized J5RealControlSnapshot stop(Consumer<UUID> beforeLock) {
+        Objects.requireNonNull(beforeLock, "beforeLock");
+        boolean alreadyTerminal = toSnapshot().terminal();
+        try {
+            if (requestId != null
+                    && (alreadyTerminal
+                            || state == J5RealControlState.AWAITING_CONFIRMATION
+                            || state == J5RealControlState.EXECUTING)) {
+                beforeLock.accept(requestId);
+            }
         }
-        state = J5RealControlState.STOPPED_LOCKED;
-        terminalCode = "OPERATOR_STOP";
-        confirmationPhrase = null;
-        expiresAt = null;
-        changedAt = clock.instant();
+        finally {
+            globalStopActive = true;
+            if (!alreadyTerminal) {
+                state = J5RealControlState.STOPPED_LOCKED;
+                terminalCode = "OPERATOR_STOP";
+                confirmationPhrase = null;
+                expiresAt = null;
+                changedAt = clock.instant();
+            }
+        }
         return toSnapshot();
     }
 
@@ -251,6 +272,7 @@ public class J5RealControlService {
                 eventId,
                 completedEndpoints,
                 terminalCode,
+                globalStopActive,
                 qualification.available(),
                 qualification.blockers());
     }

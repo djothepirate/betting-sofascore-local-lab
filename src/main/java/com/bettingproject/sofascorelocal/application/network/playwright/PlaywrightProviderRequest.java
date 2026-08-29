@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.application.network.playwright;
 
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
+import com.bettingproject.sofascorelocal.domain.provider.J5EventDataProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 
@@ -41,6 +42,15 @@ public record PlaywrightProviderRequest(
                     throw new IllegalArgumentException("invalid event-details request");
                 }
             }
+            case EVENT_STATISTICS, EVENT_INCIDENTS, EVENT_LINEUPS -> {
+                if (date != null
+                        || page != 0
+                        || uniqueTournamentId != 0
+                        || eventId < 1
+                        || eventId > J5EventDataProviderRequest.MAXIMUM_EVENT_ID) {
+                    throw new IllegalArgumentException("invalid J5 event-data request");
+                }
+            }
             default -> throw new IllegalArgumentException(
                     "endpoint is not implemented by the Playwright worker");
         }
@@ -65,5 +75,20 @@ public record PlaywrightProviderRequest(
     public static PlaywrightProviderRequest eventDetails(long eventId) {
         return new PlaywrightProviderRequest(
                 SofascoreEndpointType.EVENT_DETAILS, null, 0, 0, eventId);
+    }
+
+    public static PlaywrightProviderRequest eventStatistics(long eventId) {
+        return new PlaywrightProviderRequest(
+                SofascoreEndpointType.EVENT_STATISTICS, null, 0, 0, eventId);
+    }
+
+    public static PlaywrightProviderRequest eventIncidents(long eventId) {
+        return new PlaywrightProviderRequest(
+                SofascoreEndpointType.EVENT_INCIDENTS, null, 0, 0, eventId);
+    }
+
+    public static PlaywrightProviderRequest eventLineups(long eventId) {
+        return new PlaywrightProviderRequest(
+                SofascoreEndpointType.EVENT_LINEUPS, null, 0, 0, eventId);
     }
 }

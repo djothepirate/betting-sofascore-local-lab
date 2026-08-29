@@ -55,7 +55,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
         implements PlaywrightProviderCampaignFactory, PlaywrightProviderSupervisor {
 
     static final int MAGIC = 0x53335057;
-    static final int VERSION = 4;
+    static final int VERSION = 5;
     static final byte GET = 1;
     static final byte CLOSE = 2;
     static final byte START = 3;
@@ -83,7 +83,10 @@ public final class ChildJvmPlaywrightProviderSupervisor
     private static final Set<SofascoreEndpointType> IMPLEMENTED_ENDPOINTS = Set.of(
             SofascoreEndpointType.SCHEDULED_EVENTS,
             SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
-            SofascoreEndpointType.EVENT_DETAILS);
+            SofascoreEndpointType.EVENT_DETAILS,
+            SofascoreEndpointType.EVENT_STATISTICS,
+            SofascoreEndpointType.EVENT_INCIDENTS,
+            SofascoreEndpointType.EVENT_LINEUPS);
     private static final List<String> SAFE_INHERITED_ENVIRONMENT = List.of(
             "SystemRoot", "WINDIR", "PATH", "PATHEXT", "TEMP", "TMP",
             "USERPROFILE", "LOCALAPPDATA", "ProgramFiles", "ProgramFiles(x86)",
@@ -379,7 +382,8 @@ public final class ChildJvmPlaywrightProviderSupervisor
                         output.writeUTF(request.date().toString());
                         output.writeLong(request.uniqueTournamentId());
                     }
-                    case EVENT_DETAILS -> output.writeLong(request.eventId());
+                    case EVENT_DETAILS, EVENT_STATISTICS, EVENT_INCIDENTS, EVENT_LINEUPS ->
+                            output.writeLong(request.eventId());
                     default -> throw new PlaywrightProviderException(
                             PlaywrightProviderFailure.INVALID_ENDPOINT);
                 }
@@ -1215,8 +1219,9 @@ public final class ChildJvmPlaywrightProviderSupervisor
 
     private static final class Campaign implements PlaywrightProviderCampaign {
 
-        private ChildJvmPlaywrightProviderSupervisor owner;
+        private volatile ChildJvmPlaywrightProviderSupervisor owner;
         private final CampaignState state;
+        private volatile boolean closeRequested;
 
         private Campaign(
                 ChildJvmPlaywrightProviderSupervisor owner,
@@ -1228,7 +1233,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
         @Override
         public PlaywrightProviderResponse execute(PlaywrightProviderRequest request) {
             ChildJvmPlaywrightProviderSupervisor current = owner;
-            if (current == null) {
+            if (current == null || closeRequested) {
                 throw new PlaywrightProviderException(
                         PlaywrightProviderFailure.OPERATOR_STOP);
             }
@@ -1237,10 +1242,11 @@ public final class ChildJvmPlaywrightProviderSupervisor
 
         @Override
         public void close() {
+            closeRequested = true;
             ChildJvmPlaywrightProviderSupervisor current = owner;
             if (current != null) {
-                owner = null;
                 current.closeCampaign(state);
+                owner = null;
             }
         }
     }

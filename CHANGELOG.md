@@ -4,6 +4,61 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### J5 — migration Playwright des donnees evenement validee
+
+- implementation de `WO-SS-20260827-015` sur la branche dediee
+  `codex/j5-playwright-event-data`, fondee sur le runtime commun valide par WO-013 et WO-014 et
+  conforme a l'ADR-SS-001 v1.4 ;
+- remplacement du transport J5 direct par `ProviderJ5EventDataPlaywrightTransport`, sans
+  `RestClient`, FlareSolverr ni fallback, avec un worker, un `BrowserContext` non persistant et une
+  lease dédiés à la même campagne pour `EVENT_STATISTICS`, `EVENT_INCIDENTS` puis
+  `EVENT_LINEUPS` ;
+- passage du protocole worker a v5 pour les routes J5 fermees, fidelite des statuts et octets issus
+  de `Response.body()`, poursuite apres un `404` raw-first et arret terminal sans retry pour tout
+  autre incident ;
+- raccordement de l'arret J5 a la campagne Playwright exacte : acquittement borne, annulation de
+  l'appel en vol, aucune famille suivante et nettoyage de l'arbre attribue sans arret par nom ;
+- latch d'arret global J5 independant de l'historique terminal : un succes conserve son etat et son
+  code `COMPLETED_LOCKED`/`COMPLETED`, mais aucune nouvelle preparation n'est acceptee avant le
+  redemarrage du processus ;
+- fermeture fail-closed : une erreur de nettoyage survenue avant toute mutation reste retentable
+  sur la meme campagne, la lease partagee n'est liberee qu'apres nettoyage confirme et un echec
+  persistant apres mutation bloque toute campagne J3/J4/J5 jusqu'au redemarrage du processus ;
+  l'arret exact reste routable sans reecrire l'issue terminale historique ;
+- lanceur J5 fonde sur un `clean package` obligatoire avec verification de l'absence du bytecode
+  historique direct, et preuves d'hygiene renforcees par scan XML decode des rapports Maven et
+  recherche d'un canari aleatoire par run dans le contenu effectif de toutes les racines runtime
+  isolées ; seules trois ressources exactes embarquees par le driver Playwright sont distinguees des
+  artefacts generes, apres comparaison octet pour octet avec le classpath ;
+- cache fournisseur J5 declare `NOT_APPLICABLE` : aucune lecture ni ecriture de cache pendant une
+  campagne, tandis que les imports locaux unitaires et multi-match restent strictement sans worker
+  ni transport ;
+- tests cibles du transport verts (`20` tests), exclusivite de lease J5/J3/J4 verte (`1` test) et
+  qualification Chromium loopback ciblee verte (`14` tests), dont une sequence `200/404/200` dans
+  un seul contexte et un arret pendant `INCIDENTS` avec zero `LINEUPS` et zero residu ; aucun acces
+  SofaScore n'a ete effectue ;
+- conservation intacte de la migration append-only V26 et du parseur `event-incidents-v14` de
+  WO-012 ; aucune migration n'est ajoutee par WO-015 ;
+- readiness technique finale verte : 765 tests standards (2 ignores), 53 tests PostgreSQL,
+  11 tests de protocole/securite et 14 tests Chromium loopback, puis
+  `Verify-Local.ps1 -WithIntegrationTests` en `PASS`, sans appel SofaScore ;
+- qualification fonctionnelle proprietaire du `2026-08-29` sur Lille - Paris Saint-Germain
+  (`providerEventId=16310930`) : terminal J5 `COMPLETED_LOCKED`, trois appels ordonnes, zero import
+  local et snapshots `603`, `604`, `605` complets pour statistiques, incidents et compositions ;
+- non-regression J4 confirmee dans la meme session avec `EVENT_DETAILS` conserve dans le snapshot
+  `606` et terminal `COMPLETED_LOCKED` ;
+- correction d'une indisponibilite du catalogue J3 provoquee par deux candidats dont les libelles
+  fournisseur contenaient une tabulation ou un saut de ligne : ces candidats sont maintenant
+  exclus individuellement, sans sanitisation ni modification des snapshots bruts, et un test de
+  regression couvre le maintien des options sures ;
+- reprise humaine J3 verte sur 18 pages : catalogue `AVAILABLE`, `1 428` tournois actionnables,
+  `338` occurrences exclues, liste deroulante visible, puis qualification Ligue 1 `5 / 5` dans le
+  snapshot `643` ;
+- `WO-SS-20260827-015` passe a `VALIDATED` et rejoint `completed`. La preuve est consommee et
+  n'autorise aucun appel fournisseur supplementaire. Les huit cles locales ont ete reverrouillees,
+  J4 et J5 ont ete constates `LOCKED` apres redemarrage, puis l'application de controle a ete
+  arretee sans JVM attribuee restante.
+
 ### J4 — migration Playwright de `EVENT_DETAILS` validée
 
 - ouverture de l'implementation de `WO-SS-20260827-014` sur une baseline standard verte de 691

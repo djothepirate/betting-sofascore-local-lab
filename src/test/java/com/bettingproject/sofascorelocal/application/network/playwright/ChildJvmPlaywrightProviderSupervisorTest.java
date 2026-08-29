@@ -173,7 +173,7 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         var supervisor = supervisor(properties, starts);
 
         assertThatThrownBy(() -> supervisor.open(
-                UUID.randomUUID(), Set.of(SofascoreEndpointType.EVENT_STATISTICS)))
+                UUID.randomUUID(), Set.of(SofascoreEndpointType.TOURNAMENT_STANDINGS)))
                 .isInstanceOf(PlaywrightProviderException.class)
                 .extracting("failure")
                 .isEqualTo(PlaywrightProviderFailure.INVALID_ENDPOINT);
@@ -712,7 +712,7 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                             "SOFASCORE_PLAYWRIGHT_IPC_TOKEN");
                     workerThread.set(Thread.ofPlatform()
                             .name("fake-playwright-retryable-capture")
-                            .start(() -> runIdleWorker(
+                            .start(() -> runGracefullyClosingWorker(
                                     port, token, () -> { }, workerFailure)));
                     return process;
                 },
@@ -732,8 +732,16 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         assertThat(root.destroyCalls()).hasValue(0);
         assertThat(child.destroyCalls()).hasValue(0);
 
-        supervisor.stopCampaign(campaignId, allowlist);
-        awaitNoActiveCampaign(supervisor);
+        assertThatThrownBy(() -> campaign.execute(
+                PlaywrightProviderRequest.scheduledEvents(
+                        java.time.LocalDate.of(2026, 8, 28), 1)))
+                .isInstanceOf(PlaywrightProviderException.class)
+                .extracting("failure")
+                .isEqualTo(PlaywrightProviderFailure.OPERATOR_STOP);
+        campaign.close();
+        campaign.close();
+
+        assertThat(supervisor.activeCampaignId()).isEmpty();
         workerThread.get().join(2_000);
         assertThat(workerThread.get().isAlive()).isFalse();
         assertThat(root.alive()).isFalse();
@@ -942,13 +950,66 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                 SofascoreEndpointType.EVENT_DETAILS,
                 SofascoreEndpointType.SCHEDULED_EVENTS,
                 83L);
+        assertCrossEndpointStopIgnored(
+                SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                84L);
+        assertCrossEndpointStopIgnored(
+                SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                85L);
+        assertCrossEndpointStopIgnored(
+                SofascoreEndpointType.EVENT_LINEUPS,
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                86L);
+    }
+
+    @Test
+    void j5StopRequiresTheExactThreeEndpointAllowlist() throws Exception {
+        Set<SofascoreEndpointType> j5Allowlist = Set.of(
+                SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_LINEUPS);
+
+        assertStopAttributionIsStrict(
+                j5Allowlist,
+                PlaywrightProviderRequest.eventStatistics(16_386_245L),
+                Set.of(SofascoreEndpointType.EVENT_STATISTICS),
+                "J5_EVENT_DATA",
+                87L);
     }
 
     private void assertCrossEndpointStopIgnored(
             SofascoreEndpointType activeEndpoint,
             SofascoreEndpointType attemptedStopEndpoint,
             long processId) throws Exception {
-        Path workerJar = temporaryDirectory.resolve(activeEndpoint.name() + "-worker.jar");
+        PlaywrightProviderRequest request = switch (activeEndpoint) {
+            case SCHEDULED_EVENTS -> PlaywrightProviderRequest.scheduledEvents(
+                    LocalDate.of(2026, 8, 27), 1);
+            case TOURNAMENT_SCHEDULED_EVENTS ->
+                    PlaywrightProviderRequest.tournamentScheduledEvents(
+                            LocalDate.of(2026, 8, 27), 119_880L);
+            case EVENT_DETAILS -> PlaywrightProviderRequest.eventDetails(16_386_245L);
+            case EVENT_STATISTICS -> PlaywrightProviderRequest.eventStatistics(16_386_245L);
+            case EVENT_INCIDENTS -> PlaywrightProviderRequest.eventIncidents(16_386_245L);
+            case EVENT_LINEUPS -> PlaywrightProviderRequest.eventLineups(16_386_245L);
+            default -> throw new IllegalArgumentException("unsupported test endpoint");
+        };
+        assertStopAttributionIsStrict(
+                Set.of(activeEndpoint),
+                request,
+                Set.of(attemptedStopEndpoint),
+                activeEndpoint.name(),
+                processId);
+    }
+
+    private void assertStopAttributionIsStrict(
+            Set<SofascoreEndpointType> activeAllowlist,
+            PlaywrightProviderRequest request,
+            Set<SofascoreEndpointType> attemptedStopAllowlist,
+            String campaignLabel,
+            long processId) throws Exception {
+        Path workerJar = temporaryDirectory.resolve(campaignLabel + "-worker.jar");
         Files.write(workerJar, new byte[0]);
         ProviderPlaywrightProperties properties = new ProviderPlaywrightProperties();
         properties.setEnabled(true);
@@ -978,7 +1039,7 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                     String token = builder.environment().get(
                             "SOFASCORE_PLAYWRIGHT_IPC_TOKEN");
                     Thread thread = Thread.ofPlatform()
-                            .name("fake-playwright-worker-" + activeEndpoint)
+                            .name("fake-playwright-worker-" + campaignLabel)
                             .start(() -> runBlockingWorker(
                                     port, token, requestReceived, workerFailure));
                     workerThread.set(thread);
@@ -987,18 +1048,8 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                 processTreeAccess);
 
         UUID campaignId = UUID.randomUUID();
-        Set<SofascoreEndpointType> activeAllowlist = Set.of(activeEndpoint);
         PlaywrightProviderCampaign campaign = supervisor.open(
                 campaignId, activeAllowlist);
-        PlaywrightProviderRequest request = switch (activeEndpoint) {
-            case SCHEDULED_EVENTS -> PlaywrightProviderRequest.scheduledEvents(
-                    LocalDate.of(2026, 8, 27), 1);
-            case TOURNAMENT_SCHEDULED_EVENTS ->
-                    PlaywrightProviderRequest.tournamentScheduledEvents(
-                            LocalDate.of(2026, 8, 27), 119_880L);
-            case EVENT_DETAILS -> PlaywrightProviderRequest.eventDetails(16_386_245L);
-            default -> throw new IllegalArgumentException("unsupported test endpoint");
-        };
         CompletableFuture<Throwable> execution = CompletableFuture.supplyAsync(() -> {
             try {
                 campaign.execute(request);
@@ -1013,7 +1064,7 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         PlaywrightProviderStopReceipt wrongRequest = supervisor.stopCampaign(
                 UUID.randomUUID(), activeAllowlist);
         PlaywrightProviderStopReceipt ignored = supervisor.stopCampaign(
-                campaignId, Set.of(attemptedStopEndpoint));
+                campaignId, attemptedStopAllowlist);
 
         assertThat(wrongRequest.activeCampaignSignalled()).isFalse();
         assertThat(wrongRequest.campaignId()).isNull();
@@ -1131,7 +1182,8 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                         assertThat(input.readUTF()).isEqualTo("2026-08-27");
                         assertThat(input.readLong()).isEqualTo(119_880L);
                     }
-                    case EVENT_DETAILS -> assertThat(input.readLong()).isEqualTo(16_386_245L);
+                    case EVENT_DETAILS, EVENT_STATISTICS, EVENT_INCIDENTS, EVENT_LINEUPS ->
+                            assertThat(input.readLong()).isEqualTo(16_386_245L);
                     default -> throw new AssertionError("unexpected endpoint: " + endpoint);
                 }
                 assertThat(input.readInt()).isEqualTo(2_000);
