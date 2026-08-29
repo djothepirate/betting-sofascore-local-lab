@@ -17,6 +17,8 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
             "^/events/[^/]+/exports(?:/.*)?$");
     private static final Pattern J5_OFFLINE_BATCH_PATH = Pattern.compile(
             "^/j5-import-batches(?:;[^/]*)?(?:/.*)?$");
+    private static final Pattern J8_BENCHMARK_PATH = Pattern.compile(
+            "^/benchmark(?:;[^/]*)?/?$");
     private static final String STRICT_CACHE_CONTROL =
             "no-store, no-cache, must-revalidate, max-age=0";
     private static final String CONTENT_SECURITY_POLICY_PREFIX =
@@ -52,7 +54,8 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
     private static boolean requiresStrictLocalHeaders(HttpServletRequest request) {
         String applicationPath = applicationPath(request);
         return J7_EXPORT_PATH.matcher(applicationPath).matches()
-                || J5_OFFLINE_BATCH_PATH.matcher(applicationPath).matches();
+                || J5_OFFLINE_BATCH_PATH.matcher(applicationPath).matches()
+                || J8_BENCHMARK_PATH.matcher(applicationPath).matches();
     }
 
     private static boolean isJ5OfflineBatchRequest(HttpServletRequest request) {

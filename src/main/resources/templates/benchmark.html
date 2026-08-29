@@ -1,0 +1,399 @@
+<!doctype html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SofaScore Local Lab — Benchmark J8</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar compact-topbar">
+  <div class="shell">
+    <p class="eyebrow">BETTING PROJECT / SOFASCORE LOCAL LAB</p>
+    <h1>Rapport de benchmark J8</h1>
+    <p class="subtitle">J8 : agrégation locale — aucun appel fournisseur. Mesures reproductibles, sans polling ni comparaison externe inventée.</p>
+  </div>
+</header>
+
+<main class="shell benchmark-page">
+  <nav class="links page-links" aria-label="Navigation locale">
+    <a th:href="@{/}" href="/">← Tableau de bord</a>
+  </nav>
+
+  <section class="panel benchmark-window-panel" aria-labelledby="benchmark-window-title">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Fenêtre de mesure UTC</p>
+        <h2 id="benchmark-window-title">Intervalle demi-ouvert [from,to)</h2>
+      </div>
+      <span class="chip chip-safe">LECTURE SEULE</span>
+    </div>
+    <form class="benchmark-window-form" method="get" th:action="@{/benchmark}">
+      <label for="benchmark-from">Début UTC ISO-8601, suffixe Z</label>
+      <input id="benchmark-from" name="from" type="text" maxlength="64"
+             placeholder="2026-08-01T00:00:00Z" th:value="${selectedFrom}">
+      <label for="benchmark-to">Fin UTC ISO-8601 exclusive, suffixe Z</label>
+      <input id="benchmark-to" name="to" type="text" maxlength="64"
+             placeholder="2026-09-01T00:00:00Z" th:value="${selectedTo}">
+      <button class="button-primary" type="submit">Afficher cette fenêtre</button>
+      <a class="table-link" th:href="@{/benchmark}" href="/benchmark">Tout l’historique mesurable</a>
+    </form>
+    <p class="fixture-note">Les deux bornes doivent être absentes ensemble ou présentes ensemble. Les données à la borne <span class="mono">to</span> sont exclues.</p>
+  </section>
+
+  <section class="panel notice-danger" th:if="${benchmarkErrorCode != null}" aria-labelledby="benchmark-error-title">
+    <p class="label">Rapport non produit</p>
+    <h2 id="benchmark-error-title" class="danger" th:text="${benchmarkErrorCode}">INVALID_BENCHMARK_WINDOW</h2>
+    <p th:if="${benchmarkErrorCode == 'INVALID_BENCHMARK_WINDOW'}">La fenêtre doit contenir deux instants UTC ISO-8601 suffixés par Z, dans l’ordre strict.</p>
+    <p th:if="${benchmarkErrorCode == 'LOCAL_DATABASE_UNAVAILABLE'}">La base PostgreSQL locale n’est pas disponible. Aucune collecte de remplacement n’a été tentée.</p>
+    <p th:if="${benchmarkErrorCode == 'INCOHERENT_LOCAL_EVIDENCE'}">Les preuves locales ne permettent pas de produire un agrégat cohérent. Aucune valeur n’a été inventée.</p>
+  </section>
+
+  <div th:if="${benchmarkReport != null}">
+    <section class="status-banner"
+             th:classappend="${benchmarkReport.state.name() == 'MEASURED'} ? ' status-safe' : (${benchmarkReport.state.name() == 'PARTIAL'} ? ' status-warning' : ' status-danger')"
+             aria-labelledby="benchmark-status-title">
+      <div>
+        <p class="label" id="benchmark-status-title">État du benchmark</p>
+        <p class="status-value" th:text="${benchmarkReport.state.name()}">NOT_MEASURED</p>
+      </div>
+      <span class="chip"
+            th:classappend="${benchmarkReport.state.name() == 'MEASURED'} ? ' chip-safe' : (${benchmarkReport.state.name() == 'PARTIAL'} ? ' chip-warning' : ' chip-danger')"
+            th:text="${benchmarkReport.evidenceScope.coverage.name() == 'FULL_ATTEMPT_LEDGER' ? benchmarkReport.evidenceScope.directAttemptCount + ' APPELS DIRECTS' : 'APPELS DIRECTS NON MESURÉS'}">APPELS DIRECTS NON MESURÉS</span>
+    </section>
+
+    <section class="grid cards benchmark-cards" aria-label="Synthèse du benchmark">
+      <article class="card">
+        <p class="label">Campagnes instrumentées</p>
+        <p class="metric" th:text="${benchmarkReport.evidenceScope.providerCampaignCount}">0</p>
+        <p>Campagnes manuelles persistées dans la fenêtre.</p>
+      </article>
+      <article class="card">
+        <p class="label">Appels fournisseur directs</p>
+        <p class="metric" th:text="${benchmarkReport.callSummary.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : benchmarkReport.evidenceScope.directAttemptCount}">NON MESURÉ</p>
+        <p><span th:text="${benchmarkReport.evidenceScope.persistedResponseCount}">0</span> réponses reçues.</p>
+      </article>
+      <article class="card">
+        <p class="label">Dossiers exploitables</p>
+        <p class="metric" th:text="${benchmarkReport.dossierEfficiency.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : benchmarkReport.dossierEfficiency.targetedEventCount + ' ciblés · ' + benchmarkReport.dossierEfficiency.exploitableEventCount + ' exploitables'}">NON MESURÉ</p>
+        <p th:if="${benchmarkReport.dossierEfficiency.exploitableRate.percent.isPresent()}"
+           th:text="${benchmarkReport.dossierEfficiency.exploitableRate.percent.get().toPlainString() + '%'}">0%</p>
+        <p class="muted" th:if="${benchmarkReport.dossierEfficiency.exploitableRate.percent.isEmpty()}">NON MESURÉ</p>
+      </article>
+      <article class="card">
+        <p class="label">Corrections tardives</p>
+        <p class="metric" th:text="${benchmarkReport.lateChangeMetrics.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : benchmarkReport.lateChangeMetrics.lateCorrectionCount}">NON MESURÉ</p>
+        <p th:text="${benchmarkReport.lateChangeMetrics.state.name()}">NOT_MEASURED</p>
+      </article>
+    </section>
+
+    <section class="panel benchmark-scope-panel" aria-labelledby="benchmark-scope-title">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Population et exclusions</p>
+          <h2 id="benchmark-scope-title">Portée auditable</h2>
+        </div>
+        <span class="chip chip-safe">SHA-256 DE SÉLECTION</span>
+      </div>
+      <dl class="detail-grid">
+        <div><dt>Généré à</dt><dd class="mono" th:text="${benchmarkReport.generatedAt}">instant</dd></div>
+        <div><dt>Lecture arrêtée à (asOf)</dt><dd class="mono" th:text="${benchmarkReport.asOf}">instant</dd></div>
+        <div><dt>Début effectif inclus</dt><dd class="mono" th:text="${benchmarkReport.effectiveWindow.fromInclusive.isPresent() ? benchmarkReport.effectiveWindow.fromInclusive.get() : 'TOUT HISTORIQUE MESURABLE'}">TOUT HISTORIQUE MESURABLE</dd></div>
+        <div><dt>Fin effective exclue</dt><dd class="mono" th:text="${benchmarkReport.effectiveWindow.toExclusive.isPresent() ? benchmarkReport.effectiveWindow.toExclusive.get() : benchmarkReport.asOf}">instant</dd></div>
+        <div><dt>Hash population</dt><dd class="mono hash-value" th:text="${benchmarkReport.populationHash}">sha256</dd></div>
+        <div><dt>Couverture des preuves</dt><dd class="mono" th:text="${benchmarkReport.evidenceScope.coverage.name()}">LEGACY_BASELINE</dd></div>
+        <div><dt>Première mesure</dt><dd th:text="${benchmarkReport.evidenceScope.firstMeasuredAt.isPresent() ? benchmarkReport.evidenceScope.firstMeasuredAt.get() : 'NON MESURÉ'}">NON MESURÉ</dd></div>
+        <div><dt>Dernière mesure</dt><dd th:text="${benchmarkReport.evidenceScope.lastMeasuredAt.isPresent() ? benchmarkReport.evidenceScope.lastMeasuredAt.get() : 'NON MESURÉ'}">NON MESURÉ</dd></div>
+        <div><dt>Réponses historiques non-baseline présentes</dt><dd th:text="${benchmarkReport.evidenceScope.responseOnlyCount}">0</dd></div>
+        <div><dt>Baselines historiques</dt><dd th:text="${benchmarkReport.evidenceScope.legacyBaselineCount}">0</dd></div>
+        <div><dt>Imports JSON exclus</dt><dd th:text="${benchmarkReport.evidenceScope.manualImportCount}">0</dd></div>
+        <div><dt>Cache hits exclus des appels</dt><dd th:text="${benchmarkReport.evidenceScope.cacheHitCount}">0</dd></div>
+        <div><dt>Observations synthétiques exclues</dt><dd th:text="${benchmarkReport.evidenceScope.syntheticObservationCount}">0</dd></div>
+      </dl>
+    </section>
+
+    <section class="panel benchmark-strata-panel" aria-labelledby="benchmark-strata-title">
+      <p class="label">Dénominateurs séparés</p>
+      <h2 id="benchmark-strata-title">Strates de preuve non mélangées</h2>
+      <p class="fixture-note">Les trois niveaux sont publiés séparément. Les coûts et taux par tentative sont exacts uniquement pour <span class="mono">FULL_ATTEMPT_LEDGER</span> ; aucune absence de ledger n’est convertie en zéro.</p>
+    </section>
+
+    <div class="benchmark-stratum" th:each="stratum : ${benchmarkReport.evidenceStrata}">
+      <section class="panel benchmark-stratum-heading">
+        <p class="label">Strate de preuve</p>
+        <h2 class="mono" th:text="${stratum.coverage.name()}">RESPONSE_ONLY</h2>
+        <dl class="detail-grid">
+          <div><dt>État</dt><dd th:text="${stratum.state.name()}">NOT_MEASURED</dd></div>
+          <div><dt>Population de preuve</dt><dd th:text="${stratum.evidenceCount}">0</dd></div>
+          <div><dt>Dénominateur des tentatives</dt><dd th:text="${stratum.coverage.name() == 'FULL_ATTEMPT_LEDGER' ? 'LEDGER EXACT' : 'NON MESURÉ'}">NON MESURÉ</dd></div>
+        </dl>
+      </section>
+
+    <section class="grid two-columns benchmark-detail-grid" aria-label="Disponibilité et appels">
+      <article class="panel benchmark-availability-panel">
+        <p class="label">Pages et familles</p>
+        <h2>Disponibilité observée</h2>
+        <dl>
+          <div><dt>État</dt><dd th:text="${stratum.pageAndFamilyAvailability.state.name()}">NOT_MEASURED</dd></div>
+          <div><dt>Pages planifiées observées</dt><dd th:text="${stratum.pageAndFamilyAvailability.lowestScheduledPage.isPresent() ? stratum.pageAndFamilyAvailability.observedPageCount : 'NON MESURÉ'}">NON MESURÉ</dd></div>
+          <div><dt>Bornes de pages</dt><dd th:text="${stratum.pageAndFamilyAvailability.lowestScheduledPage.isPresent() ? stratum.pageAndFamilyAvailability.lowestScheduledPage.getAsLong() + ' à ' + stratum.pageAndFamilyAvailability.highestScheduledPage.getAsLong() : 'NON MESURÉ'}">NON MESURÉ</dd></div>
+        </dl>
+        <p><strong>Familles disponibles :</strong></p>
+        <ul class="compact-list" th:if="${!stratum.pageAndFamilyAvailability.availableFamilies.isEmpty()}">
+          <li class="mono" th:each="family : ${stratum.pageAndFamilyAvailability.availableFamilies}" th:text="${family.name()}">EVENT_DETAILS</li>
+        </ul>
+        <p class="muted" th:if="${stratum.pageAndFamilyAvailability.availableFamilies.isEmpty()}">NON MESURÉ</p>
+        <p><strong>Familles explicitement indisponibles :</strong></p>
+        <ul class="compact-list" th:if="${!stratum.pageAndFamilyAvailability.unavailableFamilies.isEmpty()}">
+          <li class="mono" th:each="family : ${stratum.pageAndFamilyAvailability.unavailableFamilies}" th:text="${family.name()}">EVENT_LINEUPS</li>
+        </ul>
+        <p class="muted" th:if="${stratum.pageAndFamilyAvailability.unavailableFamilies.isEmpty()}">NON MESURÉ</p>
+      </article>
+
+      <article class="panel benchmark-call-summary-panel">
+        <p class="label">Accessibilité</p>
+        <h2>Synthèse des appels directs</h2>
+        <dl>
+          <div><dt>État</dt><dd th:text="${stratum.callSummary.state.name()}">NOT_MEASURED</dd></div>
+          <div><dt>Tentatives</dt><dd th:text="${stratum.callSummary.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : stratum.callSummary.directAttemptCount}">NON MESURÉ</dd></div>
+          <div><dt>Réponses reçues</dt><dd th:text="${stratum.callSummary.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : stratum.callSummary.responseReceivedCount}">NON MESURÉ</dd></div>
+          <div><dt>Réponses parsées</dt><dd th:text="${stratum.callSummary.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : stratum.callSummary.parsedCount}">NON MESURÉ</dd></div>
+          <div><dt>Refus 401/403/429</dt><dd th:text="${stratum.callSummary.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : stratum.callSummary.refusalCount}">NON MESURÉ</dd></div>
+          <div><dt>404 endpoint indisponible</dt><dd th:text="${stratum.callSummary.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : stratum.callSummary.endpointUnavailableCount}">NON MESURÉ</dd></div>
+          <div><dt>INCOMPLETE_ATTEMPT</dt><dd th:text="${stratum.callSummary.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : stratum.callSummary.incompleteAttemptCount}">NON MESURÉ</dd></div>
+          <div><dt>Erreurs opérationnelles hors 404</dt><dd th:text="${stratum.callSummary.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : stratum.callSummary.errorCount}">NON MESURÉ</dd></div>
+          <div><dt>Taux de réponse</dt><dd th:text="${stratum.callSummary.responseRate.percent.isPresent() ? stratum.callSummary.responseRate.numerator + '/' + stratum.callSummary.responseRate.denominator + ' · ' + stratum.callSummary.responseRate.percent.get().toPlainString() + '%' : 'NON MESURÉ'}">NON MESURÉ</dd></div>
+          <div><dt>Compatibilité parsing</dt><dd th:text="${stratum.callSummary.parsingRate.percent.isPresent() ? stratum.callSummary.parsingRate.numerator + '/' + stratum.callSummary.parsingRate.denominator + ' · ' + stratum.callSummary.parsingRate.percent.get().toPlainString() + '%' : 'NON MESURÉ'}">NON MESURÉ</dd></div>
+          <div><dt>Taux de refus</dt><dd th:text="${stratum.callSummary.refusalRate.percent.isPresent() ? stratum.callSummary.refusalRate.numerator + '/' + stratum.callSummary.refusalRate.denominator + ' · ' + stratum.callSummary.refusalRate.percent.get().toPlainString() + '%' : 'NON MESURÉ'}">NON MESURÉ</dd></div>
+          <div><dt>Taux de 404 — synthèse toutes tentatives</dt><dd th:text="${stratum.callSummary.endpointUnavailableRate.percent.isPresent() ? stratum.callSummary.endpointUnavailableRate.numerator + '/' + stratum.callSummary.endpointUnavailableRate.denominator + ' · ' + stratum.callSummary.endpointUnavailableRate.percent.get().toPlainString() + '%' : 'NON MESURÉ'}">NON MESURÉ</dd></div>
+          <div><dt>Taux d’erreur opérationnelle hors 404</dt><dd th:text="${stratum.callSummary.errorRate.percent.isPresent() ? stratum.callSummary.errorRate.numerator + '/' + stratum.callSummary.errorRate.denominator + ' · ' + stratum.callSummary.errorRate.percent.get().toPlainString() + '%' : 'NON MESURÉ'}">NON MESURÉ</dd></div>
+        </dl>
+        <p class="fixture-note">Réponse = réponses reçues / tentatives directes. Compatibilité = réponses parsées / réponses éligibles au parsing. L’erreur opérationnelle inclut refus, échecs, arrêt opérateur après tentative et tentative sans résultat ; elle exclut toujours les 404. Son dénominateur est celui des tentatives directes.</p>
+      </article>
+    </section>
+
+    <section class="panel benchmark-endpoints-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Accessibilité, stabilité et coût</p>
+          <h2>Mesures par endpoint logique</h2>
+        </div>
+      </div>
+      <p class="empty-state muted" th:if="${stratum.endpointMetrics.isEmpty()}">Aucun endpoint ne possède de preuve éligible dans cette strate.</p>
+      <div class="table-scroll" th:if="${!stratum.endpointMetrics.isEmpty()}">
+        <table>
+          <thead>
+          <tr>
+            <th>Endpoint</th><th>État</th><th>État parsing</th><th>Tentatives</th><th>Réponses prouvées</th><th>Parsés</th><th>404</th><th>Taux 404 / tentatives endpoint</th><th>Refus</th>
+            <th>INCOMPLETE_ATTEMPT</th><th>Schéma</th><th>Contenu</th><th>Transport</th><th>Autres erreurs</th><th>Dédupliquées</th><th>Compatibilité</th><th>Erreurs / tentative</th>
+            <th>Latence n / min / P50 / P95 / max</th><th>Parseurs</th>
+          </tr>
+          </thead>
+          <tbody>
+          <tr th:each="endpoint : ${stratum.endpointMetrics}">
+            <td class="mono" th:text="${endpoint.endpoint.name()}">EVENT_DETAILS</td>
+            <td th:text="${endpoint.state.name()}">NOT_MEASURED</td>
+            <td data-metric="endpoint-parsing-state" th:text="${endpoint.parsingMeasurementState.name()}">NOT_MEASURED</td>
+            <td th:text="${endpoint.attemptMeasurementState.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : endpoint.directAttemptCount}">NON MESURÉ</td>
+            <td data-metric="endpoint-response-evidence" th:text="${endpoint.responseEvidenceCount}">0</td>
+            <td data-metric="endpoint-parsed" th:text="${endpoint.parsingMeasurementState.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : endpoint.parsedCount}">NON MESURÉ</td>
+            <td th:text="${endpoint.endpointUnavailableCount}">0</td>
+            <td data-metric="endpoint-unavailable-rate" th:text="${endpoint.endpointUnavailableRate.percent.isPresent() ? endpoint.endpointUnavailableRate.numerator + '/' + endpoint.endpointUnavailableRate.denominator + ' · ' + endpoint.endpointUnavailableRate.percent.get().toPlainString() + '%' : 'NON MESURÉ'}">NON MESURÉ</td>
+            <td th:text="${endpoint.refusalCount}">0</td>
+            <td th:text="${endpoint.attemptMeasurementState.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : endpoint.incompleteAttemptCount}">NON MESURÉ</td>
+            <td th:text="${endpoint.schemaBreakMeasurementState.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : endpoint.schemaIncompatibleCount}">NON MESURÉ</td>
+            <td th:text="${endpoint.schemaBreakMeasurementState.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : endpoint.unexpectedContentCount}">NON MESURÉ</td>
+            <td th:text="${endpoint.attemptMeasurementState.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : endpoint.transportErrorCount}">NON MESURÉ</td>
+            <td th:text="${endpoint.otherErrorCount}">0</td>
+            <td data-metric="endpoint-deduplicated" th:text="${stratum.coverage.name() == 'LEGACY_BASELINE' ? 'NON MESURÉ' : endpoint.deduplicatedResponseCount}">NON MESURÉ</td>
+            <td>
+              <span th:if="${endpoint.compatibilityRate.percent.isPresent()}"
+                    th:text="${endpoint.compatibilityRate.numerator + '/' + endpoint.compatibilityRate.denominator + ' · ' + endpoint.compatibilityRate.percent.get().toPlainString() + '%'}">0/0</span>
+              <span class="muted" th:if="${endpoint.compatibilityRate.percent.isEmpty()}">NON MESURÉ</span>
+            </td>
+            <td>
+              <span th:if="${endpoint.errorRate.percent.isPresent()}"
+                    th:text="${endpoint.errorRate.numerator + '/' + endpoint.errorRate.denominator + ' · ' + endpoint.errorRate.percent.get().toPlainString() + '%'}">0/0</span>
+              <span class="muted" th:if="${endpoint.errorRate.percent.isEmpty()}">NON MESURÉ</span>
+            </td>
+            <td>
+              <span th:if="${endpoint.latency.sampleCount > 0}"
+                    th:text="${'n=' + endpoint.latency.sampleCount + ' · min=' + endpoint.latency.minimumMs.getAsLong() + ' · P50=' + endpoint.latency.p50Ms.getAsLong() + ' · P95=' + endpoint.latency.p95Ms.getAsLong() + ' · max=' + endpoint.latency.maximumMs.getAsLong() + ' ms'}">n=1 · min=0 · P50=0 · P95=0 · max=0 ms</span>
+              <span class="muted" th:if="${endpoint.latency.sampleCount == 0}">NON MESURÉ</span>
+            </td>
+            <td>
+              <ul class="compact-list" th:if="${!endpoint.parserVersions.isEmpty()}">
+                <li class="mono" th:each="parser : ${endpoint.parserVersions}" th:text="${parser}">parser-v1</li>
+              </ul>
+              <span class="muted" th:if="${endpoint.parserVersions.isEmpty()}">NON MESURÉ</span>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fixture-note">Taux 404 par endpoint = <span class="mono">ENDPOINT_UNAVAILABLE</span> / tentatives directes de cet endpoint. Pour <span class="mono">RESPONSE_ONLY</span> et <span class="mono">LEGACY_BASELINE</span>, les colonnes de réponse décrivent uniquement le bloc historique courant. Les tentatives, <span class="mono">INCOMPLETE_ATTEMPT</span>, les pannes de transport et les taux par tentative restent NON MESURÉS. Une réponse dédupliquée sans observation immuable corrélée ne vaut jamais zéro parsing : son état parsing reste NON MESURÉ.</p>
+    </section>
+
+    <section class="panel benchmark-parser-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Stabilité</p>
+          <h2>Compatibilité des parseurs</h2>
+        </div>
+        <span class="chip" th:text="${stratum.parserStability.state.name()}">NOT_MEASURED</span>
+      </div>
+      <dl class="detail-grid">
+         <div><dt>Réponses éligibles</dt><dd th:text="${stratum.parserStability.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : stratum.parserStability.eligibleResponseCount}">NON MESURÉ</dd></div>
+         <div><dt>Réponses parsées</dt><dd th:text="${stratum.parserStability.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : stratum.parserStability.parsedCount}">NON MESURÉ</dd></div>
+         <div><dt>Schémas incompatibles</dt><dd th:text="${stratum.parserStability.schemaBreakMeasurementState.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : stratum.parserStability.schemaIncompatibleCount}">NON MESURÉ</dd></div>
+         <div><dt>Contenus inattendus</dt><dd th:text="${stratum.parserStability.schemaBreakMeasurementState.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : stratum.parserStability.unexpectedContentCount}">NON MESURÉ</dd></div>
+         <div><dt>Versions distinctes</dt><dd th:text="${stratum.parserStability.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : stratum.parserStability.parserVersionCount}">NON MESURÉ</dd></div>
+         <div><dt>Transitions de version</dt><dd th:text="${stratum.parserStability.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : stratum.parserStability.parserVersionTransitionCount}">NON MESURÉ</dd></div>
+         <div><dt>Taux compatible</dt><dd th:text="${stratum.parserStability.compatibilityRate.percent.isPresent() ? stratum.parserStability.compatibilityRate.numerator + '/' + stratum.parserStability.compatibilityRate.denominator + ' · ' + stratum.parserStability.compatibilityRate.percent.get().toPlainString() + '%' : 'NON MESURÉ'}">NON MESURÉ</dd></div>
+         <div><dt>Première rupture</dt><dd class="mono" th:text="${stratum.parserStability.schemaBreakMeasurementState.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : (stratum.parserStability.firstBreakAt.isPresent() ? stratum.parserStability.firstBreakAt.get() : 'AUCUNE RUPTURE')}">NON MESURÉ</dd></div>
+         <div><dt>Dernière rupture</dt><dd class="mono" th:text="${stratum.parserStability.schemaBreakMeasurementState.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : (stratum.parserStability.lastBreakAt.isPresent() ? stratum.parserStability.lastBreakAt.get() : 'AUCUNE RUPTURE')}">NON MESURÉ</dd></div>
+         <div><dt>Première récupération après dernière rupture</dt><dd class="mono" th:text="${stratum.parserStability.schemaBreakMeasurementState.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : (stratum.parserStability.firstRecoveryAt.isPresent() ? stratum.parserStability.firstRecoveryAt.get() : 'AUCUNE RÉCUPÉRATION')}">NON MESURÉ</dd></div>
+      </dl>
+      <p class="empty-state muted" th:if="${stratum.parserStability.versions.isEmpty()}">Aucune version de parseur éligible.</p>
+      <div class="table-scroll" th:if="${!stratum.parserStability.versions.isEmpty()}">
+        <table>
+          <thead><tr><th>Endpoint</th><th>Parseur</th><th>Réponses</th><th>Parsées</th><th>Incompatibles</th><th>Première</th><th>Dernière</th></tr></thead>
+          <tbody>
+          <tr th:each="version : ${stratum.parserStability.versions}">
+            <td class="mono" th:text="${version.endpoint.name()}">EVENT_DETAILS</td>
+            <td class="mono" th:text="${version.parserVersion}">event-details-v2</td>
+            <td th:text="${version.responseCount}">0</td>
+            <td th:text="${version.parsedCount}">0</td>
+            <td th:text="${stratum.parserStability.schemaBreakMeasurementState.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : version.incompatibleCount}">NON MESURÉ</td>
+            <td class="mono" th:text="${version.firstObservedAt.isPresent() ? version.firstObservedAt.get() : 'NON MESURÉ'}">NON MESURÉ</td>
+            <td class="mono" th:text="${version.lastObservedAt.isPresent() ? version.lastObservedAt.get() : 'NON MESURÉ'}">NON MESURÉ</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel benchmark-completeness-panel">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Complétude J5</p>
+          <h2>Famille, compétition, saison et état</h2>
+        </div>
+      </div>
+      <p class="empty-state muted" th:if="${stratum.completenessBreakdowns.isEmpty()}">Aucune observation normalisée éligible. La complétude reste NON MESURÉE.</p>
+      <div class="table-scroll" th:if="${!stratum.completenessBreakdowns.isEmpty()}">
+        <table>
+          <thead><tr><th>Famille</th><th>Compétition</th><th>Saison</th><th>État match</th><th>Mesure</th><th>N</th><th>Complete</th><th>Partial</th><th>Empty valid</th><th>Unavailable</th><th>Couverture pondérée</th></tr></thead>
+          <tbody>
+          <tr th:each="item : ${stratum.completenessBreakdowns}">
+            <td class="mono" th:text="${item.endpoint.name()}">EVENT_STATISTICS</td>
+            <td th:text="${item.competition.isPresent() ? item.competition.get() : 'NON MESURÉ'}">NON MESURÉ</td>
+            <td th:text="${item.season.isPresent() ? item.season.get() : 'NON MESURÉ'}">NON MESURÉ</td>
+            <td class="mono" th:text="${item.eventStatus.isPresent() ? item.eventStatus.get() : 'NON MESURÉ'}">NON MESURÉ</td>
+            <td th:text="${item.state.name()}">NOT_MEASURED</td>
+            <td th:text="${item.observationCount}">0</td>
+            <td th:text="${item.completeCount}">0</td>
+            <td th:text="${item.partialCount}">0</td>
+            <td th:text="${item.emptyValidCount}">0</td>
+            <td th:text="${item.unavailableCount}">0</td>
+            <td th:text="${item.weightedSignalCoveragePercent.isPresent() ? item.weightedSignalCoveragePercent.get().toPlainString() + '%' : 'NON MESURÉ'}">NON MESURÉ</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="fixture-note">Couverture pondérée = Σ signaux présents / Σ signaux attendus × 100, pour les dénominateurs strictement positifs. Une dimension absente est affichée explicitement comme <span class="mono">UNKNOWN</span>.</p>
+    </section>
+    </div>
+
+    <section class="grid two-columns benchmark-detail-grid">
+      <article class="panel benchmark-late-panel">
+        <p class="label">Fraîcheur partielle / J6</p>
+        <h2>Enrichissements et corrections tardifs</h2>
+        <dl>
+          <div><dt>État</dt><dd th:text="${benchmarkReport.lateChangeMetrics.state.name()}">NOT_MEASURED</dd></div>
+          <div><dt>Événements analysés</dt><dd th:text="${benchmarkReport.lateChangeMetrics.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : benchmarkReport.lateChangeMetrics.analyzedEventCount}">NON MESURÉ</dd></div>
+          <div><dt>Versions fournisseur</dt><dd th:text="${benchmarkReport.lateChangeMetrics.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : benchmarkReport.lateChangeMetrics.analyzedProviderVersionCount}">NON MESURÉ</dd></div>
+          <div><dt>Enrichissements tardifs</dt><dd th:text="${benchmarkReport.lateChangeMetrics.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : benchmarkReport.lateChangeMetrics.lateEnrichmentCount}">NON MESURÉ</dd></div>
+          <div><dt>Corrections tardives</dt><dd th:text="${benchmarkReport.lateChangeMetrics.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : benchmarkReport.lateChangeMetrics.lateCorrectionCount}">NON MESURÉ</dd></div>
+          <div><dt>Délai de changement tardif P50 / P95</dt><dd th:text="${benchmarkReport.lateChangeMetrics.lateChangeDelay.sampleCount > 0 ? benchmarkReport.lateChangeMetrics.lateChangeDelay.p50Ms.getAsLong() + ' / ' + benchmarkReport.lateChangeMetrics.lateChangeDelay.p95Ms.getAsLong() + ' ms' : 'NON MESURÉ'}">NON MESURÉ</dd></div>
+        </dl>
+      </article>
+
+      <article class="panel benchmark-efficiency-panel">
+        <p class="label">Coût en appels</p>
+        <h2>Dossiers ciblés et exploitables</h2>
+        <dl>
+          <div><dt>État</dt><dd th:text="${benchmarkReport.dossierEfficiency.state.name()}">NOT_MEASURED</dd></div>
+          <div><dt>Événements ciblés</dt><dd th:text="${benchmarkReport.dossierEfficiency.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : benchmarkReport.dossierEfficiency.targetedEventCount}">NON MESURÉ</dd></div>
+          <div><dt>Exploitables</dt><dd th:text="${benchmarkReport.dossierEfficiency.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : benchmarkReport.dossierEfficiency.exploitableEventCount}">NON MESURÉ</dd></div>
+          <div><dt>Strictement complets</dt><dd th:text="${benchmarkReport.dossierEfficiency.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : benchmarkReport.dossierEfficiency.strictlyCompleteEventCount}">NON MESURÉ</dd></div>
+          <div><dt>Surcoût découverte J3</dt><dd th:text="${benchmarkReport.dossierEfficiency.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : benchmarkReport.dossierEfficiency.discoveryOverhead}">NON MESURÉ</dd></div>
+          <div><dt>Appels marginaux J4 phase 2 + J5</dt><dd th:text="${benchmarkReport.dossierEfficiency.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : benchmarkReport.dossierEfficiency.marginalCallCount}">NON MESURÉ</dd></div>
+          <div><dt>Tous appels directs de la fenêtre</dt><dd th:text="${benchmarkReport.dossierEfficiency.state.name() == 'NOT_MEASURED' ? 'NON MESURÉ' : benchmarkReport.dossierEfficiency.effectiveCallCount}">NON MESURÉ</dd></div>
+          <div><dt>Appels marginaux / dossier exploitable</dt><dd th:text="${benchmarkReport.dossierEfficiency.marginalCallsPerExploitableDossier.isPresent() ? benchmarkReport.dossierEfficiency.marginalCallsPerExploitableDossier.get().toPlainString() : 'NON MESURÉ'}">NON MESURÉ</dd></div>
+          <div><dt>Appels effectifs / dossier exploitable</dt><dd th:text="${benchmarkReport.dossierEfficiency.effectiveCallsPerExploitableDossier.isPresent() ? benchmarkReport.dossierEfficiency.effectiveCallsPerExploitableDossier.get().toPlainString() : 'NON MESURÉ'}">NON MESURÉ</dd></div>
+        </dl>
+        <p class="fixture-note">Surcoût découverte = tentatives J3 pages + découverte tournoi. Ratio marginal = (tentatives J4 phase 2 + J5) / dossiers directs exploitables. Ratio effectif = toutes les tentatives directes de la fenêtre / dossiers directs exploitables. Avec un ledger <span class="mono">FULL_ATTEMPT_LEDGER</span>, les trois comptes d’appels restent exacts même sans dossier ciblé ou exploitable ; seuls les ratios à dénominateur nul restent NON MESURÉS.</p>
+        <p class="fixture-note">Un événement est ciblé par une déclaration J4/J5 de la fenêtre. Il est exploitable lorsque, à <span class="mono">asOf</span>, état canonique, détail et trois familles J5 disposent tous d’une preuve directe parse-compatible, même si un composant préexiste à la fenêtre.</p>
+        <p class="fixture-note"><span class="mono">EMPTY_VALID</span> peut rendre une famille disponible mais ne la rend jamais strictement complète.</p>
+      </article>
+    </section>
+
+    <section class="panel benchmark-limitations-panel" aria-labelledby="benchmark-limitations-title">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Inconnues et exclusions</p>
+          <h2 id="benchmark-limitations-title">Limites bornées du rapport</h2>
+        </div>
+      </div>
+      <p class="empty-state muted" th:if="${benchmarkReport.limitations.isEmpty()}">Aucune limite supplémentaire déclarée.</p>
+      <ul th:if="${!benchmarkReport.limitations.isEmpty()}">
+        <li th:each="limitation : ${benchmarkReport.limitations}">
+          <strong class="mono" th:text="${limitation.code}">CONTROL_SOURCE_ABSENT</strong>
+          <span th:text="${' — ' + limitation.explanation}"> — Explication.</span>
+        </li>
+      </ul>
+    </section>
+
+    <section class="panel benchmark-decisions-panel" aria-labelledby="benchmark-decisions-title">
+      <div class="panel-heading">
+        <div>
+          <p class="label">Préparation de J9</p>
+          <h2 id="benchmark-decisions-title">Couverture des dimensions de décision</h2>
+        </div>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th>Dimension</th><th>État</th><th>Code de preuve</th><th>Limite explicite</th></tr></thead>
+          <tbody>
+          <tr th:each="assessment : ${benchmarkReport.decisionDimensions}">
+            <td th:text="${assessment.dimension.name()}">ACCURACY</td>
+            <td th:text="${assessment.state.name()}">NOT_MEASURED</td>
+            <td class="mono" th:text="${assessment.evidenceCode}">CONTROL_SOURCE_ABSENT</td>
+            <td th:text="${assessment.explanation}">Aucune source externe.</td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="panel guardrails benchmark-guardrails">
+      <p class="label">Limites actives</p>
+      <h2>Ce rapport ne fait pas</h2>
+      <ul>
+        <li>aucun appel fournisseur, retry, polling, scheduler ou benchmark de charge ;</li>
+        <li>aucun affichage de payload, URI, header, cookie, jeton, session ou valeur locale sensible ;</li>
+        <li>aucune comparaison externe, exactitude, fraîcheur source ou valeur analytique inventée ;</li>
+        <li>aucune intégration au Betting Project principal, aucun transfert et aucune autorisation de production.</li>
+      </ul>
+    </section>
+
+    <p class="generated">Rapport généré à <span th:text="${benchmarkReport.generatedAt}">—</span>.</p>
+  </div>
+</main>
+
+<footer>
+  <div class="shell">SofaScore Local Lab — J8 Benchmark local en lecture seule</div>
+</footer>
+</body>
+</html>

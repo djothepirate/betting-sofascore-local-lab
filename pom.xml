@@ -23,6 +23,7 @@
     <testcontainers.version>2.0.5</testcontainers.version>
     <json-schema-validator.version>3.0.6</json-schema-validator.version>
     <playwright.version>1.62.0</playwright.version>
+    <spring-boot.run.main-class>com.bettingproject.sofascorelocal.SofascoreLocalApplication</spring-boot.run.main-class>
     <main.output.directory>${project.build.directory}/classes</main.output.directory>
     <test.output.directory>${project.build.directory}/test-classes</test.output.directory>
   </properties>
@@ -139,7 +140,7 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
-          <mainClass>com.bettingproject.sofascorelocal.SofascoreLocalApplication</mainClass>
+          <mainClass>${spring-boot.run.main-class}</mainClass>
         </configuration>
         <executions>
           <execution>
