@@ -1,0 +1,15 @@
+package com.bettingproject.sofascorelocal.domain.benchmark;
+
+public enum J8BenchmarkOutcomeType {
+    PARSED,
+    ENDPOINT_UNAVAILABLE,
+    HTTP_REFUSED,
+    HTTP_ERROR,
+    SCHEMA_INCOMPATIBLE,
+    UNEXPECTED_CONTENT,
+    TRANSPORT_FAILURE,
+    PERSISTENCE_FAILURE,
+    PROCESSING_FAILURE,
+    OPERATOR_STOP,
+    NOT_REACHED_AFTER_TERMINAL_FAILURE
+}

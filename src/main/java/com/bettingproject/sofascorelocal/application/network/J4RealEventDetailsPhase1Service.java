@@ -8,6 +8,11 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.transport.EventDetail
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.EventDetailsTransportFailure;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceResult;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceService;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignTerminalState;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkExecutionMode;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkOutcomeType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkResolutionSource;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsTransportResponse;
 import com.bettingproject.sofascorelocal.domain.provider.J4CachedEventDetails;
@@ -25,10 +30,14 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.UUID;
 
 @Service
@@ -43,9 +52,32 @@ public class J4RealEventDetailsPhase1Service {
     private final Clock clock;
     private final Duration cacheTtl;
     private final ManualProviderRequestCoordinator requestCoordinator;
+    private final J8BenchmarkAuditService benchmarkAuditService;
 
     @Autowired
     public J4RealEventDetailsPhase1Service(
+            J4RealPhase1ControlService controlService,
+            EventDetailsProviderTransport transport,
+            RawManualCallSnapshotStore rawSnapshotStore,
+            J4EventDetailsCache cache,
+            J4ParsedEventDetailsPersistenceService parsedPersistenceService,
+            SofascoreEndpointCatalog endpointCatalog,
+            ManualProviderRequestCoordinator requestCoordinator,
+            J8BenchmarkAuditService benchmarkAuditService) {
+        this(
+                controlService,
+                transport,
+                rawSnapshotStore,
+                cache,
+                parsedPersistenceService,
+                new EventDetailsV2Parser(),
+                Clock.systemUTC(),
+                endpointCatalog.get(SofascoreEndpointType.EVENT_DETAILS).cacheTtl(),
+                requestCoordinator,
+                benchmarkAuditService);
+    }
+
+    J4RealEventDetailsPhase1Service(
             J4RealPhase1ControlService controlService,
             EventDetailsProviderTransport transport,
             RawManualCallSnapshotStore rawSnapshotStore,
@@ -62,7 +94,8 @@ public class J4RealEventDetailsPhase1Service {
                 new EventDetailsV2Parser(),
                 Clock.systemUTC(),
                 endpointCatalog.get(SofascoreEndpointType.EVENT_DETAILS).cacheTtl(),
-                requestCoordinator);
+                requestCoordinator,
+                J8BenchmarkAuditService.disabled(Clock.systemUTC()));
     }
 
     J4RealEventDetailsPhase1Service(
@@ -85,7 +118,33 @@ public class J4RealEventDetailsPhase1Service {
                 parser,
                 clock,
                 cacheTtl,
-                new ManualProviderRequestCoordinator(clock, minimumDelay, pause::pause));
+                new ManualProviderRequestCoordinator(clock, minimumDelay, pause::pause),
+                J8BenchmarkAuditService.disabled(clock));
+    }
+
+    J4RealEventDetailsPhase1Service(
+            J4RealPhase1ControlService controlService,
+            EventDetailsProviderTransport transport,
+            RawManualCallSnapshotStore rawSnapshotStore,
+            J4EventDetailsCache cache,
+            J4ParsedEventDetailsPersistenceService parsedPersistenceService,
+            EventDetailsV2Parser parser,
+            Clock clock,
+            Duration cacheTtl,
+            Duration minimumDelay,
+            Pause pause,
+            J8BenchmarkAuditService benchmarkAuditService) {
+        this(
+                controlService,
+                transport,
+                rawSnapshotStore,
+                cache,
+                parsedPersistenceService,
+                parser,
+                clock,
+                cacheTtl,
+                new ManualProviderRequestCoordinator(clock, minimumDelay, pause::pause),
+                benchmarkAuditService);
     }
 
     private J4RealEventDetailsPhase1Service(
@@ -97,7 +156,8 @@ public class J4RealEventDetailsPhase1Service {
             EventDetailsV2Parser parser,
             Clock clock,
             Duration cacheTtl,
-            ManualProviderRequestCoordinator requestCoordinator) {
+            ManualProviderRequestCoordinator requestCoordinator,
+            J8BenchmarkAuditService benchmarkAuditService) {
         this.controlService = Objects.requireNonNull(controlService, "controlService");
         this.transport = Objects.requireNonNull(transport, "transport");
         this.rawSnapshotStore = Objects.requireNonNull(rawSnapshotStore, "rawSnapshotStore");
@@ -109,10 +169,63 @@ public class J4RealEventDetailsPhase1Service {
         this.cacheTtl = requirePositive(cacheTtl, "cacheTtl");
         this.requestCoordinator = Objects.requireNonNull(
                 requestCoordinator, "requestCoordinator");
+        this.benchmarkAuditService = Objects.requireNonNull(
+                benchmarkAuditService, "benchmarkAuditService");
     }
 
     public J4RealEventDetailsPhase1Result execute(J4RealPhase1ExecutionClaim claim) {
         Objects.requireNonNull(claim, "claim");
+        J8BenchmarkAuditService.Session audit;
+        Map<Long, J8BenchmarkAuditService.Unit> auditUnits = new LinkedHashMap<>();
+        try {
+            audit = benchmarkAuditService.start(
+                    claim.requestId(),
+                    J8BenchmarkCampaignType.J4_EVENT_DETAILS_PHASE1,
+                    J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                    J8BenchmarkCampaignType.J4_EVENT_DETAILS_PHASE1.maximumUnits(),
+                    Optional.empty());
+            int ordinal = 0;
+            for (long eventId : EventDetailsProviderRequest.PHASE_1_EVENT_IDS) {
+                EventDetailsProviderRequest request = EventDetailsProviderRequest.phase1(
+                        claim.providerOrigin(), eventId);
+                auditUnits.put(eventId, audit.declare(
+                        ++ordinal,
+                        SofascoreEndpointType.EVENT_DETAILS,
+                        request.requestKey(),
+                        Optional.empty(),
+                        OptionalLong.of(eventId)));
+            }
+        }
+        catch (RuntimeException exception) {
+            return failAndLock(
+                    claim.requestId(),
+                    "BENCHMARK_AUDIT_FAILURE",
+                    new Counters(),
+                    List.of(),
+                    List.of(),
+                    new CampaignResources());
+        }
+
+        J4RealEventDetailsPhase1Result result = executeCampaign(
+                claim, audit, auditUnits);
+        if (!result.completed()) {
+            for (J8BenchmarkAuditService.Unit unit : auditUnits.values()) {
+                audit.resolveFailureIfPending(unit, result.terminalCode());
+            }
+        }
+        J8BenchmarkCampaignTerminalState terminalState = result.completed()
+                ? J8BenchmarkCampaignTerminalState.COMPLETED
+                : result.terminalCode().contains("OPERATOR_STOP")
+                        ? J8BenchmarkCampaignTerminalState.CANCELLED
+                        : J8BenchmarkCampaignTerminalState.FAILED;
+        audit.finish(terminalState, Optional.of(result.terminalCode()));
+        return result;
+    }
+
+    private J4RealEventDetailsPhase1Result executeCampaign(
+            J4RealPhase1ExecutionClaim claim,
+            J8BenchmarkAuditService.Session audit,
+            Map<Long, J8BenchmarkAuditService.Unit> auditUnits) {
         List<J4RealEventDetailsEventResult> results = new ArrayList<>();
         List<J4RealEventDetailsUnavailableResult> unavailableResults = new ArrayList<>();
         Counters counters = new Counters();
@@ -136,6 +249,14 @@ public class J4RealEventDetailsPhase1Service {
                 if (!controlService.executionMayContinue(claim.requestId())) {
                     return failAndLock(
                             claim.requestId(), "OPERATOR_STOP", counters, results,
+                            unavailableResults, resources);
+                }
+                try {
+                    audit.reach(auditUnits.get(eventId));
+                }
+                catch (RuntimeException exception) {
+                    return failAndLock(
+                            claim.requestId(), "BENCHMARK_AUDIT_FAILURE", counters, results,
                             unavailableResults, resources);
                 }
                 EventDetailsProviderRequest request = EventDetailsProviderRequest.phase1(
@@ -162,12 +283,29 @@ public class J4RealEventDetailsPhase1Service {
                     J4CachedEventDetails candidate = cached.orElseThrow();
                     response = candidate.asTransportResponse();
                     rawPersistence = candidate.asPersistenceResult();
+                    try {
+                        audit.captureSnapshot(
+                                auditUnits.get(eventId),
+                                rawPersistence,
+                                EventDetailsV2Parser.PARSER_VERSION);
+                    }
+                    catch (RuntimeException exception) {
+                        return failAndLock(
+                                claim.requestId(), "BENCHMARK_AUDIT_FAILURE", counters,
+                                results, unavailableResults, resources);
+                    }
                     resolutionSource = J4RealEventDetailsResolutionSource.CACHE;
                     counters.cacheHits++;
                 }
                 else {
                     try {
-                        response = executeProvider(claim, request, resources, counters);
+                        response = executeProvider(
+                                claim,
+                                request,
+                                resources,
+                                counters,
+                                audit,
+                                auditUnits.get(eventId));
                     }
                     catch (ManualProviderRequestCoordinator.CoordinationException exception) {
                         return failAndLock(
@@ -181,6 +319,11 @@ public class J4RealEventDetailsPhase1Service {
                         return failAndLock(
                                 claim.requestId(), code, counters, results, unavailableResults,
                                 resources);
+                    }
+                    catch (BenchmarkAuditException exception) {
+                        return failAndLock(
+                                claim.requestId(), "BENCHMARK_AUDIT_FAILURE", counters,
+                                results, unavailableResults, resources);
                     }
                     catch (RuntimeException exception) {
                         String code = controlService.executionMayContinue(claim.requestId())
@@ -199,6 +342,17 @@ public class J4RealEventDetailsPhase1Service {
                                 claim.requestId(), "RAW_PERSISTENCE_ERROR", counters, results,
                                 unavailableResults, resources);
                     }
+                    try {
+                        audit.captureSnapshot(
+                                auditUnits.get(eventId),
+                                rawPersistence,
+                                EventDetailsV2Parser.PARSER_VERSION);
+                    }
+                    catch (RuntimeException exception) {
+                        return failAndLock(
+                                claim.requestId(), "BENCHMARK_AUDIT_FAILURE", counters,
+                                results, unavailableResults, resources);
+                    }
                     resolutionSource = J4RealEventDetailsResolutionSource.PROVIDER;
 
                     if (response.httpStatus() == 404) {
@@ -211,6 +365,22 @@ public class J4RealEventDetailsPhase1Service {
                                     results, unavailableResults, resources);
                         }
                         unavailableResults.add(unavailable(eventId, rawPersistence));
+                        recordAuditOrFailClosed(
+                                claim.requestId(),
+                                counters,
+                                results,
+                                unavailableResults,
+                                resources,
+                                () -> audit.resolve(
+                                        auditUnits.get(eventId),
+                                        J8BenchmarkResolutionSource.PROVIDER,
+                                        J8BenchmarkOutcomeType.ENDPOINT_UNAVAILABLE,
+                                        Optional.of(
+                                                RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE),
+                                        0,
+                                        Optional.empty(),
+                                        OptionalInt.empty(),
+                                        Optional.of("HTTP_404")));
                         try {
                             controlService.recordEventCompleted(claim.requestId(), eventId);
                         }
@@ -308,15 +478,8 @@ public class J4RealEventDetailsPhase1Service {
                             results, unavailableResults, resources);
                 }
 
-                try {
-                    controlService.recordEventCompleted(claim.requestId(), eventId);
-                }
-                catch (J4RealPhase1ControlException exception) {
-                    return failAndLock(
-                            claim.requestId(), "OPERATOR_STOP", counters, results,
-                            unavailableResults, resources);
-                }
-                results.add(new J4RealEventDetailsEventResult(
+                J4RealEventDetailsEventResult eventResult =
+                        new J4RealEventDetailsEventResult(
                         eventId,
                         resolutionSource,
                         rawPersistence.snapshotId(),
@@ -327,7 +490,33 @@ public class J4RealEventDetailsPhase1Service {
                         details,
                         normalized.eventObservationInserted(),
                         normalized.detailObservationInserted(),
-                        parseResult.warnings().size()));
+                        parseResult.warnings().size());
+                recordAuditOrFailClosed(
+                        claim.requestId(),
+                        counters,
+                        results,
+                        unavailableResults,
+                        resources,
+                        () -> audit.resolve(
+                                auditUnits.get(eventId),
+                                resolutionSource == J4RealEventDetailsResolutionSource.CACHE
+                                        ? J8BenchmarkResolutionSource.CACHE
+                                        : J8BenchmarkResolutionSource.PROVIDER,
+                                J8BenchmarkOutcomeType.PARSED,
+                                Optional.of(RawSnapshotSchemaStatus.PARSED),
+                                eventResult.warningCount(),
+                                Optional.empty(),
+                                OptionalInt.empty(),
+                                Optional.empty()));
+                try {
+                    controlService.recordEventCompleted(claim.requestId(), eventId);
+                }
+                catch (J4RealPhase1ControlException exception) {
+                    return failAndLock(
+                            claim.requestId(), "OPERATOR_STOP", counters, results,
+                            unavailableResults, resources);
+                }
+                results.add(eventResult);
             }
 
             RuntimeException cleanupFailure = resources.closeSafely();
@@ -362,7 +551,9 @@ public class J4RealEventDetailsPhase1Service {
             J4RealPhase1ExecutionClaim claim,
             EventDetailsProviderRequest request,
             CampaignResources resources,
-            Counters counters) {
+            Counters counters,
+            J8BenchmarkAuditService.Session audit,
+            J8BenchmarkAuditService.Unit unit) {
         if (resources.campaign == null) {
             if (!controlService.executionMayContinue(claim.requestId())) {
                 throw new EventDetailsTransportException(
@@ -374,8 +565,26 @@ public class J4RealEventDetailsPhase1Service {
         if (!controlService.executionMayContinue(claim.requestId())) {
             throw new EventDetailsTransportException(EventDetailsTransportFailure.OPERATOR_STOP);
         }
-        counters.providerCallAttempts++;
-        return resources.campaign.execute(request);
+        try {
+            audit.startAttempt(unit);
+        }
+        catch (RuntimeException exception) {
+            throw new BenchmarkAuditException(exception);
+        }
+        EventDetailsTransportResponse response;
+        try {
+            response = resources.campaign.execute(request);
+        }
+        finally {
+            counters.providerCallAttempts++;
+        }
+        try {
+            audit.captureResponse(unit, response.httpStatus(), response.latency().toMillis());
+        }
+        catch (RuntimeException exception) {
+            throw new BenchmarkAuditException(exception);
+        }
+        return response;
     }
 
     private J4RealEventDetailsPhase1Result failAndLock(
@@ -394,6 +603,35 @@ public class J4RealEventDetailsPhase1Service {
                 results,
                 unavailableResults,
                 cleanupFailure != null);
+    }
+
+    private void recordAuditOrFailClosed(
+            UUID requestId,
+            Counters counters,
+            List<J4RealEventDetailsEventResult> results,
+            List<J4RealEventDetailsUnavailableResult> unavailableResults,
+            CampaignResources resources,
+            Runnable auditWrite) {
+        try {
+            auditWrite.run();
+        }
+        catch (RuntimeException auditFailure) {
+            try {
+                failAndLock(
+                        requestId,
+                        "BENCHMARK_AUDIT_FAILURE",
+                        counters,
+                        results,
+                        unavailableResults,
+                        resources);
+            }
+            catch (RuntimeException lockFailure) {
+                if (lockFailure != auditFailure) {
+                    auditFailure.addSuppressed(lockFailure);
+                }
+            }
+            throw auditFailure;
+        }
     }
 
     private J4RealEventDetailsPhase1Result failAndLockAfterCleanup(
@@ -488,8 +726,9 @@ public class J4RealEventDetailsPhase1Service {
             RawSnapshotSchemaStatus status,
             String errorCode) {
         return switch (raw.outcome()) {
-            case INSERTED, DEDUPLICATED -> classifySafely(
+            case INSERTED -> classifySafely(
                     raw.snapshotId(), status, errorCode);
+            case DEDUPLICATED -> true;
             case CACHE_HIT -> false;
         };
     }
@@ -545,6 +784,13 @@ public class J4RealEventDetailsPhase1Service {
     private static final class Counters {
         private int providerCallAttempts;
         private int cacheHits;
+    }
+
+    private static final class BenchmarkAuditException extends RuntimeException {
+
+        private BenchmarkAuditException(RuntimeException cause) {
+            super(cause);
+        }
     }
 
     private static final class CampaignResources {

@@ -10,6 +10,7 @@ import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotAcquisitionMode;
+import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceOutcome;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceResult;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportResponse;
@@ -18,6 +19,7 @@ import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.function.Consumer;
 
 /**
  * Persists bounded raw evidence and applies deterministic incident transitions.
@@ -42,35 +44,54 @@ public final class J3ScheduledEventsOutcomeProcessor {
 
     public J3ScheduledEventsOutcome processResponse(
             ScheduledEventsTransportResponse response) {
+        return processResponse(response, ignored -> { });
+    }
+
+    public J3ScheduledEventsOutcome processResponse(
+            ScheduledEventsTransportResponse response,
+            Consumer<RawSnapshotPersistenceResult> snapshotPersisted) {
         Objects.requireNonNull(response, "response");
+        Consumer<RawSnapshotPersistenceResult> persisted = Objects.requireNonNull(
+                snapshotPersisted, "snapshotPersisted");
         if (response.httpStatus() >= 200 && response.httpStatus() < 300) {
             return processSuccessfulStatus(
                     response,
-                    RawSnapshotAcquisitionMode.DIRECT_LOCAL_ENDPOINT);
+                    RawSnapshotAcquisitionMode.DIRECT_LOCAL_ENDPOINT,
+                    persisted);
         }
 
         J3CircuitReason reason = reasonForHttpStatus(response.httpStatus());
         RawSnapshotSchemaStatus schemaStatus = response.httpStatus() == 404
                 ? RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE
                 : RawSnapshotSchemaStatus.TRANSPORT_ERROR;
-        RawSnapshotPersistenceResult persistence = snapshotStore.save(snapshot(
+        RawSnapshotPersistenceResult persistence = persist(snapshot(
                 response,
                 schemaStatus,
                 reason.name()));
+        persisted.accept(persistence);
         J3CircuitSnapshot opened = recordHttpIncident(response, reason);
         return J3ScheduledEventsOutcome.recorded(persistence, opened);
     }
 
     public J3ScheduledEventsOutcome processImportedResponse(
             ScheduledEventsTransportResponse response) {
+        return processImportedResponse(response, ignored -> { });
+    }
+
+    public J3ScheduledEventsOutcome processImportedResponse(
+            ScheduledEventsTransportResponse response,
+            Consumer<RawSnapshotPersistenceResult> snapshotPersisted) {
         Objects.requireNonNull(response, "response");
+        Consumer<RawSnapshotPersistenceResult> persisted = Objects.requireNonNull(
+                snapshotPersisted, "snapshotPersisted");
         if (response.httpStatus() < 200 || response.httpStatus() >= 300) {
             throw new IllegalArgumentException(
                     "a local JSON import must model a successful response body");
         }
         return processSuccessfulStatus(
                 response,
-                RawSnapshotAcquisitionMode.MANUAL_LOCAL_JSON_IMPORT);
+                RawSnapshotAcquisitionMode.MANUAL_LOCAL_JSON_IMPORT,
+                persisted);
     }
 
     public J3ScheduledEventsOutcome processFailure(
@@ -93,12 +114,14 @@ public final class J3ScheduledEventsOutcomeProcessor {
 
     private J3ScheduledEventsOutcome processSuccessfulStatus(
             ScheduledEventsTransportResponse response,
-            RawSnapshotAcquisitionMode acquisitionMode) {
-        RawSnapshotPersistenceResult persistence = snapshotStore.save(snapshot(
+            RawSnapshotAcquisitionMode acquisitionMode,
+            Consumer<RawSnapshotPersistenceResult> snapshotPersisted) {
+        RawSnapshotPersistenceResult persistence = persist(snapshot(
                 response,
                 acquisitionMode,
                 RawSnapshotSchemaStatus.RAW_ONLY,
                 null));
+        snapshotPersisted.accept(persistence);
         ScheduledEventsParseResult parsing = parser.parseTransportResponse(response);
         RawSnapshotSchemaStatus schemaStatus = switch (parsing.status()) {
             case PARSED -> RawSnapshotSchemaStatus.PARSED;
@@ -108,7 +131,9 @@ public final class J3ScheduledEventsOutcomeProcessor {
         String errorCode = parsing.status() == ScheduledEventsParseStatus.PARSED
                 ? null
                 : parsing.status().name();
-        snapshotStore.classify(persistence.snapshotId(), schemaStatus, errorCode);
+        if (persistence.outcome() == RawSnapshotPersistenceOutcome.INSERTED) {
+            classify(persistence.snapshotId(), schemaStatus, errorCode);
+        }
 
         if (parsing.status() == ScheduledEventsParseStatus.PARSED) {
             return J3ScheduledEventsOutcome.parsed(
@@ -138,6 +163,36 @@ public final class J3ScheduledEventsOutcomeProcessor {
         return circuit.recordIncident(J3CircuitIncident.at(
                 reason,
                 response.receivedAt()));
+    }
+
+    private RawSnapshotPersistenceResult persist(RawManualCallSnapshot snapshot) {
+        try {
+            return Objects.requireNonNull(
+                    snapshotStore.save(snapshot), "snapshotStore result");
+        }
+        catch (EvidencePersistenceException exception) {
+            throw exception;
+        }
+        catch (RuntimeException exception) {
+            throw new EvidencePersistenceException(
+                    "RAW_PERSISTENCE_ERROR", exception);
+        }
+    }
+
+    private void classify(
+            long snapshotId,
+            RawSnapshotSchemaStatus schemaStatus,
+            String errorCode) {
+        try {
+            snapshotStore.classify(snapshotId, schemaStatus, errorCode);
+        }
+        catch (EvidencePersistenceException exception) {
+            throw exception;
+        }
+        catch (RuntimeException exception) {
+            throw new EvidencePersistenceException(
+                    "RAW_CLASSIFICATION_ERROR", exception);
+        }
     }
 
     private static J3CircuitReason reasonForHttpStatus(int status) {
@@ -180,5 +235,19 @@ public final class J3ScheduledEventsOutcomeProcessor {
                 ScheduledEventsV1Parser.PARSER_VERSION,
                 schemaStatus,
                 errorCode);
+    }
+
+    static final class EvidencePersistenceException extends RuntimeException {
+
+        private final String code;
+
+        private EvidencePersistenceException(String code, RuntimeException cause) {
+            super(code, cause);
+            this.code = code;
+        }
+
+        String code() {
+            return code;
+        }
     }
 }
