@@ -16,8 +16,21 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - préparation d'une preuve multi-dossier séparée sous WO-019, plafonnée à 38 appels directs et
   bloquée avant réseau par ADR-SS-002, la readiness hors ligne, une sauvegarde/restauration V28 et
   un go propriétaire explicite à usage unique ;
+- ouverture de `WO-SS-20260831-019` sur le worktree distinct
+  `codex/j9-provider-robustness`, avec corpus D1/D2/D3 et huit campagnes unitaires existantes,
+  sans orchestrateur, code runtime, migration ou extension d'allowlist ;
+- proposition d'ADR-SS-002 v0.1, sans effet réseau tant que le propriétaire ne l'a pas acceptée,
+  pour rendre explicite l'exception unique portant le plafond agrégé de 30 à 38 appels ;
+- revue factuelle de sources officielles : restrictions publiées sur les requêtes automatisées,
+  le scraping, l'agrégation, la reproduction et l'extraction substantielle sans consentement
+  explicite ; point d'entrée `Sofascore API` et canal `Product -> API` présents, mais aucune licence,
+  authentification, limite d'appel ou permission applicable extraite ; aucune conclusion juridique ;
 - maintien d'ADR-SS-003 à `NOT_CREATED` : tout transfert HTTPS/mTLS vers le Betting Project reste
-  une étude future, facultative et sans dépendance critique ;
+  une étude future, facultative et sans dépendance critique ; une topologie Playwright sur VPS de
+  production n'est plus exclue, mais reste non mesurée et non autorisée ;
+- validation standard de chacun des deux lots documentaires : 928 tests, zéro échec, zéro erreur et
+  quatre skips prévus ; diff, liens Markdown locaux, recherche de credentials et valeurs par défaut
+  loopback/réseau contrôlés, sans appel fournisseur ;
 - aucun appel fournisseur, push, PR ou fusion vers `main` n'est autorisé par ce lot d'ouverture.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but

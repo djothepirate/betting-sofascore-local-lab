@@ -1,0 +1,339 @@
+# ADR-SS-002 - Preuve fournisseur multi-dossier bornée pour J9
+
+- **Statut :** Proposé — décision propriétaire requise, non applicable au réseau
+- **Version :** 0.1
+- **Date :** 2026-08-31
+- **Décideur :** Porteur du Betting Project
+- **Portée :** une campagne locale de preuve J9 sous `WO-SS-20260831-019`
+- **Base :** `a47c932` sur `codex/j9-decision`
+- **ADR qualifié :** `ADR-SS-001 v1.4`, inchangé
+- **Cible Java :** Java 25 LTS
+- **Transport :** Playwright existant, manuel, local et opt-in
+- **Nouvel endpoint, URI, transport ou code runtime :** aucun
+- **Effet tant que le statut reste proposé :** aucun appel fournisseur autorisé
+- **Option de production VPS future :** non exclue, non mesurée et non autorisée par cet ADR
+
+## 1. Contexte
+
+J8 est validé sur une seconde fenêtre comprenant vingt tentatives directes, vingt réponses et vingt
+parsings compatibles. Un dossier est exploitable, mais aucun dossier n'est strictement complet.
+Cette preuve borne l'accessibilité et la stabilité observées ; elle ne prouve pas la robustesse sur
+un corpus hétérogène de plusieurs dossiers.
+
+Le propriétaire retient comme orientation J9 préférée `PREPARE_OPTIONAL_INTEGRATION`, tout en
+exigeant une nouvelle preuve réelle avant la décision finale. Il choisit un parcours couvrant une
+découverte J3, une découverte tournoi et trois dossiers J4/J5. Son plafond théorique de 38 appels
+est supérieur à la borne métier complète J8 de 30 appels.
+
+ADR-SS-001 §9 exige un nouvel ADR lors d'une modification des bornes de volume. La présente
+proposition traite uniquement cette exception de preuve. Elle ne promeut pas le laboratoire, ne
+crée aucune intégration et ne modifie pas durablement la cadence fournisseur.
+
+## 2. Problème à résoudre
+
+Il faut décider si une seule série manuelle et bornée peut être exécutée pour mesurer la robustesse
+actuelle sur trois dossiers sans :
+
+- transformer huit campagnes unitaires en orchestration automatique ;
+- réutiliser une confirmation ou un contexte Playwright ;
+- dépasser 38 appels directs ;
+- affaiblir les arrêts, délais, allowlists, limites de taille ou règles sans retry ;
+- interpréter l'absence de refus technique comme une permission contractuelle ;
+- créer une dépendance du Betting Project envers SofaScore ou le poste Windows.
+
+## 3. Décision proposée
+
+Si, et seulement si, le propriétaire accepte explicitement la présente version, une campagne
+unique peut devenir éligible après satisfaction de toutes les autres portes de WO-019.
+
+```text
+ADR_SS_002_DECISION=AUTHORIZE_ONE_BOUNDED_MULTI_DOSSIER_EVIDENCE_SERIES
+ADR_SS_002_NETWORK_EFFECT_WHILE_PROPOSED=NONE
+SERIES_COUNT=1
+GLOBAL_MAXIMUM_DIRECT_ATTEMPTS=38
+MAXIMUM_CONCURRENCY=1
+MINIMUM_DELAY_SECONDS=3
+REQUEST_TIMEOUT_SECONDS=10
+AUTOMATIC_RETRY=0
+FALLBACK=0
+POLLING=0
+SCHEDULER=0
+LIVE_MODE=0
+REPLACEMENT_DOSSIER=NO
+```
+
+### 3.1 Familles fermées
+
+La série utilise uniquement les six familles déjà implémentées et allowlistées :
+
+```text
+SCHEDULED_EVENTS
+TOURNAMENT_SCHEDULED_EVENTS
+EVENT_DETAILS
+EVENT_STATISTICS
+EVENT_INCIDENTS
+EVENT_LINEUPS
+```
+
+Aucune route libre, query libre, autre origine, autre transport ou famille différée n'est admise.
+`TOURNAMENT_STANDINGS` et `TEAM_RECENT_EVENTS` restent interdits. J4 utilise uniquement la phase 2
+sur une identité canonique résolue côté serveur.
+
+### 3.2 Enveloppe d'appels
+
+| Segment | Unité existante | Maximum direct |
+|---|---|---:|
+| A1 | J3 `SCHEDULED_EVENTS`, pages contiguës `1..25` | 25 |
+| A2 | J3 `TOURNAMENT_SCHEDULED_EVENTS` pour D1 | 1 |
+| A3 | J4 phase 2 pour D1 | 1 |
+| A4 | J5 statistiques, incidents, compositions pour D1 | 3 |
+| B1 | J4 phase 2 pour D2 | 1 |
+| B2 | J5 statistiques, incidents, compositions pour D2 | 3 |
+| B3 | J4 phase 2 pour D3 | 1 |
+| B4 | J5 statistiques, incidents, compositions pour D3 | 3 |
+|  | **Plafond absolu** | **38** |
+
+Le coût réel peut être inférieur à cause du terminal J3 ou d'un cache frais. Aucun cache ne sera
+supprimé, invalidé, contourné ou artificiellement expiré. Un cache hit vaut zéro appel direct et
+reste une limite de mesure.
+
+Le plafond agrégé est contrôlé depuis le ledger avant chaque sous-campagne. Il s'agit d'une garde
+procédurale ; le runtime ne possède pas de compteur transactionnel global multi-campagne. Si la
+readiness ne démontre pas que cette garde peut être appliquée sans ambiguïté, aucun réseau n'est
+autorisé et un Work Order de code séparé devient nécessaire.
+
+### 3.3 Corpus immuable et ordre
+
+| Ordre | Dossier | Provider ID | Identité canonique | Rôle |
+|---:|---|---:|---|---|
+| D1 | Cittadella — Atalanta U23 | `16691018` | `f4713f80-4769-3656-ba51-61d8ac1aa814` | Ancrage J3 du 2026-08-15, phase `15118`, tournoi `824`, saison `99790`, puis J4/J5 |
+| D2 | Barracas Central — Rosario Central | `16671566` | `da075869-34d4-3d42-83d2-613583691845` | Cas historique complet J4/J5 et incident `Off the ball foul` |
+| D3 | Lille — Paris Saint-Germain | `16310930` | `c40066c9-987b-38d9-b415-869a453d2ad6` | Baseline Playwright récente avec trois familles J5 complètes |
+
+Les identités, leur ordre et leur rôle sont figés. Une identité devenue inéligible arrête la série
+avant réseau. Aucun quatrième dossier, remplacement ou sélection dynamique n'est admis.
+
+### 3.4 Autorisation et gestes humains
+
+L'acceptation de l'ADR ne constitue pas le go de campagne. Après readiness, sauvegarde/restauration
+V28 et gel du manifeste, le propriétaire doit fournir un go global distinct contenant :
+
+- l'identifiant de WO-019 et la version acceptée d'ADR-SS-002 ;
+- les trois provider IDs et identités canoniques ;
+- le plafond 38 ;
+- une fenêtre UTC exclusive `[FROM,TO)` d'au plus 60 minutes ;
+- l'exécutant autorisé.
+
+Le go est à usage unique. Il expire à `TO`, au premier incident global ou à la fin de la série.
+Chaque sous-campagne conserve néanmoins sa préparation locale fraîche, sa phrase exacte, son
+acquittement, son claim et son action finale. Ces confirmations techniques matérialisent le go ;
+elles ne l'étendent pas et ne forment aucune boucle automatique.
+
+Chaque sous-campagne crée un worker JVM, un Chromium et un `BrowserContext` non persistant neufs.
+Aucun profil, cookie injecté, `storageState`, HAR, trace, vidéo, capture ou téléchargement n'est
+conservé.
+
+### 3.5 Outcomes et arrêt global
+
+- J3 conserve sa sémantique native : `404`, pagination non contiguë, page 25 encore suivie ou
+  absence de terminal `hasNextPage=false` arrête toute la série.
+- J4 phase 2 conserve `404 -> COMPLETED_UNAVAILABLE`, sans parsing ni retry.
+- J5 conserve `404 -> UNAVAILABLE`, puis passe à la famille suivante.
+- Un `404` J4/J5 autorisé n'est pas un incident de sécurité, mais borne le verdict global à
+  `PARTIAL_BOUNDED`.
+- Tout autre incident fournisseur ou local terminal arrête toute la série. Les unités non
+  commencées deviennent `NOT_STARTED_AFTER_GLOBAL_STOP` dans le rapport, sans tentative fictive.
+
+Les incidents terminaux incluent `401`, `403`, `429`, `5xx`, timeout, redirection, HTML/challenge,
+origine ou route inattendue, schéma incompatible, contenu sensible, taille supérieure à 5 Mio,
+erreur de transport/persistance/traitement, perte de lease, défaut de nettoyage, dépassement du
+plafond ou fin de fenêtre.
+
+### 3.6 Sources officielles et limite de permission
+
+La revue officielle a été effectuée le `2026-08-30T22:29:27Z`, soit le 31 août en Europe/Paris.
+Elle consigne des faits documentaires, pas un avis juridique :
+
+| Source officielle | Observation factuelle | Limite |
+|---|---|---|
+| `https://www.sofascore.com/en-us/terms-and-conditions` | Conditions déclarées mises à jour le 18 septembre 2024 ; usage personnel/non commercial ; restrictions explicites sur la charge serveur par requêtes automatisées, l'intégration, l'agrégation, le scraping, la reproduction et l'extraction substantielle de base sans consentement explicite, avec les réserves légales formulées par le texte. | Aucun quota, droit d'accès aux endpoints du laboratoire ou mécanisme de consentement n'a été extrait. Le corps direct est rendu dynamiquement ; les clauses ont été retrouvées dans l'index de la même URL officielle. |
+| `https://www.sofascore.com/robots.txt` | Fichier `text/plain` de 181 lignes ; exclusions de chemins et sitemaps, sans correspondance textuelle `/api`, `Allow:` ou `Crawl-delay`. | Hôte `www` seulement ; l'absence de règle `/api` n'est pas une permission et ne décrit pas `api.sofascore.com`. |
+| `https://api.sofascore.com/api/docs/external` | Point d'entrée officiel intitulé `Sofascore API`, accessible mais sans contenu extractible. | Aucune authentification, licence, clé, tarification, limite d'appel ou endpoint autorisé n'a pu être établi. |
+| `https://corporate.sofascore.com/contact` | Le formulaire officiel contient le chemin `Product -> API`. | Canal de contact seulement ; aucune autorisation ou condition technique publiée. |
+| `https://corporate.sofascore.com/widgets` | Un mode d'intégration officiel par widget/iframe est publié. | Il ne documente ni extraction, ni stockage des données, ni accès aux endpoints du laboratoire. |
+
+```text
+TERMS_LATEST_DECLARED_UPDATE=2024-09-18
+AUTOMATED_SERVER_BURDEN_RESTRICTED=YES
+SCRAPING_AGGREGATION_REPRODUCTION_RESTRICTED_WITHOUT_EXPLICIT_CONSENT=YES_WITH_LEGAL_RESERVATION
+SUBSTANTIAL_DATABASE_EXTRACTION_RESTRICTED_WITHOUT_EXPLICIT_AGREEMENT=YES_WITH_LEGAL_RESERVATION
+OFFICIAL_API_DOC_ENTRYPOINT_PRESENT=YES_TITLE_ONLY
+API_AUTHENTICATION_TERMS_EXTRACTED=NO
+API_RATE_LIMIT_EXTRACTED=NO
+API_LICENSE_EXTRACTED=NO
+OFFICIAL_API_CONTACT_CHANNEL_PRESENT=YES
+EXPLICIT_PERMISSION_FOR_LAB_ENDPOINTS_EVIDENCED=NO
+LEGAL_CONCLUSION=NOT_PROVIDED
+```
+
+L'acceptation de cet ADR exige donc une décision propriétaire éclairée sur cette incertitude. La
+présente proposition ne transforme ni `robots.txt`, ni l'existence d'une page API, ni une ancienne
+réussite technique en consentement. Le propriétaire peut suspendre la campagne et utiliser le
+canal officiel `Product -> API` avant toute acceptation.
+
+### 3.7 Non-autorisations
+
+Même acceptée, cette décision n'autorise pas :
+
+- une seconde série, une répétition périodique ou une reprise ;
+- une hausse de concurrence, un retry ou un fallback ;
+- un nouvel endpoint, une URI libre ou un autre transport ;
+- une orchestration multi-dossier automatique ;
+- la conservation d'un état navigateur ;
+- une intégration avec le Betting Project, un push HTTPS ou mTLS ;
+- une utilisation commerciale, un déploiement VPS courant ou une dépendance critique ;
+- une purge de la base primaire ;
+- ADR-SS-003 ou une décision J9 finale.
+
+### 3.8 Position sur une production VPS future
+
+Le recours à Playwright permet de conserver comme option d'architecture un déploiement futur sur
+un environnement VPS de production. Cette possibilité n'est donc pas rejetée par principe. Elle
+n'est cependant ni étudiée par la campagne Windows résidentielle, ni autorisée par le présent ADR.
+
+```text
+FUTURE_VPS_PRODUCTION_OPTION=NOT_EXCLUDED
+CURRENT_VPS_DEPLOYMENT_AUTHORIZED=NO
+CURRENT_PRODUCTION_APPROVAL=NO
+VPS_PROVIDER_ACCESSIBILITY=NOT_MEASURED
+VPS_PLAYWRIGHT_OPERABILITY=NOT_MEASURED
+VPS_TERMS_AND_PERMISSION_COMPATIBILITY=NOT_MEASURED
+NO_CRITICAL_DEPENDENCY=REQUIRED
+```
+
+Une future décision ADR-SS-003 devra comparer la topologie locale avec transfert optionnel et la
+topologie VPS Playwright. Elle devra traiter séparément droits d'usage, caractère commercial,
+egress et blocages propres aux hébergeurs, sandbox du navigateur, secrets, certificats, durcissement,
+ressources, supervision, reprise, mise à jour et dépendance du Betting Project. Aucun résultat de
+WO-019 ne sera présenté comme une qualification du réseau ou du runtime VPS.
+
+## 4. Qualification de la décision existante
+
+ADR-SS-001 v1.4 reste l'autorité générale. ADR-SS-002 ne remplace aucune de ses protections. Il
+qualifie uniquement, pour une série et un corpus fermés, la borne de volume portée de 30 à 38.
+
+```text
+ADR_SS_001_STATUS=UNCHANGED
+ADR_SS_001_PROTECTIVE_RULES=FULLY_APPLICABLE
+ADR_SS_002_SCOPE=ONE_EVIDENCE_SERIES_ONLY
+PERMANENT_VOLUME_CHANGE=NO
+PRODUCTION_PROMOTION=NO
+```
+
+## 5. Raisons de la proposition
+
+- le propriétaire exige une preuve multi-dossier avant la décision J9 ;
+- les parcours unitaires et leur audit existent déjà ;
+- trois dossiers hétérogènes réduisent la dépendance à un seul cas sans prétention statistique ;
+- une borne absolue, un ordre fermé et l'arrêt au premier incident limitent l'exposition ;
+- un ADR séparé rend visible l'augmentation de volume et évite de la faire passer pour un simple
+  prolongement de J8.
+
+## 6. Alternatives étudiées
+
+### 6.1 Décider J9 avec J8 uniquement
+
+Avantage : aucun nouvel appel. Limite : le propriétaire a explicitement jugé la preuve de
+robustesse insuffisante. Non retenu comme voie préférée ; reste possible si la proposition est
+rejetée, avec recommandation `KEEP_LOCAL`.
+
+### 6.2 Trois dossiers J4/J5 seulement, maximum 12 appels
+
+Avantage : volume inférieur à la borne J8 et allowlist réduite à quatre familles. Limite : ne
+requalifie ni la découverte J3 ni le routage tournoi choisis par le propriétaire. Non retenu.
+
+### 6.3 Trois parcours complets J3 vers J5
+
+Avantage : couverture identique par dossier. Limite : jusqu'à 90 appels et exposition excessive.
+Rejeté.
+
+### 6.4 Orchestrateur et disjoncteur global codés
+
+Avantage : plafond transactionnel. Limite : changement runtime hors du besoin de décision et
+nouveau risque d'automatisation. Différé ; exigera un Work Order séparé si le contrôle procédural
+ne peut pas être qualifié.
+
+### 6.5 Obtenir d'abord un consentement explicite via le canal officiel
+
+Avantage : réduit l'incertitude documentaire. Limite : dépend d'une réponse externe et de ses
+conditions. Cette option reste ouverte et peut devenir une porte préalable décidée par le
+propriétaire.
+
+## 7. Conséquences
+
+### 7.1 Positives
+
+- décision de volume visible et révocable ;
+- corpus, coût, ordre et arrêts reproductibles ;
+- séparation claire entre preuve, décision J9 et future intégration ;
+- aucune modification de code ni d'ADR-SS-001.
+- conservation explicite d'une option VPS future sans la confondre avec une approbation actuelle.
+
+### 7.2 Négatives et risques
+
+- jusqu'à 38 requêtes directes dans une fenêtre ;
+- garde globale procédurale, non transactionnelle ;
+- huit campagnes unitaires et gestes opérateur associés ;
+- possibilité de résultat partiel ou d'arrêt dès le premier segment ;
+- restrictions officielles observées et absence de permission explicite prouvée ;
+- aucune généralisation statistique, juridique ou de production.
+- aucune mesure d'accessibilité ou d'opérabilité Playwright depuis un VPS.
+
+## 8. Critères d'acceptation de l'ADR
+
+Avant le passage éventuel à `ACCEPTED`, le propriétaire doit confirmer explicitement :
+
+```text
+ADR_SS_002_OWNER_DECISION=ACCEPT
+OFFICIAL_SOURCE_REVIEW_ACKNOWLEDGED=YES
+CORPUS_D1_D2_D3_ACCEPTED=YES
+GLOBAL_MAXIMUM_DIRECT_ATTEMPTS_38_ACCEPTED=YES
+ONE_GLOBAL_GO_MODEL_ACCEPTED=YES
+GO_MAXIMUM_DURATION_60_MINUTES_ACCEPTED=YES
+NATIVE_J4_J5_404_CONTINUATION_ACCEPTED=YES
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+FUTURE_VPS_PRODUCTION_OPTION_ACKNOWLEDGED=NOT_EXCLUDED_BUT_NOT_AUTHORIZED
+```
+
+Une instruction générale d'implémenter J9 ne remplace pas ce bloc d'acceptation. Sans décision
+explicite, le statut reste `PROPOSED` et `NETWORK_AUTHORIZED=NO`.
+
+## 9. Déclencheurs de réexamen
+
+Un nouvel ADR est requis avant :
+
+- changement du corpus, de l'ordre, de la fenêtre ou du plafond 38 ;
+- deuxième série, reprise après incident ou remplacement de dossier ;
+- nouveau endpoint, transport, retry, fallback, concurrence ou automatisation ;
+- conservation d'un état navigateur ;
+- autorisation d'intégration, d'usage commercial, de production VPS ou de dépendance du Betting
+  Project ; l'étude de ces options relève d'ADR-SS-003 ;
+- changement matériel des conditions officielles ou réponse spécifique de SofaScore ;
+- création d'un mécanisme global exécutoire dans le runtime.
+
+## 10. Références
+
+1. `ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md`, version 1.4.
+2. `docs/work_orders/active/WO-SS-20260831-018-decision-j9.md`.
+3. `docs/work_orders/active/WO-SS-20260831-019-j9-provider-robustness.md`.
+4. `docs/benchmark/J8-BENCHMARK-REPORT-20260830.md`.
+5. `docs/runbooks/J8-BENCHMARK.md`.
+6. `docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md`.
+7. Sources officielles listées au paragraphe 3.6, consultées le 2026-08-31 local.
+
+## 11. Historique
+
+| Version | Date | Évolution |
+|---|---|---|
+| 0.1 | 2026-08-31 | Proposition d'une série unique à trois dossiers et 38 appels maximum ; revue officielle factuelle ; aucun effet réseau avant décision propriétaire. |

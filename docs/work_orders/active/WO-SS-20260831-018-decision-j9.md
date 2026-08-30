@@ -9,12 +9,13 @@
 - **Branche :** `codex/j9-decision`
 - **Prérequis :** J8 `VALIDATED`, WO-016 et WO-017 clôturés
 - **ADR applicable :** `ADR-SS-001 v1.4`
-- **ADR de preuve requis :** `ADR-SS-002 — REQUIRED, NOT_CREATED`
+- **ADR de preuve requis :** `ADR-SS-002 v0.1 — PROPOSED, NOT_ACCEPTED`
 - **ADR d'intégration :** `ADR-SS-003 — NOT_CREATED`
 - **Appel fournisseur autorisé par ce Work Order :** `NO`
 - **Implémentation d'intégration autorisée :** `NO`
 - **Polling, scheduler, live, retry ou fallback :** `NOT_AUTHORIZED`
 - **Production, VPS ou dépendance critique :** `NOT_AUTHORIZED`
+- **Option de production VPS future :** `NOT_EXCLUDED, NOT_MEASURED, NOT_AUTHORIZED`
 
 ## 1. Objectif
 
@@ -58,7 +59,9 @@ J9_PROVIDER_ACQUISITION_MODE=MANUAL_ON_DEMAND
 J9_INTEGRATION_IMPLEMENTATION_AUTHORIZED=NO
 J9_LIVE_OR_SCHEDULED_OPERATION_AUTHORIZED=NO
 J9_BETTING_PROJECT_CRITICAL_DEPENDENCY=NO
-ADR_SS_002_STATUS=REQUIRED_BEFORE_EVIDENCE_CAMPAIGN
+J9_FUTURE_VPS_PRODUCTION_OPTION=NOT_EXCLUDED
+J9_CURRENT_VPS_DEPLOYMENT_AUTHORIZED=NO
+ADR_SS_002_STATUS=PROPOSED_NOT_ACCEPTED
 ADR_SS_003_STATUS=NOT_CREATED
 ```
 
@@ -99,8 +102,8 @@ preuve, et non un échec ou une réussite supposée.
 | Maintenabilité | Aucun temps d'adaptation à une rupture de schéma ou de restauration hors ligne n'est chronométré. | Rapport J8, `ADAPTATION_TIME_ABSENT` | `NOT_MEASURED` | Aucun engagement de compatibilité ou coût de maintenance durable ne peut être publié. |
 | Export et audit | J7 produit un document UTF-8 déterministe limité à 5 Mio, avec exactement `manifest` et `data`, schéma `urn:betting-project:sofascore-local-lab:j7:canonical-event-export:v1`, version `1.0.0`; seul `HUMAN_VALIDATED` est téléchargeable. | Architecture et runbook J7 | `PASS_LOCAL` | Aucun contrat de transfert, accusé distant ou état de livraison n'existe encore. |
 | Rétention et purge | J6 applique 30 jours, ne purge que les octets bruts après plan et sauvegarde qualifiée, et ne supprime jamais les observations normalisées. La dernière restauration réelle versionnée a été qualifiée sous Flyway V22, couverture maximale snapshot 272 ; les scripts sont maintenant alignés sur V28. | Runbook J6 et qualification du 2026-08-19 | `PARTIAL` | Une sauvegarde chiffrée fraîche V28 et sa restauration isolée doivent être qualifiées avant toute nouvelle campagne réelle. |
-| Indépendance du Betting Project | Le dépôt est local, expérimental, séparé et sans dépendance critique du projet principal. | ADR-SS-001 et cadrage | `PASS` | Toute intégration future doit rester facultative, désactivable et sans appel SofaScore depuis le VPS. |
-| Conditions d'utilisation | Le dépôt ne contient pas de preuve officielle actuelle, datée et suffisamment précise sur l'accès automatisé pertinent pour cette campagne. | Inventaire documentaire J9 | `NOT_MEASURED` | Les sources officielles accessibles doivent être recensées avant l'acceptation d'ADR-SS-002 ; leur silence ne sera pas interprété comme une autorisation. |
+| Indépendance du Betting Project | Le dépôt est actuellement local, expérimental, séparé et sans dépendance critique du projet principal. | ADR-SS-001 et cadrage | `PASS_CURRENT` | Un déploiement Playwright futur sur VPS n'est plus exclu, mais sa faisabilité et son impact sur l'indépendance restent `NOT_MEASURED`; il exigerait une décision séparée et ne pourrait devenir une dépendance critique implicite. |
+| Conditions d'utilisation | Les conditions officielles déclarées à jour le 18 septembre 2024 restreignent notamment la charge serveur par requêtes automatisées, l'intégration, l'agrégation, le scraping, la reproduction et l'extraction substantielle sans consentement explicite, avec les réserves légales du texte. Un point d'entrée officiel `Sofascore API` et un contact `Product -> API` existent, mais aucune licence, authentification, limite d'appel ou permission pour les endpoints du laboratoire n'a été extraite. | Revue officielle J9 du 2026-08-31, URLs consignées dans ADR-SS-002 et WO-019 | `PARTIAL — RESTRICTIONS_PRESENT_PERMISSION_NOT_EVIDENCED` | Fait documentaire, sans conclusion juridique. L'acceptation d'ADR-SS-002 doit reconnaître cette incertitude ; une production VPS future exigerait une nouvelle revue et, selon la décision propriétaire, un consentement explicite. |
 | Sécurité et exploitation | Playwright est local, manuel et opt-in ; chaque campagne utilise un contexte neuf non persistant, sans profil, cookie réutilisé, `storageState`, HAR, trace, vidéo, capture ou téléchargement. Polling et refresh sont désactivés. | ADR-SS-001 v1.4 et architectures J3/J4/J5 | `PASS_BOUNDED` | Ces contrôles restent obligatoires et ne valent que pour les parcours et volumes explicitement autorisés. |
 
 ## 5. Règles de recommandation
@@ -163,6 +166,13 @@ L'orientation préférée décrit seulement la direction à étudier si J9 la co
 - retries bornés, idempotence, accusés, erreurs, contrat HTTP, supervision et rotation du
   certificat seraient décidés dans ADR-SS-003, pas dans ce Work Order.
 
+Playwright rend également envisageable, sans l'autoriser, une autre topologie où le laboratoire ou
+un composant dérivé s'exécuterait un jour sur un VPS de production. Cette option n'est plus exclue
+par principe. ADR-SS-003 devra comparer au minimum le push local optionnel ci-dessus et une
+topologie VPS Playwright, puis décider séparément droits d'usage, egress, sandbox navigateur,
+secrets, certificats, supervision, limites de ressources, disponibilité et indépendance métier.
+La campagne résidentielle Windows de WO-019 ne mesurera pas l'accessibilité depuis un VPS.
+
 Cette frontière n'est ni une API publique, ni une spécification implémentable, ni une autorisation
 d'écrire le client ou le serveur.
 
@@ -182,7 +192,8 @@ d'écrire le client ou le serveur.
 - intégration, endpoint, schéma SQL, migration ou modification du format J7 ;
 - polling, scheduler, tâche périodique, mode live ou collecte automatique ;
 - test de charge, généralisation statistique ou promesse de disponibilité ;
-- déploiement VPS, production ou dépendance du Betting Project envers ce dépôt ;
+- déploiement VPS ou production dans le lot courant ; cette topologie future reste ouverte mais
+  non mesurée et non autorisée ;
 - payload brut, URI concrète, header, cookie, jeton, certificat ou secret dans Git ;
 - modification des preuves gelées J6, J7 et J8.
 
@@ -200,6 +211,8 @@ J9_PROVIDER_ACQUISITION_MODE=MANUAL_ON_DEMAND
 J9_INTEGRATION_IMPLEMENTATION_AUTHORIZED=NO
 J9_LIVE_OR_SCHEDULED_OPERATION_AUTHORIZED=NO
 J9_BETTING_PROJECT_CRITICAL_DEPENDENCY=NO
+J9_FUTURE_VPS_PRODUCTION_OPTION=NOT_EXCLUDED
+J9_CURRENT_VPS_DEPLOYMENT_AUTHORIZED=NO
 J9_OWNER_CONFIRMATION_REQUIRED=YES
 ```
 

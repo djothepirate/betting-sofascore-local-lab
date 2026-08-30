@@ -13,7 +13,17 @@ appel fournisseur, ni intégration, ni nouveau endpoint, ni polling, ni schedule
 La preuve multi-dossier envisagée relève de WO-019 et reste bloquée jusqu'à l'acceptation explicite
 d'ADR-SS-002, une readiness hors ligne verte, une sauvegarde/restauration V28 qualifiée et un go
 propriétaire unique. ADR-SS-003 n'existe pas et demeure réservé à une éventuelle étude
-d'intégration après la décision finale J9.
+d'intégration après la décision finale J9. ADR-SS-002 est maintenant proposé, sans effet réseau.
+La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
+l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
+ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une
+conclusion juridique et doit être reconnu par le propriétaire avant toute acceptation de l'ADR.
+
+L'usage futur de Playwright sur un VPS de production n'est plus exclu comme option d'architecture,
+mais il reste `NOT_MEASURED` et `NOT_AUTHORIZED`. Le dépôt conserve aujourd'hui `LOCAL_ONLY` et
+`NOT_PRODUCTION_APPROVED`. Une telle topologie devra être comparée au push local optionnel dans un
+futur ADR-SS-003 et recevoir ses propres qualifications de droits d'usage, réseau, navigateur,
+secrets, exploitation et non-dépendance critique.
 
 Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**,
 **J3 — Appel manuel**, **J4 — Événements**, **J5 — Statistiques**, **J6 — Historique**,
@@ -656,6 +666,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 ```text
 betting-sofascore-local-lab/
 ├── ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md
+├── ADR-SS-002-bounded-multi-dossier-provider-robustness.md
 ├── AGENTS.md
 ├── README.md
 ├── SECURITY.md
@@ -867,6 +878,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 ## Documentation de référence
 
 - [ADR-SS-001](ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md)
+- [ADR-SS-002 proposé — preuve J9 multi-dossier bornée](ADR-SS-002-bounded-multi-dossier-provider-robustness.md)
 - [Architecture J0/J1](docs/architecture/ARCHITECTURE.md)
 - [Contrat hors ligne scheduled-events-v1](docs/architecture/SCHEDULED-EVENTS-V1.md)
 - [Contrat hors ligne event-details-v1](docs/architecture/EVENT-DETAILS-V1.md)
@@ -962,6 +974,8 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Rapport final gelé J8](docs/benchmark/J8-BENCHMARK-REPORT-20260830.md)
 - [Validation finale J8](docs/validation/J8-FINAL-VALIDATION-20260830.md)
 - [Work Order J8 validé](docs/work_orders/completed/WO-SS-20260829-016-benchmark-j8.md)
+- [Work Order actif de décision J9](docs/work_orders/active/WO-SS-20260831-018-decision-j9.md)
+- [Work Order actif de preuve de robustesse J9](docs/work_orders/active/WO-SS-20260831-019-j9-provider-robustness.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 
