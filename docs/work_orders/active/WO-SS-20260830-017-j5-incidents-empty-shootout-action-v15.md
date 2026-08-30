@@ -1,6 +1,6 @@
 # WO-SS-20260830-017 — Incidents J5 V15, tableau d'action vide pendant une séance terminale
 
-- **Statut :** `QUALIFICATION_AUTHORIZED_NOT_RUN`
+- **Statut :** `QUALIFICATION_EXECUTION_AUTHORIZED_NOT_RUN`
 - **Date :** 2026-08-30
 - **Date de démarrage :** 2026-08-30
 - **Qualification propriétaire :** `AUTHORIZED_2026-08-30T07:46:03Z`
@@ -207,8 +207,8 @@ TARGET_PROVIDER_EVENT_ID=16691018
 TARGET_CANONICAL_EVENT_ID=f4713f80-4769-3656-ba51-61d8ac1aa814
 ENDPOINT_ORDER=EVENT_STATISTICS,EVENT_INCIDENTS,EVENT_LINEUPS
 MAX_PROVIDER_CALLS=3
-MANUAL_UI_TRIGGER_REQUIRED=YES
-AUTOMATED_BROWSER_TRIGGER=NO
+MANUAL_UI_TRIGGER_REQUIRED_AT_INITIAL_GO=YES
+AUTOMATED_BROWSER_TRIGGER_AT_INITIAL_GO=NO
 J8_CAMPAIGN_RETRY=NO
 J8_SECOND_BENCHMARK_CAMPAIGN=NO
 PROVIDER_RETRY=NO
@@ -223,3 +223,39 @@ lanceur Playwright n'exécute aucun GET. Après démarrage, l'opérateur doit pr
 recopier la nouvelle phrase de confirmation et déclencher une seule fois la voie fournisseur. Au
 premier terminal autre qu'un `404` de famille, les familles suivantes ne doivent pas être tentées.
 Une fois la campagne terminale, ce go est consommé et n'autorise aucune répétition.
+
+## 12. Instruction propriétaire d'exécution intégrale par Codex
+
+Le propriétaire a ensuite demandé explicitement, le 2026-08-30 à `08:04:57Z`, de ne pas modifier
+`.env` et de confier à Codex l'unique campagne autorisée sans geste manuel supplémentaire. Cette
+instruction remplace uniquement la modalité d'exécution de la section 11 ; elle n'élargit ni la
+cible, ni les endpoints, ni le plafond, ni le droit de reprise.
+
+```text
+OWNER_EXECUTION_OVERRIDE_RECEIVED_AT=2026-08-30T08:04:57Z
+ENV_FILE_MUTATION=NO
+PROCESS_SCOPED_NETWORK_CONFIGURATION=AUTHORIZED_FOR_THIS_LAUNCH_ONLY
+CODEX_LOCAL_UI_CONTROL=AUTHORIZED_FOR_ONE_CAMPAIGN
+MANUAL_UI_GESTURES_REQUIRED=NO_BY_EXPLICIT_OWNER_INSTRUCTION
+TARGET_PROVIDER_EVENT_ID=16691018
+MAX_PROVIDER_CALLS=3
+PROVIDER_RETRY=NO
+FALLBACK=NO
+POLLING=NO
+SECOND_CAMPAIGN=NO
+```
+
+L'activation métier et Playwright doit donc vivre seulement dans l'arbre de processus du lanceur.
+La page contrôlée reste exclusivement `127.0.0.1`; aucun profil persistant, cookie, `storageState`,
+HAR, trace, vidéo, capture ou téléchargement n'est autorisé. Codex doit vérifier l'identité locale,
+préparer une fois, soumettre la confirmation fraîche une fois, attendre le terminal et s'arrêter au
+premier incident prévu par le runbook.
+
+L'instrumentation J8 créera normalement une campagne de ledger `J5_EVENT_DATA` distincte pour ce
+parcours. Cela ne modifie pas la fenêtre ni les preuves de la campagne J8 gelée :
+
+```text
+ORIGINAL_J8_FROZEN_WINDOW_UNCHANGED=YES
+ORIGINAL_J8_PROVIDER_CAMPAIGN_RETRY=NO
+V15_QUALIFICATION_J5_LEDGER_CAMPAIGN=CREATED_AS_REQUIRED
+```
