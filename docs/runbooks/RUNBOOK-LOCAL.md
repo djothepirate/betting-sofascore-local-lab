@@ -6,9 +6,11 @@ Démarrer, vérifier, exploiter et arrêter les jalons J0 à J8 sur Windows sans
 hors de la machine locale. J5 conserve sa qualification réelle exceptionnelle désactivée par
 défaut ; J6 consulte l'historique et garde sa rétention hors interface ; J7 assemble uniquement les
 données locales courantes et exige une décision humaine avant téléchargement ; J8 agrège et exporte
-uniquement les preuves locales. Sa seconde campagne bornée a terminé vingt tentatives sur vingt et
-son rapport automatique est `MEASURED`; J8 reste `READY_FOR_HUMAN_QUALIFICATION` tant que la revue
-ciblée, le rapport final et la décision propriétaire ne sont pas acquis. La découverte
+uniquement les preuves locales. Sa seconde campagne bornée a terminé vingt tentatives sur vingt,
+son rapport automatique est `MEASURED` et son bloc reproductible est gelé sous
+`docs/benchmark/J8-BENCHMARK-REPORT-20260830.md`. La revue ciblée et la décision propriétaire sont
+consignées, J8 est `VALIDATED`, toutes les voies fournisseur restent bloquées et aucune troisième
+campagne ni décision J9 n'est autorisée. La découverte
 tournoi → rencontres est qualifiée et son Work Order est clôturé depuis le 2026-08-21.
 
 ## 2. Première installation

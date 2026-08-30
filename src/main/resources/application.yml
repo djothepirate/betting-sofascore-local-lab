@@ -74,7 +74,7 @@ info:
   app:
     name: SofaScore Local Lab
     version: 0.1.0-SNAPSHOT
-    phase: J8-BENCHMARK-READY-FOR-HUMAN-QUALIFICATION
+    phase: J8-BENCHMARK-VALIDATED
     status: EXPERIMENTAL_LOCAL_ONLY
 
 sofascore:

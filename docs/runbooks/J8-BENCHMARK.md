@@ -6,14 +6,17 @@ Ce runbook qualifie la lecture HTML et l'export Markdown J8 à partir de Postgre
 normale n'exécute aucun appel fournisseur et ne nécessite aucun opt-in réseau.
 
 ```text
-WORK_ORDER_STATUS=READY_FOR_HUMAN_QUALIFICATION
+WORK_ORDER_STATUS=VALIDATED
 PROVIDER_CALL_REQUIRED=NO
 PROVIDER_CAMPAIGN_AUTHORIZED=SECOND_GO_CONSUMED_2026_08_30
 PROVIDER_CAMPAIGN_RESULT=MEASURED_COMPLETED_20_OF_20
 PLAYWRIGHT_REQUIRED=NO
 POLLING_OR_SCHEDULING=NO
 LOAD_TEST=NO
-FINAL_BENCHMARK_REPORT=NOT_CREATED_PENDING_TARGETED_HUMAN_REVIEW
+FINAL_BENCHMARK_REPORT=docs/benchmark/J8-BENCHMARK-REPORT-20260830.md
+HUMAN_TARGETED_REVIEW=PASS
+HUMAN_REVIEW_LIMITATIONS=PRESENT
+J9_DECISION_TAKEN=NO
 ```
 
 La section 10 conserve le protocole normatif d'une campagne fournisseur prospective. Le go explicite
@@ -354,14 +357,16 @@ le hash de population avant toute proposition de commit. Le rapport versionné e
 `request_key`, header, cookie, jeton, `.env`, log brut et artefact navigateur.
 
 À la fin, arrêter Playwright et l'application, reverrouiller tous les contrôles et vérifier les
-processus/ports. Les résultats réels sont consignés dans une preuve de validation distincte ; le
-rapport final n'est créé qu'après revue humaine. Dans l'état actuel :
+processus/ports. Les résultats réels sont consignés dans une preuve de validation distincte. La
+revue et le gel final ont été terminés le 2026-08-30 :
 
 ```text
 J8_PROVIDER_CAMPAIGN_GO=CONSUMED_2026_08_30
 J8_PROVIDER_CAMPAIGN=SECOND_BOUNDED_EXECUTION_COMPLETED
 J8_PROVIDER_CAMPAIGN_RESULT=MEASURED_COMPLETED_20_OF_20
-J8_FINAL_BENCHMARK_REPORT=NOT_CREATED_PENDING_TARGETED_HUMAN_REVIEW
+J8_FINAL_BENCHMARK_REPORT=docs/benchmark/J8-BENCHMARK-REPORT-20260830.md
+J8_AUTOMATIC_BLOCK_SHA256=ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25
+J8_EXPORT_NETWORK_CALLS=0
 ```
 
 ### 10.5 Exécution du 2026-08-30
@@ -436,20 +441,22 @@ la découverte tournoi indisponible, les préparations J4/J5 désactivées, Play
 refresh à `false`; il a ensuite été arrêté et le port 8087 est libre. `.env` est inchangé. Ce
 résultat n'autorise aucune troisième campagne.
 
-### 10.8 Préparation de la revue humaine ciblée
+### 10.8 Revue humaine ciblée et rapport gelé
 
-La campagne mesurée rend les métriques automatiques obligatoires disponibles, mais elle ne remplace
-pas la revue humaine. Les trois candidats locaux sont préparés dans
-`docs/validation/J8-TARGETED-HUMAN-REVIEW-READINESS-20260830.md`. Avant toute comparaison, le
-propriétaire doit fournir les libellés des sources actuellement admises du Betting Project ou
-accepter explicitement `CONTROL_SOURCE_LABEL=CONTROL_SOURCE_ABSENT` et
-`EXTERNAL_COMPARISON_SOURCE=EXTERNAL_COMPARISON_ABSENT`. Sans source déclarée, exactitude et
-valeur analytique restent `NOT_MEASURED`; la fraîcheur reste `PARTIAL` et la maintenabilité reste
-`NOT_MEASURED`.
+La préparation des trois candidats reste conservée dans
+`docs/validation/J8-TARGETED-HUMAN-REVIEW-READINESS-20260830.md`. La décision propriétaire du
+2026-08-30 accepte la revue bornée après audit formel avec les libellés
+`CONTROL_SOURCE_LABEL=CONTROL_SOURCE_ABSENT` et
+`EXTERNAL_COMPARISON_SOURCE=EXTERNAL_COMPARISON_ABSENT`. La preuve finale est
+`docs/validation/J8-TARGETED-HUMAN-REVIEW-20260830.md` : accessibilité et stabilité sont `PASS`,
+complétude, fraîcheur, efficacité et risque sont `PARTIAL`, et les dimensions externes non
+observables restent `NOT_MEASURED`.
 
-Ne copier l'export dans `docs/benchmark/` qu'après cette revue et son acceptation. Ne modifier ni le
-bloc automatique, ni son hash; ajouter la section humaine après le marqueur de fin prévu. WO-016
-reste actif et `info.app.phase` reste `J8-BENCHMARK-READY-FOR-HUMAN-QUALIFICATION` jusque-là.
+L'export final a été relancé avec la fenêtre et l'`asOf` gelés, tous les connecteurs forcés à
+`false` et zéro appel fournisseur. Le rapport
+`docs/benchmark/J8-BENCHMARK-REPORT-20260830.md` conserve ses 15 202 premiers octets byte-identiques
+au bloc automatique SHA-256 `ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25`;
+la section humaine est placée uniquement après le marqueur de fin.
 
 ## 11. Clôture
 
@@ -460,13 +467,16 @@ remplace jamais la campagne. Tout push, toute Pull Request et toute fusion vers 
 demande explicite séparée et ne constituent pas une preuve de clôture J8.
 
 ```text
-J8_CLOSURE_CRITERIA=NOT_MET
-J8_WORK_ORDER_STATUS=READY_FOR_HUMAN_QUALIFICATION
-J8_OWNER_CLOSURE_DECISION=NOT_GRANTED
+J8_CLOSURE_CRITERIA=MET
+J8_WORK_ORDER_STATUS=VALIDATED
+J8_OWNER_CLOSURE_DECISION=GRANTED_BY_OWNER_2026_08_30
+J8_FINAL_REPORT=docs/benchmark/J8-BENCHMARK-REPORT-20260830.md
+J8_FINAL_VALIDATION=docs/validation/J8-FINAL-VALIDATION-20260830.md
+ADDITIONAL_PROVIDER_CAMPAIGN_AUTHORIZED=NO
+J9_DECISION_TAKEN=NO
 ```
 
-La clôture exige que les six lignes suivantes soient simultanément prouvées et reproduites
-exactement. Elles ne constituent pas l'état courant de cette readiness :
+Les six lignes suivantes sont simultanément prouvées et constituent le bloc de clôture courant :
 
 ```text
 COMPLETENESS_METRICS=AVAILABLE

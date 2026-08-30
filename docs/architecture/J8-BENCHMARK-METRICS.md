@@ -490,6 +490,24 @@ hors fenêtre peut alimenter la revue humaine, jamais ces agrégats ni ce hash.
 
 Cette preuve rend les portes métriques automatiques soutenables, sans transformer les dimensions
 externes absentes. Exactitude et valeur analytique restent `NOT_MEASURED`, fraîcheur et risque
-restent `PARTIAL`, et maintenabilité reste `NOT_MEASURED` tant que la revue ciblée n'est pas
-acceptée. Le rapport final sous `docs/benchmark`, la phase `VALIDATED` et la décision d'adoption J9
-ne peuvent pas être déduits de l'état `MEASURED` automatique.
+restent `PARTIAL`, et maintenabilité reste `NOT_MEASURED`. L'état `MEASURED` automatique ne suffit
+pas à lui seul à clore J8 et ne constitue jamais une décision J9.
+
+## 17. Gel final et validation J8 du 2026-08-30
+
+Après décision propriétaire conditionnelle et audit formel, les sources ont été déclarées sous les
+libellés `SOFASCORE_DIRECT_LOCAL_ENDPOINT`, `CONTROL_SOURCE_ABSENT` et
+`EXTERNAL_COMPARISON_ABSENT`. La revue des trois rôles de dossier est close avec accessibilité et
+stabilité à `PASS`, complétude, fraîcheur, efficacité et risque à `PARTIAL`, puis exactitude,
+maintenabilité et valeur analytique à `NOT_MEASURED`. Ces limites sont des résultats, non des zéros
+ou des échecs inventés.
+
+Le dernier exporteur non-Web a forcé tous les connecteurs à `false` et déclaré zéro appel
+fournisseur. Son bloc automatique de 15 202 octets est byte-identique aux exports précédents,
+SHA-256 `ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25`, avec le hash de
+population `c61b3ef3a9ac12f94d787da8c396dae58e4208a6f04aa240538e38eac5ab4726`. Le rapport versionné
+`docs/benchmark/J8-BENCHMARK-REPORT-20260830.md` préserve ce préfixe byte pour byte et place la
+section humaine uniquement après `J8-AUTOMATIC-END`.
+
+J8 est donc `VALIDATED` et WO-016 est clôturé. Cette validation ne modifie aucune fenêtre
+historique, n'autorise aucune troisième campagne et laisse `J9_DECISION_TAKEN=NO`.

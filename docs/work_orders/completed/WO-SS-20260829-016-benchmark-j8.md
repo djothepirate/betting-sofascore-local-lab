@@ -1,10 +1,10 @@
 # WO-SS-20260829-016 — Benchmark local reproductible J8
 
-- **Statut :** `READY_FOR_HUMAN_QUALIFICATION`
+- **Statut :** `VALIDATED`
 - **Date d'ouverture :** 2026-08-29
 - **Date de démarrage :** 2026-08-29
-- **Date de validation :** `NOT_RUN`
-- **Décision de clôture :** `NOT_GRANTED`
+- **Date de validation :** 2026-08-30
+- **Décision de clôture :** `GRANTED_BY_OWNER_2026_08_30_AFTER_FORMAL_AUDIT`
 - **Prérequis :** J7 fusionné et Work Orders 009 à 015 validés
 - **Base locale :** `67268d805a4ba8c7d4706be7c18f6ff78d3ec1fd`
 - **Jalon :** J8 — Benchmark
@@ -15,7 +15,7 @@
 - **Appel fournisseur pendant l'implémentation :** `NOT_AUTHORIZED`
 - **Appel fournisseur pendant les tests automatisés :** `NOT_AUTHORIZED`
 - **Campagne fournisseur J8 :** `SECOND_OWNER_GO_CONSUMED_2026_08_30_MEASURED_COMPLETED`
-- **Qualification humaine :** `PENDING_TARGETED_REVIEW_AFTER_MEASURED_CAMPAIGN`
+- **Qualification humaine :** `PASS` avec limites `PARTIAL` et `NOT_MEASURED` explicites
 - **Polling, scheduler, watcher, live, retry ou fallback :** `NOT_AUTHORIZED`
 - **Production, VPS ou dépendance critique :** `NOT_AUTHORIZED`
 
@@ -335,13 +335,13 @@ payload, chemin local, stack trace ou détail PostgreSQL.
 ## 11. Critères d'acceptation
 
 ```text
-J8_STATUS=READY_FOR_HUMAN_QUALIFICATION
-COMPLETENESS_FORMULA=IMPLEMENTED_PENDING_BOUNDED_CAMPAIGN
-LATENCY_FORMULA=IMPLEMENTED_PENDING_BOUNDED_CAMPAIGN
-SCHEMA_STABILITY=MEASURED_OR_EXPLICITLY_NOT_MEASURED
-ERROR_RATE=EVIDENCE_LEVEL_AWARE
-PROVIDER_CALL_COST=EVIDENCE_LEVEL_AWARE
-LATE_CORRECTIONS=MEASURED_OR_EXPLICITLY_NOT_MEASURED
+J8_STATUS=VALIDATED
+COMPLETENESS_FORMULA=MEASURED
+LATENCY_FORMULA=MEASURED
+SCHEMA_STABILITY=MEASURED
+ERROR_RATE=MEASURED
+PROVIDER_CALL_COST=MEASURED
+LATE_CORRECTIONS=MEASURED_OR_EXPLICITLY_NOT_MEASURED_BY_WINDOW
 FULL_ATTEMPT_LEDGER=SUPPORTED_PROSPECTIVELY
 RESPONSE_ONLY=SUPPORTED_WITH_LIMITATIONS
 LEGACY_BASELINE=SUPPORTED_WITHOUT_CALL_COUNT
@@ -385,18 +385,20 @@ La qualification humaine locale doit vérifier :
 6. l'absence de toute activité réseau J8 ;
 7. l'arrêt propre de l'application et la conservation des verrous réseau.
 
-État courant après la readiness, la campagne initiale partielle, le correctif V15 et la seconde
-campagne complète :
+État final après la readiness, la campagne initiale partielle, le correctif V15, la seconde
+campagne complète, la revue ciblée et le gel du rapport :
 
 ```text
-J8_HUMAN_QUALIFICATION=PENDING_TARGETED_REVIEW_AFTER_MEASURED_CAMPAIGN
+J8_HUMAN_QUALIFICATION=PASS
+J8_HUMAN_REVIEW_LIMITATIONS=PRESENT
 J8_HTML_TECHNICAL_QA=PASS
 J8_MARKDOWN_REPRODUCIBILITY=PASS_BYTE_IDENTICAL
 J8_TECHNICAL_QA_PROVIDER_CALLS=0
 J8_PROVIDER_CAMPAIGN=SECOND_OWNER_GO_CONSUMED_2026_08_30
 J8_PROVIDER_CAMPAIGN_RESULT=MEASURED_COMPLETED_20_OF_20
-J8_FINAL_BENCHMARK_REPORT=NOT_CREATED_PENDING_TARGETED_HUMAN_REVIEW
-J8_OWNER_CLOSURE_DECISION=NOT_GRANTED
+J8_FINAL_BENCHMARK_REPORT=docs/benchmark/J8-BENCHMARK-REPORT-20260830.md
+J8_OWNER_CLOSURE_DECISION=GRANTED_BY_OWNER_2026_08_30_AFTER_FORMAL_AUDIT
+J9_DECISION_TAKEN=NO
 ```
 
 Le propriétaire a donné le 2026-08-30 le go distinct prévu. Il a été consommé par une seule fenêtre
@@ -499,7 +501,7 @@ libéré, les gates locaux remis à `false` et le verrou persistant confirmé pa
 parcours et immédiatement après son terminal, aucun retry, import, fallback, appel compositions ou
 nouvelle campagne n'a été exécuté.
 
-La revue humaine future porte, lorsque le corpus le permet, sur trois dossiers distincts : le dossier
+La revue humaine finale porte, lorsque le corpus le permet, sur trois dossiers distincts : le dossier
 J8, le dossier direct non ciblé le plus récent en `PARTIAL` ou `UNAVAILABLE`, puis le dossier direct
 non ciblé le plus récent avec `LATE_CORRECTION`. À défaut d'un archétype, elle utilise le dossier
 direct le plus proche et consigne `ARCHETYPE_NOT_AVAILABLE`, sans appel supplémentaire. Chaque
@@ -520,9 +522,10 @@ IN_PROGRESS
   -> VALIDATED
 ```
 
-Le statut courant reste `READY_FOR_HUMAN_QUALIFICATION`. La seconde campagne est concluante et son
-rapport automatique est `MEASURED`, mais la revue humaine ciblée n'est pas terminée, le rapport
-final n'est pas gelé et aucune décision propriétaire de clôture ou décision J9 n'est acquise.
+Le statut final est `VALIDATED`. La seconde campagne est concluante et son rapport automatique est
+`MEASURED`; la revue humaine ciblée est terminée avec ses limites `PARTIAL` et `NOT_MEASURED`, le
+rapport final est gelé et la décision propriétaire de clôture est acquise. Aucune décision J9 n'est
+prise.
 
 Le passage à `VALIDATED` et le déplacement vers `docs/work_orders/completed` exigent tous les
 éléments suivants :
@@ -537,11 +540,11 @@ Le passage à `VALIDATED` et le déplacement vers `docs/work_orders/completed` e
 - décision explicite du propriétaire.
 
 Tout push, toute Pull Request et toute fusion vers `main` exigent une demande explicite séparée et
-ne constituent pas une preuve de clôture J8. Ce Work Order demeure actif et ne doit pas être
-archivé tant que ces preuves et cette décision ne sont pas acquises.
+ne constituent pas une preuve de clôture J8. Les preuves et la décision étant acquises, ce Work
+Order rejoint `docs/work_orders/completed` sans autoriser de troisième campagne.
 
-Le bloc de clôture ci-dessous doit être écrit exactement et entièrement prouvé après la campagne et
-la revue humaine ; il n'est ni écrit comme résultat courant, ni réputé acquis par la readiness :
+Le bloc de clôture ci-dessous est écrit exactement et entièrement prouvé après la campagne et la
+revue humaine :
 
 ```text
 COMPLETENESS_METRICS=AVAILABLE
@@ -643,21 +646,63 @@ Playwright à `false` a confirmé J3 au verrou de démarrage et les préparation
 puis l'application a été arrêtée à nouveau et le port 8087 libéré.
 
 La preuve détaillée est
-`docs/validation/J8-SECOND-BOUNDED-CAMPAIGN-20260830.md`. Le rapport automatique est désormais un
-candidat suffisant pour les métriques obligatoires, mais il n'est pas encore copié sous
-`docs/benchmark`: la revue humaine des trois dossiers, les libellés de sources de contrôle et la
-décision propriétaire restent à consigner. Les dimensions non observables resteront
-`NOT_MEASURED`; aucune comparaison externe n'est inventée.
+`docs/validation/J8-SECOND-BOUNDED-CAMPAIGN-20260830.md`. Le rapport automatique suffit pour les
+métriques obligatoires et son bloc exact est gelé sous
+`docs/benchmark/J8-BENCHMARK-REPORT-20260830.md`. La revue humaine des trois dossiers, les libellés
+`CONTROL_SOURCE_ABSENT` et `EXTERNAL_COMPARISON_ABSENT` et la décision propriétaire sont consignés.
+Les dimensions non observables restent `NOT_MEASURED`; aucune comparaison externe n'est inventée.
 
 La sélection locale des trois dossiers et les limites de comparaison sont consignées dans
-`docs/validation/J8-TARGETED-HUMAN-REVIEW-READINESS-20260830.md`. Ce document prépare la revue mais
-ne lui attribue aucun verdict humain.
+`docs/validation/J8-TARGETED-HUMAN-REVIEW-READINESS-20260830.md`; les verdicts finaux minimisés sont
+dans `docs/validation/J8-TARGETED-HUMAN-REVIEW-20260830.md`.
 
 ```text
 J8_TECHNICAL_METRIC_GATE=PASS
-J8_CLOSURE_BLOCK_WRITTEN=NO_PENDING_HUMAN_REVIEW
-J8_HUMAN_TARGETED_REVIEW=PENDING
-J8_FINAL_REPORT=PENDING_HUMAN_REVIEW
-J8_OWNER_CLOSURE_DECISION=NOT_GRANTED
-J8_WORK_ORDER_STATUS=READY_FOR_HUMAN_QUALIFICATION
+J8_CLOSURE_BLOCK_WRITTEN=YES
+J8_HUMAN_TARGETED_REVIEW=PASS
+J8_HUMAN_REVIEW_LIMITATIONS=PRESENT
+J8_FINAL_REPORT=docs/benchmark/J8-BENCHMARK-REPORT-20260830.md
+J8_OWNER_CLOSURE_DECISION=GRANTED_BY_OWNER_2026_08_30_AFTER_FORMAL_AUDIT
+J8_WORK_ORDER_STATUS=VALIDATED
+J9_DECISION_TAKEN=NO
+```
+
+## 17. Revue finale, gel et clôture
+
+Le 2026-08-30, le propriétaire autorise la transition vers `VALIDATED` si toutes les étapes et tous
+les critères sont formellement prouvés. L'audit final ne trouve aucun bloqueur technique, réseau,
+de persistance ou de sécurité. Il accepte l'absence de comparateur externe sous les codes
+`CONTROL_SOURCE_ABSENT` et `EXTERNAL_COMPARISON_ABSENT`; exactitude, maintenabilité et valeur
+analytique restent donc `NOT_MEASURED`. La complétude, la fraîcheur, l'efficacité et le risque
+restent `PARTIAL`; accessibilité et stabilité sont `PASS`. Ces résultats ne constituent aucune
+décision J9.
+
+Le dernier export non-Web force tous les connecteurs à `false`, réalise zéro appel fournisseur et
+reproduit le bloc automatique de 15 202 octets, SHA-256
+`ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25`, avec le hash de population
+`c61b3ef3a9ac12f94d787da8c396dae58e4208a6f04aa240538e38eac5ab4726`. Les 15 202 premiers octets
+du rapport final sont byte-identiques; la section humaine commence après le marqueur automatique.
+
+```text
+HUMAN_TARGETED_REVIEW=PASS
+HUMAN_REVIEW_LIMITATIONS=PRESENT
+CONTROL_SOURCE_LABEL=CONTROL_SOURCE_ABSENT
+EXTERNAL_COMPARISON_SOURCE=EXTERNAL_COMPARISON_ABSENT
+FINAL_REPORT=docs/benchmark/J8-BENCHMARK-REPORT-20260830.md
+FINAL_VALIDATION=docs/validation/J8-FINAL-VALIDATION-20260830.md
+AUTOMATIC_BLOCK_SHA256=ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25
+FINAL_REPORT_SHA256=6d9a46b4391beffe9c1c54591089f0b035a5ed81f9522c03998a0feff18e7e52
+J8_CLOSURE_CRITERIA=MET
+J8_STATUS=VALIDATED
+J9_DECISION_TAKEN=NO
+ADDITIONAL_PROVIDER_CAMPAIGN_AUTHORIZED=NO
+```
+
+```text
+COMPLETENESS_METRICS=AVAILABLE
+LATENCY_METRICS=AVAILABLE
+SCHEMA_STABILITY=MEASURED
+ERROR_RATE=MEASURED
+PROVIDER_CALL_COST=MEASURED
+AUTOMATIC_POLLING=NO
 ```

@@ -50,7 +50,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `VALIDATED` et rejoint `docs/work_orders/completed/`, sans instance locale active ; le go reste
   consommé et aucun appel supplémentaire, push, PR ou fusion n'est autorisé par cette clôture.
 
-### J8 — benchmark local prêt pour qualification humaine
+### J8 — benchmark local validé
 
 - ouverture de `WO-SS-20260829-016` sur la branche `codex/j8-benchmark`, depuis la baseline propre
   `67268d805a4ba8c7d4706be7c18f6ff78d3ec1fd`, après revue de l'ADR-SS-001 v1.4 : aucun endpoint,
@@ -102,10 +102,19 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   appels de découverte, quatre appels marginaux et vingt appels effectifs par dossier exploitable ;
 - arrêt de l'instance qualifiée, contrôle d'un redémarrage inerte avec tous les connecteurs,
   Playwright, polling et refresh à `false`, puis nouvel arrêt et port 8087 libre ;
-- WO-016 reste actif au statut `READY_FOR_HUMAN_QUALIFICATION` : revue humaine ciblée, libellés de
-  sources de contrôle, rapport final sous `docs/benchmark` et décision propriétaire de clôture
-  restent en attente. Les dimensions non observables ne sont pas promues et aucune décision J9
-  n'est prise.
+- dernier export non-Web de gel exécuté avec les mêmes `from/to/asOf`, tous les connecteurs forcés à
+  `false` et zéro appel fournisseur : bloc automatique toujours égal à 15 202 octets et SHA-256
+  `ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25` ;
+- revue ciblée des trois archétypes conclue et acceptée avec
+  `CONTROL_SOURCE_ABSENT` / `EXTERNAL_COMPARISON_ABSENT` : accessibilité et stabilité à `PASS`,
+  complétude, fraîcheur, efficacité et risque à `PARTIAL`, autres dimensions non observables à
+  `NOT_MEASURED`, sans décision J9 ;
+- gel du rapport final sous `docs/benchmark/J8-BENCHMARK-REPORT-20260830.md`, avec préfixe
+  automatique byte-identique et section humaine séparée; décision propriétaire de clôture
+  consignée après audit formel des critères ;
+- portes finales rejouées après les changements de clôture, configuration locale sûre et aucun
+  appel fournisseur; phase applicative passée à `J8-BENCHMARK-VALIDATED` et WO-016 déplacé sous
+  `docs/work_orders/completed/`, sans troisième campagne, push, PR ni fusion.
 
 ### J5 — migration Playwright des donnees evenement validee
 

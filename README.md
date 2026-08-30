@@ -5,14 +5,13 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**,
-**J3 — Appel manuel**, **J4 — Événements**, **J5 — Statistiques**, **J6 — Historique** et
-**J7 — Export canonique**. **J8 — Benchmark** est implémenté en état
-`READY_FOR_HUMAN_QUALIFICATION` : sa migration V27, son ledger d'appels, ses agrégats locaux, sa
-page en lecture seule et son export Markdown sont prêts. Après la campagne initiale partielle et le
-correctif V15, une seconde campagne complète explicitement autorisée a terminé vingt unités sur
-vingt avec un rapport automatique `MEASURED`. La revue humaine ciblée, le rapport final versionné
-et la décision propriétaire de clôture restent à réaliser; aucune troisième campagne ni conclusion
-d'adoption J9 n'est autorisée.
+**J3 — Appel manuel**, **J4 — Événements**, **J5 — Statistiques**, **J6 — Historique**,
+**J7 — Export canonique** et **J8 — Benchmark**. J8 est `VALIDATED` : après la campagne initiale
+partielle et le correctif V15, une seconde campagne complète explicitement autorisée a terminé vingt
+unités sur vingt avec un rapport automatique `MEASURED / FULL_ATTEMPT_LEDGER`. Le bloc automatique
+reproductible a été gelé, la revue ciblée a été acceptée avec ses limites explicites et WO-016 est
+clôturé. Les dimensions non observables restent `NOT_MEASURED`; aucune troisième campagne ni
+conclusion d'adoption J9 n'est autorisée.
 
 Le correctif borné WO-017 fournit `event-incidents-v15` et Flyway V28 : propriété d'actions absente
 et tableau exactement vide sont équivalents uniquement dans une séance terminale non minutée déjà
@@ -280,9 +279,10 @@ les compositions. Les deux exports de 15 202 octets sont byte-identiques, SHA-25
 `c61b3ef3a9ac12f94d787da8c396dae58e4208a6f04aa240538e38eac5ab4726` et l'état `MEASURED`. Un
 dossier sur un est exploitable; les coûts exacts sont 16 appels de découverte, 4 marginaux et 20
 effectifs par dossier exploitable. Le reverrouillage après redémarrage inerte est prouvé et
-l'application est arrêtée. J8 reste néanmoins `J8-BENCHMARK-READY-FOR-HUMAN-QUALIFICATION` tant
-que la revue humaine ciblée, le gel du rapport final sous `docs/benchmark/` et la décision
-propriétaire ne sont pas acquis. Aucune troisième campagne n'est autorisée.
+l'application est arrêtée. Le dernier export non-Web a reproduit exactement le bloc automatique à
+zéro appel fournisseur; la revue ciblée conserve `PARTIAL` et `NOT_MEASURED` lorsque nécessaire.
+Le rapport final est gelé sous `docs/benchmark/`, la phase est `J8-BENCHMARK-VALIDATED` et aucune
+troisième campagne ou décision J9 n'est autorisée.
 
 ## Ce qui est livré localement
 
@@ -947,7 +947,10 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Readiness de la seconde campagne J8](docs/validation/J8-SECOND-BOUNDED-CAMPAIGN-READINESS-20260830.md)
 - [Preuve de la seconde campagne J8](docs/validation/J8-SECOND-BOUNDED-CAMPAIGN-20260830.md)
 - [Readiness de la revue humaine ciblée J8](docs/validation/J8-TARGETED-HUMAN-REVIEW-READINESS-20260830.md)
-- [Work Order J8 actif](docs/work_orders/active/WO-SS-20260829-016-benchmark-j8.md)
+- [Revue humaine ciblée finale J8](docs/validation/J8-TARGETED-HUMAN-REVIEW-20260830.md)
+- [Rapport final gelé J8](docs/benchmark/J8-BENCHMARK-REPORT-20260830.md)
+- [Validation finale J8](docs/validation/J8-FINAL-VALIDATION-20260830.md)
+- [Work Order J8 validé](docs/work_orders/completed/WO-SS-20260829-016-benchmark-j8.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 

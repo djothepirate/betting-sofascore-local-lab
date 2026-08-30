@@ -203,3 +203,17 @@ GIT_DIFF_CHECK=PASS
 
 Ces portes soutiennent le résultat technique `MEASURED`; elles ne constituent ni la revue humaine,
 ni le gel du rapport final, ni la décision propriétaire nécessaire pour fermer WO-016.
+
+## 8. Addendum de clôture postérieur
+
+Les sections 6 et 7 ci-dessus figent correctement l'état immédiatement post-campagne et ne sont pas
+réécrites. Postérieurement, le propriétaire a autorisé la clôture sous condition d'un audit formel
+complet. La revue ciblée, le gel du rapport et le replay final des portes sont consignés dans :
+
+- `docs/validation/J8-TARGETED-HUMAN-REVIEW-20260830.md` ;
+- `docs/benchmark/J8-BENCHMARK-REPORT-20260830.md` ;
+- `docs/validation/J8-FINAL-VALIDATION-20260830.md`.
+
+La phase finale est `J8-BENCHMARK-VALIDATED`, WO-016 est clôturé et
+`J9_DECISION_TAKEN=NO`. Cet addendum n'autorise aucun nouvel appel fournisseur et ne modifie ni la
+fenêtre, ni les tentatives, ni le hash de population décrits plus haut.
