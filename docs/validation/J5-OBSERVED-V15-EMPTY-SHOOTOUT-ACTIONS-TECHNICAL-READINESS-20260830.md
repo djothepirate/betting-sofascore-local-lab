@@ -4,7 +4,7 @@
 
 ```text
 WORK_ORDER=WO-SS-20260830-017
-WORK_ORDER_STATUS=HUMAN_QUALIFICATION_PASS_PENDING_OWNER_CLOSURE
+WORK_ORDER_STATUS=VALIDATED
 CURRENT_INCIDENT_PARSER=event-incidents-v15
 CURRENT_FLYWAY_VERSION=28
 TECHNICAL_READINESS=PASS
@@ -22,7 +22,9 @@ SECOND_J8_BENCHMARK_CAMPAIGN=NO
 V15_QUALIFICATION_J5_LEDGER_CAMPAIGN=CREATED_AS_REQUIRED
 ORIGINAL_J8_EXCLUSIVE_WINDOW_UNCHANGED=YES
 J8_HISTORICAL_RESULT=EVENT_INCIDENTS_V14_SCHEMA_INCOMPATIBLE_UNCHANGED
-OWNER_CLOSURE_DECISION=NOT_GRANTED
+OWNER_CLOSURE_DECISION=AUTHORIZED_BY_OWNER_2026_08_30
+WORK_ORDER_CLOSURE=COMPLETED
+WORK_ORDER_LOCATION=docs/work_orders/completed
 ADDITIONAL_PROVIDER_CALL_AUTHORIZED=NO
 ```
 
@@ -206,7 +208,16 @@ de l'événement `16691018`.
 L'application a été arrêtée après le terminal. Les propriétés réseau n'ont existé que dans l'arbre
 de processus du lanceur ; `.env` est demeuré inchangé et bloquant. Un redémarrage inerte a confirmé
 J5 `LOCKED` et son bouton de préparation désactivé, puis l'application a été arrêtée à nouveau.
-Aucune campagne supplémentaire, clôture, fusion ou décision J9 n'est autorisée par ce résultat.
+Aucune campagne supplémentaire, fusion ou décision J9 n'est autorisée par ce résultat. La clôture
+de WO-017 a depuis été autorisée par une décision propriétaire distincte après constat du test
+fonctionnel concluant ; elle n'élargit pas l'autorisation réseau.
+
+## 11. Addendum — clôture propriétaire de WO-017
+
+Le propriétaire a jugé la qualification fonctionnelle V15 concluante et autorisé la clôture de
+WO-017 le 2026-08-30. L'application, le worker Playwright et le listener 8087 étaient absents au
+moment de la décision. WO-017 est donc `VALIDATED` et archivé sous `docs/work_orders/completed/`,
+sans nouvel appel fournisseur et sans effet sur le statut de J8 ou sur une décision J9.
 
 La preuve prospective minimisée complète est
 `docs/validation/J5-V15-PROVIDER-QUALIFICATION-20260830.md`.

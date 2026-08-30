@@ -46,8 +46,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - application arrêtée après le terminal, activation process-scoped terminée et `.env` inchangé
   avec les réseaux bloqués ; redémarrage inerte contrôlé avec J5 `LOCKED` et préparation
   désactivée, puis nouvel arrêt sans listener résiduel ;
-- WO-017 reste actif au statut `HUMAN_QUALIFICATION_PASS_PENDING_OWNER_CLOSURE`; le go est consommé,
-  aucun appel supplémentaire, push, PR, fusion ou clôture n'est autorisé.
+- décision propriétaire distincte après constat du test fonctionnel concluant : WO-017 passe à
+  `VALIDATED` et rejoint `docs/work_orders/completed/`, sans instance locale active ; le go reste
+  consommé et aucun appel supplémentaire, push, PR ou fusion n'est autorisé par cette clôture.
 
 ### J8 — benchmark local prêt pour qualification humaine
 

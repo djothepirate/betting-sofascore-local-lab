@@ -741,11 +741,15 @@ ENV_FILE_MUTATION=NO
 PROCESS_SCOPED_CONFIGURATION_ENDED=YES
 J5_LOCKED_AFTER_INERT_RESTART=PASS
 APPLICATION_STOPPED=YES
+WORK_ORDER_STATUS=VALIDATED
+OWNER_CLOSURE=AUTHORIZED_2026_08_30
+WORK_ORDER_LOCATION=docs/work_orders/completed
 ADDITIONAL_PROVIDER_CALL_AUTHORIZED=NO
 ```
 
-Cette preuve valide V15 dans cette portée bornée. Elle n'autorise pas le rejeu de la campagne ni
-la clôture de WO-017. La preuve détaillée est
+Cette preuve valide V15 dans cette portée bornée. Elle n'autorise pas le rejeu de la campagne. Le
+propriétaire a depuis jugé le test fonctionnel concluant et clôturé séparément WO-017 au statut
+`VALIDATED`, sans autoriser de nouvel appel. La preuve détaillée est
 `docs/validation/J5-V15-PROVIDER-QUALIFICATION-20260830.md`.
 
 ### 3.10 quater Enchaîner J4 phase 2 et J5 dans une même session

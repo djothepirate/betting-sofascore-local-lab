@@ -18,11 +18,15 @@ FALLBACK=NO
 POLLING=NO
 SECOND_CAMPAIGN=NO
 ADDITIONAL_PROVIDER_CALL_AUTHORIZED=NO
-OWNER_CLOSURE_DECISION=NOT_GRANTED
+WORK_ORDER_STATUS=VALIDATED
+OWNER_CLOSURE_DECISION=AUTHORIZED_BY_OWNER_2026_08_30
+WORK_ORDER_CLOSURE=COMPLETED
+WORK_ORDER_LOCATION=docs/work_orders/completed
 ```
 
 Cette preuve consigne l'unique campagne corrective autorisée après la readiness technique V15.
-Elle ne clôture ni WO-017 ni J8 et ne prend aucune décision d'adoption J9. Les statuts du
+La décision propriétaire distincte de la section 8 clôture ensuite WO-017, mais ne clôture pas J8
+et ne prend aucune décision d'adoption J9. Les statuts du
 laboratoire restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 `NO_CRITICAL_DEPENDENCY`.
 
@@ -161,9 +165,28 @@ valeurs secrètes de `.env`, logs bruts et artefacts navigateur.
 
 ## 7. Décision
 
-La qualification fournisseur V15 est `PASS` dans cette portée bornée. WO-017 reste actif au statut
-`HUMAN_QUALIFICATION_PASS_PENDING_OWNER_CLOSURE` : la campagne autorisée est consommée, aucun appel
-supplémentaire n'est autorisé et la clôture exige une décision propriétaire distincte.
+La qualification fournisseur V15 est `PASS` dans cette portée bornée. La campagne autorisée est
+consommée et aucun appel supplémentaire n'est autorisé. Le propriétaire a ensuite jugé ce test
+fonctionnel concluant et accordé la décision distincte de clôture de WO-017.
 
 J8 reste `READY_FOR_HUMAN_QUALIFICATION` avec son rapport historique `PARTIAL`. Cette qualification
 ne crée pas de rapport final J8, ne prouve pas sa revue humaine ciblée et ne décide pas J9.
+
+## 8. Décision propriétaire de clôture de WO-017
+
+```text
+OWNER_FUNCTIONAL_ASSESSMENT=CONCLUSIVE
+OWNER_CLOSURE_DECISION=AUTHORIZED_BY_OWNER_2026_08_30
+WORK_ORDER_STATUS=VALIDATED
+CLOTURE=COMPLETED
+WORK_ORDER_LOCATION=docs/work_orders/completed
+APPLICATION_INSTANCE_ACTIVE=NO
+PLAYWRIGHT_WORKER_ACTIVE=NO
+PORT_8087_LISTENER=ABSENT
+ADDITIONAL_PROVIDER_CALL_AUTHORIZED=NO
+ADDITIONAL_PROVIDER_CALL_AUTHORIZED_BY_CLOSURE=NO
+J8_CLOSURE_DECISION=NOT_IMPLIED
+```
+
+WO-017 est archivé dans `docs/work_orders/completed/`. La preuve J8 historique reste immuable et
+la poursuite de J8 est traitée séparément.

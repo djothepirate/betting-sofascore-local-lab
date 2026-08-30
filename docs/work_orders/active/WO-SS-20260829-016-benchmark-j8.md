@@ -459,7 +459,10 @@ J5_J8_INSTRUMENTATION_CAUSALITY=NOT_SUPPORTED_BY_LOCAL_EVIDENCE
 J5_OBSERVED_RESPONSE_VARIANT=EMPTY_FOOTBALL_PASSING_NETWORK_ACTION_ARRAY
 J5_PROVIDER_SCHEMA_STATUS_AT_J8_FREEZE=NOT_VALIDATED_AFTER_SNAPSHOT_717
 J5_PROVIDER_SCHEMA_CURRENT_STATUS=VALIDATED_BOUNDED_V15_EVENT_16691018_BY_WO_017
-J5_CORRECTIVE_SCOPE=SEPARATE_WORK_ORDER_AND_OWNER_DECISION_REQUIRED
+J5_CORRECTIVE_SCOPE=SEPARATE_WORK_ORDER_COMPLETED
+J5_CORRECTIVE_WORK_ORDER_STATUS=VALIDATED
+J5_CORRECTIVE_WORK_ORDER_LOCATION=docs/work_orders/completed
+J5_CORRECTIVE_OWNER_CLOSURE=AUTHORIZED_2026_08_30
 ```
 
 ### 13.3 Correctif technique V15 sous Work Order séparé
@@ -484,6 +487,10 @@ mêmes octets et les quatorze tableaux vides du snapshot 717. La classification 
 les dix-neuf tentatives, la fenêtre, le double export et le hash de population restent inchangés.
 Le ledger correctif est une nouvelle campagne J5 auditée, pas un retry ou une seconde campagne
 benchmark. Son go est consommé et n'autorise aucun appel supplémentaire.
+
+Le propriétaire a depuis jugé la qualification fonctionnelle V15 concluante et clôturé WO-017 au
+statut `VALIDATED`. Cette décision ne modifie ni la fenêtre, ni le rapport `PARTIAL`, ni le statut
+encore actif de J8 et n'autorise aucun nouvel appel fournisseur.
 
 À l'issue de la campagne J8 initiale, l'application et le worker ont été arrêtés, le port 8087
 libéré, les gates locaux remis à `false` et le verrou persistant confirmé par l'exporteur. Dans ce

@@ -1,11 +1,15 @@
 # WO-SS-20260830-017 — Incidents J5 V15, tableau d'action vide pendant une séance terminale
 
-- **Statut :** `HUMAN_QUALIFICATION_PASS_PENDING_OWNER_CLOSURE`
+- **Statut :** `VALIDATED`
 - **Date :** 2026-08-30
 - **Date de démarrage :** 2026-08-30
+- **Date de fin technique :** 2026-08-30
+- **Date de qualification fournisseur :** 2026-08-30
+- **Date de validation et de clôture :** 2026-08-30
 - **Qualification propriétaire :** `PASS_BY_OWNER_AUTHORIZED_CODEX_EXECUTION_2026-08-30`
 - **Campagne corrective fournisseur :** `AUTHORIZED_ONCE_AND_CONSUMED`
-- **Clôture :** `ACTIVE`
+- **Décision propriétaire de clôture :** `AUTHORIZED_BY_OWNER_2026-08-30`
+- **Clôture :** `COMPLETED`
 - **Prérequis :** campagne J8 partielle et analyse bornée au commit `cfd536e`
 - **Base locale :** `cfd536e`
 - **Jalon :** correction J5 issue de la qualification J8
@@ -142,7 +146,7 @@ reste absente, son rendu reste `—` et les chemins manquants restent mesurés.
 - [x] `mvnw -Pintegration-tests verify` est vert ;
 - [x] `Verify-Local.ps1 -WithIntegrationTests` est vert sans appel fournisseur ;
 - [x] `docker compose --env-file .env config` et `git diff --check` sont verts ;
-- [x] le Work Order reste actif jusqu'à une décision propriétaire séparée de clôture.
+- [x] la décision propriétaire séparée de clôture est acquise après qualification fonctionnelle concluante.
 
 ## 8. Livraison Git prévue
 
@@ -196,8 +200,8 @@ SOFASCORE_NETWORK_CALLS_EXECUTED=NO
 
 À l'issue de la readiness technique, le correctif ne qualifiait pas encore un schéma fournisseur
 courant. La qualification ultérieure de la section 13 a levé cette limite dans sa seule portée
-bornée ; WO-017 reste néanmoins dans `active`, avec `Clôture=ACTIVE`, dans l'attente d'une décision
-propriétaire séparée de clôture. Aucune reprise de J8 ni écriture de reparse n'est autorisée.
+bornée. WO-017 est ensuite resté dans `active` jusqu'à la décision propriétaire de clôture consignée
+à la section 14. Aucune reprise de J8 ni écriture de reparse n'a été autorisée par cette attente.
 
 ## 11. Autorisation propriétaire distincte de qualification fournisseur V15
 
@@ -361,13 +365,43 @@ PLAYWRIGHT_WORKER_AFTER_STOP=ABSENT
 APPLICATION_AFTER_STOP=ABSENT
 PORT_8087_AFTER_STOP=FREE
 ADDITIONAL_PROVIDER_CALL_AUTHORIZED=NO
-WORK_ORDER_STATUS=HUMAN_QUALIFICATION_PASS_PENDING_OWNER_CLOSURE
-OWNER_CLOSURE_DECISION=NOT_GRANTED
-CLOTURE=ACTIVE
+WORK_ORDER_STATUS=VALIDATED
+OWNER_CLOSURE_DECISION=AUTHORIZED_BY_OWNER_2026_08_30
+CLOTURE=COMPLETED
+WORK_ORDER_LOCATION=docs/work_orders/completed
 ```
 
 Le go est consommé. Aucun reparse persistant supplémentaire, nouvelle campagne, retry ou appel
 fournisseur n'est autorisé. La preuve détaillée est conservée dans
-`docs/validation/J5-V15-PROVIDER-QUALIFICATION-20260830.md`. WO-017 reste actif jusqu'à une décision
-propriétaire séparée de clôture ; J8 reste `READY_FOR_HUMAN_QUALIFICATION` et aucune décision J9
-n'est prise.
+`docs/validation/J5-V15-PROVIDER-QUALIFICATION-20260830.md`. La décision propriétaire de clôture
+est consignée ci-dessous ; J8 reste un jalon séparé et aucune décision J9 n'est prise.
+
+## 14. Décision propriétaire de clôture
+
+Le propriétaire constate que le test fonctionnel exécuté par Codex est concluant pour WO-017 et
+autorise explicitement sa clôture le 2026-08-30. L'absence d'instance locale, de worker et de
+listener sur le port 8087 a été confirmée avant cette décision.
+
+```text
+OWNER_FUNCTIONAL_ASSESSMENT=CONCLUSIVE
+IMPLEMENTATION=COMPLETED
+TECHNICAL_READINESS=PASS
+PROVIDER_QUALIFICATION=PASS_BOUNDED_EVENT_16691018
+EMPTY_ARRAY_VARIANT_REOBSERVED=YES_EXACT_DEDUPLICATED_RESPONSE
+OWNER_CLOSURE_DECISION=AUTHORIZED_BY_OWNER_2026_08_30
+WORK_ORDER_STATUS=VALIDATED
+CLOTURE=COMPLETED
+WORK_ORDER_LOCATION=docs/work_orders/completed
+APPLICATION_INSTANCE_ACTIVE=NO
+PLAYWRIGHT_WORKER_ACTIVE=NO
+PORT_8087_LISTENER=ABSENT
+ADDITIONAL_PROVIDER_CALL_AUTHORIZED=NO
+ADDITIONAL_PROVIDER_CALL_AUTHORIZED_BY_CLOSURE=NO
+J8_STATUS=READY_FOR_HUMAN_QUALIFICATION_UNCHANGED
+J8_REPORT_STATE=PARTIAL_UNCHANGED
+J8_CLOSURE_DECISION=NOT_IMPLIED
+J9_DECISION=NOT_TAKEN
+```
+
+WO-017 est déplacé dans `docs/work_orders/completed/`. Cette clôture ne rejoue aucune campagne,
+ne modifie aucune preuve append-only et n'autorise ni push, ni Pull Request, ni fusion.

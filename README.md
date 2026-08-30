@@ -19,7 +19,7 @@ explicitement autorisée par le propriétaire et exécutée une seule fois par C
 locale, a terminé `COMPLETED_LOCKED` avec trois appels. Les incidents de la réponse dédupliquée
 vers le snapshot `717` sont désormais parsés par V15 en `PARTIAL · 91%`, observation `324`, puis
 les compositions ont été atteintes. La preuve J8/V14 et sa fenêtre exclusive restent immuables ;
-WO-017 attend encore une décision propriétaire de clôture.
+le propriétaire a jugé le test fonctionnel concluant et WO-017 est désormais clôturé `VALIDATED`.
 
 J7 a franchi les portes techniques, la recette humaine et la revue de publication et appartient
 désormais à la baseline `main`. L'implémentation J4, son parcours hors ligne et ses deux
@@ -922,7 +922,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order V14 validé](docs/work_orders/completed/WO-SS-20260827-012-j5-live-extra-time-period.md)
 - [Readiness technique V15 des tableaux d'actions vides](docs/validation/J5-OBSERVED-V15-EMPTY-SHOOTOUT-ACTIONS-TECHNICAL-READINESS-20260830.md)
 - [Qualification fournisseur V15 bornée](docs/validation/J5-V15-PROVIDER-QUALIFICATION-20260830.md)
-- [Work Order correctif V15 actif](docs/work_orders/active/WO-SS-20260830-017-j5-incidents-empty-shootout-action-v15.md)
+- [Work Order correctif V15 validé](docs/work_orders/completed/WO-SS-20260830-017-j5-incidents-empty-shootout-action-v15.md)
 - [Qualification hors ligne de la session combinée J4 phase 2 + J5](docs/validation/J4-J5-COMBINED-QUALIFICATION-SESSION-20260818.md)
 - [Work Order validé de qualification réelle J5](docs/work_orders/completed/WO-SS-20260815-006-j5-real-event-data-qualification.md)
 - [Readiness technique J6](docs/validation/J6-TECHNICAL-READINESS-20260818.md)
@@ -1071,7 +1071,9 @@ J5_INCIDENT_V15_EMPTY_ARRAY_VARIANT_REOBSERVED=YES_BY_BYTE_IDENTICAL_SNAPSHOT_RE
 J5_INCIDENT_V15_PERSISTED_REPARSE=NO
 J5_PROVIDER_SCHEMA_CURRENT_STATUS=VALIDATED_BOUNDED_EVENT_16691018
 J5_INCIDENT_V14_HISTORICAL_QUALIFICATION=RETAINED_IN_ORIGINAL_BOUNDED_SCOPE
-J5_INCIDENT_CORRECTIVE_WORK_ORDER=WO_017_HUMAN_QUALIFICATION_PASS_PENDING_OWNER_CLOSURE
+J5_INCIDENT_CORRECTIVE_WORK_ORDER=WO_017_VALIDATED_COMPLETED
+J5_INCIDENT_CORRECTIVE_WORK_ORDER_LOCATION=docs/work_orders/completed
+J5_INCIDENT_OWNER_CLOSURE=AUTHORIZED_2026_08_30
 J5_INCIDENT_ADDITIONAL_PROVIDER_CALL_AUTHORIZED=NO
 J5_INCIDENT_V6_STATUS=PASS_REAL_LENS_PSG
 J5_INCIDENT_V7_STATUS=PASS_REAL_AND_INHERITED_BY_V8_V9_V10_V11_V12_V13
@@ -1181,9 +1183,9 @@ exclusive demeure `PARTIAL`.
 L'activation corrective a été limitée à l'arbre de processus du lanceur ; `.env` est resté
 inchangé et bloquant. Un redémarrage inerte a confirmé J5 `LOCKED` et sa préparation désactivée,
 puis l'application a été arrêtée sans listener résiduel sur `127.0.0.1:8087`. Le Work Order réel
-J5 historique reste `VALIDATED` et archivé dans `completed`. Le Work Order correctif WO-017 reste
-actif au statut `HUMAN_QUALIFICATION_PASS_PENDING_OWNER_CLOSURE`. Le go est consommé et
-n'autorise aucun nouvel appel.
+J5 historique reste `VALIDATED` et archivé dans `completed`. Après constat propriétaire du test
+fonctionnel concluant, le Work Order correctif WO-017 est lui aussi clôturé `VALIDATED` et archivé
+dans `completed`. Le go est consommé et n'autorise aucun nouvel appel.
 
 ## J6 : historique et sauvegarde/restauration validés
 
