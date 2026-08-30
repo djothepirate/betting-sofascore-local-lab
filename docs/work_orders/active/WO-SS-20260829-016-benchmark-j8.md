@@ -1,6 +1,6 @@
 # WO-SS-20260829-016 — Benchmark local reproductible J8
 
-- **Statut :** `READY_FOR_HUMAN_QUALIFICATION`
+- **Statut :** `QUALIFICATION_RUNNING_AFTER_SEPARATE_GO`
 - **Date d'ouverture :** 2026-08-29
 - **Date de démarrage :** 2026-08-29
 - **Date de validation :** `NOT_RUN`
@@ -549,3 +549,54 @@ ERROR_RATE=MEASURED
 PROVIDER_CALL_COST=MEASURED
 AUTOMATIC_POLLING=NO
 ```
+
+## 15. Nouveau go propriétaire après qualification V15
+
+Après clôture du correctif WO-017, le propriétaire indique que la campagne J8 peut se poursuivre.
+Dans le contexte non ambigu de WO-016 et de l'échec V14 désormais corrigé, cette instruction est
+consignée comme le nouveau go distinct exigé pour une seconde campagne end-to-end. Elle autorise
+un seul parcours `J3 → découverte tournoi → J4 phase 2 → J5` exécuté localement par Codex, sans
+geste manuel supplémentaire et sans modification de `.env`.
+
+La campagne initiale, sa fenêtre, son hash et son rapport `PARTIAL` restent immuables. La nouvelle
+campagne reçoit une fenêtre UTC exclusive et ne réutilise aucune tentative historique. Elle reste
+soumise au plafond absolu de 30 tentatives, à l'ordre fermé, au délai minimal de trois secondes, à
+la concurrence unitaire, à l'absence de retry et à l'arrêt au premier incident terminal.
+
+La sélection read-only conserve le candidat déterministe prévu : Cittadella — Atalanta U23,
+identifiant fournisseur `16691018`, identité canonique
+`f4713f80-4769-3656-ba51-61d8ac1aa814`, phase `15118`, tournoi routé `824`, saison `99790` et date
+J3 `2026-08-15`. Les caches J3 et tournoi exacts ont expiré naturellement depuis plus de 600
+secondes ; aucune suppression, invalidation ou dérogation de cache n'a été effectuée.
+
+```text
+J8_SECOND_PROVIDER_CAMPAIGN_GO=GRANTED_BY_OWNER_2026_08_30
+J8_SECOND_PROVIDER_CAMPAIGN_GO_SCOPE=ONE_END_TO_END_BOUNDED_PATH
+EXECUTION_ACTOR=CODEX_LOCAL_UI
+WINDOW_FROM=2026-08-30T09:24:51.0887925Z
+WINDOW_TO=PENDING_TERMINAL
+WINDOW_SEMANTICS=[FROM,TO)
+TARGET_PROVIDER_EVENT_ID=16691018
+TARGET_CANONICAL_EVENT_ID=f4713f80-4769-3656-ba51-61d8ac1aa814
+TARGET_DATE=2026-08-15
+TARGET_PHASE_ID=15118
+TARGET_ROUTE_TOURNAMENT_ID=824
+TARGET_SEASON_ID=99790
+J3_TARGET_CACHE_ROWS=15
+J3_TARGET_CACHE_EXPIRED_600_SECONDS=YES
+TOURNAMENT_TARGET_CACHE_ROWS=1
+TOURNAMENT_TARGET_CACHE_EXPIRED_600_SECONDS=YES
+BASELINE_J8_CAMPAIGNS=5
+BASELINE_J8_UNITS=23
+BASELINE_J8_ATTEMPTS=22
+BASELINE_J8_UNIT_RESULTS=23
+MAXIMUM_DIRECT_ATTEMPTS=30
+PROVIDER_RETRY=NO
+POLLING=NO
+ENV_FILE_MUTATION=NO
+ADDITIONAL_CAMPAIGN_AFTER_THIS_GO=NO
+```
+
+La readiness détaillée est conservée dans
+`docs/validation/J8-SECOND-BOUNDED-CAMPAIGN-READINESS-20260830.md`. Aucune requête fournisseur n'a
+été exécutée pendant la sélection, le contrôle des caches ou la consignation du go.
