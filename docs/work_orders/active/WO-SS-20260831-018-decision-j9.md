@@ -152,8 +152,10 @@ La preuve fournisseur relève d'un Work Order séparé :
 WORK_ORDER=WO-SS-20260831-019-j9-provider-robustness
 BRANCH=codex/j9-provider-robustness
 EVIDENCE_STATUS=DRAFT
+OFFLINE_READINESS=BLOCKED_PLAYWRIGHT_LOOPBACK_GRACEFUL_CLOSE
 NETWORK_AUTHORIZED=NO
 MAXIMUM_DIRECT_ATTEMPTS=38
+SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=YES_NOT_OPENED
 ```
 
 ADR-SS-002 v1.0 qualifie l'augmentation de volume exigée par ADR-SS-001 §9. Le précédent métier
@@ -166,6 +168,13 @@ Les quatre portes cumulatives sont :
 2. readiness hors ligne entièrement verte ;
 3. sauvegarde chiffrée V28 fraîche et restauration qualifiée sur une base isolée ;
 4. go propriétaire global explicite, unique et non consommé.
+
+La deuxième porte n'est pas franchie : la qualification J3 Playwright loopback et une unique
+contre-qualification hors sandbox reproduisent le même échec à la fermeture gracieuse (`14` tests,
+`12` erreurs `RUNTIME_FAILURE`, `2` scénarios d'arrêt opérateur réussis). Aucun appel fournisseur
+n'a été effectué ; J4/J5, la sauvegarde/restauration V28 et le go global restent non exécutés.
+WO-019 porte les métriques détaillées. La décision J9 demeure
+`PENDING_PROVIDER_ROBUSTNESS_EVIDENCE` et un Work Order runtime séparé est requis avant reprise.
 
 Avant ces quatre preuves :
 

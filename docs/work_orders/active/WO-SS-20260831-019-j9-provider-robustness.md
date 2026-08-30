@@ -1,6 +1,6 @@
 # WO-SS-20260831-019 — Preuve bornée de robustesse fournisseur pour J9
 
-- **Statut :** `READY_FOR_OFFLINE_READINESS`
+- **Statut :** `OPEN_AWAITING_PREREQUISITES`
 - **Date d'ouverture :** 2026-08-31
 - **Jalon :** J9 — Preuve préalable à la décision
 - **Base locale :** `a47c932`
@@ -46,9 +46,10 @@ OWNER_GO_CONSUMED=NO
 MAX_DIRECT_CALLS=38
 REPLACEMENT_DOSSIER_ALLOWED=NO
 ADR_SS_002_STATUS=ACCEPTED_V1_0
-OFFLINE_READINESS=NOT_EXECUTED
-V28_BACKUP_RESTORE=NOT_EXECUTED
+OFFLINE_READINESS=BLOCKED_PLAYWRIGHT_LOOPBACK_GRACEFUL_CLOSE
+V28_BACKUP_RESTORE=NOT_EXECUTED_READINESS_BLOCKED
 GLOBAL_OWNER_GO=NOT_GRANTED
+SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=YES_NOT_OPENED
 ```
 
 Le réseau reste bloqué jusqu'à preuve cumulative des quatre portes :
@@ -232,6 +233,15 @@ La readiness confirme notamment :
 
 Un test qui échoue, un appel fournisseur détecté ou un besoin de modification runtime ramène le
 statut à `OPEN_AWAITING_PREREQUISITES`. Aucun correctif n'est improvisé sous ce Work Order.
+
+Cette règle a été déclenchée pendant la readiness du 2026-08-31. La qualification Playwright J3
+loopback et son unique contre-qualification hors sandbox ont échoué de manière identique : `14`
+tests exécutés, `0` échec d'assertion, `12` erreurs `RUNTIME_FAILURE` pendant
+`campaign.close()` / la fermeture gracieuse et `2` scénarios d'arrêt opérateur réussis. Les
+assertions de parcours ont précédé ces erreurs de fermeture, mais leur réussite ne neutralise pas
+le garde-fou de nettoyage. Aucun appel fournisseur n'a été exécuté. J4, J5 et la
+sauvegarde/restauration V28 n'ont donc pas été lancés. La readiness reste bloquée et un Work Order
+runtime séparé, encore non ouvert, est requis avant toute reprise.
 
 ## 9. Sauvegarde/restauration V28
 
@@ -436,16 +446,31 @@ DIFF_CHECK=PASS
 LOCAL_MARKDOWN_LINKS=PASS
 SECRET_SCAN=PASS_NO_CREDENTIAL_PATTERN_IN_J9_FILES
 LOOPBACK_AND_NETWORK_DEFAULTS_CHECK=PASS
-INTEGRATION_VERIFY=PENDING
-VERIFY_LOCAL_WITH_INTEGRATION=PENDING
-LOOPBACK_J3=PENDING
-LOOPBACK_J4=PENDING
-LOOPBACK_J5=PENDING
-V28_BACKUP_RESTORE=PENDING
-GLOBAL_OWNER_GO=PENDING
+INTEGRATION_VERIFY=PASS_67_TESTS_0_FAILURE_0_ERROR
+VERIFY_LOCAL_WITH_INTEGRATION=PASS_928_STANDARD_67_INTEGRATION
+DOCKER_COMPOSE_CONFIG=PASS
+LOOPBACK_J3=FAIL_14_TESTS_0_FAILURE_12_ERRORS_0_SKIPPED_2_PASS
+LOOPBACK_J3_ERROR_CLASS=RUNTIME_FAILURE_AT_GRACEFUL_CLOSE
+LOOPBACK_J3_OUT_OF_SANDBOX_COUNTER_QUALIFICATION=IDENTICAL_FAILURE
+LOOPBACK_J3_OPERATOR_STOP_SCENARIOS=PASS_2
+LOOPBACK_J3_COUNTER_QUALIFICATION_REPORT_XML_SHA256=6567dbdf590dc5cdd76cfa9c80452324c92fbb00234151c537d943267ad94f37
+LOOPBACK_J3_COUNTER_QUALIFICATION_REPORT_TEXT_SHA256=a9358021bf2299a954138ba69982f98628e4b4f2fcda72038d77c4f7806b62a3
+LOOPBACK_J4=NOT_RUN_AFTER_J3_READINESS_FAILURE
+LOOPBACK_J5=NOT_RUN_AFTER_J3_READINESS_FAILURE
+V28_BACKUP_RESTORE=NOT_RUN_READINESS_BLOCKED
+GLOBAL_OWNER_GO=NOT_GRANTED
 PROVIDER_CALLS_UNDER_WO019=0
+POST_FAILURE_RESIDUAL_OWNED_PROCESS_COUNT=0
+POST_FAILURE_LISTENER_127_0_0_1_8087_COUNT=0
+POST_FAILURE_FORBIDDEN_BROWSER_ARTIFACTS=NONE_FOUND
+SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=YES_NOT_OPENED
+NETWORK_AUTHORIZED=NO
 ```
 
-ADR-SS-002 v1.0 est accepté et WO-019 entre dans la porte de readiness hors ligne. Les tests
-PostgreSQL, qualifications Chromium loopback et sauvegarde/restauration restent `PENDING` tant que
-leurs résultats ne sont pas consignés. Aucun de ces travaux ne constitue une autorisation réseau.
+ADR-SS-002 v1.0 reste accepté. Les vérifications standards, PostgreSQL/Testcontainers,
+`Verify-Local` et Compose sont vertes et n'ont produit aucun appel fournisseur. La qualification
+Playwright loopback reste toutefois bloquante : la contre-qualification hors sandbox reproduit les
+`12` erreurs de fermeture gracieuse. L'audit post-échec ne trouve aucun processus possédé résiduel,
+aucun listener sur `127.0.0.1:8087` et aucun HAR, trace, vidéo, capture, téléchargement ou
+`storageState`. WO-019 revient à `OPEN_AWAITING_PREREQUISITES` ; aucun go, appel fournisseur, test
+J4/J5 ou cycle V28 n'est autorisé avant un Work Order runtime séparé.

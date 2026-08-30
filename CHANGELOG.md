@@ -23,8 +23,18 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   pour rendre explicite l'exception unique portant le plafond agrégé de 30 à 38 appels ;
 - acceptation propriétaire explicite d'ADR-SS-002 v1.0 après reconnaissance de la revue officielle,
   du corpus D1/D2/D3, du plafond 38, du go unique de 60 minutes au plus, de la poursuite sur les
-  seuls `404` natifs J4/J5 et des non-autorisations ; WO-019 passe à
+  seuls `404` natifs J4/J5 et des non-autorisations ; WO-019 est d'abord passé à
   `READY_FOR_OFFLINE_READINESS`, avec `NETWORK_AUTHORIZED=NO` et go global toujours absent ;
+- readiness hors ligne partiellement verte : 928 tests standards, 67 tests d'intégration,
+  `Verify-Local.ps1 -WithIntegrationTests` et la validation Compose réussis, sans appel fournisseur ;
+- qualification J3 Playwright loopback puis unique contre-qualification hors sandbox échouées de
+  manière identique : 14 tests, 12 erreurs `RUNTIME_FAILURE` lors de la fermeture gracieuse et deux
+  scénarios d'arrêt opérateur réussis ;
+- arrêt à la porte de sécurité avec zéro appel fournisseur, aucun processus possédé résiduel, aucun
+  listener 8087 et aucun artefact navigateur interdit ; J4, J5 et le cycle sauvegarde/restauration
+  V28 n'ont pas été exécutés ;
+- WO-019 revient à `OPEN_AWAITING_PREREQUISITES` ; un Work Order runtime séparé, encore non ouvert,
+  est requis avant reprise, sans go réseau ni modification de la décision J9 ;
 - revue factuelle de sources officielles : restrictions publiées sur les requêtes automatisées,
   le scraping, l'agrégation, la reproduction et l'extraction substantielle sans consentement
   explicite ; point d'entrée `Sofascore API` et canal `Product -> API` présents, mais aucune licence,

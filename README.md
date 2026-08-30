@@ -10,11 +10,15 @@ Le jalon **J9 — Décision de gouvernance** est ouvert par `WO-SS-20260831-018`
 `PENDING_PROVIDER_ROBUSTNESS_EVIDENCE` : le corpus J8 mono-dossier ne suffit pas à conclure.
 WO-018 autorise uniquement la matrice factuelle et la préparation documentaire. Il n'autorise ni
 appel fournisseur, ni intégration, ni nouveau endpoint, ni polling, ni scheduler, ni mode live.
-La preuve multi-dossier envisagée relève de WO-019. ADR-SS-002 v1.0 est accepté explicitement ;
-WO-019 est donc `READY_FOR_OFFLINE_READINESS`, mais le réseau reste bloqué jusqu'à une readiness
-hors ligne verte, une sauvegarde/restauration V28 qualifiée et un go propriétaire unique.
-ADR-SS-003 n'existe pas et demeure réservé à une éventuelle décision d'architecture après la
-décision finale J9. L'acceptation d'ADR-SS-002 ne vaut pas go réseau.
+La preuve multi-dossier relève de WO-019. ADR-SS-002 v1.0 est accepté explicitement, mais WO-019 est
+revenu à `OPEN_AWAITING_PREREQUISITES` : la qualification J3 Playwright loopback et son unique
+contre-qualification hors sandbox ont produit le même bilan, soit `14` tests, `12` erreurs
+`RUNTIME_FAILURE` à la fermeture gracieuse et `2` scénarios d'arrêt opérateur réussis. Aucun appel
+fournisseur n'a eu lieu ; l'audit post-échec ne trouve aucun processus possédé résiduel, listener
+8087 ou artefact navigateur interdit. J4/J5 et la sauvegarde/restauration V28 n'ont pas été
+exécutés. Un Work Order runtime distinct est requis avant reprise. Le réseau reste bloqué, le go
+global n'est pas accordé et ADR-SS-003 n'existe pas. L'acceptation d'ADR-SS-002 ne vaut pas go
+réseau.
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une
