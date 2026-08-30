@@ -4,6 +4,36 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### J5 — correctif borné V15 des actions vides en tirs au but
+
+- ouverture de `WO-SS-20260830-017` sur `codex/j8-incidents-v15`, depuis la preuve J8 partielle
+  `cfd536e`, après revue de l'ADR-SS-001 v1.4 : aucun endpoint, allowlist, worker, protocole IPC,
+  transport ou garde réseau ne change ;
+- ajout de `event-incidents-v15`, héritier intégral de V14, qui assimile une propriété
+  `footballPassingNetworkAction` absente à un tableau exactement vide uniquement dans une séance
+  terminale non minutée déjà cohérente selon V12, sans déduire de minute ;
+- rejet conservé pour JSON `null`, les autres types, les tableaux non vides incohérents, les
+  séquences ou scores contradictoires et toute séance mêlant une tentative réellement minutée à
+  une tentative non minutée ;
+- câblage cohérent de V15 sur la voie fournisseur gardée, les imports locaux unitaire et
+  multi-match et la provenance des observations ; V12 à V14 restent inchangés dans leur
+  comportement historique ;
+- migration append-only V28 ajoutant seulement V15 à la contrainte fermée de parseur J5, sans DML,
+  colonne, table, backfill ou réécriture V1–V27 ; scripts J6 alignés sur la version courante sans
+  changement du périmètre de sauvegarde, de purge ou de fingerprint ;
+- 76 tests ciblés parseurs/services et l'upgrade Testcontainers V27→V28 sont verts, sans appel
+  fournisseur ; une fixture synthétique minimisée couvre les formes positives et négatives sans
+  copier le payload réel ;
+- sonde PostgreSQL read-only des octets exacts du snapshot 717 : SHA-256 inchangé,
+  `PARSED/PARTIAL · 91%`, 35 incidents, zéro problème et 18 warnings sous V15, sans reparse
+  persistant, observation ou mutation J8 ;
+- portes finales vertes après le dernier changement : 928 tests standards, 4 ignorés prévus,
+  67 tests PostgreSQL/Testcontainers, `Verify-Local.ps1 -WithIntegrationTests`, Compose et
+  `git diff --check`, avec tous les drapeaux réseau à `false`, aucun listener 8087, aucun processus
+  application/worker et aucun appel fournisseur ;
+- l'issue historique reste `event-incidents-v14 / SCHEMA_INCOMPATIBLE`, J8 reste `PARTIAL`, et
+  aucune reprise, seconde campagne ou qualification fournisseur n'est autorisée par ce correctif.
+
 ### J8 — benchmark local prêt pour qualification humaine
 
 - ouverture de `WO-SS-20260829-016` sur la branche `codex/j8-benchmark`, depuis la baseline propre
@@ -39,8 +69,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `da158fb04c8dc113a56e94e2bc7da6ad27278111af5cf8179b7476e5d8f1cc95` et zéro appel fournisseur ;
 - résultat J8 conservé `PARTIAL` et Work Order actif : configuration reverrouillée, application et
   worker arrêtés, revue humaine ciblée non terminée, aucun rapport final gelé, aucune clôture J8 ou
-  décision J9. Une correction du parseur et toute nouvelle campagne exigent un Work Order et un go
-  séparés.
+  décision J9. Le correctif technique relève désormais du Work Order séparé WO-017 ; toute
+  qualification fournisseur ou nouvelle campagne exige toujours un go distinct.
 
 ### J5 — migration Playwright des donnees evenement validee
 

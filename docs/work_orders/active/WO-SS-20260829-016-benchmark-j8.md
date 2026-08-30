@@ -461,6 +461,19 @@ J5_PROVIDER_SCHEMA_CURRENT_STATUS=NOT_VALIDATED_AFTER_SNAPSHOT_717
 J5_CORRECTIVE_SCOPE=SEPARATE_WORK_ORDER_AND_OWNER_DECISION_REQUIRED
 ```
 
+### 13.3 Correctif technique V15 sous Work Order séparé
+
+Le propriétaire a ensuite autorisé WO-017 pour le seul correctif du parseur incidents. Le parseur
+`event-incidents-v15` et la migration append-only V28 assimilent propriété absente et tableau
+exactement vide uniquement dans la séance terminale non minutée déjà cohérente. Les listes non
+vides incohérentes, les types erronés et les séances temporellement mixtes restent refusés.
+
+Une sonde PostgreSQL read-only des octets exacts du snapshot 717 rend `PARSED/PARTIAL · 91%` sous
+V15, sans persister de reparse. Elle ne modifie ni le snapshot, ni son statut historique V14, ni
+l'occurrence, ni le résultat d'unité J8, ni le coût ou le hash de population. WO-017 reste une
+readiness technique distincte : aucune reprise ou nouvelle campagne fournisseur n'est autorisée et
+J8 reste `PARTIAL / READY_FOR_HUMAN_QUALIFICATION`.
+
 Après la campagne, l'application et le worker ont été arrêtés, le port 8087 libéré, les gates locaux
 remis à `false` et le verrou persistant confirmé par l'exporteur. Aucun retry, import, fallback,
 appel compositions ou nouvelle campagne n'a été exécuté.

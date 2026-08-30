@@ -191,6 +191,22 @@ continuant à refuser les listes non vides incohérentes, les valeurs mal typée
 mixtes. Ce travail, sa migration append-only, ses tests et toute nouvelle campagne exigent un Work
 Order et une décision propriétaire séparés. Aucun correctif n'est appliqué par cette preuve J8.
 
+### 5.3 Addendum du 2026-08-30 — readiness technique V15
+
+Après gel de la présente preuve historique, WO-017 a ajouté le parseur versionné
+`event-incidents-v15` et la migration append-only V28. V15 traite propriété absente et tableau
+exactement vide comme équivalents uniquement dans la séance terminale non minutée déjà cohérente ;
+les tableaux non vides incohérents, les types erronés et les séances mêlant tentatives réellement
+minutées et non minutées restent incompatibles.
+
+Une sonde locale en transaction PostgreSQL read-only a analysé les octets exacts du snapshot 717
+sans les afficher ni les copier dans Git : SHA-256 identique, `PARSED`, zéro problème, 18 warnings,
+`PARTIAL · 91%` et 35 incidents sous V15. Elle s'est terminée par rollback et n'a créé ni
+observation, ni occurrence, ni résultat J8. Le snapshot 717 et l'unité de campagne restent donc
+`event-incidents-v14 / SCHEMA_INCOMPATIBLE`; l'issue `PARTIAL`, les 19 tentatives et le hash du
+rapport restent inchangés. Cette readiness n'autorise ni reparse persistant, ni retry, ni seconde
+campagne fournisseur.
+
 ## 6. Postconditions et décision
 
 Après l'échec terminal, aucun retry, import, fallback, appel compositions ou seconde campagne n'a

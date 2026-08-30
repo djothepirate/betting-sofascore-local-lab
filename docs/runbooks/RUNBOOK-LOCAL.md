@@ -110,7 +110,7 @@ Vérifier :
 - connecteur `DISABLED` ;
 - base URL `NON_CONFIGURED` ;
 - PostgreSQL `AVAILABLE` ;
-- migration Flyway `27` ;
+- migration Flyway `28` ;
 - snapshots `0` sur une base neuve ;
 - corpus hors ligne `AVAILABLE_OFFLINE` ;
 - fixtures `12 / 12 disponibles` ;
@@ -600,7 +600,7 @@ ouvrir la fiche d'une identité canonique J4 existante puis sélectionner
    même ordre ;
 8. si l'état du contrôle est `COMPLETED_LOCKED`, vérifier les trois panneaux locaux, leur complétude ou
    leur statut `UNAVAILABLE · N/A`, leur source `PROVIDER_SNAPSHOT`, leur parseur courant
-   (`event-statistics-v2`, `event-incidents-v14`, `event-lineups-v2`) ou normaliseur
+   (`event-statistics-v2`, `event-incidents-v15`, `event-lineups-v2`) ou normaliseur
    `event-*-unavailable-v1`, leur snapshot, leur SHA-256 et leur heure de réception, sans ouvrir ou
    copier le payload brut ;
 9. dans les panneaux incidents et compositions, vérifier qu'une complétude `PARTIAL` conserve son
@@ -630,11 +630,15 @@ Ce verrou est volontaire : arrêter l'application, la redémarrer, préparer une
 obtenir une nouvelle phrase et choisir immédiatement l'option B. L'import n'est jamais un retry ni
 un fallback automatique de la campagne échouée.
 
-Sous `event-incidents-v14`, qui hérite sans modification de la règle V12, une séance terminale
-entièrement non minutée peut être compatible à
-`PARTIAL`. Vérifier alors que le marqueur `PEN` et chaque `penaltyShootout` sans minute affichent
-`—`, que les tirs `missed` sans `reason` ni `description` sont conservés sans motif inventé, et que
-la campagne atteint les compositions. Ne jamais interpréter l'ordre de séance comme une minute.
+Sous `event-incidents-v15`, qui conserve V14 et borne l'extension à la règle terminale V12, une
+séance terminale entièrement non minutée peut être compatible à `PARTIAL` lorsque chaque tentative
+omet `footballPassingNetworkAction` ou porte un tableau exactement vide. Ces deux représentations
+peuvent coexister. Vérifier alors que le marqueur `PEN` et chaque `penaltyShootout` sans minute
+affichent `—`, que les tirs `missed` sans `reason` ni `description` sont conservés sans motif
+inventé, et que la campagne atteint les compositions. Ne jamais interpréter l'ordre de séance
+comme une minute. Une valeur `null`, un autre type, un tableau non vide incohérent ou une séance
+mêlant une tentative réellement minutée et une tentative non minutée doit toujours produire
+`SCHEMA_INCOMPATIBLE` et verrouiller la campagne.
 
 Pour un carton portant `reason="Leaving field"`, vérifier que le motif exact est conservé et rendu
 dans la colonne `MOTIF`, puis que la campagne atteint les compositions. Toute autre valeur de motif
@@ -1422,12 +1426,14 @@ Aucun Docker ni accès SofaScore n’est requis par les tests standards.
 .\mvnw.cmd -Pintegration-tests verify
 ```
 
-Docker doit être disponible. Testcontainers vérifie les migrations V1 à V27, l’état initial du
+Docker doit être disponible. Testcontainers vérifie les migrations V1 à V28, l’état initial du
 connecteur, la conservation exacte du brut, sa déduplication, les provenances J4/J5, les occurrences
 J6, la rétention auditée et la portée cache `TOURNAMENT_SCHEDULED_EVENTS` dans une base éphémère.
 V27 ajoute aussi les cinq tables append-only du ledger J8, leurs contraintes, l'upgrade V26→V27
 et la lecture reproductible des agrégats locaux. Le runbook J8 détaillé est
 `docs/runbooks/J8-BENCHMARK.md`.
+V28 n'ajoute aucune table : elle autorise uniquement la provenance `event-incidents-v15` et son
+upgrade V27→V28 prouve l'absence de réécriture des observations V14 et des cinq preuves J8.
 Pour WO-010, il vérifie aussi le commit atomique des `3N` familles, le réimport avec occurrences
 append-only et le rollback intégral lors d'une panne sur la dernière famille du dernier événement.
 

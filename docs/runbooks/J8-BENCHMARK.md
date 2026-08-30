@@ -23,8 +23,9 @@ reprise. La réussite des tests, de la page ou de l'export ne vaut jamais un nou
 ## 2. Prérequis
 
 - Windows 11, Java 25 et Docker Desktop ;
-- branche `codex/j8-benchmark` et Work Order 016 actif ;
-- PostgreSQL local sain, avec Flyway V27 ;
+- branche portant les Work Orders 016 et 017, tous deux actifs ;
+- PostgreSQL local sain, avec Flyway V28 ; V27 reste la migration ayant créé le ledger J8 et V28
+  autorise seulement le parseur incidents V15 ;
 - application liée exclusivement à `127.0.0.1:8087` ;
 - configurations J3, découverte tournoi, J4 et J5 désactivées et contrôles persistants `LOCKED` ;
 - aucun worker Playwright, appel fournisseur, campagne ou tâche planifiée en cours ;
@@ -60,8 +61,9 @@ git check-ignore .env exports\j8\control.md
 Select-String -Path .\src\main\resources\application.yml -Pattern '127\.0\.0\.1'
 ```
 
-Vérifier que V27 est append-only, que V1 à V26 n'ont pas été réécrites et qu'aucun rapport runtime,
-payload, secret, cookie ou jeton n'est suivi par Git.
+Vérifier que V27 et V28 sont append-only, que V1 à V26 n'ont pas été réécrites et qu'aucun rapport
+runtime, payload, secret, cookie ou jeton n'est suivi par Git. V28 ne doit contenir aucun DML ni
+modifier les cinq tables du ledger créé par V27.
 
 ## 4. Démarrage local sans réseau
 
@@ -380,6 +382,18 @@ formes comme équivalentes dans le seul contexte terminal cohérent. Le transpor
 inchangés par J8 et l'instrumentation ne transforme pas le payload. Toute version corrective du
 parseur, migration append-only, reparse ou nouvelle campagne relève d'un Work Order et d'un go
 propriétaire séparés.
+
+### 10.6 Correctif incidents V15 postérieur à la campagne
+
+WO-017 ajoute `event-incidents-v15` et Flyway V28 sans modifier la preuve historique. Une sonde
+locale en transaction PostgreSQL read-only a relu les octets exacts du snapshot 717 : SHA-256
+identique, résultat V15 `PARSED`, complétude `PARTIAL · 91%`, 35 incidents et zéro problème. Cette
+sonde n'a persisté ni observation, ni occurrence, ni résultat J8 et n'a effectué aucun transport.
+
+Le résultat de campagne reste donc `event-incidents-v14 / SCHEMA_INCOMPATIBLE`, son coût et son
+hash de population restent inchangés, et J8 reste `PARTIAL`. La readiness V15 n'autorise ni reparse
+persistant, ni retry, ni seconde campagne fournisseur. Toute preuve prospective V15 exige un go
+propriétaire distinct.
 
 ## 11. Clôture
 

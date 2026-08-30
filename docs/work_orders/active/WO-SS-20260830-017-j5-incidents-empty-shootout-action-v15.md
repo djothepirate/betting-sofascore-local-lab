@@ -1,6 +1,6 @@
 # WO-SS-20260830-017 — Incidents J5 V15, tableau d'action vide pendant une séance terminale
 
-- **Statut :** `IN_PROGRESS`
+- **Statut :** `READY_FOR_HUMAN_QUALIFICATION`
 - **Date :** 2026-08-30
 - **Date de démarrage :** 2026-08-30
 - **Qualification propriétaire :** `NOT_REQUESTED`
@@ -121,24 +121,24 @@ reste absente, son rendu reste `—` et les chemins manquants restent mesurés.
 
 ## 7. Critères d'acceptation
 
-- [ ] V14 continue de refuser la variante tableau vide ;
-- [ ] V15 accepte la forme historique avec propriété absente ;
-- [ ] V15 accepte le tableau vide dans une séance terminale cohérente ;
-- [ ] V15 accepte une séance cohérente combinant absence et tableau vide ;
-- [ ] V15 ne crée ni minute ni signal de complétude artificiel ;
-- [ ] une liste non vide incohérente reste refusée ;
-- [ ] `null`, objet, chaîne, nombre et booléen restent refusés ;
-- [ ] une séance mêlant tentative minutée et tentative non minutée reste refusée ;
-- [ ] les gaps, doublons, scores terminaux divergents et marqueurs invalides restent refusés ;
-- [ ] les règles V14 `Extra time` et V13 restent inchangées ;
-- [ ] les voies directe et import utilisent V15 ;
-- [ ] la lecture des versions historiques reste compatible ;
-- [ ] V28 est append-only et l'upgrade V27 vers V28 ne réécrit aucune donnée ;
-- [ ] `mvnw clean verify` est vert ;
-- [ ] `mvnw -Pintegration-tests verify` est vert ;
-- [ ] `Verify-Local.ps1 -WithIntegrationTests` est vert sans appel fournisseur ;
-- [ ] `docker compose --env-file .env config` et `git diff --check` sont verts ;
-- [ ] le Work Order reste actif jusqu'à une décision propriétaire séparée de qualification.
+- [x] V14 continue de refuser la variante tableau vide ;
+- [x] V15 accepte la forme historique avec propriété absente ;
+- [x] V15 accepte le tableau vide dans une séance terminale cohérente ;
+- [x] V15 accepte une séance cohérente combinant absence et tableau vide ;
+- [x] V15 ne crée ni minute ni signal de complétude artificiel ;
+- [x] une liste non vide incohérente reste refusée ;
+- [x] `null`, objet, chaîne, nombre et booléen restent refusés ;
+- [x] une séance mêlant tentative minutée et tentative non minutée reste refusée ;
+- [x] les gaps, doublons, scores terminaux divergents et marqueurs invalides restent refusés ;
+- [x] les règles V14 `Extra time` et V13 restent inchangées ;
+- [x] les voies directe et import utilisent V15 ;
+- [x] la lecture des versions historiques reste compatible ;
+- [x] V28 est append-only et l'upgrade V27 vers V28 ne réécrit aucune donnée ;
+- [x] `mvnw clean verify` est vert ;
+- [x] `mvnw -Pintegration-tests verify` est vert ;
+- [x] `Verify-Local.ps1 -WithIntegrationTests` est vert sans appel fournisseur ;
+- [x] `docker compose --env-file .env config` et `git diff --check` sont verts ;
+- [x] le Work Order reste actif jusqu'à une décision propriétaire séparée de qualification.
 
 ## 8. Livraison Git prévue
 
@@ -151,3 +151,44 @@ Les commits locaux seront découpés en :
 
 Aucun push, aucune Pull Request, aucune fusion dans `main` et aucune nouvelle campagne fournisseur
 ne sont autorisés par ce Work Order.
+
+## 9. Preuve locale exacte et non persistante
+
+La réponse déjà conservée du snapshot `717` a été relue dans une transaction PostgreSQL read-only,
+analysée en mémoire puis rollbackée. Le hash brut a été vérifié sans afficher ni versionner le
+payload. Les comptes d'observations et de résultats J8 sont inchangés.
+
+```text
+PROBE_CONNECTION_READ_ONLY=true
+SNAPSHOT_ID=717
+HISTORICAL_SCHEMA_STATUS=SCHEMA_INCOMPATIBLE
+HISTORICAL_PARSER=event-incidents-v14
+RAW_SHA256_MATCH=true
+V15_RESULT=PARSED
+V15_PROBLEM_COUNT=0
+V15_WARNING_COUNT=18
+V15_COMPLETENESS_STATUS=PARTIAL
+V15_COMPLETENESS_SCORE=91
+V15_INCIDENT_COUNT=35
+OBSERVATION_COUNT_UNCHANGED=true
+J8_RESULT_COUNT_UNCHANGED=true
+PERSISTED_REPARSE=NO
+```
+
+## 10. Portes techniques finales
+
+```text
+STANDARD_MAVEN_GATE=PASS_928_TESTS_4_SKIPPED
+POSTGRESQL_MAVEN_GATE=PASS_67_TESTS
+VERIFY_LOCAL_GATE=PASS
+COMPOSE_CONFIG_GATE=PASS
+GIT_DIFF_CHECK=PASS
+NETWORK_FLAGS_DEFAULT_FALSE=PASS
+PORT_8087_LISTENER=ABSENT
+APPLICATION_OR_PLAYWRIGHT_WORKER_PROCESS=ABSENT
+SOFASCORE_NETWORK_CALLS_EXECUTED=NO
+```
+
+Le correctif atteint la readiness technique mais ne qualifie pas un schéma fournisseur courant.
+WO-017 reste donc dans `active`, avec `Qualification propriétaire=NOT_REQUESTED` et
+`Clôture=ACTIVE`. Aucune reprise de J8, seconde campagne ou écriture de reparse n'est autorisée.

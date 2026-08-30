@@ -9,10 +9,16 @@ NOT_PRODUCTION_APPROVED
 NO_CRITICAL_DEPENDENCY
 V13_PROVIDER_SCHEMA_VALIDATED=YES
 V13_PROVIDER_SCHEMA_VALIDATION_SCOPE=EVENTS_16691018_AND_16851672
-CURRENT_INCIDENT_PARSER=event-incidents-v14
+CURRENT_INCIDENT_PARSER=event-incidents-v15
 V14_PROVIDER_SCHEMA_VALIDATED=YES_OWNER_LOCAL_JSON_IMPORT
 V14_PROVIDER_SCHEMA_VALIDATION_SCOPE=EVENT_16809018_OBSERVATIONS_567_AND_570
 V14_HUMAN_FUNCTIONAL_QUALIFICATION=PASS
+V15_TECHNICAL_READINESS=PASS_BOUNDED_EMPTY_ACTION_ARRAY_RULE
+V15_EXACT_STORED_RESPONSE_READ_ONLY_PROBE=PARSED_PARTIAL_91
+V15_PROVIDER_SCHEMA_VALIDATED=NO_PENDING_OWNER_REVIEW
+V15_PERSISTED_REPARSE=NO
+V15_PROVIDER_CALLS_DURING_IMPLEMENTATION_AND_TESTS=0
+J8_HISTORICAL_INCIDENT_RESULT=V14_SCHEMA_INCOMPATIBLE_UNCHANGED
 V12_OFFLINE_QUALIFICATION=PASS_33_INCIDENTS_14_UNMINUTED_SHOOTOUTS
 V13_LEAVING_FIELD_OFFLINE_QUALIFICATION=PASS_EXACT_CARD_REASON
 V12_REAL_QUALIFICATION=PASS_UNDER_V13_EVENT_16691018_SNAPSHOT_189_OBSERVATION_100
@@ -61,15 +67,24 @@ une séance terminale dont les quatorze tirs au but, ainsi que le marqueur `PEN`
 minute exploitable. V12 traite hors ligne cette forme sans convertir l'ordre des tireurs en temps
 de jeu. Une observation opérateur plus récente ajoute le motif exact de carton `Leaving field` ;
 V13 hérite intégralement de V12 et ajoute uniquement ce libellé au vocabulaire fermé. Deux
-campagnes humaines ont depuis qualifié le parseur courant : `16691018` pour la séance non minutée,
+campagnes humaines ont alors qualifié le parseur V13 courant à cette date : `16691018` pour la séance non minutée,
 avec poursuite jusqu'aux compositions, puis `16851672` pour le carton `Leaving field`, également
-jusqu'aux compositions. Le statut fournisseur courant est donc `YES` dans cette portée bornée.
+jusqu'aux compositions. Le statut fournisseur V13 était donc `YES` dans cette portée bornée.
 Les chemins techniques de complétude restent persistés mais ne sont plus rendus dans les panneaux
 incidents et compositions ; badges, compteurs et tables restent inchangés. Le contrôle visuel final
 le confirme. Le propriétaire a également attesté le reverrouillage de la configuration et les
 états J4/J5 `LOCKED` après redémarrage ; l'absence de listener sur `127.0.0.1:8087` confirme l'arrêt
 final. Les Work Orders de parseur historiques sont `VALIDATED` et archivables ; ce statut ne
 valait pas, a lui seul, qualification du nouveau transport Playwright WO-015.
+
+La campagne J8 du 2026-08-30 a ensuite conservé une nouvelle réponse incidents dont les
+tentatives terminales non minutées portent un tableau d'actions vide. WO-017 introduit le parseur
+V15 : dans le seul contexte terminal déjà cohérent de V12, propriété absente et tableau exactement
+vide représentent désormais la même absence de source auxiliaire. Une sonde en lecture seule des
+octets exacts du snapshot 717 rend `PARSED/PARTIAL · 91%` sous V15, sans reparse persistant ni
+mutation du ledger J8. La campagne historique reste donc enregistrée sous V14 avec
+`SCHEMA_INCOMPATIBLE`, et la compatibilité fournisseur V15 reste à qualifier par une décision
+propriétaire distincte ; aucun nouvel appel n'est autorisé par cette readiness technique.
 
 ### 1.1 Transport courant WO-015
 
@@ -256,7 +271,7 @@ Pour chaque famille, qu'elle soit acquise directement ou importée localement :
    reste immuable et le résultat du parseur courant est porté uniquement par l'observation
    normalisée append-only.
 
-Les parseurs courants sont `event-statistics-v2`, `event-incidents-v14` et `event-lineups-v2`.
+Les parseurs courants sont `event-statistics-v2`, `event-incidents-v15` et `event-lineups-v2`.
 L'identifiant d'événement vient du claim et non du JSON. Les champs inconnus génèrent au plus 256
 avertissements.
 Une liste vide structurellement valide reste `EMPTY_VALID`; une absence facultative mesurée reste
@@ -392,6 +407,16 @@ reste distincte du marqueur terminal `ET` et est conservée sans traduction. Une
 `isLive=false` explicite produit `SCHEMA_INCOMPATIBLE`; l'absence de `isLive` reste une donnée
 partielle mesurée. La migration append-only V26 autorise V14 sans colonne nouvelle et sans
 réécrire les observations V1–V25.
+
+`event-incidents-v15` conserve toutes les règles V14 et ne modifie que la représentation admise de
+l'absence d'action auxiliaire dans la séance terminale non minutée déjà cohérente de V12. Une
+propriété `footballPassingNetworkAction` absente et un tableau JSON exactement vide sont
+équivalents dans ce seul contexte, y compris lorsqu'ils coexistent entre tentatives. JSON `null`,
+les autres types, tout tableau non vide incohérent, les séquences ou scores contradictoires et une
+séance mêlant une tentative effectivement minutée à une tentative non minutée restent bloquants.
+Aucune minute n'est déduite de l'ordre. La migration append-only V28 ajoute seulement V15 à la
+contrainte fermée de provenance ; elle ne réécrit aucune observation, occurrence, preuve J8 ou
+donnée V1–V27.
 
 La déduplication brute est indépendante du parseur courant. Une réponse incidents identique peut
 donc résoudre un snapshot V2 historiquement `SCHEMA_INCOMPATIBLE` alors que V4 la parse avec
@@ -539,7 +564,7 @@ identifie exactement quinze absences temporelles : le marqueur `PEN` et quatorze
 `penaltyShootout`. Les sept tentatives ratées omettent aussi simultanément `reason` et
 `description`, mais ces champs facultatifs ne provoquent aucun problème de schéma.
 
-Le même payload passe sous V12 puis sous le parseur courant V13 avec 33 incidents, quatorze tirs au
+Le même payload passe sous V12 puis sous le parseur V13 alors courant avec 33 incidents, quatorze tirs au
 but, quinze avertissements `PROVIDER_SHOOTOUT_MINUTE_ABSENT`, aucune minute inventée et une
 complétude `PARTIAL`. Le retest humain V13 de `16691018` termine ensuite `COMPLETED_LOCKED` après
 exactement trois appels : snapshot 188 indisponible, snapshot incidents 189 / observation 100 à

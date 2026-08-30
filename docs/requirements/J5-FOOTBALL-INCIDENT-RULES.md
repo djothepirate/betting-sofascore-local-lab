@@ -103,7 +103,7 @@ Ci-dessous quelques exemples de blocs définissant une période d'un match de fo
 - isLive : 2 valeurs possibles
     1. true si le match est en cours
     2. false si le match est terminé
-- **time** : Temps réglementaire cumulé prévu à la fin de la période concernée en minutes (hors temps additionnel). Sur le marqueur terminal exact `text="PEN"`, `period="penalties"`, `isLive=false`, le fournisseur peut utiliser la sentinelle `999`. J5 conserve `999` uniquement dans le brut. Si tous les `penaltyShootout` de la réponse possèdent une minute effective, le marqueur est normalisé avec leur plus grande minute. Si, au contraire, toutes les tentatives omettent à la fois `time` et `footballPassingNetworkAction`, J5 conserve une minute normalisée absente uniquement lorsque la séance terminale est cohérente au sens de la section 10.2. Une séance mixte ou toute autre utilisation de `999` reste incompatible.
+- **time** : Temps réglementaire cumulé prévu à la fin de la période concernée en minutes (hors temps additionnel). Sur le marqueur terminal exact `text="PEN"`, `period="penalties"`, `isLive=false`, le fournisseur peut utiliser la sentinelle `999`. J5 conserve `999` uniquement dans le brut. Si tous les `penaltyShootout` de la réponse possèdent une minute effective, le marqueur est normalisé avec leur plus grande minute. Si, au contraire, toutes les tentatives omettent `time` et représentent l'absence d'action auxiliaire soit par une propriété `footballPassingNetworkAction` absente, soit par un tableau exactement vide, J5 V15 conserve une minute normalisée absente uniquement lorsque la séance terminale est cohérente au sens de la section 10.2. Une séance mêlant une tentative réellement minutée et une tentative non minutée, ou toute autre utilisation de `999`, reste incompatible.
 - addedTime : Valeur sentinelle généralement alimentée à 999 (elle peut être considérée comme un temps de jeu maximal technique). Cette valeur brute est conservée, mais elle n'est pas affichée comme du temps additionnel.
 - timeSeconds : Temps réglementaire cumulé prévu à la fin de la période concernée en secondes (hors temps additionnel).
 - **incidentType** : Vaut obligatoirement "period"
@@ -2320,7 +2320,7 @@ Ci-dessous quelques exemples de blocs définissant un penalty tiré dans le cadr
 
 1. Attributs globaux
 
-- **time** : Minute de jeu où le tir au but a été effectué. Si l'attribut global est absent, J5 utilise le champ `time` de la première entrée de `footballPassingNetworkAction` comme minute effective, tout en conservant le brut inchangé. Une minute peut rester absente uniquement pour une réponse où toutes les tentatives de la séance omettent à la fois `time` et `footballPassingNetworkAction`, et seulement si les conditions terminales ci-dessous sont toutes satisfaites ;
+- **time** : Minute de jeu où le tir au but a été effectué. Si l'attribut global est absent, J5 utilise le champ `time` de la première entrée non vide de `footballPassingNetworkAction` comme minute effective, tout en conservant le brut inchangé. Une minute peut rester absente uniquement pour une réponse où toutes les tentatives de la séance omettent `time` et où `footballPassingNetworkAction` est soit absent, soit un tableau exactement vide, et seulement si les conditions terminales ci-dessous sont toutes satisfaites ;
 - **player** : Bloc du joueur ayant effectué le tir au but. Données du bloc identiques à playerIn/playerOut ;
 - homeScore : Score de l'équipe à domicile (à la fin de la séance de tirs au but si cette dernière est terminée) ;
 - awayScore : Score de l'équipe à l'extérieur (à la fin de la séance de tirs au but si cette dernière est terminée) ;
@@ -2360,8 +2360,10 @@ cohérente :
    `isLive=false`, `time=999`, `addedTime=999` et les deux composantes du score final ;
 2. un marqueur de fin de temps réglementaire ou de prolongation (`FT` ou `ET`) possède une minute
    effective valide ;
-3. chaque `penaltyShootout` omet à la fois le champ global `time` et le tableau
-   `footballPassingNetworkAction` ; aucune tentative minutée ne peut être mélangée à cette forme ;
+3. chaque `penaltyShootout` omet le champ global `time` et représente l'absence de source
+   auxiliaire soit par une propriété `footballPassingNetworkAction` absente, soit par un tableau
+   exactement vide ; ces deux sérialisations peuvent coexister, mais aucune tentative réellement
+   minutée ne peut être mélangée à cette forme ;
 4. chaque tentative porte une classe `scored` ou `missed`, un côté, les deux composantes du score
    courant et une `sequence` strictement positive ;
 5. les séquences sont uniques et contiguës de `1` à `N` ;
@@ -2371,6 +2373,13 @@ Dans ce seul contexte, J5 persiste `NULL` comme minute normalisée pour le marqu
 tentatives, et émet un avertissement de provenance par chemin temporel absent. L'ordre de séance
 n'est jamais converti en minute. Une séance isolée, active, mixte, lacunaire, contradictoire ou sans
 marqueur terminal reste `SCHEMA_INCOMPATIBLE`.
+
+Cette équivalence est propre à `event-incidents-v15` et ne s'applique jamais à une valeur JSON
+`null`, un objet, une chaîne, un nombre, un booléen ou un tableau non vide. Un tableau non vide
+continue d'être évalué par les règles historiques de minute imbriquée ; s'il est mal typé,
+malformé ou incohérent avec le reste de la séance, la famille entière reste
+`SCHEMA_INCOMPATIBLE`. Les parseurs V12 à V14 conservent leur règle historique « propriété
+absente seulement ».
 
 2. Bloc player
 
