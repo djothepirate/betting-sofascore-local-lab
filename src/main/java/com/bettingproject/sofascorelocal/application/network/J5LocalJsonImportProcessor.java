@@ -42,6 +42,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 
@@ -153,10 +154,54 @@ public class J5LocalJsonImportProcessor {
             J5LocalJsonImportProcessingPlan prepared,
             BooleanSupplier mayContinue,
             Consumer<SofascoreEndpointType> endpointCompleted) {
+        return execute(prepared, mayContinue, endpointCompleted, (endpoint, raw) -> { });
+    }
+
+    J5LocalJsonImportProcessingResult execute(
+            J5LocalJsonImportProcessingPlan prepared,
+            BooleanSupplier mayContinue,
+            Consumer<SofascoreEndpointType> endpointCompleted,
+            BiConsumer<SofascoreEndpointType, RawSnapshotPersistenceResult> snapshotPersisted) {
+        return execute(
+                prepared,
+                mayContinue,
+                ignored -> { },
+                endpointCompleted,
+                snapshotPersisted);
+    }
+
+    J5LocalJsonImportProcessingResult execute(
+            J5LocalJsonImportProcessingPlan prepared,
+            BooleanSupplier mayContinue,
+            Consumer<SofascoreEndpointType> endpointReached,
+            Consumer<SofascoreEndpointType> endpointCompleted,
+            BiConsumer<SofascoreEndpointType, RawSnapshotPersistenceResult> snapshotPersisted) {
+        return execute(
+                prepared,
+                mayContinue,
+                endpointReached,
+                endpointCompleted,
+                snapshotPersisted,
+                ignored -> { });
+    }
+
+    J5LocalJsonImportProcessingResult execute(
+            J5LocalJsonImportProcessingPlan prepared,
+            BooleanSupplier mayContinue,
+            Consumer<SofascoreEndpointType> endpointReached,
+            Consumer<SofascoreEndpointType> endpointCompleted,
+            BiConsumer<SofascoreEndpointType, RawSnapshotPersistenceResult> snapshotPersisted,
+            Consumer<J5RealEndpointResult> evidenceCompleted) {
         J5LocalJsonImportProcessingPlan plan = Objects.requireNonNull(prepared, "prepared");
         BooleanSupplier continuation = Objects.requireNonNull(mayContinue, "mayContinue");
+        Consumer<SofascoreEndpointType> reached = Objects.requireNonNull(
+                endpointReached, "endpointReached");
         Consumer<SofascoreEndpointType> progress = Objects.requireNonNull(
                 endpointCompleted, "endpointCompleted");
+        BiConsumer<SofascoreEndpointType, RawSnapshotPersistenceResult> snapshotProgress =
+                Objects.requireNonNull(snapshotPersisted, "snapshotPersisted");
+        Consumer<J5RealEndpointResult> evidenceProgress = Objects.requireNonNull(
+                evidenceCompleted, "evidenceCompleted");
         List<J5RealEndpointResult> results = new ArrayList<>();
         int imports = 0;
 
@@ -166,6 +211,12 @@ public class J5LocalJsonImportProcessor {
 
         for (SofascoreEndpointType endpoint : ORDERED_ENDPOINTS) {
             requireContinuation(continuation, imports, results);
+            try {
+                reached.accept(endpoint);
+            }
+            catch (RuntimeException exception) {
+                throw failure("BENCHMARK_AUDIT_FAILURE", imports, results, exception);
+            }
             RawPayloadEvidence payload = plan.payloadFor(endpoint);
             boolean unavailable = isExplicitUnavailable404(payload);
             Instant importedAt;
@@ -189,6 +240,12 @@ public class J5LocalJsonImportProcessor {
             }
             catch (RuntimeException exception) {
                 throw failure("RAW_PERSISTENCE_ERROR", imports, results, exception);
+            }
+            try {
+                snapshotProgress.accept(endpoint, raw);
+            }
+            catch (RuntimeException exception) {
+                throw failure("BENCHMARK_AUDIT_FAILURE", imports, results, exception);
             }
             imports++;
 
@@ -271,6 +328,12 @@ public class J5LocalJsonImportProcessor {
                 throw failure("PROCESSING_RESULT_ERROR", imports, results, exception);
             }
             results.add(result);
+            try {
+                evidenceProgress.accept(result);
+            }
+            catch (RuntimeException exception) {
+                throw failure("BENCHMARK_AUDIT_FAILURE", imports, results, exception);
+            }
             try {
                 progress.accept(endpoint);
             }
@@ -462,7 +525,7 @@ public class J5LocalJsonImportProcessor {
         return endpoint.name() + "|eventId=" + eventId;
     }
 
-    private static String parserVersion(SofascoreEndpointType endpoint) {
+    static String parserVersion(SofascoreEndpointType endpoint) {
         return switch (endpoint) {
             case EVENT_STATISTICS -> EventStatisticsV2Parser.PARSER_VERSION;
             case EVENT_INCIDENTS -> EventIncidentsV14Parser.PARSER_VERSION;

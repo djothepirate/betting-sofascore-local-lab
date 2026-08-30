@@ -169,11 +169,13 @@ class J5SharedLeaseExclusivityTest {
         AtomicLong snapshotIds = new AtomicLong(100L);
         when(rawStore.save(any())).thenAnswer(invocation -> {
             RawManualCallSnapshot snapshot = invocation.getArgument(0);
+            long snapshotId = snapshotIds.incrementAndGet();
             return new RawSnapshotPersistenceResult(
-                    snapshotIds.incrementAndGet(),
+                    snapshotId,
                     RawSnapshotPersistenceOutcome.INSERTED,
                     snapshot.payload().sha256(),
-                    snapshot.payload().sizeBytes());
+                    snapshot.payload().sizeBytes(),
+                    java.util.OptionalLong.of(snapshotId));
         });
         AtomicLong observationIds = new AtomicLong(200L);
         when(dataStore.save(any())).thenAnswer(invocation -> {

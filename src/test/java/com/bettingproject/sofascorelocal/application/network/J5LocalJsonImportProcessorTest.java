@@ -73,11 +73,13 @@ class J5LocalJsonImportProcessorTest {
         when(rawStore.save(any())).thenAnswer(invocation -> {
             RawManualCallSnapshot snapshot = invocation.getArgument(0);
             rawSnapshots.add(snapshot);
+            long snapshotId = snapshotIds.incrementAndGet();
             return new RawSnapshotPersistenceResult(
-                    snapshotIds.incrementAndGet(),
+                    snapshotId,
                     RawSnapshotPersistenceOutcome.INSERTED,
                     snapshot.payload().sha256(),
-                    snapshot.payload().sizeBytes());
+                    snapshot.payload().sizeBytes(),
+                    java.util.OptionalLong.of(snapshotId));
         });
         doAnswer(invocation -> null)
                 .when(rawStore).classify(anyLong(), any(), any());
@@ -178,11 +180,13 @@ class J5LocalJsonImportProcessorTest {
         AtomicLong snapshotIds = new AtomicLong(900L);
         doAnswer(invocation -> {
             RawManualCallSnapshot snapshot = invocation.getArgument(0);
+            long snapshotId = snapshotIds.incrementAndGet();
             return new RawSnapshotPersistenceResult(
-                    snapshotIds.incrementAndGet(),
+                    snapshotId,
                     RawSnapshotPersistenceOutcome.DEDUPLICATED,
                     snapshot.payload().sha256(),
-                    snapshot.payload().sizeBytes());
+                    snapshot.payload().sizeBytes(),
+                    java.util.OptionalLong.of(snapshotId + 1000L));
         }).when(rawStore).save(any());
 
         J5LocalJsonImportProcessingResult result = processor.execute(
@@ -202,7 +206,8 @@ class J5LocalJsonImportProcessorTest {
                     950L,
                     RawSnapshotPersistenceOutcome.DEDUPLICATED,
                     snapshot.payload().sha256(),
-                    snapshot.payload().sizeBytes());
+                    snapshot.payload().sizeBytes(),
+                    java.util.OptionalLong.of(951L));
         }).when(rawStore).save(any());
         doAnswer(invocation -> {
             throw new IllegalStateException("classification unavailable");
@@ -358,6 +363,7 @@ class J5LocalJsonImportProcessorTest {
     void reportsTheImportCountAndCompletedEndpointsWhenPersistenceFails() {
         J5LocalJsonImportProcessingPlan prepared = prepareValid();
         AtomicInteger saves = new AtomicInteger();
+        List<SofascoreEndpointType> reachedEndpoints = new ArrayList<>();
         doAnswer(invocation -> {
             if (saves.incrementAndGet() == 2) {
                 throw new IllegalStateException("database unavailable");
@@ -367,10 +373,16 @@ class J5LocalJsonImportProcessorTest {
                     700L,
                     RawSnapshotPersistenceOutcome.INSERTED,
                     snapshot.payload().sha256(),
-                    snapshot.payload().sizeBytes());
+                    snapshot.payload().sizeBytes(),
+                    java.util.OptionalLong.of(701L));
         }).when(rawStore).save(any());
 
-        assertThatThrownBy(() -> processor.execute(prepared, () -> true))
+        assertThatThrownBy(() -> processor.execute(
+                prepared,
+                () -> true,
+                reachedEndpoints::add,
+                ignored -> { },
+                (endpoint, raw) -> { }))
                 .isInstanceOfSatisfying(
                         J5LocalJsonImportProcessingException.class,
                         exception -> {
@@ -380,6 +392,9 @@ class J5LocalJsonImportProcessorTest {
                                     .extracting(J5RealEndpointResult::endpointType)
                                     .containsExactly(SofascoreEndpointType.EVENT_STATISTICS);
                         });
+        assertThat(reachedEndpoints).containsExactly(
+                SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.EVENT_INCIDENTS);
     }
 
     @Test

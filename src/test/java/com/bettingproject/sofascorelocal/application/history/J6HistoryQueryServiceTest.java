@@ -31,6 +31,9 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class J6HistoryQueryServiceTest {
@@ -173,6 +176,53 @@ class J6HistoryQueryServiceTest {
                 10))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("must precede");
+    }
+
+    @Test
+    void exactTransitionRemainsStableWhenCurrentHistoryGainsABackdatedVersion() {
+        J5EventDataObservationView before = incidents(
+                10, 101, 'a', 'b', 1,
+                List.of(incident(0, "goal", 10L, 1, 0)));
+        J5EventDataObservationView backdatedAfterAsOf = incidents(
+                12, 103, 'e', 'f', 2,
+                List.of(incident(0, "goal", 10L, 1, 0)));
+        J5EventDataObservationView after = incidents(
+                11, 102, 'c', 'd', 3,
+                List.of(
+                        incident(0, "goal", 10L, 1, 0),
+                        incident(1, "card", 20L, null, null)));
+        when(eventDataStore.findByObservationId(
+                IDENTITY.value(), SofascoreEndpointType.EVENT_INCIDENTS, 10))
+                .thenReturn(Optional.of(before));
+        when(eventDataStore.findByObservationId(
+                IDENTITY.value(), SofascoreEndpointType.EVENT_INCIDENTS, 11))
+                .thenReturn(Optional.of(after));
+        var first = service.classifyExactTransition(
+                IDENTITY.value(),
+                J6HistoryStream.EVENT_INCIDENTS,
+                10,
+                11,
+                true).orElseThrow();
+        when(eventDataStore.findHistory(
+                IDENTITY.value(), SofascoreEndpointType.EVENT_INCIDENTS))
+                .thenReturn(List.of(after, backdatedAfterAsOf, before));
+        var replay = service.classifyExactTransition(
+                IDENTITY.value(),
+                J6HistoryStream.EVENT_INCIDENTS,
+                10,
+                11,
+                true).orElseThrow();
+
+        assertThat(first.classification())
+                .isEqualTo(J6HistoryClassification.LATE_ENRICHMENT);
+        assertThat(replay.classification()).isEqualTo(first.classification());
+        assertThat(replay.changes()).isEqualTo(first.changes());
+        assertThat(replay.previousObservationId()).isEqualTo(10);
+        assertThat(replay.observationId()).isEqualTo(11);
+        verify(eventDataStore, never()).findHistory(
+                IDENTITY.value(), SofascoreEndpointType.EVENT_INCIDENTS);
+        verifyNoInteractions(canonicalEventStore);
+        verifyNoInteractions(snapshotHistoryStore);
     }
 
     @Test

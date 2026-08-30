@@ -99,12 +99,18 @@ try {
             'detailObservationCount',
             'eventDataObservationCount',
             'purgeAuditCount',
+            'j8CampaignCount',
+            'j8UnitCount',
+            'j8ProviderAttemptCount',
+            'j8UnitResultCount',
+            'j8CampaignResultCount',
             'coverageMaxSnapshotId',
             'coverageReceivedAt',
             'rawPayloadIntegrityFailures',
             'snapshotMetadataSha256',
             'occurrenceSha256',
-            'normalizedProvenanceSha256'
+            'normalizedProvenanceSha256',
+            'j8BenchmarkSha256'
         )
         if ($null -eq $manifest.source -or $null -eq $manifest.restored) {
             throw 'The qualified manifest must contain source and restored evidence.'
@@ -117,9 +123,9 @@ try {
                 throw "The qualified manifest source/restore evidence differs: $field"
             }
         }
-        if ($manifest.source.flywayVersion.ToString() -cne '26' -or
+        if ($manifest.source.flywayVersion.ToString() -cne '27' -or
                 [long]$manifest.source.rawPayloadIntegrityFailures -ne 0) {
-            throw 'The qualified manifest does not prove a valid Flyway V26 raw-payload restore.'
+            throw 'The qualified manifest does not prove a valid Flyway V27 raw-payload and J8 evidence restore.'
         }
         $cipherPath = [IO.Path]::GetFullPath((Join-Path `
             (Split-Path -Parent $manifestPath) $cipherFileName))

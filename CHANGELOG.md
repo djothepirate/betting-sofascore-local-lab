@@ -4,6 +4,44 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### J8 — benchmark local prêt pour qualification humaine
+
+- ouverture de `WO-SS-20260829-016` sur la branche `codex/j8-benchmark`, depuis la baseline propre
+  `67268d805a4ba8c7d4706be7c18f6ff78d3ec1fd`, après revue de l'ADR-SS-001 v1.4 : aucun endpoint,
+  aucune allowlist et aucun élément du protocole worker Playwright v5 ne changent ;
+- ajout de la migration append-only V27 et d'un ledger immuable séparant campagnes, unités,
+  tentatives directes et résultats terminaux, sans rétrocréer de coût d'appel historique ;
+- ajout des niveaux de preuve `FULL_ATTEMPT_LEDGER`, `RESPONSE_ONLY` et `LEGACY_BASELINE`, avec
+  `NOT_MEASURED` dès qu'un dénominateur exact ne peut pas être prouvé ;
+- ajout de la page HTML locale en lecture seule `GET /benchmark`, de l'agrégation reproductible et
+  de l'export Markdown explicite sous `exports/j8/`, tous sans appel fournisseur ni JavaScript ;
+- extension de la preuve sauvegarde/restauration J6 aux cinq tables J8 via comptes et fingerprint
+  déterministe, sans les inclure dans la purge des payloads bruts ;
+- readiness technique rejouée à zéro appel fournisseur : 912 tests standards et 66 tests
+  PostgreSQL/Testcontainers sans échec, `Verify-Local`, Compose silencieux et diff à `PASS`, deux
+  exports Markdown byte-identiques, puis contrôle visuel desktop/étroit sans JavaScript ni
+  débordement horizontal global ;
+- passage initial de la phase applicative à `J8-BENCHMARK-READY-FOR-HUMAN-QUALIFICATION`, avant tout
+  appel réel ; cette readiness reste la baseline technique de la campagne ultérieure ;
+- campagne prospective exécutée le 2026-08-30 après go propriétaire distinct, dans la fenêtre
+  exclusive `[2026-08-30T03:39:12.086771Z,2026-08-30T04:32:04.339732Z)` sur l'événement fournisseur
+  `16691018`, avec 19 tentatives sur le plafond absolu de 30 : quinze pages J3, une découverte
+  tournoi et J4 phase 2 terminés, puis statistiques J5 parsées et complètes ;
+- arrêt terminal J5 sans retry sur `SCHEMA_INCOMPATIBLE` pour les incidents ; l'unité compositions
+  est conservée `NOT_REACHED_AFTER_TERMINAL_FAILURE` sans tentative, sans import, fallback ou
+  seconde campagne ;
+- analyse locale de régression : l'ancienne preuve incidents reste acceptée par V14, tandis que la
+  nouvelle réponse représente quatorze tirs au but non minutés par des tableaux d'actions vides que
+  le contrat strict hérité de V12 ne reconnaît pas encore. Le parseur, le worker Playwright et le
+  transport sont inchangés par J8 et l'instrumentation ne transforme pas le payload ;
+- double export de la fenêtre de campagne à mêmes `from/to/asOf`, byte-identique, 15 201 octets,
+  SHA-256 `d901790d1f05ddd32b92821bee51f11ae3e688ca3d929af36f667ac026b2934c`, hash de population
+  `da158fb04c8dc113a56e94e2bc7da6ad27278111af5cf8179b7476e5d8f1cc95` et zéro appel fournisseur ;
+- résultat J8 conservé `PARTIAL` et Work Order actif : configuration reverrouillée, application et
+  worker arrêtés, revue humaine ciblée non terminée, aucun rapport final gelé, aucune clôture J8 ou
+  décision J9. Une correction du parseur et toute nouvelle campagne exigent un Work Order et un go
+  séparés.
+
 ### J5 — migration Playwright des donnees evenement validee
 
 - implementation de `WO-SS-20260827-015` sur la branche dediee

@@ -242,7 +242,8 @@ class J4Phase1SharedLeaseExclusivityTest {
                     snapshotId,
                     RawSnapshotPersistenceOutcome.INSERTED,
                     snapshot.payload().sha256(),
-                    snapshot.payload().sizeBytes());
+                    snapshot.payload().sizeBytes(),
+                    java.util.OptionalLong.of(snapshotId));
         });
         when(persistence.persistParsed(any(), any(), any(), any())).thenAnswer(invocation -> {
             EventDetailsProviderRequest request = invocation.getArgument(0);

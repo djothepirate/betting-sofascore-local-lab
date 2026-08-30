@@ -3,6 +3,7 @@ package com.bettingproject.sofascorelocal.domain.provider;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.OptionalLong;
 import java.util.regex.Pattern;
 
 public record J4CachedEventDetails(
@@ -62,9 +63,10 @@ public record J4CachedEventDetails(
     public RawSnapshotPersistenceResult asPersistenceResult() {
         return new RawSnapshotPersistenceResult(
                 snapshotId,
-                RawSnapshotPersistenceOutcome.DEDUPLICATED,
+                RawSnapshotPersistenceOutcome.CACHE_HIT,
                 payload.sha256(),
-                payload.sizeBytes());
+                payload.sizeBytes(),
+                OptionalLong.empty());
     }
 
     private static String requireText(String value, String name) {

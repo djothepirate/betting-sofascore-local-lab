@@ -7,6 +7,11 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.tournamentevents.Tour
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.ScheduledEventsTransportException;
 import com.bettingproject.sofascorelocal.application.event.TournamentCanonicalEventPersistenceService;
 import com.bettingproject.sofascorelocal.application.event.TournamentCanonicalizationResult;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignTerminalState;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkExecutionMode;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkOutcomeType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkResolutionSource;
 import com.bettingproject.sofascorelocal.domain.provider.CachedTournamentScheduledEventsResponse;
 import com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
@@ -34,6 +39,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.UUID;
 
 @Service
@@ -50,6 +56,7 @@ public class TournamentEventDiscoveryService {
     private final TournamentScheduledEventsV1Parser parser;
     private final ManualProviderRequestCoordinator requestCoordinator;
     private final Clock clock;
+    private final J8BenchmarkAuditService benchmarkAudit;
 
     @Autowired
     public TournamentEventDiscoveryService(
@@ -59,7 +66,8 @@ public class TournamentEventDiscoveryService {
             RawManualCallSnapshotStore rawSnapshotStore,
             TournamentScheduledEventsProjectionService projectionService,
             TournamentCanonicalEventPersistenceService persistenceService,
-            ManualProviderRequestCoordinator requestCoordinator) {
+            ManualProviderRequestCoordinator requestCoordinator,
+            J8BenchmarkAuditService benchmarkAudit) {
         this(
                 controlService,
                 transport,
@@ -69,7 +77,8 @@ public class TournamentEventDiscoveryService {
                 persistenceService,
                 new TournamentScheduledEventsV1Parser(),
                 requestCoordinator,
-                Clock.systemUTC());
+                Clock.systemUTC(),
+                benchmarkAudit);
     }
 
     TournamentEventDiscoveryService(
@@ -82,6 +91,30 @@ public class TournamentEventDiscoveryService {
             TournamentScheduledEventsV1Parser parser,
             ManualProviderRequestCoordinator requestCoordinator,
             Clock clock) {
+        this(
+                controlService,
+                transport,
+                cache,
+                rawSnapshotStore,
+                projectionService,
+                persistenceService,
+                parser,
+                requestCoordinator,
+                clock,
+                J8BenchmarkAuditService.disabled(clock));
+    }
+
+    TournamentEventDiscoveryService(
+            TournamentEventDiscoveryControlService controlService,
+            TournamentScheduledEventsProviderTransport transport,
+            TournamentScheduledEventsCache cache,
+            RawManualCallSnapshotStore rawSnapshotStore,
+            TournamentScheduledEventsProjectionService projectionService,
+            TournamentCanonicalEventPersistenceService persistenceService,
+            TournamentScheduledEventsV1Parser parser,
+            ManualProviderRequestCoordinator requestCoordinator,
+            Clock clock,
+            J8BenchmarkAuditService benchmarkAudit) {
         this.controlService = Objects.requireNonNull(controlService, "controlService");
         this.transport = Objects.requireNonNull(transport, "transport");
         this.cache = Objects.requireNonNull(cache, "cache");
@@ -92,6 +125,7 @@ public class TournamentEventDiscoveryService {
         this.requestCoordinator = Objects.requireNonNull(
                 requestCoordinator, "requestCoordinator");
         this.clock = Objects.requireNonNull(clock, "clock");
+        this.benchmarkAudit = Objects.requireNonNull(benchmarkAudit, "benchmarkAudit");
     }
 
     public TournamentEventDiscoveryResult execute(
@@ -102,9 +136,45 @@ public class TournamentEventDiscoveryService {
                         claim.providerOrigin(),
                         claim.collectionDate(),
                         claim.selection().uniqueTournamentId());
+        J8BenchmarkAuditService.Session audit = benchmarkAudit.start(
+                claim.requestId(),
+                J8BenchmarkCampaignType.J3_TOURNAMENT_DISCOVERY,
+                J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                J8BenchmarkCampaignType.J3_TOURNAMENT_DISCOVERY.maximumUnits(),
+                Optional.of(claim.collectionDate()));
+        J8BenchmarkAuditService.Unit auditUnit = audit.declare(
+                1,
+                SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
+                request.requestKey(),
+                Optional.empty(),
+                OptionalLong.empty());
+        try {
+            TournamentEventDiscoveryResult result = executeGuarded(
+                    claim,
+                    request,
+                    audit,
+                    auditUnit);
+            return finishAudit(audit, result);
+        }
+        catch (BenchmarkAuditException exception) {
+            throw exception.auditFailure();
+        }
+        catch (RuntimeException exception) {
+            finishFailedAudit(audit, "PROCESSING_FAILURE", exception);
+            throw exception;
+        }
+    }
+
+    private TournamentEventDiscoveryResult executeGuarded(
+            TournamentEventDiscoveryExecutionClaim claim,
+            TournamentScheduledEventsProviderRequest request,
+            J8BenchmarkAuditService.Session audit,
+            J8BenchmarkAuditService.Unit auditUnit) {
         if (!controlService.executionMayContinue(claim.requestId())) {
+            audit.resolveFailure(auditUnit, "OPERATOR_STOP");
             return failed(claim.requestId(), "OPERATOR_STOP", 0, false, null, null, 0);
         }
+        audit.reach(auditUnit);
 
         CachedTournamentScheduledEventsResponse cached;
         try {
@@ -126,10 +196,15 @@ public class TournamentEventDiscoveryService {
         if (cached != null) {
             response = cached.asTransportResponse();
             rawPersistence = cached.asPersistenceResult();
+            audit.captureSnapshot(
+                    auditUnit,
+                    rawPersistence,
+                    TournamentScheduledEventsV1Parser.PARSER_VERSION);
         }
         else {
             try (var providerLease = requestCoordinator.acquireCampaign(claim.requestId())) {
                 if (!controlService.executionMayContinue(claim.requestId())) {
+                    audit.resolveFailure(auditUnit, "OPERATOR_STOP");
                     return failAndLock(
                             claim.requestId(), "OPERATOR_STOP", 0, false, null, null, 0);
                 }
@@ -137,6 +212,7 @@ public class TournamentEventDiscoveryService {
                 try {
                     providerCampaign = transport.openCampaign(claim.requestId());
                     if (!controlService.executionMayContinue(claim.requestId())) {
+                        audit.resolveFailure(auditUnit, "OPERATOR_STOP");
                         return failAndLock(
                                 claim.requestId(),
                                 "OPERATOR_STOP",
@@ -148,6 +224,7 @@ public class TournamentEventDiscoveryService {
                     }
                     providerLease.beginRequest();
                     if (!controlService.executionMayContinue(claim.requestId())) {
+                        audit.resolveFailure(auditUnit, "OPERATOR_STOP");
                         return failAndLock(
                                 claim.requestId(),
                                 "OPERATOR_STOP",
@@ -157,13 +234,39 @@ public class TournamentEventDiscoveryService {
                                 null,
                                 0);
                     }
-                    providerCalls = 1;
-                    response = providerCampaign.execute(request);
+                    try {
+                        audit.startAttempt(auditUnit);
+                    }
+                    catch (RuntimeException auditFailure) {
+                        failAndLock(
+                                claim.requestId(),
+                                "BENCHMARK_AUDIT_FAILURE",
+                                providerCalls,
+                                false,
+                                null,
+                                null,
+                                0);
+                        throw new BenchmarkAuditException(auditFailure);
+                    }
+                    try {
+                        response = providerCampaign.execute(request);
+                    }
+                    finally {
+                        providerCalls = 1;
+                    }
+                    audit.captureResponse(
+                            auditUnit,
+                            response.httpStatus(),
+                            response.latency().toMillis());
                     try {
                         rawPersistence = rawSnapshotStore.save(rawOnly(response));
+                        audit.captureSnapshot(
+                                auditUnit,
+                                rawPersistence,
+                                TournamentScheduledEventsV1Parser.PARSER_VERSION);
                     }
                     catch (RuntimeException exception) {
-                        return failAndLock(
+                        TournamentEventDiscoveryResult result = failAndLock(
                                 claim.requestId(),
                                 "RAW_PERSISTENCE_ERROR",
                                 1,
@@ -171,6 +274,8 @@ public class TournamentEventDiscoveryService {
                                 null,
                                 response,
                                 0);
+                        audit.resolveFailure(auditUnit, "RAW_PERSISTENCE_ERROR");
+                        return result;
                     }
                 }
                 finally {
@@ -193,7 +298,7 @@ public class TournamentEventDiscoveryService {
                 String code = controlService.executionMayContinue(claim.requestId())
                         ? "TRANSPORT_" + exception.failure().name()
                         : "OPERATOR_STOP";
-                return failAndLock(
+                TournamentEventDiscoveryResult result = failAndLock(
                         claim.requestId(),
                         code,
                         providerCalls,
@@ -201,12 +306,17 @@ public class TournamentEventDiscoveryService {
                         rawPersistence,
                         response,
                         0);
+                audit.resolveFailureIfPending(auditUnit, code);
+                return result;
+            }
+            catch (BenchmarkAuditException exception) {
+                throw exception;
             }
             catch (RuntimeException exception) {
                 String code = controlService.executionMayContinue(claim.requestId())
                         ? "TRANSPORT_IO_FAILURE"
                         : "OPERATOR_STOP";
-                return failAndLock(
+                TournamentEventDiscoveryResult result = failAndLock(
                         claim.requestId(),
                         code,
                         providerCalls,
@@ -214,13 +324,15 @@ public class TournamentEventDiscoveryService {
                         rawPersistence,
                         response,
                         0);
+                audit.resolveFailureIfPending(auditUnit, code);
+                return result;
             }
         }
 
         TournamentEventDiscoverySource source = cacheHit
                 ? TournamentEventDiscoverySource.CACHE
                 : TournamentEventDiscoverySource.PROVIDER;
-        return processResponse(
+        TournamentEventDiscoveryResult result = processResponse(
                 claim,
                 request,
                 response,
@@ -229,6 +341,8 @@ public class TournamentEventDiscoveryService {
                 cacheHit,
                 !cacheHit,
                 source);
+        resolveAuditResult(audit, auditUnit, result);
+        return result;
     }
 
     public TournamentEventDiscoveryResult importLocalJson(
@@ -241,8 +355,21 @@ public class TournamentEventDiscoveryService {
                         claim.providerOrigin(),
                         claim.collectionDate(),
                         claim.selection().uniqueTournamentId());
+        J8BenchmarkAuditService.Session audit = benchmarkAudit.start(
+                claim.requestId(),
+                J8BenchmarkCampaignType.J3_TOURNAMENT_DISCOVERY,
+                J8BenchmarkExecutionMode.MANUAL_LOCAL_JSON_IMPORT,
+                J8BenchmarkCampaignType.J3_TOURNAMENT_DISCOVERY.maximumUnits(),
+                Optional.of(claim.collectionDate()));
+        J8BenchmarkAuditService.Unit auditUnit = audit.declare(
+                1,
+                SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
+                request.requestKey(),
+                Optional.empty(),
+                OptionalLong.empty());
         if (!controlService.executionMayContinue(claim.requestId())) {
-            return failed(
+            audit.resolveFailure(auditUnit, "OPERATOR_STOP");
+            return finishAudit(audit, failed(
                     claim.requestId(),
                     "OPERATOR_STOP",
                     0,
@@ -250,8 +377,9 @@ public class TournamentEventDiscoveryService {
                     null,
                     null,
                     0,
-                    TournamentEventDiscoverySource.LOCAL_JSON_IMPORT);
+                    TournamentEventDiscoverySource.LOCAL_JSON_IMPORT));
         }
+        audit.reach(auditUnit);
 
         Instant importedAt = clock.instant();
         TournamentScheduledEventsTransportResponse response =
@@ -268,9 +396,13 @@ public class TournamentEventDiscoveryService {
             rawPersistence = rawSnapshotStore.save(rawOnly(
                     response,
                     RawSnapshotAcquisitionMode.MANUAL_LOCAL_JSON_IMPORT));
+            audit.captureSnapshot(
+                    auditUnit,
+                    rawPersistence,
+                    TournamentScheduledEventsV1Parser.PARSER_VERSION);
         }
         catch (RuntimeException exception) {
-            return failAndLock(
+            TournamentEventDiscoveryResult result = failAndLock(
                     claim.requestId(),
                     "LOCAL_IMPORT_PERSISTENCE_ERROR",
                     0,
@@ -279,16 +411,34 @@ public class TournamentEventDiscoveryService {
                     response,
                     0,
                     TournamentEventDiscoverySource.LOCAL_JSON_IMPORT);
+            audit.resolveFailure(auditUnit, "LOCAL_IMPORT_PERSISTENCE_ERROR");
+            try {
+                return finishAudit(audit, result);
+            }
+            catch (RuntimeException auditFailure) {
+                if (auditFailure != exception) {
+                    exception.addSuppressed(auditFailure);
+                }
+                throw exception;
+            }
         }
-        return processResponse(
-                claim,
-                request,
-                response,
-                rawPersistence,
-                0,
-                false,
-                false,
-                TournamentEventDiscoverySource.LOCAL_JSON_IMPORT);
+        try {
+            TournamentEventDiscoveryResult result = processResponse(
+                    claim,
+                    request,
+                    response,
+                    rawPersistence,
+                    0,
+                    false,
+                    false,
+                    TournamentEventDiscoverySource.LOCAL_JSON_IMPORT);
+            resolveAuditResult(audit, auditUnit, result);
+            return finishAudit(audit, result);
+        }
+        catch (RuntimeException exception) {
+            finishFailedAudit(audit, "PROCESSING_FAILURE", exception);
+            throw exception;
+        }
     }
 
     private TournamentEventDiscoveryResult processResponse(
@@ -312,8 +462,8 @@ public class TournamentEventDiscoveryService {
             RawSnapshotSchemaStatus schemaStatus = response.httpStatus() == 404
                     ? RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE
                     : RawSnapshotSchemaStatus.TRANSPORT_ERROR;
-            if (!classifySafely(
-                    rawPersistence.snapshotId(),
+            if (!classifyInsertedSafely(
+                    rawPersistence,
                     schemaStatus,
                     code)) {
                 code = "RAW_CLASSIFICATION_ERROR";
@@ -341,7 +491,7 @@ public class TournamentEventDiscoveryService {
                         claim.requestId(), "OPERATOR_STOP", providerCalls, cacheHit,
                         rawPersistence, response, 0, source);
             }
-            classifySchemaIncompatibleSafely(rawPersistence.snapshotId());
+            classifySchemaIncompatibleSafely(rawPersistence);
             return failAndLock(
                     claim.requestId(), "PARSER_FAILURE", providerCalls, cacheHit,
                     rawPersistence, response, 0, source);
@@ -357,8 +507,8 @@ public class TournamentEventDiscoveryService {
                             ? RawSnapshotSchemaStatus.UNEXPECTED_CONTENT
                             : RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE;
             String code = parsed.status().name();
-            if (!classifySafely(
-                    rawPersistence.snapshotId(),
+            if (!classifyInsertedSafely(
+                    rawPersistence,
                     schemaStatus,
                     schemaStatus.name())) {
                 code = "RAW_CLASSIFICATION_ERROR";
@@ -382,7 +532,7 @@ public class TournamentEventDiscoveryService {
                         rawPersistence, response, parsed.warnings().size(), source);
             }
             String code = exception.error().name();
-            classifySchemaIncompatibleSafely(rawPersistence.snapshotId());
+            classifySchemaIncompatibleSafely(rawPersistence);
             return failAndLock(
                     claim.requestId(), code, providerCalls, cacheHit,
                     rawPersistence, response, parsed.warnings().size(), source);
@@ -393,7 +543,7 @@ public class TournamentEventDiscoveryService {
                         claim.requestId(), "OPERATOR_STOP", providerCalls, cacheHit,
                         rawPersistence, response, parsed.warnings().size(), source);
             }
-            classifySchemaIncompatibleSafely(rawPersistence.snapshotId());
+            classifySchemaIncompatibleSafely(rawPersistence);
             return failAndLock(
                     claim.requestId(), "PROJECTION_FAILURE", providerCalls, cacheHit,
                     rawPersistence, response, parsed.warnings().size(), source);
@@ -406,8 +556,8 @@ public class TournamentEventDiscoveryService {
         }
 
         if (!cacheHit) {
-            if (!classifySafely(
-                    rawPersistence.snapshotId(),
+            if (!classifyInsertedSafely(
+                    rawPersistence,
                     RawSnapshotSchemaStatus.PARSED,
                     null)) {
                 return failAndLock(
@@ -670,15 +820,107 @@ public class TournamentEventDiscoveryService {
         }
     }
 
-    private boolean classifySchemaIncompatibleSafely(long snapshotId) {
-        return classifySafely(
-                snapshotId,
+    private boolean classifyInsertedSafely(
+            RawSnapshotPersistenceResult persistence,
+            RawSnapshotSchemaStatus status,
+            String errorCode) {
+        return switch (persistence.outcome()) {
+            case INSERTED -> classifySafely(
+                    persistence.snapshotId(), status, errorCode);
+            case DEDUPLICATED, CACHE_HIT -> true;
+        };
+    }
+
+    private boolean classifySchemaIncompatibleSafely(
+            RawSnapshotPersistenceResult persistence) {
+        return classifyInsertedSafely(
+                persistence,
                 RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE,
                 RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE.name());
     }
 
     private static Integer boxed(OptionalInt value) {
         return value.isPresent() ? value.getAsInt() : null;
+    }
+
+    private static void resolveAuditResult(
+            J8BenchmarkAuditService.Session audit,
+            J8BenchmarkAuditService.Unit unit,
+            TournamentEventDiscoveryResult result) {
+        if (result.completed()) {
+            audit.resolve(
+                    unit,
+                    benchmarkSource(result.source()),
+                    J8BenchmarkOutcomeType.PARSED,
+                    Optional.of(RawSnapshotSchemaStatus.PARSED),
+                    result.parserWarningCount(),
+                    Optional.empty(),
+                    OptionalInt.empty(),
+                    Optional.empty());
+            return;
+        }
+
+        String terminalCode = result.terminalCode();
+        if (terminalCode.equals("PARSER_FAILURE")
+                || terminalCode.equals("PROJECTION_FAILURE")
+                || terminalCode.equals("UNIQUE_TOURNAMENT_ID_MISMATCH")
+                || terminalCode.equals("CONFLICTING_EVENT_DUPLICATE")
+                || terminalCode.equals("EVENT_COUNT_MISMATCH")) {
+            audit.resolve(
+                    unit,
+                    benchmarkSource(result.source()),
+                    J8BenchmarkOutcomeType.SCHEMA_INCOMPATIBLE,
+                    Optional.of(RawSnapshotSchemaStatus.SCHEMA_INCOMPATIBLE),
+                    result.parserWarningCount(),
+                    Optional.empty(),
+                    OptionalInt.empty(),
+                    Optional.of(terminalCode));
+            return;
+        }
+        audit.resolveFailure(unit, terminalCode);
+    }
+
+    private static J8BenchmarkResolutionSource benchmarkSource(
+            TournamentEventDiscoverySource source) {
+        return switch (source) {
+            case PROVIDER -> J8BenchmarkResolutionSource.PROVIDER;
+            case CACHE -> J8BenchmarkResolutionSource.CACHE;
+            case LOCAL_JSON_IMPORT ->
+                    J8BenchmarkResolutionSource.MANUAL_LOCAL_JSON_IMPORT;
+        };
+    }
+
+    private static TournamentEventDiscoveryResult finishAudit(
+            J8BenchmarkAuditService.Session audit,
+            TournamentEventDiscoveryResult result) {
+        if (result.completed()) {
+            audit.finish(
+                    J8BenchmarkCampaignTerminalState.COMPLETED,
+                    Optional.empty());
+            return result;
+        }
+        String terminalCode = result.terminalCode();
+        J8BenchmarkCampaignTerminalState state = terminalCode.contains("OPERATOR_STOP")
+                ? J8BenchmarkCampaignTerminalState.CANCELLED
+                : J8BenchmarkCampaignTerminalState.FAILED;
+        audit.finish(state, Optional.of(terminalCode));
+        return result;
+    }
+
+    private static void finishFailedAudit(
+            J8BenchmarkAuditService.Session audit,
+            String terminalCode,
+            RuntimeException original) {
+        try {
+            audit.finish(
+                    J8BenchmarkCampaignTerminalState.FAILED,
+                    Optional.of(terminalCode));
+        }
+        catch (RuntimeException auditFailure) {
+            if (auditFailure != original) {
+                original.addSuppressed(auditFailure);
+            }
+        }
     }
 
     private static String httpTerminalCode(int httpStatus) {
@@ -698,5 +940,19 @@ public class TournamentEventDiscoveryService {
             return "HTTP_5XX";
         }
         return "HTTP_STATUS_" + httpStatus;
+    }
+
+    private static final class BenchmarkAuditException extends RuntimeException {
+
+        private final RuntimeException auditFailure;
+
+        private BenchmarkAuditException(RuntimeException auditFailure) {
+            super(auditFailure);
+            this.auditFailure = auditFailure;
+        }
+
+        private RuntimeException auditFailure() {
+            return auditFailure;
+        }
     }
 }

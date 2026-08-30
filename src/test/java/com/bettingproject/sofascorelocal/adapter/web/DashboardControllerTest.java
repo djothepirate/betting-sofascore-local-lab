@@ -277,7 +277,9 @@ class DashboardControllerTest {
                         "/events/" + discoveredEventId
                                 + "/statistics?zone=Europe%2FParis")))
                 .andExpect(content().string(containsString(
-                        "Ouvrir J5 sans saisie d’ID")));
+                        "Ouvrir J5 sans saisie d’ID")))
+                .andExpect(content().string(containsString(
+                        "/benchmark — rapport J8")));
 
         UUID preparedRequestId = UUID.fromString(
                 "c15b0969-03b2-47e4-a651-77eef7c4ed4d");

@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.sql.Types;
 import java.time.ZoneOffset;
 import java.util.Objects;
+import java.util.OptionalLong;
 
 @Repository
 public class JdbcRawManualCallSnapshotStore implements RawManualCallSnapshotStore {
@@ -109,6 +110,7 @@ public class JdbcRawManualCallSnapshotStore implements RawManualCallSnapshotStor
                 :parserVersion,
                 :persistenceOutcome
             )
+            returning id
             """;
 
     private final NamedParameterJdbcTemplate jdbcTemplate;
@@ -144,18 +146,21 @@ public class JdbcRawManualCallSnapshotStore implements RawManualCallSnapshotStor
         parameters
                 .addValue("snapshotId", snapshotId)
                 .addValue("persistenceOutcome", outcome.name());
-        int occurrenceRows = jdbcTemplate.update(INSERT_OCCURRENCE_SQL, parameters);
-        if (occurrenceRows != 1) {
+        Long occurrenceId = jdbcTemplate.queryForObject(
+                INSERT_OCCURRENCE_SQL,
+                parameters,
+                Long.class);
+        if (occurrenceId == null || occurrenceId < 1) {
             throw new IllegalStateException(
-                    "raw snapshot occurrence insert affected an unexpected number of rows: "
-                            + occurrenceRows);
+                    "raw snapshot occurrence persistence did not resolve an identifier");
         }
 
         return new RawSnapshotPersistenceResult(
                 snapshotId,
                 outcome,
                 payload.sha256(),
-                payload.sizeBytes());
+                payload.sizeBytes(),
+                OptionalLong.of(occurrenceId));
     }
 
     @Override

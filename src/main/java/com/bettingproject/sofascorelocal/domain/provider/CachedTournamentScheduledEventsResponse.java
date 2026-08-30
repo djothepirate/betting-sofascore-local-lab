@@ -3,6 +3,7 @@ package com.bettingproject.sofascorelocal.domain.provider;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
+import java.util.OptionalLong;
 
 /** A verified, fresh raw response selected from the provider response cache. */
 public record CachedTournamentScheduledEventsResponse(
@@ -58,9 +59,10 @@ public record CachedTournamentScheduledEventsResponse(
     public RawSnapshotPersistenceResult asPersistenceResult() {
         return new RawSnapshotPersistenceResult(
                 snapshotId,
-                RawSnapshotPersistenceOutcome.DEDUPLICATED,
+                RawSnapshotPersistenceOutcome.CACHE_HIT,
                 payload.sha256(),
-                payload.sizeBytes());
+                payload.sizeBytes(),
+                OptionalLong.empty());
     }
 
     public static String requireExactParserVersion(String value) {

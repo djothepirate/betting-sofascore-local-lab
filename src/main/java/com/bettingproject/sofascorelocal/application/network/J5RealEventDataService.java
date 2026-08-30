@@ -8,6 +8,11 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseResu
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportException;
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderSupervisor;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignTerminalState;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkExecutionMode;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkOutcomeType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkResolutionSource;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessReport;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventData;
@@ -31,9 +36,14 @@ import org.springframework.stereotype.Service;
 import java.time.Clock;
 import java.time.Duration;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.UUID;
 
 /** Executes one terminal, ordered, no-retry J5 provider campaign. */
@@ -50,6 +60,7 @@ public class J5RealEventDataService {
     private final EventLineupsV2Parser lineupsParser;
     private final ManualProviderRequestCoordinator requestCoordinator;
     private final PlaywrightProviderSupervisor providerSupervisor;
+    private final J8BenchmarkAuditService benchmarkAuditService;
 
     @Autowired
     public J5RealEventDataService(
@@ -59,10 +70,12 @@ public class J5RealEventDataService {
             CanonicalEventStore canonicalEventStore,
             J5EventDataStore eventDataStore,
             ManualProviderRequestCoordinator requestCoordinator,
-            PlaywrightProviderSupervisor providerSupervisor) {
+            PlaywrightProviderSupervisor providerSupervisor,
+            J8BenchmarkAuditService benchmarkAuditService) {
         this(controlService, transport, rawSnapshotStore, canonicalEventStore, eventDataStore,
                 new EventStatisticsV2Parser(), new EventIncidentsV14Parser(),
-                new EventLineupsV2Parser(), requestCoordinator, providerSupervisor);
+                new EventLineupsV2Parser(), requestCoordinator, providerSupervisor,
+                benchmarkAuditService);
     }
 
     J5RealEventDataService(
@@ -88,7 +101,8 @@ public class J5RealEventDataService {
                 incidentsParser,
                 lineupsParser,
                 new ManualProviderRequestCoordinator(clock, minimumDelay, pause::pause),
-                providerSupervisor);
+                providerSupervisor,
+                J8BenchmarkAuditService.disabled(clock));
     }
 
     J5RealEventDataService(
@@ -102,6 +116,32 @@ public class J5RealEventDataService {
             EventLineupsV2Parser lineupsParser,
             ManualProviderRequestCoordinator requestCoordinator,
             PlaywrightProviderSupervisor providerSupervisor) {
+        this(
+                controlService,
+                transport,
+                rawSnapshotStore,
+                canonicalEventStore,
+                eventDataStore,
+                statisticsParser,
+                incidentsParser,
+                lineupsParser,
+                requestCoordinator,
+                providerSupervisor,
+                J8BenchmarkAuditService.disabled(Clock.systemUTC()));
+    }
+
+    J5RealEventDataService(
+            J5RealControlService controlService,
+            J5EventDataProviderTransport transport,
+            RawManualCallSnapshotStore rawSnapshotStore,
+            CanonicalEventStore canonicalEventStore,
+            J5EventDataStore eventDataStore,
+            EventStatisticsV2Parser statisticsParser,
+            EventIncidentsV6Parser incidentsParser,
+            EventLineupsV2Parser lineupsParser,
+            ManualProviderRequestCoordinator requestCoordinator,
+            PlaywrightProviderSupervisor providerSupervisor,
+            J8BenchmarkAuditService benchmarkAuditService) {
         this.controlService = Objects.requireNonNull(controlService, "controlService");
         this.transport = Objects.requireNonNull(transport, "transport");
         this.rawSnapshotStore = Objects.requireNonNull(rawSnapshotStore, "rawSnapshotStore");
@@ -114,10 +154,103 @@ public class J5RealEventDataService {
                 requestCoordinator, "requestCoordinator");
         this.providerSupervisor = Objects.requireNonNull(
                 providerSupervisor, "providerSupervisor");
+        this.benchmarkAuditService = Objects.requireNonNull(
+                benchmarkAuditService, "benchmarkAuditService");
     }
 
-    public synchronized J5RealCampaignResult execute(J5RealExecutionClaim claim) {
+    public J5RealCampaignResult execute(J5RealExecutionClaim claim) {
         Objects.requireNonNull(claim, "claim");
+        return execute(claim, claim.canonicalEventId());
+    }
+
+    public synchronized J5RealCampaignResult execute(
+            J5RealExecutionClaim claim,
+            UUID requestedCanonicalEventId) {
+        Objects.requireNonNull(claim, "claim");
+        Objects.requireNonNull(requestedCanonicalEventId, "requestedCanonicalEventId");
+        J8BenchmarkAuditService.Session audit;
+        Map<SofascoreEndpointType, J8BenchmarkAuditService.Unit> auditUnits =
+                new LinkedHashMap<>();
+        try {
+            audit = benchmarkAuditService.start(
+                    claim.requestId(),
+                    J8BenchmarkCampaignType.J5_EVENT_DATA,
+                    J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                    J8BenchmarkCampaignType.J5_EVENT_DATA.maximumUnits(),
+                    Optional.empty());
+            int ordinal = 0;
+            for (SofascoreEndpointType endpoint : J5RealControlService.ORDERED_ENDPOINTS) {
+                J5EventDataProviderRequest request = new J5EventDataProviderRequest(
+                        claim.providerOrigin(), claim.eventId(), endpoint);
+                auditUnits.put(endpoint, audit.declare(
+                        ++ordinal,
+                        endpoint,
+                        request.requestKey(),
+                        Optional.of(claim.canonicalEventId()),
+                        OptionalLong.of(claim.eventId())));
+            }
+        }
+        catch (RuntimeException exception) {
+            return failAndLock(
+                    claim,
+                    "BENCHMARK_AUDIT_FAILURE",
+                    0,
+                    List.of(),
+                    new CampaignResources());
+        }
+
+        J5RealCampaignResult result;
+        if (!claim.canonicalEventId().equals(requestedCanonicalEventId)) {
+            result = failAndLock(
+                    claim,
+                    "EVENT_ID_MISMATCH",
+                    0,
+                    List.of(),
+                    new CampaignResources());
+        }
+        else {
+            try {
+                result = executeCampaign(claim, audit, auditUnits);
+            }
+            catch (RuntimeException exception) {
+                result = failAndLock(
+                        claim,
+                        "LOCAL_EXECUTION_FAILURE",
+                        0,
+                        List.of(),
+                        new CampaignResources());
+            }
+        }
+
+        if ("BENCHMARK_AUDIT_FAILURE".equals(result.terminalCode())) {
+            return result;
+        }
+        try {
+            for (J8BenchmarkAuditService.Unit unit : auditUnits.values()) {
+                audit.resolveFailureIfPending(unit, result.terminalCode());
+            }
+            J8BenchmarkCampaignTerminalState terminalState = result.completed()
+                    ? J8BenchmarkCampaignTerminalState.COMPLETED
+                    : result.terminalCode().contains("OPERATOR_STOP")
+                            ? J8BenchmarkCampaignTerminalState.CANCELLED
+                            : J8BenchmarkCampaignTerminalState.FAILED;
+            audit.finish(terminalState, Optional.of(result.terminalCode()));
+        }
+        catch (RuntimeException exception) {
+            return failAndLock(
+                    claim,
+                    "BENCHMARK_AUDIT_FAILURE",
+                    result.providerCallAttempts(),
+                    result.endpoints(),
+                    new CampaignResources());
+        }
+        return result;
+    }
+
+    private J5RealCampaignResult executeCampaign(
+            J5RealExecutionClaim claim,
+            J8BenchmarkAuditService.Session audit,
+            Map<SofascoreEndpointType, J8BenchmarkAuditService.Unit> auditUnits) {
         List<J5RealEndpointResult> results = new ArrayList<>();
         if (!controlService.executionMayContinue(claim.requestId())) {
             return failed(claim, "OPERATOR_STOP", 0, results);
@@ -125,8 +258,20 @@ public class J5RealEventDataService {
         CampaignResources resources = new CampaignResources();
         int attempts = 0;
         try {
-            var canonical = canonicalEventStore.findLatestByCanonicalId(
-                    claim.canonicalEventId());
+            Optional<com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView>
+                    canonical;
+            try {
+                canonical = canonicalEventStore.findLatestByCanonicalId(
+                        claim.canonicalEventId());
+            }
+            catch (RuntimeException exception) {
+                return failAndLock(
+                        claim,
+                        "CANONICAL_EVENT_READ_ERROR",
+                        attempts,
+                        results,
+                        resources);
+            }
             if (canonical.isEmpty()
                     || canonical.orElseThrow().identity().providerEventId() != claim.eventId()
                     || !canonical.orElseThrow().identity().value()
@@ -169,6 +314,13 @@ public class J5RealEventDataService {
                     return failAndLock(
                             claim, "OPERATOR_STOP", attempts, results, resources);
                 }
+                try {
+                    audit.reach(auditUnits.get(endpoint));
+                }
+                catch (RuntimeException exception) {
+                    return failAndLock(
+                            claim, "BENCHMARK_AUDIT_FAILURE", attempts, results, resources);
+                }
                 J5EventDataProviderRequest request = new J5EventDataProviderRequest(
                         claim.providerOrigin(), claim.eventId(), endpoint);
                 J5EventDataTransportResponse response;
@@ -178,8 +330,37 @@ public class J5RealEventDataService {
                         return failAndLock(
                                 claim, "OPERATOR_STOP", attempts, results, resources);
                     }
-                    attempts++;
-                    response = resources.campaign.execute(request);
+                    try {
+                        audit.startAttempt(auditUnits.get(endpoint));
+                    }
+                    catch (RuntimeException exception) {
+                        return failAndLock(
+                                claim,
+                                "BENCHMARK_AUDIT_FAILURE",
+                                attempts,
+                                results,
+                                resources);
+                    }
+                    try {
+                        response = resources.campaign.execute(request);
+                    }
+                    finally {
+                        attempts++;
+                    }
+                    try {
+                        audit.captureResponse(
+                                auditUnits.get(endpoint),
+                                response.httpStatus(),
+                                response.latency().toMillis());
+                    }
+                    catch (RuntimeException exception) {
+                        return failAndLock(
+                                claim,
+                                "BENCHMARK_AUDIT_FAILURE",
+                                attempts,
+                                results,
+                                resources);
+                    }
                 }
                 catch (ManualProviderRequestCoordinator.CoordinationException exception) {
                     return failAndLock(
@@ -209,6 +390,18 @@ public class J5RealEventDataService {
                 catch (RuntimeException exception) {
                     return failAndLock(
                             claim, "RAW_PERSISTENCE_ERROR", attempts, results, resources);
+                }
+                try {
+                    audit.captureSnapshot(
+                            auditUnits.get(endpoint), raw, parserVersion(endpoint));
+                }
+                catch (RuntimeException exception) {
+                    return failAndLock(
+                            claim,
+                            "BENCHMARK_AUDIT_FAILURE",
+                            attempts,
+                            results,
+                            resources);
                 }
                 if (response.httpStatus() == 404) {
                     J5CompletenessReport completeness = J5CompletenessReport.unavailable();
@@ -242,7 +435,7 @@ public class J5RealEventDataService {
                                 results,
                                 resources);
                     }
-                    results.add(new J5RealEndpointResult(
+                    J5RealEndpointResult endpointResult = new J5RealEndpointResult(
                             endpoint,
                             raw.snapshotId(),
                             raw.payloadSha256(),
@@ -251,7 +444,20 @@ public class J5RealEventDataService {
                             persisted.inserted(),
                             completeness.status(),
                             completeness.scorePercent(),
-                            0));
+                            0);
+                    results.add(endpointResult);
+                    if (!resolveEndpointSafely(
+                            audit,
+                            auditUnits.get(endpoint),
+                            endpointResult,
+                            true)) {
+                        return failAndLock(
+                                claim,
+                                "BENCHMARK_AUDIT_FAILURE",
+                                attempts,
+                                results,
+                                resources);
+                    }
                     try {
                         controlService.recordEndpointCompleted(claim.requestId(), endpoint);
                     }
@@ -330,7 +536,7 @@ public class J5RealEventDataService {
                             results,
                             resources);
                 }
-                results.add(new J5RealEndpointResult(
+                J5RealEndpointResult endpointResult = new J5RealEndpointResult(
                         endpoint,
                         raw.snapshotId(),
                         raw.payloadSha256(),
@@ -339,7 +545,20 @@ public class J5RealEventDataService {
                         persisted.inserted(),
                         completeness.status(),
                         completeness.scorePercent(),
-                        parsed.warnings().size()));
+                        parsed.warnings().size());
+                results.add(endpointResult);
+                if (!resolveEndpointSafely(
+                        audit,
+                        auditUnits.get(endpoint),
+                        endpointResult,
+                        false)) {
+                    return failAndLock(
+                            claim,
+                            "BENCHMARK_AUDIT_FAILURE",
+                            attempts,
+                            results,
+                            resources);
+                }
                 try {
                     controlService.recordEndpointCompleted(claim.requestId(), endpoint);
                 }
@@ -387,6 +606,32 @@ public class J5RealEventDataService {
                     snapshotId, eventId, response.payload(), response.receivedAt());
             default -> throw new IllegalArgumentException("unsupported J5 endpoint");
         };
+    }
+
+    private static boolean resolveEndpointSafely(
+            J8BenchmarkAuditService.Session audit,
+            J8BenchmarkAuditService.Unit unit,
+            J5RealEndpointResult result,
+            boolean unavailable) {
+        try {
+            audit.resolve(
+                    unit,
+                    J8BenchmarkResolutionSource.PROVIDER,
+                    unavailable
+                            ? J8BenchmarkOutcomeType.ENDPOINT_UNAVAILABLE
+                            : J8BenchmarkOutcomeType.PARSED,
+                    Optional.of(unavailable
+                            ? RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE
+                            : RawSnapshotSchemaStatus.PARSED),
+                    result.warningCount(),
+                    Optional.of(result.completenessStatus()),
+                    OptionalInt.of(result.completenessScore()),
+                    unavailable ? Optional.of("HTTP_404") : Optional.empty());
+            return true;
+        }
+        catch (RuntimeException exception) {
+            return false;
+        }
     }
 
     private J5RealCampaignResult failAndLock(

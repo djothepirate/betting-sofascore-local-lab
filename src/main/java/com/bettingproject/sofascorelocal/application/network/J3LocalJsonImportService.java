@@ -3,6 +3,11 @@ package com.bettingproject.sofascorelocal.application.network;
 import com.bettingproject.sofascorelocal.adapter.sofascore.SofascoreEndpointCatalog;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1Parser;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignTerminalState;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkExecutionMode;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkOutcomeType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkResolutionSource;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3LocalJsonImportExecutionClaim;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallControlSnapshot;
@@ -27,6 +32,9 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.UUID;
 
 @Service
@@ -45,6 +53,7 @@ public class J3LocalJsonImportService {
     private final J3ManualCollectionEvidenceService evidenceService;
     private final Clock clock;
     private final Duration cacheTtl;
+    private final J8BenchmarkAuditService benchmarkAuditService;
 
     @Autowired
     public J3LocalJsonImportService(
@@ -52,7 +61,8 @@ public class J3LocalJsonImportService {
             RawManualCallSnapshotStore snapshotStore,
             J3SingleCallGuard callGuard,
             J3ManualCollectionEvidenceService evidenceService,
-            SofascoreEndpointCatalog endpointCatalog) {
+            SofascoreEndpointCatalog endpointCatalog,
+            J8BenchmarkAuditService benchmarkAuditService) {
         this(
                 controlService,
                 new J3ScheduledEventsOutcomeProcessor(
@@ -63,7 +73,8 @@ public class J3LocalJsonImportService {
                 callGuard,
                 evidenceService,
                 Clock.systemUTC(),
-                endpointCatalog.get(SofascoreEndpointType.SCHEDULED_EVENTS).cacheTtl());
+                endpointCatalog.get(SofascoreEndpointType.SCHEDULED_EVENTS).cacheTtl(),
+                benchmarkAuditService);
     }
 
     J3LocalJsonImportService(
@@ -74,6 +85,26 @@ public class J3LocalJsonImportService {
             J3ManualCollectionEvidenceService evidenceService,
             Clock clock,
             Duration cacheTtl) {
+        this(
+                controlService,
+                outcomeProcessor,
+                parser,
+                callGuard,
+                evidenceService,
+                clock,
+                cacheTtl,
+                J8BenchmarkAuditService.disabled(clock));
+    }
+
+    J3LocalJsonImportService(
+            J3ManualCallControlService controlService,
+            J3ScheduledEventsOutcomeProcessor outcomeProcessor,
+            ScheduledEventsV1Parser parser,
+            J3SingleCallGuard callGuard,
+            J3ManualCollectionEvidenceService evidenceService,
+            Clock clock,
+            Duration cacheTtl,
+            J8BenchmarkAuditService benchmarkAuditService) {
         this.controlService = Objects.requireNonNull(controlService, "controlService");
         this.outcomeProcessor = Objects.requireNonNull(outcomeProcessor, "outcomeProcessor");
         this.parser = Objects.requireNonNull(parser, "parser");
@@ -81,6 +112,8 @@ public class J3LocalJsonImportService {
         this.evidenceService = Objects.requireNonNull(evidenceService, "evidenceService");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.cacheTtl = Objects.requireNonNull(cacheTtl, "cacheTtl");
+        this.benchmarkAuditService = Objects.requireNonNull(
+                benchmarkAuditService, "benchmarkAuditService");
         if (cacheTtl.isZero() || cacheTtl.isNegative()) {
             throw new IllegalArgumentException("cacheTtl must be positive");
         }
@@ -101,15 +134,32 @@ public class J3LocalJsonImportService {
         List<J3MinimizedPageEvidence> attempts = new ArrayList<>();
         int completedPages = 0;
         J3LocalJsonImportExecutionClaim claim = null;
+        J8BenchmarkAuditService.Session audit = null;
         try (J3SingleCallGuard.Permit ignored = permit.orElseThrow()) {
             claim = controlService.claimLocalImportExecution(requestId);
+            audit = benchmarkAuditService.start(
+                    requestId,
+                    J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
+                    J8BenchmarkExecutionMode.MANUAL_LOCAL_JSON_IMPORT,
+                    J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS.maximumUnits(),
+                    Optional.of(claim.date()));
             for (int index = 0; index < validatedPayloads.size(); index++) {
                 int page = index + 1;
+                J8BenchmarkAuditService.Unit auditUnit = audit.declare(
+                        page,
+                        SofascoreEndpointType.SCHEDULED_EVENTS,
+                        requestKey(claim.date(), page),
+                        Optional.empty(),
+                        OptionalLong.empty());
                 if (!controlService.executionMayContinue(requestId)) {
-                    return publishAlreadyLockedFailure(
+                    audit.resolveFailure(auditUnit, "OPERATOR_STOP");
+                    J3ManualCallExecutionResult result = publishAlreadyLockedFailure(
                             claim.date(), completedPages, page, STOPPED, attempts);
+                    finishAudit(audit, result);
+                    return result;
                 }
 
+                audit.reach(auditUnit);
                 Instant importedAt = clock.instant();
                 ScheduledEventsTransportResponse response = new ScheduledEventsTransportResponse(
                         requestKey(claim.date(), page),
@@ -119,8 +169,21 @@ public class J3LocalJsonImportService {
                         CONTENT_TYPE,
                         Duration.ZERO,
                         validatedPayloads.get(index));
-                J3ScheduledEventsOutcome outcome =
-                        outcomeProcessor.processImportedResponse(response);
+                J8BenchmarkAuditService.Session activeAudit = audit;
+                J3ScheduledEventsOutcome outcome;
+                try {
+                    outcome = outcomeProcessor.processImportedResponse(
+                            response,
+                            persisted -> activeAudit.captureSnapshot(
+                                    auditUnit,
+                                    persisted,
+                                    ScheduledEventsV1Parser.PARSER_VERSION));
+                }
+                catch (J3ScheduledEventsOutcomeProcessor.EvidencePersistenceException
+                        exception) {
+                    audit.resolveFailure(auditUnit, exception.code());
+                    throw exception;
+                }
                 String terminalCode = outcome.circuit().state() == J3CircuitState.CLOSED
                         ? null
                         : outcome.circuit().reason().name();
@@ -131,37 +194,88 @@ public class J3LocalJsonImportService {
                         schemaStatus(outcome),
                         outcome.hasNextPage().orElse(null),
                         terminalCode));
+                RawSnapshotSchemaStatus auditSchema = schemaStatus(outcome);
+                J8BenchmarkOutcomeType auditOutcome = switch (auditSchema) {
+                    case PARSED -> J8BenchmarkOutcomeType.PARSED;
+                    case SCHEMA_INCOMPATIBLE -> J8BenchmarkOutcomeType.SCHEMA_INCOMPATIBLE;
+                    case UNEXPECTED_CONTENT -> J8BenchmarkOutcomeType.UNEXPECTED_CONTENT;
+                    default -> J8BenchmarkOutcomeType.PROCESSING_FAILURE;
+                };
+                if (outcome.circuit().state() != J3CircuitState.CLOSED) {
+                    audit.resolve(
+                            auditUnit,
+                            J8BenchmarkResolutionSource.MANUAL_LOCAL_JSON_IMPORT,
+                            auditOutcome,
+                            auditOutcome == J8BenchmarkOutcomeType.PROCESSING_FAILURE
+                                    ? Optional.empty()
+                                    : Optional.of(auditSchema),
+                            0,
+                            Optional.empty(),
+                            OptionalInt.empty(),
+                            Optional.ofNullable(terminalCode));
+                }
 
                 if (!controlService.executionMayContinue(requestId)
                         || outcome.circuit().state() != J3CircuitState.CLOSED) {
+                    if (outcome.circuit().state() == J3CircuitState.CLOSED) {
+                        audit.resolveFailure(auditUnit, "OPERATOR_STOP");
+                    }
                     J3ManualCallControlSnapshot snapshot = controlService.snapshot();
                     if (snapshot.intent() != null
                             && snapshot.intent().state() == J3ManualCallIntentState.EXECUTING) {
                         String code = terminalCode == null ? STOPPED : terminalCode;
                         controlService.failExecution(requestId, page, code);
-                        return publishAndLock(
+                        J3ManualCallExecutionResult result = publishAndLock(
                                 requestId,
                                 claim.date(),
                                 J3ManualCallExecutionResult.failedLocalImport(
                                         completedPages, page, code, attempts.size()),
                                 attempts);
+                        finishAudit(audit, result);
+                        return result;
                     }
-                    return publishAlreadyLockedFailure(
+                    J3ManualCallExecutionResult result = publishAlreadyLockedFailure(
                             claim.date(), completedPages, page, STOPPED, attempts);
+                    finishAudit(audit, result);
+                    return result;
                 }
 
                 controlService.recordPageCompleted(requestId, page);
                 completedPages = page;
+                audit.resolve(
+                        auditUnit,
+                        J8BenchmarkResolutionSource.MANUAL_LOCAL_JSON_IMPORT,
+                        J8BenchmarkOutcomeType.PARSED,
+                        Optional.of(RawSnapshotSchemaStatus.PARSED),
+                        0,
+                        Optional.empty(),
+                        OptionalInt.empty(),
+                        Optional.empty());
             }
 
             controlService.completeExecution(requestId);
-            return publishAndLock(
+            J3ManualCallExecutionResult result = publishAndLock(
                     requestId,
                     claim.date(),
                     J3ManualCallExecutionResult.successfulLocalImport(completedPages),
                     attempts);
+            finishAudit(audit, result);
+            return result;
         }
-        catch (J3ManualCallControlException | J3LocalJsonImportException exception) {
+        catch (J3ManualCallControlException exception) {
+            finishAbortedAudit(
+                    audit,
+                    J8BenchmarkCampaignTerminalState.CANCELLED,
+                    exception.error().name(),
+                    exception);
+            throw exception;
+        }
+        catch (J3LocalJsonImportException exception) {
+            finishAbortedAudit(
+                    audit,
+                    J8BenchmarkCampaignTerminalState.FAILED,
+                    exception.error().name(),
+                    exception);
             throw exception;
         }
         catch (RuntimeException exception) {
@@ -173,7 +287,7 @@ public class J3LocalJsonImportService {
                     && snapshot.intent().state() == J3ManualCallIntentState.EXECUTING) {
                 int failedPage = completedPages + 1;
                 controlService.failExecution(requestId, failedPage, PROCESSING_FAILURE);
-                return publishAndLock(
+                J3ManualCallExecutionResult result = publishAndLock(
                         requestId,
                         claim.date(),
                         J3ManualCallExecutionResult.failedLocalImport(
@@ -182,11 +296,56 @@ public class J3LocalJsonImportService {
                                 PROCESSING_FAILURE,
                                 attempts.size()),
                         attempts);
+                if (audit != null) {
+                    finishAudit(audit, result);
+                }
+                return result;
             }
             if (!snapshot.globalStopActive()) {
                 controlService.stopGlobally();
             }
+            finishAbortedAudit(
+                    audit,
+                    snapshot.globalStopActive()
+                            ? J8BenchmarkCampaignTerminalState.CANCELLED
+                            : J8BenchmarkCampaignTerminalState.FAILED,
+                    snapshot.globalStopActive() ? "OPERATOR_STOP" : PROCESSING_FAILURE,
+                    exception);
             throw exception;
+        }
+    }
+
+    private static void finishAudit(
+            J8BenchmarkAuditService.Session audit,
+            J3ManualCallExecutionResult result) {
+        J8BenchmarkCampaignTerminalState state = result.completed()
+                ? J8BenchmarkCampaignTerminalState.COMPLETED
+                : result.terminalCode().contains("STOP")
+                        || result.terminalCode().contains("CIRCUIT_BLOCK")
+                                ? J8BenchmarkCampaignTerminalState.CANCELLED
+                                : J8BenchmarkCampaignTerminalState.FAILED;
+        audit.finish(
+                state,
+                result.completed()
+                        ? Optional.empty()
+                        : Optional.of(result.terminalCode()));
+    }
+
+    private static void finishAbortedAudit(
+            J8BenchmarkAuditService.Session audit,
+            J8BenchmarkCampaignTerminalState state,
+            String terminalCode,
+            RuntimeException original) {
+        if (audit == null) {
+            return;
+        }
+        try {
+            audit.finish(state, Optional.of(terminalCode));
+        }
+        catch (RuntimeException auditFailure) {
+            if (auditFailure != original) {
+                original.addSuppressed(auditFailure);
+            }
         }
     }
 

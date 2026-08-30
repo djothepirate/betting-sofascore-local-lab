@@ -5,6 +5,11 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.transport.ScheduledEv
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.ScheduledEventsTransportFailure;
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderStopReceipt;
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderSupervisor;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignResult;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignTerminalState;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkOutcomeType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkResolutionSource;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkUnitResult;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3CachedScheduledEventsPage;
@@ -20,9 +25,12 @@ import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProvider
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportResponse;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.port.J3ScheduledEventsPageCache;
+import com.bettingproject.sofascorelocal.port.J8BenchmarkEvidenceStore;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import com.bettingproject.sofascorelocal.port.ScheduledEventsProviderPageTransport;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.InOrder;
 
 import java.net.URI;
 import java.nio.file.Files;
@@ -49,7 +57,12 @@ import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class J3DynamicManualCallServiceTest {
 
@@ -208,6 +221,250 @@ class J3DynamicManualCallServiceTest {
                         J3ManualCallControlException.class,
                         exception -> assertThat(exception.error())
                                 .isEqualTo(J3ManualCallControlError.EXECUTION_ALREADY_STARTED));
+    }
+
+    @Test
+    void auditsOneNominalProviderPageInLifecycleOrder() throws Exception {
+        MutableClock clock = new MutableClock(NOW);
+        RecordingStore store = new RecordingStore();
+        J3ManualCallControlService control = readyControl(clock);
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
+        byte[] terminalBody = Files.readAllBytes(
+                Path.of("fixtures/scheduled-events/nominal.json"));
+        ScheduledEventsProviderPageTransport.Campaign providerCampaign =
+                mock(ScheduledEventsProviderPageTransport.Campaign.class);
+        when(providerCampaign.execute(any())).thenAnswer(invocation -> {
+            ScheduledEventsProviderPageRequest request = invocation.getArgument(0);
+            Instant requestedAt = clock.instant();
+            clock.advance(Duration.ofMillis(25));
+            return response(
+                    request,
+                    requestedAt,
+                    clock.instant(),
+                    200,
+                    withHasNextPage(terminalBody, false));
+        });
+        J8BenchmarkEvidenceStore evidenceStore = mock(J8BenchmarkEvidenceStore.class);
+        when(evidenceStore.declareUnit(any())).thenReturn(11L);
+        when(evidenceStore.startProviderAttempt(any())).thenReturn(12L);
+        ManualProviderRequestCoordinator coordinator = new ManualProviderRequestCoordinator(
+                clock, Duration.ofSeconds(3), ignored -> { });
+        J3DynamicManualCallService service = auditedService(
+                control,
+                ignored -> providerCampaign,
+                store,
+                new RecordingCache(),
+                evidenceService,
+                clock,
+                coordinator,
+                evidenceStore);
+
+        J3ManualCallExecutionResult result = service.execute(REQUEST_ID);
+
+        assertThat(result.completed()).isTrue();
+        assertThat(result.providerRequests()).isEqualTo(1);
+        InOrder order = inOrder(evidenceStore, providerCampaign);
+        order.verify(evidenceStore).startCampaign(any());
+        order.verify(evidenceStore).declareUnit(any());
+        order.verify(evidenceStore).startProviderAttempt(any());
+        order.verify(providerCampaign).execute(any());
+        order.verify(evidenceStore).recordUnitResult(any());
+        order.verify(providerCampaign).close();
+        order.verify(evidenceStore).finishCampaign(any());
+        ArgumentCaptor<J8BenchmarkUnitResult> unitResult =
+                ArgumentCaptor.forClass(J8BenchmarkUnitResult.class);
+        verify(evidenceStore).recordUnitResult(unitResult.capture());
+        assertThat(unitResult.getValue().resolutionSource())
+                .isEqualTo(J8BenchmarkResolutionSource.PROVIDER);
+        assertThat(unitResult.getValue().outcomeType())
+                .isEqualTo(J8BenchmarkOutcomeType.PARSED);
+        ArgumentCaptor<J8BenchmarkCampaignResult> campaignResult =
+                ArgumentCaptor.forClass(J8BenchmarkCampaignResult.class);
+        verify(evidenceStore).finishCampaign(campaignResult.capture());
+        assertThat(campaignResult.getValue().terminalState())
+                .isEqualTo(J8BenchmarkCampaignTerminalState.COMPLETED);
+    }
+
+    @Test
+    void closesProviderResourcesBeforeFailingTheAuditWhenCampaignCleanupFails()
+            throws Exception {
+        MutableClock clock = new MutableClock(NOW);
+        RecordingStore store = new RecordingStore();
+        J3ManualCallControlService control = readyControl(clock);
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
+        byte[] terminalBody = Files.readAllBytes(
+                Path.of("fixtures/scheduled-events/nominal.json"));
+        List<String> lifecycle = new ArrayList<>();
+        AtomicInteger closeCount = new AtomicInteger();
+        ScheduledEventsProviderPageTransport.Campaign providerCampaign =
+                new ScheduledEventsProviderPageTransport.Campaign() {
+
+                    @Override
+                    public ScheduledEventsTransportResponse execute(
+                            ScheduledEventsProviderPageRequest request) {
+                        Instant requestedAt = clock.instant();
+                        clock.advance(Duration.ofMillis(25));
+                        return response(
+                                request,
+                                requestedAt,
+                                clock.instant(),
+                                200,
+                                withHasNextPage(terminalBody, false));
+                    }
+
+                    @Override
+                    public void close() {
+                        closeCount.incrementAndGet();
+                        lifecycle.add("PROVIDER_CLOSED");
+                        throw new ScheduledEventsTransportException(
+                                ScheduledEventsTransportFailure.IO_FAILURE);
+                    }
+                };
+        J8BenchmarkEvidenceStore evidenceStore = mock(J8BenchmarkEvidenceStore.class);
+        when(evidenceStore.declareUnit(any())).thenReturn(11L);
+        when(evidenceStore.startProviderAttempt(any())).thenReturn(12L);
+        org.mockito.Mockito.doAnswer(invocation -> {
+            J8BenchmarkCampaignResult result = invocation.getArgument(0);
+            lifecycle.add("AUDIT_" + result.terminalState().name());
+            return null;
+        }).when(evidenceStore).finishCampaign(any());
+        ManualProviderRequestCoordinator coordinator = new ManualProviderRequestCoordinator(
+                clock, Duration.ofSeconds(3), ignored -> { });
+        J3DynamicManualCallService service = new J3DynamicManualCallService(
+                control,
+                ignored -> providerCampaign,
+                new J3ScheduledEventsOutcomeProcessor(
+                        store,
+                        new ScheduledEventsV1Parser(),
+                        control.circuit()),
+                new RecordingCache(),
+                new ScheduledEventsV1Parser(),
+                new J3SingleCallGuard(),
+                evidenceService,
+                clock,
+                Duration.ofMinutes(10),
+                Duration.ofSeconds(3),
+                ignored -> { },
+                coordinator,
+                new J8BenchmarkAuditService(evidenceStore, clock));
+
+        assertThatThrownBy(() -> service.execute(REQUEST_ID))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessage("provider campaign cleanup failed")
+                .hasCauseInstanceOf(ScheduledEventsTransportException.class);
+
+        assertThat(closeCount).hasValue(1);
+        assertThat(lifecycle).containsExactly("PROVIDER_CLOSED", "AUDIT_FAILED");
+        assertThat(control.snapshot().globalStopActive()).isTrue();
+        ArgumentCaptor<J8BenchmarkUnitResult> unitResult =
+                ArgumentCaptor.forClass(J8BenchmarkUnitResult.class);
+        verify(evidenceStore).recordUnitResult(unitResult.capture());
+        assertThat(unitResult.getValue().outcomeType())
+                .isEqualTo(J8BenchmarkOutcomeType.PARSED);
+        ArgumentCaptor<J8BenchmarkCampaignResult> campaignResult =
+                ArgumentCaptor.forClass(J8BenchmarkCampaignResult.class);
+        verify(evidenceStore).finishCampaign(campaignResult.capture());
+        assertThat(campaignResult.getValue().terminalState())
+                .isEqualTo(J8BenchmarkCampaignTerminalState.FAILED);
+        assertThat(campaignResult.getValue().terminalCode())
+                .contains("PROCESSING_FAILURE");
+        verify(evidenceStore).startProviderAttempt(any());
+        try (var releasedLease = coordinator.acquireCampaign(UUID.randomUUID())) {
+            assertThat(releasedLease).isNotNull();
+        }
+    }
+
+    @Test
+    void auditsACacheHitWithoutProviderAttempt() throws Exception {
+        MutableClock clock = new MutableClock(NOW);
+        RecordingStore store = new RecordingStore();
+        RecordingCache cache = new RecordingCache();
+        byte[] terminalBody = Files.readAllBytes(
+                Path.of("fixtures/scheduled-events/nominal.json"));
+        cache.put(cachedPage(1, withHasNextPage(terminalBody, false)));
+        J3ManualCallControlService control = readyControl(clock);
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
+        ScheduledEventsProviderPageTransport transport =
+                mock(ScheduledEventsProviderPageTransport.class);
+        J8BenchmarkEvidenceStore evidenceStore = mock(J8BenchmarkEvidenceStore.class);
+        when(evidenceStore.declareUnit(any())).thenReturn(21L);
+        ManualProviderRequestCoordinator coordinator = new ManualProviderRequestCoordinator(
+                clock, Duration.ofSeconds(3), ignored -> { });
+        J3DynamicManualCallService service = auditedService(
+                control,
+                transport,
+                store,
+                cache,
+                evidenceService,
+                clock,
+                coordinator,
+                evidenceStore);
+
+        J3ManualCallExecutionResult result = service.execute(REQUEST_ID);
+
+        assertThat(result.completed()).isTrue();
+        assertThat(result.providerRequests()).isZero();
+        assertThat(result.cacheHits()).isEqualTo(1);
+        verify(transport, never()).openCampaign(any());
+        verify(evidenceStore, never()).startProviderAttempt(any());
+        ArgumentCaptor<J8BenchmarkUnitResult> unitResult =
+                ArgumentCaptor.forClass(J8BenchmarkUnitResult.class);
+        verify(evidenceStore).recordUnitResult(unitResult.capture());
+        assertThat(unitResult.getValue().resolutionSource())
+                .isEqualTo(J8BenchmarkResolutionSource.CACHE);
+        assertThat(unitResult.getValue().outcomeType())
+                .isEqualTo(J8BenchmarkOutcomeType.PARSED);
+        assertThat(unitResult.getValue().attemptId()).isEmpty();
+        InOrder order = inOrder(evidenceStore);
+        order.verify(evidenceStore).startCampaign(any());
+        order.verify(evidenceStore).declareUnit(any());
+        order.verify(evidenceStore).recordUnitResult(any());
+        order.verify(evidenceStore).finishCampaign(any());
+    }
+
+    @Test
+    void blocksProviderExecutionWhenAttemptAuditPersistenceFails() throws Exception {
+        MutableClock clock = new MutableClock(NOW);
+        RecordingStore store = new RecordingStore();
+        J3ManualCallControlService control = readyControl(clock);
+        J3ManualCollectionEvidenceService evidenceService =
+                new J3ManualCollectionEvidenceService();
+        ScheduledEventsProviderPageTransport.Campaign providerCampaign =
+                mock(ScheduledEventsProviderPageTransport.Campaign.class);
+        J8BenchmarkEvidenceStore evidenceStore = mock(J8BenchmarkEvidenceStore.class);
+        when(evidenceStore.declareUnit(any())).thenReturn(31L);
+        when(evidenceStore.startProviderAttempt(any()))
+                .thenThrow(new IllegalStateException("attempt audit unavailable"));
+        ManualProviderRequestCoordinator coordinator = new ManualProviderRequestCoordinator(
+                clock, Duration.ofSeconds(3), ignored -> { });
+        J3DynamicManualCallService service = auditedService(
+                control,
+                ignored -> providerCampaign,
+                store,
+                new RecordingCache(),
+                evidenceService,
+                clock,
+                coordinator,
+                evidenceStore);
+
+        assertThatThrownBy(() -> service.execute(REQUEST_ID))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("attempt audit unavailable");
+
+        InOrder order = inOrder(evidenceStore, providerCampaign);
+        order.verify(evidenceStore).declareUnit(any());
+        order.verify(evidenceStore).startProviderAttempt(any());
+        order.verify(providerCampaign).close();
+        verify(providerCampaign, never()).execute(any());
+        verify(evidenceStore, never()).recordUnitResult(any());
+        verify(evidenceStore, never()).finishCampaign(any());
+        assertThat(control.snapshot().globalStopActive()).isTrue();
+        try (var releasedLease = coordinator.acquireCampaign(UUID.randomUUID())) {
+            assertThat(releasedLease).isNotNull();
+        }
     }
 
     @Test
@@ -761,6 +1018,34 @@ class J3DynamicManualCallServiceTest {
                 delay);
     }
 
+    private static J3DynamicManualCallService auditedService(
+            J3ManualCallControlService control,
+            ScheduledEventsProviderPageTransport transport,
+            RecordingStore store,
+            J3ScheduledEventsPageCache cache,
+            J3ManualCollectionEvidenceService evidenceService,
+            Clock clock,
+            ManualProviderRequestCoordinator coordinator,
+            J8BenchmarkEvidenceStore evidenceStore) {
+        return new J3DynamicManualCallService(
+                control,
+                transport,
+                new J3ScheduledEventsOutcomeProcessor(
+                        store,
+                        new ScheduledEventsV1Parser(),
+                        control.circuit()),
+                cache,
+                new ScheduledEventsV1Parser(),
+                new J3SingleCallGuard(),
+                evidenceService,
+                clock,
+                Duration.ofMinutes(10),
+                Duration.ofSeconds(3),
+                ignored -> { },
+                coordinator,
+                new J8BenchmarkAuditService(evidenceStore, clock));
+    }
+
     private static J3ManualCallControlService readyControl(Clock clock) {
         J3ManualCallControlService control = new J3ManualCallControlService(
                 clock,
@@ -873,7 +1158,8 @@ class J3DynamicManualCallServiceTest {
                     saved.size(),
                     RawSnapshotPersistenceOutcome.INSERTED,
                     snapshot.payload().sha256(),
-                    snapshot.payload().sizeBytes());
+                    snapshot.payload().sizeBytes(),
+                    java.util.OptionalLong.of(saved.size()));
         }
 
         @Override

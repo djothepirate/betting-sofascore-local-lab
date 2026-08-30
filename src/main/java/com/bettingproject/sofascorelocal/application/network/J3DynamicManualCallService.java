@@ -5,6 +5,11 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.Sched
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.ScheduledEventsTransportException;
 import com.bettingproject.sofascorelocal.config.SofascoreProperties;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignTerminalState;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkExecutionMode;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkOutcomeType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkResolutionSource;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3CachedScheduledEventsPage;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallExecutionClaim;
@@ -13,6 +18,8 @@ import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallControlSnap
 import com.bettingproject.sofascorelocal.domain.provider.J3MinimizedPageEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.J3MinimizedCollectionEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
+import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceOutcome;
+import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceResult;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequest;
 import com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportResponse;
@@ -30,6 +37,9 @@ import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 import java.util.UUID;
 
 @Service
@@ -45,6 +55,7 @@ public class J3DynamicManualCallService {
     private final Clock clock;
     private final Duration cacheTtl;
     private final ManualProviderRequestCoordinator requestCoordinator;
+    private final J8BenchmarkAuditService benchmarkAudit;
 
     @Autowired
     public J3DynamicManualCallService(
@@ -56,7 +67,8 @@ public class J3DynamicManualCallService {
             SofascoreEndpointCatalog endpointCatalog,
             SofascoreProperties properties,
             J3SingleCallGuard callGuard,
-            ManualProviderRequestCoordinator requestCoordinator) {
+            ManualProviderRequestCoordinator requestCoordinator,
+            J8BenchmarkAuditService benchmarkAudit) {
         this(
                 controlService,
                 transport,
@@ -72,7 +84,8 @@ public class J3DynamicManualCallService {
                 endpointCatalog.get(SofascoreEndpointType.SCHEDULED_EVENTS).cacheTtl(),
                 properties.getMinimumDelay(),
                 duration -> Thread.sleep(duration),
-                requestCoordinator);
+                requestCoordinator,
+                benchmarkAudit);
     }
 
     J3DynamicManualCallService(
@@ -102,7 +115,8 @@ public class J3DynamicManualCallService {
                 new ManualProviderRequestCoordinator(
                         clock,
                         minimumDelay,
-                        duration -> awaitForCoordinator(interPageDelay, duration)));
+                        duration -> awaitForCoordinator(interPageDelay, duration)),
+                J8BenchmarkAuditService.disabled(clock));
     }
 
     J3DynamicManualCallService(
@@ -118,6 +132,36 @@ public class J3DynamicManualCallService {
             Duration minimumDelay,
             InterPageDelay interPageDelay,
             ManualProviderRequestCoordinator requestCoordinator) {
+        this(
+                controlService,
+                transport,
+                outcomeProcessor,
+                pageCache,
+                parser,
+                callGuard,
+                evidenceService,
+                clock,
+                cacheTtl,
+                minimumDelay,
+                interPageDelay,
+                requestCoordinator,
+                J8BenchmarkAuditService.disabled(clock));
+    }
+
+    J3DynamicManualCallService(
+            J3ManualCallControlService controlService,
+            ScheduledEventsProviderPageTransport transport,
+            J3ScheduledEventsOutcomeProcessor outcomeProcessor,
+            J3ScheduledEventsPageCache pageCache,
+            ScheduledEventsV1Parser parser,
+            J3SingleCallGuard callGuard,
+            J3ManualCollectionEvidenceService evidenceService,
+            Clock clock,
+            Duration cacheTtl,
+            Duration minimumDelay,
+            InterPageDelay interPageDelay,
+            ManualProviderRequestCoordinator requestCoordinator,
+            J8BenchmarkAuditService benchmarkAudit) {
         this.controlService = Objects.requireNonNull(controlService, "controlService");
         this.transport = Objects.requireNonNull(transport, "transport");
         this.outcomeProcessor = Objects.requireNonNull(outcomeProcessor, "outcomeProcessor");
@@ -131,6 +175,7 @@ public class J3DynamicManualCallService {
         Objects.requireNonNull(interPageDelay, "interPageDelay");
         this.requestCoordinator = Objects.requireNonNull(
                 requestCoordinator, "requestCoordinator");
+        this.benchmarkAudit = Objects.requireNonNull(benchmarkAudit, "benchmarkAudit");
         if (minimumDelay.compareTo(Duration.ofSeconds(3)) < 0) {
             throw new IllegalArgumentException("minimumDelay must be at least three seconds");
         }
@@ -147,10 +192,16 @@ public class J3DynamicManualCallService {
                     J3ManualCallControlError.EXECUTION_ALREADY_STARTED);
         }
 
-        ManualProviderRequestCoordinator.CampaignLease providerLease = null;
-        ScheduledEventsProviderPageTransport.Campaign providerCampaign = null;
+        CampaignResources resources = new CampaignResources();
+        J8BenchmarkAuditService.Session audit = null;
         try (J3SingleCallGuard.Permit ignored = permit.orElseThrow()) {
             J3ManualCallExecutionClaim claim = controlService.claimExecution(requestId);
+            audit = benchmarkAudit.start(
+                    requestId,
+                    J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS,
+                    J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                    J8BenchmarkCampaignType.J3_SCHEDULED_EVENTS.maximumUnits(),
+                    Optional.of(claim.date()));
             List<J3MinimizedPageEvidence> pageAttempts = new ArrayList<>();
             int initialCompletedPages = 0;
             int completedPages = initialCompletedPages;
@@ -160,16 +211,26 @@ public class J3DynamicManualCallService {
             for (int page = claim.firstPage();
                     page <= ScheduledEventsProviderPageRequest.MAXIMUM_COLLECTION_PAGE;
                     page++) {
+                ScheduledEventsProviderPageRequest request =
+                        new ScheduledEventsProviderPageRequest(
+                                claim.providerOrigin(), claim.date(), page);
+                J8BenchmarkAuditService.Unit auditUnit = audit.declare(
+                        page,
+                        SofascoreEndpointType.SCHEDULED_EVENTS,
+                        request.requestKey(),
+                        Optional.empty(),
+                        OptionalLong.empty());
                 if (!controlService.executionMayContinue(requestId)) {
+                    audit.resolveFailure(auditUnit, "OPERATOR_STOP");
                     return publishAlreadyLockedFailure(
+                            audit,
+                            resources,
                             claim.date(), initialCompletedPages, completedPages, page,
                             "GLOBAL_STOP_OR_CIRCUIT_BLOCK", providerRequests, cacheHits,
                             pageAttempts);
                 }
+                audit.reach(auditUnit);
 
-                ScheduledEventsProviderPageRequest request =
-                        new ScheduledEventsProviderPageRequest(
-                                claim.providerOrigin(), claim.date(), page);
                 Instant cacheEvaluatedAt = clock.instant();
                 var cachedPage = pageCache.findFreshParsed(
                         request,
@@ -177,7 +238,24 @@ public class J3DynamicManualCallService {
                         cacheTtl,
                         ScheduledEventsV1Parser.PARSER_VERSION);
                 if (cachedPage.isPresent()) {
-                    boolean hasNextPage = reparseCachedPage(cachedPage.orElseThrow());
+                    J3CachedScheduledEventsPage cached = cachedPage.orElseThrow();
+                    audit.captureSnapshot(
+                            auditUnit,
+                            new RawSnapshotPersistenceResult(
+                                    cached.snapshotId(),
+                                    RawSnapshotPersistenceOutcome.CACHE_HIT,
+                                    cached.payload().sha256(),
+                                    cached.payload().sizeBytes(),
+                                    OptionalLong.empty()),
+                            ScheduledEventsV1Parser.PARSER_VERSION);
+                    boolean hasNextPage;
+                    try {
+                        hasNextPage = reparseCachedPage(cached);
+                    }
+                    catch (RuntimeException exception) {
+                        audit.resolveFailure(auditUnit, "CACHE_REPARSE_INCOMPATIBLE");
+                        throw exception;
+                    }
                     cacheHits++;
                     pageAttempts.add(J3MinimizedPageEvidence.cached(
                             page,
@@ -186,9 +264,20 @@ public class J3DynamicManualCallService {
                             clock.instant()));
                     controlService.recordPageCompleted(requestId, page);
                     completedPages = page;
+                    audit.resolve(
+                            auditUnit,
+                            J8BenchmarkResolutionSource.CACHE,
+                            J8BenchmarkOutcomeType.PARSED,
+                            Optional.of(RawSnapshotSchemaStatus.PARSED),
+                            0,
+                            Optional.empty(),
+                            OptionalInt.empty(),
+                            Optional.empty());
                     if (!hasNextPage) {
                         controlService.completeExecution(requestId);
                         return publishAndLock(
+                                audit,
+                                resources,
                                 requestId,
                                 claim.date(),
                                 initialCompletedPages,
@@ -202,6 +291,8 @@ public class J3DynamicManualCallService {
                         controlService.failExecution(
                                 requestId, blockedNextPage, terminalCode);
                         return publishAndLock(
+                                audit,
+                                resources,
                                 requestId,
                                 claim.date(),
                                 initialCompletedPages,
@@ -217,7 +308,10 @@ public class J3DynamicManualCallService {
                 }
 
                 if (!controlService.executionMayContinue(requestId)) {
+                    audit.resolveFailure(auditUnit, "OPERATOR_STOP");
                     return publishAlreadyLockedFailure(
+                            audit,
+                            resources,
                             claim.date(), initialCompletedPages, completedPages, page,
                             "GLOBAL_STOP_OR_CIRCUIT_BLOCK", providerRequests, cacheHits,
                             pageAttempts);
@@ -227,10 +321,13 @@ public class J3DynamicManualCallService {
                 boolean providerRequestExecuted = false;
                 try {
                     ScheduledEventsTransportResponse response;
-                    if (providerLease == null) {
-                        providerLease = requestCoordinator.acquireCampaign(requestId);
+                    if (resources.lease == null) {
+                        resources.lease = requestCoordinator.acquireCampaign(requestId);
                         if (!controlService.executionMayContinue(requestId)) {
+                            audit.resolveFailure(auditUnit, "OPERATOR_STOP");
                             return publishAlreadyLockedFailure(
+                                    audit,
+                                    resources,
                                     claim.date(),
                                     initialCompletedPages,
                                     completedPages,
@@ -240,11 +337,14 @@ public class J3DynamicManualCallService {
                                     cacheHits,
                                     pageAttempts);
                         }
-                        providerCampaign = transport.openCampaign(requestId);
+                        resources.campaign = transport.openCampaign(requestId);
                     }
-                    providerLease.beginRequest();
+                    resources.lease.beginRequest();
                     if (!controlService.executionMayContinue(requestId)) {
+                        audit.resolveFailure(auditUnit, "OPERATOR_STOP");
                         return publishAlreadyLockedFailure(
+                                audit,
+                                resources,
                                 claim.date(),
                                 initialCompletedPages,
                                 completedPages,
@@ -255,16 +355,50 @@ public class J3DynamicManualCallService {
                                 pageAttempts);
                     }
                     attemptedAt = clock.instant();
-                    providerRequests++;
-                    providerRequestExecuted = true;
-                    response = providerCampaign.execute(request);
-                    J3ScheduledEventsOutcome outcome = outcomeProcessor.processResponse(response);
-                    if (outcome.circuit().state() == J3CircuitState.CLOSED) {
-                        pageCache.recordParsed(
-                                request,
+                    audit.startAttempt(auditUnit);
+                    try {
+                        response = resources.campaign.execute(request);
+                    }
+                    finally {
+                        providerRequests++;
+                        providerRequestExecuted = true;
+                    }
+                    audit.captureResponse(
+                            auditUnit,
+                            response.httpStatus(),
+                            response.latency().toMillis());
+                    J8BenchmarkAuditService.Session activeAudit = audit;
+                    J3ScheduledEventsOutcome outcome;
+                    try {
+                        outcome = outcomeProcessor.processResponse(
                                 response,
-                                outcome.persistence().orElseThrow(),
-                                ScheduledEventsV1Parser.PARSER_VERSION);
+                                persisted -> activeAudit.captureSnapshot(
+                                        auditUnit,
+                                        persisted,
+                                        ScheduledEventsV1Parser.PARSER_VERSION));
+                    }
+                    catch (J3ScheduledEventsOutcomeProcessor.EvidencePersistenceException
+                            exception) {
+                        audit.resolveFailure(auditUnit, exception.code());
+                        throw exception;
+                    }
+                    if (outcome.circuit().state() == J3CircuitState.CLOSED) {
+                        try {
+                            pageCache.recordParsed(
+                                    request,
+                                    response,
+                                    outcome.persistence().orElseThrow(),
+                                    ScheduledEventsV1Parser.PARSER_VERSION);
+                        }
+                        catch (RuntimeException exception) {
+                            audit.resolveFailure(auditUnit, "CACHE_WRITE_ERROR");
+                            throw exception;
+                        }
+                    }
+                    else {
+                        audit.resolveFailure(
+                                auditUnit,
+                                outcome.circuit().reason().name());
                     }
                     String pageTerminalCode = outcome.circuit().state() == J3CircuitState.CLOSED
                             ? null
@@ -277,7 +411,12 @@ public class J3DynamicManualCallService {
                             outcome.hasNextPage().orElse(null),
                             pageTerminalCode));
                     if (controlService.snapshot().globalStopActive()) {
+                        if (outcome.circuit().state() == J3CircuitState.CLOSED) {
+                            audit.resolveFailure(auditUnit, "OPERATOR_STOP");
+                        }
                         return publishAlreadyLockedFailure(
+                                audit,
+                                resources,
                                 claim.date(),
                                 initialCompletedPages,
                                 completedPages,
@@ -291,6 +430,8 @@ public class J3DynamicManualCallService {
                         String terminalCode = outcome.circuit().reason().name();
                         controlService.failExecution(requestId, page, terminalCode);
                         return publishAndLock(
+                                audit,
+                                resources,
                                 requestId,
                                 claim.date(),
                                 initialCompletedPages,
@@ -304,12 +445,23 @@ public class J3DynamicManualCallService {
                     }
                     controlService.recordPageCompleted(requestId, page);
                     completedPages = page;
+                    audit.resolve(
+                            auditUnit,
+                            J8BenchmarkResolutionSource.PROVIDER,
+                            J8BenchmarkOutcomeType.PARSED,
+                            Optional.of(RawSnapshotSchemaStatus.PARSED),
+                            0,
+                            Optional.empty(),
+                            OptionalInt.empty(),
+                            Optional.empty());
                     boolean hasNextPage = outcome.hasNextPage().orElseThrow(
                             () -> new IllegalStateException(
                                     "a parsed page must expose hasNextPage"));
                     if (!hasNextPage) {
                         controlService.completeExecution(requestId);
                         return publishAndLock(
+                                audit,
+                                resources,
                                 requestId,
                                 claim.date(),
                                 initialCompletedPages,
@@ -323,6 +475,8 @@ public class J3DynamicManualCallService {
                         controlService.failExecution(
                                 requestId, blockedNextPage, terminalCode);
                         return publishAndLock(
+                                audit,
+                                resources,
                                 requestId,
                                 claim.date(),
                                 initialCompletedPages,
@@ -338,6 +492,8 @@ public class J3DynamicManualCallService {
                 catch (ManualProviderRequestCoordinator.CoordinationException exception) {
                     controlService.stopGlobally();
                     return publishAlreadyLockedFailure(
+                            audit,
+                            resources,
                             claim.date(), initialCompletedPages, completedPages, page,
                             "MINIMUM_DELAY_INTERRUPTED", providerRequests, cacheHits,
                             pageAttempts);
@@ -345,9 +501,12 @@ public class J3DynamicManualCallService {
                 catch (ScheduledEventsTransportException exception) {
                     if (!controlService.executionMayContinue(requestId)) {
                         String terminalCode = "OPERATOR_STOP";
+                        audit.resolveFailure(auditUnit, terminalCode);
                         pageAttempts.add(J3MinimizedPageEvidence.failedBeforeSnapshot(
                                 page, attemptedAt, terminalCode, providerRequestExecuted));
                         return publishAlreadyLockedFailure(
+                                audit,
+                                resources,
                                 claim.date(),
                                 initialCompletedPages,
                                 completedPages,
@@ -360,10 +519,13 @@ public class J3DynamicManualCallService {
                     J3ScheduledEventsOutcome outcome = outcomeProcessor.processFailure(
                             exception, clock.instant());
                     String terminalCode = outcome.circuit().reason().name();
+                    audit.resolveFailure(auditUnit, terminalCode);
                     pageAttempts.add(J3MinimizedPageEvidence.failedBeforeSnapshot(
                             page, attemptedAt, terminalCode, providerRequestExecuted));
                     controlService.failExecution(requestId, page, terminalCode);
                     return publishAndLock(
+                            audit,
+                            resources,
                             requestId,
                             claim.date(),
                             initialCompletedPages,
@@ -380,16 +542,25 @@ public class J3DynamicManualCallService {
             throw new IllegalStateException("dynamic pagination terminated unexpectedly");
         }
         catch (J3ManualCallControlException exception) {
+            RuntimeException cleanupFailure = resources.closeSafely();
+            String terminalCode = cleanupFailure == null
+                    ? exception.error().name()
+                    : "PROCESSING_FAILURE";
+            suppressCleanupFailure(exception, cleanupFailure);
+            finishFailedAudit(audit, terminalCode, exception);
             throw exception;
         }
         catch (RuntimeException exception) {
             if (!controlService.snapshot().globalStopActive()) {
                 controlService.stopGlobally();
             }
+            RuntimeException cleanupFailure = resources.closeSafely();
+            suppressCleanupFailure(exception, cleanupFailure);
+            finishFailedAudit(audit, "PROCESSING_FAILURE", exception);
             throw exception;
         }
         finally {
-            closeProviderCampaign(providerCampaign, providerLease);
+            resources.close();
         }
     }
 
@@ -403,6 +574,8 @@ public class J3DynamicManualCallService {
     }
 
     private J3ManualCallExecutionResult publishAndLock(
+            J8BenchmarkAuditService.Session audit,
+            CampaignResources resources,
             UUID requestId,
             LocalDate collectionDate,
             int initialCompletedPages,
@@ -415,10 +588,14 @@ public class J3DynamicManualCallService {
                 result,
                 pageAttempts,
                 locked);
+        resources.close();
+        finishAudit(audit, result);
         return result;
     }
 
     private J3ManualCallExecutionResult publishAlreadyLockedFailure(
+            J8BenchmarkAuditService.Session audit,
+            CampaignResources resources,
             LocalDate collectionDate,
             int initialCompletedPages,
             int completedPages,
@@ -439,7 +616,46 @@ public class J3DynamicManualCallService {
                 result,
                 pageAttempts,
                 controlService.snapshot());
+        resources.close();
+        finishAudit(audit, result);
         return result;
+    }
+
+    private static void finishAudit(
+            J8BenchmarkAuditService.Session audit,
+            J3ManualCallExecutionResult result) {
+        if (result.completed()) {
+            audit.finish(
+                    J8BenchmarkCampaignTerminalState.COMPLETED,
+                    Optional.empty());
+            return;
+        }
+        String terminalCode = result.terminalCode();
+        J8BenchmarkCampaignTerminalState state =
+                terminalCode.contains("OPERATOR_STOP")
+                                || terminalCode.contains("GLOBAL_STOP")
+                        ? J8BenchmarkCampaignTerminalState.CANCELLED
+                        : J8BenchmarkCampaignTerminalState.FAILED;
+        audit.finish(state, Optional.of(terminalCode));
+    }
+
+    private static void finishFailedAudit(
+            J8BenchmarkAuditService.Session audit,
+            String terminalCode,
+            RuntimeException original) {
+        if (audit == null) {
+            return;
+        }
+        try {
+            audit.finish(
+                    J8BenchmarkCampaignTerminalState.FAILED,
+                    Optional.of(terminalCode));
+        }
+        catch (RuntimeException auditFailure) {
+            if (auditFailure != original) {
+                original.addSuppressed(auditFailure);
+            }
+        }
     }
 
     private void publishEvidence(
@@ -487,18 +703,62 @@ public class J3DynamicManualCallService {
         }
     }
 
-    private static void closeProviderCampaign(
-            ScheduledEventsProviderPageTransport.Campaign campaign,
-            ManualProviderRequestCoordinator.CampaignLease lease) {
-        try {
-            if (campaign != null) {
-                campaign.close();
+    private static void suppressCleanupFailure(
+            RuntimeException original,
+            RuntimeException cleanupFailure) {
+        if (cleanupFailure != null && cleanupFailure != original) {
+            original.addSuppressed(cleanupFailure);
+        }
+    }
+
+    private static final class CampaignResources {
+
+        private ManualProviderRequestCoordinator.CampaignLease lease;
+        private ScheduledEventsProviderPageTransport.Campaign campaign;
+
+        private RuntimeException closeSafely() {
+            ScheduledEventsProviderPageTransport.Campaign campaignToClose = campaign;
+            ManualProviderRequestCoordinator.CampaignLease leaseToClose = lease;
+            campaign = null;
+            lease = null;
+
+            RuntimeException failure = null;
+            try {
+                if (campaignToClose != null) {
+                    campaignToClose.close();
+                }
+            }
+            catch (RuntimeException exception) {
+                failure = exception;
+            }
+            try {
+                if (leaseToClose != null) {
+                    leaseToClose.close();
+                }
+            }
+            catch (RuntimeException exception) {
+                if (failure == null) {
+                    failure = exception;
+                }
+                else {
+                    failure.addSuppressed(exception);
+                }
+            }
+            return failure;
+        }
+
+        private void close() {
+            RuntimeException failure = closeSafely();
+            if (failure != null) {
+                throw new CampaignCleanupException(failure);
             }
         }
-        finally {
-            if (lease != null) {
-                lease.close();
-            }
+    }
+
+    private static final class CampaignCleanupException extends RuntimeException {
+
+        private CampaignCleanupException(RuntimeException cause) {
+            super("provider campaign cleanup failed", cause);
         }
     }
 

@@ -70,10 +70,61 @@ class J3TransportStopAndIncidentPoliciesTest {
         assertThat(store.transitions()).containsExactly(
                 "SAVE:RAW_ONLY",
                 "CLASSIFY:PARSED",
-                "SAVE:RAW_ONLY",
-                "CLASSIFY:PARSED");
+                "SAVE:RAW_ONLY");
         assertThat(first.circuit().state()).isEqualTo(J3CircuitState.CLOSED);
         assertThat(first.retryScheduled()).isFalse();
+    }
+
+    @Test
+    void exposesTheExactOccurrenceImmediatelyAfterSaveBeforeClassification() {
+        RecordingStore store = new RecordingStore();
+        J3ScheduledEventsOutcomeProcessor processor = processor(store);
+        ScheduledEventsTransportResponse response = response(
+                200,
+                "application/json",
+                "{\"events\":[],\"hasNextPage\":false}"
+                        .getBytes(StandardCharsets.UTF_8),
+                null);
+
+        assertThatThrownBy(() -> processor.processResponse(response, persistence -> {
+            assertThat(persistence.occurrenceId()).isPresent();
+            assertThat(store.transitions()).containsExactly("SAVE:RAW_ONLY");
+            throw new IllegalStateException("simulated audit failure");
+        }))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("simulated audit failure");
+
+        assertThat(store.transitions()).containsExactly("SAVE:RAW_ONLY");
+    }
+
+    @Test
+    void exposesRawPersistenceFailuresWithABoundedAuditCode() {
+        RawManualCallSnapshotStore failingStore = new RawManualCallSnapshotStore() {
+            @Override
+            public RawSnapshotPersistenceResult save(RawManualCallSnapshot snapshot) {
+                throw new IllegalStateException("database unavailable");
+            }
+
+            @Override
+            public void classify(
+                    long snapshotId,
+                    RawSnapshotSchemaStatus schemaStatus,
+                    String errorCode) {
+                throw new AssertionError("classification must not be reached");
+            }
+        };
+        J3ScheduledEventsOutcomeProcessor processor = processor(failingStore);
+
+        assertThatThrownBy(() -> processor.processResponse(response(
+                200,
+                "application/json",
+                "{\"events\":[],\"hasNextPage\":false}"
+                        .getBytes(StandardCharsets.UTF_8),
+                null)))
+                .isInstanceOfSatisfying(
+                        J3ScheduledEventsOutcomeProcessor.EvidencePersistenceException.class,
+                        exception -> assertThat(exception.code())
+                                .isEqualTo("RAW_PERSISTENCE_ERROR"));
     }
 
     @ParameterizedTest
@@ -287,7 +338,8 @@ class J3TransportStopAndIncidentPoliciesTest {
                         J3CircuitReason.SENSITIVE_CONTENT_REJECTED));
     }
 
-    private static J3ScheduledEventsOutcomeProcessor processor(RecordingStore store) {
+    private static J3ScheduledEventsOutcomeProcessor processor(
+            RawManualCallSnapshotStore store) {
         J3NetworkCircuit circuit = J3NetworkCircuit.lockedAt(NOW.minusSeconds(2));
         circuit.activateByOperator(NOW.minusSeconds(1));
         return new J3ScheduledEventsOutcomeProcessor(
@@ -384,7 +436,8 @@ class J3TransportStopAndIncidentPoliciesTest {
                     id,
                     outcome,
                     snapshot.payload().sha256(),
-                    snapshot.payload().sizeBytes());
+                    snapshot.payload().sizeBytes(),
+                    java.util.OptionalLong.of(id));
         }
 
         private record Stored(long id, RawManualCallSnapshot snapshot) {

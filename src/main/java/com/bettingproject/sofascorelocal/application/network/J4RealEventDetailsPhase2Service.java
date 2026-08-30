@@ -7,6 +7,11 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.transport.EventDetail
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.EventDetailsTransportFailure;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceResult;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceService;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignTerminalState;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkExecutionMode;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkOutcomeType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkResolutionSource;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequest;
 import com.bettingproject.sofascorelocal.domain.provider.EventDetailsTransportResponse;
 import com.bettingproject.sofascorelocal.domain.provider.J4RealPhase2ExecutionClaim;
@@ -24,6 +29,9 @@ import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.Optional;
+import java.util.OptionalInt;
+import java.util.OptionalLong;
 
 /** One explicitly confirmed provider refresh with no cache read and no retry. */
 @Service
@@ -35,6 +43,7 @@ public class J4RealEventDetailsPhase2Service {
     private final J4ParsedEventDetailsPersistenceService parsedPersistenceService;
     private final EventDetailsV2Parser parser;
     private final ManualProviderRequestCoordinator requestCoordinator;
+    private final J8BenchmarkAuditService benchmarkAuditService;
 
     @Autowired
     public J4RealEventDetailsPhase2Service(
@@ -42,14 +51,16 @@ public class J4RealEventDetailsPhase2Service {
             EventDetailsProviderTransport transport,
             RawManualCallSnapshotStore rawSnapshotStore,
             J4ParsedEventDetailsPersistenceService parsedPersistenceService,
-            ManualProviderRequestCoordinator requestCoordinator) {
+            ManualProviderRequestCoordinator requestCoordinator,
+            J8BenchmarkAuditService benchmarkAuditService) {
         this(
                 controlService,
                 transport,
                 rawSnapshotStore,
                 parsedPersistenceService,
                 new EventDetailsV2Parser(),
-                requestCoordinator);
+                requestCoordinator,
+                benchmarkAuditService);
     }
 
     J4RealEventDetailsPhase2Service(
@@ -67,7 +78,28 @@ public class J4RealEventDetailsPhase2Service {
                 rawSnapshotStore,
                 parsedPersistenceService,
                 parser,
-                new ManualProviderRequestCoordinator(clock, minimumDelay, pause::pause));
+                new ManualProviderRequestCoordinator(clock, minimumDelay, pause::pause),
+                J8BenchmarkAuditService.disabled(clock));
+    }
+
+    J4RealEventDetailsPhase2Service(
+            J4RealPhase2ControlService controlService,
+            EventDetailsProviderTransport transport,
+            RawManualCallSnapshotStore rawSnapshotStore,
+            J4ParsedEventDetailsPersistenceService parsedPersistenceService,
+            EventDetailsV2Parser parser,
+            Clock clock,
+            Duration minimumDelay,
+            Pause pause,
+            J8BenchmarkAuditService benchmarkAuditService) {
+        this(
+                controlService,
+                transport,
+                rawSnapshotStore,
+                parsedPersistenceService,
+                parser,
+                new ManualProviderRequestCoordinator(clock, minimumDelay, pause::pause),
+                benchmarkAuditService);
     }
 
     private J4RealEventDetailsPhase2Service(
@@ -76,7 +108,8 @@ public class J4RealEventDetailsPhase2Service {
             RawManualCallSnapshotStore rawSnapshotStore,
             J4ParsedEventDetailsPersistenceService parsedPersistenceService,
             EventDetailsV2Parser parser,
-            ManualProviderRequestCoordinator requestCoordinator) {
+            ManualProviderRequestCoordinator requestCoordinator,
+            J8BenchmarkAuditService benchmarkAuditService) {
         this.controlService = Objects.requireNonNull(controlService, "controlService");
         this.transport = Objects.requireNonNull(transport, "transport");
         this.rawSnapshotStore = Objects.requireNonNull(rawSnapshotStore, "rawSnapshotStore");
@@ -85,12 +118,67 @@ public class J4RealEventDetailsPhase2Service {
         this.parser = Objects.requireNonNull(parser, "parser");
         this.requestCoordinator = Objects.requireNonNull(
                 requestCoordinator, "requestCoordinator");
+        this.benchmarkAuditService = Objects.requireNonNull(
+                benchmarkAuditService, "benchmarkAuditService");
     }
 
     public J4RealEventDetailsPhase2Result execute(J4RealPhase2ExecutionClaim claim) {
         Objects.requireNonNull(claim, "claim");
+        J8BenchmarkAuditService.Session audit;
+        J8BenchmarkAuditService.Unit unit;
+        try {
+            audit = benchmarkAuditService.start(
+                    claim.requestId(),
+                    J8BenchmarkCampaignType.J4_EVENT_DETAILS_PHASE2,
+                    J8BenchmarkExecutionMode.GUARDED_PROVIDER,
+                    J8BenchmarkCampaignType.J4_EVENT_DETAILS_PHASE2.maximumUnits(),
+                    Optional.empty());
+            unit = audit.declare(
+                    1,
+                    SofascoreEndpointType.EVENT_DETAILS,
+                    EventDetailsProviderRequest.phase2(
+                            claim.providerOrigin(), claim.eventId()).requestKey(),
+                    Optional.of(claim.canonicalEventId()),
+                    OptionalLong.of(claim.eventId()));
+        }
+        catch (RuntimeException exception) {
+            return failAndLock(claim, "BENCHMARK_AUDIT_FAILURE", 0);
+        }
+
+        J4RealEventDetailsPhase2Result result = executeCampaign(claim, audit, unit);
+        if ("BENCHMARK_AUDIT_FAILURE".equals(result.terminalCode())) {
+            return result;
+        }
+        try {
+            audit.resolveFailureIfPending(unit, result.terminalCode());
+            J8BenchmarkCampaignTerminalState terminalState = result.completed()
+                    ? J8BenchmarkCampaignTerminalState.COMPLETED
+                    : result.terminalCode().contains("OPERATOR_STOP")
+                            ? J8BenchmarkCampaignTerminalState.CANCELLED
+                            : J8BenchmarkCampaignTerminalState.FAILED;
+            audit.finish(terminalState, Optional.of(result.terminalCode()));
+        }
+        catch (RuntimeException exception) {
+            return failAndLock(
+                    claim,
+                    "BENCHMARK_AUDIT_FAILURE",
+                    result.providerCallAttempts());
+        }
+        return result;
+    }
+
+    private J4RealEventDetailsPhase2Result executeCampaign(
+            J4RealPhase2ExecutionClaim claim,
+            J8BenchmarkAuditService.Session audit,
+            J8BenchmarkAuditService.Unit unit) {
         if (!controlService.executionMayContinue(claim.requestId())) {
             return failed(claim, "OPERATOR_STOP", 0);
+        }
+        try {
+            audit.reach(unit);
+        }
+        catch (RuntimeException exception) {
+            return failAndLock(claim, "BENCHMARK_AUDIT_FAILURE", 0);
         }
 
         EventDetailsProviderRequest request = EventDetailsProviderRequest.phase2(
@@ -114,8 +202,35 @@ public class J4RealEventDetailsPhase2Service {
                 throw new EventDetailsTransportException(
                         EventDetailsTransportFailure.OPERATOR_STOP);
             }
-            providerCallAttempts = 1;
-            response = resources.campaign.execute(request);
+            try {
+                audit.startAttempt(unit);
+            }
+            catch (RuntimeException exception) {
+                RuntimeException cleanupFailure = resources.closeSafely();
+                return failAndLock(
+                        claim,
+                        "BENCHMARK_AUDIT_FAILURE",
+                        providerCallAttempts,
+                        cleanupFailure != null);
+            }
+            try {
+                response = resources.campaign.execute(request);
+            }
+            finally {
+                providerCallAttempts = 1;
+            }
+            try {
+                audit.captureResponse(
+                        unit, response.httpStatus(), response.latency().toMillis());
+            }
+            catch (RuntimeException exception) {
+                RuntimeException cleanupFailure = resources.closeSafely();
+                return failAndLock(
+                        claim,
+                        "BENCHMARK_AUDIT_FAILURE",
+                        providerCallAttempts,
+                        cleanupFailure != null);
+            }
         }
         catch (ManualProviderRequestCoordinator.CoordinationException exception) {
             RuntimeException cleanupFailure = resources.closeSafely();
@@ -151,6 +266,18 @@ public class J4RealEventDetailsPhase2Service {
             String code = cleanupCode(cleanupFailure, "RAW_PERSISTENCE_ERROR");
             return failAndLock(claim, code, 1, cleanupFailure != null);
         }
+        try {
+            audit.captureSnapshot(
+                    unit, rawPersistence, EventDetailsV2Parser.PARSER_VERSION);
+        }
+        catch (RuntimeException exception) {
+            RuntimeException cleanupFailure = resources.closeSafely();
+            return failAndLock(
+                    claim,
+                    "BENCHMARK_AUDIT_FAILURE",
+                    1,
+                    cleanupFailure != null);
+        }
         RuntimeException cleanupFailure = resources.closeSafely();
         if (cleanupFailure != null) {
             String code = cleanupCode(cleanupFailure, "TRANSPORT_IO_FAILURE");
@@ -163,6 +290,20 @@ public class J4RealEventDetailsPhase2Service {
                     RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE,
                     null)) {
                 return failAndLock(claim, "RAW_CLASSIFICATION_ERROR", 1);
+            }
+            try {
+                audit.resolve(
+                        unit,
+                        J8BenchmarkResolutionSource.PROVIDER,
+                        J8BenchmarkOutcomeType.ENDPOINT_UNAVAILABLE,
+                        Optional.of(RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE),
+                        0,
+                        Optional.empty(),
+                        OptionalInt.empty(),
+                        Optional.of("HTTP_404"));
+            }
+            catch (RuntimeException exception) {
+                return failAndLock(claim, "BENCHMARK_AUDIT_FAILURE", 1);
             }
             try {
                 controlService.recordEventCompleted(claim.requestId(), claim.eventId());
@@ -268,6 +409,20 @@ public class J4RealEventDetailsPhase2Service {
                 normalized.detailObservationInserted(),
                 parseResult.warnings().size());
         try {
+            audit.resolve(
+                    unit,
+                    J8BenchmarkResolutionSource.PROVIDER,
+                    J8BenchmarkOutcomeType.PARSED,
+                    Optional.of(RawSnapshotSchemaStatus.PARSED),
+                    event.warningCount(),
+                    Optional.empty(),
+                    OptionalInt.empty(),
+                    Optional.empty());
+        }
+        catch (RuntimeException exception) {
+            return failAndLock(claim, "BENCHMARK_AUDIT_FAILURE", 1);
+        }
+        try {
             controlService.recordEventCompleted(claim.requestId(), claim.eventId());
             controlService.complete(claim.requestId());
         }
@@ -363,8 +518,9 @@ public class J4RealEventDetailsPhase2Service {
             RawSnapshotSchemaStatus status,
             String errorCode) {
         return switch (raw.outcome()) {
-            case INSERTED, DEDUPLICATED -> classifySafely(
+            case INSERTED -> classifySafely(
                     raw.snapshotId(), status, errorCode);
+            case DEDUPLICATED -> true;
             case CACHE_HIT -> false;
         };
     }

@@ -7,6 +7,7 @@ import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservation
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservationView;
 import com.bettingproject.sofascorelocal.domain.history.J6ComparedVersion;
 import com.bettingproject.sofascorelocal.domain.history.J6CompletenessSummary;
+import com.bettingproject.sofascorelocal.domain.history.J6ExactTransitionClassification;
 import com.bettingproject.sofascorelocal.domain.history.J6HistoryClassification;
 import com.bettingproject.sofascorelocal.domain.history.J6HistoryComparison;
 import com.bettingproject.sofascorelocal.domain.history.J6HistoryPage;
@@ -179,17 +180,56 @@ public class J6HistoryQueryService {
             J6HistoryStream stream,
             long fromObservationId,
             long toObservationId) {
-        Objects.requireNonNull(canonicalEventId, "canonicalEventId");
-        Objects.requireNonNull(stream, "stream");
-        if (fromObservationId < 1 || toObservationId < 1) {
-            throw new IllegalArgumentException("comparison observation ids must be positive");
-        }
-        if (fromObservationId == toObservationId) {
-            throw new IllegalArgumentException("comparison observations must be distinct");
-        }
+        requireComparison(canonicalEventId, stream, fromObservationId, toObservationId);
         if (canonicalEventStore.findLatestByCanonicalId(canonicalEventId).isEmpty()) {
             return Optional.empty();
         }
+        Optional<LoadedVersionPair> pair = loadPair(
+                canonicalEventId,
+                stream,
+                fromObservationId,
+                toObservationId);
+        if (pair.isEmpty()) {
+            return Optional.empty();
+        }
+        LoadedVersionPair versions = pair.orElseThrow();
+        List<CanonicalEventObservationView> stateHistory = chronologicalStates(
+                canonicalEventStore.findHistory(canonicalEventId));
+        return Optional.of(compareLoadedVersions(
+                versions.before(),
+                versions.after(),
+                terminalBeforeCurrent(versions.after(), stateHistory)));
+    }
+
+    /**
+     * Compares the exact immutable observation pair selected by a bounded reader.
+     *
+     * <p>The caller supplies the terminal-state proof from the same bounded view as
+     * the pair. Unlike {@link #compare(UUID, J6HistoryStream, long, long)}, this
+     * method deliberately reloads neither current event history nor snapshot
+     * occurrence traces. It therefore lets retrospective consumers reuse the J6
+     * projection, semantic diff and classifier without allowing evidence committed
+     * after their {@code asOf} boundary to change the result.</p>
+     */
+    public Optional<J6ExactTransitionClassification> classifyExactTransition(
+            UUID canonicalEventId,
+            J6HistoryStream stream,
+            long fromObservationId,
+            long toObservationId,
+            boolean terminalBeforeCurrent) {
+        requireComparison(canonicalEventId, stream, fromObservationId, toObservationId);
+        return loadPair(canonicalEventId, stream, fromObservationId, toObservationId)
+                .map(pair -> classifyLoadedVersions(
+                        pair.before(),
+                        pair.after(),
+                        terminalBeforeCurrent));
+    }
+
+    private Optional<LoadedVersionPair> loadPair(
+            UUID canonicalEventId,
+            J6HistoryStream stream,
+            long fromObservationId,
+            long toObservationId) {
         Optional<LoadedVersion> before = findVersion(
                 canonicalEventId,
                 stream,
@@ -207,21 +247,42 @@ public class J6HistoryQueryService {
             throw new IllegalArgumentException(
                     "fromObservationId must precede toObservationId chronologically");
         }
-        List<CanonicalEventObservationView> stateHistory = chronologicalStates(
-                canonicalEventStore.findHistory(canonicalEventId));
+        return Optional.of(new LoadedVersionPair(oldVersion, newVersion));
+    }
+
+    private J6HistoryComparison compareLoadedVersions(
+            LoadedVersion oldVersion,
+            LoadedVersion newVersion,
+            boolean terminalBeforeCurrent) {
+        J6ExactTransitionClassification exact = classifyLoadedVersions(
+                oldVersion,
+                newVersion,
+                terminalBeforeCurrent);
+        Map<Long, J6SnapshotTrace> traces = traces(List.of(oldVersion, newVersion));
+        return new J6HistoryComparison(
+                exact.stream(),
+                comparedVersion(oldVersion, traces),
+                comparedVersion(newVersion, traces),
+                exact.classification(),
+                exact.changes());
+    }
+
+    private J6ExactTransitionClassification classifyLoadedVersions(
+            LoadedVersion oldVersion,
+            LoadedVersion newVersion,
+            boolean terminalBeforeCurrent) {
         List<J6SemanticChange> changes = compareValues(oldVersion, newVersion);
         J6HistoryClassification classification = classifier.classify(
                 Optional.of(oldVersion.signature()),
                 newVersion.signature(),
-                terminalBeforeCurrent(newVersion, stateHistory),
+                terminalBeforeCurrent,
                 changes);
-        Map<Long, J6SnapshotTrace> traces = traces(List.of(oldVersion, newVersion));
-        return Optional.of(new J6HistoryComparison(
-                stream,
-                comparedVersion(oldVersion, traces),
-                comparedVersion(newVersion, traces),
+        return new J6ExactTransitionClassification(
+                newVersion.stream(),
+                oldVersion.observationId(),
+                newVersion.observationId(),
                 classification,
-                changes));
+                changes);
     }
 
     private List<LoadedVersion> loadStream(
@@ -364,6 +425,35 @@ public class J6HistoryQueryService {
         }
         if (size < 1 || size > MAXIMUM_PAGE_SIZE) {
             throw new IllegalArgumentException("size must be between 1 and 100");
+        }
+    }
+
+    private static void requireComparison(
+            UUID canonicalEventId,
+            J6HistoryStream stream,
+            long fromObservationId,
+            long toObservationId) {
+        Objects.requireNonNull(canonicalEventId, "canonicalEventId");
+        Objects.requireNonNull(stream, "stream");
+        if (fromObservationId < 1 || toObservationId < 1) {
+            throw new IllegalArgumentException("comparison observation ids must be positive");
+        }
+        if (fromObservationId == toObservationId) {
+            throw new IllegalArgumentException("comparison observations must be distinct");
+        }
+    }
+
+    private record LoadedVersionPair(
+            LoadedVersion before,
+            LoadedVersion after) {
+
+        private LoadedVersionPair {
+            before = Objects.requireNonNull(before, "before");
+            after = Objects.requireNonNull(after, "after");
+            if (before.stream() != after.stream()) {
+                throw new IllegalArgumentException(
+                        "history versions must share a stream");
+            }
         }
     }
 

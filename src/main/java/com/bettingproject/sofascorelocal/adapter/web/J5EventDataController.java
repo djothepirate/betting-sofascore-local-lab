@@ -238,22 +238,16 @@ public class J5EventDataController {
         try {
             var claim = realControlService.confirmAndClaim(
                     requestId, confirmationText, acknowledged);
-            if (!claim.canonicalEventId().equals(canonicalEventId)) {
-                realControlService.fail(requestId, "EVENT_ID_MISMATCH");
-                addRealError(redirectAttributes, "EVENT_ID_MISMATCH");
+            var result = realEventDataService.execute(claim, canonicalEventId);
+            redirectAttributes.addFlashAttribute("j5RealResult", result);
+            if (result.completed()) {
+                redirectAttributes.addFlashAttribute(
+                        "j5RealMessage",
+                        "Campagne J5 terminée : trois appels fournisseur ordonnés, trois snapshots bruts et trois observations locales, y compris toute indisponibilité explicite. Le circuit est reverrouillé ; une nouvelle préparation explicite créera une campagne et une confirmation distinctes.");
+                redirectAttributes.addFlashAttribute("j5RealMessageKind", "safe");
             }
             else {
-                var result = realEventDataService.execute(claim);
-                redirectAttributes.addFlashAttribute("j5RealResult", result);
-                if (result.completed()) {
-                    redirectAttributes.addFlashAttribute(
-                            "j5RealMessage",
-                            "Campagne J5 terminée : trois appels fournisseur ordonnés, trois snapshots bruts et trois observations locales, y compris toute indisponibilité explicite. Le circuit est reverrouillé ; une nouvelle préparation explicite créera une campagne et une confirmation distinctes.");
-                    redirectAttributes.addFlashAttribute("j5RealMessageKind", "safe");
-                }
-                else {
-                    addRealError(redirectAttributes, result.terminalCode());
-                }
+                addRealError(redirectAttributes, result.terminalCode());
             }
         }
         catch (J5RealControlException exception) {

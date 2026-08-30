@@ -3,6 +3,9 @@ package com.bettingproject.sofascorelocal.application.network;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1Parser;
 import com.bettingproject.sofascorelocal.config.ProviderPlaywrightProperties;
 import com.bettingproject.sofascorelocal.config.SofascoreProperties;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkOutcomeType;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkResolutionSource;
+import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkUnitResult;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitReason;
 import com.bettingproject.sofascorelocal.domain.provider.J3CircuitState;
 import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState;
@@ -14,8 +17,10 @@ import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceO
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceResult;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
+import com.bettingproject.sofascorelocal.port.J8BenchmarkEvidenceStore;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
@@ -33,6 +38,12 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class J3LocalJsonImportServiceTest {
 
@@ -199,6 +210,48 @@ class J3LocalJsonImportServiceTest {
                 .isEqualTo(J3ManualCallIntentState.CONFIRMED_READY);
     }
 
+    @Test
+    void auditsAReachedLocalImportPersistenceFailureWithoutInventingAnAttempt()
+            throws Exception {
+        Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+        J3ManualCallControlService control = readyControl(clock);
+        RawManualCallSnapshotStore failingStore = mock(RawManualCallSnapshotStore.class);
+        doThrow(new IllegalStateException("database unavailable"))
+                .when(failingStore).save(any());
+        J8BenchmarkEvidenceStore evidenceStore = mock(J8BenchmarkEvidenceStore.class);
+        when(evidenceStore.declareUnit(any())).thenReturn(11L);
+        J3LocalJsonImportService service = new J3LocalJsonImportService(
+                control,
+                new J3ScheduledEventsOutcomeProcessor(
+                        failingStore,
+                        new ScheduledEventsV1Parser(),
+                        control.circuit()),
+                new ScheduledEventsV1Parser(),
+                new J3SingleCallGuard(),
+                new J3ManualCollectionEvidenceService(),
+                clock,
+                Duration.ofMinutes(10),
+                new J8BenchmarkAuditService(evidenceStore, clock));
+        byte[] providerShape = Files.readAllBytes(
+                Path.of("fixtures/scheduled-events/qualified-provider-shape.json"));
+
+        var result = service.importPages(REQUEST_ID, List.of(
+                RawPayloadEvidence.capture(withHasNextPage(providerShape, false))));
+
+        assertThat(result.completed()).isFalse();
+        assertThat(result.providerRequests()).isZero();
+        assertThat(result.localJsonImports()).isZero();
+        ArgumentCaptor<J8BenchmarkUnitResult> resultCaptor =
+                ArgumentCaptor.forClass(J8BenchmarkUnitResult.class);
+        verify(evidenceStore).recordUnitResult(resultCaptor.capture());
+        assertThat(resultCaptor.getValue().resolutionSource())
+                .isEqualTo(J8BenchmarkResolutionSource.MANUAL_LOCAL_JSON_IMPORT);
+        assertThat(resultCaptor.getValue().outcomeType())
+                .isEqualTo(J8BenchmarkOutcomeType.PERSISTENCE_FAILURE);
+        verify(evidenceStore, never()).startProviderAttempt(any());
+        verify(evidenceStore).finishCampaign(any());
+    }
+
     private static J3LocalJsonImportService service(
             J3ManualCallControlService control,
             RecordingStore store,
@@ -253,7 +306,8 @@ class J3LocalJsonImportServiceTest {
                     saved.size(),
                     RawSnapshotPersistenceOutcome.INSERTED,
                     snapshot.payload().sha256(),
-                    snapshot.payload().sizeBytes());
+                    snapshot.payload().sizeBytes(),
+                    java.util.OptionalLong.of(saved.size()));
         }
 
         @Override

@@ -16,6 +16,7 @@ import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceR
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotSchemaStatus;
 import com.bettingproject.sofascorelocal.port.EventDetailsProviderTransport;
 import com.bettingproject.sofascorelocal.port.J4EventDetailsCache;
+import com.bettingproject.sofascorelocal.port.J8BenchmarkEvidenceStore;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -34,6 +35,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.doThrow;
@@ -78,7 +80,8 @@ class J4RealEventDetailsPhase1ServiceTest {
                     snapshotId,
                     RawSnapshotPersistenceOutcome.INSERTED,
                     snapshot.payload().sha256(),
-                    snapshot.payload().sizeBytes());
+                    snapshot.payload().sizeBytes(),
+                    java.util.OptionalLong.of(snapshotId));
         });
         when(parsedPersistence.persistParsed(any(), any(), any(), any()))
                 .thenAnswer(invocation -> {
@@ -260,33 +263,50 @@ class J4RealEventDetailsPhase1ServiceTest {
     }
 
     @Test
-    void rejectsAConflictingClassificationForADeduplicated404Snapshot() {
-        when(providerCampaign.execute(any())).thenReturn(response(
-                EventDetailsProviderRequest.phase1(
-                        URI.create(EventDetailsProviderRequest.EXPECTED_ORIGIN),
-                        16386245L),
-                404,
-                "{\"error\":\"not-found\"}"));
+    void keepsADeduplicated404OccurrenceWithoutReclassifyingHistoricalEvidence() {
+        when(providerCampaign.execute(any())).thenAnswer(invocation -> {
+            EventDetailsProviderRequest request = invocation.getArgument(0);
+            return request.eventId() == 16386245L
+                    ? response(request, 404, "{\"error\":\"not-found\"}")
+                    : response(request, 200, nominal(request.eventId()));
+        });
         RawPayloadEvidence payload = RawPayloadEvidence.capture(
                 "{\"error\":\"not-found\"}".getBytes(StandardCharsets.UTF_8));
-        org.mockito.Mockito.doReturn(new RawSnapshotPersistenceResult(
-                101L,
-                RawSnapshotPersistenceOutcome.DEDUPLICATED,
-                payload.sha256(),
-                payload.sizeBytes())).when(rawStore).save(any());
+        org.mockito.Mockito.doAnswer(invocation -> {
+            var snapshot = (com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshot)
+                    invocation.getArgument(0);
+            if (snapshot.requestKey().endsWith("16386245")) {
+                return new RawSnapshotPersistenceResult(
+                        101L,
+                        RawSnapshotPersistenceOutcome.DEDUPLICATED,
+                        payload.sha256(),
+                        payload.sizeBytes(),
+                        java.util.OptionalLong.of(102L));
+            }
+            return new RawSnapshotPersistenceResult(
+                    102L,
+                    RawSnapshotPersistenceOutcome.INSERTED,
+                    snapshot.payload().sha256(),
+                    snapshot.payload().sizeBytes(),
+                    java.util.OptionalLong.of(103L));
+        }).when(rawStore).save(any());
         doThrow(new IllegalStateException("classification divergence"))
                 .when(rawStore).classify(
                         101L, RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE, null);
 
         var result = service.execute(claim());
 
-        assertThat(result.completed()).isFalse();
-        assertThat(result.terminalCode()).isEqualTo("RAW_CLASSIFICATION_ERROR");
-        assertThat(result.providerCallAttempts()).isEqualTo(1);
-        assertThat(result.unavailableEvents()).isEmpty();
-        verify(providerCampaign, times(1)).execute(any());
-        verify(parsedPersistence, never()).persistParsed(any(), any(), any(), any());
-        verify(control).fail(REQUEST_ID, "RAW_CLASSIFICATION_ERROR");
+        assertThat(result.completed()).isTrue();
+        assertThat(result.terminalCode()).isEqualTo("COMPLETED");
+        assertThat(result.providerCallAttempts()).isEqualTo(2);
+        assertThat(result.unavailableEvents())
+                .extracting(J4RealEventDetailsUnavailableResult::eventId)
+                .containsExactly(16386245L);
+        verify(providerCampaign, times(2)).execute(any());
+        verify(parsedPersistence, times(1)).persistParsed(any(), any(), any(), any());
+        verify(rawStore, never()).classify(
+                101L, RawSnapshotSchemaStatus.ENDPOINT_UNAVAILABLE, null);
+        verify(control).complete(REQUEST_ID);
     }
 
     @Test
@@ -394,6 +414,69 @@ class J4RealEventDetailsPhase1ServiceTest {
         assertThat(result.terminalCode()).isEqualTo("TRANSPORT_IO_FAILURE");
         assertThat(result.events()).hasSize(2);
         verify(control, never()).fail(any(), any());
+    }
+
+    @Test
+    void neverExecutesTheProviderWhenStartingTheFirstAuditAttemptFails() {
+        J8BenchmarkEvidenceStore evidenceStore = mock(J8BenchmarkEvidenceStore.class);
+        when(evidenceStore.declareUnit(any())).thenReturn(11L, 12L);
+        when(evidenceStore.startProviderAttempt(any()))
+                .thenThrow(new IllegalStateException("attempt audit unavailable"));
+        service = auditedService(evidenceStore);
+
+        assertThatThrownBy(() -> service.execute(claim()))
+                .isInstanceOf(IllegalStateException.class);
+
+        verify(evidenceStore, times(1)).startProviderAttempt(any());
+        verify(providerCampaign, never()).execute(any());
+        verify(control).fail(REQUEST_ID, "BENCHMARK_AUDIT_FAILURE");
+    }
+
+    @Test
+    void locksTheCampaignBeforeTheSecondProviderCallWhenTheFirstResultAuditFails() {
+        J8BenchmarkEvidenceStore evidenceStore = mock(J8BenchmarkEvidenceStore.class);
+        when(evidenceStore.declareUnit(any())).thenReturn(11L, 12L);
+        when(evidenceStore.startProviderAttempt(any())).thenReturn(21L, 22L);
+        doThrow(new IllegalStateException("result audit unavailable"))
+                .when(evidenceStore).recordUnitResult(any());
+        when(providerCampaign.execute(any())).thenAnswer(invocation -> {
+            EventDetailsProviderRequest request = invocation.getArgument(0);
+            return response(request, 200, nominal(request.eventId()));
+        });
+        service = auditedService(evidenceStore);
+
+        assertThatThrownBy(() -> service.execute(claim()))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessage("result audit unavailable");
+
+        ArgumentCaptor<EventDetailsProviderRequest> requestCaptor =
+                ArgumentCaptor.forClass(EventDetailsProviderRequest.class);
+        verify(providerCampaign, times(1)).execute(requestCaptor.capture());
+        assertThat(requestCaptor.getValue().eventId()).isEqualTo(16386245L);
+        verify(providerCampaign, never()).execute(
+                EventDetailsProviderRequest.phase1(
+                        URI.create(EventDetailsProviderRequest.EXPECTED_ORIGIN),
+                        16421052L));
+        verify(evidenceStore, times(1)).recordUnitResult(any());
+        verify(control).fail(REQUEST_ID, "BENCHMARK_AUDIT_FAILURE");
+    }
+
+    private J4RealEventDetailsPhase1Service auditedService(
+            J8BenchmarkEvidenceStore evidenceStore) {
+        return new J4RealEventDetailsPhase1Service(
+                control,
+                transport,
+                rawStore,
+                cache,
+                parsedPersistence,
+                new EventDetailsV2Parser(),
+                Clock.fixed(NOW, ZoneOffset.UTC),
+                Duration.ofMinutes(15),
+                Duration.ofSeconds(3),
+                pauses::add,
+                new J8BenchmarkAuditService(
+                        evidenceStore,
+                        Clock.fixed(NOW, ZoneOffset.UTC)));
     }
 
     private static J4RealPhase1ExecutionClaim claim() {

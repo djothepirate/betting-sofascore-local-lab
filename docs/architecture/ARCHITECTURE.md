@@ -1,4 +1,4 @@
-# Architecture J0 à J7 — SofaScore Local Lab
+# Architecture J0 à J8 — SofaScore Local Lab
 
 ## 1. Positionnement
 
@@ -45,6 +45,7 @@ n'est ajouté.
 │  ├─ Historique et différences sémantiques J6              │
 │  ├─ Rétention J6 manuelle, auditée et hors interface      │
 │  ├─ Export canonique J7 local + décision humaine          │
+│  ├─ Ledger et benchmark J8 locaux, immuables et bornés    │
 │  ├─ Catalogue logique fermé par défaut                    │
 │  ├─ Flyway / JDBC / JPA                                   │
 │  └─ Actuator                                              │
@@ -70,12 +71,13 @@ VPS       : aucune connexion
 | `domain.event` / `domain.eventdetails` / `domain.eventdata` | identité canonique, détail J4, familles J5 et complétude immuables |
 | `domain.history` / `domain.retention` | versions, changements, traces de snapshots et plans de rétention J6 |
 | `domain.export` | statut, manifeste, décision, composant et preuves de fichier J7 |
-| `application` | politiques réseau, orchestration manuelle et lot J5 hors ligne, normalisation, historique, diff, rétention et export J7 |
+| `domain.benchmark` | campagnes, unités, tentatives et résultats J8 à vocabulaire fermé |
+| `application` | politiques réseau, orchestration manuelle et lot J5 hors ligne, normalisation, historique, diff, rétention, export J7 et agrégation J8 |
 | `adapter.sofascore` | catalogue fermé, adaptateurs Playwright bornés J3/J4/J5 et parseurs hors ligne J2/J4/J5/découverte tournoi |
-| `adapter.persistence` | preuves brutes, occurrences, observations normalisées, historique, rétention et manifestes J7 |
+| `adapter.persistence` | preuves brutes, occurrences, observations normalisées, historique, rétention, manifestes J7 et preuves J8 |
 | `adapter.file` | publication J7 create-new par lien physique atomique, bornée à la racine locale |
-| `adapter.web` | tableau de bord, recherche, contrôle de lot et vues J4/J5/J6/J7 locales |
-| `resources/db/migration` | schémas V1 à V26, migrations append-only et triggers d’immuabilité |
+| `adapter.web` | tableau de bord, recherche, contrôle de lot et vues J4/J5/J6/J7/J8 locales |
+| `resources/db/migration` | schémas V1 à V27, migrations append-only et triggers d’immuabilité |
 | `fixtures` | corpus synthétiques hors ligne J2, J4, J5 et J6 |
 
 Le connecteur général demeure bloqué. Le chemin manuel J3 borné délègue ses deux familles
@@ -408,7 +410,7 @@ canoniques sont écrites dans une transaction unique ; un conflit d'identité ou
 ### Intégration
 
 `mvnw -Pintegration-tests verify` démarre PostgreSQL avec Testcontainers et vérifie les migrations
-V1 à V26, les upgrades historiques, la fidélité binaire, les contraintes, la déduplication et
+V1 à V27, les upgrades historiques, la fidélité binaire, les contraintes, la déduplication et
 l'immuabilité. J6 ajoute les occurrences prospectives, les exclusions de rétention, la purge des
 seuls octets dans une base éphémère, l'audit et la conservation de la provenance. Aucun appel
 SofaScore n'est exécuté. J7 ajoute l'upgrade V22→V23 prérempli, ses contraintes de cycle et la
@@ -418,7 +420,10 @@ celle d'un corps JSON importé localement. J5 ajoute l'upgrade V25→V26 qui aut
 `event-incidents-v14` sans réécrire l'historique.
 Le lot J5 ajoute le commit atomique des `3N` familles, le réimport avec snapshots et observations
 dédupliqués mais occurrences nouvelles, puis le rollback global provoqué sur la dernière famille
-du dernier événement. Aucune migration supplémentaire n'est créée.
+du dernier événement. J8 ajoute l'upgrade V26→V27, l'immutabilité des cinq tables du ledger, leurs
+contraintes de corrélation, l'unicité tentative/résultat, les occurrences dédupliquées distinctes,
+la lecture après purge du payload, l'isolation `REPEATABLE_READ` et le fingerprint identique après
+sauvegarde/restauration.
 
 ### Réel
 

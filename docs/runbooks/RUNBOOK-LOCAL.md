@@ -2,10 +2,12 @@
 
 ## 1. Objectif
 
-Démarrer, vérifier, exploiter et arrêter les jalons J0 à J7 sur Windows sans exposer de service
+Démarrer, vérifier, exploiter et arrêter les jalons J0 à J8 sur Windows sans exposer de service
 hors de la machine locale. J5 conserve sa qualification réelle exceptionnelle désactivée par
 défaut ; J6 consulte l'historique et garde sa rétention hors interface ; J7 assemble uniquement les
-données locales courantes et exige une décision humaine avant téléchargement. La découverte
+données locales courantes et exige une décision humaine avant téléchargement ; J8 agrège et exporte
+uniquement les preuves locales et reste `READY_FOR_HUMAN_QUALIFICATION` tant qu'une campagne bornée
+n'a pas reçu un go propriétaire distinct, été exécutée puis revue humainement. La découverte
 tournoi → rencontres est qualifiée et son Work Order est clôturé depuis le 2026-08-21.
 
 ## 2. Première installation
@@ -108,7 +110,7 @@ Vérifier :
 - connecteur `DISABLED` ;
 - base URL `NON_CONFIGURED` ;
 - PostgreSQL `AVAILABLE` ;
-- migration Flyway `25` ;
+- migration Flyway `27` ;
 - snapshots `0` sur une base neuve ;
 - corpus hors ligne `AVAILABLE_OFFLINE` ;
 - fixtures `12 / 12 disponibles` ;
@@ -1420,9 +1422,12 @@ Aucun Docker ni accès SofaScore n’est requis par les tests standards.
 .\mvnw.cmd -Pintegration-tests verify
 ```
 
-Docker doit être disponible. Testcontainers vérifie les migrations V1 à V26, l’état initial du
+Docker doit être disponible. Testcontainers vérifie les migrations V1 à V27, l’état initial du
 connecteur, la conservation exacte du brut, sa déduplication, les provenances J4/J5, les occurrences
 J6, la rétention auditée et la portée cache `TOURNAMENT_SCHEDULED_EVENTS` dans une base éphémère.
+V27 ajoute aussi les cinq tables append-only du ledger J8, leurs contraintes, l'upgrade V26→V27
+et la lecture reproductible des agrégats locaux. Le runbook J8 détaillé est
+`docs/runbooks/J8-BENCHMARK.md`.
 Pour WO-010, il vérifie aussi le commit atomique des `3N` familles, le réimport avec occurrences
 append-only et le rollback intégral lors d'une panne sur la dernière famille du dernier événement.
 
