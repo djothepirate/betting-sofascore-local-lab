@@ -4,6 +4,17 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
+Le jalon **J9 — Décision de gouvernance** est ouvert par `WO-SS-20260831-018` sur la branche
+`codex/j9-decision`. L'orientation propriétaire préférée est
+`PREPARE_OPTIONAL_INTEGRATION`, mais la décision finale reste
+`PENDING_PROVIDER_ROBUSTNESS_EVIDENCE` : le corpus J8 mono-dossier ne suffit pas à conclure.
+WO-018 autorise uniquement la matrice factuelle et la préparation documentaire. Il n'autorise ni
+appel fournisseur, ni intégration, ni nouveau endpoint, ni polling, ni scheduler, ni mode live.
+La preuve multi-dossier envisagée relève de WO-019 et reste bloquée jusqu'à l'acceptation explicite
+d'ADR-SS-002, une readiness hors ligne verte, une sauvegarde/restauration V28 qualifiée et un go
+propriétaire unique. ADR-SS-003 n'existe pas et demeure réservé à une éventuelle étude
+d'intégration après la décision finale J9.
+
 Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**,
 **J3 — Appel manuel**, **J4 — Événements**, **J5 — Statistiques**, **J6 — Historique**,
 **J7 — Export canonique** et **J8 — Benchmark**. J8 est `VALIDATED` : après la campagne initiale

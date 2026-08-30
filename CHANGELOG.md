@@ -4,6 +4,22 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### J9 — décision de gouvernance ouverte
+
+- ouverture de `WO-SS-20260831-018` sur `codex/j9-decision`, depuis la baseline propre
+  `40323faa7dca3341da6ef980b5762f1ff5a32a79`, sans changement de code, endpoint, schéma, migration
+  ou configuration réseau ;
+- ajout d'une matrice de décision factuelle fondée sur les preuves gelées J6, J7 et J8, avec niveaux
+  `PASS_BOUNDED`, `PASS_LOCAL`, `PARTIAL` et `NOT_MEASURED` et sans score arbitraire ;
+- orientation propriétaire consignée comme `PREPARE_OPTIONAL_INTEGRATION`, tandis que la décision
+  finale reste `PENDING_PROVIDER_ROBUSTNESS_EVIDENCE` et n'autorise aucune intégration ;
+- préparation d'une preuve multi-dossier séparée sous WO-019, plafonnée à 38 appels directs et
+  bloquée avant réseau par ADR-SS-002, la readiness hors ligne, une sauvegarde/restauration V28 et
+  un go propriétaire explicite à usage unique ;
+- maintien d'ADR-SS-003 à `NOT_CREATED` : tout transfert HTTPS/mTLS vers le Betting Project reste
+  une étude future, facultative et sans dépendance critique ;
+- aucun appel fournisseur, push, PR ou fusion vers `main` n'est autorisé par ce lot d'ouverture.
+
 ### J5 — correctif borné V15 des actions vides en tirs au but
 
 - ouverture de `WO-SS-20260830-017` sur `codex/j8-incidents-v15`, depuis la preuve J8 partielle
