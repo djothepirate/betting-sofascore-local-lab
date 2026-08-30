@@ -9,7 +9,7 @@
 - **Branche :** `codex/j9-decision`
 - **Prérequis :** J8 `VALIDATED`, WO-016 et WO-017 clôturés
 - **ADR applicable :** `ADR-SS-001 v1.4`
-- **ADR de preuve requis :** `ADR-SS-002 v0.1 — PROPOSED, NOT_ACCEPTED`
+- **ADR de preuve :** `ADR-SS-002 v1.0 — ACCEPTED, GLOBAL_GO_NOT_GRANTED`
 - **ADR d'intégration :** `ADR-SS-003 — NOT_CREATED`
 - **Appel fournisseur autorisé par ce Work Order :** `NO`
 - **Implémentation d'intégration autorisée :** `NO`
@@ -61,13 +61,36 @@ J9_LIVE_OR_SCHEDULED_OPERATION_AUTHORIZED=NO
 J9_BETTING_PROJECT_CRITICAL_DEPENDENCY=NO
 J9_FUTURE_VPS_PRODUCTION_OPTION=NOT_EXCLUDED
 J9_CURRENT_VPS_DEPLOYMENT_AUTHORIZED=NO
-ADR_SS_002_STATUS=PROPOSED_NOT_ACCEPTED
+ADR_SS_002_STATUS=ACCEPTED_V1_0
 ADR_SS_003_STATUS=NOT_CREATED
 ```
 
 Cette orientation n'autorise ni code d'intégration, ni endpoint nouveau, ni appel fournisseur, ni
 acceptation implicite d'un ADR. La décision J9 finale reste `PENDING` jusqu'à la revue humaine de
 la nouvelle preuve et à une confirmation propriétaire distincte.
+
+### 2.1 Acceptation propriétaire d'ADR-SS-002
+
+L'acceptation propriétaire d'ADR-SS-002 a été enregistrée le `2026-08-30T22:54:47Z` (2026-08-31
+Europe/Paris). Elle confirme explicitement la revue officielle, le corpus D1/D2/D3, le plafond de
+38 tentatives, le modèle de go global unique d'au plus 60 minutes, la poursuite sur les seuls `404`
+natifs J4/J5 et les non-autorisations de purge primaire, d'intégration et de production.
+
+```text
+ADR_SS_002_OWNER_DECISION=ACCEPT
+OFFICIAL_SOURCE_REVIEW_ACKNOWLEDGED=YES
+CORPUS_D1_D2_D3_ACCEPTED=YES
+GLOBAL_MAXIMUM_DIRECT_ATTEMPTS_38_ACCEPTED=YES
+ONE_GLOBAL_GO_MODEL_ACCEPTED=YES
+GO_MAXIMUM_DURATION_60_MINUTES_ACCEPTED=YES
+NATIVE_J4_J5_404_CONTINUATION_ACCEPTED=YES
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+FUTURE_VPS_PRODUCTION_OPTION_ACKNOWLEDGED=NOT_EXCLUDED_BUT_NOT_AUTHORIZED
+```
+
+Cette décision franchit uniquement la porte ADR. `NETWORK_AUTHORIZED=NO` reste applicable jusqu'à
+la readiness hors ligne, la sauvegarde/restauration V28 et un go propriétaire global distinct.
 
 ## 3. Référentiel factuel gelé
 
@@ -95,7 +118,7 @@ preuve, et non un échec ou une réussite supposée.
 | Accessibilité et stabilité bornée | La seconde fenêtre J8 contient 20 tentatives, 20 réponses et 20 parsings compatibles, sans refus, 404, retry, erreur opérationnelle ni tentative incomplète. | Rapport J8, lignes de synthèse et revue humaine | `PASS_BOUNDED` | Le corpus direct exploitable ne contient qu'un dossier ; la robustesse multi-dossier n'est pas démontrée. |
 | Complétude | Le dossier ciblé est exploitable, mais aucun dossier strictement complet n'est prouvé ; statistiques `COMPLETE`, incidents et compositions `PARTIAL`. | Rapport J8, sections complétude et revue ciblée | `PARTIAL` | Une réussite de transport ne suffit pas à prouver une richesse homogène des dossiers. |
 | Fraîcheur | Les heures locales de requête et de réception sont connues dans la fenêtre J8 ; aucun retard homogène entre heure source et réception n'est mesuré. | Rapport J8, décision `FRESHNESS=PARTIAL` | `PARTIAL` | Aucun polling, suivi live ou engagement de fraîcheur continue ne peut être déduit. |
-| Coût d'appel | J8 mesure exactement 16 appels de découverte, 4 appels marginaux et 20 appels effectifs par dossier exploitable. La preuve J9 proposée est plafonnée à 38 appels. | Rapport J8 et enveloppe proposée par WO-019 | `PARTIAL` | Un seul dossier ne fournit aucun seuil comparatif ; le coût n'est acceptable que pour un usage manuel et borné. |
+| Coût d'appel | J8 mesure exactement 16 appels de découverte, 4 appels marginaux et 20 appels effectifs par dossier exploitable. La preuve J9 cadrée est plafonnée à 38 appels. | Rapport J8 et enveloppe acceptée par ADR-SS-002 v1.0 pour WO-019 | `PARTIAL` | Un seul dossier ne fournit aucun seuil comparatif ; le coût n'est acceptable que pour un usage manuel et borné. |
 | Risque de blocage | Aucun incident fournisseur n'est observé dans la seconde fenêtre J8. | Rapport J8, 20/20 réponses et parsings | `PARTIAL` | L'absence d'incident sur une fenêtre et un dossier ne permet aucune prédiction externe. |
 | Exactitude | Aucune source de contrôle externe n'est intégrée au laboratoire. | Rapport J8, `CONTROL_SOURCE_ABSENT` | `NOT_MEASURED` | La vérité externe et les divergences métier restent inconnues. |
 | Valeur analytique | Aucun comparateur externe n'est déclaré. | Rapport J8, `EXTERNAL_COMPARISON_ABSENT` | `NOT_MEASURED` | La valeur relative pour le Betting Project n'est pas démontrée. |
@@ -133,13 +156,13 @@ NETWORK_AUTHORIZED=NO
 MAXIMUM_DIRECT_ATTEMPTS=38
 ```
 
-Elle est bloquée par un nouvel ADR car ADR-SS-001 §9 exige un réexamen lors d'une modification des
-bornes de volume. Le précédent métier complet J8 autorisait au plus 30 tentatives pour un dossier ;
-la proposition J9 en prévoit au plus 38 pour trois dossiers.
+ADR-SS-002 v1.0 qualifie l'augmentation de volume exigée par ADR-SS-001 §9. Le précédent métier
+complet J8 autorisait au plus 30 tentatives pour un dossier ; la preuve J9 acceptée en prévoit au
+plus 38 pour trois dossiers.
 
 Les quatre portes cumulatives sont :
 
-1. ADR-SS-002 accepté explicitement par le propriétaire ;
+1. ADR-SS-002 accepté explicitement par le propriétaire — `SATISFIED` ;
 2. readiness hors ligne entièrement verte ;
 3. sauvegarde chiffrée V28 fraîche et restauration qualifiée sur une base isolée ;
 4. go propriétaire global explicite, unique et non consommé.
@@ -168,10 +191,19 @@ L'orientation préférée décrit seulement la direction à étudier si J9 la co
 
 Playwright rend également envisageable, sans l'autoriser, une autre topologie où le laboratoire ou
 un composant dérivé s'exécuterait un jour sur un VPS de production. Cette option n'est plus exclue
-par principe. ADR-SS-003 devra comparer au minimum le push local optionnel ci-dessus et une
-topologie VPS Playwright, puis décider séparément droits d'usage, egress, sandbox navigateur,
-secrets, certificats, supervision, limites de ressources, disponibilité et indépendance métier.
-La campagne résidentielle Windows de WO-019 ne mesurera pas l'accessibilité depuis un VPS.
+par principe. Une étude de faisabilité ultérieure, sous Work Order distinct, comparera le push local
+optionnel ci-dessus à une topologie VPS Playwright, puis instruira séparément droits d'usage,
+egress, sandbox navigateur, secrets, certificats, supervision, limites de ressources,
+disponibilité et indépendance métier. Si la décision finale J9 le justifie, ADR-SS-003 portera le
+choix d'architecture. La campagne résidentielle Windows de WO-019 ne mesurera pas l'accessibilité
+depuis un VPS.
+
+```text
+FUTURE_FEASIBILITY_STUDY=REQUIRED_SEPARATE_WORK_ORDER
+FUTURE_COMPARISON=OPTIONAL_LOCAL_PUSH_VS_VPS_PLAYWRIGHT
+FUTURE_STUDY_STATUS=NOT_OPENED
+CURRENT_VPS_DEPLOYMENT_AUTHORIZED=NO
+```
 
 Cette frontière n'est ni une API publique, ni une spécification implémentable, ni une autorisation
 d'écrire le client ou le serveur.

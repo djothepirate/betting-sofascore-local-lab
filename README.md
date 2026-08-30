@@ -10,20 +10,22 @@ Le jalon **J9 — Décision de gouvernance** est ouvert par `WO-SS-20260831-018`
 `PENDING_PROVIDER_ROBUSTNESS_EVIDENCE` : le corpus J8 mono-dossier ne suffit pas à conclure.
 WO-018 autorise uniquement la matrice factuelle et la préparation documentaire. Il n'autorise ni
 appel fournisseur, ni intégration, ni nouveau endpoint, ni polling, ni scheduler, ni mode live.
-La preuve multi-dossier envisagée relève de WO-019 et reste bloquée jusqu'à l'acceptation explicite
-d'ADR-SS-002, une readiness hors ligne verte, une sauvegarde/restauration V28 qualifiée et un go
-propriétaire unique. ADR-SS-003 n'existe pas et demeure réservé à une éventuelle étude
-d'intégration après la décision finale J9. ADR-SS-002 est maintenant proposé, sans effet réseau.
+La preuve multi-dossier envisagée relève de WO-019. ADR-SS-002 v1.0 est accepté explicitement ;
+WO-019 est donc `READY_FOR_OFFLINE_READINESS`, mais le réseau reste bloqué jusqu'à une readiness
+hors ligne verte, une sauvegarde/restauration V28 qualifiée et un go propriétaire unique.
+ADR-SS-003 n'existe pas et demeure réservé à une éventuelle décision d'architecture après la
+décision finale J9. L'acceptation d'ADR-SS-002 ne vaut pas go réseau.
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une
-conclusion juridique et doit être reconnu par le propriétaire avant toute acceptation de l'ADR.
+conclusion juridique ; le propriétaire a explicitement reconnu cette revue dans son acceptation.
 
 L'usage futur de Playwright sur un VPS de production n'est plus exclu comme option d'architecture,
 mais il reste `NOT_MEASURED` et `NOT_AUTHORIZED`. Le dépôt conserve aujourd'hui `LOCAL_ONLY` et
-`NOT_PRODUCTION_APPROVED`. Une telle topologie devra être comparée au push local optionnel dans un
-futur ADR-SS-003 et recevoir ses propres qualifications de droits d'usage, réseau, navigateur,
-secrets, exploitation et non-dépendance critique.
+`NOT_PRODUCTION_APPROVED`. Une étude de faisabilité ultérieure, sous Work Order distinct, comparera
+le push local optionnel à une topologie Playwright VPS. Si J9 le justifie, ADR-SS-003 portera le
+choix d'architecture ; chaque topologie recevra ses propres qualifications de droits d'usage,
+réseau, navigateur, secrets, exploitation et non-dépendance critique.
 
 Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**,
 **J3 — Appel manuel**, **J4 — Événements**, **J5 — Statistiques**, **J6 — Historique**,
@@ -878,7 +880,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 ## Documentation de référence
 
 - [ADR-SS-001](ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md)
-- [ADR-SS-002 proposé — preuve J9 multi-dossier bornée](ADR-SS-002-bounded-multi-dossier-provider-robustness.md)
+- [ADR-SS-002 accepté — preuve J9 multi-dossier bornée](ADR-SS-002-bounded-multi-dossier-provider-robustness.md)
 - [Architecture J0/J1](docs/architecture/ARCHITECTURE.md)
 - [Contrat hors ligne scheduled-events-v1](docs/architecture/SCHEDULED-EVENTS-V1.md)
 - [Contrat hors ligne event-details-v1](docs/architecture/EVENT-DETAILS-V1.md)

@@ -1,7 +1,7 @@
 # ADR-SS-002 - Preuve fournisseur multi-dossier bornée pour J9
 
-- **Statut :** Proposé — décision propriétaire requise, non applicable au réseau
-- **Version :** 0.1
+- **Statut :** Accepté — éligibilité conditionnelle, aucun go réseau accordé
+- **Version :** 1.0
 - **Date :** 2026-08-31
 - **Décideur :** Porteur du Betting Project
 - **Portée :** une campagne locale de preuve J9 sous `WO-SS-20260831-019`
@@ -10,7 +10,8 @@
 - **Cible Java :** Java 25 LTS
 - **Transport :** Playwright existant, manuel, local et opt-in
 - **Nouvel endpoint, URI, transport ou code runtime :** aucun
-- **Effet tant que le statut reste proposé :** aucun appel fournisseur autorisé
+- **Acceptation propriétaire enregistrée à :** 2026-08-30T22:54:47Z (2026-08-31 Europe/Paris)
+- **Effet de l'acceptation :** première porte de WO-019 franchie ; aucun appel fournisseur autorisé avant les trois portes restantes
 - **Option de production VPS future :** non exclue, non mesurée et non autorisée par cet ADR
 
 ## 1. Contexte
@@ -26,7 +27,7 @@ découverte J3, une découverte tournoi et trois dossiers J4/J5. Son plafond th�
 est supérieur à la borne métier complète J8 de 30 appels.
 
 ADR-SS-001 §9 exige un nouvel ADR lors d'une modification des bornes de volume. La présente
-proposition traite uniquement cette exception de preuve. Elle ne promeut pas le laboratoire, ne
+décision traite uniquement cette exception de preuve. Elle ne promeut pas le laboratoire, ne
 crée aucune intégration et ne modifie pas durablement la cadence fournisseur.
 
 ## 2. Problème à résoudre
@@ -41,14 +42,18 @@ actuelle sur trois dossiers sans :
 - interpréter l'absence de refus technique comme une permission contractuelle ;
 - créer une dépendance du Betting Project envers SofaScore ou le poste Windows.
 
-## 3. Décision proposée
+## 3. Décision acceptée
 
-Si, et seulement si, le propriétaire accepte explicitement la présente version, une campagne
-unique peut devenir éligible après satisfaction de toutes les autres portes de WO-019.
+Le propriétaire a accepté explicitement la présente version et la revue officielle factuelle.
+Une campagne unique devient seulement éligible après satisfaction de toutes les autres portes de
+WO-019. L'acceptation ne constitue ni la readiness, ni le go global de campagne.
 
 ```text
+ADR_SS_002_STATUS=ACCEPTED_V1_0
+ADR_SS_002_VERSION=1.0
 ADR_SS_002_DECISION=AUTHORIZE_ONE_BOUNDED_MULTI_DOSSIER_EVIDENCE_SERIES
-ADR_SS_002_NETWORK_EFFECT_WHILE_PROPOSED=NONE
+ADR_SS_002_ACCEPTANCE_DOES_NOT_CONSTITUTE_GLOBAL_GO=YES
+NETWORK_AUTHORIZED=NO
 SERIES_COUNT=1
 GLOBAL_MAXIMUM_DIRECT_ATTEMPTS=38
 MAXIMUM_CONCURRENCY=1
@@ -176,10 +181,10 @@ EXPLICIT_PERMISSION_FOR_LAB_ENDPOINTS_EVIDENCED=NO
 LEGAL_CONCLUSION=NOT_PROVIDED
 ```
 
-L'acceptation de cet ADR exige donc une décision propriétaire éclairée sur cette incertitude. La
-présente proposition ne transforme ni `robots.txt`, ni l'existence d'une page API, ni une ancienne
-réussite technique en consentement. Le propriétaire peut suspendre la campagne et utiliser le
-canal officiel `Product -> API` avant toute acceptation.
+Le propriétaire a reconnu explicitement cette revue et l'incertitude qu'elle laisse. Cette
+acceptation ne transforme ni `robots.txt`, ni l'existence d'une page API, ni une ancienne réussite
+technique en consentement. Le canal officiel `Product -> API` reste disponible pour une démarche
+distincte ; aucune conclusion juridique n'est formulée ici.
 
 ### 3.7 Non-autorisations
 
@@ -203,6 +208,9 @@ n'est cependant ni étudiée par la campagne Windows résidentielle, ni autoris�
 
 ```text
 FUTURE_VPS_PRODUCTION_OPTION=NOT_EXCLUDED
+FUTURE_VPS_FEASIBILITY_STUDY=REQUIRED_SEPARATE_WORK_ORDER
+FUTURE_TOPOLOGY_COMPARISON=OPTIONAL_LOCAL_PUSH_VS_VPS_PLAYWRIGHT
+FUTURE_STUDY_STATUS=NOT_OPENED
 CURRENT_VPS_DEPLOYMENT_AUTHORIZED=NO
 CURRENT_PRODUCTION_APPROVAL=NO
 VPS_PROVIDER_ACCESSIBILITY=NOT_MEASURED
@@ -211,11 +219,14 @@ VPS_TERMS_AND_PERMISSION_COMPATIBILITY=NOT_MEASURED
 NO_CRITICAL_DEPENDENCY=REQUIRED
 ```
 
-Une future décision ADR-SS-003 devra comparer la topologie locale avec transfert optionnel et la
-topologie VPS Playwright. Elle devra traiter séparément droits d'usage, caractère commercial,
-egress et blocages propres aux hébergeurs, sandbox du navigateur, secrets, certificats, durcissement,
-ressources, supervision, reprise, mise à jour et dépendance du Betting Project. Aucun résultat de
-WO-019 ne sera présenté comme une qualification du réseau ou du runtime VPS.
+Une étude de faisabilité ultérieure, portée par un Work Order distinct après la décision finale J9,
+comparera la topologie locale avec push optionnel d'un export déjà `HUMAN_VALIDATED` et une
+topologie Playwright exécutée sur VPS. Si J9 ouvre la préparation d'une intégration, ADR-SS-003
+portera la décision d'architecture correspondante. L'étude traitera séparément droits d'usage,
+caractère commercial, egress et blocages propres aux hébergeurs, sandbox du navigateur, secrets,
+certificats, durcissement, ressources, supervision, reprise, mise à jour et dépendance du Betting
+Project. Aucun résultat de WO-019 ne sera présenté comme une qualification du réseau ou du runtime
+VPS.
 
 ## 4. Qualification de la décision existante
 
@@ -230,7 +241,7 @@ PERMANENT_VOLUME_CHANGE=NO
 PRODUCTION_PROMOTION=NO
 ```
 
-## 5. Raisons de la proposition
+## 5. Raisons de la décision
 
 - le propriétaire exige une preuve multi-dossier avant la décision J9 ;
 - les parcours unitaires et leur audit existent déjà ;
@@ -244,8 +255,8 @@ PRODUCTION_PROMOTION=NO
 ### 6.1 Décider J9 avec J8 uniquement
 
 Avantage : aucun nouvel appel. Limite : le propriétaire a explicitement jugé la preuve de
-robustesse insuffisante. Non retenu comme voie préférée ; reste possible si la proposition est
-rejetée, avec recommandation `KEEP_LOCAL`.
+robustesse insuffisante. Non retenu comme voie préférée ; `KEEP_LOCAL` reste possible selon le
+résultat de la preuve et la décision finale J9.
 
 ### 6.2 Trois dossiers J4/J5 seulement, maximum 12 appels
 
@@ -289,9 +300,10 @@ propriétaire.
 - aucune généralisation statistique, juridique ou de production.
 - aucune mesure d'accessibilité ou d'opérabilité Playwright depuis un VPS.
 
-## 8. Critères d'acceptation de l'ADR
+## 8. Acceptation propriétaire de l'ADR
 
-Avant le passage éventuel à `ACCEPTED`, le propriétaire doit confirmer explicitement :
+Le propriétaire a confirmé explicitement le bloc suivant, enregistré le
+`2026-08-30T22:54:47Z` (2026-08-31 Europe/Paris) :
 
 ```text
 ADR_SS_002_OWNER_DECISION=ACCEPT
@@ -306,8 +318,18 @@ INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 FUTURE_VPS_PRODUCTION_OPTION_ACKNOWLEDGED=NOT_EXCLUDED_BUT_NOT_AUTHORIZED
 ```
 
-Une instruction générale d'implémenter J9 ne remplace pas ce bloc d'acceptation. Sans décision
-explicite, le statut reste `PROPOSED` et `NETWORK_AUTHORIZED=NO`.
+```text
+ADR_OWNER_ACCEPTANCE_RECORDED=YES
+ADR_OWNER_ACCEPTANCE_SCOPE=ADR_SS_002_V1_0_ONLY
+OFFLINE_READINESS_REQUIRED=YES
+V28_BACKUP_RESTORE_REQUIRED=YES
+GLOBAL_OWNER_GO_REQUIRED=YES
+NETWORK_AUTHORIZED=NO
+```
+
+Cette acceptation franchit uniquement la première porte de WO-019. Elle n'autorise pas une
+acquisition fournisseur, une intégration, une production VPS, une purge primaire ou la création
+implicite d'ADR-SS-003.
 
 ## 9. Déclencheurs de réexamen
 
@@ -318,7 +340,8 @@ Un nouvel ADR est requis avant :
 - nouveau endpoint, transport, retry, fallback, concurrence ou automatisation ;
 - conservation d'un état navigateur ;
 - autorisation d'intégration, d'usage commercial, de production VPS ou de dépendance du Betting
-  Project ; l'étude de ces options relève d'ADR-SS-003 ;
+  Project ; l'étude de faisabilité locale-push versus VPS-Playwright relève d'un Work Order futur
+  distinct et la décision d'architecture éventuelle d'ADR-SS-003 ;
 - changement matériel des conditions officielles ou réponse spécifique de SofaScore ;
 - création d'un mécanisme global exécutoire dans le runtime.
 
@@ -336,4 +359,5 @@ Un nouvel ADR est requis avant :
 
 | Version | Date | Évolution |
 |---|---|---|
+| 1.0 | 2026-08-31 | Acceptation propriétaire explicite du corpus, du plafond 38, du go unique, de la sémantique 404 et des non-autorisations ; option VPS future reconnue mais non autorisée ; aucun go réseau accordé. |
 | 0.1 | 2026-08-31 | Proposition d'une série unique à trois dossiers et 38 appels maximum ; revue officielle factuelle ; aucun effet réseau avant décision propriétaire. |

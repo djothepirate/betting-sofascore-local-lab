@@ -1,13 +1,13 @@
 # WO-SS-20260831-019 — Preuve bornée de robustesse fournisseur pour J9
 
-- **Statut :** `READY_FOR_ADR_OWNER_DECISION`
+- **Statut :** `READY_FOR_OFFLINE_READINESS`
 - **Date d'ouverture :** 2026-08-31
 - **Jalon :** J9 — Preuve préalable à la décision
 - **Base locale :** `a47c932`
 - **Branche/worktree :** `codex/j9-provider-robustness`
 - **Work Order parent :** `WO-SS-20260831-018-decision-j9`
 - **ADR applicable :** `ADR-SS-001 v1.4`
-- **Nouvel ADR :** `ADR-SS-002 v0.1 — PROPOSED, NOT_ACCEPTED`
+- **Nouvel ADR :** `ADR-SS-002 v1.0 — ACCEPTED, GLOBAL_GO_NOT_GRANTED`
 - **État de la preuve :** `DRAFT`
 - **Réseau fournisseur :** `NOT_AUTHORIZED`
 - **Go propriétaire global :** `NOT_GRANTED`
@@ -45,7 +45,7 @@ NETWORK_AUTHORIZED=NO
 OWNER_GO_CONSUMED=NO
 MAX_DIRECT_CALLS=38
 REPLACEMENT_DOSSIER_ALLOWED=NO
-ADR_SS_002_STATUS=PROPOSED_NOT_ACCEPTED
+ADR_SS_002_STATUS=ACCEPTED_V1_0
 OFFLINE_READINESS=NOT_EXECUTED
 V28_BACKUP_RESTORE=NOT_EXECUTED
 GLOBAL_OWNER_GO=NOT_GRANTED
@@ -53,13 +53,14 @@ GLOBAL_OWNER_GO=NOT_GRANTED
 
 Le réseau reste bloqué jusqu'à preuve cumulative des quatre portes :
 
-1. ADR-SS-002 accepté explicitement par le propriétaire après lecture de la revue officielle ;
+1. ADR-SS-002 accepté explicitement par le propriétaire après lecture de la revue officielle —
+   acceptation enregistrée à `2026-08-30T22:54:47Z`, porte `SATISFIED` ;
 2. tests et qualifications hors ligne entièrement verts ;
 3. sauvegarde chiffrée fraîche au schéma Flyway V28 et restauration qualifiée sur une base isolée ;
 4. go propriétaire global, explicite, à usage unique, portant le manifeste final.
 
-L'instruction d'implémenter le plan permet de créer ce Work Order et de proposer l'ADR. Elle ne
-remplace ni l'acceptation explicite de l'ADR, ni le go réseau distinct.
+L'acceptation explicite de l'ADR a été reçue. Elle ne remplace ni la readiness hors ligne, ni la
+sauvegarde/restauration V28, ni le go réseau distinct.
 
 ## 3. Revue d'ADR-SS-001
 
@@ -70,11 +71,29 @@ bornes de volume » d'ADR-SS-001 §9.
 ```text
 ADR_SS_001_VERSION=1.4
 ADR_SS_001_MODIFICATION=NO
-NEW_ADR_REQUIRED=YES
 NEW_ADR_ID=ADR-SS-002
-NEW_ADR_STATUS=PROPOSED_NOT_ACCEPTED
-PROVIDER_CAMPAIGN_AUTHORIZED_BY_REVIEW=NO
+NEW_ADR_STATUS=ACCEPTED_V1_0
+ADR_REEXAMINATION_REQUIREMENT=SATISFIED_BY_ADR_SS_002_V1_0
+PROVIDER_NETWORK_AUTHORIZED_BY_ADR_ACCEPTANCE=NO
 ```
+
+### 3.1 Décision propriétaire enregistrée
+
+```text
+ADR_SS_002_OWNER_DECISION=ACCEPT
+OFFICIAL_SOURCE_REVIEW_ACKNOWLEDGED=YES
+CORPUS_D1_D2_D3_ACCEPTED=YES
+GLOBAL_MAXIMUM_DIRECT_ATTEMPTS_38_ACCEPTED=YES
+ONE_GLOBAL_GO_MODEL_ACCEPTED=YES
+GO_MAXIMUM_DURATION_60_MINUTES_ACCEPTED=YES
+NATIVE_J4_J5_404_CONTINUATION_ACCEPTED=YES
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+FUTURE_VPS_PRODUCTION_OPTION_ACKNOWLEDGED=NOT_EXCLUDED_BUT_NOT_AUTHORIZED
+```
+
+La décision est bornée à ADR-SS-002 v1.0. Elle n'est pas un go global et n'autorise aucun appel
+fournisseur.
 
 ## 4. Périmètre fermé
 
@@ -173,12 +192,13 @@ EXPLICIT_PERMISSION_FOR_CURRENT_LAB_ENDPOINTS_EVIDENCED=NO
 API_LICENSE_OR_RATE_LIMIT_EXTRACTED=NO
 OFFICIAL_API_CONTACT_CHANNEL_PRESENT=YES
 LEGAL_CONCLUSION=NOT_PROVIDED
-OWNER_ACKNOWLEDGEMENT_BEFORE_ADR_ACCEPTANCE=REQUIRED
+OWNER_ACKNOWLEDGEMENT_BEFORE_ADR_ACCEPTANCE=SATISFIED
 ```
 
-Le propriétaire peut exiger un consentement via le canal officiel avant d'accepter ADR-SS-002. Le
-silence d'une source, `robots.txt`, la page API sans contenu extractible et les campagnes techniques
-antérieures ne seront jamais présentés comme une permission.
+Le propriétaire a accepté ADR-SS-002 après reconnaissance explicite de cette revue, sans exiger à
+ce stade un consentement préalable via le canal officiel. Ce canal reste disponible pour une
+démarche distincte. Le silence d'une source, `robots.txt`, la page API sans contenu extractible et
+les campagnes techniques antérieures ne seront jamais présentés comme une permission.
 
 ## 8. Readiness hors ligne obligatoire
 
@@ -355,8 +375,10 @@ reçoit `ABANDON`, `KEEP_LOCAL` et `PREPARE_OPTIONAL_INTEGRATION` avec la recomm
 confirme explicitement sa décision.
 
 Une future production VPS demeure une option d'architecture non exclue. Elle n'est pas qualifiée
-par cette campagne Windows et reste soumise à ADR-SS-003, à une nouvelle revue des droits d'usage
-et à une qualification technique propre au réseau et au runtime VPS.
+par cette campagne Windows. Une étude de faisabilité ultérieure et distincte comparera le push
+local optionnel à une topologie VPS Playwright ; si la décision finale J9 le justifie, ADR-SS-003
+portera ensuite le choix d'architecture. Une nouvelle revue des droits d'usage et une qualification
+propre au réseau et au runtime VPS resteront obligatoires.
 
 ## 16. Livraison Git
 
@@ -366,7 +388,7 @@ Lot préparatoire prévu :
 docs(j9): propose bounded provider robustness evidence
 ```
 
-Après acceptation propriétaire éventuelle de l'ADR :
+Acceptation propriétaire de l'ADR :
 
 ```text
 docs(j9): accept bounded robustness ADR
@@ -404,6 +426,9 @@ alors déplacé vers `docs/work_orders/completed`. Ce déplacement n'autorise au
 ```text
 BRANCH_BASE=a47c932
 ADR_SS_002_DRAFT=CREATED
+ADR_SS_002_VERSION=1.0
+ADR_OWNER_DECISION=ACCEPTED
+ADR_OWNER_DECISION_RECORDED_AT_UTC=2026-08-30T22:54:47Z
 OFFICIAL_SOURCE_REVIEW=COMPLETED_FACTUAL_ONLY
 STANDARD_VERIFY=PASS_928_TESTS_0_FAILURE_0_ERROR_4_SKIPPED
 STANDARD_VERIFY_COMMAND=.\mvnw.cmd clean verify
@@ -417,12 +442,10 @@ LOOPBACK_J3=PENDING
 LOOPBACK_J4=PENDING
 LOOPBACK_J5=PENDING
 V28_BACKUP_RESTORE=PENDING
-ADR_OWNER_DECISION=PENDING
 GLOBAL_OWNER_GO=PENDING
 PROVIDER_CALLS_UNDER_WO019=0
 ```
 
-Le lot documentaire et le build standard suffisent pour soumettre ADR-SS-002 au propriétaire. Les
-tests PostgreSQL, qualifications Chromium loopback et sauvegarde/restauration restent volontairement
-`PENDING` : ils appartiennent à la porte de readiness postérieure à la décision d'ADR et ne
-constituent pas une autorisation réseau.
+ADR-SS-002 v1.0 est accepté et WO-019 entre dans la porte de readiness hors ligne. Les tests
+PostgreSQL, qualifications Chromium loopback et sauvegarde/restauration restent `PENDING` tant que
+leurs résultats ne sont pas consignés. Aucun de ces travaux ne constitue une autorisation réseau.

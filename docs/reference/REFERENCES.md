@@ -3,7 +3,7 @@
 ## Documents versionnés dans le dépôt
 
 1. `ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md` — décision acceptée pour expérimentation locale contrôlée.
-2. `ADR-SS-002-bounded-multi-dossier-provider-robustness.md` — proposition non active pour une preuve J9 unique, bornée à 38 appels ; décision propriétaire requise.
+2. `ADR-SS-002-bounded-multi-dossier-provider-robustness.md` — décision acceptée pour rendre éligible une preuve J9 unique bornée à 38 appels, sous readiness, sauvegarde/restauration et go global distincts.
 3. `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` — cadrage complémentaire, 8 août 2026.
 
 ## Document global conservé dans la Library ChatGPT
@@ -24,13 +24,13 @@ Sections structurantes utilisées :
 ```text
 Cadrage Betting Project v0.5.1
         │
-        ├─ règle globale : aucun appel SofaScore depuis le VPS
+        ├─ règle actuelle : aucun appel SofaScore depuis le VPS n'est autorisé
         │
         ▼
 ADR-SS-001
         │
         ├─ exception bornée : dépôt Windows local séparé
-        ├─ proposition non active : ADR-SS-002, preuve J9 unique
+        ├─ exception acceptée : ADR-SS-002, preuve J9 unique sous portes cumulatives
         │
         ▼
 Cadrage SofaScore Local Lab v0.1.0
@@ -39,5 +39,6 @@ Cadrage SofaScore Local Lab v0.1.0
 ```
 
 En cas de conflit, l’ADR-SS-001 qualifie l’exception locale, mais n’annule pas la non-dépendance du
-projet principal. ADR-SS-002 n'a aucun effet tant que son statut reste `PROPOSED` ; son existence ne
-vaut ni acceptation, ni go fournisseur, ni approbation de production VPS.
+projet principal. ADR-SS-002 v1.0 qualifie uniquement une série J9 bornée ; son acceptation ne vaut
+ni go fournisseur, ni intégration, ni approbation de production VPS. Une étude future distincte
+comparera le push local optionnel à une topologie Playwright VPS avant toute décision d'architecture.

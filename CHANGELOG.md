@@ -21,13 +21,17 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   sans orchestrateur, code runtime, migration ou extension d'allowlist ;
 - proposition d'ADR-SS-002 v0.1, sans effet réseau tant que le propriétaire ne l'a pas acceptée,
   pour rendre explicite l'exception unique portant le plafond agrégé de 30 à 38 appels ;
+- acceptation propriétaire explicite d'ADR-SS-002 v1.0 après reconnaissance de la revue officielle,
+  du corpus D1/D2/D3, du plafond 38, du go unique de 60 minutes au plus, de la poursuite sur les
+  seuls `404` natifs J4/J5 et des non-autorisations ; WO-019 passe à
+  `READY_FOR_OFFLINE_READINESS`, avec `NETWORK_AUTHORIZED=NO` et go global toujours absent ;
 - revue factuelle de sources officielles : restrictions publiées sur les requêtes automatisées,
   le scraping, l'agrégation, la reproduction et l'extraction substantielle sans consentement
   explicite ; point d'entrée `Sofascore API` et canal `Product -> API` présents, mais aucune licence,
   authentification, limite d'appel ou permission applicable extraite ; aucune conclusion juridique ;
-- maintien d'ADR-SS-003 à `NOT_CREATED` : tout transfert HTTPS/mTLS vers le Betting Project reste
-  une étude future, facultative et sans dépendance critique ; une topologie Playwright sur VPS de
-  production n'est plus exclue, mais reste non mesurée et non autorisée ;
+- maintien d'ADR-SS-003 à `NOT_CREATED` : une étude de faisabilité ultérieure et distincte comparera
+  le push local optionnel vers le Betting Project à une topologie Playwright sur VPS ; celle-ci
+  n'est plus exclue, mais reste non mesurée et non autorisée, sans dépendance critique ;
 - validation standard de chacun des deux lots documentaires : 928 tests, zéro échec, zéro erreur et
   quatre skips prévus ; diff, liens Markdown locaux, recherche de credentials et valeurs par défaut
   loopback/réseau contrôlés, sans appel fournisseur ;
