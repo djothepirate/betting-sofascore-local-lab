@@ -10,7 +10,7 @@ import java.util.Set;
  * intentionally distinct from the inactive terminal marker {@code ET}. An explicitly inactive
  * {@code Extra time} marker remains an atomic schema incompatibility.</p>
  */
-public final class EventIncidentsV14Parser extends EventIncidentsV13Parser {
+public class EventIncidentsV14Parser extends EventIncidentsV13Parser {
 
     public static final String PARSER_VERSION = "event-incidents-v14";
 
