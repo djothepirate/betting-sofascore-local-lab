@@ -68,7 +68,8 @@ public record J5EventDataObservation(
                     .anyMatch(EventIncident::hasReplacementPlayers);
             boolean hasComprehensiveDetails = incidents.incidents().stream()
                     .anyMatch(EventIncident::hasComprehensiveDetails);
-            boolean compatible = "event-incidents-v14".equals(source.parserVersion())
+            boolean compatible = "event-incidents-v15".equals(source.parserVersion())
+                    || "event-incidents-v14".equals(source.parserVersion())
                     || "event-incidents-v13".equals(source.parserVersion())
                     || "event-incidents-v12".equals(source.parserVersion())
                     || "event-incidents-v11".equals(source.parserVersion())
