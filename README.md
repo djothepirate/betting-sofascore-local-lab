@@ -16,9 +16,11 @@ contre-qualification hors sandbox ont produit le même bilan, soit `14` tests, `
 `RUNTIME_FAILURE` à la fermeture gracieuse et `2` scénarios d'arrêt opérateur réussis. Aucun appel
 fournisseur n'a eu lieu ; l'audit post-échec ne trouve aucun processus possédé résiduel, listener
 8087 ou artefact navigateur interdit. J4/J5 et la sauvegarde/restauration V28 n'ont pas été
-exécutés. Un Work Order runtime distinct est requis avant reprise. Le réseau reste bloqué, le go
-global n'est pas accordé et ADR-SS-003 n'existe pas. L'acceptation d'ADR-SS-002 ne vaut pas go
-réseau.
+exécutés. WO-020 est ouvert sur `codex/j9-playwright-graceful-close` pour le diagnostic et le
+correctif runtime exclusivement locaux. Son ouverture ne reprend pas WO-019, ne lance pas le cycle
+V28, ne donne aucun go et n'autorise ni appel fournisseur, ni intégration, ni production. Le réseau
+reste bloqué, le go global n'est pas accordé et ADR-SS-003 n'existe pas. L'acceptation d'ADR-SS-002
+ne vaut pas go réseau.
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une

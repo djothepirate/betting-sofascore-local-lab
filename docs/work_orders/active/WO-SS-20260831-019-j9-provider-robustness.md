@@ -49,7 +49,10 @@ ADR_SS_002_STATUS=ACCEPTED_V1_0
 OFFLINE_READINESS=BLOCKED_PLAYWRIGHT_LOOPBACK_GRACEFUL_CLOSE
 V28_BACKUP_RESTORE=NOT_EXECUTED_READINESS_BLOCKED
 GLOBAL_OWNER_GO=NOT_GRANTED
-SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=YES_NOT_OPENED
+SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=YES_OPENED_WO020
+RUNTIME_WORK_ORDER=WO-SS-20260831-020-j9-playwright-graceful-close
+RUNTIME_WORK_ORDER_STATUS=IN_DEVELOPMENT
+WO019_CAMPAIGN_RESUME_AUTHORIZED=NO
 ```
 
 Le réseau reste bloqué jusqu'à preuve cumulative des quatre portes :
@@ -241,7 +244,8 @@ tests exécutés, `0` échec d'assertion, `12` erreurs `RUNTIME_FAILURE` pendant
 assertions de parcours ont précédé ces erreurs de fermeture, mais leur réussite ne neutralise pas
 le garde-fou de nettoyage. Aucun appel fournisseur n'a été exécuté. J4, J5 et la
 sauvegarde/restauration V28 n'ont donc pas été lancés. La readiness reste bloquée et un Work Order
-runtime séparé, encore non ouvert, est requis avant toute reprise.
+runtime séparé WO-020 est ouvert avant toute reprise. Son ouverture n'autorise pas la campagne
+WO-019.
 
 ## 9. Sauvegarde/restauration V28
 
@@ -463,7 +467,10 @@ PROVIDER_CALLS_UNDER_WO019=0
 POST_FAILURE_RESIDUAL_OWNED_PROCESS_COUNT=0
 POST_FAILURE_LISTENER_127_0_0_1_8087_COUNT=0
 POST_FAILURE_FORBIDDEN_BROWSER_ARTIFACTS=NONE_FOUND
-SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=YES_NOT_OPENED
+SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=YES_OPENED_WO020
+RUNTIME_WORK_ORDER=WO-SS-20260831-020-j9-playwright-graceful-close
+RUNTIME_WORK_ORDER_STATUS=IN_DEVELOPMENT
+WO019_CAMPAIGN_RESUME_AUTHORIZED=NO
 NETWORK_AUTHORIZED=NO
 ```
 
@@ -473,4 +480,15 @@ Playwright loopback reste toutefois bloquante : la contre-qualification hors san
 `12` erreurs de fermeture gracieuse. L'audit post-échec ne trouve aucun processus possédé résiduel,
 aucun listener sur `127.0.0.1:8087` et aucun HAR, trace, vidéo, capture, téléchargement ou
 `storageState`. WO-019 revient à `OPEN_AWAITING_PREREQUISITES` ; aucun go, appel fournisseur, test
-J4/J5 ou cycle V28 n'est autorisé avant un Work Order runtime séparé.
+J4/J5 ou cycle V28 n'est autorisé. WO-020 traite uniquement le défaut runtime local ; une décision
+propriétaire distincte restera nécessaire avant toute reprise de WO-019.
+
+Autorisation d'ouverture de WO-020 enregistrée le 2026-08-31 :
+
+```text
+J9_RUNTIME_WORK_ORDER_OPENING=AUTHORIZE
+J9_RUNTIME_SCOPE=DIAGNOSE_AND_CORRECT_PLAYWRIGHT_GRACEFUL_CLOSE_AND_PROCESS_TREE_CLEANUP
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+```

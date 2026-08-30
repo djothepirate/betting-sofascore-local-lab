@@ -33,8 +33,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - arrêt à la porte de sécurité avec zéro appel fournisseur, aucun processus possédé résiduel, aucun
   listener 8087 et aucun artefact navigateur interdit ; J4, J5 et le cycle sauvegarde/restauration
   V28 n'ont pas été exécutés ;
-- WO-019 revient à `OPEN_AWAITING_PREREQUISITES` ; un Work Order runtime séparé, encore non ouvert,
-  est requis avant reprise, sans go réseau ni modification de la décision J9 ;
+- WO-019 revient à `OPEN_AWAITING_PREREQUISITES` ; WO-020 est ouvert depuis `542f352` sur
+  `codex/j9-playwright-graceful-close`, sous autorisation propriétaire bornée au diagnostic et au
+  correctif de la fermeture gracieuse et du nettoyage de l'arbre Playwright ; réseau fournisseur,
+  reprise de WO-019, intégration et production restent explicitement non autorisés ;
 - revue factuelle de sources officielles : restrictions publiées sur les requêtes automatisées,
   le scraping, l'agrégation, la reproduction et l'extraction substantielle sans consentement
   explicite ; point d'entrée `Sofascore API` et canal `Product -> API` présents, mais aucune licence,

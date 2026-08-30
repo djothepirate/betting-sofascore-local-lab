@@ -155,7 +155,10 @@ EVIDENCE_STATUS=DRAFT
 OFFLINE_READINESS=BLOCKED_PLAYWRIGHT_LOOPBACK_GRACEFUL_CLOSE
 NETWORK_AUTHORIZED=NO
 MAXIMUM_DIRECT_ATTEMPTS=38
-SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=YES_NOT_OPENED
+SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=YES_OPENED_WO020
+RUNTIME_WORK_ORDER=WO-SS-20260831-020-j9-playwright-graceful-close
+RUNTIME_WORK_ORDER_STATUS=IN_DEVELOPMENT
+WO019_CAMPAIGN_RESUME_AUTHORIZED=NO
 ```
 
 ADR-SS-002 v1.0 qualifie l'augmentation de volume exigée par ADR-SS-001 §9. Le précédent métier
@@ -173,8 +176,9 @@ La deuxième porte n'est pas franchie : la qualification J3 Playwright loopback 
 contre-qualification hors sandbox reproduisent le même échec à la fermeture gracieuse (`14` tests,
 `12` erreurs `RUNTIME_FAILURE`, `2` scénarios d'arrêt opérateur réussis). Aucun appel fournisseur
 n'a été effectué ; J4/J5, la sauvegarde/restauration V28 et le go global restent non exécutés.
-WO-019 porte les métriques détaillées. La décision J9 demeure
-`PENDING_PROVIDER_ROBUSTNESS_EVIDENCE` et un Work Order runtime séparé est requis avant reprise.
+WO-019 porte les métriques détaillées. WO-020 est ouvert sous autorisation propriétaire pour le
+diagnostic et le correctif runtime local, sans autoriser la reprise de WO-019. La décision J9 demeure
+`PENDING_PROVIDER_ROBUSTNESS_EVIDENCE`.
 
 Avant ces quatre preuves :
 
