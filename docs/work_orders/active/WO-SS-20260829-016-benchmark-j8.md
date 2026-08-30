@@ -13,8 +13,8 @@
 - **Nouveau parcours ou endpoint fournisseur :** `NONE`
 - **Appel fournisseur pendant l'implémentation :** `NOT_AUTHORIZED`
 - **Appel fournisseur pendant les tests automatisés :** `NOT_AUTHORIZED`
-- **Campagne fournisseur J8 :** `NOT_AUTHORIZED_NOT_RUN_REQUIRES_SEPARATE_OWNER_GO`
-- **Qualification humaine :** `NOT_RUN`
+- **Campagne fournisseur J8 :** `OWNER_GO_CONSUMED_2026_08_30_EXECUTED_PARTIAL`
+- **Qualification humaine :** `NOT_RUN_AFTER_PARTIAL_CAMPAIGN`
 - **Polling, scheduler, watcher, live, retry ou fallback :** `NOT_AUTHORIZED`
 - **Production, VPS ou dépendance critique :** `NOT_AUTHORIZED`
 
@@ -384,33 +384,86 @@ La qualification humaine locale doit vérifier :
 6. l'absence de toute activité réseau J8 ;
 7. l'arrêt propre de l'application et la conservation des verrous réseau.
 
-État après readiness technique :
+État après readiness technique puis campagne bornée :
 
 ```text
-J8_HUMAN_QUALIFICATION=NOT_RUN
+J8_HUMAN_QUALIFICATION=NOT_RUN_AFTER_PARTIAL_CAMPAIGN
 J8_HTML_TECHNICAL_QA=PASS
 J8_MARKDOWN_REPRODUCIBILITY=PASS_BYTE_IDENTICAL
 J8_TECHNICAL_QA_PROVIDER_CALLS=0
-J8_PROVIDER_CAMPAIGN=NOT_AUTHORIZED
-J8_PROVIDER_CAMPAIGN_RESULT=NOT_RUN
+J8_PROVIDER_CAMPAIGN=OWNER_GO_CONSUMED_2026_08_30
+J8_PROVIDER_CAMPAIGN_RESULT=PARTIAL_J5_FAILED_SCHEMA_INCOMPATIBLE
 J8_FINAL_BENCHMARK_REPORT=NOT_CREATED
 J8_OWNER_CLOSURE_DECISION=NOT_GRANTED
 ```
 
-Si le propriétaire souhaite la campagne fournisseur prospective J8, il doit fournir une décision
-séparée avant la première requête fournisseur. Le protocole déjà retenu, mais non autorisé par ce
-Work Order, est le suivant : sélectionner localement le dernier événement J7 `HUMAN_VALIDATED`,
-terminal et possédant les cinq composants directs, avec identifiant fournisseur croissant comme
-départage ; arrêter avant réseau s'il n'existe aucun candidat ; vérifier en lecture seule
-l'expiration naturelle des caches J3 et tournoi ; réserver une fenêtre UTC exclusive sans autre
-campagne manuelle ; puis exécuter dans l'ordre J3 `SCHEDULED_EVENTS` (pages atteintes, plafond 25),
-une découverte `TOURNAMENT_SCHEDULED_EVENTS`, J4 phase 2 `EVENT_DETAILS`, et J5
-`STATISTICS`/`INCIDENTS`/`LINEUPS`. Le plafond absolu est 30 tentatives (`25 + 1 + 1 + 3`), avec
-trois secondes minimum, concurrence un, aucun retry et arrêt au premier incident terminal, refus,
-incompatibilité, contenu inattendu ou arrêt opérateur. Le contexte Playwright est neuf et non
-persistant, sans profil, cookie, `storageState`, HAR, trace, vidéo, capture ni téléchargement. Un
-cache hit imprévu, une panne ou un dossier inexploitable donne `PARTIAL`/`NOT_MEASURED` ; aucune
-seconde campagne n'est lancée sans nouvelle autorisation.
+Le propriétaire a donné le 2026-08-30 le go distinct prévu. Il a été consommé par une seule fenêtre
+exclusive et ne vaut ni autorisation de retry, ni autorisation de seconde campagne, ni décision de
+clôture. La preuve détaillée est conservée dans
+`docs/validation/J8-BOUNDED-CAMPAIGN-20260830.md`.
+
+### 13.1 Campagne bornée du 2026-08-30
+
+```text
+J8_PROVIDER_CAMPAIGN_GO=GRANTED_BY_OWNER_2026_08_30
+J8_PROVIDER_CAMPAIGN_GO_CONSUMED=YES
+J8_WINDOW_FROM=2026-08-30T03:39:12.086771Z
+J8_WINDOW_TO=2026-08-30T04:32:04.339732Z
+J8_WINDOW_SEMANTICS=[FROM,TO)
+J8_TARGET_PROVIDER_EVENT_ID=16691018
+J8_TARGET_CANONICAL_ID=f4713f80-4769-3656-ba51-61d8ac1aa814
+J8_TARGET_DATE=2026-08-15
+J8_TARGET_PHASE_ID=15118
+J8_TARGET_UNIQUE_TOURNAMENT_ID=824
+J8_MAX_DIRECT_ATTEMPTS=30
+J8_ACTUAL_DIRECT_ATTEMPTS=19
+J8_DECLARED_UNITS=20
+J8_BOUNDED_PATH_RESULT=PARTIAL
+J8_RETRY_EXECUTED=NO
+J8_SECOND_CAMPAIGN_AUTHORIZED=NO
+```
+
+J3 `SCHEDULED_EVENTS` a terminé quinze pages parsées en quinze tentatives. La découverte tournoi a
+terminé en une tentative parsée et retenu huit événements canoniques. J4 phase 2 a terminé en une
+tentative parsée, avec une latence de 3039 ms. J5 a déclaré ses trois familles, puis a terminé
+`FAILED` après deux tentatives : statistiques `PARSED/COMPLETE` en 3012 ms, incidents
+`SCHEMA_INCOMPATIBLE` en 95 ms et compositions `NOT_REACHED_AFTER_TERMINAL_FAILURE` sans tentative.
+Le premier incident terminal a donc arrêté le parcours exactement comme prévu.
+
+Le double export local figé au même `AsOf` est byte-identique : 15 201 octets, SHA-256
+`d901790d1f05ddd32b92821bee51f11ae3e688ca3d929af36f667ac026b2934c` et hash de population
+`da158fb04c8dc113a56e94e2bc7da6ad27278111af5cf8179b7476e5d8f1cc95`. Il rend
+`PARTIAL`, `FULL_ATTEMPT_LEDGER`, dix-neuf réponses sur dix-neuf, dix-huit parsings compatibles et
+une incompatibilité. Aucun dossier n'étant exploitable, les ratios d'appels par dossier restent
+`NOT_MEASURED`.
+
+### 13.2 Régression fonctionnelle J5 observée
+
+La collecte incidents de ce dossier était exploitable avant J8 : l'ancienne preuve locale est
+toujours acceptée hors ligne par `event-incidents-v14`. La nouvelle réponse J8 représente toutefois
+les quatorze tirs au but non minutés avec `footballPassingNetworkAction` présent comme tableau vide,
+alors que la règle héritée de V12 à V14 exige la propriété absente dans le contexte terminal
+cohérent. Le résultat contient quatorze minutes d'action manquantes et un marqueur `PEN` hors
+contexte, soit quinze problèmes.
+
+Le parseur V14, le worker Playwright, le protocole IPC et le transport de réponse sont inchangés par
+J8. L'audit J8 ne reçoit pas les octets pour les transformer : il écrit la tentative avant l'appel,
+puis le statut, la latence et les références de persistance après réception. Une normalisation
+contrefactuelle en mémoire des seuls tableaux vides rend les mêmes octets `PARSED/PARTIAL`, sans
+persistance. La preuve soutient donc une nouvelle variante de représentation observée et une lacune
+bornée du parseur strict, pas une mutation de payload causée par J8.
+
+```text
+J5_END_TO_END_AVAILABILITY_REGRESSION=OBSERVED
+J5_J8_INSTRUMENTATION_CAUSALITY=NOT_SUPPORTED_BY_LOCAL_EVIDENCE
+J5_OBSERVED_RESPONSE_VARIANT=EMPTY_FOOTBALL_PASSING_NETWORK_ACTION_ARRAY
+J5_PROVIDER_SCHEMA_CURRENT_STATUS=NOT_VALIDATED_AFTER_SNAPSHOT_717
+J5_CORRECTIVE_SCOPE=SEPARATE_WORK_ORDER_AND_OWNER_DECISION_REQUIRED
+```
+
+Après la campagne, l'application et le worker ont été arrêtés, le port 8087 libéré, les gates locaux
+remis à `false` et le verrou persistant confirmé par l'exporteur. Aucun retry, import, fallback,
+appel compositions ou nouvelle campagne n'a été exécuté.
 
 La revue humaine future porte, lorsque le corpus le permet, sur trois dossiers distincts : le dossier
 J8, le dossier direct non ciblé le plus récent en `PARTIAL` ou `UNAVAILABLE`, puis le dossier direct
@@ -433,9 +486,9 @@ IN_PROGRESS
   -> VALIDATED
 ```
 
-Le statut courant est `READY_FOR_HUMAN_QUALIFICATION`. Il signifie que le périmètre documentaire et
-la capacité technique sont proposés à la recette ; il ne signifie ni campagne exécutée, ni rapport
-final accepté, ni décision J9.
+Le statut courant reste `READY_FOR_HUMAN_QUALIFICATION` malgré l'exécution de la campagne : son
+résultat est inconclusif, la revue humaine ciblée n'est pas terminée, le rapport final n'est pas
+gelé et aucune décision propriétaire de clôture ou décision J9 n'est acquise.
 
 Le passage à `VALIDATED` et le déplacement vers `docs/work_orders/completed` exigent tous les
 éléments suivants :

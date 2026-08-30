@@ -8,17 +8,17 @@ normale n'exécute aucun appel fournisseur et ne nécessite aucun opt-in réseau
 ```text
 WORK_ORDER_STATUS=READY_FOR_HUMAN_QUALIFICATION
 PROVIDER_CALL_REQUIRED=NO
-PROVIDER_CAMPAIGN_AUTHORIZED=NO
-PROVIDER_CAMPAIGN_RESULT=NOT_RUN
+PROVIDER_CAMPAIGN_AUTHORIZED=GO_CONSUMED_2026_08_30
+PROVIDER_CAMPAIGN_RESULT=PARTIAL_J5_FAILED_SCHEMA_INCOMPATIBLE
 PLAYWRIGHT_REQUIRED=NO
 POLLING_OR_SCHEDULING=NO
 LOAD_TEST=NO
 FINAL_BENCHMARK_REPORT=NOT_CREATED
 ```
 
-Une campagne fournisseur prospective est décrite séparément à la section 10. Elle reste interdite
-tant que le propriétaire n'a pas donné un go explicite et borné. La réussite des tests, de la page
-ou de l'export ne vaut jamais ce go.
+La section 10 conserve le protocole normatif d'une campagne fournisseur prospective. Le go explicite
+et borné du 2026-08-30 a été consommé par une seule exécution partielle ; il n'autorise aucune
+reprise. La réussite des tests, de la page ou de l'export ne vaut jamais un nouveau go.
 
 ## 2. Prérequis
 
@@ -350,15 +350,36 @@ le hash de population avant toute proposition de commit. Le rapport versionné e
 `request_key`, header, cookie, jeton, `.env`, log brut et artefact navigateur.
 
 À la fin, arrêter Playwright et l'application, reverrouiller tous les contrôles et vérifier les
-processus/ports. Les résultats réels seraient alors consignés dans un rapport distinct, après
-revue humaine. Dans l'état actuel :
+processus/ports. Les résultats réels sont consignés dans une preuve de validation distincte ; le
+rapport final n'est créé qu'après revue humaine. Dans l'état actuel :
 
 ```text
-J8_PROVIDER_CAMPAIGN_GO=NOT_GRANTED
-J8_PROVIDER_CAMPAIGN=NOT_AUTHORIZED
-J8_PROVIDER_CAMPAIGN_RESULT=NOT_RUN
+J8_PROVIDER_CAMPAIGN_GO=CONSUMED_2026_08_30
+J8_PROVIDER_CAMPAIGN=EXECUTED_ONCE
+J8_PROVIDER_CAMPAIGN_RESULT=PARTIAL_J5_FAILED_SCHEMA_INCOMPATIBLE
 J8_FINAL_BENCHMARK_REPORT=NOT_CREATED
 ```
+
+### 10.5 Exécution du 2026-08-30
+
+La preuve complète est `docs/validation/J8-BOUNDED-CAMPAIGN-20260830.md`. La fenêtre exclusive est
+`[2026-08-30T03:39:12.086771Z,2026-08-30T04:32:04.339732Z)`. Le parcours a déclaré vingt unités et
+consommé dix-neuf tentatives sur le plafond de trente : quinze pages J3 parsées, une découverte
+tournoi parsée, un détail J4 phase 2 parsé, puis deux appels J5. Les statistiques J5 sont
+`PARSED/COMPLETE`; les incidents sont `SCHEMA_INCOMPATIBLE`; les compositions sont
+`NOT_REACHED_AFTER_TERMINAL_FAILURE` et n'ont provoqué aucun appel.
+
+L'arrêt au premier incident a été respecté. Aucun retry, import, fallback ou seconde campagne n'est
+autorisé. Le double export local est byte-identique et rend `PARTIAL`; la configuration est
+reverrouillée, l'application et le worker sont arrêtés et le port 8087 est libre.
+
+L'analyse hors ligne compare l'ancienne et la nouvelle preuve du même événement. Elle isole une
+nouvelle représentation observée des tirs au but non minutés : propriété d'actions absente dans
+l'ancienne réponse, tableau vide dans la nouvelle. Le contrat strict V14 ne traite pas encore ces
+formes comme équivalentes dans le seul contexte terminal cohérent. Le transport et le parseur sont
+inchangés par J8 et l'instrumentation ne transforme pas le payload. Toute version corrective du
+parseur, migration append-only, reparse ou nouvelle campagne relève d'un Work Order et d'un go
+propriétaire séparés.
 
 ## 11. Clôture
 
@@ -367,6 +388,12 @@ bornée exécutée après go séparé, qualification humaine terminée, rapport 
 revue des secrets, arrêt propre et décision propriétaire. Une recette hors ligne réussie ne
 remplace jamais la campagne. Tout push, toute Pull Request et toute fusion vers `main` exigent une
 demande explicite séparée et ne constituent pas une preuve de clôture J8.
+
+```text
+J8_CLOSURE_CRITERIA=NOT_MET
+J8_WORK_ORDER_STATUS=READY_FOR_HUMAN_QUALIFICATION
+J8_OWNER_CLOSURE_DECISION=NOT_GRANTED
+```
 
 La clôture exige que les six lignes suivantes soient simultanément prouvées et reproduites
 exactement. Elles ne constituent pas l'état courant de cette readiness :

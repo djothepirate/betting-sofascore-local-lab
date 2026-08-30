@@ -21,9 +21,26 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   PostgreSQL/Testcontainers sans échec, `Verify-Local`, Compose silencieux et diff à `PASS`, deux
   exports Markdown byte-identiques, puis contrôle visuel desktop/étroit sans JavaScript ni
   débordement horizontal global ;
-- passage de la phase applicative à `J8-BENCHMARK-READY-FOR-HUMAN-QUALIFICATION`. Aucune campagne
-  réelle ni revue humaine n'a été exécutée : `VALIDATED`, le rapport gelé et la clôture du Work
-  Order restent conditionnés à un go propriétaire séparé et aux six lignes de preuve finales.
+- passage initial de la phase applicative à `J8-BENCHMARK-READY-FOR-HUMAN-QUALIFICATION`, avant tout
+  appel réel ; cette readiness reste la baseline technique de la campagne ultérieure ;
+- campagne prospective exécutée le 2026-08-30 après go propriétaire distinct, dans la fenêtre
+  exclusive `[2026-08-30T03:39:12.086771Z,2026-08-30T04:32:04.339732Z)` sur l'événement fournisseur
+  `16691018`, avec 19 tentatives sur le plafond absolu de 30 : quinze pages J3, une découverte
+  tournoi et J4 phase 2 terminés, puis statistiques J5 parsées et complètes ;
+- arrêt terminal J5 sans retry sur `SCHEMA_INCOMPATIBLE` pour les incidents ; l'unité compositions
+  est conservée `NOT_REACHED_AFTER_TERMINAL_FAILURE` sans tentative, sans import, fallback ou
+  seconde campagne ;
+- analyse locale de régression : l'ancienne preuve incidents reste acceptée par V14, tandis que la
+  nouvelle réponse représente quatorze tirs au but non minutés par des tableaux d'actions vides que
+  le contrat strict hérité de V12 ne reconnaît pas encore. Le parseur, le worker Playwright et le
+  transport sont inchangés par J8 et l'instrumentation ne transforme pas le payload ;
+- double export de la fenêtre de campagne à mêmes `from/to/asOf`, byte-identique, 15 201 octets,
+  SHA-256 `d901790d1f05ddd32b92821bee51f11ae3e688ca3d929af36f667ac026b2934c`, hash de population
+  `da158fb04c8dc113a56e94e2bc7da6ad27278111af5cf8179b7476e5d8f1cc95` et zéro appel fournisseur ;
+- résultat J8 conservé `PARTIAL` et Work Order actif : configuration reverrouillée, application et
+  worker arrêtés, revue humaine ciblée non terminée, aucun rapport final gelé, aucune clôture J8 ou
+  décision J9. Une correction du parseur et toute nouvelle campagne exigent un Work Order et un go
+  séparés.
 
 ### J5 — migration Playwright des donnees evenement validee
 

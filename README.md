@@ -225,12 +225,14 @@ append-only au niveau de chaque campagne, unité, tentative fournisseur et issue
 locale `GET /benchmark` agrège sans réseau les niveaux `FULL_ATTEMPT_LEDGER`, `RESPONSE_ONLY` et
 `LEGACY_BASELINE` sans les promouvoir artificiellement en une mesure exacte. L'exporteur local
 explicite produit le même modèle numérique en Markdown sous `exports/j8/`. Toute valeur sans
-dénominateur fiable reste `NOT_MEASURED`. L'état courant est
-`J8-BENCHMARK-READY-FOR-HUMAN-QUALIFICATION` : la campagne réelle plafonnée à 30 tentatives et la
-revue humaine exigent un go propriétaire distinct ; le Work Order demeure donc actif et aucun
-rapport qualifié n'est encore versionné dans `docs/benchmark/`. La readiness technique finale est
-verte avec 912 tests standards, 66 tests PostgreSQL/Testcontainers, deux exports Markdown
-byte-identiques et un contrôle visuel desktop/étroit, le tout avec zéro appel fournisseur.
+dénominateur fiable reste `NOT_MEASURED`. Après go propriétaire distinct, la campagne bornée du
+2026-08-30 a consommé 19 tentatives sur un plafond de 30 : J3, la découverte tournoi et J4 phase 2
+ont terminé ; J5 a parsé les statistiques puis s'est arrêté sans retry sur des incidents
+`SCHEMA_INCOMPATIBLE`, sans appel compositions. Le rapport automatique reproductible est donc
+`PARTIAL`. L'état reste `J8-BENCHMARK-READY-FOR-HUMAN-QUALIFICATION` : la revue ciblée, le rapport
+final accepté et la décision de clôture ne sont pas acquis, le Work Order reste actif et aucun
+rapport final n'est versionné dans `docs/benchmark/`. La readiness technique préalable demeure
+verte avec 912 tests standards, 66 tests PostgreSQL/Testcontainers et zéro appel fournisseur.
 
 ## Ce qui est livré localement
 
@@ -1009,6 +1011,10 @@ J5_INCIDENT_CURRENT_PARSER=event-incidents-v14
 J5_INCIDENT_V14_STATUS=VALIDATED
 J5_INCIDENT_V14_HUMAN_FUNCTIONAL_QUALIFICATION=PASS
 J5_INCIDENT_V14_LIVE_EXTRA_TIME=EXACT_TEXT_ACCEPTED_WHEN_LIVE
+J5_REAL_INCIDENTS_LATEST_DIRECT=SCHEMA_INCOMPATIBLE_SNAPSHOT_717_EVENT_16691018
+J5_PROVIDER_SCHEMA_CURRENT_STATUS=NO_AFTER_J8_CAMPAIGN_2026_08_30
+J5_INCIDENT_V14_HISTORICAL_QUALIFICATION=RETAINED_IN_ORIGINAL_BOUNDED_SCOPE
+J5_INCIDENT_CORRECTIVE_WORK_ORDER=REQUIRED_NOT_OPENED
 J5_INCIDENT_V6_STATUS=PASS_REAL_LENS_PSG
 J5_INCIDENT_V7_STATUS=PASS_REAL_AND_INHERITED_BY_V8_V9_V10_V11_V12_V13
 J5_INCIDENT_V7_FULL_OPERATOR_PAYLOAD=PASS_23_OF_23
@@ -1102,14 +1108,17 @@ but, mais pas leur combinaison. La réussite V9 de Cardiff City — Wrexham rest
 historique. La campagne V11 sur `16251993` a reparsé le snapshot 179 et qualifié la correction V10.
 La campagne combinée ultérieure sur `16671566` a ensuite enchaîné J4 phase 2 et J5 sans redémarrage,
 atteint les trois familles J5 et rendu le carton `Off the ball foul` inchangé dans le snapshot 185.
-La campagne V13 `16691018` a depuis requalifié la séance non minutée et atteint les compositions
-après trois appels ; la campagne `16851672` a qualifié séparément le motif exact `Leaving field` et
-les trois familles. Le statut fournisseur courant est donc `YES` dans cette portée bornée. Le lot
-final de neuf captures confirme que les listes de chemins techniques ont disparu sans altérer les
-tableaux, que `Leaving field` reste visible, que la configuration locale a été reverrouillée et que
-J4/J5 sont `LOCKED` après redémarrage. Le fichier `.env` demeure ignoré et n'est ni lu ni modifié
-par l'agent. Aucun listener n'est présent sur `127.0.0.1:8087` après l'arrêt final ; le Work Order
-réel J5 est `VALIDATED` et archivé dans `completed`.
+La campagne V13 `16691018` a requalifié historiquement la séance non minutée et atteint les
+compositions après trois appels ; la campagne `16851672` a qualifié séparément le motif exact
+`Leaving field` et les trois familles. Ces qualifications restent valides dans leur corpus borné.
+La réponse incidents observée pendant J8 pour `16691018` utilise toutefois une variante avec des
+listes d'actions vides que V14 rejette : le statut de compatibilité fournisseur courant revient donc
+à `NO` après le snapshot 717. Le lot historique de neuf captures conserve sa portée initiale. Après
+la campagne J8, la configuration locale a été reverrouillée, J4/J5 sont `LOCKED`, l'application et
+le worker ont été arrêtés et aucun listener n'est présent sur `127.0.0.1:8087`. Le fichier `.env`
+demeure ignoré, a été remis à ses valeurs réseau désactivées et n'est pas versionné. Le Work Order
+réel J5 historique reste `VALIDATED` et archivé dans `completed`; le correctif de parseur éventuel
+relève d'un nouveau Work Order.
 
 ## J6 : historique et sauvegarde/restauration validés
 
