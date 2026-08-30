@@ -466,3 +466,30 @@ tentatives postérieures, tandis que la fenêtre J8 du 2026-08-30 conserve ses d
 son résultat incidents V14 et son hash de population. La déduplication brute vers le snapshot 717
 n'autorise aucune réécriture de l'unité historique ; elle produit une occurrence et une
 observation V15 nouvelles dans la campagne corrective.
+
+## 16. Populations de qualification du 2026-08-30
+
+Deux fenêtres J8 distinctes démontrent l'append-only et la reproductibilité. La première,
+`[2026-08-30T03:39:12.086771Z,2026-08-30T04:32:04.339732Z)`, conserve dix-neuf tentatives et un
+rapport `PARTIAL` après l'arrêt terminal du parseur incidents V14. Ni V15, ni la campagne
+corrective WO-017, ni la seconde fenêtre ne réécrivent cette population ou son hash.
+
+La seconde fenêtre,
+`[2026-08-30T09:24:51.0887925Z,2026-08-30T09:44:03.2695965Z)`, contient quatre campagnes, vingt
+unités, vingt tentatives, vingt réponses et vingt issues `PARSED`. Elle couvre les six endpoints et
+produit `MEASURED / FULL_ATTEMPT_LEDGER`. Son hash de population est
+`c61b3ef3a9ac12f94d787da8c396dae58e4208a6f04aa240538e38eac5ab4726`; deux rendus Markdown au
+même `from/to/asOf` sont byte-identiques, 15 202 octets et SHA-256
+`ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25`.
+
+Le dossier ciblé est direct et exploitable mais non strictement complet : statistiques
+`COMPLETE`, incidents V15 `PARTIAL` et compositions `PARTIAL`. Les formules figées produisent seize
+appels de découverte, quatre appels marginaux et vingt appels effectifs par dossier exploitable.
+Les changements tardifs restent `NOT_MEASURED` dans cette fenêtre exclusive; une cohorte J6 située
+hors fenêtre peut alimenter la revue humaine, jamais ces agrégats ni ce hash.
+
+Cette preuve rend les portes métriques automatiques soutenables, sans transformer les dimensions
+externes absentes. Exactitude et valeur analytique restent `NOT_MEASURED`, fraîcheur et risque
+restent `PARTIAL`, et maintenabilité reste `NOT_MEASURED` tant que la revue ciblée n'est pas
+acceptée. Le rapport final sous `docs/benchmark`, la phase `VALIDATED` et la décision d'adoption J9
+ne peuvent pas être déduits de l'état `MEASURED` automatique.

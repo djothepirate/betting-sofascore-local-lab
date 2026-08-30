@@ -86,7 +86,26 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - résultat J8 conservé `PARTIAL` et Work Order actif : configuration reverrouillée, application et
   worker arrêtés, revue humaine ciblée non terminée, aucun rapport final gelé, aucune clôture J8 ou
   décision J9. Le correctif technique relève désormais du Work Order séparé WO-017 ; toute
-  qualification fournisseur ou nouvelle campagne exige toujours un go distinct.
+  qualification fournisseur ou nouvelle campagne exige toujours un go distinct ;
+- après validation de WO-017, second go propriétaire distinct consommé par une seule fenêtre
+  exclusive `[2026-08-30T09:24:51.0887925Z,2026-08-30T09:44:03.2695965Z)`, sans mutation de
+  `.env`, retry, fallback, import ou troisième campagne ;
+- parcours complet terminé avec quatre campagnes `COMPLETED`, vingt unités, vingt tentatives,
+  vingt réponses HTTP 200 et vingt issues `PARSED` : quinze pages J3, une découverte tournoi,
+  J4 phase 2, puis statistiques, incidents V15 et compositions J5 dans l'ordre ;
+- double export non-Web de 15 202 octets, strictement byte-identique et à zéro appel fournisseur,
+  SHA-256 `ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25`, hash de population
+  `c61b3ef3a9ac12f94d787da8c396dae58e4208a6f04aa240538e38eac5ab4726` et état `MEASURED` sous
+  `FULL_ATTEMPT_LEDGER` ;
+- dossier ciblé exploitable mais non strictement complet : statistiques `COMPLETE · 100%`,
+  incidents V15 `PARTIAL · 91,62%` et compositions `PARTIAL · 99,03%`; coûts exacts de seize
+  appels de découverte, quatre appels marginaux et vingt appels effectifs par dossier exploitable ;
+- arrêt de l'instance qualifiée, contrôle d'un redémarrage inerte avec tous les connecteurs,
+  Playwright, polling et refresh à `false`, puis nouvel arrêt et port 8087 libre ;
+- WO-016 reste actif au statut `READY_FOR_HUMAN_QUALIFICATION` : revue humaine ciblée, libellés de
+  sources de contrôle, rapport final sous `docs/benchmark` et décision propriétaire de clôture
+  restent en attente. Les dimensions non observables ne sont pas promues et aucune décision J9
+  n'est prise.
 
 ### J5 — migration Playwright des donnees evenement validee
 

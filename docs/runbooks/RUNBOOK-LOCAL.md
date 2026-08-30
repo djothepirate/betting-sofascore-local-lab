@@ -6,8 +6,9 @@ Démarrer, vérifier, exploiter et arrêter les jalons J0 à J8 sur Windows sans
 hors de la machine locale. J5 conserve sa qualification réelle exceptionnelle désactivée par
 défaut ; J6 consulte l'historique et garde sa rétention hors interface ; J7 assemble uniquement les
 données locales courantes et exige une décision humaine avant téléchargement ; J8 agrège et exporte
-uniquement les preuves locales et reste `READY_FOR_HUMAN_QUALIFICATION` tant qu'une campagne bornée
-n'a pas reçu un go propriétaire distinct, été exécutée puis revue humainement. La découverte
+uniquement les preuves locales. Sa seconde campagne bornée a terminé vingt tentatives sur vingt et
+son rapport automatique est `MEASURED`; J8 reste `READY_FOR_HUMAN_QUALIFICATION` tant que la revue
+ciblée, le rapport final et la décision propriétaire ne sont pas acquis. La découverte
 tournoi → rencontres est qualifiée et son Work Order est clôturé depuis le 2026-08-21.
 
 ## 2. Première installation
@@ -89,8 +90,9 @@ combinaison métier J3/J4/J5 valide, `SOFASCORE_PLAYWRIGHT_ENABLED=false` et l'a
 maintiennent les transports J3/J4/J5 indisponibles. Pour une campagne explicitement autorisée,
 choisir un seul lanceur exact décrit en sections 3.14 à 3.16. Le go ponctuel de WO-015 a ete
 consomme lors de la qualification du `2026-08-29`. Le go correctif WO-017 a lui aussi été consommé
-le `2026-08-30`. Toute nouvelle campagne J5 reste interdite sans nouvelle autorisation propriétaire
-distincte et tracée.
+le `2026-08-30`. Le second go J8 a ensuite été consommé par le parcours complet du même jour. Toute
+nouvelle campagne J3/J4/J5 reste interdite sans nouvelle autorisation propriétaire distincte et
+tracée.
 
 ### 3.3 Contrôles de santé
 

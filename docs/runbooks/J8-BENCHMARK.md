@@ -8,22 +8,24 @@ normale n'exécute aucun appel fournisseur et ne nécessite aucun opt-in réseau
 ```text
 WORK_ORDER_STATUS=READY_FOR_HUMAN_QUALIFICATION
 PROVIDER_CALL_REQUIRED=NO
-PROVIDER_CAMPAIGN_AUTHORIZED=GO_CONSUMED_2026_08_30
-PROVIDER_CAMPAIGN_RESULT=PARTIAL_J5_FAILED_SCHEMA_INCOMPATIBLE
+PROVIDER_CAMPAIGN_AUTHORIZED=SECOND_GO_CONSUMED_2026_08_30
+PROVIDER_CAMPAIGN_RESULT=MEASURED_COMPLETED_20_OF_20
 PLAYWRIGHT_REQUIRED=NO
 POLLING_OR_SCHEDULING=NO
 LOAD_TEST=NO
-FINAL_BENCHMARK_REPORT=NOT_CREATED
+FINAL_BENCHMARK_REPORT=NOT_CREATED_PENDING_TARGETED_HUMAN_REVIEW
 ```
 
 La section 10 conserve le protocole normatif d'une campagne fournisseur prospective. Le go explicite
-et borné du 2026-08-30 a été consommé par une seule exécution partielle ; il n'autorise aucune
-reprise. La réussite des tests, de la page ou de l'export ne vaut jamais un nouveau go.
+et borné initial du 2026-08-30 a produit une fenêtre partielle. Après qualification de V15, un
+second go distinct a été consommé par une seule exécution complète et mesurée. Aucun des deux go
+n'autorise une reprise ou une troisième campagne. La réussite des tests, de la page ou de l'export
+ne vaut jamais un nouveau go.
 
 ## 2. Prérequis
 
 - Windows 11, Java 25 et Docker Desktop ;
-- branche portant les Work Orders 016 et 017, tous deux actifs ;
+- branche portant le Work Order 016 actif et le Work Order 017 validé puis archivé ;
 - PostgreSQL local sain, avec Flyway V28 ; V27 reste la migration ayant créé le ledger J8 et V28
   autorise seulement le parseur incidents V15 ;
 - application liée exclusivement à `127.0.0.1:8087` ;
@@ -357,9 +359,9 @@ rapport final n'est créé qu'après revue humaine. Dans l'état actuel :
 
 ```text
 J8_PROVIDER_CAMPAIGN_GO=CONSUMED_2026_08_30
-J8_PROVIDER_CAMPAIGN=EXECUTED_ONCE
-J8_PROVIDER_CAMPAIGN_RESULT=PARTIAL_J5_FAILED_SCHEMA_INCOMPATIBLE
-J8_FINAL_BENCHMARK_REPORT=NOT_CREATED
+J8_PROVIDER_CAMPAIGN=SECOND_BOUNDED_EXECUTION_COMPLETED
+J8_PROVIDER_CAMPAIGN_RESULT=MEASURED_COMPLETED_20_OF_20
+J8_FINAL_BENCHMARK_REPORT=NOT_CREATED_PENDING_TARGETED_HUMAN_REVIEW
 ```
 
 ### 10.5 Exécution du 2026-08-30
@@ -371,9 +373,9 @@ tournoi parsée, un détail J4 phase 2 parsé, puis deux appels J5. Les statisti
 `PARSED/COMPLETE`; les incidents sont `SCHEMA_INCOMPATIBLE`; les compositions sont
 `NOT_REACHED_AFTER_TERMINAL_FAILURE` et n'ont provoqué aucun appel.
 
-L'arrêt au premier incident a été respecté. Aucun retry, import, fallback ou seconde campagne n'est
-autorisé. Le double export local est byte-identique et rend `PARTIAL`; la configuration est
-reverrouillée, l'application et le worker sont arrêtés et le port 8087 est libre.
+L'arrêt au premier incident a été respecté. À ce terminal précis, aucun retry, import, fallback ou
+seconde campagne n'était autorisé. Le double export local est byte-identique et rend `PARTIAL`; la
+configuration est reverrouillée, l'application et le worker sont arrêtés et le port 8087 est libre.
 
 L'analyse hors ligne compare l'ancienne et la nouvelle preuve du même événement. Elle isole une
 nouvelle représentation observée des tirs au but non minutés : propriété d'actions absente dans
@@ -402,9 +404,52 @@ appels, parsé la réponse incidents dédupliquée vers le snapshot `717` sous V
 une nouvelle preuve prospective normale, extérieure à la fenêtre exclusive J8.
 
 Le résultat historique reste `event-incidents-v14 / SCHEMA_INCOMPATIBLE`; son coût, sa fenêtre et
-son hash de population restent inchangés, et J8 reste `PARTIAL`. Une lecture « tout historique »
-peut inclure la campagne corrective ; pour reproduire le rapport initial, utiliser obligatoirement
-les `from/to/asOf` gelés. Le go WO-017 est consommé et n'autorise aucun autre appel.
+son hash de population restent inchangés, et cette première fenêtre J8 reste `PARTIAL`. Une lecture
+« tout historique » peut inclure la campagne corrective ; pour reproduire le rapport initial,
+utiliser obligatoirement les `from/to/asOf` gelés. Le go WO-017 est consommé et n'autorisait aucun
+autre appel sous WO-017.
+
+### 10.7 Seconde campagne J8 mesurée du 2026-08-30
+
+Après validation de WO-017, le propriétaire a donné un second go distinct pour un seul parcours
+J8 complet. La preuve est conservée dans
+`docs/validation/J8-SECOND-BOUNDED-CAMPAIGN-20260830.md`. La fenêtre exclusive est
+`[2026-08-30T09:24:51.0887925Z,2026-08-30T09:44:03.2695965Z)` et l'`asOf` est égal à sa borne
+supérieure.
+
+Le parcours a terminé quatre campagnes : quinze pages J3, une découverte tournoi, un détail J4
+phase 2 et trois familles J5. Les vingt unités portent chacune une tentative unique, une réponse
+HTTP 200 et une issue `PARSED`. J5 a produit statistiques `COMPLETE · 100%`, incidents
+`event-incidents-v15 / PARTIAL · 91,62%` et compositions `PARTIAL · 99,03%`. Aucun retry, import,
+fallback, arrêt opérateur ou tentative incomplète n'est présent.
+
+Deux exports non-Web lancés avec les mêmes `from/to/asOf` sont byte-identiques : 15 202 octets,
+SHA-256 `ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25` et hash de population
+`c61b3ef3a9ac12f94d787da8c396dae58e4208a6f04aa240538e38eac5ab4726`. Le rapport automatique est
+`MEASURED / FULL_ATTEMPT_LEDGER`, avec vingt réponses et vingt parsings compatibles sur vingt,
+zéro refus, 404, erreur opérationnelle ou tentative incomplète. Un dossier sur un est exploitable
+mais aucun n'est strictement complet; les coûts exacts sont seize appels de découverte, quatre
+appels marginaux et vingt appels effectifs par dossier exploitable.
+
+L'instance qualifiée a été arrêtée. Un redémarrage inerte a confirmé le verrou de démarrage J3,
+la découverte tournoi indisponible, les préparations J4/J5 désactivées, Playwright, polling et
+refresh à `false`; il a ensuite été arrêté et le port 8087 est libre. `.env` est inchangé. Ce
+résultat n'autorise aucune troisième campagne.
+
+### 10.8 Préparation de la revue humaine ciblée
+
+La campagne mesurée rend les métriques automatiques obligatoires disponibles, mais elle ne remplace
+pas la revue humaine. Les trois candidats locaux sont préparés dans
+`docs/validation/J8-TARGETED-HUMAN-REVIEW-READINESS-20260830.md`. Avant toute comparaison, le
+propriétaire doit fournir les libellés des sources actuellement admises du Betting Project ou
+accepter explicitement `CONTROL_SOURCE_LABEL=CONTROL_SOURCE_ABSENT` et
+`EXTERNAL_COMPARISON_SOURCE=EXTERNAL_COMPARISON_ABSENT`. Sans source déclarée, exactitude et
+valeur analytique restent `NOT_MEASURED`; la fraîcheur reste `PARTIAL` et la maintenabilité reste
+`NOT_MEASURED`.
+
+Ne copier l'export dans `docs/benchmark/` qu'après cette revue et son acceptation. Ne modifier ni le
+bloc automatique, ni son hash; ajouter la section humaine après le marqueur de fin prévu. WO-016
+reste actif et `info.app.phase` reste `J8-BENCHMARK-READY-FOR-HUMAN-QUALIFICATION` jusque-là.
 
 ## 11. Clôture
 

@@ -8,9 +8,11 @@ Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Boo
 **J3 — Appel manuel**, **J4 — Événements**, **J5 — Statistiques**, **J6 — Historique** et
 **J7 — Export canonique**. **J8 — Benchmark** est implémenté en état
 `READY_FOR_HUMAN_QUALIFICATION` : sa migration V27, son ledger d'appels, ses agrégats locaux, sa
-page en lecture seule et son export Markdown sont prêts. Une campagne fournisseur J8 unique,
-lancée après un go propriétaire distinct, s'est arrêtée partiellement sur les incidents J5 ; elle
-n'autorise ni retry, ni seconde campagne, ni conclusion d'adoption J9.
+page en lecture seule et son export Markdown sont prêts. Après la campagne initiale partielle et le
+correctif V15, une seconde campagne complète explicitement autorisée a terminé vingt unités sur
+vingt avec un rapport automatique `MEASURED`. La revue humaine ciblée, le rapport final versionné
+et la décision propriétaire de clôture restent à réaliser; aucune troisième campagne ni conclusion
+d'adoption J9 n'est autorisée.
 
 Le correctif borné WO-017 fournit `event-incidents-v15` et Flyway V28 : propriété d'actions absente
 et tableau exactement vide sont équivalents uniquement dans une séance terminale non minutée déjà
@@ -258,14 +260,9 @@ append-only au niveau de chaque campagne, unité, tentative fournisseur et issue
 locale `GET /benchmark` agrège sans réseau les niveaux `FULL_ATTEMPT_LEDGER`, `RESPONSE_ONLY` et
 `LEGACY_BASELINE` sans les promouvoir artificiellement en une mesure exacte. L'exporteur local
 explicite produit le même modèle numérique en Markdown sous `exports/j8/`. Toute valeur sans
-dénominateur fiable reste `NOT_MEASURED`. Après go propriétaire distinct, la campagne bornée du
-2026-08-30 a consommé 19 tentatives sur un plafond de 30 : J3, la découverte tournoi et J4 phase 2
-ont terminé ; J5 a parsé les statistiques puis s'est arrêté sans retry sur des incidents
-`SCHEMA_INCOMPATIBLE`, sans appel compositions. Le rapport automatique reproductible est donc
-`PARTIAL`. L'état reste `J8-BENCHMARK-READY-FOR-HUMAN-QUALIFICATION` : la revue ciblée, le rapport
-final accepté et la décision de clôture ne sont pas acquis, le Work Order reste actif et aucun
-rapport final n'est versionné dans `docs/benchmark/`. La readiness technique préalable demeure
-verte avec 912 tests standards, 66 tests PostgreSQL/Testcontainers et zéro appel fournisseur.
+dénominateur fiable reste `NOT_MEASURED`. La première campagne bornée du 2026-08-30 conserve son
+ledger de 19 tentatives et son rapport `PARTIAL` après l'arrêt J5 V14, sans retry ni appel
+compositions. Le correctif V15 n'a réécrit aucune de ces preuves.
 
 Une campagne J5 corrective ultérieure, instrumentée par le ledger J8 mais extérieure à cette
 fenêtre exclusive, a qualifié V15 sur les mêmes octets du snapshot incidents 717. Elle ne reclasse
@@ -273,6 +270,19 @@ pas l'unité J8 historique, ne constitue pas un retry du benchmark et ne transfo
 `PARTIAL`. En revanche, une lecture dynamique de tout l'historique inclut normalement ce nouveau
 ledger ; toute comparaison reproductible doit donc continuer d'utiliser la fenêtre et l'`asOf`
 gelés.
+
+Après un second go propriétaire distinct, une nouvelle fenêtre exclusive
+`[2026-08-30T09:24:51.0887925Z,2026-08-30T09:44:03.2695965Z)` a terminé le parcours complet :
+quinze pages J3, une découverte tournoi, J4 phase 2 et les trois familles J5. Les vingt tentatives
+ont toutes reçu HTTP 200 et produit `PARSED`, dont les incidents sous `event-incidents-v15` puis
+les compositions. Les deux exports de 15 202 octets sont byte-identiques, SHA-256
+`ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25`, avec un hash de population
+`c61b3ef3a9ac12f94d787da8c396dae58e4208a6f04aa240538e38eac5ab4726` et l'état `MEASURED`. Un
+dossier sur un est exploitable; les coûts exacts sont 16 appels de découverte, 4 marginaux et 20
+effectifs par dossier exploitable. Le reverrouillage après redémarrage inerte est prouvé et
+l'application est arrêtée. J8 reste néanmoins `J8-BENCHMARK-READY-FOR-HUMAN-QUALIFICATION` tant
+que la revue humaine ciblée, le gel du rapport final sous `docs/benchmark/` et la décision
+propriétaire ne sont pas acquis. Aucune troisième campagne n'est autorisée.
 
 ## Ce qui est livré localement
 
@@ -934,6 +944,9 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order J7 validé](docs/work_orders/completed/WO-SS-20260819-008-canonical-export-j7.md)
 - [Readiness technique J8](docs/validation/J8-TECHNICAL-READINESS-20260829.md)
 - [Preuve de campagne bornée J8](docs/validation/J8-BOUNDED-CAMPAIGN-20260830.md)
+- [Readiness de la seconde campagne J8](docs/validation/J8-SECOND-BOUNDED-CAMPAIGN-READINESS-20260830.md)
+- [Preuve de la seconde campagne J8](docs/validation/J8-SECOND-BOUNDED-CAMPAIGN-20260830.md)
+- [Readiness de la revue humaine ciblée J8](docs/validation/J8-TARGETED-HUMAN-REVIEW-READINESS-20260830.md)
 - [Work Order J8 actif](docs/work_orders/active/WO-SS-20260829-016-benchmark-j8.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées

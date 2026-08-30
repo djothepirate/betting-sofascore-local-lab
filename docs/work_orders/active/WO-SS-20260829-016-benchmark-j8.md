@@ -1,6 +1,6 @@
 # WO-SS-20260829-016 — Benchmark local reproductible J8
 
-- **Statut :** `QUALIFICATION_RUNNING_AFTER_SEPARATE_GO`
+- **Statut :** `READY_FOR_HUMAN_QUALIFICATION`
 - **Date d'ouverture :** 2026-08-29
 - **Date de démarrage :** 2026-08-29
 - **Date de validation :** `NOT_RUN`
@@ -8,13 +8,14 @@
 - **Prérequis :** J7 fusionné et Work Orders 009 à 015 validés
 - **Base locale :** `67268d805a4ba8c7d4706be7c18f6ff78d3ec1fd`
 - **Jalon :** J8 — Benchmark
-- **Branche :** `codex/j8-benchmark`
+- **Branche d'ouverture :** `codex/j8-benchmark`
+- **Branche de continuation :** `codex/j8-incidents-v15`
 - **ADR applicable :** `ADR-SS-001 v1.4`
 - **Nouveau parcours ou endpoint fournisseur :** `NONE`
 - **Appel fournisseur pendant l'implémentation :** `NOT_AUTHORIZED`
 - **Appel fournisseur pendant les tests automatisés :** `NOT_AUTHORIZED`
-- **Campagne fournisseur J8 :** `OWNER_GO_CONSUMED_2026_08_30_EXECUTED_PARTIAL`
-- **Qualification humaine :** `NOT_RUN_AFTER_PARTIAL_CAMPAIGN`
+- **Campagne fournisseur J8 :** `SECOND_OWNER_GO_CONSUMED_2026_08_30_MEASURED_COMPLETED`
+- **Qualification humaine :** `PENDING_TARGETED_REVIEW_AFTER_MEASURED_CAMPAIGN`
 - **Polling, scheduler, watcher, live, retry ou fallback :** `NOT_AUTHORIZED`
 - **Production, VPS ou dépendance critique :** `NOT_AUTHORIZED`
 
@@ -384,16 +385,17 @@ La qualification humaine locale doit vérifier :
 6. l'absence de toute activité réseau J8 ;
 7. l'arrêt propre de l'application et la conservation des verrous réseau.
 
-État après readiness technique puis campagne bornée :
+État courant après la readiness, la campagne initiale partielle, le correctif V15 et la seconde
+campagne complète :
 
 ```text
-J8_HUMAN_QUALIFICATION=NOT_RUN_AFTER_PARTIAL_CAMPAIGN
+J8_HUMAN_QUALIFICATION=PENDING_TARGETED_REVIEW_AFTER_MEASURED_CAMPAIGN
 J8_HTML_TECHNICAL_QA=PASS
 J8_MARKDOWN_REPRODUCIBILITY=PASS_BYTE_IDENTICAL
 J8_TECHNICAL_QA_PROVIDER_CALLS=0
-J8_PROVIDER_CAMPAIGN=OWNER_GO_CONSUMED_2026_08_30
-J8_PROVIDER_CAMPAIGN_RESULT=PARTIAL_J5_FAILED_SCHEMA_INCOMPATIBLE
-J8_FINAL_BENCHMARK_REPORT=NOT_CREATED
+J8_PROVIDER_CAMPAIGN=SECOND_OWNER_GO_CONSUMED_2026_08_30
+J8_PROVIDER_CAMPAIGN_RESULT=MEASURED_COMPLETED_20_OF_20
+J8_FINAL_BENCHMARK_REPORT=NOT_CREATED_PENDING_TARGETED_HUMAN_REVIEW
 J8_OWNER_CLOSURE_DECISION=NOT_GRANTED
 ```
 
@@ -518,9 +520,9 @@ IN_PROGRESS
   -> VALIDATED
 ```
 
-Le statut courant reste `READY_FOR_HUMAN_QUALIFICATION` malgré l'exécution de la campagne : son
-résultat est inconclusif, la revue humaine ciblée n'est pas terminée, le rapport final n'est pas
-gelé et aucune décision propriétaire de clôture ou décision J9 n'est acquise.
+Le statut courant reste `READY_FOR_HUMAN_QUALIFICATION`. La seconde campagne est concluante et son
+rapport automatique est `MEASURED`, mais la revue humaine ciblée n'est pas terminée, le rapport
+final n'est pas gelé et aucune décision propriétaire de clôture ou décision J9 n'est acquise.
 
 Le passage à `VALIDATED` et le déplacement vers `docs/work_orders/completed` exigent tous les
 éléments suivants :
@@ -600,3 +602,62 @@ ADDITIONAL_CAMPAIGN_AFTER_THIS_GO=NO
 La readiness détaillée est conservée dans
 `docs/validation/J8-SECOND-BOUNDED-CAMPAIGN-READINESS-20260830.md`. Aucune requête fournisseur n'a
 été exécutée pendant la sélection, le contrôle des caches ou la consignation du go.
+
+## 16. Résultat de la seconde campagne et passage en revue ciblée
+
+Le go de la section 15 a été consommé par une seule instance locale avec le profil combiné exact à
+six endpoints, injecté uniquement dans l'arbre du lanceur. `.env` est resté inchangé. La fenêtre
+exclusive est `[2026-08-30T09:24:51.0887925Z,2026-08-30T09:44:03.2695965Z)` et l'`asOf` gelé vaut
+`2026-08-30T09:44:03.2695965Z`.
+
+J3 a terminé quinze pages et quinze tentatives. La découverte tournoi, J4 phase 2 et les trois
+familles J5 ont ensuite terminé dans l'ordre, pour un total de vingt unités et vingt tentatives.
+Toutes ont reçu HTTP 200 et produit `PARSED`. Les incidents utilisent `event-incidents-v15` et
+restent `PARTIAL · 91%` en complétude, sans incompatibilité; les compositions ont été atteintes et
+sont `PARTIAL · 99%`. Aucun retry, import, fallback, arrêt opérateur ou tentative incomplète n'est
+présent.
+
+```text
+J8_SECOND_PROVIDER_CAMPAIGN_GO_CONSUMED=YES
+J8_SECOND_PROVIDER_CAMPAIGN_RESULT=MEASURED_COMPLETED
+J8_SECOND_PROVIDER_CAMPAIGN_CAMPAIGNS=4
+J8_SECOND_PROVIDER_CAMPAIGN_UNITS=20
+J8_SECOND_PROVIDER_CAMPAIGN_ATTEMPTS=20
+J8_SECOND_PROVIDER_CAMPAIGN_RESPONSES=20
+J8_SECOND_PROVIDER_CAMPAIGN_PARSED=20
+J8_SECOND_PROVIDER_CAMPAIGN_ERRORS=0
+J8_SECOND_PROVIDER_CAMPAIGN_RETRY=NO
+J8_SECOND_PROVIDER_CAMPAIGN_ADDITIONAL_CALLS_AUTHORIZED=NO
+```
+
+Le double export porte sur la même population, mesure `FULL_ATTEMPT_LEDGER` et est byte-identique :
+15 202 octets, SHA-256
+`ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25` et hash de population
+`c61b3ef3a9ac12f94d787da8c396dae58e4208a6f04aa240538e38eac5ab4726`. Il mesure 20/20 réponses,
+20/20 parsings compatibles, zéro refus, 404, erreur opérationnelle ou tentative incomplète. Un
+dossier sur un est exploitable, aucun n'est strictement complet; les coûts exacts sont 16 appels de
+découverte, 4 appels marginaux et 20 appels effectifs par dossier exploitable.
+
+Après le terminal, l'instance a été arrêtée. Un redémarrage inerte avec tous les connecteurs et
+Playwright à `false` a confirmé J3 au verrou de démarrage et les préparations J4/J5 désactivées,
+puis l'application a été arrêtée à nouveau et le port 8087 libéré.
+
+La preuve détaillée est
+`docs/validation/J8-SECOND-BOUNDED-CAMPAIGN-20260830.md`. Le rapport automatique est désormais un
+candidat suffisant pour les métriques obligatoires, mais il n'est pas encore copié sous
+`docs/benchmark`: la revue humaine des trois dossiers, les libellés de sources de contrôle et la
+décision propriétaire restent à consigner. Les dimensions non observables resteront
+`NOT_MEASURED`; aucune comparaison externe n'est inventée.
+
+La sélection locale des trois dossiers et les limites de comparaison sont consignées dans
+`docs/validation/J8-TARGETED-HUMAN-REVIEW-READINESS-20260830.md`. Ce document prépare la revue mais
+ne lui attribue aucun verdict humain.
+
+```text
+J8_TECHNICAL_METRIC_GATE=PASS
+J8_CLOSURE_BLOCK_WRITTEN=NO_PENDING_HUMAN_REVIEW
+J8_HUMAN_TARGETED_REVIEW=PENDING
+J8_FINAL_REPORT=PENDING_HUMAN_REVIEW
+J8_OWNER_CLOSURE_DECISION=NOT_GRANTED
+J8_WORK_ORDER_STATUS=READY_FOR_HUMAN_QUALIFICATION
+```
