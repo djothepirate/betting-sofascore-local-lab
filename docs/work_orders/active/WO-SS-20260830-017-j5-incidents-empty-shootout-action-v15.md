@@ -1,9 +1,9 @@
 # WO-SS-20260830-017 — Incidents J5 V15, tableau d'action vide pendant une séance terminale
 
-- **Statut :** `READY_FOR_HUMAN_QUALIFICATION`
+- **Statut :** `QUALIFICATION_AUTHORIZED_NOT_RUN`
 - **Date :** 2026-08-30
 - **Date de démarrage :** 2026-08-30
-- **Qualification propriétaire :** `NOT_REQUESTED`
+- **Qualification propriétaire :** `AUTHORIZED_2026-08-30T07:46:03Z`
 - **Clôture :** `ACTIVE`
 - **Prérequis :** campagne J8 partielle et analyse bornée au commit `cfd536e`
 - **Base locale :** `cfd536e`
@@ -74,7 +74,7 @@ ADR_SS_001_MODIFICATION_REQUIRED=NO
 NEW_ENDPOINT=NO
 ALLOWLIST_CHANGE=NO
 PLAYWRIGHT_PROTOCOL_CHANGE=NO
-PROVIDER_CAMPAIGN_AUTHORIZED=NO
+PROVIDER_CAMPAIGN_AUTHORIZED_AT_TECHNICAL_REVIEW=NO
 ```
 
 ## 4. Contrat fermé V15
@@ -149,8 +149,9 @@ Les commits locaux seront découpés en :
 3. câblage, tests et documentation ;
 4. readiness technique.
 
-Aucun push, aucune Pull Request, aucune fusion dans `main` et aucune nouvelle campagne fournisseur
-ne sont autorisés par ce Work Order.
+Aucun push, aucune Pull Request ni aucune fusion dans `main` ne sont autorisés par ce Work Order.
+Sa readiness technique n'autorisait aucune campagne ; l'autorisation propriétaire distincte et
+bornée reçue ensuite est consignée en section 11.
 
 ## 9. Preuve locale exacte et non persistante
 
@@ -189,6 +190,36 @@ APPLICATION_OR_PLAYWRIGHT_WORKER_PROCESS=ABSENT
 SOFASCORE_NETWORK_CALLS_EXECUTED=NO
 ```
 
-Le correctif atteint la readiness technique mais ne qualifie pas un schéma fournisseur courant.
-WO-017 reste donc dans `active`, avec `Qualification propriétaire=NOT_REQUESTED` et
-`Clôture=ACTIVE`. Aucune reprise de J8, seconde campagne ou écriture de reparse n'est autorisée.
+Le correctif atteint la readiness technique mais ne qualifie pas encore un schéma fournisseur
+courant. WO-017 reste donc dans `active`, avec `Clôture=ACTIVE`. Aucune reprise de J8 ni écriture de
+reparse n'est autorisée.
+
+## 11. Autorisation propriétaire distincte de qualification fournisseur V15
+
+Le propriétaire a donné le go distinct le 2026-08-30 à `07:46:03Z`, après présentation de la
+readiness. Cette décision autorise une seule campagne corrective J5 sur l'événement ayant révélé la
+variante V15. Elle n'est ni un retry de la campagne J8, ni une seconde campagne benchmark.
+
+```text
+OWNER_GO_RECEIVED_AT=2026-08-30T07:46:03Z
+OWNER_GO_SCOPE=ONE_J5_V15_PROVIDER_QUALIFICATION
+TARGET_PROVIDER_EVENT_ID=16691018
+TARGET_CANONICAL_EVENT_ID=f4713f80-4769-3656-ba51-61d8ac1aa814
+ENDPOINT_ORDER=EVENT_STATISTICS,EVENT_INCIDENTS,EVENT_LINEUPS
+MAX_PROVIDER_CALLS=3
+MANUAL_UI_TRIGGER_REQUIRED=YES
+AUTOMATED_BROWSER_TRIGGER=NO
+J8_CAMPAIGN_RETRY=NO
+J8_SECOND_BENCHMARK_CAMPAIGN=NO
+PROVIDER_RETRY=NO
+FALLBACK=NO
+POLLING=NO
+SCHEDULER=NO
+PERSISTED_REPARSE=NO
+```
+
+Conformément au runbook, la configuration `.env` reste un geste manuel du propriétaire et le
+lanceur Playwright n'exécute aucun GET. Après démarrage, l'opérateur doit préparer la campagne,
+recopier la nouvelle phrase de confirmation et déclencher une seule fois la voie fournisseur. Au
+premier terminal autre qu'un `404` de famille, les familles suivantes ne doivent pas être tentées.
+Une fois la campagne terminale, ce go est consommé et n'autorise aucune répétition.
