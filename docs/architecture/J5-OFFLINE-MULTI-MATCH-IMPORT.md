@@ -285,7 +285,7 @@ Le flux réutilise les parseurs qualifiés :
 
 ```text
 EVENT_STATISTICS -> EventStatisticsV2Parser
-EVENT_INCIDENTS  -> EventIncidentsV14Parser
+EVENT_INCIDENTS  -> EventIncidentsV15Parser
 EVENT_LINEUPS    -> EventLineupsV2Parser
 ```
 
@@ -384,8 +384,9 @@ Les tables et occurrences existantes suffisent :
 - aucun historique durable du plan, de la phrase ou du résultat n'est nécessaire.
 
 Aucune migration propre au plan multi-match ou à WO-010 n'est nécessaire. La migration transverse
-V26, qui autorise le parseur d'incidents J5 courant V14 pour toutes les voies de persistance J5,
-ne crée aucun stockage de plan ou de résultat de lot et ne change pas cette décision.
+V26 autorise historiquement V14 et V28 autorise le parseur d'incidents J5 courant V15 pour toutes
+les voies de persistance J5. V28 ne crée aucun stockage de plan ou de résultat de lot et ne change
+pas cette décision.
 
 ## 11. Politique de configuration
 

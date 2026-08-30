@@ -4,7 +4,53 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
-### J8 — benchmark local prêt pour qualification humaine
+### J5 — correctif borné V15 des actions vides en tirs au but
+
+- ouverture de `WO-SS-20260830-017` sur `codex/j8-incidents-v15`, depuis la preuve J8 partielle
+  `cfd536e`, après revue de l'ADR-SS-001 v1.4 : aucun endpoint, allowlist, worker, protocole IPC,
+  transport ou garde réseau ne change ;
+- ajout de `event-incidents-v15`, héritier intégral de V14, qui assimile une propriété
+  `footballPassingNetworkAction` absente à un tableau exactement vide uniquement dans une séance
+  terminale non minutée déjà cohérente selon V12, sans déduire de minute ;
+- rejet conservé pour JSON `null`, les autres types, les tableaux non vides incohérents, les
+  séquences ou scores contradictoires et toute séance mêlant une tentative réellement minutée à
+  une tentative non minutée ;
+- câblage cohérent de V15 sur la voie fournisseur gardée, les imports locaux unitaire et
+  multi-match et la provenance des observations ; V12 à V14 restent inchangés dans leur
+  comportement historique ;
+- migration append-only V28 ajoutant seulement V15 à la contrainte fermée de parseur J5, sans DML,
+  colonne, table, backfill ou réécriture V1–V27 ; scripts J6 alignés sur la version courante sans
+  changement du périmètre de sauvegarde, de purge ou de fingerprint ;
+- 76 tests ciblés parseurs/services et l'upgrade Testcontainers V27→V28 sont verts, sans appel
+  fournisseur ; une fixture synthétique minimisée couvre les formes positives et négatives sans
+  copier le payload réel ;
+- sonde PostgreSQL read-only des octets exacts du snapshot 717 : SHA-256 inchangé,
+  `PARSED/PARTIAL · 91%`, 35 incidents, zéro problème et 18 warnings sous V15, sans reparse
+  persistant, observation ou mutation J8 ;
+- portes finales vertes après le dernier changement : 928 tests standards, 4 ignorés prévus,
+  67 tests PostgreSQL/Testcontainers, `Verify-Local.ps1 -WithIntegrationTests`, Compose et
+  `git diff --check`, avec tous les drapeaux réseau à `false`, aucun listener 8087, aucun processus
+  application/worker et aucun appel fournisseur ;
+- après la readiness à zéro appel, go propriétaire distinct puis délégation explicite à Codex
+  d'une seule campagne locale sur `16691018`, sans modification de `.env` ;
+- campagne `COMPLETED_LOCKED` après trois appels ordonnés, sans retry, fallback, import ni seconde
+  campagne : statistiques `COMPLETE · 100%` (`716`/`322`), incidents V15 `PARTIAL · 91%`,
+  `164/179` signaux et 35 incidents (`717`/`324`), puis compositions `PARTIAL · 99%`
+  (`720`/`325`) ;
+- réobservation byte-identique de la variante tableau vide par déduplication vers le snapshot 717 :
+  la nouvelle observation V15 est append-only et la classification historique V14
+  `SCHEMA_INCOMPATIBLE` n'est pas réécrite ;
+- création normale d'une campagne ledger J5 corrective ; la fenêtre benchmark J8 gelée, ses 19
+  tentatives, son hash et son résultat `PARTIAL` restent inchangés. Une agrégation dynamique de
+  tout l'historique peut en revanche inclure le nouveau ledger ;
+- application arrêtée après le terminal, activation process-scoped terminée et `.env` inchangé
+  avec les réseaux bloqués ; redémarrage inerte contrôlé avec J5 `LOCKED` et préparation
+  désactivée, puis nouvel arrêt sans listener résiduel ;
+- décision propriétaire distincte après constat du test fonctionnel concluant : WO-017 passe à
+  `VALIDATED` et rejoint `docs/work_orders/completed/`, sans instance locale active ; le go reste
+  consommé et aucun appel supplémentaire, push, PR ou fusion n'est autorisé par cette clôture.
+
+### J8 — benchmark local validé
 
 - ouverture de `WO-SS-20260829-016` sur la branche `codex/j8-benchmark`, depuis la baseline propre
   `67268d805a4ba8c7d4706be7c18f6ff78d3ec1fd`, après revue de l'ADR-SS-001 v1.4 : aucun endpoint,
@@ -39,8 +85,36 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `da158fb04c8dc113a56e94e2bc7da6ad27278111af5cf8179b7476e5d8f1cc95` et zéro appel fournisseur ;
 - résultat J8 conservé `PARTIAL` et Work Order actif : configuration reverrouillée, application et
   worker arrêtés, revue humaine ciblée non terminée, aucun rapport final gelé, aucune clôture J8 ou
-  décision J9. Une correction du parseur et toute nouvelle campagne exigent un Work Order et un go
-  séparés.
+  décision J9. Le correctif technique relève désormais du Work Order séparé WO-017 ; toute
+  qualification fournisseur ou nouvelle campagne exige toujours un go distinct ;
+- après validation de WO-017, second go propriétaire distinct consommé par une seule fenêtre
+  exclusive `[2026-08-30T09:24:51.0887925Z,2026-08-30T09:44:03.2695965Z)`, sans mutation de
+  `.env`, retry, fallback, import ou troisième campagne ;
+- parcours complet terminé avec quatre campagnes `COMPLETED`, vingt unités, vingt tentatives,
+  vingt réponses HTTP 200 et vingt issues `PARSED` : quinze pages J3, une découverte tournoi,
+  J4 phase 2, puis statistiques, incidents V15 et compositions J5 dans l'ordre ;
+- double export non-Web de 15 202 octets, strictement byte-identique et à zéro appel fournisseur,
+  SHA-256 `ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25`, hash de population
+  `c61b3ef3a9ac12f94d787da8c396dae58e4208a6f04aa240538e38eac5ab4726` et état `MEASURED` sous
+  `FULL_ATTEMPT_LEDGER` ;
+- dossier ciblé exploitable mais non strictement complet : statistiques `COMPLETE · 100%`,
+  incidents V15 `PARTIAL · 91,62%` et compositions `PARTIAL · 99,03%`; coûts exacts de seize
+  appels de découverte, quatre appels marginaux et vingt appels effectifs par dossier exploitable ;
+- arrêt de l'instance qualifiée, contrôle d'un redémarrage inerte avec tous les connecteurs,
+  Playwright, polling et refresh à `false`, puis nouvel arrêt et port 8087 libre ;
+- dernier export non-Web de gel exécuté avec les mêmes `from/to/asOf`, tous les connecteurs forcés à
+  `false` et zéro appel fournisseur : bloc automatique toujours égal à 15 202 octets et SHA-256
+  `ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25` ;
+- revue ciblée des trois archétypes conclue et acceptée avec
+  `CONTROL_SOURCE_ABSENT` / `EXTERNAL_COMPARISON_ABSENT` : accessibilité et stabilité à `PASS`,
+  complétude, fraîcheur, efficacité et risque à `PARTIAL`, autres dimensions non observables à
+  `NOT_MEASURED`, sans décision J9 ;
+- gel du rapport final sous `docs/benchmark/J8-BENCHMARK-REPORT-20260830.md`, avec préfixe
+  automatique byte-identique et section humaine séparée; décision propriétaire de clôture
+  consignée après audit formel des critères ;
+- portes finales rejouées après les changements de clôture, configuration locale sûre et aucun
+  appel fournisseur; phase applicative passée à `J8-BENCHMARK-VALIDATED` et WO-016 déplacé sous
+  `docs/work_orders/completed/`, sans troisième campagne, push, PR ni fusion.
 
 ### J5 — migration Playwright des donnees evenement validee
 

@@ -6,8 +6,11 @@ Démarrer, vérifier, exploiter et arrêter les jalons J0 à J8 sur Windows sans
 hors de la machine locale. J5 conserve sa qualification réelle exceptionnelle désactivée par
 défaut ; J6 consulte l'historique et garde sa rétention hors interface ; J7 assemble uniquement les
 données locales courantes et exige une décision humaine avant téléchargement ; J8 agrège et exporte
-uniquement les preuves locales et reste `READY_FOR_HUMAN_QUALIFICATION` tant qu'une campagne bornée
-n'a pas reçu un go propriétaire distinct, été exécutée puis revue humainement. La découverte
+uniquement les preuves locales. Sa seconde campagne bornée a terminé vingt tentatives sur vingt,
+son rapport automatique est `MEASURED` et son bloc reproductible est gelé sous
+`docs/benchmark/J8-BENCHMARK-REPORT-20260830.md`. La revue ciblée et la décision propriétaire sont
+consignées, J8 est `VALIDATED`, toutes les voies fournisseur restent bloquées et aucune troisième
+campagne ni décision J9 n'est autorisée. La découverte
 tournoi → rencontres est qualifiée et son Work Order est clôturé depuis le 2026-08-21.
 
 ## 2. Première installation
@@ -88,8 +91,10 @@ Ces deux démarrages sont volontairement inertes pour Playwright. Même si le `.
 combinaison métier J3/J4/J5 valide, `SOFASCORE_PLAYWRIGHT_ENABLED=false` et l'absence de JAR worker
 maintiennent les transports J3/J4/J5 indisponibles. Pour une campagne explicitement autorisée,
 choisir un seul lanceur exact décrit en sections 3.14 à 3.16. Le go ponctuel de WO-015 a ete
-consomme lors de la qualification du `2026-08-29` ; toute nouvelle campagne J5 reste interdite
-sans nouvelle autorisation proprietaire distincte et tracee.
+consomme lors de la qualification du `2026-08-29`. Le go correctif WO-017 a lui aussi été consommé
+le `2026-08-30`. Le second go J8 a ensuite été consommé par le parcours complet du même jour. Toute
+nouvelle campagne J3/J4/J5 reste interdite sans nouvelle autorisation propriétaire distincte et
+tracée.
 
 ### 3.3 Contrôles de santé
 
@@ -110,7 +115,7 @@ Vérifier :
 - connecteur `DISABLED` ;
 - base URL `NON_CONFIGURED` ;
 - PostgreSQL `AVAILABLE` ;
-- migration Flyway `27` ;
+- migration Flyway `28` ;
 - snapshots `0` sur une base neuve ;
 - corpus hors ligne `AVAILABLE_OFFLINE` ;
 - fixtures `12 / 12 disponibles` ;
@@ -537,9 +542,11 @@ strictement limitée par le Work Order `WO-SS-20260815-006` et par la procédure
 
 ### 3.10 ter Qualifier réellement les trois familles J5
 
-Cette campagne est un geste humain exceptionnel. Elle ne doit jamais être déclenchée depuis Maven,
-le script de qualification loopback, un navigateur automatisé, une tâche planifiée ou un mécanisme
-de rafraîchissement. Le seul script admis prépare et démarre l'application avec le runtime
+Cette campagne exige un geste exceptionnel explicitement autorisé par le propriétaire. Par défaut,
+elle ne doit jamais être déclenchée depuis Maven, le script de qualification loopback, un navigateur
+automatisé, une tâche planifiée ou un mécanisme de rafraîchissement. Une dérogation sur l'acteur
+d'exécution n'est admissible que si elle est explicitement bornée et tracée par le propriétaire ;
+elle ne modifie aucun autre garde-fou. Le seul script admis prépare et démarre l'application avec le runtime
 Playwright ; il n'exécute aucun GET. Avant toute activation, relire le Work Order applicable,
 l'architecture J5 réelle, la readiness technique et le diff. Les deux suites Maven doivent être
 vertes ; elles n'effectuent aucun appel fournisseur.
@@ -547,6 +554,12 @@ vertes ; elles n'effectuent aucun appel fournisseur.
 WO-015 a ete qualifie et clos le `2026-08-29`. Son autorisation ponctuelle est consommee : la
 procedure ci-dessous reste reutilisable uniquement sous un nouveau Work Order ou une nouvelle
 autorisation proprietaire distincte et tracee. Elle ne constitue jamais elle-meme un go.
+
+Exception historique consommée : pour WO-017 uniquement, le propriétaire a explicitement confié
+à Codex le contrôle local de l'unique campagne autorisée et a refusé toute modification de `.env`.
+Codex a donc utilisé des propriétés limitées à l'arbre de processus du lanceur, vérifié l'identité,
+préparé et confirmé une seule fois la campagne. Cette dérogation tracée ne constitue pas une
+autorisation réutilisable et ne change pas la procédure générale.
 
 Application arrêtée, le propriétaire règle manuellement uniquement les clés réseau documentées :
 
@@ -576,6 +589,11 @@ seul processus et affiche `PROVIDER_ACCESS_PERFORMED=NO` avant Spring Boot. Il n
 ouvrir la fiche d'une identité canonique J4 existante puis sélectionner
 **« Statistiques, incidents et compositions J5 »** :
 
+La qualification WO-017 n'a pas suivi l'étape de modification manuelle de `.env` : les mêmes
+propriétés métier ont été injectées uniquement dans le processus autorisé. À l'arrêt de
+l'application, elles ont disparu automatiquement et le fichier `.env` est resté inchangé et
+bloquant.
+
 1. vérifier que l'UUID, l'identifiant fournisseur et la zone correspondent à la fiche J4 choisie ;
 2. vérifier que tous les bloqueurs de qualification J5 ont disparu ;
 3. sélectionner **« Préparer la campagne J5 »** : cette action ne contacte pas le fournisseur ;
@@ -600,7 +618,7 @@ ouvrir la fiche d'une identité canonique J4 existante puis sélectionner
    même ordre ;
 8. si l'état du contrôle est `COMPLETED_LOCKED`, vérifier les trois panneaux locaux, leur complétude ou
    leur statut `UNAVAILABLE · N/A`, leur source `PROVIDER_SNAPSHOT`, leur parseur courant
-   (`event-statistics-v2`, `event-incidents-v14`, `event-lineups-v2`) ou normaliseur
+   (`event-statistics-v2`, `event-incidents-v15`, `event-lineups-v2`) ou normaliseur
    `event-*-unavailable-v1`, leur snapshot, leur SHA-256 et leur heure de réception, sans ouvrir ou
    copier le payload brut ;
 9. dans les panneaux incidents et compositions, vérifier qu'une complétude `PARTIAL` conserve son
@@ -630,11 +648,15 @@ Ce verrou est volontaire : arrêter l'application, la redémarrer, préparer une
 obtenir une nouvelle phrase et choisir immédiatement l'option B. L'import n'est jamais un retry ni
 un fallback automatique de la campagne échouée.
 
-Sous `event-incidents-v14`, qui hérite sans modification de la règle V12, une séance terminale
-entièrement non minutée peut être compatible à
-`PARTIAL`. Vérifier alors que le marqueur `PEN` et chaque `penaltyShootout` sans minute affichent
-`—`, que les tirs `missed` sans `reason` ni `description` sont conservés sans motif inventé, et que
-la campagne atteint les compositions. Ne jamais interpréter l'ordre de séance comme une minute.
+Sous `event-incidents-v15`, qui conserve V14 et borne l'extension à la règle terminale V12, une
+séance terminale entièrement non minutée peut être compatible à `PARTIAL` lorsque chaque tentative
+omet `footballPassingNetworkAction` ou porte un tableau exactement vide. Ces deux représentations
+peuvent coexister. Vérifier alors que le marqueur `PEN` et chaque `penaltyShootout` sans minute
+affichent `—`, que les tirs `missed` sans `reason` ni `description` sont conservés sans motif
+inventé, et que la campagne atteint les compositions. Ne jamais interpréter l'ordre de séance
+comme une minute. Une valeur `null`, un autre type, un tableau non vide incohérent ou une séance
+mêlant une tentative réellement minutée et une tentative non minutée doit toujours produire
+`SCHEMA_INCOMPATIBLE` et verrouiller la campagne.
 
 Pour un carton portant `reason="Leaving field"`, vérifier que le motif exact est conservé et rendu
 dans la colonne `MOTIF`, puis que la campagne atteint les compositions. Toute autre valeur de motif
@@ -702,6 +724,37 @@ FINAL_OWNED_JAVA_PROCESS_COUNT=0
 
 Le lanceur PowerShell 7 n'a modifie aucune valeur de `.env` : ses opt-ins etaient limites a
 l'arbre de processus de la recette, qui a ete arrete lors de la cloture.
+
+La preuve corrective V15 consommée le 2026-08-30 est :
+
+```text
+J5_V15_EVENT_ID=16691018
+J5_V15_CANONICAL_EVENT_ID=f4713f80-4769-3656-ba51-61d8ac1aa814
+J5_V15_TERMINAL_STATE=COMPLETED_LOCKED
+J5_V15_PROVIDER_CALLS=3
+J5_V15_STATISTICS=PASS_COMPLETE_100_SNAPSHOT_716_OBSERVATION_322
+J5_V15_INCIDENTS=PASS_PARTIAL_91_SNAPSHOT_717_OBSERVATION_324
+J5_V15_INCIDENTS_PARSER=event-incidents-v15
+J5_V15_INCIDENTS_COUNT=35
+J5_V15_INCIDENTS_SIGNALS=164/179
+J5_V15_LINEUPS=PASS_PARTIAL_99_SNAPSHOT_720_OBSERVATION_325
+J5_V15_EMPTY_ARRAY_VARIANT_REOBSERVED=YES_BY_BYTE_IDENTICAL_SNAPSHOT_REUSE
+J5_V15_RETRY=NO
+J5_V15_SECOND_CAMPAIGN=NO
+ENV_FILE_MUTATION=NO
+PROCESS_SCOPED_CONFIGURATION_ENDED=YES
+J5_LOCKED_AFTER_INERT_RESTART=PASS
+APPLICATION_STOPPED=YES
+WORK_ORDER_STATUS=VALIDATED
+OWNER_CLOSURE=AUTHORIZED_2026_08_30
+WORK_ORDER_LOCATION=docs/work_orders/completed
+ADDITIONAL_PROVIDER_CALL_AUTHORIZED=NO
+```
+
+Cette preuve valide V15 dans cette portée bornée. Elle n'autorise pas le rejeu de la campagne. Le
+propriétaire a depuis jugé le test fonctionnel concluant et clôturé séparément WO-017 au statut
+`VALIDATED`, sans autoriser de nouvel appel. La preuve détaillée est
+`docs/validation/J5-V15-PROVIDER-QUALIFICATION-20260830.md`.
 
 ### 3.10 quater Enchaîner J4 phase 2 et J5 dans une même session
 
@@ -1422,12 +1475,14 @@ Aucun Docker ni accès SofaScore n’est requis par les tests standards.
 .\mvnw.cmd -Pintegration-tests verify
 ```
 
-Docker doit être disponible. Testcontainers vérifie les migrations V1 à V27, l’état initial du
+Docker doit être disponible. Testcontainers vérifie les migrations V1 à V28, l’état initial du
 connecteur, la conservation exacte du brut, sa déduplication, les provenances J4/J5, les occurrences
 J6, la rétention auditée et la portée cache `TOURNAMENT_SCHEDULED_EVENTS` dans une base éphémère.
 V27 ajoute aussi les cinq tables append-only du ledger J8, leurs contraintes, l'upgrade V26→V27
 et la lecture reproductible des agrégats locaux. Le runbook J8 détaillé est
 `docs/runbooks/J8-BENCHMARK.md`.
+V28 n'ajoute aucune table : elle autorise uniquement la provenance `event-incidents-v15` et son
+upgrade V27→V28 prouve l'absence de réécriture des observations V14 et des cinq preuves J8.
 Pour WO-010, il vérifie aussi le commit atomique des `3N` familles, le réimport avec occurrences
 append-only et le rollback intégral lors d'une panne sur la dernière famille du dernier événement.
 

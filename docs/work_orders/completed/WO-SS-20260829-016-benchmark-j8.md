@@ -1,20 +1,21 @@
 # WO-SS-20260829-016 — Benchmark local reproductible J8
 
-- **Statut :** `READY_FOR_HUMAN_QUALIFICATION`
+- **Statut :** `VALIDATED`
 - **Date d'ouverture :** 2026-08-29
 - **Date de démarrage :** 2026-08-29
-- **Date de validation :** `NOT_RUN`
-- **Décision de clôture :** `NOT_GRANTED`
+- **Date de validation :** 2026-08-30
+- **Décision de clôture :** `GRANTED_BY_OWNER_2026_08_30_AFTER_FORMAL_AUDIT`
 - **Prérequis :** J7 fusionné et Work Orders 009 à 015 validés
 - **Base locale :** `67268d805a4ba8c7d4706be7c18f6ff78d3ec1fd`
 - **Jalon :** J8 — Benchmark
-- **Branche :** `codex/j8-benchmark`
+- **Branche d'ouverture :** `codex/j8-benchmark`
+- **Branche de continuation :** `codex/j8-incidents-v15`
 - **ADR applicable :** `ADR-SS-001 v1.4`
 - **Nouveau parcours ou endpoint fournisseur :** `NONE`
 - **Appel fournisseur pendant l'implémentation :** `NOT_AUTHORIZED`
 - **Appel fournisseur pendant les tests automatisés :** `NOT_AUTHORIZED`
-- **Campagne fournisseur J8 :** `OWNER_GO_CONSUMED_2026_08_30_EXECUTED_PARTIAL`
-- **Qualification humaine :** `NOT_RUN_AFTER_PARTIAL_CAMPAIGN`
+- **Campagne fournisseur J8 :** `SECOND_OWNER_GO_CONSUMED_2026_08_30_MEASURED_COMPLETED`
+- **Qualification humaine :** `PASS` avec limites `PARTIAL` et `NOT_MEASURED` explicites
 - **Polling, scheduler, watcher, live, retry ou fallback :** `NOT_AUTHORIZED`
 - **Production, VPS ou dépendance critique :** `NOT_AUTHORIZED`
 
@@ -334,13 +335,13 @@ payload, chemin local, stack trace ou détail PostgreSQL.
 ## 11. Critères d'acceptation
 
 ```text
-J8_STATUS=READY_FOR_HUMAN_QUALIFICATION
-COMPLETENESS_FORMULA=IMPLEMENTED_PENDING_BOUNDED_CAMPAIGN
-LATENCY_FORMULA=IMPLEMENTED_PENDING_BOUNDED_CAMPAIGN
-SCHEMA_STABILITY=MEASURED_OR_EXPLICITLY_NOT_MEASURED
-ERROR_RATE=EVIDENCE_LEVEL_AWARE
-PROVIDER_CALL_COST=EVIDENCE_LEVEL_AWARE
-LATE_CORRECTIONS=MEASURED_OR_EXPLICITLY_NOT_MEASURED
+J8_STATUS=VALIDATED
+COMPLETENESS_FORMULA=MEASURED
+LATENCY_FORMULA=MEASURED
+SCHEMA_STABILITY=MEASURED
+ERROR_RATE=MEASURED
+PROVIDER_CALL_COST=MEASURED
+LATE_CORRECTIONS=MEASURED_OR_EXPLICITLY_NOT_MEASURED_BY_WINDOW
 FULL_ATTEMPT_LEDGER=SUPPORTED_PROSPECTIVELY
 RESPONSE_ONLY=SUPPORTED_WITH_LIMITATIONS
 LEGACY_BASELINE=SUPPORTED_WITHOUT_CALL_COUNT
@@ -384,17 +385,20 @@ La qualification humaine locale doit vérifier :
 6. l'absence de toute activité réseau J8 ;
 7. l'arrêt propre de l'application et la conservation des verrous réseau.
 
-État après readiness technique puis campagne bornée :
+État final après la readiness, la campagne initiale partielle, le correctif V15, la seconde
+campagne complète, la revue ciblée et le gel du rapport :
 
 ```text
-J8_HUMAN_QUALIFICATION=NOT_RUN_AFTER_PARTIAL_CAMPAIGN
+J8_HUMAN_QUALIFICATION=PASS
+J8_HUMAN_REVIEW_LIMITATIONS=PRESENT
 J8_HTML_TECHNICAL_QA=PASS
 J8_MARKDOWN_REPRODUCIBILITY=PASS_BYTE_IDENTICAL
 J8_TECHNICAL_QA_PROVIDER_CALLS=0
-J8_PROVIDER_CAMPAIGN=OWNER_GO_CONSUMED_2026_08_30
-J8_PROVIDER_CAMPAIGN_RESULT=PARTIAL_J5_FAILED_SCHEMA_INCOMPATIBLE
-J8_FINAL_BENCHMARK_REPORT=NOT_CREATED
-J8_OWNER_CLOSURE_DECISION=NOT_GRANTED
+J8_PROVIDER_CAMPAIGN=SECOND_OWNER_GO_CONSUMED_2026_08_30
+J8_PROVIDER_CAMPAIGN_RESULT=MEASURED_COMPLETED_20_OF_20
+J8_FINAL_BENCHMARK_REPORT=docs/benchmark/J8-BENCHMARK-REPORT-20260830.md
+J8_OWNER_CLOSURE_DECISION=GRANTED_BY_OWNER_2026_08_30_AFTER_FORMAL_AUDIT
+J9_DECISION_TAKEN=NO
 ```
 
 Le propriétaire a donné le 2026-08-30 le go distinct prévu. Il a été consommé par une seule fenêtre
@@ -457,15 +461,47 @@ bornée du parseur strict, pas une mutation de payload causée par J8.
 J5_END_TO_END_AVAILABILITY_REGRESSION=OBSERVED
 J5_J8_INSTRUMENTATION_CAUSALITY=NOT_SUPPORTED_BY_LOCAL_EVIDENCE
 J5_OBSERVED_RESPONSE_VARIANT=EMPTY_FOOTBALL_PASSING_NETWORK_ACTION_ARRAY
-J5_PROVIDER_SCHEMA_CURRENT_STATUS=NOT_VALIDATED_AFTER_SNAPSHOT_717
-J5_CORRECTIVE_SCOPE=SEPARATE_WORK_ORDER_AND_OWNER_DECISION_REQUIRED
+J5_PROVIDER_SCHEMA_STATUS_AT_J8_FREEZE=NOT_VALIDATED_AFTER_SNAPSHOT_717
+J5_PROVIDER_SCHEMA_CURRENT_STATUS=VALIDATED_BOUNDED_V15_EVENT_16691018_BY_WO_017
+J5_CORRECTIVE_SCOPE=SEPARATE_WORK_ORDER_COMPLETED
+J5_CORRECTIVE_WORK_ORDER_STATUS=VALIDATED
+J5_CORRECTIVE_WORK_ORDER_LOCATION=docs/work_orders/completed
+J5_CORRECTIVE_OWNER_CLOSURE=AUTHORIZED_2026_08_30
 ```
 
-Après la campagne, l'application et le worker ont été arrêtés, le port 8087 libéré, les gates locaux
-remis à `false` et le verrou persistant confirmé par l'exporteur. Aucun retry, import, fallback,
-appel compositions ou nouvelle campagne n'a été exécuté.
+### 13.3 Correctif technique V15 sous Work Order séparé
 
-La revue humaine future porte, lorsque le corpus le permet, sur trois dossiers distincts : le dossier
+Le propriétaire a ensuite autorisé WO-017 pour le seul correctif du parseur incidents. Le parseur
+`event-incidents-v15` et la migration append-only V28 assimilent propriété absente et tableau
+exactement vide uniquement dans la séance terminale non minutée déjà cohérente. Les listes non
+vides incohérentes, les types erronés et les séances temporellement mixtes restent refusés.
+
+Une sonde PostgreSQL read-only des octets exacts du snapshot 717 rend `PARSED/PARTIAL · 91%` sous
+V15, sans persister de reparse. Elle ne modifie ni le snapshot, ni l'occurrence, et ne reclasse ni
+l'unité ni son résultat historique V14 ; le coût et le hash de population restent inchangés. À cet instant,
+WO-017 restait une readiness technique distincte : aucune reprise ou nouvelle campagne fournisseur
+n'était autorisée et J8 restait `PARTIAL / READY_FOR_HUMAN_QUALIFICATION`.
+
+Le propriétaire a ensuite autorisé sous WO-017 une campagne J5 corrective unique et postérieure à
+la fenêtre J8, puis en a confié l'exécution locale à Codex sans modification de `.env`. Elle a
+terminé `COMPLETED_LOCKED` après trois appels sans retry : statistiques `COMPLETE · 100%`
+(`716`/`322`), incidents V15 `PARTIAL · 91%`, 35 incidents et `164/179` signaux (`717`/`324`),
+puis compositions `PARTIAL · 99%` (`720`/`325`). La réponse incidents dédupliquée réobserve les
+mêmes octets et les quatorze tableaux vides du snapshot 717. La classification V14 de l'unité J8,
+les dix-neuf tentatives, la fenêtre, le double export et le hash de population restent inchangés.
+Le ledger correctif est une nouvelle campagne J5 auditée, pas un retry ou une seconde campagne
+benchmark. Son go est consommé et n'autorise aucun appel supplémentaire.
+
+Le propriétaire a depuis jugé la qualification fonctionnelle V15 concluante et clôturé WO-017 au
+statut `VALIDATED`. Cette décision ne modifie ni la fenêtre, ni le rapport `PARTIAL`, ni le statut
+encore actif de J8 et n'autorise aucun nouvel appel fournisseur.
+
+À l'issue de la campagne J8 initiale, l'application et le worker ont été arrêtés, le port 8087
+libéré, les gates locaux remis à `false` et le verrou persistant confirmé par l'exporteur. Dans ce
+parcours et immédiatement après son terminal, aucun retry, import, fallback, appel compositions ou
+nouvelle campagne n'a été exécuté.
+
+La revue humaine finale porte, lorsque le corpus le permet, sur trois dossiers distincts : le dossier
 J8, le dossier direct non ciblé le plus récent en `PARTIAL` ou `UNAVAILABLE`, puis le dossier direct
 non ciblé le plus récent avec `LATE_CORRECTION`. À défaut d'un archétype, elle utilise le dossier
 direct le plus proche et consigne `ARCHETYPE_NOT_AVAILABLE`, sans appel supplémentaire. Chaque
@@ -486,9 +522,10 @@ IN_PROGRESS
   -> VALIDATED
 ```
 
-Le statut courant reste `READY_FOR_HUMAN_QUALIFICATION` malgré l'exécution de la campagne : son
-résultat est inconclusif, la revue humaine ciblée n'est pas terminée, le rapport final n'est pas
-gelé et aucune décision propriétaire de clôture ou décision J9 n'est acquise.
+Le statut final est `VALIDATED`. La seconde campagne est concluante et son rapport automatique est
+`MEASURED`; la revue humaine ciblée est terminée avec ses limites `PARTIAL` et `NOT_MEASURED`, le
+rapport final est gelé et la décision propriétaire de clôture est acquise. Aucune décision J9 n'est
+prise.
 
 Le passage à `VALIDATED` et le déplacement vers `docs/work_orders/completed` exigent tous les
 éléments suivants :
@@ -503,11 +540,163 @@ Le passage à `VALIDATED` et le déplacement vers `docs/work_orders/completed` e
 - décision explicite du propriétaire.
 
 Tout push, toute Pull Request et toute fusion vers `main` exigent une demande explicite séparée et
-ne constituent pas une preuve de clôture J8. Ce Work Order demeure actif et ne doit pas être
-archivé tant que ces preuves et cette décision ne sont pas acquises.
+ne constituent pas une preuve de clôture J8. Les preuves et la décision étant acquises, ce Work
+Order rejoint `docs/work_orders/completed` sans autoriser de troisième campagne.
 
-Le bloc de clôture ci-dessous doit être écrit exactement et entièrement prouvé après la campagne et
-la revue humaine ; il n'est ni écrit comme résultat courant, ni réputé acquis par la readiness :
+Le bloc de clôture ci-dessous est écrit exactement et entièrement prouvé après la campagne et la
+revue humaine :
+
+```text
+COMPLETENESS_METRICS=AVAILABLE
+LATENCY_METRICS=AVAILABLE
+SCHEMA_STABILITY=MEASURED
+ERROR_RATE=MEASURED
+PROVIDER_CALL_COST=MEASURED
+AUTOMATIC_POLLING=NO
+```
+
+## 15. Nouveau go propriétaire après qualification V15
+
+Après clôture du correctif WO-017, le propriétaire indique que la campagne J8 peut se poursuivre.
+Dans le contexte non ambigu de WO-016 et de l'échec V14 désormais corrigé, cette instruction est
+consignée comme le nouveau go distinct exigé pour une seconde campagne end-to-end. Elle autorise
+un seul parcours `J3 → découverte tournoi → J4 phase 2 → J5` exécuté localement par Codex, sans
+geste manuel supplémentaire et sans modification de `.env`.
+
+La campagne initiale, sa fenêtre, son hash et son rapport `PARTIAL` restent immuables. La nouvelle
+campagne reçoit une fenêtre UTC exclusive et ne réutilise aucune tentative historique. Elle reste
+soumise au plafond absolu de 30 tentatives, à l'ordre fermé, au délai minimal de trois secondes, à
+la concurrence unitaire, à l'absence de retry et à l'arrêt au premier incident terminal.
+
+La sélection read-only conserve le candidat déterministe prévu : Cittadella — Atalanta U23,
+identifiant fournisseur `16691018`, identité canonique
+`f4713f80-4769-3656-ba51-61d8ac1aa814`, phase `15118`, tournoi routé `824`, saison `99790` et date
+J3 `2026-08-15`. Les caches J3 et tournoi exacts ont expiré naturellement depuis plus de 600
+secondes ; aucune suppression, invalidation ou dérogation de cache n'a été effectuée.
+
+```text
+J8_SECOND_PROVIDER_CAMPAIGN_GO=GRANTED_BY_OWNER_2026_08_30
+J8_SECOND_PROVIDER_CAMPAIGN_GO_SCOPE=ONE_END_TO_END_BOUNDED_PATH
+EXECUTION_ACTOR=CODEX_LOCAL_UI
+WINDOW_FROM=2026-08-30T09:24:51.0887925Z
+WINDOW_TO=PENDING_TERMINAL
+WINDOW_SEMANTICS=[FROM,TO)
+TARGET_PROVIDER_EVENT_ID=16691018
+TARGET_CANONICAL_EVENT_ID=f4713f80-4769-3656-ba51-61d8ac1aa814
+TARGET_DATE=2026-08-15
+TARGET_PHASE_ID=15118
+TARGET_ROUTE_TOURNAMENT_ID=824
+TARGET_SEASON_ID=99790
+J3_TARGET_CACHE_ROWS=15
+J3_TARGET_CACHE_EXPIRED_600_SECONDS=YES
+TOURNAMENT_TARGET_CACHE_ROWS=1
+TOURNAMENT_TARGET_CACHE_EXPIRED_600_SECONDS=YES
+BASELINE_J8_CAMPAIGNS=5
+BASELINE_J8_UNITS=23
+BASELINE_J8_ATTEMPTS=22
+BASELINE_J8_UNIT_RESULTS=23
+MAXIMUM_DIRECT_ATTEMPTS=30
+PROVIDER_RETRY=NO
+POLLING=NO
+ENV_FILE_MUTATION=NO
+ADDITIONAL_CAMPAIGN_AFTER_THIS_GO=NO
+```
+
+La readiness détaillée est conservée dans
+`docs/validation/J8-SECOND-BOUNDED-CAMPAIGN-READINESS-20260830.md`. Aucune requête fournisseur n'a
+été exécutée pendant la sélection, le contrôle des caches ou la consignation du go.
+
+## 16. Résultat de la seconde campagne et passage en revue ciblée
+
+Le go de la section 15 a été consommé par une seule instance locale avec le profil combiné exact à
+six endpoints, injecté uniquement dans l'arbre du lanceur. `.env` est resté inchangé. La fenêtre
+exclusive est `[2026-08-30T09:24:51.0887925Z,2026-08-30T09:44:03.2695965Z)` et l'`asOf` gelé vaut
+`2026-08-30T09:44:03.2695965Z`.
+
+J3 a terminé quinze pages et quinze tentatives. La découverte tournoi, J4 phase 2 et les trois
+familles J5 ont ensuite terminé dans l'ordre, pour un total de vingt unités et vingt tentatives.
+Toutes ont reçu HTTP 200 et produit `PARSED`. Les incidents utilisent `event-incidents-v15` et
+restent `PARTIAL · 91%` en complétude, sans incompatibilité; les compositions ont été atteintes et
+sont `PARTIAL · 99%`. Aucun retry, import, fallback, arrêt opérateur ou tentative incomplète n'est
+présent.
+
+```text
+J8_SECOND_PROVIDER_CAMPAIGN_GO_CONSUMED=YES
+J8_SECOND_PROVIDER_CAMPAIGN_RESULT=MEASURED_COMPLETED
+J8_SECOND_PROVIDER_CAMPAIGN_CAMPAIGNS=4
+J8_SECOND_PROVIDER_CAMPAIGN_UNITS=20
+J8_SECOND_PROVIDER_CAMPAIGN_ATTEMPTS=20
+J8_SECOND_PROVIDER_CAMPAIGN_RESPONSES=20
+J8_SECOND_PROVIDER_CAMPAIGN_PARSED=20
+J8_SECOND_PROVIDER_CAMPAIGN_ERRORS=0
+J8_SECOND_PROVIDER_CAMPAIGN_RETRY=NO
+J8_SECOND_PROVIDER_CAMPAIGN_ADDITIONAL_CALLS_AUTHORIZED=NO
+```
+
+Le double export porte sur la même population, mesure `FULL_ATTEMPT_LEDGER` et est byte-identique :
+15 202 octets, SHA-256
+`ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25` et hash de population
+`c61b3ef3a9ac12f94d787da8c396dae58e4208a6f04aa240538e38eac5ab4726`. Il mesure 20/20 réponses,
+20/20 parsings compatibles, zéro refus, 404, erreur opérationnelle ou tentative incomplète. Un
+dossier sur un est exploitable, aucun n'est strictement complet; les coûts exacts sont 16 appels de
+découverte, 4 appels marginaux et 20 appels effectifs par dossier exploitable.
+
+Après le terminal, l'instance a été arrêtée. Un redémarrage inerte avec tous les connecteurs et
+Playwright à `false` a confirmé J3 au verrou de démarrage et les préparations J4/J5 désactivées,
+puis l'application a été arrêtée à nouveau et le port 8087 libéré.
+
+La preuve détaillée est
+`docs/validation/J8-SECOND-BOUNDED-CAMPAIGN-20260830.md`. Le rapport automatique suffit pour les
+métriques obligatoires et son bloc exact est gelé sous
+`docs/benchmark/J8-BENCHMARK-REPORT-20260830.md`. La revue humaine des trois dossiers, les libellés
+`CONTROL_SOURCE_ABSENT` et `EXTERNAL_COMPARISON_ABSENT` et la décision propriétaire sont consignés.
+Les dimensions non observables restent `NOT_MEASURED`; aucune comparaison externe n'est inventée.
+
+La sélection locale des trois dossiers et les limites de comparaison sont consignées dans
+`docs/validation/J8-TARGETED-HUMAN-REVIEW-READINESS-20260830.md`; les verdicts finaux minimisés sont
+dans `docs/validation/J8-TARGETED-HUMAN-REVIEW-20260830.md`.
+
+```text
+J8_TECHNICAL_METRIC_GATE=PASS
+J8_CLOSURE_BLOCK_WRITTEN=YES
+J8_HUMAN_TARGETED_REVIEW=PASS
+J8_HUMAN_REVIEW_LIMITATIONS=PRESENT
+J8_FINAL_REPORT=docs/benchmark/J8-BENCHMARK-REPORT-20260830.md
+J8_OWNER_CLOSURE_DECISION=GRANTED_BY_OWNER_2026_08_30_AFTER_FORMAL_AUDIT
+J8_WORK_ORDER_STATUS=VALIDATED
+J9_DECISION_TAKEN=NO
+```
+
+## 17. Revue finale, gel et clôture
+
+Le 2026-08-30, le propriétaire autorise la transition vers `VALIDATED` si toutes les étapes et tous
+les critères sont formellement prouvés. L'audit final ne trouve aucun bloqueur technique, réseau,
+de persistance ou de sécurité. Il accepte l'absence de comparateur externe sous les codes
+`CONTROL_SOURCE_ABSENT` et `EXTERNAL_COMPARISON_ABSENT`; exactitude, maintenabilité et valeur
+analytique restent donc `NOT_MEASURED`. La complétude, la fraîcheur, l'efficacité et le risque
+restent `PARTIAL`; accessibilité et stabilité sont `PASS`. Ces résultats ne constituent aucune
+décision J9.
+
+Le dernier export non-Web force tous les connecteurs à `false`, réalise zéro appel fournisseur et
+reproduit le bloc automatique de 15 202 octets, SHA-256
+`ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25`, avec le hash de population
+`c61b3ef3a9ac12f94d787da8c396dae58e4208a6f04aa240538e38eac5ab4726`. Les 15 202 premiers octets
+du rapport final sont byte-identiques; la section humaine commence après le marqueur automatique.
+
+```text
+HUMAN_TARGETED_REVIEW=PASS
+HUMAN_REVIEW_LIMITATIONS=PRESENT
+CONTROL_SOURCE_LABEL=CONTROL_SOURCE_ABSENT
+EXTERNAL_COMPARISON_SOURCE=EXTERNAL_COMPARISON_ABSENT
+FINAL_REPORT=docs/benchmark/J8-BENCHMARK-REPORT-20260830.md
+FINAL_VALIDATION=docs/validation/J8-FINAL-VALIDATION-20260830.md
+AUTOMATIC_BLOCK_SHA256=ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25
+FINAL_REPORT_SHA256=6d9a46b4391beffe9c1c54591089f0b035a5ed81f9522c03998a0feff18e7e52
+J8_CLOSURE_CRITERIA=MET
+J8_STATUS=VALIDATED
+J9_DECISION_TAKEN=NO
+ADDITIONAL_PROVIDER_CAMPAIGN_AUTHORIZED=NO
+```
 
 ```text
 COMPLETENESS_METRICS=AVAILABLE

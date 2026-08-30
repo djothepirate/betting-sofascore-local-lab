@@ -123,9 +123,9 @@ try {
                 throw "The qualified manifest source/restore evidence differs: $field"
             }
         }
-        if ($manifest.source.flywayVersion.ToString() -cne '27' -or
+        if ($manifest.source.flywayVersion.ToString() -cne '28' -or
                 [long]$manifest.source.rawPayloadIntegrityFailures -ne 0) {
-            throw 'The qualified manifest does not prove a valid Flyway V27 raw-payload and J8 evidence restore.'
+            throw 'The qualified manifest does not prove a valid Flyway V28 raw-payload and J8 evidence restore.'
         }
         $cipherPath = [IO.Path]::GetFullPath((Join-Path `
             (Split-Path -Parent $manifestPath) $cipherFileName))

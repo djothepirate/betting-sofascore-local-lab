@@ -394,7 +394,7 @@ Chaque réponse locale synthétique porte :
 | parseur | version J5 courante de la famille |
 
 Au moment de la rédaction, les versions courantes sont
-`event-statistics-v2`, `event-incidents-v14` et `event-lineups-v2`. L'implémentation doit référencer
+`event-statistics-v2`, `event-incidents-v15` et `event-lineups-v2`. L'implémentation doit référencer
 les constantes des parseurs courants plutôt que dupliquer ces chaînes dans le flux.
 
 ### 9.3 Atomicité et échec

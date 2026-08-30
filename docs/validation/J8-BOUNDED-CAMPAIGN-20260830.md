@@ -137,7 +137,7 @@ préexistant, mais les preuves locales n'établissent pas une causalité de l'in
 
 - preuve antérieure : snapshot incidents 189, 40 412 octets, observation normalisée 100,
   `event-incidents-v13`, `PARTIAL` 83 %, 33 incidents ;
-- le parseur courant `event-incidents-v14` accepte encore hors ligne, sans persistance, exactement
+- le parseur alors utilisé, `event-incidents-v14`, accepte hors ligne, sans persistance, exactement
   les octets du snapshot 189 ;
 - réponse J8 : snapshot incidents 717, 43 363 octets, `event-incidents-v14`,
   `SCHEMA_INCOMPATIBLE`, sans observation normalisée ;
@@ -147,7 +147,7 @@ préexistant, mais les preuves locales n'établissent pas une causalité de l'in
 
 Dans l'ancienne représentation, les quatorze tirs au but sans minute omettent
 `footballPassingNetworkAction`. Dans la nouvelle réponse observée, la propriété est présente avec
-un tableau vide. La règle héritée de V12 à V14 exige actuellement que cette propriété soit
+un tableau vide. La règle héritée de V12 à V14 exigeait alors que cette propriété soit
 strictement absente pour reconnaître une séance terminale cohérente non minutée.
 
 Une sonde contrefactuelle locale, en lecture seule et sans reparse persistant, confirme cette cause
@@ -161,7 +161,7 @@ J8_COUNTERFACTUAL_PERSISTED=NO
 
 Cette sonde ne modifie pas le snapshot et ne promeut pas son résultat au rang de preuve directe.
 Elle montre uniquement que la différence « propriété absente » / « tableau vide » suffit à
-expliquer l'issue du parseur courant.
+expliquer l'issue observée sous V14.
 
 ### 5.2 Audit de causalité J8
 
@@ -181,20 +181,76 @@ schéma fournisseur global a changé.
 J5_END_TO_END_AVAILABILITY_REGRESSION=OBSERVED
 J5_J8_INSTRUMENTATION_CAUSALITY=NOT_SUPPORTED_BY_LOCAL_EVIDENCE
 J5_OBSERVED_RESPONSE_VARIANT=EMPTY_FOOTBALL_PASSING_NETWORK_ACTION_ARRAY
-J5_CURRENT_PARSER_GAP=PRESENT_EMPTY_ARRAY_REJECTED_IN_COHERENT_TERMINAL_SHOOTOUT
-J5_PROVIDER_SCHEMA_CURRENT_STATUS=NOT_VALIDATED_AFTER_SNAPSHOT_717
+J5_PARSER_GAP_AT_J8_FREEZE=PRESENT_EMPTY_ARRAY_REJECTED_IN_COHERENT_TERMINAL_SHOOTOUT
+J5_PROVIDER_SCHEMA_STATUS_AT_J8_FREEZE=NOT_VALIDATED_AFTER_SNAPSHOT_717
+J5_PROVIDER_SCHEMA_CURRENT_STATUS=VALIDATED_BOUNDED_V15_EVENT_16691018_BY_WO_017
 ```
 
-Un correctif éventuel doit créer une nouvelle version de parseur et traiter « absent » et « tableau
-vide » comme équivalents uniquement dans le contexte terminal cohérent déjà protégé, tout en
-continuant à refuser les listes non vides incohérentes, les valeurs mal typées et les séances
-mixtes. Ce travail, sa migration append-only, ses tests et toute nouvelle campagne exigent un Work
-Order et une décision propriétaire séparés. Aucun correctif n'est appliqué par cette preuve J8.
+À ce stade de la preuve J8, un correctif devait créer une nouvelle version de parseur et traiter
+« absent » et « tableau vide » comme équivalents uniquement dans le contexte terminal cohérent déjà
+protégé, tout en continuant à refuser les listes non vides incohérentes, les valeurs mal typées et
+les séances mixtes. Ce travail, sa migration append-only, ses tests et toute nouvelle campagne
+exigeaient un Work Order et une décision propriétaire séparés. Aucun correctif n'a été appliqué par
+la campagne ou la preuve J8 initiales ; WO-017 est documenté séparément dans les addenda suivants.
+
+### 5.3 Addendum du 2026-08-30 — readiness technique V15
+
+Après gel de la présente preuve historique, WO-017 a ajouté le parseur versionné
+`event-incidents-v15` et la migration append-only V28. V15 traite propriété absente et tableau
+exactement vide comme équivalents uniquement dans la séance terminale non minutée déjà cohérente ;
+les tableaux non vides incohérents, les types erronés et les séances mêlant tentatives réellement
+minutées et non minutées restent incompatibles.
+
+Une sonde locale en transaction PostgreSQL read-only a analysé les octets exacts du snapshot 717
+sans les afficher ni les copier dans Git : SHA-256 identique, `PARSED`, zéro problème, 18 warnings,
+`PARTIAL · 91%` et 35 incidents sous V15. Elle s'est terminée par rollback et n'a créé ni
+observation, ni occurrence, ni résultat J8. Le snapshot brut 717 reste immuable et partagé ;
+l'unité historique de campagne qui le référence reste `event-incidents-v14 /
+SCHEMA_INCOMPATIBLE`; l'issue `PARTIAL`, les 19 tentatives et le hash du
+rapport restent inchangés. Cette readiness n'autorise ni reparse persistant, ni retry, ni seconde
+campagne fournisseur.
+
+### 5.4 Addendum du 2026-08-30 — qualification fournisseur V15 distincte
+
+Après cette readiness, le propriétaire a autorisé puis confié à Codex une unique campagne J5
+corrective sur l'événement `16691018`. Cette campagne est postérieure et extérieure à la fenêtre
+exclusive J8 `[2026-08-30T03:39:12.086771Z,2026-08-30T04:32:04.339732Z)`. Elle ne constitue ni un
+retry de la campagne benchmark, ni une seconde campagne benchmark.
+
+La campagne corrective a terminé `COMPLETED_LOCKED` après trois tentatives directes. Les
+statistiques sont `PARSED/COMPLETE · 100%` sur `716`/`322`; les incidents sont
+`PARSED/PARTIAL · 91%`, `164/179` signaux et 35 incidents sous `event-incidents-v15` sur
+`717`/`324`; les compositions ont été atteintes et sont `PARSED/PARTIAL · 99%` sur `720`/`325`.
+Aucun retry, fallback, import, polling ou second parcours n'a été exécuté.
+
+La réponse incidents a été dédupliquée vers le snapshot `717`. L'identité brute réobserve donc la
+variante ayant causé l'échec V14 : une sonde structurelle read-only compte à nouveau quatorze tirs
+sans minute et quatorze tableaux d'actions exactement vides. L'observation V15 append-only les
+parse avec succès. L'unité historique J8 reste `event-incidents-v14 / SCHEMA_INCOMPATIBLE`; les
+19 tentatives, le hash de population et le double export de la fenêtre gelée restent inchangés.
+
+```text
+V15_CORRECTIVE_J5_LEDGER_CAMPAIGN=c9caf9b1-2495-4612-9e05-b9269aebaa66
+V15_CORRECTIVE_PROVIDER_CALLS=3
+ORIGINAL_J8_WINDOW_UNCHANGED=YES
+ORIGINAL_J8_CAMPAIGN_RETRY=NO
+SECOND_J8_BENCHMARK_CAMPAIGN=NO
+ORIGINAL_J8_REPORT_STATE=PARTIAL_UNCHANGED
+WO_017_CURRENT_STATUS=VALIDATED_COMPLETED
+WO_017_CLOSURE=AUTHORIZED_2026_08_30
+J8_STATUS_AFTER_WO_017_CLOSURE=READY_FOR_HUMAN_QUALIFICATION_UNCHANGED
+```
+
+Une lecture dynamique sans fenêtre de `GET /benchmark` peut désormais inclure le nouveau ledger.
+Elle ne doit pas être comparée au rapport historique sans reprendre explicitement sa fenêtre et
+son `asOf`. Cette nouvelle preuve ne suffit pas à clôturer J8 : la revue ciblée, le rapport final
+gelé et la décision propriétaire restent absents.
 
 ## 6. Postconditions et décision
 
-Après l'échec terminal, aucun retry, import, fallback, appel compositions ou seconde campagne n'a
-été exécuté. L'application et le worker Playwright ont été arrêtés, le port 8087 a été libéré et les
+Dans la campagne J8 initiale et immédiatement après son échec terminal, aucun retry, import,
+fallback, appel compositions ou seconde campagne n'a été exécuté. L'application et le worker
+Playwright ont été arrêtés, le port 8087 a été libéré et les
 gates `.env` ont été remis à `false`. L'exporteur a ensuite confirmé le verrou persistant avant ses
 lectures locales. PostgreSQL reste localement disponible pour conserver et agréger les preuves.
 
@@ -215,7 +271,10 @@ J8_CLOSURE_BLOCK_PROVEN=NO
 J8_WORK_ORDER_STATUS=READY_FOR_HUMAN_QUALIFICATION
 J8_WORK_ORDER_VALIDATED=NO
 J8_OWNER_CLOSURE_DECISION=NOT_GRANTED
-J8_CORRECTIVE_PROVIDER_CAMPAIGN_AUTHORIZED=NO
+J8_CORRECTIVE_PROVIDER_CAMPAIGN_AUTHORIZED_AT_INITIAL_FREEZE=NO
+J8_CORRECTIVE_PROVIDER_CAMPAIGN_AUTHORIZED_LATER_BY_WO_017=YES
+J8_CORRECTIVE_PROVIDER_CAMPAIGN_CONSUMED=YES
+J8_CORRECTIVE_PROVIDER_CAMPAIGN_ADDITIONAL_CALLS_AUTHORIZED=NO
 ```
 
 Les portes techniques ont été rejouées après la campagne et après la rédaction de cette preuve,

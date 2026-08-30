@@ -1,0 +1,51 @@
+{
+  "incidents": [
+    {
+      "text": "PEN",
+      "homeScore": 2,
+      "awayScore": 1,
+      "isLive": false,
+      "period": "penalties",
+      "time": 999,
+      "addedTime": 999,
+      "incidentType": "period"
+    },
+    {
+      "incidentType": "penaltyShootout",
+      "incidentClass": "scored",
+      "isHome": true,
+      "player": {
+        "id": 902,
+        "name": "Synthetic Home Taker"
+      },
+      "homeScore": 2,
+      "awayScore": 1,
+      "sequence": 2,
+      "footballPassingNetworkAction": [],
+      "description": "Scored",
+      "reason": "scored"
+    },
+    {
+      "incidentType": "penaltyShootout",
+      "incidentClass": "missed",
+      "isHome": false,
+      "player": {
+        "id": 901,
+        "name": "Synthetic Away Taker"
+      },
+      "homeScore": 1,
+      "awayScore": 1,
+      "footballPassingNetworkAction": [],
+      "sequence": 1
+    },
+    {
+      "text": "FT",
+      "homeScore": 1,
+      "awayScore": 1,
+      "isLive": false,
+      "time": 90,
+      "addedTime": 999,
+      "incidentType": "period"
+    }
+  ]
+}

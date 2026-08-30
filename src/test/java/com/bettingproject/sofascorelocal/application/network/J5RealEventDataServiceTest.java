@@ -1,6 +1,6 @@
 package com.bettingproject.sofascorelocal.application.network;
 
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV14Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV15Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportException;
@@ -165,7 +165,7 @@ class J5RealEventDataServiceTest {
                 canonicalStore,
                 dataStore,
                 new EventStatisticsV2Parser(),
-                new EventIncidentsV14Parser(),
+                new EventIncidentsV15Parser(),
                 new EventLineupsV2Parser(),
                 coordinator,
                 providerSupervisor);
@@ -202,7 +202,7 @@ class J5RealEventDataServiceTest {
         assertThat(observations.getFirst().completeness().status())
                 .isEqualTo(J5CompletenessStatus.UNAVAILABLE);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV15Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -233,6 +233,47 @@ class J5RealEventDataServiceTest {
         assertThat(pauses).containsExactly(
                 Duration.ofSeconds(3),
                 Duration.ofSeconds(3));
+    }
+
+    @Test
+    void continuesToLineupsAfterParsingEmptyShootoutActionArraysWithV15()
+            throws Exception {
+        when(campaign.execute(any())).thenAnswer(invocation -> {
+            J5EventDataProviderRequest request = invocation.getArgument(0);
+            operations.add("transport:" + request.endpointType());
+            String body = request.endpointType() == SofascoreEndpointType.EVENT_INCIDENTS
+                    ? fixture("incidents-terminal-shootout-empty-actions.json")
+                    : fixtureFor(request.endpointType());
+            return response(request, 200, body);
+        });
+
+        var result = service.execute(claim());
+
+        assertThat(result.completed()).isTrue();
+        assertThat(result.terminalCode()).isEqualTo("COMPLETED");
+        assertThat(result.providerCallAttempts()).isEqualTo(3);
+        assertThat(result.endpoints())
+                .extracting(J5RealEndpointResult::endpointType)
+                .containsExactly(
+                        SofascoreEndpointType.EVENT_STATISTICS,
+                        SofascoreEndpointType.EVENT_INCIDENTS,
+                        SofascoreEndpointType.EVENT_LINEUPS);
+        assertThat(result.endpoints().get(1).completenessStatus())
+                .isEqualTo(J5CompletenessStatus.PARTIAL);
+        assertThat(observations.get(1).source().parserVersion())
+                .isEqualTo(EventIncidentsV15Parser.PARSER_VERSION);
+        assertThat(observations.get(1).data()).isInstanceOfSatisfying(
+                EventIncidents.class,
+                incidents -> {
+                    assertThat(incidents.incidents().getFirst().minute()).isEmpty();
+                    assertThat(incidents.incidents().get(1).minute()).isEmpty();
+                    assertThat(incidents.incidents().get(2).minute()).isEmpty();
+                });
+        assertThat(operations).containsSubsequence(
+                "normalized:EVENT_INCIDENTS",
+                "transport:EVENT_LINEUPS",
+                "normalized:EVENT_LINEUPS");
+        verify(campaign, times(3)).execute(any());
     }
 
     @Test
@@ -285,7 +326,7 @@ class J5RealEventDataServiceTest {
                 .extracting(J5RealEndpointResult::snapshotId)
                 .containsExactly(30L, 32L, 35L);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV15Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents.class,
                 incidents -> {
@@ -389,7 +430,7 @@ class J5RealEventDataServiceTest {
                         SofascoreEndpointType.EVENT_LINEUPS);
         assertThat(result.endpoints().get(1).warningCount()).isPositive();
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV15Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -452,7 +493,7 @@ class J5RealEventDataServiceTest {
                         SofascoreEndpointType.EVENT_INCIDENTS,
                         SofascoreEndpointType.EVENT_LINEUPS);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV15Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -506,7 +547,7 @@ class J5RealEventDataServiceTest {
                         SofascoreEndpointType.EVENT_INCIDENTS,
                         SofascoreEndpointType.EVENT_LINEUPS);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV15Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -568,7 +609,7 @@ class J5RealEventDataServiceTest {
                         J5CompletenessStatus.COMPLETE);
         assertThat(result.endpoints().get(1).warningCount()).isGreaterThanOrEqualTo(3);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV15Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -642,7 +683,7 @@ class J5RealEventDataServiceTest {
                         SofascoreEndpointType.EVENT_LINEUPS);
         assertThat(result.endpoints().get(1).warningCount()).isEqualTo(1);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV15Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -704,7 +745,7 @@ class J5RealEventDataServiceTest {
                         SofascoreEndpointType.EVENT_INCIDENTS,
                         SofascoreEndpointType.EVENT_LINEUPS);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV15Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -767,7 +808,7 @@ class J5RealEventDataServiceTest {
                         SofascoreEndpointType.EVENT_INCIDENTS,
                         SofascoreEndpointType.EVENT_LINEUPS);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV15Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -802,7 +843,7 @@ class J5RealEventDataServiceTest {
         assertThat(result.terminalCode()).isEqualTo("COMPLETED");
         assertThat(result.providerCallAttempts()).isEqualTo(3);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV15Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -1124,7 +1165,7 @@ class J5RealEventDataServiceTest {
                 canonicalStore,
                 dataStore,
                 new EventStatisticsV2Parser(),
-                new EventIncidentsV14Parser(),
+                new EventIncidentsV15Parser(),
                 new EventLineupsV2Parser(),
                 coordinator,
                 providerSupervisor,

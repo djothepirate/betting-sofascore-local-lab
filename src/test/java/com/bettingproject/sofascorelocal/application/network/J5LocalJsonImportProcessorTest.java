@@ -1,10 +1,11 @@
 package com.bettingproject.sofascorelocal.application.network;
 
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV14Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV15Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
+import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessStatus;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservation;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataPersistenceResult;
@@ -21,6 +22,7 @@ import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Instant;
@@ -101,7 +103,7 @@ class J5LocalJsonImportProcessorTest {
                 canonicalStore,
                 dataStore,
                 new EventStatisticsV2Parser(),
-                new EventIncidentsV14Parser(),
+                new EventIncidentsV15Parser(),
                 new EventLineupsV2Parser(),
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
@@ -139,8 +141,37 @@ class J5LocalJsonImportProcessorTest {
                         SofascoreEndpointType.EVENT_LINEUPS);
         assertThat(observations).hasSize(3);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV15Parser.PARSER_VERSION);
         verify(canonicalStore, times(2)).findLatestByCanonicalId(IDENTITY.value());
+    }
+
+    @Test
+    void acceptsEmptyShootoutActionArraysThroughTheZeroNetworkImportPath()
+            throws IOException {
+        J5LocalJsonImportProcessingPlan prepared = processor.prepare(
+                IDENTITY.value(),
+                EVENT_ID,
+                payload("{\"statistics\":[]}"),
+                payload(fixture("incidents-terminal-shootout-empty-actions.json")),
+                payload("{\"confirmed\":false}"));
+
+        J5LocalJsonImportProcessingResult result = processor.execute(prepared, () -> true);
+
+        assertThat(result.localJsonImports()).isEqualTo(3);
+        assertThat(result.endpoints().get(1).completenessStatus())
+                .isEqualTo(J5CompletenessStatus.PARTIAL);
+        assertThat(observations.get(1).source().parserVersion())
+                .isEqualTo(EventIncidentsV15Parser.PARSER_VERSION);
+        assertThat(observations.get(1).data()).isInstanceOfSatisfying(
+                EventIncidents.class,
+                incidents -> {
+                    assertThat(incidents.incidents().getFirst().minute()).isEmpty();
+                    assertThat(incidents.incidents().get(1).minute()).isEmpty();
+                    assertThat(incidents.incidents().get(2).minute()).isEmpty();
+                });
+        assertThat(rawSnapshots)
+                .extracting(RawManualCallSnapshot::acquisitionMode)
+                .containsOnly(RawSnapshotAcquisitionMode.MANUAL_LOCAL_JSON_IMPORT);
     }
 
     @Test
@@ -164,7 +195,7 @@ class J5LocalJsonImportProcessorTest {
         assertThat(result.endpoints().get(1).endpointType())
                 .isEqualTo(SofascoreEndpointType.EVENT_INCIDENTS);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV14Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV15Parser.PARSER_VERSION);
         assertThat(observations.get(1).data())
                 .isInstanceOfSatisfying(
                         com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents.class,
@@ -449,5 +480,13 @@ class J5LocalJsonImportProcessorTest {
 
     private static RawPayloadEvidence payload(String json) {
         return RawPayloadEvidence.capture(json.getBytes(StandardCharsets.UTF_8));
+    }
+
+    private String fixture(String name) throws IOException {
+        try (var input = getClass().getResourceAsStream("/fixtures/provider-j5/" + name)) {
+            return new String(
+                    java.util.Objects.requireNonNull(input).readAllBytes(),
+                    StandardCharsets.UTF_8);
+        }
     }
 }

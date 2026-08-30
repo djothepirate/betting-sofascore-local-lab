@@ -447,3 +447,67 @@ runtime `exports/j8` reste ignoré par Git. Un éventuel rapport final sous `doc
 - J8 ne compare pas à une source de contrôle externe et ne prétend pas mesurer l'exactitude que le
   corpus local ne peut pas prouver ;
 - la décision de maintien, abandon ou intégration appartient à J9 et au propriétaire.
+
+## 15. Campagnes correctives postérieures à une fenêtre gelée
+
+Le ledger est append-only : une campagne J3/J4/J5 corrective ultérieure apparaît dans une
+agrégation sans fenêtre dès que son horodatage est inférieur à `asOf`. Elle ne modifie jamais une
+campagne, unité, tentative ou issue historique. Un rapport gelé reste reproductible avec sa
+fenêtre demi-ouverte et son `asOf` exacts ; une lecture « tout historique » postérieure constitue
+une population différente et porte donc normalement un autre hash.
+
+Une qualification corrective n'est pas un retry du benchmark lorsqu'elle possède sa propre
+autorisation, son propre `requestId` et reste extérieure à la fenêtre exclusive initiale. Elle
+doit être documentée séparément et ne peut ni reclasser une ancienne unité, ni transformer
+rétroactivement un état `PARTIAL` en `MEASURED`.
+
+WO-017 illustre cette séparation : la campagne J5 corrective V15 a créé trois nouvelles
+tentatives postérieures, tandis que la fenêtre J8 du 2026-08-30 conserve ses dix-neuf tentatives,
+son résultat incidents V14 et son hash de population. La déduplication brute vers le snapshot 717
+n'autorise aucune réécriture de l'unité historique ; elle produit une occurrence et une
+observation V15 nouvelles dans la campagne corrective.
+
+## 16. Populations de qualification du 2026-08-30
+
+Deux fenêtres J8 distinctes démontrent l'append-only et la reproductibilité. La première,
+`[2026-08-30T03:39:12.086771Z,2026-08-30T04:32:04.339732Z)`, conserve dix-neuf tentatives et un
+rapport `PARTIAL` après l'arrêt terminal du parseur incidents V14. Ni V15, ni la campagne
+corrective WO-017, ni la seconde fenêtre ne réécrivent cette population ou son hash.
+
+La seconde fenêtre,
+`[2026-08-30T09:24:51.0887925Z,2026-08-30T09:44:03.2695965Z)`, contient quatre campagnes, vingt
+unités, vingt tentatives, vingt réponses et vingt issues `PARSED`. Elle couvre les six endpoints et
+produit `MEASURED / FULL_ATTEMPT_LEDGER`. Son hash de population est
+`c61b3ef3a9ac12f94d787da8c396dae58e4208a6f04aa240538e38eac5ab4726`; deux rendus Markdown au
+même `from/to/asOf` sont byte-identiques, 15 202 octets et SHA-256
+`ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25`.
+
+Le dossier ciblé est direct et exploitable mais non strictement complet : statistiques
+`COMPLETE`, incidents V15 `PARTIAL` et compositions `PARTIAL`. Les formules figées produisent seize
+appels de découverte, quatre appels marginaux et vingt appels effectifs par dossier exploitable.
+Les changements tardifs restent `NOT_MEASURED` dans cette fenêtre exclusive; une cohorte J6 située
+hors fenêtre peut alimenter la revue humaine, jamais ces agrégats ni ce hash.
+
+Cette preuve rend les portes métriques automatiques soutenables, sans transformer les dimensions
+externes absentes. Exactitude et valeur analytique restent `NOT_MEASURED`, fraîcheur et risque
+restent `PARTIAL`, et maintenabilité reste `NOT_MEASURED`. L'état `MEASURED` automatique ne suffit
+pas à lui seul à clore J8 et ne constitue jamais une décision J9.
+
+## 17. Gel final et validation J8 du 2026-08-30
+
+Après décision propriétaire conditionnelle et audit formel, les sources ont été déclarées sous les
+libellés `SOFASCORE_DIRECT_LOCAL_ENDPOINT`, `CONTROL_SOURCE_ABSENT` et
+`EXTERNAL_COMPARISON_ABSENT`. La revue des trois rôles de dossier est close avec accessibilité et
+stabilité à `PASS`, complétude, fraîcheur, efficacité et risque à `PARTIAL`, puis exactitude,
+maintenabilité et valeur analytique à `NOT_MEASURED`. Ces limites sont des résultats, non des zéros
+ou des échecs inventés.
+
+Le dernier exporteur non-Web a forcé tous les connecteurs à `false` et déclaré zéro appel
+fournisseur. Son bloc automatique de 15 202 octets est byte-identique aux exports précédents,
+SHA-256 `ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25`, avec le hash de
+population `c61b3ef3a9ac12f94d787da8c396dae58e4208a6f04aa240538e38eac5ab4726`. Le rapport versionné
+`docs/benchmark/J8-BENCHMARK-REPORT-20260830.md` préserve ce préfixe byte pour byte et place la
+section humaine uniquement après `J8-AUTOMATIC-END`.
+
+J8 est donc `VALIDATED` et WO-016 est clôturé. Cette validation ne modifie aucune fenêtre
+historique, n'autorise aucune troisième campagne et laisse `J9_DECISION_TAKEN=NO`.

@@ -6,25 +6,31 @@ Ce runbook qualifie la lecture HTML et l'export Markdown J8 à partir de Postgre
 normale n'exécute aucun appel fournisseur et ne nécessite aucun opt-in réseau.
 
 ```text
-WORK_ORDER_STATUS=READY_FOR_HUMAN_QUALIFICATION
+WORK_ORDER_STATUS=VALIDATED
 PROVIDER_CALL_REQUIRED=NO
-PROVIDER_CAMPAIGN_AUTHORIZED=GO_CONSUMED_2026_08_30
-PROVIDER_CAMPAIGN_RESULT=PARTIAL_J5_FAILED_SCHEMA_INCOMPATIBLE
+PROVIDER_CAMPAIGN_AUTHORIZED=SECOND_GO_CONSUMED_2026_08_30
+PROVIDER_CAMPAIGN_RESULT=MEASURED_COMPLETED_20_OF_20
 PLAYWRIGHT_REQUIRED=NO
 POLLING_OR_SCHEDULING=NO
 LOAD_TEST=NO
-FINAL_BENCHMARK_REPORT=NOT_CREATED
+FINAL_BENCHMARK_REPORT=docs/benchmark/J8-BENCHMARK-REPORT-20260830.md
+HUMAN_TARGETED_REVIEW=PASS
+HUMAN_REVIEW_LIMITATIONS=PRESENT
+J9_DECISION_TAKEN=NO
 ```
 
 La section 10 conserve le protocole normatif d'une campagne fournisseur prospective. Le go explicite
-et borné du 2026-08-30 a été consommé par une seule exécution partielle ; il n'autorise aucune
-reprise. La réussite des tests, de la page ou de l'export ne vaut jamais un nouveau go.
+et borné initial du 2026-08-30 a produit une fenêtre partielle. Après qualification de V15, un
+second go distinct a été consommé par une seule exécution complète et mesurée. Aucun des deux go
+n'autorise une reprise ou une troisième campagne. La réussite des tests, de la page ou de l'export
+ne vaut jamais un nouveau go.
 
 ## 2. Prérequis
 
 - Windows 11, Java 25 et Docker Desktop ;
-- branche `codex/j8-benchmark` et Work Order 016 actif ;
-- PostgreSQL local sain, avec Flyway V27 ;
+- branche portant le Work Order 016 actif et le Work Order 017 validé puis archivé ;
+- PostgreSQL local sain, avec Flyway V28 ; V27 reste la migration ayant créé le ledger J8 et V28
+  autorise seulement le parseur incidents V15 ;
 - application liée exclusivement à `127.0.0.1:8087` ;
 - configurations J3, découverte tournoi, J4 et J5 désactivées et contrôles persistants `LOCKED` ;
 - aucun worker Playwright, appel fournisseur, campagne ou tâche planifiée en cours ;
@@ -60,8 +66,9 @@ git check-ignore .env exports\j8\control.md
 Select-String -Path .\src\main\resources\application.yml -Pattern '127\.0\.0\.1'
 ```
 
-Vérifier que V27 est append-only, que V1 à V26 n'ont pas été réécrites et qu'aucun rapport runtime,
-payload, secret, cookie ou jeton n'est suivi par Git.
+Vérifier que V27 et V28 sont append-only, que V1 à V26 n'ont pas été réécrites et qu'aucun rapport
+runtime, payload, secret, cookie ou jeton n'est suivi par Git. V28 ne doit contenir aucun DML ni
+modifier les cinq tables du ledger créé par V27.
 
 ## 4. Démarrage local sans réseau
 
@@ -350,14 +357,16 @@ le hash de population avant toute proposition de commit. Le rapport versionné e
 `request_key`, header, cookie, jeton, `.env`, log brut et artefact navigateur.
 
 À la fin, arrêter Playwright et l'application, reverrouiller tous les contrôles et vérifier les
-processus/ports. Les résultats réels sont consignés dans une preuve de validation distincte ; le
-rapport final n'est créé qu'après revue humaine. Dans l'état actuel :
+processus/ports. Les résultats réels sont consignés dans une preuve de validation distincte. La
+revue et le gel final ont été terminés le 2026-08-30 :
 
 ```text
 J8_PROVIDER_CAMPAIGN_GO=CONSUMED_2026_08_30
-J8_PROVIDER_CAMPAIGN=EXECUTED_ONCE
-J8_PROVIDER_CAMPAIGN_RESULT=PARTIAL_J5_FAILED_SCHEMA_INCOMPATIBLE
-J8_FINAL_BENCHMARK_REPORT=NOT_CREATED
+J8_PROVIDER_CAMPAIGN=SECOND_BOUNDED_EXECUTION_COMPLETED
+J8_PROVIDER_CAMPAIGN_RESULT=MEASURED_COMPLETED_20_OF_20
+J8_FINAL_BENCHMARK_REPORT=docs/benchmark/J8-BENCHMARK-REPORT-20260830.md
+J8_AUTOMATIC_BLOCK_SHA256=ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25
+J8_EXPORT_NETWORK_CALLS=0
 ```
 
 ### 10.5 Exécution du 2026-08-30
@@ -369,9 +378,9 @@ tournoi parsée, un détail J4 phase 2 parsé, puis deux appels J5. Les statisti
 `PARSED/COMPLETE`; les incidents sont `SCHEMA_INCOMPATIBLE`; les compositions sont
 `NOT_REACHED_AFTER_TERMINAL_FAILURE` et n'ont provoqué aucun appel.
 
-L'arrêt au premier incident a été respecté. Aucun retry, import, fallback ou seconde campagne n'est
-autorisé. Le double export local est byte-identique et rend `PARTIAL`; la configuration est
-reverrouillée, l'application et le worker sont arrêtés et le port 8087 est libre.
+L'arrêt au premier incident a été respecté. À ce terminal précis, aucun retry, import, fallback ou
+seconde campagne n'était autorisé. Le double export local est byte-identique et rend `PARTIAL`; la
+configuration est reverrouillée, l'application et le worker sont arrêtés et le port 8087 est libre.
 
 L'analyse hors ligne compare l'ancienne et la nouvelle preuve du même événement. Elle isole une
 nouvelle représentation observée des tirs au but non minutés : propriété d'actions absente dans
@@ -380,6 +389,74 @@ formes comme équivalentes dans le seul contexte terminal cohérent. Le transpor
 inchangés par J8 et l'instrumentation ne transforme pas le payload. Toute version corrective du
 parseur, migration append-only, reparse ou nouvelle campagne relève d'un Work Order et d'un go
 propriétaire séparés.
+
+### 10.6 Correctif incidents V15 postérieur à la campagne
+
+WO-017 ajoute `event-incidents-v15` et Flyway V28 sans modifier la preuve historique. Une sonde
+locale en transaction PostgreSQL read-only a relu les octets exacts du snapshot 717 : SHA-256
+identique, résultat V15 `PARSED`, complétude `PARTIAL · 91%`, 35 incidents et zéro problème. Cette
+sonde n'a persisté ni observation, ni occurrence, ni résultat J8 et n'a effectué aucun transport.
+
+À cet instant, le résultat de campagne restait donc
+`event-incidents-v14 / SCHEMA_INCOMPATIBLE`, son coût et son hash de population restaient
+inchangés, et J8 restait `PARTIAL`. La readiness V15 n'autorisait ni reparse persistant, ni retry,
+ni seconde campagne fournisseur.
+
+Une qualification fournisseur V15 a ensuite été autorisée sous WO-017 et exécutée une seule fois
+par Codex sur instruction explicite du propriétaire. Elle a terminé `COMPLETED_LOCKED` après trois
+appels, parsé la réponse incidents dédupliquée vers le snapshot `717` sous V15 en
+`PARTIAL · 91%`, observation `324`, puis atteint les compositions `720`/`325`. Son ledger J5 est
+une nouvelle preuve prospective normale, extérieure à la fenêtre exclusive J8.
+
+Le résultat historique reste `event-incidents-v14 / SCHEMA_INCOMPATIBLE`; son coût, sa fenêtre et
+son hash de population restent inchangés, et cette première fenêtre J8 reste `PARTIAL`. Une lecture
+« tout historique » peut inclure la campagne corrective ; pour reproduire le rapport initial,
+utiliser obligatoirement les `from/to/asOf` gelés. Le go WO-017 est consommé et n'autorisait aucun
+autre appel sous WO-017.
+
+### 10.7 Seconde campagne J8 mesurée du 2026-08-30
+
+Après validation de WO-017, le propriétaire a donné un second go distinct pour un seul parcours
+J8 complet. La preuve est conservée dans
+`docs/validation/J8-SECOND-BOUNDED-CAMPAIGN-20260830.md`. La fenêtre exclusive est
+`[2026-08-30T09:24:51.0887925Z,2026-08-30T09:44:03.2695965Z)` et l'`asOf` est égal à sa borne
+supérieure.
+
+Le parcours a terminé quatre campagnes : quinze pages J3, une découverte tournoi, un détail J4
+phase 2 et trois familles J5. Les vingt unités portent chacune une tentative unique, une réponse
+HTTP 200 et une issue `PARSED`. J5 a produit statistiques `COMPLETE · 100%`, incidents
+`event-incidents-v15 / PARTIAL · 91,62%` et compositions `PARTIAL · 99,03%`. Aucun retry, import,
+fallback, arrêt opérateur ou tentative incomplète n'est présent.
+
+Deux exports non-Web lancés avec les mêmes `from/to/asOf` sont byte-identiques : 15 202 octets,
+SHA-256 `ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25` et hash de population
+`c61b3ef3a9ac12f94d787da8c396dae58e4208a6f04aa240538e38eac5ab4726`. Le rapport automatique est
+`MEASURED / FULL_ATTEMPT_LEDGER`, avec vingt réponses et vingt parsings compatibles sur vingt,
+zéro refus, 404, erreur opérationnelle ou tentative incomplète. Un dossier sur un est exploitable
+mais aucun n'est strictement complet; les coûts exacts sont seize appels de découverte, quatre
+appels marginaux et vingt appels effectifs par dossier exploitable.
+
+L'instance qualifiée a été arrêtée. Un redémarrage inerte a confirmé le verrou de démarrage J3,
+la découverte tournoi indisponible, les préparations J4/J5 désactivées, Playwright, polling et
+refresh à `false`; il a ensuite été arrêté et le port 8087 est libre. `.env` est inchangé. Ce
+résultat n'autorise aucune troisième campagne.
+
+### 10.8 Revue humaine ciblée et rapport gelé
+
+La préparation des trois candidats reste conservée dans
+`docs/validation/J8-TARGETED-HUMAN-REVIEW-READINESS-20260830.md`. La décision propriétaire du
+2026-08-30 accepte la revue bornée après audit formel avec les libellés
+`CONTROL_SOURCE_LABEL=CONTROL_SOURCE_ABSENT` et
+`EXTERNAL_COMPARISON_SOURCE=EXTERNAL_COMPARISON_ABSENT`. La preuve finale est
+`docs/validation/J8-TARGETED-HUMAN-REVIEW-20260830.md` : accessibilité et stabilité sont `PASS`,
+complétude, fraîcheur, efficacité et risque sont `PARTIAL`, et les dimensions externes non
+observables restent `NOT_MEASURED`.
+
+L'export final a été relancé avec la fenêtre et l'`asOf` gelés, tous les connecteurs forcés à
+`false` et zéro appel fournisseur. Le rapport
+`docs/benchmark/J8-BENCHMARK-REPORT-20260830.md` conserve ses 15 202 premiers octets byte-identiques
+au bloc automatique SHA-256 `ffed40714a7c13f79273d7ddfacd15b02fdd877a2e946f6b843ba63e6b8cfb25`;
+la section humaine est placée uniquement après le marqueur de fin.
 
 ## 11. Clôture
 
@@ -390,13 +467,16 @@ remplace jamais la campagne. Tout push, toute Pull Request et toute fusion vers 
 demande explicite séparée et ne constituent pas une preuve de clôture J8.
 
 ```text
-J8_CLOSURE_CRITERIA=NOT_MET
-J8_WORK_ORDER_STATUS=READY_FOR_HUMAN_QUALIFICATION
-J8_OWNER_CLOSURE_DECISION=NOT_GRANTED
+J8_CLOSURE_CRITERIA=MET
+J8_WORK_ORDER_STATUS=VALIDATED
+J8_OWNER_CLOSURE_DECISION=GRANTED_BY_OWNER_2026_08_30
+J8_FINAL_REPORT=docs/benchmark/J8-BENCHMARK-REPORT-20260830.md
+J8_FINAL_VALIDATION=docs/validation/J8-FINAL-VALIDATION-20260830.md
+ADDITIONAL_PROVIDER_CAMPAIGN_AUTHORIZED=NO
+J9_DECISION_TAKEN=NO
 ```
 
-La clôture exige que les six lignes suivantes soient simultanément prouvées et reproduites
-exactement. Elles ne constituent pas l'état courant de cette readiness :
+Les six lignes suivantes sont simultanément prouvées et constituent le bloc de clôture courant :
 
 ```text
 COMPLETENESS_METRICS=AVAILABLE

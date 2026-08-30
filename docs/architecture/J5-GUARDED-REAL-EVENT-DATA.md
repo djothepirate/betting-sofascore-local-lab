@@ -9,10 +9,25 @@ NOT_PRODUCTION_APPROVED
 NO_CRITICAL_DEPENDENCY
 V13_PROVIDER_SCHEMA_VALIDATED=YES
 V13_PROVIDER_SCHEMA_VALIDATION_SCOPE=EVENTS_16691018_AND_16851672
-CURRENT_INCIDENT_PARSER=event-incidents-v14
+CURRENT_INCIDENT_PARSER=event-incidents-v15
 V14_PROVIDER_SCHEMA_VALIDATED=YES_OWNER_LOCAL_JSON_IMPORT
 V14_PROVIDER_SCHEMA_VALIDATION_SCOPE=EVENT_16809018_OBSERVATIONS_567_AND_570
 V14_HUMAN_FUNCTIONAL_QUALIFICATION=PASS
+V15_TECHNICAL_READINESS=PASS_BOUNDED_EMPTY_ACTION_ARRAY_RULE
+V15_EXACT_STORED_RESPONSE_READ_ONLY_PROBE=PARSED_PARTIAL_91
+V15_PROVIDER_SCHEMA_VALIDATED=YES_BOUNDED_EVENT_16691018
+V15_PROVIDER_QUALIFICATION=PASS_BY_OWNER_AUTHORIZED_CODEX_EXECUTION_2026_08_30
+V15_PROVIDER_CALLS_DURING_IMPLEMENTATION_AND_TESTS=0
+V15_PROVIDER_CALLS_DURING_AUTHORIZED_QUALIFICATION=3
+V15_EMPTY_ARRAY_VARIANT_REOBSERVED=YES_RAW_DEDUPLICATED_TO_SNAPSHOT_717
+V15_INCIDENT_OBSERVATION=324_PARTIAL_91_164_OF_179_35_INCIDENTS
+V15_LINEUPS_REACHED=YES_SNAPSHOT_720_OBSERVATION_325_PARTIAL_99
+V15_PERSISTED_HISTORICAL_REPARSE=NO
+V15_WORK_ORDER_STATUS=VALIDATED_COMPLETED
+V15_OWNER_CLOSURE=AUTHORIZED_2026_08_30
+V15_WORK_ORDER_LOCATION=docs/work_orders/completed
+V15_ADDITIONAL_PROVIDER_CALL_AUTHORIZED=NO
+J8_HISTORICAL_INCIDENT_RESULT=V14_SCHEMA_INCOMPATIBLE_UNCHANGED
 V12_OFFLINE_QUALIFICATION=PASS_33_INCIDENTS_14_UNMINUTED_SHOOTOUTS
 V13_LEAVING_FIELD_OFFLINE_QUALIFICATION=PASS_EXACT_CARD_REASON
 V12_REAL_QUALIFICATION=PASS_UNDER_V13_EVENT_16691018_SNAPSHOT_189_OBSERVATION_100
@@ -61,15 +76,28 @@ une séance terminale dont les quatorze tirs au but, ainsi que le marqueur `PEN`
 minute exploitable. V12 traite hors ligne cette forme sans convertir l'ordre des tireurs en temps
 de jeu. Une observation opérateur plus récente ajoute le motif exact de carton `Leaving field` ;
 V13 hérite intégralement de V12 et ajoute uniquement ce libellé au vocabulaire fermé. Deux
-campagnes humaines ont depuis qualifié le parseur courant : `16691018` pour la séance non minutée,
+campagnes humaines ont alors qualifié le parseur V13 courant à cette date : `16691018` pour la séance non minutée,
 avec poursuite jusqu'aux compositions, puis `16851672` pour le carton `Leaving field`, également
-jusqu'aux compositions. Le statut fournisseur courant est donc `YES` dans cette portée bornée.
+jusqu'aux compositions. Le statut fournisseur V13 était donc `YES` dans cette portée bornée.
 Les chemins techniques de complétude restent persistés mais ne sont plus rendus dans les panneaux
 incidents et compositions ; badges, compteurs et tables restent inchangés. Le contrôle visuel final
 le confirme. Le propriétaire a également attesté le reverrouillage de la configuration et les
 états J4/J5 `LOCKED` après redémarrage ; l'absence de listener sur `127.0.0.1:8087` confirme l'arrêt
 final. Les Work Orders de parseur historiques sont `VALIDATED` et archivables ; ce statut ne
 valait pas, a lui seul, qualification du nouveau transport Playwright WO-015.
+
+La campagne J8 du 2026-08-30 a ensuite conservé une nouvelle réponse incidents dont les tentatives
+terminales non minutées portent un tableau d'actions vide. WO-017 introduit le parseur V15 : dans
+le seul contexte terminal déjà cohérent de V12, propriété absente et tableau exactement vide
+représentent la même absence de source auxiliaire. Une sonde read-only des octets du snapshot 717
+avait d'abord rendu `PARSED/PARTIAL · 91%` sans persistance.
+
+Une campagne fournisseur corrective distincte, autorisée ensuite par le propriétaire et exécutée
+une seule fois par Codex, a dédupliqué sa réponse incidents vers le même snapshot 717. V15 a
+persisté l'observation 324, `PARTIAL · 91%`, `164/179` signaux et 35 incidents, puis la campagne a
+atteint les compositions 720/325 et terminé `COMPLETED_LOCKED` après trois appels sans retry. La
+compatibilité fournisseur V15 est donc validée uniquement dans cette portée bornée. La
+classification V14 et le ledger de la fenêtre J8 historique restent immuables.
 
 ### 1.1 Transport courant WO-015
 
@@ -256,7 +284,7 @@ Pour chaque famille, qu'elle soit acquise directement ou importée localement :
    reste immuable et le résultat du parseur courant est porté uniquement par l'observation
    normalisée append-only.
 
-Les parseurs courants sont `event-statistics-v2`, `event-incidents-v14` et `event-lineups-v2`.
+Les parseurs courants sont `event-statistics-v2`, `event-incidents-v15` et `event-lineups-v2`.
 L'identifiant d'événement vient du claim et non du JSON. Les champs inconnus génèrent au plus 256
 avertissements.
 Une liste vide structurellement valide reste `EMPTY_VALID`; une absence facultative mesurée reste
@@ -392,6 +420,16 @@ reste distincte du marqueur terminal `ET` et est conservée sans traduction. Une
 `isLive=false` explicite produit `SCHEMA_INCOMPATIBLE`; l'absence de `isLive` reste une donnée
 partielle mesurée. La migration append-only V26 autorise V14 sans colonne nouvelle et sans
 réécrire les observations V1–V25.
+
+`event-incidents-v15` conserve toutes les règles V14 et ne modifie que la représentation admise de
+l'absence d'action auxiliaire dans la séance terminale non minutée déjà cohérente de V12. Une
+propriété `footballPassingNetworkAction` absente et un tableau JSON exactement vide sont
+équivalents dans ce seul contexte, y compris lorsqu'ils coexistent entre tentatives. JSON `null`,
+les autres types, tout tableau non vide incohérent, les séquences ou scores contradictoires et une
+séance mêlant une tentative effectivement minutée à une tentative non minutée restent bloquants.
+Aucune minute n'est déduite de l'ordre. La migration append-only V28 ajoute seulement V15 à la
+contrainte fermée de provenance ; elle ne réécrit aucune observation, occurrence, preuve J8 ou
+donnée V1–V27.
 
 La déduplication brute est indépendante du parseur courant. Une réponse incidents identique peut
 donc résoudre un snapshot V2 historiquement `SCHEMA_INCOMPATIBLE` alors que V4 la parse avec
@@ -539,7 +577,7 @@ identifie exactement quinze absences temporelles : le marqueur `PEN` et quatorze
 `penaltyShootout`. Les sept tentatives ratées omettent aussi simultanément `reason` et
 `description`, mais ces champs facultatifs ne provoquent aucun problème de schéma.
 
-Le même payload passe sous V12 puis sous le parseur courant V13 avec 33 incidents, quatorze tirs au
+Le même payload passe sous V12 puis sous le parseur V13 alors courant avec 33 incidents, quatorze tirs au
 but, quinze avertissements `PROVIDER_SHOOTOUT_MINUTE_ABSENT`, aucune minute inventée et une
 complétude `PARTIAL`. Le retest humain V13 de `16691018` termine ensuite `COMPLETED_LOCKED` après
 exactement trois appels : snapshot 188 indisponible, snapshot incidents 189 / observation 100 à
@@ -555,3 +593,17 @@ observations 102/103/104 ; incidents est `COMPLETE · 81/81` et conserve `Leavin
 observée. La liste brute des chemins manquants n'est plus rendue dans les panneaux incidents et
 compositions, sans modifier les rapports persistés ni leurs tables. Les captures finales confirment
 ce rendu, le maintien des contenus, le reverrouillage J4/J5 et l'arrêt de l'instance de contrôle.
+
+La qualification corrective V15 du 2026-08-30 porte à nouveau sur Cittadella — Atalanta U23
+(`16691018`). Les statistiques ont réutilisé `716`/`322` en `COMPLETE · 100%`; les incidents ont
+réutilisé les octets du snapshot `717` mais créé l'observation append-only `324` sous
+`event-incidents-v15`, `PARTIAL · 91%`, avec 35 incidents et `164/179` signaux ; les compositions
+ont été atteintes dans `720`/`325`, `PARTIAL · 99%`. Le passage jusqu'aux compositions confirme
+que la règle V15 ne transforme plus cette représentation cohérente en arrêt terminal.
+
+La déduplication vers le snapshot 717 réobserve exactement les quatorze tableaux d'actions vides
+de la réponse J8. Elle ne réécrit ni sa classification V14, ni l'unité historique. La qualification
+n'élargit pas le contrat : tableaux non vides incohérents, types erronés, séances mixtes,
+séquences ou scores contradictoires restent couverts par les refus automatisés. Le go WO-017 est
+consommé et n'autorise aucun appel supplémentaire ; sa clôture demeure une décision propriétaire
+distincte.

@@ -68,7 +68,7 @@ public class EventIncidentsV12Parser extends EventIncidentsV11Parser {
         }
     }
 
-    private static boolean acceptsMissingMinute(
+    private boolean acceptsMissingMinute(
             String type,
             JsonNode item,
             JsonNode allItems) {
@@ -79,7 +79,7 @@ public class EventIncidentsV12Parser extends EventIncidentsV11Parser {
                 || ("period".equals(type) && isExactTerminalPenMarker(item));
     }
 
-    private static boolean coherentUnminutedTerminalShootout(JsonNode allItems) {
+    private boolean coherentUnminutedTerminalShootout(JsonNode allItems) {
         if (allItems == null || !allItems.isArray() || allItems.isEmpty()) {
             return false;
         }
@@ -148,12 +148,22 @@ public class EventIncidentsV12Parser extends EventIncidentsV11Parser {
                         penMarker.get("awayScore"), finalAttempt.get("awayScore").intValue());
     }
 
-    private static boolean isUnminutedShootoutAttempt(JsonNode item) {
+    private boolean isUnminutedShootoutAttempt(JsonNode item) {
         return item != null
                 && item.isObject()
                 && textEquals(item.get("incidentType"), "penaltyShootout")
                 && item.get("time") == null
-                && item.get("footballPassingNetworkAction") == null;
+                && acceptsUnminutedShootoutAction(item.get("footballPassingNetworkAction"));
+    }
+
+    /**
+     * Defines the exact auxiliary-action absence accepted for an unminuted shootout attempt.
+     *
+     * <p>The V12 historical contract accepts only an omitted property. Later versioned parsers may
+     * widen this single representation rule without changing the semantics of V12 through V14.</p>
+     */
+    protected boolean acceptsUnminutedShootoutAction(JsonNode action) {
+        return action == null;
     }
 
     private static boolean isExactTerminalPenMarker(JsonNode item) {
