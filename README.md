@@ -4,7 +4,40 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**, **J3 — Appel manuel**, **J4 — Événements**, **J5 — Statistiques**, **J6 — Historique** et **J7 — Export canonique**. **J8 — Benchmark** est implémenté en état `READY_FOR_HUMAN_QUALIFICATION` : sa migration V27, son ledger d'appels, ses agrégats locaux, sa page en lecture seule et son export Markdown sont prêts. Une campagne fournisseur J8 unique, lancée après un go propriétaire distinct, s'est arrêtée partiellement sur les incidents J5 ; elle n'autorise ni retry, ni seconde campagne, ni conclusion d'adoption J9. Le correctif borné WO-017 fournit désormais `event-incidents-v15` et Flyway V28 : propriété d'actions absente et tableau exactement vide sont équivalents uniquement dans une séance terminale non minutée déjà cohérente. Sa readiness technique n'a effectué aucun appel fournisseur, aucun reparse persistant et ne modifie pas l'issue historique J8/V14. J7 a franchi les portes techniques, la recette humaine et la revue de publication et appartient désormais à la baseline `main`. L'implémentation J4, son parcours hors ligne et ses deux sous-étapes réelles bornées sont qualifiés humainement. La sous-étape 1 a validé `16386245` et `16421052` après correction du retour par date. La sous-étape 2 a validé la saisie d'identifiants, le rappel manuel avec une nouvelle confirmation, la déduplication d'une réponse inchangée et la création d'une observation append-only lorsque `16412917` est passé de `notstarted` à `inprogress`. Après l'arrêt global, la configuration a été remise à l'état bloqué, ce verrouillage a été vérifié après redémarrage et l'application a été arrêtée gracieusement. La Pull Request `#8` a été fusionnée et le Work Order J4 est archivé `VALIDATED`. Les voies fournisseur restent désactivées par défaut ; une configuration locale explicitement armée peut réunir J3, J4 phase 2 et J5 dans une même instance, avec une seule requête fournisseur active et un délai minimal partagé. Une recette réelle a depuis achevé, dans un même démarrage, J4 phase 2, les trois familles J5 puis une collecte J3 paginée sur six pages. La forme J3 `scheduled` compte des compétitions disponibles pour la date et ne fournit pas de rencontres programmées ; le reparsage J4 l'indique désormais sans présenter son total nul de matchs comme une anomalie. Aucun appel fournisseur n’est exécuté par Maven, conformément au document de cadrage `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
+Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**,
+**J3 — Appel manuel**, **J4 — Événements**, **J5 — Statistiques**, **J6 — Historique** et
+**J7 — Export canonique**. **J8 — Benchmark** est implémenté en état
+`READY_FOR_HUMAN_QUALIFICATION` : sa migration V27, son ledger d'appels, ses agrégats locaux, sa
+page en lecture seule et son export Markdown sont prêts. Une campagne fournisseur J8 unique,
+lancée après un go propriétaire distinct, s'est arrêtée partiellement sur les incidents J5 ; elle
+n'autorise ni retry, ni seconde campagne, ni conclusion d'adoption J9.
+
+Le correctif borné WO-017 fournit `event-incidents-v15` et Flyway V28 : propriété d'actions absente
+et tableau exactement vide sont équivalents uniquement dans une séance terminale non minutée déjà
+cohérente. Après la readiness à zéro appel, une campagne fournisseur corrective distincte,
+explicitement autorisée par le propriétaire et exécutée une seule fois par Codex sur l'interface
+locale, a terminé `COMPLETED_LOCKED` avec trois appels. Les incidents de la réponse dédupliquée
+vers le snapshot `717` sont désormais parsés par V15 en `PARTIAL · 91%`, observation `324`, puis
+les compositions ont été atteintes. La preuve J8/V14 et sa fenêtre exclusive restent immuables ;
+WO-017 attend encore une décision propriétaire de clôture.
+
+J7 a franchi les portes techniques, la recette humaine et la revue de publication et appartient
+désormais à la baseline `main`. L'implémentation J4, son parcours hors ligne et ses deux
+sous-étapes réelles bornées sont qualifiés humainement. La sous-étape 1 a validé `16386245` et
+`16421052` après correction du retour par date. La sous-étape 2 a validé la saisie d'identifiants,
+le rappel manuel avec une nouvelle confirmation, la déduplication d'une réponse inchangée et la
+création d'une observation append-only lorsque `16412917` est passé de `notstarted` à
+`inprogress`. Après l'arrêt global, la configuration a été remise à l'état bloqué, ce verrouillage
+a été vérifié après redémarrage et l'application a été arrêtée gracieusement. La Pull Request `#8`
+a été fusionnée et le Work Order J4 est archivé `VALIDATED`. Les voies fournisseur restent
+désactivées par défaut ; une configuration locale explicitement armée peut réunir J3, J4 phase 2
+et J5 dans une même instance, avec une seule requête fournisseur active et un délai minimal
+partagé. Une recette réelle a depuis achevé, dans un même démarrage, J4 phase 2, les trois familles
+J5 puis une collecte J3 paginée sur six pages. La forme J3 `scheduled` compte des compétitions
+disponibles pour la date et ne fournit pas de rencontres programmées ; le reparsage J4 l'indique
+désormais sans présenter son total nul de matchs comme une anomalie. Aucun appel fournisseur n’est
+exécuté par Maven, conformément au document de cadrage
+`Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` et à l’ADR `ADR-SS-001`.
 
 Le Work Order `WO-SS-20260827-014` est `VALIDATED` depuis le `2026-08-28`. Il migre
 `EVENT_DETAILS` vers le runtime Playwright commun de WO-013, avec le `404` indisponible sans parsing
@@ -233,6 +266,13 @@ ont terminé ; J5 a parsé les statistiques puis s'est arrêté sans retry sur d
 final accepté et la décision de clôture ne sont pas acquis, le Work Order reste actif et aucun
 rapport final n'est versionné dans `docs/benchmark/`. La readiness technique préalable demeure
 verte avec 912 tests standards, 66 tests PostgreSQL/Testcontainers et zéro appel fournisseur.
+
+Une campagne J5 corrective ultérieure, instrumentée par le ledger J8 mais extérieure à cette
+fenêtre exclusive, a qualifié V15 sur les mêmes octets du snapshot incidents 717. Elle ne reclasse
+pas l'unité J8 historique, ne constitue pas un retry du benchmark et ne transforme pas son rapport
+`PARTIAL`. En revanche, une lecture dynamique de tout l'historique inclut normalement ce nouveau
+ledger ; toute comparaison reproductible doit donc continuer d'utiliser la fenêtre et l'`asOf`
+gelés.
 
 ## Ce qui est livré localement
 
@@ -881,6 +921,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Qualification V14 du marqueur live `Extra time`](docs/validation/J5-OBSERVED-V14-LIVE-EXTRA-TIME-PERIOD-20260827.md)
 - [Work Order V14 validé](docs/work_orders/completed/WO-SS-20260827-012-j5-live-extra-time-period.md)
 - [Readiness technique V15 des tableaux d'actions vides](docs/validation/J5-OBSERVED-V15-EMPTY-SHOOTOUT-ACTIONS-TECHNICAL-READINESS-20260830.md)
+- [Qualification fournisseur V15 bornée](docs/validation/J5-V15-PROVIDER-QUALIFICATION-20260830.md)
 - [Work Order correctif V15 actif](docs/work_orders/active/WO-SS-20260830-017-j5-incidents-empty-shootout-action-v15.md)
 - [Qualification hors ligne de la session combinée J4 phase 2 + J5](docs/validation/J4-J5-COMBINED-QUALIFICATION-SESSION-20260818.md)
 - [Work Order validé de qualification réelle J5](docs/work_orders/completed/WO-SS-20260815-006-j5-real-event-data-qualification.md)
@@ -1001,14 +1042,14 @@ J5_REAL_FIRST_CAMPAIGN_PROVIDER_CALLS=1
 J5_REAL_FIRST_STATISTICS_SNAPSHOT=30
 J5_REAL_LAST_SUCCESSFUL_CAMPAIGN_PROVIDER_CALLS=3
 J5_REAL_LATEST_FAILED_CAMPAIGN_PROVIDER_CALLS=2
-J5_REAL_STATISTICS_LATEST=V2_COMPLETE_SNAPSHOT_194_OBSERVATION_102_256_OF_256
+J5_REAL_STATISTICS_LATEST=V2_COMPLETE_SNAPSHOT_716_OBSERVATION_322_100_PERCENT
 J5_REAL_STATISTICS_UNAVAILABLE_RETEST=SNAPSHOT_118_CONTINUED_TO_INCIDENTS_AND_LINEUPS
-J5_REAL_INCIDENTS_LAST_PASS=V13_COMPLETE_SNAPSHOT_195_OBSERVATION_103_81_OF_81
-J5_REAL_INCIDENTS_LATEST=V13_COMPLETE_SNAPSHOT_195_EVENT_16851672
+J5_REAL_INCIDENTS_LAST_PASS=V15_PARTIAL_SNAPSHOT_717_OBSERVATION_324_164_OF_179
+J5_REAL_INCIDENTS_LATEST=V15_PARTIAL_SNAPSHOT_717_OBSERVATION_324_EVENT_16691018
 J5_REAL_INCIDENTS_CURRENT_PARSER=event-incidents-v15
 J5_REAL_SUBSTITUTION_PLAYERS=PASS_REAL_RENDERED
 J5_REAL_LAST_SUCCESSFUL_TERMINAL=COMPLETED_LOCKED
-J5_REAL_LINEUPS=V2_COMPLETE_SNAPSHOT_196_OBSERVATION_104_97_OF_97
+J5_REAL_LINEUPS=V2_PARTIAL_SNAPSHOT_720_OBSERVATION_325_99_PERCENT
 J5_HTTP_404_POLICY=ENDPOINT_UNAVAILABLE_CONTINUE_NO_RETRY
 J5_CORRECTIVE_V3_RETEST=PASS_REAL
 J5_CORRECTIVE_V4_RETEST=PASS_REAL_THREE_CALLS
@@ -1022,12 +1063,16 @@ J5_INCIDENT_CURRENT_PARSER=event-incidents-v15
 J5_INCIDENT_V14_STATUS=VALIDATED
 J5_INCIDENT_V14_HUMAN_FUNCTIONAL_QUALIFICATION=PASS
 J5_INCIDENT_V14_LIVE_EXTRA_TIME=EXACT_TEXT_ACCEPTED_WHEN_LIVE
-J5_REAL_INCIDENTS_LATEST_DIRECT=SCHEMA_INCOMPATIBLE_SNAPSHOT_717_EVENT_16691018
+J5_REAL_INCIDENTS_LATEST_DIRECT=V15_PARTIAL_SNAPSHOT_717_OBSERVATION_324_EVENT_16691018
+J5_INCIDENT_V14_J8_HISTORICAL_RESULT=SCHEMA_INCOMPATIBLE_SNAPSHOT_717_EVENT_16691018
 J5_INCIDENT_V15_EXACT_STORED_READ_ONLY_PROBE=PARSED_PARTIAL_91_SNAPSHOT_717
+J5_INCIDENT_V15_PROVIDER_QUALIFICATION=PASS_EVENT_16691018_SNAPSHOT_717_OBSERVATION_324
+J5_INCIDENT_V15_EMPTY_ARRAY_VARIANT_REOBSERVED=YES_BY_BYTE_IDENTICAL_SNAPSHOT_REUSE
 J5_INCIDENT_V15_PERSISTED_REPARSE=NO
-J5_PROVIDER_SCHEMA_CURRENT_STATUS=NOT_VALIDATED_PENDING_OWNER_REVIEW
+J5_PROVIDER_SCHEMA_CURRENT_STATUS=VALIDATED_BOUNDED_EVENT_16691018
 J5_INCIDENT_V14_HISTORICAL_QUALIFICATION=RETAINED_IN_ORIGINAL_BOUNDED_SCOPE
-J5_INCIDENT_CORRECTIVE_WORK_ORDER=WO_017_READY_FOR_HUMAN_QUALIFICATION
+J5_INCIDENT_CORRECTIVE_WORK_ORDER=WO_017_HUMAN_QUALIFICATION_PASS_PENDING_OWNER_CLOSURE
+J5_INCIDENT_ADDITIONAL_PROVIDER_CALL_AUTHORIZED=NO
 J5_INCIDENT_V6_STATUS=PASS_REAL_LENS_PSG
 J5_INCIDENT_V7_STATUS=PASS_REAL_AND_INHERITED_BY_V8_V9_V10_V11_V12_V13
 J5_INCIDENT_V7_FULL_OPERATOR_PAYLOAD=PASS_23_OF_23
@@ -1124,16 +1169,21 @@ atteint les trois familles J5 et rendu le carton `Off the ball foul` inchangé d
 La campagne V13 `16691018` a requalifié historiquement la séance non minutée et atteint les
 compositions après trois appels ; la campagne `16851672` a qualifié séparément le motif exact
 `Leaving field` et les trois familles. Ces qualifications restent valides dans leur corpus borné.
-La réponse incidents observée pendant J8 pour `16691018` utilise toutefois une variante avec des
-listes d'actions vides que V14 rejette. WO-017 introduit V15 et la sonde read-only des octets exacts
-du snapshot 717 rend `PARSED/PARTIAL · 91%`, sans persister de reparse ni altérer la campagne J8.
-La compatibilité fournisseur V15 reste donc `NOT_VALIDATED_PENDING_OWNER_REVIEW`; le lot historique
-de neuf captures conserve sa portée initiale. Après
-la campagne J8, la configuration locale a été reverrouillée, J4/J5 sont `LOCKED`, l'application et
-le worker ont été arrêtés et aucun listener n'est présent sur `127.0.0.1:8087`. Le fichier `.env`
-demeure ignoré, a été remis à ses valeurs réseau désactivées et n'est pas versionné. Le Work Order
-réel J5 historique reste `VALIDATED` et archivé dans `completed`. Le Work Order correctif WO-017
-reste actif en readiness et n'autorise aucun appel, retry ou nouvelle campagne.
+La réponse incidents observée pendant J8 pour `16691018` utilise une variante avec des listes
+d'actions vides que V14 rejette. WO-017 introduit V15 ; sa sonde read-only avait d'abord rendu les
+octets exacts du snapshot 717 `PARSED/PARTIAL · 91%` sans persistance. Après go propriétaire
+distinct, une seule campagne corrective a ensuite réobservé des octets dédupliqués vers ce même
+snapshot : l'observation V15 `324` conserve 35 incidents et `164/179` signaux, puis la campagne
+atteint les compositions dans le snapshot `720`, observation `325`, et termine
+`COMPLETED_LOCKED` après trois appels sans retry. La preuve J8/V14 reste immuable et sa fenêtre
+exclusive demeure `PARTIAL`.
+
+L'activation corrective a été limitée à l'arbre de processus du lanceur ; `.env` est resté
+inchangé et bloquant. Un redémarrage inerte a confirmé J5 `LOCKED` et sa préparation désactivée,
+puis l'application a été arrêtée sans listener résiduel sur `127.0.0.1:8087`. Le Work Order réel
+J5 historique reste `VALIDATED` et archivé dans `completed`. Le Work Order correctif WO-017 reste
+actif au statut `HUMAN_QUALIFICATION_PASS_PENDING_OWNER_CLOSURE`. Le go est consommé et
+n'autorise aucun nouvel appel.
 
 ## J6 : historique et sauvegarde/restauration validés
 

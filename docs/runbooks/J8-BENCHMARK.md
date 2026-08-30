@@ -390,10 +390,21 @@ locale en transaction PostgreSQL read-only a relu les octets exacts du snapshot 
 identique, résultat V15 `PARSED`, complétude `PARTIAL · 91%`, 35 incidents et zéro problème. Cette
 sonde n'a persisté ni observation, ni occurrence, ni résultat J8 et n'a effectué aucun transport.
 
-Le résultat de campagne reste donc `event-incidents-v14 / SCHEMA_INCOMPATIBLE`, son coût et son
-hash de population restent inchangés, et J8 reste `PARTIAL`. La readiness V15 n'autorise ni reparse
-persistant, ni retry, ni seconde campagne fournisseur. Toute preuve prospective V15 exige un go
-propriétaire distinct.
+À cet instant, le résultat de campagne restait donc
+`event-incidents-v14 / SCHEMA_INCOMPATIBLE`, son coût et son hash de population restaient
+inchangés, et J8 restait `PARTIAL`. La readiness V15 n'autorisait ni reparse persistant, ni retry,
+ni seconde campagne fournisseur.
+
+Une qualification fournisseur V15 a ensuite été autorisée sous WO-017 et exécutée une seule fois
+par Codex sur instruction explicite du propriétaire. Elle a terminé `COMPLETED_LOCKED` après trois
+appels, parsé la réponse incidents dédupliquée vers le snapshot `717` sous V15 en
+`PARTIAL · 91%`, observation `324`, puis atteint les compositions `720`/`325`. Son ledger J5 est
+une nouvelle preuve prospective normale, extérieure à la fenêtre exclusive J8.
+
+Le résultat historique reste `event-incidents-v14 / SCHEMA_INCOMPATIBLE`; son coût, sa fenêtre et
+son hash de population restent inchangés, et J8 reste `PARTIAL`. Une lecture « tout historique »
+peut inclure la campagne corrective ; pour reproduire le rapport initial, utiliser obligatoirement
+les `from/to/asOf` gelés. Le go WO-017 est consommé et n'autorise aucun autre appel.
 
 ## 11. Clôture
 

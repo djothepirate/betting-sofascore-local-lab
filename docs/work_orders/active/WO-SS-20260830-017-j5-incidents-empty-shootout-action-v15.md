@@ -1,9 +1,10 @@
 # WO-SS-20260830-017 — Incidents J5 V15, tableau d'action vide pendant une séance terminale
 
-- **Statut :** `QUALIFICATION_EXECUTION_AUTHORIZED_NOT_RUN`
+- **Statut :** `HUMAN_QUALIFICATION_PASS_PENDING_OWNER_CLOSURE`
 - **Date :** 2026-08-30
 - **Date de démarrage :** 2026-08-30
-- **Qualification propriétaire :** `AUTHORIZED_2026-08-30T07:46:03Z`
+- **Qualification propriétaire :** `PASS_BY_OWNER_AUTHORIZED_CODEX_EXECUTION_2026-08-30`
+- **Campagne corrective fournisseur :** `AUTHORIZED_ONCE_AND_CONSUMED`
 - **Clôture :** `ACTIVE`
 - **Prérequis :** campagne J8 partielle et analyse bornée au commit `cfd536e`
 - **Base locale :** `cfd536e`
@@ -16,6 +17,7 @@
 - **Payload fournisseur ajouté à Git :** `NO`
 - **Appel fournisseur pendant l'implémentation :** `NOT_AUTHORIZED`
 - **Appel fournisseur pendant les tests automatisés :** `NOT_AUTHORIZED`
+- **Appels fournisseur pendant la qualification distincte :** `3_EXACT_NO_RETRY`
 - **Nouvel endpoint, URI, allowlist ou transport :** `NO`
 - **Polling, planification, live réseau, fallback ou retry :** `NOT_AUTHORIZED`
 - **Modification de l'ADR-SS-001 :** `NOT_REQUIRED_AFTER_EXPLICIT_REVIEW`
@@ -113,7 +115,9 @@ reste absente, son rendu reste `—` et les chemins manquants restent mesurés.
 - modification ou suppression des migrations V1 à V27 ;
 - réécriture automatique d'une observation historique ;
 - reparse persistant automatique du snapshot `717` ;
-- nouvelle campagne J5, import opérateur ou appel fournisseur ;
+- nouvelle campagne J5, import opérateur ou appel fournisseur pendant l'implémentation et la
+  readiness technique ; la qualification distincte autorisée puis consommée aux sections 11 à 13
+  ne modifie pas ce périmètre technique ;
 - relance de la campagne bornée J8 ;
 - assouplissement d'une autre structure incidents ;
 - adoption J9, qualification humaine ou clôture automatique de J8 ;
@@ -138,7 +142,7 @@ reste absente, son rendu reste `—` et les chemins manquants restent mesurés.
 - [x] `mvnw -Pintegration-tests verify` est vert ;
 - [x] `Verify-Local.ps1 -WithIntegrationTests` est vert sans appel fournisseur ;
 - [x] `docker compose --env-file .env config` et `git diff --check` sont verts ;
-- [x] le Work Order reste actif jusqu'à une décision propriétaire séparée de qualification.
+- [x] le Work Order reste actif jusqu'à une décision propriétaire séparée de clôture.
 
 ## 8. Livraison Git prévue
 
@@ -190,9 +194,10 @@ APPLICATION_OR_PLAYWRIGHT_WORKER_PROCESS=ABSENT
 SOFASCORE_NETWORK_CALLS_EXECUTED=NO
 ```
 
-Le correctif atteint la readiness technique mais ne qualifie pas encore un schéma fournisseur
-courant. WO-017 reste donc dans `active`, avec `Clôture=ACTIVE`. Aucune reprise de J8 ni écriture de
-reparse n'est autorisée.
+À l'issue de la readiness technique, le correctif ne qualifiait pas encore un schéma fournisseur
+courant. La qualification ultérieure de la section 13 a levé cette limite dans sa seule portée
+bornée ; WO-017 reste néanmoins dans `active`, avec `Clôture=ACTIVE`, dans l'attente d'une décision
+propriétaire séparée de clôture. Aucune reprise de J8 ni écriture de reparse n'est autorisée.
 
 ## 11. Autorisation propriétaire distincte de qualification fournisseur V15
 
@@ -259,3 +264,110 @@ ORIGINAL_J8_FROZEN_WINDOW_UNCHANGED=YES
 ORIGINAL_J8_PROVIDER_CAMPAIGN_RETRY=NO
 V15_QUALIFICATION_J5_LEDGER_CAMPAIGN=CREATED_AS_REQUIRED
 ```
+
+## 13. Qualification fournisseur V15 exécutée
+
+L'instruction propriétaire de la section 12 a été exécutée une fois le 2026-08-30, sans modifier
+`.env`. Seul l'arbre de processus du lanceur J5 a reçu l'opt-in fournisseur et Playwright ; J3,
+J4, la découverte tournoi, le polling, le scheduler et tout fallback sont restés désactivés. Codex
+a vérifié l'identité locale, préparé une seule campagne, consommé une seule confirmation fraîche
+et soumis une seule fois la voie fournisseur. La confirmation n'a été ni consignée ni versionnée.
+
+```text
+QUALIFICATION_EXECUTED_AT=2026-08-30T08:09:44.275218Z
+QUALIFICATION_EXECUTION_MODE=OWNER_AUTHORIZED_CODEX_LOCAL_UI_CONTROL
+ENV_FILE_MUTATION=NO
+TARGET_PROVIDER_EVENT_ID=16691018
+TARGET_CANONICAL_EVENT_ID=f4713f80-4769-3656-ba51-61d8ac1aa814
+CAMPAIGN_CONTROL_STATE=COMPLETED_LOCKED
+CAMPAIGN_TERMINAL_STATE=COMPLETED
+CAMPAIGN_TERMINAL_CODE=COMPLETED
+PROVIDER_CALLS=3
+PROVIDER_RETRY=NO
+SECOND_CAMPAIGN=NO
+FALLBACK=NO
+POLLING=NO
+```
+
+Les trois familles ont répondu en HTTP 200 et ont été parsées dans l'ordre imposé. La durée entre
+les départs successifs est restée supérieure ou égale à trois secondes. La réponse incidents est
+bit-identique au snapshot historique 717 : une nouvelle occurrence fournisseur dédupliquée et une
+nouvelle observation V15 ont été écrites sans reclasser le snapshot V14.
+
+| Famille | Tentative | Latence | Snapshot / occurrence | Parseur | Résultat | Observation |
+|---|---:|---:|---|---|---|---:|
+| `EVENT_STATISTICS` | 20 | 2 994 ms | `716 / 685` (`DEDUPLICATED`) | `event-statistics-v2` | `PARSED`, `COMPLETE · 100%` | 322 |
+| `EVENT_INCIDENTS` | 21 | 77 ms | `717 / 686` (`DEDUPLICATED`) | `event-incidents-v15` | `PARSED`, `PARTIAL · 91%` | 324 |
+| `EVENT_LINEUPS` | 22 | 132 ms | `720 / 687` (`INSERTED`) | `event-lineups-v2` | `PARSED`, `PARTIAL · 99%` | 325 |
+
+La preuve incidents normalisée contient 35 incidents et 164 signaux présents sur 179 attendus,
+avec 18 warnings de complétude. Le marqueur terminal `PEN` et les quatorze tirs au but conservent
+une minute absente, leurs séquences 1 à 14 et leurs scores ; aucun motif n'est inventé. Une sonde
+PostgreSQL structurelle en transaction `REPEATABLE READ READ ONLY`, terminée par rollback, compte
+exactement quatorze tentatives sans `time`, quatorze tableaux d'actions exactement vides, aucune
+propriété absente, aucun tableau non vide, aucun type erroné et un marqueur terminal `PEN` exact.
+Elle n'affiche ni ne persiste le payload.
+
+```text
+V15_CURRENT_RESPONSE_COMPATIBILITY=PASS
+EMPTY_ARRAY_VARIANT_REOBSERVED=YES_EXACT_DEDUPLICATED_RESPONSE
+INCIDENTS_SCHEMA_STATUS=PARSED
+INCIDENTS_PROBLEM_COUNT=0
+INCIDENTS_WARNING_COUNT=18
+INCIDENTS_COMPLETENESS=PARTIAL_91
+INCIDENTS_COUNT=35
+LINEUPS_REACHED_AFTER_INCIDENTS=YES
+HISTORICAL_J8_UNIT_CLASSIFICATION_REFERENCING_SNAPSHOT_717=event-incidents-v14_SCHEMA_INCOMPATIBLE_UNCHANGED
+PERSISTED_REPARSE_OF_HISTORICAL_OBSERVATION=NO
+```
+
+### 13.1 Ledger J8 et séparation de la fenêtre historique
+
+Le parcours a produit, comme prévu par V27, la campagne d'audit distincte
+`c9caf9b1-2495-4612-9e05-b9269aebaa66`, de type `J5_EVENT_DATA` et mode
+`GUARDED_PROVIDER`. Ses trois unités, trois tentatives, trois occurrences et trois résultats sont
+cohérents. Les statuts, latences, snapshots, occurrences et versions de parseur correspondent
+exactement entre le résultat d'unité et l'occurrence associée.
+
+Avant cette campagne corrective, le ledger gelé comptait quatre campagnes, dix-neuf tentatives et
+vingt résultats d'unité. Ces comptes restent inchangés lorsqu'on exclut la nouvelle campagne. La
+fenêtre exclusive et le rapport J8 historiques ne sont pas recalculés ; seul l'agrégat dynamique
+« tout l'historique » peut désormais inclure la preuve corrective postérieure.
+
+```text
+V15_QUALIFICATION_J8_CAMPAIGN_ID=c9caf9b1-2495-4612-9e05-b9269aebaa66
+V15_QUALIFICATION_J8_CAMPAIGN=COMPLETED_3_OF_3
+V15_QUALIFICATION_ATTEMPTS=3
+V15_QUALIFICATION_INCOMPLETE_ATTEMPTS=0
+PREEXISTING_J8_LEDGER=4_CAMPAIGNS_19_ATTEMPTS_20_UNIT_RESULTS
+ORIGINAL_J8_EXCLUSIVE_WINDOW_UNCHANGED=YES
+ORIGINAL_J8_RESULT=PARTIAL_V14_SCHEMA_INCOMPATIBLE_UNCHANGED
+ORIGINAL_J8_CAMPAIGN_RETRY=NO
+```
+
+### 13.2 Reverrouillage et état de livraison
+
+Après le terminal, l'application et le worker ont été arrêtés gracieusement. Les huit valeurs
+locales étaient toujours bloquées dans `.env`. Un redémarrage normal, sans lanceur Playwright, a
+confirmé `LOCKED`, la liste explicite des bloqueurs, le bouton de préparation désactivé et
+l'absence de confirmation. L'application a ensuite été arrêtée ; le port 8087 est libre et la
+seule JVM restante est celle d'Eclipse, étrangère au worktree.
+
+```text
+LOCAL_CONFIGURATION_RELOCKED=YES_WITHOUT_ENV_FILE_MUTATION
+J5_LOCKED_AFTER_INERT_RESTART=PASS
+J5_PREPARE_DISABLED_AFTER_INERT_RESTART=YES
+PLAYWRIGHT_WORKER_AFTER_STOP=ABSENT
+APPLICATION_AFTER_STOP=ABSENT
+PORT_8087_AFTER_STOP=FREE
+ADDITIONAL_PROVIDER_CALL_AUTHORIZED=NO
+WORK_ORDER_STATUS=HUMAN_QUALIFICATION_PASS_PENDING_OWNER_CLOSURE
+OWNER_CLOSURE_DECISION=NOT_GRANTED
+CLOTURE=ACTIVE
+```
+
+Le go est consommé. Aucun reparse persistant supplémentaire, nouvelle campagne, retry ou appel
+fournisseur n'est autorisé. La preuve détaillée est conservée dans
+`docs/validation/J5-V15-PROVIDER-QUALIFICATION-20260830.md`. WO-017 reste actif jusqu'à une décision
+propriétaire séparée de clôture ; J8 reste `READY_FOR_HUMAN_QUALIFICATION` et aucune décision J9
+n'est prise.

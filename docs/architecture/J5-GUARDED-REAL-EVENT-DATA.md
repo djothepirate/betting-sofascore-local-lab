@@ -15,9 +15,16 @@ V14_PROVIDER_SCHEMA_VALIDATION_SCOPE=EVENT_16809018_OBSERVATIONS_567_AND_570
 V14_HUMAN_FUNCTIONAL_QUALIFICATION=PASS
 V15_TECHNICAL_READINESS=PASS_BOUNDED_EMPTY_ACTION_ARRAY_RULE
 V15_EXACT_STORED_RESPONSE_READ_ONLY_PROBE=PARSED_PARTIAL_91
-V15_PROVIDER_SCHEMA_VALIDATED=NO_PENDING_OWNER_REVIEW
-V15_PERSISTED_REPARSE=NO
+V15_PROVIDER_SCHEMA_VALIDATED=YES_BOUNDED_EVENT_16691018
+V15_PROVIDER_QUALIFICATION=PASS_BY_OWNER_AUTHORIZED_CODEX_EXECUTION_2026_08_30
 V15_PROVIDER_CALLS_DURING_IMPLEMENTATION_AND_TESTS=0
+V15_PROVIDER_CALLS_DURING_AUTHORIZED_QUALIFICATION=3
+V15_EMPTY_ARRAY_VARIANT_REOBSERVED=YES_RAW_DEDUPLICATED_TO_SNAPSHOT_717
+V15_INCIDENT_OBSERVATION=324_PARTIAL_91_164_OF_179_35_INCIDENTS
+V15_LINEUPS_REACHED=YES_SNAPSHOT_720_OBSERVATION_325_PARTIAL_99
+V15_PERSISTED_HISTORICAL_REPARSE=NO
+V15_WORK_ORDER_STATUS=HUMAN_QUALIFICATION_PASS_PENDING_OWNER_CLOSURE
+V15_ADDITIONAL_PROVIDER_CALL_AUTHORIZED=NO
 J8_HISTORICAL_INCIDENT_RESULT=V14_SCHEMA_INCOMPATIBLE_UNCHANGED
 V12_OFFLINE_QUALIFICATION=PASS_33_INCIDENTS_14_UNMINUTED_SHOOTOUTS
 V13_LEAVING_FIELD_OFFLINE_QUALIFICATION=PASS_EXACT_CARD_REASON
@@ -77,14 +84,18 @@ le confirme. Le propriétaire a également attesté le reverrouillage de la conf
 final. Les Work Orders de parseur historiques sont `VALIDATED` et archivables ; ce statut ne
 valait pas, a lui seul, qualification du nouveau transport Playwright WO-015.
 
-La campagne J8 du 2026-08-30 a ensuite conservé une nouvelle réponse incidents dont les
-tentatives terminales non minutées portent un tableau d'actions vide. WO-017 introduit le parseur
-V15 : dans le seul contexte terminal déjà cohérent de V12, propriété absente et tableau exactement
-vide représentent désormais la même absence de source auxiliaire. Une sonde en lecture seule des
-octets exacts du snapshot 717 rend `PARSED/PARTIAL · 91%` sous V15, sans reparse persistant ni
-mutation du ledger J8. La campagne historique reste donc enregistrée sous V14 avec
-`SCHEMA_INCOMPATIBLE`, et la compatibilité fournisseur V15 reste à qualifier par une décision
-propriétaire distincte ; aucun nouvel appel n'est autorisé par cette readiness technique.
+La campagne J8 du 2026-08-30 a ensuite conservé une nouvelle réponse incidents dont les tentatives
+terminales non minutées portent un tableau d'actions vide. WO-017 introduit le parseur V15 : dans
+le seul contexte terminal déjà cohérent de V12, propriété absente et tableau exactement vide
+représentent la même absence de source auxiliaire. Une sonde read-only des octets du snapshot 717
+avait d'abord rendu `PARSED/PARTIAL · 91%` sans persistance.
+
+Une campagne fournisseur corrective distincte, autorisée ensuite par le propriétaire et exécutée
+une seule fois par Codex, a dédupliqué sa réponse incidents vers le même snapshot 717. V15 a
+persisté l'observation 324, `PARTIAL · 91%`, `164/179` signaux et 35 incidents, puis la campagne a
+atteint les compositions 720/325 et terminé `COMPLETED_LOCKED` après trois appels sans retry. La
+compatibilité fournisseur V15 est donc validée uniquement dans cette portée bornée. La
+classification V14 et le ledger de la fenêtre J8 historique restent immuables.
 
 ### 1.1 Transport courant WO-015
 
@@ -580,3 +591,17 @@ observations 102/103/104 ; incidents est `COMPLETE · 81/81` et conserve `Leavin
 observée. La liste brute des chemins manquants n'est plus rendue dans les panneaux incidents et
 compositions, sans modifier les rapports persistés ni leurs tables. Les captures finales confirment
 ce rendu, le maintien des contenus, le reverrouillage J4/J5 et l'arrêt de l'instance de contrôle.
+
+La qualification corrective V15 du 2026-08-30 porte à nouveau sur Cittadella — Atalanta U23
+(`16691018`). Les statistiques ont réutilisé `716`/`322` en `COMPLETE · 100%`; les incidents ont
+réutilisé les octets du snapshot `717` mais créé l'observation append-only `324` sous
+`event-incidents-v15`, `PARTIAL · 91%`, avec 35 incidents et `164/179` signaux ; les compositions
+ont été atteintes dans `720`/`325`, `PARTIAL · 99%`. Le passage jusqu'aux compositions confirme
+que la règle V15 ne transforme plus cette représentation cohérente en arrêt terminal.
+
+La déduplication vers le snapshot 717 réobserve exactement les quatorze tableaux d'actions vides
+de la réponse J8. Elle ne réécrit ni sa classification V14, ni l'unité historique. La qualification
+n'élargit pas le contrat : tableaux non vides incohérents, types erronés, séances mixtes,
+séquences ou scores contradictoires restent couverts par les refus automatisés. Le go WO-017 est
+consommé et n'autorise aucun appel supplémentaire ; sa clôture demeure une décision propriétaire
+distincte.

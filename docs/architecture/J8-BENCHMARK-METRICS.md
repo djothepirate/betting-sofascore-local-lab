@@ -447,3 +447,22 @@ runtime `exports/j8` reste ignoré par Git. Un éventuel rapport final sous `doc
 - J8 ne compare pas à une source de contrôle externe et ne prétend pas mesurer l'exactitude que le
   corpus local ne peut pas prouver ;
 - la décision de maintien, abandon ou intégration appartient à J9 et au propriétaire.
+
+## 15. Campagnes correctives postérieures à une fenêtre gelée
+
+Le ledger est append-only : une campagne J3/J4/J5 corrective ultérieure apparaît dans une
+agrégation sans fenêtre dès que son horodatage est inférieur à `asOf`. Elle ne modifie jamais une
+campagne, unité, tentative ou issue historique. Un rapport gelé reste reproductible avec sa
+fenêtre demi-ouverte et son `asOf` exacts ; une lecture « tout historique » postérieure constitue
+une population différente et porte donc normalement un autre hash.
+
+Une qualification corrective n'est pas un retry du benchmark lorsqu'elle possède sa propre
+autorisation, son propre `requestId` et reste extérieure à la fenêtre exclusive initiale. Elle
+doit être documentée séparément et ne peut ni reclasser une ancienne unité, ni transformer
+rétroactivement un état `PARTIAL` en `MEASURED`.
+
+WO-017 illustre cette séparation : la campagne J5 corrective V15 a créé trois nouvelles
+tentatives postérieures, tandis que la fenêtre J8 du 2026-08-30 conserve ses dix-neuf tentatives,
+son résultat incidents V14 et son hash de population. La déduplication brute vers le snapshot 717
+n'autorise aucune réécriture de l'unité historique ; elle produit une occurrence et une
+observation V15 nouvelles dans la campagne corrective.

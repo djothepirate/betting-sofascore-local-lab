@@ -457,7 +457,8 @@ bornée du parseur strict, pas une mutation de payload causée par J8.
 J5_END_TO_END_AVAILABILITY_REGRESSION=OBSERVED
 J5_J8_INSTRUMENTATION_CAUSALITY=NOT_SUPPORTED_BY_LOCAL_EVIDENCE
 J5_OBSERVED_RESPONSE_VARIANT=EMPTY_FOOTBALL_PASSING_NETWORK_ACTION_ARRAY
-J5_PROVIDER_SCHEMA_CURRENT_STATUS=NOT_VALIDATED_AFTER_SNAPSHOT_717
+J5_PROVIDER_SCHEMA_STATUS_AT_J8_FREEZE=NOT_VALIDATED_AFTER_SNAPSHOT_717
+J5_PROVIDER_SCHEMA_CURRENT_STATUS=VALIDATED_BOUNDED_V15_EVENT_16691018_BY_WO_017
 J5_CORRECTIVE_SCOPE=SEPARATE_WORK_ORDER_AND_OWNER_DECISION_REQUIRED
 ```
 
@@ -469,14 +470,25 @@ exactement vide uniquement dans la séance terminale non minutée déjà cohére
 vides incohérentes, les types erronés et les séances temporellement mixtes restent refusés.
 
 Une sonde PostgreSQL read-only des octets exacts du snapshot 717 rend `PARSED/PARTIAL · 91%` sous
-V15, sans persister de reparse. Elle ne modifie ni le snapshot, ni son statut historique V14, ni
-l'occurrence, ni le résultat d'unité J8, ni le coût ou le hash de population. WO-017 reste une
-readiness technique distincte : aucune reprise ou nouvelle campagne fournisseur n'est autorisée et
-J8 reste `PARTIAL / READY_FOR_HUMAN_QUALIFICATION`.
+V15, sans persister de reparse. Elle ne modifie ni le snapshot, ni l'occurrence, et ne reclasse ni
+l'unité ni son résultat historique V14 ; le coût et le hash de population restent inchangés. À cet instant,
+WO-017 restait une readiness technique distincte : aucune reprise ou nouvelle campagne fournisseur
+n'était autorisée et J8 restait `PARTIAL / READY_FOR_HUMAN_QUALIFICATION`.
 
-Après la campagne, l'application et le worker ont été arrêtés, le port 8087 libéré, les gates locaux
-remis à `false` et le verrou persistant confirmé par l'exporteur. Aucun retry, import, fallback,
-appel compositions ou nouvelle campagne n'a été exécuté.
+Le propriétaire a ensuite autorisé sous WO-017 une campagne J5 corrective unique et postérieure à
+la fenêtre J8, puis en a confié l'exécution locale à Codex sans modification de `.env`. Elle a
+terminé `COMPLETED_LOCKED` après trois appels sans retry : statistiques `COMPLETE · 100%`
+(`716`/`322`), incidents V15 `PARTIAL · 91%`, 35 incidents et `164/179` signaux (`717`/`324`),
+puis compositions `PARTIAL · 99%` (`720`/`325`). La réponse incidents dédupliquée réobserve les
+mêmes octets et les quatorze tableaux vides du snapshot 717. La classification V14 de l'unité J8,
+les dix-neuf tentatives, la fenêtre, le double export et le hash de population restent inchangés.
+Le ledger correctif est une nouvelle campagne J5 auditée, pas un retry ou une seconde campagne
+benchmark. Son go est consommé et n'autorise aucun appel supplémentaire.
+
+À l'issue de la campagne J8 initiale, l'application et le worker ont été arrêtés, le port 8087
+libéré, les gates locaux remis à `false` et le verrou persistant confirmé par l'exporteur. Dans ce
+parcours et immédiatement après son terminal, aucun retry, import, fallback, appel compositions ou
+nouvelle campagne n'a été exécuté.
 
 La revue humaine future porte, lorsque le corpus le permet, sur trois dossiers distincts : le dossier
 J8, le dossier direct non ciblé le plus récent en `PARTIAL` ou `UNAVAILABLE`, puis le dossier direct

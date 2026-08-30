@@ -4,24 +4,32 @@
 
 ```text
 WORK_ORDER=WO-SS-20260830-017
-WORK_ORDER_STATUS=READY_FOR_HUMAN_QUALIFICATION
+WORK_ORDER_STATUS=HUMAN_QUALIFICATION_PASS_PENDING_OWNER_CLOSURE
 CURRENT_INCIDENT_PARSER=event-incidents-v15
 CURRENT_FLYWAY_VERSION=28
 TECHNICAL_READINESS=PASS
-OWNER_FUNCTIONAL_QUALIFICATION=NOT_RUN
-PROVIDER_SCHEMA_CURRENT_STATUS=NOT_VALIDATED_PENDING_OWNER_REVIEW
+OWNER_FUNCTIONAL_QUALIFICATION=PASS_BY_OWNER_AUTHORIZED_CODEX_EXECUTION_2026_08_30
+PROVIDER_SCHEMA_CURRENT_STATUS=VALIDATED_BOUNDED_EVENT_16691018
 EXACT_STORED_RESPONSE_READ_ONLY_PROBE=PARSED_PARTIAL_91
 EXACT_STORED_RESPONSE_PERSISTED_REPARSE=NO
 REAL_PROVIDER_CALLS_DURING_IMPLEMENTATION=0
 REAL_PROVIDER_CALLS_DURING_AUTOMATED_TESTS=0
+REAL_PROVIDER_CALLS_DURING_AUTHORIZED_QUALIFICATION=3
+QUALIFICATION_CAMPAIGN_TERMINAL_STATE=COMPLETED_LOCKED
+EMPTY_ARRAY_VARIANT_REOBSERVED=YES_BY_BYTE_IDENTICAL_SNAPSHOT_REUSE
 RETRY_OF_J8_CAMPAIGN=NO
-SECOND_J8_CAMPAIGN=NO
+SECOND_J8_BENCHMARK_CAMPAIGN=NO
+V15_QUALIFICATION_J5_LEDGER_CAMPAIGN=CREATED_AS_REQUIRED
+ORIGINAL_J8_EXCLUSIVE_WINDOW_UNCHANGED=YES
 J8_HISTORICAL_RESULT=EVENT_INCIDENTS_V14_SCHEMA_INCOMPATIBLE_UNCHANGED
+OWNER_CLOSURE_DECISION=NOT_GRANTED
+ADDITIONAL_PROVIDER_CALL_AUTHORIZED=NO
 ```
 
-Cette readiness couvre uniquement le correctif borné demandé après la campagne J8 partielle. Elle
-ne constitue ni une nouvelle qualification fournisseur, ni un reparse durable du snapshot 717, ni
-une autorisation de reprendre la campagne.
+Les sections 2 à 9 conservent la photographie de la readiness technique obtenue après la campagne
+J8 partielle : elle ne constituait alors ni une qualification fournisseur, ni un reparse durable
+du snapshot 717, ni une autorisation de reprendre la campagne. La section 10 consigne séparément
+la qualification corrective ultérieure autorisée ; elle ne réécrit pas cette preuve initiale.
 
 Les statuts du laboratoire restent :
 
@@ -168,10 +176,37 @@ provenance courante, le scénario ciblé a été rejoué, puis la suite PostgreS
 `Verify-Local.ps1 -WithIntegrationTests` ont terminé sans échec. Cette correction de test ne change
 ni une preuve historique V14, ni une donnée persistée.
 
-## 9. Limite de qualification
+## 9. Limite de la readiness technique initiale
 
-Les portes techniques étant vertes, l'état atteint est `READY_FOR_HUMAN_QUALIFICATION`. La
-compatibilité fournisseur courante reste
-`NOT_VALIDATED_PENDING_OWNER_REVIEW`. Une éventuelle qualification V15, un reparse persistant ou
-une nouvelle campagne J8 nécessitent une autorisation propriétaire distincte. L'état applicatif
-reste `J8-BENCHMARK-READY-FOR-HUMAN-QUALIFICATION` et J8 reste `PARTIAL`.
+À l'instant de la readiness technique, l'état était `READY_FOR_HUMAN_QUALIFICATION` et aucun appel
+fournisseur n'avait été autorisé ou exécuté. Cette propriété reste vraie pour l'implémentation, les
+tests et la sonde read-only. L'addendum suivant consigne séparément la campagne corrective
+ultérieure, explicitement autorisée par le propriétaire.
+
+## 10. Addendum — qualification fournisseur V15 du 2026-08-30
+
+Le propriétaire a autorisé une seule campagne J5 corrective sur l'événement fournisseur
+`16691018`, identité canonique `f4713f80-4769-3656-ba51-61d8ac1aa814`, puis a explicitement confié
+son exécution intégrale à Codex sans modification de `.env` et sans geste manuel supplémentaire.
+
+La campagne s'est terminée `COMPLETED_LOCKED` après exactement trois appels, dans l'ordre
+`EVENT_STATISTICS`, `EVENT_INCIDENTS`, `EVENT_LINEUPS`, sans retry, fallback, import ou seconde
+campagne. Les statistiques sont `COMPLETE · 100%` sur le snapshot `716`, observation `322`. Les
+incidents sont parsés par `event-incidents-v15`, `PARTIAL · 91%`, `164/179` signaux et 35
+incidents, sur le snapshot dédupliqué `717`, observation `324`. Les compositions ont bien été
+atteintes et sont `PARTIAL · 99%` sur le snapshot `720`, observation `325`.
+
+La réutilisation du snapshot brut `717` prouve que la variante exacte rejetée historiquement par
+V14 a été réobservée. Une sonde structurelle read-only confirme quatorze tirs sans minute et
+quatorze tableaux exactement vides, sans forme non vide ou mal typée. V15 les accepte sans
+inventer de minute ; la classification V14 de la campagne J8 et le snapshot historique restent
+immuables. Cette qualification valide le schéma fournisseur V15 uniquement dans le corpus borné
+de l'événement `16691018`.
+
+L'application a été arrêtée après le terminal. Les propriétés réseau n'ont existé que dans l'arbre
+de processus du lanceur ; `.env` est demeuré inchangé et bloquant. Un redémarrage inerte a confirmé
+J5 `LOCKED` et son bouton de préparation désactivé, puis l'application a été arrêtée à nouveau.
+Aucune campagne supplémentaire, clôture, fusion ou décision J9 n'est autorisée par ce résultat.
+
+La preuve prospective minimisée complète est
+`docs/validation/J5-V15-PROVIDER-QUALIFICATION-20260830.md`.

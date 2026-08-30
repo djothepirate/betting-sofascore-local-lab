@@ -31,8 +31,23 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   67 tests PostgreSQL/Testcontainers, `Verify-Local.ps1 -WithIntegrationTests`, Compose et
   `git diff --check`, avec tous les drapeaux réseau à `false`, aucun listener 8087, aucun processus
   application/worker et aucun appel fournisseur ;
-- l'issue historique reste `event-incidents-v14 / SCHEMA_INCOMPATIBLE`, J8 reste `PARTIAL`, et
-  aucune reprise, seconde campagne ou qualification fournisseur n'est autorisée par ce correctif.
+- après la readiness à zéro appel, go propriétaire distinct puis délégation explicite à Codex
+  d'une seule campagne locale sur `16691018`, sans modification de `.env` ;
+- campagne `COMPLETED_LOCKED` après trois appels ordonnés, sans retry, fallback, import ni seconde
+  campagne : statistiques `COMPLETE · 100%` (`716`/`322`), incidents V15 `PARTIAL · 91%`,
+  `164/179` signaux et 35 incidents (`717`/`324`), puis compositions `PARTIAL · 99%`
+  (`720`/`325`) ;
+- réobservation byte-identique de la variante tableau vide par déduplication vers le snapshot 717 :
+  la nouvelle observation V15 est append-only et la classification historique V14
+  `SCHEMA_INCOMPATIBLE` n'est pas réécrite ;
+- création normale d'une campagne ledger J5 corrective ; la fenêtre benchmark J8 gelée, ses 19
+  tentatives, son hash et son résultat `PARTIAL` restent inchangés. Une agrégation dynamique de
+  tout l'historique peut en revanche inclure le nouveau ledger ;
+- application arrêtée après le terminal, activation process-scoped terminée et `.env` inchangé
+  avec les réseaux bloqués ; redémarrage inerte contrôlé avec J5 `LOCKED` et préparation
+  désactivée, puis nouvel arrêt sans listener résiduel ;
+- WO-017 reste actif au statut `HUMAN_QUALIFICATION_PASS_PENDING_OWNER_CLOSURE`; le go est consommé,
+  aucun appel supplémentaire, push, PR, fusion ou clôture n'est autorisé.
 
 ### J8 — benchmark local prêt pour qualification humaine
 
