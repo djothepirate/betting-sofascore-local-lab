@@ -8721,7 +8721,7 @@ class FlywayMigrationIT {
                 .hasSize(2)
                 .allSatisfy(row -> assertThat(row)
                         .containsEntry(
-                                "parser_version", EventIncidentsV14Parser.PARSER_VERSION)
+                                "parser_version", EventIncidentsV15Parser.PARSER_VERSION)
                         .containsEntry("period_text", "Extra time")
                         .containsEntry("minute", 120));
 
