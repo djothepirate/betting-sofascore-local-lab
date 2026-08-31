@@ -70,6 +70,24 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   passe alors à `READY_FOR_V28_BACKUP_RESTORE` ; le cycle chiffré sauvegarde/restauration V28 reste
   `NOT_EXECUTED`, la preuve reste `DRAFT`, et campagne fournisseur, réseau, go global, consommation
   du go, intégration et production restent non autorisés ;
+- première session V28 hôte détachée interrompue à l'invite `age` avant toute saisie, après échec de
+  rattachement de son onglet ; audit après arrêt à zéro processus, fichier ou base temporaire
+  résiduel ; tentative manuelle suivante arrêtée dans le terminal Codex restreint au préflight
+  `DESTINATION_DIRECTORY_NOT_VISIBLE`, avant `age`, `pg_dump`, fichier ou base temporaire ; ces
+  deux arrêts locaux n'ont produit aucun appel ni retry fournisseur ;
+- sauvegarde/restauration V28 ensuite qualifiée sous PowerShell 7 natif interactif : création à
+  `2026-08-31T06:44:41.9669041Z`, qualification à `2026-08-31T06:46:07.7013794Z`, archive chiffrée
+  de `6 996 157` octets au SHA-256
+  `2b1402d12274f3e9a646aa6134f8cf8bee7a5e11b3249e8dff5c63040cb89d34` et manifeste de `2 202`
+  octets au SHA-256 `7d112e4db804125656a54c61edd8c1eb9417f95e8b7c3d4df88d99d92cde6e62` ;
+  Flyway `28`, couverture maximale snapshot `794` reçue à `2026-08-30T20:30:46.412Z`, restauration
+  qualifiée, zéro mismatch source/restauration, zéro échec d'intégrité brute, zéro fichier partiel
+  et zéro base temporaire résiduelle, absence vérifiée indépendamment, connecteur `SAFE`, port 8087
+  libre, zéro accès
+  fournisseur et aucune purge primaire ; WO-019 passe à `READY_FOR_GLOBAL_OWNER_GO` avec
+  `NEXT_GATE=GLOBAL_OWNER_GO`, tandis que `WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO`, réseau,
+  go global, consommation, intégration et production restent à `NO`/`NOT_GRANTED` et la preuve à
+  `DRAFT` ;
 - revue factuelle de sources officielles : restrictions publiées sur les requêtes automatisées,
   le scraping, l'agrégation, la reproduction et l'extraction substantielle sans consentement
   explicite ; point d'entrée `Sofascore API` et canal `Product -> API` présents, mais aucune licence,

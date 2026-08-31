@@ -1,6 +1,6 @@
 # WO-SS-20260831-019 — Preuve bornée de robustesse fournisseur pour J9
 
-- **Statut :** `READY_FOR_V28_BACKUP_RESTORE`
+- **Statut :** `READY_FOR_GLOBAL_OWNER_GO`
 - **Date d'ouverture :** 2026-08-31
 - **Jalon :** J9 — Preuve préalable à la décision
 - **Base locale :** `a47c932`
@@ -43,17 +43,20 @@ VPS ou de production. Elle ne prend pas la décision J9.
 EVIDENCE_STATUS=DRAFT
 NETWORK_AUTHORIZED=NO
 OWNER_GO_CONSUMED=NO
+PROVIDER_CALLS_UNDER_WO019=0
 MAX_DIRECT_CALLS=38
 REPLACEMENT_DOSSIER_ALLOWED=NO
 ADR_SS_002_STATUS=ACCEPTED_V1_0
-WORK_ORDER_STATUS=READY_FOR_V28_BACKUP_RESTORE
+WORK_ORDER_STATUS=READY_FOR_GLOBAL_OWNER_GO
 WO019_WORK_ORDER_RESUME_AUTHORIZED=YES
 WO019_PROVIDER_CAMPAIGN_AUTHORIZED=NO_PENDING_GLOBAL_GO
 WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
 OFFLINE_READINESS=PASS_REEXECUTED_AFTER_VALIDATED_WO020
 OFFLINE_READINESS_REEXECUTED_ON=2026-08-31
-V28_BACKUP_RESTORE=NOT_EXECUTED
-NEXT_GATE=V28_BACKUP_RESTORE
+V28_BACKUP_RESTORE=QUALIFIED
+V28_RESTORE_QUALIFIED=YES
+V28_BACKUP_RESTORE_QUALIFIED_AT_UTC=2026-08-31T06:46:07.7013794Z
+NEXT_GATE=GLOBAL_OWNER_GO
 GLOBAL_OWNER_GO=NOT_GRANTED
 SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=SATISFIED_BY_VALIDATED_WO020
 RUNTIME_WORK_ORDER=WO-SS-20260831-020-j9-playwright-graceful-close
@@ -272,9 +275,10 @@ fournisseur n'a eu lieu. La readiness devient
 `PASS_REEXECUTED_AFTER_VALIDATED_WO020` et WO-019 passe alors, et seulement alors, à
 `READY_FOR_V28_BACKUP_RESTORE`.
 
-Le cycle sauvegarde/restauration chiffré V28 n'a pas encore été lancé et reste la prochaine porte.
-La campagne fournisseur, le réseau, le go global, l'intégration et la production restent non
-autorisés.
+Le cycle sauvegarde/restauration chiffré V28 a ensuite été qualifié dans une exécution interactive
+PowerShell 7 native, distincte du rejeu hors ligne et minimisée dans le journal. WO-019 passe à
+`READY_FOR_GLOBAL_OWNER_GO`, mais le go global reste `NOT_GRANTED`. La campagne fournisseur, le
+réseau, l'intégration et la production restent non autorisés.
 
 ## 9. Sauvegarde/restauration V28
 
@@ -288,8 +292,9 @@ Après readiness et avant le go :
 6. conserver seulement dans la preuve Git les hashes et métadonnées minimisées ;
 7. ne lancer aucune purge primaire.
 
-Le bloc suivant décrit le résultat futur exigé ; il n'est pas l'état courant, qui reste
-`V28_BACKUP_RESTORE=NOT_EXECUTED` :
+La preuve fraîche exigée est maintenant qualifiée. Le journal conserve ses seuls hashes,
+horodatages, tailles et contrôles minimisés autorisés, sans chemin, nom de fichier, manifeste JSON,
+phrase secrète, dump, payload ou credential. Son résultat fonctionnel est :
 
 ```text
 J6_BACKUP_RESULT=QUALIFIED
@@ -307,7 +312,8 @@ propriétaire. Le go doit identifier explicitement :
 
 ```text
 WORK_ORDER=WO-SS-20260831-019-j9-provider-robustness
-ADR=ADR-SS-002_<ACCEPTED_VERSION>
+ADR=ADR-SS-002_v1.0
+ADR_STATUS=ACCEPTED
 TARGET_PROVIDER_EVENT_IDS=16691018,16671566,16310930
 TARGET_CANONICAL_EVENT_IDS=f4713f80-4769-3656-ba51-61d8ac1aa814,da075869-34d4-3d42-83d2-613583691845,c40066c9-987b-38d9-b415-869a453d2ad6
 MAXIMUM_DIRECT_ATTEMPTS=38
@@ -316,6 +322,10 @@ MAXIMUM_WINDOW_DURATION=60m
 EXECUTION_ACTOR=<explicit>
 GO_USE=ONE_TIME
 ```
+
+`ADR=ADR-SS-002_v1.0` et `ADR_STATUS=ACCEPTED` attestent uniquement l'ADR déjà acceptée ; ces
+champs ne constituent pas le go global, qui reste `NOT_GRANTED` tant que le propriétaire ne l'a pas
+accordé dans un bloc distinct.
 
 Le go expire à `TO`, au premier incident global ou à la fin de la série. Il ne survit pas à un
 redémarrage décidé après incident. Les confirmations techniques propres à chaque sous-campagne
@@ -615,6 +625,77 @@ EVIDENCE_STATUS=DRAFT
 INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
 
-WO-019 est donc maintenant `READY_FOR_V28_BACKUP_RESTORE`. Le cycle V28 reste à exécuter et à
-qualifier. La campagne fournisseur, le réseau, le go global, la consommation du go, l'intégration
-et la production restent non autorisés.
+À l'issue de ce rejeu, WO-019 était `READY_FOR_V28_BACKUP_RESTORE`. Une première session
+interactive hôte lancée par Codex a atteint la première invite `age`, mais son onglet n'a pas été
+rattaché à l'interface. Elle a été interrompue avant toute saisie de phrase secrète. L'audit
+immédiat après interruption a confirmé l'absence d'archive, de manifeste, de fichier partiel, de
+base temporaire et de processus résiduel :
+
+```text
+WO019_V28_DETACHED_ATTEMPT=STOPPED_AT_FIRST_AGE_PROMPT
+WO019_V28_DETACHED_ATTEMPT_PASSPHRASE_ENTERED=NO
+WO019_V28_DETACHED_ATTEMPT_PLAINTEXT_DUMP_FILE_CREATED=NO
+WO019_V28_DETACHED_POST_STOP_AGE_PROCESS_COUNT=0
+WO019_V28_DETACHED_POST_STOP_PG_DUMP_PROCESS_COUNT=0
+WO019_V28_DETACHED_POST_STOP_PARTIAL_FILE_COUNT=0
+WO019_V28_DETACHED_POST_STOP_FINAL_FILE_COUNT=0
+WO019_V28_DETACHED_POST_STOP_MANIFEST_FILE_COUNT=0
+WO019_V28_DETACHED_POST_STOP_TEMPORARY_DATABASE_COUNT=0
+WO019_V28_DETACHED_PROVIDER_ACCESS_PERFORMED=NO
+```
+
+La tentative manuelle suivante, lancée dans le terminal Codex restreint, s'est arrêtée plus tôt au
+préflight de visibilité du répertoire, avant `age`, `pg_dump`, création de fichier ou base
+temporaire :
+
+```text
+WO019_V28_RESTRICTED_TERMINAL_ATTEMPT=STOPPED_AT_PREFLIGHT
+WO019_V28_RESTRICTED_TERMINAL_STOP_REASON=DESTINATION_DIRECTORY_NOT_VISIBLE
+WO019_V28_RESTRICTED_TERMINAL_STOPPED_BEFORE_AGE=YES
+WO019_V28_RESTRICTED_TERMINAL_STOPPED_BEFORE_PG_DUMP=YES
+WO019_V28_RESTRICTED_TERMINAL_FILE_CREATED=NO
+WO019_V28_RESTRICTED_TERMINAL_TEMPORARY_DATABASE_CREATED=NO
+WO019_V28_RESTRICTED_TERMINAL_PROVIDER_ACCESS_PERFORMED=NO
+```
+
+Ces deux arrêts locaux ne sont ni des appels ni des retries fournisseur. L'exécution qualifiée a
+ensuite été réalisée dans PowerShell 7 natif interactif. La preuve versionnée reste volontairement
+limitée aux métadonnées suivantes :
+
+```text
+WO019_V28_EXECUTION_ENVIRONMENT=POWERSHELL_7_NATIVE_INTERACTIVE
+J6_BACKUP_RESULT=QUALIFIED
+J6_BACKUP_CREATED_AT=2026-08-31T06:44:41.9669041Z
+J6_BACKUP_QUALIFIED_AT=2026-08-31T06:46:07.7013794Z
+J6_BACKUP_CIPHER_SHA256=2b1402d12274f3e9a646aa6134f8cf8bee7a5e11b3249e8dff5c63040cb89d34
+J6_BACKUP_MANIFEST_SHA256=7d112e4db804125656a54c61edd8c1eb9417f95e8b7c3d4df88d99d92cde6e62
+J6_BACKUP_ARCHIVE_BYTES=6996157
+J6_BACKUP_MANIFEST_BYTES=2202
+FLYWAY_VERSION=28
+J6_BACKUP_COVERAGE_MAX_SNAPSHOT_ID=794
+J6_BACKUP_COVERAGE_RECEIVED_AT=2026-08-30T20:30:46.412Z
+J6_RESTORE_QUALIFIED=YES
+J6_SOURCE_RESTORED_PROPERTY_MISMATCHES=0
+J6_RAW_PAYLOAD_INTEGRITY_FAILURES=0
+J6_BACKUP_PARTIAL_FILE_COUNT=0
+J6_TEMPORARY_RESTORE_DATABASE_RESIDUAL_COUNT_INDEPENDENTLY_VERIFIED=0
+CONNECTOR_CONTROL=SAFE
+LISTENER_127_0_0_1_8087=FREE
+PROVIDER_ACCESS_PERFORMED=NO
+PRIMARY_DATABASE_PURGE=NO
+WORK_ORDER_STATUS=READY_FOR_GLOBAL_OWNER_GO
+V28_BACKUP_RESTORE=QUALIFIED
+NEXT_GATE=GLOBAL_OWNER_GO
+WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+NETWORK_AUTHORIZED=NO
+GLOBAL_OWNER_GO=NOT_GRANTED
+OWNER_GO_CONSUMED=NO
+EVIDENCE_STATUS=DRAFT
+PROVIDER_CALLS_UNDER_WO019=0
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+```
+
+Aucun chemin externe, nom de fichier, manifeste JSON, phrase secrète, dump, payload ou credential
+n'est versionné. WO-019 est maintenant `READY_FOR_GLOBAL_OWNER_GO`, sans accorder ce go. La
+campagne fournisseur, le réseau, la consommation du go, l'intégration et la production restent non
+autorisés.

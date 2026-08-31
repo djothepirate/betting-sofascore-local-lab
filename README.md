@@ -40,10 +40,29 @@ Ce rejeu propre à WO-019 a ensuite réussi le 2026-08-31 : `clean verify` compt
 SofaScore `NO`, et `docker compose --env-file .env config --quiet` rend `PASS`. Les qualifications
 loopback J3, J4 et J5 exécutées sous `pwsh` comptent chacune `14/0/0/0`, sans accès fournisseur.
 La readiness devient `PASS_REEXECUTED_AFTER_VALIDATED_WO020` et WO-019 passe alors à
-`READY_FOR_V28_BACKUP_RESTORE`. Le cycle chiffré sauvegarde/restauration V28 reste `NOT_EXECUTED`
-et constitue la prochaine porte. Le réseau reste bloqué, le go global n'est pas accordé ni
-consommé, la campagne fournisseur, l'intégration et la production restent non autorisées, et
-ADR-SS-003 n'existe pas. L'acceptation d'ADR-SS-002 ne vaut pas go réseau.
+`READY_FOR_V28_BACKUP_RESTORE`.
+
+Une première session hôte détachée a atteint l'invite `age`, puis a été interrompue avant toute
+saisie parce que son onglet n'était pas rattaché ; l'audit après arrêt a confirmé zéro processus,
+fichier ou base temporaire résiduel. La tentative manuelle suivante dans le terminal Codex
+restreint s'est arrêtée au préflight `DESTINATION_DIRECTORY_NOT_VISIBLE`, avant `age`, `pg_dump`,
+fichier ou base temporaire. Ces arrêts locaux ne sont ni des appels ni des retries fournisseur.
+L'exécution interactive PowerShell 7 native suivante a qualifié la sauvegarde/restauration : création
+`2026-08-31T06:44:41.9669041Z`, qualification `2026-08-31T06:46:07.7013794Z`, archive chiffrée
+`6 996 157` octets avec SHA-256
+`2b1402d12274f3e9a646aa6134f8cf8bee7a5e11b3249e8dff5c63040cb89d34`, manifeste minimisé
+`2 202` octets avec SHA-256
+`7d112e4db804125656a54c61edd8c1eb9417f95e8b7c3d4df88d99d92cde6e62`, Flyway `28`, couverture
+jusqu'au snapshot `794` reçu à `2026-08-30T20:30:46.412Z` et `restoreQualified=true`. Les contrôles
+comptent zéro mismatch source/restauration, zéro échec d'intégrité brute, zéro fichier partiel et
+zéro base temporaire résiduelle vérifiée indépendamment ; le connecteur est `SAFE`, le port 8087
+est libre, l'accès fournisseur et la purge primaire restent à `NO`.
+
+WO-019 passe donc à `READY_FOR_GLOBAL_OWNER_GO` avec `NEXT_GATE=GLOBAL_OWNER_GO`, sans accorder ce
+go. Le réseau reste bloqué, le go global reste `NOT_GRANTED` et non consommé,
+`WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO`, les appels fournisseur restent à zéro, et
+l'intégration comme la production restent non autorisées. ADR-SS-003 n'existe pas. L'acceptation
+d'ADR-SS-002 ne vaut pas go réseau.
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une

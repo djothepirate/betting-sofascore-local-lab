@@ -151,15 +151,18 @@ La preuve fournisseur relève d'un Work Order séparé :
 ```text
 WORK_ORDER=WO-SS-20260831-019-j9-provider-robustness
 BRANCH=codex/j9-provider-robustness
-WORK_ORDER_STATUS=READY_FOR_V28_BACKUP_RESTORE
+WORK_ORDER_STATUS=READY_FOR_GLOBAL_OWNER_GO
 EVIDENCE_STATUS=DRAFT
+PROVIDER_CALLS_UNDER_WO019=0
 WO019_WORK_ORDER_RESUME_AUTHORIZED=YES
 WO019_PROVIDER_CAMPAIGN_AUTHORIZED=NO_PENDING_GLOBAL_GO
 WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
 OFFLINE_READINESS=PASS_REEXECUTED_AFTER_VALIDATED_WO020
 OFFLINE_READINESS_REEXECUTED_ON=2026-08-31
-V28_BACKUP_RESTORE=NOT_EXECUTED
-NEXT_GATE=V28_BACKUP_RESTORE
+V28_BACKUP_RESTORE=QUALIFIED
+V28_RESTORE_QUALIFIED=YES
+V28_BACKUP_RESTORE_QUALIFIED_AT_UTC=2026-08-31T06:46:07.7013794Z
+NEXT_GATE=GLOBAL_OWNER_GO
 NETWORK_AUTHORIZED=NO
 GLOBAL_OWNER_GO=NOT_GRANTED
 OWNER_GO_CONSUMED=NO
@@ -206,12 +209,17 @@ lancées sous `pwsh`, comptent chacune `14/0/0/0`, sans accès fournisseur. La r
 `PASS_REEXECUTED_AFTER_VALIDATED_WO020` ; WO-019 passe alors à
 `READY_FOR_V28_BACKUP_RESTORE`.
 
-Cette preuve ne vaut ni campagne fournisseur, ni accès réseau, ni go global. La
-sauvegarde/restauration chiffrée V28 reste `NOT_EXECUTED` et constitue la prochaine porte ; le go
-global n'est pas accordé et n'a pas été consommé. WO-019 porte les métriques détaillées ; la
-décision J9 demeure `PENDING_PROVIDER_ROBUSTNESS_EVIDENCE`.
+La sauvegarde/restauration chiffrée V28 a ensuite été qualifiée sous PowerShell 7 natif interactif :
+Flyway `28`, restauration qualifiée, zéro mismatch source/restauration, zéro échec d'intégrité brute,
+zéro fichier partiel et zéro base temporaire résiduelle lors du contrôle indépendant. Le connecteur
+est `SAFE`, le port 8087 est libre, aucun accès fournisseur ni purge primaire n'a eu lieu. WO-019
+passe à `READY_FOR_GLOBAL_OWNER_GO`.
 
-Avant ces quatre preuves :
+Cette preuve ne vaut ni campagne fournisseur, ni accès réseau, ni go global. Le go global reste
+`NOT_GRANTED` et n'a pas été consommé. WO-019 porte les métriques détaillées ; la décision J9
+demeure `PENDING_PROVIDER_ROBUSTNESS_EVIDENCE`.
+
+Tant que la quatrième porte, le go global, n'est pas explicitement accordée :
 
 ```text
 PROVIDER_NETWORK=NOT_AUTHORIZED
@@ -389,6 +397,44 @@ WO019_GLOBAL_OWNER_GO=NOT_GRANTED
 WO019_OWNER_GO_CONSUMED=NO
 WO019_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
+
+La preuve V28 qualifiée après le rejeu hors ligne est consignée dans un bloc distinct :
+
+```text
+WO019_V28_EXECUTION_ENVIRONMENT=POWERSHELL_7_NATIVE_INTERACTIVE
+J6_BACKUP_RESULT=QUALIFIED
+J6_BACKUP_CREATED_AT=2026-08-31T06:44:41.9669041Z
+J6_BACKUP_QUALIFIED_AT=2026-08-31T06:46:07.7013794Z
+J6_BACKUP_CIPHER_SHA256=2b1402d12274f3e9a646aa6134f8cf8bee7a5e11b3249e8dff5c63040cb89d34
+J6_BACKUP_MANIFEST_SHA256=7d112e4db804125656a54c61edd8c1eb9417f95e8b7c3d4df88d99d92cde6e62
+J6_BACKUP_ARCHIVE_BYTES=6996157
+J6_BACKUP_MANIFEST_BYTES=2202
+FLYWAY_VERSION=28
+J6_BACKUP_COVERAGE_MAX_SNAPSHOT_ID=794
+J6_BACKUP_COVERAGE_RECEIVED_AT=2026-08-30T20:30:46.412Z
+J6_RESTORE_QUALIFIED=YES
+J6_SOURCE_RESTORED_PROPERTY_MISMATCHES=0
+J6_RAW_PAYLOAD_INTEGRITY_FAILURES=0
+J6_BACKUP_PARTIAL_FILE_COUNT=0
+J6_TEMPORARY_RESTORE_DATABASE_RESIDUAL_COUNT_INDEPENDENTLY_VERIFIED=0
+CONNECTOR_CONTROL=SAFE
+LISTENER_127_0_0_1_8087=FREE
+PROVIDER_ACCESS_PERFORMED=NO
+PRIMARY_DATABASE_PURGE=NO
+WO019_STATUS=READY_FOR_GLOBAL_OWNER_GO
+WO019_V28_BACKUP_RESTORE=QUALIFIED
+WO019_NEXT_GATE=GLOBAL_OWNER_GO
+WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+WO019_NETWORK_AUTHORIZED=NO
+WO019_GLOBAL_OWNER_GO=NOT_GRANTED
+WO019_OWNER_GO_CONSUMED=NO
+WO019_EVIDENCE_STATUS=DRAFT
+WO019_PROVIDER_CALLS=0
+WO019_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+```
+
+Aucun chemin externe, nom de fichier, manifeste JSON, phrase secrète, dump, payload ou credential
+n'est repris dans cette preuve de décision.
 
 Le premier lancement Maven en sandbox n'a pas pu résoudre le parent Spring Boot absent du cache
 local (`Permission denied: getsockopt`). La même commande, relancée avec l'accès Maven explicitement
