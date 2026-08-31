@@ -26,8 +26,9 @@ son navigateur, son contexte neuf et son allowlist propre. Le contrat J4 est doc
 
 `WO-SS-20260831-020` corrige uniquement la sequence de fermeture et de nettoyage du superviseur
 commun. Le worker de production, le protocole IPC, les familles, les routes et leurs semantiques
-restent inchanges. Cette correction est qualifiee localement et reste en attente de revue
-proprietaire ; elle n'autorise aucun appel fournisseur ni la reprise de WO-019.
+restent inchanges. Cette correction locale a ete validee par le proprietaire sous WO-020, desormais
+archive, le 2026-08-31 ; cette validation n'autorise aucun appel fournisseur ni la reprise de
+WO-019.
 
 `PAGE` reste compris entre `1` et `25`, la date est une `LocalDate` rendue en ISO et l'identifiant
 de tournoi unique est strictement positif. Toute autre origine, methode, route, redirection ou

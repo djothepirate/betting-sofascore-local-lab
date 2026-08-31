@@ -27,9 +27,10 @@ chacune) sont verts. Les portes Maven sont également vertes avec `931` tests st
 tests d'intégration ; l'audit final trouve zéro processus possédé, zéro listener 8087 et aucun
 artefact navigateur interdit. Aucun accès fournisseur n'a eu lieu.
 
-WO-020 est donc `READY_FOR_OWNER_REVIEW`, pas `VALIDATED`. Sa readiness locale ne reprend pas
-WO-019, ne lance pas le cycle chiffré sauvegarde/restauration V28, ne donne aucun go et n'autorise ni
-appel fournisseur, ni intégration, ni production. Le réseau reste bloqué, le go global n'est pas
+Le propriétaire a validé WO-020 et autorisé son déplacement vers les Work Orders terminés le
+2026-08-31 à `00:41:58Z`. Cette validation runtime ne reprend pas WO-019, ne lance pas le cycle
+chiffré sauvegarde/restauration V28, ne donne aucun go et n'autorise ni appel fournisseur, ni
+intégration, ni production. Le réseau reste bloqué, le go global n'est pas
 accordé et ADR-SS-003 n'existe pas. L'acceptation d'ADR-SS-002 ne vaut pas go réseau.
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
@@ -994,7 +995,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order J8 validé](docs/work_orders/completed/WO-SS-20260829-016-benchmark-j8.md)
 - [Work Order actif de décision J9](docs/work_orders/active/WO-SS-20260831-018-decision-j9.md)
 - [Work Order actif de preuve de robustesse J9](docs/work_orders/active/WO-SS-20260831-019-j9-provider-robustness.md)
-- [Work Order runtime J9 prêt pour revue propriétaire](docs/work_orders/active/WO-SS-20260831-020-j9-playwright-graceful-close.md)
+- [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 

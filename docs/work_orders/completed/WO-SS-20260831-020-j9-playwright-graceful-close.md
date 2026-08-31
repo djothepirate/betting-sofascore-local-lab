@@ -1,7 +1,9 @@
 # WO-SS-20260831-020 — Diagnostic et correction de la fermeture gracieuse Playwright
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
 - **Date d'ouverture :** 2026-08-31
+- **Date de validation propriétaire :** 2026-08-31T00:41:58Z
+- **Date de clôture :** 2026-08-31
 - **Jalon :** J9 — prérequis runtime de WO-019
 - **Base locale :** `542f35246ae7680d6c66d05fb73fb634b5dc1165`
 - **Branche :** `codex/j9-playwright-graceful-close`
@@ -14,7 +16,7 @@
 - **Nouvel endpoint, allowlist, parseur, schéma ou migration :** `NONE`
 - **Cause racine :** `ESTABLISHED`
 - **Correction locale :** `IMPLEMENTED_AND_QUALIFIED`
-- **Validation propriétaire :** `REQUIRED`
+- **Validation propriétaire :** `RECEIVED — VALIDATE`
 
 ## 1. Objectif
 
@@ -49,6 +51,25 @@ J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 Cette autorisation couvre le diagnostic, les tests de régression et la correction runtime locale.
 Elle n'est ni un go réseau, ni une reprise implicite de WO-019, ni une autorisation de modifier les
 bornes de sécurité ou le protocole sans preuve et revue explicites.
+
+La validation propriétaire de clôture reçue le 2026-08-31 à `00:41:58Z` est enregistrée exactement
+comme suit :
+
+```text
+J9_RUNTIME_WORK_ORDER=WO-SS-20260831-020-J9-PLAYWRIGHT-GRACEFUL-CLOSE
+J9_RUNTIME_WORK_ORDER_OWNER_DECISION=VALIDATE
+J9_RUNTIME_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_RUNTIME_SCOPE_CONFIRMED=DIAGNOSE_AND_CORRECT_PLAYWRIGHT_GRACEFUL_CLOSE_AND_PROCESS_TREE_CLEANUP
+J9_RUNTIME_WORK_ORDER_MOVE_TO_COMPLETED=YES
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_FUTURE_VPS_PRODUCTION_OPTION=NOT_EXCLUDED_BUT_NOT_AUTHORIZED
+```
+
+Cette validation clôt uniquement le défaut runtime couvert par WO-020. Elle ne constitue ni la
+readiness complète de WO-019, ni son autorisation de reprise, ni un go réseau, ni une autorisation
+d'intégration, de production ou de déploiement VPS.
 
 ## 3. Preuve d'entrée faisant autorité
 
@@ -189,7 +210,8 @@ Si la correction exige une augmentation de borne, une nouvelle version du protoc
 6. exécuter les qualifications loopback J3, puis J4, puis J5 — `PASS_14_OF_14_EACH` ;
 7. exécuter les suites standard et intégration ainsi que Compose — `PASS` ;
 8. auditer processus, listeners et artefacts — `PASS` ;
-9. soumettre le résultat à la revue propriétaire sans reprendre WO-019 — `CURRENT_STEP`.
+9. soumettre le résultat à la revue propriétaire sans reprendre WO-019 —
+   `COMPLETED_OWNER_VALIDATED`.
 
 ## 9. Matrice de validation
 
@@ -257,6 +279,7 @@ Résultats finaux :
 
 ```text
 STANDARD_CLEAN_VERIFY=PASS_931_TESTS_0_FAILURE_0_ERROR_4_SKIPPED
+CLOSURE_STANDARD_VERIFY=PASS_931_TESTS_0_FAILURE_0_ERROR_4_SKIPPED
 INTEGRATION_VERIFY=PASS_67_TESTS_0_FAILURE_0_ERROR
 VERIFY_LOCAL_WITH_INTEGRATION=PASS
 TESTCONTAINERS_FLYWAY_SCHEMA=V28_CONFIRMED
@@ -292,7 +315,7 @@ README.md
 CHANGELOG.md
 docs/work_orders/active/WO-SS-20260831-018-decision-j9.md
 docs/work_orders/active/WO-SS-20260831-019-j9-provider-robustness.md
-docs/work_orders/active/WO-SS-20260831-020-j9-playwright-graceful-close.md
+docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md
 ```
 
 Le worker de production, le protocole IPC, les scripts, la configuration, les endpoints, les
@@ -307,10 +330,11 @@ Les principaux commits locaux de réalisation sont :
 95bd13c docs(j9): open Playwright graceful close runtime work order
 f969419 fix(playwright): close worker gracefully before tree cleanup
 d62e46a docs(j9): record WO-020 runtime readiness
+f73ff6f docs(j9): align WO-020 delivery ledger
 ```
 
-Aucun push, PR, merge vers `main`, payload brut ou artefact navigateur n'est autorisé. Après
-validation technique, l'intégration dans `codex/j9-decision` reste linéaire ou fast-forward.
+Aucun push, PR, merge vers `main`, payload brut ou artefact navigateur n'est autorisé. L'intégration
+dans `codex/j9-decision` a été réalisée par fast-forward avant la validation propriétaire.
 
 ## 13. Portes de statut
 
@@ -334,15 +358,20 @@ CANCELLED
 Même `LOCAL_READINESS_PASS` n'autorise pas la reprise de WO-019. Une décision propriétaire
 distincte restera nécessaire.
 
-État soumis au propriétaire :
+État final validé par le propriétaire :
 
 ```text
-WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+WORK_ORDER_STATUS=VALIDATED
 ROOT_CAUSE_STATUS=ESTABLISHED
 IMPLEMENTATION_STATUS=COMPLETED_LOCAL
 LOCAL_READINESS=PASS
-OWNER_REVIEW_REQUIRED=YES
-OWNER_VALIDATION=NOT_RECEIVED
+OWNER_REVIEW_REQUIRED=NO
+OWNER_REVIEW_STATUS=SATISFIED
+OWNER_VALIDATION=RECEIVED_VALIDATE
+OWNER_VALIDATED_AT_UTC=2026-08-31T00:41:58Z
+CLOSURE=AUTHORIZED_BY_OWNER_2026-08-31
+MOVED_TO_COMPLETED=YES
+WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md
 NETWORK_AUTHORIZED=NO
 WO019_CAMPAIGN_RESUME_AUTHORIZED=NO
 INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
@@ -383,8 +412,12 @@ POST_FINAL_VERIFY_RESIDUAL_OWNED_PROCESS_COUNT=0
 POST_FINAL_VERIFY_LISTENER_127_0_0_1_8087_COUNT=0
 POST_FINAL_VERIFY_FORBIDDEN_RUNTIME_ARTIFACT_COUNT=0_EXCLUDING_IMMUTABLE_BROWSER_CACHE
 J5_FORBIDDEN_BROWSER_ARTIFACT_SCANNER=PASS
-WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
-OWNER_VALIDATION=NOT_RECEIVED
+WORK_ORDER_STATUS=VALIDATED
+OWNER_VALIDATION=RECEIVED_VALIDATE
+OWNER_VALIDATED_AT_UTC=2026-08-31T00:41:58Z
+CLOSURE=AUTHORIZED_BY_OWNER_2026-08-31
+MOVED_TO_COMPLETED=YES
+WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md
 NETWORK_AUTHORIZED=NO
 WO019_CAMPAIGN_RESUME_AUTHORIZED=NO
 INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO

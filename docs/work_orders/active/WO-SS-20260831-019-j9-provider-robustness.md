@@ -46,13 +46,16 @@ OWNER_GO_CONSUMED=NO
 MAX_DIRECT_CALLS=38
 REPLACEMENT_DOSSIER_ALLOWED=NO
 ADR_SS_002_STATUS=ACCEPTED_V1_0
-OFFLINE_READINESS=BLOCKED_PENDING_WO020_OWNER_REVIEW_AND_WO019_RESUME_AUTHORIZATION
+OFFLINE_READINESS=BLOCKED_PENDING_WO019_RESUME_AUTHORIZATION
 V28_BACKUP_RESTORE=NOT_EXECUTED_READINESS_BLOCKED
 GLOBAL_OWNER_GO=NOT_GRANTED
-SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=YES_OPENED_WO020
+SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=SATISFIED_BY_VALIDATED_WO020
 RUNTIME_WORK_ORDER=WO-SS-20260831-020-j9-playwright-graceful-close
-RUNTIME_WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+RUNTIME_WORK_ORDER_STATUS=VALIDATED
+RUNTIME_WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md
 RUNTIME_CORRECTION_LOCAL_READINESS=PASS
+RUNTIME_WORK_ORDER_OWNER_VALIDATION=RECEIVED_2026-08-31T00:41:58Z
+RUNTIME_OWNER_REVIEW=SATISFIED
 WO019_CAMPAIGN_RESUME_AUTHORIZED=NO
 ```
 
@@ -249,9 +252,10 @@ WO-020 a ensuite établi la cause circulaire : le worker émettait `CLOSED` puis
 alors que le parent attendait ou terminait l'arbre avant de produire cet EOF ; le timeout gracieux
 était aussi plafonné à tort à `2 s`. La correction du seul superviseur conserve le worker, le
 protocole et les endpoints, puis les qualifications loopback J3, J4 et J5 ont chacune réussi leurs
-`14` tests. Cette preuve reste une readiness locale de WO-020 en attente de revue propriétaire. Elle
-ne reprend pas WO-019. La sauvegarde/restauration chiffrée V28 n'a pas été lancée et la readiness de
-WO-019 reste bloquée jusqu'à une décision propriétaire distincte.
+`14` tests. Le propriétaire a validé cette readiness locale et autorisé le déplacement de WO-020
+vers les Work Orders terminés le 2026-08-31 à `00:41:58Z`. Cette décision ne reprend pas WO-019.
+La sauvegarde/restauration chiffrée V28 n'a pas été lancée et la readiness de WO-019 reste bloquée
+jusqu'à une autorisation propriétaire distincte de reprise.
 
 ## 9. Sauvegarde/restauration V28
 
@@ -264,6 +268,9 @@ Après readiness et avant le go :
 5. exiger Flyway V28, comptes, couverture et fingerprints identiques, y compris le ledger J8 ;
 6. conserver seulement dans la preuve Git les hashes et métadonnées minimisées ;
 7. ne lancer aucune purge primaire.
+
+Le bloc suivant décrit le résultat futur exigé ; il n'est pas l'état courant, qui reste
+`V28_BACKUP_RESTORE=NOT_EXECUTED_READINESS_BLOCKED` :
 
 ```text
 J6_BACKUP_RESULT=QUALIFIED
@@ -473,10 +480,13 @@ PROVIDER_CALLS_UNDER_WO019=0
 POST_FAILURE_RESIDUAL_OWNED_PROCESS_COUNT=0
 POST_FAILURE_LISTENER_127_0_0_1_8087_COUNT=0
 POST_FAILURE_FORBIDDEN_BROWSER_ARTIFACTS=NONE_FOUND
-SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=YES_OPENED_WO020
+SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=SATISFIED_BY_VALIDATED_WO020
 RUNTIME_WORK_ORDER=WO-SS-20260831-020-j9-playwright-graceful-close
-RUNTIME_WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+RUNTIME_WORK_ORDER_STATUS=VALIDATED
+RUNTIME_WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md
 RUNTIME_CORRECTION_LOCAL_READINESS=PASS
+RUNTIME_WORK_ORDER_OWNER_VALIDATION=RECEIVED_2026-08-31T00:41:58Z
+RUNTIME_OWNER_REVIEW=SATISFIED
 WO020_ROOT_CAUSE=CLOSED_ACKNOWLEDGED_WORKER_WAITING_FOR_PARENT_EOF
 WO020_SUPERVISOR_TESTS=PASS_31_OF_31
 WO020_WORKER_PROTOCOL_TESTS=PASS_10_OF_10
@@ -499,9 +509,10 @@ NETWORK_AUTHORIZED=NO
 ADR-SS-002 v1.0 reste accepté. Les vérifications standards, PostgreSQL/Testcontainers,
 `Verify-Local` et Compose sont vertes et n'ont produit aucun appel fournisseur. La qualification
 Playwright loopback initiale reste conservée comme preuve de l'arrêt de sécurité. WO-020 a depuis
-établi la cause, qualifié sa correction et réussi les trois scripts loopback, mais reste
-`READY_FOR_OWNER_REVIEW`. L'audit post-correction ne trouve aucun processus possédé résiduel, aucun
-listener sur `127.0.0.1:8087` et le scanner J5 ne trouve aucun artefact navigateur interdit.
+établi la cause, qualifié sa correction et réussi les trois scripts loopback. Le propriétaire l'a
+validé et a autorisé son déplacement vers les Work Orders terminés le 2026-08-31 à `00:41:58Z`.
+L'audit post-correction ne trouve aucun processus possédé résiduel, aucun listener sur
+`127.0.0.1:8087` et le scanner J5 ne trouve aucun artefact navigateur interdit.
 WO-019 reste `OPEN_AWAITING_PREREQUISITES` et `EVIDENCE_STATUS=DRAFT` ; aucun go, appel fournisseur,
 cycle chiffré sauvegarde/restauration V28 ou reprise de campagne n'est autorisé avant une décision
 propriétaire distincte.
@@ -515,3 +526,7 @@ J9_PROVIDER_NETWORK_AUTHORIZED=NO
 J9_WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
 J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
+
+Le bloc propriétaire exact de validation et de clôture est conservé dans le
+[Work Order WO-020 validé](../completed/WO-SS-20260831-020-j9-playwright-graceful-close.md). Sa
+validation satisfait le prérequis runtime uniquement et ne modifie aucune porte de WO-019.

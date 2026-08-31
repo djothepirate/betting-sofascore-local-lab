@@ -54,8 +54,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   d'intégration, Flyway V28 confirmé uniquement dans Testcontainers et Compose valides ; zéro accès
   fournisseur, processus possédé ou listener 8087, scanner d'artefacts J5 vert ; ceci ne vaut pas le
   cycle chiffré sauvegarde/restauration V28 de WO-019 ;
-- WO-020 passe à `READY_FOR_OWNER_REVIEW`, sans validation propriétaire implicite ; WO-019 reste
-  `OPEN_AWAITING_PREREQUISITES`, sa preuve reste `DRAFT` et réseau, go et reprise restent à `NO` ;
+- WO-020 passe d'abord à `READY_FOR_OWNER_REVIEW`, sans validation propriétaire implicite ;
+- validation propriétaire explicite de WO-020 reçue le 2026-08-31 à `00:41:58Z`, avec déplacement
+  autorisé vers les Work Orders terminés ; WO-019 reste `OPEN_AWAITING_PREREQUISITES`, sa preuve
+  reste `DRAFT` et réseau, go, reprise, intégration et production restent à `NO` ;
 - revue factuelle de sources officielles : restrictions publiées sur les requêtes automatisées,
   le scraping, l'agrégation, la reproduction et l'extraction substantielle sans consentement
   explicite ; point d'entrée `Sofascore API` et canal `Product -> API` présents, mais aucune licence,
