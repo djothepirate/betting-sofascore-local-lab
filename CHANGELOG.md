@@ -170,6 +170,20 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - déclenchement séparé du réexamen d'ADR-SS-002 exigé par sa section 9 avant toute éventuelle
   décision de reprise ; la clôture de WO-021 ne vaut ni acceptation d'une révision de l'ADR, ni
   manifeste, ni go fournisseur.
+- ouverture de `WO-SS-20260831-022` sur `codex/j9-adr002-reexamination` depuis la clôture validée
+  de WO-021, pour réaliser exclusivement le réexamen documentaire d'ADR-SS-002 avant toute reprise ;
+  aucun appel fournisseur, reprise, go, intégration ou production n'est autorisé ;
+- conclusion du réexamen : v1.0 est `ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP` et non réutilisable,
+  car la reprise après incident et le fence global exécutoire WO-021 déclenchent tous deux le
+  paragraphe 9 ; proposition d'un draft v1.1 sans effet exécutoire ;
+- matrice propriétaire du draft v1.1 : continuation D2/D3 recommandée avec `8` nouveaux appels
+  maximum et `28` cumulés, nouvelle série complète alternative avec `38` nouveaux et `58` cumulés,
+  ou absence de reprise ; la voie minimale ne requalifie pas le rapport historique `STOPPED` et
+  borne la consolidation à `PARTIAL_BOUNDED` sous les règles actuelles ;
+- revue officielle rafraîchie le `2026-08-31T10:18:51.8559197Z` : restrictions et absence de
+  permission/licence/quota applicable toujours constatées ; avant tout go restent requis le choix
+  puis l'acceptation propriétaire de v1.1, une readiness fraîche, une nouvelle sauvegarde/restauration
+  V28 post-arrêt, un manifeste et un nouveau go à usage unique.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 

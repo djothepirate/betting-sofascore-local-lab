@@ -14,7 +14,7 @@ La règle déterministe J9 a produit la recommandation `KEEP_LOCAL`, avec
 `J9_EVIDENCE_RESULT=STOPPED`. Le propriétaire a explicitement refusé cette recommandation comme
 décision finale le 2026-08-31. Ce refus ne sélectionne pas automatiquement une autre option :
 `J9_FINAL_DECISION=NOT_TAKEN` et
-`J9_DECISION_STATUS=PENDING_ADR_SS_002_REEXAMINATION_AND_FUTURE_WO019_EVIDENCE`. Il n'autorise ni intégration, ni
+`J9_DECISION_STATUS=PENDING_ADR_SS_002_V1_1_PROFILE_DECISION_AND_FUTURE_WO019_EVIDENCE`. Il n'autorise ni intégration, ni
 production, ni nouvel appel fournisseur, ni polling, ni scheduler, ni mode live.
 La preuve multi-dossier relève de WO-019. ADR-SS-002 v1.0 est accepté explicitement. Le premier
 contrôle J3 Playwright loopback de WO-019 et sa
@@ -90,9 +90,10 @@ Le discriminant préalable a échoué en `0,08 s` avant correction, comme attend
 une horloge monotone réévaluée après chaque réveil, un fence conservateur dans le superviseur parent
 — trois secondes complètes après la fin observable du dispatch précédent — et l'observation CDP
 `Network.requestWillBeSent` du seul document principal exact. L'identité requête/réponse est
-corrélée ; cache, service worker, redirection ou preuve temporelle incomplète ferment la série au
-lieu de produire un timestamp favorable supposé. Le fence couvre également deux campagnes ou
-workers successifs.
+corrélée ; cache navigateur/CDP, service worker, prefetch, redirection ou preuve temporelle
+incomplète ferment la série au lieu de produire un timestamp favorable supposé. Le cache métier
+cache-first garde sa sémantique distincte : un hit frais vaut zéro appel direct. Le fence couvre
+également deux campagnes ou workers successifs.
 
 Le premier rejeu Chromium complet a isolé un défaut de teardown sur le cas timeout :
 `Fetch.disable`, `Network.disable` et les détachements CDP synchrones précédaient `page.close()` sur
@@ -113,8 +114,21 @@ pendant le fence comme une perte de preuve, conserve le statut d'interruption et
 
 La validation de WO-021 n'a autorisé aucun accès fournisseur. WO-019 reste `STOPPED`, ses `20` tentatives sont
 gelées, et l'accès fournisseur, sa reprise, un nouveau go, l'intégration et la production restent
-interdits. Une future reprise après WO-021 exigera une nouvelle décision propriétaire, une readiness
-fraîche, le réexamen ADR imposé par ADR-SS-002 §9, un nouveau manifeste et un nouveau go global.
+interdits.
+
+WO-022 réalise ensuite le réexamen imposé par ADR-SS-002 §9. Il conclut que v1.0 est
+`ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP` et ne peut pas être réutilisée : l'arrêt après incident
+et le fence global exécutoire ajouté par WO-021 déclenchent tous deux une nouvelle version. Le
+draft v1.1 reste sans effet réseau et attend le choix propriétaire entre une continuation D2/D3
+limitée à huit nouveaux appels, une nouvelle série complète de 38 appels ou l'absence de reprise.
+
+La voie minimale recommandée conserve D1 gelé, limite le cumul à `28` et exige un rapport
+supplémentaire. Elle ne transforme pas rétroactivement le rapport `STOPPED` en `PASS` ; sous les
+règles actuelles, la consolidation reste au maximum `PARTIAL_BOUNDED`. Une nouvelle série complète
+pourrait produire un verdict autonome, mais porterait l'exposition cumulée maximale à `58`.
+Après le choix du profil, toute reprise exigerait encore l'acceptation explicite de v1.1, une
+readiness fraîche, une nouvelle sauvegarde/restauration V28 post-arrêt, un manifeste et un nouveau
+go global.
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une
@@ -1081,6 +1095,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Rapport arrêté de la campagne J9](docs/validation/J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831.md)
 - [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md)
 - [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay.md)
+- [Work Order actif de réexamen ADR-SS-002](docs/work_orders/active/WO-SS-20260831-022-j9-adr-ss-002-reexamination.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 

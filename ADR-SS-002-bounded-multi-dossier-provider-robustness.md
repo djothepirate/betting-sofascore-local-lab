@@ -1,17 +1,28 @@
 # ADR-SS-002 - Preuve fournisseur multi-dossier bornée pour J9
 
-- **Statut :** Accepté — éligibilité conditionnelle, aucun go réseau accordé
-- **Version :** 1.0
+- **Statut :** v1.0 `ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP` ; v1.1
+  `DRAFT_PENDING_OWNER_PROFILE_DECISION`
+- **Version historique acceptée :** 1.0
+- **Version proposée :** 1.1
 - **Date :** 2026-08-31
 - **Décideur :** Porteur du Betting Project
-- **Portée :** une campagne locale de preuve J9 sous `WO-SS-20260831-019`
-- **Base :** `a47c932` sur `codex/j9-decision`
+- **Portée historique v1.0 :** une campagne locale de preuve J9 sous `WO-SS-20260831-019`
+- **Portée proposée v1.1 :** profil de suite à choisir ; aucune reprise avant acceptation
+- **Base historique v1.0 :** `a47c932` sur `codex/j9-decision`
+- **Base du draft v1.1 :** `1fcd2cd1a71df74e97e31850a1497a3780e7719f` sur
+  `codex/j9-adr002-reexamination`
 - **ADR qualifié :** `ADR-SS-001 v1.4`, inchangé
 - **Cible Java :** Java 25 LTS
 - **Transport :** Playwright existant, manuel, local et opt-in
-- **Nouvel endpoint, URI, transport ou code runtime :** aucun
-- **Acceptation propriétaire enregistrée à :** 2026-08-30T22:54:47Z (2026-08-31 Europe/Paris)
-- **Effet de l'acceptation :** première porte de WO-019 franchie ; aucun appel fournisseur autorisé avant les trois portes restantes
+- **Changement runtime sous v1.0 :** aucun
+- **Fait runtime incorporé par le draft v1.1 :** fence WO-021 validé, commit `e2311cc` ; aucun
+  nouveau code sous WO-022
+- **Acceptation propriétaire v1.0 enregistrée à :** 2026-08-30T22:54:47Z
+  (2026-08-31 Europe/Paris)
+- **Acceptation propriétaire v1.1 :** `PENDING`
+- **Effet historique de l'acceptation v1.0 :** première porte de WO-019 franchie ; série ensuite
+  consommée et terminée par arrêt après vingt tentatives
+- **Effet du draft v1.1 :** aucun ; ni reprise, ni réseau, ni go avant décision propriétaire
 - **Option de production VPS future :** non exclue, non mesurée et non autorisée par cet ADR
 
 ## 1. Contexte
@@ -350,14 +361,179 @@ Un nouvel ADR est requis avant :
 1. `ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md`, version 1.4.
 2. `docs/work_orders/active/WO-SS-20260831-018-decision-j9.md`.
 3. `docs/work_orders/active/WO-SS-20260831-019-j9-provider-robustness.md`.
-4. `docs/benchmark/J8-BENCHMARK-REPORT-20260830.md`.
-5. `docs/runbooks/J8-BENCHMARK.md`.
-6. `docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md`.
-7. Sources officielles listées au paragraphe 3.6, consultées le 2026-08-31 local.
+4. `docs/work_orders/active/WO-SS-20260831-022-j9-adr-ss-002-reexamination.md`.
+5. `docs/benchmark/J8-BENCHMARK-REPORT-20260830.md`.
+6. `docs/runbooks/J8-BENCHMARK.md`.
+7. `docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md`.
+8. Sources officielles listées aux paragraphes 3.6 et 11.6, consultées le 2026-08-31 local.
 
-## 11. Historique
+## 11. Réexamen après WO-021 — draft v1.1 sans effet exécutoire
+
+### 11.1 Déclencheurs et état terminal v1.0
+
+Le réexamen demandé après la validation de WO-021 conclut que v1.0 ne peut pas être réutilisée.
+Deux déclencheurs du paragraphe 9 sont réalisés :
+
+- reprise après incident et arrêt global ;
+- création, sous WO-021, d'un fence global exécutoire commun aux campagnes et workers.
+
+Le paragraphe 3.7 interdisait en outre explicitement une seconde série ou une reprise. Le go unique
+v1.0 est consommé, expiré et terminé par l'arrêt. Le rapport historique reste immuable.
+
+```text
+ADR_SS_002_REEXAMINATION_RESULT=NEW_VERSION_REQUIRED
+ADR_SS_002_V1_0_STATE=ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP
+ADR_SS_002_V1_0_FILE_SHA256_BEFORE_V1_1_DRAFT=F68792FF722708F436957D3414317F2B5AC9FA2E2FA77BC949274FED144B3957
+ADR_SS_002_V1_0_FILE_SHA256_SCOPE=HISTORICAL_V1_0_FILE_BEFORE_V1_1_DRAFT
+ADR_SS_002_V1_0_SOURCE_COMMIT=af7fe179315053aedff31f0b3f6a31f6e4a8e54c
+ADR_SS_002_V1_0_REUSABLE_FOR_RESUME=NO
+PRIOR_GLOBAL_OWNER_GO_REUSABLE=NO
+PRIOR_EVIDENCE_RESULT=STOPPED
+PRIOR_DIRECT_ATTEMPTS_FROZEN=20
+PRIOR_D1_PROVIDER_START_DELAY=NOT_MEASURED
+WO021_STATUS=VALIDATED
+NETWORK_AUTHORIZED=NO
+```
+
+WO-021 qualifie prospectivement le runtime corrigé en loopback. Il ne reconstitue ni ne
+requalifie les départs fournisseur D1 historiques.
+
+### 11.2 Profils examinés
+
+| Profil | Nouveaux appels max. | Cumul max. | D1 rejoué | Nouveau verdict autonome complet |
+|---|---:|---:|---|---|
+| `CONTINUE_D2_D3_ONLY` | 8 | 28 | Non | Non |
+| `RESTART_FULL_D1_D2_D3` | 38 | 58 | Oui | Oui |
+| `DO_NOT_RESUME` | 0 | 20 | Non | Non |
+
+Le draft recommande `CONTINUE_D2_D3_ONLY` pour limiter l'exposition. Cette voie ne transforme pas
+le rapport `STOPPED` en `PASS` : elle crée une preuve supplémentaire D2/D3 et laisse la
+consolidation au maximum `PARTIAL_BOUNDED` sous les règles courantes.
+
+Une série complète pourrait produire un nouveau verdict autonome, mais elle constitue une seconde
+série de 38 appels maximum et porte le cumul théorique à 58. Elle exige donc une décision
+propriétaire explicite et une réécriture du présent draft.
+
+### 11.3 Profil normatif proposé : continuation D2/D3 seulement
+
+Le texte ci-dessous est un draft sans effet exécutoire :
+
+```text
+ADR_SS_002_V1_1_STATUS=DRAFT_PENDING_OWNER_PROFILE_DECISION
+ADR_SS_002_V1_1_RECOMMENDED_PROFILE=CONTINUE_D2_D3_ONLY
+HISTORICAL_DIRECT_ATTEMPTS_FROZEN=20
+CONTINUATION_MAXIMUM_NEW_DIRECT_ATTEMPTS=8
+MAXIMUM_CUMULATIVE_DIRECT_ATTEMPTS_AFTER_CONTINUATION=28
+ORIGINAL_HARD_CEILING=38
+ORIGINAL_HARD_CEILING_INCREASED_UNDER_RECOMMENDED_PROFILE=NO
+UNALLOCATED_HEADROOM=10_NOT_AUTHORIZED
+UNUSED_J3_RESERVATION_REALLOCATED=NO
+D1_REEXECUTION_AUTHORIZED=NO
+REPLACEMENT_DOSSIER_ALLOWED=NO
+```
+
+| État | Dossier | Provider ID | Identité canonique | Unités |
+|---|---|---:|---|---:|
+| Gelé | D1 | `16691018` | `f4713f80-4769-3656-ba51-61d8ac1aa814` | 0 |
+| Cible 1 | D2 | `16671566` | `da075869-34d4-3d42-83d2-613583691845` | J4 `1` + J5 `3` |
+| Cible 2 | D3 | `16310930` | `c40066c9-987b-38d9-b415-869a453d2ad6` | J4 `1` + J5 `3` |
+
+L'ordre fermé proposé est `J4 D2`, `J5 D2`, `J4 D3`, `J5 D3`. Les réservations cumulées sont
+`20+1=21`, `21+3=24`, `24+1=25`, `25+3=28`. Le plafond propre à cette continuation refuse
+`28+1` et `26+3`. Le plafond historique secondaire refuse également `38+1` et `36+3`. Les dix
+unités entre 28 et 38 ne sont pas disponibles pour un retry, un rejeu, un dossier supplémentaire
+ou une seconde continuation.
+
+Le fence WO-021, la concurrence `1`, le minimum `3 s`, le timeout `10 s`, la limite 5 Mio, le
+contexte neuf et toutes les règles sans retry, fallback, polling, scheduler, cache forcé ou artefact
+navigateur restent obligatoires. Les arrêts et sémantiques `404` de v1.0 restent applicables.
+
+### 11.4 Nouveau go et rapports
+
+L'ancien go est irréutilisable. Après toutes les portes, un nouveau go éventuel identifiera v1.1
+accepté, le rapport historique et son hash, la baseline 20, les deux cibles, l'ordre, le maximum
+nouveau 8, le cumul maximum 28, l'acteur et une fenêtre UTC d'au plus 60 minutes.
+
+Le go sera consommé au premier claim J4 D2. Une seconde utilisation, un redémarrage, une deuxième
+instance, un incident, la fin de fenêtre ou la fin de D3 le terminera.
+
+```text
+ORIGINAL_REPORT_RESULT=STOPPED
+ORIGINAL_REPORT_REWRITTEN=NO
+SUPPLEMENTAL_D2_D3_REPORT_REQUIRED=YES
+SUPPLEMENTAL_D2_D3_RESULT=<PASS|PARTIAL_BOUNDED|STOPPED>
+CONSOLIDATED_EVIDENCE_MAXIMUM=PARTIAL_BOUNDED
+J9_FINAL_DECISION=NOT_TAKEN
+```
+
+### 11.5 Portes cumulatives
+
+Avant tout nouveau go :
+
+1. intégration linéaire de WO-021 validé dans l'historique exact destiné à WO-019 ;
+2. choix propriétaire du profil, puis acceptation explicite du texte v1.1 final ;
+3. readiness fraîche avec tests standards et d'intégration, qualifications loopback J3/J4/J5,
+   fence inter-worker/inter-campagne, cleanup, artefacts, secrets et flags bloquants ;
+4. nouvelle sauvegarde chiffrée V28 post-arrêt et restauration isolée couvrant au minimum le
+   snapshot `814`, les occurrences `778..781` et les vingt tentatives ;
+5. nouveau manifeste gelé et corroboration indépendante du ledger ;
+6. nouveau go global explicite et à usage unique.
+
+La sauvegarde précédente couvrait au maximum le snapshot `794` et ne contient donc pas la preuve D1
+acquise pendant la série arrêtée.
+
+### 11.6 Revue officielle rafraîchie
+
+La consultation documentaire du `2026-08-31T10:18:51.8559197Z` ne découvre aucune permission,
+licence ou limite API applicable :
+
+- les conditions officielles déclarent toujours une dernière mise à jour au `2024-09-18` et
+  restreignent notamment la charge serveur par requêtes automatisées, l'agrégation, le scraping,
+  la reproduction et l'extraction substantielle sans consentement explicite, avec les réserves
+  légales du texte ;
+- le point d'entrée `Sofascore API` reste accessible sans authentification, licence, tarification,
+  limite d'appel ou permission extractible ;
+- `robots.txt` comporte 181 lignes sur l'hôte `www`, sans règle `/api`, `Allow` ou `Crawl-delay` ;
+  cette absence n'est pas une permission ;
+- le canal officiel `Product -> API` et les widgets iframe restent disponibles, sans documenter
+  l'extraction ou le stockage via les endpoints du laboratoire.
+
+```text
+OFFICIAL_SOURCE_REVIEW_REFRESHED_AT_UTC=2026-08-31T10:18:51.8559197Z
+EXPLICIT_PERMISSION_FOR_LAB_ENDPOINTS_EVIDENCED=NO
+API_AUTHENTICATION_TERMS_EXTRACTED=NO
+API_RATE_LIMIT_EXTRACTED=NO
+API_LICENSE_EXTRACTED=NO
+LEGAL_CONCLUSION=NOT_PROVIDED
+```
+
+Le transport Playwright et l'option VPS future ne neutralisent pas ces faits. Production,
+intégration, VPS courant et dépendance critique restent interdits.
+
+### 11.7 Porte propriétaire du profil
+
+Le réexamen ne sélectionne pas automatiquement le profil recommandé :
+
+```text
+J9_ADR_SS_002_REEXAMINATION_OWNER_DECISION=<SELECT_CONTINUE_D2_D3_ONLY|SELECT_RESTART_FULL_D1_D2_D3|DO_NOT_RESUME|REQUEST_CHANGES>
+J9_ADR_SS_002_V1_0_STATE=ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP
+J9_ADR_SS_002_V1_0_REUSABLE_FOR_RESUME=NO
+J9_ADR_SS_002_V1_1_STATUS=DRAFT_PENDING_OWNER_PROFILE_DECISION
+J9_RECOMMENDED_PROFILE=CONTINUE_D2_D3_ONLY
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+J9_NEW_PROVIDER_GO_GRANTED=NO
+J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_FINAL_DECISION=NOT_TAKEN
+J9_FUTURE_VPS_PRODUCTION_OPTION=NOT_EXCLUDED_BUT_NOT_AUTHORIZED
+```
+
+Après le choix du profil, le texte final v1.1 fera l'objet d'une acceptation propriétaire distincte.
+
+## 12. Historique
 
 | Version | Date | Évolution |
 |---|---|---|
+| 1.1-draft | 2026-08-31 | Réexamen après arrêt et WO-021 ; v1.0 déclarée non réutilisable ; matrice continuation D2/D3 (8 nouveaux, 28 cumulés) versus nouvelle série complète (38 nouveaux, 58 cumulés) ; profil minimal recommandé, décision propriétaire en attente ; aucun effet réseau. |
 | 1.0 | 2026-08-31 | Acceptation propriétaire explicite du corpus, du plafond 38, du go unique, de la sémantique 404 et des non-autorisations ; option VPS future reconnue mais non autorisée ; aucun go réseau accordé. |
 | 0.1 | 2026-08-31 | Proposition d'une série unique à trois dossiers et 38 appels maximum ; revue officielle factuelle ; aucun effet réseau avant décision propriétaire. |
