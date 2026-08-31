@@ -1,6 +1,6 @@
 # WO-SS-20260831-019 — Preuve bornée de robustesse fournisseur pour J9
 
-- **Statut :** `READY_FOR_PROVIDER_CAMPAIGN`
+- **Statut :** `QUALIFICATION_RUNNING`
 - **Date d'ouverture :** 2026-08-31
 - **Jalon :** J9 — Preuve préalable à la décision
 - **Base locale :** `a47c932`
@@ -10,8 +10,8 @@
 - **Nouvel ADR :** `ADR-SS-002 v1.0 — ACCEPTED, GLOBAL_GO_GRANTED`
 - **État de la preuve :** `DRAFT`
 - **Réseau fournisseur :** `AUTHORIZED_WITHIN_EXACT_WINDOW_ONLY`
-- **Go propriétaire global :** `GRANTED`
-- **Go consommé :** `NO`
+- **Go propriétaire global :** `CONSUMED`
+- **Go consommé :** `YES — FIRST_ACCEPTED_J3_EXECUTION_CLAIM`
 - **Plafond direct global :** `38`
 - **Dossier de remplacement :** `NOT_AUTHORIZED`
 - **Nouvel endpoint, URI, transport, code ou migration :** `NONE`
@@ -42,16 +42,16 @@ VPS ou de production. Elle ne prend pas la décision J9.
 ```text
 EVIDENCE_STATUS=DRAFT
 NETWORK_AUTHORIZED=YES_WITHIN_THIS_MANIFEST_AND_WINDOW_ONLY
-OWNER_GO_CONSUMED=NO
+OWNER_GO_CONSUMED=YES
 OWNER_GO_CONSUMPTION_POINT=FIRST_ACCEPTED_J3_EXECUTION_CLAIM
 OWNER_GO_CONSUMPTION_EFFECT=IRREVERSIBLE_FOR_SERIES
-PROVIDER_CALLS_UNDER_WO019=0
+PROVIDER_CALLS_UNDER_WO019=15
 LEDGER_BASELINE_DIRECT_ATTEMPTS=0
 LEDGER_RULE=ATTEMPTS_SO_FAR_PLUS_NEXT_MAX_LE_38
 MAX_DIRECT_CALLS=38
 REPLACEMENT_DOSSIER_ALLOWED=NO
 ADR_SS_002_STATUS=ACCEPTED_V1_0
-WORK_ORDER_STATUS=READY_FOR_PROVIDER_CAMPAIGN
+WORK_ORDER_STATUS=QUALIFICATION_RUNNING
 WO019_WORK_ORDER_RESUME_AUTHORIZED=YES
 WO019_PROVIDER_CAMPAIGN_AUTHORIZED=YES_WITHIN_THIS_MANIFEST_AND_WINDOW_ONLY
 WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=YES_WITHIN_THIS_MANIFEST_AND_WINDOW_ONLY
@@ -60,8 +60,8 @@ OFFLINE_READINESS_REEXECUTED_ON=2026-08-31
 V28_BACKUP_RESTORE=QUALIFIED
 V28_RESTORE_QUALIFIED=YES
 V28_BACKUP_RESTORE_QUALIFIED_AT_UTC=2026-08-31T06:46:07.7013794Z
-NEXT_GATE=FRESH_TECHNICAL_CONFIRMATION_J3
-GLOBAL_OWNER_GO=GRANTED
+NEXT_GATE=FRESH_TECHNICAL_CONFIRMATION_TOURNAMENT_D1
+GLOBAL_OWNER_GO=CONSUMED
 GLOBAL_OWNER_GO_OBSERVED_AT_UTC=2026-08-31T07:10:43.748Z
 GLOBAL_OWNER_GO_WINDOW_UTC=[2026-08-31T07:15:00Z,2026-08-31T08:15:00Z)
 GLOBAL_OWNER_GO_ACTOR=CODEX_LOCAL_AGENT
@@ -75,6 +75,87 @@ RUNTIME_WORK_ORDER_OWNER_VALIDATION=RECEIVED_2026-08-31T00:41:58Z
 RUNTIME_OWNER_REVIEW=SATISFIED
 INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
+
+### 2.1 Sous-campagne J3 datée — résultat et consommation du go
+
+Le propriétaire a réalisé le geste manuel frais J3 dans l'interface locale. Le premier claim
+d'exécution accepté a consommé irréversiblement le go global unique avant le résultat du transport.
+L'instant exact du claim n'est pas persisté par le runtime ; il est borné par la première tentative
+directe, commencée à `2026-08-31T07:25:57.890Z`. Aucune valeur plus précise n'est déduite.
+
+La preuve terminale minimisée servie localement par le runtime et les métadonnées PostgreSQL ont été
+relues séparément, sans versionner ni afficher de payload brut, URI fournisseur, en-tête, phrase de
+confirmation, identifiant de confirmation ou donnée de session :
+
+```text
+J3_SUBCAMPAIGN_RESULT=PASS
+J3_COLLECTION_DATE=2026-08-15
+J3_TERMINAL_STATE=COMPLETED
+J3_TERMINAL_CODE=NONE
+J3_PROVIDER_REQUEST_COUNT=15
+J3_PROVIDER_PAGES_REQUESTED=1,2,3,4,5,6,7,8,9,10,11,12,13,14,15
+J3_PAGES_COMPLETED_COUNT=15
+J3_CACHE_HIT_COUNT=0
+J3_LOCAL_JSON_IMPORT_COUNT=0
+J3_HTTP_200_COUNT=15
+J3_PARSED_COUNT=15
+J3_PERSISTENCE_INSERTED_COUNT=15
+J3_FIRST_REQUESTED_AT_UTC=2026-08-31T07:25:57.890Z
+J3_COMPLETED_AT_UTC=2026-08-31T07:26:40.410752300Z
+J3_LAST_PAGE_HAS_NEXT_PAGE=false
+J3_MAX_PAYLOAD_BYTES=219503
+J3_TOTAL_PAYLOAD_BYTES=2847033
+J3_FIVE_MIB_LIMIT_RESPECTED=YES
+J3_AUTOMATIC_RETRY_EXECUTED=NO
+J3_POLLING_OR_SCHEDULE_EXECUTED=NO
+J3_FINAL_GLOBAL_STOP=ACTIVE
+J3_FINAL_CIRCUIT_STATE=LOCKED
+J3_FINAL_CIRCUIT_REASON=MANUAL_COLLECTION_TERMINAL_LOCK
+J3_PLAYWRIGHT_DESCENDANT_PROCESS_COUNT_AFTER_TERMINAL=0
+J3_FORBIDDEN_BROWSER_ARTIFACT_COUNT=0
+J3_EVIDENCE_VERSION=6
+J3_EVIDENCE_BYTES=10629
+J3_EVIDENCE_SHA256=1b8e28232e8cbb594b0816d822a5be40926b360965e28823330c5d986d6fb897
+```
+
+Les pages sont contiguës ; les quinze réponses portent `HTTP 200`, le parseur
+`scheduled-events-v1` et une persistance `INSERTED`. Les tentatives 2 à 15 commencent au moins trois
+secondes après la tentative précédente. Le premier appel, sans prédélai requis, a duré 2 872 ms ;
+les quatorze autres latences mesurées sont comprises entre 248 et 425 ms. Aucune condition d'arrêt
+globale n'a été observée.
+
+L'ancrage J3 de D1 est factuellement présent dans le corpus parsé : le snapshot `804`, page 10,
+contient la phase `15118` (`Coppa Italia Serie C, Knockout stage`), le tournoi unique `824`
+(`Coppa Italia Serie C`) et la catégorie `31` (`Italy`). Le catalogue runtime est `AVAILABLE`,
+reconstruit depuis les quinze pages, et propose cette phase. L'identité événement `16691018`, la
+saison `99790` et l'identité canonique attendue seront vérifiées dans le résultat de l'unique
+découverte tournoi ; elles ne sont pas présentées comme des sorties de l'endpoint J3 daté.
+
+Le ledger procédural, contrôlé avant la sous-campagne tournoi, devient :
+
+```text
+GLOBAL_OWNER_GO=CONSUMED
+OWNER_GO_CONSUMED=YES
+OWNER_GO_CONSUMPTION_EVIDENCE=FIRST_DIRECT_REQUEST_STARTED_2026-08-31T07:25:57.890Z
+WORK_ORDER_STATUS=QUALIFICATION_RUNNING
+EVIDENCE_STATUS=DRAFT
+PROVIDER_CALLS_UNDER_WO019=15
+NEXT_SUBCAMPAIGN=TOURNAMENT_SCHEDULED_EVENTS_D1
+NEXT_SUBCAMPAIGN_MAXIMUM_DIRECT_ATTEMPTS=1
+LEDGER_CHECK=15_PLUS_1_LE_38_PASS
+REMAINING_DIRECT_ATTEMPTS_BEFORE_NEXT_CLAIM=23
+REMAINING_DIRECT_ATTEMPTS_AFTER_FULL_NEXT_RESERVATION=22
+NEXT_GATE=FRESH_TECHNICAL_CONFIRMATION_TOURNAMENT_D1
+REPLACEMENT_DOSSIER_ALLOWED=NO
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+```
+
+Le runtime applicatif local reste actif afin de conserver le catalogue issu de cette collecte ; il
+n'effectue aucun appel automatiquement. La sous-campagne tournoi exige un nouveau geste opérateur,
+une préparation fraîche et sa phrase technique à usage unique. Le go propriétaire global consommé
+n'est ni renouvelé ni rejoué : cette confirmation technique matérialise seulement la suite déjà
+autorisée dans le manifeste et la fenêtre en cours.
 
 Le réseau reste bloqué hors du manifeste et de la fenêtre explicites. Les quatre portes cumulatives
 sont désormais satisfaites pour cette campagne unique :
