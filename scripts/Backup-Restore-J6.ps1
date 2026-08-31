@@ -3,15 +3,34 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$Destination,
 
-    [string]$AgePath
+    [string]$AgePath,
+
+    [ValidateRange(30, 3600)]
+    [int]$PipelineTimeoutSeconds = 300,
+
+    [ValidateRange(100, 30000)]
+    [int]$PipelineCleanupTimeoutMilliseconds = 5000,
+
+    [Parameter(DontShow = $true)]
+    [switch]$QualificationInjectCleanupFailureAfterSuccessfulCleanup
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 3.0
 
+if ($QualificationInjectCleanupFailureAfterSuccessfulCleanup -and
+    $env:J6_WO024_LOOPBACK_FAULT_INJECTION -cne 'AUTHORIZED') {
+    throw 'The WO-024 loopback cleanup fault injection is not authorized in this process.'
+}
+
 if ($PSVersionTable.PSVersion -lt [version]'7.4') {
     throw 'PowerShell 7.4 or newer is required to preserve native binary pipelines.'
 }
+$pipelineModulePath = Join-Path $PSScriptRoot 'J6-NativeBinaryPipeline.psm1'
+if (-not (Test-Path -LiteralPath $pipelineModulePath -PathType Leaf)) {
+    throw 'The J6 native binary pipeline module is required.'
+}
+Import-Module -Name $pipelineModulePath -Force
 if (-not [IO.Path]::IsPathFullyQualified($Destination)) {
     throw 'The encrypted backup destination must be absolute.'
 }
@@ -37,9 +56,11 @@ if ((Test-Path -LiteralPath $destinationPath) -or (Test-Path -LiteralPath $manif
 if (Get-NetTCPConnection -LocalPort 8087 -State Listen -ErrorAction SilentlyContinue) {
     throw 'Stop the local application before creating and qualifying the J6 backup.'
 }
-if (-not (Get-Command docker -ErrorAction SilentlyContinue)) {
+$dockerCommand = Get-Command docker -ErrorAction SilentlyContinue
+if ($null -eq $dockerCommand) {
     throw 'Docker is required.'
 }
+$dockerExecutable = [IO.Path]::GetFullPath($dockerCommand.Source)
 if (-not (Test-Path -LiteralPath (Join-Path $repositoryRoot '.env') -PathType Leaf)) {
     throw 'The local .env file is required by Docker Compose.'
 }
@@ -61,7 +82,7 @@ else {
 
 function Invoke-PrimaryScalar {
     param([Parameter(Mandatory = $true)][string]$Sql)
-    $value = & docker compose --env-file .env exec -T postgres sh -c `
+    $value = & $dockerExecutable compose --env-file .env exec -T postgres sh -c `
         'psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --no-align --tuples-only --quiet --command "$1"' `
         sh $Sql
     if ($LASTEXITCODE -ne 0) {
@@ -75,13 +96,176 @@ function Invoke-RestoreScalar {
         [Parameter(Mandatory = $true)][string]$Database,
         [Parameter(Mandatory = $true)][string]$Sql
     )
-    $value = & docker compose --env-file .env exec -T postgres sh -c `
+    $value = & $dockerExecutable compose --env-file .env exec -T postgres sh -c `
         'psql --username "$POSTGRES_USER" --dbname "$1" --no-align --tuples-only --quiet --command "$2"' `
         sh $Database $Sql
     if ($LASTEXITCODE -ne 0) {
         throw 'A restored database verification query failed.'
     }
     return (($value | ForEach-Object { $_.ToString() }) -join "`n").TrimEnd()
+}
+
+function Assert-J6OwnedPostgresApplicationName {
+    param([Parameter(Mandatory = $true)][string]$ApplicationName)
+    if ($ApplicationName -notmatch '^j6_(backup|restore)_[a-f0-9]{32}$') {
+        throw 'The owned PostgreSQL application name is unsafe.'
+    }
+}
+
+function Assert-J6OperatorNotCancelled {
+    if ($operatorCancellation.Token.IsCancellationRequested) {
+        throw [OperationCanceledException]::new('The J6 backup/restore was cancelled by the operator.')
+    }
+}
+
+function Get-J6RemainingCleanupMilliseconds {
+    param([Parameter(Mandatory = $true)][DateTime]$DeadlineUtc)
+    $remaining = [int][Math]::Floor(($DeadlineUtc - [DateTime]::UtcNow).TotalMilliseconds)
+    if ($remaining -lt 1) {
+        throw 'The bounded J6 cleanup deadline expired.'
+    }
+    return $remaining
+}
+
+function Invoke-J6BoundedDockerCleanupCommand {
+    param(
+        [Parameter(Mandatory = $true)][string[]]$ArgumentList,
+        [Parameter(Mandatory = $true)][DateTime]$DeadlineUtc
+    )
+    $remaining = Get-J6RemainingCleanupMilliseconds -DeadlineUtc $DeadlineUtc
+    if ($remaining -lt 200) {
+        throw 'The bounded Docker cleanup command has no safe execution/cleanup budget remaining.'
+    }
+    $nativeCleanupBudget = [int][Math]::Min(
+        $PipelineCleanupTimeoutMilliseconds,
+        [Math]::Max(100, [Math]::Floor($remaining / 5)))
+    $nativeExecutionBudget = $remaining - $nativeCleanupBudget
+    $result = Invoke-J6BoundedNativeCommand `
+        -FilePath $dockerExecutable `
+        -ArgumentList $ArgumentList `
+        -WorkingDirectory $repositoryRoot `
+        -TimeoutMilliseconds $nativeExecutionBudget `
+        -CleanupTimeoutMilliseconds $nativeCleanupBudget
+    if ($result.ExitCode -ne 0 -or
+        $result.ProcessTreeCleanup -ne 'PASS' -or
+        $result.UnexpectedDescendantCleanup) {
+        throw 'A bounded Docker cleanup command did not complete cleanly.'
+    }
+    return $result.StandardOutput.TrimEnd()
+}
+
+function Invoke-J6BoundedPrimaryCleanupScalar {
+    param(
+        [Parameter(Mandatory = $true)][string]$Sql,
+        [Parameter(Mandatory = $true)][DateTime]$DeadlineUtc
+    )
+    return Invoke-J6BoundedDockerCleanupCommand `
+        -ArgumentList @(
+            'compose', '--env-file', '.env', 'exec', '-T', 'postgres',
+            'sh', '-c',
+            'psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --no-align --tuples-only --quiet --command "$1"',
+            'sh', $Sql) `
+        -DeadlineUtc $DeadlineUtc
+}
+
+function Get-J6OwnedPostgresSessionCount {
+    param(
+        [Parameter(Mandatory = $true)][string]$ApplicationName,
+        [Parameter(Mandatory = $true)][DateTime]$DeadlineUtc
+    )
+    Assert-J6OwnedPostgresApplicationName -ApplicationName $ApplicationName
+    return [long](Invoke-J6BoundedPrimaryCleanupScalar `
+        -Sql "select count(*) from pg_stat_activity where application_name = '$ApplicationName' and pid <> pg_backend_pid()" `
+        -DeadlineUtc $DeadlineUtc)
+}
+
+function Confirm-J6OwnedPostgresSessionCleanup {
+    param([Parameter(Mandatory = $true)][string]$ApplicationName)
+    Assert-J6OwnedPostgresApplicationName -ApplicationName $ApplicationName
+
+    $startedAt = [DateTime]::UtcNow
+    $deadline = $startedAt.AddMilliseconds($PipelineCleanupTimeoutMilliseconds)
+    $minimumObservationMilliseconds = [Math]::Min(
+        2500,
+        [Math]::Floor($PipelineCleanupTimeoutMilliseconds / 2))
+    $stabilizationNotBefore = $startedAt.AddMilliseconds(
+        $minimumObservationMilliseconds)
+    $terminateSql = @"
+select count(*)
+from (
+    select pg_terminate_backend(pid)
+    from pg_stat_activity
+    where application_name = '$ApplicationName'
+      and pid <> pg_backend_pid()
+) terminated
+"@
+    $consecutiveZeros = 0
+    while ([DateTime]::UtcNow -lt $deadline -and $consecutiveZeros -lt 3) {
+        $sessionCount = Get-J6OwnedPostgresSessionCount `
+                -ApplicationName $ApplicationName `
+                -DeadlineUtc $deadline
+        if ($sessionCount -ne 0) {
+            [void](Invoke-J6BoundedPrimaryCleanupScalar `
+                -Sql $terminateSql `
+                -DeadlineUtc $deadline)
+            $consecutiveZeros = 0
+        }
+        else {
+            if ([DateTime]::UtcNow -ge $stabilizationNotBefore) {
+                $consecutiveZeros++
+            }
+            else {
+                $consecutiveZeros = 0
+            }
+        }
+        if ($consecutiveZeros -lt 3) {
+            Start-Sleep -Milliseconds 100
+        }
+    }
+    if ($consecutiveZeros -eq 3) {
+        return
+    }
+
+    throw 'An exactly owned PostgreSQL backup/restore session survived bounded cleanup.'
+}
+
+function Write-J6NativePipelineEvidence {
+    param([Parameter(Mandatory = $true)]$Result)
+    $producerExit = if ($null -eq $Result.ProducerExitCode) {
+        'NOT_AVAILABLE'
+    }
+    else {
+        $Result.ProducerExitCode
+    }
+    $consumerExit = if ($null -eq $Result.ConsumerExitCode) {
+        'NOT_AVAILABLE'
+    }
+    else {
+        $Result.ConsumerExitCode
+    }
+    Write-Host "J6_NATIVE_PIPELINE_PHASE=$($Result.Phase)"
+    Write-Host "J6_NATIVE_PIPELINE_RESULT=$($Result.PipelineResult)"
+    Write-Host "J6_NATIVE_PIPELINE_PRODUCER_STATUS=$($Result.ProducerStatus)"
+    Write-Host "J6_NATIVE_PIPELINE_PRODUCER_EXIT_CODE=$producerExit"
+    Write-Host "J6_NATIVE_PIPELINE_CONSUMER_STATUS=$($Result.ConsumerStatus)"
+    Write-Host "J6_NATIVE_PIPELINE_CONSUMER_EXIT_CODE=$consumerExit"
+    Write-Host "J6_NATIVE_PIPELINE_COPY_STATUS=$($Result.CopyStatus)"
+    Write-Host "J6_NATIVE_PIPELINE_LOCAL_CLEANUP=$($Result.LocalProcessTreeCleanup)"
+}
+
+function Complete-J6NativePipeline {
+    param(
+        [Parameter(Mandatory = $true)]$Result,
+        [Parameter(Mandatory = $true)][string]$FailureMessage
+    )
+    Write-J6NativePipelineEvidence -Result $Result
+    if ($Result.PipelineResult -ne 'SUCCESS' -or
+        $Result.ProducerExitCode -ne 0 -or
+        $Result.ConsumerExitCode -ne 0 -or
+        $Result.CopyStatus -ne 'COMPLETED_TO_EOF' -or
+        $Result.LocalProcessTreeCleanup -ne 'PASS') {
+        throw "$FailureMessage Native result: $($Result.PipelineResult)."
+    }
 }
 
 function Get-TextSha256 {
@@ -156,14 +340,24 @@ from (
 '@
 
 Push-Location $repositoryRoot
+$operatorCancellation = New-J6ConsoleCancellationRegistration
 $partialPath = Join-Path $destinationDirectory `
     ([IO.Path]::GetFileName($destinationPath) + '.partial-' + [Guid]::NewGuid().ToString('N'))
-$restoreDatabase = 'sofascore_j6_restore_' + `
-    (Get-Date).ToUniversalTime().ToString('yyyyMMddHHmmss') + '_' + `
-    [Guid]::NewGuid().ToString('N').Substring(0, 8)
+$manifestStagingPath = $manifestPath + '.partial-' + [Guid]::NewGuid().ToString('N')
+$restoreDatabase = 'sofascore_j6_restore_' + [Guid]::NewGuid().ToString('N')
+$restoreDatabaseCreated = $false
+$restoreDatabaseCleanupArmed = $false
+$backupApplicationName = $null
+$restoreApplicationName = $null
+$qualificationDataReady = $false
+$destinationOwned = $false
+$manifestOwned = $false
+$publicationComplete = $false
 $manifest = $null
 try {
-    & docker compose --env-file .env config --quiet
+    try {
+    Assert-J6OperatorNotCancelled
+    & $dockerExecutable compose --env-file .env config --quiet
     if ($LASTEXITCODE -ne 0) {
         throw 'compose.yaml validation failed.'
     }
@@ -209,14 +403,34 @@ from provider_snapshot
     }
 
     Write-Host 'J6_BACKUP_ENCRYPTION=INTERACTIVE_PASSPHRASE_REQUIRED'
-    & docker compose --env-file .env exec -T postgres sh -c `
-        'pg_dump --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --format=custom --no-owner --no-privileges' |
-        & $ageExecutable -p -o $partialPath
-    if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $partialPath -PathType Leaf)) {
-        throw 'Encrypted pg_dump creation failed.'
+    Assert-J6OperatorNotCancelled
+    $backupApplicationName = 'j6_backup_' + [Guid]::NewGuid().ToString('N')
+    Assert-J6OwnedPostgresApplicationName -ApplicationName $backupApplicationName
+    $backupPipeline = Invoke-J6NativeBinaryPipeline `
+        -Phase BACKUP_ENCRYPTION `
+        -ProducerFilePath $dockerExecutable `
+        -ProducerArgumentList @(
+            'compose', '--env-file', '.env', 'exec', '-T',
+            '-e', "PGAPPNAME=$backupApplicationName",
+            'postgres', 'sh', '-c',
+            'exec pg_dump --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --format=custom --no-owner --no-privileges') `
+        -ConsumerFilePath $ageExecutable `
+        -ConsumerArgumentList @('-p', '-o', $partialPath) `
+        -WorkingDirectory $repositoryRoot `
+        -TimeoutSeconds $PipelineTimeoutSeconds `
+        -CleanupTimeoutMilliseconds $PipelineCleanupTimeoutMilliseconds `
+        -CancellationToken $operatorCancellation.Token
+    Complete-J6NativePipeline `
+        -Result $backupPipeline `
+        -FailureMessage 'Encrypted pg_dump creation failed.'
+    Confirm-J6OwnedPostgresSessionCleanup -ApplicationName $backupApplicationName
+    Write-Host 'J6_NATIVE_PIPELINE_REMOTE_SESSION_CLEANUP=PASS'
+    Assert-J6OperatorNotCancelled
+    if (-not (Test-Path -LiteralPath $partialPath -PathType Leaf) -or
+        (Get-Item -LiteralPath $partialPath).Length -le 0) {
+        throw 'Encrypted pg_dump creation did not produce a non-empty partial archive.'
     }
-    Move-Item -LiteralPath $partialPath -Destination $destinationPath
-    $cipherSha256 = (Get-FileHash -LiteralPath $destinationPath -Algorithm SHA256).Hash.ToLowerInvariant()
+    $cipherSha256 = (Get-FileHash -LiteralPath $partialPath -Algorithm SHA256).Hash.ToLowerInvariant()
 
     $manifest = [ordered]@{
         formatVersion = 1
@@ -228,25 +442,61 @@ from provider_snapshot
         restoreQualified = $false
         qualifiedAt = $null
     }
-    $manifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $manifestPath -Encoding utf8NoBOM
 
-    if ($restoreDatabase -notmatch '^sofascore_j6_restore_[0-9]{14}_[a-f0-9]{8}$') {
+    if ($restoreDatabase -notmatch '^sofascore_j6_restore_[a-f0-9]{32}$') {
         throw 'Generated restore database name is unsafe.'
     }
-    & docker compose --env-file .env exec -T postgres sh -c `
-        'createdb --username "$POSTGRES_USER" "$1"' sh $restoreDatabase
-    if ($LASTEXITCODE -ne 0) {
+    $ownershipDeadline = [DateTime]::UtcNow.AddMilliseconds($PipelineCleanupTimeoutMilliseconds)
+    $existingRestoreDatabaseCount = [long](Invoke-J6BoundedPrimaryCleanupScalar `
+        -Sql "select count(*) from pg_database where datname = '$restoreDatabase'" `
+        -DeadlineUtc $ownershipDeadline)
+    if ($existingRestoreDatabaseCount -ne 0) {
+        throw 'The generated temporary restore database name is not unowned.'
+    }
+    $restoreDatabaseCleanupArmed = $true
+    $createDeadline = [DateTime]::UtcNow.AddSeconds($PipelineTimeoutSeconds)
+    $createResult = Invoke-J6BoundedDockerCleanupCommand `
+        -ArgumentList @(
+            'compose', '--env-file', '.env', 'exec', '-T', 'postgres',
+            'sh', '-c', 'createdb --username "$POSTGRES_USER" "$1"',
+            'sh', $restoreDatabase) `
+        -DeadlineUtc $createDeadline
+    if ($createResult.Length -gt 0) {
+        throw 'Temporary restore database creation produced unexpected output.'
+    }
+    $createdDatabaseCount = [long](Invoke-J6BoundedPrimaryCleanupScalar `
+        -Sql "select count(*) from pg_database where datname = '$restoreDatabase'" `
+        -DeadlineUtc ([DateTime]::UtcNow.AddMilliseconds($PipelineCleanupTimeoutMilliseconds)))
+    if ($createdDatabaseCount -ne 1) {
         throw 'Temporary restore database creation failed.'
     }
+    $restoreDatabaseCreated = $true
 
     Write-Host 'J6_RESTORE_DECRYPTION=INTERACTIVE_PASSPHRASE_REQUIRED'
-    & $ageExecutable -d $destinationPath |
-        & docker compose --env-file .env exec -T postgres sh -c `
-            'pg_restore --username "$POSTGRES_USER" --dbname "$1" --no-owner --no-privileges --exit-on-error' `
-            sh $restoreDatabase
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Encrypted backup restore failed.'
-    }
+    Assert-J6OperatorNotCancelled
+    $restoreApplicationName = 'j6_restore_' + [Guid]::NewGuid().ToString('N')
+    Assert-J6OwnedPostgresApplicationName -ApplicationName $restoreApplicationName
+    $restorePipeline = Invoke-J6NativeBinaryPipeline `
+        -Phase RESTORE_DECRYPTION `
+        -ProducerFilePath $ageExecutable `
+        -ProducerArgumentList @('-d', $partialPath) `
+        -ConsumerFilePath $dockerExecutable `
+        -ConsumerArgumentList @(
+            'compose', '--env-file', '.env', 'exec', '-T',
+            '-e', "PGAPPNAME=$restoreApplicationName",
+            'postgres', 'sh', '-c',
+            'exec pg_restore --username "$POSTGRES_USER" --dbname "$1" --no-owner --no-privileges --exit-on-error',
+            'sh', $restoreDatabase) `
+        -WorkingDirectory $repositoryRoot `
+        -TimeoutSeconds $PipelineTimeoutSeconds `
+        -CleanupTimeoutMilliseconds $PipelineCleanupTimeoutMilliseconds `
+        -CancellationToken $operatorCancellation.Token
+    Complete-J6NativePipeline `
+        -Result $restorePipeline `
+        -FailureMessage 'Encrypted backup restore failed.'
+    Confirm-J6OwnedPostgresSessionCleanup -ApplicationName $restoreApplicationName
+    Write-Host 'J6_NATIVE_PIPELINE_REMOTE_SESSION_CLEANUP=PASS'
+    Assert-J6OperatorNotCancelled
 
     $restored = [ordered]@{
         flywayVersion = Invoke-RestoreScalar -Database $restoreDatabase -Sql $flywaySql
@@ -274,10 +524,78 @@ from provider_snapshot
             throw "Restore qualification mismatch: $key"
         }
     }
+    $qualificationDataReady = $true
+    }
+    finally {
+        $cleanupFailures = [Collections.Generic.List[string]]::new()
+        foreach ($applicationName in @($backupApplicationName, $restoreApplicationName)) {
+            if ([string]::IsNullOrWhiteSpace($applicationName)) {
+                continue
+            }
+            try {
+                Confirm-J6OwnedPostgresSessionCleanup -ApplicationName $applicationName
+            }
+            catch {
+                $cleanupFailures.Add(
+                    "The exactly owned PostgreSQL session cleanup failed for $applicationName.")
+            }
+        }
+
+        if ($restoreDatabaseCleanupArmed) {
+            try {
+                if ($restoreDatabase -notmatch '^sofascore_j6_restore_[a-f0-9]{32}$') {
+                    throw 'The armed temporary restore database name is unsafe.'
+                }
+                $dropDeadline = [DateTime]::UtcNow.AddMilliseconds(
+                    $PipelineCleanupTimeoutMilliseconds)
+                [void](Invoke-J6BoundedDockerCleanupCommand `
+                    -ArgumentList @(
+                        'compose', '--env-file', '.env', 'exec', '-T', 'postgres',
+                        'sh', '-c',
+                        'dropdb --username "$POSTGRES_USER" --force --if-exists "$1"',
+                        'sh', $restoreDatabase) `
+                    -DeadlineUtc $dropDeadline)
+                $remainingDatabaseCount = [long](Invoke-J6BoundedPrimaryCleanupScalar `
+                    -Sql "select count(*) from pg_database where datname = '$restoreDatabase'" `
+                    -DeadlineUtc ([DateTime]::UtcNow.AddMilliseconds(
+                            $PipelineCleanupTimeoutMilliseconds)))
+                if ($remainingDatabaseCount -ne 0) {
+                    throw 'The owned temporary restore database still exists after cleanup.'
+                }
+                $restoreDatabaseCleanupArmed = $false
+                if ($restoreDatabaseCreated) {
+                    Write-Host 'J6_TEMPORARY_RESTORE_DATABASE_CLEANUP=PASS'
+                }
+            }
+            catch {
+                $cleanupFailures.Add(
+                    'The exactly owned temporary restore database cleanup could not be confirmed.')
+            }
+        }
+        if ($QualificationInjectCleanupFailureAfterSuccessfulCleanup -and
+            $cleanupFailures.Count -eq 0) {
+            $cleanupFailures.Add(
+                'WO-024 loopback fault injection rejected qualification after successful cleanup.')
+        }
+        if ($cleanupFailures.Count -ne 0) {
+            throw ('J6 fail-closed cleanup failed: ' + ($cleanupFailures -join ' '))
+        }
+    }
+
+    if (-not $qualificationDataReady) {
+        throw 'The J6 backup cannot be published without complete restore evidence.'
+    }
+    Assert-J6OperatorNotCancelled
     $manifest.restoreQualified = $true
     $manifest.qualifiedAt = (Get-Date).ToUniversalTime().ToString('o')
     $manifest['restored'] = $restored
-    $manifest | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath $manifestPath -Encoding utf8NoBOM
+    Move-Item -LiteralPath $partialPath -Destination $destinationPath
+    $destinationOwned = $true
+    $manifest | ConvertTo-Json -Depth 6 |
+        Set-Content -LiteralPath $manifestStagingPath -Encoding utf8NoBOM
+    Move-Item -LiteralPath $manifestStagingPath -Destination $manifestPath
+    $manifestOwned = $true
+    $publicationComplete = $true
 
     $manifestSha256 = (Get-FileHash -LiteralPath $manifestPath -Algorithm SHA256).Hash.ToLowerInvariant()
     Write-Host 'J6_BACKUP_RESULT=QUALIFIED'
@@ -287,12 +605,44 @@ from provider_snapshot
     Write-Host "J6_BACKUP_COVERAGE_RECEIVED_AT=$($source.coverageReceivedAt)"
 }
 finally {
+    $fileCleanupFailures = [Collections.Generic.List[string]]::new()
     if (Test-Path -LiteralPath $partialPath) {
-        Remove-Item -LiteralPath $partialPath -Force
+        try {
+            Remove-Item -LiteralPath $partialPath -Force
+        }
+        catch {
+            $fileCleanupFailures.Add('The partial encrypted backup could not be removed.')
+        }
     }
-    if ($restoreDatabase -match '^sofascore_j6_restore_[0-9]{14}_[a-f0-9]{8}$') {
-        & docker compose --env-file .env exec -T postgres sh -c `
-            'dropdb --username "$POSTGRES_USER" --if-exists "$1"' sh $restoreDatabase *> $null
+    if (Test-Path -LiteralPath $manifestStagingPath) {
+        try {
+            Remove-Item -LiteralPath $manifestStagingPath -Force
+        }
+        catch {
+            $fileCleanupFailures.Add('The partial backup manifest could not be removed.')
+        }
+    }
+    if (-not $publicationComplete -and $manifestOwned -and
+        (Test-Path -LiteralPath $manifestPath)) {
+        try {
+            Remove-Item -LiteralPath $manifestPath -Force
+        }
+        catch {
+            $fileCleanupFailures.Add('The unqualified backup manifest could not be removed.')
+        }
+    }
+    if (-not $publicationComplete -and $destinationOwned -and
+        (Test-Path -LiteralPath $destinationPath)) {
+        try {
+            Remove-Item -LiteralPath $destinationPath -Force
+        }
+        catch {
+            $fileCleanupFailures.Add('The unqualified encrypted backup could not be removed.')
+        }
     }
     Pop-Location
+    $operatorCancellation.Dispose()
+    if ($fileCleanupFailures.Count -ne 0) {
+        throw ('J6 fail-closed file cleanup failed: ' + ($fileCleanupFailures -join ' '))
+    }
 }
