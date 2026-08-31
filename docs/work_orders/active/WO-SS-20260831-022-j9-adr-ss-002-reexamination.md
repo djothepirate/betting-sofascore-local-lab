@@ -1,6 +1,6 @@
-# WO-SS-20260831-022 — Réexamen d'ADR-SS-002 avant toute reprise de WO-019
+# WO-SS-20260831-022 — Réexamen d'ADR-SS-002 après l'arrêt de WO-019
 
-- **Statut :** `READY_FOR_OWNER_PROFILE_DECISION`
+- **Statut :** `READY_FOR_ADR_V1_1_OWNER_ACCEPTANCE`
 - **Date d'ouverture :** 2026-08-31
 - **Jalon :** J9 — gouvernance de la preuve fournisseur
 - **Base locale :** `1fcd2cd1a71df74e97e31850a1497a3780e7719f`
@@ -10,11 +10,16 @@
 - **Campagne concernée :** WO-019 `STOPPED`
 - **Prérequis runtime :** WO-021 `VALIDATED`
 - **ADR réexaminé :** ADR-SS-002 v1.0 `ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP`
-- **Version proposée :** ADR-SS-002 v1.1 `DRAFT_PENDING_OWNER_PROFILE_DECISION`
+- **Version proposée :** ADR-SS-002 v1.1 `DRAFT_SELECTED_PROFILE_PENDING_OWNER_ACCEPTANCE`
 - **Réseau fournisseur :** `NOT_AUTHORIZED`
 - **Reprise de WO-019 :** `NOT_AUTHORIZED`
 - **Nouveau go fournisseur :** `NOT_GRANTED`
 - **Tentatives historiques gelées :** `20`
+- **Profil sélectionné :** `RESTART_FULL_D1_D2_D3`
+- **Nouvelle campagne requise :** Work Order/worktree distincts, non ouverts
+- **Actions du propriétaire aux endpoints :** `UNAVAILABLE`
+- **Autre opérateur humain local désigné :** `NO`
+- **État d'exécution :** `BLOCKED_PENDING_OPERATOR_DECISION`
 - **Décision J9 finale :** `NOT_TAKEN`
 - **Intégration ou production :** `NOT_AUTHORIZED`
 - **Option VPS future :** `NOT_EXCLUDED_BUT_NOT_AUTHORIZED`
@@ -75,7 +80,7 @@ go était à usage unique, sa fenêtre est expirée et son arrêt est terminal.
 ADR_SS_002_REEXAMINATION_RESULT=NEW_VERSION_REQUIRED
 ADR_SS_002_V1_0_STATE=ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP
 ADR_SS_002_V1_0_REUSABLE_FOR_RESUME=NO
-ADR_SS_002_V1_1_STATUS=DRAFT_PENDING_OWNER_PROFILE_DECISION
+ADR_SS_002_V1_1_STATUS=DRAFT_SELECTED_PROFILE_PENDING_OWNER_ACCEPTANCE
 OLD_GLOBAL_OWNER_GO_REUSABLE=NO
 NETWORK_AUTHORIZED=NO
 ```
@@ -89,7 +94,7 @@ prochaine décision doit être versionnée, explicite et limitée à un profil f
 |---|---|---|---|
 | ADR-SS-001 v1.4 | `VALID` | Aucun endpoint, transport de secours, proxy, retry, fallback, polling ou scheduler ajouté | Conserver intégralement |
 | Six familles allowlistées | `VALID` | J3/J4/J5 restent limités aux six familles existantes | Conserver |
-| Corpus D1/D2/D3 | `VALID_WITH_HISTORY` | D1 exécuté ; D2/D3 non commencés | Distinguer D1 gelé et cibles futures |
+| Corpus D1/D2/D3 | `VALID_WITH_HISTORY` | D1 exécuté historiquement ; D2/D3 non commencés | Conserver l'historique et rejouer D1/D2/D3 dans une nouvelle série autonome |
 | Dossier de remplacement | `PROHIBITED` | Aucun remplacement autorisé ou réalisé | Conserver |
 | Concurrence `1` | `VALID` | WO-021 ne change pas cette borne | Conserver |
 | Minimum `3 s` | `VALID_REQUIREMENT_NEW_IMPLEMENTATION` | Fence et observation CDP qualifiés sous WO-021 | Qualifier prospectivement, jamais rétroactivement |
@@ -99,13 +104,13 @@ prochaine décision doit être versionnée, explicite et limitée à un profil f
 | HAR, trace, vidéo, capture, téléchargement, `storageState` | `PROHIBITED` | Aucun artefact conservé | Conserver |
 | `404` natif J4/J5 | `VALID` | Sémantiques inchangées | Conserver |
 | Arrêt global | `VALID_AND_EXERCISED` | WO-019 a été arrêté conformément à la règle | Conserver |
-| Ledger procédural | `VALID_BASELINE_CHANGED` | Aucun compteur transactionnel global ; baseline désormais 20 | Partir de 20, jamais de 0 |
+| Ledger procédural | `VALID_DUAL_LEDGER_REQUIRED` | Aucun compteur transactionnel global ; historique 20 et nouvelle série 0..38 | Contrôler séparément la série 0..38 et le cumul 20..58 |
 | Fence global runtime | `NEW_MATERIAL_FACT` | WO-021 ajoute une garde exécutoire cross-worker/cross-campaign | Déclencheur §9 et nouvelle qualification normative |
-| Une série seulement | `CONSUMED` | La série a commencé et s'est terminée par `STOPPED` | Non réutilisable |
+| Une série seulement | `CONSUMED` | La série v1.0 s'est terminée par `STOPPED` | v1.1 peut déroger une fois sous un nouveau Work Order ; troisième série interdite |
 | Ancien go global | `CONSUMED_AND_EXPIRED` | Usage unique, fenêtre expirée, arrêt terminal | Nouveau go distinct requis |
 | Ancienne readiness | `HISTORICAL_ONLY` | Le code runtime a changé | Rejouer sur le commit exact |
 | Sauvegarde/restauration V28 | `HISTORICAL_NOT_FRESH` | Couverture max snapshot `794`, antérieure aux données D1 jusqu'au snapshot `814` et occurrences `778..781` | Nouvelle sauvegarde/restauration obligatoire |
-| Rapport `STOPPED` | `IMMUTABLE` | Décrit correctement les 20 tentatives et l'arrêt | Rapport supplémentaire séparé |
+| Rapport `STOPPED` | `IMMUTABLE` | Décrit correctement les 20 tentatives et l'arrêt | Nouveau rapport autonome séparé, sans réécriture |
 | Sources officielles | `REFRESHED_RESTRICTIONS_AND_UNCERTAINTY_PERSIST` | Aucune permission/licence/quota applicable extrait | Reconnaissance propriétaire toujours requise |
 | Intégration, production, VPS | `NOT_AUTHORIZED` | WO-021 ne change aucune décision d'exploitation | Conserver |
 | Décision J9 finale | `NOT_TAKEN` | `KEEP_LOCAL` rejeté comme décision finale sans choix automatique d'une autre option | Rester séparée |
@@ -133,61 +138,82 @@ Cette recommandation a une conséquence explicite : elle ne peut pas effacer le 
 supplémentaire D2/D3 peut être `PASS`, mais la consolidation J9 reste au maximum
 `PARTIAL_BOUNDED` tant que le critère existant exige une preuve fournisseur homogène.
 
-Si le propriétaire recherche prioritairement un nouveau `PASS` autonome sur tout le corpus, il doit
-choisir explicitement `RESTART_FULL_D1_D2_D3`, accepter jusqu'à 38 nouveaux appels et un maximum
-cumulé de 58. Cette extension n'est pas déduite du mot « reprise » et exigera une réécriture du
-draft v1.1 avant acceptation.
+Le propriétaire sélectionne explicitement `RESTART_FULL_D1_D2_D3`. Ce profil est celui qui rend
+possible un nouveau verdict autonome sur tout le corpus. Cette sélection accepte le profil à
+réécrire, pas encore le texte v1.1 ni l'exécution de la campagne.
+
+```text
+J9_ADR_SS_002_REEXAMINATION_OWNER_DECISION=SELECT_RESTART_FULL_D1_D2_D3
+J9_ADR_SS_002_V1_1_SELECTED_PROFILE=RESTART_FULL_D1_D2_D3
+J9_PROFILE_SELECTION_RECORDED_AT_UTC=2026-08-31T11:07:13.3823864Z
+J9_ADR_SS_002_V1_1_OWNER_ACCEPTANCE=PENDING
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_NEW_CAMPAIGN_AUTHORIZED=NO
+J9_NEW_PROVIDER_GO_GRANTED=NO
+```
 
 ## 6. Profil normatif proposé pour ADR-SS-002 v1.1
 
-Le draft v1.1 est fondé sur le profil recommandé `CONTINUE_D2_D3_ONLY`.
+Le draft v1.1 est aligné sur `RESTART_FULL_D1_D2_D3`. Il décrit une nouvelle campagne autonome et
+ne rouvre pas WO-019. Conformément à la règle « un Work Order et un worktree par campagne », son
+exécution exigera un nouveau Work Order et un nouveau worktree après acceptation de l'ADR.
 
 ### 6.1 Corpus et ordre
 
-| État | Dossier | Provider ID | Identité canonique | Action |
-|---|---|---:|---|---|
-| Gelé | D1 — Cittadella / Atalanta U23 | `16691018` | `f4713f80-4769-3656-ba51-61d8ac1aa814` | Aucune réexécution fournisseur |
-| Cible 1 | D2 — Barracas Central / Rosario Central | `16671566` | `da075869-34d4-3d42-83d2-613583691845` | J4 puis J5 |
-| Cible 2 | D3 — Lille / PSG | `16310930` | `c40066c9-987b-38d9-b415-869a453d2ad6` | J4 puis J5 |
+| Ordre | Dossier | Provider ID | Identité canonique | Action |
+|---:|---|---:|---|---|
+| D1 | Cittadella / Atalanta U23 | `16691018` | `f4713f80-4769-3656-ba51-61d8ac1aa814` | J3 daté, tournoi, J4, J5 |
+| D2 | Barracas Central / Rosario Central | `16671566` | `da075869-34d4-3d42-83d2-613583691845` | J4 puis J5 |
+| D3 | Lille / PSG | `16310930` | `c40066c9-987b-38d9-b415-869a453d2ad6` | J4 puis J5 |
 
 Ordre fermé :
 
 ```text
-J4_D2
-J5_D2_STATISTICS_INCIDENTS_LINEUPS
-J4_D3
-J5_D3_STATISTICS_INCIDENTS_LINEUPS
+A1=J3_SCHEDULED_EVENTS_D1_MAX_25
+A2=TOURNAMENT_SCHEDULED_EVENTS_D1_MAX_1
+A3=J4_D1_MAX_1
+A4=J5_D1_STATISTICS_INCIDENTS_LINEUPS_MAX_3
+B1=J4_D2_MAX_1
+B2=J5_D2_STATISTICS_INCIDENTS_LINEUPS_MAX_3
+B3=J4_D3_MAX_1
+B4=J5_D3_STATISTICS_INCIDENTS_LINEUPS_MAX_3
 ```
 
-### 6.2 Ledger
+D1 conserve la date `2026-08-15`, la phase `15118`, le tournoi `824` et la saison `99790`.
 
-| Segment | Réservation maximale | Cumul maximal |
-|---|---:|---:|
-| Historique gelé | 20 | 20 |
-| J4 D2 | 1 | 21 |
-| J5 D2 | 3 | 24 |
-| J4 D3 | 1 | 25 |
-| J5 D3 | 3 | 28 |
+### 6.2 Ledgers
+
+| Segment | Maximum nouveau | Cumul nouvelle série | Cumul audit J9 |
+|---|---:|---:|---:|
+| Historique v1.0 immuable | 0 | 0 | 20 |
+| A1 | 25 | 25 | 45 |
+| A2 | 1 | 26 | 46 |
+| A3 | 1 | 27 | 47 |
+| A4 | 3 | 30 | 50 |
+| B1 | 1 | 31 | 51 |
+| B2 | 3 | 34 | 54 |
+| B3 | 1 | 35 | 55 |
+| B4 | 3 | 38 | 58 |
 
 ```text
 HISTORICAL_DIRECT_ATTEMPTS_FROZEN=20
-CONTINUATION_MAXIMUM_NEW_DIRECT_ATTEMPTS=8
-MAXIMUM_CUMULATIVE_DIRECT_ATTEMPTS_AFTER_CONTINUATION=28
-ORIGINAL_HARD_CEILING=38
-ORIGINAL_HARD_CEILING_INCREASED_UNDER_RECOMMENDED_PROFILE=NO
-UNALLOCATED_HEADROOM=10_NOT_AUTHORIZED
-UNUSED_J3_RESERVATION_REALLOCATED=NO
-D1_REEXECUTION_AUTHORIZED=NO
+NEW_SERIES_LEDGER_BASELINE_DIRECT_ATTEMPTS=0
+NEW_SERIES_MAXIMUM_DIRECT_ATTEMPTS=38
+AUDIT_CUMULATIVE_BASELINE_DIRECT_ATTEMPTS=20
+AUDIT_MAXIMUM_CUMULATIVE_DIRECT_ATTEMPTS=58
+D1_REEXECUTION_REQUIRED_IF_NEW_SERIES_EXECUTED=YES
+D1_REEXECUTION_CURRENTLY_AUTHORIZED=NO
+SECOND_SERIES_CURRENTLY_AUTHORIZED=NO_PENDING_ADR_ACCEPTANCE_AND_ALL_GATES
+THIRD_SERIES_AUTHORIZED=NO
 REPLACEMENT_DOSSIER_ALLOWED=NO
 ```
 
-Le plafond propre à la continuation refuse les contre-épreuves `28 + 1` et `26 + 3`. Le plafond
-historique secondaire refuse aussi `38 + 1` et `36 + 3`. La marge non utilisée ne peut servir à
-aucun retry, rejeu, dossier supplémentaire ou seconde continuation. Si une protection
-transactionnelle automatique contre le dépassement devient obligatoire, un nouveau Work Order de
-code sera requis.
+Les contre-épreuves `38 + 1`, `36 + 3`, `58 + 1` et `56 + 3` sont refusées. Les unités non
+consommées ne peuvent servir à aucun retry, rejeu, remplacement ou troisième série. Si le contrôle
+procédural des deux ledgers ne peut être qualifié sans ambiguïté, la campagne reste bloquée et un
+Work Order de code distinct devient nécessaire.
 
-### 6.3 Runtime et arrêts
+### 6.3 Runtime, cache et arrêts
 
 ```text
 MAXIMUM_CONCURRENCY=1
@@ -205,43 +231,72 @@ CACHE_FORCING=NO
 Le fence WO-021 est une garantie prospective. Toute perte de preuve temporelle, interruption,
 timestamp incohérent, réponse du document principal servie depuis le cache navigateur/CDP, service
 worker, prefetch, redirection, HTML/challenge, réponse sensible, corps supérieur à 5 Mio, erreur de
-persistance, lease ou cleanup arrête la continuation. Un `404` natif J4/J5 conserve les sémantiques
-existantes et borne le résultat supplémentaire à `PARTIAL_BOUNDED`.
+persistance, lease ou cleanup arrête la nouvelle série.
 
-Le cache métier cache-first existant reste autorisé : un cache hit frais vaut zéro appel direct et
-borne la dimension mesurée, sans créer de timestamp fournisseur fictif.
+Le cache métier cache-first existant reste autorisé : un hit frais vaut zéro appel direct et rend la
+dimension correspondante insuffisante pour un `PASS` autonome. Un `404` natif J4/J5 conserve les
+sémantiques existantes et borne le résultat à `PARTIAL_BOUNDED`.
 
-### 6.4 Nouveau go
-
-L'ancien go est irréutilisable. Le nouveau go éventuel devra identifier :
-
-- WO-019 et ADR-SS-002 v1.1 accepté ;
-- le rapport historique et son hash ;
-- la baseline gelée de 20 ;
-- D2 et D3 exacts et l'ordre fermé ;
-- le plafond nouveau 8 et le cumul maximum 28 ;
-- une fenêtre UTC `[FROM,TO)` strictement inférieure ou égale à 60 minutes ;
-- l'acteur unique.
-
-Il sera consommé au premier claim J4 D2. Une seconde utilisation, un redémarrage applicatif, une
-deuxième instance, la fin de fenêtre, un incident ou la fin de D3 le terminera. Les confirmations
-techniques fraîches restent requises pour chaque sous-campagne.
-
-### 6.5 Rapports et verdicts
-
-Le rapport historique reste inchangé. Un rapport supplémentaire distinct consignera D2/D3,
-l'observation CDP, les arrivées serveur, le ledger, les hashes et le cleanup.
+### 6.4 Nouveau Work Order et futur go
 
 ```text
-ORIGINAL_REPORT_RESULT=STOPPED
-ORIGINAL_REPORT_REWRITTEN=NO
-SUPPLEMENTAL_D2_D3_RESULT=<PASS|PARTIAL_BOUNDED|STOPPED>
-CONSOLIDATED_EVIDENCE_MAXIMUM=PARTIAL_BOUNDED
+WO019_STATUS=STOPPED
+WO019_HISTORICAL_CAMPAIGN_REOPENED=NO
+NEW_FULL_RESTART_CAMPAIGN_WORK_ORDER_REQUIRED=YES
+NEXT_AVAILABLE_WORK_ORDER_OBSERVED=WO-SS-20260831-023
+NEW_FULL_RESTART_CAMPAIGN_WORK_ORDER=NOT_OPENED
+NEW_FULL_RESTART_CAMPAIGN_WORKTREE_REQUIRED=YES
+NEW_CAMPAIGN_WORK_ORDER_OPENING_AUTHORIZED=NO
+```
+
+Le nouveau go éventuel devra identifier ADR-SS-002 v1.1 accepté, le futur Work Order, le rapport
+historique et son hash, les trois dossiers, les maxima 38 nouveaux et 58 cumulés, une fenêtre UTC
+`[FROM,TO)` d'au plus 60 minutes et l'acteur d'exécution autorisé par la décision séparée. Il sera
+consommé au premier claim J3 accepté. Une seconde utilisation, un redémarrage, une deuxième
+instance, la fin de fenêtre, un incident ou la fin de D3 le terminera.
+
+### 6.5 Rapport et verdict autonomes
+
+```text
+HISTORICAL_REPORT_RESULT=STOPPED
+HISTORICAL_REPORT_REWRITTEN=NO
+NEW_AUTONOMOUS_REPORT_REQUIRED=YES
+NEW_AUTONOMOUS_REPORT_RESULT=<PASS|PARTIAL_BOUNDED|STOPPED>
+NEW_AUTONOMOUS_REPORT_REWRITES_HISTORICAL_REPORT=NO
 J9_FINAL_DECISION=NOT_TAKEN
 ```
 
-Changer cette règle pour produire un `PASS` consolidé malgré la lacune D1 constituerait une
-modification propriétaire matérielle du critère, pas une conséquence technique de WO-021.
+Un `PASS` exige la fin de la nouvelle série sous 38 appels, aucune condition d'arrêt, aucun cache hit
+ou `404` limitant une dimension attendue, toutes les réponses compatibles et persistées, un audit
+exploitable et les écarts réseau qualifiés. Les seules indisponibilités natives ou lacunes bornées
+produisent `PARTIAL_BOUNDED`. Toute condition d'arrêt produit `STOPPED`.
+
+### 6.6 Porte opérateur
+
+Le propriétaire indique qu'il ne pourra pas réaliser les actions locales d'interrogation des
+endpoints. Huit séquences unitaires fraîches restent nécessaires ; chacune conserve sa préparation,
+sa phrase, son acquittement, son claim et son action finale.
+
+```text
+OWNER_ENDPOINT_ACTIONS_AVAILABLE_FOR_NEW_CAMPAIGN=NO
+OTHER_HUMAN_LOCAL_OPERATOR_DESIGNATED=NO
+CURRENT_EXECUTION_MODEL=EIGHT_FRESH_MANUAL_SUBCAMPAIGN_SEQUENCES
+CURRENT_EXECUTION_MODEL_SATISFIABLE=NO_PENDING_OPERATOR_DECISION
+CAMPAIGN_EXECUTION_STATE=BLOCKED_PENDING_OPERATOR_DECISION
+OPERATOR_PATH_OWNER_DECISION=PENDING
+AUTOMATED_MULTI_CAMPAIGN_ORCHESTRATION_AUTHORIZED=NO
+AUTOMATED_UI_SUBMISSION_AUTHORIZED=NO
+CODEX_LOCAL_UI_EXECUTION_AUTHORIZED=NO
+```
+
+Le choix de profil ne délègue pas ces séquences à Codex. La voie normale des runbooks est humaine et
+unitaire. Le précédent [WO-017](../completed/WO-SS-20260830-017-j5-incidents-empty-shootout-action-v15.md)
+a cependant autorisé une exécution ponctuelle `CODEX_LOCAL_UI` après instruction propriétaire
+explicite. Les suites recevables sont donc de différer la campagne, sélectionner le modèle d'un autre
+opérateur humain local, ou sélectionner le modèle d'une exécution ponctuelle `CODEX_LOCAL_UI` sans
+orchestration ; l'autorisation effective de l'acteur sera consignée dans le futur Work Order. Un
+script, scheduler, orchestrateur UI ou changement runtime exigerait un Work Order de code et un
+réexamen d'ADR-SS-001 distincts.
 
 ## 7. Revue officielle rafraîchie
 
@@ -271,14 +326,14 @@ Le transport Playwright et l'option VPS future ne transforment pas ces faits en 
 
 ## 8. Portes cumulatives avant tout nouveau go
 
-1. clôture WO-021 intégrée dans l'historique exact destiné à WO-019 ;
-2. choix propriétaire du profil de v1.1 ;
-3. draft v1.1 finalisé puis accepté explicitement par un second bloc propriétaire ;
-4. revue officielle encore fraîche à la date d'acceptation ou du go ;
-5. readiness hors ligne fraîche sur le commit exact ;
+1. acceptation explicite du draft v1.1 aligné sur le profil choisi ;
+2. résolution et autorisation du modèle opérateur ;
+3. ouverture d'un nouveau Work Order et d'un nouveau worktree de campagne ;
+4. revue officielle encore fraîche à la date de l'acceptation ou du go ;
+5. readiness hors ligne fraîche sur le commit exact du nouveau Work Order ;
 6. sauvegarde chiffrée V28 post-arrêt et restauration isolée couvrant au moins le snapshot `814`,
    les occurrences jusqu'à `781` et les vingt tentatives gelées ;
-7. manifeste gelé et corroboration indépendante du ledger ;
+7. manifeste gelé et corroboration indépendante des ledgers `0..38` et `20..58` ;
 8. nouveau go global explicite à usage unique.
 
 La readiness inclura au minimum :
@@ -299,10 +354,10 @@ MINIMUM_NETWORK_START_GAPS=PASS_GE_3_SECONDS
 CROSS_WORKER_NETWORK_START_GAPS=PASS_GE_3_SECONDS
 CROSS_CAMPAIGN_NETWORK_START_GAPS=PASS_GE_3_SECONDS
 STOP_DURING_DELAY_NEW_REQUEST_COUNT=0
-CONTINUATION_LEDGER_28_PLUS_1=REJECTED
-CONTINUATION_LEDGER_26_PLUS_3=REJECTED
-HISTORICAL_LEDGER_38_PLUS_1=REJECTED
-HISTORICAL_LEDGER_36_PLUS_3=REJECTED
+NEW_SERIES_LEDGER_38_PLUS_1=REJECTED
+NEW_SERIES_LEDGER_36_PLUS_3=REJECTED
+AUDIT_CUMULATIVE_LEDGER_58_PLUS_1=REJECTED
+AUDIT_CUMULATIVE_LEDGER_56_PLUS_3=REJECTED
 OLD_GLOBAL_OWNER_GO_REUSE=REJECTED
 LISTENER_8087_COUNT=0
 RESIDUAL_OWNED_PROCESS_COUNT=0
@@ -315,45 +370,69 @@ La sauvegarde V28 qualifiée avant la série v1.0 ne suffit pas : elle s'arrêta
 alors que la base post-arrêt contient notamment les snapshots `810`, `813`, `814` et les occurrences
 `778..781`.
 
-## 9. Choix propriétaire attendu
+## 9. Acceptation propriétaire attendue
 
-Le réexamen est terminé. Le prochain choix ne vaut toujours ni reprise ni go :
+Le profil est sélectionné et le draft est aligné. Le premier choix porte sur ADR-SS-002 v1.1 ; il
+ne vaut toujours ni ouverture du nouveau Work Order, ni résolution du modèle opérateur, ni go :
 
 ```text
-J9_ADR_SS_002_REEXAMINATION_OWNER_DECISION=<SELECT_CONTINUE_D2_D3_ONLY|SELECT_RESTART_FULL_D1_D2_D3|DO_NOT_RESUME|REQUEST_CHANGES>
-J9_ADR_SS_002_V1_0_STATE=ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP
-J9_ADR_SS_002_V1_0_REUSABLE_FOR_RESUME=NO
-J9_ADR_SS_002_V1_1_STATUS=DRAFT_PENDING_OWNER_PROFILE_DECISION
+ADR_SS_002_V1_1_OWNER_DECISION=<ACCEPT|REJECT|REQUEST_CHANGES>
+ADR_SS_002_V1_1_PROFILE=RESTART_FULL_D1_D2_D3
+ADR_SS_002_V1_1_DRAFT_COMMIT=<commit>
+ADR_SS_002_V1_1_FILE_SHA256=<sha256>
+ADR_SS_002_V1_0_STATE=ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP
+ADR_SS_002_V1_0_REUSABLE=NO
 
-J9_RECOMMENDED_PROFILE=CONTINUE_D2_D3_ONLY
-J9_HISTORICAL_DIRECT_ATTEMPTS_FROZEN=20
-J9_RECOMMENDED_MAXIMUM_NEW_DIRECT_ATTEMPTS=8
-J9_RECOMMENDED_MAXIMUM_CUMULATIVE_DIRECT_ATTEMPTS=28
-J9_ORIGINAL_HARD_CEILING_38_INCREASED_UNDER_RECOMMENDED_PROFILE=NO
-J9_D1_REEXECUTION_RECOMMENDED=NO
-J9_SUPPLEMENTAL_REPORT_REQUIRED_IF_RESUME=YES
-J9_CONSOLIDATED_EVIDENCE_MAXIMUM_UNDER_RECOMMENDED_PROFILE=PARTIAL_BOUNDED
+HISTORICAL_DIRECT_ATTEMPTS_FROZEN_20_ACKNOWLEDGED=<YES|NO>
+NEW_FULL_SERIES_MAXIMUM_DIRECT_ATTEMPTS_38_ACCEPTED=<YES|NO>
+MAXIMUM_CUMULATIVE_DIRECT_ATTEMPTS_58_ACCEPTED=<YES|NO>
+D1_REEXECUTION_ACCEPTED=<YES|NO>
+NEW_AUTONOMOUS_REPORT_REQUIRED=YES
+THIRD_SERIES_AUTHORIZED=NO
+REPLACEMENT_DOSSIER_ALLOWED=NO
 
-J9_PROVIDER_NETWORK_AUTHORIZED=NO
-J9_WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
-J9_NEW_PROVIDER_GO_GRANTED=NO
-J9_FRESH_OFFLINE_READINESS_REQUIRED_IF_RESUME=YES
-J9_FRESH_POST_STOP_V28_BACKUP_RESTORE_REQUIRED_IF_RESUME=YES
-J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+OFFICIAL_SOURCE_REVIEW_ACKNOWLEDGED=<YES|NO>
+EXPLICIT_PROVIDER_PERMISSION_EVIDENCED=NO
+OWNER_ENDPOINT_ACTIONS_AVAILABLE=NO
+OTHER_HUMAN_LOCAL_OPERATOR_DESIGNATED=NO
+OPERATOR_MODEL_STATUS=UNRESOLVED
+CAMPAIGN_EXECUTION_BLOCKED_PENDING_OPERATOR_DECISION=YES
+AUTOMATED_UI_ORCHESTRATION_AUTHORIZED=NO
+CODEX_LOCAL_UI_EXECUTION_AUTHORIZED=NO
+
+NEW_CAMPAIGN_WORK_ORDER_REQUIRED=YES
+NEW_CAMPAIGN_WORKTREE_REQUIRED=YES
+NEW_CAMPAIGN_BRANCH_REQUIRED=YES
+NEW_CAMPAIGN_WORK_ORDER_OPENING_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO
+NEW_GLOBAL_OWNER_GO_GRANTED=NO
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 J9_FINAL_DECISION=NOT_TAKEN
-J9_FUTURE_VPS_PRODUCTION_OPTION=NOT_EXCLUDED_BUT_NOT_AUTHORIZED
+FUTURE_VPS_PRODUCTION_OPTION=NOT_EXCLUDED_BUT_NOT_AUTHORIZED
 ```
 
-Si `SELECT_CONTINUE_D2_D3_ONLY` est choisi, le draft normatif actuel pourra être soumis pour une
-acceptation v1.1 distincte. Si `SELECT_RESTART_FULL_D1_D2_D3` est choisi, ADR-SS-002 v1.1 devra
-d'abord être réécrit avec le plafond nouveau 38, le cumul 58 et une nouvelle série autonome.
+Le choix de l'acteur est séparé et reste lui aussi sans effet réseau, go ou ouverture :
+
+```text
+J9_V1_1_OPERATOR_PATH_OWNER_DECISION=<DEFER_UNTIL_OWNER_AVAILABLE|SELECT_OTHER_HUMAN_LOCAL_OPERATOR_MODEL|SELECT_ONE_OFF_CODEX_LOCAL_UI_MODEL|REQUEST_AUTOMATED_EXECUTION_STUDY>
+SELECTED_EXECUTION_ACTOR=<UNRESOLVED|OWNER|OTHER_HUMAN_LOCAL_OPERATOR|CODEX_LOCAL_UI>
+OWNER_ENDPOINT_ACTIONS_AVAILABLE=NO
+CODEX_LOCAL_UI_EXECUTION_AUTHORIZED=NO
+AUTOMATED_UI_ORCHESTRATION_AUTHORIZED=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+NEW_GLOBAL_OWNER_GO_GRANTED=NO
+OPERATOR_DECISION_EFFECT=ACTOR_MODEL_ONLY_NO_EXECUTION_NO_NETWORK_NO_GO_NO_WORK_ORDER_OPENING
+```
+
+`SELECT_ONE_OFF_CODEX_LOCAL_UI_MODEL` identifiera l'acteur envisagé et devra être repris puis
+autorisé dans le futur Work Order. `REQUEST_AUTOMATED_EXECUTION_STUDY` signalera seulement le besoin
+d'une étude ; son ouverture exigera une autorisation et un Work Order distincts.
 
 ## 10. Critères de clôture de WO-022
 
-WO-022 restera actif jusqu'à :
-
-- décision propriétaire explicite sur le profil ;
-- alignement du draft v1.1 sur ce profil ;
-- soumission du bloc d'acceptation ou de refus d'ADR-SS-002 v1.1.
-
-Même sa clôture future ne vaudra pas readiness, sauvegarde, manifeste, go ou accès fournisseur.
+WO-022 restera actif jusqu'à la réception du bloc d'acceptation, de refus ou de demande de
+modification d'ADR-SS-002 v1.1. Même sa clôture future ne vaudra ni ouverture de WO-023, ni
+résolution du modèle opérateur, ni readiness, sauvegarde, manifeste, go ou accès fournisseur.

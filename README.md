@@ -14,9 +14,10 @@ La règle déterministe J9 a produit la recommandation `KEEP_LOCAL`, avec
 `J9_EVIDENCE_RESULT=STOPPED`. Le propriétaire a explicitement refusé cette recommandation comme
 décision finale le 2026-08-31. Ce refus ne sélectionne pas automatiquement une autre option :
 `J9_FINAL_DECISION=NOT_TAKEN` et
-`J9_DECISION_STATUS=PENDING_ADR_SS_002_V1_1_PROFILE_DECISION_AND_FUTURE_WO019_EVIDENCE`. Il n'autorise ni intégration, ni
+`J9_DECISION_STATUS=PENDING_ADR_SS_002_V1_1_OWNER_ACCEPTANCE_AND_NEW_CAMPAIGN_EVIDENCE`. Il n'autorise ni intégration, ni
 production, ni nouvel appel fournisseur, ni polling, ni scheduler, ni mode live.
-La preuve multi-dossier relève de WO-019. ADR-SS-002 v1.0 est accepté explicitement. Le premier
+La preuve arrêtée relève de WO-019 ; le profil sélectionné exigera une nouvelle campagne sous un
+nouveau Work Order. ADR-SS-002 v1.0 avait été accepté explicitement. Le premier
 contrôle J3 Playwright loopback de WO-019 et sa
 contre-qualification hors sandbox avaient produit `12` erreurs `RUNTIME_FAILURE` sur `14` tests à
 la fermeture gracieuse. WO-020 a depuis établi la cause : le worker émettait `CLOSED` puis attendait
@@ -119,20 +120,24 @@ interdits.
 WO-022 réalise ensuite le réexamen imposé par ADR-SS-002 §9. Il conclut que v1.0 est
 `ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP` et ne peut pas être réutilisée : l'arrêt après incident
 et le fence global exécutoire ajouté par WO-021 déclenchent tous deux une nouvelle version. Le
-draft v1.1 reste sans effet réseau et attend le choix propriétaire entre une continuation D2/D3
-limitée à huit nouveaux appels, une nouvelle série complète de 38 appels ou l'absence de reprise.
+propriétaire a sélectionné `RESTART_FULL_D1_D2_D3` pour le draft v1.1 : une nouvelle série complète
+de 38 appels maximum, soit 58 cumulés avec les vingt tentatives historiques, incluant le rejeu D1 et
+pouvant produire un nouveau verdict autonome.
 
-La voie minimale recommandée conserve D1 gelé, limite le cumul à `28` et exige un rapport
-supplémentaire. Elle ne transforme pas rétroactivement le rapport `STOPPED` en `PASS` ; sous les
-règles actuelles, la consolidation reste au maximum `PARTIAL_BOUNDED`. Une nouvelle série complète
-pourrait produire un verdict autonome, mais porterait l'exposition cumulée maximale à `58`.
-Après le choix du profil, toute reprise exigerait encore l'acceptation explicite de v1.1, une
-readiness fraîche, une nouvelle sauvegarde/restauration V28 post-arrêt, un manifeste et un nouveau
-go global.
+Cette série ne rouvrira pas WO-019. La règle « un Work Order et un worktree par campagne » exige un
+nouveau Work Order/worktree, non encore ouvert. Le draft v1.1 reste sans effet réseau et attend son
+acceptation explicite. Le propriétaire indique en outre qu'il ne pourra pas réaliser les huit
+séquences unitaires d'interrogation des endpoints. Aucun autre opérateur humain n'est désigné et
+aucune exécution locale par Codex n'est autorisée par ce seul constat : la campagne reste donc
+bloquée dans l'attente d'un choix d'acteur distinct. Le précédent WO-017 permet de proposer une
+exécution ponctuelle `CODEX_LOCAL_UI` après instruction propriétaire explicite, sans l'assimiler à
+un script ou à une orchestration. Aucune readiness, sauvegarde, ouverture de campagne, automatisation
+UI, manifeste ou go n'est déduite de cette contrainte.
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une
-conclusion juridique ; le propriétaire a explicitement reconnu cette revue dans son acceptation.
+conclusion juridique ; le propriétaire avait explicitement reconnu cette revue dans son acceptation
+d'ADR-SS-002 v1.0.
 
 L'usage futur de Playwright sur un VPS de production n'est plus exclu comme option d'architecture,
 mais il reste `NOT_MEASURED` et `NOT_AUTHORIZED`. Le dépôt conserve aujourd'hui `LOCAL_ONLY` et

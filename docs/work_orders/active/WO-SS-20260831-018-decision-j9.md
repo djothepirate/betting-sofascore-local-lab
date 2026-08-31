@@ -2,14 +2,14 @@
 
 - **Statut :** `IN_DEVELOPMENT`
 - **Date d'ouverture :** 2026-08-31
-- **Décision J9 finale :** `PENDING_ADR_SS_002_V1_1_PROFILE_DECISION_AND_FUTURE_WO019_EVIDENCE`
+- **Décision J9 finale :** `PENDING_ADR_SS_002_V1_1_OWNER_ACCEPTANCE_AND_NEW_CAMPAIGN_EVIDENCE`
 - **Orientation propriétaire :** `PREPARE_OPTIONAL_INTEGRATION`
 - **Jalon :** J9 — Décision de gouvernance
 - **Base locale :** `40323faa7dca3341da6ef980b5762f1ff5a32a79`
 - **Branche :** `codex/j9-decision`
 - **Prérequis :** J8 `VALIDATED`, WO-016 et WO-017 clôturés
 - **ADR applicable :** `ADR-SS-001 v1.4`
-- **ADR de preuve :** `ADR-SS-002 v1.0 — ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP ; v1.1 — DRAFT_PENDING_OWNER_PROFILE_DECISION`
+- **ADR de preuve :** `ADR-SS-002 v1.0 — ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP ; v1.1 — DRAFT_SELECTED_PROFILE_PENDING_OWNER_ACCEPTANCE`
 - **Résultat de preuve WO-019 :** `STOPPED — KEEP_LOCAL_RECOMMENDED_THEN_REJECTED_AS_FINAL_DECISION`
 - **Prérequis runtime WO-021 :** `VALIDATED — LOCAL_ONLY, NO_PROVIDER_ACCESS`
 - **ADR d'intégration :** `ADR-SS-003 — NOT_CREATED`
@@ -149,8 +149,8 @@ La preuve globale est `STOPPED`. Les conditions de `PREPARE_OPTIONAL_INTEGRATION
 réunies et aucune incompatibilité structurelle n'établit `ABANDON`. La matrice a produit la
 recommandation déterministe `KEEP_LOCAL`, que le propriétaire a explicitement refusée comme
 décision finale le 2026-08-31. Ce refus ne sélectionne aucune autre option : la décision finale
-reste suspendue au choix du profil ADR-SS-002 v1.1 et à une éventuelle nouvelle preuve WO-019
-dûment autorisée.
+reste suspendue à l'acceptation d'ADR-SS-002 v1.1 aligné sur le profil complet sélectionné et à une
+nouvelle campagne autonome dûment autorisée sous un Work Order distinct.
 
 ## 5. Règles de recommandation
 
@@ -190,11 +190,11 @@ V1_0_V28_BACKUP_MAX_SNAPSHOT_ID=794
 V1_1_POST_STOP_V28_BACKUP_RESTORE=REQUIRED_NOT_EXECUTED
 V1_1_POST_STOP_MINIMUM_SNAPSHOT_COVERAGE=814
 V1_1_POST_STOP_MINIMUM_OCCURRENCE_COVERAGE=781
-NEXT_GATE=ADR_SS_002_V1_1_PROFILE_OWNER_DECISION
+NEXT_GATE=ADR_SS_002_V1_1_OWNER_ACCEPTANCE
 NETWORK_AUTHORIZED=NO
 GLOBAL_OWNER_GO=CONSUMED_AND_TERMINATED_BY_STOP
 OWNER_GO_CONSUMED=YES
-MAXIMUM_DIRECT_ATTEMPTS=38
+V1_0_HISTORICAL_MAXIMUM_DIRECT_ATTEMPTS=38
 WO019_D2_D3_PROVIDER_ATTEMPTS=0
 WO019_REPORT=docs/validation/J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831.md
 WO019_REPORT_SHA256=47e6171eeb1fc44cf995c727d4f09107875c844e71e8b183068731cbb4c62b9d
@@ -214,10 +214,24 @@ J9_OWNER_RESPONSE_TO_KEEP_LOCAL=REJECTED_AS_FINAL_DECISION
 J9_FINAL_DECISION=NOT_TAKEN
 ADR_SS_002_V1_0_STATE=ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP
 ADR_SS_002_V1_0_REUSABLE_FOR_RESUME=NO
-ADR_SS_002_V1_1_STATUS=DRAFT_PENDING_OWNER_PROFILE_DECISION
+ADR_SS_002_V1_1_STATUS=DRAFT_SELECTED_PROFILE_PENDING_OWNER_ACCEPTANCE
+ADR_SS_002_V1_1_OWNER_PROFILE_DECISION=SELECT_RESTART_FULL_D1_D2_D3
+ADR_SS_002_V1_1_PROFILE_DECISION_RECORDED_AT_UTC=2026-08-31T11:07:13.3823864Z
+ADR_SS_002_V1_1_MAXIMUM_NEW_DIRECT_ATTEMPTS=38
+ADR_SS_002_V1_1_MAXIMUM_CUMULATIVE_DIRECT_ATTEMPTS=58
 ADR_SS_002_REEXAMINATION_WORK_ORDER=WO-SS-20260831-022-j9-adr-ss-002-reexamination
 ADR_SS_002_REEXAMINATION_RESULT=NEW_VERSION_REQUIRED
-J9_DECISION_STATUS=PENDING_ADR_SS_002_V1_1_PROFILE_DECISION_AND_FUTURE_WO019_EVIDENCE
+WO019_HISTORICAL_CAMPAIGN_REOPENED=NO
+NEW_FULL_RESTART_CAMPAIGN_WORK_ORDER_REQUIRED=YES
+NEXT_AVAILABLE_WORK_ORDER_OBSERVED=WO-SS-20260831-023
+NEW_FULL_RESTART_CAMPAIGN_WORK_ORDER=NOT_OPENED
+OWNER_ENDPOINT_ACTIONS_AVAILABLE_FOR_NEW_CAMPAIGN=NO
+OTHER_HUMAN_LOCAL_OPERATOR_DESIGNATED=NO
+CAMPAIGN_EXECUTION_STATE=BLOCKED_PENDING_OPERATOR_DECISION
+OPERATOR_PATH_OWNER_DECISION=PENDING
+AUTOMATED_UI_ORCHESTRATION_AUTHORIZED=NO
+CODEX_LOCAL_UI_EXECUTION_AUTHORIZED=NO
+J9_DECISION_STATUS=PENDING_ADR_SS_002_V1_1_OWNER_ACCEPTANCE_AND_NEW_CAMPAIGN_EVIDENCE
 INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
 
@@ -225,10 +239,13 @@ Le propriétaire a autorisé l'implémentation et la qualification loopback de W
 `2026-08-31T08:43:48.8202621Z`, sans accès fournisseur, reprise de WO-019, nouveau go, intégration
 ou production. L'implémentation et les qualifications locales sont désormais vertes ; WO-021 est
 `VALIDATED` après décision propriétaire explicite et se trouve dans les Work Orders terminés. Sa
-réalisation reste distincte de la
-décision J9 finale et de toute future reprise de WO-019. Conformément à ADR-SS-002 §9, une reprise
-après incident exige aussi un nouvel ADR ou un amendement explicitement revu ; WO-021 ne l'autorise
-pas.
+réalisation reste distincte de la décision J9 finale et de toute future campagne. Le propriétaire a
+depuis sélectionné `RESTART_FULL_D1_D2_D3` pour le draft v1.1. Ce profil constitue une nouvelle
+série autonome : WO-019 reste arrêté et un nouveau Work Order/worktree sera requis après
+l'acceptation de v1.1. Le propriétaire est indisponible pour les séquences UI, aucun autre humain
+n'est désigné et aucune délégation à Codex n'est reçue : l'exécution reste donc bloquée. Le précédent
+WO-017 permet néanmoins de soumettre séparément une exécution ponctuelle `CODEX_LOCAL_UI` au choix
+propriétaire, sans autoriser script ni orchestration.
 
 ADR-SS-002 v1.0 qualifie l'augmentation de volume exigée par ADR-SS-001 §9. Le précédent métier
 complet J8 autorisait au plus 30 tentatives pour un dossier ; la preuve J9 acceptée en prévoit au
@@ -290,7 +307,7 @@ WO019_D2_D3_PROVIDER_ATTEMPTS=0
 J9_DECISION_RECOMMENDATION=KEEP_LOCAL
 J9_OWNER_RESPONSE_TO_KEEP_LOCAL=REJECTED_AS_FINAL_DECISION
 J9_FINAL_DECISION=NOT_TAKEN
-J9_DECISION_STATUS=PENDING_ADR_SS_002_V1_1_PROFILE_DECISION_AND_FUTURE_WO019_EVIDENCE
+J9_DECISION_STATUS=PENDING_ADR_SS_002_V1_1_OWNER_ACCEPTANCE_AND_NEW_CAMPAIGN_EVIDENCE
 ```
 
 Le propriétaire estime que la différence de `33 ms` par rapport à trois secondes, calculée sur les
@@ -365,7 +382,7 @@ J9_CURRENT_EVIDENCE_RESULT=STOPPED
 J9_CURRENT_EVIDENCE_RECOMMENDATION=KEEP_LOCAL
 J9_OWNER_RESPONSE_TO_KEEP_LOCAL_RECOMMENDATION=REJECTED_AS_FINAL_DECISION
 J9_FINAL_OWNER_DECISION=NOT_TAKEN
-J9_DECISION_STATUS=PENDING_ADR_SS_002_V1_1_PROFILE_DECISION_AND_FUTURE_WO019_EVIDENCE
+J9_DECISION_STATUS=PENDING_ADR_SS_002_V1_1_OWNER_ACCEPTANCE_AND_NEW_CAMPAIGN_EVIDENCE
 J9_CURRENT_EVIDENCE_REFERENCE=J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831;SHA256=47e6171eeb1fc44cf995c727d4f09107875c844e71e8b183068731cbb4c62b9d
 J9_PROVIDER_ACQUISITION_MODE=MANUAL_ON_DEMAND
 J9_INTEGRATION_IMPLEMENTATION_AUTHORIZED=NO
@@ -553,12 +570,21 @@ WO019_NETWORK_AUTHORIZED=NO
 WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
 WO019_NEW_PROVIDER_GO_GRANTED=NO
 ADR_SS_002_REEXAMINATION_STATUS=COMPLETED_NEW_VERSION_REQUIRED
-ADR_SS_002_V1_1_OWNER_PROFILE_DECISION=PENDING
+ADR_SS_002_V1_1_OWNER_PROFILE_DECISION=SELECT_RESTART_FULL_D1_D2_D3
+ADR_SS_002_V1_1_STATUS=DRAFT_SELECTED_PROFILE_PENDING_OWNER_ACCEPTANCE
+ADR_SS_002_V1_1_MAXIMUM_NEW_DIRECT_ATTEMPTS=38
+ADR_SS_002_V1_1_MAXIMUM_CUMULATIVE_DIRECT_ATTEMPTS=58
+NEW_FULL_RESTART_CAMPAIGN_WORK_ORDER_REQUIRED=YES
+NEW_FULL_RESTART_CAMPAIGN_WORK_ORDER=NOT_OPENED
+OWNER_ENDPOINT_ACTIONS_AVAILABLE_FOR_NEW_CAMPAIGN=NO
+OTHER_HUMAN_LOCAL_OPERATOR_DESIGNATED=NO
+CAMPAIGN_EXECUTION_STATE=BLOCKED_PENDING_OPERATOR_DECISION
+OPERATOR_PATH_OWNER_DECISION=PENDING
 J9_FINAL_DECISION=NOT_TAKEN
 INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
 
-WO-021 est validé et archivé. Le réexamen d'ADR-SS-002 est terminé et conclut qu'une version 1.1
-est nécessaire. Restent obligatoires le choix propriétaire du profil, l'acceptation distincte du
-texte v1.1 final, la readiness fraîche, la sauvegarde/restauration V28 post-arrêt, le nouveau
-manifeste et le nouveau go global à usage unique avant toute future reprise.
+WO-021 est validé et archivé. Le réexamen d'ADR-SS-002 est terminé et le profil complet est
+sélectionné. Restent obligatoires l'acceptation distincte du texte v1.1 final, la résolution du
+modèle opérateur, l'ouverture d'un nouveau Work Order/worktree de campagne, la readiness fraîche,
+la sauvegarde/restauration V28 post-arrêt, le manifeste et le nouveau go global à usage unique.

@@ -184,6 +184,19 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   permission/licence/quota applicable toujours constatées ; avant tout go restent requis le choix
   puis l'acceptation propriétaire de v1.1, une readiness fraîche, une nouvelle sauvegarde/restauration
   V28 post-arrêt, un manifeste et un nouveau go à usage unique.
+- sélection propriétaire reçue le `2026-08-31T11:07:13.3823864Z` du profil
+  `RESTART_FULL_D1_D2_D3` pour le draft ADR-SS-002 v1.1 : 38 nouvelles tentatives au maximum, 58
+  cumulées avec les vingt tentatives v1.0 gelées, rejeu D1 inclus et nouveau rapport autonome ;
+  l'acceptation v1.1 reste distincte et réseau, campagne et go restent à `NO` ;
+- la nouvelle série complète n'est pas une reprise de WO-019 : son statut `STOPPED`, la campagne
+  v1.0, ses vingt tentatives et son rapport historique restent immuables ; conformément à la règle
+  un Work Order/worktree par campagne, un nouveau Work Order et un nouveau worktree seront requis
+  après acceptation, mais ne sont pas encore ouverts ;
+- indisponibilité déclarée du propriétaire pour les huit séquences unitaires d'interrogation ; aucun
+  autre opérateur humain n'est désigné et le modèle courant est `BLOCKED_PENDING_OPERATOR_DECISION`.
+  Aucune délégation à Codex ne découle de ce constat ; le précédent WO-017 permet toutefois de
+  proposer séparément une exécution ponctuelle `CODEX_LOCAL_UI` sur instruction propriétaire
+  explicite. Script, orchestration, scheduler et modification runtime restent hors autorisation.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 
