@@ -151,10 +151,29 @@ a réussi sur le commit `8b91bf8` : 945 tests standards, 67 tests d'intégration
 réseau `NO`, Compose, trois parcours Playwright loopback à `21` tests worker puis `14` tests Chromium,
 tests superviseur `40/40` et coordinateur `8/8`, délai minimal `>= 3 s`, port/processus/artefacts à
 zéro, connecteur `SAFE` et Flyway V28. La nouvelle sauvegarde/restauration hors ligne avec la vraie
-phrase auto-générée par `age` est maintenant autorisée mais pas encore exécutée ; WO-023 est
-`READY_FOR_V28_BACKUP_RESTORE`. Réseau fournisseur, reprise de campagne et nouveau go restent à
-`NO` : après qualification de la sauvegarde, le manifeste devra être figé avant qu'un nouveau go
-global lié à une fenêtre UTC puisse matérialiser l'intention d'enchaîner sur la campagne.
+phrase auto-générée par `age` a ensuite été exécutée une fois. Le chiffrement a terminé avec les
+deux processus à `EXIT_0`, copie à EOF et nettoyage local `PASS`, mais la confirmation bornée de la
+session PostgreSQL exactement possédée a échoué ou est devenue invérifiable avant toute
+restauration et publication finale. Trois observations postérieures trouvent zéro session exacte
+et zéro session J6 possédée ; processus exact, fichier final/partiel, base temporaire et listener
+8087 sont également à zéro. Ces contrôles prouvent le confinement, pas le succès rétroactif.
+
+WO-023 est donc `BLOCKED_AFTER_BACKUP_CLEANUP_UNCONFIRMED`. L'écart de qualification est factuel :
+la commande réelle a utilisé le défaut `5 000 ms`, tandis que les quatre parcours Docker de WO-024
+forçaient `10 000 ms`, et le message final n'a pas conservé la cause interne. La tentative unique
+est consommée. Un Work Order runtime distinct et une nouvelle décision propriétaire sont requis
+avant tout nouvel essai. Réseau fournisseur, campagne, manifeste et nouveau go restent à `NO`,
+`NOT_CREATED` ou `NOT_GRANTED`.
+
+La validation standard post-incident a confirmé ce blocage : sur `945` tests, le seul échec est le
+scénario synthétique J6 dont la commande bornée n'a pas créé sa preuve PID dans la fenêtre de
+`1 500 ms`. La cause reste indéterminée et aucun lien causal n'est affirmé avec l'incident
+PostgreSQL. Une entrée synthétique antérieure d'état Windows `Unknown` reste par ailleurs visible
+par `tasklist`/CIM alors que les API ordinaires ne peuvent ni l'ouvrir ni la terminer ; un ancien
+répertoire temporaire synthétique subsiste aussi hors dépôt. La qualification runtime actuelle est
+donc `NOT_REPRODUCIBLE` ; le futur Work Order devra couvrir à la fois la borne PostgreSQL réelle,
+la classification sanitée et la preuve PID/absence multi-API.
+
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une
@@ -1125,6 +1144,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order validé de réexamen ADR-SS-002](docs/work_orders/completed/WO-SS-20260831-022-j9-adr-ss-002-reexamination.md)
 - [Work Order actif de nouvelle preuve J9](docs/work_orders/active/WO-SS-20260831-023-j9-provider-robustness-v11.md)
 - [Work Order validé de nettoyage fail-closed J6/J9](docs/work_orders/completed/WO-SS-20260831-024-j9-backup-pipeline-fail-closed-cleanup.md)
+- [Incident fail-closed post-sauvegarde WO-023](docs/validation/J9-WO023-POST-BACKUP-CLEANUP-INCIDENT-20260831.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 

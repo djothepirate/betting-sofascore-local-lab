@@ -1,6 +1,6 @@
 # WO-SS-20260831-023 — Campagne autonome de robustesse fournisseur J9 sous ADR-SS-002 v1.1
 
-- **Statut :** `READY_FOR_V28_BACKUP_RESTORE`
+- **Statut :** `BLOCKED_AFTER_BACKUP_CLEANUP_UNCONFIRMED`
 - **Date d'ouverture :** 2026-08-31
 - **Décision propriétaire observée à :** 2026-08-31T13:08:48.0887445Z
 - **Jalon :** J9 — nouvelle preuve fournisseur autonome
@@ -390,3 +390,94 @@ J9_FINAL_DECISION=NOT_TAKEN
 OWNER_SEQUENCE_INTENT=BACKUP_RESTORE_THEN_PROVIDER_CAMPAIGN
 PROVIDER_CAMPAIGN_AUTHORITY_IN_CURRENT_BLOCK=NO
 ```
+
+## 12. Incident fail-closed de la porte sauvegarde/restauration
+
+La photographie du paragraphe 11 reste la preuve de readiness antérieure à l'essai. La tentative
+unique ensuite autorisée a utilisé la phrase secrète auto-générée par `age`. Le chiffrement s'est
+terminé avec producteur et consommateur à `EXIT_0`, copie à EOF et nettoyage local déclaré `PASS`,
+puis l'exécution s'est arrêtée à la confirmation de nettoyage de la session PostgreSQL exactement
+possédée.
+
+Le point d'arrêt précède la publication de l'archive finale, la création du manifeste et toute
+restauration. L'audit post-incident trouve trois fois zéro session exacte et zéro session J6
+possédée ; il trouve également zéro processus exact, fichier final ou partiel, base temporaire et
+listener 8087. Ce confinement postérieur ne qualifie pas rétroactivement la tentative.
+
+Le diagnostic établit un écart de qualification : le runtime utilise par défaut une fenêtre de
+nettoyage de `5 000 ms`, alors que les quatre parcours Docker de qualification WO-024 forçaient
+`10 000 ms`. Le message final générique ne préserve pas la cause interne ; le déclencheur exact
+reste donc indéterminé. Le rapport distinct
+[Le rapport d'incident distinct](../../validation/J9-WO023-POST-BACKUP-CLEANUP-INCIDENT-20260831.md)
+consigne les faits, hashes et bornes sans exposer le nom exact de session ni le chemin de la preuve
+opérateur.
+
+La validation standard post-incident a ensuite produit `945` tests, un échec, zéro erreur et quatre
+skips. Le scénario synthétique de commande native bornée a atteint les marqueurs précédents puis
+n'a pas créé sa preuve PID dans sa fenêtre de `1 500 ms`. Une entrée synthétique antérieure,
+orpheline et d'état Windows `Unknown`, est en outre visible par `tasklist`/CIM mais pas ouvrable par
+`Get-Process`. Ces constats sont distincts de l'incident PostgreSQL réel ; ils rendent néanmoins la
+qualification runtime courante non reproductible et doivent entrer dans le périmètre correctif. Un
+répertoire temporaire synthétique, antérieur de plus de quatre heures au verify rouge, subsiste
+également hors dépôt ; il n'est pas attribué à cette exécution mais doit être couvert par l'audit de
+nettoyage renforcé.
+
+```text
+WORK_ORDER_STATUS=BLOCKED_AFTER_BACKUP_CLEANUP_UNCONFIRMED
+EVIDENCE_STATUS=DRAFT
+OFFLINE_READINESS=PASS_AFTER_VALIDATED_WO024
+
+BACKUP_ATTEMPT_RESULT=FAILED_FAIL_CLOSED
+BACKUP_ENCRYPTION_PIPELINE=COMPLETED_NOT_QUALIFIED
+EXACT_POSTGRES_SESSION_CLEANUP_CONFIRMATION=FAILED_OR_UNVERIFIABLE
+BACKUP_QUALIFIED=NO
+FINAL_ARCHIVE_PUBLICATION=NO_BY_CODE_PATH
+MANIFEST_STATUS=NOT_CREATED
+RESTORE_PHASE=NOT_STARTED
+RESTORE_QUALIFIED=NO
+
+POST_INCIDENT_EXACT_SESSION_OBSERVATIONS=0,0,0
+POST_INCIDENT_ALL_OWNED_SESSION_OBSERVATIONS=0,0,0
+POST_INCIDENT_EXACT_PROCESS_COUNT=0
+POST_INCIDENT_TEMPORARY_RESTORE_DATABASE_COUNT=0
+POST_INCIDENT_BACKUP_DIRECTORY_FILE_COUNT=0
+POST_INCIDENT_PARTIAL_FILE_COUNT=0
+POST_INCIDENT_LISTENER_8087_COUNT=0
+
+DEFAULT_CLEANUP_TIMEOUT_MS=5000
+WO024_DOCKER_QUALIFIED_CLEANUP_TIMEOUT_MS=10000
+DEFAULT_PATH_DOCKER_QUALIFIED=NO
+ROOT_CAUSE=INCONCLUSIVE_WITH_PROVEN_QUALIFICATION_MISMATCH
+PERSISTENT_SESSION_SURVIVAL_PROVEN=NO
+
+POST_INCIDENT_CLEAN_VERIFY=FAIL_945_TESTS_1_FAILURE_0_ERRORS_4_SKIPPED
+J6_BOUNDED_NATIVE_COMMAND_PID_EVIDENCE=NOT_CREATED
+CURRENT_RUNTIME_QUALIFICATION_REPRODUCIBLE=NO
+SYNTHETIC_UNKNOWN_STATE_PROCESS_ENTRY_COUNT=1
+SYNTHETIC_PROCESS_ABSENCE_PROOF=FAILED_CROSS_API_CORROBORATION
+SYNTHETIC_TEMP_DIRECTORY_RESIDUAL_COUNT=1
+
+OWNER_BACKUP_RETRY_AUTHORIZATION=CONSUMED_BY_FAILED_ATTEMPT
+WO023_BACKUP_RETRY_AUTHORIZED_NOW=NO
+NEXT_GATE=OWNER_DECISION_ON_DISTINCT_RUNTIME_CORRECTIVE_WORK_ORDER
+
+NEW_SERIES_DIRECT_ATTEMPTS=0
+AUDIT_CUMULATIVE_DIRECT_ATTEMPTS=20
+PROVIDER_ACCESS_PERFORMED=NO
+CODEX_LOCAL_UI_PROVIDER_ACTIONS_ALLOWED_NOW=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO
+WO023_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+GLOBAL_OWNER_GO=NOT_GRANTED
+OWNER_GO_CONSUMED=NO
+NEW_GLOBAL_OWNER_GO_GRANTED=NO
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_FINAL_DECISION=NOT_TAKEN
+```
+
+WO-024 est validé et gelé. Toute modification du script, de la borne de nettoyage, de la logique
+d'observation PostgreSQL, du parsing, de la classification d'erreur ou de la preuve PID/absence
+multi-API exige un Work Order runtime, une branche/worktree dédiés et une autorisation propriétaire
+d'implémentation. Même si aucun changement de code n'était finalement nécessaire, une nouvelle
+tentative réelle exigerait une nouvelle décision propriétaire explicite.

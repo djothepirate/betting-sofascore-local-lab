@@ -252,6 +252,30 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   navigateur versionnables à zéro. WO-023 passe à `READY_FOR_V28_BACKUP_RESTORE` ; la tentative
   chiffrée avec phrase `age` auto-générée est autorisée mais reste non exécutée, et réseau,
   campagne, nouveau go, intégration et production restent à `NO`.
+- tentative unique post-WO-024 exécutée avec phrase `age` auto-générée : chiffrement terminé avec
+  producteur et consommateur à `EXIT_0`, copie à EOF et nettoyage local `PASS`, puis arrêt
+  fail-closed sur une confirmation de nettoyage PostgreSQL exacte échouée ou invérifiable ; ce
+  point précède toute restauration, publication finale et création de manifeste ;
+- audit post-incident : trois observations successives à zéro pour la session exacte et toutes les
+  sessions J6 possédées, zéro processus exact, fichier final/partiel, base temporaire ou listener
+  8087 ; ces résultats prouvent le confinement et non une qualification rétroactive ;
+- écart de qualification établi entre le défaut runtime de `5 000 ms` et les quatre parcours Docker
+  WO-024 exécutés avec `10 000 ms`, tandis que la cause interne est masquée par le message final
+  générique. WO-023 passe à `BLOCKED_AFTER_BACKUP_CLEANUP_UNCONFIRMED` ; la tentative autorisée est
+  consommée et un Work Order runtime distinct ainsi qu'une nouvelle décision propriétaire sont
+  requis avant tout nouvel essai ; fournisseur, campagne, manifeste, go, intégration et production
+  restent non autorisés.
+- contre-validation standard post-incident : `945` tests, un échec, zéro erreur et quatre skips ;
+  le seul scénario rouge est la commande native bornée J6 dont la preuve PID n'a pas été créée dans
+  sa fenêtre de `1 500 ms`. Aucun code runtime/test n'a changé depuis WO-024, la cause reste
+  indéterminée et aucun lien causal avec l'incident PostgreSQL n'est déduit ;
+- audit Windows complémentaire : une entrée synthétique antérieure exécutant uniquement un sleep
+  de 30 secondes reste visible en état `Unknown` par `tasklist`/CIM, avec parent absent, tout en
+  étant inaccessible aux API ordinaires de processus ; elle n'appartient pas à la tentative réelle
+  de sauvegarde et son attribution au verify courant n'est pas établie ; un ancien répertoire
+  temporaire synthétique, créé plus de quatre heures avant le verify rouge, subsiste aussi hors
+  dépôt. La qualification runtime devient `NOT_REPRODUCIBLE` et le futur Work Order devra durcir la
+  preuve PID/absence multi-API sans relâcher les garanties fail-closed.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 
