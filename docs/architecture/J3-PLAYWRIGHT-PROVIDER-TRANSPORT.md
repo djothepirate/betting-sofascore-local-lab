@@ -24,6 +24,11 @@ n'alterne pas les campagnes J3 et J4 dans un meme contexte : chaque campagne con
 son navigateur, son contexte neuf et son allowlist propre. Le contrat J4 est documente dans
 `J4-PLAYWRIGHT-EVENT-DETAILS.md`.
 
+`WO-SS-20260831-020` corrige uniquement la sequence de fermeture et de nettoyage du superviseur
+commun. Le worker de production, le protocole IPC, les familles, les routes et leurs semantiques
+restent inchanges. Cette correction est qualifiee localement et reste en attente de revue
+proprietaire ; elle n'autorise aucun appel fournisseur ni la reprise de WO-019.
+
 `PAGE` reste compris entre `1` et `25`, la date est une `LocalDate` rendue en ISO et l'identifiant
 de tournoi unique est strictement positif. Toute autre origine, methode, route, redirection ou
 sous-requete est un incident terminal. Il n'existe aucun fallback vers `RestClient`, FlareSolverr,
@@ -135,13 +140,32 @@ corps trop grand sont egalement terminaux, sans repli automatique.
 
 ## 7. Arret cible
 
-Les actions d'arret J3 signalent le superviseur avant de verrouiller le controle metier. Le socket
-de la campagne est ferme immediatement, puis le worker et ses descendants identifies par PID et
-instant de creation sont nettoyes. Aucun processus n'est tue par nom.
+Les actions d'arret J3 signalent le superviseur avant de verrouiller le controle metier. Le worker
+et ses descendants restent identifies exactement par PID et instant de creation. Aucun processus
+n'est tue par nom.
+
+La fermeture normale et l'arret operateur sont deux modes explicites :
+
+- en mode gracieux, le parent envoie `CLOSE`; le worker ferme son runtime, emet `CLOSED`, puis
+  attend l'EOF parent. Apres `CLOSED`, le superviseur capture un nouvel inventaire de l'arbre avant
+  de faire `shutdownOutput()`. Le worker peut alors sortir naturellement sans perdre l'identite
+  d'un descendant reparente ;
+- le superviseur laisse `250 ms` a cette sortie naturelle, avant les replis conserves a `1 s` pour
+  le signal souple, `2 s` pour l'annulation operateur et `5 s` pour le nettoyage total ;
+- le timeout gracieux configure a `5 s` utilise le budget de nettoyage restant et n'est pas
+  plafonne par la borne d'annulation operateur de `2 s` ;
+- un `ReentrantLock` et des attentes bornees de `20 ms` permettent a une demande d'arret operateur
+  de preempter une fermeture gracieuse en cours ;
+- l'instant de la premiere demande d'arret est immuable et reste l'origine des bornes operateur,
+  meme si un inventaire ou un handshake etait deja en cours ;
+- un nettoyage echoue avant toute mutation peut etre retente avec un nouveau budget. Apres une
+  mutation, l'echec reste terminal et la lease demeure fail-closed.
 
 Les bornes du contrat sont :
 
 ```text
+NATURAL_PROCESS_EXIT_MAX=250ms
+SOFT_PROCESS_TERMINATION_MAX=1s
 STOP_ACKNOWLEDGEMENT_MAX=500ms
 IN_FLIGHT_CANCELLATION_MAX=2s
 PROCESS_TREE_CLEANUP_MAX=5s

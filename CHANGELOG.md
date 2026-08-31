@@ -37,6 +37,25 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `codex/j9-playwright-graceful-close`, sous autorisation propriétaire bornée au diagnostic et au
   correctif de la fermeture gracieuse et du nettoyage de l'arbre Playwright ; réseau fournisseur,
   reprise de WO-019, intégration et production restent explicitement non autorisés ;
+- diagnostic causal WO-020 établi par un test discriminant rouge : le worker émettait `CLOSED` puis
+  attendait l'EOF parent, tandis que le superviseur attendait ou terminait l'arbre avant cet EOF ;
+  le timeout gracieux configuré à cinq secondes était aussi plafonné à tort par la borne opérateur
+  de deux secondes ;
+- correction locale limitée au superviseur : inventaire frais après `CLOSED`, `shutdownOutput()`,
+  modes gracieux/opérateur explicites, horodatage d'arrêt immuable, préemption sous `ReentrantLock`
+  par polling de 20 ms, fenêtre de sortie naturelle de 250 ms puis replis bornés à 1 s / 2 s / 5 s,
+  et nouveau budget uniquement pour un nouvel essai de nettoyage échoué avant mutation ; worker,
+  protocole IPC, endpoints, scripts et configuration inchangés ;
+- qualification locale WO-020 verte : superviseur `31/31`, protocole `10/10`, sécurité `1/1`, puis
+  J3, J4 et J5 loopback `14/14` chacun ; le premier lancement J5 sous Windows PowerShell 5.1 s'est
+  arrêté avant Maven faute de `ResolveLinkTarget`, puis la commande inchangée a réussi sous
+  PowerShell 7.6 ;
+- portes finales WO-020 : `clean verify` avec 931 tests standards, quatre skips prévus, 67 tests
+  d'intégration, Flyway V28 confirmé uniquement dans Testcontainers et Compose valides ; zéro accès
+  fournisseur, processus possédé ou listener 8087, scanner d'artefacts J5 vert ; ceci ne vaut pas le
+  cycle chiffré sauvegarde/restauration V28 de WO-019 ;
+- WO-020 passe à `READY_FOR_OWNER_REVIEW`, sans validation propriétaire implicite ; WO-019 reste
+  `OPEN_AWAITING_PREREQUISITES`, sa preuve reste `DRAFT` et réseau, go et reprise restent à `NO` ;
 - revue factuelle de sources officielles : restrictions publiées sur les requêtes automatisées,
   le scraping, l'agrégation, la reproduction et l'extraction substantielle sans consentement
   explicite ; point d'entrée `Sofascore API` et canal `Product -> API` présents, mais aucune licence,

@@ -10,17 +10,27 @@ Le jalon **J9 — Décision de gouvernance** est ouvert par `WO-SS-20260831-018`
 `PENDING_PROVIDER_ROBUSTNESS_EVIDENCE` : le corpus J8 mono-dossier ne suffit pas à conclure.
 WO-018 autorise uniquement la matrice factuelle et la préparation documentaire. Il n'autorise ni
 appel fournisseur, ni intégration, ni nouveau endpoint, ni polling, ni scheduler, ni mode live.
-La preuve multi-dossier relève de WO-019. ADR-SS-002 v1.0 est accepté explicitement, mais WO-019 est
-revenu à `OPEN_AWAITING_PREREQUISITES` : la qualification J3 Playwright loopback et son unique
-contre-qualification hors sandbox ont produit le même bilan, soit `14` tests, `12` erreurs
-`RUNTIME_FAILURE` à la fermeture gracieuse et `2` scénarios d'arrêt opérateur réussis. Aucun appel
-fournisseur n'a eu lieu ; l'audit post-échec ne trouve aucun processus possédé résiduel, listener
-8087 ou artefact navigateur interdit. J4/J5 et la sauvegarde/restauration V28 n'ont pas été
-exécutés. WO-020 est ouvert sur `codex/j9-playwright-graceful-close` pour le diagnostic et le
-correctif runtime exclusivement locaux. Son ouverture ne reprend pas WO-019, ne lance pas le cycle
-V28, ne donne aucun go et n'autorise ni appel fournisseur, ni intégration, ni production. Le réseau
-reste bloqué, le go global n'est pas accordé et ADR-SS-003 n'existe pas. L'acceptation d'ADR-SS-002
-ne vaut pas go réseau.
+La preuve multi-dossier relève de WO-019. ADR-SS-002 v1.0 est accepté explicitement, mais WO-019
+reste `OPEN_AWAITING_PREREQUISITES`. Son premier contrôle J3 Playwright loopback et sa
+contre-qualification hors sandbox avaient produit `12` erreurs `RUNTIME_FAILURE` sur `14` tests à
+la fermeture gracieuse. WO-020 a depuis établi la cause : le worker émettait `CLOSED` puis attendait
+l'EOF parent, tandis que le parent attendait ou terminait l'arbre avant de produire cet EOF ; le
+timeout gracieux de `5 s` était en outre plafonné à tort à la borne opérateur de `2 s`.
+
+La correction locale du superviseur inventorie l'arbre après `CLOSED`, ferme la sortie parent,
+sépare les modes gracieux et opérateur, laisse `250 ms` à la sortie naturelle, puis conserve le
+repli souple à `1 s`, l'acquittement opérateur à `500 ms`, son annulation à `2 s` et le nettoyage
+total à `5 s`.
+Le worker, le protocole et les endpoints sont inchangés. Les tests du superviseur (`31/31`), du
+protocole (`10/10`), de sécurité (`1/1`) et les qualifications loopback J3, J4 et J5 (`14/14`
+chacune) sont verts. Les portes Maven sont également vertes avec `931` tests standards et `67`
+tests d'intégration ; l'audit final trouve zéro processus possédé, zéro listener 8087 et aucun
+artefact navigateur interdit. Aucun accès fournisseur n'a eu lieu.
+
+WO-020 est donc `READY_FOR_OWNER_REVIEW`, pas `VALIDATED`. Sa readiness locale ne reprend pas
+WO-019, ne lance pas le cycle chiffré sauvegarde/restauration V28, ne donne aucun go et n'autorise ni
+appel fournisseur, ni intégration, ni production. Le réseau reste bloqué, le go global n'est pas
+accordé et ADR-SS-003 n'existe pas. L'acceptation d'ADR-SS-002 ne vaut pas go réseau.
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une
@@ -984,6 +994,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order J8 validé](docs/work_orders/completed/WO-SS-20260829-016-benchmark-j8.md)
 - [Work Order actif de décision J9](docs/work_orders/active/WO-SS-20260831-018-decision-j9.md)
 - [Work Order actif de preuve de robustesse J9](docs/work_orders/active/WO-SS-20260831-019-j9-provider-robustness.md)
+- [Work Order runtime J9 prêt pour revue propriétaire](docs/work_orders/active/WO-SS-20260831-020-j9-playwright-graceful-close.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 

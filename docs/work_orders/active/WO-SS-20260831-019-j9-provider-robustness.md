@@ -46,12 +46,13 @@ OWNER_GO_CONSUMED=NO
 MAX_DIRECT_CALLS=38
 REPLACEMENT_DOSSIER_ALLOWED=NO
 ADR_SS_002_STATUS=ACCEPTED_V1_0
-OFFLINE_READINESS=BLOCKED_PLAYWRIGHT_LOOPBACK_GRACEFUL_CLOSE
+OFFLINE_READINESS=BLOCKED_PENDING_WO020_OWNER_REVIEW_AND_WO019_RESUME_AUTHORIZATION
 V28_BACKUP_RESTORE=NOT_EXECUTED_READINESS_BLOCKED
 GLOBAL_OWNER_GO=NOT_GRANTED
 SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=YES_OPENED_WO020
 RUNTIME_WORK_ORDER=WO-SS-20260831-020-j9-playwright-graceful-close
-RUNTIME_WORK_ORDER_STATUS=IN_DEVELOPMENT
+RUNTIME_WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+RUNTIME_CORRECTION_LOCAL_READINESS=PASS
 WO019_CAMPAIGN_RESUME_AUTHORIZED=NO
 ```
 
@@ -241,11 +242,16 @@ Cette règle a été déclenchée pendant la readiness du 2026-08-31. La qualifi
 loopback et son unique contre-qualification hors sandbox ont échoué de manière identique : `14`
 tests exécutés, `0` échec d'assertion, `12` erreurs `RUNTIME_FAILURE` pendant
 `campaign.close()` / la fermeture gracieuse et `2` scénarios d'arrêt opérateur réussis. Les
-assertions de parcours ont précédé ces erreurs de fermeture, mais leur réussite ne neutralise pas
-le garde-fou de nettoyage. Aucun appel fournisseur n'a été exécuté. J4, J5 et la
-sauvegarde/restauration V28 n'ont donc pas été lancés. La readiness reste bloquée et un Work Order
-runtime séparé WO-020 est ouvert avant toute reprise. Son ouverture n'autorise pas la campagne
-WO-019.
+assertions de parcours ont précédé ces erreurs de fermeture, mais leur réussite ne neutralisait pas
+le garde-fou de nettoyage. Aucun appel fournisseur n'a été exécuté.
+
+WO-020 a ensuite établi la cause circulaire : le worker émettait `CLOSED` puis attendait l'EOF,
+alors que le parent attendait ou terminait l'arbre avant de produire cet EOF ; le timeout gracieux
+était aussi plafonné à tort à `2 s`. La correction du seul superviseur conserve le worker, le
+protocole et les endpoints, puis les qualifications loopback J3, J4 et J5 ont chacune réussi leurs
+`14` tests. Cette preuve reste une readiness locale de WO-020 en attente de revue propriétaire. Elle
+ne reprend pas WO-019. La sauvegarde/restauration chiffrée V28 n'a pas été lancée et la readiness de
+WO-019 reste bloquée jusqu'à une décision propriétaire distincte.
 
 ## 9. Sauvegarde/restauration V28
 
@@ -469,19 +475,36 @@ POST_FAILURE_LISTENER_127_0_0_1_8087_COUNT=0
 POST_FAILURE_FORBIDDEN_BROWSER_ARTIFACTS=NONE_FOUND
 SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=YES_OPENED_WO020
 RUNTIME_WORK_ORDER=WO-SS-20260831-020-j9-playwright-graceful-close
-RUNTIME_WORK_ORDER_STATUS=IN_DEVELOPMENT
+RUNTIME_WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+RUNTIME_CORRECTION_LOCAL_READINESS=PASS
+WO020_ROOT_CAUSE=CLOSED_ACKNOWLEDGED_WORKER_WAITING_FOR_PARENT_EOF
+WO020_SUPERVISOR_TESTS=PASS_31_OF_31
+WO020_WORKER_PROTOCOL_TESTS=PASS_10_OF_10
+WO020_WORKER_SECURITY_TESTS=PASS_1_OF_1
+WO020_LOOPBACK_J3=PASS_14_OF_14
+WO020_LOOPBACK_J4=PASS_14_OF_14
+WO020_LOOPBACK_J5=PASS_14_OF_14
+WO020_STANDARD_CLEAN_VERIFY=PASS_931_TESTS_0_FAILURE_0_ERROR_4_SKIPPED
+WO020_INTEGRATION_VERIFY=PASS_67_TESTS_0_FAILURE_0_ERROR
+WO020_TESTCONTAINERS_FLYWAY_SCHEMA=V28_CONFIRMED_NOT_BACKUP_RESTORE
+WO020_DOCKER_COMPOSE_CONFIG=PASS
+WO020_POST_LOOPBACK_RESIDUAL_OWNED_PROCESS_COUNT=0
+WO020_POST_LOOPBACK_LISTENER_127_0_0_1_8087_COUNT=0
+WO020_J5_FORBIDDEN_BROWSER_ARTIFACT_SCANNER=PASS
+WO020_PROVIDER_ACCESS_PERFORMED=NO
 WO019_CAMPAIGN_RESUME_AUTHORIZED=NO
 NETWORK_AUTHORIZED=NO
 ```
 
 ADR-SS-002 v1.0 reste accepté. Les vérifications standards, PostgreSQL/Testcontainers,
 `Verify-Local` et Compose sont vertes et n'ont produit aucun appel fournisseur. La qualification
-Playwright loopback reste toutefois bloquante : la contre-qualification hors sandbox reproduit les
-`12` erreurs de fermeture gracieuse. L'audit post-échec ne trouve aucun processus possédé résiduel,
-aucun listener sur `127.0.0.1:8087` et aucun HAR, trace, vidéo, capture, téléchargement ou
-`storageState`. WO-019 revient à `OPEN_AWAITING_PREREQUISITES` ; aucun go, appel fournisseur, test
-J4/J5 ou cycle V28 n'est autorisé. WO-020 traite uniquement le défaut runtime local ; une décision
-propriétaire distincte restera nécessaire avant toute reprise de WO-019.
+Playwright loopback initiale reste conservée comme preuve de l'arrêt de sécurité. WO-020 a depuis
+établi la cause, qualifié sa correction et réussi les trois scripts loopback, mais reste
+`READY_FOR_OWNER_REVIEW`. L'audit post-correction ne trouve aucun processus possédé résiduel, aucun
+listener sur `127.0.0.1:8087` et le scanner J5 ne trouve aucun artefact navigateur interdit.
+WO-019 reste `OPEN_AWAITING_PREREQUISITES` et `EVIDENCE_STATUS=DRAFT` ; aucun go, appel fournisseur,
+cycle chiffré sauvegarde/restauration V28 ou reprise de campagne n'est autorisé avant une décision
+propriétaire distincte.
 
 Autorisation d'ouverture de WO-020 enregistrée le 2026-08-31 :
 

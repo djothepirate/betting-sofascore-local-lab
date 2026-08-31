@@ -152,12 +152,13 @@ La preuve fournisseur relève d'un Work Order séparé :
 WORK_ORDER=WO-SS-20260831-019-j9-provider-robustness
 BRANCH=codex/j9-provider-robustness
 EVIDENCE_STATUS=DRAFT
-OFFLINE_READINESS=BLOCKED_PLAYWRIGHT_LOOPBACK_GRACEFUL_CLOSE
+OFFLINE_READINESS=BLOCKED_PENDING_WO020_OWNER_REVIEW_AND_WO019_RESUME_AUTHORIZATION
 NETWORK_AUTHORIZED=NO
 MAXIMUM_DIRECT_ATTEMPTS=38
 SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=YES_OPENED_WO020
 RUNTIME_WORK_ORDER=WO-SS-20260831-020-j9-playwright-graceful-close
-RUNTIME_WORK_ORDER_STATUS=IN_DEVELOPMENT
+RUNTIME_WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+RUNTIME_CORRECTION_LOCAL_READINESS=PASS
 WO019_CAMPAIGN_RESUME_AUTHORIZED=NO
 ```
 
@@ -172,12 +173,13 @@ Les quatre portes cumulatives sont :
 3. sauvegarde chiffrée V28 fraîche et restauration qualifiée sur une base isolée ;
 4. go propriétaire global explicite, unique et non consommé.
 
-La deuxième porte n'est pas franchie : la qualification J3 Playwright loopback et une unique
-contre-qualification hors sandbox reproduisent le même échec à la fermeture gracieuse (`14` tests,
-`12` erreurs `RUNTIME_FAILURE`, `2` scénarios d'arrêt opérateur réussis). Aucun appel fournisseur
-n'a été effectué ; J4/J5, la sauvegarde/restauration V28 et le go global restent non exécutés.
-WO-019 porte les métriques détaillées. WO-020 est ouvert sous autorisation propriétaire pour le
-diagnostic et le correctif runtime local, sans autoriser la reprise de WO-019. La décision J9 demeure
+La deuxième porte n'est pas encore formellement franchie. L'échec initial J3 a été reproduit hors
+sandbox (`14` tests, `12` erreurs `RUNTIME_FAILURE`, `2` scénarios d'arrêt opérateur réussis), puis
+WO-020 a établi et corrigé localement la séquence circulaire `CLOSED` / attente d'EOF parent. Les
+tests superviseur, protocole et sécurité ainsi que les qualifications loopback J3, J4 et J5 sont
+désormais verts, sans accès fournisseur. WO-020 est `READY_FOR_OWNER_REVIEW`, pas `VALIDATED`, et
+la reprise de WO-019 reste explicitement non autorisée. La sauvegarde/restauration chiffrée V28 et
+le go global n'ont pas été exécutés. WO-019 porte les métriques détaillées ; la décision J9 demeure
 `PENDING_PROVIDER_ROBUSTNESS_EVIDENCE`.
 
 Avant ces quatre preuves :
@@ -297,6 +299,13 @@ SOFASCORE_J3_J4_J5_QUALIFICATION_DEFAULTS=false
 AUTOMATIC_REFRESH_DEFAULT=false
 LIVE_POLLING_DEFAULT=false
 PROVIDER_CALLS_DURING_OPENING=0
+WO020_STATUS=READY_FOR_OWNER_REVIEW
+WO020_LOCAL_READINESS=PASS
+WO020_PROVIDER_ACCESS_PERFORMED=NO
+WO019_EVIDENCE_STATUS=DRAFT
+WO019_CAMPAIGN_RESUME_AUTHORIZED=NO
+WO019_NETWORK_AUTHORIZED=NO
+WO019_GLOBAL_OWNER_GO=NOT_GRANTED
 ```
 
 Le premier lancement Maven en sandbox n'a pas pu résoudre le parent Spring Boot absent du cache
