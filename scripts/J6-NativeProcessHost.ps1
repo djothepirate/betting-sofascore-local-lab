@@ -7,7 +7,23 @@ param(
     [string]$TargetFilePath,
 
     [Parameter(Mandatory = $true)]
-    [string]$ArgumentPayloadBase64
+    [string]$ArgumentPayloadBase64,
+
+    [Parameter(Mandatory = $true)]
+    [ValidatePattern('^J6NativeStartup_[0-9a-f]{32}$')]
+    [string]$StartupPipeName,
+
+    [Parameter(Mandatory = $true)]
+    [ValidatePattern('^[0-9a-f]{32}$')]
+    [string]$StartupNonce,
+
+    [Parameter(Mandatory = $true)]
+    [ValidateRange(100, 30000)]
+    [int]$StartupTimeoutMilliseconds,
+
+    [Parameter(DontShow = $true)]
+    [ValidateRange(0, 30000)]
+    [int]$QualificationStartupHandshakeDelayMilliseconds = 0
 )
 
 $ErrorActionPreference = 'Stop'
@@ -66,6 +82,8 @@ public sealed class J6NativeHostControlGuard : IDisposable
 $gate = $null
 $target = $null
 $controlGuard = $null
+$startupPipe = $null
+$startupWriter = $null
 try {
     if ($IsWindows) {
         # The target gate remains closed while this guard is installed. The
@@ -101,6 +119,44 @@ try {
     if (-not $target.Start()) {
         exit 125
     }
+
+    if ($QualificationStartupHandshakeDelayMilliseconds -gt 0) {
+        if ([Environment]::GetEnvironmentVariable(
+                'J6_WO025_LOOPBACK_FAULT_INJECTION',
+                [EnvironmentVariableTarget]::Process) -ne 'AUTHORIZED') {
+            exit 124
+        }
+        Start-Sleep -Milliseconds $QualificationStartupHandshakeDelayMilliseconds
+    }
+
+    # Publish the exact target identity over an in-memory, nonce-bound channel.
+    # The parent starts its execution deadline only after validating this
+    # message. No command argument, path, output byte, or persistent artifact is
+    # included in the startup protocol.
+    $startupEvidence = [ordered]@{
+        Protocol = 'J6_NATIVE_TARGET_START_V1'
+        Nonce = $StartupNonce
+        ProcessId = $target.Id
+        StartedAtUtcTicks = $target.StartTime.ToUniversalTime().Ticks
+    }
+    $startupPipe = [IO.Pipes.NamedPipeClientStream]::new(
+        '.',
+        $StartupPipeName,
+        [IO.Pipes.PipeDirection]::Out,
+        [IO.Pipes.PipeOptions]::Asynchronous)
+    $startupPipe.Connect($StartupTimeoutMilliseconds)
+    $startupWriter = [IO.StreamWriter]::new(
+        $startupPipe,
+        [Text.UTF8Encoding]::new($false),
+        1024,
+        $true)
+    $startupWriter.WriteLine((ConvertTo-Json -InputObject $startupEvidence -Compress))
+    $startupWriter.Flush()
+    $startupWriter.Dispose()
+    $startupWriter = $null
+    $startupPipe.Dispose()
+    $startupPipe = $null
+
     $target.WaitForExit()
     exit $target.ExitCode
 }
@@ -110,6 +166,12 @@ catch {
     exit 126
 }
 finally {
+    if ($null -ne $startupWriter) {
+        $startupWriter.Dispose()
+    }
+    if ($null -ne $startupPipe) {
+        $startupPipe.Dispose()
+    }
     if ($null -ne $target) {
         $target.Dispose()
     }

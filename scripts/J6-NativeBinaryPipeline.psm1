@@ -97,6 +97,42 @@ public static class J6ProcessTreeSnapshot
             CloseHandle(snapshot);
         }
     }
+
+    // Read-only corroboration for qualification. A PID observed here never
+    // authorizes termination; cleanup requires a Job Object or an exact
+    // PID-plus-start-time identity obtained from an owned process handle.
+    public static bool ContainsProcessId(int processId)
+    {
+        IntPtr snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+        if (snapshot == InvalidHandleValue)
+        {
+            throw new InvalidOperationException(
+                "Could not take the read-only process snapshot. Win32=" + Marshal.GetLastWin32Error());
+        }
+
+        try
+        {
+            var entry = new PROCESSENTRY32 { dwSize = (uint)Marshal.SizeOf<PROCESSENTRY32>() };
+            if (!Process32FirstW(snapshot, ref entry))
+            {
+                return false;
+            }
+            do
+            {
+                if (unchecked((int)entry.th32ProcessID) == processId)
+                {
+                    return true;
+                }
+                entry.dwSize = (uint)Marshal.SizeOf<PROCESSENTRY32>();
+            }
+            while (Process32NextW(snapshot, ref entry));
+            return false;
+        }
+        finally
+        {
+            CloseHandle(snapshot);
+        }
+    }
 }
 
 public sealed class J6ConsoleCancellationRegistration : IDisposable
@@ -374,11 +410,22 @@ function Start-J6ConfinedNativeProcess {
         [Parameter(Mandatory = $true)][string]$FilePath,
         [Parameter(Mandatory = $true)][string[]]$ArgumentList,
         [Parameter(Mandatory = $true)][string]$WorkingDirectory,
+        [ValidateRange(100, 30000)][int]$StartupTimeoutMilliseconds = 10000,
+        [ValidateRange(0, 30000)]
+        [int]$QualificationStartupHandshakeDelayMilliseconds = 0,
         [switch]$RedirectStandardOutput,
         [switch]$RedirectStandardInput,
         [switch]$RedirectStandardError
     )
 
+    if ($QualificationStartupHandshakeDelayMilliseconds -gt 0 -and
+        [Environment]::GetEnvironmentVariable(
+            'J6_WO025_LOOPBACK_FAULT_INJECTION',
+            [EnvironmentVariableTarget]::Process) -ne 'AUTHORIZED') {
+        throw 'WO-025 native startup fault injection is not authorized.'
+    }
+
+    $startupStopwatch = [Diagnostics.Stopwatch]::StartNew()
     if (-not $IsWindows) {
         $process = [Diagnostics.Process]::new()
         $process.StartInfo = New-J6NativeProcessStartInfo `
@@ -392,12 +439,16 @@ function Start-J6ConfinedNativeProcess {
             $process.Dispose()
             throw 'The native process did not start.'
         }
+        $identity = New-J6OwnedProcessIdentity -Process $process
+        $startupStopwatch.Stop()
         return [pscustomobject]@{
             Process = $process
-            Identity = New-J6OwnedProcessIdentity -Process $process
+            Identity = $identity
+            TargetIdentity = $identity
             Job = $null
             Gate = $null
             Confinement = 'PROCESS_TREE_FALLBACK'
+            StartupDurationMilliseconds = $startupStopwatch.ElapsedMilliseconds
         }
     }
 
@@ -412,6 +463,8 @@ function Start-J6ConfinedNativeProcess {
     $argumentPayload = [Convert]::ToBase64String(
         [Text.Encoding]::UTF8.GetBytes($argumentJson))
     $gateName = 'Local\J6NativeGate_' + [Guid]::NewGuid().ToString('N')
+    $startupNonce = [Guid]::NewGuid().ToString('N')
+    $startupPipeName = 'J6NativeStartup_' + [Guid]::NewGuid().ToString('N')
     $createdNew = $false
     $gate = [Threading.EventWaitHandle]::new(
         $false,
@@ -425,14 +478,35 @@ function Start-J6ConfinedNativeProcess {
 
     $job = $null
     $process = $null
+    $startupPipe = $null
+    $startupReader = $null
     try {
+        $startupPipeOptions = [IO.Pipes.PipeOptions](
+            [int][IO.Pipes.PipeOptions]::Asynchronous -bor
+            [int][IO.Pipes.PipeOptions]::CurrentUserOnly)
+        $startupPipe = [IO.Pipes.NamedPipeServerStream]::new(
+            $startupPipeName,
+            [IO.Pipes.PipeDirection]::In,
+            1,
+            [IO.Pipes.PipeTransmissionMode]::Byte,
+            $startupPipeOptions)
         $job = [J6WindowsKillOnCloseJob]::new()
         $hostArguments = @(
             '-NoLogo', '-NoProfile', '-NonInteractive',
             '-File', $hostPath,
             '-GateName', $gateName,
             '-TargetFilePath', $FilePath,
-            '-ArgumentPayloadBase64', $argumentPayload)
+            '-ArgumentPayloadBase64', $argumentPayload,
+            '-StartupPipeName', $startupPipeName,
+            '-StartupNonce', $startupNonce,
+            '-StartupTimeoutMilliseconds', $StartupTimeoutMilliseconds.ToString(
+                [Globalization.CultureInfo]::InvariantCulture))
+        if ($QualificationStartupHandshakeDelayMilliseconds -gt 0) {
+            $hostArguments += @(
+                '-QualificationStartupHandshakeDelayMilliseconds',
+                $QualificationStartupHandshakeDelayMilliseconds.ToString(
+                    [Globalization.CultureInfo]::InvariantCulture))
+        }
         $process = [Diagnostics.Process]::new()
         $process.StartInfo = New-J6NativeProcessStartInfo `
             -FilePath $pwshPath `
@@ -457,18 +531,90 @@ function Start-J6ConfinedNativeProcess {
             throw 'The confined native-process gate could not be released.'
         }
 
+        $startupDeadline = [DateTime]::UtcNow.AddMilliseconds(
+            $StartupTimeoutMilliseconds)
+        $connectionTask = $startupPipe.WaitForConnectionAsync()
+        while (-not $connectionTask.IsCompleted) {
+            if ($process.HasExited) {
+                throw 'The gated native-process host exited before target startup was confirmed.'
+            }
+            if ([DateTime]::UtcNow -ge $startupDeadline) {
+                throw 'The confined native target did not complete its startup handshake.'
+            }
+            Start-Sleep -Milliseconds 25
+        }
+        [void]$connectionTask.GetAwaiter().GetResult()
+
+        $startupReader = [IO.StreamReader]::new(
+            $startupPipe,
+            [Text.UTF8Encoding]::new($false),
+            $false,
+            1024,
+            $true)
+        $readTask = $startupReader.ReadLineAsync()
+        while (-not $readTask.IsCompleted) {
+            if ([DateTime]::UtcNow -ge $startupDeadline) {
+                throw 'The confined native target startup evidence was not received in time.'
+            }
+            Start-Sleep -Milliseconds 25
+        }
+        $startupLine = $readTask.GetAwaiter().GetResult()
+        if ([string]::IsNullOrWhiteSpace($startupLine) -or
+            $startupLine.Length -gt 512) {
+            throw 'The confined native target startup evidence was invalid.'
+        }
+        $startupEvidence = ConvertFrom-Json -InputObject $startupLine
+        $startupProperties = @($startupEvidence.PSObject.Properties.Name)
+        $requiredStartupProperties = @(
+            'Protocol', 'Nonce', 'ProcessId', 'StartedAtUtcTicks')
+        if ($startupProperties.Count -ne $requiredStartupProperties.Count -or
+            @($requiredStartupProperties | Where-Object {
+                    $startupProperties -notcontains $_
+                }).Count -ne 0 -or
+            [string]$startupEvidence.Protocol -cne 'J6_NATIVE_TARGET_START_V1' -or
+            [string]$startupEvidence.Nonce -cne $startupNonce) {
+            throw 'The confined native target startup evidence was invalid.'
+        }
+        try {
+            $targetProcessId = [Convert]::ToInt32(
+                $startupEvidence.ProcessId,
+                [Globalization.CultureInfo]::InvariantCulture)
+            $targetStartedAtUtcTicks = [Convert]::ToInt64(
+                $startupEvidence.StartedAtUtcTicks,
+                [Globalization.CultureInfo]::InvariantCulture)
+        }
+        catch {
+            throw 'The confined native target startup identity was invalid.'
+        }
+        if ($targetProcessId -le 0 -or $targetStartedAtUtcTicks -le 0) {
+            throw 'The confined native target startup identity was invalid.'
+        }
+        $targetIdentity = [pscustomobject]@{
+            ProcessId = $targetProcessId
+            StartedAtUtcTicks = $targetStartedAtUtcTicks
+            ExitedAtUtcTicks = $null
+        }
+        $startupReader.Dispose()
+        $startupReader = $null
+        $startupPipe.Dispose()
+        $startupPipe = $null
+        $startupStopwatch.Stop()
+
         return [pscustomobject]@{
             Process = $process
             Identity = $identity
+            TargetIdentity = $targetIdentity
             Job = $job
             Gate = $gate
             Confinement = 'WINDOWS_KILL_ON_JOB_CLOSE'
+            StartupDurationMilliseconds = $startupStopwatch.ElapsedMilliseconds
         }
     }
     catch {
         $startFailure = $_.Exception
         $cleanupFailures = [Collections.Generic.List[string]]::new()
         $startCleanupDeadline = [DateTime]::UtcNow.AddSeconds(5)
+        $startCleanupActiveAfter = $null
         if ($null -ne $job) {
             try {
                 $job.Terminate()
@@ -476,7 +622,8 @@ function Start-J6ConfinedNativeProcess {
                     [DateTime]::UtcNow -lt $startCleanupDeadline) {
                     Start-Sleep -Milliseconds 25
                 }
-                if ($job.GetActiveProcessCount() -ne 0) {
+                $startCleanupActiveAfter = $job.GetActiveProcessCount()
+                if ($startCleanupActiveAfter -ne 0) {
                     $cleanupFailures.Add('JOB_NOT_EMPTY')
                 }
             }
@@ -515,14 +662,32 @@ function Start-J6ConfinedNativeProcess {
         if ($null -ne $process) {
             try { $process.Dispose() } catch { }
         }
+        if ($null -ne $startupReader) {
+            try { $startupReader.Dispose() } catch {
+                $cleanupFailures.Add('STARTUP_READER_CLOSE_UNVERIFIABLE')
+            }
+        }
+        if ($null -ne $startupPipe) {
+            try { $startupPipe.Dispose() } catch {
+                $cleanupFailures.Add('STARTUP_PIPE_CLOSE_UNVERIFIABLE')
+            }
+        }
         try { $gate.Dispose() } catch {
             $cleanupFailures.Add('GATE_CLOSE_UNVERIFIABLE')
         }
         if ($cleanupFailures.Count -ne 0) {
-            throw [J6NativeConfinementCleanupException]::new(
+            $cleanupException = [J6NativeConfinementCleanupException]::new(
                 'The native confinement start cleanup could not be confirmed.',
                 $startFailure)
+            $cleanupException.Data['J6ProcessTreeCleanup'] = 'UNCONFIRMED'
+            throw $cleanupException
         }
+        $startupStopwatch.Stop()
+        $startFailure.Data['J6ProcessTreeCleanup'] = 'PASS'
+        $startFailure.Data['J6Confinement'] = 'WINDOWS_KILL_ON_JOB_CLOSE'
+        $startFailure.Data['J6ActiveProcessesAfterCleanup'] = $startCleanupActiveAfter
+        $startFailure.Data['J6StartupDurationMilliseconds'] = `
+            $startupStopwatch.ElapsedMilliseconds
         throw $startFailure
     }
 }
@@ -1015,6 +1180,12 @@ function Invoke-J6BoundedNativeCommand {
         [Parameter(Mandatory = $true)][string]$WorkingDirectory,
         [ValidateRange(1, 300000)][int]$TimeoutMilliseconds,
         [ValidateRange(100, 30000)][int]$CleanupTimeoutMilliseconds = 5000,
+        [ValidateRange(100, 30000)][int]$StartupTimeoutMilliseconds = 10000,
+        [Parameter(DontShow = $true)]
+        [DateTime]$OverallCommandDeadlineUtc = [DateTime]::MaxValue,
+        [Parameter(DontShow = $true)]
+        [ValidateRange(0, 30000)]
+        [int]$QualificationStartupHandshakeDelayMilliseconds = 0,
         [Parameter(DontShow = $true)]
         [switch]$QualificationInjectSupervisionFailureAfterStart,
         [Parameter(DontShow = $true)]
@@ -1045,6 +1216,9 @@ function Invoke-J6BoundedNativeCommand {
     $job = $null
     $gate = $null
     $identity = $null
+    $targetIdentity = $null
+    $startupDurationMilliseconds = $null
+    $confinement = 'NOT_STARTED'
     $descendants = [Collections.Generic.Dictionary[string, object]]::new()
     $stdoutTask = $null
     $stderrTask = $null
@@ -1052,17 +1226,38 @@ function Invoke-J6BoundedNativeCommand {
     $primaryFailure = $null
     $cleanupFailure = $null
     $cleanup = $null
+    $nativeStartInvoked = $false
     try {
+        $effectiveStartupTimeoutMilliseconds = $StartupTimeoutMilliseconds
+        if ($OverallCommandDeadlineUtc -ne [DateTime]::MaxValue) {
+            $overallStartupRemaining = [int][Math]::Floor(
+                ($OverallCommandDeadlineUtc.ToUniversalTime() -
+                    [DateTime]::UtcNow).TotalMilliseconds)
+            if ($overallStartupRemaining -lt 100) {
+                throw [TimeoutException]::new(
+                    'The bounded native command overall deadline expired before startup.')
+            }
+            $effectiveStartupTimeoutMilliseconds = [Math]::Min(
+                $StartupTimeoutMilliseconds,
+                $overallStartupRemaining)
+        }
+        $nativeStartInvoked = $true
         $confined = Start-J6ConfinedNativeProcess `
             -FilePath $FilePath `
             -ArgumentList $ArgumentList `
             -WorkingDirectory $WorkingDirectory `
+            -StartupTimeoutMilliseconds $effectiveStartupTimeoutMilliseconds `
+            -QualificationStartupHandshakeDelayMilliseconds `
+                $QualificationStartupHandshakeDelayMilliseconds `
             -RedirectStandardOutput `
             -RedirectStandardError
         $process = $confined.Process
         $identity = $confined.Identity
+        $targetIdentity = $confined.TargetIdentity
+        $startupDurationMilliseconds = $confined.StartupDurationMilliseconds
         $job = $confined.Job
         $gate = $confined.Gate
+        $confinement = $confined.Confinement
         $stdoutTask = $process.StandardOutput.ReadToEndAsync()
         $stderrTask = $process.StandardError.ReadToEndAsync()
         if ($QualificationInjectSupervisionFailureAfterStart) {
@@ -1089,6 +1284,10 @@ function Invoke-J6BoundedNativeCommand {
             throw 'WO-024 injected post-start native supervision failure.'
         }
         $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMilliseconds)
+        if ($OverallCommandDeadlineUtc -ne [DateTime]::MaxValue -and
+            $OverallCommandDeadlineUtc.ToUniversalTime() -lt $deadline) {
+            $deadline = $OverallCommandDeadlineUtc.ToUniversalTime()
+        }
         while (-not $process.HasExited -and [DateTime]::UtcNow -lt $deadline) {
             if ($null -eq $job) {
                 Update-J6OwnedDescendantIdentities `
@@ -1184,19 +1383,77 @@ function Invoke-J6BoundedNativeCommand {
         if ($null -ne $process) {
             $process.Dispose()
         }
-        throw [InvalidOperationException]::new(
+        $cleanupException = [InvalidOperationException]::new(
             'The bounded native command cleanup could not be confirmed.',
             $cleanupFailure)
+        $cleanupException.Data['J6ProcessTreeCleanup'] = 'UNCONFIRMED'
+        $cleanupException.Data['J6Confinement'] = $confinement
+        if ($null -ne $targetIdentity) {
+            $cleanupException.Data['J6TargetProcessId'] = [int]$targetIdentity.ProcessId
+            $cleanupException.Data['J6TargetStartedAtUtcTicks'] = `
+                [long]$targetIdentity.StartedAtUtcTicks
+        }
+        $cleanupException.Data['J6StartupDurationMilliseconds'] = `
+            $startupDurationMilliseconds
+        throw $cleanupException
     }
     if ($null -ne $primaryFailure) {
         if ($null -ne $process) {
             $process.Dispose()
         }
+        if ($null -ne $targetIdentity) {
+            $primaryFailure.Data['J6TargetProcessId'] = [int]$targetIdentity.ProcessId
+            $primaryFailure.Data['J6TargetStartedAtUtcTicks'] = `
+                [long]$targetIdentity.StartedAtUtcTicks
+        }
+        if (-not $primaryFailure.Data.Contains('J6StartupDurationMilliseconds') -and
+            $null -ne $startupDurationMilliseconds) {
+            $primaryFailure.Data['J6StartupDurationMilliseconds'] = `
+                $startupDurationMilliseconds
+        }
+        if (-not $primaryFailure.Data.Contains('J6ProcessTreeCleanup')) {
+            $primaryFailure.Data['J6ProcessTreeCleanup'] = if (
+                -not $nativeStartInvoked) {
+                'NOT_REQUIRED'
+            }
+            elseif (
+                $null -ne $cleanup -and $cleanup.Exited -and
+                $cleanup.DescendantsExited) {
+                'PASS'
+            }
+            else {
+                'UNCONFIRMED'
+            }
+        }
+        if (-not $primaryFailure.Data.Contains('J6Confinement')) {
+            $primaryFailure.Data['J6Confinement'] = $confinement
+        }
+        if ($null -ne $cleanup -and
+            $null -ne $cleanup.PSObject.Properties['ActiveProcessesAfterCleanup']) {
+            $primaryFailure.Data['J6ActiveProcessesAfterCleanup'] = `
+                $cleanup.ActiveProcessesAfterCleanup
+        }
         throw $primaryFailure
     }
     if ($timedOut) {
         $process.Dispose()
-        throw 'The bounded native command exceeded its deadline.'
+        $timeoutException = [TimeoutException]::new(
+            'The bounded native command exceeded its deadline.')
+        if ($null -ne $targetIdentity) {
+            $timeoutException.Data['J6TargetProcessId'] = [int]$targetIdentity.ProcessId
+            $timeoutException.Data['J6TargetStartedAtUtcTicks'] = `
+                [long]$targetIdentity.StartedAtUtcTicks
+        }
+        $timeoutException.Data['J6StartupDurationMilliseconds'] = `
+            $startupDurationMilliseconds
+        $timeoutException.Data['J6ProcessTreeCleanup'] = 'PASS'
+        $timeoutException.Data['J6Confinement'] = $confinement
+        if ($null -ne $cleanup -and
+            $null -ne $cleanup.PSObject.Properties['ActiveProcessesAfterCleanup']) {
+            $timeoutException.Data['J6ActiveProcessesAfterCleanup'] = `
+                $cleanup.ActiveProcessesAfterCleanup
+        }
+        throw $timeoutException
     }
 
     $process.WaitForExit()
@@ -1208,6 +1465,27 @@ function Invoke-J6BoundedNativeCommand {
         StandardOutput = $standardOutput
         ProcessTreeCleanup = 'PASS'
         UnexpectedDescendantCleanup = $cleanup.DescendantKillRequested
+        Confinement = $confinement
+        ActiveProcessesAfterCleanup = if (
+            $null -ne $cleanup.PSObject.Properties['ActiveProcessesAfterCleanup']) {
+            $cleanup.ActiveProcessesAfterCleanup
+        }
+        else {
+            $null
+        }
+        TargetProcessId = if ($null -eq $targetIdentity) {
+            $null
+        }
+        else {
+            [int]$targetIdentity.ProcessId
+        }
+        TargetStartedAtUtcTicks = if ($null -eq $targetIdentity) {
+            $null
+        }
+        else {
+            [long]$targetIdentity.StartedAtUtcTicks
+        }
+        StartupDurationMilliseconds = $startupDurationMilliseconds
     }
 }
 
@@ -1229,6 +1507,9 @@ function Invoke-J6NativeBinaryPipeline {
 
         [ValidateRange(100, 30000)]
         [int]$CleanupTimeoutMilliseconds = 5000,
+
+        [ValidateRange(100, 30000)]
+        [int]$StartupTimeoutMilliseconds = 10000,
 
         [Threading.CancellationToken]$CancellationToken = [Threading.CancellationToken]::None
     )
@@ -1255,6 +1536,10 @@ function Invoke-J6NativeBinaryPipeline {
     $consumerConfinement = 'NOT_STARTED'
     $producerIdentity = $null
     $consumerIdentity = $null
+    $producerTargetIdentity = $null
+    $consumerTargetIdentity = $null
+    $producerStartupDurationMilliseconds = $null
+    $consumerStartupDurationMilliseconds = $null
     $producerDescendants = [Collections.Generic.Dictionary[string, object]]::new()
     $consumerDescendants = [Collections.Generic.Dictionary[string, object]]::new()
     $producerPid = $null
@@ -1289,6 +1574,7 @@ function Invoke-J6NativeBinaryPipeline {
     $startCleanupUnconfirmed = $false
     $ownedResourceDisposeUnconfirmed = $false
     $stopwatch = [Diagnostics.Stopwatch]::StartNew()
+    $executionStopwatch = [Diagnostics.Stopwatch]::new()
 
     try {
         if ($CancellationToken.IsCancellationRequested) {
@@ -1301,9 +1587,13 @@ function Invoke-J6NativeBinaryPipeline {
             -FilePath $ConsumerFilePath `
             -ArgumentList $ConsumerArgumentList `
             -WorkingDirectory $WorkingDirectory `
+            -StartupTimeoutMilliseconds $StartupTimeoutMilliseconds `
             -RedirectStandardInput
         $consumer = $consumerConfined.Process
         $consumerIdentity = $consumerConfined.Identity
+        $consumerTargetIdentity = $consumerConfined.TargetIdentity
+        $consumerStartupDurationMilliseconds = `
+            $consumerConfined.StartupDurationMilliseconds
         $consumerJob = $consumerConfined.Job
         $consumerGate = $consumerConfined.Gate
         $consumerConfinement = $consumerConfined.Confinement
@@ -1314,9 +1604,13 @@ function Invoke-J6NativeBinaryPipeline {
             -FilePath $ProducerFilePath `
             -ArgumentList $ProducerArgumentList `
             -WorkingDirectory $WorkingDirectory `
+            -StartupTimeoutMilliseconds $StartupTimeoutMilliseconds `
             -RedirectStandardOutput
         $producer = $producerConfined.Process
         $producerIdentity = $producerConfined.Identity
+        $producerTargetIdentity = $producerConfined.TargetIdentity
+        $producerStartupDurationMilliseconds = `
+            $producerConfined.StartupDurationMilliseconds
         $producerJob = $producerConfined.Job
         $producerGate = $producerConfined.Gate
         $producerConfinement = $producerConfined.Confinement
@@ -1327,6 +1621,7 @@ function Invoke-J6NativeBinaryPipeline {
             $consumer.StandardInput.BaseStream,
             $copyCancellation.Token)
         $pipelineResult = 'RUNNING'
+        $executionStopwatch.Start()
 
         while ($pipelineResult -eq 'RUNNING') {
             if ($null -eq $producerJob) {
@@ -1344,7 +1639,7 @@ function Invoke-J6NativeBinaryPipeline {
                 $pipelineResult = 'CANCELLED'
                 break
             }
-            if ($stopwatch.Elapsed.TotalSeconds -ge $TimeoutSeconds) {
+            if ($executionStopwatch.Elapsed.TotalSeconds -ge $TimeoutSeconds) {
                 $timedOut = $true
                 $pipelineResult = 'TIMEOUT'
                 break
@@ -1405,7 +1700,7 @@ function Invoke-J6NativeBinaryPipeline {
                         $pipelineResult = 'CANCELLED'
                         break
                     }
-                    if ($stopwatch.Elapsed.TotalSeconds -ge $TimeoutSeconds) {
+                    if ($executionStopwatch.Elapsed.TotalSeconds -ge $TimeoutSeconds) {
                         $timedOut = $true
                         $pipelineResult = 'TIMEOUT'
                         break
@@ -1526,6 +1821,7 @@ function Invoke-J6NativeBinaryPipeline {
                 # The copy status is reported independently below.
             }
         }
+        $executionStopwatch.Stop()
         $stopwatch.Stop()
     }
 
@@ -1583,8 +1879,28 @@ function Invoke-J6NativeBinaryPipeline {
         ProducerExitCode = $producerExitCode
         ProducerPid = $producerPid
         ProducerStartedAtUtc = $producerStartedAt
+        ProducerTargetPid = if ($null -eq $producerTargetIdentity) {
+            $null
+        }
+        else {
+            [int]$producerTargetIdentity.ProcessId
+        }
+        ProducerTargetStartedAtUtcTicks = if ($null -eq $producerTargetIdentity) {
+            $null
+        }
+        else {
+            [long]$producerTargetIdentity.StartedAtUtcTicks
+        }
+        ProducerStartupDurationMilliseconds = $producerStartupDurationMilliseconds
         ProducerConfinement = $producerConfinement
         ProducerRootAliveAtCleanupStart = $producerCleanup.RootAliveBeforeCleanup
+        ProducerActiveProcessesAfterCleanup = if (
+            $null -ne $producerCleanup.PSObject.Properties['ActiveProcessesAfterCleanup']) {
+            $producerCleanup.ActiveProcessesAfterCleanup
+        }
+        else {
+            $null
+        }
         ConsumerStatus = Get-J6NativeProcessStatus `
             -Process $consumer `
             -KillRequested $consumerCleanup.KillRequested `
@@ -1593,8 +1909,28 @@ function Invoke-J6NativeBinaryPipeline {
         ConsumerExitCode = $consumerExitCode
         ConsumerPid = $consumerPid
         ConsumerStartedAtUtc = $consumerStartedAt
+        ConsumerTargetPid = if ($null -eq $consumerTargetIdentity) {
+            $null
+        }
+        else {
+            [int]$consumerTargetIdentity.ProcessId
+        }
+        ConsumerTargetStartedAtUtcTicks = if ($null -eq $consumerTargetIdentity) {
+            $null
+        }
+        else {
+            [long]$consumerTargetIdentity.StartedAtUtcTicks
+        }
+        ConsumerStartupDurationMilliseconds = $consumerStartupDurationMilliseconds
         ConsumerConfinement = $consumerConfinement
         ConsumerRootAliveAtCleanupStart = $consumerCleanup.RootAliveBeforeCleanup
+        ConsumerActiveProcessesAfterCleanup = if (
+            $null -ne $consumerCleanup.PSObject.Properties['ActiveProcessesAfterCleanup']) {
+            $consumerCleanup.ActiveProcessesAfterCleanup
+        }
+        else {
+            $null
+        }
         ProducerObservedDescendantPids = @($producerCleanup.ObservedDescendantPids)
         ConsumerObservedDescendantPids = @($consumerCleanup.ObservedDescendantPids)
         CopyStatus = $copyStatus
@@ -1602,6 +1938,7 @@ function Invoke-J6NativeBinaryPipeline {
         TimedOut = $timedOut
         Cancelled = $cancelled
         DurationMilliseconds = $stopwatch.ElapsedMilliseconds
+        ExecutionDurationMilliseconds = $executionStopwatch.ElapsedMilliseconds
         FailureKind = $failureKind
         FailureMessage = $failureMessage
         FailurePosition = $failurePosition

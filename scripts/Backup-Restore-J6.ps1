@@ -5,11 +5,16 @@ param(
 
     [string]$AgePath,
 
+    [string]$DockerPath,
+
     [ValidateRange(30, 3600)]
     [int]$PipelineTimeoutSeconds = 300,
 
     [ValidateRange(100, 30000)]
     [int]$PipelineCleanupTimeoutMilliseconds = 5000,
+
+    [ValidateRange(10000, 60000)]
+    [int]$PostgresCleanupTimeoutMilliseconds = 10000,
 
     [Parameter(DontShow = $true)]
     [switch]$QualificationInjectCleanupFailureAfterSuccessfulCleanup
@@ -31,6 +36,27 @@ if (-not (Test-Path -LiteralPath $pipelineModulePath -PathType Leaf)) {
     throw 'The J6 native binary pipeline module is required.'
 }
 Import-Module -Name $pipelineModulePath -Force
+
+function Assert-J6DockerExecutableIdentity {
+    param([Parameter(Mandatory = $true)][string]$ExecutablePath)
+
+    $canonicalPath = [IO.Path]::GetFullPath($ExecutablePath)
+    $item = Get-Item -LiteralPath $canonicalPath -Force
+    if ($item.Name -cne 'docker.exe' -or
+        ($item.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 -or
+        $item.VersionInfo.CompanyName -cne 'Docker Inc' -or
+        $item.VersionInfo.ProductName -cne 'Docker Client') {
+        throw 'The Docker executable identity is not the qualified Docker Client.'
+    }
+    $signature = Get-AuthenticodeSignature -LiteralPath $canonicalPath
+    if ($signature.Status -ne [Management.Automation.SignatureStatus]::Valid -or
+        $null -eq $signature.SignerCertificate -or
+        $signature.SignerCertificate.Subject -cnotmatch
+            '(^|, )O=Docker Inc(,|$)') {
+        throw 'The Docker executable Authenticode identity is not valid for Docker Inc.'
+    }
+}
+
 if (-not [IO.Path]::IsPathFullyQualified($Destination)) {
     throw 'The encrypted backup destination must be absolute.'
 }
@@ -56,11 +82,25 @@ if ((Test-Path -LiteralPath $destinationPath) -or (Test-Path -LiteralPath $manif
 if (Get-NetTCPConnection -LocalPort 8087 -State Listen -ErrorAction SilentlyContinue) {
     throw 'Stop the local application before creating and qualifying the J6 backup.'
 }
-$dockerCommand = Get-Command docker -ErrorAction SilentlyContinue
-if ($null -eq $dockerCommand) {
-    throw 'Docker is required.'
+$dockerExecutable = $null
+if (-not [string]::IsNullOrWhiteSpace($DockerPath)) {
+    if (-not [IO.Path]::IsPathFullyQualified($DockerPath)) {
+        throw 'The supplied Docker executable path must be absolute.'
+    }
+    $dockerExecutable = [IO.Path]::GetFullPath($DockerPath)
+    if (-not (Test-Path -LiteralPath $dockerExecutable -PathType Leaf)) {
+        throw 'The supplied Docker executable does not exist.'
+    }
 }
-$dockerExecutable = [IO.Path]::GetFullPath($dockerCommand.Source)
+else {
+    $dockerCommand = Get-Command docker -ErrorAction SilentlyContinue
+    if ($null -eq $dockerCommand) {
+        throw 'Docker is required. Supply -DockerPath when it is not available on PATH.'
+    }
+    $dockerExecutable = [IO.Path]::GetFullPath($dockerCommand.Source)
+}
+Assert-J6DockerExecutableIdentity -ExecutablePath $dockerExecutable
+Write-Host 'J6_DOCKER_EXECUTABLE_IDENTITY=AUTHENTICODE_DOCKER_INC'
 if (-not (Test-Path -LiteralPath (Join-Path $repositoryRoot '.env') -PathType Leaf)) {
     throw 'The local .env file is required by Docker Compose.'
 }
@@ -83,7 +123,7 @@ else {
 function Invoke-PrimaryScalar {
     param([Parameter(Mandatory = $true)][string]$Sql)
     $value = & $dockerExecutable compose --env-file .env exec -T postgres sh -c `
-        'psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --no-align --tuples-only --quiet --command "$1"' `
+        'psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --no-align --tuples-only --quiet --set=ON_ERROR_STOP=1 --command "$1"' `
         sh $Sql
     if ($LASTEXITCODE -ne 0) {
         throw 'A primary database verification query failed.'
@@ -97,7 +137,7 @@ function Invoke-RestoreScalar {
         [Parameter(Mandatory = $true)][string]$Sql
     )
     $value = & $dockerExecutable compose --env-file .env exec -T postgres sh -c `
-        'psql --username "$POSTGRES_USER" --dbname "$1" --no-align --tuples-only --quiet --command "$2"' `
+        'psql --username "$POSTGRES_USER" --dbname "$1" --no-align --tuples-only --quiet --set=ON_ERROR_STOP=1 --command "$2"' `
         sh $Database $Sql
     if ($LASTEXITCODE -ne 0) {
         throw 'A restored database verification query failed.'
@@ -107,9 +147,237 @@ function Invoke-RestoreScalar {
 
 function Assert-J6OwnedPostgresApplicationName {
     param([Parameter(Mandatory = $true)][string]$ApplicationName)
-    if ($ApplicationName -notmatch '^j6_(backup|restore)_[a-f0-9]{32}$') {
+    if ($ApplicationName -cnotmatch '^j6_(backup|restore)_[a-f0-9]{32}$') {
         throw 'The owned PostgreSQL application name is unsafe.'
     }
+}
+
+function ConvertTo-J6SanitizedInnerException {
+    param(
+        [Parameter(Mandatory = $true)][Exception]$Exception,
+        [ValidateRange(0, 8)][int]$Depth = 0
+    )
+
+    if ($Depth -ge 8) {
+        $depthLimited = [InvalidOperationException]::new(
+            'J6_SANITIZED_INNER_CAUSE=CAUSE_DEPTH_LIMIT')
+        $depthLimited.Data['J6SanitizedCauseCategory'] = 'CAUSE_DEPTH_LIMIT'
+        return $depthLimited
+    }
+
+    if ($Exception -is [AggregateException]) {
+        $sanitizedCauses = [Collections.Generic.List[Exception]]::new()
+        foreach ($inner in @($Exception.InnerExceptions)) {
+            $sanitizedCauses.Add((ConvertTo-J6SanitizedInnerException `
+                        -Exception $inner `
+                        -Depth ($Depth + 1)))
+        }
+        $sanitizedAggregate = [AggregateException]::new(
+            'J6_SANITIZED_INNER_CAUSE=AGGREGATE_FAILURE',
+            [Exception[]]$sanitizedCauses.ToArray())
+        $sanitizedAggregate.Data['J6SanitizedCauseCategory'] = `
+            'AGGREGATE_FAILURE'
+        return $sanitizedAggregate
+    }
+
+    $cleanupClassification = [string]$Exception.Data[
+        'J6CleanupClassification']
+    $category = if ($cleanupClassification -cmatch
+        '^([A-Z0-9]+_?)+$') {
+        'CLEANUP_' + $cleanupClassification
+    }
+    elseif ($Exception -is [TimeoutException]) {
+        'TIMEOUT_EXCEPTION'
+    }
+    elseif ($Exception -is [OperationCanceledException]) {
+        'OPERATION_CANCELLED'
+    }
+    elseif ($Exception -is [UnauthorizedAccessException]) {
+        'ACCESS_DENIED'
+    }
+    elseif ($Exception -is [ComponentModel.Win32Exception]) {
+        'NATIVE_PROCESS_FAILURE'
+    }
+    elseif ($Exception -is [IO.IOException]) {
+        'IO_FAILURE'
+    }
+    elseif ($Exception -is [InvalidOperationException]) {
+        'INVALID_OPERATION'
+    }
+    else {
+        'OTHER_FAILURE'
+    }
+
+    $sanitizedNestedCause = $null
+    if ($null -ne $Exception.InnerException) {
+        $sanitizedNestedCause = ConvertTo-J6SanitizedInnerException `
+            -Exception $Exception.InnerException `
+            -Depth ($Depth + 1)
+    }
+    $sanitized = if ($null -eq $sanitizedNestedCause) {
+        [InvalidOperationException]::new(
+            "J6_SANITIZED_INNER_CAUSE=$category")
+    }
+    else {
+        [InvalidOperationException]::new(
+            "J6_SANITIZED_INNER_CAUSE=$category",
+            $sanitizedNestedCause)
+    }
+    $sanitized.Data['J6SanitizedCauseCategory'] = $category
+    return $sanitized
+}
+
+function New-J6SanitizedCleanupException {
+    param(
+        [Parameter(Mandatory = $true)]
+        [ValidateSet(
+            'POSTGRES_DOCKER_COMMAND_FAILED',
+            'POSTGRES_DOCKER_COMMAND_NONZERO_EXIT',
+            'POSTGRES_DOCKER_PROCESS_CLEANUP_UNCONFIRMED',
+            'POSTGRES_SQL_COMMAND_NONZERO_EXIT',
+            'POSTGRES_OBSERVATION_TIMEOUT',
+            'POSTGRES_SCALAR_OUTPUT_INVALID',
+            'POSTGRES_SESSION_REMAINING',
+            'POSTGRES_SESSION_STABILITY_NOT_PROVEN',
+            'POSTGRES_SESSION_CLEANUP_UNCONFIRMED',
+            'TEMPORARY_RESTORE_DATABASE_CLEANUP_UNCONFIRMED',
+            'FILE_CLEANUP_UNCONFIRMED',
+            'LOCAL_RESOURCE_CLEANUP_UNCONFIRMED',
+            'PRIMARY_OPERATION_FAILED_DURING_CLEANUP',
+            'QUALIFICATION_INJECTED_CLEANUP_FAILURE')]
+        [string]$Classification,
+        [AllowNull()][Exception]$InnerException
+    )
+
+    $message = "J6_CLEANUP_FAILURE=$Classification"
+    $sanitizedInnerException = $null
+    if ($null -ne $InnerException) {
+        $sanitizedInnerException = ConvertTo-J6SanitizedInnerException `
+            -Exception $InnerException
+    }
+    $exception = if ($null -eq $sanitizedInnerException) {
+        [InvalidOperationException]::new($message)
+    }
+    else {
+        [InvalidOperationException]::new($message, $sanitizedInnerException)
+    }
+    $exception.Data['J6CleanupClassification'] = $Classification
+    return $exception
+}
+
+function Get-J6SanitizedCleanupClassification {
+    param(
+        [Parameter(Mandatory = $true)][Exception]$Exception,
+        [Parameter(Mandatory = $true)][string]$Fallback
+    )
+
+    $classification = [string]$Exception.Data['J6CleanupClassification']
+    if ($classification -in @(
+            'POSTGRES_DOCKER_COMMAND_FAILED',
+            'POSTGRES_DOCKER_COMMAND_NONZERO_EXIT',
+            'POSTGRES_DOCKER_PROCESS_CLEANUP_UNCONFIRMED',
+            'POSTGRES_SQL_COMMAND_NONZERO_EXIT',
+            'POSTGRES_OBSERVATION_TIMEOUT',
+            'POSTGRES_SCALAR_OUTPUT_INVALID',
+            'POSTGRES_SESSION_REMAINING',
+            'POSTGRES_SESSION_STABILITY_NOT_PROVEN',
+            'POSTGRES_SESSION_CLEANUP_UNCONFIRMED',
+            'TEMPORARY_RESTORE_DATABASE_CLEANUP_UNCONFIRMED',
+            'FILE_CLEANUP_UNCONFIRMED',
+            'LOCAL_RESOURCE_CLEANUP_UNCONFIRMED',
+            'PRIMARY_OPERATION_FAILED_DURING_CLEANUP',
+            'QUALIFICATION_INJECTED_CLEANUP_FAILURE')) {
+        return $classification
+    }
+    return $Fallback
+}
+
+function ConvertFrom-J6StrictNonNegativeInt64Scalar {
+    param([Parameter(Mandatory = $true)][AllowEmptyString()][string]$Value)
+
+    if ($Value -cnotmatch '\A(0|[1-9][0-9]*)(?:\r?\n)?\z') {
+        throw (New-J6SanitizedCleanupException `
+                -Classification 'POSTGRES_SCALAR_OUTPUT_INVALID')
+    }
+
+    $canonicalValue = $Matches[1]
+    [long]$parsedValue = 0
+    if (-not [long]::TryParse(
+            $canonicalValue,
+            [Globalization.NumberStyles]::None,
+            [Globalization.CultureInfo]::InvariantCulture,
+            [ref]$parsedValue)) {
+        throw (New-J6SanitizedCleanupException `
+                -Classification 'POSTGRES_SCALAR_OUTPUT_INVALID')
+    }
+    return $parsedValue
+}
+
+function ConvertFrom-J6StrictTerminationEvidenceScalar {
+    param([Parameter(Mandatory = $true)][AllowEmptyString()][string]$Value)
+
+    if ($Value -cnotmatch
+        '\A(?<targeted>0|[1-9][0-9]*),(?<successful>0|[1-9][0-9]*)(?:\r?\n)?\z') {
+        throw (New-J6SanitizedCleanupException `
+                -Classification 'POSTGRES_SCALAR_OUTPUT_INVALID')
+    }
+    $targetedText = [string]$Matches.targeted
+    $successfulText = [string]$Matches.successful
+    $targeted = ConvertFrom-J6StrictNonNegativeInt64Scalar `
+        -Value $targetedText
+    $successful = ConvertFrom-J6StrictNonNegativeInt64Scalar `
+        -Value $successfulText
+    if ($successful -gt $targeted) {
+        throw (New-J6SanitizedCleanupException `
+                -Classification 'POSTGRES_SESSION_CLEANUP_UNCONFIRMED')
+    }
+    return [pscustomobject]@{
+        TargetedSessionCount = $targeted
+        SuccessfulTerminationSignals = $successful
+    }
+}
+
+function Merge-J6PostgresTerminationEvidence {
+    param(
+        [Parameter(Mandatory = $true)][long]$TargetedSessionAttempts,
+        [Parameter(Mandatory = $true)][long]$SuccessfulTerminationSignals,
+        [Parameter(Mandatory = $true)][long]$TargetedSessionCountNow,
+        [Parameter(Mandatory = $true)][long]$SuccessfulSignalsNow
+    )
+
+    if ($TargetedSessionAttempts -lt 0 -or
+        $SuccessfulTerminationSignals -lt 0 -or
+        $TargetedSessionCountNow -lt 0 -or
+        $SuccessfulSignalsNow -lt 0 -or
+        $SuccessfulSignalsNow -gt $TargetedSessionCountNow -or
+        $TargetedSessionAttempts -gt
+            ([long]::MaxValue - $TargetedSessionCountNow) -or
+        $SuccessfulTerminationSignals -gt
+            ([long]::MaxValue - $SuccessfulSignalsNow)) {
+        throw (New-J6SanitizedCleanupException `
+                -Classification 'POSTGRES_SESSION_CLEANUP_UNCONFIRMED')
+    }
+
+    return [pscustomobject]@{
+        TargetedSessionAttempts =
+            $TargetedSessionAttempts + $TargetedSessionCountNow
+        SuccessfulTerminationSignals =
+            $SuccessfulTerminationSignals + $SuccessfulSignalsNow
+    }
+}
+
+function Resolve-J6PostgresCleanupTimeoutClassification {
+    param(
+        [Parameter(Mandatory = $true)][long]$LastSessionCount,
+        [Parameter(Mandatory = $true)]
+        [bool]$LastObservationIsFreshAfterTermination
+    )
+
+    if ($LastObservationIsFreshAfterTermination -and
+        $LastSessionCount -gt 0) {
+        return 'POSTGRES_SESSION_REMAINING'
+    }
+    return 'POSTGRES_OBSERVATION_TIMEOUT'
 }
 
 function Assert-J6OperatorNotCancelled {
@@ -132,26 +400,55 @@ function Invoke-J6BoundedDockerCleanupCommand {
         [Parameter(Mandatory = $true)][string[]]$ArgumentList,
         [Parameter(Mandatory = $true)][DateTime]$DeadlineUtc
     )
-    $remaining = Get-J6RemainingCleanupMilliseconds -DeadlineUtc $DeadlineUtc
-    if ($remaining -lt 200) {
-        throw 'The bounded Docker cleanup command has no safe execution/cleanup budget remaining.'
+    try {
+        $remaining = Get-J6RemainingCleanupMilliseconds -DeadlineUtc $DeadlineUtc
+        $result = Invoke-J6BoundedNativeCommand `
+            -FilePath $dockerExecutable `
+            -ArgumentList $ArgumentList `
+            -WorkingDirectory $repositoryRoot `
+            -TimeoutMilliseconds $remaining `
+            -CleanupTimeoutMilliseconds $PipelineCleanupTimeoutMilliseconds `
+            -OverallCommandDeadlineUtc $DeadlineUtc
     }
-    $nativeCleanupBudget = [int][Math]::Min(
-        $PipelineCleanupTimeoutMilliseconds,
-        [Math]::Max(100, [Math]::Floor($remaining / 5)))
-    $nativeExecutionBudget = $remaining - $nativeCleanupBudget
-    $result = Invoke-J6BoundedNativeCommand `
-        -FilePath $dockerExecutable `
-        -ArgumentList $ArgumentList `
-        -WorkingDirectory $repositoryRoot `
-        -TimeoutMilliseconds $nativeExecutionBudget `
-        -CleanupTimeoutMilliseconds $nativeCleanupBudget
-    if ($result.ExitCode -ne 0 -or
-        $result.ProcessTreeCleanup -ne 'PASS' -or
+    catch {
+        $nativeFailure = $_.Exception
+        $classification = if (
+            $nativeFailure.Data['J6ProcessTreeCleanup'] -eq 'UNCONFIRMED' -or
+            $nativeFailure.Message -eq `
+                'The bounded native command cleanup could not be confirmed.' -or
+            $nativeFailure.Message -eq `
+                'The native confinement start cleanup could not be confirmed.') {
+            'POSTGRES_DOCKER_PROCESS_CLEANUP_UNCONFIRMED'
+        }
+        elseif ($nativeFailure -is [TimeoutException] -or
+            $nativeFailure.Message -eq 'The bounded J6 cleanup deadline expired.' -or
+            $nativeFailure.Message -eq `
+                'The confined native target did not complete its startup handshake.' -or
+            $nativeFailure.Message -eq `
+                'The confined native target startup evidence was not received in time.') {
+            'POSTGRES_OBSERVATION_TIMEOUT'
+        }
+        else {
+            'POSTGRES_DOCKER_COMMAND_FAILED'
+        }
+        throw (New-J6SanitizedCleanupException `
+                -Classification $classification `
+                -InnerException $nativeFailure)
+    }
+    if ($result.ProcessTreeCleanup -ne 'PASS' -or
         $result.UnexpectedDescendantCleanup) {
-        throw 'A bounded Docker cleanup command did not complete cleanly.'
+        $failure = New-J6SanitizedCleanupException `
+            -Classification 'POSTGRES_DOCKER_PROCESS_CLEANUP_UNCONFIRMED'
+        $failure.Data['J6NativeExitCode'] = [int]$result.ExitCode
+        throw $failure
     }
-    return $result.StandardOutput.TrimEnd()
+    if ($result.ExitCode -ne 0) {
+        $failure = New-J6SanitizedCleanupException `
+            -Classification 'POSTGRES_DOCKER_COMMAND_NONZERO_EXIT'
+        $failure.Data['J6NativeExitCode'] = [int]$result.ExitCode
+        throw $failure
+    }
+    return [string]$result.StandardOutput
 }
 
 function Invoke-J6BoundedPrimaryCleanupScalar {
@@ -159,13 +456,51 @@ function Invoke-J6BoundedPrimaryCleanupScalar {
         [Parameter(Mandatory = $true)][string]$Sql,
         [Parameter(Mandatory = $true)][DateTime]$DeadlineUtc
     )
-    return Invoke-J6BoundedDockerCleanupCommand `
-        -ArgumentList @(
-            'compose', '--env-file', '.env', 'exec', '-T', 'postgres',
-            'sh', '-c',
-            'psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --no-align --tuples-only --quiet --command "$1"',
-            'sh', $Sql) `
+    try {
+        return Invoke-J6BoundedDockerCleanupCommand `
+            -ArgumentList @(
+                'compose', '--env-file', '.env', 'exec', '-T', 'postgres',
+                'sh', '-c',
+                'psql --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" --no-align --tuples-only --quiet --set=ON_ERROR_STOP=1 --command "$1"; status=$?; if [ "$status" -ne 0 ]; then exit 86; fi',
+                'sh', $Sql) `
+            -DeadlineUtc $DeadlineUtc
+    }
+    catch {
+        $classification = Get-J6SanitizedCleanupClassification `
+            -Exception $_.Exception `
+            -Fallback 'POSTGRES_DOCKER_COMMAND_FAILED'
+        if ($classification -eq 'POSTGRES_DOCKER_COMMAND_NONZERO_EXIT' -and
+            [int]$_.Exception.Data['J6NativeExitCode'] -eq 86) {
+            throw (New-J6SanitizedCleanupException `
+                    -Classification 'POSTGRES_SQL_COMMAND_NONZERO_EXIT' `
+                    -InnerException $_.Exception)
+        }
+        throw
+    }
+}
+
+function Invoke-J6BoundedPrimaryCleanupCount {
+    param(
+        [Parameter(Mandatory = $true)][string]$Sql,
+        [Parameter(Mandatory = $true)][DateTime]$DeadlineUtc
+    )
+
+    $value = Invoke-J6BoundedPrimaryCleanupScalar `
+        -Sql $Sql `
         -DeadlineUtc $DeadlineUtc
+    return ConvertFrom-J6StrictNonNegativeInt64Scalar -Value $value
+}
+
+function Invoke-J6BoundedPrimaryCleanupTerminationEvidence {
+    param(
+        [Parameter(Mandatory = $true)][string]$Sql,
+        [Parameter(Mandatory = $true)][DateTime]$DeadlineUtc
+    )
+
+    $value = Invoke-J6BoundedPrimaryCleanupScalar `
+        -Sql $Sql `
+        -DeadlineUtc $DeadlineUtc
+    return ConvertFrom-J6StrictTerminationEvidenceScalar -Value $value
 }
 
 function Get-J6OwnedPostgresSessionCount {
@@ -174,59 +509,171 @@ function Get-J6OwnedPostgresSessionCount {
         [Parameter(Mandatory = $true)][DateTime]$DeadlineUtc
     )
     Assert-J6OwnedPostgresApplicationName -ApplicationName $ApplicationName
-    return [long](Invoke-J6BoundedPrimaryCleanupScalar `
+    return Invoke-J6BoundedPrimaryCleanupCount `
         -Sql "select count(*) from pg_stat_activity where application_name = '$ApplicationName' and pid <> pg_backend_pid()" `
-        -DeadlineUtc $DeadlineUtc)
+        -DeadlineUtc $DeadlineUtc
 }
 
 function Confirm-J6OwnedPostgresSessionCleanup {
     param([Parameter(Mandatory = $true)][string]$ApplicationName)
     Assert-J6OwnedPostgresApplicationName -ApplicationName $ApplicationName
 
+    if ($confirmedPostgresCleanupProofs.ContainsKey($ApplicationName)) {
+        Write-Host 'J6_POSTGRES_SESSION_CLEANUP_IDEMPOTENT_REUSE=PASS'
+        return $confirmedPostgresCleanupProofs[$ApplicationName]
+    }
+
     $startedAt = [DateTime]::UtcNow
-    $deadline = $startedAt.AddMilliseconds($PipelineCleanupTimeoutMilliseconds)
+    $deadline = $startedAt.AddMilliseconds($PostgresCleanupTimeoutMilliseconds)
     $minimumObservationMilliseconds = [Math]::Min(
         2500,
-        [Math]::Floor($PipelineCleanupTimeoutMilliseconds / 2))
+        [Math]::Floor($PostgresCleanupTimeoutMilliseconds / 2))
     $stabilizationNotBefore = $startedAt.AddMilliseconds(
         $minimumObservationMilliseconds)
     $terminateSql = @"
-select count(*)
-from (
-    select pg_terminate_backend(pid)
+with exact_targets as materialized (
+    select pid
     from pg_stat_activity
     where application_name = '$ApplicationName'
       and pid <> pg_backend_pid()
-) terminated
+), terminated as materialized (
+    select pg_terminate_backend(pid) as was_terminated
+    from exact_targets
+)
+select
+    (select count(*) from exact_targets)::text || ',' ||
+    (select count(*) from terminated where was_terminated)::text
 "@
+    [long]$targetedSessionAttempts = 0
+    [long]$successfulTerminationSignals = 0
+    [long]$lastSessionCount = 0
+    $lastObservationIsFreshAfterTermination = $false
+    $awaitingFreshObservationAfterZeroSignal = $false
     $consecutiveZeros = 0
+
+    $initialSessionCount = Get-J6OwnedPostgresSessionCount `
+        -ApplicationName $ApplicationName `
+        -DeadlineUtc $deadline
+    $lastSessionCount = $initialSessionCount
+    $lastObservationIsFreshAfterTermination = $true
+    if ($initialSessionCount -gt 0) {
+        $terminationNow = Invoke-J6BoundedPrimaryCleanupTerminationEvidence `
+            -Sql $terminateSql `
+            -DeadlineUtc $deadline
+        $terminationEvidence = Merge-J6PostgresTerminationEvidence `
+            -TargetedSessionAttempts $targetedSessionAttempts `
+            -SuccessfulTerminationSignals $successfulTerminationSignals `
+            -TargetedSessionCountNow $terminationNow.TargetedSessionCount `
+            -SuccessfulSignalsNow `
+                $terminationNow.SuccessfulTerminationSignals
+        $targetedSessionAttempts = $terminationEvidence.TargetedSessionAttempts
+        $successfulTerminationSignals = `
+            $terminationEvidence.SuccessfulTerminationSignals
+        $lastObservationIsFreshAfterTermination = $false
+        $awaitingFreshObservationAfterZeroSignal =
+            $terminationNow.TargetedSessionCount -gt 0 -and
+            $terminationNow.SuccessfulTerminationSignals -eq 0
+    }
+
+    while ([DateTime]::UtcNow -lt $stabilizationNotBefore -and
+        [DateTime]::UtcNow -lt $deadline) {
+        $sleepMilliseconds = [int][Math]::Min(
+            100,
+            [Math]::Max(
+                1,
+                [Math]::Floor(
+                    ($stabilizationNotBefore - [DateTime]::UtcNow).TotalMilliseconds)))
+        Start-Sleep -Milliseconds $sleepMilliseconds
+    }
+
     while ([DateTime]::UtcNow -lt $deadline -and $consecutiveZeros -lt 3) {
         $sessionCount = Get-J6OwnedPostgresSessionCount `
                 -ApplicationName $ApplicationName `
                 -DeadlineUtc $deadline
+        $lastSessionCount = $sessionCount
+        $lastObservationIsFreshAfterTermination = $true
         if ($sessionCount -ne 0) {
-            [void](Invoke-J6BoundedPrimaryCleanupScalar `
+            if ($awaitingFreshObservationAfterZeroSignal) {
+                $remainingFailure = New-J6SanitizedCleanupException `
+                    -Classification 'POSTGRES_SESSION_REMAINING'
+                $remainingFailure.Data['J6TargetedSessionAttempts'] =
+                    $targetedSessionAttempts
+                $remainingFailure.Data['J6SuccessfulTerminationSignals'] =
+                    $successfulTerminationSignals
+                $remainingFailure.Data['J6RemainingSessions'] = $sessionCount
+                $remainingFailure.Data['J6StableZeroObservations'] =
+                    $consecutiveZeros
+                throw $remainingFailure
+            }
+            $terminationNow =
+                Invoke-J6BoundedPrimaryCleanupTerminationEvidence `
                 -Sql $terminateSql `
-                -DeadlineUtc $deadline)
+                -DeadlineUtc $deadline
+            $terminationEvidence = Merge-J6PostgresTerminationEvidence `
+                -TargetedSessionAttempts $targetedSessionAttempts `
+                -SuccessfulTerminationSignals $successfulTerminationSignals `
+                -TargetedSessionCountNow `
+                    $terminationNow.TargetedSessionCount `
+                -SuccessfulSignalsNow `
+                    $terminationNow.SuccessfulTerminationSignals
+            $targetedSessionAttempts = `
+                $terminationEvidence.TargetedSessionAttempts
+            $successfulTerminationSignals = `
+                $terminationEvidence.SuccessfulTerminationSignals
+            $lastObservationIsFreshAfterTermination = $false
+            $awaitingFreshObservationAfterZeroSignal =
+                $terminationNow.TargetedSessionCount -gt 0 -and
+                $terminationNow.SuccessfulTerminationSignals -eq 0
             $consecutiveZeros = 0
         }
         else {
-            if ([DateTime]::UtcNow -ge $stabilizationNotBefore) {
-                $consecutiveZeros++
-            }
-            else {
-                $consecutiveZeros = 0
-            }
+            $awaitingFreshObservationAfterZeroSignal = $false
+            $consecutiveZeros++
         }
         if ($consecutiveZeros -lt 3) {
             Start-Sleep -Milliseconds 100
         }
     }
     if ($consecutiveZeros -eq 3) {
-        return
+        $proof = [pscustomobject]@{
+            TargetedSessionAttempts = $targetedSessionAttempts
+            SuccessfulTerminationSignals = $successfulTerminationSignals
+            RemainingSessions = 0L
+            StableZeroObservations = 3
+            ConfirmedAtUtc = [DateTime]::UtcNow.ToString('o')
+            Classification = 'PASS'
+        }
+        $confirmedPostgresCleanupProofs.Add($ApplicationName, $proof)
+        Write-Host (
+            'J6_POSTGRES_SESSION_TARGETED_ATTEMPT_COUNT=' +
+            $targetedSessionAttempts)
+        Write-Host (
+            'J6_POSTGRES_SESSION_SUCCESSFUL_TERMINATION_SIGNAL_COUNT=' +
+            $successfulTerminationSignals)
+        Write-Host 'J6_POSTGRES_SESSION_REMAINING_COUNT=0'
+        Write-Host 'J6_POSTGRES_SESSION_STABLE_ZERO_OBSERVATIONS=3'
+        return $proof
     }
 
-    throw 'An exactly owned PostgreSQL backup/restore session survived bounded cleanup.'
+    $failureClassification = `
+        Resolve-J6PostgresCleanupTimeoutClassification `
+            -LastSessionCount $lastSessionCount `
+            -LastObservationIsFreshAfterTermination `
+                $lastObservationIsFreshAfterTermination
+    $failure = New-J6SanitizedCleanupException `
+        -Classification $failureClassification
+    $failure.Data['J6TargetedSessionAttempts'] = $targetedSessionAttempts
+    $failure.Data['J6SuccessfulTerminationSignals'] = `
+        $successfulTerminationSignals
+    $failure.Data['J6RemainingSessions'] = if (
+        $lastObservationIsFreshAfterTermination) {
+        $lastSessionCount
+    }
+    else {
+        'UNCONFIRMED_AFTER_TERMINATION'
+    }
+    $failure.Data['J6StableZeroObservations'] = $consecutiveZeros
+    throw $failure
 }
 
 function Write-J6NativePipelineEvidence {
@@ -354,6 +801,13 @@ $destinationOwned = $false
 $manifestOwned = $false
 $publicationComplete = $false
 $manifest = $null
+$operationFailure = $null
+$terminalFailure = $null
+$confirmedPostgresCleanupProofs = `
+    [Collections.Generic.Dictionary[string, object]]::new(
+        [StringComparer]::Ordinal)
+Write-Host "J6_NATIVE_PROCESS_CLEANUP_TIMEOUT_MILLISECONDS=$PipelineCleanupTimeoutMilliseconds"
+Write-Host "J6_POSTGRES_CLEANUP_TIMEOUT_MILLISECONDS=$PostgresCleanupTimeoutMilliseconds"
 try {
     try {
     Assert-J6OperatorNotCancelled
@@ -423,7 +877,8 @@ from provider_snapshot
     Complete-J6NativePipeline `
         -Result $backupPipeline `
         -FailureMessage 'Encrypted pg_dump creation failed.'
-    Confirm-J6OwnedPostgresSessionCleanup -ApplicationName $backupApplicationName
+    [void](Confirm-J6OwnedPostgresSessionCleanup `
+        -ApplicationName $backupApplicationName)
     Write-Host 'J6_NATIVE_PIPELINE_REMOTE_SESSION_CLEANUP=PASS'
     Assert-J6OperatorNotCancelled
     if (-not (Test-Path -LiteralPath $partialPath -PathType Leaf) -or
@@ -443,13 +898,13 @@ from provider_snapshot
         qualifiedAt = $null
     }
 
-    if ($restoreDatabase -notmatch '^sofascore_j6_restore_[a-f0-9]{32}$') {
+    if ($restoreDatabase -cnotmatch '^sofascore_j6_restore_[a-f0-9]{32}$') {
         throw 'Generated restore database name is unsafe.'
     }
-    $ownershipDeadline = [DateTime]::UtcNow.AddMilliseconds($PipelineCleanupTimeoutMilliseconds)
-    $existingRestoreDatabaseCount = [long](Invoke-J6BoundedPrimaryCleanupScalar `
+    $ownershipDeadline = [DateTime]::UtcNow.AddMilliseconds($PostgresCleanupTimeoutMilliseconds)
+    $existingRestoreDatabaseCount = Invoke-J6BoundedPrimaryCleanupCount `
         -Sql "select count(*) from pg_database where datname = '$restoreDatabase'" `
-        -DeadlineUtc $ownershipDeadline)
+        -DeadlineUtc $ownershipDeadline
     if ($existingRestoreDatabaseCount -ne 0) {
         throw 'The generated temporary restore database name is not unowned.'
     }
@@ -464,9 +919,10 @@ from provider_snapshot
     if ($createResult.Length -gt 0) {
         throw 'Temporary restore database creation produced unexpected output.'
     }
-    $createdDatabaseCount = [long](Invoke-J6BoundedPrimaryCleanupScalar `
+    $createdDatabaseCount = Invoke-J6BoundedPrimaryCleanupCount `
         -Sql "select count(*) from pg_database where datname = '$restoreDatabase'" `
-        -DeadlineUtc ([DateTime]::UtcNow.AddMilliseconds($PipelineCleanupTimeoutMilliseconds)))
+        -DeadlineUtc ([DateTime]::UtcNow.AddMilliseconds(
+                $PostgresCleanupTimeoutMilliseconds))
     if ($createdDatabaseCount -ne 1) {
         throw 'Temporary restore database creation failed.'
     }
@@ -494,7 +950,8 @@ from provider_snapshot
     Complete-J6NativePipeline `
         -Result $restorePipeline `
         -FailureMessage 'Encrypted backup restore failed.'
-    Confirm-J6OwnedPostgresSessionCleanup -ApplicationName $restoreApplicationName
+    [void](Confirm-J6OwnedPostgresSessionCleanup `
+        -ApplicationName $restoreApplicationName)
     Write-Host 'J6_NATIVE_PIPELINE_REMOTE_SESSION_CLEANUP=PASS'
     Assert-J6OperatorNotCancelled
 
@@ -526,28 +983,42 @@ from provider_snapshot
     }
     $qualificationDataReady = $true
     }
+    catch {
+        $operationFailure = $_.Exception
+    }
     finally {
-        $cleanupFailures = [Collections.Generic.List[string]]::new()
+        $cleanupFailures = [Collections.Generic.List[Exception]]::new()
+        $cleanupClassifications = [Collections.Generic.List[string]]::new()
         foreach ($applicationName in @($backupApplicationName, $restoreApplicationName)) {
             if ([string]::IsNullOrWhiteSpace($applicationName)) {
                 continue
             }
             try {
-                Confirm-J6OwnedPostgresSessionCleanup -ApplicationName $applicationName
+                [void](Confirm-J6OwnedPostgresSessionCleanup `
+                    -ApplicationName $applicationName)
             }
             catch {
-                $cleanupFailures.Add(
-                    "The exactly owned PostgreSQL session cleanup failed for $applicationName.")
+                $cleanupFailure = $_.Exception
+                $classification = Get-J6SanitizedCleanupClassification `
+                    -Exception $cleanupFailure `
+                    -Fallback 'POSTGRES_SESSION_CLEANUP_UNCONFIRMED'
+                if ($classification -eq 'POSTGRES_SESSION_CLEANUP_UNCONFIRMED') {
+                    $cleanupFailure = New-J6SanitizedCleanupException `
+                        -Classification $classification `
+                        -InnerException $cleanupFailure
+                }
+                $cleanupFailures.Add($cleanupFailure)
+                $cleanupClassifications.Add($classification)
             }
         }
 
         if ($restoreDatabaseCleanupArmed) {
             try {
-                if ($restoreDatabase -notmatch '^sofascore_j6_restore_[a-f0-9]{32}$') {
+                if ($restoreDatabase -cnotmatch '^sofascore_j6_restore_[a-f0-9]{32}$') {
                     throw 'The armed temporary restore database name is unsafe.'
                 }
                 $dropDeadline = [DateTime]::UtcNow.AddMilliseconds(
-                    $PipelineCleanupTimeoutMilliseconds)
+                    $PostgresCleanupTimeoutMilliseconds)
                 [void](Invoke-J6BoundedDockerCleanupCommand `
                     -ArgumentList @(
                         'compose', '--env-file', '.env', 'exec', '-T', 'postgres',
@@ -555,10 +1026,9 @@ from provider_snapshot
                         'dropdb --username "$POSTGRES_USER" --force --if-exists "$1"',
                         'sh', $restoreDatabase) `
                     -DeadlineUtc $dropDeadline)
-                $remainingDatabaseCount = [long](Invoke-J6BoundedPrimaryCleanupScalar `
+                $remainingDatabaseCount = Invoke-J6BoundedPrimaryCleanupCount `
                     -Sql "select count(*) from pg_database where datname = '$restoreDatabase'" `
-                    -DeadlineUtc ([DateTime]::UtcNow.AddMilliseconds(
-                            $PipelineCleanupTimeoutMilliseconds)))
+                    -DeadlineUtc $dropDeadline
                 if ($remainingDatabaseCount -ne 0) {
                     throw 'The owned temporary restore database still exists after cleanup.'
                 }
@@ -568,18 +1038,43 @@ from provider_snapshot
                 }
             }
             catch {
-                $cleanupFailures.Add(
-                    'The exactly owned temporary restore database cleanup could not be confirmed.')
+                $cleanupFailure = New-J6SanitizedCleanupException `
+                    -Classification 'TEMPORARY_RESTORE_DATABASE_CLEANUP_UNCONFIRMED' `
+                    -InnerException $_.Exception
+                $cleanupFailures.Add($cleanupFailure)
+                $cleanupClassifications.Add(
+                    'TEMPORARY_RESTORE_DATABASE_CLEANUP_UNCONFIRMED')
             }
         }
         if ($QualificationInjectCleanupFailureAfterSuccessfulCleanup -and
             $cleanupFailures.Count -eq 0) {
-            $cleanupFailures.Add(
-                'WO-024 loopback fault injection rejected qualification after successful cleanup.')
+            $cleanupFailure = New-J6SanitizedCleanupException `
+                -Classification 'QUALIFICATION_INJECTED_CLEANUP_FAILURE'
+            $cleanupFailures.Add($cleanupFailure)
+            $cleanupClassifications.Add('QUALIFICATION_INJECTED_CLEANUP_FAILURE')
         }
         if ($cleanupFailures.Count -ne 0) {
-            throw ('J6 fail-closed cleanup failed: ' + ($cleanupFailures -join ' '))
+            if ($null -ne $operationFailure) {
+                $primaryFailure = New-J6SanitizedCleanupException `
+                    -Classification 'PRIMARY_OPERATION_FAILED_DURING_CLEANUP' `
+                    -InnerException $operationFailure
+                $cleanupFailures.Insert(0, $primaryFailure)
+                $cleanupClassifications.Add(
+                    'PRIMARY_OPERATION_FAILED_DURING_CLEANUP')
+            }
+            $failureClasses = @($cleanupClassifications | Sort-Object -Unique)
+            $aggregateFailure = [AggregateException]::new(
+                'J6_CLEANUP_CAUSES_PRESERVED',
+                [Exception[]]$cleanupFailures.ToArray())
+            throw [InvalidOperationException]::new(
+                ('J6_FAIL_CLOSED_CLEANUP=FAILED;' +
+                    'J6_CLEANUP_FAILURE_CLASSES=' + ($failureClasses -join ',')),
+                $aggregateFailure)
         }
+    }
+
+    if ($null -ne $operationFailure) {
+        throw $operationFailure
     }
 
     if (-not $qualificationDataReady) {
@@ -604,14 +1099,21 @@ from provider_snapshot
     Write-Host "J6_BACKUP_COVERAGE_MAX_SNAPSHOT_ID=$($source.coverageMaxSnapshotId)"
     Write-Host "J6_BACKUP_COVERAGE_RECEIVED_AT=$($source.coverageReceivedAt)"
 }
+catch {
+    $terminalFailure = $_.Exception
+}
 finally {
-    $fileCleanupFailures = [Collections.Generic.List[string]]::new()
+    $fileCleanupFailures = [Collections.Generic.List[Exception]]::new()
+    $fileCleanupClassifications = [Collections.Generic.List[string]]::new()
     if (Test-Path -LiteralPath $partialPath) {
         try {
             Remove-Item -LiteralPath $partialPath -Force
         }
         catch {
-            $fileCleanupFailures.Add('The partial encrypted backup could not be removed.')
+            $fileCleanupFailures.Add((New-J6SanitizedCleanupException `
+                        -Classification 'FILE_CLEANUP_UNCONFIRMED' `
+                        -InnerException $_.Exception))
+            $fileCleanupClassifications.Add('FILE_CLEANUP_UNCONFIRMED')
         }
     }
     if (Test-Path -LiteralPath $manifestStagingPath) {
@@ -619,7 +1121,10 @@ finally {
             Remove-Item -LiteralPath $manifestStagingPath -Force
         }
         catch {
-            $fileCleanupFailures.Add('The partial backup manifest could not be removed.')
+            $fileCleanupFailures.Add((New-J6SanitizedCleanupException `
+                        -Classification 'FILE_CLEANUP_UNCONFIRMED' `
+                        -InnerException $_.Exception))
+            $fileCleanupClassifications.Add('FILE_CLEANUP_UNCONFIRMED')
         }
     }
     if (-not $publicationComplete -and $manifestOwned -and
@@ -628,7 +1133,10 @@ finally {
             Remove-Item -LiteralPath $manifestPath -Force
         }
         catch {
-            $fileCleanupFailures.Add('The unqualified backup manifest could not be removed.')
+            $fileCleanupFailures.Add((New-J6SanitizedCleanupException `
+                        -Classification 'FILE_CLEANUP_UNCONFIRMED' `
+                        -InnerException $_.Exception))
+            $fileCleanupClassifications.Add('FILE_CLEANUP_UNCONFIRMED')
         }
     }
     if (-not $publicationComplete -and $destinationOwned -and
@@ -637,12 +1145,52 @@ finally {
             Remove-Item -LiteralPath $destinationPath -Force
         }
         catch {
-            $fileCleanupFailures.Add('The unqualified encrypted backup could not be removed.')
+            $fileCleanupFailures.Add((New-J6SanitizedCleanupException `
+                        -Classification 'FILE_CLEANUP_UNCONFIRMED' `
+                        -InnerException $_.Exception))
+            $fileCleanupClassifications.Add('FILE_CLEANUP_UNCONFIRMED')
         }
     }
-    Pop-Location
-    $operatorCancellation.Dispose()
-    if ($fileCleanupFailures.Count -ne 0) {
-        throw ('J6 fail-closed file cleanup failed: ' + ($fileCleanupFailures -join ' '))
+    try {
+        Pop-Location
     }
+    catch {
+        $fileCleanupFailures.Add((New-J6SanitizedCleanupException `
+                    -Classification 'LOCAL_RESOURCE_CLEANUP_UNCONFIRMED' `
+                    -InnerException $_.Exception))
+        $fileCleanupClassifications.Add(
+            'LOCAL_RESOURCE_CLEANUP_UNCONFIRMED')
+    }
+    try {
+        $operatorCancellation.Dispose()
+    }
+    catch {
+        $fileCleanupFailures.Add((New-J6SanitizedCleanupException `
+                    -Classification 'LOCAL_RESOURCE_CLEANUP_UNCONFIRMED' `
+                    -InnerException $_.Exception))
+        $fileCleanupClassifications.Add(
+            'LOCAL_RESOURCE_CLEANUP_UNCONFIRMED')
+    }
+    if ($fileCleanupFailures.Count -ne 0) {
+        if ($null -ne $terminalFailure) {
+            $fileCleanupFailures.Insert(0, (
+                    New-J6SanitizedCleanupException `
+                        -Classification 'PRIMARY_OPERATION_FAILED_DURING_CLEANUP' `
+                        -InnerException $terminalFailure))
+            $fileCleanupClassifications.Add(
+                'PRIMARY_OPERATION_FAILED_DURING_CLEANUP')
+        }
+        $failureClasses = @(
+            $fileCleanupClassifications | Sort-Object -Unique)
+        $terminalFailure = [InvalidOperationException]::new(
+            ('J6_FAIL_CLOSED_FILE_CLEANUP=FAILED;' +
+                'J6_CLEANUP_FAILURE_CLASSES=' +
+                ($failureClasses -join ',')),
+            [AggregateException]::new(
+                'J6_FILE_CLEANUP_CAUSES_PRESERVED',
+                [Exception[]]$fileCleanupFailures.ToArray()))
+    }
+}
+if ($null -ne $terminalFailure) {
+    throw $terminalFailure
 }
