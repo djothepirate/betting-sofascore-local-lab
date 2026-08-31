@@ -201,8 +201,15 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `2026-08-31T12:02:37.0545305Z` pour le draft `fc18f3d`, SHA-256
   `c1fc398703585e0dcc3ccf36d880f0a009d8366e5492835b9f244f3437ebdba4` ; le modèle ponctuel
   `CODEX_LOCAL_UI` est sélectionné mais son exécution reste à `NO` ;
-- WO-022 validé et déplacé vers les Work Orders terminés. WO-019 reste `STOPPED`, WO-023 n'est pas
-  ouvert et campagne, réseau, go, intégration et production restent non autorisés.
+- WO-022 validé et déplacé vers les Work Orders terminés. À ce stade, WO-019 reste `STOPPED`,
+  WO-023 n'est pas encore ouvert et campagne, réseau, go, intégration et production restent non
+  autorisés ;
+- instruction propriétaire de lancement de la nouvelle campagne à usage unique observée le
+  `2026-08-31T13:08:48.0887445Z` : ouverture de WO-023 sur
+  `codex/j9-provider-robustness-v11` avec worktree dédié ; `CODEX_LOCAL_UI` est autorisé comme acteur
+  conditionnel de ce WO. L'instruction permet la préparation hors ligne, mais ne constitue pas le
+  go fournisseur lié à un manifeste et une fenêtre UTC : campagne, réseau et consommation restent
+  à `NO`/`NOT_GRANTED` avant readiness, sauvegarde/restauration, manifeste gelé et décision finale.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 

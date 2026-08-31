@@ -190,7 +190,7 @@ V1_0_V28_BACKUP_MAX_SNAPSHOT_ID=794
 V1_1_POST_STOP_V28_BACKUP_RESTORE=REQUIRED_NOT_EXECUTED
 V1_1_POST_STOP_MINIMUM_SNAPSHOT_COVERAGE=814
 V1_1_POST_STOP_MINIMUM_OCCURRENCE_COVERAGE=781
-NEXT_GATE=NEW_CAMPAIGN_WORK_ORDER_OPENING_OWNER_DECISION
+NEXT_GATE=WO023_OFFLINE_READINESS
 NETWORK_AUTHORIZED=NO
 GLOBAL_OWNER_GO=CONSUMED_AND_TERMINATED_BY_STOP
 OWNER_GO_CONSUMED=YES
@@ -230,15 +230,23 @@ ADR_SS_002_REEXAMINATION_WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20
 WO019_HISTORICAL_CAMPAIGN_REOPENED=NO
 NEW_FULL_RESTART_CAMPAIGN_WORK_ORDER_REQUIRED=YES
 NEXT_AVAILABLE_WORK_ORDER_OBSERVED=WO-SS-20260831-023
-NEW_FULL_RESTART_CAMPAIGN_WORK_ORDER=NOT_OPENED
+NEW_FULL_RESTART_CAMPAIGN_WORK_ORDER=WO-SS-20260831-023-j9-provider-robustness-v11
+NEW_FULL_RESTART_CAMPAIGN_WORK_ORDER_STATUS=OPEN_AWAITING_OFFLINE_READINESS
+NEW_FULL_RESTART_CAMPAIGN_WORK_ORDER_LOCATION=docs/work_orders/active/WO-SS-20260831-023-j9-provider-robustness-v11.md
+NEW_FULL_RESTART_CAMPAIGN_BRANCH=codex/j9-provider-robustness-v11
+NEW_FULL_RESTART_CAMPAIGN_WORKTREE=.tmp/j9-provider-robustness-v11
 OWNER_ENDPOINT_ACTIONS_AVAILABLE_FOR_NEW_CAMPAIGN=NO
 OTHER_HUMAN_LOCAL_OPERATOR_DESIGNATED=NO
-CAMPAIGN_EXECUTION_STATE=BLOCKED_PENDING_NEW_CAMPAIGN_WORK_ORDER_AND_ALL_GATES
+CAMPAIGN_EXECUTION_STATE=OPEN_AWAITING_OFFLINE_READINESS
 OPERATOR_PATH_OWNER_DECISION=SELECT_ONE_OFF_CODEX_LOCAL_UI_MODEL
 SELECTED_EXECUTION_ACTOR=CODEX_LOCAL_UI
-OPERATOR_MODEL_STATUS=SELECTED_NOT_AUTHORIZED
+OPERATOR_MODEL_STATUS=SELECTED_AND_CONDITIONALLY_AUTHORIZED_FOR_WO023
+CODEX_LOCAL_UI_ACTOR_AUTHORIZED_FOR_WO023=YES
+CODEX_LOCAL_UI_PROVIDER_ACTIONS_ALLOWED_NOW=NO
 AUTOMATED_UI_ORCHESTRATION_AUTHORIZED=NO
-CODEX_LOCAL_UI_EXECUTION_AUTHORIZED=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+NEW_GLOBAL_OWNER_GO_GRANTED=NO
 J9_DECISION_STATUS=PENDING_NEW_PROVIDER_ROBUSTNESS_CAMPAIGN_AND_EVIDENCE
 INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
@@ -249,10 +257,12 @@ ou production. L'implémentation et les qualifications locales sont désormais v
 `VALIDATED` après décision propriétaire explicite et se trouve dans les Work Orders terminés. Sa
 réalisation reste distincte de la décision J9 finale et de toute future campagne. Le propriétaire a
 depuis sélectionné `RESTART_FULL_D1_D2_D3`, puis accepté ADR-SS-002 v1.1. Ce profil constitue une
-nouvelle série autonome : WO-019 reste arrêté et un nouveau Work Order/worktree est encore requis.
-Le modèle ponctuel `CODEX_LOCAL_UI` est sélectionné, mais son exécution n'est pas autorisée ; la
-campagne reste bloquée avant la décision d'ouverture du nouveau Work Order et toutes les autres
-portes. Script et orchestration restent interdits.
+nouvelle série autonome : WO-019 reste arrêté et WO-023 est désormais ouvert sur sa branche et son
+worktree dédiés après l'instruction propriétaire de lancement à usage unique observée le
+`2026-08-31T13:08:48.0887445Z`. Le modèle ponctuel `CODEX_LOCAL_UI` est autorisé comme acteur de
+WO-023 sous condition de toutes les portes. Les actions fournisseur restent bloquées avant la
+readiness, la sauvegarde/restauration, le manifeste et un go global lié à une fenêtre UTC explicite.
+Script et orchestration restent interdits.
 
 ADR-SS-002 v1.0 qualifie l'augmentation de volume exigée par ADR-SS-001 §9. Le précédent métier
 complet J8 autorisait au plus 30 tentatives pour un dossier ; la preuve J9 acceptée en prévoit au
@@ -583,20 +593,25 @@ ADR_SS_002_V1_1_OWNER_ACCEPTED_AT_UTC=2026-08-31T12:02:37.0545305Z
 ADR_SS_002_V1_1_MAXIMUM_NEW_DIRECT_ATTEMPTS=38
 ADR_SS_002_V1_1_MAXIMUM_CUMULATIVE_DIRECT_ATTEMPTS=58
 NEW_FULL_RESTART_CAMPAIGN_WORK_ORDER_REQUIRED=YES
-NEW_FULL_RESTART_CAMPAIGN_WORK_ORDER=NOT_OPENED
+NEW_FULL_RESTART_CAMPAIGN_WORK_ORDER=WO-SS-20260831-023-j9-provider-robustness-v11
+NEW_FULL_RESTART_CAMPAIGN_WORK_ORDER_STATUS=OPEN_AWAITING_OFFLINE_READINESS
+NEW_FULL_RESTART_CAMPAIGN_WORK_ORDER_LOCATION=docs/work_orders/active/WO-SS-20260831-023-j9-provider-robustness-v11.md
 OWNER_ENDPOINT_ACTIONS_AVAILABLE_FOR_NEW_CAMPAIGN=NO
 OTHER_HUMAN_LOCAL_OPERATOR_DESIGNATED=NO
-CAMPAIGN_EXECUTION_STATE=BLOCKED_PENDING_NEW_CAMPAIGN_WORK_ORDER_AND_ALL_GATES
+CAMPAIGN_EXECUTION_STATE=OPEN_AWAITING_OFFLINE_READINESS
 OPERATOR_PATH_OWNER_DECISION=SELECT_ONE_OFF_CODEX_LOCAL_UI_MODEL
 SELECTED_EXECUTION_ACTOR=CODEX_LOCAL_UI
-OPERATOR_MODEL_STATUS=SELECTED_NOT_AUTHORIZED
-CODEX_LOCAL_UI_EXECUTION_AUTHORIZED=NO
+OPERATOR_MODEL_STATUS=SELECTED_AND_CONDITIONALLY_AUTHORIZED_FOR_WO023
+CODEX_LOCAL_UI_ACTOR_AUTHORIZED_FOR_WO023=YES
+CODEX_LOCAL_UI_PROVIDER_ACTIONS_ALLOWED_NOW=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+NEW_GLOBAL_OWNER_GO_GRANTED=NO
 J9_FINAL_DECISION=NOT_TAKEN
 INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
 
-WO-021 est validé et archivé. ADR-SS-002 v1.1 est accepté et WO-022 est validé puis archivé. Le
-modèle ponctuel `CODEX_LOCAL_UI` est sélectionné, sans autorisation d'exécution. Restent obligatoires
-la décision d'ouverture d'un nouveau Work Order/worktree, l'autorisation effective de l'acteur, la
-readiness fraîche, la sauvegarde/restauration V28 post-arrêt, le manifeste et le nouveau go global à
-usage unique.
+WO-021 est validé et archivé. ADR-SS-002 v1.1 est accepté et WO-022 est validé puis archivé. WO-023
+est ouvert pour la série autonome à usage unique et `CODEX_LOCAL_UI` est autorisé comme acteur sous
+condition. Restent obligatoires la readiness fraîche, la sauvegarde/restauration V28 post-arrêt, le
+manifeste gelé et le nouveau go global lié à ce manifeste et à une fenêtre UTC d'au plus 60 minutes.

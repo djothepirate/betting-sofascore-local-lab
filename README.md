@@ -124,12 +124,12 @@ propriétaire a sélectionné `RESTART_FULL_D1_D2_D3`, puis accepté ADR-SS-002 
 série complète de 38 appels maximum, soit 58 cumulés avec les vingt tentatives historiques, incluant
 le rejeu D1 et pouvant produire un nouveau verdict autonome.
 
-Cette série ne rouvrira pas WO-019. La règle « un Work Order et un worktree par campagne » exige un
-nouveau Work Order/worktree, non encore ouvert. Le propriétaire indique qu'il ne pourra pas réaliser
-les huit séquences unitaires et a sélectionné le modèle ponctuel `CODEX_LOCAL_UI`. Ce modèle n'est
-pas encore autorisé à exécuter : la campagne reste bloquée avant l'ouverture du nouveau Work Order,
-l'autorisation effective de l'acteur, la readiness, la sauvegarde/restauration, le manifeste et le
-nouveau go. Aucun script, orchestration ou automatisation UI n'est autorisé.
+Cette série ne rouvre pas WO-019. Après l'instruction propriétaire de lancement à usage unique,
+WO-023 est ouvert sur `codex/j9-provider-robustness-v11` avec son worktree dédié. Le propriétaire ne
+pourra pas réaliser les huit séquences unitaires ; le modèle ponctuel `CODEX_LOCAL_UI` est autorisé
+comme acteur de WO-023 sous condition de toutes les portes. Aucun appel fournisseur n'est encore
+autorisé : la readiness, la sauvegarde/restauration, le manifeste gelé et un go global lié à une
+fenêtre UTC explicite restent requis. Aucun script, orchestration ou automatisation UI n'est autorisé.
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une
