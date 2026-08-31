@@ -301,12 +301,12 @@ explicite que le worker émet `CLOSED` avant d'attendre l'EOF parent.
 
 ## 12. Livraison Git
 
-Les commits locaux prévus sont :
+Les principaux commits locaux de réalisation sont :
 
 ```text
-docs(j9): open Playwright graceful close runtime work order
-fix(playwright): complete graceful worker termination
-docs(j9): qualify Playwright graceful close correction
+95bd13c docs(j9): open Playwright graceful close runtime work order
+f969419 fix(playwright): close worker gracefully before tree cleanup
+d62e46a docs(j9): record WO-020 runtime readiness
 ```
 
 Aucun push, PR, merge vers `main`, payload brut ou artefact navigateur n'est autorisé. Après
