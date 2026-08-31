@@ -276,6 +276,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   temporaire synthétique, créé plus de quatre heures avant le verify rouge, subsiste aussi hors
   dépôt. La qualification runtime devient `NOT_REPRODUCIBLE` et le futur Work Order devra durcir la
   preuve PID/absence multi-API sans relâcher les garanties fail-closed.
+- autorisation propriétaire et ouverture de `WO-SS-20260831-025` sur la branche/worktree dédiée
+  `codex/j9-backup-cleanup-proof-hardening`, depuis le commit d'incident `5014902` ; le périmètre
+  couvre uniquement la confirmation PostgreSQL effective, le parsing scalaire et la cause sanitée,
+  le handshake PID, la corroboration multi-API/états fantômes et le nettoyage exact du temp root ;
+- qualifications WO-025 limitées au local, loopback et Docker local. WO-024 reste gelé, WO-023
+  reste bloqué et une nouvelle sauvegarde réelle exigera une décision propriétaire séparée ; toute
+  terminaison par PID seul, acquisition fournisseur, nouveau go, intégration et production restent
+  à `NO`.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 

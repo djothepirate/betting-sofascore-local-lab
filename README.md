@@ -174,6 +174,14 @@ répertoire temporaire synthétique subsiste aussi hors dépôt. La qualificatio
 donc `NOT_REPRODUCIBLE` ; le futur Work Order devra couvrir à la fois la borne PostgreSQL réelle,
 la classification sanitée et la preuve PID/absence multi-API.
 
+Le propriétaire a depuis autorisé `WO-SS-20260831-025-j9-backup-cleanup-proof-hardening`. Ce Work
+Order runtime est ouvert sur `codex/j9-backup-cleanup-proof-hardening` depuis le commit d'incident
+`5014902`. Il couvre exclusivement le défaut effectif de confirmation PostgreSQL, la cause sanitée,
+le parsing scalaire strict, le handshake PID, la corroboration multi-API des états Windows et le
+nettoyage du répertoire synthétique exact. Les qualifications restent locales/loopback ; toute
+terminaison par PID seul, nouvelle sauvegarde WO-023, acquisition fournisseur, intégration ou
+production demeure interdite.
+
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une
@@ -1145,6 +1153,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order actif de nouvelle preuve J9](docs/work_orders/active/WO-SS-20260831-023-j9-provider-robustness-v11.md)
 - [Work Order validé de nettoyage fail-closed J6/J9](docs/work_orders/completed/WO-SS-20260831-024-j9-backup-pipeline-fail-closed-cleanup.md)
 - [Incident fail-closed post-sauvegarde WO-023](docs/validation/J9-WO023-POST-BACKUP-CLEANUP-INCIDENT-20260831.md)
+- [Work Order runtime actif de durcissement de preuve J6/J9](docs/work_orders/active/WO-SS-20260831-025-j9-backup-cleanup-proof-hardening.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 
