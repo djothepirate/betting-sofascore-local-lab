@@ -151,9 +151,18 @@ La preuve fournisseur relève d'un Work Order séparé :
 ```text
 WORK_ORDER=WO-SS-20260831-019-j9-provider-robustness
 BRANCH=codex/j9-provider-robustness
+WORK_ORDER_STATUS=READY_FOR_V28_BACKUP_RESTORE
 EVIDENCE_STATUS=DRAFT
-OFFLINE_READINESS=BLOCKED_PENDING_WO019_RESUME_AUTHORIZATION
+WO019_WORK_ORDER_RESUME_AUTHORIZED=YES
+WO019_PROVIDER_CAMPAIGN_AUTHORIZED=NO_PENDING_GLOBAL_GO
+WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+OFFLINE_READINESS=PASS_REEXECUTED_AFTER_VALIDATED_WO020
+OFFLINE_READINESS_REEXECUTED_ON=2026-08-31
+V28_BACKUP_RESTORE=NOT_EXECUTED
+NEXT_GATE=V28_BACKUP_RESTORE
 NETWORK_AUTHORIZED=NO
+GLOBAL_OWNER_GO=NOT_GRANTED
+OWNER_GO_CONSUMED=NO
 MAXIMUM_DIRECT_ATTEMPTS=38
 SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=SATISFIED_BY_VALIDATED_WO020
 RUNTIME_WORK_ORDER=WO-SS-20260831-020-j9-playwright-graceful-close
@@ -161,7 +170,7 @@ RUNTIME_WORK_ORDER_STATUS=VALIDATED
 RUNTIME_WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md
 RUNTIME_CORRECTION_LOCAL_READINESS=PASS
 RUNTIME_WORK_ORDER_OWNER_VALIDATION=RECEIVED_2026-08-31T00:41:58Z
-WO019_CAMPAIGN_RESUME_AUTHORIZED=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
 
 ADR-SS-002 v1.0 qualifie l'augmentation de volume exigée par ADR-SS-001 §9. Le précédent métier
@@ -171,19 +180,36 @@ plus 38 pour trois dossiers.
 Les quatre portes cumulatives sont :
 
 1. ADR-SS-002 accepté explicitement par le propriétaire — `SATISFIED` ;
-2. readiness hors ligne entièrement verte ;
+2. readiness hors ligne entièrement verte — `SATISFIED_BY_REEXECUTION_AFTER_VALIDATED_WO020` ;
 3. sauvegarde chiffrée V28 fraîche et restauration qualifiée sur une base isolée ;
 4. go propriétaire global explicite, unique et non consommé.
 
-La deuxième porte n'est pas encore formellement franchie. L'échec initial J3 a été reproduit hors
-sandbox (`14` tests, `12` erreurs `RUNTIME_FAILURE`, `2` scénarios d'arrêt opérateur réussis), puis
-WO-020 a établi et corrigé localement la séquence circulaire `CLOSED` / attente d'EOF parent. Les
-tests superviseur, protocole et sécurité ainsi que les qualifications loopback J3, J4 et J5 sont
-désormais verts, sans accès fournisseur. Le propriétaire a validé WO-020 et autorisé son déplacement
-vers les Work Orders terminés le 2026-08-31 à `00:41:58Z`. Cette validation runtime ne reprend pas
-WO-019, qui reste explicitement non autorisé. La sauvegarde/restauration chiffrée V28 et le go global
-n'ont pas été exécutés. WO-019 porte les métriques détaillées ; la décision J9 demeure
-`PENDING_PROVIDER_ROBUSTNESS_EVIDENCE`.
+L'échec initial J3 a été reproduit hors sandbox (`14` tests, `12` erreurs `RUNTIME_FAILURE`, `2`
+scénarios d'arrêt opérateur réussis), puis WO-020 a établi et corrigé localement la séquence
+circulaire `CLOSED` / attente d'EOF parent. Les tests superviseur, protocole et sécurité ainsi que
+les qualifications loopback J3, J4 et J5 sont désormais verts, sans accès fournisseur. Le
+propriétaire a validé WO-020 et autorisé son déplacement vers les Work Orders terminés le
+2026-08-31 à `00:41:58Z`, puis a autorisé séparément la reprise de WO-019 le 2026-08-31 :
+
+> J’autorise la reprise de WO-019
+
+Cette autorisation a d'abord placé WO-019 à `READY_FOR_OFFLINE_READINESS`, avec
+`OFFLINE_READINESS=AUTHORIZED_NOT_EXECUTED`. Elle n'a pas autorisé la reprise de la campagne
+fournisseur : `WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO`.
+
+Un rejeu distinct propre à WO-019 a ensuite réussi : `clean verify` compte `931/0/0/4`, la suite
+d'intégration `67/0/0/0`, la commande exacte
+`powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Verify-Local.ps1 -WithIntegrationTests`
+rend `PASS` avec intégrations `YES` et réseau SofaScore `NO`, et
+`docker compose --env-file .env config --quiet` rend `PASS`. Les qualifications J3, J4 et J5,
+lancées sous `pwsh`, comptent chacune `14/0/0/0`, sans accès fournisseur. La readiness devient
+`PASS_REEXECUTED_AFTER_VALIDATED_WO020` ; WO-019 passe alors à
+`READY_FOR_V28_BACKUP_RESTORE`.
+
+Cette preuve ne vaut ni campagne fournisseur, ni accès réseau, ni go global. La
+sauvegarde/restauration chiffrée V28 reste `NOT_EXECUTED` et constitue la prochaine porte ; le go
+global n'est pas accordé et n'a pas été consommé. WO-019 porte les métriques détaillées ; la
+décision J9 demeure `PENDING_PROVIDER_ROBUSTNESS_EVIDENCE`.
 
 Avant ces quatre preuves :
 
@@ -311,6 +337,57 @@ WO019_EVIDENCE_STATUS=DRAFT
 WO019_CAMPAIGN_RESUME_AUTHORIZED=NO
 WO019_NETWORK_AUTHORIZED=NO
 WO019_GLOBAL_OWNER_GO=NOT_GRANTED
+```
+
+Le bloc précédent conserve l'état historique à la clôture de WO-020. L'autorisation distincte
+ultérieure est enregistrée sans le réécrire :
+
+```text
+OWNER_WO019_RESUME_AUTHORIZATION_RECEIVED_ON=2026-08-31
+WO019_STATUS=READY_FOR_OFFLINE_READINESS
+WO019_WORK_ORDER_RESUME_AUTHORIZED=YES
+WO019_PROVIDER_CAMPAIGN_AUTHORIZED=NO_PENDING_GLOBAL_GO
+WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+WO019_OFFLINE_READINESS=AUTHORIZED_NOT_EXECUTED
+WO019_V28_BACKUP_RESTORE=NOT_EXECUTED
+WO019_NEXT_GATE=OFFLINE_READINESS_REEXECUTION
+WO019_EVIDENCE_STATUS=DRAFT
+WO019_NETWORK_AUTHORIZED=NO
+WO019_GLOBAL_OWNER_GO=NOT_GRANTED
+WO019_OWNER_GO_CONSUMED=NO
+WO019_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+```
+
+Le rejeu hors ligne exécuté après cette autorisation est consigné séparément :
+
+```text
+WO019_OFFLINE_READINESS_REEXECUTION=PASS
+WO019_OFFLINE_READINESS_REEXECUTED_ON=2026-08-31
+WO019_STATUS=READY_FOR_V28_BACKUP_RESTORE
+WO019_OFFLINE_READINESS=PASS_REEXECUTED_AFTER_VALIDATED_WO020
+WO019_STANDARD_VERIFY=PASS_931_TESTS_0_FAILURE_0_ERROR_4_SKIPPED
+WO019_INTEGRATION_VERIFY=PASS_67_TESTS_0_FAILURE_0_ERROR_0_SKIPPED
+WO019_VERIFY_LOCAL_COMMAND=powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Verify-Local.ps1 -WithIntegrationTests
+WO019_VERIFY_LOCAL=PASS
+WO019_VERIFY_LOCAL_INTEGRATIONS=YES
+WO019_VERIFY_LOCAL_SOFASCORE_NETWORK=NO
+WO019_DOCKER_COMPOSE_CONFIG_COMMAND=docker compose --env-file .env config --quiet
+WO019_DOCKER_COMPOSE_CONFIG=PASS
+WO019_LOOPBACK_J3=PASS_14_TESTS_0_FAILURE_0_ERROR_0_SKIPPED
+WO019_LOOPBACK_J3_PROVIDER_ACCESS_PERFORMED=NO
+WO019_LOOPBACK_J4=PASS_14_TESTS_0_FAILURE_0_ERROR_0_SKIPPED
+WO019_LOOPBACK_J4_PROVIDER_ACCESS_PERFORMED=NO
+WO019_LOOPBACK_J5=PASS_14_TESTS_0_FAILURE_0_ERROR_0_SKIPPED
+WO019_LOOPBACK_J5_PROVIDER_ACCESS_PERFORMED=NO
+WO019_PROVIDER_ACCESS_PERFORMED=NO
+WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+WO019_V28_BACKUP_RESTORE=NOT_EXECUTED
+WO019_NEXT_GATE=V28_BACKUP_RESTORE
+WO019_EVIDENCE_STATUS=DRAFT
+WO019_NETWORK_AUTHORIZED=NO
+WO019_GLOBAL_OWNER_GO=NOT_GRANTED
+WO019_OWNER_GO_CONSUMED=NO
+WO019_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
 
 Le premier lancement Maven en sandbox n'a pas pu résoudre le parent Spring Boot absent du cache

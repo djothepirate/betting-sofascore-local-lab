@@ -58,6 +58,18 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - validation propriétaire explicite de WO-020 reçue le 2026-08-31 à `00:41:58Z`, avec déplacement
   autorisé vers les Work Orders terminés ; WO-019 reste `OPEN_AWAITING_PREREQUISITES`, sa preuve
   reste `DRAFT` et réseau, go, reprise, intégration et production restent à `NO` ;
+- autorisation propriétaire distincte de reprise de WO-019 reçue le 2026-08-31, exprimée exactement
+  par « J’autorise la reprise de WO-019 » ; cette décision place d'abord WO-019 à
+  `READY_FOR_OFFLINE_READINESS`, avec `OFFLINE_READINESS=AUTHORIZED_NOT_EXECUTED` et
+  `WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO` : seul le rejeu hors ligne est autorisé ;
+- rejeu hors ligne WO-019 distinct ensuite vert le 2026-08-31 : `clean verify` à `931/0/0/4`, intégration à
+  `67/0/0/0`, commande exacte `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Verify-Local.ps1 -WithIntegrationTests`
+  à `PASS` avec intégrations `YES` et réseau
+  SofaScore `NO`, Compose silencieux à `PASS`, puis J3, J4 et J5 sous `pwsh` à `14/0/0/0` chacun,
+  sans accès fournisseur ; la readiness devient `PASS_REEXECUTED_AFTER_VALIDATED_WO020` et WO-019
+  passe alors à `READY_FOR_V28_BACKUP_RESTORE` ; le cycle chiffré sauvegarde/restauration V28 reste
+  `NOT_EXECUTED`, la preuve reste `DRAFT`, et campagne fournisseur, réseau, go global, consommation
+  du go, intégration et production restent non autorisés ;
 - revue factuelle de sources officielles : restrictions publiées sur les requêtes automatisées,
   le scraping, l'agrégation, la reproduction et l'extraction substantielle sans consentement
   explicite ; point d'entrée `Sofascore API` et canal `Product -> API` présents, mais aucune licence,

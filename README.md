@@ -10,14 +10,14 @@ Le jalon **J9 — Décision de gouvernance** est ouvert par `WO-SS-20260831-018`
 `PENDING_PROVIDER_ROBUSTNESS_EVIDENCE` : le corpus J8 mono-dossier ne suffit pas à conclure.
 WO-018 autorise uniquement la matrice factuelle et la préparation documentaire. Il n'autorise ni
 appel fournisseur, ni intégration, ni nouveau endpoint, ni polling, ni scheduler, ni mode live.
-La preuve multi-dossier relève de WO-019. ADR-SS-002 v1.0 est accepté explicitement, mais WO-019
-reste `OPEN_AWAITING_PREREQUISITES`. Son premier contrôle J3 Playwright loopback et sa
+La preuve multi-dossier relève de WO-019. ADR-SS-002 v1.0 est accepté explicitement. Le premier
+contrôle J3 Playwright loopback de WO-019 et sa
 contre-qualification hors sandbox avaient produit `12` erreurs `RUNTIME_FAILURE` sur `14` tests à
 la fermeture gracieuse. WO-020 a depuis établi la cause : le worker émettait `CLOSED` puis attendait
 l'EOF parent, tandis que le parent attendait ou terminait l'arbre avant de produire cet EOF ; le
 timeout gracieux de `5 s` était en outre plafonné à tort à la borne opérateur de `2 s`.
 
-La correction locale du superviseur inventorie l'arbre après `CLOSED`, ferme la sortie parent,
+Sous WO-020, la correction locale du superviseur inventorie l'arbre après `CLOSED`, ferme la sortie parent,
 sépare les modes gracieux et opérateur, laisse `250 ms` à la sortie naturelle, puis conserve le
 repli souple à `1 s`, l'acquittement opérateur à `500 ms`, son annulation à `2 s` et le nettoyage
 total à `5 s`.
@@ -28,10 +28,22 @@ tests d'intégration ; l'audit final trouve zéro processus possédé, zéro lis
 artefact navigateur interdit. Aucun accès fournisseur n'a eu lieu.
 
 Le propriétaire a validé WO-020 et autorisé son déplacement vers les Work Orders terminés le
-2026-08-31 à `00:41:58Z`. Cette validation runtime ne reprend pas WO-019, ne lance pas le cycle
-chiffré sauvegarde/restauration V28, ne donne aucun go et n'autorise ni appel fournisseur, ni
-intégration, ni production. Le réseau reste bloqué, le go global n'est pas
-accordé et ADR-SS-003 n'existe pas. L'acceptation d'ADR-SS-002 ne vaut pas go réseau.
+2026-08-31 à `00:41:58Z`. Cette validation runtime ne reprenait pas, à elle seule, WO-019. Le
+propriétaire a ensuite autorisé séparément la reprise de WO-019 le 2026-08-31. Cette décision a
+d'abord placé WO-019 à `READY_FOR_OFFLINE_READINESS`, avec
+`OFFLINE_READINESS=AUTHORIZED_NOT_EXECUTED` et
+`WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO` : elle autorisait le rejeu hors ligne, pas la
+campagne fournisseur.
+
+Ce rejeu propre à WO-019 a ensuite réussi le 2026-08-31 : `clean verify` compte `931/0/0/4`, l'intégration
+`67/0/0/0`, `Verify-Local.ps1 -WithIntegrationTests` rend `PASS` avec intégrations `YES` et réseau
+SofaScore `NO`, et `docker compose --env-file .env config --quiet` rend `PASS`. Les qualifications
+loopback J3, J4 et J5 exécutées sous `pwsh` comptent chacune `14/0/0/0`, sans accès fournisseur.
+La readiness devient `PASS_REEXECUTED_AFTER_VALIDATED_WO020` et WO-019 passe alors à
+`READY_FOR_V28_BACKUP_RESTORE`. Le cycle chiffré sauvegarde/restauration V28 reste `NOT_EXECUTED`
+et constitue la prochaine porte. Le réseau reste bloqué, le go global n'est pas accordé ni
+consommé, la campagne fournisseur, l'intégration et la production restent non autorisées, et
+ADR-SS-003 n'existe pas. L'acceptation d'ADR-SS-002 ne vaut pas go réseau.
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une

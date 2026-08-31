@@ -1,6 +1,6 @@
 # WO-SS-20260831-019 — Preuve bornée de robustesse fournisseur pour J9
 
-- **Statut :** `OPEN_AWAITING_PREREQUISITES`
+- **Statut :** `READY_FOR_V28_BACKUP_RESTORE`
 - **Date d'ouverture :** 2026-08-31
 - **Jalon :** J9 — Preuve préalable à la décision
 - **Base locale :** `a47c932`
@@ -37,7 +37,7 @@ La campagne doit mesurer :
 Elle ne constitue ni un test de charge, ni une qualification statistique, juridique, commerciale,
 VPS ou de production. Elle ne prend pas la décision J9.
 
-## 2. État initial et portes cumulatives
+## 2. État courant et portes cumulatives
 
 ```text
 EVIDENCE_STATUS=DRAFT
@@ -46,8 +46,14 @@ OWNER_GO_CONSUMED=NO
 MAX_DIRECT_CALLS=38
 REPLACEMENT_DOSSIER_ALLOWED=NO
 ADR_SS_002_STATUS=ACCEPTED_V1_0
-OFFLINE_READINESS=BLOCKED_PENDING_WO019_RESUME_AUTHORIZATION
-V28_BACKUP_RESTORE=NOT_EXECUTED_READINESS_BLOCKED
+WORK_ORDER_STATUS=READY_FOR_V28_BACKUP_RESTORE
+WO019_WORK_ORDER_RESUME_AUTHORIZED=YES
+WO019_PROVIDER_CAMPAIGN_AUTHORIZED=NO_PENDING_GLOBAL_GO
+WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+OFFLINE_READINESS=PASS_REEXECUTED_AFTER_VALIDATED_WO020
+OFFLINE_READINESS_REEXECUTED_ON=2026-08-31
+V28_BACKUP_RESTORE=NOT_EXECUTED
+NEXT_GATE=V28_BACKUP_RESTORE
 GLOBAL_OWNER_GO=NOT_GRANTED
 SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=SATISFIED_BY_VALIDATED_WO020
 RUNTIME_WORK_ORDER=WO-SS-20260831-020-j9-playwright-graceful-close
@@ -56,7 +62,7 @@ RUNTIME_WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260831-020-j9-pla
 RUNTIME_CORRECTION_LOCAL_READINESS=PASS
 RUNTIME_WORK_ORDER_OWNER_VALIDATION=RECEIVED_2026-08-31T00:41:58Z
 RUNTIME_OWNER_REVIEW=SATISFIED
-WO019_CAMPAIGN_RESUME_AUTHORIZED=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
 
 Le réseau reste bloqué jusqu'à preuve cumulative des quatre portes :
@@ -216,15 +222,11 @@ appel SofaScore.
 ```powershell
 .\mvnw.cmd clean verify
 .\mvnw.cmd -Pintegration-tests verify
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File .\scripts\Verify-Local.ps1 -WithIntegrationTests
-docker compose --env-file .env config
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File .\scripts\Invoke-J3PlaywrightLoopbackQualification.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File .\scripts\Invoke-J4PlaywrightLoopbackQualification.ps1
-powershell.exe -NoProfile -ExecutionPolicy Bypass `
-  -File .\scripts\Invoke-J5PlaywrightLoopbackQualification.ps1
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Verify-Local.ps1 -WithIntegrationTests
+docker compose --env-file .env config --quiet
+pwsh -NoProfile -File .\scripts\Invoke-J3PlaywrightLoopbackQualification.ps1
+pwsh -NoProfile -File .\scripts\Invoke-J4PlaywrightLoopbackQualification.ps1
+pwsh -NoProfile -File .\scripts\Invoke-J5PlaywrightLoopbackQualification.ps1
 ```
 
 La readiness confirme notamment :
@@ -252,10 +254,27 @@ WO-020 a ensuite établi la cause circulaire : le worker émettait `CLOSED` puis
 alors que le parent attendait ou terminait l'arbre avant de produire cet EOF ; le timeout gracieux
 était aussi plafonné à tort à `2 s`. La correction du seul superviseur conserve le worker, le
 protocole et les endpoints, puis les qualifications loopback J3, J4 et J5 ont chacune réussi leurs
-`14` tests. Le propriétaire a validé cette readiness locale et autorisé le déplacement de WO-020
-vers les Work Orders terminés le 2026-08-31 à `00:41:58Z`. Cette décision ne reprend pas WO-019.
-La sauvegarde/restauration chiffrée V28 n'a pas été lancée et la readiness de WO-019 reste bloquée
-jusqu'à une autorisation propriétaire distincte de reprise.
+`14` tests. Le propriétaire a validé cette preuve runtime WO-020 et autorisé son déplacement
+vers les Work Orders terminés le 2026-08-31 à `00:41:58Z`. Cette validation qualifiait le correctif
+runtime, mais ne remplaçait pas le rejeu de readiness propre à WO-019.
+
+Le propriétaire a ensuite autorisé séparément la reprise de WO-019 le 2026-08-31. Cette décision a
+d'abord placé le Work Order à `READY_FOR_OFFLINE_READINESS`, avec
+`OFFLINE_READINESS=AUTHORIZED_NOT_EXECUTED`. Elle autorisait uniquement le rejeu des prérequis
+locaux et maintenait `WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO`.
+
+Le rejeu hors ligne distinct a ensuite réussi : `clean verify` compte `931` tests, `0` échec,
+`0` erreur et `4` skips ; la suite d'intégration compte `67` tests, `0` échec, `0` erreur et
+`0` skip ; `Verify-Local.ps1 -WithIntegrationTests` rend `PASS`, confirme les intégrations à `YES`
+et le réseau SofaScore à `NO` ; Compose silencieux rend `PASS` ; les qualifications J3, J4 et J5
+lancées sous `pwsh` comptent chacune `14` tests, `0` échec, `0` erreur et `0` skip. Aucun accès
+fournisseur n'a eu lieu. La readiness devient
+`PASS_REEXECUTED_AFTER_VALIDATED_WO020` et WO-019 passe alors, et seulement alors, à
+`READY_FOR_V28_BACKUP_RESTORE`.
+
+Le cycle sauvegarde/restauration chiffré V28 n'a pas encore été lancé et reste la prochaine porte.
+La campagne fournisseur, le réseau, le go global, l'intégration et la production restent non
+autorisés.
 
 ## 9. Sauvegarde/restauration V28
 
@@ -270,7 +289,7 @@ Après readiness et avant le go :
 7. ne lancer aucune purge primaire.
 
 Le bloc suivant décrit le résultat futur exigé ; il n'est pas l'état courant, qui reste
-`V28_BACKUP_RESTORE=NOT_EXECUTED_READINESS_BLOCKED` :
+`V28_BACKUP_RESTORE=NOT_EXECUTED` :
 
 ```text
 J6_BACKUP_RESULT=QUALIFIED
@@ -431,6 +450,7 @@ preuves réelles. Aucun push, PR ou merge vers `main` n'est autorisé. La branch
 OPEN_AWAITING_PREREQUISITES
   -> READY_FOR_ADR_OWNER_DECISION
   -> READY_FOR_OFFLINE_READINESS
+  -> READY_FOR_V28_BACKUP_RESTORE
   -> READY_FOR_GLOBAL_OWNER_GO
   -> QUALIFICATION_RUNNING
   -> READY_FOR_HUMAN_REVIEW
@@ -449,6 +469,11 @@ WO-019 ne passe à `VALIDATED` qu'après preuve versionnée et décision humaine
 alors déplacé vers `docs/work_orders/completed`. Ce déplacement n'autorise aucun nouvel appel.
 
 ## 18. Journal d'exécution
+
+Le bloc suivant conserve la photographie historique prise à l'arrêt de readiness puis à la
+validation de WO-020. En particulier, `WO019_CAMPAIGN_RESUME_AUTHORIZED=NO` décrit correctement la
+porte encore fermée à cet instant ; l'autorisation propriétaire distincte et l'état courant sont
+consignés après ce bloc sans réécrire cette preuve.
 
 ```text
 BRANCH_BASE=a47c932
@@ -513,9 +538,8 @@ Playwright loopback initiale reste conservée comme preuve de l'arrêt de sécur
 validé et a autorisé son déplacement vers les Work Orders terminés le 2026-08-31 à `00:41:58Z`.
 L'audit post-correction ne trouve aucun processus possédé résiduel, aucun listener sur
 `127.0.0.1:8087` et le scanner J5 ne trouve aucun artefact navigateur interdit.
-WO-019 reste `OPEN_AWAITING_PREREQUISITES` et `EVIDENCE_STATUS=DRAFT` ; aucun go, appel fournisseur,
-cycle chiffré sauvegarde/restauration V28 ou reprise de campagne n'est autorisé avant une décision
-propriétaire distincte.
+Cette validation a qualifié le correctif runtime, sans exécuter le rejeu de readiness propre à
+WO-019 ni le cycle chiffré sauvegarde/restauration V28.
 
 Autorisation d'ouverture de WO-020 enregistrée le 2026-08-31 :
 
@@ -529,4 +553,68 @@ J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 
 Le bloc propriétaire exact de validation et de clôture est conservé dans le
 [Work Order WO-020 validé](../completed/WO-SS-20260831-020-j9-playwright-graceful-close.md). Sa
-validation satisfait le prérequis runtime uniquement et ne modifie aucune porte de WO-019.
+validation satisfait le prérequis runtime uniquement ; elle ne valait pas, à elle seule,
+autorisation de reprendre WO-019.
+
+Autorisation propriétaire distincte de reprise reçue le 2026-08-31, sans heure ajoutée :
+
+> J’autorise la reprise de WO-019
+
+```text
+OWNER_WO019_RESUME_AUTHORIZATION_RECEIVED_ON=2026-08-31
+WORK_ORDER_STATUS=READY_FOR_OFFLINE_READINESS
+WO019_WORK_ORDER_RESUME_AUTHORIZED=YES
+WO019_PROVIDER_CAMPAIGN_AUTHORIZED=NO_PENDING_GLOBAL_GO
+WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+OFFLINE_READINESS=AUTHORIZED_NOT_EXECUTED
+V28_BACKUP_RESTORE=NOT_EXECUTED
+NEXT_GATE=OFFLINE_READINESS_REEXECUTION
+NETWORK_AUTHORIZED=NO
+GLOBAL_OWNER_GO=NOT_GRANTED
+OWNER_GO_CONSUMED=NO
+EVIDENCE_STATUS=DRAFT
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+PROVIDER_CALLS_UNDER_WO019=0
+```
+
+Cette décision a repris le Work Order et autorisé son rejeu hors ligne ; elle n'a pas prévalidé le
+résultat de ce rejeu. La preuve distincte exécutée après l'autorisation est :
+
+```text
+WO019_OFFLINE_READINESS_REEXECUTION=PASS
+WO019_OFFLINE_READINESS_REEXECUTED_ON=2026-08-31
+WORK_ORDER_STATUS=READY_FOR_V28_BACKUP_RESTORE
+OFFLINE_READINESS=PASS_REEXECUTED_AFTER_VALIDATED_WO020
+WO019_STANDARD_VERIFY_COMMAND=.\mvnw.cmd clean verify
+WO019_STANDARD_VERIFY=PASS_931_TESTS_0_FAILURE_0_ERROR_4_SKIPPED
+WO019_INTEGRATION_VERIFY_COMMAND=.\mvnw.cmd -Pintegration-tests verify
+WO019_INTEGRATION_VERIFY=PASS_67_TESTS_0_FAILURE_0_ERROR_0_SKIPPED
+WO019_VERIFY_LOCAL_COMMAND=powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Verify-Local.ps1 -WithIntegrationTests
+WO019_VERIFY_LOCAL=PASS
+WO019_VERIFY_LOCAL_INTEGRATIONS=YES
+WO019_VERIFY_LOCAL_SOFASCORE_NETWORK=NO
+WO019_DOCKER_COMPOSE_CONFIG_COMMAND=docker compose --env-file .env config --quiet
+WO019_DOCKER_COMPOSE_CONFIG=PASS
+WO019_LOOPBACK_J3_COMMAND=pwsh -NoProfile -File .\scripts\Invoke-J3PlaywrightLoopbackQualification.ps1
+WO019_LOOPBACK_J3=PASS_14_TESTS_0_FAILURE_0_ERROR_0_SKIPPED
+WO019_LOOPBACK_J3_PROVIDER_ACCESS_PERFORMED=NO
+WO019_LOOPBACK_J4_COMMAND=pwsh -NoProfile -File .\scripts\Invoke-J4PlaywrightLoopbackQualification.ps1
+WO019_LOOPBACK_J4=PASS_14_TESTS_0_FAILURE_0_ERROR_0_SKIPPED
+WO019_LOOPBACK_J4_PROVIDER_ACCESS_PERFORMED=NO
+WO019_LOOPBACK_J5_COMMAND=pwsh -NoProfile -File .\scripts\Invoke-J5PlaywrightLoopbackQualification.ps1
+WO019_LOOPBACK_J5=PASS_14_TESTS_0_FAILURE_0_ERROR_0_SKIPPED
+WO019_LOOPBACK_J5_PROVIDER_ACCESS_PERFORMED=NO
+WO019_PROVIDER_ACCESS_PERFORMED=NO
+WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+V28_BACKUP_RESTORE=NOT_EXECUTED
+NEXT_GATE=V28_BACKUP_RESTORE
+NETWORK_AUTHORIZED=NO
+GLOBAL_OWNER_GO=NOT_GRANTED
+OWNER_GO_CONSUMED=NO
+EVIDENCE_STATUS=DRAFT
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+```
+
+WO-019 est donc maintenant `READY_FOR_V28_BACKUP_RESTORE`. Le cycle V28 reste à exécuter et à
+qualifier. La campagne fournisseur, le réseau, le go global, la consommation du go, l'intégration
+et la production restent non autorisés.
