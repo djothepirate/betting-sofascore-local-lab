@@ -136,6 +136,33 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `J9_FINAL_DECISION=NOT_TAKEN` et la décision attend WO-021 ainsi qu'une éventuelle nouvelle preuve
   WO-019 ; toute reprise après incident exigera une nouvelle décision, une readiness fraîche, le
   réexamen ADR prévu par ADR-SS-002 §9, un nouveau manifeste et un nouveau go global à usage unique.
+- discriminant WO-021 exécuté avant correction et rouge en `0,08 s`, établissant l'absence de fence
+  conservateur fondé sur la fin de réponse et la lacune de preuve de la marge résiduelle de `33 ms` ;
+- correction runtime bornée : temporisation logique monotone avec réévaluation des réveils
+  anticipés, fence parent commun aux campagnes/workers attendant au moins trois secondes après la
+  fin observable du dispatch précédent, et observation CDP corrélée de l'unique document principal
+  exact ; toute perte de preuve temporelle, réponse de cache/service worker ou identité incohérente
+  reste fail-closed ; une interruption avant ou pendant l'attente conserve son statut, empoisonne la
+  preuve temporelle et n'émet aucun `GET`, sans nouvel endpoint ni changement incompatible du
+  protocole ;
+- premier rejeu J3 Chromium après le correctif principal arrêté avec un seul échec sur `14` tests :
+  `TIMEOUT` attendu, `PROTOCOL_ERROR` reçu et `RUNTIME_FAILURE` de clôture supprimé ; diagnostic du
+  teardown établi sur les désactivations/détachements CDP synchrones exécutés avant `page.close()`
+  sur la navigation bloquée, qui retardaient la trame timeout au-delà du canal IPC ; correction par
+  fermeture de la page avant le teardown CDP, sans modifier `clearCookies()` ni les bornes WO-020,
+  puis test ciblé `1/1` vert en `5,323 s` et suite complète `14/14` verte en `101,5 s` ;
+- qualification locale WO-021 verte : le premier `Verify-Local.ps1 -WithIntegrationTests` compte
+  `941` tests standards et `67` tests d'intégration ; chacun des scripts J3/J4/J5 réussit `21` tests
+  worker (`10` protocole, `1` sécurité, `10` observation réseau) puis `14` tests Chromium ; J5
+  confirme les écarts `requestedAt`, les arrivées serveur loopback et les écarts inter-workers
+  `>= 3 s`, ainsi que zéro nouvelle requête pendant un arrêt au fence ; les suites ciblées
+  postérieures passent `40/40` pour le superviseur et `8/8` pour le coordinateur, y compris le garde
+  d'interruption fail-closed ; le `clean verify` final après ce garde passe `943` tests, zéro échec,
+  zéro erreur et quatre skips à `2026-08-31T09:48:10Z` ;
+- passage de WO-021 à `READY_FOR_OWNER_REVIEW`, sans déplacement vers les Work Orders terminés et
+  sans accès fournisseur ; WO-019 reste `STOPPED`, ses `20` tentatives restent gelées, réseau,
+  reprise, nouveau go, intégration et production restent à `NO`, et toute reprise future exige une
+  nouvelle décision propriétaire ainsi que le réexamen d'ADR-SS-002.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 

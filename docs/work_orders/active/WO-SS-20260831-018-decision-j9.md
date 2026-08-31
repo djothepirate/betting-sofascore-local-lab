@@ -11,6 +11,7 @@
 - **ADR applicable :** `ADR-SS-001 v1.4`
 - **ADR de preuve :** `ADR-SS-002 v1.0 — ACCEPTED, GLOBAL_GO_CONSUMED_AND_TERMINATED_BY_STOP`
 - **Résultat de preuve WO-019 :** `STOPPED — KEEP_LOCAL_RECOMMENDED_THEN_REJECTED_AS_FINAL_DECISION`
+- **Prérequis runtime WO-021 :** `READY_FOR_OWNER_REVIEW — LOCAL_ONLY, NO_PROVIDER_ACCESS`
 - **ADR d'intégration :** `ADR-SS-003 — NOT_CREATED`
 - **Appel fournisseur autorisé par ce Work Order :** `NO`
 - **Implémentation d'intégration autorisée :** `NO`
@@ -140,7 +141,7 @@ Le rapport WO-019 complète la matrice sans réécrire les preuves J6, J7 ou J8 
 | Complétude D1 | Statistiques `COMPLETE · 100 %`, incidents `PARTIAL · 91 %`, compositions `PARTIAL · 99 %`. | `PARTIAL` | D1 est exploitable mais non strictement complet. |
 | Coût d'appel | `20` tentatives directes sur un plafond de `38` ; D2 et D3 ont reçu zéro appel après l'arrêt. | `PARTIAL` | Le coût multi-dossier prévu n'est pas mesuré. |
 | Risque de blocage fournisseur | Aucun `401`, `403`, `404`, `429`, `5xx`, timeout ou schéma incompatible n'est observé sur D1. | `PARTIAL` | L'absence d'incident sur D1 ne démontre pas la robustesse multi-dossier. |
-| Délai exact entre départs fournisseur | Les timestamps persistés sont pré-navigation ; l'écart calculé de `2 967 ms` ne prouve ni violation on-wire ni conformité au minimum de trois secondes. | `NOT_MEASURED` | Le contrôle procédural courant ne permet pas de démontrer l'invariant ; la série est `STOPPED`. |
+| Délai exact entre départs fournisseur | Les timestamps WO-019 gelés sont pré-navigation ; l'écart calculé de `2 967 ms` ne prouve ni violation on-wire ni conformité au minimum de trois secondes. WO-021 qualifie désormais en loopback un fence parent conservateur et une observation CDP du document principal, avec écarts `requestedAt`, arrivées serveur et écarts inter-workers tous `>= 3 s`. | `NOT_MEASURED_PROVIDER` · `PASS_LOCAL_RUNTIME` | La correction locale ne requalifie pas rétroactivement les 20 tentatives fournisseur et ne reprend pas la série `STOPPED`. Une nouvelle preuve exigerait de nouvelles autorisations. |
 | Export post-campagne | Le double export byte-identique n'a pas été exécuté après l'arrêt global. | `NOT_MEASURED` | La reproductibilité d'export ne peut pas être promue comme acquis de cette campagne. |
 | Sécurité post-arrêt | Arrêt gracieux réussi, zéro listener 8087, zéro processus applicatif ou descendant possédé, zéro artefact navigateur interdit, flags fournisseur à `false`. | `PASS_BOUNDED` | Le réseau reste verrouillé et le go consommé ne peut pas être rejoué. |
 
@@ -195,9 +196,11 @@ PREVIOUS_GRACEFUL_CLOSE_RUNTIME_WORK_ORDER=WO-SS-20260831-020-j9-playwright-grac
 PREVIOUS_GRACEFUL_CLOSE_RUNTIME_WORK_ORDER_STATUS=VALIDATED
 NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER_REQUIRED=YES
 NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER=WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay
-NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER_STATUS=IN_DEVELOPMENT
+NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
 NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER_BRANCH=codex/j9-playwright-minimum-delay
 NEW_PROVIDER_START_DELAY_IMPLEMENTATION_AUTHORIZED=YES
+NEW_PROVIDER_START_DELAY_LOCAL_READINESS=PASS
+NEW_PROVIDER_START_DELAY_PROVIDER_ACCESS_PERFORMED=NO
 J9_DECISION_RECOMMENDATION=KEEP_LOCAL
 J9_OWNER_RESPONSE_TO_KEEP_LOCAL=REJECTED_AS_FINAL_DECISION
 J9_FINAL_DECISION=NOT_TAKEN
@@ -207,9 +210,11 @@ INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 
 Le propriétaire a autorisé l'implémentation et la qualification loopback de WO-021 le
 `2026-08-31T08:43:48.8202621Z`, sans accès fournisseur, reprise de WO-019, nouveau go, intégration
-ou production. Sa décision reste distincte de la décision J9 finale et de toute future reprise de
-WO-019. Conformément à ADR-SS-002 §9, une reprise après incident exige aussi un nouvel ADR ou un
-amendement explicitement revu ; WO-021 ne l'autorise pas.
+ou production. L'implémentation et les qualifications locales sont désormais vertes ; WO-021 est
+`READY_FOR_OWNER_REVIEW`, mais n'est ni validé ni terminé. Sa réalisation reste distincte de la
+décision J9 finale et de toute future reprise de WO-019. Conformément à ADR-SS-002 §9, une reprise
+après incident exige aussi un nouvel ADR ou un amendement explicitement revu ; WO-021 ne l'autorise
+pas.
 
 ADR-SS-002 v1.0 qualifie l'augmentation de volume exigée par ADR-SS-001 §9. Le précédent métier
 complet J8 autorisait au plus 30 tentatives pour un dossier ; la preuve J9 acceptée en prévoit au
@@ -277,7 +282,9 @@ J9_DECISION_STATUS=PENDING_WO021_AND_FUTURE_WO019_EVIDENCE
 Le propriétaire estime que la différence de `33 ms` par rapport à trois secondes, calculée sur les
 timestamps pré-navigation, est trop faible pour justifier une décision finale `KEEP_LOCAL`. Cette
 appréciation est consignée sans requalifier rétroactivement la preuve : le départ réseau exact
-restait `NOT_MEASURED` et aucune violation on-wire n'a été établie.
+restait `NOT_MEASURED` et aucune violation on-wire n'a été établie. WO-021 répond à la lacune runtime
+en loopback, mais sa preuve locale ne transforme pas les observations fournisseur gelées en mesure
+on-wire et ne sélectionne aucune décision J9.
 
 ## 7. Frontière d'une intégration optionnelle future
 
@@ -497,3 +504,46 @@ Le premier lancement Maven en sandbox n'a pas pu résoudre le parent Spring Boot
 local (`Permission denied: getsockopt`). La même commande, relancée avec l'accès Maven explicitement
 autorisé, a terminé `BUILD SUCCESS`. Ce premier refus d'infrastructure n'est pas un échec de test du
 projet et n'a provoqué aucun appel fournisseur.
+
+### 12.1 Consolidation locale WO-021
+
+La preuve runtime postérieure est ajoutée sans modifier le rapport fournisseur arrêté de WO-019 :
+
+```text
+WO021_STATUS=READY_FOR_OWNER_REVIEW
+WO021_OWNER_VALIDATION=PENDING
+WO021_DISCRIMINANT_RED_BEFORE_FIX=PASS_OBSERVED_FAILURE_IN_0_08_SECONDS
+WO021_TIMEOUT_TEARDOWN_INITIAL_RESULT=FAIL_EXPECTED_TIMEOUT_GOT_PROTOCOL_ERROR
+WO021_TIMEOUT_TEARDOWN_ROOT_CAUSE=CDP_DISABLE_AND_DETACH_BEFORE_PAGE_CLOSE_DELAYED_TIMEOUT_FRAME
+WO021_TIMEOUT_TEARDOWN_CORRECTION=PAGE_CLOSE_BEFORE_CDP_DISABLE_AND_DETACH
+WO021_TIMEOUT_TARGETED_REQUALIFICATION=PASS_1_OF_1_IN_5_323_SECONDS
+WO021_TIMEOUT_FULL_REQUALIFICATION=PASS_14_OF_14_IN_101_5_SECONDS
+WO021_VERIFY_LOCAL_BEFORE_FINAL_INTERRUPT_GUARD=PASS_941_STANDARD_67_INTEGRATION
+WO021_FINAL_STANDARD_VERIFY=PASS_943_TESTS_0_FAILURE_0_ERROR_4_SKIPPED
+WO021_FINAL_STANDARD_VERIFY_FINISHED_AT_UTC=2026-08-31T09:48:10Z
+WO021_INTEGRATION_VERIFY=PASS_67_TESTS_0_FAILURE_0_ERROR_0_SKIPPED
+WO021_LOOPBACK_J3=PASS_21_WORKER_TESTS_PLUS_14_CHROMIUM_IT
+WO021_LOOPBACK_J4=PASS_21_WORKER_TESTS_PLUS_14_CHROMIUM_IT
+WO021_LOOPBACK_J5=PASS_21_WORKER_TESTS_PLUS_14_CHROMIUM_IT
+WO021_J5_REQUESTED_AT_GAPS=PASS_GE_3000_MS
+WO021_J5_LOOPBACK_ARRIVAL_GAPS=PASS_GE_3000000000_NS
+WO021_CROSS_WORKER_GAPS=PASS_GE_3_SECONDS
+WO021_STOP_DURING_DELAY_NEW_REQUEST_COUNT=0
+WO021_INTERRUPT_DURING_DELAY=PASS_TIMING_EVIDENCE_LOST_NO_GET
+WO021_SUPERVISOR_TARGETED_TESTS=PASS_40_OF_40
+WO021_MANUAL_COORDINATOR_TARGETED_TESTS=PASS_8_OF_8
+WO021_PROVIDER_ACCESS_PERFORMED=NO
+WO019_STATUS=STOPPED
+WO019_TOTAL_DIRECT_ATTEMPTS_FROZEN=20
+WO019_NETWORK_AUTHORIZED=NO
+WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+WO019_NEW_PROVIDER_GO_GRANTED=NO
+ADR_SS_002_REEXAMINATION_REQUIRED_BEFORE_ANY_FUTURE_RESUME=YES
+J9_FINAL_DECISION=NOT_TAKEN
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+```
+
+WO-021 reste actif jusqu'à une validation propriétaire explicite. Sa qualification locale ne
+remplace ni la nouvelle décision requise pour WO-019, ni la readiness fraîche, ni le réexamen
+d'ADR-SS-002, ni le nouveau manifeste et le nouveau go global à usage unique qui seraient exigés
+avant toute future reprise.

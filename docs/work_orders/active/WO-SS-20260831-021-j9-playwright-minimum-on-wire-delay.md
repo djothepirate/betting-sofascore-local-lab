@@ -1,6 +1,6 @@
 # WO-SS-20260831-021 — Mesure et garantie du délai minimal Playwright entre départs réseau
 
-- **Statut :** `IN_DEVELOPMENT`
+- **Statut :** `READY_FOR_OWNER_REVIEW`
 - **Date d'ouverture :** 2026-08-31
 - **Jalon :** J9 — prérequis runtime après arrêt de WO-019
 - **Base locale :** `216b184b96055f53c48f3c9d0b5a6d21d03723f0`
@@ -12,10 +12,10 @@
 - **Reprise de WO-019 :** `NOT_AUTHORIZED`
 - **Nouveau go fournisseur :** `NOT_GRANTED`
 - **Tentatives WO-019 gelées :** `20`
-- **Implémentation WO-021 :** `AUTHORIZED`
+- **Implémentation WO-021 :** `IMPLEMENTED_AND_LOCALLY_QUALIFIED`
 - **Intégration ou production :** `NOT_AUTHORIZED`
 - **Endpoint, transport, protocole, schéma ou migration :** `NO_SCOPE_EXPANSION_AUTHORIZED`
-- **Lacune de mesure :** `ESTABLISHED`
+- **Lacune de mesure :** `CORRECTED_AND_QUALIFIED_ON_LOOPBACK`
 - **Violation on-wire sous trois secondes :** `NOT_ESTABLISHED`
 - **Autorisation propriétaire d'implémentation :** `RECEIVED_2026-08-31T08:43:48.8202621Z`
 - **Validation propriétaire de clôture :** `PENDING`
@@ -145,7 +145,7 @@ J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 J9_FUTURE_WO019_RESUME_REQUIRES_NEW_OWNER_DECISION_AND_NEW_GLOBAL_GO=YES
 ```
 
-L'état exécutoire devient :
+L'état exécutoire devenu applicable immédiatement après l'autorisation, avant implémentation, était :
 
 ```text
 WORK_ORDER_STATUS=IN_DEVELOPMENT
@@ -164,6 +164,10 @@ qualification locale sera `READY_FOR_OWNER_REVIEW`, en attente d'un nouveau bloc
 validation. Une éventuelle reprise de WO-019 restera en outre soumise au déclencheur de réexamen
 d'ADR-SS-002 §9 applicable à toute reprise après incident ; aucun nouvel ADR n'est autorisé par
 WO-021.
+
+Ce statut maximal est désormais atteint : l'implémentation et les qualifications locales sont
+vertes, mais le propriétaire n'a pas encore validé WO-021. Le Work Order reste donc dans
+`docs/work_orders/active` et ne doit pas être déplacé vers les Work Orders terminés.
 
 ## 5. Contrat runtime à préserver
 
@@ -250,6 +254,10 @@ WORK_ORDER_STATUS=BLOCKED_REQUIRES_SCOPE_AMENDMENT
 Les deux portes requises ont été franchies le `2026-08-31T08:43:48.8202621Z`. Les lots runtime et
 loopback peuvent commencer sans accès fournisseur et sans reprise de WO-019.
 
+Les lots 1 à 7 ont ensuite été exécutés localement. Le lot 8 est atteint au statut
+`READY_FOR_OWNER_REVIEW` ; il ne constitue ni une validation propriétaire ni une autorisation de
+reprendre WO-019.
+
 ## 8. Matrice de tests obligatoire
 
 | Cas | Résultat requis |
@@ -309,17 +317,113 @@ LISTENER_127_0_0_1_8087_COUNT=0
 FORBIDDEN_BROWSER_ARTIFACT_COUNT=0
 ```
 
-## 10. Fichiers candidats
+### 9.1 Résultats observés
+
+Le discriminant ciblé a d'abord été exécuté avant la correction. Il est devenu rouge en `0,08 s`,
+comme attendu : l'ancienne implémentation n'appliquait pas le fence conservateur fondé sur la fin de
+la réponse précédente et ne pouvait donc pas démontrer la marge résiduelle de `33 ms` du scénario
+J5. La correction n'a été appliquée qu'après cette preuve rouge.
+
+Le runtime corrigé :
+
+- utilise une horloge monotone et réévalue toute attente anticipée dans
+  `ManualProviderRequestCoordinator` ;
+- place dans le superviseur parent un fence conservateur commun aux campagnes et workers : un
+  nouveau dispatch IPC attend le minimum configuré après la fin observable du dispatch précédent ;
+- marque la preuve temporelle comme perdue et bloque les dispatchs suivants lorsqu'aucune réponse
+  exploitable ne permet d'armer ce fence ;
+- traite toute interruption avant ou pendant l'attente comme une perte de preuve : le statut
+  d'interruption est conservé, aucun `GET` n'est écrit et toutes les admissions suivantes restent
+  bloquées ;
+- observe dans le worker l'événement CDP `Network.requestWillBeSent` du seul document principal
+  exact, le corrèle à sa réponse et rejette cache, service worker, redirection ou identité
+  incohérente ;
+- conserve le protocole IPC, les endpoints, le timeout réseau de dix secondes, la concurrence `1`,
+  l'absence de retry et les bornes de fermeture WO-020.
+
+La première qualification Chromium complète après le correctif principal a découvert un défaut
+distinct sur le scénario timeout : `14` tests avaient été exécutés, avec un seul échec en `8,451 s`.
+Le test attendait `TIMEOUT`, mais le parent recevait `PROTOCOL_ERROR`, puis la clôture produisait un
+`RUNTIME_FAILURE` supprimé. La cause confirmée était l'ordre synchrone du teardown worker :
+`Fetch.disable`, puis `Network.disable` et le détachement des sessions CDP étaient exécutés avant
+`page.close()` sur une navigation encore bloquée. Cette séquence retardait la trame `TIMEOUT` au-delà
+de la durée de vie du canal IPC. Le teardown ferme désormais d'abord la page, ce qui annule la
+navigation, puis désactive et détache les sessions CDP. Le test timeout ciblé passe `1/1` en
+`5,323 s`, puis la suite Chromium complète passe `14/14` en `101,5 s`. Cette correction ne modifie
+ni `clearCookies()`, ni les bornes WO-020, ni la classification des autres incidents.
+
+La requalification finale est :
+
+```text
+WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+IMPLEMENTATION_STATUS=IMPLEMENTED_AND_LOCALLY_QUALIFIED
+DISCRIMINANT_RED_BEFORE_FIX=PASS_OBSERVED_FAILURE_IN_0_08_SECONDS
+DISCRIMINANT_RED_SCOPE=RESPONSE_COMPLETION_FENCE_AND_RESIDUAL_33_MS
+TIMEOUT_TEARDOWN_INITIAL_RESULT=FAIL_EXPECTED_TIMEOUT_GOT_PROTOCOL_ERROR_WITH_SUPPRESSED_RUNTIME_FAILURE
+TIMEOUT_TEARDOWN_ROOT_CAUSE=SYNCHRONOUS_CDP_DISABLE_AND_DETACH_BEFORE_PAGE_CLOSE_DELAYED_TIMEOUT_FRAME_BEYOND_IPC
+TIMEOUT_TEARDOWN_CORRECTION=PAGE_CLOSE_CANCELS_NAVIGATION_BEFORE_CDP_DISABLE_AND_DETACH
+TIMEOUT_TARGETED_REQUALIFICATION=PASS_1_OF_1_IN_5_323_SECONDS
+TIMEOUT_FULL_CHROMIUM_REQUALIFICATION=PASS_14_OF_14_IN_101_5_SECONDS
+VERIFY_LOCAL_WITH_INTEGRATION_BEFORE_FINAL_INTERRUPT_GUARD=PASS_941_STANDARD_67_INTEGRATION
+FINAL_STANDARD_VERIFY=PASS_943_TESTS_0_FAILURE_0_ERROR_4_SKIPPED
+FINAL_STANDARD_VERIFY_FINISHED_AT_UTC=2026-08-31T09:48:10Z
+INTEGRATION_TESTS=PASS_67_TESTS_0_FAILURE_0_ERROR_0_SKIPPED
+SUPERVISOR_TARGETED_TESTS_AFTER_INTERRUPT_GUARD=PASS_40_OF_40
+MANUAL_COORDINATOR_TARGETED_TESTS=PASS_8_OF_8
+INTERRUPTION_DURING_DELAY=PASS_TIMING_EVIDENCE_LOST_NO_GET
+LOOPBACK_J3=PASS_21_WORKER_TESTS_PLUS_14_CHROMIUM_IT
+LOOPBACK_J3_FINAL_RERUN_FINISHED_AT_UTC=2026-08-31T09:50:33Z
+LOOPBACK_J4=PASS_21_WORKER_TESTS_PLUS_14_CHROMIUM_IT
+LOOPBACK_J4_FINAL_RERUN_FINISHED_AT_UTC=2026-08-31T09:52:50Z
+LOOPBACK_J5=PASS_21_WORKER_TESTS_PLUS_14_CHROMIUM_IT
+LOOPBACK_J5_FINAL_RERUN_FINISHED_AT_UTC=2026-08-31T09:55:06Z
+WORKER_TEST_BREAKDOWN=10_PROTOCOL_PLUS_1_SECURITY_PLUS_10_NETWORK_OBSERVATION
+J5_REQUESTED_AT_GAPS=PASS_GE_3000_MS
+J5_LOOPBACK_ARRIVAL_GAPS=PASS_GE_3000000000_NS
+CROSS_WORKER_REQUESTED_AT_GAP=PASS_GE_3000_MS
+CROSS_WORKER_LOOPBACK_ARRIVAL_GAP=PASS_GE_3000000000_NS
+STOP_DURING_DELAY_NEW_REQUEST_COUNT=0
+MAVEN_REPORT_SENSITIVE_SCANNER=PASS
+RUNTIME_FILE_CANARY_SCAN=PASS
+PROVIDER_ACCESS_PERFORMED=NO
+WO019_STATUS=STOPPED
+WO019_EXISTING_DIRECT_ATTEMPTS_FROZEN=20
+WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+NETWORK_AUTHORIZED=NO
+NEW_PROVIDER_GO_GRANTED=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+FINAL_LOCAL_QUALIFICATION_STATE=PASS_AFTER_INTERRUPT_GUARD
+```
+
+Les trois scripts J3, J4 et J5 ont chacun vérifié les `21` tests worker — `10` protocole, `1`
+sécurité, `10` observation réseau — puis les `14` tests d'intégration Chromium. J5 vérifie en plus
+les écarts `requestedAt`, les arrivées monotones du serveur loopback et les écarts entre workers,
+tous au moins égaux à trois secondes, ainsi que zéro nouvelle requête lorsque l'arrêt intervient
+pendant le fence. Les suites ciblées postérieures confirment également `40/40` tests superviseur et
+`8/8` tests coordinateur, dont l'interruption fail-closed sans émission de `GET`. Aucun script n'a
+contacté le fournisseur. Les rejeux finaux postérieurs au garde d'interruption se sont terminés à
+`2026-08-31T09:50:33Z` pour J3, `2026-08-31T09:52:50Z` pour J4 et
+`2026-08-31T09:55:06Z` pour J5. Le dernier rejeu J5 reconfirme toutes les lignes d'écart
+`requestedAt`, loopback et inter-workers `>= 3 s`, `STOP_DURING_DELAY_NEW_REQUEST_COUNT=0` et
+`PROVIDER_ACCESS_PERFORMED=NO`.
+
+## 10. Fichiers du lot
 
 ```text
 src/main/java/.../ManualProviderRequestCoordinator.java
-src/main/java/.../playwright/PlaywrightProviderResponse.java
 src/main/java/.../playwright/ChildJvmPlaywrightProviderSupervisor.java
+src/main/java/.../playwright/ProviderNetworkStartDelayGate.java
 src/provider-playwright/java/.../ProviderPlaywrightWorkerMain.java
+src/provider-playwright/java/.../ProviderMainDocumentNetworkObservation.java
 src/test/java/.../ManualProviderRequestCoordinatorTest.java
 src/test/java/.../ChildJvmPlaywrightProviderSupervisorTest.java
 src/provider-playwright-test/java/.../ProviderPlaywrightWorkerProtocolTest.java
+src/provider-playwright-test/java/.../ProviderPlaywrightWorkerSecurityContractTest.java
+src/provider-playwright-test/java/.../ProviderPlaywrightWorkerNetworkObservationTest.java
 src/provider-playwright-qualification-test/java/.../ProviderPlaywrightLocalQualificationIT.java
+scripts/Invoke-J3PlaywrightLoopbackQualification.ps1
+scripts/Invoke-J4PlaywrightLoopbackQualification.ps1
+scripts/Invoke-J5PlaywrightLoopbackQualification.ps1
 docs/architecture/J3-PLAYWRIGHT-PROVIDER-TRANSPORT.md
 README.md
 CHANGELOG.md
@@ -328,7 +432,9 @@ docs/work_orders/active/WO-SS-20260831-019-j9-provider-robustness.md
 docs/work_orders/active/WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay.md
 ```
 
-Cette liste reste candidate. Aucun fichier runtime ne doit être modifié avant l'autorisation.
+Cette liste reflète le lot réalisé. Les autres tests de services J3/J4/J5 ont été adaptés uniquement
+pour préserver les contrats de coordination et de temporisation monotone. Aucun endpoint, ADR,
+migration, schéma, route ou configuration réseau n'a été ajouté.
 
 ## 11. Portes de statut
 
@@ -354,7 +460,9 @@ CANCELLED
 
 Même `VALIDATED` ne réouvre pas WO-019. Une reprise future nécessitera une nouvelle décision
 propriétaire, une readiness fraîche, un nouveau manifeste, un nouveau go à usage unique et une
-nouvelle fenêtre. Les 20 tentatives de la campagne arrêtée restent gelées dans leur rapport.
+nouvelle fenêtre. Puisque WO-019 a été arrêté après incident, ADR-SS-002 doit également être
+réexaminé explicitement avant une telle reprise. Les 20 tentatives de la campagne arrêtée restent
+gelées dans leur rapport.
 
 ## 12. Critères d'acceptation de l'ouverture
 
@@ -382,4 +490,26 @@ OPENING_PROVIDER_ACCESS_PERFORMED=NO
 - aucune modification runtime, migration, ADR, endpoint ou configuration réseau ;
 - aucun appel fournisseur, reprise de WO-019, push ou fusion vers `main` ;
 - `git diff --check`, liens locaux et recherche de secrets verts ;
-- implémentation conservée à `NOT_AUTHORIZED`.
+- au moment de l'ouverture, implémentation conservée à `NOT_AUTHORIZED` ; cette photographie
+  historique est remplacée pour l'état courant par la section 13.
+
+## 13. Porte propriétaire de clôture
+
+La qualification locale autorise uniquement la revue propriétaire de WO-021 :
+
+```text
+WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+OWNER_VALIDATION=PENDING
+MOVE_TO_COMPLETED_AUTHORIZED=NO
+WO019_STATUS=STOPPED
+WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+WO019_EXISTING_DIRECT_ATTEMPTS_FROZEN=20
+PROVIDER_NETWORK_AUTHORIZED=NO
+NEW_PROVIDER_GO_GRANTED=NO
+ADR_SS_002_REEXAMINATION_REQUIRED_BEFORE_ANY_FUTURE_RESUME=YES
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+```
+
+Une validation propriétaire explicite reste nécessaire pour déplacer WO-021 vers
+`docs/work_orders/completed`. Même cette future validation ne reprendra pas WO-019 et ne vaudra pas
+réexamen ni acceptation d'ADR-SS-002.

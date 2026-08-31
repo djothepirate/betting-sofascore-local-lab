@@ -12,6 +12,7 @@
 - **Réseau fournisseur :** `NO — SERIES_STOPPED`
 - **Go propriétaire global :** `CONSUMED`
 - **Go consommé :** `YES — FIRST_ACCEPTED_J3_EXECUTION_CLAIM`
+- **Nouveau go fournisseur :** `NOT_GRANTED`
 - **Plafond direct global :** `38`
 - **Dossier de remplacement :** `NOT_AUTHORIZED`
 - **Nouvel endpoint, URI, transport, code ou migration :** `NONE`
@@ -60,7 +61,7 @@ OFFLINE_READINESS_REEXECUTED_ON=2026-08-31
 V28_BACKUP_RESTORE=QUALIFIED
 V28_RESTORE_QUALIFIED=YES
 V28_BACKUP_RESTORE_QUALIFIED_AT_UTC=2026-08-31T06:46:07.7013794Z
-NEXT_GATE=WO021_IMPLEMENTATION_AND_LOCAL_QUALIFICATION
+NEXT_GATE=WO021_OWNER_REVIEW_THEN_NEW_OWNER_DECISION_AND_ADR_SS_002_REEXAMINATION
 GLOBAL_OWNER_GO=CONSUMED_AND_TERMINATED_BY_STOP
 GLOBAL_OWNER_GO_OBSERVED_AT_UTC=2026-08-31T07:10:43.748Z
 GLOBAL_OWNER_GO_WINDOW_UTC=[2026-08-31T07:15:00Z,2026-08-31T08:15:00Z)
@@ -75,9 +76,14 @@ PREVIOUS_RUNTIME_WORK_ORDER_OWNER_VALIDATION=RECEIVED_2026-08-31T00:41:58Z
 PREVIOUS_RUNTIME_OWNER_REVIEW=SATISFIED
 NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER_REQUIRED=YES
 NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER=WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay
-NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER_STATUS=IN_DEVELOPMENT
+NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
 NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER_BRANCH=codex/j9-playwright-minimum-delay
 NEW_PROVIDER_START_DELAY_IMPLEMENTATION_AUTHORIZED=YES
+NEW_PROVIDER_START_DELAY_LOCAL_READINESS=PASS
+NEW_PROVIDER_START_DELAY_PROVIDER_ACCESS_PERFORMED=NO
+FUTURE_WO019_RESUME_REQUIRES_NEW_OWNER_DECISION=YES
+FUTURE_WO019_RESUME_REQUIRES_ADR_SS_002_REEXAMINATION=YES
+FUTURE_WO019_RESUME_REQUIRES_NEW_GLOBAL_GO=YES
 INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
 
@@ -431,6 +437,43 @@ automatiquement `PREPARE_OPTIONAL_INTEGRATION` et ne reprend pas la campagne. Le
 restent gelées. Après WO-021, toute reprise éventuelle exigera une nouvelle décision, une readiness
 fraîche, un nouvel ADR ou amendement au titre d'ADR-SS-002 §9, puis un nouveau manifeste et un
 nouveau go global à usage unique.
+
+WO-021 a désormais atteint `READY_FOR_OWNER_REVIEW` après implémentation et qualification
+exclusivement locales. Le discriminant initial a été rouge en `0,08 s`; la correction ajoute un
+fence monotone parent conservateur, une observation CDP du document principal exact et une
+temporisation robuste aux réveils anticipés. Un premier rejeu Chromium a ensuite isolé un défaut de
+teardown qui retardait la trame `TIMEOUT` : les désactivations et détachements CDP synchrones
+précédaient `page.close()` sur la navigation bloquée. L'ordre a été corrigé pour fermer la page et
+annuler la navigation avant le teardown CDP ; le test ciblé passe `1/1` en `5,323 s` et la suite
+complète `14/14` en `101,5 s`. La requalification finale compte, pour chacun de J3/J4/J5, `21` tests
+worker et `14` tests Chromium verts. J5 confirme les écarts
+`requestedAt`, les arrivées serveur loopback et les écarts inter-workers `>= 3 s`, ainsi que zéro
+nouvelle requête lors d'un arrêt pendant le fence. Le premier
+`Verify-Local.ps1 -WithIntegrationTests` est vert avec `941` tests standards et `67` tests
+d'intégration. Deux tests superviseur supplémentaires confirment ensuite que toute interruption
+avant ou pendant l'attente perd la preuve temporelle et n'émet aucun `GET`; les suites ciblées
+passent `40/40` pour le superviseur et `8/8` pour le coordinateur. Le `clean verify` final, après ce
+garde, passe `943` tests, zéro échec, zéro erreur et quatre skips à
+`2026-08-31T09:48:10Z`. Aucun accès fournisseur n'a eu lieu.
+
+Cette qualification ne change aucun état exécutoire de WO-019 :
+
+```text
+WORK_ORDER_STATUS=STOPPED
+EVIDENCE_STATUS=STOPPED
+PROVIDER_CALLS_UNDER_WO019=20
+EXISTING_DIRECT_ATTEMPTS_FROZEN=20
+NETWORK_AUTHORIZED=NO
+WO019_WORK_ORDER_RESUME_AUTHORIZED=NO_STOPPED
+WO019_PROVIDER_CAMPAIGN_AUTHORIZED=NO_STOPPED
+WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+NEW_PROVIDER_GO_GRANTED=NO
+GLOBAL_OWNER_GO=CONSUMED_AND_TERMINATED_BY_STOP
+WO021_STATUS=READY_FOR_OWNER_REVIEW
+WO021_OWNER_VALIDATION=PENDING
+ADR_SS_002_REEXAMINATION_REQUIRED_BEFORE_ANY_FUTURE_RESUME=YES
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+```
 
 Le réseau reste bloqué. Historiquement, les quatre portes cumulatives avaient été satisfaites pour
 cette campagne unique avant son exécution :

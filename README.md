@@ -83,10 +83,38 @@ l'arrêt ; il ne peut pas autoriser une reprise. ADR-SS-003 n'existe pas.
 
 WO-021 est ouvert sur `codex/j9-playwright-minimum-delay` pour produire une mesure démontrable et
 une garantie loopback du délai minimal de trois secondes. Son implémentation et sa qualification
-loopback ont été autorisées le 2026-08-31 ; son statut est `IN_DEVELOPMENT`. L'accès fournisseur,
-la reprise de WO-019, un nouveau go, l'intégration et la production restent interdits. Une future
-reprise après WO-021 exigera une nouvelle décision propriétaire, une readiness fraîche, le
-réexamen ADR imposé par ADR-SS-002 §9, un nouveau manifeste et un nouveau go global.
+loopback ont été autorisées le 2026-08-31. L'implémentation est maintenant qualifiée localement et
+WO-021 est `READY_FOR_OWNER_REVIEW`, toujours actif et en attente de validation propriétaire.
+
+Le discriminant préalable a échoué en `0,08 s` avant correction, comme attendu. Le correctif utilise
+une horloge monotone réévaluée après chaque réveil, un fence conservateur dans le superviseur parent
+— trois secondes complètes après la fin observable du dispatch précédent — et l'observation CDP
+`Network.requestWillBeSent` du seul document principal exact. L'identité requête/réponse est
+corrélée ; cache, service worker, redirection ou preuve temporelle incomplète ferment la série au
+lieu de produire un timestamp favorable supposé. Le fence couvre également deux campagnes ou
+workers successifs.
+
+Le premier rejeu Chromium complet a isolé un défaut de teardown sur le cas timeout :
+`Fetch.disable`, `Network.disable` et les détachements CDP synchrones précédaient `page.close()` sur
+la navigation encore bloquée, ce qui retardait la trame `TIMEOUT` et produisait `PROTOCOL_ERROR`,
+puis `RUNTIME_FAILURE` à la clôture. Le worker ferme désormais d'abord la page pour annuler la
+navigation, puis termine le teardown CDP ; le test ciblé passe `1/1` en `5,323 s` et la suite
+Chromium complète `14/14` en `101,5 s`. La requalification finale de chaque script J3, J4 et J5
+compte `21` tests worker verts — `10` protocole, `1` sécurité et `10` observation réseau — puis `14`
+tests Chromium verts.
+J5 confirme les écarts `requestedAt`, les arrivées monotones sur le serveur loopback et les écarts
+inter-workers `>= 3 s`, avec zéro nouvelle requête lorsqu'un arrêt intervient pendant le fence.
+Le premier `Verify-Local.ps1 -WithIntegrationTests` est vert avec `941` tests standards et `67`
+tests d'intégration. Le garde d'interruption ajouté ensuite traite toute interruption avant ou
+pendant le fence comme une perte de preuve, conserve le statut d'interruption et n'émet aucun
+`GET`; les suites ciblées passent `40/40` pour le superviseur et `8/8` pour le coordinateur. Le
+`clean verify` final après ce garde passe `943` tests, zéro échec, zéro erreur et quatre skips à
+`2026-08-31T09:48:10Z`.
+
+Aucun de ces contrôles n'a accédé au fournisseur. WO-019 reste `STOPPED`, ses `20` tentatives sont
+gelées, et l'accès fournisseur, sa reprise, un nouveau go, l'intégration et la production restent
+interdits. Une future reprise après WO-021 exigera une nouvelle décision propriétaire, une readiness
+fraîche, le réexamen ADR imposé par ADR-SS-002 §9, un nouveau manifeste et un nouveau go global.
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une
@@ -1052,7 +1080,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order actif de preuve de robustesse J9](docs/work_orders/active/WO-SS-20260831-019-j9-provider-robustness.md)
 - [Rapport arrêté de la campagne J9](docs/validation/J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831.md)
 - [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md)
-- [Work Order runtime J9 en développement](docs/work_orders/active/WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay.md)
+- [Work Order runtime J9 prêt pour revue propriétaire](docs/work_orders/active/WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 
