@@ -1,7 +1,9 @@
 # WO-SS-20260831-021 — Mesure et garantie du délai minimal Playwright entre départs réseau
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
 - **Date d'ouverture :** 2026-08-31
+- **Date de validation propriétaire :** 2026-08-31T10:12:59.5805959Z
+- **Date de clôture :** 2026-08-31
 - **Jalon :** J9 — prérequis runtime après arrêt de WO-019
 - **Base locale :** `216b184b96055f53c48f3c9d0b5a6d21d03723f0`
 - **Branche :** `codex/j9-playwright-minimum-delay`
@@ -18,7 +20,7 @@
 - **Lacune de mesure :** `CORRECTED_AND_QUALIFIED_ON_LOOPBACK`
 - **Violation on-wire sous trois secondes :** `NOT_ESTABLISHED`
 - **Autorisation propriétaire d'implémentation :** `RECEIVED_2026-08-31T08:43:48.8202621Z`
-- **Validation propriétaire de clôture :** `PENDING`
+- **Validation propriétaire de clôture :** `RECEIVED_2026-08-31T10:12:59.5805959Z`
 
 ## 1. Objectif
 
@@ -165,9 +167,9 @@ validation. Une éventuelle reprise de WO-019 restera en outre soumise au décle
 d'ADR-SS-002 §9 applicable à toute reprise après incident ; aucun nouvel ADR n'est autorisé par
 WO-021.
 
-Ce statut maximal est désormais atteint : l'implémentation et les qualifications locales sont
-vertes, mais le propriétaire n'a pas encore validé WO-021. Le Work Order reste donc dans
-`docs/work_orders/active` et ne doit pas être déplacé vers les Work Orders terminés.
+Ce statut maximal a ensuite été atteint : l'implémentation et les qualifications locales étaient
+vertes, mais le propriétaire n'avait pas encore validé WO-021. Cette photographie intermédiaire a
+été remplacée par la validation de la section 14.
 
 ## 5. Contrat runtime à préserver
 
@@ -355,7 +357,7 @@ ni `clearCookies()`, ni les bornes WO-020, ni la classification des autres incid
 La requalification finale est :
 
 ```text
-WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+WORK_ORDER_STATUS_AT_LOCAL_READINESS=READY_FOR_OWNER_REVIEW
 IMPLEMENTATION_STATUS=IMPLEMENTED_AND_LOCALLY_QUALIFIED
 DISCRIMINANT_RED_BEFORE_FIX=PASS_OBSERVED_FAILURE_IN_0_08_SECONDS
 DISCRIMINANT_RED_SCOPE=RESPONSE_COMPLETION_FENCE_AND_RESIDUAL_33_MS
@@ -429,7 +431,7 @@ README.md
 CHANGELOG.md
 docs/work_orders/active/WO-SS-20260831-018-decision-j9.md
 docs/work_orders/active/WO-SS-20260831-019-j9-provider-robustness.md
-docs/work_orders/active/WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay.md
+docs/work_orders/completed/WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay.md
 ```
 
 Cette liste reflète le lot réalisé. Les autres tests de services J3/J4/J5 ont été adaptés uniquement
@@ -495,7 +497,8 @@ OPENING_PROVIDER_ACCESS_PERFORMED=NO
 
 ## 13. Porte propriétaire de clôture
 
-La qualification locale autorise uniquement la revue propriétaire de WO-021 :
+La qualification locale autorisait uniquement la revue propriétaire de WO-021. L'état suivant est
+la photographie historique précédant la validation consignée à la section 14 :
 
 ```text
 WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
@@ -510,6 +513,66 @@ ADR_SS_002_REEXAMINATION_REQUIRED_BEFORE_ANY_FUTURE_RESUME=YES
 INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
 
-Une validation propriétaire explicite reste nécessaire pour déplacer WO-021 vers
-`docs/work_orders/completed`. Même cette future validation ne reprendra pas WO-019 et ne vaudra pas
-réexamen ni acceptation d'ADR-SS-002.
+Cette porte a été satisfaite par la décision propriétaire explicite consignée ci-dessous. La
+validation ne reprend pas WO-019 et ne vaut pas réexamen ni acceptation d'une révision
+d'ADR-SS-002.
+
+## 14. Validation propriétaire et clôture
+
+Le propriétaire a validé WO-021 et autorisé son déplacement vers les Work Orders terminés le
+`2026-08-31T10:12:59.5805959Z` :
+
+```text
+J9_WO021_OWNER_REVIEW_DECISION=VALIDATE
+J9_WO021_WORK_ORDER=WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay
+J9_WO021_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO021_SCOPE_CONFIRMED=DIAGNOSE_CORRECT_AND_MEASURE_MINIMUM_3_SECOND_PROVIDER_NETWORK_START_DELAY
+J9_WO021_MINIMUM_PROVIDER_START_DELAY_QUALIFIED=YES
+J9_WO021_LOOPBACK_J3_J4_J5=PASS
+J9_WO021_WORK_ORDER_MOVE_TO_COMPLETED=YES
+J9_WO019_STATUS=STOPPED
+J9_WO019_EXISTING_DIRECT_ATTEMPTS_FROZEN=20
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+J9_NEW_PROVIDER_GO_GRANTED=NO
+J9_OWNER_RESPONSE_TO_KEEP_LOCAL_RECOMMENDATION=REJECTED_AS_FINAL_DECISION
+J9_FINAL_DECISION=NOT_TAKEN
+J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_FUTURE_VPS_PRODUCTION_OPTION=NOT_EXCLUDED_BUT_NOT_AUTHORIZED
+```
+
+État terminal de WO-021 :
+
+```text
+WORK_ORDER_STATUS=VALIDATED
+IMPLEMENTATION_STATUS=IMPLEMENTED_AND_LOCALLY_QUALIFIED
+OWNER_VALIDATION=RECEIVED
+OWNER_REVIEW_REQUIRED=NO
+OWNER_REVIEW_STATUS=SATISFIED
+OWNER_VALIDATED_AT_UTC=2026-08-31T10:12:59.5805959Z
+CLOSURE=AUTHORIZED_BY_OWNER_2026-08-31
+MOVE_TO_COMPLETED_AUTHORIZED=YES
+MOVE_TO_COMPLETED_PERFORMED=YES
+WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay.md
+LOCAL_READINESS=PASS
+MINIMUM_PROVIDER_NETWORK_START_DELAY=QUALIFIED_GE_3_SECONDS_ON_LOOPBACK
+J9_WO021_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO021_MINIMUM_PROVIDER_START_DELAY_QUALIFIED=YES
+J9_WO021_LOOPBACK_J3_J4_J5=PASS
+PROVIDER_ACCESS_PERFORMED=NO
+WO019_STATUS=STOPPED
+WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+WO019_EXISTING_DIRECT_ATTEMPTS_FROZEN=20
+PROVIDER_NETWORK_AUTHORIZED=NO
+NEW_PROVIDER_GO_GRANTED=NO
+ADR_SS_002_REEXAMINATION_REQUIRED_BEFORE_ANY_FUTURE_RESUME=YES
+ADR_SS_002_REEXAMINATION_REQUESTED_NEXT=YES
+J9_FINAL_DECISION=NOT_TAKEN
+J9_OWNER_RESPONSE_TO_KEEP_LOCAL_RECOMMENDATION=REJECTED_AS_FINAL_DECISION
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+FUTURE_VPS_PRODUCTION_OPTION=NOT_EXCLUDED_BUT_NOT_AUTHORIZED
+```
+
+La clôture de WO-021 établit uniquement la readiness runtime locale. Elle ne requalifie pas
+rétroactivement les vingt tentatives fournisseur arrêtées, ne transforme pas la recommandation
+historique `KEEP_LOCAL` en décision finale et ne crée aucun droit de reprise sous le go consommé.

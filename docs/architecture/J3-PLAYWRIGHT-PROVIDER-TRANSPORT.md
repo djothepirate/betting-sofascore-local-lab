@@ -30,7 +30,7 @@ restent inchanges. Cette correction locale a ete validee par le proprietaire sou
 archive, le 2026-08-31 ; cette validation n'autorise aucun appel fournisseur ni la reprise de
 WO-019.
 
-`WO-SS-20260831-021`, actuellement `READY_FOR_OWNER_REVIEW`, rend le delai minimal de trois secondes
+`WO-SS-20260831-021`, valide et archive le 2026-08-31, rend le delai minimal de trois secondes
 mesurable et demonstrable en loopback. Il ajoute un fence monotone conservateur dans le superviseur
 parent et une observation CDP du document principal exact dans le worker. Il ne change aucune
 famille, route, origine fournisseur, limite de volume, commande IPC ou semantique de persistance. Sa
@@ -257,8 +257,8 @@ du teardown timeout, le premier `Verify-Local.ps1 -WithIntegrationTests` est ver
 standards et `67` tests d'integration. Les suites ciblees ajoutees apres le garde d'interruption
 passent `40/40` pour le superviseur et `8/8` pour le coordinateur. Le `clean verify` final apres ce
 garde passe `943` tests, zero echec, zero erreur et quatre skips a `2026-08-31T09:48:10Z`. Les trois
-scripts loopback sont verts, sans acces fournisseur. WO-021 reste actif en
-`READY_FOR_OWNER_REVIEW`; reseau, reprise de WO-019, nouveau go, integration et production restent
+scripts loopback sont verts, sans acces fournisseur. La validation proprietaire a place WO-021 dans
+les Work Orders termines ; reseau, reprise de WO-019, nouveau go, integration et production restent
 interdits.
 
 ## 9. Exclusions

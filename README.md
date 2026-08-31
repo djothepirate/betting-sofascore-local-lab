@@ -14,7 +14,7 @@ La règle déterministe J9 a produit la recommandation `KEEP_LOCAL`, avec
 `J9_EVIDENCE_RESULT=STOPPED`. Le propriétaire a explicitement refusé cette recommandation comme
 décision finale le 2026-08-31. Ce refus ne sélectionne pas automatiquement une autre option :
 `J9_FINAL_DECISION=NOT_TAKEN` et
-`J9_DECISION_STATUS=PENDING_WO021_AND_FUTURE_WO019_EVIDENCE`. Il n'autorise ni intégration, ni
+`J9_DECISION_STATUS=PENDING_ADR_SS_002_REEXAMINATION_AND_FUTURE_WO019_EVIDENCE`. Il n'autorise ni intégration, ni
 production, ni nouvel appel fournisseur, ni polling, ni scheduler, ni mode live.
 La preuve multi-dossier relève de WO-019. ADR-SS-002 v1.0 est accepté explicitement. Le premier
 contrôle J3 Playwright loopback de WO-019 et sa
@@ -81,10 +81,10 @@ Playwright sont absents. Les flags fournisseur persistés sont à `false`, l'ori
 persistées sont vides, et le réseau est de nouveau verrouillé. Le go est consommé et terminé par
 l'arrêt ; il ne peut pas autoriser une reprise. ADR-SS-003 n'existe pas.
 
-WO-021 est ouvert sur `codex/j9-playwright-minimum-delay` pour produire une mesure démontrable et
-une garantie loopback du délai minimal de trois secondes. Son implémentation et sa qualification
-loopback ont été autorisées le 2026-08-31. L'implémentation est maintenant qualifiée localement et
-WO-021 est `READY_FOR_OWNER_REVIEW`, toujours actif et en attente de validation propriétaire.
+WO-021 a produit sur `codex/j9-playwright-minimum-delay` une mesure démontrable et une garantie
+loopback du délai minimal de trois secondes. Son implémentation et sa qualification loopback ont
+été autorisées, puis validées explicitement par le propriétaire le 2026-08-31. WO-021 est désormais
+`VALIDATED` et archivé dans les Work Orders terminés.
 
 Le discriminant préalable a échoué en `0,08 s` avant correction, comme attendu. Le correctif utilise
 une horloge monotone réévaluée après chaque réveil, un fence conservateur dans le superviseur parent
@@ -111,7 +111,7 @@ pendant le fence comme une perte de preuve, conserve le statut d'interruption et
 `clean verify` final après ce garde passe `943` tests, zéro échec, zéro erreur et quatre skips à
 `2026-08-31T09:48:10Z`.
 
-Aucun de ces contrôles n'a accédé au fournisseur. WO-019 reste `STOPPED`, ses `20` tentatives sont
+La validation de WO-021 n'a autorisé aucun accès fournisseur. WO-019 reste `STOPPED`, ses `20` tentatives sont
 gelées, et l'accès fournisseur, sa reprise, un nouveau go, l'intégration et la production restent
 interdits. Une future reprise après WO-021 exigera une nouvelle décision propriétaire, une readiness
 fraîche, le réexamen ADR imposé par ADR-SS-002 §9, un nouveau manifeste et un nouveau go global.
@@ -1080,7 +1080,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order actif de preuve de robustesse J9](docs/work_orders/active/WO-SS-20260831-019-j9-provider-robustness.md)
 - [Rapport arrêté de la campagne J9](docs/validation/J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831.md)
 - [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md)
-- [Work Order runtime J9 prêt pour revue propriétaire](docs/work_orders/active/WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay.md)
+- [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 

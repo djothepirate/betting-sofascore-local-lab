@@ -163,6 +163,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   sans accès fournisseur ; WO-019 reste `STOPPED`, ses `20` tentatives restent gelées, réseau,
   reprise, nouveau go, intégration et production restent à `NO`, et toute reprise future exige une
   nouvelle décision propriétaire ainsi que le réexamen d'ADR-SS-002.
+- validation propriétaire explicite de WO-021 reçue le 2026-08-31, avec readiness locale, garantie
+  du délai minimal et qualifications loopback J3/J4/J5 reconnues ; WO-021 passe à `VALIDATED` et
+  est déplacé vers les Work Orders terminés ; WO-019 reste `STOPPED`, les vingt tentatives restent
+  gelées, réseau, reprise et nouveau go restent à `NO`, et `J9_FINAL_DECISION=NOT_TAKEN` ;
+- déclenchement séparé du réexamen d'ADR-SS-002 exigé par sa section 9 avant toute éventuelle
+  décision de reprise ; la clôture de WO-021 ne vaut ni acceptation d'une révision de l'ADR, ni
+  manifeste, ni go fournisseur.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 
