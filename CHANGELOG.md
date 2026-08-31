@@ -327,6 +327,24 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   reporter ses preuves loopback J3/J4/J5 sans nouvel accès fournisseur. Cette décision ne réactive
   ni la campagne fournisseur, ni le réseau, ni un go global, ni la purge primaire, l'intégration ou
   la production.
+- unique invocation réelle WO-023 ensuite qualifiée : archive `age` de `7 268 470` octets au
+  SHA-256 `526f2faa22f8da0506194030f6f7fbe0966e65550310375d055041d4ea257041`, manifeste
+  de `2 203` octets au SHA-256
+  `7994a3b2ec6ced505b36514ad0b5eb113c5c1b30a0a77811e4d1a7ae80a2eaa9`, restauration V28
+  marquée `restoreQualified=true`, snapshot maximal `814`, `781` occurrences et `116` tentatives
+  J8 couvertes ; toutes les valeurs et quatre empreintes source/restauration concordent, intégrité
+  brute et mismatches sont à zéro ;
+- postflight WO-023 vert : état primaire identique au manifeste source, zéro purge, session J6,
+  base temporaire, processus `age`/host natif, listener 8087 ou fichier partiel. Le jeton est
+  consommé `1_OF_1` ; la prochaine porte est le gel du manifeste et la corroboration indépendante
+  du ledger, tandis que campagne, réseau, go global, intégration et production restent à `NO`.
+- corroboration indépendante ensuite verte : 20 tentatives historiques WO-019 retrouvées avec la
+  répartition `15+1+1+1+1+1`, zéro doublon d'unité et zéro tentative WO-023 ; total append-only 116,
+  dernier départ à `2026-08-31T07:59:01.092327Z` ;
+- manifeste de campagne WO-023 gelé au SHA-256
+  `ff909f298f7d3c99b1027c071ac4d783a19529f6241b37941151c2c08c418a9e`, avec runtime, readiness,
+  sauvegarde, corpus, ordre A1..B4, ledgers et conditions d'arrêt. WO-023 devient
+  `READY_FOR_GLOBAL_OWNER_GO`, ce qui ne vaut ni go courant, ni réseau ou campagne autorisés.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 

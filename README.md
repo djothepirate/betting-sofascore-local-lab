@@ -183,10 +183,15 @@ les `67` tests d'intégration, Verify-Local et Compose sont verts sur le commit 
 fournisseur ni purge primaire. Le propriétaire a validé cette readiness le 2026-09-01 et autorisé
 le déplacement de WO-025 vers les Work Orders terminés. La preuve ne réattribue ni ne supprime les
 résidus historiques non possédés. Le propriétaire a ensuite fourni la décision séparée requise et
-autorisé un unique nouvel essai local chiffré de sauvegarde/restauration WO-023. Cette autorisation
-est consommable une seule fois et n'est pas une autorisation de campagne. Terminaison par PID seul,
-réseau fournisseur, campagne, nouveau go, purge primaire, intégration et production restent
-interdits.
+autorisé un unique nouvel essai local chiffré de sauvegarde/restauration WO-023. Cet essai est
+qualifié : archive `age` de 7 268 470 octets, restauration V28 identique, couverture maximale 814,
+116 tentatives J8 couvertes, intégrité brute et mismatches à zéro, puis zéro session, base temporaire,
+processus natif, listener ou fichier partiel résiduel. L'autorisation est consommée et n'est pas une
+autorisation de campagne. Le ledger indépendant a ensuite retrouvé les 20 tentatives historiques,
+zéro tentative WO-023 et zéro doublon ; le manifeste de campagne est gelé au SHA-256
+`ff909f298f7d3c99b1027c071ac4d783a19529f6241b37941151c2c08c418a9e`. WO-023 est prêt à recevoir
+un nouveau go propriétaire global lié à ce manifeste et à une fenêtre future, mais réseau
+fournisseur, campagne, go courant, purge primaire, intégration et production restent interdits.
 
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
@@ -1161,6 +1166,8 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Incident fail-closed post-sauvegarde WO-023](docs/validation/J9-WO023-POST-BACKUP-CLEANUP-INCIDENT-20260831.md)
 - [Work Order validé de durcissement de preuve J6/J9](docs/work_orders/completed/WO-SS-20260831-025-j9-backup-cleanup-proof-hardening.md)
 - [Readiness locale du durcissement de preuve WO-025](docs/validation/J9-WO025-BACKUP-CLEANUP-PROOF-HARDENING-READINESS-20260901.md)
+- [Qualification du nouvel essai V28 WO-023](docs/validation/J9-WO023-V28-BACKUP-RESTORE-RETRY-20260901.md)
+- [Manifeste gelé de campagne WO-023](docs/validation/J9-WO023-PROVIDER-CAMPAIGN-MANIFEST-20260901.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 
