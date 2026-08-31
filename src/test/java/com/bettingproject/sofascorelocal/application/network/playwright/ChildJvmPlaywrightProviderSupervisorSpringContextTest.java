@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.application.network.playwright;
 
 import com.bettingproject.sofascorelocal.config.ProviderPlaywrightProperties;
+import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.test.context.runner.ApplicationContextRunner;
@@ -32,7 +33,10 @@ class ChildJvmPlaywrightProviderSupervisorSpringContextTest {
     }
 
     @Configuration(proxyBeanMethods = false)
-    @EnableConfigurationProperties(ProviderPlaywrightProperties.class)
+    @EnableConfigurationProperties({
+            ProviderPlaywrightProperties.class,
+            SofascoreProperties.class
+    })
     @Import(ChildJvmPlaywrightProviderSupervisor.class)
     static class SupervisorConfiguration {
     }

@@ -26,6 +26,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -57,6 +58,7 @@ class J4RealEventDetailsPhase2ServiceTest {
     private RawManualCallSnapshotStore rawStore;
     private J4ParsedEventDetailsPersistenceService parsedPersistence;
     private List<Duration> pauses;
+    private MutableClock clock;
     private J4RealEventDetailsPhase2Service service;
 
     @BeforeEach
@@ -67,6 +69,7 @@ class J4RealEventDetailsPhase2ServiceTest {
         rawStore = mock(RawManualCallSnapshotStore.class);
         parsedPersistence = mock(J4ParsedEventDetailsPersistenceService.class);
         pauses = new ArrayList<>();
+        clock = new MutableClock(NOW);
         when(control.executionMayContinue(any())).thenReturn(true);
         when(transport.openCampaign(any())).thenReturn(providerCampaign);
         AtomicLong snapshotIds = new AtomicLong(200L);
@@ -97,9 +100,9 @@ class J4RealEventDetailsPhase2ServiceTest {
                 rawStore,
                 parsedPersistence,
                 new EventDetailsV2Parser(),
-                Clock.fixed(NOW, ZoneOffset.UTC),
+                clock,
                 Duration.ofSeconds(3),
-                pauses::add);
+                this::pauseAndAdvance);
     }
 
     @Test
@@ -344,11 +347,16 @@ class J4RealEventDetailsPhase2ServiceTest {
                 rawStore,
                 parsedPersistence,
                 new EventDetailsV2Parser(),
-                Clock.fixed(NOW, ZoneOffset.UTC),
+                clock,
                 Duration.ofSeconds(3),
-                pauses::add,
+                this::pauseAndAdvance,
                 new J8BenchmarkAuditService(
                         evidenceStore, Clock.fixed(NOW, ZoneOffset.UTC)));
+    }
+
+    private void pauseAndAdvance(Duration duration) {
+        pauses.add(duration);
+        clock.advance(duration);
     }
 
     private static J4RealPhase2ExecutionClaim claim(UUID requestId) {
@@ -396,5 +404,36 @@ class J4RealEventDetailsPhase2ServiceTest {
                   }
                 }
                 """.formatted(eventId, status);
+    }
+
+    private static final class MutableClock extends Clock {
+
+        private Instant instant;
+
+        private MutableClock(Instant instant) {
+            this.instant = instant;
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return ZoneOffset.UTC;
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            if (!ZoneOffset.UTC.equals(zone)) {
+                throw new IllegalArgumentException("test clock is UTC only");
+            }
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return instant;
+        }
+
+        private void advance(Duration duration) {
+            instant = instant.plus(duration);
+        }
     }
 }

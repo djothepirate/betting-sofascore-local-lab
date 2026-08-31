@@ -2,10 +2,7 @@ package com.bettingproject.sofascorelocal.application.network;
 
 import org.junit.jupiter.api.Test;
 
-import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -13,22 +10,27 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 class ManualProviderRequestCoordinatorTest {
 
-    private static final Clock CLOCK = Clock.fixed(
-            Instant.parse("2026-08-18T11:00:00Z"), ZoneOffset.UTC);
     private static final UUID CAMPAIGN_ID = UUID.fromString(
             "c2925098-6f3b-4b19-8d0d-59cc5ef62a2a");
 
     @Test
     void sharesTheMinimumDelayAcrossSuccessiveJ3J4AndJ5RequestLeases() {
+        MutableTicker ticker = new MutableTicker();
         List<Duration> pauses = new ArrayList<>();
         var coordinator = new ManualProviderRequestCoordinator(
-                CLOCK, Duration.ofSeconds(3), pauses::add);
+                ticker::read,
+                Duration.ofSeconds(3),
+                delay -> {
+                    pauses.add(delay);
+                    ticker.advance(delay);
+                });
 
         try (var ignored = coordinator.acquire()) {
             assertThat(pauses).isEmpty();
@@ -38,14 +40,85 @@ class ManualProviderRequestCoordinatorTest {
         }
         try (var ignored = coordinator.acquire()) {
             assertThat(pauses).containsExactly(
-                    Duration.ofSeconds(3), Duration.ofSeconds(6));
+                    Duration.ofSeconds(3), Duration.ofSeconds(3));
         }
     }
 
     @Test
-    void keepsASecondCampaignOutsideTheProviderSectionUntilRelease() throws Exception {
+    void waitsForTheRemainingMillisecondAtTwoThousandNineHundredNinetyNineMilliseconds() {
+        MutableTicker ticker = new MutableTicker();
+        List<Duration> pauses = new ArrayList<>();
         var coordinator = new ManualProviderRequestCoordinator(
-                CLOCK, Duration.ofSeconds(3), ignored -> { });
+                ticker::read,
+                Duration.ofSeconds(3),
+                delay -> {
+                    pauses.add(delay);
+                    ticker.advance(delay);
+                });
+
+        try (var ignored = coordinator.acquire()) {
+            // Establish the first monotonic start.
+        }
+        ticker.advance(Duration.ofMillis(2_999));
+        try (var ignored = coordinator.acquire()) {
+            // The exact missing millisecond must be observed, not assumed.
+        }
+
+        assertThat(pauses).containsExactly(Duration.ofMillis(1));
+    }
+
+    @Test
+    void doesNotPauseAtTheExactThreeSecondBoundary() {
+        MutableTicker ticker = new MutableTicker();
+        List<Duration> pauses = new ArrayList<>();
+        var coordinator = new ManualProviderRequestCoordinator(
+                ticker::read, Duration.ofSeconds(3), pauses::add);
+
+        try (var ignored = coordinator.acquire()) {
+            // Establish the first monotonic start.
+        }
+        ticker.advance(Duration.ofSeconds(3));
+        try (var ignored = coordinator.acquire()) {
+            // The boundary itself is admissible.
+        }
+
+        assertThat(pauses).isEmpty();
+    }
+
+    @Test
+    void rechecksMonotonicTimeAfterEveryEarlyWakeWithoutAdvancingItLogically() {
+        MutableTicker ticker = new MutableTicker();
+        List<Duration> pauses = new ArrayList<>();
+        AtomicLong wake = new AtomicLong();
+        var coordinator = new ManualProviderRequestCoordinator(
+                ticker::read,
+                Duration.ofSeconds(3),
+                delay -> {
+                    pauses.add(delay);
+                    ticker.advance(wake.getAndIncrement() == 0
+                            ? Duration.ofSeconds(1)
+                            : delay);
+                });
+
+        try (var ignored = coordinator.acquire()) {
+            // Establish the first monotonic start.
+        }
+        try (var ignored = coordinator.acquire()) {
+            // The first pause wakes two seconds early and must be retried.
+        }
+
+        assertThat(pauses).containsExactly(
+                Duration.ofSeconds(3), Duration.ofSeconds(2));
+        assertThat(ticker.read()).isEqualTo(Duration.ofSeconds(3).toNanos());
+    }
+
+    @Test
+    void keepsASecondCampaignOutsideTheProviderSectionUntilRelease() throws Exception {
+        MutableTicker ticker = new MutableTicker();
+        var coordinator = new ManualProviderRequestCoordinator(
+                ticker::read,
+                Duration.ofSeconds(3),
+                ticker::advance);
         CountDownLatch attempting = new CountDownLatch(1);
         CountDownLatch entered = new CountDownLatch(1);
         var executor = Executors.newSingleThreadExecutor();
@@ -72,9 +145,15 @@ class ManualProviderRequestCoordinatorTest {
 
     @Test
     void holdsOneFairLeaseForTheCampaignAndAppliesTimingAtEachRequestStart() {
+        MutableTicker ticker = new MutableTicker();
         List<Duration> pauses = new ArrayList<>();
         var coordinator = new ManualProviderRequestCoordinator(
-                CLOCK, Duration.ofSeconds(3), pauses::add);
+                ticker::read,
+                Duration.ofSeconds(3),
+                delay -> {
+                    pauses.add(delay);
+                    ticker.advance(delay);
+                });
 
         try (var campaign = coordinator.acquireCampaign(CAMPAIGN_ID)) {
             assertThat(campaign.campaignId()).isEqualTo(CAMPAIGN_ID);
@@ -88,14 +167,17 @@ class ManualProviderRequestCoordinatorTest {
 
         assertThat(pauses).containsExactly(
                 Duration.ofSeconds(3),
-                Duration.ofSeconds(6));
+                Duration.ofSeconds(3));
     }
 
     @Test
     void blocksAnotherThreadForTheWholeCampaignAndClosesIdempotently()
             throws Exception {
+        MutableTicker ticker = new MutableTicker();
         var coordinator = new ManualProviderRequestCoordinator(
-                CLOCK, Duration.ofSeconds(3), ignored -> { });
+                ticker::read,
+                Duration.ofSeconds(3),
+                ticker::advance);
         CountDownLatch attempting = new CountDownLatch(1);
         CountDownLatch entered = new CountDownLatch(1);
         var executor = Executors.newSingleThreadExecutor();
@@ -125,8 +207,11 @@ class ManualProviderRequestCoordinatorTest {
     @Test
     void interruptedCampaignAcquisitionFailsClosedAndRestoresInterruptStatus()
             throws Exception {
+        MutableTicker ticker = new MutableTicker();
         var coordinator = new ManualProviderRequestCoordinator(
-                CLOCK, Duration.ofSeconds(3), ignored -> { });
+                ticker::read,
+                Duration.ofSeconds(3),
+                ticker::advance);
         var owner = coordinator.acquireCampaign(CAMPAIGN_ID);
         CountDownLatch attempting = new CountDownLatch(1);
         AtomicReference<Throwable> failure = new AtomicReference<>();
@@ -158,6 +243,19 @@ class ManualProviderRequestCoordinatorTest {
 
         try (var reusable = coordinator.acquireCampaign(UUID.randomUUID())) {
             assertThat(reusable).isNotNull();
+        }
+    }
+
+    private static final class MutableTicker {
+
+        private final AtomicLong nanos = new AtomicLong();
+
+        private long read() {
+            return nanos.get();
+        }
+
+        private void advance(Duration duration) {
+            nanos.addAndGet(duration.toNanos());
         }
     }
 }

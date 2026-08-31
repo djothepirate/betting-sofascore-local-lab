@@ -132,11 +132,11 @@ try {
     & .\mvnw.cmd `
         '-Pprovider-playwright-runtime' `
         '-DskipTests=false' `
-        '-Dtest=ProviderPlaywrightWorkerProtocolTest,ProviderPlaywrightWorkerSecurityContractTest' `
+        '-Dtest=ProviderPlaywrightWorkerProtocolTest,ProviderPlaywrightWorkerSecurityContractTest,ProviderPlaywrightWorkerNetworkObservationTest' `
         clean `
         test
     if ($LASTEXITCODE -ne 0) {
-        throw 'The explicit J5 Playwright worker protocol and security tests failed'
+        throw 'The explicit J5 Playwright worker protocol, security and network-observation tests failed'
     }
 
     & .\mvnw.cmd `
@@ -162,12 +162,15 @@ try {
         'target\surefire-reports\TEST-com.bettingproject.sofascorelocal.provider.playwright.worker.ProviderPlaywrightWorkerProtocolTest.xml'
     $securityReportPath = Join-Path $repositoryRoot `
         'target\surefire-reports\TEST-com.bettingproject.sofascorelocal.provider.playwright.worker.ProviderPlaywrightWorkerSecurityContractTest.xml'
+    $networkObservationReportPath = Join-Path $repositoryRoot `
+        'target\surefire-reports\TEST-com.bettingproject.sofascorelocal.provider.playwright.worker.ProviderPlaywrightWorkerNetworkObservationTest.xml'
     $qualificationReportPath = Join-Path $repositoryRoot `
         'target\failsafe-reports\TEST-com.bettingproject.sofascorelocal.application.network.playwright.ProviderPlaywrightLocalQualificationIT.xml'
     $expectedXmlSuites = @(
-        [pscustomobject]@{ Path = $protocolReportPath; Tests = 10 },
-        [pscustomobject]@{ Path = $securityReportPath; Tests = 1 },
-        [pscustomobject]@{ Path = $qualificationReportPath; Tests = 14 }
+        [pscustomobject]@{ Path = $protocolReportPath; Tests = 10; Exact = $true },
+        [pscustomobject]@{ Path = $securityReportPath; Tests = 1; Exact = $true },
+        [pscustomobject]@{ Path = $networkObservationReportPath; Tests = 10; Exact = $true },
+        [pscustomobject]@{ Path = $qualificationReportPath; Tests = 14; Exact = $true }
     )
     $expectedXmlReports = @($expectedXmlSuites | ForEach-Object { $_.Path })
     foreach ($expectedSuite in $expectedXmlSuites) {
@@ -181,7 +184,13 @@ try {
         $failures = [int]$suite.failures
         $errors = [int]$suite.errors
         $skipped = [int]$suite.skipped
-        if ($tests -ne $expectedSuite.Tests -or $failures -ne 0 -or
+        $testCountMismatch = if ($expectedSuite.Exact) {
+            $tests -ne $expectedSuite.Tests
+        }
+        else {
+            $tests -lt $expectedSuite.Tests
+        }
+        if ($testCountMismatch -or $failures -ne 0 -or
             $errors -ne 0 -or $skipped -ne 0) {
             throw "The expected J5 Playwright Maven test report does not have the exact successful suite shape: $reportPath"
         }
@@ -190,7 +199,8 @@ try {
     [xml]$qualificationReport = Get-Content -LiteralPath $qualificationReportPath -Raw
     foreach ($requiredTestCase in @(
             'routesJ5StatisticsIncidentsAndLineupsThroughOneWorkerAndPreservesA404',
-            'stopsJ5DuringIncidentsWithinEveryBoundWithoutCallingLineupsOrLeavingResidue',
+            'createsANewWorkerAndContextForTheNextExplicitCampaign',
+            'stopsJ5DuringMinimumDelayFenceWithinEveryBoundWithoutStartingNextRequest',
             'rejectsASensitiveCanaryWithoutWritingItToWorkerStreamsOrRuntimeFiles')) {
         $matchingTestCases = @($qualificationReport.testsuite.testcase |
                 Where-Object { $_.name -eq $requiredTestCase })
@@ -240,7 +250,15 @@ finally {
 
 Write-Host 'J5_PLAYWRIGHT_LOOPBACK_QUALIFICATION=PASS'
 Write-Host 'WORKER_PROTOCOL_AND_SECURITY_TESTS=PASS'
+Write-Host 'WORKER_NETWORK_OBSERVATION_TESTS=PASS'
 Write-Host 'J5_EVENT_DATA_ROUTE_TESTS=PASS'
+Write-Host 'MINIMUM_PERSISTED_NETWORK_START_GAP_MS=PASS_GE_3000'
+Write-Host 'MINIMUM_LOOPBACK_SERVER_ARRIVAL_GAP_NS=PASS_GE_3000000000'
+Write-Host 'J5_REQUESTED_AT_GAPS=PASS_GE_3000_MS'
+Write-Host 'J5_LOOPBACK_ARRIVAL_GAPS=PASS_GE_3000000000_NS'
+Write-Host 'CROSS_WORKER_REQUESTED_AT_GAP=PASS_GE_3000_MS'
+Write-Host 'CROSS_WORKER_LOOPBACK_ARRIVAL_GAP=PASS_GE_3000000000_NS'
+Write-Host 'STOP_DURING_DELAY_NEW_REQUEST_COUNT=0'
 Write-Host 'MAVEN_REPORT_SENSITIVE_SCANNER=PASS_SCANNER_PARITY_ENCODED_TEXT_ATTRIBUTES_PROPERTIES'
 Write-Host 'RUNTIME_FILE_CANARY_SCAN=PASS_ISOLATED_WRITABLE_ROOTS_PER_RUN_RANDOM_CANARY'
 Write-Host 'SENSITIVE_DATA_IN_TEST_REPORTS=NO'

@@ -26,6 +26,13 @@ class ProviderPlaywrightWorkerSecurityContractTest {
                 .contains("response.status()")
                 .contains("response.headerValue(\"content-type\")")
                 .contains("response.body()")
+                .contains("networkObserver.send(\"Page.getFrameTree\")")
+                .contains("\"Network.requestWillBeSent\"")
+                .contains("\"Network.requestServedFromCache\"")
+                .contains("\"Network.responseReceived\"")
+                .contains("networkObserver.send(\"Network.enable\")")
+                .contains(".requireNetworkStartedAt()")
+                .contains("response.fromServiceWorker()")
                 .contains("responseGuard.send(\"Fetch.enable\", responseStageOnly())")
                 .contains("session.send(\"Fetch.failRequest\", command)")
                 .contains("session.send(\"Fetch.continueResponse\", command)")
@@ -47,6 +54,7 @@ class ProviderPlaywrightWorkerSecurityContractTest {
                         "setProxy",
                         "setUserAgent",
                         "addCookies",
+                        "long requestedEpochMillis = Instant.now().toEpochMilli()",
                         "System.out",
                         "System.err",
                         "FlareSolverr");
@@ -61,6 +69,10 @@ class ProviderPlaywrightWorkerSecurityContractTest {
         int exactUriCheck = source.indexOf("expectedUri == null", routeHandler);
         int singleAdmissionCheck = source.indexOf(
                 "exactNavigationAdmission.compareAndSet(true, false)", routeHandler);
+        int networkEnable = source.indexOf("networkObserver.send(\"Network.enable\")");
+        int fetchEnable = source.indexOf(
+                "responseGuard.send(\"Fetch.enable\", responseStageOnly())");
+        int navigation = source.indexOf("page.navigate(exactUri");
         assertThat(handshake).isNotNegative();
         assertThat(startGate).isGreaterThan(handshake);
         assertThat(runtime).isGreaterThan(startGate);
@@ -69,5 +81,8 @@ class ProviderPlaywrightWorkerSecurityContractTest {
         assertThat(redirectedRequest).isNotNegative();
         assertThat(exactUriCheck).isGreaterThan(redirectedRequest);
         assertThat(singleAdmissionCheck).isGreaterThan(exactUriCheck);
+        assertThat(networkEnable).isNotNegative();
+        assertThat(fetchEnable).isGreaterThan(networkEnable);
+        assertThat(navigation).isGreaterThan(fetchEnable);
     }
 }

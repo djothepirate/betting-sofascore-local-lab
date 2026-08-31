@@ -6,10 +6,11 @@ import org.springframework.stereotype.Component;
 
 import java.time.Clock;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
+import java.util.function.LongSupplier;
 
 /**
  * Serializes every explicitly confirmed J3, J4 and J5 provider transport and
@@ -20,22 +21,32 @@ import java.util.concurrent.locks.ReentrantLock;
 public final class ManualProviderRequestCoordinator {
 
     private final ReentrantLock requestLock = new ReentrantLock(true);
-    private final Clock clock;
-    private final Duration minimumDelay;
+    private final LongSupplier nanoTime;
+    private final long minimumDelayNanos;
     private final Pause pause;
-    private Instant lastStartedAt;
+    private boolean started;
+    private long lastStartedAtNanos;
 
     @Autowired
     public ManualProviderRequestCoordinator(SofascoreProperties properties) {
         this(
-                Clock.systemUTC(),
+                System::nanoTime,
                 Objects.requireNonNull(properties, "properties").getMinimumDelay(),
                 ManualProviderRequestCoordinator::sleepSafely);
     }
 
     ManualProviderRequestCoordinator(Clock clock, Duration minimumDelay, Pause pause) {
-        this.clock = Objects.requireNonNull(clock, "clock");
-        this.minimumDelay = requireAtLeastThreeSeconds(minimumDelay);
+        this(() -> epochNanos(Objects.requireNonNull(clock, "clock").instant()),
+                minimumDelay,
+                pause);
+    }
+
+    ManualProviderRequestCoordinator(
+            LongSupplier nanoTime,
+            Duration minimumDelay,
+            Pause pause) {
+        this.nanoTime = Objects.requireNonNull(nanoTime, "nanoTime");
+        this.minimumDelayNanos = requireAtLeastThreeSeconds(minimumDelay).toNanos();
         this.pause = Objects.requireNonNull(pause, "pause");
     }
 
@@ -68,18 +79,17 @@ public final class ManualProviderRequestCoordinator {
 
     private void beginRequest() {
         try {
-            Instant now = clock.instant();
-            if (lastStartedAt != null) {
-                Instant earliest = lastStartedAt.plus(minimumDelay);
-                if (now.isBefore(earliest)) {
-                    pause.pause(Duration.between(now, earliest));
-                    now = clock.instant();
-                    if (now.isBefore(earliest)) {
-                        now = earliest;
-                    }
+            long now = nanoTime.getAsLong();
+            if (started) {
+                long elapsed = now - lastStartedAtNanos;
+                while (elapsed < minimumDelayNanos) {
+                    pause.pause(Duration.ofNanos(minimumDelayNanos - elapsed));
+                    now = nanoTime.getAsLong();
+                    elapsed = now - lastStartedAtNanos;
                 }
             }
-            lastStartedAt = now;
+            lastStartedAtNanos = now;
+            started = true;
         }
         catch (RuntimeException exception) {
             throw exception instanceof CoordinationException
@@ -102,12 +112,18 @@ public final class ManualProviderRequestCoordinator {
 
     private static void sleepSafely(Duration delay) {
         try {
-            Thread.sleep(delay.toMillis());
+            TimeUnit.NANOSECONDS.sleep(delay.toNanos());
         }
         catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
             throw new CoordinationException(exception);
         }
+    }
+
+    private static long epochNanos(java.time.Instant instant) {
+        return Math.addExact(
+                Math.multiplyExact(instant.getEpochSecond(), 1_000_000_000L),
+                instant.getNano());
     }
 
     @FunctionalInterface

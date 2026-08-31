@@ -27,10 +27,8 @@ import org.junit.jupiter.api.Test;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -62,10 +60,7 @@ class J5SharedLeaseExclusivityTest {
     void holdsTheSharedLeaseAcrossAllThreeTargetsUntilTheJ5CampaignCloses()
             throws Exception {
         ManualProviderRequestCoordinator coordinator =
-                new ManualProviderRequestCoordinator(
-                        Clock.fixed(NOW, ZoneOffset.UTC),
-                        Duration.ofSeconds(3),
-                        ignored -> { });
+                immediateCoordinator();
         CountDownLatch statisticsStarted = new CountDownLatch(1);
         CountDownLatch releaseStatistics = new CountDownLatch(1);
         CountDownLatch incidentsStarted = new CountDownLatch(1);
@@ -256,6 +251,14 @@ class J5SharedLeaseExclusivityTest {
             order.add(marker);
             entered.countDown();
         }
+    }
+
+    private static ManualProviderRequestCoordinator immediateCoordinator() {
+        AtomicLong ticker = new AtomicLong();
+        return new ManualProviderRequestCoordinator(
+                ticker::get,
+                Duration.ofSeconds(3),
+                delay -> ticker.addAndGet(delay.toNanos()));
     }
 
     private static J5RealExecutionClaim claim() {

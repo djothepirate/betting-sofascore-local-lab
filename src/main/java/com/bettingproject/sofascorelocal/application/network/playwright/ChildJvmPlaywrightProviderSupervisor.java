@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.application.network.playwright;
 
 import com.bettingproject.sofascorelocal.config.ProviderPlaywrightProperties;
+import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import jakarta.annotation.PreDestroy;
@@ -70,6 +71,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
     static final Duration SOFT_PROCESS_TERMINATION_MAX = Duration.ofSeconds(1);
     static final Duration IN_FLIGHT_CANCELLATION_MAX = Duration.ofSeconds(2);
     static final Duration PROCESS_TREE_CLEANUP_MAX = Duration.ofSeconds(5);
+    static final Duration DEFAULT_MINIMUM_PROVIDER_NETWORK_START_DELAY = Duration.ofSeconds(3);
     static final int MAXIMUM_STOP_TOMBSTONES_PER_ALLOWLIST = 256;
 
     private static final Duration NATURAL_PROCESS_EXIT_MAX = Duration.ofMillis(250);
@@ -99,20 +101,35 @@ public final class ChildJvmPlaywrightProviderSupervisor
     private final SecureRandom secureRandom;
     private final ProcessStarter processStarter;
     private final ProcessTreeAccess processTreeAccess;
+    private final ProviderNetworkStartDelayGate providerNetworkStartDelayGate;
     private final AtomicReference<CampaignState> active = new AtomicReference<>();
     private final AtomicReference<SupervisorLifecycle> lifecycle =
             new AtomicReference<>(SupervisorLifecycle.OPEN);
     private final ConcurrentMap<Set<SofascoreEndpointType>, StopTombstones> stopTombstones =
             new ConcurrentHashMap<>();
 
-    @Autowired
     public ChildJvmPlaywrightProviderSupervisor(ProviderPlaywrightProperties properties) {
         this(
                 properties,
                 Clock.systemUTC(),
                 new SecureRandom(),
                 ProcessBuilder::start,
-                new SystemProcessTreeAccess());
+                new SystemProcessTreeAccess(),
+                DEFAULT_MINIMUM_PROVIDER_NETWORK_START_DELAY);
+    }
+
+    @Autowired
+    public ChildJvmPlaywrightProviderSupervisor(
+            ProviderPlaywrightProperties properties,
+            SofascoreProperties sofascoreProperties) {
+        this(
+                properties,
+                Clock.systemUTC(),
+                new SecureRandom(),
+                ProcessBuilder::start,
+                new SystemProcessTreeAccess(),
+                Objects.requireNonNull(sofascoreProperties, "sofascoreProperties")
+                        .getMinimumDelay());
     }
 
     ChildJvmPlaywrightProviderSupervisor(
@@ -125,7 +142,8 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 clock,
                 secureRandom,
                 processStarter,
-                new SystemProcessTreeAccess());
+                new SystemProcessTreeAccess(),
+                DEFAULT_MINIMUM_PROVIDER_NETWORK_START_DELAY);
     }
 
     ChildJvmPlaywrightProviderSupervisor(
@@ -134,12 +152,34 @@ public final class ChildJvmPlaywrightProviderSupervisor
             SecureRandom secureRandom,
             ProcessStarter processStarter,
             ProcessTreeAccess processTreeAccess) {
+        this(
+                properties,
+                clock,
+                secureRandom,
+                processStarter,
+                processTreeAccess,
+                DEFAULT_MINIMUM_PROVIDER_NETWORK_START_DELAY);
+    }
+
+    ChildJvmPlaywrightProviderSupervisor(
+            ProviderPlaywrightProperties properties,
+            Clock clock,
+            SecureRandom secureRandom,
+            ProcessStarter processStarter,
+            ProcessTreeAccess processTreeAccess,
+            Duration minimumProviderNetworkStartDelay) {
         this.properties = Objects.requireNonNull(properties, "properties");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.secureRandom = Objects.requireNonNull(secureRandom, "secureRandom");
         this.processStarter = Objects.requireNonNull(processStarter, "processStarter");
         this.processTreeAccess = Objects.requireNonNull(
                 processTreeAccess, "processTreeAccess");
+        this.providerNetworkStartDelayGate = new ProviderNetworkStartDelayGate(
+                Objects.requireNonNull(
+                        minimumProviderNetworkStartDelay,
+                        "minimumProviderNetworkStartDelay"),
+                this.processTreeAccess::nanoTime,
+                this.processTreeAccess::pause);
     }
 
     @Override
@@ -308,12 +348,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     acknowledgedAt,
                     elapsed(requestedAtNanos, processTreeAccess.nanoTime()));
         }
-        state.markOperatorStopRequested(requestedAtNanos);
-        boolean firstSignal = state.terminationRequested.compareAndSet(false, true);
-        if (firstSignal) {
-            state.phase.set(CampaignPhase.TERMINATING);
-            state.markTerminationStarted(processTreeAccess);
-        }
+        state.requestOperatorStop(requestedAtNanos, processTreeAccess);
         Thread.ofVirtual()
                 .name("provider-playwright-stop-" + state.campaignId)
                 .start(() -> terminateAfterStopSignal(state));
@@ -345,10 +380,9 @@ public final class ChildJvmPlaywrightProviderSupervisor
         CampaignState state = active.get();
         try {
             if (state != null) {
-                state.markOperatorStopRequested(processTreeAccess.nanoTime());
-                state.terminationRequested.set(true);
-                state.phase.set(CampaignPhase.TERMINATING);
-                state.markTerminationStarted(processTreeAccess);
+                state.requestOperatorStop(
+                        processTreeAccess.nanoTime(),
+                        processTreeAccess);
                 try {
                     terminateSynchronously(state, false);
                 }
@@ -371,29 +405,41 @@ public final class ChildJvmPlaywrightProviderSupervisor
             throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
         }
         state.ioLock.lock();
+        boolean dispatchStarted = false;
+        boolean usableResponseEvidence = false;
         try {
             requireActive(state);
             try {
                 DataOutputStream output = Objects.requireNonNull(state.output, "output");
                 DataInputStream input = Objects.requireNonNull(state.input, "input");
-                output.writeByte(GET);
-                output.writeUTF(request.endpoint().name());
-                switch (request.endpoint()) {
-                    case SCHEDULED_EVENTS -> {
-                        output.writeUTF(request.date().toString());
-                        output.writeInt(request.page());
+                providerNetworkStartDelayGate.awaitNextDispatch(() -> requireActive(state));
+                state.dispatchLock.lock();
+                try {
+                    requireActive(state);
+                    state.providerDispatchStarted.set(true);
+                    dispatchStarted = true;
+                    output.writeByte(GET);
+                    output.writeUTF(request.endpoint().name());
+                    switch (request.endpoint()) {
+                        case SCHEDULED_EVENTS -> {
+                            output.writeUTF(request.date().toString());
+                            output.writeInt(request.page());
+                        }
+                        case TOURNAMENT_SCHEDULED_EVENTS -> {
+                            output.writeUTF(request.date().toString());
+                            output.writeLong(request.uniqueTournamentId());
+                        }
+                        case EVENT_DETAILS, EVENT_STATISTICS, EVENT_INCIDENTS, EVENT_LINEUPS ->
+                                output.writeLong(request.eventId());
+                        default -> throw new PlaywrightProviderException(
+                                PlaywrightProviderFailure.INVALID_ENDPOINT);
                     }
-                    case TOURNAMENT_SCHEDULED_EVENTS -> {
-                        output.writeUTF(request.date().toString());
-                        output.writeLong(request.uniqueTournamentId());
-                    }
-                    case EVENT_DETAILS, EVENT_STATISTICS, EVENT_INCIDENTS, EVENT_LINEUPS ->
-                            output.writeLong(request.eventId());
-                    default -> throw new PlaywrightProviderException(
-                            PlaywrightProviderFailure.INVALID_ENDPOINT);
+                    output.writeInt(toMillis(properties.getRequestTimeout()));
+                    output.flush();
                 }
-                output.writeInt(toMillis(properties.getRequestTimeout()));
-                output.flush();
+                finally {
+                    state.dispatchLock.unlock();
+                }
                 int frame = input.readUnsignedByte();
                 if (frame == FAILURE) {
                     PlaywrightProviderException failure = workerFailure(input.readUTF());
@@ -404,8 +450,15 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     throw new PlaywrightProviderException(
                             PlaywrightProviderFailure.PROTOCOL_ERROR);
                 }
-                Instant requestedAt = Instant.ofEpochMilli(input.readLong());
-                Instant receivedAt = Instant.ofEpochMilli(input.readLong());
+                long requestedAtEpochMillis = input.readLong();
+                long receivedAtEpochMillis = input.readLong();
+                if (requestedAtEpochMillis <= 0
+                        || receivedAtEpochMillis < requestedAtEpochMillis) {
+                    throw new PlaywrightProviderException(
+                            PlaywrightProviderFailure.PROTOCOL_ERROR);
+                }
+                Instant requestedAt = Instant.ofEpochMilli(requestedAtEpochMillis);
+                Instant receivedAt = Instant.ofEpochMilli(receivedAtEpochMillis);
                 int status = input.readInt();
                 String contentType = input.readUTF();
                 requireContentType(contentType);
@@ -430,13 +483,15 @@ public final class ChildJvmPlaywrightProviderSupervisor
                                 PlaywrightProviderFailure.SENSITIVE_CONTENT_REJECTED);
                     }
                     Duration latency = Duration.between(requestedAt, receivedAt);
-                    return new PlaywrightProviderResponse(
+                    PlaywrightProviderResponse response = new PlaywrightProviderResponse(
                             requestedAt,
                             receivedAt,
                             status,
                             contentType,
                             latency,
                             payload);
+                    usableResponseEvidence = true;
+                    return response;
                 }
                 finally {
                     Arrays.fill(body, (byte) 0);
@@ -444,6 +499,11 @@ public final class ChildJvmPlaywrightProviderSupervisor
             }
             catch (PlaywrightProviderException exception) {
                 throw exception;
+            }
+            catch (ProviderNetworkStartDelayGate.TimingEvidenceException exception) {
+                throw new PlaywrightProviderException(
+                        PlaywrightProviderFailure.RUNTIME_FAILURE,
+                        exception);
             }
             catch (IOException | RuntimeException exception) {
                 PlaywrightProviderFailure failure = state.terminationRequested.get()
@@ -453,6 +513,10 @@ public final class ChildJvmPlaywrightProviderSupervisor
             }
         }
         finally {
+            if (dispatchStarted) {
+                providerNetworkStartDelayGate.recordDispatchFinished(
+                        usableResponseEvidence);
+            }
             state.ioLock.unlock();
         }
     }
@@ -461,12 +525,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
         if (active.get() != state) {
             return;
         }
-        boolean firstTerminationRequest =
-                state.terminationRequested.compareAndSet(false, true);
-        if (firstTerminationRequest) {
-            state.phase.set(CampaignPhase.TERMINATING);
-            state.markTerminationStarted(processTreeAccess);
-        }
+        state.requestTermination(processTreeAccess);
         boolean requestGracefulClose = !state.operatorStopRequested.get();
         terminateSynchronously(state, requestGracefulClose);
     }
@@ -481,6 +540,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
     }
 
     private void terminateSynchronously(CampaignState state, boolean requestGracefulClose) {
+        state.requestTermination(processTreeAccess);
         long terminationStartedAt = state.markTerminationStarted(processTreeAccess);
         synchronized (state.cleanupLock) {
             if (state.cleanupCompleted) {
@@ -599,6 +659,9 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     closeQuietly(state.output);
                     closeQuietly(state.socket);
                     closeQuietly(state.server);
+                }
+                if (state.providerDispatchStarted.get()) {
+                    providerNetworkStartDelayGate.recordDispatchFinished(true);
                 }
                 if (cleanupFailure == null) {
                     state.cleanupCompleted = true;
@@ -1418,6 +1481,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
         private final UUID campaignId;
         private final Set<SofascoreEndpointType> allowedEndpoints;
         private final ReentrantLock ioLock = new ReentrantLock();
+        private final ReentrantLock dispatchLock = new ReentrantLock();
         private final Object processInventoryLock = new Object();
         private final Object cleanupLock = new Object();
         private final AtomicReference<CampaignPhase> phase =
@@ -1425,6 +1489,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
         private final AtomicBoolean terminationRequested = new AtomicBoolean();
         private final AtomicBoolean operatorStopRequested = new AtomicBoolean();
         private final AtomicBoolean authenticatedTerminalFrameReceived = new AtomicBoolean();
+        private final AtomicBoolean providerDispatchStarted = new AtomicBoolean();
         private final AtomicLong terminationStartedAtNanos = new AtomicLong(Long.MIN_VALUE);
         private final AtomicLong operatorStopStartedAtNanos =
                 new AtomicLong(Long.MIN_VALUE);
@@ -1463,6 +1528,38 @@ public final class ChildJvmPlaywrightProviderSupervisor
             long now = access.nanoTime();
             terminationStartedAtNanos.compareAndSet(Long.MIN_VALUE, now);
             return terminationStartedAtNanos.get();
+        }
+
+        private boolean requestTermination(ProcessTreeAccess access) {
+            dispatchLock.lock();
+            try {
+                return requestTerminationLocked(access);
+            }
+            finally {
+                dispatchLock.unlock();
+            }
+        }
+
+        private boolean requestOperatorStop(
+                long requestedAtNanos,
+                ProcessTreeAccess access) {
+            dispatchLock.lock();
+            try {
+                markOperatorStopRequested(requestedAtNanos);
+                return requestTerminationLocked(access);
+            }
+            finally {
+                dispatchLock.unlock();
+            }
+        }
+
+        private boolean requestTerminationLocked(ProcessTreeAccess access) {
+            boolean firstSignal = terminationRequested.compareAndSet(false, true);
+            if (firstSignal) {
+                phase.set(CampaignPhase.TERMINATING);
+                markTerminationStarted(access);
+            }
+            return firstSignal;
         }
 
         private void markOperatorStopRequested(long requestedAtNanos) {
