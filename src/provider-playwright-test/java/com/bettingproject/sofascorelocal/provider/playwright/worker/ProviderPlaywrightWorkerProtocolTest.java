@@ -219,6 +219,13 @@ class ProviderPlaywrightWorkerProtocolTest {
 
     @Test
     void closedWorkerWaitsForParentEofAndRejectsFurtherCommands() throws Exception {
+        ByteArrayOutputStream closedBytes = new ByteArrayOutputStream();
+        try (DataOutputStream output = new DataOutputStream(closedBytes)) {
+            ProviderPlaywrightWorkerProtocol.writeClosed(output);
+        }
+        assertThat(closedBytes.toByteArray())
+                .containsExactly(ProviderPlaywrightWorkerProtocol.CLOSED);
+
         try (DataInputStream eof = new DataInputStream(new ByteArrayInputStream(new byte[0]))) {
             ProviderPlaywrightWorkerProtocol.awaitParentTermination(eof);
         }

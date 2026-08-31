@@ -635,6 +635,194 @@ class ChildJvmPlaywrightProviderSupervisorTest {
     }
 
     @Test
+    void gracefulCloseUsesItsOwnBudgetAndReleasesTheWorkerWithParentEof()
+            throws Exception {
+        ProviderPlaywrightProperties properties = enabledProperties("graceful-eof.jar");
+        properties.setGracefulCloseTimeout(Duration.ofSeconds(4));
+        Instant rootStartedAt = Instant.parse("2026-08-27T08:00:00Z");
+        OwnedHandle root = ownedHandle(660L, rootStartedAt, false, false);
+        Process process = process(root.handle());
+        ProcessHandle.Info processInfo = mock(ProcessHandle.Info.class);
+        when(process.info()).thenReturn(processInfo);
+        when(processInfo.startInstant()).thenReturn(Optional.of(rootStartedAt));
+        CountDownLatch closeReceived = new CountDownLatch(1);
+        CountDownLatch closedSent = new CountDownLatch(1);
+        CountDownLatch parentEofObserved = new CountDownLatch(1);
+        AtomicReference<Thread> workerThread = new AtomicReference<>();
+        AtomicReference<Throwable> workerFailure = new AtomicReference<>();
+        var processTreeAccess = new RealTimeProcessTreeAccess(root.owned());
+        var supervisor = new ChildJvmPlaywrightProviderSupervisor(
+                properties,
+                Clock.systemUTC(),
+                new SecureRandom(),
+                builder -> {
+                    int port = Integer.parseInt(builder.environment().get(
+                            "SOFASCORE_PLAYWRIGHT_IPC_PORT"));
+                    String token = builder.environment().get(
+                            "SOFASCORE_PLAYWRIGHT_IPC_TOKEN");
+                    workerThread.set(Thread.ofPlatform()
+                            .name("fake-playwright-graceful-eof")
+                            .start(() -> runDelayedGracefullyClosingWorker(
+                                    port,
+                                    token,
+                                    Duration.ofMillis(2_250),
+                                    closeReceived,
+                                    closedSent,
+                                    parentEofObserved,
+                                    () -> root.alive().set(false),
+                                    workerFailure)));
+                    return process;
+                },
+                processTreeAccess);
+        UUID campaignId = UUID.randomUUID();
+        PlaywrightProviderCampaign campaign = supervisor.open(
+                campaignId, Set.of(SofascoreEndpointType.SCHEDULED_EVENTS));
+
+        long closeStartedAt = System.nanoTime();
+        campaign.close();
+        Duration closeLatency = Duration.ofNanos(System.nanoTime() - closeStartedAt);
+
+        assertThat(closeReceived.await(1, TimeUnit.SECONDS)).isTrue();
+        assertThat(closedSent.await(1, TimeUnit.SECONDS)).isTrue();
+        assertThat(parentEofObserved.await(1, TimeUnit.SECONDS)).isTrue();
+        assertThat(closeLatency)
+                .isGreaterThan(ChildJvmPlaywrightProviderSupervisor.IN_FLIGHT_CANCELLATION_MAX)
+                .isLessThanOrEqualTo(
+                        ChildJvmPlaywrightProviderSupervisor.PROCESS_TREE_CLEANUP_MAX);
+        assertThat(supervisor.activeCampaignId()).isEmpty();
+        assertThat(root.alive()).isFalse();
+        assertThat(root.destroyCalls()).hasValue(0);
+        assertThat(root.forceCalls()).hasValue(0);
+        workerThread.get().join(2_000);
+        assertThat(workerThread.get().isAlive()).isFalse();
+        assertThat(workerFailure.get()).isNull();
+    }
+
+    @Test
+    void operatorStopPreemptsAnInProgressGracefulCloseWithoutResettingItsBounds()
+            throws Exception {
+        ProviderPlaywrightProperties properties = enabledProperties("close-stop-race.jar");
+        properties.setGracefulCloseTimeout(Duration.ofSeconds(4));
+        Instant rootStartedAt = Instant.parse("2026-08-27T08:00:00Z");
+        OwnedHandle root = ownedHandle(669L, rootStartedAt, true, true);
+        Process process = process(root.handle());
+        ProcessHandle.Info processInfo = mock(ProcessHandle.Info.class);
+        when(process.info()).thenReturn(processInfo);
+        when(processInfo.startInstant()).thenReturn(Optional.of(rootStartedAt));
+        CountDownLatch closeReceived = new CountDownLatch(1);
+        CountDownLatch operatorStopIssued = new CountDownLatch(1);
+        AtomicReference<Thread> workerThread = new AtomicReference<>();
+        AtomicReference<Throwable> workerFailure = new AtomicReference<>();
+        var supervisor = new ChildJvmPlaywrightProviderSupervisor(
+                properties,
+                Clock.systemUTC(),
+                new SecureRandom(),
+                builder -> {
+                    int port = Integer.parseInt(builder.environment().get(
+                            "SOFASCORE_PLAYWRIGHT_IPC_PORT"));
+                    String token = builder.environment().get(
+                            "SOFASCORE_PLAYWRIGHT_IPC_TOKEN");
+                    workerThread.set(Thread.ofPlatform()
+                            .name("fake-playwright-close-stop-race")
+                            .start(() -> runPreemptibleGracefulWorker(
+                                    port,
+                                    token,
+                                    closeReceived,
+                                    operatorStopIssued,
+                                    workerFailure)));
+                    return process;
+                },
+                new RealTimeProcessTreeAccess(root.owned()));
+        UUID campaignId = UUID.randomUUID();
+        Set<SofascoreEndpointType> allowlist =
+                Set.of(SofascoreEndpointType.SCHEDULED_EVENTS);
+        PlaywrightProviderCampaign campaign = supervisor.open(campaignId, allowlist);
+        CompletableFuture<Throwable> close = CompletableFuture.supplyAsync(() -> {
+            try {
+                campaign.close();
+                return null;
+            }
+            catch (Throwable failure) {
+                return failure;
+            }
+        });
+        assertThat(closeReceived.await(1, TimeUnit.SECONDS)).isTrue();
+
+        long stopStartedAt = System.nanoTime();
+        PlaywrightProviderStopReceipt receipt = supervisor.stopCampaign(
+                campaignId,
+                allowlist);
+        operatorStopIssued.countDown();
+        awaitNoActiveCampaign(supervisor);
+        Duration stopLatency = Duration.ofNanos(System.nanoTime() - stopStartedAt);
+
+        assertThat(receipt.acknowledgementLatency())
+                .isLessThanOrEqualTo(
+                        ChildJvmPlaywrightProviderSupervisor.STOP_ACKNOWLEDGEMENT_MAX);
+        assertThat(stopLatency)
+                .isLessThanOrEqualTo(
+                        ChildJvmPlaywrightProviderSupervisor.IN_FLIGHT_CANCELLATION_MAX);
+        assertThat(close.get(2, TimeUnit.SECONDS)).isNull();
+        assertThat(root.alive()).isFalse();
+        workerThread.get().join(2_000);
+        assertThat(workerThread.get().isAlive()).isFalse();
+        assertThat(workerFailure.get()).isNull();
+    }
+
+    @Test
+    void operatorCancellationBudgetStartsBeforeTheFreshTerminationInventory()
+            throws Exception {
+        ProviderPlaywrightProperties properties = enabledProperties("operator-budget.jar");
+        Instant rootStartedAt = Instant.parse("2026-08-27T08:00:00Z");
+        OwnedHandle root = ownedHandle(670L, rootStartedAt, true, true);
+        Process process = process(root.handle());
+        ProcessHandle.Info processInfo = mock(ProcessHandle.Info.class);
+        when(process.info()).thenReturn(processInfo);
+        when(processInfo.startInstant()).thenReturn(Optional.of(rootStartedAt));
+        AtomicReference<Thread> workerThread = new AtomicReference<>();
+        AtomicReference<Throwable> workerFailure = new AtomicReference<>();
+        var processTreeAccess = new AdvancingTerminationCaptureAccess(root);
+        var supervisor = new ChildJvmPlaywrightProviderSupervisor(
+                properties,
+                Clock.systemUTC(),
+                new SecureRandom(),
+                builder -> {
+                    int port = Integer.parseInt(builder.environment().get(
+                            "SOFASCORE_PLAYWRIGHT_IPC_PORT"));
+                    String token = builder.environment().get(
+                            "SOFASCORE_PLAYWRIGHT_IPC_TOKEN");
+                    workerThread.set(Thread.ofPlatform()
+                            .name("fake-playwright-operator-budget")
+                            .start(() -> runIdleWorker(port, token, () -> { }, workerFailure)));
+                    return process;
+                },
+                processTreeAccess);
+        UUID campaignId = UUID.randomUUID();
+        Set<SofascoreEndpointType> allowlist =
+                Set.of(SofascoreEndpointType.SCHEDULED_EVENTS);
+        supervisor.open(campaignId, allowlist);
+
+        PlaywrightProviderStopReceipt receipt = supervisor.stopCampaign(campaignId, allowlist);
+        try {
+            assertThat(processTreeAccess.terminationCaptureEntered()
+                    .await(1, TimeUnit.SECONDS)).isTrue();
+        }
+        finally {
+            processTreeAccess.releaseTerminationCapture().countDown();
+        }
+        awaitValueAtLeast(processTreeAccess.captureCalls(), 3);
+
+        assertThat(receipt.acknowledgementLatency())
+                .isLessThanOrEqualTo(
+                        ChildJvmPlaywrightProviderSupervisor.STOP_ACKNOWLEDGEMENT_MAX);
+        assertThat(root.alive()).isFalse();
+        assertThat(supervisor.activeCampaignId()).contains(campaignId);
+        workerThread.get().join(2_000);
+        assertThat(workerThread.get().isAlive()).isFalse();
+        assertThat(workerFailure.get()).isNull();
+    }
+
+    @Test
     void postClosedInventoryRetainsAChildThatIsThenReparentedByRootExit()
             throws Exception {
         ProviderPlaywrightProperties properties = enabledProperties("late-child-tree.jar");
@@ -738,6 +926,7 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                 .isInstanceOf(PlaywrightProviderException.class)
                 .extracting("failure")
                 .isEqualTo(PlaywrightProviderFailure.OPERATOR_STOP);
+        processTreeAccess.advance(Duration.ofSeconds(6));
         campaign.close();
         campaign.close();
 
@@ -1257,6 +1446,81 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         }
     }
 
+    private static void runDelayedGracefullyClosingWorker(
+            int port,
+            String token,
+            Duration closedDelay,
+            CountDownLatch closeReceived,
+            CountDownLatch closedSent,
+            CountDownLatch parentEofObserved,
+            Runnable afterParentEof,
+            AtomicReference<Throwable> failure) {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(
+                    InetAddress.getByName("127.0.0.1"), port), 1_000);
+            DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+            output.writeInt(ChildJvmPlaywrightProviderSupervisor.MAGIC);
+            output.writeInt(ChildJvmPlaywrightProviderSupervisor.VERSION);
+            output.writeUTF(token);
+            output.flush();
+            try (DataInputStream input = new DataInputStream(
+                    new BufferedInputStream(socket.getInputStream()))) {
+                assertThat(input.readUnsignedByte())
+                        .isEqualTo(ChildJvmPlaywrightProviderSupervisor.START);
+                output.writeByte(ChildJvmPlaywrightProviderSupervisor.READY);
+                output.flush();
+                assertThat(input.readUnsignedByte())
+                        .isEqualTo(ChildJvmPlaywrightProviderSupervisor.CLOSE);
+                closeReceived.countDown();
+                TimeUnit.NANOSECONDS.sleep(closedDelay.toNanos());
+                output.writeByte(ChildJvmPlaywrightProviderSupervisor.CLOSED);
+                output.flush();
+                closedSent.countDown();
+                assertThat(input.read()).isEqualTo(-1);
+                afterParentEof.run();
+                parentEofObserved.countDown();
+            }
+        }
+        catch (Throwable exception) {
+            failure.set(exception);
+            closeReceived.countDown();
+            closedSent.countDown();
+            parentEofObserved.countDown();
+        }
+    }
+
+    private static void runPreemptibleGracefulWorker(
+            int port,
+            String token,
+            CountDownLatch closeReceived,
+            CountDownLatch operatorStopIssued,
+            AtomicReference<Throwable> failure) {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress(
+                    InetAddress.getByName("127.0.0.1"), port), 1_000);
+            DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+            output.writeInt(ChildJvmPlaywrightProviderSupervisor.MAGIC);
+            output.writeInt(ChildJvmPlaywrightProviderSupervisor.VERSION);
+            output.writeUTF(token);
+            output.flush();
+            try (DataInputStream input = new DataInputStream(
+                    new BufferedInputStream(socket.getInputStream()))) {
+                assertThat(input.readUnsignedByte())
+                        .isEqualTo(ChildJvmPlaywrightProviderSupervisor.START);
+                output.writeByte(ChildJvmPlaywrightProviderSupervisor.READY);
+                output.flush();
+                assertThat(input.readUnsignedByte())
+                        .isEqualTo(ChildJvmPlaywrightProviderSupervisor.CLOSE);
+                closeReceived.countDown();
+                assertThat(operatorStopIssued.await(2, TimeUnit.SECONDS)).isTrue();
+            }
+        }
+        catch (Throwable exception) {
+            failure.set(exception);
+            closeReceived.countDown();
+        }
+    }
+
     private static void assertUnauthenticatedRootIsNotEnumerated(
             Instant expected,
             boolean alive,
@@ -1569,6 +1833,72 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         }
     }
 
+    private static final class AdvancingTerminationCaptureAccess
+            implements ChildJvmPlaywrightProviderSupervisor.ProcessTreeAccess {
+
+        private final OwnedHandle root;
+        private final AtomicInteger captureCalls = new AtomicInteger();
+        private final AtomicLong nanoTime = new AtomicLong();
+        private final CountDownLatch terminationCaptureEntered = new CountDownLatch(1);
+        private final CountDownLatch releaseTerminationCapture = new CountDownLatch(1);
+
+        private AdvancingTerminationCaptureAccess(
+                OwnedHandle root) {
+            this.root = root;
+        }
+
+        @Override
+        public long nanoTime() {
+            return nanoTime.get();
+        }
+
+        @Override
+        public ChildJvmPlaywrightProviderSupervisor.ProcessTreeSnapshot capture(
+                Process process,
+                Instant rootStartedAt) {
+            int capture = captureCalls.incrementAndGet();
+            if (capture == 2) {
+                terminationCaptureEntered.countDown();
+                try {
+                    if (!releaseTerminationCapture.await(2, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException(
+                                "termination capture release timed out");
+                    }
+                }
+                catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException(
+                            "termination capture interrupted",
+                            exception);
+                }
+                nanoTime.addAndGet(Duration.ofMillis(2_100).toNanos());
+            }
+            if (!root.alive().get()) {
+                return ChildJvmPlaywrightProviderSupervisor.ProcessTreeSnapshot
+                        .rootNotAuthenticated(0);
+            }
+            return ChildJvmPlaywrightProviderSupervisor.ProcessTreeSnapshot.exact(
+                    List.of(root.owned()));
+        }
+
+        @Override
+        public void pause(Duration duration) {
+            nanoTime.addAndGet(duration.toNanos());
+        }
+
+        private AtomicInteger captureCalls() {
+            return captureCalls;
+        }
+
+        private CountDownLatch terminationCaptureEntered() {
+            return terminationCaptureEntered;
+        }
+
+        private CountDownLatch releaseTerminationCapture() {
+            return releaseTerminationCapture;
+        }
+    }
+
     private static final class FailingProcessTreeAccess
             implements ChildJvmPlaywrightProviderSupervisor.ProcessTreeAccess {
 
@@ -1576,6 +1906,7 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         private final OwnedHandle child;
         private final int failingCapture;
         private final AtomicInteger captureCalls = new AtomicInteger();
+        private final AtomicLong nanoTimeOffset = new AtomicLong();
 
         private FailingProcessTreeAccess(
                 OwnedHandle root,
@@ -1588,7 +1919,7 @@ class ChildJvmPlaywrightProviderSupervisorTest {
 
         @Override
         public long nanoTime() {
-            return System.nanoTime();
+            return System.nanoTime() + nanoTimeOffset.get();
         }
 
         @Override
@@ -1615,6 +1946,10 @@ class ChildJvmPlaywrightProviderSupervisorTest {
             catch (InterruptedException exception) {
                 Thread.currentThread().interrupt();
             }
+        }
+
+        private void advance(Duration duration) {
+            nanoTimeOffset.addAndGet(duration.toNanos());
         }
     }
 

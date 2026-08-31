@@ -150,6 +150,7 @@ class ProviderPlaywrightLocalQualificationIT {
 
             Process exactWorker = worker.get();
             assertThat(exactWorker.waitFor(5, TimeUnit.SECONDS)).isTrue();
+            assertThat(exactWorker.exitValue()).isZero();
             assertThat(supervisor.activeCampaignId()).isEmpty();
             assertThat(ownedProcesses).allMatch(identity -> !identity.isSameProcessAlive());
             assertThat(standardOutput.get().get(5, TimeUnit.SECONDS)).isEmpty();
