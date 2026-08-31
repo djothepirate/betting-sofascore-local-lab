@@ -163,8 +163,9 @@ RAW_PAYLOAD_IN_DOCUMENTATION=NO
 PRIMARY_DATABASE_PURGE=NO
 ```
 
-Les payloads bruts restent exclusivement en base locale. Aucun cookie, jeton, certificat, chemin
-sensible, phrase technique ou donnée de session n'est ajouté au dépôt.
+Aucun payload brut n'est ajouté à la documentation ou à Git ; les octets autorisés restent dans les
+stockages locaux prévus, dont la base primaire et la sauvegarde chiffrée qualifiée. Aucun cookie,
+jeton, certificat, chemin sensible, phrase technique ou donnée de session n'est ajouté au dépôt.
 
 ## Vérifications post-arrêt
 

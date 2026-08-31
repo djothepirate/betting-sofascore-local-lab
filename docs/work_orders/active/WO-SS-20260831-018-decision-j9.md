@@ -188,7 +188,7 @@ OWNER_GO_CONSUMED=YES
 MAXIMUM_DIRECT_ATTEMPTS=38
 WO019_D2_D3_PROVIDER_ATTEMPTS=0
 WO019_REPORT=docs/validation/J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831.md
-WO019_REPORT_SHA256=b73e1760873e616e0a0edb3575e1b63c0467a5062576b96b3c847234ab853215
+WO019_REPORT_SHA256=47e6171eeb1fc44cf995c727d4f09107875c844e71e8b183068731cbb4c62b9d
 PREVIOUS_GRACEFUL_CLOSE_RUNTIME_WORK_ORDER=WO-SS-20260831-020-j9-playwright-graceful-close
 PREVIOUS_GRACEFUL_CLOSE_RUNTIME_WORK_ORDER_STATUS=VALIDATED
 NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER_REQUIRED=YES
@@ -202,12 +202,15 @@ ADR-SS-002 v1.0 qualifie l'augmentation de volume exigée par ADR-SS-001 §9. Le
 complet J8 autorisait au plus 30 tentatives pour un dossier ; la preuve J9 acceptée en prévoit au
 plus 38 pour trois dossiers.
 
-Les quatre portes cumulatives sont :
+Les quatre portes cumulatives avaient été satisfaites avant le premier claim fournisseur :
 
 1. ADR-SS-002 accepté explicitement par le propriétaire — `SATISFIED` ;
 2. readiness hors ligne entièrement verte — `SATISFIED_BY_REEXECUTION_AFTER_VALIDATED_WO020` ;
 3. sauvegarde chiffrée V28 fraîche et restauration qualifiée sur une base isolée ;
-4. go propriétaire global explicite, unique et non consommé.
+4. go propriétaire global explicite, unique et alors non consommé.
+
+Ce go a depuis été consommé au premier claim J3 accepté puis terminé par l'arrêt de la série ; cette
+photographie historique n'accorde donc aucune autorisation courante.
 
 L'échec initial J3 a été reproduit hors sandbox (`14` tests, `12` erreurs `RUNTIME_FAILURE`, `2`
 scénarios d'arrêt opérateur réussis), puis WO-020 a établi et corrigé localement la séquence
@@ -320,7 +323,7 @@ est la valeur recommandée à confirmer ou à remplacer explicitement :
 J9_DECISION=KEEP_LOCAL
 J9_DECIDED_AT_UTC=<owner confirmation timestamp>
 J9_EVIDENCE_RESULT=STOPPED
-J9_EVIDENCE_REFERENCE=J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831;SHA256=b73e1760873e616e0a0edb3575e1b63c0467a5062576b96b3c847234ab853215
+J9_EVIDENCE_REFERENCE=J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831;SHA256=47e6171eeb1fc44cf995c727d4f09107875c844e71e8b183068731cbb4c62b9d
 J9_PROVIDER_ACQUISITION_MODE=MANUAL_ON_DEMAND
 J9_INTEGRATION_IMPLEMENTATION_AUTHORIZED=NO
 J9_LIVE_OR_SCHEDULED_OPERATION_AUTHORIZED=NO
