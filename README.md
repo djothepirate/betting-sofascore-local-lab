@@ -182,10 +182,11 @@ root exactement possédé. Les parcours hors ligne et Docker local répétés, l
 les `67` tests d'intégration, Verify-Local et Compose sont verts sur le commit `d019be2`, sans appel
 fournisseur ni purge primaire. Le propriétaire a validé cette readiness le 2026-09-01 et autorisé
 le déplacement de WO-025 vers les Work Orders terminés. La preuve ne réattribue ni ne supprime les
-résidus historiques non possédés. Cette validation n'autorise pas une nouvelle sauvegarde : WO-023
-demeure bloqué et son retry exige une décision propriétaire séparée et postérieure. Terminaison par
-PID seul, réseau fournisseur, campagne, nouveau go, purge primaire, intégration et production
-restent interdits.
+résidus historiques non possédés. Le propriétaire a ensuite fourni la décision séparée requise et
+autorisé un unique nouvel essai local chiffré de sauvegarde/restauration WO-023. Cette autorisation
+est consommable une seule fois et n'est pas une autorisation de campagne. Terminaison par PID seul,
+réseau fournisseur, campagne, nouveau go, purge primaire, intégration et production restent
+interdits.
 
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence

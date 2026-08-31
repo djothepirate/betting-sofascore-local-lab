@@ -317,6 +317,16 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   sauvegarde/restauration exige toujours une décision propriétaire séparée et postérieure ;
   campagne fournisseur, réseau, nouveau go, purge primaire, intégration et production restent à
   `NO`.
+- décision propriétaire séparée reçue à `2026-08-31T22:46:53.9166240Z` pour un unique nouvel essai
+  local chiffré de sauvegarde/restauration WO-023 ; le parcours hérité reste la génération native
+  interactive par `age`, avec phrase confinée au terminal opérateur. Le jeton n'est consommé qu'à
+  la première invocation réelle après préflight vert ; toute sortie du script le consomme. La
+  vérification standard fraîche est verte à `946/0/0/5`, sans différence de code runtime depuis le
+  commit qualifié WO-025 ; un diff exact confirme aussi l'absence de changement du runtime et de la
+  configuration fournisseur depuis la readiness WO-023 au commit `8b91bf8`, ce qui permet de
+  reporter ses preuves loopback J3/J4/J5 sans nouvel accès fournisseur. Cette décision ne réactive
+  ni la campagne fournisseur, ni le réseau, ni un go global, ni la purge primaire, l'intégration ou
+  la production.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 
