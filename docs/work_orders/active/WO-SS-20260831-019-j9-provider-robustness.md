@@ -1,16 +1,16 @@
 # WO-SS-20260831-019 — Preuve bornée de robustesse fournisseur pour J9
 
-- **Statut :** `READY_FOR_GLOBAL_OWNER_GO`
+- **Statut :** `READY_FOR_PROVIDER_CAMPAIGN`
 - **Date d'ouverture :** 2026-08-31
 - **Jalon :** J9 — Preuve préalable à la décision
 - **Base locale :** `a47c932`
 - **Branche/worktree :** `codex/j9-provider-robustness`
 - **Work Order parent :** `WO-SS-20260831-018-decision-j9`
 - **ADR applicable :** `ADR-SS-001 v1.4`
-- **Nouvel ADR :** `ADR-SS-002 v1.0 — ACCEPTED, GLOBAL_GO_NOT_GRANTED`
+- **Nouvel ADR :** `ADR-SS-002 v1.0 — ACCEPTED, GLOBAL_GO_GRANTED`
 - **État de la preuve :** `DRAFT`
-- **Réseau fournisseur :** `NOT_AUTHORIZED`
-- **Go propriétaire global :** `NOT_GRANTED`
+- **Réseau fournisseur :** `AUTHORIZED_WITHIN_EXACT_WINDOW_ONLY`
+- **Go propriétaire global :** `GRANTED`
 - **Go consommé :** `NO`
 - **Plafond direct global :** `38`
 - **Dossier de remplacement :** `NOT_AUTHORIZED`
@@ -41,23 +41,31 @@ VPS ou de production. Elle ne prend pas la décision J9.
 
 ```text
 EVIDENCE_STATUS=DRAFT
-NETWORK_AUTHORIZED=NO
+NETWORK_AUTHORIZED=YES_WITHIN_THIS_MANIFEST_AND_WINDOW_ONLY
 OWNER_GO_CONSUMED=NO
+OWNER_GO_CONSUMPTION_POINT=FIRST_ACCEPTED_J3_EXECUTION_CLAIM
+OWNER_GO_CONSUMPTION_EFFECT=IRREVERSIBLE_FOR_SERIES
 PROVIDER_CALLS_UNDER_WO019=0
+LEDGER_BASELINE_DIRECT_ATTEMPTS=0
+LEDGER_RULE=ATTEMPTS_SO_FAR_PLUS_NEXT_MAX_LE_38
 MAX_DIRECT_CALLS=38
 REPLACEMENT_DOSSIER_ALLOWED=NO
 ADR_SS_002_STATUS=ACCEPTED_V1_0
-WORK_ORDER_STATUS=READY_FOR_GLOBAL_OWNER_GO
+WORK_ORDER_STATUS=READY_FOR_PROVIDER_CAMPAIGN
 WO019_WORK_ORDER_RESUME_AUTHORIZED=YES
-WO019_PROVIDER_CAMPAIGN_AUTHORIZED=NO_PENDING_GLOBAL_GO
-WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+WO019_PROVIDER_CAMPAIGN_AUTHORIZED=YES_WITHIN_THIS_MANIFEST_AND_WINDOW_ONLY
+WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=YES_WITHIN_THIS_MANIFEST_AND_WINDOW_ONLY
 OFFLINE_READINESS=PASS_REEXECUTED_AFTER_VALIDATED_WO020
 OFFLINE_READINESS_REEXECUTED_ON=2026-08-31
 V28_BACKUP_RESTORE=QUALIFIED
 V28_RESTORE_QUALIFIED=YES
 V28_BACKUP_RESTORE_QUALIFIED_AT_UTC=2026-08-31T06:46:07.7013794Z
-NEXT_GATE=GLOBAL_OWNER_GO
-GLOBAL_OWNER_GO=NOT_GRANTED
+NEXT_GATE=FRESH_TECHNICAL_CONFIRMATION_J3
+GLOBAL_OWNER_GO=GRANTED
+GLOBAL_OWNER_GO_OBSERVED_AT_UTC=2026-08-31T07:10:43.748Z
+GLOBAL_OWNER_GO_WINDOW_UTC=[2026-08-31T07:15:00Z,2026-08-31T08:15:00Z)
+GLOBAL_OWNER_GO_ACTOR=CODEX_LOCAL_AGENT
+GLOBAL_OWNER_GO_USE=ONE_TIME
 SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=SATISFIED_BY_VALIDATED_WO020
 RUNTIME_WORK_ORDER=WO-SS-20260831-020-j9-playwright-graceful-close
 RUNTIME_WORK_ORDER_STATUS=VALIDATED
@@ -68,16 +76,19 @@ RUNTIME_OWNER_REVIEW=SATISFIED
 INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
 
-Le réseau reste bloqué jusqu'à preuve cumulative des quatre portes :
+Le réseau reste bloqué hors du manifeste et de la fenêtre explicites. Les quatre portes cumulatives
+sont désormais satisfaites pour cette campagne unique :
 
 1. ADR-SS-002 accepté explicitement par le propriétaire après lecture de la revue officielle —
    acceptation enregistrée à `2026-08-30T22:54:47Z`, porte `SATISFIED` ;
 2. tests et qualifications hors ligne entièrement verts ;
 3. sauvegarde chiffrée fraîche au schéma Flyway V28 et restauration qualifiée sur une base isolée ;
-4. go propriétaire global, explicite, à usage unique, portant le manifeste final.
+4. go propriétaire global, explicite, à usage unique, portant le manifeste final — reçu avant
+   l'ouverture de sa fenêtre `[2026-08-31T07:15:00Z,2026-08-31T08:15:00Z)`.
 
-L'acceptation explicite de l'ADR a été reçue. Elle ne remplace ni la readiness hors ligne, ni la
-sauvegarde/restauration V28, ni le go réseau distinct.
+Le go n'autorise aucun appel avant `2026-08-31T07:15:00Z`, après `2026-08-31T08:15:00Z`, au-delà de
+38 tentatives directes, vers un autre dossier, ni après le premier incident bloquant ou la fin de la
+série. Il n'autorise ni intégration, ni production, ni purge primaire.
 
 ## 3. Revue d'ADR-SS-001
 
@@ -696,6 +707,47 @@ INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
 
 Aucun chemin externe, nom de fichier, manifeste JSON, phrase secrète, dump, payload ou credential
-n'est versionné. WO-019 est maintenant `READY_FOR_GLOBAL_OWNER_GO`, sans accorder ce go. La
-campagne fournisseur, le réseau, la consommation du go, l'intégration et la production restent non
-autorisés.
+n'est versionné. À l'issue de cette porte V28 et avant la réception décrite ci-dessous, WO-019 était
+`READY_FOR_GLOBAL_OWNER_GO` ; la campagne fournisseur, le réseau, la consommation du go,
+l'intégration et la production restaient non autorisés.
+
+## 16. Go propriétaire global unique reçu
+
+Le propriétaire a accordé le go global unique suivant. Le second bloc rappelant l'état « jusqu'à
+réception valide » décrit l'état immédiatement antérieur et est supersédé par cette réception pour
+la seule fenêtre déclarée :
+
+```text
+J9_WO019_GLOBAL_OWNER_GO_DECISION=GRANT
+WORK_ORDER=WO-SS-20260831-019-j9-provider-robustness
+ADR=ADR-SS-002_v1.0
+ADR_STATUS=ACCEPTED
+TARGET_PROVIDER_EVENT_IDS=16691018,16671566,16310930
+TARGET_CANONICAL_EVENT_IDS=f4713f80-4769-3656-ba51-61d8ac1aa814,da075869-34d4-3d42-83d2-613583691845,c40066c9-987b-38d9-b415-869a453d2ad6
+MAXIMUM_DIRECT_ATTEMPTS=38
+WINDOW_UTC=[2026-08-31T07:15:00Z,2026-08-31T08:15:00Z)
+MAXIMUM_WINDOW_DURATION=60m
+EXECUTION_ACTOR=CODEX_LOCAL_AGENT
+GO_USE=ONE_TIME
+J9_PROVIDER_NETWORK_AUTHORIZED=YES_WITHIN_THIS_MANIFEST_AND_WINDOW_ONLY
+J9_WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=YES_WITHIN_THIS_MANIFEST_AND_WINDOW_ONLY
+REPLACEMENT_DOSSIER_ALLOWED=NO
+PRIMARY_DATABASE_PURGE=NO
+J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+```
+
+État au moment de la réception, avant toute préparation fraîche ou tentative fournisseur :
+
+```text
+GLOBAL_OWNER_GO_OBSERVED_AT_UTC=2026-08-31T07:10:43.748Z
+WORK_ORDER_STATUS=READY_FOR_PROVIDER_CAMPAIGN
+NEXT_GATE=FRESH_TECHNICAL_CONFIRMATION_J3
+OWNER_GO_CONSUMED=NO
+OWNER_GO_CONSUMPTION_POINT=FIRST_ACCEPTED_J3_EXECUTION_CLAIM
+OWNER_GO_CONSUMPTION_EFFECT=IRREVERSIBLE_FOR_SERIES
+PROVIDER_CALLS_UNDER_WO019=0
+LEDGER_BASELINE_DIRECT_ATTEMPTS=0
+LEDGER_RULE=ATTEMPTS_SO_FAR_PLUS_NEXT_MAX_LE_38
+REPLACEMENT_DOSSIER_ALLOWED=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+```
