@@ -145,10 +145,13 @@ d'intégration ; aucun processus possédé, listener, session ou artefact ne sub
 
 La contre-épreuve `age` est abstraite, locale et sans secret : elle ne qualifie ni le dialogue TTY,
 ni l'auto-génération réelle d'une phrase et ne demande aucune saisie humaine volontairement
-incorrecte. WO-024 reste actif à `READY_FOR_OWNER_REVIEW`. WO-023 demeure suspendu ; réseau
-fournisseur, reprise de campagne et nouveau go restent à `NO`. Après validation propriétaire de
-WO-024 seulement, une nouvelle sauvegarde/restauration hors ligne avec la vraie phrase auto-générée
-par `age` pourra être tentée nominalement.
+incorrecte. Le propriétaire a validé WO-024 et autorisé son déplacement parmi les Work Orders
+terminés. La nouvelle sauvegarde/restauration hors ligne WO-023 avec la vraie phrase auto-générée
+par `age` est maintenant autorisée mais pas encore exécutée ; WO-023 reste
+`OPEN_AWAITING_OFFLINE_READINESS`. Réseau fournisseur, reprise de campagne et nouveau go restent à
+`NO` : après intégration, précontrôles et qualification de la sauvegarde, le manifeste devra être
+figé avant qu'un nouveau go global lié à une fenêtre UTC puisse matérialiser l'intention d'enchaîner
+sur la campagne.
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une
@@ -1118,7 +1121,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay.md)
 - [Work Order validé de réexamen ADR-SS-002](docs/work_orders/completed/WO-SS-20260831-022-j9-adr-ss-002-reexamination.md)
 - [Work Order actif de nouvelle preuve J9](docs/work_orders/active/WO-SS-20260831-023-j9-provider-robustness-v11.md)
-- [Work Order actif de nettoyage fail-closed J6/J9](docs/work_orders/active/WO-SS-20260831-024-j9-backup-pipeline-fail-closed-cleanup.md)
+- [Work Order validé de nettoyage fail-closed J6/J9](docs/work_orders/completed/WO-SS-20260831-024-j9-backup-pipeline-fail-closed-cleanup.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 

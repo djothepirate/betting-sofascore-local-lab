@@ -231,8 +231,15 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   phrase humaine n'est requise ;
 - vérifications finales réussies : 945 tests standards, 67 tests d'intégration, Java 25, PostgreSQL
   18.4/V28, `Verify-Local.ps1 -WithIntegrationTests`, Compose, scans de portée et de secrets. WO-024
-  passe à `READY_FOR_OWNER_REVIEW` mais reste actif ; WO-023, réseau fournisseur, campagne, nouveau
-  go, intégration et production restent interdits.
+  avait atteint `READY_FOR_OWNER_REVIEW` au commit `e0beee0` ; WO-023, réseau fournisseur, campagne,
+  nouveau go, intégration et production restaient interdits ;
+- validation propriétaire explicite de WO-024 reçue : qualification fail-closed reconnue,
+  déplacement vers les Work Orders terminés autorisé et nouvelle sauvegarde/restauration WO-023
+  avec phrase `age` auto-générée désormais autorisée, mais pas encore exécutée au moment de cette
+  clôture ;
+- intention propriétaire d'enchaîner ensuite sur la campagne fournisseur enregistrée sans élargir
+  le bloc exécutoire : réseau, reprise WO-023 et nouveau go restent à `NO` jusqu'à qualification de
+  la sauvegarde, gel du manifeste et nouveau go global lié à une fenêtre UTC.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 
