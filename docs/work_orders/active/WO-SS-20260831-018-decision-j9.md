@@ -192,11 +192,18 @@ WO019_REPORT_SHA256=47e6171eeb1fc44cf995c727d4f09107875c844e71e8b183068731cbb4c6
 PREVIOUS_GRACEFUL_CLOSE_RUNTIME_WORK_ORDER=WO-SS-20260831-020-j9-playwright-graceful-close
 PREVIOUS_GRACEFUL_CLOSE_RUNTIME_WORK_ORDER_STATUS=VALIDATED
 NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER_REQUIRED=YES
+NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER=WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay
+NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER_STATUS=OPEN_AWAITING_OWNER_AUTHORIZATION
+NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER_BRANCH=codex/j9-playwright-minimum-delay
 NEW_PROVIDER_START_DELAY_IMPLEMENTATION_AUTHORIZED=NO
 J9_DECISION_RECOMMENDATION=KEEP_LOCAL
 J9_DECISION_STATUS=PENDING_OWNER_CONFIRMATION
 INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
+
+WO-021 est ouvert par le déclencheur déjà prévu dans le plan J9, sans autoriser son implémentation.
+Sa décision propriétaire reste distincte de la décision J9 finale et de toute future reprise de
+WO-019.
 
 ADR-SS-002 v1.0 qualifie l'augmentation de volume exigée par ADR-SS-001 §9. Le précédent métier
 complet J8 autorisait au plus 30 tentatives pour un dossier ; la preuve J9 acceptée en prévoit au

@@ -78,6 +78,11 @@ L'application a été arrêtée gracieusement ; le port 8087, le processus appli
 Playwright sont absents. Les flags fournisseur persistés sont à `false`, l'origine et l'allowlist
 persistées sont vides, et le réseau est de nouveau verrouillé. Le go est consommé et terminé par
 l'arrêt ; il ne peut pas autoriser une reprise. ADR-SS-003 n'existe pas.
+
+WO-021 est ouvert sur `codex/j9-playwright-minimum-delay` pour proposer une mesure démontrable et
+une garantie loopback du délai minimal de trois secondes. Son statut est
+`OPEN_AWAITING_OWNER_AUTHORIZATION` : aucun diagnostic mutateur, correctif, test ajouté, accès
+fournisseur ou reprise de WO-019 n'est encore autorisé.
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une
@@ -1043,6 +1048,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order actif de preuve de robustesse J9](docs/work_orders/active/WO-SS-20260831-019-j9-provider-robustness.md)
 - [Rapport arrêté de la campagne J9](docs/validation/J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831.md)
 - [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md)
+- [Work Order runtime J9 en attente d'autorisation](docs/work_orders/active/WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 

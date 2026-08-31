@@ -120,6 +120,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   déterministe J9 est `KEEP_LOCAL`, sous réserve de la confirmation explicite du propriétaire ;
 - validation post-arrêt réussie : `clean verify` avec `931/0/0/4`, profil d'intégration avec
   `67/0/0/0`, schéma Flyway V28 et configuration Compose valides, sans appel fournisseur.
+- ouverture documentaire de `WO-SS-20260831-021` sur la branche/worktree distinct
+  `codex/j9-playwright-minimum-delay`, depuis le commit STOPPED `216b184`, pour rendre mesurable et
+  garantir en loopback le délai minimal de trois secondes entre départs réseau observables ; statut
+  `OPEN_AWAITING_OWNER_AUTHORIZATION`, implémentation, tests ajoutés, réseau fournisseur, reprise de
+  WO-019, nouveau go, intégration et production à `NO` ; validation documentaire à `931/0/0/4`,
+  diff, liens locaux, credentials et invariants loopback/réseau verts.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 
