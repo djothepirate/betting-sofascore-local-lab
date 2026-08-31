@@ -133,11 +133,22 @@ fenêtre UTC explicite restent requis. Aucun script, orchestration ou automatisa
 Deux échecs interactifs de phrase secrète ont ensuite révélé que la pipeline native
 `pg_dump | age` ne terminait pas de manière coordonnée son producteur lorsque le consommateur
 quittait prématurément. Les deux arbres de processus et sessions `pg_dump` suspendus ont été arrêtés
-et le nettoyage a été vérifié sans archive, base temporaire ni appel fournisseur résiduel. WO-023
-est suspendu pendant que WO-024 corrige et qualifie hors ligne l'annulation, les timeouts et le
-nettoyage fail-closed de cette pipeline. Le réseau fournisseur, la reprise de campagne et tout
-nouveau go restent à `NO` ; seule une nouvelle sauvegarde/restauration hors ligne avec phrase
-auto-générée est préautorisée après validation propriétaire de WO-024.
+et le nettoyage a été vérifié sans archive, base temporaire ni appel fournisseur résiduel.
+
+WO-024 a désormais corrigé et qualifié localement le cycle de vie fail-closed des deux pipelines
+`pg_dump -> age` et `age -> pg_restore`. Un hôte attend une porte avant de créer la cible, le
+processus est préalablement confiné dans un Job Object Windows `KILL_ON_JOB_CLOSE`, les flux restent
+binaires et le succès exige l'arrêt vérifié de chaque arbre, session PostgreSQL, fichier partiel et
+base isolée. Le chemin interactif hérite du terminal déjà attaché et ne demande aucune nouvelle
+console. Les essais hors ligne et Docker passent, ainsi que 945 tests standards et 67 tests
+d'intégration ; aucun processus possédé, listener, session ou artefact ne subsiste.
+
+La contre-épreuve `age` est abstraite, locale et sans secret : elle ne qualifie ni le dialogue TTY,
+ni l'auto-génération réelle d'une phrase et ne demande aucune saisie humaine volontairement
+incorrecte. WO-024 reste actif à `READY_FOR_OWNER_REVIEW`. WO-023 demeure suspendu ; réseau
+fournisseur, reprise de campagne et nouveau go restent à `NO`. Après validation propriétaire de
+WO-024 seulement, une nouvelle sauvegarde/restauration hors ligne avec la vraie phrase auto-générée
+par `age` pourra être tentée nominalement.
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une

@@ -196,10 +196,28 @@ Elle refuse de démarrer si un opt-in réseau, le rafraîchissement automatique,
 verrou persistant du connecteur ne sont pas dans l'état sûr.
 
 `scripts/Backup-Restore-J6.ps1` produit un `pg_dump` au format custom directement chiffré par
-`age`, sans fichier de dump clair. Il le restaure dans une base temporaire portant un nom borné,
-puis compare Flyway, les comptes, les hashes réels des payloads, les occurrences et les empreintes
-de provenance normalisée. Le manifeste n'est qualifié qu'après égalité complète. La base temporaire
-est supprimée dans le bloc de nettoyage.
+`age`, sans fichier de dump clair sur le chemin réel. Les deux pipelines binaires
+`pg_dump -> age` et `age -> pg_restore` utilisent un superviseur commun. Chaque hôte attend une
+porte avant de créer sa cible ; sous Windows, le parent affecte d'abord cet hôte à un Job Object
+`KILL_ON_JOB_CLOSE`, vérifie son appartenance et son compteur, puis ouvre la porte. La cible et ses
+descendants héritent ainsi du confinement avant leur création.
+
+Les octets circulent entre handles natifs par leurs `BaseStream`, jamais par le pipeline objet ou
+texte de PowerShell. Producteur, consommateur, copie, portes et Job Objects sont observés et nettoyés
+indépendamment sous une échéance commune. Tout échec, timeout, interruption, identité inaccessible,
+compteur Job inconnu, handle non fermé ou nettoyage non démontré invalide le résultat. Les sessions
+PostgreSQL reçoivent un `PGAPPNAME` aléatoire strictement borné ; seules les sessions de cette
+exécution peuvent être terminées et trois observations stables à zéro sont exigées.
+
+Archive et manifeste restent en staging `.partial-*`. Le flux est restauré dans une base temporaire
+portant un nom borné, puis Flyway, comptes, hashes réels des payloads, occurrences et empreintes de
+provenance normalisée sont comparés. La publication et `restoreQualified=true` ne surviennent
+qu'après égalité et nettoyage complets. Tout staging et la base temporaire sont supprimés en cas
+d'échec.
+
+Le vrai `age -p` hérite du terminal interactif déjà attaché. Aucun `Start-Process`,
+`CREATE_NEW_CONSOLE`, `AttachConsole` ou `FreeConsole` n'est demandé par le chemin runtime. La
+contre-épreuve `CTRL_BREAK` utilise seulement `CREATE_NEW_PROCESS_GROUP` dans la console courante.
 
 Le chemin exact et les contrôles opérateur sont décrits dans le runbook J6. Aucun de ces scripts
 n'est planifié ou appelé par l'application.
@@ -207,7 +225,15 @@ n'est planifié ou appelé par l'application.
 ## 10. Limites et décisions différées
 
 - la qualification humaine de l'interface J6 reste nécessaire ;
-- la première sauvegarde/restauration sur la base locale de l'opérateur reste interactive ;
+- la première sauvegarde/restauration sur la base locale de l'opérateur reste interactive. Le double
+  local qualifie une invocation abstraite `age -p` sans secret mais ni le vrai dialogue TTY, ni
+  l'auto-génération, la restitution ou la réutilisation d'une phrase ;
+- le double Docker `age` est une transformation réversible réservée à la preuve locale. Il ne
+  constitue pas un chiffrement et son artefact temporaire doit être supprimé avant tout `PASS` ;
+- les commandes scalaires historiques de préflight Docker/PostgreSQL restent hors du superviseur de
+  pipeline ; le lot ne prétend pas généraliser son timeout à toute commande externe ;
+- l'encodage Base64 des arguments de l'hôte est un transport, pas un chiffrement. Aucun secret ou
+  credential ne doit y être placé ;
 - aucune purge de la base primaire n'est autorisée par le Work Order sans décision distincte ;
 - l'export canonique reste réservé à J7 ;
 - les mesures agrégées et coûts d'appels restent réservés à J8 ;

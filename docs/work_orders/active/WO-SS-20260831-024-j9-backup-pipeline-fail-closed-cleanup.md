@@ -1,6 +1,6 @@
 # WO-SS-20260831-024 — Nettoyage fail-closed de la pipeline native de sauvegarde J6
 
-- **Statut :** `IN_DEVELOPMENT`
+- **Statut :** `READY_FOR_OWNER_REVIEW`
 - **Date d'ouverture :** 2026-08-31
 - **Jalon :** J9 — porte de sauvegarde/restauration préalable à la preuve fournisseur
 - **Base immuable d'ouverture :** `2d9c2dd7fbe9e11d3854db8847978d61230f2a78`
@@ -8,7 +8,7 @@
 - **Worktree :** `.tmp/j9-backup-pipeline-fail-closed-cleanup`
 - **Work Order parent :** `WO-SS-20260831-023-j9-provider-robustness-v11`
 - **ADR applicables :** ADR-SS-001 v1.4 ; ADR-SS-002 v1.1 `ACCEPTED`
-- **Implémentation :** `AUTHORIZED_NOT_YET_QUALIFIED`
+- **Implémentation :** `IMPLEMENTED_AND_LOCALLY_QUALIFIED` (`969f29d`)
 - **Qualification autorisée :** `LOOPBACK_AND_OFFLINE_ONLY`
 - **WO-023 :** `SUSPENDED_PENDING_WO024_VALIDATION`
 - **Réseau fournisseur :** `NOT_AUTHORIZED`
@@ -38,7 +38,7 @@ J9_ENDPOINT_TRANSPORT_PROTOCOL_SCHEMA_MIGRATION_SCOPE_EXPANSION_AUTHORIZED=NO
 J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
 
-État exécutoire à l'ouverture :
+État exécutoire à l'ouverture, désormais remplacé par l'état de revue du paragraphe 10 :
 
 ```text
 WORK_ORDER_STATUS=IN_DEVELOPMENT
@@ -178,12 +178,58 @@ terminaison sans exposer de secret et sans ouvrir d'invite interactive.
 | Échec du nettoyage | Résultat terminal en échec ; aucune qualification favorable n'est produite. |
 | Fichier `.partial-*` présent | Suppression ciblée vérifiée avant sortie. |
 | Base de restauration temporaire possédée | Suppression ciblée vérifiée, base primaire inchangée. |
-| Parcours de phrase auto-générée simulé hors ligne | L'entrée vide emprunte le chemin attendu sans consigner ni exposer la phrase. |
+| Invocation abstraite `age -p` sans secret | Le double écrit exactement `PASSPHRASE_INVOCATION_PATH=SIMULATED_NO_SECRET` et la qualification émet `J6_SYNTHETIC_AGE_PASSPHRASE_INVOCATION=PASS_ABSTRACT_NO_SECRET`. Il ne simule ni le TTY vide, ni la génération native, ni la restitution ou la réutilisation d'une phrase. |
 | Hygiène | Zéro secret, payload brut, accès fournisseur, listener ou processus possédé résiduel. |
 
 Les tests ne doivent ni dépendre d'une phrase secrète réelle ni lancer de requête fournisseur. La
 sauvegarde V28 réelle de WO-023 avec phrase auto-générée appartient à la porte post-validation
 décrite au paragraphe 9.
+
+### 6.1. Correctif réalisé
+
+Le commit local `969f29d` introduit un superviseur de pipeline binaire commun et l'applique aux
+deux sens `pg_dump -> age` et `age -> pg_restore` :
+
+- un hôte PowerShell attend une porte nommée avant de créer sa cible ;
+- sous Windows, l'hôte est d'abord affecté à un Job Object configuré
+  `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE`, son appartenance et `ActiveProcesses=1` sont vérifiées,
+  puis seulement la porte est libérée ; la cible et ses descendants héritent ainsi du confinement ;
+- les octets passent directement entre les `BaseStream` des handles natifs ; aucun payload binaire
+  ne traverse le pipeline objet ou texte de PowerShell ;
+- producteur, consommateur, copie, portes et Job Objects sont suivis séparément. Le premier échec,
+  timeout ou signal d'annulation invalide la série et le nettoyage des deux côtés continue sous une
+  échéance commune ;
+- un démarrage partiel, un comptage Job inconnu, un handle non fermé, une identité inaccessible ou
+  un `ActiveProcesses` non nul devient `CLEANUP_UNCONFIRMED` et interdit tout succès ;
+- chaque `pg_dump` et `pg_restore` reçoit un `PGAPPNAME` aléatoire validé. Seules les sessions de ce
+  nom exact peuvent être terminées et trois observations stables à zéro sont exigées ;
+- archive et manifeste restent en staging `.partial-*`. Ils ne sont publiés qu'après restauration
+  isolée V28, égalité des preuves et nettoyage complet ; toute publication incomplète est supprimée.
+
+Le chemin interactif hérite du terminal déjà attaché. Le runtime et le harnais n'utilisent ni
+`Start-Process`, ni `CREATE_NEW_CONSOLE`, ni `AttachConsole`, ni `FreeConsole`. Le seul flag console
+du lanceur de contre-épreuve est `CREATE_NEW_PROCESS_GROUP`, nécessaire au vrai `CTRL_BREAK`. Le
+marqueur `J6_CTRL_BREAK_NEW_CONSOLE_REQUESTED=NO` prouve donc l'absence de demande explicite d'une
+nouvelle console ; il ne promet pas qu'un parent entièrement headless puisse fournir le TTY requis
+par `age -p`. Les onglets `Start-Sleep` et erreurs `0x800700e8` observés pendant le développement
+provenaient d'une version antérieure du harnais et ne sont pas produits par le snapshot qualifié.
+
+### 6.2. Limites explicitement conservées
+
+- le faux `age` de la qualification est une transformation XOR locale et réversible, pas une preuve
+  cryptographique. Avec `-WithDocker`, son artefact transitoire contient donc une représentation
+  réversible du dump local dans le répertoire temporaire dédié et borné du test ; le `finally` le
+  supprime, aucun artefact n'est versionné, mais un arrêt brutal de la machine reste hors preuve ;
+- l'invocation abstraite sans secret ne qualifie pas le dialogue TTY ni l'auto-génération native
+  d'`age`. Cette preuve réelle reste exclusivement la tentative WO-023 post-validation ;
+- les sondes Docker scalaires historiques de préflight restent distinctes du nouveau superviseur de
+  pipeline. Le présent lot qualifie les pipelines natives et leurs nettoyages, sans prétendre
+  généraliser le timeout à toute commande du script ;
+- les arguments de l'hôte sont encodés en Base64 pour leur transport local, sans chiffrement. Le
+  contrat interdit d'y placer un secret ou un credential ; aucun appel actuel ne le fait ;
+- les délais internes du harnais `CTRL_BREAK` sont bornés mais séquentiels. Un crash natif brutal du
+  lanceur ne peut, par nature, exécuter son propre `finally` ; ces limites ne concernent pas le
+  chemin nominal du script de sauvegarde.
 
 ## 7. Vérifications requises
 
@@ -218,6 +264,73 @@ SECRET_AND_RAW_PAYLOAD_SCAN=PASS
 
 Les tests d'intégration ne peuvent contacter que les dépendances locales prévues par le dépôt. Ils
 ne valent ni sauvegarde WO-023 qualifiée, ni reprise de campagne fournisseur.
+
+### 7.1. Résultats du snapshot qualifié
+
+Le snapshot fonctionnel qualifié est le commit local
+`969f29d01ae1f9cf8048fd3a491ce94e9d120ee6`. Les commandes ont été exécutées dans le worktree
+WO-024, sans accès fournisseur :
+
+| Vérification | Résultat factuel |
+|---|---|
+| Parse des quatre scripts PowerShell modifiés ou ajoutés | `PASS` |
+| `pwsh -NoProfile -File .\scripts\Invoke-J6BackupRestoreLoopbackQualification.ps1` | `PASS`, puis trois répétitions consécutives `PASS` sur le snapshot stabilisé |
+| même qualification avec `-WithDocker` | `PASS` sur PostgreSQL local ; dump, restauration isolée, échecs chiffreur/déchiffreur et nettoyage fail-closed qualifiés |
+| `.\mvnw.cmd --offline -q -Dtest=J6NativeBinaryPipelineQualificationTest test` | `PASS`, 2 tests, zéro échec ou erreur |
+| `.\mvnw.cmd --offline clean verify` | `PASS`, 945 tests, zéro échec, zéro erreur, 4 ignorés ; premier passage fonctionnel terminé à `2026-08-31T17:58:43Z`, nouveau passage après documentation terminé à `2026-08-31T18:24:11Z` |
+| `.\mvnw.cmd --offline -Pintegration-tests verify` | `PASS`, 945 tests unitaires et 67 tests d'intégration, zéro échec ou erreur ; PostgreSQL 18.4, schéma V28 ; fin `2026-08-31T18:00:24Z` |
+| `pwsh -NoProfile -File .\scripts\Verify-Local.ps1 -WithIntegrationTests` | `PASS`, Java 25, Docker contrôlé, tests d'intégration exécutés, appels SofaScore `NO` ; fin `2026-08-31T18:03:21Z` |
+| `docker compose --env-file .env config --quiet` | `PASS` |
+| `git diff --check` | `PASS` |
+
+Les contre-épreuves hors ligne ont confirmé un flux binaire de 65 536 octets couvrant toutes les
+valeurs d'octet, avec longueur et SHA-256 identiques. Elles ont aussi confirmé l'arrêt fail-closed
+sur échec précoce de chacun des côtés, troncature, timeout, annulation coopérative, interruption
+`CTRL_BREAK`, exception après démarrage, racine déjà sortie avec descendant vivant et simulation de
+réutilisation de PID. Les racines du wrapper sont constatées vivantes avant le nettoyage du vrai
+`CTRL_BREAK`, puis le compteur final de processus possédés vaut zéro.
+
+La qualification Docker a confirmé :
+
+```text
+J6_PIPELINE_DOCKER_PG_DUMP_EARLY_CONSUMER_FAILURE=PASS_FAIL_CLOSED
+J6_PIPELINE_REMOTE_OWNED_SESSION_COUNT=0
+J6_SYNTHETIC_AGE_PASSPHRASE_INVOCATION=PASS_ABSTRACT_NO_SECRET
+J6_PIPELINE_DOCKER_PG_RESTORE_NOMINAL=PASS
+J6_TEMPORARY_RESTORE_DATABASE_CLEANUP=PASS
+J6_PARTIAL_FILE_CLEANUP=PASS
+J6_DECRYPTOR_FAILURE_REJECTS_QUALIFICATION=PASS_FAIL_CLOSED
+J6_TEMPORARY_RESTORE_DATABASE_RESIDUAL_COUNT=0
+J6_CLEANUP_FAILURE_REJECTS_QUALIFICATION=PASS_FAIL_CLOSED
+J6_PIPELINE_RESIDUAL_OWNED_PROCESS_COUNT=0
+J6_PIPELINE_HUMAN_INCORRECT_PASSPHRASE_REQUIRED=NO
+J6_BACKUP_RESTORE_LOOPBACK_QUALIFICATION=PASS
+```
+
+L'audit final de portée et d'hygiène donne :
+
+```text
+FAIL_CLOSED_PIPELINE_TESTS=PASS
+CONSUMER_FAILURE_CANCELS_PRODUCER=PASS
+PRODUCER_FAILURE_CANCELS_CONSUMER=PASS
+TIMEOUT_CLEANUP=PASS
+INTERRUPTION_CLEANUP=PASS
+PARTIAL_FILE_CLEANUP=PASS
+TEMPORARY_RESTORE_DATABASE_CLEANUP=PASS
+RESIDUAL_J6_OWNED_PROCESS_COUNT=0
+RESIDUAL_J6_POSTGRES_SESSION_COUNT=0
+LISTENER_127_0_0_1_8087_COUNT=0
+PROVIDER_ACCESS_PERFORMED=NO
+SERVER_ADDRESS=127.0.0.1
+NETWORK_FLAGS_DEFAULT_FALSE=PASS
+SECRET_AND_RAW_PAYLOAD_SCAN=PASS
+SECURITY_SCOPE_AUDIT=PASS_WITH_DOCUMENTED_LOCAL_TEST_RESIDUALS
+```
+
+Aucun endpoint, transport fournisseur, schéma, migration, format d'export, fichier Compose,
+dépendance Maven ou configuration réseau applicative n'a été modifié. Aucun secret, payload brut,
+archive, base temporaire, fichier `.partial-*`, session PostgreSQL possédée, worker ou listener 8087
+ne subsiste dans la preuve finale.
 
 ## 8. Portes de statut et validation propriétaire
 
@@ -280,13 +393,13 @@ PROVIDER_NETWORK_AUTHORIZED=NO
 NEW_GLOBAL_OWNER_GO_GRANTED=NO
 ```
 
-## 10. État d'ouverture
+## 10. État prêt pour revue propriétaire
 
 ```text
-WORK_ORDER_STATUS=IN_DEVELOPMENT
-EVIDENCE_STATUS=DRAFT
-IMPLEMENTATION_STATUS=AUTHORIZED_NOT_YET_QUALIFIED
-OFFLINE_AND_LOOPBACK_QUALIFICATION=NOT_EXECUTED
+WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+EVIDENCE_STATUS=PASS_LOCAL
+IMPLEMENTATION_STATUS=IMPLEMENTED_AND_LOCALLY_QUALIFIED
+OFFLINE_AND_LOOPBACK_QUALIFICATION=PASS
 OWNER_VALIDATION=PENDING
 MOVE_TO_COMPLETED_AUTHORIZED=NO
 WO023_STATUS=SUSPENDED_PENDING_WO024_VALIDATION
@@ -298,3 +411,27 @@ PRIMARY_DATABASE_PURGE=NO
 INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 J9_FINAL_DECISION=NOT_TAKEN
 ```
+
+## 11. Choix propriétaire explicite requis
+
+Le propriétaire peut maintenant accepter ou refuser la qualification locale ci-dessus. Le bloc
+doit rester explicite ; aucune valeur de décision n'est déduite automatiquement des tests :
+
+```text
+J9_WO024_OWNER_REVIEW_DECISION=<VALIDATE|REJECT>
+J9_WO024_WORK_ORDER=WO-SS-20260831-024-j9-backup-pipeline-fail-closed-cleanup
+J9_WO024_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO024_SCOPE_CONFIRMED=DIAGNOSE_CORRECT_AND_QUALIFY_J6_BACKUP_NATIVE_PIPELINE_CANCELLATION_TIMEOUT_AND_PROCESS_TREE_CLEANUP
+J9_WO024_FAIL_CLOSED_PIPELINE_QUALIFIED=YES
+J9_WO024_WORK_ORDER_MOVE_TO_COMPLETED=<YES|NO>
+J9_WO023_BACKUP_RETRY=AUTHORIZED_AFTER_VALIDATION_WITH_AGE_AUTOGENERATED_PASSPHRASE
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_WO023_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+J9_NEW_PROVIDER_GO_GRANTED=NO
+J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+```
+
+Une validation autorisera le déplacement de WO-024 vers les Work Orders terminés et matérialisera
+la porte déjà accordée pour une unique nouvelle sauvegarde/restauration WO-023 nominale avec la
+phrase auto-générée par le vrai exécutable `age`. Elle n'autorisera ni la campagne fournisseur, ni
+le réseau, ni un nouveau go, ni l'intégration ou la production.

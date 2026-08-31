@@ -136,20 +136,32 @@ pwsh -NoProfile -File .\scripts\Backup-Restore-J6.ps1 `
 
 `age` demande interactivement la phrase secrète pendant le chiffrement puis le déchiffrement. Ne
 pas passer cette phrase sur la ligne de commande, ne pas la coller dans un rapport et ne pas la
-conserver dans `.env`.
+conserver dans `.env`. La commande doit être lancée depuis un terminal interactif déjà attaché : le
+script transmet directement ce terminal à `age` et ne crée aucune nouvelle console. Après une
+modification des variables d'environnement utilisateur, redémarrer entièrement l'application ou le
+terminal qui lance la commande, ou fournir explicitement les valeurs non secrètes requises dans la
+commande ; un onglet enfant ne peut pas récupérer rétroactivement l'environnement de son parent.
 
 Le script :
 
 1. refuse une application encore à l'écoute sur le port 8087 ;
 2. vérifie Compose, le verrou réseau et la version courante Flyway V28 ;
 3. vérifie le SHA-256 réel de chaque payload retenu ;
-4. dirige `pg_dump --format=custom` directement vers `age -p` ;
-5. crée un manifeste initial non qualifié ;
-6. restaure le flux déchiffré directement dans une base temporaire ;
-7. compare version Flyway, comptes, couverture et empreintes source/restauration, y compris les
+4. démarre chaque côté derrière une porte, confine d'abord son hôte dans un Job Object Windows
+   `KILL_ON_JOB_CLOSE`, puis dirige les handles binaires natifs de `pg_dump --format=custom`
+   directement vers `age -p` ;
+5. observe séparément les sorties, applique une échéance bornée et annule le pair ainsi que ses
+   descendants au premier échec, timeout ou interruption ;
+6. identifie les sessions `pg_dump` et `pg_restore` par un `PGAPPNAME` unique et n'accepte le
+   nettoyage qu'après trois observations stables à zéro ;
+7. conserve archive et manifeste sous des noms `.partial-*` jusqu'à la qualification complète ;
+8. crée un manifeste initial non qualifié ;
+9. restaure le flux déchiffré directement dans une base temporaire ;
+10. compare version Flyway, comptes, couverture et empreintes source/restauration, y compris les
    cinq comptes et le fingerprint déterministe du ledger J8 ;
-8. inscrit `restoreQualified=true` uniquement après égalité ;
-9. supprime la base temporaire dans tous les cas.
+11. inscrit `restoreQualified=true` uniquement après égalité et nettoyage prouvé ;
+12. supprime la base temporaire et tout fichier partiel dans tous les cas ; une preuve de nettoyage
+    incomplète rend l'exécution terminalement invalide.
 
 Une réussite se termine par :
 
@@ -164,6 +176,22 @@ J6_BACKUP_COVERAGE_RECEIVED_AT=<instant UTC>
 Deux fichiers restent dans le répertoire externe : le fichier `.age` et
 `<fichier>.age.manifest.json`. Conserver les deux ensemble. Si la qualification échoue, ils ne
 constituent pas une preuve valide et le mode `Execute` doit rester interdit.
+
+Pour qualifier le superviseur lui-même en développement, sans phrase réelle et sans fournisseur :
+
+```powershell
+pwsh -NoProfile -File .\scripts\Invoke-J6BackupRestoreLoopbackQualification.ps1
+pwsh -NoProfile -File .\scripts\Invoke-J6BackupRestoreLoopbackQualification.ps1 -WithDocker
+```
+
+Le premier parcours est entièrement synthétique. Le second utilise uniquement PostgreSQL local et
+un faux `age` sans secret. Ce double applique une transformation XOR réversible : il teste le
+transport binaire, les sorties, l'annulation et le nettoyage, pas la cryptographie, le dialogue TTY
+ou l'auto-génération native d'une phrase. Il peut créer transitoirement, dans le répertoire temporaire
+du test, une représentation réversible du dump local ; le `finally` doit la supprimer et une
+qualification favorable exige son absence finale. Ne jamais utiliser ce double avec des données
+dont ce risque local n'est pas acceptable. Aucune saisie humaine volontairement incorrecte n'est
+requise pour ces contre-épreuves.
 
 ## 6. Refaire l'aperçu final
 
@@ -261,6 +289,9 @@ Arrêter proprement l'application après vérification.
 | `BACKUP_COVERAGE_INSUFFICIENT` | preuve antérieure à un candidat | créer une nouvelle sauvegarde |
 | `DATABASE_MUTATION_MISMATCH` | nombre de lignes inattendu | transaction annulée ; diagnostiquer avant tout nouvel essai |
 | `LOCAL_EXECUTION_FAILURE` | configuration, manifeste ou base invalide | conserver les preuves et diagnostiquer localement |
+| échec ou timeout d'un côté de la pipeline native | producteur ou consommateur invalide | arrêter le pair et son Job Object ; ne publier aucun fichier ni résultat qualifié |
+| `CLEANUP_UNCONFIRMED` ou nettoyage de session non stabilisé | absence de résidu non démontrée | arrêter ; ne pas relancer avant diagnostic ciblé et audit des ressources possédées |
+| session PostgreSQL possédée encore visible | snapshot ou restauration potentiellement actifs | ne pas tuer largement par nom ; cibler seulement le `PGAPPNAME` exact de l'exécution et prouver trois observations à zéro |
 
 Ne jamais contourner un refus par une modification SQL manuelle, une désactivation de trigger ou
 une édition du manifeste. Une restauration de secours doit être effectuée vers une base distincte

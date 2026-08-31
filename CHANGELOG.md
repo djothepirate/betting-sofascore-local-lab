@@ -219,7 +219,20 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   exclusivement hors ligne l'annulation coordonnée, les timeouts et le nettoyage de l'arbre natif.
   WO-023 reste suspendu, réseau fournisseur, reprise de campagne et nouveau go restent à `NO` ; la
   nouvelle sauvegarde/restauration WO-023 avec phrase auto-générée ne devient autorisée qu'après
-  validation propriétaire de WO-024.
+  validation propriétaire de WO-024 ;
+- implémentation locale `969f29d` d'un superviseur binaire fail-closed partagé par les voies
+  `pg_dump -> age` et `age -> pg_restore` : porte préalable à la création de la cible, Job Objects
+  Windows `KILL_ON_JOB_CLOSE`, suivi indépendant des statuts, échéance bornée commune, nettoyage
+  des arbres, sessions exactes `PGAPPNAME`, fichiers `.partial-*` et base de restauration isolée ;
+- qualification WO-024 hors ligne et Docker réussie : octets et SHA-256 identiques, échecs des deux
+  côtés, troncature, timeout, annulation et vrai `CTRL_BREAK` refusés fail-closed, zéro processus,
+  session PostgreSQL, base temporaire, fichier partiel ou listener résiduel. Le double `age` ne
+  transporte aucun secret et ne simule pas le TTY ou l'auto-génération réelle ; aucune mauvaise
+  phrase humaine n'est requise ;
+- vérifications finales réussies : 945 tests standards, 67 tests d'intégration, Java 25, PostgreSQL
+  18.4/V28, `Verify-Local.ps1 -WithIntegrationTests`, Compose, scans de portée et de secrets. WO-024
+  passe à `READY_FOR_OWNER_REVIEW` mais reste actif ; WO-023, réseau fournisseur, campagne, nouveau
+  go, intégration et production restent interdits.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 
