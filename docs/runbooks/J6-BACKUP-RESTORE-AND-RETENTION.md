@@ -142,25 +142,46 @@ modification des variables d'environnement utilisateur, redémarrer entièrement
 terminal qui lance la commande, ou fournir explicitement les valeurs non secrètes requises dans la
 commande ; un onglet enfant ne peut pas récupérer rétroactivement l'environnement de son parent.
 
+Les deux bornes de nettoyage par défaut sont distinctes :
+
+```text
+PIPELINE_NATIVE_CLEANUP_DEFAULT_MS=5000
+POSTGRES_OWNED_SESSION_CLEANUP_DEFAULT_MS=10000
+```
+
+La première borne couvre l'arrêt et la preuve de nettoyage des processus natifs possédés. La
+seconde couvre l'observation, la terminaison exacte éventuelle et la stabilisation de la session
+PostgreSQL possédée. Elles ne constituent ni une boucle indéfinie ni un budget interchangeable.
+
 Le script :
 
 1. refuse une application encore à l'écoute sur le port 8087 ;
 2. vérifie Compose, le verrou réseau et la version courante Flyway V28 ;
 3. vérifie le SHA-256 réel de chaque payload retenu ;
-4. démarre chaque côté derrière une porte, confine d'abord son hôte dans un Job Object Windows
-   `KILL_ON_JOB_CLOSE`, puis dirige les handles binaires natifs de `pg_dump --format=custom`
-   directement vers `age -p` ;
-5. observe séparément les sorties, applique une échéance bornée et annule le pair ainsi que ses
+4. vérifie l'exécutable Docker exact ; sous Windows, il doit être un fichier absolu sans reparse
+   point, signé validement et attribué au produit Docker Inc. ;
+5. démarre chaque côté derrière une porte, confine d'abord son hôte dans un Job Object Windows
+   `KILL_ON_JOB_CLOSE`, puis acquiert sur un named pipe `CurrentUserOnly` un handshake cible lié par
+   nonce avec l'identité exacte `PID + StartTime` avant de mesurer le budget d'exécution ;
+6. dirige les handles binaires natifs de `pg_dump --format=custom` directement vers `age -p`,
+   observe séparément les sorties, applique une échéance bornée et annule le pair ainsi que ses
    descendants au premier échec, timeout ou interruption ;
-6. identifie les sessions `pg_dump` et `pg_restore` par un `PGAPPNAME` unique et n'accepte le
-   nettoyage qu'après trois observations stables à zéro ;
-7. conserve archive et manifeste sous des noms `.partial-*` jusqu'à la qualification complète ;
-8. crée un manifeste initial non qualifié ;
-9. restaure le flux déchiffré directement dans une base temporaire ;
-10. compare version Flyway, comptes, couverture et empreintes source/restauration, y compris les
+7. n'accepte la preuve d'absence native qu'après corroboration bornée du Job Object, de l'identité
+   .NET exacte, de Toolhelp, CIM et `tasklist` ; aucune vue d'observation n'autorise une terminaison
+   par PID seul ;
+8. identifie les sessions `pg_dump` et `pg_restore` par un `PGAPPNAME` unique conforme exactement à
+   `^j6_(backup|restore)_[a-f0-9]{32}$`, exécute `psql` avec `ON_ERROR_STOP=1`, distingue les cibles
+   des signaux de terminaison acceptés et n'accepte le nettoyage qu'après trois observations
+   fraîches à zéro ;
+9. conserve uniquement des classifications et causes internes sanitées ; stderr brut, phrase
+   secrète, `.env`, chaîne de connexion et payload ne doivent pas être restitués ;
+10. conserve archive et manifeste sous des noms `.partial-*` jusqu'à la qualification complète ;
+11. crée un manifeste initial non qualifié ;
+12. restaure le flux déchiffré directement dans une base temporaire ;
+13. compare version Flyway, comptes, couverture et empreintes source/restauration, y compris les
    cinq comptes et le fingerprint déterministe du ledger J8 ;
-11. inscrit `restoreQualified=true` uniquement après égalité et nettoyage prouvé ;
-12. supprime la base temporaire et tout fichier partiel dans tous les cas ; une preuve de nettoyage
+14. inscrit `restoreQualified=true` uniquement après égalité et nettoyage prouvé ;
+15. supprime la base temporaire et tout fichier partiel dans tous les cas ; une preuve de nettoyage
     incomplète rend l'exécution terminalement invalide.
 
 Une réussite se termine par :
@@ -192,6 +213,23 @@ du test, une représentation réversible du dump local ; le `finally` doit la su
 qualification favorable exige son absence finale. Ne jamais utiliser ce double avec des données
 dont ce risque local n'est pas acceptable. Aucune saisie humaine volontairement incorrecte n'est
 requise pour ces contre-épreuves.
+
+Le harness couvre les parcours PostgreSQL nominal, session déjà absente, disparition naturelle,
+persistance ou terminaison refusée, timeout, erreur SQL et parsing invalide. Il vérifie aussi :
+
+- la distinction entre observation fraîche et compte antérieur à une terminaison ;
+- l'idempotence d'une preuve exacte déjà stabilisée ;
+- la classification d'un état Windows multi-API divergent comme
+  `AMBIGUOUS_CROSS_API_GHOST_VISIBILITY`, avec réobservation bornée mais aucune terminaison par PID
+  seul ;
+- la création d'un temp root synthétique enfant direct du temp système avec nom canonique et
+  marqueur de propriété lié au chemin et à un nonce ;
+- le refus du parent temporaire, des globs, des chemins extérieurs et des reparse points ;
+- la suppression du seul temp root exactement possédé et la preuve de son absence finale.
+
+Un ancien processus ou répertoire dont l'appartenance n'est pas démontrée doit rester non attribué
+et intact. Le harness ne prouve pas la propreté globale de Windows ou du répertoire temporaire ; il
+prouve uniquement l'absence des ressources exactes qu'il possède.
 
 ## 6. Refaire l'aperçu final
 
@@ -292,6 +330,13 @@ Arrêter proprement l'application après vérification.
 | échec ou timeout d'un côté de la pipeline native | producteur ou consommateur invalide | arrêter le pair et son Job Object ; ne publier aucun fichier ni résultat qualifié |
 | `CLEANUP_UNCONFIRMED` ou nettoyage de session non stabilisé | absence de résidu non démontrée | arrêter ; ne pas relancer avant diagnostic ciblé et audit des ressources possédées |
 | session PostgreSQL possédée encore visible | snapshot ou restauration potentiellement actifs | ne pas tuer largement par nom ; cibler seulement le `PGAPPNAME` exact de l'exécution et prouver trois observations à zéro |
+| `POSTGRES_SESSION_REMAINING` | une observation fraîche postérieure à la dernière terminaison voit encore la session exacte | arrêter ; auditer l'identité exacte et ne jamais terminer par nom large |
+| `POSTGRES_OBSERVATION_TIMEOUT` | la borne expire sans preuve fraîche suffisante | arrêter ; ne pas convertir un ancien compte en preuve de présence ou d'absence |
+| `POSTGRES_SCALAR_OUTPUT_INVALID` | sortie `psql` vide, bruitée, multiligne, non canonique ou incohérente | arrêter ; diagnostiquer la commande et ne pas interpréter approximativement la sortie |
+| `POSTGRES_DOCKER_COMMAND_FAILED`, `POSTGRES_DOCKER_COMMAND_NONZERO_EXIT` ou `POSTGRES_SQL_COMMAND_NONZERO_EXIT` | Docker, le processus natif ou SQL a échoué | arrêter ; conserver seulement la classification sanitée et diagnostiquer localement |
+| `POSTGRES_DOCKER_PROCESS_CLEANUP_UNCONFIRMED` | l'absence de l'arbre de commande Docker n'est pas prouvée | arrêter et auditer l'identité possédée ; aucune reprise tant que le nettoyage reste invérifiable |
+| `AMBIGUOUS_CROSS_API_GHOST_VISIBILITY` | .NET ne peut pas ouvrir l'identité mais une vue secondaire reste visible | arrêter la qualification et auditer ; ne pas tuer par PID seul |
+| `TEMP_ROOT_CLEANUP_FAILED` ou propriété/confinement du temp root non confirmés | le seul répertoire synthétique exact ne peut pas être validé ou supprimé sûrement | ne supprimer que le chemin exact possédé ; ne jamais supprimer récursivement le parent temporaire |
 
 Ne jamais contourner un refus par une modification SQL manuelle, une désactivation de trigger ou
 une édition du manifeste. Une restauration de secours doit être effectuée vers une base distincte

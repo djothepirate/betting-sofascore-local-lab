@@ -1,7 +1,8 @@
 # WO-SS-20260831-025 — Durcissement de la preuve de nettoyage J6/J9
 
-- **Statut :** `IN_DEVELOPMENT`
+- **Statut :** `READY_FOR_OWNER_REVIEW`
 - **Date d'ouverture :** 2026-08-31
+- **Readiness locale achevée :** 2026-09-01
 - **Décision propriétaire observée à :** 2026-08-31T20:07:12.5287020Z
 - **Jalon :** J9 — prérequis runtime de la nouvelle preuve fournisseur
 - **Base immuable d'ouverture :** `501490233df5d29719e19d70dabbfc1e37ac4ce7`
@@ -9,6 +10,14 @@
 - **Worktree :** `.tmp/j9-backup-cleanup-proof-hardening`
 - **Work Order parent :** `WO-SS-20260831-023-j9-provider-robustness-v11`
 - **Work Order antérieur gelé :** WO-024 `VALIDATED_AND_FROZEN`
+- **Commit d'ouverture :** `5a93911d42b84755d461781dbdb45e890f008789`
+- **Commit fonctionnel qualifié :** `d019be274f200aaa33124b041e3773cf15ae2723`
+- **Implémentation :** `IMPLEMENTED_AND_LOCALLY_QUALIFIED`
+- **Validation propriétaire :** `PENDING`
+- **Déplacement vers completed :** `NOT_AUTHORIZED`
+- **Rapport :**
+  [`J9-WO025-BACKUP-CLEANUP-PROOF-HARDENING-READINESS-20260901`](../../validation/J9-WO025-BACKUP-CLEANUP-PROOF-HARDENING-READINESS-20260901.md),
+  SHA-256 `f0854b2b4b3515051832e565d3cb534cd473c744adb14fe0eb4775965501088f`
 - **Réseau fournisseur :** `NOT_AUTHORIZED`
 - **Nouvelle sauvegarde/restauration WO-023 :** `NOT_AUTHORIZED`
 - **Intégration, production ou VPS courant :** `NOT_AUTHORIZED`
@@ -139,9 +148,9 @@ WO-025 ne modifie pas :
 - les garanties `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
   `NO_CRITICAL_DEPENDENCY`.
 
-## 5. Fichiers candidats
+## 5. Fichiers modifiés
 
-Le périmètre de code est limité aux fichiers nécessaires parmi :
+Le périmètre runtime et test qualifié est limité aux fichiers suivants :
 
 ```text
 scripts/Backup-Restore-J6.ps1
@@ -152,7 +161,9 @@ src/test/java/com/bettingproject/sofascorelocal/build/J6NativeBinaryPipelineQual
 docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md
 ```
 
-Tout besoin de modification hors de cette liste sera consigné et arrêté avant élargissement.
+La traçabilité de readiness modifie en plus le présent Work Order, `README.md`, `CHANGELOG.md` et
+le rapport de validation précité. Aucun autre code, endpoint, transport, protocole, schéma ou
+migration n'est modifié.
 
 ## 6. Qualifications obligatoires
 
@@ -218,7 +229,10 @@ PROVIDER_NETWORK_AUTHORIZED=NO
 NEW_PROVIDER_GLOBAL_GO_GRANTED=NO
 ```
 
-## 8. État initial
+## 8. État initial gelé
+
+Ce bloc conserve la photographie d'ouverture. Ses valeurs `NOT_IMPLEMENTED` et `NOT_EXECUTED` ne
+décrivent pas le résultat courant, consigné dans les sections suivantes.
 
 ```text
 WORK_ORDER_STATUS=IN_DEVELOPMENT
@@ -248,3 +262,123 @@ NEW_PROVIDER_GLOBAL_GO_GRANTED=NO
 PRIMARY_DATABASE_PURGE=NO
 INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
+
+## 9. Implémentation et classification déterministe
+
+Le commit fonctionnel qualifié `d019be274f200aaa33124b041e3773cf15ae2723` livre :
+
+- des budgets effectifs et distincts de `5 000 ms` pour le nettoyage natif et de `10 000 ms`
+  pour l'observation PostgreSQL ;
+- un `PGAPPNAME` exact et sensible à la casse, `psql` sous `ON_ERROR_STOP=1`, un même CTE
+  matérialisé pour les cibles et les signaux de terminaison, un parsing canonique strict et trois
+  observations fraîches à zéro ;
+- une distinction déterministe entre session réellement restante et expiration sans observation
+  fraîche, sans réutiliser un compte obsolète après terminaison ;
+- des causes bornées et sanitées, avec agrégation de l'erreur primaire, du nettoyage PostgreSQL,
+  des fichiers et du temp root sans exposition de stderr brut ;
+- un handshake cible en mémoire avant le budget d'exécution, l'identité exacte
+  `PID + StartTime`, le confinement par Job Object et une corroboration .NET, Toolhelp, CIM et
+  `tasklist` strictement bornée ;
+- la classification `AMBIGUOUS_CROSS_API_GHOST_VISIBILITY`, sans terminaison par PID seul ;
+- un temp root enfant direct du temp système, au nom canonique et au marqueur de propriété lié à
+  un nonce, avec refus du parent, des globs, chemins extérieurs et reparse points avant suppression
+  littérale exacte.
+
+Le correctif n'attribue ni ne supprime aucun processus ou répertoire historique dont la propriété
+n'est pas démontrée. Les ressources de l'exécution courante sont les seules couvertes par la preuve
+d'absence.
+
+## 10. Résultats de qualification et audit final
+
+Le rapport lié dans le cartouche constitue la source détaillée. Sur le commit fonctionnel exact :
+
+- une exécution directe et cinq répétitions Maven hors ligne sont passées ;
+- une exécution directe et trois répétitions Maven avec PostgreSQL/Docker local sont passées ;
+- `mvnw.cmd clean verify` a passé `946` tests, sans échec ni erreur et avec `5` skips prévus ;
+- le profil d'intégration a passé `67` tests, sans échec, erreur ou skip ;
+- `Verify-Local.ps1 -WithIntegrationTests`, Compose et `git diff --check` sont passés ;
+- le scanner de motifs à haute confiance trouve zéro secret, zéro ajout de liaison/réseau interdit
+  et zéro ajout de purge large ;
+- aucune session PostgreSQL J6 possédée, base de restauration temporaire, fichier partiel,
+  processus possédé, temp root exact ou listener 8087 ne subsiste après les parcours qualifiés.
+
+```text
+FAIL_CLOSED_AND_EXACT_OWNERSHIP_INVARIANTS=PRESERVED
+POSTGRES_CLEANUP_EFFECTIVE_DEFAULT_QUALIFIED=YES_5000_10000
+STRICT_SCALAR_PARSING=PASS
+SANITIZED_INNER_CAUSE=PASS
+BOUNDED_NATIVE_PID_EVIDENCE_RELIABILITY=PASS
+MULTI_API_PROCESS_STATE_CORROBORATION=PASS
+GHOST_STATE_CLASSIFICATION=PASS_FAIL_CLOSED
+EXACT_CURRENT_RUN_SYNTHETIC_TEMP_ROOT_CLEANUP=PASS
+
+CURRENT_RUN_RESIDUAL_OWNED_PROCESS_COUNT=0
+CURRENT_RUN_RESIDUAL_J6_POSTGRES_SESSION_COUNT=0
+CURRENT_RUN_TEMPORARY_RESTORE_DATABASE_COUNT=0
+CURRENT_RUN_PARTIAL_ARTIFACT_COUNT=0
+CURRENT_RUN_EXACT_SYNTHETIC_TEMP_ROOT_RESIDUAL_COUNT=0
+LISTENER_127_0_0_1_8087_COUNT=0
+PID_ONLY_TERMINATION_USED=NO
+
+HISTORICAL_AMBIGUOUS_PROCESS_ENTRY_ATTRIBUTION=NOT_ESTABLISHED
+HISTORICAL_SYNTHETIC_TEMP_ROOT_ATTRIBUTION=NOT_ESTABLISHED
+UNOWNED_OR_UNATTRIBUTED_RESOURCE_TERMINATION_OR_DELETION=NO
+
+SERVER_ADDRESS=127.0.0.1
+NETWORK_FLAGS_DEFAULT_FALSE=PASS
+PROVIDER_ACCESS_PERFORMED=NO
+PRIMARY_DATABASE_PURGE=NO
+```
+
+## 11. État prêt pour revue propriétaire
+
+```text
+WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+EVIDENCE_STATUS=PASS_LOCAL
+IMPLEMENTATION_STATUS=IMPLEMENTED_AND_LOCALLY_QUALIFIED
+LOCAL_READINESS=PASS
+OFFLINE_AND_LOOPBACK_QUALIFICATION=PASS
+OWNER_VALIDATION=PENDING
+OWNER_REVIEW_REQUIRED=YES
+MOVE_TO_COMPLETED_AUTHORIZED=NO
+WORK_ORDER_LOCATION=docs/work_orders/active/WO-SS-20260831-025-j9-backup-cleanup-proof-hardening.md
+
+WO024_STATUS=VALIDATED_AND_FROZEN
+WO023_STATUS=BLOCKED_AFTER_BACKUP_CLEANUP_UNCONFIRMED
+WO023_BACKUP_RETRY_AFTER_WO025_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
+WO023_BACKUP_RETRY_AUTHORIZED=NO
+WO023_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+NEW_PROVIDER_GLOBAL_GO_GRANTED=NO
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_FINAL_DECISION=NOT_TAKEN
+```
+
+## 12. Choix propriétaire explicite requis
+
+Le propriétaire peut accepter ou rejeter la readiness locale au moyen du bloc suivant :
+
+```text
+J9_WO025_OWNER_REVIEW_DECISION=<VALIDATE|REJECT>
+J9_WO025_WORK_ORDER=WO-SS-20260831-025-j9-backup-cleanup-proof-hardening
+J9_WO025_LOCAL_READINESS_ACKNOWLEDGED=<YES|NO>
+J9_WO025_SCOPE_CONFIRMED=DIAGNOSE_CORRECT_AND_QUALIFY_J6_EXACT_POSTGRES_CLEANUP_EFFECTIVE_DEFAULT_SANITIZED_INNER_CAUSE_STRICT_SCALAR_PARSING_BOUNDED_NATIVE_PID_EVIDENCE_RELIABILITY_MULTI_API_PROCESS_STATE_CORROBORATION_GHOST_STATE_CLASSIFICATION_AND_EXACT_SYNTHETIC_TEMP_ROOT_CLEANUP
+J9_WO025_CLEANUP_PROOF_HARDENING_QUALIFIED=<YES|NO>
+J9_WO025_FAIL_CLOSED_AND_EXACT_OWNERSHIP_INVARIANTS=<PRESERVED|REJECTED>
+J9_WO025_PID_ONLY_TERMINATION_USED=NO
+J9_WO025_WORK_ORDER_MOVE_TO_COMPLETED=<YES|NO>
+J9_WO023_BACKUP_RETRY_AFTER_WO025_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
+J9_WO023_BACKUP_RETRY_AUTHORIZED=NO
+J9_WO023_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_NEW_PROVIDER_GLOBAL_GO_GRANTED=NO
+J9_PRIMARY_DATABASE_PURGE=NO
+J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+```
+
+Une éventuelle validation de WO-025 autorisera seulement son déplacement vers les Work Orders
+terminés. Elle n'autorisera pas la sauvegarde/restauration WO-023, ne reprendra pas la campagne
+fournisseur et ne créera aucun go. La sauvegarde/restauration WO-023 exigera une décision
+propriétaire séparée et postérieure.

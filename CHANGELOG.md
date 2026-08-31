@@ -284,6 +284,31 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   reste bloqué et une nouvelle sauvegarde réelle exigera une décision propriétaire séparée ; toute
   terminaison par PID seul, acquisition fournisseur, nouveau go, intégration et production restent
   à `NO`.
+- correctif PostgreSQL WO-025 au commit `d019be2` : défauts effectifs distincts de `5 000 ms` pour
+  le nettoyage natif et `10 000 ms` pour l'observation, `PGAPPNAME` exact sensible à la casse,
+  `ON_ERROR_STOP=1`, couple ciblé/réussi issu d'un même CTE, parsing canonique strict, trois zéros
+  frais et idempotence uniquement après preuve stabilisée ; un ancien compte après terminaison ne
+  peut plus produire un faux `SESSION_REMAINING` ;
+- classifications Docker, SQL, parsing, observation, session restante et nettoyage de processus
+  désormais distinctes et fail-closed ; les causes internes publiables sont sanitées et agrégées
+  avec les échecs fichier/temp sans restituer stderr brut, secret, `.env`, phrase `age` ou payload ;
+- preuve native Windows fondée sur un handshake `CurrentUserOnly` lié par nonce avant le budget
+  d'exécution, identité cible `PID + StartTime`, Job Object `KILL_ON_JOB_CLOSE` et corroboration
+  bornée .NET/Toolhelp/CIM/`tasklist` ; un état fantôme est classé ambigu et réobservé dans une
+  borne, sans jamais autoriser une terminaison par PID seul ;
+- temp root synthétique limité à l'enfant canonique exactement possédé du temp système : marqueur
+  atomique de chemin/nonce, refus du parent, des globs, chemins extérieurs et reparse points,
+  suppression littérale et preuve d'absence avec préservation du frère sentinelle ; aucune
+  attribution ou suppression d'un résidu historique non possédé ;
+- qualification finale locale sur le commit fonctionnel : un parcours direct et cinq répétitions
+  Maven hors ligne, puis un parcours direct et trois répétitions Maven avec Docker local, tous
+  verts ; portes complètes à `946/0/0/5` tests standards, `67/0/0/0` intégrations, Verify-Local avec
+  intégrations, Compose et contrôle du diff passés, zéro secret à haute confiance, listener,
+  processus/session/base temporaire/fichier partiel/temp root possédé résiduel ou appel fournisseur ;
+- WO-025 atteint `READY_FOR_OWNER_REVIEW`, pas `VALIDATED` : la décision propriétaire et le
+  déplacement vers `completed` restent requis. WO-023 reste bloqué ; un retry de sauvegarde exige
+  une décision propriétaire séparée, et campagne, réseau, nouveau go, purge primaire, intégration
+  et production restent à `NO`.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 
