@@ -146,12 +146,15 @@ d'intégration ; aucun processus possédé, listener, session ou artefact ne sub
 La contre-épreuve `age` est abstraite, locale et sans secret : elle ne qualifie ni le dialogue TTY,
 ni l'auto-génération réelle d'une phrase et ne demande aucune saisie humaine volontairement
 incorrecte. Le propriétaire a validé WO-024 et autorisé son déplacement parmi les Work Orders
-terminés. La nouvelle sauvegarde/restauration hors ligne WO-023 avec la vraie phrase auto-générée
-par `age` est maintenant autorisée mais pas encore exécutée ; WO-023 reste
-`OPEN_AWAITING_OFFLINE_READINESS`. Réseau fournisseur, reprise de campagne et nouveau go restent à
-`NO` : après intégration, précontrôles et qualification de la sauvegarde, le manifeste devra être
-figé avant qu'un nouveau go global lié à une fenêtre UTC puisse matérialiser l'intention d'enchaîner
-sur la campagne.
+terminés. Le correctif WO-024 a été intégré par fast-forward dans WO-023, puis la readiness fraîche
+a réussi sur le commit `8b91bf8` : 945 tests standards, 67 tests d'intégration, contrôle local avec
+réseau `NO`, Compose, trois parcours Playwright loopback à `21` tests worker puis `14` tests Chromium,
+tests superviseur `40/40` et coordinateur `8/8`, délai minimal `>= 3 s`, port/processus/artefacts à
+zéro, connecteur `SAFE` et Flyway V28. La nouvelle sauvegarde/restauration hors ligne avec la vraie
+phrase auto-générée par `age` est maintenant autorisée mais pas encore exécutée ; WO-023 est
+`READY_FOR_V28_BACKUP_RESTORE`. Réseau fournisseur, reprise de campagne et nouveau go restent à
+`NO` : après qualification de la sauvegarde, le manifeste devra être figé avant qu'un nouveau go
+global lié à une fenêtre UTC puisse matérialiser l'intention d'enchaîner sur la campagne.
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une

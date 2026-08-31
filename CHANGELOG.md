@@ -240,6 +240,18 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - intention propriétaire d'enchaîner ensuite sur la campagne fournisseur enregistrée sans élargir
   le bloc exécutoire : réseau, reprise WO-023 et nouveau go restent à `NO` jusqu'à qualification de
   la sauvegarde, gel du manifeste et nouveau go global lié à une fenêtre UTC.
+- fast-forward du correctif WO-024 validé dans le worktree WO-023, puis readiness fraîche sur
+  `8b91bf8` : Maven standard `945/0/0/4`, intégration `67/0/0/0`, `Verify-Local` avec réseau
+  fournisseur `NO`, Compose valide et Flyway V28 ;
+- qualifications Playwright J3, J4 et J5 strictement loopback réussies, chacune avec `21/0/0/0`
+  tests worker puis `14/0/0/0` tests Chromium ; J5 confirme les départs et arrivées `>= 3 s`, les
+  fences inter-worker, zéro requête après arrêt pendant délai, les scans canari/sensible et l'absence
+  d'accès fournisseur ; superviseur `40/40`, coordinateur `8/8` ;
+- audit final de readiness : connecteur primaire `SAFE`, dernière tentative fournisseur à
+  `2026-08-31T07:59:01.092327Z`, port 8087, processus possédés, sandbox résiduel et artefacts
+  navigateur versionnables à zéro. WO-023 passe à `READY_FOR_V28_BACKUP_RESTORE` ; la tentative
+  chiffrée avec phrase `age` auto-générée est autorisée mais reste non exécutée, et réseau,
+  campagne, nouveau go, intégration et production restent à `NO`.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 
