@@ -1,6 +1,6 @@
 # WO-SS-20260831-021 — Mesure et garantie du délai minimal Playwright entre départs réseau
 
-- **Statut :** `OPEN_AWAITING_OWNER_AUTHORIZATION`
+- **Statut :** `IN_DEVELOPMENT`
 - **Date d'ouverture :** 2026-08-31
 - **Jalon :** J9 — prérequis runtime après arrêt de WO-019
 - **Base locale :** `216b184b96055f53c48f3c9d0b5a6d21d03723f0`
@@ -12,12 +12,13 @@
 - **Reprise de WO-019 :** `NOT_AUTHORIZED`
 - **Nouveau go fournisseur :** `NOT_GRANTED`
 - **Tentatives WO-019 gelées :** `20`
-- **Implémentation WO-021 :** `NOT_AUTHORIZED`
+- **Implémentation WO-021 :** `AUTHORIZED`
 - **Intégration ou production :** `NOT_AUTHORIZED`
 - **Endpoint, transport, protocole, schéma ou migration :** `NO_SCOPE_EXPANSION_AUTHORIZED`
 - **Lacune de mesure :** `ESTABLISHED`
 - **Violation on-wire sous trois secondes :** `NOT_ESTABLISHED`
-- **Validation propriétaire :** `PENDING`
+- **Autorisation propriétaire d'implémentation :** `RECEIVED_2026-08-31T08:43:48.8202621Z`
+- **Validation propriétaire de clôture :** `PENDING`
 
 ## 1. Objectif
 
@@ -114,7 +115,7 @@ J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 J9_FUTURE_WO019_RESUME_REQUIRES_NEW_OWNER_DECISION_AND_NEW_GLOBAL_GO=YES
 ```
 
-Jusqu'à réception de cette décision :
+État historique jusqu'à réception de cette décision :
 
 ```text
 WORK_ORDER_STATUS=OPEN_AWAITING_OWNER_AUTHORIZATION
@@ -124,6 +125,45 @@ LOOPBACK_QUALIFICATION_AUTHORIZED=NO
 PROVIDER_NETWORK_AUTHORIZED=NO
 WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
 ```
+
+### 4.1 Autorisation propriétaire reçue
+
+Le propriétaire a autorisé l'implémentation et la qualification loopback le
+`2026-08-31T08:43:48.8202621Z` avec le bloc suivant :
+
+```text
+J9_WO021_OWNER_DECISION=AUTHORIZE_IMPLEMENTATION
+J9_WO021_WORK_ORDER=WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay
+J9_WO021_SCOPE=DIAGNOSE_CORRECT_AND_MEASURE_MINIMUM_3_SECOND_PROVIDER_NETWORK_START_DELAY
+J9_WO021_LOOPBACK_QUALIFICATION_AUTHORIZED=YES
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+J9_WO019_EXISTING_DIRECT_ATTEMPTS_FROZEN=20
+J9_NEW_PROVIDER_GO_GRANTED=NO
+J9_ENDPOINT_TRANSPORT_PROTOCOL_SCHEMA_MIGRATION_SCOPE_EXPANSION_AUTHORIZED=NO
+J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_FUTURE_WO019_RESUME_REQUIRES_NEW_OWNER_DECISION_AND_NEW_GLOBAL_GO=YES
+```
+
+L'état exécutoire devient :
+
+```text
+WORK_ORDER_STATUS=IN_DEVELOPMENT
+IMPLEMENTATION_STATUS=AUTHORIZED_NOT_YET_QUALIFIED
+MUTATING_DIAGNOSTIC_AUTHORIZED=YES_WITHIN_WO021_SCOPE
+LOOPBACK_QUALIFICATION_AUTHORIZED=YES
+PROVIDER_NETWORK_AUTHORIZED=NO
+WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+WO019_EXISTING_DIRECT_ATTEMPTS_FROZEN=20
+NEW_PROVIDER_GO_GRANTED=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+```
+
+Cette autorisation ne vaut pas validation de WO-021. Le statut maximal après correction et
+qualification locale sera `READY_FOR_OWNER_REVIEW`, en attente d'un nouveau bloc propriétaire de
+validation. Une éventuelle reprise de WO-019 restera en outre soumise au déclencheur de réexamen
+d'ADR-SS-002 §9 applicable à toute reprise après incident ; aucun nouvel ADR n'est autorisé par
+WO-021.
 
 ## 5. Contrat runtime à préserver
 
@@ -207,9 +247,8 @@ WORK_ORDER_STATUS=BLOCKED_REQUIRES_SCOPE_AMENDMENT
 8. READY_FOR_OWNER_REVIEW
 ```
 
-Aucun lot après l'ouverture documentaire ne commence avant
-`J9_WO021_OWNER_DECISION=AUTHORIZE_IMPLEMENTATION` et
-`J9_WO021_LOOPBACK_QUALIFICATION_AUTHORIZED=YES`.
+Les deux portes requises ont été franchies le `2026-08-31T08:43:48.8202621Z`. Les lots runtime et
+loopback peuvent commencer sans accès fournisseur et sans reprise de WO-019.
 
 ## 8. Matrice de tests obligatoire
 

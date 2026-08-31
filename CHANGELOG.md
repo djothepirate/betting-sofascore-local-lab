@@ -126,6 +126,16 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `OPEN_AWAITING_OWNER_AUTHORIZATION`, implémentation, tests ajoutés, réseau fournisseur, reprise de
   WO-019, nouveau go, intégration et production à `NO` ; validation documentaire à `931/0/0/4`,
   diff, liens locaux, credentials et invariants loopback/réseau verts.
+- autorisation propriétaire de réaliser WO-021 reçue le 2026-08-31 à
+  `08:43:48.8202621Z`, strictement bornée au diagnostic, au correctif et à la qualification
+  loopback du délai minimal de trois secondes ; WO-021 passe à `IN_DEVELOPMENT`, tandis que réseau
+  fournisseur, reprise de WO-019, nouveau go, endpoint, transport, protocole incompatible, schéma,
+  migration, intégration et production restent à `NO` ;
+- refus propriétaire explicite de transformer la recommandation déterministe `KEEP_LOCAL` en
+  décision finale J9 : la photographie `STOPPED` reste factuelle, mais
+  `J9_FINAL_DECISION=NOT_TAKEN` et la décision attend WO-021 ainsi qu'une éventuelle nouvelle preuve
+  WO-019 ; toute reprise après incident exigera une nouvelle décision, une readiness fraîche, le
+  réexamen ADR prévu par ADR-SS-002 §9, un nouveau manifeste et un nouveau go global à usage unique.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 

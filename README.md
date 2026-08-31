@@ -10,10 +10,12 @@ une décision finale. La campagne complémentaire WO-019 est désormais `STOPPED
 tentatives directes sur un plafond de `38`, toutes limitées au chemin D1. D2 et D3 restent
 `NOT_STARTED_AFTER_GLOBAL_STOP`.
 
-La règle déterministe J9 produit maintenant la recommandation `KEEP_LOCAL`, avec
-`J9_EVIDENCE_RESULT=STOPPED`. Cette recommandation reste `PENDING_OWNER_CONFIRMATION` : elle n'est
-pas encore la décision finale du propriétaire et n'autorise ni intégration, ni production, ni nouvel
-appel fournisseur, ni polling, ni scheduler, ni mode live.
+La règle déterministe J9 a produit la recommandation `KEEP_LOCAL`, avec
+`J9_EVIDENCE_RESULT=STOPPED`. Le propriétaire a explicitement refusé cette recommandation comme
+décision finale le 2026-08-31. Ce refus ne sélectionne pas automatiquement une autre option :
+`J9_FINAL_DECISION=NOT_TAKEN` et
+`J9_DECISION_STATUS=PENDING_WO021_AND_FUTURE_WO019_EVIDENCE`. Il n'autorise ni intégration, ni
+production, ni nouvel appel fournisseur, ni polling, ni scheduler, ni mode live.
 La preuve multi-dossier relève de WO-019. ADR-SS-002 v1.0 est accepté explicitement. Le premier
 contrôle J3 Playwright loopback de WO-019 et sa
 contre-qualification hors sandbox avaient produit `12` erreurs `RUNTIME_FAILURE` sur `14` tests à
@@ -79,10 +81,12 @@ Playwright sont absents. Les flags fournisseur persistés sont à `false`, l'ori
 persistées sont vides, et le réseau est de nouveau verrouillé. Le go est consommé et terminé par
 l'arrêt ; il ne peut pas autoriser une reprise. ADR-SS-003 n'existe pas.
 
-WO-021 est ouvert sur `codex/j9-playwright-minimum-delay` pour proposer une mesure démontrable et
-une garantie loopback du délai minimal de trois secondes. Son statut est
-`OPEN_AWAITING_OWNER_AUTHORIZATION` : aucun diagnostic mutateur, correctif, test ajouté, accès
-fournisseur ou reprise de WO-019 n'est encore autorisé.
+WO-021 est ouvert sur `codex/j9-playwright-minimum-delay` pour produire une mesure démontrable et
+une garantie loopback du délai minimal de trois secondes. Son implémentation et sa qualification
+loopback ont été autorisées le 2026-08-31 ; son statut est `IN_DEVELOPMENT`. L'accès fournisseur,
+la reprise de WO-019, un nouveau go, l'intégration et la production restent interdits. Une future
+reprise après WO-021 exigera une nouvelle décision propriétaire, une readiness fraîche, le
+réexamen ADR imposé par ADR-SS-002 §9, un nouveau manifeste et un nouveau go global.
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une
@@ -1048,7 +1052,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order actif de preuve de robustesse J9](docs/work_orders/active/WO-SS-20260831-019-j9-provider-robustness.md)
 - [Rapport arrêté de la campagne J9](docs/validation/J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831.md)
 - [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md)
-- [Work Order runtime J9 en attente d'autorisation](docs/work_orders/active/WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay.md)
+- [Work Order runtime J9 en développement](docs/work_orders/active/WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 

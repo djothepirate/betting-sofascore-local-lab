@@ -2,7 +2,7 @@
 
 - **Statut :** `IN_DEVELOPMENT`
 - **Date d'ouverture :** 2026-08-31
-- **Décision J9 finale :** `PENDING_OWNER_CONFIRMATION`
+- **Décision J9 finale :** `PENDING_WO021_AND_FUTURE_WO019_EVIDENCE`
 - **Orientation propriétaire :** `PREPARE_OPTIONAL_INTEGRATION`
 - **Jalon :** J9 — Décision de gouvernance
 - **Base locale :** `40323faa7dca3341da6ef980b5762f1ff5a32a79`
@@ -10,7 +10,7 @@
 - **Prérequis :** J8 `VALIDATED`, WO-016 et WO-017 clôturés
 - **ADR applicable :** `ADR-SS-001 v1.4`
 - **ADR de preuve :** `ADR-SS-002 v1.0 — ACCEPTED, GLOBAL_GO_CONSUMED_AND_TERMINATED_BY_STOP`
-- **Résultat de preuve WO-019 :** `STOPPED — KEEP_LOCAL_RECOMMENDED`
+- **Résultat de preuve WO-019 :** `STOPPED — KEEP_LOCAL_RECOMMENDED_THEN_REJECTED_AS_FINAL_DECISION`
 - **ADR d'intégration :** `ADR-SS-003 — NOT_CREATED`
 - **Appel fournisseur autorisé par ce Work Order :** `NO`
 - **Implémentation d'intégration autorisée :** `NO`
@@ -145,8 +145,10 @@ Le rapport WO-019 complète la matrice sans réécrire les preuves J6, J7 ou J8 
 | Sécurité post-arrêt | Arrêt gracieux réussi, zéro listener 8087, zéro processus applicatif ou descendant possédé, zéro artefact navigateur interdit, flags fournisseur à `false`. | `PASS_BOUNDED` | Le réseau reste verrouillé et le go consommé ne peut pas être rejoué. |
 
 La preuve globale est `STOPPED`. Les conditions de `PREPARE_OPTIONAL_INTEGRATION` ne sont donc pas
-réunies et aucune incompatibilité structurelle n'établit `ABANDON`. La recommandation déterministe
-est `KEEP_LOCAL`, en attente de confirmation propriétaire explicite.
+réunies et aucune incompatibilité structurelle n'établit `ABANDON`. La matrice a produit la
+recommandation déterministe `KEEP_LOCAL`, que le propriétaire a explicitement refusée comme
+décision finale le 2026-08-31. Ce refus ne sélectionne aucune autre option : la décision finale
+reste suspendue à WO-021 et à une éventuelle nouvelle preuve WO-019 dûment autorisée.
 
 ## 5. Règles de recommandation
 
@@ -193,17 +195,21 @@ PREVIOUS_GRACEFUL_CLOSE_RUNTIME_WORK_ORDER=WO-SS-20260831-020-j9-playwright-grac
 PREVIOUS_GRACEFUL_CLOSE_RUNTIME_WORK_ORDER_STATUS=VALIDATED
 NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER_REQUIRED=YES
 NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER=WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay
-NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER_STATUS=OPEN_AWAITING_OWNER_AUTHORIZATION
+NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER_STATUS=IN_DEVELOPMENT
 NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER_BRANCH=codex/j9-playwright-minimum-delay
-NEW_PROVIDER_START_DELAY_IMPLEMENTATION_AUTHORIZED=NO
+NEW_PROVIDER_START_DELAY_IMPLEMENTATION_AUTHORIZED=YES
 J9_DECISION_RECOMMENDATION=KEEP_LOCAL
-J9_DECISION_STATUS=PENDING_OWNER_CONFIRMATION
+J9_OWNER_RESPONSE_TO_KEEP_LOCAL=REJECTED_AS_FINAL_DECISION
+J9_FINAL_DECISION=NOT_TAKEN
+J9_DECISION_STATUS=PENDING_WO021_AND_FUTURE_WO019_EVIDENCE
 INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
 
-WO-021 est ouvert par le déclencheur déjà prévu dans le plan J9, sans autoriser son implémentation.
-Sa décision propriétaire reste distincte de la décision J9 finale et de toute future reprise de
-WO-019.
+Le propriétaire a autorisé l'implémentation et la qualification loopback de WO-021 le
+`2026-08-31T08:43:48.8202621Z`, sans accès fournisseur, reprise de WO-019, nouveau go, intégration
+ou production. Sa décision reste distincte de la décision J9 finale et de toute future reprise de
+WO-019. Conformément à ADR-SS-002 §9, une reprise après incident exige aussi un nouvel ADR ou un
+amendement explicitement revu ; WO-021 ne l'autorise pas.
 
 ADR-SS-002 v1.0 qualifie l'augmentation de volume exigée par ADR-SS-001 §9. Le précédent métier
 complet J8 autorisait au plus 30 tentatives pour un dossier ; la preuve J9 acceptée en prévoit au
@@ -263,8 +269,15 @@ WO019_EVIDENCE_RESULT=STOPPED
 WO019_TOTAL_DIRECT_ATTEMPTS=20
 WO019_D2_D3_PROVIDER_ATTEMPTS=0
 J9_DECISION_RECOMMENDATION=KEEP_LOCAL
-J9_DECISION_STATUS=PENDING_OWNER_CONFIRMATION
+J9_OWNER_RESPONSE_TO_KEEP_LOCAL=REJECTED_AS_FINAL_DECISION
+J9_FINAL_DECISION=NOT_TAKEN
+J9_DECISION_STATUS=PENDING_WO021_AND_FUTURE_WO019_EVIDENCE
 ```
+
+Le propriétaire estime que la différence de `33 ms` par rapport à trois secondes, calculée sur les
+timestamps pré-navigation, est trop faible pour justifier une décision finale `KEEP_LOCAL`. Cette
+appréciation est consignée sans requalifier rétroactivement la preuve : le départ réseau exact
+restait `NOT_MEASURED` et aucune violation on-wire n'a été établie.
 
 ## 7. Frontière d'une intégration optionnelle future
 
@@ -320,17 +333,19 @@ d'écrire le client ou le serveur.
 - payload brut, URI concrète, header, cookie, jeton, certificat ou secret dans Git ;
 - modification des preuves gelées J6, J7 et J8.
 
-## 10. Bloc de décision finale réservé
+## 10. Photographie de la recommandation refusée et décision finale réservée
 
-Après qualification et revue humaine de WO-019, le propriétaire reçoit le bloc suivant, rempli avec
-les faits et la recommandation mais sans confirmation automatique. Le champ `J9_DECISION` ci-dessous
-est la valeur recommandée à confirmer ou à remplacer explicitement :
+Après la preuve arrêtée de WO-019, le propriétaire a reçu la recommandation ci-dessous. Il l'a
+explicitement refusée comme décision finale ; elle est conservée comme photographie historique et
+ne reste pas préremplie comme un choix en attente d'une simple confirmation :
 
 ```text
-J9_DECISION=KEEP_LOCAL
-J9_DECIDED_AT_UTC=<owner confirmation timestamp>
-J9_EVIDENCE_RESULT=STOPPED
-J9_EVIDENCE_REFERENCE=J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831;SHA256=47e6171eeb1fc44cf995c727d4f09107875c844e71e8b183068731cbb4c62b9d
+J9_CURRENT_EVIDENCE_RESULT=STOPPED
+J9_CURRENT_EVIDENCE_RECOMMENDATION=KEEP_LOCAL
+J9_OWNER_RESPONSE_TO_KEEP_LOCAL_RECOMMENDATION=REJECTED_AS_FINAL_DECISION
+J9_FINAL_OWNER_DECISION=NOT_TAKEN
+J9_DECISION_STATUS=PENDING_WO021_AND_FUTURE_WO019_EVIDENCE
+J9_CURRENT_EVIDENCE_REFERENCE=J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831;SHA256=47e6171eeb1fc44cf995c727d4f09107875c844e71e8b183068731cbb4c62b9d
 J9_PROVIDER_ACQUISITION_MODE=MANUAL_ON_DEMAND
 J9_INTEGRATION_IMPLEMENTATION_AUTHORIZED=NO
 J9_LIVE_OR_SCHEDULED_OPERATION_AUTHORIZED=NO
@@ -340,8 +355,10 @@ J9_CURRENT_VPS_DEPLOYMENT_AUTHORIZED=NO
 J9_OWNER_CONFIRMATION_REQUIRED=YES
 ```
 
-Seule la réponse propriétaire explicite permettra de remplacer le statut `PENDING`, d'écrire
-`J9_OWNER_CONFIRMATION_REQUIRED=NO` et de clôturer WO-018.
+Une future preuve ne remplacera pas automatiquement cette photographie. Seule une nouvelle réponse
+propriétaire explicite choisissant `ABANDON`, `KEEP_LOCAL` ou `PREPARE_OPTIONAL_INTEGRATION`
+permettra de remplacer le statut `PENDING`, d'écrire `J9_OWNER_CONFIRMATION_REQUIRED=NO` et de
+clôturer WO-018.
 
 ## 11. Critères d'acceptation du lot d'ouverture
 
