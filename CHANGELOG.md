@@ -99,6 +99,27 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   quatre skips prévus ; diff, liens Markdown locaux, recherche de credentials et valeurs par défaut
   loopback/réseau contrôlés, sans appel fournisseur ;
 - aucun appel fournisseur, push, PR ou fusion vers `main` n'est autorisé par ce lot d'ouverture.
+- go propriétaire global unique accordé pour la fenêtre
+  `[2026-08-31T07:15:00Z,2026-08-31T08:15:00Z)`, puis consommé irréversiblement au premier claim J3
+  accepté ; aucun autre go ni droit de rejeu n'en découle ;
+- exécution limitée au dossier D1 : quinze pages `SCHEDULED_EVENTS`, une découverte tournoi, un
+  appel `EVENT_DETAILS` et les trois familles J5, soit `20` tentatives directes sur le plafond de
+  `38`, `20` réponses HTTP `200`, `20` parsings compatibles, zéro `404`, zéro retry et zéro appel
+  D2/D3 ;
+- arrêt de la série avant D2 après l'audit temporel J5 : les timestamps `requested_at` persistés
+  sont capturés avant `page.navigate` et ne mesurent pas le départ réseau réel ; l'écart de
+  `2 967 ms` calculé entre ces timestamps ne démontre donc ni violation on-wire ni conformité au
+  délai strict de trois secondes, qui reste `NOT_MEASURED` ;
+- WO-019 et sa preuve globale passent à `STOPPED`, le go devient
+  `CONSUMED_AND_TERMINATED_BY_STOP`, D2/D3 deviennent `NOT_STARTED_AFTER_GLOBAL_STOP` et toute
+  nouvelle qualification exige un Work Order runtime distinct, une nouvelle readiness et un nouveau
+  go propriétaire ;
+- arrêt gracieux réussi, port 8087, application et descendants Playwright absents, aucun artefact
+  navigateur interdit ; flags fournisseur persistés à `false`, origine et allowlist persistées
+  vides, réseau reverrouillé, intégration et production toujours non autorisées ; la recommandation
+  déterministe J9 est `KEEP_LOCAL`, sous réserve de la confirmation explicite du propriétaire ;
+- validation post-arrêt réussie : `clean verify` avec `931/0/0/4`, profil d'intégration avec
+  `67/0/0/0`, schéma Flyway V28 et configuration Compose valides, sans appel fournisseur.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 

@@ -4,12 +4,16 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le jalon **J9 — Décision de gouvernance** est ouvert par `WO-SS-20260831-018` sur la branche
-`codex/j9-decision`. L'orientation propriétaire préférée est
-`PREPARE_OPTIONAL_INTEGRATION`, mais la décision finale reste
-`PENDING_PROVIDER_ROBUSTNESS_EVIDENCE` : le corpus J8 mono-dossier ne suffit pas à conclure.
-WO-018 autorise uniquement la matrice factuelle et la préparation documentaire. Il n'autorise ni
-appel fournisseur, ni intégration, ni nouveau endpoint, ni polling, ni scheduler, ni mode live.
+Le jalon **J9 — Décision de gouvernance** reste ouvert sous `WO-SS-20260831-018`. L'orientation
+propriétaire initialement consignée était `PREPARE_OPTIONAL_INTEGRATION` ; elle ne constituait pas
+une décision finale. La campagne complémentaire WO-019 est désormais `STOPPED` après `20`
+tentatives directes sur un plafond de `38`, toutes limitées au chemin D1. D2 et D3 restent
+`NOT_STARTED_AFTER_GLOBAL_STOP`.
+
+La règle déterministe J9 produit maintenant la recommandation `KEEP_LOCAL`, avec
+`J9_EVIDENCE_RESULT=STOPPED`. Cette recommandation reste `PENDING_OWNER_CONFIRMATION` : elle n'est
+pas encore la décision finale du propriétaire et n'autorise ni intégration, ni production, ni nouvel
+appel fournisseur, ni polling, ni scheduler, ni mode live.
 La preuve multi-dossier relève de WO-019. ADR-SS-002 v1.0 est accepté explicitement. Le premier
 contrôle J3 Playwright loopback de WO-019 et sa
 contre-qualification hors sandbox avaient produit `12` erreurs `RUNTIME_FAILURE` sur `14` tests à
@@ -58,11 +62,22 @@ comptent zéro mismatch source/restauration, zéro échec d'intégrité brute, z
 zéro base temporaire résiduelle vérifiée indépendamment ; le connecteur est `SAFE`, le port 8087
 est libre, l'accès fournisseur et la purge primaire restent à `NO`.
 
-WO-019 passe donc à `READY_FOR_GLOBAL_OWNER_GO` avec `NEXT_GATE=GLOBAL_OWNER_GO`, sans accorder ce
-go. Le réseau reste bloqué, le go global reste `NOT_GRANTED` et non consommé,
-`WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO`, les appels fournisseur restent à zéro, et
-l'intégration comme la production restent non autorisées. ADR-SS-003 n'existe pas. L'acceptation
-d'ADR-SS-002 ne vaut pas go réseau.
+Le go propriétaire global a ensuite été accordé pour l'unique fenêtre
+`[2026-08-31T07:15:00Z,2026-08-31T08:15:00Z)` et consommé irréversiblement au premier claim J3
+accepté. Le chemin D1 a exécuté quinze pages J3, une découverte tournoi, un appel J4 et les trois
+familles J5 : `20/38` tentatives directes, `20` réponses HTTP `200`, `20` parsings compatibles et
+aucun retry.
+
+L'audit postérieur à J5 a toutefois établi que `requested_at` est un timestamp pré-navigation, et
+non l'instant exact de départ réseau. L'écart de `2 967 ms` calculé entre ces timestamps persistés
+ne prouve ni une violation on-wire, ni le respect du délai strict de trois secondes. Conformément à
+la règle d'arrêt de WO-019, la preuve temporelle est `NOT_MEASURED`, WO-019 et la preuve globale sont
+`STOPPED`, et D2/D3 n'ont reçu aucun appel.
+
+L'application a été arrêtée gracieusement ; le port 8087, le processus applicatif et les descendants
+Playwright sont absents. Les flags fournisseur persistés sont à `false`, l'origine et l'allowlist
+persistées sont vides, et le réseau est de nouveau verrouillé. Le go est consommé et terminé par
+l'arrêt ; il ne peut pas autoriser une reprise. ADR-SS-003 n'existe pas.
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une
@@ -1026,6 +1041,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order J8 validé](docs/work_orders/completed/WO-SS-20260829-016-benchmark-j8.md)
 - [Work Order actif de décision J9](docs/work_orders/active/WO-SS-20260831-018-decision-j9.md)
 - [Work Order actif de preuve de robustesse J9](docs/work_orders/active/WO-SS-20260831-019-j9-provider-robustness.md)
+- [Rapport arrêté de la campagne J9](docs/validation/J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831.md)
 - [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées

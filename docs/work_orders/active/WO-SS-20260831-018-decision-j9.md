@@ -2,14 +2,15 @@
 
 - **Statut :** `IN_DEVELOPMENT`
 - **Date d'ouverture :** 2026-08-31
-- **Décision J9 finale :** `PENDING_PROVIDER_ROBUSTNESS_EVIDENCE`
+- **Décision J9 finale :** `PENDING_OWNER_CONFIRMATION`
 - **Orientation propriétaire :** `PREPARE_OPTIONAL_INTEGRATION`
 - **Jalon :** J9 — Décision de gouvernance
 - **Base locale :** `40323faa7dca3341da6ef980b5762f1ff5a32a79`
 - **Branche :** `codex/j9-decision`
 - **Prérequis :** J8 `VALIDATED`, WO-016 et WO-017 clôturés
 - **ADR applicable :** `ADR-SS-001 v1.4`
-- **ADR de preuve :** `ADR-SS-002 v1.0 — ACCEPTED, GLOBAL_GO_NOT_GRANTED`
+- **ADR de preuve :** `ADR-SS-002 v1.0 — ACCEPTED, GLOBAL_GO_CONSUMED_AND_TERMINATED_BY_STOP`
+- **Résultat de preuve WO-019 :** `STOPPED — KEEP_LOCAL_RECOMMENDED`
 - **ADR d'intégration :** `ADR-SS-003 — NOT_CREATED`
 - **Appel fournisseur autorisé par ce Work Order :** `NO`
 - **Implémentation d'intégration autorisée :** `NO`
@@ -129,6 +130,24 @@ preuve, et non un échec ou une réussite supposée.
 | Conditions d'utilisation | Les conditions officielles déclarées à jour le 18 septembre 2024 restreignent notamment la charge serveur par requêtes automatisées, l'intégration, l'agrégation, le scraping, la reproduction et l'extraction substantielle sans consentement explicite, avec les réserves légales du texte. Un point d'entrée officiel `Sofascore API` et un contact `Product -> API` existent, mais aucune licence, authentification, limite d'appel ou permission pour les endpoints du laboratoire n'a été extraite. | Revue officielle J9 du 2026-08-31, URLs consignées dans ADR-SS-002 et WO-019 | `PARTIAL — RESTRICTIONS_PRESENT_PERMISSION_NOT_EVIDENCED` | Fait documentaire, sans conclusion juridique. L'acceptation d'ADR-SS-002 doit reconnaître cette incertitude ; une production VPS future exigerait une nouvelle revue et, selon la décision propriétaire, un consentement explicite. |
 | Sécurité et exploitation | Playwright est local, manuel et opt-in ; chaque campagne utilise un contexte neuf non persistant, sans profil, cookie réutilisé, `storageState`, HAR, trace, vidéo, capture ou téléchargement. Polling et refresh sont désactivés. | ADR-SS-001 v1.4 et architectures J3/J4/J5 | `PASS_BOUNDED` | Ces contrôles restent obligatoires et ne valent que pour les parcours et volumes explicitement autorisés. |
 
+### 4.1 Consolidation après WO-019
+
+Le rapport WO-019 complète la matrice sans réécrire les preuves J6, J7 ou J8 :
+
+| Critère J9 | Fait WO-019 mesuré | Qualification consolidée | Conséquence de décision |
+|---|---|---|---|
+| Accessibilité et compatibilité D1 | `20/20` tentatives ont reçu `HTTP 200`, ont été parsées et persistées ; aucun retry ou refus n'est observé. | `PASS_BOUNDED` | Succès fonctionnel strictement limité à D1. |
+| Complétude D1 | Statistiques `COMPLETE · 100 %`, incidents `PARTIAL · 91 %`, compositions `PARTIAL · 99 %`. | `PARTIAL` | D1 est exploitable mais non strictement complet. |
+| Coût d'appel | `20` tentatives directes sur un plafond de `38` ; D2 et D3 ont reçu zéro appel après l'arrêt. | `PARTIAL` | Le coût multi-dossier prévu n'est pas mesuré. |
+| Risque de blocage fournisseur | Aucun `401`, `403`, `404`, `429`, `5xx`, timeout ou schéma incompatible n'est observé sur D1. | `PARTIAL` | L'absence d'incident sur D1 ne démontre pas la robustesse multi-dossier. |
+| Délai exact entre départs fournisseur | Les timestamps persistés sont pré-navigation ; l'écart calculé de `2 967 ms` ne prouve ni violation on-wire ni conformité au minimum de trois secondes. | `NOT_MEASURED` | Le contrôle procédural courant ne permet pas de démontrer l'invariant ; la série est `STOPPED`. |
+| Export post-campagne | Le double export byte-identique n'a pas été exécuté après l'arrêt global. | `NOT_MEASURED` | La reproductibilité d'export ne peut pas être promue comme acquis de cette campagne. |
+| Sécurité post-arrêt | Arrêt gracieux réussi, zéro listener 8087, zéro processus applicatif ou descendant possédé, zéro artefact navigateur interdit, flags fournisseur à `false`. | `PASS_BOUNDED` | Le réseau reste verrouillé et le go consommé ne peut pas être rejoué. |
+
+La preuve globale est `STOPPED`. Les conditions de `PREPARE_OPTIONAL_INTEGRATION` ne sont donc pas
+réunies et aucune incompatibilité structurelle n'établit `ABANDON`. La recommandation déterministe
+est `KEEP_LOCAL`, en attente de confirmation propriétaire explicite.
+
 ## 5. Règles de recommandation
 
 La matrice ne choisit jamais automatiquement à la place du propriétaire. Elle produit une
@@ -151,28 +170,31 @@ La preuve fournisseur relève d'un Work Order séparé :
 ```text
 WORK_ORDER=WO-SS-20260831-019-j9-provider-robustness
 BRANCH=codex/j9-provider-robustness
-WORK_ORDER_STATUS=READY_FOR_GLOBAL_OWNER_GO
-EVIDENCE_STATUS=DRAFT
-PROVIDER_CALLS_UNDER_WO019=0
-WO019_WORK_ORDER_RESUME_AUTHORIZED=YES
-WO019_PROVIDER_CAMPAIGN_AUTHORIZED=NO_PENDING_GLOBAL_GO
+WORK_ORDER_STATUS=STOPPED
+EVIDENCE_STATUS=STOPPED
+PROVIDER_CALLS_UNDER_WO019=20
+WO019_WORK_ORDER_RESUME_AUTHORIZED=NO_STOPPED
+WO019_PROVIDER_CAMPAIGN_AUTHORIZED=NO_STOPPED
 WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
 OFFLINE_READINESS=PASS_REEXECUTED_AFTER_VALIDATED_WO020
 OFFLINE_READINESS_REEXECUTED_ON=2026-08-31
 V28_BACKUP_RESTORE=QUALIFIED
 V28_RESTORE_QUALIFIED=YES
 V28_BACKUP_RESTORE_QUALIFIED_AT_UTC=2026-08-31T06:46:07.7013794Z
-NEXT_GATE=GLOBAL_OWNER_GO
+NEXT_GATE=SEPARATE_RUNTIME_WORK_ORDER_FOR_MEASURABLE_PROVIDER_START_DELAY
 NETWORK_AUTHORIZED=NO
-GLOBAL_OWNER_GO=NOT_GRANTED
-OWNER_GO_CONSUMED=NO
+GLOBAL_OWNER_GO=CONSUMED_AND_TERMINATED_BY_STOP
+OWNER_GO_CONSUMED=YES
 MAXIMUM_DIRECT_ATTEMPTS=38
-SEPARATE_RUNTIME_WORK_ORDER_REQUIRED=SATISFIED_BY_VALIDATED_WO020
-RUNTIME_WORK_ORDER=WO-SS-20260831-020-j9-playwright-graceful-close
-RUNTIME_WORK_ORDER_STATUS=VALIDATED
-RUNTIME_WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md
-RUNTIME_CORRECTION_LOCAL_READINESS=PASS
-RUNTIME_WORK_ORDER_OWNER_VALIDATION=RECEIVED_2026-08-31T00:41:58Z
+WO019_D2_D3_PROVIDER_ATTEMPTS=0
+WO019_REPORT=docs/validation/J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831.md
+WO019_REPORT_SHA256=b73e1760873e616e0a0edb3575e1b63c0467a5062576b96b3c847234ab853215
+PREVIOUS_GRACEFUL_CLOSE_RUNTIME_WORK_ORDER=WO-SS-20260831-020-j9-playwright-graceful-close
+PREVIOUS_GRACEFUL_CLOSE_RUNTIME_WORK_ORDER_STATUS=VALIDATED
+NEW_PROVIDER_START_DELAY_RUNTIME_WORK_ORDER_REQUIRED=YES
+NEW_PROVIDER_START_DELAY_IMPLEMENTATION_AUTHORIZED=NO
+J9_DECISION_RECOMMENDATION=KEEP_LOCAL
+J9_DECISION_STATUS=PENDING_OWNER_CONFIRMATION
 INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
 
@@ -215,16 +237,23 @@ zéro fichier partiel et zéro base temporaire résiduelle lors du contrôle ind
 est `SAFE`, le port 8087 est libre, aucun accès fournisseur ni purge primaire n'a eu lieu. WO-019
 passe à `READY_FOR_GLOBAL_OWNER_GO`.
 
-Cette preuve ne vaut ni campagne fournisseur, ni accès réseau, ni go global. Le go global reste
-`NOT_GRANTED` et n'a pas été consommé. WO-019 porte les métriques détaillées ; la décision J9
-demeure `PENDING_PROVIDER_ROBUSTNESS_EVIDENCE`.
+Le go global a ensuite été accordé pour la fenêtre exclusive
+`[2026-08-31T07:15:00Z,2026-08-31T08:15:00Z)`, puis consommé au premier claim J3 accepté. La série
+a exécuté 20 tentatives directes sur D1, toutes `HTTP 200` et compatibles. Elle a été arrêtée avant
+D2 parce que le runtime ne permet pas de mesurer le départ réseau exact requis pour démontrer le
+délai strict de trois secondes. Le go est maintenant consommé et terminé par l'arrêt.
 
-Tant que la quatrième porte, le go global, n'est pas explicitement accordée :
+État après arrêt :
 
 ```text
 PROVIDER_NETWORK=NOT_AUTHORIZED
-OWNER_GO=NOT_GRANTED
-OWNER_GO_CONSUMED=NO
+OWNER_GO=CONSUMED_AND_TERMINATED_BY_STOP
+OWNER_GO_CONSUMED=YES
+WO019_EVIDENCE_RESULT=STOPPED
+WO019_TOTAL_DIRECT_ATTEMPTS=20
+WO019_D2_D3_PROVIDER_ATTEMPTS=0
+J9_DECISION_RECOMMENDATION=KEEP_LOCAL
+J9_DECISION_STATUS=PENDING_OWNER_CONFIRMATION
 ```
 
 ## 7. Frontière d'une intégration optionnelle future
@@ -283,14 +312,15 @@ d'écrire le client ou le serveur.
 
 ## 10. Bloc de décision finale réservé
 
-Après qualification et revue humaine de WO-019, le propriétaire recevra le bloc suivant, rempli
-avec les faits et la recommandation mais sans confirmation automatique :
+Après qualification et revue humaine de WO-019, le propriétaire reçoit le bloc suivant, rempli avec
+les faits et la recommandation mais sans confirmation automatique. Le champ `J9_DECISION` ci-dessous
+est la valeur recommandée à confirmer ou à remplacer explicitement :
 
 ```text
-J9_DECISION=<ABANDON|KEEP_LOCAL|PREPARE_OPTIONAL_INTEGRATION>
-J9_DECIDED_AT_UTC=<timestamp>
-J9_EVIDENCE_RESULT=<PASS|PARTIAL_BOUNDED|STOPPED>
-J9_EVIDENCE_REFERENCE=<report id and sha256>
+J9_DECISION=KEEP_LOCAL
+J9_DECIDED_AT_UTC=<owner confirmation timestamp>
+J9_EVIDENCE_RESULT=STOPPED
+J9_EVIDENCE_REFERENCE=J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831;SHA256=b73e1760873e616e0a0edb3575e1b63c0467a5062576b96b3c847234ab853215
 J9_PROVIDER_ACQUISITION_MODE=MANUAL_ON_DEMAND
 J9_INTEGRATION_IMPLEMENTATION_AUTHORIZED=NO
 J9_LIVE_OR_SCHEDULED_OPERATION_AUTHORIZED=NO
