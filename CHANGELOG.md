@@ -210,6 +210,16 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   conditionnel de ce WO. L'instruction permet la préparation hors ligne, mais ne constitue pas le
   go fournisseur lié à un manifeste et une fenêtre UTC : campagne, réseau et consommation restent
   à `NO`/`NOT_GRANTED` avant readiness, sauvegarde/restauration, manifeste gelé et décision finale.
+- après deux désaccords interactifs de phrase secrète, diagnostic de deux pipelines natives
+  `pg_dump | age` dont le producteur et sa session PostgreSQL sont restés suspendus après la sortie
+  anticipée du consommateur ; nettoyage ciblé vérifié à zéro processus, session `pg_dump`, fichier
+  de sauvegarde et base temporaire résiduels, sans aucun appel fournisseur ;
+- autorisation propriétaire et ouverture de `WO-SS-20260831-024` sur
+  `codex/j9-backup-pipeline-fail-closed-cleanup`, depuis `2d9c2dd7`, pour corriger et qualifier
+  exclusivement hors ligne l'annulation coordonnée, les timeouts et le nettoyage de l'arbre natif.
+  WO-023 reste suspendu, réseau fournisseur, reprise de campagne et nouveau go restent à `NO` ; la
+  nouvelle sauvegarde/restauration WO-023 avec phrase auto-générée ne devient autorisée qu'après
+  validation propriétaire de WO-024.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 
