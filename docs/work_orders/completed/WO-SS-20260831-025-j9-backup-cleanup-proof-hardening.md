@@ -1,8 +1,10 @@
 # WO-SS-20260831-025 — Durcissement de la preuve de nettoyage J6/J9
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
 - **Date d'ouverture :** 2026-08-31
 - **Readiness locale achevée :** 2026-09-01
+- **Date de clôture :** 2026-09-01
+- **Décision de validation observée à :** `2026-08-31T22:35:48.6609979Z`
 - **Décision propriétaire observée à :** 2026-08-31T20:07:12.5287020Z
 - **Jalon :** J9 — prérequis runtime de la nouvelle preuve fournisseur
 - **Base immuable d'ouverture :** `501490233df5d29719e19d70dabbfc1e37ac4ce7`
@@ -13,8 +15,8 @@
 - **Commit d'ouverture :** `5a93911d42b84755d461781dbdb45e890f008789`
 - **Commit fonctionnel qualifié :** `d019be274f200aaa33124b041e3773cf15ae2723`
 - **Implémentation :** `IMPLEMENTED_AND_LOCALLY_QUALIFIED`
-- **Validation propriétaire :** `PENDING`
-- **Déplacement vers completed :** `NOT_AUTHORIZED`
+- **Validation propriétaire :** `VALIDATED`
+- **Déplacement vers completed :** `AUTHORIZED_AND_EXECUTED`
 - **Rapport :**
   [`J9-WO025-BACKUP-CLEANUP-PROOF-HARDENING-READINESS-20260901`](../../validation/J9-WO025-BACKUP-CLEANUP-PROOF-HARDENING-READINESS-20260901.md),
   SHA-256 `f0854b2b4b3515051832e565d3cb534cd473c744adb14fe0eb4775965501088f`
@@ -330,18 +332,20 @@ PROVIDER_ACCESS_PERFORMED=NO
 PRIMARY_DATABASE_PURGE=NO
 ```
 
-## 11. État prêt pour revue propriétaire
+## 11. État validé par le propriétaire
 
 ```text
-WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
-EVIDENCE_STATUS=PASS_LOCAL
+WORK_ORDER_STATUS=VALIDATED
+EVIDENCE_STATUS=PASS_LOCAL_ACCEPTED_BY_OWNER
 IMPLEMENTATION_STATUS=IMPLEMENTED_AND_LOCALLY_QUALIFIED
 LOCAL_READINESS=PASS
 OFFLINE_AND_LOOPBACK_QUALIFICATION=PASS
-OWNER_VALIDATION=PENDING
-OWNER_REVIEW_REQUIRED=YES
-MOVE_TO_COMPLETED_AUTHORIZED=NO
-WORK_ORDER_LOCATION=docs/work_orders/active/WO-SS-20260831-025-j9-backup-cleanup-proof-hardening.md
+OWNER_VALIDATION=VALIDATED
+OWNER_VALIDATED_AT_UTC=2026-08-31T22:35:48.6609979Z
+OWNER_REVIEW_REQUIRED=NO
+MOVE_TO_COMPLETED_AUTHORIZED=YES
+MOVE_TO_COMPLETED_PERFORMED=YES
+WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260831-025-j9-backup-cleanup-proof-hardening.md
 
 WO024_STATUS=VALIDATED_AND_FROZEN
 WO023_STATUS=BLOCKED_AFTER_BACKUP_CLEANUP_UNCONFIRMED
@@ -356,19 +360,20 @@ INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 J9_FINAL_DECISION=NOT_TAKEN
 ```
 
-## 12. Choix propriétaire explicite requis
+## 12. Décision propriétaire reçue
 
-Le propriétaire peut accepter ou rejeter la readiness locale au moyen du bloc suivant :
+Le propriétaire a validé la readiness locale et autorisé le déplacement de WO-025 vers les Work
+Orders terminés avec le bloc suivant :
 
 ```text
-J9_WO025_OWNER_REVIEW_DECISION=<VALIDATE|REJECT>
+J9_WO025_OWNER_REVIEW_DECISION=VALIDATE
 J9_WO025_WORK_ORDER=WO-SS-20260831-025-j9-backup-cleanup-proof-hardening
-J9_WO025_LOCAL_READINESS_ACKNOWLEDGED=<YES|NO>
+J9_WO025_LOCAL_READINESS_ACKNOWLEDGED=YES
 J9_WO025_SCOPE_CONFIRMED=DIAGNOSE_CORRECT_AND_QUALIFY_J6_EXACT_POSTGRES_CLEANUP_EFFECTIVE_DEFAULT_SANITIZED_INNER_CAUSE_STRICT_SCALAR_PARSING_BOUNDED_NATIVE_PID_EVIDENCE_RELIABILITY_MULTI_API_PROCESS_STATE_CORROBORATION_GHOST_STATE_CLASSIFICATION_AND_EXACT_SYNTHETIC_TEMP_ROOT_CLEANUP
-J9_WO025_CLEANUP_PROOF_HARDENING_QUALIFIED=<YES|NO>
-J9_WO025_FAIL_CLOSED_AND_EXACT_OWNERSHIP_INVARIANTS=<PRESERVED|REJECTED>
+J9_WO025_CLEANUP_PROOF_HARDENING_QUALIFIED=YES
+J9_WO025_FAIL_CLOSED_AND_EXACT_OWNERSHIP_INVARIANTS=PRESERVED
 J9_WO025_PID_ONLY_TERMINATION_USED=NO
-J9_WO025_WORK_ORDER_MOVE_TO_COMPLETED=<YES|NO>
+J9_WO025_WORK_ORDER_MOVE_TO_COMPLETED=YES
 J9_WO023_BACKUP_RETRY_AFTER_WO025_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
 J9_WO023_BACKUP_RETRY_AUTHORIZED=NO
 J9_WO023_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
@@ -378,7 +383,6 @@ J9_PRIMARY_DATABASE_PURGE=NO
 J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
 ```
 
-Une éventuelle validation de WO-025 autorisera seulement son déplacement vers les Work Orders
-terminés. Elle n'autorisera pas la sauvegarde/restauration WO-023, ne reprendra pas la campagne
-fournisseur et ne créera aucun go. La sauvegarde/restauration WO-023 exigera une décision
-propriétaire séparée et postérieure.
+Cette validation autorise uniquement la clôture documentaire de WO-025. Elle n'autorise pas la
+sauvegarde/restauration WO-023, ne reprend pas la campagne fournisseur et ne crée aucun go. La
+sauvegarde/restauration WO-023 exige toujours une décision propriétaire séparée et postérieure.

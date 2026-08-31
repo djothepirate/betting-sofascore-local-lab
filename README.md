@@ -180,11 +180,12 @@ effectives distinctes de `5 000/10 000 ms`, le parsing scalaire, la cause sanit�
 cible, l'identité `PID + StartTime`, la corroboration Windows multi-API et le nettoyage du seul temp
 root exactement possédé. Les parcours hors ligne et Docker local répétés, les `946` tests standards,
 les `67` tests d'intégration, Verify-Local et Compose sont verts sur le commit `d019be2`, sans appel
-fournisseur ni purge primaire. Le Work Order atteint donc seulement `READY_FOR_OWNER_REVIEW` : la
-validation propriétaire et son déplacement vers `completed` restent en attente. La preuve ne
-réattribue ni ne supprime les résidus historiques non possédés. WO-023 demeure bloqué ; toute
-nouvelle sauvegarde/restauration exige une décision propriétaire séparée. Terminaison par PID seul,
-réseau fournisseur, campagne, nouveau go, intégration et production restent interdits.
+fournisseur ni purge primaire. Le propriétaire a validé cette readiness le 2026-09-01 et autorisé
+le déplacement de WO-025 vers les Work Orders terminés. La preuve ne réattribue ni ne supprime les
+résidus historiques non possédés. Cette validation n'autorise pas une nouvelle sauvegarde : WO-023
+demeure bloqué et son retry exige une décision propriétaire séparée et postérieure. Terminaison par
+PID seul, réseau fournisseur, campagne, nouveau go, purge primaire, intégration et production
+restent interdits.
 
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
@@ -1157,7 +1158,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order actif de nouvelle preuve J9](docs/work_orders/active/WO-SS-20260831-023-j9-provider-robustness-v11.md)
 - [Work Order validé de nettoyage fail-closed J6/J9](docs/work_orders/completed/WO-SS-20260831-024-j9-backup-pipeline-fail-closed-cleanup.md)
 - [Incident fail-closed post-sauvegarde WO-023](docs/validation/J9-WO023-POST-BACKUP-CLEANUP-INCIDENT-20260831.md)
-- [Work Order runtime actif de durcissement de preuve J6/J9](docs/work_orders/active/WO-SS-20260831-025-j9-backup-cleanup-proof-hardening.md)
+- [Work Order validé de durcissement de preuve J6/J9](docs/work_orders/completed/WO-SS-20260831-025-j9-backup-cleanup-proof-hardening.md)
 - [Readiness locale du durcissement de preuve WO-025](docs/validation/J9-WO025-BACKUP-CLEANUP-PROOF-HARDENING-READINESS-20260901.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées

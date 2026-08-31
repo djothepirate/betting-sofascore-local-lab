@@ -481,3 +481,59 @@ d'observation PostgreSQL, du parsing, de la classification d'erreur ou de la pre
 multi-API exige un Work Order runtime, une branche/worktree dédiés et une autorisation propriétaire
 d'implémentation. Même si aucun changement de code n'était finalement nécessaire, une nouvelle
 tentative réelle exigerait une nouvelle décision propriétaire explicite.
+
+## 13. Validation de WO-025 et porte courante de WO-023
+
+Le paragraphe 12 reste la photographie immuable de l'incident et de la porte alors ouverte. Le
+Work Order correctif distinct
+[`WO-SS-20260831-025-j9-backup-cleanup-proof-hardening`](../completed/WO-SS-20260831-025-j9-backup-cleanup-proof-hardening.md)
+a depuis livré puis qualifié localement les valeurs effectives, le nettoyage PostgreSQL exact, les
+classifications sanitées, la preuve native multi-API et le nettoyage du temp root exactement
+possédé. Le propriétaire a validé WO-025 à `2026-08-31T22:35:48.6609979Z` et autorisé son
+déplacement vers les Work Orders terminés.
+
+Cette validation satisfait la porte corrective technique ; elle ne recrée pas l'autorisation de
+sauvegarde WO-023 consommée par l'essai précédent. Conformément au bloc propriétaire de clôture de
+WO-025, la prochaine porte de WO-023 est exclusivement une décision propriétaire séparée sur un
+nouvel essai de sauvegarde/restauration. Elle n'autorise encore ni la campagne fournisseur ni son
+réseau.
+
+```text
+STATE_RECONCILED_AT_UTC=2026-08-31T22:35:48.6609979Z
+WORK_ORDER_STATUS=BLOCKED_AFTER_BACKUP_CLEANUP_UNCONFIRMED
+EVIDENCE_STATUS=DRAFT
+
+WO025_STATUS=VALIDATED
+WO025_LOCAL_READINESS=PASS_LOCAL_ACCEPTED_BY_OWNER
+WO025_FAIL_CLOSED_AND_EXACT_OWNERSHIP_INVARIANTS=PRESERVED
+WO025_PID_ONLY_TERMINATION_USED=NO
+WO025_MOVE_TO_COMPLETED_PERFORMED=YES
+WO025_CLEANUP_PROOF_HARDENING_QUALIFIED=YES
+WO025_WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260831-025-j9-backup-cleanup-proof-hardening.md
+
+OWNER_BACKUP_RETRY_AUTHORIZATION=NOT_GRANTED_AFTER_WO025_VALIDATION
+BACKUP_QUALIFIED=NO
+J9_WO023_BACKUP_RETRY_AFTER_WO025_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
+J9_WO023_BACKUP_RETRY_AUTHORIZED=NO
+WO023_BACKUP_RETRY_AUTHORIZED_NOW=NO
+NEXT_GATE=SEPARATE_OWNER_DECISION_ON_WO023_BACKUP_RETRY
+
+NEW_SERIES_DIRECT_ATTEMPTS=0
+AUDIT_CUMULATIVE_DIRECT_ATTEMPTS=20
+PROVIDER_ACCESS_PERFORMED=NO
+CODEX_LOCAL_UI_PROVIDER_ACTIONS_ALLOWED_NOW=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO
+WO023_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+J9_WO023_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+GLOBAL_OWNER_GO=NOT_GRANTED
+OWNER_GO_CONSUMED=NO
+NEW_GLOBAL_OWNER_GO_GRANTED=NO
+J9_NEW_PROVIDER_GLOBAL_GO_GRANTED=NO
+PRIMARY_DATABASE_PURGE=NO
+J9_PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_FINAL_DECISION=NOT_TAKEN
+```

@@ -309,6 +309,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   déplacement vers `completed` restent requis. WO-023 reste bloqué ; un retry de sauvegarde exige
   une décision propriétaire séparée, et campagne, réseau, nouveau go, purge primaire, intégration
   et production restent à `NO`.
+- validation propriétaire explicite de WO-025 reçue à `2026-08-31T22:35:48.6609979Z` : readiness
+  locale, durcissement de la preuve et invariants fail-closed/exact ownership reconnus, avec
+  terminaison par PID seul confirmée absente et déplacement autorisé vers les Work Orders
+  terminés ;
+- clôture documentaire de WO-025 sans effet implicite sur WO-023 : le retry de
+  sauvegarde/restauration exige toujours une décision propriétaire séparée et postérieure ;
+  campagne fournisseur, réseau, nouveau go, purge primaire, intégration et production restent à
+  `NO`.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 
