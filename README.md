@@ -14,7 +14,7 @@ La règle déterministe J9 a produit la recommandation `KEEP_LOCAL`, avec
 `J9_EVIDENCE_RESULT=STOPPED`. Le propriétaire a explicitement refusé cette recommandation comme
 décision finale le 2026-08-31. Ce refus ne sélectionne pas automatiquement une autre option :
 `J9_FINAL_DECISION=NOT_TAKEN` et
-`J9_DECISION_STATUS=PENDING_ADR_SS_002_V1_1_OWNER_ACCEPTANCE_AND_NEW_CAMPAIGN_EVIDENCE`. Il n'autorise ni intégration, ni
+`J9_DECISION_STATUS=PENDING_NEW_PROVIDER_ROBUSTNESS_CAMPAIGN_AND_EVIDENCE`. Il n'autorise ni intégration, ni
 production, ni nouvel appel fournisseur, ni polling, ni scheduler, ni mode live.
 La preuve arrêtée relève de WO-019 ; le profil sélectionné exigera une nouvelle campagne sous un
 nouveau Work Order. ADR-SS-002 v1.0 avait été accepté explicitement. Le premier
@@ -120,19 +120,16 @@ interdits.
 WO-022 réalise ensuite le réexamen imposé par ADR-SS-002 §9. Il conclut que v1.0 est
 `ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP` et ne peut pas être réutilisée : l'arrêt après incident
 et le fence global exécutoire ajouté par WO-021 déclenchent tous deux une nouvelle version. Le
-propriétaire a sélectionné `RESTART_FULL_D1_D2_D3` pour le draft v1.1 : une nouvelle série complète
-de 38 appels maximum, soit 58 cumulés avec les vingt tentatives historiques, incluant le rejeu D1 et
-pouvant produire un nouveau verdict autonome.
+propriétaire a sélectionné `RESTART_FULL_D1_D2_D3`, puis accepté ADR-SS-002 v1.1 : une nouvelle
+série complète de 38 appels maximum, soit 58 cumulés avec les vingt tentatives historiques, incluant
+le rejeu D1 et pouvant produire un nouveau verdict autonome.
 
 Cette série ne rouvrira pas WO-019. La règle « un Work Order et un worktree par campagne » exige un
-nouveau Work Order/worktree, non encore ouvert. Le draft v1.1 reste sans effet réseau et attend son
-acceptation explicite. Le propriétaire indique en outre qu'il ne pourra pas réaliser les huit
-séquences unitaires d'interrogation des endpoints. Aucun autre opérateur humain n'est désigné et
-aucune exécution locale par Codex n'est autorisée par ce seul constat : la campagne reste donc
-bloquée dans l'attente d'un choix d'acteur distinct. Le précédent WO-017 permet de proposer une
-exécution ponctuelle `CODEX_LOCAL_UI` après instruction propriétaire explicite, sans l'assimiler à
-un script ou à une orchestration. Aucune readiness, sauvegarde, ouverture de campagne, automatisation
-UI, manifeste ou go n'est déduite de cette contrainte.
+nouveau Work Order/worktree, non encore ouvert. Le propriétaire indique qu'il ne pourra pas réaliser
+les huit séquences unitaires et a sélectionné le modèle ponctuel `CODEX_LOCAL_UI`. Ce modèle n'est
+pas encore autorisé à exécuter : la campagne reste bloquée avant l'ouverture du nouveau Work Order,
+l'autorisation effective de l'acteur, la readiness, la sauvegarde/restauration, le manifeste et le
+nouveau go. Aucun script, orchestration ou automatisation UI n'est autorisé.
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
 ou limite d'API applicable aux endpoints du laboratoire n'a été extraite. Ce constat n'est pas une
@@ -1100,7 +1097,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Rapport arrêté de la campagne J9](docs/validation/J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831.md)
 - [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md)
 - [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay.md)
-- [Work Order actif de réexamen ADR-SS-002](docs/work_orders/active/WO-SS-20260831-022-j9-adr-ss-002-reexamination.md)
+- [Work Order validé de réexamen ADR-SS-002](docs/work_orders/completed/WO-SS-20260831-022-j9-adr-ss-002-reexamination.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 

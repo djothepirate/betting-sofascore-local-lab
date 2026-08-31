@@ -1,17 +1,18 @@
 # ADR-SS-002 - Preuve fournisseur multi-dossier bornée pour J9
 
-- **Statut :** v1.0 `ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP` ; v1.1
-  `DRAFT_SELECTED_PROFILE_PENDING_OWNER_ACCEPTANCE`
-- **Version historique acceptée :** 1.0
-- **Version proposée :** 1.1
+- **Statut :** v1.0 `ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP` ; v1.1 `ACCEPTED`
+- **Version historique :** 1.0
+- **Version courante acceptée :** 1.1
 - **Date :** 2026-08-31
 - **Décideur :** Porteur du Betting Project
 - **Portée historique v1.0 :** une campagne locale de preuve J9 sous `WO-SS-20260831-019`
-- **Portée proposée v1.1 :** une nouvelle série complète D1/D2/D3 sous un nouveau Work Order ;
-  aucune campagne avant acceptation
+- **Portée normative v1.1 :** une nouvelle série complète D1/D2/D3 sous un nouveau Work Order ;
+  aucune campagne avant satisfaction de toutes les portes post-acceptation
 - **Base historique v1.0 :** `a47c932` sur `codex/j9-decision`
 - **Base du draft v1.1 :** `1fcd2cd1a71df74e97e31850a1497a3780e7719f` sur
   `codex/j9-adr002-reexamination`
+- **Draft v1.1 accepté :** commit `fc18f3da2a4946d9854587930051f83bd3930402`, SHA-256
+  `c1fc398703585e0dcc3ccf36d880f0a009d8366e5492835b9f244f3437ebdba4`
 - **ADR qualifié :** `ADR-SS-001 v1.4`, inchangé
 - **Cible Java :** Java 25 LTS
 - **Transport :** Playwright existant, manuel, local et opt-in
@@ -20,15 +21,19 @@
   nouveau code sous WO-022
 - **Acceptation propriétaire v1.0 enregistrée à :** 2026-08-30T22:54:47Z
   (2026-08-31 Europe/Paris)
-- **Acceptation propriétaire v1.1 :** `PENDING`
+- **Acceptation propriétaire v1.1 :** `ACCEPTED`, enregistrée le
+  `2026-08-31T12:02:37.0545305Z`
 - **Profil v1.1 choisi par le propriétaire :** `RESTART_FULL_D1_D2_D3`, enregistré le
   `2026-08-31T11:07:13.3823864Z`
 - **Actions du propriétaire aux endpoints pendant la future campagne :** `UNAVAILABLE`
 - **Autre opérateur humain local désigné :** `NO`
-- **Modèle d'exécution :** `BLOCKED_PENDING_OPERATOR_DECISION`
+- **Modèle d'acteur sélectionné :** `ONE_OFF_CODEX_LOCAL_UI`
+- **Exécution par Codex :** `NOT_AUTHORIZED_PENDING_FUTURE_CAMPAIGN_WORK_ORDER`
+- **Modèle d'exécution :** `BLOCKED_PENDING_NEW_CAMPAIGN_WORK_ORDER_AND_ALL_GATES`
 - **Effet historique de l'acceptation v1.0 :** première porte de WO-019 franchie ; série ensuite
   consommée et terminée par arrêt après vingt tentatives
-- **Effet du draft v1.1 :** aucun ; ni reprise, ni réseau, ni go avant décision propriétaire
+- **Effet de l'acceptation v1.1 :** rend recevable une décision ultérieure d'ouverture d'un nouveau
+  Work Order ; n'autorise ni campagne, ni réseau, ni go
 - **Option de production VPS future :** non exclue, non mesurée et non autorisée par cet ADR
 
 ## 1. Contexte
@@ -367,13 +372,13 @@ Un nouvel ADR est requis avant :
 1. `ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md`, version 1.4.
 2. `docs/work_orders/active/WO-SS-20260831-018-decision-j9.md`.
 3. `docs/work_orders/active/WO-SS-20260831-019-j9-provider-robustness.md`.
-4. `docs/work_orders/active/WO-SS-20260831-022-j9-adr-ss-002-reexamination.md`.
+4. `docs/work_orders/completed/WO-SS-20260831-022-j9-adr-ss-002-reexamination.md`.
 5. `docs/benchmark/J8-BENCHMARK-REPORT-20260830.md`.
 6. `docs/runbooks/J8-BENCHMARK.md`.
 7. `docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md`.
 8. Sources officielles listées aux paragraphes 3.6 et 11.6, consultées le 2026-08-31 local.
 
-## 11. Réexamen après WO-021 — draft v1.1 sans effet exécutoire
+## 11. Réexamen après WO-021 — révision v1.1 acceptée sans effet exécutoire
 
 ### 11.1 Déclencheurs et état terminal v1.0
 
@@ -393,7 +398,7 @@ ADR_SS_002_V1_0_FILE_SHA256_BEFORE_V1_1_DRAFT=F68792FF722708F436957D3414317F2B5A
 ADR_SS_002_V1_0_FILE_SHA256_SCOPE=HISTORICAL_V1_0_FILE_BEFORE_V1_1_DRAFT
 ADR_SS_002_V1_0_SOURCE_COMMIT=af7fe179315053aedff31f0b3f6a31f6e4a8e54c
 ADR_SS_002_V1_0_REUSABLE_FOR_RESUME=NO
-ADR_SS_002_V1_1_STATUS=DRAFT_SELECTED_PROFILE_PENDING_OWNER_ACCEPTANCE
+ADR_SS_002_V1_1_STATUS=ACCEPTED
 PRIOR_GLOBAL_OWNER_GO_REUSABLE=NO
 PRIOR_EVIDENCE_RESULT=STOPPED
 PRIOR_DIRECT_ATTEMPTS_FROZEN=20
@@ -422,22 +427,22 @@ preuve autonome et homogène sur D1, D2 et D3. Le choix a été reçu le
 J9_ADR_SS_002_REEXAMINATION_OWNER_DECISION=SELECT_RESTART_FULL_D1_D2_D3
 J9_ADR_SS_002_V1_1_SELECTED_PROFILE=RESTART_FULL_D1_D2_D3
 J9_PROFILE_SELECTION_RECORDED_AT_UTC=2026-08-31T11:07:13.3823864Z
-J9_PROFILE_SELECTION_EFFECT=DRAFT_REWRITE_ONLY
-J9_ADR_SS_002_V1_1_OWNER_ACCEPTANCE=PENDING
+J9_PROFILE_SELECTION_EFFECT=INCORPORATED_IN_ACCEPTED_V1_1
+J9_ADR_SS_002_V1_1_OWNER_ACCEPTANCE=ACCEPTED_2026-08-31T12:02:37.0545305Z
 J9_PROVIDER_NETWORK_AUTHORIZED=NO
 J9_NEW_CAMPAIGN_AUTHORIZED=NO
 J9_NEW_PROVIDER_GO_GRANTED=NO
 ```
 
-### 11.3 Profil normatif proposé : nouvelle série complète D1/D2/D3
+### 11.3 Profil normatif accepté : nouvelle série complète D1/D2/D3
 
-Le texte ci-dessous est un draft sans effet exécutoire. S'il est accepté, il rendra seulement une
-décision d'ouverture ultérieure d'un nouveau Work Order et d'un nouveau worktree recevable pour une
-série unique. Il ne les ouvre pas, ne rouvre pas WO-019, ne réutilise pas la série v1.0 et
-n'autorise aucune troisième série.
+Le texte ci-dessous est accepté depuis le `2026-08-31T12:02:37.0545305Z`. Cette acceptation rend
+seulement une décision d'ouverture ultérieure d'un nouveau Work Order et d'un nouveau worktree
+recevable pour une série unique. Elle ne les ouvre pas, ne rouvre pas WO-019, ne réutilise pas la
+série v1.0 et n'autorise aucune troisième série.
 
 ```text
-ADR_SS_002_V1_1_STATUS=DRAFT_SELECTED_PROFILE_PENDING_OWNER_ACCEPTANCE
+ADR_SS_002_V1_1_STATUS=ACCEPTED
 ADR_SS_002_V1_1_PROFILE=RESTART_FULL_D1_D2_D3
 HISTORICAL_DIRECT_ATTEMPTS_FROZEN=20
 NEW_SERIES_LEDGER_BASELINE_DIRECT_ATTEMPTS=0
@@ -446,7 +451,7 @@ AUDIT_CUMULATIVE_BASELINE_DIRECT_ATTEMPTS=20
 AUDIT_MAXIMUM_CUMULATIVE_DIRECT_ATTEMPTS=58
 D1_REEXECUTION_REQUIRED_IF_NEW_SERIES_EXECUTED=YES
 D1_REEXECUTION_CURRENTLY_AUTHORIZED=NO
-SECOND_SERIES_CURRENTLY_AUTHORIZED=NO_PENDING_ADR_ACCEPTANCE_AND_ALL_GATES
+SECOND_SERIES_CURRENTLY_AUTHORIZED=NO_PENDING_NEW_CAMPAIGN_WORK_ORDER_AND_ALL_GATES
 THIRD_SERIES_AUTHORIZED=NO
 REPLACEMENT_DOSSIER_ALLOWED=NO
 NEW_FULL_RESTART_CAMPAIGN_WORK_ORDER_REQUIRED=YES
@@ -455,8 +460,9 @@ NEW_FULL_RESTART_CAMPAIGN_WORKTREE_REQUIRED=YES
 WO019_HISTORICAL_CAMPAIGN_REOPENED=NO
 ```
 
-Le prochain numéro disponible observé est `WO-SS-20260831-023`, mais le choix du profil n'autorise
-pas encore son ouverture. La règle « un Work Order et un worktree par campagne » reste applicable.
+Le prochain numéro disponible observé est `WO-SS-20260831-023`, mais l'acceptation de v1.1 et le
+choix du modèle d'acteur n'autorisent pas son ouverture. La règle « un Work Order et un worktree par
+campagne » reste applicable.
 
 | Segment v1.1 | Unité existante | Maximum nouveau | Cumul série | Cumul audit J9 |
 |---|---|---:|---:|---:|
@@ -493,17 +499,19 @@ navigateur restent obligatoires.
 ### 11.4 Modèle opérateur et futur go
 
 Le propriétaire indique qu'il ne pourra pas réaliser les actions locales nécessaires aux huit
-sous-campagnes A1 à B4. Cette indisponibilité personnelle est une porte matérielle : elle ne vaut ni
-désignation d'un autre humain, ni délégation à Codex, ni permission de transformer les huit
-séquences unitaires en orchestration.
+sous-campagnes A1 à B4. Il sélectionne désormais `CODEX_LOCAL_UI` comme modèle d'acteur ponctuel.
+Cette sélection ne vaut pas encore autorisation d'exécution pour Codex et ne permet pas de
+transformer les huit séquences unitaires en orchestration.
 
 ```text
 OWNER_ENDPOINT_ACTIONS_AVAILABLE_FOR_NEW_CAMPAIGN=NO
 OTHER_HUMAN_LOCAL_OPERATOR_DESIGNATED=NO
 CURRENT_EXECUTION_MODEL=EIGHT_FRESH_MANUAL_SUBCAMPAIGN_SEQUENCES
-CURRENT_EXECUTION_MODEL_SATISFIABLE=NO_PENDING_OPERATOR_DECISION
-CAMPAIGN_EXECUTION_STATE=BLOCKED_PENDING_OPERATOR_DECISION
-OPERATOR_PATH_OWNER_DECISION=PENDING
+CURRENT_EXECUTION_MODEL_SATISFIABLE=NO_PENDING_FUTURE_CAMPAIGN_WORK_ORDER_ACTOR_AUTHORIZATION
+CAMPAIGN_EXECUTION_STATE=BLOCKED_PENDING_NEW_CAMPAIGN_WORK_ORDER_AND_ALL_GATES
+OPERATOR_PATH_OWNER_DECISION=SELECT_ONE_OFF_CODEX_LOCAL_UI_MODEL
+SELECTED_EXECUTION_ACTOR=CODEX_LOCAL_UI
+OPERATOR_MODEL_STATUS=SELECTED_NOT_AUTHORIZED
 AUTOMATED_MULTI_CAMPAIGN_ORCHESTRATION_AUTHORIZED=NO
 AUTOMATED_UI_SUBMISSION_AUTHORIZED=NO
 CODEX_LOCAL_UI_EXECUTION_AUTHORIZED=NO
@@ -516,18 +524,13 @@ fraîchement préparées et confirmées ; la procédure J4 interdit notamment le
 automatisé, le polling et le rafraîchissement automatique. Un précédent versionné existe toutefois :
 [WO-017](docs/work_orders/completed/WO-SS-20260830-017-j5-incidents-empty-shootout-action-v15.md)
 et son [rapport](docs/validation/J5-V15-PROVIDER-QUALIFICATION-20260830.md) consignent une campagne
-unitaire exécutée par `CODEX_LOCAL_UI` après dérogation propriétaire explicite. Ce précédent ne vaut
-pas délégation pour J9 : le message courant constate seulement l'indisponibilité du propriétaire.
+unitaire exécutée par `CODEX_LOCAL_UI` après dérogation propriétaire explicite. Pour J9, le modèle
+`ONE_OFF_CODEX_LOCAL_UI` est maintenant sélectionné, mais l'autorisation effective de cet acteur
+reste à consigner dans le futur Work Order de campagne. Si le besoin porte au contraire sur un
+script, un scheduler, une orchestration UI ou une modification runtime, un Work Order de code et un
+réexamen d'ADR-SS-001 seront requis.
 
-Les voies actuellement recevables sont : différer la campagne jusqu'à disponibilité du
-propriétaire, sélectionner le modèle d'un autre opérateur humain local, ou sélectionner le modèle
-d'une exécution ponctuelle `CODEX_LOCAL_UI` des huit séquences, sans orchestration. L'autorisation
-effective de l'acteur retenu sera consignée dans le futur Work Order. Si le besoin porte au contraire
-sur un script, un scheduler, une orchestration UI ou une modification runtime, un Work Order de code
-et un réexamen d'ADR-SS-001 seront requis. L'acceptation de v1.1 peut intervenir avec cette porte
-encore bloquée.
-
-Après résolution du modèle opérateur et satisfaction de toutes les autres portes, un nouveau go
+Après autorisation effective du modèle d'acteur et satisfaction de toutes les autres portes, un nouveau go
 identifiera v1.1 accepté, le nouveau Work Order de campagne, le rapport historique et son hash, les
 trois dossiers, les maxima 38 nouveaux et 58 cumulés, l'acteur d'exécution autorisé par la décision
 séparée et une fenêtre UTC d'au plus 60 minutes. Il sera consommé au premier claim J3 accepté. Une
@@ -536,17 +539,17 @@ redémarrage, une deuxième instance, un incident, la fin de fenêtre ou la fin 
 
 ### 11.5 Portes cumulatives
 
-Avant tout nouveau go :
+Avant tout nouveau go, l'acceptation explicite de v1.1 et la sélection du modèle d'acteur sont
+satisfaites. Restent obligatoires :
 
-1. acceptation explicite du présent texte v1.1 ;
-2. résolution et autorisation du modèle opérateur ;
-3. ouverture d'un nouveau Work Order et d'un nouveau worktree de campagne ;
-4. readiness fraîche avec tests standards et d'intégration, qualifications loopback J3/J4/J5,
+1. décision propriétaire d'ouverture d'un nouveau Work Order et d'un nouveau worktree de campagne,
+   avec autorisation explicite de l'acteur `CODEX_LOCAL_UI` dans ce périmètre ;
+2. readiness fraîche avec tests standards et d'intégration, qualifications loopback J3/J4/J5,
    fence inter-worker/inter-campagne, cleanup, artefacts, secrets et flags bloquants ;
-5. nouvelle sauvegarde chiffrée V28 post-arrêt et restauration isolée couvrant au minimum le
+3. nouvelle sauvegarde chiffrée V28 post-arrêt et restauration isolée couvrant au minimum le
    snapshot `814`, les occurrences `778..781` et les vingt tentatives ;
-6. nouveau manifeste gelé et corroboration indépendante des deux ledgers ;
-7. nouveau go global explicite et à usage unique.
+4. nouveau manifeste gelé et corroboration indépendante des deux ledgers ;
+5. nouveau go global explicite et à usage unique.
 
 La sauvegarde précédente couvrait au maximum le snapshot `794` et ne contient donc pas la preuve D1
 acquise pendant la série arrêtée.
@@ -593,54 +596,27 @@ LEGAL_CONCLUSION=NOT_PROVIDED
 Le transport Playwright et l'option VPS future ne neutralisent pas ces faits. Production,
 intégration, VPS courant et dépendance critique restent interdits.
 
-### 11.7 Porte propriétaire d'acceptation v1.1
+### 11.7 Acceptation propriétaire v1.1 et sélection du modèle d'acteur
 
-Le choix du profil est enregistré. Le premier bloc reste requis pour l'ADR et ne vaut ni ouverture
-du nouveau Work Order, ni résolution du modèle opérateur, ni go réseau :
+Le propriétaire a déclaré explicitement « J'accepte v1.1 » le
+`2026-08-31T12:02:37.0545305Z`. Cette décision vise le draft versionné et identifié qui lui a été
+soumis :
 
 ```text
-ADR_SS_002_V1_1_OWNER_DECISION=<ACCEPT|REJECT|REQUEST_CHANGES>
+ADR_SS_002_V1_1_OWNER_DECISION=ACCEPT
 ADR_SS_002_V1_1_PROFILE=RESTART_FULL_D1_D2_D3
-ADR_SS_002_V1_1_DRAFT_COMMIT=<commit>
-ADR_SS_002_V1_1_FILE_SHA256=<sha256>
-ADR_SS_002_V1_0_STATE=ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP
-ADR_SS_002_V1_0_REUSABLE=NO
-
-HISTORICAL_DIRECT_ATTEMPTS_FROZEN_20_ACKNOWLEDGED=<YES|NO>
-NEW_FULL_SERIES_MAXIMUM_DIRECT_ATTEMPTS_38_ACCEPTED=<YES|NO>
-MAXIMUM_CUMULATIVE_DIRECT_ATTEMPTS_58_ACCEPTED=<YES|NO>
-D1_REEXECUTION_ACCEPTED=<YES|NO>
-NEW_AUTONOMOUS_REPORT_REQUIRED=YES
-THIRD_SERIES_AUTHORIZED=NO
-REPLACEMENT_DOSSIER_ALLOWED=NO
-
-OFFICIAL_SOURCE_REVIEW_ACKNOWLEDGED=<YES|NO>
-EXPLICIT_PROVIDER_PERMISSION_EVIDENCED=NO
-OWNER_ENDPOINT_ACTIONS_AVAILABLE=NO
-OTHER_HUMAN_LOCAL_OPERATOR_DESIGNATED=NO
-OPERATOR_MODEL_STATUS=UNRESOLVED
-CAMPAIGN_EXECUTION_BLOCKED_PENDING_OPERATOR_DECISION=YES
-AUTOMATED_UI_ORCHESTRATION_AUTHORIZED=NO
-CODEX_LOCAL_UI_EXECUTION_AUTHORIZED=NO
-
-NEW_CAMPAIGN_WORK_ORDER_REQUIRED=YES
-NEW_CAMPAIGN_WORKTREE_REQUIRED=YES
-NEW_CAMPAIGN_BRANCH_REQUIRED=YES
-NEW_CAMPAIGN_WORK_ORDER_OPENING_AUTHORIZED=NO
-PROVIDER_NETWORK_AUTHORIZED=NO
-CAMPAIGN_EXECUTION_AUTHORIZED=NO
-NEW_GLOBAL_OWNER_GO_GRANTED=NO
-PRIMARY_DATABASE_PURGE=NO
-INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
-J9_FINAL_DECISION=NOT_TAKEN
-FUTURE_VPS_PRODUCTION_OPTION=NOT_EXCLUDED_BUT_NOT_AUTHORIZED
+ADR_SS_002_V1_1_ACCEPTED_DRAFT_COMMIT=fc18f3da2a4946d9854587930051f83bd3930402
+ADR_SS_002_V1_1_ACCEPTED_DRAFT_FILE_SHA256=c1fc398703585e0dcc3ccf36d880f0a009d8366e5492835b9f244f3437ebdba4
+ADR_SS_002_V1_1_OWNER_ACCEPTED_AT_UTC=2026-08-31T12:02:37.0545305Z
+ADR_SS_002_V1_1_OWNER_ACCEPTANCE_FORM=EXPLICIT_NATURAL_LANGUAGE_FOR_VERSIONED_DRAFT
+ADR_SS_002_V1_1_STATUS=ACCEPTED
 ```
 
-Le choix de l'acteur est une seconde décision, sans effet réseau, go ou ouverture de Work Order :
+Le même message sélectionne séparément le modèle d'acteur suivant, sans autoriser l'exécution :
 
 ```text
-J9_V1_1_OPERATOR_PATH_OWNER_DECISION=<DEFER_UNTIL_OWNER_AVAILABLE|SELECT_OTHER_HUMAN_LOCAL_OPERATOR_MODEL|SELECT_ONE_OFF_CODEX_LOCAL_UI_MODEL|REQUEST_AUTOMATED_EXECUTION_STUDY>
-SELECTED_EXECUTION_ACTOR=<UNRESOLVED|OWNER|OTHER_HUMAN_LOCAL_OPERATOR|CODEX_LOCAL_UI>
+J9_V1_1_OPERATOR_PATH_OWNER_DECISION=SELECT_ONE_OFF_CODEX_LOCAL_UI_MODEL
+SELECTED_EXECUTION_ACTOR=CODEX_LOCAL_UI
 OWNER_ENDPOINT_ACTIONS_AVAILABLE=NO
 CODEX_LOCAL_UI_EXECUTION_AUTHORIZED=NO
 AUTOMATED_UI_ORCHESTRATION_AUTHORIZED=NO
@@ -650,19 +626,26 @@ NEW_GLOBAL_OWNER_GO_GRANTED=NO
 OPERATOR_DECISION_EFFECT=ACTOR_MODEL_ONLY_NO_EXECUTION_NO_NETWORK_NO_GO_NO_WORK_ORDER_OPENING
 ```
 
-Une sélection `SELECT_ONE_OFF_CODEX_LOCAL_UI_MODEL` identifiera l'acteur envisagé pour les huit
-séquences fraîches et devra être reprise puis autorisée dans le futur Work Order de campagne. Elle
-n'autorisera ni exécution, ni script, ni orchestration, ni réseau, ni go.
-`REQUEST_AUTOMATED_EXECUTION_STUDY` signalera seulement le besoin d'une étude ; son ouverture exigera
-une autorisation et un Work Order distincts. Ce choix ne les ouvrira pas à lui seul.
+Les portes et non-autorisations courantes restent :
 
-Après acceptation, WO-022 pourra être clos. Cette clôture ne vaudra ni ouverture de WO-023, ni
-readiness, ni sauvegarde, ni manifeste, ni go, ni accès fournisseur.
+```text
+NEW_CAMPAIGN_WORK_ORDER_REQUIRED=YES
+NEW_CAMPAIGN_WORKTREE_REQUIRED=YES
+NEW_CAMPAIGN_BRANCH_REQUIRED=YES
+NEW_CAMPAIGN_WORK_ORDER_OPENING_AUTHORIZED=NO
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_FINAL_DECISION=NOT_TAKEN
+FUTURE_VPS_PRODUCTION_OPTION=NOT_EXCLUDED_BUT_NOT_AUTHORIZED
+```
+
+WO-022 est désormais clos et archivé. Cette clôture ne vaut ni ouverture de WO-023, ni readiness,
+ni sauvegarde, ni manifeste, ni go, ni accès fournisseur.
 
 ## 12. Historique
 
 | Version | Date | Évolution |
 |---|---|---|
-| 1.1-draft | 2026-08-31 | Réexamen après arrêt et WO-021 ; v1.0 déclarée non réutilisable ; `RESTART_FULL_D1_D2_D3` choisi par le propriétaire ; nouvelle série proposée à 38 nouveaux appels et 58 cumulés sous un futur Work Order distinct ; indisponibilité du propriétaire et absence d'autre acteur désigné enregistrées, exécution bloquée ; acceptation v1.1 encore requise ; aucun effet réseau. |
+| 1.1 | 2026-08-31 | `RESTART_FULL_D1_D2_D3` accepté explicitement sur le draft `fc18f3d` ; nouvelle série de 38 appels maximum et 58 cumulés sous un futur Work Order distinct ; modèle ponctuel `CODEX_LOCAL_UI` sélectionné mais non autorisé à l'exécution ; aucun effet réseau, go, campagne ou production. |
 | 1.0 | 2026-08-31 | Acceptation propriétaire explicite du corpus, du plafond 38, du go unique, de la sémantique 404 et des non-autorisations ; option VPS future reconnue mais non autorisée ; aucun go réseau accordé. |
 | 0.1 | 2026-08-31 | Proposition d'une série unique à trois dossiers et 38 appels maximum ; revue officielle factuelle ; aucun effet réseau avant décision propriétaire. |

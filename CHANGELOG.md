@@ -193,10 +193,16 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   un Work Order/worktree par campagne, un nouveau Work Order et un nouveau worktree seront requis
   après acceptation, mais ne sont pas encore ouverts ;
 - indisponibilité déclarée du propriétaire pour les huit séquences unitaires d'interrogation ; aucun
-  autre opérateur humain n'est désigné et le modèle courant est `BLOCKED_PENDING_OPERATOR_DECISION`.
+  autre opérateur humain n'était alors désigné et l'état était `BLOCKED_PENDING_OPERATOR_DECISION`.
   Aucune délégation à Codex ne découle de ce constat ; le précédent WO-017 permet toutefois de
   proposer séparément une exécution ponctuelle `CODEX_LOCAL_UI` sur instruction propriétaire
   explicite. Script, orchestration, scheduler et modification runtime restent hors autorisation.
+- acceptation propriétaire explicite d'ADR-SS-002 v1.1 reçue le
+  `2026-08-31T12:02:37.0545305Z` pour le draft `fc18f3d`, SHA-256
+  `c1fc398703585e0dcc3ccf36d880f0a009d8366e5492835b9f244f3437ebdba4` ; le modèle ponctuel
+  `CODEX_LOCAL_UI` est sélectionné mais son exécution reste à `NO` ;
+- WO-022 validé et déplacé vers les Work Orders terminés. WO-019 reste `STOPPED`, WO-023 n'est pas
+  ouvert et campagne, réseau, go, intégration et production restent non autorisés.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 
