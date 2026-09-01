@@ -24,6 +24,16 @@ SofaScore ne pourra être transféré tant que la permission reste `NOT_EVIDENCE
 aucun runtime et n'autorise aucun réseau fournisseur ou receiver réel, livraison, VPS ou
 production.
 
+Le propriétaire fixe une progression en trois paliers : activation manuelle d'un J7
+`HUMAN_VALIDATED` et requête vers le receiver avec les deux applications sur Windows ; ensuite
+Local Lab sur Windows et receiver `betting-project` sur le VPS de production déclaré ; enfin,
+éventuellement, les deux applications sur ce VPS. Le VPS `51.255.167.32` est déclaré disponible
+mais sans configuration ni installation manuelle et reste `NOT_QUALIFIED`. Le palier Windows/VPS
+nécessite ses Work Orders d'infrastructure, de déploiement et de réseau. Le palier VPS/VPS
+déplacerait potentiellement Playwright et les données brutes : il reste bloqué par `LOCAL_ONLY`,
+ADR-SS-001 et ADR-SS-003 v0.1 jusqu'à une révision explicite. Aucune connexion ou sonde du VPS n'a
+été effectuée.
+
 Le correctif fournisseur distinct
 [WO-SS-20260901-030](docs/work_orders/completed/WO-SS-20260901-030-j9-provider-playwright-port-boundary-hardening.md)
 est `VALIDATED` et archivé depuis le `main` issu des PR #20/#21. Le commit

@@ -27,6 +27,16 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - proposition non autorisante de séparer le receiver HTTPS sur `127.0.0.1:8444` et son PostgreSQL
   sur `127.0.0.1:5433`, avec décision préalable de séquencement des migrations CAT-002, deux
   Work Orders futurs et qualification inter-processus synthétique avant tout export fournisseur ;
+- clarification propriétaire du déclencheur : une activation manuelle distincte d'un export J7
+  déjà `HUMAN_VALIDATED` devra soumettre exactement une requête au receiver sans jamais déclencher
+  une acquisition ;
+- trajectoire ordonnée Windows/Windows, puis Windows vers receiver sur le VPS de production
+  `51.255.167.32`, puis option ultérieure VPS/VPS ; l'hôte est déclaré disponible mais sans
+  configuration ou installation manuelle, n'a pas été contacté et reste non qualifié ;
+- palier Windows/VPS soumis à des Work Orders et décisions séparés d'infrastructure, déploiement,
+  ingress, mTLS et réseau ; palier VPS/VPS bloqué par la gouvernance courante tant que la permission,
+  ADR-SS-001, ADR-SS-003 et les statuts `LOCAL_ONLY` / `NOT_PRODUCTION_APPROVED` ne sont pas
+  explicitement révisés ;
 - aucun changement applicatif, endpoint, migration, schéma ou configuration ; aucun message
   externe, appel fournisseur, receiver réel, livraison, VPS ou usage de production sous WO-031 ;
   `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED` reste bloquant.

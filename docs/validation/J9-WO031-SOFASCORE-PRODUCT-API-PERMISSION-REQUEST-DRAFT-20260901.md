@@ -1,7 +1,8 @@
 # J9 / WO-031 — Brouillon de demande de permission SofaScore Product -> API
 
-- **Version du brouillon :** `1.0`
+- **Version du brouillon :** `1.1`
 - **Préparé le :** 2026-09-01
+- **Révisé le :** `2026-09-01T16:51:36.7174622Z`
 - **Statut :** `PREPARED_NOT_SENT`
 - **Canal envisagé :** formulaire officiel SofaScore, catégorie `Product -> API`
 - **Objet :** permission écrite et conditions applicables à un usage API football borné
@@ -55,8 +56,11 @@ INTENDED_USE_CLASSIFICATION=[PERSONAL_RESEARCH|NON_COMMERCIAL|COMMERCIAL|OTHER]
 BETTING_RELATED_USE_DESCRIPTION=[REQUIRED_PLAIN_LANGUAGE_DESCRIPTION]
 END_USER_ACCESS=[INTERNAL_ONLY|EXTERNAL_USERS|OTHER]
 RECEIVER_OPERATOR=[SAME_CONTROLLER|THIRD_PARTY|OTHER]
-RECEIVER_INITIAL_LOCATION=[LOCAL_MACHINE|PRIVATE_TEST_HOST|OTHER]
-RECEIVER_FUTURE_HOSTING_PROVIDER_AND_REGION=[IF_APPLICABLE]
+RECEIVER_INITIAL_LOCATION=OWNER_WINDOWS_MACHINE_FOR_FIRST_TEST
+RECEIVER_SECOND_LOCATION=PRODUCTION_VPS_FOR_SECOND_TEST
+RECEIVER_FUTURE_HOSTING_PROVIDER_AND_REGION=[REQUIRED]
+POSSIBLE_FUTURE_PROVIDER_AND_RECEIVER_COLOCATION=YES_SUBJECT_TO_EXPLICIT_PERMISSION_AND_GOVERNANCE
+PRODUCTION_VPS_PUBLIC_IP_DISCLOSURE_IN_REQUEST=[NO_BY_DEFAULT|YES_IF_NECESSARY]
 MODEL_TRAINING=[NO|YES_WITH_DETAILS]
 DATA_RESALE=[NO|YES_WITH_DETAILS]
 PUBLIC_REDISTRIBUTION=[NO|YES_WITH_DETAILS]
@@ -93,14 +97,19 @@ fresh non-persistent context, concurrency 1, at least three seconds between star
 scheduler, retry, proxy rotation, session reuse or challenge bypass. Two prior one-off evidence
 series made 48 direct attempts in total; this is not an ongoing cadence.
 
-Raw responses would remain in the isolated laboratory for at most 30 days. Only minimized,
-normalized and human-reviewed data would be sent by a separate manual HTTPS/mTLS action to a
-Betting Project receiver. That receiver would never call SofaScore or trigger an acquisition.
+Raw responses would remain in the isolated laboratory for at most 30 days. Activating an already
+human-validated J7 export would be a separate manual action that sends one HTTPS/mTLS request to a
+Betting Project receiver. That receiver would never call SofaScore or trigger an acquisition. The
+first end-to-end test would run both applications on one Windows workstation; a later test would
+keep acquisition on Windows and run the receiver on a production VPS; a possible third stage would
+run both applications on that VPS only if SofaScore and the applicable governance explicitly allow
+hosted provider acquisition.
 
 Please confirm the official API product, authentication and contract; whether this betting-related
 use and Playwright transport are permitted; applicable pricing, rate, retention, normalization,
-attribution and receiver-transfer terms; whether future VPS storage changes the answer; and whether
-a sandbox is available. We found public Terms and External API documentation but no permission
+attribution and receiver-transfer terms; whether a remote receiver and possible future hosted
+provider acquisition change the answer; and whether a sandbox is available. We found public Terms
+and External API documentation but no permission
 clearly applicable to this use, so no further real provider use or delivery will be enabled based
 on this request alone.
 
@@ -145,6 +154,18 @@ would remain strictly separated:
 
 operator-initiated bounded acquisition -> local parsing and human validation -> separate HTTPS
 delivery of an already-existing export to the receiver.
+
+Activating delivery means a separate explicit operator action on one already `HUMAN_VALIDATED` J7
+export. It sends one request to the receiver; it is not an automatic consequence of validation and
+does not start provider acquisition.
+
+We envisage a staged qualification:
+
+1. both applications running on the same Windows workstation;
+2. the laboratory remaining on Windows while the receiver runs on a production VPS in
+   [HOSTING PROVIDER, COUNTRY AND REGION]; and
+3. potentially, both applications running on that VPS at a later date, but only if hosted provider
+   acquisition is explicitly permitted and separately approved.
 
 No raw SofaScore response, cookie, token, browser session, certificate material or provider URL
 would be sent to the receiver.
@@ -191,8 +212,12 @@ Could you please confirm:
 6. whether the responses may be parsed and normalized, and whether minimized, human-reviewed
    event data may be retained and transmitted to a separate receiver controlled by
    [RECEIVER OPERATOR];
-7. whether the answer changes for commercial, user-facing or future VPS-hosted use; and
-8. whether a sandbox or test environment is available for end-to-end qualification.
+7. whether a production-VPS receiver may accept the normalized export while acquisition remains on
+   Windows;
+8. whether provider acquisition may ever run from that VPS, under which official API product and
+   restrictions, or whether it must always remain on the Windows workstation;
+9. whether the answer changes for commercial, user-facing or other hosted use; and
+10. whether a sandbox or test environment is available for end-to-end qualification.
 
 A detailed technical appendix and the exact route templates are available on request.
 
@@ -321,7 +346,8 @@ The ordered flow is:
 2. the laboratory finishes provider requests and closes the browser context;
 3. data is parsed and reviewed locally;
 4. an operator explicitly marks one minimized canonical export as HUMAN_VALIDATED;
-5. a separate operator action sends that already-existing export by outbound HTTPS with mTLS;
+5. a separate operator activation sends one request containing that already-existing export by
+   outbound HTTPS with mTLS;
 6. the receiver validates it, applies idempotence and returns a minimized acknowledgement.
 
 The receiver cannot call SofaScore, invoke Playwright, request a refresh or cause the sender to
@@ -340,6 +366,7 @@ PAYLOAD_SCHEMA_ID=urn:betting-project:sofascore-local-lab:j7:canonical-event-exp
 PAYLOAD_SCHEMA_VERSION=1.0.0
 DELIVERY_PROTOCOL=J7_OPTIONAL_LOCAL_PUSH
 DELIVERY_PROTOCOL_VERSION=1.0
+DELIVERY_TRIGGER=EXPLICIT_OPERATOR_ACTIVATION_AFTER_HUMAN_VALIDATED
 TRANSPORT=OUTBOUND_HTTPS_POST_WITH_MTLS
 IDEMPOTENCY_KEY=EXPORT_ID_PLUS_FILE_SHA256
 AUTOMATIC_DELIVERY_RETRY=NONE
@@ -353,9 +380,11 @@ Questions explicites :
 ```text
 - May normalized and human-reviewed SofaScore-derived data be transferred from the local
   laboratory to a separate Betting Project receiver controlled by [IDENTITY]?
-- May that receiver initially run on [LOCAL OR PRIVATE TEST LOCATION]?
+- May that receiver initially run on the owner's Windows workstation for the first end-to-end test?
 - May the receiver later run on a VPS in [PROVIDER, COUNTRY AND REGION] while provider acquisition
   remains on the local Windows machine?
+- May both the laboratory and receiver later run on that VPS, including provider acquisition from
+  the VPS, or must provider acquisition remain on the local Windows machine?
 - Does such transfer require a commercial API agreement, regional restriction, subprocessor
   declaration or additional licence?
 - May the receiver retain the normalized data? If yes, for how long?
@@ -364,11 +393,13 @@ Questions explicites :
 - Are attribution, source-linking, freshness notices or deletion mechanisms required?
 ```
 
-La demande actuelle ne sollicite pas l'exécution de Playwright fournisseur sur VPS :
+La demande n'affirme aucun droit d'exécuter Playwright fournisseur sur VPS. Elle demande si ce
+troisième palier pourrait être autorisé et par quel produit officiel :
 
 ```text
-This request does not seek permission to run provider acquisition on a VPS. If SofaScore offers a
-licensable hosted-server use case, please tell us whether it should be discussed separately.
+No provider acquisition will be enabled on a VPS based on this request alone. Please tell us
+whether a licensable hosted-server use case exists, which official API product and authentication
+it requires, and whether it must be reviewed under a separate agreement.
 ```
 
 ### 4.6 Catégories de données à distinguer
@@ -403,10 +434,12 @@ event data.
 8. Are transformation and aggregation permitted?
 9. Is transfer to a separately deployed receiver under the same controller permitted?
 10. Is VPS or cloud storage of normalized data permitted, and in which regions?
-11. Are attribution and source-link requirements mandatory?
-12. Is there a sandbox or test credential for end-to-end qualification?
-13. What process applies to suspension, revocation, schema changes and incident notification?
-14. Who should be contacted before changing volume, endpoints, purpose or deployment topology?
+11. Is provider acquisition from a VPS permitted under any official product, or must acquisition
+    remain on the operator's Windows workstation?
+12. Are attribution and source-link requirements mandatory?
+13. Is there a sandbox or test credential for end-to-end qualification?
+14. What process applies to suspension, revocation, schema changes and incident notification?
+15. Who should be contacted before changing volume, endpoints, purpose or deployment topology?
 ```
 
 ## 5. Forme de réponse écrite souhaitée
@@ -422,7 +455,7 @@ AUTHORIZED_ENDPOINTS_OR_DATA_FAMILIES=[VALUE]
 AUTHORIZED_PURPOSE=[VALUE]
 BETTING_RELATED_USE=[PERMITTED|NOT_PERMITTED|CONDITIONAL]
 COMMERCIAL_USE=[PERMITTED|NOT_PERMITTED|CONDITIONAL]
-AUTHORIZED_ENVIRONMENTS=[LOCAL_TEST|LOCAL_OPERATION|RECEIVER_TEST|RECEIVER_VPS|OTHER]
+AUTHORIZED_ENVIRONMENTS=[WINDOWS_PROVIDER_TEST|WINDOWS_RECEIVER_TEST|RECEIVER_VPS|PROVIDER_VPS|COLOCATED_VPS|OTHER]
 RATE_LIMITS=[VALUE]
 RAW_STORAGE_AND_RETENTION=[VALUE]
 ENCRYPTED_BACKUP_RULES=[VALUE]
@@ -487,8 +520,11 @@ INTENDED_USE_CLASSIFICATION=<VALUE>
 BETTING_RELATED_USE_DESCRIPTION=<VALUE>
 END_USER_ACCESS=<VALUE>
 RECEIVER_OPERATOR=<VALUE>
-RECEIVER_INITIAL_LOCATION=<VALUE>
-RECEIVER_FUTURE_HOSTING_PROVIDER_AND_REGION=<VALUE_OR_NOT_APPLICABLE>
+RECEIVER_INITIAL_LOCATION=OWNER_WINDOWS_MACHINE_FOR_FIRST_TEST
+RECEIVER_SECOND_LOCATION=PRODUCTION_VPS_FOR_SECOND_TEST
+RECEIVER_FUTURE_HOSTING_PROVIDER_AND_REGION=<VALUE>
+POSSIBLE_FUTURE_PROVIDER_AND_RECEIVER_COLOCATION=<INCLUDED|EXCLUDED>
+PRODUCTION_VPS_PUBLIC_IP_DISCLOSURE_IN_REQUEST=<YES|NO>
 MODEL_TRAINING=<NO|YES_WITH_DETAILS>
 DATA_RESALE=<NO|YES_WITH_DETAILS>
 PUBLIC_REDISTRIBUTION=<NO|YES_WITH_DETAILS>

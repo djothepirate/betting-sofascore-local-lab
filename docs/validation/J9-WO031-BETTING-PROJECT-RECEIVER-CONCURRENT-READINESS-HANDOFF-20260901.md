@@ -1,7 +1,8 @@
 # J9 / WO-031 — Handoff de readiness du receiver Betting Project concurrent
 
-- **Version :** `1.0`
+- **Version :** `1.1`
 - **Préparé le :** 2026-09-01
+- **Révisé le :** `2026-09-01T16:51:36.7174622Z`
 - **Statut :** `PREPARED_NOT_IMPLEMENTED`
 - **Dépôt émetteur :** `betting-sofascore-local-lab`
 - **Dépôt receiver :** `betting-project`
@@ -19,17 +20,34 @@ LAB_RUNTIME_PORT=8087
 RECEIVER_RUNTIME_ADDRESS=127.0.0.1_FOR_LOCAL_QUALIFICATION
 RECEIVER_RUNTIME_PORT=8444_PROPOSED_TBD_BY_RECEIVER_WORK_ORDER
 RECEIVER_DATABASE_PORT=5433_PROPOSED_TBD_BY_RECEIVER_WORK_ORDER
+J7_DELIVERY_TRIGGER=EXPLICIT_OPERATOR_ACTIVATION_AFTER_HUMAN_VALIDATED
+J7_DELIVERY_ACTION=SUBMIT_ONE_REQUEST_TO_BETTING_PROJECT_RECEIVER
+J7_DELIVERY_TRIGGERS_PROVIDER_ACQUISITION=NO
+E2E_STAGE_1=WINDOWS_LOCAL_LAB_TO_WINDOWS_BETTING_PROJECT
+E2E_STAGE_2=WINDOWS_LOCAL_LAB_TO_PRODUCTION_VPS_BETTING_PROJECT
+E2E_STAGE_3=POTENTIAL_PRODUCTION_VPS_LOCAL_LAB_TO_SAME_VPS_BETTING_PROJECT
+OWNER_DECLARED_PRODUCTION_VPS_IPV4=51.255.167.32
+OWNER_DECLARED_PRODUCTION_VPS_STATE=AVAILABLE_UNCONFIGURED_NOT_QUALIFIED
+VPS_CONNECTION_OR_PROBE_PERFORMED=NO
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 REAL_DELIVERY_AUTHORIZED=NO
 PROVIDER_NETWORK_AUTHORIZED=NO
 VPS_DEPLOYMENT_AUTHORIZED=NO
+RECEIVER_VPS_DEPLOYMENT_AUTHORIZED=NO
+LOCAL_LAB_VPS_DEPLOYMENT_AUTHORIZED=NO
+PROVIDER_VPS_ACQUISITION_AUTHORIZED=NO
+PRODUCTION_INGESTION_AUTHORIZED=NO
 PRODUCTION_AUTHORIZED=NO
 ```
 
 Ce handoff établit les prérequis d'un futur test end-to-end avec les deux vraies applications. Il
 ne crée aucun endpoint et n'autorise aucun démarrage, socket, certificat, livraison ou appel
 fournisseur.
+
+L'IPv4 du VPS est une coordonnée fournie par le propriétaire, pas une cible technique déjà
+acceptée. Aucun contrôle DNS, routage, port, système, compte, firewall, patch, certificat,
+sauvegarde ou accès administratif n'a été effectué sous WO-031.
 
 ## 1. Résultat attendu
 
@@ -54,6 +72,27 @@ La coexistence temporelle des processus est nécessaire à l'échange HTTP. Elle
 dépendance critique, ni démarrage coordonné d'une acquisition, ni chemin de retour du receiver vers
 SofaScore.
 
+### 1.1 Sémantique de l'activation J7
+
+L'activation J7 est l'action manuelle de livraison prévue par ADR-SS-003 v0.1. Elle s'applique à un
+export déjà `HUMAN_VALIDATED`, fige son identité et ses hashes, réclame son entrée de ledger puis
+soumet exactement une requête au receiver. Elle n'est ni le passage automatique à
+`HUMAN_VALIDATED`, ni le téléchargement J7, ni une action susceptible de lancer J3/J4/J5 ou
+Playwright. Un déclenchement événementiel automatique exigerait une révision d'ADR-SS-003.
+
+### 1.2 Trajectoire propriétaire en trois paliers
+
+| Palier | Local Lab | Betting Project | Flux | État courant |
+|---|---|---|---|---|
+| 1 — Windows/Windows | poste Windows, loopback | même poste Windows, processus et base distincts | HTTPS/mTLS loopback | `OWNER_REQUIRED_NOT_IMPLEMENTED` ; synthétique éligible à une autorisation locale séparée |
+| 2 — Windows/VPS | poste Windows ; acquisition locale seulement | VPS de production déclaré `51.255.167.32` | HTTPS/mTLS sortant Windows vers ingress VPS à définir | `OWNER_REQUIRED_NOT_AUTHORIZED` ; compatible avec la direction `OPTIONAL_LOCAL_PUSH`, sans autoriser le VPS |
+| 3 — VPS/VPS éventuel | VPS de production ; acquisition hébergée potentielle | même VPS, isolation obligatoire | réseau interne hôte à concevoir | `BLOCKED_BY_CURRENT_GOVERNANCE` ; exige permission et révisions ADR/règles |
+
+Les trois lignes décrivent des objectifs successifs, pas trois autorisations. Le palier 1 prouve le
+contrat et les processus ; le palier 2 ajoute l'infrastructure et la frontière Internet ; le palier
+3 change en plus le lieu d'acquisition et de conservation brute. La réussite d'une ligne ne permet
+pas d'exécuter la suivante.
+
 ## 2. État constaté des deux dépôts
 
 ### 2.1 SofaScore Local Lab
@@ -65,7 +104,7 @@ SofaScore.
 | Compose | projet `betting-sofascore-local-lab`, conteneur et volume dédiés | conserver cette identité sans la réutiliser côté receiver |
 | Sender | désactivé par défaut | activation future uniquement sous Work Order et décision exacts |
 | URI receiver | vide | aucune cible réelle n'est actuellement définie |
-| Permission | `NOT_EVIDENCED` | toute tentative réelle est refusée avant socket |
+| Permission | `NOT_EVIDENCED` | toute livraison de données dérivées de SofaScore est refusée avant socket ; un E2E synthétique des vrais processus reste une qualification distincte |
 | mTLS | obligatoire ; cible Windows `Windows-MY` pour l'identité client | profil réel et clé native non exportable encore à qualifier |
 | Retry/concurrence | zéro retry automatique, concurrence `1` | invariants à préserver pendant le test inter-processus |
 
@@ -99,6 +138,22 @@ donc décider le séquencement : fusionner CAT-002 avant d'attribuer la prochain
 receiver, ou suspendre CAT-002 et le reprendre après le receiver. Deux migrations `V003` ne doivent
 jamais être développées en parallèle, et une version artificiellement élevée ne doit pas contourner
 ce conflit.
+
+### 2.3 VPS de production déclaré
+
+| Dimension | Fait propriétaire | Qualification technique |
+|---|---|---|
+| IPv4 | `51.255.167.32` | déclarée seulement ; aucune connexion ou sonde |
+| Destination | VPS destiné à la production | aucune production autorisée par ce document |
+| Disponibilité | propriétaire : prêt à être utilisé | `AVAILABLE_UNCONFIGURED_NOT_QUALIFIED` |
+| Configuration/installation manuelle | aucune | OS, comptes, patchs, firewall, ports, runtime, stockage et sauvegarde inconnus |
+| DNS et TLS | non fournis | URI, SAN, chaîne de confiance et rotation à définir |
+| Accès administratif | non fourni | méthode, MFA, clés, bastion et moindre privilège à définir hors Git |
+| Hébergeur/région | non fournis | nécessaires au rendu final de la demande SofaScore et au modèle de menace |
+
+« Prêt à être utilisé » signifie ici que le propriétaire met l'hôte à disposition d'une future
+préparation. Cela ne signifie pas que l'hôte est durci, joignable, sauvegardé, observable ou prêt à
+recevoir une application. Aucun secret, identifiant ou clé d'accès ne doit être ajouté à ce dépôt.
 
 ## 3. Contrat minimal à implémenter côté receiver
 
@@ -194,7 +249,51 @@ Un trust-all est interdit. La JVM du laboratoire devra s'exécuter sous le compt
 la clé : une qualification lancée sous un compte sandbox différent ne prouverait pas l'accès au
 magasin utilisateur du propriétaire.
 
-## 5. Séquence de qualification inter-processus
+### 4.4 Frontière VPS pour les paliers 2 et 3
+
+L'IPv4 seule ne définit pas le receiver. Avant le palier 2, un Work Order d'infrastructure devra
+choisir et qualifier une frontière parmi des options explicites. La préférence de sécurité à
+évaluer est un réseau privé/overlay borné complété par mTLS applicatif ; une exposition publique sur
+`443` derrière un ingress durci et mTLS reste une alternative à décider. Exposer directement le
+processus Java ou PostgreSQL sur l'IPv4 publique est refusé par défaut.
+
+Exigences communes :
+
+- aucun port PostgreSQL public ; écoute base locale au VPS seulement ;
+- receiver désactivé par défaut et endpoint unique borné ;
+- DNS ou URI exacte, SAN serveur et trust anchors figés avant le go ;
+- firewall entrant allowlisté au poste émetteur ou au réseau privé choisi ;
+- compte système non privilégié, fichiers et volumes séparés, secrets hors Git et hors arguments ;
+- patchs, horloge, journaux expurgés, limites CPU/mémoire/disque, sauvegarde/restauration et rollback
+  qualifiés ;
+- health/readiness sans payload et sans endpoint de management public superflu ;
+- zéro retry automatique et arrêt global au premier écart TLS, réseau, schéma ou audit ;
+- inventaire postflight des listeners, processus, conteneurs et fichiers temporaires.
+
+Pour le palier 3, Local Lab et Betting Project devront en outre utiliser des comptes, processus,
+réseaux, bases et volumes isolés sur l'hôte partagé. Cette isolation ne lève pas le blocage
+normatif : l'acquisition fournisseur depuis le VPS reste interdite tant que la gouvernance et la
+permission ne l'autorisent pas explicitement.
+
+Le profil sender accepté est aujourd'hui propre à Windows : l'identité client est sélectionnée dans
+`Windows-MY` et la clé privée doit rester native et non exportable. Ce mécanisme ne peut pas être
+copié sur un VPS Linux. Le palier 3 devra choisir et qualifier un magasin/agent de clé VPS distinct,
+la rotation, la révocation et les ACL, puis réviser le contrat mTLS sans affaiblir la non-exportabilité
+ni introduire de secret versionné.
+
+## 5. Séquences de qualification inter-processus
+
+### 5.1 Palier 1 — Windows/Windows
+
+Deux catégories normatives ne doivent pas être confondues :
+
+```text
+REAL_APPLICATION_SYNTHETIC_E2E=TWO_REAL_PROCESSES_SYNTHETIC_J7_NO_SOFASCORE_RIGHT_REQUIRED
+PROVIDER_DERIVED_REAL_DELIVERY=TWO_REAL_PROCESSES_SOFASCORE_DERIVED_J7_PERMISSION_REQUIRED
+```
+
+La première catégorie prouve le code, les processus, mTLS, le contrat et les ledgers, mais pas le
+droit de transférer des données fournisseur. La seconde exige toutes les portes de la section 8.
 
 La première qualification avec le vrai receiver doit rester offline vis-à-vis de SofaScore et
 utiliser une enveloppe J7 entièrement synthétique. Tant que la permission reste `NOT_EVIDENCED`, un
@@ -226,6 +325,46 @@ fournisseur reverrouillés avant de démarrer la phase receiver. Les deux applic
 être simultanément disponibles que pendant la livraison. Une livraison ne pourra jamais déclencher
 une acquisition.
 
+### 5.2 Palier 2 — Windows vers receiver VPS
+
+Ce palier ne sera préparé qu'après un `PASS` du palier 1 et la validation du receiver. Il conserve
+le Local Lab et toute acquisition fournisseur sur Windows. Avant une livraison distante :
+
+1. inventorier le VPS sans y déployer le runtime et geler OS, hébergeur/région, accès, ownership et
+   baseline ;
+2. ouvrir et valider les Work Orders infrastructure et déploiement `betting-project` ;
+3. choisir l'ingress, le DNS ou l'URI, les ports, le firewall et la chaîne mTLS ;
+4. qualifier sauvegarde/restauration, rétention/purge, logs, monitoring, limites de ressources et
+   rollback sur une cible isolée ;
+5. déployer le receiver désactivé, puis vérifier la readiness sans payload ;
+6. figer le commit, l'image, les empreintes TLS, l'URI et le corpus synthétique dans un manifeste ;
+7. obtenir une autorisation réseau et un go propriétaire à usage unique ;
+8. exécuter d'abord une requête synthétique, puis seulement après permission compatible une
+   livraison de données SofaScore dérivées ;
+9. rapprocher les ledgers et effectuer le postflight des deux hôtes.
+
+Le fait que le receiver soit installé sur un VPS destiné à la production exige une autorisation de
+changement de cet environnement même si le payload de qualification est synthétique. Aucun accès à
+`51.255.167.32` n'est déduit de la présente trajectoire.
+
+### 5.3 Palier 3 — Local Lab et receiver sur le VPS
+
+Ce palier est seulement envisagé. Si le Local Lab y effectue l'acquisition, il devient la topologie
+`VPS_PLAYWRIGHT` différée par ADR-SS-003 v0.1. Avant tout prototype connecté, il faudra :
+
+1. obtenir une permission officielle couvrant explicitement l'usage betting, l'environnement
+   hébergé, les familles, l'authentification et les limites ;
+2. réviser ADR-SS-001, ADR-SS-003, `AGENTS.md` et les statuts `LOCAL_ONLY` /
+   `NOT_PRODUCTION_APPROVED` concernés ;
+3. décider la frontière et le cycle de vie des payloads bruts sur VPS ;
+4. ouvrir un Work Order Playwright VPS distinct avec modèle de menace, sandbox, egress, cleanup,
+   stockage, chiffrement, sauvegarde/restauration, supervision et arrêt d'urgence ;
+5. isoler le Local Lab du receiver et des fonctions critiques du Betting Project sur le même hôte ;
+6. qualifier d'abord hors ligne, puis sous manifeste et go réseau propres.
+
+Déplacer uniquement un processus de livraison sans Playwright ne prouverait pas l'acquisition VPS.
+La portée exacte devra donc être figée avant le réexamen de gouvernance.
+
 ## 6. Cas d'acceptation obligatoires
 
 Le vrai parcours `lab -> receiver` couvre une livraison nominale unique. Le doublon exact, la
@@ -236,6 +375,7 @@ dont la concurrence vaut `1` et dont le ledger terminal interdit le nouveau clai
 | Cas | Résultat attendu |
 |---|---|
 | deux JVM et deux bases simultanément disponibles | readiness indépendante, aucun conflit de port ou volume |
+| activation manuelle d'un J7 `HUMAN_VALIDATED` | une requête receiver ; aucun appel fournisseur ni seconde livraison implicite |
 | livraison nominale mTLS | un effet receiver, ACK valide et corrélé, état sender `DELIVERED` |
 | même export et même hash, client receiver dédié | zéro second effet, doublon exact confirmé |
 | deux requêtes concurrentes de même clé, client receiver dédié | une seule transaction et un seul effet receiver |
@@ -248,6 +388,9 @@ dont la concurrence vaut `1` et dont le ledger terminal interdit le nouveau clai
 | ACK absent, surdimensionné, malformé ou non corrélé | `UNKNOWN_RECONCILIATION_REQUIRED`, zéro retry |
 | demande receiver visant un refresh fournisseur | fonctionnalité absente et refusée |
 | livraison en échec | aucun appel J3/J4/J5, aucun démarrage Playwright |
+| palier 2 synthétique Windows/VPS | même contrat et ACK que le loopback, ingress borné, aucun port base public |
+| tentative palier 2 sans URI/SAN/go exacts | refus avant socket ou avant claim, selon la porte manquante |
+| tentative palier 3 sous gouvernance v0.1 | refus avant démarrage du Local Lab sur VPS |
 | arrêt des deux applications | zéro listener/processus possédé résiduel |
 
 ## 7. Répartition des futurs Work Orders
@@ -264,7 +407,8 @@ au minimum couvrir :
 - authentification mTLS et qualification des cas négatifs ;
 - tests offline et PostgreSQL/Testcontainers ;
 - absence de dépendance au code ou au runtime du laboratoire ;
-- démarrage simultané documenté avec le laboratoire.
+- démarrage simultané documenté avec le laboratoire sur Windows ;
+- artefact de déploiement reproductible et désactivé par défaut, sans en déduire un déploiement VPS.
 
 Le profil existant `control-api`, conditionné par une propriété receiver désactivée par défaut, est
 la voie recommandée. Créer implicitement un quatrième profil runtime contreviendrait à la
@@ -282,10 +426,20 @@ Après validation du receiver, un Work Order sender distinct devra couvrir :
 - réconciliation manuelle et postflight ;
 - première livraison réelle uniquement sous une nouvelle décision propriétaire.
 
+### 7.3 Infrastructure et paliers VPS
+
+Le palier 2 exige au minimum un Work Order d'infrastructure/déploiement distinct couvrant le VPS
+déclaré, l'ingress, le DNS, le firewall, le mTLS, l'utilisateur de service, les secrets, la base,
+les sauvegardes, l'observabilité, le rollback et le runbook. Sa validation n'autorise pas le palier
+3.
+
+Le palier 3 exige une étude et une décision de gouvernance avant tout Work Order d'exécution. Il ne
+doit pas être ajouté au Work Order receiver ou sender du palier 1/2 comme extension implicite.
+
 L'ouverture ou la validation de l'un de ces Work Orders ne vaut pas validation automatique de
 l'autre.
 
-## 8. Portes avant première livraison réelle
+## 8. Portes avant première livraison réelle dérivée fournisseur
 
 ```text
 J9_OFFICIAL_PERMISSION_STATUS=EVIDENCED_COMPATIBLE
@@ -303,7 +457,37 @@ PRODUCTION_AUTHORIZED=SEPARATE_DECISION_REQUIRED
 ```
 
 Tant qu'une seule de ces portes manque, la topologie peut être préparée et qualifiée en
-loopback/offline, mais aucune livraison réelle ne doit partir.
+loopback/offline avec un J7 synthétique, mais aucune livraison dérivée de SofaScore ne doit partir.
+
+Portes supplémentaires du palier 2 :
+
+```text
+WINDOWS_WINDOWS_E2E_RESULT=PASS
+VPS_INVENTORY_AND_HARDENING=QUALIFIED
+VPS_TARGET_IDENTITY=MANIFESTED_WITHOUT_SECRET
+VPS_INGRESS_MODEL=EXPLICITLY_SELECTED_AND_QUALIFIED
+VPS_RECEIVER_DEPLOYMENT_WORK_ORDER=VALIDATED
+VPS_RECEIVER_BACKUP_RESTORE=QUALIFIED
+VPS_RECEIVER_ROLLBACK=QUALIFIED
+REMOTE_MTLS_AND_DNS_OR_URI=QUALIFIED
+VPS_CHANGE_AUTHORIZATION=GRANT
+REMOTE_RECEIVER_NETWORK_OWNER_GO=GRANT_ONE_TIME
+```
+
+Portes supplémentaires du palier 3 :
+
+```text
+SOFASCORE_HOSTED_PROVIDER_PERMISSION=EVIDENCED_COMPATIBLE
+ADR_SS_001_VPS_REVIEW=ACCEPTED_COMPATIBLE
+ADR_SS_003_VPS_REVIEW=ACCEPTED_COMPATIBLE
+LOCAL_ONLY_AND_PRODUCTION_GOVERNANCE=EXPLICITLY_REDECIDED
+RAW_PROVIDER_DATA_ON_VPS_POLICY=APPROVED
+VPS_PLAYWRIGHT_WORK_ORDER=VALIDATED
+COLOCATED_PROCESS_DATA_SECRET_ISOLATION=QUALIFIED
+VPS_PLACEMENT_MODEL=<B1_COLOCATED_PRODUCTION_VPS|B3_ISOLATED_CONTAINER_ON_SHARED_HOST>
+VPS_SENDER_PRIVATE_KEY_MODEL=QUALIFIED_NON_EXPORTABLE_NON_WINDOWS_MY
+PROVIDER_VPS_NETWORK_OWNER_GO=GRANT_ONE_TIME
+```
 
 ## 9. Décisions attendues avant ouverture du receiver
 
@@ -318,13 +502,24 @@ BETTING_PROJECT_RECEIVER_HTTPS_PORT=8444_PROPOSED
 BETTING_PROJECT_RECEIVER_DB_PORT=5433_PROPOSED
 BETTING_PROJECT_RECEIVER_MTLS_REQUIRED=YES
 BETTING_PROJECT_RECEIVER_REAL_CODE_LOOPBACK_QUALIFICATION=AUTHORIZE_SEPARATELY
-BETTING_PROJECT_RECEIVER_EXTERNAL_NETWORK=NO
-BETTING_PROJECT_RECEIVER_VPS_DEPLOYMENT=NO
-BETTING_PROJECT_PRODUCTION=NO
+BETTING_PROJECT_RECEIVER_EXTERNAL_NETWORK_CURRENT=NO
+BETTING_PROJECT_RECEIVER_VPS_DEPLOYMENT_CURRENT=NO
+BETTING_PROJECT_PRODUCTION_CURRENT=NO
 
 LAB_REAL_RECEIVER_SENDER_WORK_ORDER_OPENING=AFTER_RECEIVER_READINESS
 LAB_PROVIDER_FLAGS_DURING_DELIVERY=ALL_FALSE
 LAB_DELIVERY_TRIGGERS_PROVIDER_ACQUISITION=NEVER
 LAB_REAL_PROVIDER_DERIVED_EXPORT_DELIVERY=PENDING_OFFICIAL_PERMISSION
 LAB_SYNTHETIC_TWO_PROCESS_E2E=ELIGIBLE_FOR_SEPARATE_LOCAL_QUALIFICATION
+
+E2E_STAGE_1_WINDOWS_WINDOWS=REQUIRES_SEPARATE_OWNER_AUTHORIZATION
+E2E_STAGE_2_WINDOWS_VPS=REQUIRES_STAGE_1_PASS_AND_SEPARATE_INFRA_NETWORK_AUTHORIZATION
+E2E_STAGE_2_OWNER_DECLARED_VPS_IPV4=51.255.167.32
+E2E_STAGE_2_VPS_STATE=AVAILABLE_UNCONFIGURED_NOT_QUALIFIED
+E2E_STAGE_2_RECEIVER_VPS_DEPLOYMENT_AUTHORIZED=NO
+E2E_STAGE_2_PRODUCTION_INGESTION_AUTHORIZED=NO
+E2E_STAGE_3_VPS_VPS=BLOCKED_BY_CURRENT_GOVERNANCE
+E2E_STAGE_3_GOVERNANCE_REVIEW=REQUIRED_BEFORE_WORK_ORDER_OPENING
+E2E_STAGE_3_LOCAL_LAB_VPS_DEPLOYMENT_AUTHORIZED=NO
+E2E_STAGE_3_PROVIDER_VPS_ACQUISITION_AUTHORIZED=NO
 ```

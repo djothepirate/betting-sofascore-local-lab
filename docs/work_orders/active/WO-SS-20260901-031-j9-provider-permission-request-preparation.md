@@ -20,6 +20,22 @@ Le propriétaire autorise la préparation d'une demande destinée au canal publi
 disponibilité du receiver dans le dépôt `betting-project`, avec exécution simultanée du receiver et
 de `betting-sofascore-local-lab`.
 
+Le propriétaire précise ensuite le déclencheur et la trajectoire de qualification. L'activation
+explicite d'un export J7 éligible doit soumettre une requête au receiver `betting-project`. Sous la
+gouvernance v0.1 courante, « activation » est interprété comme une action opérateur distincte sur un
+export déjà `HUMAN_VALIDATED`, et non comme un envoi automatique lors du changement d'état de
+validation. Les trois paliers demandés sont :
+
+1. les deux dépôts exécutés sur le poste Windows ;
+2. le Local Lab sur Windows et `betting-project` sur le VPS de production déclaré par le
+   propriétaire ;
+3. éventuellement, les deux dépôts sur ce VPS de production.
+
+Le VPS déclaré porte l'IPv4 `51.255.167.32`. Le propriétaire le décrit comme disponible, mais
+aucune configuration ni installation manuelle n'y a encore été réalisée. WO-031 enregistre ce fait
+sans contacter, sonder, configurer ou qualifier l'hôte. L'adresse n'est ni une URI receiver
+acceptée, ni une preuve de contrôle, de durcissement, de TLS, d'accessibilité ou de readiness.
+
 Cette autorisation permet de produire un brouillon exact, une liste de questions et un handoff de
 readiness inter-dépôts. Elle n'autorise pas l'envoi de la demande, l'utilisation d'une identité ou
 d'une adresse de réponse non fournies, un appel fournisseur, une connexion au receiver réel, une
@@ -31,11 +47,24 @@ J9_WO031_SCOPE=PREPARE_SOFASCORE_PRODUCT_API_PERMISSION_REQUEST_AND_REAL_RECEIVE
 SOFASCORE_PRODUCT_API_REQUEST_PREPARATION_AUTHORIZED=YES
 SOFASCORE_PRODUCT_API_REQUEST_SEND_AUTHORIZED=NO
 CONCURRENT_REAL_RECEIVER_REQUIREMENT=YES
+J7_EXPORT_DELIVERY_TRIGGER=EXPLICIT_OPERATOR_ACTIVATION_AFTER_HUMAN_VALIDATED
+J7_EXPORT_ACTIVATION_SUBMITS_RECEIVER_REQUEST=REQUIRED_FUTURE_BEHAVIOR
+J7_EXPORT_ACTIVATION_TRIGGERS_PROVIDER_ACQUISITION=NO
+E2E_STAGE_1=WINDOWS_LOCAL_LAB_TO_WINDOWS_BETTING_PROJECT
+E2E_STAGE_2=WINDOWS_LOCAL_LAB_TO_PRODUCTION_VPS_BETTING_PROJECT
+E2E_STAGE_3=POTENTIAL_PRODUCTION_VPS_LOCAL_LAB_TO_SAME_VPS_BETTING_PROJECT
+OWNER_DECLARED_PRODUCTION_VPS_IPV4=51.255.167.32
+OWNER_DECLARED_PRODUCTION_VPS_STATE=AVAILABLE_UNCONFIGURED_NOT_QUALIFIED
+VPS_CONNECTION_OR_PROBE_AUTHORIZED_UNDER_WO031=NO
 BETTING_PROJECT_RECEIVER_REPOSITORY_MUTATION_AUTHORIZED=NO
 PROVIDER_ENDPOINT_NETWORK_AUTHORIZED=NO
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 REAL_DELIVERY_AUTHORIZED=NO
 VPS_DEPLOYMENT_AUTHORIZED=NO
+RECEIVER_VPS_DEPLOYMENT_AUTHORIZED=NO
+LOCAL_LAB_VPS_DEPLOYMENT_AUTHORIZED=NO
+PROVIDER_VPS_ACQUISITION_AUTHORIZED=NO
+PRODUCTION_INGESTION_AUTHORIZED=NO
 PRODUCTION_AUTHORIZED=NO
 ```
 
@@ -77,14 +106,16 @@ WO-031 doit :
    un éventuel envoi ;
 5. définir le handoff nécessaire pour implémenter et exécuter le vrai receiver `betting-project`
    en même temps que le laboratoire lors d'une future qualification end-to-end ;
-6. préserver toutes les barrières réseau et de production jusqu'à des décisions distinctes.
+6. ordonner les qualifications Windows/Windows, Windows/VPS puis, sous révision de gouvernance,
+   l'option VPS/VPS ;
+7. préserver toutes les barrières réseau et de production jusqu'à des décisions distinctes.
 
 ## 4. Livrables
 
 | Livrable | Chemin | État final de préparation |
 |---|---|---|
-| Brouillon fournisseur | `docs/validation/J9-WO031-SOFASCORE-PRODUCT-API-PERMISSION-REQUEST-DRAFT-20260901.md` | `PREPARED_NOT_SENT` — SHA-256 `a72e2c6552f0aa2350d95482dcd8ae3647769efb0093a2367c49211a89f3c11d` |
-| Handoff receiver concurrent | `docs/validation/J9-WO031-BETTING-PROJECT-RECEIVER-CONCURRENT-READINESS-HANDOFF-20260901.md` | `PREPARED_NOT_IMPLEMENTED` — SHA-256 `105d37784d0eabc924a03cc1ac29aa9aa03241f788f755b5b078b89c92410551` |
+| Brouillon fournisseur | `docs/validation/J9-WO031-SOFASCORE-PRODUCT-API-PERMISSION-REQUEST-DRAFT-20260901.md` | v1.1 `PREPARED_NOT_SENT` — SHA-256 `27daa5859ce52d6bf2e4459a4ba7ab4048bab21e5b23e12fddb226e6ce228b3e` |
+| Handoff receiver concurrent | `docs/validation/J9-WO031-BETTING-PROJECT-RECEIVER-CONCURRENT-READINESS-HANDOFF-20260901.md` | v1.1 `PREPARED_NOT_IMPLEMENTED` — SHA-256 `63b5f5f9968d4eea4190e2702e3589e7f20669b91e7f84622f33cc458cfb5ca6` |
 | Traçabilité projet | `README.md`, `CHANGELOG.md` | `UPDATED` |
 
 Le brouillon est une preuve versionnée de préparation, pas une preuve d'envoi ni une permission.
@@ -92,7 +123,7 @@ Son hash atteste le modèle avec placeholders. Une future autorisation d'envoi d
 SHA-256 d'un rendu final distinct, sans placeholder et byte-identique au texte effectivement
 présenté dans le formulaire ; le hash du modèle ne peut pas autoriser ce rendu.
 
-## 5. Exigence de receiver réel concurrent
+## 5. Exigence de receiver réel concurrent et trajectoire
 
 La qualification future ne pourra pas se limiter au harness synthétique de WO-027. Elle devra
 exécuter deux applications réelles dans des processus distincts :
@@ -108,6 +139,19 @@ dans `betting-project`, puis une qualification loopback/offline inter-processus 
 distante. Le worktree `betting-project` actuellement occupé par d'autres travaux ne sera pas
 modifié sous WO-031.
 
+Le palier 1 peut qualifier le vrai code avec une enveloppe synthétique avant la permission
+fournisseur. Un test d'applications et de réseau réels avec J7 synthétique
+(`REAL_APPLICATION_SYNTHETIC_E2E`) ne vaut pas livraison réelle de données dérivées fournisseur
+(`PROVIDER_DERIVED_REAL_DELIVERY`) ; seule cette dernière exige la permission officielle
+applicable.
+
+Le palier 2 reste architecturalement un push sortant depuis Windows, mais touche un
+hôte de production et exige donc une qualification VPS, un ingress explicitement choisi, mTLS, une
+URI ou un nom DNS figé, un déploiement receiver autorisé et un go réseau séparé. Le palier 3 déplace
+également le Local Lab et potentiellement Playwright sur le VPS : il est
+`BLOCKED_BY_CURRENT_GOVERNANCE` tant que `LOCAL_ONLY`, ADR-SS-001, ADR-SS-003 et la frontière des
+données brutes n'ont pas été explicitement révisés.
+
 ## 6. Hors périmètre
 
 - envoi du formulaire, d'un courriel ou de toute autre correspondance externe ;
@@ -117,6 +161,10 @@ modifié sous WO-031.
 - implémentation ou démarrage du receiver `betting-project` ;
 - connexion à une cible réelle, livraison d'un export, VPS, production, live, polling ou scheduler ;
 - collecte ou versionnement d'une identité, d'un secret, d'un certificat ou d'un payload brut.
+
+L'index `docs/reference/REFERENCES.md` reflète encore une hiérarchie antérieure à ADR-SS-003/WO-026.
+Cette dette documentaire n'est pas corrigée silencieusement sous WO-031 ; elle devra être traitée
+par un lot documentaire distinct, sans modifier les PDF de référence immuables.
 
 ## 7. Portes ultérieures distinctes
 
@@ -151,6 +199,16 @@ Même avec une permission compatible, le test réel exigera au minimum :
 - une autorisation fournisseur indépendante si cette qualification comprend une nouvelle
   acquisition.
 
+La progression entre les paliers n'est pas automatique :
+
+| Palier | Portée | Porte supplémentaire minimale |
+|---|---|---|
+| 1 — Windows/Windows | deux vrais processus, réseau loopback | receiver et sender qualifiés, go local dédié ; export synthétique autorisable avant permission |
+| 2 — Windows/VPS | Local Lab Windows vers receiver du VPS de production | inventaire et durcissement VPS, choix d'ingress, mTLS distant, DNS/SAN, sauvegarde/restauration, déploiement et réseau explicitement autorisés |
+| 3 — VPS/VPS éventuel | Local Lab et Betting Project sur le VPS de production | permission couvrant l'acquisition hébergée, révision ADR-SS-001/003 et règles `LOCAL_ONLY`, isolation Playwright, données brutes et production |
+
+La réussite d'un palier ne vaut ni autorisation ni preuve du suivant.
+
 ## 8. Vérifications et définition de fini
 
 1. brouillon fournisseur complet, factuel et marqué `NOT_SENT` ;
@@ -158,7 +216,7 @@ Même avec une permission compatible, le test réel exigera au minimum :
 3. questions explicites sur accès, familles, quota, automatisation, rétention, dérivation,
    transfert privé et contexte betting ;
 4. handoff receiver décrivant la coexistence de deux processus réels, l'ordre de démarrage, les
-   barrières et les critères de qualification ;
+   trois placements successifs, leurs barrières et les critères de qualification ;
 5. aucun changement dans le dépôt `betting-project` ;
 6. `README.md` et `CHANGELOG.md` mis à jour ;
 7. `mvnw.cmd --offline clean verify` ;
@@ -182,6 +240,9 @@ migration, schéma, persistance ou configuration.
 | `2026-09-01T15:55:13Z` | `mvnw.cmd --offline clean verify` sous le compte propriétaire | `PASS` — Surefire `1043/0/0/5`, Failsafe `84/0/0/0` |
 | `2026-09-01T15:57:40.9090014Z` | relecture indépendante, liens, cohérence inter-dépôts et corrections de gouvernance | `PASS` |
 | `2026-09-01T15:57:40.9090014Z` | hashes des deux livrables, diff, flags et traçabilité préparés | `PASS` |
+| `2026-09-01T16:51:36.7174622Z` | trajectoire propriétaire Windows/Windows, Windows/VPS et VPS/VPS enregistrée | `PASS` — aucune connexion au VPS ni autorisation réseau déduite |
+| `2026-09-01T17:02:53Z` | `mvnw.cmd --offline clean verify` après révision v1.1 | `PASS` — Surefire `1043/0/0/5`, Failsafe `84/0/0/0`, aucun réseau fournisseur/receiver/VPS |
+| `2026-09-01T17:04:10.6191936Z` | postflight Docker, ports et processus du worktree | `PASS` — seul PostgreSQL local préexistant sur `127.0.0.1:5432`, aucun processus ou conteneur de test résiduel |
 
 ## 10. État courant
 
@@ -191,7 +252,8 @@ WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
 PREPARATION_AUTHORIZED=YES
 OPENING_COMMIT=35d8588c4cfb1214c3f8ea26f064f91672fa706b
 PERMISSION_REQUEST_DRAFT_STATUS=PREPARED_NOT_SENT
-PERMISSION_REQUEST_DRAFT_SHA256=a72e2c6552f0aa2350d95482dcd8ae3647769efb0093a2367c49211a89f3c11d
+PERMISSION_REQUEST_DRAFT_VERSION=1.1
+PERMISSION_REQUEST_DRAFT_SHA256=27daa5859ce52d6bf2e4459a4ba7ab4048bab21e5b23e12fddb226e6ce228b3e
 FINAL_RENDERED_REQUEST_STATUS=NOT_CREATED_REQUIRES_OWNER_VALUES
 FINAL_RENDERED_UNRESOLVED_PLACEHOLDER_COUNT=NOT_EVALUATED
 PERMISSION_REQUEST_SENT=NO
@@ -199,15 +261,31 @@ OWNER_SEND_DECISION=NOT_RECEIVED
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 OFFICIAL_PERMISSION_GATE_SATISFIED=NO
 BETTING_PROJECT_RECEIVER_CONCURRENT_HANDOFF_STATUS=PREPARED_NOT_IMPLEMENTED
-BETTING_PROJECT_RECEIVER_CONCURRENT_HANDOFF_SHA256=105d37784d0eabc924a03cc1ac29aa9aa03241f788f755b5b078b89c92410551
+BETTING_PROJECT_RECEIVER_CONCURRENT_HANDOFF_VERSION=1.1
+BETTING_PROJECT_RECEIVER_CONCURRENT_HANDOFF_SHA256=63b5f5f9968d4eea4190e2702e3589e7f20669b91e7f84622f33cc458cfb5ca6
 BETTING_PROJECT_RECEIVER_IMPLEMENTED=NO
 BETTING_PROJECT_RECEIVER_RUNNING=NO
+J7_EXPORT_DELIVERY_TRIGGER=EXPLICIT_OPERATOR_ACTIVATION_AFTER_HUMAN_VALIDATED
+J7_EXPORT_ACTIVATION_SUBMITS_RECEIVER_REQUEST=REQUIRED_FUTURE_BEHAVIOR
+E2E_STAGE_1_STATUS=OWNER_REQUIRED_NOT_IMPLEMENTED
+E2E_STAGE_2_STATUS=OWNER_REQUIRED_NOT_AUTHORIZED
+E2E_STAGE_3_STATUS=OWNER_FUTURE_OPTION_BLOCKED_BY_CURRENT_GOVERNANCE
+OWNER_DECLARED_PRODUCTION_VPS_IPV4=51.255.167.32
+OWNER_DECLARED_PRODUCTION_VPS_STATE=AVAILABLE_UNCONFIGURED_NOT_QUALIFIED
+VPS_CONNECTION_OR_PROBE_PERFORMED=NO
+KNOWN_REFERENCE_INDEX_GAP=ADR_SS_003_AND_WO026_STATUS_REQUIRE_SEPARATE_DOCUMENTARY_UPDATE
 STANDARD_VERIFY=PASS_SUREFIRE_1043_0_0_5_FAILSAFE_84_0_0_0
+STANDARD_VERIFY_LATEST_AT_UTC=2026-09-01T17:02:53Z
+POSTFLIGHT=PASS_NO_TEMP_CONTAINER_NO_RELATED_PROCESS
 OFFICIAL_SOURCE_READ_ONLY_HTTPS=YES
 PROVIDER_ENDPOINT_NETWORK_AUTHORIZED=NO
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 REAL_DELIVERY_AUTHORIZED=NO
 VPS_DEPLOYMENT_AUTHORIZED=NO
+RECEIVER_VPS_DEPLOYMENT_AUTHORIZED=NO
+LOCAL_LAB_VPS_DEPLOYMENT_AUTHORIZED=NO
+PROVIDER_VPS_ACQUISITION_AUTHORIZED=NO
+PRODUCTION_INGESTION_AUTHORIZED=NO
 PRODUCTION_AUTHORIZED=NO
 OWNER_REVIEW_REQUIRED=YES
 ```
