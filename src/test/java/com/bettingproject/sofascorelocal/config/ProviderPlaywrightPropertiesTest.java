@@ -45,6 +45,34 @@ class ProviderPlaywrightPropertiesTest {
     }
 
     @Test
+    void acceptsOnlyTheClosedTcpPortRangeBoundaries() {
+        ProviderPlaywrightProperties properties = new ProviderPlaywrightProperties();
+        properties.setLoopbackQualification(true);
+
+        properties.setLoopbackOrigin("http://127.0.0.1");
+        assertThat(properties.isSafeConfiguration()).isFalse();
+        assertThat(validator.validate(properties)).isNotEmpty();
+
+        properties.setLoopbackOrigin("http://127.0.0.1:0");
+        assertThat(properties.isSafeConfiguration()).isFalse();
+        assertThat(validator.validate(properties)).isNotEmpty();
+
+        properties.setLoopbackOrigin("http://127.0.0.1:1");
+        assertThat(properties.isSafeConfiguration()).isTrue();
+        assertThat(validator.validate(properties)).isEmpty();
+
+        properties.setLoopbackOrigin("http://127.0.0.1:65535");
+        assertThat(properties.isSafeConfiguration()).isTrue();
+        assertThat(validator.validate(properties)).isEmpty();
+
+        properties.setLoopbackOrigin("http://127.0.0.1:65536");
+        assertThat(properties.isSafeConfiguration()).isFalse();
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getPropertyPath().toString()
+                        .equals("safeConfiguration"));
+    }
+
+    @Test
     void refusesOriginOverridesOutsideQualificationAndUnboundedTimeouts() {
         ProviderPlaywrightProperties properties = new ProviderPlaywrightProperties();
         properties.setLoopbackOrigin("http://127.0.0.1:49152");

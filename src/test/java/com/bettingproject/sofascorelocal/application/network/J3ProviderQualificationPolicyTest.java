@@ -2,18 +2,25 @@ package com.bettingproject.sofascorelocal.application.network;
 
 import com.bettingproject.sofascorelocal.config.ProviderPlaywrightProperties;
 import com.bettingproject.sofascorelocal.config.SofascoreProperties;
+import com.bettingproject.sofascorelocal.domain.provider.J3ManualCallIntentState;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.Set;
+import java.util.UUID;
 import java.util.jar.Attributes;
 import java.util.jar.JarOutputStream;
 import java.util.jar.Manifest;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class J3ProviderQualificationPolicyTest {
 
@@ -166,6 +173,50 @@ class J3ProviderQualificationPolicyTest {
         assertThat(snapshot.blockers()).contains(
                 "PLAYWRIGHT_CONFIGURATION_UNSAFE",
                 "PLAYWRIGHT_LOOPBACK_QUALIFICATION_ACTIVE");
+    }
+
+    @Test
+    void rejectsAnOutOfRangeLoopbackPortBeforeAProviderClaim() throws Exception {
+        SofascoreProperties properties = exactJ3Configuration();
+        ProviderPlaywrightProperties playwright = configuredPlaywright(
+                "out-of-range-port-worker.jar");
+        playwright.setLoopbackQualification(true);
+        playwright.setLoopbackOrigin("http://127.0.0.1:65536");
+        J3ProviderQualificationPolicy policy = new J3ProviderQualificationPolicy(
+                properties, playwright);
+
+        var snapshot = policy.snapshot();
+
+        assertThat(snapshot.available()).isFalse();
+        assertThat(snapshot.providerOrigin()).isNull();
+        assertThat(snapshot.blockers()).containsExactly(
+                "PLAYWRIGHT_CONFIGURATION_UNSAFE",
+                "PLAYWRIGHT_LOOPBACK_QUALIFICATION_ACTIVE");
+
+        UUID requestId = UUID.fromString(
+                "bed9a8ca-1ed7-4a7c-bd15-3595f35dfb49");
+        var control = new J3ManualCallControlService(
+                Clock.fixed(Instant.parse("2026-09-01T13:20:00Z"), ZoneOffset.UTC),
+                () -> requestId,
+                () -> 42,
+                policy::snapshot,
+                policy::localImportSnapshot);
+        control.rearmAfterGlobalStop();
+        control.activateByOperator();
+        var prepared = control.prepare(LocalDate.parse("2026-08-15"));
+        control.confirm(
+                requestId,
+                prepared.intent().confirmationPhrase(),
+                true);
+
+        assertThatThrownBy(() -> control.claimExecution(requestId))
+                .isInstanceOfSatisfying(
+                        J3ManualCallControlException.class,
+                        exception -> assertThat(exception.error()).isEqualTo(
+                                J3ManualCallControlError.PROVIDER_TRANSPORT_UNAVAILABLE));
+        assertThat(control.executionMayContinue(requestId)).isFalse();
+        assertThat(control.snapshot().intent().state())
+                .isEqualTo(J3ManualCallIntentState.CONFIRMED_READY);
     }
 
     @Test

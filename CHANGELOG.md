@@ -4,6 +4,39 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-030 borne de port de qualification Playwright fournisseur
+
+- ouverture de
+  `WO-SS-20260901-030-j9-provider-playwright-port-boundary-hardening` depuis `origin/main` au
+  commit exact `daf55bf76521f81893f86d04fde3c2903bf22362`, dans une branche et un worktree dédiés,
+  sans modifier les preuves WO-029 déjà fusionnées ;
+- périmètre borné au refus fail-closed des origines de qualification loopback dont le port se
+  trouve hors de `[1, 65535]`, dans `ProviderPlaywrightProperties` puis dans la garde miroir du
+  worker enfant ; aucun endpoint, transport, protocole, retry, polling ou schéma ne change ;
+- qualification exclusivement offline : aucun appel fournisseur, aucun réseau receiver, aucun
+  déploiement VPS et aucune production ne sont autorisés sous WO-030.
+- correctif commité sous `154349a2fbebe3fd0a43a63c7105f690ff04976b` : garde parente et
+  défense en profondeur du worker refusent les ports absents, `0` et `65536`, tout en acceptant
+  structurellement `1` et `65535` sans connexion vers ces bornes ;
+- preuve directe du refus avant claim : `claimExecution()` rend
+  `PROVIDER_TRANSPORT_UNAVAILABLE`, l'exécution ne démarre pas et l'intention reste
+  `CONFIRMED_READY` ;
+- qualification `PASS_LOCAL_FAIL_CLOSED` : tests ciblés `14/0/0/0` et `11/0/0/0`, suite
+  standard Surefire `1043/0/0/5`, profil runtime `1065/0/0/5` et deux passes Failsafe
+  `84/0/0/0`, avec Flyway V1→V29, ledger, mTLS et end-to-end loopback verts ;
+- audits finaux propres : `git diff --check`, zéro secret haute confiance, zéro artefact
+  Playwright interdit, `server.address=127.0.0.1`, flags fournisseur et livraison réelle bloqués,
+  puis zéro processus attribuable au worktree, listener `8087` ou conteneur Testcontainers ;
+- rapport autonome SHA-256
+  `9bd030f4cc92f32bdeee977089d3f4c5c709278fec4c24cc66ed8fb6d258be5f` et passage du Work Order
+  à `READY_FOR_OWNER_REVIEW` ;
+- bloc propriétaire complet enregistré le `2026-09-01T14:00:53Z`, soit
+  `2026-09-01T16:00:53+02:00` en Europe/Paris : commit d'implémentation et preuve qualifiés validés,
+  readiness locale reconnue et déplacement de WO-030 vers `completed` autorisé ; le rapport reste
+  byte-identique et son SHA-256 inchangé ;
+- clôture documentaire à `VALIDATED` sans appel fournisseur ou receiver réel, sans déploiement VPS,
+  sans production et sans déduction d'une autorisation de push ou de fusion.
+
 ### Après J9 — WO-029 durcissement de la borne de port du push local optionnel
 
 - ouverture de

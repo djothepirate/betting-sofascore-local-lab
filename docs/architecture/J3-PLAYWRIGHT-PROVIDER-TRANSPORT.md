@@ -96,7 +96,9 @@ worker sont effaces apres capture.
 
 Le worker n'ecoute pas sur le LAN. Le mode de qualification peut substituer une origine uniquement
 si elle est exactement de la forme `http://127.0.0.1:<port>`, sans chemin, user-info, query ni
-fragment.
+fragment. WO-030 rend explicite l'intervalle ferme `[1, 65535]` dans la configuration Spring
+parente et dans la validation defensive du worker enfant. Les ports limites sont verifies hors
+ligne, sans connexion ; cette correction n'ajoute aucune origine, route ou autorisation reseau.
 
 ## 4. Contexte ephemere
 

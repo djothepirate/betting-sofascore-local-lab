@@ -179,6 +179,22 @@ class ProviderPlaywrightWorkerProtocolTest {
     }
 
     @Test
+    void acceptsOnlyTheClosedLoopbackOriginTcpPortRange() {
+        assertLoopbackOriginRejected("http://127.0.0.1");
+        assertLoopbackOriginRejected("http://127.0.0.1:0");
+
+        ProviderPlaywrightWorkerConfiguration lowest = loopbackConfiguration(
+                "http://127.0.0.1:1");
+        assertThat(lowest.uriFor(eventDetailsCommand()).getPort()).isEqualTo(1);
+
+        ProviderPlaywrightWorkerConfiguration highest = loopbackConfiguration(
+                "http://127.0.0.1:65535");
+        assertThat(highest.uriFor(eventDetailsCommand()).getPort()).isEqualTo(65_535);
+
+        assertLoopbackOriginRejected("http://127.0.0.1:65536");
+    }
+
+    @Test
     void writesTheBoundedResponseFrameExactly() throws Exception {
         byte[] body = new byte[]{0, 1, 2, (byte) 0xff};
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
@@ -311,5 +327,24 @@ class ProviderPlaywrightWorkerProtocolTest {
         environment.put(ProviderPlaywrightWorkerConfiguration.IPC_TOKEN,
                 "0123456789abcdef0123456789abcdef");
         return environment;
+    }
+
+    private static ProviderPlaywrightWorkerConfiguration loopbackConfiguration(String origin) {
+        Map<String, String> environment = baseEnvironment();
+        environment.put(ProviderPlaywrightWorkerConfiguration.LOOPBACK_QUALIFICATION, "true");
+        environment.put(ProviderPlaywrightWorkerConfiguration.LOOPBACK_ORIGIN, origin);
+        return ProviderPlaywrightWorkerConfiguration.fromEnvironment(environment);
+    }
+
+    private static void assertLoopbackOriginRejected(String origin) {
+        assertThatThrownBy(() -> loopbackConfiguration(origin))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("INVALID_CONFIGURATION");
+    }
+
+    private static ProviderPlaywrightWorkerProtocol.GetCommand eventDetailsCommand() {
+        return new ProviderPlaywrightWorkerProtocol.GetCommand(
+                ProviderPlaywrightWorkerProtocol.Endpoint.EVENT_DETAILS,
+                null, 0, 0, 16_386_245L, 5_000);
     }
 }

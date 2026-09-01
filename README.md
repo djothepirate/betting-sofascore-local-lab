@@ -4,6 +4,19 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
+Le correctif fournisseur distinct
+[WO-SS-20260901-030](docs/work_orders/completed/WO-SS-20260901-030-j9-provider-playwright-port-boundary-hardening.md)
+est `VALIDATED` et archivé depuis le `main` issu des PR #20/#21. Le commit
+`154349a2fbebe3fd0a43a63c7105f690ff04976b` borne à `[1, 65535]` le port explicite de la
+qualification Playwright loopback dans la configuration parente et dans le worker enfant. Le
+[rapport WO-030](docs/validation/J9-WO030-PROVIDER-PLAYWRIGHT-PORT-BOUNDARY-QUALIFICATION-20260901.md)
+conclut `PASS_LOCAL_FAIL_CLOSED` après `1043` tests standards, `1065` tests du profil runtime et
+deux passages de `84` tests d'intégration, sans appel fournisseur ni navigateur. Le propriétaire a
+validé le commit et le SHA-256 qualifiés, reconnu la readiness locale et autorisé le déplacement du
+Work Order vers `completed` ; cette décision a été enregistrée le `2026-09-01T14:00:53Z`, soit
+`2026-09-01T16:00:53+02:00` en Europe/Paris. Elle n'autorise aucun push, merge, réseau fournisseur
+ou receiver réel, déploiement VPS ou usage de production.
+
 Le propriétaire a pris la décision finale du jalon **J9 — Décision de gouvernance** :
 `PREPARE_OPTIONAL_INTEGRATION`. `WO-SS-20260831-018` et la preuve WO-023 sont désormais validés et
 clôturés sur la branche de décision. WO-019 reste la campagne historique `STOPPED` de 20 tentatives ;
