@@ -1,8 +1,8 @@
-# J9 / WO-031 — Handoff de readiness du receiver Betting Project concurrent
+# J9 / WO-033 — Handoff de readiness du receiver Betting Project concurrent
 
-- **Version :** `1.1`
+- **Version :** `1.2`
 - **Préparé le :** 2026-09-01
-- **Révisé le :** `2026-09-01T16:51:36.7174622Z`
+- **Révisé le :** `2026-09-01T18:13:34.3075675Z`
 - **Statut :** `PREPARED_NOT_IMPLEMENTED`
 - **Dépôt émetteur :** `betting-sofascore-local-lab`
 - **Dépôt receiver :** `betting-project`
@@ -47,7 +47,8 @@ fournisseur.
 
 L'IPv4 du VPS est une coordonnée fournie par le propriétaire, pas une cible technique déjà
 acceptée. Aucun contrôle DNS, routage, port, système, compte, firewall, patch, certificat,
-sauvegarde ou accès administratif n'a été effectué sous WO-031.
+sauvegarde ou accès administratif n'a été effectué sous l'ancien identifiant WO-031, désormais
+renuméroté WO-033.
 
 ## 1. Résultat attendu
 
@@ -128,7 +129,7 @@ l'implémentation du receiver.
 | Receiver J7 | absent | Work Order, endpoint, persistance, idempotence, ACK et tests requis |
 | Dépendance au lab | interdite par les règles du dépôt | aucune dépendance Maven/runtime au laboratoire ; implémenter le contrat accepté à la frontière |
 
-Le worktree courant de `betting-project` contient des travaux CAT-002 non finalisés. WO-031 ne le
+Le worktree courant de `betting-project` contient des travaux CAT-002 non finalisés. WO-033 ne le
 modifie pas. L'implémentation du receiver exigera une branche et un worktree distincts créés depuis
 une base propre et vérifiée, conformément aux règles du dépôt receiver.
 

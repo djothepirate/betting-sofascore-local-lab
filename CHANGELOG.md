@@ -4,15 +4,22 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
-### Après J9 — WO-031 préparation de la permission fournisseur et du receiver concurrent
+### Après J9 — WO-033 préparation de la permission fournisseur et du receiver concurrent
 
-- ouverture de
-  `WO-SS-20260901-031-j9-provider-permission-request-preparation` depuis `origin/main` au commit
-  exact `f3d7d3feb9c48859ba6ae182b7f6e78b11b1f089`, sur une branche et un worktree dédiés ;
+- ouverture locale initiale sous le numéro fournisseur `031` depuis `origin/main` au commit exact
+  `f3d7d3feb9c48859ba6ae182b7f6e78b11b1f089`, puis réconciliation propriétaire vers
+  `WO-SS-20260901-033-j9-provider-permission-request-preparation` afin de réserver `031` au Work
+  Order d'intégration continue sans lien avec J9 ; branche, worktree et artefacts fournisseur
+  renommés sans modifier la branche CI ni la PR #23 ;
+- conservation append-only du commit documentaire pré-renumérotation
+  `e659ff8fc05ce99913d87ae554c9356581e852f8`, du hash historique du brouillon
+  `27daa5859ce52d6bf2e4459a4ba7ab4048bab21e5b23e12fddb226e6ce228b3e` et du hash historique du
+  handoff `63b5f5f9968d4eea4190e2702e3589e7f20669b91e7f84622f33cc458cfb5ca6` comme références
+  remplacées ; les deux livrables sont révisés en `1.2` et requalifiés sous leur identité `033` ;
 - préparation, sans envoi, d'un brouillon anglais pour le canal officiel SofaScore
   `Product -> API`, avec champs propriétaires obligatoires pour l'identité, la juridiction, le
   statut commercial, le contexte betting, l'audience, le receiver et l'hébergement ;
-- revue officielle rafraîchie des conditions, de la documentation API externe et du formulaire de
+- revue des sources officielles rafraîchie pour les conditions, la documentation API externe et le formulaire de
   contact : l'existence d'une documentation technique et d'une catégorie de contact ne constitue
   toujours pas une licence ou une permission applicable ;
 - demande explicite portant sur les six familles J3/J4/J5, le transport Playwright borné, les
@@ -38,7 +45,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   ADR-SS-001, ADR-SS-003 et les statuts `LOCAL_ONLY` / `NOT_PRODUCTION_APPROVED` ne sont pas
   explicitement révisés ;
 - aucun changement applicatif, endpoint, migration, schéma ou configuration ; aucun message
-  externe, appel fournisseur, receiver réel, livraison, VPS ou usage de production sous WO-031 ;
+  externe, appel fournisseur, receiver réel, livraison, VPS ou usage de production sous WO-033 ;
   `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED` reste bloquant.
 
 ### Après J9 — WO-030 borne de port de qualification Playwright fournisseur

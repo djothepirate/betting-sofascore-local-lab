@@ -1,14 +1,20 @@
-# WO-SS-20260901-031 — Préparation de la demande de permission fournisseur et du receiver concurrent
+# WO-SS-20260901-033 — Préparation de la demande de permission fournisseur et du receiver concurrent
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `REQUALIFICATION_REQUIRED_AFTER_RENUMBERING`
 - **Jalon :** après J9 — levée documentaire de la porte de permission et préparation end-to-end
 - **Ouvert le :** 2026-09-01
 - **Ouverture UTC :** `2026-09-01T15:41:29.1426445Z`
 - **Ouverture Europe/Paris :** `2026-09-01T17:41:29.1426445+02:00`
-- **Branche :** `codex/j9-wo031-provider-permission-request`
-- **Worktree :** `.tmp/j9-wo031-provider-permission-request`
+- **Branche :** `codex/j9-wo033-provider-permission-request`
+- **Worktree :** `.tmp/j9-wo033-provider-permission-request`
 - **Base exacte :** `f3d7d3feb9c48859ba6ae182b7f6e78b11b1f089`
-- **Commit d'ouverture :** `35d8588c4cfb1214c3f8ea26f064f91672fa706b`
+- **Commit d'ouverture historique avant renumérotation :**
+  `35d8588c4cfb1214c3f8ea26f064f91672fa706b`
+- **Identifiant initial désormais remplacé :**
+  `WO-SS-20260901-031-j9-provider-permission-request-preparation`
+- **Décision de renumérotation enregistrée UTC :** `2026-09-01T18:07:20.2600389Z`
+- **Décision de renumérotation enregistrée Europe/Paris :**
+  `2026-09-01T20:07:20.2600389+02:00`
 - **Type de lot :** documentation et handoff inter-dépôts uniquement ; aucun changement runtime,
   aucun envoi externe, appel d'acquisition fournisseur ou réseau receiver ; seules les pages
   officielles ont été consultées en lecture seule
@@ -32,7 +38,7 @@ validation. Les trois paliers demandés sont :
 3. éventuellement, les deux dépôts sur ce VPS de production.
 
 Le VPS déclaré porte l'IPv4 `51.255.167.32`. Le propriétaire le décrit comme disponible, mais
-aucune configuration ni installation manuelle n'y a encore été réalisée. WO-031 enregistre ce fait
+aucune configuration ni installation manuelle n'y a encore été réalisée. WO-033 enregistre ce fait
 sans contacter, sonder, configurer ou qualifier l'hôte. L'adresse n'est ni une URI receiver
 acceptée, ni une preuve de contrôle, de durcissement, de TLS, d'accessibilité ou de readiness.
 
@@ -42,8 +48,8 @@ d'une adresse de réponse non fournies, un appel fournisseur, une connexion au r
 livraison, un déploiement VPS ou un usage de production.
 
 ```text
-J9_WO031_OWNER_DECISION=AUTHORIZE_PREPARATION
-J9_WO031_SCOPE=PREPARE_SOFASCORE_PRODUCT_API_PERMISSION_REQUEST_AND_REAL_RECEIVER_CONCURRENCY_HANDOFF
+J9_WO033_OWNER_DECISION=AUTHORIZE_PREPARATION
+J9_WO033_SCOPE=PREPARE_SOFASCORE_PRODUCT_API_PERMISSION_REQUEST_AND_REAL_RECEIVER_CONCURRENCY_HANDOFF
 SOFASCORE_PRODUCT_API_REQUEST_PREPARATION_AUTHORIZED=YES
 SOFASCORE_PRODUCT_API_REQUEST_SEND_AUTHORIZED=NO
 CONCURRENT_REAL_RECEIVER_REQUIREMENT=YES
@@ -55,7 +61,7 @@ E2E_STAGE_2=WINDOWS_LOCAL_LAB_TO_PRODUCTION_VPS_BETTING_PROJECT
 E2E_STAGE_3=POTENTIAL_PRODUCTION_VPS_LOCAL_LAB_TO_SAME_VPS_BETTING_PROJECT
 OWNER_DECLARED_PRODUCTION_VPS_IPV4=51.255.167.32
 OWNER_DECLARED_PRODUCTION_VPS_STATE=AVAILABLE_UNCONFIGURED_NOT_QUALIFIED
-VPS_CONNECTION_OR_PROBE_AUTHORIZED_UNDER_WO031=NO
+VPS_CONNECTION_OR_PROBE_AUTHORIZED_UNDER_WO033=NO
 BETTING_PROJECT_RECEIVER_REPOSITORY_MUTATION_AUTHORIZED=NO
 PROVIDER_ENDPOINT_NETWORK_AUTHORIZED=NO
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
@@ -68,9 +74,55 @@ PRODUCTION_INGESTION_AUTHORIZED=NO
 PRODUCTION_AUTHORIZED=NO
 ```
 
+### 1.1 Réconciliation du numéro de Work Order
+
+Le propriétaire a confirmé que
+`WO-SS-20260901-031-ci-gitlab-local-only` appartient aux travaux d'environnement d'intégration
+continue, sans lien avec J9, et conserve le numéro `031`. Le présent lot fournisseur, ouvert
+ultérieurement avec le même numéro sur une branche locale non publiée, est donc renuméroté `033`.
+
+Cette correction change les chemins et les octets des deux livrables. Les hashes et le commit de
+préparation précédemment présentés sous `031` sont conservés comme preuves historiques, mais sont
+remplacés pour toute future revue par les nouvelles références `033`. Aucun commit de la PR CI
+#23, aucune branche CI et aucun document de ce Work Order CI ne sont modifiés.
+
+```text
+WORK_ORDER_NUMBER_RECONCILIATION_OWNER_DECISION=AUTHORIZE
+WORK_ORDER_RENUMBER_AUTHORIZED=YES
+WORK_ORDER_RENUMBER_DECISION=AUTHORIZE_RENUMBER_FROM_WO031_TO_WO033
+WORK_ORDER_RENUMBER_REASON=RESOLVE_COLLISION_WITH_DISTINCT_CI_WO031
+PRESERVED_WORK_ORDER=WO-SS-20260901-031-ci-gitlab-local-only
+PRESERVED_WORK_ORDER_SCOPE=CONTINUOUS_INTEGRATION_ENVIRONMENT_NOT_J9
+DISTINCT_CI_WO031_PRESERVED=YES
+DISTINCT_CI_WO031_REF=origin/codex/ss-20260901-031-ci-bootstrap
+DISTINCT_CI_WO031_COMMIT=01eea4ba60e966ca48a5824575a6b895d6a48a1b
+DISTINCT_CI_WO031_PATH=docs/work_orders/active/WO-SS-20260901-031-ci-gitlab-local-only.md
+RENUMBERED_FROM=WO-SS-20260901-031-j9-provider-permission-request-preparation
+RENUMBERED_TO=WO-SS-20260901-033-j9-provider-permission-request-preparation
+PRE_RENUMBER_BRANCH=codex/j9-wo031-provider-permission-request
+CURRENT_BRANCH=codex/j9-wo033-provider-permission-request
+PRE_RENUMBER_WORKTREE=.tmp/j9-wo031-provider-permission-request
+CURRENT_WORKTREE=.tmp/j9-wo033-provider-permission-request
+BRANCH_RENAME_RECORDED_AT_UTC=2026-09-01T18:06:32Z
+HISTORICAL_OPENING_COMMIT=35d8588c4cfb1214c3f8ea26f064f91672fa706b
+HISTORICAL_OPENING_IDENTIFIER=WO-SS-20260901-031-j9-provider-permission-request-preparation
+PRE_RENUMBER_HEAD=e659ff8fc05ce99913d87ae554c9356581e852f8
+HISTORY_REWRITE=NO
+COMMIT_STRATEGY=APPEND_ONLY
+OLD_DOCUMENTATION_COMMIT=e659ff8fc05ce99913d87ae554c9356581e852f8
+OLD_PERMISSION_REQUEST_DRAFT_SHA256=27daa5859ce52d6bf2e4459a4ba7ab4048bab21e5b23e12fddb226e6ce228b3e
+OLD_RECEIVER_HANDOFF_SHA256=63b5f5f9968d4eea4190e2702e3589e7f20669b91e7f84622f33cc458cfb5ca6
+OLD_REFERENCES_STATUS=SUPERSEDED_BY_AUTHORIZED_RENUMBERING
+CI_PULL_REQUEST_23_MUTATED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+VPS_DEPLOYMENT_AUTHORIZED=NO
+PRODUCTION_AUTHORIZED=NO
+```
+
 ## 2. Situation de départ factuelle
 
-La revue officielle versionnée sous
+La revue des sources officielles versionnée sous
 [`J9-WO027-OFFICIAL-PERMISSION-REVIEW-20260901.md`](../../validation/J9-WO027-OFFICIAL-PERMISSION-REVIEW-20260901.md)
 conclut :
 
@@ -95,7 +147,7 @@ transforme aucune interprétation interne en avis juridique.
 
 ## 3. Objectifs
 
-WO-031 doit :
+WO-033 doit :
 
 1. produire un brouillon adressable à SofaScore décrivant honnêtement l'usage envisagé, les
    limites techniques et la topologie optionnelle ;
@@ -114,8 +166,8 @@ WO-031 doit :
 
 | Livrable | Chemin | État final de préparation |
 |---|---|---|
-| Brouillon fournisseur | `docs/validation/J9-WO031-SOFASCORE-PRODUCT-API-PERMISSION-REQUEST-DRAFT-20260901.md` | v1.1 `PREPARED_NOT_SENT` — SHA-256 `27daa5859ce52d6bf2e4459a4ba7ab4048bab21e5b23e12fddb226e6ce228b3e` |
-| Handoff receiver concurrent | `docs/validation/J9-WO031-BETTING-PROJECT-RECEIVER-CONCURRENT-READINESS-HANDOFF-20260901.md` | v1.1 `PREPARED_NOT_IMPLEMENTED` — SHA-256 `63b5f5f9968d4eea4190e2702e3589e7f20669b91e7f84622f33cc458cfb5ca6` |
+| Brouillon fournisseur | `docs/validation/J9-WO033-SOFASCORE-PRODUCT-API-PERMISSION-REQUEST-DRAFT-20260901.md` | v1.2 `PREPARED_NOT_SENT` — SHA-256 `0934f6c68bf7b9c6d072c9fc616c809d75967c090f81402e5bc8cfdeb8bc150d` |
+| Handoff receiver concurrent | `docs/validation/J9-WO033-BETTING-PROJECT-RECEIVER-CONCURRENT-READINESS-HANDOFF-20260901.md` | v1.2 `PREPARED_NOT_IMPLEMENTED` — SHA-256 `94c8b643bb6d20386f1ab9ca3694f7724222c9ff3a5a0898b32e2d2bbb43b18a` |
 | Traçabilité projet | `README.md`, `CHANGELOG.md` | `UPDATED` |
 
 Le brouillon est une preuve versionnée de préparation, pas une preuve d'envoi ni une permission.
@@ -137,7 +189,7 @@ Le receiver ne doit jamais déclencher une acquisition SofaScore. Les deux appli
 partager ni base, ni volume, ni secret implicite. Leur coexistence exige un futur Work Order dédié
 dans `betting-project`, puis une qualification loopback/offline inter-processus avant toute cible
 distante. Le worktree `betting-project` actuellement occupé par d'autres travaux ne sera pas
-modifié sous WO-031.
+modifié sous WO-033.
 
 Le palier 1 peut qualifier le vrai code avec une enveloppe synthétique avant la permission
 fournisseur. Un test d'applications et de réseau réels avec J7 synthétique
@@ -163,8 +215,9 @@ données brutes n'ont pas été explicitement révisés.
 - collecte ou versionnement d'une identité, d'un secret, d'un certificat ou d'un payload brut.
 
 L'index `docs/reference/REFERENCES.md` reflète encore une hiérarchie antérieure à ADR-SS-003/WO-026.
-Cette dette documentaire n'est pas corrigée silencieusement sous WO-031 ; elle devra être traitée
-par un lot documentaire distinct, sans modifier les PDF de référence immuables.
+Cette dette documentaire a été traitée séparément par WO-032, sans modifier les PDF de référence
+immuables. WO-032 est validé et poussé sur sa branche dédiée, mais n'est pas incorporé silencieusement
+à la base du présent Work Order.
 
 ## 7. Portes ultérieures distinctes
 
@@ -234,7 +287,7 @@ migration, schéma, persistance ou configuration.
 | Date/heure UTC | Action | Résultat |
 |---|---|---|
 | `2026-09-01T15:41:29.1426445Z` | `origin/main` et commit de base contrôlés | `PASS` — `f3d7d3feb9c48859ba6ae182b7f6e78b11b1f089` |
-| `2026-09-01T15:41:29.1426445Z` | numéro WO-031, branche et worktree dédiés contrôlés | `PASS` |
+| `2026-09-01T15:41:29.1426445Z` | numéro initial WO-031, branche et worktree dédiés contrôlés | `PASS` — état historique avant découverte de la collision |
 | `2026-09-01T15:41:29.1426445Z` | portée de préparation et interdictions réseau enregistrées | `PASS` |
 | `2026-09-01T15:44:51.0151176Z` | conditions, documentation API externe et canal `Product -> API` officiels rafraîchis en lecture seule | `PASS` — aucune permission applicable déduite |
 | `2026-09-01T15:55:13Z` | `mvnw.cmd --offline clean verify` sous le compte propriétaire | `PASS` — Surefire `1043/0/0/5`, Failsafe `84/0/0/0` |
@@ -243,26 +296,65 @@ migration, schéma, persistance ou configuration.
 | `2026-09-01T16:51:36.7174622Z` | trajectoire propriétaire Windows/Windows, Windows/VPS et VPS/VPS enregistrée | `PASS` — aucune connexion au VPS ni autorisation réseau déduite |
 | `2026-09-01T17:02:53Z` | `mvnw.cmd --offline clean verify` après révision v1.1 | `PASS` — Surefire `1043/0/0/5`, Failsafe `84/0/0/0`, aucun réseau fournisseur/receiver/VPS |
 | `2026-09-01T17:04:10.6191936Z` | postflight Docker, ports et processus du worktree | `PASS` — seul PostgreSQL local préexistant sur `127.0.0.1:5432`, aucun processus ou conteneur de test résiduel |
+| `2026-09-01T18:07:20.2600389Z` | décision propriétaire de réconciliation du numéro | `AUTHORIZE` — WO CI conserve `031`, lot fournisseur renuméroté `033` |
+| `2026-09-01T18:07:20.2600389Z` | branche et worktree fournisseur renommés | `PASS` — aucune modification de la branche CI ni de la PR #23 |
+| `2026-09-01T18:13:34.3075675Z` | livrables renommés figés en v1.2 et empreintes recalculées | `PASS` — identité `033`, anciennes références conservées comme historique remplacé |
 
 ## 10. État courant
 
 ```text
-WORK_ORDER=WO-SS-20260901-031-j9-provider-permission-request-preparation
-WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+WORK_ORDER=WO-SS-20260901-033-j9-provider-permission-request-preparation
+WORK_ORDER_STATUS=REQUALIFICATION_REQUIRED_AFTER_RENUMBERING
+WORK_ORDER_RENUMBER_AUTHORIZED=YES
+WORK_ORDER_RENUMBER_DECISION=AUTHORIZE_RENUMBER_FROM_WO031_TO_WO033
+WORK_ORDER_RENUMBER_REASON=RESOLVE_COLLISION_WITH_DISTINCT_CI_WO031
+WORK_ORDER_PREVIOUS_ID=WO-SS-20260901-031-j9-provider-permission-request-preparation
+WORK_ORDER_CURRENT_ID=WO-SS-20260901-033-j9-provider-permission-request-preparation
+RENUMBERED_FROM=WO-SS-20260901-031-j9-provider-permission-request-preparation
+NUMBER_COLLISION_WITH=WO-SS-20260901-031-ci-gitlab-local-only
+NUMBER_COLLISION_SCOPE=CONTINUOUS_INTEGRATION_ENVIRONMENT_NOT_J9
+RENUMBERING_OWNER_AUTHORIZED=YES
+PRE_RENUMBER_BRANCH=codex/j9-wo031-provider-permission-request
+CURRENT_BRANCH=codex/j9-wo033-provider-permission-request
+PRE_RENUMBER_WORKTREE=.tmp/j9-wo031-provider-permission-request
+CURRENT_WORKTREE=.tmp/j9-wo033-provider-permission-request
+BRANCH_RENAME_RECORDED_AT_UTC=2026-09-01T18:06:32Z
+DISTINCT_CI_WO031_PRESERVED=YES
+DISTINCT_CI_WO031_REF=origin/codex/ss-20260901-031-ci-bootstrap
+DISTINCT_CI_WO031_COMMIT=01eea4ba60e966ca48a5824575a6b895d6a48a1b
+DISTINCT_CI_WO031_PATH=docs/work_orders/active/WO-SS-20260901-031-ci-gitlab-local-only.md
+OLD_DOCUMENTATION_COMMIT=e659ff8fc05ce99913d87ae554c9356581e852f8
+OLD_REFERENCES_STATUS=SUPERSEDED_BY_AUTHORIZED_RENUMBERING
 PREPARATION_AUTHORIZED=YES
-OPENING_COMMIT=35d8588c4cfb1214c3f8ea26f064f91672fa706b
+HISTORICAL_OPENING_COMMIT=35d8588c4cfb1214c3f8ea26f064f91672fa706b
+HISTORICAL_OPENING_IDENTIFIER=WO-SS-20260901-031-j9-provider-permission-request-preparation
+OPENING_COMMIT_SCOPE=PRE_RENUMBERING_WO031
+PRE_RENUMBER_HEAD=e659ff8fc05ce99913d87ae554c9356581e852f8
+HISTORY_REWRITE=NO
+COMMIT_STRATEGY=APPEND_ONLY
+RENUMBERING_COMMIT=PENDING_APPEND_ONLY_COMMIT
+WO033_LOCAL_COLLISION_CHECK=PASS
+WO033_REMOTE_COLLISION_CHECK=PASS
+PRE_RENUMBER_DRAFT_PATH=docs/validation/J9-WO031-SOFASCORE-PRODUCT-API-PERMISSION-REQUEST-DRAFT-20260901.md
+CURRENT_DRAFT_PATH=docs/validation/J9-WO033-SOFASCORE-PRODUCT-API-PERMISSION-REQUEST-DRAFT-20260901.md
 PERMISSION_REQUEST_DRAFT_STATUS=PREPARED_NOT_SENT
-PERMISSION_REQUEST_DRAFT_VERSION=1.1
-PERMISSION_REQUEST_DRAFT_SHA256=27daa5859ce52d6bf2e4459a4ba7ab4048bab21e5b23e12fddb226e6ce228b3e
+PERMISSION_REQUEST_DRAFT_PRE_RENUMBER_VERSION=1.1
+PERMISSION_REQUEST_DRAFT_VERSION=1.2
+PERMISSION_REQUEST_DRAFT_SHA256=0934f6c68bf7b9c6d072c9fc616c809d75967c090f81402e5bc8cfdeb8bc150d
+OLD_PERMISSION_REQUEST_DRAFT_SHA256=27daa5859ce52d6bf2e4459a4ba7ab4048bab21e5b23e12fddb226e6ce228b3e
 FINAL_RENDERED_REQUEST_STATUS=NOT_CREATED_REQUIRES_OWNER_VALUES
 FINAL_RENDERED_UNRESOLVED_PLACEHOLDER_COUNT=NOT_EVALUATED
 PERMISSION_REQUEST_SENT=NO
 OWNER_SEND_DECISION=NOT_RECEIVED
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 OFFICIAL_PERMISSION_GATE_SATISFIED=NO
+PRE_RENUMBER_HANDOFF_PATH=docs/validation/J9-WO031-BETTING-PROJECT-RECEIVER-CONCURRENT-READINESS-HANDOFF-20260901.md
+CURRENT_HANDOFF_PATH=docs/validation/J9-WO033-BETTING-PROJECT-RECEIVER-CONCURRENT-READINESS-HANDOFF-20260901.md
 BETTING_PROJECT_RECEIVER_CONCURRENT_HANDOFF_STATUS=PREPARED_NOT_IMPLEMENTED
-BETTING_PROJECT_RECEIVER_CONCURRENT_HANDOFF_VERSION=1.1
-BETTING_PROJECT_RECEIVER_CONCURRENT_HANDOFF_SHA256=63b5f5f9968d4eea4190e2702e3589e7f20669b91e7f84622f33cc458cfb5ca6
+BETTING_PROJECT_RECEIVER_CONCURRENT_HANDOFF_PRE_RENUMBER_VERSION=1.1
+BETTING_PROJECT_RECEIVER_CONCURRENT_HANDOFF_VERSION=1.2
+BETTING_PROJECT_RECEIVER_CONCURRENT_HANDOFF_SHA256=94c8b643bb6d20386f1ab9ca3694f7724222c9ff3a5a0898b32e2d2bbb43b18a
+OLD_BETTING_PROJECT_RECEIVER_CONCURRENT_HANDOFF_SHA256=63b5f5f9968d4eea4190e2702e3589e7f20669b91e7f84622f33cc458cfb5ca6
 BETTING_PROJECT_RECEIVER_IMPLEMENTED=NO
 BETTING_PROJECT_RECEIVER_RUNNING=NO
 J7_EXPORT_DELIVERY_TRIGGER=EXPLICIT_OPERATOR_ACTIVATION_AFTER_HUMAN_VALIDATED
@@ -273,9 +365,9 @@ E2E_STAGE_3_STATUS=OWNER_FUTURE_OPTION_BLOCKED_BY_CURRENT_GOVERNANCE
 OWNER_DECLARED_PRODUCTION_VPS_IPV4=51.255.167.32
 OWNER_DECLARED_PRODUCTION_VPS_STATE=AVAILABLE_UNCONFIGURED_NOT_QUALIFIED
 VPS_CONNECTION_OR_PROBE_PERFORMED=NO
-KNOWN_REFERENCE_INDEX_GAP=ADR_SS_003_AND_WO026_STATUS_REQUIRE_SEPARATE_DOCUMENTARY_UPDATE
-STANDARD_VERIFY=PASS_SUREFIRE_1043_0_0_5_FAILSAFE_84_0_0_0
-STANDARD_VERIFY_LATEST_AT_UTC=2026-09-01T17:02:53Z
+KNOWN_REFERENCE_INDEX_GAP=ADDRESSED_BY_WO032_ON_SEPARATE_PUSHED_BRANCH_NOT_IN_CURRENT_BASE
+STANDARD_VERIFY=PENDING_RERUN_AFTER_RENUMBERING
+STANDARD_VERIFY_LATEST_AT_UTC=PENDING
 POSTFLIGHT=PASS_NO_TEMP_CONTAINER_NO_RELATED_PROCESS
 OFFICIAL_SOURCE_READ_ONLY_HTTPS=YES
 PROVIDER_ENDPOINT_NETWORK_AUTHORIZED=NO

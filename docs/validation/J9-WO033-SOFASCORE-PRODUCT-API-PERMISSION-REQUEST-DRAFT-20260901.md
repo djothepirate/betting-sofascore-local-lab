@@ -1,8 +1,8 @@
-# J9 / WO-031 — Brouillon de demande de permission SofaScore Product -> API
+# J9 / WO-033 — Brouillon de demande de permission SofaScore Product -> API
 
-- **Version du brouillon :** `1.1`
+- **Version du brouillon :** `1.2`
 - **Préparé le :** 2026-09-01
-- **Révisé le :** `2026-09-01T16:51:36.7174622Z`
+- **Révisé le :** `2026-09-01T18:13:34.3075675Z`
 - **Statut :** `PREPARED_NOT_SENT`
 - **Canal envisagé :** formulaire officiel SofaScore, catégorie `Product -> API`
 - **Objet :** permission écrite et conditions applicables à un usage API football borné
@@ -477,7 +477,7 @@ hors Git.
 
 ## 6. Rendu final et bloc requis pour autoriser ultérieurement l'envoi
 
-Le SHA-256 stable de ce fichier sera enregistré dans WO-031 comme preuve du modèle revu. Il ne
+Le SHA-256 stable de ce fichier sera enregistré dans WO-033 comme preuve du modèle revu. Il ne
 peut pas autoriser l'envoi : compléter les placeholders change les octets du message.
 
 Avant toute demande d'autorisation, un rendu `FINAL_RENDERED_NOT_SENT` devra être produit avec les
@@ -500,9 +500,9 @@ Un futur bloc devra couvrir toutes les valeurs ayant remplacé les placeholders 
 octets exacts du rendu :
 
 ```text
-J9_WO031_PERMISSION_REQUEST_OWNER_DECISION=AUTHORIZE_SEND
-WORK_ORDER=WO-SS-20260901-031-j9-provider-permission-request-preparation
-DRAFT_REFERENCE=docs/validation/J9-WO031-SOFASCORE-PRODUCT-API-PERMISSION-REQUEST-DRAFT-20260901.md
+J9_WO033_PERMISSION_REQUEST_OWNER_DECISION=AUTHORIZE_SEND
+WORK_ORDER=WO-SS-20260901-033-j9-provider-permission-request-preparation
+DRAFT_REFERENCE=docs/validation/J9-WO033-SOFASCORE-PRODUCT-API-PERMISSION-REQUEST-DRAFT-20260901.md
 DRAFT_TEMPLATE_SHA256=<EXACT_REVIEWED_TEMPLATE_SHA256>
 FINAL_RENDERED_STATUS=FINAL_RENDERED_NOT_SENT
 SEND_DESTINATION_URL=https://corporate.sofascore.com/contact

@@ -5,22 +5,28 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order documentaire
-[WO-SS-20260901-031](docs/work_orders/active/WO-SS-20260901-031-j9-provider-permission-request-preparation.md)
+[WO-SS-20260901-033](docs/work_orders/active/WO-SS-20260901-033-j9-provider-permission-request-preparation.md)
 prépare, sans l'envoyer, une demande écrite au canal officiel SofaScore `Product -> API`. Le
-[brouillon fournisseur](docs/validation/J9-WO031-SOFASCORE-PRODUCT-API-PERMISSION-REQUEST-DRAFT-20260901.md)
+[brouillon fournisseur](docs/validation/J9-WO033-SOFASCORE-PRODUCT-API-PERMISSION-REQUEST-DRAFT-20260901.md)
 décrit explicitement le contexte betting, les six familles de données, le transport Playwright
 borné, la rétention locale et le transfert proposé d'un export J7 minimisé. Les champs d'identité,
 de statut commercial, d'usage et d'hébergement restent à compléter par le propriétaire ;
 `J9_OFFICIAL_PERMISSION_STATUS` demeure donc `NOT_EVIDENCED` et aucun message n'a été envoyé.
 
+Ce lot avait été ouvert localement sous le numéro fournisseur `031`. Le propriétaire a réservé ce
+numéro au Work Order d'intégration continue `WO-SS-20260901-031-ci-gitlab-local-only`, sans lien
+avec J9, et a autorisé la renumérotation du présent lot en `033`. Les anciens chemins, le commit
+`e659ff8` et les deux anciennes empreintes restent des références historiques remplacées ; la
+branche CI et la PR #23 ne sont pas modifiées par cette réconciliation.
+
 Le
-[handoff receiver concurrent](docs/validation/J9-WO031-BETTING-PROJECT-RECEIVER-CONCURRENT-READINESS-HANDOFF-20260901.md)
+[handoff receiver concurrent](docs/validation/J9-WO033-BETTING-PROJECT-RECEIVER-CONCURRENT-READINESS-HANDOFF-20260901.md)
 établit que le vrai processus `betting-project` devra être disponible en même temps que le vrai
 laboratoire pendant une future phase de livraison. Le receiver J7 n'existe pas encore et exige son
 propre Work Order, son propre worktree, un séquencement explicite avec les migrations CAT-002, des
 ports et bases séparés, mTLS, idempotence, effet unique et ACK borné. Une première qualification à
 deux processus pourra utiliser une enveloppe entièrement synthétique ; aucun export dérivé de
-SofaScore ne pourra être transféré tant que la permission reste `NOT_EVIDENCED`. WO-031 ne modifie
+SofaScore ne pourra être transféré tant que la permission reste `NOT_EVIDENCED`. WO-033 ne modifie
 aucun runtime et n'autorise aucun réseau fournisseur ou receiver réel, livraison, VPS ou
 production.
 
