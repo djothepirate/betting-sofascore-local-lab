@@ -1,7 +1,9 @@
 # WO-SS-20260831-023 — Campagne autonome de robustesse fournisseur J9 sous ADR-SS-002 v1.1
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
 - **Date d'ouverture :** 2026-08-31
+- **Date de clôture :** 2026-09-01
+- **Validation propriétaire observée à :** `2026-09-01T05:49:58.398Z` (`2026-09-01T07:49:58.398+02:00`, Europe/Paris)
 - **Décision propriétaire observée à :** 2026-08-31T13:08:48.0887445Z
 - **Jalon :** J9 — nouvelle preuve fournisseur autonome
 - **Base immuable d'ouverture :** `1be8a26a0fb4ff54e9514ca69655d5aa825d2f26`
@@ -19,6 +21,9 @@
 - **Réseau fournisseur :** `NOT_AUTHORIZED`
 - **Go global fournisseur :** `CONSUMED_AND_TERMINATED_BY_D3_COMPLETION`
 - **Résultat de preuve :** `PASS — 28/38 nouvelles tentatives, 48/58 cumulées`
+- **Validation propriétaire :** `VALIDATED`
+- **Déplacement vers completed :** `AUTHORIZED_AND_EXECUTED`
+- **Décision J9 finale :** `PREPARE_OPTIONAL_INTEGRATION`
 - **Intégration, production ou VPS courant :** `NOT_AUTHORIZED`
 - **Option VPS future :** `NOT_EXCLUDED_BUT_NOT_AUTHORIZED`
 
@@ -840,6 +845,74 @@ J9_FINAL_DECISION=NOT_TAKEN
 J9_OWNER_CONFIRMATION_REQUIRED=YES
 ```
 
-WO-023 reste actif jusqu'à sa validation explicite par le propriétaire. Son `PASS` produit une
-recommandation J9, pas une décision finale, et n'autorise ni ADR-SS-003, ni intégration, ni
-production, ni nouvelle campagne fournisseur.
+À ce stade pré-validation, WO-023 restait actif jusqu'à sa validation explicite par le propriétaire.
+Son `PASS` produisait une recommandation J9, pas encore une décision finale, et n'autorisait ni
+ADR-SS-003, ni intégration, ni production, ni nouvelle campagne fournisseur. La section 19 consigne
+la décision ultérieure qui clôt cette porte.
+
+## 19. Validation propriétaire, décision J9 reçue et clôture
+
+Le propriétaire valide explicitement la preuve `PASS`, reconnaît la readiness locale, autorise le
+déplacement de WO-023 vers les Work Orders terminés et choisit
+`PREPARE_OPTIONAL_INTEGRATION` comme décision J9 finale. L'instant communiqué est normalisé sous les
+deux représentations équivalentes suivantes :
+
+```text
+J9_DECIDED_AT_UTC=2026-09-01T05:49:58.398Z
+J9_DECIDED_AT_EUROPE_PARIS=2026-09-01T07:49:58.398+02:00
+J9_DECIDED_AT_TIME_ZONE=Europe/Paris
+```
+
+Le bloc propriétaire exécuté est consigné avec ses effets de sûreté inchangés :
+
+```text
+J9_WO023_OWNER_REVIEW_DECISION=VALIDATE
+J9_WO023_WORK_ORDER=WO-SS-20260831-023-j9-provider-robustness-v11
+J9_WO023_EVIDENCE_RESULT=PASS
+J9_WO023_EVIDENCE_REFERENCE=J9-WO023-PROVIDER-ROBUSTNESS-CAMPAIGN-20260901;SHA256=1c6a97f872d5621efcaffa505d16a7724f81816891aa0a9a990a0abec56e87c1
+J9_WO023_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO023_WORK_ORDER_MOVE_TO_COMPLETED=YES
+
+J9_DECISION_RECOMMENDATION=PREPARE_OPTIONAL_INTEGRATION
+J9_DECISION=PREPARE_OPTIONAL_INTEGRATION
+J9_DECIDED_AT_UTC=2026-09-01T05:49:58.398Z
+J9_DECIDED_AT_EUROPE_PARIS=2026-09-01T07:49:58.398+02:00
+J9_EVIDENCE_RESULT=PASS
+J9_EVIDENCE_REFERENCE=J9-WO023-PROVIDER-ROBUSTNESS-CAMPAIGN-20260901;SHA256=1c6a97f872d5621efcaffa505d16a7724f81816891aa0a9a990a0abec56e87c1
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PROVIDER_ACQUISITION_MODE=MANUAL_ON_DEMAND
+J9_INTEGRATION_IMPLEMENTATION_AUTHORIZED=NO
+J9_LIVE_OR_SCHEDULED_OPERATION_AUTHORIZED=NO
+J9_BETTING_PROJECT_CRITICAL_DEPENDENCY=NO
+J9_FUTURE_VPS_PRODUCTION_OPTION=NOT_EXCLUDED_BUT_NOT_AUTHORIZED
+J9_CURRENT_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_OWNER_CONFIRMATION_REQUIRED=NO
+```
+
+La clôture de WO-023 ne réutilise pas le go, n'autorise aucun nouvel appel fournisseur et ne crée
+pas ADR-SS-003. La décision `PREPARE_OPTIONAL_INTEGRATION` autorise seulement, dans un futur Work
+Order distinct, la préparation d'une étude et la proposition d'ADR-SS-003. Les droits/permissions,
+l'architecture de livraison, la comparaison push local / Playwright VPS, les secrets, le réseau et
+l'exploitation restent à instruire avant toute implémentation.
+
+```text
+WORK_ORDER_STATUS=VALIDATED
+EVIDENCE_STATUS=PASS_ACCEPTED_BY_OWNER
+OWNER_VALIDATION=VALIDATED
+OWNER_VALIDATED_AT_UTC=2026-09-01T05:49:58.398Z
+OWNER_VALIDATED_AT_EUROPE_PARIS=2026-09-01T07:49:58.398+02:00
+OWNER_REVIEW_REQUIRED=NO
+MOVE_TO_COMPLETED_AUTHORIZED=YES
+MOVE_TO_COMPLETED_PERFORMED=YES
+WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260831-023-j9-provider-robustness-v11.md
+GLOBAL_OWNER_GO=CONSUMED_AND_TERMINATED_BY_D3_COMPLETION
+PROVIDER_NETWORK_AUTHORIZED=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO_COMPLETED
+NEW_PROVIDER_CAMPAIGN_AUTHORIZED=NO
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+ADR_SS_003_STATUS=NOT_CREATED
+OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_FINAL_DECISION=PREPARE_OPTIONAL_INTEGRATION
+J9_OWNER_CONFIRMATION_REQUIRED=NO
+```

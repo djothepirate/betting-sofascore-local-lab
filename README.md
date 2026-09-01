@@ -4,19 +4,22 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le jalon **J9 — Décision de gouvernance** reste ouvert sous `WO-SS-20260831-018`. L'orientation
-propriétaire initiale `PREPARE_OPTIONAL_INTEGRATION` n'est toujours pas une décision finale. WO-019
-reste la campagne historique `STOPPED` de 20 tentatives ; son ancienne recommandation `KEEP_LOCAL`
-a été refusée comme décision finale sans être réécrite.
+Le propriétaire a pris la décision finale du jalon **J9 — Décision de gouvernance** :
+`PREPARE_OPTIONAL_INTEGRATION`. La clôture de `WO-SS-20260831-018` intervient après consolidation
+de la preuve validée WO-023 sur sa branche de décision. WO-019 reste la campagne historique
+`STOPPED` de 20 tentatives ; son ancienne recommandation `KEEP_LOCAL` a été refusée comme décision
+finale sans être réécrite.
 
-La nouvelle campagne autonome WO-023 est désormais `PASS` : les huit segments D1/D2/D3 ont produit
+La nouvelle campagne autonome WO-023 est désormais `VALIDATED` avec un résultat `PASS` : les huit
+segments D1/D2/D3 ont produit
 28 réponses HTTP 200 et 28 parsings sur 38 tentatives autorisées, sans cache hit, 404, retry ou
 incident. La sauvegarde/restauration V28, le double export reproductible et le postflight sont
-qualifiés. La matrice recommande maintenant `PREPARE_OPTIONAL_INTEGRATION`, mais
-`J9_FINAL_DECISION=NOT_TAKEN` et
-`J9_DECISION_STATUS=PENDING_OWNER_CONFIRMATION_AFTER_WO023_PASS` jusqu'au choix propriétaire
-explicite. Le go est consommé, le réseau reverrouillé et aucune intégration, production, nouvelle
-campagne, acquisition live, tâche planifiée ou topologie VPS n'est autorisée.
+qualifiés. Le propriétaire a validé WO-023 et autorisé son déplacement vers les Work Orders
+terminés à `2026-09-01T05:49:58.398Z`, soit `2026-09-01T07:49:58.398+02:00` en Europe/Paris.
+Il a simultanément choisi `PREPARE_OPTIONAL_INTEGRATION` comme décision J9 finale. Cette décision
+n'autorise ni implémentation, ni production, ni nouvelle campagne, ni acquisition live ou
+planifiée, ni déploiement VPS courant ; la permission officielle reste `NOT_EVIDENCED` et
+ADR-SS-003 reste `NOT_CREATED`. Le go est consommé et le réseau reverrouillé.
 
 La preuve arrêtée relève de WO-019 ; le profil sélectionné a exigé une nouvelle campagne sous un
 nouveau Work Order. ADR-SS-002 v1.0 avait été accepté explicitement. Le premier
@@ -1172,7 +1175,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md)
 - [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay.md)
 - [Work Order validé de réexamen ADR-SS-002](docs/work_orders/completed/WO-SS-20260831-022-j9-adr-ss-002-reexamination.md)
-- [Work Order actif de nouvelle preuve J9](docs/work_orders/active/WO-SS-20260831-023-j9-provider-robustness-v11.md)
+- [Work Order validé de nouvelle preuve J9](docs/work_orders/completed/WO-SS-20260831-023-j9-provider-robustness-v11.md)
 - [Work Order validé de nettoyage fail-closed J6/J9](docs/work_orders/completed/WO-SS-20260831-024-j9-backup-pipeline-fail-closed-cleanup.md)
 - [Incident fail-closed post-sauvegarde WO-023](docs/validation/J9-WO023-POST-BACKUP-CLEANUP-INCIDENT-20260831.md)
 - [Work Order validé de durcissement de preuve J6/J9](docs/work_orders/completed/WO-SS-20260831-025-j9-backup-cleanup-proof-hardening.md)

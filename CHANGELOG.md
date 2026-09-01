@@ -370,6 +370,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `PREPARE_OPTIONAL_INTEGRATION`, sous confirmation propriétaire et avec permission officielle
   toujours `NOT_EVIDENCED` ; le go est consommé, WO-023 reste `READY_FOR_OWNER_REVIEW` et réseau,
   intégration, production et VPS courant restent interdits.
+- validation propriétaire de WO-023 et déplacement vers les Work Orders terminés à
+  `2026-09-01T05:49:58.398Z`, soit `2026-09-01T07:49:58.398+02:00` en Europe/Paris ; la preuve
+  `PASS` est acceptée et la décision J9 finale devient `PREPARE_OPTIONAL_INTEGRATION`, sans créer
+  ADR-SS-003 ni autoriser un appel fournisseur, une implémentation, la production ou un VPS courant.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 
