@@ -563,7 +563,11 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         assertThat(launchEntered.await(1, TimeUnit.SECONDS)).isTrue();
         assertThat(supervisor.activeCampaignId()).contains(campaignId);
 
-        CompletableFuture<Void> shutdown = CompletableFuture.runAsync(supervisor::shutdown);
+        CompletableFuture<Void> shutdown = CompletableFuture.runAsync(
+                supervisor::shutdown,
+                task -> Thread.ofPlatform()
+                        .name("playwright-supervisor-shutdown-test")
+                        .start(task));
         assertThat(processTreeAccess.shutdownObserved().await(1, TimeUnit.SECONDS)).isTrue();
         releaseLaunch.countDown();
 
