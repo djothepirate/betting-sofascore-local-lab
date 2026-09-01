@@ -29,8 +29,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   puis zéro processus attribuable au worktree, listener `8087` ou conteneur Testcontainers ;
 - rapport autonome SHA-256
   `9bd030f4cc92f32bdeee977089d3f4c5c709278fec4c24cc66ed8fb6d258be5f` et passage du Work Order
-  à `READY_FOR_OWNER_REVIEW` ; le déplacement vers `completed`, le push et la fusion attendent
-  des décisions propriétaires explicites.
+  à `READY_FOR_OWNER_REVIEW` ;
+- bloc propriétaire complet enregistré le `2026-09-01T14:00:53Z`, soit
+  `2026-09-01T16:00:53+02:00` en Europe/Paris : commit d'implémentation et preuve qualifiés validés,
+  readiness locale reconnue et déplacement de WO-030 vers `completed` autorisé ; le rapport reste
+  byte-identique et son SHA-256 inchangé ;
+- clôture documentaire à `VALIDATED` sans appel fournisseur ou receiver réel, sans déploiement VPS,
+  sans production et sans déduction d'une autorisation de push ou de fusion.
 
 ### Après J9 — WO-029 durcissement de la borne de port du push local optionnel
 

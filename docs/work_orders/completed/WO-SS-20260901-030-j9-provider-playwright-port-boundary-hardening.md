@@ -1,6 +1,6 @@
 # WO-SS-20260901-030 — Durcissement de la borne de port de qualification Playwright fournisseur
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
 - **Jalon :** après J9 — correctif fournisseur distinct de WO-029
 - **Ouvert le :** 2026-09-01
 - **Ouverture UTC :** `2026-09-01T13:17:27.6325976Z`
@@ -14,6 +14,8 @@
   `docs/validation/J9-WO030-PROVIDER-PLAYWRIGHT-PORT-BOUNDARY-QUALIFICATION-20260901.md`
 - **SHA-256 du rapport :**
   `9bd030f4cc92f32bdeee977089d3f4c5c709278fec4c24cc66ed8fb6d258be5f`
+- **Validation propriétaire enregistrée UTC :** `2026-09-01T14:00:53Z`
+- **Validation propriétaire enregistrée Europe/Paris :** `2026-09-01T16:00:53+02:00`
 - **Type de lot :** correctif fail-closed fournisseur, tests offline et documentation ; aucun
   appel fournisseur réel
 
@@ -26,7 +28,7 @@ les preuves qualifiées antérieures.
 
 ```text
 WORK_ORDER=WO-SS-20260901-030-j9-provider-playwright-port-boundary-hardening
-WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+WORK_ORDER_STATUS=VALIDATED
 BASE_COMMIT=daf55bf76521f81893f86d04fde3c2903bf22362
 PARENT_WORK_ORDER=NONE_DISTINCT_PROVIDER_CORRECTIVE_SCOPE
 TARGET_PRIMARY_FILE=src/main/java/com/bettingproject/sofascorelocal/config/ProviderPlaywrightProperties.java
@@ -145,19 +147,30 @@ faire une condition artificielle du correctif.
 | `2026-09-01T13:41:43Z` | `mvnw.cmd --offline clean verify` | `PASS` — Surefire `1043/0/0/5`, Failsafe `84/0/0/0` |
 | `2026-09-01T13:45:44Z` | profil `provider-playwright-runtime` complet | `PASS` — Surefire `1065/0/0/5`, Failsafe `84/0/0/0` |
 | `2026-09-01T13:47:21.0195627Z` | diff, secrets, flags, loopback, artefacts et ressources résiduelles | `PASS` |
+| `2026-09-01T14:00:53Z` | réception du bloc propriétaire validant le commit et la preuve qualifiés | `VALIDATE` |
+| `2026-09-01T14:00:53Z` | readiness locale reconnue et déplacement documentaire vers `completed` | `PASS` |
 
 ## 8. État courant
 
 ```text
-WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+WORK_ORDER_STATUS=VALIDATED
 IMPLEMENTATION_STATUS=COMPLETED
 IMPLEMENTATION_COMMIT=154349a2fbebe3fd0a43a63c7105f690ff04976b
 QUALIFICATION_STATUS=PASS_LOCAL_FAIL_CLOSED
 QUALIFICATION_REPORT=docs/validation/J9-WO030-PROVIDER-PLAYWRIGHT-PORT-BOUNDARY-QUALIFICATION-20260901.md
 QUALIFICATION_REPORT_SHA256=9bd030f4cc92f32bdeee977089d3f4c5c709278fec4c24cc66ed8fb6d258be5f
-OWNER_REVIEW_REQUIRED=YES
-OWNER_REVIEW_DECISION=NOT_RECEIVED
-WORK_ORDER_MOVE_TO_COMPLETED=NO
+OWNER_REVIEW_REQUIRED=NO
+OWNER_REVIEW_DECISION=VALIDATE
+OWNER_REVIEW_BLOCK_STATUS=COMPLETE
+LOCAL_READINESS_ACKNOWLEDGED=YES
+IMPLEMENTATION_COMMIT_MATCH=YES
+QUALIFICATION_REPORT_SHA256_MATCH=YES
+OWNER_DECISION_RECORDED_AT_UTC=2026-09-01T14:00:53Z
+OWNER_DECISION_RECORDED_AT_EUROPE_PARIS=2026-09-01T16:00:53+02:00
+WORK_ORDER_MOVE_TO_COMPLETED=YES
+MOVE_TO_COMPLETED_AUTHORIZED=YES
+MOVE_TO_COMPLETED_PERFORMED=YES
+WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260901-030-j9-provider-playwright-port-boundary-hardening.md
 PROVIDER_CALLS_UNDER_WO030=0
 PROVIDER_NETWORK_AUTHORIZED=NO
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
@@ -165,21 +178,23 @@ VPS_DEPLOYMENT_AUTHORIZED=NO
 PRODUCTION_AUTHORIZED=NO
 ```
 
-## 9. Bloc soumis au propriétaire
+## 9. Décision propriétaire reçue
 
 ```text
-J9_WO030_OWNER_REVIEW_DECISION=<VALIDATE|REJECT>
+J9_WO030_OWNER_REVIEW_DECISION=VALIDATE
 J9_WO030_WORK_ORDER=WO-SS-20260901-030-j9-provider-playwright-port-boundary-hardening
 J9_WO030_IMPLEMENTATION_COMMIT=154349a2fbebe3fd0a43a63c7105f690ff04976b
 J9_WO030_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
 J9_WO030_QUALIFICATION_REPORT_SHA256=9bd030f4cc92f32bdeee977089d3f4c5c709278fec4c24cc66ed8fb6d258be5f
-J9_WO030_LOCAL_READINESS_ACKNOWLEDGED=<YES|NO>
-J9_WO030_WORK_ORDER_MOVE_TO_COMPLETED=<YES|NO>
+J9_WO030_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO030_WORK_ORDER_MOVE_TO_COMPLETED=YES
 J9_PROVIDER_NETWORK_AUTHORIZED=NO
 J9_REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 J9_VPS_DEPLOYMENT_AUTHORIZED=NO
 J9_PRODUCTION_AUTHORIZED=NO
 ```
 
-La qualification locale ne préremplit pas les deux décisions propriétaires. Tant que ce bloc n'est
-pas reçu avec des valeurs explicites, WO-030 reste actif et aucun push ou merge n'est déduit.
+Le bloc complet a été reçu et enregistré le `2026-09-01T14:00:53Z`, soit
+`2026-09-01T16:00:53+02:00` en Europe/Paris. Il valide la readiness locale et autorise le seul
+déplacement documentaire de WO-030 vers les Work Orders terminés. Il n'autorise aucun appel
+fournisseur ou receiver réel, déploiement VPS, usage de production, push ou merge.
