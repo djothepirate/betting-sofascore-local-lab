@@ -22,6 +22,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   lié au worktree ou conteneur Testcontainers résiduel, le seul conteneur actif étant PostgreSQL
   local préexistant sur `127.0.0.1:5432` ; le lot passe à `READY_FOR_OWNER_REVIEW` sans modifier
   aucune autorisation d'envoi, de réseau, de receiver, de VPS ou de production ;
+- validation propriétaire du commit qualifié
+  `9535478d54d26b35c95bef5a7e7615fe23c68de8`, du commit de renumérotation
+  `cdb9c73fc26c6456d3e42020108fadb55769398d`, du brouillon v1.2
+  `0934f6c68bf7b9c6d072c9fc616c809d75967c090f81402e5bc8cfdeb8bc150d` et du handoff v1.2
+  `94c8b643bb6d20386f1ab9ca3694f7724222c9ff3a5a0898b32e2d2bbb43b18a` ; readiness locale
+  reconnue et WO-033 déplacé vers `completed`, tandis que permission officielle, envoi, réseau
+  fournisseur, receiver réel, livraison, VPS et production restent explicitement bloqués ;
 - préparation, sans envoi, d'un brouillon anglais pour le canal officiel SofaScore
   `Product -> API`, avec champs propriétaires obligatoires pour l'identité, la juridiction, le
   statut commercial, le contexte betting, l'audience, le receiver et l'hébergement ;

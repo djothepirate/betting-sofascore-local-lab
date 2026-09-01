@@ -1,6 +1,6 @@
 # WO-SS-20260901-033 — Préparation de la demande de permission fournisseur et du receiver concurrent
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
 - **Jalon :** après J9 — levée documentaire de la porte de permission et préparation end-to-end
 - **Ouvert le :** 2026-09-01
 - **Ouverture UTC :** `2026-09-01T15:41:29.1426445Z`
@@ -18,6 +18,9 @@
 - **Requalification terminée UTC :** `2026-09-01T18:21:47Z`
 - **Requalification terminée Europe/Paris :** `2026-09-01T20:21:47+02:00`
 - **Postflight UTC :** `2026-09-01T18:22:46.3756532Z`
+- **Validation propriétaire UTC :** `2026-09-01T18:28:18.8023401Z`
+- **Validation propriétaire Europe/Paris :** `2026-09-01T20:28:18.8023401+02:00`
+- **Clôture locale UTC :** `2026-09-01T18:28:18.8023401Z`
 - **Type de lot :** documentation et handoff inter-dépôts uniquement ; aucun changement runtime,
   aucun envoi externe, appel d'acquisition fournisseur ou réseau receiver ; seules les pages
   officielles ont été consultées en lecture seule
@@ -304,12 +307,15 @@ migration, schéma, persistance ou configuration.
 | `2026-09-01T18:13:34.3075675Z` | livrables renommés figés en v1.2 et empreintes recalculées | `PASS` — identité `033`, anciennes références conservées comme historique remplacé |
 | `2026-09-01T18:21:47Z` | `mvnw.cmd --offline clean verify` après renumérotation | `PASS` — Surefire `1043/0/0/5`, Failsafe `84/0/0/0`, aucun appel fournisseur/receiver/VPS |
 | `2026-09-01T18:22:46.3756532Z` | postflight conteneurs, processus et listeners | `PASS` — aucun résidu Testcontainers, processus lié au worktree ou listener `8087`/`8444` ; seul PostgreSQL local préexistant sur `127.0.0.1:5432` reste actif |
+| `2026-09-01T18:28:18.8023401Z` | bloc de revue propriétaire reçu et vérifié | `VALIDATE` — commit qualifié, commit de renumérotation, versions et hashes concordants ; readiness reconnue |
+| `2026-09-01T18:28:18.8023401Z` | déplacement du Work Order de `active` vers `completed` | `PASS` — autorisé explicitement, sans envoi ni ouverture d'une barrière réseau |
 
 ## 10. État courant
 
 ```text
 WORK_ORDER=WO-SS-20260901-033-j9-provider-permission-request-preparation
-WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+WORK_ORDER_STATUS=VALIDATED
+WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260901-033-j9-provider-permission-request-preparation.md
 WORK_ORDER_RENUMBER_AUTHORIZED=YES
 WORK_ORDER_RENUMBER_DECISION=AUTHORIZE_RENUMBER_FROM_WO031_TO_WO033
 WORK_ORDER_RENUMBER_REASON=RESOLVE_COLLISION_WITH_DISTINCT_CI_WO031
@@ -338,6 +344,9 @@ PRE_RENUMBER_HEAD=e659ff8fc05ce99913d87ae554c9356581e852f8
 HISTORY_REWRITE=NO
 COMMIT_STRATEGY=APPEND_ONLY
 RENUMBERING_COMMIT=cdb9c73fc26c6456d3e42020108fadb55769398d
+QUALIFIED_COMMIT=9535478d54d26b35c95bef5a7e7615fe23c68de8
+QUALIFIED_COMMIT_MATCH=YES
+RENUMBERING_COMMIT_MATCH=YES
 WO033_LOCAL_COLLISION_CHECK=PASS
 WO033_REMOTE_COLLISION_CHECK=PASS
 PRE_RENUMBER_DRAFT_PATH=docs/validation/J9-WO031-SOFASCORE-PRODUCT-API-PERMISSION-REQUEST-DRAFT-20260901.md
@@ -346,6 +355,7 @@ PERMISSION_REQUEST_DRAFT_STATUS=PREPARED_NOT_SENT
 PERMISSION_REQUEST_DRAFT_PRE_RENUMBER_VERSION=1.1
 PERMISSION_REQUEST_DRAFT_VERSION=1.2
 PERMISSION_REQUEST_DRAFT_SHA256=0934f6c68bf7b9c6d072c9fc616c809d75967c090f81402e5bc8cfdeb8bc150d
+PERMISSION_REQUEST_DRAFT_OWNER_REVIEW_MATCH=YES
 OLD_PERMISSION_REQUEST_DRAFT_SHA256=27daa5859ce52d6bf2e4459a4ba7ab4048bab21e5b23e12fddb226e6ce228b3e
 FINAL_RENDERED_REQUEST_STATUS=NOT_CREATED_REQUIRES_OWNER_VALUES
 FINAL_RENDERED_UNRESOLVED_PLACEHOLDER_COUNT=NOT_EVALUATED
@@ -359,6 +369,7 @@ BETTING_PROJECT_RECEIVER_CONCURRENT_HANDOFF_STATUS=PREPARED_NOT_IMPLEMENTED
 BETTING_PROJECT_RECEIVER_CONCURRENT_HANDOFF_PRE_RENUMBER_VERSION=1.1
 BETTING_PROJECT_RECEIVER_CONCURRENT_HANDOFF_VERSION=1.2
 BETTING_PROJECT_RECEIVER_CONCURRENT_HANDOFF_SHA256=94c8b643bb6d20386f1ab9ca3694f7724222c9ff3a5a0898b32e2d2bbb43b18a
+BETTING_PROJECT_RECEIVER_CONCURRENT_HANDOFF_OWNER_REVIEW_MATCH=YES
 OLD_BETTING_PROJECT_RECEIVER_CONCURRENT_HANDOFF_SHA256=63b5f5f9968d4eea4190e2702e3589e7f20669b91e7f84622f33cc458cfb5ca6
 BETTING_PROJECT_RECEIVER_IMPLEMENTED=NO
 BETTING_PROJECT_RECEIVER_RUNNING=NO
@@ -399,27 +410,38 @@ LOCAL_LAB_VPS_DEPLOYMENT_AUTHORIZED=NO
 PROVIDER_VPS_ACQUISITION_AUTHORIZED=NO
 PRODUCTION_INGESTION_AUTHORIZED=NO
 PRODUCTION_AUTHORIZED=NO
-OWNER_REVIEW_REQUIRED=YES
+OWNER_REVIEW_REQUIRED=NO
+OWNER_REVIEW_DECISION=VALIDATE
+OWNER_REVIEW_BLOCK_STATUS=COMPLETE
+LOCAL_READINESS_ACKNOWLEDGED=YES
+WORK_ORDER_MOVE_TO_COMPLETED=YES
+MOVE_TO_COMPLETED_AUTHORIZED=YES
+MOVE_TO_COMPLETED_PERFORMED=YES
 ```
 
-## 11. Bloc de revue propriétaire attendu
+## 11. Bloc de revue propriétaire reçu
 
-La revue documentaire et l'autorisation d'envoyer la demande restent deux décisions séparées. Le
-bloc ci-dessous permet uniquement de valider ou demander la reprise du lot `033` ; il n'autorise
-pas l'envoi préparé dans le brouillon.
+Le propriétaire valide le lot documentaire et autorise son déplacement vers les Work Orders
+terminés. La revue documentaire et l'autorisation d'envoyer la demande restent deux décisions
+séparées : le bloc reçu refuse explicitement l'envoi, le réseau fournisseur, le receiver réel, la
+livraison réelle, le VPS et la production.
 
 ```text
-J9_WO033_OWNER_REVIEW_DECISION=<VALIDATE|REWORK>
+J9_WO033_OWNER_REVIEW_DECISION=VALIDATE
 J9_WO033_WORK_ORDER=WO-SS-20260901-033-j9-provider-permission-request-preparation
-J9_WO033_QUALIFIED_COMMIT=<EXACT_FINAL_QUALIFIED_COMMIT>
+J9_WO033_QUALIFIED_COMMIT=9535478d54d26b35c95bef5a7e7615fe23c68de8
+J9_WO033_RENUMBERING_COMMIT=cdb9c73fc26c6456d3e42020108fadb55769398d
 J9_WO033_PERMISSION_REQUEST_DRAFT_VERSION=1.2
 J9_WO033_PERMISSION_REQUEST_DRAFT_SHA256=0934f6c68bf7b9c6d072c9fc616c809d75967c090f81402e5bc8cfdeb8bc150d
 J9_WO033_RECEIVER_HANDOFF_VERSION=1.2
 J9_WO033_RECEIVER_HANDOFF_SHA256=94c8b643bb6d20386f1ab9ca3694f7724222c9ff3a5a0898b32e2d2bbb43b18a
-J9_WO033_LOCAL_READINESS_ACKNOWLEDGED=<YES|NO>
-J9_WO033_WORK_ORDER_MOVE_TO_COMPLETED=<YES|NO>
+J9_WO033_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO033_WORK_ORDER_MOVE_TO_COMPLETED=YES
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PERMISSION_REQUEST_SEND_AUTHORIZED=NO
 J9_PROVIDER_NETWORK_AUTHORIZED=NO
 J9_REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_REAL_DELIVERY_AUTHORIZED=NO
 J9_VPS_DEPLOYMENT_AUTHORIZED=NO
 J9_PRODUCTION_AUTHORIZED=NO
 ```

@@ -5,7 +5,7 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order documentaire
-[WO-SS-20260901-033](docs/work_orders/active/WO-SS-20260901-033-j9-provider-permission-request-preparation.md)
+[WO-SS-20260901-033](docs/work_orders/completed/WO-SS-20260901-033-j9-provider-permission-request-preparation.md)
 prépare, sans l'envoyer, une demande écrite au canal officiel SofaScore `Product -> API`. Le
 [brouillon fournisseur](docs/validation/J9-WO033-SOFASCORE-PRODUCT-API-PERMISSION-REQUEST-DRAFT-20260901.md)
 décrit explicitement le contexte betting, les six familles de données, le transport Playwright
@@ -20,9 +20,10 @@ avec J9, et a autorisé la renumérotation du présent lot en `033`. Les anciens
 branche CI et la PR #23 ne sont pas modifiées par cette réconciliation.
 
 Les deux livrables `033` sont figés en version `1.2` et la requalification complète hors ligne est
-réussie ; le Work Order est `READY_FOR_OWNER_REVIEW`. Cette readiness documentaire n'autorise pas
-l'envoi de la demande, un accès fournisseur, un receiver réel, une livraison, le VPS ou la
-production.
+réussie. Le propriétaire a validé le commit qualifié `9535478d54d26b35c95bef5a7e7615fe23c68de8`,
+reconnu la readiness locale et autorisé l'archivage du Work Order dans `completed`. Cette validation
+documentaire n'autorise pas l'envoi de la demande, un accès fournisseur, un receiver réel, une
+livraison, le VPS ou la production.
 
 Le
 [handoff receiver concurrent](docs/validation/J9-WO033-BETTING-PROJECT-RECEIVER-CONCURRENT-READINESS-HANDOFF-20260901.md)
