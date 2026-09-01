@@ -40,6 +40,9 @@ déploiement VPS.
 
 - [x] ADR-SS-004 préserve explicitement les quatre statuts du laboratoire.
 - [ ] Le job Windows exécute `Verify-Local.ps1` et les tests standards sans réseau.
+- [ ] Le job Windows qualifie, sans Maven ni `pom.xml`, le launcher exact livré dans l'archive :
+  sélection d'un JAR unique, répertoire courant extrait, profil local, barrières JVM anti-retry,
+  environnement hostile neutralisé et refus des daemon/contexte Docker distants.
 - [ ] Le job Linux exécute les tests standards et les 84 tests d'intégration sans réseau.
 - [ ] Le manifeste de l'archive indique `vps.deployable=false`.
 - [ ] Deux générations successives du SBOM ont la même empreinte et aucun numéro de série.
@@ -47,6 +50,7 @@ déploiement VPS.
   Maven, sinon le packaging échoue.
 - [ ] Une version Maven finale non taguée reste un snapshot `LOCAL_ONLY` non promouvable et la PR
   de préparation peut être qualifiée avant la création du tag.
+- [ ] Toute base de version Maven snapshot hors SemVer `X.Y.Z[-rc.N]` est refusée avant packaging.
 - [ ] Aucun job GitLab de `main` ou de tag ne lit un cache Maven qu'une ref non protégée peut
   alimenter ; le cache partagé reste désactivé jusqu'à isolation serveur qualifiée.
 - [ ] Une release locale taguée ne contient aucun identifiant de pipeline propre à une forge.
@@ -60,6 +64,7 @@ déploiement VPS.
 
 ```text
 powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\Verify-Local.ps1
+pwsh -NoProfile -File .\ci\test-distribution-launchers.ps1
 ./mvnw -B -ntp -Pintegration-tests clean verify
 sh ci/assert-local-only.sh
 sh ci/package-local-only.sh

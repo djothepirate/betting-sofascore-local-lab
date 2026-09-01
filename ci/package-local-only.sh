@@ -105,17 +105,17 @@ else
             base_version=${version%-SNAPSHOT}
             ;;
         *)
-            if ! printf '%s' "$version" | grep -Eq \
-                '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.[1-9][0-9]*)?$'; then
-                echo "FAIL: version Maven non taguée hors convention SemVer : $version." >&2
-                exit 1
-            fi
             # La PR de préparation puis le build de main valident la version
             # finale avant le tag. Sans tag, le payload reste un snapshot local
             # non promouvable ; seul GitLab publie la release locale taguée.
             base_version=$version
             ;;
     esac
+    if ! printf '%s' "$base_version" | grep -Eq \
+        '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.[1-9][0-9]*)?$'; then
+        echo "FAIL: version Maven snapshot hors convention SemVer : $version." >&2
+        exit 1
+    fi
     artifact_version="${base_version}-snapshot.p${pipeline_iid}.g${short_sha}"
 fi
 
@@ -206,9 +206,12 @@ jar_name="betting-sofascore-local-lab-${artifact_version}.jar"
 bundle_name="betting-sofascore-local-lab-${artifact_version}-local-only.zip"
 cp "$source_jar" "$stage/$jar_name"
 cp target/bom.json "$stage/sbom.cdx.json"
-cp .env.example compose.yaml README.md SECURITY.md "$stage/"
-cp scripts/Initialize-LocalConfig.ps1 scripts/Preflight-Local.ps1 \
-    scripts/Start-Local.ps1 scripts/Stop-Local.ps1 "$stage/scripts/"
+cp .env.example compose.yaml SECURITY.md "$stage/"
+cp ci/distribution/README.md "$stage/README.md"
+cp scripts/Initialize-LocalConfig.ps1 "$stage/scripts/Initialize-LocalConfig.ps1"
+cp ci/distribution/Preflight-Local.ps1 "$stage/scripts/Preflight-Local.ps1"
+cp ci/distribution/Start-Local.ps1 "$stage/scripts/Start-Local.ps1"
+cp ci/distribution/Stop-Local.ps1 "$stage/scripts/Stop-Local.ps1"
 
 cat >"$stage/provenance.properties" <<EOF
 artifact.classification=EXPERIMENTAL_LOCAL_ONLY

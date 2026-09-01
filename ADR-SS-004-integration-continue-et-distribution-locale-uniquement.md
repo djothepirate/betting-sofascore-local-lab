@@ -22,6 +22,7 @@ activée qu'après une CI verte et les protections administratives décrites par
 
 Le dépôt suit son propre SemVer. Les tags `vX.Y.Z[-rc.N]` et les versions du dépôt principal sont
 indépendants. Un snapshot porte l'IID du pipeline et le SHA court.
+Toute base Maven snapshot hors `X.Y.Z[-rc.N]-SNAPSHOT` est refusée avant packaging.
 
 Toute CI conserve les statuts :
 
@@ -45,6 +46,14 @@ production.approved=false
 vps.deployable=false
 sofascore.network.used=false
 ```
+
+Le bundle extrait fournit des launchers propres à la distribution. Ils exigent exactement un JAR
+applicatif, le lancent directement avec Java 25 depuis la racine extraite et reprennent les trois
+barrières JVM anti-retry. Les valeurs locales prioritaires et la neutralisation de toute
+configuration Spring, SofaScore, receiver ou datasource héritée empêchent l'environnement appelant
+d'activer une fonction réseau ou d'exposer le serveur. Ils ne dépendent ni du dépôt source, ni de
+`pom.xml`, ni du Maven Wrapper. Les opérations Compose déclarent le fichier et le nom de projet,
+et refusent tout `DOCKER_HOST` ou contexte qui ne vise pas une named pipe Windows locale.
 
 Aucun stage de déploiement, environnement de production, secret de production, runner VPS ou
 bundle VPS n'est autorisé. Une release du Local Lab signifie uniquement « distribution locale

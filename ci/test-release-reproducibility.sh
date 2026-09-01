@@ -9,14 +9,21 @@ cleanup() {
 }
 trap cleanup EXIT HUP INT TERM
 
-mkdir -p "$fixture/ci" "$fixture/target" "$fixture/scripts"
+mkdir -p "$fixture/ci/distribution" "$fixture/target" "$fixture/scripts"
 cp "$repository/ci/package-local-only.sh" "$fixture/ci/package-local-only.sh"
+cp "$repository/ci/distribution/README.md" "$fixture/ci/distribution/README.md"
+cp "$repository/ci/distribution/Preflight-Local.ps1" \
+    "$fixture/ci/distribution/Preflight-Local.ps1"
+cp "$repository/ci/distribution/Start-Local.ps1" \
+    "$fixture/ci/distribution/Start-Local.ps1"
+cp "$repository/ci/distribution/Stop-Local.ps1" \
+    "$fixture/ci/distribution/Stop-Local.ps1"
 printf '#!/usr/bin/env sh\nexit 0\n' >"$fixture/ci/assert-local-only.sh"
 printf 'fixture-jar\n' >"$fixture/target/application.jar"
-for file in .env.example compose.yaml README.md SECURITY.md; do
+for file in .env.example compose.yaml SECURITY.md; do
     printf 'release fixture\n' >"$fixture/$file"
 done
-for file in Initialize-LocalConfig.ps1 Preflight-Local.ps1 Start-Local.ps1 Stop-Local.ps1; do
+for file in Initialize-LocalConfig.ps1; do
     printf '# release fixture\n' >"$fixture/scripts/$file"
 done
 
@@ -26,7 +33,7 @@ set -eu
 
 for arg in "$@"; do
     if [ "$arg" = help:evaluate ]; then
-        printf '1.2.3\n'
+        printf '%s\n' "${FIXTURE_MAVEN_VERSION:-1.2.3}"
         exit 0
     fi
 done
@@ -67,6 +74,21 @@ chmod +x "$fixture/mvnw"
         commit -qm 'release fixture'
     head_commit=$(git rev-parse HEAD)
     git update-ref refs/remotes/origin/main "$head_commit"
+
+    invalid_version_output=$(mktemp)
+    if env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=foo-SNAPSHOT \
+        SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=99 \
+        GITHUB_REF_TYPE=branch GITHUB_REF_NAME=codex/invalid-version \
+        sh ci/package-local-only.sh >"$invalid_version_output" 2>&1; then
+        echo 'FAIL: une version Maven snapshot non SemVer a été acceptée.' >&2
+        exit 1
+    fi
+    if ! grep -Fq 'version Maven snapshot hors convention SemVer' "$invalid_version_output"; then
+        echo 'FAIL: le refus du snapshot Maven non SemVer est ambigu.' >&2
+        cat "$invalid_version_output" >&2
+        exit 1
+    fi
+    rm -f "$invalid_version_output"
 
     # Une préparation de release porte déjà la version Maven finale, mais
     # reste un snapshot LOCAL_ONLY tant qu'aucun tag ne désigne le commit.
@@ -147,5 +169,53 @@ if ! grep -Fxq 'artifact.version=1.2.3' "$provenance"; then
     echo 'FAIL: la version canonique locale est absente de la provenance.' >&2
     exit 1
 fi
+if ! cmp -s "$repository/ci/distribution/README.md" "$fixture/inspect/README.md" ||
+   ! cmp -s "$repository/ci/distribution/Preflight-Local.ps1" \
+       "$fixture/inspect/scripts/Preflight-Local.ps1" ||
+   ! cmp -s "$repository/ci/distribution/Start-Local.ps1" \
+       "$fixture/inspect/scripts/Start-Local.ps1" ||
+   ! cmp -s "$repository/ci/distribution/Stop-Local.ps1" \
+       "$fixture/inspect/scripts/Stop-Local.ps1"; then
+    echo 'FAIL: le bundle ne contient pas les launchers et le guide de distribution qualifiés.' >&2
+    exit 1
+fi
+if grep -Eiq 'mvnw([.]cmd)?|pom[.]xml|spring-boot:run' \
+       "$fixture/inspect/scripts/Preflight-Local.ps1" \
+       "$fixture/inspect/scripts/Start-Local.ps1" \
+       "$fixture/inspect/scripts/Stop-Local.ps1" \
+       "$fixture/inspect/README.md"; then
+    echo 'FAIL: le bundle dépend encore des sources ou du Maven Wrapper.' >&2
+    exit 1
+fi
+for argument in \
+    '-Djdk.httpclient.disableRetryConnect=true' \
+    '-Djdk.httpclient.redirects.retrylimit=1' \
+    '-Djdk.httpclient.enableAllMethodRetry=false' \
+    "'-jar'" \
+    '--spring.profiles.active=local' \
+    '--server.address=127.0.0.1' \
+    '--sofascore.enabled=false' \
+    '--sofascore.playwright.enabled=false' \
+    '--optional-integration.enabled=false' \
+    '--optional-integration.remote-delivery-authorized=false'; do
+    if ! grep -Fq -- "$argument" "$fixture/inspect/scripts/Start-Local.ps1"; then
+        echo "FAIL: argument Java absent du launcher distribué : $argument" >&2
+        exit 1
+    fi
+done
+for launcher in Preflight-Local.ps1 Start-Local.ps1 Stop-Local.ps1; do
+    if ! grep -Fq -- '--project-name' "$fixture/inspect/scripts/$launcher" ||
+       ! grep -Fq -- 'betting-sofascore-local-lab' "$fixture/inspect/scripts/$launcher"; then
+        echo "FAIL: identité Docker Compose absente du launcher distribué : $launcher" >&2
+        exit 1
+    fi
+done
+for launcher in Preflight-Local.ps1 Stop-Local.ps1; do
+    if ! grep -Fq 'DOCKER_HOST must target a local Windows named pipe' \
+        "$fixture/inspect/scripts/$launcher"; then
+        echo "FAIL: garde Docker locale absente du launcher distribué : $launcher" >&2
+        exit 1
+    fi
+done
 
 printf 'RELEASE_REPRODUCIBILITY=PASS_LOCAL_ONLY\n'

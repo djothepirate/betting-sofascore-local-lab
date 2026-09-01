@@ -17,7 +17,7 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.head.repo.full_name || github.repository }}-${{ startsWith(github.ref, 'refs/tags/') && 'tag' || 'branch' }}-${{ github.event.pull_request.head.ref || github.ref_name }}
   cancel-in-progress: true
 
 env:
@@ -64,6 +64,10 @@ jobs:
           # échouer la garde anti-lien de LocalJ7ExportFileStore avant le test.
           JAVA_TOOL_OPTIONS: -Djava.io.tmpdir=${{ runner.temp }}
         run: powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts\Verify-Local.ps1
+
+      - name: Vérifier le lanceur du bundle extrait
+        shell: pwsh
+        run: ./ci/test-distribution-launchers.ps1
 
       - name: Vérifier le commit
         shell: powershell
