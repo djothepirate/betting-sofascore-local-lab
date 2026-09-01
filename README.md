@@ -17,8 +17,19 @@ qualifiés. Le propriétaire a validé WO-023 et autorisé son déplacement vers
 terminés à `2026-09-01T05:49:58.398Z`, soit `2026-09-01T07:49:58.398+02:00` en Europe/Paris.
 Il a simultanément choisi `PREPARE_OPTIONAL_INTEGRATION` comme décision J9 finale. Cette décision
 n'autorise ni implémentation, ni production, ni nouvelle campagne, ni acquisition live ou
-planifiée, ni déploiement VPS courant ; la permission officielle reste `NOT_EVIDENCED` et
-ADR-SS-003 reste `NOT_CREATED`. Le go est consommé et le réseau reverrouillé.
+planifiée, ni déploiement VPS courant. La permission officielle reste `NOT_EVIDENCED`. Le go est
+consommé et le réseau reverrouillé.
+
+Les travaux J9 finalisés sont publiés sur `origin/codex/j9-decision` au commit
+`1a58a3bd7673f5946d5c48ae573c191e52d223a2`, sans modification de `main`. Le Work Order
+[WO-SS-20260901-026](docs/work_orders/active/WO-SS-20260901-026-optional-integration-feasibility.md)
+est ouvert depuis cette base pour comparer le push local optionnel à Playwright sur VPS et proposer
+[ADR-SS-003 v0.1](ADR-SS-003-optional-integration-topology.md). L'ADR est
+`PROPOSED_NOT_ACCEPTED` : le push local est la seule direction proposée pour un futur Work Order
+sous la gouvernance actuelle,
+tandis que Playwright VPS est `DEFERRED_BLOCKED_BY_CURRENT_GOVERNANCE`. Aucune topologie n'est
+sélectionnée par le propriétaire et aucun endpoint, réseau, déploiement, intégration ou usage de
+production n'est autorisé.
 
 La preuve arrêtée relève de WO-019 ; le profil sélectionné a exigé une nouvelle campagne sous un
 nouveau Work Order. ADR-SS-002 v1.0 avait été accepté explicitement. Le premier
@@ -84,7 +95,7 @@ la règle d'arrêt de WO-019, la preuve temporelle est `NOT_MEASURED`, WO-019 et
 L'application a été arrêtée gracieusement ; le port 8087, le processus applicatif et les descendants
 Playwright sont absents. Les flags fournisseur persistés sont à `false`, l'origine et l'allowlist
 persistées sont vides, et le réseau est de nouveau verrouillé. Le go est consommé et terminé par
-l'arrêt ; il ne peut pas autoriser une reprise. ADR-SS-003 n'existe pas.
+l'arrêt ; il ne peut pas autoriser une reprise. À ce stade historique, ADR-SS-003 n'existait pas.
 
 WO-021 a produit sur `codex/j9-playwright-minimum-delay` une mesure démontrable et une garantie
 loopback du délai minimal de trois secondes. Son implémentation et sa qualification loopback ont
@@ -213,13 +224,14 @@ conclusion juridique ; le propriétaire avait explicitement reconnu cette revue 
 d'ADR-SS-002 v1.0.
 
 L'usage futur de Playwright sur un VPS de production n'est plus exclu comme option d'architecture,
-mais il reste `NOT_MEASURED` et `NOT_AUTHORIZED`. Le dépôt conserve aujourd'hui `LOCAL_ONLY` et
-`NOT_PRODUCTION_APPROVED`. Une étude de faisabilité ultérieure, sous Work Order distinct, comparera
-le push local optionnel à une topologie Playwright VPS. La décision J9 permet seulement de préparer
-cette étude et de proposer ultérieurement ADR-SS-003 ; cet ADR n'existe pas encore et aucune
-architecture ne peut être implémentée sur la seule décision J9. Chaque topologie recevra ses propres
-qualifications de droits d'usage, réseau, navigateur, secrets, exploitation et non-dépendance
-critique.
+mais il reste `NOT_MEASURED`, `NOT_AUTHORIZED` et `BLOCKED_BY_CURRENT_GOVERNANCE`. Le dépôt conserve
+`LOCAL_ONLY` et `NOT_PRODUCTION_APPROVED` ; ADR-SS-001 maintient les appels fournisseur hors du VPS
+et les payloads bruts localement. WO-026 mène désormais l'étude factuelle. ADR-SS-003 v0.1 propose
+le push local d'un export J7 déjà `HUMAN_VALIDATED` comme seule direction candidate compatible avec
+les règles actuelles, et diffère la topologie VPS jusqu'à une décision de gouvernance, une
+permission officielle et des preuves VPS distinctes. La proposition ne vaut ni acceptation, ni
+implémentation. Chaque topologie conserve ses propres portes de droits d'usage, réseau, navigateur,
+secrets, exploitation, frontière de données et non-dépendance critique.
 
 Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**,
 **J3 — Appel manuel**, **J4 — Événements**, **J5 — Statistiques**, **J6 — Historique**,
@@ -863,6 +875,7 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass `
 betting-sofascore-local-lab/
 ├── ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md
 ├── ADR-SS-002-bounded-multi-dossier-provider-robustness.md
+├── ADR-SS-003-optional-integration-topology.md
 ├── AGENTS.md
 ├── README.md
 ├── SECURITY.md
@@ -1075,6 +1088,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 
 - [ADR-SS-001](ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md)
 - [ADR-SS-002 accepté — preuve J9 multi-dossier bornée](ADR-SS-002-bounded-multi-dossier-provider-robustness.md)
+- [ADR-SS-003 v0.1 proposé, non accepté — topologie d'intégration optionnelle](ADR-SS-003-optional-integration-topology.md)
 - [Architecture J0/J1](docs/architecture/ARCHITECTURE.md)
 - [Contrat hors ligne scheduled-events-v1](docs/architecture/SCHEDULED-EVENTS-V1.md)
 - [Contrat hors ligne event-details-v1](docs/architecture/EVENT-DETAILS-V1.md)
@@ -1184,6 +1198,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Qualification du nouvel essai V28 WO-023](docs/validation/J9-WO023-V28-BACKUP-RESTORE-RETRY-20260901.md)
 - [Manifeste gelé de campagne WO-023](docs/validation/J9-WO023-PROVIDER-CAMPAIGN-MANIFEST-20260901.md)
 - [Rapport autonome PASS de la campagne WO-023](docs/validation/J9-WO023-PROVIDER-ROBUSTNESS-CAMPAIGN-20260901.md)
+- [Work Order actif d'étude d'intégration optionnelle et proposition ADR-SS-003](docs/work_orders/active/WO-SS-20260901-026-optional-integration-feasibility.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 

@@ -4,6 +4,34 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — étude d’intégration optionnelle ouverte
+
+- publication sans force de la plage J9 finalisée sur la branche privée
+  `origin/codex/j9-decision`, au commit
+  `1a58a3bd7673f5946d5c48ae573c191e52d223a2`, avec divergence locale/distante nulle et sans
+  modification de `main`, resté à `40323faa7dca3341da6ef980b5762f1ff5a32a79` ;
+- ouverture de `WO-SS-20260901-026` depuis ce tip J9 publié, sur la branche
+  `codex/j9-optional-integration-study` et le worktree `.tmp/j9-optional-integration-study`, pour
+  une étude documentaire séparée de toute implémentation ;
+- comparaison factuelle, sans score arbitraire, de `OPTIONAL_LOCAL_PUSH`, `VPS_PLAYWRIGHT` et du
+  repli `KEEP_LOCAL_NO_INTEGRATION`, avec preuves, confiance et lacunes restantes ;
+- proposition d'ADR-SS-003 v0.1 à l'état `PROPOSED_NOT_ACCEPTED` : le push local d'un export J7
+  déjà `HUMAN_VALIDATED` est la seule direction proposée pour un futur Work Order sous la
+  gouvernance actuelle ; Playwright
+  VPS reste `DEFERRED_BLOCKED_BY_CURRENT_GOVERNANCE`, car `LOCAL_ONLY`, ADR-SS-001 et la frontière
+  des payloads bruts doivent être redécidés explicitement avant toute qualification distante ;
+- maintien de la permission officielle à `NOT_EVIDENCED` et définition de portes distinctes pour
+  l'acceptation de l'ADR, un futur contrat HTTPS/mTLS, une éventuelle preuve VPS et toute décision
+  de production ;
+- aucun code, endpoint, URI, schéma, migration, configuration, certificat, secret, appel
+  fournisseur, transfert, déploiement VPS, polling, scheduler, live, retry ou fallback ajouté ou
+  autorisé ; ADR-SS-001, ADR-SS-002, `AGENTS.md` et `docs/reference` restent inchangés ;
+- vérification Maven finale hors sandbox réussie avec 946 tests, zéro échec, zéro erreur et cinq
+  skips prévus ; `git diff --check`, 136 liens locaux, hygiène documentaire, loopback et flags
+  fournisseur bloqués contrôlés ; la première tentative sandboxée avait été arrêtée par un refus
+  ZipFS sur le cache Maven utilisateur, sans échec de code ;
+- aucun push, PR ou merge de WO-026 n'est autorisé par l'instruction d'ouverture.
+
 ### J9 — décision de gouvernance clôturée
 
 - ouverture de `WO-SS-20260831-018` sur `codex/j9-decision`, depuis la baseline propre
