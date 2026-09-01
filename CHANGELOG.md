@@ -15,6 +15,22 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   worker enfant ; aucun endpoint, transport, protocole, retry, polling ou schéma ne change ;
 - qualification exclusivement offline : aucun appel fournisseur, aucun réseau receiver, aucun
   déploiement VPS et aucune production ne sont autorisés sous WO-030.
+- correctif commité sous `154349a2fbebe3fd0a43a63c7105f690ff04976b` : garde parente et
+  défense en profondeur du worker refusent les ports absents, `0` et `65536`, tout en acceptant
+  structurellement `1` et `65535` sans connexion vers ces bornes ;
+- preuve directe du refus avant claim : `claimExecution()` rend
+  `PROVIDER_TRANSPORT_UNAVAILABLE`, l'exécution ne démarre pas et l'intention reste
+  `CONFIRMED_READY` ;
+- qualification `PASS_LOCAL_FAIL_CLOSED` : tests ciblés `14/0/0/0` et `11/0/0/0`, suite
+  standard Surefire `1043/0/0/5`, profil runtime `1065/0/0/5` et deux passes Failsafe
+  `84/0/0/0`, avec Flyway V1→V29, ledger, mTLS et end-to-end loopback verts ;
+- audits finaux propres : `git diff --check`, zéro secret haute confiance, zéro artefact
+  Playwright interdit, `server.address=127.0.0.1`, flags fournisseur et livraison réelle bloqués,
+  puis zéro processus attribuable au worktree, listener `8087` ou conteneur Testcontainers ;
+- rapport autonome SHA-256
+  `9bd030f4cc92f32bdeee977089d3f4c5c709278fec4c24cc66ed8fb6d258be5f` et passage du Work Order
+  à `READY_FOR_OWNER_REVIEW` ; le déplacement vers `completed`, le push et la fusion attendent
+  des décisions propriétaires explicites.
 
 ### Après J9 — WO-029 durcissement de la borne de port du push local optionnel
 

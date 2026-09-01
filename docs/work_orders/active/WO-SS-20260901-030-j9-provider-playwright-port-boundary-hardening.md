@@ -1,6 +1,6 @@
 # WO-SS-20260901-030 — Durcissement de la borne de port de qualification Playwright fournisseur
 
-- **Statut :** `IN_PROGRESS`
+- **Statut :** `READY_FOR_OWNER_REVIEW`
 - **Jalon :** après J9 — correctif fournisseur distinct de WO-029
 - **Ouvert le :** 2026-09-01
 - **Ouverture UTC :** `2026-09-01T13:17:27.6325976Z`
@@ -8,9 +8,12 @@
 - **Branche :** `codex/j9-wo030-provider-playwright-port-boundary`
 - **Worktree :** `.tmp/w30`
 - **Base exacte :** `daf55bf76521f81893f86d04fde3c2903bf22362`
-- **Commit d'ouverture :** `PENDING`
-- **Rapport autonome prévu :**
+- **Commit d'ouverture :** `1c7c1358527c0461824a0de0e76b03e54c38c435`
+- **Commit d'implémentation qualifié :** `154349a2fbebe3fd0a43a63c7105f690ff04976b`
+- **Rapport autonome :**
   `docs/validation/J9-WO030-PROVIDER-PLAYWRIGHT-PORT-BOUNDARY-QUALIFICATION-20260901.md`
+- **SHA-256 du rapport :**
+  `9bd030f4cc92f32bdeee977089d3f4c5c709278fec4c24cc66ed8fb6d258be5f`
 - **Type de lot :** correctif fail-closed fournisseur, tests offline et documentation ; aucun
   appel fournisseur réel
 
@@ -23,7 +26,7 @@ les preuves qualifiées antérieures.
 
 ```text
 WORK_ORDER=WO-SS-20260901-030-j9-provider-playwright-port-boundary-hardening
-WORK_ORDER_STATUS=IN_PROGRESS
+WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
 BASE_COMMIT=daf55bf76521f81893f86d04fde3c2903bf22362
 PARENT_WORK_ORDER=NONE_DISTINCT_PROVIDER_CORRECTIVE_SCOPE
 TARGET_PRIMARY_FILE=src/main/java/com/bettingproject/sofascorelocal/config/ProviderPlaywrightProperties.java
@@ -41,21 +44,23 @@ PRODUCTION_AUTHORIZED=NO
 
 ## 2. Anomalie factuelle
 
-`ProviderPlaywrightProperties.isSafeConfiguration()` exige actuellement un port explicite positif
-pour l'origine de qualification loopback, mais n'en vérifie pas la borne supérieure. Une valeur
-telle que `http://127.0.0.1:65536` est donc acceptée par Bean Validation alors qu'elle se trouve hors
-de l'intervalle TCP valide.
+Sur la base de départ, `ProviderPlaywrightProperties.isSafeConfiguration()` exigeait un port
+explicite positif pour l'origine de qualification loopback, mais n'en vérifiait pas la borne
+supérieure. Une valeur telle que `http://127.0.0.1:65536` était donc acceptée par Bean Validation
+alors qu'elle se trouve hors de l'intervalle TCP valide.
 
-La même validation incomplète existe dans
+La même validation incomplète existait dans
 `ProviderPlaywrightWorkerConfiguration.parseOrigin()`, frontière de défense en profondeur du
 worker enfant. Le parent transmet l'origine de qualification au worker par environnement ; laisser
 la seconde garde inchangée permettrait au worker d'accepter directement la même valeur hors plage
 si la première barrière était contournée.
 
-Les contrôles voisins sont déjà corrects et restent hors modification :
+Les contrôles voisins étaient déjà corrects et leur contrat reste inchangé :
 
-- le port IPC du worker est borné à `[1, 65535]` ;
-- `ScheduledEventsTransportRequest` borne déjà son origine simulée à `[1, 65535]` ;
+- le port IPC du worker reste borné à `[1, 65535]` ; son littéral est seulement remplacé par la
+  constante commune du worker ;
+- `ScheduledEventsTransportRequest` borne déjà son origine simulée à `[1, 65535]` et son
+  implémentation n'est pas modifiée ;
 - WO-029 a corrigé le chemin distinct du push local J7 et demeure gelé.
 
 Empreintes SHA-256 de la base :
@@ -122,7 +127,8 @@ receiver J7, permission officielle, réseau fournisseur, déploiement VPS et pro
 8. zéro listener, worker ou navigateur résiduel ;
 9. mise à jour du changelog, du README, de l'architecture Playwright et publication d'un rapport
    autonome ;
-10. déplacement vers `docs/work_orders/completed` uniquement après qualification verte.
+10. déplacement vers `docs/work_orders/completed` uniquement après qualification verte et
+    décision propriétaire explicite.
 
 Les tests d'intégration PostgreSQL ne sont pas requis : ce lot ne modifie ni migration, ni schéma,
 ni persistance. Ils pourront être rejoués uniquement comme non-régression supplémentaire, sans en
@@ -134,19 +140,46 @@ faire une condition artificielle du correctif.
 |---|---|---|
 | `2026-09-01T13:17:27.6325976Z` | `origin/main` actualisé et base exacte vérifiée | `PASS` |
 | `2026-09-01T13:17:27.6325976Z` | numéro WO-030, branche et worktree dédiés vérifiés | `PASS` |
-| `PENDING` | ouverture documentaire commitée | `PENDING` |
-| `PENDING` | correctif parent et worker | `PENDING` |
-| `PENDING` | qualifications et audits | `PENDING` |
+| `2026-09-01T13:17:27.6325976Z` | ouverture documentaire commitée sous `1c7c1358527c0461824a0de0e76b03e54c38c435` | `PASS` |
+| `2026-09-01T13:37:28Z` | correctif parent et worker commité sous `154349a2fbebe3fd0a43a63c7105f690ff04976b` | `PASS` |
+| `2026-09-01T13:41:43Z` | `mvnw.cmd --offline clean verify` | `PASS` — Surefire `1043/0/0/5`, Failsafe `84/0/0/0` |
+| `2026-09-01T13:45:44Z` | profil `provider-playwright-runtime` complet | `PASS` — Surefire `1065/0/0/5`, Failsafe `84/0/0/0` |
+| `2026-09-01T13:47:21.0195627Z` | diff, secrets, flags, loopback, artefacts et ressources résiduelles | `PASS` |
 
 ## 8. État courant
 
 ```text
-WORK_ORDER_STATUS=IN_PROGRESS
-IMPLEMENTATION_STATUS=NOT_STARTED
-QUALIFICATION_STATUS=NOT_RUN
+WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+IMPLEMENTATION_STATUS=COMPLETED
+IMPLEMENTATION_COMMIT=154349a2fbebe3fd0a43a63c7105f690ff04976b
+QUALIFICATION_STATUS=PASS_LOCAL_FAIL_CLOSED
+QUALIFICATION_REPORT=docs/validation/J9-WO030-PROVIDER-PLAYWRIGHT-PORT-BOUNDARY-QUALIFICATION-20260901.md
+QUALIFICATION_REPORT_SHA256=9bd030f4cc92f32bdeee977089d3f4c5c709278fec4c24cc66ed8fb6d258be5f
+OWNER_REVIEW_REQUIRED=YES
+OWNER_REVIEW_DECISION=NOT_RECEIVED
+WORK_ORDER_MOVE_TO_COMPLETED=NO
 PROVIDER_CALLS_UNDER_WO030=0
 PROVIDER_NETWORK_AUTHORIZED=NO
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 VPS_DEPLOYMENT_AUTHORIZED=NO
 PRODUCTION_AUTHORIZED=NO
 ```
+
+## 9. Bloc soumis au propriétaire
+
+```text
+J9_WO030_OWNER_REVIEW_DECISION=<VALIDATE|REJECT>
+J9_WO030_WORK_ORDER=WO-SS-20260901-030-j9-provider-playwright-port-boundary-hardening
+J9_WO030_IMPLEMENTATION_COMMIT=154349a2fbebe3fd0a43a63c7105f690ff04976b
+J9_WO030_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
+J9_WO030_QUALIFICATION_REPORT_SHA256=9bd030f4cc92f32bdeee977089d3f4c5c709278fec4c24cc66ed8fb6d258be5f
+J9_WO030_LOCAL_READINESS_ACKNOWLEDGED=<YES|NO>
+J9_WO030_WORK_ORDER_MOVE_TO_COMPLETED=<YES|NO>
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+La qualification locale ne préremplit pas les deux décisions propriétaires. Tant que ce bloc n'est
+pas reçu avec des valeurs explicites, WO-030 reste actif et aucun push ou merge n'est déduit.
