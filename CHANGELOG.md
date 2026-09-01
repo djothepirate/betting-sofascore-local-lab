@@ -4,7 +4,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
-### J9 — décision de gouvernance ouverte
+### J9 — décision de gouvernance clôturée
 
 - ouverture de `WO-SS-20260831-018` sur `codex/j9-decision`, depuis la baseline propre
   `40323faa7dca3341da6ef980b5762f1ff5a32a79`, sans changement de code, endpoint, schéma, migration
@@ -370,10 +370,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `PREPARE_OPTIONAL_INTEGRATION`, sous confirmation propriétaire et avec permission officielle
   toujours `NOT_EVIDENCED` ; le go est consommé, WO-023 reste `READY_FOR_OWNER_REVIEW` et réseau,
   intégration, production et VPS courant restent interdits.
-- validation propriétaire de WO-023 et déplacement vers les Work Orders terminés à
-  `2026-09-01T05:49:58.398Z`, soit `2026-09-01T07:49:58.398+02:00` en Europe/Paris ; la preuve
-  `PASS` est acceptée et la décision J9 finale devient `PREPARE_OPTIONAL_INTEGRATION`, sans créer
-  ADR-SS-003 ni autoriser un appel fournisseur, une implémentation, la production ou un VPS courant.
+- validation propriétaire de WO-023, acceptation de la preuve `PASS` au SHA-256
+  `1c6a97f872d5621efcaffa505d16a7724f81816891aa0a9a990a0abec56e87c1` et déplacement de WO-023
+  vers les Work Orders terminés à `2026-09-01T05:49:58.398Z`, soit
+  `2026-09-01T07:49:58.398+02:00` en Europe/Paris ; la décision J9 finale devient
+  `PREPARE_OPTIONAL_INTEGRATION` et WO-018 est validé puis déplacé vers les Work Orders terminés.
+  La permission officielle reste `NOT_EVIDENCED` ; ADR-SS-003 n'est pas créé et aucun appel
+  fournisseur, nouvelle campagne, implémentation, production ou VPS courant n'est autorisé.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 

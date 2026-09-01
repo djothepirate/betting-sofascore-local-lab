@@ -5,10 +5,9 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le propriétaire a pris la décision finale du jalon **J9 — Décision de gouvernance** :
-`PREPARE_OPTIONAL_INTEGRATION`. La clôture de `WO-SS-20260831-018` intervient après consolidation
-de la preuve validée WO-023 sur sa branche de décision. WO-019 reste la campagne historique
-`STOPPED` de 20 tentatives ; son ancienne recommandation `KEEP_LOCAL` a été refusée comme décision
-finale sans être réécrite.
+`PREPARE_OPTIONAL_INTEGRATION`. `WO-SS-20260831-018` et la preuve WO-023 sont désormais validés et
+clôturés sur la branche de décision. WO-019 reste la campagne historique `STOPPED` de 20 tentatives ;
+son ancienne recommandation `KEEP_LOCAL` a été refusée comme décision finale sans être réécrite.
 
 La nouvelle campagne autonome WO-023 est désormais `VALIDATED` avec un résultat `PASS` : les huit
 segments D1/D2/D3 ont produit
@@ -216,9 +215,11 @@ d'ADR-SS-002 v1.0.
 L'usage futur de Playwright sur un VPS de production n'est plus exclu comme option d'architecture,
 mais il reste `NOT_MEASURED` et `NOT_AUTHORIZED`. Le dépôt conserve aujourd'hui `LOCAL_ONLY` et
 `NOT_PRODUCTION_APPROVED`. Une étude de faisabilité ultérieure, sous Work Order distinct, comparera
-le push local optionnel à une topologie Playwright VPS. Si J9 le justifie, ADR-SS-003 portera le
-choix d'architecture ; chaque topologie recevra ses propres qualifications de droits d'usage,
-réseau, navigateur, secrets, exploitation et non-dépendance critique.
+le push local optionnel à une topologie Playwright VPS. La décision J9 permet seulement de préparer
+cette étude et de proposer ultérieurement ADR-SS-003 ; cet ADR n'existe pas encore et aucune
+architecture ne peut être implémentée sur la seule décision J9. Chaque topologie recevra ses propres
+qualifications de droits d'usage, réseau, navigateur, secrets, exploitation et non-dépendance
+critique.
 
 Le dépôt matérialise les jalons validés **J0 — Gouvernance**, **J1 — Bootstrap**, **J2 — Fixtures**,
 **J3 — Appel manuel**, **J4 — Événements**, **J5 — Statistiques**, **J6 — Historique**,
@@ -1169,7 +1170,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Rapport final gelé J8](docs/benchmark/J8-BENCHMARK-REPORT-20260830.md)
 - [Validation finale J8](docs/validation/J8-FINAL-VALIDATION-20260830.md)
 - [Work Order J8 validé](docs/work_orders/completed/WO-SS-20260829-016-benchmark-j8.md)
-- [Work Order actif de décision J9](docs/work_orders/active/WO-SS-20260831-018-decision-j9.md)
+- [Work Order validé de décision J9](docs/work_orders/completed/WO-SS-20260831-018-decision-j9.md)
 - [Work Order actif de preuve de robustesse J9](docs/work_orders/active/WO-SS-20260831-019-j9-provider-robustness.md)
 - [Rapport arrêté de la campagne J9](docs/validation/J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831.md)
 - [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md)
