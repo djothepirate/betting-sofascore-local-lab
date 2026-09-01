@@ -25,11 +25,13 @@ NORMALIZED_OBSERVATION_DELETION=IMPOSSIBLE_BY_DESIGN
 - PowerShell 7.4 ou plus récent pour préserver les pipelines binaires natifs ;
 - exécutable `age` disponible dans `PATH` ou fourni avec `-AgePath` ;
 - PostgreSQL local démarré et sain ;
-- Flyway V28 appliqué ; la rétention reste définie par V22, V23 étend seulement
+- Flyway V29 appliqué ; la rétention reste définie par V22, V23 étend seulement
   `export_manifest` pour J7, V24 élargit la portée du cache de découverte tournoi, V25 ajoute
   uniquement la provenance de l'import JSON local, V26 autorise `event-incidents-v14`, V27 ajoute
   le ledger J8 sans étendre le périmètre de purge et V28 autorise uniquement
-  `event-incidents-v15`, sans table, réécriture ni changement de fingerprint ;
+  `event-incidents-v15`, sans table ni réécriture, et V29 ajoute le ledger de livraison J7
+  metadata-only dont les trois compteurs et l'empreinte sont inclus dans la preuve de
+  sauvegarde/restauration sans étendre le périmètre de purge ;
 - application liée uniquement à `127.0.0.1` ;
 - toutes les voies J3/J4/J5, y compris la découverte tournoi, désactivées et
   `connector_control` à `LOCKED` ;
@@ -156,7 +158,7 @@ PostgreSQL possédée. Elles ne constituent ni une boucle indéfinie ni un budge
 Le script :
 
 1. refuse une application encore à l'écoute sur le port 8087 ;
-2. vérifie Compose, le verrou réseau et la version courante Flyway V28 ;
+2. vérifie Compose, le verrou réseau et la version courante Flyway V29 ;
 3. vérifie le SHA-256 réel de chaque payload retenu ;
 4. vérifie l'exécutable Docker exact ; sous Windows, il doit être un fichier absolu sans reparse
    point, signé validement et attribué au produit Docker Inc. ;
@@ -280,9 +282,11 @@ pwsh -NoProfile -File .\scripts\Invoke-J6Retention.ps1 `
   -ConfirmationPhrase 'PURGER <N> PAYLOADS J6 <J6_RETENTION_PLAN_SHA256>'
 ```
 
-Le script revérifie le nom du fichier chiffré, son hash, Flyway V28, l'égalité complète des preuves
-source/restauration et la couverture. Le service recalcule ensuite le plan, la phrase et la
-couverture avant que l'adaptateur ne les revérifie sous verrou transactionnel.
+Le script revérifie le nom du fichier chiffré, son hash, Flyway V29, l'égalité complète des preuves
+source/restauration, les trois compteurs et l'empreinte metadata-only du ledger J7, ainsi que la
+couverture. Le service recalcule ensuite le plan, la phrase et la couverture avant que l'adaptateur
+ne les revérifie sous verrou transactionnel. La purge primaire reste limitée aux octets bruts J6 :
+elle ne supprime ni livraison, ni tentative, ni résultat J7.
 
 Une réussite affiche uniquement un bilan minimisé :
 

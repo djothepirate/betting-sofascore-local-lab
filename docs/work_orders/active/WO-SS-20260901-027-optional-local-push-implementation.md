@@ -1,6 +1,6 @@
 # WO-SS-20260901-027 — Implémentation fail-closed du push local optionnel
 
-- **Statut :** `IN_PROGRESS_BLOCKED_FOR_REAL_USE_BY_PERMISSION_GATE`
+- **Statut :** `READY_FOR_OWNER_REVIEW`
 - **Jalon :** après J9 — implémentation bornée de `OPTIONAL_LOCAL_PUSH`
 - **Ouvert le :** 2026-09-01
 - **Ouverture UTC :** `2026-09-01T08:02:45.4284643Z`
@@ -38,7 +38,8 @@ invariants fail-closed sans rendre l'option A utilisable contre une cible réell
 
 ```text
 WORK_ORDER=WO-SS-20260901-027-optional-local-push-implementation
-WORK_ORDER_STATUS=IN_PROGRESS_BLOCKED_FOR_REAL_USE_BY_PERMISSION_GATE
+WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+REAL_USE_STATUS=BLOCKED_BY_PERMISSION_GATE
 OWNER_IMPLEMENTATION_AUTHORIZATION=RECEIVED
 IMPLEMENTATION_AUTHORIZATION=LOCAL_FAIL_CLOSED_OFFLINE_AND_LOOPBACK_ONLY
 ADR_SS_003_STATUS=ACCEPTED
@@ -105,8 +106,13 @@ autoriser son usage réel :
 - accusé synchrone minimisé et validation stricte de ses corrélations ;
 - ledger distinct portant exactement les six états ADR ;
 - zéro retry automatique et concurrence `1` ;
-- politique mTLS fail-closed avec clé privée destinée au magasin utilisateur Windows et jamais
-  exportée ;
+- politique JDK HTTP attestée dès le démarrage JVM avec
+  `-Djdk.httpclient.disableRetryConnect=true`,
+  `-Djdk.httpclient.redirects.retrylimit=1` et
+  `-Djdk.httpclient.enableAllMethodRetry=false` ;
+- politique mTLS fail-closed avec clé privée destinée au magasin utilisateur Windows et dont le
+  provider Java n'expose aucun encodage ; la politique native de non-exportabilité reste une porte
+  non qualifiée avant toute cible réelle ;
 - classification déterministe des succès, doublons, refus et résultats ambigus ;
 - preuve offline/loopback uniquement synthétique, sans SofaScore, Betting Project réel ou VPS.
 
@@ -120,8 +126,8 @@ autoriser son usage réel :
 | Version | identifiant de protocole explicite et versionné |
 | Idempotence | clé stable dérivée de `exportId` et du SHA-256 du fichier |
 | Accusé | identité d'import distante, résultat, `exportId`, SHA-256 reçu, `receivedAt` |
-| Résultats positifs | `ACCEPTED` ou doublon exact explicitement confirmé |
-| Conflit | même identité avec artefact divergent : refus terminal |
+| Résultats positifs | `IMPORTED` ou doublon exact explicitement confirmé |
+| Conflit | `exportId` connu avec hash divergent : refus local avant claim ; HTTP `409` distant : refus terminal |
 | Sécurité | mTLS obligatoire pour toute cible réelle ; validation du serveur et identité client |
 | Reprise | aucune automatique ; action manuelle avec même artefact et même clé après réconciliation |
 
@@ -144,7 +150,8 @@ UNKNOWN_RECONCILIATION_REQUIRED
 - `HUMAN_VALIDATED` est une condition d'éligibilité et n'est jamais modifié par une livraison ;
 - timeout, rupture TLS, erreur de transport, `5xx`, accusé absent, malformé ou non corrélé donnent
   `UNKNOWN_RECONCILIATION_REQUIRED` ;
-- un refus `4xx` donne `REJECTED_TERMINAL`, sauf doublon exact explicitement accusé ;
+- une réponse `4xx` normalement reçue, aux métadonnées valides et au corps borné, donne
+  `REJECTED_TERMINAL` ; une réponse hostile ou surdimensionnée reste ambiguë sans HTTP fiable ;
 - seuls un accusé valide et corrélé ou un doublon exact confirmé donnent respectivement
   `DELIVERED` ou `DUPLICATE_CONFIRMED` ;
 - aucune transition ne déclenche J3, J4, J5 ou Playwright.
@@ -152,19 +159,25 @@ UNKNOWN_RECONCILIATION_REQUIRED
 ## 6. mTLS et secrets
 
 Le profil cible impose la validation du certificat serveur, une identité client exacte et une clé
-privée non exportable destinée à `Windows-MY`. Aucun alias sensible, certificat, clé, mot de passe,
-payload ou chemin utilisateur ne peut être conservé dans Git ou les logs. WO-027 qualifie la
-politique, les erreurs et un échange mTLS synthétique ; il ne provisionne ni certificat de
-production ni receiver réel.
+privée destinée à `Windows-MY`. Le code refuse une clé dont le provider Java expose un encodage ;
+ce contrôle ne démontre pas à lui seul que la clé a été provisionnée avec une politique Windows
+native non exportable. Cette preuve reste `NOT_QUALIFIED_FOR_REAL_TARGET` et devra être produite
+avec le profil PKI réel. Aucun alias sensible, certificat, clé, mot de passe, payload ou chemin
+utilisateur ne peut être conservé dans Git ou les logs. WO-027 qualifie la politique, les erreurs
+et un échange mTLS synthétique ; il ne provisionne ni certificat de production ni receiver réel.
 
 ## 7. Lots d'implémentation
 
 1. **Ouverture, permission et contrat :** versionner la revue officielle, le contrat receiver et le
    modèle de menace minimal.
-2. **Domaine et persistance locale :** identité, clé, accusé, machine d'états et migration append-only
-   d'un ledger indépendant, sans changer J7.
+2. **Domaine et persistance locale :** identité immuable, clé, accusé, machine d'états, journal de
+   tentatives/résultats append-only et projection strictement gardée dans un ledger indépendant,
+   sans changer J7.
 3. **Sender fail-closed et mTLS :** relire l'export J7, imposer taille/hash/timeout/concurrence, zéro
-   retry et refuser avant socket lorsque la permission est `NOT_EVIDENCED`.
+   retry et refuser avant socket lorsque la permission est `NOT_EVIDENCED`. Les trois propriétés
+   JDK HTTP exactes doivent être présentes au démarrage JVM et sont revérifiées avant construction
+   du client puis avant envoi ; une valeur absente, tardive ou divergente ferme localement le
+   transport.
 4. **Qualification synthétique :** receiver test-only sur `127.0.0.1` et port éphémère ; aucun
    fournisseur ou listener persistant.
 
@@ -174,10 +187,14 @@ production ni receiver réel.
 - permission `NOT_EVIDENCED` refusée avant résolution DNS ou connexion ;
 - export non `HUMAN_VALIDATED`, hash divergent ou taille supérieure à 5 Mio refusé localement ;
 - livraison nominale synthétique et accusé corrélé ;
-- même clé et même artefact : `DUPLICATE_CONFIRMED`, sans second effet receiver ;
-- même identité avec hash divergent : `REJECTED_TERMINAL` ;
+- effet appliqué puis ACK perdu : reprise manuelle avec la même clé et le même artefact,
+  `DUPLICATE_CONFIRMED` sans second effet receiver ;
+- `exportId` connu avec hash divergent : refus local avant claim, sans ligne ni socket ; un HTTP
+  `409` distant normalement reçu est `REJECTED_TERMINAL` ;
 - accusé incohérent, `4xx`, `5xx`, timeout, arrêt receiver et rupture mTLS classifiés ;
 - aucune reprise automatique, concurrence supérieure à `1` ou transition illégale ;
+- arguments JVM anti-retry exacts observés depuis le processus de test, et refus avant
+  `sendAsync` si l'une des trois valeurs diverge ;
 - aucune modification du statut J7, invocation Playwright ou acquisition fournisseur ;
 - aucun secret, payload ou certificat privé dans les logs, preuves ou Git ;
 - nettoyage du receiver synthétique et absence de listener résiduel.
@@ -203,7 +220,12 @@ un déploiement VPS ou une production exigent chacun leur porte explicite applic
 |---|---|---|
 | Baseline, branche et worktree | `PASS` | base `aedb5f424883c9e7a1839fd50aa2c2689fa65418`, branche/worktree dédiés |
 | Revue officielle | `PASS_REVIEW_NOT_PERMISSION` | rapport versionné ; résultat `NOT_EVIDENCED` |
-| Contrat receiver | `PENDING` | aucune implémentation externe autorisée |
-| Ledger et sender fail-closed | `PENDING` | aucune cible réelle |
-| Qualification offline/loopback | `PENDING` | zéro réseau fournisseur/receiver réel |
-| Vérification finale | `PENDING` | statut maximal `READY_FOR_OWNER_REVIEW` |
+| Contrat receiver | `IMPLEMENTED_LOCAL_CONTRACT_ONLY` | contrat v1.0 et ACK strict ; aucune implémentation externe autorisée |
+| Ledger et sender fail-closed | `IMPLEMENTED_DISABLED` | V29, six états séparés, zéro cible réelle, barrières JDK anti-retry |
+| Qualification offline/loopback | `PASS` | [rapport WO-027](../../validation/J9-WO027-OPTIONAL-LOCAL-PUSH-QUALIFICATION-20260901.md), zéro réseau fournisseur/receiver réel |
+| Vérification finale | `PASS_READY_FOR_OWNER_REVIEW` | Surefire `1036/0/0/5`, Failsafe `84/0/0/0`, permission réelle toujours bloquante |
+
+Le Work Order reste actif. Seule une validation propriétaire explicite peut autoriser son
+déplacement vers `completed`; elle ne pourra pas, à elle seule, autoriser une cible ou une livraison
+réelle tant que la porte de permission officielle et les autres prérequis d'ADR-SS-003 ne sont pas
+satisfaits.

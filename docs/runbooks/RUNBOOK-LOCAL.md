@@ -115,7 +115,7 @@ Vérifier :
 - connecteur `DISABLED` ;
 - base URL `NON_CONFIGURED` ;
 - PostgreSQL `AVAILABLE` ;
-- migration Flyway `28` ;
+- migration Flyway `29` ;
 - snapshots `0` sur une base neuve ;
 - corpus hors ligne `AVAILABLE_OFFLINE` ;
 - fixtures `12 / 12 disponibles` ;
@@ -1475,7 +1475,7 @@ Aucun Docker ni accès SofaScore n’est requis par les tests standards.
 .\mvnw.cmd -Pintegration-tests verify
 ```
 
-Docker doit être disponible. Testcontainers vérifie les migrations V1 à V28, l’état initial du
+Docker doit être disponible. Testcontainers vérifie les migrations V1 à V29, l’état initial du
 connecteur, la conservation exacte du brut, sa déduplication, les provenances J4/J5, les occurrences
 J6, la rétention auditée et la portée cache `TOURNAMENT_SCHEDULED_EVENTS` dans une base éphémère.
 V27 ajoute aussi les cinq tables append-only du ledger J8, leurs contraintes, l'upgrade V26→V27
@@ -1483,6 +1483,8 @@ et la lecture reproductible des agrégats locaux. Le runbook J8 détaillé est
 `docs/runbooks/J8-BENCHMARK.md`.
 V28 n'ajoute aucune table : elle autorise uniquement la provenance `event-incidents-v15` et son
 upgrade V27→V28 prouve l'absence de réécriture des observations V14 et des cinq preuves J8.
+V29 ajoute le ledger de livraison J7 séparé, ses contraintes transactionnelles et sa preuve
+metadata-only dans le cycle J6 de dump/restauration ; elle n'active aucun sender ni réseau réel.
 Pour WO-010, il vérifie aussi le commit atomique des `3N` familles, le réimport avec occurrences
 append-only et le rollback intégral lors d'une panne sur la dernière famille du dernier événement.
 

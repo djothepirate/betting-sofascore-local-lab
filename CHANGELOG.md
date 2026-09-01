@@ -13,6 +13,31 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   l'idempotence, aux accusés, aux états séparés et aux qualifications synthétiques offline/loopback ;
 - revue officielle datée maintenant `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED` : la documentation
   API publique ne vaut pas consentement et aucune licence applicable n'est versionnée ;
+- contrat `J7_OPTIONAL_LOCAL_PUSH` v1.0 et ACK strict versionnés, avec corps limité à l'export J7
+  canonique déjà `HUMAN_VALIDATED`, taille maximale de 5 Mio et clé d'idempotence stable
+  `j7:<exportId>:sha256:<fileSha256>` ;
+- sender fail-closed sans bean, contrôleur, route, scheduler, polling, URI ou cible réelle, utilisant
+  un transport HTTPS loopback synthétique sans proxy, redirection, cookie, fallback ou retry ;
+- ajout des trois barrières JVM anti-retry, attestées au démarrage puis avant construction et avant
+  envoi : `disableRetryConnect=true`, `redirects.retrylimit=1` et
+  `enableAllMethodRetry=false` ;
+- schéma V29 append-only pour l'identité, les tentatives et résultats de livraison, avec six états
+  séparés de J7, concurrence globale `1`, projection gardée, horloge PostgreSQL et réconciliation
+  stale manuelle seulement ;
+- preuves J6 étendues à V29 : sauvegarde/restauration compare les comptes et l'empreinte métadonnée
+  du ledger de livraison sans conserver les octets livrés ni élargir la purge primaire ;
+- mTLS synthétique qualifié sur quatre scénarios : nominal, autorité serveur non approuvée, SAN
+  divergent et certificat client incorrect ; l'opacité Java est prouvée, mais la non-exportabilité
+  native Windows reste `NOT_QUALIFIED_FOR_REAL_TARGET` ;
+- idempotence qualifiée avec effet unique et reprise manuelle `DUPLICATE`, refus local d'un
+  `exportId` associé à un hash divergent avant claim/socket, et classification terminale d'un
+  éventuel HTTP `409` distant ;
+- qualification finale `PASS_LOCAL_FAIL_CLOSED` : Surefire `1036/0/0/5`, Failsafe `84/0/0/0`,
+  ACK et corps d'erreur bornés à 16 KiB, J7 inchangé, zéro appel fournisseur, zéro receiver réel et
+  zéro listener résiduel ;
+- publication du rapport
+  `docs/validation/J9-WO027-OPTIONAL-LOCAL-PUSH-QUALIFICATION-20260901.md` et passage de WO-027 à
+  `READY_FOR_OWNER_REVIEW`, sans déplacement implicite vers les Work Orders terminés ;
 - activation réelle, receiver Betting Project, livraison, réseau fournisseur, VPS, production,
   polling, scheduler, retry automatique et fallback maintenus à `NO` ; zéro push déduit de cette
   ouverture.
