@@ -4,6 +4,52 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — étude d’intégration optionnelle ouverte
+
+- ouverture de WO-028 pour corriger factuellement l’identité du schéma J7 dans ADR-SS-003 :
+  l’alias ambigu `J7_CANONICAL_EXPORT_V1` est remplacé par l’identifiant manifeste canonique
+  `urn:betting-project:sofascore-local-lab:j7:canonical-event-export:v1` et sa version `1.0.0`,
+  sans modifier la topologie acceptée, l’historique v0.1 ni aucune autorisation runtime ou réseau ;
+- publication sans force de la plage J9 finalisée sur la branche privée
+  `origin/codex/j9-decision`, au commit
+  `1a58a3bd7673f5946d5c48ae573c191e52d223a2`, avec divergence locale/distante nulle et sans
+  modification de `main`, resté à `40323faa7dca3341da6ef980b5762f1ff5a32a79` ;
+- ouverture de `WO-SS-20260901-026` depuis ce tip J9 publié, sur la branche
+  `codex/j9-optional-integration-study` et le worktree `.tmp/j9-optional-integration-study`, pour
+  une étude documentaire séparée de toute implémentation ;
+- comparaison factuelle, sans score arbitraire, de `OPTIONAL_LOCAL_PUSH`, `VPS_PLAYWRIGHT` et du
+  repli `KEEP_LOCAL_NO_INTEGRATION`, avec preuves, confiance et lacunes restantes ;
+- proposition initiale d'ADR-SS-003 v0.1, puis acceptation propriétaire du draft immuable le
+  `2026-09-01T07:25:25.4809414Z` (`09:25:25.4809414+02:00` en Europe/Paris) : le push local d'un
+  export J7 déjà `HUMAN_VALIDATED` devient la topologie sélectionnée pour un futur Work Order sous
+  la gouvernance actuelle ; Playwright
+  VPS reste `DEFERRED_BLOCKED_BY_CURRENT_GOVERNANCE`, car `LOCAL_ONLY`, ADR-SS-001 et la frontière
+  des payloads bruts doivent être redécidés explicitement avant toute qualification distante ;
+- gel du draft proposé dans le commit local
+  `ca789a3a40ea5fc6c16312bd73f675bc9fd32650`, avec SHA-256 ADR-SS-003
+  `0edcc1e7db2ffc268d1560342d8c2f7c8ea9e1f91c65148e0504c1217f5982be`, afin de lier la future
+  décision propriétaire à un objet immuable ;
+- maintien de la permission officielle à `NOT_EVIDENCED` et définition de portes distinctes pour
+  l'acceptation de l'ADR, un futur contrat HTTPS/mTLS, une éventuelle preuve VPS et toute décision
+  de production ;
+- validation et clôture de WO-026 sur l’acceptation d’ADR-SS-003 v0.1, qui satisfait l’objet de ce
+  lot documentaire conformément au précédent WO-022, sans fabriquer de champ de décision
+  propriétaire supplémentaire ;
+- confirmation que cette acceptation ne vaut ni implémentation du sender ou du receiver, ni réseau
+  fournisseur, ni livraison live, ni déploiement VPS, ni production ;
+- aucun code, endpoint, URI, schéma, migration, configuration, certificat, secret, appel
+  fournisseur, transfert, déploiement VPS, polling, scheduler, live, retry ou fallback ajouté ou
+  autorisé ; ADR-SS-001, ADR-SS-002, `AGENTS.md` et `docs/reference` restent inchangés ;
+- vérification Maven du draft hors sandbox réussie avec 946 tests, zéro échec, zéro erreur et cinq
+  skips prévus ; le rerun post-acceptation a ensuite rapporté 946 tests, un échec, zéro erreur et
+  cinq skips : seul le contrôle J6 a refusé l’environnement, parce qu’une instance locale
+  préexistante de `SofascoreLocalApplication` occupait
+  déjà `127.0.0.1:8087`; la contre-vérification ciblée a reproduit cette porte fail-closed, sans
+  arrêt du processus utilisateur ; `git diff --check`, 136 liens locaux, hygiène documentaire,
+  loopback et flags fournisseur bloqués restent contrôlés ;
+- aucun push, PR, merge ou Work Order d’implémentation n’est autorisé par l’instruction d’ouverture
+  ou l’acceptation d’ADR-SS-003.
+
 ### J9 — décision de gouvernance clôturée
 
 - ouverture de `WO-SS-20260831-018` sur `codex/j9-decision`, depuis la baseline propre
