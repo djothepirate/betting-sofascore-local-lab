@@ -10,7 +10,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   PostgreSQL/Testcontainers, la sécurité, les métriques qualité et le packaging local ;
 - production de distributions `EXPERIMENTAL_LOCAL_ONLY` contenant JAR, SBOM CycloneDX,
   provenance et SHA-256, avec `vps.deployable=false` et sans profil fournisseur ;
-- validation fail-closed de l'identité du commit empaqueté et refus de tout tag de release locale
+- génération CycloneDX reproductible à partir de l’horodatage du commit, sans numéro de série,\n  avec deux générations successives obligatoirement byte-identiques avant création du bundle ;\n- validation fail-closed de l'identité du commit empaqueté et refus de tout tag de release locale
   qui ne serait pas atteignable depuis la branche canonique `main` ;
 - conservation des interdictions d'appel SofaScore, de receiver réel, de livraison optionnelle,
   de VPS et de production pendant toutes les qualifications CI.

@@ -42,6 +42,7 @@ déploiement VPS.
 - [ ] Le job Windows exécute `Verify-Local.ps1` et les tests standards sans réseau.
 - [ ] Le job Linux exécute les tests standards et les 84 tests d'intégration sans réseau.
 - [ ] Le manifeste de l'archive indique `vps.deployable=false`.
+- [ ] Deux générations successives du SBOM ont la même empreinte et aucun numéro de série.
 - [ ] Le tag désigne le commit extrait, reste atteignable depuis `main` et correspond à la version
   Maven, sinon le packaging échoue.
 - [ ] Les rapports qualité initiaux sont produits puis la baseline est verrouillée.
