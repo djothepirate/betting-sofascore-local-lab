@@ -13,6 +13,19 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - périmètre borné au refus d'un port d'origine loopback hors de l'intervalle fermé
   `[1, 65535]` par la configuration avant lecture d'export et avant claim, puis par le transport
   avant le client HTTP ; aucune migration, aucun contrat, endpoint, protocole ou schéma ne change ;
+- correctif runtime append-only `8fb4d5a64a8c36d553168c8e82cc4f46454ee96a` et preuve complémentaire
+  `699d2245322ef9614f05f912371db8fd9edca2b9` : ports absent et `0` refusés, `1` et `65535`
+  acceptés structurellement, `65536` refusé, sans connexion vers ces ports et avec zéro interaction
+  export, ledger ou transport pour chaque origine invalide ;
+- qualification `PASS_LOCAL_FAIL_CLOSED` : 50 tests ciblés, puis deux passages verts à
+  Surefire `1041/0/0/5` et Failsafe `84/0/0/0`, avec migrations V1→V29, mTLS et end-to-end
+  loopback ; Compose valide, diff et scan de secrets propres, zéro listener `8087` et zéro
+  conteneur Testcontainers résiduel ;
+- préservation byte-identique du Work Order WO-027
+  (`be18d440edf33ae8c511c4b1bab5ad1e70f6c2167027d525769c98417ebf5c2c`) et de son rapport
+  (`d656b7ea12ba38a40b88e9a78e5b7afb9642c4405080b9246b8539d177eb1d12`) ; publication du
+  rapport WO-029 validé et déplacement du Work Order vers `completed` avant push, résolution de
+  revue et fusion de la PR #21 ;
 - maintien de `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED`, du sender désactivé par défaut et de
   toutes les interdictions de receiver réel, livraison réelle, réseau fournisseur, VPS et
   production pendant la qualification offline/loopback.

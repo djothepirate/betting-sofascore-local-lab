@@ -1,13 +1,20 @@
 # WO-SS-20260901-029 — Durcissement de la borne de port du push local optionnel
 
-- **Statut :** `IN_PROGRESS`
+- **Statut :** `VALIDATED`
 - **Jalon :** après J9 — correctif de revue de la PR #21
 - **Ouvert le :** 2026-09-01
 - **Ouverture UTC :** `2026-09-01T12:17:44.3637202Z`
 - **Ouverture Europe/Paris :** `2026-09-01T14:17:44.3670919+02:00`
+- **Clôture UTC :** `2026-09-01T12:41:07.5514026Z`
+- **Clôture Europe/Paris :** `2026-09-01T14:41:07.5598944+02:00`
 - **Branche :** `codex/j9-wo029-port-boundary-hardening`
 - **Worktree :** `.tmp/j9-wo029-port-boundary-hardening`
 - **Base exacte :** `36598f1979ddc7be7081431b147691e7e9b8e49d`
+- **Commit d'ouverture :** `47732b3af56e1bcc0071b427f8bbf33d4676b5a6`
+- **Commit correctif runtime :** `8fb4d5a64a8c36d553168c8e82cc4f46454ee96a`
+- **Commit code/tests qualifié :** `699d2245322ef9614f05f912371db8fd9edca2b9`
+- **SHA-256 du rapport WO-029 :**
+  `6c762e8a8ed2635395c3038a1549a2d9e0cade341f0b42feaface8bb77a1c963`
 - **PR corrigée :** `#21`, branche `codex/j9-optional-local-push-implementation`
 - **Constat de revue :** P2 « Reject out-of-range ports before claiming a delivery »,
   discussion `discussion_r3903674609`
@@ -29,10 +36,12 @@ ni squash, ni rebase, ni force-push, ni réécriture des preuves WO-027.
 
 ```text
 WORK_ORDER=WO-SS-20260901-029-j9-optional-local-push-port-boundary-hardening
-WORK_ORDER_STATUS=IN_PROGRESS
+WORK_ORDER_STATUS=VALIDATED
 BASE_COMMIT=36598f1979ddc7be7081431b147691e7e9b8e49d
 TARGET_PULL_REQUEST=21
 PR20_MUST_BE_MERGED_FIRST=YES
+PR20_PREREQUISITE_SATISFIED=YES
+PR20_MERGE_COMMIT=cb7c8efe72bd2ef4a5d0f9aab4ae72d4e75453bc
 PRESERVE_QUALIFIED_COMMIT_HASHES=YES
 SQUASH_OR_REBASE_AUTHORIZED=NO
 FORCE_PUSH_AUTHORIZED=NO
@@ -47,12 +56,12 @@ PRODUCTION_AUTHORIZED=NO
 
 ## 2. Anomalie factuelle
 
-Les deux gardes locales de la base WO-027 vérifient actuellement qu'un port explicite est positif,
-mais ne vérifient pas sa borne supérieure :
+Sur la base WO-027, les deux gardes locales vérifiaient qu'un port explicite était positif, mais ne
+vérifiaient pas sa borne supérieure :
 
-- `OptionalLocalPushProperties.isLoopbackQualificationSafe()` accepte structurellement un port
+- `OptionalLocalPushProperties.isLoopbackQualificationSafe()` acceptait structurellement un port
   supérieur à `65535` ;
-- `BettingProjectJ7DeliveryHttpTransport.requireExactHttpsIpv4LoopbackOrigin()` applique la même
+- `BettingProjectJ7DeliveryHttpTransport.requireExactHttpsIpv4LoopbackOrigin()` appliquait la même
   validation incomplète.
 
 Une URI telle que `https://127.0.0.1:65536` peut ainsi franchir ces deux gardes. Le service persiste
@@ -62,6 +71,12 @@ livraison non envoyée peut alors rester `IN_FLIGHT` jusqu'à une réconciliatio
 
 Le risque n'est pas un accès réseau autorisé : il s'agit d'un défaut de validation fail-closed et
 d'auditabilité avant claim. Aucun appel réel n'est nécessaire pour le reproduire ou le corriger.
+
+Le commit `8fb4d5a64a8c36d553168c8e82cc4f46454ee96a` applique désormais l'intervalle fermé
+`[1, 65535]` dans les propriétés et à la frontière transport. Le commit
+`699d2245322ef9614f05f912371db8fd9edca2b9` verrouille explicitement le port absent, `0`, `1`,
+`65535` et `65536`, y compris la preuve de zéro interaction export/ledger/transport pour chaque
+origine invalide.
 
 ## 3. Objectif et périmètre
 
@@ -164,15 +179,32 @@ sans squash, rebase ni force-push.
 |---|---|---|
 | `2026-09-01T12:17:44.3637202Z` | Worktree ouvert depuis le tip exact de la PR #21 | `PASS` |
 | `2026-09-01T12:17:44.3637202Z` | Baseline et anomalie P2 consignées | `PASS` |
+| `2026-09-01T12:21:14Z` | Correctif runtime et tests ciblés initiaux | 48/0/0/0 ; `PASS` |
+| `2026-09-01T12:32:56Z` | Preuves complètes `-1`, `0`, `1`, `65535`, `65536` | 50/0/0/0 ; `PASS` |
+| `2026-09-01T12:37:12Z` | `mvnw.cmd --offline clean verify` | Surefire 1041/0/0/5 ; Failsafe 84/0/0/0 ; `PASS` |
+| `2026-09-01T12:40:46Z` | `mvnw.cmd --offline -Pintegration-tests verify` | Surefire 1041/0/0/5 ; Failsafe 84/0/0/0 ; `PASS` |
+| `2026-09-01T12:40:46Z` | migrations V1→V29, mTLS et end-to-end loopback | `PASS` |
+| `2026-09-01T12:41:07Z` | Compose, diff, secrets, flags, SHA WO-027 et ressources résiduelles | `PASS` |
 
-## 9. État d'ouverture
+## 9. État final local
 
 ```text
-WORK_ORDER_STATUS=IN_PROGRESS
-IMPLEMENTATION_STATUS=PENDING
-QUALIFICATION_STATUS=DRAFT
+WORK_ORDER_STATUS=VALIDATED
+IMPLEMENTATION_STATUS=COMPLETED
+QUALIFICATION_STATUS=PASS_LOCAL_FAIL_CLOSED
+QUALIFIED_CODE_AND_TEST_COMMIT=699d2245322ef9614f05f912371db8fd9edca2b9
+QUALIFIED_AT_UTC=2026-09-01T12:40:46Z
+WO029_QUALIFICATION_REPORT_SHA256=6c762e8a8ed2635395c3038a1549a2d9e0cade341f0b42feaface8bb77a1c963
+PORT_RANGE_GUARDS_QUALIFIED=YES
+BEFORE_CLAIM_INVARIANT_QUALIFIED=YES
+WO027_BYTE_IDENTITY_QUALIFIED=YES
+WO027_QUALIFICATION_REPORT_SHA256=d656b7ea12ba38a40b88e9a78e5b7afb9642c4405080b9246b8539d177eb1d12
+WO027_COMPLETED_WORK_ORDER_SHA256=be18d440edf33ae8c511c4b1bab5ad1e70f6c2167027d525769c98417ebf5c2c
+PR20_MERGED=YES
+PR20_MERGE_COMMIT=cb7c8efe72bd2ef4a5d0f9aab4ae72d4e75453bc
 PR21_REVIEW_THREAD_RESOLVED=NO
 PR21_MERGED=NO
+PR21_NEXT_ACTION=PUSH_RESOLVE_MERGE
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 REAL_DELIVERY_AUTHORIZED=NO
@@ -180,3 +212,7 @@ PROVIDER_NETWORK_AUTHORIZED=NO
 VPS_DEPLOYMENT_AUTHORIZED=NO
 PRODUCTION_AUTHORIZED=NO
 ```
+
+Le statut `VALIDATED` clôt la preuve locale de WO-029. Il ne préjuge pas des actions GitHub encore
+à exécuter : le push fast-forward, la résolution de la discussion puis la fusion par merge commit
+avec garde sur le tip exact sont consignés dans le rapport comme étapes suivantes.
