@@ -4,6 +4,28 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-032 actualisation de l’index des références
+
+- ouverture de `WO-SS-20260901-032-reference-index-refresh` depuis la référence locale
+  `origin/main` au commit exact `f3d7d3feb9c48859ba6ae182b7f6e78b11b1f089`, dans une branche
+  et un worktree documentaires dédiés ; WO-031 reste un lot séparé et n’est pas absorbé par cette
+  actualisation ;
+- ajout d’ADR-SS-003 v0.1 `ACCEPTED`, de WO-026 terminé et des suites locales WO-027 à WO-030 dans
+  `docs/reference/REFERENCES.md`, avec liens relatifs vers les sources versionnées ;
+- remplacement de l’étude « future » devenue obsolète par le résultat factuel :
+  `OPTIONAL_LOCAL_PUSH` sélectionné et `VPS_PLAYWRIGHT` différé,
+  `BLOCKED_BY_CURRENT_GOVERNANCE` ;
+- conservation de `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED` et distinction entre décision
+  d’architecture, socle local fail-closed et autorisations réelles toujours absentes ;
+- PDF `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf` explicitement exclu du lot et
+  contrôlé byte-identique à 259 004 octets, SHA-256
+  `746106cfe5142ad7b7426443b9730b22f281d6d844d108a5c371c7e08c9f1fee` ;
+- qualification locale `PASS` : `mvnw.cmd --offline clean verify` avec Surefire `1043/0/0/5` et
+  Failsafe `84/0/0/0`, onze liens locaux résolus, diff/scan de secrets/invariants propres et zéro
+  listener, processus ou conteneur Testcontainers résiduel ; passage à `READY_FOR_OWNER_REVIEW` ;
+- aucun changement d’ADR, code, configuration, schéma ou rapport ; aucun appel fournisseur,
+  receiver réel, livraison, VPS, production, push ou fusion autorisé sous WO-032.
+
 ### Après J9 — WO-030 borne de port de qualification Playwright fournisseur
 
 - ouverture de
