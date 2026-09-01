@@ -20,6 +20,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   gouvernance actuelle ; Playwright
   VPS reste `DEFERRED_BLOCKED_BY_CURRENT_GOVERNANCE`, car `LOCAL_ONLY`, ADR-SS-001 et la frontière
   des payloads bruts doivent être redécidés explicitement avant toute qualification distante ;
+- gel du draft proposé dans le commit local
+  `ca789a3a40ea5fc6c16312bd73f675bc9fd32650`, avec SHA-256 ADR-SS-003
+  `0edcc1e7db2ffc268d1560342d8c2f7c8ea9e1f91c65148e0504c1217f5982be`, afin de lier la future
+  décision propriétaire à un objet immuable ;
 - maintien de la permission officielle à `NOT_EVIDENCED` et définition de portes distinctes pour
   l'acceptation de l'ADR, un futur contrat HTTPS/mTLS, une éventuelle preuve VPS et toute décision
   de production ;

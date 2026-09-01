@@ -19,6 +19,9 @@
 - **Décision J9 finale :** `PREPARE_OPTIONAL_INTEGRATION`
 - **Permission officielle :** `NOT_EVIDENCED`
 - **ADR proposé :** `ADR-SS-003 v0.1` — `PROPOSED_NOT_ACCEPTED`
+- **Commit local de proposition :** `ca789a3a40ea5fc6c16312bd73f675bc9fd32650`
+- **SHA-256 du fichier ADR-SS-003 v0.1 proposé :**
+  `0edcc1e7db2ffc268d1560342d8c2f7c8ea9e1f91c65148e0504c1217f5982be`
 - **Type de lot :** documentation et décision d’architecture seulement
 
 ## 1. Décision d’ouverture et interprétation bornée
@@ -43,6 +46,8 @@ WORK_ORDER_STATUS=READY_FOR_ADR_OWNER_DECISION
 J9_FINAL_DECISION=PREPARE_OPTIONAL_INTEGRATION
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 ADR_SS_003_STATUS=PROPOSED_NOT_ACCEPTED
+ADR_SS_003_COMMIT=ca789a3a40ea5fc6c16312bd73f675bc9fd32650
+ADR_SS_003_FILE_SHA256=0edcc1e7db2ffc268d1560342d8c2f7c8ea9e1f91c65148e0504c1217f5982be
 ADR_SS_003_OWNER_DECISION_REQUIRED=YES
 ARCHITECTURE_OPTION_SELECTED_BY_OWNER=NO
 CODE_CHANGE_AUTHORIZED=NO
@@ -311,7 +316,7 @@ Avant tout prototype connecté :
 - [x] liens Markdown locaux contrôlés ;
 - [x] scan de secrets, cookies, jetons, payloads et chemins sensibles réussi ;
 - [x] `server.address=127.0.0.1` et flags réseau bloquants confirmés ;
-- [ ] commit documentaire local dédié créé.
+- [x] commit documentaire local dédié créé.
 
 Les cases de validation ne seront cochées qu’avec les sorties réellement observées.
 
@@ -344,6 +349,7 @@ Résultats du 2026-09-01 :
 | Adresse et flags | `PASS` : `server.address=127.0.0.1` ; `sofascore.enabled`, Playwright et toutes les qualifications restent à `false` par défaut ; base URL et allowlist restent vides |
 | Portée Git | quatre fichiers documentaires seulement ; ADR-SS-001, ADR-SS-002, `AGENTS.md`, code, configuration, migrations et `docs/reference` inchangés |
 | Réseau | aucun appel fournisseur ou transfert sous WO-026 |
+| Commit de proposition | `ca789a3a40ea5fc6c16312bd73f675bc9fd32650` ; ADR-SS-003 v0.1 SHA-256 `0edcc1e7db2ffc268d1560342d8c2f7c8ea9e1f91c65148e0504c1217f5982be` |
 
 ## 12. Bloc propriétaire futur pour ADR-SS-003
 
@@ -352,8 +358,8 @@ Le bloc suivant sera soumis après revue du présent lot. Il n’est pas prérem
 ```text
 ADR_SS_003_OWNER_DECISION=<ACCEPT|REJECT|REQUEST_REVISION>
 ADR_SS_003_VERSION=0.1
-ADR_SS_003_COMMIT=<commit local de proposition>
-ADR_SS_003_FILE_SHA256=<sha256 du fichier proposé>
+ADR_SS_003_COMMIT=ca789a3a40ea5fc6c16312bd73f675bc9fd32650
+ADR_SS_003_FILE_SHA256=0edcc1e7db2ffc268d1560342d8c2f7c8ea9e1f91c65148e0504c1217f5982be
 WORK_ORDER=WO-SS-20260901-026-optional-integration-feasibility
 PROPOSED_PRIMARY_TOPOLOGY=OPTIONAL_LOCAL_PUSH
 ADR_SS_003_SELECTED_TOPOLOGY=<OPTIONAL_LOCAL_PUSH|KEEP_LOCAL_NO_INTEGRATION|NONE>
