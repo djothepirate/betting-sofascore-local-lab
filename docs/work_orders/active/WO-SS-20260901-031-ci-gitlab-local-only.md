@@ -45,6 +45,7 @@ déploiement VPS.
 - [ ] Deux générations successives du SBOM ont la même empreinte et aucun numéro de série.
 - [ ] Le tag désigne le commit extrait, reste atteignable depuis `main` et correspond à la version
   Maven, sinon le packaging échoue.
+- [ ] Une release locale taguée ne contient aucun identifiant de pipeline propre à une forge.
 - [ ] Les rapports qualité initiaux sont produits puis la baseline est verrouillée.
 - [ ] Le projet GitLab privé homonyme est créé et porte le même SHA.
 - [ ] GitHub Actions et le premier pipeline GitLab sont verts.
