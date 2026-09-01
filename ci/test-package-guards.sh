@@ -86,6 +86,29 @@ if grep -Eq 'MAVEN_CACHE_POLICY|^[[:space:]]*cache:' .gitlab-ci.yml; then
     echo 'FAIL: le cache GitLab partagé reste interdit sans isolation serveur qualifiée.' >&2
     exit 1
 fi
+excluded_path_count=$(awk '
+    /^[[:space:]]*SECRET_DETECTION_EXCLUDED_PATHS[[:space:]]*:/ { count++ }
+    END { print count + 0 }
+' .gitlab-ci.yml)
+if [ "$excluded_path_count" -ne 1 ] \
+   || ! grep -Fq \
+    'SECRET_DETECTION_EXCLUDED_PATHS: "scripts/Invoke-J5PlaywrightLoopbackQualification.ps1"' \
+    .gitlab-ci.yml \
+   || ! grep -Fq 'expected_blob=62c2eba3fb980d68589a9804d2fa81bcc865a039' \
+       ci/check-no-secrets.sh; then
+    echo 'FAIL: l’exception GitLab des canaris doit rester limitée au blob synthétique audité.' >&2
+    exit 1
+fi
+if ! grep -Fq 'AST_ENABLE_MR_PIPELINES: "true"' .gitlab-ci.yml; then
+    echo 'FAIL: les scanners GitLab stables doivent s’exécuter dans les pipelines MR.' >&2
+    exit 1
+fi
+if ! grep -Fq \
+    'secret_scan_base="${CI_MERGE_REQUEST_DIFF_BASE_SHA:-${CI_COMMIT_BEFORE_SHA:-}}"' \
+    .gitlab-ci.yml; then
+    echo 'FAIL: le scan historique d’une MR doit partir de CI_MERGE_REQUEST_DIFF_BASE_SHA.' >&2
+    exit 1
+fi
 if grep -Fq 'target/*.jar' .gitlab-ci.yml; then
     echo 'FAIL: un JAR exécutable ne doit pas être conservé depuis les tests GitLab de branches ou MR.' >&2
     exit 1
@@ -129,6 +152,31 @@ awk '
 if ! cmp -s "$guard_fixture/workflow.expected" "$guard_fixture/workflow.actual"; then
     echo 'FAIL: la matrice workflow GitLab ne respecte plus le contrat branche/MR/tag/web.' >&2
     cat "$guard_fixture/workflow.actual" >&2
+    exit 1
+fi
+cat >"$guard_fixture/secret-detection.expected" <<'YAML'
+secret_detection:
+  allow_failure: false
+  variables:
+    GIT_DEPTH: "0"
+  rules:
+    - if: '$SECRET_DETECTION_DISABLED == "true" || $SECRET_DETECTION_DISABLED == "1"'
+      when: never
+    - if: '$CI_COMMIT_TAG'
+    - if: '$AST_ENABLE_MR_PIPELINES == "true" && $CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$AST_ENABLE_MR_PIPELINES == "true" && $CI_OPEN_MERGE_REQUESTS'
+      when: never
+    - if: '$CI_COMMIT_BRANCH'
+YAML
+awk '
+    /^secret_detection:$/ { capture = 1 }
+    capture && NR > 1 && /^[^[:space:]#]/ && $0 !~ /^secret_detection:$/ { exit }
+    capture && $0 !~ /^[[:space:]]*$/ { print }
+' .gitlab-ci.yml >"$guard_fixture/secret-detection.actual"
+if ! cmp -s "$guard_fixture/secret-detection.expected" \
+    "$guard_fixture/secret-detection.actual"; then
+    echo 'FAIL: Secret Detection doit couvrir MR, branches et tags sans doublon.' >&2
+    cat "$guard_fixture/secret-detection.actual" >&2
     exit 1
 fi
 sh ci/test-check-no-secrets-signals.sh

@@ -21,6 +21,7 @@ stages:
 
 variables:
   GIT_DEPTH: "0"
+  AST_ENABLE_MR_PIPELINES: "true"
   MAVEN_USER_HOME: "$CI_PROJECT_DIR/.m2"
   MAVEN_OPTS: >-
     -Dmaven.repo.local=$CI_PROJECT_DIR/.m2/repository
@@ -37,10 +38,25 @@ variables:
   OPTIONAL_INTEGRATION_ENABLED: "false"
   OPTIONAL_INTEGRATION_REMOTE_DELIVERY_AUTHORIZED: "false"
   SECRET_DETECTION_HISTORIC_SCAN: "true"
+  # Canaris synthétiques audités ; le scanner strict ne les exempte que pour le blob SHA connu.
+  SECRET_DETECTION_EXCLUDED_PATHS: "scripts/Invoke-J5PlaywrightLoopbackQualification.ps1"
   SAST_EXCLUDED_ANALYZERS: "spotbugs"
 
 default:
   interruptible: true
+
+secret_detection:
+  allow_failure: false
+  variables:
+    GIT_DEPTH: "0"
+  rules:
+    - if: '$SECRET_DETECTION_DISABLED == "true" || $SECRET_DETECTION_DISABLED == "1"'
+      when: never
+    - if: '$CI_COMMIT_TAG'
+    - if: '$AST_ENABLE_MR_PIPELINES == "true" && $CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$AST_ENABLE_MR_PIPELINES == "true" && $CI_OPEN_MERGE_REQUESTS'
+      when: never
+    - if: '$CI_COMMIT_BRANCH'
 
 .maven-java25:
   image:
@@ -55,7 +71,9 @@ validate:local-only:
   stage: validate
   script:
     - sh ci/assert-local-only.sh
-    - sh ci/check-no-secrets.sh "${CI_COMMIT_BEFORE_SHA:-}"
+    - |
+      secret_scan_base="${CI_MERGE_REQUEST_DIFF_BASE_SHA:-${CI_COMMIT_BEFORE_SHA:-}}"
+      sh ci/check-no-secrets.sh "$secret_scan_base"
     - sh ci/test-package-guards.sh
     - |
       ref="${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-${CI_COMMIT_BRANCH:-}}"
@@ -65,10 +83,11 @@ validate:local-only:
         sh ci/check-branch-name.sh "$ref"
       fi
     - |
-      if [ -n "${CI_COMMIT_BEFORE_SHA:-}" ] \
-        && ! printf '%s' "$CI_COMMIT_BEFORE_SHA" | grep -Eq '^0+$' \
-        && git cat-file -e "${CI_COMMIT_BEFORE_SHA}^{commit}" 2>/dev/null; then
-        git diff --check "${CI_COMMIT_BEFORE_SHA}...HEAD"
+      diff_base="${CI_MERGE_REQUEST_DIFF_BASE_SHA:-${CI_COMMIT_BEFORE_SHA:-}}"
+      if [ -n "$diff_base" ] \
+        && ! printf '%s' "$diff_base" | grep -Eq '^0+$' \
+        && git cat-file -e "${diff_base}^{commit}" 2>/dev/null; then
+        git diff --check "${diff_base}...HEAD"
       else
         git show --check --format= HEAD
       fi

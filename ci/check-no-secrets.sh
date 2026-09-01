@@ -83,9 +83,11 @@ while IFS= read -r path; do
     # Ce blob audité contient les valeurs synthétiques du test de fuite J5.
     # La moindre modification change son SHA et réactive le scan fail-closed.
     if is_vetted_synthetic_fixture "$path" HEAD; then continue; fi
-    if git cat-file blob "HEAD:$path" >"$blob_file" 2>/dev/null; then
-        scan_blob "$blob_file" "$path [HEAD]"
+    if ! git cat-file blob "HEAD:$path" >"$blob_file" 2>/dev/null; then
+        echo "FAIL: lecture Git impossible pour $path [HEAD]." >&2
+        exit 2
     fi
+    scan_blob "$blob_file" "$path [HEAD]"
 done <"$candidate_file"
 
 if [ -n "$base_ref" ] && ! printf '%s' "$base_ref" | grep -Eq '^0+$'; then
@@ -93,21 +95,38 @@ if [ -n "$base_ref" ] && ! printf '%s' "$base_ref" | grep -Eq '^0+$'; then
         echo 'FAIL: base Git explicite introuvable pendant le contrôle de secrets.' >&2
         exit 2
     fi
-    git rev-list --reverse "${base_ref}..HEAD" >"$commit_file"
-    while IFS= read -r commit; do
-        [ -n "$commit" ] || continue
-        git -c core.quotepath=false diff-tree --root -m --no-commit-id --name-only -r \
-            --diff-filter=ACMR "$commit" -- | LC_ALL=C sort -u >"$candidate_file"
-        while IFS= read -r path; do
-            [ -n "$path" ] || continue
-            case "$path" in target/*|exports/*|docs/reference/*) continue ;; esac
-            if is_vetted_synthetic_fixture "$path" "$commit"; then continue; fi
-            if git cat-file blob "$commit:$path" >"$blob_file" 2>/dev/null; then
-                scan_blob "$blob_file" "$path [commit $(printf '%.12s' "$commit")]"
-            fi
-        done <"$candidate_file"
-    done <"$commit_file"
+    revision_range="${base_ref}..HEAD"
+else
+    # Tags, premiers pushs et pipelines manuels n'ont pas toujours de base exploitable.
+    # Dans ce cas, le contrôle strict parcourt tout l'historique atteignable.
+    revision_range=HEAD
 fi
+if ! git rev-list --reverse "$revision_range" >"$commit_file"; then
+    echo 'FAIL: impossible d’énumérer l’historique Git pendant le contrôle de secrets.' >&2
+    exit 2
+fi
+while IFS= read -r commit; do
+    [ -n "$commit" ] || continue
+    if ! git -c core.quotepath=false diff-tree --root -m --no-commit-id --name-only -r \
+        --diff-filter=ACMR "$commit" -- >"$candidate_file"; then
+        echo "FAIL: impossible d’énumérer les fichiers du commit $commit." >&2
+        exit 2
+    fi
+    if ! LC_ALL=C sort -u -o "$candidate_file" "$candidate_file"; then
+        echo "FAIL: impossible d’ordonner les fichiers du commit $commit." >&2
+        exit 2
+    fi
+    while IFS= read -r path; do
+        [ -n "$path" ] || continue
+        case "$path" in target/*|exports/*|docs/reference/*) continue ;; esac
+        if is_vetted_synthetic_fixture "$path" "$commit"; then continue; fi
+        if ! git cat-file blob "$commit:$path" >"$blob_file" 2>/dev/null; then
+            echo "FAIL: lecture Git impossible pour $path [commit $commit]." >&2
+            exit 2
+        fi
+        scan_blob "$blob_file" "$path [commit $(printf '%.12s' "$commit")]"
+    done <"$candidate_file"
+done <"$commit_file"
 
 if [ "$findings" -ne 0 ]; then
     exit 1
