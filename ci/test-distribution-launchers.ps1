@@ -32,11 +32,21 @@ $originalDockerArgumentsEnvironment = $env:DISTRIBUTION_DOCKER_ARGS_FILE
 $poisonedEnvironment = [ordered]@{
     'SPRING_APPLICATION_JSON' = '{"server":{"address":"0.0.0.0"},"sofascore":{"enabled":true}}'
     'SPRING_CONFIG_IMPORT' = 'optional:https://example.invalid/config'
+    'SPRING-CONFIG-IMPORT' = 'optional:https://example.invalid/hyphen-config'
+    'spring.datasource.url' = 'jdbc:postgresql://example.invalid/dotted-forbidden'
+    'SPRING_CLOUD_CONFIG_URI' = 'https://example.invalid/cloud-config'
     'SPRING_PROFILES_INCLUDE' = 'sofascore-live-test'
     'SPRING_DATASOURCE_URL' = 'jdbc:postgresql://example.invalid/forbidden'
     'SPRING_FLYWAY_URL' = 'jdbc:postgresql://example.invalid/forbidden'
+    'LOGGING_CONFIG' = 'https://example.invalid/logback.xml'
+    'LOGGING.CONFIG' = 'https://example.invalid/dotted-logback.xml'
+    'POSTGRES_PORT' = '6543'
+    'POSTGRES_DB' = 'ambient_forbidden_database'
+    'POSTGRES_USER' = 'ambient_forbidden_user'
+    'POSTGRES_PASSWORD' = 'ambient_forbidden_password'
     'SERVER_ADDRESS' = '0.0.0.0'
     'MANAGEMENT_SERVER_ADDRESS' = '0.0.0.0'
+    'MANAGEMENT_ENDPOINTS_WEB_EXPOSURE_INCLUDE' = '*'
     'SOFASCORE_ENABLED' = 'true'
     'SOFASCORE_PLAYWRIGHT_ENABLED' = 'true'
     'SOFASCORE_PLAYWRIGHT_LOOPBACK_QUALIFICATION' = 'true'
@@ -71,8 +81,13 @@ try {
     Set-Content -LiteralPath (Join-Path $fixtureRoot '.env') -Value 'POSTGRES_DB=fixture' -Encoding ASCII
     Set-Content -LiteralPath (Join-Path $fixtureRoot 'compose.yaml') -Value 'services: {}' -Encoding ASCII
 
-    $fakeJava = @'
+$fakeJava = @'
 @echo off
+if not "%_JAVA_OPTIONS%"=="" exit /b 90
+if not "%JAVA_TOOL_OPTIONS%"=="" exit /b 90
+if not "%JDK_JAVA_OPTIONS%"=="" exit /b 90
+if not "%LOGGING_CONFIG%"=="" exit /b 90
+if not "%SPRING_CLOUD_CONFIG_URI%"=="" exit /b 90
 if "%~1"=="--version" (
   echo openjdk 25 2025-09-16
   exit /b 0
@@ -85,7 +100,7 @@ exit /b 0
 '@
     Set-Content -LiteralPath (Join-Path $binDirectory 'java.cmd') -Value $fakeJava -Encoding ASCII
 
-    $fakeDocker = @'
+$fakeDocker = @'
 @echo off
 >> "%DISTRIBUTION_DOCKER_ARGS_FILE%" echo %*
 if "%~1"=="--host" (
@@ -106,7 +121,23 @@ if "%~1"=="context" (
 )
 if "%~1"=="compose" (
   for %%A in (%*) do (
+    if "%%~A"=="config" (
+      if not "%POSTGRES_PORT%"=="" exit /b 91
+      if not "%POSTGRES_DB%"=="" exit /b 91
+      if not "%POSTGRES_USER%"=="" exit /b 91
+      if not "%POSTGRES_PASSWORD%"=="" exit /b 91
+    )
+    if "%%~A"=="up" (
+      if not "%POSTGRES_PORT%"=="" exit /b 91
+      if not "%POSTGRES_DB%"=="" exit /b 91
+      if not "%POSTGRES_USER%"=="" exit /b 91
+      if not "%POSTGRES_PASSWORD%"=="" exit /b 91
+    )
     if "%%~A"=="ps" (
+      if not "%POSTGRES_PORT%"=="" exit /b 91
+      if not "%POSTGRES_DB%"=="" exit /b 91
+      if not "%POSTGRES_USER%"=="" exit /b 91
+      if not "%POSTGRES_PASSWORD%"=="" exit /b 91
       echo fixture-postgres
       exit /b 0
     )
@@ -318,11 +349,17 @@ exit /b 0
 
     $unsafeChildEnvironment = @(
         Get-Content -LiteralPath $environmentFile | Where-Object {
-            $_ -match '^(_JAVA_OPTIONS=|JAVA_TOOL_OPTIONS=|JDK_JAVA_OPTIONS=|SPRING_APPLICATION_JSON=|SPRING_(CONFIG|PROFILES|DATASOURCE|FLYWAY)_|SERVER_|MANAGEMENT_SERVER_|SOFASCORE_|OPTIONAL_INTEGRATION_)'
+            $_ -match '^(_JAVA_OPTIONS=|JAVA_TOOL_OPTIONS=|JDK_JAVA_OPTIONS=|SPRING[_.-]|LOGGING[_.-]|POSTGRES[_.-]|SERVER[_.-]|MANAGEMENT[_.-]|SOFASCORE[_.-]|OPTIONAL[_.-]INTEGRATION[_.-])'
         }
     )
     if ($unsafeChildEnvironment.Count -ne 0) {
         throw "Unsafe ambient configuration reached Java: $($unsafeChildEnvironment -join ', ')"
+    }
+    foreach ($environmentName in $poisonedEnvironment.Keys) {
+        $restoredValue = [Environment]::GetEnvironmentVariable($environmentName)
+        if ($restoredValue -cne $poisonedEnvironment[$environmentName]) {
+            throw "The launcher did not restore ambient configuration: $environmentName"
+        }
     }
 
     & (Join-Path $scriptsDirectory 'Stop-Local.ps1')
@@ -355,6 +392,12 @@ exit /b 0
     }
     if (-not $nonZeroExitRejected) {
         throw 'The distribution launcher ignored a non-zero Java exit code.'
+    }
+    foreach ($environmentName in $poisonedEnvironment.Keys) {
+        $restoredValue = [Environment]::GetEnvironmentVariable($environmentName)
+        if ($restoredValue -cne $poisonedEnvironment[$environmentName]) {
+            throw "The failing launcher did not restore ambient configuration: $environmentName"
+        }
     }
     Remove-Item Env:DISTRIBUTION_JAVA_EXIT_CODE
 

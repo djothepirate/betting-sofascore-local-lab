@@ -7,34 +7,23 @@ $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
 
 $distributionRoot = Split-Path -Parent $PSScriptRoot
-& (Join-Path $PSScriptRoot 'Preflight-Local.ps1')
-
-$applicationJars = @(
-    Get-ChildItem -LiteralPath $distributionRoot -File -Filter 'betting-sofascore-local-lab-*.jar' |
-        Where-Object {
-            $_.Name -notmatch '-(sources|javadoc|tests|provider-playwright-worker)[.]jar$'
-        }
-)
-if ($applicationJars.Count -ne 1) {
-    throw "Exactly one bundled application JAR is required; found $($applicationJars.Count)."
-}
-$applicationJar = $applicationJars[0]
 
 function Test-IsUnsafeEnvironmentName {
     param([Parameter(Mandatory = $true)][string]$Name)
+
+    # Spring relaxed binding also accepts case, dots and hyphens on Windows.
+    $canonicalName = $Name.ToUpperInvariant() -replace '[.\-]', '_'
     return (
-        $Name -eq 'SPRING_APPLICATION_JSON' -or
-        $Name -like 'SPRING_CONFIG_*' -or
-        $Name -like 'SPRING_PROFILES_*' -or
-        $Name -like 'SPRING_DATASOURCE_*' -or
-        $Name -like 'SPRING_FLYWAY_*' -or
-        $Name -like 'SERVER_*' -or
-        $Name -like 'MANAGEMENT_SERVER_*' -or
-        $Name -like 'SOFASCORE_*' -or
-        $Name -like 'OPTIONAL_INTEGRATION_*' -or
-        $Name -eq '_JAVA_OPTIONS' -or
-        $Name -eq 'JAVA_TOOL_OPTIONS' -or
-        $Name -eq 'JDK_JAVA_OPTIONS'
+        $canonicalName -like 'SPRING_*' -or
+        $canonicalName -like 'LOGGING_*' -or
+        $canonicalName -like 'POSTGRES_*' -or
+        $canonicalName -like 'SERVER_*' -or
+        $canonicalName -like 'MANAGEMENT_*' -or
+        $canonicalName -like 'SOFASCORE_*' -or
+        $canonicalName -like 'OPTIONAL_INTEGRATION_*' -or
+        $canonicalName -eq '_JAVA_OPTIONS' -or
+        $canonicalName -eq 'JAVA_TOOL_OPTIONS' -or
+        $canonicalName -eq 'JDK_JAVA_OPTIONS'
     )
 }
 
@@ -68,6 +57,29 @@ function Get-LocalDockerArguments {
     }
     return @('--host', $endpoint)
 }
+
+$savedEnvironment = @{}
+try {
+    foreach ($environmentEntry in @(Get-ChildItem Env:)) {
+        if (Test-IsUnsafeEnvironmentName -Name $environmentEntry.Name) {
+            $savedEnvironment[$environmentEntry.Name] = $environmentEntry.Value
+            Remove-Item -LiteralPath "Env:$($environmentEntry.Name)"
+        }
+    }
+
+    # Sanitize before Preflight: even `java --version` must not consume ambient JVM options.
+    & (Join-Path $PSScriptRoot 'Preflight-Local.ps1')
+
+    $applicationJars = @(
+        Get-ChildItem -LiteralPath $distributionRoot -File -Filter 'betting-sofascore-local-lab-*.jar' |
+            Where-Object {
+                $_.Name -notmatch '-(sources|javadoc|tests|provider-playwright-worker)[.]jar$'
+            }
+    )
+    if ($applicationJars.Count -ne 1) {
+        throw "Exactly one bundled application JAR is required; found $($applicationJars.Count)."
+    }
+    $applicationJar = $applicationJars[0]
 
 Push-Location $distributionRoot
 try {
@@ -111,53 +123,39 @@ try {
 
     Write-Host 'POSTGRES_STATUS=HEALTHY'
     if ($RunApplication) {
-        $savedEnvironment = @{}
-        try {
-            foreach ($environmentEntry in @(Get-ChildItem Env:)) {
-                if (Test-IsUnsafeEnvironmentName -Name $environmentEntry.Name) {
-                    $savedEnvironment[$environmentEntry.Name] = $environmentEntry.Value
-                    Remove-Item -LiteralPath "Env:$($environmentEntry.Name)"
-                }
-            }
-            $javaArguments = @(
-                '-Djdk.httpclient.disableRetryConnect=true'
-                '-Djdk.httpclient.redirects.retrylimit=1'
-                '-Djdk.httpclient.enableAllMethodRetry=false'
-                '-jar'
-                $applicationJar.FullName
-                '--spring.profiles.active=local'
-                '--server.address=127.0.0.1'
-                '--server.port=8087'
-                '--sofascore.enabled=false'
-                '--sofascore.playwright.enabled=false'
-                '--sofascore.playwright.loopback-qualification=false'
-                '--sofascore.playwright.loopback-origin='
-                '--sofascore.j3-qualification-enabled=false'
-                '--sofascore.j4-event-details-qualification-enabled=false'
-                '--sofascore.j4-event-details-phase2-enabled=false'
-                '--sofascore.j5-event-data-qualification-enabled=false'
-                '--sofascore.tournament-event-discovery-enabled=false'
-                '--sofascore.automatic-refresh-enabled=false'
-                '--sofascore.live-polling-enabled=false'
-                '--optional-integration.enabled=false'
-                '--optional-integration.remote-delivery-authorized=false'
-                '--optional-integration.official-permission-status=NOT_EVIDENCED'
-                '--optional-integration.loopback-qualification=false'
-                '--optional-integration.loopback-origin='
-                '--optional-integration.automatic-retry-enabled=false'
-            )
-            Write-Host 'ENVIRONMENT_GUARDS=APPLIED'
-            Write-Host 'APPLICATION_STATUS=STARTING_LOCAL_ONLY'
-            & java @javaArguments
-            $applicationExitCode = $LASTEXITCODE
-            if ($applicationExitCode -ne 0) {
-                throw "The local application exited with code $applicationExitCode."
-            }
-        }
-        finally {
-            foreach ($savedEntry in $savedEnvironment.GetEnumerator()) {
-                Set-Item -LiteralPath "Env:$($savedEntry.Key)" -Value $savedEntry.Value
-            }
+        $javaArguments = @(
+            '-Djdk.httpclient.disableRetryConnect=true'
+            '-Djdk.httpclient.redirects.retrylimit=1'
+            '-Djdk.httpclient.enableAllMethodRetry=false'
+            '-jar'
+            $applicationJar.FullName
+            '--spring.profiles.active=local'
+            '--server.address=127.0.0.1'
+            '--server.port=8087'
+            '--sofascore.enabled=false'
+            '--sofascore.playwright.enabled=false'
+            '--sofascore.playwright.loopback-qualification=false'
+            '--sofascore.playwright.loopback-origin='
+            '--sofascore.j3-qualification-enabled=false'
+            '--sofascore.j4-event-details-qualification-enabled=false'
+            '--sofascore.j4-event-details-phase2-enabled=false'
+            '--sofascore.j5-event-data-qualification-enabled=false'
+            '--sofascore.tournament-event-discovery-enabled=false'
+            '--sofascore.automatic-refresh-enabled=false'
+            '--sofascore.live-polling-enabled=false'
+            '--optional-integration.enabled=false'
+            '--optional-integration.remote-delivery-authorized=false'
+            '--optional-integration.official-permission-status=NOT_EVIDENCED'
+            '--optional-integration.loopback-qualification=false'
+            '--optional-integration.loopback-origin='
+            '--optional-integration.automatic-retry-enabled=false'
+        )
+        Write-Host 'ENVIRONMENT_GUARDS=APPLIED'
+        Write-Host 'APPLICATION_STATUS=STARTING_LOCAL_ONLY'
+        & java @javaArguments
+        $applicationExitCode = $LASTEXITCODE
+        if ($applicationExitCode -ne 0) {
+            throw "The local application exited with code $applicationExitCode."
         }
         Write-Host 'APPLICATION_STATUS=STOPPED_EXIT_CODE_0'
     }
@@ -168,4 +166,10 @@ try {
 }
 finally {
     Pop-Location
+}
+}
+finally {
+    foreach ($savedEntry in $savedEnvironment.GetEnumerator()) {
+        Set-Item -LiteralPath "Env:$($savedEntry.Key)" -Value $savedEntry.Value
+    }
 }

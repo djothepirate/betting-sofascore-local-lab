@@ -16,6 +16,19 @@
   <version>0.1.0-SNAPSHOT</version>
   <name>SofaScore Local Lab</name>
   <description>Laboratoire local et contrôlé d'enrichissement SofaScore pour le Betting Project</description>
+  <url>https://github.com/djothepirate/betting-sofascore-local-lab</url>
+  <licenses>
+    <license>
+      <name>Proprietary</name>
+      <comments>All rights reserved. No license or other rights are granted except under a separate written agreement.</comments>
+    </license>
+  </licenses>
+  <scm>
+    <connection>scm:git:https://github.com/djothepirate/betting-sofascore-local-lab.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/djothepirate/betting-sofascore-local-lab.git</developerConnection>
+    <url>https://github.com/djothepirate/betting-sofascore-local-lab</url>
+    <tag>HEAD</tag>
+  </scm>
 
   <properties>
     <java.version>25</java.version>

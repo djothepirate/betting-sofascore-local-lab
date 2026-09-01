@@ -46,6 +46,8 @@ déploiement VPS.
 - [ ] Le job Linux exécute les tests standards et les 84 tests d'intégration sans réseau.
 - [ ] Le manifeste de l'archive indique `vps.deployable=false`.
 - [ ] Deux générations successives du SBOM ont la même empreinte et aucun numéro de série.
+- [ ] Le composant racine du SBOM est une application, référence ce dépôt et porte la licence
+  provisoire `Proprietary` plutôt que les métadonnées héritées de Spring Boot.
 - [ ] Le tag désigne le commit extrait, reste atteignable depuis `main` et correspond à la version
   Maven, sinon le packaging échoue.
 - [ ] Une version Maven finale non taguée reste un snapshot `LOCAL_ONLY` non promouvable et la PR
