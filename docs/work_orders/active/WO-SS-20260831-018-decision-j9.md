@@ -2,7 +2,7 @@
 
 - **Statut :** `IN_DEVELOPMENT`
 - **Date d'ouverture :** 2026-08-31
-- **Décision J9 finale :** `PENDING_NEW_PROVIDER_ROBUSTNESS_CAMPAIGN_AND_EVIDENCE`
+- **Décision J9 finale :** `PENDING_OWNER_CONFIRMATION_AFTER_WO023_PASS`
 - **Orientation propriétaire :** `PREPARE_OPTIONAL_INTEGRATION`
 - **Jalon :** J9 — Décision de gouvernance
 - **Base locale :** `40323faa7dca3341da6ef980b5762f1ff5a32a79`
@@ -11,6 +11,7 @@
 - **ADR applicable :** `ADR-SS-001 v1.4`
 - **ADR de preuve :** `ADR-SS-002 v1.0 — ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP ; v1.1 — ACCEPTED`
 - **Résultat de preuve WO-019 :** `STOPPED — KEEP_LOCAL_RECOMMENDED_THEN_REJECTED_AS_FINAL_DECISION`
+- **Résultat de preuve WO-023 :** `PASS — PREPARE_OPTIONAL_INTEGRATION_RECOMMENDED_PENDING_OWNER_CONFIRMATION`
 - **Prérequis runtime WO-021 :** `VALIDATED — LOCAL_ONLY, NO_PROVIDER_ACCESS`
 - **ADR d'intégration :** `ADR-SS-003 — NOT_CREATED`
 - **Appel fournisseur autorisé par ce Work Order :** `NO`
@@ -615,3 +616,69 @@ WO-021 est validé et archivé. ADR-SS-002 v1.1 est accepté et WO-022 est valid
 est ouvert pour la série autonome à usage unique et `CODEX_LOCAL_UI` est autorisé comme acteur sous
 condition. Restent obligatoires la readiness fraîche, la sauvegarde/restauration V28 post-arrêt, le
 manifeste gelé et le nouveau go global lié à ce manifeste et à une fenêtre UTC d'au plus 60 minutes.
+
+## 13. Consolidation factuelle après WO-023
+
+Cette section complète, sans les réécrire, les photographies historiques J8 et WO-019. Le rapport
+autonome WO-023 porte une nouvelle série complète D1/D2/D3 exécutée sous ADR-SS-002 v1.1 et classée
+`PASS` selon sa règle déterministe.
+
+| Critère J9 | Fait consolidé après WO-023 | Qualification | Lacune ou conséquence restante |
+|---|---|---|---|
+| Accessibilité et stabilité bornée | 28 tentatives sur six familles, 28 réponses HTTP 200 et 28 parsings ; huit sous-campagnes `COMPLETED`, zéro retry ou incident. | `PASS_BOUNDED_MULTI_DOSSIER` | Trois dossiers et une fenêtre ne prouvent ni disponibilité continue ni SLA. |
+| Complétude | D2 et D3 sont `COMPLETE · 100 %` sur les trois familles J5 ; D1 est à 100 % statistiques, 91 % incidents et 99 % compositions. | `PARTIAL_BOUNDED` | Les lacunes D1 sont optionnelles et bornées, mais interdisent de présenter le corpus comme strictement complet. |
+| Fraîcheur | Requêtes et réceptions sont horodatées dans l'enveloppe WO-023 ; aucun suivi continu de l'heure source n'est mesuré. | `PARTIAL` | Aucun polling, live ou engagement de fraîcheur continue. |
+| Coût d'appel | La série complète consomme 28 appels sur 38 pour trois dossiers exploitables ; cumul d'audit 48/58 avec WO-019. | `PASS_BOUNDED` | Les dix appels non utilisés sont expirés et non réutilisables ; le coût ne vaut que pour le mode manuel borné. |
+| Risque de blocage | Aucun 401, 403, 404, 429, 5xx, timeout, challenge, redirection, schéma incompatible ou arrêt sur D1/D2/D3. | `PASS_BOUNDED_MULTI_DOSSIER` | Aucune extrapolation statistique ou promesse de disponibilité. |
+| Délai fournisseur | Minimum de 3 000,277 ms entre départs de tentative et 3 088 ms entre `requested_at` fournisseur ; zéro intervalle inférieur à trois secondes. | `PASS_BOUNDED` | Mesure limitée à la série exécutée ; la cadence permanente reste interdite. |
+| Exactitude externe | Aucune source de vérité externe n'est comparée aux valeurs normalisées. | `NOT_MEASURED` | L'exactitude métier reste une condition d'une étude ultérieure. |
+| Valeur analytique externe | Aucun comparateur du Betting Project ne mesure un gain prédictif ou opérationnel. | `NOT_MEASURED` | La préparation optionnelle ne peut promettre aucune valeur analytique. |
+| Maintenabilité durable | La campagne démontre la compatibilité des parseurs présents, pas un coût d'adaptation futur. | `NOT_MEASURED` | Aucun engagement de compatibilité durable ou de délai de correction. |
+| Persistance et audit | 28 occurrences auditées, 24 snapshots insérés et 4 réponses fraîches dédupliquées ; zéro cache hit, unité dupliquée ou échec d'intégrité. | `PASS_LOCAL` | Les payloads restent locaux et hors documentation/Git. |
+| Export reproductible | Deux exports J8 avec mêmes bornes sont byte-identiques : 15 696 octets, SHA-256 `76d1983dc466356de033efae859822b005aa4e77f3fe19403619ff8e2c240580`, même population et zéro appel réseau. | `PASS_LOCAL_REPRODUCIBLE` | Cela ne constitue ni un export J7 nouvellement validé ni un contrat de livraison distant. |
+| Rétention, sauvegarde et restauration | Sauvegarde chiffrée fraîche et restauration isolée qualifiées sur V28 avant campagne ; aucune purge primaire. | `PASS_LOCAL_V28` | Toute future campagne ou production exigera sa propre politique et ses propres preuves fraîches. |
+| Indépendance du Betting Project | Dépôt séparé, manuel, désactivable, sans dépendance critique ; aucune intégration créée. | `PASS_CURRENT` | Toute topologie future doit préserver cette indépendance explicitement. |
+| Conditions d'utilisation | Restrictions officielles documentées ; aucune permission, licence ou limite applicable aux endpoints du laboratoire n'a été extraite. | `PARTIAL — RESTRICTIONS_PRESENT_PERMISSION_NOT_EVIDENCED` | Aucune conclusion juridique. Droits/permission restent une porte dure avant implémentation ou VPS. |
+| Sécurité et exploitation | Contexte Playwright non persistant, concurrence 1, aucun artefact interdit ; arrêt final sans listener, worker, navigateur possédé ou flag réseau actif. | `PASS_BOUNDED` | Aucun scheduler, polling, mode live, intégration ou production n'est autorisé. |
+| Option VPS future | Playwright rend une étude VPS concevable, mais aucune topologie, exposition, gestion de secrets, autorisation ou exploitation VPS n'est qualifiée. | `NOT_MEASURED / NOT_AUTHORIZED` | L'étude future comparera push local optionnel et Playwright VPS sous Work Order/ADR distincts. |
+
+Le rapport de référence est
+[J9-WO023-PROVIDER-ROBUSTNESS-CAMPAIGN-20260901](../../validation/J9-WO023-PROVIDER-ROBUSTNESS-CAMPAIGN-20260901.md),
+SHA-256 `1c6a97f872d5621efcaffa505d16a7724f81816891aa0a9a990a0abec56e87c1`. La campagne est à 28/38 nouvelles tentatives et 48/58 cumulées ;
+le go est `CONSUMED_AND_TERMINATED_BY_D3_COMPLETION` et le réseau est reverrouillé.
+
+### 13.1 Application des règles de recommandation
+
+`ABANDON` n'est pas déclenché : aucune incompatibilité structurelle, impossibilité d'audit/purge ou
+dépendance critique inévitable n'est établie. `KEEP_LOCAL` reste une option propriétaire possible,
+mais le nouvel élément qui déclenchait sa recommandation historique — la preuve `STOPPED` — est
+remplacé pour la décision courante par un rapport autonome `PASS`.
+
+La campagne, la restauration V28, l'audit et l'export sont conformes ; aucune incompatibilité
+structurelle n'est établie par les sources officielles consultées et l'indépendance actuelle reste
+démontrée. La recommandation déterministe devient donc `PREPARE_OPTIONAL_INTEGRATION`. Le statut
+officiel reste néanmoins `PERMISSION_NOT_EVIDENCED` : cette recommandation n'autorise qu'une future
+étude/ADR, jamais l'implémentation ou la production.
+
+```text
+J9_DECISION_RECOMMENDATION=PREPARE_OPTIONAL_INTEGRATION
+J9_DECISION=<ABANDON|KEEP_LOCAL|PREPARE_OPTIONAL_INTEGRATION>
+J9_DECIDED_AT_UTC=<timestamp propriétaire>
+J9_EVIDENCE_RESULT=PASS
+J9_EVIDENCE_REFERENCE=J9-WO023-PROVIDER-ROBUSTNESS-CAMPAIGN-20260901;SHA256=1c6a97f872d5621efcaffa505d16a7724f81816891aa0a9a990a0abec56e87c1
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PROVIDER_ACQUISITION_MODE=MANUAL_ON_DEMAND
+J9_INTEGRATION_IMPLEMENTATION_AUTHORIZED=NO
+J9_LIVE_OR_SCHEDULED_OPERATION_AUTHORIZED=NO
+J9_BETTING_PROJECT_CRITICAL_DEPENDENCY=NO
+J9_FUTURE_VPS_PRODUCTION_OPTION=NOT_EXCLUDED_BUT_NOT_AUTHORIZED
+J9_CURRENT_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_FINAL_DECISION=NOT_TAKEN
+J9_OWNER_CONFIRMATION_REQUIRED=YES
+```
+
+WO-023 reste `READY_FOR_OWNER_REVIEW` et WO-018 reste actif. Seule la validation explicite du
+rapport/WO-023 puis le choix explicite de l'une des trois valeurs peuvent remplacer
+`J9_FINAL_DECISION=NOT_TAKEN`, clôturer WO-018 et, si le choix est
+`PREPARE_OPTIONAL_INTEGRATION`, permettre ultérieurement l'ouverture d'un Work Order distinct pour
+proposer ADR-SS-003. ADR-SS-003 n'est pas créé par cette consolidation.

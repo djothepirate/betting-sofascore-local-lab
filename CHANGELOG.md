@@ -345,6 +345,31 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `ff909f298f7d3c99b1027c071ac4d783a19529f6241b37941151c2c08c418a9e`, avec runtime, readiness,
   sauvegarde, corpus, ordre A1..B4, ledgers et conditions d'arrêt. WO-023 devient
   `READY_FOR_GLOBAL_OWNER_GO`, ce qui ne vaut ni go courant, ni réseau ou campagne autorisés.
+- go propriétaire global reçu pour le commit `f632fd0`, le manifeste gelé et la fenêtre exacte
+  `[2026-08-31T23:45:00Z,2026-09-01T00:45:00Z)`, acteur ponctuel `CODEX_LOCAL_UI`, plafond 38
+  nouvelles tentatives et 58 cumulées, sans remplacement, purge primaire, intégration ou production ;
+- exécution séquentielle complète A1..B4 : quinze pages J3, une découverte tournoi, trois détails
+  J4 et neuf familles J5, soit 28 tentatives ; 28 réponses HTTP 200, 28 parsings, 24 insertions et
+  quatre déduplications après réponse fraîche, zéro cache hit, 404, autre HTTP, retry ou incident ;
+- D2 et D3 qualifiés `COMPLETE · 100 %` sur les trois familles J5 ; D1 conserve des lacunes
+  optionnelles bornées à `PARTIAL · 91 %` pour les incidents et `PARTIAL · 99 %` pour les
+  compositions, séparées du verdict de robustesse technique ;
+- cadence qualifiée avec minimum `3 000,277 ms` entre départs de tentative et `3 088 ms` entre
+  `requested_at` fournisseur, zéro intervalle inférieur à trois secondes, concurrence et overlap à
+  zéro ; 28/38 nouvelles tentatives, 48/58 cumulées et dix tentatives expirées non réutilisables ;
+- double export J8 post-campagne byte-identique sur deux exécutions de 15 696 octets, SHA-256
+  `76d1983dc466356de033efae859822b005aa4e77f3fe19403619ff8e2c240580`, même hash de population
+  `c8c19ddc3ece1497c26e3348ef78a736f1eaf8fe0b0980801d077f97ab2bf399`, couverture
+  `FULL_ATTEMPT_LEDGER` et zéro appel réseau ;
+- postflight vert : connecteur `SAFE`, circuit `LOCKED`, flags fournisseur à `false`, zéro listener
+  8087, application, worker, navigateur possédé, session/base J6 ou artefact Playwright interdit ;
+  vérifications finales à 946 tests standards et 67 intégrations sans échec/erreur, Flyway V28,
+  Compose, diff et contrôle des secrets réussis ;
+- rapport autonome `J9-WO023-PROVIDER-ROBUSTNESS-CAMPAIGN-20260901` au SHA-256
+  `1c6a97f872d5621efcaffa505d16a7724f81816891aa0a9a990a0abec56e87c1`, classé `PASS`. La matrice recommande désormais
+  `PREPARE_OPTIONAL_INTEGRATION`, sous confirmation propriétaire et avec permission officielle
+  toujours `NOT_EVIDENCED` ; le go est consommé, WO-023 reste `READY_FOR_OWNER_REVIEW` et réseau,
+  intégration, production et VPS courant restent interdits.
 
 ### J5 — correctif borné V15 des actions vides en tirs au but
 

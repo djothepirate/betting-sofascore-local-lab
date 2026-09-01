@@ -5,18 +5,20 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le jalon **J9 — Décision de gouvernance** reste ouvert sous `WO-SS-20260831-018`. L'orientation
-propriétaire initialement consignée était `PREPARE_OPTIONAL_INTEGRATION` ; elle ne constituait pas
-une décision finale. La campagne complémentaire WO-019 est désormais `STOPPED` après `20`
-tentatives directes sur un plafond de `38`, toutes limitées au chemin D1. D2 et D3 restent
-`NOT_STARTED_AFTER_GLOBAL_STOP`.
+propriétaire initiale `PREPARE_OPTIONAL_INTEGRATION` n'est toujours pas une décision finale. WO-019
+reste la campagne historique `STOPPED` de 20 tentatives ; son ancienne recommandation `KEEP_LOCAL`
+a été refusée comme décision finale sans être réécrite.
 
-La règle déterministe J9 a produit la recommandation `KEEP_LOCAL`, avec
-`J9_EVIDENCE_RESULT=STOPPED`. Le propriétaire a explicitement refusé cette recommandation comme
-décision finale le 2026-08-31. Ce refus ne sélectionne pas automatiquement une autre option :
+La nouvelle campagne autonome WO-023 est désormais `PASS` : les huit segments D1/D2/D3 ont produit
+28 réponses HTTP 200 et 28 parsings sur 38 tentatives autorisées, sans cache hit, 404, retry ou
+incident. La sauvegarde/restauration V28, le double export reproductible et le postflight sont
+qualifiés. La matrice recommande maintenant `PREPARE_OPTIONAL_INTEGRATION`, mais
 `J9_FINAL_DECISION=NOT_TAKEN` et
-`J9_DECISION_STATUS=PENDING_NEW_PROVIDER_ROBUSTNESS_CAMPAIGN_AND_EVIDENCE`. Il n'autorise ni intégration, ni
-production, ni nouvel appel fournisseur, ni polling, ni scheduler, ni mode live.
-La preuve arrêtée relève de WO-019 ; le profil sélectionné exigera une nouvelle campagne sous un
+`J9_DECISION_STATUS=PENDING_OWNER_CONFIRMATION_AFTER_WO023_PASS` jusqu'au choix propriétaire
+explicite. Le go est consommé, le réseau reverrouillé et aucune intégration, production, nouvelle
+campagne, acquisition live, tâche planifiée ou topologie VPS n'est autorisée.
+
+La preuve arrêtée relève de WO-019 ; le profil sélectionné a exigé une nouvelle campagne sous un
 nouveau Work Order. ADR-SS-002 v1.0 avait été accepté explicitement. Le premier
 contrôle J3 Playwright loopback de WO-019 et sa
 contre-qualification hors sandbox avaient produit `12` erreurs `RUNTIME_FAILURE` sur `14` tests à
@@ -192,6 +194,15 @@ zéro tentative WO-023 et zéro doublon ; le manifeste de campagne est gelé au 
 `ff909f298f7d3c99b1027c071ac4d783a19529f6241b37941151c2c08c418a9e`. WO-023 est prêt à recevoir
 un nouveau go propriétaire global lié à ce manifeste et à une fenêtre future, mais réseau
 fournisseur, campagne, go courant, purge primaire, intégration et production restent interdits.
+
+Le go global finalement reçu pour la fenêtre
+`[2026-08-31T23:45:00Z,2026-09-01T00:45:00Z)` a été consommé une fois. A1 à B4 ont terminé avec
+28/28 réponses et parsings, 24 snapshots insérés et quatre réponses fraîches dédupliquées, pour
+28/38 nouvelles tentatives et 48/58 cumulées avec WO-019. D2 et D3 sont complets sur les trois
+familles J5 ; D1 reste partiel à 91 % pour les incidents et 99 % pour les compositions. Le délai
+minimal observé est supérieur à trois secondes, l'export J8 est byte-identique sur deux exécutions,
+et l'arrêt final ne laisse aucun listener, worker, navigateur possédé ni artefact Playwright. Le go
+est terminé par l'achèvement D3 et ne peut pas être rejoué.
 
 La revue officielle factuelle a relevé des restrictions sur les requêtes automatisées, le scraping,
 l'agrégation et l'extraction substantielle sans consentement explicite ; aucune permission, licence
@@ -1168,6 +1179,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Readiness locale du durcissement de preuve WO-025](docs/validation/J9-WO025-BACKUP-CLEANUP-PROOF-HARDENING-READINESS-20260901.md)
 - [Qualification du nouvel essai V28 WO-023](docs/validation/J9-WO023-V28-BACKUP-RESTORE-RETRY-20260901.md)
 - [Manifeste gelé de campagne WO-023](docs/validation/J9-WO023-PROVIDER-CAMPAIGN-MANIFEST-20260901.md)
+- [Rapport autonome PASS de la campagne WO-023](docs/validation/J9-WO023-PROVIDER-ROBUSTNESS-CAMPAIGN-20260901.md)
 
 ## J3 et J4 validés, voies fournisseur de nouveau verrouillées
 

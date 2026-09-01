@@ -1,6 +1,6 @@
 # WO-SS-20260831-023 — Campagne autonome de robustesse fournisseur J9 sous ADR-SS-002 v1.1
 
-- **Statut :** `BLOCKED_AFTER_BACKUP_CLEANUP_UNCONFIRMED`
+- **Statut :** `READY_FOR_OWNER_REVIEW`
 - **Date d'ouverture :** 2026-08-31
 - **Décision propriétaire observée à :** 2026-08-31T13:08:48.0887445Z
 - **Jalon :** J9 — nouvelle preuve fournisseur autonome
@@ -13,11 +13,12 @@
 - **Profil :** `RESTART_FULL_D1_D2_D3`
 - **Usage de la nouvelle série :** `ONE_TIME`
 - **Acteur sélectionné :** `CODEX_LOCAL_UI`
-- **Exécution fournisseur immédiate :** `NOT_AUTHORIZED_PENDING_ALL_GATES_AND_MANIFEST_BOUND_GO`
+- **Exécution fournisseur :** `COMPLETED_ONE_TIME`
 - **Plafond de la nouvelle série :** 38 tentatives directes
 - **Plafond cumulatif d'audit J9 :** 58 tentatives directes
 - **Réseau fournisseur :** `NOT_AUTHORIZED`
-- **Go global fournisseur :** `NOT_GRANTED`
+- **Go global fournisseur :** `CONSUMED_AND_TERMINATED_BY_D3_COMPLETION`
+- **Résultat de preuve :** `PASS — 28/38 nouvelles tentatives, 48/58 cumulées`
 - **Intégration, production ou VPS courant :** `NOT_AUTHORIZED`
 - **Option VPS future :** `NOT_EXCLUDED_BUT_NOT_AUTHORIZED`
 
@@ -744,3 +745,101 @@ J9_FINAL_DECISION=NOT_TAKEN
 satisfaites. Aucun processus fournisseur ne sera lancé et aucun go ne sera déduit de décisions
 antérieures. Le prochain bloc propriétaire devra citer le commit local qui introduit ce manifeste,
 son chemin, son SHA-256 et une nouvelle fenêtre UTC future d'au plus 60 minutes.
+
+## 17. Go global exécuté et campagne autonome
+
+Le propriétaire a ensuite fourni un go global complet, lié au commit et au manifeste gelés, avec
+une fenêtre exacte de 60 minutes. Ce bloc a autorisé une seule série D1/D2/D3 et aucun autre effet :
+
+```text
+J9_WO023_GLOBAL_OWNER_GO_DECISION=GRANT
+WORK_ORDER=WO-SS-20260831-023-j9-provider-robustness-v11
+WORK_ORDER_COMMIT=f632fd0377f2715c15fc2e030168a35a67f98552
+MANIFEST_REFERENCE=docs/validation/J9-WO023-PROVIDER-CAMPAIGN-MANIFEST-20260901.md
+MANIFEST_SHA256=ff909f298f7d3c99b1027c071ac4d783a19529f6241b37941151c2c08c418a9e
+ADR=ADR-SS-002_v1.1
+ADR_STATUS=ACCEPTED
+HISTORICAL_REPORT=docs/validation/J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831.md
+HISTORICAL_REPORT_SHA256=47e6171eeb1fc44cf995c727d4f09107875c844e71e8b183068731cbb4c62b9d
+BACKUP_REPORT=docs/validation/J9-WO023-V28-BACKUP-RESTORE-RETRY-20260901.md
+BACKUP_REPORT_SHA256=c29ce8593ccd54ca4347636cf9bcf881d1f36081348a5850e134e69cffab9bbe
+TARGET_PROVIDER_EVENT_IDS=16691018,16671566,16310930
+TARGET_CANONICAL_EVENT_IDS=f4713f80-4769-3656-ba51-61d8ac1aa814,da075869-34d4-3d42-83d2-613583691845,c40066c9-987b-38d9-b415-869a453d2ad6
+HISTORICAL_DIRECT_ATTEMPTS_FROZEN=20
+NEW_SERIES_MAXIMUM_DIRECT_ATTEMPTS=38
+AUDIT_MAXIMUM_CUMULATIVE_DIRECT_ATTEMPTS=58
+EXECUTION_ACTOR=CODEX_LOCAL_UI
+WINDOW_UTC=[2026-08-31T23:45:00Z,2026-09-01T00:45:00Z)
+MAXIMUM_WINDOW_DURATION=60m
+GO_USE=ONE_TIME
+REPLACEMENT_DOSSIER_ALLOWED=NO
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+```
+
+Le préflight T0 a validé le commit exact, les trois hashes, la branche propre, les flags bloqués,
+le contrôle `SAFE/LOCKED`, l'absence de listener/processus/artefact et le ledger de base à 116.
+Le premier claim J3 a consommé le go. Les huit segments A1 à B4 ont ensuite terminé séquentiellement :
+
+| Segment | Périmètre | Tentatives | Résultat |
+|---|---|---:|---|
+| A1 | J3 pages 1 à 15 | 15 | 15 `HTTP 200 / PARSED / INSERTED` |
+| A2 | tournoi D1 | 1 | `HTTP 200 / PARSED / DEDUPLICATED` après réponse fraîche |
+| A3 | J4 D1 | 1 | `HTTP 200 / PARSED / INSERTED` |
+| A4 | J5 D1 | 3 | 3 `HTTP 200 / PARSED / DEDUPLICATED` après réponses fraîches |
+| B1 | J4 D2 | 1 | `HTTP 200 / PARSED / INSERTED` |
+| B2 | J5 D2 | 3 | 3 `HTTP 200 / PARSED / INSERTED` |
+| B3 | J4 D3 | 1 | `HTTP 200 / PARSED / INSERTED` |
+| B4 | J5 D3 | 3 | 3 `HTTP 200 / PARSED / INSERTED` |
+
+Le ledger final contient les IDs 117 à 144 : 28 tentatives, 28 réponses, 28 parsings, 24 insertions
+et quatre déduplications fraîches, sans cache, 404, retry ou incident. D2 et D3 sont complets sur
+les trois familles J5 ; D1 conserve deux lacunes optionnelles bornées (`91 %` incidents et `99 %`
+compositions). Le délai minimal entre départs de tentative est `3 000,277 ms` et le minimum entre
+`requested_at` fournisseur est `3 088 ms`, sans intervalle inférieur à trois secondes.
+
+## 18. Postflight, rapport autonome et porte propriétaire
+
+Le rapport autonome
+[J9-WO023-PROVIDER-ROBUSTNESS-CAMPAIGN-20260901](../../validation/J9-WO023-PROVIDER-ROBUSTNESS-CAMPAIGN-20260901.md)
+porte le détail du ledger, les tailles et hashes de payload, les bornes, la complétude, le double
+export et le postflight. Son SHA-256 est
+`1c6a97f872d5621efcaffa505d16a7724f81816891aa0a9a990a0abec56e87c1`.
+
+Le double export J8 est byte-identique sur deux exécutions : 15 696 octets, SHA-256
+`76d1983dc466356de033efae859822b005aa4e77f3fe19403619ff8e2c240580`, hash de population
+`c8c19ddc3ece1497c26e3348ef78a736f1eaf8fe0b0980801d077f97ab2bf399`, couverture
+`FULL_ATTEMPT_LEDGER`, 28/28/28 tentatives/réponses/parsings et zéro appel réseau d'export.
+
+Après B4, l'arrêt normal a laissé zéro listener 8087, application, worker Playwright, descendant
+Node/navigateur possédé, processus `age`, session J6, base temporaire, profil/téléchargement ou
+artefact Playwright interdit. Le connecteur est `SAFE`, le circuit `LOCKED`, `.env` conserve tous
+les flags fournisseur à `false`, `server.address=127.0.0.1` et le réseau est de nouveau interdit.
+
+Les validations post-campagne sont vertes : 946 tests standards, zéro échec/erreur et cinq ignorés ;
+67 tests d'intégration, zéro échec/erreur ; Flyway V28 ; configuration Compose valide ; contrôle du
+diff et des secrets documentaire réussi.
+
+```text
+WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+EVIDENCE_STATUS=PASS
+CAMPAIGN_EXECUTION=COMPLETED_ONE_TIME
+GLOBAL_OWNER_GO=CONSUMED_AND_TERMINATED_BY_D3_COMPLETION
+OWNER_GO_CONSUMED=YES
+NEW_SERIES_DIRECT_ATTEMPTS=28
+NEW_SERIES_MAXIMUM_DIRECT_ATTEMPTS=38
+AUDIT_CUMULATIVE_DIRECT_ATTEMPTS=48
+AUDIT_MAXIMUM_CUMULATIVE_DIRECT_ATTEMPTS=58
+UNUSED_AUTHORIZED_ATTEMPTS=10_NOT_REUSABLE
+PROVIDER_NETWORK_AUTHORIZED=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO_COMPLETED
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_FUTURE_VPS_PRODUCTION_OPTION=NOT_EXCLUDED_BUT_NOT_AUTHORIZED
+J9_FINAL_DECISION=NOT_TAKEN
+J9_OWNER_CONFIRMATION_REQUIRED=YES
+```
+
+WO-023 reste actif jusqu'à sa validation explicite par le propriétaire. Son `PASS` produit une
+recommandation J9, pas une décision finale, et n'autorise ni ADR-SS-003, ni intégration, ni
+production, ni nouvelle campagne fournisseur.
