@@ -29,6 +29,8 @@ $hadDockerContextEnvironment = Test-Path Env:DOCKER_CONTEXT
 $originalDockerContextEnvironment = $env:DOCKER_CONTEXT
 $hadDockerArgumentsEnvironment = Test-Path Env:DISTRIBUTION_DOCKER_ARGS_FILE
 $originalDockerArgumentsEnvironment = $env:DISTRIBUTION_DOCKER_ARGS_FILE
+$hadDockerVolumeEnvironment = Test-Path Env:DISTRIBUTION_DOCKER_VOLUME_EXISTS
+$originalDockerVolumeEnvironment = $env:DISTRIBUTION_DOCKER_VOLUME_EXISTS
 $poisonedEnvironment = [ordered]@{
     'SPRING_APPLICATION_JSON' = '{"server":{"address":"0.0.0.0"},"sofascore":{"enabled":true}}'
     'SPRING_CONFIG_IMPORT' = 'optional:https://example.invalid/config'
@@ -75,6 +77,7 @@ try {
     Copy-Item -LiteralPath (Join-Path $repositoryRoot 'ci\distribution\Preflight-Local.ps1') -Destination $scriptsDirectory
     Copy-Item -LiteralPath (Join-Path $repositoryRoot 'ci\distribution\Start-Local.ps1') -Destination $scriptsDirectory
     Copy-Item -LiteralPath (Join-Path $repositoryRoot 'ci\distribution\Stop-Local.ps1') -Destination $scriptsDirectory
+    Copy-Item -LiteralPath (Join-Path $repositoryRoot 'scripts\Initialize-LocalConfig.ps1') -Destination $scriptsDirectory
 
     $jarPath = Join-Path $fixtureRoot 'betting-sofascore-local-lab-1.2.3.jar'
     Set-Content -LiteralPath $jarPath -Value 'fixture-jar' -Encoding ASCII
@@ -119,6 +122,12 @@ if "%~1"=="context" (
   )
   exit /b 0
 )
+if "%~1"=="volume" (
+  if "%~2"=="ls" (
+    if "%DISTRIBUTION_DOCKER_VOLUME_EXISTS%"=="1" echo betting-sofascore-local-lab-postgres-data
+    exit /b 0
+  )
+)
 if "%~1"=="compose" (
   for %%A in (%*) do (
     if "%%~A"=="config" (
@@ -155,6 +164,57 @@ exit /b 0
     Remove-Item Env:DOCKER_HOST -ErrorAction SilentlyContinue
     Remove-Item Env:DOCKER_CONTEXT -ErrorAction SilentlyContinue
     Remove-Item Env:DISTRIBUTION_DOCKER_ENDPOINT -ErrorAction SilentlyContinue
+
+    $initializer = Join-Path $scriptsDirectory 'Initialize-LocalConfig.ps1'
+    $envPath = Join-Path $fixtureRoot '.env'
+    Remove-Item -LiteralPath $envPath -Force
+    $env:DISTRIBUTION_DOCKER_VOLUME_EXISTS = '1'
+    $persistentVolumeRejected = $false
+    try {
+        & $initializer
+    }
+    catch {
+        if ($_.Exception.Message -notmatch 'Persistent PostgreSQL volume') {
+            throw
+        }
+        $persistentVolumeRejected = $true
+    }
+    if (-not $persistentVolumeRejected) {
+        throw 'The initializer replaced credentials while the persistent PostgreSQL volume existed.'
+    }
+    if (Test-Path -LiteralPath $envPath) {
+        throw 'The rejected initialization created an .env file.'
+    }
+
+    $env:DISTRIBUTION_DOCKER_VOLUME_EXISTS = '0'
+    & $initializer
+    if (-not (Test-Path -LiteralPath $envPath -PathType Leaf)) {
+        throw 'The initializer did not create .env when the persistent volume was absent.'
+    }
+    $initialConfig = Get-Content -LiteralPath $envPath -Raw
+    if ($initialConfig -notmatch '(?m)^POSTGRES_PASSWORD=[A-Za-z0-9]{43}\r?$') {
+        throw 'The initializer did not create the expected random PostgreSQL password.'
+    }
+
+    $env:DISTRIBUTION_DOCKER_VOLUME_EXISTS = '1'
+    $rotationRejected = $false
+    try {
+        & $initializer -Force
+    }
+    catch {
+        if ($_.Exception.Message -notmatch 'Persistent PostgreSQL volume') {
+            throw
+        }
+        $rotationRejected = $true
+    }
+    if (-not $rotationRejected) {
+        throw 'The -Force option bypassed the persistent PostgreSQL credential guard.'
+    }
+    if ((Get-Content -LiteralPath $envPath -Raw) -cne $initialConfig) {
+        throw 'The rejected credential rotation modified .env.'
+    }
+    Remove-Item Env:DISTRIBUTION_DOCKER_VOLUME_EXISTS
+    Write-Host 'DISTRIBUTION_POSTGRES_CREDENTIALS=PASS_FAIL_CLOSED_PERSISTENT_VOLUME'
 
     $preflight = Join-Path $scriptsDirectory 'Preflight-Local.ps1'
     & $preflight -SkipDocker -SkipEnvironmentFile
@@ -402,6 +462,7 @@ exit /b 0
     Remove-Item Env:DISTRIBUTION_JAVA_EXIT_CODE
 
     $launcherPaths = @(
+        (Join-Path $scriptsDirectory 'Initialize-LocalConfig.ps1')
         (Join-Path $scriptsDirectory 'Preflight-Local.ps1')
         (Join-Path $scriptsDirectory 'Start-Local.ps1')
         (Join-Path $scriptsDirectory 'Stop-Local.ps1')
@@ -462,6 +523,12 @@ finally {
     }
     else {
         Remove-Item Env:DISTRIBUTION_DOCKER_ARGS_FILE -ErrorAction SilentlyContinue
+    }
+    if ($hadDockerVolumeEnvironment) {
+        $env:DISTRIBUTION_DOCKER_VOLUME_EXISTS = $originalDockerVolumeEnvironment
+    }
+    else {
+        Remove-Item Env:DISTRIBUTION_DOCKER_VOLUME_EXISTS -ErrorAction SilentlyContinue
     }
     foreach ($environmentName in $poisonedEnvironment.Keys) {
         if ($originalPoisonedEnvironment.ContainsKey($environmentName)) {

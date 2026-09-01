@@ -43,6 +43,9 @@ déploiement VPS.
 - [ ] Le job Windows qualifie, sans Maven ni `pom.xml`, le launcher exact livré dans l'archive :
   sélection d'un JAR unique, répertoire courant extrait, profil local, barrières JVM anti-retry,
   environnement hostile neutralisé et refus des daemon/contexte Docker distants.
+- [ ] L'initialiseur refuse de créer ou de faire tourner les identifiants tant que le volume
+  PostgreSQL persistant existe ; une nouvelle extraction doit réutiliser l'ancien `.env` ou passer
+  par la suppression explicite des données avant de générer un nouveau mot de passe.
 - [ ] Le job Linux exécute les tests standards et les 84 tests d'intégration sans réseau.
 - [ ] Le manifeste de l'archive indique `vps.deployable=false`.
 - [ ] Deux générations successives du SBOM ont la même empreinte et aucun numéro de série.

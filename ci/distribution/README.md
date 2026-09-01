@@ -19,6 +19,13 @@ pwsh -NoProfile -File .\scripts\Preflight-Local.ps1
 pwsh -NoProfile -File .\scripts\Start-Local.ps1 -RunApplication
 ```
 
+Le fichier `.env` contient les identifiants du volume PostgreSQL persistant : le conserver et le
+réutiliser lors d'une nouvelle extraction. L'initialiseur refuse de générer ou de faire tourner un
+mot de passe si le volume `betting-sofascore-local-lab-postgres-data` existe déjà. Dans ce cas,
+recopier le `.env` de l'extraction précédente ou, si les données peuvent être perdues, exécuter
+explicitement `Stop-Local.ps1 -RemoveData` depuis cette extraction avant de relancer
+`Initialize-LocalConfig.ps1`. L'option `-Force` ne contourne jamais cette protection.
+
 Le lanceur démarre PostgreSQL, attend son état sain, puis exécute directement l'unique JAR livré.
 Il ne dépend ni d'un dépôt source, ni de Maven, ni du Maven Wrapper. L'application reste liée à
 `127.0.0.1` et les intégrations fournisseur et receiver demeurent désactivées. Les launchers

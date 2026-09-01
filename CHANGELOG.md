@@ -14,6 +14,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   l'unique JAR embarqué, sans Maven, en conservant le profil local, les barrières JVM anti-retry et
   la neutralisation des surcharges d'environnement réseau, serveur, datasource et receiver ; les
   commandes Compose figent leur projet et refusent tout daemon Docker non local ;
+- refus fail-closed de générer ou de faire tourner les identifiants PostgreSQL lorsqu'un volume
+  persistant existe déjà : une nouvelle extraction doit réutiliser le `.env` précédent ou supprimer
+  explicitement les données avant toute rotation du mot de passe ;
 - production de distributions `EXPERIMENTAL_LOCAL_ONLY` contenant JAR, SBOM CycloneDX,
   provenance et SHA-256, avec `vps.deployable=false` et sans profil fournisseur ;
 - génération CycloneDX reproductible à partir de l’horodatage du commit, sans numéro de série,

@@ -21,13 +21,12 @@ cp "$repository/ci/distribution/Start-Local.ps1" \
     "$fixture/ci/distribution/Start-Local.ps1"
 cp "$repository/ci/distribution/Stop-Local.ps1" \
     "$fixture/ci/distribution/Stop-Local.ps1"
+cp "$repository/scripts/Initialize-LocalConfig.ps1" \
+    "$fixture/scripts/Initialize-LocalConfig.ps1"
 printf '#!/usr/bin/env sh\nexit 0\n' >"$fixture/ci/assert-local-only.sh"
 printf 'fixture-jar\n' >"$fixture/target/application.jar"
 for file in .env.example compose.yaml SECURITY.md; do
     printf 'release fixture\n' >"$fixture/$file"
-done
-for file in Initialize-LocalConfig.ps1; do
-    printf '# release fixture\n' >"$fixture/scripts/$file"
 done
 
 cat >"$fixture/mvnw" <<'MVNW'
@@ -279,6 +278,8 @@ if ! grep -Fxq 'artifact.version=1.2.3' "$provenance"; then
     exit 1
 fi
 if ! cmp -s "$repository/ci/distribution/README.md" "$fixture/inspect/README.md" ||
+   ! cmp -s "$repository/scripts/Initialize-LocalConfig.ps1" \
+       "$fixture/inspect/scripts/Initialize-LocalConfig.ps1" ||
    ! cmp -s "$repository/ci/distribution/Preflight-Local.ps1" \
        "$fixture/inspect/scripts/Preflight-Local.ps1" ||
    ! cmp -s "$repository/ci/distribution/Start-Local.ps1" \
