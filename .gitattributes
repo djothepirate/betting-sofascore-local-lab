@@ -14,6 +14,10 @@
 mvnw text eol=lf
 *.cmd text eol=crlf
 *.ps1 text eol=crlf
+docs/validation/J9-WO034-PERMISSION-REQUEST-PRIMARY-TEMPLATE-20260901.txt text eol=lf
+docs/validation/J9-WO034-PERMISSION-REQUEST-SYNTHETIC-FIXTURE-20260901.properties text eol=lf
+scripts/Render-WO034PermissionRequest.ps1 text eol=lf
+scripts/Invoke-WO034PermissionRequest.ps1 text eol=lf
 *.pdf binary
 *.zip binary
 *.bundle binary

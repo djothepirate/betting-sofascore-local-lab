@@ -1,0 +1,71 @@
+Hello SofaScore Product / API team,
+
+My name is {{REQUESTOR_FULL_LEGAL_NAME}}, and I am {{REQUESTOR_ROLE}} for {{ORGANIZATION_OR_PROJECT_OWNER}} in {{COUNTRY_AND_JURISDICTION}}. I am submitting this request as {{LEGAL_ENTITY_DESCRIPTION}}.
+
+I am requesting written guidance and, if available, explicit permission for a small, bounded integration involving two separate Java applications:
+
+1. "betting-sofascore-local-lab", an experimental Windows application that manually initiates limited football-data acquisitions; and
+2. "betting-project", a separate betting-related analytics application intended to receive only a minimized, normalized and human-reviewed export.
+
+{{REPOSITORY_BLOCK}}The intended use is: {{BETTING_RELATED_USE_DESCRIPTION}}. It is classified as {{INTENDED_USE_DESCRIPTION}}, and the resulting data would be available to {{END_USER_ACCESS_DESCRIPTION}}. The laboratory itself {{LAB_WAGER_STATEMENT}}
+
+The receiving application would never call SofaScore and would never trigger a SofaScore acquisition. It is {{RECEIVER_CONTROL_DESCRIPTION}} and is operated by {{RECEIVER_OPERATOR_IDENTITY}}. For an end-to-end test, both applications must run at the same time, but the sequence would remain strictly separated:
+
+operator-initiated bounded acquisition, then local parsing and human validation, then separate HTTPS delivery of an already-existing export to the receiver.
+
+Activating delivery means a separate explicit operator action on one already HUMAN_VALIDATED J7 export. It sends one request to the receiver; it is not an automatic consequence of validation and does not start provider acquisition.
+
+We envisage a staged qualification:
+
+1. both applications running on the same Windows workstation;
+2. the laboratory remaining on Windows while the receiver runs on a production VPS hosted by {{RECEIVER_FUTURE_HOSTING_PROVIDER}} in {{RECEIVER_FUTURE_HOSTING_COUNTRY}}, region {{RECEIVER_FUTURE_HOSTING_REGION}};
+{{COLOCATION_LIST_ITEM}}
+{{IP_DISCLOSURE_BLOCK}}No raw SofaScore response, cookie, token, browser session, certificate material or provider URL would be sent to the receiver.
+
+The requested football-data families are:
+
+- scheduled football events;
+- scheduled events for one tournament and date;
+- event details;
+- event statistics;
+- event incidents;
+- event lineups.
+
+There is no live polling, background scheduler or automatic retry. Requests are sequential, with concurrency 1 and at least three seconds between request starts. A known-event operation requires up to four GET requests.
+
+For full transparency, two one-off bounded evidence series have already taken place. The first was stopped after 20 direct attempts. A later independent series completed with 28 direct attempts under a 38-attempt maximum. The cumulative audit ceiling for those two series was 58, and 48 attempts were effectively made. These are historical validation counts, not an ongoing cadence.
+
+The future expected cadence would be {{EXPECTED_MANUAL_ACQUISITIONS_PER_DAY}} manual acquisitions per day and {{EXPECTED_MANUAL_ACQUISITIONS_PER_WEEK}} per week, with {{EXPECTED_DIRECT_ATTEMPTS_PER_DAY}} direct provider attempts per day and {{EXPECTED_DIRECT_ATTEMPTS_PER_MONTH}} per month, subject to any lower or different limits specified by SofaScore.
+
+The experimental client currently uses Playwright with a fresh, non-persistent browser context to issue one allowlisted GET request at a time. It does not scrape rendered HTML or the DOM, establish a reusable browser session, solve challenges, use stealth extensions, rotate proxies or addresses, retain browser storage, reuse cookies, or retry after a refusal. Please confirm whether this transport is acceptable. If it is not, please identify the official API product, credentials and transport that must be used instead.
+
+The following declarations cover {{DATA_USE_SCOPE_DESCRIPTION}}:
+
+- model training: {{MODEL_TRAINING_STATEMENT}}
+- data resale: {{DATA_RESALE_STATEMENT}}
+- public redistribution: {{PUBLIC_REDISTRIBUTION_STATEMENT}}
+
+We request permission for {{REQUESTED_PERMISSION_DURATION}}. Raw responses would be retained locally for no more than 30 days and could be included in an encrypted recovery backup only under the controls described in this request.
+
+At the time of our review on 1 September 2026, we found the public SofaScore Terms and the External API documentation, but did not identify a licence or permission clearly applicable to this use. We are therefore asking before enabling further real provider use or real data delivery.
+
+Could you please confirm:
+
+1. whether the described betting-related use is permitted;
+2. which official API product, host, authentication method and contract must be used;
+3. whether the six data families listed above are available under that product;
+4. the applicable pricing, attribution and per-second, per-minute, per-day and per-month limits;
+5. whether raw responses may be retained locally for up to 30 days and included in an encrypted recovery backup;
+6. whether the responses may be parsed and normalized, and whether minimized, human-reviewed event data may be retained and transmitted to the receiver described above;
+7. whether a production-VPS receiver may accept the normalized export while acquisition remains on Windows;
+{{HOSTED_PROVIDER_QUESTIONS_BLOCK}}
+
+A detailed technical appendix and the exact route templates are available on request.
+
+Kind regards,
+
+{{REQUESTOR_FULL_LEGAL_NAME}}
+{{REQUESTOR_ROLE}}
+{{ORGANIZATION_OR_PROJECT_OWNER}}
+{{COUNTRY_AND_JURISDICTION}}
+{{REPLY_EMAIL}}

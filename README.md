@@ -4,6 +4,25 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
+Le Work Order
+[WO-SS-20260901-034](docs/work_orders/active/WO-SS-20260901-034-j9-permission-request-final-render.md)
+prépare localement le rendu final exact de la demande de permission issue de WO-033. Les valeurs
+d'identité, de contact, d'usage, de receiver, d'hébergement et de cadence sont collectées hors du
+dépôt, sous `%USERPROFILE%\Documents\SofaScoreLocalLab-private\permission-requests\WO-SS-20260901-034`.
+Ce conteneur privé est lié à l'identité Windows propriétaire par un bootstrap empreinté et par des
+ACL protégées ; ni les valeurs, ni le corps final, ni l'enveloppe de formulaire ne sont versionnés.
+Le [manifeste expurgé](docs/validation/J9-WO034-PERMISSION-REQUEST-FINAL-RENDER-MANIFEST-20260901.md)
+lie un [template canonique PII-free](docs/validation/J9-WO034-PERMISSION-REQUEST-PRIMARY-TEMPLATE-20260901.txt),
+un [launcher attesté](scripts/Invoke-WO034PermissionRequest.ps1) et un
+[renderer PowerShell déterministe](scripts/Render-WO034PermissionRequest.ps1) à leurs SHA-256. Le
+launcher est la racine de confiance préalable : son empreinte, ses octets, ses ACL et l'absence de
+reparse point doivent être vérifiés avant l'invocation `pwsh -NoProfile`. Le contrat produit un message UTF-8 sans
+BOM, NFC, LF et saut final, puis une enveloppe JSON canonique couvrant aussi société, nom, e-mail,
+destination, catégorie, topic, pièces jointes et liens collés (ces deux listes restant vides). Le
+rendu réel n'est pas encore créé : 30 valeurs ou confirmations inconditionnelles, ainsi que les
+détails conditionnels applicables, et la confirmation du mode `PRIMARY_ONLY` restent requis. Aucun message n'a été
+envoyé et aucune autorisation fournisseur, receiver réel, livraison, VPS ou production n'en découle.
+
 Le Work Order documentaire
 [WO-SS-20260901-033](docs/work_orders/completed/WO-SS-20260901-033-j9-provider-permission-request-preparation.md)
 prépare, sans l'envoyer, une demande écrite au canal officiel SofaScore `Product -> API`. Le

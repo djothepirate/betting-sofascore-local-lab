@@ -4,6 +4,58 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-034 rendu final local de la demande de permission
+
+- ouverture de `WO-SS-20260901-034-j9-permission-request-final-render` depuis le commit exact
+  `a45daf79d46cf6df5b76fefcb78c7e9ef0ebfdf9`, dans une branche et un worktree dédiés, après
+  validation et clôture de WO-033 ;
+- autorisation bornée à la collecte locale des valeurs propriétaire, au rendu sans placeholder et
+  au calcul de son SHA-256 exact ; aucun envoi, appel fournisseur, receiver réel, livraison, VPS ou
+  production n'est autorisé ;
+- vérification byte-identique du brouillon source WO-033 v1.2 au SHA-256
+  `0934f6c68bf7b9c6d072c9fc616c809d75967c090f81402e5bc8cfdeb8bc150d`, sans modification du
+  document qualifié ;
+- inspection en lecture seule du formulaire officiel `Product -> API` : société facultative, nom
+  complet, e-mail et message obligatoires, absence de champ sujet et absence d'attribut de longueur
+  maximale déclaré sur le message ; aucune donnée saisie et aucune soumission ;
+- choix recommandé `PRIMARY_ONLY`, restant soumis à confirmation propriétaire, avec un contrat
+  canonique UTF-8 sans BOM, normalisation NFC, fins de ligne LF, absence d'espaces finaux et un saut
+  final ;
+- création d'un conteneur privé exclusivement local hors dépôt sous
+  `%USERPROFILE%\Documents\SofaScoreLocalLab-private`, lié à l'identité Windows propriétaire par un
+  bootstrap empreinté et des ACL protégées ; les informations personnelles, le corps final et
+  l'enveloppe resteront hors Git ;
+- ajout d'un template `PRIMARY_ONLY` PII-free SHA-256
+  `bfb9195b78aa663c2e7bb36e896b813087afb1d4e1609346bc9cb0ff21ad8356`, d'un launcher
+  PowerShell SHA-256 `2398de4e1a9179f6bd79913876c64256de014c48ed0615a0c3709851f3e37094`
+  et d'un renderer v1.1.0 SHA-256
+  `b722709fd0d8988718fcfefb8506803daba4cd241bb3dc00a88874dd708f28b6` ; le launcher est la
+  racine de confiance préchargement et atteste les deux copies du renderer avant toute mutation ;
+- bootstrap privé absent de Git, dont seule l'empreinte
+  `3741fa3fdf4097f155c0d58891cca10bb9951561e996edff5f75dba78b75e731` est versionnée ; identité Windows,
+  profil et racine privée sont validés localement sans être consignés dans les preuves versionnées ;
+- empreintes séparées du message et d'une enveloppe canonique liant destination, catégorie, topic,
+  champ société, nom, e-mail, message exact, pièces jointes et liens collés (listes vides) ; la
+  future saisie devra réussir une comparaison
+  champ par champ avant toute soumission distinctement autorisée ;
+- double rendu synthétique byte-identique : message de 6 014 octets au SHA-256
+  `0e00198a0b774fa0e88c0769009ddb5d3258aa3a18be0004ba4a2ea910459ab4`, enveloppe de 6 572
+  octets au SHA-256 `25b6c3cec577ba33ca456de1ed57c3c52a93528a6f49733a4bf98c8dc93c32f8`,
+  round-trip réussi et zéro token non résolu ;
+- qualification fail-closed de 20 cas : complétude et séparation de modes, confinement/ACL/reparse,
+  secrets haute confiance, verrou concurrent, non-écrasement, staging et bundle incomplet,
+  streams attestés non inscriptibles, restauration byte-identique des entrées et nettoyage exact ;
+- qualification d'ouverture réussie : UTF-8/LF sans BOM ni NUL, ignore Git du fichier privé,
+  `git diff --check` et scan de secrets propres, puis `mvnw.cmd --offline clean verify` avec
+  Surefire `1043/0/0/5` et Failsafe `84/0/0/0` ;
+- état initial `WAITING_FOR_OWNER_INPUT` : message, enveloppe et empreintes non créés tant que les
+  30 déclarations ou confirmations propriétaire inconditionnelles et les détails conditionnels
+  applicables ne sont pas complets ; une éventuelle soumission
+  exigera une nouvelle décision explicite portant sur les deux empreintes exactes ;
+- cycle de vie local borné : suppression obligatoire après refus/abandon, clôture sans envoi ou
+  réconciliation de l'unique soumission ; aucun artefact nominatif dans Git, les logs, J6 ou un
+  dossier synchronisé.
+
 ### Après J9 — WO-033 préparation de la permission fournisseur et du receiver concurrent
 
 - ouverture locale initiale sous le numéro fournisseur `031` depuis `origin/main` au commit exact
