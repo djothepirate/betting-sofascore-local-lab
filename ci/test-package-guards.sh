@@ -24,7 +24,10 @@ cleanup() {
         git update-ref -d "$canonical_main_ref" >/dev/null 2>&1 || true
     fi
 }
-trap cleanup EXIT HUP INT TERM
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
 
 assert_rejected() {
     expected=$1
@@ -103,7 +106,7 @@ if ! grep -Fq '$CI_COMMIT_REF_PROTECTED == "true" && $CI_COMMIT_TAG =~' \
     echo 'FAIL: une release locale GitLab exige un tag protégé.' >&2
     exit 1
 fi
-
+sh ci/test-check-no-secrets-signals.sh
 sh ci/test-branch-name.sh
 sh ci/test-release-reproducibility.sh
 

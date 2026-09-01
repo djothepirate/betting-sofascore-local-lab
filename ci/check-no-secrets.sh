@@ -8,7 +8,20 @@ base_ref=${1:-}
 candidate_file=$(mktemp "${TMPDIR:-/tmp}/lab-secret-candidates.XXXXXX")
 blob_file=$(mktemp "${TMPDIR:-/tmp}/lab-secret-blob.XXXXXX")
 commit_file=$(mktemp "${TMPDIR:-/tmp}/lab-secret-commits.XXXXXX")
-trap 'rm -f "$candidate_file" "$blob_file" "$commit_file"' EXIT HUP INT TERM
+cleanup() {
+    rm -f "$candidate_file" "$blob_file" "$commit_file" || :
+}
+trap cleanup EXIT
+trap 'exit 129' HUP
+trap 'exit 130' INT
+trap 'exit 143' TERM
+
+# Point d'injection strictement réservé au test comportemental des traps ci-dessous.
+case ${CI_SECRET_SCAN_SELF_SIGNAL:-} in
+    '') ;;
+    HUP|INT|TERM) kill "-${CI_SECRET_SCAN_SELF_SIGNAL}" "$$" ;;
+    *) echo 'FAIL: signal de test du scanner invalide.' >&2; exit 2 ;;
+esac
 
 private_key_pattern='-----BEGIN[[:space:]]+((RSA|EC|DSA|OPENSSH|PGP|ENCRYPTED)[[:space:]]+)?PRIVATE[[:space:]]+KEY([[:space:]]+BLOCK)?-----'
 aws_pattern='(^|[^A-Z0-9])(AKIA|ASIA)[A-Z0-9]{16}([^A-Z0-9]|$)'
