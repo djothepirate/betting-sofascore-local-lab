@@ -69,9 +69,22 @@ class OptionalLocalPushPropertiesTest {
     }
 
     @Test
-    void acceptsTheMaximumTcpPortAndRejectsTheFirstOutOfRangePort() {
+    void acceptsOnlyTheClosedTcpPortRangeBoundaries() {
         OptionalLocalPushProperties properties = new OptionalLocalPushProperties();
         properties.setLoopbackQualification(true);
+
+        properties.setLoopbackOrigin("https://127.0.0.1");
+        assertThat(properties.isLoopbackQualificationSafe()).isFalse();
+        assertThat(validator.validate(properties)).isNotEmpty();
+
+        properties.setLoopbackOrigin("https://127.0.0.1:0");
+        assertThat(properties.isLoopbackQualificationSafe()).isFalse();
+        assertThat(validator.validate(properties)).isNotEmpty();
+
+        properties.setLoopbackOrigin("https://127.0.0.1:1");
+        assertThat(properties.isLoopbackQualificationSafe()).isTrue();
+        assertThat(validator.validate(properties)).isEmpty();
+
         properties.setLoopbackOrigin("https://127.0.0.1:65535");
 
         assertThat(properties.isLoopbackQualificationSafe()).isTrue();

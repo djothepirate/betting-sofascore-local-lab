@@ -330,14 +330,19 @@ class J7OptionalDeliveryServiceTest {
         verifyNoInteractions(blockedExportService, blockedLedgerStore, blockedTransport);
     }
 
-    @Test
-    void outOfRangeLoopbackPortStopsBeforeExportClaimOrTransport() {
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "https://127.0.0.1",
+            "https://127.0.0.1:0",
+            "https://127.0.0.1:65536"
+    })
+    void invalidLoopbackPortStopsBeforeExportClaimOrTransport(String invalidOrigin) {
         exportService = mock(J7CanonicalExportService.class);
         ledgerStore = mock(J7DeliveryLedgerStore.class);
         transport = mock(J7DeliveryTransport.class);
         OptionalLocalPushProperties properties = new OptionalLocalPushProperties();
         properties.setLoopbackQualification(true);
-        properties.setLoopbackOrigin("https://127.0.0.1:65536");
+        properties.setLoopbackOrigin(invalidOrigin);
         service = new J7OptionalDeliveryService(
                 exportService,
                 ledgerStore,
