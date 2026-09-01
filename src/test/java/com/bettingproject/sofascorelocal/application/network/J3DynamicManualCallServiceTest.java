@@ -53,6 +53,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Function;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -88,8 +89,7 @@ class J3DynamicManualCallServiceTest {
             clock.advance(Duration.ofMillis(25));
             return response(request, requestedAt, clock.instant(), 200, body);
         });
-        var coordinator = new ManualProviderRequestCoordinator(
-                clock, Duration.ofSeconds(3), ignored -> { });
+        var coordinator = immediateCoordinator();
         var service = new J3DynamicManualCallService(
                 control,
                 transport,
@@ -248,8 +248,7 @@ class J3DynamicManualCallServiceTest {
         J8BenchmarkEvidenceStore evidenceStore = mock(J8BenchmarkEvidenceStore.class);
         when(evidenceStore.declareUnit(any())).thenReturn(11L);
         when(evidenceStore.startProviderAttempt(any())).thenReturn(12L);
-        ManualProviderRequestCoordinator coordinator = new ManualProviderRequestCoordinator(
-                clock, Duration.ofSeconds(3), ignored -> { });
+        ManualProviderRequestCoordinator coordinator = immediateCoordinator();
         J3DynamicManualCallService service = auditedService(
                 control,
                 ignored -> providerCampaign,
@@ -330,8 +329,7 @@ class J3DynamicManualCallServiceTest {
             lifecycle.add("AUDIT_" + result.terminalState().name());
             return null;
         }).when(evidenceStore).finishCampaign(any());
-        ManualProviderRequestCoordinator coordinator = new ManualProviderRequestCoordinator(
-                clock, Duration.ofSeconds(3), ignored -> { });
+        ManualProviderRequestCoordinator coordinator = immediateCoordinator();
         J3DynamicManualCallService service = new J3DynamicManualCallService(
                 control,
                 ignored -> providerCampaign,
@@ -391,8 +389,7 @@ class J3DynamicManualCallServiceTest {
                 mock(ScheduledEventsProviderPageTransport.class);
         J8BenchmarkEvidenceStore evidenceStore = mock(J8BenchmarkEvidenceStore.class);
         when(evidenceStore.declareUnit(any())).thenReturn(21L);
-        ManualProviderRequestCoordinator coordinator = new ManualProviderRequestCoordinator(
-                clock, Duration.ofSeconds(3), ignored -> { });
+        ManualProviderRequestCoordinator coordinator = immediateCoordinator();
         J3DynamicManualCallService service = auditedService(
                 control,
                 transport,
@@ -438,8 +435,7 @@ class J3DynamicManualCallServiceTest {
         when(evidenceStore.declareUnit(any())).thenReturn(31L);
         when(evidenceStore.startProviderAttempt(any()))
                 .thenThrow(new IllegalStateException("attempt audit unavailable"));
-        ManualProviderRequestCoordinator coordinator = new ManualProviderRequestCoordinator(
-                clock, Duration.ofSeconds(3), ignored -> { });
+        ManualProviderRequestCoordinator coordinator = immediateCoordinator();
         J3DynamicManualCallService service = auditedService(
                 control,
                 ignored -> providerCampaign,
@@ -1144,6 +1140,14 @@ class J3DynamicManualCallServiceTest {
                     response.payload(),
                     parserVersion));
         }
+    }
+
+    private static ManualProviderRequestCoordinator immediateCoordinator() {
+        AtomicLong ticker = new AtomicLong();
+        return new ManualProviderRequestCoordinator(
+                ticker::get,
+                Duration.ofSeconds(3),
+                delay -> ticker.addAndGet(delay.toNanos()));
     }
 
     private static final class RecordingStore implements RawManualCallSnapshotStore {

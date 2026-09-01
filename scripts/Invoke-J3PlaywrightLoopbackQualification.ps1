@@ -1,15 +1,27 @@
 [CmdletBinding()]
-param()
+param(
+    [string]$BrowserCachePath = ''
+)
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
 
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
-$browserCache = Join-Path $repositoryRoot '.tmp\provider-playwright-browsers'
+$browserCache = $BrowserCachePath
+if ([string]::IsNullOrWhiteSpace($browserCache)) {
+    $browserCache = Join-Path $repositoryRoot '.tmp\provider-playwright-browsers'
+}
 if (-not (Test-Path -LiteralPath $browserCache -PathType Container)) {
     throw 'The dedicated Playwright browser cache is absent; run Install-J3PlaywrightRuntime.ps1 explicitly first'
 }
-$browserCache = (Resolve-Path -LiteralPath $browserCache).Path
+$browserCacheItem = Get-Item -LiteralPath $browserCache -Force
+$browserCacheTarget = $browserCacheItem.ResolveLinkTarget($true)
+$browserCache = if ($null -eq $browserCacheTarget) {
+    $browserCacheItem.FullName
+}
+else {
+    $browserCacheTarget.FullName
+}
 $chromiumInstallations = @(Get-ChildItem -LiteralPath $browserCache -Directory |
     Where-Object {
         $_.Name -like 'chromium-*' -and
@@ -35,11 +47,11 @@ try {
     & .\mvnw.cmd `
         '-Pprovider-playwright-runtime' `
         '-DskipTests=false' `
-        '-Dtest=ProviderPlaywrightWorkerProtocolTest,ProviderPlaywrightWorkerSecurityContractTest' `
+        '-Dtest=ProviderPlaywrightWorkerProtocolTest,ProviderPlaywrightWorkerSecurityContractTest,ProviderPlaywrightWorkerNetworkObservationTest' `
         clean `
         test
     if ($LASTEXITCODE -ne 0) {
-        throw 'The explicit J3 Playwright worker protocol and security tests failed'
+        throw 'The explicit J3 Playwright worker protocol, security and network-observation tests failed'
     }
 
     & .\mvnw.cmd `
@@ -66,6 +78,8 @@ try {
             'target\surefire-reports\TEST-com.bettingproject.sofascorelocal.provider.playwright.worker.ProviderPlaywrightWorkerProtocolTest.xml'),
         (Join-Path $repositoryRoot `
             'target\surefire-reports\TEST-com.bettingproject.sofascorelocal.provider.playwright.worker.ProviderPlaywrightWorkerSecurityContractTest.xml'),
+        (Join-Path $repositoryRoot `
+            'target\surefire-reports\TEST-com.bettingproject.sofascorelocal.provider.playwright.worker.ProviderPlaywrightWorkerNetworkObservationTest.xml'),
         (Join-Path $repositoryRoot `
             'target\failsafe-reports\TEST-com.bettingproject.sofascorelocal.application.network.playwright.ProviderPlaywrightLocalQualificationIT.xml')
     )
@@ -115,6 +129,7 @@ finally {
 
 Write-Host 'J3_PLAYWRIGHT_LOOPBACK_QUALIFICATION=PASS'
 Write-Host 'WORKER_PROTOCOL_AND_SECURITY_TESTS=PASS'
+Write-Host 'WORKER_NETWORK_OBSERVATION_TESTS=PASS'
 Write-Host 'SENSITIVE_DATA_IN_TEST_REPORTS=NO'
 Write-Host 'ORIGIN=http://127.0.0.1:<ephemeral>'
 Write-Host 'PROVIDER_ACCESS_PERFORMED=NO'

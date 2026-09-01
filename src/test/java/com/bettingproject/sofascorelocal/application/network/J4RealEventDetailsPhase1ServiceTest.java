@@ -28,6 +28,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,6 +59,7 @@ class J4RealEventDetailsPhase1ServiceTest {
     private J4EventDetailsCache cache;
     private J4ParsedEventDetailsPersistenceService parsedPersistence;
     private List<Duration> pauses;
+    private MutableClock clock;
     private J4RealEventDetailsPhase1Service service;
 
     @BeforeEach
@@ -69,6 +71,7 @@ class J4RealEventDetailsPhase1ServiceTest {
         cache = mock(J4EventDetailsCache.class);
         parsedPersistence = mock(J4ParsedEventDetailsPersistenceService.class);
         pauses = new ArrayList<>();
+        clock = new MutableClock(NOW);
         when(control.executionMayContinue(REQUEST_ID)).thenReturn(true);
         when(transport.openCampaign(REQUEST_ID)).thenReturn(providerCampaign);
         when(cache.findFreshParsed(any(), any(), any(), any())).thenReturn(Optional.empty());
@@ -100,10 +103,10 @@ class J4RealEventDetailsPhase1ServiceTest {
                 cache,
                 parsedPersistence,
                 new EventDetailsV2Parser(),
-                Clock.fixed(NOW, ZoneOffset.UTC),
+                clock,
                 Duration.ofMinutes(15),
                 Duration.ofSeconds(3),
-                pauses::add);
+                this::pauseAndAdvance);
     }
 
     @Test
@@ -470,13 +473,18 @@ class J4RealEventDetailsPhase1ServiceTest {
                 cache,
                 parsedPersistence,
                 new EventDetailsV2Parser(),
-                Clock.fixed(NOW, ZoneOffset.UTC),
+                clock,
                 Duration.ofMinutes(15),
                 Duration.ofSeconds(3),
-                pauses::add,
+                this::pauseAndAdvance,
                 new J8BenchmarkAuditService(
                         evidenceStore,
                         Clock.fixed(NOW, ZoneOffset.UTC)));
+    }
+
+    private void pauseAndAdvance(Duration duration) {
+        pauses.add(duration);
+        clock.advance(duration);
     }
 
     private static J4RealPhase1ExecutionClaim claim() {
@@ -518,5 +526,36 @@ class J4RealEventDetailsPhase1ServiceTest {
                   }
                 }
                 """.formatted(eventId, home, away);
+    }
+
+    private static final class MutableClock extends Clock {
+
+        private Instant instant;
+
+        private MutableClock(Instant instant) {
+            this.instant = instant;
+        }
+
+        @Override
+        public ZoneId getZone() {
+            return ZoneOffset.UTC;
+        }
+
+        @Override
+        public Clock withZone(ZoneId zone) {
+            if (!ZoneOffset.UTC.equals(zone)) {
+                throw new IllegalArgumentException("test clock is UTC only");
+            }
+            return this;
+        }
+
+        @Override
+        public Instant instant() {
+            return instant;
+        }
+
+        private void advance(Duration duration) {
+            instant = instant.plus(duration);
+        }
     }
 }

@@ -36,10 +36,12 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 class ProviderPlaywrightLocalQualificationIT {
 
@@ -47,6 +49,8 @@ class ProviderPlaywrightLocalQualificationIT {
     private static final Path RUNTIME_SANDBOX_ROOT = Path.of(
             "target", "provider-playwright-runtime", "qualification-sandboxes")
             .toAbsolutePath().normalize();
+    private static final Duration MINIMUM_PROVIDER_START_GAP = Duration.ofSeconds(3);
+    private static final Duration FENCE_OBSERVATION_WINDOW = Duration.ofMillis(250);
     private static final byte[] PAGE_ONE =
             "{\"events\":[],\"hasNextPage\":true,\"marker\":\"caf\u00e9\"}"
                     .getBytes(StandardCharsets.UTF_8);
@@ -150,6 +154,7 @@ class ProviderPlaywrightLocalQualificationIT {
 
             Process exactWorker = worker.get();
             assertThat(exactWorker.waitFor(5, TimeUnit.SECONDS)).isTrue();
+            assertThat(exactWorker.exitValue()).isZero();
             assertThat(supervisor.activeCampaignId()).isEmpty();
             assertThat(ownedProcesses).allMatch(identity -> !identity.isSameProcessAlive());
             assertThat(standardOutput.get().get(5, TimeUnit.SECONDS)).isEmpty();
@@ -345,26 +350,34 @@ class ProviderPlaywrightLocalQualificationIT {
                 assertThat(exactWorker).isNotNull();
                 assertThat(exactWorker.isAlive()).isTrue();
 
+                PlaywrightProviderResponse statistics = campaign.execute(
+                        PlaywrightProviderRequest.eventStatistics(J5_EVENT_ID));
                 assertExactResponse(
-                        campaign.execute(PlaywrightProviderRequest.eventStatistics(J5_EVENT_ID)),
+                        statistics,
                         200,
                         "application/json; charset=utf-8",
                         J5_STATISTICS_RESPONSE);
                 assertThat(worker.get()).isSameAs(exactWorker);
 
+                PlaywrightProviderResponse incidents = campaign.execute(
+                        PlaywrightProviderRequest.eventIncidents(J5_EVENT_ID));
                 assertExactResponse(
-                        campaign.execute(PlaywrightProviderRequest.eventIncidents(J5_EVENT_ID)),
+                        incidents,
                         404,
                         "application/problem+json",
                         J5_INCIDENTS_NOT_FOUND_RESPONSE);
                 assertThat(worker.get()).isSameAs(exactWorker);
 
+                PlaywrightProviderResponse lineups = campaign.execute(
+                        PlaywrightProviderRequest.eventLineups(J5_EVENT_ID));
                 assertExactResponse(
-                        campaign.execute(PlaywrightProviderRequest.eventLineups(J5_EVENT_ID)),
+                        lineups,
                         200,
                         "application/json",
                         J5_LINEUPS_RESPONSE);
                 assertThat(worker.get()).isSameAs(exactWorker);
+                assertMinimumRequestedAtGap(statistics, incidents);
+                assertMinimumRequestedAtGap(incidents, lineups);
 
                 ownedProcesses = captureOwnedProcessTree(exactWorker);
                 output = standardOutput.get();
@@ -381,6 +394,9 @@ class ProviderPlaywrightLocalQualificationIT {
                     FixtureServer.J5_STATISTICS_PATH,
                     FixtureServer.J5_INCIDENTS_PATH,
                     FixtureServer.J5_LINEUPS_PATH);
+            assertThat(fixture.arrivalGapsNanos())
+                    .hasSize(2)
+                    .allMatch(gap -> gap >= MINIMUM_PROVIDER_START_GAP.toNanos());
             assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
         }
     }
@@ -571,10 +587,13 @@ class ProviderPlaywrightLocalQualificationIT {
             List<ProcessIdentity> firstTree;
             CompletableFuture<byte[]> firstOutput;
             CompletableFuture<byte[]> firstError;
+            PlaywrightProviderResponse firstResponse;
             try (PlaywrightProviderCampaign campaign = supervisor.open(
                     UUID.randomUUID(), Set.of(SofascoreEndpointType.SCHEDULED_EVENTS))) {
+                firstResponse = campaign.execute(
+                        PlaywrightProviderRequest.scheduledEvents(DATE, 1));
                 assertExactResponse(
-                        campaign.execute(PlaywrightProviderRequest.scheduledEvents(DATE, 1)),
+                        firstResponse,
                         200,
                         "application/json; charset=utf-8",
                         PAGE_ONE);
@@ -591,10 +610,13 @@ class ProviderPlaywrightLocalQualificationIT {
             List<ProcessIdentity> secondTree;
             CompletableFuture<byte[]> secondOutput;
             CompletableFuture<byte[]> secondError;
+            PlaywrightProviderResponse secondResponse;
             try (PlaywrightProviderCampaign campaign = supervisor.open(
                     UUID.randomUUID(), Set.of(SofascoreEndpointType.SCHEDULED_EVENTS))) {
+                secondResponse = campaign.execute(
+                        PlaywrightProviderRequest.scheduledEvents(DATE, 1));
                 assertExactResponse(
-                        campaign.execute(PlaywrightProviderRequest.scheduledEvents(DATE, 1)),
+                        secondResponse,
                         200,
                         "application/json; charset=utf-8",
                         PAGE_ONE);
@@ -607,10 +629,14 @@ class ProviderPlaywrightLocalQualificationIT {
 
             assertThat(secondWorker).isNotSameAs(firstWorker);
             assertThat(secondIdentity).isNotEqualTo(firstIdentity);
+            assertMinimumRequestedAtGap(firstResponse, secondResponse);
             assertWorkerExited(supervisor, secondWorker, secondTree, secondOutput, secondError);
             fixture.assertExactTraffic(
                     FixtureServer.PAGE_ONE_PATH,
                     FixtureServer.PAGE_ONE_PATH);
+            assertThat(fixture.arrivalGapsNanos())
+                    .hasSize(1)
+                    .allMatch(gap -> gap >= MINIMUM_PROVIDER_START_GAP.toNanos());
             assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
         }
     }
@@ -690,7 +716,7 @@ class ProviderPlaywrightLocalQualificationIT {
 
     @Test
     @Timeout(120)
-    void stopsJ5DuringIncidentsWithinEveryBoundWithoutCallingLineupsOrLeavingResidue()
+    void stopsJ5DuringMinimumDelayFenceWithinEveryBoundWithoutStartingNextRequest()
             throws Exception {
         Path workerJar = requiredRegularFile("provider.playwright.worker-jar");
         Path browserCache = requiredDirectory("provider.playwright.browser-cache");
@@ -698,7 +724,7 @@ class ProviderPlaywrightLocalQualificationIT {
         AtomicReference<CompletableFuture<byte[]>> standardOutput = new AtomicReference<>();
         AtomicReference<CompletableFuture<byte[]>> standardError = new AtomicReference<>();
 
-        try (FixtureServer fixture = FixtureServer.startSlowJ5Incidents();
+        try (FixtureServer fixture = FixtureServer.start();
              ExecutorService streamReaders = Executors.newVirtualThreadPerTaskExecutor()) {
             ChildJvmPlaywrightProviderSupervisor supervisor =
                     new ChildJvmPlaywrightProviderSupervisor(
@@ -728,8 +754,10 @@ class ProviderPlaywrightLocalQualificationIT {
                     J5_STOP_STATISTICS_RESPONSE);
             assertThat(worker.get()).isSameAs(exactWorker);
             List<ProcessIdentity> ownedProcesses = captureOwnedProcessTree(exactWorker);
+            CountDownLatch fencedExecutionStarted = new CountDownLatch(1);
             CompletableFuture<Throwable> execution = CompletableFuture.supplyAsync(() -> {
                 try {
+                    fencedExecutionStarted.countDown();
                     campaign.execute(PlaywrightProviderRequest.eventIncidents(
                             J5_STOP_EVENT_ID));
                     return null;
@@ -739,7 +767,12 @@ class ProviderPlaywrightLocalQualificationIT {
                 }
             });
             try {
-                assertThat(fixture.awaitSlowRequest(Duration.ofSeconds(10))).isTrue();
+                assertThat(fencedExecutionStarted.await(1, TimeUnit.SECONDS)).isTrue();
+                assertThatThrownBy(() -> execution.get(
+                        FENCE_OBSERVATION_WINDOW.toNanos(), TimeUnit.NANOSECONDS))
+                        .isInstanceOf(TimeoutException.class);
+                assertThat(fixture.requestCount(FixtureServer.J5_STOP_INCIDENTS_PATH)).isZero();
+                assertThat(fixture.requestCount(FixtureServer.J5_STOP_LINEUPS_PATH)).isZero();
                 long stopStartedAt = System.nanoTime();
                 PlaywrightProviderStopReceipt receipt = supervisor.stopCampaign(
                         campaignId, allowlist);
@@ -766,14 +799,13 @@ class ProviderPlaywrightLocalQualificationIT {
                 assertThat(worker.get()).isSameAs(exactWorker);
                 assertThat(standardOutput.get().get(5, TimeUnit.SECONDS)).isEmpty();
                 assertThat(standardError.get().get(5, TimeUnit.SECONDS)).isEmpty();
-                fixture.assertExactTraffic(
-                        FixtureServer.J5_STOP_STATISTICS_PATH,
-                        FixtureServer.J5_STOP_INCIDENTS_PATH);
+                fixture.assertExactTraffic(FixtureServer.J5_STOP_STATISTICS_PATH);
+                assertThat(fixture.requestCount(FixtureServer.J5_STOP_INCIDENTS_PATH)).isZero();
                 assertThat(fixture.requestCount(FixtureServer.J5_STOP_LINEUPS_PATH)).isZero();
+                assertThat(fixture.arrivalGapsNanos()).isEmpty();
                 assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
             }
             finally {
-                fixture.releaseSlowResponse();
                 campaign.close();
             }
         }
@@ -991,6 +1023,13 @@ class ProviderPlaywrightLocalQualificationIT {
         assertThat(response.payload().bytes()).containsExactly(expectedBody);
         assertThat(response.receivedAt()).isAfterOrEqualTo(response.requestedAt());
         assertThat(response.latency()).isGreaterThanOrEqualTo(Duration.ZERO);
+    }
+
+    private static void assertMinimumRequestedAtGap(
+            PlaywrightProviderResponse previous,
+            PlaywrightProviderResponse next) {
+        assertThat(Duration.between(previous.requestedAt(), next.requestedAt()))
+                .isGreaterThanOrEqualTo(MINIMUM_PROVIDER_START_GAP);
     }
 
     private static List<ProcessIdentity> captureOwnedProcessTree(Process process) {
@@ -1278,51 +1317,44 @@ class ProviderPlaywrightLocalQualificationIT {
         private final ExecutorService executor;
         private final boolean slowPageOne;
         private final boolean slowEventDetails;
-        private final boolean slowJ5Incidents;
         private final String sensitiveCanaryValue;
         private final CountDownLatch slowRequestReceived = new CountDownLatch(1);
         private final CountDownLatch releaseSlowResponse = new CountDownLatch(1);
         private final List<ObservedRequest> requests = new CopyOnWriteArrayList<>();
+        private final List<Long> arrivalNanos = new CopyOnWriteArrayList<>();
 
         private FixtureServer(
                 HttpServer server,
                 ExecutorService executor,
                 boolean slowPageOne,
-                boolean slowEventDetails,
-                boolean slowJ5Incidents) {
+                boolean slowEventDetails) {
             this.server = server;
             this.executor = executor;
             this.slowPageOne = slowPageOne;
             this.slowEventDetails = slowEventDetails;
-            this.slowJ5Incidents = slowJ5Incidents;
             this.sensitiveCanaryValue = "local-canary-" + UUID.randomUUID();
         }
 
         static FixtureServer start() throws IOException {
-            return start(false, false, false);
+            return start(false, false);
         }
 
         static FixtureServer startSlow() throws IOException {
-            return start(true, false, false);
+            return start(true, false);
         }
 
         static FixtureServer startSlowEventDetails() throws IOException {
-            return start(false, true, false);
-        }
-
-        static FixtureServer startSlowJ5Incidents() throws IOException {
-            return start(false, false, true);
+            return start(false, true);
         }
 
         private static FixtureServer start(
                 boolean slowPageOne,
-                boolean slowEventDetails,
-                boolean slowJ5Incidents) throws IOException {
+                boolean slowEventDetails) throws IOException {
             HttpServer server = HttpServer.create(
                     new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0), 0);
             ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor();
             FixtureServer fixture = new FixtureServer(
-                    server, executor, slowPageOne, slowEventDetails, slowJ5Incidents);
+                    server, executor, slowPageOne, slowEventDetails);
             server.createContext("/", fixture::handle);
             server.setExecutor(executor);
             server.start();
@@ -1338,6 +1370,7 @@ class ProviderPlaywrightLocalQualificationIT {
         }
 
         private void handle(HttpExchange exchange) throws IOException {
+            arrivalNanos.add(System.nanoTime());
             byte[] requestBody = exchange.getRequestBody().readAllBytes();
             try {
                 requests.add(new ObservedRequest(
@@ -1460,15 +1493,6 @@ class ProviderPlaywrightLocalQualificationIT {
                 }
                 else if (J5_STOP_INCIDENTS_PATH.equals(
                         exchange.getRequestURI().getRawPath())) {
-                    if (slowJ5Incidents) {
-                        slowRequestReceived.countDown();
-                        try {
-                            releaseSlowResponse.await(30, TimeUnit.SECONDS);
-                        }
-                        catch (InterruptedException exception) {
-                            Thread.currentThread().interrupt();
-                        }
-                    }
                     respond(exchange, 200, "application/json", J5_STOP_INCIDENTS_RESPONSE);
                 }
                 else if (J5_STOP_LINEUPS_PATH.equals(exchange.getRequestURI().getRawPath())) {
@@ -1573,6 +1597,14 @@ class ProviderPlaywrightLocalQualificationIT {
 
         long requestCount(String path) {
             return requests.stream().filter(request -> path.equals(request.path())).count();
+        }
+
+        List<Long> arrivalGapsNanos() {
+            List<Long> result = new ArrayList<>();
+            for (int index = 1; index < arrivalNanos.size(); index++) {
+                result.add(arrivalNanos.get(index) - arrivalNanos.get(index - 1));
+            }
+            return List.copyOf(result);
         }
 
         @Override

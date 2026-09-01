@@ -1,0 +1,918 @@
+# WO-SS-20260831-023 — Campagne autonome de robustesse fournisseur J9 sous ADR-SS-002 v1.1
+
+- **Statut :** `VALIDATED`
+- **Date d'ouverture :** 2026-08-31
+- **Date de clôture :** 2026-09-01
+- **Validation propriétaire observée à :** `2026-09-01T05:49:58.398Z` (`2026-09-01T07:49:58.398+02:00`, Europe/Paris)
+- **Décision propriétaire observée à :** 2026-08-31T13:08:48.0887445Z
+- **Jalon :** J9 — nouvelle preuve fournisseur autonome
+- **Base immuable d'ouverture :** `1be8a26a0fb4ff54e9514ca69655d5aa825d2f26`
+- **Branche :** `codex/j9-provider-robustness-v11`
+- **Worktree :** `.tmp/j9-provider-robustness-v11`
+- **Work Order parent :** `WO-SS-20260831-018-decision-j9`
+- **Campagne historique :** WO-019 `STOPPED`, vingt tentatives gelées, non rouverte
+- **ADR applicables :** ADR-SS-001 v1.4 ; ADR-SS-002 v1.1 `ACCEPTED`
+- **Profil :** `RESTART_FULL_D1_D2_D3`
+- **Usage de la nouvelle série :** `ONE_TIME`
+- **Acteur sélectionné :** `CODEX_LOCAL_UI`
+- **Exécution fournisseur :** `COMPLETED_ONE_TIME`
+- **Plafond de la nouvelle série :** 38 tentatives directes
+- **Plafond cumulatif d'audit J9 :** 58 tentatives directes
+- **Réseau fournisseur :** `NOT_AUTHORIZED`
+- **Go global fournisseur :** `CONSUMED_AND_TERMINATED_BY_D3_COMPLETION`
+- **Résultat de preuve :** `PASS — 28/38 nouvelles tentatives, 48/58 cumulées`
+- **Validation propriétaire :** `VALIDATED`
+- **Déplacement vers completed :** `AUTHORIZED_AND_EXECUTED`
+- **Décision J9 finale :** `PREPARE_OPTIONAL_INTEGRATION`
+- **Intégration, production ou VPS courant :** `NOT_AUTHORIZED`
+- **Option VPS future :** `NOT_EXCLUDED_BUT_NOT_AUTHORIZED`
+
+## 1. Décision d'ouverture et limite du go reçu
+
+Après l'acceptation d'ADR-SS-002 v1.1, le propriétaire demande de lancer la nouvelle campagne à
+usage unique. Cette instruction lève la porte d'ouverture et de préparation du nouveau Work Order,
+de sa branche et de son worktree. Comme `CODEX_LOCAL_UI` est l'unique modèle d'acteur déjà
+sélectionné, elle autorise aussi cet acteur dans le périmètre de WO-023, sous condition de toutes les
+portes restantes.
+
+Le message ne contient pas encore le manifeste gelé, son commit/hash ni une fenêtre UTC explicite.
+Conformément à ADR-SS-002 v1.1 §11.4-11.5, il ne peut donc pas être traité comme le go global
+fournisseur consommable et ne devient pas une autorisation réseau latente.
+
+```text
+OWNER_NEW_CAMPAIGN_LAUNCH_DECISION=AUTHORIZE_OPENING_AND_OFFLINE_PREPARATION
+OWNER_DECISION_RECORDED_AT_UTC=2026-08-31T13:08:48.0887445Z
+NEW_CAMPAIGN_WORK_ORDER_OPENING_AUTHORIZED=YES
+NEW_CAMPAIGN_BRANCH_CREATION_AUTHORIZED=YES
+NEW_CAMPAIGN_WORKTREE_CREATION_AUTHORIZED=YES
+NEW_CAMPAIGN_PREPARATION_AUTHORIZED=YES
+NEW_CAMPAIGN_SERIES_USE=ONE_TIME
+
+SELECTED_EXECUTION_ACTOR=CODEX_LOCAL_UI
+CODEX_LOCAL_UI_ACTOR_AUTHORIZED_FOR_WO023=YES
+CODEX_LOCAL_UI_PROVIDER_ACTIONS_ALLOWED_NOW=NO
+CODEX_LOCAL_UI_EXECUTION_CONDITION=ALL_OFFLINE_GATES_SATISFIED_AND_MANIFEST_BOUND_GLOBAL_OWNER_GO_VALID
+AUTOMATED_UI_ORCHESTRATION_AUTHORIZED=NO
+
+WORK_ORDER_STATUS=OPEN_AWAITING_OFFLINE_READINESS
+CAMPAIGN_EXECUTION_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+GLOBAL_OWNER_GO=NOT_GRANTED
+OWNER_GO_CONSUMED=NO
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_FINAL_DECISION=NOT_TAKEN
+```
+
+Le go historique v1.0 reste consommé, expiré et terminé par l'arrêt de WO-019 :
+
+```text
+WO019_STATUS=STOPPED
+WO019_HISTORICAL_CAMPAIGN_REOPENED=NO
+WO019_HISTORICAL_DIRECT_ATTEMPTS_FROZEN=20
+PRIOR_GLOBAL_OWNER_GO=CONSUMED_AND_TERMINATED_BY_STOP
+PRIOR_GLOBAL_OWNER_GO_REUSABLE=NO
+HISTORICAL_REPORT=docs/validation/J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831.md
+HISTORICAL_REPORT_BYTES=9708
+HISTORICAL_REPORT_SHA256=47e6171eeb1fc44cf995c727d4f09107875c844e71e8b183068731cbb4c62b9d
+```
+
+## 2. Objectif et résultat attendu
+
+Produire une nouvelle preuve autonome, homogène et bornée sur D1, D2 et D3, sans modifier ni
+compléter le rapport historique WO-019. Le rapport de WO-023 sera distinct et classé selon la règle
+déterministe d'ADR-SS-002 v1.1 :
+
+- `PASS` si la série se termine sous 38 tentatives, sans incident bloquant, cache hit ou 404 limitant
+  une dimension attendue, avec réponses compatibles, persistées et auditables ;
+- `PARTIAL_BOUNDED` uniquement pour des indisponibilités natives ou des lacunes explicitement
+  bornées, sans incident de sécurité ni contournement ;
+- `STOPPED` au déclenchement de toute condition d'arrêt ou violation d'un prérequis.
+
+La campagne ne constitue ni une autorisation d'intégration, ni une qualification de production ou
+de VPS, ni un droit permanent d'interroger le fournisseur.
+
+## 3. Corpus immuable et ordre fermé
+
+| Dossier | Provider ID | Identifiant canonique | Rôle |
+|---|---:|---|---|
+| D1 — Cittadella / Atalanta U23 | `16691018` | `f4713f80-4769-3656-ba51-61d8ac1aa814` | Ancrage J3 daté `2026-08-15`, tournoi `824`, saison `99790`, phase `15118`, puis J4/J5 |
+| D2 — Barracas Central / Rosario Central | `16671566` | `da075869-34d4-3d42-83d2-613583691845` | Cas historique complet J4/J5 avec incident off-ball |
+| D3 — Lille / PSG | `16310930` | `c40066c9-987b-38d9-b415-869a453d2ad6` | Cas récent avec les trois familles J5 disponibles |
+
+L'ordre fermé comprend huit sous-campagnes unitaires et fraîches :
+
+| Segment | Parcours | Maximum nouveau | Cumul série | Cumul audit J9 |
+|---|---|---:|---:|---:|
+| A1 | J3 `SCHEDULED_EVENTS`, pages contiguës `1..25` | 25 | 25 | 45 |
+| A2 | J3 `TOURNAMENT_SCHEDULED_EVENTS` pour D1 | 1 | 26 | 46 |
+| A3 | J4 phase 2 pour D1 | 1 | 27 | 47 |
+| A4 | J5 statistiques, incidents et compositions pour D1 | 3 | 30 | 50 |
+| B1 | J4 phase 2 pour D2 | 1 | 31 | 51 |
+| B2 | J5 statistiques, incidents et compositions pour D2 | 3 | 34 | 54 |
+| B3 | J4 phase 2 pour D3 | 1 | 35 | 55 |
+| B4 | J5 statistiques, incidents et compositions pour D3 | 3 | 38 | 58 |
+
+```text
+NEW_SERIES_LEDGER_BASELINE_DIRECT_ATTEMPTS=0
+NEW_SERIES_MAXIMUM_DIRECT_ATTEMPTS=38
+AUDIT_CUMULATIVE_BASELINE_DIRECT_ATTEMPTS=20
+AUDIT_MAXIMUM_CUMULATIVE_DIRECT_ATTEMPTS=58
+D1_REEXECUTION_REQUIRED=YES
+REPLACEMENT_DOSSIER_ALLOWED=NO
+THIRD_SERIES_AUTHORIZED=NO
+```
+
+Chaque sous-campagne contrôlera les deux ledgers avant son claim. Les unités non consommées ne
+constituent aucune réserve de retry, de rejeu, de remplacement ou de troisième série. Un cache hit
+vaut zéro appel direct et borne le résultat autonome pour la dimension concernée.
+
+## 4. Portes cumulatives avant tout appel fournisseur
+
+Les portes sont strictement séquentielles :
+
+1. Work Order, branche et worktree dédiés ouverts sur le commit d'ADR v1.1 accepté ;
+2. readiness fraîche sur le commit exact de préparation ;
+3. revue officielle encore fraîche à la date du futur go ;
+4. sauvegarde chiffrée V28 post-arrêt et restauration isolée qualifiée ;
+5. manifeste final gelé et corroboration indépendante des ledgers ;
+6. go propriétaire global explicite, lié au manifeste, borné à une fenêtre UTC d'au plus 60 minutes
+   et à usage unique.
+
+Tant qu'une seule porte reste insatisfaite :
+
+```text
+CODEX_LOCAL_UI_PROVIDER_ACTIONS_ALLOWED_NOW=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+GLOBAL_OWNER_GO=NOT_GRANTED
+OWNER_GO_CONSUMED=NO
+```
+
+## 5. Readiness hors ligne obligatoire
+
+La readiness sera exécutée sur le commit exact de WO-023, sans accès fournisseur :
+
+```text
+.\mvnw.cmd clean verify
+.\mvnw.cmd -Pintegration-tests verify
+pwsh -NoProfile -File .\scripts\Verify-Local.ps1 -WithIntegrationTests
+docker compose --env-file .env config --quiet
+pwsh -NoProfile -File .\scripts\Invoke-J3PlaywrightLoopbackQualification.ps1
+pwsh -NoProfile -File .\scripts\Invoke-J4PlaywrightLoopbackQualification.ps1
+pwsh -NoProfile -File .\scripts\Invoke-J5PlaywrightLoopbackQualification.ps1
+```
+
+La qualification inclura également les tests des fences inter-worker/inter-campagne, du refus des
+39e/59e tentatives, de la consommation unique du go, de l'arrêt global, du délai réseau minimal de
+3 secondes, du nettoyage après succès/échec et de l'absence d'artefacts navigateur, secrets ou
+payloads bruts dans Git et les journaux documentaires.
+
+Critères de readiness :
+
+```text
+STANDARD_TESTS=PASS
+INTEGRATION_TESTS=PASS
+VERIFY_LOCAL=PASS
+COMPOSE_CONFIG=PASS
+LOOPBACK_J3=PASS
+LOOPBACK_J4=PASS
+LOOPBACK_J5=PASS
+PROVIDER_ACCESS_PERFORMED=NO
+LISTENER_127_0_0_1_8087_AFTER_READINESS=FREE
+OWNED_PLAYWRIGHT_PROCESS_COUNT_AFTER_READINESS=0
+FORBIDDEN_BROWSER_ARTIFACT_COUNT=0
+```
+
+## 6. Sauvegarde/restauration V28 post-arrêt
+
+Après la readiness et avant le manifeste, une nouvelle archive chiffrée sera créée hors Git et
+restaurée sur une cible isolée. Aucune phrase secrète, clé privée, archive, payload ou chemin
+sensible ne sera versionné.
+
+La qualification doit établir au minimum :
+
+```text
+FLYWAY_SCHEMA_VERSION=28
+MINIMUM_SNAPSHOT_ID_COVERAGE=814
+MINIMUM_OCCURRENCE_ID_COVERAGE=781
+HISTORICAL_DIRECT_ATTEMPTS_COVERED=20
+RESTORE_QUALIFIED=YES
+RAW_INTEGRITY_FAILURE_COUNT=0
+SOURCE_RESTORE_MISMATCH_COUNT=0
+TEMPORARY_RESTORE_DATABASE_REMAINING=NO
+PRIMARY_DATABASE_PURGE=NO
+PROVIDER_ACCESS_PERFORMED=NO
+```
+
+Un échec, une couverture insuffisante ou un résidu de restauration bloque la campagne et exige une
+nouvelle décision après correction ; aucune purge de la base primaire n'est permise.
+
+## 7. Manifeste final et futur go global
+
+Après satisfaction des portes hors ligne, un manifeste versionné figera le commit exécutable, les
+résultats de readiness et de sauvegarde/restauration, le corpus, l'ordre A1..B4, les deux ledgers,
+l'acteur et les invariants. Son SHA-256 sera calculé avant toute demande de go.
+
+Le bloc propriétaire global devra alors identifier explicitement ce manifeste et une fenêtre UTC
+non rétroactive d'au plus 60 minutes :
+
+```text
+J9_WO023_GLOBAL_OWNER_GO_DECISION=<GRANT|DENY>
+WORK_ORDER=WO-SS-20260831-023-j9-provider-robustness-v11
+WORK_ORDER_COMMIT=<commit>
+MANIFEST_REFERENCE=<path>
+MANIFEST_SHA256=<sha256>
+ADR=ADR-SS-002_v1.1
+ADR_STATUS=ACCEPTED
+HISTORICAL_REPORT=docs/validation/J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831.md
+HISTORICAL_REPORT_SHA256=47e6171eeb1fc44cf995c727d4f09107875c844e71e8b183068731cbb4c62b9d
+TARGET_PROVIDER_EVENT_IDS=16691018,16671566,16310930
+TARGET_CANONICAL_EVENT_IDS=f4713f80-4769-3656-ba51-61d8ac1aa814,da075869-34d4-3d42-83d2-613583691845,c40066c9-987b-38d9-b415-869a453d2ad6
+HISTORICAL_DIRECT_ATTEMPTS_FROZEN=20
+NEW_SERIES_MAXIMUM_DIRECT_ATTEMPTS=38
+AUDIT_MAXIMUM_CUMULATIVE_DIRECT_ATTEMPTS=58
+EXECUTION_ACTOR=CODEX_LOCAL_UI
+WINDOW_UTC=[<FROM>,<TO>)
+MAXIMUM_WINDOW_DURATION=60m
+GO_USE=ONE_TIME
+REPLACEMENT_DOSSIER_ALLOWED=NO
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+```
+
+Le go sera consommé irréversiblement au premier claim J3 accepté. Une deuxième utilisation, un
+redémarrage, une deuxième instance, une condition d'arrêt, la fin de la fenêtre ou la fin de D3 le
+terminera.
+
+## 8. Exécution UI unitaire et conditions d'arrêt
+
+L'acteur utilisera exclusivement l'interface locale sur `127.0.0.1:8087`. Chaque segment A1..B4
+conserve une préparation fraîche, sa phrase exacte à usage unique, son acquittement/claim et un
+nouveau contexte Playwright non persistant. La concurrence reste `1`, le délai minimal `3 s`, le
+timeout `10 s`, sans retry, fallback, polling, scheduler, cache forcé, script de soumission ou
+orchestration UI.
+
+Une réponse `404` native conserve les sémantiques existantes et permet la poursuite ordonnée avec
+un résultat global au maximum `PARTIAL_BOUNDED`. Toute autre condition suivante arrête la série :
+
+- `401`, `403`, `429`, `5xx`, timeout ou redirection inattendue ;
+- HTML/challenge, incompatibilité de schéma ou dépassement de 5 Mio ;
+- fuite de donnée sensible, échec de persistance, lease, fence ou cleanup ;
+- absence de délai réseau conforme, dépassement potentiel d'un ledger ou go invalide/expiré ;
+- conservation de HAR, trace, vidéo, capture, téléchargement ou `storageState`.
+
+Aucun dossier de remplacement, retry, relance automatique ou poursuite après arrêt n'est permis.
+
+## 9. Preuve, nettoyage et clôture
+
+Le rapport autonome sera créé sous `docs/validation` sans modifier le rapport WO-019. Il consignera
+les tentatives par segment/dossier/famille, classifications HTTP, parsings, persistences,
+complétude, indisponibilités natives, durées, hashes, ledgers, cleanup et reproductibilité des
+exports, sans payload brut, cookie, jeton, certificat, phrase de confirmation ou donnée de session.
+
+Après succès comme après arrêt :
+
+1. remettre tous les flags réseau à l'état bloqué ;
+2. vérifier l'absence de listener, worker, navigateur ou processus possédé résiduel ;
+3. vérifier l'absence d'artefact navigateur interdit et de secret dans le diff ;
+4. réexécuter les tests requis et produire le commit local de preuve ;
+5. consolider la matrice de WO-018 sans fusion vers `main` et sans push.
+
+## 10. État à l'ouverture
+
+```text
+WORK_ORDER_STATUS=OPEN_AWAITING_OFFLINE_READINESS
+EVIDENCE_STATUS=DRAFT
+OFFLINE_READINESS=NOT_EXECUTED
+POST_STOP_V28_BACKUP_RESTORE=NOT_EXECUTED
+MANIFEST_STATUS=NOT_CREATED
+GLOBAL_OWNER_GO=NOT_GRANTED
+OWNER_GO_CONSUMED=NO
+NEW_SERIES_DIRECT_ATTEMPTS=0
+AUDIT_CUMULATIVE_DIRECT_ATTEMPTS=20
+CODEX_LOCAL_UI_ACTOR_AUTHORIZED_FOR_WO023=YES
+CODEX_LOCAL_UI_PROVIDER_ACTIONS_ALLOWED_NOW=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_FINAL_DECISION=NOT_TAKEN
+```
+
+## 11. Validation de WO-024 et readiness fraîche post-correctif
+
+Le paragraphe 10 reste la photographie immuable de l'ouverture. Le propriétaire a ensuite validé
+WO-024 et autorisé une nouvelle tentative de sauvegarde/restauration WO-023 avec la phrase secrète
+auto-générée par `age`. Il a également exprimé l'intention d'enchaîner sur la campagne fournisseur,
+mais son bloc explicite maintient le réseau, la reprise et le nouveau go à `NO`. L'intention de
+séquence ne vaut donc pas go fournisseur.
+
+```text
+J9_WO024_OWNER_REVIEW_DECISION=VALIDATE
+J9_WO024_WORK_ORDER=WO-SS-20260831-024-j9-backup-pipeline-fail-closed-cleanup
+J9_WO024_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO024_SCOPE_CONFIRMED=DIAGNOSE_CORRECT_AND_QUALIFY_J6_BACKUP_NATIVE_PIPELINE_CANCELLATION_TIMEOUT_AND_PROCESS_TREE_CLEANUP
+J9_WO024_FAIL_CLOSED_PIPELINE_QUALIFIED=YES
+J9_WO024_WORK_ORDER_MOVE_TO_COMPLETED=YES
+J9_WO023_BACKUP_RETRY=AUTHORIZED_AFTER_VALIDATION_WITH_AGE_AUTOGENERATED_PASSPHRASE
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_WO023_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+J9_NEW_PROVIDER_GO_GRANTED=NO
+J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+```
+
+WO-024 a été clôturé au commit `8b91bf86c624ebff0ddf5c4c9bf454e83142b578`, puis intégré à
+WO-023 par fast-forward, sans commit de fusion. La readiness fraîche a été exécutée sur ce commit,
+hors ligne pour Maven et exclusivement sur `127.0.0.1` pour Playwright. Le cache Chromium complet
+déjà qualifié du worktree historique WO-019 a été fourni explicitement aux trois scripts ; aucun
+téléchargement de navigateur n'a été déclenché.
+
+Les deux premiers lancements J3 depuis le profil de sandbox Codex se sont arrêtés avant les tests :
+le profil remappait le dépôt Maven vers un cache vide et refusait l'accès à Central. Ils n'ont lancé
+ni worker, ni navigateur, ni appel fournisseur. La même commande, exécutée dans le contexte hôte
+avec Maven forcé hors ligne, a ensuite réussi ; J4 et J5 ont suivi séquentiellement dans ce même
+contexte.
+
+Le rapport détaillé et les hashes des rapports locaux conservés au moment du constat sont dans
+`docs/validation/J9-PROVIDER-ROBUSTNESS-V11-READINESS-20260831.md`.
+
+```text
+WORK_ORDER_STATUS=READY_FOR_V28_BACKUP_RESTORE
+EVIDENCE_STATUS=DRAFT
+
+WO024_STATUS=VALIDATED
+WO024_VALIDATED_COMMIT=8b91bf86c624ebff0ddf5c4c9bf454e83142b578
+WO024_OWNER_VALIDATED_AT_UTC=2026-08-31T18:37:19Z
+WO024_WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260831-024-j9-backup-pipeline-fail-closed-cleanup.md
+WO024_FAIL_CLOSED_PIPELINE_QUALIFIED=YES
+
+OFFLINE_READINESS=PASS_AFTER_VALIDATED_WO024
+OFFLINE_READINESS_CODE_COMMIT=8b91bf86c624ebff0ddf5c4c9bf454e83142b578
+STANDARD_VERIFY=PASS_945_TESTS_0_FAILURES_0_ERRORS_4_SKIPPED
+INTEGRATION_VERIFY=PASS_67_TESTS_0_FAILURES_0_ERRORS_0_SKIPPED
+FLYWAY_SCHEMA=V28
+VERIFY_LOCAL=PASS_WITH_INTEGRATION_TESTS_PROVIDER_NETWORK_NO
+COMPOSE_CONFIG=PASS
+LOOPBACK_J3=PASS_21_WORKER_PLUS_14_CHROMIUM
+LOOPBACK_J4=PASS_21_WORKER_PLUS_14_CHROMIUM
+LOOPBACK_J5=PASS_21_WORKER_PLUS_14_CHROMIUM
+SUPERVISOR_TESTS=PASS_40
+COORDINATOR_TESTS=PASS_8
+MINIMUM_NETWORK_START_GAPS=PASS_GE_3_SECONDS
+CROSS_WORKER_NETWORK_START_GAPS=PASS_GE_3_SECONDS
+CROSS_CAMPAIGN_NETWORK_START_GAPS=PASS_GE_3_SECONDS
+STOP_DURING_DELAY_NEW_REQUEST_COUNT=0
+NEW_SERIES_LEDGER_38_PLUS_1=REJECTED
+NEW_SERIES_LEDGER_36_PLUS_3=REJECTED
+AUDIT_CUMULATIVE_LEDGER_58_PLUS_1=REJECTED
+AUDIT_CUMULATIVE_LEDGER_56_PLUS_3=REJECTED
+OLD_GLOBAL_OWNER_GO_REUSE=REJECTED
+PROVIDER_ACCESS_PERFORMED=NO
+LISTENER_127_0_0_1_8087_AFTER_READINESS=FREE
+OWNED_PLAYWRIGHT_PROCESS_COUNT_AFTER_READINESS=0
+FORBIDDEN_BROWSER_ARTIFACT_COUNT=0
+SECRET_AND_RAW_PAYLOAD_SCAN=PASS
+NETWORK_FLAGS_DEFAULT_FALSE=PASS
+
+WO023_BACKUP_RETRY_AUTHORIZED_NOW=YES_WITH_AGE_AUTOGENERATED_PASSPHRASE
+POST_STOP_V28_BACKUP_RESTORE=AUTHORIZED_NOT_EXECUTED
+NEXT_GATE=POST_STOP_V28_BACKUP_RESTORE
+MANIFEST_STATUS=NOT_CREATED
+
+GLOBAL_OWNER_GO=NOT_GRANTED
+OWNER_GO_CONSUMED=NO
+NEW_SERIES_DIRECT_ATTEMPTS=0
+AUDIT_CUMULATIVE_DIRECT_ATTEMPTS=20
+CODEX_LOCAL_UI_PROVIDER_ACTIONS_ALLOWED_NOW=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO
+WO023_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+NEW_GLOBAL_OWNER_GO_GRANTED=NO
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_FINAL_DECISION=NOT_TAKEN
+
+OWNER_SEQUENCE_INTENT=BACKUP_RESTORE_THEN_PROVIDER_CAMPAIGN
+PROVIDER_CAMPAIGN_AUTHORITY_IN_CURRENT_BLOCK=NO
+```
+
+## 12. Incident fail-closed de la porte sauvegarde/restauration
+
+La photographie du paragraphe 11 reste la preuve de readiness antérieure à l'essai. La tentative
+unique ensuite autorisée a utilisé la phrase secrète auto-générée par `age`. Le chiffrement s'est
+terminé avec producteur et consommateur à `EXIT_0`, copie à EOF et nettoyage local déclaré `PASS`,
+puis l'exécution s'est arrêtée à la confirmation de nettoyage de la session PostgreSQL exactement
+possédée.
+
+Le point d'arrêt précède la publication de l'archive finale, la création du manifeste et toute
+restauration. L'audit post-incident trouve trois fois zéro session exacte et zéro session J6
+possédée ; il trouve également zéro processus exact, fichier final ou partiel, base temporaire et
+listener 8087. Ce confinement postérieur ne qualifie pas rétroactivement la tentative.
+
+Le diagnostic établit un écart de qualification : le runtime utilise par défaut une fenêtre de
+nettoyage de `5 000 ms`, alors que les quatre parcours Docker de qualification WO-024 forçaient
+`10 000 ms`. Le message final générique ne préserve pas la cause interne ; le déclencheur exact
+reste donc indéterminé. Le rapport distinct
+[Le rapport d'incident distinct](../../validation/J9-WO023-POST-BACKUP-CLEANUP-INCIDENT-20260831.md)
+consigne les faits, hashes et bornes sans exposer le nom exact de session ni le chemin de la preuve
+opérateur.
+
+La validation standard post-incident a ensuite produit `945` tests, un échec, zéro erreur et quatre
+skips. Le scénario synthétique de commande native bornée a atteint les marqueurs précédents puis
+n'a pas créé sa preuve PID dans sa fenêtre de `1 500 ms`. Une entrée synthétique antérieure,
+orpheline et d'état Windows `Unknown`, est en outre visible par `tasklist`/CIM mais pas ouvrable par
+`Get-Process`. Ces constats sont distincts de l'incident PostgreSQL réel ; ils rendent néanmoins la
+qualification runtime courante non reproductible et doivent entrer dans le périmètre correctif. Un
+répertoire temporaire synthétique, antérieur de plus de quatre heures au verify rouge, subsiste
+également hors dépôt ; il n'est pas attribué à cette exécution mais doit être couvert par l'audit de
+nettoyage renforcé.
+
+```text
+WORK_ORDER_STATUS=BLOCKED_AFTER_BACKUP_CLEANUP_UNCONFIRMED
+EVIDENCE_STATUS=DRAFT
+OFFLINE_READINESS=PASS_AFTER_VALIDATED_WO024
+
+BACKUP_ATTEMPT_RESULT=FAILED_FAIL_CLOSED
+BACKUP_ENCRYPTION_PIPELINE=COMPLETED_NOT_QUALIFIED
+EXACT_POSTGRES_SESSION_CLEANUP_CONFIRMATION=FAILED_OR_UNVERIFIABLE
+BACKUP_QUALIFIED=NO
+FINAL_ARCHIVE_PUBLICATION=NO_BY_CODE_PATH
+MANIFEST_STATUS=NOT_CREATED
+RESTORE_PHASE=NOT_STARTED
+RESTORE_QUALIFIED=NO
+
+POST_INCIDENT_EXACT_SESSION_OBSERVATIONS=0,0,0
+POST_INCIDENT_ALL_OWNED_SESSION_OBSERVATIONS=0,0,0
+POST_INCIDENT_EXACT_PROCESS_COUNT=0
+POST_INCIDENT_TEMPORARY_RESTORE_DATABASE_COUNT=0
+POST_INCIDENT_BACKUP_DIRECTORY_FILE_COUNT=0
+POST_INCIDENT_PARTIAL_FILE_COUNT=0
+POST_INCIDENT_LISTENER_8087_COUNT=0
+
+DEFAULT_CLEANUP_TIMEOUT_MS=5000
+WO024_DOCKER_QUALIFIED_CLEANUP_TIMEOUT_MS=10000
+DEFAULT_PATH_DOCKER_QUALIFIED=NO
+ROOT_CAUSE=INCONCLUSIVE_WITH_PROVEN_QUALIFICATION_MISMATCH
+PERSISTENT_SESSION_SURVIVAL_PROVEN=NO
+
+POST_INCIDENT_CLEAN_VERIFY=FAIL_945_TESTS_1_FAILURE_0_ERRORS_4_SKIPPED
+J6_BOUNDED_NATIVE_COMMAND_PID_EVIDENCE=NOT_CREATED
+CURRENT_RUNTIME_QUALIFICATION_REPRODUCIBLE=NO
+SYNTHETIC_UNKNOWN_STATE_PROCESS_ENTRY_COUNT=1
+SYNTHETIC_PROCESS_ABSENCE_PROOF=FAILED_CROSS_API_CORROBORATION
+SYNTHETIC_TEMP_DIRECTORY_RESIDUAL_COUNT=1
+
+OWNER_BACKUP_RETRY_AUTHORIZATION=CONSUMED_BY_FAILED_ATTEMPT
+WO023_BACKUP_RETRY_AUTHORIZED_NOW=NO
+NEXT_GATE=OWNER_DECISION_ON_DISTINCT_RUNTIME_CORRECTIVE_WORK_ORDER
+
+NEW_SERIES_DIRECT_ATTEMPTS=0
+AUDIT_CUMULATIVE_DIRECT_ATTEMPTS=20
+PROVIDER_ACCESS_PERFORMED=NO
+CODEX_LOCAL_UI_PROVIDER_ACTIONS_ALLOWED_NOW=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO
+WO023_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+GLOBAL_OWNER_GO=NOT_GRANTED
+OWNER_GO_CONSUMED=NO
+NEW_GLOBAL_OWNER_GO_GRANTED=NO
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_FINAL_DECISION=NOT_TAKEN
+```
+
+WO-024 est validé et gelé. Toute modification du script, de la borne de nettoyage, de la logique
+d'observation PostgreSQL, du parsing, de la classification d'erreur ou de la preuve PID/absence
+multi-API exige un Work Order runtime, une branche/worktree dédiés et une autorisation propriétaire
+d'implémentation. Même si aucun changement de code n'était finalement nécessaire, une nouvelle
+tentative réelle exigerait une nouvelle décision propriétaire explicite.
+
+## 13. Validation de WO-025 et porte courante de WO-023
+
+Le paragraphe 12 reste la photographie immuable de l'incident et de la porte alors ouverte. Le
+Work Order correctif distinct
+[`WO-SS-20260831-025-j9-backup-cleanup-proof-hardening`](../completed/WO-SS-20260831-025-j9-backup-cleanup-proof-hardening.md)
+a depuis livré puis qualifié localement les valeurs effectives, le nettoyage PostgreSQL exact, les
+classifications sanitées, la preuve native multi-API et le nettoyage du temp root exactement
+possédé. Le propriétaire a validé WO-025 à `2026-08-31T22:35:48.6609979Z` et autorisé son
+déplacement vers les Work Orders terminés.
+
+Cette validation satisfait la porte corrective technique ; elle ne recrée pas l'autorisation de
+sauvegarde WO-023 consommée par l'essai précédent. Conformément au bloc propriétaire de clôture de
+WO-025, la prochaine porte de WO-023 est exclusivement une décision propriétaire séparée sur un
+nouvel essai de sauvegarde/restauration. Elle n'autorise encore ni la campagne fournisseur ni son
+réseau.
+
+```text
+STATE_RECONCILED_AT_UTC=2026-08-31T22:35:48.6609979Z
+WORK_ORDER_STATUS=BLOCKED_AFTER_BACKUP_CLEANUP_UNCONFIRMED
+EVIDENCE_STATUS=DRAFT
+
+WO025_STATUS=VALIDATED
+WO025_LOCAL_READINESS=PASS_LOCAL_ACCEPTED_BY_OWNER
+WO025_FAIL_CLOSED_AND_EXACT_OWNERSHIP_INVARIANTS=PRESERVED
+WO025_PID_ONLY_TERMINATION_USED=NO
+WO025_MOVE_TO_COMPLETED_PERFORMED=YES
+WO025_CLEANUP_PROOF_HARDENING_QUALIFIED=YES
+WO025_WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260831-025-j9-backup-cleanup-proof-hardening.md
+
+OWNER_BACKUP_RETRY_AUTHORIZATION=NOT_GRANTED_AFTER_WO025_VALIDATION
+BACKUP_QUALIFIED=NO
+J9_WO023_BACKUP_RETRY_AFTER_WO025_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
+J9_WO023_BACKUP_RETRY_AUTHORIZED=NO
+WO023_BACKUP_RETRY_AUTHORIZED_NOW=NO
+NEXT_GATE=SEPARATE_OWNER_DECISION_ON_WO023_BACKUP_RETRY
+
+NEW_SERIES_DIRECT_ATTEMPTS=0
+AUDIT_CUMULATIVE_DIRECT_ATTEMPTS=20
+PROVIDER_ACCESS_PERFORMED=NO
+CODEX_LOCAL_UI_PROVIDER_ACTIONS_ALLOWED_NOW=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO
+WO023_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+J9_WO023_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+GLOBAL_OWNER_GO=NOT_GRANTED
+OWNER_GO_CONSUMED=NO
+NEW_GLOBAL_OWNER_GO_GRANTED=NO
+J9_NEW_PROVIDER_GLOBAL_GO_GRANTED=NO
+PRIMARY_DATABASE_PURGE=NO
+J9_PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_FINAL_DECISION=NOT_TAKEN
+```
+
+## 14. Autorisation propriétaire séparée d'un nouvel essai local
+
+Après la validation et le gel de WO-025, le propriétaire a fourni le 31 août 2026 la décision
+séparée exigée par la porte du paragraphe 13 : « J'autorise un nouvel essai de
+sauvegarde/restauration ». Cette autorisation est interprétée de façon bornée comme un jeton unique
+pour un seul nouveau cycle local chiffré de sauvegarde puis restauration sous WO-023. Elle ne vaut
+ni autorisation d'acquisition SofaScore, ni reprise de la campagne fournisseur, ni nouveau go
+global, ni purge de la base primaire, ni intégration ou production.
+
+La phrase secrète reste saisie directement dans le terminal interactif par l'opérateur et n'est ni
+transmise à Codex, ni journalisée, ni conservée dans Git ou dans `.env`. Sans attribuer ce choix au
+nouveau message propriétaire, le parcours opératoire déjà qualifié de WO-023 reste celui de la
+phrase auto-générée par `age` : première invite laissée vide, phrase affichée conservée uniquement
+par l'opérateur le temps du cycle, puis ressaisie au déchiffrement. Le terminal natif ne doit pas
+être relayé dans un transcript visible du modèle.
+
+L'autorisation n'est pas consommée par les contrôles préparatoires. Elle l'est exactement à la
+première invocation réelle de `Backup-Restore-J6.ps1` après un préflight entièrement vert. Toute
+sortie du script après ce point, favorable ou non, porte le compteur à `1_OF_1` et interdit une
+nouvelle tentative sans nouvelle décision propriétaire.
+
+```text
+STATE_RECONCILED_AT_UTC=2026-08-31T22:46:53.9166240Z
+WORK_ORDER_STATUS=READY_FOR_ONE_TIME_V28_BACKUP_RESTORE_RETRY
+EVIDENCE_STATUS=DRAFT
+
+J9_WO023_BACKUP_RETRY_OWNER_DECISION=AUTHORIZE_ONE_NEW_ATTEMPT
+J9_WO023_BACKUP_RETRY_AUTHORIZED=YES_ONE_TIME
+WO023_BACKUP_RETRY_AUTHORIZED_NOW=YES_ONE_TIME
+WO023_BACKUP_RETRY_AUTHORIZATION_USE_COUNT=0_OF_1
+BACKUP_RESTORE_RETRY_STATUS=AUTHORIZED_NOT_STARTED
+AGE_PASSPHRASE_INTERACTION=REQUIRED_IN_ATTACHED_TERMINAL
+AGE_PASSPHRASE_MODE=AGE_AUTOGENERATED_IN_ATTACHED_NATIVE_TERMINAL
+AGE_FIRST_PROMPT_ACTION=SUBMIT_EMPTY
+AGE_SECRET_HANDLING=OPERATOR_ONLY_NOT_IN_MODEL_TRANSCRIPT_NOT_IN_GIT_NOT_IN_ENV
+AUTHORIZATION_CONSUMPTION_POINT=FIRST_REAL_BACKUP_RESTORE_SCRIPT_INVOCATION_AFTER_GREEN_PREFLIGHT
+BACKUP_QUALIFIED=NO
+RESTORE_QUALIFIED=NO
+MANIFEST_STATUS=NOT_CREATED_FOR_THIS_RETRY
+NEXT_GATE=LOCAL_BACKUP_RESTORE_PREFLIGHT_THEN_ONE_TIME_INTERACTIVE_EXECUTION
+
+CURRENT_STANDARD_VERIFY=PASS_946_TESTS_0_FAILURES_0_ERRORS_5_SKIPPED
+CURRENT_STANDARD_VERIFY_FINISHED_AT_UTC=2026-08-31T22:51:11Z
+RUNTIME_CODE_DIFF_FROM_WO025_QUALIFIED_COMMIT=NONE
+WO025_LOCAL_READINESS_APPLICABLE_TO_UNCHANGED_J6_RUNTIME=YES
+WO023_PRIOR_READINESS_COMMIT=8b91bf86c624ebff0ddf5c4c9bf454e83142b578
+WO025_QUALIFIED_RUNTIME_COMMIT=d019be274f200aaa33124b041e3773cf15ae2723
+WO025_OWNER_VALIDATED_COMMIT=dfbdeefb663981653716bc6b7b4794b1b56c3630
+PROVIDER_RUNTIME_AND_CONFIG_DIFF_FROM_WO023_PRIOR_READINESS=NONE
+WO023_PRIOR_J3_J4_J5_LOOPBACK_READINESS_CARRIED_FORWARD_BY_EXACT_DIFF=YES
+
+NEW_SERIES_DIRECT_ATTEMPTS=0
+AUDIT_CUMULATIVE_DIRECT_ATTEMPTS=20
+PROVIDER_ACCESS_PERFORMED=NO
+CODEX_LOCAL_UI_PROVIDER_ACTIONS_ALLOWED_NOW=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO
+WO023_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+J9_WO023_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+GLOBAL_OWNER_GO=NOT_GRANTED
+OWNER_GO_CONSUMED=NO
+NEW_GLOBAL_OWNER_GO_GRANTED=NO
+J9_NEW_PROVIDER_GLOBAL_GO_GRANTED=NO
+PRIMARY_DATABASE_PURGE=NO
+J9_PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_FINAL_DECISION=NOT_TAKEN
+```
+
+## 15. Qualification du nouvel essai V28 et porte suivante
+
+L'unique invocation réelle autorisée au paragraphe 14 a été exécutée dans un terminal PowerShell 7
+natif non capturé. Le propriétaire a utilisé la phrase auto-générée par `age` sans la transmettre à
+Codex. L'archive n'a été publiée qu'après restauration isolée V28 et égalité complète des mesures et
+empreintes source/restauration.
+
+Le rapport distinct
+[J9-WO023-V28-BACKUP-RESTORE-RETRY-20260901](../../validation/J9-WO023-V28-BACKUP-RESTORE-RETRY-20260901.md)
+porte le préflight, les hashes, les compteurs restaurés et le postflight sans chemin externe ni
+secret. Son SHA-256 est
+`c29ce8593ccd54ca4347636cf9bcf881d1f36081348a5850e134e69cffab9bbe`.
+
+```text
+STATE_RECONCILED_AT_UTC=2026-08-31T23:01:28.8008379Z
+WORK_ORDER_STATUS=READY_FOR_FINAL_MANIFEST_FREEZE_AND_INDEPENDENT_LEDGER_CORROBORATION
+EVIDENCE_STATUS=DRAFT
+
+WO023_BACKUP_RETRY_AUTHORIZATION_USE_COUNT=1_OF_1
+WO023_BACKUP_RETRY_AUTHORIZED_NOW=NO
+REAL_BACKUP_RESTORE_SCRIPT_INVOCATIONS=1
+AUTOMATIC_RETRY_PERFORMED=NO
+BACKUP_RESTORE_RETRY_RESULT=PASS
+BACKUP_QUALIFIED=YES
+RESTORE_QUALIFIED=YES
+SOURCE_RESTORE_MISMATCH_COUNT=0
+RAW_PAYLOAD_INTEGRITY_FAILURE_COUNT=0
+
+J6_BACKUP_CIPHER_SHA256=526f2faa22f8da0506194030f6f7fbe0966e65550310375d055041d4ea257041
+J6_BACKUP_MANIFEST_SHA256=7994a3b2ec6ced505b36514ad0b5eb113c5c1b30a0a77811e4d1a7ae80a2eaa9
+J6_BACKUP_CIPHER_SIZE_BYTES=7268470
+J6_BACKUP_MANIFEST_SIZE_BYTES=2203
+J6_BACKUP_CREATED_AT_UTC=2026-08-31T22:57:10.9961533Z
+J6_BACKUP_QUALIFIED_AT_UTC=2026-08-31T22:57:55.7088914Z
+J6_BACKUP_COVERAGE_MAX_SNAPSHOT_ID=814
+J6_BACKUP_COVERAGE_RECEIVED_AT=2026-08-31T07:59:01.196000Z
+J8_PROVIDER_CALL_ATTEMPT_COUNT_COVERED=116
+MANIFEST_RESTORE_QUALIFIED=true
+MANIFEST_REPORT_ID=J9-WO023-V28-BACKUP-RESTORE-RETRY-20260901
+MANIFEST_REPORT_SHA256=c29ce8593ccd54ca4347636cf9bcf881d1f36081348a5850e134e69cffab9bbe
+
+PRIMARY_DATABASE_STATE_MATCHES_MANIFEST_SOURCE=YES
+PRIMARY_DATABASE_PURGE=NO
+J6_OWNED_POSTGRES_SESSION_COUNT=0
+J6_TEMPORARY_RESTORE_DATABASE_COUNT=0
+AGE_PROCESS_COUNT=0
+J6_NATIVE_HOST_PROCESS_COUNT=0
+LISTENER_8087_COUNT=0
+PARTIAL_ARTIFACT_COUNT=0
+OPERATOR_TERMINAL_HUMAN_CLOSE_REQUESTED=YES
+
+NEXT_GATE=FINAL_MANIFEST_FREEZE_AND_INDEPENDENT_LEDGER_CORROBORATION
+NEW_SERIES_DIRECT_ATTEMPTS=0
+AUDIT_CUMULATIVE_DIRECT_ATTEMPTS=20
+PROVIDER_ACCESS_PERFORMED=NO
+CODEX_LOCAL_UI_PROVIDER_ACTIONS_ALLOWED_NOW=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO
+WO023_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+J9_WO023_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+GLOBAL_OWNER_GO=NOT_GRANTED
+OWNER_GO_CONSUMED=NO
+NEW_GLOBAL_OWNER_GO_GRANTED=NO
+J9_NEW_PROVIDER_GLOBAL_GO_GRANTED=NO
+J9_PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_FINAL_DECISION=NOT_TAKEN
+```
+
+Cette réussite clôt uniquement la porte de sauvegarde/restauration. Elle n'autorise aucune action
+fournisseur : le manifeste doit encore être figé par ses hashes et le ledger corroboré
+indépendamment avant qu'un éventuel nouveau go propriétaire global puisse être demandé.
+
+## 16. Gel du manifeste de campagne et corroboration indépendante du ledger
+
+La porte suivante a été exécutée sans réseau fournisseur. Le ledger append-only retrouve exactement
+les 20 tentatives historiques WO-019 dans la fenêtre englobante `07:25–08:00Z`, avec la répartition
+`15+1+1+1+1+1`, zéro doublon par unité et zéro tentative depuis l'ouverture de WO-023. Le total
+historique courant reste 116 et son dernier départ précède la création de la nouvelle sauvegarde.
+
+Le manifeste de campagne versionné
+[J9-WO023-PROVIDER-CAMPAIGN-MANIFEST-20260901](../../validation/J9-WO023-PROVIDER-CAMPAIGN-MANIFEST-20260901.md)
+fige le runtime, la readiness, la preuve de sauvegarde, les ledgers, le corpus D1/D2/D3, l'ordre
+A1..B4, les plafonds et les arrêts. Son SHA-256 est
+`ff909f298f7d3c99b1027c071ac4d783a19529f6241b37941151c2c08c418a9e`.
+
+```text
+STATE_RECONCILED_AT_UTC=2026-08-31T23:07:10.5845860Z
+WORK_ORDER_STATUS=READY_FOR_GLOBAL_OWNER_GO
+EVIDENCE_STATUS=DRAFT
+
+CAMPAIGN_MANIFEST_STATUS=FROZEN_AWAITING_GLOBAL_OWNER_GO
+CAMPAIGN_MANIFEST_REFERENCE=docs/validation/J9-WO023-PROVIDER-CAMPAIGN-MANIFEST-20260901.md
+CAMPAIGN_MANIFEST_SHA256=ff909f298f7d3c99b1027c071ac4d783a19529f6241b37941151c2c08c418a9e
+BACKUP_REPORT_REFERENCE=docs/validation/J9-WO023-V28-BACKUP-RESTORE-RETRY-20260901.md
+BACKUP_REPORT_SHA256=c29ce8593ccd54ca4347636cf9bcf881d1f36081348a5850e134e69cffab9bbe
+HISTORICAL_REPORT_REFERENCE=docs/validation/J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831.md
+HISTORICAL_REPORT_SHA256=47e6171eeb1fc44cf995c727d4f09107875c844e71e8b183068731cbb4c62b9d
+
+INDEPENDENT_LEDGER_CORROBORATION=PASS
+HISTORICAL_DIRECT_ATTEMPTS_CORROBORATED=20
+HISTORICAL_LEDGER_FIRST_STARTED_AT_UTC=2026-08-31T07:25:57.738322Z
+HISTORICAL_LEDGER_LAST_STARTED_AT_UTC=2026-08-31T07:59:01.092327Z
+TOTAL_J8_PROVIDER_ATTEMPTS=116
+MAX_J8_PROVIDER_ATTEMPT_ID=116
+DUPLICATE_ATTEMPT_UNIT_COUNT=0
+NEW_SERIES_DIRECT_ATTEMPTS=0
+AUDIT_CUMULATIVE_DIRECT_ATTEMPTS=20
+NEW_SERIES_MAXIMUM_DIRECT_ATTEMPTS=38
+AUDIT_MAXIMUM_CUMULATIVE_DIRECT_ATTEMPTS=58
+
+NEXT_GATE=GLOBAL_OWNER_GO
+CODEX_LOCAL_UI_PROVIDER_ACTIONS_ALLOWED_NOW=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO
+WO023_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+J9_WO023_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+GLOBAL_OWNER_GO=NOT_GRANTED
+OWNER_GO_CONSUMED=NO
+NEW_GLOBAL_OWNER_GO_GRANTED=NO
+J9_NEW_PROVIDER_GLOBAL_GO_GRANTED=NO
+PRIMARY_DATABASE_PURGE=NO
+J9_PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_FINAL_DECISION=NOT_TAKEN
+```
+
+`READY_FOR_GLOBAL_OWNER_GO` signifie seulement que les portes documentaires hors ligne sont
+satisfaites. Aucun processus fournisseur ne sera lancé et aucun go ne sera déduit de décisions
+antérieures. Le prochain bloc propriétaire devra citer le commit local qui introduit ce manifeste,
+son chemin, son SHA-256 et une nouvelle fenêtre UTC future d'au plus 60 minutes.
+
+## 17. Go global exécuté et campagne autonome
+
+Le propriétaire a ensuite fourni un go global complet, lié au commit et au manifeste gelés, avec
+une fenêtre exacte de 60 minutes. Ce bloc a autorisé une seule série D1/D2/D3 et aucun autre effet :
+
+```text
+J9_WO023_GLOBAL_OWNER_GO_DECISION=GRANT
+WORK_ORDER=WO-SS-20260831-023-j9-provider-robustness-v11
+WORK_ORDER_COMMIT=f632fd0377f2715c15fc2e030168a35a67f98552
+MANIFEST_REFERENCE=docs/validation/J9-WO023-PROVIDER-CAMPAIGN-MANIFEST-20260901.md
+MANIFEST_SHA256=ff909f298f7d3c99b1027c071ac4d783a19529f6241b37941151c2c08c418a9e
+ADR=ADR-SS-002_v1.1
+ADR_STATUS=ACCEPTED
+HISTORICAL_REPORT=docs/validation/J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831.md
+HISTORICAL_REPORT_SHA256=47e6171eeb1fc44cf995c727d4f09107875c844e71e8b183068731cbb4c62b9d
+BACKUP_REPORT=docs/validation/J9-WO023-V28-BACKUP-RESTORE-RETRY-20260901.md
+BACKUP_REPORT_SHA256=c29ce8593ccd54ca4347636cf9bcf881d1f36081348a5850e134e69cffab9bbe
+TARGET_PROVIDER_EVENT_IDS=16691018,16671566,16310930
+TARGET_CANONICAL_EVENT_IDS=f4713f80-4769-3656-ba51-61d8ac1aa814,da075869-34d4-3d42-83d2-613583691845,c40066c9-987b-38d9-b415-869a453d2ad6
+HISTORICAL_DIRECT_ATTEMPTS_FROZEN=20
+NEW_SERIES_MAXIMUM_DIRECT_ATTEMPTS=38
+AUDIT_MAXIMUM_CUMULATIVE_DIRECT_ATTEMPTS=58
+EXECUTION_ACTOR=CODEX_LOCAL_UI
+WINDOW_UTC=[2026-08-31T23:45:00Z,2026-09-01T00:45:00Z)
+MAXIMUM_WINDOW_DURATION=60m
+GO_USE=ONE_TIME
+REPLACEMENT_DOSSIER_ALLOWED=NO
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+```
+
+Le préflight T0 a validé le commit exact, les trois hashes, la branche propre, les flags bloqués,
+le contrôle `SAFE/LOCKED`, l'absence de listener/processus/artefact et le ledger de base à 116.
+Le premier claim J3 a consommé le go. Les huit segments A1 à B4 ont ensuite terminé séquentiellement :
+
+| Segment | Périmètre | Tentatives | Résultat |
+|---|---|---:|---|
+| A1 | J3 pages 1 à 15 | 15 | 15 `HTTP 200 / PARSED / INSERTED` |
+| A2 | tournoi D1 | 1 | `HTTP 200 / PARSED / DEDUPLICATED` après réponse fraîche |
+| A3 | J4 D1 | 1 | `HTTP 200 / PARSED / INSERTED` |
+| A4 | J5 D1 | 3 | 3 `HTTP 200 / PARSED / DEDUPLICATED` après réponses fraîches |
+| B1 | J4 D2 | 1 | `HTTP 200 / PARSED / INSERTED` |
+| B2 | J5 D2 | 3 | 3 `HTTP 200 / PARSED / INSERTED` |
+| B3 | J4 D3 | 1 | `HTTP 200 / PARSED / INSERTED` |
+| B4 | J5 D3 | 3 | 3 `HTTP 200 / PARSED / INSERTED` |
+
+Le ledger final contient les IDs 117 à 144 : 28 tentatives, 28 réponses, 28 parsings, 24 insertions
+et quatre déduplications fraîches, sans cache, 404, retry ou incident. D2 et D3 sont complets sur
+les trois familles J5 ; D1 conserve deux lacunes optionnelles bornées (`91 %` incidents et `99 %`
+compositions). Le délai minimal entre départs de tentative est `3 000,277 ms` et le minimum entre
+`requested_at` fournisseur est `3 088 ms`, sans intervalle inférieur à trois secondes.
+
+## 18. Postflight, rapport autonome et porte propriétaire
+
+Le rapport autonome
+[J9-WO023-PROVIDER-ROBUSTNESS-CAMPAIGN-20260901](../../validation/J9-WO023-PROVIDER-ROBUSTNESS-CAMPAIGN-20260901.md)
+porte le détail du ledger, les tailles et hashes de payload, les bornes, la complétude, le double
+export et le postflight. Son SHA-256 est
+`1c6a97f872d5621efcaffa505d16a7724f81816891aa0a9a990a0abec56e87c1`.
+
+Le double export J8 est byte-identique sur deux exécutions : 15 696 octets, SHA-256
+`76d1983dc466356de033efae859822b005aa4e77f3fe19403619ff8e2c240580`, hash de population
+`c8c19ddc3ece1497c26e3348ef78a736f1eaf8fe0b0980801d077f97ab2bf399`, couverture
+`FULL_ATTEMPT_LEDGER`, 28/28/28 tentatives/réponses/parsings et zéro appel réseau d'export.
+
+Après B4, l'arrêt normal a laissé zéro listener 8087, application, worker Playwright, descendant
+Node/navigateur possédé, processus `age`, session J6, base temporaire, profil/téléchargement ou
+artefact Playwright interdit. Le connecteur est `SAFE`, le circuit `LOCKED`, `.env` conserve tous
+les flags fournisseur à `false`, `server.address=127.0.0.1` et le réseau est de nouveau interdit.
+
+Les validations post-campagne sont vertes : 946 tests standards, zéro échec/erreur et cinq ignorés ;
+67 tests d'intégration, zéro échec/erreur ; Flyway V28 ; configuration Compose valide ; contrôle du
+diff et des secrets documentaire réussi.
+
+```text
+WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+EVIDENCE_STATUS=PASS
+CAMPAIGN_EXECUTION=COMPLETED_ONE_TIME
+GLOBAL_OWNER_GO=CONSUMED_AND_TERMINATED_BY_D3_COMPLETION
+OWNER_GO_CONSUMED=YES
+NEW_SERIES_DIRECT_ATTEMPTS=28
+NEW_SERIES_MAXIMUM_DIRECT_ATTEMPTS=38
+AUDIT_CUMULATIVE_DIRECT_ATTEMPTS=48
+AUDIT_MAXIMUM_CUMULATIVE_DIRECT_ATTEMPTS=58
+UNUSED_AUTHORIZED_ATTEMPTS=10_NOT_REUSABLE
+PROVIDER_NETWORK_AUTHORIZED=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO_COMPLETED
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+J9_FUTURE_VPS_PRODUCTION_OPTION=NOT_EXCLUDED_BUT_NOT_AUTHORIZED
+J9_FINAL_DECISION=NOT_TAKEN
+J9_OWNER_CONFIRMATION_REQUIRED=YES
+```
+
+À ce stade pré-validation, WO-023 restait actif jusqu'à sa validation explicite par le propriétaire.
+Son `PASS` produisait une recommandation J9, pas encore une décision finale, et n'autorisait ni
+ADR-SS-003, ni intégration, ni production, ni nouvelle campagne fournisseur. La section 19 consigne
+la décision ultérieure qui clôt cette porte.
+
+## 19. Validation propriétaire, décision J9 reçue et clôture
+
+Le propriétaire valide explicitement la preuve `PASS`, reconnaît la readiness locale, autorise le
+déplacement de WO-023 vers les Work Orders terminés et choisit
+`PREPARE_OPTIONAL_INTEGRATION` comme décision J9 finale. L'instant communiqué est normalisé sous les
+deux représentations équivalentes suivantes :
+
+```text
+J9_DECIDED_AT_UTC=2026-09-01T05:49:58.398Z
+J9_DECIDED_AT_EUROPE_PARIS=2026-09-01T07:49:58.398+02:00
+J9_DECIDED_AT_TIME_ZONE=Europe/Paris
+```
+
+Le bloc propriétaire exécuté est consigné avec ses effets de sûreté inchangés :
+
+```text
+J9_WO023_OWNER_REVIEW_DECISION=VALIDATE
+J9_WO023_WORK_ORDER=WO-SS-20260831-023-j9-provider-robustness-v11
+J9_WO023_EVIDENCE_RESULT=PASS
+J9_WO023_EVIDENCE_REFERENCE=J9-WO023-PROVIDER-ROBUSTNESS-CAMPAIGN-20260901;SHA256=1c6a97f872d5621efcaffa505d16a7724f81816891aa0a9a990a0abec56e87c1
+J9_WO023_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO023_WORK_ORDER_MOVE_TO_COMPLETED=YES
+
+J9_DECISION_RECOMMENDATION=PREPARE_OPTIONAL_INTEGRATION
+J9_DECISION=PREPARE_OPTIONAL_INTEGRATION
+J9_DECIDED_AT_UTC=2026-09-01T05:49:58.398Z
+J9_DECIDED_AT_EUROPE_PARIS=2026-09-01T07:49:58.398+02:00
+J9_EVIDENCE_RESULT=PASS
+J9_EVIDENCE_REFERENCE=J9-WO023-PROVIDER-ROBUSTNESS-CAMPAIGN-20260901;SHA256=1c6a97f872d5621efcaffa505d16a7724f81816891aa0a9a990a0abec56e87c1
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PROVIDER_ACQUISITION_MODE=MANUAL_ON_DEMAND
+J9_INTEGRATION_IMPLEMENTATION_AUTHORIZED=NO
+J9_LIVE_OR_SCHEDULED_OPERATION_AUTHORIZED=NO
+J9_BETTING_PROJECT_CRITICAL_DEPENDENCY=NO
+J9_FUTURE_VPS_PRODUCTION_OPTION=NOT_EXCLUDED_BUT_NOT_AUTHORIZED
+J9_CURRENT_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_OWNER_CONFIRMATION_REQUIRED=NO
+```
+
+La clôture de WO-023 ne réutilise pas le go, n'autorise aucun nouvel appel fournisseur et ne crée
+pas ADR-SS-003. La décision `PREPARE_OPTIONAL_INTEGRATION` autorise seulement, dans un futur Work
+Order distinct, la préparation d'une étude et la proposition d'ADR-SS-003. Les droits/permissions,
+l'architecture de livraison, la comparaison push local / Playwright VPS, les secrets, le réseau et
+l'exploitation restent à instruire avant toute implémentation.
+
+```text
+WORK_ORDER_STATUS=VALIDATED
+EVIDENCE_STATUS=PASS_ACCEPTED_BY_OWNER
+OWNER_VALIDATION=VALIDATED
+OWNER_VALIDATED_AT_UTC=2026-09-01T05:49:58.398Z
+OWNER_VALIDATED_AT_EUROPE_PARIS=2026-09-01T07:49:58.398+02:00
+OWNER_REVIEW_REQUIRED=NO
+MOVE_TO_COMPLETED_AUTHORIZED=YES
+MOVE_TO_COMPLETED_PERFORMED=YES
+WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260831-023-j9-provider-robustness-v11.md
+GLOBAL_OWNER_GO=CONSUMED_AND_TERMINATED_BY_D3_COMPLETION
+PROVIDER_NETWORK_AUTHORIZED=NO
+CAMPAIGN_EXECUTION_AUTHORIZED=NO_COMPLETED
+NEW_PROVIDER_CAMPAIGN_AUTHORIZED=NO
+PRIMARY_DATABASE_PURGE=NO
+INTEGRATION_OR_PRODUCTION_AUTHORIZED=NO
+ADR_SS_003_STATUS=NOT_CREATED
+OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_FINAL_DECISION=PREPARE_OPTIONAL_INTEGRATION
+J9_OWNER_CONFIRMATION_REQUIRED=NO
+```

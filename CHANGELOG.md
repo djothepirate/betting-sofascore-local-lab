@@ -4,6 +4,380 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### J9 — décision de gouvernance clôturée
+
+- ouverture de `WO-SS-20260831-018` sur `codex/j9-decision`, depuis la baseline propre
+  `40323faa7dca3341da6ef980b5762f1ff5a32a79`, sans changement de code, endpoint, schéma, migration
+  ou configuration réseau ;
+- ajout d'une matrice de décision factuelle fondée sur les preuves gelées J6, J7 et J8, avec niveaux
+  `PASS_BOUNDED`, `PASS_LOCAL`, `PARTIAL` et `NOT_MEASURED` et sans score arbitraire ;
+- orientation propriétaire consignée comme `PREPARE_OPTIONAL_INTEGRATION`, tandis que la décision
+  finale reste `PENDING_PROVIDER_ROBUSTNESS_EVIDENCE` et n'autorise aucune intégration ;
+- préparation d'une preuve multi-dossier séparée sous WO-019, plafonnée à 38 appels directs et
+  bloquée avant réseau par ADR-SS-002, la readiness hors ligne, une sauvegarde/restauration V28 et
+  un go propriétaire explicite à usage unique ;
+- ouverture de `WO-SS-20260831-019` sur le worktree distinct
+  `codex/j9-provider-robustness`, avec corpus D1/D2/D3 et huit campagnes unitaires existantes,
+  sans orchestrateur, code runtime, migration ou extension d'allowlist ;
+- proposition d'ADR-SS-002 v0.1, sans effet réseau tant que le propriétaire ne l'a pas acceptée,
+  pour rendre explicite l'exception unique portant le plafond agrégé de 30 à 38 appels ;
+- acceptation propriétaire explicite d'ADR-SS-002 v1.0 après reconnaissance de la revue officielle,
+  du corpus D1/D2/D3, du plafond 38, du go unique de 60 minutes au plus, de la poursuite sur les
+  seuls `404` natifs J4/J5 et des non-autorisations ; WO-019 est d'abord passé à
+  `READY_FOR_OFFLINE_READINESS`, avec `NETWORK_AUTHORIZED=NO` et go global toujours absent ;
+- readiness hors ligne partiellement verte : 928 tests standards, 67 tests d'intégration,
+  `Verify-Local.ps1 -WithIntegrationTests` et la validation Compose réussis, sans appel fournisseur ;
+- qualification J3 Playwright loopback puis unique contre-qualification hors sandbox échouées de
+  manière identique : 14 tests, 12 erreurs `RUNTIME_FAILURE` lors de la fermeture gracieuse et deux
+  scénarios d'arrêt opérateur réussis ;
+- arrêt à la porte de sécurité avec zéro appel fournisseur, aucun processus possédé résiduel, aucun
+  listener 8087 et aucun artefact navigateur interdit ; J4, J5 et le cycle sauvegarde/restauration
+  V28 n'ont pas été exécutés ;
+- WO-019 revient à `OPEN_AWAITING_PREREQUISITES` ; WO-020 est ouvert depuis `542f352` sur
+  `codex/j9-playwright-graceful-close`, sous autorisation propriétaire bornée au diagnostic et au
+  correctif de la fermeture gracieuse et du nettoyage de l'arbre Playwright ; réseau fournisseur,
+  reprise de WO-019, intégration et production restent explicitement non autorisés ;
+- diagnostic causal WO-020 établi par un test discriminant rouge : le worker émettait `CLOSED` puis
+  attendait l'EOF parent, tandis que le superviseur attendait ou terminait l'arbre avant cet EOF ;
+  le timeout gracieux configuré à cinq secondes était aussi plafonné à tort par la borne opérateur
+  de deux secondes ;
+- correction locale limitée au superviseur : inventaire frais après `CLOSED`, `shutdownOutput()`,
+  modes gracieux/opérateur explicites, horodatage d'arrêt immuable, préemption sous `ReentrantLock`
+  par polling de 20 ms, fenêtre de sortie naturelle de 250 ms puis replis bornés à 1 s / 2 s / 5 s,
+  et nouveau budget uniquement pour un nouvel essai de nettoyage échoué avant mutation ; worker,
+  protocole IPC, endpoints, scripts et configuration inchangés ;
+- qualification locale WO-020 verte : superviseur `31/31`, protocole `10/10`, sécurité `1/1`, puis
+  J3, J4 et J5 loopback `14/14` chacun ; le premier lancement J5 sous Windows PowerShell 5.1 s'est
+  arrêté avant Maven faute de `ResolveLinkTarget`, puis la commande inchangée a réussi sous
+  PowerShell 7.6 ;
+- portes finales WO-020 : `clean verify` avec 931 tests standards, quatre skips prévus, 67 tests
+  d'intégration, Flyway V28 confirmé uniquement dans Testcontainers et Compose valides ; zéro accès
+  fournisseur, processus possédé ou listener 8087, scanner d'artefacts J5 vert ; ceci ne vaut pas le
+  cycle chiffré sauvegarde/restauration V28 de WO-019 ;
+- WO-020 passe d'abord à `READY_FOR_OWNER_REVIEW`, sans validation propriétaire implicite ;
+- validation propriétaire explicite de WO-020 reçue le 2026-08-31 à `00:41:58Z`, avec déplacement
+  autorisé vers les Work Orders terminés ; WO-019 reste `OPEN_AWAITING_PREREQUISITES`, sa preuve
+  reste `DRAFT` et réseau, go, reprise, intégration et production restent à `NO` ;
+- autorisation propriétaire distincte de reprise de WO-019 reçue le 2026-08-31, exprimée exactement
+  par « J’autorise la reprise de WO-019 » ; cette décision place d'abord WO-019 à
+  `READY_FOR_OFFLINE_READINESS`, avec `OFFLINE_READINESS=AUTHORIZED_NOT_EXECUTED` et
+  `WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO` : seul le rejeu hors ligne est autorisé ;
+- rejeu hors ligne WO-019 distinct ensuite vert le 2026-08-31 : `clean verify` à `931/0/0/4`, intégration à
+  `67/0/0/0`, commande exacte `powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\scripts\Verify-Local.ps1 -WithIntegrationTests`
+  à `PASS` avec intégrations `YES` et réseau
+  SofaScore `NO`, Compose silencieux à `PASS`, puis J3, J4 et J5 sous `pwsh` à `14/0/0/0` chacun,
+  sans accès fournisseur ; la readiness devient `PASS_REEXECUTED_AFTER_VALIDATED_WO020` et WO-019
+  passe alors à `READY_FOR_V28_BACKUP_RESTORE` ; le cycle chiffré sauvegarde/restauration V28 reste
+  `NOT_EXECUTED`, la preuve reste `DRAFT`, et campagne fournisseur, réseau, go global, consommation
+  du go, intégration et production restent non autorisés ;
+- première session V28 hôte détachée interrompue à l'invite `age` avant toute saisie, après échec de
+  rattachement de son onglet ; audit après arrêt à zéro processus, fichier ou base temporaire
+  résiduel ; tentative manuelle suivante arrêtée dans le terminal Codex restreint au préflight
+  `DESTINATION_DIRECTORY_NOT_VISIBLE`, avant `age`, `pg_dump`, fichier ou base temporaire ; ces
+  deux arrêts locaux n'ont produit aucun appel ni retry fournisseur ;
+- sauvegarde/restauration V28 ensuite qualifiée sous PowerShell 7 natif interactif : création à
+  `2026-08-31T06:44:41.9669041Z`, qualification à `2026-08-31T06:46:07.7013794Z`, archive chiffrée
+  de `6 996 157` octets au SHA-256
+  `2b1402d12274f3e9a646aa6134f8cf8bee7a5e11b3249e8dff5c63040cb89d34` et manifeste de `2 202`
+  octets au SHA-256 `7d112e4db804125656a54c61edd8c1eb9417f95e8b7c3d4df88d99d92cde6e62` ;
+  Flyway `28`, couverture maximale snapshot `794` reçue à `2026-08-30T20:30:46.412Z`, restauration
+  qualifiée, zéro mismatch source/restauration, zéro échec d'intégrité brute, zéro fichier partiel
+  et zéro base temporaire résiduelle, absence vérifiée indépendamment, connecteur `SAFE`, port 8087
+  libre, zéro accès
+  fournisseur et aucune purge primaire ; WO-019 passe à `READY_FOR_GLOBAL_OWNER_GO` avec
+  `NEXT_GATE=GLOBAL_OWNER_GO`, tandis que `WO019_PROVIDER_CAMPAIGN_RESUME_AUTHORIZED=NO`, réseau,
+  go global, consommation, intégration et production restent à `NO`/`NOT_GRANTED` et la preuve à
+  `DRAFT` ;
+- revue factuelle de sources officielles : restrictions publiées sur les requêtes automatisées,
+  le scraping, l'agrégation, la reproduction et l'extraction substantielle sans consentement
+  explicite ; point d'entrée `Sofascore API` et canal `Product -> API` présents, mais aucune licence,
+  authentification, limite d'appel ou permission applicable extraite ; aucune conclusion juridique ;
+- maintien d'ADR-SS-003 à `NOT_CREATED` : une étude de faisabilité ultérieure et distincte comparera
+  le push local optionnel vers le Betting Project à une topologie Playwright sur VPS ; celle-ci
+  n'est plus exclue, mais reste non mesurée et non autorisée, sans dépendance critique ;
+- validation standard de chacun des deux lots documentaires : 928 tests, zéro échec, zéro erreur et
+  quatre skips prévus ; diff, liens Markdown locaux, recherche de credentials et valeurs par défaut
+  loopback/réseau contrôlés, sans appel fournisseur ;
+- aucun appel fournisseur, push, PR ou fusion vers `main` n'est autorisé par ce lot d'ouverture.
+- go propriétaire global unique accordé pour la fenêtre
+  `[2026-08-31T07:15:00Z,2026-08-31T08:15:00Z)`, puis consommé irréversiblement au premier claim J3
+  accepté ; aucun autre go ni droit de rejeu n'en découle ;
+- exécution limitée au dossier D1 : quinze pages `SCHEDULED_EVENTS`, une découverte tournoi, un
+  appel `EVENT_DETAILS` et les trois familles J5, soit `20` tentatives directes sur le plafond de
+  `38`, `20` réponses HTTP `200`, `20` parsings compatibles, zéro `404`, zéro retry et zéro appel
+  D2/D3 ;
+- arrêt de la série avant D2 après l'audit temporel J5 : les timestamps `requested_at` persistés
+  sont capturés avant `page.navigate` et ne mesurent pas le départ réseau réel ; l'écart de
+  `2 967 ms` calculé entre ces timestamps ne démontre donc ni violation on-wire ni conformité au
+  délai strict de trois secondes, qui reste `NOT_MEASURED` ;
+- WO-019 et sa preuve globale passent à `STOPPED`, le go devient
+  `CONSUMED_AND_TERMINATED_BY_STOP`, D2/D3 deviennent `NOT_STARTED_AFTER_GLOBAL_STOP` et toute
+  nouvelle qualification exige un Work Order runtime distinct, une nouvelle readiness et un nouveau
+  go propriétaire ;
+- arrêt gracieux réussi, port 8087, application et descendants Playwright absents, aucun artefact
+  navigateur interdit ; flags fournisseur persistés à `false`, origine et allowlist persistées
+  vides, réseau reverrouillé, intégration et production toujours non autorisées ; la recommandation
+  déterministe J9 est `KEEP_LOCAL`, sous réserve de la confirmation explicite du propriétaire ;
+- validation post-arrêt réussie : `clean verify` avec `931/0/0/4`, profil d'intégration avec
+  `67/0/0/0`, schéma Flyway V28 et configuration Compose valides, sans appel fournisseur.
+- ouverture documentaire de `WO-SS-20260831-021` sur la branche/worktree distinct
+  `codex/j9-playwright-minimum-delay`, depuis le commit STOPPED `216b184`, pour rendre mesurable et
+  garantir en loopback le délai minimal de trois secondes entre départs réseau observables ; statut
+  `OPEN_AWAITING_OWNER_AUTHORIZATION`, implémentation, tests ajoutés, réseau fournisseur, reprise de
+  WO-019, nouveau go, intégration et production à `NO` ; validation documentaire à `931/0/0/4`,
+  diff, liens locaux, credentials et invariants loopback/réseau verts.
+- autorisation propriétaire de réaliser WO-021 reçue le 2026-08-31 à
+  `08:43:48.8202621Z`, strictement bornée au diagnostic, au correctif et à la qualification
+  loopback du délai minimal de trois secondes ; WO-021 passe à `IN_DEVELOPMENT`, tandis que réseau
+  fournisseur, reprise de WO-019, nouveau go, endpoint, transport, protocole incompatible, schéma,
+  migration, intégration et production restent à `NO` ;
+- refus propriétaire explicite de transformer la recommandation déterministe `KEEP_LOCAL` en
+  décision finale J9 : la photographie `STOPPED` reste factuelle, mais
+  `J9_FINAL_DECISION=NOT_TAKEN` et la décision attend WO-021 ainsi qu'une éventuelle nouvelle preuve
+  WO-019 ; toute reprise après incident exigera une nouvelle décision, une readiness fraîche, le
+  réexamen ADR prévu par ADR-SS-002 §9, un nouveau manifeste et un nouveau go global à usage unique.
+- discriminant WO-021 exécuté avant correction et rouge en `0,08 s`, établissant l'absence de fence
+  conservateur fondé sur la fin de réponse et la lacune de preuve de la marge résiduelle de `33 ms` ;
+- correction runtime bornée : temporisation logique monotone avec réévaluation des réveils
+  anticipés, fence parent commun aux campagnes/workers attendant au moins trois secondes après la
+  fin observable du dispatch précédent, et observation CDP corrélée de l'unique document principal
+  exact ; toute perte de preuve temporelle, réponse de cache/service worker ou identité incohérente
+  reste fail-closed ; une interruption avant ou pendant l'attente conserve son statut, empoisonne la
+  preuve temporelle et n'émet aucun `GET`, sans nouvel endpoint ni changement incompatible du
+  protocole ;
+- premier rejeu J3 Chromium après le correctif principal arrêté avec un seul échec sur `14` tests :
+  `TIMEOUT` attendu, `PROTOCOL_ERROR` reçu et `RUNTIME_FAILURE` de clôture supprimé ; diagnostic du
+  teardown établi sur les désactivations/détachements CDP synchrones exécutés avant `page.close()`
+  sur la navigation bloquée, qui retardaient la trame timeout au-delà du canal IPC ; correction par
+  fermeture de la page avant le teardown CDP, sans modifier `clearCookies()` ni les bornes WO-020,
+  puis test ciblé `1/1` vert en `5,323 s` et suite complète `14/14` verte en `101,5 s` ;
+- qualification locale WO-021 verte : le premier `Verify-Local.ps1 -WithIntegrationTests` compte
+  `941` tests standards et `67` tests d'intégration ; chacun des scripts J3/J4/J5 réussit `21` tests
+  worker (`10` protocole, `1` sécurité, `10` observation réseau) puis `14` tests Chromium ; J5
+  confirme les écarts `requestedAt`, les arrivées serveur loopback et les écarts inter-workers
+  `>= 3 s`, ainsi que zéro nouvelle requête pendant un arrêt au fence ; les suites ciblées
+  postérieures passent `40/40` pour le superviseur et `8/8` pour le coordinateur, y compris le garde
+  d'interruption fail-closed ; le `clean verify` final après ce garde passe `943` tests, zéro échec,
+  zéro erreur et quatre skips à `2026-08-31T09:48:10Z` ;
+- passage de WO-021 à `READY_FOR_OWNER_REVIEW`, sans déplacement vers les Work Orders terminés et
+  sans accès fournisseur ; WO-019 reste `STOPPED`, ses `20` tentatives restent gelées, réseau,
+  reprise, nouveau go, intégration et production restent à `NO`, et toute reprise future exige une
+  nouvelle décision propriétaire ainsi que le réexamen d'ADR-SS-002.
+- validation propriétaire explicite de WO-021 reçue le 2026-08-31, avec readiness locale, garantie
+  du délai minimal et qualifications loopback J3/J4/J5 reconnues ; WO-021 passe à `VALIDATED` et
+  est déplacé vers les Work Orders terminés ; WO-019 reste `STOPPED`, les vingt tentatives restent
+  gelées, réseau, reprise et nouveau go restent à `NO`, et `J9_FINAL_DECISION=NOT_TAKEN` ;
+- déclenchement séparé du réexamen d'ADR-SS-002 exigé par sa section 9 avant toute éventuelle
+  décision de reprise ; la clôture de WO-021 ne vaut ni acceptation d'une révision de l'ADR, ni
+  manifeste, ni go fournisseur.
+- ouverture de `WO-SS-20260831-022` sur `codex/j9-adr002-reexamination` depuis la clôture validée
+  de WO-021, pour réaliser exclusivement le réexamen documentaire d'ADR-SS-002 avant toute reprise ;
+  aucun appel fournisseur, reprise, go, intégration ou production n'est autorisé ;
+- conclusion du réexamen : v1.0 est `ACCEPTED_CONSUMED_AND_TERMINATED_BY_STOP` et non réutilisable,
+  car la reprise après incident et le fence global exécutoire WO-021 déclenchent tous deux le
+  paragraphe 9 ; proposition d'un draft v1.1 sans effet exécutoire ;
+- matrice propriétaire du draft v1.1 : continuation D2/D3 recommandée avec `8` nouveaux appels
+  maximum et `28` cumulés, nouvelle série complète alternative avec `38` nouveaux et `58` cumulés,
+  ou absence de reprise ; la voie minimale ne requalifie pas le rapport historique `STOPPED` et
+  borne la consolidation à `PARTIAL_BOUNDED` sous les règles actuelles ;
+- revue officielle rafraîchie le `2026-08-31T10:18:51.8559197Z` : restrictions et absence de
+  permission/licence/quota applicable toujours constatées ; avant tout go restent requis le choix
+  puis l'acceptation propriétaire de v1.1, une readiness fraîche, une nouvelle sauvegarde/restauration
+  V28 post-arrêt, un manifeste et un nouveau go à usage unique.
+- sélection propriétaire reçue le `2026-08-31T11:07:13.3823864Z` du profil
+  `RESTART_FULL_D1_D2_D3` pour le draft ADR-SS-002 v1.1 : 38 nouvelles tentatives au maximum, 58
+  cumulées avec les vingt tentatives v1.0 gelées, rejeu D1 inclus et nouveau rapport autonome ;
+  l'acceptation v1.1 reste distincte et réseau, campagne et go restent à `NO` ;
+- la nouvelle série complète n'est pas une reprise de WO-019 : son statut `STOPPED`, la campagne
+  v1.0, ses vingt tentatives et son rapport historique restent immuables ; conformément à la règle
+  un Work Order/worktree par campagne, un nouveau Work Order et un nouveau worktree seront requis
+  après acceptation, mais ne sont pas encore ouverts ;
+- indisponibilité déclarée du propriétaire pour les huit séquences unitaires d'interrogation ; aucun
+  autre opérateur humain n'était alors désigné et l'état était `BLOCKED_PENDING_OPERATOR_DECISION`.
+  Aucune délégation à Codex ne découle de ce constat ; le précédent WO-017 permet toutefois de
+  proposer séparément une exécution ponctuelle `CODEX_LOCAL_UI` sur instruction propriétaire
+  explicite. Script, orchestration, scheduler et modification runtime restent hors autorisation.
+- acceptation propriétaire explicite d'ADR-SS-002 v1.1 reçue le
+  `2026-08-31T12:02:37.0545305Z` pour le draft `fc18f3d`, SHA-256
+  `c1fc398703585e0dcc3ccf36d880f0a009d8366e5492835b9f244f3437ebdba4` ; le modèle ponctuel
+  `CODEX_LOCAL_UI` est sélectionné mais son exécution reste à `NO` ;
+- WO-022 validé et déplacé vers les Work Orders terminés. À ce stade, WO-019 reste `STOPPED`,
+  WO-023 n'est pas encore ouvert et campagne, réseau, go, intégration et production restent non
+  autorisés ;
+- instruction propriétaire de lancement de la nouvelle campagne à usage unique observée le
+  `2026-08-31T13:08:48.0887445Z` : ouverture de WO-023 sur
+  `codex/j9-provider-robustness-v11` avec worktree dédié ; `CODEX_LOCAL_UI` est autorisé comme acteur
+  conditionnel de ce WO. L'instruction permet la préparation hors ligne, mais ne constitue pas le
+  go fournisseur lié à un manifeste et une fenêtre UTC : campagne, réseau et consommation restent
+  à `NO`/`NOT_GRANTED` avant readiness, sauvegarde/restauration, manifeste gelé et décision finale.
+- après deux désaccords interactifs de phrase secrète, diagnostic de deux pipelines natives
+  `pg_dump | age` dont le producteur et sa session PostgreSQL sont restés suspendus après la sortie
+  anticipée du consommateur ; nettoyage ciblé vérifié à zéro processus, session `pg_dump`, fichier
+  de sauvegarde et base temporaire résiduels, sans aucun appel fournisseur ;
+- autorisation propriétaire et ouverture de `WO-SS-20260831-024` sur
+  `codex/j9-backup-pipeline-fail-closed-cleanup`, depuis `2d9c2dd7`, pour corriger et qualifier
+  exclusivement hors ligne l'annulation coordonnée, les timeouts et le nettoyage de l'arbre natif.
+  WO-023 reste suspendu, réseau fournisseur, reprise de campagne et nouveau go restent à `NO` ; la
+  nouvelle sauvegarde/restauration WO-023 avec phrase auto-générée ne devient autorisée qu'après
+  validation propriétaire de WO-024 ;
+- implémentation locale `969f29d` d'un superviseur binaire fail-closed partagé par les voies
+  `pg_dump -> age` et `age -> pg_restore` : porte préalable à la création de la cible, Job Objects
+  Windows `KILL_ON_JOB_CLOSE`, suivi indépendant des statuts, échéance bornée commune, nettoyage
+  des arbres, sessions exactes `PGAPPNAME`, fichiers `.partial-*` et base de restauration isolée ;
+- qualification WO-024 hors ligne et Docker réussie : octets et SHA-256 identiques, échecs des deux
+  côtés, troncature, timeout, annulation et vrai `CTRL_BREAK` refusés fail-closed, zéro processus,
+  session PostgreSQL, base temporaire, fichier partiel ou listener résiduel. Le double `age` ne
+  transporte aucun secret et ne simule pas le TTY ou l'auto-génération réelle ; aucune mauvaise
+  phrase humaine n'est requise ;
+- vérifications finales réussies : 945 tests standards, 67 tests d'intégration, Java 25, PostgreSQL
+  18.4/V28, `Verify-Local.ps1 -WithIntegrationTests`, Compose, scans de portée et de secrets. WO-024
+  avait atteint `READY_FOR_OWNER_REVIEW` au commit `e0beee0` ; WO-023, réseau fournisseur, campagne,
+  nouveau go, intégration et production restaient interdits ;
+- validation propriétaire explicite de WO-024 reçue : qualification fail-closed reconnue,
+  déplacement vers les Work Orders terminés autorisé et nouvelle sauvegarde/restauration WO-023
+  avec phrase `age` auto-générée désormais autorisée, mais pas encore exécutée au moment de cette
+  clôture ;
+- intention propriétaire d'enchaîner ensuite sur la campagne fournisseur enregistrée sans élargir
+  le bloc exécutoire : réseau, reprise WO-023 et nouveau go restent à `NO` jusqu'à qualification de
+  la sauvegarde, gel du manifeste et nouveau go global lié à une fenêtre UTC.
+- fast-forward du correctif WO-024 validé dans le worktree WO-023, puis readiness fraîche sur
+  `8b91bf8` : Maven standard `945/0/0/4`, intégration `67/0/0/0`, `Verify-Local` avec réseau
+  fournisseur `NO`, Compose valide et Flyway V28 ;
+- qualifications Playwright J3, J4 et J5 strictement loopback réussies, chacune avec `21/0/0/0`
+  tests worker puis `14/0/0/0` tests Chromium ; J5 confirme les départs et arrivées `>= 3 s`, les
+  fences inter-worker, zéro requête après arrêt pendant délai, les scans canari/sensible et l'absence
+  d'accès fournisseur ; superviseur `40/40`, coordinateur `8/8` ;
+- audit final de readiness : connecteur primaire `SAFE`, dernière tentative fournisseur à
+  `2026-08-31T07:59:01.092327Z`, port 8087, processus possédés, sandbox résiduel et artefacts
+  navigateur versionnables à zéro. WO-023 passe à `READY_FOR_V28_BACKUP_RESTORE` ; la tentative
+  chiffrée avec phrase `age` auto-générée est autorisée mais reste non exécutée, et réseau,
+  campagne, nouveau go, intégration et production restent à `NO`.
+- tentative unique post-WO-024 exécutée avec phrase `age` auto-générée : chiffrement terminé avec
+  producteur et consommateur à `EXIT_0`, copie à EOF et nettoyage local `PASS`, puis arrêt
+  fail-closed sur une confirmation de nettoyage PostgreSQL exacte échouée ou invérifiable ; ce
+  point précède toute restauration, publication finale et création de manifeste ;
+- audit post-incident : trois observations successives à zéro pour la session exacte et toutes les
+  sessions J6 possédées, zéro processus exact, fichier final/partiel, base temporaire ou listener
+  8087 ; ces résultats prouvent le confinement et non une qualification rétroactive ;
+- écart de qualification établi entre le défaut runtime de `5 000 ms` et les quatre parcours Docker
+  WO-024 exécutés avec `10 000 ms`, tandis que la cause interne est masquée par le message final
+  générique. WO-023 passe à `BLOCKED_AFTER_BACKUP_CLEANUP_UNCONFIRMED` ; la tentative autorisée est
+  consommée et un Work Order runtime distinct ainsi qu'une nouvelle décision propriétaire sont
+  requis avant tout nouvel essai ; fournisseur, campagne, manifeste, go, intégration et production
+  restent non autorisés.
+- contre-validation standard post-incident : `945` tests, un échec, zéro erreur et quatre skips ;
+  le seul scénario rouge est la commande native bornée J6 dont la preuve PID n'a pas été créée dans
+  sa fenêtre de `1 500 ms`. Aucun code runtime/test n'a changé depuis WO-024, la cause reste
+  indéterminée et aucun lien causal avec l'incident PostgreSQL n'est déduit ;
+- audit Windows complémentaire : une entrée synthétique antérieure exécutant uniquement un sleep
+  de 30 secondes reste visible en état `Unknown` par `tasklist`/CIM, avec parent absent, tout en
+  étant inaccessible aux API ordinaires de processus ; elle n'appartient pas à la tentative réelle
+  de sauvegarde et son attribution au verify courant n'est pas établie ; un ancien répertoire
+  temporaire synthétique, créé plus de quatre heures avant le verify rouge, subsiste aussi hors
+  dépôt. La qualification runtime devient `NOT_REPRODUCIBLE` et le futur Work Order devra durcir la
+  preuve PID/absence multi-API sans relâcher les garanties fail-closed.
+- autorisation propriétaire et ouverture de `WO-SS-20260831-025` sur la branche/worktree dédiée
+  `codex/j9-backup-cleanup-proof-hardening`, depuis le commit d'incident `5014902` ; le périmètre
+  couvre uniquement la confirmation PostgreSQL effective, le parsing scalaire et la cause sanitée,
+  le handshake PID, la corroboration multi-API/états fantômes et le nettoyage exact du temp root ;
+- qualifications WO-025 limitées au local, loopback et Docker local. WO-024 reste gelé, WO-023
+  reste bloqué et une nouvelle sauvegarde réelle exigera une décision propriétaire séparée ; toute
+  terminaison par PID seul, acquisition fournisseur, nouveau go, intégration et production restent
+  à `NO`.
+- correctif PostgreSQL WO-025 au commit `d019be2` : défauts effectifs distincts de `5 000 ms` pour
+  le nettoyage natif et `10 000 ms` pour l'observation, `PGAPPNAME` exact sensible à la casse,
+  `ON_ERROR_STOP=1`, couple ciblé/réussi issu d'un même CTE, parsing canonique strict, trois zéros
+  frais et idempotence uniquement après preuve stabilisée ; un ancien compte après terminaison ne
+  peut plus produire un faux `SESSION_REMAINING` ;
+- classifications Docker, SQL, parsing, observation, session restante et nettoyage de processus
+  désormais distinctes et fail-closed ; les causes internes publiables sont sanitées et agrégées
+  avec les échecs fichier/temp sans restituer stderr brut, secret, `.env`, phrase `age` ou payload ;
+- preuve native Windows fondée sur un handshake `CurrentUserOnly` lié par nonce avant le budget
+  d'exécution, identité cible `PID + StartTime`, Job Object `KILL_ON_JOB_CLOSE` et corroboration
+  bornée .NET/Toolhelp/CIM/`tasklist` ; un état fantôme est classé ambigu et réobservé dans une
+  borne, sans jamais autoriser une terminaison par PID seul ;
+- temp root synthétique limité à l'enfant canonique exactement possédé du temp système : marqueur
+  atomique de chemin/nonce, refus du parent, des globs, chemins extérieurs et reparse points,
+  suppression littérale et preuve d'absence avec préservation du frère sentinelle ; aucune
+  attribution ou suppression d'un résidu historique non possédé ;
+- qualification finale locale sur le commit fonctionnel : un parcours direct et cinq répétitions
+  Maven hors ligne, puis un parcours direct et trois répétitions Maven avec Docker local, tous
+  verts ; portes complètes à `946/0/0/5` tests standards, `67/0/0/0` intégrations, Verify-Local avec
+  intégrations, Compose et contrôle du diff passés, zéro secret à haute confiance, listener,
+  processus/session/base temporaire/fichier partiel/temp root possédé résiduel ou appel fournisseur ;
+- WO-025 atteint `READY_FOR_OWNER_REVIEW`, pas `VALIDATED` : la décision propriétaire et le
+  déplacement vers `completed` restent requis. WO-023 reste bloqué ; un retry de sauvegarde exige
+  une décision propriétaire séparée, et campagne, réseau, nouveau go, purge primaire, intégration
+  et production restent à `NO`.
+- validation propriétaire explicite de WO-025 reçue à `2026-08-31T22:35:48.6609979Z` : readiness
+  locale, durcissement de la preuve et invariants fail-closed/exact ownership reconnus, avec
+  terminaison par PID seul confirmée absente et déplacement autorisé vers les Work Orders
+  terminés ;
+- clôture documentaire de WO-025 sans effet implicite sur WO-023 : le retry de
+  sauvegarde/restauration exige toujours une décision propriétaire séparée et postérieure ;
+  campagne fournisseur, réseau, nouveau go, purge primaire, intégration et production restent à
+  `NO`.
+- décision propriétaire séparée reçue à `2026-08-31T22:46:53.9166240Z` pour un unique nouvel essai
+  local chiffré de sauvegarde/restauration WO-023 ; le parcours hérité reste la génération native
+  interactive par `age`, avec phrase confinée au terminal opérateur. Le jeton n'est consommé qu'à
+  la première invocation réelle après préflight vert ; toute sortie du script le consomme. La
+  vérification standard fraîche est verte à `946/0/0/5`, sans différence de code runtime depuis le
+  commit qualifié WO-025 ; un diff exact confirme aussi l'absence de changement du runtime et de la
+  configuration fournisseur depuis la readiness WO-023 au commit `8b91bf8`, ce qui permet de
+  reporter ses preuves loopback J3/J4/J5 sans nouvel accès fournisseur. Cette décision ne réactive
+  ni la campagne fournisseur, ni le réseau, ni un go global, ni la purge primaire, l'intégration ou
+  la production.
+- unique invocation réelle WO-023 ensuite qualifiée : archive `age` de `7 268 470` octets au
+  SHA-256 `526f2faa22f8da0506194030f6f7fbe0966e65550310375d055041d4ea257041`, manifeste
+  de `2 203` octets au SHA-256
+  `7994a3b2ec6ced505b36514ad0b5eb113c5c1b30a0a77811e4d1a7ae80a2eaa9`, restauration V28
+  marquée `restoreQualified=true`, snapshot maximal `814`, `781` occurrences et `116` tentatives
+  J8 couvertes ; toutes les valeurs et quatre empreintes source/restauration concordent, intégrité
+  brute et mismatches sont à zéro ;
+- postflight WO-023 vert : état primaire identique au manifeste source, zéro purge, session J6,
+  base temporaire, processus `age`/host natif, listener 8087 ou fichier partiel. Le jeton est
+  consommé `1_OF_1` ; la prochaine porte est le gel du manifeste et la corroboration indépendante
+  du ledger, tandis que campagne, réseau, go global, intégration et production restent à `NO`.
+- corroboration indépendante ensuite verte : 20 tentatives historiques WO-019 retrouvées avec la
+  répartition `15+1+1+1+1+1`, zéro doublon d'unité et zéro tentative WO-023 ; total append-only 116,
+  dernier départ à `2026-08-31T07:59:01.092327Z` ;
+- manifeste de campagne WO-023 gelé au SHA-256
+  `ff909f298f7d3c99b1027c071ac4d783a19529f6241b37941151c2c08c418a9e`, avec runtime, readiness,
+  sauvegarde, corpus, ordre A1..B4, ledgers et conditions d'arrêt. WO-023 devient
+  `READY_FOR_GLOBAL_OWNER_GO`, ce qui ne vaut ni go courant, ni réseau ou campagne autorisés.
+- go propriétaire global reçu pour le commit `f632fd0`, le manifeste gelé et la fenêtre exacte
+  `[2026-08-31T23:45:00Z,2026-09-01T00:45:00Z)`, acteur ponctuel `CODEX_LOCAL_UI`, plafond 38
+  nouvelles tentatives et 58 cumulées, sans remplacement, purge primaire, intégration ou production ;
+- exécution séquentielle complète A1..B4 : quinze pages J3, une découverte tournoi, trois détails
+  J4 et neuf familles J5, soit 28 tentatives ; 28 réponses HTTP 200, 28 parsings, 24 insertions et
+  quatre déduplications après réponse fraîche, zéro cache hit, 404, autre HTTP, retry ou incident ;
+- D2 et D3 qualifiés `COMPLETE · 100 %` sur les trois familles J5 ; D1 conserve des lacunes
+  optionnelles bornées à `PARTIAL · 91 %` pour les incidents et `PARTIAL · 99 %` pour les
+  compositions, séparées du verdict de robustesse technique ;
+- cadence qualifiée avec minimum `3 000,277 ms` entre départs de tentative et `3 088 ms` entre
+  `requested_at` fournisseur, zéro intervalle inférieur à trois secondes, concurrence et overlap à
+  zéro ; 28/38 nouvelles tentatives, 48/58 cumulées et dix tentatives expirées non réutilisables ;
+- double export J8 post-campagne byte-identique sur deux exécutions de 15 696 octets, SHA-256
+  `76d1983dc466356de033efae859822b005aa4e77f3fe19403619ff8e2c240580`, même hash de population
+  `c8c19ddc3ece1497c26e3348ef78a736f1eaf8fe0b0980801d077f97ab2bf399`, couverture
+  `FULL_ATTEMPT_LEDGER` et zéro appel réseau ;
+- postflight vert : connecteur `SAFE`, circuit `LOCKED`, flags fournisseur à `false`, zéro listener
+  8087, application, worker, navigateur possédé, session/base J6 ou artefact Playwright interdit ;
+  vérifications finales à 946 tests standards et 67 intégrations sans échec/erreur, Flyway V28,
+  Compose, diff et contrôle des secrets réussis ;
+- rapport autonome `J9-WO023-PROVIDER-ROBUSTNESS-CAMPAIGN-20260901` au SHA-256
+  `1c6a97f872d5621efcaffa505d16a7724f81816891aa0a9a990a0abec56e87c1`, classé `PASS`. La matrice recommande désormais
+  `PREPARE_OPTIONAL_INTEGRATION`, sous confirmation propriétaire et avec permission officielle
+  toujours `NOT_EVIDENCED` ; le go est consommé, WO-023 reste `READY_FOR_OWNER_REVIEW` et réseau,
+  intégration, production et VPS courant restent interdits.
+- validation propriétaire de WO-023, acceptation de la preuve `PASS` au SHA-256
+  `1c6a97f872d5621efcaffa505d16a7724f81816891aa0a9a990a0abec56e87c1` et déplacement de WO-023
+  vers les Work Orders terminés à `2026-09-01T05:49:58.398Z`, soit
+  `2026-09-01T07:49:58.398+02:00` en Europe/Paris ; la décision J9 finale devient
+  `PREPARE_OPTIONAL_INTEGRATION` et WO-018 est validé puis déplacé vers les Work Orders terminés.
+  La permission officielle reste `NOT_EVIDENCED` ; ADR-SS-003 n'est pas créé et aucun appel
+  fournisseur, nouvelle campagne, implémentation, production ou VPS courant n'est autorisé.
+
 ### J5 — correctif borné V15 des actions vides en tirs au but
 
 - ouverture de `WO-SS-20260830-017` sur `codex/j8-incidents-v15`, depuis la preuve J8 partielle

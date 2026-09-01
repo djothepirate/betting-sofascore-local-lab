@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.application.network.playwright;
 
 import com.bettingproject.sofascorelocal.config.ProviderPlaywrightProperties;
+import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import jakarta.annotation.PreDestroy;
@@ -47,6 +48,7 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Stream;
 
 /** Owns exactly one isolated Playwright worker process for the current manual campaign. */
@@ -69,8 +71,10 @@ public final class ChildJvmPlaywrightProviderSupervisor
     static final Duration SOFT_PROCESS_TERMINATION_MAX = Duration.ofSeconds(1);
     static final Duration IN_FLIGHT_CANCELLATION_MAX = Duration.ofSeconds(2);
     static final Duration PROCESS_TREE_CLEANUP_MAX = Duration.ofSeconds(5);
+    static final Duration DEFAULT_MINIMUM_PROVIDER_NETWORK_START_DELAY = Duration.ofSeconds(3);
     static final int MAXIMUM_STOP_TOMBSTONES_PER_ALLOWLIST = 256;
 
+    private static final Duration NATURAL_PROCESS_EXIT_MAX = Duration.ofMillis(250);
     private static final Duration PROCESS_TREE_POLL_INTERVAL = Duration.ofMillis(20);
 
     private static final String IPC_PORT = "SOFASCORE_PLAYWRIGHT_IPC_PORT";
@@ -97,20 +101,35 @@ public final class ChildJvmPlaywrightProviderSupervisor
     private final SecureRandom secureRandom;
     private final ProcessStarter processStarter;
     private final ProcessTreeAccess processTreeAccess;
+    private final ProviderNetworkStartDelayGate providerNetworkStartDelayGate;
     private final AtomicReference<CampaignState> active = new AtomicReference<>();
     private final AtomicReference<SupervisorLifecycle> lifecycle =
             new AtomicReference<>(SupervisorLifecycle.OPEN);
     private final ConcurrentMap<Set<SofascoreEndpointType>, StopTombstones> stopTombstones =
             new ConcurrentHashMap<>();
 
-    @Autowired
     public ChildJvmPlaywrightProviderSupervisor(ProviderPlaywrightProperties properties) {
         this(
                 properties,
                 Clock.systemUTC(),
                 new SecureRandom(),
                 ProcessBuilder::start,
-                new SystemProcessTreeAccess());
+                new SystemProcessTreeAccess(),
+                DEFAULT_MINIMUM_PROVIDER_NETWORK_START_DELAY);
+    }
+
+    @Autowired
+    public ChildJvmPlaywrightProviderSupervisor(
+            ProviderPlaywrightProperties properties,
+            SofascoreProperties sofascoreProperties) {
+        this(
+                properties,
+                Clock.systemUTC(),
+                new SecureRandom(),
+                ProcessBuilder::start,
+                new SystemProcessTreeAccess(),
+                Objects.requireNonNull(sofascoreProperties, "sofascoreProperties")
+                        .getMinimumDelay());
     }
 
     ChildJvmPlaywrightProviderSupervisor(
@@ -123,7 +142,8 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 clock,
                 secureRandom,
                 processStarter,
-                new SystemProcessTreeAccess());
+                new SystemProcessTreeAccess(),
+                DEFAULT_MINIMUM_PROVIDER_NETWORK_START_DELAY);
     }
 
     ChildJvmPlaywrightProviderSupervisor(
@@ -132,12 +152,34 @@ public final class ChildJvmPlaywrightProviderSupervisor
             SecureRandom secureRandom,
             ProcessStarter processStarter,
             ProcessTreeAccess processTreeAccess) {
+        this(
+                properties,
+                clock,
+                secureRandom,
+                processStarter,
+                processTreeAccess,
+                DEFAULT_MINIMUM_PROVIDER_NETWORK_START_DELAY);
+    }
+
+    ChildJvmPlaywrightProviderSupervisor(
+            ProviderPlaywrightProperties properties,
+            Clock clock,
+            SecureRandom secureRandom,
+            ProcessStarter processStarter,
+            ProcessTreeAccess processTreeAccess,
+            Duration minimumProviderNetworkStartDelay) {
         this.properties = Objects.requireNonNull(properties, "properties");
         this.clock = Objects.requireNonNull(clock, "clock");
         this.secureRandom = Objects.requireNonNull(secureRandom, "secureRandom");
         this.processStarter = Objects.requireNonNull(processStarter, "processStarter");
         this.processTreeAccess = Objects.requireNonNull(
                 processTreeAccess, "processTreeAccess");
+        this.providerNetworkStartDelayGate = new ProviderNetworkStartDelayGate(
+                Objects.requireNonNull(
+                        minimumProviderNetworkStartDelay,
+                        "minimumProviderNetworkStartDelay"),
+                this.processTreeAccess::nanoTime,
+                this.processTreeAccess::pause);
     }
 
     @Override
@@ -306,11 +348,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     acknowledgedAt,
                     elapsed(requestedAtNanos, processTreeAccess.nanoTime()));
         }
-        boolean firstSignal = state.terminationRequested.compareAndSet(false, true);
-        if (firstSignal) {
-            state.phase.set(CampaignPhase.TERMINATING);
-            state.markTerminationStarted(processTreeAccess);
-        }
+        state.requestOperatorStop(requestedAtNanos, processTreeAccess);
         Thread.ofVirtual()
                 .name("provider-playwright-stop-" + state.campaignId)
                 .start(() -> terminateAfterStopSignal(state));
@@ -342,9 +380,9 @@ public final class ChildJvmPlaywrightProviderSupervisor
         CampaignState state = active.get();
         try {
             if (state != null) {
-                state.terminationRequested.set(true);
-                state.phase.set(CampaignPhase.TERMINATING);
-                state.markTerminationStarted(processTreeAccess);
+                state.requestOperatorStop(
+                        processTreeAccess.nanoTime(),
+                        processTreeAccess);
                 try {
                     terminateSynchronously(state, false);
                 }
@@ -366,29 +404,42 @@ public final class ChildJvmPlaywrightProviderSupervisor
         if (!state.allowedEndpoints.contains(request.endpoint())) {
             throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
         }
-        synchronized (state.ioLock) {
+        state.ioLock.lock();
+        boolean dispatchStarted = false;
+        boolean usableResponseEvidence = false;
+        try {
             requireActive(state);
             try {
                 DataOutputStream output = Objects.requireNonNull(state.output, "output");
                 DataInputStream input = Objects.requireNonNull(state.input, "input");
-                output.writeByte(GET);
-                output.writeUTF(request.endpoint().name());
-                switch (request.endpoint()) {
-                    case SCHEDULED_EVENTS -> {
-                        output.writeUTF(request.date().toString());
-                        output.writeInt(request.page());
+                providerNetworkStartDelayGate.awaitNextDispatch(() -> requireActive(state));
+                state.dispatchLock.lock();
+                try {
+                    requireActive(state);
+                    state.providerDispatchStarted.set(true);
+                    dispatchStarted = true;
+                    output.writeByte(GET);
+                    output.writeUTF(request.endpoint().name());
+                    switch (request.endpoint()) {
+                        case SCHEDULED_EVENTS -> {
+                            output.writeUTF(request.date().toString());
+                            output.writeInt(request.page());
+                        }
+                        case TOURNAMENT_SCHEDULED_EVENTS -> {
+                            output.writeUTF(request.date().toString());
+                            output.writeLong(request.uniqueTournamentId());
+                        }
+                        case EVENT_DETAILS, EVENT_STATISTICS, EVENT_INCIDENTS, EVENT_LINEUPS ->
+                                output.writeLong(request.eventId());
+                        default -> throw new PlaywrightProviderException(
+                                PlaywrightProviderFailure.INVALID_ENDPOINT);
                     }
-                    case TOURNAMENT_SCHEDULED_EVENTS -> {
-                        output.writeUTF(request.date().toString());
-                        output.writeLong(request.uniqueTournamentId());
-                    }
-                    case EVENT_DETAILS, EVENT_STATISTICS, EVENT_INCIDENTS, EVENT_LINEUPS ->
-                            output.writeLong(request.eventId());
-                    default -> throw new PlaywrightProviderException(
-                            PlaywrightProviderFailure.INVALID_ENDPOINT);
+                    output.writeInt(toMillis(properties.getRequestTimeout()));
+                    output.flush();
                 }
-                output.writeInt(toMillis(properties.getRequestTimeout()));
-                output.flush();
+                finally {
+                    state.dispatchLock.unlock();
+                }
                 int frame = input.readUnsignedByte();
                 if (frame == FAILURE) {
                     PlaywrightProviderException failure = workerFailure(input.readUTF());
@@ -399,8 +450,15 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     throw new PlaywrightProviderException(
                             PlaywrightProviderFailure.PROTOCOL_ERROR);
                 }
-                Instant requestedAt = Instant.ofEpochMilli(input.readLong());
-                Instant receivedAt = Instant.ofEpochMilli(input.readLong());
+                long requestedAtEpochMillis = input.readLong();
+                long receivedAtEpochMillis = input.readLong();
+                if (requestedAtEpochMillis <= 0
+                        || receivedAtEpochMillis < requestedAtEpochMillis) {
+                    throw new PlaywrightProviderException(
+                            PlaywrightProviderFailure.PROTOCOL_ERROR);
+                }
+                Instant requestedAt = Instant.ofEpochMilli(requestedAtEpochMillis);
+                Instant receivedAt = Instant.ofEpochMilli(receivedAtEpochMillis);
                 int status = input.readInt();
                 String contentType = input.readUTF();
                 requireContentType(contentType);
@@ -425,13 +483,15 @@ public final class ChildJvmPlaywrightProviderSupervisor
                                 PlaywrightProviderFailure.SENSITIVE_CONTENT_REJECTED);
                     }
                     Duration latency = Duration.between(requestedAt, receivedAt);
-                    return new PlaywrightProviderResponse(
+                    PlaywrightProviderResponse response = new PlaywrightProviderResponse(
                             requestedAt,
                             receivedAt,
                             status,
                             contentType,
                             latency,
                             payload);
+                    usableResponseEvidence = true;
+                    return response;
                 }
                 finally {
                     Arrays.fill(body, (byte) 0);
@@ -440,6 +500,11 @@ public final class ChildJvmPlaywrightProviderSupervisor
             catch (PlaywrightProviderException exception) {
                 throw exception;
             }
+            catch (ProviderNetworkStartDelayGate.TimingEvidenceException exception) {
+                throw new PlaywrightProviderException(
+                        PlaywrightProviderFailure.RUNTIME_FAILURE,
+                        exception);
+            }
             catch (IOException | RuntimeException exception) {
                 PlaywrightProviderFailure failure = state.terminationRequested.get()
                         ? PlaywrightProviderFailure.OPERATOR_STOP
@@ -447,17 +512,22 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 throw new PlaywrightProviderException(failure, exception);
             }
         }
+        finally {
+            if (dispatchStarted) {
+                providerNetworkStartDelayGate.recordDispatchFinished(
+                        usableResponseEvidence);
+            }
+            state.ioLock.unlock();
+        }
     }
 
     private void closeCampaign(CampaignState state) {
         if (active.get() != state) {
             return;
         }
-        if (state.terminationRequested.compareAndSet(false, true)) {
-            state.phase.set(CampaignPhase.TERMINATING);
-            state.markTerminationStarted(processTreeAccess);
-        }
-        terminateSynchronously(state, true);
+        state.requestTermination(processTreeAccess);
+        boolean requestGracefulClose = !state.operatorStopRequested.get();
+        terminateSynchronously(state, requestGracefulClose);
     }
 
     private void terminateAfterStopSignal(CampaignState state) {
@@ -470,7 +540,8 @@ public final class ChildJvmPlaywrightProviderSupervisor
     }
 
     private void terminateSynchronously(CampaignState state, boolean requestGracefulClose) {
-        state.markTerminationStarted(processTreeAccess);
+        state.requestTermination(processTreeAccess);
+        long terminationStartedAt = state.markTerminationStarted(processTreeAccess);
         synchronized (state.cleanupLock) {
             if (state.cleanupCompleted) {
                 return;
@@ -478,7 +549,11 @@ public final class ChildJvmPlaywrightProviderSupervisor
             if (state.cleanupTerminalFailure != null) {
                 throw state.cleanupTerminalFailure;
             }
-            long cleanupStartedAt = processTreeAccess.nanoTime();
+            boolean gracefulAttempt = requestGracefulClose
+                    && !state.operatorStopRequested.get();
+            long cleanupStartedAt = gracefulAttempt
+                    ? processTreeAccess.nanoTime()
+                    : state.operatorStopStartedAtOr(terminationStartedAt);
             AtomicBoolean mutationStarted = new AtomicBoolean();
             Throwable cleanupFailure = null;
             try {
@@ -502,19 +577,55 @@ public final class ChildJvmPlaywrightProviderSupervisor
                             registration,
                             initialInventory,
                             authenticatedWorkerExitExpected);
-                    if (requestGracefulClose) {
-                        authenticatedWorkerExitExpected |= requestClose(state, mutationStarted);
+                    boolean gracefulCloseMode = gracefulAttempt;
+                    boolean closeAcknowledged = false;
+                    boolean parentTerminationSignalled = false;
+                    if (gracefulCloseMode) {
+                        closeAcknowledged = requestClose(
+                                state,
+                                mutationStarted,
+                                cleanupStartedAt);
+                        authenticatedWorkerExitExpected |= closeAcknowledged;
+                        terminationInventory = captureTerminationProcessInventory(
+                                registration,
+                                terminationInventory,
+                                authenticatedWorkerExitExpected);
                     }
+                    gracefulCloseMode &= !state.operatorStopRequested.get();
+                    if (closeAcknowledged) {
+                        parentTerminationSignalled = signalParentTermination(
+                                state,
+                                mutationStarted);
+                    }
+                    long processTerminationStartedAt = gracefulCloseMode
+                            ? processTreeAccess.nanoTime()
+                            : state.operatorStopStartedAtOr(terminationStartedAt);
+                    boolean naturalTerminationExpected = gracefulCloseMode
+                            && closeAcknowledged
+                            && parentTerminationSignalled;
                     ProcessTreeCleanupOutcome outcome = terminateOwnedProcessTree(
                             registration.process(),
                             registration.processStartedAt(),
                             terminationInventory,
                             processTreeAccess,
                             cleanupStartedAt,
+                            processTerminationStartedAt,
                             mutationStarted,
-                            authenticatedWorkerExitExpected);
-                    if (!outcome.identityComplete()
-                            || !outcome.cancellationWithinBound()
+                            authenticatedWorkerExitExpected,
+                            naturalTerminationExpected);
+                    boolean operatorStopMode = !gracefulCloseMode
+                            || state.operatorStopRequested.get();
+                    long cancellationObservedAt = deadline(
+                            processTerminationStartedAt,
+                            outcome.cancellationLatency());
+                    boolean operatorCancellationWithinBound = !operatorStopMode
+                            || cancellationObservedAt <= deadline(
+                                    state.operatorStopStartedAtOr(terminationStartedAt),
+                                    IN_FLIGHT_CANCELLATION_MAX);
+                    if ((!operatorStopMode && !authenticatedWorkerExitExpected)
+                            || (closeAcknowledged && !parentTerminationSignalled)
+                            || !outcome.identityComplete()
+                            || !operatorCancellationWithinBound
                             || outcome.cleanupLatency().compareTo(PROCESS_TREE_CLEANUP_MAX) > 0
                             || outcome.residualOwnedProcessCount() != 0) {
                         throw new PlaywrightProviderException(
@@ -548,6 +659,9 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     closeQuietly(state.output);
                     closeQuietly(state.socket);
                     closeQuietly(state.server);
+                }
+                if (state.providerDispatchStarted.get()) {
+                    providerNetworkStartDelayGate.recordDispatchFinished(true);
                 }
                 if (cleanupFailure == null) {
                     state.cleanupCompleted = true;
@@ -654,25 +768,109 @@ public final class ChildJvmPlaywrightProviderSupervisor
         }
     }
 
-    private boolean requestClose(CampaignState state, AtomicBoolean mutationStarted) {
-        synchronized (state.ioLock) {
+    private boolean requestClose(
+            CampaignState state,
+            AtomicBoolean mutationStarted,
+            long cleanupStartedAt) {
+        if (!acquireCloseIoLock(state, cleanupStartedAt)) {
+            return false;
+        }
+        try {
             if (state.socket == null || state.socket.isClosed()) {
                 return false;
             }
             try {
+                long cleanupDeadline = deadline(
+                        cleanupStartedAt,
+                        PROCESS_TREE_CLEANUP_MAX);
+                long remainingNanos = cleanupDeadline - processTreeAccess.nanoTime();
+                if (remainingNanos < TimeUnit.MILLISECONDS.toNanos(1)) {
+                    return false;
+                }
+                Duration remainingCleanup = Duration.ofNanos(remainingNanos);
                 Duration closeTimeout = properties.getGracefulCloseTimeout()
-                        .compareTo(IN_FLIGHT_CANCELLATION_MAX) < 0
+                        .compareTo(remainingCleanup) < 0
                                 ? properties.getGracefulCloseTimeout()
-                                : IN_FLIGHT_CANCELLATION_MAX;
-                state.socket.setSoTimeout(toMillis(closeTimeout));
+                                : remainingCleanup;
+                long closeDeadline = deadline(processTreeAccess.nanoTime(), closeTimeout);
                 mutationStarted.set(true);
                 state.output.writeByte(CLOSE);
                 state.output.flush();
-                return state.input.readUnsignedByte() == CLOSED;
+                while (!state.operatorStopRequested.get()) {
+                    long remainingCloseNanos = Math.min(
+                            closeDeadline,
+                            cleanupDeadline) - processTreeAccess.nanoTime();
+                    if (remainingCloseNanos < TimeUnit.MILLISECONDS.toNanos(1)) {
+                        return false;
+                    }
+                    Duration readSlice = Duration.ofNanos(Math.min(
+                            PROCESS_TREE_POLL_INTERVAL.toNanos(),
+                            remainingCloseNanos));
+                    state.socket.setSoTimeout(toMillis(readSlice));
+                    try {
+                        return state.input.readUnsignedByte() == CLOSED;
+                    }
+                    catch (SocketTimeoutException timeout) {
+                        // Recheck an operator-stop upgrade before the next bounded read.
+                    }
+                }
+                return false;
             }
             catch (IOException | RuntimeException exception) {
                 return false;
             }
+        }
+        finally {
+            state.ioLock.unlock();
+        }
+    }
+
+    private boolean acquireCloseIoLock(CampaignState state, long cleanupStartedAt) {
+        long cleanupDeadline = deadline(cleanupStartedAt, PROCESS_TREE_CLEANUP_MAX);
+        while (!state.operatorStopRequested.get()) {
+            long remainingNanos = cleanupDeadline - processTreeAccess.nanoTime();
+            if (remainingNanos < TimeUnit.MILLISECONDS.toNanos(1)) {
+                return false;
+            }
+            long waitNanos = Math.min(
+                    PROCESS_TREE_POLL_INTERVAL.toNanos(),
+                    remainingNanos);
+            try {
+                if (state.ioLock.tryLock(waitNanos, TimeUnit.NANOSECONDS)) {
+                    return true;
+                }
+            }
+            catch (InterruptedException exception) {
+                Thread.currentThread().interrupt();
+                return false;
+            }
+        }
+        return false;
+    }
+
+    private static boolean signalParentTermination(
+            CampaignState state,
+            AtomicBoolean mutationStarted) {
+        state.ioLock.lock();
+        try {
+            Socket socket = state.socket;
+            if (socket == null) {
+                return false;
+            }
+            if (socket.isClosed() || socket.isOutputShutdown()) {
+                return true;
+            }
+            try {
+                mutationStarted.set(true);
+                socket.shutdownOutput();
+                return true;
+            }
+            catch (IOException | RuntimeException exception) {
+                return false;
+            }
+        }
+        finally {
+            state.ioLock.unlock();
         }
     }
 
@@ -863,13 +1061,16 @@ public final class ChildJvmPlaywrightProviderSupervisor
             Instant rootStartedAt,
             ProcessTreeAccess access) {
         ProcessTreeSnapshot initialInventory = access.capture(process, rootStartedAt);
+        long startedAt = access.nanoTime();
         return terminateOwnedProcessTree(
                 process,
                 rootStartedAt,
                 initialInventory,
                 access,
-                access.nanoTime(),
+                startedAt,
+                startedAt,
                 new AtomicBoolean(),
+                false,
                 false);
     }
 
@@ -878,13 +1079,16 @@ public final class ChildJvmPlaywrightProviderSupervisor
             Instant rootStartedAt,
             ProcessTreeSnapshot initialInventory,
             ProcessTreeAccess access) {
+        long startedAt = access.nanoTime();
         return terminateOwnedProcessTree(
                 process,
                 rootStartedAt,
                 initialInventory,
                 access,
-                access.nanoTime(),
+                startedAt,
+                startedAt,
                 new AtomicBoolean(),
+                false,
                 false);
     }
 
@@ -894,14 +1098,17 @@ public final class ChildJvmPlaywrightProviderSupervisor
             ProcessTreeSnapshot initialInventory,
             ProcessTreeAccess access,
             boolean authenticatedWorkerExitExpected) {
+        long startedAt = access.nanoTime();
         return terminateOwnedProcessTree(
                 process,
                 rootStartedAt,
                 initialInventory,
                 access,
-                access.nanoTime(),
+                startedAt,
+                startedAt,
                 new AtomicBoolean(),
-                authenticatedWorkerExitExpected);
+                authenticatedWorkerExitExpected,
+                false);
     }
 
     private static ProcessTreeCleanupOutcome terminateOwnedProcessTree(
@@ -909,18 +1116,27 @@ public final class ChildJvmPlaywrightProviderSupervisor
             Instant rootStartedAt,
             ProcessTreeSnapshot initialInventory,
             ProcessTreeAccess access,
-            long startedAt,
+            long cleanupStartedAt,
+            long processTerminationStartedAt,
             AtomicBoolean mutationStarted,
-            boolean authenticatedWorkerExitExpected) {
+            boolean authenticatedWorkerExitExpected,
+            boolean naturalTerminationExpected) {
         Objects.requireNonNull(process, "process");
         Objects.requireNonNull(rootStartedAt, "rootStartedAt");
         Objects.requireNonNull(initialInventory, "initialInventory");
         Objects.requireNonNull(access, "access");
         Objects.requireNonNull(mutationStarted, "mutationStarted");
 
-        long softDeadline = deadline(startedAt, SOFT_PROCESS_TERMINATION_MAX);
-        long cancellationDeadline = deadline(startedAt, IN_FLIGHT_CANCELLATION_MAX);
-        long cleanupDeadline = deadline(startedAt, PROCESS_TREE_CLEANUP_MAX);
+        long softDeadline = deadline(
+                processTerminationStartedAt,
+                SOFT_PROCESS_TERMINATION_MAX);
+        long naturalExitDeadline = deadline(
+                processTerminationStartedAt,
+                NATURAL_PROCESS_EXIT_MAX);
+        long cancellationDeadline = deadline(
+                processTerminationStartedAt,
+                IN_FLIGHT_CANCELLATION_MAX);
+        long cleanupDeadline = deadline(cleanupStartedAt, PROCESS_TREE_CLEANUP_MAX);
         Map<OwnedProcessIdentity, OwnedProcess> owned = new LinkedHashMap<>();
         OwnedProcess root = new OwnedProcess(process.toHandle(), rootStartedAt);
         owned.put(root.identity(), root);
@@ -945,8 +1161,12 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 long now = access.nanoTime();
                 boolean forcibly = now >= softDeadline;
 
+                boolean signalOwnedProcesses = !naturalTerminationExpected
+                        || now >= naturalExitDeadline;
                 // A fresh, re-authenticated union immediately precedes every signal group.
-                authenticatedRootTermination |= root.destroy(forcibly, mutationStarted);
+                if (signalOwnedProcesses) {
+                    authenticatedRootTermination |= root.destroy(forcibly, mutationStarted);
+                }
                 ProcessTreeSnapshot afterRootSignal = access.capture(process, rootStartedAt);
                 mergeOwned(owned, afterRootSignal.ownedProcesses());
                 capturePasses++;
@@ -956,11 +1176,13 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 identityComplete &= captureIsConclusive(
                         afterRootSignal,
                         authenticatedRootTermination);
-                destroyOwnedExceptRoot(
-                        owned.values(),
-                        root.identity(),
-                        forcibly,
-                        mutationStarted);
+                if (signalOwnedProcesses) {
+                    destroyOwnedExceptRoot(
+                            owned.values(),
+                            root.identity(),
+                            forcibly,
+                            mutationStarted);
+                }
 
                 if (owned.values().stream().noneMatch(OwnedProcess::sameProcessAlive)) {
                     ProcessTreeSnapshot finalCheck = access.capture(process, rootStartedAt);
@@ -1004,10 +1226,10 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     mutationStarted);
             int residual = residualOwnedProcessCount(owned.values());
             long finishedAt = Math.min(access.nanoTime(), cleanupDeadline);
-            Duration cleanupLatency = elapsed(startedAt, finishedAt);
+            Duration cleanupLatency = elapsed(cleanupStartedAt, finishedAt);
             Duration cancellationLatency = cancelledAt < 0
-                    ? cleanupLatency
-                    : elapsed(startedAt, cancelledAt);
+                    ? elapsed(processTerminationStartedAt, finishedAt)
+                    : elapsed(processTerminationStartedAt, cancelledAt);
             boolean cancellationWithinBound = cancelledAt >= 0
                     && cancelledAt <= cancellationDeadline;
             return new ProcessTreeCleanupOutcome(
@@ -1025,7 +1247,8 @@ public final class ChildJvmPlaywrightProviderSupervisor
             }
             destroyOwnedBestEffort(owned.values(), mutationStarted);
             return incompleteCleanupOutcome(
-                    startedAt,
+                    cleanupStartedAt,
+                    processTerminationStartedAt,
                     cleanupDeadline,
                     owned.values(),
                     access,
@@ -1075,16 +1298,18 @@ public final class ChildJvmPlaywrightProviderSupervisor
     }
 
     private static ProcessTreeCleanupOutcome incompleteCleanupOutcome(
-            long startedAt,
+            long cleanupStartedAt,
+            long processTerminationStartedAt,
             long cleanupDeadline,
             Collection<OwnedProcess> owned,
             ProcessTreeAccess access,
             int capturePasses,
             int unverifiedAliveProcessCount) {
         long finishedAt = Math.min(access.nanoTime(), cleanupDeadline);
-        Duration cleanupLatency = elapsed(startedAt, finishedAt);
+        Duration cleanupLatency = elapsed(cleanupStartedAt, finishedAt);
+        Duration cancellationLatency = elapsed(processTerminationStartedAt, finishedAt);
         return new ProcessTreeCleanupOutcome(
-                cleanupLatency,
+                cancellationLatency,
                 cleanupLatency,
                 false,
                 false,
@@ -1255,14 +1480,19 @@ public final class ChildJvmPlaywrightProviderSupervisor
 
         private final UUID campaignId;
         private final Set<SofascoreEndpointType> allowedEndpoints;
-        private final Object ioLock = new Object();
+        private final ReentrantLock ioLock = new ReentrantLock();
+        private final ReentrantLock dispatchLock = new ReentrantLock();
         private final Object processInventoryLock = new Object();
         private final Object cleanupLock = new Object();
         private final AtomicReference<CampaignPhase> phase =
                 new AtomicReference<>(CampaignPhase.STARTING);
         private final AtomicBoolean terminationRequested = new AtomicBoolean();
+        private final AtomicBoolean operatorStopRequested = new AtomicBoolean();
         private final AtomicBoolean authenticatedTerminalFrameReceived = new AtomicBoolean();
+        private final AtomicBoolean providerDispatchStarted = new AtomicBoolean();
         private final AtomicLong terminationStartedAtNanos = new AtomicLong(Long.MIN_VALUE);
+        private final AtomicLong operatorStopStartedAtNanos =
+                new AtomicLong(Long.MIN_VALUE);
         private final CompletableFuture<ProcessRegistration> processRegistration =
                 new CompletableFuture<>();
         private volatile ServerSocket server;
@@ -1298,6 +1528,48 @@ public final class ChildJvmPlaywrightProviderSupervisor
             long now = access.nanoTime();
             terminationStartedAtNanos.compareAndSet(Long.MIN_VALUE, now);
             return terminationStartedAtNanos.get();
+        }
+
+        private boolean requestTermination(ProcessTreeAccess access) {
+            dispatchLock.lock();
+            try {
+                return requestTerminationLocked(access);
+            }
+            finally {
+                dispatchLock.unlock();
+            }
+        }
+
+        private boolean requestOperatorStop(
+                long requestedAtNanos,
+                ProcessTreeAccess access) {
+            dispatchLock.lock();
+            try {
+                markOperatorStopRequested(requestedAtNanos);
+                return requestTerminationLocked(access);
+            }
+            finally {
+                dispatchLock.unlock();
+            }
+        }
+
+        private boolean requestTerminationLocked(ProcessTreeAccess access) {
+            boolean firstSignal = terminationRequested.compareAndSet(false, true);
+            if (firstSignal) {
+                phase.set(CampaignPhase.TERMINATING);
+                markTerminationStarted(access);
+            }
+            return firstSignal;
+        }
+
+        private void markOperatorStopRequested(long requestedAtNanos) {
+            operatorStopStartedAtNanos.compareAndSet(Long.MIN_VALUE, requestedAtNanos);
+            operatorStopRequested.set(true);
+        }
+
+        private long operatorStopStartedAtOr(long fallback) {
+            long observed = operatorStopStartedAtNanos.get();
+            return observed == Long.MIN_VALUE ? fallback : observed;
         }
 
         private void attach(

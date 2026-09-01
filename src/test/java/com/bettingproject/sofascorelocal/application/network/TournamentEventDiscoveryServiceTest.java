@@ -54,6 +54,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -286,10 +287,7 @@ class TournamentEventDiscoveryServiceTest {
                         new TournamentScheduledEventsProjectionService(),
                         persistence,
                         new TournamentScheduledEventsV1Parser(),
-                        new ManualProviderRequestCoordinator(
-                                clock,
-                                Duration.ofSeconds(3),
-                                ignored -> { }),
+                        immediateCoordinator(),
                         clock);
 
         var result = localService.importLocalJson(localClaim, payload);
@@ -563,10 +561,7 @@ class TournamentEventDiscoveryServiceTest {
                 new TournamentScheduledEventsProjectionService(),
                 persistence,
                 new TournamentScheduledEventsV1Parser(),
-                new ManualProviderRequestCoordinator(
-                        clock,
-                        Duration.ofSeconds(3),
-                        ignored -> { }),
+                immediateCoordinator(),
                 clock);
 
         var result = realService.execute(realClaim);
@@ -610,10 +605,7 @@ class TournamentEventDiscoveryServiceTest {
                 new TournamentScheduledEventsProjectionService(),
                 persistence,
                 new TournamentScheduledEventsV1Parser(),
-                new ManualProviderRequestCoordinator(
-                        clock,
-                        Duration.ofSeconds(3),
-                        ignored -> { }),
+                immediateCoordinator(),
                 clock);
 
         var result = realService.execute(realClaim);
@@ -660,6 +652,14 @@ class TournamentEventDiscoveryServiceTest {
                 List.of(41L),
                 List.of(claim(Map.of(7200, 1)).selection()),
                 0);
+    }
+
+    private static ManualProviderRequestCoordinator immediateCoordinator() {
+        AtomicLong ticker = new AtomicLong();
+        return new ManualProviderRequestCoordinator(
+                ticker::get,
+                Duration.ofSeconds(3),
+                delay -> ticker.addAndGet(delay.toNanos()));
     }
 
     private static TournamentScheduledEventsTransportResponse response(
@@ -736,10 +736,7 @@ class TournamentEventDiscoveryServiceTest {
                 selectedProjection,
                 persistence,
                 selectedParser,
-                new ManualProviderRequestCoordinator(
-                        selectedClock,
-                        Duration.ofSeconds(3),
-                        ignored -> { }),
+                immediateCoordinator(),
                 selectedClock);
     }
 
@@ -754,10 +751,7 @@ class TournamentEventDiscoveryServiceTest {
                 new TournamentScheduledEventsProjectionService(),
                 persistence,
                 new TournamentScheduledEventsV1Parser(),
-                new ManualProviderRequestCoordinator(
-                        selectedClock,
-                        Duration.ofSeconds(3),
-                        ignored -> { }),
+                immediateCoordinator(),
                 selectedClock,
                 new J8BenchmarkAuditService(evidenceStore, selectedClock));
     }

@@ -228,11 +228,29 @@ public final class ProviderPlaywrightWorkerMain {
                         ProviderPlaywrightWorkerProtocol.FailureCode.UNEXPECTED_ROUTE);
                 download.cancel();
             });
-            long requestedEpochMillis = Instant.now().toEpochMilli();
-            CDPSession responseGuard = context.newCDPSession(page);
+            CDPSession networkObserver = null;
+            CDPSession responseGuard = null;
             try {
+                networkObserver = context.newCDPSession(page);
+                String mainFrameId = ProviderMainDocumentNetworkObservation.requireMainFrameId(
+                        networkObserver.send("Page.getFrameTree"));
+                ProviderMainDocumentNetworkObservation networkObservation =
+                        new ProviderMainDocumentNetworkObservation(exactUri, mainFrameId);
+                networkObserver.on(
+                        "Network.requestWillBeSent",
+                        networkObservation::onRequestWillBeSent);
+                networkObserver.on(
+                        "Network.requestServedFromCache",
+                        networkObservation::onRequestServedFromCache);
+                networkObserver.on(
+                        "Network.responseReceived",
+                        networkObservation::onResponseReceived);
+                networkObserver.send("Network.enable");
+
+                responseGuard = context.newCDPSession(page);
+                CDPSession activeResponseGuard = responseGuard;
                 responseGuard.on("Fetch.requestPaused", event ->
-                        handlePausedResponse(responseGuard, event));
+                        handlePausedResponse(activeResponseGuard, event));
                 responseGuard.send("Fetch.enable", responseStageOnly());
                 Response response = page.navigate(exactUri, new Page.NavigateOptions()
                         .setWaitUntil(WaitUntilState.COMMIT)
@@ -248,6 +266,19 @@ public final class ProviderPlaywrightWorkerMain {
                 if (response.status() >= 300 && response.status() < 400) {
                     return ExecutionResult.failure(
                             ProviderPlaywrightWorkerProtocol.FailureCode.REDIRECT_BLOCKED);
+                }
+                if (response.fromServiceWorker()) {
+                    networkObservation.rejectNonNetworkResponse();
+                }
+                long requestedEpochMillis;
+                try {
+                    requestedEpochMillis = networkObservation
+                            .requireNetworkStartedAt()
+                            .toEpochMilli();
+                }
+                catch (RuntimeException exception) {
+                    return ExecutionResult.failure(
+                            ProviderPlaywrightWorkerProtocol.FailureCode.PLAYWRIGHT_FAILURE);
                 }
                 String contentType = response.headerValue("content-type");
                 if (contentType == null) {
@@ -287,9 +318,14 @@ public final class ProviderPlaywrightWorkerMain {
                     return ExecutionResult.failure(failure);
                 }
                 try {
+                    long receivedEpochMillis = Instant.now().toEpochMilli();
+                    if (receivedEpochMillis < requestedEpochMillis) {
+                        return ExecutionResult.failure(
+                                ProviderPlaywrightWorkerProtocol.FailureCode.PLAYWRIGHT_FAILURE);
+                    }
                     return ExecutionResult.success(new ProviderPlaywrightWorkerProtocol.ResponseFrame(
                             requestedEpochMillis,
-                            Math.max(requestedEpochMillis, Instant.now().toEpochMilli()),
+                            receivedEpochMillis,
                             response.status(),
                             contentType,
                             body));
@@ -319,14 +355,27 @@ public final class ProviderPlaywrightWorkerMain {
                 catch (PlaywrightException ignored) {
                     // Closing the campaign can terminate Chromium before this request returns.
                 }
-                try {
-                    responseGuard.send("Fetch.disable");
-                    responseGuard.detach();
-                }
-                catch (PlaywrightException ignored) {
-                    // Closing the exact page also closes its attached CDP session.
-                }
+                disableAndDetach(responseGuard, "Fetch.disable");
+                disableAndDetach(networkObserver, "Network.disable");
                 context.clearCookies();
+            }
+        }
+
+        private static void disableAndDetach(CDPSession session, String disableCommand) {
+            if (session == null) {
+                return;
+            }
+            try {
+                session.send(disableCommand);
+            }
+            catch (PlaywrightException ignored) {
+                // Detachment is still attempted below.
+            }
+            try {
+                session.detach();
+            }
+            catch (PlaywrightException ignored) {
+                // Closing the exact page also closes its attached CDP session.
             }
         }
 

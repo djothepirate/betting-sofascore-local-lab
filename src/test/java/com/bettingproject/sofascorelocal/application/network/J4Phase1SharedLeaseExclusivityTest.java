@@ -20,10 +20,8 @@ import org.junit.jupiter.api.Test;
 
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
-import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -31,6 +29,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -51,10 +50,7 @@ class J4Phase1SharedLeaseExclusivityTest {
     void holdsTheSharedLeaseAcrossBothFixedTargetsUntilTheJ4CampaignCloses()
             throws Exception {
         ManualProviderRequestCoordinator coordinator =
-                new ManualProviderRequestCoordinator(
-                        Clock.fixed(NOW, ZoneOffset.UTC),
-                        Duration.ofSeconds(3),
-                        ignored -> { });
+                immediateCoordinator();
         CountDownLatch firstTargetStarted = new CountDownLatch(1);
         CountDownLatch releaseFirstTarget = new CountDownLatch(1);
         CountDownLatch secondTargetStarted = new CountDownLatch(1);
@@ -121,10 +117,7 @@ class J4Phase1SharedLeaseExclusivityTest {
     void holdsTheSharedLeaseFromTheFirstCacheHitThroughTheSecondTargetMiss()
             throws Exception {
         ManualProviderRequestCoordinator coordinator =
-                new ManualProviderRequestCoordinator(
-                        Clock.fixed(NOW, ZoneOffset.UTC),
-                        Duration.ofSeconds(3),
-                        ignored -> { });
+                immediateCoordinator();
         CountDownLatch cachedTargetLookupStarted = new CountDownLatch(1);
         CountDownLatch releaseCachedTarget = new CountDownLatch(1);
         CountDownLatch providerTargetStarted = new CountDownLatch(1);
@@ -386,5 +379,13 @@ class J4Phase1SharedLeaseExclusivityTest {
             Thread.currentThread().interrupt();
             throw new IllegalStateException("test synchronization interrupted", exception);
         }
+    }
+
+    private static ManualProviderRequestCoordinator immediateCoordinator() {
+        AtomicLong ticker = new AtomicLong();
+        return new ManualProviderRequestCoordinator(
+                ticker::get,
+                Duration.ofSeconds(3),
+                delay -> ticker.addAndGet(delay.toNanos()));
     }
 }
