@@ -69,6 +69,23 @@ class OptionalLocalPushPropertiesTest {
     }
 
     @Test
+    void acceptsTheMaximumTcpPortAndRejectsTheFirstOutOfRangePort() {
+        OptionalLocalPushProperties properties = new OptionalLocalPushProperties();
+        properties.setLoopbackQualification(true);
+        properties.setLoopbackOrigin("https://127.0.0.1:65535");
+
+        assertThat(properties.isLoopbackQualificationSafe()).isTrue();
+        assertThat(validator.validate(properties)).isEmpty();
+
+        properties.setLoopbackOrigin("https://127.0.0.1:65536");
+
+        assertThat(properties.isLoopbackQualificationSafe()).isFalse();
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getPropertyPath().toString()
+                        .equals("loopbackQualificationSafe"));
+    }
+
+    @Test
     void refusesUnsafeContractOverridesRetryTimeoutsAndMtls() {
         OptionalLocalPushProperties properties = new OptionalLocalPushProperties();
         properties.setMaximumConcurrency(2);

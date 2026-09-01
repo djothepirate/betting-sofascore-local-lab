@@ -301,6 +301,26 @@ class BettingProjectJ7DeliveryHttpTransportTest {
     }
 
     @Test
+    void acceptsTheMaximumTcpPortAndRejectsTheFirstOutOfRangePortBeforeClientUse() {
+        HttpClient client = mock(HttpClient.class);
+
+        assertThat(BettingProjectJ7DeliveryHttpTransport.forTest(
+                client,
+                URI.create("https://127.0.0.1:65535"),
+                Duration.ofSeconds(10),
+                Clock.systemUTC())).isNotNull();
+
+        assertThatThrownBy(() -> BettingProjectJ7DeliveryHttpTransport.forTest(
+                client,
+                URI.create("https://127.0.0.1:65536"),
+                Duration.ofSeconds(10),
+                Clock.systemUTC()))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("origin must be an exact HTTPS IPv4 loopback origin");
+        verifyNoInteractions(client);
+    }
+
+    @Test
     void validatesEveryConstructionArgumentBeforeBuildingAnOwnedHttpClient()
             throws Exception {
         SSLContext sslContext = SSLContext.getDefault();

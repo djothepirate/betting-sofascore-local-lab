@@ -330,6 +330,31 @@ class J7OptionalDeliveryServiceTest {
         verifyNoInteractions(blockedExportService, blockedLedgerStore, blockedTransport);
     }
 
+    @Test
+    void outOfRangeLoopbackPortStopsBeforeExportClaimOrTransport() {
+        exportService = mock(J7CanonicalExportService.class);
+        ledgerStore = mock(J7DeliveryLedgerStore.class);
+        transport = mock(J7DeliveryTransport.class);
+        OptionalLocalPushProperties properties = new OptionalLocalPushProperties();
+        properties.setLoopbackQualification(true);
+        properties.setLoopbackOrigin("https://127.0.0.1:65536");
+        service = new J7OptionalDeliveryService(
+                exportService,
+                ledgerStore,
+                transport,
+                new J7DeliveryAcknowledgementParser(),
+                new J7DeliveryPolicy(properties),
+                Clock.fixed(NOW, ZoneOffset.UTC));
+
+        assertThatThrownBy(() -> service.deliverSyntheticLoopback(
+                CANONICAL_EVENT_ID,
+                EXPORT_ID,
+                J7OptionalDeliveryService.confirmationFor(identity)))
+                .isInstanceOf(J7DeliveryException.class)
+                .hasMessage(J7DeliveryError.INVALID_LOOPBACK_ORIGIN.name());
+        verifyNoInteractions(exportService, ledgerStore, transport);
+    }
+
     private J7DeliveryExecutionResult deliver() {
         return service.deliverSyntheticLoopback(
                 CANONICAL_EVENT_ID,

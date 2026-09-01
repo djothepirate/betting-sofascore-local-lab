@@ -19,6 +19,7 @@ public class OptionalLocalPushProperties {
     public static final int MAXIMUM_PAYLOAD_BYTES = 5 * 1024 * 1024;
     public static final int MAXIMUM_ACKNOWLEDGEMENT_BYTES = 16 * 1024;
     public static final String PROTOCOL_VERSION = "1.0";
+    private static final int MAXIMUM_TCP_PORT = 65_535;
 
     private boolean enabled;
     private boolean remoteDeliveryAuthorized;
@@ -186,6 +187,7 @@ public class OptionalLocalPushProperties {
             return "https".equals(origin.getScheme())
                     && "127.0.0.1".equals(origin.getHost())
                     && origin.getPort() >= 1
+                    && origin.getPort() <= MAXIMUM_TCP_PORT
                     && origin.getRawUserInfo() == null
                     && origin.getRawQuery() == null
                     && origin.getRawFragment() == null

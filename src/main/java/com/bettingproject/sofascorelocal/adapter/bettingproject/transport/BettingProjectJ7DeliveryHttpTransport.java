@@ -49,6 +49,7 @@ public final class BettingProjectJ7DeliveryHttpTransport
     private static final Duration MAXIMUM_TIMEOUT = Duration.ofSeconds(10);
     private static final Duration CLIENT_SHUTDOWN_TIMEOUT = Duration.ofSeconds(1);
     private static final int MAXIMUM_CONTENT_TYPE_LENGTH = 128;
+    private static final int MAXIMUM_TCP_PORT = 65_535;
     private final HttpClient httpClient;
     private final URI endpointUri;
     private final Duration requestTimeout;
@@ -519,6 +520,7 @@ public final class BettingProjectJ7DeliveryHttpTransport
         if (!"https".equals(origin.getScheme())
                 || !"127.0.0.1".equals(origin.getHost())
                 || origin.getPort() < 1
+                || origin.getPort() > MAXIMUM_TCP_PORT
                 || origin.getRawUserInfo() != null
                 || origin.getRawQuery() != null
                 || origin.getRawFragment() != null
