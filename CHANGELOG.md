@@ -4,6 +4,17 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-031 intégration continue et distribution locale uniquement
+
+- ajout de pipelines GitHub Actions Windows/Linux et GitLab CI pour les tests standards,
+  PostgreSQL/Testcontainers, la sécurité, les métriques qualité et le packaging local ;
+- production de distributions `EXPERIMENTAL_LOCAL_ONLY` contenant JAR, SBOM CycloneDX,
+  provenance et SHA-256, avec `vps.deployable=false` et sans profil fournisseur ;
+- validation fail-closed de l'identité du commit empaqueté et refus de tout tag de release locale
+  qui ne serait pas atteignable depuis la branche canonique `main` ;
+- conservation des interdictions d'appel SofaScore, de receiver réel, de livraison optionnelle,
+  de VPS et de production pendant toutes les qualifications CI.
+
 ### Après J9 — WO-030 borne de port de qualification Playwright fournisseur
 
 - ouverture de
