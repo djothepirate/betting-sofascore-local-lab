@@ -1737,6 +1737,7 @@ class ChildJvmPlaywrightProviderSupervisorTest {
             AtomicInteger getCount,
             List<Long> observedStarts,
             AtomicReference<Throwable> failure) {
+        boolean malformedResponseTimestampWritten = false;
         try (Socket socket = new Socket()) {
             socket.connect(new InetSocketAddress(
                     InetAddress.getByName("127.0.0.1"), port), 1_000);
@@ -1777,12 +1778,19 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                     output.writeByte(ChildJvmPlaywrightProviderSupervisor.RESPONSE);
                     output.writeLong(requestedAt);
                     output.writeLong(receivedAt);
+                    malformedResponseTimestampWritten =
+                            malformedFirstTimestamp && requestIndex == 1;
                     output.writeInt(200);
                     output.writeUTF("application/json");
                     output.writeInt(body.length);
                     output.write(body);
                     output.flush();
                 }
+            }
+        }
+        catch (java.net.SocketException exception) {
+            if (!malformedResponseTimestampWritten) {
+                failure.set(exception);
             }
         }
         catch (Throwable exception) {
