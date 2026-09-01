@@ -16,6 +16,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   qui ne serait pas atteignable depuis la branche canonique `main` ;
 - qualification d'une version Maven finale avant tag sous forme de snapshot `LOCAL_ONLY` non
   promouvable, puis création du tag sur le même SHA seulement après validation de `main` ;
+- suppression du cache Maven partagé GitLab afin qu'une branche contrôlant son YAML ne puisse
+  empoisonner aucune dépendance ensuite consommée par `main` ou par un tag ;
 - publication des releases locales taguées par GitLab uniquement ; GitHub conserve la compilation
   et les tests du tag sans reconstruire un second bundle avec une autre chaîne d'outils ;
 - conservation des interdictions d'appel SofaScore, de receiver réel, de livraison optionnelle,
