@@ -14,6 +14,8 @@ import java.time.Duration;
 @Validated
 public class ProviderPlaywrightProperties {
 
+    private static final int MAXIMUM_TCP_PORT = 65_535;
+
     private boolean enabled;
     private Path workerJar;
 
@@ -108,6 +110,7 @@ public class ProviderPlaywrightProperties {
             return "http".equals(origin.getScheme())
                     && "127.0.0.1".equals(origin.getHost())
                     && origin.getPort() >= 1
+                    && origin.getPort() <= MAXIMUM_TCP_PORT
                     && origin.getRawUserInfo() == null
                     && origin.getRawQuery() == null
                     && origin.getRawFragment() == null

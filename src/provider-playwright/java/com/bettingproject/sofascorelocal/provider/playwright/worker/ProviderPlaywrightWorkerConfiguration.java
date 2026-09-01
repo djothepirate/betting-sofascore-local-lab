@@ -8,6 +8,8 @@ import java.util.Objects;
 
 final class ProviderPlaywrightWorkerConfiguration {
 
+    private static final int MAXIMUM_TCP_PORT = 65_535;
+
     static final String IPC_PORT = "SOFASCORE_PLAYWRIGHT_IPC_PORT";
     static final String IPC_TOKEN = "SOFASCORE_PLAYWRIGHT_IPC_TOKEN";
     static final String LOOPBACK_ORIGIN = "SOFASCORE_PLAYWRIGHT_LOOPBACK_ORIGIN";
@@ -61,7 +63,7 @@ final class ProviderPlaywrightWorkerConfiguration {
     private static int parsePort(String value) {
         try {
             int port = Integer.parseInt(value);
-            if (port < 1 || port > 65_535) {
+            if (port < 1 || port > MAXIMUM_TCP_PORT) {
                 throw new IllegalArgumentException();
             }
             return port;
@@ -89,6 +91,7 @@ final class ProviderPlaywrightWorkerConfiguration {
             if (!"http".equals(candidate.getScheme())
                     || !"127.0.0.1".equals(candidate.getHost())
                     || candidate.getPort() < 1
+                    || candidate.getPort() > MAXIMUM_TCP_PORT
                     || candidate.getRawUserInfo() != null
                     || candidate.getRawQuery() != null
                     || candidate.getRawFragment() != null
