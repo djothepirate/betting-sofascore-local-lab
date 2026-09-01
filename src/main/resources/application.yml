@@ -105,6 +105,24 @@ sofascore:
   export-directory: ${SOFASCORE_EXPORT_DIR:./exports}
   allowed-endpoints: ${SOFASCORE_ALLOWED_ENDPOINTS:}
 
+optional-integration:
+  enabled: false
+  remote-delivery-authorized: false
+  official-permission-status: NOT_EVIDENCED
+  loopback-qualification: false
+  loopback-origin: ""
+  maximum-concurrency: 1
+  maximum-payload-bytes: 5242880
+  maximum-acknowledgement-bytes: 16384
+  protocol-version: "1.0"
+  connect-timeout: 5s
+  request-timeout: 10s
+  automatic-retry-enabled: false
+  mtls:
+    required: true
+    key-store-type: Windows-MY
+    client-certificate-sha256: ""
+
 logging:
   level:
     root: INFO

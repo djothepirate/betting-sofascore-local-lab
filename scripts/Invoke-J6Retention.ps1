@@ -104,13 +104,17 @@ try {
             'j8ProviderAttemptCount',
             'j8UnitResultCount',
             'j8CampaignResultCount',
+            'j7DeliveryCount',
+            'j7DeliveryAttemptCount',
+            'j7DeliveryAttemptResultCount',
             'coverageMaxSnapshotId',
             'coverageReceivedAt',
             'rawPayloadIntegrityFailures',
             'snapshotMetadataSha256',
             'occurrenceSha256',
             'normalizedProvenanceSha256',
-            'j8BenchmarkSha256'
+            'j8BenchmarkSha256',
+            'j7DeliveryLedgerSha256'
         )
         if ($null -eq $manifest.source -or $null -eq $manifest.restored) {
             throw 'The qualified manifest must contain source and restored evidence.'
@@ -123,9 +127,13 @@ try {
                 throw "The qualified manifest source/restore evidence differs: $field"
             }
         }
-        if ($manifest.source.flywayVersion.ToString() -cne '28' -or
-                [long]$manifest.source.rawPayloadIntegrityFailures -ne 0) {
-            throw 'The qualified manifest does not prove a valid Flyway V28 raw-payload and J8 evidence restore.'
+        if ($manifest.source.flywayVersion.ToString() -cne '29' -or
+                [long]$manifest.source.rawPayloadIntegrityFailures -ne 0 -or
+                [long]$manifest.source.j7DeliveryCount -lt 0 -or
+                [long]$manifest.source.j7DeliveryAttemptCount -lt 0 -or
+                [long]$manifest.source.j7DeliveryAttemptResultCount -lt 0 -or
+                $manifest.source.j7DeliveryLedgerSha256.ToString() -cnotmatch '^[0-9a-f]{64}$') {
+            throw 'The qualified manifest does not prove a valid Flyway V29 raw-payload, J8 evidence and metadata-only J7 delivery-ledger restore.'
         }
         $cipherPath = [IO.Path]::GetFullPath((Join-Path `
             (Split-Path -Parent $manifestPath) $cipherFileName))

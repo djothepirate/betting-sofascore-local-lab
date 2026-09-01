@@ -785,6 +785,19 @@ from (
     from j8_benchmark_campaign_result campaign_result
 ) j8_evidence
 '@
+$j7DeliveryLedgerFingerprintSql = @'
+select coalesce(string_agg(value, E'\n' order by value), '')
+from (
+    select 'J7_DELIVERY|' || to_jsonb(delivery)::text as value
+    from j7_delivery delivery
+    union all
+    select 'J7_DELIVERY_ATTEMPT|' || to_jsonb(attempt)::text as value
+    from j7_delivery_attempt attempt
+    union all
+    select 'J7_DELIVERY_ATTEMPT_RESULT|' || to_jsonb(attempt_result)::text as value
+    from j7_delivery_attempt_result attempt_result
+) j7_delivery_ledger
+'@
 
 Push-Location $repositoryRoot
 $operatorCancellation = New-J6ConsoleCancellationRegistration
@@ -822,8 +835,8 @@ try {
     }
 
     $sourceFlywayVersion = Invoke-PrimaryScalar -Sql $flywaySql
-    if ($sourceFlywayVersion -cne '28') {
-        throw 'Flyway V28 must be applied before the J6 backup/restore qualification.'
+    if ($sourceFlywayVersion -cne '29') {
+        throw 'Flyway V29 must be applied before the J6 backup/restore qualification.'
     }
     $coverageReceivedSql = @'
 select coalesce(
@@ -844,6 +857,9 @@ from provider_snapshot
         j8ProviderAttemptCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j8_provider_call_attempt')
         j8UnitResultCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j8_benchmark_unit_result')
         j8CampaignResultCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j8_benchmark_campaign_result')
+        j7DeliveryCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j7_delivery')
+        j7DeliveryAttemptCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j7_delivery_attempt')
+        j7DeliveryAttemptResultCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j7_delivery_attempt_result')
         coverageMaxSnapshotId = [long](Invoke-PrimaryScalar -Sql 'select coalesce(max(id), 0) from provider_snapshot')
         coverageReceivedAt = Invoke-PrimaryScalar -Sql $coverageReceivedSql
         rawPayloadIntegrityFailures = [long](Invoke-PrimaryScalar -Sql "select count(*) from provider_snapshot where payload_raw is not null and encode(sha256(payload_raw), 'hex') <> payload_sha256")
@@ -851,6 +867,7 @@ from provider_snapshot
         occurrenceSha256 = Get-TextSha256 (Invoke-PrimaryScalar -Sql $occurrenceFingerprintSql)
         normalizedProvenanceSha256 = Get-TextSha256 (Invoke-PrimaryScalar -Sql $normalizedFingerprintSql)
         j8BenchmarkSha256 = Get-TextSha256 (Invoke-PrimaryScalar -Sql $j8BenchmarkFingerprintSql)
+        j7DeliveryLedgerSha256 = Get-TextSha256 (Invoke-PrimaryScalar -Sql $j7DeliveryLedgerFingerprintSql)
     }
     if ($source.rawPayloadIntegrityFailures -ne 0) {
         throw 'At least one retained payload does not match its persisted SHA-256.'
@@ -968,6 +985,9 @@ from provider_snapshot
         j8ProviderAttemptCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j8_provider_call_attempt')
         j8UnitResultCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j8_benchmark_unit_result')
         j8CampaignResultCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j8_benchmark_campaign_result')
+        j7DeliveryCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j7_delivery')
+        j7DeliveryAttemptCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j7_delivery_attempt')
+        j7DeliveryAttemptResultCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j7_delivery_attempt_result')
         coverageMaxSnapshotId = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select coalesce(max(id), 0) from provider_snapshot')
         coverageReceivedAt = Invoke-RestoreScalar -Database $restoreDatabase -Sql $coverageReceivedSql
         rawPayloadIntegrityFailures = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql "select count(*) from provider_snapshot where payload_raw is not null and encode(sha256(payload_raw), 'hex') <> payload_sha256")
@@ -975,6 +995,7 @@ from provider_snapshot
         occurrenceSha256 = Get-TextSha256 (Invoke-RestoreScalar -Database $restoreDatabase -Sql $occurrenceFingerprintSql)
         normalizedProvenanceSha256 = Get-TextSha256 (Invoke-RestoreScalar -Database $restoreDatabase -Sql $normalizedFingerprintSql)
         j8BenchmarkSha256 = Get-TextSha256 (Invoke-RestoreScalar -Database $restoreDatabase -Sql $j8BenchmarkFingerprintSql)
+        j7DeliveryLedgerSha256 = Get-TextSha256 (Invoke-RestoreScalar -Database $restoreDatabase -Sql $j7DeliveryLedgerFingerprintSql)
     }
     foreach ($key in $source.Keys) {
         if ($source[$key].ToString() -cne $restored[$key].ToString()) {

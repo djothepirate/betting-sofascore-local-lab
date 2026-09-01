@@ -31,6 +31,32 @@ que Playwright VPS reste `DEFERRED_BLOCKED_BY_CURRENT_GOVERNANCE`. L’acceptati
 endpoint et n’autorise aucun réseau, déploiement, intégration, receiver, livraison live ou usage de
 production. WO-026 est validé et terminé sur cette décision documentaire.
 
+Le propriétaire a ensuite autorisé l'ouverture et la réalisation du Work Order distinct
+[WO-SS-20260901-027](docs/work_orders/completed/WO-SS-20260901-027-optional-local-push-implementation.md)
+sur `codex/j9-optional-local-push-implementation`. Ce lot traite le contrat receiver, le sender et
+son ledger séparé, mTLS, l'idempotence, les accusés et les qualifications offline/loopback.
+WO-027 a atteint `READY_FOR_OWNER_REVIEW` avec le
+[rapport de qualification local](docs/validation/J9-WO027-OPTIONAL-LOCAL-PUSH-QUALIFICATION-20260901.md) :
+`1036/0/0/5` tests standards et `84/0/0/0` tests d'intégration sont verts, dont les scénarios
+PostgreSQL V29, quatre scénarios mTLS et deux parcours end-to-end synthétiques. Le sender reste sans
+bean, route, scheduler, origine ou cible réelle ; les états de livraison sont séparés du statut J7,
+les réponses sont bornées à 16 KiB, la concurrence vaut `1` et aucune reprise automatique n'existe.
+
+La revue officielle maintient toutefois la permission à `NOT_EVIDENCED` : le socle reste
+fail-closed, désactivé et sans cible réelle. L'opacité Java d'une clé est qualifiée, mais la preuve
+Windows native de non-exportabilité, la PKI réelle et le receiver Betting Project restent à
+qualifier dans leurs Work Orders respectifs. Le receiver Betting Project exige son propre Work
+Order dans son dépôt ; aucune livraison réelle, aucun appel fournisseur, aucun VPS et aucune
+production ne sont autorisés sous WO-027. Les qualifications ont produit zéro appel fournisseur,
+zéro appel vers un receiver réel et zéro listener résiduel.
+
+Un premier bloc propriétaire avait énoncé `VALIDATE` pour le commit
+`5af48e5ea0e7150b460fe106da74aa5d3bd5489a`, le résultat `PASS_LOCAL_FAIL_CLOSED` et le SHA-256 du
+rapport, tout en laissant deux champs sous forme `<YES|NO>` ; aucune clôture n'en avait alors été
+déduite. Le propriétaire a ensuite fourni le bloc complet avec readiness locale `YES` et déplacement
+vers `completed` `YES`. WO-027 est donc `VALIDATED` et archivé parmi les Work Orders terminés. La
+permission officielle, le receiver réel et tous les usages réseau/VPS/production restent bloqués.
+
 La preuve arrêtée relève de WO-019 ; le profil sélectionné a exigé une nouvelle campagne sous un
 nouveau Work Order. ADR-SS-002 v1.0 avait été accepté explicitement. Le premier
 contrôle J3 Playwright loopback de WO-019 et sa
@@ -518,7 +544,7 @@ troisième campagne ou décision J9 n'est autorisée.
 - dépôt Git autonome, documentation, ADR, règles agent et Work Orders ;
 - Java **25 LTS**, Spring Boot **4.1.0** et Maven Wrapper versionné ;
 - interface Spring MVC + Thymeleaf sur `127.0.0.1:8087` ;
-- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V28 et stockage brut séparé ;
+- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V29 et stockage brut séparé ;
 - Actuator, Caffeine, validation de configuration et garde de liaison locale ;
 - catalogue logique des familles d’endpoints, sans URI réelle ;
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;

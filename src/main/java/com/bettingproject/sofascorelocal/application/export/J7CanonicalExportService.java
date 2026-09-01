@@ -585,6 +585,25 @@ public class J7CanonicalExportService {
                 verified.content());
     }
 
+    public J7ValidatedExportArtifact loadHumanValidatedForDelivery(
+            UUID canonicalEventId,
+            UUID exportId) {
+        J7ExportManifest manifest = manifest(canonicalEventId, exportId);
+        if (manifest.status() != J7ExportStatus.HUMAN_VALIDATED) {
+            throw new J7ExportException(J7ExportError.NOT_DOWNLOADABLE);
+        }
+        VerifiedFile verified = readAndVerify(manifest);
+        cleanupCandidateBestEffort(manifest);
+        return new J7ValidatedExportArtifact(
+                manifest.exportId(),
+                manifest.canonicalEventId(),
+                manifest.schemaId(),
+                manifest.schemaVersion(),
+                manifest.dataSha256(),
+                manifest.currentContentSha256(),
+                verified.content());
+    }
+
     private J7ExportManifest terminalDecision(
             J7ExportManifest candidateManifest,
             byte[] candidateBytes,

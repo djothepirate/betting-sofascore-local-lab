@@ -26,6 +26,7 @@
     <spring-boot.run.main-class>com.bettingproject.sofascorelocal.SofascoreLocalApplication</spring-boot.run.main-class>
     <main.output.directory>${project.build.directory}/classes</main.output.directory>
     <test.output.directory>${project.build.directory}/test-classes</test.output.directory>
+    <j7.no-automatic-retry.jvm-arguments>-Djdk.httpclient.disableRetryConnect=true -Djdk.httpclient.redirects.retrylimit=1 -Djdk.httpclient.enableAllMethodRetry=false</j7.no-automatic-retry.jvm-arguments>
   </properties>
 
   <dependencies>
@@ -141,6 +142,7 @@
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
           <mainClass>${spring-boot.run.main-class}</mainClass>
+          <jvmArguments>${j7.no-automatic-retry.jvm-arguments}</jvmArguments>
         </configuration>
         <executions>
           <execution>
@@ -149,6 +151,20 @@
             </goals>
           </execution>
         </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-surefire-plugin</artifactId>
+        <configuration>
+          <argLine>${j7.no-automatic-retry.jvm-arguments}</argLine>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-failsafe-plugin</artifactId>
+        <configuration>
+          <argLine>${j7.no-automatic-retry.jvm-arguments}</argLine>
+        </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
@@ -198,6 +214,7 @@
                   <goal>verify</goal>
                 </goals>
                 <configuration>
+                  <argLine>${j7.no-automatic-retry.jvm-arguments}</argLine>
                   <includes>
                     <include>**/integration/**/*IT.java</include>
                   </includes>

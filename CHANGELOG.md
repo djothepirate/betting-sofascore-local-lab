@@ -4,6 +4,78 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-029 durcissement de la borne de port du push local optionnel
+
+- ouverture de
+  `WO-SS-20260901-029-j9-optional-local-push-port-boundary-hardening` depuis le commit exact
+  `36598f1979ddc7be7081431b147691e7e9b8e49d`, dans une branche et un worktree dédiés, pour
+  corriger le constat P2 de la PR #21 sans réécrire WO-027 ni sa qualification ;
+- périmètre borné au refus d'un port d'origine loopback hors de l'intervalle fermé
+  `[1, 65535]` par la configuration avant lecture d'export et avant claim, puis par le transport
+  avant le client HTTP ; aucune migration, aucun contrat, endpoint, protocole ou schéma ne change ;
+- correctif runtime append-only `8fb4d5a64a8c36d553168c8e82cc4f46454ee96a` et preuve complémentaire
+  `699d2245322ef9614f05f912371db8fd9edca2b9` : ports absent et `0` refusés, `1` et `65535`
+  acceptés structurellement, `65536` refusé, sans connexion vers ces ports et avec zéro interaction
+  export, ledger ou transport pour chaque origine invalide ;
+- qualification `PASS_LOCAL_FAIL_CLOSED` : 50 tests ciblés, puis deux passages verts à
+  Surefire `1041/0/0/5` et Failsafe `84/0/0/0`, avec migrations V1→V29, mTLS et end-to-end
+  loopback ; Compose valide, diff et scan de secrets propres, zéro listener `8087` et zéro
+  conteneur Testcontainers résiduel ;
+- préservation byte-identique du Work Order WO-027
+  (`be18d440edf33ae8c511c4b1bab5ad1e70f6c2167027d525769c98417ebf5c2c`) et de son rapport
+  (`d656b7ea12ba38a40b88e9a78e5b7afb9642c4405080b9246b8539d177eb1d12`) ; publication du
+  rapport WO-029 validé et déplacement du Work Order vers `completed` avant push, résolution de
+  revue et fusion de la PR #21 ;
+- maintien de `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED`, du sender désactivé par défaut et de
+  toutes les interdictions de receiver réel, livraison réelle, réseau fournisseur, VPS et
+  production pendant la qualification offline/loopback.
+
+### Après J9 — WO-027 push local optionnel fail-closed
+
+- autorisation propriétaire d'ouvrir et de réaliser
+  `WO-SS-20260901-027-optional-local-push-implementation` depuis le commit exact de clôture de
+  WO-026 `aedb5f424883c9e7a1839fd50aa2c2689fa65418`, sur une branche et un worktree dédiés ;
+- portée bornée au contrat receiver versionné, au sender/ledger local désactivé, à mTLS,
+  l'idempotence, aux accusés, aux états séparés et aux qualifications synthétiques offline/loopback ;
+- revue officielle datée maintenant `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED` : la documentation
+  API publique ne vaut pas consentement et aucune licence applicable n'est versionnée ;
+- contrat `J7_OPTIONAL_LOCAL_PUSH` v1.0 et ACK strict versionnés, avec corps limité à l'export J7
+  canonique déjà `HUMAN_VALIDATED`, taille maximale de 5 Mio et clé d'idempotence stable
+  `j7:<exportId>:sha256:<fileSha256>` ;
+- sender fail-closed sans bean, contrôleur, route, scheduler, polling, URI ou cible réelle, utilisant
+  un transport HTTPS loopback synthétique sans proxy, redirection, cookie, fallback ou retry ;
+- ajout des trois barrières JVM anti-retry, attestées au démarrage puis avant construction et avant
+  envoi : `disableRetryConnect=true`, `redirects.retrylimit=1` et
+  `enableAllMethodRetry=false` ;
+- schéma V29 append-only pour l'identité, les tentatives et résultats de livraison, avec six états
+  séparés de J7, concurrence globale `1`, projection gardée, horloge PostgreSQL et réconciliation
+  stale manuelle seulement ;
+- preuves J6 étendues à V29 : sauvegarde/restauration compare les comptes et l'empreinte métadonnée
+  du ledger de livraison sans conserver les octets livrés ni élargir la purge primaire ;
+- mTLS synthétique qualifié sur quatre scénarios : nominal, autorité serveur non approuvée, SAN
+  divergent et certificat client incorrect ; l'opacité Java est prouvée, mais la non-exportabilité
+  native Windows reste `NOT_QUALIFIED_FOR_REAL_TARGET` ;
+- idempotence qualifiée avec effet unique et reprise manuelle `DUPLICATE`, refus local d'un
+  `exportId` associé à un hash divergent avant claim/socket, et classification terminale d'un
+  éventuel HTTP `409` distant ;
+- qualification finale `PASS_LOCAL_FAIL_CLOSED` : Surefire `1036/0/0/5`, Failsafe `84/0/0/0`,
+  ACK et corps d'erreur bornés à 16 KiB, J7 inchangé, zéro appel fournisseur, zéro receiver réel et
+  zéro listener résiduel ;
+- publication du rapport
+  `docs/validation/J9-WO027-OPTIONAL-LOCAL-PUSH-QUALIFICATION-20260901.md` et passage de WO-027 à
+  `READY_FOR_OWNER_REVIEW`, sans déplacement implicite vers les Work Orders terminés ;
+- verdict propriétaire `VALIDATE` reçu pour le commit
+  `5af48e5ea0e7150b460fe106da74aa5d3bd5489a`, du résultat `PASS_LOCAL_FAIL_CLOSED` et du SHA-256
+  `d656b7ea12ba38a40b88e9a78e5b7afb9642c4405080b9246b8539d177eb1d12` ; les deux champs readiness
+  et déplacement vers `completed` restant sous forme `<YES|NO>`, le bloc de revue demeure incomplet,
+  aucune valeur n'est déduite et WO-027 reste actif à `READY_FOR_OWNER_REVIEW` ;
+- bloc propriétaire final complet reçu avec readiness locale `YES` et déplacement vers
+  `completed` `YES` : WO-027 passe à `VALIDATED` et est archivé dans les Work Orders terminés ; le
+  commit qualifié, le résultat et le hash restent inchangés, comme tous les garde-fous réels ;
+- activation réelle, receiver Betting Project, livraison, réseau fournisseur, VPS, production,
+  polling, scheduler, retry automatique et fallback maintenus à `NO` ; zéro push déduit de cette
+  ouverture.
+
 ### Après J9 — étude d’intégration optionnelle ouverte
 
 - ouverture de WO-028 pour corriger factuellement l’identité du schéma J7 dans ADR-SS-003 :
