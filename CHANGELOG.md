@@ -4,6 +4,19 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-029 durcissement de la borne de port du push local optionnel
+
+- ouverture de
+  `WO-SS-20260901-029-j9-optional-local-push-port-boundary-hardening` depuis le commit exact
+  `36598f1979ddc7be7081431b147691e7e9b8e49d`, dans une branche et un worktree dédiés, pour
+  corriger le constat P2 de la PR #21 sans réécrire WO-027 ni sa qualification ;
+- périmètre borné au refus d'un port d'origine loopback hors de l'intervalle fermé
+  `[1, 65535]` par la configuration avant lecture d'export et avant claim, puis par le transport
+  avant le client HTTP ; aucune migration, aucun contrat, endpoint, protocole ou schéma ne change ;
+- maintien de `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED`, du sender désactivé par défaut et de
+  toutes les interdictions de receiver réel, livraison réelle, réseau fournisseur, VPS et
+  production pendant la qualification offline/loopback.
+
 ### Après J9 — WO-027 push local optionnel fail-closed
 
 - autorisation propriétaire d'ouvrir et de réaliser

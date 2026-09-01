@@ -51,6 +51,10 @@ l’autorise pas.
 13. L’indisponibilité du sender ou du receiver ne bloque aucune fonction critique du Betting
     Project.
 14. Le kill switch et toute configuration de cible restent désactivés par défaut.
+15. Le port explicite de l’origine loopback doit appartenir à la borne fermée `[1, 65535]` : cette
+    contrainte est validée par la configuration avant lecture de l’export et avant claim, puis
+    vérifiée de nouveau par le transport avant la construction du client qu’il possède ou avant
+    toute utilisation d’un client injecté.
 
 ## 3. Frontières et flux
 
