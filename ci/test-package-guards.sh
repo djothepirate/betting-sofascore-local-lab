@@ -4,27 +4,12 @@ set -eu
 repository=$(git rev-parse --show-toplevel)
 cd "$repository"
 
-head_commit=$(git rev-parse 'HEAD^{commit}')
-parent_commit=$(git rev-parse 'HEAD^{commit}^')
-canonical_main_ref=refs/remotes/origin/main
-original_main=$(git rev-parse --verify "${canonical_main_ref}^{commit}" 2>/dev/null || true)
-test_tag="v999999.999999.$$-rc.1"
-test_tag_ref="refs/tags/$test_tag"
-
-if git show-ref --verify --quiet "$test_tag_ref"; then
-    echo "FAIL: le tag de test existe déjà : $test_tag" >&2
-    exit 1
-fi
+guard_fixture=$(mktemp -d "${TMPDIR:-/tmp}/package-guard-repository.XXXXXX")
 
 cleanup() {
-    git update-ref -d "$test_tag_ref" >/dev/null 2>&1 || true
-    if [ -n "$original_main" ]; then
-        git update-ref "$canonical_main_ref" "$original_main" >/dev/null 2>&1 || true
-    else
-        git update-ref -d "$canonical_main_ref" >/dev/null 2>&1 || true
-    fi
+    rm -rf "$guard_fixture" || :
 }
-trap cleanup EXIT
+trap cleanup 0
 trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
@@ -47,29 +32,47 @@ assert_rejected() {
     rm -f "$output_file"
 }
 
-assert_rejected 'ne correspond pas au commit extrait' \
-    env CI_COMMIT_SHA="$parent_commit" CI_PIPELINE_IID=1 \
-    sh ci/package-local-only.sh
+mkdir -p "$guard_fixture/ci"
+cp ci/package-local-only.sh "$guard_fixture/ci/package-local-only.sh"
+git init -q -b main "$guard_fixture"
+git -C "$guard_fixture" config user.name ci-fixture
+git -C "$guard_fixture" config user.email ci-fixture.invalid@example.test
+git -C "$guard_fixture" add ci/package-local-only.sh
+git -C "$guard_fixture" commit -qm 'package guard fixture base'
+git -C "$guard_fixture" commit --allow-empty -qm 'package guard fixture head'
 
-assert_rejected "le tag $test_tag est absent du checkout" \
-    env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG="$test_tag" CI_PIPELINE_IID=1 \
-    sh ci/package-local-only.sh
+(
+    cd "$guard_fixture"
+    head_commit=$(git rev-parse 'HEAD^{commit}')
+    parent_commit=$(git rev-parse 'HEAD^{commit}^')
+    canonical_main_ref=refs/remotes/origin/main
+    test_tag=v999999.999999.999999-rc.1
+    test_tag_ref="refs/tags/$test_tag"
 
-git update-ref "$test_tag_ref" "$head_commit"
-git update-ref -d "$canonical_main_ref"
-assert_rejected 'référence canonique main introuvable' \
-    env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG="$test_tag" CI_PIPELINE_IID=1 \
-    sh ci/package-local-only.sh
+    assert_rejected 'ne correspond pas au commit extrait' \
+        env CI_COMMIT_SHA="$parent_commit" CI_PIPELINE_IID=1 \
+        sh ci/package-local-only.sh
 
-git update-ref "$canonical_main_ref" "$parent_commit"
-assert_rejected "n'est pas atteignable depuis" \
-    env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG="$test_tag" CI_PIPELINE_IID=1 \
-    sh ci/package-local-only.sh
+    assert_rejected "le tag $test_tag est absent du checkout" \
+        env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG="$test_tag" CI_PIPELINE_IID=1 \
+        sh ci/package-local-only.sh
 
-git update-ref "$test_tag_ref" "$parent_commit"
-assert_rejected 'ne désigne pas le commit source' \
-    env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG="$test_tag" CI_PIPELINE_IID=1 \
-    sh ci/package-local-only.sh
+    git update-ref "$test_tag_ref" "$head_commit"
+    git update-ref -d "$canonical_main_ref"
+    assert_rejected 'référence canonique main introuvable' \
+        env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG="$test_tag" CI_PIPELINE_IID=1 \
+        sh ci/package-local-only.sh
+
+    git update-ref "$canonical_main_ref" "$parent_commit"
+    assert_rejected "n'est pas atteignable depuis" \
+        env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG="$test_tag" CI_PIPELINE_IID=1 \
+        sh ci/package-local-only.sh
+
+    git update-ref "$test_tag_ref" "$parent_commit"
+    assert_rejected 'ne désigne pas le commit source' \
+        env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG="$test_tag" CI_PIPELINE_IID=1 \
+        sh ci/package-local-only.sh
+)
 
 if grep -Fq 'build.pipeline.iid=' ci/package-local-only.sh; then
     echo 'FAIL: une provenance immuable ne doit pas contenir l’IID de la forge.' >&2
@@ -104,6 +107,28 @@ fi
 if ! grep -Fq '$CI_COMMIT_REF_PROTECTED == "true" && $CI_COMMIT_TAG =~' \
     .gitlab-ci.yml; then
     echo 'FAIL: une release locale GitLab exige un tag protégé.' >&2
+    exit 1
+fi
+cat >"$guard_fixture/workflow.expected" <<'YAML'
+workflow:
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS'
+      when: never
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_COMMIT_BRANCH'
+    - if: '$CI_COMMIT_TAG'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - when: never
+YAML
+awk '
+    /^workflow:$/ { capture = 1 }
+    capture && /^stages:$/ { exit }
+    capture && $0 !~ /^[[:space:]]*$/ { print }
+' .gitlab-ci.yml >"$guard_fixture/workflow.actual"
+if ! cmp -s "$guard_fixture/workflow.expected" "$guard_fixture/workflow.actual"; then
+    echo 'FAIL: la matrice workflow GitLab ne respecte plus le contrat branche/MR/tag/web.' >&2
+    cat "$guard_fixture/workflow.actual" >&2
     exit 1
 fi
 sh ci/test-check-no-secrets-signals.sh

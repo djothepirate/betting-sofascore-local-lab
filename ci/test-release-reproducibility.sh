@@ -5,9 +5,9 @@ repository=$(git rev-parse --show-toplevel)
 fixture=$(mktemp -d /tmp/sofascore-release-fixture.XXXXXX)
 
 cleanup() {
-    rm -rf "$fixture"
+    rm -rf "$fixture" || :
 }
-trap cleanup EXIT
+trap cleanup 0
 trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM

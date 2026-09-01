@@ -6,9 +6,9 @@ cd "$repository"
 
 fixture=$(mktemp -d "${TMPDIR:-/tmp}/lab-secret-signal-test.XXXXXX")
 cleanup_fixture() {
-    rm -rf "$fixture"
+    rm -rf "$fixture" || :
 }
-trap cleanup_fixture EXIT
+trap cleanup_fixture 0
 trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM

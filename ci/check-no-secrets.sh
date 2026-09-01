@@ -11,7 +11,7 @@ commit_file=$(mktemp "${TMPDIR:-/tmp}/lab-secret-commits.XXXXXX")
 cleanup() {
     rm -f "$candidate_file" "$blob_file" "$commit_file" || :
 }
-trap cleanup EXIT
+trap cleanup 0
 trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM

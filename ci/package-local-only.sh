@@ -135,7 +135,7 @@ if [ "$jar_count" -ne 1 ]; then
 fi
 
 sbom_work=$(mktemp -d "${TMPDIR:-/tmp}/sofascore-sbom.XXXXXX")
-trap 'rm -rf "$sbom_work"' EXIT
+trap 'rm -rf "$sbom_work" || :' 0
 
 generate_sbom() {
     output_dir=$1
