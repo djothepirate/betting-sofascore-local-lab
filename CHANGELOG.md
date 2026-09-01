@@ -4,6 +4,19 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-027 push local optionnel fail-closed
+
+- autorisation propriétaire d'ouvrir et de réaliser
+  `WO-SS-20260901-027-optional-local-push-implementation` depuis le commit exact de clôture de
+  WO-026 `aedb5f424883c9e7a1839fd50aa2c2689fa65418`, sur une branche et un worktree dédiés ;
+- portée bornée au contrat receiver versionné, au sender/ledger local désactivé, à mTLS,
+  l'idempotence, aux accusés, aux états séparés et aux qualifications synthétiques offline/loopback ;
+- revue officielle datée maintenant `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED` : la documentation
+  API publique ne vaut pas consentement et aucune licence applicable n'est versionnée ;
+- activation réelle, receiver Betting Project, livraison, réseau fournisseur, VPS, production,
+  polling, scheduler, retry automatique et fallback maintenus à `NO` ; zéro push déduit de cette
+  ouverture.
+
 ### Après J9 — étude d’intégration optionnelle ouverte
 
 - publication sans force de la plage J9 finalisée sur la branche privée

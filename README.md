@@ -31,6 +31,15 @@ que Playwright VPS reste `DEFERRED_BLOCKED_BY_CURRENT_GOVERNANCE`. L’acceptati
 endpoint et n’autorise aucun réseau, déploiement, intégration, receiver, livraison live ou usage de
 production. WO-026 est validé et terminé sur cette décision documentaire.
 
+Le propriétaire a ensuite autorisé l'ouverture et la réalisation du Work Order distinct
+[WO-SS-20260901-027](docs/work_orders/active/WO-SS-20260901-027-optional-local-push-implementation.md)
+sur `codex/j9-optional-local-push-implementation`. Ce lot traite le contrat receiver, le sender et
+son ledger séparé, mTLS, l'idempotence, les accusés et les qualifications offline/loopback. La
+revue officielle d'ouverture maintient toutefois la permission à `NOT_EVIDENCED` : le socle doit
+donc rester fail-closed, désactivé et sans cible réelle. Le receiver Betting Project exige son
+propre Work Order dans son dépôt ; aucune livraison réelle, aucun appel fournisseur, aucun VPS et
+aucune production ne sont autorisés sous WO-027.
+
 La preuve arrêtée relève de WO-019 ; le profil sélectionné a exigé une nouvelle campagne sous un
 nouveau Work Order. ADR-SS-002 v1.0 avait été accepté explicitement. Le premier
 contrôle J3 Playwright loopback de WO-019 et sa
