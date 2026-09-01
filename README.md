@@ -12,6 +12,11 @@ l’acceptation d’ADR-SS-003 v0.1. Ce lot rend les décisions navigables, dist
 permission officielle reste `NOT_EVIDENCED`. Le PDF de cadrage demeure byte-identique ; aucun ADR,
 code, réseau fournisseur ou receiver réel, VPS ou usage de production n’est modifié ou autorisé.
 
+Un premier bloc de revue propriétaire a validé le commit qualifié `b9ff5f0` et les empreintes de
+l’index et du PDF. Les champs de reconnaissance de la readiness locale et de déplacement vers
+`completed` sont toutefois restés sous la forme `<YES|NO>` : aucune valeur n’en est déduite,
+WO-032 reste actif à `READY_FOR_OWNER_REVIEW` et toutes les non-autorisations demeurent inchangées.
+
 Le correctif fournisseur distinct
 [WO-SS-20260901-030](docs/work_orders/completed/WO-SS-20260901-030-j9-provider-playwright-port-boundary-hardening.md)
 est `VALIDATED` et archivé depuis le `main` issu des PR #20/#21. Le commit

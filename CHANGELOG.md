@@ -23,6 +23,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - qualification locale `PASS` : `mvnw.cmd --offline clean verify` avec Surefire `1043/0/0/5` et
   Failsafe `84/0/0/0`, onze liens locaux résolus, diff/scan de secrets/invariants propres et zéro
   listener, processus ou conteneur Testcontainers résiduel ; passage à `READY_FOR_OWNER_REVIEW` ;
+- premier bloc propriétaire reçu avec verdict `VALIDATE`, commit `b9ff5f0` et empreintes index/PDF
+  concordants ; `LOCAL_READINESS_ACKNOWLEDGED` et `WORK_ORDER_MOVE_TO_COMPLETED` restant sous
+  `<YES|NO>`, le bloc est `INCOMPLETE_REQUIRED_FIELDS`, aucune valeur n’est déduite et WO-032 reste
+  actif dans `docs/work_orders/active` ;
 - aucun changement d’ADR, code, configuration, schéma ou rapport ; aucun appel fournisseur,
   receiver réel, livraison, VPS, production, push ou fusion autorisé sous WO-032.
 

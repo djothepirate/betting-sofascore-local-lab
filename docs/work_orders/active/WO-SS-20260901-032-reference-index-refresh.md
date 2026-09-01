@@ -12,6 +12,9 @@
 - **Commit d’ouverture :** `e5258386c1582a1cb8fa6b394264889293617aa6`
 - **Vérification Maven terminée UTC :** `2026-09-01T17:20:32Z`
 - **Vérification Maven terminée Europe/Paris :** `2026-09-01T19:20:32+02:00`
+- **Premier bloc de revue propriétaire reçu UTC :** `2026-09-01T17:30:34.2266742Z`
+- **Premier bloc de revue propriétaire reçu Europe/Paris :**
+  `2026-09-01T19:30:34.2266742+02:00`
 - **Type de lot :** documentation locale seulement ; aucun changement de code, configuration,
   schéma, réseau, ADR ou PDF
 
@@ -160,6 +163,7 @@ L’index final mesure 4 937 octets et porte le SHA-256
 | `2026-09-01T17:20:32Z` | `mvnw.cmd --offline clean verify` | `PASS` — Surefire `1043/0/0/5`, Failsafe `84/0/0/0` |
 | `2026-09-01T17:21:10.2147379Z` | liens, diff, secrets, invariants, empreintes et postflight | `PASS` |
 | `2026-09-01T17:26:30.5624553Z` | relecture croisée finale et correction de précision documentaire | `PASS` — horodatage Maven distingué du postflight ; « sources officielles » explicité |
+| `2026-09-01T17:30:34.2266742Z` | premier bloc de revue propriétaire contrôlé | `RECEIVED_INCOMPLETE` — verdict, commit et empreintes concordants ; readiness et déplacement laissés sous `<YES|NO>` |
 
 ## 10. État courant
 
@@ -176,8 +180,17 @@ REFERENCE_PDF_GIT_BLOB_BEFORE=cfbe41b57c235163eeb60036ba9186c305981307
 REFERENCE_PDF_GIT_BLOB_AFTER=cfbe41b57c235163eeb60036ba9186c305981307
 LOCAL_QUALIFICATION_STATUS=PASS
 OWNER_REVIEW_REQUIRED=YES
-OWNER_REVIEW_DECISION=NOT_RECEIVED
+OWNER_REVIEW_DECISION=VALIDATE
+OWNER_REVIEW_BLOCK_STATUS=INCOMPLETE_REQUIRED_FIELDS
+DOCUMENTATION_COMMIT=b9ff5f0f96998ff46785b3dd7f2e4369b3f1ce37
+DOCUMENTATION_COMMIT_MATCH=YES
+REFERENCE_INDEX_SHA256_MATCH=YES
+REFERENCE_PDF_SHA256_MATCH=YES
+LOCAL_READINESS_ACKNOWLEDGED=NOT_PROVIDED_PLACEHOLDER
+WORK_ORDER_MOVE_TO_COMPLETED=NOT_PROVIDED_PLACEHOLDER
 MOVE_TO_COMPLETED_AUTHORIZED=NO
+MOVE_TO_COMPLETED_PERFORMED=NO
+WORK_ORDER_LOCATION=docs/work_orders/active/WO-SS-20260901-032-reference-index-refresh.md
 PROVIDER_NETWORK_AUTHORIZED=NO
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 VPS_DEPLOYMENT_AUTHORIZED=NO
@@ -197,16 +210,57 @@ PUSH_OR_MERGE_AUTHORIZED=NO
 - [ADR-SS-002](../../../ADR-SS-002-bounded-multi-dossier-provider-robustness.md)
 - [ADR-SS-003](../../../ADR-SS-003-optional-integration-topology.md)
 
-## 12. Bloc de revue propriétaire attendu
+## 12. Premier bloc de revue propriétaire reçu — incomplet
 
-La qualification locale rend le lot recevable à une revue propriétaire ; elle ne le valide pas et
-n’autorise pas son déplacement vers `completed`. Le bloc attendu devra identifier le commit exact
-qualifié communiqué après le commit documentaire final :
+Le propriétaire a énoncé `VALIDATE` pour le commit qualifié et les deux empreintes attendues. Ces
+trois références correspondent exactement aux objets locaux contrôlés.
+
+Les deux derniers choix décisionnels sont toutefois restés sous la forme littérale `<YES|NO>`.
+Conformément au précédent WO-027, ces placeholders sont des choix non résolus, pas des
+autorisations. La readiness locale n’est donc pas reconnue explicitement, le déplacement vers
+`completed` n’est pas autorisé et WO-032 demeure actif à `READY_FOR_OWNER_REVIEW`.
+
+Bloc reproduit tel que reçu, après retrait des seuls échappements de rendu Markdown :
 
 ```text
-J9_WO032_OWNER_REVIEW_DECISION=<VALIDATE|REJECT>
+J9_WO032_OWNER_REVIEW_DECISION=VALIDATE
 J9_WO032_WORK_ORDER=WO-SS-20260901-032-reference-index-refresh
-J9_WO032_DOCUMENTATION_COMMIT=<qualified commit>
+J9_WO032_DOCUMENTATION_COMMIT=b9ff5f0f96998ff46785b3dd7f2e4369b3f1ce37
+J9_WO032_REFERENCE_INDEX_SHA256=b3612691b1738b07038599b6d61ae58cfd7ec8e15bbcec2198c6b7498bbab1f7
+J9_WO032_REFERENCE_PDF_SHA256=746106cfe5142ad7b7426443b9730b22f281d6d844d108a5c371c7e08c9f1fee
+J9_WO032_LOCAL_READINESS_ACKNOWLEDGED=<YES|NO>
+J9_WO032_WORK_ORDER_MOVE_TO_COMPLETED=<YES|NO>
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+Contrôles dérivés, distincts des paroles du propriétaire :
+
+```text
+J9_WO032_DOCUMENTATION_COMMIT_MATCH=YES
+J9_WO032_REFERENCE_INDEX_SHA256_MATCH=YES
+J9_WO032_REFERENCE_PDF_SHA256_MATCH=YES
+J9_WO032_LOCAL_READINESS_ACKNOWLEDGED=NOT_PROVIDED_PLACEHOLDER
+J9_WO032_WORK_ORDER_MOVE_TO_COMPLETED=NOT_PROVIDED_PLACEHOLDER
+OWNER_REVIEW_BLOCK_STATUS=INCOMPLETE_REQUIRED_FIELDS
+OWNER_REVIEW_REQUIRED=YES
+WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+MOVE_TO_COMPLETED_AUTHORIZED=NO
+MOVE_TO_COMPLETED_PERFORMED=NO
+```
+
+## 13. Bloc propriétaire complet encore requis
+
+Pour terminer WO-032, le propriétaire doit remplacer explicitement les deux placeholders par des
+valeurs `YES` ou `NO`. Une validation et un déplacement ne pourront être déduits que si les deux
+valeurs reçues l’autorisent :
+
+```text
+J9_WO032_OWNER_REVIEW_DECISION=VALIDATE
+J9_WO032_WORK_ORDER=WO-SS-20260901-032-reference-index-refresh
+J9_WO032_DOCUMENTATION_COMMIT=b9ff5f0f96998ff46785b3dd7f2e4369b3f1ce37
 J9_WO032_REFERENCE_INDEX_SHA256=b3612691b1738b07038599b6d61ae58cfd7ec8e15bbcec2198c6b7498bbab1f7
 J9_WO032_REFERENCE_PDF_SHA256=746106cfe5142ad7b7426443b9730b22f281d6d844d108a5c371c7e08c9f1fee
 J9_WO032_LOCAL_READINESS_ACKNOWLEDGED=<YES|NO>
