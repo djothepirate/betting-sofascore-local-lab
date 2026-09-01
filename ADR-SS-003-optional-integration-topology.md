@@ -460,4 +460,4 @@ Order. Elle n’autorise pas :
 8. [Runbook J6](docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md).
 9. [Architecture générale](docs/architecture/ARCHITECTURE.md).
 10. [Règles du dépôt](AGENTS.md).
-11. [Clarification corrective WO-028](docs/work_orders/active/WO-SS-20260901-028-adr-ss-003-j7-schema-identity-clarification.md).
+11. [Clarification corrective WO-028](docs/work_orders/completed/WO-SS-20260901-028-adr-ss-003-j7-schema-identity-clarification.md).
