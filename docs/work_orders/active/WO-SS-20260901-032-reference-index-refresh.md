@@ -10,8 +10,8 @@
 - **Base exacte :** `f3d7d3feb9c48859ba6ae182b7f6e78b11b1f089` (référence locale
   `origin/main` ; aucune actualisation distante exécutée sous ce lot)
 - **Commit d’ouverture :** `e5258386c1582a1cb8fa6b394264889293617aa6`
-- **Qualification locale terminée UTC :** `2026-09-01T17:20:32Z`
-- **Qualification locale terminée Europe/Paris :** `2026-09-01T19:20:32+02:00`
+- **Vérification Maven terminée UTC :** `2026-09-01T17:20:32Z`
+- **Vérification Maven terminée Europe/Paris :** `2026-09-01T19:20:32+02:00`
 - **Type de lot :** documentation locale seulement ; aucun changement de code, configuration,
   schéma, réseau, ADR ou PDF
 
@@ -145,8 +145,8 @@ exécutés avec succès parce qu’ils sont attachés au cycle `verify` courant 
 | Postflight | `PASS` — aucun listener `8087`, processus attribuable au worktree ou conteneur Testcontainers résiduel |
 | Réseau réel | zéro appel fournisseur, zéro appel receiver réel, zéro accès VPS |
 
-L’index final mesure 4 924 octets et porte le SHA-256
-`959adb8d120386ede0a0fbd2b46a2883b57a04582d5b21134d62107b14342c91`.
+L’index final mesure 4 937 octets et porte le SHA-256
+`b3612691b1738b07038599b6d61ae58cfd7ec8e15bbcec2198c6b7498bbab1f7`.
 
 ## 9. Registre d’exécution
 
@@ -159,6 +159,7 @@ L’index final mesure 4 924 octets et porte le SHA-256
 | `2026-09-01T17:15:00Z` | index actualisé et hiérarchie confrontée aux ADR/WO versionnés | `PASS` — ADR-SS-003 et WO-026 à WO-030 intégrés sans extrapolation |
 | `2026-09-01T17:20:32Z` | `mvnw.cmd --offline clean verify` | `PASS` — Surefire `1043/0/0/5`, Failsafe `84/0/0/0` |
 | `2026-09-01T17:21:10.2147379Z` | liens, diff, secrets, invariants, empreintes et postflight | `PASS` |
+| `2026-09-01T17:26:30.5624553Z` | relecture croisée finale et correction de précision documentaire | `PASS` — horodatage Maven distingué du postflight ; « sources officielles » explicité |
 
 ## 10. État courant
 
@@ -167,7 +168,7 @@ WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
 REFERENCE_INDEX_STATUS=CURRENT_THROUGH_WO030_ON_BASE_F3D7D3F
 REFERENCE_INDEX_UPDATE_STATUS=COMPLETED
 REFERENCE_INDEX_SHA256_BEFORE=d2cff7ce0bea80eb903d66bc293e90b6d7bdd8b38e81524ab082a16e751bd446
-REFERENCE_INDEX_SHA256_AFTER=959adb8d120386ede0a0fbd2b46a2883b57a04582d5b21134d62107b14342c91
+REFERENCE_INDEX_SHA256_AFTER=b3612691b1738b07038599b6d61ae58cfd7ec8e15bbcec2198c6b7498bbab1f7
 REFERENCE_PDF_IMMUTABILITY_STATUS=PASS_BYTE_IDENTICAL
 REFERENCE_PDF_SHA256_BEFORE=746106cfe5142ad7b7426443b9730b22f281d6d844d108a5c371c7e08c9f1fee
 REFERENCE_PDF_SHA256_AFTER=746106cfe5142ad7b7426443b9730b22f281d6d844d108a5c371c7e08c9f1fee
@@ -206,7 +207,7 @@ qualifié communiqué après le commit documentaire final :
 J9_WO032_OWNER_REVIEW_DECISION=<VALIDATE|REJECT>
 J9_WO032_WORK_ORDER=WO-SS-20260901-032-reference-index-refresh
 J9_WO032_DOCUMENTATION_COMMIT=<qualified commit>
-J9_WO032_REFERENCE_INDEX_SHA256=959adb8d120386ede0a0fbd2b46a2883b57a04582d5b21134d62107b14342c91
+J9_WO032_REFERENCE_INDEX_SHA256=b3612691b1738b07038599b6d61ae58cfd7ec8e15bbcec2198c6b7498bbab1f7
 J9_WO032_REFERENCE_PDF_SHA256=746106cfe5142ad7b7426443b9730b22f281d6d844d108a5c371c7e08c9f1fee
 J9_WO032_LOCAL_READINESS_ACKNOWLEDGED=<YES|NO>
 J9_WO032_WORK_ORDER_MOVE_TO_COMPLETED=<YES|NO>

@@ -61,7 +61,7 @@ Cadrage SofaScore Local Lab v0.1.0
 | [WO-029](../work_orders/completed/WO-SS-20260901-029-j9-optional-local-push-port-boundary-hardening.md) | borne de port du push local optionnel durcie et qualifiée localement | aucun receiver réel, réseau réel, VPS ou production |
 | [WO-030](../work_orders/completed/WO-SS-20260901-030-j9-provider-playwright-port-boundary-hardening.md) | borne de port Playwright fournisseur durcie et qualifiée localement | aucun appel fournisseur, réseau receiver, VPS ou production |
 
-La [revue officielle versionnée sous WO-027](../validation/J9-WO027-OFFICIAL-PERMISSION-REVIEW-20260901.md)
+La [revue des sources officielles versionnée sous WO-027](../validation/J9-WO027-OFFICIAL-PERMISSION-REVIEW-20260901.md)
 maintient `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED`. La documentation publique observée ne
 constitue pas, à elle seule, une permission applicable au laboratoire. La
 [qualification WO-027](../validation/J9-WO027-OPTIONAL-LOCAL-PUSH-QUALIFICATION-20260901.md)
