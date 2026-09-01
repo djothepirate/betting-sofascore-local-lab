@@ -73,4 +73,6 @@ if ! grep -Fq 'artifact.version=$artifact_version' ci/package-local-only.sh; the
     exit 1
 fi
 
+sh ci/test-release-reproducibility.sh
+
 printf 'PACKAGE_GIT_GUARDS=PASS_LOCAL_ONLY\n'

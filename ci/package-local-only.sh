@@ -226,9 +226,18 @@ EOF
     sha256sum "$jar_name" sbom.cdx.json provenance.properties >SHA256SUMS
 )
 
+find "$stage" -type d -exec chmod 0755 {} +
+find "$stage" -type f -exec chmod 0644 {} +
+archive_entries=$sbom_work/archive-entries.txt
 (
     cd "$stage"
-    jar --create --file "../$bundle_name" --date="$source_iso" .
+    find . -type f -print | LC_ALL=C sort >"$archive_entries"
+    set --
+    while IFS= read -r entry; do
+        set -- "$@" "$entry"
+    done <"$archive_entries"
+    jar --create --no-manifest --no-compress --date="$source_iso" \
+        --file "../$bundle_name" "$@"
 )
 (
     cd "$distribution"
