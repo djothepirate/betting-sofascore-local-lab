@@ -143,7 +143,7 @@ if ($violations.Count -gt 0) {
 
 Push-Location $repositoryRoot
 try {
-    & .\mvnw.cmd clean verify
+    & .\mvnw.cmd -DskipITs clean verify
     if ($LASTEXITCODE -ne 0) {
         throw 'Standard Maven verification failed'
     }

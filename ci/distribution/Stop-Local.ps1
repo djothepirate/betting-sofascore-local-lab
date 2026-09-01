@@ -1,15 +1,12 @@
 [CmdletBinding()]
 param(
-    [switch]$Force
+    [switch]$RemoveData
 )
 
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version 2.0
 
-$repositoryRoot = Split-Path -Parent $PSScriptRoot
-$envPath = Join-Path $repositoryRoot '.env'
-$exportsPath = Join-Path $repositoryRoot 'exports'
-$postgresVolumeName = 'betting-sofascore-local-lab-postgres-data'
+$distributionRoot = Split-Path -Parent $PSScriptRoot
 
 function Assert-Command {
     param([Parameter(Mandatory = $true)][string]$Name)
@@ -49,49 +46,49 @@ function Get-LocalDockerArguments {
     return @('--host', $endpoint)
 }
 
-if ((Test-Path -LiteralPath $envPath) -and -not $Force) {
-    throw '.env already exists. Keep it to reuse the credentials of the persistent PostgreSQL volume.'
+$composePath = Join-Path $distributionRoot 'compose.yaml'
+$envPath = Join-Path $distributionRoot '.env'
+if (-not (Test-Path -LiteralPath $composePath -PathType Leaf)) {
+    throw 'compose.yaml is missing from the distribution.'
+}
+if (-not (Test-Path -LiteralPath $envPath -PathType Leaf)) {
+    throw 'Missing .env. Run scripts\Initialize-LocalConfig.ps1 first.'
 }
 
 Assert-Command -Name 'docker'
 $dockerGlobalArguments = @(Get-LocalDockerArguments)
 & docker @dockerGlobalArguments info *> $null
 if ($LASTEXITCODE -ne 0) {
-    throw 'Docker Desktop is not ready.'
+    throw 'Docker Desktop is not ready'
+}
+& docker @dockerGlobalArguments compose version *> $null
+if ($LASTEXITCODE -ne 0) {
+    throw 'docker compose is not available'
 }
 
-$volumeOutput = & docker @dockerGlobalArguments volume ls --quiet --filter "name=^$postgresVolumeName`$"
-$volumeQueryExitCode = $LASTEXITCODE
-if ($volumeQueryExitCode -ne 0) {
-    throw "Unable to determine whether persistent PostgreSQL volume '$postgresVolumeName' exists."
-}
-$volumeNames = @($volumeOutput | ForEach-Object { $_.Trim() } | Where-Object { $_ })
-if ($volumeNames -contains $postgresVolumeName) {
-    throw "Persistent PostgreSQL volume '$postgresVolumeName' already exists. Reuse the .env from the previous extraction, or explicitly remove its data with scripts\Stop-Local.ps1 -RemoveData before initializing new credentials."
-}
-
-$bytes = New-Object byte[] 32
-$generator = [System.Security.Cryptography.RandomNumberGenerator]::Create()
+Push-Location $distributionRoot
 try {
-    $generator.GetBytes($bytes)
+    $composeArguments = @(
+        'compose'
+        '--project-name'
+        'betting-sofascore-local-lab'
+        '--file'
+        'compose.yaml'
+        '--env-file'
+        '.env'
+        'down'
+    )
+    if ($RemoveData) {
+        $composeArguments += '--volumes'
+    }
+    $dockerArguments = @($dockerGlobalArguments) + $composeArguments
+    & docker @dockerArguments
+    if ($LASTEXITCODE -ne 0) {
+        throw 'docker compose down failed'
+    }
+    Write-Host 'LOCAL_STACK_STOPPED=YES'
+    Write-Host "POSTGRES_DATA_REMOVED=$RemoveData"
 }
 finally {
-    $generator.Dispose()
+    Pop-Location
 }
-
-$password = [Convert]::ToBase64String($bytes)
-$password = $password.TrimEnd('=').Replace('+', 'A').Replace('/', 'B')
-
-$content = @(
-    'POSTGRES_DB=sofascore_local_lab'
-    'POSTGRES_USER=sofascore_lab'
-    "POSTGRES_PASSWORD=$password"
-    'POSTGRES_PORT=5432'
-)
-
-Set-Content -LiteralPath $envPath -Value $content -Encoding ASCII
-New-Item -ItemType Directory -Path $exportsPath -Force | Out-Null
-
-Write-Host 'LOCAL_CONFIG_RESULT=CREATED'
-Write-Host "ENV_FILE=$envPath"
-Write-Host 'POSTGRES_PASSWORD_DISPLAYED=NO'
