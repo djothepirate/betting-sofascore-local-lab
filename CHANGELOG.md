@@ -4,6 +4,18 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-030 borne de port de qualification Playwright fournisseur
+
+- ouverture de
+  `WO-SS-20260901-030-j9-provider-playwright-port-boundary-hardening` depuis `origin/main` au
+  commit exact `daf55bf76521f81893f86d04fde3c2903bf22362`, dans une branche et un worktree dédiés,
+  sans modifier les preuves WO-029 déjà fusionnées ;
+- périmètre borné au refus fail-closed des origines de qualification loopback dont le port se
+  trouve hors de `[1, 65535]`, dans `ProviderPlaywrightProperties` puis dans la garde miroir du
+  worker enfant ; aucun endpoint, transport, protocole, retry, polling ou schéma ne change ;
+- qualification exclusivement offline : aucun appel fournisseur, aucun réseau receiver, aucun
+  déploiement VPS et aucune production ne sont autorisés sous WO-030.
+
 ### Après J9 — WO-029 durcissement de la borne de port du push local optionnel
 
 - ouverture de

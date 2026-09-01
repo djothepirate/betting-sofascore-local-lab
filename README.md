@@ -4,6 +4,13 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
+Le correctif fournisseur distinct
+[WO-SS-20260901-030](docs/work_orders/active/WO-SS-20260901-030-j9-provider-playwright-port-boundary-hardening.md)
+est ouvert depuis le `main` issu des PR #20/#21. Il borne à `[1, 65535]` le port explicite de la
+qualification Playwright loopback dans la configuration parente et dans le worker enfant. Sa
+qualification reste offline : aucun appel fournisseur, aucun réseau receiver, aucun VPS et aucune
+production ne sont autorisés.
+
 Le propriétaire a pris la décision finale du jalon **J9 — Décision de gouvernance** :
 `PREPARE_OPTIONAL_INTEGRATION`. `WO-SS-20260831-018` et la preuve WO-023 sont désormais validés et
 clôturés sur la branche de décision. WO-019 reste la campagne historique `STOPPED` de 20 tentatives ;
