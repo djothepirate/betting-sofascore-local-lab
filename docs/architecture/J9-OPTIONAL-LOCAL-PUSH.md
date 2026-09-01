@@ -394,7 +394,7 @@ fallback de sécurité n’est compatible avec v1.0.
 ## 13. Références
 
 1. [ADR-SS-003 acceptée](../../ADR-SS-003-optional-integration-topology.md).
-2. [Work Order WO-027](../work_orders/active/WO-SS-20260901-027-optional-local-push-implementation.md).
+2. [Work Order WO-027](../work_orders/completed/WO-SS-20260901-027-optional-local-push-implementation.md).
 3. [Architecture de l’export J7](J7-CANONICAL-EVENT-EXPORT.md).
 4. [Schéma de l’export J7](../../src/main/resources/schemas/j7-canonical-event-export-v1.schema.json).
 5. [Schéma de l’ACK v1](../../src/main/resources/schemas/j7-delivery-ack-v1.schema.json).

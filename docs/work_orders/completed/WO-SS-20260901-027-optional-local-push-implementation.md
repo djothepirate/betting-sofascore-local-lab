@@ -1,10 +1,12 @@
 # WO-SS-20260901-027 — Implémentation fail-closed du push local optionnel
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
 - **Jalon :** après J9 — implémentation bornée de `OPTIONAL_LOCAL_PUSH`
 - **Ouvert le :** 2026-09-01
 - **Ouverture UTC :** `2026-09-01T08:02:45.4284643Z`
 - **Ouverture Europe/Paris :** `2026-09-01T10:02:45.4284643+02:00`
+- **Validation/clôture enregistrée UTC :** `2026-09-01T11:01:28.6491455Z`
+- **Validation/clôture enregistrée Europe/Paris :** `2026-09-01T13:01:28.6494680+02:00`
 - **Branche :** `codex/j9-optional-local-push-implementation`
 - **Worktree :** `.tmp/j9-optional-local-push-implementation`
 - **Base locale vérifiée :** `aedb5f424883c9e7a1839fd50aa2c2689fa65418`
@@ -38,7 +40,7 @@ invariants fail-closed sans rendre l'option A utilisable contre une cible réell
 
 ```text
 WORK_ORDER=WO-SS-20260901-027-optional-local-push-implementation
-WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+WORK_ORDER_STATUS=VALIDATED
 REAL_USE_STATUS=BLOCKED_BY_PERMISSION_GATE
 OWNER_IMPLEMENTATION_AUTHORIZATION=RECEIVED
 IMPLEMENTATION_AUTHORIZATION=LOCAL_FAIL_CLOSED_OFFLINE_AND_LOOPBACK_ONLY
@@ -224,15 +226,16 @@ un déploiement VPS ou une production exigent chacun leur porte explicite applic
 | Ledger et sender fail-closed | `IMPLEMENTED_DISABLED` | V29, six états séparés, zéro cible réelle, barrières JDK anti-retry |
 | Qualification offline/loopback | `PASS` | [rapport WO-027](../../validation/J9-WO027-OPTIONAL-LOCAL-PUSH-QUALIFICATION-20260901.md), zéro réseau fournisseur/receiver réel |
 | Vérification finale | `PASS_READY_FOR_OWNER_REVIEW` | Surefire `1036/0/0/5`, Failsafe `84/0/0/0`, permission réelle toujours bloquante |
-| Revue propriétaire | `RECEIVED_INCOMPLETE` | verdict `VALIDATE`, commit et rapport concordants ; readiness et déplacement non renseignés |
+| Premier bloc de revue propriétaire | `RECEIVED_INCOMPLETE` | verdict `VALIDATE`, commit et rapport concordants ; readiness et déplacement initialement non renseignés |
+| Bloc propriétaire final | `VALIDATED` | readiness `YES`, déplacement vers `completed` `YES`, garde-fous réels inchangés |
 
-Le Work Order reste actif. Le verdict propriétaire `VALIDATE` est reçu, mais le bloc de revue n'est
-pas complet et le déplacement vers `completed` n'est pas décidé : les deux champs correspondants
-ont été renvoyés sous forme de placeholders. Une future valeur explicite `YES` pourra autoriser ce
-déplacement ; elle ne pourra pas, à elle seule, autoriser une cible ou une livraison réelle tant que
-la porte de permission officielle et les autres prérequis d'ADR-SS-003 ne sont pas satisfaits.
+À ce stade intermédiaire, le Work Order était resté actif : le verdict propriétaire `VALIDATE`
+avait été reçu, mais les deux champs de readiness et de déplacement étaient encore des placeholders.
+Cette situation historique est remplacée par le bloc propriétaire final complet de la section 12.
+La clôture documentaire ne peut pas, à elle seule, autoriser une cible ou une livraison réelle tant
+que la porte de permission officielle et les autres prérequis d'ADR-SS-003 ne sont pas satisfaits.
 
-## 11. Revue propriétaire reçue
+## 11. Premier bloc de revue propriétaire reçu — historique
 
 Le bloc de revue a été enregistré le `2026-09-01T10:54:57.5243442Z`, soit le
 `2026-09-01T12:54:57.5247767+02:00` en Europe/Paris. Le commit et le SHA-256 fournis correspondent
@@ -241,8 +244,11 @@ résultat `PASS_LOCAL_FAIL_CLOSED`.
 
 Deux champs ont toutefois été laissés sous forme de choix non résolu (`<YES|NO>`). Ils ne sont pas
 interprétés comme des autorisations : ni l'accusé explicite de readiness locale, ni le déplacement
-vers `completed` ne sont enregistrés. Le bloc de revue reste donc incomplet et le fichier demeure à
-`READY_FOR_OWNER_REVIEW` dans `docs/work_orders/active`.
+vers `completed` n'étaient alors enregistrés. Le bloc de revue restait donc incomplet et le fichier
+demeurait à `READY_FOR_OWNER_REVIEW` dans `docs/work_orders/active`.
+
+Ce premier bloc est désormais `SUPERSEDED_BY_FINAL_COMPLETE_OWNER_BLOCK` et reste conservé pour
+l'audit de la décision, sans effet exécutoire résiduel.
 
 ```text
 J9_WO027_OWNER_REVIEW_DECISION=VALIDATE
@@ -258,6 +264,42 @@ OWNER_REVIEW_BLOCK_STATUS=INCOMPLETE_REQUIRED_FIELDS
 OWNER_REVIEW_REQUIRED=YES
 WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
 WORK_ORDER_LOCATION=docs/work_orders/active/WO-SS-20260901-027-optional-local-push-implementation.md
+
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+BETTING_PROJECT_RECEIVER_IMPLEMENTED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REAL_DELIVERY_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+VPS_DEPLOYMENT_AUTHORIZED=NO
+PRODUCTION_AUTHORIZED=NO
+```
+
+## 12. Validation et clôture propriétaires finales
+
+Le propriétaire a ensuite remplacé explicitement les deux placeholders par `YES`, tout en
+réaffirmant le commit qualifié, le résultat, le SHA-256 du rapport et chaque non-autorisation. Le
+bloc complet autorise la validation de WO-027 et son déplacement de `active` vers `completed`.
+
+Cette clôture reconnaît uniquement la readiness locale fail-closed. Elle ne satisfait pas la porte
+de permission officielle, n'implémente pas le receiver du Betting Project et n'autorise aucun
+réseau ou usage réel.
+
+```text
+J9_WO027_OWNER_REVIEW_DECISION=VALIDATE
+J9_WO027_WORK_ORDER=WO-SS-20260901-027-optional-local-push-implementation
+J9_WO027_COMMIT=5af48e5ea0e7150b460fe106da74aa5d3bd5489a
+J9_WO027_COMMIT_MATCH=YES
+J9_WO027_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
+J9_WO027_QUALIFICATION_REPORT_SHA256=d656b7ea12ba38a40b88e9a78e5b7afb9642c4405080b9246b8539d177eb1d12
+J9_WO027_QUALIFICATION_REPORT_SHA256_MATCH=YES
+J9_WO027_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO027_WORK_ORDER_MOVE_TO_COMPLETED=YES
+MOVE_TO_COMPLETED_AUTHORIZED=YES
+MOVE_TO_COMPLETED_PERFORMED=YES
+OWNER_REVIEW_BLOCK_STATUS=COMPLETE
+OWNER_REVIEW_REQUIRED=NO
+WORK_ORDER_STATUS=VALIDATED
+WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260901-027-optional-local-push-implementation.md
 
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 BETTING_PROJECT_RECEIVER_IMPLEMENTED=NO

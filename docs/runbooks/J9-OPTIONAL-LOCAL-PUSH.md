@@ -28,7 +28,7 @@ flag de contournement pour « essayer » le parcours.
 - [Schéma ACK v1](../../src/main/resources/schemas/j7-delivery-ack-v1.schema.json) ;
 - [Schéma export J7](../../src/main/resources/schemas/j7-canonical-event-export-v1.schema.json) ;
 - [Runbook export J7](J7-CANONICAL-EVENT-EXPORT.md) ;
-- [Work Order WO-027](../work_orders/active/WO-SS-20260901-027-optional-local-push-implementation.md).
+- [Work Order WO-027](../work_orders/completed/WO-SS-20260901-027-optional-local-push-implementation.md).
 
 En cas de divergence, ADR-SS-003 et le Work Order bornent l’autorisation ; le contrat v1.0 borne le
 format. Une qualification ne doit pas assouplir un contrôle pour devenir verte.

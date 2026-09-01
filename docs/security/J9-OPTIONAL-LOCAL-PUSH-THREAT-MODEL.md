@@ -239,6 +239,6 @@ Une qualification loopback ne satisfait aucune de ces portes par elle-même.
 2. [Schéma ACK v1](../../src/main/resources/schemas/j7-delivery-ack-v1.schema.json).
 3. [Runbook de qualification](../runbooks/J9-OPTIONAL-LOCAL-PUSH.md).
 4. [ADR-SS-003 acceptée](../../ADR-SS-003-optional-integration-topology.md).
-5. [Work Order WO-027](../work_orders/active/WO-SS-20260901-027-optional-local-push-implementation.md).
+5. [Work Order WO-027](../work_orders/completed/WO-SS-20260901-027-optional-local-push-implementation.md).
 6. [Architecture J7](../architecture/J7-CANONICAL-EVENT-EXPORT.md).
 7. [Règles du dépôt](../../AGENTS.md).

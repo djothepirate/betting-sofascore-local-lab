@@ -43,6 +43,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `d656b7ea12ba38a40b88e9a78e5b7afb9642c4405080b9246b8539d177eb1d12` ; les deux champs readiness
   et déplacement vers `completed` restant sous forme `<YES|NO>`, le bloc de revue demeure incomplet,
   aucune valeur n'est déduite et WO-027 reste actif à `READY_FOR_OWNER_REVIEW` ;
+- bloc propriétaire final complet reçu avec readiness locale `YES` et déplacement vers
+  `completed` `YES` : WO-027 passe à `VALIDATED` et est archivé dans les Work Orders terminés ; le
+  commit qualifié, le résultat et le hash restent inchangés, comme tous les garde-fous réels ;
 - activation réelle, receiver Betting Project, livraison, réseau fournisseur, VPS, production,
   polling, scheduler, retry automatique et fallback maintenus à `NO` ; zéro push déduit de cette
   ouverture.

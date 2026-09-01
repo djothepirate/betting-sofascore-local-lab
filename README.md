@@ -32,10 +32,10 @@ endpoint et n’autorise aucun réseau, déploiement, intégration, receiver, li
 production. WO-026 est validé et terminé sur cette décision documentaire.
 
 Le propriétaire a ensuite autorisé l'ouverture et la réalisation du Work Order distinct
-[WO-SS-20260901-027](docs/work_orders/active/WO-SS-20260901-027-optional-local-push-implementation.md)
+[WO-SS-20260901-027](docs/work_orders/completed/WO-SS-20260901-027-optional-local-push-implementation.md)
 sur `codex/j9-optional-local-push-implementation`. Ce lot traite le contrat receiver, le sender et
 son ledger séparé, mTLS, l'idempotence, les accusés et les qualifications offline/loopback.
-WO-027 atteint désormais `READY_FOR_OWNER_REVIEW` avec le
+WO-027 a atteint `READY_FOR_OWNER_REVIEW` avec le
 [rapport de qualification local](docs/validation/J9-WO027-OPTIONAL-LOCAL-PUSH-QUALIFICATION-20260901.md) :
 `1036/0/0/5` tests standards et `84/0/0/0` tests d'intégration sont verts, dont les scénarios
 PostgreSQL V29, quatre scénarios mTLS et deux parcours end-to-end synthétiques. Le sender reste sans
@@ -50,13 +50,12 @@ Order dans son dépôt ; aucune livraison réelle, aucun appel fournisseur, aucu
 production ne sont autorisés sous WO-027. Les qualifications ont produit zéro appel fournisseur,
 zéro appel vers un receiver réel et zéro listener résiduel.
 
-Le propriétaire a ensuite énoncé `VALIDATE` pour le commit
+Un premier bloc propriétaire avait énoncé `VALIDATE` pour le commit
 `5af48e5ea0e7150b460fe106da74aa5d3bd5489a`, le résultat `PASS_LOCAL_FAIL_CLOSED` et le SHA-256 du
-rapport, qui concordent tous avec les objets locaux. Les champs
-`J9_WO027_LOCAL_READINESS_ACKNOWLEDGED` et `J9_WO027_WORK_ORDER_MOVE_TO_COMPLETED` ont cependant été
-laissés sous forme `<YES|NO>` : ils ne sont pas traités comme des décisions. Le bloc de revue reste
-incomplet et WO-027 demeure actif à `READY_FOR_OWNER_REVIEW`, sans autorisation réelle
-supplémentaire.
+rapport, tout en laissant deux champs sous forme `<YES|NO>` ; aucune clôture n'en avait alors été
+déduite. Le propriétaire a ensuite fourni le bloc complet avec readiness locale `YES` et déplacement
+vers `completed` `YES`. WO-027 est donc `VALIDATED` et archivé parmi les Work Orders terminés. La
+permission officielle, le receiver réel et tous les usages réseau/VPS/production restent bloqués.
 
 La preuve arrêtée relève de WO-019 ; le profil sélectionné a exigé une nouvelle campagne sous un
 nouveau Work Order. ADR-SS-002 v1.0 avait été accepté explicitement. Le premier
