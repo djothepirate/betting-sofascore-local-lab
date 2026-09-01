@@ -306,6 +306,50 @@ class J7CanonicalExportServiceTest {
     }
 
     @Test
+    void exposesOnlyAReverifiedHumanValidatedArtifactForSeparateDelivery() {
+        J7ExportManifest validated = manifest(J7ExportStatus.HUMAN_VALIDATED);
+        when(manifestStore.findByExportId(EXPORT_ID)).thenReturn(Optional.of(validated));
+        when(fileStore.readVerified(
+                validated.relativePath(), TERMINAL_SHA, TERMINAL_BYTES.length))
+                .thenReturn(TERMINAL_BYTES);
+        when(guard.verify(TERMINAL_BYTES, EVENT_ID, EXPORT_ID))
+                .thenReturn(verified(
+                        J7ExportStatus.HUMAN_VALIDATED,
+                        TERMINAL_SHA,
+                        TERMINAL_BYTES,
+                        GENERATED_AT,
+                        Optional.of(DECIDED_AT),
+                        Optional.empty()));
+
+        J7ValidatedExportArtifact artifact = service.loadHumanValidatedForDelivery(
+                EVENT_ID, EXPORT_ID);
+
+        assertThat(artifact.exportId()).isEqualTo(EXPORT_ID);
+        assertThat(artifact.canonicalEventId()).isEqualTo(EVENT_ID);
+        assertThat(artifact.schemaId()).isEqualTo(J7ExportContract.SCHEMA_ID);
+        assertThat(artifact.schemaVersion()).isEqualTo(J7ExportContract.SCHEMA_VERSION);
+        assertThat(artifact.dataSha256()).isEqualTo(DATA_SHA);
+        assertThat(artifact.fileSha256()).isEqualTo(TERMINAL_SHA);
+        assertThat(artifact.content()).isEqualTo(TERMINAL_BYTES);
+        assertThat(artifact.sizeBytes()).isEqualTo(TERMINAL_BYTES.length);
+    }
+
+    @Test
+    void neverExposesCandidateOrRejectedContentForDelivery() {
+        when(manifestStore.findByExportId(EXPORT_ID))
+                .thenReturn(Optional.of(manifest(J7ExportStatus.COHERENCE_CHECKED)))
+                .thenReturn(Optional.of(manifest(J7ExportStatus.REJECTED)));
+
+        assertError(
+                () -> service.loadHumanValidatedForDelivery(EVENT_ID, EXPORT_ID),
+                J7ExportError.NOT_DOWNLOADABLE);
+        assertError(
+                () -> service.loadHumanValidatedForDelivery(EVENT_ID, EXPORT_ID),
+                J7ExportError.NOT_DOWNLOADABLE);
+        verify(fileStore, never()).readVerified(any(), any(), any(Long.class));
+    }
+
+    @Test
     void anIdempotentTerminalRetryCleansAResidualCandidateUsingItsOwnSize() {
         J7ExportManifest validated = manifest(J7ExportStatus.HUMAN_VALIDATED);
         when(manifestStore.findByExportId(EXPORT_ID)).thenReturn(Optional.of(validated));

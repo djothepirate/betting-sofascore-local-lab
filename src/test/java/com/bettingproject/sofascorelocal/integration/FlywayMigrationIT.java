@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.integration;
 
 import com.bettingproject.sofascorelocal.adapter.persistence.JdbcRawManualCallSnapshotStore;
+import com.bettingproject.sofascorelocal.adapter.persistence.delivery.JdbcJ7DeliveryLedgerStore;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.tournamentevents.TournamentScheduledEventsParseEvidence;
@@ -115,6 +116,7 @@ import com.bettingproject.sofascorelocal.port.J5EventDataStore;
 import com.bettingproject.sofascorelocal.port.J6SnapshotHistoryStore;
 import com.bettingproject.sofascorelocal.port.J6RawPayloadRetentionStore;
 import com.bettingproject.sofascorelocal.port.J7ExportManifestStore;
+import com.bettingproject.sofascorelocal.port.J7DeliveryLedgerStore;
 import com.bettingproject.sofascorelocal.port.J8BenchmarkEvidenceStore;
 import com.bettingproject.sofascorelocal.port.J8BenchmarkReadStore;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
@@ -123,6 +125,8 @@ import com.bettingproject.sofascorelocal.port.RawSnapshotInspectionStore;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
 import org.junit.jupiter.api.Test;
+import org.springframework.aop.framework.Advised;
+import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -132,6 +136,7 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionInterceptor;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -283,6 +288,9 @@ class FlywayMigrationIT {
     J7ExportManifestStore j7ExportManifestStore;
 
     @Autowired
+    J7DeliveryLedgerStore j7DeliveryLedgerStore;
+
+    @Autowired
     J8BenchmarkEvidenceStore j8BenchmarkEvidenceStore;
 
     @Autowired
@@ -297,6 +305,8 @@ class FlywayMigrationIT {
                 "select to_regclass('public.provider_snapshot')", String.class);
         String exportTable = jdbcTemplate.queryForObject(
                 "select to_regclass('public.export_manifest')", String.class);
+        String deliveryTable = jdbcTemplate.queryForObject(
+                "select to_regclass('public.j7_delivery')", String.class);
         Boolean networkEnabled = jdbcTemplate.queryForObject(
                 "select network_enabled from connector_control where singleton_id = 1",
                 Boolean.class);
@@ -321,9 +331,21 @@ class FlywayMigrationIT {
 
         assertThat(snapshotTable).isEqualTo("provider_snapshot");
         assertThat(exportTable).isEqualTo("export_manifest");
+        assertThat(deliveryTable).isEqualTo("j7_delivery");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("28");
+        assertThat(flywayVersion).isEqualTo("29");
         assertThat(rawColumn).isEqualTo("bytea");
+    }
+
+    @Test
+    void startsTheJ7DeliveryLedgerStoreWithTransactionalAdvice() {
+        assertThat(AopUtils.isAopProxy(j7DeliveryLedgerStore)).isTrue();
+        assertThat(AopUtils.getTargetClass(j7DeliveryLedgerStore))
+                .isEqualTo(JdbcJ7DeliveryLedgerStore.class);
+        assertThat(j7DeliveryLedgerStore).isInstanceOf(Advised.class);
+        assertThat(((Advised) j7DeliveryLedgerStore).getAdvisors())
+                .anySatisfy(advisor -> assertThat(advisor.getAdvice())
+                        .isInstanceOf(TransactionInterceptor.class));
     }
 
     @Test
@@ -6411,7 +6433,7 @@ class FlywayMigrationIT {
 
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$flywaySql"),
-                String.class)).isEqualTo("28");
+                String.class)).isEqualTo("29");
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$snapshotFingerprintSql"),
                 String.class)).isNotNull();
@@ -6424,17 +6446,32 @@ class FlywayMigrationIT {
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$j8BenchmarkFingerprintSql"),
                 String.class)).isNotNull();
+        String deliveryLedgerFingerprintSql =
+                powerShellHereString(script, "$j7DeliveryLedgerFingerprintSql");
+        assertThat(jdbcTemplate.queryForObject(
+                deliveryLedgerFingerprintSql,
+                String.class)).isNotNull();
+        assertThat(deliveryLedgerFingerprintSql)
+                .contains("from j7_delivery delivery")
+                .contains("from j7_delivery_attempt attempt")
+                .contains("from j7_delivery_attempt_result attempt_result")
+                .doesNotContain("export_manifest", "provider_snapshot", "payload_raw");
         assertThat(script)
                 .contains("j8CampaignCount")
                 .contains("j8UnitCount")
                 .contains("j8ProviderAttemptCount")
                 .contains("j8UnitResultCount")
-                .contains("j8CampaignResultCount");
+                .contains("j8CampaignResultCount")
+                .contains("j7DeliveryCount")
+                .contains("j7DeliveryAttemptCount")
+                .contains("j7DeliveryAttemptResultCount")
+                .contains("j7DeliveryLedgerSha256")
+                .contains("$sourceFlywayVersion -cne '29'");
     }
 
     @Test
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
-    void restoresAllFiveJ8EvidenceTablesWithAnIdenticalFingerprint() throws Exception {
+    void restoresJ8AndJ7DeliveryEvidenceWithIdenticalFingerprints() throws Exception {
         String suffix = UUID.randomUUID().toString().replace("-", "").substring(0, 12);
         String sourceDatabase = "j8_backup_src_" + suffix;
         String restoreDatabase = "j8_backup_dst_" + suffix;
@@ -6442,7 +6479,10 @@ class FlywayMigrationIT {
         String script = Files.readString(
                 Path.of("scripts", "Backup-Restore-J6.ps1"),
                 StandardCharsets.UTF_8);
-        String fingerprintSql = powerShellHereString(script, "$j8BenchmarkFingerprintSql");
+        String j8FingerprintSql =
+                powerShellHereString(script, "$j8BenchmarkFingerprintSql");
+        String j7DeliveryFingerprintSql =
+                powerShellHereString(script, "$j7DeliveryLedgerFingerprintSql");
 
         assertContainerCommandSucceeded(POSTGRES.execInContainer(
                 "createdb",
@@ -6454,8 +6494,8 @@ class FlywayMigrationIT {
                     .dataSource(sourceDataSource)
                     .locations("classpath:db/migration")
                     .load();
-            assertThat(sourceFlyway.migrate().migrationsExecuted).isEqualTo(28);
-            assertThat(sourceFlyway.info().current().getVersion().getVersion()).isEqualTo("28");
+            assertThat(sourceFlyway.migrate().migrationsExecuted).isEqualTo(29);
+            assertThat(sourceFlyway.info().current().getVersion().getVersion()).isEqualTo("29");
 
             JdbcTemplate sourceJdbc = new JdbcTemplate(sourceDataSource);
             UUID campaignId = UUID.randomUUID();
@@ -6493,8 +6533,115 @@ class FlywayMigrationIT {
                     ) values (?, ?, 'FAILED', 'BACKUP_RESTORE_TEST', 1)
                     """, campaignId, Timestamp.from(startedAt.plusSeconds(4)));
 
-            String sourceFingerprint = sourceJdbc.queryForObject(fingerprintSql, String.class);
-            assertThat(sourceFingerprint).isNotBlank();
+            UUID canonicalEventId = UUID.randomUUID();
+            UUID exportId = UUID.randomUUID();
+            String dataSha256 = "a".repeat(64);
+            String sourceSetSha256 = "b".repeat(64);
+            String candidateContentSha256 = "c".repeat(64);
+            String validatedContentSha256 = "d".repeat(64);
+            sourceJdbc.update("""
+                    insert into canonical_event (id, provider, provider_event_id)
+                    values (?, 'SOFASCORE', 19999999)
+                    """, canonicalEventId);
+            insertJ7Candidate(
+                    sourceJdbc,
+                    canonicalEventId,
+                    exportId,
+                    dataSha256,
+                    sourceSetSha256,
+                    candidateContentSha256);
+            Instant validatedAt = startedAt.plusSeconds(5);
+            String validatedPath =
+                    "j7-" + canonicalEventId + "-" + exportId + ".validated.json";
+            recordJ7DecisionIntent(
+                    sourceJdbc,
+                    exportId,
+                    J7ExportStatus.HUMAN_VALIDATED,
+                    validatedAt,
+                    null,
+                    validatedPath,
+                    validatedContentSha256,
+                    2048);
+            assertThat(sourceJdbc.update("""
+                    update export_manifest
+                    set export_path = ?,
+                        content_sha256 = ?,
+                        content_size_bytes = 2048,
+                        validation_status = 'HUMAN_VALIDATED',
+                        decided_at = ?,
+                        decision_reason = null
+                    where export_uuid = ?
+                    """,
+                    validatedPath,
+                    validatedContentSha256,
+                    Timestamp.from(validatedAt),
+                    exportId)).isOne();
+            Long exportManifestId = sourceJdbc.queryForObject("""
+                    select id from export_manifest where export_uuid = ?
+                    """, Long.class, exportId);
+
+            UUID deliveryUuid = UUID.randomUUID();
+            Instant deliveryCreatedAt = startedAt.plusSeconds(6);
+            String idempotencyKey = "j7:" + exportId
+                    + ":sha256:" + validatedContentSha256;
+            Long deliveryId = sourceJdbc.queryForObject("""
+                    insert into j7_delivery (
+                        delivery_uuid, export_manifest_id, export_uuid,
+                        file_sha256, data_sha256, file_size_bytes,
+                        idempotency_key, protocol_version, current_state,
+                        created_at, state_changed_at
+                    ) values (?, ?, ?, ?, ?, ?, ?, '1.0', 'NOT_ATTEMPTED', ?, ?)
+                    returning id
+                    """,
+                    Long.class,
+                    deliveryUuid,
+                    exportManifestId,
+                    exportId,
+                    validatedContentSha256,
+                    dataSha256,
+                    2048L,
+                    idempotencyKey,
+                    Timestamp.from(deliveryCreatedAt),
+                    Timestamp.from(deliveryCreatedAt));
+            Instant attemptStartedAt = startedAt.plusSeconds(7);
+            Long deliveryAttemptId = sourceJdbc.queryForObject("""
+                    insert into j7_delivery_attempt (
+                        attempt_uuid, delivery_id, attempt_number, started_at
+                    ) values (?, ?, 1, ?)
+                    returning id
+                    """,
+                    Long.class,
+                    UUID.randomUUID(),
+                    deliveryId,
+                    Timestamp.from(attemptStartedAt));
+            assertThat(sourceJdbc.update("""
+                    update j7_delivery
+                    set current_state = 'IN_FLIGHT', state_changed_at = ?
+                    where id = ?
+                    """, Timestamp.from(attemptStartedAt), deliveryId)).isOne();
+            Instant attemptCompletedAt = startedAt.plusSeconds(8);
+            assertThat(sourceJdbc.update("""
+                    insert into j7_delivery_attempt_result (
+                        attempt_id, terminal_state, http_status, safe_result_code,
+                        acknowledgement_sha256, remote_import_id,
+                        acknowledgement_received_at, completed_at
+                    ) values (?, 'REJECTED_TERMINAL', 422,
+                              'BACKUP_RESTORE_TEST', null, null, null, ?)
+                    """,
+                    deliveryAttemptId,
+                    Timestamp.from(attemptCompletedAt))).isOne();
+            assertThat(sourceJdbc.update("""
+                    update j7_delivery
+                    set current_state = 'REJECTED_TERMINAL', state_changed_at = ?
+                    where id = ?
+                    """, Timestamp.from(attemptCompletedAt), deliveryId)).isOne();
+
+            String sourceJ8Fingerprint =
+                    sourceJdbc.queryForObject(j8FingerprintSql, String.class);
+            String sourceJ7DeliveryFingerprint =
+                    sourceJdbc.queryForObject(j7DeliveryFingerprintSql, String.class);
+            assertThat(sourceJ8Fingerprint).isNotBlank();
+            assertThat(sourceJ7DeliveryFingerprint).isNotBlank();
             for (String table : List.of(
                     "j8_benchmark_campaign",
                     "j8_benchmark_unit",
@@ -6505,6 +6652,29 @@ class FlywayMigrationIT {
                         "select count(*) from " + table,
                         Long.class)).isOne();
             }
+            for (String table : List.of(
+                    "j7_delivery",
+                    "j7_delivery_attempt",
+                    "j7_delivery_attempt_result")) {
+                assertThat(sourceJdbc.queryForObject(
+                        "select count(*) from " + table,
+                        Long.class)).isOne();
+            }
+            assertThat(sourceJdbc.queryForObject("""
+                    select count(*)
+                    from information_schema.columns
+                    where table_schema = 'public'
+                      and table_name in (
+                          'j7_delivery',
+                          'j7_delivery_attempt',
+                          'j7_delivery_attempt_result'
+                      )
+                      and (
+                          data_type in ('bytea', 'json', 'jsonb', 'text')
+                          or column_name ~
+                              '(payload|body|content|cookie|token|secret|private_key|certificate|diagnostic)'
+                      )
+                    """, Long.class)).isZero();
 
             assertContainerCommandSucceeded(POSTGRES.execInContainer(
                     "pg_dump",
@@ -6537,15 +6707,26 @@ class FlywayMigrationIT {
                     order by installed_rank desc
                     limit 1
                     """,
-                    String.class)).isEqualTo("28");
-            assertThat(restoreJdbc.queryForObject(fingerprintSql, String.class))
-                    .isEqualTo(sourceFingerprint);
+                    String.class)).isEqualTo("29");
+            assertThat(restoreJdbc.queryForObject(j8FingerprintSql, String.class))
+                    .isEqualTo(sourceJ8Fingerprint);
+            assertThat(restoreJdbc.queryForObject(
+                    j7DeliveryFingerprintSql,
+                    String.class)).isEqualTo(sourceJ7DeliveryFingerprint);
             for (String table : List.of(
                     "j8_benchmark_campaign",
                     "j8_benchmark_unit",
                     "j8_provider_call_attempt",
                     "j8_benchmark_unit_result",
                     "j8_benchmark_campaign_result")) {
+                assertThat(restoreJdbc.queryForObject(
+                        "select count(*) from " + table,
+                        Long.class)).isOne();
+            }
+            for (String table : List.of(
+                    "j7_delivery",
+                    "j7_delivery_attempt",
+                    "j7_delivery_attempt_result")) {
                 assertThat(restoreJdbc.queryForObject(
                         "select count(*) from " + table,
                         Long.class)).isOne();
@@ -6615,8 +6796,15 @@ class FlywayMigrationIT {
                 StandardCharsets.UTF_8);
 
         assertThat(script)
-                .contains("$manifest.source.flywayVersion.ToString() -cne '28'")
-                .contains("valid Flyway V28 raw-payload and J8 evidence restore");
+                .contains("$manifest.source.flywayVersion.ToString() -cne '29'")
+                .contains("valid Flyway V29 raw-payload, J8 evidence and metadata-only J7 delivery-ledger restore");
+
+        String qualificationFields = powerShellArray(script, "$qualificationFields");
+        assertThat(qualificationFields)
+                .contains("'j7DeliveryCount'")
+                .contains("'j7DeliveryAttemptCount'")
+                .contains("'j7DeliveryAttemptResultCount'")
+                .contains("'j7DeliveryLedgerSha256'");
 
         String environmentNames = powerShellArray(script, "$environmentNames");
         assertThat(environmentNames)
@@ -6647,7 +6835,8 @@ class FlywayMigrationIT {
 
     private static String powerShellArray(String script, String variableName) {
         Pattern assignment = Pattern.compile(
-                "^" + Pattern.quote(variableName) + "\\s*=\\s*@\\(\\R(.*?)^\\)$",
+                "^\\s*" + Pattern.quote(variableName)
+                        + "\\s*=\\s*@\\(\\R(.*?)^\\s*\\)$",
                 Pattern.MULTILINE | Pattern.DOTALL);
         Matcher matcher = assignment.matcher(script);
         if (!matcher.find()) {
