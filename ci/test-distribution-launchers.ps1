@@ -432,3 +432,7 @@ finally {
         Remove-Item -LiteralPath $fixtureRoot -Recurse -Force
     }
 }
+
+# The negative Java fixture deliberately leaves the native-process status non-zero.
+# The assertion above qualifies that status; do not leak it as this test script's result.
+$global:LASTEXITCODE = 0
