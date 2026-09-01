@@ -27,6 +27,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   concordants ; `LOCAL_READINESS_ACKNOWLEDGED` et `WORK_ORDER_MOVE_TO_COMPLETED` restant sous
   `<YES|NO>`, le bloc est `INCOMPLETE_REQUIRED_FIELDS`, aucune valeur n’est déduite et WO-032 reste
   actif dans `docs/work_orders/active` ;
+- bloc propriétaire final reçu avec readiness locale `YES` et déplacement `YES` : WO-032 passe à
+  `VALIDATED` et est archivé dans `docs/work_orders/completed`, avec commit qualifié et empreintes
+  inchangés ; les autorisations fournisseur, receiver réel, VPS et production restent à `NO` ;
 - aucun changement d’ADR, code, configuration, schéma ou rapport ; aucun appel fournisseur,
   receiver réel, livraison, VPS, production, push ou fusion autorisé sous WO-032.
 

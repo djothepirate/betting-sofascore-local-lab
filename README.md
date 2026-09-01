@@ -5,17 +5,18 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order documentaire distinct
-[WO-SS-20260901-032](docs/work_orders/active/WO-SS-20260901-032-reference-index-refresh.md)
+[WO-SS-20260901-032](docs/work_orders/completed/WO-SS-20260901-032-reference-index-refresh.md)
 actualise l’[index des références de cadrage](docs/reference/REFERENCES.md) après WO-026 et
 l’acceptation d’ADR-SS-003 v0.1. Ce lot rend les décisions navigables, distingue la topologie
 `OPTIONAL_LOCAL_PUSH` sélectionnée de `VPS_PLAYWRIGHT` toujours différé et rappelle que la
 permission officielle reste `NOT_EVIDENCED`. Le PDF de cadrage demeure byte-identique ; aucun ADR,
 code, réseau fournisseur ou receiver réel, VPS ou usage de production n’est modifié ou autorisé.
 
-Un premier bloc de revue propriétaire a validé le commit qualifié `b9ff5f0` et les empreintes de
-l’index et du PDF. Les champs de reconnaissance de la readiness locale et de déplacement vers
-`completed` sont toutefois restés sous la forme `<YES|NO>` : aucune valeur n’en est déduite,
-WO-032 reste actif à `READY_FOR_OWNER_REVIEW` et toutes les non-autorisations demeurent inchangées.
+Après un premier bloc incomplet correctement maintenu sans effet terminal, le propriétaire a fourni
+un bloc final `VALIDATE`, reconnu la readiness locale et autorisé le déplacement vers `completed`.
+WO-032 est désormais `VALIDATED` et archivé ; le commit qualifié `b9ff5f0` et les empreintes de
+l’index et du PDF concordent. Les interdictions fournisseur, receiver réel, VPS et production
+restent toutes à `NO` ; aucun push ou merge n’est autorisé par cette clôture documentaire.
 
 Le correctif fournisseur distinct
 [WO-SS-20260901-030](docs/work_orders/completed/WO-SS-20260901-030-j9-provider-playwright-port-boundary-hardening.md)

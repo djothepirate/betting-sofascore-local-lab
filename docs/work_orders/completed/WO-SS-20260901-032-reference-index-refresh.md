@@ -1,6 +1,6 @@
 # WO-SS-20260901-032 — Actualisation de l’index des références de cadrage
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
 - **Jalon :** après J9 — cohérence documentaire du référentiel de décision
 - **Ouvert le :** 2026-09-01
 - **Ouverture UTC :** `2026-09-01T17:12:33.2592273Z`
@@ -15,6 +15,12 @@
 - **Premier bloc de revue propriétaire reçu UTC :** `2026-09-01T17:30:34.2266742Z`
 - **Premier bloc de revue propriétaire reçu Europe/Paris :**
   `2026-09-01T19:30:34.2266742+02:00`
+- **Bloc propriétaire final reçu UTC :** `2026-09-01T17:37:47.8238937Z`
+- **Bloc propriétaire final reçu Europe/Paris :** `2026-09-01T19:37:47.8238937+02:00`
+- **Décision propriétaire finale :** `VALIDATE` ; readiness locale reconnue et déplacement vers
+  `completed` autorisé
+- **Clôture UTC :** `2026-09-01T17:39:49.9439345Z`
+- **Clôture Europe/Paris :** `2026-09-01T19:39:49.9439345+02:00`
 - **Type de lot :** documentation locale seulement ; aucun changement de code, configuration,
   schéma, réseau, ADR ou PDF
 
@@ -37,7 +43,7 @@ aucun usage de production.
 
 ```text
 WORK_ORDER=WO-SS-20260901-032-reference-index-refresh
-WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+WORK_ORDER_STATUS=VALIDATED
 DOCUMENTATION_ONLY=YES
 REFERENCE_INDEX_UPDATE_AUTHORIZED=YES
 REFERENCE_PDF_CHANGE_AUTHORIZED=NO
@@ -164,11 +170,13 @@ L’index final mesure 4 937 octets et porte le SHA-256
 | `2026-09-01T17:21:10.2147379Z` | liens, diff, secrets, invariants, empreintes et postflight | `PASS` |
 | `2026-09-01T17:26:30.5624553Z` | relecture croisée finale et correction de précision documentaire | `PASS` — horodatage Maven distingué du postflight ; « sources officielles » explicité |
 | `2026-09-01T17:30:34.2266742Z` | premier bloc de revue propriétaire contrôlé | `RECEIVED_INCOMPLETE` — verdict, commit et empreintes concordants ; readiness et déplacement laissés sous `<YES|NO>` |
+| `2026-09-01T17:37:47.8238937Z` | bloc propriétaire final contrôlé et consommé | `VALIDATED` — readiness `YES`, déplacement `YES`, toutes les autorisations réseau et production maintenues à `NO` |
+| `2026-09-01T17:39:49.9439345Z` | déplacement du Work Order après contrôles de clôture | `PASS` — une copie sous `completed`, aucune copie sous `active` |
 
 ## 10. État courant
 
 ```text
-WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+WORK_ORDER_STATUS=VALIDATED
 REFERENCE_INDEX_STATUS=CURRENT_THROUGH_WO030_ON_BASE_F3D7D3F
 REFERENCE_INDEX_UPDATE_STATUS=COMPLETED
 REFERENCE_INDEX_SHA256_BEFORE=d2cff7ce0bea80eb903d66bc293e90b6d7bdd8b38e81524ab082a16e751bd446
@@ -179,20 +187,23 @@ REFERENCE_PDF_SHA256_AFTER=746106cfe5142ad7b7426443b9730b22f281d6d844d108a5c371c
 REFERENCE_PDF_GIT_BLOB_BEFORE=cfbe41b57c235163eeb60036ba9186c305981307
 REFERENCE_PDF_GIT_BLOB_AFTER=cfbe41b57c235163eeb60036ba9186c305981307
 LOCAL_QUALIFICATION_STATUS=PASS
-OWNER_REVIEW_REQUIRED=YES
+OWNER_REVIEW_REQUIRED=NO
 OWNER_REVIEW_DECISION=VALIDATE
-OWNER_REVIEW_BLOCK_STATUS=INCOMPLETE_REQUIRED_FIELDS
+OWNER_REVIEW_BLOCK_STATUS=COMPLETE
+OWNER_DECISION_RECORDED_AT_UTC=2026-09-01T17:37:47.8238937Z
+OWNER_DECISION_RECORDED_AT_EUROPE_PARIS=2026-09-01T19:37:47.8238937+02:00
 DOCUMENTATION_COMMIT=b9ff5f0f96998ff46785b3dd7f2e4369b3f1ce37
 DOCUMENTATION_COMMIT_MATCH=YES
 REFERENCE_INDEX_SHA256_MATCH=YES
 REFERENCE_PDF_SHA256_MATCH=YES
-LOCAL_READINESS_ACKNOWLEDGED=NOT_PROVIDED_PLACEHOLDER
-WORK_ORDER_MOVE_TO_COMPLETED=NOT_PROVIDED_PLACEHOLDER
-MOVE_TO_COMPLETED_AUTHORIZED=NO
-MOVE_TO_COMPLETED_PERFORMED=NO
-WORK_ORDER_LOCATION=docs/work_orders/active/WO-SS-20260901-032-reference-index-refresh.md
+LOCAL_READINESS_ACKNOWLEDGED=YES
+WORK_ORDER_MOVE_TO_COMPLETED=YES
+MOVE_TO_COMPLETED_AUTHORIZED=YES
+MOVE_TO_COMPLETED_PERFORMED=YES
+WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260901-032-reference-index-refresh.md
 PROVIDER_NETWORK_AUTHORIZED=NO
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REAL_DELIVERY_AUTHORIZED=NO
 VPS_DEPLOYMENT_AUTHORIZED=NO
 PRODUCTION_AUTHORIZED=NO
 PUSH_OR_MERGE_AUTHORIZED=NO
@@ -210,15 +221,15 @@ PUSH_OR_MERGE_AUTHORIZED=NO
 - [ADR-SS-002](../../../ADR-SS-002-bounded-multi-dossier-provider-robustness.md)
 - [ADR-SS-003](../../../ADR-SS-003-optional-integration-topology.md)
 
-## 12. Premier bloc de revue propriétaire reçu — incomplet
+## 12. Premier bloc de revue propriétaire reçu — historique incomplet
 
 Le propriétaire a énoncé `VALIDATE` pour le commit qualifié et les deux empreintes attendues. Ces
 trois références correspondent exactement aux objets locaux contrôlés.
 
-Les deux derniers choix décisionnels sont toutefois restés sous la forme littérale `<YES|NO>`.
-Conformément au précédent WO-027, ces placeholders sont des choix non résolus, pas des
-autorisations. La readiness locale n’est donc pas reconnue explicitement, le déplacement vers
-`completed` n’est pas autorisé et WO-032 demeure actif à `READY_FOR_OWNER_REVIEW`.
+Dans ce premier bloc, les deux derniers choix décisionnels étaient restés sous la forme littérale
+`<YES|NO>`. Conformément au précédent WO-027, ces placeholders ont été traités comme des choix non
+résolus, pas comme des autorisations. WO-032 est donc resté actif à `READY_FOR_OWNER_REVIEW`
+jusqu’à la réception du bloc final complet reproduit à la section suivante.
 
 Bloc reproduit tel que reçu, après retrait des seuls échappements de rendu Markdown :
 
@@ -251,11 +262,22 @@ MOVE_TO_COMPLETED_AUTHORIZED=NO
 MOVE_TO_COMPLETED_PERFORMED=NO
 ```
 
-## 13. Bloc propriétaire complet encore requis
+Ce premier bloc est désormais
+`SUPERSEDED_BY_FINAL_COMPLETE_OWNER_BLOCK`. Il reste conservé uniquement comme étape historique ;
+son absence d’effet terminal n’est pas réécrite a posteriori.
 
-Pour terminer WO-032, le propriétaire doit remplacer explicitement les deux placeholders par des
-valeurs `YES` ou `NO`. Une validation et un déplacement ne pourront être déduits que si les deux
-valeurs reçues l’autorisent :
+```text
+FIRST_OWNER_REVIEW_BLOCK_STATUS=SUPERSEDED_BY_FINAL_COMPLETE_OWNER_BLOCK
+```
+
+## 13. Bloc propriétaire final reçu et décision de clôture
+
+Le propriétaire a ensuite fourni les deux valeurs terminales explicites. Le commit documentaire et
+les deux empreintes correspondent au lot qualifié ; la readiness locale est reconnue et le
+déplacement vers `completed` est autorisé. Les quatre interdictions réseau, VPS et production sont
+maintenues sans changement.
+
+Bloc final reproduit tel que reçu, après retrait des seuls échappements de rendu Markdown :
 
 ```text
 J9_WO032_OWNER_REVIEW_DECISION=VALIDATE
@@ -263,10 +285,33 @@ J9_WO032_WORK_ORDER=WO-SS-20260901-032-reference-index-refresh
 J9_WO032_DOCUMENTATION_COMMIT=b9ff5f0f96998ff46785b3dd7f2e4369b3f1ce37
 J9_WO032_REFERENCE_INDEX_SHA256=b3612691b1738b07038599b6d61ae58cfd7ec8e15bbcec2198c6b7498bbab1f7
 J9_WO032_REFERENCE_PDF_SHA256=746106cfe5142ad7b7426443b9730b22f281d6d844d108a5c371c7e08c9f1fee
-J9_WO032_LOCAL_READINESS_ACKNOWLEDGED=<YES|NO>
-J9_WO032_WORK_ORDER_MOVE_TO_COMPLETED=<YES|NO>
+J9_WO032_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO032_WORK_ORDER_MOVE_TO_COMPLETED=YES
 J9_PROVIDER_NETWORK_AUTHORIZED=NO
 J9_REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 J9_VPS_DEPLOYMENT_AUTHORIZED=NO
 J9_PRODUCTION_AUTHORIZED=NO
+```
+
+État terminal dérivé et contrôlé :
+
+```text
+WORK_ORDER_STATUS=VALIDATED
+OWNER_REVIEW_REQUIRED=NO
+OWNER_REVIEW_DECISION=VALIDATE
+OWNER_REVIEW_BLOCK_STATUS=COMPLETE
+OWNER_DECISION_RECORDED_AT_UTC=2026-09-01T17:37:47.8238937Z
+OWNER_DECISION_RECORDED_AT_EUROPE_PARIS=2026-09-01T19:37:47.8238937+02:00
+DOCUMENTATION_COMMIT_MATCH=YES
+REFERENCE_INDEX_SHA256_MATCH=YES
+REFERENCE_PDF_SHA256_MATCH=YES
+LOCAL_READINESS_ACKNOWLEDGED=YES
+MOVE_TO_COMPLETED_AUTHORIZED=YES
+MOVE_TO_COMPLETED_PERFORMED=YES
+PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REAL_DELIVERY_AUTHORIZED=NO
+VPS_DEPLOYMENT_AUTHORIZED=NO
+PRODUCTION_AUTHORIZED=NO
+PUSH_OR_MERGE_AUTHORIZED=NO
 ```
