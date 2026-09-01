@@ -6,6 +6,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Après J9 — étude d’intégration optionnelle ouverte
 
+- ouverture de WO-028 pour corriger factuellement l’identité du schéma J7 dans ADR-SS-003 :
+  l’alias ambigu `J7_CANONICAL_EXPORT_V1` est remplacé par l’identifiant manifeste canonique
+  `urn:betting-project:sofascore-local-lab:j7:canonical-event-export:v1` et sa version `1.0.0`,
+  sans modifier la topologie acceptée, l’historique v0.1 ni aucune autorisation runtime ou réseau ;
 - publication sans force de la plage J9 finalisée sur la branche privée
   `origin/codex/j9-decision`, au commit
   `1a58a3bd7673f5946d5c48ae573c191e52d223a2`, avec divergence locale/distante nulle et sans

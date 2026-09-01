@@ -3,6 +3,8 @@
 - **Statut :** v0.1 `ACCEPTED` — direction d’architecture sélectionnée, aucun effet
   d’implémentation ou de réseau
 - **Version acceptée :** 0.1
+- **Clarification factuelle courante :** v0.1 + `WO-SS-20260901-028` — identité/version J7
+  explicitées sans nouvelle décision de version, de topologie ou d’autorisation
 - **Date de proposition :** 2026-09-01
 - **Date d’acceptation :** `2026-09-01T07:25:25.4809414Z`
   (`2026-09-01T09:25:25.4809414+02:00` en Europe/Paris)
@@ -321,7 +323,8 @@ isolation acceptable ou si son arrêt ne peut garantir le nettoyage fail-closed.
 ```text
 IMPORT_ENDPOINT_URI=NOT_DEFINED
 DELIVERY_HTTP_METHOD=POST
-PAYLOAD_SCHEMA_VERSION=J7_CANONICAL_EXPORT_V1
+PAYLOAD_SCHEMA_ID=urn:betting-project:sofascore-local-lab:j7:canonical-event-export:v1
+PAYLOAD_SCHEMA_VERSION=1.0.0
 DELIVERY_PROTOCOL_VERSION=NOT_DEFINED
 DELIVERY_TRIGGER=MANUAL_ON_DEMAND_AFTER_HUMAN_VALIDATED
 DELIVERY_STATE_MODEL=SEPARATE_LEDGER_WITH_SIX_DEFINED_STATES
@@ -343,6 +346,11 @@ VPS_RUNTIME_OR_IMAGE=NOT_SELECTED
 SLA_OR_SLO=NOT_DEFINED
 PROVIDER_PERMISSION=NOT_EVIDENCED
 ```
+
+La paire normative effectivement portée par l’enveloppe J7 est `PAYLOAD_SCHEMA_ID` +
+`PAYLOAD_SCHEMA_VERSION`; elle correspond exactement aux constantes versionnées
+`J7ExportContract.SCHEMA_ID` et `J7ExportContract.SCHEMA_VERSION`. La version du protocole de
+livraison reste une dimension séparée.
 
 ## 13. Décomposition des futurs travaux
 
@@ -437,6 +445,7 @@ Order. Elle n’autorise pas :
 |---|---|---|---|
 | 0.1 | 2026-09-01 | `PROPOSED_NOT_ACCEPTED` | Proposition issue de J9 : option A comme direction d’un futur Work Order, option B différée et bloquée par la gouvernance actuelle, option C comme repli ; aucun effet runtime ou réseau |
 | 0.1 | 2026-09-01 | `ACCEPTED` | Draft immuable `ca789a3a…` / `0edcc1e7…` accepté à `07:25:25.4809414Z` ; `OPTIONAL_LOCAL_PUSH` sélectionné, option VPS différée, toutes les autorisations d’implémentation, de réseau, de livraison, de déploiement et de production maintenues à `NO` |
+| 0.1 (clarification factuelle WO-028) | 2026-09-01 | `CORRECTIVE_CLARIFICATION` | Remplacement de l’affectation ambiguë `J7_CANONICAL_EXPORT_V1` par la paire manifeste canonique `urn:betting-project:sofascore-local-lab:j7:canonical-event-export:v1` / `1.0.0` ; version et décision v0.1 ainsi que non-autorisations inchangées |
 
 ## 18. Références
 
@@ -451,3 +460,4 @@ Order. Elle n’autorise pas :
 8. [Runbook J6](docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md).
 9. [Architecture générale](docs/architecture/ARCHITECTURE.md).
 10. [Règles du dépôt](AGENTS.md).
+11. [Clarification corrective WO-028](docs/work_orders/active/WO-SS-20260901-028-adr-ss-003-j7-schema-identity-clarification.md).
