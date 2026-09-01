@@ -4,6 +4,33 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-031 préparation de la permission fournisseur et du receiver concurrent
+
+- ouverture de
+  `WO-SS-20260901-031-j9-provider-permission-request-preparation` depuis `origin/main` au commit
+  exact `f3d7d3feb9c48859ba6ae182b7f6e78b11b1f089`, sur une branche et un worktree dédiés ;
+- préparation, sans envoi, d'un brouillon anglais pour le canal officiel SofaScore
+  `Product -> API`, avec champs propriétaires obligatoires pour l'identité, la juridiction, le
+  statut commercial, le contexte betting, l'audience, le receiver et l'hébergement ;
+- revue officielle rafraîchie des conditions, de la documentation API externe et du formulaire de
+  contact : l'existence d'une documentation technique et d'une catégorie de contact ne constitue
+  toujours pas une licence ou une permission applicable ;
+- demande explicite portant sur les six familles J3/J4/J5, le transport Playwright borné, les
+  quotas, la rétention brute, la sauvegarde chiffrée, la normalisation, l'usage betting, le transfert
+  d'un export minimisé et un éventuel receiver VPS ;
+- handoff inter-dépôts établissant que le vrai processus `betting-project` doit tourner en même
+  temps que le vrai laboratoire pendant la phase de livraison, sans jamais déclencher une
+  acquisition fournisseur ;
+- constat que le receiver J7, son endpoint, sa persistance et son mTLS serveur n'existent pas
+  encore, tandis que le sender réel du laboratoire reste fermé par le code et ne peut être ouvert
+  par de simples variables d'environnement ;
+- proposition non autorisante de séparer le receiver HTTPS sur `127.0.0.1:8444` et son PostgreSQL
+  sur `127.0.0.1:5433`, avec décision préalable de séquencement des migrations CAT-002, deux
+  Work Orders futurs et qualification inter-processus synthétique avant tout export fournisseur ;
+- aucun changement applicatif, endpoint, migration, schéma ou configuration ; aucun message
+  externe, appel fournisseur, receiver réel, livraison, VPS ou usage de production sous WO-031 ;
+  `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED` reste bloquant.
+
 ### Après J9 — WO-030 borne de port de qualification Playwright fournisseur
 
 - ouverture de
