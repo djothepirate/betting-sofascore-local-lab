@@ -21,6 +21,21 @@ sendgrid_pattern='(^|[^A-Za-z0-9_.-])SG\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{20,}(
 jwt_pattern='(^|[^A-Za-z0-9_-])eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}([^A-Za-z0-9_-]|$)'
 
 findings=0
+is_vetted_synthetic_fixture() {
+    path=$1
+    revision=$2
+    case "$path" in
+        scripts/Invoke-J5PlaywrightLoopbackQualification.ps1)
+            expected_blob=62c2eba3fb980d68589a9804d2fa81bcc865a039
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+    actual_blob=$(git rev-parse "$revision:$path" 2>/dev/null || true)
+    [ "$actual_blob" = "$expected_blob" ]
+}
+
 scan_blob() {
     path=$1
     label=$2
@@ -52,6 +67,9 @@ git -c core.quotepath=false ls-files >"$candidate_file"
 while IFS= read -r path; do
     [ -n "$path" ] || continue
     case "$path" in target/*|exports/*|docs/reference/*) continue ;; esac
+    # Ce blob audité contient les valeurs synthétiques du test de fuite J5.
+    # La moindre modification change son SHA et réactive le scan fail-closed.
+    if is_vetted_synthetic_fixture "$path" HEAD; then continue; fi
     if git cat-file blob "HEAD:$path" >"$blob_file" 2>/dev/null; then
         scan_blob "$blob_file" "$path [HEAD]"
     fi
@@ -70,6 +88,7 @@ if [ -n "$base_ref" ] && ! printf '%s' "$base_ref" | grep -Eq '^0+$'; then
         while IFS= read -r path; do
             [ -n "$path" ] || continue
             case "$path" in target/*|exports/*|docs/reference/*) continue ;; esac
+            if is_vetted_synthetic_fixture "$path" "$commit"; then continue; fi
             if git cat-file blob "$commit:$path" >"$blob_file" 2>/dev/null; then
                 scan_blob "$blob_file" "$path [commit $(printf '%.12s' "$commit")]"
             fi
