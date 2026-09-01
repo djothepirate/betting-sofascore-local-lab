@@ -50,6 +50,14 @@ Order dans son dépôt ; aucune livraison réelle, aucun appel fournisseur, aucu
 production ne sont autorisés sous WO-027. Les qualifications ont produit zéro appel fournisseur,
 zéro appel vers un receiver réel et zéro listener résiduel.
 
+Le propriétaire a ensuite énoncé `VALIDATE` pour le commit
+`5af48e5ea0e7150b460fe106da74aa5d3bd5489a`, le résultat `PASS_LOCAL_FAIL_CLOSED` et le SHA-256 du
+rapport, qui concordent tous avec les objets locaux. Les champs
+`J9_WO027_LOCAL_READINESS_ACKNOWLEDGED` et `J9_WO027_WORK_ORDER_MOVE_TO_COMPLETED` ont cependant été
+laissés sous forme `<YES|NO>` : ils ne sont pas traités comme des décisions. Le bloc de revue reste
+incomplet et WO-027 demeure actif à `READY_FOR_OWNER_REVIEW`, sans autorisation réelle
+supplémentaire.
+
 La preuve arrêtée relève de WO-019 ; le profil sélectionné a exigé une nouvelle campagne sous un
 nouveau Work Order. ADR-SS-002 v1.0 avait été accepté explicitement. Le premier
 contrôle J3 Playwright loopback de WO-019 et sa

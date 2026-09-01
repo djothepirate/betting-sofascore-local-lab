@@ -38,6 +38,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - publication du rapport
   `docs/validation/J9-WO027-OPTIONAL-LOCAL-PUSH-QUALIFICATION-20260901.md` et passage de WO-027 à
   `READY_FOR_OWNER_REVIEW`, sans déplacement implicite vers les Work Orders terminés ;
+- verdict propriétaire `VALIDATE` reçu pour le commit
+  `5af48e5ea0e7150b460fe106da74aa5d3bd5489a`, du résultat `PASS_LOCAL_FAIL_CLOSED` et du SHA-256
+  `d656b7ea12ba38a40b88e9a78e5b7afb9642c4405080b9246b8539d177eb1d12` ; les deux champs readiness
+  et déplacement vers `completed` restant sous forme `<YES|NO>`, le bloc de revue demeure incomplet,
+  aucune valeur n'est déduite et WO-027 reste actif à `READY_FOR_OWNER_REVIEW` ;
 - activation réelle, receiver Betting Project, livraison, réseau fournisseur, VPS, production,
   polling, scheduler, retry automatique et fallback maintenus à `NO` ; zéro push déduit de cette
   ouverture.

@@ -224,8 +224,46 @@ un déploiement VPS ou une production exigent chacun leur porte explicite applic
 | Ledger et sender fail-closed | `IMPLEMENTED_DISABLED` | V29, six états séparés, zéro cible réelle, barrières JDK anti-retry |
 | Qualification offline/loopback | `PASS` | [rapport WO-027](../../validation/J9-WO027-OPTIONAL-LOCAL-PUSH-QUALIFICATION-20260901.md), zéro réseau fournisseur/receiver réel |
 | Vérification finale | `PASS_READY_FOR_OWNER_REVIEW` | Surefire `1036/0/0/5`, Failsafe `84/0/0/0`, permission réelle toujours bloquante |
+| Revue propriétaire | `RECEIVED_INCOMPLETE` | verdict `VALIDATE`, commit et rapport concordants ; readiness et déplacement non renseignés |
 
-Le Work Order reste actif. Seule une validation propriétaire explicite peut autoriser son
-déplacement vers `completed`; elle ne pourra pas, à elle seule, autoriser une cible ou une livraison
-réelle tant que la porte de permission officielle et les autres prérequis d'ADR-SS-003 ne sont pas
-satisfaits.
+Le Work Order reste actif. Le verdict propriétaire `VALIDATE` est reçu, mais le bloc de revue n'est
+pas complet et le déplacement vers `completed` n'est pas décidé : les deux champs correspondants
+ont été renvoyés sous forme de placeholders. Une future valeur explicite `YES` pourra autoriser ce
+déplacement ; elle ne pourra pas, à elle seule, autoriser une cible ou une livraison réelle tant que
+la porte de permission officielle et les autres prérequis d'ADR-SS-003 ne sont pas satisfaits.
+
+## 11. Revue propriétaire reçue
+
+Le bloc de revue a été enregistré le `2026-09-01T10:54:57.5243442Z`, soit le
+`2026-09-01T12:54:57.5247767+02:00` en Europe/Paris. Le commit et le SHA-256 fournis correspondent
+exactement aux objets locaux immuables. Le propriétaire a énoncé le verdict `VALIDATE` sur le
+résultat `PASS_LOCAL_FAIL_CLOSED`.
+
+Deux champs ont toutefois été laissés sous forme de choix non résolu (`<YES|NO>`). Ils ne sont pas
+interprétés comme des autorisations : ni l'accusé explicite de readiness locale, ni le déplacement
+vers `completed` ne sont enregistrés. Le bloc de revue reste donc incomplet et le fichier demeure à
+`READY_FOR_OWNER_REVIEW` dans `docs/work_orders/active`.
+
+```text
+J9_WO027_OWNER_REVIEW_DECISION=VALIDATE
+J9_WO027_WORK_ORDER=WO-SS-20260901-027-optional-local-push-implementation
+J9_WO027_COMMIT=5af48e5ea0e7150b460fe106da74aa5d3bd5489a
+J9_WO027_COMMIT_MATCH=YES
+J9_WO027_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
+J9_WO027_QUALIFICATION_REPORT_SHA256=d656b7ea12ba38a40b88e9a78e5b7afb9642c4405080b9246b8539d177eb1d12
+J9_WO027_QUALIFICATION_REPORT_SHA256_MATCH=YES
+J9_WO027_LOCAL_READINESS_ACKNOWLEDGED=NOT_PROVIDED_PLACEHOLDER
+J9_WO027_WORK_ORDER_MOVE_TO_COMPLETED=NOT_PROVIDED_PLACEHOLDER
+OWNER_REVIEW_BLOCK_STATUS=INCOMPLETE_REQUIRED_FIELDS
+OWNER_REVIEW_REQUIRED=YES
+WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+WORK_ORDER_LOCATION=docs/work_orders/active/WO-SS-20260901-027-optional-local-push-implementation.md
+
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+BETTING_PROJECT_RECEIVER_IMPLEMENTED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REAL_DELIVERY_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+VPS_DEPLOYMENT_AUTHORIZED=NO
+PRODUCTION_AUTHORIZED=NO
+```
