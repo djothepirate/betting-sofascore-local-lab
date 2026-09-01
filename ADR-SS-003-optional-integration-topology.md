@@ -1,10 +1,15 @@
 # ADR-SS-003 — Topologie d’intégration optionnelle du SofaScore Local Lab
 
-- **Statut :** v0.1 `PROPOSED_NOT_ACCEPTED` — décision propriétaire requise, aucun effet
+- **Statut :** v0.1 `ACCEPTED` — direction d’architecture sélectionnée, aucun effet
   d’implémentation ou de réseau
-- **Version proposée :** 0.1
+- **Version acceptée :** 0.1
 - **Date de proposition :** 2026-09-01
-- **Décideur :** Porteur du Betting Project — `PENDING`
+- **Date d’acceptation :** `2026-09-01T07:25:25.4809414Z`
+  (`2026-09-01T09:25:25.4809414+02:00` en Europe/Paris)
+- **Décideur :** Porteur du Betting Project — `ACCEPT`
+- **Draft accepté :** commit `ca789a3a40ea5fc6c16312bd73f675bc9fd32650`, SHA-256 du
+  fichier `0edcc1e7db2ffc268d1560342d8c2f7c8ea9e1f91c65148e0504c1217f5982be`
+- **Topologie sélectionnée :** `OPTIONAL_LOCAL_PUSH`
 - **Work Order :** `WO-SS-20260901-026-optional-integration-feasibility`
 - **Branche :** `codex/j9-optional-integration-study`
 - **Base J9 publiée :** `1a58a3bd7673f5946d5c48ae573c191e52d223a2` sur
@@ -83,7 +88,7 @@ VPS_DEPLOYMENT_AUTHORIZED=NO
 PRODUCTION_AUTHORIZED=NO
 ```
 
-La proposition ne modifie ni ADR-SS-001, ni ADR-SS-002, ni `AGENTS.md`. Une option incompatible
+L’acceptation ne modifie ni ADR-SS-001, ni ADR-SS-002, ni `AGENTS.md`. Une option incompatible
 avec ces invariants exige une décision et une révision distinctes avant toute expérimentation.
 
 ## 5. Options étudiées
@@ -98,7 +103,7 @@ avec ces invariants exige une décision et une révision distinctes avant toute 
 6. Le Betting Project accuse ou refuse la livraison sans jamais déclencher d’acquisition SofaScore.
 7. L’arrêt du poste ou du laboratoire n’affecte aucune fonction permanente du Betting Project.
 
-La proposition fixe les choix d’architecture suivants : livraison v1 manuelle après
+La décision acceptée fixe les choix d’architecture suivants : livraison v1 manuelle après
 `HUMAN_VALIDATED`, `POST` HTTPS vers un point d’import dédié, réception idempotente sous une clé
 stable dérivée de l’identité et du hash de l’export, accusé synchrone minimisé, zéro retry
 automatique, ledger de livraison séparé, et mTLS obligatoire avec clé privée client non exportable
@@ -168,25 +173,31 @@ Aucun score n’est calculé. La différence déterminante est normative : A est
 peut être étudiée pour implémentation sans d’abord réviser la gouvernance ; B ne dispose ni de cette
 compatibilité, ni d’une preuve d’environnement.
 
-## 7. Décision proposée v0.1
+## 7. Décision acceptée v0.1
 
 ```text
-ADR_SS_003_STATUS=PROPOSED_NOT_ACCEPTED
+ADR_SS_003_STATUS=ACCEPTED
 ADR_SS_003_VERSION=0.1
+ADR_SS_003_OWNER_DECISION=ACCEPT
+ADR_SS_003_ACCEPTED_DRAFT_COMMIT=ca789a3a40ea5fc6c16312bd73f675bc9fd32650
+ADR_SS_003_ACCEPTED_DRAFT_FILE_SHA256=0edcc1e7db2ffc268d1560342d8c2f7c8ea9e1f91c65148e0504c1217f5982be
+ADR_SS_003_ACCEPTED_AT_UTC=2026-09-01T07:25:25.4809414Z
+ADR_SS_003_ACCEPTED_AT_EUROPE_PARIS=2026-09-01T09:25:25.4809414+02:00
 PROPOSED_PRIMARY_TOPOLOGY=OPTIONAL_LOCAL_PUSH
-PROPOSED_PRIMARY_TOPOLOGY_EFFECT=FUTURE_IMPLEMENTATION_STUDY_ONLY
+ADR_SS_003_SELECTED_TOPOLOGY=OPTIONAL_LOCAL_PUSH
+SELECTED_TOPOLOGY_EFFECT=FUTURE_IMPLEMENTATION_WORK_ORDER_ONLY
 VPS_PLAYWRIGHT_STATUS=DEFERRED_BLOCKED_BY_CURRENT_GOVERNANCE
 FALLBACK_TOPOLOGY=KEEP_LOCAL_NO_INTEGRATION
-OWNER_DECISION_REQUIRED=YES
+ADR_OWNER_CONFIRMATION_RECEIVED=YES
 ADR_ACCEPTANCE_AUTHORIZES_IMPLEMENTATION=NO
 ADR_ACCEPTANCE_AUTHORIZES_PROVIDER_NETWORK=NO
 ADR_ACCEPTANCE_AUTHORIZES_VPS_DEPLOYMENT=NO
 ADR_ACCEPTANCE_AUTHORIZES_PRODUCTION=NO
 ```
 
-La proposition sélectionne `OPTIONAL_LOCAL_PUSH` comme seule direction candidate sous les règles
-actuelles. Elle fixe le contrat architectural de la section 8, mais ne crée aucune URI, aucun
-certificat et aucune valeur de timeout et ne permet aucune mutation. `VPS_PLAYWRIGHT` reste une
+Le propriétaire sélectionne `OPTIONAL_LOCAL_PUSH` comme seule direction candidate sous les règles
+actuelles. La décision fixe le contrat architectural de la section 8, mais ne crée aucune URI,
+aucun certificat et aucune valeur de timeout et ne permet aucune mutation. `VPS_PLAYWRIGHT` reste une
 alternative architecturale différée qui devra faire l’objet d’un réexamen de gouvernance et de
 preuves propres.
 
@@ -229,7 +240,7 @@ testables :
 
 ## 9. Conditions préalables obligatoires
 
-### 9.1 Pour accepter la direction proposée
+### 9.1 Portes satisfaites lors de l’acceptation
 
 - décision propriétaire explicite sur ADR-SS-003 v0.1 ;
 - reconnaissance de `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED` ;
@@ -258,7 +269,7 @@ testables :
 - Work Order, manifeste, plafond et go propres à une preuve VPS ;
 - aucune extrapolation du résultat WO-023.
 
-## 10. Conséquences de la proposition
+## 10. Conséquences de la décision
 
 ### 10.1 Positives
 
@@ -292,7 +303,7 @@ testables :
 
 ## 11. Disqualifiants structurels
 
-La direction proposée doit revenir à `KEEP_LOCAL_NO_INTEGRATION` si elle exige :
+La direction sélectionnée doit revenir à `KEEP_LOCAL_NO_INTEGRATION` si elle exige :
 
 - proxy rotatif, furtivité, résolution de challenge, cookie/session réutilisé ou fallback fournisseur ;
 - exposition publique du laboratoire ou d’une interface Playwright ;
@@ -354,27 +365,43 @@ Si l’option B redevient candidate :
 
 Aucun de ces Work Orders n’est implicitement ouvert par l’acceptation du présent document.
 
-## 14. Bloc de décision propriétaire
+## 14. Bloc de décision propriétaire enregistré
+
+Le bloc ci-dessous est reproduit tel que reçu. Sa dernière ligne exprimait la porte de confirmation
+au moment de la soumission ; le message propriétaire qui le contient satisfait cette porte pour
+ADR-SS-003.
 
 ```text
-ADR_SS_003_OWNER_DECISION=<ACCEPT|REJECT|REQUEST_REVISION>
+ADR_SS_003_OWNER_DECISION=ACCEPT
 ADR_SS_003_VERSION=0.1
-ADR_SS_003_SELECTED_TOPOLOGY=<OPTIONAL_LOCAL_PUSH|KEEP_LOCAL_NO_INTEGRATION|NONE>
+ADR_SS_003_COMMIT=ca789a3a40ea5fc6c16312bd73f675bc9fd32650
+ADR_SS_003_FILE_SHA256=0edcc1e7db2ffc268d1560342d8c2f7c8ea9e1f91c65148e0504c1217f5982be
+WORK_ORDER=WO-SS-20260901-026-optional-integration-feasibility
 PROPOSED_PRIMARY_TOPOLOGY=OPTIONAL_LOCAL_PUSH
+ADR_SS_003_SELECTED_TOPOLOGY=OPTIONAL_LOCAL_PUSH
 VPS_PLAYWRIGHT_STATUS=DEFERRED_BLOCKED_BY_CURRENT_GOVERNANCE
 ADR_SS_001_EFFECT=UNCHANGED_UNDER_PROPOSAL
-OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
-RAW_PROVIDER_DATA_ON_VPS_POLICY=PROHIBITED_UNDER_CURRENT_GOVERNANCE
-PROVIDER_ACQUISITION_MODE=MANUAL_ON_DEMAND
-PROVIDER_NETWORK_AUTHORIZED=NO
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+ADR_ACCEPTANCE_AUTHORIZES_IMPLEMENTATION=NO
 INTEGRATION_IMPLEMENTATION_AUTHORIZED=NO
 BETTING_PROJECT_RECEIVER_IMPLEMENTATION_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
 LIVE_DELIVERY_AUTHORIZED=NO
 VPS_DEPLOYMENT_AUTHORIZED=NO
 PRODUCTION_AUTHORIZED=NO
-NO_CRITICAL_DEPENDENCY=REQUIRED
-SEPARATE_IMPLEMENTATION_WORK_ORDERS_REQUIRED=YES
+FUTURE_IMPLEMENTATION_WORK_ORDER_REQUIRED=YES
+FUTURE_VPS_GOVERNANCE_DECISION_REQUIRED=YES
 OWNER_CONFIRMATION_REQUIRED=YES
+```
+
+État dérivé après réception, sans étendre la décision :
+
+```text
+OWNER_CONFIRMATION_RECEIVED=YES
+ADR_OWNER_CONFIRMATION_OUTSTANDING=NO
+WORK_ORDER_STATUS=VALIDATED
+CLOSURE_BASIS=ADR_SS_003_V0_1_OWNER_ACCEPTANCE_SATISFIES_WO026_OBJECTIVE
+MOVE_TO_COMPLETED_PERFORMED=YES
 ```
 
 ## 15. Déclencheurs de réexamen
@@ -391,10 +418,10 @@ Réexaminer ADR-SS-003 avant toute mutation si :
 - mTLS à clé non exportable ne peut pas satisfaire le contrat ;
 - un payload sensible ou une donnée brute franchirait la frontière.
 
-## 16. Effet de la proposition
+## 16. Effet de l’acceptation
 
-La création de ce fichier ne vaut pas acceptation. Même une acceptation propriétaire de v0.1 ne
-vaudrait que sélection d’une direction pour un futur Work Order. Elle n’autoriserait pas :
+L’acceptation propriétaire de v0.1 vaut uniquement sélection d’une direction pour un futur Work
+Order. Elle n’autorise pas :
 
 - la création d’un endpoint ou d’une URI ;
 - la modification du Betting Project ;
@@ -409,6 +436,7 @@ vaudrait que sélection d’une direction pour un futur Work Order. Elle n’aut
 | Version | Date | Statut | Évolution |
 |---|---|---|---|
 | 0.1 | 2026-09-01 | `PROPOSED_NOT_ACCEPTED` | Proposition issue de J9 : option A comme direction d’un futur Work Order, option B différée et bloquée par la gouvernance actuelle, option C comme repli ; aucun effet runtime ou réseau |
+| 0.1 | 2026-09-01 | `ACCEPTED` | Draft immuable `ca789a3a…` / `0edcc1e7…` accepté à `07:25:25.4809414Z` ; `OPTIONAL_LOCAL_PUSH` sélectionné, option VPS différée, toutes les autorisations d’implémentation, de réseau, de livraison, de déploiement et de production maintenues à `NO` |
 
 ## 18. Références
 

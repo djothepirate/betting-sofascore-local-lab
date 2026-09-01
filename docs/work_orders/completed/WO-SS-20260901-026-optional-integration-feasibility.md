@@ -1,6 +1,6 @@
 # WO-SS-20260901-026 — Étude de faisabilité de l’intégration optionnelle et proposition ADR-SS-003
 
-- **Statut :** `READY_FOR_ADR_OWNER_DECISION`
+- **Statut :** `VALIDATED`
 - **Jalon :** après J9 — préparation de l’intégration optionnelle
 - **Ouvert le :** 2026-09-01
 - **Ouverture UTC :** `2026-09-01T06:37:59.009Z`
@@ -18,10 +18,14 @@
   `1c6a97f872d5621efcaffa505d16a7724f81816891aa0a9a990a0abec56e87c1`
 - **Décision J9 finale :** `PREPARE_OPTIONAL_INTEGRATION`
 - **Permission officielle :** `NOT_EVIDENCED`
-- **ADR proposé :** `ADR-SS-003 v0.1` — `PROPOSED_NOT_ACCEPTED`
+- **ADR accepté :** `ADR-SS-003 v0.1` — `ACCEPTED`
 - **Commit local de proposition :** `ca789a3a40ea5fc6c16312bd73f675bc9fd32650`
-- **SHA-256 du fichier ADR-SS-003 v0.1 proposé :**
+- **SHA-256 du draft ADR-SS-003 v0.1 accepté :**
   `0edcc1e7db2ffc268d1560342d8c2f7c8ea9e1f91c65148e0504c1217f5982be`
+- **Décision propriétaire ADR :** `ACCEPT`, reçue à `2026-09-01T07:25:25.4809414Z`
+  (`2026-09-01T09:25:25.4809414+02:00` en Europe/Paris)
+- **Topologie sélectionnée :** `OPTIONAL_LOCAL_PUSH`
+- **Fondement de clôture :** l’acceptation d’ADR-SS-003 v0.1 satisfait l’objet documentaire du WO
 - **Type de lot :** documentation et décision d’architecture seulement
 
 ## 1. Décision d’ouverture et interprétation bornée
@@ -37,19 +41,23 @@ La branche J9 finalisée a été publiée sans force sur le dépôt privé de r�
 au commit `40323faa7dca3341da6ef980b5762f1ff5a32a79`. Le présent Work Order part du commit J9 publié
 exact `1a58a3bd7673f5946d5c48ae573c191e52d223a2`, dans une branche et un worktree distincts.
 
-Cette instruction autorise une étude et une proposition d’ADR. Elle n’accepte pas ADR-SS-003, ne
-sélectionne pas définitivement une topologie, n’autorise aucune implémentation, aucun endpoint,
-aucun déploiement, aucun appel fournisseur et aucune exploitation de production.
+Cette instruction d’ouverture autorisait une étude et une proposition d’ADR. La décision
+propriétaire reçue le 1er septembre accepte désormais ADR-SS-003 v0.1 et sélectionne
+`OPTIONAL_LOCAL_PUSH`, sans autoriser aucune implémentation, aucun endpoint, aucun déploiement,
+aucun appel fournisseur et aucune exploitation de production.
 
 ```text
-WORK_ORDER_STATUS=READY_FOR_ADR_OWNER_DECISION
+WORK_ORDER_STATUS=VALIDATED
 J9_FINAL_DECISION=PREPARE_OPTIONAL_INTEGRATION
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
-ADR_SS_003_STATUS=PROPOSED_NOT_ACCEPTED
+ADR_SS_003_STATUS=ACCEPTED
 ADR_SS_003_COMMIT=ca789a3a40ea5fc6c16312bd73f675bc9fd32650
 ADR_SS_003_FILE_SHA256=0edcc1e7db2ffc268d1560342d8c2f7c8ea9e1f91c65148e0504c1217f5982be
-ADR_SS_003_OWNER_DECISION_REQUIRED=YES
-ARCHITECTURE_OPTION_SELECTED_BY_OWNER=NO
+ADR_SS_003_OWNER_DECISION=ACCEPT
+ADR_SS_003_SELECTED_TOPOLOGY=OPTIONAL_LOCAL_PUSH
+OWNER_ACCEPTANCE_RECORDED=YES
+CLOSURE_BASIS=ADR_SS_003_V0_1_OWNER_ACCEPTANCE_SATISFIES_WO026_OBJECTIVE
+MOVE_TO_COMPLETED_PERFORMED=YES
 CODE_CHANGE_AUTHORIZED=NO
 INTEGRATION_IMPLEMENTATION_AUTHORIZED=NO
 PROVIDER_NETWORK_AUTHORIZED=NO
@@ -149,7 +157,7 @@ Le contrat candidat doit préserver :
 - timeout fini, concurrence `1`, supervision minimisée et absence de polling ou scheduler ;
 - l’absence d’effet sur le Betting Project lorsque le poste Windows ou le laboratoire est arrêté.
 
-Ces choix sont proposés par ADR-SS-003 v0.1, mais restent `NOT_IMPLEMENTED`. L’URI, les valeurs
+Ces choix sont fixés par ADR-SS-003 v0.1 acceptée, mais restent `NOT_IMPLEMENTED`. L’URI, les valeurs
 numériques de timeout, le profil de certificat et les noms exacts du schéma d’accusé sont
 `NOT_DEFINED` ou `NOT_MEASURED` et devront respecter ces choix dans les futurs Work Orders.
 
@@ -212,9 +220,9 @@ l’état de preuve : `PASS_LOCAL`, `COMPATIBLE_FOR_FUTURE_WORK_ORDER_UNDER_CURR
 | Arrêt, rollback et désactivation | Arrêt du push sans effet sur acquisition ou cœur ; contrat à tester | Retrait du service VPS et purge contrôlée à concevoir | **Moyenne pour A, faible pour B** : l’architecture A est directionnellement réversible ; aucune procédure de rollback distante n’est qualifiée. |
 | Conclusion factuelle | Seule direction compatible pour un futur Work Order sous la gouvernance actuelle, sous portes | Alternative différée, bloquée avant expérimentation distante | **Élevée** : cette conclusion découle des textes actuels, pas d’un score et pas d’une compatibilité runtime déjà démontrée. `KEEP_LOCAL_NO_INTEGRATION` reste le repli si une porte échoue. |
 
-## 7. Recommandation soumise par le draft ADR-SS-003
+## 7. Recommandation du draft et décision propriétaire
 
-La proposition v0.1 recommande :
+Le draft v0.1 recommandait :
 
 1. `OPTIONAL_LOCAL_PUSH` comme seule direction proposée pour un futur Work Order d’implémentation
    sous la gouvernance actuelle ;
@@ -224,8 +232,9 @@ La proposition v0.1 recommande :
 4. aucun changement effectif avant acceptation propriétaire explicite d’ADR-SS-003 et ouverture
    d’un autre Work Order.
 
-Cette recommandation ne vaut pas sélection propriétaire. L’acceptation, le rejet ou la demande de
-révision d’ADR-SS-003 doivent être explicites.
+Le propriétaire a explicitement accepté cette recommandation et sélectionné
+`OPTIONAL_LOCAL_PUSH`. Ce choix ne vaut ni autorisation d’implémentation, ni ouverture automatique
+d’un Work Order d’implémentation.
 
 ## 8. Travaux de faisabilité restant à instruire
 
@@ -273,13 +282,13 @@ Avant tout prototype connecté :
 
 ## 9. Portes de décision
 
-### 9.1 Avant acceptation d’ADR-SS-003
+### 9.1 Acceptation d’ADR-SS-003 — portes franchies
 
 - matrice factuelle revue par le propriétaire ;
 - statut `NOT_EVIDENCED` de la permission explicitement reconnu ;
 - portée nulle de l’ADR sur le runtime, le réseau et la production explicitement reconnue ;
 - statut `BLOCKED_BY_CURRENT_GOVERNANCE` de la topologie VPS explicitement reconnu ;
-- choix propriétaire explicite : `ACCEPT`, `REJECT` ou `REQUEST_REVISION`.
+- choix propriétaire explicite `ACCEPT`, reçu et lié au commit/hash du draft.
 
 ### 9.2 Avant tout Work Order d’implémentation du push local
 
@@ -308,7 +317,8 @@ Avant tout prototype connecté :
 - [x] `OPTIONAL_LOCAL_PUSH`, `VPS_PLAYWRIGHT` et le repli local définis ;
 - [x] matrice factuelle sans score arbitraire, avec confiance et lacunes ;
 - [x] incompatibilités VPS avec `LOCAL_ONLY`, ADR-SS-001 et la frontière brute explicitées ;
-- [x] proposition ADR-SS-003 v0.1 créée sans acceptation implicite ;
+- [x] proposition ADR-SS-003 v0.1 créée sans acceptation implicite, puis acceptation propriétaire
+  explicite liée au commit et au SHA-256 du draft ;
 - [x] aucune modification d’ADR-SS-001, ADR-SS-002, `AGENTS.md` ou `docs/reference` ;
 - [x] aucun code, endpoint, URI, schéma, migration, configuration, appel fournisseur ou déploiement ;
 - [x] `mvnw.cmd clean verify` réussi ;
@@ -343,6 +353,8 @@ Résultats du 2026-09-01 :
 |---|---|
 | `mvnw.cmd --offline -Dmaven.repo.local=... clean verify` | `PASS` hors sandbox à `2026-09-01T06:54:03Z` (`08:54:03+02:00` Europe/Paris) ; 946 tests, 0 échec, 0 erreur, 5 skips prévus |
 | Première tentative en sandbox | arrêt avant tests pendant la fermeture ZipFS de `spring-orm-7.0.8.jar`, avec `AccessDeniedException` sur le cache Maven utilisateur ; la même commande hors sandbox a réussi, sans modification de source ou de dépendance |
+| Rerun post-acceptation du `clean verify` | `BLOCKED_BY_PREEXISTING_LOCAL_APPLICATION` à `2026-09-01T07:36:13Z` : 946 tests rapportés, 1 échec, 0 erreur, 5 skips ; seul `J6NativeBinaryPipelineQualificationTest` a refusé le listener `127.0.0.1:8087` déjà occupé |
+| Contre-vérification J6 ciblée | même refus fail-closed à `2026-09-01T07:38:01Z` ; `netstat`, l’API .NET et la lecture de processus ont attribué le port à une instance locale préexistante de `SofascoreLocalApplication`, démarrée à `2026-09-01T07:14:32Z` ; aucun processus n’a été arrêté |
 | `git diff --check` | `PASS` |
 | Liens Markdown locaux | `PASS`, 136 cibles résolues dans README, WO-026 et ADR-SS-003 |
 | Hygiène documentaire | `PASS`, aucun secret, valeur de credential, clé privée, cookie, jeton, payload brut, chemin utilisateur ou URI nouvelle dans le lot |
@@ -351,18 +363,23 @@ Résultats du 2026-09-01 :
 | Réseau | aucun appel fournisseur ou transfert sous WO-026 |
 | Commit de proposition | `ca789a3a40ea5fc6c16312bd73f675bc9fd32650` ; ADR-SS-003 v0.1 SHA-256 `0edcc1e7db2ffc268d1560342d8c2f7c8ea9e1f91c65148e0504c1217f5982be` |
 
-## 12. Bloc propriétaire futur pour ADR-SS-003
+Le `PASS` complet de `06:54:03Z` reste la vérification du lot documentaire de proposition. Le
+rerun post-acceptation n’a révélé aucune régression de source : il a confirmé le comportement
+fail-closed attendu lorsqu’une application locale utilisateur occupe déjà le port réservé. Le
+présent lot ne possède aucune autorisation pour arrêter cette application.
 
-Le bloc suivant sera soumis après revue du présent lot. Il n’est pas prérempli comme une décision :
+## 12. Décision propriétaire ADR-SS-003 enregistrée
+
+Le bloc suivant est reproduit tel que reçu :
 
 ```text
-ADR_SS_003_OWNER_DECISION=<ACCEPT|REJECT|REQUEST_REVISION>
+ADR_SS_003_OWNER_DECISION=ACCEPT
 ADR_SS_003_VERSION=0.1
 ADR_SS_003_COMMIT=ca789a3a40ea5fc6c16312bd73f675bc9fd32650
 ADR_SS_003_FILE_SHA256=0edcc1e7db2ffc268d1560342d8c2f7c8ea9e1f91c65148e0504c1217f5982be
 WORK_ORDER=WO-SS-20260901-026-optional-integration-feasibility
 PROPOSED_PRIMARY_TOPOLOGY=OPTIONAL_LOCAL_PUSH
-ADR_SS_003_SELECTED_TOPOLOGY=<OPTIONAL_LOCAL_PUSH|KEEP_LOCAL_NO_INTEGRATION|NONE>
+ADR_SS_003_SELECTED_TOPOLOGY=OPTIONAL_LOCAL_PUSH
 VPS_PLAYWRIGHT_STATUS=DEFERRED_BLOCKED_BY_CURRENT_GOVERNANCE
 ADR_SS_001_EFFECT=UNCHANGED_UNDER_PROPOSAL
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
@@ -378,15 +395,40 @@ FUTURE_VPS_GOVERNANCE_DECISION_REQUIRED=YES
 OWNER_CONFIRMATION_REQUIRED=YES
 ```
 
+La dernière ligne est conservée verbatim. Le message qui contient ce bloc est la confirmation du
+propriétaire pour l’ADR. Conformément au précédent WO-022, cette acceptation satisfait le critère
+terminal du présent Work Order documentaire sans fabriquer de champ propriétaire supplémentaire :
+
+```text
+OWNER_CONFIRMATION_RECEIVED=YES
+ADR_OWNER_CONFIRMATION_OUTSTANDING=NO
+WORK_ORDER_STATUS=VALIDATED
+CLOSURE_BASIS=ADR_SS_003_V0_1_OWNER_ACCEPTANCE_SATISFIES_WO026_OBJECTIVE
+MOVE_TO_COMPLETED_PERFORMED=YES
+PROVIDER_NETWORK_AUTHORIZED=NO
+INTEGRATION_IMPLEMENTATION_AUTHORIZED=NO
+BETTING_PROJECT_RECEIVER_IMPLEMENTATION_AUTHORIZED=NO
+LIVE_DELIVERY_AUTHORIZED=NO
+VPS_DEPLOYMENT_AUTHORIZED=NO
+PRODUCTION_AUTHORIZED=NO
+```
+
 ## 13. Références
 
-- [Décision J9 WO-018](../completed/WO-SS-20260831-018-decision-j9.md)
-- [Preuve J9 WO-023](../completed/WO-SS-20260831-023-j9-provider-robustness-v11.md)
+- [Décision J9 WO-018](WO-SS-20260831-018-decision-j9.md)
+- [Preuve J9 WO-023](WO-SS-20260831-023-j9-provider-robustness-v11.md)
 - [Rapport PASS WO-023](../../validation/J9-WO023-PROVIDER-ROBUSTNESS-CAMPAIGN-20260901.md)
 - [ADR-SS-001](../../../ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md)
 - [ADR-SS-002](../../../ADR-SS-002-bounded-multi-dossier-provider-robustness.md)
-- [ADR-SS-003 v0.1 proposé](../../../ADR-SS-003-optional-integration-topology.md)
+- [ADR-SS-003 v0.1 accepté](../../../ADR-SS-003-optional-integration-topology.md)
 - [Architecture J7](../../architecture/J7-CANONICAL-EVENT-EXPORT.md)
 - [Transport Playwright J3](../../architecture/J3-PLAYWRIGHT-PROVIDER-TRANSPORT.md)
 - [Architecture générale](../../architecture/ARCHITECTURE.md)
 - [Règles du dépôt](../../../AGENTS.md)
+
+## 14. Clôture
+
+WO-026 est validé et déplacé vers les Work Orders terminés parce que l’acceptation propriétaire
+d’ADR-SS-003 v0.1 satisfait intégralement son objectif documentaire. Aucun lot d’implémentation
+n’est ouvert implicitement et toutes les portes réseau, livraison, VPS et production demeurent
+fermées.

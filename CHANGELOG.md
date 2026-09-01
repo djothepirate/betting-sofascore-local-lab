@@ -15,9 +15,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   une étude documentaire séparée de toute implémentation ;
 - comparaison factuelle, sans score arbitraire, de `OPTIONAL_LOCAL_PUSH`, `VPS_PLAYWRIGHT` et du
   repli `KEEP_LOCAL_NO_INTEGRATION`, avec preuves, confiance et lacunes restantes ;
-- proposition d'ADR-SS-003 v0.1 à l'état `PROPOSED_NOT_ACCEPTED` : le push local d'un export J7
-  déjà `HUMAN_VALIDATED` est la seule direction proposée pour un futur Work Order sous la
-  gouvernance actuelle ; Playwright
+- proposition initiale d'ADR-SS-003 v0.1, puis acceptation propriétaire du draft immuable le
+  `2026-09-01T07:25:25.4809414Z` (`09:25:25.4809414+02:00` en Europe/Paris) : le push local d'un
+  export J7 déjà `HUMAN_VALIDATED` devient la topologie sélectionnée pour un futur Work Order sous
+  la gouvernance actuelle ; Playwright
   VPS reste `DEFERRED_BLOCKED_BY_CURRENT_GOVERNANCE`, car `LOCAL_ONLY`, ADR-SS-001 et la frontière
   des payloads bruts doivent être redécidés explicitement avant toute qualification distante ;
 - gel du draft proposé dans le commit local
@@ -27,14 +28,23 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - maintien de la permission officielle à `NOT_EVIDENCED` et définition de portes distinctes pour
   l'acceptation de l'ADR, un futur contrat HTTPS/mTLS, une éventuelle preuve VPS et toute décision
   de production ;
+- validation et clôture de WO-026 sur l’acceptation d’ADR-SS-003 v0.1, qui satisfait l’objet de ce
+  lot documentaire conformément au précédent WO-022, sans fabriquer de champ de décision
+  propriétaire supplémentaire ;
+- confirmation que cette acceptation ne vaut ni implémentation du sender ou du receiver, ni réseau
+  fournisseur, ni livraison live, ni déploiement VPS, ni production ;
 - aucun code, endpoint, URI, schéma, migration, configuration, certificat, secret, appel
   fournisseur, transfert, déploiement VPS, polling, scheduler, live, retry ou fallback ajouté ou
   autorisé ; ADR-SS-001, ADR-SS-002, `AGENTS.md` et `docs/reference` restent inchangés ;
-- vérification Maven finale hors sandbox réussie avec 946 tests, zéro échec, zéro erreur et cinq
-  skips prévus ; `git diff --check`, 136 liens locaux, hygiène documentaire, loopback et flags
-  fournisseur bloqués contrôlés ; la première tentative sandboxée avait été arrêtée par un refus
-  ZipFS sur le cache Maven utilisateur, sans échec de code ;
-- aucun push, PR ou merge de WO-026 n'est autorisé par l'instruction d'ouverture.
+- vérification Maven du draft hors sandbox réussie avec 946 tests, zéro échec, zéro erreur et cinq
+  skips prévus ; le rerun post-acceptation a ensuite rapporté 946 tests, un échec, zéro erreur et
+  cinq skips : seul le contrôle J6 a refusé l’environnement, parce qu’une instance locale
+  préexistante de `SofascoreLocalApplication` occupait
+  déjà `127.0.0.1:8087`; la contre-vérification ciblée a reproduit cette porte fail-closed, sans
+  arrêt du processus utilisateur ; `git diff --check`, 136 liens locaux, hygiène documentaire,
+  loopback et flags fournisseur bloqués restent contrôlés ;
+- aucun push, PR, merge ou Work Order d’implémentation n’est autorisé par l’instruction d’ouverture
+  ou l’acceptation d’ADR-SS-003.
 
 ### J9 — décision de gouvernance clôturée
 
