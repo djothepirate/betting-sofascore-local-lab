@@ -15,7 +15,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `e659ff8fc05ce99913d87ae554c9356581e852f8`, du hash historique du brouillon
   `27daa5859ce52d6bf2e4459a4ba7ab4048bab21e5b23e12fddb226e6ce228b3e` et du hash historique du
   handoff `63b5f5f9968d4eea4190e2702e3589e7f20669b91e7f84622f33cc458cfb5ca6` comme références
-  remplacées ; les deux livrables sont révisés en `1.2` et requalifiés sous leur identité `033` ;
+  remplacées ; les deux livrables ont d'abord été révisés et figés en `1.2` sous leur identité
+  `033`, avec requalification alors requise ;
+- requalification hors ligne après renumérotation : `mvnw.cmd --offline clean verify` réussi avec
+  Surefire `1043/0/0/5` et Failsafe `84/0/0/0` ; postflight sans listener `8087`/`8444`, processus
+  lié au worktree ou conteneur Testcontainers résiduel, le seul conteneur actif étant PostgreSQL
+  local préexistant sur `127.0.0.1:5432` ; le lot passe à `READY_FOR_OWNER_REVIEW` sans modifier
+  aucune autorisation d'envoi, de réseau, de receiver, de VPS ou de production ;
 - préparation, sans envoi, d'un brouillon anglais pour le canal officiel SofaScore
   `Product -> API`, avec champs propriétaires obligatoires pour l'identité, la juridiction, le
   statut commercial, le contexte betting, l'audience, le receiver et l'hébergement ;

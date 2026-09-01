@@ -19,6 +19,11 @@ avec J9, et a autorisé la renumérotation du présent lot en `033`. Les anciens
 `e659ff8` et les deux anciennes empreintes restent des références historiques remplacées ; la
 branche CI et la PR #23 ne sont pas modifiées par cette réconciliation.
 
+Les deux livrables `033` sont figés en version `1.2` et la requalification complète hors ligne est
+réussie ; le Work Order est `READY_FOR_OWNER_REVIEW`. Cette readiness documentaire n'autorise pas
+l'envoi de la demande, un accès fournisseur, un receiver réel, une livraison, le VPS ou la
+production.
+
 Le
 [handoff receiver concurrent](docs/validation/J9-WO033-BETTING-PROJECT-RECEIVER-CONCURRENT-READINESS-HANDOFF-20260901.md)
 établit que le vrai processus `betting-project` devra être disponible en même temps que le vrai
