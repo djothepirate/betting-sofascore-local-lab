@@ -71,6 +71,7 @@ jobs:
     timeout-minutes: 60
     env:
       SECRET_SCAN_BASE: ${{ github.event.pull_request.base.sha || github.event.before || '' }}
+      SOURCE_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - name: Extraire le dépôt avec son historique
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -93,11 +94,12 @@ jobs:
           sh ci/check-no-secrets.sh "$SECRET_SCAN_BASE"
 
       - name: Exécuter les tests standards et PostgreSQL/Testcontainers
-        run: ./mvnw -B -ntp -Pintegration-tests clean verify
+        run: |
+          source_epoch=$(git show -s --format=%ct "$SOURCE_COMMIT_SHA")
+          ./mvnw -B -ntp -Dproject.build.outputTimestamp="$source_epoch" \
+            -Pintegration-tests clean verify
 
       - name: Produire la distribution locale, le SBOM et la provenance
-        env:
-          SOURCE_COMMIT_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
         run: sh ci/package-local-only.sh
 
       - name: Publier l'artefact du run

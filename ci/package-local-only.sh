@@ -31,6 +31,14 @@ case "$pipeline_iid" in
 esac
 
 short_sha=$(printf '%.12s' "$commit_sha")
+source_epoch=$(git show -s --format=%ct "$commit_sha")
+case "$source_epoch" in
+    *[!0-9]*|'')
+        echo 'FAIL: horodatage du commit source invalide.' >&2
+        exit 1
+        ;;
+esac
+source_iso=$(date -u -d "@$source_epoch" '+%Y-%m-%dT%H:%M:%SZ')
 channel=snapshot-local-only
 if [ -n "$tag" ]; then
     if ! printf '%s' "$tag" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.[1-9][0-9]*)?$'; then
@@ -97,6 +105,7 @@ sofascore.network.used=false
 optional.integration.authorized=false
 source.repository=djothepirate/betting-sofascore-local-lab
 source.commit=$commit_sha
+source.epoch=$source_epoch
 source.tag=$tag
 maven.version=$version
 build.pipeline.iid=$pipeline_iid
@@ -111,7 +120,7 @@ EOF
 
 (
     cd "$stage"
-    jar --create --file "../$bundle_name" .
+    jar --create --file "../$bundle_name" --date="$source_iso" .
 )
 (
     cd "$distribution"

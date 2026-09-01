@@ -85,7 +85,9 @@ test:linux:
     TESTCONTAINERS_HOST_OVERRIDE: "docker"
   timeout: 60m
   script:
-    - ./mvnw -B -ntp -Pintegration-tests clean verify
+    - source_epoch=$(git show -s --format=%ct "$CI_COMMIT_SHA")
+    - ./mvnw -B -ntp -Dproject.build.outputTimestamp="$source_epoch"
+      -Pintegration-tests clean verify
   artifacts:
     when: always
     expire_in: 14 days
