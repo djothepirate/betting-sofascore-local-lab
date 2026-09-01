@@ -101,13 +101,21 @@ if [ -n "$tag" ]; then
     channel=release-local-only
 else
     case "$version" in
-        *-SNAPSHOT) ;;
+        *-SNAPSHOT)
+            base_version=${version%-SNAPSHOT}
+            ;;
         *)
-            echo "FAIL: un build sans tag exige une version Maven -SNAPSHOT, reçu $version." >&2
-            exit 1
+            if ! printf '%s' "$version" | grep -Eq \
+                '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.[1-9][0-9]*)?$'; then
+                echo "FAIL: version Maven non taguée hors convention SemVer : $version." >&2
+                exit 1
+            fi
+            # La PR de préparation puis le build de main valident la version
+            # finale avant le tag. Sans tag, le payload reste un snapshot local
+            # non promouvable ; seul GitLab publie la release locale taguée.
+            base_version=$version
             ;;
     esac
-    base_version=${version%-SNAPSHOT}
     artifact_version="${base_version}-snapshot.p${pipeline_iid}.g${short_sha}"
 fi
 

@@ -45,6 +45,8 @@ déploiement VPS.
 - [ ] Deux générations successives du SBOM ont la même empreinte et aucun numéro de série.
 - [ ] Le tag désigne le commit extrait, reste atteignable depuis `main` et correspond à la version
   Maven, sinon le packaging échoue.
+- [ ] Une version Maven finale non taguée reste un snapshot `LOCAL_ONLY` non promouvable et la PR
+  de préparation peut être qualifiée avant la création du tag.
 - [ ] Une release locale taguée ne contient aucun identifiant de pipeline propre à une forge.
 - [ ] GitLab est l'unique producteur du bundle local tagué ; GitHub vérifie le tag sans le republier.
 - [ ] Les rapports qualité initiaux sont produits puis la baseline est verrouillée.

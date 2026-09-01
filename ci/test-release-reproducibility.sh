@@ -67,6 +67,38 @@ chmod +x "$fixture/mvnw"
         commit -qm 'release fixture'
     head_commit=$(git rev-parse HEAD)
     git update-ref refs/remotes/origin/main "$head_commit"
+
+    # Une préparation de release porte déjà la version Maven finale, mais
+    # reste un snapshot LOCAL_ONLY tant qu'aucun tag ne désigne le commit.
+    umask 077
+    env -i PATH="$PATH" SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=100 \
+        GITHUB_REF_TYPE=branch GITHUB_REF_NAME=release/1.2.3 \
+        sh ci/package-local-only.sh >/dev/null
+    untagged_bundle=$(pwd)/target/distribution/betting-sofascore-local-lab-1.2.3-snapshot.p100.g$(printf '%.12s' "$head_commit")-local-only.zip
+    if [ ! -f "$untagged_bundle" ]; then
+        echo 'FAIL: la préparation locale non taguée ne produit pas son snapshot.' >&2
+        exit 1
+    fi
+    mkdir inspect-preparation
+    (
+        cd inspect-preparation
+        jar --extract --file "$untagged_bundle"
+    )
+    preparation_provenance=inspect-preparation/provenance.properties
+    if ! grep -Fxq 'artifact.channel=snapshot-local-only' "$preparation_provenance" ||
+       ! grep -Fxq 'source.tag=' "$preparation_provenance" ||
+       ! grep -Fxq "artifact.version=1.2.3-snapshot.p100.g$(printf '%.12s' "$head_commit")" "$preparation_provenance" ||
+       ! grep -Fxq 'artifact.classification=EXPERIMENTAL_LOCAL_ONLY' "$preparation_provenance" ||
+       ! grep -Fxq 'production.approved=false' "$preparation_provenance" ||
+       ! grep -Fxq 'vps.deployable=false' "$preparation_provenance"; then
+        echo 'FAIL: la préparation locale non taguée est présentée comme une release.' >&2
+        exit 1
+    fi
+    if [ -e target/distribution/betting-sofascore-local-lab-1.2.3-local-only.zip ]; then
+        echo 'FAIL: une version Maven finale sans tag a produit une release locale.' >&2
+        exit 1
+    fi
+
     git tag v1.2.3
 
     umask 002
