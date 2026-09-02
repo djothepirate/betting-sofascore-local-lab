@@ -98,4 +98,3 @@ if [ ! -x "$MAVEN_BIN" ]; then
 fi
 
 exec "$MAVEN_BIN" "$@"
-
