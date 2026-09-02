@@ -1,0 +1,317 @@
+$repositoryRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$toolsRoot = Join-Path $repositoryRoot 'scripts\wo036'
+$modulePath = Join-Path $toolsRoot 'WO036-CampaignTools.psm1'
+$moduleText = Get-Content -LiteralPath $modulePath -Raw
+$wrapperNames = @(
+    'Register-WO036ExecutableArtifacts',
+    'Start-WO036Component',
+    'Stop-WO036Component',
+    'Copy-WO036LocalLabDatabase',
+    'Export-WO036PreCallFreeze',
+    'Test-WO036FrozenTooling',
+    'Invoke-WO036CollisionProbe',
+    'Export-WO036RedactedEvidence',
+    'Test-WO036PrivateLogRedaction'
+)
+
+Import-Module $modulePath -Force
+
+Describe 'WO-036 campaign module and wrapper surface' {
+    It 'parses the module and every wrapper without syntax errors' {
+        $paths = @($modulePath) + @($wrapperNames | ForEach-Object {
+            Join-Path $toolsRoot "$_.ps1"
+        })
+        foreach ($path in $paths) {
+            (Test-Path -LiteralPath $path -PathType Leaf) | Should Be $true
+            $tokens = $null
+            $errors = $null
+            [void][Management.Automation.Language.Parser]::ParseFile(
+                $path, [ref]$tokens, [ref]$errors)
+            $errors.Count | Should Be 0
+        }
+    }
+
+    It 'exports the exact operator commands including frozen-tooling validation' {
+        $actual = @((Get-Command -Module WO036-CampaignTools).Name | Sort-Object)
+        $expected = @($wrapperNames + 'Read-WO036PrivateState' | Sort-Object)
+        (Compare-Object $expected $actual) | Should BeNullOrEmpty
+    }
+
+    It 'imports the shared module and calls the matching command in every wrapper' {
+        foreach ($name in $wrapperNames) {
+            $text = Get-Content -LiteralPath (Join-Path $toolsRoot "$name.ps1") -Raw
+            $text | Should Match "Import-Module .*WO036-CampaignTools\.psm1"
+            $text | Should Match ([regex]::Escape($name) + ' (?:@PSBoundParameters|-StatePath)')
+        }
+    }
+}
+
+Describe 'WO-036 fail-closed runtime invariants' {
+    It 'uses all three qualified JVM HttpClient retry guards' {
+        $moduleText | Should Match '-Djdk\.httpclient\.disableRetryConnect=true'
+        $moduleText | Should Match '-Djdk\.httpclient\.redirects\.retrylimit=1'
+        $moduleText | Should Match '-Djdk\.httpclient\.enableAllMethodRetry=false'
+        ([regex]::Matches($moduleText, '\$script:JdkHttpClientRetryGuards\[[0-2]\]').Count) |
+            Should Be 3
+    }
+
+    It 'neutralizes inherited configuration, proxy, Java debug and TLS key logging' {
+        foreach ($name in @(
+                'SPRING_CONFIG_IMPORT', 'SPRING_CONFIG_LOCATION',
+                'JAVA_TOOL_OPTIONS', '_JAVA_OPTIONS', 'JDK_JAVA_OPTIONS',
+                'HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'SSLKEYLOGFILE',
+                'NSS_SSLKEYLOGFILE', 'JAVAX_NET_DEBUG',
+                'JDK_HTTPCLIENT_HTTPCLIENT_LOG')) {
+            $moduleText | Should Match ([regex]::Escape("'$name'"))
+        }
+        $moduleText | Should Match ([regex]::Escape("Join-Path `$workingDirectory '.env'"))
+        $moduleText | Should Match ([regex]::Escape('-WorkingDirectory $workingDirectory'))
+    }
+
+    It 'uses the exact pre-created shared lock without an OpenOrCreate fallback' {
+        $moduleText | Should Match "'\.wo036-tools\.lock'"
+        $moduleText | Should Match '\[IO\.FileMode\]::Open'
+        $moduleText | Should Match '\[IO\.FileShare\]::None'
+        $moduleText | Should Not Match '\[IO\.FileMode\]::OpenOrCreate'
+    }
+
+    It 'requires separately qualified clean-build JAR hashes at registration' {
+        $moduleText | Should Match 'ExpectedLocalLabJarSha256'
+        $moduleText | Should Match 'ExpectedReceiverJarSha256'
+        $moduleText | Should Match 'separately qualified clean builds'
+        $moduleText | Should Match 'registered-tooling\.json'
+        $moduleText | Should Match 'javaSha256'
+    }
+
+    It 'rehashes every frozen tool and allows only the exact manifest commit afterward' {
+        $moduleText | Should Match 'Get-WO036ToolingFileProof'
+        $moduleText | Should Match 'Assert-WO036RegisteredTooling'
+        $moduleText | Should Match 'J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-20260902\.md'
+        $moduleText | Should Match 'merge-base.*--is-ancestor'
+        $moduleText | Should Match 'tooling changed after its one-shot registration'
+    }
+
+    It 'serializes all public mutating and evidence commands under the shared lock' {
+        ([regex]::Matches($moduleText,
+            'Invoke-WO036LockedOperation -StatePath \$StatePath').Count) | Should Be 9
+    }
+}
+
+Describe 'WO-036 Preparation A B sequence and one-shot clone' {
+    It 'models distinct Preparation, A and B components with no concurrent Local Lab process' {
+        $moduleText | Should Match "ValidateSet\('Receiver', 'LocalLabPreparation', 'LocalLabA', 'LocalLabB'\)"
+        $moduleText | Should Match 'Local Lab campaign instances cannot run concurrently'
+        $moduleText | Should Match 'preparation instance is only available before the clone'
+        $moduleText | Should Match 'Local Lab B requires the exact durable 201 proof from A'
+    }
+
+    It 'requires a graceful preparation stop before a one-shot clone claim' {
+        $moduleText | Should Match 'Assert-WO036GracefulStopResult -State \$state -Component LocalLabPreparation'
+        $moduleText | Should Match "'database-clone\.json'"
+        $moduleText | Should Match 'CLAIMED_UNKNOWN_CONSUMED'
+        $moduleText | Should Match 'Write-WO036PrivateJson -Path \$claimPath -Value \$claim -CreateNew'
+    }
+
+    It 'proves B absent and creates it once without DROP or malformed backslash quotes' {
+        $moduleText | Should Match "'targetCount'.*pg_database"
+        $moduleText | Should Match '\[int\]\$preflight\.targetCount -ne 0'
+        $moduleText | Should Match 'create database "\$target" with template "\$source";'
+        $moduleText | Should Not Match '(?i)drop\s+database'
+        $moduleText | Should Not Match 'create database \\"\$target'
+    }
+
+    It 'binds the clone to one HUMAN_VALIDATED five-source synthetic artifact and zero deliveries' {
+        $moduleText | Should Match 'humanValidatedCandidateCount'
+        $moduleText | Should Match 'jsonb_array_length\(source_observations\) = 5'
+        $moduleText | Should Match "sourceKind' = 'SYNTHETIC_FIXTURE'"
+        $moduleText | Should Match '\[int\]\$corpus\.deliveryCount -ne 0'
+        $moduleText | Should Match '\[int\]\$corpus\.attemptCount -ne 0'
+        $moduleText | Should Match '\[int\]\$corpus\.resultCount -ne 0'
+    }
+}
+
+Describe 'WO-036 exact three-call proof model' {
+    It 'names and caps import-route calls separately from shutdown control calls' {
+        $moduleText | Should Match '\$script:MaximumImportRouteCalls = 3'
+        $moduleText | Should Match 'WO036_MAXIMUM_IMPORT_ROUTE_CALLS'
+        $moduleText | Should Match 'shutdownControlCallsBeforeEvidence = 3'
+        $moduleText | Should Not Match 'WO036_DIRECT_ATTEMPTS'
+    }
+
+    It 'proves receiver global counts at freeze, after 201, after duplicate and after collision' {
+        foreach ($field in @(
+                'globalReceiptCount', 'globalPayloadCount',
+                'globalAuditTotalCount', 'globalOutboxJ7Count')) {
+            $moduleText | Should Match ([regex]::Escape($field))
+        }
+        $moduleText | Should Match '\$receiverProof\.globalAuditTotalCount -ne 1'
+        $moduleText | Should Match '\$receiver\.globalAuditTotalCount -ne 2'
+        $moduleText | Should Match '\$after\.globalAuditTotalCount -ne 3'
+    }
+
+    It 'correlates the 409 audit to exact export, mutant hashes, key and reason' {
+        $moduleText | Should Match 'request_idempotency_key'
+        $moduleText | Should Match 'observed_file_sha256'
+        $moduleText | Should Match 'observed_data_sha256'
+        $moduleText | Should Match "reason_code = 'EXPORT_ID_DIVERGENCE'"
+        $moduleText | Should Match 'idempotencyKeySha256'
+        $moduleText | Should Match 'FULL_J7_ENVELOPE_METADATA_ONLY_MUTATION'
+    }
+
+    It 'phase-gates PRE_COLLISION and FINAL against the one-shot collision claim' {
+        $moduleText | Should Match 'PRE_COLLISION evidence is unavailable after a collision claim'
+        $moduleText | Should Match "collision\.status -ceq 'PASS_CONSUMED'"
+        $moduleText | Should Match 'collision\.importRouteCallOrdinal -eq 3'
+        $moduleText | Should Match 'collision\.httpStatus -eq 409'
+    }
+
+    It 'requires three graceful Local Lab stops and the exact live receiver listener' {
+        $moduleText | Should Match '\$gracefulStopCount -eq 3'
+        $moduleText | Should Match '\$forcedStopCount -eq 0'
+        $moduleText | Should Match 'STOPPED_EXACT_FORCED'
+        $moduleText | Should Match 'Test-WO036ExactLoopbackListener -Port 8444'
+        $moduleText | Should Match 'Get-NetTCPConnection -State Listen -LocalPort 8087'
+    }
+
+    It 'requires the exact six pre-call logs and eight completed Local Lab logs' {
+        $moduleText | Should Match 'Assert-WO036ExactPrivateLogSet -Proof \$logProof'
+        $moduleText | Should Match 'ExpectedNames \$script:PreCallLogNames'
+        $moduleText | Should Match 'ExpectedNames \$script:CompletedLocalLabLogNames'
+        $moduleText | Should Match 'fileNames = @\(\$logProof\.FileNames\)'
+    }
+
+    It 'contains no provider, VPS or non-loopback campaign target' {
+        $moduleText | Should Not Match '(?i)api\.sofascore\.com'
+        $moduleText | Should Not Match '51\.255\.167\.32'
+        $moduleText | Should Not Match '0\.0\.0\.0'
+        $moduleText | Should Match 'https://127\.0\.0\.1:8444'
+    }
+}
+
+Describe 'WO-036 offline behavioral primitives' {
+    InModuleScope WO036-CampaignTools {
+        It 'wires both qualified JAR hashes through the registration core' {
+            $core = Get-Command Register-WO036ExecutableArtifactsCore
+            $core.Parameters.ContainsKey('ExpectedLocalLabJarSha256') | Should Be $true
+            $core.Parameters.ContainsKey('ExpectedReceiverJarSha256') | Should Be $true
+            $provenance = Get-Command Assert-WO036GitArtifactProvenance
+            $provenance.Parameters.ContainsKey('ExpectedLocalLabJarSha256') | Should Be $false
+            $provenance.Parameters.ContainsKey('ExpectedReceiverJarSha256') | Should Be $false
+        }
+
+        It 'rejects a missing or substituted private log before a phase gate' {
+            $proof = [pscustomobject]@{
+                FileCount = 2
+                FileNames = @('a.log', 'b.log')
+            }
+            { Assert-WO036ExactPrivateLogSet -Proof $proof `
+                    -ExpectedNames @('a.log', 'b.log') -Gate 'test' } |
+                Should Not Throw
+            $substitutionFailed = $false
+            try {
+                Assert-WO036ExactPrivateLogSet -Proof $proof `
+                    -ExpectedNames @('a.log', 'c.log') -Gate 'test'
+            }
+            catch {
+                $substitutionFailed = $true
+            }
+            $substitutionFailed | Should Be $true
+            $missingFailed = $false
+            try {
+                Assert-WO036ExactPrivateLogSet -Proof $proof `
+                    -ExpectedNames @('a.log') -Gate 'test'
+            }
+            catch {
+                $missingFailed = $true
+            }
+            $missingFailed | Should Be $true
+        }
+
+        It 'enforces FileShare.None on the pre-created lock' {
+            $root = Join-Path $TestDrive 'private'
+            [void](New-Item -ItemType Directory -Path $root)
+            $statePath = Join-Path $root 'state.private.json'
+            $lockPath = Join-Path $root '.wo036-tools.lock'
+            [IO.File]::WriteAllText($statePath, '{}')
+            [IO.File]::WriteAllText($lockPath, '')
+            Mock Assert-WO036PrivateAcl { }
+            Mock Assert-WO036NoReparsePathChain { }
+            $first = Enter-WO036ToolsLock -StatePath $statePath
+            try {
+                $secondOpenFailed = $false
+                try {
+                    $second = Enter-WO036ToolsLock -StatePath $statePath
+                    $second.Dispose()
+                }
+                catch {
+                    $secondOpenFailed = $true
+                }
+                $secondOpenFailed | Should Be $true
+            }
+            finally {
+                $first.Dispose()
+            }
+        }
+
+        It 'refuses reuse of a CreateNew private one-shot claim' {
+            $path = Join-Path $TestDrive 'claim.json'
+            Mock Assert-WO036PrivateAcl { }
+            Write-WO036PrivateJson -Path $path -Value @{ status = 'CLAIMED' } -CreateNew
+            $secondClaimFailed = $false
+            try {
+                Write-WO036PrivateJson -Path $path `
+                    -Value @{ status = 'SECOND' } -CreateNew
+            }
+            catch {
+                $secondClaimFailed = $true
+            }
+            $secondClaimFailed | Should Be $true
+        }
+
+        It 'mutates only generator metadata while preserving data hash and byte length' {
+            $id = [guid]::NewGuid()
+            $data = '{"events":[]}'
+            $encoding = [Text.UTF8Encoding]::new($false, $true)
+            $dataHash = [Convert]::ToHexString(
+                [Security.Cryptography.SHA256]::HashData(
+                    $encoding.GetBytes($data))).ToLowerInvariant()
+            $json = '{"manifest":{"exportId":"' + $id +
+                '","dataSha256":"' + $dataHash +
+                '","validation":{"status":"HUMAN_VALIDATED"},' +
+                '"generatorVersion":"1.0.0"},"data":' + $data + "}`n"
+            $original = $encoding.GetBytes($json)
+            $mutation = New-WO036CollisionMutation -OriginalBytes $original
+            try {
+                $mutation.ExportId | Should Be $id
+                $mutation.DataSha256 | Should Be $dataHash
+                $mutation.Bytes.Length | Should Be $original.Length
+                ([Convert]::ToHexString($mutation.Bytes) -eq
+                    [Convert]::ToHexString($original)) | Should Be $false
+            }
+            finally {
+                [Array]::Clear($mutation.Bytes, 0, $mutation.Bytes.Length)
+                [Array]::Clear($original, 0, $original.Length)
+            }
+        }
+
+        It 'builds an exact redacted collision-audit correlation proof with one mocked query' {
+            Mock Invoke-WO036Psql {
+                '{"divergenceCount":1,"correlationCount":1,"reasonCount":1}'
+            }
+            $state = [pscustomobject]@{
+                Config = [pscustomobject]@{
+                    receiver = [pscustomobject]@{ databaseName = 'betting_wo036' }
+                }
+            }
+            $id = [guid]::NewGuid()
+            $fileHash = 'a' * 64
+            $dataHash = 'b' * 64
+            $proof = Get-WO036CollisionAuditProof -State $state -ExportId $id `
+                -MutatedFileSha256 $fileHash -DataSha256 $dataHash
+            $proof.correlationCount | Should Be 1
+            $proof.reasonCode | Should Be 'EXPORT_ID_DIVERGENCE'
+            $proof.idempotencyKeySha256 | Should Match '^[0-9a-f]{64}$'
+            Assert-MockCalled Invoke-WO036Psql 1 -Exactly -Scope It
+        }
+    }
+}
