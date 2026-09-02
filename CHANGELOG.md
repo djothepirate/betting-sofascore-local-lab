@@ -4,6 +4,19 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-036 qualification E2E J7 locale Windows/Windows
+
+- ouverture de `WO-SS-20260902-036-j9-j7-local-e2e-qualification` depuis la clôture validée de
+  WO-035 au commit exact `aa405c6750062b9df9312f0845188f48f4c778de`, dans une branche et un
+  worktree dédiés ;
+- portée strictement synthétique : deux applications réelles, deux frontières PostgreSQL isolées,
+  PKI mTLS locale éphémère et listeners exclusivement sur `127.0.0.1` ;
+- protocole déterministe sans altération des ledgers : `201/IMPORTED` depuis la base Local Lab A,
+  `200/DUPLICATE` depuis une base B clonée avant le premier claim, puis collision valide `409` par
+  un probe mTLS synthétique de campagne ;
+- maintien de `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED` et des interdictions de donnée dérivée,
+  réseau fournisseur ou distant, VPS, production, push, merge ou PR INT-001.
+
 ### Après J9 — WO-035 sender réel J7 du Local Lab
 
 - ouverture de `WO-SS-20260902-035-j9-real-j7-delivery-sender` depuis le `main` propre au commit

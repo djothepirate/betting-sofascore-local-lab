@@ -5,6 +5,15 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
+[WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
+est ouvert sur une campagne E2E strictement synthétique Windows/Windows. Il qualifie deux
+applications Java et deux bases PostgreSQL réelles sur loopback, avec mTLS local, une première
+importation `201/IMPORTED`, un duplicate `200/DUPLICATE` sans réarmement de ledger et une collision
+contrôlée `409`. La permission officielle reste `NOT_EVIDENCED` ; aucune donnée dérivée de
+SofaScore, aucun appel fournisseur, receiver distant, VPS, production, push ou PR INT-001 n’est
+autorisé par cette ouverture.
+
+Le Work Order
 [WO-SS-20260902-035](docs/work_orders/completed/WO-SS-20260902-035-j9-real-j7-delivery-sender.md)
 est `VALIDATED` avec le résultat `PASS_LOCAL_FAIL_CLOSED` au commit
 `f5a27887b7db43576eb608d564c245c8cca3a602`. Le sender J7 réel du Local Lab est composé avec action
@@ -13,7 +22,8 @@ restant désactivé par défaut. La validation propriétaire a été enregistré
 `2026-09-02T18:57:00Z`, soit `2026-09-02T20:57:00+02:00` en Europe/Paris, avec readiness locale et
 déplacement vers `completed` confirmés. La permission officielle demeure `NOT_EVIDENCED` : aucun
 appel fournisseur, receiver réel, transfert d'un export dérivé, déploiement VPS ou usage de
-production n'est autorisé. WO-036 et la PR d'INT-001 restent des étapes ultérieures distinctes.
+production n'est autorisé. WO-036 est désormais ouvert par une autorisation distincte ; la PR
+d'INT-001 reste l’étape ultérieure séparée.
 
 Le correctif fournisseur distinct
 [WO-SS-20260901-030](docs/work_orders/completed/WO-SS-20260901-030-j9-provider-playwright-port-boundary-hardening.md)
