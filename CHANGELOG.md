@@ -27,7 +27,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - rapport autonome SHA-256
   `1028761cbc68154da780d314935880bf17b803c3cf8a35b1386fd29ab28bae76` et passage du Work Order à
   `READY_FOR_OWNER_REVIEW`, sans appel fournisseur ou receiver réel et sans ouvrir WO-036 ni créer
-  la PR INT-001.
+  la PR INT-001 ;
+- validation propriétaire enregistrée le `2026-09-02T18:57:00Z`, avec reconnaissance de la
+  readiness locale, concordance du commit et du SHA-256, rapport byte-identique avec empreinte
+  inchangée, puis déplacement de WO-035 vers les Work Orders terminés ;
+- clôture à `VALIDATED` sans modifier `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED`, sans autoriser
+  de réseau fournisseur ou receiver réel, de livraison dérivée, de VPS ou de production, et sans
+  ouvrir implicitement WO-036 ni créer la PR INT-001.
 
 ### Après J9 — WO-031 intégration continue et distribution locale uniquement
 

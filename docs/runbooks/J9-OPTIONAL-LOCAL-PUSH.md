@@ -34,7 +34,7 @@ contournement pour « essayer » le parcours.
 - [Schéma export J7](../../src/main/resources/schemas/j7-canonical-event-export-v1.schema.json) ;
 - [Runbook export J7](J7-CANONICAL-EVENT-EXPORT.md) ;
 - [Work Order WO-027](../work_orders/completed/WO-SS-20260901-027-optional-local-push-implementation.md) ;
-- [Work Order WO-035](../work_orders/active/WO-SS-20260902-035-j9-real-j7-delivery-sender.md).
+- [Work Order WO-035](../work_orders/completed/WO-SS-20260902-035-j9-real-j7-delivery-sender.md).
 
 En cas de divergence, ADR-SS-003 et le Work Order bornent l’autorisation ; le contrat v1.0 borne le
 format. Une qualification ne doit pas assouplir un contrôle pour devenir verte.
@@ -564,5 +564,10 @@ WO035_REAL_RECEIVER_CALLS=0
 WO035_WO036_OPENED=NO
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 REAL_DELIVERY_AUTHORIZED=NO
-OWNER_REVIEW_REQUIRED=YES
+WORK_ORDER_STATUS=VALIDATED
+OWNER_REVIEW_REQUIRED=NO
+OWNER_REVIEW_DECISION=VALIDATE
+LOCAL_READINESS_ACKNOWLEDGED=YES
+WORK_ORDER_MOVE_TO_COMPLETED=YES
+OWNER_DECISION_RECORDED_AT_UTC=2026-09-02T18:57:00Z
 ```

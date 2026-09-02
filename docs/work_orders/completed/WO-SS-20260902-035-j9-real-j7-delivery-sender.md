@@ -1,6 +1,6 @@
 # WO-SS-20260902-035 — Sender réel J7 du Local Lab
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
 - **Jalon :** après J9 — activation contrôlée de `OPTIONAL_LOCAL_PUSH`
 - **Ouvert le :** 2026-09-02
 - **Ouverture UTC :** `2026-09-02T16:32:56.7260511Z`
@@ -16,6 +16,8 @@
 - **SHA-256 du rapport :**
   `1028761cbc68154da780d314935880bf17b803c3cf8a35b1386fd29ab28bae76`
 - **Résultat :** `PASS_LOCAL_FAIL_CLOSED`
+- **Décision propriétaire enregistrée UTC :** `2026-09-02T18:57:00Z`
+- **Décision propriétaire enregistrée Europe/Paris :** `2026-09-02T20:57:00+02:00`
 - **Work Order parent :** `WO-SS-20260901-027-optional-local-push-implementation` — `VALIDATED`
 - **ADR :** `ADR-SS-003 v0.1` — `ACCEPTED`
 - **Permission officielle :** `NOT_EVIDENCED`
@@ -28,7 +30,7 @@ Betting Project. Le présent Work Order exécute exclusivement la première éta
 
 ```text
 WORK_ORDER=WO-SS-20260902-035-j9-real-j7-delivery-sender
-WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+WORK_ORDER_STATUS=VALIDATED
 BRANCH=codex/j9-wo035-real-j7-delivery-sender
 
 WO035_IMPLEMENTATION_AUTHORIZED=YES
@@ -193,9 +195,53 @@ REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 PROVIDER_NETWORK_AUTHORIZED=NO
 VPS_DEPLOYMENT_AUTHORIZED=NO
 PRODUCTION_AUTHORIZED=NO
-OWNER_REVIEW_REQUIRED=YES
+OWNER_REVIEW_REQUIRED=NO
 ```
 
-Le Work Order reste actif jusqu'à décision propriétaire explicite. Une validation pourra autoriser
-son déplacement vers `completed`, sans autoriser par elle-même WO-036, une PR INT-001, un réseau
-réel ou une production.
+Le propriétaire a validé le commit et la preuve qualifiés, reconnu la readiness locale et autorisé
+le déplacement vers `completed`. Cette décision n'autorise par elle-même ni WO-036, ni une PR
+INT-001, ni un réseau réel, ni une production.
+
+## 9. Décision propriétaire et clôture
+
+```text
+J9_WO035_OWNER_REVIEW_DECISION=VALIDATE
+J9_WO035_WORK_ORDER=WO-SS-20260902-035-j9-real-j7-delivery-sender
+J9_WO035_IMPLEMENTATION_COMMIT=f5a27887b7db43576eb608d564c245c8cca3a602
+J9_WO035_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
+J9_WO035_QUALIFICATION_REPORT_SHA256=1028761cbc68154da780d314935880bf17b803c3cf8a35b1386fd29ab28bae76
+J9_WO035_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO035_WORK_ORDER_MOVE_TO_COMPLETED=YES
+
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+VPS_DEPLOYMENT_AUTHORIZED=NO
+PRODUCTION_AUTHORIZED=NO
+```
+
+Le bloc complet a été reçu et enregistré le `2026-09-02T18:57:00Z`, soit
+`2026-09-02T20:57:00+02:00` en Europe/Paris. Les valeurs du commit d'implémentation et du SHA-256
+du rapport correspondent aux preuves versionnées. Cette validation n'autorise ni l'ouverture de
+WO-036, ni la création de la PR INT-001, ni un réseau fournisseur ou receiver réel, ni une
+livraison dérivée, un VPS, une production, un push ou une fusion.
+
+```text
+IMPLEMENTATION_STATUS=COMPLETED
+QUALIFICATION_STATUS=PASS_LOCAL_FAIL_CLOSED
+OWNER_REVIEW_REQUIRED=NO
+OWNER_REVIEW_DECISION=VALIDATE
+OWNER_REVIEW_BLOCK_STATUS=COMPLETE
+LOCAL_READINESS_ACKNOWLEDGED=YES
+IMPLEMENTATION_COMMIT_MATCH=YES
+QUALIFICATION_REPORT_SHA256_MATCH=YES
+OWNER_DECISION_RECORDED_AT_UTC=2026-09-02T18:57:00Z
+OWNER_DECISION_RECORDED_AT_EUROPE_PARIS=2026-09-02T20:57:00+02:00
+WORK_ORDER_MOVE_TO_COMPLETED=YES
+MOVE_TO_COMPLETED_AUTHORIZED=YES
+MOVE_TO_COMPLETED_PERFORMED=YES
+WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260902-035-j9-real-j7-delivery-sender.md
+WO036_OPENED=NO
+INT001_PULL_REQUEST_CREATED=NO
+```

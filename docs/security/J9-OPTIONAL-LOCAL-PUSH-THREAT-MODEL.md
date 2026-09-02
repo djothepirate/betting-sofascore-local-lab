@@ -280,4 +280,4 @@ Une qualification loopback ne satisfait aucune de ces portes par elle-même.
 5. [Work Order WO-027](../work_orders/completed/WO-SS-20260901-027-optional-local-push-implementation.md).
 6. [Architecture J7](../architecture/J7-CANONICAL-EVENT-EXPORT.md).
 7. [Règles du dépôt](../../AGENTS.md).
-8. [Work Order WO-035](../work_orders/active/WO-SS-20260902-035-j9-real-j7-delivery-sender.md).
+8. [Work Order WO-035](../work_orders/completed/WO-SS-20260902-035-j9-real-j7-delivery-sender.md).
