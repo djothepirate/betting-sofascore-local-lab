@@ -2,8 +2,8 @@
 
 - **Statut :** `IN_PROGRESS_DRAFT_PR`
 - **Date d'ouverture :** 2026-09-01
-- **Branche :** `codex/ss-20260901-031-ci-bootstrap`
-- **Base exacte :** `f3d7d3feb9c48859ba6ae182b7f6e78b11b1f089`
+- **Branche de correction :** `codex/ss-20260902-032-maven-wrapper-extraction`
+- **Base exacte :** `c01aa561742a3228d9effe6e6a08263eb2f28439`
 - **ADR applicables :** `ADR-SS-001`, `ADR-SS-003`, `ADR-SS-004`, `ADR-008`
 - **Réseau fournisseur :** `NO`
 - **VPS :** `FORBIDDEN`
@@ -88,10 +88,24 @@ PRODUCTION_AUTHORIZED=NO
 
 ## Résultats d'exécution
 
-À compléter avec la Pull Request, le SHA, les runs GitHub, le pipeline GitLab et les métriques de
-baseline avant revue.
+### Qualification GitLab du 2026-09-02
+
+- Le pipeline GitLab [#2](https://gitlab.com/djothepirate-betting-project/betting-sofascore-local-lab/-/pipelines/2811317360)
+  atteint un runner partagé, puis le job `validate:local-only` échoue pendant `./mvnw -version`.
+- Cause : l'image Maven épinglée ne fournit ni `unzip` ni `python3`, les deux seuls extracteurs
+  reconnus par le launcher. Le ZIP officiel est téléchargé et son SHA-256 est validé avant l'échec.
+- La Pull Request GitHub [#24](https://github.com/djothepirate/betting-sofascore-local-lab/pull/24)
+  ajoute l'outil JDK `jar` comme extracteur de repli et restaure le bit exécutable de `bin/mvn`,
+  sans modifier les barrières réseau ni la classification `LOCAL_ONLY`. Elle reste en brouillon
+  pour revue humaine.
+- Validation locale ciblée : `bash -n ./mvnw`, cache Maven vierge, `unzip` et `python3` masqués et
+  deux exécutions successives de `./mvnw -version` avec Maven `3.9.16`. Résultat :
+  `MAVEN_WRAPPER_JAR_FALLBACK=PASS`.
+- Restent à qualifier après fusion humaine : synchronisation du nouveau SHA `main` vers GitLab,
+  pipeline GitLab déclenché par `push`, jobs complets et bundle snapshot `LOCAL_ONLY`.
 
 ## Définition de terminé
 
 Le lot reste en brouillon tant que les preuves réelles ne sont pas consignées. Une distribution
 verte ne vaut jamais autorisation fournisseur, intégration réelle, VPS ou production.
+
