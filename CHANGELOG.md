@@ -14,6 +14,39 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   et de l'interdiction de tout réseau fournisseur/receiver réel, transfert dérivé, VPS ou production ;
 - WO-036 et la création de la PR d'INT-001 restent des étapes séparées, non exécutées sous WO-035.
 
+### Après J9 — WO-031 intégration continue et distribution locale uniquement
+
+- ajout de pipelines GitHub Actions Windows/Linux et GitLab CI pour les tests standards,
+  PostgreSQL/Testcontainers, la sécurité, les métriques qualité et le packaging local ;
+- fiabilisation du launcher POSIX `mvnw` dans l'image GitLab épinglée : après validation du
+  SHA-256, recours à l'outil JDK `jar` lorsque `unzip` et `python3` sont absents, puis restauration
+  du bit exécutable de `bin/mvn`, sans modifier l'URL ni l'empreinte Maven épinglées ;
+- regroupement des événements GitHub `push` et `pull_request` d'une même branche source afin
+  d'annuler le run doublon sans collision entre dépôts ou forks homonymes ;
+- remplacement des scripts source du bundle par des launchers qualifiés qui démarrent directement
+  l'unique JAR embarqué, sans Maven, en conservant le profil local, les barrières JVM anti-retry et
+  la neutralisation des surcharges d'environnement réseau, serveur, datasource et receiver ; les
+  commandes Compose figent leur projet et refusent tout daemon Docker non local ;
+- refus fail-closed de générer ou de faire tourner les identifiants PostgreSQL lorsqu'un volume
+  persistant existe déjà : une nouvelle extraction doit réutiliser le `.env` précédent ou supprimer
+  explicitement les données avant toute rotation du mot de passe ;
+- production de distributions `EXPERIMENTAL_LOCAL_ONLY` contenant JAR, SBOM CycloneDX,
+  provenance et SHA-256, avec `vps.deployable=false` et sans profil fournisseur ;
+- génération CycloneDX reproductible à partir de l’horodatage du commit, sans numéro de série,
+  avec deux générations successives obligatoirement byte-identiques avant création du bundle ;
+- validation fail-closed de l'identité du commit empaqueté et refus de tout tag de release locale
+  qui ne serait pas atteignable depuis la branche canonique `main` ;
+- qualification d'une version Maven finale avant tag sous forme de snapshot `LOCAL_ONLY` non
+  promouvable, puis création du tag sur le même SHA seulement après validation de `main` ;
+- refus avant packaging de toute version Maven snapshot dont la base n'est pas un SemVer ou RC
+  canonique `X.Y.Z[-rc.N]` ;
+- suppression du cache Maven partagé GitLab afin qu'une branche contrôlant son YAML ne puisse
+  empoisonner aucune dépendance ensuite consommée par `main` ou par un tag ;
+- publication des releases locales taguées par GitLab uniquement ; GitHub conserve la compilation
+  et les tests du tag sans reconstruire un second bundle avec une autre chaîne d'outils ;
+- conservation des interdictions d'appel SofaScore, de receiver réel, de livraison optionnelle,
+  de VPS et de production pendant toutes les qualifications CI.
+
 ### Après J9 — WO-030 borne de port de qualification Playwright fournisseur
 
 - ouverture de

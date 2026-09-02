@@ -16,6 +16,19 @@
   <version>0.1.0-SNAPSHOT</version>
   <name>SofaScore Local Lab</name>
   <description>Laboratoire local et contrôlé d'enrichissement SofaScore pour le Betting Project</description>
+  <url>https://github.com/djothepirate/betting-sofascore-local-lab</url>
+  <licenses>
+    <license>
+      <name>Proprietary</name>
+      <comments>All rights reserved. No license or other rights are granted except under a separate written agreement.</comments>
+    </license>
+  </licenses>
+  <scm>
+    <connection>scm:git:https://github.com/djothepirate/betting-sofascore-local-lab.git</connection>
+    <developerConnection>scm:git:ssh://git@github.com/djothepirate/betting-sofascore-local-lab.git</developerConnection>
+    <url>https://github.com/djothepirate/betting-sofascore-local-lab</url>
+    <tag>HEAD</tag>
+  </scm>
 
   <properties>
     <java.version>25</java.version>
@@ -27,6 +40,7 @@
     <main.output.directory>${project.build.directory}/classes</main.output.directory>
     <test.output.directory>${project.build.directory}/test-classes</test.output.directory>
     <j7.no-automatic-retry.jvm-arguments>-Djdk.httpclient.disableRetryConnect=true -Djdk.httpclient.redirects.retrylimit=1 -Djdk.httpclient.enableAllMethodRetry=false</j7.no-automatic-retry.jvm-arguments>
+    <jacoco.agent.argLine></jacoco.agent.argLine>
   </properties>
 
   <dependencies>
@@ -156,14 +170,14 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
         <configuration>
-          <argLine>${j7.no-automatic-retry.jvm-arguments}</argLine>
+          <argLine>${j7.no-automatic-retry.jvm-arguments} @{jacoco.agent.argLine}</argLine>
         </configuration>
       </plugin>
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
         <configuration>
-          <argLine>${j7.no-automatic-retry.jvm-arguments}</argLine>
+          <argLine>${j7.no-automatic-retry.jvm-arguments} @{jacoco.agent.argLine}</argLine>
         </configuration>
       </plugin>
       <plugin>
@@ -214,7 +228,7 @@
                   <goal>verify</goal>
                 </goals>
                 <configuration>
-                  <argLine>${j7.no-automatic-retry.jvm-arguments}</argLine>
+                  <argLine>${j7.no-automatic-retry.jvm-arguments} @{jacoco.agent.argLine}</argLine>
                   <includes>
                     <include>**/integration/**/*IT.java</include>
                   </includes>
