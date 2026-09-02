@@ -1,6 +1,6 @@
 # WO-SS-20260902-035 — Sender réel J7 du Local Lab
 
-- **Statut :** `IN_PROGRESS`
+- **Statut :** `READY_FOR_OWNER_REVIEW`
 - **Jalon :** après J9 — activation contrôlée de `OPTIONAL_LOCAL_PUSH`
 - **Ouvert le :** 2026-09-02
 - **Ouverture UTC :** `2026-09-02T16:32:56.7260511Z`
@@ -10,6 +10,12 @@
 - **Base locale d’ouverture vérifiée :** `f3d7d3feb9c48859ba6ae182b7f6e78b11b1f089`
 - **`origin/main` intégré avant implémentation :** `579fa2545cc2cb8e7ce31afc15f0ec4fb3fd1571`
 - **Commit d’alignement :** `49fac876ca5ee2f6dad603c3a339ca9b47dc1b1e`
+- **Commit d’implémentation qualifié :** `f5a27887b7db43576eb608d564c245c8cca3a602`
+- **Rapport de qualification :**
+  `docs/validation/J9-WO035-REAL-J7-DELIVERY-SENDER-QUALIFICATION-20260902.md`
+- **SHA-256 du rapport :**
+  `1028761cbc68154da780d314935880bf17b803c3cf8a35b1386fd29ab28bae76`
+- **Résultat :** `PASS_LOCAL_FAIL_CLOSED`
 - **Work Order parent :** `WO-SS-20260901-027-optional-local-push-implementation` — `VALIDATED`
 - **ADR :** `ADR-SS-003 v0.1` — `ACCEPTED`
 - **Permission officielle :** `NOT_EVIDENCED`
@@ -22,7 +28,7 @@ Betting Project. Le présent Work Order exécute exclusivement la première éta
 
 ```text
 WORK_ORDER=WO-SS-20260902-035-j9-real-j7-delivery-sender
-WORK_ORDER_STATUS=IN_PROGRESS
+WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
 BRANCH=codex/j9-wo035-real-j7-delivery-sender
 
 WO035_IMPLEMENTATION_AUTHORIZED=YES
@@ -160,3 +166,36 @@ Le Work Order restera actif après le commit qualifié jusqu'à revue propriéta
 un rapport autonome, les hashes des preuves, un résultat local fail-closed et un bloc propriétaire
 distinct. Aucun push, merge, appel fournisseur, receiver réel, livraison réelle, VPS ou production
 n'est déduit de la réussite locale.
+
+## 8. Résultat qualifié
+
+Le sender runtime a été implémenté et qualifié au commit exact
+`f5a27887b7db43576eb608d564c245c8cca3a602`. Deux cycles complets Maven successifs passent avec
+1 115 tests standards et 85 tests d'intégration, sans échec. Les contrôles Compose, local-only,
+distribution, reproductibilité, syntaxe, UTF-8, secrets, loopback et processus résiduels passent
+également.
+
+```text
+WO035_RUNTIME_SENDER_RESULT=PASS_LOCAL_FAIL_CLOSED
+WO035_IMPLEMENTATION_COMMIT=f5a27887b7db43576eb608d564c245c8cca3a602
+WO035_QUALIFICATION_REPORT=docs/validation/J9-WO035-REAL-J7-DELIVERY-SENDER-QUALIFICATION-20260902.md
+WO035_QUALIFICATION_REPORT_SHA256=1028761cbc68154da780d314935880bf17b803c3cf8a35b1386fd29ab28bae76
+
+WO035_PROVIDER_DERIVED_PATH=BLOCKED
+WO035_PROVIDER_CALLS=0
+WO035_REAL_RECEIVER_CALLS=0
+WO035_WO036_OPENED=NO
+WO035_INT001_PULL_REQUEST_CREATED=NO
+
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+VPS_DEPLOYMENT_AUTHORIZED=NO
+PRODUCTION_AUTHORIZED=NO
+OWNER_REVIEW_REQUIRED=YES
+```
+
+Le Work Order reste actif jusqu'à décision propriétaire explicite. Une validation pourra autoriser
+son déplacement vers `completed`, sans autoriser par elle-même WO-036, une PR INT-001, un réseau
+réel ou une production.

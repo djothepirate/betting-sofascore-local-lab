@@ -13,6 +13,21 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - maintien de `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED`, du sender désactivé sans origine ni go
   et de l'interdiction de tout réseau fournisseur/receiver réel, transfert dérivé, VPS ou production ;
 - WO-036 et la création de la PR d'INT-001 restent des étapes séparées, non exécutées sous WO-035.
+- implémentation qualifiée au commit `f5a27887b7db43576eb608d564c245c8cca3a602` : action UI
+  manuelle, confirmation exacte liée à l'ordinal, revalidation des octets `HUMAN_VALIDATED`, claim
+  atomique, transport HTTPS/mTLS Windows mono-exécution, ACK strict, ledger et réconciliation sans
+  payload ;
+- durcissement fail-closed par classification de provenance, voie synthétique strictement
+  `SYNTHETIC_ONLY`, frontière `HandlerMethod`/Host/Origin, gate partagée
+  `IDLE`/`ACTIVE`/`POISONED`, body publisher one-shot et neutralisation des flags dans les
+  launchers et les pipelines CI ;
+- qualification `PASS_LOCAL_FAIL_CLOSED` : deux cycles verts à 1 115 tests standards et 85 tests
+  d'intégration, Compose silencieux, barrières local-only, distribution, reproductibilité, syntaxe,
+  UTF-8, secrets et cleanup propres ;
+- rapport autonome SHA-256
+  `1028761cbc68154da780d314935880bf17b803c3cf8a35b1386fd29ab28bae76` et passage du Work Order à
+  `READY_FOR_OWNER_REVIEW`, sans appel fournisseur ou receiver réel et sans ouvrir WO-036 ni créer
+  la PR INT-001.
 
 ### Après J9 — WO-031 intégration continue et distribution locale uniquement
 
