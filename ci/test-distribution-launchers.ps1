@@ -61,8 +61,16 @@ $poisonedEnvironment = [ordered]@{
     'SOFASCORE_LIVE_POLLING_ENABLED' = 'true'
     'SOFASCORE_BASE_URL' = 'https://example.invalid/forbidden'
     'OPTIONAL_INTEGRATION_ENABLED' = 'true'
+    'OPTIONAL_INTEGRATION_EXECUTION_MODE' = 'PROVIDER_DERIVED'
     'OPTIONAL_INTEGRATION_REMOTE_DELIVERY_AUTHORIZED' = 'true'
+    'OPTIONAL_INTEGRATION_OFFICIAL_PERMISSION_STATUS' = 'EVIDENCED_COMPATIBLE'
+    'OPTIONAL_INTEGRATION_RECEIVER_QUALIFICATION' = 'PASS'
+    'OPTIONAL_INTEGRATION_SENDER_QUALIFICATION' = 'PASS'
+    'OPTIONAL_INTEGRATION_RECEIVER_ORIGIN' = 'https://example.invalid:8444'
     'OPTIONAL_INTEGRATION_LOOPBACK_QUALIFICATION' = 'true'
+    'OPTIONAL_INTEGRATION_LOOPBACK_ORIGIN' = 'https://127.0.0.1:9443'
+    'OPTIONAL_INTEGRATION_AUTOMATIC_RETRY_ENABLED' = 'true'
+    'OPTIONAL_INTEGRATION_MTLS_CLIENT_CERTIFICATE_SHA256' = ('a' * 64)
     '_JAVA_OPTIONS' = '-Djdk.httpclient.disableRetryConnect=false -Dspring.profiles.include=sofascore-live-test'
     'JAVA_TOOL_OPTIONS' = '-Dspring.profiles.include=sofascore-live-test'
     'JDK_JAVA_OPTIONS' = '-Dspring.profiles.include=sofascore-live-test'
@@ -383,11 +391,16 @@ exit /b 0
         '--sofascore.automatic-refresh-enabled=false'
         '--sofascore.live-polling-enabled=false'
         '--optional-integration.enabled=false'
+        '--optional-integration.execution-mode=DISABLED'
         '--optional-integration.remote-delivery-authorized=false'
         '--optional-integration.official-permission-status=NOT_EVIDENCED'
+        '--optional-integration.receiver-qualification=NOT_QUALIFIED'
+        '--optional-integration.sender-qualification=NOT_QUALIFIED'
+        '--optional-integration.receiver-origin='
         '--optional-integration.loopback-qualification=false'
         '--optional-integration.loopback-origin='
         '--optional-integration.automatic-retry-enabled=false'
+        '--optional-integration.mtls.client-certificate-sha256='
     )
     $previousIndex = -1
     foreach ($requiredArgument in $requiredArguments) {

@@ -27,8 +27,9 @@ import java.util.OptionalInt;
 import java.util.UUID;
 
 /**
- * Explicit one-shot orchestration used only by the synthetic WO-027 qualification. It is not a
- * Spring bean and exposes no HTTP route under the current permission gate.
+ * Explicit one-shot orchestration shared by the synthetic qualification and the manually invoked
+ * WO-035 runtime boundary. It remains a plain object: only {@link J7DeliveryRuntimeService} is
+ * Spring-composed, after all policy and confirmation gates.
  */
 public final class J7OptionalDeliveryService {
 
@@ -58,10 +59,43 @@ public final class J7OptionalDeliveryService {
     public J7DeliveryExecutionResult deliverSyntheticLoopback(
             UUID canonicalEventId,
             UUID exportId,
-            String confirmation) {
+            String confirmation,
+            int expectedAttemptNumber) {
         policy.requireSyntheticLoopbackQualification();
+        return deliverPreparedTransport(
+                canonicalEventId,
+                exportId,
+                confirmation,
+                J7DeliveryPayloadClass.SYNTHETIC_ONLY,
+                expectedAttemptNumber);
+    }
+
+    J7DeliveryExecutionResult deliverPreparedTransport(
+            UUID canonicalEventId,
+            UUID exportId,
+            String confirmation,
+            J7DeliveryPayloadClass expectedPayloadClass,
+            int expectedAttemptNumber) {
         J7ValidatedExportArtifact artifact = exportService.loadHumanValidatedForDelivery(
                 canonicalEventId, exportId);
+        return deliverVerifiedArtifact(
+                artifact,
+                confirmation,
+                expectedPayloadClass,
+                expectedAttemptNumber);
+    }
+
+    J7DeliveryExecutionResult deliverVerifiedArtifact(
+            J7ValidatedExportArtifact artifact,
+            String confirmation,
+            J7DeliveryPayloadClass expectedPayloadClass,
+            int expectedAttemptNumber) {
+        Objects.requireNonNull(artifact, "artifact");
+        if (expectedPayloadClass != null
+                && artifact.payloadClass() != expectedPayloadClass) {
+            throw new J7DeliveryException(
+                    J7DeliveryError.PAYLOAD_PROVENANCE_NOT_ELIGIBLE);
+        }
         J7DeliveryIdentity identity = new J7DeliveryIdentity(
                 artifact.exportId(), artifact.fileSha256());
         requireExactConfirmation(confirmation, confirmationFor(identity));
@@ -72,23 +106,27 @@ public final class J7OptionalDeliveryService {
                 identity.fileSha256(),
                 artifact.dataSha256(),
                 identity.idempotencyKey(),
+                expectedAttemptNumber,
                 startedAt);
+        Completion completion;
         try {
             J7DeliveryTransportResponse response = transport.execute(
                     new J7DeliveryTransportRequest(
                             identity, artifact.dataSha256(), artifact.content()));
-            Completion completion = classify(
+            completion = classify(
                     identity, artifact.dataSha256(), claim.startedAt(), response);
-            return complete(claim, completion, now());
         }
         catch (J7DeliveryTransportException exception) {
-            return complete(
-                    claim,
-                    Completion.unknown(
-                            OptionalInt.empty(),
-                            "TRANSPORT_" + exception.failure().name()),
-                    now());
+            completion = Completion.unknown(
+                    OptionalInt.empty(),
+                    "TRANSPORT_" + exception.failure().name());
         }
+        catch (RuntimeException exception) {
+            completion = Completion.unknown(
+                    OptionalInt.empty(),
+                    "TRANSPORT_RUNTIME_FAILURE");
+        }
+        return complete(claim, completion, now());
     }
 
     public static String confirmationFor(J7DeliveryIdentity identity) {
@@ -187,7 +225,7 @@ public final class J7OptionalDeliveryService {
                 .equalsIgnoreCase(contentType.trim());
     }
 
-    private static void requireExactConfirmation(String actual, String expected) {
+    static void requireExactConfirmation(String actual, String expected) {
         if (actual == null
                 || actual.length() > 256
                 || !MessageDigest.isEqual(

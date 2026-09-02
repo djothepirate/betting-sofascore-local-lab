@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
@@ -89,6 +90,7 @@ class J7OptionalDeliveryServiceTest {
                 FILE_SHA256,
                 DATA_SHA256,
                 identity.idempotencyKey(),
+                1,
                 NOW))
                 .thenReturn(new J7DeliveryLedgerStore.ClaimReceipt(
                         DELIVERY_ID, 1, J7DeliveryLedgerStore.DeliveryState.IN_FLIGHT,
@@ -114,7 +116,8 @@ class J7OptionalDeliveryServiceTest {
         J7DeliveryExecutionResult result = service.deliverSyntheticLoopback(
                 CANONICAL_EVENT_ID,
                 EXPORT_ID,
-                J7OptionalDeliveryService.confirmationFor(identity));
+                J7OptionalDeliveryService.confirmationFor(identity),
+                1);
 
         assertThat(result.state()).isEqualTo(J7DeliveryState.DELIVERED);
         assertThat(result.httpStatus()).hasValue(201);
@@ -125,7 +128,12 @@ class J7OptionalDeliveryServiceTest {
         deliveryOrder.verify(exportService)
                 .loadHumanValidatedForDelivery(CANONICAL_EVENT_ID, EXPORT_ID);
         deliveryOrder.verify(ledgerStore).claim(
-                EXPORT_ID, FILE_SHA256, DATA_SHA256, identity.idempotencyKey(), NOW);
+                EXPORT_ID,
+                FILE_SHA256,
+                DATA_SHA256,
+                identity.idempotencyKey(),
+                1,
+                NOW);
         deliveryOrder.verify(transport).execute(request.capture());
         deliveryOrder.verify(ledgerStore).complete(
                 eq(DELIVERY_ID),
@@ -286,17 +294,44 @@ class J7OptionalDeliveryServiceTest {
     @Test
     void wrongConfirmationStopsBeforeClaimOrTransportAndDoesNotLeakIt() {
         assertThatThrownBy(() -> service.deliverSyntheticLoopback(
-                CANONICAL_EVENT_ID, EXPORT_ID, "wrong-sensitive-confirmation"))
+                CANONICAL_EVENT_ID,
+                EXPORT_ID,
+                "wrong-sensitive-confirmation",
+                1))
                 .isInstanceOf(J7DeliveryException.class)
                 .hasMessage(J7DeliveryError.INVALID_CONFIRMATION.name());
 
-        verify(ledgerStore, never()).claim(any(), anyString(), anyString(), anyString(), any());
+        verify(ledgerStore, never()).claim(
+                any(), anyString(), anyString(), anyString(), anyInt(), any());
+        verify(transport, never()).execute(any());
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = J7DeliveryPayloadClass.class,
+            names = {"PROVIDER_DERIVED", "MIXED_OR_UNKNOWN"})
+    void syntheticQualificationRejectsEveryNonSyntheticProvenanceBeforeClaimOrTransport(
+            J7DeliveryPayloadClass payloadClass) {
+        when(exportService.loadHumanValidatedForDelivery(CANONICAL_EVENT_ID, EXPORT_ID))
+                .thenReturn(artifact(payloadClass));
+
+        assertThatThrownBy(() -> service.deliverSyntheticLoopback(
+                CANONICAL_EVENT_ID,
+                EXPORT_ID,
+                J7OptionalDeliveryService.confirmationFor(identity),
+                1))
+                .isInstanceOf(J7DeliveryException.class)
+                .hasMessage(J7DeliveryError.PAYLOAD_PROVENANCE_NOT_ELIGIBLE.name());
+
+        verify(ledgerStore, never()).claim(
+                any(), anyString(), anyString(), anyString(), anyInt(), any());
         verify(transport, never()).execute(any());
     }
 
     @Test
     void aLedgerClaimFailureStopsBeforeTransport() {
-        when(ledgerStore.claim(any(), anyString(), anyString(), anyString(), any()))
+        when(ledgerStore.claim(
+                any(), anyString(), anyString(), anyString(), anyInt(), any()))
                 .thenThrow(new J7DeliveryLedgerStore.LedgerException(
                         J7DeliveryLedgerStore.LedgerFailure.ANOTHER_DELIVERY_IN_FLIGHT));
 
@@ -324,7 +359,8 @@ class J7OptionalDeliveryServiceTest {
         assertThatThrownBy(() -> blockedService.deliverSyntheticLoopback(
                 CANONICAL_EVENT_ID,
                 EXPORT_ID,
-                J7OptionalDeliveryService.confirmationFor(identity)))
+                J7OptionalDeliveryService.confirmationFor(identity),
+                1))
                 .isInstanceOf(J7DeliveryException.class)
                 .hasMessage(J7DeliveryError.LOOPBACK_QUALIFICATION_DISABLED.name());
         verifyNoInteractions(blockedExportService, blockedLedgerStore, blockedTransport);
@@ -354,7 +390,8 @@ class J7OptionalDeliveryServiceTest {
         assertThatThrownBy(() -> service.deliverSyntheticLoopback(
                 CANONICAL_EVENT_ID,
                 EXPORT_ID,
-                J7OptionalDeliveryService.confirmationFor(identity)))
+                J7OptionalDeliveryService.confirmationFor(identity),
+                1))
                 .isInstanceOf(J7DeliveryException.class)
                 .hasMessage(J7DeliveryError.INVALID_LOOPBACK_ORIGIN.name());
         verifyNoInteractions(exportService, ledgerStore, transport);
@@ -364,10 +401,16 @@ class J7OptionalDeliveryServiceTest {
         return service.deliverSyntheticLoopback(
                 CANONICAL_EVENT_ID,
                 EXPORT_ID,
-                J7OptionalDeliveryService.confirmationFor(identity));
+                J7OptionalDeliveryService.confirmationFor(identity),
+                1);
     }
 
     private static J7ValidatedExportArtifact artifact() {
+        return artifact(J7DeliveryPayloadClass.SYNTHETIC_ONLY);
+    }
+
+    private static J7ValidatedExportArtifact artifact(
+            J7DeliveryPayloadClass payloadClass) {
         return new J7ValidatedExportArtifact(
                 EXPORT_ID,
                 CANONICAL_EVENT_ID,
@@ -375,6 +418,7 @@ class J7OptionalDeliveryServiceTest {
                 J7ExportContract.SCHEMA_VERSION,
                 DATA_SHA256,
                 FILE_SHA256,
+                payloadClass,
                 CONTENT);
     }
 

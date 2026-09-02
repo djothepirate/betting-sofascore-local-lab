@@ -1,5 +1,6 @@
 package com.bettingproject.sofascorelocal.application.export;
 
+import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryPayloadClass;
 import com.bettingproject.sofascorelocal.security.Sha256;
 import org.junit.jupiter.api.Test;
 
@@ -29,6 +30,36 @@ class J7ValidatedExportArtifactTest {
 
         assertThat(artifact.content()).containsExactly((byte) '{', (byte) '}');
         assertThat(artifact.sizeBytes()).isEqualTo(2);
+        assertThat(artifact.payloadClass())
+                .isEqualTo(J7DeliveryPayloadClass.MIXED_OR_UNKNOWN);
+    }
+
+    @Test
+    void requiresAnExplicitNonNullPayloadClassWhenProvenanceIsKnown() {
+        byte[] bytes = new byte[] {'{', '}'};
+        J7ValidatedExportArtifact synthetic = new J7ValidatedExportArtifact(
+                EXPORT_ID,
+                EVENT_ID,
+                J7ExportContract.SCHEMA_ID,
+                J7ExportContract.SCHEMA_VERSION,
+                "a".repeat(64),
+                Sha256.hex(bytes),
+                J7DeliveryPayloadClass.SYNTHETIC_ONLY,
+                bytes);
+
+        assertThat(synthetic.payloadClass())
+                .isEqualTo(J7DeliveryPayloadClass.SYNTHETIC_ONLY);
+        assertThatThrownBy(() -> new J7ValidatedExportArtifact(
+                EXPORT_ID,
+                EVENT_ID,
+                J7ExportContract.SCHEMA_ID,
+                J7ExportContract.SCHEMA_VERSION,
+                "a".repeat(64),
+                Sha256.hex(bytes),
+                null,
+                bytes))
+                .isInstanceOf(NullPointerException.class)
+                .hasMessage("payloadClass");
     }
 
     @Test

@@ -7,7 +7,9 @@
 - **Ouverture Europe/Paris :** `2026-09-02T18:32:56.7355286+02:00`
 - **Branche :** `codex/j9-wo035-real-j7-delivery-sender`
 - **Worktree :** `.tmp/j9-wo035-real-j7-delivery-sender`
-- **Base locale vérifiée :** `f3d7d3feb9c48859ba6ae182b7f6e78b11b1f089`
+- **Base locale d’ouverture vérifiée :** `f3d7d3feb9c48859ba6ae182b7f6e78b11b1f089`
+- **`origin/main` intégré avant implémentation :** `579fa2545cc2cb8e7ce31afc15f0ec4fb3fd1571`
+- **Commit d’alignement :** `49fac876ca5ee2f6dad603c3a339ca9b47dc1b1e`
 - **Work Order parent :** `WO-SS-20260901-027-optional-local-push-implementation` — `VALIDATED`
 - **ADR :** `ADR-SS-003 v0.1` — `ACCEPTED`
 - **Permission officielle :** `NOT_EVIDENCED`
@@ -47,14 +49,18 @@ en maintenant toutes les portes réelles fermées par défaut :
 
 1. action UI locale distincte, disponible uniquement pour un export `HUMAN_VALIDATED` ;
 2. phrase exacte `LIVRER J7 <exportId> SHA256 <fileSha256>` et jeton formulaire local à usage
-   unique ;
+   unique, avec demande liée en mémoire au prochain ordinal de tentative attendu ;
 3. lecture et envoi des octets exacts de l'enveloppe J7 validée ;
 4. transport `POST` HTTPS/mTLS vers le contrat INT-001, sans redirection, proxy, cookie, retry,
    fallback, polling ou scheduler ;
 5. sélection stricte du certificat client dans `Windows-MY`, sans secret ni clé privée en Git ;
 6. affichage du ledger séparé et réconciliation opérateur explicite d'un `IN_FLIGHT` réellement
    stale ;
-7. maintien des six états de livraison séparés de la validation J7.
+7. maintien des six états de livraison séparés de la validation J7 ;
+8. frontière navigateur liée au `HandlerMethod`, Host/Origin exacts, en-têtes forwarded refusés et
+   protections anti-frame ;
+9. transport mono-exécution, body publisher one-shot et gate partagée livraison/réconciliation
+   tenue jusqu’après la fermeture effective du transport.
 
 ## 3. Contrat et invariants réutilisés
 
@@ -93,8 +99,9 @@ PROVIDER_DERIVED_DELIVERY_OWNER_GO=GRANTED_ONE_TIME
 ```
 
 La configuration versionnée reste à `NOT_EVIDENCED`, désactivée, sans origine receiver et sans go.
-Une origine locale admissible est exactement une origine `https://127.0.0.1:<1..65535>` sans
-userinfo, path, query ou fragment. Toute topologie VPS reste hors périmètre de WO-035.
+L’unique origine locale admissible au runtime WO-035 est exactement
+`https://127.0.0.1:8444`, sans userinfo, path, query ou fragment. Toute autre origine, tout autre
+port et toute topologie VPS restent hors périmètre de WO-035.
 
 ## 5. Implémentation attendue
 
@@ -109,7 +116,15 @@ userinfo, path, query ou fragment. Toute topologie VPS reste hors périmètre de
 - rendre l'état courant et les blockers visibles sans exposer payload, ACK brut, URI sensible,
   alias, chaîne de certificat ou diagnostics de transport ;
 - exposer une action de réconciliation uniquement pour un claim `IN_FLIGHT` stale et corrélé ;
-- classifier toute erreur après claim en `UNKNOWN_RECONCILIATION_REQUIRED`, sans second envoi.
+- classifier toute erreur après claim en `UNKNOWN_RECONCILIATION_REQUIRED`, sans second envoi ;
+- imposer `SYNTHETIC_ONLY` dans la voie synthétique elle-même avant claim, factory et socket ;
+- appliquer la frontière locale à toute méthode de `J7DeliveryController` via le `HandlerMethod`
+  résolu, avec `Host`/`Origin` exacts, refus des en-têtes forwarded et protections anti-frame ;
+- rendre chaque instance de transport mono-exécution et son body publisher one-shot ;
+- partager une gate singleton `IDLE`/`ACTIVE`/`POISONED` entre livraison et réconciliation, garder
+  son lease jusqu’après `transport.close()` et exiger un redémarrage après toute erreur de close ;
+- réaliser la réconciliation à partir des seules métadonnées d’export et du ledger, indépendamment
+  de la présence ou de la lisibilité du fichier payload.
 
 ## 6. Vérifications obligatoires
 
@@ -119,7 +134,19 @@ userinfo, path, query ou fragment. Toute topologie VPS reste hors périmètre de
 - test d'absence d'interaction avec export, ledger, certificat et transport lorsque la politique
   refuse ;
 - tests web : action absente hors `HUMAN_VALIDATED`, jeton consommé une fois, phrase exacte,
-  affichage minimisé du ledger et réconciliation protégée ;
+  affichage minimisé du ledger, réconciliation protégée et demande inter-session périmée refusée
+  si une tentative concurrente a avancé l’ordinal ;
+- test PostgreSQL : ordinal confirmé propagé jusqu’au claim et refus atomique d’un ordinal périmé,
+  sans insert de tentative suivante, sans nouvel `IN_FLIGHT` et sans socket ;
+- appels directs de la voie synthétique avec provenance fournisseur et mixte refusés avant ledger
+  et transport ;
+- tests de frontière web par handler : Host/Origin exacts, doublons, en-têtes forwarded, URI brute
+  hostile, CSP `frame-ancestors 'none'` et `X-Frame-Options: DENY` ;
+- test d’une même instance de transport exécutée deux fois et d’une seconde souscription du body,
+  toutes deux refusées sans second `sendAsync` ;
+- tests de concurrence : une deuxième livraison et une réconciliation refusées pendant un close
+  bloqué ; retour à `IDLE` après succès ; passage durable à `POISONED` après erreur de close ;
+- test de réconciliation metadata/ledger-only lorsque toute tentative d’accès au payload échoue ;
 - tests de composition : aucun accès `Windows-MY` ni client HTTP lorsque le sender est désactivé ;
 - maintien des tests PostgreSQL V29, mTLS et E2E synthétique existants ;
 - `mvnw.cmd clean verify` ;
@@ -133,4 +160,3 @@ Le Work Order restera actif après le commit qualifié jusqu'à revue propriéta
 un rapport autonome, les hashes des preuves, un résultat local fail-closed et un bloc propriétaire
 distinct. Aucun push, merge, appel fournisseur, receiver réel, livraison réelle, VPS ou production
 n'est déduit de la réussite locale.
-

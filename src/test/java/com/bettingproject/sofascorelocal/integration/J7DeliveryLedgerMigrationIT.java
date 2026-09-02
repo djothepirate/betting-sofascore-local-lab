@@ -89,6 +89,7 @@ class J7DeliveryLedgerMigrationIT {
                 export.fileSha256(),
                 export.dataSha256(),
                 export.idempotencyKey(),
+                1,
                 startedAt);
 
         assertThat(claim.attemptNumber()).isEqualTo(1);
@@ -155,6 +156,7 @@ class J7DeliveryLedgerMigrationIT {
                 candidate.fileSha256(),
                 candidate.dataSha256(),
                 candidate.idempotencyKey(),
+                1,
                 Instant.parse("2026-09-01T10:10:00Z")))
                 .isInstanceOfSatisfying(
                         J7DeliveryLedgerStore.LedgerException.class,
@@ -167,6 +169,7 @@ class J7DeliveryLedgerMigrationIT {
                 validated.fileSha256(),
                 validated.dataSha256(),
                 validated.idempotencyKey(),
+                1,
                 databaseClock().plusNanos(1)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("microsecond precision");
@@ -175,6 +178,7 @@ class J7DeliveryLedgerMigrationIT {
                 "d".repeat(64),
                 validated.dataSha256(),
                 "j7:" + validated.exportId() + ":sha256:" + "d".repeat(64),
+                1,
                 Instant.parse("2026-09-01T10:11:00Z")))
                 .isInstanceOfSatisfying(
                         J7DeliveryLedgerStore.LedgerException.class,
@@ -195,6 +199,7 @@ class J7DeliveryLedgerMigrationIT {
                 first.fileSha256(),
                 first.dataSha256(),
                 first.idempotencyKey(),
+                1,
                 firstStart);
 
         assertThatThrownBy(() -> store.claim(
@@ -202,6 +207,7 @@ class J7DeliveryLedgerMigrationIT {
                 second.fileSha256(),
                 second.dataSha256(),
                 second.idempotencyKey(),
+                1,
                 firstStart.plusMillis(1)))
                 .isInstanceOfSatisfying(
                         J7DeliveryLedgerStore.LedgerException.class,
@@ -225,6 +231,7 @@ class J7DeliveryLedgerMigrationIT {
                 first.fileSha256(),
                 first.dataSha256(),
                 first.idempotencyKey(),
+                2,
                 repeatStart);
         assertThat(repeat.deliveryId()).isEqualTo(firstClaim.deliveryId());
         assertThat(repeat.attemptNumber()).isEqualTo(2);
@@ -247,6 +254,7 @@ class J7DeliveryLedgerMigrationIT {
                 first.fileSha256(),
                 first.dataSha256(),
                 first.idempotencyKey(),
+                3,
                 repeatStart.plusSeconds(2)))
                 .isInstanceOfSatisfying(
                         J7DeliveryLedgerStore.LedgerException.class,
@@ -258,6 +266,7 @@ class J7DeliveryLedgerMigrationIT {
                 second.fileSha256(),
                 second.dataSha256(),
                 second.idempotencyKey(),
+                1,
                 repeatStart.plusSeconds(3));
         store.complete(
                 secondClaim.deliveryId(),
@@ -277,6 +286,52 @@ class J7DeliveryLedgerMigrationIT {
                 "select count(*) from j7_delivery_attempt where delivery_id = (select id from j7_delivery where delivery_uuid = ?)",
                         Long.class,
                         firstClaim.deliveryId())).isEqualTo(2);
+    }
+
+    @Test
+    void refusesAStaleExpectedAttemptAtomicallyWithoutCreatingTheNextAttempt() {
+        ExportEvidence export = insertValidatedExport();
+        Instant firstStartedAt = Instant.parse("2026-09-01T10:25:00Z");
+        var firstClaim = store.claim(
+                export.exportId(),
+                export.fileSha256(),
+                export.dataSha256(),
+                export.idempotencyKey(),
+                1,
+                firstStartedAt);
+        store.complete(
+                firstClaim.deliveryId(),
+                1,
+                J7DeliveryLedgerStore.DeliveryState.UNKNOWN_RECONCILIATION_REQUIRED,
+                OptionalInt.empty(),
+                "TRANSPORT_TIMEOUT",
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                firstStartedAt.plusSeconds(1));
+
+        assertThatThrownBy(() -> store.claim(
+                export.exportId(),
+                export.fileSha256(),
+                export.dataSha256(),
+                export.idempotencyKey(),
+                1,
+                firstStartedAt.plusSeconds(2)))
+                .isInstanceOfSatisfying(
+                        J7DeliveryLedgerStore.LedgerException.class,
+                        exception -> assertThat(exception.failure()).isEqualTo(
+                                J7DeliveryLedgerStore.LedgerFailure
+                                        .ATTEMPT_ORDINAL_MISMATCH));
+
+        assertThat(store.find(export.exportId(), export.fileSha256()))
+                .hasValueSatisfying(snapshot -> assertThat(snapshot)
+                        .extracting(
+                                J7DeliveryLedgerStore.DeliverySnapshot::state,
+                                J7DeliveryLedgerStore.DeliverySnapshot::attemptCount)
+                        .containsExactly(
+                                J7DeliveryLedgerStore.DeliveryState
+                                        .UNKNOWN_RECONCILIATION_REQUIRED,
+                                1));
     }
 
     @Test
@@ -349,7 +404,7 @@ class J7DeliveryLedgerMigrationIT {
         Instant startedAt = databaseClock();
         var claim = store.claim(
                 export.exportId(), export.fileSha256(), export.dataSha256(),
-                export.idempotencyKey(), startedAt);
+                export.idempotencyKey(), 1, startedAt);
         Instant completedAt = startedAt.plusSeconds(1);
 
         assertThatThrownBy(() -> store.complete(
@@ -412,6 +467,7 @@ class J7DeliveryLedgerMigrationIT {
                 export.fileSha256(),
                 export.dataSha256(),
                 export.idempotencyKey(),
+                1,
                 startedAt);
 
         assertThatThrownBy(() -> store.reconcileStaleInFlightAsUnknown(
@@ -460,6 +516,7 @@ class J7DeliveryLedgerMigrationIT {
                 export.fileSha256(),
                 export.dataSha256(),
                 export.idempotencyKey(),
+                2,
                 repeatStartedAt);
         assertThat(repeat.attemptNumber()).isEqualTo(2);
         store.complete(
@@ -496,6 +553,7 @@ class J7DeliveryLedgerMigrationIT {
                     export.fileSha256(),
                     export.dataSha256(),
                     export.idempotencyKey(),
+                    1,
                     startedAt));
             Instant waiterObservedAt = awaitGlobalAdvisoryLockWaiter();
 
@@ -598,7 +656,7 @@ class J7DeliveryLedgerMigrationIT {
         ExportEvidence second = insertValidatedExport();
         var firstClaim = store.claim(
                 first.exportId(), first.fileSha256(), first.dataSha256(),
-                first.idempotencyKey(), Instant.parse("2026-09-01T10:30:00Z"));
+                first.idempotencyKey(), 1, Instant.parse("2026-09-01T10:30:00Z"));
         UUID secondDeliveryId = UUID.randomUUID();
         UUID secondAttemptId = UUID.randomUUID();
         OffsetDateTime secondStartedAt = OffsetDateTime.parse("2026-09-01T10:30:00.001Z");
@@ -677,6 +735,7 @@ class J7DeliveryLedgerMigrationIT {
                     export.fileSha256(),
                     export.dataSha256(),
                     export.idempotencyKey(),
+                    1,
                     Instant.parse("2026-09-01T10:40:00Z")))
                     .isInstanceOfSatisfying(
                             J7DeliveryLedgerStore.LedgerException.class,
@@ -699,7 +758,7 @@ class J7DeliveryLedgerMigrationIT {
         Instant startedAt = databaseClock();
         var claim = store.claim(
                 export.exportId(), export.fileSha256(), export.dataSha256(),
-                export.idempotencyKey(), startedAt);
+                export.idempotencyKey(), 1, startedAt);
         jdbc.execute("""
                 create function fail_test_j7_delivery_completion()
                 returns trigger
@@ -771,7 +830,7 @@ class J7DeliveryLedgerMigrationIT {
         try {
             return store.claim(
                     export.exportId(), export.fileSha256(), export.dataSha256(),
-                    export.idempotencyKey(), startedAt);
+                    export.idempotencyKey(), 1, startedAt);
         }
         catch (J7DeliveryLedgerStore.LedgerException exception) {
             return exception.failure();

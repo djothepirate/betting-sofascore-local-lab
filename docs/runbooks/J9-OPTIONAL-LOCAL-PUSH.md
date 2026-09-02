@@ -1,15 +1,19 @@
-# Runbook J9 — Qualification offline et loopback du push local optionnel v1.0
+# Runbook J9 — Qualification offline et préparation du sender local optionnel v1.0
 
 ## 1. Objet et limite d’emploi
 
-Ce runbook qualifie le contrat v1.0 et le socle fail-closed de WO-027. Il ne permet pas d’envoyer un
-export vers le Betting Project ou vers une autre cible réelle.
+Ce runbook conserve la qualification du socle fail-closed v1.0 réalisée sous WO-027 et documente
+la préparation runtime de WO-035. Il ne permet pas d’envoyer un export vers le Betting Project ou
+vers une autre cible. Le premier échange synthétique entre les deux applications relève du futur
+WO-036.
 
 ```text
-RUNBOOK_SCOPE=OFFLINE_AND_SYNTHETIC_LOOPBACK_ONLY
+RUNBOOK_SCOPE=WO027_OFFLINE_LOOPBACK_AND_WO035_RUNTIME_PREPARATION
 CONTRACT_VERSION=1.0
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
-IMPORT_ENDPOINT_URI=NOT_DEFINED
+WO035_LOCAL_RECEIVER_ORIGIN=https://127.0.0.1:8444
+WO035_NETWORK_EXECUTION_AUTHORIZED=NO
+WO036_WINDOWS_WINDOWS_E2E_STATUS=FUTURE_SEPARATE_WORK_ORDER
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 PROVIDER_NETWORK_AUTHORIZED=NO
 LIVE_DELIVERY_AUTHORIZED=NO
@@ -17,9 +21,10 @@ VPS_DEPLOYMENT_AUTHORIZED=NO
 PRODUCTION_AUTHORIZED=NO
 ```
 
-Avec l’état actuel, toute tentative réelle doit être refusée avant DNS et avant socket. Ne pas
-ajouter une URI, un certificat réel, un fichier de clé, un proxy, une exception de confiance ou un
-flag de contournement pour « essayer » le parcours.
+Avec l’état actuel, toute tentative `PROVIDER_DERIVED` doit être refusée avant création du client
+et avant socket. L’origine locale exacte est versionnée, mais WO-035 n’autorise pas à la contacter.
+Ne pas ajouter une autre URI, un fichier de clé, un proxy, une exception de confiance ou un flag de
+contournement pour « essayer » le parcours.
 
 ## 2. Contrats de référence
 
@@ -28,7 +33,8 @@ flag de contournement pour « essayer » le parcours.
 - [Schéma ACK v1](../../src/main/resources/schemas/j7-delivery-ack-v1.schema.json) ;
 - [Schéma export J7](../../src/main/resources/schemas/j7-canonical-event-export-v1.schema.json) ;
 - [Runbook export J7](J7-CANONICAL-EVENT-EXPORT.md) ;
-- [Work Order WO-027](../work_orders/completed/WO-SS-20260901-027-optional-local-push-implementation.md).
+- [Work Order WO-027](../work_orders/completed/WO-SS-20260901-027-optional-local-push-implementation.md) ;
+- [Work Order WO-035](../work_orders/active/WO-SS-20260902-035-j9-real-j7-delivery-sender.md).
 
 En cas de divergence, ADR-SS-003 et le Work Order bornent l’autorisation ; le contrat v1.0 borne le
 format. Une qualification ne doit pas assouplir un contrôle pour devenir verte.
@@ -36,14 +42,16 @@ format. Une qualification ne doit pas assouplir un contrôle pour devenir verte.
 ## 3. Préconditions de poste et de dépôt
 
 1. utiliser Java 25 LTS et Maven Wrapper ;
-2. travailler uniquement dans le worktree `codex/j9-optional-local-push-implementation` ;
+2. pour WO-035, travailler uniquement dans le worktree
+   `codex/j9-wo035-real-j7-delivery-sender`; le worktree WO-027 reste gelé ;
 3. confirmer qu’aucune modification concurrente Eclipse ne vise ce worktree ;
 4. confirmer que `.env` reste ignoré et qu’aucun secret n’est dans Git ;
 5. ne démarrer aucune campagne Playwright ;
 6. ne configurer aucune cible distante ;
 7. conserver l’application liée à `127.0.0.1` ;
 8. conserver les flags fournisseur et livraison réelle désactivés ;
-9. employer uniquement des exports et certificats synthétiques dans les tests loopback ;
+9. employer uniquement des exports et certificats synthétiques dans les tests loopback ; aucun
+   test WO-035 ne consulte le magasin Windows réel ;
 10. vérifier que le port du receiver synthétique est attribué par le système et non fixé ;
 11. démarrer la JVM avec les trois arguments exacts suivants :
     `-Djdk.httpclient.disableRetryConnect=true`,
@@ -99,6 +107,7 @@ dans cet ordre :
 
 1. **Configuration par défaut**
    - kill switch désactivé ;
+   - mode `DISABLED`, origine receiver vide, qualifications sender/receiver `NOT_QUALIFIED` ;
    - permission `NOT_EVIDENCED` ;
    - URI réelle absente ;
    - aucun certificat réel sélectionné ;
@@ -108,7 +117,10 @@ dans cet ordre :
 2. **Éligibilité J7**
    - accepter uniquement `HUMAN_VALIDATED` ;
    - refuser `COHERENCE_CHECKED`, `REJECTED` et toute valeur inconnue ;
-   - ne jamais modifier la décision J7.
+   - ne jamais modifier la décision J7 ;
+   - classer les cinq sources vérifiées : toutes synthétiques donnent `SYNTHETIC_ONLY`, toutes
+     fournisseur donnent `PROVIDER_DERIVED`, tout mélange, absence incohérente ou valeur inconnue
+     donne `MIXED_OR_UNKNOWN` et ferme le parcours.
 3. **Confinement du fichier**
    - résolution canonique sous la racine autorisée ;
    - refus d’une traversée, d’un lien, d’un fichier absent ou changé ;
@@ -200,13 +212,15 @@ Vérifier séparément :
 Vérifier au minimum :
 
 - ACK vide ;
+- ACK avec BOM UTF-8/UTF-16, NUL, encodage UTF-16 ou UTF-8 malformé ;
 - JSON malformé ;
 - propriété inconnue ;
 - mauvaise version ;
 - `status` non permis ;
 - `exportId`, `fileSha256`, `dataSha256` ou clé non corrélés ;
 - code HTTP incompatible avec `IMPORTED` ou `DUPLICATE` ;
-- `remoteImportId` ou `receivedAt` invalide ;
+- `remoteImportId` invalide ou `receivedAt` non canonique, décalé ou différent de
+  `Instant.toString()` ;
 - corps supérieur à `16 384` octets ;
 - `Content-Encoding` autre que `identity` ;
 - media type inattendu.
@@ -387,6 +401,165 @@ WO027_J7_STATE_SEPARATION_RESULT=<PASS|FAIL|NOT_EXECUTED>
 WO027_PROVIDER_CALLS=0
 WO027_REAL_RECEIVER_CALLS=0
 WO027_RESIDUAL_LISTENERS=<count>
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+REAL_DELIVERY_AUTHORIZED=NO
+OWNER_REVIEW_REQUIRED=YES
+```
+
+## 14. Profil runtime WO-035 préparé, non exécuté
+
+### 14.1 Valeurs par défaut obligatoires
+
+La livraison est inactive après un démarrage normal :
+
+```text
+optional-integration.enabled=false
+optional-integration.execution-mode=DISABLED
+optional-integration.receiver-origin=
+optional-integration.receiver-qualification=NOT_QUALIFIED
+optional-integration.sender-qualification=NOT_QUALIFIED
+optional-integration.remote-delivery-authorized=false
+optional-integration.official-permission-status=NOT_EVIDENCED
+optional-integration.automatic-retry-enabled=false
+optional-integration.mtls.client-certificate-sha256=
+```
+
+Sous ces valeurs, la consultation HTML reste locale et n’ouvre ni magasin de certificats, ni
+client HTTP, ni socket. La génération, le contrôle de cohérence et la transition
+`HUMAN_VALIDATED` ne préparent et n’exécutent aucune livraison.
+
+### 14.2 Geste opérateur à usage unique
+
+Pour un export `HUMAN_VALIDATED`, la livraison est une action distincte en deux temps :
+
+1. préparer une demande liée à l’événement, l’export, son `fileSha256` vérifié et au prochain
+   ordinal de tentative calculé depuis le ledger ;
+2. recopier exactement la phrase présentée ;
+3. cocher l’accusé explicite ;
+4. consommer la demande une seule fois dans sa fenêtre de cinq minutes ;
+5. seulement après cette consommation, construire le transport puis persister le claim avant le
+   POST.
+
+La phrase normative est :
+
+```text
+LIVRER J7 <exportId> SHA256 <fileSha256>
+```
+
+L’ordinal n’est pas ajouté à cette phrase publique. À l’exécution, le ledger est d’abord relu : une
+demande expirée, déjà consommée, liée à une autre session, à d’autres octets ou à un ordinal déjà
+différent est brûlée et refusée avant factory. Le même ordinal est ensuite transmis jusqu’au claim
+PostgreSQL et revalidé sous le verrou global, dans la transaction, avant insert de tentative,
+passage `IN_FLIGHT` et ouverture de socket. Une évolution concurrente intercalée après la première
+lecture est donc elle aussi refusée, puis le transport possédé est fermé. Ainsi, une demande
+préparée avant qu’une autre session produise `UNKNOWN_RECONCILIATION_REQUIRED` ne peut pas
+autoriser la tentative suivante ; une nouvelle attestation et une nouvelle préparation sont
+obligatoires.
+La réconciliation d’un `IN_FLIGHT` périmé emploie une demande séparée :
+
+```text
+RECONCILIER J7 <exportId> TENTATIVE <ordinal> SHA256 <fileSha256>
+```
+
+Elle ne contacte jamais le receiver et ne relance jamais le POST. Les états du ledger restent
+séparés de `HUMAN_VALIDATED` : `NOT_ATTEMPTED`, `IN_FLIGHT`, `DELIVERED`,
+`DUPLICATE_CONFIRMED`, `REJECTED_TERMINAL` et `UNKNOWN_RECONCILIATION_REQUIRED`.
+
+### 14.3 Matrice de provenance
+
+| Classe calculée | Mode runtime exigé | État sous WO-035 |
+|---|---|---|
+| `SYNTHETIC_ONLY` | `SYNTHETIC_LOOPBACK` | Code préparé ; échange réel reporté à WO-036 |
+| `PROVIDER_DERIVED` | `PROVIDER_DERIVED` | Bloqué par `NOT_EVIDENCED`, autorisation distante absente et `PROVIDER_OWNER_GO_REQUIRED` |
+| `MIXED_OR_UNKNOWN` | Aucun | Refus `PAYLOAD_PROVENANCE_NOT_ELIGIBLE` |
+
+Le mode synthétique n’accepte que l’origine exacte `https://127.0.0.1:8444`, les qualifications
+receiver et sender à `PASS`, une empreinte certificat SHA-256 exacte et
+`remote-delivery-authorized=false`. Cette matrice est une spécification pour WO-036, pas un ordre
+de lancer les applications sous WO-035.
+
+Avant toute qualification, vérifier également que la voie applicative synthétique transmet
+explicitement la classe attendue `SYNTHETIC_ONLY`. Un export classé `PROVIDER_DERIVED` ou
+`MIXED_OR_UNKNOWN` doit être refusé avant claim, création du transport et socket, y compris dans un
+test qui appelle directement le service sans passer par l’UI.
+
+### 14.4 Frontière navigateur locale
+
+Pour toute action résolue vers `J7DeliveryController`, contrôler :
+
+```text
+Host=127.0.0.1:8087 exactement une fois
+Origin=absent ou http://127.0.0.1:8087 exactement une fois
+Forwarded=absent
+X-Forwarded-Host=absent
+X-Forwarded-Proto=absent
+Content-Security-Policy contient frame-ancestors 'none'
+X-Frame-Options=DENY
+```
+
+Le contrôle doit reposer sur le `HandlerMethod` résolu et non sur un préfixe d’URI. Tester les
+doublons, les valeurs hostiles et une URI brute encodée tout en conservant le même handler. Un
+refus intervient avant le contrôleur, sans jeton consommé, claim ou transport.
+
+### 14.5 Profil mTLS Windows
+
+Le transport runtime, construit paresseusement après toutes les portes, applique :
+
+```text
+CLIENT_CERTIFICATE_STORE=Windows-MY
+CLIENT_CERTIFICATE_PROVIDER=SunMSCAPI
+CLIENT_CERTIFICATE_SELECTOR=EXACT_SHA256
+CLIENT_CERTIFICATE_EKU=clientAuth
+CLIENT_CERTIFICATE_KEY_USAGE=digitalSignature
+SERVER_TRUST_STORE=Windows-ROOT
+SERVER_TRUST_PROVIDER=SunMSCAPI
+TLS_PROTOCOLS=TLSv1.3,TLSv1.2
+REDIRECT_POLICY=NEVER
+AUTOMATIC_RETRY=0
+```
+
+La clé doit exister et rester opaque pour le provider Java. L’empreinte, la clé et les certificats
+ne sont jamais inscrits dans Git ou dans un rapport. `Windows-ROOT` est chargé explicitement : le
+truststore JVM par défaut, un trust-all et la désactivation de la vérification de nom ne sont pas
+des fallbacks. La non-exportabilité native et le provisionnement de la PKI doivent être qualifiés
+séparément pendant WO-036.
+
+### 14.6 Mono-exécution, cleanup et réconciliation
+
+Pour chaque tentative, vérifier conjointement :
+
+1. l’instance de transport refuse une seconde invocation de `execute` ;
+2. le body publisher refuse une seconde souscription ;
+3. les propriétés JVM anti-retry sont attestées avant construction puis avant envoi ;
+4. la gate partagée passe de `IDLE` à `ACTIVE` avant tout travail et reste `ACTIVE` jusqu’après la
+   fin de `transport.close()` ;
+5. une seconde livraison et toute réconciliation sont refusées pendant `ACTIVE` avec
+   `DELIVERY_IN_PROGRESS` ;
+6. une fermeture réussie rend `IDLE` ;
+7. une fermeture en erreur rend `POISONED`, même si une autre erreur est primaire, puis toute
+   livraison ou réconciliation reste refusée avec `DELIVERY_RUNTIME_POISONED` jusqu’au
+   redémarrage.
+
+La réconciliation ne doit ni lire, ni ouvrir, ni revérifier le fichier J7. Préparer puis exécuter
+la réconciliation à partir des seules métadonnées d’export et du ledger ; un test où l’accès au
+payload échoue doit encore atteindre le contrôle stale/ordinal, sans aucun POST.
+
+### 14.7 Porte vers WO-036
+
+WO-036 devra être ouvert dans une branche et un Work Order distincts. Il pourra seulement utiliser
+un export J7 entièrement synthétique, le Local Lab sur `127.0.0.1:8087`, le receiver sur
+`127.0.0.1:8444`, deux bases distinctes et une PKI locale hors Git. Il devra prouver `201/IMPORTED`,
+`200/DUPLICATE`, `409`, l’identité byte-à-byte, l’outbox et le cleanup. Il n’autorise aucun appel
+SofaScore, export dérivé fournisseur, receiver distant, VPS ou production.
+
+Bloc de clôture attendu pour WO-035 :
+
+```text
+WO035_RUNTIME_SENDER_RESULT=<PASS_LOCAL_FAIL_CLOSED|FAIL|NOT_EXECUTED>
+WO035_PROVIDER_DERIVED_PATH=BLOCKED
+WO035_PROVIDER_CALLS=0
+WO035_REAL_RECEIVER_CALLS=0
+WO035_WO036_OPENED=NO
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 REAL_DELIVERY_AUTHORIZED=NO
 OWNER_REVIEW_REQUIRED=YES

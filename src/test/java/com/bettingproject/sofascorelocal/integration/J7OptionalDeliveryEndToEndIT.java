@@ -5,6 +5,7 @@ import com.bettingproject.sofascorelocal.adapter.persistence.delivery.JdbcJ7Deli
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryAcknowledgementParser;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryContract;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryExecutionResult;
+import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryPayloadClass;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryPolicy;
 import com.bettingproject.sofascorelocal.application.delivery.J7OptionalDeliveryService;
 import com.bettingproject.sofascorelocal.application.export.J7CanonicalExportService;
@@ -109,7 +110,8 @@ class J7OptionalDeliveryEndToEndIT {
 
     private HttpsServer server;
     private ExecutorService serverExecutor;
-    private BettingProjectJ7DeliveryHttpTransport clientTransport;
+    private final List<BettingProjectJ7DeliveryHttpTransport> clientTransports =
+            new ArrayList<>();
     private int boundPort;
 
     @BeforeAll
@@ -141,7 +143,7 @@ class J7OptionalDeliveryEndToEndIT {
     @AfterEach
     void stopReceiverAndProveTheEphemeralListenerIsReleased() throws Exception {
         Throwable cleanupFailure = null;
-        if (clientTransport != null) {
+        for (BettingProjectJ7DeliveryHttpTransport clientTransport : clientTransports) {
             try {
                 clientTransport.close();
                 assertThat(clientTransport.isTerminated()).isTrue();
@@ -149,10 +151,8 @@ class J7OptionalDeliveryEndToEndIT {
             catch (Throwable failure) {
                 cleanupFailure = appendCleanupFailure(cleanupFailure, failure);
             }
-            finally {
-                clientTransport = null;
-            }
         }
+        clientTransports.clear();
         if (server != null) {
             try {
                 server.stop(0);
@@ -234,7 +234,8 @@ class J7OptionalDeliveryEndToEndIT {
         J7DeliveryExecutionResult result = scenario.service().deliverSyntheticLoopback(
                 export.canonicalEventId(),
                 export.exportId(),
-                J7OptionalDeliveryService.confirmationFor(export.identity()));
+                J7OptionalDeliveryService.confirmationFor(export.identity()),
+                1);
 
         assertThat(result.state()).isEqualTo(J7DeliveryState.DELIVERED);
         assertThat(result.httpStatus()).hasValue(201);
@@ -271,7 +272,7 @@ class J7OptionalDeliveryEndToEndIT {
         String confirmation = J7OptionalDeliveryService.confirmationFor(export.identity());
 
         J7DeliveryExecutionResult unknown = scenario.service().deliverSyntheticLoopback(
-                export.canonicalEventId(), export.exportId(), confirmation);
+                export.canonicalEventId(), export.exportId(), confirmation, 1);
 
         assertThat(unknown.state())
                 .isEqualTo(J7DeliveryState.UNKNOWN_RECONCILIATION_REQUIRED);
@@ -290,7 +291,7 @@ class J7OptionalDeliveryEndToEndIT {
         assertJ7EvidenceUnchanged(export);
 
         J7DeliveryExecutionResult duplicate = scenario.service().deliverSyntheticLoopback(
-                export.canonicalEventId(), export.exportId(), confirmation);
+                export.canonicalEventId(), export.exportId(), confirmation, 2);
 
         assertThat(duplicate.state()).isEqualTo(J7DeliveryState.DUPLICATE_CONFIRMED);
         assertThat(duplicate.httpStatus()).hasValue(200);
@@ -323,13 +324,6 @@ class J7OptionalDeliveryEndToEndIT {
             AtomicInteger persistentPreSocketChecks) throws IOException {
         URI origin = startMutualTlsLoopbackServer(receiver);
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
-        clientTransport = BettingProjectJ7DeliveryHttpTransport
-                .forSyntheticLoopback(
-                        origin,
-                        tlsContexts.authenticatedClient(),
-                        TRANSPORT_TIMEOUT,
-                        TRANSPORT_TIMEOUT,
-                        clock);
         J7DeliveryTransport persistentClaimGuard = request -> {
             Map<String, Object> row = jdbc.queryForMap("""
                     select delivery.current_state, count(attempt.id) as attempt_count
@@ -352,7 +346,21 @@ class J7OptionalDeliveryEndToEndIT {
                   and result.attempt_id is null
                     """, Long.class, export.exportId(), export.fileSha256())).isEqualTo(1L);
             persistentPreSocketChecks.incrementAndGet();
-            return clientTransport.execute(request);
+            BettingProjectJ7DeliveryHttpTransport attemptTransport =
+                    BettingProjectJ7DeliveryHttpTransport.forSyntheticLoopback(
+                            origin,
+                            tlsContexts.authenticatedClient(),
+                            TRANSPORT_TIMEOUT,
+                            TRANSPORT_TIMEOUT,
+                            clock);
+            clientTransports.add(attemptTransport);
+            try {
+                return attemptTransport.execute(request);
+            }
+            finally {
+                attemptTransport.close();
+                assertThat(attemptTransport.isTerminated()).isTrue();
+            }
         };
 
         J7CanonicalExportService exportService = mock(J7CanonicalExportService.class);
@@ -802,6 +810,7 @@ class J7OptionalDeliveryEndToEndIT {
                     J7ExportContract.SCHEMA_VERSION,
                     dataSha256,
                     fileSha256,
+                    J7DeliveryPayloadClass.SYNTHETIC_ONLY,
                     content);
         }
     }

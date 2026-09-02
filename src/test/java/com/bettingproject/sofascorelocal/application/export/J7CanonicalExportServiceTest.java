@@ -1,5 +1,6 @@
 package com.bettingproject.sofascorelocal.application.export;
 
+import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryPayloadClass;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportDecision;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportError;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportException;
@@ -37,6 +38,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 class J7CanonicalExportServiceTest {
@@ -306,6 +308,22 @@ class J7CanonicalExportServiceTest {
     }
 
     @Test
+    void exposesOnlyPersistedDeliveryMetadataBeforeReadingValidatedBytes() {
+        J7ExportManifest validated = manifest(J7ExportStatus.HUMAN_VALIDATED);
+        when(manifestStore.findByExportId(EXPORT_ID)).thenReturn(Optional.of(validated));
+
+        J7DeliveryCandidate candidate = service.deliveryCandidate(EVENT_ID, EXPORT_ID);
+
+        assertThat(candidate.exportId()).isEqualTo(EXPORT_ID);
+        assertThat(candidate.canonicalEventId()).isEqualTo(EVENT_ID);
+        assertThat(candidate.fileSha256()).isEqualTo(TERMINAL_SHA);
+        assertThat(candidate.payloadClass())
+                .isEqualTo(J7DeliveryPayloadClass.MIXED_OR_UNKNOWN);
+        verify(fileStore, never()).readVerified(any(), any(), any(Long.class));
+        verifyNoInteractions(guard);
+    }
+
+    @Test
     void exposesOnlyAReverifiedHumanValidatedArtifactForSeparateDelivery() {
         J7ExportManifest validated = manifest(J7ExportStatus.HUMAN_VALIDATED);
         when(manifestStore.findByExportId(EXPORT_ID)).thenReturn(Optional.of(validated));
@@ -330,6 +348,8 @@ class J7CanonicalExportServiceTest {
         assertThat(artifact.schemaVersion()).isEqualTo(J7ExportContract.SCHEMA_VERSION);
         assertThat(artifact.dataSha256()).isEqualTo(DATA_SHA);
         assertThat(artifact.fileSha256()).isEqualTo(TERMINAL_SHA);
+        assertThat(artifact.payloadClass())
+                .isEqualTo(J7DeliveryPayloadClass.MIXED_OR_UNKNOWN);
         assertThat(artifact.content()).isEqualTo(TERMINAL_BYTES);
         assertThat(artifact.sizeBytes()).isEqualTo(TERMINAL_BYTES.length);
     }
@@ -347,6 +367,22 @@ class J7CanonicalExportServiceTest {
                 () -> service.loadHumanValidatedForDelivery(EVENT_ID, EXPORT_ID),
                 J7ExportError.NOT_DOWNLOADABLE);
         verify(fileStore, never()).readVerified(any(), any(), any(Long.class));
+    }
+
+    @Test
+    void neverExposesCandidateOrRejectedMetadataForDelivery() {
+        when(manifestStore.findByExportId(EXPORT_ID))
+                .thenReturn(Optional.of(manifest(J7ExportStatus.COHERENCE_CHECKED)))
+                .thenReturn(Optional.of(manifest(J7ExportStatus.REJECTED)));
+
+        assertError(
+                () -> service.deliveryCandidate(EVENT_ID, EXPORT_ID),
+                J7ExportError.NOT_DOWNLOADABLE);
+        assertError(
+                () -> service.deliveryCandidate(EVENT_ID, EXPORT_ID),
+                J7ExportError.NOT_DOWNLOADABLE);
+        verify(fileStore, never()).readVerified(any(), any(), any(Long.class));
+        verifyNoInteractions(guard);
     }
 
     @Test

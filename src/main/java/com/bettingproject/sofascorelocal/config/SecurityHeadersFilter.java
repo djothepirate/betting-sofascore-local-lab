@@ -24,7 +24,8 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
     private static final String CONTENT_SECURITY_POLICY_PREFIX =
             "default-src 'self'; style-src 'self'; img-src 'self'; ";
     private static final String CONTENT_SECURITY_POLICY_SUFFIX =
-            "; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'";
+            "; frame-src 'none'; frame-ancestors 'none'; object-src 'none'; "
+                    + "base-uri 'none'; form-action 'self'";
 
     @Override
     protected void doFilterInternal(
@@ -33,6 +34,7 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
             FilterChain filterChain) throws ServletException, IOException {
         response.setHeader("Cache-Control", "no-store");
         response.setHeader("X-Content-Type-Options", "nosniff");
+        response.setHeader("X-Frame-Options", "DENY");
         response.setHeader("Referrer-Policy", "no-referrer");
         response.setHeader(
                 "Content-Security-Policy",

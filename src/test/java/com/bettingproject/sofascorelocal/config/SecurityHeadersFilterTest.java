@@ -70,6 +70,15 @@ class SecurityHeadersFilterTest {
                 .contains("script-src 'none'");
     }
 
+    @Test
+    void deniesFramingThroughBothLegacyAndCspHeaders() throws Exception {
+        MockHttpServletResponse response = filter("/events");
+
+        assertThat(response.getHeader("X-Frame-Options")).isEqualTo("DENY");
+        assertThat(response.getHeader("Content-Security-Policy"))
+                .contains("frame-ancestors 'none'");
+    }
+
     private MockHttpServletResponse filter(String path) throws Exception {
         MockHttpServletRequest request = new MockHttpServletRequest("GET", path);
         MockHttpServletResponse response = new MockHttpServletResponse();

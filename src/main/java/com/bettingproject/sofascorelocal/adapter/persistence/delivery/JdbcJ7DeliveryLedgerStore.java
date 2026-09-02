@@ -194,8 +194,15 @@ public class JdbcJ7DeliveryLedgerStore implements J7DeliveryLedgerStore {
             String fileSha256,
             String dataSha256,
             String idempotencyKey,
+            int expectedAttemptNumber,
             Instant startedAt) {
-        requireClaim(exportId, fileSha256, dataSha256, idempotencyKey, startedAt);
+        requireClaim(
+                exportId,
+                fileSha256,
+                dataSha256,
+                idempotencyKey,
+                expectedAttemptNumber,
+                startedAt);
         try {
             acquireGlobalClaimLock();
             Optional<DeliveryRow> existing = findDeliveryForUpdate(exportId);
@@ -219,6 +226,9 @@ public class JdbcJ7DeliveryLedgerStore implements J7DeliveryLedgerStore {
             }
 
             int attemptNumber = Math.addExact(delivery.attemptCount(), 1);
+            if (attemptNumber != expectedAttemptNumber) {
+                throw new LedgerException(LedgerFailure.ATTEMPT_ORDINAL_MISMATCH);
+            }
             MapSqlParameterSource attemptParameters = new MapSqlParameterSource()
                     .addValue("attemptId", UUID.randomUUID())
                     .addValue("deliveryDatabaseId", delivery.databaseId())
@@ -569,6 +579,7 @@ public class JdbcJ7DeliveryLedgerStore implements J7DeliveryLedgerStore {
             String fileSha256,
             String dataSha256,
             String idempotencyKey,
+            int expectedAttemptNumber,
             Instant startedAt) {
         requireExportId(exportId);
         requireSha256(fileSha256, "fileSha256");
@@ -580,6 +591,9 @@ public class JdbcJ7DeliveryLedgerStore implements J7DeliveryLedgerStore {
         String expectedIdempotencyKey = "j7:" + exportId + ":sha256:" + fileSha256;
         if (!expectedIdempotencyKey.equals(idempotencyKey)) {
             throw new LedgerException(LedgerFailure.IDENTITY_MISMATCH);
+        }
+        if (expectedAttemptNumber < 1) {
+            throw new LedgerException(LedgerFailure.ATTEMPT_ORDINAL_MISMATCH);
         }
     }
 

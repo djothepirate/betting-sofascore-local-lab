@@ -107,8 +107,12 @@ sofascore:
 
 optional-integration:
   enabled: false
+  execution-mode: DISABLED
   remote-delivery-authorized: false
   official-permission-status: NOT_EVIDENCED
+  receiver-qualification: NOT_QUALIFIED
+  sender-qualification: NOT_QUALIFIED
+  receiver-origin: ""
   loopback-qualification: false
   loopback-origin: ""
   maximum-concurrency: 1
