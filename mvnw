@@ -75,12 +75,17 @@ if [ ! -x "$MAVEN_BIN" ]; then
     unzip -q "$ARCHIVE" -d "$EXTRACT_DIR"
   elif command -v python3 >/dev/null 2>&1; then
     python3 -m zipfile -e "$ARCHIVE" "$EXTRACT_DIR"
+  elif command -v jar >/dev/null 2>&1; then
+    (cd "$EXTRACT_DIR" && jar xf "$ARCHIVE")
   else
-    echo "unzip or python3 is required to extract Maven" >&2
+    echo "unzip, python3, or jar is required to extract Maven" >&2
     exit 1
   fi
 
   EXTRACTED_HOME="$EXTRACT_DIR/$DIST_DIR_NAME"
+  if [ -f "$EXTRACTED_HOME/bin/mvn" ] && [ ! -x "$EXTRACTED_HOME/bin/mvn" ]; then
+    chmod +x "$EXTRACTED_HOME/bin/mvn"
+  fi
   if [ ! -x "$EXTRACTED_HOME/bin/mvn" ]; then
     echo "Unexpected Maven archive layout" >&2
     exit 1
@@ -93,3 +98,4 @@ if [ ! -x "$MAVEN_BIN" ]; then
 fi
 
 exec "$MAVEN_BIN" "$@"
+
