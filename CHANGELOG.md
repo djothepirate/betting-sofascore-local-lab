@@ -4,6 +4,16 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-035 sender réel J7 du Local Lab
+
+- ouverture de `WO-SS-20260902-035-j9-real-j7-delivery-sender` depuis le `main` propre au commit
+  exact `f3d7d3feb9c48859ba6ae182b7f6e78b11b1f089`, dans une branche et un worktree dédiés ;
+- portée bornée à la composition runtime, l'action UI manuelle, mTLS Windows, l'affichage du ledger
+  et la réconciliation opérateur sur le socle WO-027/V29 déjà validé ;
+- maintien de `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED`, du sender désactivé sans origine ni go
+  et de l'interdiction de tout réseau fournisseur/receiver réel, transfert dérivé, VPS ou production ;
+- WO-036 et la création de la PR d'INT-001 restent des étapes séparées, non exécutées sous WO-035.
+
 ### Après J9 — WO-030 borne de port de qualification Playwright fournisseur
 
 - ouverture de

@@ -4,6 +4,15 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
+Le Work Order
+[WO-SS-20260902-035](docs/work_orders/active/WO-SS-20260902-035-j9-real-j7-delivery-sender.md)
+est ouvert sur une branche et un worktree dédiés pour composer le sender J7 réel du Local Lab,
+ajouter son action manuelle, mTLS Windows, l'affichage du ledger et la réconciliation opérateur.
+La permission officielle reste `NOT_EVIDENCED` : la configuration versionnée demeure désactivée,
+sans origine receiver ni go, et WO-035 n'autorise aucun appel fournisseur, receiver réel, transfert
+d'un export dérivé, déploiement VPS ou usage de production. WO-036 et la PR d'INT-001 constituent
+des étapes ultérieures distinctes.
+
 Le correctif fournisseur distinct
 [WO-SS-20260901-030](docs/work_orders/completed/WO-SS-20260901-030-j9-provider-playwright-port-boundary-hardening.md)
 est `VALIDATED` et archivé depuis le `main` issu des PR #20/#21. Le commit
