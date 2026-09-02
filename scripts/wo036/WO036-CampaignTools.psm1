@@ -1765,7 +1765,7 @@ function Start-WO036ComponentCore {
         $clonePath = Join-Path (Get-WO036PrivateToolsStateDirectory -State $state) `
             'database-clone.json'
         if ($Component -eq 'LocalLabPreparation') {
-            if (Test-Path -LiteralPath $clonePath `
+            if ((Test-Path -LiteralPath $clonePath) `
                     -or @($state.Config.ownedProcesses | Where-Object {
                         $_.Component -in @('LocalLabA', 'LocalLabB')
                     }).Count -ne 0) {

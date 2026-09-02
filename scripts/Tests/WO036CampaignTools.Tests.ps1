@@ -115,6 +115,15 @@ Describe 'WO-036 Preparation A B sequence and one-shot clone' {
         $moduleText | Should Match 'Local Lab B requires the exact durable 201 proof from A'
     }
 
+    It 'evaluates the preparation clone gate as a Boolean expression' {
+        $moduleText | Should Match (
+            'if \(\(Test-Path -LiteralPath \$clonePath\)\s*`\s*' +
+            '-or @\(\$state\.Config\.ownedProcesses')
+        $moduleText | Should Not Match (
+            'if \(Test-Path -LiteralPath \$clonePath\s*`\s*' +
+            '-or @\(\$state\.Config\.ownedProcesses')
+    }
+
     It 'requires a graceful preparation stop before a one-shot clone claim' {
         $moduleText | Should Match 'Assert-WO036GracefulStopResult -State \$state -Component LocalLabPreparation'
         $moduleText | Should Match "'database-clone\.json'"
