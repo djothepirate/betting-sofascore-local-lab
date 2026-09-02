@@ -18,6 +18,8 @@ $script:serverRootCertificateThumbprint = $null
 $script:clientCertificateThumbprint = $null
 $script:phase = 'PREFLIGHT'
 $script:resolvedDockerExecutable = $null
+$script:resolvedDockerEndpoint = $null
+$script:toolsLock = $null
 
 function Assert-Command {
     param([Parameter(Mandatory = $true)][string]$Name)
@@ -173,12 +175,48 @@ function Protect-PrivateDirectory {
     Assert-PrivateAcl -Path $Path -OwnerSid $OwnerSid.Value
 }
 
+function Protect-PrivateFile {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)]
+        [System.Security.Principal.SecurityIdentifier]$OwnerSid
+    )
+
+    $acl = [System.Security.AccessControl.FileSecurity]::new()
+    $acl.SetOwner($OwnerSid)
+    $acl.SetAccessRuleProtection($true, $false)
+    $rule = [System.Security.AccessControl.FileSystemAccessRule]::new(
+        $OwnerSid,
+        [System.Security.AccessControl.FileSystemRights]::FullControl,
+        [System.Security.AccessControl.AccessControlType]::Allow)
+    $acl.AddAccessRule($rule)
+    Set-Acl -LiteralPath $Path -AclObject $acl
+    Assert-PrivateAcl -Path $Path -OwnerSid $OwnerSid.Value
+}
+
+function Exit-PrivateToolsLock {
+    if ($null -ne $script:toolsLock) {
+        $script:toolsLock.Dispose()
+        $script:toolsLock = $null
+    }
+}
+
 function Assert-NotReparsePoint {
     param([Parameter(Mandatory = $true)][string]$Path)
 
     $item = Get-Item -LiteralPath $Path -Force
     if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
         throw 'A WO-036 private path must not be a reparse point.'
+    }
+}
+
+function Assert-NoDescendantReparsePoint {
+    param([Parameter(Mandatory = $true)][string]$Root)
+
+    foreach ($item in Get-ChildItem -LiteralPath $Root -Force -Recurse -ErrorAction Stop) {
+        if (($item.Attributes -band [System.IO.FileAttributes]::ReparsePoint) -ne 0) {
+            throw 'The WO-036 private run root contains a descendant reparse point.'
+        }
     }
 }
 
@@ -254,7 +292,7 @@ function Assert-ImmediateGuidChild {
     }
 }
 
-function Get-LocalDockerArguments {
+function Resolve-LocalDockerEndpoint {
     $dockerContextOverride = [Environment]::GetEnvironmentVariable('DOCKER_CONTEXT')
     $dockerHostOverride = [Environment]::GetEnvironmentVariable('DOCKER_HOST')
     if (-not [string]::IsNullOrWhiteSpace($dockerContextOverride)) {
@@ -265,7 +303,7 @@ function Get-LocalDockerArguments {
         $endpoint = ($endpointOutput | Out-String).Trim()
     }
     elseif (-not [string]::IsNullOrWhiteSpace($dockerHostOverride)) {
-        if ($dockerHostOverride -notmatch '^npipe:////[.]/pipe/[^/]+$') {
+        if ($dockerHostOverride -cnotmatch '^npipe:////[.]/pipe/[A-Za-z0-9._-]+$') {
             throw 'DOCKER_HOST must target a local Windows named pipe.'
         }
         $endpoint = $dockerHostOverride
@@ -277,10 +315,18 @@ function Get-LocalDockerArguments {
         }
         $endpoint = ($endpointOutput | Out-String).Trim()
     }
-    if ($endpoint -notmatch '^npipe:////[.]/pipe/[^/]+$') {
+    if ($endpoint -cnotmatch '^npipe:////[.]/pipe/[A-Za-z0-9._-]+$') {
         throw 'The selected Docker context must target a local Windows named pipe.'
     }
-    return @('--host', $endpoint)
+    return $endpoint
+}
+
+function Get-PinnedDockerArguments {
+    if ($script:resolvedDockerEndpoint -cnotmatch
+        '^npipe:////[.]/pipe/[A-Za-z0-9._-]+$') {
+        throw 'The pinned WO-036 Docker endpoint is unavailable.'
+    }
+    return @('--host', $script:resolvedDockerEndpoint)
 }
 
 function Assert-LoopbackDatabasePortsFree {
@@ -316,7 +362,7 @@ function Start-OwnedDatabases {
     param([Parameter(Mandatory = $true)][string]$EnvironmentPath)
 
     Assert-LoopbackDatabasePortsFree
-    $dockerArguments = @(Get-LocalDockerArguments)
+    $dockerArguments = @(Get-PinnedDockerArguments)
     & $script:resolvedDockerExecutable @dockerArguments info *> $null
     if ($LASTEXITCODE -ne 0) {
         throw 'Docker Desktop is not ready.'
@@ -409,9 +455,8 @@ Assert-Command -Name 'keytool.exe'
 Assert-Command -Name 'New-SelfSignedCertificate'
 Assert-Command -Name 'Import-Certificate'
 Assert-Command -Name 'Export-Certificate'
-if ($StartDatabases) {
-    $script:resolvedDockerExecutable = Resolve-TrustedDockerExecutable -Override $DockerExecutablePath
-}
+$script:resolvedDockerExecutable = Resolve-TrustedDockerExecutable -Override $DockerExecutablePath
+$script:resolvedDockerEndpoint = Resolve-LocalDockerEndpoint
 
 $currentIdentity = [System.Security.Principal.WindowsIdentity]::GetCurrent()
 $ownerSid = $currentIdentity.User
@@ -444,6 +489,8 @@ Protect-PrivateDirectory -Path $script:runRoot -OwnerSid $ownerSid
 $script:phase = 'PRIVATE_LAYOUT'
 $script:statePath = Join-Path $script:runRoot 'state.private.json'
 $markerPath = Join-Path $script:runRoot '.wo036-owner.json'
+$toolsLockPath = Join-Path $script:runRoot '.wo036-tools.lock'
+$dockerEndpointPath = Join-Path $script:runRoot 'docker-endpoint.private.txt'
 $environmentPath = Join-Path $script:runRoot 'campaign.private.env'
 $pkiRoot = Join-Path $script:runRoot 'pki'
 $exportRoot = Join-Path $script:runRoot 'exports'
@@ -451,6 +498,29 @@ New-Item -ItemType Directory -Path $pkiRoot | Out-Null
 New-Item -ItemType Directory -Path $exportRoot | Out-Null
 Assert-NotReparsePoint -Path $pkiRoot
 Assert-NotReparsePoint -Path $exportRoot
+
+$script:phase = 'PRIVATE_TOOLS_LOCK'
+$script:toolsLock = [System.IO.FileStream]::new(
+    $toolsLockPath,
+    [System.IO.FileMode]::CreateNew,
+    [System.IO.FileAccess]::ReadWrite,
+    [System.IO.FileShare]::None)
+$script:toolsLock.Flush($true)
+Protect-PrivateFile -Path $toolsLockPath -OwnerSid $ownerSid
+Assert-NotReparsePoint -Path $toolsLockPath
+Assert-PrivateAcl -Path $toolsLockPath -OwnerSid $ownerSid.Value
+
+$script:phase = 'PRIVATE_DOCKER_ENDPOINT'
+Write-Utf8NoBomFile -Path $dockerEndpointPath -Content ($script:resolvedDockerEndpoint + "`n")
+Protect-PrivateFile -Path $dockerEndpointPath -OwnerSid $ownerSid
+Assert-NotReparsePoint -Path $dockerEndpointPath
+Assert-PrivateAcl -Path $dockerEndpointPath -OwnerSid $ownerSid.Value
+if ([System.IO.File]::ReadAllText(
+        $dockerEndpointPath,
+        [System.Text.UTF8Encoding]::new($false, $true)) -cne
+    ($script:resolvedDockerEndpoint + "`n")) {
+    throw 'The pinned WO-036 Docker endpoint file is not byte-exact UTF-8 LF text.'
+}
 
 $ownershipNonce = New-RandomUrlSafeValue
 $ownershipSha256 = Get-Sha256Text -Value $ownershipNonce
@@ -818,6 +888,7 @@ Write-PrivateState
     Write-Output "WO036_DATABASES_STARTED=$(if ($script:state.DatabasesStarted) { 'YES' } else { 'NO' })"
     Write-Output 'WO036_SECRETS_DISPLAYED=NO'
     Write-Output 'WO036_PROVIDER_NETWORK_OPENED=NO'
+    Exit-PrivateToolsLock
 }
 catch {
     $failureType = $_.Exception.GetType().Name
@@ -832,6 +903,11 @@ catch {
     try {
         if (-not [string]::IsNullOrWhiteSpace($script:statePath) -and
             (Test-Path -LiteralPath $script:statePath -PathType Leaf)) {
+            if ($null -ne $script:toolsLock -and $null -ne $script:state) {
+                $script:state.cleanupStatus = 'IN_PROGRESS'
+                Write-PrivateState
+            }
+            Exit-PrivateToolsLock
             & $cleanupPath -StatePath $script:statePath -Confirm:$false
             $rollback = 'PASS'
         }
@@ -843,11 +919,17 @@ catch {
                 -Child $candidateRoot `
                 -RunId $runId
             Assert-NotReparsePoint -Path $candidateRoot
+            Assert-NoDescendantReparsePoint -Root $candidateRoot
+            Exit-PrivateToolsLock
             Remove-Item -LiteralPath $candidateRoot -Recurse -Force
             $rollback = 'PASS_PRE_STATE_ROOT_ONLY'
         }
+        else {
+            Exit-PrivateToolsLock
+        }
     }
     catch {
+        Exit-PrivateToolsLock
         $rollback = 'FAILED_PRIVATE_STATE_RETAINED'
     }
     if ($null -ne $script:state) {

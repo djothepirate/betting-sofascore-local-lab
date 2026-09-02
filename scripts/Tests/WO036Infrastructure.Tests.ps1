@@ -72,6 +72,38 @@ Describe 'WO-036 initialization and cleanup scripts' {
         $initialize | Should Not Match "Write-(Host|Output).*CertificateSha256"
     }
 
+    It 'creates the shared tools lock before exposing state and cleanup acquires it exclusively' {
+        $initialize | Should Match "\.wo036-tools\.lock"
+        $initialize | Should Match "\[System\.IO\.FileMode\]::CreateNew"
+        $initialize | Should Match "\[System\.IO\.FileShare\]::None"
+        $remove | Should Match "\.wo036-tools\.lock"
+        $remove | Should Match "\[System\.IO\.FileMode\]::Open"
+        $remove | Should Match "\[System\.IO\.FileShare\]::None"
+        $remove | Should Match "cleanupStatus = 'IN_PROGRESS'"
+        $remove | Should Match "WO036_SHARED_TOOLS_LOCK_DELETED_LAST=YES"
+        $initialize.IndexOf("`$script:phase = 'PRIVATE_TOOLS_LOCK'") |
+            Should BeLessThan $initialize.IndexOf("`$script:phase = 'PRIVATE_STATE'")
+        $initializeLockCreate = $initialize.IndexOf('$script:toolsLock = [System.IO.FileStream]::new')
+        $initializePass = $initialize.IndexOf("`$script:state.InitializationStatus = 'PASS'")
+        $initialize.Substring(
+            $initializeLockCreate,
+            $initializePass - $initializeLockCreate) |
+            Should Not Match '\$script:toolsLock\.Dispose\('
+        $initialize.IndexOf('    Exit-PrivateToolsLock', $initializePass) |
+            Should BeGreaterThan $initialize.IndexOf(
+                "Write-Output 'WO036_PROVIDER_NETWORK_OPENED=NO'", $initializePass)
+        $initialize.IndexOf("`$script:state.cleanupStatus = 'IN_PROGRESS'") |
+            Should BeLessThan $initialize.LastIndexOf('            Exit-PrivateToolsLock')
+        $remove.IndexOf('[System.IO.FileMode]::Open') |
+            Should BeLessThan $remove.IndexOf('$state = Get-Content')
+        $finalLockGuardIndex = $remove.IndexOf(
+            'The shared tools lock is not the final private-root file.')
+        $remove.IndexOf('$script:toolsLock.Dispose()', $finalLockGuardIndex) |
+            Should BeLessThan $remove.IndexOf('Remove-Item -LiteralPath $resolvedToolsLockPath -Force')
+        $remove.IndexOf('Remove-Item -LiteralPath $resolvedStatePath -Force') |
+            Should BeLessThan $remove.IndexOf('Remove-Item -LiteralPath $resolvedToolsLockPath -Force')
+    }
+
     It 'pins and revalidates the exact Docker executable used by cleanup' {
         $initialize | Should Match "dockerExecutableSha256"
         $initialize | Should Match "DockerDesktop\\resources\\bin"
@@ -80,12 +112,25 @@ Describe 'WO-036 initialization and cleanup scripts' {
         $remove | Should Match "The recorded Docker executable hash changed"
     }
 
+    It 'pins one exact local Docker named-pipe endpoint for initialization and cleanup' {
+        $initialize | Should Match 'docker-endpoint\.private\.txt'
+        $initialize | Should Match '\^npipe:////\[\.\]/pipe/\[A-Za-z0-9\._-\]\+\$'
+        $initialize | Should Match 'resolvedDockerEndpoint \+ "`n"'
+        $initialize | Should Match 'Protect-PrivateFile -Path \$dockerEndpointPath'
+        $remove | Should Match 'docker-endpoint\.private\.txt'
+        $remove | Should Match 'Get-PinnedDockerArguments -State \$State'
+        $remove | Should Not Match 'DOCKER_CONTEXT|DOCKER_HOST|context inspect'
+    }
+
     It 'refuses PID-only cleanup and validates exact Docker ownership labels' {
         $remove | Should Match "PID-only termination is forbidden"
         $remove | Should Match "CommandLineSha256"
         $remove | Should Match "com\.bettingproject\.work-order"
         $remove | Should Match "com\.bettingproject\.wo036\.run-id"
         $remove | Should Match "com\.bettingproject\.wo036\.ownership-sha256"
+        $remove | Should Match 'Process start time changed before bounded forced termination'
+        $remove | Should Match 'exact owned-process CIM postcheck failed'
+        $remove | Should Match 'identity changed during the zero-residue postcheck'
     }
 
     It 'never performs broad Docker or filesystem cleanup' {
@@ -94,7 +139,23 @@ Describe 'WO-036 initialization and cleanup scripts' {
         $remove | Should Not Match '(?i)system\s+prune'
         $remove | Should Match "Assert-ExactPath"
         $remove | Should Match "Assert-NoDescendantReparsePoint"
-        $remove | Should Match 'Remove-Item -LiteralPath \$freshRunRoot -Recurse -Force'
+        $remove | Should Match 'Remove-Item -LiteralPath \$child\.FullName -Recurse -Force'
+        $remove | Should Match 'Remove-Item -LiteralPath \$freshRunRoot -Force'
+        $remove | Should Not Match 'Remove-Item -LiteralPath \$freshRunRoot -Recurse'
+    }
+
+    It 'attests zero process, Docker, certificate and listener residue before root deletion' {
+        $remove | Should Match 'Get-ExactOwnedProcessResidualCount'
+        $remove | Should Match 'Get-OwnedCertificateResidualCount'
+        $remove | Should Match 'WO036_CLEANUP_CONTAINER_RESIDUAL_COUNT='
+        $remove | Should Match 'WO036_CLEANUP_VOLUME_RESIDUAL_COUNT='
+        foreach ($port in @(8087, 8444, 5432, 5433)) {
+            $remove | Should Match "WO036_CLEANUP_LISTENER_${port}_COUNT="
+        }
+        $remove | Should Match 'WO036_CLEANUP_ZERO_RESOURCE_PRE_ROOT=PASS'
+        $remove | Should Match 'WO036_CLEANUP_ATTESTATION=PASS'
+        $remove.IndexOf('WO036_CLEANUP_ATTESTATION=PASS') |
+            Should BeGreaterThan $remove.IndexOf('if (-not $rootRemoved)')
     }
 
     It 'contains no provider endpoint or non-loopback network target' {
