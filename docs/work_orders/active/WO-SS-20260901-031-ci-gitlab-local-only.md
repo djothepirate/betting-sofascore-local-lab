@@ -108,4 +108,3 @@ PRODUCTION_AUTHORIZED=NO
 
 Le lot reste en brouillon tant que les preuves réelles ne sont pas consignées. Une distribution
 verte ne vaut jamais autorisation fournisseur, intégration réelle, VPS ou production.
-
