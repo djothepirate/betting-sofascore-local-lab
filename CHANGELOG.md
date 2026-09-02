@@ -8,6 +8,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 - ajout de pipelines GitHub Actions Windows/Linux et GitLab CI pour les tests standards,
   PostgreSQL/Testcontainers, la sécurité, les métriques qualité et le packaging local ;
+- fiabilisation du launcher POSIX `mvnw` dans l'image GitLab épinglée : après validation du
+  SHA-256, recours à l'outil JDK `jar` lorsque `unzip` et `python3` sont absents, puis restauration
+  du bit exécutable de `bin/mvn`, sans modifier l'URL ni l'empreinte Maven épinglées ;
 - regroupement des événements GitHub `push` et `pull_request` d'une même branche source afin
   d'annuler le run doublon sans collision entre dépôts ou forks homonymes ;
 - remplacement des scripts source du bundle par des launchers qualifiés qui démarrent directement
