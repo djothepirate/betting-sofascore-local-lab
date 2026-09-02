@@ -62,7 +62,8 @@ déploiement VPS.
 - [ ] GitLab est l'unique producteur du bundle local tagué ; GitHub vérifie le tag sans le republier.
 - [ ] Les rapports qualité initiaux sont produits puis la baseline est verrouillée.
 - [ ] Le projet GitLab privé homonyme est créé et porte le même SHA.
-- [ ] GitHub Actions et le premier pipeline GitLab sont verts.
+- [x] GitHub Actions est vert sous Windows et Linux.
+- [ ] Le premier pipeline GitLab complet est vert.
 - [ ] La revue humaine autorise explicitement la fusion.
 
 ## Commandes de test
@@ -98,6 +99,10 @@ PRODUCTION_AUTHORIZED=NO
   ajoute l'outil JDK `jar` comme extracteur de repli et restaure le bit exécutable de `bin/mvn`,
   sans modifier les barrières réseau ni la classification `LOCAL_ONLY`. Elle reste en brouillon
   pour revue humaine.
+- Le [run GitHub #48](https://github.com/djothepirate/betting-sofascore-local-lab/actions/runs/33574906687),
+  au SHA `6a9379995b6d1113e879ff07d6040aa3a2914298`, est vert sous Windows et Linux : garde locale,
+  tests standards, intégration PostgreSQL/Testcontainers, launcher extrait, distribution
+  `LOCAL_ONLY` et contrôle du diff réussissent.
 - Validation locale ciblée : `bash -n ./mvnw`, cache Maven vierge, `unzip` et `python3` masqués et
   deux exécutions successives de `./mvnw -version` avec Maven `3.9.16`. Résultat :
   `MAVEN_WRAPPER_JAR_FALLBACK=PASS`.
