@@ -16,6 +16,7 @@ $script:ExpectedReceiverBranch = 'codex/int-001-j7-receiver'
 $script:AllowedPostFreezeManifestPath =
     'docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-20260902.md'
 $script:MaximumImportRouteCalls = 3
+$script:DockerEndpointFileName = 'docker-endpoint.private.txt'
 $script:PreCallLogNames = @(
     'receiver.stdout.log', 'receiver.stderr.log',
     'locallabpreparation.stdout.log', 'locallabpreparation.stderr.log',
@@ -246,6 +247,58 @@ function Get-WO036FileSha256Hex {
     }
 }
 
+function Read-WO036PinnedDockerEndpoint {
+    param(
+        [Parameter(Mandatory = $true)][string]$PrivateRoot,
+        [string]$ExpectedSha256 = ''
+    )
+
+    $expectedPath = [IO.Path]::GetFullPath((Join-Path `
+        $PrivateRoot $script:DockerEndpointFileName))
+    $endpointPath = Resolve-WO036ExistingPath -Value $expectedPath `
+        -PathType Leaf -Description 'pinned private Docker endpoint'
+    if (-not $endpointPath.Equals($expectedPath,
+                [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'WO-036 pinned Docker endpoint path is not exact.'
+    }
+    Assert-WO036NoReparsePathChain -Candidate $endpointPath -Root $PrivateRoot
+    Assert-WO036PrivateAcl -Path $endpointPath -RequireProtected
+    $bytes = [IO.File]::ReadAllBytes($endpointPath)
+    try {
+        if ($bytes.Length -lt 20 -or $bytes.Length -gt 256 `
+                -or $bytes[0] -eq 0xEF `
+                -or $bytes[$bytes.Length - 1] -ne 0x0A) {
+            throw 'invalid endpoint byte envelope'
+        }
+        $text = $script:Utf8NoBom.GetString($bytes)
+        if ($text.Contains("`r") `
+                -or ([regex]::Matches($text, "`n")).Count -ne 1) {
+            throw 'invalid endpoint line envelope'
+        }
+        $endpoint = $text.Substring(0, $text.Length - 1)
+        if ($endpoint -cnotmatch '^npipe:////[.]/pipe/[A-Za-z0-9._-]+$') {
+            throw 'invalid endpoint value'
+        }
+        $sha256 = Get-WO036Sha256Hex -Bytes $bytes
+        if (-not [string]::IsNullOrEmpty($ExpectedSha256) `
+                -and ($ExpectedSha256 -notmatch '^[0-9a-f]{64}$' `
+                    -or $sha256 -cne $ExpectedSha256)) {
+            throw 'endpoint hash mismatch'
+        }
+        return [pscustomobject][ordered]@{
+            Path = $endpointPath
+            Endpoint = $endpoint
+            Sha256 = $sha256
+        }
+    }
+    catch {
+        throw 'WO-036 pinned Docker endpoint is not exact private UTF-8 evidence.'
+    }
+    finally {
+        [Array]::Clear($bytes, 0, $bytes.Length)
+    }
+}
+
 function Read-WO036PrivateState {
     [CmdletBinding()]
     param(
@@ -345,6 +398,8 @@ function Read-WO036PrivateState {
     }
     Assert-WO036NoReparsePathChain -Candidate $resolvedRunRoot `
         -Root $approvedQualificationRoot
+    $dockerEndpointProof = Read-WO036PinnedDockerEndpoint `
+        -PrivateRoot $resolvedRunRoot
     if (-not $AllowInfrastructureNotReady `
             -and ($state.initializationStatus -ne 'PASS' `
                 -or $state.databasesStarted -ne $true `
@@ -507,6 +562,9 @@ function Read-WO036PrivateState {
         ReceiverTrustStore = $trustStore
         ExportDirectory = $exportDirectory
         DockerPath = $dockerPath
+        DockerEndpoint = [string]$dockerEndpointProof.Endpoint
+        DockerEndpointPath = [string]$dockerEndpointProof.Path
+        DockerEndpointSha256 = [string]$dockerEndpointProof.Sha256
     }
 }
 
@@ -643,7 +701,7 @@ function Assert-WO036RegisteredTooling {
             'schemaVersion', 'workOrder', 'registeredAtUtc', 'status',
             'localLabBranch', 'localLabHead', 'receiverBranch', 'receiverHead',
             'receiverRepositoryRoot', 'javaSha256', 'localLabJarSha256',
-            'receiverJarSha256', 'toolingFiles')
+            'receiverJarSha256', 'dockerEndpointSha256', 'toolingFiles')
     if ($registration.schemaVersion -cne '1.0' `
             -or $registration.workOrder -cne $script:WorkOrder `
             -or $registration.status -cne 'FROZEN_ONE_SHOT' `
@@ -656,6 +714,8 @@ function Assert-WO036RegisteredTooling {
                 [string]$State.Config.localLabJarSha256 `
             -or $registration.receiverJarSha256 -cne
                 [string]$State.Config.receiverJarSha256 `
+            -or $registration.dockerEndpointSha256 -cne
+                [string]$State.DockerEndpointSha256 `
             -or (Get-WO036FileSha256Hex -Path $State.JavaPath) -cne
                 [string]$registration.javaSha256) {
         throw 'WO-036 registered executable/tooling identity is invalid.'
@@ -726,6 +786,7 @@ function Assert-WO036RegisteredTooling {
         javaSha256 = [string]$registration.javaSha256
         localLabJarSha256 = [string]$registration.localLabJarSha256
         receiverJarSha256 = [string]$registration.receiverJarSha256
+        dockerEndpointSha256 = [string]$registration.dockerEndpointSha256
         toolingFiles = $expectedTooling
         registrationManifestSha256 = Get-WO036FileSha256Hex -Path $registrationPath
         allowedPostFreezeManifestPath = $script:AllowedPostFreezeManifestPath
@@ -806,6 +867,7 @@ function Register-WO036ExecutableArtifactsCore {
         javaSha256 = Get-WO036FileSha256Hex -Path $java
         localLabJarSha256 = [string]$state.Config.localLabJarSha256
         receiverJarSha256 = [string]$state.Config.receiverJarSha256
+        dockerEndpointSha256 = [string]$state.DockerEndpointSha256
         toolingFiles = @(Get-WO036ToolingFileProof)
     }
     Write-WO036PrivateJson -Path (Join-Path `
@@ -987,28 +1049,15 @@ function Assert-WO036ContainerOwnership {
 function Get-WO036DockerArguments {
     param([Parameter(Mandatory = $true)][object]$State)
 
-    $contextOverride = [Environment]::GetEnvironmentVariable('DOCKER_CONTEXT')
-    $hostOverride = [Environment]::GetEnvironmentVariable('DOCKER_HOST')
     try {
-        $commandExecuted = $false
-        if (-not [string]::IsNullOrWhiteSpace($contextOverride)) {
-            $endpoint = (& $State.DockerPath context inspect --format `
-                '{{.Endpoints.docker.Host}}' $contextOverride 2>$null | Out-String).Trim()
-            $commandExecuted = $true
+        $proof = Read-WO036PinnedDockerEndpoint -PrivateRoot $State.PrivateRoot `
+            -ExpectedSha256 ([string]$State.DockerEndpointSha256)
+        if ($proof.Endpoint -cne [string]$State.DockerEndpoint `
+                -or -not $proof.Path.Equals([string]$State.DockerEndpointPath,
+                    [StringComparison]::OrdinalIgnoreCase)) {
+            throw 'endpoint identity changed'
         }
-        elseif (-not [string]::IsNullOrWhiteSpace($hostOverride)) {
-            $endpoint = $hostOverride
-        }
-        else {
-            $endpoint = (& $State.DockerPath context inspect --format `
-                '{{.Endpoints.docker.Host}}' 2>$null | Out-String).Trim()
-            $commandExecuted = $true
-        }
-        if (($commandExecuted -and $LASTEXITCODE -ne 0) `
-                -or $endpoint -notmatch '^npipe:////[.]/pipe/[^/]+$') {
-            throw 'non-local endpoint'
-        }
-        return @('--host', $endpoint)
+        return @('--host', [string]$proof.Endpoint)
     }
     catch {
         throw 'WO-036 Docker endpoint is not one local Windows named pipe.'
@@ -2374,6 +2423,8 @@ function Export-WO036PreCallFreezeCore {
                 javaSha256 = [string]$toolingProof.javaSha256
                 localLabJarSha256 = [string]$state.Config.localLabJarSha256
                 receiverJarSha256 = [string]$state.Config.receiverJarSha256
+                dockerEndpointSha256 =
+                    [string]$toolingProof.dockerEndpointSha256
             }
             tooling = [ordered]@{
                 localLabRegisteredHead =
@@ -2382,6 +2433,8 @@ function Export-WO036PreCallFreezeCore {
                 receiverHead = [string]$toolingProof.receiverHead
                 registrationManifestSha256 =
                     [string]$toolingProof.registrationManifestSha256
+                dockerEndpointSha256 =
+                    [string]$toolingProof.dockerEndpointSha256
                 allowedPostFreezeManifestPath =
                     [string]$toolingProof.allowedPostFreezeManifestPath
                 files = @($toolingProof.toolingFiles)
@@ -2979,6 +3032,7 @@ function Export-WO036RedactedEvidenceCore {
                 javaSha256 = $toolingProof.javaSha256
                 localLabJarSha256 = $toolingProof.localLabJarSha256
                 receiverJarSha256 = $toolingProof.receiverJarSha256
+                dockerEndpointSha256 = $toolingProof.dockerEndpointSha256
                 registrationManifestSha256 =
                     $toolingProof.registrationManifestSha256
                 files = @($toolingProof.toolingFiles)

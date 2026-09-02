@@ -75,6 +75,16 @@ Describe 'WO-036 fail-closed runtime invariants' {
         $moduleText | Should Not Match '\[IO\.FileMode\]::OpenOrCreate'
     }
 
+    It 'uses only the exact pinned private Docker endpoint and freezes its hash' {
+        $moduleText | Should Match 'docker-endpoint\.private\.txt'
+        $moduleText | Should Match 'Read-WO036PinnedDockerEndpoint'
+        $moduleText | Should Match 'dockerEndpointSha256'
+        $moduleText | Should Match '\^npipe:////\[\.\]/pipe/\[A-Za-z0-9\._-\]\+\$'
+        $moduleText | Should Not Match "GetEnvironmentVariable\('DOCKER_CONTEXT'\)"
+        $moduleText | Should Not Match "GetEnvironmentVariable\('DOCKER_HOST'\)"
+        $moduleText | Should Not Match 'context inspect --format'
+    }
+
     It 'requires separately qualified clean-build JAR hashes at registration' {
         $moduleText | Should Match 'ExpectedLocalLabJarSha256'
         $moduleText | Should Match 'ExpectedReceiverJarSha256'
@@ -197,6 +207,62 @@ Describe 'WO-036 offline behavioral primitives' {
             $provenance = Get-Command Assert-WO036GitArtifactProvenance
             $provenance.Parameters.ContainsKey('ExpectedLocalLabJarSha256') | Should Be $false
             $provenance.Parameters.ContainsKey('ExpectedReceiverJarSha256') | Should Be $false
+        }
+
+        It 'accepts only one exact UTF-8 local npipe line and pins its hash' {
+            $root = Join-Path $TestDrive 'docker-endpoint'
+            [void](New-Item -ItemType Directory -Path $root)
+            $endpointPath = Join-Path $root 'docker-endpoint.private.txt'
+            $encoding = [Text.UTF8Encoding]::new($false, $true)
+            [IO.File]::WriteAllText(
+                $endpointPath,
+                "npipe:////./pipe/dockerDesktopLinuxEngine`n",
+                $encoding)
+            Mock Assert-WO036NoReparsePathChain { }
+            Mock Assert-WO036PrivateAcl { }
+            $proof = Read-WO036PinnedDockerEndpoint -PrivateRoot $root
+            $proof.Endpoint | Should Be 'npipe:////./pipe/dockerDesktopLinuxEngine'
+            $proof.Sha256 | Should Match '^[0-9a-f]{64}$'
+            $arguments = Get-WO036DockerArguments -State ([pscustomobject]@{
+                PrivateRoot = $root
+                DockerEndpoint = $proof.Endpoint
+                DockerEndpointPath = $proof.Path
+                DockerEndpointSha256 = $proof.Sha256
+            })
+            $arguments.Count | Should Be 2
+            $arguments[0] | Should Be '--host'
+            $arguments[1] | Should Be $proof.Endpoint
+
+            [IO.File]::WriteAllText(
+                $endpointPath,
+                "npipe:////./pipe/otherEngine`n",
+                $encoding)
+            $changedFailed = $false
+            try {
+                [void](Get-WO036DockerArguments -State ([pscustomobject]@{
+                    PrivateRoot = $root
+                    DockerEndpoint = $proof.Endpoint
+                    DockerEndpointPath = $proof.Path
+                    DockerEndpointSha256 = $proof.Sha256
+                }))
+            }
+            catch {
+                $changedFailed = $true
+            }
+            $changedFailed | Should Be $true
+
+            [IO.File]::WriteAllText(
+                $endpointPath,
+                "npipe:////./pipe/otherEngine`r`n",
+                $encoding)
+            $crlfFailed = $false
+            try {
+                [void](Read-WO036PinnedDockerEndpoint -PrivateRoot $root)
+            }
+            catch {
+                $crlfFailed = $true
+            }
+            $crlfFailed | Should Be $true
         }
 
         It 'rejects a missing or substituted private log before a phase gate' {
