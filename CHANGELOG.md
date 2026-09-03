@@ -133,7 +133,28 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `a2d44150af6ad6a7931e29d6291a7df711e171e9`, puis autorisation de la reprise R3 ; les preuves R1
   et R2 restent immuables, la nouvelle série reste subordonnée à un répertoire privé, une PKI, des
   bases isolées, des exécutables enregistrés et le manifeste neuf
-  `J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R3-20260903`.
+  `J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R3-20260903` ;
+- gel du manifeste R3 au commit `f14c1418995625ea653f8d01afd9c81044f3abd1`, SHA-256
+  `cd20a30cd855d161fcaa0f5db93ef0c50fca5c297d569d0a4af2f4f02aab842d`, avant le premier POST,
+  puis exécution avec export, PKI, bases et processus entièrement neufs et synthétiques ;
+- A qualifie `201/IMPORTED` et `DELIVERED`; B qualifie `200/DUPLICATE` et
+  `DUPLICATE_CONFIRMED`, avec un seul receipt, payload et outbox, confirmant ainsi le correctif
+  temporel WO-038 dans le parcours Windows/Windows réel ;
+- troisième et dernier appel consommé par la sonde de collision, mais réponse non-`409` dont le
+  statut exact n'a pas été préservé : aucun audit `DIVERGENCE_REJECTED`, aucun retry et séquence
+  contractuelle `201/200/409` non qualifiée ;
+- diagnostic à forte confiance, distinct des observations runtime : le client .NET de la sonde
+  insère un espace dans le `Content-Type` sérialisé, ce que le receiver strict rejetterait sous
+  `400/INVALID_CONTENT_TYPE` avant le service ; aucun défaut du sender Java, de WO-038 ou du
+  receiver n'est démontré par cet arrêt ;
+- arrêt fail-closed, journaux expurgés sans occurrence interdite, cleanup exact à zéro résidu et
+  redémarrage `healthy` du PostgreSQL primaire exact, sans recréation, purge ou lecture de son
+  contenu ;
+- publication du rapport
+  `J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R3-STOP-20260903`, résultat `STOPPED`, SHA-256
+  `f59cc0aeaa56fd6c8156032fea7e93048f17f616f1882cc3979bcd69363d1576`; WO-036 reste actif et
+  exige un Work Order de harnais distinct, sa qualification, une nouvelle décision propriétaire et
+  un manifeste R4 neuf avant tout nouvel appel.
 
 ### Après J9 — WO-035 sender réel J7 du Local Lab
 

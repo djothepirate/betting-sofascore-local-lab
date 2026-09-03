@@ -1,6 +1,6 @@
 # WO-SS-20260902-036 — Qualification E2E J7 locale Windows/Windows
 
-- **Statut :** `RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT`
+- **Statut :** `STOPPED_AFTER_CONSUMED_COLLISION_PROBE_PENDING_DISTINCT_TOOLING_RUNTIME_CORRECTION`
 - **Jalon :** après J9 — qualification synthétique de `OPTIONAL_LOCAL_PUSH`
 - **Ouvert le :** 2026-09-02
 - **Ouverture UTC :** `2026-09-02T19:08:46.1623419Z`
@@ -33,14 +33,15 @@ dérivée de SofaScore, aucun appel fournisseur, receiver distant, VPS ou produc
 
 ```text
 WORK_ORDER=WO-SS-20260902-036-j9-j7-local-e2e-qualification
-WORK_ORDER_STATUS=RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
+WORK_ORDER_STATUS=STOPPED_AFTER_CONSUMED_COLLISION_PROBE_PENDING_DISTINCT_TOOLING_RUNTIME_CORRECTION
 BRANCH=codex/j9-wo036-j7-local-e2e
 
-RESUME_RUN=R3
-LOCAL_SYNTHETIC_WINDOWS_E2E_AUTHORIZED=YES
-LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=YES_SYNTHETIC_ONLY
-FRESH_RUN_REQUIRED=YES
-FRESH_MANIFEST_REQUIRED=YES
+RESUME_RUN=R3_STOPPED
+RESUME_AUTHORIZATION=CONSUMED
+LOCAL_SYNTHETIC_WINDOWS_E2E_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
+LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
+FRESH_RUN_COMPLETED=YES
+FRESH_MANIFEST_STATUS=FROZEN_AND_CONSUMED
 FRESH_MANIFEST_PATH=docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R3-20260903.md
 LOCAL_SYNTHETIC_DATA_ONLY=YES
 REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
@@ -411,7 +412,7 @@ disponible vérifié est `038`, mais son ouverture et son implémentation exigen
 propriétaire distincte. Après validation de ce correctif, toute nouvelle reprise de WO-036 exigera
 encore une décision séparée, un run neuf et un manifeste neuf.
 
-## 14. Autorisation propriétaire de reprise R3
+## 14. Autorisation propriétaire de reprise R3 — état historique pré-exécution
 
 Les sections précédentes conservent les constats historiques R1 et R2. Leurs manifestes et rapports
 restent immuables. WO-038 a depuis corrigé la frontière temporelle du sender, obtenu
@@ -453,6 +454,7 @@ docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R3-20260903.md
 ```
 
 ```text
+PRE_R3_AUTHORIZATION_STATE=HISTORICAL_CONSUMED
 J9_WO036_OWNER_RESUME_DECISION=AUTHORIZE
 J9_WO036_RESUME_RUN=R3
 J9_WO036_STATUS=RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
@@ -470,4 +472,101 @@ REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
 J9_VPS_DEPLOYMENT_AUTHORIZED=NO
 J9_PRODUCTION_AUTHORIZED=NO
+```
+
+## 15. Résultat de la campagne R3
+
+### 15.1 Résultat observé
+
+Le manifeste R3 a été gelé avant le premier appel au commit
+`f14c1418995625ea653f8d01afd9c81044f3abd1`, SHA-256
+`cd20a30cd855d161fcaa0f5db93ef0c50fca5c297d569d0a4af2f4f02aab842d`. La campagne a employé
+un nouveau répertoire privé, une PKI éphémère neuve, deux bases Local Lab isolées neuves, le
+receiver INT-001 local et les deux JAR enregistrés.
+
+A a produit `201/IMPORTED` et `DELIVERED`. B, créé depuis la base clonée avant le claim de A, a
+produit `200/DUPLICATE` et `DUPLICATE_CONFIRMED`, avec un seul receipt, payload et outbox. Ce
+résultat confirme WO-038 dans le parcours Windows/Windows réel. Après une preuve pré-collision à
+exactement deux appels, la sonde a consommé le troisième et dernier appel, mais reçu une réponse
+non-`409` dont le statut exact n'a pas été conservé. Sa claim est
+`FAILED_OR_UNKNOWN_CONSUMED`; aucun retry, rejeu ou quatrième appel n'a eu lieu. Aucun audit
+`DIVERGENCE_REJECTED` n'a été créé : la séquence `201/200/409` n'est pas qualifiée.
+
+```text
+J9_WO036_STATUS=STOPPED_AFTER_CONSUMED_COLLISION_PROBE_PENDING_DISTINCT_TOOLING_RUNTIME_CORRECTION
+J9_WO036_R3_RESULT=STOPPED
+J9_WO036_R3_MANIFEST_COMMIT=f14c1418995625ea653f8d01afd9c81044f3abd1
+J9_WO036_R3_MANIFEST_SHA256=cd20a30cd855d161fcaa0f5db93ef0c50fca5c297d569d0a4af2f4f02aab842d
+J9_WO036_R3_RECEIVER_SEQUENCE=201_IMPORTED,200_DUPLICATE,NON_409
+J9_WO036_R3_LOCAL_LEDGER_SEQUENCE=DELIVERED,DUPLICATE_CONFIRMED
+J9_WO036_R3_IMPORT_ROUTE_CALLS=3
+J9_WO036_R3_MAXIMUM_IMPORT_ROUTE_CALLS=3
+J9_WO036_R3_PRE_COLLISION_EVIDENCE=PASS_EXACTLY_TWO_CALLS
+J9_WO036_R3_COLLISION_PROBE=FAILED_OR_UNKNOWN_CONSUMED
+J9_WO036_R3_COLLISION_HTTP_STATUS=UNKNOWN_NON_409
+J9_WO036_R3_COLLISION_409=NOT_OBSERVED
+J9_WO036_R3_CONTRACT_SEQUENCE_QUALIFIED=NO
+J9_WO036_R3_AUTOMATIC_RETRIES=0
+J9_WO036_R3_PROVIDER_CALLS=0
+J9_WO036_R3_REMOTE_RECEIVER_CALLS=0
+```
+
+Le [rapport autonome R3](../../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R3-STOP-20260903.md)
+porte le SHA-256 `f59cc0aeaa56fd6c8156032fea7e93048f17f616f1882cc3979bcd69363d1576` et consigne la
+provenance, les compteurs durables, les preuves expurgées et le cleanup sans exposer de payload,
+ACK brut, secret, certificat ou chemin privé.
+
+### 15.2 Analyse de cause distincte des observations
+
+Une reproduction locale sans réseau établit que `MediaTypeHeaderValue`, employé par la sonde
+PowerShell, transforme le littéral contractuel en une forme contenant un espace avant `version`.
+Le receiver compare la valeur textuelle exacte et mapperait cette différence vers
+`400/INVALID_CONTENT_TYPE` avant le service. L'absence d'audit de divergence concorde avec ce
+chemin. Le statut et le code n'ayant pas été capturés dans la preuve runtime, ils restent une
+inférence à forte confiance et non un résultat observé. Aucune régression du sender Java ou de
+WO-038 et aucun défaut du receiver ne sont démontrés. Le futur Work Order doit imposer le résultat
+exact sur le fil sans préjuger du mécanisme de correction ni assouplir le contrat.
+
+```text
+J9_WO036_R3_PROBE_CAUSE_STATUS=HIGH_CONFIDENCE_CODE_PATH_INFERENCE_NOT_RUNTIME_CAPTURED
+J9_WO036_R3_PROBABLE_HTTP_STATUS=400
+J9_WO036_R3_PROBABLE_RECEIVER_ERROR=INVALID_CONTENT_TYPE
+J9_WO036_R3_RECEIVER_SERVICE_COLLISION_BRANCH_REACHED=NO
+J9_WO036_R3_RECEIVER_CHANGE_REQUIRED=NO
+J9_WO036_R3_LOCAL_LAB_JAVA_SENDER_CHANGE_REQUIRED=NO
+J9_WO036_R3_WO038_REGRESSION_EVIDENCED=NO
+J9_WO036_R3_CAMPAIGN_TOOLING_RUNTIME_CHANGE_REQUIRED=YES
+```
+
+### 15.3 Arrêt, cleanup et porte suivante
+
+Les deux Local Lab et le receiver ont été arrêtés gracieusement. Le cleanup atteste zéro processus,
+conteneur, volume, certificat et listener de campagne résiduel. Le seul `certutil.exe` exactement
+possédé a dû être terminé avant le retrait direct du certificat racine éphémère, après vérification
+exacte de son identité ; aucune suppression large ou fondée sur le seul PID n'a eu lieu. Le
+répertoire privé a été supprimé. Le PostgreSQL primaire exact a été redémarré sans recréation ni
+purge et est `healthy`, avec le même volume RW et le même bind `127.0.0.1:5432`.
+
+WO-036 reste actif. Le numéro `039` est disponible, mais tout Work Order de correction, puis toute
+reprise R4, exigent leurs décisions propriétaires distinctes.
+
+```text
+J9_WO036_RESUME_AUTHORIZED=NO
+J9_WO036_WORK_ORDER_MOVE_TO_COMPLETED=NO
+J9_WO036_RESUME_AFTER_TOOLING_CORRECTION=REQUIRES_SEPARATE_OWNER_DECISION
+J9_WO036_NEXT_FRESH_RUN=R4
+J9_WO036_R4_MANIFEST=REQUIRED_NEW_AND_FROZEN_BEFORE_FIRST_POST
+J9_LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
+
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+LIVE_DELIVERY_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+INT001_PULL_REQUEST_AUTHORIZED_BY_THIS_WORK_ORDER=NO
+INT001_VALIDATION_AUTHORIZED_BY_THIS_WORK_ORDER=NO
+PRIMARY_DATABASE_PURGE=NO
 ```

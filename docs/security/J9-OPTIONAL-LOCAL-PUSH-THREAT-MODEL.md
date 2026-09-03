@@ -4,9 +4,10 @@
 
 Ce modèle couvre le socle qualifié par WO-027, le sender runtime fail-closed préparé par WO-035, la
 frontière d’origine navigateur qualifiée localement par WO-037, la correction temporelle WO-038
-qualifiée et validée localement, ainsi que la preuve partielle WO-036 de
-deux échanges synthétiques avec le receiver loopback réel. Il ne qualifie ni la séquence complète
-`201/200/409`, ni un déploiement, ni aucune donnée dérivée du fournisseur. La permission officielle
+qualifiée et validée localement, ainsi que la preuve partielle WO-036 de trois appels synthétiques
+avec le receiver loopback réel. R3 confirme `201/200`, mais son appel de collision non-`409` ne
+qualifie pas la séquence complète `201/200/409`. Il ne qualifie ni un déploiement, ni aucune donnée
+dérivée du fournisseur. La permission officielle
 demeure `NOT_EVIDENCED`; par conséquent, toute livraison `PROVIDER_DERIVED` est bloquée avant
 création du transport et avant réseau.
 
@@ -15,9 +16,10 @@ SECURITY_MODEL_VERSION=1.0
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 WO035_LOCAL_RECEIVER_ORIGIN=https://127.0.0.1:8444
 WO035_RUNTIME_NETWORK_AUTHORIZED=NO
-WO036_WINDOWS_WINDOWS_E2E_STATUS=RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
+WO036_WINDOWS_WINDOWS_E2E_STATUS=STOPPED_AFTER_CONSUMED_COLLISION_PROBE_PENDING_DISTINCT_TOOLING_RUNTIME_CORRECTION
 WO036_FIRST_ATTEMPT_RESULT=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
 WO036_SECOND_ATTEMPT_RESULT=STOPPED_AFTER_200_DUPLICATE_BEFORE_409
+WO036_THIRD_ATTEMPT_RESULT=STOPPED_AFTER_NON_409_COLLISION_PROBE
 WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=VALIDATED
 WO037_BROWSER_ORIGIN_BOUNDARY_RESULT=PASS_LOCAL_FAIL_CLOSED
 WO037_OWNER_REVIEW_DECISION=VALIDATE
@@ -30,9 +32,15 @@ WO038_RECEIVER_RUNTIME_CHANGE=NO
 WO038_QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a
 WO036_RESUME_AFTER_WO037_VALIDATION=CONSUMED_BY_STOPPED_R2
 WO036_RESUME_MANIFEST_STATUS=FROZEN_AND_CONSUMED
-WO036_RESUME_AFTER_WO038_VALIDATION=AUTHORIZED_R3_BY_SEPARATE_OWNER_DECISION
-WO036_R3_MANIFEST_STATUS=REQUIRED_NOT_YET_FROZEN
-LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=YES_SYNTHETIC_ONLY_R3
+WO036_RESUME_AFTER_WO038_VALIDATION=CONSUMED_BY_STOPPED_R3
+WO036_R3_MANIFEST_STATUS=FROZEN_AND_CONSUMED
+WO036_R3_MANIFEST_COMMIT=f14c1418995625ea653f8d01afd9c81044f3abd1
+WO036_R3_MANIFEST_SHA256=cd20a30cd855d161fcaa0f5db93ef0c50fca5c297d569d0a4af2f4f02aab842d
+WO036_R3_STOPPED_REPORT_SHA256=f59cc0aeaa56fd6c8156032fea7e93048f17f616f1882cc3979bcd69363d1576
+WO036_R3_RECEIVER_SEQUENCE=201_IMPORTED,200_DUPLICATE,NON_409
+WO036_R3_EXPECTED_SEQUENCE_QUALIFIED=NO
+WO036_R3_COLLISION_409=NOT_OBSERVED
+LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
 PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
@@ -67,8 +75,8 @@ décision interne en permission d’usage.
 ### 2.2 Composants explicitement hors périmètre
 
 - déploiement réel du receiver Betting Project et toute cible non loopback ;
-- nouvelle exécution du receiver local `127.0.0.1:8444` tant qu’un correctif runtime distinct et une
-  nouvelle reprise de WO-036 ne sont pas autorisés ;
+- nouvelle exécution du receiver local `127.0.0.1:8444` tant qu'un correctif de harnais distinct,
+  sa qualification et une nouvelle reprise de WO-036 ne sont pas autorisés ;
 - URI, DNS, certificat ou autorité de production ;
 - réseau fournisseur ou acquisition SofaScore ;
 - Playwright sur VPS ou poste distant ;
@@ -143,6 +151,7 @@ est non fiable jusqu’à validation. Un code HTTP `2xx` n’est pas une preuve 
 | Rejeu ou double clic | Même export envoyé plusieurs fois | Clé stable, concurrence `1`, receiver idempotent, ACK `DUPLICATE` sans second effet | Effet appliqué puis ACK perdu ; reprise manuelle synthétique, compteur d’effet égal à `1` |
 | Arrêt après claim | `IN_FLIGHT` orphelin bloquant ou reprise hasardeuse | Aucun envoi automatique ; réconciliation manuelle de l’ordinal exact après délai minimal `30 s` mesuré par l’horloge PostgreSQL depuis la création DB immuable, vers `UNKNOWN` | Refus immédiat ou identité divergente, attente DB réelle, puis reprise manuelle sous la même clé |
 | Collision logique | Même `exportId` associé à un hash différent | Refus local avant claim/socket ; aucune nouvelle clé opportuniste. Un HTTP `409` distant reste terminal | Identité divergente refusée par le ledger sans ligne ; classification contractuelle du `409` testée séparément |
+| Canonicalisation d'un en-tête contractuellement exact | Une bibliothèque HTTP insère un espace dans le `Content-Type` et provoque un rejet avant la collision | Prouver la valeur effectivement sérialisée sur le fil, sans assouplir le contrat ni le receiver | Test focalisé hors ligne puis qualification loopback bornée produisant exactement `409` |
 | Résultat ambigu | Timeout ou rupture après import effectif | `UNKNOWN_RECONCILIATION_REQUIRED`, zéro retry, reprise manuelle avec même clé | Timeout post-import simulé, aucun second appel automatique |
 | Retry interne du JDK | Le client reprend une connexion ou un échange sans seconde souscription visible du body | Arguments JVM de démarrage exacts `disableRetryConnect=true`, `redirects.retrylimit=1`, `enableAllMethodRetry=false`; attestation avant construction et avant envoi | Arguments visibles dans le processus ; divergence de chaque propriété refusée avant `sendAsync` ; un seul effet receiver |
 | Réutilisation du transport | Une même instance est invoquée ou son corps est souscrit deux fois | Garde atomique mono-exécution et body publisher one-shot, en complément des propriétés JDK | Première exécution unique puis seconde invocation refusée avant `sendAsync`; seconde souscription refusée |
@@ -253,10 +262,11 @@ Windows. Le sender ne consulte ces magasins qu’après les portes runtime et un
 | Risque | Statut WO-027/WO-035/WO-036/WO-037/WO-038 | Condition de réduction |
 |---|---|---|
 | Permission ou licence applicable | `NOT_EVIDENCED` | Source ou autorisation versionnée et revue qualifiée |
-| Receiver et idempotence transactionnelle | `PARTIAL_BOUNDED_201_AND_200_OBSERVED` | Correctif sender puis nouvelle campagne complète incluant `409` |
-| URI et exposition | `PASS_BOUNDED_SYNTHETIC_LOOPBACK_TWO_CALLS` | Aucune cible réelle ; nouvelle autorisation requise pour tout échange |
+| Receiver et idempotence transactionnelle | `PARTIAL_BOUNDED_201_AND_200_CONFIRMED_409_NOT_QUALIFIED` | Correction du probe puis nouvelle campagne complète incluant `409` |
+| URI et exposition | `PASS_BOUNDED_SYNTHETIC_LOOPBACK_THREE_CALLS_STOPPED` | Aucune cible réelle ; nouvelle autorisation requise pour tout échange |
 | Compatibilité navigateur/frontière locale | `PASS_LOCAL_FAIL_CLOSED_VALIDATED` | Frontière qualifiée par WO-037 et exercée par WO-036 |
-| Validation temporelle ACK duplicate | `PASS_LOCAL_FAIL_CLOSED_VALIDATED_WO036_STOPPED` | Reprise WO-036 séparément autorisée avec un manifeste neuf |
+| Validation temporelle ACK duplicate | `PASS_LOCAL_FAIL_CLOSED_CONFIRMED_BY_R3` | Maintenir la sémantique qualifiée par WO-038 |
+| Sérialisation du média type par le probe de collision | `HIGH_CONFIDENCE_HARNESS_DEFECT_PENDING_DISTINCT_QUALIFICATION` | Prouver hors ligne et sur loopback la valeur exacte transmise sans assouplir le receiver |
 | Profil PKI réel | `NOT_DEFINED` | Autorités, EKU, révocation, rotation et récupération approuvées |
 | Non-exportabilité native de la clé client | `NOT_QUALIFIED` | Provisionnement Windows réel et preuve native contrôlée |
 | Rétention de la copie importée | `NOT_DEFINED` | Politique receiver, purge et restauration qualifiées |
@@ -294,13 +304,16 @@ Toutes les portes suivantes sont cumulatives :
 9. tests offline puis loopback intégralement verts ;
 10. décision propriétaire distincte autorisant une livraison réelle d’un export déjà validé.
 
-La reprise WO-036 a été arrêtée après un premier `201/IMPORTED` et un duplicate durable que le
-sender a classé inconnu en raison d’un invariant temporel incompatible avec le contrat receiver.
-La sortie fail-closed, l’absence de retry et de collision, puis le cleanup complet ont préservé les
-frontières de sécurité. WO-038 constitue le Work Order runtime distinct ; son correctif est qualifié
-et validé localement à `PASS_LOCAL_FAIL_CLOSED`. Une décision propriétaire séparée autorise
-désormais une reprise R3 strictement synthétique et loopback, soumise à un run et un manifeste
-neufs avant tout POST.
+R2 a été arrêtée après un premier `201/IMPORTED` et un duplicate durable que le sender a classé
+inconnu en raison d'un invariant temporel incompatible avec le contrat receiver. WO-038 a corrigé
+ce défaut à `PASS_LOCAL_FAIL_CLOSED`. R3 a ensuite confirmé le premier import, le duplicate,
+l'idempotence receiver et le correctif temporel dans les deux applications réelles. Son troisième
+appel a néanmoins produit une réponse non-`409`; la claim et l'autorisation ont été consommées,
+sans retry. L'analyse désigne fortement la sérialisation du média type par le probe, mais le statut
+exact n'a pas été capturé et le `409/DIVERGENCE_REJECTED` reste non qualifié. La sortie fail-closed,
+l'absence de rejeu et le cleanup complet ont préservé les frontières de sécurité. Toute nouvelle
+campagne exige un correctif de harnais distinct, sa qualification, une nouvelle décision et un
+manifeste neuf.
 
 WO-036 ne satisfera que la qualification synthétique Windows/Windows. Même verte, elle ne change
 ni `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED`, ni le blocage `PROVIDER_OWNER_GO_REQUIRED`.
@@ -322,3 +335,5 @@ Une qualification loopback ne satisfait aucune de ces portes par elle-même.
 11. [Rapport de reprise arrêtée WO-036](../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903.md).
 12. [Work Order WO-038](../work_orders/completed/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md).
 13. [Qualification WO-038](../validation/J9-WO038-J7-ACK-RECEIPT-TIME-SEMANTICS-QUALIFICATION-20260903.md).
+14. [Manifeste R3 WO-036](../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R3-20260903.md).
+15. [Rapport d'arrêt R3 WO-036](../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R3-STOP-20260903.md).

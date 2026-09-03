@@ -16,9 +16,10 @@ J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 LOCAL_RECEIVER_ORIGIN=https://127.0.0.1:8444
 LOCAL_IMPORT_ENDPOINT_URI=https://127.0.0.1:8444/api/imports/sofascore/j7-canonical-events
 WO035_RUNTIME_SENDER_STATUS=VALIDATED_LOCAL_FAIL_CLOSED
-WO036_WINDOWS_WINDOWS_E2E_STATUS=RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
+WO036_WINDOWS_WINDOWS_E2E_STATUS=STOPPED_AFTER_CONSUMED_COLLISION_PROBE_PENDING_DISTINCT_TOOLING_RUNTIME_CORRECTION
 WO036_FIRST_ATTEMPT_RESULT=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
 WO036_SECOND_ATTEMPT_RESULT=STOPPED_AFTER_200_DUPLICATE_BEFORE_409
+WO036_THIRD_ATTEMPT_RESULT=STOPPED_AFTER_NON_409_COLLISION_PROBE
 WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=VALIDATED
 WO037_BROWSER_ORIGIN_BOUNDARY_RESULT=PASS_LOCAL_FAIL_CLOSED
 WO037_OWNER_REVIEW_DECISION=VALIDATE
@@ -31,9 +32,15 @@ WO038_RECEIVER_RUNTIME_CHANGE=NO
 WO038_QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a
 WO036_RESUME_AFTER_WO037_VALIDATION=CONSUMED_BY_STOPPED_R2
 WO036_RESUME_MANIFEST_STATUS=FROZEN_AND_CONSUMED
-WO036_RESUME_AFTER_WO038_VALIDATION=AUTHORIZED_R3_BY_SEPARATE_OWNER_DECISION
-WO036_R3_MANIFEST_STATUS=REQUIRED_NOT_YET_FROZEN
-LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=YES_SYNTHETIC_ONLY_R3
+WO036_RESUME_AFTER_WO038_VALIDATION=CONSUMED_BY_STOPPED_R3
+WO036_R3_MANIFEST_STATUS=FROZEN_AND_CONSUMED
+WO036_R3_MANIFEST_COMMIT=f14c1418995625ea653f8d01afd9c81044f3abd1
+WO036_R3_MANIFEST_SHA256=cd20a30cd855d161fcaa0f5db93ef0c50fca5c297d569d0a4af2f4f02aab842d
+WO036_R3_STOPPED_REPORT_SHA256=f59cc0aeaa56fd6c8156032fea7e93048f17f616f1882cc3979bcd69363d1576
+WO036_R3_RECEIVER_SEQUENCE=201_IMPORTED,200_DUPLICATE,NON_409
+WO036_R3_EXPECTED_SEQUENCE_QUALIFIED=NO
+WO036_R3_COLLISION_409=NOT_OBSERVED
+LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
 PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
@@ -46,12 +53,14 @@ PRODUCTION_AUTHORIZED=NO
 Tant que la permission officielle reste `NOT_EVIDENCED`, le runtime doit refuser tout export
 `PROVIDER_DERIVED` avant création du client, résolution ou ouverture de socket. WO-035 fixe une
 seule origine runtime, `https://127.0.0.1:8444`. Les qualifications historiques de WO-027 restent
-synthétiques, liées à `127.0.0.1` et à un port éphémère. La reprise WO-036 a contacté sur loopback
-le receiver INT-001 réel avec un export entièrement synthétique : `201/IMPORTED`, puis
-`200/DUPLICATE` côté receiver. Elle s’est arrêtée avant `409`, car le sender a rejeté la sémantique
-temporelle contractuelle de l’ACK duplicate. La correction WO-038 est désormais qualifiée et
-validée à `PASS_LOCAL_FAIL_CLOSED`. La décision de reprise R3 est acquise, mais aucun nouvel échange
-n’a lieu avant un préflight neuf et le gel du manifeste R3 distinct.
+synthétiques, liées à `127.0.0.1` et à un port éphémère. La reprise R2 de WO-036 a contacté sur
+loopback le receiver INT-001 réel avec un export entièrement synthétique : `201/IMPORTED`, puis
+`200/DUPLICATE` côté receiver. Elle s'est arrêtée avant `409`, car le sender a rejeté la sémantique
+temporelle contractuelle de l'ACK duplicate. La correction WO-038 est qualifiée et validée à
+`PASS_LOCAL_FAIL_CLOSED`. R3 a ensuite confirmé `201/IMPORTED`, `200/DUPLICATE` et
+`DUPLICATE_CONFIRMED`, mais son troisième appel a reçu une réponse non-`409` et a consommé la
+limite. La séquence contractuelle complète n'est donc pas qualifiée et toute exception loopback est
+de nouveau bloquée.
 
 Le receiver et sa persistance appartiennent à `INT-001` dans le dépôt Betting Project. WO-035 ne
 contacte pas cette implémentation ; seule la campagne WO-036 l’a exercée sur loopback avec un corpus
@@ -430,7 +439,7 @@ documentaire. La classification des cinq sources vérifiées impose la matrice s
 
 | Provenance | Mode exigé | Effet sous WO-035 |
 |---|---|---|
-| `SYNTHETIC_ONLY` | `SYNTHETIC_LOOPBACK` | Préparable uniquement avec origine locale exacte, receiver/sender `PASS`, empreinte certificat et autorisation distante `false`; preuve R2 partielle, nouvelle reprise WO-036 requise pour achever `201/200/409` |
+| `SYNTHETIC_ONLY` | `SYNTHETIC_LOOPBACK` | `201/200` confirmés par R3 ; `409` non qualifié ; correction, qualification, autorisation et campagne neuves requises avant tout nouvel échange |
 | `PROVIDER_DERIVED` | `PROVIDER_DERIVED` | Toujours bloqué par permission, autorisation distante et surtout `PROVIDER_OWNER_GO_REQUIRED` |
 | `MIXED_OR_UNKNOWN` | Aucun | Refus `PAYLOAD_PROVENANCE_NOT_ELIGIBLE` avant transport |
 
@@ -445,10 +454,11 @@ Pour tout refus runtime :
 5. il expose uniquement un code local minimisé, sans donnée du fichier.
 
 Le harness WO-027, lié à un port éphémère, reste test-only. Le profil runtime local WO-035, lié à
-`8444`, n’est pas une autorisation d’échange. La campagne R2 a produit une preuve partielle
-`201/200`; seule une nouvelle reprise de WO-036, postérieure au correctif runtime validé et liée à
-une nouvelle décision ainsi qu’à un manifeste neuf, pourra achever la qualification des deux
-applications Windows. Aucun export dérivé de SofaScore n’est admissible.
+`8444`, n'est pas une autorisation d'échange. R3 confirme `201/200`, mais n'a pas qualifié le
+`409` : son troisième appel est consommé et ne peut être rejoué. Seules une correction de harnais
+distincte, sa qualification, une nouvelle décision propriétaire et une campagne entièrement neuve
+pourront achever la qualification des deux applications Windows. Aucun export dérivé de SofaScore
+n'est admissible.
 
 La méthode applicative dédiée au mode `SYNTHETIC_LOOPBACK` impose explicitement
 `expectedPayloadClass=SYNTHETIC_ONLY` avant claim et avant construction du transport. Elle ne
@@ -540,12 +550,27 @@ second appel byte-identique conformément à son contrat sous `200/DUPLICATE`, e
 collision `409`, sans retry. Son rapport distinct est
 [J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903](../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903.md).
 
-Le défaut appartenait au sender Local Lab ; le receiver est conforme au contrat INT-001. WO-036 ne
-porte aucun correctif runtime. WO-038 porte la correction distincte, qualifiée et validée à
-`PASS_LOCAL_FAIL_CLOSED`. La nouvelle décision propriétaire autorise R3 exclusivement sur loopback
-et données synthétiques ; un manifeste neuf doit encore être gelé avant tout POST. La campagne
-n’autorise toujours ni réseau fournisseur, ni livraison de données dérivées, ni receiver distant,
-ni VPS, ni production.
+Le défaut R2 appartenait au sender Local Lab ; le receiver est conforme au contrat INT-001. WO-036
+ne porte aucun correctif runtime. WO-038 porte la correction distincte, qualifiée et validée à
+`PASS_LOCAL_FAIL_CLOSED`.
+
+R3, liée au
+[manifeste gelé](../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R3-20260903.md),
+a ensuite confirmé le premier import et le duplicate dans les deux applications réelles. Son
+troisième et dernier appel n'a toutefois pas produit le `409` contractuel et n'a créé aucun audit
+`DIVERGENCE_REJECTED`. Le statut exact de cette réponse non-`409` n'a pas été conservé. L'analyse
+statique, la reproduction hors ligne et l'état durable désignent avec une forte confiance la
+sérialisation du média type par le probe .NET : le receiver strict suivrait alors le chemin
+`400/INVALID_CONTENT_TYPE` avant l'évaluation de la divergence. Cette inférence ne démontre aucun
+défaut du sender Java, de WO-038 ou du receiver. Le
+[rapport R3](../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R3-STOP-20260903.md) conserve la
+distinction entre observation et diagnostic.
+
+L'autorisation R3 et ses trois appels sont consommés. Une correction de l'outillage de campagne
+dans un Work Order distinct, sa qualification, une nouvelle décision propriétaire et un manifeste
+R4 neuf sont nécessaires. Les règles normatives `201/IMPORTED`, `200/DUPLICATE` et
+`409/DIVERGENCE_REJECTED` restent inchangées. Aucun réseau fournisseur, livraison de données
+dérivées, receiver distant, VPS ou production n'est autorisé.
 
 Tout changement incompatible exige une version de protocole nouvelle, une revue d’ADR-SS-003 et
 un Work Order. Aucun assouplissement silencieux, champ d’ACK toléré, retry, URI de secours ou
@@ -567,3 +592,5 @@ fallback de sécurité n’est compatible avec v1.0.
 12. [Rapport de reprise arrêtée WO-036](../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903.md).
 13. [Work Order WO-038](../work_orders/completed/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md).
 14. [Qualification WO-038](../validation/J9-WO038-J7-ACK-RECEIPT-TIME-SEMANTICS-QUALIFICATION-20260903.md).
+15. [Manifeste R3 WO-036](../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R3-20260903.md).
+16. [Rapport d'arrêt R3 WO-036](../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R3-STOP-20260903.md).
