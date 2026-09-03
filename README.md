@@ -21,9 +21,10 @@ les 1 136 tests Surefire et les 89 tests Failsafe passent, y compris sous le pro
 Le cleanup hôte est complet et le PostgreSQL primaire exact reste `running/healthy` sur
 `127.0.0.1:5432`. Le
 [rapport WO-039](docs/validation/J9-WO039-COLLISION-PROBE-HTTP-SERIALIZATION-QUALIFICATION-20260903.md)
-a pour SHA-256 `4108f3916f0800c5d1c3616f0c6af866462cda5a188991f15f0305b0ea8d7f50`. WO-036
-reste arrêté : R4 exige une décision propriétaire distincte et un manifeste neuf. Aucun réseau
-fournisseur ou distant, VPS ou production n’est autorisé.
+a pour SHA-256 `4108f3916f0800c5d1c3616f0c6af866462cda5a188991f15f0305b0ea8d7f50`. Le propriétaire a
+depuis autorisé le run R4 neuf de WO-036, exclusivement synthétique et loopback. Sa préparation
+reste bloquée avant tout POST jusqu'au gel du manifeste R4 distinct. Aucun réseau fournisseur ou
+distant, VPS ou production n’est autorisé.
 
 Le propriétaire a validé WO-039, reconnu sa readiness locale et autorisé son déplacement vers les
 Work Orders terminés le `2026-09-03T16:31:41Z`, soit `2026-09-03T18:31:41+02:00` en

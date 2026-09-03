@@ -6,6 +6,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Après J9 — WO-039 sérialisation HTTP de la sonde de collision WO-036
 
+- intégration linéaire de la clôture validée WO-039 dans la branche WO-036, puis autorisation
+  propriétaire séparée du run R4 neuf le `2026-09-03T16:37:32.7385871Z` ; la reprise reste
+  exclusivement synthétique et loopback, avec trois appels maximum, aucun retry et un manifeste
+  R4 distinct obligatoirement gelé avant le premier POST ;
+- réépinglage du seul chemin documentaire admis après enregistrement one-shot des exécutables vers
+  `J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R4-20260903.md`, sans changement du sender Java,
+  du receiver, du protocole ou des portes fournisseur, distante, VPS et production ;
+
 - ouverture de `WO-SS-20260903-039-j9-wo036-collision-probe-http-serialization` depuis le commit
   R3 exact `277f65f318386c763069b9e1907d34acf3b228ba`, dans la branche dédiée
   `codex/j9-wo039-collision-probe-http-serialization` et le worktree Windows court `.tmp/w39` ;
