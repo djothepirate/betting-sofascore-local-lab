@@ -15,6 +15,26 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   receiver INT-001 ou des migrations, et aucun rejeu de WO-036 autorisés ;
 - qualification autorisée hors ligne puis, si nécessaire, contre INT-001 exclusivement loopback
   et synthétique, sans donnée fournisseur, receiver distant, VPS, production ou base primaire.
+- correction au commit `90c1354c97f506b8291fedae80b7dc6ed37e2c11` : construction explicite des octets
+  HTTP/1.1, média type exact sans espace ajouté, en-têtes uniques, `Content-Length` vérifié, corps
+  mutant byte-identique, TLS direct épinglé vers `127.0.0.1:8444`, aucun proxy, redirect ou retry,
+  réponse bornée et expurgée ;
+- qualification hôte synthétique : exactement un POST, un receipt, un payload et un outbox
+  préexistants, puis un unique audit `DIVERGENCE_REJECTED/EXPORT_ID_DIVERGENCE`, sans second effet
+  durable, retry ou rejeu ;
+- correction complémentaire au commit `058c57b05ac4c40e1867af60e76cce6cc2864e67` : acceptation
+  bornée d’une ligne de statut HTTP/1.1 sans reason phrase, maintien du refus des lignes ambiguës ou
+  malformées et qualification hors ligne sans rejouer le POST consommé ;
+- qualifications vertes : Pester `47/47`, Surefire `1136/0/0/5` et Failsafe `89/0/0/0` sous
+  `clean verify` puis sous le profil `integration-tests`, `git diff --check`, contrôles UTF-8,
+  secrets, loopback et flags bloquants ;
+- cleanup complet des processus, listeners `5433/8444`, conteneur, volume, réseau et PKI
+  temporaires ; le conteneur PostgreSQL primaire exact reste `running/healthy` sur
+  `127.0.0.1:5432`, sans accès ni purge ;
+- passage de WO-039 à `READY_FOR_OWNER_REVIEW` avec le résultat `PASS_LOCAL_FAIL_CLOSED` ; WO-036
+  reste arrêté et R4 exige une décision propriétaire séparée ainsi qu’un manifeste neuf gelé avant
+  son premier POST ; publication du rapport de qualification avec le SHA-256
+  `4108f3916f0800c5d1c3616f0c6af866462cda5a188991f15f0305b0ea8d7f50`.
 
 ### Après J9 — WO-038 sémantique temporelle de l’accusé J7
 

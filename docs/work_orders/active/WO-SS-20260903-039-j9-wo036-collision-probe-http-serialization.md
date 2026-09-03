@@ -1,6 +1,6 @@
 # WO-SS-20260903-039 — Sérialisation HTTP de la sonde de collision WO-036
 
-- **Statut :** `ACTIVE`
+- **Statut :** `READY_FOR_OWNER_REVIEW`
 - **Jalon :** après J9 — correction du harnais avant une éventuelle reprise R4 de WO-036
 - **Ouvert le :** 2026-09-03
 - **Ouverture UTC :** `2026-09-03T14:32:05.0141332Z`
@@ -14,6 +14,10 @@
 - **SHA-256 du rapport R3 :**
   `f59cc0aeaa56fd6c8156032fea7e93048f17f616f1882cc3979bcd69363d1576`
 - **Permission officielle :** `NOT_EVIDENCED`
+- **Implémentation principale :** `90c1354c97f506b8291fedae80b7dc6ed37e2c11`
+- **Compatibilité de réponse :** `058c57b05ac4c40e1867af60e76cce6cc2864e67`
+- **Qualification terminée UTC :** `2026-09-03T16:23:25Z`
+- **Qualification terminée Europe/Paris :** `2026-09-03T18:23:25+02:00`
 
 Le chemin de worktree court est imposé par la limite de longueur de chemin Windows rencontrée lors
 de la matérialisation initiale. Il ne modifie ni le nom de la branche, ni le commit de base, ni la
@@ -180,10 +184,60 @@ WO-039 ne peut être proposé à la validation que si :
 Même validé, WO-039 ne reprend pas WO-036. R4 exigera une décision propriétaire séparée, un run
 neuf et un manifeste neuf gelé avant le premier POST.
 
+## 7. Réalisation et preuve bornée
+
+Le commit `90c1354c97f506b8291fedae80b7dc6ed37e2c11` construit les octets HTTP/1.1 de la sonde sans
+abstraction de média type, fixe le média type contractuel exact, vérifie l’unicité et l’innocuité
+des en-têtes, conserve le corps mutant byte pour byte et utilise un flux TLS direct vers
+`127.0.0.1:8444`. Il désactive proxy, redirect et retry et borne chaque phase réseau à dix
+secondes. La réponse brute reste éphémère et seul un statut avec un code ProblemDetail sûr peut
+atteindre la preuve.
+
+Une exécution hôte synthétique et isolée a émis exactement un POST. Le receiver INT-001 inchangé a
+conservé un receipt, un payload et un outbox, puis enregistré un unique audit
+`DIVERGENCE_REJECTED/EXPORT_ID_DIVERGENCE`, sans second effet durable. Les compteurs expurgés
+étaient `receipt=1`, `payload=1`, `outbox=1`, `importedAudit=1`, `divergenceAudit=1` et
+`auditTotal=2`. Aucun retry ni rejeu manuel n’a été réalisé.
+
+Après cet effet terminal, le parseur a refusé la ligne de statut : il exigeait une reason phrase
+alors que HTTP/1.1 permet au serveur de l’omettre. Les octets de réponse n’ayant pas été persistés,
+cette attribution demeure explicitement une inférence étroite. Le commit
+`058c57b05ac4c40e1867af60e76cce6cc2864e67` accepte une ligne avec code seul ou avec reason phrase
+ASCII visible bornée, tout en refusant une séparation vide ou une ligne malformée. Cette correction
+a été qualifiée hors ligne ; la requête consommée n’a pas été rejouée.
+
+## 8. Qualification et cleanup
+
 ```text
-WORK_ORDER_STATUS=ACTIVE
-IMPLEMENTATION_STATUS=AUTHORIZED_PENDING
-QUALIFICATION_STATUS=PENDING
+QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
+PESTER_WO036_WO039=PASS_47_OF_47
+MVNW_CLEAN_VERIFY=PASS_SUREFIRE_1136_0_0_5_FAILSAFE_89_0_0_0
+MVNW_INTEGRATION_TESTS_VERIFY=PASS_SUREFIRE_1136_0_0_5_FAILSAFE_89_0_0_0
+WO039_IMPORT_ROUTE_POST_COUNT=1
+WO039_AUTOMATIC_RETRY_COUNT=0
+WO039_MANUAL_REPLAY_COUNT=0
+WO039_DOCKER_RESIDUAL_COUNT=0
+WO039_JAVA_PROCESS_RESIDUAL_COUNT=0
+LISTENER_5433_RESIDUAL_COUNT=0
+LISTENER_8444_RESIDUAL_COUNT=0
+PRIMARY_CONTAINER_ID=e7b218117df39b7cbfbffb3b1223647568f149912a84592e506b5690f9686c1f
+PRIMARY_CONTAINER_STATE=running_healthy
+PRIMARY_LISTENER=127.0.0.1:5432
+PRIMARY_DATABASE_TOUCH=NO
+PRIMARY_DATABASE_PURGE=NO
+```
+
+Le rapport autonome est
+`docs/validation/J9-WO039-COLLISION-PROBE-HTTP-SERIALIZATION-QUALIFICATION-20260903.md`. Son
+empreinte SHA-256 est
+`4108f3916f0800c5d1c3616f0c6af866462cda5a188991f15f0305b0ea8d7f50`.
+
+## 9. État soumis à la revue
+
+```text
+WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+IMPLEMENTATION_STATUS=COMPLETE
+QUALIFICATION_STATUS=PASS_LOCAL_FAIL_CLOSED
 OWNER_REVIEW_REQUIRED=YES
 WORK_ORDER_MOVE_TO_COMPLETED=NO
 WO036_STATUS=STOPPED_AFTER_CONSUMED_COLLISION_PROBE_PENDING_WO039

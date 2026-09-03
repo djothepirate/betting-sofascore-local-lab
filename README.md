@@ -6,13 +6,24 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 Le Work Order
 [WO-SS-20260903-039](docs/work_orders/active/WO-SS-20260903-039-j9-wo036-collision-probe-http-serialization.md)
-est ouvert depuis le commit R3 `277f65f318386c763069b9e1907d34acf3b228ba`. Sa portée est
-strictement limitée au client de sonde de collision du harnais WO-036 : prouver et préserver le
-`Content-Type` contractuel exact sur le fil, puis conserver uniquement un statut HTTP et un code
-d’échec sûr. Aucun changement du sender Java, du receiver INT-001, du protocole ou de ses
-tolérances n’est autorisé. La qualification peut employer une cible synthétique loopback sur
-`127.0.0.1`, mais ne reprend pas WO-036 et n’autorise aucun réseau fournisseur, distant, VPS ou
-production.
+est `READY_FOR_OWNER_REVIEW` avec le résultat `PASS_LOCAL_FAIL_CLOSED`. Le commit
+`90c1354c97f506b8291fedae80b7dc6ed37e2c11` construit la sonde de collision sous forme d’octets
+HTTP/1.1 exacts : média type contractuel sans espace ajouté, en-têtes uniques et bornés,
+`Content-Length` exact, corps byte-identique et TLS direct vers `127.0.0.1:8444`, sans proxy,
+redirect ni retry. Une exécution synthétique hôte a produit exactement un POST et le receiver
+INT-001 inchangé a persisté l’unique audit
+`DIVERGENCE_REJECTED/EXPORT_ID_DIVERGENCE`, sans second receipt, payload ou outbox.
+
+Le commit `058c57b05ac4c40e1867af60e76cce6cc2864e67` corrige ensuite le parseur borné pour accepter une
+ligne `HTTP/1.1 409` sans reason phrase tout en refusant les formes ambiguës. La requête déjà
+consommée n’a pas été rejouée ; cette correction est qualifiée hors ligne. Les 47 tests Pester,
+les 1 136 tests Surefire et les 89 tests Failsafe passent, y compris sous le profil d’intégration.
+Le cleanup hôte est complet et le PostgreSQL primaire exact reste `running/healthy` sur
+`127.0.0.1:5432`. Le
+[rapport WO-039](docs/validation/J9-WO039-COLLISION-PROBE-HTTP-SERIALIZATION-QUALIFICATION-20260903.md)
+a pour SHA-256 `4108f3916f0800c5d1c3616f0c6af866462cda5a188991f15f0305b0ea8d7f50`. WO-036
+reste arrêté : R4 exige une décision propriétaire distincte et un manifeste neuf. Aucun réseau
+fournisseur ou distant, VPS ou production n’est autorisé.
 
 Le Work Order
 [WO-SS-20260903-038](docs/work_orders/completed/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md)
