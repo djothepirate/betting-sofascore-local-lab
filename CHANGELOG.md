@@ -4,6 +4,18 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-036 reprise R5 synthétique autorisée
+
+- push de la branche WO-040 validée, puis intégration linéaire de sa clôture dans WO-036 au commit
+  `9cf14180404efe899abeb6a7f3f3d6b7f1e6a028`, sans rebase, squash ni réécriture ;
+- décision propriétaire distincte enregistrée le `2026-09-03T19:05:02.0860147Z` pour reprendre
+  WO-036 avec un run R5 neuf, exclusivement synthétique et loopback Windows/Windows ;
+- réépinglage du seul chemin documentaire admis après enregistrement one-shot vers
+  `J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R5-20260903.md`, lequel doit être gelé et
+  commité avant le premier POST ;
+- maintien à `NO` de la permission officielle, des données dérivées, des réseaux fournisseur et
+  distant, du VPS, de la production ainsi que de la PR et de la validation INT-001.
+
 ### Après J9 — WO-040 capture de réponse de collision WO-036
 
 - ouverture depuis le commit R4 exact `33d2ae0bd5c2c8daae4cd708b0f12efaf9cd029d`, dans la branche

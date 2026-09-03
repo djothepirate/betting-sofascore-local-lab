@@ -38,6 +38,13 @@ Work Orders terminés le `2026-09-03T18:58:26.5005063Z`, soit
 WO-036 reste arrêté et R5 n'est pas autorisé sans décision propriétaire distincte ni manifeste
 neuf gelé avant son premier POST.
 
+Le propriétaire a depuis demandé de pousser WO-040 puis de reprendre WO-036. La branche WO-040
+est poussée sur `origin` et sa clôture est intégrée dans WO-036 par fast-forward exact au commit
+`9cf14180404efe899abeb6a7f3f3d6b7f1e6a028`. Le run R5 est autorisé exclusivement pour la campagne
+E2E synthétique Windows/Windows ; un nouveau manifeste R5 doit être gelé et commité avant son
+premier POST. Les réseaux fournisseur et distant, les données dérivées de SofaScore, le VPS, la
+production, la PR et la validation INT-001 restent interdits.
+
 Le run neuf R4 de
 [WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
 a été gelé avant son premier POST au commit `e12500dc8af9133b254bfe075d74e979cad472a6`, manifeste
