@@ -1,6 +1,6 @@
 # WO-SS-20260904-042 — Readiness CI de la PR de remplacement WO-036
 
-- **Statut :** `IN_PROGRESS`
+- **Statut :** `LOCAL_READY_PENDING_REPLACEMENT_PR`
 - **Jalon :** après J9 — préparation de fusion de WO-036
 - **Ouvert le :** 2026-09-04
 - **Ouverture UTC :** `2026-09-03T22:36:17.9770318Z`
@@ -10,6 +10,11 @@
 - **Base qualifiée exacte :** `ad343d5f1ed131b9a766c60ffd0086dc354ee839`
 - **Pull Request historique :** `#25`
 - **Run CI diagnostiqué :** `33812551196`
+- **Commit d'ouverture :** `ec3def5f03c0390289308fe899eafc08cb03893e`
+- **Commit d'implémentation :** `63cfa6eeb8b21bf185390622fe524014104b0b31`
+- **Rapport local :**
+  [`J9-WO042-PR25-CI-READINESS-QUALIFICATION-20260904.md`](../../validation/J9-WO042-PR25-CI-READINESS-QUALIFICATION-20260904.md)
+- **SHA-256 du rapport :** `43a0711b0d53749f261594a7d24f670c3a54ff33be2b073b992c5f065e41a67f`
 - **Permission officielle :** `NOT_EVIDENCED`
 
 ## 1. Autorisation propriétaire
@@ -131,3 +136,38 @@ PR25_CLOSE_AUTHORIZED=NO_PENDING_GREEN_REPLACEMENT
 MERGE_AUTHORIZED=NO
 ```
 
+## 7. Qualification locale obtenue
+
+Le commit d'implémentation `63cfa6eeb8b21bf185390622fe524014104b0b31` modifie uniquement la
+deadline externe de `J6NativeBinaryPipelineQualificationTest` de `90` à `180` secondes. Les scripts
+J6 et leurs timeouts internes restent byte-identiques à la base. Trois exécutions ciblées
+successives passent en `64.055 s`, `61.918 s` et `60.258 s`. Les parcours Maven standard et
+intégration passent également, avec un maximum J6 mesuré de `64.825 s`, soit `36.01 %` de la borne.
+
+```text
+WO042_LOCAL_TECHNICAL_READINESS=PASS_LOCAL_CI_READY
+WO042_J6_TARGETED_RUNS=3_OF_3_PASS
+WO042_J6_MAXIMUM_MEASURED_SECONDS=64.825
+WO042_J6_OUTER_DEADLINE_SECONDS=180
+WO042_STANDARD_SUREFIRE=1136_TESTS_0_FAILURES_0_ERRORS_5_SKIPPED
+WO042_STANDARD_FAILSAFE=89_TESTS_0_FAILURES_0_ERRORS_0_SKIPPED
+WO042_INTEGRATION_SUREFIRE=1136_TESTS_0_FAILURES_0_ERRORS_5_SKIPPED
+WO042_INTEGRATION_FAILSAFE=89_TESTS_0_FAILURES_0_ERRORS_0_SKIPPED
+WO042_BRANCH_NAME_CHECK=PASS
+WO042_LOCAL_ONLY_POLICY=PASS
+WO042_SECRET_SCAN=PASS_HIGH_CONFIDENCE
+WO042_DIFF_CHECK=PASS
+WO042_RESIDUAL_OWNED_PROCESSES=0
+WO042_RESIDUAL_TESTCONTAINERS=0
+WO042_REPLACEMENT_PULL_REQUEST=NOT_CREATED
+WO042_REPLACEMENT_PULL_REQUEST_CHECKS=NOT_RUN
+WO042_STATUS=LOCAL_READY_PENDING_REPLACEMENT_PR
+PR25_STATUS=OPEN
+PR25_CLOSE_AUTHORIZED=NO_PENDING_GREEN_REPLACEMENT
+MERGE_AUTHORIZED=NO
+```
+
+Le rapport local expurgé mesure `7124` octets et porte le SHA-256
+`43a0711b0d53749f261594a7d24f670c3a54ff33be2b073b992c5f065e41a67f`. Il autorise la publication
+de la branche et la préparation de la PR de remplacement, mais ne vaut ni check GitHub vert, ni
+validation propriétaire de WO-042, ni autorisation de fusion ou de fermeture immédiate de `#25`.

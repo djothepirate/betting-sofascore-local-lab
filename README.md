@@ -12,6 +12,15 @@ Convention 1A. Sa correction est limitée à la deadline externe du test J6 hors
 180 secondes ; les timeouts runtime J6, les invariants fail-closed, le cleanup et la politique CI
 restent inchangés.
 
+La qualification locale de WO-042 est `PASS_LOCAL_CI_READY`. Trois exécutions ciblées J6 passent
+en `64.055 s`, `61.918 s` et `60.258 s` ; les parcours Maven standard et intégration passent chacun
+avec Surefire `1136/0/0/5` et Failsafe `89/0/0/0`. Le maximum J6 observé est `64.825 s`, soit
+`36.01 %` de la borne. Le
+[rapport local](docs/validation/J9-WO042-PR25-CI-READINESS-QUALIFICATION-20260904.md) mesure `7124`
+octets et porte le SHA-256
+`43a0711b0d53749f261594a7d24f670c3a54ff33be2b073b992c5f065e41a67f`. La readiness distante reste
+à établir sur la future PR de remplacement.
+
 La PR `#25` reste ouverte jusqu'à l'obtention de checks verts sur la remplaçante. Aucune fusion,
 fermeture prématurée de `#25`, donnée J7 réelle, opération fournisseur/receiver réelle ou distante,
 VPS, production, PR ou validation INT-001 n'est autorisée par WO-042.
