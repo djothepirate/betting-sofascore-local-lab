@@ -4,6 +4,18 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
+Le Work Order runtime
+[WO-SS-20260903-041](docs/work_orders/active/WO-SS-20260903-041-j9-local-labb-readiness-listener-gate.md)
+est ouvert depuis le commit WO-036 arrêté `62bb8d126d28da2aedefb8845ee3817492229a71`. Il doit
+diagnostiquer et qualifier la porte de readiness/listener de LocalLabB. L'hypothèse initiale est
+une course TOCTOU : la boucle actuelle prend deux instantanés successifs et peut classer comme
+conflit un listener exact apparu entre eux. Le correctif devra utiliser un instantané cohérent sans
+relâcher l'unicité, `127.0.0.1`, le port ou le PID exacts.
+
+WO-041 n'autorise aucune reprise R6, aucun POST receiver, appel fournisseur, donnée dérivée,
+réseau distant, VPS, production, PR ou validation INT-001. WO-036 reste actif et arrêté ; sa claim
+R5 demeure consommée.
+
 Le Work Order
 [WO-SS-20260903-040](docs/work_orders/completed/WO-SS-20260903-040-j9-wo036-collision-response-client-qualification.md)
 est `VALIDATED` sur une branche et un worktree distincts depuis le commit R4 exact

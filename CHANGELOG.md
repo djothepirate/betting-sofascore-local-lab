@@ -4,6 +4,20 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-041 porte de readiness/listener LocalLabB
+
+- ouverture depuis le commit WO-036 arrêté
+  `62bb8d126d28da2aedefb8845ee3817492229a71`, dans la branche
+  `codex/j9-wo041-local-labb-readiness-listener-gate` et le worktree distinct `.tmp/w41` ;
+- diagnostic borné à la double observation des listeners dans l'outillage WO-036 : une apparition
+  exacte entre les deux instantanés peut être classée à tort comme conflit ;
+- correction attendue par instantané unique cohérent, sans assouplir l'adresse, le port, le nombre
+  de listeners ou le PID propriétaire ;
+- qualification hors ligne et hôte autorisée uniquement sur `127.0.0.1`, avec processus
+  synthétiques possédés et cleanup exact ;
+- WO-036 reste arrêté, R5 reste consommé et aucun R6, POST receiver, appel fournisseur, donnée
+  dérivée, réseau distant, VPS, production, PR ou validation INT-001 n'est autorisé.
+
 ### Après J9 — WO-036 reprise R5 arrêtée avant le duplicate
 
 - manifeste R5 neuf gelé avant le premier POST au commit
