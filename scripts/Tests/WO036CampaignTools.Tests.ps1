@@ -113,7 +113,7 @@ Describe 'WO-036 fail-closed runtime invariants' {
     It 'rehashes every frozen tool and allows only the exact manifest commit afterward' {
         $moduleText | Should Match 'Get-WO036ToolingFileProof'
         $moduleText | Should Match 'Assert-WO036RegisteredTooling'
-        $moduleText | Should Match 'J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-20260903\.md'
+        $moduleText | Should Match 'J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R3-20260903\.md'
         $moduleText | Should Match 'merge-base.*--is-ancestor'
         $moduleText | Should Match 'tooling changed after its one-shot registration'
     }

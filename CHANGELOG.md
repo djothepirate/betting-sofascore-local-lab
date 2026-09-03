@@ -37,10 +37,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   Work Orders terminés le `2026-09-03T12:35:39Z`, soit `2026-09-03T14:35:39+02:00` en
   Europe/Paris ;
 - invariants maintenus : receiver INT-001 inchangé et non appelé, aucun retry, réseau réel, donnée
-  fournisseur, VPS ou production ; WO-036 reste
-  `STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION`, et sa reprise après une
-  décision propriétaire séparée exigera un manifeste neuf ; le receiver INT-001 loopback reste
-  `NO_PENDING_NEW_OWNER_DECISION`.
+  fournisseur, VPS ou production ; la validation de WO-038 ne reprenait pas elle-même WO-036 ;
+- décision propriétaire distincte de reprise R3 enregistrée le
+  `2026-09-03T13:02:58.9483990Z`, soit `2026-09-03T15:02:58.9483990+02:00` en Europe/Paris,
+  exclusivement pour un run synthétique Windows/Windows neuf, un receiver INT-001 loopback local
+  et un manifeste distinct avant le premier POST.
 
 ### Après J9 — WO-037 frontière d’origine du navigateur J7
 
@@ -127,7 +128,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - publication du rapport `J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903`, résultat `STOPPED`,
   SHA-256 `219f54f2b429b1eaea04c920e55cc87d33f9c5644697129e6ff96fc9cad19062` ; WO-036 reste actif et
   exige un Work Order runtime distinct, sa validation, une nouvelle décision de reprise et un
-  manifeste neuf.
+  manifeste neuf ;
+- intégration linéaire de la clôture validée WO-038 au commit
+  `a2d44150af6ad6a7931e29d6291a7df711e171e9`, puis autorisation de la reprise R3 ; les preuves R1
+  et R2 restent immuables, la nouvelle série reste subordonnée à un répertoire privé, une PKI, des
+  bases isolées, des exécutables enregistrés et le manifeste neuf
+  `J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R3-20260903`.
 
 ### Après J9 — WO-035 sender réel J7 du Local Lab
 

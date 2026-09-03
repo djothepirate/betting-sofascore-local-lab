@@ -8,8 +8,8 @@ la préparation runtime de WO-035. Il ne permet aucune livraison de données dé
 essai avant receiver et la validation de WO-037, sa reprise a été autorisée puis consommée par un
 run neuf. Cette reprise s’est arrêtée après `201/IMPORTED`, puis `200/DUPLICATE` côté receiver : le
 sender a rejeté l’instant durable initial de l’ACK duplicate. La correction WO-038 est désormais
-qualifiée et validée localement, mais aucun nouvel échange n’est autorisé sans une nouvelle décision
-de reprise et un manifeste neuf.
+qualifiée et validée localement. Une décision propriétaire distincte autorise R3, mais aucun nouvel
+échange n’est exécuté avant un run neuf, son préflight et le gel d’un manifeste distinct.
 
 ```text
 RUNBOOK_SCOPE=WO027_OFFLINE_LOOPBACK_WO035_RUNTIME_WO036_SYNTHETIC_E2E_WO037_BROWSER_BOUNDARY_AND_WO038_ACK_TIME
@@ -17,7 +17,7 @@ CONTRACT_VERSION=1.0
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 WO035_LOCAL_RECEIVER_ORIGIN=https://127.0.0.1:8444
 WO035_NETWORK_EXECUTION_AUTHORIZED=NO
-WO036_WINDOWS_WINDOWS_E2E_STATUS=STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION
+WO036_WINDOWS_WINDOWS_E2E_STATUS=RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
 WO036_FIRST_ATTEMPT_RESULT=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
 WO036_SECOND_ATTEMPT_RESULT=STOPPED_AFTER_200_DUPLICATE_BEFORE_409
 WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=VALIDATED
@@ -32,7 +32,9 @@ WO038_RECEIVER_RUNTIME_CHANGE=NO
 WO038_QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a
 WO036_RESUME_AFTER_WO037_VALIDATION=CONSUMED_BY_STOPPED_R2
 WO036_RESUME_MANIFEST_STATUS=FROZEN_AND_CONSUMED
-LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
+WO036_RESUME_AFTER_WO038_VALIDATION=AUTHORIZED_R3_BY_SEPARATE_OWNER_DECISION
+WO036_R3_MANIFEST_STATUS=REQUIRED_NOT_YET_FROZEN
+LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=YES_SYNTHETIC_ONLY_R3
 PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
@@ -600,10 +602,12 @@ Le rapport distinct
 `J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903` établit la conformité idempotente du
 receiver, l’identité byte-à-byte, l’outbox unique et le cleanup complet. WO-038 porte le correctif
 temporel du sender sans reprendre la campagne ; il est qualifié et validé localement à
-`PASS_LOCAL_FAIL_CLOSED`. Il reste à obtenir une nouvelle décision de reprise et à rejouer une
-campagne intégrale avec un manifeste neuf. Aucune autorisation du run consommé ne peut être
-réutilisée. Aucun appel SofaScore, export dérivé fournisseur, receiver distant, VPS ou production
-n’est autorisé.
+`PASS_LOCAL_FAIL_CLOSED`. La décision propriétaire distincte autorise désormais R3, exclusivement
+avec données synthétiques et receiver INT-001 loopback. La campagne doit repartir intégralement de
+zéro et geler le manifeste
+`J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R3-20260903` avant le premier POST. Aucune
+autorisation du run R2 consommé n’est réutilisée. Aucun appel SofaScore, export dérivé fournisseur,
+receiver distant, VPS ou production n’est autorisé.
 
 Bloc de clôture attendu pour WO-035 :
 

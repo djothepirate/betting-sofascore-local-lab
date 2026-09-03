@@ -1,6 +1,6 @@
 # WO-SS-20260902-036 — Qualification E2E J7 locale Windows/Windows
 
-- **Statut :** `STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION`
+- **Statut :** `RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT`
 - **Jalon :** après J9 — qualification synthétique de `OPTIONAL_LOCAL_PUSH`
 - **Ouvert le :** 2026-09-02
 - **Ouverture UTC :** `2026-09-02T19:08:46.1623419Z`
@@ -11,8 +11,12 @@
 - **Sender Local Lab qualifié :** `f5a27887b7db43576eb608d564c245c8cca3a602`
 - **Correctif navigateur validé :** `f28e4b6954c0fb703923f770ab9156326e212a07`
 - **Clôture WO-037 intégrée par fast-forward :** `9a10447d0c94e441b860b942e436e2c943f1e2c1`
-- **Reprise autorisée UTC :** `2026-09-03T10:10:23Z`
-- **Reprise autorisée Europe/Paris :** `2026-09-03T12:10:23+02:00`
+- **Reprise R2 autorisée UTC :** `2026-09-03T10:10:23Z`
+- **Reprise R2 autorisée Europe/Paris :** `2026-09-03T12:10:23+02:00`
+- **Correctif ACK validé :** `3a0c297a5151c572417b4f2f12bb5c3ed216172f`
+- **Clôture WO-038 intégrée par fast-forward :** `a2d44150af6ad6a7931e29d6291a7df711e171e9`
+- **Reprise R3 autorisée UTC :** `2026-09-03T13:02:58.9483990Z`
+- **Reprise R3 autorisée Europe/Paris :** `2026-09-03T15:02:58.9483990+02:00`
 - **Receiver INT-001 observé :** `b6a093ab4d3358f23a59b65b68a3eb720494bcba`
 - **Implémentation receiver observée :** `3920a58c122cbee0fb379781abcd53d3eaa0f70d`
 - **Base CAT-002 du receiver :** `85dc943601a7d33d37ca69a0c913bf32f1162811`
@@ -29,11 +33,15 @@ dérivée de SofaScore, aucun appel fournisseur, receiver distant, VPS ou produc
 
 ```text
 WORK_ORDER=WO-SS-20260902-036-j9-j7-local-e2e-qualification
-WORK_ORDER_STATUS=STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION
+WORK_ORDER_STATUS=RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
 BRANCH=codex/j9-wo036-j7-local-e2e
 
-LOCAL_SYNTHETIC_WINDOWS_E2E_AUTHORIZED=CONSUMED_BY_STOPPED_R2
-LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
+RESUME_RUN=R3
+LOCAL_SYNTHETIC_WINDOWS_E2E_AUTHORIZED=YES
+LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=YES_SYNTHETIC_ONLY
+FRESH_RUN_REQUIRED=YES
+FRESH_MANIFEST_REQUIRED=YES
+FRESH_MANIFEST_PATH=docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R3-20260903.md
 LOCAL_SYNTHETIC_DATA_ONLY=YES
 REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
 
@@ -402,3 +410,64 @@ WO-036 reste actif. Aucun correctif runtime n’est apporté par cette campagne.
 disponible vérifié est `038`, mais son ouverture et son implémentation exigent une autorisation
 propriétaire distincte. Après validation de ce correctif, toute nouvelle reprise de WO-036 exigera
 encore une décision séparée, un run neuf et un manifeste neuf.
+
+## 14. Autorisation propriétaire de reprise R3
+
+Les sections précédentes conservent les constats historiques R1 et R2. Leurs manifestes et rapports
+restent immuables. WO-038 a depuis corrigé la frontière temporelle du sender, obtenu
+`PASS_LOCAL_FAIL_CLOSED`, puis été validé et déplacé vers les Work Orders terminés. La branche
+WO-036 a été avancée linéairement jusqu’au commit de clôture WO-038
+`a2d44150af6ad6a7931e29d6291a7df711e171e9`, sans rebase ni réécriture.
+
+Le propriétaire transmet la décision distincte suivante :
+
+```text
+J'autorise la reprise de WO-036
+```
+
+La décision est enregistrée le `2026-09-03T13:02:58.9483990Z`, soit le
+`2026-09-03T15:02:58.9483990+02:00` en Europe/Paris. Son effet est borné au périmètre déjà défini de
+WO-036 : campagne Windows/Windows intégralement synthétique, receiver INT-001 local sur loopback,
+maximum de trois appels ordonnés `201/200/409`, sans retry. Elle ne vaut ni permission officielle,
+ni livraison de données dérivées, ni réseau fournisseur ou distant, ni VPS, production, push,
+fusion ou validation d’INT-001.
+
+Les portes acquises et preuves historiques sont liées par :
+
+```text
+WO038_STATUS=VALIDATED
+WO038_IMPLEMENTATION_COMMIT=3a0c297a5151c572417b4f2f12bb5c3ed216172f
+WO038_CLOSURE_COMMIT=a2d44150af6ad6a7931e29d6291a7df711e171e9
+WO038_COMPLETED_WORK_ORDER_SHA256=c638a6efed1c9608f00cd65e795150cff15f092d7d17f1b0ca8090cc98873429
+WO038_QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a
+R2_MANIFEST_SHA256=6ef4c4fbe8af1027ff06170bea00aa8ca75c3159bcd21134db2598ddd4b18a78
+R2_STOPPED_REPORT_SHA256=219f54f2b429b1eaea04c920e55cc87d33f9c5644697129e6ff96fc9cad19062
+R2_EVIDENCE_IMMUTABLE=YES
+```
+
+R3 doit employer un nouveau répertoire privé, une PKI éphémère neuve, deux bases isolées neuves,
+des JAR reconstruits et enregistrés, puis geler avant le premier POST le manifeste distinct :
+
+```text
+docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R3-20260903.md
+```
+
+```text
+J9_WO036_OWNER_RESUME_DECISION=AUTHORIZE
+J9_WO036_RESUME_RUN=R3
+J9_WO036_STATUS=RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
+J9_WO036_RESUME_AFTER_WO038_VALIDATION=AUTHORIZED_BY_SEPARATE_OWNER_DECISION
+J9_WO036_FRESH_RUN_REQUIRED=YES
+J9_WO036_FRESH_MANIFEST_REQUIRED=YES
+J9_WO036_WORK_ORDER_MOVE_TO_COMPLETED=NO
+J9_LOCAL_SYNTHETIC_WINDOWS_E2E_AUTHORIZED=YES
+J9_LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=YES_SYNTHETIC_ONLY
+
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```

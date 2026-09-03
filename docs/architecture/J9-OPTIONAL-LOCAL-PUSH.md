@@ -16,7 +16,7 @@ J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 LOCAL_RECEIVER_ORIGIN=https://127.0.0.1:8444
 LOCAL_IMPORT_ENDPOINT_URI=https://127.0.0.1:8444/api/imports/sofascore/j7-canonical-events
 WO035_RUNTIME_SENDER_STATUS=VALIDATED_LOCAL_FAIL_CLOSED
-WO036_WINDOWS_WINDOWS_E2E_STATUS=STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION
+WO036_WINDOWS_WINDOWS_E2E_STATUS=RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
 WO036_FIRST_ATTEMPT_RESULT=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
 WO036_SECOND_ATTEMPT_RESULT=STOPPED_AFTER_200_DUPLICATE_BEFORE_409
 WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=VALIDATED
@@ -31,7 +31,9 @@ WO038_RECEIVER_RUNTIME_CHANGE=NO
 WO038_QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a
 WO036_RESUME_AFTER_WO037_VALIDATION=CONSUMED_BY_STOPPED_R2
 WO036_RESUME_MANIFEST_STATUS=FROZEN_AND_CONSUMED
-LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
+WO036_RESUME_AFTER_WO038_VALIDATION=AUTHORIZED_R3_BY_SEPARATE_OWNER_DECISION
+WO036_R3_MANIFEST_STATUS=REQUIRED_NOT_YET_FROZEN
+LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=YES_SYNTHETIC_ONLY_R3
 PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
@@ -48,8 +50,8 @@ synthétiques, liées à `127.0.0.1` et à un port éphémère. La reprise WO-03
 le receiver INT-001 réel avec un export entièrement synthétique : `201/IMPORTED`, puis
 `200/DUPLICATE` côté receiver. Elle s’est arrêtée avant `409`, car le sender a rejeté la sémantique
 temporelle contractuelle de l’ACK duplicate. La correction WO-038 est désormais qualifiée et
-validée à `PASS_LOCAL_FAIL_CLOSED`, mais aucun nouvel échange n’est autorisé sans une décision de
-reprise distincte et un manifeste neuf.
+validée à `PASS_LOCAL_FAIL_CLOSED`. La décision de reprise R3 est acquise, mais aucun nouvel échange
+n’a lieu avant un préflight neuf et le gel du manifeste R3 distinct.
 
 Le receiver et sa persistance appartiennent à `INT-001` dans le dépôt Betting Project. WO-035 ne
 contacte pas cette implémentation ; seule la campagne WO-036 l’a exercée sur loopback avec un corpus
@@ -538,11 +540,12 @@ second appel byte-identique conformément à son contrat sous `200/DUPLICATE`, e
 collision `409`, sans retry. Son rapport distinct est
 [J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903](../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903.md).
 
-Le défaut appartient au sender Local Lab ; le receiver est conforme au contrat INT-001. WO-036 ne
-porte aucun correctif runtime et reste arrêté. WO-038 porte la correction distincte, qualifiée et
-validée à `PASS_LOCAL_FAIL_CLOSED` ; une nouvelle décision propriétaire et un manifeste neuf
-restent obligatoires avant toute autre reprise. La campagne n’autorise toujours ni réseau
-fournisseur, ni livraison de données dérivées, ni receiver distant, ni VPS, ni production.
+Le défaut appartenait au sender Local Lab ; le receiver est conforme au contrat INT-001. WO-036 ne
+porte aucun correctif runtime. WO-038 porte la correction distincte, qualifiée et validée à
+`PASS_LOCAL_FAIL_CLOSED`. La nouvelle décision propriétaire autorise R3 exclusivement sur loopback
+et données synthétiques ; un manifeste neuf doit encore être gelé avant tout POST. La campagne
+n’autorise toujours ni réseau fournisseur, ni livraison de données dérivées, ni receiver distant,
+ni VPS, ni production.
 
 Tout changement incompatible exige une version de protocole nouvelle, une revue d’ADR-SS-003 et
 un Work Order. Aucun assouplissement silencieux, champ d’ACK toléré, retry, URI de secours ou

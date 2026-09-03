@@ -15,7 +15,7 @@ SECURITY_MODEL_VERSION=1.0
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 WO035_LOCAL_RECEIVER_ORIGIN=https://127.0.0.1:8444
 WO035_RUNTIME_NETWORK_AUTHORIZED=NO
-WO036_WINDOWS_WINDOWS_E2E_STATUS=STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION
+WO036_WINDOWS_WINDOWS_E2E_STATUS=RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
 WO036_FIRST_ATTEMPT_RESULT=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
 WO036_SECOND_ATTEMPT_RESULT=STOPPED_AFTER_200_DUPLICATE_BEFORE_409
 WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=VALIDATED
@@ -30,7 +30,9 @@ WO038_RECEIVER_RUNTIME_CHANGE=NO
 WO038_QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a
 WO036_RESUME_AFTER_WO037_VALIDATION=CONSUMED_BY_STOPPED_R2
 WO036_RESUME_MANIFEST_STATUS=FROZEN_AND_CONSUMED
-LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
+WO036_RESUME_AFTER_WO038_VALIDATION=AUTHORIZED_R3_BY_SEPARATE_OWNER_DECISION
+WO036_R3_MANIFEST_STATUS=REQUIRED_NOT_YET_FROZEN
+LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=YES_SYNTHETIC_ONLY_R3
 PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
@@ -295,9 +297,10 @@ Toutes les portes suivantes sont cumulatives :
 La reprise WO-036 a été arrêtée après un premier `201/IMPORTED` et un duplicate durable que le
 sender a classé inconnu en raison d’un invariant temporel incompatible avec le contrat receiver.
 La sortie fail-closed, l’absence de retry et de collision, puis le cleanup complet ont préservé les
-frontières de sécurité. WO-038 constitue le Work Order runtime distinct ; sa validation ne remplace
-pas la nouvelle décision requise pour reprendre WO-036. Son correctif est qualifié et validé
-localement à `PASS_LOCAL_FAIL_CLOSED`, tandis que WO-036 demeure arrêté.
+frontières de sécurité. WO-038 constitue le Work Order runtime distinct ; son correctif est qualifié
+et validé localement à `PASS_LOCAL_FAIL_CLOSED`. Une décision propriétaire séparée autorise
+désormais une reprise R3 strictement synthétique et loopback, soumise à un run et un manifeste
+neufs avant tout POST.
 
 WO-036 ne satisfera que la qualification synthétique Windows/Windows. Même verte, elle ne change
 ni `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED`, ni le blocage `PROVIDER_OWNER_GO_REQUIRED`.

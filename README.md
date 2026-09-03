@@ -21,8 +21,10 @@ restent interdits ; la permission officielle demeure `NOT_EVIDENCED`.
 
 Le propriétaire a validé WO-038, reconnu sa readiness locale et autorisé son déplacement vers les
 Work Orders terminés le `2026-09-03T12:35:39Z`, soit `2026-09-03T14:35:39+02:00` en
-Europe/Paris. Cette validation ne reprend pas WO-036 et n’autorise pas le receiver INT-001
-loopback.
+Europe/Paris. Cette validation ne reprenait pas à elle seule WO-036. Une nouvelle décision
+propriétaire distincte autorise depuis le `2026-09-03T13:02:58.9483990Z`, soit
+`2026-09-03T15:02:58.9483990+02:00` en Europe/Paris, une campagne R3 neuve exclusivement
+synthétique et loopback avec le receiver local INT-001.
 
 Le Work Order
 [WO-SS-20260903-037](docs/work_orders/completed/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md)
@@ -49,7 +51,7 @@ exécutée, puis arrêtée de façon fail-closed après le deuxième appel recei
 
 Le Work Order
 [WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
-reste actif à `STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION`. Le premier import
+reste actif à `RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT`. Le premier import R2
 a produit `201/IMPORTED` et l’état sender `DELIVERED`. La répétition byte-identique a été persistée
 idempotemment par le receiver sous `200/DUPLICATE`, sans second payload ni second outbox, mais le
 sender l’a classée `UNKNOWN_RECONCILIATION_REQUIRED` avec `ACK_HTTP_STATUS_MISMATCH`. Le
@@ -58,11 +60,12 @@ SHA-256 `219f54f2b429b1eaea04c920e55cc87d33f9c5644697129e6ff96fc9cad19062`, éta
 réemploie conformément à son contrat l’instant durable du premier import, tandis que le sender exige
 à tort que cet instant soit postérieur au début de la seconde tentative. Aucun retry ni probe `409`
 n’a été exécuté. Le cleanup est complet et le PostgreSQL primaire exact a été redémarré `healthy`.
-WO-038 fournit désormais le correctif runtime qualifié et validé. Une décision de reprise séparée
-et un manifeste neuf restent obligatoires avant toute nouvelle reprise de WO-036. La permission
-officielle reste `NOT_EVIDENCED` ; aucune donnée dérivée de SofaScore,
-aucun réseau fournisseur ou distant, VPS, production, push ou PR INT-001 n’est autorisé par cette
-campagne.
+WO-038 fournit désormais le correctif runtime qualifié et validé. La décision séparée de reprise R3
+est acquise ; un run intégralement neuf et le manifeste
+`J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R3-20260903` doivent encore être préparés et gelés
+avant le premier POST. La permission officielle reste `NOT_EVIDENCED` ; aucune donnée dérivée de
+SofaScore, aucun réseau fournisseur ou distant, VPS, production, push ou PR INT-001 n’est autorisé
+par cette reprise.
 
 Le Work Order
 [WO-SS-20260902-035](docs/work_orders/completed/WO-SS-20260902-035-j9-real-j7-delivery-sender.md)
