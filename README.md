@@ -5,6 +5,16 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
+[WO-SS-20260903-039](docs/work_orders/active/WO-SS-20260903-039-j9-wo036-collision-probe-http-serialization.md)
+est ouvert depuis le commit R3 `277f65f318386c763069b9e1907d34acf3b228ba`. Sa portée est
+strictement limitée au client de sonde de collision du harnais WO-036 : prouver et préserver le
+`Content-Type` contractuel exact sur le fil, puis conserver uniquement un statut HTTP et un code
+d’échec sûr. Aucun changement du sender Java, du receiver INT-001, du protocole ou de ses
+tolérances n’est autorisé. La qualification peut employer une cible synthétique loopback sur
+`127.0.0.1`, mais ne reprend pas WO-036 et n’autorise aucun réseau fournisseur, distant, VPS ou
+production.
+
+Le Work Order
 [WO-SS-20260903-038](docs/work_orders/completed/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md)
 est `VALIDATED` avec le résultat `PASS_LOCAL_FAIL_CLOSED` au commit
 `3a0c297a5151c572417b4f2f12bb5c3ed216172f`. Le sender ne compare plus le `receivedAt` durable
