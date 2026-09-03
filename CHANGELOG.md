@@ -24,6 +24,21 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - les préparations ayant révélé ces écarts ont été arrêtées et nettoyées avant tout POST : zéro
   appel de route d’import, zéro appel fournisseur, zéro ressource de campagne résiduelle et aucune
   atteinte au PostgreSQL primaire.
+- campagne figée ensuite arrêtée avant receiver par un `403` local reproductible dans Brave : la
+  réponse `Referrer-Policy: no-referrer` produit `Origin: null` pour le `POST` HTML natif, valeur
+  refusée par l'intercepteur qui n'accepte qu'un Origin absent ou exactement loopback ; les tests
+  unitaires existants ne couvraient pas cette chaîne navigateur réelle ;
+- preuve expurgée : deux préparations navigateur locales refusées, zéro tentative sender durable,
+  zéro receipt, payload, audit ou outbox receiver, zéro retry et zéro appel fournisseur ou distant ;
+- arrêt gracieux de Local Lab A et du receiver, non-démarrage de B et de la collision, scan de six
+  journaux privés sans occurrence interdite, cleanup exact à zéro résidu et redémarrage `healthy`
+  du PostgreSQL primaire exact avec son identité, son volume RW et son bind loopback inchangés ;
+- vérification post-campagne : `1115` tests standards et `85` tests d'intégration, zéro échec ou
+  erreur, `BUILD SUCCESS` ;
+- publication du rapport `J9-WO036-J7-LOCAL-E2E-CAMPAIGN-20260903` avec résultat `STOPPED` et
+  SHA-256 `5244422187f0bc591e3ce57f20b076037f64bad266ad9052b985d8127b475994` ; WO-036 reste actif et
+  exige un Work Order runtime distinct puis une nouvelle décision propriétaire et un nouveau
+  manifeste avant toute reprise de la séquence `201/200/409`.
 
 ### Après J9 — WO-035 sender réel J7 du Local Lab
 

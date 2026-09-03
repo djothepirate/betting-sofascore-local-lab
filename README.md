@@ -6,12 +6,17 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 Le Work Order
 [WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
-est ouvert sur une campagne E2E strictement synthétique Windows/Windows. Il qualifie deux
-applications Java et deux bases PostgreSQL réelles sur loopback, avec mTLS local, une première
-importation `201/IMPORTED`, un duplicate `200/DUPLICATE` sans réarmement de ledger et une collision
-contrôlée `409`. La permission officielle reste `NOT_EVIDENCED` ; aucune donnée dérivée de
-SofaScore, aucun appel fournisseur, receiver distant, VPS, production, push ou PR INT-001 n’est
-autorisé par cette ouverture.
+reste actif avec le résultat `STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION`. La
+campagne E2E strictement synthétique Windows/Windows a été arrêtée avant son premier appel receiver :
+Brave a produit `Origin: null` sous la politique `Referrer-Policy: no-referrer`, tandis que la
+frontière locale n'accepte qu'un Origin absent ou exactement loopback et a donc répondu `403` avant
+contrôleur. Le [rapport WO-036](docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-20260903.md)
+confirme zéro tentative sender persistée, zéro receipt/payload/audit/outbox receiver, zéro retry et
+zéro appel fournisseur. Le cleanup de campagne est complet et le PostgreSQL primaire exact a été
+redémarré `healthy`. Un Work Order runtime distinct et une nouvelle décision de reprise sont requis
+avant de rejouer `201/200/409`. La permission officielle reste `NOT_EVIDENCED` ; aucune donnée
+dérivée de SofaScore, aucun réseau fournisseur ou distant, VPS, production, push ou PR INT-001
+n'est autorisé par cette ouverture.
 
 Le Work Order
 [WO-SS-20260902-035](docs/work_orders/completed/WO-SS-20260902-035-j9-real-j7-delivery-sender.md)

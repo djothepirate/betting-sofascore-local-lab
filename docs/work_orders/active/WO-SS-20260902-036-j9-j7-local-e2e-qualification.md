@@ -1,6 +1,6 @@
 # WO-SS-20260902-036 — Qualification E2E J7 locale Windows/Windows
 
-- **Statut :** `IN_PROGRESS`
+- **Statut :** `STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION`
 - **Jalon :** après J9 — qualification synthétique de `OPTIONAL_LOCAL_PUSH`
 - **Ouvert le :** 2026-09-02
 - **Ouverture UTC :** `2026-09-02T19:08:46.1623419Z`
@@ -25,7 +25,7 @@ dérivée de SofaScore, aucun appel fournisseur, receiver distant, VPS ou produc
 
 ```text
 WORK_ORDER=WO-SS-20260902-036-j9-j7-local-e2e-qualification
-WORK_ORDER_STATUS=IN_PROGRESS
+WORK_ORDER_STATUS=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
 BRANCH=codex/j9-wo036-j7-local-e2e
 
 LOCAL_SYNTHETIC_WINDOWS_E2E_AUTHORIZED=YES
@@ -201,4 +201,77 @@ REMOTE_RECEIVER_CALLS=0
 PROVIDER_DERIVED_PAYLOADS=0
 VPS_DEPLOYMENTS=0
 CAMPAIGN_RESTART_REQUIRED_AFTER_CLEAN_BUILD=YES
+```
+
+## 10. Résultat de la campagne figée
+
+Le run issu du manifeste gelé au commit `c6a1e0a4f8fbf57279344d24d0cb0e521d315d9d`
+s'est arrêté avant le premier appel de la route d'import. Un navigateur Brave réel a soumis le
+formulaire `Préparer la livraison` avec le Host loopback exact mais `Origin: null`. La frontière
+locale a répondu `403` avant contrôleur. Une seconde soumission native, toujours sans possibilité
+d'atteindre le receiver, a confirmé la même classification dans DevTools sans export de HAR,
+cookie, jeton ou corps de formulaire.
+
+La cause est une incompatibilité interne : `SecurityHeadersFilter` émet
+`Referrer-Policy: no-referrer`, ce qui produit normativement `Origin: null` pour ce `POST` de
+navigation, tandis que `J7DeliveryLocalRequestBoundaryInterceptor` n'accepte qu'un Origin absent
+ou exactement égal à `http://127.0.0.1:8087`. Les tests existants injectent directement ces deux
+cas acceptés et ne reproduisent pas la chaîne d'un navigateur réel.
+
+Le [rapport autonome](../../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-20260903.md) consigne la
+preuve expurgée. Les bases confirment zéro tentative sender et zéro receipt, payload, audit ou
+outbox receiver. Local Lab A et le receiver ont été arrêtés gracieusement ; B et la collision n'ont
+pas démarré. Le cleanup exact a supprimé tous les processus, listeners, conteneurs, volumes,
+certificats et fichiers privés de campagne, puis le conteneur PostgreSQL primaire exact a été
+redémarré `healthy` avec la même identité, le même volume RW et le bind `127.0.0.1:5432`.
+
+```text
+WO036_EVIDENCE_RESULT=STOPPED
+WO036_STOP_CLASS=LOCAL_BROWSER_BOUNDARY_INCOMPATIBILITY_PRE_RECEIVER
+WO036_REPORT_ID=J9-WO036-J7-LOCAL-E2E-CAMPAIGN-20260903
+WO036_REPORT_SHA256=5244422187f0bc591e3ce57f20b076037f64bad266ad9052b985d8127b475994
+LOCAL_NATIVE_BROWSER_PREPARE_SUBMISSIONS=2
+LOCAL_PREPARE_HTTP_STATUS=403
+HOST_CLASS=EXACT_127_0_0_1_8087
+ORIGIN_CLASS=NULL
+FORWARDED_HEADERS_PRESENT=NO
+SENDER_DURABLE_ATTEMPTS=0
+RECEIVER_IMPORT_ROUTE_CALLS=0
+RECEIVER_DURABLE_OBJECTS=0
+AUTOMATIC_RETRIES=0
+PROVIDER_CALLS=0
+REMOTE_RECEIVER_CALLS=0
+PRIVATE_LOG_REDACTION=PASS
+CAMPAIGN_CLEANUP=PASS_ZERO_RESIDUE
+PRIMARY_POSTGRES_RESTART=PASS_EXACT_HEALTHY
+POST_CAMPAIGN_CLEAN_VERIFY=PASS_1115_TESTS_0_FAILURES_0_ERRORS_5_SKIPPED
+POST_CAMPAIGN_INTEGRATION_VERIFY=PASS_85_TESTS_0_FAILURES_0_ERRORS_0_SKIPPED
+POST_CAMPAIGN_VERIFY_LOCAL=PASS_NO_PROVIDER_CALL
+```
+
+## 11. Décision propriétaire requise
+
+WO-036 reste actif ; il ne peut pas être déplacé vers `completed` et sa série ne peut pas être
+reprise avec le manifeste courant. Un correctif runtime distinct doit d'abord réconcilier la
+politique de referrer et la frontière d'origine sans accepter une origine opaque, puis être
+qualifié avec un vrai navigateur loopback. Après sa validation, une reprise de WO-036 exigera une
+nouvelle décision propriétaire et un nouveau manifeste lié au nouveau binaire.
+
+Le numéro `037` et la branche correspondante ont été contrôlés comme disponibles au moment du
+constat, sans constituer à eux seuls une autorisation d'ouverture :
+
+```text
+J9_WO037_OWNER_DECISION=<AUTHORIZE_IMPLEMENTATION|DENY>
+J9_WO037_WORK_ORDER=WO-SS-20260903-037-j9-j7-browser-origin-boundary
+J9_WO037_SCOPE=DIAGNOSE_CORRECT_AND_QUALIFY_NATIVE_BROWSER_REFERRER_POLICY_AND_LOCAL_ORIGIN_BOUNDARY_COMPATIBILITY
+J9_WO037_LOOPBACK_BROWSER_QUALIFICATION_AUTHORIZED=<YES|NO>
+J9_WO037_PREFERRED_DIRECTION=SCOPE_SAME_ORIGIN_REFERRER_POLICY_TO_J7_DELIVERY_WITHOUT_ACCEPTING_OPAQUE_ORIGINS
+
+J9_WO036_STATUS=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
+J9_WO036_RESUME_AFTER_WO037_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
+J9_WO036_WORK_ORDER_MOVE_TO_COMPLETED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
 ```
