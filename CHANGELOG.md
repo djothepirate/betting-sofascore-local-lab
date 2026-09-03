@@ -15,14 +15,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - correction autorisée strictement limitée au passage de cette deadline externe à 180 s, sans
   modification des timeouts runtime, de la propriété/cleanup des processus, de la politique CI ou
   d'un comportement applicatif ;
-- commit d'implémentation `63cfa6eeb8b21bf185390622fe524014104b0b31` qualifié par trois
+- commit d'implémentation `63cfa6e0187f24d3393e8f846036aa078c3f94a6` qualifié par trois
   exécutions ciblées J6 (`64.055 s`, `61.918 s`, `60.258 s`), puis par les deux parcours Maven
   complets, chacun à Surefire `1136/0/0/5` et Failsafe `89/0/0/0` ;
 - maximum J6 post-correction mesuré à `64.825 s`, soit `36.01 %` de la borne externe de 180 s, avec
   zéro processus détenu, listener de campagne ou conteneur Testcontainers résiduel ;
 - rapport local `docs/validation/J9-WO042-PR25-CI-READINESS-QUALIFICATION-20260904.md`, taille
   `7124` octets et SHA-256
-  `43a0711b0d53749f261594a7d24f670c3a54ff33be2b073b992c5f065e41a67f` ;
+  `cd278b5d3c9698030bee54ee3cefb01458c192c02761238c1111d7af19a9fc58` ;
 - préparation autorisée d'une PR de remplacement, sans fermeture de la PR `#25` avant obtention de
   checks verts et sans autorisation de fusion ;
 - aucune permission officielle, donnée J7 réelle, réseau fournisseur ou receiver réel/distant, VPS,

@@ -18,7 +18,7 @@ avec Surefire `1136/0/0/5` et Failsafe `89/0/0/0`. Le maximum J6 observé est `6
 `36.01 %` de la borne. Le
 [rapport local](docs/validation/J9-WO042-PR25-CI-READINESS-QUALIFICATION-20260904.md) mesure `7124`
 octets et porte le SHA-256
-`43a0711b0d53749f261594a7d24f670c3a54ff33be2b073b992c5f065e41a67f`. La readiness distante reste
+`cd278b5d3c9698030bee54ee3cefb01458c192c02761238c1111d7af19a9fc58`. La readiness distante reste
 à établir sur la future PR de remplacement.
 
 La PR `#25` reste ouverte jusqu'à l'obtention de checks verts sur la remplaçante. Aucune fusion,

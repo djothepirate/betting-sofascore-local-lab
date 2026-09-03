@@ -10,11 +10,11 @@
 - **Base qualifiée exacte :** `ad343d5f1ed131b9a766c60ffd0086dc354ee839`
 - **Pull Request historique :** `#25`
 - **Run CI diagnostiqué :** `33812551196`
-- **Commit d'ouverture :** `ec3def5f03c0390289308fe899eafc08cb03893e`
-- **Commit d'implémentation :** `63cfa6eeb8b21bf185390622fe524014104b0b31`
+- **Commit d'ouverture :** `ec3def51ae4936eb7d0c689d4bfa773070102262`
+- **Commit d'implémentation :** `63cfa6e0187f24d3393e8f846036aa078c3f94a6`
 - **Rapport local :**
   [`J9-WO042-PR25-CI-READINESS-QUALIFICATION-20260904.md`](../../validation/J9-WO042-PR25-CI-READINESS-QUALIFICATION-20260904.md)
-- **SHA-256 du rapport :** `43a0711b0d53749f261594a7d24f670c3a54ff33be2b073b992c5f065e41a67f`
+- **SHA-256 du rapport :** `cd278b5d3c9698030bee54ee3cefb01458c192c02761238c1111d7af19a9fc58`
 - **Permission officielle :** `NOT_EVIDENCED`
 
 ## 1. Autorisation propriétaire
@@ -138,7 +138,7 @@ MERGE_AUTHORIZED=NO
 
 ## 7. Qualification locale obtenue
 
-Le commit d'implémentation `63cfa6eeb8b21bf185390622fe524014104b0b31` modifie uniquement la
+Le commit d'implémentation `63cfa6e0187f24d3393e8f846036aa078c3f94a6` modifie uniquement la
 deadline externe de `J6NativeBinaryPipelineQualificationTest` de `90` à `180` secondes. Les scripts
 J6 et leurs timeouts internes restent byte-identiques à la base. Trois exécutions ciblées
 successives passent en `64.055 s`, `61.918 s` et `60.258 s`. Les parcours Maven standard et
@@ -168,6 +168,6 @@ MERGE_AUTHORIZED=NO
 ```
 
 Le rapport local expurgé mesure `7124` octets et porte le SHA-256
-`43a0711b0d53749f261594a7d24f670c3a54ff33be2b073b992c5f065e41a67f`. Il autorise la publication
+`cd278b5d3c9698030bee54ee3cefb01458c192c02761238c1111d7af19a9fc58`. Il autorise la publication
 de la branche et la préparation de la PR de remplacement, mais ne vaut ni check GitHub vert, ni
 validation propriétaire de WO-042, ni autorisation de fusion ou de fermeture immédiate de `#25`.
