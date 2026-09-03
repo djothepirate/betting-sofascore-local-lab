@@ -1820,6 +1820,21 @@ select jsonb_build_object(
     }
 }
 
+function Test-WO036ExactLoopbackListenerSnapshot {
+    param(
+        [Parameter(Mandatory = $true)]
+        [AllowEmptyCollection()]
+        [object[]]$Listeners,
+        [Parameter(Mandatory = $true)][int]$Port,
+        [Parameter(Mandatory = $true)][int]$ProcessId
+    )
+
+    return $Listeners.Count -eq 1 -and
+        [string]$Listeners[0].LocalAddress -ceq '127.0.0.1' -and
+        [int]$Listeners[0].LocalPort -eq $Port -and
+        [int]$Listeners[0].OwningProcess -eq $ProcessId
+}
+
 function Test-WO036ExactLoopbackListener {
     param(
         [Parameter(Mandatory = $true)][int]$Port,
@@ -1828,10 +1843,8 @@ function Test-WO036ExactLoopbackListener {
 
     $listeners = @(Get-NetTCPConnection -State Listen -LocalPort $Port `
         -ErrorAction SilentlyContinue)
-    return $listeners.Count -eq 1 -and
-        [string]$listeners[0].LocalAddress -ceq '127.0.0.1' -and
-        [int]$listeners[0].LocalPort -eq $Port -and
-        [int]$listeners[0].OwningProcess -eq $ProcessId
+    return Test-WO036ExactLoopbackListenerSnapshot -Listeners $listeners `
+        -Port $Port -ProcessId $ProcessId
 }
 
 function Wait-WO036LoopbackListener {
@@ -1843,11 +1856,12 @@ function Wait-WO036LoopbackListener {
         if (-not (Get-Process -Id $ProcessId -ErrorAction SilentlyContinue)) {
             return $false
         }
-        if (Test-WO036ExactLoopbackListener -Port $Port -ProcessId $ProcessId) {
-            return $true
-        }
         $listeners = @(Get-NetTCPConnection -State Listen -LocalPort $Port `
             -ErrorAction SilentlyContinue)
+        if (Test-WO036ExactLoopbackListenerSnapshot -Listeners $listeners `
+                -Port $Port -ProcessId $ProcessId) {
+            return $true
+        }
         if ($listeners.Count -gt 0) { return $false }
         Start-Sleep -Milliseconds 500
     }
