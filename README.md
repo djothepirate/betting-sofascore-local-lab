@@ -5,8 +5,8 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
-[WO-SS-20260903-040](docs/work_orders/active/WO-SS-20260903-040-j9-wo036-collision-response-client-qualification.md)
-est `READY_FOR_OWNER_REVIEW` sur une branche et un worktree distincts depuis le commit R4 exact
+[WO-SS-20260903-040](docs/work_orders/completed/WO-SS-20260903-040-j9-wo036-collision-response-client-qualification.md)
+est `VALIDATED` sur une branche et un worktree distincts depuis le commit R4 exact
 `33d2ae0bd5c2c8daae4cd708b0f12efaf9cd029d`. Sa portée est limitée au diagnostic, à la correction
 et à la qualification du lecteur de réponse HTTP de la sonde WO-036 après un effet durable de
 divergence. WO-036 reste arrêté, sa claim R4 demeure consommée et aucun sender Java, receiver,
@@ -32,7 +32,11 @@ chunked, sans retry. La base isolée contient exactement un receipt, un payload,
 accès ni purge. Le
 [rapport WO-040](docs/validation/J9-WO040-COLLISION-RESPONSE-CLIENT-QUALIFICATION-20260903.md)
 a pour SHA-256 `2eb13aa1825d21eb5c40e97ffebf77246099d781f626591132897c4d128e9aee`.
-WO-040 reste actif jusqu'à validation propriétaire ; WO-036 reste arrêté et R5 n'est pas autorisé.
+Le propriétaire a validé WO-040, reconnu sa readiness locale et autorisé son déplacement vers les
+Work Orders terminés le `2026-09-03T18:58:26.5005063Z`, soit
+`2026-09-03T20:58:26.5005063+02:00` en Europe/Paris. Cette validation clôt uniquement WO-040 :
+WO-036 reste arrêté et R5 n'est pas autorisé sans décision propriétaire distincte ni manifeste
+neuf gelé avant son premier POST.
 
 Le run neuf R4 de
 [WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)

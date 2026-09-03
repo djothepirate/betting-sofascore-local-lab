@@ -43,7 +43,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   rapport `J9-WO040-COLLISION-RESPONSE-CLIENT-QUALIFICATION-20260903`, SHA-256
   `2eb13aa1825d21eb5c40e97ffebf77246099d781f626591132897c4d128e9aee` ; WO-036 reste arrêté,
   R5 non autorisé et soumis à une décision propriétaire distincte et à un manifeste neuf gelé
-  avant son premier POST.
+  avant son premier POST ;
+- validation propriétaire de WO-040, readiness locale reconnue et déplacement vers les Work
+  Orders terminés le `2026-09-03T18:58:26.5005063Z`, soit
+  `2026-09-03T20:58:26.5005063+02:00` en Europe/Paris ; cette clôture ne reprend pas WO-036,
+  n'autorise pas R5 et maintient toutes les portes fournisseur, receiver réel ou distant, VPS et
+  production à `NO`.
 
 ### Après J9 — WO-036 reprise R4 synthétique arrêtée après divergence durable
 
