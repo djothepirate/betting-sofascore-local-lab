@@ -23,6 +23,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - rapport local `docs/validation/J9-WO042-PR25-CI-READINESS-QUALIFICATION-20260904.md`, taille
   `7124` octets et SHA-256
   `cd278b5d3c9698030bee54ee3cefb01458c192c02761238c1111d7af19a9fc58` ;
+- branche poussée et PR de remplacement `#26` ouverte sans conflit vers `main`, sans directive de
+  clôture automatique de `#25` ;
+- premier run distant `33817549423` vert sur `ef4fbe69c06b007e4bf96a80971576eeb3ad7537` : Windows
+  `PASS` en `3 min 31 s` et Linux `PASS` en `5 min 06 s`, avec une seconde passe requise sur le
+  commit documentaire final ;
 - préparation autorisée d'une PR de remplacement, sans fermeture de la PR `#25` avant obtention de
   checks verts et sans autorisation de fusion ;
 - aucune permission officielle, donnée J7 réelle, réseau fournisseur ou receiver réel/distant, VPS,

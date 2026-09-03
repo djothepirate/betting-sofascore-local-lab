@@ -1,6 +1,6 @@
 # WO-SS-20260904-042 — Readiness CI de la PR de remplacement WO-036
 
-- **Statut :** `LOCAL_READY_PENDING_REPLACEMENT_PR`
+- **Statut :** `READY_FOR_OWNER_REVIEW`
 - **Jalon :** après J9 — préparation de fusion de WO-036
 - **Ouvert le :** 2026-09-04
 - **Ouverture UTC :** `2026-09-03T22:36:17.9770318Z`
@@ -9,7 +9,10 @@
 - **Worktree :** `.tmp/j9-wo042-pr25-ci-readiness`
 - **Base qualifiée exacte :** `ad343d5f1ed131b9a766c60ffd0086dc354ee839`
 - **Pull Request historique :** `#25`
+- **Pull Request de remplacement :**
+  [`#26`](https://github.com/djothepirate/betting-sofascore-local-lab/pull/26)
 - **Run CI diagnostiqué :** `33812551196`
+- **Premier run CI vert de la remplaçante :** `33817549423`
 - **Commit d'ouverture :** `ec3def51ae4936eb7d0c689d4bfa773070102262`
 - **Commit d'implémentation :** `63cfa6e0187f24d3393e8f846036aa078c3f94a6`
 - **Rapport local :**
@@ -159,9 +162,11 @@ WO042_SECRET_SCAN=PASS_HIGH_CONFIDENCE
 WO042_DIFF_CHECK=PASS
 WO042_RESIDUAL_OWNED_PROCESSES=0
 WO042_RESIDUAL_TESTCONTAINERS=0
-WO042_REPLACEMENT_PULL_REQUEST=NOT_CREATED
-WO042_REPLACEMENT_PULL_REQUEST_CHECKS=NOT_RUN
-WO042_STATUS=LOCAL_READY_PENDING_REPLACEMENT_PR
+WO042_REPLACEMENT_PULL_REQUEST=26
+WO042_REPLACEMENT_PULL_REQUEST_INITIAL_HEAD=ef4fbe69c06b007e4bf96a80971576eeb3ad7537
+WO042_REPLACEMENT_PULL_REQUEST_INITIAL_CHECKS=WINDOWS_PASS_LINUX_PASS
+WO042_REPLACEMENT_PULL_REQUEST_FINAL_HEAD_CHECKS=REQUIRED_AFTER_TRACEABILITY_COMMIT
+WO042_STATUS=READY_FOR_OWNER_REVIEW_AFTER_GREEN_FINAL_HEAD
 PR25_STATUS=OPEN
 PR25_CLOSE_AUTHORIZED=NO_PENDING_GREEN_REPLACEMENT
 MERGE_AUTHORIZED=NO
@@ -171,3 +176,26 @@ Le rapport local expurgé mesure `7124` octets et porte le SHA-256
 `cd278b5d3c9698030bee54ee3cefb01458c192c02761238c1111d7af19a9fc58`. Il autorise la publication
 de la branche et la préparation de la PR de remplacement, mais ne vaut ni check GitHub vert, ni
 validation propriétaire de WO-042, ni autorisation de fusion ou de fermeture immédiate de `#25`.
+
+## 8. Pull Request de remplacement et première preuve distante
+
+La branche a été poussée sans réécriture, puis la Pull Request
+[`#26`](https://github.com/djothepirate/betting-sofascore-local-lab/pull/26) a été ouverte vers `main`.
+Sur le HEAD `ef4fbe69c06b007e4bf96a80971576eeb3ad7537`, le run GitHub Actions
+`33817549423` obtient les deux résultats suivants :
+
+```text
+WO042_INITIAL_REMOTE_CI_RUN=33817549423
+WO042_INITIAL_REMOTE_WINDOWS_JOB=PASS_3M31S
+WO042_INITIAL_REMOTE_LINUX_JOB=PASS_5M06S
+WO042_INITIAL_REMOTE_CHECKS=2_OF_2_PASS
+WO042_REPLACEMENT_PULL_REQUEST_CONFLICTS=NONE
+WO042_REPLACEMENT_PULL_REQUEST_MERGEABLE=YES
+PR25_STATUS=OPEN
+PR25_CLOSE_EXECUTED=NO
+MERGE_EXECUTED=NO
+```
+
+Le présent ajout de traçabilité change le HEAD de la PR après cette première passe verte. La
+readiness propriétaire annoncée en tête exige donc que les mêmes deux checks soient également verts
+sur ce HEAD documentaire final. Aucun échec ne peut être masqué par la passe précédente.

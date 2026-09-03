@@ -21,6 +21,12 @@ octets et porte le SHA-256
 `cd278b5d3c9698030bee54ee3cefb01458c192c02761238c1111d7af19a9fc58`. La readiness distante reste
 à établir sur la future PR de remplacement.
 
+La PR de remplacement
+[`#26`](https://github.com/djothepirate/betting-sofascore-local-lab/pull/26) est ouverte vers `main`,
+sans conflit. Son premier run distant `33817549423`, sur le HEAD `ef4fbe69c06b007e4bf96a80971576eeb3ad7537`,
+est vert : Windows en `3 min 31 s` et Linux en `5 min 06 s`. Le dernier commit de traçabilité doit
+obtenir les mêmes deux checks verts avant la revue propriétaire ; aucune fusion n'est autorisée.
+
 La PR `#25` reste ouverte jusqu'à l'obtention de checks verts sur la remplaçante. Aucune fusion,
 fermeture prématurée de `#25`, donnée J7 réelle, opération fournisseur/receiver réelle ou distante,
 VPS, production, PR ou validation INT-001 n'est autorisée par WO-042.
