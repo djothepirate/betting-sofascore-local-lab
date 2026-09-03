@@ -22,23 +22,29 @@ Le propriétaire a validé les commits runtime, harnais et documentation, reconn
 et autorisé le déplacement du Work Order vers `completed` le `2026-09-03T09:53:43Z`, soit
 `2026-09-03T11:53:43+02:00` en Europe/Paris.
 
-Cette validation n’autorise ni reprise de WO-036, ni livraison, ni receiver réel, ni réseau
-fournisseur, ni VPS, ni production. WO-036 reste arrêté et sa reprise exige une nouvelle décision
-propriétaire et un nouveau manifeste.
+Cette validation n’autorisait pas à elle seule la reprise de WO-036. Le propriétaire a depuis
+autorisé séparément cette reprise, qui reste bornée à une nouvelle campagne synthétique locale et
+à un nouveau manifeste. Elle n’autorise ni donnée dérivée, ni réseau fournisseur ou distant, ni
+VPS, ni production.
 
 Le Work Order
 [WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
-reste actif avec le résultat `STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION`. La
-campagne E2E strictement synthétique Windows/Windows a été arrêtée avant son premier appel receiver :
+reste actif à `RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT`. Son premier essai conserve
+le résultat
+immuable `STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION` : la campagne E2E strictement
+synthétique Windows/Windows a été arrêtée avant son premier appel receiver lorsque
 Brave a produit `Origin: null` sous la politique `Referrer-Policy: no-referrer`, tandis que la
 frontière locale n'accepte qu'un Origin absent ou exactement loopback et a donc répondu `403` avant
 contrôleur. Le [rapport WO-036](docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-20260903.md)
 confirme zéro tentative sender persistée, zéro receipt/payload/audit/outbox receiver, zéro retry et
 zéro appel fournisseur. Le cleanup de campagne est complet et le PostgreSQL primaire exact a été
-redémarré `healthy`. Un Work Order runtime distinct et une nouvelle décision de reprise sont requis
-avant de rejouer `201/200/409`. La permission officielle reste `NOT_EVIDENCED` ; aucune donnée
-dérivée de SofaScore, aucun réseau fournisseur ou distant, VPS, production, push ou PR INT-001
-n'est autorisé par cette ouverture.
+redémarré `healthy`. WO-037 a corrigé et qualifié la frontière navigateur ; la décision propriétaire
+distincte de reprise a été enregistrée le `2026-09-03T10:10:23Z`, soit
+`2026-09-03T12:10:23+02:00` en Europe/Paris. Un nouveau run complet et un nouveau manifeste lié au
+commit/JAR corrigés sont obligatoires avant de rejouer `201/200/409`. La permission officielle
+reste `NOT_EVIDENCED` ; aucune donnée dérivée de SofaScore, aucun réseau fournisseur ou distant,
+VPS, production, push ou PR INT-001
+n'est autorisé par cette reprise.
 
 Le Work Order
 [WO-SS-20260902-035](docs/work_orders/completed/WO-SS-20260902-035-j9-real-j7-delivery-sender.md)

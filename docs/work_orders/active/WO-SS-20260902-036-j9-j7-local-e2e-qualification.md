@@ -1,6 +1,6 @@
 # WO-SS-20260902-036 — Qualification E2E J7 locale Windows/Windows
 
-- **Statut :** `STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION`
+- **Statut :** `RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT`
 - **Jalon :** après J9 — qualification synthétique de `OPTIONAL_LOCAL_PUSH`
 - **Ouvert le :** 2026-09-02
 - **Ouverture UTC :** `2026-09-02T19:08:46.1623419Z`
@@ -9,6 +9,10 @@
 - **Worktree :** `.tmp/j9-wo036-j7-local-e2e`
 - **Base locale d’ouverture vérifiée :** `aa405c6750062b9df9312f0845188f48f4c778de`
 - **Sender Local Lab qualifié :** `f5a27887b7db43576eb608d564c245c8cca3a602`
+- **Correctif navigateur validé :** `f28e4b6954c0fb703923f770ab9156326e212a07`
+- **Clôture WO-037 intégrée par fast-forward :** `9a10447d0c94e441b860b942e436e2c943f1e2c1`
+- **Reprise autorisée UTC :** `2026-09-03T10:10:23Z`
+- **Reprise autorisée Europe/Paris :** `2026-09-03T12:10:23+02:00`
 - **Receiver INT-001 observé :** `b6a093ab4d3358f23a59b65b68a3eb720494bcba`
 - **Implémentation receiver observée :** `3920a58c122cbee0fb379781abcd53d3eaa0f70d`
 - **Base CAT-002 du receiver :** `85dc943601a7d33d37ca69a0c913bf32f1162811`
@@ -25,7 +29,7 @@ dérivée de SofaScore, aucun appel fournisseur, receiver distant, VPS ou produc
 
 ```text
 WORK_ORDER=WO-SS-20260902-036-j9-j7-local-e2e-qualification
-WORK_ORDER_STATUS=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
+WORK_ORDER_STATUS=RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
 BRANCH=codex/j9-wo036-j7-local-e2e
 
 LOCAL_SYNTHETIC_WINDOWS_E2E_AUTHORIZED=YES
@@ -249,7 +253,7 @@ POST_CAMPAIGN_INTEGRATION_VERIFY=PASS_85_TESTS_0_FAILURES_0_ERRORS_0_SKIPPED
 POST_CAMPAIGN_VERIFY_LOCAL=PASS_NO_PROVIDER_CALL
 ```
 
-## 11. Décision propriétaire requise
+## 11. Décision propriétaire requise après le premier essai
 
 WO-036 reste actif ; il ne peut pas être déplacé vers `completed` et sa série ne peut pas être
 reprise avec le manifeste courant. Un correctif runtime distinct doit d'abord réconcilier la
@@ -272,6 +276,77 @@ J9_WO036_RESUME_AFTER_WO037_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
 J9_WO036_WORK_ORDER_MOVE_TO_COMPLETED=NO
 J9_PROVIDER_NETWORK_AUTHORIZED=NO
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+## 12. Autorisation propriétaire de reprise et campagne R2
+
+La section précédente reste le constat historique du premier essai. Le manifeste et le rapport
+qui le documentent demeurent gelés et ne sont ni modifiés ni réinterprétés. WO-037 a depuis corrigé
+la politique de referrer sans accepter d’origine opaque, puis a été qualifié et validé. Le
+propriétaire a ensuite transmis la décision distincte suivante :
+
+```text
+J'autorise la reprise de la WO-036
+```
+
+Cette phrase est enregistrée le `2026-09-03T10:10:23Z`, soit
+`2026-09-03T12:10:23+02:00` en Europe/Paris. Son effet est borné au périmètre synthétique
+Windows/Windows déjà approuvé. La branche WO-036 a été avancée linéairement jusqu’au commit de
+clôture WO-037 `9a10447d0c94e441b860b942e436e2c943f1e2c1`, sans rebase ni réécriture.
+
+Les preuves historiques restent identifiées par :
+
+```text
+PREVIOUS_MANIFEST_REFERENCE=docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-20260902.md
+PREVIOUS_MANIFEST_COMMIT=c6a1e0a4f8fbf57279344d24d0cb0e521d315d9d
+PREVIOUS_MANIFEST_SHA256=e996e631fdc905c91b8288852fbba7b878023985db7d5bdd228dccdaeefbe960
+PREVIOUS_STOPPED_REPORT_REFERENCE=docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-20260903.md
+PREVIOUS_STOPPED_REPORT_COMMIT=f4f53aa24b4a8a764819bdb7cf79c87482bd7244
+PREVIOUS_STOPPED_REPORT_SHA256=5244422187f0bc591e3ce57f20b076037f64bad266ad9052b985d8127b475994
+PRE_RESUME_WORK_ORDER_SHA256=d9247d05f9a168492e529fddfb72125db6a560f081b2d5b929bddcd11ed6b853
+```
+
+La porte WO-037 acquise est liée par :
+
+```text
+WO037_STATUS=VALIDATED
+WO037_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
+WO037_RUNTIME_COMMIT=f28e4b6954c0fb703923f770ab9156326e212a07
+WO037_QUALIFIED_HARNESS_COMMIT=2596f0592496b2ba84893c8f4ef2cf0185d46f8f
+WO037_DOCUMENTATION_COMMIT=24739d03d33801a8a6c8d2fe956e1dc254bb3d57
+WO037_CLOSURE_COMMIT=9a10447d0c94e441b860b942e436e2c943f1e2c1
+WO037_REPORT_REFERENCE=docs/validation/J9-WO037-J7-BROWSER-ORIGIN-BOUNDARY-QUALIFICATION-20260903.md
+WO037_REPORT_SHA256=db8993328643a0ecb39eb83ff9eab6223f6c6ca6605b4cacf3e96dea171fab01
+WO037_COMPLETED_WORK_ORDER_REFERENCE=docs/work_orders/completed/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md
+WO037_COMPLETED_WORK_ORDER_SHA256=dc76113dc9e6439a5e0b6b5ad8f8e8db5b2d5fe4226163681a62aaf3fe064b93
+```
+
+Un nouveau run complet doit repartir de zéro. Il emploiera un nouveau répertoire privé, une PKI et
+des bases isolées neuves, reconstruira les deux JAR, enregistrera leur identité et gèlera avant le
+premier POST un nouveau manifeste distinct :
+
+```text
+docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-20260903.md
+```
+
+L’ancien manifeste et le rapport d’arrêt restent immuables. WO-036 reste actif et ne peut toujours
+pas être déplacé vers `completed` avant une nouvelle preuve complète et une revue propriétaire.
+
+```text
+J9_WO036_OWNER_RESUME_DECISION=AUTHORIZE
+J9_WO036_STATUS=RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
+J9_WO036_RESUME_AFTER_WO037_VALIDATION=AUTHORIZED_BY_SEPARATE_OWNER_DECISION
+J9_WO036_FRESH_RUN_REQUIRED=YES
+J9_WO036_FRESH_MANIFEST_REQUIRED=YES
+J9_WO036_WORK_ORDER_MOVE_TO_COMPLETED=NO
+J9_LOCAL_SYNTHETIC_WINDOWS_E2E_AUTHORIZED=YES
+J9_LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=YES_SYNTHETIC_ONLY
+J9_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
 J9_VPS_DEPLOYMENT_AUTHORIZED=NO
 J9_PRODUCTION_AUTHORIZED=NO
 ```

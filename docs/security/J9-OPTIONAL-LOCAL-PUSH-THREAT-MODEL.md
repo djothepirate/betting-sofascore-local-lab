@@ -13,11 +13,14 @@ SECURITY_MODEL_VERSION=1.0
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 WO035_LOCAL_RECEIVER_ORIGIN=https://127.0.0.1:8444
 WO035_RUNTIME_NETWORK_AUTHORIZED=NO
-WO036_WINDOWS_WINDOWS_E2E_STATUS=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
+WO036_WINDOWS_WINDOWS_E2E_STATUS=RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
+WO036_FIRST_ATTEMPT_RESULT=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
 WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=VALIDATED
 WO037_BROWSER_ORIGIN_BOUNDARY_RESULT=PASS_LOCAL_FAIL_CLOSED
 WO037_OWNER_REVIEW_DECISION=VALIDATE
-WO036_RESUME_AFTER_WO037_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
+WO036_RESUME_AFTER_WO037_VALIDATION=AUTHORIZED_BY_SEPARATE_OWNER_DECISION
+WO036_FRESH_MANIFEST_REQUIRED=YES
+LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=YES
 REAL_NETWORK_AUTHORIZED=NO
 PROVIDER_NETWORK_AUTHORIZED=NO
 MTLS_REQUIRED_FOR_ANY_FUTURE_REAL_TARGET=YES
@@ -236,7 +239,7 @@ Windows. Le sender ne consulte ces magasins qu’après les portes runtime et un
 | Permission ou licence applicable | `NOT_EVIDENCED` | Source ou autorisation versionnée et revue qualifiée |
 | Receiver et idempotence transactionnelle | `OUT_OF_SCOPE_LOCAL_LAB` | Validation INT-001 puis E2E synthétique WO-036 |
 | URI et exposition | `LOCAL_LOOPBACK_ONLY_NOT_EXECUTED` | Qualification WO-036 de l’origine exacte `127.0.0.1:8444` |
-| Compatibilité navigateur/frontière locale | `PASS_LOCAL_FAIL_CLOSED_VALIDATED` | Réduction locale validée ; toute reprise de WO-036 reste soumise à une décision propriétaire distincte |
+| Compatibilité navigateur/frontière locale | `PASS_LOCAL_FAIL_CLOSED_VALIDATED` | Réduction locale validée et reprise synthétique autorisée ; nouveau préflight et manifeste encore obligatoires |
 | Profil PKI réel | `NOT_DEFINED` | Autorités, EKU, révocation, rotation et récupération approuvées |
 | Non-exportabilité native de la clé client | `NOT_QUALIFIED` | Provisionnement Windows réel et preuve native contrôlée |
 | Rétention de la copie importée | `NOT_DEFINED` | Politique receiver, purge et restauration qualifiées |

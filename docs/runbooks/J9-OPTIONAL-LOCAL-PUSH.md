@@ -3,9 +3,10 @@
 ## 1. Objet et limite d’emploi
 
 Ce runbook conserve la qualification du socle fail-closed v1.0 réalisée sous WO-027 et documente
-la préparation runtime de WO-035. Il ne permet pas d’envoyer un export vers le Betting Project ou
-vers une autre cible. Le premier échange synthétique entre les deux applications relève de WO-036,
-actuellement arrêté avant receiver et non reprenable sans décision propriétaire distincte.
+la préparation runtime de WO-035. Il ne permet aucune livraison de données dérivées. Le premier
+échange synthétique entre les deux applications relève de WO-036 ; après l’arrêt de son premier
+essai avant receiver et la validation de WO-037, sa reprise a été autorisée par une décision
+propriétaire distincte et exige un run neuf ainsi qu’un nouveau manifeste.
 
 ```text
 RUNBOOK_SCOPE=WO027_OFFLINE_LOOPBACK_WO035_RUNTIME_AND_WO037_BROWSER_BOUNDARY
@@ -13,11 +14,14 @@ CONTRACT_VERSION=1.0
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 WO035_LOCAL_RECEIVER_ORIGIN=https://127.0.0.1:8444
 WO035_NETWORK_EXECUTION_AUTHORIZED=NO
-WO036_WINDOWS_WINDOWS_E2E_STATUS=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
+WO036_WINDOWS_WINDOWS_E2E_STATUS=RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
+WO036_FIRST_ATTEMPT_RESULT=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
 WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=VALIDATED
 WO037_BROWSER_ORIGIN_BOUNDARY_RESULT=PASS_LOCAL_FAIL_CLOSED
 WO037_OWNER_REVIEW_DECISION=VALIDATE
-WO036_RESUME_AFTER_WO037_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
+WO036_RESUME_AFTER_WO037_VALIDATION=AUTHORIZED_BY_SEPARATE_OWNER_DECISION
+WO036_FRESH_MANIFEST_REQUIRED=YES
+LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=YES
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 PROVIDER_NETWORK_AUTHORIZED=NO
 LIVE_DELIVERY_AUTHORIZED=NO
@@ -564,17 +568,20 @@ payload échoue doit encore atteindre le contrôle stale/ordinal, sans aucun POS
 
 ### 14.7 Porte vers WO-036
 
-WO-036 est actif mais arrêté avant son premier appel receiver. Son manifeste et son rapport d’arrêt
-restent gelés. La qualification verte de WO-037 réduit uniquement le défaut de frontière
-navigateur ; elle ne réactive pas la campagne. La reprise de WO-036 exige une décision propriétaire
-distincte, un nouveau manifeste lié au commit et au JAR qualifiés, puis une campagne complète depuis
-son début.
+WO-036 est actif. Son premier manifeste et son rapport d’arrêt restent gelés. La qualification
+verte de WO-037 a réduit le défaut de frontière navigateur, puis une décision propriétaire
+distincte a autorisé la reprise. Avant tout premier POST du nouveau run, il reste obligatoire de
+refaire le préflight, reconstruire et enregistrer les exécutables, créer des ressources isolées
+neuves et geler un nouveau manifeste lié au commit et aux JAR qualifiés. La série repart ensuite
+intégralement depuis son début ; aucun compteur, export, certificat ou état privé du premier essai
+n’est réutilisé.
 
 WO-036 reste limité à un export J7 entièrement synthétique, au Local Lab sur
 `127.0.0.1:8087`, au receiver sur `127.0.0.1:8444`, à deux bases distinctes et à une PKI locale
 hors Git. Il devra encore prouver `201/IMPORTED`, `200/DUPLICATE`, `409`, l’identité byte-à-byte,
-l’outbox et le cleanup. WO-037 n’autorise aucun appel SofaScore, export dérivé fournisseur,
-receiver réel ou distant, VPS ou production.
+l’outbox et le cleanup. La reprise autorise le receiver INT-001 réel uniquement sur le loopback et
+avec ce corpus synthétique. Elle n’autorise aucun appel SofaScore, export dérivé fournisseur,
+receiver distant, VPS ou production.
 
 Bloc de clôture attendu pour WO-035 :
 

@@ -32,9 +32,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `24739d03d33801a8a6c8d2fe956e1dc254bb3d57`, readiness locale reconnue et déplacement autorisé
   vers `completed`, décision enregistrée le `2026-09-03T09:53:43Z` ;
 - WO-037 passe à `VALIDATED` sans autoriser de livraison ni de réseau réel ;
-- WO-036 demeure `STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION` : sa reprise, son
-  nouveau manifeste et la campagne complète `201/200/409` exigent une décision propriétaire
-  distincte.
+- le premier essai WO-036 demeure une preuve immuable
+  `STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION` ;
+- décision propriétaire distincte de reprise WO-036 enregistrée le `2026-09-03T10:10:23Z`, puis
+  fast-forward de sa branche vers le commit validé WO-037
+  `9a10447d0c94e441b860b942e436e2c943f1e2c1` ; la nouvelle série `201/200/409` reste subordonnée
+  à un run neuf et à un nouveau manifeste lié aux exécutables qualifiés.
 
 ### Après J9 — WO-036 qualification E2E J7 locale Windows/Windows
 

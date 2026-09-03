@@ -16,11 +16,14 @@ J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 LOCAL_RECEIVER_ORIGIN=https://127.0.0.1:8444
 LOCAL_IMPORT_ENDPOINT_URI=https://127.0.0.1:8444/api/imports/sofascore/j7-canonical-events
 WO035_RUNTIME_SENDER_STATUS=VALIDATED_LOCAL_FAIL_CLOSED
-WO036_WINDOWS_WINDOWS_E2E_STATUS=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
+WO036_WINDOWS_WINDOWS_E2E_STATUS=RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
+WO036_FIRST_ATTEMPT_RESULT=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
 WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=VALIDATED
 WO037_BROWSER_ORIGIN_BOUNDARY_RESULT=PASS_LOCAL_FAIL_CLOSED
 WO037_OWNER_REVIEW_DECISION=VALIDATE
-WO036_RESUME_AFTER_WO037_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
+WO036_RESUME_AFTER_WO037_VALIDATION=AUTHORIZED_BY_SEPARATE_OWNER_DECISION
+WO036_FRESH_MANIFEST_REQUIRED=YES
+LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=YES
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 PROVIDER_NETWORK_AUTHORIZED=NO
 LIVE_DELIVERY_AUTHORIZED=NO
@@ -499,11 +502,11 @@ gelé. WO-037 corrige et qualifie uniquement cette frontière navigateur. Son ha
 établi avec Spring/Tomcat réel, des services synthétiques en mémoire et Chromium que la préparation
 native porte l’Origin loopback exact, tandis qu’une origine opaque reste refusée avant contrôleur.
 
-Même après la qualification verte et la validation propriétaire de WO-037, la série
-synthétique `201/IMPORTED`, `200/DUPLICATE` et `409` de WO-036 ne peut pas reprendre sans nouvelle
-décision propriétaire, nouveau manifeste lié au commit et au JAR qualifiés et redémarrage complet
-de la campagne. Les résultats de WO-037 n’autorisent ni réseau fournisseur, ni livraison de données
-dérivées, ni receiver réel, ni VPS, ni production.
+La décision propriétaire distincte de reprise a désormais été reçue. Elle autorise uniquement un
+redémarrage complet de WO-036 sur le loopback avec un corpus synthétique, après préflight frais et
+gel d’un nouveau manifeste lié aux commits et JAR qualifiés. Elle ne rouvre pas le manifeste du
+premier essai et n’autorise ni réseau fournisseur, ni livraison de données dérivées, ni receiver
+distant, ni VPS, ni production.
 
 Tout changement incompatible exige une version de protocole nouvelle, une revue d’ADR-SS-003 et
 un Work Order. Aucun assouplissement silencieux, champ d’ACK toléré, retry, URI de secours ou
