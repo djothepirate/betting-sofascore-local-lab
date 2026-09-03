@@ -4,6 +4,15 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
+Le Work Order
+[WO-SS-20260903-040](docs/work_orders/active/WO-SS-20260903-040-j9-wo036-collision-response-client-qualification.md)
+est ouvert sur une branche et un worktree distincts depuis le commit R4 exact
+`33d2ae0bd5c2c8daae4cd708b0f12efaf9cd029d`. Sa portée est limitée au diagnostic, à la correction
+et à la qualification du lecteur de réponse HTTP de la sonde WO-036 après un effet durable de
+divergence. WO-036 reste arrêté, sa claim R4 demeure consommée et aucun sender Java, receiver,
+contrat, migration, réseau fournisseur ou distant, VPS ou production n’est autorisé à changer ou
+à être utilisé.
+
 Le run neuf R4 de
 [WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
 a été gelé avant son premier POST au commit `e12500dc8af9133b254bfe075d74e979cad472a6`, manifeste

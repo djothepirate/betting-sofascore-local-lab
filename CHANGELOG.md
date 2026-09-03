@@ -4,6 +4,17 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — ouverture de WO-040 sur la capture de réponse de collision WO-036
+
+- ouverture depuis le commit R4 exact `33d2ae0bd5c2c8daae4cd708b0f12efaf9cd029d`, dans la branche
+  `codex/j9-wo040-collision-response-client-qualification` et le worktree court `.tmp/w40` ;
+- portée bornée au lecteur HTTP du harnais `scripts/wo036`, après un effet receiver de divergence
+  durable dont le statut n’a pas été capturé côté client R4 ;
+- qualification hors ligne autorisée, puis qualification optionnelle contre INT-001 exclusivement
+  loopback et synthétique, sans reprise ou rejeu de WO-036 ;
+- sender Java, receiver, migrations, protocole, permission officielle, réseaux fournisseur et
+  distant, VPS, production et base primaire inchangés et hors périmètre.
+
 ### Après J9 — WO-036 reprise R4 synthétique arrêtée après divergence durable
 
 - gel du manifeste R4 avant le premier POST au commit
