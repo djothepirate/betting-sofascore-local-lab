@@ -207,6 +207,30 @@ Describe 'WO-036 exact three-call proof model' {
         $moduleText | Should Match 'FULL_J7_ENVELOPE_METADATA_ONLY_MUTATION'
     }
 
+    It 'writes the collision request as exact bounded HTTP bytes over pinned loopback TLS' {
+        $moduleText | Should Match 'function New-WO036CollisionHttpRequest'
+        $moduleText | Should Match 'Content-Type: \$script:RequestMediaType'
+        $moduleText | Should Match 'Host: 127\.0\.0\.1:8444'
+        $moduleText | Should Match 'Connection: close'
+        $moduleText | Should Match 'function Invoke-WO036ExactLoopbackHttpsRequest'
+        $moduleText | Should Match '\[Net\.Security\.SslStream\]::new'
+        $moduleText | Should Match "TargetHost = '127\.0\.0\.1'"
+        $moduleText | Should Match 'ExpectedServerCertificateSha256'
+        $moduleText | Should Not Match 'MediaTypeHeaderValue'
+    }
+
+    It 'bounds response evidence to a status and safe problem code before classification' {
+        $moduleText | Should Match 'function Read-WO036BoundedHttpResponse'
+        $moduleText | Should Match 'function Get-WO036SafeProblemCode'
+        $moduleText | Should Match "safeProblemCode.*J7_IMPORT_CONFLICT"
+        $moduleText | Should Match "claim\['httpStatus'\]"
+        $moduleText | Should Match "claim\['safeProblemCode'\]"
+        $moduleText | Should Match "(?s)claim\['httpStatus'\].*Update-WO036PrivateJsonAtomic.*Get-WO036SafeProblemCode"
+        $moduleText | Should Match 'response exceeds the bounded wire envelope'
+        $moduleText | Should Not Match "claim\['responseBody'\]"
+        $moduleText | Should Not Match "claim\['rawResponse'\]"
+    }
+
     It 'phase-gates PRE_COLLISION and FINAL against the one-shot collision claim' {
         $moduleText | Should Match 'PRE_COLLISION evidence is unavailable after a collision claim'
         $moduleText | Should Match "collision\.status -ceq 'PASS_CONSUMED'"
@@ -576,6 +600,205 @@ Describe 'WO-036 offline behavioral primitives' {
             finally {
                 [Array]::Clear($mutation.Bytes, 0, $mutation.Bytes.Length)
                 [Array]::Clear($original, 0, $original.Length)
+            }
+        }
+
+        It 'builds one exact request header block and preserves the body byte for byte' {
+            $encoding = [Text.UTF8Encoding]::new($false, $true)
+            $body = $encoding.GetBytes('{"manifest":{},"data":{}}' + "`n")
+            $fileHash = Get-WO036Sha256Hex -Bytes $body
+            $dataHash = 'b' * 64
+            $exportId = [guid]::NewGuid()
+            $request = New-WO036CollisionHttpRequest -Body $body `
+                -ExportId $exportId -FileSha256 $fileHash -DataSha256 $dataHash
+            try {
+                $header = [Text.Encoding]::ASCII.GetString(
+                    $request.Bytes, 0, $request.HeaderSizeBytes)
+                $header | Should Match '^POST /api/imports/sofascore/j7-canonical-events HTTP/1\.1\r\n'
+                ([regex]::Matches($header,
+                    'Content-Type: application/vnd\.betting-project\.j7-canonical-event\+json;version=1\.0\r\n').Count) |
+                    Should Be 1
+                $header.Contains(
+                    'application/vnd.betting-project.j7-canonical-event+json; version=1.0') |
+                    Should Be $false
+                ([regex]::Matches($header, 'Content-Length: ' + $body.Length + '\r\n').Count) |
+                    Should Be 1
+                $header.EndsWith("Connection: close`r`n`r`n") | Should Be $true
+                $request.HeaderSha256 | Should Match '^[0-9a-f]{64}$'
+                $request.RequestSizeBytes | Should Be (
+                    $request.HeaderSizeBytes + $body.Length)
+                $actualBody = New-Object byte[] $body.Length
+                [Buffer]::BlockCopy(
+                    $request.Bytes, $request.HeaderSizeBytes,
+                    $actualBody, 0, $actualBody.Length)
+                try {
+                    [Convert]::ToHexString($actualBody) |
+                        Should Be ([Convert]::ToHexString($body))
+                }
+                finally {
+                    [Array]::Clear($actualBody, 0, $actualBody.Length)
+                }
+            }
+            finally {
+                [Array]::Clear($request.Bytes, 0, $request.Bytes.Length)
+                [Array]::Clear($body, 0, $body.Length)
+            }
+        }
+
+        It 'rejects a request whose declared file hash is not the exact body hash' {
+            $body = [Text.Encoding]::UTF8.GetBytes('{"synthetic":true}')
+            try {
+                $failedClosed = $false
+                try {
+                    [void](New-WO036CollisionHttpRequest -Body $body `
+                        -ExportId ([guid]::NewGuid()) -FileSha256 ('a' * 64) `
+                        -DataSha256 ('b' * 64))
+                }
+                catch {
+                    $failedClosed = $_.Exception.Message -eq
+                        'WO-036 collision request identity is invalid.'
+                }
+                $failedClosed | Should Be $true
+            }
+            finally {
+                [Array]::Clear($body, 0, $body.Length)
+            }
+        }
+
+        It 'parses one bounded fixed-length problem detail and returns only its safe code' {
+            $bodyText = '{"type":"urn:test","title":"Conflict","status":409,' +
+                '"detail":"safe","instance":"/test","code":"J7_IMPORT_CONFLICT"}'
+            $body = [Text.UTF8Encoding]::new($false, $true).GetBytes($bodyText)
+            $head = "HTTP/1.1 409 Conflict`r`n" +
+                "Content-Type: application/problem+json`r`n" +
+                "Content-Length: $($body.Length)`r`n" +
+                "Connection: close`r`n`r`n"
+            $headBytes = [Text.Encoding]::ASCII.GetBytes($head)
+            $wire = New-Object byte[] ($headBytes.Length + $body.Length)
+            [Buffer]::BlockCopy($headBytes, 0, $wire, 0, $headBytes.Length)
+            [Buffer]::BlockCopy($body, 0, $wire, $headBytes.Length, $body.Length)
+            $stream = [IO.MemoryStream]::new($wire, $false)
+            $response = $null
+            try {
+                $response = Read-WO036BoundedHttpResponse -Stream $stream
+                $response.StatusCode | Should Be 409
+                (Get-WO036SafeProblemCode -Response $response) |
+                    Should Be 'J7_IMPORT_CONFLICT'
+                $response.PSObject.Properties.Name.Count | Should Be 3
+                ($response.PSObject.Properties.Name -contains 'StatusCode') |
+                    Should Be $true
+                ($response.PSObject.Properties.Name -contains 'Headers') |
+                    Should Be $true
+                ($response.PSObject.Properties.Name -contains 'BodyBytes') |
+                    Should Be $true
+            }
+            finally {
+                if ($null -ne $response) {
+                    [Array]::Clear($response.BodyBytes, 0, $response.BodyBytes.Length)
+                }
+                $stream.Dispose()
+                [Array]::Clear($wire, 0, $wire.Length)
+                [Array]::Clear($headBytes, 0, $headBytes.Length)
+                [Array]::Clear($body, 0, $body.Length)
+            }
+        }
+
+        It 'parses a bounded chunked problem detail without retaining framing bytes' {
+            $bodyText = '{"status":400,"code":"INVALID_CONTENT_TYPE"}'
+            $body = [Text.UTF8Encoding]::new($false, $true).GetBytes($bodyText)
+            $chunkSize = $body.Length.ToString('x', [Globalization.CultureInfo]::InvariantCulture)
+            $wireText = "HTTP/1.1 400 Bad Request`r`n" +
+                "Content-Type: application/problem+json`r`n" +
+                "Transfer-Encoding: chunked`r`nConnection: close`r`n`r`n" +
+                "$chunkSize`r`n$bodyText`r`n0`r`n`r`n"
+            $wire = [Text.UTF8Encoding]::new($false, $true).GetBytes($wireText)
+            $stream = [IO.MemoryStream]::new($wire, $false)
+            $response = $null
+            try {
+                $response = Read-WO036BoundedHttpResponse -Stream $stream
+                $response.StatusCode | Should Be 400
+                (Get-WO036SafeProblemCode -Response $response) |
+                    Should Be 'INVALID_CONTENT_TYPE'
+                $response.BodyBytes.Length | Should Be $body.Length
+            }
+            finally {
+                if ($null -ne $response) {
+                    [Array]::Clear($response.BodyBytes, 0, $response.BodyBytes.Length)
+                }
+                $stream.Dispose()
+                [Array]::Clear($wire, 0, $wire.Length)
+                [Array]::Clear($body, 0, $body.Length)
+            }
+        }
+
+        It 'fails closed on duplicate response headers and unsafe problem codes' {
+            $duplicateText = "HTTP/1.1 409 Conflict`r`n" +
+                "Content-Type: application/problem+json`r`n" +
+                "Content-Type: application/problem+json`r`n" +
+                "Content-Length: 0`r`nConnection: close`r`n`r`n"
+            $duplicateBytes = [Text.Encoding]::ASCII.GetBytes($duplicateText)
+            $duplicateStream = [IO.MemoryStream]::new($duplicateBytes, $false)
+            try {
+                $duplicateFailed = $false
+                try {
+                    [void](Read-WO036BoundedHttpResponse -Stream $duplicateStream)
+                }
+                catch {
+                    $duplicateFailed = $true
+                }
+                $duplicateFailed | Should Be $true
+            }
+            finally {
+                $duplicateStream.Dispose()
+                [Array]::Clear($duplicateBytes, 0, $duplicateBytes.Length)
+            }
+
+            $unsafeBytes = [Text.Encoding]::UTF8.GetBytes(
+                '{"status":409,"code":"unsafe value"}')
+            $unsafeResponse = [pscustomobject]@{
+                StatusCode = 409
+                Headers = [Collections.Generic.Dictionary[string, string]]::new(
+                    [StringComparer]::OrdinalIgnoreCase)
+                BodyBytes = $unsafeBytes
+            }
+            $unsafeResponse.Headers.Add('Content-Type', 'application/problem+json')
+            try {
+                $unsafeFailed = $false
+                try {
+                    [void](Get-WO036SafeProblemCode -Response $unsafeResponse)
+                }
+                catch {
+                    $unsafeFailed = $true
+                }
+                $unsafeFailed | Should Be $true
+            }
+            finally {
+                [Array]::Clear($unsafeBytes, 0, $unsafeBytes.Length)
+            }
+
+            $duplicateJsonBytes = [Text.Encoding]::UTF8.GetBytes(
+                '{"status":409,"code":"J7_IMPORT_CONFLICT","code":"J7_IMPORT_CONFLICT"}')
+            $duplicateJsonResponse = [pscustomobject]@{
+                StatusCode = 409
+                Headers = [Collections.Generic.Dictionary[string, string]]::new(
+                    [StringComparer]::OrdinalIgnoreCase)
+                BodyBytes = $duplicateJsonBytes
+            }
+            $duplicateJsonResponse.Headers.Add(
+                'Content-Type',
+                'application/problem+json')
+            try {
+                $duplicateJsonFailed = $false
+                try {
+                    [void](Get-WO036SafeProblemCode -Response $duplicateJsonResponse)
+                }
+                catch {
+                    $duplicateJsonFailed = $true
+                }
+                $duplicateJsonFailed | Should Be $true
+            }
+            finally {
+                [Array]::Clear($duplicateJsonBytes, 0, $duplicateJsonBytes.Length)
             }
         }
 

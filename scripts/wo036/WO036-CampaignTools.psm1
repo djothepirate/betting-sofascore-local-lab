@@ -1308,6 +1308,361 @@ function New-WO036HttpClient {
     return $client
 }
 
+function Get-WO036ByteSequenceIndex {
+    param(
+        [Parameter(Mandatory = $true)][byte[]]$Bytes,
+        [Parameter(Mandatory = $true)][byte[]]$Sequence,
+        [ValidateRange(0, [int]::MaxValue)][int]$StartIndex = 0
+    )
+
+    if ($Sequence.Length -eq 0 -or $StartIndex -gt $Bytes.Length) {
+        return -1
+    }
+    for ($index = $StartIndex; $index -le $Bytes.Length - $Sequence.Length; $index++) {
+        $matches = $true
+        for ($offset = 0; $offset -lt $Sequence.Length; $offset++) {
+            if ($Bytes[$index + $offset] -ne $Sequence[$offset]) {
+                $matches = $false
+                break
+            }
+        }
+        if ($matches) {
+            return $index
+        }
+    }
+    return -1
+}
+
+function New-WO036CollisionHttpRequest {
+    param(
+        [Parameter(Mandatory = $true)][byte[]]$Body,
+        [Parameter(Mandatory = $true)][guid]$ExportId,
+        [Parameter(Mandatory = $true)][string]$FileSha256,
+        [Parameter(Mandatory = $true)][string]$DataSha256
+    )
+
+    if ($Body.Length -lt 1 -or $Body.Length -gt 5242880 `
+            -or $FileSha256 -notmatch '^[0-9a-f]{64}$' `
+            -or $DataSha256 -notmatch '^[0-9a-f]{64}$' `
+            -or (Get-WO036Sha256Hex -Bytes $Body) -cne $FileSha256) {
+        throw 'WO-036 collision request identity is invalid.'
+    }
+    $exportIdText = $ExportId.ToString()
+    $idempotencyKey = "j7:$exportIdText`:sha256:$FileSha256"
+    $lines = @(
+        "POST $script:ReceiverPath HTTP/1.1",
+        'Host: 127.0.0.1:8444',
+        "Content-Type: $script:RequestMediaType",
+        "Accept: $script:AckMediaType",
+        "Idempotency-Key: $idempotencyKey",
+        'X-J7-Protocol-Version: 1.0',
+        "X-J7-Export-Id: $exportIdText",
+        "X-J7-File-SHA256: $FileSha256",
+        "X-J7-Data-SHA256: $DataSha256",
+        "Content-Length: $($Body.Length)",
+        'Connection: close'
+    )
+    foreach ($line in $lines) {
+        if ($line.Length -lt 1 -or $line.Length -gt 256 `
+                -or $line -notmatch '^[\x20-\x7e]+$' `
+                -or $line.Contains("`r") -or $line.Contains("`n")) {
+            throw 'WO-036 collision request contains an unsafe HTTP header line.'
+        }
+    }
+    $headerText = ($lines -join "`r`n") + "`r`n`r`n"
+    $headerBytes = [Text.Encoding]::ASCII.GetBytes($headerText)
+    $requestBytes = New-Object byte[] ($headerBytes.Length + $Body.Length)
+    try {
+        [Buffer]::BlockCopy($headerBytes, 0, $requestBytes, 0, $headerBytes.Length)
+        [Buffer]::BlockCopy($Body, 0, $requestBytes, $headerBytes.Length, $Body.Length)
+        return [pscustomobject]@{
+            Bytes = $requestBytes
+            HeaderSizeBytes = $headerBytes.Length
+            BodySizeBytes = $Body.Length
+            HeaderSha256 = Get-WO036Sha256Hex -Bytes $headerBytes
+            RequestSizeBytes = $requestBytes.Length
+        }
+    }
+    catch {
+        [Array]::Clear($requestBytes, 0, $requestBytes.Length)
+        throw
+    }
+    finally {
+        [Array]::Clear($headerBytes, 0, $headerBytes.Length)
+    }
+}
+
+function ConvertFrom-WO036ChunkedResponseBody {
+    param([Parameter(Mandatory = $true)][byte[]]$Bytes)
+
+    $crlf = [byte[]]@(13, 10)
+    $offset = 0
+    $decoded = [IO.MemoryStream]::new()
+    try {
+        while ($true) {
+            $lineEnd = Get-WO036ByteSequenceIndex -Bytes $Bytes -Sequence $crlf `
+                -StartIndex $offset
+            if ($lineEnd -lt $offset -or $lineEnd - $offset -lt 1 `
+                    -or $lineEnd - $offset -gt 8) {
+                throw 'WO-036 response has an invalid chunk-size line.'
+            }
+            $sizeText = [Text.Encoding]::ASCII.GetString(
+                $Bytes, $offset, $lineEnd - $offset)
+            if ($sizeText -notmatch '^[0-9A-Fa-f]{1,8}$') {
+                throw 'WO-036 response has an invalid chunk size.'
+            }
+            $size = [int]::Parse(
+                $sizeText,
+                [Globalization.NumberStyles]::HexNumber,
+                [Globalization.CultureInfo]::InvariantCulture)
+            $offset = $lineEnd + 2
+            if ($size -eq 0) {
+                if ($offset + 2 -ne $Bytes.Length `
+                        -or $Bytes[$offset] -ne 13 `
+                        -or $Bytes[$offset + 1] -ne 10) {
+                    throw 'WO-036 response contains unsupported chunk trailers or trailing bytes.'
+                }
+                return $decoded.ToArray()
+            }
+            if ($size -gt 16384 - $decoded.Length `
+                    -or $offset + $size + 2 -gt $Bytes.Length `
+                    -or $Bytes[$offset + $size] -ne 13 `
+                    -or $Bytes[$offset + $size + 1] -ne 10) {
+                throw 'WO-036 response chunk body is malformed or exceeds its bound.'
+            }
+            $decoded.Write($Bytes, $offset, $size)
+            $offset += $size + 2
+        }
+    }
+    finally {
+        $decoded.Dispose()
+    }
+}
+
+function Read-WO036BoundedHttpResponse {
+    param([Parameter(Mandatory = $true)][IO.Stream]$Stream)
+
+    $wire = [IO.MemoryStream]::new()
+    $buffer = New-Object byte[] 4096
+    $wireBytes = $null
+    $entityBytes = $null
+    try {
+        while ($true) {
+            $read = $Stream.Read($buffer, 0, $buffer.Length)
+            if ($read -eq 0) {
+                break
+            }
+            if ($wire.Length + $read -gt 49152) {
+                throw 'WO-036 response exceeds the bounded wire envelope.'
+            }
+            $wire.Write($buffer, 0, $read)
+        }
+        $wireBytes = $wire.ToArray()
+        $separator = [byte[]]@(13, 10, 13, 10)
+        $headerEnd = Get-WO036ByteSequenceIndex -Bytes $wireBytes -Sequence $separator
+        if ($headerEnd -lt 12 -or $headerEnd -gt 16384) {
+            throw 'WO-036 response has no bounded HTTP header block.'
+        }
+        for ($index = 0; $index -lt $headerEnd; $index++) {
+            $value = $wireBytes[$index]
+            if ($value -gt 127 `
+                    -or ($value -lt 32 -and $value -ne 13 -and $value -ne 10)) {
+                throw 'WO-036 response headers are not strict visible ASCII.'
+            }
+        }
+        $headerText = [Text.Encoding]::ASCII.GetString($wireBytes, 0, $headerEnd)
+        $lines = @($headerText -split "`r`n")
+        if ($lines.Count -lt 1 `
+                -or $lines[0] -cnotmatch '^HTTP/1\.1 ([1-5][0-9]{2}) [\x20-\x7e]{1,128}$') {
+            throw 'WO-036 response status line is invalid.'
+        }
+        $statusCode = [int]$Matches[1]
+        $headers = [Collections.Generic.Dictionary[string, string]]::new(
+            [StringComparer]::OrdinalIgnoreCase)
+        foreach ($line in @($lines | Select-Object -Skip 1)) {
+            $colon = $line.IndexOf(':')
+            if ($colon -lt 1 -or $colon + 2 -gt $line.Length `
+                    -or $line[$colon + 1] -ne ' ' `
+                    -or $line.Substring(0, $colon) -notmatch '^[A-Za-z0-9-]{1,64}$' `
+                    -or $line.Substring($colon + 2) -notmatch '^[\x20-\x7e]*$') {
+                throw 'WO-036 response contains an invalid HTTP header line.'
+            }
+            $name = $line.Substring(0, $colon)
+            if ($headers.ContainsKey($name)) {
+                throw 'WO-036 response contains a duplicate HTTP header.'
+            }
+            $headers.Add($name, $line.Substring($colon + 2))
+        }
+        $bodyOffset = $headerEnd + 4
+        $rawBodyLength = $wireBytes.Length - $bodyOffset
+        $rawBody = New-Object byte[] $rawBodyLength
+        if ($rawBodyLength -gt 0) {
+            [Buffer]::BlockCopy($wireBytes, $bodyOffset, $rawBody, 0, $rawBodyLength)
+        }
+        try {
+            $transferEncoding = if ($headers.ContainsKey('Transfer-Encoding')) {
+                $headers['Transfer-Encoding']
+            }
+            else { '' }
+            $contentLength = if ($headers.ContainsKey('Content-Length')) {
+                $headers['Content-Length']
+            }
+            else { '' }
+            if (-not [string]::IsNullOrEmpty($transferEncoding) `
+                    -and -not [string]::IsNullOrEmpty($contentLength)) {
+                throw 'WO-036 response ambiguously declares length and transfer encoding.'
+            }
+            if (-not [string]::IsNullOrEmpty($transferEncoding)) {
+                if ($transferEncoding -cne 'chunked') {
+                    throw 'WO-036 response uses an unsupported transfer encoding.'
+                }
+                $entityBytes = ConvertFrom-WO036ChunkedResponseBody -Bytes $rawBody
+            }
+            elseif (-not [string]::IsNullOrEmpty($contentLength)) {
+                if ($contentLength -notmatch '^(0|[1-9][0-9]{0,4})$' `
+                        -or [int]$contentLength -gt 16384 `
+                        -or [int]$contentLength -ne $rawBody.Length) {
+                    throw 'WO-036 response content length is invalid or mismatched.'
+                }
+                $entityBytes = [byte[]]$rawBody.Clone()
+            }
+            else {
+                if ($rawBody.Length -gt 16384) {
+                    throw 'WO-036 close-delimited response body exceeds its bound.'
+                }
+                $entityBytes = [byte[]]$rawBody.Clone()
+            }
+        }
+        finally {
+            [Array]::Clear($rawBody, 0, $rawBody.Length)
+        }
+        return [pscustomobject]@{
+            StatusCode = $statusCode
+            Headers = $headers
+            BodyBytes = $entityBytes
+        }
+    }
+    catch {
+        if ($null -ne $entityBytes) {
+            [Array]::Clear($entityBytes, 0, $entityBytes.Length)
+        }
+        throw
+    }
+    finally {
+        if ($null -ne $wireBytes) {
+            [Array]::Clear($wireBytes, 0, $wireBytes.Length)
+        }
+        [Array]::Clear($buffer, 0, $buffer.Length)
+        $wire.Dispose()
+    }
+}
+
+function Get-WO036SafeProblemCode {
+    param([Parameter(Mandatory = $true)][object]$Response)
+
+    if ($Response.BodyBytes.Length -lt 2 -or $Response.BodyBytes.Length -gt 16384 `
+            -or -not $Response.Headers.ContainsKey('Content-Type') `
+            -or $Response.Headers['Content-Type'] -cne 'application/problem+json') {
+        throw 'WO-036 response does not contain one bounded problem detail.'
+    }
+    $problemText = $null
+    $document = $null
+    try {
+        $problemText = $script:Utf8NoBom.GetString($Response.BodyBytes)
+        $document = [System.Text.Json.JsonDocument]::Parse($problemText)
+        Assert-WO036NoDuplicateJsonProperties -Element $document.RootElement
+        $problem = $problemText | ConvertFrom-Json -Depth 8
+    }
+    catch {
+        throw 'WO-036 response problem detail is not strict UTF-8 JSON.'
+    }
+    finally {
+        if ($null -ne $document) {
+            $document.Dispose()
+        }
+        $problemText = $null
+    }
+    $code = $problem.code
+    if ($null -eq $code -or $code -isnot [string] `
+            -or $code -notmatch '^[A-Z][A-Z0-9_]{1,63}$' `
+            -or $null -eq $problem.status `
+            -or [int]$problem.status -ne [int]$Response.StatusCode) {
+        throw 'WO-036 response problem detail has no safe correlated code.'
+    }
+    return [string]$code
+}
+
+function Invoke-WO036ExactLoopbackHttpsRequest {
+    param(
+        [Parameter(Mandatory = $true)][byte[]]$RequestBytes,
+        [Parameter(Mandatory = $true)][string]$ClientCertificateSha256,
+        [Parameter(Mandatory = $true)][string]$ExpectedServerCertificateSha256
+    )
+
+    if ($RequestBytes.Length -lt 1 `
+            -or $ClientCertificateSha256 -notmatch '^[0-9a-f]{64}$' `
+            -or $ExpectedServerCertificateSha256 -notmatch '^[0-9a-f]{64}$') {
+        throw 'WO-036 exact loopback HTTPS request identity is invalid.'
+    }
+    $certificate = $null
+    $remoteCertificate = $null
+    $tcpClient = $null
+    $networkStream = $null
+    $sslStream = $null
+    try {
+        $certificate = Get-WO036ClientCertificate `
+            -CertificateSha256 $ClientCertificateSha256
+        $certificates = [Security.Cryptography.X509Certificates.X509CertificateCollection]::new()
+        [void]$certificates.Add($certificate)
+        $tcpClient = [Net.Sockets.TcpClient]::new(
+            [Net.Sockets.AddressFamily]::InterNetwork)
+        $tcpClient.NoDelay = $true
+        $connectTask = $tcpClient.ConnectAsync([Net.IPAddress]::Loopback, 8444)
+        if (-not $connectTask.Wait([TimeSpan]::FromSeconds(10))) {
+            throw 'connection timeout'
+        }
+        [void]$connectTask.GetAwaiter().GetResult()
+        $networkStream = $tcpClient.GetStream()
+        $networkStream.ReadTimeout = 10000
+        $networkStream.WriteTimeout = 10000
+        $sslStream = [Net.Security.SslStream]::new($networkStream, $false)
+        $sslStream.ReadTimeout = 10000
+        $sslStream.WriteTimeout = 10000
+        $options = [Net.Security.SslClientAuthenticationOptions]::new()
+        $options.TargetHost = '127.0.0.1'
+        $options.ClientCertificates = $certificates
+        $options.EnabledSslProtocols =
+            [Security.Authentication.SslProtocols]::Tls12 -bor
+            [Security.Authentication.SslProtocols]::Tls13
+        $options.CertificateRevocationCheckMode =
+            [Security.Cryptography.X509Certificates.X509RevocationMode]::NoCheck
+        $authenticationTask = $sslStream.AuthenticateAsClientAsync($options)
+        if (-not $authenticationTask.Wait([TimeSpan]::FromSeconds(10))) {
+            throw 'TLS timeout'
+        }
+        [void]$authenticationTask.GetAwaiter().GetResult()
+        $remoteCertificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new(
+            $sslStream.RemoteCertificate)
+        if ((Get-WO036Sha256Hex -Bytes $remoteCertificate.RawData) -cne
+                $ExpectedServerCertificateSha256) {
+            throw 'server certificate mismatch'
+        }
+        $sslStream.Write($RequestBytes, 0, $RequestBytes.Length)
+        $sslStream.Flush()
+        return Read-WO036BoundedHttpResponse -Stream $sslStream
+    }
+    catch {
+        throw 'WO-036 exact loopback HTTPS request failed or returned an unsafe response.'
+    }
+    finally {
+        if ($null -ne $remoteCertificate) { $remoteCertificate.Dispose() }
+        if ($null -ne $sslStream) { $sslStream.Dispose() }
+        elseif ($null -ne $networkStream) { $networkStream.Dispose() }
+        if ($null -ne $tcpClient) { $tcpClient.Dispose() }
+        if ($null -ne $certificate) { $certificate.Dispose() }
+    }
+}
+
 function Test-WO036PortIsFree {
     param([Parameter(Mandatory = $true)][int]$Port)
     $listeners = [Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().GetActiveTcpListeners()
@@ -2778,9 +3133,7 @@ function Invoke-WO036CollisionProbeCore {
     $mutation = $null
     $claim = $null
     $claimCreated = $false
-    $client = $null
-    $request = $null
-    $content = $null
+    $wireRequest = $null
     $response = $null
     $claimPath = Join-Path (Get-WO036PrivateToolsStateDirectory -State $state) `
         'collision-probe.json'
@@ -2798,6 +3151,9 @@ function Invoke-WO036CollisionProbeCore {
         $idempotencyKey = "j7:$ExportId`:sha256:$($mutation.FileSha256)"
         $idempotencyKeySha256 = Get-WO036Sha256Hex -Bytes (
             $script:Utf8NoBom.GetBytes($idempotencyKey))
+        $wireRequest = New-WO036CollisionHttpRequest -Body $mutation.Bytes `
+            -ExportId $ExportId -FileSha256 $mutation.FileSha256 `
+            -DataSha256 $mutation.DataSha256
         $claim = [ordered]@{
             schemaVersion = '1.0'
             workOrder = $script:WorkOrder
@@ -2811,6 +3167,10 @@ function Invoke-WO036CollisionProbeCore {
             mutatedFileSha256 = [string]$mutation.FileSha256
             dataSha256 = [string]$mutation.DataSha256
             idempotencyKeySha256 = $idempotencyKeySha256
+            requestHeaderSha256 = [string]$wireRequest.HeaderSha256
+            requestHeaderSizeBytes = [int]$wireRequest.HeaderSizeBytes
+            requestBodySizeBytes = [int]$wireRequest.BodySizeBytes
+            requestSizeBytes = [int]$wireRequest.RequestSizeBytes
         }
         Write-WO036PrivateJson -Path $claimPath -Value $claim -CreateNew
         $claimCreated = $true
@@ -2819,28 +3179,27 @@ function Invoke-WO036CollisionProbeCore {
                 -ProcessId ([int]$receiverProcess.ProcessId))) {
             throw 'WO-036 receiver listener identity changed after collision claim.'
         }
-        $client = New-WO036HttpClient -ClientCertificateSha256 `
-            ([string]$state.Config.localLab.clientCertificateSha256)
-        $request = [Net.Http.HttpRequestMessage]::new(
-            [Net.Http.HttpMethod]::Post,
-            $script:ReceiverOrigin + $script:ReceiverPath)
-        $content = [Net.Http.ByteArrayContent]::new($mutation.Bytes)
-        $content.Headers.ContentType = [Net.Http.Headers.MediaTypeHeaderValue]::Parse(
-            $script:RequestMediaType)
-        $request.Content = $content
-        [void]$request.Headers.TryAddWithoutValidation('Accept', $script:AckMediaType)
-        [void]$request.Headers.TryAddWithoutValidation(
-            'Idempotency-Key', $idempotencyKey)
-        [void]$request.Headers.TryAddWithoutValidation('X-J7-Protocol-Version', '1.0')
-        [void]$request.Headers.TryAddWithoutValidation(
-            'X-J7-Export-Id', $ExportId.ToString())
-        [void]$request.Headers.TryAddWithoutValidation(
-            'X-J7-File-SHA256', $mutation.FileSha256)
-        [void]$request.Headers.TryAddWithoutValidation(
-            'X-J7-Data-SHA256', $mutation.DataSha256)
-        $response = $client.Send(
-            $request, [Net.Http.HttpCompletionOption]::ResponseHeadersRead)
-        if ([int]$response.StatusCode -ne 409) {
+        $serverCertificate = [Security.Cryptography.X509Certificates.X509Certificate2]::new(
+            [string]$state.Config.pki.serverCertificatePublic)
+        try {
+            $serverCertificateSha256 = Get-WO036Sha256Hex `
+                -Bytes $serverCertificate.RawData
+        }
+        finally {
+            $serverCertificate.Dispose()
+        }
+        $response = Invoke-WO036ExactLoopbackHttpsRequest `
+            -RequestBytes $wireRequest.Bytes `
+            -ClientCertificateSha256 (
+                [string]$state.Config.localLab.clientCertificateSha256) `
+            -ExpectedServerCertificateSha256 $serverCertificateSha256
+        $claim['httpStatus'] = [int]$response.StatusCode
+        Update-WO036PrivateJsonAtomic -Path $claimPath -Value $claim
+        $safeProblemCode = Get-WO036SafeProblemCode -Response $response
+        $claim['safeProblemCode'] = $safeProblemCode
+        Update-WO036PrivateJsonAtomic -Path $claimPath -Value $claim
+        if ([int]$response.StatusCode -ne 409 `
+                -or $safeProblemCode -cne 'J7_IMPORT_CONFLICT') {
             throw 'WO-036 collision probe did not receive the exact terminal conflict.'
         }
         $after = Get-WO036DatabaseProof -State $state -Role Receiver -ExportId $ExportId
@@ -2872,6 +3231,7 @@ function Invoke-WO036CollisionProbeCore {
         $claim.status = 'PASS_CONSUMED'
         $claim['completedAtUtc'] = [DateTimeOffset]::UtcNow.ToString('O')
         $claim['httpStatus'] = 409
+        $claim['safeProblemCode'] = 'J7_IMPORT_CONFLICT'
         $claim['auditCorrelationCount'] = 1
         $claim['auditReasonCode'] = 'EXPORT_ID_DIVERGENCE'
         Update-WO036PrivateJsonAtomic -Path $claimPath -Value $claim
@@ -2896,10 +3256,12 @@ function Invoke-WO036CollisionProbeCore {
         throw
     }
     finally {
-        if ($null -ne $response) { $response.Dispose() }
-        if ($null -ne $request) { $request.Dispose() }
-        elseif ($null -ne $content) { $content.Dispose() }
-        if ($null -ne $client) { $client.Dispose() }
+        if ($null -ne $response -and $null -ne $response.BodyBytes) {
+            [Array]::Clear($response.BodyBytes, 0, $response.BodyBytes.Length)
+        }
+        if ($null -ne $wireRequest -and $null -ne $wireRequest.Bytes) {
+            [Array]::Clear($wireRequest.Bytes, 0, $wireRequest.Bytes.Length)
+        }
         if ($null -ne $mutation -and $null -ne $mutation.Bytes) {
             [Array]::Clear($mutation.Bytes, 0, $mutation.Bytes.Length)
         }
