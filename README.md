@@ -6,15 +6,23 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 Le Work Order runtime
 [WO-SS-20260903-041](docs/work_orders/active/WO-SS-20260903-041-j9-local-labb-readiness-listener-gate.md)
-est ouvert depuis le commit WO-036 arrêté `62bb8d126d28da2aedefb8845ee3817492229a71`. Il doit
-diagnostiquer et qualifier la porte de readiness/listener de LocalLabB. L'hypothèse initiale est
-une course TOCTOU : la boucle actuelle prend deux instantanés successifs et peut classer comme
-conflit un listener exact apparu entre eux. Le correctif devra utiliser un instantané cohérent sans
-relâcher l'unicité, `127.0.0.1`, le port ou le PID exacts.
+est `READY_FOR_OWNER_REVIEW`. Il reproduit et corrige le défaut
+`INCOHERENT_DOUBLE_LISTENER_SNAPSHOT_TOCTOU_FALSE_CONFLICT` : l'ancienne boucle pouvait classer
+comme conflit un listener exact apparu entre deux lectures successives. Le commit
+`7893136664c5fc6c162da844735e36cb7829814c` emploie désormais un seul instantané cohérent par
+tentative, sans relâcher l'unicité, `127.0.0.1`, le port ou le PID exacts.
 
-WO-041 n'autorise aucune reprise R6, aucun POST receiver, appel fournisseur, donnée dérivée,
-réseau distant, VPS, production, PR ou validation INT-001. WO-036 reste actif et arrêté ; sa claim
-R5 demeure consommée.
+La qualification est `PASS_LOCAL_FAIL_CLOSED` : 87 tests Pester passent, dix apparitions retardées
+réelles sur `127.0.0.1:8087` sont acceptées, le propriétaire conflictuel est refusé, les deux
+vérifications Maven passent avec 1 136 tests Surefire et 89 tests Failsafe sans échec, et aucun
+processus, listener synthétique ou conteneur Testcontainers ne subsiste. Le rapport
+[J9-WO041-LOCALLABB-READINESS-LISTENER-GATE-QUALIFICATION-20260903](docs/validation/J9-WO041-LOCALLABB-READINESS-LISTENER-GATE-QUALIFICATION-20260903.md)
+a pour SHA-256
+`ed650e2d9631f39b442769315fd50d47e5ee85129fb9e4549bb7093110a2976c`.
+
+WO-041 reste actif jusqu'à la revue propriétaire et n'autorise aucune reprise R6, aucun POST
+receiver, appel fournisseur, donnée dérivée, réseau distant, VPS, production, PR ou validation
+INT-001. WO-036 reste actif et arrêté ; sa claim R5 demeure consommée.
 
 Le Work Order
 [WO-SS-20260903-040](docs/work_orders/completed/WO-SS-20260903-040-j9-wo036-collision-response-client-qualification.md)

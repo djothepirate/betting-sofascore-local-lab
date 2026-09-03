@@ -1,13 +1,22 @@
 # WO-SS-20260903-041 — Porte de readiness/listener de LocalLabB
 
-- **Statut :** `IN_PROGRESS`
+- **Statut :** `READY_FOR_OWNER_REVIEW`
 - **Jalon :** après J9 — correction runtime de l'outillage avant une éventuelle reprise R6 de WO-036
 - **Ouvert le :** 2026-09-03
 - **Ouverture UTC :** `2026-09-03T20:18:18.1820646Z`
 - **Ouverture Europe/Paris :** `2026-09-03T22:18:18.1820646+02:00`
+- **Prêt pour revue UTC :** `2026-09-03T20:36:05.4456232Z`
+- **Prêt pour revue Europe/Paris :** `2026-09-03T22:36:05.4456232+02:00`
 - **Branche :** `codex/j9-wo041-local-labb-readiness-listener-gate`
 - **Worktree :** `.tmp/w41`
 - **Base locale d'ouverture vérifiée :** `62bb8d126d28da2aedefb8845ee3817492229a71`
+- **Commit d'ouverture :** `92e7548783596e2a7519a3486f801b33b616e815`
+- **Commit d'implémentation :** `7893136664c5fc6c162da844735e36cb7829814c`
+- **Résultat de qualification :** `PASS_LOCAL_FAIL_CLOSED`
+- **Rapport :**
+  `docs/validation/J9-WO041-LOCALLABB-READINESS-LISTENER-GATE-QUALIFICATION-20260903.md`
+- **SHA-256 du rapport :**
+  `ed650e2d9631f39b442769315fd50d47e5ee85129fb9e4549bb7093110a2976c`
 - **Work Order bloqué :** `WO-SS-20260902-036-j9-j7-local-e2e-qualification`
 - **Rapport du constat R5 :**
   `docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R5-STOP-20260903.md`
@@ -69,11 +78,14 @@ journal privé expurgé indique ensuite un démarrage Spring/Tomcat sur `8087`, 
 `Wait-WO036LoopbackListener` a retourné `false` et le processus a été nettoyé. Aucun deuxième POST
 n'a été émis.
 
-Le code actuel prend deux instantanés distincts par tentative : le premier dans
+Le code antérieur à WO-041 prenait deux instantanés distincts par tentative : le premier dans
 `Test-WO036ExactLoopbackListener`, le second immédiatement après pour détecter tout listener
 conflictuel. Si le listener exact apparaît entre ces deux lectures, le premier instantané est vide
-et le second, pourtant valide, est classé comme conflit. Ce mécanisme constitue une hypothèse TOCTOU
-fortement compatible avec R5 ; il doit être reproduit avant d'être élevé au rang de cause qualifiée.
+et le second, pourtant valide, est classé comme conflit. WO-041 reproduit déterministement ce faux
+conflit et qualifie le défaut
+`INCOHERENT_DOUBLE_LISTENER_SNAPSHOT_TOCTOU_FALSE_CONFLICT`. Le défaut est fortement compatible avec
+R5, mais les deux instantanés bruts de R5 n'avaient pas été conservés : l'interleaving historique
+exact ne peut donc pas être affirmé comme observé rétroactivement.
 
 ## 3. Objectif et périmètre
 
@@ -133,10 +145,96 @@ Les cas obligatoires sont :
 
 ## 6. Critères de sortie
 
-WO-041 sera `READY_FOR_OWNER_REVIEW` uniquement si la cause est reproduite, si le correctif reste
-limité à l'outillage WO-036, si les cas hostiles restent fail-closed et si la qualification hôte
-loopback ne laisse aucun résidu. Le Work Order restera actif jusqu'à la validation propriétaire.
+WO-041 atteint `READY_FOR_OWNER_REVIEW` : la cause est reproduite, le correctif reste limité à
+l'outillage WO-036, les cas hostiles restent fail-closed et la qualification hôte loopback ne
+laisse aucun résidu. Le Work Order restera actif jusqu'à la validation propriétaire.
 
 Même validé, WO-041 ne reprend pas WO-036. R6 exigera une décision propriétaire distincte, un run
 neuf et un manifeste R6 gelé avant son premier POST.
 
+## 7. Réalisation
+
+Le commit `7893136664c5fc6c162da844735e36cb7829814c` :
+
+- extrait l'évaluation exacte d'un instantané dans
+  `Test-WO036ExactLoopbackListenerSnapshot` ;
+- fait lire à `Wait-WO036LoopbackListener` un seul instantané par tentative ;
+- emploie ce même instantané pour accepter l'unique listener exact ou refuser immédiatement un
+  conflit ;
+- conserve le contrôle préalable de l'existence du processus et la borne de 60 tentatives espacées
+  de 500 ms ;
+- ajoute une régression Pester déterministe et un harness Windows n'ouvrant qu'un listener
+  synthétique loopback possédé et nettoyé avec preuve d'identité exacte.
+
+Aucun fichier Java, migration, contrat receiver ou configuration réseau applicative n'a été
+modifié.
+
+## 8. Preuves de qualification
+
+```text
+ROOT_CAUSE_DEFECT_REPRODUCED=YES
+R5_SYMPTOM_COMPATIBILITY=HIGH
+R5_EXACT_INTERLEAVING_RETROACTIVELY_OBSERVED=NO
+
+PESTER_TOTAL=87
+PESTER_PASSED=87
+PESTER_FAILED=0
+PESTER_SKIPPED=0
+
+WO041_DELAYED_EXACT_LISTENER_ITERATIONS=10
+WO041_DELAYED_EXACT_LISTENER_SUCCESSES=10
+WO041_CONFLICTING_OWNER_REJECTED=YES
+WO041_RESIDUAL_PROCESS_COUNT=0
+WO041_RESIDUAL_LISTENER_COUNT=0
+
+MAVEN_CLEAN_VERIFY=PASS
+MAVEN_INTEGRATION_TESTS_VERIFY=PASS
+SUREFIRE_TESTS=1136
+SUREFIRE_FAILURES=0
+SUREFIRE_ERRORS=0
+SUREFIRE_SKIPPED=5
+FAILSAFE_TESTS=89
+FAILSAFE_FAILURES=0
+FAILSAFE_ERRORS=0
+FAILSAFE_SKIPPED=0
+
+DOCKER_COMPOSE_CONFIG=PASS
+TESTCONTAINERS_RESIDUAL_COUNT=0
+PRIMARY_POSTGRES_CONTAINER_UNCHANGED=YES
+PRIMARY_POSTGRES_STATUS=RUNNING_HEALTHY
+PRIMARY_POSTGRES_LISTENER=127.0.0.1:5432
+LISTENER_8087_AFTER_QUALIFICATION=ABSENT
+LISTENER_8444_AFTER_QUALIFICATION=ABSENT
+LISTENER_5433_AFTER_QUALIFICATION=ABSENT
+PROVIDER_CALLS=0
+RECEIVER_CALLS=0
+```
+
+Le rapport autonome contient les commandes, la matrice de cas, les bornes de nettoyage et les
+restrictions de gouvernance. Son empreinte est celle enregistrée en tête du présent Work Order.
+
+## 9. État soumis à la revue propriétaire
+
+```text
+J9_WO041_TECHNICAL_READINESS=PASS_LOCAL_FAIL_CLOSED
+J9_WO041_STATUS=READY_FOR_OWNER_REVIEW
+J9_WO041_WORK_ORDER_MOVE_TO_COMPLETED=NO_PENDING_OWNER_REVIEW
+
+J9_WO036_STATUS=STOPPED_AFTER_FIRST_IMPORT_AND_CONSUMED_B_START_CLAIM
+J9_WO036_RESUME_AFTER_WO041_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
+J9_WO036_WORK_ORDER_MOVE_TO_COMPLETED=NO
+J9_WO036_NEXT_FRESH_RUN=R6
+J9_WO036_R6_MANIFEST=REQUIRED_NEW_AND_FROZEN_BEFORE_FIRST_POST
+
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+LIVE_DELIVERY_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+Le Work Order demeure dans `active` jusqu'à une décision propriétaire explicite. Une validation de
+WO-041 autorisera uniquement son classement documentaire ; elle ne vaudra pas reprise de WO-036.

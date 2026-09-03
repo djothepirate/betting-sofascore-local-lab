@@ -9,10 +9,21 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - ouverture depuis le commit WO-036 arrêté
   `62bb8d126d28da2aedefb8845ee3817492229a71`, dans la branche
   `codex/j9-wo041-local-labb-readiness-listener-gate` et le worktree distinct `.tmp/w41` ;
-- diagnostic borné à la double observation des listeners dans l'outillage WO-036 : une apparition
-  exacte entre les deux instantanés peut être classée à tort comme conflit ;
-- correction attendue par instantané unique cohérent, sans assouplir l'adresse, le port, le nombre
-  de listeners ou le PID propriétaire ;
+- reproduction déterministe du défaut
+  `INCOHERENT_DOUBLE_LISTENER_SNAPSHOT_TOCTOU_FALSE_CONFLICT` : une apparition exacte entre les deux
+  anciens instantanés était classée à tort comme conflit ;
+- correction au commit `7893136664c5fc6c162da844735e36cb7829814c` par instantané unique
+  cohérent, sans assouplir l'adresse, le port, le nombre de listeners ou le PID propriétaire ;
+- qualification `PASS_LOCAL_FAIL_CLOSED` : 87/87 tests Pester, 10/10 listeners exacts retardés,
+  refus du propriétaire conflictuel, `mvnw.cmd clean verify` et
+  `mvnw.cmd -Pintegration-tests verify` verts avec 1 136 tests Surefire et 89 tests Failsafe sans
+  échec ;
+- zéro processus, listener synthétique ou conteneur Testcontainers résiduel ; PostgreSQL primaire
+  est resté sain sur `127.0.0.1:5432` avec son identité et son volume inchangés ;
+- rapport
+  `docs/validation/J9-WO041-LOCALLABB-READINESS-LISTENER-GATE-QUALIFICATION-20260903.md`, SHA-256
+  `ed650e2d9631f39b442769315fd50d47e5ee85129fb9e4549bb7093110a2976c` ;
+- passage à `READY_FOR_OWNER_REVIEW` ; le Work Order reste actif jusqu'à la décision propriétaire ;
 - qualification hors ligne et hôte autorisée uniquement sur `127.0.0.1`, avec processus
   synthétiques possédés et cleanup exact ;
 - WO-036 reste arrêté, R5 reste consommé et aucun R6, POST receiver, appel fournisseur, donnée
