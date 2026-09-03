@@ -4,7 +4,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
-### Après J9 — ouverture de WO-040 sur la capture de réponse de collision WO-036
+### Après J9 — WO-040 capture de réponse de collision WO-036
 
 - ouverture depuis le commit R4 exact `33d2ae0bd5c2c8daae4cd708b0f12efaf9cd029d`, dans la branche
   `codex/j9-wo040-collision-response-client-qualification` et le worktree court `.tmp/w40` ;
@@ -21,9 +21,29 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - lecture désormais incrémentale selon le framing HTTP : restitution exacte à la longueur déclarée
   ou au chunk terminal, EOF conservé pour le close-delimited, refus fail-closed des doubles
   framing, troncatures, chunks hostiles, dépassements et octets surnuméraires déjà bufferisés ;
-- qualifications intermédiaires vertes : Pester campagne `52/52`, Pester campagne plus
-  infrastructure `67/67`, Surefire `1136/0/0/5` et Failsafe `89/0/0/0` sous `clean verify` ;
-  qualification loopback INT-001 synthétique encore requise avant revue propriétaire.
+- première correction au commit `f6e6a804f507bad48943534d4179bfcc90437766`, puis compatibilité
+  complémentaire au commit `80cd5a33b19b2da48f0ab0821ef6fdfbd2623ba4` pour accepter exactement
+  l'unique séparateur d'une reason phrase vide émis par INT-001/Tomcat, sans accepter de version,
+  code, séparateur ou caractère de contrôle ambigu ;
+- préparations hôte fail-closed : un écart de destination du volume primaire détecté avant
+  ressources, une route PFX refusée par SChannel avant écriture HTTP, puis un import nominal isolé
+  arrêté sur `HTTP_STATUS_LINE` avant tout POST de collision ; aucune continuation, boucle ou retry
+  automatique et cleanup exact entre les essais ;
+- qualification finale exclusivement synthétique et loopback contre INT-001 inchangé : exactement
+  deux POST, `201` sous `Content-Length`, puis `409/J7_IMPORT_CONFLICT` sous framing chunked, un
+  seul receipt, payload et outbox, et les deux audits attendus dont
+  `DIVERGENCE_REJECTED/EXPORT_ID_DIVERGENCE` ;
+- qualifications vertes : Pester campagne `53/53`, Pester campagne plus infrastructure `68/68`,
+  Surefire `1136/0/0/5` et Failsafe `89/0/0/0` sous `clean verify` puis sous le profil
+  `integration-tests`, ainsi que la validation Compose ;
+- cleanup hôte à zéro processus, listener `5433/8444`, conteneur, volume, certificat ou racine
+  privée résiduel ; PostgreSQL primaire exact maintenu `running/healthy` sur `127.0.0.1:5432`,
+  sans accès ni purge ;
+- passage de WO-040 à `READY_FOR_OWNER_REVIEW` avec `PASS_LOCAL_FAIL_CLOSED` et publication du
+  rapport `J9-WO040-COLLISION-RESPONSE-CLIENT-QUALIFICATION-20260903`, SHA-256
+  `2eb13aa1825d21eb5c40e97ffebf77246099d781f626591132897c4d128e9aee` ; WO-036 reste arrêté,
+  R5 non autorisé et soumis à une décision propriétaire distincte et à un manifeste neuf gelé
+  avant son premier POST.
 
 ### Après J9 — WO-036 reprise R4 synthétique arrêtée après divergence durable
 

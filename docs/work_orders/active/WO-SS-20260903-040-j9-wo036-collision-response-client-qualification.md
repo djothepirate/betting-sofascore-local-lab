@@ -1,6 +1,6 @@
 # WO-SS-20260903-040 — Qualification de la capture de réponse de collision WO-036
 
-- **Statut :** `IMPLEMENTED_PENDING_LOOPBACK_QUALIFICATION`
+- **Statut :** `READY_FOR_OWNER_REVIEW`
 - **Jalon :** après J9 — correction du harnais avant une éventuelle reprise R5 de WO-036
 - **Ouvert le :** 2026-09-03
 - **Ouverture UTC :** `2026-09-03T17:38:14.3891321Z`
@@ -8,11 +8,20 @@
 - **Branche :** `codex/j9-wo040-collision-response-client-qualification`
 - **Worktree :** `.tmp/w40`
 - **Base locale d’ouverture vérifiée :** `33d2ae0bd5c2c8daae4cd708b0f12efaf9cd029d`
+- **Commit principal du lecteur borné :** `f6e6a804f507bad48943534d4179bfcc90437766`
+- **Commit de compatibilité de ligne de statut :**
+  `80cd5a33b19b2da48f0ab0821ef6fdfbd2623ba4`
+- **Readiness consignée en UTC :** `2026-09-03T18:51:14.6957371Z`
+- **Readiness consignée en Europe/Paris :** `2026-09-03T20:51:14.6957371+02:00`
 - **Work Order bloqué :** `WO-SS-20260902-036-j9-j7-local-e2e-qualification`
 - **Rapport du constat R4 :**
   `docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R4-STOP-20260903.md`
 - **SHA-256 du rapport R4 :**
   `16e9f85e12109f2709146312410bbe2a5e040c4f176c2d5596746aa2b70076b5`
+- **Rapport de qualification WO-040 :**
+  `docs/validation/J9-WO040-COLLISION-RESPONSE-CLIENT-QUALIFICATION-20260903.md`
+- **SHA-256 du rapport WO-040 :**
+  `2eb13aa1825d21eb5c40e97ffebf77246099d781f626591132897c4d128e9aee`
 - **Permission officielle :** `NOT_EVIDENCED`
 
 ## 1. Autorisation propriétaire
@@ -206,25 +215,121 @@ Les réponses fixed-length et chunked complètes n'exigent donc plus que le serv
 pour que leur statut et leur ProblemDetail sûr soient disponibles. Le correctif reste limité à
 `scripts/wo036/WO036-CampaignTools.psm1` et à ses tests Pester.
 
-## 9. Qualification hors ligne intermédiaire
+## 9. Qualification hors ligne finale
 
 ```text
-QUALIFIED_AT_UTC=2026-09-03T17:54:48.5400889Z
-QUALIFIED_AT_EUROPE_PARIS=2026-09-03T19:54:48.5400889+02:00
-PESTER_WO036_CAMPAIGN_TOOLS=PASS_52_OF_52
-PESTER_WO036_AND_INFRASTRUCTURE=PASS_67_OF_67
+PESTER_WO036_CAMPAIGN_TOOLS=PASS_53_OF_53
+PESTER_WO036_AND_INFRASTRUCTURE=PASS_68_OF_68
 MVNW_CLEAN_VERIFY_SUREFIRE=PASS_1136_TESTS_0_FAILURES_0_ERRORS_5_SKIPPED
 MVNW_CLEAN_VERIFY_FAILSAFE=PASS_89_TESTS_0_FAILURES_0_ERRORS_0_SKIPPED
 MVNW_CLEAN_VERIFY_BUILD=SUCCESS
+MVNW_INTEGRATION_TESTS_SUREFIRE=PASS_1136_TESTS_0_FAILURES_0_ERRORS_5_SKIPPED
+MVNW_INTEGRATION_TESTS_FAILSAFE=PASS_89_TESTS_0_FAILURES_0_ERRORS_0_SKIPPED
+MVNW_INTEGRATION_TESTS_BUILD=SUCCESS
 PROVIDER_CALLS=0
 REMOTE_RECEIVER_CALLS=0
 PRIMARY_DATABASE_TOUCH=NO
 ```
 
-Les cinq nouveaux cas Pester qualifient la restitution sans EOF, y compris avec lectures
-fragmentées, et le refus fail-closed des réponses fixed-length ou chunked tronquées,
-surnuméraires ou hostiles. Les tests Maven n'effectuent que leurs appels locaux et leurs bases
-Testcontainers isolées.
+Les sept nouveaux cas Pester qualifient la restitution sans EOF, y compris avec lectures
+fragmentées, l'unique séparateur d'une reason phrase vide et le refus fail-closed des réponses
+fixed-length ou chunked tronquées, surnuméraires, hostiles ou aux séparateurs ambigus. Les tests
+Maven n'effectuent que leurs appels locaux et leurs bases Testcontainers isolées.
 
-La qualification loopback WO-040 reste à produire contre INT-001 inchangé, avec une base, une PKI
-et un corpus entièrement synthétiques. Elle ne reprendra pas WO-036 et ne constituera pas R5.
+## 10. Qualification loopback synthétique
+
+Le run final, entièrement neuf, a utilisé le receiver INT-001 inchangé au commit
+`b6a093ab4d3358f23a59b65b68a3eb720494bcba`, son JAR de SHA-256
+`d41f74e984fa2455e535623fc570b30f91fd2b03d7742ada81c7c948f67c0c7f`, une base PostgreSQL
+isolée liée à `127.0.0.1:5433`, le receiver lié à `127.0.0.1:8444` et une PKI mTLS éphémère hors
+dépôt. Le corps J7 de `3149` octets était intégralement synthétique.
+
+```text
+LOOPBACK_STARTED_AT_UTC=2026-09-03T18:33:00.5193608Z
+LOOPBACK_STARTED_AT_EUROPE_PARIS=2026-09-03T20:33:00.5193608+02:00
+LOOPBACK_FINISHED_AT_UTC=2026-09-03T18:33:20.4330487Z
+LOOPBACK_FINISHED_AT_EUROPE_PARIS=2026-09-03T20:33:20.4330487+02:00
+IMPORT_ROUTE_POSTS=2
+AUTOMATIC_RETRIES=0
+BASELINE_HTTP_STATUS=201
+BASELINE_RESPONSE_FRAMING=CONTENT_LENGTH
+COLLISION_HTTP_STATUS=409
+COLLISION_SAFE_CODE=J7_IMPORT_CONFLICT
+COLLISION_RESPONSE_FRAMING=CHUNKED
+QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
+```
+
+Une préparation mTLS antérieure via PFX a échoué dans SChannel avant toute écriture HTTP. Une
+première qualification avec clé CNG a ensuite produit l'import nominal, puis s'est arrêtée sur
+`HTTP_STATUS_LINE`, sans POST de collision. Elle a établi que le receiver réel émet un unique
+séparateur après le code lorsque la reason phrase est vide. La correction complémentaire
+`80cd5a33b19b2da48f0ab0821ef6fdfbd2623ba4` accepte cette seule forme sans accepter d'origine,
+de framing ou de syntaxe ambiguë. Chaque état isolé a été nettoyé avant un nouvel essai ; aucune
+tentative ne relève d'un retry automatique.
+
+Les effets durables du run final sont exacts :
+
+```text
+RECEIPT_COUNT=1
+PAYLOAD_COUNT=1
+OUTBOX_COUNT=1
+IMPORTED_AUDIT_COUNT=1
+DIVERGENCE_AUDIT_COUNT=1
+AUDIT_TOTAL_COUNT=2
+DIVERGENCE_REASON=EXPORT_ID_DIVERGENCE
+```
+
+Le POST de collision a donc restitué au client `409/J7_IMPORT_CONFLICT` sous framing chunked
+complet, sans second receipt, payload ou outbox.
+
+## 11. Cleanup et contrôles postérieurs
+
+```text
+PROCESS_RESIDUAL_COUNT=0
+CONTAINER_RESIDUAL_COUNT=0
+VOLUME_RESIDUAL_COUNT=0
+CERTIFICATE_STORE_RESIDUAL_COUNT=0
+LISTENER_127_0_0_1_5433_COUNT=0
+LISTENER_127_0_0_1_8444_COUNT=0
+PRIVATE_RUN_ROOT_REMOVED=YES
+PRIMARY_CONTAINER_NAME=betting-sofascore-local-lab-postgres
+PRIMARY_CONTAINER_ID=e7b218117df39b7cbfbffb3b1223647568f149912a84592e506b5690f9686c1f
+PRIMARY_CONTAINER_STATE=running
+PRIMARY_CONTAINER_HEALTH=healthy
+PRIMARY_LISTENER=127.0.0.1:5432
+PRIMARY_DATABASE_TOUCH=NO
+PRIMARY_DATABASE_PURGE=NO
+```
+
+Aucun HAR, trace, vidéo, capture, téléchargement, `storageState`, certificat privé, payload,
+réponse brute, cookie, jeton ou secret n'est conservé. Le rapport autonome expurgé porte les
+détails de la qualification et son empreinte.
+
+## 12. Conclusion et revue propriétaire
+
+WO-040 satisfait ses critères de sortie avec `PASS_LOCAL_FAIL_CLOSED`. Le diff runtime est borné
+au module de campagne WO-036 et à ses tests ; aucun fichier Java, migration, receiver, contrat ou
+endpoint n'a changé.
+
+```text
+J9_WO040_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
+J9_WO040_LOCAL_READINESS=PASS
+J9_WO040_OWNER_REVIEW_REQUIRED=YES
+J9_WO040_WORK_ORDER_MOVE_TO_COMPLETED=NO
+J9_WO036_STATUS=STOPPED_AFTER_CONSUMED_R4_COLLISION_RESPONSE_QUALIFICATION_FAILURE
+J9_WO036_RESUME_AUTHORIZED=NO
+J9_WO036_NEXT_FRESH_RUN=R5
+J9_WO036_R5_MANIFEST=REQUIRED_NEW_AND_FROZEN_BEFORE_FIRST_POST
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+LIVE_DELIVERY_AUTHORIZED=NO
+VPS_DEPLOYMENT_AUTHORIZED=NO
+PRODUCTION_AUTHORIZED=NO
+```
+
+Le Work Order reste dans `active` jusqu'à la validation explicite du propriétaire. Même après
+validation, WO-036 ne pourra reprendre que sur décision propriétaire séparée, avec un run R5 neuf
+et un manifeste R5 gelé avant son premier POST.

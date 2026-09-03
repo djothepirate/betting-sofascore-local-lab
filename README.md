@@ -6,7 +6,7 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 Le Work Order
 [WO-SS-20260903-040](docs/work_orders/active/WO-SS-20260903-040-j9-wo036-collision-response-client-qualification.md)
-est ouvert sur une branche et un worktree distincts depuis le commit R4 exact
+est `READY_FOR_OWNER_REVIEW` sur une branche et un worktree distincts depuis le commit R4 exact
 `33d2ae0bd5c2c8daae4cd708b0f12efaf9cd029d`. Sa portée est limitée au diagnostic, à la correction
 et à la qualification du lecteur de réponse HTTP de la sonde WO-036 après un effet durable de
 divergence. WO-036 reste arrêté, sa claim R4 demeure consommée et aucun sender Java, receiver,
@@ -18,9 +18,21 @@ réponse HTTP fixe complète, l'ancien lecteur effectuait un `Read()` supplémen
 perdre le statut si le transport restait ouvert ou échouait. Le lecteur qualifié restitue désormais
 les réponses `Content-Length` et `chunked` dès que leur framing exact est complet ; les réponses
 close-delimited exigent toujours un EOF propre et les framing tronqués, ambigus, surdimensionnés
-ou déjà surnuméraires restent refusés. Les 67 tests Pester, 1 136 tests Surefire et 89 tests
-Failsafe passent. La qualification INT-001 loopback synthétique de WO-040 reste à exécuter ;
-WO-036 reste arrêté et R5 n'est pas autorisé.
+ou déjà surnuméraires restent refusés. Le commit
+`f6e6a804f507bad48943534d4179bfcc90437766` porte ce framing incrémental fail-closed ; le commit
+`80cd5a33b19b2da48f0ab0821ef6fdfbd2623ba4` accepte en plus l'unique séparateur émis par
+INT-001/Tomcat pour une reason phrase vide, tout en refusant les formes ambiguës.
+
+La qualification finale contre INT-001 inchangé, exclusivement synthétique et loopback, a produit
+exactement deux POST : `201` sous `Content-Length`, puis `409/J7_IMPORT_CONFLICT` sous framing
+chunked, sans retry. La base isolée contient exactement un receipt, un payload, un outbox, un audit
+`IMPORTED` et un audit `DIVERGENCE_REJECTED/EXPORT_ID_DIVERGENCE`. Les 68 tests Pester, les
+1 136 tests Surefire et les 89 tests Failsafe passent dans les deux parcours Maven. Le cleanup est
+à zéro résidu ; le PostgreSQL primaire exact reste `running/healthy` sur `127.0.0.1:5432`, sans
+accès ni purge. Le
+[rapport WO-040](docs/validation/J9-WO040-COLLISION-RESPONSE-CLIENT-QUALIFICATION-20260903.md)
+a pour SHA-256 `2eb13aa1825d21eb5c40e97ffebf77246099d781f626591132897c4d128e9aee`.
+WO-040 reste actif jusqu'à validation propriétaire ; WO-036 reste arrêté et R5 n'est pas autorisé.
 
 Le run neuf R4 de
 [WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
