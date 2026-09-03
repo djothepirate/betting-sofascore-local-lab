@@ -17,8 +17,9 @@ LOCAL_RECEIVER_ORIGIN=https://127.0.0.1:8444
 LOCAL_IMPORT_ENDPOINT_URI=https://127.0.0.1:8444/api/imports/sofascore/j7-canonical-events
 WO035_RUNTIME_SENDER_STATUS=VALIDATED_LOCAL_FAIL_CLOSED
 WO036_WINDOWS_WINDOWS_E2E_STATUS=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
-WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=READY_FOR_OWNER_REVIEW
+WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=VALIDATED
 WO037_BROWSER_ORIGIN_BOUNDARY_RESULT=PASS_LOCAL_FAIL_CLOSED
+WO037_OWNER_REVIEW_DECISION=VALIDATE
 WO036_RESUME_AFTER_WO037_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 PROVIDER_NETWORK_AUTHORIZED=NO
@@ -498,7 +499,7 @@ gelé. WO-037 corrige et qualifie uniquement cette frontière navigateur. Son ha
 établi avec Spring/Tomcat réel, des services synthétiques en mémoire et Chromium que la préparation
 native porte l’Origin loopback exact, tandis qu’une origine opaque reste refusée avant contrôleur.
 
-Même après une qualification verte et la future validation propriétaire de WO-037, la série
+Même après la qualification verte et la validation propriétaire de WO-037, la série
 synthétique `201/IMPORTED`, `200/DUPLICATE` et `409` de WO-036 ne peut pas reprendre sans nouvelle
 décision propriétaire, nouveau manifeste lié au commit et au JAR qualifiés et redémarrage complet
 de la campagne. Les résultats de WO-037 n’autorisent ni réseau fournisseur, ni livraison de données
@@ -519,5 +520,5 @@ fallback de sécurité n’est compatible avec v1.0.
 7. [Runbook WO-027](../runbooks/J9-OPTIONAL-LOCAL-PUSH.md).
 8. [Règles du dépôt](../../AGENTS.md).
 9. [Work Order WO-035](../work_orders/completed/WO-SS-20260902-035-j9-real-j7-delivery-sender.md).
-10. [Work Order WO-037](../work_orders/active/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md).
+10. [Work Order WO-037](../work_orders/completed/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md).
 11. [Qualification WO-037](../validation/J9-WO037-J7-BROWSER-ORIGIN-BOUNDARY-QUALIFICATION-20260903.md).

@@ -14,8 +14,9 @@ J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 WO035_LOCAL_RECEIVER_ORIGIN=https://127.0.0.1:8444
 WO035_RUNTIME_NETWORK_AUTHORIZED=NO
 WO036_WINDOWS_WINDOWS_E2E_STATUS=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
-WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=READY_FOR_OWNER_REVIEW
+WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=VALIDATED
 WO037_BROWSER_ORIGIN_BOUNDARY_RESULT=PASS_LOCAL_FAIL_CLOSED
+WO037_OWNER_REVIEW_DECISION=VALIDATE
 WO036_RESUME_AFTER_WO037_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
 REAL_NETWORK_AUTHORIZED=NO
 PROVIDER_NETWORK_AUTHORIZED=NO
@@ -235,7 +236,7 @@ Windows. Le sender ne consulte ces magasins qu’après les portes runtime et un
 | Permission ou licence applicable | `NOT_EVIDENCED` | Source ou autorisation versionnée et revue qualifiée |
 | Receiver et idempotence transactionnelle | `OUT_OF_SCOPE_LOCAL_LAB` | Validation INT-001 puis E2E synthétique WO-036 |
 | URI et exposition | `LOCAL_LOOPBACK_ONLY_NOT_EXECUTED` | Qualification WO-036 de l’origine exacte `127.0.0.1:8444` |
-| Compatibilité navigateur/frontière locale | `PASS_LOCAL_FAIL_CLOSED_READY_FOR_OWNER_REVIEW` | Validation propriétaire de WO-037 puis décision distincte de reprise de WO-036 |
+| Compatibilité navigateur/frontière locale | `PASS_LOCAL_FAIL_CLOSED_VALIDATED` | Réduction locale validée ; toute reprise de WO-036 reste soumise à une décision propriétaire distincte |
 | Profil PKI réel | `NOT_DEFINED` | Autorités, EKU, révocation, rotation et récupération approuvées |
 | Non-exportabilité native de la clé client | `NOT_QUALIFIED` | Provisionnement Windows réel et preuve native contrôlée |
 | Rétention de la copie importée | `NOT_DEFINED` | Politique receiver, purge et restauration qualifiées |
@@ -288,5 +289,5 @@ Une qualification loopback ne satisfait aucune de ces portes par elle-même.
 6. [Architecture J7](../architecture/J7-CANONICAL-EVENT-EXPORT.md).
 7. [Règles du dépôt](../../AGENTS.md).
 8. [Work Order WO-035](../work_orders/completed/WO-SS-20260902-035-j9-real-j7-delivery-sender.md).
-9. [Work Order WO-037](../work_orders/active/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md).
+9. [Work Order WO-037](../work_orders/completed/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md).
 10. [Qualification WO-037](../validation/J9-WO037-J7-BROWSER-ORIGIN-BOUNDARY-QUALIFICATION-20260903.md).

@@ -26,8 +26,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   validation expurgée de `docker compose config` ;
 - publication du rapport `J9-WO037-J7-BROWSER-ORIGIN-BOUNDARY-QUALIFICATION-20260903` avec résultat
   `PASS_LOCAL_FAIL_CLOSED` et SHA-256
-  `db8993328643a0ecb39eb83ff9eab6223f6c6ca6605b4cacf3e96dea171fab01` ; WO-037 reste actif en
-  `READY_FOR_OWNER_REVIEW` ;
+  `db8993328643a0ecb39eb83ff9eab6223f6c6ca6605b4cacf3e96dea171fab01` ;
+- validation propriétaire des commits runtime `f28e4b6954c0fb703923f770ab9156326e212a07`, harnais
+  `2596f0592496b2ba84893c8f4ef2cf0185d46f8f` et documentation
+  `24739d03d33801a8a6c8d2fe956e1dc254bb3d57`, readiness locale reconnue et déplacement autorisé
+  vers `completed`, décision enregistrée le `2026-09-03T09:53:43Z` ;
+- WO-037 passe à `VALIDATED` sans autoriser de livraison ni de réseau réel ;
 - WO-036 demeure `STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION` : sa reprise, son
   nouveau manifeste et la campagne complète `201/200/409` exigent une décision propriétaire
   distincte.

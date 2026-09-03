@@ -5,8 +5,8 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
-[WO-SS-20260903-037](docs/work_orders/active/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md)
-est `READY_FOR_OWNER_REVIEW` avec le résultat `PASS_LOCAL_FAIL_CLOSED`. Le commit runtime
+[WO-SS-20260903-037](docs/work_orders/completed/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md)
+est `VALIDATED` avec le résultat `PASS_LOCAL_FAIL_CLOSED`. Le commit runtime
 `f28e4b6954c0fb703923f770ab9156326e212a07` réserve `Referrer-Policy: same-origin` au sous-arbre
 canonique `/events/{canonicalEventId}/exports/**`, maintient `no-referrer` sur les autres routes et
 conserve le refus de `Origin: null`, des Hosts ou Origins hostiles ou dupliqués et des en-têtes
@@ -18,8 +18,11 @@ fournisseur et hors loopback, les téléchargements, artefacts interdits et list
 tous à zéro. Le
 [rapport WO-037](docs/validation/J9-WO037-J7-BROWSER-ORIGIN-BOUNDARY-QUALIFICATION-20260903.md)
 a pour empreinte `db8993328643a0ecb39eb83ff9eab6223f6c6ca6605b4cacf3e96dea171fab01`.
+Le propriétaire a validé les commits runtime, harnais et documentation, reconnu la readiness locale
+et autorisé le déplacement du Work Order vers `completed` le `2026-09-03T09:53:43Z`, soit
+`2026-09-03T11:53:43+02:00` en Europe/Paris.
 
-Cette qualification n’autorise ni reprise de WO-036, ni livraison, ni receiver réel, ni réseau
+Cette validation n’autorise ni reprise de WO-036, ni livraison, ni receiver réel, ni réseau
 fournisseur, ni VPS, ni production. WO-036 reste arrêté et sa reprise exige une nouvelle décision
 propriétaire et un nouveau manifeste.
 

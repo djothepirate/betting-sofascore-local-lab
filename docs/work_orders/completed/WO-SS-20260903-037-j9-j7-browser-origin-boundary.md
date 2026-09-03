@@ -1,10 +1,12 @@
 # WO-SS-20260903-037 — Frontière d’origine du navigateur pour la livraison J7
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
 - **Jalon :** après J9 — correction runtime préalable à la reprise de WO-036
 - **Ouvert le :** 2026-09-03
 - **Ouverture UTC :** `2026-09-03T08:58:02.7540081Z`
 - **Ouverture Europe/Paris :** `2026-09-03T10:58:02.7540081+02:00`
+- **Décision propriétaire enregistrée UTC :** `2026-09-03T09:53:43Z`
+- **Décision propriétaire enregistrée Europe/Paris :** `2026-09-03T11:53:43+02:00`
 - **Branche :** `codex/j9-wo037-j7-browser-origin-boundary`
 - **Worktree :** `.tmp/j9-wo037-j7-browser-origin-boundary`
 - **Base locale d’ouverture vérifiée :** `f4f53aa24b4a8a764819bdb7cf79c87482bd7244`
@@ -200,9 +202,9 @@ Un résultat `PASS_LOCAL_FAIL_CLOSED` exige simultanément :
 - un rapport autonome expurgé et son SHA-256 ;
 - les vérifications Maven, intégration, UTF-8, secrets, loopback et flags bloquants réussies.
 
-Le commit qualifié et le rapport seront soumis à une revue propriétaire distincte. WO-037 restera
-actif jusqu’à cette validation explicite et ne sera déplacé vers `completed` que si le propriétaire
-l’autorise.
+Le commit qualifié et le rapport ont été soumis à une revue propriétaire distincte. Le propriétaire
+a validé les preuves, reconnu la readiness locale et explicitement autorisé le déplacement de
+WO-037 vers `completed`.
 
 Même après validation de WO-037, WO-036 reste `STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION`.
 Sa reprise exige une nouvelle décision propriétaire, un nouveau manifeste lié au nouveau commit et
@@ -210,8 +212,8 @@ au nouveau JAR, puis une nouvelle campagne depuis son début. Le manifeste gelé
 rapport d’arrêt et les preuves antérieures ne sont pas modifiés.
 
 ```text
-WO037_OWNER_REVIEW_REQUIRED=YES
-WO037_WORK_ORDER_MOVE_TO_COMPLETED=NO
+WO037_OWNER_REVIEW_REQUIRED=NO
+WO037_WORK_ORDER_MOVE_TO_COMPLETED=YES
 WO036_STATUS=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
 WO036_RESUME_AFTER_WO037_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
 WO036_WORK_ORDER_MOVE_TO_COMPLETED=NO
@@ -303,29 +305,30 @@ WO037_CHROMIUM_FAILURES=0
 ```
 
 La preuve autonome est consignée dans
-`docs/validation/J9-WO037-J7-BROWSER-ORIGIN-BOUNDARY-QUALIFICATION-20260903.md`. Son empreinte sera
-injectée après calcul, sans rendre le rapport auto-référentiel.
+`docs/validation/J9-WO037-J7-BROWSER-ORIGIN-BOUNDARY-QUALIFICATION-20260903.md`, avec le SHA-256
+`db8993328643a0ecb39eb83ff9eab6223f6c6ca6605b4cacf3e96dea171fab01`.
 
 ```text
 WO037_RUNTIME_COMMIT=f28e4b6954c0fb703923f770ab9156326e212a07
 WO037_QUALIFIED_HARNESS_COMMIT=2596f0592496b2ba84893c8f4ef2cf0185d46f8f
 WO037_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
 WO037_REPORT_SHA256=db8993328643a0ecb39eb83ff9eab6223f6c6ca6605b4cacf3e96dea171fab01
-WO037_OWNER_REVIEW_REQUIRED=YES
-WO037_WORK_ORDER_MOVE_TO_COMPLETED=NO
+WO037_OWNER_REVIEW_REQUIRED=NO
+WO037_WORK_ORDER_MOVE_TO_COMPLETED=YES
 ```
 
-## 10. Revue propriétaire requise
+## 10. Décision propriétaire et clôture
 
 ```text
-J9_WO037_OWNER_REVIEW_DECISION=<VALIDATE|REJECT>
+J9_WO037_OWNER_REVIEW_DECISION=VALIDATE
 J9_WO037_WORK_ORDER=WO-SS-20260903-037-j9-j7-browser-origin-boundary
 J9_WO037_RUNTIME_COMMIT=f28e4b6954c0fb703923f770ab9156326e212a07
 J9_WO037_QUALIFIED_HARNESS_COMMIT=2596f0592496b2ba84893c8f4ef2cf0185d46f8f
+J9_WO037_DOCUMENTATION_COMMIT=24739d03d33801a8a6c8d2fe956e1dc254bb3d57
 J9_WO037_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
 J9_WO037_QUALIFICATION_REPORT_SHA256=db8993328643a0ecb39eb83ff9eab6223f6c6ca6605b4cacf3e96dea171fab01
-J9_WO037_LOCAL_READINESS_ACKNOWLEDGED=<YES|NO>
-J9_WO037_WORK_ORDER_MOVE_TO_COMPLETED=<YES|NO>
+J9_WO037_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO037_WORK_ORDER_MOVE_TO_COMPLETED=YES
 
 J9_WO036_STATUS=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
 J9_WO036_RESUME_AFTER_WO037_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
@@ -334,4 +337,38 @@ J9_PROVIDER_NETWORK_AUTHORIZED=NO
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 J9_VPS_DEPLOYMENT_AUTHORIZED=NO
 J9_PRODUCTION_AUTHORIZED=NO
+```
+
+Le bloc complet a été reçu et enregistré le `2026-09-03T09:53:43Z`, soit
+`2026-09-03T11:53:43+02:00` en Europe/Paris. Les commits runtime, harnais et documentation ainsi
+que l’empreinte du rapport correspondent exactement aux preuves versionnées. Cette validation
+n’autorise ni reprise de WO-036, ni réseau fournisseur ou receiver réel, ni livraison, ni VPS, ni
+production, ni push ou fusion.
+
+```text
+WORK_ORDER_STATUS=VALIDATED
+IMPLEMENTATION_STATUS=COMPLETED
+QUALIFICATION_STATUS=PASS_LOCAL_FAIL_CLOSED
+OWNER_REVIEW_REQUIRED=NO
+OWNER_REVIEW_DECISION=VALIDATE
+OWNER_REVIEW_BLOCK_STATUS=COMPLETE
+LOCAL_READINESS_ACKNOWLEDGED=YES
+RUNTIME_COMMIT_MATCH=YES
+QUALIFIED_HARNESS_COMMIT_MATCH=YES
+DOCUMENTATION_COMMIT_MATCH=YES
+QUALIFICATION_REPORT_SHA256_MATCH=YES
+OWNER_DECISION_RECORDED_AT_UTC=2026-09-03T09:53:43Z
+OWNER_DECISION_RECORDED_AT_EUROPE_PARIS=2026-09-03T11:53:43+02:00
+WORK_ORDER_MOVE_TO_COMPLETED=YES
+MOVE_TO_COMPLETED_AUTHORIZED=YES
+MOVE_TO_COMPLETED_PERFORMED=YES
+WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md
+
+WO036_STATUS=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
+WO036_RESUME_AFTER_WO037_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
+WO036_WORK_ORDER_MOVE_TO_COMPLETED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+VPS_DEPLOYMENT_AUTHORIZED=NO
+PRODUCTION_AUTHORIZED=NO
 ```
