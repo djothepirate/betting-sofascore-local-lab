@@ -2,25 +2,27 @@
 
 ## 1. Décision de sécurité
 
-Ce modèle couvre le socle qualifié par WO-027, le sender runtime fail-closed préparé par WO-035 et
-la frontière d’origine navigateur qualifiée localement par WO-037. Il ne qualifie aucun échange
-avec le receiver, aucun déploiement et aucune donnée dérivée du fournisseur. La permission
-officielle demeure `NOT_EVIDENCED`; par conséquent, toute livraison `PROVIDER_DERIVED` est bloquée
-avant création du transport et avant réseau.
+Ce modèle couvre le socle qualifié par WO-027, le sender runtime fail-closed préparé par WO-035, la
+frontière d’origine navigateur qualifiée localement par WO-037 et la preuve partielle WO-036 de deux
+échanges synthétiques avec le receiver loopback réel. Il ne qualifie ni la séquence complète
+`201/200/409`, ni un déploiement, ni aucune donnée dérivée du fournisseur. La permission officielle
+demeure `NOT_EVIDENCED`; par conséquent, toute livraison `PROVIDER_DERIVED` est bloquée avant
+création du transport et avant réseau.
 
 ```text
 SECURITY_MODEL_VERSION=1.0
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 WO035_LOCAL_RECEIVER_ORIGIN=https://127.0.0.1:8444
 WO035_RUNTIME_NETWORK_AUTHORIZED=NO
-WO036_WINDOWS_WINDOWS_E2E_STATUS=RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
+WO036_WINDOWS_WINDOWS_E2E_STATUS=STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION
 WO036_FIRST_ATTEMPT_RESULT=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
+WO036_SECOND_ATTEMPT_RESULT=STOPPED_AFTER_200_DUPLICATE_BEFORE_409
 WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=VALIDATED
 WO037_BROWSER_ORIGIN_BOUNDARY_RESULT=PASS_LOCAL_FAIL_CLOSED
 WO037_OWNER_REVIEW_DECISION=VALIDATE
-WO036_RESUME_AFTER_WO037_VALIDATION=AUTHORIZED_BY_SEPARATE_OWNER_DECISION
-WO036_FRESH_MANIFEST_REQUIRED=YES
-LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=YES
+WO036_RESUME_AFTER_WO037_VALIDATION=CONSUMED_BY_STOPPED_R2
+WO036_RESUME_MANIFEST_STATUS=FROZEN_AND_CONSUMED
+LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
 REAL_NETWORK_AUTHORIZED=NO
 PROVIDER_NETWORK_AUTHORIZED=NO
 MTLS_REQUIRED_FOR_ANY_FUTURE_REAL_TARGET=YES
@@ -51,9 +53,9 @@ décision interne en permission d’usage.
 
 ### 2.2 Composants explicitement hors périmètre
 
-- receiver réel du Betting Project et son dépôt ;
-- exécution du receiver local `127.0.0.1:8444`, réservée à la reprise distinctement autorisée de
-  WO-036 ;
+- déploiement réel du receiver Betting Project et toute cible non loopback ;
+- nouvelle exécution du receiver local `127.0.0.1:8444` tant qu’un correctif runtime distinct et une
+  nouvelle reprise de WO-036 ne sont pas autorisés ;
 - URI, DNS, certificat ou autorité de production ;
 - réseau fournisseur ou acquisition SofaScore ;
 - Playwright sur VPS ou poste distant ;
@@ -115,7 +117,7 @@ est non fiable jusqu’à validation. Un code HTTP `2xx` n’est pas une preuve 
 
 ## 5. Menaces, contrôles et preuve attendue
 
-| Menace | Scénario | Contrôle obligatoire | Preuve WO-027/WO-035/WO-037 |
+| Menace | Scénario | Contrôle obligatoire | Preuve WO-027/WO-035/WO-036/WO-037 |
 |---|---|---|---|
 | Livraison sans permission | Une configuration fournisseur est activée alors que la permission est `NOT_EVIDENCED` | Porte de permission, autorisation distante et `PROVIDER_OWNER_GO_REQUIRED` avant création du transport ou socket | Test sans listener : refus local, aucune interaction ledger et aucune ligne créée (`NOT_ATTEMPTED` conceptuel) |
 | Confusion de provenance | Un export mixte, incohérent ou fournisseur est présenté comme synthétique | Classification à partir des cinq sources vérifiées ; `MIXED_OR_UNKNOWN` toujours refusé ; mode exact par classe | Matrice entièrement synthétique, entièrement fournisseur, mixte, emplacement absent et valeur inconnue |
@@ -132,6 +134,7 @@ est non fiable jusqu’à validation. Un code HTTP `2xx` n’est pas une preuve 
 | Retry interne du JDK | Le client reprend une connexion ou un échange sans seconde souscription visible du body | Arguments JVM de démarrage exacts `disableRetryConnect=true`, `redirects.retrylimit=1`, `enableAllMethodRetry=false`; attestation avant construction et avant envoi | Arguments visibles dans le processus ; divergence de chaque propriété refusée avant `sendAsync` ; un seul effet receiver |
 | Réutilisation du transport | Une même instance est invoquée ou son corps est souscrit deux fois | Garde atomique mono-exécution et body publisher one-shot, en complément des propriétés JDK | Première exécution unique puis seconde invocation refusée avant `sendAsync`; seconde souscription refusée |
 | Faux succès | `2xx` avec ACK absent, malformé ou non corrélé | UTF-8 strict sans BOM/NUL/UTF-16, schéma strict, `receivedAt` canonique UTC, corrélation de tous les champs, couple code/statut exact | ACK trop grand, encodage hostile, date non canonique, champ inconnu, hash/ID/statut incohérents |
+| Sémantique temporelle du duplicate | Le receiver réemploie conformément au contrat le `receivedAt` durable initial, antérieur à la tentative de répétition, mais le sender applique la borne basse d’un nouvel import et produit un faux résultat inconnu | Distinguer la validation temporelle `IMPORTED` de `DUPLICATE`, conserver la borne haute et toutes les corrélations, puis tester avec deux instants réellement distincts | Reprise WO-036 arrêtée fail-closed après `200/DUPLICATE`; correctif runtime distinct requis |
 | ACK ou erreur volumineux | Receiver envoie un corps illimité ou un ACK positif compressé | Limite de toute lecture à `16 384` octets ; ACK positif seulement avec `Content-Encoding` absent/identity | Réponse >16 KiB refusée quel que soit le statut ; ACK positif compressé refusé |
 | Redirection/SSRF | Cible renvoie vers une autre origine ou une URI injectée | Seule origine `https://127.0.0.1:8444`, sans chemin/query/fragment/user-info ; redirections jamais suivies ; aucune cible de secours | Toutes les variantes d’origine refusées avant lecture du certificat ; `3xx` classé ambigu et zéro seconde connexion |
 | Usurpation du receiver | Certificat serveur faux ou nom incohérent | Confiance chargée explicitement depuis `Windows-ROOT`/`SunMSCAPI`, vérification de nom et TLS 1.2/1.3 ; aucun trust-all | Certificat/nom/autorité synthétique incorrects refusés ; aucune consultation réelle sous WO-035 |
@@ -144,7 +147,7 @@ est non fiable jusqu’à validation. Un code HTTP `2xx` n’est pas une preuve 
 | Confusion validation/livraison | Un échec distant modifie `HUMAN_VALIDATED` | Tables/états séparés, aucune transition croisée | Tests d’échec et succès laissant J7 inchangé |
 | Couplage fournisseur | Le push déclenche J3/J4/J5/Playwright | Aucune dépendance ou callback d’acquisition dans sender/receiver | Tests sans mock fournisseur et contrôle des appels à zéro |
 | Déni de service local | Très gros fichier, nombreuses tentatives ou ACK lent | 5 MiB, concurrence `1`, timeouts finis, 16 KiB ACK, zéro retry | Tests de bornes et de timeout |
-| Évasion du harness | Listener de test persistant ou non loopback | WO-027 : `127.0.0.1`, port `0`; WO-037 : `127.0.0.1:8087`; reprise WO-036 : origine exacte `https://127.0.0.1:8444`; fermeture et audit listener | WO-037 ouvre uniquement le listener Local Lab loopback `8087`, le ferme avec zéro résidu et ne construit aucun listener receiver `8444` |
+| Évasion du harness | Listener de test persistant ou non loopback | WO-027 : `127.0.0.1`, port `0`; WO-037 : `127.0.0.1:8087`; reprise WO-036 : origine exacte `https://127.0.0.1:8444`; fermeture et audit listener | WO-037 ferme son listener sans résidu ; R2 ferme Local Lab A/B, receiver et bases avec résidus possédés à zéro et ports `8087`, `8444`, `5432`, `5433` libérés avant redémarrage séparé du primaire |
 | État fantôme | Crash entre intention, socket et résultat | Intention persistée avant socket, `IN_FLIGHT`, classification fail-closed au redémarrage | Reprise locale classant l’ambiguïté sans nouvel envoi |
 | Chevauchement cleanup/nouvelle livraison | Le ledger devient terminal avant que le client et ses ressources soient fermés | Gate singleton `IDLE/ACTIVE/POISONED` tenue jusqu’après `transport.close()` | Deuxième livraison refusée pendant un close bloqué ; elle n’atteint ni export, ni claim, ni socket |
 | Réconciliation d’un processus vivant | Un `IN_FLIGHT` est classé stale pendant que son transport est encore actif | Livraison et réconciliation acquièrent la même gate singleton | Réconciliation refusée pendant `ACTIVE`, sans accès de mutation au ledger |
@@ -234,12 +237,13 @@ Windows. Le sender ne consulte ces magasins qu’après les portes runtime et un
 
 ## 8. Risques résiduels
 
-| Risque | Statut WO-027/WO-035/WO-037 | Condition de réduction |
+| Risque | Statut WO-027/WO-035/WO-036/WO-037 | Condition de réduction |
 |---|---|---|
 | Permission ou licence applicable | `NOT_EVIDENCED` | Source ou autorisation versionnée et revue qualifiée |
-| Receiver et idempotence transactionnelle | `OUT_OF_SCOPE_LOCAL_LAB` | Validation INT-001 puis E2E synthétique WO-036 |
-| URI et exposition | `LOCAL_LOOPBACK_ONLY_NOT_EXECUTED` | Qualification WO-036 de l’origine exacte `127.0.0.1:8444` |
-| Compatibilité navigateur/frontière locale | `PASS_LOCAL_FAIL_CLOSED_VALIDATED` | Réduction locale validée et reprise synthétique autorisée ; nouveau préflight et manifeste encore obligatoires |
+| Receiver et idempotence transactionnelle | `PARTIAL_BOUNDED_201_AND_200_OBSERVED` | Correctif sender puis nouvelle campagne complète incluant `409` |
+| URI et exposition | `PASS_BOUNDED_SYNTHETIC_LOOPBACK_TWO_CALLS` | Aucune cible réelle ; nouvelle autorisation requise pour tout échange |
+| Compatibilité navigateur/frontière locale | `PASS_LOCAL_FAIL_CLOSED_VALIDATED` | Frontière qualifiée par WO-037 et exercée par WO-036 |
+| Validation temporelle ACK duplicate | `STOPPED_FAIL_CLOSED` | Correctif sender et tests à instants distincts, puis reprise WO-036 séparément autorisée |
 | Profil PKI réel | `NOT_DEFINED` | Autorités, EKU, révocation, rotation et récupération approuvées |
 | Non-exportabilité native de la clé client | `NOT_QUALIFIED` | Provisionnement Windows réel et preuve native contrôlée |
 | Rétention de la copie importée | `NOT_DEFINED` | Politique receiver, purge et restauration qualifiées |
@@ -277,6 +281,11 @@ Toutes les portes suivantes sont cumulatives :
 9. tests offline puis loopback intégralement verts ;
 10. décision propriétaire distincte autorisant une livraison réelle d’un export déjà validé.
 
+La reprise WO-036 a été arrêtée après un premier `201/IMPORTED` et un duplicate durable que le
+sender a classé inconnu en raison d’un invariant temporel incompatible avec le contrat receiver.
+La sortie fail-closed, l’absence de retry et de collision, puis le cleanup complet ont préservé les
+frontières de sécurité. Un Work Order runtime distinct et une nouvelle décision sont requis.
+
 WO-036 ne satisfera que la qualification synthétique Windows/Windows. Même verte, elle ne change
 ni `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED`, ni le blocage `PROVIDER_OWNER_GO_REQUIRED`.
 
@@ -294,3 +303,4 @@ Une qualification loopback ne satisfait aucune de ces portes par elle-même.
 8. [Work Order WO-035](../work_orders/completed/WO-SS-20260902-035-j9-real-j7-delivery-sender.md).
 9. [Work Order WO-037](../work_orders/completed/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md).
 10. [Qualification WO-037](../validation/J9-WO037-J7-BROWSER-ORIGIN-BOUNDARY-QUALIFICATION-20260903.md).
+11. [Rapport de reprise arrêtée WO-036](../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903.md).

@@ -36,8 +36,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION` ;
 - décision propriétaire distincte de reprise WO-036 enregistrée le `2026-09-03T10:10:23Z`, puis
   fast-forward de sa branche vers le commit validé WO-037
-  `9a10447d0c94e441b860b942e436e2c943f1e2c1` ; la nouvelle série `201/200/409` reste subordonnée
-  à un run neuf et à un nouveau manifeste lié aux exécutables qualifiés.
+  `9a10447d0c94e441b860b942e436e2c943f1e2c1` ; à cet instant, la nouvelle série `201/200/409`
+  restait subordonnée à un run neuf et à un nouveau manifeste lié aux exécutables qualifiés ; cette
+  autorisation a depuis été consommée par la reprise R2 décrite dans la section WO-036 ci-dessous.
 
 ### Après J9 — WO-036 qualification E2E J7 locale Windows/Windows
 
@@ -74,6 +75,21 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   SHA-256 `5244422187f0bc591e3ce57f20b076037f64bad266ad9052b985d8127b475994` ; WO-036 reste actif et
   exige un Work Order runtime distinct puis une nouvelle décision propriétaire et un nouveau
   manifeste avant toute reprise de la séquence `201/200/409`.
+- reprise autorisée exécutée dans un run entièrement neuf après gel du manifeste R2 au commit
+  `07fd440a6773526aeb2b28e7c43413023967f6d1`, SHA-256
+  `6ef4c4fbe8af1027ff06170bea00aa8ca75c3159bcd21134db2598ddd4b18a78` ;
+- séquence R2 arrêtée après deux appels sur trois : A a produit `201/IMPORTED` et `DELIVERED`, puis
+  le receiver a persisté idempotemment `200/DUPLICATE` pour B, tandis que le sender a classé B
+  `UNKNOWN_RECONCILIATION_REQUIRED` sous `ACK_HTTP_STATUS_MISMATCH` ;
+- cause établie côté sender : sa borne basse temporelle rejette le `receivedAt` durable initial que
+  le contrat receiver exige de réemployer pour un duplicate exact ; aucune incompatibilité mTLS,
+  parsing, identité, hash ou idempotence receiver n’est observée ;
+- arrêt fail-closed sans retry ni collision `409`, cleanup à zéro résidu et redémarrage `healthy` du
+  PostgreSQL primaire exact ;
+- publication du rapport `J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903`, résultat `STOPPED`,
+  SHA-256 `219f54f2b429b1eaea04c920e55cc87d33f9c5644697129e6ff96fc9cad19062` ; WO-036 reste actif et
+  exige un Work Order runtime distinct, sa validation, une nouvelle décision de reprise et un
+  manifeste neuf.
 
 ### Après J9 — WO-035 sender réel J7 du Local Lab
 

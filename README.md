@@ -22,29 +22,25 @@ Le propriétaire a validé les commits runtime, harnais et documentation, reconn
 et autorisé le déplacement du Work Order vers `completed` le `2026-09-03T09:53:43Z`, soit
 `2026-09-03T11:53:43+02:00` en Europe/Paris.
 
-Cette validation n’autorisait pas à elle seule la reprise de WO-036. Le propriétaire a depuis
-autorisé séparément cette reprise, qui reste bornée à une nouvelle campagne synthétique locale et
-à un nouveau manifeste. Elle n’autorise ni donnée dérivée, ni réseau fournisseur ou distant, ni
-VPS, ni production.
+Cette validation n’autorisait pas à elle seule la reprise de WO-036. Le propriétaire l’a autorisée
+séparément le `2026-09-03T10:10:23Z`, soit `2026-09-03T12:10:23+02:00` en Europe/Paris, uniquement
+pour une campagne synthétique Windows/Windows neuve et un manifeste distinct. Cette reprise a été
+exécutée, puis arrêtée de façon fail-closed après le deuxième appel receiver.
 
 Le Work Order
 [WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
-reste actif à `RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT`. Son premier essai conserve
-le résultat
-immuable `STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION` : la campagne E2E strictement
-synthétique Windows/Windows a été arrêtée avant son premier appel receiver lorsque
-Brave a produit `Origin: null` sous la politique `Referrer-Policy: no-referrer`, tandis que la
-frontière locale n'accepte qu'un Origin absent ou exactement loopback et a donc répondu `403` avant
-contrôleur. Le [rapport WO-036](docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-20260903.md)
-confirme zéro tentative sender persistée, zéro receipt/payload/audit/outbox receiver, zéro retry et
-zéro appel fournisseur. Le cleanup de campagne est complet et le PostgreSQL primaire exact a été
-redémarré `healthy`. WO-037 a corrigé et qualifié la frontière navigateur ; la décision propriétaire
-distincte de reprise a été enregistrée le `2026-09-03T10:10:23Z`, soit
-`2026-09-03T12:10:23+02:00` en Europe/Paris. Un nouveau run complet et un nouveau manifeste lié au
-commit/JAR corrigés sont obligatoires avant de rejouer `201/200/409`. La permission officielle
-reste `NOT_EVIDENCED` ; aucune donnée dérivée de SofaScore, aucun réseau fournisseur ou distant,
-VPS, production, push ou PR INT-001
-n'est autorisé par cette reprise.
+reste actif à `STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION`. Le premier import
+a produit `201/IMPORTED` et l’état sender `DELIVERED`. La répétition byte-identique a été persistée
+idempotemment par le receiver sous `200/DUPLICATE`, sans second payload ni second outbox, mais le
+sender l’a classée `UNKNOWN_RECONCILIATION_REQUIRED` avec `ACK_HTTP_STATUS_MISMATCH`. Le
+[rapport de reprise WO-036](docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903.md),
+SHA-256 `219f54f2b429b1eaea04c920e55cc87d33f9c5644697129e6ff96fc9cad19062`, établit que le receiver
+réemploie conformément à son contrat l’instant durable du premier import, tandis que le sender exige
+à tort que cet instant soit postérieur au début de la seconde tentative. Aucun retry ni probe `409`
+n’a été exécuté. Le cleanup est complet et le PostgreSQL primaire exact a été redémarré `healthy`.
+Un Work Order runtime distinct est requis avant toute nouvelle reprise de WO-036. La permission
+officielle reste `NOT_EVIDENCED` ; aucune donnée dérivée de SofaScore, aucun réseau fournisseur ou
+distant, VPS, production, push ou PR INT-001 n’est autorisé par cette campagne.
 
 Le Work Order
 [WO-SS-20260902-035](docs/work_orders/completed/WO-SS-20260902-035-j9-real-j7-delivery-sender.md)
@@ -55,7 +51,7 @@ restant désactivé par défaut. La validation propriétaire a été enregistré
 `2026-09-02T18:57:00Z`, soit `2026-09-02T20:57:00+02:00` en Europe/Paris, avec readiness locale et
 déplacement vers `completed` confirmés. La permission officielle demeure `NOT_EVIDENCED` : aucun
 appel fournisseur, receiver réel, transfert d'un export dérivé, déploiement VPS ou usage de
-production n'est autorisé. WO-036 est désormais ouvert par une autorisation distincte ; la PR
+production n'est autorisé. WO-036 avait ensuite été ouvert par une autorisation distincte ; la PR
 d'INT-001 reste l’étape ultérieure séparée.
 
 Le correctif fournisseur distinct

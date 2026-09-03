@@ -4,24 +4,27 @@
 
 Ce runbook conserve la qualification du socle fail-closed v1.0 réalisée sous WO-027 et documente
 la préparation runtime de WO-035. Il ne permet aucune livraison de données dérivées. Le premier
-échange synthétique entre les deux applications relève de WO-036 ; après l’arrêt de son premier
-essai avant receiver et la validation de WO-037, sa reprise a été autorisée par une décision
-propriétaire distincte et exige un run neuf ainsi qu’un nouveau manifeste.
+échange synthétique entre les deux applications relève de WO-036. Après l’arrêt de son premier
+essai avant receiver et la validation de WO-037, sa reprise a été autorisée puis consommée par un
+run neuf. Cette reprise s’est arrêtée après `201/IMPORTED`, puis `200/DUPLICATE` côté receiver : le
+sender a rejeté l’instant durable initial de l’ACK duplicate. Aucun nouvel échange n’est autorisé
+avant correction runtime distincte, validation et nouvelle décision propriétaire.
 
 ```text
-RUNBOOK_SCOPE=WO027_OFFLINE_LOOPBACK_WO035_RUNTIME_AND_WO037_BROWSER_BOUNDARY
+RUNBOOK_SCOPE=WO027_OFFLINE_LOOPBACK_WO035_RUNTIME_WO036_SYNTHETIC_E2E_AND_WO037_BROWSER_BOUNDARY
 CONTRACT_VERSION=1.0
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 WO035_LOCAL_RECEIVER_ORIGIN=https://127.0.0.1:8444
 WO035_NETWORK_EXECUTION_AUTHORIZED=NO
-WO036_WINDOWS_WINDOWS_E2E_STATUS=RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
+WO036_WINDOWS_WINDOWS_E2E_STATUS=STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION
 WO036_FIRST_ATTEMPT_RESULT=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
+WO036_SECOND_ATTEMPT_RESULT=STOPPED_AFTER_200_DUPLICATE_BEFORE_409
 WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=VALIDATED
 WO037_BROWSER_ORIGIN_BOUNDARY_RESULT=PASS_LOCAL_FAIL_CLOSED
 WO037_OWNER_REVIEW_DECISION=VALIDATE
-WO036_RESUME_AFTER_WO037_VALIDATION=AUTHORIZED_BY_SEPARATE_OWNER_DECISION
-WO036_FRESH_MANIFEST_REQUIRED=YES
-LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=YES
+WO036_RESUME_AFTER_WO037_VALIDATION=CONSUMED_BY_STOPPED_R2
+WO036_RESUME_MANIFEST_STATUS=FROZEN_AND_CONSUMED
+LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 PROVIDER_NETWORK_AUTHORIZED=NO
 LIVE_DELIVERY_AUTHORIZED=NO
@@ -321,7 +324,9 @@ Après les tests :
 8. confirmer l’absence de certificat, clé, truststore, keystore, HAR, trace, vidéo, capture ou
    téléchargement ajouté à Git ;
 9. confirmer qu’aucun payload complet ni ACK brut ne figure dans les rapports ;
-10. confirmer qu’aucun appel fournisseur ou receiver réel n’a été réalisé.
+10. sous WO-027/WO-035, confirmer qu’aucun appel receiver n’a été réalisé ; sous une campagne
+    WO-036 distinctement autorisée, comptabiliser uniquement les appels vers l’implémentation
+    INT-001 loopback synthétique et confirmer zéro appel fournisseur, non-loopback ou dérivé.
 
 ## 9. Ledger et preuves autorisées
 
@@ -347,7 +352,9 @@ Arrêter immédiatement la qualification si :
 - une cible n’est pas loopback ;
 - une URI réelle apparaît dans la configuration ou les logs ;
 - un certificat ou une clé non synthétique est demandé ;
-- un appel fournisseur, Playwright ou Betting Project réel est possible ;
+- un appel fournisseur, Playwright ou Betting Project non-loopback est possible ; l’unique
+  exception receiver est l’implémentation INT-001 loopback synthétique sous une campagne WO-036
+  fraîche, explicitement autorisée et liée à son manifeste ;
 - un retry automatique ou une redirection est observé ;
 - le fichier J7 ou son statut est modifié ;
 - le payload ou un secret est journalisé ;
@@ -477,14 +484,14 @@ séparés de `HUMAN_VALIDATED` : `NOT_ATTEMPTED`, `IN_FLIGHT`, `DELIVERED`,
 
 | Classe calculée | Mode runtime exigé | État sous WO-035 |
 |---|---|---|
-| `SYNTHETIC_ONLY` | `SYNTHETIC_LOOPBACK` | Code préparé ; échange réel reporté à WO-036 |
+| `SYNTHETIC_ONLY` | `SYNTHETIC_LOOPBACK` | Code préparé ; preuve R2 partielle `201/200`, nouvelle reprise WO-036 requise pour achever `201/200/409` |
 | `PROVIDER_DERIVED` | `PROVIDER_DERIVED` | Bloqué par `NOT_EVIDENCED`, autorisation distante absente et `PROVIDER_OWNER_GO_REQUIRED` |
 | `MIXED_OR_UNKNOWN` | Aucun | Refus `PAYLOAD_PROVENANCE_NOT_ELIGIBLE` |
 
 Le mode synthétique n’accepte que l’origine exacte `https://127.0.0.1:8444`, les qualifications
 receiver et sender à `PASS`, une empreinte certificat SHA-256 exacte et
-`remote-delivery-authorized=false`. Cette matrice est une spécification pour WO-036, pas un ordre
-de lancer les applications sous WO-035.
+`remote-delivery-authorized=false`. Cette matrice reste une spécification pour une nouvelle reprise
+de WO-036, pas un ordre de lancer les applications sous WO-035 ni une autorisation de réutiliser R2.
 
 Avant toute qualification, vérifier également que la voie applicative synthétique transmet
 explicitement la classe attendue `SYNTHETIC_ONLY`. Un export classé `PROVIDER_DERIVED` ou
@@ -568,20 +575,21 @@ payload échoue doit encore atteindre le contrôle stale/ordinal, sans aucun POS
 
 ### 14.7 Porte vers WO-036
 
-WO-036 est actif. Son premier manifeste et son rapport d’arrêt restent gelés. La qualification
-verte de WO-037 a réduit le défaut de frontière navigateur, puis une décision propriétaire
-distincte a autorisé la reprise. Avant tout premier POST du nouveau run, il reste obligatoire de
-refaire le préflight, reconstruire et enregistrer les exécutables, créer des ressources isolées
-neuves et geler un nouveau manifeste lié au commit et aux JAR qualifiés. La série repart ensuite
-intégralement depuis son début ; aucun compteur, export, certificat ou état privé du premier essai
-n’est réutilisé.
+WO-036 est actif. Son premier manifeste et son premier rapport d’arrêt restent gelés. Après la
+qualification de WO-037, la décision propriétaire distincte de reprise a été consommée par un run
+neuf et par le manifeste
+`J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-20260903`. Le premier appel a produit
+`201/IMPORTED`. Le deuxième a produit côté receiver le duplicate durable attendu, mais le sender a
+classé le `200/DUPLICATE` `UNKNOWN_RECONCILIATION_REQUIRED` parce que le `receivedAt` initial est
+antérieur au claim courant. La série s’est arrêtée sans retry et sans collision `409`.
 
-WO-036 reste limité à un export J7 entièrement synthétique, au Local Lab sur
-`127.0.0.1:8087`, au receiver sur `127.0.0.1:8444`, à deux bases distinctes et à une PKI locale
-hors Git. Il devra encore prouver `201/IMPORTED`, `200/DUPLICATE`, `409`, l’identité byte-à-byte,
-l’outbox et le cleanup. La reprise autorise le receiver INT-001 réel uniquement sur le loopback et
-avec ce corpus synthétique. Elle n’autorise aucun appel SofaScore, export dérivé fournisseur,
-receiver distant, VPS ou production.
+Le rapport distinct
+`J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903` établit la conformité idempotente du
+receiver, l’identité byte-à-byte, l’outbox unique et le cleanup complet. Il reste à corriger sous un
+Work Order runtime distinct la sémantique temporelle du sender, puis à obtenir une nouvelle décision
+de reprise et à rejouer une campagne intégrale avec un manifeste neuf. Aucune autorisation du run
+consommé ne peut être réutilisée. Aucun appel SofaScore, export dérivé fournisseur, receiver distant,
+VPS ou production n’est autorisé.
 
 Bloc de clôture attendu pour WO-035 :
 

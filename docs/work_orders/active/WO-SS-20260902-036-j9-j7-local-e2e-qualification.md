@@ -1,6 +1,6 @@
 # WO-SS-20260902-036 — Qualification E2E J7 locale Windows/Windows
 
-- **Statut :** `RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT`
+- **Statut :** `STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION`
 - **Jalon :** après J9 — qualification synthétique de `OPTIONAL_LOCAL_PUSH`
 - **Ouvert le :** 2026-09-02
 - **Ouverture UTC :** `2026-09-02T19:08:46.1623419Z`
@@ -29,11 +29,11 @@ dérivée de SofaScore, aucun appel fournisseur, receiver distant, VPS ou produc
 
 ```text
 WORK_ORDER=WO-SS-20260902-036-j9-j7-local-e2e-qualification
-WORK_ORDER_STATUS=RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
+WORK_ORDER_STATUS=STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION
 BRANCH=codex/j9-wo036-j7-local-e2e
 
-LOCAL_SYNTHETIC_WINDOWS_E2E_AUTHORIZED=YES
-LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=YES_SYNTHETIC_ONLY
+LOCAL_SYNTHETIC_WINDOWS_E2E_AUTHORIZED=CONSUMED_BY_STOPPED_R2
+LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
 LOCAL_SYNTHETIC_DATA_ONLY=YES
 REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
 
@@ -280,12 +280,14 @@ J9_VPS_DEPLOYMENT_AUTHORIZED=NO
 J9_PRODUCTION_AUTHORIZED=NO
 ```
 
-## 12. Autorisation propriétaire de reprise et campagne R2
+## 12. Autorisation propriétaire de reprise — état historique pré-exécution R2
 
-La section précédente reste le constat historique du premier essai. Le manifeste et le rapport
-qui le documentent demeurent gelés et ne sont ni modifiés ni réinterprétés. WO-037 a depuis corrigé
-la politique de referrer sans accepter d’origine opaque, puis a été qualifié et validé. Le
-propriétaire a ensuite transmis la décision distincte suivante :
+La section précédente reste le constat historique du premier essai. La présente section fige l’état
+pré-exécution de R2 ; les valeurs d’autorisation qu’elle reproduit ont depuis été consommées par le
+run arrêté décrit en section 13 et ne représentent plus l’autorité courante. Le manifeste et le
+rapport du premier essai demeurent gelés et ne sont ni modifiés ni réinterprétés. WO-037 avait
+corrigé la politique de referrer sans accepter d’origine opaque, puis avait été qualifié et validé.
+Le propriétaire avait ensuite transmis la décision distincte suivante :
 
 ```text
 J'autorise la reprise de la WO-036
@@ -323,18 +325,19 @@ WO037_COMPLETED_WORK_ORDER_REFERENCE=docs/work_orders/completed/WO-SS-20260903-0
 WO037_COMPLETED_WORK_ORDER_SHA256=dc76113dc9e6439a5e0b6b5ad8f8e8db5b2d5fe4226163681a62aaf3fe064b93
 ```
 
-Un nouveau run complet doit repartir de zéro. Il emploiera un nouveau répertoire privé, une PKI et
-des bases isolées neuves, reconstruira les deux JAR, enregistrera leur identité et gèlera avant le
-premier POST un nouveau manifeste distinct :
+Cette décision exigeait qu’un nouveau run complet reparte de zéro, emploie un nouveau répertoire
+privé, une PKI et des bases isolées neuves, reconstruise les deux JAR, enregistre leur identité et
+gèle avant le premier POST le manifeste distinct suivant :
 
 ```text
 docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-20260903.md
 ```
 
-L’ancien manifeste et le rapport d’arrêt restent immuables. WO-036 reste actif et ne peut toujours
-pas être déplacé vers `completed` avant une nouvelle preuve complète et une revue propriétaire.
+L’ancien manifeste et le rapport d’arrêt restent immuables. Le bloc suivant représente exclusivement
+l’état autorisé avant exécution de R2 ; la section 13 porte l’état courant.
 
 ```text
+PRE_R2_AUTHORIZATION_STATE=HISTORICAL_CONSUMED
 J9_WO036_OWNER_RESUME_DECISION=AUTHORIZE
 J9_WO036_STATUS=RESUME_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
 J9_WO036_RESUME_AFTER_WO037_VALIDATION=AUTHORIZED_BY_SEPARATE_OWNER_DECISION
@@ -350,3 +353,52 @@ REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
 J9_VPS_DEPLOYMENT_AUTHORIZED=NO
 J9_PRODUCTION_AUTHORIZED=NO
 ```
+
+## 13. Résultat de la campagne de reprise R2
+
+Le manifeste distinct a été gelé au commit
+`07fd440a6773526aeb2b28e7c43413023967f6d1`, puis la campagne neuve a été exécutée avec un export
+J7 entièrement synthétique. Le [rapport autonome de reprise](../../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903.md),
+SHA-256 `219f54f2b429b1eaea04c920e55cc87d33f9c5644697129e6ff96fc9cad19062`, consigne le résultat
+`STOPPED`.
+
+Le premier appel a produit `201/IMPORTED` et l’état local `DELIVERED`. Le receiver a traité le
+second appel byte-identique comme le duplicate durable attendu : `200/DUPLICATE`, un seul receipt,
+un seul payload, un seul outbox et deux audits au total. Le sender a néanmoins classé ce second
+résultat `UNKNOWN_RECONCILIATION_REQUIRED` avec `ACK_HTTP_STATUS_MISMATCH`, car il impose au
+`receivedAt` initial réemployé par le receiver d’être postérieur au début du second claim.
+
+La cause est déterministe et se situe dans l’invariant temporel du sender Local Lab. Le receiver
+INT-001 est conforme à son contrat, qui impose au duplicate de réemployer le `remoteImportId` et le
+`receivedAt` du premier import durable. Aucun retry ni probe de collision `409` n’a été effectué.
+Les applications ont été arrêtées gracieusement, les ressources de campagne supprimées sans résidu
+et le conteneur PostgreSQL primaire exact redémarré `healthy` sans recréation ni purge.
+
+```text
+J9_WO036_STATUS=STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION
+J9_WO036_RESUME_RUN_RESULT=STOPPED
+J9_WO036_STOP_CLASS=LOCAL_LAB_DUPLICATE_ACK_RECEIPT_TIME_SEMANTICS_MISMATCH
+J9_WO036_RECEIVER_SEQUENCE=201_IMPORTED,200_DUPLICATE
+J9_WO036_LOCAL_LEDGER_SEQUENCE=DELIVERED,UNKNOWN_RECONCILIATION_REQUIRED
+J9_WO036_IMPORT_ROUTE_CALLS=2
+J9_WO036_MAXIMUM_IMPORT_ROUTE_CALLS=3
+J9_WO036_COLLISION_PROBE=NOT_PERFORMED_AFTER_GLOBAL_STOP
+J9_WO036_AUTOMATIC_RETRIES=0
+J9_WO036_RUNTIME_CORRECTION_REQUIRED=YES
+J9_WO036_RESUME_AFTER_RUNTIME_CORRECTION=REQUIRES_SEPARATE_OWNER_DECISION
+J9_WO036_WORK_ORDER_MOVE_TO_COMPLETED=NO
+J9_LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
+
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+WO-036 reste actif. Aucun correctif runtime n’est apporté par cette campagne. Le prochain numéro
+disponible vérifié est `038`, mais son ouverture et son implémentation exigent une autorisation
+propriétaire distincte. Après validation de ce correctif, toute nouvelle reprise de WO-036 exigera
+encore une décision séparée, un run neuf et un manifeste neuf.
