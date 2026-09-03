@@ -4,6 +4,34 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-037 frontière d’origine du navigateur J7
+
+- ouverture de `WO-SS-20260903-037-j9-j7-browser-origin-boundary` depuis le commit exact
+  `f4f53aa24b4a8a764819bdb7cf79c87482bd7244`, dans une branche et un worktree dédiés ;
+- correction runtime `f28e4b6954c0fb703923f770ab9156326e212a07` strictement bornée : la politique
+  `same-origin` est réservée au sous-arbre canonique `/events/{canonicalEventId}/exports/**`,
+  tandis que `no-referrer` reste appliqué aux autres routes ;
+- maintien sans assouplissement de la frontière `HandlerMethod` : Host exact
+  `127.0.0.1:8087`, Origin absent ou exactement `http://127.0.0.1:8087`, refus de
+  `Origin: null`, des valeurs multiples ou hostiles et de tout en-tête forwarded ;
+- ajout au commit `2596f0592496b2ba84893c8f4ef2cf0185d46f8f` d’un profil Maven explicite et d’un
+  lanceur de qualification qui démarrent Spring/Tomcat réel avec services synthétiques en mémoire,
+  sans base de données, receiver, fournisseur ou cible non loopback ;
+- qualification Chromium réelle `PASS` : aperçu `200` avec `Referrer-Policy: same-origin`,
+  préparation native `200` avec l’Origin loopback exact et préparation issue de l’origine opaque
+  `null` refusée `403` ; exécution, réconciliation, claims, appels receiver/fournisseur/hors
+  loopback, téléchargements, artefacts interdits et listeners résiduels tous à zéro ;
+- contrôles verts : Surefire `1132/0/0/5` sur `164` suites, Failsafe `85/0/0/0` sur `4` suites,
+  tests ciblés sécurité/livraison `42/0`, Pester `8/8`, harnais Chromium `1/0/0/0` et
+  validation expurgée de `docker compose config` ;
+- publication du rapport `J9-WO037-J7-BROWSER-ORIGIN-BOUNDARY-QUALIFICATION-20260903` avec résultat
+  `PASS_LOCAL_FAIL_CLOSED` et SHA-256
+  `db8993328643a0ecb39eb83ff9eab6223f6c6ca6605b4cacf3e96dea171fab01` ; WO-037 reste actif en
+  `READY_FOR_OWNER_REVIEW` ;
+- WO-036 demeure `STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION` : sa reprise, son
+  nouveau manifeste et la campagne complète `201/200/409` exigent une décision propriétaire
+  distincte.
+
 ### Après J9 — WO-036 qualification E2E J7 locale Windows/Windows
 
 - ouverture de `WO-SS-20260902-036-j9-j7-local-e2e-qualification` depuis la clôture validée de

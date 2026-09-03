@@ -2,17 +2,21 @@
 
 ## 1. Décision de sécurité
 
-Ce modèle couvre le socle qualifié par WO-027 et le sender runtime fail-closed préparé par WO-035.
-Il ne qualifie aucun échange avec le receiver, aucun déploiement et aucune donnée dérivée du
-fournisseur. La permission officielle demeure `NOT_EVIDENCED`; par conséquent, toute livraison
-`PROVIDER_DERIVED` est bloquée avant création du transport et avant réseau.
+Ce modèle couvre le socle qualifié par WO-027, le sender runtime fail-closed préparé par WO-035 et
+la frontière d’origine navigateur qualifiée localement par WO-037. Il ne qualifie aucun échange
+avec le receiver, aucun déploiement et aucune donnée dérivée du fournisseur. La permission
+officielle demeure `NOT_EVIDENCED`; par conséquent, toute livraison `PROVIDER_DERIVED` est bloquée
+avant création du transport et avant réseau.
 
 ```text
 SECURITY_MODEL_VERSION=1.0
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 WO035_LOCAL_RECEIVER_ORIGIN=https://127.0.0.1:8444
 WO035_RUNTIME_NETWORK_AUTHORIZED=NO
-WO036_WINDOWS_WINDOWS_E2E_STATUS=FUTURE_SEPARATE_WORK_ORDER
+WO036_WINDOWS_WINDOWS_E2E_STATUS=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
+WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=READY_FOR_OWNER_REVIEW
+WO037_BROWSER_ORIGIN_BOUNDARY_RESULT=PASS_LOCAL_FAIL_CLOSED
+WO036_RESUME_AFTER_WO037_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
 REAL_NETWORK_AUTHORIZED=NO
 PROVIDER_NETWORK_AUTHORIZED=NO
 MTLS_REQUIRED_FOR_ANY_FUTURE_REAL_TARGET=YES
@@ -44,7 +48,8 @@ décision interne en permission d’usage.
 ### 2.2 Composants explicitement hors périmètre
 
 - receiver réel du Betting Project et son dépôt ;
-- exécution du receiver local `127.0.0.1:8444`, réservée au futur WO-036 ;
+- exécution du receiver local `127.0.0.1:8444`, réservée à la reprise distinctement autorisée de
+  WO-036 ;
 - URI, DNS, certificat ou autorité de production ;
 - réseau fournisseur ou acquisition SofaScore ;
 - Playwright sur VPS ou poste distant ;
@@ -106,12 +111,13 @@ est non fiable jusqu’à validation. Un code HTTP `2xx` n’est pas une preuve 
 
 ## 5. Menaces, contrôles et preuve attendue
 
-| Menace | Scénario | Contrôle obligatoire | Preuve WO-027/WO-035 |
+| Menace | Scénario | Contrôle obligatoire | Preuve WO-027/WO-035/WO-037 |
 |---|---|---|---|
 | Livraison sans permission | Une configuration fournisseur est activée alors que la permission est `NOT_EVIDENCED` | Porte de permission, autorisation distante et `PROVIDER_OWNER_GO_REQUIRED` avant création du transport ou socket | Test sans listener : refus local, aucune interaction ledger et aucune ligne créée (`NOT_ATTEMPTED` conceptuel) |
 | Confusion de provenance | Un export mixte, incohérent ou fournisseur est présenté comme synthétique | Classification à partir des cinq sources vérifiées ; `MIXED_OR_UNKNOWN` toujours refusé ; mode exact par classe | Matrice entièrement synthétique, entièrement fournisseur, mixte, emplacement absent et valeur inconnue |
 | Bypass interne du mode synthétique | Un appelant invoque directement la voie synthétique avec un artefact fournisseur ou mixte | La voie impose `expectedPayloadClass=SYNTHETIC_ONLY` avant claim, factory et socket | Appels directs `PROVIDER_DERIVED` et `MIXED_OR_UNKNOWN` refusés sans ledger ni transport |
 | Contournement de la frontière navigateur | Une URI encodée, un Host/Origin dupliqué ou un proxy tente d’atteindre une action locale | Intercepteur fondé sur le `HandlerMethod`; Host/Origin exacts, en-têtes forwarded interdits, `frame-ancestors 'none'` et `DENY` | Handler de livraison avec URI brute hostile, doublons et forwarded refusé avant contrôleur |
+| Origine opaque induite par la politique de réponse | Une page J7 servie avec `no-referrer` transforme l’origine d’un `POST` natif en `null`, rendant la frontière exacte incompatible avec son propre formulaire | `same-origin` exclusivement sur `/events/{canonicalEventId}/exports/**` ; `no-referrer` ailleurs ; `Origin: null` toujours refusé | Tests de sélection canonique et chemins adjacents ; Chromium réel avec Origin loopback exact atteignant `delivery/prepare`, puis origine opaque refusée avant contrôleur |
 | Rejeu de confirmation | Une phrase copiée, expirée, issue d’une autre session ou préparée avant une tentative concurrente déclenche un POST | Demande bornée à cinq minutes, digest de session, identité événement/export/hash/action, prochain ordinal attendu et consommation atomique à usage unique ; l’ordinal reste caché pour la phrase publique et il est revalidé transactionnellement sous le verrou global au claim | Absence, expiration, seconde consommation, autre session et identités divergentes refusées au précontrôle ; intercalation concurrente refusée avant insert, `IN_FLIGHT` et socket, sans ordinal suivant |
 | Mauvais fichier | Fichier non validé, déplacé, remplacé ou lié hors racine | Résolution canonique, confinement, absence de lien, statut `HUMAN_VALIDATED`, taille et hash recalculés | Cas offline de chemin, statut, taille et hash invalides |
 | Altération en transit | Corps différent du fichier validé | Hash des octets exacts dans en-tête et clé ; HTTPS ; vérification receiver exigée | Receiver synthétique compare corps, en-tête et clé |
@@ -134,7 +140,7 @@ est non fiable jusqu’à validation. Un code HTTP `2xx` n’est pas une preuve 
 | Confusion validation/livraison | Un échec distant modifie `HUMAN_VALIDATED` | Tables/états séparés, aucune transition croisée | Tests d’échec et succès laissant J7 inchangé |
 | Couplage fournisseur | Le push déclenche J3/J4/J5/Playwright | Aucune dépendance ou callback d’acquisition dans sender/receiver | Tests sans mock fournisseur et contrôle des appels à zéro |
 | Déni de service local | Très gros fichier, nombreuses tentatives ou ACK lent | 5 MiB, concurrence `1`, timeouts finis, 16 KiB ACK, zéro retry | Tests de bornes et de timeout |
-| Évasion du harness | Listener de test persistant ou non loopback | WO-027 : `127.0.0.1`, port `0`; WO-036 futur : origine exacte `https://127.0.0.1:8444`; fermeture et audit listener | Succès et échec sans listener résiduel ; aucune ouverture sous WO-035 |
+| Évasion du harness | Listener de test persistant ou non loopback | WO-027 : `127.0.0.1`, port `0`; WO-037 : `127.0.0.1:8087`; reprise WO-036 : origine exacte `https://127.0.0.1:8444`; fermeture et audit listener | WO-037 ouvre uniquement le listener Local Lab loopback `8087`, le ferme avec zéro résidu et ne construit aucun listener receiver `8444` |
 | État fantôme | Crash entre intention, socket et résultat | Intention persistée avant socket, `IN_FLIGHT`, classification fail-closed au redémarrage | Reprise locale classant l’ambiguïté sans nouvel envoi |
 | Chevauchement cleanup/nouvelle livraison | Le ledger devient terminal avant que le client et ses ressources soient fermés | Gate singleton `IDLE/ACTIVE/POISONED` tenue jusqu’après `transport.close()` | Deuxième livraison refusée pendant un close bloqué ; elle n’atteint ni export, ni claim, ni socket |
 | Réconciliation d’un processus vivant | Un `IN_FLIGHT` est classé stale pendant que son transport est encore actif | Livraison et réconciliation acquièrent la même gate singleton | Réconciliation refusée pendant `ACTIVE`, sans accès de mutation au ledger |
@@ -224,11 +230,12 @@ Windows. Le sender ne consulte ces magasins qu’après les portes runtime et un
 
 ## 8. Risques résiduels
 
-| Risque | Statut WO-027/WO-035 | Condition de réduction |
+| Risque | Statut WO-027/WO-035/WO-037 | Condition de réduction |
 |---|---|---|
 | Permission ou licence applicable | `NOT_EVIDENCED` | Source ou autorisation versionnée et revue qualifiée |
 | Receiver et idempotence transactionnelle | `OUT_OF_SCOPE_LOCAL_LAB` | Validation INT-001 puis E2E synthétique WO-036 |
 | URI et exposition | `LOCAL_LOOPBACK_ONLY_NOT_EXECUTED` | Qualification WO-036 de l’origine exacte `127.0.0.1:8444` |
+| Compatibilité navigateur/frontière locale | `PASS_LOCAL_FAIL_CLOSED_READY_FOR_OWNER_REVIEW` | Validation propriétaire de WO-037 puis décision distincte de reprise de WO-036 |
 | Profil PKI réel | `NOT_DEFINED` | Autorités, EKU, révocation, rotation et récupération approuvées |
 | Non-exportabilité native de la clé client | `NOT_QUALIFIED` | Provisionnement Windows réel et preuve native contrôlée |
 | Rétention de la copie importée | `NOT_DEFINED` | Politique receiver, purge et restauration qualifiées |
@@ -281,3 +288,5 @@ Une qualification loopback ne satisfait aucune de ces portes par elle-même.
 6. [Architecture J7](../architecture/J7-CANONICAL-EVENT-EXPORT.md).
 7. [Règles du dépôt](../../AGENTS.md).
 8. [Work Order WO-035](../work_orders/completed/WO-SS-20260902-035-j9-real-j7-delivery-sender.md).
+9. [Work Order WO-037](../work_orders/active/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md).
+10. [Qualification WO-037](../validation/J9-WO037-J7-BROWSER-ORIGIN-BOUNDARY-QUALIFICATION-20260903.md).

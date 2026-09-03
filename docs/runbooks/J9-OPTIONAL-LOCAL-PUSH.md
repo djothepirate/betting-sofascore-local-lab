@@ -4,16 +4,19 @@
 
 Ce runbook conserve la qualification du socle fail-closed v1.0 réalisée sous WO-027 et documente
 la préparation runtime de WO-035. Il ne permet pas d’envoyer un export vers le Betting Project ou
-vers une autre cible. Le premier échange synthétique entre les deux applications relève du futur
-WO-036.
+vers une autre cible. Le premier échange synthétique entre les deux applications relève de WO-036,
+actuellement arrêté avant receiver et non reprenable sans décision propriétaire distincte.
 
 ```text
-RUNBOOK_SCOPE=WO027_OFFLINE_LOOPBACK_AND_WO035_RUNTIME_PREPARATION
+RUNBOOK_SCOPE=WO027_OFFLINE_LOOPBACK_WO035_RUNTIME_AND_WO037_BROWSER_BOUNDARY
 CONTRACT_VERSION=1.0
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 WO035_LOCAL_RECEIVER_ORIGIN=https://127.0.0.1:8444
 WO035_NETWORK_EXECUTION_AUTHORIZED=NO
-WO036_WINDOWS_WINDOWS_E2E_STATUS=FUTURE_SEPARATE_WORK_ORDER
+WO036_WINDOWS_WINDOWS_E2E_STATUS=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
+WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=READY_FOR_OWNER_REVIEW
+WO037_BROWSER_ORIGIN_BOUNDARY_RESULT=PASS_LOCAL_FAIL_CLOSED
+WO036_RESUME_AFTER_WO037_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 PROVIDER_NETWORK_AUTHORIZED=NO
 LIVE_DELIVERY_AUTHORIZED=NO
@@ -490,9 +493,12 @@ Pour toute action résolue vers `J7DeliveryController`, contrôler :
 ```text
 Host=127.0.0.1:8087 exactement une fois
 Origin=absent ou http://127.0.0.1:8087 exactement une fois
+Origin=null=REFUSE
 Forwarded=absent
 X-Forwarded-Host=absent
 X-Forwarded-Proto=absent
+Referrer-Policy=same-origin sur /events/{canonicalEventId}/exports/**
+Referrer-Policy=no-referrer sur toute route étrangère à ce sous-arbre
 Content-Security-Policy contient frame-ancestors 'none'
 X-Frame-Options=DENY
 ```
@@ -500,6 +506,17 @@ X-Frame-Options=DENY
 Le contrôle doit reposer sur le `HandlerMethod` résolu et non sur un préfixe d’URI. Tester les
 doublons, les valeurs hostiles et une URI brute encodée tout en conservant le même handler. Un
 refus intervient avant le contrôleur, sans jeton consommé, claim ou transport.
+
+La qualification native WO-037 part d’une page d’aperçu J7 réellement servie par un
+Spring/Tomcat lié à `http://127.0.0.1:8087`, avec des services synthétiques en mémoire et sans base
+de données. Elle vérifie l’en-tête `same-origin`, puis soumet uniquement `delivery/prepare`. La
+preuve doit constater un Host exact, un Origin unique égal à `http://127.0.0.1:8087`, l’absence
+d’en-têtes forwarded et l’arrivée au contrôleur sans `403`.
+
+Ne pas soumettre `delivery/execute` ni une réconciliation, ne pas produire de claim et ne pas
+démarrer de receiver. Un contexte navigateur neuf doit être fermé sans conserver HAR, trace,
+vidéo, capture, téléchargement, `storageState`, cookie, jeton ou corps de formulaire. Une page
+d’origine opaque doit continuer à produire `Origin: null` et être refusée `403` avant contrôleur.
 
 ### 14.5 Profil mTLS Windows
 
@@ -546,11 +563,17 @@ payload échoue doit encore atteindre le contrôle stale/ordinal, sans aucun POS
 
 ### 14.7 Porte vers WO-036
 
-WO-036 devra être ouvert dans une branche et un Work Order distincts. Il pourra seulement utiliser
-un export J7 entièrement synthétique, le Local Lab sur `127.0.0.1:8087`, le receiver sur
-`127.0.0.1:8444`, deux bases distinctes et une PKI locale hors Git. Il devra prouver `201/IMPORTED`,
-`200/DUPLICATE`, `409`, l’identité byte-à-byte, l’outbox et le cleanup. Il n’autorise aucun appel
-SofaScore, export dérivé fournisseur, receiver distant, VPS ou production.
+WO-036 est actif mais arrêté avant son premier appel receiver. Son manifeste et son rapport d’arrêt
+restent gelés. La qualification verte de WO-037 réduit uniquement le défaut de frontière
+navigateur ; elle ne réactive pas la campagne. La reprise de WO-036 exige une décision propriétaire
+distincte, un nouveau manifeste lié au commit et au JAR qualifiés, puis une campagne complète depuis
+son début.
+
+WO-036 reste limité à un export J7 entièrement synthétique, au Local Lab sur
+`127.0.0.1:8087`, au receiver sur `127.0.0.1:8444`, à deux bases distinctes et à une PKI locale
+hors Git. Il devra encore prouver `201/IMPORTED`, `200/DUPLICATE`, `409`, l’identité byte-à-byte,
+l’outbox et le cleanup. WO-037 n’autorise aucun appel SofaScore, export dérivé fournisseur,
+receiver réel ou distant, VPS ou production.
 
 Bloc de clôture attendu pour WO-035 :
 

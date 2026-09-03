@@ -1,6 +1,6 @@
 # WO-SS-20260903-037 — Frontière d’origine du navigateur pour la livraison J7
 
-- **Statut :** `IN_PROGRESS`
+- **Statut :** `READY_FOR_OWNER_REVIEW`
 - **Jalon :** après J9 — correction runtime préalable à la reprise de WO-036
 - **Ouvert le :** 2026-09-03
 - **Ouverture UTC :** `2026-09-03T08:58:02.7540081Z`
@@ -37,7 +37,7 @@ J9_PRODUCTION_AUTHORIZED=NO
 ```
 
 Cette autorisation permet une modification runtime bornée, ses tests hors ligne et une
-qualification manuelle avec un navigateur réel sur `http://127.0.0.1:8087`. Elle ne vaut ni
+qualification explicite avec un navigateur réel sur `http://127.0.0.1:8087`. Elle ne vaut ni
 validation de WO-037, ni reprise de WO-036, ni autorisation de livraison.
 
 ## 2. Diagnostic établi par WO-036
@@ -153,7 +153,8 @@ besoin est soumis au propriétaire dans un Work Order séparé.
 
 ### 6.2 Qualification dans un navigateur réel
 
-La qualification autorisée utilise une application Local Lab réelle, une base synthétique isolée
+La qualification autorisée utilise un serveur Spring/Tomcat réel avec les contrôleurs, filtres,
+intercepteurs et templates de production, des services synthétiques en mémoire sans base de données
 et un navigateur au contexte neuf sur `http://127.0.0.1:8087`. Elle s’arrête après la préparation
 de livraison et doit établir au minimum :
 
@@ -167,12 +168,14 @@ de livraison et doit établir au minimum :
    receiver n’est construit ou exécuté ;
 5. aucune trace, HAR, vidéo, capture, téléchargement, `storageState`, cookie, jeton ou corps de
    formulaire n’est conservé dans les preuves ou dans Git ;
-6. l’application, le navigateur de qualification et la base synthétique sont arrêtés et nettoyés
-   avec zéro listener, worker ou processus attribuable restant.
+6. l’application, le navigateur de qualification et leurs services synthétiques en mémoire sont
+   arrêtés et nettoyés avec zéro listener, worker ou processus attribuable restant.
 
 La preuve versionnée est limitée aux commits, versions, statuts, compteurs et classifications
-expurgées. Toute divergence vers `Origin: null`, tout `403`, toute tentative réseau receiver ou
-toute impossibilité d’attribuer et nettoyer les ressources arrête la qualification.
+expurgées. Sur le parcours positif same-origin, toute divergence vers `Origin: null` ou tout `403`
+arrête la qualification. La contre-preuve opaque explicitement isolée doit au contraire produire
+`Origin: null` et un `403` avant contrôleur. Toute tentative réseau receiver ou fournisseur ou toute
+impossibilité d’attribuer et nettoyer les ressources arrête la qualification dans les deux cas.
 
 ### 6.3 Vérifications de dépôt
 
@@ -216,4 +219,119 @@ PROVIDER_NETWORK_AUTHORIZED=NO
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 VPS_DEPLOYMENT_AUTHORIZED=NO
 PRODUCTION_AUTHORIZED=NO
+```
+
+## 8. Implémentation réalisée
+
+Le commit runtime `f28e4b6954c0fb703923f770ab9156326e212a07` limite la modification de production
+à `SecurityHeadersFilter` :
+
+- `Referrer-Policy: same-origin` est appliqué au seul sous-arbre canonique
+  `/events/{canonicalEventId}/exports/**` ;
+- `Referrer-Policy: no-referrer` reste la valeur par défaut sur toute autre route ;
+- le chemin d’application continue d’être calculé après retrait du `contextPath` ;
+- la CSP, le cache strict, `X-Frame-Options`, `X-Content-Type-Options` et `X-Robots-Tag` restent
+  inchangés ;
+- `J7DeliveryLocalRequestBoundaryInterceptor` n’est pas élargi : un test explicite établit que la
+  valeur littérale `Origin: null` reste refusée `403` avant le contrôleur.
+
+Le commit de harnais `2596f0592496b2ba84893c8f4ef2cf0185d46f8f` ajoute un profil Maven
+`j7-browser-origin-loopback-qualification`, le lanceur explicite
+`scripts/Invoke-J7BrowserOriginLoopbackQualification.ps1`, ses tests Pester et un test d’intégration
+Playwright isolé de la suite standard. Le harnais démarre un Spring/Tomcat réel sur le loopback
+exact avec des services synthétiques en mémoire ; il ne construit ni base de données, ni ledger
+durable, ni transport, ni receiver, ni composant fournisseur.
+
+## 9. Qualification et résultat
+
+La matrice unitaire a confirmé `same-origin` sur le sous-arbre J7, y compris avec un `contextPath`,
+et `no-referrer` sur des routes représentatives hors de ce sous-arbre ainsi que les chemins
+adjacents ou hostiles. La frontière
+a conservé l’acceptation du couple Host/Origin loopback exact et le refus des origines opaques ou
+hostiles, doublons et en-têtes forwarded.
+
+La qualification Chromium explicite a ensuite établi :
+
+```text
+PREVIEW_HTTP_STATUS=200
+PREVIEW_REFERRER_POLICY=same-origin
+NATIVE_PREPARE_HOST_CLASS=EXACT_127_0_0_1_8087
+NATIVE_PREPARE_ORIGIN_CLASS=EXACT_HTTP_127_0_0_1_8087
+NATIVE_PREPARE_FORWARDED_HEADERS_PRESENT=NO
+NATIVE_PREPARE_HTTP_STATUS=200
+NATIVE_PREPARE_CONTROLLER_REACHED=YES
+OPAQUE_PREPARE_ORIGIN_CLASS=NULL
+OPAQUE_PREPARE_HTTP_STATUS=403
+OPAQUE_PREPARE_CONTROLLER_REACHED=NO
+DELIVERY_EXECUTE_CALLS=0
+RECONCILIATION_CALLS=0
+DELIVERY_CLAIMS=0
+RECEIVER_CALLS=0
+PROVIDER_CALLS=0
+NON_LOOPBACK_CALLS=0
+DOWNLOADS=0
+FORBIDDEN_BROWSER_ARTIFACTS=0
+RESIDUAL_LISTENERS=0
+```
+
+Les contrôles consolidés sont verts :
+
+```text
+MVNW_CLEAN_VERIFY=PASS
+MVNW_INTEGRATION_TESTS_VERIFY=PASS
+SUREFIRE_TESTS=1132
+SUREFIRE_FAILURES=0
+SUREFIRE_ERRORS=0
+SUREFIRE_SKIPPED=5
+SUREFIRE_SUITES=164
+FAILSAFE_TESTS=85
+FAILSAFE_FAILURES=0
+FAILSAFE_ERRORS=0
+FAILSAFE_SKIPPED=0
+FAILSAFE_SUITES=4
+TARGETED_SECURITY_AND_DELIVERY_TESTS=42
+TARGETED_SECURITY_AND_DELIVERY_FAILURES=0
+DOCKER_COMPOSE_CONFIG=PASS
+GIT_DIFF_CHECK=PASS
+MODIFIED_TEXT_UTF8_STRICT=PASS
+ADDED_SECRET_PATTERN_HITS=0
+WO036_PROTECTED_FILES_UNCHANGED=YES
+WO037_PESTER_TESTS=8
+WO037_PESTER_FAILURES=0
+WO037_CHROMIUM_TESTS=1
+WO037_CHROMIUM_FAILURES=0
+```
+
+La preuve autonome est consignée dans
+`docs/validation/J9-WO037-J7-BROWSER-ORIGIN-BOUNDARY-QUALIFICATION-20260903.md`. Son empreinte sera
+injectée après calcul, sans rendre le rapport auto-référentiel.
+
+```text
+WO037_RUNTIME_COMMIT=f28e4b6954c0fb703923f770ab9156326e212a07
+WO037_QUALIFIED_HARNESS_COMMIT=2596f0592496b2ba84893c8f4ef2cf0185d46f8f
+WO037_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
+WO037_REPORT_SHA256=db8993328643a0ecb39eb83ff9eab6223f6c6ca6605b4cacf3e96dea171fab01
+WO037_OWNER_REVIEW_REQUIRED=YES
+WO037_WORK_ORDER_MOVE_TO_COMPLETED=NO
+```
+
+## 10. Revue propriétaire requise
+
+```text
+J9_WO037_OWNER_REVIEW_DECISION=<VALIDATE|REJECT>
+J9_WO037_WORK_ORDER=WO-SS-20260903-037-j9-j7-browser-origin-boundary
+J9_WO037_RUNTIME_COMMIT=f28e4b6954c0fb703923f770ab9156326e212a07
+J9_WO037_QUALIFIED_HARNESS_COMMIT=2596f0592496b2ba84893c8f4ef2cf0185d46f8f
+J9_WO037_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
+J9_WO037_QUALIFICATION_REPORT_SHA256=db8993328643a0ecb39eb83ff9eab6223f6c6ca6605b4cacf3e96dea171fab01
+J9_WO037_LOCAL_READINESS_ACKNOWLEDGED=<YES|NO>
+J9_WO037_WORK_ORDER_MOVE_TO_COMPLETED=<YES|NO>
+
+J9_WO036_STATUS=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
+J9_WO036_RESUME_AFTER_WO037_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
+J9_WO036_WORK_ORDER_MOVE_TO_COMPLETED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
 ```

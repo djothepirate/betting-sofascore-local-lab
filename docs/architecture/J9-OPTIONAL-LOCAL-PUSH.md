@@ -16,7 +16,10 @@ J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 LOCAL_RECEIVER_ORIGIN=https://127.0.0.1:8444
 LOCAL_IMPORT_ENDPOINT_URI=https://127.0.0.1:8444/api/imports/sofascore/j7-canonical-events
 WO035_RUNTIME_SENDER_STATUS=VALIDATED_LOCAL_FAIL_CLOSED
-WO036_WINDOWS_WINDOWS_E2E_STATUS=FUTURE_SEPARATE_WORK_ORDER
+WO036_WINDOWS_WINDOWS_E2E_STATUS=STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION
+WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=READY_FOR_OWNER_REVIEW
+WO037_BROWSER_ORIGIN_BOUNDARY_RESULT=PASS_LOCAL_FAIL_CLOSED
+WO036_RESUME_AFTER_WO037_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
 PROVIDER_NETWORK_AUTHORIZED=NO
 LIVE_DELIVERY_AUTHORIZED=NO
@@ -28,8 +31,9 @@ Tant que la permission officielle reste `NOT_EVIDENCED`, le runtime doit refuser
 `PROVIDER_DERIVED` avant création du client, résolution ou ouverture de socket. WO-035 fixe une
 seule origine runtime, `https://127.0.0.1:8444`, mais n’exécute aucune requête vers elle. Les
 qualifications historiques de WO-027 restent synthétiques, liées à `127.0.0.1` et à un port
-éphémère. Le premier échange entre les deux applications, intégralement synthétique, appartient au
-futur WO-036.
+éphémère. Le premier échange entre les deux applications, intégralement synthétique, appartient à
+WO-036, actuellement arrêté avant son premier appel receiver et non reprenable sans décision
+propriétaire distincte.
 
 Le receiver et sa persistance appartiennent à `INT-001` dans le dépôt Betting Project. WO-035 ne
 contacte pas cette implémentation et ne crée ni PR ni campagne E2E pour elle. Le présent contrat est
@@ -409,9 +413,9 @@ Pour tout refus runtime :
 5. il expose uniquement un code local minimisé, sans donnée du fichier.
 
 Le harness WO-027, lié à un port éphémère, reste test-only. Le profil runtime local WO-035, lié à
-`8444`, n’est pas une autorisation d’échange : seul le futur WO-036 pourra qualifier les deux
-applications Windows avec des données entièrement synthétiques et un go distinct. Aucun export
-dérivé de SofaScore n’est admissible dans cette campagne.
+`8444`, n’est pas une autorisation d’échange : seul WO-036 pourra qualifier les deux applications
+Windows avec des données entièrement synthétiques après une décision de reprise distincte et un
+nouveau manifeste. Aucun export dérivé de SofaScore n’est admissible dans cette campagne.
 
 La méthode applicative dédiée au mode `SYNTHETIC_LOOPBACK` impose explicitement
 `expectedPayloadClass=SYNTHETIC_ONLY` avant claim et avant construction du transport. Elle ne
@@ -426,6 +430,16 @@ l’encodage ou de la forme de l’URI brute. Elle exige un unique `Host: 127.0.
 `Origin` seulement s’il est unique et exactement égal à `http://127.0.0.1:8087`, et refuse
 `Forwarded`, `X-Forwarded-Host` et `X-Forwarded-Proto`. Les protections `frame-ancestors 'none'`
 et `X-Frame-Options: DENY` empêchent aussi l’encapsulation du geste opérateur.
+
+Les réponses du sous-arbre canonique `/events/{canonicalEventId}/exports/**` appliquent
+`Referrer-Policy: same-origin` afin qu’une navigation `POST` native issue de l’origine loopback
+exacte conserve une valeur `Origin` vérifiable. Toutes les routes étrangères à ce sous-arbre
+conservent `Referrer-Policy: no-referrer`. Cette sélection est effectuée sur le chemin d’application
+après retrait du `contextPath`, sans correspondance de préfixe adjacent.
+
+Cette politique de réponse ne modifie pas la règle d’admission. `Origin: null` reste une origine
+opaque interdite ; aucune déduction depuis `Referer`, aucune confiance dans un proxy et aucune
+comparaison partielle d’origine ne sont admises.
 
 Une instance de transport n’est exécutable qu’une fois. Son garde atomique refuse une seconde
 invocation et son body publisher est lui aussi one-shot : les octets exacts du J7 validé ne peuvent
@@ -478,11 +492,17 @@ Le Work Order `INT-001` du receiver dans le dépôt Betting Project doit au mini
 - prouver qu’aucun import ne déclenche SofaScore ;
 - maintenir `NO_CRITICAL_DEPENDENCY`.
 
-Le futur `WO-SS-20260902-036-j9-j7-local-e2e-qualification` doit vérifier, avec deux processus et
-deux bases réels sur Windows, l’origine exacte `https://127.0.0.1:8444`, le mTLS local, les ACK
-`IMPORTED`/`DUPLICATE`, le conflit `409`, l’inbox byte-identique et l’outbox. Son corpus reste
-entièrement synthétique et ses résultats n’autorisent ni réseau fournisseur, ni livraison de
-données dérivées, ni VPS, ni production.
+`WO-SS-20260902-036-j9-j7-local-e2e-qualification` a été lancé puis arrêté avant son premier appel
+receiver à la suite de l’incompatibilité locale de politique de referrer consignée dans son rapport
+gelé. WO-037 corrige et qualifie uniquement cette frontière navigateur. Son harnais explicite a
+établi avec Spring/Tomcat réel, des services synthétiques en mémoire et Chromium que la préparation
+native porte l’Origin loopback exact, tandis qu’une origine opaque reste refusée avant contrôleur.
+
+Même après une qualification verte et la future validation propriétaire de WO-037, la série
+synthétique `201/IMPORTED`, `200/DUPLICATE` et `409` de WO-036 ne peut pas reprendre sans nouvelle
+décision propriétaire, nouveau manifeste lié au commit et au JAR qualifiés et redémarrage complet
+de la campagne. Les résultats de WO-037 n’autorisent ni réseau fournisseur, ni livraison de données
+dérivées, ni receiver réel, ni VPS, ni production.
 
 Tout changement incompatible exige une version de protocole nouvelle, une revue d’ADR-SS-003 et
 un Work Order. Aucun assouplissement silencieux, champ d’ACK toléré, retry, URI de secours ou
@@ -499,3 +519,5 @@ fallback de sécurité n’est compatible avec v1.0.
 7. [Runbook WO-027](../runbooks/J9-OPTIONAL-LOCAL-PUSH.md).
 8. [Règles du dépôt](../../AGENTS.md).
 9. [Work Order WO-035](../work_orders/completed/WO-SS-20260902-035-j9-real-j7-delivery-sender.md).
+10. [Work Order WO-037](../work_orders/active/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md).
+11. [Qualification WO-037](../validation/J9-WO037-J7-BROWSER-ORIGIN-BOUNDARY-QUALIFICATION-20260903.md).

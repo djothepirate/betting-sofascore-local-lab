@@ -5,6 +5,25 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
+[WO-SS-20260903-037](docs/work_orders/active/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md)
+est `READY_FOR_OWNER_REVIEW` avec le résultat `PASS_LOCAL_FAIL_CLOSED`. Le commit runtime
+`f28e4b6954c0fb703923f770ab9156326e212a07` réserve `Referrer-Policy: same-origin` au sous-arbre
+canonique `/events/{canonicalEventId}/exports/**`, maintient `no-referrer` sur les autres routes et
+conserve le refus de `Origin: null`, des Hosts ou Origins hostiles ou dupliqués et des en-têtes
+forwarded. Le commit de harnais `2596f0592496b2ba84893c8f4ef2cf0185d46f8f` qualifie un
+Spring/Tomcat réel avec services synthétiques en mémoire et Chromium dans un contexte neuf : aperçu
+`200`, politique `same-origin`, préparation native `200` avec l’Origin loopback exact et préparation
+issue d’une origine opaque refusée `403`. Les appels d’exécution, réconciliation, claim, receiver,
+fournisseur et hors loopback, les téléchargements, artefacts interdits et listeners résiduels sont
+tous à zéro. Le
+[rapport WO-037](docs/validation/J9-WO037-J7-BROWSER-ORIGIN-BOUNDARY-QUALIFICATION-20260903.md)
+a pour empreinte `db8993328643a0ecb39eb83ff9eab6223f6c6ca6605b4cacf3e96dea171fab01`.
+
+Cette qualification n’autorise ni reprise de WO-036, ni livraison, ni receiver réel, ni réseau
+fournisseur, ni VPS, ni production. WO-036 reste arrêté et sa reprise exige une nouvelle décision
+propriétaire et un nouveau manifeste.
+
+Le Work Order
 [WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
 reste actif avec le résultat `STOPPED_PRE_RECEIVER_PENDING_DISTINCT_RUNTIME_CORRECTION`. La
 campagne E2E strictement synthétique Windows/Windows a été arrêtée avant son premier appel receiver :
