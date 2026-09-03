@@ -48,6 +48,36 @@ $script:RepositoryRoot = [IO.Path]::GetFullPath(
     (Split-Path -Parent (Split-Path -Parent $PSScriptRoot)))
 $script:Utf8NoBom = [Text.UTF8Encoding]::new($false, $true)
 
+function ConvertTo-WO036UtcDateTime {
+    param(
+        [Parameter(Mandatory = $true)][object]$Value,
+        [Parameter(Mandatory = $true)][string]$Description
+    )
+
+    if ($Value -is [DateTimeOffset]) {
+        return $Value.UtcDateTime
+    }
+    if ($Value -is [DateTime]) {
+        if ($Value.Kind -eq [DateTimeKind]::Unspecified) {
+            throw "WO-036 $Description has no UTC or offset identity."
+        }
+        return $Value.ToUniversalTime()
+    }
+    if ($Value -is [string]) {
+        try {
+            return [DateTimeOffset]::ParseExact(
+                $Value,
+                'O',
+                [Globalization.CultureInfo]::InvariantCulture,
+                [Globalization.DateTimeStyles]::RoundtripKind).UtcDateTime
+        }
+        catch {
+            throw "WO-036 $Description is not one round-trip timestamp."
+        }
+    }
+    throw "WO-036 $Description has an invalid timestamp type."
+}
+
 function Test-WO036PathWithin {
     param(
         [Parameter(Mandatory = $true)][string]$Candidate,
@@ -985,11 +1015,8 @@ function Get-WO036OwnedProcess {
         $executable = [IO.Path]::GetFullPath([string]$process.ExecutablePath)
         $recordedExecutable = [IO.Path]::GetFullPath([string]$record.ExecutablePath)
         $live = Get-Process -Id ([int]$record.Pid) -ErrorAction Stop
-        $recordedStart = [DateTimeOffset]::ParseExact(
-            [string]$record.StartTimeUtc,
-            'O',
-            [Globalization.CultureInfo]::InvariantCulture,
-            [Globalization.DateTimeStyles]::RoundtripKind).UtcDateTime
+        $recordedStart = ConvertTo-WO036UtcDateTime `
+            -Value $record.StartTimeUtc -Description "$Component process start time"
         $marker = "-Dwo036.instance=$($record.instanceToken)"
         if (-not $executable.Equals($State.JavaPath,
                     [StringComparison]::OrdinalIgnoreCase) `
@@ -2093,11 +2120,9 @@ function Stop-WO036ComponentCore {
         [void](Get-WO036OwnedProcess -State $state -Component $Component)
         Stop-WO036ExactStartedProcess -State $state `
             -ProcessId ([int]$record.Pid) `
-            -StartTimeUtc ([DateTimeOffset]::ParseExact(
-                [string]$record.StartTimeUtc,
-                'O',
-                [Globalization.CultureInfo]::InvariantCulture,
-                [Globalization.DateTimeStyles]::RoundtripKind).UtcDateTime) `
+            -StartTimeUtc (ConvertTo-WO036UtcDateTime `
+                -Value $record.StartTimeUtc `
+                -Description "$Component process start time") `
             -InstanceToken ([string]$record.InstanceToken) `
             -Jar $(if ($Component -eq 'Receiver') {
                 $state.ReceiverJar

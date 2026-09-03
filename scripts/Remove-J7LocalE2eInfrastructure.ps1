@@ -35,6 +35,36 @@ function Get-Sha256Text {
     }
 }
 
+function ConvertTo-ExactUtcDateTime {
+    param(
+        [Parameter(Mandatory = $true)][object]$Value,
+        [Parameter(Mandatory = $true)][string]$Description
+    )
+
+    if ($Value -is [DateTimeOffset]) {
+        return $Value.UtcDateTime
+    }
+    if ($Value -is [DateTime]) {
+        if ($Value.Kind -eq [DateTimeKind]::Unspecified) {
+            throw "$Description has no UTC or offset identity."
+        }
+        return $Value.ToUniversalTime()
+    }
+    if ($Value -is [string]) {
+        try {
+            return [DateTimeOffset]::ParseExact(
+                $Value,
+                'O',
+                [Globalization.CultureInfo]::InvariantCulture,
+                [Globalization.DateTimeStyles]::RoundtripKind).UtcDateTime
+        }
+        catch {
+            throw "$Description is not one round-trip timestamp."
+        }
+    }
+    throw "$Description has an invalid timestamp type."
+}
+
 function Get-CertificateSha256 {
     param(
         [Parameter(Mandatory = $true)]
@@ -219,10 +249,9 @@ function Get-ExactOwnedProcessResidualCount {
         if ([string]::IsNullOrWhiteSpace([string]$cimProcess.ExecutablePath)) {
             throw 'WO-036 exact owned-process executable postcheck is unavailable.'
         }
-        $expectedStartTime = [DateTimeOffset]::Parse(
-            $ownedProcess.StartTimeUtc,
-            [System.Globalization.CultureInfo]::InvariantCulture,
-            [System.Globalization.DateTimeStyles]::RoundtripKind).UtcDateTime
+        $expectedStartTime = ConvertTo-ExactUtcDateTime `
+            -Value $ownedProcess.StartTimeUtc `
+            -Description 'An owned process start time'
         $commandLine = if ($null -eq $cimProcess.CommandLine) {
             ''
         }
@@ -376,10 +405,9 @@ function Stop-ExactOwnedProcesses {
             throw 'An owned process command line no longer matches its recorded identity.'
         }
         $actualStartTime = (Get-Process -Id $processId).StartTime.ToUniversalTime()
-        $expectedStartTime = [DateTimeOffset]::Parse(
-            $ownedProcess.StartTimeUtc,
-            [System.Globalization.CultureInfo]::InvariantCulture,
-            [System.Globalization.DateTimeStyles]::RoundtripKind).UtcDateTime
+        $expectedStartTime = ConvertTo-ExactUtcDateTime `
+            -Value $ownedProcess.StartTimeUtc `
+            -Description 'An owned process start time'
         if ([Math]::Abs(($actualStartTime - $expectedStartTime).TotalSeconds) -gt 1) {
             throw 'An owned process start time no longer matches its recorded identity.'
         }

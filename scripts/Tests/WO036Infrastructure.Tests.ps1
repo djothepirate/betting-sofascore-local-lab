@@ -133,6 +133,13 @@ Describe 'WO-036 initialization and cleanup scripts' {
         $remove | Should Match 'identity changed during the zero-residue postcheck'
     }
 
+    It 'normalizes cleanup timestamps without requiring PowerShell 7.5' {
+        $remove | Should Match 'function ConvertTo-ExactUtcDateTime'
+        ([regex]::Matches($remove,
+            'ConvertTo-ExactUtcDateTime').Count) | Should Be 3
+        $remove | Should Not Match 'ConvertFrom-Json[^\r\n]*-DateKind'
+    }
+
     It 'never performs broad Docker or filesystem cleanup' {
         $remove | Should Not Match '(?i)down\s+(?:--volumes|-v)(?:\s|$)'
         $remove | Should Not Match '(?i)volume\s+prune'

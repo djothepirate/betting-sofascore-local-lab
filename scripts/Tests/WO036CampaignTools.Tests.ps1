@@ -114,6 +114,13 @@ Describe 'WO-036 fail-closed runtime invariants' {
         ([regex]::Matches($moduleText,
             'Invoke-WO036LockedOperation -StatePath \$StatePath').Count) | Should Be 9
     }
+
+    It 'normalizes process timestamps without requiring a recent PowerShell JSON option' {
+        $moduleText | Should Match 'function ConvertTo-WO036UtcDateTime'
+        ([regex]::Matches($moduleText,
+            'ConvertTo-WO036UtcDateTime').Count) | Should Be 3
+        $moduleText | Should Not Match 'ConvertFrom-Json[^\r\n]*-DateKind'
+    }
 }
 
 Describe 'WO-036 Preparation A B sequence and one-shot clone' {
@@ -218,6 +225,32 @@ Describe 'WO-036 exact three-call proof model' {
 
 Describe 'WO-036 offline behavioral primitives' {
     InModuleScope WO036-CampaignTools {
+        It 'normalizes a deserialized ISO start time under a French culture' {
+            $previousCulture = [Globalization.CultureInfo]::CurrentCulture
+            try {
+                [Globalization.CultureInfo]::CurrentCulture =
+                    [Globalization.CultureInfo]::GetCultureInfo('fr-FR')
+                $parsed = '{"StartTimeUtc":"2026-09-03T06:43:08.7271579Z"}' |
+                    ConvertFrom-Json -Depth 4
+                $actual = ConvertTo-WO036UtcDateTime `
+                    -Value $parsed.StartTimeUtc -Description 'test start time'
+                $actual.Kind | Should Be ([DateTimeKind]::Utc)
+                $actual.ToString('O') | Should Be '2026-09-03T06:43:08.7271579Z'
+                $localizedRejected = $false
+                try {
+                    ConvertTo-WO036UtcDateTime -Value '03/09/2026 06:43:08' `
+                        -Description 'test start time' | Out-Null
+                }
+                catch {
+                    $localizedRejected = $true
+                }
+                $localizedRejected | Should Be $true
+            }
+            finally {
+                [Globalization.CultureInfo]::CurrentCulture = $previousCulture
+            }
+        }
+
         It 'returns the packaged Spring configuration location for every component' {
             $state = [pscustomobject]@{
                 ReceiverKeyStore = 'receiver.p12'
