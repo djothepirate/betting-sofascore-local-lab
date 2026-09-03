@@ -59,6 +59,16 @@ class J7DeliveryLocalRequestBoundaryInterceptorTest {
     }
 
     @Test
+    void refusesANullOpaqueOriginForTheResolvedDeliveryController()
+            throws Exception {
+        MockHttpServletRequest request = request("/path-is-not-consulted");
+        request.addHeader("Host", LOCAL_HOST);
+        request.addHeader("Origin", "null");
+
+        assertForbidden(request, deliveryHandler());
+    }
+
+    @Test
     void refusesDuplicateOriginValuesEvenWhenBothAreLocallyExact() throws Exception {
         MockHttpServletRequest request = localRequest();
         request.addHeader("Origin", LOCAL_ORIGIN);
