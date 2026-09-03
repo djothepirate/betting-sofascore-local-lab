@@ -1,6 +1,6 @@
 # WO-SS-20260902-036 — Qualification E2E J7 locale Windows/Windows
 
-- **Statut :** `RESUME_R6_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT`
+- **Statut :** `READY_FOR_OWNER_REVIEW`
 - **Jalon :** après J9 — qualification synthétique de `OPTIONAL_LOCAL_PUSH`
 - **Ouvert le :** 2026-09-02
 - **Ouverture UTC :** `2026-09-02T19:08:46.1623419Z`
@@ -32,6 +32,11 @@
 - **Work Order parent :** `WO-SS-20260902-035-j9-real-j7-delivery-sender` — `VALIDATED`
 - **ADR :** `ADR-SS-003 v0.1` — `ACCEPTED`
 - **Permission officielle :** `NOT_EVIDENCED`
+- **Manifeste R6 gelé :** `c9ab6075210adb6593457ec6fac0691069ed528d` — SHA-256
+  `9e61dbcac5c2d13f0755c506ab1ad13df6ceaed1df9b186c21351be6f91e7d68`
+- **Rapport R6 :** `docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R6-20260903.md`
+  — 14 304 octets — SHA-256
+  `17a299cef826a4cc8da3fd4ff50a20eec99aee447cc4a0b69fc79914d4ab4280`
 
 ## 1. Autorisation et périmètre
 
@@ -42,16 +47,16 @@ dérivée de SofaScore, aucun appel fournisseur, receiver distant, VPS ou produc
 
 ```text
 WORK_ORDER=WO-SS-20260902-036-j9-j7-local-e2e-qualification
-WORK_ORDER_STATUS=RESUME_R6_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
+WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
 BRANCH=codex/j9-wo036-j7-local-e2e
 
 RESUME_RUN=R6
-RESUME_AUTHORIZATION=GRANTED_NOT_YET_CONSUMED
-LOCAL_SYNTHETIC_WINDOWS_E2E_AUTHORIZED=YES
-LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=YES_SYNTHETIC_ONLY
-FRESH_RUN_COMPLETED=NO
-FRESH_RUN_RESULT=NOT_STARTED
-FRESH_MANIFEST_STATUS=REQUIRED_NEW_AND_FROZEN_BEFORE_FIRST_POST
+RESUME_AUTHORIZATION=CONSUMED
+LOCAL_SYNTHETIC_WINDOWS_E2E_AUTHORIZED=NO_CAMPAIGN_COMPLETE
+LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=NO_CAMPAIGN_COMPLETE
+FRESH_RUN_COMPLETED=YES
+FRESH_RUN_RESULT=PASS_LOCAL_SYNTHETIC_E2E
+FRESH_MANIFEST_STATUS=FROZEN_AND_COMMITTED_BEFORE_FIRST_POST
 FRESH_MANIFEST_PATH=docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R6-20260903.md
 LOCAL_SYNTHETIC_DATA_ONLY=YES
 REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
@@ -955,4 +960,70 @@ R6_PRE_MANIFEST_PRIMARY_CONTAINER_RESTORED=YES
 R6_PRE_MANIFEST_PRIMARY_DATABASE_TOUCHED=NO
 R6_MANIFEST_PIN_CORRECTION=R5_TO_R6_ONLY
 R6_CAMPAIGN_RUN_CONSUMED=NO
+```
+
+## 21. Run R6 — qualification E2E synthétique complète
+
+R6 a recréé une racine privée, une PKI éphémère, deux bases isolées, un export synthétique et
+toutes ses claims. Son manifeste neuf a été gelé puis commité avant le premier `POST` au commit
+`c9ab6075210adb6593457ec6fac0691069ed528d`, SHA-256
+`9e61dbcac5c2d13f0755c506ab1ad13df6ceaed1df9b186c21351be6f91e7d68`. Le contrôle
+post-commit de l'outillage enregistré a réussi avec zéro appel consommé.
+
+La séquence attendue est complète : A a persisté `DELIVERED` après `201/IMPORTED`, B a persisté
+`DUPLICATE_CONFIRMED` après `200/DUPLICATE`, puis la sonde one-shot de collision a reçu
+`409/DIVERGENCE_REJECTED`. Le plafond final est exactement `3/3`, avec concurrence `1`, zéro
+retry et aucune quatrième tentative. Le duplicate réutilise l'identité d'import distante et
+l'heure durable initiales, sans comparaison erronée avec l'horloge du second sender.
+
+Le receiver contient exactement un receipt, un payload de 7 616 octets byte-identique, un outbox
+`J7_IMPORT_ACCEPTED` et trois audits — `IMPORTED`, `DUPLICATE`, `DIVERGENCE_REJECTED`. Le second
+appel et la collision n'ont créé ni second receipt, ni second payload, ni second outbox. Les hashes
+terminal et `data` correspondent aux valeurs gelées.
+
+Les instances A et B ainsi que le receiver ont été arrêtés gracieusement. Le cleanup possédé a
+établi zéro processus, listener, conteneur, volume de campagne, certificat ou racine privée R6
+résiduel. Le conteneur PostgreSQL primaire exact a ensuite retrouvé l'état `healthy`, avec la même
+identité, le même volume et le bind `127.0.0.1:5432`, sans accès ni purge de sa base. Le seul autre
+volume Docker observé est un volume anonyme non monté créé le 22 août, donc antérieur et étranger
+à R6.
+
+Les postflights sont verts : Pester `87/87`, Local Lab Surefire `1136/0/0/5` et Failsafe
+`89/0/0/0` sous `clean verify` puis sous le profil `integration-tests`, receiver Surefire
+`297/0/0/0` et Failsafe `98/0/0/0` sous son profil `integration`, et aucun conteneur
+Testcontainers résiduel. Le contrôle hôte final ne voit que le listener primaire
+`127.0.0.1:5432` dans la frontière `8087/8444/5432/5433`.
+
+Le rapport
+`docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R6-20260903.md`, taille `14304`
+octets et SHA-256 `17a299cef826a4cc8da3fd4ff50a20eec99aee447cc4a0b69fc79914d4ab4280`, classe R6
+`PASS_LOCAL_SYNTHETIC_E2E`. WO-036 reste actif jusqu'à la revue propriétaire ; le succès de la
+campagne n'autorise ni la validation ou la PR d'INT-001, ni une donnée dérivée, un receiver réel ou
+distant, le VPS ou la production.
+
+```text
+J9_WO036_STATUS=READY_FOR_OWNER_REVIEW
+J9_WO036_EVIDENCE_RESULT=PASS
+J9_WO036_QUALIFICATION_RESULT=PASS_LOCAL_SYNTHETIC_E2E
+J9_WO036_R6_MANIFEST_COMMIT=c9ab6075210adb6593457ec6fac0691069ed528d
+J9_WO036_R6_MANIFEST_SHA256=9e61dbcac5c2d13f0755c506ab1ad13df6ceaed1df9b186c21351be6f91e7d68
+J9_WO036_QUALIFICATION_REPORT_SHA256=17a299cef826a4cc8da3fd4ff50a20eec99aee447cc4a0b69fc79914d4ab4280
+J9_WO036_RESUME_RUN_R6=CONSUMED
+J9_WO036_IMPORT_ROUTE_CALLS=3
+J9_WO036_MAXIMUM_IMPORT_ROUTE_CALLS=3
+J9_WO036_AUTOMATIC_RETRIES=0
+J9_WO036_WORK_ORDER_MOVE_TO_COMPLETED=NO_PENDING_OWNER_REVIEW
+J9_LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=NO_CAMPAIGN_COMPLETE
+
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+LIVE_DELIVERY_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+INT001_PULL_REQUEST_AUTHORIZED_BY_THIS_WORK_ORDER=NO
+INT001_VALIDATION_AUTHORIZED_BY_THIS_WORK_ORDER=NO
+PRIMARY_DATABASE_PURGE=NO
 ```

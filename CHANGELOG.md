@@ -4,6 +4,30 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-036 R6 synthétique qualifié
+
+- manifeste R6 neuf gelé et commité avant le premier POST au commit
+  `c9ab6075210adb6593457ec6fac0691069ed528d`, SHA-256
+  `9e61dbcac5c2d13f0755c506ab1ad13df6ceaed1df9b186c21351be6f91e7d68`, après
+  qualifications vertes, clone A vers B et preuve de zéro appel ;
+- séquence loopback Windows/Windows complète : A `201/IMPORTED` et `DELIVERED`, B
+  `200/DUPLICATE` et `DUPLICATE_CONFIRMED`, puis collision one-shot
+  `409/DIVERGENCE_REJECTED`, exactement trois appels sur trois et aucun retry ;
+- persistance receiver bornée à un receipt, un payload J7 synthétique byte-identique et un outbox,
+  avec un audit pour chacun des résultats `IMPORTED`, `DUPLICATE` et `DIVERGENCE_REJECTED` ;
+- arrêt gracieux des deux instances Local Lab et du receiver, puis cleanup exact sans processus,
+  listener, conteneur, volume de campagne, certificat ou racine privée résiduel ;
+- redémarrage `healthy` du conteneur PostgreSQL primaire exact avec identité, volume et bind
+  `127.0.0.1:5432` inchangés, sans accès ni purge de sa base ;
+- postflights verts : Pester `87/87`, Local Lab Surefire `1136/0/0/5` et Failsafe `89/0/0/0`
+  dans les deux parcours Maven, receiver Surefire `297/0/0/0` et Failsafe `98/0/0/0`, sans
+  conteneur Testcontainers résiduel ;
+- rapport `docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R6-20260903.md`, taille
+  `14304` octets et SHA-256 `17a299cef826a4cc8da3fd4ff50a20eec99aee447cc4a0b69fc79914d4ab4280` ;
+- WO-036 reste actif et `READY_FOR_OWNER_REVIEW` ; les permissions officielle, données dérivées,
+  réseaux fournisseur et distant, receiver réel, VPS, production, PR et validation INT-001
+  restent bloqués.
+
 ### Après J9 — WO-036 reprise R6 autorisée
 
 - validation propriétaire et push de WO-041, puis intégration par avance rapide de son commit de

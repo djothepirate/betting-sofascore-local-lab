@@ -4,16 +4,26 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le propriétaire a validé WO-041, autorisé son push puis la reprise directe de
+Le run neuf R6 de
 [WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
-par un run neuf R6. La branche WO-036 contient par avance rapide le correctif listener qualifié et
-est `RESUME_R6_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT`. R6 doit utiliser une nouvelle
-racine privée, une nouvelle PKI, deux nouvelles bases isolées, un nouvel export synthétique et de
-nouvelles claims. Son manifeste distinct doit être gelé et commité avant le premier `POST`.
+a qualifié le flux synthétique Windows/Windows complet. Son manifeste a été gelé et commité avant
+le premier `POST` au commit `c9ab6075210adb6593457ec6fac0691069ed528d`, SHA-256
+`9e61dbcac5c2d13f0755c506ab1ad13df6ceaed1df9b186c21351be6f91e7d68`. La séquence réelle
+loopback a produit exactement `201/IMPORTED`, `200/DUPLICATE` et
+`409/DIVERGENCE_REJECTED`, avec un unique receipt, payload et outbox durables, trois audits, zéro
+retry et zéro quatrième appel.
 
-La reprise autorise uniquement les connexions synthétiques loopback déjà bornées par WO-036. Aucun
-réseau fournisseur, payload dérivé, receiver distant, VPS, production, PR ou validation INT-001
-n'est autorisé. La claim R5 reste consommée et ne sera pas réutilisée.
+Le cleanup est complet, les processus ont été arrêtés gracieusement et le PostgreSQL primaire
+exact est de nouveau `healthy` sur `127.0.0.1:5432`, avec identité et volume inchangés. Les
+postflights passent : Pester `87/87`, Local Lab Surefire `1136/0/0/5` et Failsafe `89/0/0/0`,
+receiver Surefire `297/0/0/0` et Failsafe `98/0/0/0`. Le
+[rapport R6](docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R6-20260903.md), taille
+`14304` octets et SHA-256 `17a299cef826a4cc8da3fd4ff50a20eec99aee447cc4a0b69fc79914d4ab4280`, classe la
+preuve `PASS_LOCAL_SYNTHETIC_E2E`.
+
+WO-036 est `READY_FOR_OWNER_REVIEW` et reste actif. L'exception loopback synthétique est refermée.
+Aucun réseau fournisseur, payload dérivé, receiver réel ou distant, VPS, production, PR ou
+validation INT-001 n'est autorisé.
 
 Le Work Order runtime
 [WO-SS-20260903-041](docs/work_orders/completed/WO-SS-20260903-041-j9-local-labb-readiness-listener-gate.md)
