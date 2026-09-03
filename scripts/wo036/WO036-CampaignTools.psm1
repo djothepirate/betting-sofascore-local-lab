@@ -1473,7 +1473,7 @@ function Read-WO036BoundedHttpResponse {
         $headerText = [Text.Encoding]::ASCII.GetString($wireBytes, 0, $headerEnd)
         $lines = @($headerText -split "`r`n")
         if ($lines.Count -lt 1 `
-                -or $lines[0] -cnotmatch '^HTTP/1\.1 ([1-5][0-9]{2}) [\x20-\x7e]{1,128}$') {
+                -or $lines[0] -cnotmatch '^HTTP/1\.1 ([1-5][0-9]{2})(?: [\x21-\x7e][\x20-\x7e]{0,127})?$') {
             throw 'WO-036 response status line is invalid.'
         }
         $statusCode = [int]$Matches[1]

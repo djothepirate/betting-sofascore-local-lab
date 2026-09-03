@@ -703,6 +703,57 @@ Describe 'WO-036 offline behavioral primitives' {
             }
         }
 
+        It 'accepts an HTTP 1.1 status without the deprecated reason phrase' {
+            $bodyText = '{"status":409,"code":"J7_IMPORT_CONFLICT"}'
+            $body = [Text.UTF8Encoding]::new($false, $true).GetBytes($bodyText)
+            $head = "HTTP/1.1 409`r`n" +
+                "Content-Type: application/problem+json`r`n" +
+                "Content-Length: $($body.Length)`r`n" +
+                "Connection: close`r`n`r`n"
+            $headBytes = [Text.Encoding]::ASCII.GetBytes($head)
+            $wire = New-Object byte[] ($headBytes.Length + $body.Length)
+            [Buffer]::BlockCopy($headBytes, 0, $wire, 0, $headBytes.Length)
+            [Buffer]::BlockCopy($body, 0, $wire, $headBytes.Length, $body.Length)
+            $stream = [IO.MemoryStream]::new($wire, $false)
+            $response = $null
+            try {
+                $response = Read-WO036BoundedHttpResponse -Stream $stream
+                $response.StatusCode | Should Be 409
+                (Get-WO036SafeProblemCode -Response $response) |
+                    Should Be 'J7_IMPORT_CONFLICT'
+            }
+            finally {
+                if ($null -ne $response) {
+                    [Array]::Clear($response.BodyBytes, 0, $response.BodyBytes.Length)
+                }
+                $stream.Dispose()
+                [Array]::Clear($wire, 0, $wire.Length)
+                [Array]::Clear($headBytes, 0, $headBytes.Length)
+                [Array]::Clear($body, 0, $body.Length)
+            }
+        }
+
+        It 'fails closed on a blank HTTP reason phrase separator' {
+            $wire = [Text.Encoding]::ASCII.GetBytes(
+                "HTTP/1.1 409 `r`nContent-Length: 0`r`nConnection: close`r`n`r`n")
+            $stream = [IO.MemoryStream]::new($wire, $false)
+            try {
+                $failedClosed = $false
+                try {
+                    [void](Read-WO036BoundedHttpResponse -Stream $stream)
+                }
+                catch {
+                    $failedClosed = $_.Exception.Message -eq
+                        'WO-036 response status line is invalid.'
+                }
+                $failedClosed | Should Be $true
+            }
+            finally {
+                $stream.Dispose()
+                [Array]::Clear($wire, 0, $wire.Length)
+            }
+        }
+
         It 'parses a bounded chunked problem detail without retaining framing bytes' {
             $bodyText = '{"status":400,"code":"INVALID_CONTENT_TYPE"}'
             $body = [Text.UTF8Encoding]::new($false, $true).GetBytes($bodyText)
