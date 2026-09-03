@@ -13,6 +13,15 @@ divergence. WO-036 reste arrêté, sa claim R4 demeure consommée et aucun sende
 contrat, migration, réseau fournisseur ou distant, VPS ou production n’est autorisé à changer ou
 à être utilisé.
 
+Le diagnostic WO-040 a reproduit hors ligne une dépendance erronée à l'EOF : même après une
+réponse HTTP fixe complète, l'ancien lecteur effectuait un `Read()` supplémentaire et pouvait
+perdre le statut si le transport restait ouvert ou échouait. Le lecteur qualifié restitue désormais
+les réponses `Content-Length` et `chunked` dès que leur framing exact est complet ; les réponses
+close-delimited exigent toujours un EOF propre et les framing tronqués, ambigus, surdimensionnés
+ou déjà surnuméraires restent refusés. Les 67 tests Pester, 1 136 tests Surefire et 89 tests
+Failsafe passent. La qualification INT-001 loopback synthétique de WO-040 reste à exécuter ;
+WO-036 reste arrêté et R5 n'est pas autorisé.
+
 Le run neuf R4 de
 [WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
 a été gelé avant son premier POST au commit `e12500dc8af9133b254bfe075d74e979cad472a6`, manifeste

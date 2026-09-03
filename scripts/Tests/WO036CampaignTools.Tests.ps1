@@ -1,3 +1,59 @@
+if (-not ('WO036CompleteThenAbortStream' -as [type])) {
+    Add-Type -TypeDefinition @'
+using System;
+using System.IO;
+
+public sealed class WO036CompleteThenAbortStream : Stream
+{
+    private readonly byte[] content;
+    private readonly int maximumReadSize;
+    private int offset;
+
+    public WO036CompleteThenAbortStream(byte[] content) : this(content, int.MaxValue)
+    {
+    }
+
+    public WO036CompleteThenAbortStream(byte[] content, int maximumReadSize)
+    {
+        this.content = content ?? throw new ArgumentNullException(nameof(content));
+        if (maximumReadSize < 1)
+        {
+            throw new ArgumentOutOfRangeException(nameof(maximumReadSize));
+        }
+        this.maximumReadSize = maximumReadSize;
+    }
+
+    public override bool CanRead => true;
+    public override bool CanSeek => false;
+    public override bool CanWrite => false;
+    public override long Length => throw new NotSupportedException();
+    public override long Position
+    {
+        get => throw new NotSupportedException();
+        set => throw new NotSupportedException();
+    }
+
+    public override int Read(byte[] buffer, int bufferOffset, int count)
+    {
+        if (offset >= content.Length)
+        {
+            throw new IOException("synthetic transport abort after complete framed response");
+        }
+        int read = Math.Min(Math.Min(count, maximumReadSize), content.Length - offset);
+        Buffer.BlockCopy(content, offset, buffer, bufferOffset, read);
+        offset += read;
+        return read;
+    }
+
+    public override void Flush() { }
+    public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+    public override void SetLength(long value) => throw new NotSupportedException();
+    public override void Write(byte[] buffer, int offset, int count) =>
+        throw new NotSupportedException();
+}
+'@
+}
+
 $repositoryRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $toolsRoot = Join-Path $repositoryRoot 'scripts\wo036'
 $modulePath = Join-Path $toolsRoot 'WO036-CampaignTools.psm1'
@@ -700,6 +756,141 @@ Describe 'WO-036 offline behavioral primitives' {
                 [Array]::Clear($wire, 0, $wire.Length)
                 [Array]::Clear($headBytes, 0, $headBytes.Length)
                 [Array]::Clear($body, 0, $body.Length)
+            }
+        }
+
+        It 'returns a complete fixed-length response without requiring transport EOF' {
+            $bodyText = '{"status":409,"code":"J7_IMPORT_CONFLICT"}'
+            $body = [Text.UTF8Encoding]::new($false, $true).GetBytes($bodyText)
+            $head = "HTTP/1.1 409`r`n" +
+                "Content-Type: application/problem+json`r`n" +
+                "Content-Length: $($body.Length)`r`n" +
+                "Connection: close`r`n`r`n"
+            $headBytes = [Text.Encoding]::ASCII.GetBytes($head)
+            $wire = New-Object byte[] ($headBytes.Length + $body.Length)
+            [Buffer]::BlockCopy($headBytes, 0, $wire, 0, $headBytes.Length)
+            [Buffer]::BlockCopy($body, 0, $wire, $headBytes.Length, $body.Length)
+            $stream = [WO036CompleteThenAbortStream]::new($wire)
+            $response = $null
+            try {
+                $response = Read-WO036BoundedHttpResponse -Stream $stream
+                $response.StatusCode | Should Be 409
+                (Get-WO036SafeProblemCode -Response $response) |
+                    Should Be 'J7_IMPORT_CONFLICT'
+            }
+            finally {
+                if ($null -ne $response) {
+                    [Array]::Clear($response.BodyBytes, 0, $response.BodyBytes.Length)
+                }
+                $stream.Dispose()
+                [Array]::Clear($wire, 0, $wire.Length)
+                [Array]::Clear($headBytes, 0, $headBytes.Length)
+                [Array]::Clear($body, 0, $body.Length)
+            }
+        }
+
+        It 'returns a fragmented complete chunked response without requiring transport EOF' {
+            $bodyText = '{"status":409,"code":"J7_IMPORT_CONFLICT"}'
+            $body = [Text.UTF8Encoding]::new($false, $true).GetBytes($bodyText)
+            $chunkSize = $body.Length.ToString('x', [Globalization.CultureInfo]::InvariantCulture)
+            $wireText = "HTTP/1.1 409`r`n" +
+                "Content-Type: application/problem+json`r`n" +
+                "Transfer-Encoding: chunked`r`nConnection: close`r`n`r`n" +
+                "$chunkSize`r`n$bodyText`r`n0`r`n`r`n"
+            $wire = [Text.UTF8Encoding]::new($false, $true).GetBytes($wireText)
+            $stream = [WO036CompleteThenAbortStream]::new($wire, 7)
+            $response = $null
+            try {
+                $response = Read-WO036BoundedHttpResponse -Stream $stream
+                $response.StatusCode | Should Be 409
+                (Get-WO036SafeProblemCode -Response $response) |
+                    Should Be 'J7_IMPORT_CONFLICT'
+            }
+            finally {
+                if ($null -ne $response) {
+                    [Array]::Clear($response.BodyBytes, 0, $response.BodyBytes.Length)
+                }
+                $stream.Dispose()
+                [Array]::Clear($wire, 0, $wire.Length)
+                [Array]::Clear($body, 0, $body.Length)
+            }
+        }
+
+        It 'requires clean EOF for a close-delimited response' {
+            $wire = [Text.Encoding]::ASCII.GetBytes(
+                "HTTP/1.1 409`r`nContent-Type: application/problem+json`r`n`r`n{}")
+            $aborted = [WO036CompleteThenAbortStream]::new($wire)
+            $closed = [IO.MemoryStream]::new($wire, $false)
+            $response = $null
+            try {
+                $abortFailedClosed = $false
+                try {
+                    [void](Read-WO036BoundedHttpResponse -Stream $aborted)
+                }
+                catch {
+                    $abortFailedClosed = $_.Exception.Message -match
+                        'synthetic transport abort after complete framed response'
+                }
+                $abortFailedClosed | Should Be $true
+
+                $response = Read-WO036BoundedHttpResponse -Stream $closed
+                $response.StatusCode | Should Be 409
+                $response.BodyBytes.Length | Should Be 2
+            }
+            finally {
+                if ($null -ne $response) {
+                    [Array]::Clear($response.BodyBytes, 0, $response.BodyBytes.Length)
+                }
+                $aborted.Dispose()
+                $closed.Dispose()
+                [Array]::Clear($wire, 0, $wire.Length)
+            }
+        }
+
+        It 'fails closed on truncated or overlong fixed-length responses' {
+            foreach ($wireText in @(
+                    "HTTP/1.1 409`r`nContent-Length: 3`r`n`r`n{}",
+                    "HTTP/1.1 409`r`nContent-Length: 2`r`n`r`n{}X")) {
+                $wire = [Text.Encoding]::ASCII.GetBytes($wireText)
+                $stream = [IO.MemoryStream]::new($wire, $false)
+                try {
+                    $failedClosed = $false
+                    try {
+                        [void](Read-WO036BoundedHttpResponse -Stream $stream)
+                    }
+                    catch {
+                        $failedClosed = $true
+                    }
+                    $failedClosed | Should Be $true
+                }
+                finally {
+                    $stream.Dispose()
+                    [Array]::Clear($wire, 0, $wire.Length)
+                }
+            }
+        }
+
+        It 'fails closed on truncated or trailing chunked response bytes' {
+            foreach ($wireText in @(
+                    "HTTP/1.1 409`r`nTransfer-Encoding: chunked`r`n`r`n2`r`n{}",
+                    "HTTP/1.1 409`r`nTransfer-Encoding: chunked`r`n`r`n2`r`n{}`r`n0`r`n`r`nX",
+                    "HTTP/1.1 409`r`nTransfer-Encoding: chunked`r`n`r`nFFFFFFFF`r`n")) {
+                $wire = [Text.Encoding]::ASCII.GetBytes($wireText)
+                $stream = [IO.MemoryStream]::new($wire, $false)
+                try {
+                    $failedClosed = $false
+                    try {
+                        [void](Read-WO036BoundedHttpResponse -Stream $stream)
+                    }
+                    catch {
+                        $failedClosed = $true
+                    }
+                    $failedClosed | Should Be $true
+                }
+                finally {
+                    $stream.Dispose()
+                    [Array]::Clear($wire, 0, $wire.Length)
+                }
             }
         }
 

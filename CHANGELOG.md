@@ -14,6 +14,16 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   loopback et synthétique, sans reprise ou rejeu de WO-036 ;
 - sender Java, receiver, migrations, protocole, permission officielle, réseaux fournisseur et
   distant, VPS, production et base primaire inchangés et hors périmètre.
+- reproduction hors ligne déterministe de la dépendance fautive à l'EOF : une réponse fixe
+  complète suivie d'un transport fautif était perdue parce que le lecteur réclamait encore un
+  `Read()` ; attribution compatible avec R4 à forte confiance, sans inventer les octets R4 non
+  conservés ;
+- lecture désormais incrémentale selon le framing HTTP : restitution exacte à la longueur déclarée
+  ou au chunk terminal, EOF conservé pour le close-delimited, refus fail-closed des doubles
+  framing, troncatures, chunks hostiles, dépassements et octets surnuméraires déjà bufferisés ;
+- qualifications intermédiaires vertes : Pester campagne `52/52`, Pester campagne plus
+  infrastructure `67/67`, Surefire `1136/0/0/5` et Failsafe `89/0/0/0` sous `clean verify` ;
+  qualification loopback INT-001 synthétique encore requise avant revue propriétaire.
 
 ### Après J9 — WO-036 reprise R4 synthétique arrêtée après divergence durable
 

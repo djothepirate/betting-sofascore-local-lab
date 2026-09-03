@@ -1,6 +1,6 @@
 # WO-SS-20260903-040 — Qualification de la capture de réponse de collision WO-036
 
-- **Statut :** `IN_PROGRESS_OFFLINE_DIAGNOSIS`
+- **Statut :** `IMPLEMENTED_PENDING_LOOPBACK_QUALIFICATION`
 - **Jalon :** après J9 — correction du harnais avant une éventuelle reprise R5 de WO-036
 - **Ouvert le :** 2026-09-03
 - **Ouverture UTC :** `2026-09-03T17:38:14.3891321Z`
@@ -164,3 +164,67 @@ WO-040 ne pourra être proposé à la validation que si :
 
 Même validé, WO-040 ne reprend pas WO-036. R5 exigera une décision propriétaire séparée, un run
 entièrement neuf et un manifeste R5 gelé avant son premier POST.
+
+## 7. Diagnostic hors ligne établi
+
+Le lecteur antérieur accumulait toute la réponse puis exigeait un `Read()` retournant zéro avant
+d'analyser les en-têtes et le corps. Une réponse HTTP/1.1 fixe pourtant complète pouvait donc être
+perdue si le transport restait ouvert ou devenait fautif après ses derniers octets. Cette
+dépendance à l'EOF reproduit de façon déterministe une classe de défaut compatible avec R4 ; elle
+ne prétend pas reconstituer les octets bruts R4, qui n'ont volontairement pas été conservés.
+
+Le test de reproduction fournit une réponse synthétique complète `409` avec
+`Content-Length` et `J7_IMPORT_CONFLICT`, puis lève une erreur au prochain `Read()`. Avant
+correction, le lecteur sollicitait ce `Read()` surnuméraire et échouait sans restituer le statut.
+Après correction, le même flux restitue `409/J7_IMPORT_CONFLICT` sans attendre l'EOF.
+
+```text
+R4_RAW_RESPONSE_AVAILABLE=NO
+ROOT_CAUSE_CLASS=HTTP_MESSAGE_COMPLETION_WAS_INCORRECTLY_COUPLED_TO_TRANSPORT_EOF
+OFFLINE_REPRODUCTION=PASS_DETERMINISTIC
+R4_COMPATIBILITY_CONFIDENCE=HIGH_NOT_RETROACTIVE_WIRE_OBSERVATION
+LOCAL_LAB_JAVA_SENDER_CHANGED=NO
+RECEIVER_RUNTIME_CHANGED=NO
+PROTOCOL_CHANGED=NO
+```
+
+## 8. Correction bornée
+
+Le lecteur sépare maintenant la détection incrémentale d'un message HTTP complet de son décodage
+strict :
+
+- une réponse avec `Content-Length` est restituée lorsque le nombre exact d'octets est déjà reçu ;
+- une réponse `Transfer-Encoding: chunked` est restituée uniquement après un chunk terminal
+  valide, sans extension ni trailer ;
+- une réponse sans framing explicite reste close-delimited et exige toujours un EOF propre ;
+- toute double déclaration de framing, troncature, longueur hostile, chunk invalide, dépassement
+  de 16 Kio de corps ou octet surnuméraire déjà présent dans le buffer est refusé ;
+- aucun octet brut n'est ajouté à la claim, aux journaux ou à Git et les buffers sont effacés ;
+- la connexion n'est pas réutilisée, le retry reste nul et la claim one-shot reste inchangée.
+
+Les réponses fixed-length et chunked complètes n'exigent donc plus que le serveur ferme le flux
+pour que leur statut et leur ProblemDetail sûr soient disponibles. Le correctif reste limité à
+`scripts/wo036/WO036-CampaignTools.psm1` et à ses tests Pester.
+
+## 9. Qualification hors ligne intermédiaire
+
+```text
+QUALIFIED_AT_UTC=2026-09-03T17:54:48.5400889Z
+QUALIFIED_AT_EUROPE_PARIS=2026-09-03T19:54:48.5400889+02:00
+PESTER_WO036_CAMPAIGN_TOOLS=PASS_52_OF_52
+PESTER_WO036_AND_INFRASTRUCTURE=PASS_67_OF_67
+MVNW_CLEAN_VERIFY_SUREFIRE=PASS_1136_TESTS_0_FAILURES_0_ERRORS_5_SKIPPED
+MVNW_CLEAN_VERIFY_FAILSAFE=PASS_89_TESTS_0_FAILURES_0_ERRORS_0_SKIPPED
+MVNW_CLEAN_VERIFY_BUILD=SUCCESS
+PROVIDER_CALLS=0
+REMOTE_RECEIVER_CALLS=0
+PRIMARY_DATABASE_TOUCH=NO
+```
+
+Les cinq nouveaux cas Pester qualifient la restitution sans EOF, y compris avec lectures
+fragmentées, et le refus fail-closed des réponses fixed-length ou chunked tronquées,
+surnuméraires ou hostiles. Les tests Maven n'effectuent que leurs appels locaux et leurs bases
+Testcontainers isolées.
+
+La qualification loopback WO-040 reste à produire contre INT-001 inchangé, avec une base, une PKI
+et un corpus entièrement synthétiques. Elle ne reprendra pas WO-036 et ne constituera pas R5.

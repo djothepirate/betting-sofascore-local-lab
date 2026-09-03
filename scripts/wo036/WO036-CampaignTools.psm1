@@ -1439,102 +1439,174 @@ function ConvertFrom-WO036ChunkedResponseBody {
     }
 }
 
-function Read-WO036BoundedHttpResponse {
-    param([Parameter(Mandatory = $true)][IO.Stream]$Stream)
+function Get-WO036ChunkedResponseFrameState {
+    param(
+        [Parameter(Mandatory = $true)][byte[]]$Bytes,
+        [Parameter(Mandatory = $true)][bool]$EndOfStream
+    )
 
-    $wire = [IO.MemoryStream]::new()
-    $buffer = New-Object byte[] 4096
-    $wireBytes = $null
-    $entityBytes = $null
-    try {
-        while ($true) {
-            $read = $Stream.Read($buffer, 0, $buffer.Length)
-            if ($read -eq 0) {
-                break
+    $crlf = [byte[]]@(13, 10)
+    $offset = 0
+    $entityLength = 0
+    while ($true) {
+        $lineEnd = Get-WO036ByteSequenceIndex -Bytes $Bytes -Sequence $crlf `
+            -StartIndex $offset
+        if ($lineEnd -lt 0) {
+            if ($Bytes.Length - $offset -gt 8) {
+                throw 'WO-036 response has an invalid chunk-size line.'
             }
-            if ($wire.Length + $read -gt 49152) {
-                throw 'WO-036 response exceeds the bounded wire envelope.'
+            if ($EndOfStream) {
+                throw 'WO-036 chunked response is truncated.'
             }
-            $wire.Write($buffer, 0, $read)
+            return [pscustomobject]@{ Complete = $false; EntityLength = $entityLength }
         }
-        $wireBytes = $wire.ToArray()
-        $separator = [byte[]]@(13, 10, 13, 10)
-        $headerEnd = Get-WO036ByteSequenceIndex -Bytes $wireBytes -Sequence $separator
-        if ($headerEnd -lt 12 -or $headerEnd -gt 16384) {
+        if ($lineEnd - $offset -lt 1 -or $lineEnd - $offset -gt 8) {
+            throw 'WO-036 response has an invalid chunk-size line.'
+        }
+        $sizeText = [Text.Encoding]::ASCII.GetString(
+            $Bytes, $offset, $lineEnd - $offset)
+        if ($sizeText -notmatch '^[0-9A-Fa-f]{1,8}$') {
+            throw 'WO-036 response has an invalid chunk size.'
+        }
+        $size = [uint32]::Parse(
+            $sizeText,
+            [Globalization.NumberStyles]::HexNumber,
+            [Globalization.CultureInfo]::InvariantCulture)
+        $offset = $lineEnd + 2
+        if ($size -eq 0) {
+            if ($Bytes.Length - $offset -lt 2) {
+                if ($EndOfStream) {
+                    throw 'WO-036 chunked response is truncated.'
+                }
+                return [pscustomobject]@{ Complete = $false; EntityLength = $entityLength }
+            }
+            if ($Bytes[$offset] -ne 13 -or $Bytes[$offset + 1] -ne 10 `
+                    -or $offset + 2 -ne $Bytes.Length) {
+                throw 'WO-036 response contains unsupported chunk trailers or trailing bytes.'
+            }
+            return [pscustomobject]@{ Complete = $true; EntityLength = $entityLength }
+        }
+        if ($size -gt 16384 - $entityLength) {
+            throw 'WO-036 response chunk body is malformed or exceeds its bound.'
+        }
+        $requiredLength = $offset + [int]$size + 2
+        if ($Bytes.Length -lt $requiredLength) {
+            if ($EndOfStream) {
+                throw 'WO-036 chunked response is truncated.'
+            }
+            return [pscustomobject]@{ Complete = $false; EntityLength = $entityLength }
+        }
+        if ($Bytes[$offset + $size] -ne 13 `
+                -or $Bytes[$offset + $size + 1] -ne 10) {
+            throw 'WO-036 response chunk body is malformed or exceeds its bound.'
+        }
+        $entityLength += $size
+        $offset = $requiredLength
+    }
+}
+
+function ConvertFrom-WO036BoundedHttpResponseFrame {
+    param(
+        [Parameter(Mandatory = $true)][byte[]]$WireBytes,
+        [Parameter(Mandatory = $true)][bool]$EndOfStream
+    )
+
+    $separator = [byte[]]@(13, 10, 13, 10)
+    $headerEnd = Get-WO036ByteSequenceIndex -Bytes $WireBytes -Sequence $separator
+    if ($headerEnd -lt 0) {
+        if ($WireBytes.Length -gt 16388 -or $EndOfStream) {
             throw 'WO-036 response has no bounded HTTP header block.'
         }
-        for ($index = 0; $index -lt $headerEnd; $index++) {
-            $value = $wireBytes[$index]
-            if ($value -gt 127 `
-                    -or ($value -lt 32 -and $value -ne 13 -and $value -ne 10)) {
-                throw 'WO-036 response headers are not strict visible ASCII.'
-            }
+        return $null
+    }
+    if ($headerEnd -lt 12 -or $headerEnd -gt 16384) {
+        throw 'WO-036 response has no bounded HTTP header block.'
+    }
+    for ($index = 0; $index -lt $headerEnd; $index++) {
+        $value = $WireBytes[$index]
+        if ($value -gt 127 `
+                -or ($value -lt 32 -and $value -ne 13 -and $value -ne 10)) {
+            throw 'WO-036 response headers are not strict visible ASCII.'
         }
-        $headerText = [Text.Encoding]::ASCII.GetString($wireBytes, 0, $headerEnd)
-        $lines = @($headerText -split "`r`n")
-        if ($lines.Count -lt 1 `
-                -or $lines[0] -cnotmatch '^HTTP/1\.1 ([1-5][0-9]{2})(?: [\x21-\x7e][\x20-\x7e]{0,127})?$') {
-            throw 'WO-036 response status line is invalid.'
+    }
+    $headerText = [Text.Encoding]::ASCII.GetString($WireBytes, 0, $headerEnd)
+    $lines = @($headerText -split "`r`n")
+    if ($lines.Count -lt 1 `
+            -or $lines[0] -cnotmatch '^HTTP/1\.1 ([1-5][0-9]{2})(?: [\x21-\x7e][\x20-\x7e]{0,127})?$') {
+        throw 'WO-036 response status line is invalid.'
+    }
+    $statusCode = [int]$Matches[1]
+    $headers = [Collections.Generic.Dictionary[string, string]]::new(
+        [StringComparer]::OrdinalIgnoreCase)
+    foreach ($line in @($lines | Select-Object -Skip 1)) {
+        $colon = $line.IndexOf(':')
+        if ($colon -lt 1 -or $colon + 2 -gt $line.Length `
+                -or $line[$colon + 1] -ne ' ' `
+                -or $line.Substring(0, $colon) -notmatch '^[A-Za-z0-9-]{1,64}$' `
+                -or $line.Substring($colon + 2) -notmatch '^[\x20-\x7e]*$') {
+            throw 'WO-036 response contains an invalid HTTP header line.'
         }
-        $statusCode = [int]$Matches[1]
-        $headers = [Collections.Generic.Dictionary[string, string]]::new(
-            [StringComparer]::OrdinalIgnoreCase)
-        foreach ($line in @($lines | Select-Object -Skip 1)) {
-            $colon = $line.IndexOf(':')
-            if ($colon -lt 1 -or $colon + 2 -gt $line.Length `
-                    -or $line[$colon + 1] -ne ' ' `
-                    -or $line.Substring(0, $colon) -notmatch '^[A-Za-z0-9-]{1,64}$' `
-                    -or $line.Substring($colon + 2) -notmatch '^[\x20-\x7e]*$') {
-                throw 'WO-036 response contains an invalid HTTP header line.'
-            }
-            $name = $line.Substring(0, $colon)
-            if ($headers.ContainsKey($name)) {
-                throw 'WO-036 response contains a duplicate HTTP header.'
-            }
-            $headers.Add($name, $line.Substring($colon + 2))
+        $name = $line.Substring(0, $colon)
+        if ($headers.ContainsKey($name)) {
+            throw 'WO-036 response contains a duplicate HTTP header.'
         }
-        $bodyOffset = $headerEnd + 4
-        $rawBodyLength = $wireBytes.Length - $bodyOffset
-        $rawBody = New-Object byte[] $rawBodyLength
-        if ($rawBodyLength -gt 0) {
-            [Buffer]::BlockCopy($wireBytes, $bodyOffset, $rawBody, 0, $rawBodyLength)
+        $headers.Add($name, $line.Substring($colon + 2))
+    }
+    $bodyOffset = $headerEnd + 4
+    $rawBodyLength = $WireBytes.Length - $bodyOffset
+    $rawBody = New-Object byte[] $rawBodyLength
+    $entityBytes = $null
+    if ($rawBodyLength -gt 0) {
+        [Buffer]::BlockCopy($WireBytes, $bodyOffset, $rawBody, 0, $rawBodyLength)
+    }
+    try {
+        $transferEncoding = if ($headers.ContainsKey('Transfer-Encoding')) {
+            $headers['Transfer-Encoding']
         }
-        try {
-            $transferEncoding = if ($headers.ContainsKey('Transfer-Encoding')) {
-                $headers['Transfer-Encoding']
+        else { '' }
+        $contentLength = if ($headers.ContainsKey('Content-Length')) {
+            $headers['Content-Length']
+        }
+        else { '' }
+        if (-not [string]::IsNullOrEmpty($transferEncoding) `
+                -and -not [string]::IsNullOrEmpty($contentLength)) {
+            throw 'WO-036 response ambiguously declares length and transfer encoding.'
+        }
+        if (-not [string]::IsNullOrEmpty($transferEncoding)) {
+            if ($transferEncoding -cne 'chunked') {
+                throw 'WO-036 response uses an unsupported transfer encoding.'
             }
-            else { '' }
-            $contentLength = if ($headers.ContainsKey('Content-Length')) {
-                $headers['Content-Length']
+            $frame = Get-WO036ChunkedResponseFrameState -Bytes $rawBody `
+                -EndOfStream $EndOfStream
+            if (-not $frame.Complete) {
+                return $null
             }
-            else { '' }
-            if (-not [string]::IsNullOrEmpty($transferEncoding) `
-                    -and -not [string]::IsNullOrEmpty($contentLength)) {
-                throw 'WO-036 response ambiguously declares length and transfer encoding.'
+            $entityBytes = ConvertFrom-WO036ChunkedResponseBody -Bytes $rawBody
+        }
+        elseif (-not [string]::IsNullOrEmpty($contentLength)) {
+            if ($contentLength -notmatch '^(0|[1-9][0-9]{0,4})$' `
+                    -or [int]$contentLength -gt 16384) {
+                throw 'WO-036 response content length is invalid or mismatched.'
             }
-            if (-not [string]::IsNullOrEmpty($transferEncoding)) {
-                if ($transferEncoding -cne 'chunked') {
-                    throw 'WO-036 response uses an unsupported transfer encoding.'
-                }
-                $entityBytes = ConvertFrom-WO036ChunkedResponseBody -Bytes $rawBody
-            }
-            elseif (-not [string]::IsNullOrEmpty($contentLength)) {
-                if ($contentLength -notmatch '^(0|[1-9][0-9]{0,4})$' `
-                        -or [int]$contentLength -gt 16384 `
-                        -or [int]$contentLength -ne $rawBody.Length) {
+            if ($rawBody.Length -lt [int]$contentLength) {
+                if ($EndOfStream) {
                     throw 'WO-036 response content length is invalid or mismatched.'
                 }
-                $entityBytes = [byte[]]$rawBody.Clone()
+                return $null
             }
-            else {
-                if ($rawBody.Length -gt 16384) {
-                    throw 'WO-036 close-delimited response body exceeds its bound.'
-                }
-                $entityBytes = [byte[]]$rawBody.Clone()
+            if ($rawBody.Length -gt [int]$contentLength) {
+                throw 'WO-036 response contains bytes after its fixed-length message.'
             }
+            $entityBytes = [byte[]]$rawBody.Clone()
         }
-        finally {
-            [Array]::Clear($rawBody, 0, $rawBody.Length)
+        else {
+            if ($rawBody.Length -gt 16384) {
+                throw 'WO-036 close-delimited response body exceeds its bound.'
+            }
+            if (-not $EndOfStream) {
+                return $null
+            }
+            $entityBytes = [byte[]]$rawBody.Clone()
         }
         return [pscustomobject]@{
             StatusCode = $statusCode
@@ -1549,9 +1621,42 @@ function Read-WO036BoundedHttpResponse {
         throw
     }
     finally {
-        if ($null -ne $wireBytes) {
-            [Array]::Clear($wireBytes, 0, $wireBytes.Length)
+        [Array]::Clear($rawBody, 0, $rawBody.Length)
+    }
+}
+
+function Read-WO036BoundedHttpResponse {
+    param([Parameter(Mandatory = $true)][IO.Stream]$Stream)
+
+    $wire = [IO.MemoryStream]::new()
+    $buffer = New-Object byte[] 4096
+    try {
+        while ($true) {
+            $read = $Stream.Read($buffer, 0, $buffer.Length)
+            $endOfStream = $read -eq 0
+            if (-not $endOfStream) {
+                if ($wire.Length + $read -gt 49152) {
+                    throw 'WO-036 response exceeds the bounded wire envelope.'
+                }
+                $wire.Write($buffer, 0, $read)
+            }
+            $wireBytes = $wire.ToArray()
+            try {
+                $response = ConvertFrom-WO036BoundedHttpResponseFrame `
+                    -WireBytes $wireBytes -EndOfStream $endOfStream
+                if ($null -ne $response) {
+                    return $response
+                }
+            }
+            finally {
+                [Array]::Clear($wireBytes, 0, $wireBytes.Length)
+            }
+            if ($endOfStream) {
+                throw 'WO-036 response ended before one complete HTTP message.'
+            }
         }
+    }
+    finally {
         [Array]::Clear($buffer, 0, $buffer.Length)
         $wire.Dispose()
     }
