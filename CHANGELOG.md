@@ -32,12 +32,15 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - publication du rapport
   `J9-WO038-J7-ACK-RECEIPT-TIME-SEMANTICS-QUALIFICATION-20260903` avec le résultat
   `PASS_LOCAL_FAIL_CLOSED` et l’empreinte
-  `QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a` ; WO-038 reste actif à
-  `READY_FOR_OWNER_REVIEW` ;
+  `QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a` ;
+- validation propriétaire de WO-038, reconnaissance de la readiness locale et déplacement vers les
+  Work Orders terminés le `2026-09-03T12:35:39Z`, soit `2026-09-03T14:35:39+02:00` en
+  Europe/Paris ;
 - invariants maintenus : receiver INT-001 inchangé et non appelé, aucun retry, réseau réel, donnée
   fournisseur, VPS ou production ; WO-036 reste
   `STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION`, et sa reprise après une
-  éventuelle validation de WO-038 exigera une décision propriétaire séparée et un manifeste neuf.
+  décision propriétaire séparée exigera un manifeste neuf ; le receiver INT-001 loopback reste
+  `NO_PENDING_NEW_OWNER_DECISION`.
 
 ### Après J9 — WO-037 frontière d’origine du navigateur J7
 

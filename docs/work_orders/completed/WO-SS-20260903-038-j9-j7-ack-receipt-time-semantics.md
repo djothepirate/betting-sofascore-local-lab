@@ -1,6 +1,6 @@
 # WO-SS-20260903-038 — Sémantique temporelle de l’accusé J7
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
 - **Jalon :** après J9 — correction runtime préalable à une nouvelle reprise de WO-036
 - **Ouvert le :** 2026-09-03
 - **Ouverture UTC :** `2026-09-03T11:11:54.5206596Z`
@@ -10,6 +10,8 @@
 - **Base locale d’ouverture vérifiée :** `4cbcb1eb48344b153cd8d8f392aa805feb84ea32`
 - **Commit d’ouverture :** `2b95e3885cad2f8729d9e429192c7a5171bb80a1`
 - **Commit d’implémentation qualifié :** `3a0c297a5151c572417b4f2f12bb5c3ed216172f`
+- **Décision propriétaire enregistrée UTC :** `2026-09-03T12:35:39Z`
+- **Décision propriétaire enregistrée Europe/Paris :** `2026-09-03T14:35:39+02:00`
 - **Rapport de qualification :**
   `docs/validation/J9-WO038-J7-ACK-RECEIPT-TIME-SEMANTICS-QUALIFICATION-20260903.md`
 - **SHA-256 du rapport de qualification :**
@@ -148,26 +150,27 @@ loopback utilise uniquement des données synthétiques et ne vaut pas reprise de
 
 ## 6. Critères de sortie
 
-Le Work Order est soumis à la revue propriétaire avec `PASS_LOCAL_FAIL_CLOSED` après confirmation
-que le correctif reste borné au sender, que tous les cas ci-dessus sont verts, que les preuves sont
-expurgées et qu’un rapport autonome destiné à être référencé par son SHA-256 est versionné.
+Le Work Order a été soumis à la revue propriétaire avec `PASS_LOCAL_FAIL_CLOSED` après confirmation
+que le correctif restait borné au sender, que tous les cas ci-dessus étaient verts, que les preuves
+étaient expurgées et qu’un rapport autonome référencé par son SHA-256 était versionné. Le
+propriétaire a validé le résultat, reconnu la readiness locale et autorisé le déplacement du Work
+Order vers les travaux terminés.
 
-WO-038 restera actif à `READY_FOR_OWNER_REVIEW` jusqu’à une validation explicite. Même après cette
-validation, WO-036 restera
-`STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION` et sa reprise exigera une nouvelle
-décision propriétaire ainsi qu’un manifeste de campagne neuf.
+Cette validation ne reprend pas WO-036. Son statut reste
+`STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION` et sa reprise exige toujours une
+nouvelle décision propriétaire ainsi qu’un manifeste de campagne neuf.
 
 ```text
-WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+WORK_ORDER_STATUS=VALIDATED
 IMPLEMENTATION_STATUS=COMPLETED
 QUALIFICATION_STATUS=PASS_LOCAL_FAIL_CLOSED
 QUALIFICATION_REPORT=docs/validation/J9-WO038-J7-ACK-RECEIPT-TIME-SEMANTICS-QUALIFICATION-20260903.md
 QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a
 IMPLEMENTATION_COMMIT=3a0c297a5151c572417b4f2f12bb5c3ed216172f
-OWNER_REVIEW_REQUIRED=YES
-OWNER_REVIEW_DECISION=NOT_RECEIVED
-WORK_ORDER_MOVE_TO_COMPLETED=NO
-WORK_ORDER_LOCATION=docs/work_orders/active/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md
+OWNER_REVIEW_REQUIRED=NO
+OWNER_REVIEW_DECISION=VALIDATE
+WORK_ORDER_MOVE_TO_COMPLETED=YES
+WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md
 RECEIVER_RUNTIME_CHANGE=NO
 AUTOMATIC_RETRY=0
 WO036_STATUS=STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION
@@ -278,18 +281,21 @@ REMOTE_RECEIVER_CALLS=0
 
 La preuve autonome est consignée dans
 `docs/validation/J9-WO038-J7-ACK-RECEIPT-TIME-SEMANTICS-QUALIFICATION-20260903.md`. Son empreinte
-sera calculée sur les octets finalisés avant le commit documentaire.
+validée sur les octets finalisés est
+`e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a`.
 
-## 10. Revue propriétaire requise
+## 10. Décision propriétaire et clôture
+
+Le bloc de décision reçu du propriétaire est consigné ci-dessous :
 
 ```text
-J9_WO038_OWNER_REVIEW_DECISION=<VALIDATE|REJECT>
+J9_WO038_OWNER_REVIEW_DECISION=VALIDATE
 J9_WO038_WORK_ORDER=WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics
 J9_WO038_IMPLEMENTATION_COMMIT=3a0c297a5151c572417b4f2f12bb5c3ed216172f
 J9_WO038_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
 J9_WO038_QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a
-J9_WO038_LOCAL_READINESS_ACKNOWLEDGED=<YES|NO>
-J9_WO038_WORK_ORDER_MOVE_TO_COMPLETED=<YES|NO>
+J9_WO038_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO038_WORK_ORDER_MOVE_TO_COMPLETED=YES
 
 J9_WO036_STATUS=STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION
 J9_WO036_RESUME_AFTER_WO038_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
@@ -305,5 +311,43 @@ J9_VPS_DEPLOYMENT_AUTHORIZED=NO
 J9_PRODUCTION_AUTHORIZED=NO
 ```
 
-Le résultat `PASS_LOCAL_FAIL_CLOSED` ne préremplit aucune décision propriétaire. WO-038 reste
-actif ; WO-036 demeure arrêté et aucune porte réseau ou de production n’est ouverte.
+Les références du bloc concordent avec le commit d’implémentation et le rapport qualifiés. La
+décision a été consignée le `2026-09-03T12:35:39Z`, soit le
+`2026-09-03T14:35:39+02:00` en Europe/Paris.
+
+```text
+WORK_ORDER_STATUS=VALIDATED
+IMPLEMENTATION_STATUS=COMPLETED
+QUALIFICATION_STATUS=PASS_LOCAL_FAIL_CLOSED
+OWNER_REVIEW_REQUIRED=NO
+OWNER_REVIEW_DECISION=VALIDATE
+OWNER_REVIEW_BLOCK_STATUS=COMPLETE
+LOCAL_READINESS_ACKNOWLEDGED=YES
+IMPLEMENTATION_COMMIT_MATCH=YES
+QUALIFICATION_REPORT_SHA256_MATCH=YES
+OWNER_DECISION_RECORDED_AT_UTC=2026-09-03T12:35:39Z
+OWNER_DECISION_RECORDED_AT_EUROPE_PARIS=2026-09-03T14:35:39+02:00
+WORK_ORDER_MOVE_TO_COMPLETED=YES
+MOVE_TO_COMPLETED_AUTHORIZED=YES
+MOVE_TO_COMPLETED_PERFORMED=YES
+WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md
+
+RECEIVER_RUNTIME_CHANGE=NO
+AUTOMATIC_RETRY=0
+WO036_STATUS=STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION
+WO036_RESUME_AFTER_WO038_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
+WO036_WORK_ORDER_MOVE_TO_COMPLETED=NO
+LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
+
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+WO-038 est clôturé et déplacé vers les Work Orders terminés. Cette clôture ne reprend pas WO-036,
+n’autorise pas le receiver INT-001 loopback et n’ouvre aucune livraison de donnée dérivée du
+fournisseur, aucun réseau fournisseur ou receiver réel/distant, aucun VPS ni aucune production.

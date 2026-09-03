@@ -4,7 +4,7 @@
 
 Ce modèle couvre le socle qualifié par WO-027, le sender runtime fail-closed préparé par WO-035, la
 frontière d’origine navigateur qualifiée localement par WO-037, la correction temporelle WO-038
-qualifiée localement et en attente de revue propriétaire, ainsi que la preuve partielle WO-036 de
+qualifiée et validée localement, ainsi que la preuve partielle WO-036 de
 deux échanges synthétiques avec le receiver loopback réel. Il ne qualifie ni la séquence complète
 `201/200/409`, ni un déploiement, ni aucune donnée dérivée du fournisseur. La permission officielle
 demeure `NOT_EVIDENCED`; par conséquent, toute livraison `PROVIDER_DERIVED` est bloquée avant
@@ -21,9 +21,11 @@ WO036_SECOND_ATTEMPT_RESULT=STOPPED_AFTER_200_DUPLICATE_BEFORE_409
 WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=VALIDATED
 WO037_BROWSER_ORIGIN_BOUNDARY_RESULT=PASS_LOCAL_FAIL_CLOSED
 WO037_OWNER_REVIEW_DECISION=VALIDATE
-WO038_ACK_RECEIPT_TIME_STATUS=READY_FOR_OWNER_REVIEW
+WO038_ACK_RECEIPT_TIME_STATUS=VALIDATED
 WO038_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
-WO038_OWNER_REVIEW_REQUIRED=YES
+WO038_OWNER_REVIEW_REQUIRED=NO
+WO038_OWNER_REVIEW_DECISION=VALIDATE
+WO038_WORK_ORDER_MOVE_TO_COMPLETED=YES
 WO038_RECEIVER_RUNTIME_CHANGE=NO
 WO038_QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a
 WO036_RESUME_AFTER_WO037_VALIDATION=CONSUMED_BY_STOPPED_R2
@@ -252,7 +254,7 @@ Windows. Le sender ne consulte ces magasins qu’après les portes runtime et un
 | Receiver et idempotence transactionnelle | `PARTIAL_BOUNDED_201_AND_200_OBSERVED` | Correctif sender puis nouvelle campagne complète incluant `409` |
 | URI et exposition | `PASS_BOUNDED_SYNTHETIC_LOOPBACK_TWO_CALLS` | Aucune cible réelle ; nouvelle autorisation requise pour tout échange |
 | Compatibilité navigateur/frontière locale | `PASS_LOCAL_FAIL_CLOSED_VALIDATED` | Frontière qualifiée par WO-037 et exercée par WO-036 |
-| Validation temporelle ACK duplicate | `PASS_LOCAL_FAIL_CLOSED_PENDING_OWNER_REVIEW_WO036_STOPPED` | Validation propriétaire de WO-038, puis reprise WO-036 séparément autorisée |
+| Validation temporelle ACK duplicate | `PASS_LOCAL_FAIL_CLOSED_VALIDATED_WO036_STOPPED` | Reprise WO-036 séparément autorisée avec un manifeste neuf |
 | Profil PKI réel | `NOT_DEFINED` | Autorités, EKU, révocation, rotation et récupération approuvées |
 | Non-exportabilité native de la clé client | `NOT_QUALIFIED` | Provisionnement Windows réel et preuve native contrôlée |
 | Rétention de la copie importée | `NOT_DEFINED` | Politique receiver, purge et restauration qualifiées |
@@ -293,9 +295,9 @@ Toutes les portes suivantes sont cumulatives :
 La reprise WO-036 a été arrêtée après un premier `201/IMPORTED` et un duplicate durable que le
 sender a classé inconnu en raison d’un invariant temporel incompatible avec le contrat receiver.
 La sortie fail-closed, l’absence de retry et de collision, puis le cleanup complet ont préservé les
-frontières de sécurité. WO-038 constitue le Work Order runtime distinct ; sa validation éventuelle
-ne remplacera pas la nouvelle décision requise pour reprendre WO-036. Son correctif est qualifié
-localement à `PASS_LOCAL_FAIL_CLOSED`, mais il reste actif à `READY_FOR_OWNER_REVIEW`.
+frontières de sécurité. WO-038 constitue le Work Order runtime distinct ; sa validation ne remplace
+pas la nouvelle décision requise pour reprendre WO-036. Son correctif est qualifié et validé
+localement à `PASS_LOCAL_FAIL_CLOSED`, tandis que WO-036 demeure arrêté.
 
 WO-036 ne satisfera que la qualification synthétique Windows/Windows. Même verte, elle ne change
 ni `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED`, ni le blocage `PROVIDER_OWNER_GO_REQUIRED`.
@@ -315,5 +317,5 @@ Une qualification loopback ne satisfait aucune de ces portes par elle-même.
 9. [Work Order WO-037](../work_orders/completed/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md).
 10. [Qualification WO-037](../validation/J9-WO037-J7-BROWSER-ORIGIN-BOUNDARY-QUALIFICATION-20260903.md).
 11. [Rapport de reprise arrêtée WO-036](../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903.md).
-12. [Work Order WO-038](../work_orders/active/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md).
+12. [Work Order WO-038](../work_orders/completed/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md).
 13. [Qualification WO-038](../validation/J9-WO038-J7-ACK-RECEIPT-TIME-SEMANTICS-QUALIFICATION-20260903.md).

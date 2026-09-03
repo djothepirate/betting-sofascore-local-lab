@@ -5,8 +5,8 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
-[WO-SS-20260903-038](docs/work_orders/active/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md)
-reste actif à `READY_FOR_OWNER_REVIEW` avec le résultat `PASS_LOCAL_FAIL_CLOSED` au commit
+[WO-SS-20260903-038](docs/work_orders/completed/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md)
+est `VALIDATED` avec le résultat `PASS_LOCAL_FAIL_CLOSED` au commit
 `3a0c297a5151c572417b4f2f12bb5c3ed216172f`. Le sender ne compare plus le `receivedAt` durable
 du receiver à la fenêtre murale de sa tentative locale ; il conserve la valeur exacte tout en
 exigeant sa forme UTC canonique, sa représentation à la microseconde dans les années
@@ -18,6 +18,11 @@ a pour empreinte `QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c0
 hors ligne ou synthétique loopback, sans modification ni appel du receiver INT-001, sans retry et
 sans reprise de WO-036. Les réseaux fournisseur, receiver réel ou distant, le VPS et la production
 restent interdits ; la permission officielle demeure `NOT_EVIDENCED`.
+
+Le propriétaire a validé WO-038, reconnu sa readiness locale et autorisé son déplacement vers les
+Work Orders terminés le `2026-09-03T12:35:39Z`, soit `2026-09-03T14:35:39+02:00` en
+Europe/Paris. Cette validation ne reprend pas WO-036 et n’autorise pas le receiver INT-001
+loopback.
 
 Le Work Order
 [WO-SS-20260903-037](docs/work_orders/completed/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md)
@@ -53,9 +58,9 @@ SHA-256 `219f54f2b429b1eaea04c920e55cc87d33f9c5644697129e6ff96fc9cad19062`, éta
 réemploie conformément à son contrat l’instant durable du premier import, tandis que le sender exige
 à tort que cet instant soit postérieur au début de la seconde tentative. Aucun retry ni probe `409`
 n’a été exécuté. Le cleanup est complet et le PostgreSQL primaire exact a été redémarré `healthy`.
-WO-038 fournit désormais le correctif runtime qualifié, mais sa validation propriétaire, une
-décision de reprise séparée et un manifeste neuf restent obligatoires avant toute nouvelle reprise
-de WO-036. La permission officielle reste `NOT_EVIDENCED` ; aucune donnée dérivée de SofaScore,
+WO-038 fournit désormais le correctif runtime qualifié et validé. Une décision de reprise séparée
+et un manifeste neuf restent obligatoires avant toute nouvelle reprise de WO-036. La permission
+officielle reste `NOT_EVIDENCED` ; aucune donnée dérivée de SofaScore,
 aucun réseau fournisseur ou distant, VPS, production, push ou PR INT-001 n’est autorisé par cette
 campagne.
 

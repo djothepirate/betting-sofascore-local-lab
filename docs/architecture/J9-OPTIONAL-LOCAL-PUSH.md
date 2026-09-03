@@ -22,9 +22,11 @@ WO036_SECOND_ATTEMPT_RESULT=STOPPED_AFTER_200_DUPLICATE_BEFORE_409
 WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=VALIDATED
 WO037_BROWSER_ORIGIN_BOUNDARY_RESULT=PASS_LOCAL_FAIL_CLOSED
 WO037_OWNER_REVIEW_DECISION=VALIDATE
-WO038_ACK_RECEIPT_TIME_STATUS=READY_FOR_OWNER_REVIEW
+WO038_ACK_RECEIPT_TIME_STATUS=VALIDATED
 WO038_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
-WO038_OWNER_REVIEW_REQUIRED=YES
+WO038_OWNER_REVIEW_REQUIRED=NO
+WO038_OWNER_REVIEW_DECISION=VALIDATE
+WO038_WORK_ORDER_MOVE_TO_COMPLETED=YES
 WO038_RECEIVER_RUNTIME_CHANGE=NO
 WO038_QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a
 WO036_RESUME_AFTER_WO037_VALIDATION=CONSUMED_BY_STOPPED_R2
@@ -45,9 +47,9 @@ seule origine runtime, `https://127.0.0.1:8444`. Les qualifications historiques 
 synthétiques, liées à `127.0.0.1` et à un port éphémère. La reprise WO-036 a contacté sur loopback
 le receiver INT-001 réel avec un export entièrement synthétique : `201/IMPORTED`, puis
 `200/DUPLICATE` côté receiver. Elle s’est arrêtée avant `409`, car le sender a rejeté la sémantique
-temporelle contractuelle de l’ACK duplicate. La correction WO-038 est désormais qualifiée
-localement à `PASS_LOCAL_FAIL_CLOSED`, mais aucun nouvel échange n’est autorisé sans sa validation
-propriétaire, une décision de reprise distincte et un manifeste neuf.
+temporelle contractuelle de l’ACK duplicate. La correction WO-038 est désormais qualifiée et
+validée à `PASS_LOCAL_FAIL_CLOSED`, mais aucun nouvel échange n’est autorisé sans une décision de
+reprise distincte et un manifeste neuf.
 
 Le receiver et sa persistance appartiennent à `INT-001` dans le dépôt Betting Project. WO-035 ne
 contacte pas cette implémentation ; seule la campagne WO-036 l’a exercée sur loopback avec un corpus
@@ -537,11 +539,10 @@ collision `409`, sans retry. Son rapport distinct est
 [J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903](../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903.md).
 
 Le défaut appartient au sender Local Lab ; le receiver est conforme au contrat INT-001. WO-036 ne
-porte aucun correctif runtime et reste arrêté. WO-038 porte la correction distincte, qualifiée
-localement à `PASS_LOCAL_FAIL_CLOSED` et soumise à la revue propriétaire ; sa validation
-éventuelle, puis une nouvelle décision propriétaire et un manifeste neuf resteront obligatoires
-avant toute autre reprise. La campagne n’autorise toujours ni réseau fournisseur, ni livraison de
-données dérivées, ni receiver distant, ni VPS, ni production.
+porte aucun correctif runtime et reste arrêté. WO-038 porte la correction distincte, qualifiée et
+validée à `PASS_LOCAL_FAIL_CLOSED` ; une nouvelle décision propriétaire et un manifeste neuf
+restent obligatoires avant toute autre reprise. La campagne n’autorise toujours ni réseau
+fournisseur, ni livraison de données dérivées, ni receiver distant, ni VPS, ni production.
 
 Tout changement incompatible exige une version de protocole nouvelle, une revue d’ADR-SS-003 et
 un Work Order. Aucun assouplissement silencieux, champ d’ACK toléré, retry, URI de secours ou
@@ -561,5 +562,5 @@ fallback de sécurité n’est compatible avec v1.0.
 10. [Work Order WO-037](../work_orders/completed/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md).
 11. [Qualification WO-037](../validation/J9-WO037-J7-BROWSER-ORIGIN-BOUNDARY-QUALIFICATION-20260903.md).
 12. [Rapport de reprise arrêtée WO-036](../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903.md).
-13. [Work Order WO-038](../work_orders/active/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md).
+13. [Work Order WO-038](../work_orders/completed/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md).
 14. [Qualification WO-038](../validation/J9-WO038-J7-ACK-RECEIPT-TIME-SEMANTICS-QUALIFICATION-20260903.md).
