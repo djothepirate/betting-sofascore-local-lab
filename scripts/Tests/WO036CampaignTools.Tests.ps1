@@ -924,24 +924,45 @@ Describe 'WO-036 offline behavioral primitives' {
             }
         }
 
-        It 'fails closed on a blank HTTP reason phrase separator' {
+        It 'accepts the single separator of an empty HTTP reason phrase' {
             $wire = [Text.Encoding]::ASCII.GetBytes(
                 "HTTP/1.1 409 `r`nContent-Length: 0`r`nConnection: close`r`n`r`n")
             $stream = [IO.MemoryStream]::new($wire, $false)
+            $response = $null
             try {
-                $failedClosed = $false
-                try {
-                    [void](Read-WO036BoundedHttpResponse -Stream $stream)
-                }
-                catch {
-                    $failedClosed = $_.Exception.Message -eq
-                        'WO-036 response status line is invalid.'
-                }
-                $failedClosed | Should Be $true
+                $response = Read-WO036BoundedHttpResponse -Stream $stream
+                $response.StatusCode | Should Be 409
+                $response.BodyBytes.Length | Should Be 0
             }
             finally {
+                if ($null -ne $response) {
+                    [Array]::Clear($response.BodyBytes, 0, $response.BodyBytes.Length)
+                }
                 $stream.Dispose()
                 [Array]::Clear($wire, 0, $wire.Length)
+            }
+        }
+
+        It 'rejects extra separators around an empty HTTP reason phrase' {
+            foreach ($statusLine in @('HTTP/1.1 409  ', 'HTTP/1.1  409')) {
+                $wire = [Text.Encoding]::ASCII.GetBytes(
+                    "$statusLine`r`nContent-Length: 0`r`nConnection: close`r`n`r`n")
+                $stream = [IO.MemoryStream]::new($wire, $false)
+                try {
+                    $failedClosed = $false
+                    try {
+                        [void](Read-WO036BoundedHttpResponse -Stream $stream)
+                    }
+                    catch {
+                        $failedClosed = $_.Exception.Message -eq
+                            'WO-036 response status line is invalid.'
+                    }
+                    $failedClosed | Should Be $true
+                }
+                finally {
+                    $stream.Dispose()
+                    [Array]::Clear($wire, 0, $wire.Length)
+                }
             }
         }
 
