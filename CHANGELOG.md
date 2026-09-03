@@ -4,6 +4,19 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-036 reprise R6 autorisée
+
+- validation propriétaire et push de WO-041, puis intégration par avance rapide de son commit de
+  clôture `d1fdf04615994d1ef3e0ad86a5c3d389002e813e` dans la branche WO-036 ;
+- autorisation d'un run R6 neuf dans le seul périmètre synthétique Windows/Windows loopback de
+  WO-036, avec au plus trois appels d'import et aucun retry automatique ;
+- obligation d'une nouvelle racine privée, d'une PKI éphémère, de bases isolées, d'un export
+  synthétique et de claims neufs ;
+- manifeste R6 distinct requis, gelé et commité avant le premier `POST` ;
+- R5 et sa claim de démarrage B restent immuables et consommés ;
+- aucun appel fournisseur, payload dérivé, receiver distant, VPS, production, PR ou validation
+  INT-001 n'est autorisé.
+
 ### Après J9 — WO-041 porte de readiness/listener LocalLabB
 
 - ouverture depuis le commit WO-036 arrêté

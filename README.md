@@ -4,6 +4,17 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
+Le propriétaire a validé WO-041, autorisé son push puis la reprise directe de
+[WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
+par un run neuf R6. La branche WO-036 contient par avance rapide le correctif listener qualifié et
+est `RESUME_R6_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT`. R6 doit utiliser une nouvelle
+racine privée, une nouvelle PKI, deux nouvelles bases isolées, un nouvel export synthétique et de
+nouvelles claims. Son manifeste distinct doit être gelé et commité avant le premier `POST`.
+
+La reprise autorise uniquement les connexions synthétiques loopback déjà bornées par WO-036. Aucun
+réseau fournisseur, payload dérivé, receiver distant, VPS, production, PR ou validation INT-001
+n'est autorisé. La claim R5 reste consommée et ne sera pas réutilisée.
+
 Le Work Order runtime
 [WO-SS-20260903-041](docs/work_orders/completed/WO-SS-20260903-041-j9-local-labb-readiness-listener-gate.md)
 est `VALIDATED`. Il reproduit et corrige le défaut
