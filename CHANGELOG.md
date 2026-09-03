@@ -4,6 +4,22 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-042 readiness CI de la PR de remplacement WO-036
+
+- ouverture depuis le commit WO-036 qualifié exact
+  `ad343d5f1ed131b9a766c60ffd0086dc354ee839`, sans réécriture de ses 57 commits, dans la branche
+  Convention 1A `codex/ss-20260904-042-j9-pr25-ci-readiness` et le worktree distinct
+  `.tmp/j9-wo042-pr25-ci-readiness` ;
+- diagnostic du run GitHub Actions `33812551196` : échec Linux avant Maven sur le nom historique
+  hors Convention 1A et échec Windows sur la seule deadline externe de 90 s du test J6 hors ligne ;
+- correction autorisée strictement limitée au passage de cette deadline externe à 180 s, sans
+  modification des timeouts runtime, de la propriété/cleanup des processus, de la politique CI ou
+  d'un comportement applicatif ;
+- préparation autorisée d'une PR de remplacement, sans fermeture de la PR `#25` avant obtention de
+  checks verts et sans autorisation de fusion ;
+- aucune permission officielle, donnée J7 réelle, réseau fournisseur ou receiver réel/distant, VPS,
+  production, PR ou validation INT-001 n'est autorisé.
+
 ### Après J9 — WO-036 R6 synthétique qualifié
 
 - manifeste R6 neuf gelé et commité avant le premier POST au commit

@@ -4,6 +4,18 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
+Le Work Order
+[WO-SS-20260904-042](docs/work_orders/active/WO-SS-20260904-042-j9-pr25-ci-readiness.md)
+est ouvert depuis le commit WO-036 qualifié exact
+`ad343d5f1ed131b9a766c60ffd0086dc354ee839` afin de préparer une PR de remplacement conforme à la
+Convention 1A. Sa correction est limitée à la deadline externe du test J6 hors ligne, portée de 90 à
+180 secondes ; les timeouts runtime J6, les invariants fail-closed, le cleanup et la politique CI
+restent inchangés.
+
+La PR `#25` reste ouverte jusqu'à l'obtention de checks verts sur la remplaçante. Aucune fusion,
+fermeture prématurée de `#25`, donnée J7 réelle, opération fournisseur/receiver réelle ou distante,
+VPS, production, PR ou validation INT-001 n'est autorisée par WO-042.
+
 Le run neuf R6 de
 [WO-SS-20260902-036](docs/work_orders/completed/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
 a qualifié le flux synthétique Windows/Windows complet. Son manifeste a été gelé et commité avant
