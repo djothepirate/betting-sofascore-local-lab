@@ -6,6 +6,8 @@ import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.dao.DataAccessException;
@@ -238,6 +240,7 @@ class J7DeliveryLedgerMigrationIT {
         assertThat(repeat.idempotencyKey()).isEqualTo(firstClaim.idempotencyKey());
 
         UUID remoteImportId = UUID.fromString("27000000-0000-4000-8000-000000000102");
+        Instant initialRemoteReceivedAt = firstStart.plusMillis(250);
         store.complete(
                 repeat.deliveryId(),
                 2,
@@ -246,8 +249,19 @@ class J7DeliveryLedgerMigrationIT {
                 "DUPLICATE",
                 Optional.of("e".repeat(64)),
                 Optional.of(remoteImportId),
-                Optional.of(repeatStart.plusSeconds(1)),
+                Optional.of(initialRemoteReceivedAt),
                 repeatStart.plusSeconds(1));
+
+        assertThat(jdbc.queryForObject("""
+                select acknowledgement_received_at
+                from j7_delivery_attempt_result result
+                join j7_delivery_attempt attempt on attempt.id = result.attempt_id
+                where attempt.delivery_id = (
+                    select id from j7_delivery where delivery_uuid = ?
+                )
+                  and attempt.attempt_number = 2
+                """, OffsetDateTime.class, repeat.deliveryId()).toInstant())
+                .isEqualTo(initialRemoteReceivedAt);
 
         assertThatThrownBy(() -> store.claim(
                 first.exportId(),
@@ -286,6 +300,83 @@ class J7DeliveryLedgerMigrationIT {
                 "select count(*) from j7_delivery_attempt where delivery_id = (select id from j7_delivery where delivery_uuid = ?)",
                         Long.class,
                         firstClaim.deliveryId())).isEqualTo(2);
+    }
+
+    @Test
+    void persistsImportedAcknowledgementFromAnIndependentReceiverClock() {
+        ExportEvidence export = insertValidatedExport();
+        Instant senderStartedAt = Instant.parse("2026-09-03T10:00:00Z");
+        var claim = store.claim(
+                export.exportId(),
+                export.fileSha256(),
+                export.dataSha256(),
+                export.idempotencyKey(),
+                1,
+                senderStartedAt);
+        Instant receiverReceivedAt = senderStartedAt.plusSeconds(120);
+        Instant senderCompletedAt = senderStartedAt.plusSeconds(1);
+
+        var completed = store.complete(
+                claim.deliveryId(),
+                claim.attemptNumber(),
+                J7DeliveryLedgerStore.DeliveryState.DELIVERED,
+                OptionalInt.of(201),
+                "IMPORTED_DISTINCT_RECEIVER_CLOCK",
+                Optional.of("d".repeat(64)),
+                Optional.of(UUID.fromString("27000000-0000-4000-8000-000000000103")),
+                Optional.of(receiverReceivedAt),
+                senderCompletedAt);
+
+        assertThat(completed.state()).isEqualTo(J7DeliveryLedgerStore.DeliveryState.DELIVERED);
+        assertThat(jdbc.queryForObject("""
+                select acknowledgement_received_at
+                from j7_delivery_attempt_result result
+                join j7_delivery_attempt attempt on attempt.id = result.attempt_id
+                where attempt.delivery_id = (
+                    select id from j7_delivery where delivery_uuid = ?
+                )
+                """, OffsetDateTime.class, claim.deliveryId()).toInstant())
+                .isEqualTo(receiverReceivedAt);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "0001-01-01T00:00:00Z",
+            "9999-12-31T23:59:59.999999Z"
+    })
+    void persistsAndReadsBackTheExactReceiverTimestampBoundaries(String boundary) {
+        ExportEvidence export = insertValidatedExport();
+        Instant senderStartedAt = databaseClock();
+        var claim = store.claim(
+                export.exportId(),
+                export.fileSha256(),
+                export.dataSha256(),
+                export.idempotencyKey(),
+                1,
+                senderStartedAt);
+        Instant receiverReceivedAt = Instant.parse(boundary);
+
+        var completed = store.complete(
+                claim.deliveryId(),
+                claim.attemptNumber(),
+                J7DeliveryLedgerStore.DeliveryState.DELIVERED,
+                OptionalInt.of(201),
+                "IMPORTED_BOUNDARY_RECEIVER_CLOCK",
+                Optional.of("d".repeat(64)),
+                Optional.of(UUID.randomUUID()),
+                Optional.of(receiverReceivedAt),
+                senderStartedAt.plusSeconds(1));
+
+        assertThat(completed.state()).isEqualTo(J7DeliveryLedgerStore.DeliveryState.DELIVERED);
+        assertThat(jdbc.queryForObject("""
+                select acknowledgement_received_at
+                from j7_delivery_attempt_result result
+                join j7_delivery_attempt attempt on attempt.id = result.attempt_id
+                where attempt.delivery_id = (
+                    select id from j7_delivery where delivery_uuid = ?
+                )
+                """, OffsetDateTime.class, claim.deliveryId()).toInstant())
+                .isEqualTo(receiverReceivedAt);
     }
 
     @Test
@@ -410,12 +501,42 @@ class J7DeliveryLedgerMigrationIT {
         assertThatThrownBy(() -> store.complete(
                 claim.deliveryId(),
                 claim.attemptNumber(),
+                J7DeliveryLedgerStore.DeliveryState.REJECTED_TERMINAL,
+                OptionalInt.of(422),
+                "LOCAL_COMPLETION_PRECEDES_START",
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                startedAt.minusNanos(1_000)))
+                .isInstanceOfSatisfying(
+                        J7DeliveryLedgerStore.LedgerException.class,
+                        exception -> assertThat(exception.failure()).isEqualTo(
+                                J7DeliveryLedgerStore.LedgerFailure.ATTEMPT_NOT_ACTIVE));
+
+        assertThatThrownBy(() -> store.complete(
+                claim.deliveryId(),
+                claim.attemptNumber(),
                 J7DeliveryLedgerStore.DeliveryState.UNKNOWN_RECONCILIATION_REQUIRED,
                 OptionalInt.of(429),
                 "HTTP_4XX_AMBIGUOUS",
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
+                completedAt))
+                .isInstanceOfSatisfying(
+                        J7DeliveryLedgerStore.LedgerException.class,
+                        exception -> assertThat(exception.failure()).isEqualTo(
+                                J7DeliveryLedgerStore.LedgerFailure.INVALID_COMPLETION));
+
+        assertThatThrownBy(() -> store.complete(
+                claim.deliveryId(),
+                claim.attemptNumber(),
+                J7DeliveryLedgerStore.DeliveryState.DELIVERED,
+                OptionalInt.of(201),
+                "NON_PERSISTABLE_RECEIVER_TIMESTAMP",
+                Optional.of("d".repeat(64)),
+                Optional.of(UUID.fromString("27000000-0000-4000-8000-000000000104")),
+                Optional.of(Instant.parse("2026-09-03T10:00:00.123456789Z")),
                 completedAt))
                 .isInstanceOfSatisfying(
                         J7DeliveryLedgerStore.LedgerException.class,

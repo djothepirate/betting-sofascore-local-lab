@@ -166,6 +166,36 @@ class J7DeliveryRuntimeServiceTest {
     }
 
     @Test
+    void historicalDuplicateAcknowledgementIsAcceptedAndTransportClosesOnce() {
+        Instant initialDurableReceivedAt = Instant.parse("1900-01-01T00:00:00Z");
+        when(transport.execute(any())).thenReturn(
+                response(200, ack("DUPLICATE", initialDurableReceivedAt)));
+
+        J7DeliveryExecutionResult result = service.deliver(
+                CANONICAL_EVENT_ID,
+                EXPORT_ID,
+                confirmation(),
+                1);
+
+        assertThat(result.state()).isEqualTo(J7DeliveryState.DUPLICATE_CONFIRMED);
+        assertThat(result.httpStatus()).hasValue(200);
+        assertThat(result.safeResultCode()).isEqualTo("HTTP_DUPLICATE_CONFIRMED");
+        verify(ledgerStore).complete(
+                eq(DELIVERY_ID),
+                eq(1),
+                eq(J7DeliveryLedgerStore.DeliveryState.DUPLICATE_CONFIRMED),
+                eq(OptionalInt.of(200)),
+                eq("HTTP_DUPLICATE_CONFIRMED"),
+                any(),
+                eq(Optional.of(REMOTE_IMPORT_ID)),
+                eq(Optional.of(initialDurableReceivedAt)),
+                eq(NOW));
+        verify(transport, times(1)).execute(any());
+        verify(transport, times(1)).close();
+        assertGateIdle();
+    }
+
+    @Test
     void defaultRuntimeGateStopsBeforeCertificateFactoryClaimAndPost() {
         J7DeliveryRuntimeService blocked = service(new OptionalLocalPushProperties());
 
@@ -542,6 +572,10 @@ class J7DeliveryRuntimeServiceTest {
     }
 
     private static byte[] ack(String status) {
+        return ack(status, NOW);
+    }
+
+    private static byte[] ack(String status, Instant receivedAt) {
         return ("{" +
                 "\"protocolVersion\":\"1.0\"," +
                 "\"remoteImportId\":\"" + REMOTE_IMPORT_ID + "\"," +
@@ -549,7 +583,7 @@ class J7DeliveryRuntimeServiceTest {
                 "\"exportId\":\"" + EXPORT_ID + "\"," +
                 "\"fileSha256\":\"" + FILE_SHA256 + "\"," +
                 "\"dataSha256\":\"" + DATA_SHA256 + "\"," +
-                "\"receivedAt\":\"" + NOW + "\"" +
+                "\"receivedAt\":\"" + receivedAt + "\"" +
                 "}").getBytes(StandardCharsets.UTF_8);
     }
 

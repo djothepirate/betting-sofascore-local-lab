@@ -149,13 +149,13 @@ try {
                 throw "The qualified manifest source/restore evidence differs: $field"
             }
         }
-        if ($manifest.source.flywayVersion.ToString() -cne '29' -or
+        if ($manifest.source.flywayVersion.ToString() -cne '30' -or
                 [long]$manifest.source.rawPayloadIntegrityFailures -ne 0 -or
                 [long]$manifest.source.j7DeliveryCount -lt 0 -or
                 [long]$manifest.source.j7DeliveryAttemptCount -lt 0 -or
                 [long]$manifest.source.j7DeliveryAttemptResultCount -lt 0 -or
                 $manifest.source.j7DeliveryLedgerSha256.ToString() -cnotmatch '^[0-9a-f]{64}$') {
-            throw 'The qualified manifest does not prove a valid Flyway V29 raw-payload, J8 evidence and metadata-only J7 delivery-ledger restore.'
+            throw 'The qualified manifest does not prove a valid Flyway V30 raw-payload, J8 evidence and metadata-only J7 delivery-ledger restore.'
         }
         $cipherPath = [IO.Path]::GetFullPath((Join-Path `
             (Split-Path -Parent $manifestPath) $cipherFileName))

@@ -1,5 +1,6 @@
 package com.bettingproject.sofascorelocal.adapter.persistence.delivery;
 
+import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryReceivedAtPolicy;
 import com.bettingproject.sofascorelocal.port.J7DeliveryLedgerStore;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.RowMapper;
@@ -376,13 +377,9 @@ public class JdbcJ7DeliveryLedgerStore implements J7DeliveryLedgerStore {
         if (attempt.resultPresent() || completedAt.isBefore(attempt.startedAt())) {
             throw new LedgerException(LedgerFailure.ATTEMPT_NOT_ACTIVE);
         }
-        if (acknowledgementReceivedAt
-                .filter(receivedAt -> receivedAt.isBefore(attempt.startedAt())
-                        || receivedAt.isAfter(completedAt))
-                .isPresent()) {
-            throw new LedgerException(LedgerFailure.INVALID_COMPLETION);
-        }
 
+        // acknowledgementReceivedAt is receiver-authored metadata. Only startedAt and
+        // completedAt share the Local Lab clock and therefore have a meaningful ordering.
         MapSqlParameterSource resultParameters = new MapSqlParameterSource()
                 .addValue("attemptDatabaseId", attempt.databaseId())
                 .addValue("terminalState", terminalState.name())
@@ -631,7 +628,9 @@ public class JdbcJ7DeliveryLedgerStore implements J7DeliveryLedgerStore {
                         .filter(value -> SHA_256.matcher(value).matches())
                         .isPresent()
                 && remoteImportId.filter(value -> !NIL_UUID.equals(value)).isPresent()
-                && acknowledgementReceivedAt.isPresent();
+                && acknowledgementReceivedAt
+                        .filter(J7DeliveryReceivedAtPolicy::isExactlyPersistable)
+                        .isPresent();
         boolean acknowledgementAbsent = acknowledgementSha256.isEmpty()
                 && remoteImportId.isEmpty()
                 && acknowledgementReceivedAt.isEmpty();

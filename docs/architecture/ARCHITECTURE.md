@@ -77,7 +77,7 @@ VPS       : aucune connexion
 | `adapter.persistence` | preuves brutes, occurrences, observations normalisées, historique, rétention, manifestes J7 et preuves J8 |
 | `adapter.file` | publication J7 create-new par lien physique atomique, bornée à la racine locale |
 | `adapter.web` | tableau de bord, recherche, contrôle de lot et vues J4/J5/J6/J7/J8 locales |
-| `resources/db/migration` | schémas V1 à V29, migrations append-only et triggers d’immuabilité |
+| `resources/db/migration` | schémas V1 à V30, migrations append-only et triggers d’immuabilité |
 | `fixtures` | corpus synthétiques hors ligne J2, J4, J5 et J6 |
 
 Le connecteur général demeure bloqué. Le chemin manuel J3 borné délègue ses deux familles
@@ -410,7 +410,7 @@ canoniques sont écrites dans une transaction unique ; un conflit d'identité ou
 ### Intégration
 
 `mvnw -Pintegration-tests verify` démarre PostgreSQL avec Testcontainers et vérifie les migrations
-V1 à V29, les upgrades historiques, la fidélité binaire, les contraintes, la déduplication et
+V1 à V30, les upgrades historiques, la fidélité binaire, les contraintes, la déduplication et
 l'immuabilité. J6 ajoute les occurrences prospectives, les exclusions de rétention, la purge des
 seuls octets dans une base éphémère, l'audit et la conservation de la provenance. Aucun appel
 SofaScore n'est exécuté. J7 ajoute l'upgrade V22→V23 prérempli, ses contraintes de cycle et la
@@ -428,6 +428,9 @@ V28 ajoute uniquement `event-incidents-v15` à la contrainte fermée des observa
 V29 ajoute le ledger de livraison J7 distinct : identité immuable, tentatives/résultats append-only
 et projection d'état strictement gardée, sans payload ni modification du statut J7.
 Elle ne crée aucune table et ne réécrit ni observation, ni snapshot, ni occurrence, ni preuve J8.
+V30 remplace uniquement le trigger de résultat J7 : l’ordre local entre début et fin de tentative
+reste gardé, tandis que l’instant canonique déclaré par l’horloge indépendante du receiver est
+persisté exactement sans le comparer aux horodatages du Local Lab. Elle ne réécrit aucune donnée.
 V15 assimile propriété d'actions absente et tableau exactement vide uniquement dans une séance
 terminale non minutée déjà cohérente ; les types erronés, listes non vides incohérentes et séances
 temporellement mixtes restent incompatibles.

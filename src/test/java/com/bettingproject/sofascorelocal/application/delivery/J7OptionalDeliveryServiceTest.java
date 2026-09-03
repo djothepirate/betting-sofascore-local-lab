@@ -153,7 +153,12 @@ class J7OptionalDeliveryServiceTest {
 
     @Test
     void exactDuplicateAcknowledgementIsSeparateAndDoesNotBecomeDelivered() {
-        when(transport.execute(any())).thenReturn(response(200, ack("DUPLICATE")));
+        Instant initialDurableReceivedAt = NOW.minusSeconds(86_400);
+        when(transport.execute(any())).thenReturn(response(
+                200,
+                J7DeliveryContract.ACKNOWLEDGEMENT_MEDIA_TYPE,
+                ack("DUPLICATE", initialDurableReceivedAt),
+                NOW));
 
         J7DeliveryExecutionResult result = deliver();
 
@@ -166,8 +171,9 @@ class J7OptionalDeliveryServiceTest {
                 eq("HTTP_DUPLICATE_CONFIRMED"),
                 any(),
                 eq(Optional.of(REMOTE_IMPORT_ID)),
-                eq(Optional.of(NOW)),
+                eq(Optional.of(initialDurableReceivedAt)),
                 eq(NOW));
+        verify(transport, times(1)).execute(any());
     }
 
     @ParameterizedTest
@@ -217,6 +223,32 @@ class J7OptionalDeliveryServiceTest {
         verify(transport, times(1)).execute(any());
     }
 
+    @Test
+    void nonPersistableReceiverTimestampRemainsUnknownWithoutRetryOrAckEvidence() {
+        byte[] nonPersistable = new String(
+                ack("IMPORTED"), StandardCharsets.UTF_8)
+                .replace(NOW.toString(), "2026-09-01T12:00:00.123456789Z")
+                .getBytes(StandardCharsets.UTF_8);
+        when(transport.execute(any())).thenReturn(response(201, nonPersistable));
+
+        J7DeliveryExecutionResult result = deliver();
+
+        assertThat(result.state())
+                .isEqualTo(J7DeliveryState.UNKNOWN_RECONCILIATION_REQUIRED);
+        assertThat(result.safeResultCode()).isEqualTo("ACK_INVALID_OR_MISMATCHED");
+        verify(ledgerStore).complete(
+                eq(DELIVERY_ID),
+                eq(1),
+                eq(J7DeliveryLedgerStore.DeliveryState.UNKNOWN_RECONCILIATION_REQUIRED),
+                eq(OptionalInt.of(201)),
+                eq("ACK_INVALID_OR_MISMATCHED"),
+                eq(Optional.empty()),
+                eq(Optional.empty()),
+                eq(Optional.empty()),
+                eq(NOW));
+        verify(transport, times(1)).execute(any());
+    }
+
     @ParameterizedTest
     @CsvSource({"200, IMPORTED", "201, DUPLICATE"})
     void incompatibleHttpAndAcknowledgementStatusesRemainUnknownWithoutRetry(
@@ -231,6 +263,16 @@ class J7OptionalDeliveryServiceTest {
                 .isEqualTo(J7DeliveryState.UNKNOWN_RECONCILIATION_REQUIRED);
         assertThat(result.httpStatus()).hasValue(httpStatus);
         assertThat(result.safeResultCode()).isEqualTo("ACK_HTTP_STATUS_MISMATCH");
+        verify(ledgerStore).complete(
+                eq(DELIVERY_ID),
+                eq(1),
+                eq(J7DeliveryLedgerStore.DeliveryState.UNKNOWN_RECONCILIATION_REQUIRED),
+                eq(OptionalInt.of(httpStatus)),
+                eq("ACK_HTTP_STATUS_MISMATCH"),
+                eq(Optional.empty()),
+                eq(Optional.empty()),
+                eq(Optional.empty()),
+                eq(NOW));
         verify(transport, times(1)).execute(any());
     }
 
@@ -250,20 +292,31 @@ class J7OptionalDeliveryServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(longs = {-1L, 1L})
-    void acknowledgementOutsideTheClaimAndReceiveWindowRemainsUnknownWithoutRetry(
-            long acknowledgementOffsetSeconds) {
+    @ValueSource(strings = {"1900-01-01T00:00:00Z", "2100-01-01T00:00:00Z"})
+    void importedAcknowledgementUsesTheIndependentReceiverClockWithoutLocalOrdering(
+            String receiverTimestamp) {
+        Instant receiverReceivedAt = Instant.parse(receiverTimestamp);
         when(transport.execute(any())).thenReturn(response(
                 201,
                 J7DeliveryContract.ACKNOWLEDGEMENT_MEDIA_TYPE,
-                ack("IMPORTED", NOW.plusSeconds(acknowledgementOffsetSeconds)),
+                ack("IMPORTED", receiverReceivedAt),
                 NOW));
 
         J7DeliveryExecutionResult result = deliver();
 
-        assertThat(result.state())
-                .isEqualTo(J7DeliveryState.UNKNOWN_RECONCILIATION_REQUIRED);
-        assertThat(result.safeResultCode()).isEqualTo("ACK_HTTP_STATUS_MISMATCH");
+        assertThat(result.state()).isEqualTo(J7DeliveryState.DELIVERED);
+        assertThat(result.httpStatus()).hasValue(201);
+        assertThat(result.safeResultCode()).isEqualTo("HTTP_201_IMPORTED");
+        verify(ledgerStore).complete(
+                eq(DELIVERY_ID),
+                eq(1),
+                eq(J7DeliveryLedgerStore.DeliveryState.DELIVERED),
+                eq(OptionalInt.of(201)),
+                eq("HTTP_201_IMPORTED"),
+                any(),
+                eq(Optional.of(REMOTE_IMPORT_ID)),
+                eq(Optional.of(receiverReceivedAt)),
+                eq(NOW));
         verify(transport, times(1)).execute(any());
     }
 

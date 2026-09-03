@@ -247,6 +247,19 @@ Un ACK positif est accepté uniquement si toutes les conditions sont satisfaites
   `Instant.toString()`, terminée par `Z` ;
 - cohérence entre le code HTTP et le statut.
 
+`receivedAt` désigne l’instant durable déclaré par le receiver. Pour `DUPLICATE`, il s’agit de
+l’instant du premier import, réemployé avec le même `remoteImportId`. L’horloge du receiver et celle
+du sender constituent deux frontières indépendantes : le Local Lab persiste exactement cet instant
+distant mais ne l’ordonne ni contre le début de la tentative ni contre la réception locale de la
+réponse. L’acceptation repose sur la forme UTC canonique, l’authentification mTLS, la paire
+HTTP/statut et les corrélations d’identité et de hashes ; aucune tolérance d’horloge arbitraire ni
+substitution par un instant local n’est introduite.
+
+Pour garantir cette conservation exacte dans `timestamptz`, la frontière v1.0 refuse avant succès
+les fractions plus précises que la microseconde, les années ISO étendues hors `0001..9999` et les
+sentinelles PostgreSQL infinies. Il s’agit de compatibilité de représentation, jamais d’une borne
+relative à l’heure courante du sender.
+
 Le sender arrête la lecture et classe le résultat comme ambigu dès que la limite de 16 KiB pourrait
 être dépassée. Il ne journalise jamais le corps d’un ACK invalide.
 
@@ -516,10 +529,10 @@ collision `409`, sans retry. Son rapport distinct est
 [J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903](../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903.md).
 
 Le défaut appartient au sender Local Lab ; le receiver est conforme au contrat INT-001. WO-036 ne
-porte aucun correctif runtime et reste arrêté. Une correction distincte, sa qualification et sa
-validation, puis une nouvelle décision propriétaire et un manifeste neuf sont obligatoires avant
-toute autre reprise. La campagne n’autorise toujours ni réseau fournisseur, ni livraison de données
-dérivées, ni receiver distant, ni VPS, ni production.
+porte aucun correctif runtime et reste arrêté. WO-038 porte la correction distincte et sa
+qualification ; sa validation éventuelle, puis une nouvelle décision propriétaire et un manifeste
+neuf resteront obligatoires avant toute autre reprise. La campagne n’autorise toujours ni réseau
+fournisseur, ni livraison de données dérivées, ni receiver distant, ni VPS, ni production.
 
 Tout changement incompatible exige une version de protocole nouvelle, une revue d’ADR-SS-003 et
 un Work Order. Aucun assouplissement silencieux, champ d’ACK toléré, retry, URI de secours ou
@@ -539,3 +552,4 @@ fallback de sécurité n’est compatible avec v1.0.
 10. [Work Order WO-037](../work_orders/completed/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md).
 11. [Qualification WO-037](../validation/J9-WO037-J7-BROWSER-ORIGIN-BOUNDARY-QUALIFICATION-20260903.md).
 12. [Rapport de reprise arrêtée WO-036](../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903.md).
+13. [Work Order WO-038](../work_orders/active/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md).

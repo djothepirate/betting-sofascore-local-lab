@@ -117,7 +117,7 @@ class J7DeliveryAcknowledgementTest {
     }
 
     @Test
-    void rejectsMissingStatusOrReceivedInstant() {
+    void rejectsMissingStatusOrNonPersistableReceivedInstant() {
         assertError(
                 () -> new J7DeliveryAcknowledgement(
                         "1.0", REMOTE_IMPORT_ID, null, EXPORT_ID,
@@ -131,6 +131,19 @@ class J7DeliveryAcknowledgementTest {
                         EXPORT_ID, FILE_SHA256, DATA_SHA256, null),
                 J7DeliveryError.INVALID_RECEIVED_AT,
                 null);
+        for (Instant invalid : new Instant[] {
+                Instant.parse("2026-09-01T10:00:00.123456789Z"),
+                Instant.parse("0000-12-31T23:59:59.999999Z"),
+                Instant.parse("+10000-01-01T00:00:00Z")
+        }) {
+            assertError(
+                    () -> new J7DeliveryAcknowledgement(
+                            "1.0", REMOTE_IMPORT_ID,
+                            J7DeliveryAcknowledgementStatus.IMPORTED,
+                            EXPORT_ID, FILE_SHA256, DATA_SHA256, invalid),
+                    J7DeliveryError.INVALID_RECEIVED_AT,
+                    null);
+        }
     }
 
     @Test

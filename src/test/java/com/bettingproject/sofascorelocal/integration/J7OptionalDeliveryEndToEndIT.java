@@ -62,6 +62,7 @@ import java.security.SecureRandom;
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -295,6 +296,7 @@ class J7OptionalDeliveryEndToEndIT {
 
         assertThat(duplicate.state()).isEqualTo(J7DeliveryState.DUPLICATE_CONFIRMED);
         assertThat(duplicate.httpStatus()).hasValue(200);
+        assertThat(duplicate.safeResultCode()).isEqualTo("HTTP_DUPLICATE_CONFIRMED");
         assertThat(duplicate.attemptNumber()).isEqualTo(2);
         assertThat(persistentPreSocketChecks).hasValue(2);
         assertThat(receiver.requestCount()).isEqualTo(2);
@@ -312,6 +314,12 @@ class J7OptionalDeliveryEndToEndIT {
         assertThat(attemptTerminalStates(duplicate.deliveryId())).containsExactly(
                 "UNKNOWN_RECONCILIATION_REQUIRED",
                 "DUPLICATE_CONFIRMED");
+        assertThat(acknowledgementReceivedAts(duplicate.deliveryId()))
+                .containsExactly(receiver.initialDurableReceivedAt());
+        assertThat(remoteImportIds(duplicate.deliveryId()))
+                .containsExactly(receiver.remoteImportId());
+        assertThat(acknowledgementSha256s(duplicate.deliveryId()))
+                .containsExactly(receiver.duplicateAcknowledgementSha256());
         assertJ7EvidenceUnchanged(export);
         verify(scenario.exportService(), times(2))
                 .loadHumanValidatedForDelivery(
@@ -521,6 +529,44 @@ class J7OptionalDeliveryEndToEndIT {
                 join j7_delivery delivery on delivery.id = attempt.delivery_id
                 join j7_delivery_attempt_result result on result.attempt_id = attempt.id
                 where delivery.delivery_uuid = ?
+                order by attempt.attempt_number
+                """, String.class, deliveryId);
+    }
+
+    private static List<Instant> acknowledgementReceivedAts(UUID deliveryId) {
+        return jdbc.queryForList("""
+                select result.acknowledgement_received_at
+                from j7_delivery_attempt attempt
+                join j7_delivery delivery on delivery.id = attempt.delivery_id
+                join j7_delivery_attempt_result result on result.attempt_id = attempt.id
+                where delivery.delivery_uuid = ?
+                  and result.acknowledgement_received_at is not null
+                order by attempt.attempt_number
+                """, OffsetDateTime.class, deliveryId).stream()
+                .map(OffsetDateTime::toInstant)
+                .toList();
+    }
+
+    private static List<UUID> remoteImportIds(UUID deliveryId) {
+        return jdbc.queryForList("""
+                select result.remote_import_id
+                from j7_delivery_attempt attempt
+                join j7_delivery delivery on delivery.id = attempt.delivery_id
+                join j7_delivery_attempt_result result on result.attempt_id = attempt.id
+                where delivery.delivery_uuid = ?
+                  and result.remote_import_id is not null
+                order by attempt.attempt_number
+                """, UUID.class, deliveryId);
+    }
+
+    private static List<String> acknowledgementSha256s(UUID deliveryId) {
+        return jdbc.queryForList("""
+                select result.acknowledgement_sha256
+                from j7_delivery_attempt attempt
+                join j7_delivery delivery on delivery.id = attempt.delivery_id
+                join j7_delivery_attempt_result result on result.attempt_id = attempt.id
+                where delivery.delivery_uuid = ?
+                  and result.acknowledgement_sha256 is not null
                 order by attempt.attempt_number
                 """, String.class, deliveryId);
     }
@@ -820,6 +866,7 @@ class J7OptionalDeliveryEndToEndIT {
         private final ExportEvidence expected;
         private final FirstEffectResponse firstEffectResponse;
         private final UUID remoteImportId;
+        private final Instant initialDurableReceivedAt;
         private final Map<String, ReceivedIdentity> received = new ConcurrentHashMap<>();
         private final AtomicInteger requestCount = new AtomicInteger();
         private final AtomicInteger effectCount = new AtomicInteger();
@@ -834,6 +881,7 @@ class J7OptionalDeliveryEndToEndIT {
             this.remoteImportId = UUID.nameUUIDFromBytes(
                     ("wo027-e2e-remote-" + expected.exportId())
                             .getBytes(StandardCharsets.UTF_8));
+            this.initialDurableReceivedAt = Instant.parse("1900-01-01T00:00:00Z");
         }
 
         @Override
@@ -911,11 +959,30 @@ class J7OptionalDeliveryEndToEndIT {
             return clientIdentityObserved.get();
         }
 
+        private Instant initialDurableReceivedAt() {
+            return initialDurableReceivedAt;
+        }
+
+        private UUID remoteImportId() {
+            return remoteImportId;
+        }
+
+        private String duplicateAcknowledgementSha256() {
+            return Sha256.hex(acknowledgement(
+                    J7DeliveryAcknowledgementStatus.DUPLICATE)
+                    .getBytes(StandardCharsets.UTF_8));
+        }
+
         private void sendAcknowledgement(
                 HttpExchange exchange,
                 int status,
                 J7DeliveryAcknowledgementStatus acknowledgementStatus) throws IOException {
-            String acknowledgement = """
+            send(exchange, status, acknowledgement(acknowledgementStatus));
+        }
+
+        private String acknowledgement(
+                J7DeliveryAcknowledgementStatus acknowledgementStatus) {
+            return """
                     {"protocolVersion":"%s","remoteImportId":"%s","status":"%s","exportId":"%s","fileSha256":"%s","dataSha256":"%s","receivedAt":"%s"}
                     """.formatted(
                     J7DeliveryContract.PROTOCOL_VERSION,
@@ -924,8 +991,7 @@ class J7OptionalDeliveryEndToEndIT {
                     expected.exportId(),
                     expected.fileSha256(),
                     expected.dataSha256(),
-                    NOW);
-            send(exchange, status, acknowledgement);
+                    initialDurableReceivedAt);
         }
 
         private static void send(HttpExchange exchange, int status, String json)

@@ -8,10 +8,10 @@ la préparation runtime de WO-035. Il ne permet aucune livraison de données dé
 essai avant receiver et la validation de WO-037, sa reprise a été autorisée puis consommée par un
 run neuf. Cette reprise s’est arrêtée après `201/IMPORTED`, puis `200/DUPLICATE` côté receiver : le
 sender a rejeté l’instant durable initial de l’ACK duplicate. Aucun nouvel échange n’est autorisé
-avant correction runtime distincte, validation et nouvelle décision propriétaire.
+avant validation de la correction WO-038 et nouvelle décision propriétaire.
 
 ```text
-RUNBOOK_SCOPE=WO027_OFFLINE_LOOPBACK_WO035_RUNTIME_WO036_SYNTHETIC_E2E_AND_WO037_BROWSER_BOUNDARY
+RUNBOOK_SCOPE=WO027_OFFLINE_LOOPBACK_WO035_RUNTIME_WO036_SYNTHETIC_E2E_WO037_BROWSER_BOUNDARY_AND_WO038_ACK_TIME
 CONTRACT_VERSION=1.0
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 WO035_LOCAL_RECEIVER_ORIGIN=https://127.0.0.1:8444
@@ -22,6 +22,8 @@ WO036_SECOND_ATTEMPT_RESULT=STOPPED_AFTER_200_DUPLICATE_BEFORE_409
 WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=VALIDATED
 WO037_BROWSER_ORIGIN_BOUNDARY_RESULT=PASS_LOCAL_FAIL_CLOSED
 WO037_OWNER_REVIEW_DECISION=VALIDATE
+WO038_ACK_RECEIPT_TIME_STATUS=IN_PROGRESS
+WO038_RECEIVER_RUNTIME_CHANGE=NO
 WO036_RESUME_AFTER_WO037_VALIDATION=CONSUMED_BY_STOPPED_R2
 WO036_RESUME_MANIFEST_STATUS=FROZEN_AND_CONSUMED
 LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
@@ -230,8 +232,9 @@ Vérifier au minimum :
 - `status` non permis ;
 - `exportId`, `fileSha256`, `dataSha256` ou clé non corrélés ;
 - code HTTP incompatible avec `IMPORTED` ou `DUPLICATE` ;
-- `remoteImportId` invalide ou `receivedAt` non canonique, décalé ou différent de
-  `Instant.toString()` ;
+- `remoteImportId` invalide ou `receivedAt` non canonique, représenté avec un offset autre que
+  `Z`, différent de `Instant.toString()`, plus précis que la microseconde, situé hors des années
+  ISO non étendues `0001..9999` ou égal à une sentinelle PostgreSQL infinie ;
 - corps supérieur à `16 384` octets ;
 - `Content-Encoding` autre que `identity` ;
 - media type inattendu.
@@ -586,7 +589,8 @@ antérieur au claim courant. La série s’est arrêtée sans retry et sans coll
 Le rapport distinct
 `J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903` établit la conformité idempotente du
 receiver, l’identité byte-à-byte, l’outbox unique et le cleanup complet. Il reste à corriger sous un
-Work Order runtime distinct la sémantique temporelle du sender, puis à obtenir une nouvelle décision
+Work Order runtime distinct la sémantique temporelle du sender. WO-038 porte ce correctif sans
+reprendre la campagne ; après sa validation éventuelle, il restera à obtenir une nouvelle décision
 de reprise et à rejouer une campagne intégrale avec un manifeste neuf. Aucune autorisation du run
 consommé ne peut être réutilisée. Aucun appel SofaScore, export dérivé fournisseur, receiver distant,
 VPS ou production n’est autorisé.

@@ -53,8 +53,9 @@ La reprise R2 de WO-036 a établi une séquence receiver correcte : le premier e
 second événement d’outbox. Conformément au contrat INT-001, l’accusé duplicate réemploie le
 `remoteImportId` et le `receivedAt` du premier import durable.
 
-Le sender Local Lab reconnaît la paire `200/DUPLICATE` et corrèle correctement le protocole,
-l’export, les hashes et l’identité distante, mais exige actuellement que `receivedAt` soit compris
+Le sender Local Lab reconnaît la paire `200/DUPLICATE`, corrèle correctement le protocole,
+l’export et les hashes, et valide la forme canonique non nulle de l’identité distante. Il exige
+cependant actuellement que `receivedAt` soit compris
 entre le début et la fin de la tentative locale courante. L’instant durable initial est donc rejeté
 par construction lors de la seconde tentative et reçoit le code inexact
 `ACK_HTTP_STATUS_MISMATCH`.
@@ -69,8 +70,10 @@ fiable d’ordre causal, y compris pour un premier import Windows→VPS.
 WO-038 doit :
 
 1. préserver les paires contractuelles strictes `201/IMPORTED` et `200/DUPLICATE` ;
-2. préserver la corrélation du protocole, de `exportId`, `fileSha256`, `dataSha256` et de
-   `remoteImportId` ;
+2. préserver la corrélation du protocole, de `exportId`, `fileSha256` et `dataSha256`, ainsi que la
+   validation canonique non nulle de `remoteImportId` ; la réutilisation de cette identité lors
+   d’un duplicate reste un invariant du receiver, vérifié côté receiver/campagne et persisté sans
+   substitution par le sender ;
 3. traiter `receivedAt` comme l’instant durable déclaré par le receiver et non comme un instant de
    l’horloge locale du sender ;
 4. accepter pour un duplicate l’identité et l’instant durables du premier import, même lorsque cet
@@ -81,9 +84,16 @@ WO-038 doit :
 7. qualifier le comportement hors ligne et, si nécessaire, au moyen d’un receiver synthétique
    exclusivement loopback.
 
+La valeur distante acceptée doit rester exactement représentable dans le ledger : UTC canonique
+avec suffixe `Z`, année ISO non étendue de `0001` à `9999`, précision maximale de six chiffres
+fractionnaires et exclusion des sentinelles PostgreSQL infinies. Ces bornes sont des contraintes de
+forme et de persistance, pas une tolérance ni un ordre relatif à l’horloge du sender.
+
 Le correctif reste dans le Local Lab. Il ne modifie ni le receiver INT-001, ni le format d’ACK, ni
-le protocole J7, ni le schéma SQL, ni la migration V29, ni le transport mTLS, ni les états durables
-de livraison.
+le protocole J7, ni le transport mTLS, ni les états durables de livraison. La migration V29 reste
+byte-identique et aucune table, colonne, contrainte ou donnée n’est réécrite. La migration
+append-only V30 remplace uniquement le corps du trigger de résultat afin de conserver les gardes
+locales tout en cessant d’ordonner l’horloge distante du receiver contre celle du Local Lab.
 
 ## 4. Invariants et interdictions
 

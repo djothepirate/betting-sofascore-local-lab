@@ -4,6 +4,8 @@ import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryAcknowledgeme
 import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryError;
 import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryException;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -114,6 +116,29 @@ class J7DeliveryAcknowledgementParserTest {
                 RECEIVED_AT.toString(),
                 canonicalFractional).getBytes(StandardCharsets.UTF_8));
         assertThat(acknowledgement.receivedAt()).isEqualTo(Instant.parse(canonicalFractional));
+
+        assertInvalid(
+                json("IMPORTED").replace(
+                        RECEIVED_AT.toString(),
+                        "2026-09-01T08:00:00.123456789Z"),
+                J7DeliveryError.INVALID_RECEIVED_AT);
+        assertInvalid(
+                json("IMPORTED").replace(
+                        RECEIVED_AT.toString(),
+                        "+10000-01-01T00:00:00Z"),
+                J7DeliveryError.INVALID_RECEIVED_AT);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "0001-01-01T00:00:00Z",
+            "9999-12-31T23:59:59.999999Z"
+    })
+    void acceptsTheExactInclusivePersistenceBoundaryInstants(String boundary) {
+        var acknowledgement = parser.parse(json("IMPORTED").replace(
+                RECEIVED_AT.toString(), boundary).getBytes(StandardCharsets.UTF_8));
+
+        assertThat(acknowledgement.receivedAt()).isEqualTo(Instant.parse(boundary));
     }
 
     private void assertInvalid(String value, J7DeliveryError expectedError) {

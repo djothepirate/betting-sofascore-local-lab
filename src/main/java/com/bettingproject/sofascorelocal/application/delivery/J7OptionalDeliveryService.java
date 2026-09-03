@@ -114,7 +114,7 @@ public final class J7OptionalDeliveryService {
                     new J7DeliveryTransportRequest(
                             identity, artifact.dataSha256(), artifact.content()));
             completion = classify(
-                    identity, artifact.dataSha256(), claim.startedAt(), response);
+                    identity, artifact.dataSha256(), response);
         }
         catch (J7DeliveryTransportException exception) {
             completion = Completion.unknown(
@@ -138,7 +138,6 @@ public final class J7OptionalDeliveryService {
     private Completion classify(
             J7DeliveryIdentity identity,
             String dataSha256,
-            Instant startedAt,
             J7DeliveryTransportResponse response) {
         int status = response.httpStatus();
         if (status >= 200 && status <= 299) {
@@ -157,13 +156,13 @@ public final class J7OptionalDeliveryService {
                 boolean duplicate = status == 200
                         && acknowledgement.status()
                         == J7DeliveryAcknowledgementStatus.DUPLICATE;
-                if (!imported
-                        && !duplicate
-                        || acknowledgement.receivedAt().isBefore(startedAt)
-                        || acknowledgement.receivedAt().isAfter(response.receivedAt())) {
+                if (!imported && !duplicate) {
                     return Completion.unknown(
                             OptionalInt.of(status), "ACK_HTTP_STATUS_MISMATCH");
                 }
+                // receivedAt is declared by the receiver's independent wall clock. In
+                // particular, DUPLICATE reuses the first durable import time. Its canonical
+                // value is retained verbatim but cannot be ordered against local attempt times.
                 return new Completion(
                         imported
                                 ? J7DeliveryState.DELIVERED
