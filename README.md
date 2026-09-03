@@ -5,6 +5,16 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
+[WO-SS-20260903-038](docs/work_orders/active/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md)
+est ouvert sur une branche et un worktree dédiés pour corriger la sémantique temporelle de l’accusé
+J7 côté sender. Le receiver INT-001 réemploie contractuellement, pour `200/DUPLICATE`, le
+`remoteImportId` et le `receivedAt` du premier import durable ; le Local Lab ne doit pas comparer
+cet instant distant à la fenêtre murale de la tentative locale courante. La qualification reste
+hors ligne ou synthétique loopback, sans modification du receiver, sans retry et sans reprise de
+WO-036. Les réseaux fournisseur, receiver réel ou distant, le VPS et la production restent
+interdits ; la permission officielle demeure `NOT_EVIDENCED`.
+
+Le Work Order
 [WO-SS-20260903-037](docs/work_orders/completed/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md)
 est `VALIDATED` avec le résultat `PASS_LOCAL_FAIL_CLOSED`. Le commit runtime
 `f28e4b6954c0fb703923f770ab9156326e212a07` réserve `Referrer-Policy: same-origin` au sous-arbre

@@ -4,6 +4,18 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-038 sémantique temporelle de l’accusé J7
+
+- ouverture de `WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics` depuis le commit exact
+  `4cbcb1eb48344b153cd8d8f392aa805feb84ea32`, dans une branche et un worktree dédiés ;
+- correction autorisée uniquement côté sender Local Lab afin de reconnaître le `receivedAt`
+  durable initial d’un `200/DUPLICATE` et de ne pas imposer d’ordre strict entre les horloges
+  murales distinctes du sender et du receiver ;
+- invariants maintenus : receiver INT-001 inchangé, paires HTTP/ACK et corrélations strictes,
+  aucun retry, réseau réel, donnée fournisseur, VPS ou production ;
+- WO-036 reste arrêté et sa reprise après validation de WO-038 exigera une décision propriétaire
+  séparée et un manifeste neuf.
+
 ### Après J9 — WO-037 frontière d’origine du navigateur J7
 
 - ouverture de `WO-SS-20260903-037-j9-j7-browser-origin-boundary` depuis le commit exact
