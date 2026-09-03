@@ -5,8 +5,8 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
-[WO-SS-20260903-039](docs/work_orders/active/WO-SS-20260903-039-j9-wo036-collision-probe-http-serialization.md)
-est `READY_FOR_OWNER_REVIEW` avec le résultat `PASS_LOCAL_FAIL_CLOSED`. Le commit
+[WO-SS-20260903-039](docs/work_orders/completed/WO-SS-20260903-039-j9-wo036-collision-probe-http-serialization.md)
+est `VALIDATED` avec le résultat `PASS_LOCAL_FAIL_CLOSED`. Le commit
 `90c1354c97f506b8291fedae80b7dc6ed37e2c11` construit la sonde de collision sous forme d’octets
 HTTP/1.1 exacts : média type contractuel sans espace ajouté, en-têtes uniques et bornés,
 `Content-Length` exact, corps byte-identique et TLS direct vers `127.0.0.1:8444`, sans proxy,
@@ -24,6 +24,11 @@ Le cleanup hôte est complet et le PostgreSQL primaire exact reste `running/heal
 a pour SHA-256 `4108f3916f0800c5d1c3616f0c6af866462cda5a188991f15f0305b0ea8d7f50`. WO-036
 reste arrêté : R4 exige une décision propriétaire distincte et un manifeste neuf. Aucun réseau
 fournisseur ou distant, VPS ou production n’est autorisé.
+
+Le propriétaire a validé WO-039, reconnu sa readiness locale et autorisé son déplacement vers les
+Work Orders terminés le `2026-09-03T16:31:41Z`, soit `2026-09-03T18:31:41+02:00` en
+Europe/Paris. Cette validation clôt WO-039 uniquement : WO-036 reste arrêté et son run R4 exige
+toujours une décision propriétaire séparée ainsi qu’un manifeste neuf gelé avant le premier POST.
 
 Le Work Order
 [WO-SS-20260903-038](docs/work_orders/completed/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md)

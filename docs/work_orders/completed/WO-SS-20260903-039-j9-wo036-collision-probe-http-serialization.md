@@ -1,6 +1,6 @@
 # WO-SS-20260903-039 — Sérialisation HTTP de la sonde de collision WO-036
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
 - **Jalon :** après J9 — correction du harnais avant une éventuelle reprise R4 de WO-036
 - **Ouvert le :** 2026-09-03
 - **Ouverture UTC :** `2026-09-03T14:32:05.0141332Z`
@@ -18,6 +18,9 @@
 - **Compatibilité de réponse :** `058c57b05ac4c40e1867af60e76cce6cc2864e67`
 - **Qualification terminée UTC :** `2026-09-03T16:23:25Z`
 - **Qualification terminée Europe/Paris :** `2026-09-03T18:23:25+02:00`
+- **Validation propriétaire UTC :** `2026-09-03T16:31:41Z`
+- **Validation propriétaire Europe/Paris :** `2026-09-03T18:31:41+02:00`
+- **Commit documentaire soumis :** `5a41e9ba468aef387e5a37b0f0fe20e7b0c92460`
 
 Le chemin de worktree court est imposé par la limite de longueur de chemin Windows rencontrée lors
 de la matérialisation initiale. Il ne modifie ni le nom de la branche, ni le commit de base, ni la
@@ -232,15 +235,50 @@ Le rapport autonome est
 empreinte SHA-256 est
 `4108f3916f0800c5d1c3616f0c6af866462cda5a188991f15f0305b0ea8d7f50`.
 
-## 9. État soumis à la revue
+## 9. Décision propriétaire et clôture
+
+Le propriétaire valide le résultat, reconnaît la readiness locale et autorise le déplacement de
+WO-039 vers les Work Orders terminés. Le bloc reçu est conservé sans élargissement :
 
 ```text
-WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+J9_WO039_OWNER_REVIEW_DECISION=VALIDATE
+J9_WO039_WORK_ORDER=WO-SS-20260903-039-j9-wo036-collision-probe-http-serialization
+J9_WO039_PRIMARY_IMPLEMENTATION_COMMIT=90c1354c97f506b8291fedae80b7dc6ed37e2c11
+J9_WO039_RESPONSE_COMPATIBILITY_COMMIT=058c57b05ac4c40e1867af60e76cce6cc2864e67
+J9_WO039_DOCUMENTATION_COMMIT=5a41e9ba468aef387e5a37b0f0fe20e7b0c92460
+J9_WO039_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
+J9_WO039_QUALIFICATION_REPORT_SHA256=4108f3916f0800c5d1c3616f0c6af866462cda5a188991f15f0305b0ea8d7f50
+J9_WO039_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO039_WORK_ORDER_MOVE_TO_COMPLETED=YES
+
+J9_WO036_STATUS=STOPPED_AFTER_CONSUMED_COLLISION_PROBE_PENDING_WO039
+J9_WO036_RESUME_AFTER_WO039_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
+J9_WO036_WORK_ORDER_MOVE_TO_COMPLETED=NO
+J9_WO036_NEXT_FRESH_RUN=R4
+J9_WO036_R4_MANIFEST=REQUIRED_NEW_AND_FROZEN_BEFORE_FIRST_POST
+
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+LIVE_DELIVERY_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+La validation clôt WO-039 uniquement. Le libellé historique de WO-036 reçu dans le bloc est
+conservé comme référence à l’état qui précédait cette clôture ; son état opérationnel reste
+`STOPPED`, sans autorisation R4. Un run R4 exige toujours une décision propriétaire séparée et un
+manifeste neuf gelé avant le premier POST.
+
+```text
+WORK_ORDER_STATUS=VALIDATED
 IMPLEMENTATION_STATUS=COMPLETE
 QUALIFICATION_STATUS=PASS_LOCAL_FAIL_CLOSED
-OWNER_REVIEW_REQUIRED=YES
-WORK_ORDER_MOVE_TO_COMPLETED=NO
-WO036_STATUS=STOPPED_AFTER_CONSUMED_COLLISION_PROBE_PENDING_WO039
+OWNER_REVIEW_REQUIRED=NO
+WORK_ORDER_MOVE_TO_COMPLETED=YES
+WO036_STATUS=STOPPED_PENDING_SEPARATE_R4_OWNER_DECISION
 WO036_RESUME_AUTHORIZED=NO
 WO036_NEXT_FRESH_RUN=R4
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED

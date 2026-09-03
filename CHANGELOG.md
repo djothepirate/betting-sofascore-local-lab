@@ -35,6 +35,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   reste arrêté et R4 exige une décision propriétaire séparée ainsi qu’un manifeste neuf gelé avant
   son premier POST ; publication du rapport de qualification avec le SHA-256
   `4108f3916f0800c5d1c3616f0c6af866462cda5a188991f15f0305b0ea8d7f50`.
+- validation propriétaire de WO-039, readiness locale reconnue et déplacement vers les Work Orders
+  terminés le `2026-09-03T16:31:41Z`, soit `2026-09-03T18:31:41+02:00` en Europe/Paris ; WO-036
+  reste arrêté, sans reprise R4 implicite, et toutes les interdictions fournisseur, receiver
+  distant, VPS et production demeurent effectives.
 
 ### Après J9 — WO-038 sémantique temporelle de l’accusé J7
 
