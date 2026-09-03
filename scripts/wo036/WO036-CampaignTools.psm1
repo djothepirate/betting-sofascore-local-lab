@@ -14,7 +14,7 @@ $script:ExpectedReceiverImplementationCommit = '3920a58c122cbee0fb379781abcd53d3
 $script:ExpectedLocalLabBranch = 'codex/j9-wo036-j7-local-e2e'
 $script:ExpectedReceiverBranch = 'codex/int-001-j7-receiver'
 $script:AllowedPostFreezeManifestPath =
-    'docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R5-20260903.md'
+    'docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R6-20260903.md'
 $script:MaximumImportRouteCalls = 3
 $script:DockerEndpointFileName = 'docker-endpoint.private.txt'
 $script:PreCallLogNames = @(

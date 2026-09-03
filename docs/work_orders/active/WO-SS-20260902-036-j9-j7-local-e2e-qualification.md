@@ -581,11 +581,6 @@ INT001_VALIDATION_AUTHORIZED_BY_THIS_WORK_ORDER=NO
 PRIMARY_DATABASE_PURGE=NO
 ```
 
-L'autorisation de reprendre R6 réactive uniquement l'exception locale synthétique déjà définie par
-WO-036 : le receiver INT-001 peut écouter sur `127.0.0.1:8444` pour les trois appels bornés du run.
-Cette exception ne change pas `REAL_RECEIVER_NETWORK_AUTHORIZED=NO` et n'autorise aucun receiver
-distant ou payload dérivé du fournisseur.
-
 ## 16. Autorisation propriétaire de reprise R4 — état pré-exécution
 
 WO-039 a corrigé et qualifié l'émission byte-exacte de la sonde de collision ainsi que la lecture
@@ -931,4 +926,33 @@ J9_PRODUCTION_AUTHORIZED=NO
 INT001_PULL_REQUEST_AUTHORIZED_BY_THIS_WORK_ORDER=NO
 INT001_VALIDATION_AUTHORIZED_BY_THIS_WORK_ORDER=NO
 PRIMARY_DATABASE_PURGE=NO
+```
+
+L'autorisation de reprendre R6 réactive uniquement l'exception locale synthétique déjà définie par
+WO-036 : le receiver INT-001 peut écouter sur `127.0.0.1:8444` pour les trois appels bornés du run.
+Cette exception ne change pas `REAL_RECEIVER_NETWORK_AUTHORIZED=NO` et n'autorise aucun receiver
+distant ou payload dérivé du fournisseur.
+
+Le premier préflight privé R6 a été retiré le `2026-09-03T21:19:43Z`, avant création du manifeste
+et avec zéro appel d'import. Le gel privé avait correctement établi
+`IMPORT_ROUTE_CALLS_BEFORE_FREEZE=0`, puis le contrôle a identifié que la liste blanche
+post-enregistrement de l'outillage désignait encore le manifeste immuable R5. A, le receiver et la
+préparation ont été arrêtés gracieusement ; le nettoyage possédé a attesté zéro processus,
+listener, conteneur, volume ou certificat résiduel. Le conteneur PostgreSQL primaire exact a été
+redémarré avec la même identité, le même volume et le bind `127.0.0.1:5432`, sans purge ni accès à
+sa base.
+
+Cette racine pré-manifeste ne constitue pas un run de campagne consommé : aucun manifeste R6 n'a
+été créé et aucun `POST` n'a été tenté. Le seul correctif admis avant de recréer l'infrastructure
+est le remplacement exact du pin documentaire R5 par le chemin R6 déjà autorisé, avec son test
+statique correspondant.
+
+```text
+R6_PRE_MANIFEST_PREFLIGHT=DISCARDED_FAIL_CLOSED
+R6_PRE_MANIFEST_IMPORT_ROUTE_CALLS=0
+R6_PRE_MANIFEST_PRIVATE_ROOT_CLEANUP=PASS
+R6_PRE_MANIFEST_PRIMARY_CONTAINER_RESTORED=YES
+R6_PRE_MANIFEST_PRIMARY_DATABASE_TOUCHED=NO
+R6_MANIFEST_PIN_CORRECTION=R5_TO_R6_ONLY
+R6_CAMPAIGN_RUN_CONSUMED=NO
 ```
