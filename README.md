@@ -40,10 +40,22 @@ neuf gelé avant son premier POST.
 
 Le propriétaire a depuis demandé de pousser WO-040 puis de reprendre WO-036. La branche WO-040
 est poussée sur `origin` et sa clôture est intégrée dans WO-036 par fast-forward exact au commit
-`9cf14180404efe899abeb6a7f3f3d6b7f1e6a028`. Le run R5 est autorisé exclusivement pour la campagne
-E2E synthétique Windows/Windows ; un nouveau manifeste R5 doit être gelé et commité avant son
-premier POST. Les réseaux fournisseur et distant, les données dérivées de SofaScore, le VPS, la
-production, la PR et la validation INT-001 restent interdits.
+`9cf14180404efe899abeb6a7f3f3d6b7f1e6a028`. Le run R5 exclusivement synthétique et loopback a
+gelé son manifeste neuf avant le premier POST, puis A a produit `201/IMPORTED` et `DELIVERED`.
+Après l'arrêt gracieux de A, la claim one-shot de démarrage B a été consommée sur l'échec de la
+porte du listener exact `127.0.0.1:8087`, alors que le journal privé expurgé rapporte le démarrage
+Spring/Tomcat. Aucun deuxième POST, duplicate, collision ou retry n'a suivi.
+
+R5 est donc `STOPPED_AFTER_FIRST_IMPORT_AND_CONSUMED_B_START_CLAIM`, avec cause racine
+`NOT_ESTABLISHED`. Le cleanup et les postflights sont verts : Pester `68/68`, Local Lab Surefire
+`1136/0/0/5` et Failsafe `89/0/0/0`, receiver Surefire `297/0/0/0` et Failsafe `98/0/0/0`, zéro
+résidu WO-036 ou Testcontainers, et le PostgreSQL primaire exact est `healthy` sur
+`127.0.0.1:5432`. Le
+[rapport R5](docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R5-STOP-20260903.md), taille
+`12501` octets et SHA-256 `1bee325424931a8ecc6e0b445fbd06efd2e80364a2dad8e038245dd2012c8053`,
+consigne l'arrêt. WO-036 reste actif ; un Work Order distinct doit diagnostiquer l'outillage avant
+toute proposition R6. Les réseaux fournisseur et distant, les données dérivées de SofaScore, le
+VPS, la production, tout nouveau push de WO-036, la PR et la validation INT-001 restent interdits.
 
 Le run neuf R4 de
 [WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
@@ -139,7 +151,7 @@ exécutée, puis arrêtée de façon fail-closed après le deuxième appel recei
 
 Le Work Order
 [WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
-reste actif à `STOPPED_AFTER_CONSUMED_R4_COLLISION_RESPONSE_QUALIFICATION_FAILURE`.
+reste actif à `STOPPED_AFTER_FIRST_IMPORT_AND_CONSUMED_B_START_CLAIM`.
 Le premier import R2
 a produit `201/IMPORTED` et l’état sender `DELIVERED`. La répétition byte-identique a été persistée
 idempotemment par le receiver sous `200/DUPLICATE`, sans second payload ni second outbox, mais le
@@ -165,7 +177,18 @@ le résultat `STOPPED`, SHA-256
 la sérialisation HTTP exacte, puis R4 a été autorisé et exécuté. Son manifeste neuf a été gelé
 avant le premier POST ; les résultats `201` et `200` sont conformes et l'effet receiver de
 divergence est durable, mais le statut du troisième appel n'a pas été capturé côté client. Le
-rapport R4 et la porte R5 sont décrits en tête du présent document. La permission officielle reste
+rapport R4 et la porte R5 sont décrits en tête du présent document. R5 a ensuite été préparé dans
+un environnement neuf et son manifeste a été gelé avant le premier POST au commit
+`7c7505174c6a01da1c0134cd0564bd49529d0445`. A a produit `201/IMPORTED` et `DELIVERED`. Après
+l'arrêt gracieux de A, la claim one-shot de démarrage B a échoué sur la porte du listener exact
+`127.0.0.1:8087` avant toute tentative de duplicate. Le journal privé expurgé indique un démarrage
+Spring/Tomcat terminé, mais la cause du défaut d'observation reste `NOT_ESTABLISHED`; aucun retry,
+second POST ou probe de collision n'a été exécuté. Le cleanup R5 est complet et le PostgreSQL
+primaire exact a retrouvé l'état `healthy`. Le
+[rapport R5](docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R5-STOP-20260903.md) consigne
+le résultat `STOPPED`. Une correction de l'outillage sous Work Order distinct, sa validation, une
+décision propriétaire séparée, un run R6 neuf et un manifeste R6 gelé avant le premier POST sont
+requis. La permission officielle reste
 `NOT_EVIDENCED`; aucune donnée dérivée de SofaScore, aucun réseau fournisseur ou distant, VPS,
 production, push, fusion, PR ou validation INT-001 n’est autorisé.
 

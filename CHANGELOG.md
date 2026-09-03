@@ -4,6 +4,35 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-036 reprise R5 arrêtée avant le duplicate
+
+- manifeste R5 neuf gelé avant le premier POST au commit
+  `7c7505174c6a01da1c0134cd0564bd49529d0445`, SHA-256
+  `c7a7fcee02b5d70b49551509a0773b0b404b369af94c386308838398e51b3ec0`, après qualifications
+  vertes, clone A vers B, six journaux privés expurgés et preuve de zéro appel ;
+- premier import conforme depuis A : `201/IMPORTED`, ledger `DELIVERED`, un seul receipt, payload
+  byte-identique, audit `IMPORTED` et outbox, sans retry ;
+- arrêt fail-closed avant le deuxième POST : après l'arrêt gracieux de A, la claim one-shot de
+  démarrage B a échoué sur la porte du listener exact `127.0.0.1:8087` ; Spring/Tomcat a annoncé
+  son démarrage dans le journal privé, mais l'outillage n'a pas validé le listener dans son délai
+  borné et a nettoyé le processus ;
+- zéro tentative B, duplicate ou collision, cause racine `NOT_ESTABLISHED`, aucun rejeu de la claim
+  consommée et besoin d'un Work Order distinct de diagnostic de l'outillage avant un éventuel R6 ;
+- scan final de huit journaux privés sans occurrence interdite, arrêt gracieux du receiver et
+  cleanup exact à zéro processus, listener, conteneur, volume, certificat ou racine privée R5 ;
+- redémarrage `healthy` du conteneur PostgreSQL primaire exact avec la même identité et le même
+  volume sur `127.0.0.1:5432`, sans accès, recréation ni purge ;
+- publication du rapport
+  `J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R5-STOP-20260903`, résultat `STOPPED`, taille `12501`
+  octets et SHA-256 `1bee325424931a8ecc6e0b445fbd06efd2e80364a2dad8e038245dd2012c8053` ;
+  WO-036 reste actif, R5 est consommé et toute reprise R6 exige une correction qualifiée, une
+  décision propriétaire distincte et un manifeste neuf gelé avant le premier POST ;
+- qualifications post-campagne vertes : Pester `68/68`, Local Lab Surefire `1136/0/0/5` et
+  Failsafe `89/0/0/0` dans les deux parcours Maven, receiver Surefire `297/0/0/0` et Failsafe
+  `98/0/0/0`, puis zéro résidu WO-036 ou Testcontainers au contrôle hôte final ;
+- maintien à `NOT_EVIDENCED` du statut de permission officielle et à `NO` des données dérivées,
+  réseaux fournisseur, receiver réel ou distant, VPS, production, PR et validation INT-001.
+
 ### Après J9 — WO-036 reprise R5 synthétique autorisée
 
 - push de la branche WO-040 validée, puis intégration linéaire de sa clôture dans WO-036 au commit

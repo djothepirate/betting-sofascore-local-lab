@@ -1,6 +1,6 @@
 # WO-SS-20260902-036 — Qualification E2E J7 locale Windows/Windows
 
-- **Statut :** `RESUME_R5_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT`
+- **Statut :** `STOPPED_AFTER_FIRST_IMPORT_AND_CONSUMED_B_START_CLAIM`
 - **Jalon :** après J9 — qualification synthétique de `OPTIONAL_LOCAL_PUSH`
 - **Ouvert le :** 2026-09-02
 - **Ouverture UTC :** `2026-09-02T19:08:46.1623419Z`
@@ -39,16 +39,16 @@ dérivée de SofaScore, aucun appel fournisseur, receiver distant, VPS ou produc
 
 ```text
 WORK_ORDER=WO-SS-20260902-036-j9-j7-local-e2e-qualification
-WORK_ORDER_STATUS=RESUME_R5_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
+WORK_ORDER_STATUS=STOPPED_AFTER_FIRST_IMPORT_AND_CONSUMED_B_START_CLAIM
 BRANCH=codex/j9-wo036-j7-local-e2e
 
 RESUME_RUN=R5
-RESUME_AUTHORIZATION=AUTHORIZED_NOT_YET_CONSUMED
-LOCAL_SYNTHETIC_WINDOWS_E2E_AUTHORIZED=YES
-LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=YES_SYNTHETIC_ONLY
-FRESH_RUN_COMPLETED=NO
-FRESH_RUN_RESULT=PENDING
-FRESH_MANIFEST_STATUS=REQUIRED_BEFORE_FIRST_POST
+RESUME_AUTHORIZATION=CONSUMED
+LOCAL_SYNTHETIC_WINDOWS_E2E_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
+LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
+FRESH_RUN_COMPLETED=YES
+FRESH_RUN_RESULT=STOPPED
+FRESH_MANIFEST_STATUS=FROZEN_AND_COMMITTED_BEFORE_FIRST_POST
 FRESH_MANIFEST_PATH=docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R5-20260903.md
 LOCAL_SYNTHETIC_DATA_ONLY=YES
 REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
@@ -777,6 +777,73 @@ WO040_DOCUMENTATION_COMMIT=8e7441b94d6074fd59d5b18c5cd830c064e88e5f
 WO040_CLOSURE_COMMIT=9cf14180404efe899abeb6a7f3f3d6b7f1e6a028
 WO040_QUALIFICATION_REPORT_SHA256=2eb13aa1825d21eb5c40e97ffebf77246099d781f626591132897c4d128e9aee
 WO040_COMPLETED_WORK_ORDER_SHA256=0fcbd57ee3eac7facf5a638c0d5c86e38eaf9a09b0418e8b7b5b6f2eb915871f
+
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+LIVE_DELIVERY_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+INT001_PULL_REQUEST_AUTHORIZED_BY_THIS_WORK_ORDER=NO
+INT001_VALIDATION_AUTHORIZED_BY_THIS_WORK_ORDER=NO
+PRIMARY_DATABASE_PURGE=NO
+```
+
+## 19. Run R5 — arrêt après le premier import et avant le duplicate
+
+Le run R5 a utilisé une racine privée, une PKI, deux bases isolées, un export J7 synthétique et des
+claims neufs. Son manifeste distinct a été gelé puis commité avant le premier `POST` au commit
+`7c7505174c6a01da1c0134cd0564bd49529d0445`, SHA-256
+`c7a7fcee02b5d70b49551509a0773b0b404b369af94c386308838398e51b3ec0`. Le contrôle post-commit de
+l'outillage gelé a réussi avec zéro appel receiver.
+
+A a ensuite produit `201/IMPORTED` et l'état local `DELIVERED`, avec exactement un receipt, un
+payload byte-identique, un audit `IMPORTED` et un outbox. Après l'arrêt gracieux de A, la commande
+one-shot de démarrage de B a échoué sur la porte du listener exact `127.0.0.1:8087`. Le journal
+privé expurgé rapporte que Spring/Tomcat a annoncé son démarrage, mais la propriété exacte du
+listener n'a pas été validée dans l'enveloppe bornée. Le processus B a été nettoyé ; aucun second
+`POST`, duplicate, probe de collision ou retry n'a été exécuté.
+
+La claim de démarrage B reste consommée. Sa suppression ou son rejeu aurait contredit les invariants
+de la campagne. La cause racine est `NOT_ESTABLISHED` : une course d'observation Windows est une
+hypothèse, pas un fait établi. Un Work Order distinct de diagnostic et qualification de l'outillage
+de démarrage est requis avant toute nouvelle proposition de reprise.
+
+Le receiver a été arrêté gracieusement et le cleanup a établi zéro processus, listener, conteneur,
+volume, certificat ou racine privée R5 résiduel. Le conteneur PostgreSQL primaire exact a été
+redémarré avec la même identité et est `healthy` sur `127.0.0.1:5432`, sans recréation, accès ou
+purge de son volume.
+
+Les postflights sont verts : Pester WO-036 `68/68`, Local Lab Surefire `1136/0/0/5` et Failsafe
+`89/0/0/0` sous `clean verify` puis sous le profil `integration-tests`, receiver Surefire
+`297/0/0/0` et Failsafe `98/0/0/0` sous son profil `integration`, et zéro conteneur ou volume
+WO-036 ou Testcontainers résiduel. Le contrôle hôte final ne voit que le listener primaire
+`127.0.0.1:5432` dans la frontière `8087/8444/5432/5433`.
+
+Le rapport
+`docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R5-STOP-20260903.md`, taille `12501`
+octets et SHA-256 `1bee325424931a8ecc6e0b445fbd06efd2e80364a2dad8e038245dd2012c8053`, classe R5
+`STOPPED`. WO-036 reste actif et aucun résultat favorable n'est attribué aux étapes `200` et
+`409` non exécutées.
+
+```text
+J9_WO036_STATUS=STOPPED_AFTER_FIRST_IMPORT_AND_CONSUMED_B_START_CLAIM
+J9_WO036_EVIDENCE_RESULT=STOPPED
+J9_WO036_EVIDENCE_REPORT_SHA256=1bee325424931a8ecc6e0b445fbd06efd2e80364a2dad8e038245dd2012c8053
+J9_WO036_RESUME_RUN_R5=CONSUMED
+J9_WO036_IMPORT_ROUTE_CALLS=1
+J9_WO036_MAXIMUM_IMPORT_ROUTE_CALLS=3
+J9_WO036_AUTOMATIC_RETRIES=0
+J9_WO036_LOCAL_LAB_A_RESULT=201_IMPORTED_DELIVERED
+J9_WO036_LOCAL_LAB_B_DELIVERY_ATTEMPTS=0
+J9_WO036_COLLISION_PROBE_EXECUTED=NO
+J9_WO036_WORK_ORDER_MOVE_TO_COMPLETED=NO
+J9_WO036_RESUME_AFTER_TOOLING_DIAGNOSIS=REQUIRES_SEPARATE_OWNER_DECISION
+J9_WO036_NEXT_FRESH_RUN=R6
+J9_WO036_R6_MANIFEST=REQUIRED_NEW_AND_FROZEN_BEFORE_FIRST_POST
+J9_LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
 
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 J9_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
