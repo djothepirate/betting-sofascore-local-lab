@@ -24,9 +24,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   conteneur Testcontainers résiduel ;
 - rapport `docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R6-20260903.md`, taille
   `14304` octets et SHA-256 `17a299cef826a4cc8da3fd4ff50a20eec99aee447cc4a0b69fc79914d4ab4280` ;
-- WO-036 reste actif et `READY_FOR_OWNER_REVIEW` ; les permissions officielle, données dérivées,
-  réseaux fournisseur et distant, receiver réel, VPS, production, PR et validation INT-001
-  restent bloqués.
+- validation propriétaire de WO-036, reconnaissance de sa readiness locale et déplacement autorisé
+  vers les Work Orders terminés ;
+- push de la branche et création d'une Pull Request vers `main` autorisés avant tout essai avec un
+  export J7 réel, sans autorisation de fusion ;
+- les permissions officielle, export J7 réel, données dérivées, réseaux fournisseur et distant,
+  receiver réel, VPS, production et validation INT-001 restent bloqués.
 
 ### Après J9 — WO-036 reprise R6 autorisée
 

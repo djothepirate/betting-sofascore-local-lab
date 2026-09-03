@@ -1,6 +1,6 @@
 # WO-SS-20260902-036 — Qualification E2E J7 locale Windows/Windows
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
 - **Jalon :** après J9 — qualification synthétique de `OPTIONAL_LOCAL_PUSH`
 - **Ouvert le :** 2026-09-02
 - **Ouverture UTC :** `2026-09-02T19:08:46.1623419Z`
@@ -37,6 +37,8 @@
 - **Rapport R6 :** `docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R6-20260903.md`
   — 14 304 octets — SHA-256
   `17a299cef826a4cc8da3fd4ff50a20eec99aee447cc4a0b69fc79914d4ab4280`
+- **Validation propriétaire UTC :** `2026-09-03T22:08:32.8181405+00:00`
+- **Validation propriétaire Europe/Paris :** `2026-09-04T00:08:32.8181405+02:00`
 
 ## 1. Autorisation et périmètre
 
@@ -47,7 +49,7 @@ dérivée de SofaScore, aucun appel fournisseur, receiver distant, VPS ou produc
 
 ```text
 WORK_ORDER=WO-SS-20260902-036-j9-j7-local-e2e-qualification
-WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+WORK_ORDER_STATUS=VALIDATED
 BRANCH=codex/j9-wo036-j7-local-e2e
 
 RESUME_RUN=R6
@@ -1026,4 +1028,49 @@ J9_PRODUCTION_AUTHORIZED=NO
 INT001_PULL_REQUEST_AUTHORIZED_BY_THIS_WORK_ORDER=NO
 INT001_VALIDATION_AUTHORIZED_BY_THIS_WORK_ORDER=NO
 PRIMARY_DATABASE_PURGE=NO
+```
+
+## 22. Validation propriétaire et clôture
+
+Le propriétaire valide le run R6 et la readiness locale de WO-036, reconnaît le résultat
+`PASS_LOCAL_SYNTHETIC_E2E` et autorise le déplacement du présent Work Order vers les éléments
+terminés. Les références soumises correspondent aux fichiers gelés : le manifeste est au commit
+`c9ab6075210adb6593457ec6fac0691069ed528d` avec le SHA-256
+`9e61dbcac5c2d13f0755c506ab1ad13df6ceaed1df9b186c21351be6f91e7d68`, et le rapport R6 a
+le SHA-256 `17a299cef826a4cc8da3fd4ff50a20eec99aee447cc4a0b69fc79914d4ab4280`.
+
+La même instruction autorise le push de la branche WO-036 et la création d'une Pull Request vers
+`main`, avant tout essai avec un export J7 réel. Elle ne vaut pas autorisation de fusion, de
+validation d'INT-001, de livraison réelle ou dérivée du fournisseur, de réseau fournisseur ou
+distant, de VPS ou de production.
+
+```text
+J9_WO036_OWNER_REVIEW_DECISION=VALIDATE
+J9_WO036_WORK_ORDER=WO-SS-20260902-036-j9-j7-local-e2e-qualification
+J9_WO036_R6_MANIFEST_COMMIT=c9ab6075210adb6593457ec6fac0691069ed528d
+J9_WO036_R6_MANIFEST_SHA256=9e61dbcac5c2d13f0755c506ab1ad13df6ceaed1df9b186c21351be6f91e7d68
+J9_WO036_DOCUMENTATION_COMMIT=31ecfbbeadf5e81f5c0bb9667588c24341716a7a
+J9_WO036_EVIDENCE_RESULT=PASS
+J9_WO036_QUALIFICATION_RESULT=PASS_LOCAL_SYNTHETIC_E2E
+J9_WO036_QUALIFICATION_REPORT_SHA256=17a299cef826a4cc8da3fd4ff50a20eec99aee447cc4a0b69fc79914d4ab4280
+J9_WO036_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO036_WORK_ORDER_MOVE_TO_COMPLETED=YES
+
+J9_LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=NO_CAMPAIGN_COMPLETE
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+LIVE_DELIVERY_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+INT001_PULL_REQUEST_AUTHORIZED=NO
+INT001_VALIDATION_AUTHORIZED=NO
+
+J9_WO036_STATUS=VALIDATED
+J9_WO036_PUSH_AUTHORIZED=YES
+J9_WO036_PULL_REQUEST_TO_MAIN_AUTHORIZED=YES
+J9_WO036_MERGE_AUTHORIZED=NO
+J9_REAL_J7_EXPORT_TEST_AUTHORIZED=NO
 ```

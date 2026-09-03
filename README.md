@@ -5,7 +5,7 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le run neuf R6 de
-[WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
+[WO-SS-20260902-036](docs/work_orders/completed/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
 a qualifié le flux synthétique Windows/Windows complet. Son manifeste a été gelé et commité avant
 le premier `POST` au commit `c9ab6075210adb6593457ec6fac0691069ed528d`, SHA-256
 `9e61dbcac5c2d13f0755c506ab1ad13df6ceaed1df9b186c21351be6f91e7d68`. La séquence réelle
@@ -21,9 +21,10 @@ receiver Surefire `297/0/0/0` et Failsafe `98/0/0/0`. Le
 `14304` octets et SHA-256 `17a299cef826a4cc8da3fd4ff50a20eec99aee447cc4a0b69fc79914d4ab4280`, classe la
 preuve `PASS_LOCAL_SYNTHETIC_E2E`.
 
-WO-036 est `READY_FOR_OWNER_REVIEW` et reste actif. L'exception loopback synthétique est refermée.
-Aucun réseau fournisseur, payload dérivé, receiver réel ou distant, VPS, production, PR ou
-validation INT-001 n'est autorisé.
+Le propriétaire a validé WO-036, reconnu sa readiness locale et autorisé son classement, le push
+de sa branche ainsi que la création d'une Pull Request vers `main`. L'exception loopback
+synthétique est refermée. Aucun export J7 réel, réseau fournisseur, payload dérivé, receiver réel
+ou distant, VPS, production, fusion ou validation INT-001 n'est autorisé par cette validation.
 
 Le Work Order runtime
 [WO-SS-20260903-041](docs/work_orders/completed/WO-SS-20260903-041-j9-local-labb-readiness-listener-gate.md)
@@ -100,7 +101,7 @@ toute proposition R6. Les réseaux fournisseur et distant, les données dérivé
 VPS, la production, tout nouveau push de WO-036, la PR et la validation INT-001 restent interdits.
 
 Le run neuf R4 de
-[WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
+[WO-SS-20260902-036](docs/work_orders/completed/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
 a été gelé avant son premier POST au commit `e12500dc8af9133b254bfe075d74e979cad472a6`, manifeste
 SHA-256 `ff73efe0f9840941c6b281cdba38e21cda63e379acd0154f673ef8d7624b39ef`, puis exécuté avec un
 export J7 entièrement synthétique. A a produit `201/IMPORTED` et `DELIVERED`; B a produit
@@ -192,7 +193,7 @@ pour une campagne synthétique Windows/Windows neuve et un manifeste distinct. C
 exécutée, puis arrêtée de façon fail-closed après le deuxième appel receiver.
 
 Le Work Order
-[WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
+[WO-SS-20260902-036](docs/work_orders/completed/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
 reste actif à `STOPPED_AFTER_FIRST_IMPORT_AND_CONSUMED_B_START_CLAIM`.
 Le premier import R2
 a produit `201/IMPORTED` et l’état sender `DELIVERED`. La répétition byte-identique a été persistée
