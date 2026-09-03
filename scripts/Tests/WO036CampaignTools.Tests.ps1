@@ -102,6 +102,12 @@ Describe 'WO-036 fail-closed runtime invariants' {
         $moduleText | Should Match 'javaSha256'
     }
 
+    It 'pins the Local Lab sender provenance to the qualified WO-038 implementation' {
+        $moduleText | Should Match ([regex]::Escape(
+            "`$script:ExpectedLocalLabSenderCommit = '3a0c297a5151c572417b4f2f12bb5c3ed216172f'"))
+        $moduleText | Should Not Match 'f5a27887b7db43576eb608d564c245c8cca3a602'
+    }
+
     It 'reads active redirected logs through a stable bounded shared snapshot' {
         $moduleText | Should Match 'function Read-WO036StableActiveLogBytes'
         $moduleText | Should Match '\[IO\.FileShare\]::ReadWrite'

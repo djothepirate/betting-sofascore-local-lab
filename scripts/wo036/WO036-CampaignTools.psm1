@@ -8,7 +8,7 @@ $script:ReceiverPath = '/api/imports/sofascore/j7-canonical-events'
 $script:RequestMediaType =
     'application/vnd.betting-project.j7-canonical-event+json;version=1.0'
 $script:AckMediaType = 'application/vnd.betting-project.j7-delivery-ack+json;version=1.0'
-$script:ExpectedLocalLabSenderCommit = 'f5a27887b7db43576eb608d564c245c8cca3a602'
+$script:ExpectedLocalLabSenderCommit = '3a0c297a5151c572417b4f2f12bb5c3ed216172f'
 $script:ExpectedReceiverHeadCommit = 'b6a093ab4d3358f23a59b65b68a3eb720494bcba'
 $script:ExpectedReceiverImplementationCommit = '3920a58c122cbee0fb379781abcd53d3eaa0f70d'
 $script:ExpectedLocalLabBranch = 'codex/j9-wo036-j7-local-e2e'
