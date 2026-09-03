@@ -6,13 +6,18 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 Le Work Order
 [WO-SS-20260903-038](docs/work_orders/active/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md)
-est ouvert sur une branche et un worktree dédiés pour corriger la sémantique temporelle de l’accusé
-J7 côté sender. Le receiver INT-001 réemploie contractuellement, pour `200/DUPLICATE`, le
-`remoteImportId` et le `receivedAt` du premier import durable ; le Local Lab ne doit pas comparer
-cet instant distant à la fenêtre murale de la tentative locale courante. La qualification reste
-hors ligne ou synthétique loopback, sans modification du receiver, sans retry et sans reprise de
-WO-036. Les réseaux fournisseur, receiver réel ou distant, le VPS et la production restent
-interdits ; la permission officielle demeure `NOT_EVIDENCED`.
+reste actif à `READY_FOR_OWNER_REVIEW` avec le résultat `PASS_LOCAL_FAIL_CLOSED` au commit
+`3a0c297a5151c572417b4f2f12bb5c3ed216172f`. Le sender ne compare plus le `receivedAt` durable
+du receiver à la fenêtre murale de sa tentative locale ; il conserve la valeur exacte tout en
+exigeant sa forme UTC canonique, sa représentation à la microseconde dans les années
+`0001..9999`, les paires HTTP/ACK strictes et toutes les corrélations. La migration append-only V30
+ne réécrit ni V29 ni les données existantes et maintient uniquement les gardes d’ordre locales. Les
+commandes Maven sont vertes avec Surefire `1136/0/0/5` et Failsafe `89/0/0/0`. Le
+[rapport WO-038](docs/validation/J9-WO038-J7-ACK-RECEIPT-TIME-SEMANTICS-QUALIFICATION-20260903.md)
+a pour empreinte `QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a`. La qualification est
+hors ligne ou synthétique loopback, sans modification ni appel du receiver INT-001, sans retry et
+sans reprise de WO-036. Les réseaux fournisseur, receiver réel ou distant, le VPS et la production
+restent interdits ; la permission officielle demeure `NOT_EVIDENCED`.
 
 Le Work Order
 [WO-SS-20260903-037](docs/work_orders/completed/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md)
@@ -48,9 +53,11 @@ SHA-256 `219f54f2b429b1eaea04c920e55cc87d33f9c5644697129e6ff96fc9cad19062`, éta
 réemploie conformément à son contrat l’instant durable du premier import, tandis que le sender exige
 à tort que cet instant soit postérieur au début de la seconde tentative. Aucun retry ni probe `409`
 n’a été exécuté. Le cleanup est complet et le PostgreSQL primaire exact a été redémarré `healthy`.
-Un Work Order runtime distinct est requis avant toute nouvelle reprise de WO-036. La permission
-officielle reste `NOT_EVIDENCED` ; aucune donnée dérivée de SofaScore, aucun réseau fournisseur ou
-distant, VPS, production, push ou PR INT-001 n’est autorisé par cette campagne.
+WO-038 fournit désormais le correctif runtime qualifié, mais sa validation propriétaire, une
+décision de reprise séparée et un manifeste neuf restent obligatoires avant toute nouvelle reprise
+de WO-036. La permission officielle reste `NOT_EVIDENCED` ; aucune donnée dérivée de SofaScore,
+aucun réseau fournisseur ou distant, VPS, production, push ou PR INT-001 n’est autorisé par cette
+campagne.
 
 Le Work Order
 [WO-SS-20260902-035](docs/work_orders/completed/WO-SS-20260902-035-j9-real-j7-delivery-sender.md)

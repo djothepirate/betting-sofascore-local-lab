@@ -1,6 +1,6 @@
 # WO-SS-20260903-038 — Sémantique temporelle de l’accusé J7
 
-- **Statut :** `IN_PROGRESS`
+- **Statut :** `READY_FOR_OWNER_REVIEW`
 - **Jalon :** après J9 — correction runtime préalable à une nouvelle reprise de WO-036
 - **Ouvert le :** 2026-09-03
 - **Ouverture UTC :** `2026-09-03T11:11:54.5206596Z`
@@ -8,6 +8,12 @@
 - **Branche :** `codex/j9-wo038-j7-ack-receipt-time-semantics`
 - **Worktree :** `.tmp/j9-wo038-j7-ack-receipt-time-semantics`
 - **Base locale d’ouverture vérifiée :** `4cbcb1eb48344b153cd8d8f392aa805feb84ea32`
+- **Commit d’ouverture :** `2b95e3885cad2f8729d9e429192c7a5171bb80a1`
+- **Commit d’implémentation qualifié :** `3a0c297a5151c572417b4f2f12bb5c3ed216172f`
+- **Rapport de qualification :**
+  `docs/validation/J9-WO038-J7-ACK-RECEIPT-TIME-SEMANTICS-QUALIFICATION-20260903.md`
+- **SHA-256 du rapport de qualification :**
+  `QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a`
 - **Work Order bloqué :** `WO-SS-20260902-036-j9-j7-local-e2e-qualification`
 - **Rapport du constat :**
   `docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903.md`
@@ -53,11 +59,11 @@ La reprise R2 de WO-036 a établi une séquence receiver correcte : le premier e
 second événement d’outbox. Conformément au contrat INT-001, l’accusé duplicate réemploie le
 `remoteImportId` et le `receivedAt` du premier import durable.
 
-Le sender Local Lab reconnaît la paire `200/DUPLICATE`, corrèle correctement le protocole,
-l’export et les hashes, et valide la forme canonique non nulle de l’identité distante. Il exige
-cependant actuellement que `receivedAt` soit compris
-entre le début et la fin de la tentative locale courante. L’instant durable initial est donc rejeté
-par construction lors de la seconde tentative et reçoit le code inexact
+Avant correction, le sender Local Lab reconnaissait la paire `200/DUPLICATE`, corrélait
+correctement le protocole, l’export et les hashes, et validait la forme canonique non nulle de
+l’identité distante. Il exigeait cependant que `receivedAt` soit compris entre le début et la fin
+de la tentative locale courante. L’instant durable initial était donc rejeté par construction lors
+de la seconde tentative et recevait le code inexact
 `ACK_HTTP_STATUS_MISMATCH`.
 
 Cette borne compare en outre des horloges murales distinctes : `startedAt` et la réception HTTP
@@ -142,9 +148,9 @@ loopback utilise uniquement des données synthétiques et ne vaut pas reprise de
 
 ## 6. Critères de sortie
 
-Le Work Order pourra être soumis à la revue propriétaire avec
-`PASS_LOCAL_FAIL_CLOSED` seulement si le correctif reste borné au sender, que tous les cas ci-dessus
-sont verts, que les preuves sont expurgées et qu’un rapport autonome avec SHA-256 est versionné.
+Le Work Order est soumis à la revue propriétaire avec `PASS_LOCAL_FAIL_CLOSED` après confirmation
+que le correctif reste borné au sender, que tous les cas ci-dessus sont verts, que les preuves sont
+expurgées et qu’un rapport autonome destiné à être référencé par son SHA-256 est versionné.
 
 WO-038 restera actif à `READY_FOR_OWNER_REVIEW` jusqu’à une validation explicite. Même après cette
 validation, WO-036 restera
@@ -152,11 +158,152 @@ validation, WO-036 restera
 décision propriétaire ainsi qu’un manifeste de campagne neuf.
 
 ```text
-WORK_ORDER_STATUS=IN_PROGRESS
-IMPLEMENTATION_STATUS=AUTHORIZED
-QUALIFICATION_STATUS=NOT_RUN
+WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW
+IMPLEMENTATION_STATUS=COMPLETED
+QUALIFICATION_STATUS=PASS_LOCAL_FAIL_CLOSED
+QUALIFICATION_REPORT=docs/validation/J9-WO038-J7-ACK-RECEIPT-TIME-SEMANTICS-QUALIFICATION-20260903.md
+QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a
+IMPLEMENTATION_COMMIT=3a0c297a5151c572417b4f2f12bb5c3ed216172f
 OWNER_REVIEW_REQUIRED=YES
+OWNER_REVIEW_DECISION=NOT_RECEIVED
+WORK_ORDER_MOVE_TO_COMPLETED=NO
+WORK_ORDER_LOCATION=docs/work_orders/active/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md
+RECEIVER_RUNTIME_CHANGE=NO
+AUTOMATIC_RETRY=0
 WO036_STATUS=STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION
 WO036_RESUME_AFTER_WO038_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
 WO036_WORK_ORDER_MOVE_TO_COMPLETED=NO
+LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
 ```
+
+## 7. Implémentation réalisée
+
+Le commit `3a0c297a5151c572417b4f2f12bb5c3ed216172f` supprime uniquement l’ordre entre
+`ack.receivedAt` et les instants locaux de tentative. Les paires contractuelles
+`201/IMPORTED` et `200/DUPLICATE`, les corrélations de protocole, d’export et de hashes, la forme
+canonique de l’identité distante et toutes les classifications fail-closed restent exigées.
+
+Une politique de domaine commune borne `receivedAt` aux instants UTC canoniques exactement
+persistables à la microseconde et aux années ISO non étendues `0001..9999`. Le ledger Java
+conserve l’ordre local `completedAt >= startedAt` et persiste l’instant receiver sans substitution.
+
+La migration append-only V30 remplace uniquement le corps du trigger de résultat et ses
+commentaires. Elle conserve les gardes d’état `IN_FLIGHT`, de dernière tentative et d’ordre local,
+retire les deux comparaisons inter-horloges, puis refuse les sentinelles PostgreSQL infinies et les
+dates hors de la plage canonique. Les scripts J6 exigent désormais le schéma courant V30.
+
+```text
+V29_FILE=src/main/resources/db/migration/V29__j9_optional_local_push_delivery_ledger.sql
+V29_BYTES=13569
+V29_SHA256=49f32e88af2ed0115fa9cc5587913f4f0ed7576d49eb1bd4634a0dd212416bd5
+V29_REWRITTEN=NO
+V30_FILE=src/main/resources/db/migration/V30__j9_j7_ack_receipt_time_semantics.sql
+V30_BYTES=1804
+V30_SHA256=4fdb5e8ed1865d0b1fb0b028653f5600e70fa96148c4da102e0371b1ad2d2967
+RECEIVER_RUNTIME_CHANGED=NO
+ACK_PROTOCOL_CHANGED=NO
+AUTOMATIC_RETRY_ADDED=NO
+```
+
+## 8. Décision factuelle et classifications
+
+| Option examinée | Conséquence | Décision |
+|---|---|---|
+| borner ou remplacer l’instant receiver par l’horloge locale | perd la preuve distante exacte | `REJECTED` |
+| ajouter une tolérance fixe entre les deux horloges | ajoute un seuil arbitraire sans contrat de synchronisation | `REJECTED` |
+| lever seulement la borne basse de `DUPLICATE` | laisse d’autres succès dépendre d’une horloge étrangère | `REJECTED` |
+| supprimer uniquement l’ordre inter-horloges et garder les validations structurelles et locales | respecte le contrat receiver sans affaiblir le fail-closed | `SELECTED` |
+
+Après correction :
+
+| Réponse | Résultat sender | Code sûr |
+|---|---|---|
+| `201/IMPORTED` strict avec instant receiver indépendant | `DELIVERED` | `HTTP_201_IMPORTED` |
+| `200/DUPLICATE` strict avec instant durable initial | `DUPLICATE_CONFIRMED` | `HTTP_DUPLICATE_CONFIRMED` |
+| paire HTTP/statut non contractuelle | `UNKNOWN_RECONCILIATION_REQUIRED` | `ACK_HTTP_STATUS_MISMATCH` |
+| instant non canonique ou non exactement persistable | `UNKNOWN_RECONCILIATION_REQUIRED` | `ACK_INVALID_OR_MISMATCHED` |
+
+## 9. Qualification et compatibilité V29→V30
+
+Le test d’upgrade isolé part d’une base V29 préremplie. Après V30, l’entrée Flyway V29 reste
+identique, une seule migration supplémentaire est enregistrée, et les comptes ainsi que
+l’empreinte agrégée des trois tables du ledger sont inchangés. Le nouveau trigger conserve les
+gardes locales et l’append-only, accepte un instant receiver antérieur d’un jour et le relit
+exactement, puis refuse `infinity`, `-infinity`, une année antérieure à `0001` et l’année `10000`.
+
+Les tests de domaine, parsing et service couvrent les bornes inclusives `0001` et `9999`, le refus
+d’une précision nanoseconde, des instants receiver `1900` et `2100`, un duplicate historique, les
+mauvaises paires et l’absence de retry. Le test E2E mTLS synthétique couvre séparément un import
+nominal, puis un effet durable suivi d’une réponse inconnue et d’une relance manuelle donnant
+`200/DUPLICATE` : deux requêtes produisent un seul effet receiver, avec identité, instant et SHA de
+l’ACK persistés exactement.
+
+```text
+MVNW_CLEAN_VERIFY=PASS
+SUREFIRE_TESTS=1136
+SUREFIRE_FAILURES=0
+SUREFIRE_ERRORS=0
+SUREFIRE_SKIPPED=5
+MVNW_INTEGRATION_TESTS_VERIFY=PASS
+FAILSAFE_TESTS=89
+FAILSAFE_FAILURES=0
+FAILSAFE_ERRORS=0
+FAILSAFE_SKIPPED=0
+TARGETED_WO038_TESTS=PASS
+DOCKER_COMPOSE_CONFIG_QUIET=PASS
+POWERSHELL_SCRIPT_PARSE_ERRORS=0
+MODIFIED_TEXT_UTF8_STRICT=23/23
+MODIFIED_TEXT_UTF8_BOM_COUNT=0
+MODIFIED_TEXT_NUL_COUNT=0
+ADDED_SECRET_PATTERN_HITS=0
+WO036_PROTECTED_DIFF_LINES=0
+SERVER_ADDRESS_DEFAULT=127.0.0.1
+PROVIDER_DEFAULT_FLAGS=BLOCKED
+REAL_RECEIVER_DEFAULT_FLAGS=BLOCKED
+TESTCONTAINERS_RESIDUALS=0
+JAVA_PROCESS_RESIDUALS=0
+BROWSER_PROCESS_RESIDUALS=0
+PROVIDER_CALLS=0
+INT001_RUNTIME_CALLS=0
+REAL_RECEIVER_CALLS=0
+REMOTE_RECEIVER_CALLS=0
+```
+
+La preuve autonome est consignée dans
+`docs/validation/J9-WO038-J7-ACK-RECEIPT-TIME-SEMANTICS-QUALIFICATION-20260903.md`. Son empreinte
+sera calculée sur les octets finalisés avant le commit documentaire.
+
+## 10. Revue propriétaire requise
+
+```text
+J9_WO038_OWNER_REVIEW_DECISION=<VALIDATE|REJECT>
+J9_WO038_WORK_ORDER=WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics
+J9_WO038_IMPLEMENTATION_COMMIT=3a0c297a5151c572417b4f2f12bb5c3ed216172f
+J9_WO038_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
+J9_WO038_QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a
+J9_WO038_LOCAL_READINESS_ACKNOWLEDGED=<YES|NO>
+J9_WO038_WORK_ORDER_MOVE_TO_COMPLETED=<YES|NO>
+
+J9_WO036_STATUS=STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION
+J9_WO036_RESUME_AFTER_WO038_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
+J9_WO036_WORK_ORDER_MOVE_TO_COMPLETED=NO
+J9_LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
+
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+Le résultat `PASS_LOCAL_FAIL_CLOSED` ne préremplit aucune décision propriétaire. WO-038 reste
+actif ; WO-036 demeure arrêté et aucune porte réseau ou de production n’est ouverte.

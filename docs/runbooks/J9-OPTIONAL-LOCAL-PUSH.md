@@ -8,7 +8,8 @@ la préparation runtime de WO-035. Il ne permet aucune livraison de données dé
 essai avant receiver et la validation de WO-037, sa reprise a été autorisée puis consommée par un
 run neuf. Cette reprise s’est arrêtée après `201/IMPORTED`, puis `200/DUPLICATE` côté receiver : le
 sender a rejeté l’instant durable initial de l’ACK duplicate. Aucun nouvel échange n’est autorisé
-avant validation de la correction WO-038 et nouvelle décision propriétaire.
+avant validation propriétaire de la correction WO-038, désormais qualifiée localement, et nouvelle
+décision de reprise.
 
 ```text
 RUNBOOK_SCOPE=WO027_OFFLINE_LOOPBACK_WO035_RUNTIME_WO036_SYNTHETIC_E2E_WO037_BROWSER_BOUNDARY_AND_WO038_ACK_TIME
@@ -22,12 +23,17 @@ WO036_SECOND_ATTEMPT_RESULT=STOPPED_AFTER_200_DUPLICATE_BEFORE_409
 WO037_BROWSER_ORIGIN_BOUNDARY_STATUS=VALIDATED
 WO037_BROWSER_ORIGIN_BOUNDARY_RESULT=PASS_LOCAL_FAIL_CLOSED
 WO037_OWNER_REVIEW_DECISION=VALIDATE
-WO038_ACK_RECEIPT_TIME_STATUS=IN_PROGRESS
+WO038_ACK_RECEIPT_TIME_STATUS=READY_FOR_OWNER_REVIEW
+WO038_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
+WO038_OWNER_REVIEW_REQUIRED=YES
 WO038_RECEIVER_RUNTIME_CHANGE=NO
+WO038_QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a
 WO036_RESUME_AFTER_WO037_VALIDATION=CONSUMED_BY_STOPPED_R2
 WO036_RESUME_MANIFEST_STATUS=FROZEN_AND_CONSUMED
 LOCAL_SYNTHETIC_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
+PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
 REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
 PROVIDER_NETWORK_AUTHORIZED=NO
 LIVE_DELIVERY_AUTHORIZED=NO
 VPS_DEPLOYMENT_AUTHORIZED=NO
@@ -47,7 +53,9 @@ contournement pour « essayer » le parcours.
 - [Schéma export J7](../../src/main/resources/schemas/j7-canonical-event-export-v1.schema.json) ;
 - [Runbook export J7](J7-CANONICAL-EVENT-EXPORT.md) ;
 - [Work Order WO-027](../work_orders/completed/WO-SS-20260901-027-optional-local-push-implementation.md) ;
-- [Work Order WO-035](../work_orders/completed/WO-SS-20260902-035-j9-real-j7-delivery-sender.md).
+- [Work Order WO-035](../work_orders/completed/WO-SS-20260902-035-j9-real-j7-delivery-sender.md) ;
+- [Work Order WO-038](../work_orders/active/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md) ;
+- [qualification WO-038](../validation/J9-WO038-J7-ACK-RECEIPT-TIME-SEMANTICS-QUALIFICATION-20260903.md).
 
 En cas de divergence, ADR-SS-003 et le Work Order bornent l’autorisation ; le contrat v1.0 borne le
 format. Une qualification ne doit pas assouplir un contrôle pour devenir verte.
@@ -588,12 +596,12 @@ antérieur au claim courant. La série s’est arrêtée sans retry et sans coll
 
 Le rapport distinct
 `J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903` établit la conformité idempotente du
-receiver, l’identité byte-à-byte, l’outbox unique et le cleanup complet. Il reste à corriger sous un
-Work Order runtime distinct la sémantique temporelle du sender. WO-038 porte ce correctif sans
-reprendre la campagne ; après sa validation éventuelle, il restera à obtenir une nouvelle décision
-de reprise et à rejouer une campagne intégrale avec un manifeste neuf. Aucune autorisation du run
-consommé ne peut être réutilisée. Aucun appel SofaScore, export dérivé fournisseur, receiver distant,
-VPS ou production n’est autorisé.
+receiver, l’identité byte-à-byte, l’outbox unique et le cleanup complet. WO-038 porte le correctif
+temporel du sender sans reprendre la campagne ; il est qualifié localement à
+`PASS_LOCAL_FAIL_CLOSED` et reste à `READY_FOR_OWNER_REVIEW`. Après sa validation éventuelle, il
+restera à obtenir une nouvelle décision de reprise et à rejouer une campagne intégrale avec un
+manifeste neuf. Aucune autorisation du run consommé ne peut être réutilisée. Aucun appel SofaScore,
+export dérivé fournisseur, receiver distant, VPS ou production n’est autorisé.
 
 Bloc de clôture attendu pour WO-035 :
 

@@ -8,13 +8,36 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 - ouverture de `WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics` depuis le commit exact
   `4cbcb1eb48344b153cd8d8f392aa805feb84ea32`, dans une branche et un worktree dédiés ;
-- correction autorisée uniquement côté sender Local Lab afin de reconnaître le `receivedAt`
-  durable initial d’un `200/DUPLICATE` et de ne pas imposer d’ordre strict entre les horloges
-  murales distinctes du sender et du receiver ;
-- invariants maintenus : receiver INT-001 inchangé, paires HTTP/ACK et corrélations strictes,
-  aucun retry, réseau réel, donnée fournisseur, VPS ou production ;
-- WO-036 reste arrêté et sa reprise après validation de WO-038 exigera une décision propriétaire
-  séparée et un manifeste neuf.
+- cause bornée aux comparaisons du `receivedAt` durable, déclaré par le receiver, avec les instants
+  de tentative issus de l’horloge distincte du Local Lab ; aucune tolérance inter-horloges ne peut
+  fournir un ordre causal contractualisé ;
+- correctif qualifié au commit `3a0c297a5151c572417b4f2f12bb5c3ed216172f` : le sender ne
+  compare plus ces horloges, persiste l’instant receiver exact et conserve les paires
+  `201/IMPORTED` et `200/DUPLICATE`, les corrélations strictes et l’ordre local
+  `completedAt >= startedAt` ;
+- ajout d’une politique commune de représentation de `receivedAt` : UTC canonique avec suffixe
+  `Z`, précision maximale à la microseconde et année ISO non étendue `0001..9999` ; les valeurs
+  trop précises ou hors plage restent classées fail-closed sans preuve ACK ni retry ;
+- ajout de la migration append-only V30, limitée au remplacement du trigger de résultat : V29
+  reste byte-identique à `13 569` octets et SHA-256
+  `49f32e88af2ed0115fa9cc5587913f4f0ed7576d49eb1bd4634a0dd212416bd5`, tandis que V30 fait
+  `1 804` octets et porte le SHA-256
+  `4fdb5e8ed1865d0b1fb0b028653f5600e70fa96148c4da102e0371b1ad2d2967` ;
+- preuve d’upgrade V29→V30 sur une base isolée : entrée Flyway V29, comptes et empreinte du ledger
+  inchangés, une seule migration appliquée, gardes locales et append-only conservés, instant
+  receiver antérieur relu exactement, sentinelles infinies et années hors plage refusées ;
+- qualifications vertes : Surefire `1136/0/0/5`, Failsafe `89/0/0/0`, tests ciblés domaine,
+  service, runtime, ledger, Flyway et E2E mTLS synthétique, Compose silencieux, parsing PowerShell,
+  UTF-8 `23/23`, secrets, loopback, flags bloquants et cleanup ;
+- publication du rapport
+  `J9-WO038-J7-ACK-RECEIPT-TIME-SEMANTICS-QUALIFICATION-20260903` avec le résultat
+  `PASS_LOCAL_FAIL_CLOSED` et l’empreinte
+  `QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a` ; WO-038 reste actif à
+  `READY_FOR_OWNER_REVIEW` ;
+- invariants maintenus : receiver INT-001 inchangé et non appelé, aucun retry, réseau réel, donnée
+  fournisseur, VPS ou production ; WO-036 reste
+  `STOPPED_AFTER_DUPLICATE_ACK_PENDING_DISTINCT_RUNTIME_CORRECTION`, et sa reprise après une
+  éventuelle validation de WO-038 exigera une décision propriétaire séparée et un manifeste neuf.
 
 ### Après J9 — WO-037 frontière d’origine du navigateur J7
 
