@@ -4,6 +4,36 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-036 reprise R4 synthétique arrêtée après divergence durable
+
+- gel du manifeste R4 avant le premier POST au commit
+  `e12500dc8af9133b254bfe075d74e979cad472a6`, SHA-256
+  `ff73efe0f9840941c6b281cdba38e21cda63e379acd0154f673ef8d7624b39ef`, avec export, PKI,
+  bases isolées et processus neufs, exclusivement synthétiques et loopback ;
+- qualification de A sous `201/IMPORTED` et `DELIVERED`, puis de B sous `200/DUPLICATE` et
+  `DUPLICATE_CONFIRMED`, avec un seul receipt, payload et outbox ;
+- troisième et dernier appel consommé : le receiver a persisté exactement un audit corrélé
+  `DIVERGENCE_REJECTED/EXPORT_ID_DIVERGENCE`, sans second receipt, payload ou outbox, mais le
+  client de campagne n'a conservé ni statut HTTP ni code sûr et a classé la claim
+  `FAILED_OR_UNKNOWN_CONSUMED` ; aucun retry, rejeu ou quatrième appel ;
+- correction factuelle de l'hypothèse transitoire de timeout : l'intervalle exact entre claim et
+  achèvement est `539.19 ms`, ce qui exclut le timeout configuré ; la cause de non-capture reste
+  `NOT_ESTABLISHED` et aucun défaut du sender Java, du receiver, de WO-038 ou de la sérialisation
+  de requête WO-039 n'est démontré ;
+- arrêt gracieux des trois applications, scan de huit journaux privés sans occurrence interdite,
+  cleanup exact à zéro résidu et redémarrage `running/healthy` du PostgreSQL primaire exact sur
+  `127.0.0.1:5432`, sans recréation ni purge ;
+- postflights verts : Pester `62/62`, Local Lab Surefire `1136/0/0/5` et Failsafe `89/0/0/0`
+  dans les deux parcours Maven, receiver Surefire `297/0/0/0` et Failsafe `98/0/0/0`, sans
+  résidu Testcontainers ;
+- publication du rapport
+  `J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R4-STOP-20260903`, résultat `STOPPED`, SHA-256
+  `16e9f85e12109f2709146312410bbe2a5e040c4f176c2d5596746aa2b70076b5` ; WO-036 reste actif et
+  exige un Work Order de harnais distinct, sa validation, une décision propriétaire séparée, un
+  run R5 neuf et un manifeste R5 gelé avant son premier POST ;
+- maintien de `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED` et des interdictions de donnée dérivée,
+  réseau fournisseur ou distant, VPS, production, push, fusion, PR ou validation INT-001.
+
 ### Après J9 — WO-039 sérialisation HTTP de la sonde de collision WO-036
 
 - intégration linéaire de la clôture validée WO-039 dans la branche WO-036, puis autorisation

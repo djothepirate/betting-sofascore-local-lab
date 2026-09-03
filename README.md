@@ -4,6 +4,26 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
+Le run neuf R4 de
+[WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
+a été gelé avant son premier POST au commit `e12500dc8af9133b254bfe075d74e979cad472a6`, manifeste
+SHA-256 `ff73efe0f9840941c6b281cdba38e21cda63e379acd0154f673ef8d7624b39ef`, puis exécuté avec un
+export J7 entièrement synthétique. A a produit `201/IMPORTED` et `DELIVERED`; B a produit
+`200/DUPLICATE` et `DUPLICATE_CONFIRMED`. Le troisième et dernier appel a atteint la branche
+receiver de divergence et persisté l'audit `DIVERGENCE_REJECTED/EXPORT_ID_DIVERGENCE`, sans
+second receipt, payload ou outbox. Le client de campagne n'a toutefois capturé ni statut HTTP ni
+code sûr : sa claim est consommée sous `FAILED_OR_UNKNOWN_CONSUMED`, sans retry ni rejeu.
+
+R4 est donc `STOPPED_AFTER_CONSUMED_R4_COLLISION_RESPONSE_QUALIFICATION_FAILURE`. La mesure
+`539.19 ms` entre claim et achèvement exclut l'hypothèse d'un timeout ; la cause exacte du défaut
+de capture reste `NOT_ESTABLISHED`. Le
+[rapport R4](docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R4-STOP-20260903.md), SHA-256
+`16e9f85e12109f2709146312410bbe2a5e040c4f176c2d5596746aa2b70076b5`, consigne l'arrêt,
+le cleanup sans résidu, le redémarrage sain du PostgreSQL primaire exact et les postflights verts.
+WO-036 reste actif ; une correction de harnais distincte, sa validation, une nouvelle décision
+propriétaire et un manifeste R5 neuf sont requis. Aucun réseau fournisseur ou distant, donnée
+dérivée, VPS, production, push, fusion, PR ou validation INT-001 n'est autorisé.
+
 Le Work Order
 [WO-SS-20260903-039](docs/work_orders/completed/WO-SS-20260903-039-j9-wo036-collision-probe-http-serialization.md)
 est `VALIDATED` avec le résultat `PASS_LOCAL_FAIL_CLOSED`. Le commit
@@ -22,14 +42,14 @@ Le cleanup hôte est complet et le PostgreSQL primaire exact reste `running/heal
 `127.0.0.1:5432`. Le
 [rapport WO-039](docs/validation/J9-WO039-COLLISION-PROBE-HTTP-SERIALIZATION-QUALIFICATION-20260903.md)
 a pour SHA-256 `4108f3916f0800c5d1c3616f0c6af866462cda5a188991f15f0305b0ea8d7f50`. Le propriétaire a
-depuis autorisé le run R4 neuf de WO-036, exclusivement synthétique et loopback. Sa préparation
-reste bloquée avant tout POST jusqu'au gel du manifeste R4 distinct. Aucun réseau fournisseur ou
-distant, VPS ou production n’est autorisé.
+ensuite autorisé le run R4 neuf de WO-036, exclusivement synthétique et loopback ; cette
+autorisation a été consommée par la campagne arrêtée décrite ci-dessus. Aucun réseau fournisseur
+ou distant, VPS ou production n’est autorisé.
 
 Le propriétaire a validé WO-039, reconnu sa readiness locale et autorisé son déplacement vers les
 Work Orders terminés le `2026-09-03T16:31:41Z`, soit `2026-09-03T18:31:41+02:00` en
-Europe/Paris. Cette validation clôt WO-039 uniquement : WO-036 reste arrêté et son run R4 exige
-toujours une décision propriétaire séparée ainsi qu’un manifeste neuf gelé avant le premier POST.
+Europe/Paris. Cette validation clôt WO-039 uniquement ; l'autorisation propriétaire ultérieure de
+R4 est distincte et désormais consommée.
 
 Le Work Order
 [WO-SS-20260903-038](docs/work_orders/completed/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md)
@@ -78,7 +98,7 @@ exécutée, puis arrêtée de façon fail-closed après le deuxième appel recei
 
 Le Work Order
 [WO-SS-20260902-036](docs/work_orders/active/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
-reste actif à `STOPPED_AFTER_CONSUMED_COLLISION_PROBE_PENDING_DISTINCT_TOOLING_RUNTIME_CORRECTION`.
+reste actif à `STOPPED_AFTER_CONSUMED_R4_COLLISION_RESPONSE_QUALIFICATION_FAILURE`.
 Le premier import R2
 a produit `201/IMPORTED` et l’état sender `DELIVERED`. La répétition byte-identique a été persistée
 idempotemment par le receiver sous `200/DUPLICATE`, sans second payload ni second outbox, mais le
@@ -100,9 +120,11 @@ statut numérique exact n’a pas été conservé dans la preuve runtime. Le cle
 PostgreSQL primaire exact est `healthy`. Le
 [rapport R3](docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R3-STOP-20260903.md) consigne
 le résultat `STOPPED`, SHA-256
-`f59cc0aeaa56fd6c8156032fea7e93048f17f616f1882cc3979bcd69363d1576`. Une correction de harnais
-distincte, sa qualification, une nouvelle décision
-propriétaire, un run neuf et un manifeste neuf sont requis. La permission officielle reste
+`f59cc0aeaa56fd6c8156032fea7e93048f17f616f1882cc3979bcd69363d1576`. WO-039 a ensuite qualifié
+la sérialisation HTTP exacte, puis R4 a été autorisé et exécuté. Son manifeste neuf a été gelé
+avant le premier POST ; les résultats `201` et `200` sont conformes et l'effet receiver de
+divergence est durable, mais le statut du troisième appel n'a pas été capturé côté client. Le
+rapport R4 et la porte R5 sont décrits en tête du présent document. La permission officielle reste
 `NOT_EVIDENCED`; aucune donnée dérivée de SofaScore, aucun réseau fournisseur ou distant, VPS,
 production, push, fusion, PR ou validation INT-001 n’est autorisé.
 

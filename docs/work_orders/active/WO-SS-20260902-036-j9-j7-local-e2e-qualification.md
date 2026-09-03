@@ -1,6 +1,6 @@
 # WO-SS-20260902-036 — Qualification E2E J7 locale Windows/Windows
 
-- **Statut :** `RESUME_R4_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT`
+- **Statut :** `STOPPED_AFTER_CONSUMED_R4_COLLISION_RESPONSE_QUALIFICATION_FAILURE`
 - **Jalon :** après J9 — qualification synthétique de `OPTIONAL_LOCAL_PUSH`
 - **Ouvert le :** 2026-09-02
 - **Ouverture UTC :** `2026-09-02T19:08:46.1623419Z`
@@ -36,16 +36,19 @@ dérivée de SofaScore, aucun appel fournisseur, receiver distant, VPS ou produc
 
 ```text
 WORK_ORDER=WO-SS-20260902-036-j9-j7-local-e2e-qualification
-WORK_ORDER_STATUS=RESUME_R4_AUTHORIZED_PENDING_FRESH_MANIFEST_AND_PREFLIGHT
+WORK_ORDER_STATUS=STOPPED_AFTER_CONSUMED_R4_COLLISION_RESPONSE_QUALIFICATION_FAILURE
 BRANCH=codex/j9-wo036-j7-local-e2e
 
 RESUME_RUN=R4
-RESUME_AUTHORIZATION=AUTHORIZED_NOT_YET_CONSUMED
+RESUME_AUTHORIZATION=CONSUMED
 LOCAL_SYNTHETIC_WINDOWS_E2E_AUTHORIZED=YES
-LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=YES_SYNTHETIC_ONLY
+LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
 FRESH_RUN_COMPLETED=NO
-FRESH_MANIFEST_STATUS=REQUIRED_BEFORE_FIRST_POST
+FRESH_RUN_RESULT=STOPPED
+FRESH_MANIFEST_STATUS=FROZEN_BEFORE_FIRST_POST
 FRESH_MANIFEST_PATH=docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-MANIFEST-RESUME-R4-20260903.md
+FRESH_MANIFEST_COMMIT=e12500dc8af9133b254bfe075d74e979cad472a6
+FRESH_MANIFEST_SHA256=ff73efe0f9840941c6b281cdba38e21cda63e379acd0154f673ef8d7624b39ef
 LOCAL_SYNTHETIC_DATA_ONLY=YES
 REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
 
@@ -617,6 +620,100 @@ WO039_RESPONSE_COMPATIBILITY_COMMIT=058c57b05ac4c40e1867af60e76cce6cc2864e67
 WO039_DOCUMENTATION_COMMIT=5a41e9ba468aef387e5a37b0f0fe20e7b0c92460
 WO039_CLOSURE_COMMIT=13266e81829f0272adcd2d4c60734f562a27f0b1
 WO039_QUALIFICATION_REPORT_SHA256=4108f3916f0800c5d1c3616f0c6af866462cda5a188991f15f0305b0ea8d7f50
+
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+LIVE_DELIVERY_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+INT001_PULL_REQUEST_AUTHORIZED_BY_THIS_WORK_ORDER=NO
+INT001_VALIDATION_AUTHORIZED_BY_THIS_WORK_ORDER=NO
+PRIMARY_DATABASE_PURGE=NO
+```
+
+## 17. Résultat de la campagne R4
+
+### 17.1 Gel préalable et séquence observée
+
+Le manifeste R4 a été gelé avant le premier appel au commit
+`e12500dc8af9133b254bfe075d74e979cad472a6`, SHA-256
+`ff73efe0f9840941c6b281cdba38e21cda63e379acd0154f673ef8d7624b39ef`. Le contrôle de
+l'outillage post-commit a réussi avec zéro appel consommé. La campagne a employé un nouvel export
+J7 `HUMAN_VALIDATED` intégralement synthétique, une PKI éphémère neuve, deux bases Local Lab
+isolées neuves et le receiver INT-001 local.
+
+A a produit `201/IMPORTED` et `DELIVERED`. B, créée depuis la base clonée avant le claim de A, a
+produit `200/DUPLICATE` et `DUPLICATE_CONFIRMED`, avec un seul receipt, payload et outbox. Après
+une preuve pré-collision à exactement deux appels, la sonde a consommé le troisième et dernier
+appel. Le receiver a persisté l'audit corrélé
+`DIVERGENCE_REJECTED/EXPORT_ID_DIVERGENCE`, sans second receipt, payload ou outbox, mais le client
+de campagne n'a capturé ni statut HTTP ni code sûr avant de classer la claim
+`FAILED_OR_UNKNOWN_CONSUMED`.
+
+```text
+J9_WO036_STATUS=STOPPED_AFTER_CONSUMED_R4_COLLISION_RESPONSE_QUALIFICATION_FAILURE
+J9_WO036_R4_RESULT=STOPPED
+J9_WO036_R4_MANIFEST_COMMIT=e12500dc8af9133b254bfe075d74e979cad472a6
+J9_WO036_R4_MANIFEST_SHA256=ff73efe0f9840941c6b281cdba38e21cda63e379acd0154f673ef8d7624b39ef
+J9_WO036_R4_RECEIVER_SEQUENCE=201_IMPORTED,200_DUPLICATE,DIVERGENCE_REJECTED_DURABLY_AUDITED
+J9_WO036_R4_LOCAL_LEDGER_SEQUENCE=DELIVERED,DUPLICATE_CONFIRMED
+J9_WO036_R4_IMPORT_ROUTE_CALLS=3
+J9_WO036_R4_MAXIMUM_IMPORT_ROUTE_CALLS=3
+J9_WO036_R4_PRE_COLLISION_EVIDENCE=PASS_EXACTLY_TWO_CALLS
+J9_WO036_R4_RECEIVER_DIVERGENCE_BUSINESS_EFFECT=PASS
+J9_WO036_R4_COLLISION_PROBE=FAILED_OR_UNKNOWN_CONSUMED
+J9_WO036_R4_COLLISION_HTTP_STATUS_CLIENT=NOT_CAPTURED
+J9_WO036_R4_CONTRACT_SEQUENCE_QUALIFIED=NO
+J9_WO036_R4_AUTOMATIC_RETRIES=0
+J9_WO036_R4_PROVIDER_CALLS=0
+J9_WO036_R4_REMOTE_RECEIVER_CALLS=0
+```
+
+Le [rapport autonome R4](../../validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R4-STOP-20260903.md),
+SHA-256 `16e9f85e12109f2709146312410bbe2a5e040c4f176c2d5596746aa2b70076b5`, consigne la provenance,
+les compteurs durables, les preuves expurgées et le cleanup sans exposer de payload, ACK brut,
+secret, certificat ou chemin privé.
+
+### 17.2 Analyse bornée et correction d'une hypothèse transitoire
+
+La claim a été acquise à `2026-09-03T17:05:10.0405712Z` et achevée à
+`2026-09-03T17:05:10.5797607Z`, soit `539.19 ms`. Cette mesure exclut un timeout de lecture : toute
+suggestion transitoire d'un arrêt proche de la limite est corrigée. Le média type, les en-têtes et
+le corps ont nécessairement atteint la branche métier, puisque l'audit de divergence est durable.
+Le contrat mappe cette branche vers HTTP `409`, mais l'absence de capture côté client interdit de
+présenter ce statut comme observé par R4.
+
+La cause exacte du défaut de capture reste `NOT_ESTABLISHED`. Aucun changement du sender Java, du
+receiver, du protocole ou de WO-038 n'est justifié par cette preuve. Un Work Order de harnais
+distinct doit diagnostiquer et qualifier la lecture de la réponse après l'effet de divergence,
+sans réutiliser la claim R4.
+
+### 17.3 Arrêt, cleanup et porte suivante
+
+Les deux Local Lab et le receiver ont été arrêtés gracieusement. Le cleanup atteste zéro processus,
+listener, conteneur, volume, réseau ou certificat R4 résiduel. Le répertoire privé a été supprimé.
+Le PostgreSQL primaire exact a été redémarré sans recréation ni purge et est `healthy`, avec le même
+identifiant, la même image, le même volume, la même politique `unless-stopped` et le même bind
+`127.0.0.1:5432`.
+
+Les qualifications post-campagne sont vertes : Pester `62/62`, Local Lab Surefire `1136/0/0/5`
+et Failsafe `89/0/0/0` dans les deux parcours Maven, receiver Surefire `297/0/0/0` et Failsafe
+`98/0/0/0`. Aucun résidu Testcontainers ne subsiste.
+
+WO-036 reste actif. L'autorisation R4 et ses trois appels sont consommés. Une correction de harnais,
+sa validation, une nouvelle décision propriétaire, un run R5 neuf et un manifeste R5 gelé avant
+son premier POST sont requis avant toute reprise.
+
+```text
+J9_WO036_RESUME_AUTHORIZED=NO
+J9_WO036_WORK_ORDER_MOVE_TO_COMPLETED=NO
+J9_WO036_RESUME_AFTER_TOOLING_CORRECTION=REQUIRES_SEPARATE_OWNER_DECISION
+J9_WO036_NEXT_FRESH_RUN=R5
+J9_WO036_R5_MANIFEST=REQUIRED_NEW_AND_FROZEN_BEFORE_FIRST_POST
+J9_LOCAL_INT001_RECEIVER_LOOPBACK_AUTHORIZED=NO_PENDING_NEW_OWNER_DECISION
 
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 J9_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
