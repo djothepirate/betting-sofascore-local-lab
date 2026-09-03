@@ -5,8 +5,8 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order runtime
-[WO-SS-20260903-041](docs/work_orders/active/WO-SS-20260903-041-j9-local-labb-readiness-listener-gate.md)
-est `READY_FOR_OWNER_REVIEW`. Il reproduit et corrige le défaut
+[WO-SS-20260903-041](docs/work_orders/completed/WO-SS-20260903-041-j9-local-labb-readiness-listener-gate.md)
+est `VALIDATED`. Il reproduit et corrige le défaut
 `INCOHERENT_DOUBLE_LISTENER_SNAPSHOT_TOCTOU_FALSE_CONFLICT` : l'ancienne boucle pouvait classer
 comme conflit un listener exact apparu entre deux lectures successives. Le commit
 `7893136664c5fc6c162da844735e36cb7829814c` emploie désormais un seul instantané cohérent par
@@ -20,9 +20,10 @@ processus, listener synthétique ou conteneur Testcontainers ne subsiste. Le rap
 a pour SHA-256
 `ed650e2d9631f39b442769315fd50d47e5ee85129fb9e4549bb7093110a2976c`.
 
-WO-041 reste actif jusqu'à la revue propriétaire et n'autorise aucune reprise R6, aucun POST
-receiver, appel fournisseur, donnée dérivée, réseau distant, VPS, production, PR ou validation
-INT-001. WO-036 reste actif et arrêté ; sa claim R5 demeure consommée.
+La validation de WO-041 autorise son classement. Le propriétaire autorise séparément la reprise de
+WO-036 par un run neuf R6, avec un manifeste neuf gelé avant son premier POST. Aucun appel
+fournisseur, donnée dérivée, receiver distant, VPS, production, PR ou validation INT-001 n'est
+autorisé ; la claim R5 demeure consommée et ne sera pas réutilisée.
 
 Le Work Order
 [WO-SS-20260903-040](docs/work_orders/completed/WO-SS-20260903-040-j9-wo036-collision-response-client-qualification.md)

@@ -23,11 +23,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - rapport
   `docs/validation/J9-WO041-LOCALLABB-READINESS-LISTENER-GATE-QUALIFICATION-20260903.md`, SHA-256
   `ed650e2d9631f39b442769315fd50d47e5ee85129fb9e4549bb7093110a2976c` ;
-- passage à `READY_FOR_OWNER_REVIEW` ; le Work Order reste actif jusqu'à la décision propriétaire ;
+- validation propriétaire et déplacement vers les Work Orders terminés ;
 - qualification hors ligne et hôte autorisée uniquement sur `127.0.0.1`, avec processus
   synthétiques possédés et cleanup exact ;
-- WO-036 reste arrêté, R5 reste consommé et aucun R6, POST receiver, appel fournisseur, donnée
-  dérivée, réseau distant, VPS, production, PR ou validation INT-001 n'est autorisé.
+- autorisation propriétaire séparée de reprendre WO-036 par un run neuf R6, après création et gel
+  d'un nouveau manifeste avant son premier POST ; R5 reste consommé et ne sera pas réutilisé ;
+- aucun appel fournisseur, donnée dérivée, receiver distant, VPS, production, PR ou validation
+  INT-001 n'est autorisé par cette validation.
 
 ### Après J9 — WO-036 reprise R5 arrêtée avant le duplicate
 

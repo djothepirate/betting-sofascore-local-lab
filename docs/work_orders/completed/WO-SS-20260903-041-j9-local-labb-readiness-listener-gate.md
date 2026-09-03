@@ -1,12 +1,14 @@
 # WO-SS-20260903-041 — Porte de readiness/listener de LocalLabB
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
 - **Jalon :** après J9 — correction runtime de l'outillage avant une éventuelle reprise R6 de WO-036
 - **Ouvert le :** 2026-09-03
 - **Ouverture UTC :** `2026-09-03T20:18:18.1820646Z`
 - **Ouverture Europe/Paris :** `2026-09-03T22:18:18.1820646+02:00`
 - **Prêt pour revue UTC :** `2026-09-03T20:36:05.4456232Z`
 - **Prêt pour revue Europe/Paris :** `2026-09-03T22:36:05.4456232+02:00`
+- **Validé UTC :** `2026-09-03T20:45:29.1610431Z`
+- **Validé Europe/Paris :** `2026-09-03T22:45:29.1610431+02:00`
 - **Branche :** `codex/j9-wo041-local-labb-readiness-listener-gate`
 - **Worktree :** `.tmp/w41`
 - **Base locale d'ouverture vérifiée :** `62bb8d126d28da2aedefb8845ee3817492229a71`
@@ -236,5 +238,37 @@ J9_VPS_DEPLOYMENT_AUTHORIZED=NO
 J9_PRODUCTION_AUTHORIZED=NO
 ```
 
-Le Work Order demeure dans `active` jusqu'à une décision propriétaire explicite. Une validation de
-WO-041 autorisera uniquement son classement documentaire ; elle ne vaudra pas reprise de WO-036.
+## 10. Validation propriétaire
+
+Le propriétaire valide la qualification, reconnaît la readiness locale, autorise le classement de
+WO-041 et autorise séparément la reprise de WO-036 par un run neuf R6 :
+
+```text
+J9_WO041_OWNER_REVIEW_DECISION=VALIDATE
+J9_WO041_WORK_ORDER=WO-SS-20260903-041-j9-local-labb-readiness-listener-gate
+J9_WO041_IMPLEMENTATION_COMMIT=7893136664c5fc6c162da844735e36cb7829814c
+J9_WO041_DOCUMENTATION_COMMIT=72ebe53c6bb8bedac21035c2d9d2d058b1bc8dce
+J9_WO041_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
+J9_WO041_QUALIFICATION_REPORT_SHA256=ed650e2d9631f39b442769315fd50d47e5ee85129fb9e4549bb7093110a2976c
+J9_WO041_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO041_WORK_ORDER_MOVE_TO_COMPLETED=YES
+
+J9_WO036_STATUS=STOPPED_AFTER_FIRST_IMPORT_AND_CONSUMED_B_START_CLAIM
+J9_WO036_RESUME_AFTER_WO041_VALIDATION=YES
+J9_WO036_WORK_ORDER_MOVE_TO_COMPLETED=NO
+J9_WO036_NEXT_FRESH_RUN=R6
+J9_WO036_R6_MANIFEST=REQUIRED_NEW_AND_FROZEN_BEFORE_FIRST_POST
+
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+LIVE_DELIVERY_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+WO-041 peut être déplacé vers `completed`. La reprise R6 reste limitée au périmètre synthétique
+loopback de WO-036, avec un manifeste neuf gelé avant son premier POST. Elle n'autorise aucun réseau
+fournisseur, receiver distant, VPS ou production.
