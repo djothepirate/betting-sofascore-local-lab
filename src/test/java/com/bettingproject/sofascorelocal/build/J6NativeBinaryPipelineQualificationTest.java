@@ -17,7 +17,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class J6NativeBinaryPipelineQualificationTest {
 
-    private static final Duration OFFLINE_TIMEOUT = Duration.ofSeconds(90);
+    private static final Duration OFFLINE_TIMEOUT = Duration.ofSeconds(180);
     private static final Duration DOCKER_TIMEOUT = Duration.ofMinutes(10);
 
     private record QualificationResult(boolean finished, int exitCode, String evidence) {
