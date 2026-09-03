@@ -1390,7 +1390,7 @@ function Get-WO036ComponentEnvironment {
         'JDK_HTTPCLIENT_HTTPCLIENT_LOG' = ''
         'SPRING_APPLICATION_JSON' = ''
         'SPRING_CONFIG_IMPORT' = ''
-        'SPRING_CONFIG_LOCATION' = ''
+        'SPRING_CONFIG_LOCATION' = 'classpath:/'
         'SPRING_CONFIG_ADDITIONAL_LOCATION' = ''
     }
     if ($Component -eq 'Receiver') {

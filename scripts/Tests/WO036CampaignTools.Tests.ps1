@@ -68,6 +68,15 @@ Describe 'WO-036 fail-closed runtime invariants' {
         $moduleText | Should Match ([regex]::Escape('-WorkingDirectory $workingDirectory'))
     }
 
+    It 'loads only the packaged Spring configuration from the private runtime directory' {
+        $moduleText | Should Match (
+            "'SPRING_CONFIG_LOCATION'\s*=\s*'classpath:/'")
+        $moduleText | Should Not Match (
+            "'SPRING_CONFIG_LOCATION'\s*=\s*''")
+        $moduleText | Should Not Match (
+            "'SPRING_CONFIG_LOCATION'\s*=\s*'(?:optional:)?file:")
+    }
+
     It 'uses the exact pre-created shared lock without an OpenOrCreate fallback' {
         $moduleText | Should Match "'\.wo036-tools\.lock'"
         $moduleText | Should Match '\[IO\.FileMode\]::Open'
@@ -209,6 +218,39 @@ Describe 'WO-036 exact three-call proof model' {
 
 Describe 'WO-036 offline behavioral primitives' {
     InModuleScope WO036-CampaignTools {
+        It 'returns the packaged Spring configuration location for every component' {
+            $state = [pscustomobject]@{
+                ReceiverKeyStore = 'receiver.p12'
+                ReceiverTrustStore = 'receiver-trust.p12'
+                ExportDirectory = 'exports'
+                Config = [pscustomobject]@{
+                    receiver = [pscustomobject]@{
+                        clientCertificateSha256 = ('a' * 64)
+                        keyStorePassword = 'test-only'
+                        trustStorePassword = 'test-only'
+                        databaseName = 'receiver'
+                        databaseUser = 'receiver'
+                        databasePassword = 'test-only'
+                    }
+                    localLab = [pscustomobject]@{
+                        sourceDatabase = 'local_lab_a'
+                        targetDatabase = 'local_lab_b'
+                        databaseUser = 'local_lab'
+                        databasePassword = 'test-only'
+                        clientCertificateSha256 = ('b' * 64)
+                    }
+                }
+            }
+
+            foreach ($component in @(
+                    'Receiver', 'LocalLabPreparation', 'LocalLabA', 'LocalLabB')) {
+                $environment = Get-WO036ComponentEnvironment `
+                    -State $state -Component $component
+                $environment['SPRING_CONFIG_LOCATION'] |
+                    Should Be 'classpath:/'
+            }
+        }
+
         It 'wires both qualified JAR hashes through the registration core' {
             $core = Get-Command Register-WO036ExecutableArtifactsCore
             $core.Parameters.ContainsKey('ExpectedLocalLabJarSha256') | Should Be $true
