@@ -16,6 +16,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   un probe mTLS synthétique de campagne ;
 - maintien de `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED` et des interdictions de donnée dérivée,
   réseau fournisseur ou distant, VPS, production, push, merge ou PR INT-001.
+- qualification pré-appel du harnais : refus de l’indirection `javapath` au profit du binaire Java
+  25 exact, puis correction du scanner de journaux actifs Windows par snapshot borné
+  `FileShare.ReadWrite`, avec contrôle de stabilité, limites de 50/100 MiB, erreur expurgée et
+  conservation des gardes d’ACL, de contenu, de processus et de listener ; 52 tests Pester couvrent
+  notamment la redirection `Start-Process` réelle et le refus fermé d’un writer exclusif ;
+- les préparations ayant révélé ces écarts ont été arrêtées et nettoyées avant tout POST : zéro
+  appel de route d’import, zéro appel fournisseur, zéro ressource de campagne résiduelle et aucune
+  atteinte au PostgreSQL primaire.
 
 ### Après J9 — WO-035 sender réel J7 du Local Lab
 

@@ -173,3 +173,32 @@ Le Work Order restera actif après la campagne jusqu’à production du rapport 
 propriétaire. Aucun push, merge, PR INT-001, réseau fournisseur ou distant, livraison dérivée, VPS
 ou production ne découle de sa réussite.
 
+## 9. Qualification du harnais avant premier POST
+
+Le 2026-09-03, deux préparations ont été arrêtées et nettoyées avant le gel du manifeste et avant
+tout appel de la route d’import :
+
+1. le chemin `javapath` résolu depuis le `PATH` lançait le véritable Java 25 dans un processus
+   enfant ; le contrôle de propriété du listener a refusé cette indirection. La reprise impose le
+   chemin absolu du binaire Java 25 qualifié ; aucun relâchement de la preuve PID, de l’exécutable,
+   du marqueur d’instance, de la ligne de commande ou de l’heure de démarrage n’a été introduit ;
+2. le premier gel complet a révélé que `File.ReadAllBytes` ne pouvait pas ouvrir un journal encore
+   détenu par `Start-Process -RedirectStandardOutput/-RedirectStandardError` sous Windows. Le
+   scanner ouvre désormais un snapshot en lecture avec `FileShare.ReadWrite`, borne chaque fichier
+   à 50 MiB et l’ensemble à 100 MiB, exige la même longueur avant et après la lecture, puis conserve
+   l’effacement des buffers et tous les contrôles de contenu, d’ACL, de confinement et de noms.
+
+Le correctif du scanner est qualifié par des tests comportementaux couvrant un journal actif
+partageable, un writer exclusif refusé en échec fermé et le vrai mécanisme Windows
+`Start-Process -RedirectStandard*`. Chaque préparation abandonnée a été suivie d’un cleanup exact :
+zéro processus, listener, conteneur, volume ou certificat résiduel, aucune atteinte à la base
+primaire et aucun accès fournisseur.
+
+```text
+IMPORT_ROUTE_CALLS_BEFORE_HARNESS_REQUALIFICATION=0
+PROVIDER_CALLS=0
+REMOTE_RECEIVER_CALLS=0
+PROVIDER_DERIVED_PAYLOADS=0
+VPS_DEPLOYMENTS=0
+CAMPAIGN_RESTART_REQUIRED_AFTER_CLEAN_BUILD=YES
+```

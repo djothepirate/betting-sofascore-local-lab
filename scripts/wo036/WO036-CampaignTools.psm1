@@ -1493,6 +1493,58 @@ function Get-WO036SensitiveProcessEnvironmentNames {
         ForEach-Object { [string]$_ })
 }
 
+function Read-WO036StableActiveLogBytes {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][ValidateRange(0, 52428800)]
+        [long]$MaximumBytes
+    )
+
+    $stream = $null
+    $bytes = $null
+    try {
+        $stream = [IO.FileStream]::new(
+            $Path,
+            [IO.FileMode]::Open,
+            [IO.FileAccess]::Read,
+            [IO.FileShare]::ReadWrite,
+            65536,
+            [IO.FileOptions]::SequentialScan)
+        $lengthBefore = $stream.Length
+        if ($lengthBefore -lt 0 `
+                -or $lengthBefore -gt $MaximumBytes `
+                -or $lengthBefore -gt [int]::MaxValue) {
+            throw 'log length outside bounded scan envelope'
+        }
+        $bytes = [byte[]]::new([int]$lengthBefore)
+        $offset = 0
+        while ($offset -lt $bytes.Length) {
+            $read = $stream.Read($bytes, $offset, $bytes.Length - $offset)
+            if ($read -le 0) {
+                throw 'log reached EOF before its frozen length'
+            }
+            $offset += $read
+        }
+        if ($stream.Length -ne $lengthBefore) {
+            throw 'log changed during bounded scan'
+        }
+        $result = $bytes
+        $bytes = $null
+        return ,$result
+    }
+    catch {
+        if ($null -ne $bytes) {
+            [Array]::Clear($bytes, 0, $bytes.Length)
+        }
+        throw 'WO-036 active private log could not be read as one stable bounded snapshot.'
+    }
+    finally {
+        if ($null -ne $stream) {
+            $stream.Dispose()
+        }
+    }
+}
+
 function Get-WO036PrivateLogRedactionProof {
     param([Parameter(Mandatory = $true)][object]$State)
 
@@ -1517,8 +1569,8 @@ function Get-WO036PrivateLogRedactionProof {
             }).Count -ne 0) {
         throw 'WO-036 private logs contain an unexpected artifact.'
     }
-    $size = [long]($files | Measure-Object -Property Length -Sum).Sum
-    if ($size -gt 104857600 `
+    $metadataSize = [long]($files | Measure-Object -Property Length -Sum).Sum
+    if ($metadataSize -gt 104857600 `
             -or @($files | Where-Object { $_.Length -gt 52428800 }).Count -ne 0) {
         throw 'WO-036 private logs exceed the bounded scan envelope.'
     }
@@ -1531,11 +1583,17 @@ function Get-WO036PrivateLogRedactionProof {
         Where-Object { -not [string]::IsNullOrEmpty($_) } |
         Select-Object -Unique
     $forbidden = 0
+    $size = 0L
     foreach ($file in $files) {
         Assert-WO036NoReparsePathChain -Candidate $file.FullName -Root $State.PrivateRoot
         Assert-WO036PrivateAcl -Path $file.FullName
-        $bytes = [IO.File]::ReadAllBytes($file.FullName)
+        $bytes = Read-WO036StableActiveLogBytes -Path $file.FullName `
+            -MaximumBytes 52428800
         try {
+            $size += $bytes.Length
+            if ($size -gt 104857600) {
+                throw 'WO-036 private logs exceed the bounded scan envelope.'
+            }
             $text = $script:Utf8NoBom.GetString($bytes)
             foreach ($literal in $literalSecrets) {
                 $offset = 0

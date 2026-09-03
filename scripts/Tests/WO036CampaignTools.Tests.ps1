@@ -102,6 +102,14 @@ Describe 'WO-036 fail-closed runtime invariants' {
         $moduleText | Should Match 'javaSha256'
     }
 
+    It 'reads active redirected logs through a stable bounded shared snapshot' {
+        $moduleText | Should Match 'function Read-WO036StableActiveLogBytes'
+        $moduleText | Should Match '\[IO\.FileShare\]::ReadWrite'
+        $moduleText | Should Match '\$stream\.Length -ne \$lengthBefore'
+        $moduleText | Should Match 'stable bounded snapshot'
+        $moduleText | Should Not Match '\[IO\.File\]::ReadAllBytes\(\$file\.FullName\)'
+    }
+
     It 'rehashes every frozen tool and allows only the exact manifest commit afterward' {
         $moduleText | Should Match 'Get-WO036ToolingFileProof'
         $moduleText | Should Match 'Assert-WO036RegisteredTooling'
@@ -375,6 +383,127 @@ Describe 'WO-036 offline behavioral primitives' {
                 $missingFailed = $true
             }
             $missingFailed | Should Be $true
+        }
+
+        It 'reads a flushed active log while the writer remains open' {
+            $root = Join-Path $TestDrive 'shared-active-log'
+            $logs = Join-Path $root 'logs'
+            [void](New-Item -ItemType Directory -Path $logs)
+            $logPath = Join-Path $logs 'locallaba.stderr.log'
+            $safeBytes = [Text.UTF8Encoding]::new($false, $true).GetBytes(
+                "WO036_TEST_LOG=SAFE`n")
+            $writer = [IO.FileStream]::new(
+                $logPath,
+                [IO.FileMode]::Create,
+                [IO.FileAccess]::ReadWrite,
+                [IO.FileShare]::ReadWrite)
+            try {
+                $writer.Write($safeBytes, 0, $safeBytes.Length)
+                $writer.Flush($true)
+                Mock Assert-WO036NoReparsePathChain { }
+                Mock Assert-WO036PrivateAcl { }
+                $state = [pscustomobject]@{
+                    PrivateRoot = $root
+                    Config = [pscustomobject]@{
+                        receiver = [pscustomobject]@{
+                            databasePassword = ''
+                            keyStorePassword = ''
+                            trustStorePassword = ''
+                        }
+                        localLab = [pscustomobject]@{
+                            databasePassword = ''
+                            clientCertificateSha256 = ''
+                        }
+                    }
+                }
+                $proof = Get-WO036PrivateLogRedactionProof -State $state
+                $proof.FileCount | Should Be 1
+                $proof.SizeBytes | Should Be $safeBytes.Length
+                $proof.ForbiddenOccurrenceCount | Should Be 0
+            }
+            finally {
+                $writer.Dispose()
+                [Array]::Clear($safeBytes, 0, $safeBytes.Length)
+            }
+        }
+
+        It 'fails closed when an active log writer denies read sharing' {
+            $logPath = Join-Path $TestDrive 'exclusive-active.log'
+            [IO.File]::WriteAllText($logPath, "WO036_TEST_LOG=SAFE`n")
+            $writer = [IO.FileStream]::new(
+                $logPath,
+                [IO.FileMode]::Open,
+                [IO.FileAccess]::Write,
+                [IO.FileShare]::None)
+            try {
+                $failedClosed = $false
+                try {
+                    [void](Read-WO036StableActiveLogBytes -Path $logPath `
+                        -MaximumBytes 1024)
+                }
+                catch {
+                    $failedClosed = $_.Exception.Message -eq
+                        'WO-036 active private log could not be read as one stable bounded snapshot.'
+                }
+                $failedClosed | Should Be $true
+            }
+            finally {
+                $writer.Dispose()
+            }
+        }
+
+        It 'reads logs created by the exact Windows Start-Process redirection mechanism' {
+            if (-not $IsWindows) {
+                return
+            }
+            $stdout = Join-Path $TestDrive 'redirected.stdout.log'
+            $stderr = Join-Path $TestDrive 'redirected.stderr.log'
+            $command = "[Console]::Out.WriteLine('WO036_STDOUT=SAFE');" +
+                "[Console]::Error.WriteLine('WO036_STDERR=SAFE');" +
+                'Start-Sleep -Seconds 15'
+            $encoded = [Convert]::ToBase64String(
+                [Text.Encoding]::Unicode.GetBytes($command))
+            $process = Start-Process -FilePath (Get-Process -Id $PID).Path `
+                -ArgumentList @('-NoLogo', '-NoProfile', '-NonInteractive',
+                    '-EncodedCommand', $encoded) `
+                -WindowStyle Hidden -PassThru `
+                -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+            try {
+                $deadline = [DateTime]::UtcNow.AddSeconds(3)
+                do {
+                    Start-Sleep -Milliseconds 50
+                } while (((-not (Test-Path -LiteralPath $stdout)) `
+                        -or (Get-Item -LiteralPath $stdout).Length -eq 0 `
+                        -or (-not (Test-Path -LiteralPath $stderr)) `
+                        -or (Get-Item -LiteralPath $stderr).Length -eq 0) `
+                    -and [DateTime]::UtcNow -lt $deadline)
+                $process.HasExited | Should Be $false
+                $stdoutBytes = Read-WO036StableActiveLogBytes -Path $stdout `
+                    -MaximumBytes 1024
+                $stderrBytes = Read-WO036StableActiveLogBytes -Path $stderr `
+                    -MaximumBytes 1024
+                try {
+                    $process.HasExited | Should Be $false
+                    $stdoutBytes.Length | Should BeGreaterThan 0
+                    $stderrBytes.Length | Should BeGreaterThan 0
+                }
+                finally {
+                    [Array]::Clear($stdoutBytes, 0, $stdoutBytes.Length)
+                    [Array]::Clear($stderrBytes, 0, $stderrBytes.Length)
+                }
+            }
+            finally {
+                try {
+                    if (-not $process.HasExited) {
+                        Stop-Process -InputObject $process -Force
+                    }
+                    Wait-Process -InputObject $process -Timeout 10 `
+                        -ErrorAction SilentlyContinue
+                }
+                finally {
+                    $process.Dispose()
+                }
+            }
         }
 
         It 'enforces FileShare.None on the pre-created lock' {
