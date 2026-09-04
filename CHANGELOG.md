@@ -4,6 +4,20 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — préparation primaire WO-046 V32 achevée sans campagne
+
+- configuration locale privée préparée sous ACL, sans secret dans Git ou les sorties ;
+- sauvegarde chiffrée V30 et restauration isolée qualifiées avant migration ;
+- JAR reconstruit proprement hors ligne sous Java 25 ; tests non réexécutés pour cette opération
+  administrative ; aucun code applicatif, migration existante ou outillage qualifié modifié ;
+- Flyway valide 32 migrations et applique V31 puis V32 via le Local Lab non-web bloqué ;
+  sortie naturelle code zéro en 6311 ms, fermeture Hikari et absence de listener ;
+- sauvegarde chiffrée V32/restauration qualifiées, compteurs et empreintes historiques
+  concordants, zéro base temporaire/session J6 résiduelle ;
+- export sélectionné et historique V1–V30 inchangés ; zéro grant, consommation, livraison et
+  tentative ; rapport `J9-WO046-PRIMARY-V30-V32-PREPARATION-20260905.md` ;
+- WO-046 reste actif : création du manifeste, owner-go et POST soumis à leurs décisions distinctes.
+
 ### Après J9 — autorisation de préparation primaire WO-046 V30 vers V32
 
 - décision propriétaire distincte enregistrée pour la configuration locale privée, la

@@ -1,6 +1,6 @@
 # WO-SS-20260904-046 — Campagne E2E J7 réelle locale Windows/Windows
 
-- **Statut :** `PRIMARY_PREPARATION_AUTHORIZED_PENDING_V30_BACKUP_RESTORE`
+- **Statut :** `PRIMARY_V32_PREPARED_PENDING_CAMPAIGN_MANIFEST_AUTHORIZATION`
 - **Jalon :** après J9 — campagne locale d'une livraison J7 dérivée fournisseur
 - **Ouvert le :** 2026-09-04
 - **Ouverture UTC :** `2026-09-04T13:59:22.9943521Z`
@@ -583,3 +583,49 @@ La sauvegarde V30 et son cleanup doivent réussir avant toute migration. Les fic
 campagne WO-046, dont la création demeure interdite. Les phrases secrètes `age` sont saisies
 uniquement par le propriétaire dans un terminal interactif privé, sans capture ni transcript.
 Cette section enregistre l'autorité, pas un résultat d'exécution ; les résultats restent à prouver.
+
+## 14. Préparation primaire exécutée — V32 protégée et contrôlée
+
+Le [rapport distinct de préparation primaire](../../validation/J9-WO046-PRIMARY-V30-V32-PREPARATION-20260905.md)
+consigne le résultat `PASS_PRIMARY_V32_PREPARED_NO_CAMPAIGN_MANIFEST_NO_POST`.
+Sa taille est `11638` octets et son SHA-256 est
+`398d608a06cf228bbf299b608517328da73f95ecf43701243ddc39ebb6ee50bd`.
+La protection V30 est qualifiée le `2026-09-04T22:57:14.8125701Z`, avant toute migration.
+Le Local Lab reconstruit hors ligne au commit `f9788e63c3df862272a482ef83f5f45a9fa95371`
+applique V31 puis V32 en mode non-web, toutes fonctions fournisseur et livraison bloquées.
+Il sort naturellement code zéro en `6311 ms`, avec fermeture Hikari. La protection V32 est ensuite
+qualifiée le `2026-09-04T23:11:15.2409962Z`, soit `2026-09-05T01:11:15.2409962+02:00` à Paris.
+
+Les configurations privées, archives chiffrées et manifestes techniques restent hors Git sous
+ACL propriétaire/SYSTEM. Les deux restaurations utilisent des bases temporaires distinctes du
+même serveur ; elles sont supprimées par le cleanup qualifié. Aucune purge primaire n'est faite.
+Les compteurs et empreintes historiques comparés sont inchangés ; l'historique V1–V30, la ligne
+de métadonnées et le fichier J7 sélectionné restent identiques. Le composant `EVENT_DETAILS`
+manquant demeure signalé. Les limites exactes de la preuve de restauration figurent au rapport.
+
+```text
+J9_WO046_PRIMARY_PREPARATION_STATUS=COMPLETE
+J9_WO046_PRIMARY_SCHEMA_VERSION=32
+J9_WO046_V30_BACKUP_RESTORE=PASS
+J9_WO046_V31_V32_MIGRATION=PASS
+J9_WO046_V32_BACKUP_RESTORE=PASS
+J9_WO046_FAILED_MIGRATIONS=0
+J9_WO046_TEMP_RESTORE_DATABASE_COUNT=0
+J9_WO046_J6_SESSION_COUNT=0
+J9_WO046_APPLICATION_LISTENER_COUNT=0
+J9_WO046_OWNER_GO_GRANT_COUNT=0
+J9_WO046_OWNER_GO_CONSUMPTION_COUNT=0
+J9_WO046_DELIVERY_COUNT=0
+J9_WO046_DELIVERY_ATTEMPT_COUNT=0
+J9_WO046_MANIFEST_CREATION_AUTHORIZED=NO
+J9_WO046_MANIFEST_CREATED=NO
+J9_WO046_OWNER_GO_GRANTED=NO
+J9_WO046_REAL_POST_AUTHORIZED=NO
+J9_WO046_WORK_ORDER_MOVE_TO_COMPLETED=NO
+```
+
+La prochaine porte est l'autorisation distincte de créer et geler le manifeste de campagne,
+après recontrôles frais des métadonnées et de l'identité PKI. Son commit précédera la soumission
+du bloc owner-go canonique V2 et toute autorisation future du POST unique. Cette préparation ne
+consomme aucune de ces décisions. Aucun receiver, fournisseur, réseau distant, VPS ou production
+n'a été activé ; les restrictions demeurent inchangées.

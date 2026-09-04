@@ -4,6 +4,14 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
+La [préparation primaire WO-046](docs/validation/J9-WO046-PRIMARY-V30-V32-PREPARATION-20260905.md)
+est achevée : sauvegarde/restauration V30 qualifiée, migrations V31 puis V32 par démarrage
+transitoire non-web bloqué, puis sauvegarde/restauration V32 qualifiée. L'export J7 déjà validé,
+ses métadonnées et les empreintes historiques comparées sont inchangés. Aucun listener
+applicatif ne subsiste ; grants, consommations, livraisons et tentatives restent à zéro.
+WO-046 reste actif, en attente de l'autorisation distincte de création du manifeste de campagne.
+**Aucun manifeste de campagne, owner-go ni POST réel n'est créé ou autorisé par cette préparation.**
+
 Le Work Order
 [WO-SS-20260904-048](docs/work_orders/completed/WO-SS-20260904-048-j9-wo046-local-mtls-identity-provisioning.md)
 est `VALIDATED`, classé et qualifié `PASS_LOCAL_FAIL_CLOSED` sur la branche distincte
