@@ -4,6 +4,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — autorisation de préparation primaire WO-046 V30 vers V32
+
+- décision propriétaire distincte enregistrée pour la configuration locale privée, la
+  sauvegarde/restauration V30 préalable, le démarrage transitoire du seul Local Lab fournisseur
+  et livraison désactivés pour Flyway V31 puis V32, son arrêt et la sauvegarde/restauration V32 ;
+- exécution conditionnée au succès de chaque étape ; phrases age uniquement en terminal privé,
+  sans capture ; aucun manifeste de campagne, go ou POST autorisé.
+
 ### Après J9 — préflight primaire WO-046 strictement en lecture seule
 
 - autorisation propriétaire consommée uniquement pour l'historique Flyway et les métadonnées du

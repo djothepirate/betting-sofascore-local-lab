@@ -1,6 +1,6 @@
 # WO-SS-20260904-046 — Campagne E2E J7 réelle locale Windows/Windows
 
-- **Statut :** `PREFLIGHT_COMPLETE_PENDING_PRIMARY_MIGRATION_AND_BACKUP_AUTHORIZATION`
+- **Statut :** `PRIMARY_PREPARATION_AUTHORIZED_PENDING_V30_BACKUP_RESTORE`
 - **Jalon :** après J9 — campagne locale d'une livraison J7 dérivée fournisseur
 - **Ouvert le :** 2026-09-04
 - **Ouverture UTC :** `2026-09-04T13:59:22.9943521Z`
@@ -552,3 +552,34 @@ de restauration au-delà des contrôles existants.
 
 La présente consignation ne consomme aucune de ces autorisations futures. Le manifeste, le go,
 le POST, les réseaux fournisseur/distant, le VPS et la production restent interdits.
+
+## 13. Autorisation distincte de préparation primaire V30 vers V32
+
+Le propriétaire autorise ensuite la préparation primaire V30 vers V32, incluant la configuration
+locale privée nécessaire et les opérations proposées en section 12.1, sans création de manifeste
+ni POST. Cette décision couvre la sauvegarde/restauration préalable V30, le démarrage transitoire
+du seul Local Lab toutes portes fournisseur/livraison fermées pour appliquer V31 puis V32 par
+Flyway, son arrêt, puis la sauvegarde/restauration isolée V32.
+
+```text
+J9_WO046_PRIMARY_PREPARATION_OWNER_DECISION=AUTHORIZE
+J9_WO046_PRIVATE_LOCAL_CONFIGURATION_PREPARATION_AUTHORIZED=YES
+J9_WO046_V30_ENCRYPTED_BACKUP_AND_ISOLATED_RESTORE_AUTHORIZED=YES
+J9_WO046_V31_THEN_V32_FLYWAY_MIGRATION_AUTHORIZED=YES_AFTER_QUALIFIED_V30_BACKUP
+J9_WO046_LOCAL_LAB_TRANSIENT_BLOCKED_START_AUTHORIZED=YES_FOR_MIGRATION_ONLY
+J9_WO046_V32_ENCRYPTED_BACKUP_AND_ISOLATED_RESTORE_AUTHORIZED=YES
+J9_WO046_PRIMARY_DATABASE_PURGE=NO
+J9_WO046_MANIFEST_CREATION_AUTHORIZED=NO
+J9_WO046_OWNER_GO_GRANTED=NO
+J9_WO046_REAL_POST_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+La sauvegarde V30 et son cleanup doivent réussir avant toute migration. Les fichiers techniques
+`.age.manifest.json` produits par l'outillage de sauvegarde qualifié ne sont pas le manifeste de
+campagne WO-046, dont la création demeure interdite. Les phrases secrètes `age` sont saisies
+uniquement par le propriétaire dans un terminal interactif privé, sans capture ni transcript.
+Cette section enregistre l'autorité, pas un résultat d'exécution ; les résultats restent à prouver.

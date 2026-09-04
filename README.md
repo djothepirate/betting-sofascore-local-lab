@@ -61,7 +61,7 @@ Le Work Order
 porte historiquement dans son document v0.1 l'état `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`,
 depuis le commit exact de clôture de WO-045
 `8a1225fc4b85d8e8b55af536fcbc7955676131ff`. L'état effectif de la séquence est désormais
-`PREFLIGHT_COMPLETE_PENDING_PRIMARY_MIGRATION_AND_BACKUP_AUTHORIZATION`. Il prépare la future campagne
+`PRIMARY_PREPARATION_AUTHORIZED_PENDING_V30_BACKUP_RESTORE`. Il prépare la future campagne
 Windows/Windows d'une livraison manuelle unique d'un export J7 fournisseur déjà
 `HUMAN_VALIDATED` vers le receiver Betting Project sur `https://127.0.0.1:8444`.
 
@@ -98,7 +98,9 @@ métadonnées publiques, sans clé privée, mutation ou socket. L'étape 4 est d
 `SELECTED_RUN_BOUND_WO048_VALIDATED_PUBLIC_METADATA_REVALIDATED`. Le préflight du ledger et du
 schéma primaire est terminé ; la protection préalable V30, la migration séquentielle V31/V32
 par démarrage transitoire du Local Lab toutes portes réseau fermées et la sauvegarde/restauration
-isolée V32 restent réservées à une décision distincte. Aucun de ces traitements n'est exécuté.
+isolée V32 sont désormais autorisées par décision distincte, avec sauvegarde V30 qualifiée avant
+toute migration. Leur réussite reste à établir ; aucun résultat d'exécution n'est déduit de
+l'autorisation.
 Le manifeste WO-046 n'est pas créé et son
 autorisation n'est pas consommée ; aucun nouveau go propriétaire n'est construit, accordé ou
 enregistré.
