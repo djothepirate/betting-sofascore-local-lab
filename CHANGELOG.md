@@ -6,6 +6,15 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Après J9 — WO-048 identités mTLS locales liées au run WO-046
 
+- validation propriétaire et classement consignés le `2026-09-04T22:10:44Z`
+  (`2026-09-05T00:10:44+02:00` Europe/Paris), portant sur le runtime `063c91f2...` et la
+  documentation `ca9641d503fdc03d1413527498b05f8429e65ffb` ; tentatives échouées, déviation
+  Testcontainers, readiness locale et conservation du run nominal explicitement reconnues ;
+- rapport qualifié conservé byte-identique ; déplacement du Work Order vers `completed` ;
+  reprise préparatoire WO-046 autorisée, mais manifeste, go et POST toujours à `NO` ;
+- publication autorisée de la branche historique et création d'un alias conforme 1A
+  `codex/ss-20260904-048-j9-wo046-local-mtls-identity-provisioning` au même commit pour la PR
+  vers `main`, avec les dépendances validées WO-045/WO-047 et sans réécriture des commits ;
 - ouverture, depuis `e771c2a5fedc508fbd0a420ae4596166251d82cd`, du Work Order distinct
   `WO-SS-20260904-048-j9-wo046-local-mtls-identity-provisioning` ;
 - implémentation d'un provisionneur, d'un cleanup exact et d'un harness de qualification PKI-only,
@@ -39,7 +48,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `docs/validation/J9-WO048-LOCAL-MTLS-IDENTITY-PROVISIONING-QUALIFICATION-20260904.md`, taille
   `12844` octets et SHA-256
   `c704961530020216bfbc644f2fa928357466eccf54ef4e3d80f5705a95ef109d`, résultat
-  `PASS_LOCAL_FAIL_CLOSED` ; WO-048 reste `READY_FOR_OWNER_REVIEW` avant classement ;
+  `PASS_LOCAL_FAIL_CLOSED` ; le rapport conserve l'état historique `READY_FOR_OWNER_REVIEW`
+  antérieur à la présente validation et au classement ;
 - politique propriétaire `PRIVATE_EXTERNAL_RECORD_ONLY` : aucun UUID de run, empreinte réelle,
   certificat, chemin privé ou secret n'est versionné ; seul l'engagement SHA-256 de l'état privé
   complet est publié, sans présenter cet état comme dépourvu de secrets ;

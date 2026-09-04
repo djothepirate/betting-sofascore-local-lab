@@ -5,8 +5,8 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
-[WO-SS-20260904-048](docs/work_orders/active/WO-SS-20260904-048-j9-wo046-local-mtls-identity-provisioning.md)
-est implémenté et qualifié `PASS_LOCAL_FAIL_CLOSED` sur la branche distincte
+[WO-SS-20260904-048](docs/work_orders/completed/WO-SS-20260904-048-j9-wo046-local-mtls-identity-provisioning.md)
+est `VALIDATED`, classé et qualifié `PASS_LOCAL_FAIL_CLOSED` sur la branche distincte
 `codex/j9-wo048-wo046-local-mtls-identity-provisioning`, au runtime exact
 `063c91f2de57330ca2b6baf3753d7de4ea921881`. Il fournit à WO-046 un outillage PKI-only
 fail-closed et un unique jeu d'identités mTLS locales neuf, éphémère et lié au run, sans démarrer
@@ -25,9 +25,12 @@ Le
 [rapport expurgé WO-048](docs/validation/J9-WO048-LOCAL-MTLS-IDENTITY-PROVISIONING-QUALIFICATION-20260904.md),
 taille `12844` octets et SHA-256
 `c704961530020216bfbc644f2fa928357466eccf54ef4e3d80f5705a95ef109d`, consigne aussi une
-déviation Testcontainers contenue et nettoyée, sans accès à la base primaire. WO-048 reste
-`READY_FOR_OWNER_REVIEW` : la readiness, les tentatives hôte et cette déviation doivent encore
-être reconnues explicitement avant classement.
+déviation Testcontainers contenue et nettoyée, sans accès à la base primaire. Le propriétaire a
+validé la readiness, reconnu les tentatives hôte, la déviation et la conservation du run nominal ;
+la clôture est consignée le `2026-09-04T22:10:44Z` (`2026-09-05T00:10:44+02:00` Europe/Paris).
+Le rapport et les commits qualifiés restent immuables. La branche historique sera publiée avec
+l'alias de PR conforme `codex/ss-20260904-048-j9-wo046-local-mtls-identity-provisioning` au même
+commit, afin de respecter la convention CI sans réécrire l'historique.
 
 Le UUID du run, les certificats, empreintes réelles, clés, stores, mots de passe et chemins privés
 restent hors Git dans un état externe protégé. Cet état contient des secrets sous ACL ; seul son
@@ -58,7 +61,7 @@ Le Work Order
 porte historiquement dans son document v0.1 l'état `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`,
 depuis le commit exact de clôture de WO-045
 `8a1225fc4b85d8e8b55af536fcbc7955676131ff`. L'état effectif de la séquence est désormais
-`PAUSED_PENDING_WO048_OWNER_VALIDATION`. Il prépare la future campagne
+`RESUME_AUTHORIZED_BEFORE_MANIFEST`. Il prépare la future campagne
 Windows/Windows d'une livraison manuelle unique d'un export J7 fournisseur déjà
 `HUMAN_VALIDATED` vers le receiver Betting Project sur `https://127.0.0.1:8444`.
 
@@ -86,7 +89,7 @@ taille `6215` octets et SHA-256
 `18152301fbb4caa49218f7562f2a1ceb35b9e451dd6c6c5b02dc5b845eba574a`, constate que
 `CurrentUser\\My` contenait zéro certificat lors de cet inventaire historique. WO-048 a depuis
 provisionné et qualifié un jeu neuf lié au run ; l'étape 4 est désormais
-`SELECTED_RUN_BOUND_PENDING_WO048_OWNER_VALIDATION`. Le manifeste WO-046 n'est pas créé et son
+`SELECTED_RUN_BOUND_WO048_VALIDATED_PENDING_PREUSE_REVALIDATION`. Le manifeste WO-046 n'est pas créé et son
 autorisation n'est pas consommée ; aucun nouveau go propriétaire n'est construit, accordé ou
 enregistré.
 Aucun receiver n'est démarré, aucun POST ou appel SofaScore n'est autorisé, et les réseaux distant

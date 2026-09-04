@@ -1,6 +1,8 @@
 # WO-SS-20260904-048 — Identités mTLS locales liées au run WO-046
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
+- **Clôture consignée UTC :** `2026-09-04T22:10:44Z`
+- **Clôture consignée Europe/Paris :** `2026-09-05T00:10:44+02:00`
 - **Jalon :** après J9 — préalable distinct à la campagne réelle locale WO-046
 - **Préparé le :** 2026-09-04
 - **Préparation UTC :** `2026-09-04T17:14:44.3290393Z`
@@ -266,7 +268,7 @@ WO-048 pourra être soumis à validation propriétaire uniquement si :
 9. une revue adversariale ne laisse aucun finding P0/P1/P2 ouvert ;
 10. le propriétaire valide séparément le résultat avant classement.
 
-## 10. État effectif soumis à la revue propriétaire
+## 10. État historique soumis à la revue propriétaire
 
 ```text
 J9_WO048_STATUS=READY_FOR_OWNER_REVIEW
@@ -373,7 +375,7 @@ WO-048 n'autorise toujours ni la création du manifeste WO-046, ni un owner-go, 
 Après validation et classement de WO-048, la reprise de WO-046 restera soumise à une décision
 propriétaire séparée.
 
-## 14. Bloc de revue propriétaire soumis
+## 14. Bloc de revue propriétaire soumis — historique
 
 ```text
 J9_WO048_OWNER_REVIEW_DECISION=<VALIDATE|REJECT>
@@ -397,3 +399,66 @@ J9_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
 J9_VPS_DEPLOYMENT_AUTHORIZED=NO
 J9_PRODUCTION_AUTHORIZED=NO
 ```
+
+## 15. Validation propriétaire, classement et publication
+
+Le propriétaire a validé le runtime et la documentation ci-dessous, reconnu les tentatives hôte
+échouées, leurs rollbacks sans résidu, la déviation Testcontainers et la conservation volontaire
+du run nominal. Cette décision est consignée le `2026-09-04T22:10:44Z`, soit
+`2026-09-05T00:10:44+02:00` en Europe/Paris ; l'horodatage désigne la consignation et non un
+horodatage de message propriétaire reconstitué.
+
+```text
+J9_WO048_OWNER_REVIEW_DECISION=VALIDATE
+J9_WO048_WORK_ORDER=WO-SS-20260904-048-j9-wo046-local-mtls-identity-provisioning
+J9_WO048_IMPLEMENTATION_COMMIT=063c91f2de57330ca2b6baf3753d7de4ea921881
+J9_WO048_DOCUMENTATION_COMMIT=ca9641d503fdc03d1413527498b05f8429e65ffb
+J9_WO048_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
+J9_WO048_QUALIFICATION_REPORT_SHA256=c704961530020216bfbc644f2fa928357466eccf54ef4e3d80f5705a95ef109d
+J9_WO048_FAILED_HOST_ATTEMPTS_ACKNOWLEDGED=YES
+J9_WO048_FAILED_ATTEMPT_RESIDUALS=0
+J9_WO048_TESTCONTAINERS_EXECUTION_DEVIATION_ACKNOWLEDGED=YES
+J9_WO048_SUCCESSFUL_RUN_RETENTION_ACKNOWLEDGED=YES
+J9_WO048_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO048_WORK_ORDER_MOVE_TO_COMPLETED=YES
+J9_WO046_RESUME_AFTER_WO048_VALIDATION=YES
+J9_WO046_MANIFEST_CREATION_AUTHORIZED=NO
+J9_WO046_OWNER_GO_GRANTED=NO
+J9_WO046_REAL_POST_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+La décision remplace les attentes propriétaires des sections 10 à 14. Le rapport de qualification
+de `12844` octets reste immuable ; son état historique `READY_FOR_OWNER_REVIEW` n'est pas réécrit.
+
+```text
+J9_WO048_FINAL_STATUS=VALIDATED
+J9_WO048_OWNER_REVIEW_REQUIRED=NO
+J9_WO048_WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260904-048-j9-wo046-local-mtls-identity-provisioning.md
+J9_WO046_STATUS=RESUME_AUTHORIZED_BEFORE_MANIFEST
+J9_WO046_RESUME_AUTHORIZED=YES
+J9_WO046_MANIFEST_CREATED=NO
+J9_WO046_OWNER_GO_GRANTED=NO
+J9_WO046_REAL_POST_AUTHORIZED=NO
+```
+
+Le push et la création d'une PR vers `main` sont autorisés par l'instruction propriétaire de
+publication. La branche de travail nommée explicitement est conservée. Comme son nom historique
+ne satisfait pas `ci/check-branch-name.sh`, un alias de publication conforme à la convention 1A
+est créé au même commit, sans squash, rebase ou changement de code :
+
+```text
+WORK_BRANCH=codex/j9-wo048-wo046-local-mtls-identity-provisioning
+PR_BRANCH=codex/ss-20260904-048-j9-wo046-local-mtls-identity-provisioning
+PR_BASE=main
+QUALIFIED_COMMIT_HASHES=PRESERVED
+MERGE_AUTHORIZED=NO
+```
+
+La portée de la PR contient également les dépendances WO-045/V31 et WO-047/V32 validées, ainsi
+que les préparatifs documentaires WO-046 hérités, car ils ne sont pas encore dans `main`. Le
+corps de PR doit expliciter cette portée cumulative. La reprise WO-046 poursuit les préparatifs
+hors ligne ; elle n'accorde ni création du manifeste, ni accès primaire supplémentaire, ni POST.
