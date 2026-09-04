@@ -6,11 +6,26 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 Le Work Order
 [WO-SS-20260904-044](docs/work_orders/active/WO-SS-20260904-044-j9-wo036-java-jar-path-argument-boundary.md)
-est ouvert depuis le HEAD exact `96dec8492dbc043c7d6e4310195421f4411722df` de la PR `#26`.
-Il traite le second P2 : préserver le chemin JAR WO-036 comme un unique argument natif lorsque le
-chemin Windows contient des espaces. Sa portée est limitée à l'outillage de lancement de campagne,
-aux tests et à la preuve hors ligne ; aucune base, opération HTTP, fusion ou fermeture de PR n'est
-autorisée.
+est `READY_FOR_OWNER_REVIEW`. Le commit
+`0b903b71ae70ccfb9b55f8d89bc8ac57eab0cbe3` résout localement le second P2 de la PR `#26` : le
+chemin JAR WO-036 absolu et canonique est explicitement protégé à la frontière native de
+`Start-Process`, puis reçu comme une valeur unique immédiatement après `-jar` même lorsque le
+chemin Windows contient des espaces. Les valeurs ambiguës sont refusées fail-closed.
+
+La preuve hôte passe sur `5/5` itérations et `4/4` refus, sans processus détenu ni racine temporaire
+résiduelle. Pester passe à `5/5` ciblé et `95/95` global ; Maven standard hors ligne avec les
+intégrations explicitement désactivées passe à Surefire `1136/0/0/5`. Le
+[rapport WO-044](docs/validation/J9-WO044-JAVA-JAR-PATH-ARGUMENT-BOUNDARY-QUALIFICATION-20260904.md),
+taille `8729` octets, porte le SHA-256
+`02008824316e688b6e42c523aaec45acf7b8edb776f49a9b11a822afd6a125a7`.
+
+Un écart d'exécution est déclaré : une première commande Maven hôte sans `-DskipITs` a démarré un
+PostgreSQL Testcontainers isolé et Ryuk malgré la porte `DATABASE_START=NO`. Elle a été interrompue
+immédiatement ; le postflight par identifiants exacts confirme zéro conteneur résiduel, tandis que
+la base primaire est restée `running/healthy`, sans accès, arrêt ni purge. La qualification de la
+correction est `PASS_LOCAL_FAIL_CLOSED`, mais sa validation propriétaire reste requise avec
+reconnaissance explicite de cet écart. Aucun push, changement ou merge de la PR `#26`, fermeture de
+la PR `#25`, appel HTTP, donnée J7 réelle, VPS ou production n'est autorisé.
 
 Le Work Order
 [WO-SS-20260904-043](docs/work_orders/completed/WO-SS-20260904-043-j9-wo036-client-certificate-fail-closed-rollback.md)

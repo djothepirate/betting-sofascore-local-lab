@@ -11,9 +11,26 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `codex/ss-20260904-044-j9-wo036-java-jar-path-argument-boundary` ;
 - confirmation statique du second P2 : `Start-Process -ArgumentList` reçoit le chemin JAR sans
   guillemets explicites et peut le découper si un segment Windows contient un espace ;
-- correction et qualification autorisées uniquement dans l'outillage de lancement WO-036, ses
-  tests et sa documentation, avec fixture hôte hors ligne sous un véritable chemin contenant des
-  espaces ;
+- correction au commit `0b903b71ae70ccfb9b55f8d89bc8ac57eab0cbe3` : validation fail-closed du
+  chemin JAR absolu et canonique, puis protection explicite de son unique valeur à la frontière
+  native de `Start-Process` ;
+- harnais hôte réel sous un chemin Windows contenant des espaces : reproduction pré-correctif,
+  `5/5` réceptions comme argument unique, ordre exact de l'identité, des trois garde-fous JDK et de
+  `-jar`, cas sans espace inchangé et `4/4` valeurs ambiguës refusées ;
+- zéro processus détenu et zéro racine temporaire synthétique résiduelle ; Pester `5/5` ciblé et
+  `95/95` global, puis Maven standard hors ligne avec intégrations explicitement désactivées vert à
+  Surefire `1136/0/0/5` ;
+- écart d'exécution déclaré : une première commande Maven hôte sans `-DskipITs` a démarré un
+  PostgreSQL Testcontainers isolé et Ryuk malgré l'interdiction de démarrer une base ; interruption
+  immédiate, zéro conteneur exact résiduel et base primaire restée `running/healthy`, sans accès,
+  arrêt ni purge ;
+- rapport
+  `docs/validation/J9-WO044-JAVA-JAR-PATH-ARGUMENT-BOUNDARY-QUALIFICATION-20260904.md`, taille
+  `8729` octets et SHA-256
+  `02008824316e688b6e42c523aaec45acf7b8edb776f49a9b11a822afd6a125a7` ;
+- résultat d'implémentation `PASS_LOCAL_FAIL_CLOSED`, WO-044
+  `READY_FOR_OWNER_REVIEW_WITH_DISCLOSED_EXECUTION_DEVIATION` et P2
+  `RESOLVED_LOCALLY_PENDING_OWNER_VALIDATION` ;
 - aucun code Java applicatif, receiver, contrat, migration, base, payload J7, réseau, VPS,
   production, merge de `#26` ou fermeture de `#25` autorisé.
 
