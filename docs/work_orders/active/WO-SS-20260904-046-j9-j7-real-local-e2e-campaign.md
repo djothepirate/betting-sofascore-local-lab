@@ -1,6 +1,6 @@
 # WO-SS-20260904-046 — Campagne E2E J7 réelle locale Windows/Windows
 
-- **Statut :** `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`
+- **Statut :** `PAUSED_PENDING_MTLS_IDENTITY_PROVISIONING_DECISION`
 - **Jalon :** après J9 — campagne locale d'une livraison J7 dérivée fournisseur
 - **Ouvert le :** 2026-09-04
 - **Ouverture UTC :** `2026-09-04T13:59:22.9943521Z`
@@ -114,7 +114,7 @@ INT001_OWNER_VALIDATION=RECORDED
 INT001_STATUS=OWNER_VALIDATED_LOCALLY_QUALIFIED_NOT_PUBLISHED
 ```
 
-## 4. Réconciliation ordonnée des préconditions
+## 4. Réconciliation ordonnée des préconditions à l'ouverture — historique v0.1
 
 L'ouverture ne transforme aucune déclaration ou observation historique en preuve exécutoire. Les
 éléments suivants doivent être identifiés par une référence versionnée, un commit exact et une
@@ -137,7 +137,8 @@ déclaration propriétaire `EVIDENCED_COMPATIBLE` d'une preuve officielle positi
 finale rendue, preuve de soumission, réponse, licence ou convention applicable n'est établie dans
 le périmètre inspecté. Le résultat déterministe reste donc `NOT_EVIDENCED`.
 
-La séquence propriétaire s'arrête à cette porte :
+Dans l'état historique antérieur à ADR-SS-003 v0.2, la séquence propriétaire s'arrêtait à cette
+porte :
 
 ```text
 ORDERED_STEP_1_INT001_OWNER_VALIDATION=COMPLETE
@@ -173,7 +174,8 @@ Il devra lier au minimum :
 
 - le commit Local Lab exact et le commit receiver exact exécutés ;
 - les rapports et hashes de qualification sender, receiver et frontière owner-go ;
-- la preuve officielle applicable, expurgée, versionnée et hashée ;
+- la preuve d'audit officielle exacte, même négative, et la base de gouvernance ADR-SS-003 v0.2,
+  chacune expurgée, versionnée et hashée ;
 - l'événement canonique, l'identifiant fournisseur et l'export sélectionné ;
 - `exportId`, `fileSha256`, `dataSha256`, taille, schema ID et version ;
 - l'origine exacte `https://127.0.0.1:8444` ;
@@ -188,9 +190,12 @@ les jetons et les ACK bruts restent hors manifeste, hors documentation et hors G
 ## 6. Go canonique futur
 
 Après le gel du manifeste, un nouveau bloc propriétaire devra reprendre exactement le format
-`J7_PROVIDER_DERIVED_OWNER_GO_V1` qualifié par WO-045. Il devra notamment fixer :
+`J7_PROVIDER_DERIVED_OWNER_GO_V2` qualifié par WO-047. V1 reste strictement historique et exige
+toujours `EVIDENCED_COMPATIBLE` ; il ne peut pas porter la décision courante. Le futur bloc V2
+devra notamment fixer :
 
 ```text
+FORMAT=J7_PROVIDER_DERIVED_OWNER_GO_V2
 WORK_ORDER=WO-SS-20260904-046-j9-j7-real-local-e2e-campaign
 CAMPAIGN_MANIFEST_REFERENCE=docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-CAMPAIGN-MANIFEST-20260904.md
 CAMPAIGN_MANIFEST_SHA256=<sha256 du manifeste gelé>
@@ -200,6 +205,13 @@ OWNER_DECISION=GRANT
 GO_USE=ONE_TIME
 PAYLOAD_CLASS=PROVIDER_DERIVED
 VALIDATION_STATUS=HUMAN_VALIDATED
+PROVIDER_PERMISSION_AUDIT_REFERENCE=docs/validation/J9-WO046-OFFICIAL-PERMISSION-RECONCILIATION-20260904.md
+PROVIDER_PERMISSION_AUDIT_SHA256=707e0fd9b07dc0944225be80a590792e5e8ab0631dab964a465335f283ac1473
+PROVIDER_PERMISSION_AUDIT_STATUS=NOT_EVIDENCED
+J7_TRANSFER_GOVERNANCE_BASIS_REFERENCE=ADR-SS-003-optional-integration-topology.md
+J7_TRANSFER_GOVERNANCE_BASIS_COMMIT=e1ec9936467dd570f7ed00c51227c8e7d5a35945
+J7_TRANSFER_GOVERNANCE_BASIS_SHA256=ded6a4da8a3161caae491f62919f4f5c3569c69c821be5a807772cc542cede3f
+J7_TRANSFER_GOVERNANCE_BASIS_STATUS=ADR_ACCEPTED_NO_EXECUTION_AUTHORITY
 PROVIDER_DERIVED_REAL_POST_AUTHORIZED=YES
 PROVIDER_NETWORK_AUTHORIZED=NO
 REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
@@ -210,9 +222,9 @@ OWNER_GO_DOCUMENT_SHA256=<sha256 externe au préimage canonique>
 ```
 
 Le futur go doit avoir une fenêtre UTC semi-ouverte strictement positive, future au moment de son
-enregistrement et d'une durée maximale de 60 minutes. Tout go antérieur à WO-045 est non
-réutilisable. Aucun go n'est accordé, construit, hashé, enregistré ou consommé à l'ouverture de
-WO-046.
+enregistrement et d'une durée maximale de 60 minutes. Tout go V1 ou antérieur à WO-047 est non
+réutilisable. Aucun go n'est accordé, construit, hashé, enregistré ou consommé par la reprise ou
+la sélection hors ligne.
 
 ## 7. Exécution future bornée
 
@@ -235,7 +247,7 @@ Une erreur avant le claim atomique ne crée ni tentative ni consommation. Dès q
 committé, le go est consommé définitivement et toute incertitude impose
 `UNKNOWN_RECONCILIATION_REQUIRED`, sans second POST.
 
-## 8. Périmètre actuellement autorisé
+## 8. Périmètre autorisé à l'ouverture — historique v0.1
 
 Sont autorisés par la présente décision :
 
@@ -243,6 +255,10 @@ Sont autorisés par la présente décision :
 - la création de ce Work Order actif ;
 - les contrôles hors ligne et en lecture seule nécessaires pour décrire les portes manquantes ;
 - les mises à jour documentaires d'ouverture de `README.md` et `CHANGELOG.md`.
+
+La décision de reprise consignée en section 10 supersède uniquement cette portée historique pour
+l'intégration linéaire et les étapes de sélection hors ligne ; les interdictions du manifeste, du
+go, du POST et des réseaux restent effectives.
 
 Restent interdits :
 
@@ -292,7 +308,97 @@ J9_VPS_DEPLOYMENT_AUTHORIZED=NO
 J9_PRODUCTION_AUTHORIZED=NO
 ```
 
-WO-046 est ouvert mais bloqué avant préparation de campagne. Pour reprendre dans l'ordre demandé,
-il faut d'abord fournir puis réconcilier une preuve officielle positive exacte. Une identité mTLS
-devra ensuite être provisionnée sous une autorisation distincte avant sélection et gel du
-manifeste. Aucun go ni POST ne peut être déduit de l'ouverture ou de la présente réconciliation.
+Dans cet état initial v0.1, WO-046 était bloqué avant préparation de campagne et exigeait à tort
+une preuve officielle positive. Cette photographie reste conservée pour audit. ADR-SS-003 v0.2,
+WO-047 puis la décision propriétaire de reprise la supersèdent pour le seul transfert J7 local ;
+l'état gouvernant courant est consigné ci-dessous. Aucun go ni POST ne peut être déduit de cette
+supersession.
+
+## 10. Reprise après validation de WO-047
+
+Le propriétaire a autorisé la reprise après la validation et le push de WO-047 :
+
+```text
+J9_WO047_FINAL_STATUS=VALIDATED
+J9_WO046_STATUS=RESUME
+J9_WO046_RESUME_AUTHORIZED=YES
+J9_WO046_MANIFEST_CREATED=NO
+J9_WO046_OWNER_GO_GRANTED=NO
+J9_WO046_REAL_POST_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+La branche WO-046, propre au commit
+`0338821cc07130f5d200a70db10209bb898a59ae`, a été avancée exclusivement par fast-forward sur la
+clôture WO-047 validée et publiée
+`73881ebf2c673d347b63e8be982572e70b6429ae`. Le statut officiel reste exactement
+`NOT_EVIDENCED`, mais ADR-SS-003 v0.2 le traite comme un fait d'audit non bloquant pour ce seul
+transfert local. `EVIDENCED_INCOMPATIBLE` demeure bloquant et les portes J3/J4/J5 sont inchangées.
+
+La reprise hors ligne est qualifiée dans
+`docs/validation/J9-WO046-RESUME-EXPORT-AND-MTLS-SELECTION-20260904.md`, taille `6215` octets et
+SHA-256 `18152301fbb4caa49218f7562f2a1ceb35b9e451dd6c6c5b02dc5b845eba574a`.
+
+### 10.1 Étape 3 — sélection des métadonnées J7
+
+Le candidat fournisseur validé le plus récent est sélectionné par ses seules métadonnées :
+
+```text
+EXPORT_SELECTION_STATUS=SELECTED_METADATA_ONLY_PENDING_PRIMARY_LEDGER_REVALIDATION
+EXPORT_ID=a8d40d57-98c5-4e01-8ecc-4f1f9b5feabc
+CANONICAL_EVENT_ID=e2c9599a-2336-3888-ae88-2437dad02b48
+PROVIDER_EVENT_ID=16310945
+PAYLOAD_CLASS=PROVIDER_DERIVED
+VALIDATION_STATUS=HUMAN_VALIDATED
+SCHEMA_ID=urn:betting-project:sofascore-local-lab:j7:canonical-event-export:v1
+SCHEMA_VERSION=1.0.0
+SIZE_BYTES=35663
+FILE_SHA256=d4aba249231bb9d575f40b5c23a629b938f685ee7d4cc479bfa7d846d61be3f6
+DATA_SHA256=f95ae31e711a9433d6d06745d37f2535143266aa97c7d151fd26bea88ef03ac6
+WARNING=MISSING_COMPONENT:EVENT_DETAILS
+```
+
+La sélection est bornée au fichier local. Le statut et le chemin dans le ledger primaire devront
+être revalidés avant le manifeste ; aucun contact avec la base primaire n'a été effectué ici.
+
+### 10.2 Étape 4 — absence d'identité mTLS sélectionnable
+
+L'inventaire des seules métadonnées publiques de `Cert:\CurrentUser\My` retourne zéro certificat.
+Aucune identité ne peut être sélectionnée et aucun provisionnement n'a été déduit de la reprise :
+
+```text
+CURRENT_USER_MY_CERTIFICATE_COUNT=0
+MTLS_IDENTITY_SELECTION_STATUS=NOT_SELECTED_NO_EXISTING_CANDIDATE
+CERTIFICATE_PROVISIONING_PERFORMED=NO
+PRIVATE_KEY_READ_EXPORT_OR_USE=NO
+```
+
+L'état gouvernant devient donc :
+
+```text
+J9_WO046_STATUS=PAUSED_PENDING_MTLS_IDENTITY_PROVISIONING_DECISION
+ORDERED_STEP_1_INT001_OWNER_VALIDATION=COMPLETE
+ORDERED_STEP_2_OFFICIAL_EVIDENCE_RECONCILIATION=COMPLETE_NEGATIVE_AUDIT_ONLY_NON_BLOCKING_FOR_LOCAL_J7_TRANSFER
+ORDERED_STEP_3_EXPORT_METADATA_SELECTION=COMPLETE_PENDING_PRIMARY_LEDGER_REVALIDATION
+ORDERED_STEP_4_MTLS_IDENTITY_SELECTION=BLOCKED_NO_EXISTING_CANDIDATE
+ORDERED_STEP_5_MANIFEST_AUTHORIZATION=NOT_CONSUMED
+ORDERED_STEP_6_MANIFEST_COMMIT=NOT_CREATED
+ORDERED_STEP_7_OWNER_GO_SUBMISSION=NOT_CREATED
+ORDERED_STEP_8_REAL_POST_AUTHORIZATION=NOT_GRANTED
+J9_WO046_MANIFEST_CREATION_AUTHORIZED=NO
+J9_WO046_OWNER_GO_GRANTED=NO
+J9_WO046_REAL_POST_AUTHORIZED=NO
+J9_WO046_DIRECT_IMPORT_ATTEMPTS=0
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_LOCAL_RECEIVER_LOOPBACK_AUTHORIZED=NO
+J9_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+Le prochain changement d'état possible est le provisionnement borné d'une identité mTLS locale,
+sous décision propriétaire distincte. Le manifeste, le go et le POST restent des portes
+ultérieures séparées.

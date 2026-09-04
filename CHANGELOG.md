@@ -31,8 +31,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - aucune nouvelle porte d'acquisition J3/J4/J5 et aucun changement INT-001 sous ce Work Order ;
   les décisions réseau fournisseur restent entièrement séparées ;
 - implémentation hors ligne, PostgreSQL isolé et loopback synthétique autorisés sous WO-047 ;
-  WO-046 demeure effectivement `PAUSED_AWAITING_SEPARATE_OWNER_RESUME_DECISION` avant l'étape 3,
-  tandis que son document v0.1 conserve son statut historique ;
+  à la clôture de WO-047, WO-046 était
+  `PAUSED_AWAITING_SEPARATE_OWNER_RESUME_DECISION` avant l'étape 3, tandis que son document v0.1
+  conservait son statut historique ;
 - contrôles J6 portés à V32 et vérifiés uniquement par tests statiques ciblés ; l'interdiction
   propriétaire exclut le test `pg_dump`/`pg_restore`, le pipeline natif et tout contact de la base
   primaire. La qualification emploie le profil `integration-tests` ciblé et doit compléter un
@@ -55,6 +56,25 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Après J9 — WO-046 campagne E2E J7 réelle locale Windows/Windows
 
+- reprise explicitement autorisée après validation de WO-047 ; branche WO-046 avancée par
+  fast-forward exclusif de `0338821cc07130f5d200a70db10209bb898a59ae` au commit de clôture
+  publié `73881ebf2c673d347b63e8be982572e70b6429ae` ;
+- la preuve officielle demeure exactement `NOT_EVIDENCED`, désormais audit-only et non bloquante
+  pour le seul transfert J7 local sous ADR-SS-003 v0.2 ; `EVIDENCED_INCOMPATIBLE` et les portes
+  d'acquisition J3/J4/J5 restent inchangés ;
+- étape 3 accomplie hors ligne par sélection des métadonnées du candidat le plus récent : export
+  `a8d40d57-98c5-4e01-8ecc-4f1f9b5feabc`, événement fournisseur `16310945`,
+  `PROVIDER_DERIVED`, `HUMAN_VALIDATED`, `35663` octets, SHA-256 fichier
+  `d4aba249231bb9d575f40b5c23a629b938f685ee7d4cc479bfa7d846d61be3f6` et avertissement conservé
+  `MISSING_COMPONENT:EVENT_DETAILS` ; concordance primaire encore à revalider avant manifeste ;
+- étape 4 arrêtée proprement : l'inventaire des seules métadonnées publiques de
+  `CurrentUser\\My` retourne zéro certificat, sans création, export ni utilisation de clé privée ;
+- rapport de reprise
+  `docs/validation/J9-WO046-RESUME-EXPORT-AND-MTLS-SELECTION-20260904.md`, taille `6215` octets et
+  SHA-256 `18152301fbb4caa49218f7562f2a1ceb35b9e451dd6c6c5b02dc5b845eba574a` ; état effectif
+  `PAUSED_PENDING_MTLS_IDENTITY_PROVISIONING_DECISION` ;
+- aucun manifeste, go, POST réel, receiver, appel fournisseur, réseau distant, VPS ou production
+  autorisé ou consommé lors de cette reprise ;
 - validation propriétaire d'INT-001 consignée dans son dépôt au commit
   `de06153f0908a1bb2dc9bbd2c8e22f7fd14dacfd`, avec résultat
   `PASS_LOCAL_FAIL_CLOSED`, sans push, PR, merge, démarrage ou réseau ;

@@ -16,20 +16,19 @@ Betting Project, lequel ne contacte jamais SofaScore.
 L'implémentation V2/V32 hors ligne et synthétique est qualifiée sous WO-047 au commit
 `ddb41e8fd0dfe32e9c2aa5fdb4a50d9fcd90cb93`. Le propriétaire a validé sa readiness locale,
 reconnu la déviation de sélection contenue et autorisé son classement le
-`2026-09-04T16:37:53.4738879Z`. WO-046 reste en pause avant l'étape 3 jusqu'à une décision
-propriétaire de reprise séparée. Aucune sélection, identité mTLS, création de manifeste, go ou
-tentative n'est consommée. Aucun POST réel, appel J3/J4/J5, receiver distant, VPS ou production
-n'est autorisé.
+`2026-09-04T16:37:53.4738879Z`. La reprise séparée de WO-046 est maintenant autorisée et sa
+branche a intégré WO-047 par fast-forward exact jusqu'au commit de clôture publié
+`73881ebf2c673d347b63e8be982572e70b6429ae`. Aucun manifeste, go ou POST réel n'est pour autant
+autorisé.
 
 Le Work Order
 [WO-SS-20260904-046](docs/work_orders/active/WO-SS-20260904-046-j9-j7-real-local-e2e-campaign.md)
 porte historiquement dans son document v0.1 l'état `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`,
 depuis le commit exact de clôture de WO-045
 `8a1225fc4b85d8e8b55af536fcbc7955676131ff`. L'état effectif de la séquence est désormais
-`PAUSED_AWAITING_SEPARATE_OWNER_RESUME_DECISION`, sans réécriture de cette preuve historique. Il
-prépare la future campagne Windows/Windows d'une
-livraison manuelle unique d'un export J7 fournisseur déjà `HUMAN_VALIDATED` vers le receiver
-Betting Project sur `https://127.0.0.1:8444`.
+`PAUSED_PENDING_MTLS_IDENTITY_PROVISIONING_DECISION`. Il prépare la future campagne
+Windows/Windows d'une livraison manuelle unique d'un export J7 fournisseur déjà
+`HUMAN_VALIDATED` vers le receiver Betting Project sur `https://127.0.0.1:8444`.
 
 L'autorisation historique propre à WO-046 couvre uniquement l'ouverture documentaire et
 l'inventaire hors ligne.
@@ -42,12 +41,21 @@ réponse, licence ou convention SofaScore exacte corroborant la déclaration pro
 `EVIDENCED_COMPATIBLE`. Le résultat exécutoire reste `NOT_EVIDENCED`.
 
 La conclusion de blocage du rapport WO-046 reste la preuve exacte de la règle v0.1 alors effective,
-mais ADR-SS-003 v0.2 la supersède désormais pour le seul transfert J7 local. WO-047 est validé,
-mais la séquence demeure arrêtée avant l'étape 3 dans l'attente de l'autorisation propriétaire
-distincte de reprendre WO-046. Un export candidat a seulement été
-inventorié en lecture seule, sans sélection, et aucun certificat client n'existe actuellement dans
-`CurrentUser\\My`. Le manifeste WO-046 n'est pas créé et son autorisation n'est pas consommée ;
-aucun nouveau go propriétaire n'est construit, accordé ou enregistré.
+mais ADR-SS-003 v0.2 la supersède pour le seul transfert J7 local. Le statut officiel reste
+`NOT_EVIDENCED` comme fait d'audit et n'est pas présenté comme un accord. L'étape 3 a sélectionné
+hors ligne les métadonnées de l'export `a8d40d57-98c5-4e01-8ecc-4f1f9b5feabc`, classé
+`PROVIDER_DERIVED` et `HUMAN_VALIDATED`, taille `35663` octets, SHA-256 fichier
+`d4aba249231bb9d575f40b5c23a629b938f685ee7d4cc479bfa7d846d61be3f6`. La concordance du ledger
+primaire reste à revalider avant manifeste.
+
+Le
+[rapport de reprise WO-046](docs/validation/J9-WO046-RESUME-EXPORT-AND-MTLS-SELECTION-20260904.md),
+taille `6215` octets et SHA-256
+`18152301fbb4caa49218f7562f2a1ceb35b9e451dd6c6c5b02dc5b845eba574a`, constate que
+`CurrentUser\\My` contient zéro certificat. L'étape 4 reste donc
+`NOT_SELECTED_NO_EXISTING_CANDIDATE` jusqu'à une décision distincte de provisionnement. Le
+manifeste WO-046 n'est pas créé et son autorisation n'est pas consommée ; aucun nouveau go
+propriétaire n'est construit, accordé ou enregistré.
 Aucun receiver n'est démarré, aucun POST ou appel SofaScore n'est autorisé, et les réseaux distant
 et fournisseur, le VPS et la production restent bloqués.
 
@@ -82,7 +90,9 @@ taille `12033` octets et SHA-256
 `75b55109c0705a44026376d7f0bdadf76d979dcd4268c1430d5ed8008d693540`, conclut
 `PASS_LOCAL_FAIL_CLOSED`. Le propriétaire a validé cette readiness, reconnu la déviation de
 sélection contenue et autorisé le classement du Work Order. Aucun profil `integration-tests`
-intégral n'est revendiqué et cette clôture n'autorise pas la reprise de WO-046.
+intégral n'est revendiqué. La clôture seule n'autorisait pas la reprise de WO-046 ; cette reprise
+a depuis été accordée par une décision propriétaire séparée et reste bornée par les portes
+consignées dans le Work Order actif.
 
 Pour la qualification historique WO-045, les parcours Maven standard et `integration-tests`
 passent chacun à Surefire `1167/0/0/5` et
