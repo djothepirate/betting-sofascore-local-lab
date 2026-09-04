@@ -906,7 +906,7 @@ try {
     }
     Invoke-WO048QualificationFailurePoint -Point 'AFTER_SERVER_ROOT_IMPORT'
 
-    $script:phase = 'CLIENT_CERTIFICATE'
+    $script:phase = 'CLIENT_CERTIFICATE_CREATE'
     $clientSubjectArgument =
         "CN=WO046 sender $($runId.ToString('D')),OU=WO-046,O=Betting Project Local Qualification"
     $clientValidityAnchorUtc = [DateTimeOffset]::UtcNow
@@ -932,13 +932,16 @@ try {
         throw 'The WO-048 sender client certificate was not created.'
     }
     try {
+        $script:phase = 'CLIENT_RECOVERY_DECLARATION'
         $clientRecord = Set-WO048ClientCertificateRecoveryDeclaration `
             -Certificate $script:clientCertificate `
             -ExpectedSubject $expectedClientSubject
         Invoke-WO048QualificationFailurePoint `
             -Point 'AFTER_CLIENT_CERTIFICATE_CREATION_BEFORE_OWNERSHIP'
+        $script:phase = 'CLIENT_CNG_IDENTITY'
         $clientRecord.cngKey = Get-WO048ClientCngKeyIdentity `
             -Certificate $script:clientCertificate
+        $script:phase = 'CLIENT_OWNERSHIP_STATE'
         $clientRecord.ownershipStatus = 'OWNED'
         Invoke-WO048QualificationFailurePoint `
             -Point 'AFTER_CLIENT_CERTIFICATE_OWNERSHIP_IN_MEMORY'

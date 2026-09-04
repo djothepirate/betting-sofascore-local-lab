@@ -510,6 +510,8 @@ Describe 'WO-048 exact certificate profiles and ownership ordering' {
         $serverImport = $initializeSource.IndexOf('Import-Certificate', $serverRecord)
         $clientCreate = $initializeSource.IndexOf(
             '$script:clientCertificate = New-SelfSignedCertificate')
+        $clientCreatePhase = $initializeSource.LastIndexOf(
+            "`$script:phase = 'CLIENT_CERTIFICATE_CREATE'", $clientCreate)
         $declarationFunction = $initializeSource.IndexOf(
             'function Set-WO048ClientCertificateRecoveryDeclaration')
         $declarationTransition = $initializeSource.IndexOf(
@@ -520,12 +522,18 @@ Describe 'WO-048 exact certificate profiles and ownership ordering' {
             '$script:clientCertificateRecoveryDeclared = $true', $declarationStateWrite)
         $clientDeclaration = $initializeSource.IndexOf(
             'Set-WO048ClientCertificateRecoveryDeclaration', $clientCreate)
+        $clientDeclarationPhase = $initializeSource.LastIndexOf(
+            "`$script:phase = 'CLIENT_RECOVERY_DECLARATION'", $clientDeclaration)
         $clientBeforeOwnershipFailure = $initializeSource.IndexOf(
             "'AFTER_CLIENT_CERTIFICATE_CREATION_BEFORE_OWNERSHIP'", $clientDeclaration)
         $clientCng = $initializeSource.IndexOf(
             'Get-WO048ClientCngKeyIdentity', $clientBeforeOwnershipFailure)
+        $clientCngPhase = $initializeSource.LastIndexOf(
+            "`$script:phase = 'CLIENT_CNG_IDENTITY'", $clientCng)
         $clientRecord = $initializeSource.IndexOf(
             '$clientRecord.ownershipStatus = ''OWNED''', $clientCng)
+        $clientOwnershipPhase = $initializeSource.LastIndexOf(
+            "`$script:phase = 'CLIENT_OWNERSHIP_STATE'", $clientRecord)
         $clientInMemoryFailure = $initializeSource.IndexOf(
             "'AFTER_CLIENT_CERTIFICATE_OWNERSHIP_IN_MEMORY'", $clientRecord)
         $clientOwnedState = $initializeSource.IndexOf(
@@ -552,14 +560,22 @@ Describe 'WO-048 exact certificate profiles and ownership ordering' {
         $serverState | Should BeGreaterThan $serverRecord
         $serverImport | Should BeGreaterThan $serverState
         $clientCreate | Should BeGreaterThan -1
+        $clientCreatePhase | Should BeGreaterThan -1
+        $clientCreate | Should BeGreaterThan $clientCreatePhase
         $declarationFunction | Should BeGreaterThan -1
         $declarationTransition | Should BeGreaterThan $declarationFunction
         $declarationStateWrite | Should BeGreaterThan $declarationTransition
         $declarationFlag | Should BeGreaterThan $declarationStateWrite
         $clientDeclaration | Should BeGreaterThan $clientCreate
+        $clientDeclarationPhase | Should BeGreaterThan $clientCreate
+        $clientDeclaration | Should BeGreaterThan $clientDeclarationPhase
         $clientBeforeOwnershipFailure | Should BeGreaterThan $clientDeclaration
         $clientCng | Should BeGreaterThan $clientBeforeOwnershipFailure
+        $clientCngPhase | Should BeGreaterThan $clientBeforeOwnershipFailure
+        $clientCng | Should BeGreaterThan $clientCngPhase
         $clientRecord | Should BeGreaterThan $clientCng
+        $clientOwnershipPhase | Should BeGreaterThan $clientCng
+        $clientRecord | Should BeGreaterThan $clientOwnershipPhase
         $clientInMemoryFailure | Should BeGreaterThan $clientRecord
         $clientOwnedState | Should BeGreaterThan $clientInMemoryFailure
         $clientPersistedFailure | Should BeGreaterThan $clientOwnedState
