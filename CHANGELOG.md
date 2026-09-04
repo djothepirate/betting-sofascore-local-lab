@@ -11,17 +11,19 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - constat confirmé : INT-001 ne contacte pas SofaScore ; le couplage à
   `EVIDENCED_COMPATIBLE` se trouve exclusivement dans la configuration, la policy, le grant et la
   migration V31 du sender Local Lab ;
-- proposition ADR-SS-003 v0.2 : conserver `NOT_EVIDENCED` comme fait d'audit exact et hashé, sans
+- acceptation propriétaire d'ADR-SS-003 v0.2 sur la proposition immuable
+  `e1ec9936467dd570f7ed00c51227c8e7d5a35945` / `ded6a4da8a3161caae491f62919f4f5c3569c69c821be5a807772cc542cede3f` :
+  conserver `NOT_EVIDENCED` comme fait d'audit exact et hashé, sans
   en faire une porte pour le POST J7 local ; maintenir `EVIDENCED_INCOMPATIBLE` bloquant ;
-- format canonique V1 conservé strict et historique ; proposition d'un
+- format canonique V1 conservé strict et historique ; implémentation autorisée d'un
   `J7_PROVIDER_DERIVED_OWNER_GO_V2` séparant `PROVIDER_PERMISSION_AUDIT_*` et
   `J7_TRANSFER_GOVERNANCE_BASIS_*`, sans faux accord officiel ni autorité attribuée à l'ADR ;
-- migration V32 append-only et discriminée par format proposée, V31, la fonction canonique V1 et
+- migration V32 append-only et discriminée par format autorisée, V31, la fonction canonique V1 et
   toutes les preuves WO-045/WO-046 antérieures restant immuables ;
 - aucune nouvelle porte d'acquisition J3/J4/J5 et aucun changement INT-001 sous ce Work Order ;
   les décisions réseau fournisseur restent entièrement séparées ;
-- aucun effet runtime avant acceptation propriétaire d'ADR-SS-003 v0.2 et autorisation explicite
-  de WO-047 ; WO-046 demeure en pause avant l'étape 3 ;
+- implémentation hors ligne, PostgreSQL isolé et loopback synthétique autorisés sous WO-047 ;
+  WO-046 demeure en pause avant l'étape 3 jusqu'à validation et décision de reprise séparée ;
 - aucun export ou certificat sélectionné, manifeste créé, go construit, POST ou appel fournisseur
   effectué ; réseaux distant/fournisseur, VPS et production maintenus à `NO`.
 

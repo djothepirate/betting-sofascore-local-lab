@@ -6,15 +6,17 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 Le Work Order
 [WO-SS-20260904-047](docs/work_orders/active/WO-SS-20260904-047-j9-j7-delivery-governance-separation.md)
-est préparé dans l'état `DRAFT_AWAITING_OWNER_DECISION` sur la branche distincte
-`codex/j9-wo047-j7-delivery-governance-separation`. Il propose ADR-SS-003 v0.2 afin de corriger un
+est en cours dans l'état `IN_PROGRESS` sur la branche distincte
+`codex/j9-wo047-j7-delivery-governance-separation`. ADR-SS-003 v0.2 a été acceptée sur la
+proposition immuable `e1ec9936467dd570f7ed00c51227c8e7d5a35945` afin de corriger un
 couplage erroné : l'absence de réponse officielle SofaScore reste un fait d'audit
 `NOT_EVIDENCED`, mais ne doit pas bloquer le transfert local d'un J7 déjà `HUMAN_VALIDATED` vers
 Betting Project, lequel ne contacte jamais SofaScore.
 
-Cette proposition n'a encore aucun effet runtime. ADR-SS-003 v0.1 reste effective, WO-046 est
-donc en pause avant l'étape 3, et aucune sélection, identité mTLS, création de manifeste, go ou
-tentative n'est consommée. Aucun POST, appel J3/J4/J5, receiver distant, VPS ou production n'est
+L'implémentation V2/V32 hors ligne et synthétique est autorisée sous WO-047. WO-046 reste en pause
+avant l'étape 3 jusqu'à qualification et validation de WO-047, intégration linéaire et nouvelle
+décision propriétaire. Aucune sélection, identité mTLS, création de manifeste, go ou tentative
+n'est consommée. Aucun POST réel, appel J3/J4/J5, receiver distant, VPS ou production n'est
 autorisé.
 
 Le Work Order
@@ -33,7 +35,9 @@ taille `7273` octets et SHA-256
 réponse, licence ou convention SofaScore exacte corroborant la déclaration propriétaire
 `EVIDENCED_COMPATIBLE`. Le résultat exécutoire reste `NOT_EVIDENCED`.
 
-Sous la règle v0.1 encore effective, la séquence ordonnée s'arrête à cette deuxième étape. Un export candidat a seulement été
+La conclusion de blocage du rapport WO-046 reste la preuve exacte de la règle v0.1 alors effective,
+mais ADR-SS-003 v0.2 la supersède désormais pour le seul transfert J7 local. La séquence demeure
+temporairement arrêtée avant l'étape 3 jusqu'à validation de WO-047. Un export candidat a seulement été
 inventorié en lecture seule, sans sélection, et aucun certificat client n'existe actuellement dans
 `CurrentUser\\My`. Le manifeste WO-046 n'est pas créé et son autorisation n'est pas consommée ;
 aucun nouveau go propriétaire n'est construit, accordé ou enregistré.

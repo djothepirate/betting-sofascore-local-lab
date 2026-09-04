@@ -1,6 +1,6 @@
 # WO-SS-20260904-047 — Séparation de gouvernance entre acquisition fournisseur et livraison J7
 
-- **Statut :** `DRAFT_AWAITING_OWNER_DECISION`
+- **Statut :** `IN_PROGRESS`
 - **Jalon :** après J9 — préalable runtime à la reprise de WO-046
 - **Préparé le :** 2026-09-04
 - **Préparation UTC :** `2026-09-04T15:00:14.9065640Z`
@@ -8,8 +8,10 @@
 - **Branche :** `codex/j9-wo047-j7-delivery-governance-separation`
 - **Worktree :** `.tmp/w47`
 - **Base exacte :** `0338821cc07130f5d200a70db10209bb898a59ae`
-- **ADR concernée :** ADR-SS-003 v0.2 proposée, non acceptée
-- **Changement runtime autorisé :** non, en attente de décision propriétaire explicite
+- **ADR concernée :** ADR-SS-003 v0.2 acceptée sur la proposition immuable `e1ec9936467dd570f7ed00c51227c8e7d5a35945`
+- **Changement runtime autorisé :** oui, dans la portée bornée de la décision propriétaire reçue
+- **Décision reçue UTC :** `2026-09-04T15:27:21.4106846Z`
+- **Décision reçue Europe/Paris :** `2026-09-04T17:27:21.4198866+02:00`
 
 ## 1. Clarification propriétaire à appliquer
 
@@ -58,9 +60,9 @@ OFFICIAL_PERMISSION_RECONCILIATION_RESULT=NOT_EVIDENCED
 Sa conclusion de blocage décrit fidèlement l'ancienne règle v0.1. Elle ne sera ni réécrite ni
 présentée comme une réponse officielle ; une preuve corrective séparée consignera la supersession.
 
-## 3. Objectif proposé
+## 3. Objectif autorisé
 
-Après acceptation d'ADR-SS-003 v0.2 et autorisation explicite d'implémentation, WO-047 devra :
+ADR-SS-003 v0.2 et l'implémentation de WO-047 ayant été explicitement autorisées, WO-047 doit :
 
 1. rendre `NOT_EVIDENCED` non bloquant uniquement pour le POST J7 local vers le receiver Betting
    Project ;
@@ -80,7 +82,7 @@ Après acceptation d'ADR-SS-003 v0.2 et autorisation explicite d'implémentation
 10. laisser à une décision WO-046 ultérieure la migration V32 de la base primaire puis sa
     sauvegarde chiffrée/restauration isolée avant le manifeste et le POST réels.
 
-## 4. Portée runtime proposée
+## 4. Portée runtime autorisée
 
 ### 4.1 Configuration et policy J7
 
@@ -114,8 +116,8 @@ PROVIDER_PERMISSION_AUDIT_REFERENCE=docs/validation/J9-WO046-OFFICIAL-PERMISSION
 PROVIDER_PERMISSION_AUDIT_SHA256=707e0fd9b07dc0944225be80a590792e5e8ab0631dab964a465335f283ac1473
 PROVIDER_PERMISSION_AUDIT_STATUS=NOT_EVIDENCED
 J7_TRANSFER_GOVERNANCE_BASIS_REFERENCE=ADR-SS-003-optional-integration-topology.md
-J7_TRANSFER_GOVERNANCE_BASIS_COMMIT=<commit de la proposition v0.2 acceptée>
-J7_TRANSFER_GOVERNANCE_BASIS_SHA256=<sha256 du fichier v0.2 accepté>
+J7_TRANSFER_GOVERNANCE_BASIS_COMMIT=e1ec9936467dd570f7ed00c51227c8e7d5a35945
+J7_TRANSFER_GOVERNANCE_BASIS_SHA256=ded6a4da8a3161caae491f62919f4f5c3569c69c821be5a807772cc542cede3f
 J7_TRANSFER_GOVERNANCE_BASIS_STATUS=ADR_ACCEPTED_NO_EXECUTION_AUTHORITY
 PROVIDER_DERIVED_REAL_POST_AUTHORIZED=YES
 PROVIDER_NETWORK_AUTHORIZED=NO
@@ -126,7 +128,7 @@ AUTOMATIC_RETRY_AUTHORIZED=NO
 ```
 
 La référence, le commit et le SHA-256 de gouvernance identifieront les octets exacts de la
-proposition ADR-SS-003 v0.2 ultérieurement acceptée sans lui attribuer un droit d'exécution. Les
+proposition ADR-SS-003 v0.2 acceptée sans lui attribuer un droit d'exécution. Les
 lignes `OWNER_DECISION=GRANT`, `GO_USE=ONE_TIME` et
 `PROVIDER_DERIVED_REAL_POST_AUTHORIZED=YES` du bloc owner-go lui-même porteront l'autorisation
 spécifique, authentifiée par son propre SHA-256 externe. La ligne
@@ -187,7 +189,7 @@ distant, déploiement VPS, production, polling, scheduler, retry ou fallback.
 - effectuer un POST WO-046 ou transporter un export dérivé fournisseur ;
 - publier une branche ou fusionner vers `main`.
 
-## 7. Qualification proposée
+## 7. Qualification autorisée
 
 Les critères minimaux sont :
 
@@ -208,17 +210,36 @@ Si et seulement si le bloc propriétaire le porte à `YES`, des POST synthétiqu
 `127.0.0.1` pourront qualifier le format V2, l'atomicité et l'absence de retry. Ils ne pourront
 utiliser ni un export fournisseur, ni la base primaire, ni le manifeste ou le go WO-046.
 
-## 8. Portes propriétaires
+## 8. Décision propriétaire reçue et portes maintenues
 
-La préparation documentaire de ce Work Order ne vaut ni acceptation de l'ADR, ni autorisation de
-runtime. Le bloc suivant devra être complété sans placeholder avant toute implémentation :
+La décision suivante a été reçue sans placeholder et vérifiée contre la proposition immuable.
+Elle autorise l'implémentation, les tests hors ligne, PostgreSQL isolé et le loopback synthétique ;
+elle n'autorise ni base primaire, ni pipeline J6 natif, ni export réel, ni réseau fournisseur ou
+distant :
 
 ```text
-ADR_SS_003_V0_2_OWNER_DECISION=<ACCEPT|REJECT>
-ADR_SS_003_V0_2_PROPOSAL_COMMIT=<commit documentaire>
-ADR_SS_003_V0_2_FILE_SHA256=<sha256 du fichier ADR proposé>
-J9_WO047_OWNER_DECISION=<AUTHORIZE_IMPLEMENTATION|DENY>
+ADR_SS_003_V0_2_OWNER_DECISION=ACCEPT
+ADR_SS_003_V0_2_PROPOSAL_COMMIT=e1ec9936467dd570f7ed00c51227c8e7d5a35945
+ADR_SS_003_V0_2_FILE_SHA256=ded6a4da8a3161caae491f62919f4f5c3569c69c821be5a807772cc542cede3f
+ADR_SS_003_V0_2_SELECTED_TOPOLOGY=OPTIONAL_LOCAL_PUSH
+ADR_SS_003_V0_2_NOT_EVIDENCED_AUDIT_STATUS_PRESERVED=YES
+ADR_SS_003_V0_2_NOT_EVIDENCED_EFFECT=AUDIT_ONLY_NON_BLOCKING_FOR_LOCAL_J7_TRANSFER
+ADR_SS_003_V0_2_EVIDENCED_INCOMPATIBLE_REMAINS_BLOCKING=YES
+ADR_SS_003_V0_2_J3_J4_J5_OFFICIAL_PERMISSION_GATE_CHANGE=NO
+ADR_SS_003_V0_2_OWNER_GO_FORMAT=J7_PROVIDER_DERIVED_OWNER_GO_V2
+ADR_SS_003_V0_2_V1_COMPATIBILITY=STRICT_LEGACY_UNCHANGED
+ADR_SS_003_V0_2_MIGRATION_POLICY=V32_APPEND_ONLY_FORMAT_DISCRIMINATED_V31_IMMUTABLE
+ADR_SS_003_V0_2_ACCEPTANCE_AUTHORIZES_REAL_POST=NO
+ADR_SS_003_V0_2_PROVIDER_NETWORK_AUTHORIZED=NO
+ADR_SS_003_V0_2_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+ADR_SS_003_V0_2_VPS_DEPLOYMENT_AUTHORIZED=NO
+ADR_SS_003_V0_2_PRODUCTION_AUTHORIZED=NO
+J9_WO047_OWNER_DECISION=AUTHORIZE_IMPLEMENTATION
 J9_WO047_WORK_ORDER=WO-SS-20260904-047-j9-j7-delivery-governance-separation
+J9_WO047_BRANCH=codex/j9-wo047-j7-delivery-governance-separation
+J9_WO047_BASE_COMMIT=0338821cc07130f5d200a70db10209bb898a59ae
+J9_WO047_PROPOSAL_COMMIT=e1ec9936467dd570f7ed00c51227c8e7d5a35945
+J9_WO047_WORK_ORDER_SHA256=8b6f1e6e0f6835d124e97741607424b923654b2dd112ab4627d4f2688c99215e
 J9_WO047_SCOPE=SEPARATE_J7_LOCAL_TRANSFER_FROM_SOFASCORE_OFFICIAL_PERMISSION_GATE
 J9_WO047_NOT_EVIDENCED_AUDIT_STATUS_PRESERVED=YES
 J9_WO047_EVIDENCED_INCOMPATIBLE_REMAINS_BLOCKING=YES
@@ -226,9 +247,9 @@ J9_WO047_J3_J4_J5_OFFICIAL_PERMISSION_GATE_CHANGE=NO
 J9_WO047_OWNER_GO_FORMAT=J7_PROVIDER_DERIVED_OWNER_GO_V2
 J9_WO047_V1_COMPATIBILITY=STRICT_LEGACY_UNCHANGED
 J9_WO047_MIGRATION_POLICY=V32_APPEND_ONLY_FORMAT_DISCRIMINATED_V31_IMMUTABLE
-J9_WO047_OFFLINE_AND_SYNTHETIC_LOOPBACK_QUALIFICATION_AUTHORIZED=<YES|NO>
-J9_WO047_SYNTHETIC_LOOPBACK_POST_AUTHORIZED=<YES|NO>
-J9_WO047_ISOLATED_POSTGRES_QUALIFICATION_AUTHORIZED=<YES|NO>
+J9_WO047_OFFLINE_AND_SYNTHETIC_LOOPBACK_QUALIFICATION_AUTHORIZED=YES
+J9_WO047_SYNTHETIC_LOOPBACK_POST_AUTHORIZED=YES
+J9_WO047_ISOLATED_POSTGRES_QUALIFICATION_AUTHORIZED=YES
 J9_WO047_NATIVE_BACKUP_RESTORE_AUTHORIZED=NO
 J9_WO047_PRIMARY_DATABASE_SCHEMA_MIGRATION_AUTHORIZED=NO
 J9_WO047_PRIMARY_DATABASE_TOUCH_AUTHORIZED=NO
@@ -245,11 +266,11 @@ J9_WO046_RESUME_AFTER_WO047_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
 ## 9. État effectif
 
 ```text
-J9_WO047_STATUS=DRAFT_AWAITING_OWNER_DECISION
-J9_WO047_IMPLEMENTATION_AUTHORIZED=NO
-ADR_SS_003_V0_2_STATUS=PROPOSED_NOT_ACCEPTED
+J9_WO047_STATUS=IN_PROGRESS
+J9_WO047_IMPLEMENTATION_AUTHORIZED=YES
+ADR_SS_003_V0_2_STATUS=ACCEPTED
 J9_WO046_STATUS=PAUSED_PENDING_WO047
-J9_WO046_ORDERED_STEP_2=COMPLETE_NEGATIVE_NOT_A_J7_TRANSFER_GATE_UNDER_PROPOSAL
+J9_WO046_ORDERED_STEP_2=COMPLETE_NEGATIVE_NOT_A_J7_TRANSFER_GATE_UNDER_ACCEPTED_V0_2
 J9_WO046_ORDERED_STEP_3=NOT_STARTED
 J9_WO046_MANIFEST_STATUS=NOT_CREATED
 J9_WO046_OWNER_GO_STATUS=NOT_GRANTED
