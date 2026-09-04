@@ -8,7 +8,8 @@ param(
         'AFTER_CLIENT_CERTIFICATE_CREATION_BEFORE_OWNERSHIP',
         'AFTER_CLIENT_CERTIFICATE_OWNERSHIP_IN_MEMORY',
         'AFTER_CLIENT_CERTIFICATE_OWNERSHIP_PERSISTED',
-        'AFTER_RECEIVER_TRUSTSTORE')]
+        'AFTER_RECEIVER_TRUSTSTORE',
+        IgnoreCase = $false)]
     [string]$QualificationFailurePoint = 'NONE'
 )
 
@@ -228,7 +229,8 @@ function Write-WO048State {
 function Invoke-WO048QualificationFailurePoint {
     param([Parameter(Mandatory = $true)][string]$Point)
 
-    if ($QualificationFailurePoint -eq $Point) {
+    if ($QualificationFailurePoint -ceq $Point) {
+        $script:phase = 'INJECTED_' + $Point
         throw "WO-048 injected PKI-only qualification failure at $Point."
     }
 }
@@ -921,7 +923,8 @@ try {
         -KeyLength 3072 `
         -HashAlgorithm SHA256 `
         -KeyExportPolicy NonExportable `
-        -KeySpec Signature `
+        -KeySpec None `
+        -KeyUsageProperty Sign `
         -KeyUsage DigitalSignature `
         -TextExtension @(
             '2.5.29.19={critical}{text}CA=false',

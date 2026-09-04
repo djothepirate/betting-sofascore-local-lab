@@ -497,6 +497,10 @@ Describe 'WO-048 exact certificate profiles and ownership ordering' {
         $initializeSource | Should Match 'KeyLength 3072'
         $initializeSource | Should Match 'HashAlgorithm SHA256'
         $initializeSource | Should Match 'KeyExportPolicy NonExportable'
+        $initializeSource | Should Match 'KeySpec None'
+        $initializeSource | Should Not Match 'KeySpec Signature'
+        $initializeSource | Should Match 'KeyUsageProperty Sign'
+        $initializeSource | Should Not Match 'KeyUsageProperty All'
         $initializeSource | Should Match 'KeyUsage DigitalSignature'
         $initializeSource | Should Match '2\.5\.29\.19=\{critical\}\{text\}CA=false'
         $initializeSource | Should Match '2\.5\.29\.37=\{critical\}\{text\}1\.3\.6\.1\.5\.5\.7\.3\.2'
@@ -678,6 +682,12 @@ Describe 'WO-048 fail-closed lifecycle' {
         }
         $qualificationSource | Should Match 'WO048_FAILURE_POINTS=7_OF_7_PASS'
         $qualificationSource | Should Match 'WO048_LOCAL_MTLS_IDENTITY_QUALIFICATION=PASS_LOCAL_FAIL_CLOSED'
+        $initializeSource | Should Match 'IgnoreCase = \$false'
+        $initializeSource | Should Match '\$QualificationFailurePoint -ceq \$Point'
+        $initializeSource | Should Match '\$script:phase = ''INJECTED_'' \+ \$Point'
+        $qualificationSource | Should Match '\$expectedInjectedPhase = ''INJECTED_'' \+ \$FailurePoint'
+        $qualificationSource | Should Match '\(RuntimeException\); rollback=PASS\.'
+        $qualificationSource | Should Match '\$caught\.Exception\.Message -cne \$expectedInjectedMessage'
         ([regex]::Matches(
             $qualificationSource,
             [regex]::Escape('& $cleanupPath')).Count) | Should Be 1

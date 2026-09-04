@@ -313,10 +313,12 @@ function Invoke-WO048InjectedFailureCase {
     catch {
         $caught = $_
     }
+    $expectedInjectedPhase = 'INJECTED_' + $FailurePoint
+    $expectedInjectedMessage =
+        "WO-048 PKI-only provisioning failed closed during $expectedInjectedPhase (RuntimeException); rollback=PASS."
     if ($null -eq $caught -or
-        $caught.Exception.Message -notmatch
-            '^WO-048 PKI-only provisioning failed closed during [A-Z_]+ \([A-Za-z]+\); rollback=PASS\.$') {
-        throw 'A WO-048 injected failure did not use the exact fail-closed rollback path.'
+        $caught.Exception.Message -cne $expectedInjectedMessage) {
+        throw 'A WO-048 injected failure did not reach its exact requested point with fail-closed rollback.'
     }
     $capturedText = (@($captured | ForEach-Object { $_.ToString() }) -join "`n")
     if ($capturedText -match '(?i)(thumbprint|certificate.*sha256|private\\|\.p12|\.cer)') {
