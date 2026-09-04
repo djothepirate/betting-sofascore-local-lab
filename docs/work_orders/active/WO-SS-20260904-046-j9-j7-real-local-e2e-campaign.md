@@ -1,6 +1,6 @@
 # WO-SS-20260904-046 — Campagne E2E J7 réelle locale Windows/Windows
 
-- **Statut :** `RESUMED_PREPARATORY_PENDING_PRIMARY_PREFLIGHT_AUTHORIZATION`
+- **Statut :** `PREFLIGHT_COMPLETE_PENDING_PRIMARY_MIGRATION_AND_BACKUP_AUTHORIZATION`
 - **Jalon :** après J9 — campagne locale d'une livraison J7 dérivée fournisseur
 - **Ouvert le :** 2026-09-04
 - **Ouverture UTC :** `2026-09-04T13:59:22.9943521Z`
@@ -405,7 +405,7 @@ Le prochain changement d'état possible est le provisionnement borné d'une iden
 sous décision propriétaire distincte. Le manifeste, le go et le POST restent des portes
 ultérieures séparées.
 
-## 11. Reprise préparatoire après validation de WO-048
+## 11. Reprise préparatoire après validation de WO-048 — avant autorisation du préflight
 
 Le propriétaire a validé WO-048, reconnu ses tentatives hôte échouées sans résidus, la déviation
 Testcontainers et la conservation du run nominal, puis autorisé explicitement la reprise de
@@ -486,3 +486,69 @@ Les modifications de cette reprise sont exclusivement documentaires. Les rapport
 les migrations et les PDF de référence restent immuables ; aucun test applicatif, Testcontainers
 ou pipeline natif n'est relancé pour ce lot. Les contrôles du lot portent sur le diff, les textes
 UTF-8, les références et l'absence de données privées nouvellement introduites.
+
+## 12. Préflight primaire autorisé, exécuté strictement en lecture seule
+
+Le propriétaire a ensuite autorisé le préflight strictement en lecture seule via le conteneur
+primaire exact `betting-sofascore-local-lab-postgres`, limité au schéma Flyway et aux métadonnées
+de l'export sélectionné, sans migration, sauvegarde, démarrage d'application ni POST. Cette
+décision supersède la seule attente de lecture primaire de la section 11 ; elle n'autorise
+aucune mutation primaire ni aucun manifeste.
+
+La preuve est consignée dans
+[J9-WO046-PRIMARY-READONLY-PREFLIGHT-20260905.md](../../validation/J9-WO046-PRIMARY-READONLY-PREFLIGHT-20260905.md),
+taille `7149` octets, SHA-256
+`e4cf7c99f34ed7071562b6220a4ae0726cb6052de069c26a8fe905014ecc6e58`.
+Le premier snapshot SQL est daté `2026-09-04T22:32:01.562779Z`.
+
+```text
+J9_WO046_PRIMARY_READONLY_PREFLIGHT=COMPLETE
+J9_WO046_PRIMARY_SCHEMA_VERSION=30
+J9_WO046_FLYWAY_SUCCESSFUL_VERSIONS=1..30
+J9_WO046_FLYWAY_FAILED_ROW_COUNT=0
+J9_WO046_V31_APPLIED=NO
+J9_WO046_V32_APPLIED=NO
+J9_WO046_EXPORT_SELECTION=FILE_AND_PRIMARY_LEDGER_METADATA_CORROBORATED
+J9_WO046_SELECTED_EXPORT_DELIVERY_ROW_COUNT=0
+J9_WO046_SELECTED_EXPORT_ATTEMPT_ROW_COUNT=0
+J9_WO046_STATUS=PREFLIGHT_COMPLETE_PENDING_PRIMARY_MIGRATION_AND_BACKUP_AUTHORIZATION
+J9_WO046_PRIMARY_DATABASE_MUTATION_AUTHORIZED=NO
+J9_WO046_PRIMARY_BACKUP_RESTORE_AUTHORIZED=NO
+J9_WO046_MANIFEST_CREATION_AUTHORIZED=NO
+J9_WO046_OWNER_GO_GRANTED=NO
+J9_WO046_REAL_POST_AUTHORIZED=NO
+```
+
+La concordance couvre le statut `HUMAN_VALIDATED`, la classification `PROVIDER_DERIVED`,
+l'identité canonique/fournisseur, le chemin relatif, la décision et son intention, les hashes et
+la taille. Le fichier existant est inchangé ; sources, warnings, identifiants de snapshots et
+hash du jeu de sources correspondent structurellement au ledger. La provenance et l'avertissement
+`MISSING_COMPONENT:EVENT_DETAILS` sont préservés. Aucun appel fournisseur ou receiver n'a eu lieu.
+
+### 12.1 Préparation suivante identifiée hors ligne — non exécutée
+
+Le parcours existant ne nécessite pas de nouveau code de sauvegarde :
+
+1. préparer, sous autorisation, des destinations chiffrées neuves hors Git et la configuration
+   locale exacte, sans exposer de credentials ; les deux worktrees ci-dessous n'ont pas de `.env`
+   lors de l'inspection ;
+2. protéger V30 avec `scripts/Backup-Restore-J6.ps1` du bundle propre
+   `.tmp/j9-wo042-pr25-ci-readiness`, commit `400900410dfa751521ce387fbadcc4b5ca95a94a`,
+   SHA-256 script `9580565fcc6f5065f2e1493316ff4a0b856108f5b4784e3bc050185b6122671c` ;
+3. appliquer V31 puis V32 par Flyway, sans modification des migrations antérieures ; le parcours
+   opérationnel existant passe par un démarrage Local Lab transitoire, toutes portes fournisseur
+   et livraison fermées, puis arrêt : ce démarrage doit être explicitement autorisé ;
+4. recontrôler le schéma, la concordance de l'export, les états de livraison et les flags bloquants ;
+5. qualifier la sauvegarde/restauration V32 avec le bundle WO-046, SHA-256 script
+   `4b68fd7f3d3231b5969ead307373fea6a06f5c987449badf9cfabcfc140e608f` ;
+6. consigner les preuves avant toute demande de création de manifeste et de nouveau go.
+
+Les cycles existants restaurent dans une base temporaire distincte sur le même serveur, pas un
+second conteneur, et la suppriment après qualification. Les comparaisons intégrées ne comportent
+pas d'empreinte dédiée à tous les champs d'`export_manifest` dans la cible restaurée. Les octets
+du fichier J7 sont externes au dump SQL et doivent être conservés et hashés séparément. Ne pas
+présenter une sauvegarde PostgreSQL comme une sauvegarde du fichier J7 ni élargir les garanties
+de restauration au-delà des contrôles existants.
+
+La présente consignation ne consomme aucune de ces autorisations futures. Le manifeste, le go,
+le POST, les réseaux fournisseur/distant, le VPS et la production restent interdits.

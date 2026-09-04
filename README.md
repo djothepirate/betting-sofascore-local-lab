@@ -61,7 +61,7 @@ Le Work Order
 porte historiquement dans son document v0.1 l'état `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`,
 depuis le commit exact de clôture de WO-045
 `8a1225fc4b85d8e8b55af536fcbc7955676131ff`. L'état effectif de la séquence est désormais
-`RESUMED_PREPARATORY_PENDING_PRIMARY_PREFLIGHT_AUTHORIZATION`. Il prépare la future campagne
+`PREFLIGHT_COMPLETE_PENDING_PRIMARY_MIGRATION_AND_BACKUP_AUTHORIZATION`. Il prépare la future campagne
 Windows/Windows d'une livraison manuelle unique d'un export J7 fournisseur déjà
 `HUMAN_VALIDATED` vers le receiver Betting Project sur `https://127.0.0.1:8444`.
 
@@ -81,7 +81,11 @@ mais ADR-SS-003 v0.2 la supersède pour le seul transfert J7 local. Le statut of
 hors ligne les métadonnées de l'export `a8d40d57-98c5-4e01-8ecc-4f1f9b5feabc`, classé
 `PROVIDER_DERIVED` et `HUMAN_VALIDATED`, taille `35663` octets, SHA-256 fichier
 `d4aba249231bb9d575f40b5c23a629b938f685ee7d4cc479bfa7d846d61be3f6`. La concordance du ledger
-primaire reste à revalider avant manifeste.
+primaire a été corroborée sous autorisation de lecture seule par le
+[préflight primaire WO-046](docs/validation/J9-WO046-PRIMARY-READONLY-PREFLIGHT-20260905.md) :
+export unique `HUMAN_VALIDATED`, fichier inchangé, métadonnées structurées identiques et aucune
+livraison/tentative pour cet export. La base comporte exactement V1 à V30 réussies ; V31 et V32
+ne sont pas appliquées. Le schéma primaire doit donc être préparé avant le manifeste.
 
 Le
 [rapport de reprise WO-046](docs/validation/J9-WO046-RESUME-EXPORT-AND-MTLS-SELECTION-20260904.md),
@@ -92,9 +96,9 @@ provisionné et qualifié un jeu neuf lié au run. Après intégration par fast-
 `5f7756b17c42d14bc97c7ddd7fcbde616b2241e0`, les deux identités ont été revalidées par leurs seules
 métadonnées publiques, sans clé privée, mutation ou socket. L'étape 4 est désormais
 `SELECTED_RUN_BOUND_WO048_VALIDATED_PUBLIC_METADATA_REVALIDATED`. Le préflight du ledger et du
-schéma primaire reste soumis à une décision distincte ; aucune version primaire n'est déduite
-de la seule présence de V32 dans le dépôt. La migration primaire et sa sauvegarde/restauration
-demeurent réservées à une décision ultérieure, conformément à WO-047.
+schéma primaire est terminé ; la protection préalable V30, la migration séquentielle V31/V32
+par démarrage transitoire du Local Lab toutes portes réseau fermées et la sauvegarde/restauration
+isolée V32 restent réservées à une décision distincte. Aucun de ces traitements n'est exécuté.
 Le manifeste WO-046 n'est pas créé et son
 autorisation n'est pas consommée ; aucun nouveau go propriétaire n'est construit, accordé ou
 enregistré.

@@ -4,6 +4,19 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — préflight primaire WO-046 strictement en lecture seule
+
+- autorisation propriétaire consommée uniquement pour l'historique Flyway et les métadonnées du
+  seul export sélectionné, via le conteneur primaire exact déjà démarré et sain ; transactions
+  READ ONLY bornées, terminées par ROLLBACK, aucun payload affiché ;
+- schéma primaire mesuré V30, trente migrations réussies et aucune échouée ; V31/V32 absentes ;
+- export `a8d40d57-98c5-4e01-8ecc-4f1f9b5feabc` corroboré `HUMAN_VALIDATED` et
+  `PROVIDER_DERIVED`, hashes/taille/chemin/intention conformes, aucune livraison ni tentative ;
+- fichier J7 inchangé et comparaison structurelle sources/warnings/snapshots concordante ;
+  rapport expurgé `J9-WO046-PRIMARY-READONLY-PREFLIGHT-20260905.md` ;
+- chemins existants de sauvegarde V30 et V32 identifiés hors ligne ; aucune migration,
+  sauvegarde, application, manifeste, owner-go ou livraison exécutés par ce préflight.
+
 ### Après J9 — reprise préparatoire WO-046 après validation WO-048
 
 - intégration par fast-forward exact de la clôture WO-048
