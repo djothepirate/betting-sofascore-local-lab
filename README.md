@@ -5,8 +5,8 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
-[WO-SS-20260904-047](docs/work_orders/active/WO-SS-20260904-047-j9-j7-delivery-governance-separation.md)
-est qualifié localement dans l'état `LOCAL_READY_AWAITING_OWNER_REVIEW` sur la branche distincte
+[WO-SS-20260904-047](docs/work_orders/completed/WO-SS-20260904-047-j9-j7-delivery-governance-separation.md)
+est `VALIDATED` et classé sur la branche distincte
 `codex/j9-wo047-j7-delivery-governance-separation`. ADR-SS-003 v0.2 a été acceptée sur la
 proposition immuable `e1ec9936467dd570f7ed00c51227c8e7d5a35945` afin de corriger un
 couplage erroné : l'absence de réponse officielle SofaScore reste un fait d'audit
@@ -14,19 +14,20 @@ couplage erroné : l'absence de réponse officielle SofaScore reste un fait d'au
 Betting Project, lequel ne contacte jamais SofaScore.
 
 L'implémentation V2/V32 hors ligne et synthétique est qualifiée sous WO-047 au commit
-`ddb41e8fd0dfe32e9c2aa5fdb4a50d9fcd90cb93`. WO-046 reste en pause avant l'étape 3 jusqu'à
-validation propriétaire de WO-047, intégration linéaire et nouvelle
-décision propriétaire. Aucune sélection, identité mTLS, création de manifeste, go ou tentative
-n'est consommée. Aucun POST réel, appel J3/J4/J5, receiver distant, VPS ou production n'est
-autorisé.
+`ddb41e8fd0dfe32e9c2aa5fdb4a50d9fcd90cb93`. Le propriétaire a validé sa readiness locale,
+reconnu la déviation de sélection contenue et autorisé son classement le
+`2026-09-04T16:37:53.4738879Z`. WO-046 reste en pause avant l'étape 3 jusqu'à une décision
+propriétaire de reprise séparée. Aucune sélection, identité mTLS, création de manifeste, go ou
+tentative n'est consommée. Aucun POST réel, appel J3/J4/J5, receiver distant, VPS ou production
+n'est autorisé.
 
 Le Work Order
 [WO-SS-20260904-046](docs/work_orders/active/WO-SS-20260904-046-j9-j7-real-local-e2e-campaign.md)
 porte historiquement dans son document v0.1 l'état `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`,
 depuis le commit exact de clôture de WO-045
 `8a1225fc4b85d8e8b55af536fcbc7955676131ff`. L'état effectif de la séquence est désormais
-`PAUSED_PENDING_WO047`, sans réécriture de cette preuve historique. Il prépare la future campagne
-Windows/Windows d'une
+`PAUSED_AWAITING_SEPARATE_OWNER_RESUME_DECISION`, sans réécriture de cette preuve historique. Il
+prépare la future campagne Windows/Windows d'une
 livraison manuelle unique d'un export J7 fournisseur déjà `HUMAN_VALIDATED` vers le receiver
 Betting Project sur `https://127.0.0.1:8444`.
 
@@ -41,8 +42,9 @@ réponse, licence ou convention SofaScore exacte corroborant la déclaration pro
 `EVIDENCED_COMPATIBLE`. Le résultat exécutoire reste `NOT_EVIDENCED`.
 
 La conclusion de blocage du rapport WO-046 reste la preuve exacte de la règle v0.1 alors effective,
-mais ADR-SS-003 v0.2 la supersède désormais pour le seul transfert J7 local. La séquence demeure
-temporairement arrêtée avant l'étape 3 jusqu'à validation de WO-047. Un export candidat a seulement été
+mais ADR-SS-003 v0.2 la supersède désormais pour le seul transfert J7 local. WO-047 est validé,
+mais la séquence demeure arrêtée avant l'étape 3 dans l'attente de l'autorisation propriétaire
+distincte de reprendre WO-046. Un export candidat a seulement été
 inventorié en lecture seule, sans sélection, et aucun certificat client n'existe actuellement dans
 `CurrentUser\\My`. Le manifeste WO-046 n'est pas créé et son autorisation n'est pas consommée ;
 aucun nouveau go propriétaire n'est construit, accordé ou enregistré.
@@ -78,9 +80,9 @@ base primaire n'est autorisé. Le
 [rapport WO-047](docs/validation/J9-WO047-J7-DELIVERY-GOVERNANCE-SEPARATION-QUALIFICATION-20260904.md),
 taille `12033` octets et SHA-256
 `75b55109c0705a44026376d7f0bdadf76d979dcd4268c1430d5ed8008d693540`, conclut
-`PASS_LOCAL_FAIL_CLOSED`. La revue propriétaire et la reconnaissance de la déviation de sélection
-contenue restent nécessaires ; aucun profil `integration-tests` intégral ni aucune clôture n'est
-revendiqué.
+`PASS_LOCAL_FAIL_CLOSED`. Le propriétaire a validé cette readiness, reconnu la déviation de
+sélection contenue et autorisé le classement du Work Order. Aucun profil `integration-tests`
+intégral n'est revendiqué et cette clôture n'autorise pas la reprise de WO-046.
 
 Pour la qualification historique WO-045, les parcours Maven standard et `integration-tests`
 passent chacun à Surefire `1167/0/0/5` et
@@ -1289,7 +1291,7 @@ Les commandes ci-dessous décrivent le socle général du dépôt. Elles ne vale
 d'exécuter les scénarios natifs sous WO-047 : pour ce Work Order, utiliser uniquement le
 `clean verify` avec exclusion explicite de `J6NativeBinaryPipelineQualificationTest` et les
 sélections positives du profil `integration-tests` consignées dans le
-[WO-047](docs/work_orders/active/WO-SS-20260904-047-j9-j7-delivery-governance-separation.md).
+[WO-047](docs/work_orders/completed/WO-SS-20260904-047-j9-j7-delivery-governance-separation.md).
 Le test Flyway `pg_dump`/`pg_restore`, le pipeline natif et le profil intégral restent interdits.
 
 ### Tests standards hors ligne fournisseur

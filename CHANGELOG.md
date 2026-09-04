@@ -31,8 +31,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - aucune nouvelle porte d'acquisition J3/J4/J5 et aucun changement INT-001 sous ce Work Order ;
   les décisions réseau fournisseur restent entièrement séparées ;
 - implémentation hors ligne, PostgreSQL isolé et loopback synthétique autorisés sous WO-047 ;
-  WO-046 demeure effectivement `PAUSED_PENDING_WO047` avant l'étape 3 jusqu'à validation et
-  décision de reprise séparée, tandis que son document v0.1 conserve son statut historique ;
+  WO-046 demeure effectivement `PAUSED_AWAITING_SEPARATE_OWNER_RESUME_DECISION` avant l'étape 3,
+  tandis que son document v0.1 conserve son statut historique ;
 - contrôles J6 portés à V32 et vérifiés uniquement par tests statiques ciblés ; l'interdiction
   propriétaire exclut le test `pg_dump`/`pg_restore`, le pipeline natif et tout contact de la base
   primaire. La qualification emploie le profil `integration-tests` ciblé et doit compléter un
@@ -46,7 +46,10 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `75b55109c0705a44026376d7f0bdadf76d979dcd4268c1430d5ed8008d693540`, résultat
   `PASS_LOCAL_FAIL_CLOSED` et zéro finding P0/P1/P2/P3 ; une sélection Failsafe trop large a été
   interrompue à la bannière de la classe J6 interdite sans marqueur de méthode native observé et
-  doit être reconnue par le propriétaire ;
+  a été explicitement reconnue par le propriétaire ;
+- validation propriétaire de la readiness locale et autorisation de classement reçues le
+  `2026-09-04T16:37:53.4738879Z` (`2026-09-04T18:37:53.4738879+02:00` Europe/Paris) ; WO-047 est
+  déplacé vers `docs/work_orders/completed`, sans autoriser la reprise de WO-046 ;
 - aucun export ou certificat sélectionné, manifeste créé, go construit, POST ou appel fournisseur
   effectué ; réseaux distant/fournisseur, VPS et production maintenus à `NO`.
 

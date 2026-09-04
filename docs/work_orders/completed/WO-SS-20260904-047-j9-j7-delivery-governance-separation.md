@@ -1,6 +1,6 @@
 # WO-SS-20260904-047 — Séparation de gouvernance entre acquisition fournisseur et livraison J7
 
-- **Statut :** `LOCAL_READY_AWAITING_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
 - **Jalon :** après J9 — préalable runtime à la reprise de WO-046
 - **Préparé le :** 2026-09-04
 - **Préparation UTC :** `2026-09-04T15:00:14.9065640Z`
@@ -282,10 +282,10 @@ J9_WO046_RESUME_AFTER_WO047_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
 ## 9. État effectif
 
 ```text
-J9_WO047_STATUS=LOCAL_READY_AWAITING_OWNER_REVIEW
+J9_WO047_STATUS=VALIDATED
 J9_WO047_IMPLEMENTATION_AUTHORIZED=YES
 ADR_SS_003_V0_2_STATUS=ACCEPTED
-J9_WO046_STATUS=PAUSED_PENDING_WO047
+J9_WO046_STATUS=PAUSED_AWAITING_SEPARATE_OWNER_RESUME_DECISION
 J9_WO046_ORDERED_STEP_2=COMPLETE_NEGATIVE_NOT_A_J7_TRANSFER_GATE_UNDER_ACCEPTED_V0_2
 J9_WO046_ORDERED_STEP_3=NOT_STARTED
 J9_WO046_MANIFEST_STATUS=NOT_CREATED
@@ -301,13 +301,13 @@ J9_PRODUCTION_AUTHORIZED=NO
 
 Le document actif de WO-046 conserve comme preuve historique v0.1 son statut
 `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`. Il n'est pas réécrit sous WO-047. L'état gouvernant
-la séquence courante est bien `PAUSED_PENDING_WO047` ; toute reprise après validation de WO-047
-exige encore une décision propriétaire séparée.
+la séquence courante est désormais `PAUSED_AWAITING_SEPARATE_OWNER_RESUME_DECISION` ; toute reprise
+après validation de WO-047 exige encore une décision propriétaire séparée.
 
 ## 10. État d'implémentation et qualification locale
 
-L'implémentation autorisée est qualifiée localement et le Work Order attend la revue propriétaire.
-Aucune clôture n'est prononcée avant cette décision. Les éléments implémentés couvrent :
+L'implémentation autorisée est qualifiée localement, la revue propriétaire est acquise et la
+clôture est consignée à la section 11. Les éléments implémentés couvrent :
 
 - l'allow-list runtime `NOT_EVIDENCED|EVIDENCED_COMPATIBLE`, les refus dédiés de
   `EVIDENCED_INCOMPATIBLE` et des valeurs invalides, ainsi que leurs mappings UI/API ;
@@ -320,7 +320,7 @@ Aucune clôture n'est prononcée avant cette décision. Les éléments implémen
 
 ### 10.1 Résultats ciblés et finaux
 
-| Lot ciblé | Résultat intermédiaire | Limite d'autorisation |
+| Lot ciblé | Résultat | Limite d'autorisation |
 |---|---:|---|
 | policy, configuration, runtime, controller et mappings UI/API Java | `86/86 PASS` | hors ligne ; aucun POST réel |
 | cycle ledger PostgreSQL V1/V2 | `29/29 PASS` | PostgreSQL Testcontainers isolé |
@@ -378,17 +378,52 @@ QUALIFICATION_IMPLEMENTATION_COMMIT=ddb41e8fd0dfe32e9c2aa5fdb4a50d9fcd90cb93
 QUALIFICATION_FINAL_REPORT=docs/validation/J9-WO047-J7-DELIVERY-GOVERNANCE-SEPARATION-QUALIFICATION-20260904.md
 QUALIFICATION_FINAL_REPORT_SIZE=12033
 QUALIFICATION_FINAL_REPORT_SHA256=75b55109c0705a44026376d7f0bdadf76d979dcd4268c1430d5ed8008d693540
-QUALIFICATION_WORK_ORDER_CLOSURE=NOT_PERFORMED
+QUALIFICATION_WORK_ORDER_CLOSURE=PERFORMED_AFTER_OWNER_VALIDATION
 ```
 
 Une première sélection Failsafe trop large a atteint la bannière de
 `J6NativeBinaryPipelineQualificationTest` et a été interrompue immédiatement. Aucun rapport de
 méthode native, marqueur de pipeline, appel `pg_dump`/`pg_restore` ou effet primaire n'a été
 observé ; aucun résultat de cette exécution n'est revendiqué. La preuve finale utilise uniquement
-les sélections bornées détaillées dans le rapport. La validation propriétaire doit reconnaître
-explicitement cette déviation contenue.
+les sélections bornées détaillées dans le rapport. La déviation contenue a été explicitement
+reconnue par le propriétaire avant la clôture.
 
 Les contrôles finaux confirment UTF-8 sans BOM ni NUL, zéro secret détecté, V31 inchangée,
 `server.address=127.0.0.1`, tous les flags réseau et d'exécution désactivés par défaut, Compose
 valide, aucun Testcontainers résiduel et le conteneur PostgreSQL primaire byte-identifié, toujours
 en cours d'exécution et sain avec le même instant de démarrage et le même volume.
+
+## 11. Validation propriétaire et clôture
+
+Le propriétaire a validé la qualification locale, reconnu explicitement la déviation de sélection
+contenue et autorisé le classement de WO-047 le `2026-09-04T16:37:53.4738879Z`, soit
+`2026-09-04T18:37:53.4738879+02:00` en Europe/Paris :
+
+```text
+J9_WO047_OWNER_REVIEW_DECISION=VALIDATE
+J9_WO047_EXECUTION_DEVIATION_ACKNOWLEDGED=YES
+J9_WO047_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO047_WORK_ORDER_MOVE_TO_COMPLETED=YES
+```
+
+La validation porte sur l'implémentation
+`ddb41e8fd0dfe32e9c2aa5fdb4a50d9fcd90cb93` et le rapport de qualification de `12033` octets,
+SHA-256 `75b55109c0705a44026376d7f0bdadf76d979dcd4268c1430d5ed8008d693540`.
+
+Elle clôt WO-047 sans accorder l'autorisation distincte nécessaire à la reprise de WO-046 :
+
+```text
+J9_WO047_FINAL_STATUS=VALIDATED
+J9_WO047_LOCAL_READINESS=ACKNOWLEDGED
+J9_WO047_EXECUTION_DEVIATION=ACKNOWLEDGED
+J9_WO047_WORK_ORDER_LOCATION=docs/work_orders/completed/WO-SS-20260904-047-j9-j7-delivery-governance-separation.md
+J9_WO046_STATUS=PAUSED_AWAITING_SEPARATE_OWNER_RESUME_DECISION
+J9_WO046_RESUME_AUTHORIZED=NO
+J9_WO046_MANIFEST_CREATED=NO
+J9_WO046_OWNER_GO_GRANTED=NO
+J9_WO046_REAL_POST_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
