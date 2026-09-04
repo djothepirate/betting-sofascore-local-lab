@@ -4,6 +4,19 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-044 frontière d'argument du chemin JAR WO-036
+
+- ouverture depuis le HEAD exact `96dec8492dbc043c7d6e4310195421f4411722df` de la PR `#26`,
+  dans la branche Convention 1A distincte
+  `codex/ss-20260904-044-j9-wo036-java-jar-path-argument-boundary` ;
+- confirmation statique du second P2 : `Start-Process -ArgumentList` reçoit le chemin JAR sans
+  guillemets explicites et peut le découper si un segment Windows contient un espace ;
+- correction et qualification autorisées uniquement dans l'outillage de lancement WO-036, ses
+  tests et sa documentation, avec fixture hôte hors ligne sous un véritable chemin contenant des
+  espaces ;
+- aucun code Java applicatif, receiver, contrat, migration, base, payload J7, réseau, VPS,
+  production, merge de `#26` ou fermeture de `#25` autorisé.
+
 ### Après J9 — WO-043 rollback fail-closed du certificat client WO-036
 
 - ouverture depuis le commit de clôture WO-042

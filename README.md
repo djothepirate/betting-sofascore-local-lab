@@ -5,6 +5,14 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
+[WO-SS-20260904-044](docs/work_orders/active/WO-SS-20260904-044-j9-wo036-java-jar-path-argument-boundary.md)
+est ouvert depuis le HEAD exact `96dec8492dbc043c7d6e4310195421f4411722df` de la PR `#26`.
+Il traite le second P2 : préserver le chemin JAR WO-036 comme un unique argument natif lorsque le
+chemin Windows contient des espaces. Sa portée est limitée à l'outillage de lancement de campagne,
+aux tests et à la preuve hors ligne ; aucune base, opération HTTP, fusion ou fermeture de PR n'est
+autorisée.
+
+Le Work Order
 [WO-SS-20260904-043](docs/work_orders/completed/WO-SS-20260904-043-j9-wo036-client-certificate-fail-closed-rollback.md)
 est `VALIDATED` et classé. Le commit
 `f1e40da11e0c3f74661afcbb5de9dc458b385f60` ferme localement la fenêtre P2 de la PR `#26` : la
