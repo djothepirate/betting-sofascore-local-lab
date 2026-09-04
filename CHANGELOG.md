@@ -11,10 +11,28 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `codex/ss-20260904-043-j9-wo036-client-certificate-rollback` ;
 - confirmation statique du P2 de la PR `#26` : le certificat client et sa clé privée sont créés dans
   `CurrentUser\My` avant l'enregistrement de leur propriété dans l'état de campagne ;
-- correction limitée à l'enregistrement immédiat, au rollback exact du certificat et de sa clé
-  privée et à des injections d'échec locales bornées ;
+- correction au commit `f1e40da11e0c3f74661afcbb5de9dc458b385f60` : propriété exacte
+  enregistrée en mémoire immédiatement après la création puis persistée avant `HasPrivateKey`,
+  EKU, Key Usage, politique CNG et export ;
+- rollback local et externe limité au certificat exact concordant par magasin, thumbprint, SHA-256
+  et sujet, avec suppression explicite de sa clé privée ; aucune suppression large ou par sujet
+  seul ;
+- qualification hôte `PASS_LOCAL_FAIL_CLOSED` aux quatre points d'injection, avec durées de
+  `9760 ms`, `7052 ms`, `6337 ms` et `5583 ms`, puis parcours nominal préparé/nettoyé sans
+  démarrage des bases ;
+- zéro certificat client, clé privée, racine privée de campagne, processus ou listener nouveau
+  résiduel ; le PostgreSQL primaire préexistant reste `running/healthy` sur
+  `127.0.0.1:5432`, sans accès, arrêt ni purge ;
+- Pester `18/18` ciblé et `90/90` global, puis Maven standard et intégration verts chacun avec
+  Surefire `1136/0/0/5` et Failsafe `89/0/0/0` ; garde-fous de branche, `LOCAL_ONLY`, secrets,
+  packaging, reproductibilité, launchers, UTF-8 et diff verts ;
+- rapport
+  `docs/validation/J9-WO043-CLIENT-CERTIFICATE-ROLLBACK-QUALIFICATION-20260904.md`, taille `7122`
+  octets et SHA-256 `f412dc4b7c489412ffb8b3499dfe3a1350985c602b8b7d9a87659e0f7733665c` ;
+- P2 classé `RESOLVED_LOCALLY_PENDING_OWNER_VALIDATION` et WO-043
+  `READY_FOR_OWNER_REVIEW` ;
 - aucune fusion, fermeture de PR, base, donnée J7 réelle, opération fournisseur/receiver HTTP,
-  réseau distant, VPS ou production autorisé.
+  réseau distant, VPS ou production autorisé ; aucun push de WO-043 avant validation propriétaire.
 
 ### Après J9 — WO-042 readiness CI de la PR de remplacement WO-036
 
