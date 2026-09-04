@@ -504,6 +504,16 @@ Describe 'WO-048 exact certificate profiles and ownership ordering' {
         $moduleSource | Should Match 'CngExportPolicies\]::None'
     }
 
+    It 'exposes only a bounded hexadecimal HRESULT chain with a sanitized failure' {
+        $initializeSource | Should Match '\$failureDepth -lt 4'
+        $initializeSource | Should Match 'BitConverter\]::ToUInt32'
+        $initializeSource | Should Match "ToString\('X8'\)"
+        $initializeSource | Should Match "\^\[0-9A-F\]\{8\}\(,\[0-9A-F\]\{8\}\)\{0,3\}\$"
+        $initializeSource | Should Match "Data\['WO048FailureHResultChain'\]"
+        $initializeSource | Should Not Match 'Data\[''WO048FailureMessage''\]'
+        $initializeSource | Should Not Match 'Data\[''WO048FailurePath''\]'
+    }
+
     It 'persists exact recovery authority before server import and before client failure checks' {
         $serverRecord = $initializeSource.IndexOf("role = 'receiver-server-direct-trust'")
         $serverState = $initializeSource.IndexOf('Write-WO048State', $serverRecord)

@@ -125,6 +125,7 @@ $script:nativeProcessHostSha256 = $null
 $script:pwshPath = $null
 $script:pwshSha256 = $null
 $script:ownerSid = $null
+$script:failureHResultChain = $null
 
 function Exit-WO048ToolsLock {
     if ($null -ne $script:toolsLock) {
@@ -1071,6 +1072,18 @@ try {
 }
 catch {
     $failureType = $_.Exception.GetType().Name
+    $failureHResults = [System.Collections.Generic.List[string]]::new()
+    $failureCursor = $_.Exception
+    for ($failureDepth = 0;
+        $failureDepth -lt 4 -and $null -ne $failureCursor;
+        $failureDepth++) {
+        $failureHResultBytes = [System.BitConverter]::GetBytes(
+            [int]$failureCursor.HResult)
+        $failureHResults.Add(
+            [System.BitConverter]::ToUInt32($failureHResultBytes, 0).ToString('X8'))
+        $failureCursor = $failureCursor.InnerException
+    }
+    $script:failureHResultChain = ($failureHResults -join ',')
     if ($null -ne $script:clientCertificate) {
         if ($script:unpersistedClientRollbackFailed) {
             $script:clientCertificate.Dispose()
@@ -1119,10 +1132,17 @@ catch {
         Exit-WO048ToolsLock
         $rollback = 'FAILED_PRIVATE_STATE_RETAINED'
     }
-    if ($script:unpersistedClientRollbackFailed) {
-        throw "WO-048 PKI-only provisioning failed closed during $script:phase ($failureType); rollback=$rollback; manual exact recovery required."
+    $publicFailureMessage = if ($script:unpersistedClientRollbackFailed) {
+        "WO-048 PKI-only provisioning failed closed during $script:phase ($failureType); rollback=$rollback; manual exact recovery required."
     }
-    throw "WO-048 PKI-only provisioning failed closed during $script:phase ($failureType); rollback=$rollback."
+    else {
+        "WO-048 PKI-only provisioning failed closed during $script:phase ($failureType); rollback=$rollback."
+    }
+    $publicFailure = [System.InvalidOperationException]::new($publicFailureMessage)
+    if ($script:failureHResultChain -match '^[0-9A-F]{8}(,[0-9A-F]{8}){0,3}$') {
+        $publicFailure.Data['WO048FailureHResultChain'] = $script:failureHResultChain
+    }
+    throw $publicFailure
 }
 finally {
     if ($null -ne $script:clientCertificate) {
