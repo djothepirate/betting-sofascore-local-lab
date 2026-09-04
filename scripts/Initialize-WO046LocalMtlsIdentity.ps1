@@ -125,7 +125,6 @@ $script:nativeProcessHostSha256 = $null
 $script:pwshPath = $null
 $script:pwshSha256 = $null
 $script:ownerSid = $null
-$script:failureHResultChain = $null
 
 function Exit-WO048ToolsLock {
     if ($null -ne $script:toolsLock) {
@@ -1071,19 +1070,8 @@ try {
     Write-Output 'WO048_REMOTE_NETWORK_CALLS=0'
 }
 catch {
-    $failureType = $_.Exception.GetType().Name
-    $failureHResults = [System.Collections.Generic.List[string]]::new()
-    $failureCursor = $_.Exception
-    for ($failureDepth = 0;
-        $failureDepth -lt 4 -and $null -ne $failureCursor;
-        $failureDepth++) {
-        $failureHResultBytes = [System.BitConverter]::GetBytes(
-            [int]$failureCursor.HResult)
-        $failureHResults.Add(
-            [System.BitConverter]::ToUInt32($failureHResultBytes, 0).ToString('X8'))
-        $failureCursor = $failureCursor.InnerException
-    }
-    $script:failureHResultChain = ($failureHResults -join ',')
+    $failureException = $_.Exception
+    $failureType = $failureException.GetType().Name
     if ($null -ne $script:clientCertificate) {
         if ($script:unpersistedClientRollbackFailed) {
             $script:clientCertificate.Dispose()
@@ -1132,6 +1120,37 @@ catch {
         Exit-WO048ToolsLock
         $rollback = 'FAILED_PRIVATE_STATE_RETAINED'
     }
+    $failureHResultChain = $null
+    $failureNativeCryptoCode = $null
+    try {
+        $failureHResults = [System.Collections.Generic.List[string]]::new()
+        $failureCursor = $failureException
+        for ($failureDepth = 0;
+            $failureDepth -lt 4 -and $null -ne $failureCursor;
+            $failureDepth++) {
+            $failureHResultBytes = [System.BitConverter]::GetBytes(
+                [int]$failureCursor.HResult)
+            $failureHResults.Add(
+                [System.BitConverter]::ToUInt32($failureHResultBytes, 0).ToString('X8'))
+            $failureCursor = $failureCursor.InnerException
+        }
+        $failureHResultChain = ($failureHResults -join ',')
+        if ($script:phase -ceq 'CLIENT_CERTIFICATE_CREATE') {
+            $nativeCodeMatches = @([System.Text.RegularExpressions.Regex]::Matches(
+                $failureException.Message,
+                '(?i)(?<![0-9a-f])0x(8009[0-9a-f]{4}|80070005|80070020)(?![0-9a-f])'))
+            $nativeCodes = @($nativeCodeMatches |
+                ForEach-Object { $_.Groups[1].Value.ToUpperInvariant() } |
+                Sort-Object -Unique)
+            if ($nativeCodes.Count -eq 1) {
+                $failureNativeCryptoCode = $nativeCodes[0]
+            }
+        }
+    }
+    catch {
+        $failureHResultChain = $null
+        $failureNativeCryptoCode = $null
+    }
     $publicFailureMessage = if ($script:unpersistedClientRollbackFailed) {
         "WO-048 PKI-only provisioning failed closed during $script:phase ($failureType); rollback=$rollback; manual exact recovery required."
     }
@@ -1139,8 +1158,12 @@ catch {
         "WO-048 PKI-only provisioning failed closed during $script:phase ($failureType); rollback=$rollback."
     }
     $publicFailure = [System.InvalidOperationException]::new($publicFailureMessage)
-    if ($script:failureHResultChain -match '^[0-9A-F]{8}(,[0-9A-F]{8}){0,3}$') {
-        $publicFailure.Data['WO048FailureHResultChain'] = $script:failureHResultChain
+    if ($failureHResultChain -match '^[0-9A-F]{8}(,[0-9A-F]{8}){0,3}$') {
+        $publicFailure.Data['WO048FailureHResultChain'] = $failureHResultChain
+    }
+    if ($failureNativeCryptoCode -match '^(8009[0-9A-F]{4}|80070005|80070020)$') {
+        $publicFailure.Data['WO048FailureNativeCryptoCode'] =
+            $failureNativeCryptoCode
     }
     throw $publicFailure
 }

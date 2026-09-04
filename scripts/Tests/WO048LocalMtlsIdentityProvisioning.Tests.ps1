@@ -514,6 +514,45 @@ Describe 'WO-048 exact certificate profiles and ownership ordering' {
         $initializeSource | Should Not Match 'Data\[''WO048FailurePath''\]'
     }
 
+    It 'allowlists one native crypto code without exposing the cmdlet message' {
+        $initializeSource | Should Match "\$script:phase -ceq 'CLIENT_CERTIFICATE_CREATE'"
+        $initializeSource | Should Match '0x\(8009\[0-9a-f\]\{4\}\|80070005\|80070020\)'
+        $initializeSource | Should Match '\$nativeCodes.Count -eq 1'
+        $initializeSource | Should Match "\^\(8009\[0-9A-F\]\{4\}\|80070005\|80070020\)\$"
+        $initializeSource | Should Match "Data\['WO048FailureNativeCryptoCode'\]"
+        $initializeSource | Should Not Match "Data\['WO048FailureNativeMessage'\]"
+
+        $pattern = '(?i)(?<![0-9a-f])0x(8009[0-9a-f]{4}|80070005|80070020)(?![0-9a-f])'
+        $one = @([regex]::Matches('private text 0x8009000f private text', $pattern))
+        $one.Count | Should Be 1
+        $one[0].Groups[1].Value.ToUpperInvariant() | Should Be '8009000F'
+        @([regex]::Matches('private text 0xDEADBEEF private text', $pattern)).Count |
+            Should Be 0
+        @([regex]::Matches('0x8009000F and 0x80070005', $pattern)).Count |
+            Should Be 2
+    }
+
+    It 'performs rollback before any non-blocking public failure classification' {
+        $caughtFailure = $initializeSource.IndexOf('$failureException = $_.Exception')
+        $rollback = $initializeSource.IndexOf('& $cleanupPath', $caughtFailure)
+        $classification = $initializeSource.IndexOf(
+            '$failureHResultChain = $null', $rollback)
+        $classificationGuard = $initializeSource.IndexOf('try {', $classification)
+        $classificationFallback = $initializeSource.IndexOf(
+            '$failureNativeCryptoCode = $null',
+            $initializeSource.IndexOf('catch {', $classificationGuard))
+        $publicFailure = $initializeSource.IndexOf(
+            '$publicFailure = [System.InvalidOperationException]::new',
+            $classificationFallback)
+
+        $caughtFailure | Should BeGreaterThan -1
+        $rollback | Should BeGreaterThan $caughtFailure
+        $classification | Should BeGreaterThan $rollback
+        $classificationGuard | Should BeGreaterThan $classification
+        $classificationFallback | Should BeGreaterThan $classificationGuard
+        $publicFailure | Should BeGreaterThan $classificationFallback
+    }
+
     It 'persists exact recovery authority before server import and before client failure checks' {
         $serverRecord = $initializeSource.IndexOf("role = 'receiver-server-direct-trust'")
         $serverState = $initializeSource.IndexOf('Write-WO048State', $serverRecord)
