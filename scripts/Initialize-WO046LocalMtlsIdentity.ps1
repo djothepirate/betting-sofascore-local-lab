@@ -34,8 +34,70 @@ if (-not (Test-Path -LiteralPath $modulePath -PathType Leaf) -or
     -not (Test-Path -LiteralPath $boundedJavaCapturePath -PathType Leaf)) {
     throw 'The exact versioned WO-048 PKI-only tooling is incomplete.'
 }
-Import-Module -Name $modulePath -Force -ErrorAction Stop
-Import-Module -Name $nativeRunnerModulePath -Force -ErrorAction Stop
+
+function Import-WO048PinnedGlobalModule {
+    param(
+        [Parameter(Mandatory = $true)][string]$ExpectedPath,
+        [Parameter(Mandatory = $true)][string]$ExpectedName,
+        [Parameter(Mandatory = $true)][string[]]$RequiredCommands
+    )
+
+    $canonicalExpectedPath = [System.IO.Path]::GetFullPath(
+        (Resolve-Path -LiteralPath $ExpectedPath -ErrorAction Stop).Path)
+    $existing = @(Get-Module -Name $ExpectedName -All)
+    if ($existing.Count -gt 1 -or @($existing | Where-Object {
+            [string]::IsNullOrWhiteSpace($_.Path) -or
+            [System.IO.Path]::GetFullPath($_.Path) -cne $canonicalExpectedPath
+        }).Count -ne 0) {
+        throw 'WO-048 refuses a loaded module with an ambiguous or unexpected origin.'
+    }
+    $ownedByThisInvocation = $existing.Count -eq 0
+    Import-Module -Name $canonicalExpectedPath -Global -ErrorAction Stop
+    $loaded = @(Get-Module -Name $ExpectedName -All)
+    if ($loaded.Count -ne 1 -or
+        [System.IO.Path]::GetFullPath($loaded[0].Path) -cne
+            $canonicalExpectedPath) {
+        throw 'WO-048 could not establish one exact globally visible module.'
+    }
+    foreach ($requiredCommand in $RequiredCommands) {
+        $resolved = @(Get-Command -Name ($ExpectedName + '\' + $requiredCommand) `
+            -All -ErrorAction Stop)
+        if ($resolved.Count -ne 1 -or $null -eq $resolved[0].Module -or
+            [System.IO.Path]::GetFullPath($resolved[0].Module.Path) -cne
+                $canonicalExpectedPath) {
+            throw 'WO-048 could not resolve an exact pinned module command.'
+        }
+    }
+    return $ownedByThisInvocation
+}
+
+$script:wo048PkiModuleOwnedByThisInvocation = $false
+$script:wo048NativeModuleOwnedByThisInvocation = $false
+try {
+    $script:wo048PkiModuleOwnedByThisInvocation =
+        Import-WO048PinnedGlobalModule `
+            -ExpectedPath $modulePath `
+            -ExpectedName 'WO048-PkiTools' `
+            -RequiredCommands @(
+                'Assert-WO048LocalFixedPathPrefix',
+                'Get-WO048CurrentOwnerSid')
+    $script:wo048NativeModuleOwnedByThisInvocation =
+        Import-WO048PinnedGlobalModule `
+            -ExpectedPath $nativeRunnerModulePath `
+            -ExpectedName 'J6-NativeBinaryPipeline' `
+            -RequiredCommands @('Invoke-J6BoundedNativeCommand')
+}
+catch {
+    if ($script:wo048NativeModuleOwnedByThisInvocation) {
+        Remove-Module -Name 'J6-NativeBinaryPipeline' -Force `
+            -ErrorAction SilentlyContinue
+    }
+    if ($script:wo048PkiModuleOwnedByThisInvocation) {
+        Remove-Module -Name 'WO048-PkiTools' -Force `
+            -ErrorAction SilentlyContinue
+    }
+    throw 'WO-048 could not establish its exact pinned module set.'
+}
 
 $script:phase = 'PREFLIGHT'
 $script:runRoot = $null
@@ -1061,6 +1123,14 @@ finally {
         $script:clientCertificate = $null
     }
     Exit-WO048ToolsLock
-    Remove-Module -Name 'WO048-PkiTools' -Force -ErrorAction SilentlyContinue
-    Remove-Module -Name 'J6-NativeBinaryPipeline' -Force -ErrorAction SilentlyContinue
+    if ($script:wo048NativeModuleOwnedByThisInvocation) {
+        Remove-Module -Name 'J6-NativeBinaryPipeline' -Force `
+            -ErrorAction SilentlyContinue
+        $script:wo048NativeModuleOwnedByThisInvocation = $false
+    }
+    if ($script:wo048PkiModuleOwnedByThisInvocation) {
+        Remove-Module -Name 'WO048-PkiTools' -Force `
+            -ErrorAction SilentlyContinue
+        $script:wo048PkiModuleOwnedByThisInvocation = $false
+    }
 }

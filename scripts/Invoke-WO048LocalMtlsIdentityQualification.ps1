@@ -1,7 +1,11 @@
 [CmdletBinding()]
 param(
     [ValidateRange(5, 30)]
-    [int]$CleanupObservationSeconds = 15
+    [int]$CleanupObservationSeconds = 15,
+
+    [switch]$ModuleCommandScopeQualificationOnly,
+
+    [string]$ModuleCommandScopeQualificationRoot
 )
 
 $ErrorActionPreference = 'Stop'
@@ -20,29 +24,87 @@ foreach ($path in @($initializePath, $cleanupPath, $modulePath)) {
         throw 'WO-048 host qualification requires the exact versioned PKI-only tooling.'
     }
 }
-Import-Module -Name $modulePath -Force -ErrorAction Stop
 
-$localApplicationData = [Environment]::GetFolderPath(
-    [Environment+SpecialFolder]::LocalApplicationData)
-$roamingApplicationData = [Environment]::GetFolderPath(
-    [Environment+SpecialFolder]::ApplicationData)
-$ownerSid = Get-WO048CurrentOwnerSid
-if ([string]::IsNullOrWhiteSpace($localApplicationData) -or
-    [string]::IsNullOrWhiteSpace($roamingApplicationData)) {
-    throw 'WO-048 host qualification cannot resolve exact current-user roots.'
+function Import-WO048PinnedGlobalModule {
+    param(
+        [Parameter(Mandatory = $true)][string]$ExpectedPath,
+        [Parameter(Mandatory = $true)][string]$ExpectedName,
+        [Parameter(Mandatory = $true)][string[]]$RequiredCommands
+    )
+
+    $canonicalExpectedPath = [System.IO.Path]::GetFullPath(
+        (Resolve-Path -LiteralPath $ExpectedPath -ErrorAction Stop).Path)
+    $existing = @(Get-Module -Name $ExpectedName -All)
+    if ($existing.Count -gt 1 -or @($existing | Where-Object {
+            [string]::IsNullOrWhiteSpace($_.Path) -or
+            [System.IO.Path]::GetFullPath($_.Path) -cne $canonicalExpectedPath
+        }).Count -ne 0) {
+        throw 'WO-048 refuses a loaded module with an ambiguous or unexpected origin.'
+    }
+    $ownedByThisInvocation = $existing.Count -eq 0
+    Import-Module -Name $canonicalExpectedPath -Global -ErrorAction Stop
+    $loaded = @(Get-Module -Name $ExpectedName -All)
+    if ($loaded.Count -ne 1 -or
+        [System.IO.Path]::GetFullPath($loaded[0].Path) -cne
+            $canonicalExpectedPath) {
+        throw 'WO-048 could not establish one exact globally visible module.'
+    }
+    foreach ($requiredCommand in $RequiredCommands) {
+        $resolved = @(Get-Command -Name ($ExpectedName + '\' + $requiredCommand) `
+            -All -ErrorAction Stop)
+        if ($resolved.Count -ne 1 -or $null -eq $resolved[0].Module -or
+            [System.IO.Path]::GetFullPath($resolved[0].Module.Path) -cne
+                $canonicalExpectedPath) {
+            throw 'WO-048 could not resolve an exact pinned module command.'
+        }
+    }
+    return $ownedByThisInvocation
 }
-$canonicalLocalApplicationData = Assert-WO048LocalFixedPathPrefix `
-    -Path $localApplicationData -RequireExistingType Directory
-$canonicalRoamingApplicationData = Assert-WO048LocalFixedPathPrefix `
-    -Path $roamingApplicationData -RequireExistingType Directory
-$campaignBase = Assert-WO048LocalFixedPathPrefix `
-    -Path (Join-Path $canonicalLocalApplicationData `
-        'SofaScoreLocalLab\qualifications\WO-SS-20260904-046')
-$cngKeyRoot = Assert-WO048LocalFixedPathPrefix `
-    -Path (Join-Path $canonicalRoamingApplicationData 'Microsoft\Crypto\Keys')
-$legacyRsaRoot = Assert-WO048LocalFixedPathPrefix `
-    -Path (Join-Path $canonicalRoamingApplicationData `
-        ('Microsoft\Crypto\RSA\' + $ownerSid.Value))
+
+$script:wo048PkiModuleOwnedByThisInvocation =
+    Import-WO048PinnedGlobalModule `
+        -ExpectedPath $modulePath `
+        -ExpectedName 'WO048-PkiTools' `
+        -RequiredCommands @(
+            'Assert-WO048LocalFixedPathPrefix',
+            'Get-WO048CurrentOwnerSid')
+
+$ownerSid = Get-WO048CurrentOwnerSid
+if ($ModuleCommandScopeQualificationOnly) {
+    if ([string]::IsNullOrWhiteSpace($ModuleCommandScopeQualificationRoot)) {
+        throw 'WO-048 module-scope qualification requires one explicit local root.'
+    }
+    $scopeOnlyRoot = Assert-WO048LocalFixedPathPrefix `
+        -Path $ModuleCommandScopeQualificationRoot `
+        -RequireExistingType Directory
+    $canonicalLocalApplicationData = $scopeOnlyRoot
+    $canonicalRoamingApplicationData = $scopeOnlyRoot
+    $campaignBase = $scopeOnlyRoot
+    $cngKeyRoot = $scopeOnlyRoot
+    $legacyRsaRoot = $scopeOnlyRoot
+}
+else {
+    $localApplicationData = [Environment]::GetFolderPath(
+        [Environment+SpecialFolder]::LocalApplicationData)
+    $roamingApplicationData = [Environment]::GetFolderPath(
+        [Environment+SpecialFolder]::ApplicationData)
+    if ([string]::IsNullOrWhiteSpace($localApplicationData) -or
+        [string]::IsNullOrWhiteSpace($roamingApplicationData)) {
+        throw 'WO-048 host qualification cannot resolve exact current-user roots.'
+    }
+    $canonicalLocalApplicationData = Assert-WO048LocalFixedPathPrefix `
+        -Path $localApplicationData -RequireExistingType Directory
+    $canonicalRoamingApplicationData = Assert-WO048LocalFixedPathPrefix `
+        -Path $roamingApplicationData -RequireExistingType Directory
+    $campaignBase = Assert-WO048LocalFixedPathPrefix `
+        -Path (Join-Path $canonicalLocalApplicationData `
+            'SofaScoreLocalLab\qualifications\WO-SS-20260904-046')
+    $cngKeyRoot = Assert-WO048LocalFixedPathPrefix `
+        -Path (Join-Path $canonicalRoamingApplicationData 'Microsoft\Crypto\Keys')
+    $legacyRsaRoot = Assert-WO048LocalFixedPathPrefix `
+        -Path (Join-Path $canonicalRoamingApplicationData `
+            ('Microsoft\Crypto\RSA\' + $ownerSid.Value))
+}
 $clientSubjectPattern =
     '^CN=WO046 sender [0-9a-fA-F-]{36}, OU=WO-046, O=Betting Project Local Qualification$'
 $serverSubject = 'CN=127.0.0.1, OU=WO-046, O=Betting Project Local Qualification'
@@ -467,6 +529,30 @@ function Assert-WO048NominalPrivateRecord {
     }
 }
 
+if ($ModuleCommandScopeQualificationOnly) {
+    try {
+        if ([string]::IsNullOrWhiteSpace($ModuleCommandScopeQualificationRoot)) {
+            throw 'WO-048 module-scope qualification requires one explicit local root.'
+        }
+        $scopeRoot = Assert-WO048LocalFixedPathPrefix `
+            -Path $ModuleCommandScopeQualificationRoot `
+            -RequireExistingType Directory
+        $scopeSnapshot = @(Get-WO048FileNameSnapshot -Roots @($scopeRoot))
+        if ($scopeSnapshot.Count -ne 0) {
+            throw 'WO-048 module-scope qualification root must be empty.'
+        }
+        Write-Output 'WO048_NESTED_MODULE_COMMAND_RESOLUTION=PASS'
+    }
+    finally {
+        if ($script:wo048PkiModuleOwnedByThisInvocation) {
+            Remove-Module -Name 'WO048-PkiTools' -Force `
+                -ErrorAction SilentlyContinue
+            $script:wo048PkiModuleOwnedByThisInvocation = $false
+        }
+    }
+    return
+}
+
 $failurePoints = @(
     'AFTER_PRIVATE_STATE',
     'AFTER_SERVER_KEYSTORE',
@@ -554,7 +640,11 @@ try {
     $recordSha256 = $guardedResult.QualificationResult.RecordSha256
 }
 finally {
-    Remove-Module -Name 'WO048-PkiTools' -Force -ErrorAction SilentlyContinue
+    if ($script:wo048PkiModuleOwnedByThisInvocation) {
+        Remove-Module -Name 'WO048-PkiTools' -Force `
+            -ErrorAction SilentlyContinue
+        $script:wo048PkiModuleOwnedByThisInvocation = $false
+    }
 }
 
 Write-Output 'WO048_LOCAL_MTLS_IDENTITY_QUALIFICATION=PASS_LOCAL_FAIL_CLOSED'

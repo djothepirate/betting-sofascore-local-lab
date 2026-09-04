@@ -20,9 +20,60 @@ $modulePath = Join-Path $PSScriptRoot 'wo048\WO048-PkiTools.psm1'
 if (-not (Test-Path -LiteralPath $modulePath -PathType Leaf)) {
     throw 'The exact versioned WO-048 PKI-only module is unavailable.'
 }
-Import-Module -Name $modulePath -Force -ErrorAction Stop
+
+function Import-WO048PinnedGlobalModule {
+    param(
+        [Parameter(Mandatory = $true)][string]$ExpectedPath,
+        [Parameter(Mandatory = $true)][string]$ExpectedName,
+        [Parameter(Mandatory = $true)][string[]]$RequiredCommands
+    )
+
+    $canonicalExpectedPath = [System.IO.Path]::GetFullPath(
+        (Resolve-Path -LiteralPath $ExpectedPath -ErrorAction Stop).Path)
+    $existing = @(Get-Module -Name $ExpectedName -All)
+    if ($existing.Count -gt 1 -or @($existing | Where-Object {
+            [string]::IsNullOrWhiteSpace($_.Path) -or
+            [System.IO.Path]::GetFullPath($_.Path) -cne $canonicalExpectedPath
+        }).Count -ne 0) {
+        throw 'WO-048 refuses a loaded module with an ambiguous or unexpected origin.'
+    }
+    $ownedByThisInvocation = $existing.Count -eq 0
+    Import-Module -Name $canonicalExpectedPath -Global -ErrorAction Stop
+    $loaded = @(Get-Module -Name $ExpectedName -All)
+    if ($loaded.Count -ne 1 -or
+        [System.IO.Path]::GetFullPath($loaded[0].Path) -cne
+            $canonicalExpectedPath) {
+        throw 'WO-048 could not establish one exact globally visible module.'
+    }
+    foreach ($requiredCommand in $RequiredCommands) {
+        $resolved = @(Get-Command -Name ($ExpectedName + '\' + $requiredCommand) `
+            -All -ErrorAction Stop)
+        if ($resolved.Count -ne 1 -or $null -eq $resolved[0].Module -or
+            [System.IO.Path]::GetFullPath($resolved[0].Module.Path) -cne
+                $canonicalExpectedPath) {
+            throw 'WO-048 could not resolve an exact pinned module command.'
+        }
+    }
+    return $ownedByThisInvocation
+}
+
+$script:wo048PkiModuleOwnedByThisInvocation =
+    Import-WO048PinnedGlobalModule `
+        -ExpectedPath $modulePath `
+        -ExpectedName 'WO048-PkiTools' `
+        -RequiredCommands @(
+            'Assert-WO048LocalFixedPathPrefix',
+            'Read-WO048FinalizationLockJournalFromStream')
 
 $script:toolsLock = $null
+
+function Exit-WO048PkiModuleScope {
+    if ($script:wo048PkiModuleOwnedByThisInvocation) {
+        Remove-Module -Name 'WO048-PkiTools' -Force `
+            -ErrorAction SilentlyContinue
+        $script:wo048PkiModuleOwnedByThisInvocation = $false
+    }
+}
 
 function Exit-WO048CleanupLock {
     if ($null -ne $script:toolsLock) {
@@ -536,7 +587,7 @@ if (-not (Test-Path -LiteralPath $lockPath -PathType Leaf)) {
         Write-Output 'WO048_PKI_CLEANUP=PASS_RESUMED_MARKER_ONLY'
         Write-Output "WO048_RUN_ID=$canonicalRunId"
         Write-Output 'WO048_PRIVATE_ROOT_RESIDUAL_COUNT=0'
-        Remove-Module -Name 'WO048-PkiTools' -Force -ErrorAction SilentlyContinue
+        Exit-WO048PkiModuleScope
         return
     }
     if ($recoveryPhaseWithoutLock -cne 'FINAL_EMPTY_ROOT') {
@@ -553,7 +604,7 @@ if (-not (Test-Path -LiteralPath $lockPath -PathType Leaf)) {
     Write-Output 'WO048_PKI_CLEANUP=PASS_RESUMED_EMPTY_ROOT'
     Write-Output "WO048_RUN_ID=$canonicalRunId"
     Write-Output 'WO048_PRIVATE_ROOT_RESIDUAL_COUNT=0'
-    Remove-Module -Name 'WO048-PkiTools' -Force -ErrorAction SilentlyContinue
+    Exit-WO048PkiModuleScope
     return
 }
 Assert-WO048NotReparsePoint -Path $lockPath
@@ -859,7 +910,7 @@ try {
 }
 finally {
     Exit-WO048CleanupLock
-    Remove-Module -Name 'WO048-PkiTools' -Force -ErrorAction SilentlyContinue
+    Exit-WO048PkiModuleScope
 }
 
 if (-not $rootRemoved) {

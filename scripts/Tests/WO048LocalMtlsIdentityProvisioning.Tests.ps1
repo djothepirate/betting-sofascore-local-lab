@@ -318,6 +318,63 @@ Describe 'WO-048 PKI-only script surface' {
         }
     }
 
+    It 'resolves pinned module commands from real nested helpers under pwsh File scope' {
+        $scopeRoot = Join-Path $TestDrive 'empty-module-scope-root'
+        [void](New-Item -ItemType Directory -Path $scopeRoot)
+        $pwshPath = [System.Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+        Import-Module -Name $nativeRunnerModulePath -Force -ErrorAction Stop
+        try {
+            $result = Invoke-J6BoundedNativeCommand `
+                -FilePath $pwshPath `
+                -ArgumentList @(
+                    '-NoLogo', '-NoProfile', '-NonInteractive',
+                    '-File', $qualificationPath,
+                    '-ModuleCommandScopeQualificationOnly',
+                    '-ModuleCommandScopeQualificationRoot', $scopeRoot) `
+                -WorkingDirectory $repositoryRoot `
+                -TimeoutMilliseconds 30000 `
+                -StartupTimeoutMilliseconds 5000 `
+                -CleanupTimeoutMilliseconds 5000
+            $result.ExitCode | Should Be 0
+            $result.StandardOutput.Trim() |
+                Should Be 'WO048_NESTED_MODULE_COMMAND_RESOLUTION=PASS'
+            $result.ProcessTreeCleanup | Should Be 'PASS'
+            $result.UnexpectedDescendantCleanup | Should Be $false
+
+            $fakeModuleRoot = Join-Path $TestDrive 'unexpected-module-origin'
+            [void](New-Item -ItemType Directory -Path $fakeModuleRoot)
+            $fakeModulePath = Join-Path $fakeModuleRoot 'WO048-PkiTools.psm1'
+            [IO.File]::WriteAllText(
+                $fakeModulePath,
+                "function Get-WO048UnexpectedOrigin { 'unexpected' }`n" +
+                    "Export-ModuleMember -Function 'Get-WO048UnexpectedOrigin'`n",
+                [Text.UTF8Encoding]::new($false, $true))
+            $escapedFake = $fakeModulePath.Replace("'", "''")
+            $escapedQualification = $qualificationPath.Replace("'", "''")
+            $escapedScopeRoot = $scopeRoot.Replace("'", "''")
+            $command = "Import-Module -Name '$escapedFake' -Global -Force " +
+                "-ErrorAction Stop; & '$escapedQualification' " +
+                "-ModuleCommandScopeQualificationOnly " +
+                "-ModuleCommandScopeQualificationRoot '$escapedScopeRoot'"
+            $wrongOrigin = Invoke-J6BoundedNativeCommand `
+                -FilePath $pwshPath `
+                -ArgumentList @(
+                    '-NoLogo', '-NoProfile', '-NonInteractive',
+                    '-Command', $command) `
+                -WorkingDirectory $repositoryRoot `
+                -TimeoutMilliseconds 30000 `
+                -StartupTimeoutMilliseconds 5000 `
+                -CleanupTimeoutMilliseconds 5000
+            ($wrongOrigin.ExitCode -ne 0) | Should Be $true
+            $wrongOrigin.ProcessTreeCleanup | Should Be 'PASS'
+            $wrongOrigin.UnexpectedDescendantCleanup | Should Be $false
+        }
+        finally {
+            Remove-Module -Name 'J6-NativeBinaryPipeline' -Force `
+                -ErrorAction SilentlyContinue
+        }
+    }
+
     It 'does not execute the real provisioner from its offline Pester suite' {
         $testParseErrors.Count | Should Be 0
         ($testCommandNames -contains $initializePath) | Should Be $false
@@ -566,9 +623,11 @@ Describe 'WO-048 fail-closed lifecycle' {
         $allRuntimeSource | Should Not Match 'ownershipNonce|ownershipSha256|authenticate the private identity'
         $initializeSource | Should Match 'moduleSha256 = \$moduleSha256'
         $cleanupSource | Should Not Match 'state\.moduleSha256|Get-WO048FileSha256 -Path \$pin\[1\]'
-        $cleanupSource.IndexOf('FileShare]::None') |
-            Should BeLessThan $cleanupSource.IndexOf(
-                'Read-WO048FinalizationLockJournalFromStream')
+        $exclusiveLockIndex = $cleanupSource.IndexOf('FileShare]::None')
+        $exclusiveLockIndex | Should BeGreaterThan -1
+        $exclusiveLockIndex | Should BeLessThan $cleanupSource.IndexOf(
+            'Read-WO048FinalizationLockJournalFromStream',
+            $exclusiveLockIndex)
     }
 
     It 'allows only the exact PKI artifacts and makes final cleanup resumable' {
