@@ -6,6 +6,8 @@ import org.flywaydb.core.Flyway;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.dao.DataAccessException;
@@ -89,6 +91,7 @@ class J7DeliveryLedgerMigrationIT {
                 export.fileSha256(),
                 export.dataSha256(),
                 export.idempotencyKey(),
+                1,
                 startedAt);
 
         assertThat(claim.attemptNumber()).isEqualTo(1);
@@ -155,6 +158,7 @@ class J7DeliveryLedgerMigrationIT {
                 candidate.fileSha256(),
                 candidate.dataSha256(),
                 candidate.idempotencyKey(),
+                1,
                 Instant.parse("2026-09-01T10:10:00Z")))
                 .isInstanceOfSatisfying(
                         J7DeliveryLedgerStore.LedgerException.class,
@@ -167,6 +171,7 @@ class J7DeliveryLedgerMigrationIT {
                 validated.fileSha256(),
                 validated.dataSha256(),
                 validated.idempotencyKey(),
+                1,
                 databaseClock().plusNanos(1)))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("microsecond precision");
@@ -175,6 +180,7 @@ class J7DeliveryLedgerMigrationIT {
                 "d".repeat(64),
                 validated.dataSha256(),
                 "j7:" + validated.exportId() + ":sha256:" + "d".repeat(64),
+                1,
                 Instant.parse("2026-09-01T10:11:00Z")))
                 .isInstanceOfSatisfying(
                         J7DeliveryLedgerStore.LedgerException.class,
@@ -195,6 +201,7 @@ class J7DeliveryLedgerMigrationIT {
                 first.fileSha256(),
                 first.dataSha256(),
                 first.idempotencyKey(),
+                1,
                 firstStart);
 
         assertThatThrownBy(() -> store.claim(
@@ -202,6 +209,7 @@ class J7DeliveryLedgerMigrationIT {
                 second.fileSha256(),
                 second.dataSha256(),
                 second.idempotencyKey(),
+                1,
                 firstStart.plusMillis(1)))
                 .isInstanceOfSatisfying(
                         J7DeliveryLedgerStore.LedgerException.class,
@@ -225,12 +233,14 @@ class J7DeliveryLedgerMigrationIT {
                 first.fileSha256(),
                 first.dataSha256(),
                 first.idempotencyKey(),
+                2,
                 repeatStart);
         assertThat(repeat.deliveryId()).isEqualTo(firstClaim.deliveryId());
         assertThat(repeat.attemptNumber()).isEqualTo(2);
         assertThat(repeat.idempotencyKey()).isEqualTo(firstClaim.idempotencyKey());
 
         UUID remoteImportId = UUID.fromString("27000000-0000-4000-8000-000000000102");
+        Instant initialRemoteReceivedAt = firstStart.plusMillis(250);
         store.complete(
                 repeat.deliveryId(),
                 2,
@@ -239,14 +249,26 @@ class J7DeliveryLedgerMigrationIT {
                 "DUPLICATE",
                 Optional.of("e".repeat(64)),
                 Optional.of(remoteImportId),
-                Optional.of(repeatStart.plusSeconds(1)),
+                Optional.of(initialRemoteReceivedAt),
                 repeatStart.plusSeconds(1));
+
+        assertThat(jdbc.queryForObject("""
+                select acknowledgement_received_at
+                from j7_delivery_attempt_result result
+                join j7_delivery_attempt attempt on attempt.id = result.attempt_id
+                where attempt.delivery_id = (
+                    select id from j7_delivery where delivery_uuid = ?
+                )
+                  and attempt.attempt_number = 2
+                """, OffsetDateTime.class, repeat.deliveryId()).toInstant())
+                .isEqualTo(initialRemoteReceivedAt);
 
         assertThatThrownBy(() -> store.claim(
                 first.exportId(),
                 first.fileSha256(),
                 first.dataSha256(),
                 first.idempotencyKey(),
+                3,
                 repeatStart.plusSeconds(2)))
                 .isInstanceOfSatisfying(
                         J7DeliveryLedgerStore.LedgerException.class,
@@ -258,6 +280,7 @@ class J7DeliveryLedgerMigrationIT {
                 second.fileSha256(),
                 second.dataSha256(),
                 second.idempotencyKey(),
+                1,
                 repeatStart.plusSeconds(3));
         store.complete(
                 secondClaim.deliveryId(),
@@ -277,6 +300,129 @@ class J7DeliveryLedgerMigrationIT {
                 "select count(*) from j7_delivery_attempt where delivery_id = (select id from j7_delivery where delivery_uuid = ?)",
                         Long.class,
                         firstClaim.deliveryId())).isEqualTo(2);
+    }
+
+    @Test
+    void persistsImportedAcknowledgementFromAnIndependentReceiverClock() {
+        ExportEvidence export = insertValidatedExport();
+        Instant senderStartedAt = Instant.parse("2026-09-03T10:00:00Z");
+        var claim = store.claim(
+                export.exportId(),
+                export.fileSha256(),
+                export.dataSha256(),
+                export.idempotencyKey(),
+                1,
+                senderStartedAt);
+        Instant receiverReceivedAt = senderStartedAt.plusSeconds(120);
+        Instant senderCompletedAt = senderStartedAt.plusSeconds(1);
+
+        var completed = store.complete(
+                claim.deliveryId(),
+                claim.attemptNumber(),
+                J7DeliveryLedgerStore.DeliveryState.DELIVERED,
+                OptionalInt.of(201),
+                "IMPORTED_DISTINCT_RECEIVER_CLOCK",
+                Optional.of("d".repeat(64)),
+                Optional.of(UUID.fromString("27000000-0000-4000-8000-000000000103")),
+                Optional.of(receiverReceivedAt),
+                senderCompletedAt);
+
+        assertThat(completed.state()).isEqualTo(J7DeliveryLedgerStore.DeliveryState.DELIVERED);
+        assertThat(jdbc.queryForObject("""
+                select acknowledgement_received_at
+                from j7_delivery_attempt_result result
+                join j7_delivery_attempt attempt on attempt.id = result.attempt_id
+                where attempt.delivery_id = (
+                    select id from j7_delivery where delivery_uuid = ?
+                )
+                """, OffsetDateTime.class, claim.deliveryId()).toInstant())
+                .isEqualTo(receiverReceivedAt);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+            "0001-01-01T00:00:00Z",
+            "9999-12-31T23:59:59.999999Z"
+    })
+    void persistsAndReadsBackTheExactReceiverTimestampBoundaries(String boundary) {
+        ExportEvidence export = insertValidatedExport();
+        Instant senderStartedAt = databaseClock();
+        var claim = store.claim(
+                export.exportId(),
+                export.fileSha256(),
+                export.dataSha256(),
+                export.idempotencyKey(),
+                1,
+                senderStartedAt);
+        Instant receiverReceivedAt = Instant.parse(boundary);
+
+        var completed = store.complete(
+                claim.deliveryId(),
+                claim.attemptNumber(),
+                J7DeliveryLedgerStore.DeliveryState.DELIVERED,
+                OptionalInt.of(201),
+                "IMPORTED_BOUNDARY_RECEIVER_CLOCK",
+                Optional.of("d".repeat(64)),
+                Optional.of(UUID.randomUUID()),
+                Optional.of(receiverReceivedAt),
+                senderStartedAt.plusSeconds(1));
+
+        assertThat(completed.state()).isEqualTo(J7DeliveryLedgerStore.DeliveryState.DELIVERED);
+        assertThat(jdbc.queryForObject("""
+                select acknowledgement_received_at
+                from j7_delivery_attempt_result result
+                join j7_delivery_attempt attempt on attempt.id = result.attempt_id
+                where attempt.delivery_id = (
+                    select id from j7_delivery where delivery_uuid = ?
+                )
+                """, OffsetDateTime.class, claim.deliveryId()).toInstant())
+                .isEqualTo(receiverReceivedAt);
+    }
+
+    @Test
+    void refusesAStaleExpectedAttemptAtomicallyWithoutCreatingTheNextAttempt() {
+        ExportEvidence export = insertValidatedExport();
+        Instant firstStartedAt = Instant.parse("2026-09-01T10:25:00Z");
+        var firstClaim = store.claim(
+                export.exportId(),
+                export.fileSha256(),
+                export.dataSha256(),
+                export.idempotencyKey(),
+                1,
+                firstStartedAt);
+        store.complete(
+                firstClaim.deliveryId(),
+                1,
+                J7DeliveryLedgerStore.DeliveryState.UNKNOWN_RECONCILIATION_REQUIRED,
+                OptionalInt.empty(),
+                "TRANSPORT_TIMEOUT",
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                firstStartedAt.plusSeconds(1));
+
+        assertThatThrownBy(() -> store.claim(
+                export.exportId(),
+                export.fileSha256(),
+                export.dataSha256(),
+                export.idempotencyKey(),
+                1,
+                firstStartedAt.plusSeconds(2)))
+                .isInstanceOfSatisfying(
+                        J7DeliveryLedgerStore.LedgerException.class,
+                        exception -> assertThat(exception.failure()).isEqualTo(
+                                J7DeliveryLedgerStore.LedgerFailure
+                                        .ATTEMPT_ORDINAL_MISMATCH));
+
+        assertThat(store.find(export.exportId(), export.fileSha256()))
+                .hasValueSatisfying(snapshot -> assertThat(snapshot)
+                        .extracting(
+                                J7DeliveryLedgerStore.DeliverySnapshot::state,
+                                J7DeliveryLedgerStore.DeliverySnapshot::attemptCount)
+                        .containsExactly(
+                                J7DeliveryLedgerStore.DeliveryState
+                                        .UNKNOWN_RECONCILIATION_REQUIRED,
+                                1));
     }
 
     @Test
@@ -349,8 +495,23 @@ class J7DeliveryLedgerMigrationIT {
         Instant startedAt = databaseClock();
         var claim = store.claim(
                 export.exportId(), export.fileSha256(), export.dataSha256(),
-                export.idempotencyKey(), startedAt);
+                export.idempotencyKey(), 1, startedAt);
         Instant completedAt = startedAt.plusSeconds(1);
+
+        assertThatThrownBy(() -> store.complete(
+                claim.deliveryId(),
+                claim.attemptNumber(),
+                J7DeliveryLedgerStore.DeliveryState.REJECTED_TERMINAL,
+                OptionalInt.of(422),
+                "LOCAL_COMPLETION_PRECEDES_START",
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                startedAt.minusNanos(1_000)))
+                .isInstanceOfSatisfying(
+                        J7DeliveryLedgerStore.LedgerException.class,
+                        exception -> assertThat(exception.failure()).isEqualTo(
+                                J7DeliveryLedgerStore.LedgerFailure.ATTEMPT_NOT_ACTIVE));
 
         assertThatThrownBy(() -> store.complete(
                 claim.deliveryId(),
@@ -361,6 +522,21 @@ class J7DeliveryLedgerMigrationIT {
                 Optional.empty(),
                 Optional.empty(),
                 Optional.empty(),
+                completedAt))
+                .isInstanceOfSatisfying(
+                        J7DeliveryLedgerStore.LedgerException.class,
+                        exception -> assertThat(exception.failure()).isEqualTo(
+                                J7DeliveryLedgerStore.LedgerFailure.INVALID_COMPLETION));
+
+        assertThatThrownBy(() -> store.complete(
+                claim.deliveryId(),
+                claim.attemptNumber(),
+                J7DeliveryLedgerStore.DeliveryState.DELIVERED,
+                OptionalInt.of(201),
+                "NON_PERSISTABLE_RECEIVER_TIMESTAMP",
+                Optional.of("d".repeat(64)),
+                Optional.of(UUID.fromString("27000000-0000-4000-8000-000000000104")),
+                Optional.of(Instant.parse("2026-09-03T10:00:00.123456789Z")),
                 completedAt))
                 .isInstanceOfSatisfying(
                         J7DeliveryLedgerStore.LedgerException.class,
@@ -412,6 +588,7 @@ class J7DeliveryLedgerMigrationIT {
                 export.fileSha256(),
                 export.dataSha256(),
                 export.idempotencyKey(),
+                1,
                 startedAt);
 
         assertThatThrownBy(() -> store.reconcileStaleInFlightAsUnknown(
@@ -460,6 +637,7 @@ class J7DeliveryLedgerMigrationIT {
                 export.fileSha256(),
                 export.dataSha256(),
                 export.idempotencyKey(),
+                2,
                 repeatStartedAt);
         assertThat(repeat.attemptNumber()).isEqualTo(2);
         store.complete(
@@ -496,6 +674,7 @@ class J7DeliveryLedgerMigrationIT {
                     export.fileSha256(),
                     export.dataSha256(),
                     export.idempotencyKey(),
+                    1,
                     startedAt));
             Instant waiterObservedAt = awaitGlobalAdvisoryLockWaiter();
 
@@ -598,7 +777,7 @@ class J7DeliveryLedgerMigrationIT {
         ExportEvidence second = insertValidatedExport();
         var firstClaim = store.claim(
                 first.exportId(), first.fileSha256(), first.dataSha256(),
-                first.idempotencyKey(), Instant.parse("2026-09-01T10:30:00Z"));
+                first.idempotencyKey(), 1, Instant.parse("2026-09-01T10:30:00Z"));
         UUID secondDeliveryId = UUID.randomUUID();
         UUID secondAttemptId = UUID.randomUUID();
         OffsetDateTime secondStartedAt = OffsetDateTime.parse("2026-09-01T10:30:00.001Z");
@@ -677,6 +856,7 @@ class J7DeliveryLedgerMigrationIT {
                     export.fileSha256(),
                     export.dataSha256(),
                     export.idempotencyKey(),
+                    1,
                     Instant.parse("2026-09-01T10:40:00Z")))
                     .isInstanceOfSatisfying(
                             J7DeliveryLedgerStore.LedgerException.class,
@@ -699,7 +879,7 @@ class J7DeliveryLedgerMigrationIT {
         Instant startedAt = databaseClock();
         var claim = store.claim(
                 export.exportId(), export.fileSha256(), export.dataSha256(),
-                export.idempotencyKey(), startedAt);
+                export.idempotencyKey(), 1, startedAt);
         jdbc.execute("""
                 create function fail_test_j7_delivery_completion()
                 returns trigger
@@ -771,7 +951,7 @@ class J7DeliveryLedgerMigrationIT {
         try {
             return store.claim(
                     export.exportId(), export.fileSha256(), export.dataSha256(),
-                    export.idempotencyKey(), startedAt);
+                    export.idempotencyKey(), 1, startedAt);
         }
         catch (J7DeliveryLedgerStore.LedgerException exception) {
             return exception.failure();

@@ -1,5 +1,6 @@
 package com.bettingproject.sofascorelocal.adapter.persistence.delivery;
 
+import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryReceivedAtPolicy;
 import com.bettingproject.sofascorelocal.port.J7DeliveryLedgerStore;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.RowMapper;
@@ -194,8 +195,15 @@ public class JdbcJ7DeliveryLedgerStore implements J7DeliveryLedgerStore {
             String fileSha256,
             String dataSha256,
             String idempotencyKey,
+            int expectedAttemptNumber,
             Instant startedAt) {
-        requireClaim(exportId, fileSha256, dataSha256, idempotencyKey, startedAt);
+        requireClaim(
+                exportId,
+                fileSha256,
+                dataSha256,
+                idempotencyKey,
+                expectedAttemptNumber,
+                startedAt);
         try {
             acquireGlobalClaimLock();
             Optional<DeliveryRow> existing = findDeliveryForUpdate(exportId);
@@ -219,6 +227,9 @@ public class JdbcJ7DeliveryLedgerStore implements J7DeliveryLedgerStore {
             }
 
             int attemptNumber = Math.addExact(delivery.attemptCount(), 1);
+            if (attemptNumber != expectedAttemptNumber) {
+                throw new LedgerException(LedgerFailure.ATTEMPT_ORDINAL_MISMATCH);
+            }
             MapSqlParameterSource attemptParameters = new MapSqlParameterSource()
                     .addValue("attemptId", UUID.randomUUID())
                     .addValue("deliveryDatabaseId", delivery.databaseId())
@@ -366,13 +377,9 @@ public class JdbcJ7DeliveryLedgerStore implements J7DeliveryLedgerStore {
         if (attempt.resultPresent() || completedAt.isBefore(attempt.startedAt())) {
             throw new LedgerException(LedgerFailure.ATTEMPT_NOT_ACTIVE);
         }
-        if (acknowledgementReceivedAt
-                .filter(receivedAt -> receivedAt.isBefore(attempt.startedAt())
-                        || receivedAt.isAfter(completedAt))
-                .isPresent()) {
-            throw new LedgerException(LedgerFailure.INVALID_COMPLETION);
-        }
 
+        // acknowledgementReceivedAt is receiver-authored metadata. Only startedAt and
+        // completedAt share the Local Lab clock and therefore have a meaningful ordering.
         MapSqlParameterSource resultParameters = new MapSqlParameterSource()
                 .addValue("attemptDatabaseId", attempt.databaseId())
                 .addValue("terminalState", terminalState.name())
@@ -569,6 +576,7 @@ public class JdbcJ7DeliveryLedgerStore implements J7DeliveryLedgerStore {
             String fileSha256,
             String dataSha256,
             String idempotencyKey,
+            int expectedAttemptNumber,
             Instant startedAt) {
         requireExportId(exportId);
         requireSha256(fileSha256, "fileSha256");
@@ -580,6 +588,9 @@ public class JdbcJ7DeliveryLedgerStore implements J7DeliveryLedgerStore {
         String expectedIdempotencyKey = "j7:" + exportId + ":sha256:" + fileSha256;
         if (!expectedIdempotencyKey.equals(idempotencyKey)) {
             throw new LedgerException(LedgerFailure.IDENTITY_MISMATCH);
+        }
+        if (expectedAttemptNumber < 1) {
+            throw new LedgerException(LedgerFailure.ATTEMPT_ORDINAL_MISMATCH);
         }
     }
 
@@ -617,7 +628,9 @@ public class JdbcJ7DeliveryLedgerStore implements J7DeliveryLedgerStore {
                         .filter(value -> SHA_256.matcher(value).matches())
                         .isPresent()
                 && remoteImportId.filter(value -> !NIL_UUID.equals(value)).isPresent()
-                && acknowledgementReceivedAt.isPresent();
+                && acknowledgementReceivedAt
+                        .filter(J7DeliveryReceivedAtPolicy::isExactlyPersistable)
+                        .isPresent();
         boolean acknowledgementAbsent = acknowledgementSha256.isEmpty()
                 && remoteImportId.isEmpty()
                 && acknowledgementReceivedAt.isEmpty();

@@ -34,7 +34,7 @@ public record J7DeliveryAcknowledgement(
                 fileSha256, J7DeliveryError.INVALID_FILE_SHA256);
         dataSha256 = J7DeliveryValueGuard.requireSha256(
                 dataSha256, J7DeliveryError.INVALID_DATA_SHA256);
-        receivedAt = J7DeliveryValueGuard.requireInstant(
+        receivedAt = J7DeliveryReceivedAtPolicy.requireExactlyPersistable(
                 receivedAt, J7DeliveryError.INVALID_RECEIVED_AT);
     }
 }

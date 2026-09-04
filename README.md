@@ -65,6 +65,325 @@ déplacerait potentiellement Playwright et les données brutes : il reste bloqu�
 ADR-SS-001 et ADR-SS-003 v0.1 jusqu'à une révision explicite. Aucune connexion ou sonde du VPS n'a
 été effectuée.
 
+[WO-SS-20260904-044](docs/work_orders/completed/WO-SS-20260904-044-j9-wo036-java-jar-path-argument-boundary.md)
+est `VALIDATED` et classé. Le commit
+`0b903b71ae70ccfb9b55f8d89bc8ac57eab0cbe3` résout localement le second P2 de la PR `#26` : le
+chemin JAR WO-036 absolu et canonique est explicitement protégé à la frontière native de
+`Start-Process`, puis reçu comme une valeur unique immédiatement après `-jar` même lorsque le
+chemin Windows contient des espaces. Les valeurs ambiguës sont refusées fail-closed.
+
+La preuve hôte passe sur `5/5` itérations et `4/4` refus, sans processus détenu ni racine temporaire
+résiduelle. Pester passe à `5/5` ciblé et `95/95` global ; Maven standard hors ligne avec les
+intégrations explicitement désactivées passe à Surefire `1136/0/0/5`. Le
+[rapport WO-044](docs/validation/J9-WO044-JAVA-JAR-PATH-ARGUMENT-BOUNDARY-QUALIFICATION-20260904.md),
+taille `8729` octets, porte le SHA-256
+`02008824316e688b6e42c523aaec45acf7b8edb776f49a9b11a822afd6a125a7`.
+
+Un écart d'exécution est déclaré : une première commande Maven hôte sans `-DskipITs` a démarré un
+PostgreSQL Testcontainers isolé et Ryuk malgré la porte `DATABASE_START=NO`. Elle a été interrompue
+immédiatement ; le postflight par identifiants exacts confirme zéro conteneur résiduel, tandis que
+la base primaire est restée `running/healthy`, sans accès, arrêt ni purge. La qualification de la
+correction est `PASS_LOCAL_FAIL_CLOSED`. Le propriétaire a validé WO-044, reconnu explicitement
+cet écart et la readiness locale, puis autorisé son classement le
+`2026-09-04T09:34:31.1785757Z`, soit
+`2026-09-04T11:34:31.1785757+02:00` en Europe/Paris. Le P2 est désormais
+`RESOLVED_LOCALLY_VALIDATED_PENDING_PR_UPDATE`. Aucun push ou changement de la PR `#26` n'est
+autorisé sans décision propriétaire séparée ; son merge, la fermeture de la PR `#25`, les appels
+HTTP, les données J7 réelles, le VPS et la production restent interdits.
+
+Le Work Order
+[WO-SS-20260904-043](docs/work_orders/completed/WO-SS-20260904-043-j9-wo036-client-certificate-fail-closed-rollback.md)
+est `VALIDATED` et classé. Le commit
+`f1e40da11e0c3f74661afcbb5de9dc458b385f60` ferme localement la fenêtre P2 de la PR `#26` : la
+propriété exacte du certificat client WO-036 est enregistrée avant toute validation post-création,
+puis le certificat `CurrentUser\My` et sa clé privée sont supprimés ensemble sur tout échec.
+
+Les quatre injections déterministes et le parcours nominal passent sans certificat, clé privée,
+racine de campagne, processus ou listener nouveau résiduel. Pester passe à `18/18` ciblé et `90/90`
+global ; les parcours Maven standard et intégration passent chacun à Surefire `1136/0/0/5` et
+Failsafe `89/0/0/0`. Le
+[rapport WO-043](docs/validation/J9-WO043-CLIENT-CERTIFICATE-ROLLBACK-QUALIFICATION-20260904.md),
+taille `7122` octets, porte le SHA-256
+`f412dc4b7c489412ffb8b3499dfe3a1350985c602b8b7d9a87659e0f7733665c`.
+
+Le propriétaire a reconnu la readiness locale de WO-043 et autorisé son push puis la poursuite de
+la PR `#26`. Le P2 est `RESOLVED_LOCALLY_VALIDATED_PENDING_PR_UPDATE`. Le PostgreSQL primaire
+préexistant est resté `running/healthy` sur `127.0.0.1:5432`, sans accès, arrêt ni purge. La fusion
+de `#26`, la fermeture de `#25` et toute opération réseau réelle restent interdites.
+
+Le Work Order
+[WO-SS-20260904-042](docs/work_orders/completed/WO-SS-20260904-042-j9-pr25-ci-readiness.md)
+est `VALIDATED` et classé depuis le commit WO-036 qualifié exact
+`ad343d5f1ed131b9a766c60ffd0086dc354ee839` afin de préparer une PR de remplacement conforme à la
+Convention 1A. Sa correction est limitée à la deadline externe du test J6 hors ligne, portée de 90 à
+180 secondes ; les timeouts runtime J6, les invariants fail-closed, le cleanup et la politique CI
+restent inchangés.
+
+La qualification locale de WO-042 est `PASS_LOCAL_CI_READY`. Trois exécutions ciblées J6 passent
+en `64.055 s`, `61.918 s` et `60.258 s` ; les parcours Maven standard et intégration passent chacun
+avec Surefire `1136/0/0/5` et Failsafe `89/0/0/0`. Le maximum J6 observé est `64.825 s`, soit
+`36.01 %` de la borne. Le
+[rapport local](docs/validation/J9-WO042-PR25-CI-READINESS-QUALIFICATION-20260904.md) mesure `7124`
+octets et porte le SHA-256
+`cd278b5d3c9698030bee54ee3cefb01458c192c02761238c1111d7af19a9fc58`.
+
+La PR de remplacement
+[`#26`](https://github.com/djothepirate/betting-sofascore-local-lab/pull/26) est ouverte vers `main`,
+sans conflit. Ses runs `33817549423` et `33818064414` sont verts ; sur le HEAD final validé
+`deb404cbb93bd7135d820aab2b8eebcecf87117c`, Windows passe en `3 min 35 s` et Linux en
+`5 min 20 s`. Le propriétaire reconnaît la readiness locale et CI de WO-042. Aucune fusion n'est
+autorisée.
+
+La revue de la PR `#26` conserve un P2 ouvert sur le rollback du certificat client du harnais E2E
+WO-036. Sa correction relève d'un Work Order distinct ; la validation de WO-042 ne le résout pas.
+
+La PR `#25` reste ouverte malgré les checks verts de la remplaçante. Aucune fusion, fermeture de
+`#25`, donnée J7 réelle, opération fournisseur/receiver réelle ou distante,
+VPS, production, PR ou validation INT-001 n'est autorisée par WO-042.
+
+Le run neuf R6 de
+[WO-SS-20260902-036](docs/work_orders/completed/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
+a qualifié le flux synthétique Windows/Windows complet. Son manifeste a été gelé et commité avant
+le premier `POST` au commit `c9ab6075210adb6593457ec6fac0691069ed528d`, SHA-256
+`9e61dbcac5c2d13f0755c506ab1ad13df6ceaed1df9b186c21351be6f91e7d68`. La séquence réelle
+loopback a produit exactement `201/IMPORTED`, `200/DUPLICATE` et
+`409/DIVERGENCE_REJECTED`, avec un unique receipt, payload et outbox durables, trois audits, zéro
+retry et zéro quatrième appel.
+
+Le cleanup est complet, les processus ont été arrêtés gracieusement et le PostgreSQL primaire
+exact est de nouveau `healthy` sur `127.0.0.1:5432`, avec identité et volume inchangés. Les
+postflights passent : Pester `87/87`, Local Lab Surefire `1136/0/0/5` et Failsafe `89/0/0/0`,
+receiver Surefire `297/0/0/0` et Failsafe `98/0/0/0`. Le
+[rapport R6](docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R6-20260903.md), taille
+`14304` octets et SHA-256 `17a299cef826a4cc8da3fd4ff50a20eec99aee447cc4a0b69fc79914d4ab4280`, classe la
+preuve `PASS_LOCAL_SYNTHETIC_E2E`.
+
+Le propriétaire a validé WO-036, reconnu sa readiness locale et autorisé son classement, le push
+de sa branche ainsi que la création d'une Pull Request vers `main`. L'exception loopback
+synthétique est refermée. Aucun export J7 réel, réseau fournisseur, payload dérivé, receiver réel
+ou distant, VPS, production, fusion ou validation INT-001 n'est autorisé par cette validation.
+
+Le Work Order runtime
+[WO-SS-20260903-041](docs/work_orders/completed/WO-SS-20260903-041-j9-local-labb-readiness-listener-gate.md)
+est `VALIDATED`. Il reproduit et corrige le défaut
+`INCOHERENT_DOUBLE_LISTENER_SNAPSHOT_TOCTOU_FALSE_CONFLICT` : l'ancienne boucle pouvait classer
+comme conflit un listener exact apparu entre deux lectures successives. Le commit
+`7893136664c5fc6c162da844735e36cb7829814c` emploie désormais un seul instantané cohérent par
+tentative, sans relâcher l'unicité, `127.0.0.1`, le port ou le PID exacts.
+
+La qualification est `PASS_LOCAL_FAIL_CLOSED` : 87 tests Pester passent, dix apparitions retardées
+réelles sur `127.0.0.1:8087` sont acceptées, le propriétaire conflictuel est refusé, les deux
+vérifications Maven passent avec 1 136 tests Surefire et 89 tests Failsafe sans échec, et aucun
+processus, listener synthétique ou conteneur Testcontainers ne subsiste. Le rapport
+[J9-WO041-LOCALLABB-READINESS-LISTENER-GATE-QUALIFICATION-20260903](docs/validation/J9-WO041-LOCALLABB-READINESS-LISTENER-GATE-QUALIFICATION-20260903.md)
+a pour SHA-256
+`ed650e2d9631f39b442769315fd50d47e5ee85129fb9e4549bb7093110a2976c`.
+
+La validation de WO-041 autorise son classement. Le propriétaire autorise séparément la reprise de
+WO-036 par un run neuf R6, avec un manifeste neuf gelé avant son premier POST. Aucun appel
+fournisseur, donnée dérivée, receiver distant, VPS, production, PR ou validation INT-001 n'est
+autorisé ; la claim R5 demeure consommée et ne sera pas réutilisée.
+
+Le Work Order
+[WO-SS-20260903-040](docs/work_orders/completed/WO-SS-20260903-040-j9-wo036-collision-response-client-qualification.md)
+est `VALIDATED` sur une branche et un worktree distincts depuis le commit R4 exact
+`33d2ae0bd5c2c8daae4cd708b0f12efaf9cd029d`. Sa portée est limitée au diagnostic, à la correction
+et à la qualification du lecteur de réponse HTTP de la sonde WO-036 après un effet durable de
+divergence. WO-036 reste arrêté, sa claim R4 demeure consommée et aucun sender Java, receiver,
+contrat, migration, réseau fournisseur ou distant, VPS ou production n’est autorisé à changer ou
+à être utilisé.
+
+Le diagnostic WO-040 a reproduit hors ligne une dépendance erronée à l'EOF : même après une
+réponse HTTP fixe complète, l'ancien lecteur effectuait un `Read()` supplémentaire et pouvait
+perdre le statut si le transport restait ouvert ou échouait. Le lecteur qualifié restitue désormais
+les réponses `Content-Length` et `chunked` dès que leur framing exact est complet ; les réponses
+close-delimited exigent toujours un EOF propre et les framing tronqués, ambigus, surdimensionnés
+ou déjà surnuméraires restent refusés. Le commit
+`f6e6a804f507bad48943534d4179bfcc90437766` porte ce framing incrémental fail-closed ; le commit
+`80cd5a33b19b2da48f0ab0821ef6fdfbd2623ba4` accepte en plus l'unique séparateur émis par
+INT-001/Tomcat pour une reason phrase vide, tout en refusant les formes ambiguës.
+
+La qualification finale contre INT-001 inchangé, exclusivement synthétique et loopback, a produit
+exactement deux POST : `201` sous `Content-Length`, puis `409/J7_IMPORT_CONFLICT` sous framing
+chunked, sans retry. La base isolée contient exactement un receipt, un payload, un outbox, un audit
+`IMPORTED` et un audit `DIVERGENCE_REJECTED/EXPORT_ID_DIVERGENCE`. Les 68 tests Pester, les
+1 136 tests Surefire et les 89 tests Failsafe passent dans les deux parcours Maven. Le cleanup est
+à zéro résidu ; le PostgreSQL primaire exact reste `running/healthy` sur `127.0.0.1:5432`, sans
+accès ni purge. Le
+[rapport WO-040](docs/validation/J9-WO040-COLLISION-RESPONSE-CLIENT-QUALIFICATION-20260903.md)
+a pour SHA-256 `2eb13aa1825d21eb5c40e97ffebf77246099d781f626591132897c4d128e9aee`.
+Le propriétaire a validé WO-040, reconnu sa readiness locale et autorisé son déplacement vers les
+Work Orders terminés le `2026-09-03T18:58:26.5005063Z`, soit
+`2026-09-03T20:58:26.5005063+02:00` en Europe/Paris. Cette validation clôt uniquement WO-040 :
+WO-036 reste arrêté et R5 n'est pas autorisé sans décision propriétaire distincte ni manifeste
+neuf gelé avant son premier POST.
+
+Le propriétaire a depuis demandé de pousser WO-040 puis de reprendre WO-036. La branche WO-040
+est poussée sur `origin` et sa clôture est intégrée dans WO-036 par fast-forward exact au commit
+`9cf14180404efe899abeb6a7f3f3d6b7f1e6a028`. Le run R5 exclusivement synthétique et loopback a
+gelé son manifeste neuf avant le premier POST, puis A a produit `201/IMPORTED` et `DELIVERED`.
+Après l'arrêt gracieux de A, la claim one-shot de démarrage B a été consommée sur l'échec de la
+porte du listener exact `127.0.0.1:8087`, alors que le journal privé expurgé rapporte le démarrage
+Spring/Tomcat. Aucun deuxième POST, duplicate, collision ou retry n'a suivi.
+
+R5 est donc `STOPPED_AFTER_FIRST_IMPORT_AND_CONSUMED_B_START_CLAIM`, avec cause racine
+`NOT_ESTABLISHED`. Le cleanup et les postflights sont verts : Pester `68/68`, Local Lab Surefire
+`1136/0/0/5` et Failsafe `89/0/0/0`, receiver Surefire `297/0/0/0` et Failsafe `98/0/0/0`, zéro
+résidu WO-036 ou Testcontainers, et le PostgreSQL primaire exact est `healthy` sur
+`127.0.0.1:5432`. Le
+[rapport R5](docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R5-STOP-20260903.md), taille
+`12501` octets et SHA-256 `1bee325424931a8ecc6e0b445fbd06efd2e80364a2dad8e038245dd2012c8053`,
+consigne l'arrêt. WO-036 reste actif ; un Work Order distinct doit diagnostiquer l'outillage avant
+toute proposition R6. Les réseaux fournisseur et distant, les données dérivées de SofaScore, le
+VPS, la production, tout nouveau push de WO-036, la PR et la validation INT-001 restent interdits.
+
+Le run neuf R4 de
+[WO-SS-20260902-036](docs/work_orders/completed/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
+a été gelé avant son premier POST au commit `e12500dc8af9133b254bfe075d74e979cad472a6`, manifeste
+SHA-256 `ff73efe0f9840941c6b281cdba38e21cda63e379acd0154f673ef8d7624b39ef`, puis exécuté avec un
+export J7 entièrement synthétique. A a produit `201/IMPORTED` et `DELIVERED`; B a produit
+`200/DUPLICATE` et `DUPLICATE_CONFIRMED`. Le troisième et dernier appel a atteint la branche
+receiver de divergence et persisté l'audit `DIVERGENCE_REJECTED/EXPORT_ID_DIVERGENCE`, sans
+second receipt, payload ou outbox. Le client de campagne n'a toutefois capturé ni statut HTTP ni
+code sûr : sa claim est consommée sous `FAILED_OR_UNKNOWN_CONSUMED`, sans retry ni rejeu.
+
+R4 est donc `STOPPED_AFTER_CONSUMED_R4_COLLISION_RESPONSE_QUALIFICATION_FAILURE`. La mesure
+`539.19 ms` entre claim et achèvement exclut l'hypothèse d'un timeout ; la cause exacte du défaut
+de capture reste `NOT_ESTABLISHED`. Le
+[rapport R4](docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R4-STOP-20260903.md), SHA-256
+`16e9f85e12109f2709146312410bbe2a5e040c4f176c2d5596746aa2b70076b5`, consigne l'arrêt,
+le cleanup sans résidu, le redémarrage sain du PostgreSQL primaire exact et les postflights verts.
+WO-036 reste actif ; une correction de harnais distincte, sa validation, une nouvelle décision
+propriétaire et un manifeste R5 neuf sont requis. Aucun réseau fournisseur ou distant, donnée
+dérivée, VPS, production, push, fusion, PR ou validation INT-001 n'est autorisé.
+
+Le Work Order
+[WO-SS-20260903-039](docs/work_orders/completed/WO-SS-20260903-039-j9-wo036-collision-probe-http-serialization.md)
+est `VALIDATED` avec le résultat `PASS_LOCAL_FAIL_CLOSED`. Le commit
+`90c1354c97f506b8291fedae80b7dc6ed37e2c11` construit la sonde de collision sous forme d’octets
+HTTP/1.1 exacts : média type contractuel sans espace ajouté, en-têtes uniques et bornés,
+`Content-Length` exact, corps byte-identique et TLS direct vers `127.0.0.1:8444`, sans proxy,
+redirect ni retry. Une exécution synthétique hôte a produit exactement un POST et le receiver
+INT-001 inchangé a persisté l’unique audit
+`DIVERGENCE_REJECTED/EXPORT_ID_DIVERGENCE`, sans second receipt, payload ou outbox.
+
+Le commit `058c57b05ac4c40e1867af60e76cce6cc2864e67` corrige ensuite le parseur borné pour accepter une
+ligne `HTTP/1.1 409` sans reason phrase tout en refusant les formes ambiguës. La requête déjà
+consommée n’a pas été rejouée ; cette correction est qualifiée hors ligne. Les 47 tests Pester,
+les 1 136 tests Surefire et les 89 tests Failsafe passent, y compris sous le profil d’intégration.
+Le cleanup hôte est complet et le PostgreSQL primaire exact reste `running/healthy` sur
+`127.0.0.1:5432`. Le
+[rapport WO-039](docs/validation/J9-WO039-COLLISION-PROBE-HTTP-SERIALIZATION-QUALIFICATION-20260903.md)
+a pour SHA-256 `4108f3916f0800c5d1c3616f0c6af866462cda5a188991f15f0305b0ea8d7f50`. Le propriétaire a
+ensuite autorisé le run R4 neuf de WO-036, exclusivement synthétique et loopback ; cette
+autorisation a été consommée par la campagne arrêtée décrite ci-dessus. Aucun réseau fournisseur
+ou distant, VPS ou production n’est autorisé.
+
+Le propriétaire a validé WO-039, reconnu sa readiness locale et autorisé son déplacement vers les
+Work Orders terminés le `2026-09-03T16:31:41Z`, soit `2026-09-03T18:31:41+02:00` en
+Europe/Paris. Cette validation clôt WO-039 uniquement ; l'autorisation propriétaire ultérieure de
+R4 est distincte et désormais consommée.
+
+Le Work Order
+[WO-SS-20260903-038](docs/work_orders/completed/WO-SS-20260903-038-j9-j7-ack-receipt-time-semantics.md)
+est `VALIDATED` avec le résultat `PASS_LOCAL_FAIL_CLOSED` au commit
+`3a0c297a5151c572417b4f2f12bb5c3ed216172f`. Le sender ne compare plus le `receivedAt` durable
+du receiver à la fenêtre murale de sa tentative locale ; il conserve la valeur exacte tout en
+exigeant sa forme UTC canonique, sa représentation à la microseconde dans les années
+`0001..9999`, les paires HTTP/ACK strictes et toutes les corrélations. La migration append-only V30
+ne réécrit ni V29 ni les données existantes et maintient uniquement les gardes d’ordre locales. Les
+commandes Maven sont vertes avec Surefire `1136/0/0/5` et Failsafe `89/0/0/0`. Le
+[rapport WO-038](docs/validation/J9-WO038-J7-ACK-RECEIPT-TIME-SEMANTICS-QUALIFICATION-20260903.md)
+a pour empreinte `QUALIFICATION_REPORT_SHA256=e51bc537c775b4378ee1c6672f86f6c7c085849d62d51970c3d1b6e4aef1395a`. La qualification est
+hors ligne ou synthétique loopback, sans modification ni appel du receiver INT-001, sans retry et
+sans reprise de WO-036. Les réseaux fournisseur, receiver réel ou distant, le VPS et la production
+restent interdits ; la permission officielle demeure `NOT_EVIDENCED`.
+
+Le propriétaire a validé WO-038, reconnu sa readiness locale et autorisé son déplacement vers les
+Work Orders terminés le `2026-09-03T12:35:39Z`, soit `2026-09-03T14:35:39+02:00` en
+Europe/Paris. Cette validation ne reprenait pas à elle seule WO-036. Une nouvelle décision
+propriétaire distincte a autorisé le `2026-09-03T13:02:58.9483990Z`, soit
+`2026-09-03T15:02:58.9483990+02:00` en Europe/Paris, une campagne R3 neuve exclusivement
+synthétique et loopback avec le receiver local INT-001. Cette autorisation est désormais consommée.
+
+Le Work Order
+[WO-SS-20260903-037](docs/work_orders/completed/WO-SS-20260903-037-j9-j7-browser-origin-boundary.md)
+est `VALIDATED` avec le résultat `PASS_LOCAL_FAIL_CLOSED`. Le commit runtime
+`f28e4b6954c0fb703923f770ab9156326e212a07` réserve `Referrer-Policy: same-origin` au sous-arbre
+canonique `/events/{canonicalEventId}/exports/**`, maintient `no-referrer` sur les autres routes et
+conserve le refus de `Origin: null`, des Hosts ou Origins hostiles ou dupliqués et des en-têtes
+forwarded. Le commit de harnais `2596f0592496b2ba84893c8f4ef2cf0185d46f8f` qualifie un
+Spring/Tomcat réel avec services synthétiques en mémoire et Chromium dans un contexte neuf : aperçu
+`200`, politique `same-origin`, préparation native `200` avec l’Origin loopback exact et préparation
+issue d’une origine opaque refusée `403`. Les appels d’exécution, réconciliation, claim, receiver,
+fournisseur et hors loopback, les téléchargements, artefacts interdits et listeners résiduels sont
+tous à zéro. Le
+[rapport WO-037](docs/validation/J9-WO037-J7-BROWSER-ORIGIN-BOUNDARY-QUALIFICATION-20260903.md)
+a pour empreinte `db8993328643a0ecb39eb83ff9eab6223f6c6ca6605b4cacf3e96dea171fab01`.
+Le propriétaire a validé les commits runtime, harnais et documentation, reconnu la readiness locale
+et autorisé le déplacement du Work Order vers `completed` le `2026-09-03T09:53:43Z`, soit
+`2026-09-03T11:53:43+02:00` en Europe/Paris.
+
+Cette validation n’autorisait pas à elle seule la reprise de WO-036. Le propriétaire l’a autorisée
+séparément le `2026-09-03T10:10:23Z`, soit `2026-09-03T12:10:23+02:00` en Europe/Paris, uniquement
+pour une campagne synthétique Windows/Windows neuve et un manifeste distinct. Cette reprise a été
+exécutée, puis arrêtée de façon fail-closed après le deuxième appel receiver.
+
+Le Work Order
+[WO-SS-20260902-036](docs/work_orders/completed/WO-SS-20260902-036-j9-j7-local-e2e-qualification.md)
+reste actif à `STOPPED_AFTER_FIRST_IMPORT_AND_CONSUMED_B_START_CLAIM`.
+Le premier import R2
+a produit `201/IMPORTED` et l’état sender `DELIVERED`. La répétition byte-identique a été persistée
+idempotemment par le receiver sous `200/DUPLICATE`, sans second payload ni second outbox, mais le
+sender l’a classée `UNKNOWN_RECONCILIATION_REQUIRED` avec `ACK_HTTP_STATUS_MISMATCH`. Le
+[rapport de reprise WO-036](docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-STOP-20260903.md),
+SHA-256 `219f54f2b429b1eaea04c920e55cc87d33f9c5644697129e6ff96fc9cad19062`, établit que le receiver
+réemploie conformément à son contrat l’instant durable du premier import, tandis que le sender exige
+à tort que cet instant soit postérieur au début de la seconde tentative. Aucun retry ni probe `409`
+n’a été exécuté. Le cleanup est complet et le PostgreSQL primaire exact a été redémarré `healthy`.
+WO-038 fournit le correctif runtime qualifié et validé. R3 a ensuite été gelée au commit
+`f14c1418995625ea653f8d01afd9c81044f3abd1`, manifeste SHA-256
+`cd20a30cd855d161fcaa0f5db93ef0c50fca5c297d569d0a4af2f4f02aab842d`, puis exécutée dans un
+environnement neuf. A a produit `201/IMPORTED` et `DELIVERED`; B a produit `200/DUPLICATE` et
+`DUPLICATE_CONFIRMED`, ce qui confirme WO-038 dans le parcours réel. Le troisième et dernier appel
+a toutefois reçu une réponse non-`409`; la claim est consommée, aucun retry n’a eu lieu et la
+défense `409/DIVERGENCE_REJECTED` n’est pas qualifiée. L’analyse statique et une reproduction hors
+ligne désignent fortement la sérialisation .NET du `Content-Type` par la sonde comme cause, mais le
+statut numérique exact n’a pas été conservé dans la preuve runtime. Le cleanup est complet et le
+PostgreSQL primaire exact est `healthy`. Le
+[rapport R3](docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R3-STOP-20260903.md) consigne
+le résultat `STOPPED`, SHA-256
+`f59cc0aeaa56fd6c8156032fea7e93048f17f616f1882cc3979bcd69363d1576`. WO-039 a ensuite qualifié
+la sérialisation HTTP exacte, puis R4 a été autorisé et exécuté. Son manifeste neuf a été gelé
+avant le premier POST ; les résultats `201` et `200` sont conformes et l'effet receiver de
+divergence est durable, mais le statut du troisième appel n'a pas été capturé côté client. Le
+rapport R4 et la porte R5 sont décrits en tête du présent document. R5 a ensuite été préparé dans
+un environnement neuf et son manifeste a été gelé avant le premier POST au commit
+`7c7505174c6a01da1c0134cd0564bd49529d0445`. A a produit `201/IMPORTED` et `DELIVERED`. Après
+l'arrêt gracieux de A, la claim one-shot de démarrage B a échoué sur la porte du listener exact
+`127.0.0.1:8087` avant toute tentative de duplicate. Le journal privé expurgé indique un démarrage
+Spring/Tomcat terminé, mais la cause du défaut d'observation reste `NOT_ESTABLISHED`; aucun retry,
+second POST ou probe de collision n'a été exécuté. Le cleanup R5 est complet et le PostgreSQL
+primaire exact a retrouvé l'état `healthy`. Le
+[rapport R5](docs/validation/J9-WO036-J7-LOCAL-E2E-CAMPAIGN-RESUME-R5-STOP-20260903.md) consigne
+le résultat `STOPPED`. Une correction de l'outillage sous Work Order distinct, sa validation, une
+décision propriétaire séparée, un run R6 neuf et un manifeste R6 gelé avant le premier POST sont
+requis. La permission officielle reste
+`NOT_EVIDENCED`; aucune donnée dérivée de SofaScore, aucun réseau fournisseur ou distant, VPS,
+production, push, fusion, PR ou validation INT-001 n’est autorisé.
+
+Le Work Order
+[WO-SS-20260902-035](docs/work_orders/completed/WO-SS-20260902-035-j9-real-j7-delivery-sender.md)
+est `VALIDATED` avec le résultat `PASS_LOCAL_FAIL_CLOSED` au commit
+`f5a27887b7db43576eb608d564c245c8cca3a602`. Le sender J7 réel du Local Lab est composé avec action
+manuelle, confirmation exacte, mTLS Windows, ledger séparé et réconciliation opérateur, tout en
+restant désactivé par défaut. La validation propriétaire a été enregistrée le
+`2026-09-02T18:57:00Z`, soit `2026-09-02T20:57:00+02:00` en Europe/Paris, avec readiness locale et
+déplacement vers `completed` confirmés. La permission officielle demeure `NOT_EVIDENCED` : aucun
+appel fournisseur, receiver réel, transfert d'un export dérivé, déploiement VPS ou usage de
+production n'est autorisé. WO-036 avait ensuite été ouvert par une autorisation distincte ; la PR
+d'INT-001 reste l’étape ultérieure séparée.
+
 Le correctif fournisseur distinct
 [WO-SS-20260901-030](docs/work_orders/completed/WO-SS-20260901-030-j9-provider-playwright-port-boundary-hardening.md)
 est `VALIDATED` et archivé depuis le `main` issu des PR #20/#21. Le commit
@@ -618,7 +937,7 @@ troisième campagne ou décision J9 n'est autorisée.
 - dépôt Git autonome, documentation, ADR, règles agent et Work Orders ;
 - Java **25 LTS**, Spring Boot **4.1.0** et Maven Wrapper versionné ;
 - interface Spring MVC + Thymeleaf sur `127.0.0.1:8087` ;
-- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V29 et stockage brut séparé ;
+- PostgreSQL local dans Docker Desktop, migrations Flyway V1 à V30 et stockage brut séparé ;
 - Actuator, Caffeine, validation de configuration et garde de liaison locale ;
 - catalogue logique des familles d’endpoints, sans URI réelle ;
 - connecteur verrouillé dans le code au mode `LOCKED_OFFLINE_J3_POLICY` ;

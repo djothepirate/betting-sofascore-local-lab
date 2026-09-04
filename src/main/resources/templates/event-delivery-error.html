@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Livraison J7 refusée — SofaScore Local Lab</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar compact-topbar">
+  <div class="shell"><p class="eyebrow">J7 · Livraison séparée</p><h1>Action refusée</h1></div>
+</header>
+<main class="shell event-page">
+  <section class="status-banner status-danger">
+    <div><p class="label">Code local sûr</p><p class="status-value mono" th:text="${deliveryErrorCode}">DELIVERY_REFUSED</p></div>
+  </section>
+  <p>Aucun détail distant, payload, accusé brut ou matériel de certificat n’est affiché.</p>
+  <a th:href="@{/events/{id}/exports/{exportId}(id=${canonicalEventId},exportId=${exportId})}"
+     href="/events/00000000-0000-0000-0000-000000000000/exports/00000000-0000-0000-0000-000000000000">Retour à l’export</a>
+</main>
+</body>
+</html>

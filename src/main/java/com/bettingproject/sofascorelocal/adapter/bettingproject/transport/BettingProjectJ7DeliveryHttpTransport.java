@@ -7,6 +7,7 @@ import com.bettingproject.sofascorelocal.port.J7DeliveryTransportException;
 import com.bettingproject.sofascorelocal.port.J7DeliveryTransportFailure;
 import com.bettingproject.sofascorelocal.port.J7DeliveryTransportRequest;
 import com.bettingproject.sofascorelocal.port.J7DeliveryTransportResponse;
+import com.bettingproject.sofascorelocal.port.OwnedJ7DeliveryTransport;
 
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLException;
@@ -33,11 +34,11 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
- * One-shot HTTPS transport for the synthetic loopback qualification. It has no Spring bean and no
- * real origin factory under WO-027.
+ * One-shot HTTPS transport for the exact loopback receiver. The transport itself is not a Spring
+ * bean; WO-035 creates one owned instance only after all manual runtime gates have passed.
  */
 public final class BettingProjectJ7DeliveryHttpTransport
-        implements J7DeliveryTransport, AutoCloseable {
+        implements J7DeliveryTransport, OwnedJ7DeliveryTransport {
 
     public static final String IMPORT_PATH =
             J7DeliveryContract.RELATIVE_IMPORT_PATH;
@@ -55,6 +56,7 @@ public final class BettingProjectJ7DeliveryHttpTransport
     private final Duration requestTimeout;
     private final Clock clock;
     private final boolean ownsHttpClient;
+    private final AtomicBoolean executed = new AtomicBoolean();
     private final AtomicBoolean closed = new AtomicBoolean();
 
     private BettingProjectJ7DeliveryHttpTransport(
@@ -87,6 +89,7 @@ public final class BettingProjectJ7DeliveryHttpTransport
         JdkHttpClientNoAutomaticRetryPolicy.requireSatisfiedFromStartupAndNow();
         SSLParameters sslParameters = new SSLParameters();
         sslParameters.setEndpointIdentificationAlgorithm("HTTPS");
+        sslParameters.setProtocols(new String[] {"TLSv1.3", "TLSv1.2"});
         HttpClient httpClient = HttpClient.newBuilder()
                 .connectTimeout(exactConnectTimeout)
                 .followRedirects(HttpClient.Redirect.NEVER)
@@ -102,6 +105,16 @@ public final class BettingProjectJ7DeliveryHttpTransport
                 exactRequestTimeout,
                 exactClock,
                 true);
+    }
+
+    public static BettingProjectJ7DeliveryHttpTransport forLocalReceiver(
+            URI origin,
+            SSLContext sslContext,
+            Duration connectTimeout,
+            Duration requestTimeout,
+            Clock clock) {
+        return forSyntheticLoopback(
+                origin, sslContext, connectTimeout, requestTimeout, clock);
     }
 
     static BettingProjectJ7DeliveryHttpTransport forTest(
@@ -133,6 +146,10 @@ public final class BettingProjectJ7DeliveryHttpTransport
     @Override
     public J7DeliveryTransportResponse execute(J7DeliveryTransportRequest request) {
         Objects.requireNonNull(request, "request");
+        if (!executed.compareAndSet(false, true)) {
+            throw new J7DeliveryTransportException(
+                    J7DeliveryTransportFailure.AUTOMATIC_REPLAY_BLOCKED);
+        }
         if (closed.get()) {
             throw new J7DeliveryTransportException(
                     J7DeliveryTransportFailure.IO_FAILURE);
