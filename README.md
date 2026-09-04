@@ -5,8 +5,8 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
-[WO-SS-20260904-043](docs/work_orders/active/WO-SS-20260904-043-j9-wo036-client-certificate-fail-closed-rollback.md)
-est `READY_FOR_OWNER_REVIEW`. Le commit
+[WO-SS-20260904-043](docs/work_orders/completed/WO-SS-20260904-043-j9-wo036-client-certificate-fail-closed-rollback.md)
+est `VALIDATED` et classé. Le commit
 `f1e40da11e0c3f74661afcbb5de9dc458b385f60` ferme localement la fenêtre P2 de la PR `#26` : la
 propriété exacte du certificat client WO-036 est enregistrée avant toute validation post-création,
 puis le certificat `CurrentUser\My` et sa clé privée sont supprimés ensemble sur tout échec.
@@ -19,9 +19,10 @@ Failsafe `89/0/0/0`. Le
 taille `7122` octets, porte le SHA-256
 `f412dc4b7c489412ffb8b3499dfe3a1350985c602b8b7d9a87659e0f7733665c`.
 
-Le P2 est `RESOLVED_LOCALLY_PENDING_OWNER_VALIDATION`. Le PostgreSQL primaire préexistant est
-resté `running/healthy` sur `127.0.0.1:5432`, sans accès, arrêt ni purge. Aucun push de WO-043,
-merge de `#26`, fermeture de `#25` ou opération réseau réelle n'est autorisé à ce stade.
+Le propriétaire a reconnu la readiness locale de WO-043 et autorisé son push puis la poursuite de
+la PR `#26`. Le P2 est `RESOLVED_LOCALLY_VALIDATED_PENDING_PR_UPDATE`. Le PostgreSQL primaire
+préexistant est resté `running/healthy` sur `127.0.0.1:5432`, sans accès, arrêt ni purge. La fusion
+de `#26`, la fermeture de `#25` et toute opération réseau réelle restent interdites.
 
 Le Work Order
 [WO-SS-20260904-042](docs/work_orders/completed/WO-SS-20260904-042-j9-pr25-ci-readiness.md)

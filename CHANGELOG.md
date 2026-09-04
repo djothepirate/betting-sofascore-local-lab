@@ -29,10 +29,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - rapport
   `docs/validation/J9-WO043-CLIENT-CERTIFICATE-ROLLBACK-QUALIFICATION-20260904.md`, taille `7122`
   octets et SHA-256 `f412dc4b7c489412ffb8b3499dfe3a1350985c602b8b7d9a87659e0f7733665c` ;
-- P2 classé `RESOLVED_LOCALLY_PENDING_OWNER_VALIDATION` et WO-043
-  `READY_FOR_OWNER_REVIEW` ;
+- validation propriétaire le `2026-09-04T08:15:31.9368617Z`, soit
+  `2026-09-04T10:15:31.9368617+02:00` en Europe/Paris, reconnaissance de la readiness locale et
+  classement de WO-043 dans les Work Orders terminés ;
+- P2 classé `RESOLVED_LOCALLY_VALIDATED_PENDING_PR_UPDATE`, avec push de WO-043 et poursuite de
+  la PR `#26` autorisés ;
 - aucune fusion, fermeture de PR, base, donnée J7 réelle, opération fournisseur/receiver HTTP,
-  réseau distant, VPS ou production autorisé ; aucun push de WO-043 avant validation propriétaire.
+  réseau distant, VPS ou production autorisé ; la fusion de `#26` et la fermeture de `#25`
+  restent explicitement interdites.
 
 ### Après J9 — WO-042 readiness CI de la PR de remplacement WO-036
 
