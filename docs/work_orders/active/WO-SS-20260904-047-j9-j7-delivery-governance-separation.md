@@ -1,6 +1,6 @@
 # WO-SS-20260904-047 — Séparation de gouvernance entre acquisition fournisseur et livraison J7
 
-- **Statut :** `IN_PROGRESS`
+- **Statut :** `LOCAL_READY_AWAITING_OWNER_REVIEW`
 - **Jalon :** après J9 — préalable runtime à la reprise de WO-046
 - **Préparé le :** 2026-09-04
 - **Préparation UTC :** `2026-09-04T15:00:14.9065640Z`
@@ -11,7 +11,7 @@
 - **ADR concernée :** ADR-SS-003 v0.2 acceptée sur la proposition immuable `e1ec9936467dd570f7ed00c51227c8e7d5a35945`
 - **Changement runtime autorisé :** oui, dans la portée bornée de la décision propriétaire reçue
 - **Décision reçue UTC :** `2026-09-04T15:27:21.4106846Z`
-- **Décision reçue Europe/Paris :** `2026-09-04T17:27:21.4198866+02:00`
+- **Décision reçue Europe/Paris :** `2026-09-04T17:27:21.4106846+02:00`
 
 ## 1. Clarification propriétaire à appliquer
 
@@ -98,8 +98,8 @@ L'absence de modification des policies J3/J4/J5 n'est pas une autorisation : leu
 soumis à leurs Work Orders, allowlists, préparations, confirmations et décisions réseau propres.
 La livraison J7 doit continuer d'exiger `PROVIDER_NETWORK_AUTHORIZED=NO` et ne peut jamais démarrer
 Playwright ou une acquisition. WO-047 ne crée pas une nouvelle porte de permission officielle
-pour J3/J4/J5 et ne modifie pas ADR-SS-001 ; ce choix de portée est explicite et devra être confirmé
-dans la décision propriétaire.
+pour J3/J4/J5 et ne modifie pas ADR-SS-001 ; ce choix de portée explicite est confirmé sans réserve
+par la décision propriétaire reçue.
 
 ### 4.2 Grant canonique V2
 
@@ -107,7 +107,7 @@ V1 reste un contrat historique strict : il continue d'exiger exactement `EVIDENC
 aucune ligne V1 existante ou future ne peut porter `NOT_EVIDENCED`.
 
 V2 sépare explicitement l'audit de la permission fournisseur et la base de gouvernance du
-transfert. Son bloc canonique reprendra toutes les autres lignes V1 et remplacera seulement les
+transfert. Son bloc canonique reprend toutes les autres lignes V1 et remplace seulement les
 trois lignes ambiguës par les lignes suivantes :
 
 ```text
@@ -127,7 +127,7 @@ PRODUCTION_AUTHORIZED=NO
 AUTOMATIC_RETRY_AUTHORIZED=NO
 ```
 
-La référence, le commit et le SHA-256 de gouvernance identifieront les octets exacts de la
+La référence, le commit et le SHA-256 de gouvernance identifient les octets exacts de la
 proposition ADR-SS-003 v0.2 acceptée sans lui attribuer un droit d'exécution. Les
 lignes `OWNER_DECISION=GRANT`, `GO_USE=ONE_TIME` et
 `PROVIDER_DERIVED_REAL_POST_AUTHORIZED=YES` du bloc owner-go lui-même porteront l'autorisation
@@ -137,20 +137,20 @@ lié au manifeste WO-046 gelé. Elle n'est ni accordée ni consommée sous WO-04
 
 ### 4.3 Migration V32
 
-V31 reste immuable. V32 ajoutera un discriminant de format et les colonnes V2 nécessaires. Les
+V31 reste immuable. V32 ajoute un discriminant de format et les colonnes V2 nécessaires. Les
 colonnes physiques V31 seront conservées pour la lecture des lignes historiques ; le bloc
 canonique V2 utilisera les noms `PROVIDER_PERMISSION_AUDIT_*` et
 `J7_TRANSFER_GOVERNANCE_BASIS_*` sans réinterpréter le bloc canonique V1.
 
-Les contraintes conditionnelles devront garantir :
+Les contraintes conditionnelles garantissent :
 
 ```text
 V1=STRICT_LEGACY_EVIDENCED_COMPATIBLE_ONLY
 V2=NOT_EVIDENCED_OR_EVIDENCED_COMPATIBLE_PLUS_EXACT_GOVERNANCE_BASIS_AND_OWNER_GO
 ```
 
-`EVIDENCED_INCOMPATIBLE`, toute valeur inconnue et toute divergence resteront refusées. La fonction
-canonique V1, les lignes V1 et leurs empreintes resteront byte-identiques. V32 ajoutera une fonction
+`EVIDENCED_INCOMPATIBLE`, toute valeur inconnue et toute divergence restent refusées. La fonction
+canonique V1, les lignes V1 et leurs empreintes restent byte-identiques. V32 ajoute une fonction
 canonique V2 et un dispatch strict par format ; aucune ligne historique ne sera réécrite.
 
 ## 5. Invariants préservés
@@ -201,14 +201,30 @@ Les critères minimaux sont :
   refusés fail-closed ;
 - consommation atomique unique, concurrence, révocation et absence de remboursement inchangées ;
 - migration neuve et V31 vers V32 sur PostgreSQL Testcontainers isolé, sans perte ni réécriture ;
-- contrôles de version J6 V32 vérifiés par tests hors ligne, sans exécution du pipeline natif ;
-- `mvnw.cmd clean verify`, profil `integration-tests`, `git diff --check`, contrôle UTF-8,
-  secrets, loopback et flags bloquants verts ;
+- contrôles de version J6 V32 vérifiés par tests statiques hors ligne, sans exécution du pipeline
+  natif ;
+- `mvnw.cmd clean verify` avec exclusion explicite de
+  `J6NativeBinaryPipelineQualificationTest`, puis profil `integration-tests` limité à une sélection
+  positive de tests ne lançant ni backup/restore natif ni base primaire ;
+- `git diff --check`, contrôle UTF-8, secrets, loopback et flags bloquants verts ;
 - aucun accès fournisseur, POST réel ou réseau non-loopback durant la qualification.
 
 Si et seulement si le bloc propriétaire le porte à `YES`, des POST synthétiques sur
 `127.0.0.1` pourront qualifier le format V2, l'atomicité et l'absence de retry. Ils ne pourront
 utiliser ni un export fournisseur, ni la base primaire, ni le manifeste ou le go WO-046.
+
+L'interdiction propriétaire `J9_WO047_NATIVE_BACKUP_RESTORE_AUTHORIZED=NO` exclut expressément :
+
+- `J6NativeBinaryPipelineQualificationTest#syntheticNativePipelineFailsClosedWithoutHumanPassphraseInput`
+  et, pour le `clean verify`, la classe entière qui porte les scénarios de pipeline natif ;
+- `FlywayMigrationIT#restoresJ8AndJ7DeliveryEvidenceWithIdenticalFingerprints`, qui exécute
+  réellement `pg_dump` et `pg_restore` ;
+- toute commande de backup/restore J6 et tout contact, backup, purge ou migration de la base
+  primaire.
+
+Le profil `integration-tests` intégral n'est donc pas une commande autorisée pour WO-047 et aucun
+résultat intégral ne doit être revendiqué. Les tests statiques J6 nécessaires sont réintroduits par
+sélection positive dans la commande ciblée, sans lancer les scénarios natifs exclus.
 
 ## 8. Décision propriétaire reçue et portes maintenues
 
@@ -266,7 +282,7 @@ J9_WO046_RESUME_AFTER_WO047_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
 ## 9. État effectif
 
 ```text
-J9_WO047_STATUS=IN_PROGRESS
+J9_WO047_STATUS=LOCAL_READY_AWAITING_OWNER_REVIEW
 J9_WO047_IMPLEMENTATION_AUTHORIZED=YES
 ADR_SS_003_V0_2_STATUS=ACCEPTED
 J9_WO046_STATUS=PAUSED_PENDING_WO047
@@ -282,3 +298,97 @@ J9_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
 J9_VPS_DEPLOYMENT_AUTHORIZED=NO
 J9_PRODUCTION_AUTHORIZED=NO
 ```
+
+Le document actif de WO-046 conserve comme preuve historique v0.1 son statut
+`BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`. Il n'est pas réécrit sous WO-047. L'état gouvernant
+la séquence courante est bien `PAUSED_PENDING_WO047` ; toute reprise après validation de WO-047
+exige encore une décision propriétaire séparée.
+
+## 10. État d'implémentation et qualification locale
+
+L'implémentation autorisée est qualifiée localement et le Work Order attend la revue propriétaire.
+Aucune clôture n'est prononcée avant cette décision. Les éléments implémentés couvrent :
+
+- l'allow-list runtime `NOT_EVIDENCED|EVIDENCED_COMPATIBLE`, les refus dédiés de
+  `EVIDENCED_INCOMPATIBLE` et des valeurs invalides, ainsi que leurs mappings UI/API ;
+- le grant canonique Java/JDBC V2, sans modification du golden V1 ;
+- V32 append-only, ses contraintes fail-closed sur les formes et valeurs `NULL`, sa fonction
+  canonique V2 et son dispatcher à `search_path` fixé, sans modification de V31, de la fonction V1
+  ou des lignes V1 ;
+- le claim atomique V1/V2, la consommation unique, la révocation et les courses concurrentes ;
+- les contrôles J6 exigeant V32, sans lancement d'un outil natif.
+
+### 10.1 Résultats ciblés et finaux
+
+| Lot ciblé | Résultat intermédiaire | Limite d'autorisation |
+|---|---:|---|
+| policy, configuration, runtime, controller et mappings UI/API Java | `86/86 PASS` | hors ligne ; aucun POST réel |
+| cycle ledger PostgreSQL V1/V2 | `29/29 PASS` | PostgreSQL Testcontainers isolé |
+| migration et fonction canonique V32, fresh puis V31→V32 | `2/2 PASS` | PostgreSQL Testcontainers isolé ; V1/V31 non réécrits |
+| scénarios Flyway explicitement sélectionnés | `3/3 PASS` | le scénario `pg_dump`/`pg_restore` n'est pas sélectionné |
+| gardes J6 statiques V32 explicitement sélectionnées | `2/2 PASS` | aucun pipeline natif |
+| `clean verify` standard avec exclusion native explicite | `1178/1178 PASS`, `4` ignorés | Failsafe non exécuté |
+| intégrations autorisées, hors `FlywayMigrationIT` | `37/37 PASS` | PostgreSQL isolé et loopback synthétique |
+
+La commande d'intégration ciblée observée est :
+
+```powershell
+.\mvnw.cmd -q --offline -Pintegration-tests `
+  "-Dtest=J6NativeBinaryPipelineQualificationTest#backupRestoreScriptUsesTheFailClosedSupervisorForBothBinaryPipelines+retentionAcceptsOnlyAV32QualifiedManifestWithoutRunningNativeTools" `
+  "-Dit.test=J7ProviderOwnerGoV32MigrationIT,FlywayMigrationIT#createsTheJ3RawSnapshotSchemaAndKeepsNetworkDisabled+executesJ6BackupFingerprintQueriesAgainstTheMigratedSchema+j6RetentionLauncherRequiresCurrentFlywayAndDisablesTournamentDiscovery" `
+  verify
+```
+
+Le cycle ledger V1/V2 est qualifié séparément, par sélection positive :
+
+```powershell
+.\mvnw.cmd -q --offline -Pintegration-tests `
+  "-Dtest=J6NativeBinaryPipelineQualificationTest#backupRestoreScriptUsesTheFailClosedSupervisorForBothBinaryPipelines+retentionAcceptsOnlyAV32QualifiedManifestWithoutRunningNativeTools" `
+  "-Dit.test=J7DeliveryLedgerMigrationIT" `
+  verify
+```
+
+### 10.2 Consolidation finale
+
+Le `clean verify` final a exclu explicitement la classe de pipeline natif ; les deux contrôles
+statiques autorisés de cette classe ont ensuite été réintroduits par sélection positive :
+
+```powershell
+.\mvnw.cmd --offline `
+  "-Dmaven.repo.local=C:\Users\geoff\.m2\repository" `
+  "-Dsurefire.excludes=**/J6NativeBinaryPipelineQualificationTest.java" `
+  -DskipITs=true clean verify
+```
+
+```text
+QUALIFICATION_CLEAN_VERIFY_WITH_EXPLICIT_NATIVE_EXCLUSION=PASS_1178_TESTS_4_SKIPPED
+QUALIFICATION_SELECTED_INTEGRATION_TESTS=PASS_37
+QUALIFICATION_SELECTED_FLYWAY_TESTS=PASS_3
+QUALIFICATION_SELECTED_J6_STATIC_TESTS=PASS_2
+QUALIFICATION_FULL_INTEGRATION_PROFILE=NOT_RUN_NOT_AUTHORIZED
+QUALIFICATION_NATIVE_BACKUP_RESTORE=NOT_RUN_NOT_AUTHORIZED
+QUALIFICATION_PRIMARY_DATABASE_TOUCH=0
+QUALIFICATION_PROVIDER_NETWORK_CALLS=0
+QUALIFICATION_REAL_POSTS=0
+QUALIFICATION_FINAL_P0_FINDINGS=0
+QUALIFICATION_FINAL_P1_FINDINGS=0
+QUALIFICATION_FINAL_P2_FINDINGS=0
+QUALIFICATION_FINAL_P3_FINDINGS=0
+QUALIFICATION_IMPLEMENTATION_COMMIT=ddb41e8fd0dfe32e9c2aa5fdb4a50d9fcd90cb93
+QUALIFICATION_FINAL_REPORT=docs/validation/J9-WO047-J7-DELIVERY-GOVERNANCE-SEPARATION-QUALIFICATION-20260904.md
+QUALIFICATION_FINAL_REPORT_SIZE=12033
+QUALIFICATION_FINAL_REPORT_SHA256=75b55109c0705a44026376d7f0bdadf76d979dcd4268c1430d5ed8008d693540
+QUALIFICATION_WORK_ORDER_CLOSURE=NOT_PERFORMED
+```
+
+Une première sélection Failsafe trop large a atteint la bannière de
+`J6NativeBinaryPipelineQualificationTest` et a été interrompue immédiatement. Aucun rapport de
+méthode native, marqueur de pipeline, appel `pg_dump`/`pg_restore` ou effet primaire n'a été
+observé ; aucun résultat de cette exécution n'est revendiqué. La preuve finale utilise uniquement
+les sélections bornées détaillées dans le rapport. La validation propriétaire doit reconnaître
+explicitement cette déviation contenue.
+
+Les contrôles finaux confirment UTF-8 sans BOM ni NUL, zéro secret détecté, V31 inchangée,
+`server.address=127.0.0.1`, tous les flags réseau et d'exécution désactivés par défaut, Compose
+valide, aucun Testcontainers résiduel et le conteneur PostgreSQL primaire byte-identifié, toujours
+en cours d'exécution et sain avec le même instant de démarrage et le même volume.

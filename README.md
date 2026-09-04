@@ -6,27 +6,32 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 Le Work Order
 [WO-SS-20260904-047](docs/work_orders/active/WO-SS-20260904-047-j9-j7-delivery-governance-separation.md)
-est en cours dans l'état `IN_PROGRESS` sur la branche distincte
+est qualifié localement dans l'état `LOCAL_READY_AWAITING_OWNER_REVIEW` sur la branche distincte
 `codex/j9-wo047-j7-delivery-governance-separation`. ADR-SS-003 v0.2 a été acceptée sur la
 proposition immuable `e1ec9936467dd570f7ed00c51227c8e7d5a35945` afin de corriger un
 couplage erroné : l'absence de réponse officielle SofaScore reste un fait d'audit
 `NOT_EVIDENCED`, mais ne doit pas bloquer le transfert local d'un J7 déjà `HUMAN_VALIDATED` vers
 Betting Project, lequel ne contacte jamais SofaScore.
 
-L'implémentation V2/V32 hors ligne et synthétique est autorisée sous WO-047. WO-046 reste en pause
-avant l'étape 3 jusqu'à qualification et validation de WO-047, intégration linéaire et nouvelle
+L'implémentation V2/V32 hors ligne et synthétique est qualifiée sous WO-047 au commit
+`ddb41e8fd0dfe32e9c2aa5fdb4a50d9fcd90cb93`. WO-046 reste en pause avant l'étape 3 jusqu'à
+validation propriétaire de WO-047, intégration linéaire et nouvelle
 décision propriétaire. Aucune sélection, identité mTLS, création de manifeste, go ou tentative
 n'est consommée. Aucun POST réel, appel J3/J4/J5, receiver distant, VPS ou production n'est
 autorisé.
 
 Le Work Order
 [WO-SS-20260904-046](docs/work_orders/active/WO-SS-20260904-046-j9-j7-real-local-e2e-campaign.md)
-est ouvert dans l'état `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`, depuis le commit exact de clôture de WO-045
-`8a1225fc4b85d8e8b55af536fcbc7955676131ff`. Il prépare la future campagne Windows/Windows d'une
+porte historiquement dans son document v0.1 l'état `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`,
+depuis le commit exact de clôture de WO-045
+`8a1225fc4b85d8e8b55af536fcbc7955676131ff`. L'état effectif de la séquence est désormais
+`PAUSED_PENDING_WO047`, sans réécriture de cette preuve historique. Il prépare la future campagne
+Windows/Windows d'une
 livraison manuelle unique d'un export J7 fournisseur déjà `HUMAN_VALIDATED` vers le receiver
 Betting Project sur `https://127.0.0.1:8444`.
 
-L'autorisation actuelle couvre uniquement l'ouverture documentaire et l'inventaire hors ligne.
+L'autorisation historique propre à WO-046 couvre uniquement l'ouverture documentaire et
+l'inventaire hors ligne.
 Le receiver INT-001 est désormais validé par le propriétaire, localement qualifié et non publié au
 commit documentaire `de06153f0908a1bb2dc9bbd2c8e22f7fd14dacfd` de son dépôt. La
 [réconciliation officielle](docs/validation/J9-WO046-OFFICIAL-PERMISSION-RECONCILIATION-20260904.md),
@@ -48,8 +53,8 @@ Le Work Order
 [WO-SS-20260904-045](docs/work_orders/completed/WO-SS-20260904-045-j9-provider-derived-owner-go-boundary.md)
 est `VALIDATED` et classé. Son commit d'implémentation
 `67467d5dbd63fa54d11b2d1cd701a31edf4454e0` ajoute la frontière durable, exacte, atomique et à
-usage unique exigée avant toute future livraison J7 dérivée de données fournisseur. La voie
-`SYNTHETIC_ONLY` reste inchangée ; `MIXED_OR_UNKNOWN` reste refusée.
+usage unique V1 historique exigée avant toute future livraison J7 dérivée de données fournisseur.
+La voie `SYNTHETIC_ONLY` reste inchangée ; `MIXED_OR_UNKNOWN` reste refusée.
 
 Le grant propriétaire est lié par UUID et SHA-256 à un document canonique qui fixe le futur Work
 Order/manifeste, les commits des deux dépôts, la preuve officielle, l'événement, l'export et ses
@@ -62,10 +67,23 @@ transport.
 La confirmation locale émet désormais une capacité mémoire liée à l'instance exacte du reçu,
 expirante et consommable une seule fois. Une copie présentant les mêmes champs est refusée avant
 toute lecture d'export ou de grant. Après claim, aucun échec ne rembourse le go et aucun retry
-automatique n'est possible. Les fonctions SQL fixent leur `search_path`, et la sauvegarde J6 V31
-empreinte également les trois journaux owner-go.
+automatique n'est possible. Les fonctions SQL fixent leur `search_path`, et la sauvegarde J6 alors
+qualifiée en V31 empreinte également les trois journaux owner-go.
 
-Les parcours Maven standard et `integration-tests` passent chacun à Surefire `1167/0/0/5` et
+WO-047 conserve ce format V1 et V31 byte-identiques, puis ajoute un format V2 et une migration V32
+append-only qui discriminent explicitement audit fournisseur et gouvernance du transfert. Les
+contrôles J6 courants exigent V32. Sous l'autorisation WO-047, leur qualification reste cependant
+statique et ciblée : aucun `pg_dump`, `pg_restore`, pipeline natif, backup/restore ou contact de la
+base primaire n'est autorisé. Le
+[rapport WO-047](docs/validation/J9-WO047-J7-DELIVERY-GOVERNANCE-SEPARATION-QUALIFICATION-20260904.md),
+taille `12033` octets et SHA-256
+`75b55109c0705a44026376d7f0bdadf76d979dcd4268c1430d5ed8008d693540`, conclut
+`PASS_LOCAL_FAIL_CLOSED`. La revue propriétaire et la reconnaissance de la déviation de sélection
+contenue restent nécessaires ; aucun profil `integration-tests` intégral ni aucune clôture n'est
+revendiqué.
+
+Pour la qualification historique WO-045, les parcours Maven standard et `integration-tests`
+passent chacun à Surefire `1167/0/0/5` et
 Failsafe `100/0/0/0`, incluant PostgreSQL, concurrence, mTLS et E2E synthétique strictement
 loopback. Les revues adversariales finales comptent zéro P1/P2. Le
 [rapport WO-045](docs/validation/J9-WO045-PROVIDER-DERIVED-OWNER-GO-BOUNDARY-QUALIFICATION-20260904.md),
@@ -1266,6 +1284,13 @@ http://127.0.0.1:8087/actuator/metrics
 Le démarrage depuis Eclipse nécessite que PostgreSQL ait déjà été lancé par `Start-Local.ps1` ou `docker compose up -d postgres`.
 
 ## Commandes de validation
+
+Les commandes ci-dessous décrivent le socle général du dépôt. Elles ne valent pas autorisation
+d'exécuter les scénarios natifs sous WO-047 : pour ce Work Order, utiliser uniquement le
+`clean verify` avec exclusion explicite de `J6NativeBinaryPipelineQualificationTest` et les
+sélections positives du profil `integration-tests` consignées dans le
+[WO-047](docs/work_orders/active/WO-SS-20260904-047-j9-j7-delivery-governance-separation.md).
+Le test Flyway `pg_dump`/`pg_restore`, le pipeline natif et le profil intégral restent interdits.
 
 ### Tests standards hors ligne fournisseur
 

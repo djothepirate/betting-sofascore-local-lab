@@ -18,12 +18,35 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - format canonique V1 conservé strict et historique ; implémentation autorisée d'un
   `J7_PROVIDER_DERIVED_OWNER_GO_V2` séparant `PROVIDER_PERMISSION_AUDIT_*` et
   `J7_TRANSFER_GOVERNANCE_BASIS_*`, sans faux accord officiel ni autorité attribuée à l'ADR ;
-- migration V32 append-only et discriminée par format autorisée, V31, la fonction canonique V1 et
-  toutes les preuves WO-045/WO-046 antérieures restant immuables ;
+- implémentation de l'allow-list runtime `NOT_EVIDENCED|EVIDENCED_COMPATIBLE`, avec veto
+  `EVIDENCED_INCOMPATIBLE`/valeur invalide, codes sûrs dédiés et mapping UI/API qui conserve le
+  motif exact sans réémettre le code legacy `OFFICIAL_PERMISSION_NOT_EVIDENCED` ;
+- ajout du grant Java/JDBC V2 et de la migration V32 append-only discriminée par format ; V31, la
+  fonction canonique V1, le golden V1 et toutes les preuves WO-045/WO-046 antérieures restent
+  immuables, tandis que les contraintes et la fonction canonique V2 échouent fermées ;
+  implémentation figée au commit `ddb41e8fd0dfe32e9c2aa5fdb4a50d9fcd90cb93` ;
+- consommation du go, création de tentative et claim `IN_FLIGHT` maintenus atomiques pour V1/V2 ;
+  révocation/claim, concurrence, rollback et absence de remboursement après claim couverts sur
+  PostgreSQL isolé ;
 - aucune nouvelle porte d'acquisition J3/J4/J5 et aucun changement INT-001 sous ce Work Order ;
   les décisions réseau fournisseur restent entièrement séparées ;
 - implémentation hors ligne, PostgreSQL isolé et loopback synthétique autorisés sous WO-047 ;
-  WO-046 demeure en pause avant l'étape 3 jusqu'à validation et décision de reprise séparée ;
+  WO-046 demeure effectivement `PAUSED_PENDING_WO047` avant l'étape 3 jusqu'à validation et
+  décision de reprise séparée, tandis que son document v0.1 conserve son statut historique ;
+- contrôles J6 portés à V32 et vérifiés uniquement par tests statiques ciblés ; l'interdiction
+  propriétaire exclut le test `pg_dump`/`pg_restore`, le pipeline natif et tout contact de la base
+  primaire. La qualification emploie le profil `integration-tests` ciblé et doit compléter un
+  `clean verify` avec exclusion native explicite, sans revendiquer le profil intégral ;
+- qualification finale locale verte : `clean verify` borné `1178/1178` avec `4` tests ignorés,
+  intégrations autorisées `37/37`, ledger PostgreSQL V1/V2 `29/29`, migration V32 `2/2`, Flyway
+  ciblé `3/3` et gardes J6 statiques `2/2` ;
+- rapport
+  `docs/validation/J9-WO047-J7-DELIVERY-GOVERNANCE-SEPARATION-QUALIFICATION-20260904.md`, taille
+  `12033` octets et SHA-256
+  `75b55109c0705a44026376d7f0bdadf76d979dcd4268c1430d5ed8008d693540`, résultat
+  `PASS_LOCAL_FAIL_CLOSED` et zéro finding P0/P1/P2/P3 ; une sélection Failsafe trop large a été
+  interrompue à la bannière de la classe J6 interdite sans marqueur de méthode native observé et
+  doit être reconnue par le propriétaire ;
 - aucun export ou certificat sélectionné, manifeste créé, go construit, POST ou appel fournisseur
   effectué ; réseaux distant/fournisseur, VPS et production maintenus à `NO`.
 

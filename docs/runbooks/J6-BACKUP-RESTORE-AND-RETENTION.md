@@ -12,6 +12,15 @@ suppriment aucune donnée de la base primaire. Le mode `Execute` de la rétentio
 et doit faire l'objet d'une décision opérateur distincte. Il n'existe ni bouton Web, ni tâche
 planifiée, ni purge automatique.
 
+ADR-SS-003 v0.2 supersède la règle v0.1 uniquement pour la porte J7 locale ; le format V1 et V31
+restent immuables, tandis que V2/V32 portent la séparation audit/gouvernance. Sous WO-047,
+l'interdiction propriétaire est plus stricte : sauvegarde/restauration native,
+`pg_dump`, `pg_restore`, pipeline natif, migration ou contact de la base primaire et purge primaire
+ne sont pas autorisés. Les procédures natives ci-dessous restent une référence historique pour un
+futur Work Order explicitement autorisé ; elles ne doivent pas être lancées pour qualifier
+WO-047. Seuls les contrôles statiques ciblés des scripts et les migrations Testcontainers sur un
+PostgreSQL isolé relèvent de son périmètre.
+
 ```text
 PROVIDER_CALL_REQUIRED=NO
 POLLING_OR_SCHEDULING=NO
@@ -25,16 +34,18 @@ NORMALIZED_OBSERVATION_DELETION=IMPOSSIBLE_BY_DESIGN
 - PowerShell 7.4 ou plus récent pour préserver les pipelines binaires natifs ;
 - exécutable `age` disponible dans `PATH` ou fourni avec `-AgePath` ;
 - PostgreSQL local démarré et sain ;
-- Flyway V31 appliqué ; la rétention reste définie par V22, V23 étend seulement
+- Flyway V32 appliqué ; la rétention reste définie par V22, V23 étend seulement
   `export_manifest` pour J7, V24 élargit la portée du cache de découverte tournoi, V25 ajoute
   uniquement la provenance de l'import JSON local, V26 autorise `event-incidents-v14`, V27 ajoute
   le ledger J8 sans étendre le périmètre de purge et V28 autorise uniquement
   `event-incidents-v15`, sans table ni réécriture, et V29 ajoute le ledger de livraison J7
   metadata-only dont les trois compteurs et l'empreinte sont inclus dans la preuve de
   sauvegarde/restauration sans étendre le périmètre de purge ; V30 remplace uniquement le trigger
-  de résultat J7 afin de ne plus ordonner l’horloge receiver contre l’horloge locale, et V31 ajoute
+  de résultat J7 afin de ne plus ordonner l’horloge receiver contre l’horloge locale ; V31 ajoute
   les preuves append-only de grant, révocation et consommation du go propriétaire provider-derived,
-  dont les trois comptes et les lignes canoniques participent à la même empreinte J7 ;
+  dont les trois comptes et les lignes canoniques participent à la même empreinte J7 ; V32 ajoute
+  de façon append-only le discriminant V1/V2 et les champs d'audit/gouvernance V2, sans modifier
+  V31 ni la fonction canonique V1. L'empreinte `to_jsonb(owner_go)` couvre donc les colonnes V32 ;
 - application liée uniquement à `127.0.0.1` ;
 - toutes les voies J3/J4/J5, y compris la découverte tournoi, désactivées et
   `connector_control` à `LOCKED` ;
@@ -161,7 +172,7 @@ PostgreSQL possédée. Elles ne constituent ni une boucle indéfinie ni un budge
 Le script :
 
 1. refuse une application encore à l'écoute sur le port 8087 ;
-2. vérifie Compose, le verrou réseau et la version courante Flyway V31 ;
+2. vérifie Compose, le verrou réseau et la version courante Flyway V32 ;
 3. vérifie le SHA-256 réel de chaque payload retenu ;
 4. vérifie l'exécutable Docker exact ; sous Windows, il doit être un fichier absolu sans reparse
    point, signé validement et attribué au produit Docker Inc. ;
@@ -286,7 +297,7 @@ pwsh -NoProfile -File .\scripts\Invoke-J6Retention.ps1 `
   -ConfirmationPhrase 'PURGER <N> PAYLOADS J6 <J6_RETENTION_PLAN_SHA256>'
 ```
 
-Le script revérifie le nom du fichier chiffré, son hash, Flyway V31, l'égalité complète des preuves
+Le script revérifie le nom du fichier chiffré, son hash, Flyway V32, l'égalité complète des preuves
 source/restauration, les six compteurs et l'empreinte metadata-only du ledger J7 — incluant grant,
 révocation et consommation owner-go — ainsi que la couverture. Le service recalcule ensuite le
 plan, la phrase et la couverture avant que l'adaptateur ne les revérifie sous verrou transactionnel.
@@ -365,3 +376,7 @@ Pour passer le Work Order à `VALIDATED`, consigner au minimum :
 - arrêt final de l'application.
 
 Les fichiers `.age`, manifestes locaux et captures d'écran restent hors Git.
+
+Cette liste décrit une qualification J6 complète lorsqu'elle est autorisée. Elle ne peut pas être
+utilisée pour revendiquer une sauvegarde/restauration native sous WO-047 : ce Work Order exclut
+explicitement ces opérations et ne qualifie que les gardes V32 par tests statiques ciblés.
