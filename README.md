@@ -5,6 +5,14 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
+[WO-SS-20260904-043](docs/work_orders/active/WO-SS-20260904-043-j9-wo036-client-certificate-fail-closed-rollback.md)
+est ouvert sur la remarque P2 de la PR `#26`. Il doit enregistrer la propriété exacte du certificat
+client WO-036 immédiatement après sa création, garantir la suppression du certificat et de sa clé
+privée sur tout échec post-création, puis qualifier ces chemins par injections locales bornées. Le
+périmètre est limité au harnais E2E synthétique et à ses tests ; aucune fusion ou opération réseau
+réelle n'est autorisée.
+
+Le Work Order
 [WO-SS-20260904-042](docs/work_orders/completed/WO-SS-20260904-042-j9-pr25-ci-readiness.md)
 est `VALIDATED` et classé depuis le commit WO-036 qualifié exact
 `ad343d5f1ed131b9a766c60ffd0086dc354ee839` afin de préparer une PR de remplacement conforme à la

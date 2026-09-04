@@ -4,6 +4,18 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-043 rollback fail-closed du certificat client WO-036
+
+- ouverture depuis le commit de clôture WO-042
+  `deca7e0c0e39e60f4c3647fd07fd4b0ca4901957`, sur la branche Convention 1A distincte
+  `codex/ss-20260904-043-j9-wo036-client-certificate-rollback` ;
+- confirmation statique du P2 de la PR `#26` : le certificat client et sa clé privée sont créés dans
+  `CurrentUser\My` avant l'enregistrement de leur propriété dans l'état de campagne ;
+- correction limitée à l'enregistrement immédiat, au rollback exact du certificat et de sa clé
+  privée et à des injections d'échec locales bornées ;
+- aucune fusion, fermeture de PR, base, donnée J7 réelle, opération fournisseur/receiver HTTP,
+  réseau distant, VPS ou production autorisé.
+
 ### Après J9 — WO-042 readiness CI de la PR de remplacement WO-036
 
 - ouverture depuis le commit WO-036 qualifié exact
