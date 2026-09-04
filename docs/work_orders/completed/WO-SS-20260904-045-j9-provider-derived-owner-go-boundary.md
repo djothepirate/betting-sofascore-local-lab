@@ -1,10 +1,12 @@
 # WO-SS-20260904-045 — Frontière de go propriétaire pour une livraison J7 fournisseur
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
 - **Jalon :** après J9 — préalable runtime à une campagne J7 réelle Windows/Windows
 - **Ouvert le :** 2026-09-04
 - **Ouverture UTC :** `2026-09-04T12:25:59.2434972Z`
 - **Ouverture Europe/Paris :** `2026-09-04T14:25:59.2434972+02:00`
+- **Validation UTC :** `2026-09-04T13:56:44.6887667Z`
+- **Validation Europe/Paris :** `2026-09-04T15:56:44.6887667+02:00`
 - **Branche :** `codex/j9-wo045-provider-derived-owner-go-boundary`
 - **Worktree :** `.tmp/w45`
 - **Base exacte :** `400900410dfa751521ce387fbadcc4b5ca95a94a`
@@ -228,7 +230,7 @@ Les statuts `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 ## 9. État qualifié
 
 ```text
-WO045_STATUS=READY_FOR_OWNER_REVIEW
+WO045_STATUS=VALIDATED
 WO045_BASE_COMMIT=400900410dfa751521ce387fbadcc4b5ca95a94a
 WO045_OPENING_COMMIT=831e011f3e82f03761029fcfa5b7990c11b50bf4
 WO045_IMPLEMENTATION_COMMIT=67467d5dbd63fa54d11b2d1cd701a31edf4454e0
@@ -247,26 +249,27 @@ WO045_PROVIDER_CALLS=0
 WO045_REMOTE_RECEIVER_CALLS=0
 WO045_VPS_CONNECTIONS=0
 PRE_WO045_OWNER_GO=RECEIVED_NOT_CONSUMED_NOT_REUSABLE_FOR_WO046
-WO046_OPENING=NOT_AUTHORIZED
+WO046_OPENING=AUTHORIZED_BY_SEPARATE_OWNER_DECISION
 WO046_MANIFEST=NOT_CREATED
 WO046_OWNER_GO=NOT_GRANTED
 ```
 
-## 10. Porte de revue propriétaire
+## 10. Décision propriétaire enregistrée
 
-Après implémentation et qualification, le bloc suivant sera soumis prérempli uniquement avec les
-preuves calculées :
+Le propriétaire valide WO-045, reconnaît sa readiness locale, autorise son classement et autorise
+séparément l'ouverture de WO-046. Cette décision n'autorise aucun POST réel et n'accorde aucun go
+lié au futur manifeste :
 
 ```text
-J9_WO045_OWNER_REVIEW_DECISION=<VALIDATE|REJECT>
+J9_WO045_OWNER_REVIEW_DECISION=VALIDATE
 J9_WO045_WORK_ORDER=WO-SS-20260904-045-j9-provider-derived-owner-go-boundary
 J9_WO045_IMPLEMENTATION_COMMIT=67467d5dbd63fa54d11b2d1cd701a31edf4454e0
 J9_WO045_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
 J9_WO045_QUALIFICATION_REPORT_SHA256=5146c18542f0376a60bac5d4a25b68ff3f2fec9d7da700b32ee0aac60e16d946
-J9_WO045_LOCAL_READINESS_ACKNOWLEDGED=<YES|NO>
-J9_WO045_WORK_ORDER_MOVE_TO_COMPLETED=<YES|NO>
+J9_WO045_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO045_WORK_ORDER_MOVE_TO_COMPLETED=YES
 
-J9_WO046_OPENING_AUTHORIZED=NO
+J9_WO046_OPENING_AUTHORIZED=YES
 J9_WO046_REAL_POST_AUTHORIZED=NO
 J9_WO046_NEW_MANIFEST_BOUND_OWNER_GO_GRANTED=NO
 J9_PROVIDER_NETWORK_AUTHORIZED=NO
@@ -274,3 +277,21 @@ J9_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
 J9_VPS_DEPLOYMENT_AUTHORIZED=NO
 J9_PRODUCTION_AUTHORIZED=NO
 ```
+
+État effectif après consommation de cette décision :
+
+```text
+J9_WO045_STATUS=VALIDATED_AND_COMPLETED
+J9_WO046_OPENING_AUTHORIZED=YES
+J9_WO046_REAL_POST_AUTHORIZED=NO
+J9_WO046_NEW_MANIFEST_BOUND_OWNER_GO_GRANTED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+L'autorisation d'ouverture permet uniquement de créer WO-046. Elle ne vaut ni création ou
+consommation d'un go propriétaire, ni POST réel, ni appel fournisseur, ni accès receiver distant,
+ni déploiement VPS ou production. Le futur manifeste devra être gelé avant son premier POST et
+faire l'objet d'un nouveau go exactement lié.

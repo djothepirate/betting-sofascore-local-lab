@@ -32,9 +32,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `docs/validation/J9-WO045-PROVIDER-DERIVED-OWNER-GO-BOUNDARY-QUALIFICATION-20260904.md`, taille
   `11471` octets et SHA-256
   `5146c18542f0376a60bac5d4a25b68ff3f2fec9d7da700b32ee0aac60e16d946` ;
-- résultat `PASS_LOCAL_FAIL_CLOSED` et WO-045 `READY_FOR_OWNER_REVIEW` ;
-- zéro grant réel, POST fournisseur, appel SofaScore, receiver distant, VPS ou production ; WO-046,
-  son manifeste et son nouveau go restent non autorisés ; aucun push ni merge effectué.
+- résultat `PASS_LOCAL_FAIL_CLOSED`, validé par le propriétaire avec reconnaissance de la readiness
+  locale et autorisation de classement le `2026-09-04T13:56:44.6887667Z`, soit
+  `2026-09-04T15:56:44.6887667+02:00` en Europe/Paris ;
+- WO-045 classé dans les Work Orders terminés ; ouverture de WO-046 autorisée séparément, sans
+  autorisation de POST réel et sans nouveau go lié au futur manifeste ;
+- zéro grant réel, POST fournisseur, appel SofaScore, receiver distant, VPS ou production ; les
+  réseaux fournisseur et receiver distant, le VPS et la production restent interdits ; aucun push
+  ni merge effectué par cette clôture.
 
 ### Après J9 — WO-044 frontière d'argument du chemin JAR WO-036
 

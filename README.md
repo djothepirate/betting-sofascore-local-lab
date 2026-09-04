@@ -5,8 +5,8 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
-[WO-SS-20260904-045](docs/work_orders/active/WO-SS-20260904-045-j9-provider-derived-owner-go-boundary.md)
-est `READY_FOR_OWNER_REVIEW`. Son commit d'implémentation
+[WO-SS-20260904-045](docs/work_orders/completed/WO-SS-20260904-045-j9-provider-derived-owner-go-boundary.md)
+est `VALIDATED` et classé. Son commit d'implémentation
 `67467d5dbd63fa54d11b2d1cd701a31edf4454e0` ajoute la frontière durable, exacte, atomique et à
 usage unique exigée avant toute future livraison J7 dérivée de données fournisseur. La voie
 `SYNTHETIC_ONLY` reste inchangée ; `MIXED_OR_UNKNOWN` reste refusée.
@@ -33,10 +33,15 @@ taille `11471` octets, porte le SHA-256
 `5146c18542f0376a60bac5d4a25b68ff3f2fec9d7da700b32ee0aac60e16d946` et conclut
 `PASS_LOCAL_FAIL_CLOSED`.
 
+Le propriétaire a validé WO-045, reconnu sa readiness locale et autorisé son classement le
+`2026-09-04T13:56:44.6887667Z`, soit `2026-09-04T15:56:44.6887667+02:00` en Europe/Paris.
+
 Aucun grant réel, POST fournisseur, appel SofaScore, receiver distant, accès VPS ou usage de
-production n'a été effectué. WO-046 n'est pas ouvert : un nouveau manifeste gelé et un nouveau go
-propriétaire exactement lié restent obligatoires après validation séparée de WO-045. La branche et
-ses commits restent locaux ; aucun push ni merge n'est réalisé par ce Work Order.
+production n'a été effectué. Le propriétaire autorise séparément l'ouverture de WO-046, mais
+n'accorde aucun go lié au futur manifeste et n'autorise aucun POST réel. Le nouveau manifeste gelé
+et un nouveau go propriétaire exactement lié restent obligatoires avant toute tentative. Les
+réseaux fournisseur et receiver distant, le VPS et la production restent interdits. La branche et
+ses commits restent locaux ; aucun push ni merge n'est réalisé par cette clôture.
 
 Le Work Order
 [WO-SS-20260904-044](docs/work_orders/completed/WO-SS-20260904-044-j9-wo036-java-jar-path-argument-boundary.md)
