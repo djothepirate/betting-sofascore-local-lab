@@ -532,9 +532,21 @@ Describe 'WO-048 exact certificate profiles and ownership ordering' {
             'Write-WO048State', $clientInMemoryFailure)
         $clientPersistedFailure = $initializeSource.IndexOf(
             "'AFTER_CLIENT_CERTIFICATE_OWNERSHIP_PERSISTED'", $clientOwnedState)
+        $clientProfilePhase = $initializeSource.IndexOf(
+            "`$script:phase = 'CLIENT_CERTIFICATE_PROFILE'", $clientPersistedFailure)
         $clientProfile = $initializeSource.IndexOf(
-            'Assert-WO048ClientCertificateProfile', $clientRecord)
-        $clientExport = $initializeSource.IndexOf('Export-Certificate', $clientRecord)
+            'Assert-WO048ClientCertificateProfile', $clientProfilePhase)
+        $clientPrivateKeyPhase = $initializeSource.IndexOf(
+            "`$script:phase = 'CLIENT_PRIVATE_KEY_PROFILE'", $clientProfile)
+        $clientPrivateKeyProfile = $initializeSource.IndexOf(
+            'Assert-WO048ClientPrivateKeyProfile', $clientPrivateKeyPhase)
+        $clientExportPhase = $initializeSource.IndexOf(
+            "`$script:phase = 'CLIENT_PUBLIC_EXPORT'", $clientPrivateKeyProfile)
+        $clientExport = $initializeSource.IndexOf('Export-Certificate', $clientExportPhase)
+        $clientPublicProfilePhase = $initializeSource.IndexOf(
+            "`$script:phase = 'CLIENT_PUBLIC_CERTIFICATE_PROFILE'", $clientExport)
+        $clientPublicProfile = $initializeSource.IndexOf(
+            'Assert-WO048ClientCertificateProfile', $clientPublicProfilePhase)
 
         $serverRecord | Should BeGreaterThan -1
         $serverState | Should BeGreaterThan $serverRecord
@@ -551,8 +563,14 @@ Describe 'WO-048 exact certificate profiles and ownership ordering' {
         $clientInMemoryFailure | Should BeGreaterThan $clientRecord
         $clientOwnedState | Should BeGreaterThan $clientInMemoryFailure
         $clientPersistedFailure | Should BeGreaterThan $clientOwnedState
-        $clientProfile | Should BeGreaterThan $clientPersistedFailure
-        $clientExport | Should BeGreaterThan $clientProfile
+        $clientProfilePhase | Should BeGreaterThan $clientPersistedFailure
+        $clientProfile | Should BeGreaterThan $clientProfilePhase
+        $clientPrivateKeyPhase | Should BeGreaterThan $clientProfile
+        $clientPrivateKeyProfile | Should BeGreaterThan $clientPrivateKeyPhase
+        $clientExportPhase | Should BeGreaterThan $clientPrivateKeyProfile
+        $clientExport | Should BeGreaterThan $clientExportPhase
+        $clientPublicProfilePhase | Should BeGreaterThan $clientExport
+        $clientPublicProfile | Should BeGreaterThan $clientPublicProfilePhase
     }
 
     It 'retains a certificate-only recovery declaration when CNG inspection cannot complete' {

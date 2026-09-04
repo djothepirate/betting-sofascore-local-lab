@@ -972,18 +972,22 @@ try {
     }
     Invoke-WO048QualificationFailurePoint `
         -Point 'AFTER_CLIENT_CERTIFICATE_OWNERSHIP_PERSISTED'
+    $script:phase = 'CLIENT_CERTIFICATE_PROFILE'
     Assert-WO048ClientCertificateProfile `
         -Certificate $script:clientCertificate `
         -ExpectedSubject $expectedClientSubject `
         -ObservedAtUtc ([DateTimeOffset]::UtcNow) `
         -RequirePrivateKey
+    $script:phase = 'CLIENT_PRIVATE_KEY_PROFILE'
     Assert-WO048ClientPrivateKeyProfile -Certificate $script:clientCertificate
+    $script:phase = 'CLIENT_PUBLIC_EXPORT'
     Export-Certificate `
         -Cert $script:clientCertificate `
         -FilePath $clientPublicPath `
         -Type CERT | Out-Null
     Protect-WO048PrivateFile -Path $clientPublicPath -OwnerSid $ownerSid
 
+    $script:phase = 'CLIENT_PUBLIC_CERTIFICATE_PROFILE'
     $clientPublicCertificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
         $clientPublicPath)
     try {
