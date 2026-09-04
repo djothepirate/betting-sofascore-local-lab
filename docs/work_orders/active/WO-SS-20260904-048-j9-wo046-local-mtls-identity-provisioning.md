@@ -1,6 +1,6 @@
 # WO-SS-20260904-048 — Identités mTLS locales liées au run WO-046
 
-- **Statut :** `IMPLEMENTATION_AUTHORIZED`
+- **Statut :** `READY_FOR_OWNER_REVIEW`
 - **Jalon :** après J9 — préalable distinct à la campagne réelle locale WO-046
 - **Préparé le :** 2026-09-04
 - **Préparation UTC :** `2026-09-04T17:14:44.3290393Z`
@@ -182,13 +182,14 @@ en retenant :
 CERTIFICATE_FINGERPRINT_GIT_POLICY=PRIVATE_EXTERNAL_RECORD_ONLY
 ```
 
-Les empreintes leaf exactes, thumbprints Windows, numéros de série, DN détaillés, fichiers `.cer`,
-alias, chemins privés et inventaires de magasins restent dans l'état externe protégé. La preuve
-Git ne contient que des statuts expurgés, les propriétés cryptographiques non identifiantes et le
-SHA-256 d'un relevé public-métadonnées privé, immuable et sans secret.
+Les empreintes leaf exactes, thumbprints Windows, numéros de série, UUID du run, DN détaillés,
+fichiers `.cer`, alias, chemins privés et inventaires de magasins restent dans l'état externe
+protégé. Cet état contient aussi les secrets PKCS#12 nécessaires. La preuve Git ne contient que
+des statuts expurgés, les propriétés cryptographiques non identifiantes et l'engagement SHA-256
+de l'état privé complet ; elle ne présente pas ce digest comme celui d'un relevé sans secret.
 
 Le futur manifeste WO-046 ne publiera pas l'empreinte réelle. Il pourra uniquement lier la
-référence logique et le SHA-256 du relevé privé. Le futur owner-go V2, lui-même externe à Git,
+référence logique et le SHA-256 de l'état privé. Le futur owner-go V2, lui-même externe à Git,
 devra contenir le `CLIENT_CERTIFICATE_SHA256` exact issu de ce relevé. Cette harmonisation bornée
 ne modifie ni le protocole mTLS, ni la sélection runtime, ni l'allowlist receiver.
 
@@ -207,8 +208,11 @@ Les scripts dédiés doivent au minimum offrir :
 - nettoyage des fichiers partiels et processus natifs possédés après échec ;
 - sortie publique sans secret, chemin privé ou empreinte réelle.
 
-L'outillage ne doit jamais démarrer Docker, Java, PostgreSQL, le Local Lab ou INT-001. Il ne doit
-ouvrir aucune socket et ne doit jamais solliciter SofaScore ou une autre origine réseau.
+L'outillage ne doit jamais démarrer Docker, PostgreSQL, l'application Local Lab ou l'application
+INT-001. Seuls les exécutables Java 25 épinglés (`java`, `javac`, `keytool`) et le probe
+SunMSCAPI hors ligne sont admis pour la qualification statique des magasins ; ils ne doivent
+ouvrir aucune socket ni effectuer de handshake. L'outillage ne doit jamais solliciter SofaScore
+ou une autre origine réseau.
 
 ## 8. Cas de qualification obligatoires
 
@@ -225,13 +229,16 @@ ouvrir aucune socket et ne doit jamais solliciter SofaScore ou une autre origine
 - rejet d'une empreinte mal formée, non unique ou divergente ;
 - simulation d'échec avant et après persistance de propriété ;
 - preuve que le rollback ne cible jamais un objet non possédé ;
-- preuve que Docker, la base, Java, un listener et le réseau ne sont jamais sollicités.
+- preuve que Docker, la base, les applications Java Local Lab/INT-001, un listener et le réseau
+  ne sont jamais sollicités ; les seuls outils Java 25 hors ligne autorisés restent bornés et
+  supervisés.
 
 ### 8.2 Qualification hôte bornée
 
 Après réussite des tests et revue du script :
 
-- exécution unique du provisionneur sur le poste Windows courant ;
+- invocations hôte contrôlées pendant la mise au point, chacune échouant fermée et sans résidu en
+  cas d'erreur, puis conservation d'un unique run nominal final ;
 - attestation privée des deux identités et des stores ;
 - vérification publique expurgée de toutes les propriétés exigées ;
 - vérification `Windows-MY`/`Windows-ROOT` via Java sans handshake ;
@@ -259,15 +266,15 @@ WO-048 pourra être soumis à validation propriétaire uniquement si :
 9. une revue adversariale ne laisse aucun finding P0/P1/P2 ouvert ;
 10. le propriétaire valide séparément le résultat avant classement.
 
-## 10. État initial effectif
+## 10. État effectif soumis à la revue propriétaire
 
 ```text
-J9_WO048_STATUS=IMPLEMENTATION_AUTHORIZED
-J9_WO048_PKI_ONLY_TOOLING_STATUS=NOT_IMPLEMENTED
-J9_WO048_HOST_PROVISIONING_STATUS=NOT_STARTED
-J9_WO048_MTLS_IDENTITY_STATUS=NOT_SELECTED
-J9_WO048_PRIVATE_METADATA_RECORD_STATUS=NOT_CREATED
-J9_WO048_QUALIFICATION_STATUS=DRAFT
+J9_WO048_STATUS=READY_FOR_OWNER_REVIEW
+J9_WO048_PKI_ONLY_TOOLING_STATUS=IMPLEMENTED
+J9_WO048_HOST_PROVISIONING_STATUS=PASS_ONE_RETAINED_RUN
+J9_WO048_MTLS_IDENTITY_STATUS=SELECTED_RUN_BOUND
+J9_WO048_PRIVATE_METADATA_RECORD_STATUS=CREATED_PRIVATE_EXTERNAL_HASH_ONLY
+J9_WO048_QUALIFICATION_STATUS=PASS_LOCAL_FAIL_CLOSED
 J9_WO048_OWNER_REVIEW_REQUIRED=YES
 J9_WO048_WORK_ORDER_MOVE_TO_COMPLETED=NO
 
@@ -281,6 +288,110 @@ J9_WO046_DIRECT_IMPORT_ATTEMPTS=0
 J9_WO048_DATABASE_START_READ_OR_WRITE_AUTHORIZED=NO
 J9_WO048_RECEIVER_OR_LOCAL_LAB_START_AUTHORIZED=NO
 J9_WO048_TLS_HANDSHAKE_OR_SOCKET_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+## 11. Implémentation et corrections
+
+La branche a conservé l'historique linéaire suivant depuis la base autorisée :
+
+```text
+OPENING_COMMIT=05d3f2bdba595f9188aa89b76e409873abad6077
+PRIMARY_IMPLEMENTATION_COMMIT=9755dd6921cff0bdabb1d112f9630ce046ff4db5
+MODULE_SCOPE_HARDENING_COMMIT=6c3c59c8dd20d5575d3b6f986ba8274f353c28c3
+CLIENT_FAILURE_CLASSIFICATION_COMMIT=dc38177e1a225620309f1fb69251c2b7b87fc9de
+CLIENT_PHASE_REFINEMENT_COMMIT=b556cb034a64d3a26a7c8f2209212bf5c41ab99d
+BOUNDED_FAILURE_CODES_COMMIT=95a8b6d58928e8e4a78b94b65b745ffb0bdbde4f
+SAFE_NATIVE_CLASSIFICATION_COMMIT=88c9a59cbbae3e358dd33441a7ca45a7de341bb2
+CNG_SIGNING_FIX_COMMIT=874bcc3c6d816df3bc4fcb6eb620707078dd5888
+QUALIFIED_RUNTIME_COMMIT=063c91f2de57330ca2b6baf3753d7de4ea921881
+```
+
+Deux écarts hôte ont été établis puis corrigés. Le profil client historique
+`KeySpec=Signature` échouait sur le KSP CNG avec le code expurgé `0x80090017` ; le profil final
+emploie `KeySpec=None`, `KeyUsageProperty=Sign` et `KeyUsage=DigitalSignature`. Ensuite, le
+cmdlet `Import-Certificate` échouait de manière reproductible avec `0x80070057` dans le harness
+complet. Le runtime final utilise `X509Store.Add` après refus d'une collision et persistance de
+l'autorité exacte de cleanup, puis exige une cardinalité et une identité exactes avant de marquer
+le certificat `OWNED`.
+
+Toutes les tentatives hôte échouées ont terminé avec rollback `PASS` et zéro certificat, clé ou
+racine privée possédé résiduel. Cette affirmation ne concerne pas le succès final : son unique run
+et ses deux identités sont volontairement conservés pour WO-046.
+
+## 12. Qualification finale expurgée
+
+Le rapport
+[J9-WO048-LOCAL-MTLS-IDENTITY-PROVISIONING-QUALIFICATION-20260904.md](../../validation/J9-WO048-LOCAL-MTLS-IDENTITY-PROVISIONING-QUALIFICATION-20260904.md),
+taille `12844` octets et SHA-256
+`c704961530020216bfbc644f2fa928357466eccf54ef4e3d80f5705a95ef109d`, consigne :
+
+```text
+QUALIFIED_AT_UTC=2026-09-04T21:47:47Z
+QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
+FAILURE_INJECTIONS=7_OF_7_PASS
+FAILED_RUN_RESIDUE=0
+RETAINED_NOMINAL_RUN=1
+RETAINED_CLIENT_IDENTITY_COUNT=1
+RETAINED_RECEIVER_TRUST_IDENTITY_COUNT=1
+PRIVATE_IDENTITY_STATE_COMMITMENT_SHA256=29c53ef4b27cd9782bc49f52b5594152f12d0ca7f96fd7209052ea90f6cc7475
+JAVA_25_PROVENANCE=PASS
+JAVA_SUNMSCAPI_STORE_QUALIFICATION=PASS_NO_HANDSHAKE
+POWERSHELL_PARSERS=PASS
+PESTER=54/54_PASS
+P0_OPEN=0
+P1_OPEN=0
+P2_OPEN=0
+```
+
+Un audit distinct après la sortie du provisionneur a relu le schéma privé v2 et confirmé, sans
+afficher d'identifiant privé, que le hash du record concorde, que les deux enregistrements sont
+`OWNED` et que chacun possède exactement une correspondance persistante dans son magasin. Deux
+diagnostics non autoritatifs ont été invalidés : un comptage grossier par motif de sujet `0/0`,
+puis une première passe qui interrogeait la collection inexistante `identities`. La preuve finale
+utilise exactement `ownedCertificates[].sha256`.
+
+Le build Maven standard antérieur aux derniers changements exclusivement PowerShell reste vert à
+`1182` tests, zéro échec, zéro erreur et cinq skips en `3 min 14 s`. Les parseurs et Pester ont été
+rejoués sur les octets finaux. Une sélection Maven trop large avait déclenché des ressources
+Testcontainers isolées malgré la portée WO-048 ; elles ont été nettoyées sans toucher la base
+primaire. Cette déviation est consignée et soumise à reconnaissance propriétaire, pas présentée
+comme une qualification autorisée.
+
+## 13. Limites maintenues après la qualification
+
+Le run nominal est seulement provisionné et sélectionné. Aucune application n'a été démarrée,
+aucun handshake ou socket n'a été ouvert, aucune base n'a été lue ou écrite et aucun appel
+fournisseur ou distant n'a été effectué. La validité et l'identité exactes devront être revérifiées
+avant toute future utilisation. Le cleanup de ce run exigera une décision distincte et devra
+réutiliser exclusivement son autorité privée exacte.
+
+WO-048 n'autorise toujours ni la création du manifeste WO-046, ni un owner-go, ni le POST réel.
+Après validation et classement de WO-048, la reprise de WO-046 restera soumise à une décision
+propriétaire séparée.
+
+## 14. Bloc de revue propriétaire soumis
+
+```text
+J9_WO048_OWNER_REVIEW_DECISION=<VALIDATE|REJECT>
+J9_WO048_WORK_ORDER=WO-SS-20260904-048-j9-wo046-local-mtls-identity-provisioning
+J9_WO048_IMPLEMENTATION_COMMIT=063c91f2de57330ca2b6baf3753d7de4ea921881
+J9_WO048_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
+J9_WO048_QUALIFICATION_REPORT_SHA256=c704961530020216bfbc644f2fa928357466eccf54ef4e3d80f5705a95ef109d
+J9_WO048_FAILED_HOST_ATTEMPTS_ACKNOWLEDGED=<YES|NO>
+J9_WO048_FAILED_ATTEMPT_RESIDUALS=0
+J9_WO048_TESTCONTAINERS_EXECUTION_DEVIATION_ACKNOWLEDGED=<YES|NO>
+J9_WO048_SUCCESSFUL_RUN_RETENTION_ACKNOWLEDGED=<YES|NO>
+J9_WO048_LOCAL_READINESS_ACKNOWLEDGED=<YES|NO>
+J9_WO048_WORK_ORDER_MOVE_TO_COMPLETED=<YES|NO>
+
+J9_WO046_RESUME_AFTER_WO048_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
+J9_WO046_MANIFEST_CREATION_AUTHORIZED=NO
+J9_WO046_OWNER_GO_GRANTED=NO
+J9_WO046_REAL_POST_AUTHORIZED=NO
 J9_PROVIDER_NETWORK_AUTHORIZED=NO
 J9_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
 J9_VPS_DEPLOYMENT_AUTHORIZED=NO

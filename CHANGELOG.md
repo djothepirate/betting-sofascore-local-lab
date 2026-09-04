@@ -8,18 +8,43 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 - ouverture, depuis `e771c2a5fedc508fbd0a420ae4596166251d82cd`, du Work Order distinct
   `WO-SS-20260904-048-j9-wo046-local-mtls-identity-provisioning` ;
-- implémentation autorisée d'un provisionneur et d'un cleanup PKI-only, sans réutilisation de
-  l'infrastructure complète WO-036, sans Docker, base, application, listener, handshake ou socket ;
+- implémentation d'un provisionneur, d'un cleanup exact et d'un harness de qualification PKI-only,
+  sans réutilisation de l'infrastructure complète WO-036, sans Docker, base, application,
+  listener, handshake ou socket ; seuls les outils Java 25 épinglés et un probe SunMSCAPI hors
+  ligne sont admis ;
 - profil local éphémère lié à un run WO-046 : client `CurrentUser\\My`/`Windows-MY` à clé CNG
   non exportable et serveur receiver strictement identifié par `IP:127.0.0.1`, avec stores
   PKCS#12 conservés hors Git ;
 - mutations limitées aux certificats dont la propriété exacte est attestée par magasin,
   thumbprint SHA-1, SHA-256 DER et sujet exact, avec rollback fail-closed ;
-- politique propriétaire `PRIVATE_EXTERNAL_RECORD_ONLY` : aucune empreinte réelle, certificat,
-  chemin privé ou secret ne sera versionné ; le futur manifeste pourra seulement lier le SHA-256
-  d'un relevé privé ;
+- première cause hôte établie : `KeySpec=Signature` incompatible avec le chemin CNG exercé
+  (`0x80090017`) ; correction au commit
+  `874bcc3c6d816df3bc4fcb6eb620707078dd5888` par `KeySpec=None`,
+  `KeyUsageProperty=Sign` et `KeyUsage=DigitalSignature` ;
+- seconde cause hôte établie après au moins deux arrêts fail-closed : le chemin
+  `Import-Certificate` échouait avec `0x80070057` ; remplacement au commit qualifié
+  `063c91f2de57330ca2b6baf3753d7de4ea921881` par `X509Store.Add`, avec refus d'une collision,
+  autorité de cleanup durable avant mutation et contrôles exacts avant promotion `OWNED` ;
+- qualification finale : sept injections sur sept passent avec rollback et zéro résidu pour les
+  runs échoués ; un seul run nominal est volontairement conservé, avec exactement une identité
+  cliente CNG non exportable et une identité receiver, toutes deux confirmées persistantes par un
+  audit exact après la sortie du provisionneur ;
+- parseurs PowerShell verts, Pester `54/54`, `git diff --check` vert et revue adversariale sans
+  finding P0/P1/P2 ; le build Maven antérieur aux derniers changements uniquement PowerShell
+  reste vert à `1182/0/0/5` en `3 min 14 s` ;
+- une sélection Maven trop large avait démarré des ressources Testcontainers isolées en dehors de
+  la portée prévue ; elles ont été nettoyées sans accès à la base primaire et la déviation est
+  soumise à reconnaissance propriétaire ;
+- rapport
+  `docs/validation/J9-WO048-LOCAL-MTLS-IDENTITY-PROVISIONING-QUALIFICATION-20260904.md`, taille
+  `12844` octets et SHA-256
+  `c704961530020216bfbc644f2fa928357466eccf54ef4e3d80f5705a95ef109d`, résultat
+  `PASS_LOCAL_FAIL_CLOSED` ; WO-048 reste `READY_FOR_OWNER_REVIEW` avant classement ;
+- politique propriétaire `PRIVATE_EXTERNAL_RECORD_ONLY` : aucun UUID de run, empreinte réelle,
+  certificat, chemin privé ou secret n'est versionné ; seul l'engagement SHA-256 de l'état privé
+  complet est publié, sans présenter cet état comme dépourvu de secrets ;
 - aucun manifeste WO-046, owner-go, POST, accès fournisseur, receiver distant, VPS ou production
-  n'est autorisé par l'ouverture de WO-048.
+  n'est autorisé par la qualification de WO-048.
 
 ### Après J9 — WO-047 séparation de gouvernance acquisition / livraison J7
 
