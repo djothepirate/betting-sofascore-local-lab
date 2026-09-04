@@ -5,6 +5,18 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
+[WO-SS-20260904-048](docs/work_orders/active/WO-SS-20260904-048-j9-wo046-local-mtls-identity-provisioning.md)
+est ouvert sur la branche distincte
+`codex/j9-wo048-wo046-local-mtls-identity-provisioning`. Il doit fournir à WO-046 un outillage
+PKI-only fail-closed et des identités mTLS locales neuves, éphémères et liées à un run, sans
+démarrer Docker, PostgreSQL, le Local Lab ou INT-001 et sans ouvrir de socket.
+
+Les certificats, empreintes réelles, clés, stores, mots de passe et chemins privés restent hors
+Git dans un état externe protégé. Seuls des statuts expurgés et le SHA-256 de ce relevé privé
+pourront être versionnés. L'ouverture de WO-048 n'autorise ni le manifeste WO-046, ni un owner-go,
+ni un POST réel ; les réseaux fournisseur/distant, le VPS et la production restent interdits.
+
+Le Work Order
 [WO-SS-20260904-047](docs/work_orders/completed/WO-SS-20260904-047-j9-j7-delivery-governance-separation.md)
 est `VALIDATED` et classé sur la branche distincte
 `codex/j9-wo047-j7-delivery-governance-separation`. ADR-SS-003 v0.2 a été acceptée sur la

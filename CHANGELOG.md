@@ -4,6 +4,23 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-048 identités mTLS locales liées au run WO-046
+
+- ouverture, depuis `e771c2a5fedc508fbd0a420ae4596166251d82cd`, du Work Order distinct
+  `WO-SS-20260904-048-j9-wo046-local-mtls-identity-provisioning` ;
+- implémentation autorisée d'un provisionneur et d'un cleanup PKI-only, sans réutilisation de
+  l'infrastructure complète WO-036, sans Docker, base, application, listener, handshake ou socket ;
+- profil local éphémère lié à un run WO-046 : client `CurrentUser\\My`/`Windows-MY` à clé CNG
+  non exportable et serveur receiver strictement identifié par `IP:127.0.0.1`, avec stores
+  PKCS#12 conservés hors Git ;
+- mutations limitées aux certificats dont la propriété exacte est attestée par magasin,
+  thumbprint SHA-1, SHA-256 DER et sujet exact, avec rollback fail-closed ;
+- politique propriétaire `PRIVATE_EXTERNAL_RECORD_ONLY` : aucune empreinte réelle, certificat,
+  chemin privé ou secret ne sera versionné ; le futur manifeste pourra seulement lier le SHA-256
+  d'un relevé privé ;
+- aucun manifeste WO-046, owner-go, POST, accès fournisseur, receiver distant, VPS ou production
+  n'est autorisé par l'ouverture de WO-048.
+
 ### Après J9 — WO-047 séparation de gouvernance acquisition / livraison J7
 
 - préparation, depuis `0338821cc07130f5d200a70db10209bb898a59ae`, du Work Order distinct
