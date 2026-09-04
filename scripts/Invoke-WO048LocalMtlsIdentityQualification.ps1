@@ -316,9 +316,25 @@ function Invoke-WO048InjectedFailureCase {
     $expectedInjectedPhase = 'INJECTED_' + $FailurePoint
     $expectedInjectedMessage =
         "WO-048 PKI-only provisioning failed closed during $expectedInjectedPhase (RuntimeException); rollback=PASS."
-    if ($null -eq $caught -or
-        $caught.Exception.Message -cne $expectedInjectedMessage) {
-        throw 'A WO-048 injected failure did not reach its exact requested point with fail-closed rollback.'
+    if ($null -eq $caught) {
+        throw 'A WO-048 injected failure completed without a terminating failure.'
+    }
+    if ($caught.Exception.Message -cne $expectedInjectedMessage) {
+        $publicClassification = [regex]::Match(
+            $caught.Exception.Message,
+            '^WO-048 PKI-only provisioning failed closed during (?<phase>[A-Z_]+) \((?<type>[A-Za-z]+)\); rollback=(?<rollback>[A-Z_]+)(?:; manual exact recovery required)?\.$')
+        if (-not $publicClassification.Success) {
+            throw 'A WO-048 injected failure returned an invalid public classification shape.'
+        }
+        $publicHResultChain = [string]$caught.Exception.Data['WO048FailureHResultChain']
+        if ($publicHResultChain -cnotmatch '^[0-9A-F]{8}(,[0-9A-F]{8}){0,3}$') {
+            $publicHResultChain = 'NONE'
+        }
+        throw ('A WO-048 injected failure diverged safely: phase=' +
+            $publicClassification.Groups['phase'].Value + ';type=' +
+            $publicClassification.Groups['type'].Value + ';rollback=' +
+            $publicClassification.Groups['rollback'].Value + ';hresult=' +
+            $publicHResultChain + '.')
     }
     $capturedText = (@($captured | ForEach-Object { $_.ToString() }) -join "`n")
     if ($capturedText -match '(?i)(thumbprint|certificate.*sha256|private\\|\.p12|\.cer)') {

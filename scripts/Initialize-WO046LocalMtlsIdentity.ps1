@@ -611,7 +611,6 @@ if ([Environment]::OSVersion.Platform -ne [PlatformID]::Win32NT) {
 }
 foreach ($commandName in @(
         'New-SelfSignedCertificate',
-        'Import-Certificate',
         'Export-Certificate')) {
     if (-not (Get-Command $commandName -ErrorAction SilentlyContinue)) {
         throw 'A required Windows certificate command is unavailable.'
@@ -831,7 +830,7 @@ try {
     Write-WO048State
     Invoke-WO048QualificationFailurePoint -Point 'AFTER_PRIVATE_STATE'
 
-    $script:phase = 'SERVER_KEYSTORE'
+    $script:phase = 'SERVER_KEYSTORE_GENERATE'
     $serverAlias = 'wo046-server-' + $runId.ToString('N')
     $previousServerPassword = [Environment]::GetEnvironmentVariable(
         'WO048_KEYTOOL_SERVER_PASSWORD', 'Process')
@@ -850,6 +849,7 @@ try {
             '-storetype', 'PKCS12', '-keystore', $serverKeyStorePath,
             '-storepass:env', 'WO048_KEYTOOL_SERVER_PASSWORD',
             '-keypass:env', 'WO048_KEYTOOL_SERVER_PASSWORD')
+        $script:phase = 'SERVER_CERTIFICATE_EXPORT'
         Invoke-WO048Keytool -Arguments @(
             '-exportcert', '-noprompt',
             '-alias', $serverAlias,
@@ -862,11 +862,13 @@ try {
         [Environment]::SetEnvironmentVariable(
             'WO048_KEYTOOL_SERVER_PASSWORD', $previousServerPassword, 'Process')
     }
+    $script:phase = 'SERVER_PRIVATE_FILE_PROFILE'
     foreach ($privateFile in @($serverKeyStorePath, $serverPublicPath)) {
         Protect-WO048PrivateFile -Path $privateFile -OwnerSid $ownerSid
     }
     Assert-WO048NoDescendantReparsePoint -Root $script:runRoot
 
+    $script:phase = 'SERVER_CERTIFICATE_PROFILE'
     $serverCertificate = [System.Security.Cryptography.X509Certificates.X509Certificate2]::new(
         $serverPublicPath)
     try {
@@ -874,6 +876,7 @@ try {
             -Certificate $serverCertificate `
             -ObservedAtUtc ([DateTimeOffset]::UtcNow)
         $serverCertificateSha256 = Get-WO048CertificateSha256 -Certificate $serverCertificate
+        $script:phase = 'SERVER_RECOVERY_STATE'
         $serverRootRecords = @($script:state.ownedCertificates | Where-Object {
             $_.role -ceq 'receiver-server-direct-trust'
         })
@@ -882,26 +885,70 @@ try {
             throw 'The WO-048 server recovery record cardinality is not exact.'
         }
         $serverRootRecord = $serverRootRecords[0]
-        $serverRootRecord.ownershipStatus = 'DECLARED_BEFORE_IMPORT'
-        $serverRootRecord.thumbprint = $serverCertificate.Thumbprint.ToUpperInvariant()
-        $serverRootRecord.sha256 = $serverCertificateSha256
-        $serverRootRecord.subject = $serverCertificate.Subject
-        $script:state.pki.serverCertificateSha256 = $serverCertificateSha256
-        Write-WO048State
         Invoke-WO048QualificationFailurePoint -Point 'AFTER_SERVER_KEYSTORE'
 
-        $imported = @(Import-Certificate `
-            -FilePath $serverPublicPath `
-            -CertStoreLocation 'Cert:\CurrentUser\Root')
-        if ($imported.Count -ne 1 -or
-            $imported[0].Thumbprint.ToUpperInvariant() -ne $serverRootRecord.thumbprint -or
-            (Get-WO048CertificateSha256 -Certificate $imported[0]) -ne $serverCertificateSha256 -or
-            $imported[0].Subject -cne $serverRootRecord.subject) {
-            throw 'The exact WO-048 receiver trust import was not established.'
+        $serverTrustStore = [System.Security.Cryptography.X509Certificates.X509Store]::new(
+            'Root',
+            [System.Security.Cryptography.X509Certificates.StoreLocation]::CurrentUser)
+        $serverTrustMatches = @()
+        try {
+            $script:phase = 'SERVER_ROOT_STORE_OPEN'
+            $serverTrustStore.Open(
+                [System.Security.Cryptography.X509Certificates.OpenFlags]::ReadWrite -bor
+                [System.Security.Cryptography.X509Certificates.OpenFlags]::OpenExistingOnly)
+            $script:phase = 'SERVER_ROOT_PREEXISTING_CHECK'
+            $serverTrustMatches = @($serverTrustStore.Certificates.Find(
+                    [System.Security.Cryptography.X509Certificates.X509FindType]::FindByThumbprint,
+                    $serverCertificate.Thumbprint,
+                    $false))
+            if ($serverTrustMatches.Count -ne 0) {
+                throw 'WO-048 refuses to claim a pre-existing receiver trust certificate.'
+            }
+            $serverRootRecord.ownershipStatus = 'DECLARED_BEFORE_IMPORT'
+            $serverRootRecord.thumbprint = $serverCertificate.Thumbprint.ToUpperInvariant()
+            $serverRootRecord.sha256 = $serverCertificateSha256
+            $serverRootRecord.subject = $serverCertificate.Subject
+            $script:state.pki.serverCertificateSha256 = $serverCertificateSha256
+            $script:phase = 'SERVER_ROOT_RECOVERY_DECLARATION'
+            Write-WO048State
+
+            $script:phase = 'SERVER_ROOT_STORE_ADD'
+            $serverTrustStore.Add($serverCertificate)
+            $script:phase = 'SERVER_ROOT_STORE_CARDINALITY'
+            $serverTrustMatches = @($serverTrustStore.Certificates.Find(
+                    [System.Security.Cryptography.X509Certificates.X509FindType]::FindByThumbprint,
+                    $serverRootRecord.thumbprint,
+                    $false))
+            if ($serverTrustMatches.Count -ne 1) {
+                throw 'The exact WO-048 receiver trust store cardinality was not established.'
+            }
+            $script:phase = 'SERVER_ROOT_STORE_THUMBPRINT'
+            if ($serverTrustMatches[0].Thumbprint.ToUpperInvariant() -ne
+                $serverRootRecord.thumbprint) {
+                throw 'The exact WO-048 receiver trust store thumbprint was not established.'
+            }
+            $script:phase = 'SERVER_ROOT_STORE_SHA256'
+            if ((Get-WO048CertificateSha256 -Certificate $serverTrustMatches[0]) -ne
+                $serverCertificateSha256) {
+                throw 'The exact WO-048 receiver trust store hash was not established.'
+            }
+            $script:phase = 'SERVER_ROOT_STORE_SUBJECT'
+            if ($serverTrustMatches[0].Subject -cne $serverRootRecord.subject) {
+                throw 'The exact WO-048 receiver trust store subject was not established.'
+            }
+            $script:phase = 'SERVER_ROOT_OWNERSHIP_STATE'
+            $serverRootRecord.ownershipStatus = 'OWNED'
+            Write-WO048State
         }
-        $imported[0].Dispose()
-        $serverRootRecord.ownershipStatus = 'OWNED'
-        Write-WO048State
+        finally {
+            foreach ($serverTrustMatch in $serverTrustMatches) {
+                if ($serverTrustMatch -is
+                    [System.Security.Cryptography.X509Certificates.X509Certificate2]) {
+                    $serverTrustMatch.Dispose()
+                }
+            }
+            $serverTrustStore.Dispose()
+        }
     }
     finally {
         $serverCertificate.Dispose()

@@ -443,7 +443,10 @@ Describe 'WO-048 exact certificate profiles and ownership ordering' {
         $initializeSource | Should Match "'-ext', 'SAN=ip:127\.0\.0\.1'"
         $initializeSource | Should Match "receiver-server\.private\.p12"
         $initializeSource | Should Match "receiver-server\.public\.cer"
-        $initializeSource | Should Match "Cert:\\CurrentUser\\Root"
+        $initializeSource | Should Match "X509Store\]::new\(\s*'Root'"
+        $initializeSource | Should Match 'StoreLocation\]::CurrentUser'
+        $initializeSource | Should Match 'OpenFlags\]::ReadWrite -bor'
+        $initializeSource | Should Match 'OpenFlags\]::OpenExistingOnly'
     }
 
     It 'uses the previously qualified bounded native runner for every keytool process' {
@@ -559,8 +562,11 @@ Describe 'WO-048 exact certificate profiles and ownership ordering' {
 
     It 'persists exact recovery authority before server import and before client failure checks' {
         $serverRecord = $initializeSource.IndexOf("role = 'receiver-server-direct-trust'")
-        $serverState = $initializeSource.IndexOf('Write-WO048State', $serverRecord)
-        $serverImport = $initializeSource.IndexOf('Import-Certificate', $serverRecord)
+        $serverDeclaration = $initializeSource.IndexOf(
+            '$serverRootRecord.ownershipStatus = ''DECLARED_BEFORE_IMPORT''', $serverRecord)
+        $serverState = $initializeSource.IndexOf('Write-WO048State', $serverDeclaration)
+        $serverImport = $initializeSource.IndexOf(
+            '$serverTrustStore.Add($serverCertificate)', $serverState)
         $clientCreate = $initializeSource.IndexOf(
             '$script:clientCertificate = New-SelfSignedCertificate')
         $clientCreatePhase = $initializeSource.LastIndexOf(
@@ -610,7 +616,8 @@ Describe 'WO-048 exact certificate profiles and ownership ordering' {
             'Assert-WO048ClientCertificateProfile', $clientPublicProfilePhase)
 
         $serverRecord | Should BeGreaterThan -1
-        $serverState | Should BeGreaterThan $serverRecord
+        $serverDeclaration | Should BeGreaterThan $serverRecord
+        $serverState | Should BeGreaterThan $serverDeclaration
         $serverImport | Should BeGreaterThan $serverState
         $clientCreate | Should BeGreaterThan -1
         $clientCreatePhase | Should BeGreaterThan -1
@@ -688,6 +695,30 @@ Describe 'WO-048 fail-closed lifecycle' {
         $qualificationSource | Should Match '\$expectedInjectedPhase = ''INJECTED_'' \+ \$FailurePoint'
         $qualificationSource | Should Match '\(RuntimeException\); rollback=PASS\.'
         $qualificationSource | Should Match '\$caught\.Exception\.Message -cne \$expectedInjectedMessage'
+        foreach ($phase in @(
+                'SERVER_KEYSTORE_GENERATE',
+                'SERVER_CERTIFICATE_EXPORT',
+                'SERVER_PRIVATE_FILE_PROFILE',
+                'SERVER_CERTIFICATE_PROFILE',
+                'SERVER_RECOVERY_STATE',
+                'SERVER_ROOT_STORE_OPEN',
+                'SERVER_ROOT_PREEXISTING_CHECK',
+                'SERVER_ROOT_RECOVERY_DECLARATION',
+                'SERVER_ROOT_STORE_ADD',
+                'SERVER_ROOT_STORE_CARDINALITY',
+                'SERVER_ROOT_STORE_THUMBPRINT',
+                'SERVER_ROOT_STORE_SHA256',
+                'SERVER_ROOT_STORE_SUBJECT',
+                'SERVER_ROOT_OWNERSHIP_STATE')) {
+            $initializeSource | Should Match $phase
+        }
+        $initializeSource | Should Match '\$serverTrustStore\.Certificates\.Find'
+        $initializeSource | Should Match '\$serverTrustStore\.Add\(\$serverCertificate\)'
+        $initializeSource | Should Match 'finally \{[\s\S]+\$serverTrustMatch\.Dispose\(\)'
+        $initializeSource | Should Match '\$serverTrustStore\.Dispose\(\)'
+        $initializeSource | Should Not Match 'Import-Certificate'
+        $qualificationSource | Should Match '\$publicHResultChain -cnotmatch'
+        $qualificationSource | Should Match ';hresult='
         ([regex]::Matches(
             $qualificationSource,
             [regex]::Escape('& $cleanupPath')).Count) | Should Be 1
