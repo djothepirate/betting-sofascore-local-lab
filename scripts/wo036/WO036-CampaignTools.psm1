@@ -238,6 +238,31 @@ function Resolve-WO036ExistingPath {
     }
 }
 
+function ConvertTo-WO036JavaJarStartProcessArgument {
+    param([Parameter(Mandatory = $true)][string]$Path)
+
+    if ([string]::IsNullOrWhiteSpace($Path) `
+            -or $Path -match '[\x00-\x1f\x7f"]' `
+            -or -not [IO.Path]::IsPathFullyQualified($Path) `
+            -or [IO.Path]::GetExtension($Path) -cne '.jar') {
+        throw 'WO-036 Java JAR path cannot be serialized as one exact native argument.'
+    }
+    try {
+        $canonical = [IO.Path]::GetFullPath($Path)
+    }
+    catch {
+        throw 'WO-036 Java JAR path cannot be serialized as one exact native argument.'
+    }
+    if (-not $canonical.Equals($Path, [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'WO-036 Java JAR path is not canonical.'
+    }
+
+    # Start-Process joins ArgumentList values into one native command line. Keep the
+    # registered canonical path explicitly quoted so Java receives one exact value
+    # after -jar even when a Windows directory name contains spaces.
+    return ('"{0}"' -f $Path)
+}
+
 function Assert-WO036SecretValue {
     param(
         [Parameter(Mandatory = $true)][string]$Value,
@@ -2485,7 +2510,7 @@ function Start-WO036ComponentCore {
                 $script:JdkHttpClientRetryGuards[0],
                 $script:JdkHttpClientRetryGuards[1],
                 $script:JdkHttpClientRetryGuards[2],
-                '-jar', $jar) `
+                '-jar', (ConvertTo-WO036JavaJarStartProcessArgument -Path $jar)) `
                 -WorkingDirectory $workingDirectory -WindowStyle Hidden -PassThru `
                 -RedirectStandardOutput $stdout -RedirectStandardError $stderr
         }
