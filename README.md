@@ -6,16 +6,24 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 Le Work Order
 [WO-SS-20260904-046](docs/work_orders/active/WO-SS-20260904-046-j9-j7-real-local-e2e-campaign.md)
-est ouvert dans l'état `OPEN_AWAITING_PRECONDITIONS`, depuis le commit exact de clôture de WO-045
+est ouvert dans l'état `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`, depuis le commit exact de clôture de WO-045
 `8a1225fc4b85d8e8b55af536fcbc7955676131ff`. Il prépare la future campagne Windows/Windows d'une
 livraison manuelle unique d'un export J7 fournisseur déjà `HUMAN_VALIDATED` vers le receiver
 Betting Project sur `https://127.0.0.1:8444`.
 
 L'autorisation actuelle couvre uniquement l'ouverture documentaire et l'inventaire hors ligne.
-Le receiver INT-001 est localement qualifié et prêt pour revue propriétaire, mais pas encore validé.
-Sa validation, la preuve officielle applicable, l'export exact et l'identité mTLS doivent encore
-être réconciliés par des références et hashes exacts. Le manifeste WO-046 n'est pas créé et sa
-création n'est pas autorisée ; aucun nouveau go propriétaire n'est accordé ou enregistré.
+Le receiver INT-001 est désormais validé par le propriétaire, localement qualifié et non publié au
+commit documentaire `de06153f0908a1bb2dc9bbd2c8e22f7fd14dacfd` de son dépôt. La
+[réconciliation officielle](docs/validation/J9-WO046-OFFICIAL-PERMISSION-RECONCILIATION-20260904.md),
+taille `7273` octets et SHA-256
+`707e0fd9b07dc0944225be80a590792e5e8ab0631dab964a465335f283ac1473`, ne trouve toutefois aucune
+réponse, licence ou convention SofaScore exacte corroborant la déclaration propriétaire
+`EVIDENCED_COMPATIBLE`. Le résultat exécutoire reste `NOT_EVIDENCED`.
+
+La séquence ordonnée s'arrête donc à cette deuxième étape. Un export candidat a seulement été
+inventorié en lecture seule, sans sélection, et aucun certificat client n'existe actuellement dans
+`CurrentUser\\My`. Le manifeste WO-046 n'est pas créé et son autorisation n'est pas consommée ;
+aucun nouveau go propriétaire n'est construit, accordé ou enregistré.
 Aucun receiver n'est démarré, aucun POST ou appel SofaScore n'est autorisé, et les réseaux distant
 et fournisseur, le VPS et la production restent bloqués.
 

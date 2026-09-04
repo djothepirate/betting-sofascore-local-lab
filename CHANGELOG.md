@@ -6,15 +6,27 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### Après J9 — WO-046 campagne E2E J7 réelle locale Windows/Windows
 
+- validation propriétaire d'INT-001 consignée dans son dépôt au commit
+  `de06153f0908a1bb2dc9bbd2c8e22f7fd14dacfd`, avec résultat
+  `PASS_LOCAL_FAIL_CLOSED`, sans push, PR, merge, démarrage ou réseau ;
+- réconciliation exacte de la porte officielle dans
+  `docs/validation/J9-WO046-OFFICIAL-PERMISSION-RECONCILIATION-20260904.md`, taille `7273` octets
+  et SHA-256 `707e0fd9b07dc0944225be80a590792e5e8ab0631dab964a465335f283ac1473` : brouillon WO-033
+  non envoyé, rendu WO-034 absent, aucune preuve de soumission ni réponse officielle applicable ;
+- distinction conservée entre la déclaration propriétaire `EVIDENCED_COMPATIBLE` et le résultat
+  exécutoire `NOT_EVIDENCED`; WO-046 passe à `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED` ;
+- inventaire hors ligne sans consommation : un candidat J7 fournisseur validé existe, tandis que
+  `CurrentUser\\My` ne contient aucune identité mTLS réutilisable ; étapes 3 et 4 non franchies ;
+- séquence suspendue avant sélection, autorisation/gel/commit du manifeste et soumission d'un go ;
+  aucune autorisation de POST réel n'est accordée ;
 - ouverture autorisée séparément après validation de WO-045, depuis son commit de clôture exact
   `8a1225fc4b85d8e8b55af536fcbc7955676131ff`, dans la branche distincte
   `codex/j9-wo046-j7-real-local-e2e-campaign` ;
-- création du seul Work Order actif, dans l'état `OPEN_AWAITING_PRECONDITIONS`, sans manifeste ni
-  rapport de campagne ;
+- création du seul Work Order actif, initialement `OPEN_AWAITING_PRECONDITIONS` puis porté à
+  `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`, sans manifeste ni rapport de campagne ;
 - inventaire initial : sender WO-035 et frontière owner-go WO-045 qualifiés, E2E synthétique
-  WO-036 vert, receiver INT-001 localement qualifié et prêt pour revue propriétaire mais non encore
-  validé, tandis que la référence versionnée de la preuve officielle compatible reste à
-  réconcilier ;
+  WO-036 vert et receiver INT-001 localement qualifié, désormais validé par le propriétaire ; la
+  réconciliation de la permission officielle aboutit négativement ;
 - futur manifeste fixé à
   `docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-CAMPAIGN-MANIFEST-20260904.md`, mais création et gel
   non autorisés à cette étape ;

@@ -1,6 +1,6 @@
 # WO-SS-20260904-046 — Campagne E2E J7 réelle locale Windows/Windows
 
-- **Statut :** `OPEN_AWAITING_PRECONDITIONS`
+- **Statut :** `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`
 - **Jalon :** après J9 — campagne locale d'une livraison J7 dérivée fournisseur
 - **Ouvert le :** 2026-09-04
 - **Ouverture UTC :** `2026-09-04T13:59:22.9943521Z`
@@ -96,7 +96,25 @@ OWNER_GO_BOUNDARY_OWNER_VALIDATED=YES
 OWNER_GO_BOUNDARY_CLOSURE_COMMIT=8a1225fc4b85d8e8b55af536fcbc7955676131ff
 ```
 
-## 4. Préconditions non encore réconciliées
+### 3.4 Receiver INT-001 validé par le propriétaire
+
+Le propriétaire a demandé que la validation d'INT-001 constitue la première étape de la séquence.
+Elle est maintenant consignée dans le dépôt Betting Project, sans push, PR, merge, démarrage de
+receiver ou réseau :
+
+```text
+INT001_BRANCH=codex/int-001-j7-receiver
+INT001_IMPLEMENTATION_COMMIT=25c0229aac06df9ab380f0dfa77a3e70f34a5632
+INT001_OWNER_VALIDATION_COMMIT=de06153f0908a1bb2dc9bbd2c8e22f7fd14dacfd
+INT001_IMPLEMENTATION_RESULT=PASS_LOCAL_FAIL_CLOSED
+INT001_LOCAL_READINESS_REPORT=docs/reviews/INT-001-local-readiness.md
+INT001_LOCAL_READINESS_REPORT_SIZE=14300
+INT001_LOCAL_READINESS_REPORT_SHA256=0ca2efb8e9424c2a776b95f9605ca8e5c38a15766a31ff900e09c46161cbcba2
+INT001_OWNER_VALIDATION=RECORDED
+INT001_STATUS=OWNER_VALIDATED_LOCALLY_QUALIFIED_NOT_PUBLISHED
+```
+
+## 4. Réconciliation ordonnée des préconditions
 
 L'ouverture ne transforme aucune déclaration ou observation historique en preuve exécutoire. Les
 éléments suivants doivent être identifiés par une référence versionnée, un commit exact et une
@@ -104,38 +122,40 @@ empreinte avant toute création de manifeste :
 
 | Porte | État à l'ouverture | Preuve exigée avant manifeste |
 |---|---|---|
-| Receiver INT-001 | `LOCALLY_QUALIFIED_READY_FOR_OWNER_REVIEW_NOT_VALIDATED` | validation propriétaire, commit exécutable exact, rapport et SHA-256, rétention/purge/restauration qualifiées |
-| Permission officielle | `OWNER_DECLARED_EVIDENCED_COMPATIBLE_REFERENCE_NOT_RECONCILED` | preuve applicable expurgée, versionnée, référencée et hashée |
+| Receiver INT-001 | `OWNER_VALIDATED_LOCALLY_QUALIFIED_NOT_PUBLISHED` | porte locale satisfaite ; aucune publication ni exécution autorisée |
+| Permission officielle | `RECONCILED_NOT_EVIDENCED_BLOCKING` | réponse ou accord applicable, expurgé, versionné, référencé et hashé |
 | Export J7 réel | `NOT_SELECTED` | métadonnées d'un export `PROVIDER_DERIVED` et `HUMAN_VALIDATED`, sans octets dans Git |
-| Identité mTLS | `NOT_SELECTED` | origine loopback exacte et empreinte publique du certificat client exact |
+| Identité mTLS | `NOT_SELECTED_NO_EXISTING_CANDIDATE` | provisionnement distinct puis origine loopback exacte et empreinte publique du certificat client exact |
 | Manifeste WO-046 | `NOT_CREATED_NOT_AUTHORIZED` | décision séparée, contenu complet puis commit gelé avant tout POST |
 | Go propriétaire WO-046 | `NOT_GRANTED` | bloc canonique lié au manifeste gelé et fenêtre future de 60 minutes maximum |
 | Exécution | `NOT_AUTHORIZED` | autorisation explicite du POST réel et go durable enregistré |
 
-La branche contient encore comme preuve officielle positive la seule déclaration propriétaire
-`EVIDENCED_COMPATIBLE`. Le rapport versionné historique
-`docs/validation/J9-WO027-OFFICIAL-PERMISSION-REVIEW-20260901.md` conclut
-`NOT_EVIDENCED`. WO-046 ne déduit donc aucune référence ni aucun hash favorable : la preuve exacte
-doit être réconciliée avant de pouvoir être liée au manifeste et au go.
+La réconciliation exacte est enregistrée dans
+`docs/validation/J9-WO046-OFFICIAL-PERMISSION-RECONCILIATION-20260904.md`, taille `7273` octets et
+SHA-256 `707e0fd9b07dc0944225be80a590792e5e8ab0631dab964a465335f283ac1473`. Elle distingue la
+déclaration propriétaire `EVIDENCED_COMPATIBLE` d'une preuve officielle positive : aucune demande
+finale rendue, preuve de soumission, réponse, licence ou convention applicable n'est établie dans
+le périmètre inspecté. Le résultat déterministe reste donc `NOT_EVIDENCED`.
 
-Une inspection hors ligne et en lecture seule du worktree Betting Project INT-001 établit le
-snapshot suivant à l'ouverture :
+La séquence propriétaire s'arrête à cette porte :
 
 ```text
-INT001_BRANCH=codex/int-001-j7-receiver
-INT001_BRANCH_HEAD_OBSERVED=25c0229aac06df9ab380f0dfa77a3e70f34a5632
-INT001_WORKTREE_CLEAN=YES
-INT001_WORK_ORDER_STATUS=READY_FOR_OWNER_REVIEW_LOCALLY_QUALIFIED
-INT001_IMPLEMENTATION_RESULT=PASS_LOCAL_FAIL_CLOSED
-INT001_LOCAL_READINESS_REPORT=docs/reviews/INT-001-local-readiness.md
-INT001_LOCAL_READINESS_REPORT_SIZE=14300
-INT001_LOCAL_READINESS_REPORT_SHA256=0ca2efb8e9424c2a776b95f9605ca8e5c38a15766a31ff900e09c46161cbcba2
-INT001_OWNER_VALIDATION=NOT_RECORDED
+ORDERED_STEP_1_INT001_OWNER_VALIDATION=COMPLETE
+ORDERED_STEP_2_OFFICIAL_EVIDENCE_RECONCILIATION=COMPLETE_NEGATIVE
+ORDERED_STEP_2_POSITIVE_GATE_SATISFIED=NO
+ORDERED_STEP_3_EXPORT_SELECTION=NOT_REACHED
+ORDERED_STEP_4_MTLS_IDENTITY_SELECTION=NOT_REACHED
+ORDERED_STEP_5_MANIFEST_AUTHORIZATION=NOT_CONSUMED
+ORDERED_STEP_6_MANIFEST_COMMIT=NOT_CREATED
+ORDERED_STEP_7_OWNER_GO_SUBMISSION=NOT_CREATED
+ORDERED_STEP_8_REAL_POST_AUTHORIZATION=NOT_GRANTED
 ```
 
-Ce snapshot prouve une readiness locale, pas une validation propriétaire. Le futur manifeste devra
-référencer le commit receiver réellement exécuté après validation ; ni le commit seulement observé
-pendant WO-036, ni le snapshot ci-dessus ne sont promus silencieusement en receiver validé.
+Deux inventaires strictement en lecture seule ont été effectués sans franchir les étapes 3 et 4 :
+un export candidat `PROVIDER_DERIVED` et `HUMAN_VALIDATED` existe, mais n'est pas sélectionné ; le
+magasin `CurrentUser\\My` ne contient actuellement aucun certificat, donc aucune identité mTLS
+exacte réutilisable ne peut être sélectionnée. Le provisionnement futur de l'identité cliente et
+de la confiance receiver exige une autorisation distincte avant le manifeste.
 
 ## 5. Manifeste futur obligatoire
 
@@ -243,9 +263,15 @@ Restent interdits :
 J9_WO046_WORK_ORDER=WO-SS-20260904-046-j9-j7-real-local-e2e-campaign
 J9_WO046_BRANCH=codex/j9-wo046-j7-real-local-e2e-campaign
 J9_WO046_BASE_COMMIT=8a1225fc4b85d8e8b55af536fcbc7955676131ff
-J9_WO046_WORK_ORDER_STATUS=OPEN_AWAITING_PRECONDITIONS
+J9_WO046_WORK_ORDER_STATUS=BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED
 J9_WO046_OPENING_DECISION_CONSUMED=YES
 J9_WO046_DOCUMENTARY_AND_OFFLINE_INVENTORY_AUTHORIZED=YES
+
+J9_WO046_INT001_OWNER_VALIDATION=COMPLETE
+J9_WO046_OFFICIAL_PERMISSION_RECONCILIATION=COMPLETE_NEGATIVE
+J9_WO046_OFFICIAL_PERMISSION_GATE=BLOCKED
+J9_WO046_EXPORT_SELECTION=NOT_REACHED
+J9_WO046_MTLS_IDENTITY_SELECTION=NOT_REACHED
 
 J9_WO046_CAMPAIGN_EXECUTION_AUTHORIZED=NO
 J9_WO046_REAL_POST_AUTHORIZED=NO
@@ -266,6 +292,7 @@ J9_VPS_DEPLOYMENT_AUTHORIZED=NO
 J9_PRODUCTION_AUTHORIZED=NO
 ```
 
-WO-046 est ouvert mais bloqué avant préparation de campagne. La prochaine étape autorisable est la
-réconciliation hors ligne des préconditions puis, dans une décision distincte, la création et le
-gel d'un manifeste complet. Aucun go ni POST ne peut être déduit de l'ouverture.
+WO-046 est ouvert mais bloqué avant préparation de campagne. Pour reprendre dans l'ordre demandé,
+il faut d'abord fournir puis réconcilier une preuve officielle positive exacte. Une identité mTLS
+devra ensuite être provisionnée sous une autorisation distincte avant sélection et gel du
+manifeste. Aucun go ni POST ne peut être déduit de l'ouverture ou de la présente réconciliation.
