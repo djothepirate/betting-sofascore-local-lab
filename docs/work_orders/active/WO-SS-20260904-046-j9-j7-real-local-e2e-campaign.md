@@ -1,6 +1,6 @@
 # WO-SS-20260904-046 — Campagne E2E J7 réelle locale Windows/Windows
 
-- **Statut :** `PAUSED_PENDING_MTLS_IDENTITY_PROVISIONING_DECISION`
+- **Statut :** `RESUMED_PREPARATORY_PENDING_PRIMARY_PREFLIGHT_AUTHORIZATION`
 - **Jalon :** après J9 — campagne locale d'une livraison J7 dérivée fournisseur
 - **Ouvert le :** 2026-09-04
 - **Ouverture UTC :** `2026-09-04T13:59:22.9943521Z`
@@ -179,7 +179,9 @@ Il devra lier au minimum :
 - l'événement canonique, l'identifiant fournisseur et l'export sélectionné ;
 - `exportId`, `fileSha256`, `dataSha256`, taille, schema ID et version ;
 - l'origine exacte `https://127.0.0.1:8444` ;
-- l'empreinte publique du certificat client exact ;
+- la référence logique privée et l'engagement SHA-256 de l'état PKI exact qualifié par WO-048 ;
+  les empreintes des certificats restent exclusivement dans le record privé externe et le futur
+  owner-go V2 externe, conformément à `PRIVATE_EXTERNAL_RECORD_ONLY` ;
 - l'acteur `CODEX_LOCAL_UI`, l'ordinal `1` et un seul appel direct maximum ;
 - l'inventaire initial des listeners, processus, conteneurs et bases détenus ;
 - les étapes de cleanup et de postflight sans payload ni secret.
@@ -256,7 +258,7 @@ Sont autorisés par la présente décision :
 - les contrôles hors ligne et en lecture seule nécessaires pour décrire les portes manquantes ;
 - les mises à jour documentaires d'ouverture de `README.md` et `CHANGELOG.md`.
 
-La décision de reprise consignée en section 10 supersède uniquement cette portée historique pour
+Les décisions de reprise consignées en sections 10 et 11 supersèdent cette portée historique pour
 l'intégration linéaire et les étapes de sélection hors ligne ; les interdictions du manifeste, du
 go, du POST et des réseaux restent effectives.
 
@@ -314,7 +316,7 @@ WO-047 puis la décision propriétaire de reprise la supersèdent pour le seul t
 l'état gouvernant courant est consigné ci-dessous. Aucun go ni POST ne peut être déduit de cette
 supersession.
 
-## 10. Reprise après validation de WO-047
+## 10. Reprise après validation de WO-047 — état historique avant WO-048
 
 Le propriétaire a autorisé la reprise après la validation et le push de WO-047 :
 
@@ -402,3 +404,85 @@ J9_PRODUCTION_AUTHORIZED=NO
 Le prochain changement d'état possible est le provisionnement borné d'une identité mTLS locale,
 sous décision propriétaire distincte. Le manifeste, le go et le POST restent des portes
 ultérieures séparées.
+
+## 11. Reprise préparatoire après validation de WO-048
+
+Le propriétaire a validé WO-048, reconnu ses tentatives hôte échouées sans résidus, la déviation
+Testcontainers et la conservation du run nominal, puis autorisé explicitement la reprise de
+WO-046. La décision et le classement de WO-048 sont consignés au commit
+`5f7756b17c42d14bc97c7ddd7fcbde616b2241e0`. La branche WO-046, propre au commit
+`e771c2a5fedc508fbd0a420ae4596166251d82cd`, a intégré cette clôture par fast-forward exact,
+sans réécriture de l'historique et sans modification du receiver.
+
+```text
+J9_WO048_OWNER_REVIEW_DECISION=VALIDATE
+J9_WO048_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO048_WORK_ORDER_MOVE_TO_COMPLETED=YES
+J9_WO046_RESUME_AFTER_WO048_VALIDATION=YES
+J9_WO046_MANIFEST_CREATION_AUTHORIZED=NO
+J9_WO046_OWNER_GO_GRANTED=NO
+J9_WO046_REAL_POST_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+### 11.1 Préconditions corroborées sans application ni base
+
+- INT-001 reste propre au commit `de06153f0908a1bb2dc9bbd2c8e22f7fd14dacfd` ; sa validation
+  propriétaire est consignée. Son rapport de readiness conserve les `14300` octets et le SHA-256
+  `0ca2efb8e9424c2a776b95f9605ca8e5c38a15766a31ff900e09c46161cbcba2`, recalculé à la reprise.
+- Le rapport WO-048 reste byte-identique : `12844` octets, SHA-256
+  `c704961530020216bfbc644f2fa928357466eccf54ef4e3d80f5705a95ef109d`.
+- L'engagement de l'état PKI privé conservé correspond exactement au SHA-256
+  `29c53ef4b27cd9782bc49f52b5594152f12d0ca7f96fd7209052ea90f6cc7475`. Ce fichier contient des
+  secrets protégés par ACL : seul son engagement est publié, jamais son contenu, son UUID ou ses
+  chemins.
+- La vérification courante des seules métadonnées publiques retrouve exactement un certificat
+  détenu par rôle dans `CurrentUser\\My` et `CurrentUser\\Root`, avec concordance privée du
+  thumbprint, du SHA-256 DER et du sujet. Les deux certificats sont temporellement valides à ce
+  contrôle. La vérification ne lit, n'exporte ni n'utilise aucune clé privée et ne réalise aucune
+  mutation, socket ou handshake. La validité devra être recontrôlée avant l'utilisation future.
+- La preuve officielle et la sélection des métadonnées de l'export restent celles des rapports
+  immuables des sections 4 et 10.1. `NOT_EVIDENCED` est une métadonnée d'audit non bloquante
+  pour ce seul transfert local sous ADR-SS-003 v0.2 ; aucun accord SofaScore n'est affirmé et
+  `EVIDENCED_INCOMPATIBLE` demeure bloquant.
+
+### 11.2 Portes restantes et portée de la reprise
+
+| Porte | État courant | Action restante |
+|---|---|---|
+| Receiver INT-001 | `OWNER_VALIDATED_LOCALLY_QUALIFIED_NOT_PUBLISHED` | épingler le commit réellement exécuté dans un futur manifeste autorisé |
+| Identités mTLS | `SELECTED_RUN_BOUND_WO048_VALIDATED_PUBLIC_METADATA_REVALIDATED` | garder le record privé exact et recontrôler la validité avant utilisation |
+| Export sélectionné | `SELECTED_METADATA_ONLY_PENDING_PRIMARY_LEDGER_REVALIDATION` | vérifier les seules métadonnées dans le ledger primaire sous autorisation distincte |
+| Schéma primaire courant | `NOT_VERIFIED_IN_THIS_RESUME` | préflight primaire en lecture seule à autoriser ; aucune version actuelle déduite des migrations du dépôt |
+| Migration primaire V32 et sauvegarde/restauration | `PENDING_SEPARATE_OWNER_DECISION` | appliquer la porte réservée par WO-047 section 3.10, sans purge primaire |
+| Manifeste | `NOT_CREATED_NOT_AUTHORIZED` | décision séparée après satisfaction des prérequis, puis commit gelé |
+| Owner-go V2 | `NOT_CREATED_NOT_GRANTED` | soumettre un nouveau bloc lié au manifeste gelé et au record PKI privé |
+| POST réel | `NOT_AUTHORIZED` | autorisation distincte future et à usage unique |
+
+La présente reprise n'autorise aucun accès à la base primaire, migration, sauvegarde/restauration,
+démarrage d'application ou de base, ni appel receiver. La prochaine décision à demander concerne
+le préflight primaire strictement en lecture seule : schéma Flyway effectif et concordance de
+l'export déjà sélectionné avec son ledger, sans payload dans les sorties. Les mutations V32 et
+la sauvegarde/restauration seront ensuite bornées d'après ces constats, avant toute demande de
+création de manifeste. Aucun nouveau manifeste ni bloc de go n'est produit par cette section.
+
+```text
+J9_WO046_STATUS=RESUMED_PREPARATORY_PENDING_PRIMARY_PREFLIGHT_AUTHORIZATION
+J9_WO046_MTLS_IDENTITY_SELECTION=SELECTED_RUN_BOUND_WO048_VALIDATED_PUBLIC_METADATA_REVALIDATED
+J9_WO046_PRIMARY_DATABASE_READ_AUTHORIZED=NO
+J9_WO046_PRIMARY_DATABASE_MUTATION_AUTHORIZED=NO
+J9_WO046_MANIFEST_CREATED=NO
+J9_WO046_OWNER_GO_REGISTERED=NO
+J9_WO046_OWNER_GO_CONSUMED=NO
+J9_WO046_DIRECT_IMPORT_ATTEMPTS=0
+J9_WO046_PROVIDER_DERIVED_REAL_POSTS=0
+J9_LOCAL_RECEIVER_LOOPBACK_AUTHORIZED=NO
+```
+
+Les modifications de cette reprise sont exclusivement documentaires. Les rapports historiques,
+les migrations et les PDF de référence restent immuables ; aucun test applicatif, Testcontainers
+ou pipeline natif n'est relancé pour ce lot. Les contrôles du lot portent sur le diff, les textes
+UTF-8, les références et l'absence de données privées nouvellement introduites.

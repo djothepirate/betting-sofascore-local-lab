@@ -4,6 +4,22 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — reprise préparatoire WO-046 après validation WO-048
+
+- intégration par fast-forward exact de la clôture WO-048
+  `5f7756b17c42d14bc97c7ddd7fcbde616b2241e0`, sans réécriture des commits ;
+- validation INT-001 et hash de readiness corroborés ; engagement de l'état PKI privé et
+  présence, identité exacte et validité temporelle des deux certificats recontrôlés sans clé
+  privée, mutation, base, application ou socket ;
+- politique des empreintes réconciliée : aucune empreinte de certificat dans le futur manifeste
+  versionné, uniquement référence logique et engagement de l'état privé ; valeurs exactes
+  réservées au record PKI et au futur owner-go V2 externes ;
+- état `RESUMED_PREPARATORY_PENDING_PRIMARY_PREFLIGHT_AUTHORIZATION` : export déjà sélectionné
+  à corroborer dans son ledger, schéma primaire à mesurer sous autorisation distincte, puis
+  migration V32 et sauvegarde/restauration à borner conformément à WO-047 ;
+- aucun manifeste, go ou POST créé ; aucun appel fournisseur ou receiver ; rapports qualifiés,
+  migrations, code et références immuables inchangés.
+
 ### Après J9 — WO-048 identités mTLS locales liées au run WO-046
 
 - validation propriétaire et classement consignés le `2026-09-04T22:10:44Z`

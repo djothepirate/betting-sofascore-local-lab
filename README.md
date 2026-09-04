@@ -61,7 +61,7 @@ Le Work Order
 porte historiquement dans son document v0.1 l'état `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`,
 depuis le commit exact de clôture de WO-045
 `8a1225fc4b85d8e8b55af536fcbc7955676131ff`. L'état effectif de la séquence est désormais
-`RESUME_AUTHORIZED_BEFORE_MANIFEST`. Il prépare la future campagne
+`RESUMED_PREPARATORY_PENDING_PRIMARY_PREFLIGHT_AUTHORIZATION`. Il prépare la future campagne
 Windows/Windows d'une livraison manuelle unique d'un export J7 fournisseur déjà
 `HUMAN_VALIDATED` vers le receiver Betting Project sur `https://127.0.0.1:8444`.
 
@@ -88,8 +88,14 @@ Le
 taille `6215` octets et SHA-256
 `18152301fbb4caa49218f7562f2a1ceb35b9e451dd6c6c5b02dc5b845eba574a`, constate que
 `CurrentUser\\My` contenait zéro certificat lors de cet inventaire historique. WO-048 a depuis
-provisionné et qualifié un jeu neuf lié au run ; l'étape 4 est désormais
-`SELECTED_RUN_BOUND_WO048_VALIDATED_PENDING_PREUSE_REVALIDATION`. Le manifeste WO-046 n'est pas créé et son
+provisionné et qualifié un jeu neuf lié au run. Après intégration par fast-forward de sa clôture
+`5f7756b17c42d14bc97c7ddd7fcbde616b2241e0`, les deux identités ont été revalidées par leurs seules
+métadonnées publiques, sans clé privée, mutation ou socket. L'étape 4 est désormais
+`SELECTED_RUN_BOUND_WO048_VALIDATED_PUBLIC_METADATA_REVALIDATED`. Le préflight du ledger et du
+schéma primaire reste soumis à une décision distincte ; aucune version primaire n'est déduite
+de la seule présence de V32 dans le dépôt. La migration primaire et sa sauvegarde/restauration
+demeurent réservées à une décision ultérieure, conformément à WO-047.
+Le manifeste WO-046 n'est pas créé et son
 autorisation n'est pas consommée ; aucun nouveau go propriétaire n'est construit, accordé ou
 enregistré.
 Aucun receiver n'est démarré, aucun POST ou appel SofaScore n'est autorisé, et les réseaux distant
