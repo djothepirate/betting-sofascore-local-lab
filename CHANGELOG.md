@@ -4,6 +4,25 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-046 campagne E2E J7 réelle locale Windows/Windows
+
+- ouverture autorisée séparément après validation de WO-045, depuis son commit de clôture exact
+  `8a1225fc4b85d8e8b55af536fcbc7955676131ff`, dans la branche distincte
+  `codex/j9-wo046-j7-real-local-e2e-campaign` ;
+- création du seul Work Order actif, dans l'état `OPEN_AWAITING_PRECONDITIONS`, sans manifeste ni
+  rapport de campagne ;
+- inventaire initial : sender WO-035 et frontière owner-go WO-045 qualifiés, E2E synthétique
+  WO-036 vert, receiver INT-001 localement qualifié et prêt pour revue propriétaire mais non encore
+  validé, tandis que la référence versionnée de la preuve officielle compatible reste à
+  réconcilier ;
+- futur manifeste fixé à
+  `docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-CAMPAIGN-MANIFEST-20260904.md`, mais création et gel
+  non autorisés à cette étape ;
+- aucun export réel sélectionné, certificat consulté, grant construit/enregistré/consommé,
+  listener démarré, POST émis ou appel fournisseur effectué ;
+- campagne, POST réel, receiver loopback, réseaux fournisseur ou distant, VPS, production, retry,
+  push, merge et clôture maintenus interdits jusqu'aux décisions propriétaires correspondantes.
+
 ### Après J9 — WO-045 frontière de go propriétaire pour un export J7 fournisseur
 
 - ouverture depuis `main` exact `400900410dfa751521ce387fbadcc4b5ca95a94a`, dans la branche

@@ -5,6 +5,21 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
+[WO-SS-20260904-046](docs/work_orders/active/WO-SS-20260904-046-j9-j7-real-local-e2e-campaign.md)
+est ouvert dans l'état `OPEN_AWAITING_PRECONDITIONS`, depuis le commit exact de clôture de WO-045
+`8a1225fc4b85d8e8b55af536fcbc7955676131ff`. Il prépare la future campagne Windows/Windows d'une
+livraison manuelle unique d'un export J7 fournisseur déjà `HUMAN_VALIDATED` vers le receiver
+Betting Project sur `https://127.0.0.1:8444`.
+
+L'autorisation actuelle couvre uniquement l'ouverture documentaire et l'inventaire hors ligne.
+Le receiver INT-001 est localement qualifié et prêt pour revue propriétaire, mais pas encore validé.
+Sa validation, la preuve officielle applicable, l'export exact et l'identité mTLS doivent encore
+être réconciliés par des références et hashes exacts. Le manifeste WO-046 n'est pas créé et sa
+création n'est pas autorisée ; aucun nouveau go propriétaire n'est accordé ou enregistré.
+Aucun receiver n'est démarré, aucun POST ou appel SofaScore n'est autorisé, et les réseaux distant
+et fournisseur, le VPS et la production restent bloqués.
+
+Le Work Order
 [WO-SS-20260904-045](docs/work_orders/completed/WO-SS-20260904-045-j9-provider-derived-owner-go-boundary.md)
 est `VALIDATED` et classé. Son commit d'implémentation
 `67467d5dbd63fa54d11b2d1cd701a31edf4454e0` ajoute la frontière durable, exacte, atomique et à
