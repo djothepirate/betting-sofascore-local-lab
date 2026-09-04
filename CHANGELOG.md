@@ -28,9 +28,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   `docs/validation/J9-WO044-JAVA-JAR-PATH-ARGUMENT-BOUNDARY-QUALIFICATION-20260904.md`, taille
   `8729` octets et SHA-256
   `02008824316e688b6e42c523aaec45acf7b8edb776f49a9b11a822afd6a125a7` ;
-- résultat d'implémentation `PASS_LOCAL_FAIL_CLOSED`, WO-044
-  `READY_FOR_OWNER_REVIEW_WITH_DISCLOSED_EXECUTION_DEVIATION` et P2
-  `RESOLVED_LOCALLY_PENDING_OWNER_VALIDATION` ;
+- résultat d'implémentation `PASS_LOCAL_FAIL_CLOSED`, validé par le propriétaire avec
+  reconnaissance explicite de l'écart et de la readiness locale le
+  `2026-09-04T09:34:31.1785757Z`, soit `2026-09-04T11:34:31.1785757+02:00` en Europe/Paris ;
+- WO-044 classé dans les Work Orders terminés et P2 porté à
+  `RESOLVED_LOCALLY_VALIDATED_PENDING_PR_UPDATE` ; la mise à jour de la PR `#26` exige toujours une
+  décision propriétaire séparée ;
 - aucun code Java applicatif, receiver, contrat, migration, base, payload J7, réseau, VPS,
   production, merge de `#26` ou fermeture de `#25` autorisé.
 

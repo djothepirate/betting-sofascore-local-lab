@@ -1,10 +1,12 @@
 # WO-SS-20260904-044 — Frontière d'argument du chemin JAR WO-036
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
 - **Jalon :** après J9 — résolution du second P2 de la PR `#26`
 - **Ouvert le :** 2026-09-04
 - **Ouverture UTC :** `2026-09-04T08:49:46.7534713Z`
 - **Ouverture Europe/Paris :** `2026-09-04T10:49:46.7534713+02:00`
+- **Validation UTC :** `2026-09-04T09:34:31.1785757Z`
+- **Validation Europe/Paris :** `2026-09-04T11:34:31.1785757+02:00`
 - **Branche :** `codex/ss-20260904-044-j9-wo036-java-jar-path-argument-boundary`
 - **Worktree :** `.tmp/j9-wo044-java-jar-path-argument-boundary`
 - **Base exacte :** `96dec8492dbc043c7d6e4310195421f4411722df`
@@ -57,8 +59,8 @@ INT001_VALIDATION_AUTHORIZED=NO
 
 ## 2. Constat factuel
 
-La fonction de démarrage des composants Java dans
-`scripts/wo036/WO036-CampaignTools.psm1` appelle actuellement :
+Avant le correctif qualifié, la fonction de démarrage des composants Java dans
+`scripts/wo036/WO036-CampaignTools.psm1` appelait :
 
 ```powershell
 Start-Process -FilePath $state.JavaPath -ArgumentList @(
@@ -70,8 +72,9 @@ Start-Process -FilePath $state.JavaPath -ArgumentList @(
 ```
 
 Sous Windows, `Start-Process` recompose `ArgumentList` en une ligne native séparée par des espaces.
-Le chemin `$jar` ne porte aucune protection explicite. Un chemin contenant un espace peut donc
-être découpé en plusieurs arguments et ne plus être reçu comme l'unique valeur suivant `-jar`.
+Le chemin `$jar` ne portait aucune protection explicite. Un chemin contenant un espace pouvait
+donc être découpé en plusieurs arguments et ne plus être reçu comme l'unique valeur suivant
+`-jar`.
 
 Les qualifications existantes utilisent un worktree sans espace et ne prouvent pas cette
 frontière. Le lanceur qualifié WO-041 protège déjà son chemin helper transmis à `-File` par des
@@ -144,7 +147,7 @@ Les statuts `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 ## 7. Résultat local
 
 ```text
-WO044_STATUS=READY_FOR_OWNER_REVIEW
+WO044_STATUS=VALIDATED
 WO044_IMPLEMENTATION_COMMIT=0b903b71ae70ccfb9b55f8d89bc8ac57eab0cbe3
 WO044_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
 WO044_REPORT=docs/validation/J9-WO044-JAVA-JAR-PATH-ARGUMENT-BOUNDARY-QUALIFICATION-20260904.md
@@ -164,7 +167,7 @@ WO044_ACCIDENTAL_ISOLATED_TESTCONTAINERS_DATABASE_STARTS=1
 WO044_PRIMARY_DATABASE_TOUCHES=0
 WO044_EXACT_TESTCONTAINERS_RESIDUAL_COUNT=0
 WO044_EXECUTION_DEVIATION=DISCLOSED_CONTAINED_ZERO_RESIDUE
-PR26_REVIEW_FINDING=P2_RESOLVED_LOCALLY_PENDING_OWNER_VALIDATION
+PR26_REVIEW_FINDING=P2_RESOLVED_LOCALLY_VALIDATED_PENDING_PR_UPDATE
 PR26_MERGE_AUTHORIZED=NO
 PR25_STATUS=OPEN
 PR25_CLOSE_AUTHORIZED=NO
@@ -176,22 +179,25 @@ répertoire synthétique résiduel. Une première commande Maven hôte incorrect
 la porte `DATABASE_START=NO`. L'exécution a été interrompue immédiatement ; le contrôle fondé sur
 les identifiants exacts confirme zéro conteneur résiduel et zéro accès, arrêt ou purge de la base
 primaire. Le rapport consigne cet écart intégralement. La qualification d'implémentation est
-positive, mais la validation propriétaire reste requise en connaissance de cet écart.
+positive. Le propriétaire a validé ce résultat et reconnu explicitement l'écart d'exécution le
+`2026-09-04T09:34:31.1785757Z`, soit `2026-09-04T11:34:31.1785757+02:00` en Europe/Paris.
 
-## 8. Revue propriétaire requise
+## 8. Décision propriétaire enregistrée
 
 ```text
-J9_WO044_OWNER_REVIEW_DECISION=<VALIDATE|REJECT>
+J9_WO044_OWNER_REVIEW_DECISION=VALIDATE
 J9_WO044_WORK_ORDER=WO-SS-20260904-044-j9-wo036-java-jar-path-argument-boundary
 J9_WO044_IMPLEMENTATION_COMMIT=0b903b71ae70ccfb9b55f8d89bc8ac57eab0cbe3
+J9_WO044_DOCUMENTATION_COMMIT=41b9fe08f2c1ba2b978cdea29421ba03969d80ba
 J9_WO044_QUALIFICATION_RESULT=PASS_LOCAL_FAIL_CLOSED
 J9_WO044_QUALIFICATION_REPORT_SHA256=02008824316e688b6e42c523aaec45acf7b8edb776f49a9b11a822afd6a125a7
-J9_WO044_EXECUTION_DEVIATION_ACKNOWLEDGED=<YES|NO>
-J9_WO044_LOCAL_READINESS_ACKNOWLEDGED=<YES|NO>
-J9_WO044_WORK_ORDER_MOVE_TO_COMPLETED=<YES|NO>
+J9_WO044_EXECUTION_DEVIATION_ACKNOWLEDGED=YES
+J9_WO044_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO044_WORK_ORDER_MOVE_TO_COMPLETED=YES
 
 J9_WO044_PR26_UPDATE_AFTER_VALIDATION=REQUIRES_SEPARATE_OWNER_DECISION
 J9_PR26_MERGE_AUTHORIZED=NO
+J9_PR25_STATUS=OPEN
 J9_PR25_CLOSE_AUTHORIZED=NO
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 J9_REAL_J7_EXPORT_TEST_AUTHORIZED=NO
@@ -204,4 +210,16 @@ J9_VPS_DEPLOYMENT_AUTHORIZED=NO
 J9_PRODUCTION_AUTHORIZED=NO
 INT001_PULL_REQUEST_AUTHORIZED=NO
 INT001_VALIDATION_AUTHORIZED=NO
+```
+
+État effectif après consommation de cette décision :
+
+```text
+J9_WO044_STATUS=VALIDATED_AND_COMPLETED
+J9_WO044_EXECUTION_DEVIATION_STATUS=ACKNOWLEDGED
+J9_PR26_REVIEW_FINDING_STATUS=P2_RESOLVED_LOCALLY_VALIDATED_PENDING_PR_UPDATE
+J9_WO044_PR26_UPDATE_AUTHORIZED=NO_REQUIRES_SEPARATE_OWNER_DECISION
+J9_PR26_MERGE_AUTHORIZED=NO
+J9_PR25_STATUS=OPEN
+J9_PR25_CLOSE_AUTHORIZED=NO
 ```
