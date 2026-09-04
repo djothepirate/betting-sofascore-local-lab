@@ -129,6 +129,9 @@ try {
             'j7DeliveryCount',
             'j7DeliveryAttemptCount',
             'j7DeliveryAttemptResultCount',
+            'j7ProviderOwnerGoGrantCount',
+            'j7ProviderOwnerGoRevocationCount',
+            'j7ProviderOwnerGoConsumptionCount',
             'coverageMaxSnapshotId',
             'coverageReceivedAt',
             'rawPayloadIntegrityFailures',
@@ -149,13 +152,16 @@ try {
                 throw "The qualified manifest source/restore evidence differs: $field"
             }
         }
-        if ($manifest.source.flywayVersion.ToString() -cne '30' -or
+        if ($manifest.source.flywayVersion.ToString() -cne '31' -or
                 [long]$manifest.source.rawPayloadIntegrityFailures -ne 0 -or
                 [long]$manifest.source.j7DeliveryCount -lt 0 -or
                 [long]$manifest.source.j7DeliveryAttemptCount -lt 0 -or
                 [long]$manifest.source.j7DeliveryAttemptResultCount -lt 0 -or
+                [long]$manifest.source.j7ProviderOwnerGoGrantCount -lt 0 -or
+                [long]$manifest.source.j7ProviderOwnerGoRevocationCount -lt 0 -or
+                [long]$manifest.source.j7ProviderOwnerGoConsumptionCount -lt 0 -or
                 $manifest.source.j7DeliveryLedgerSha256.ToString() -cnotmatch '^[0-9a-f]{64}$') {
-            throw 'The qualified manifest does not prove a valid Flyway V30 raw-payload, J8 evidence and metadata-only J7 delivery-ledger restore.'
+            throw 'The qualified manifest does not prove a valid Flyway V31 raw-payload, J8 evidence and metadata-only J7 delivery and owner-go restore.'
         }
         $cipherPath = [IO.Path]::GetFullPath((Join-Path `
             (Split-Path -Parent $manifestPath) $cipherFileName))

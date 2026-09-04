@@ -1,5 +1,44 @@
 # Runbook J9 — Qualification offline et préparation du sender local optionnel v1.0
 
+## Extension WO-045 — préparer sans exécuter un futur go fournisseur
+
+WO-045 qualifie uniquement la frontière logicielle et PostgreSQL. Il ne permet pas de créer le
+manifeste WO-046, d'enregistrer une autorisation réelle, d'ouvrir le receiver pour un export réel
+ou d'effectuer un POST. Les jeux d'essai sont fabriqués localement ; aucun identifiant, export ou
+payload observé auprès de SofaScore ne doit être utilisé.
+
+Un futur Work Order de campagne devra, dans cet ordre :
+
+1. geler et committer un manifeste neuf avant toute tentative ;
+2. produire le préimage canonique défini à la section 4 de WO-045, dans l'ordre exact, en UTF-8
+   sans BOM avec LF final, puis calculer son SHA-256 ; le champ
+   `OWNER_GO_DOCUMENT_SHA256` accompagne le bloc mais n'appartient jamais au préimage ;
+3. référencer une preuve officielle applicable, expurgée et hashée ;
+4. fixer l'export `HUMAN_VALIDATED`, son événement fournisseur, ses hashes, sa taille, les commits
+   des deux dépôts, l'origine `https://127.0.0.1:8444`, l'empreinte du certificat et l'ordinal `1` ;
+5. limiter la fenêtre à 60 minutes et le nombre d'appels d'import à un ;
+6. enregistrer explicitement le grant, sans création automatique au démarrage ;
+7. sélectionner sa référence exacte dans la configuration locale privée ;
+8. demander un nouveau go propriétaire lié au manifeste ;
+9. seulement après toutes les portes, préparer puis consommer la confirmation UI.
+
+Le reçu remis au runtime doit être l'instance exacte émise par le service de confirmation : une
+copie contenant les mêmes champs est invalide. Sa capacité mémoire est consommée avant tout accès
+à l'export ou au grant et disparaît à l'expiration, à la première tentative runtime ou au
+redémarrage. Il n'existe aucun mécanisme de restitution ou de reconstruction de cette capacité.
+
+L'état affichable se limite à `AVAILABLE`, `NOT_YET_VALID`, `EXPIRED`, `REVOKED`, `CONSUMED` ou
+un refus générique. Ne jamais copier dans une capture ou un journal le SHA du bloc propriétaire,
+l'empreinte du certificat, la clé d'idempotence, un chemin privé, le payload ou un ACK brut.
+
+```text
+WO045_PROVIDER_DERIVED_REAL_POST_AUTHORIZED=NO
+WO045_PROVIDER_NETWORK_AUTHORIZED=NO
+WO045_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+WO046_OPENING_AUTHORIZED=NO
+WO046_NEW_MANIFEST_BOUND_OWNER_GO_REQUIRED=YES
+```
+
 ## 1. Objet et limite d’emploi
 
 Ce runbook conserve la qualification du socle fail-closed v1.0 réalisée sous WO-027 et documente

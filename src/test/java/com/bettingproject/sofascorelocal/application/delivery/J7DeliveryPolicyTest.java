@@ -3,10 +3,12 @@ package com.bettingproject.sofascorelocal.application.delivery;
 import com.bettingproject.sofascorelocal.config.OptionalLocalPushProperties;
 import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryError;
 import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryException;
+import com.bettingproject.sofascorelocal.domain.delivery.J7ProviderDerivedOwnerGo;
 import com.bettingproject.sofascorelocal.port.J7DeliveryTransportFactory;
 import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -21,7 +23,7 @@ class J7DeliveryPolicyTest {
                 "DELIVERY_DISABLED",
                 "OFFICIAL_PERMISSION_NOT_EVIDENCED",
                 "REMOTE_DELIVERY_NOT_AUTHORIZED",
-                "REAL_RECEIVER_WORK_ORDER_NOT_SATISFIED");
+                "PROVIDER_OWNER_GO_REQUIRED");
         assertError(policy::requireRealDelivery, J7DeliveryError.DELIVERY_DISABLED);
         assertError(
                 policy::requireSyntheticLoopbackQualification,
@@ -55,7 +57,7 @@ class J7DeliveryPolicyTest {
         assertError(policy::requireRealDelivery, J7DeliveryError.DELIVERY_DISABLED);
         assertThat(policy.realDeliveryBlockers())
                 .contains("DELIVERY_DISABLED", "REMOTE_DELIVERY_NOT_AUTHORIZED",
-                        "REAL_RECEIVER_WORK_ORDER_NOT_SATISFIED")
+                        "PROVIDER_OWNER_GO_REQUIRED")
                 .doesNotContain("OFFICIAL_PERMISSION_NOT_EVIDENCED");
     }
 
@@ -71,7 +73,7 @@ class J7DeliveryPolicyTest {
                 J7DeliveryError.OFFICIAL_PERMISSION_NOT_EVIDENCED);
         assertThat(policy.realDeliveryBlockers()).containsExactly(
                 "OFFICIAL_PERMISSION_NOT_EVIDENCED",
-                "REAL_RECEIVER_WORK_ORDER_NOT_SATISFIED");
+                "PROVIDER_OWNER_GO_REQUIRED");
     }
 
     @Test
@@ -154,7 +156,7 @@ class J7DeliveryPolicyTest {
     }
 
     @Test
-    void providerDerivedRuntimeRemainsStructurallyBlockedByOneTimeOwnerGo() {
+    void providerDerivedRuntimeRequiresACompleteOwnerGoReference() {
         OptionalLocalPushProperties properties = syntheticRuntimeProperties();
         properties.setExecutionMode(
                 OptionalLocalPushProperties.ExecutionMode.PROVIDER_DERIVED);
@@ -169,6 +171,22 @@ class J7DeliveryPolicyTest {
                 J7DeliveryError.PROVIDER_OWNER_GO_REQUIRED);
         assertThat(policy.runtimeBlockers(J7DeliveryPayloadClass.PROVIDER_DERIVED))
                 .containsExactly("PROVIDER_OWNER_GO_REQUIRED");
+
+        properties.getProviderOwnerGo().setGoId(
+                "50000000-0000-4000-8000-000000000005");
+        assertError(
+                () -> policy.requireRuntimeDelivery(
+                        J7DeliveryPayloadClass.PROVIDER_DERIVED),
+                J7DeliveryError.PROVIDER_OWNER_GO_INVALID);
+
+        properties.getProviderOwnerGo().setOwnerGoDocumentSha256("b".repeat(64));
+        policy.requireRuntimeDelivery(J7DeliveryPayloadClass.PROVIDER_DERIVED);
+        assertThat(policy.runtimeBlockers(J7DeliveryPayloadClass.PROVIDER_DERIVED))
+                .isEmpty();
+        assertThat(policy.providerOwnerGoReference())
+                .isEqualTo(new J7ProviderDerivedOwnerGo.Reference(
+                        UUID.fromString("50000000-0000-4000-8000-000000000005"),
+                        "b".repeat(64)));
     }
 
     @Test
@@ -187,6 +205,21 @@ class J7DeliveryPolicyTest {
                         "OFFICIAL_PERMISSION_NOT_EVIDENCED",
                         "REMOTE_DELIVERY_NOT_AUTHORIZED",
                         "PROVIDER_OWNER_GO_REQUIRED");
+    }
+
+    @Test
+    void syntheticRuntimeRejectsAProviderOwnerGoReference() {
+        OptionalLocalPushProperties properties = syntheticRuntimeProperties();
+        properties.getProviderOwnerGo().setGoId(
+                "50000000-0000-4000-8000-000000000005");
+        properties.getProviderOwnerGo().setOwnerGoDocumentSha256("b".repeat(64));
+
+        assertRuntimeError(
+                properties,
+                J7DeliveryError.PROVIDER_OWNER_GO_NOT_ALLOWED);
+        assertThat(new J7DeliveryPolicy(properties).runtimeBlockers(
+                J7DeliveryPayloadClass.SYNTHETIC_ONLY))
+                .containsExactly("PROVIDER_OWNER_GO_NOT_ALLOWED");
     }
 
     private static OptionalLocalPushProperties syntheticRuntimeProperties() {

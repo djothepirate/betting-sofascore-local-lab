@@ -126,6 +126,9 @@ optional-integration:
     required: true
     key-store-type: Windows-MY
     client-certificate-sha256: ""
+  provider-owner-go:
+    go-id: ""
+    owner-go-document-sha256: ""
 
 logging:
   level:

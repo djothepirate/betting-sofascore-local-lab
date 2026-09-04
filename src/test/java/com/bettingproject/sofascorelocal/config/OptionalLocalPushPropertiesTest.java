@@ -39,6 +39,7 @@ class OptionalLocalPushPropertiesTest {
         assertThat(properties.getMtls().isRequired()).isTrue();
         assertThat(properties.getMtls().getKeyStoreType()).isEqualTo("Windows-MY");
         assertThat(properties.getMtls().getClientCertificateSha256()).isEmpty();
+        assertThat(properties.getProviderOwnerGo().isAbsent()).isTrue();
         assertThat(validator.validate(properties)).isEmpty();
     }
 
@@ -89,7 +90,32 @@ class OptionalLocalPushPropertiesTest {
         properties.setRemoteDeliveryAuthorized(true);
         properties.setOfficialPermissionStatus(
                 OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE);
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getPropertyPath().toString()
+                        .equals("runtimeActivationCoherent"));
+
+        properties.getProviderOwnerGo().setGoId(
+                "50000000-0000-4000-8000-000000000005");
+        properties.getProviderOwnerGo().setOwnerGoDocumentSha256("b".repeat(64));
         assertThat(validator.validate(properties)).isEmpty();
+    }
+
+    @Test
+    void ownerGoReferenceIsAbsentByDefaultCompleteForProviderAndForbiddenElsewhere() {
+        OptionalLocalPushProperties properties = new OptionalLocalPushProperties();
+        properties.getProviderOwnerGo().setGoId(
+                "50000000-0000-4000-8000-000000000005");
+
+        assertThat(properties.getProviderOwnerGo().isAbsentOrComplete()).isFalse();
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getPropertyPath().toString()
+                        .equals("providerOwnerGo.absentOrComplete"));
+
+        properties.getProviderOwnerGo().setOwnerGoDocumentSha256("b".repeat(64));
+        assertThat(properties.getProviderOwnerGo().isComplete()).isTrue();
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getPropertyPath().toString()
+                        .equals("runtimeActivationCoherent"));
     }
 
     @Test

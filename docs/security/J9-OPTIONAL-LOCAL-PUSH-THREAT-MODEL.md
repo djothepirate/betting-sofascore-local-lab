@@ -1,5 +1,37 @@
 # J9 — Modèle de menace du push local optionnel v1.0
 
+## Extension WO-045 — frontière d'autorité d'une donnée dérivée fournisseur
+
+WO-045 remplace le simple obstacle structurel `PROVIDER_OWNER_GO_REQUIRED` par une frontière
+durable sans toutefois autoriser de POST réel. L'autorité future est un grant exact, immuable,
+référencé par UUID et SHA-256 de décision, enregistré explicitement et consommable une fois. Sa
+fenêtre est évaluée par l'horloge PostgreSQL après acquisition des verrous ; elle est semi-ouverte
+et ne dépasse pas 60 minutes.
+
+La référence du grant est liée à la confirmation côté serveur et n'est ni fournie par le navigateur
+ni rendue dans le modèle HTML. La consommation et le claim `IN_FLIGHT` sont atomiques. Les triggers
+refusent un grant divergent, révoqué, prématuré, expiré ou déjà consommé, une tentative fournisseur
+orpheline, une mutation des preuves append-only et toute association à un autre export ou ordinal.
+La construction du transport n'intervient qu'après commit. Le grant n'est jamais remboursé après
+une erreur ou un redémarrage.
+
+Le SHA-256 du bloc propriétaire n'est pas une valeur déclarative libre : Java et PostgreSQL le
+recalculent sur le même préimage normatif UTF-8/LF final. Le champ SHA lui-même est exclu du
+préimage. Les gardes SQL fixent leur `search_path` et qualifient les objets applicatifs afin qu'un
+schéma placé en tête par une session ne puisse détourner la fonction canonique ou les relations.
+
+| Menace WO-045 | Contrôle | Effet fail-closed attendu |
+|---|---|---|
+| Drapeau copié ou relancé après redémarrage | Grant PostgreSQL immuable et consommation unique | Refus avant factory et socket |
+| Substitution entre préparation et exécution | Référence exacte conservée dans la confirmation session-bound | La confirmation est brûlée, aucun claim |
+| Reçu construit ou copié dans la JVM sans geste humain | Capacité mémoire liée par identité à l'instance exacte, même expiration et consommation atomique one-shot | Refus avant export, politique, grant, factory et socket |
+| Course révocation/consommation | Verrous et écritures append-only mutuellement exclusives | Un seul résultat durable |
+| Expiration pendant l'attente du verrou | `clock_timestamp()` relu après l'attente | `EXPIRED`, aucune tentative |
+| Crash entre autorisation et claim | Une transaction pour consommation, tentative et `IN_FLIGHT` | Rollback total ou état durable cohérent |
+| Échec après claim | Transport ouvert seulement après commit ; zéro retry | Grant consommé et état terminal borné ou réconciliation |
+| Bypass SQL | Contraintes et triggers corrélant grant, manifeste, tentative et delivery | Transaction rejetée |
+| Fuite de gouvernance | Aucun payload, ACK, secret, clé, certificat ou référence privée dans l'UI/log | Métadonnées minimales uniquement |
+
 ## 1. Décision de sécurité
 
 Ce modèle couvre le socle qualifié par WO-027, le sender runtime fail-closed préparé par WO-035, la

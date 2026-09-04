@@ -108,6 +108,24 @@ public final class J7OptionalDeliveryService {
                 identity.idempotencyKey(),
                 expectedAttemptNumber,
                 startedAt);
+        return executeAlreadyClaimed(artifact, claim);
+    }
+
+    /**
+     * Executes exactly one transport call for a claim already persisted by the caller. This is
+     * the WO-045 boundary used after provider owner-go consumption; it deliberately performs no
+     * second claim and no confirmation lookup.
+     */
+    J7DeliveryExecutionResult executeAlreadyClaimed(
+            J7ValidatedExportArtifact artifact,
+            J7DeliveryLedgerStore.ClaimReceipt claim) {
+        Objects.requireNonNull(artifact, "artifact");
+        Objects.requireNonNull(claim, "claim");
+        J7DeliveryIdentity identity = new J7DeliveryIdentity(
+                artifact.exportId(), artifact.fileSha256());
+        if (!identity.idempotencyKey().equals(claim.idempotencyKey())) {
+            throw new J7DeliveryException(J7DeliveryError.PROVIDER_OWNER_GO_MISMATCH);
+        }
         Completion completion;
         try {
             J7DeliveryTransportResponse response = transport.execute(

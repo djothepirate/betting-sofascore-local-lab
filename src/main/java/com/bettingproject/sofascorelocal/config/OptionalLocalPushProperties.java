@@ -11,6 +11,7 @@ import org.springframework.validation.annotation.Validated;
 import java.net.URI;
 import java.time.Duration;
 import java.util.Locale;
+import java.util.UUID;
 import java.util.regex.Pattern;
 
 @ConfigurationProperties(prefix = "optional-integration")
@@ -62,6 +63,10 @@ public class OptionalLocalPushProperties {
     @Valid
     @NotNull
     private Mtls mtls = new Mtls();
+
+    @Valid
+    @NotNull
+    private ProviderOwnerGo providerOwnerGo = new ProviderOwnerGo();
 
     public enum PermissionStatus {
         NOT_EVIDENCED,
@@ -216,6 +221,14 @@ public class OptionalLocalPushProperties {
         this.mtls = mtls;
     }
 
+    public ProviderOwnerGo getProviderOwnerGo() {
+        return providerOwnerGo;
+    }
+
+    public void setProviderOwnerGo(ProviderOwnerGo providerOwnerGo) {
+        this.providerOwnerGo = providerOwnerGo;
+    }
+
     @AssertTrue(message = "the WO-035 runtime activation matrix is inconsistent")
     public boolean isRuntimeActivationCoherent() {
         if (executionMode == null
@@ -228,21 +241,26 @@ public class OptionalLocalPushProperties {
                     && !remoteDeliveryAuthorized
                     && receiverOrigin.isEmpty()
                     && receiverQualification == QualificationStatus.NOT_QUALIFIED
-                    && senderQualification == QualificationStatus.NOT_QUALIFIED;
+                    && senderQualification == QualificationStatus.NOT_QUALIFIED
+                    && providerOwnerGo != null
+                    && providerOwnerGo.isAbsent();
         }
         if (executionMode == ExecutionMode.DISABLED
                 || !isExactLocalReceiverOrigin(receiverOrigin)
                 || receiverQualification != QualificationStatus.PASS
                 || senderQualification != QualificationStatus.PASS
                 || mtls == null
+                || providerOwnerGo == null
                 || mtls.getClientCertificateSha256().isEmpty()) {
             return false;
         }
         return switch (executionMode) {
             case DISABLED -> false;
-            case SYNTHETIC_LOOPBACK -> !remoteDeliveryAuthorized;
+            case SYNTHETIC_LOOPBACK -> !remoteDeliveryAuthorized
+                    && providerOwnerGo.isAbsent();
             case PROVIDER_DERIVED -> remoteDeliveryAuthorized
-                    && officialPermissionStatus == PermissionStatus.EVIDENCED_COMPATIBLE;
+                    && officialPermissionStatus == PermissionStatus.EVIDENCED_COMPATIBLE
+                    && providerOwnerGo.isComplete();
         };
     }
 
@@ -351,6 +369,62 @@ public class OptionalLocalPushProperties {
                     && "Windows-MY".equals(keyStoreType)
                     && (clientCertificateSha256.isEmpty()
                     || SHA_256.matcher(clientCertificateSha256).matches());
+        }
+    }
+
+    /**
+     * Public, non-secret reference to the exact owner-go document. The document itself remains
+     * outside configuration; both fields are deliberately absent by default and must be supplied
+     * together only for a provider-derived one-shot execution.
+     */
+    public static class ProviderOwnerGo {
+
+        private static final Pattern SHA_256 = Pattern.compile("[0-9a-f]{64}");
+
+        private String goId = "";
+        private String ownerGoDocumentSha256 = "";
+
+        public String getGoId() {
+            return goId;
+        }
+
+        public void setGoId(String goId) {
+            this.goId = goId == null ? "" : goId.trim().toLowerCase(Locale.ROOT);
+        }
+
+        public String getOwnerGoDocumentSha256() {
+            return ownerGoDocumentSha256;
+        }
+
+        public void setOwnerGoDocumentSha256(String ownerGoDocumentSha256) {
+            this.ownerGoDocumentSha256 = ownerGoDocumentSha256 == null
+                    ? ""
+                    : ownerGoDocumentSha256.trim().toLowerCase(Locale.ROOT);
+        }
+
+        public boolean isAbsent() {
+            return goId.isEmpty() && ownerGoDocumentSha256.isEmpty();
+        }
+
+        public boolean isComplete() {
+            if (!SHA_256.matcher(ownerGoDocumentSha256).matches()) {
+                return false;
+            }
+            try {
+                UUID parsed = UUID.fromString(goId);
+                return parsed.variant() == 2
+                        && parsed.version() >= 1
+                        && parsed.version() <= 5
+                        && !parsed.equals(new UUID(0, 0));
+            }
+            catch (IllegalArgumentException exception) {
+                return false;
+            }
+        }
+
+        @AssertTrue(message = "provider owner-go reference must be absent or complete")
+        public boolean isAbsentOrComplete() {
+            return isAbsent() || isComplete();
         }
     }
 }

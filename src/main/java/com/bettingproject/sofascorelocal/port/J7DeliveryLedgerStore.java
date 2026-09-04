@@ -1,5 +1,7 @@
 package com.bettingproject.sofascorelocal.port;
 
+import com.bettingproject.sofascorelocal.domain.delivery.J7ProviderDerivedOwnerGo;
+
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
@@ -28,6 +30,18 @@ public interface J7DeliveryLedgerStore {
             String idempotencyKey,
             int expectedAttemptNumber,
             Instant startedAt);
+
+    J7ProviderDerivedOwnerGo.Snapshot registerProviderDerivedOwnerGo(
+            J7ProviderDerivedOwnerGo.Grant grant);
+
+    J7ProviderDerivedOwnerGo.Snapshot revokeProviderDerivedOwnerGo(
+            J7ProviderDerivedOwnerGo.Reference reference,
+            String revocationDecisionBlockSha256);
+
+    Optional<J7ProviderDerivedOwnerGo.Snapshot> findProviderDerivedOwnerGo(
+            J7ProviderDerivedOwnerGo.Reference reference);
+
+    ClaimReceipt claimProviderDerived(J7ProviderDerivedOwnerGo.Claim claim);
 
     DeliverySnapshot complete(
             UUID deliveryId,
@@ -148,6 +162,13 @@ public interface J7DeliveryLedgerStore {
         ATTEMPT_NOT_ACTIVE,
         ATTEMPT_ORDINAL_MISMATCH,
         ATTEMPT_NOT_STALE,
+        OWNER_GO_NOT_REGISTERED,
+        OWNER_GO_IDENTITY_MISMATCH,
+        OWNER_GO_NOT_YET_VALID,
+        OWNER_GO_EXPIRED,
+        OWNER_GO_REVOKED,
+        OWNER_GO_CONSUMED,
+        OWNER_GO_REVOCATION_CONFLICT,
         INVALID_COMPLETION,
         STORAGE_UNAVAILABLE
     }

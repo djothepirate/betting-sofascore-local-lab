@@ -1,7 +1,11 @@
 package com.bettingproject.sofascorelocal.security;
 
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryConfirmationAction;
+import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryConfirmationReceipt;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryConfirmationRequest;
+import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryError;
+import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryException;
+import com.bettingproject.sofascorelocal.domain.delivery.J7ProviderDerivedOwnerGo;
 import org.junit.jupiter.api.Test;
 
 import java.security.SecureRandom;
@@ -10,6 +14,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
@@ -102,6 +107,157 @@ class J7DeliveryConfirmationServiceTest {
         consume(service, request, true, clock);
 
         assertInvalidConsumption(() -> consume(service, request, true, clock));
+    }
+
+    @Test
+    void issuedRuntimeCapabilityIsIdentityBoundAndConsumedOnlyOnce() {
+        MutableClock clock = new MutableClock(NOW);
+        J7DeliveryConfirmationService service = service(clock);
+        J7DeliveryConfirmationRequest request = delivery(service);
+        J7DeliveryConfirmationReceipt issued = consume(service, request, true, clock);
+        J7DeliveryConfirmationReceipt forgedCopy = new J7DeliveryConfirmationReceipt(
+                issued.action(),
+                issued.canonicalEventId(),
+                issued.exportId(),
+                issued.fileSha256(),
+                issued.attemptNumber(),
+                issued.providerOwnerGoReference());
+
+        assertRuntimeCapabilityRejected(() ->
+                service.consumeRuntimeCapability(forgedCopy, NOW));
+        service.consumeRuntimeCapability(issued, NOW);
+        assertRuntimeCapabilityRejected(() ->
+                service.consumeRuntimeCapability(issued, NOW));
+    }
+
+    @Test
+    void issuedRuntimeCapabilityExpiresAtTheOriginalConfirmationBoundary() {
+        MutableClock clock = new MutableClock(NOW);
+        J7DeliveryConfirmationService service = service(clock);
+        J7DeliveryConfirmationRequest request = delivery(service);
+        J7DeliveryConfirmationReceipt issued = consume(service, request, true, clock);
+
+        assertRuntimeCapabilityRejected(() ->
+                service.consumeRuntimeCapability(issued, request.expiresAt()));
+    }
+
+    @Test
+    void bindsTheServerSelectedOwnerGoWithoutExposingItInTheRequest() {
+        MutableClock clock = new MutableClock(NOW);
+        J7DeliveryConfirmationService service = service(clock);
+        J7ProviderDerivedOwnerGo.Reference reference =
+                new J7ProviderDerivedOwnerGo.Reference(
+                        UUID.fromString("45000000-0000-4000-8000-000000000045"),
+                        "e".repeat(64));
+        J7DeliveryConfirmationRequest request = service.prepare(
+                SESSION_KEY,
+                J7DeliveryConfirmationAction.DELIVERY,
+                EVENT_ID,
+                EXPORT_ID,
+                FILE_SHA256,
+                OptionalInt.of(1),
+                Optional.of(reference));
+
+        assertThat(request.toString())
+                .doesNotContain(reference.goId().toString())
+                .doesNotContain(reference.ownerDecisionBlockSha256());
+
+        J7DeliveryConfirmationReceipt receipt = service.consume(
+                SESSION_KEY,
+                J7DeliveryConfirmationAction.DELIVERY,
+                EVENT_ID,
+                EXPORT_ID,
+                FILE_SHA256,
+                OptionalInt.of(1),
+                request.requestId(),
+                request.confirmationText(),
+                true,
+                clock);
+
+        assertThat(receipt.providerOwnerGoReference()).contains(reference);
+        assertThat(receipt.action()).isEqualTo(J7DeliveryConfirmationAction.DELIVERY);
+        assertThat(receipt.canonicalEventId()).isEqualTo(EVENT_ID);
+        assertThat(receipt.exportId()).isEqualTo(EXPORT_ID);
+        assertThat(receipt.fileSha256()).isEqualTo(FILE_SHA256);
+        assertThat(receipt.attemptNumber()).isEqualTo(1);
+        assertThat(receipt.toString())
+                .doesNotContain(reference.goId().toString())
+                .doesNotContain(reference.ownerDecisionBlockSha256())
+                .doesNotContain(EVENT_ID.toString())
+                .doesNotContain(EXPORT_ID.toString())
+                .doesNotContain(FILE_SHA256);
+    }
+
+    @Test
+    void replacingPreparationCannotSubstituteTheEarlierServerSelectedOwnerGo() {
+        MutableClock clock = new MutableClock(NOW);
+        J7DeliveryConfirmationService service = service(clock);
+        J7ProviderDerivedOwnerGo.Reference firstReference =
+                new J7ProviderDerivedOwnerGo.Reference(
+                        UUID.fromString("45000000-0000-4000-8000-000000000045"),
+                        "e".repeat(64));
+        J7ProviderDerivedOwnerGo.Reference secondReference =
+                new J7ProviderDerivedOwnerGo.Reference(
+                        UUID.fromString("45000000-0000-4000-8000-000000000046"),
+                        "f".repeat(64));
+        J7DeliveryConfirmationRequest first = service.prepare(
+                SESSION_KEY,
+                J7DeliveryConfirmationAction.DELIVERY,
+                EVENT_ID,
+                EXPORT_ID,
+                FILE_SHA256,
+                OptionalInt.of(1),
+                Optional.of(firstReference));
+        J7DeliveryConfirmationRequest second = service.prepare(
+                SESSION_KEY,
+                J7DeliveryConfirmationAction.DELIVERY,
+                EVENT_ID,
+                EXPORT_ID,
+                FILE_SHA256,
+                OptionalInt.of(1),
+                Optional.of(secondReference));
+
+        assertInvalidConsumption(() -> service.consume(
+                SESSION_KEY,
+                J7DeliveryConfirmationAction.DELIVERY,
+                EVENT_ID,
+                EXPORT_ID,
+                FILE_SHA256,
+                OptionalInt.of(1),
+                first.requestId(),
+                first.confirmationText(),
+                true,
+                clock));
+        assertInvalidConsumption(() -> service.consume(
+                SESSION_KEY,
+                J7DeliveryConfirmationAction.DELIVERY,
+                EVENT_ID,
+                EXPORT_ID,
+                FILE_SHA256,
+                OptionalInt.of(1),
+                second.requestId(),
+                second.confirmationText(),
+                true,
+                clock));
+        J7DeliveryConfirmationRequest fresh = service.prepare(
+                SESSION_KEY,
+                J7DeliveryConfirmationAction.DELIVERY,
+                EVENT_ID,
+                EXPORT_ID,
+                FILE_SHA256,
+                OptionalInt.of(1),
+                Optional.of(secondReference));
+        assertThat(service.consume(
+                SESSION_KEY,
+                J7DeliveryConfirmationAction.DELIVERY,
+                EVENT_ID,
+                EXPORT_ID,
+                FILE_SHA256,
+                OptionalInt.of(1),
+                fresh.requestId(),
+                fresh.confirmationText(),
+                true,
+                clock).providerOwnerGoReference()).contains(secondReference);
     }
 
     @Test
@@ -346,12 +502,19 @@ class J7DeliveryConfirmationServiceTest {
                 OptionalInt.of(1));
     }
 
-    private static void consume(
+    private static void assertRuntimeCapabilityRejected(Runnable invocation) {
+        assertThatThrownBy(invocation::run)
+                .isInstanceOf(J7DeliveryException.class)
+                .extracting(exception -> ((J7DeliveryException) exception).error())
+                .isEqualTo(J7DeliveryError.INVALID_CONFIRMATION);
+    }
+
+    private static J7DeliveryConfirmationReceipt consume(
             J7DeliveryConfirmationService service,
             J7DeliveryConfirmationRequest request,
             boolean acknowledged,
             Clock clock) {
-        service.consume(
+        return service.consume(
                 SESSION_KEY,
                 J7DeliveryConfirmationAction.DELIVERY,
                 EVENT_ID,

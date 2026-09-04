@@ -3,6 +3,7 @@ package com.bettingproject.sofascorelocal.adapter.web;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryConfirmationRequest;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryExecutionGate;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryPayloadClass;
+import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryPreparation;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryQueryService;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryRuntimeService;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryView;
@@ -12,6 +13,7 @@ import com.bettingproject.sofascorelocal.application.export.J7ExportContract;
 import com.bettingproject.sofascorelocal.application.export.J7ExportPreview;
 import com.bettingproject.sofascorelocal.config.J7DeliveryWebMvcConfiguration;
 import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryIdentity;
+import com.bettingproject.sofascorelocal.domain.delivery.J7ProviderDerivedOwnerGo;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportError;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportException;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportManifest;
@@ -42,6 +44,7 @@ import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -72,6 +75,10 @@ class J7DeliveryControllerTest {
             UUID.fromString("30000000-0000-4000-8000-000000000003");
     private static final String FILE_SHA256 = "a".repeat(64);
     private static final String DATA_SHA256 = "b".repeat(64);
+    private static final J7ProviderDerivedOwnerGo.Reference OWNER_GO_REFERENCE =
+            new J7ProviderDerivedOwnerGo.Reference(
+                    UUID.fromString("45000000-0000-4000-8000-000000000045"),
+                    "e".repeat(64));
     private static final Instant NOW = Instant.parse("2026-09-02T08:00:00Z");
     private static final String LOCAL_HOST = "127.0.0.1:8087";
     private static final String LOCAL_ORIGIN = "http://127.0.0.1:8087";
@@ -116,8 +123,8 @@ class J7DeliveryControllerTest {
 
     @Test
     void prepareCreatesOnlyASessionBoundConfirmationWithoutClaimOrRuntime() throws Exception {
-        when(queryService.view(preview)).thenReturn(
-                deliveryView(Optional.empty(), true, false));
+        when(queryService.preparation(preview)).thenReturn(
+                deliveryPreparation(Optional.empty(), true, false));
         MockHttpSession session = new MockHttpSession();
 
         MvcResult result = prepare(session, false)
@@ -133,7 +140,7 @@ class J7DeliveryControllerTest {
         J7DeliveryConfirmationRequest request = confirmationRequest(result);
         assertThat(request.confirmationText())
                 .isEqualTo("LIVRER J7 " + EXPORT_ID + " SHA256 " + FILE_SHA256);
-        verify(runtimeService, never()).deliver(any(), any(), anyString(), anyInt());
+        verify(runtimeService, never()).deliver(any(), anyString());
         verify(ledgerStore, never()).claim(
                 any(), anyString(), anyString(), anyString(), anyInt(), any());
         verify(exportService, never()).deliveryCandidate(EVENT_ID, EXPORT_ID);
@@ -142,8 +149,8 @@ class J7DeliveryControllerTest {
     @Test
     void hostileHostIsRefusedBeforeTheControllerAndDoesNotConsumeTheFormToken()
             throws Exception {
-        when(queryService.view(preview)).thenReturn(
-                deliveryView(Optional.empty(), true, false));
+        when(queryService.preparation(preview)).thenReturn(
+                deliveryPreparation(Optional.empty(), true, false));
         MockHttpSession session = new MockHttpSession();
         String localFormToken = formTokenService.issue(session);
 
@@ -172,8 +179,8 @@ class J7DeliveryControllerTest {
     @Test
     void exactConfirmationIsOneShotAndOnlyTheFirstExecutionReachesRuntime()
             throws Exception {
-        when(queryService.view(preview)).thenReturn(
-                deliveryView(Optional.empty(), true, false));
+        when(queryService.preparation(preview)).thenReturn(
+                deliveryPreparation(Optional.empty(), true, false));
         MockHttpSession session = new MockHttpSession();
         MvcResult prepared = prepare(session, false)
                 .andExpect(status().isOk())
@@ -192,7 +199,12 @@ class J7DeliveryControllerTest {
                         "/events/" + EVENT_ID + "/exports/" + EXPORT_ID));
 
         verify(runtimeService).deliver(
-                EVENT_ID, EXPORT_ID, request.confirmationText(), 1);
+                argThat(receipt -> receipt.canonicalEventId().equals(EVENT_ID)
+                        && receipt.exportId().equals(EXPORT_ID)
+                        && receipt.fileSha256().equals(FILE_SHA256)
+                        && receipt.attemptNumber() == 1
+                        && receipt.providerOwnerGoReference().isEmpty()),
+                org.mockito.ArgumentMatchers.eq(request.confirmationText()));
 
         String retryToken = formTokenService.issue(session);
         mockMvc.perform(localPost(executePath())
@@ -208,14 +220,70 @@ class J7DeliveryControllerTest {
                         "INVALID_OR_EXPIRED_CONFIRMATION"));
 
         verify(runtimeService).deliver(
-                EVENT_ID, EXPORT_ID, request.confirmationText(), 1);
+                argThat(receipt -> receipt.canonicalEventId().equals(EVENT_ID)
+                        && receipt.exportId().equals(EXPORT_ID)
+                        && receipt.fileSha256().equals(FILE_SHA256)
+                        && receipt.attemptNumber() == 1
+                        && receipt.providerOwnerGoReference().isEmpty()),
+                org.mockito.ArgumentMatchers.eq(request.confirmationText()));
+    }
+
+    @Test
+    void providerPreparationBindsOnlyTheServerSelectedGoAndNeverRendersIt()
+            throws Exception {
+        J7ExportPreview providerPreview = new J7ExportPreview(
+                preview.manifest(),
+                preview.prettyJson(),
+                preview.validationConfirmation(),
+                preview.rejectionConfirmation(),
+                J7DeliveryPayloadClass.PROVIDER_DERIVED);
+        when(exportService.preview(EVENT_ID, EXPORT_ID)).thenReturn(providerPreview);
+        when(exportService.deliveryCandidate(EVENT_ID, EXPORT_ID)).thenReturn(
+                new J7DeliveryCandidate(
+                        EXPORT_ID,
+                        EVENT_ID,
+                        FILE_SHA256,
+                        J7DeliveryPayloadClass.PROVIDER_DERIVED));
+        when(queryService.preparation(providerPreview)).thenReturn(
+                new J7DeliveryPreparation(
+                        new J7DeliveryView(
+                                J7DeliveryPayloadClass.PROVIDER_DERIVED,
+                                List.of(),
+                                Optional.empty(),
+                                true,
+                                false),
+                        Optional.of(OWNER_GO_REFERENCE)));
+        MockHttpSession session = new MockHttpSession();
+
+        MvcResult prepared = prepare(session, false)
+                .andExpect(status().isOk())
+                .andExpect(model().attributeDoesNotExist("deliveryPreparation"))
+                .andReturn();
+        assertThat(prepared.getResponse().getContentAsString())
+                .doesNotContain(OWNER_GO_REFERENCE.goId().toString())
+                .doesNotContain(OWNER_GO_REFERENCE.ownerDecisionBlockSha256());
+        J7DeliveryConfirmationRequest request = confirmationRequest(prepared);
+
+        mockMvc.perform(localPost(executePath())
+                        .session(session)
+                        .param("localFormToken", modelString(prepared, "localFormToken"))
+                        .param("deliveryRequestId", request.requestId().toString())
+                        .param("confirmationText", request.confirmationText())
+                        .param("acknowledged", "true"))
+                .andExpect(status().is3xxRedirection());
+
+        verify(runtimeService).deliver(
+                argThat(receipt -> receipt.providerOwnerGoReference()
+                        .filter(OWNER_GO_REFERENCE::equals)
+                        .isPresent()),
+                org.mockito.ArgumentMatchers.eq(request.confirmationText()));
     }
 
     @Test
     void refusalBurnsTheConfirmationAndCannotBeCorrectedByReusingIt()
             throws Exception {
-        when(queryService.view(preview)).thenReturn(
-                deliveryView(Optional.empty(), true, false));
+        when(queryService.preparation(preview)).thenReturn(
+                deliveryPreparation(Optional.empty(), true, false));
         MockHttpSession session = new MockHttpSession();
         MvcResult prepared = prepare(session, false)
                 .andExpect(status().isOk())
@@ -249,8 +317,8 @@ class J7DeliveryControllerTest {
     @Test
     void aConfirmationPreparedBeforeAnotherUnknownAttemptCannotStartTheNextOne()
             throws Exception {
-        when(queryService.view(preview)).thenReturn(
-                deliveryView(Optional.empty(), true, false));
+        when(queryService.preparation(preview)).thenReturn(
+                deliveryPreparation(Optional.empty(), true, false));
         MockHttpSession firstSession = new MockHttpSession();
         MockHttpSession staleSession = new MockHttpSession();
         MvcResult firstPrepared = prepare(firstSession, false)
@@ -289,7 +357,12 @@ class J7DeliveryControllerTest {
                         "INVALID_OR_EXPIRED_CONFIRMATION"));
 
         verify(runtimeService).deliver(
-                EVENT_ID, EXPORT_ID, first.confirmationText(), 1);
+                argThat(receipt -> receipt.canonicalEventId().equals(EVENT_ID)
+                        && receipt.exportId().equals(EXPORT_ID)
+                        && receipt.fileSha256().equals(FILE_SHA256)
+                        && receipt.attemptNumber() == 1
+                        && receipt.providerOwnerGoReference().isEmpty()),
+                org.mockito.ArgumentMatchers.eq(first.confirmationText()));
     }
 
     @Test
@@ -298,8 +371,8 @@ class J7DeliveryControllerTest {
         J7DeliveryLedgerStore.DeliverySnapshot unknown = snapshot(
                 J7DeliveryLedgerStore.DeliveryState.UNKNOWN_RECONCILIATION_REQUIRED,
                 2);
-        when(queryService.view(preview)).thenReturn(
-                deliveryView(Optional.of(unknown), true, false));
+        when(queryService.preparation(preview)).thenReturn(
+                deliveryPreparation(Optional.of(unknown), true, false));
         MockHttpSession session = new MockHttpSession();
 
         prepare(session, false)
@@ -534,6 +607,15 @@ class J7DeliveryControllerTest {
                 ledger,
                 preparationAllowed,
                 reconciliationAvailable);
+    }
+
+    private static J7DeliveryPreparation deliveryPreparation(
+            Optional<J7DeliveryLedgerStore.DeliverySnapshot> ledger,
+            boolean preparationAllowed,
+            boolean reconciliationAvailable) {
+        return new J7DeliveryPreparation(
+                deliveryView(ledger, preparationAllowed, reconciliationAvailable),
+                Optional.empty());
     }
 
     private static J7DeliveryLedgerStore.DeliverySnapshot snapshot(

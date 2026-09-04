@@ -3,12 +3,14 @@ package com.bettingproject.sofascorelocal.application.delivery;
 import com.bettingproject.sofascorelocal.config.OptionalLocalPushProperties;
 import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryError;
 import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryException;
+import com.bettingproject.sofascorelocal.domain.delivery.J7ProviderDerivedOwnerGo;
 import com.bettingproject.sofascorelocal.port.J7DeliveryTransportFactory;
 
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 /** Runtime gate kept separate from every SofaScore acquisition property. */
 public final class J7DeliveryPolicy {
@@ -32,6 +34,9 @@ public final class J7DeliveryPolicy {
         if (properties.isAutomaticRetryEnabled()) {
             throw new J7DeliveryException(J7DeliveryError.REMOTE_DELIVERY_NOT_AUTHORIZED);
         }
+        if (!providerOwnerGoIsAbsent()) {
+            throw new J7DeliveryException(J7DeliveryError.PROVIDER_OWNER_GO_NOT_ALLOWED);
+        }
     }
 
     public void requireRealDelivery() {
@@ -47,7 +52,7 @@ public final class J7DeliveryPolicy {
             throw new J7DeliveryException(
                     J7DeliveryError.REMOTE_DELIVERY_NOT_AUTHORIZED);
         }
-        throw new J7DeliveryException(J7DeliveryError.REMOTE_DELIVERY_NOT_AUTHORIZED);
+        providerOwnerGoReference();
     }
 
     public List<String> realDeliveryBlockers() {
@@ -62,7 +67,14 @@ public final class J7DeliveryPolicy {
         if (!properties.isRemoteDeliveryAuthorized()) {
             blockers.add("REMOTE_DELIVERY_NOT_AUTHORIZED");
         }
-        blockers.add("REAL_RECEIVER_WORK_ORDER_NOT_SATISFIED");
+        OptionalLocalPushProperties.ProviderOwnerGo configured =
+                properties.getProviderOwnerGo();
+        if (configured == null || configured.isAbsent()) {
+            blockers.add("PROVIDER_OWNER_GO_REQUIRED");
+        }
+        else if (!configured.isComplete()) {
+            blockers.add("PROVIDER_OWNER_GO_INVALID");
+        }
         return List.copyOf(blockers);
     }
 
@@ -73,8 +85,9 @@ public final class J7DeliveryPolicy {
 
     /**
      * Applies the WO-035 runtime gates without consulting a certificate store or opening a client.
-     * Provider-derived delivery deliberately remains structurally blocked until a later Work Order
-     * supplies a durable, exact and one-time owner-go consumption boundary.
+     * Provider-derived delivery is admitted only when configuration carries the complete public
+     * reference of the owner-go document. Durable availability, identity and one-time consumption
+     * are enforced later by the persistence boundary, before transport creation.
      */
     public void requireRuntimeDelivery(J7DeliveryPayloadClass payloadClass) {
         Objects.requireNonNull(payloadClass, "payloadClass");
@@ -119,6 +132,10 @@ public final class J7DeliveryPolicy {
                 throw new J7DeliveryException(
                         J7DeliveryError.REMOTE_DELIVERY_NOT_AUTHORIZED);
             }
+            if (!providerOwnerGoIsAbsent()) {
+                throw new J7DeliveryException(
+                        J7DeliveryError.PROVIDER_OWNER_GO_NOT_ALLOWED);
+            }
             return;
         }
         if (properties.getOfficialPermissionStatus()
@@ -130,7 +147,7 @@ public final class J7DeliveryPolicy {
             throw new J7DeliveryException(
                     J7DeliveryError.REMOTE_DELIVERY_NOT_AUTHORIZED);
         }
-        throw new J7DeliveryException(J7DeliveryError.PROVIDER_OWNER_GO_REQUIRED);
+        providerOwnerGoReference();
     }
 
     public List<String> runtimeBlockers(J7DeliveryPayloadClass payloadClass) {
@@ -178,12 +195,61 @@ public final class J7DeliveryPolicy {
             if (!properties.isRemoteDeliveryAuthorized()) {
                 blockers.add("REMOTE_DELIVERY_NOT_AUTHORIZED");
             }
-            blockers.add("PROVIDER_OWNER_GO_REQUIRED");
+            OptionalLocalPushProperties.ProviderOwnerGo configured =
+                    properties.getProviderOwnerGo();
+            if (configured == null || configured.isAbsent()) {
+                blockers.add("PROVIDER_OWNER_GO_REQUIRED");
+            }
+            else if (!configured.isComplete()) {
+                blockers.add("PROVIDER_OWNER_GO_INVALID");
+            }
         }
         else if (properties.isRemoteDeliveryAuthorized()) {
             blockers.add("REMOTE_DELIVERY_NOT_AUTHORIZED");
         }
+        else if (!providerOwnerGoIsAbsent()) {
+            blockers.add("PROVIDER_OWNER_GO_NOT_ALLOWED");
+        }
         return List.copyOf(blockers);
+    }
+
+    public J7ProviderDerivedOwnerGo.Reference providerOwnerGoReference() {
+        OptionalLocalPushProperties.ProviderOwnerGo configured =
+                properties.getProviderOwnerGo();
+        if (configured == null || configured.isAbsent()) {
+            throw new J7DeliveryException(J7DeliveryError.PROVIDER_OWNER_GO_REQUIRED);
+        }
+        if (!configured.isComplete()) {
+            throw new J7DeliveryException(J7DeliveryError.PROVIDER_OWNER_GO_INVALID);
+        }
+        try {
+            return new J7ProviderDerivedOwnerGo.Reference(
+                    UUID.fromString(configured.getGoId()),
+                    configured.getOwnerGoDocumentSha256());
+        }
+        catch (IllegalArgumentException exception) {
+            throw new J7DeliveryException(J7DeliveryError.PROVIDER_OWNER_GO_INVALID);
+        }
+    }
+
+    /** Verifies that the durable grant repeats every current non-secret activation gate. */
+    public void requireProviderOwnerGoGrantConfiguration(
+            J7ProviderDerivedOwnerGo.Grant grant) {
+        Objects.requireNonNull(grant, "grant");
+        requireRuntimeDelivery(J7DeliveryPayloadClass.PROVIDER_DERIVED);
+        if (!grant.reference().equals(providerOwnerGoReference())
+                || !grant.officialPermissionStatus()
+                .equals(properties.getOfficialPermissionStatus().name())
+                || !grant.receiverQualification()
+                .equals(properties.getReceiverQualification().name())
+                || !grant.senderQualification()
+                .equals(properties.getSenderQualification().name())
+                || !grant.receiverOrigin().toString()
+                .equals(properties.getReceiverOrigin())
+                || !grant.clientCertificateSha256()
+                .equals(properties.getMtls().getClientCertificateSha256())) {
+            throw new J7DeliveryException(J7DeliveryError.PROVIDER_OWNER_GO_MISMATCH);
+        }
     }
 
     public J7DeliveryTransportFactory.Configuration runtimeTransportConfiguration(
@@ -194,5 +260,10 @@ public final class J7DeliveryPolicy {
                 properties.getMtls().getClientCertificateSha256(),
                 properties.getConnectTimeout(),
                 properties.getRequestTimeout());
+    }
+
+    private boolean providerOwnerGoIsAbsent() {
+        return properties.getProviderOwnerGo() != null
+                && properties.getProviderOwnerGo().isAbsent();
     }
 }

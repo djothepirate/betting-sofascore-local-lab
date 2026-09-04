@@ -1,5 +1,58 @@
 # J9 — Contrat d’architecture du push local optionnel v1.0
 
+## Extension WO-045 — grant fournisseur exact, durable et consommable une fois
+
+WO-045 ajoute une frontière d'autorité distincte pour `PROVIDER_DERIVED`. Elle ne réalise aucun
+envoi réel et n'ouvre pas WO-046. Un futur envoi ne deviendra éligible qu'après enregistrement
+explicite d'un grant propriétaire immuable lié à un manifeste de campagne neuf et gelé. Aucun
+grant n'est créé au démarrage de l'application, par la génération d'un export, par sa validation
+humaine ou par une recherche permissive d'une autorisation disponible.
+
+Le grant porte une identité UUID et le SHA-256 de son bloc de décision canonique. Il fixe le Work
+Order et le manifeste de campagne, les commits qualifiés des deux dépôts, la preuve officielle
+référencée, l'acteur, l'événement canonique et fournisseur, l'export, ses deux hashes et sa taille,
+le schéma J7, l'origine receiver, l'empreinte publique du certificat client, l'ordinal `1`, un seul
+appel au plus et une fenêtre UTC semi-ouverte de 60 minutes maximum. Les valeurs constantes sont
+`PROVIDER_DERIVED`, `HUMAN_VALIDATED` et `ONE_TIME`.
+
+Le préimage normatif est celui de la section 4 du Work Order WO-045 : clés et ordre fixes,
+UTF-8 sans BOM, séparateurs LF et LF final, UUID minuscules, URI ASCII, booléens `YES`/`NO` et
+instants UTC à exactement six chiffres de microsecondes. Le champ externe
+`OWNER_GO_DOCUMENT_SHA256` est exclu du préimage pour éviter l'autoréférence. Java et PostgreSQL
+recalculent séparément le même SHA-256 avant d'accepter le grant.
+
+La préparation de confirmation lie côté serveur la référence exacte du grant à la session, à
+l'événement, à l'export, au hash et à l'ordinal. Cette référence n'est jamais un champ de formulaire
+et n'est pas affichée. Une confirmation humaine réussie émet en outre une capacité mémoire liée à
+l'instance exacte du reçu, expirant avec la demande et consommable une seule fois par le runtime.
+Un reçu construit ou copié par un autre appelant JVM ne possède pas cette capacité et est refusé
+avant toute lecture d'export, de grant ou de transport. Lors de l'exécution, PostgreSQL relit le
+grant exact sous verrou, évalue son
+état avec l'horloge de la base et compare de nouveau toutes les identités. L'insertion de la
+consommation, l'insertion de la tentative et le passage du ledger à `IN_FLIGHT` forment une seule
+transaction. L'ouverture du transport, la lecture du magasin de certificats et tout socket sont
+postérieurs à son commit.
+
+```text
+OWNER_GO_MAXIMUM_WINDOW=60m
+OWNER_GO_EXPECTED_ATTEMPT_NUMBER=1
+OWNER_GO_MAXIMUM_DIRECT_IMPORT_CALLS=1
+OWNER_GO_CONSUMPTION_AND_LEDGER_CLAIM=ONE_POSTGRESQL_TRANSACTION
+OWNER_GO_REFERENCE_IN_HTML=NO
+CONFIRMATION_RUNTIME_CAPABILITY=EXACT_INSTANCE_ONE_TIME_IN_MEMORY
+FORGED_OR_COPIED_CONFIRMATION_RECEIPT=REJECT_BEFORE_EXPORT_OR_GRANT
+TRANSPORT_OPEN_BEFORE_OWNER_GO_COMMIT=NO
+OWNER_GO_REUSABLE_AFTER_FAILURE_OR_RESTART=NO
+WO045_PROVIDER_DERIVED_REAL_POSTS=0
+WO046_OPENING_AUTHORIZED=NO
+```
+
+Les grants, révocations et consommations sont append-only. Une révocation et une consommation
+s'excluent mutuellement. Une défaillance avant le commit atomique ne laisse ni consommation seule,
+ni tentative seule. Après ce commit, tout échec de factory, certificat, TLS, HTTP, ACK ou cleanup
+laisse le grant définitivement consommé ; le résultat est persisté de façon bornée ou reste
+`IN_FLIGHT` jusqu'à une réconciliation manuelle, sans retry automatique.
+
 ## 1. Statut, autorité et portée
 
 Ce document fige le contrat technique v1.0 du sender local prévu par ADR-SS-003. Le socle a été
