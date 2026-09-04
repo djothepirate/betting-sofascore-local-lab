@@ -1,5 +1,8 @@
 package com.bettingproject.sofascorelocal.adapter.web;
 
+import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryPayloadClass;
+import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryQueryService;
+import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryView;
 import com.bettingproject.sofascorelocal.application.export.J7CanonicalExportService;
 import com.bettingproject.sofascorelocal.application.export.J7ExportContract;
 import com.bettingproject.sofascorelocal.application.export.J7ExportDownload;
@@ -73,6 +76,9 @@ class J7ExportControllerTest {
 
     @MockitoBean
     private J7CanonicalExportService exportService;
+
+    @MockitoBean
+    private J7DeliveryQueryService deliveryQueryService;
 
     @MockitoBean
     private CacheManager cacheManager;
@@ -168,8 +174,15 @@ class J7ExportControllerTest {
 
     @Test
     void exposesDownloadOnlyForAHumanValidatedExport() throws Exception {
-        when(exportService.preview(EVENT_ID, EXPORT_ID))
-                .thenReturn(preview(validated()));
+        J7ExportPreview preview = preview(validated());
+        J7DeliveryView deliveryView = new J7DeliveryView(
+                J7DeliveryPayloadClass.MIXED_OR_UNKNOWN,
+                List.of("PAYLOAD_PROVENANCE_NOT_ELIGIBLE"),
+                Optional.empty(),
+                false,
+                false);
+        when(exportService.preview(EVENT_ID, EXPORT_ID)).thenReturn(preview);
+        when(deliveryQueryService.view(preview)).thenReturn(deliveryView);
 
         mockMvc.perform(get("/events/{id}/exports/{exportId}", EVENT_ID, EXPORT_ID))
                 .andExpect(status().isOk())

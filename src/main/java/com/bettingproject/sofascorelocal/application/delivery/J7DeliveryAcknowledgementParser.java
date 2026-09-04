@@ -11,6 +11,10 @@ import tools.jackson.databind.ObjectMapper;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.node.ObjectNode;
 
+import java.nio.ByteBuffer;
+import java.nio.charset.CharacterCodingException;
+import java.nio.charset.CodingErrorAction;
+import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.format.DateTimeParseException;
 import java.util.Objects;
@@ -48,7 +52,7 @@ public final class J7DeliveryAcknowledgementParser {
             throw new J7DeliveryException(J7DeliveryError.ACKNOWLEDGEMENT_TOO_LARGE);
         }
         try {
-            JsonNode parsed = JSON_MAPPER.readTree(bytes);
+            JsonNode parsed = JSON_MAPPER.readTree(strictUtf8(bytes));
             if (!(parsed instanceof ObjectNode object)
                     || object.size() != EXACT_FIELDS.size()
                     || !EXACT_FIELDS.stream().allMatch(object::has)) {
@@ -69,6 +73,45 @@ public final class J7DeliveryAcknowledgementParser {
         catch (DateTimeParseException | IllegalArgumentException | tools.jackson.core.JacksonException exception) {
             throw invalidAcknowledgement();
         }
+    }
+
+    private static String strictUtf8(byte[] bytes) {
+        if (startsWith(bytes, 0xef, 0xbb, 0xbf)
+                || startsWith(bytes, 0xfe, 0xff)
+                || startsWith(bytes, 0xff, 0xfe)) {
+            throw invalidAcknowledgement();
+        }
+        for (byte value : bytes) {
+            if (value == 0) {
+                throw invalidAcknowledgement();
+            }
+        }
+        try {
+            String decoded = StandardCharsets.UTF_8.newDecoder()
+                    .onMalformedInput(CodingErrorAction.REPORT)
+                    .onUnmappableCharacter(CodingErrorAction.REPORT)
+                    .decode(ByteBuffer.wrap(bytes))
+                    .toString();
+            if (decoded.indexOf('\ufeff') >= 0 || decoded.indexOf('\u0000') >= 0) {
+                throw invalidAcknowledgement();
+            }
+            return decoded;
+        }
+        catch (CharacterCodingException exception) {
+            throw invalidAcknowledgement();
+        }
+    }
+
+    private static boolean startsWith(byte[] bytes, int... prefix) {
+        if (bytes.length < prefix.length) {
+            return false;
+        }
+        for (int index = 0; index < prefix.length; index++) {
+            if (Byte.toUnsignedInt(bytes[index]) != prefix[index]) {
+                return false;
+            }
+        }
+        return true;
     }
 
     private static String text(ObjectNode object, String name) {
@@ -96,7 +139,11 @@ public final class J7DeliveryAcknowledgementParser {
         if (value.length() < 20 || value.length() > 35) {
             throw invalidAcknowledgement();
         }
-        return Instant.parse(value);
+        Instant parsed = Instant.parse(value);
+        if (!value.endsWith("Z") || !parsed.toString().equals(value)) {
+            throw invalidAcknowledgement();
+        }
+        return parsed;
     }
 
     private static J7DeliveryException invalidAcknowledgement() {

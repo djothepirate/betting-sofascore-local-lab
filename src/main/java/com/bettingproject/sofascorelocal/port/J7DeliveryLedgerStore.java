@@ -13,7 +13,9 @@ import java.util.regex.Pattern;
  *
  * <p>The ledger never stores export bytes, acknowledgement bodies, transport diagnostics or
  * certificate material. A retry from an unknown outcome is represented by a new append-only
- * attempt under the same immutable delivery identity and idempotency key.</p>
+ * attempt under the same immutable delivery identity and idempotency key. Every claim must carry
+ * the exact next attempt ordinal confirmed by the operator boundary; the persistence adapter
+ * revalidates it atomically before creating an attempt.</p>
  */
 public interface J7DeliveryLedgerStore {
 
@@ -24,6 +26,7 @@ public interface J7DeliveryLedgerStore {
             String fileSha256,
             String dataSha256,
             String idempotencyKey,
+            int expectedAttemptNumber,
             Instant startedAt);
 
     DeliverySnapshot complete(
@@ -143,6 +146,7 @@ public interface J7DeliveryLedgerStore {
         ANOTHER_DELIVERY_IN_FLIGHT,
         DELIVERY_TERMINAL,
         ATTEMPT_NOT_ACTIVE,
+        ATTEMPT_ORDINAL_MISMATCH,
         ATTEMPT_NOT_STALE,
         INVALID_COMPLETION,
         STORAGE_UNAVAILABLE

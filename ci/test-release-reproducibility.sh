@@ -307,7 +307,16 @@ for argument in \
     '--sofascore.enabled=false' \
     '--sofascore.playwright.enabled=false' \
     '--optional-integration.enabled=false' \
-    '--optional-integration.remote-delivery-authorized=false'; do
+    '--optional-integration.execution-mode=DISABLED' \
+    '--optional-integration.remote-delivery-authorized=false' \
+    '--optional-integration.official-permission-status=NOT_EVIDENCED' \
+    '--optional-integration.receiver-qualification=NOT_QUALIFIED' \
+    '--optional-integration.sender-qualification=NOT_QUALIFIED' \
+    '--optional-integration.receiver-origin=' \
+    '--optional-integration.loopback-qualification=false' \
+    '--optional-integration.loopback-origin=' \
+    '--optional-integration.automatic-retry-enabled=false' \
+    '--optional-integration.mtls.client-certificate-sha256='; do
     if ! grep -Fq -- "$argument" "$fixture/inspect/scripts/Start-Local.ps1"; then
         echo "FAIL: argument Java absent du launcher distribué : $argument" >&2
         exit 1

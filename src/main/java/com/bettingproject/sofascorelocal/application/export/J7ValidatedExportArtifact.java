@@ -1,5 +1,6 @@
 package com.bettingproject.sofascorelocal.application.export;
 
+import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryPayloadClass;
 import com.bettingproject.sofascorelocal.security.Sha256;
 
 import java.util.Objects;
@@ -16,6 +17,7 @@ public record J7ValidatedExportArtifact(
         String schemaVersion,
         String dataSha256,
         String fileSha256,
+        J7DeliveryPayloadClass payloadClass,
         byte[] content) {
 
     private static final Pattern SHA_256 = Pattern.compile("[0-9a-f]{64}");
@@ -30,6 +32,7 @@ public record J7ValidatedExportArtifact(
         }
         requireSha256(dataSha256, "dataSha256");
         requireSha256(fileSha256, "fileSha256");
+        payloadClass = Objects.requireNonNull(payloadClass, "payloadClass");
         content = Objects.requireNonNull(content, "content").clone();
         if (content.length < 1 || content.length > J7ExportContract.MAXIMUM_BYTES) {
             throw new IllegalArgumentException("content must be between one byte and 5 MiB");
@@ -37,6 +40,28 @@ public record J7ValidatedExportArtifact(
         if (!fileSha256.equals(Sha256.hex(content))) {
             throw new IllegalArgumentException("content does not match fileSha256");
         }
+    }
+
+    /**
+     * Compatibility constructor that never assumes an unproved provenance.
+     */
+    public J7ValidatedExportArtifact(
+            UUID exportId,
+            UUID canonicalEventId,
+            String schemaId,
+            String schemaVersion,
+            String dataSha256,
+            String fileSha256,
+            byte[] content) {
+        this(
+                exportId,
+                canonicalEventId,
+                schemaId,
+                schemaVersion,
+                dataSha256,
+                fileSha256,
+                J7DeliveryPayloadClass.MIXED_OR_UNKNOWN,
+                content);
     }
 
     @Override

@@ -3,6 +3,7 @@ package com.bettingproject.sofascorelocal.application.delivery;
 import com.bettingproject.sofascorelocal.config.OptionalLocalPushProperties;
 import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryError;
 import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryException;
+import com.bettingproject.sofascorelocal.port.J7DeliveryTransportFactory;
 
 import java.net.URI;
 import java.util.ArrayList;
@@ -68,5 +69,130 @@ public final class J7DeliveryPolicy {
     public URI syntheticLoopbackOrigin() {
         requireSyntheticLoopbackQualification();
         return URI.create(properties.getLoopbackOrigin());
+    }
+
+    /**
+     * Applies the WO-035 runtime gates without consulting a certificate store or opening a client.
+     * Provider-derived delivery deliberately remains structurally blocked until a later Work Order
+     * supplies a durable, exact and one-time owner-go consumption boundary.
+     */
+    public void requireRuntimeDelivery(J7DeliveryPayloadClass payloadClass) {
+        Objects.requireNonNull(payloadClass, "payloadClass");
+        if (payloadClass == J7DeliveryPayloadClass.MIXED_OR_UNKNOWN) {
+            throw new J7DeliveryException(
+                    J7DeliveryError.PAYLOAD_PROVENANCE_NOT_ELIGIBLE);
+        }
+        if (!properties.isEnabled()) {
+            throw new J7DeliveryException(J7DeliveryError.DELIVERY_DISABLED);
+        }
+        OptionalLocalPushProperties.ExecutionMode expectedMode =
+                payloadClass == J7DeliveryPayloadClass.SYNTHETIC_ONLY
+                        ? OptionalLocalPushProperties.ExecutionMode.SYNTHETIC_LOOPBACK
+                        : OptionalLocalPushProperties.ExecutionMode.PROVIDER_DERIVED;
+        if (properties.getExecutionMode() != expectedMode) {
+            throw new J7DeliveryException(J7DeliveryError.EXECUTION_MODE_MISMATCH);
+        }
+        if (!properties.isReceiverOriginSafe()
+                || properties.getReceiverOrigin().isEmpty()) {
+            throw new J7DeliveryException(J7DeliveryError.INVALID_RECEIVER_ORIGIN);
+        }
+        if (properties.getReceiverQualification()
+                != OptionalLocalPushProperties.QualificationStatus.PASS) {
+            throw new J7DeliveryException(J7DeliveryError.RECEIVER_NOT_QUALIFIED);
+        }
+        if (properties.getSenderQualification()
+                != OptionalLocalPushProperties.QualificationStatus.PASS) {
+            throw new J7DeliveryException(J7DeliveryError.SENDER_NOT_QUALIFIED);
+        }
+        if (properties.getMtls() == null
+                || !properties.getMtls().isProfileSafe()
+                || properties.getMtls().getClientCertificateSha256().isEmpty()) {
+            throw new J7DeliveryException(
+                    J7DeliveryError.MTLS_CERTIFICATE_NOT_CONFIGURED);
+        }
+        if (properties.isAutomaticRetryEnabled()) {
+            throw new J7DeliveryException(
+                    J7DeliveryError.AUTOMATIC_RETRY_NOT_ALLOWED);
+        }
+        if (payloadClass == J7DeliveryPayloadClass.SYNTHETIC_ONLY) {
+            if (properties.isRemoteDeliveryAuthorized()) {
+                throw new J7DeliveryException(
+                        J7DeliveryError.REMOTE_DELIVERY_NOT_AUTHORIZED);
+            }
+            return;
+        }
+        if (properties.getOfficialPermissionStatus()
+                != OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE) {
+            throw new J7DeliveryException(
+                    J7DeliveryError.OFFICIAL_PERMISSION_NOT_EVIDENCED);
+        }
+        if (!properties.isRemoteDeliveryAuthorized()) {
+            throw new J7DeliveryException(
+                    J7DeliveryError.REMOTE_DELIVERY_NOT_AUTHORIZED);
+        }
+        throw new J7DeliveryException(J7DeliveryError.PROVIDER_OWNER_GO_REQUIRED);
+    }
+
+    public List<String> runtimeBlockers(J7DeliveryPayloadClass payloadClass) {
+        Objects.requireNonNull(payloadClass, "payloadClass");
+        List<String> blockers = new ArrayList<>();
+        if (payloadClass == J7DeliveryPayloadClass.MIXED_OR_UNKNOWN) {
+            blockers.add("PAYLOAD_PROVENANCE_NOT_ELIGIBLE");
+            return List.copyOf(blockers);
+        }
+        if (!properties.isEnabled()) {
+            blockers.add("DELIVERY_DISABLED");
+        }
+        OptionalLocalPushProperties.ExecutionMode expectedMode =
+                payloadClass == J7DeliveryPayloadClass.SYNTHETIC_ONLY
+                        ? OptionalLocalPushProperties.ExecutionMode.SYNTHETIC_LOOPBACK
+                        : OptionalLocalPushProperties.ExecutionMode.PROVIDER_DERIVED;
+        if (properties.getExecutionMode() != expectedMode) {
+            blockers.add("EXECUTION_MODE_MISMATCH");
+        }
+        if (!properties.isReceiverOriginSafe()
+                || properties.getReceiverOrigin().isEmpty()) {
+            blockers.add("INVALID_RECEIVER_ORIGIN");
+        }
+        if (properties.getReceiverQualification()
+                != OptionalLocalPushProperties.QualificationStatus.PASS) {
+            blockers.add("RECEIVER_NOT_QUALIFIED");
+        }
+        if (properties.getSenderQualification()
+                != OptionalLocalPushProperties.QualificationStatus.PASS) {
+            blockers.add("SENDER_NOT_QUALIFIED");
+        }
+        if (properties.getMtls() == null
+                || !properties.getMtls().isProfileSafe()
+                || properties.getMtls().getClientCertificateSha256().isEmpty()) {
+            blockers.add("MTLS_CERTIFICATE_NOT_CONFIGURED");
+        }
+        if (properties.isAutomaticRetryEnabled()) {
+            blockers.add("AUTOMATIC_RETRY_NOT_ALLOWED");
+        }
+        if (payloadClass == J7DeliveryPayloadClass.PROVIDER_DERIVED) {
+            if (properties.getOfficialPermissionStatus()
+                    != OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE) {
+                blockers.add("OFFICIAL_PERMISSION_NOT_EVIDENCED");
+            }
+            if (!properties.isRemoteDeliveryAuthorized()) {
+                blockers.add("REMOTE_DELIVERY_NOT_AUTHORIZED");
+            }
+            blockers.add("PROVIDER_OWNER_GO_REQUIRED");
+        }
+        else if (properties.isRemoteDeliveryAuthorized()) {
+            blockers.add("REMOTE_DELIVERY_NOT_AUTHORIZED");
+        }
+        return List.copyOf(blockers);
+    }
+
+    public J7DeliveryTransportFactory.Configuration runtimeTransportConfiguration(
+            J7DeliveryPayloadClass payloadClass) {
+        requireRuntimeDelivery(payloadClass);
+        return new J7DeliveryTransportFactory.Configuration(
+                URI.create(properties.getReceiverOrigin()),
+                properties.getMtls().getClientCertificateSha256(),
+                properties.getConnectTimeout(),
+                properties.getRequestTimeout());
     }
 }

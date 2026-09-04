@@ -124,6 +124,89 @@
     </a>
   </section>
 
+  <section class="panel j7-delivery-panel"
+           th:if="${exportPreview.manifest.status.name() == 'HUMAN_VALIDATED'}">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Geste séparé · Livraison J7</p>
+        <h2>Push manuel vers le receiver Betting Project</h2>
+      </div>
+      <span class="chip"
+            th:classappend="${deliveryView.state() == 'DELIVERED' || deliveryView.state() == 'DUPLICATE_CONFIRMED'} ? 'chip-safe' : 'chip-warning'"
+            th:text="${deliveryView.state()}">NOT_ATTEMPTED</span>
+    </div>
+    <p>La génération et la validation n’émettent aucune requête. Seule l’action finale ci-dessous
+      peut effectuer un POST HTTPS/mTLS, sans retry automatique.</p>
+    <dl class="detail-grid">
+      <div><dt>Validation J7</dt><dd class="mono">HUMAN_VALIDATED</dd></div>
+      <div><dt>Provenance</dt><dd class="mono" th:text="${deliveryView.payloadClass}">MIXED_OR_UNKNOWN</dd></div>
+      <div><dt>État de livraison</dt><dd class="mono" th:text="${deliveryView.state()}">NOT_ATTEMPTED</dd></div>
+      <div><dt>Tentatives persistées</dt><dd th:text="${deliveryView.attemptCount()}">0</dd></div>
+    </dl>
+
+    <div th:if="${!deliveryView.policyBlockers.isEmpty()}" class="control-stage j7-reject-stage">
+      <h3>Livraison verrouillée</h3>
+      <p>Les portes locales suivantes restent fermées :</p>
+      <ul>
+        <li class="mono" th:each="blocker : ${deliveryView.policyBlockers}" th:text="${blocker}">DELIVERY_DISABLED</li>
+      </ul>
+    </div>
+
+    <form method="post" class="control-form"
+          th:if="${deliveryView.preparationAllowed && deliveryConfirmationRequest == null}"
+          th:action="@{/events/{id}/exports/{exportId}/delivery/prepare(id=${canonicalEventId},exportId=${exportId})}">
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <label th:if="${deliveryView.unknownOutcomeReconciliationRequired()}">
+        <input type="checkbox" name="unknownOutcomeReconciled" value="true" required>
+        J’ai vérifié manuellement l’état du receiver. Le résultat précédent reste inconnu et cette
+        reprise réutilisera exactement les mêmes octets et la même clé d’idempotence.
+      </label>
+      <button class="button-primary" type="submit">Préparer la livraison</button>
+    </form>
+
+    <div class="control-stage" th:if="${deliveryConfirmationRequest != null}">
+      <h3>Confirmation éphémère à usage unique</h3>
+      <p>Expire à <span class="mono" th:text="${deliveryConfirmationRequest.expiresAt}">instant</span>.
+        Recopiez exactement :</p>
+      <code class="confirmation-phrase" th:text="${deliveryConfirmationRequest.confirmationText}">LIVRER J7</code>
+      <form method="post" class="control-form"
+            th:action="@{/events/{id}/exports/{exportId}/delivery/execute(id=${canonicalEventId},exportId=${exportId})}">
+        <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+        <input type="hidden" name="deliveryRequestId" th:value="${deliveryConfirmationRequest.requestId}">
+        <label for="j7-delivery-confirmation">Confirmation exacte</label>
+        <input id="j7-delivery-confirmation" type="text" name="confirmationText"
+               maxlength="256" autocomplete="off" spellcheck="false" required>
+        <label><input type="checkbox" name="acknowledged" value="true" required>
+          Je confirme cette tentative unique et l’absence de retry automatique.</label>
+        <button class="button-primary" type="submit">Livrer maintenant</button>
+      </form>
+    </div>
+
+    <form method="post" class="control-form"
+          th:if="${deliveryView.reconciliationAvailable && reconciliationConfirmationRequest == null}"
+          th:action="@{/events/{id}/exports/{exportId}/delivery/reconciliation/prepare(id=${canonicalEventId},exportId=${exportId})}">
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <button class="button-secondary" type="submit">Préparer la réconciliation d’un IN_FLIGHT stale</button>
+    </form>
+
+    <div class="control-stage" th:if="${reconciliationConfirmationRequest != null}">
+      <h3>Réconciliation opérateur — aucun réseau</h3>
+      <p>Cette action ne prétend pas que le receiver n’a rien reçu. Recopiez exactement :</p>
+      <code class="confirmation-phrase" th:text="${reconciliationConfirmationRequest.confirmationText}">RECONCILIER J7</code>
+      <form method="post" class="control-form"
+            th:action="@{/events/{id}/exports/{exportId}/delivery/reconciliation/execute(id=${canonicalEventId},exportId=${exportId})}">
+        <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+        <input type="hidden" name="reconciliationRequestId" th:value="${reconciliationConfirmationRequest.requestId}">
+        <label for="j7-reconciliation-confirmation">Confirmation exacte</label>
+        <input id="j7-reconciliation-confirmation" type="text" name="confirmationText"
+               maxlength="256" autocomplete="off" spellcheck="false" required>
+        <label><input type="checkbox" name="acknowledged" value="true" required>
+          Je reconnais que le résultat distant reste inconnu.</label>
+        <button class="button-danger" type="submit">Réconcilier localement vers UNKNOWN</button>
+      </form>
+    </div>
+  </section>
+
   <section class="panel j7-terminal-panel"
            th:if="${exportPreview.manifest.status.name() == 'REJECTED'}">
     <p class="label">Décision terminale</p>

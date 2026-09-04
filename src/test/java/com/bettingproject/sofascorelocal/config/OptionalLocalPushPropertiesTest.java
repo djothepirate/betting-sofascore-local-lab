@@ -17,10 +17,17 @@ class OptionalLocalPushPropertiesTest {
         OptionalLocalPushProperties properties = new OptionalLocalPushProperties();
 
         assertThat(properties.isEnabled()).isFalse();
+        assertThat(properties.getExecutionMode())
+                .isEqualTo(OptionalLocalPushProperties.ExecutionMode.DISABLED);
         assertThat(properties.isRemoteDeliveryAuthorized()).isFalse();
         assertThat(properties.getOfficialPermissionStatus())
                 .isEqualTo(OptionalLocalPushProperties.PermissionStatus.NOT_EVIDENCED);
         assertThat(properties.isLoopbackQualification()).isFalse();
+        assertThat(properties.getReceiverQualification())
+                .isEqualTo(OptionalLocalPushProperties.QualificationStatus.NOT_QUALIFIED);
+        assertThat(properties.getSenderQualification())
+                .isEqualTo(OptionalLocalPushProperties.QualificationStatus.NOT_QUALIFIED);
+        assertThat(properties.getReceiverOrigin()).isEmpty();
         assertThat(properties.getLoopbackOrigin()).isEmpty();
         assertThat(properties.getMaximumConcurrency()).isEqualTo(1);
         assertThat(properties.getMaximumPayloadBytes()).isEqualTo(5 * 1024 * 1024);
@@ -36,16 +43,53 @@ class OptionalLocalPushPropertiesTest {
     }
 
     @Test
-    void realDeliveryCannotBeArmedByConfigurationUnderWo027() {
+    void acceptsOnlyACompleteSyntheticRuntimeProfile() {
         OptionalLocalPushProperties properties = new OptionalLocalPushProperties();
-        properties.setOfficialPermissionStatus(
-                OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE);
         properties.setEnabled(true);
-        properties.setRemoteDeliveryAuthorized(true);
+        properties.setExecutionMode(
+                OptionalLocalPushProperties.ExecutionMode.SYNTHETIC_LOOPBACK);
+        properties.setReceiverOrigin(OptionalLocalPushProperties.LOCAL_RECEIVER_ORIGIN);
+        properties.setReceiverQualification(
+                OptionalLocalPushProperties.QualificationStatus.PASS);
+        properties.setSenderQualification(
+                OptionalLocalPushProperties.QualificationStatus.PASS);
+        properties.getMtls().setClientCertificateSha256("a".repeat(64));
+
+        assertThat(validator.validate(properties)).isEmpty();
+
+        properties.setReceiverOrigin("https://127.0.0.1:8445");
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getPropertyPath().toString()
+                        .equals("receiverOriginSafe"));
+
+        properties.setReceiverOrigin(OptionalLocalPushProperties.LOCAL_RECEIVER_ORIGIN);
+        properties.getMtls().setClientCertificateSha256("");
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getPropertyPath().toString()
+                        .equals("runtimeActivationCoherent"));
+    }
+
+    @Test
+    void providerDerivedConfigurationRequiresPermissionAndRemoteAuthorization() {
+        OptionalLocalPushProperties properties = new OptionalLocalPushProperties();
+        properties.setEnabled(true);
+        properties.setExecutionMode(
+                OptionalLocalPushProperties.ExecutionMode.PROVIDER_DERIVED);
+        properties.setReceiverOrigin(OptionalLocalPushProperties.LOCAL_RECEIVER_ORIGIN);
+        properties.setReceiverQualification(
+                OptionalLocalPushProperties.QualificationStatus.PASS);
+        properties.setSenderQualification(
+                OptionalLocalPushProperties.QualificationStatus.PASS);
+        properties.getMtls().setClientCertificateSha256("a".repeat(64));
 
         assertThat(validator.validate(properties))
                 .anyMatch(violation -> violation.getPropertyPath().toString()
-                        .equals("realDeliveryFailClosed"));
+                        .equals("runtimeActivationCoherent"));
+
+        properties.setRemoteDeliveryAuthorized(true);
+        properties.setOfficialPermissionStatus(
+                OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE);
+        assertThat(validator.validate(properties)).isEmpty();
     }
 
     @Test

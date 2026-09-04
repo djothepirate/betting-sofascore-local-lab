@@ -21,10 +21,13 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
             "^/benchmark(?:;[^/]*)?/?$");
     private static final String STRICT_CACHE_CONTROL =
             "no-store, no-cache, must-revalidate, max-age=0";
+    private static final String DEFAULT_REFERRER_POLICY = "no-referrer";
+    private static final String J7_EXPORT_REFERRER_POLICY = "same-origin";
     private static final String CONTENT_SECURITY_POLICY_PREFIX =
             "default-src 'self'; style-src 'self'; img-src 'self'; ";
     private static final String CONTENT_SECURITY_POLICY_SUFFIX =
-            "; frame-src 'none'; object-src 'none'; base-uri 'none'; form-action 'self'";
+            "; frame-src 'none'; frame-ancestors 'none'; object-src 'none'; "
+                    + "base-uri 'none'; form-action 'self'";
 
     @Override
     protected void doFilterInternal(
@@ -33,7 +36,12 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
             FilterChain filterChain) throws ServletException, IOException {
         response.setHeader("Cache-Control", "no-store");
         response.setHeader("X-Content-Type-Options", "nosniff");
-        response.setHeader("Referrer-Policy", "no-referrer");
+        response.setHeader("X-Frame-Options", "DENY");
+        response.setHeader(
+                "Referrer-Policy",
+                isJ7ExportRequest(request)
+                        ? J7_EXPORT_REFERRER_POLICY
+                        : DEFAULT_REFERRER_POLICY);
         response.setHeader(
                 "Content-Security-Policy",
                 CONTENT_SECURITY_POLICY_PREFIX
@@ -56,6 +64,10 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
         return J7_EXPORT_PATH.matcher(applicationPath).matches()
                 || J5_OFFLINE_BATCH_PATH.matcher(applicationPath).matches()
                 || J8_BENCHMARK_PATH.matcher(applicationPath).matches();
+    }
+
+    private static boolean isJ7ExportRequest(HttpServletRequest request) {
+        return J7_EXPORT_PATH.matcher(applicationPath(request)).matches();
     }
 
     private static boolean isJ5OfflineBatchRequest(HttpServletRequest request) {

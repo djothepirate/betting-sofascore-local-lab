@@ -1,5 +1,6 @@
 package com.bettingproject.sofascorelocal.application.export;
 
+import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryPayloadClass;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportDecision;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportError;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportException;
@@ -494,7 +495,9 @@ public class J7CanonicalExportService {
                     mapper.writerWithDefaultPrettyPrinter()
                             .writeValueAsString(verified.envelope()),
                     validationConfirmation(manifest),
-                    rejectionConfirmation(manifest));
+                    rejectionConfirmation(manifest),
+                    J7DeliveryPayloadClassifier.classify(
+                            object(verified.envelope(), "manifest").required("sources")));
         }
         catch (JacksonException exception) {
             throw new J7ExportException(J7ExportError.INVALID_SCHEMA, exception);
@@ -593,6 +596,8 @@ public class J7CanonicalExportService {
             throw new J7ExportException(J7ExportError.NOT_DOWNLOADABLE);
         }
         VerifiedFile verified = readAndVerify(manifest);
+        J7DeliveryPayloadClass payloadClass = J7DeliveryPayloadClassifier.classify(
+                parseJson(manifest.sourceObservationsJson()));
         cleanupCandidateBestEffort(manifest);
         return new J7ValidatedExportArtifact(
                 manifest.exportId(),
@@ -601,7 +606,28 @@ public class J7CanonicalExportService {
                 manifest.schemaVersion(),
                 manifest.dataSha256(),
                 manifest.currentContentSha256(),
+                payloadClass,
                 verified.content());
+    }
+
+    /**
+     * Returns only persisted, bounded metadata so runtime delivery gates can fail before the
+     * validated J7 file is opened. The file and its full evidence are independently reverified by
+     * {@link #loadHumanValidatedForDelivery(UUID, UUID)} immediately before any claim.
+     */
+    public J7DeliveryCandidate deliveryCandidate(
+            UUID canonicalEventId,
+            UUID exportId) {
+        J7ExportManifest manifest = manifest(canonicalEventId, exportId);
+        if (manifest.status() != J7ExportStatus.HUMAN_VALIDATED) {
+            throw new J7ExportException(J7ExportError.NOT_DOWNLOADABLE);
+        }
+        return new J7DeliveryCandidate(
+                manifest.exportId(),
+                manifest.canonicalEventId(),
+                manifest.currentContentSha256(),
+                J7DeliveryPayloadClassifier.classify(
+                        parseJson(manifest.sourceObservationsJson())));
     }
 
     private J7ExportManifest terminalDecision(

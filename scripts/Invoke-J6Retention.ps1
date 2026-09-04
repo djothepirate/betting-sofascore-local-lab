@@ -36,7 +36,18 @@ $environmentNames = @(
     'SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED',
     'SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED',
     'SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED',
-    'SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED'
+    'SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED',
+    'OPTIONAL_INTEGRATION_ENABLED',
+    'OPTIONAL_INTEGRATION_EXECUTION_MODE',
+    'OPTIONAL_INTEGRATION_REMOTE_DELIVERY_AUTHORIZED',
+    'OPTIONAL_INTEGRATION_OFFICIAL_PERMISSION_STATUS',
+    'OPTIONAL_INTEGRATION_RECEIVER_QUALIFICATION',
+    'OPTIONAL_INTEGRATION_SENDER_QUALIFICATION',
+    'OPTIONAL_INTEGRATION_RECEIVER_ORIGIN',
+    'OPTIONAL_INTEGRATION_LOOPBACK_QUALIFICATION',
+    'OPTIONAL_INTEGRATION_LOOPBACK_ORIGIN',
+    'OPTIONAL_INTEGRATION_AUTOMATIC_RETRY_ENABLED',
+    'OPTIONAL_INTEGRATION_MTLS_CLIENT_CERTIFICATE_SHA256'
 )
 $previousEnvironment = @{}
 foreach ($name in $environmentNames) {
@@ -50,13 +61,24 @@ function Set-ProcessEnvironment {
 
 try {
     Set-ProcessEnvironment -Name 'SOFASCORE_J6_RETENTION_MODE' -Value $Mode.ToUpperInvariant()
+    Set-ProcessEnvironment -Name 'OPTIONAL_INTEGRATION_EXECUTION_MODE' -Value 'DISABLED'
+    Set-ProcessEnvironment -Name 'OPTIONAL_INTEGRATION_OFFICIAL_PERMISSION_STATUS' -Value 'NOT_EVIDENCED'
+    Set-ProcessEnvironment -Name 'OPTIONAL_INTEGRATION_RECEIVER_QUALIFICATION' -Value 'NOT_QUALIFIED'
+    Set-ProcessEnvironment -Name 'OPTIONAL_INTEGRATION_SENDER_QUALIFICATION' -Value 'NOT_QUALIFIED'
+    Set-ProcessEnvironment -Name 'OPTIONAL_INTEGRATION_RECEIVER_ORIGIN' -Value ''
+    Set-ProcessEnvironment -Name 'OPTIONAL_INTEGRATION_LOOPBACK_ORIGIN' -Value ''
+    Set-ProcessEnvironment -Name 'OPTIONAL_INTEGRATION_MTLS_CLIENT_CERTIFICATE_SHA256' -Value ''
     foreach ($name in @(
             'SOFASCORE_ENABLED',
             'SOFASCORE_J3_QUALIFICATION_ENABLED',
             'SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED',
             'SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED',
             'SOFASCORE_J5_EVENT_DATA_QUALIFICATION_ENABLED',
-            'SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED')) {
+            'SOFASCORE_TOURNAMENT_EVENT_DISCOVERY_ENABLED',
+            'OPTIONAL_INTEGRATION_ENABLED',
+            'OPTIONAL_INTEGRATION_REMOTE_DELIVERY_AUTHORIZED',
+            'OPTIONAL_INTEGRATION_LOOPBACK_QUALIFICATION',
+            'OPTIONAL_INTEGRATION_AUTOMATIC_RETRY_ENABLED')) {
         Set-ProcessEnvironment -Name $name -Value 'false'
     }
 
@@ -127,13 +149,13 @@ try {
                 throw "The qualified manifest source/restore evidence differs: $field"
             }
         }
-        if ($manifest.source.flywayVersion.ToString() -cne '29' -or
+        if ($manifest.source.flywayVersion.ToString() -cne '30' -or
                 [long]$manifest.source.rawPayloadIntegrityFailures -ne 0 -or
                 [long]$manifest.source.j7DeliveryCount -lt 0 -or
                 [long]$manifest.source.j7DeliveryAttemptCount -lt 0 -or
                 [long]$manifest.source.j7DeliveryAttemptResultCount -lt 0 -or
                 $manifest.source.j7DeliveryLedgerSha256.ToString() -cnotmatch '^[0-9a-f]{64}$') {
-            throw 'The qualified manifest does not prove a valid Flyway V29 raw-payload, J8 evidence and metadata-only J7 delivery-ledger restore.'
+            throw 'The qualified manifest does not prove a valid Flyway V30 raw-payload, J8 evidence and metadata-only J7 delivery-ledger restore.'
         }
         $cipherPath = [IO.Path]::GetFullPath((Join-Path `
             (Split-Path -Parent $manifestPath) $cipherFileName))
