@@ -4,6 +4,27 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-047 séparation de gouvernance acquisition / livraison J7
+
+- préparation, depuis `0338821cc07130f5d200a70db10209bb898a59ae`, du Work Order distinct
+  `WO-SS-20260904-047-j9-j7-delivery-governance-separation` ;
+- constat confirmé : INT-001 ne contacte pas SofaScore ; le couplage à
+  `EVIDENCED_COMPATIBLE` se trouve exclusivement dans la configuration, la policy, le grant et la
+  migration V31 du sender Local Lab ;
+- proposition ADR-SS-003 v0.2 : conserver `NOT_EVIDENCED` comme fait d'audit exact et hashé, sans
+  en faire une porte pour le POST J7 local ; maintenir `EVIDENCED_INCOMPATIBLE` bloquant ;
+- format canonique V1 conservé strict et historique ; proposition d'un
+  `J7_PROVIDER_DERIVED_OWNER_GO_V2` séparant `PROVIDER_PERMISSION_AUDIT_*` et
+  `J7_TRANSFER_GOVERNANCE_BASIS_*`, sans faux accord officiel ni autorité attribuée à l'ADR ;
+- migration V32 append-only et discriminée par format proposée, V31, la fonction canonique V1 et
+  toutes les preuves WO-045/WO-046 antérieures restant immuables ;
+- aucune nouvelle porte d'acquisition J3/J4/J5 et aucun changement INT-001 sous ce Work Order ;
+  les décisions réseau fournisseur restent entièrement séparées ;
+- aucun effet runtime avant acceptation propriétaire d'ADR-SS-003 v0.2 et autorisation explicite
+  de WO-047 ; WO-046 demeure en pause avant l'étape 3 ;
+- aucun export ou certificat sélectionné, manifeste créé, go construit, POST ou appel fournisseur
+  effectué ; réseaux distant/fournisseur, VPS et production maintenus à `NO`.
+
 ### Après J9 — WO-046 campagne E2E J7 réelle locale Windows/Windows
 
 - validation propriétaire d'INT-001 consignée dans son dépôt au commit

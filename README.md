@@ -5,6 +5,19 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
+[WO-SS-20260904-047](docs/work_orders/active/WO-SS-20260904-047-j9-j7-delivery-governance-separation.md)
+est préparé dans l'état `DRAFT_AWAITING_OWNER_DECISION` sur la branche distincte
+`codex/j9-wo047-j7-delivery-governance-separation`. Il propose ADR-SS-003 v0.2 afin de corriger un
+couplage erroné : l'absence de réponse officielle SofaScore reste un fait d'audit
+`NOT_EVIDENCED`, mais ne doit pas bloquer le transfert local d'un J7 déjà `HUMAN_VALIDATED` vers
+Betting Project, lequel ne contacte jamais SofaScore.
+
+Cette proposition n'a encore aucun effet runtime. ADR-SS-003 v0.1 reste effective, WO-046 est
+donc en pause avant l'étape 3, et aucune sélection, identité mTLS, création de manifeste, go ou
+tentative n'est consommée. Aucun POST, appel J3/J4/J5, receiver distant, VPS ou production n'est
+autorisé.
+
+Le Work Order
 [WO-SS-20260904-046](docs/work_orders/active/WO-SS-20260904-046-j9-j7-real-local-e2e-campaign.md)
 est ouvert dans l'état `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`, depuis le commit exact de clôture de WO-045
 `8a1225fc4b85d8e8b55af536fcbc7955676131ff`. Il prépare la future campagne Windows/Windows d'une
@@ -20,7 +33,7 @@ taille `7273` octets et SHA-256
 réponse, licence ou convention SofaScore exacte corroborant la déclaration propriétaire
 `EVIDENCED_COMPATIBLE`. Le résultat exécutoire reste `NOT_EVIDENCED`.
 
-La séquence ordonnée s'arrête donc à cette deuxième étape. Un export candidat a seulement été
+Sous la règle v0.1 encore effective, la séquence ordonnée s'arrête à cette deuxième étape. Un export candidat a seulement été
 inventorié en lecture seule, sans sélection, et aucun certificat client n'existe actuellement dans
 `CurrentUser\\My`. Le manifeste WO-046 n'est pas créé et son autorisation n'est pas consommée ;
 aucun nouveau go propriétaire n'est construit, accordé ou enregistré.
