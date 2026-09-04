@@ -4,6 +4,23 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — manifeste WO-046 gelé localement sans exécution
+
+- autorisation propriétaire distincte de création, gel et commit local du seul manifeste,
+  sans démarrage receiver, sans owner-go et sans POST ;
+- recontrôles des métadonnées primaires en lecture seule et de l'identité mTLS publique :
+  V32, export `HUMAN_VALIDATED` inchangé, zéro livraison/tentative/grant/consommation,
+  profils et identités exactes conformes, secrets et empreintes PKI réelles hors Git ;
+- manifeste `J9-WO046-J7-REAL-LOCAL-E2E-CAMPAIGN-MANIFEST-20260904.md`, `18380` octets,
+  SHA-256 `6590603286c6c422588bbc3f6a46f502716fa2e2df18b6ad0df741cbd1cbf277`,
+  gelé à son premier commit, export unique, commits/JAR épinglés, un seul POST futur maximum ;
+- cible receiver canonique neuve seulement planifiée, image locale épinglée, rétention
+  explicite de 30 jours ; aucune ressource créée ni ancienne qualification réutilisée ;
+- package receiver propre hors ligne sans tests réussi, JAR byte-identique, aucun lancement ;
+  contrôles documentaires UTF-8/confidentialité/diff, sans nouveau `clean verify` ni campagne ;
+- WO-046 reste actif, en attente d'autorisation distincte de préparation du owner-go V2 ;
+  aucune fenêtre effective, aucun go, POST, push, appel fournisseur ou réseau distant.
+
 ### Après J9 — préparation primaire WO-046 V32 achevée sans campagne
 
 - configuration locale privée préparée sous ACL, sans secret dans Git ou les sorties ;

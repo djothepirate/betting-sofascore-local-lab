@@ -1,6 +1,6 @@
 # WO-SS-20260904-046 — Campagne E2E J7 réelle locale Windows/Windows
 
-- **Statut :** `PRIMARY_V32_PREPARED_PENDING_CAMPAIGN_MANIFEST_AUTHORIZATION`
+- **Statut :** `MANIFEST_FROZEN_PENDING_SEPARATE_OWNER_GO_PREPARATION_AUTHORIZATION`
 - **Jalon :** après J9 — campagne locale d'une livraison J7 dérivée fournisseur
 - **Ouvert le :** 2026-09-04
 - **Ouverture UTC :** `2026-09-04T13:59:22.9943521Z`
@@ -629,3 +629,78 @@ après recontrôles frais des métadonnées et de l'identité PKI. Son commit pr
 du bloc owner-go canonique V2 et toute autorisation future du POST unique. Cette préparation ne
 consomme aucune de ces décisions. Aucun receiver, fournisseur, réseau distant, VPS ou production
 n'a été activé ; les restrictions demeurent inchangées.
+
+## 15. Manifeste créé et gelé sous autorisation documentaire distincte
+
+Le propriétaire autorise ensuite explicitement la création, le gel et le commit local du
+manifeste WO-046, après recontrôle des métadonnées de l'export et de l'identité mTLS, sans
+démarrage du receiver, sans owner-go et sans POST. Cette décision supersède uniquement
+l'attente de création du manifeste de la section 14. Les états des sections antérieures
+demeurent historiques ; ils ne sont pas réécrits.
+
+Le [manifeste de campagne](../../validation/J9-WO046-J7-REAL-LOCAL-E2E-CAMPAIGN-MANIFEST-20260904.md)
+est créé depuis `e3765e58db8d430ab480c67af790cecd44ccbb61` et gelé par le premier commit local
+qui le contient, avec les présentes mises à jour documentaires. Ses octets ne contiennent ni
+leur propre hash ni leur propre commit. Le commit de gel exact est fourni dans le compte rendu
+propriétaire ; aucune réécriture silencieuse du manifeste n'est admise après ce commit.
+
+```text
+J9_WO046_MANIFEST_PREPARED_AT_UTC=2026-09-04T23:30:24Z
+J9_WO046_MANIFEST_PREPARED_AT_EUROPE_PARIS=2026-09-05T01:30:24+02:00
+J9_WO046_MANIFEST_REFERENCE=docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-CAMPAIGN-MANIFEST-20260904.md
+J9_WO046_MANIFEST_SIZE_BYTES=18380
+J9_WO046_MANIFEST_SHA256=6590603286c6c422588bbc3f6a46f502716fa2e2df18b6ad0df741cbd1cbf277
+J9_WO046_MANIFEST_ENCODING=UTF8_LF_WITHOUT_BOM
+J9_WO046_MANIFEST_CREATED=YES
+J9_WO046_MANIFEST_FREEZE=IMMUTABLE_FROM_FIRST_LOCAL_COMMIT
+J9_WO046_MANIFEST_PUBLICATION=LOCAL_ONLY_NO_PUSH
+J9_WO046_STATUS=MANIFEST_FROZEN_PENDING_SEPARATE_OWNER_GO_PREPARATION_AUTHORIZATION
+J9_WO046_OWNER_GO_CONSTRUCTION_AUTHORIZED=NO
+J9_WO046_OWNER_GO_CREATED=NO
+J9_WO046_OWNER_GO_GRANTED=NO
+J9_WO046_OWNER_GO_REGISTERED=NO
+J9_WO046_OWNER_GO_CONSUMED=NO
+J9_WO046_RECEIVER_START_AUTHORIZED=NO
+J9_WO046_REAL_POST_AUTHORIZED=NO
+J9_WO046_WORK_ORDER_MOVE_TO_COMPLETED=NO
+```
+
+Les recontrôles préalables sont satisfaits :
+
+- PKI le `2026-09-04T23:25:42.8257148Z` : registre privé qualifié et ACL conformes, identités
+  exactes et profils publics concordants, certificats valides ; aucune clé privée lue, utilisée
+  ou exportée, aucune mutation du magasin et aucun handshake. Seul l'engagement SHA-256 du
+  registre est versionné ; les empreintes réelles et ses secrets restent externes ;
+- métadonnées primaires le `2026-09-04T23:27:23.953071Z` : transaction bornée en lecture seule
+  terminée par ROLLBACK, schéma V32 sans migration échouée, export unique
+  `a8d40d57-98c5-4e01-8ecc-4f1f9b5feabc` déjà `HUMAN_VALIDATED` et `PROVIDER_DERIVED`, taille
+  et hashes inchangés, warning `MISSING_COMPONENT:EVENT_DETAILS` conservé ; zéro livraison,
+  tentative, grant, révocation et consommation ;
+- receiver INT-001 : reconstruction propre sous Java 25.0.4 au commit
+  `de06153f0908a1bb2dc9bbd2c8e22f7fd14dacfd`, wrapper hors ligne, tests/profils de qualification
+  désactivés, `clean package` réussi en `11.684 s` ; le JAR est byte-identique à l'artefact
+  précédent et aucun receiver n'est lancé ;
+- références qualifiées, proposition ADR v0.2 et JAR Local Lab rehashés ; aucun changement
+  runtime ou de migration, aucun rapport historique ni PDF modifié ;
+- aucun listener applicatif 8087/8444, port receiver PostgreSQL 5433 libre. Les ressources
+  canoniques receiver sont seulement planifiées ; aucune création, adoption ou réutilisation
+  des anciennes ressources INT-001 Q1/Q2 n'a lieu.
+
+Le manifeste fixe un export unique, les deux commits/JAR, la cible HTTPS/mTLS loopback, les
+headers exacts, une tentative maximum, zéro retry, les contrôles de réception durable et de
+cleanup. La rétention receiver planifiée est explicitement de 30 jours. Il ne construit aucun
+UUID de go, fenêtre effective, préimage canonique ou hash de décision propriétaire.
+
+Deux relectures indépendantes du contrat et du receiver n'ont relevé aucun défaut bloquant.
+Les contrôles documentaires couvrent le diff, UTF-8 sans BOM/NUL, l'absence de placeholders et
+de clés dupliquées, les bornes et la confidentialité des seules métadonnées publiées. Les
+tests applicatifs, Testcontainers et pipelines natifs ne sont pas relancés : la présente
+autorité est limitée au gel documentaire sans POST ni démarrage d'application ; aucun nouveau
+`clean verify` n'est revendiqué. Les qualifications existantes sont référencées sans extension
+de leur portée. Le seul build de cette préparation est le package receiver hors ligne sans tests.
+
+La prochaine porte est une autorisation distincte de préparer et soumettre le nouveau owner-go
+V2 lié au manifeste gelé, puis l'autorisation future, exacte et à usage unique de l'exécution.
+Le statut officiel reste `NOT_EVIDENCED` comme audit non bloquant pour ce transfert local sous
+ADR-SS-003 v0.2 ; `EVIDENCED_INCOMPATIBLE` reste bloquant. Aucun accord SofaScore, appel
+fournisseur, réseau distant, VPS, production ou transfert réel n'est inféré de ce gel.

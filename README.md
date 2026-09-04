@@ -9,8 +9,13 @@ est achevée : sauvegarde/restauration V30 qualifiée, migrations V31 puis V32 p
 transitoire non-web bloqué, puis sauvegarde/restauration V32 qualifiée. L'export J7 déjà validé,
 ses métadonnées et les empreintes historiques comparées sont inchangés. Aucun listener
 applicatif ne subsiste ; grants, consommations, livraisons et tentatives restent à zéro.
-WO-046 reste actif, en attente de l'autorisation distincte de création du manifeste de campagne.
-**Aucun manifeste de campagne, owner-go ni POST réel n'est créé ou autorisé par cette préparation.**
+Le [manifeste WO-046](docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-CAMPAIGN-MANIFEST-20260904.md)
+est ensuite créé et gelé par commit local sous autorisation distincte, après recontrôle en
+lecture seule des métadonnées de l'export et de l'identité mTLS. Il contient `18380` octets,
+SHA-256 `6590603286c6c422588bbc3f6a46f502716fa2e2df18b6ad0df741cbd1cbf277`.
+WO-046 reste actif : préparation du owner-go V2 et exécution restent soumises à leurs décisions
+séparées. **Ce gel ne crée aucun owner-go et n'autorise ni démarrage du receiver ni POST.**
+Les ressources futures du receiver sont seulement planifiées ; aucun push n'est réalisé.
 
 Le Work Order
 [WO-SS-20260904-048](docs/work_orders/completed/WO-SS-20260904-048-j9-wo046-local-mtls-identity-provisioning.md)
@@ -69,7 +74,7 @@ Le Work Order
 porte historiquement dans son document v0.1 l'état `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`,
 depuis le commit exact de clôture de WO-045
 `8a1225fc4b85d8e8b55af536fcbc7955676131ff`. L'état effectif de la séquence est désormais
-`PRIMARY_PREPARATION_AUTHORIZED_PENDING_V30_BACKUP_RESTORE`. Il prépare la future campagne
+`MANIFEST_FROZEN_PENDING_SEPARATE_OWNER_GO_PREPARATION_AUTHORIZATION`. Il prépare la future campagne
 Windows/Windows d'une livraison manuelle unique d'un export J7 fournisseur déjà
 `HUMAN_VALIDATED` vers le receiver Betting Project sur `https://127.0.0.1:8444`.
 
@@ -92,8 +97,9 @@ hors ligne les métadonnées de l'export `a8d40d57-98c5-4e01-8ecc-4f1f9b5feabc`,
 primaire a été corroborée sous autorisation de lecture seule par le
 [préflight primaire WO-046](docs/validation/J9-WO046-PRIMARY-READONLY-PREFLIGHT-20260905.md) :
 export unique `HUMAN_VALIDATED`, fichier inchangé, métadonnées structurées identiques et aucune
-livraison/tentative pour cet export. La base comporte exactement V1 à V30 réussies ; V31 et V32
-ne sont pas appliquées. Le schéma primaire doit donc être préparé avant le manifeste.
+livraison/tentative pour cet export. Ce préflight historique constatait V1 à V30 réussies,
+V31/V32 non appliquées. La préparation primaire distincte référencée en tête de page a depuis
+qualifié V31 puis V32 et la sauvegarde/restauration V32, avant le gel du manifeste.
 
 Le
 [rapport de reprise WO-046](docs/validation/J9-WO046-RESUME-EXPORT-AND-MTLS-SELECTION-20260904.md),
@@ -104,14 +110,10 @@ provisionné et qualifié un jeu neuf lié au run. Après intégration par fast-
 `5f7756b17c42d14bc97c7ddd7fcbde616b2241e0`, les deux identités ont été revalidées par leurs seules
 métadonnées publiques, sans clé privée, mutation ou socket. L'étape 4 est désormais
 `SELECTED_RUN_BOUND_WO048_VALIDATED_PUBLIC_METADATA_REVALIDATED`. Le préflight du ledger et du
-schéma primaire est terminé ; la protection préalable V30, la migration séquentielle V31/V32
-par démarrage transitoire du Local Lab toutes portes réseau fermées et la sauvegarde/restauration
-isolée V32 sont désormais autorisées par décision distincte, avec sauvegarde V30 qualifiée avant
-toute migration. Leur réussite reste à établir ; aucun résultat d'exécution n'est déduit de
-l'autorisation.
-Le manifeste WO-046 n'est pas créé et son
-autorisation n'est pas consommée ; aucun nouveau go propriétaire n'est construit, accordé ou
-enregistré.
+schéma primaire, la protection préalable V30, la migration séquentielle V31/V32 et la
+sauvegarde/restauration isolée V32 sont terminés et documentés. Une décision distincte a ensuite
+autorisé le seul gel du manifeste WO-046 ; les métadonnées et l'identité mTLS ont été recontrôlées.
+Aucun nouveau go propriétaire n'est construit, accordé ou enregistré.
 Aucun receiver n'est démarré, aucun POST ou appel SofaScore n'est autorisé, et les réseaux distant
 et fournisseur, le VPS et la production restent bloqués.
 
