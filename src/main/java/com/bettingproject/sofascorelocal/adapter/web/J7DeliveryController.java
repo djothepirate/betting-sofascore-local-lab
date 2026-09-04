@@ -89,7 +89,7 @@ public final class J7DeliveryController {
             J7DeliveryPreparation preparation = queryService.preparation(preview);
             J7DeliveryView view = preparation.view();
             if (!view.preparationAllowed()) {
-                throw new J7DeliveryException(J7DeliveryError.DELIVERY_DISABLED);
+                throw new J7DeliveryException(blockedPreparationError(view));
             }
             if (view.unknownOutcomeReconciliationRequired()
                     && !unknownOutcomeReconciled) {
@@ -307,6 +307,18 @@ public final class J7DeliveryController {
             return "LEDGER_" + ledgerException.failure().name();
         }
         return "DELIVERY_REFUSED";
+    }
+
+    private static J7DeliveryError blockedPreparationError(J7DeliveryView view) {
+        if (view.policyBlockers().contains(
+                J7DeliveryError.OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE.name())) {
+            return J7DeliveryError.OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE;
+        }
+        if (view.policyBlockers().contains(
+                J7DeliveryError.OFFICIAL_PERMISSION_STATUS_INVALID.name())) {
+            return J7DeliveryError.OFFICIAL_PERMISSION_STATUS_INVALID;
+        }
+        return J7DeliveryError.DELIVERY_DISABLED;
     }
 
     private static void applyNoStoreHeaders(HttpServletResponse response) {

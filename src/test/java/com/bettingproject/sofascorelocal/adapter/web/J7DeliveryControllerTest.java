@@ -3,6 +3,7 @@ package com.bettingproject.sofascorelocal.adapter.web;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryConfirmationRequest;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryExecutionGate;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryPayloadClass;
+import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryPolicy;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryPreparation;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryQueryService;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryRuntimeService;
@@ -12,6 +13,10 @@ import com.bettingproject.sofascorelocal.application.export.J7DeliveryCandidate;
 import com.bettingproject.sofascorelocal.application.export.J7ExportContract;
 import com.bettingproject.sofascorelocal.application.export.J7ExportPreview;
 import com.bettingproject.sofascorelocal.config.J7DeliveryWebMvcConfiguration;
+import com.bettingproject.sofascorelocal.config.J7DeliveryLocalRequestBoundaryInterceptor;
+import com.bettingproject.sofascorelocal.config.OptionalLocalPushProperties;
+import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryError;
+import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryException;
 import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryIdentity;
 import com.bettingproject.sofascorelocal.domain.delivery.J7ProviderDerivedOwnerGo;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportError;
@@ -33,6 +38,7 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.time.Instant;
 import java.util.List;
@@ -92,6 +98,9 @@ class J7DeliveryControllerTest {
     @Autowired
     private J7DeliveryExecutionGate executionGate;
 
+    @Autowired
+    private J7DeliveryConfirmationService confirmationService;
+
     @MockitoBean
     private J7CanonicalExportService exportService;
 
@@ -144,6 +153,94 @@ class J7DeliveryControllerTest {
         verify(ledgerStore, never()).claim(
                 any(), anyString(), anyString(), anyString(), anyInt(), any());
         verify(exportService, never()).deliveryCandidate(EVENT_ID, EXPORT_ID);
+    }
+
+    @Test
+    void incompatiblePermissionVetoIsRenderedAsItsDedicatedSafeCode() throws Exception {
+        when(queryService.preparation(preview)).thenReturn(new J7DeliveryPreparation(
+                new J7DeliveryView(
+                        J7DeliveryPayloadClass.PROVIDER_DERIVED,
+                        List.of("OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE"),
+                        Optional.empty(),
+                        false,
+                        false),
+                Optional.empty()));
+
+        prepare(new MockHttpSession(), false)
+                .andExpect(status().isConflict())
+                .andExpect(view().name("event-delivery-error"))
+                .andExpect(model().attribute(
+                        "deliveryErrorCode",
+                        "OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE"));
+
+        verifyNoInteractions(runtimeService, ledgerStore);
+        verify(exportService, never()).deliveryCandidate(EVENT_ID, EXPORT_ID);
+    }
+
+    @Test
+    void invalidPermissionStatusIsRenderedAsItsDedicatedSafeCode() throws Exception {
+        when(queryService.preparation(preview)).thenReturn(new J7DeliveryPreparation(
+                new J7DeliveryView(
+                        J7DeliveryPayloadClass.PROVIDER_DERIVED,
+                        List.of("OFFICIAL_PERMISSION_STATUS_INVALID"),
+                        Optional.empty(),
+                        false,
+                        false),
+                Optional.empty()));
+
+        prepare(new MockHttpSession(), false)
+                .andExpect(status().isConflict())
+                .andExpect(view().name("event-delivery-error"))
+                .andExpect(model().attribute(
+                        "deliveryErrorCode",
+                        "OFFICIAL_PERMISSION_STATUS_INVALID"));
+
+        verifyNoInteractions(runtimeService, ledgerStore);
+        verify(exportService, never()).deliveryCandidate(EVENT_ID, EXPORT_ID);
+    }
+
+    @Test
+    void realPolicyQueryAndControllerPreserveTheDedicatedIncompatibleVeto()
+            throws Exception {
+        OptionalLocalPushProperties properties = providerProperties();
+        properties.setOfficialPermissionStatus(
+                OptionalLocalPushProperties.PermissionStatus.EVIDENCED_INCOMPATIBLE);
+        J7DeliveryPolicy realPolicy = new J7DeliveryPolicy(properties);
+        J7DeliveryQueryService realQueryService = new J7DeliveryQueryService(
+                ledgerStore, realPolicy);
+        J7ExportPreview providerPreview = providerPreview();
+        when(exportService.preview(EVENT_ID, EXPORT_ID)).thenReturn(providerPreview);
+        when(ledgerStore.find(EXPORT_ID, FILE_SHA256)).thenReturn(Optional.empty());
+
+        assertThat(realQueryService.preparation(providerPreview).view().policyBlockers())
+                .containsExactly("OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE")
+                .doesNotContain("OFFICIAL_PERMISSION_NOT_EVIDENCED");
+
+        J7DeliveryController controller = new J7DeliveryController(
+                exportService,
+                realQueryService,
+                runtimeService,
+                ledgerStore,
+                executionGate,
+                confirmationService,
+                formTokenService);
+        MockMvc realCollaboratorMvc = MockMvcBuilders.standaloneSetup(controller)
+                .addInterceptors(new J7DeliveryLocalRequestBoundaryInterceptor())
+                .build();
+        MockHttpSession session = new MockHttpSession();
+
+        realCollaboratorMvc.perform(localPost(preparePath())
+                        .session(session)
+                        .param("localFormToken", formTokenService.issue(session))
+                        .param("unknownOutcomeReconciled", "false"))
+                .andExpect(status().isConflict())
+                .andExpect(view().name("event-delivery-error"))
+                .andExpect(model().attribute(
+                        "deliveryErrorCode",
+                        "OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE"));
+
+        verify(runtimeService, never()).deliver(any(), anyString());
+        verify(ledgerStore, never()).findProviderDerivedOwnerGo(any());
     }
 
     @Test
@@ -595,6 +692,34 @@ class J7DeliveryControllerTest {
                 "VALIDER",
                 "REJETER",
                 J7DeliveryPayloadClass.SYNTHETIC_ONLY);
+    }
+
+    private static J7ExportPreview providerPreview() {
+        J7ExportPreview synthetic = preview();
+        return new J7ExportPreview(
+                synthetic.manifest(),
+                synthetic.prettyJson(),
+                synthetic.validationConfirmation(),
+                synthetic.rejectionConfirmation(),
+                J7DeliveryPayloadClass.PROVIDER_DERIVED);
+    }
+
+    private static OptionalLocalPushProperties providerProperties() {
+        OptionalLocalPushProperties properties = new OptionalLocalPushProperties();
+        properties.setEnabled(true);
+        properties.setExecutionMode(
+                OptionalLocalPushProperties.ExecutionMode.PROVIDER_DERIVED);
+        properties.setRemoteDeliveryAuthorized(true);
+        properties.setReceiverOrigin(OptionalLocalPushProperties.LOCAL_RECEIVER_ORIGIN);
+        properties.setReceiverQualification(
+                OptionalLocalPushProperties.QualificationStatus.PASS);
+        properties.setSenderQualification(
+                OptionalLocalPushProperties.QualificationStatus.PASS);
+        properties.getMtls().setClientCertificateSha256("c".repeat(64));
+        properties.getProviderOwnerGo().setGoId(
+                "45000000-0000-4000-8000-000000000045");
+        properties.getProviderOwnerGo().setOwnerGoDocumentSha256("e".repeat(64));
+        return properties;
     }
 
     private static J7DeliveryView deliveryView(

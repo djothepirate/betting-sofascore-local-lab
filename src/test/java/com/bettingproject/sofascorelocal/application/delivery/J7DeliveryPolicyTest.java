@@ -21,7 +21,6 @@ class J7DeliveryPolicyTest {
 
         assertThat(policy.realDeliveryBlockers()).containsExactly(
                 "DELIVERY_DISABLED",
-                "OFFICIAL_PERMISSION_NOT_EVIDENCED",
                 "REMOTE_DELIVERY_NOT_AUTHORIZED",
                 "PROVIDER_OWNER_GO_REQUIRED");
         assertError(policy::requireRealDelivery, J7DeliveryError.DELIVERY_DISABLED);
@@ -62,7 +61,7 @@ class J7DeliveryPolicyTest {
     }
 
     @Test
-    void notEvidencedPermissionRemainsAnExecutableGateEvenIfOtherFlagsAreForced() {
+    void notEvidencedPermissionIsAuditOnlyForLocalJ7Delivery() {
         OptionalLocalPushProperties properties = new OptionalLocalPushProperties();
         properties.setEnabled(true);
         properties.setRemoteDeliveryAuthorized(true);
@@ -70,9 +69,8 @@ class J7DeliveryPolicyTest {
 
         assertError(
                 policy::requireRealDelivery,
-                J7DeliveryError.OFFICIAL_PERMISSION_NOT_EVIDENCED);
+                J7DeliveryError.PROVIDER_OWNER_GO_REQUIRED);
         assertThat(policy.realDeliveryBlockers()).containsExactly(
-                "OFFICIAL_PERMISSION_NOT_EVIDENCED",
                 "PROVIDER_OWNER_GO_REQUIRED");
     }
 
@@ -160,8 +158,6 @@ class J7DeliveryPolicyTest {
         OptionalLocalPushProperties properties = syntheticRuntimeProperties();
         properties.setExecutionMode(
                 OptionalLocalPushProperties.ExecutionMode.PROVIDER_DERIVED);
-        properties.setOfficialPermissionStatus(
-                OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE);
         properties.setRemoteDeliveryAuthorized(true);
         J7DeliveryPolicy policy = new J7DeliveryPolicy(properties);
 
@@ -190,7 +186,7 @@ class J7DeliveryPolicyTest {
     }
 
     @Test
-    void providerPermissionAndRemoteAuthorizationAreIndependentGates() {
+    void notEvidencedAuditAndRemoteAuthorizationAreIndependentGates() {
         OptionalLocalPushProperties properties = syntheticRuntimeProperties();
         properties.setExecutionMode(
                 OptionalLocalPushProperties.ExecutionMode.PROVIDER_DERIVED);
@@ -199,12 +195,50 @@ class J7DeliveryPolicyTest {
         assertError(
                 () -> policy.requireRuntimeDelivery(
                         J7DeliveryPayloadClass.PROVIDER_DERIVED),
-                J7DeliveryError.OFFICIAL_PERMISSION_NOT_EVIDENCED);
+                J7DeliveryError.REMOTE_DELIVERY_NOT_AUTHORIZED);
         assertThat(policy.runtimeBlockers(J7DeliveryPayloadClass.PROVIDER_DERIVED))
                 .containsExactly(
-                        "OFFICIAL_PERMISSION_NOT_EVIDENCED",
                         "REMOTE_DELIVERY_NOT_AUTHORIZED",
                         "PROVIDER_OWNER_GO_REQUIRED");
+    }
+
+    @Test
+    void evidencedIncompatibleAuditIsADedicatedFailClosedVeto() {
+        OptionalLocalPushProperties properties = providerRuntimeProperties();
+        properties.setOfficialPermissionStatus(
+                OptionalLocalPushProperties.PermissionStatus.EVIDENCED_INCOMPATIBLE);
+        J7DeliveryPolicy policy = new J7DeliveryPolicy(properties);
+
+        assertError(
+                policy::requireRealDelivery,
+                J7DeliveryError.OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE);
+        assertError(
+                () -> policy.requireRuntimeDelivery(
+                        J7DeliveryPayloadClass.PROVIDER_DERIVED),
+                J7DeliveryError.OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE);
+        assertThat(policy.realDeliveryBlockers()).containsExactly(
+                "OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE");
+        assertThat(policy.runtimeBlockers(J7DeliveryPayloadClass.PROVIDER_DERIVED))
+                .containsExactly("OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE");
+    }
+
+    @Test
+    void unknownPermissionAuditFailsClosedWithADedicatedCode() {
+        OptionalLocalPushProperties properties = providerRuntimeProperties();
+        properties.setOfficialPermissionStatus(null);
+        J7DeliveryPolicy policy = new J7DeliveryPolicy(properties);
+
+        assertError(
+                policy::requireRealDelivery,
+                J7DeliveryError.OFFICIAL_PERMISSION_STATUS_INVALID);
+        assertError(
+                () -> policy.requireRuntimeDelivery(
+                        J7DeliveryPayloadClass.PROVIDER_DERIVED),
+                J7DeliveryError.OFFICIAL_PERMISSION_STATUS_INVALID);
+        assertThat(policy.realDeliveryBlockers()).containsExactly(
+                "OFFICIAL_PERMISSION_STATUS_INVALID");
+        assertThat(policy.runtimeBlockers(J7DeliveryPayloadClass.PROVIDER_DERIVED))
+                .containsExactly("OFFICIAL_PERMISSION_STATUS_INVALID");
     }
 
     @Test
@@ -234,6 +268,17 @@ class J7DeliveryPolicyTest {
         properties.setSenderQualification(
                 OptionalLocalPushProperties.QualificationStatus.PASS);
         properties.getMtls().setClientCertificateSha256("a".repeat(64));
+        return properties;
+    }
+
+    private static OptionalLocalPushProperties providerRuntimeProperties() {
+        OptionalLocalPushProperties properties = syntheticRuntimeProperties();
+        properties.setExecutionMode(
+                OptionalLocalPushProperties.ExecutionMode.PROVIDER_DERIVED);
+        properties.setRemoteDeliveryAuthorized(true);
+        properties.getProviderOwnerGo().setGoId(
+                "50000000-0000-4000-8000-000000000005");
+        properties.getProviderOwnerGo().setOwnerGoDocumentSha256("b".repeat(64));
         return properties;
     }
 

@@ -135,17 +135,17 @@ class J7DeliveryQueryServiceTest {
     }
 
     @Test
-    void aStaticProviderBlockerPreventsAnyOwnerGoLookup() {
+    void evidencedIncompatibleProviderBlockerIsVisibleAndPreventsOwnerGoLookup() {
         J7ExportPreview providerPreview = preview(
                 J7ExportStatus.HUMAN_VALIDATED,
                 J7DeliveryPayloadClass.PROVIDER_DERIVED);
         when(policy.runtimeBlockers(J7DeliveryPayloadClass.PROVIDER_DERIVED))
-                .thenReturn(List.of("OFFICIAL_PERMISSION_NOT_EVIDENCED"));
+                .thenReturn(List.of("OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE"));
 
         J7DeliveryPreparation preparation = service.preparation(providerPreview);
 
         assertThat(preparation.view().policyBlockers())
-                .containsExactly("OFFICIAL_PERMISSION_NOT_EVIDENCED");
+                .containsExactly("OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE");
         assertThat(preparation.view().preparationAllowed()).isFalse();
         assertThat(preparation.providerOwnerGoReference()).isEmpty();
         verify(policy, never()).providerOwnerGoReference();

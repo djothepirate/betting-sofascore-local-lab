@@ -169,6 +169,7 @@ public interface J7DeliveryLedgerStore {
         OWNER_GO_REVOKED,
         OWNER_GO_CONSUMED,
         OWNER_GO_REVOCATION_CONFLICT,
+        OWNER_GO_FORMAT_INVALID,
         INVALID_COMPLETION,
         STORAGE_UNAVAILABLE
     }

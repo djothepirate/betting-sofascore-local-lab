@@ -140,9 +140,17 @@ public class JdbcJ7DeliveryLedgerStore implements J7DeliveryLedgerStore {
             owner_go.campaign_manifest_sha256,
             owner_go.local_lab_commit,
             owner_go.receiver_commit,
+            owner_go.owner_go_format,
             owner_go.official_permission_evidence_reference,
             owner_go.official_permission_evidence_sha256,
             owner_go.official_permission_status,
+            owner_go.provider_permission_audit_reference,
+            owner_go.provider_permission_audit_sha256,
+            owner_go.provider_permission_audit_status,
+            owner_go.j7_transfer_governance_basis_reference,
+            owner_go.j7_transfer_governance_basis_commit,
+            owner_go.j7_transfer_governance_basis_sha256,
+            owner_go.j7_transfer_governance_basis_status,
             owner_go.receiver_qualification,
             owner_go.sender_qualification,
             owner_go.execution_actor,
@@ -201,9 +209,18 @@ public class JdbcJ7DeliveryLedgerStore implements J7DeliveryLedgerStore {
                 go_uuid, owner_decision_block_sha256, work_order,
                 campaign_manifest_reference, campaign_manifest_sha256,
                 local_lab_commit, receiver_commit,
+                owner_go_format,
                 official_permission_evidence_reference,
                 official_permission_evidence_sha256,
-                official_permission_status, receiver_qualification,
+                official_permission_status,
+                provider_permission_audit_reference,
+                provider_permission_audit_sha256,
+                provider_permission_audit_status,
+                j7_transfer_governance_basis_reference,
+                j7_transfer_governance_basis_commit,
+                j7_transfer_governance_basis_sha256,
+                j7_transfer_governance_basis_status,
+                receiver_qualification,
                 sender_qualification, execution_actor, export_manifest_id,
                 canonical_event_id, provider_event_id, export_uuid,
                 file_sha256, data_sha256, file_size_bytes,
@@ -219,9 +236,18 @@ public class JdbcJ7DeliveryLedgerStore implements J7DeliveryLedgerStore {
                 :goId, :ownerDecisionBlockSha256, :workOrder,
                 :campaignManifestReference, :campaignManifestSha256,
                 :localLabCommit, :receiverCommit,
+                :ownerGoFormat,
                 :officialPermissionEvidenceReference,
                 :officialPermissionEvidenceSha256,
-                :officialPermissionStatus, :receiverQualification,
+                :officialPermissionStatus,
+                :providerPermissionAuditReference,
+                :providerPermissionAuditSha256,
+                :providerPermissionAuditStatus,
+                :j7TransferGovernanceBasisReference,
+                :j7TransferGovernanceBasisCommit,
+                :j7TransferGovernanceBasisSha256,
+                :j7TransferGovernanceBasisStatus,
+                :receiverQualification,
                 :senderQualification, :executionActor, :exportManifestId,
                 :canonicalEventId, :providerEventId, :exportId,
                 :fileSha256, :dataSha256, :fileSizeBytes,
@@ -733,44 +759,7 @@ public class JdbcJ7DeliveryLedgerStore implements J7DeliveryLedgerStore {
 
     private ProviderGoRow mapProviderGo(ResultSet resultSet, int rowNumber)
             throws SQLException {
-        J7ProviderDerivedOwnerGo.Grant grant = new J7ProviderDerivedOwnerGo.Grant(
-                resultSet.getObject("go_uuid", UUID.class),
-                resultSet.getString("owner_decision_block_sha256"),
-                resultSet.getString("work_order"),
-                resultSet.getString("campaign_manifest_reference"),
-                resultSet.getString("campaign_manifest_sha256"),
-                resultSet.getString("local_lab_commit"),
-                resultSet.getString("receiver_commit"),
-                resultSet.getString("official_permission_evidence_reference"),
-                resultSet.getString("official_permission_evidence_sha256"),
-                resultSet.getString("official_permission_status"),
-                resultSet.getString("receiver_qualification"),
-                resultSet.getString("sender_qualification"),
-                resultSet.getString("execution_actor"),
-                resultSet.getObject("canonical_event_id", UUID.class),
-                resultSet.getLong("provider_event_id"),
-                resultSet.getObject("export_uuid", UUID.class),
-                resultSet.getString("file_sha256"),
-                resultSet.getString("data_sha256"),
-                resultSet.getLong("file_size_bytes"),
-                resultSet.getString("schema_id"),
-                resultSet.getString("schema_version"),
-                URI.create(resultSet.getString("receiver_origin")),
-                resultSet.getString("client_certificate_sha256"),
-                resultSet.getInt("expected_attempt_number"),
-                resultSet.getInt("maximum_direct_import_calls"),
-                resultSet.getObject("valid_from", OffsetDateTime.class).toInstant(),
-                resultSet.getObject("valid_until", OffsetDateTime.class).toInstant(),
-                resultSet.getString("owner_decision"),
-                resultSet.getString("go_use"),
-                resultSet.getString("payload_class"),
-                resultSet.getString("validation_status"),
-                resultSet.getBoolean("provider_derived_real_post_authorized"),
-                resultSet.getBoolean("provider_network_authorized"),
-                resultSet.getBoolean("remote_receiver_network_authorized"),
-                resultSet.getBoolean("vps_deployment_authorized"),
-                resultSet.getBoolean("production_authorized"),
-                resultSet.getBoolean("automatic_retry_authorized"));
+        J7ProviderDerivedOwnerGo.Grant grant = mapGrant(resultSet);
         return new ProviderGoRow(
                 resultSet.getLong("id"),
                 grant,
@@ -783,6 +772,96 @@ public class JdbcJ7DeliveryLedgerStore implements J7DeliveryLedgerStore {
                 Optional.ofNullable(resultSet.getObject(
                         "consumed_delivery_uuid", UUID.class)),
                 optionalInt(resultSet, "consumed_attempt_number"));
+    }
+
+    private static J7ProviderDerivedOwnerGo.Grant mapGrant(ResultSet resultSet)
+            throws SQLException {
+        String format = resultSet.getString("owner_go_format");
+        if (J7ProviderDerivedOwnerGo.FORMAT_V1.equals(format)) {
+            return new J7ProviderDerivedOwnerGo.Grant(
+                    resultSet.getObject("go_uuid", UUID.class),
+                    resultSet.getString("owner_decision_block_sha256"),
+                    resultSet.getString("work_order"),
+                    resultSet.getString("campaign_manifest_reference"),
+                    resultSet.getString("campaign_manifest_sha256"),
+                    resultSet.getString("local_lab_commit"),
+                    resultSet.getString("receiver_commit"),
+                    resultSet.getString("official_permission_evidence_reference"),
+                    resultSet.getString("official_permission_evidence_sha256"),
+                    resultSet.getString("official_permission_status"),
+                    resultSet.getString("receiver_qualification"),
+                    resultSet.getString("sender_qualification"),
+                    resultSet.getString("execution_actor"),
+                    resultSet.getObject("canonical_event_id", UUID.class),
+                    resultSet.getLong("provider_event_id"),
+                    resultSet.getObject("export_uuid", UUID.class),
+                    resultSet.getString("file_sha256"),
+                    resultSet.getString("data_sha256"),
+                    resultSet.getLong("file_size_bytes"),
+                    resultSet.getString("schema_id"),
+                    resultSet.getString("schema_version"),
+                    URI.create(resultSet.getString("receiver_origin")),
+                    resultSet.getString("client_certificate_sha256"),
+                    resultSet.getInt("expected_attempt_number"),
+                    resultSet.getInt("maximum_direct_import_calls"),
+                    resultSet.getObject("valid_from", OffsetDateTime.class).toInstant(),
+                    resultSet.getObject("valid_until", OffsetDateTime.class).toInstant(),
+                    resultSet.getString("owner_decision"),
+                    resultSet.getString("go_use"),
+                    resultSet.getString("payload_class"),
+                    resultSet.getString("validation_status"),
+                    resultSet.getBoolean("provider_derived_real_post_authorized"),
+                    resultSet.getBoolean("provider_network_authorized"),
+                    resultSet.getBoolean("remote_receiver_network_authorized"),
+                    resultSet.getBoolean("vps_deployment_authorized"),
+                    resultSet.getBoolean("production_authorized"),
+                    resultSet.getBoolean("automatic_retry_authorized"));
+        }
+        if (J7ProviderDerivedOwnerGo.FORMAT_V2.equals(format)) {
+            return J7ProviderDerivedOwnerGo.Grant.v2(
+                    resultSet.getObject("go_uuid", UUID.class),
+                    resultSet.getString("owner_decision_block_sha256"),
+                    resultSet.getString("work_order"),
+                    resultSet.getString("campaign_manifest_reference"),
+                    resultSet.getString("campaign_manifest_sha256"),
+                    resultSet.getString("local_lab_commit"),
+                    resultSet.getString("receiver_commit"),
+                    resultSet.getString("provider_permission_audit_reference"),
+                    resultSet.getString("provider_permission_audit_sha256"),
+                    resultSet.getString("provider_permission_audit_status"),
+                    resultSet.getString("j7_transfer_governance_basis_reference"),
+                    resultSet.getString("j7_transfer_governance_basis_commit"),
+                    resultSet.getString("j7_transfer_governance_basis_sha256"),
+                    resultSet.getString("j7_transfer_governance_basis_status"),
+                    resultSet.getString("receiver_qualification"),
+                    resultSet.getString("sender_qualification"),
+                    resultSet.getString("execution_actor"),
+                    resultSet.getObject("canonical_event_id", UUID.class),
+                    resultSet.getLong("provider_event_id"),
+                    resultSet.getObject("export_uuid", UUID.class),
+                    resultSet.getString("file_sha256"),
+                    resultSet.getString("data_sha256"),
+                    resultSet.getLong("file_size_bytes"),
+                    resultSet.getString("schema_id"),
+                    resultSet.getString("schema_version"),
+                    URI.create(resultSet.getString("receiver_origin")),
+                    resultSet.getString("client_certificate_sha256"),
+                    resultSet.getInt("expected_attempt_number"),
+                    resultSet.getInt("maximum_direct_import_calls"),
+                    resultSet.getObject("valid_from", OffsetDateTime.class).toInstant(),
+                    resultSet.getObject("valid_until", OffsetDateTime.class).toInstant(),
+                    resultSet.getString("owner_decision"),
+                    resultSet.getString("go_use"),
+                    resultSet.getString("payload_class"),
+                    resultSet.getString("validation_status"),
+                    resultSet.getBoolean("provider_derived_real_post_authorized"),
+                    resultSet.getBoolean("provider_network_authorized"),
+                    resultSet.getBoolean("remote_receiver_network_authorized"),
+                    resultSet.getBoolean("vps_deployment_authorized"),
+                    resultSet.getBoolean("production_authorized"),
+                    resultSet.getBoolean("automatic_retry_authorized"));
+        }
+        throw new LedgerException(LedgerFailure.OWNER_GO_FORMAT_INVALID);
     }
 
     private static Optional<Instant> optionalInstant(ResultSet resultSet, String column)
@@ -807,11 +886,27 @@ public class JdbcJ7DeliveryLedgerStore implements J7DeliveryLedgerStore {
                 .addValue("campaignManifestSha256", grant.campaignManifestSha256())
                 .addValue("localLabCommit", grant.localLabCommit())
                 .addValue("receiverCommit", grant.receiverCommit())
+                .addValue("ownerGoFormat", grant.format())
                 .addValue("officialPermissionEvidenceReference",
-                        grant.officialPermissionEvidenceReference())
+                        grant.officialPermissionEvidenceReference(), Types.VARCHAR)
                 .addValue("officialPermissionEvidenceSha256",
-                        grant.officialPermissionEvidenceSha256())
-                .addValue("officialPermissionStatus", grant.officialPermissionStatus())
+                        grant.officialPermissionEvidenceSha256(), Types.VARCHAR)
+                .addValue("officialPermissionStatus",
+                        grant.officialPermissionStatus(), Types.VARCHAR)
+                .addValue("providerPermissionAuditReference",
+                        grant.providerPermissionAuditReference(), Types.VARCHAR)
+                .addValue("providerPermissionAuditSha256",
+                        grant.providerPermissionAuditSha256(), Types.VARCHAR)
+                .addValue("providerPermissionAuditStatus",
+                        grant.providerPermissionAuditStatus(), Types.VARCHAR)
+                .addValue("j7TransferGovernanceBasisReference",
+                        grant.j7TransferGovernanceBasisReference(), Types.VARCHAR)
+                .addValue("j7TransferGovernanceBasisCommit",
+                        grant.j7TransferGovernanceBasisCommit(), Types.VARCHAR)
+                .addValue("j7TransferGovernanceBasisSha256",
+                        grant.j7TransferGovernanceBasisSha256(), Types.VARCHAR)
+                .addValue("j7TransferGovernanceBasisStatus",
+                        grant.j7TransferGovernanceBasisStatus(), Types.VARCHAR)
                 .addValue("receiverQualification", grant.receiverQualification())
                 .addValue("senderQualification", grant.senderQualification())
                 .addValue("executionActor", grant.executionActor())

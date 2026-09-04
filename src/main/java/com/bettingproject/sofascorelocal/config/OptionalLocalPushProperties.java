@@ -232,6 +232,7 @@ public class OptionalLocalPushProperties {
     @AssertTrue(message = "the WO-035 runtime activation matrix is inconsistent")
     public boolean isRuntimeActivationCoherent() {
         if (executionMode == null
+                || officialPermissionStatus == null
                 || receiverQualification == null
                 || senderQualification == null) {
             return false;
@@ -259,7 +260,8 @@ public class OptionalLocalPushProperties {
             case SYNTHETIC_LOOPBACK -> !remoteDeliveryAuthorized
                     && providerOwnerGo.isAbsent();
             case PROVIDER_DERIVED -> remoteDeliveryAuthorized
-                    && officialPermissionStatus == PermissionStatus.EVIDENCED_COMPATIBLE
+                    && (officialPermissionStatus == PermissionStatus.NOT_EVIDENCED
+                    || officialPermissionStatus == PermissionStatus.EVIDENCED_COMPATIBLE)
                     && providerOwnerGo.isComplete();
         };
     }

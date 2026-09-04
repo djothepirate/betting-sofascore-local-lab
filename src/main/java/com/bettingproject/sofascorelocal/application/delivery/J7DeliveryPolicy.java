@@ -43,11 +43,7 @@ public final class J7DeliveryPolicy {
         if (!properties.isEnabled()) {
             throw new J7DeliveryException(J7DeliveryError.DELIVERY_DISABLED);
         }
-        if (properties.getOfficialPermissionStatus()
-                != OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE) {
-            throw new J7DeliveryException(
-                    J7DeliveryError.OFFICIAL_PERMISSION_NOT_EVIDENCED);
-        }
+        requireJ7TransferEligiblePermissionAudit();
         if (!properties.isRemoteDeliveryAuthorized()) {
             throw new J7DeliveryException(
                     J7DeliveryError.REMOTE_DELIVERY_NOT_AUTHORIZED);
@@ -60,10 +56,7 @@ public final class J7DeliveryPolicy {
         if (!properties.isEnabled()) {
             blockers.add("DELIVERY_DISABLED");
         }
-        if (properties.getOfficialPermissionStatus()
-                != OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE) {
-            blockers.add("OFFICIAL_PERMISSION_NOT_EVIDENCED");
-        }
+        addPermissionAuditBlocker(blockers);
         if (!properties.isRemoteDeliveryAuthorized()) {
             blockers.add("REMOTE_DELIVERY_NOT_AUTHORIZED");
         }
@@ -84,10 +77,11 @@ public final class J7DeliveryPolicy {
     }
 
     /**
-     * Applies the WO-035 runtime gates without consulting a certificate store or opening a client.
-     * Provider-derived delivery is admitted only when configuration carries the complete public
-     * reference of the owner-go document. Durable availability, identity and one-time consumption
-     * are enforced later by the persistence boundary, before transport creation.
+     * Applies the WO-035 runtime gates as amended by WO-047, without consulting a certificate
+     * store or opening a client. Provider-derived delivery admits only the explicit permission
+     * audit allow-list and requires the complete public reference of the owner-go document.
+     * Durable availability, identity and one-time consumption are enforced later by the
+     * persistence boundary, before transport creation.
      */
     public void requireRuntimeDelivery(J7DeliveryPayloadClass payloadClass) {
         Objects.requireNonNull(payloadClass, "payloadClass");
@@ -138,11 +132,7 @@ public final class J7DeliveryPolicy {
             }
             return;
         }
-        if (properties.getOfficialPermissionStatus()
-                != OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE) {
-            throw new J7DeliveryException(
-                    J7DeliveryError.OFFICIAL_PERMISSION_NOT_EVIDENCED);
-        }
+        requireJ7TransferEligiblePermissionAudit();
         if (!properties.isRemoteDeliveryAuthorized()) {
             throw new J7DeliveryException(
                     J7DeliveryError.REMOTE_DELIVERY_NOT_AUTHORIZED);
@@ -188,10 +178,7 @@ public final class J7DeliveryPolicy {
             blockers.add("AUTOMATIC_RETRY_NOT_ALLOWED");
         }
         if (payloadClass == J7DeliveryPayloadClass.PROVIDER_DERIVED) {
-            if (properties.getOfficialPermissionStatus()
-                    != OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE) {
-                blockers.add("OFFICIAL_PERMISSION_NOT_EVIDENCED");
-            }
+            addPermissionAuditBlocker(blockers);
             if (!properties.isRemoteDeliveryAuthorized()) {
                 blockers.add("REMOTE_DELIVERY_NOT_AUTHORIZED");
             }
@@ -238,7 +225,7 @@ public final class J7DeliveryPolicy {
         Objects.requireNonNull(grant, "grant");
         requireRuntimeDelivery(J7DeliveryPayloadClass.PROVIDER_DERIVED);
         if (!grant.reference().equals(providerOwnerGoReference())
-                || !grant.officialPermissionStatus()
+                || !grant.permissionAuditStatus()
                 .equals(properties.getOfficialPermissionStatus().name())
                 || !grant.receiverQualification()
                 .equals(properties.getReceiverQualification().name())
@@ -265,5 +252,38 @@ public final class J7DeliveryPolicy {
     private boolean providerOwnerGoIsAbsent() {
         return properties.getProviderOwnerGo() != null
                 && properties.getProviderOwnerGo().isAbsent();
+    }
+
+    private void requireJ7TransferEligiblePermissionAudit() {
+        OptionalLocalPushProperties.PermissionStatus status =
+                properties.getOfficialPermissionStatus();
+        if (status == OptionalLocalPushProperties.PermissionStatus.NOT_EVIDENCED
+                || status
+                == OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE) {
+            return;
+        }
+        if (status == OptionalLocalPushProperties.PermissionStatus.EVIDENCED_INCOMPATIBLE) {
+            throw new J7DeliveryException(
+                    J7DeliveryError.OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE);
+        }
+        throw new J7DeliveryException(
+                J7DeliveryError.OFFICIAL_PERMISSION_STATUS_INVALID);
+    }
+
+    private void addPermissionAuditBlocker(List<String> blockers) {
+        OptionalLocalPushProperties.PermissionStatus status =
+                properties.getOfficialPermissionStatus();
+        if (status == OptionalLocalPushProperties.PermissionStatus.NOT_EVIDENCED
+                || status
+                == OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE) {
+            return;
+        }
+        if (status
+                == OptionalLocalPushProperties.PermissionStatus.EVIDENCED_INCOMPATIBLE) {
+            blockers.add(
+                    J7DeliveryError.OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE.name());
+            return;
+        }
+        blockers.add(J7DeliveryError.OFFICIAL_PERMISSION_STATUS_INVALID.name());
     }
 }

@@ -3,6 +3,9 @@ package com.bettingproject.sofascorelocal.config;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
 
@@ -11,6 +14,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 class OptionalLocalPushPropertiesTest {
 
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+            .withUserConfiguration(BindingConfiguration.class);
 
     @Test
     void defaultsAreFailClosedBoundedAndPermissionIsNotEvidenced() {
@@ -71,7 +76,7 @@ class OptionalLocalPushPropertiesTest {
     }
 
     @Test
-    void providerDerivedConfigurationRequiresPermissionAndRemoteAuthorization() {
+    void providerDerivedConfigurationTreatsNotEvidencedAsAuditOnly() {
         OptionalLocalPushProperties properties = new OptionalLocalPushProperties();
         properties.setEnabled(true);
         properties.setExecutionMode(
@@ -88,8 +93,6 @@ class OptionalLocalPushPropertiesTest {
                         .equals("runtimeActivationCoherent"));
 
         properties.setRemoteDeliveryAuthorized(true);
-        properties.setOfficialPermissionStatus(
-                OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE);
         assertThat(validator.validate(properties))
                 .anyMatch(violation -> violation.getPropertyPath().toString()
                         .equals("runtimeActivationCoherent"));
@@ -98,6 +101,39 @@ class OptionalLocalPushPropertiesTest {
                 "50000000-0000-4000-8000-000000000005");
         properties.getProviderOwnerGo().setOwnerGoDocumentSha256("b".repeat(64));
         assertThat(validator.validate(properties)).isEmpty();
+
+        properties.setOfficialPermissionStatus(
+                OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE);
+        assertThat(validator.validate(properties)).isEmpty();
+
+        properties.setOfficialPermissionStatus(
+                OptionalLocalPushProperties.PermissionStatus.EVIDENCED_INCOMPATIBLE);
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getPropertyPath().toString()
+                        .equals("runtimeActivationCoherent"));
+
+        properties.setOfficialPermissionStatus(null);
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getPropertyPath().toString()
+                        .equals("officialPermissionStatus"))
+                .anyMatch(violation -> violation.getPropertyPath().toString()
+                        .equals("runtimeActivationCoherent"));
+    }
+
+    @Test
+    void unknownPermissionStatusCannotBindOrActivateTheSpringConfiguration() {
+        contextRunner.withPropertyValues(
+                        "optional-integration.enabled=true",
+                        "optional-integration.execution-mode=PROVIDER_DERIVED",
+                        "optional-integration.official-permission-status=FUTURE_UNKNOWN")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure())
+                            .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                            .hasStackTraceContaining(
+                                    "optional-integration.official-permission-status")
+                            .hasStackTraceContaining("FUTURE_UNKNOWN");
+                });
     }
 
     @Test
@@ -194,5 +230,10 @@ class OptionalLocalPushPropertiesTest {
 
         properties.getMtls().setClientCertificateSha256("not-a-fingerprint");
         assertThat(validator.validate(properties)).isNotEmpty();
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableConfigurationProperties(OptionalLocalPushProperties.class)
+    static class BindingConfiguration {
     }
 }

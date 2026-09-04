@@ -8,6 +8,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Configuration;
@@ -765,20 +766,24 @@ class J7DeliveryLedgerMigrationIT {
         return value.toInstant();
     }
 
-    @Test
-    void registersAndAtomicallyConsumesOneExactProviderDerivedOwnerGo() {
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(OwnerGoTestFormat.class)
+    void registersAndAtomicallyConsumesOneExactProviderDerivedOwnerGo(
+            OwnerGoTestFormat format) {
         ExportEvidence export = insertProviderValidatedExport();
         Instant now = databaseClock();
         J7ProviderDerivedOwnerGo.Grant grant = providerGrant(
-                export, now.minusSeconds(30), now.plusSeconds(300));
+                export, now.minusSeconds(30), now.plusSeconds(300), format);
 
         var registered = store.registerProviderDerivedOwnerGo(grant);
         assertThat(registered.status()).isEqualTo(J7ProviderDerivedOwnerGo.Status.AVAILABLE);
         Map<String, Object> canonicalEvidence = jdbc.queryForMap("""
-                select j7_provider_owner_go_canonical_block(owner_go) as canonical_block,
+                select j7_provider_owner_go_canonical_block_for_format(owner_go)
+                           as canonical_block,
                        pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(
-                           j7_provider_owner_go_canonical_block(owner_go), 'UTF8')), 'hex')
-                           as computed_hash
+                           j7_provider_owner_go_canonical_block_for_format(owner_go),
+                           'UTF8')), 'hex')
+                            as computed_hash
                 from j7_provider_delivery_owner_go_grant owner_go
                 where owner_go.go_uuid = ?
                 """, grant.goId());
@@ -900,12 +905,14 @@ class J7DeliveryLedgerMigrationIT {
                 """, available.goId())).isInstanceOf(DataAccessException.class);
     }
 
-    @Test
-    void rollsBackProviderAttemptAndConsumptionWhenClaimCannotReachInFlight() {
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(OwnerGoTestFormat.class)
+    void rollsBackProviderAttemptAndConsumptionWhenClaimCannotReachInFlight(
+            OwnerGoTestFormat format) {
         ExportEvidence export = insertProviderValidatedExport();
         Instant now = databaseClock();
         J7ProviderDerivedOwnerGo.Grant grant = providerGrant(
-                export, now.minusSeconds(30), now.plusSeconds(300));
+                export, now.minusSeconds(30), now.plusSeconds(300), format);
         store.registerProviderDerivedOwnerGo(grant);
         jdbc.execute("""
                 create function fail_test_provider_j7_delivery_claim()
@@ -1096,12 +1103,14 @@ class J7DeliveryLedgerMigrationIT {
                 Long.class, deliveryId)).isZero();
     }
 
-    @Test
-    void serializesConcurrentClaimsForTheSameProviderGrant() throws Exception {
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(OwnerGoTestFormat.class)
+    void serializesConcurrentClaimsForTheSameProviderGrant(
+            OwnerGoTestFormat format) throws Exception {
         ExportEvidence export = insertProviderValidatedExport();
         Instant now = databaseClock();
         J7ProviderDerivedOwnerGo.Grant grant = providerGrant(
-                export, now.minusSeconds(30), now.plusSeconds(300));
+                export, now.minusSeconds(30), now.plusSeconds(300), format);
         store.registerProviderDerivedOwnerGo(grant);
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch release = new CountDownLatch(1);
@@ -1153,12 +1162,14 @@ class J7DeliveryLedgerMigrationIT {
         }
     }
 
-    @Test
-    void makesConcurrentRevocationAndClaimMutuallyExclusive() throws Exception {
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(OwnerGoTestFormat.class)
+    void makesConcurrentRevocationAndClaimMutuallyExclusive(
+            OwnerGoTestFormat format) throws Exception {
         ExportEvidence export = insertProviderValidatedExport();
         Instant now = databaseClock();
         J7ProviderDerivedOwnerGo.Grant grant = providerGrant(
-                export, now.minusSeconds(30), now.plusSeconds(300));
+                export, now.minusSeconds(30), now.plusSeconds(300), format);
         store.registerProviderDerivedOwnerGo(grant);
         CountDownLatch ready = new CountDownLatch(2);
         CountDownLatch release = new CountDownLatch(1);
@@ -1623,46 +1634,112 @@ class J7DeliveryLedgerMigrationIT {
             ExportEvidence export,
             Instant validFrom,
             Instant validUntil) {
+        return providerGrant(export, validFrom, validUntil, OwnerGoTestFormat.V1);
+    }
+
+    private static J7ProviderDerivedOwnerGo.Grant providerGrant(
+            ExportEvidence export,
+            Instant validFrom,
+            Instant validUntil,
+            OwnerGoTestFormat format) {
         long sequence = SEQUENCE.incrementAndGet();
-        J7ProviderDerivedOwnerGo.Grant draft = new J7ProviderDerivedOwnerGo.Grant(
-                UUID.nameUUIDFromBytes(("provider-go-" + sequence).getBytes(
-                        java.nio.charset.StandardCharsets.UTF_8)),
-                sha(sequence * 20 + 1),
-                "WO-SS-20260904-046-provider-derived-real-delivery",
-                "docs/validation/J9-WO046-PROVIDER-DERIVED-MANIFEST-" + sequence + ".md",
-                sha(sequence * 20 + 2),
-                String.format("%040x", sequence * 20 + 3),
-                String.format("%040x", sequence * 20 + 4),
-                "docs/validation/J9-OFFICIAL-PERMISSION-EVIDENCE-" + sequence + ".md",
-                sha(sequence * 20 + 5),
-                "EVIDENCED_COMPATIBLE",
-                "PASS",
-                "PASS",
-                "CODEX_LOCAL_UI",
-                export.canonicalEventId(),
-                export.providerEventId(),
-                export.exportId(),
-                export.fileSha256(),
-                export.dataSha256(),
-                2048,
-                J7ProviderDerivedOwnerGo.EXPECTED_SCHEMA_ID,
-                J7ProviderDerivedOwnerGo.EXPECTED_SCHEMA_VERSION,
-                URI.create("https://127.0.0.1:8444"),
-                sha(sequence * 20 + 6),
-                1,
-                1,
-                validFrom,
-                validUntil,
-                "GRANT",
-                "ONE_TIME",
-                "PROVIDER_DERIVED",
-                "HUMAN_VALIDATED",
-                true,
-                false,
-                false,
-                false,
-                false,
-                false);
+        UUID goId = UUID.nameUUIDFromBytes(("provider-go-" + sequence).getBytes(
+                java.nio.charset.StandardCharsets.UTF_8));
+        String ownerDecisionSha = sha(sequence * 20 + 1);
+        String manifestReference =
+                "docs/validation/J9-WO046-PROVIDER-DERIVED-MANIFEST-" + sequence + ".md";
+        String manifestSha = sha(sequence * 20 + 2);
+        String localCommit = String.format("%040x", sequence * 20 + 3);
+        String receiverCommit = String.format("%040x", sequence * 20 + 4);
+        String permissionReference =
+                "docs/validation/J9-OFFICIAL-PERMISSION-EVIDENCE-" + sequence + ".md";
+        String permissionSha = sha(sequence * 20 + 5);
+        String certificateSha = sha(sequence * 20 + 6);
+        J7ProviderDerivedOwnerGo.Grant draft;
+        if (format == OwnerGoTestFormat.V1) {
+            draft = new J7ProviderDerivedOwnerGo.Grant(
+                    goId,
+                    ownerDecisionSha,
+                    "WO-SS-20260904-046-provider-derived-real-delivery",
+                    manifestReference,
+                    manifestSha,
+                    localCommit,
+                    receiverCommit,
+                    permissionReference,
+                    permissionSha,
+                    "EVIDENCED_COMPATIBLE",
+                    "PASS",
+                    "PASS",
+                    "CODEX_LOCAL_UI",
+                    export.canonicalEventId(),
+                    export.providerEventId(),
+                    export.exportId(),
+                    export.fileSha256(),
+                    export.dataSha256(),
+                    2048,
+                    J7ProviderDerivedOwnerGo.EXPECTED_SCHEMA_ID,
+                    J7ProviderDerivedOwnerGo.EXPECTED_SCHEMA_VERSION,
+                    URI.create("https://127.0.0.1:8444"),
+                    certificateSha,
+                    1,
+                    1,
+                    validFrom,
+                    validUntil,
+                    "GRANT",
+                    "ONE_TIME",
+                    "PROVIDER_DERIVED",
+                    "HUMAN_VALIDATED",
+                    true,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false);
+        }
+        else {
+            draft = J7ProviderDerivedOwnerGo.Grant.v2(
+                    goId,
+                    ownerDecisionSha,
+                    "WO-SS-20260904-046-provider-derived-real-delivery",
+                    manifestReference,
+                    manifestSha,
+                    localCommit,
+                    receiverCommit,
+                    permissionReference,
+                    permissionSha,
+                    "NOT_EVIDENCED",
+                    J7ProviderDerivedOwnerGo.EXPECTED_TRANSFER_GOVERNANCE_BASIS_REFERENCE,
+                    J7ProviderDerivedOwnerGo.EXPECTED_TRANSFER_GOVERNANCE_BASIS_COMMIT,
+                    J7ProviderDerivedOwnerGo.EXPECTED_TRANSFER_GOVERNANCE_BASIS_SHA256,
+                    J7ProviderDerivedOwnerGo.EXPECTED_TRANSFER_GOVERNANCE_BASIS_STATUS,
+                    "PASS",
+                    "PASS",
+                    "CODEX_LOCAL_UI",
+                    export.canonicalEventId(),
+                    export.providerEventId(),
+                    export.exportId(),
+                    export.fileSha256(),
+                    export.dataSha256(),
+                    2048,
+                    J7ProviderDerivedOwnerGo.EXPECTED_SCHEMA_ID,
+                    J7ProviderDerivedOwnerGo.EXPECTED_SCHEMA_VERSION,
+                    URI.create("https://127.0.0.1:8444"),
+                    certificateSha,
+                    1,
+                    1,
+                    validFrom,
+                    validUntil,
+                    "GRANT",
+                    "ONE_TIME",
+                    "PROVIDER_DERIVED",
+                    "HUMAN_VALIDATED",
+                    true,
+                    false,
+                    false,
+                    false,
+                    false,
+                    false);
+        }
         return draft.withOwnerDecisionBlockSha256(
                 draft.computedOwnerDecisionBlockSha256());
     }
@@ -1682,11 +1759,27 @@ class J7DeliveryLedgerMigrationIT {
                 .addValue("campaignManifestSha256", grant.campaignManifestSha256())
                 .addValue("localLabCommit", grant.localLabCommit())
                 .addValue("receiverCommit", grant.receiverCommit())
+                .addValue("ownerGoFormat", grant.format())
                 .addValue("officialPermissionEvidenceReference",
-                        grant.officialPermissionEvidenceReference())
+                        grant.officialPermissionEvidenceReference(), java.sql.Types.VARCHAR)
                 .addValue("officialPermissionEvidenceSha256",
-                        grant.officialPermissionEvidenceSha256())
-                .addValue("officialPermissionStatus", grant.officialPermissionStatus())
+                        grant.officialPermissionEvidenceSha256(), java.sql.Types.VARCHAR)
+                .addValue("officialPermissionStatus",
+                        grant.officialPermissionStatus(), java.sql.Types.VARCHAR)
+                .addValue("providerPermissionAuditReference",
+                        grant.providerPermissionAuditReference(), java.sql.Types.VARCHAR)
+                .addValue("providerPermissionAuditSha256",
+                        grant.providerPermissionAuditSha256(), java.sql.Types.VARCHAR)
+                .addValue("providerPermissionAuditStatus",
+                        grant.providerPermissionAuditStatus(), java.sql.Types.VARCHAR)
+                .addValue("j7TransferGovernanceBasisReference",
+                        grant.j7TransferGovernanceBasisReference(), java.sql.Types.VARCHAR)
+                .addValue("j7TransferGovernanceBasisCommit",
+                        grant.j7TransferGovernanceBasisCommit(), java.sql.Types.VARCHAR)
+                .addValue("j7TransferGovernanceBasisSha256",
+                        grant.j7TransferGovernanceBasisSha256(), java.sql.Types.VARCHAR)
+                .addValue("j7TransferGovernanceBasisStatus",
+                        grant.j7TransferGovernanceBasisStatus(), java.sql.Types.VARCHAR)
                 .addValue("receiverQualification", grant.receiverQualification())
                 .addValue("senderQualification", grant.senderQualification())
                 .addValue("executionActor", grant.executionActor())
@@ -1726,9 +1819,18 @@ class J7DeliveryLedgerMigrationIT {
                     go_uuid, owner_decision_block_sha256, work_order,
                     campaign_manifest_reference, campaign_manifest_sha256,
                     local_lab_commit, receiver_commit,
+                    owner_go_format,
                     official_permission_evidence_reference,
                     official_permission_evidence_sha256,
-                    official_permission_status, receiver_qualification,
+                    official_permission_status,
+                    provider_permission_audit_reference,
+                    provider_permission_audit_sha256,
+                    provider_permission_audit_status,
+                    j7_transfer_governance_basis_reference,
+                    j7_transfer_governance_basis_commit,
+                    j7_transfer_governance_basis_sha256,
+                    j7_transfer_governance_basis_status,
+                    receiver_qualification,
                     sender_qualification, execution_actor, export_manifest_id,
                     canonical_event_id, provider_event_id, export_uuid,
                     file_sha256, data_sha256, file_size_bytes,
@@ -1744,9 +1846,18 @@ class J7DeliveryLedgerMigrationIT {
                     :goId, :ownerDecisionBlockSha256, :workOrder,
                     :campaignManifestReference, :campaignManifestSha256,
                     :localLabCommit, :receiverCommit,
+                    :ownerGoFormat,
                     :officialPermissionEvidenceReference,
                     :officialPermissionEvidenceSha256,
-                    :officialPermissionStatus, :receiverQualification,
+                    :officialPermissionStatus,
+                    :providerPermissionAuditReference,
+                    :providerPermissionAuditSha256,
+                    :providerPermissionAuditStatus,
+                    :j7TransferGovernanceBasisReference,
+                    :j7TransferGovernanceBasisCommit,
+                    :j7TransferGovernanceBasisSha256,
+                    :j7TransferGovernanceBasisStatus,
+                    :receiverQualification,
                     :senderQualification, :executionActor, :exportManifestId,
                     :canonicalEventId, :providerEventId, :exportId,
                     :fileSha256, :dataSha256, :fileSizeBytes,
@@ -1926,6 +2037,11 @@ class J7DeliveryLedgerMigrationIT {
 
     private static String sha(long value) {
         return String.format("%064x", value);
+    }
+
+    private enum OwnerGoTestFormat {
+        V1,
+        V2
     }
 
     private record ExportEvidence(
