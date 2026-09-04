@@ -5,6 +5,40 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
+[WO-SS-20260904-045](docs/work_orders/active/WO-SS-20260904-045-j9-provider-derived-owner-go-boundary.md)
+est `READY_FOR_OWNER_REVIEW`. Son commit d'implémentation
+`67467d5dbd63fa54d11b2d1cd701a31edf4454e0` ajoute la frontière durable, exacte, atomique et à
+usage unique exigée avant toute future livraison J7 dérivée de données fournisseur. La voie
+`SYNTHETIC_ONLY` reste inchangée ; `MIXED_OR_UNKNOWN` reste refusée.
+
+Le grant propriétaire est lié par UUID et SHA-256 à un document canonique qui fixe le futur Work
+Order/manifeste, les commits des deux dépôts, la preuve officielle, l'événement, l'export et ses
+hashes, le schéma, le receiver loopback, le certificat client, l'ordinal `1`, un seul appel et une
+fenêtre de 60 minutes maximum. Java et PostgreSQL recalculent le même préimage UTF-8/LF. La
+migration V31 conserve les grants, révocations et consommations append-only ; consommation,
+tentative et passage `IN_FLIGHT` sont committés dans une seule transaction avant toute ouverture du
+transport.
+
+La confirmation locale émet désormais une capacité mémoire liée à l'instance exacte du reçu,
+expirante et consommable une seule fois. Une copie présentant les mêmes champs est refusée avant
+toute lecture d'export ou de grant. Après claim, aucun échec ne rembourse le go et aucun retry
+automatique n'est possible. Les fonctions SQL fixent leur `search_path`, et la sauvegarde J6 V31
+empreinte également les trois journaux owner-go.
+
+Les parcours Maven standard et `integration-tests` passent chacun à Surefire `1167/0/0/5` et
+Failsafe `100/0/0/0`, incluant PostgreSQL, concurrence, mTLS et E2E synthétique strictement
+loopback. Les revues adversariales finales comptent zéro P1/P2. Le
+[rapport WO-045](docs/validation/J9-WO045-PROVIDER-DERIVED-OWNER-GO-BOUNDARY-QUALIFICATION-20260904.md),
+taille `11471` octets, porte le SHA-256
+`5146c18542f0376a60bac5d4a25b68ff3f2fec9d7da700b32ee0aac60e16d946` et conclut
+`PASS_LOCAL_FAIL_CLOSED`.
+
+Aucun grant réel, POST fournisseur, appel SofaScore, receiver distant, accès VPS ou usage de
+production n'a été effectué. WO-046 n'est pas ouvert : un nouveau manifeste gelé et un nouveau go
+propriétaire exactement lié restent obligatoires après validation séparée de WO-045. La branche et
+ses commits restent locaux ; aucun push ni merge n'est réalisé par ce Work Order.
+
+Le Work Order
 [WO-SS-20260904-044](docs/work_orders/completed/WO-SS-20260904-044-j9-wo036-java-jar-path-argument-boundary.md)
 est `VALIDATED` et classé. Le commit
 `0b903b71ae70ccfb9b55f8d89bc8ac57eab0cbe3` résout localement le second P2 de la PR `#26` : le

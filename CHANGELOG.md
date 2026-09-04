@@ -4,6 +4,38 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-045 frontière de go propriétaire pour un export J7 fournisseur
+
+- ouverture depuis `main` exact `400900410dfa751521ce387fbadcc4b5ca95a94a`, dans la branche
+  distincte `codex/j9-wo045-provider-derived-owner-go-boundary` ;
+- définition d'un document propriétaire canonique fermé et hashé, lié au futur Work Order et à son
+  manifeste gelé, aux commits qualifiés, à la preuve officielle, à l'événement, à l'export et ses
+  hashes, au schéma, au receiver, au certificat, à l'ordinal `1`, à un seul appel et à une fenêtre
+  de 60 minutes maximum ;
+- commit d'implémentation `67467d5dbd63fa54d11b2d1cd701a31edf4454e0` : modèle et vérifications
+  Java, configuration fail-closed, policy/query/runtime/controller et ledger PostgreSQL ;
+- migration additive V31 : grants, révocations et consommations append-only, classification
+  `SYNTHETIC_ONLY|PROVIDER_DERIVED`, hash canonique recalculé en base et fonctions à `search_path`
+  figé ;
+- claim `PROVIDER_DERIVED` atomique : insertion de la tentative, consommation du go et transition
+  `IN_FLIGHT` dans une transaction unique, avant factory, certificat et socket ;
+- capacité de confirmation éphémère liée à l'identité de l'instance exacte du reçu, consommée une
+  seule fois avant lecture de l'export ou du grant ; copies, replays et expirations refusés ;
+- aucun remboursement du go après claim, aucun retry automatique et réconciliation sans réseau ;
+- extension des scripts J6 à V31 avec empreinte et compteurs des trois journaux owner-go ;
+- qualification ciblée de sauvegarde/restauration, puis deux parcours complets verts : standard et
+  profil `integration-tests`, chacun à Surefire `1167/0/0/5` et Failsafe `100/0/0/0`, dont `4`
+  tests mTLS loopback et `2` E2E loopback ;
+- trois revues adversariales finales sans finding P1/P2, contrôle UTF-8 `33/33`, secrets sans hit,
+  scripts PowerShell parsables, Compose valide, loopback et defaults bloquants conservés ;
+- rapport
+  `docs/validation/J9-WO045-PROVIDER-DERIVED-OWNER-GO-BOUNDARY-QUALIFICATION-20260904.md`, taille
+  `11471` octets et SHA-256
+  `5146c18542f0376a60bac5d4a25b68ff3f2fec9d7da700b32ee0aac60e16d946` ;
+- résultat `PASS_LOCAL_FAIL_CLOSED` et WO-045 `READY_FOR_OWNER_REVIEW` ;
+- zéro grant réel, POST fournisseur, appel SofaScore, receiver distant, VPS ou production ; WO-046,
+  son manifeste et son nouveau go restent non autorisés ; aucun push ni merge effectué.
+
 ### Après J9 — WO-044 frontière d'argument du chemin JAR WO-036
 
 - ouverture depuis le HEAD exact `96dec8492dbc043c7d6e4310195421f4411722df` de la PR `#26`,
