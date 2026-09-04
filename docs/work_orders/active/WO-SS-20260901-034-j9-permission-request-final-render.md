@@ -99,8 +99,13 @@ qui est consignée séparément ci-dessus.
 | Saisie propriétaire | `%USERPROFILE%\Documents\SofaScoreLocalLab-private\permission-requests\WO-SS-20260901-034\owner-input.properties` | hors dépôt | modèle local vide créé, SHA-256 initial `fdd3765d81e732bf9b1c2440a2056bbf11c1f5b8a8029a0b87f9bbb0c11775c1` |
 | Template canonique `PRIMARY_ONLY` | `docs/validation/J9-WO034-PERMISSION-REQUEST-PRIMARY-TEMPLATE-20260901.txt` | versionné, sans PII | v1, SHA-256 `bfb9195b78aa663c2e7bb36e896b813087afb1d4e1609346bc9cb0ff21ad8356` |
 | Fixture synthétique canonique | `docs/validation/J9-WO034-PERMISSION-REQUEST-SYNTHETIC-FIXTURE-20260901.properties` | versionnée, sans PII | SHA-256 `abdafb5f87ee2fe0f46b2cfef8a33daebb5f3f6b4d99f86fd49c1de70bad8114` |
+| Fixture synthétique de préflight | `docs/validation/J9-WO034-PERMISSION-REQUEST-PREFLIGHT-SYNTHETIC-FIXTURE-20260902.properties` | versionnée, sans PII | SHA-256 `3308e6b7f63adb51706fc92c3b8a9aba66b40347b5f3d6b8625e85833533f706` |
 | Launcher attesté | `scripts/Invoke-WO034PermissionRequest.ps1` | versionné, sans PII | racine de confiance préchargement, SHA-256 `2398de4e1a9179f6bd79913876c64256de014c48ed0615a0c3709851f3e37094` |
 | Renderer déterministe | `scripts/Render-WO034PermissionRequest.ps1` | versionné, sans PII | v1.1.0, SHA-256 `b722709fd0d8988718fcfefb8506803daba4cd241bb3dc00a88874dd708f28b6` |
+| Préflight expurgé | `scripts/Test-WO034PermissionRequestInput.ps1` | versionné, sans PII | validation seule, SHA-256 `36cdc6e766a61a451570a934d4b51b97d6c62aab605e76aeb1d3170aac33d647` |
+| Tests du préflight | `scripts/Test-WO034PermissionRequestInput.Tests.ps1` | versionnés, sans PII | 22 scénarios, SHA-256 `1b29ac27e152e0dcdac72a70d2c22f33e9e3611a9028e0d535546e7ca9a7d55d` |
+| Orchestrateur préflight-rendu | `scripts/Invoke-WO034PermissionRequestWithPreflight.ps1` | versionné, sans PII | verrou continu et attestations, SHA-256 `6ff75681eaa2a51a992fdfaa5f0547fc5b2432643a2bbf77a921f2469d132379` |
+| Tests de verrou de l'orchestrateur | `scripts/Invoke-WO034PermissionRequestWithPreflight.Tests.ps1` | versionnés, sans PII | 5 scénarios hors ligne, SHA-256 `a85074712a8a045ea696cce52174596571878459c71d625e513fffac8622d274` |
 | Runtime qualifié | `%USERPROFILE%\Documents\SofaScoreLocalLab-private\permission-requests\WO-SS-20260901-034\qualified-runtime` | hors dépôt | copies byte-identiques du launcher et du renderer, ACL protégées |
 | Message final | `%USERPROFILE%\Documents\SofaScoreLocalLab-private\permission-requests\WO-SS-20260901-034\outbound-message.utf8.txt` | hors dépôt | non créé, en attente des valeurs |
 | Enveloppe de formulaire canonique | `%USERPROFILE%\Documents\SofaScoreLocalLab-private\permission-requests\WO-SS-20260901-034\outbound-form-envelope.utf8.json` | hors dépôt | non créée |
@@ -139,6 +144,19 @@ confirmations inconditionnelles, et jusqu'à 10 champs de détail conditionnels.
 conditionnel doit être renseigné exactement lorsque son option le requiert et rester vide dans les
 autres cas. Le template versionné conserve volontairement 32 occurrences réparties sur 28 tokens ;
 seul le message rendu doit avoir un compteur nul de tokens.
+
+Le préflight lit ces 41 propriétés sans appeler le launcher ni le renderer. Il réapplique les
+allowlists, formats, conditions et filtres de valeurs du renderer figé, puis exige en plus un
+fichier strict UTF-8 sans BOM, avec fins de ligne LF et saut final. Avant lecture, il recalcule les
+SHA-256 du launcher, du renderer et du template. Sa sortie ne contient que des compteurs, des
+statuts et, pour aider la correction, les noms des clés connues manquantes, vides, dupliquées ou
+invalides. Les valeurs et les noms de clés inconnus contrôlés par l'entrée ne sont jamais émis.
+
+La description betting-related passe cette porte uniquement si, après normalisation NFC, elle est
+strictement identique au texte approuvé dans le plan : `Betting Project will receive an immutable,
+minimized, normalized and human-reviewed J7 export as a durable input for future versioned
+enrichment and betting-analysis processing; it will not call SofaScore or trigger an acquisition.`
+Une formulation partielle ou une formulation qui ajoute une assertion contradictoire est refusée.
 
 Le dépôt public `https://github.com/djothepirate/betting-sofascore-local-lab` est connu, mais il ne
 sera inséré que si le propriétaire choisit explicitement de le divulguer. L'IPv4 déclarée
@@ -187,6 +205,15 @@ et l'empreinte épinglée, puis conserve les deux handles jusqu'au retour comple
 des streams lisibles, seekables et non inscriptibles, les relit et les compare avant toute mutation
 du conteneur privé.
 
+L'orchestrateur versionné épingle en outre les empreintes du préflight et du launcher. Il conserve
+des handles `FileShare.Read` sur le préflight versionné et sur les copies source/runtime du launcher,
+puis sur `owner-input.properties` sans interruption entre le préflight et le retour du renderer.
+Cette politique autorise leurs relectures par les processus qualifiés tout en refusant écriture,
+suppression et remplacement. Les octets de la saisie sont comparés avant/après sous le même handle ;
+leur empreinte privée n'est ni affichée ni versionnée. La sortie intermédiaire
+`RENDERER_EXECUTED=NO` reste capturée dans la phase préflight et n'est pas relayée comme preuve
+finale après exécution du renderer.
+
 Le renderer applique le mapping et les conditions fixés par son code versionné : catégories
 `OTHER_WITH_DETAILS`, société facultative, site/dépôt, colocalisation, IPv4 et déclarations
 `YES_WITH_DETAILS`. Il refuse les valeurs inutilisées, inconnues, dupliquées, vides, hors allowlist,
@@ -228,17 +255,41 @@ confirmé le mode. L'état courant est :
 
 ```text
 WORK_ORDER_STATUS=WAITING_FOR_OWNER_INPUT
-OWNER_INPUT_FILE_STATUS=CREATED_EMPTY_TEMPLATE
+OWNER_INPUT_FILE_STATUS=PARTIALLY_COMPLETED_9_OF_30_UNCONDITIONAL
 OWNER_INPUT_VALUES_STORED_IN_GIT=NO
-OUTBOUND_CONTENT_MODE_OWNER_CONFIRMED=NO
+OUTBOUND_CONTENT_MODE_OWNER_CONFIRMED=NOT_YET_QUALIFIED
 FINAL_RENDERED_STATUS=NOT_CREATED_PENDING_OWNER_INPUT
 OUTBOUND_MESSAGE_SHA256=NOT_COMPUTED
 OUTBOUND_FORM_ENVELOPE_SHA256=NOT_COMPUTED
 UNRESOLVED_OWNER_INPUT_STATUS=INCOMPLETE
-UNRESOLVED_OWNER_INPUT_COUNT=30
+UNRESOLVED_OWNER_INPUT_COUNT=21
 CONDITIONAL_OWNER_INPUT_COUNT_MAXIMUM=10
 FORM_SUBMISSION_AUTHORIZED=NO
 EXTERNAL_MESSAGE_SENT=NO
+```
+
+Le renderer réel ne doit être lancé qu'après un préflight dont la sortie expurgée contient toutes
+les portes suivantes :
+
+```text
+WO034_INPUT_PREFLIGHT_STATUS=PASS
+FROZEN_LAUNCHER_SHA256_MATCH=YES
+FROZEN_RENDERER_SHA256_MATCH=YES
+FROZEN_TEMPLATE_SHA256_MATCH=YES
+INPUT_STRICT_UTF8_NO_BOM_LF_FINAL_NEWLINE=YES
+EXPECTED_KEY_COUNT=41
+MISSING_KEY_COUNT=0
+UNKNOWN_KEY_COUNT=0
+DUPLICATE_KEY_COUNT=0
+MALFORMED_LINE_COUNT=0
+UNCONDITIONAL_COMPLETE_COUNT=30/30
+EMPTY_UNCONDITIONAL_KEY_COUNT=0
+FORMAT_ERROR_COUNT=0
+ENUM_ERROR_COUNT=0
+CONDITIONAL_ERROR_COUNT=0
+SEMANTIC_COVERAGE_EVOLVING_BETTING_PROJECT_ANALYTICS=YES
+OWNER_INPUT_VALUES_EMITTED=NO
+RENDERER_EXECUTED=NO
 ```
 
 ### 6.2 Porte distincte d'envoi
@@ -296,6 +347,8 @@ WO-034 pourra présenter le rendu à la revue propriétaire seulement si :
 - le fichier de saisie, le message, l'enveloppe, leurs hashes et la preuve locale restent hors du
   dépôt et non suivis par Git ;
 - toutes les valeurs propriétaire requises sont présentes et cohérentes ;
+- le préflight expurgé réussit les 41 clés exactes, les 30 champs inconditionnels, les formats,
+  enums, conditions et la couverture sémantique sans émettre de valeur propriétaire ;
 - le mode est confirmé explicitement ;
 - le launcher préchargé est attesté hors processus, sa copie privée est byte-identique, son ACL est
   protégée et son chemin ne traverse aucun reparse point ;
@@ -332,6 +385,10 @@ preuve expurgée. La création du rendu ne modifiera pas
 | `2026-09-01T20:33:23Z` | contrôle de complétude du modèle privé sans afficher ses valeurs | `WAITING` — 30 valeurs ou confirmations inconditionnelles et jusqu'à 10 détails conditionnels restent à fournir |
 | `2026-09-01T20:44:41Z` | `mvnw.cmd --offline clean verify` final avec cache Maven propriétaire explicite | `PASS` — Surefire `1043/0/0/5`, Failsafe `84/0/0/0`, `BUILD SUCCESS` |
 | `2026-09-01T20:48:13Z` | postflight runtime et Docker en lecture seule | `PASS` — aucun listener `8087`/`8444`, processus lié au worktree ou conteneur Testcontainers résiduel |
+| `2026-09-01T23:07:21Z` | qualification synthétique PII-free du préflight expurgé | `PASS` — 22 scénarios bornés, mode fixe non vide, phrase sémantique exacte NFC, refus partiel/contradictoire, sentinelles commentaire/clé inconnue, valeur libre NFD contrôlée en formes brute/NFC, canaux stdout/stderr, schéma `41/30`, UTF-8/LF et absence de fuite/exécution du renderer |
+| `2026-09-01T23:07:21Z` | qualification hors ligne du verrou continu de l'orchestrateur | `PASS` — 5 scénarios : écriture, suppression et remplacement concurrents refusés, relectures séquentielles autorisées, vrai processus préflight réussi sous le verrou, aucun hash privé émis et renderer non exécuté |
+| `2026-09-01T23:21:34Z` | `mvnw.cmd --offline clean verify` après durcissement du préflight et de l'orchestrateur | `PASS` — Surefire `1043/0/0/5`, Failsafe `84/0/0/0`, `BUILD SUCCESS` ; aucun appel fournisseur |
+| `2026-09-01T23:25:29Z` | préflight expurgé de la saisie propriétaire après clarification de `PRODUCTION_VPS_PUBLIC_IP_DISCLOSURE_IN_REQUEST=NO` | `WAITING` — entrée lisible et conforme UTF-8/LF, `41/41` clés, `9/30` champs inconditionnels complets, `21` vides, zéro erreur de format/énumération/condition, couverture sémantique encore absente et renderer non exécuté |
 
 ```text
 OPENING_DOCUMENTATION_QUALIFICATION=PASS
@@ -356,4 +413,17 @@ SYNTHETIC_OUTPUT_CLEANUP=PASS
 OFFICIAL_CONTACT_PAGE_READ_ONLY_HTTPS_PERFORMED=YES
 FORM_SUBMISSION_NETWORK_PERFORMED=NO
 PROVIDER_DATA_API_CALLS_UNDER_WO034=0
+PREFLIGHT_SCRIPT_SHA256=36cdc6e766a61a451570a934d4b51b97d6c62aab605e76aeb1d3170aac33d647
+PREFLIGHT_TEST_SCRIPT_SHA256=1b29ac27e152e0dcdac72a70d2c22f33e9e3611a9028e0d535546e7ca9a7d55d
+PREFLIGHT_SYNTHETIC_FIXTURE_SHA256=3308e6b7f63adb51706fc92c3b8a9aba66b40347b5f3d6b8625e85833533f706
+PREFLIGHT_SYNTHETIC_TEST_CASES=22
+PREFLIGHT_SYNTHETIC_QUALIFICATION=PASS_PII_FREE_NO_RENDERER_EXECUTION
+PREFLIGHT_ORCHESTRATOR_SHA256=6ff75681eaa2a51a992fdfaa5f0547fc5b2432643a2bbf77a921f2469d132379
+PREFLIGHT_ORCHESTRATOR_TEST_SHA256=a85074712a8a045ea696cce52174596571878459c71d625e513fffac8622d274
+PREFLIGHT_ORCHESTRATOR_LOCK_SCENARIOS=5
+PREFLIGHT_ORCHESTRATOR_QUALIFICATION=PASS_OFFLINE_WRITE_DELETE_REPLACEMENT_DENIED
+PREFLIGHT_HARDENING_STANDARD_VERIFY_RESULT=PASS
+PREFLIGHT_HARDENING_STANDARD_VERIFY_FINISHED_AT_UTC=2026-09-01T23:21:34Z
+PREFLIGHT_HARDENING_STANDARD_VERIFY_SUREFIRE=1043_TESTS_0_FAILURES_0_ERRORS_5_SKIPPED
+PREFLIGHT_HARDENING_STANDARD_VERIFY_FAILSAFE=84_TESTS_0_FAILURES_0_ERRORS_0_SKIPPED
 ```
