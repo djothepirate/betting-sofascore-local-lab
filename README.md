@@ -5,8 +5,8 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le Work Order
-[WO-SS-20260904-042](docs/work_orders/active/WO-SS-20260904-042-j9-pr25-ci-readiness.md)
-est ouvert depuis le commit WO-036 qualifié exact
+[WO-SS-20260904-042](docs/work_orders/completed/WO-SS-20260904-042-j9-pr25-ci-readiness.md)
+est `VALIDATED` et classé depuis le commit WO-036 qualifié exact
 `ad343d5f1ed131b9a766c60ffd0086dc354ee839` afin de préparer une PR de remplacement conforme à la
 Convention 1A. Sa correction est limitée à la deadline externe du test J6 hors ligne, portée de 90 à
 180 secondes ; les timeouts runtime J6, les invariants fail-closed, le cleanup et la politique CI
@@ -18,17 +18,20 @@ avec Surefire `1136/0/0/5` et Failsafe `89/0/0/0`. Le maximum J6 observé est `6
 `36.01 %` de la borne. Le
 [rapport local](docs/validation/J9-WO042-PR25-CI-READINESS-QUALIFICATION-20260904.md) mesure `7124`
 octets et porte le SHA-256
-`cd278b5d3c9698030bee54ee3cefb01458c192c02761238c1111d7af19a9fc58`. La readiness distante reste
-à établir sur la future PR de remplacement.
+`cd278b5d3c9698030bee54ee3cefb01458c192c02761238c1111d7af19a9fc58`.
 
 La PR de remplacement
 [`#26`](https://github.com/djothepirate/betting-sofascore-local-lab/pull/26) est ouverte vers `main`,
-sans conflit. Son premier run distant `33817549423`, sur le HEAD `ef4fbe69c06b007e4bf96a80971576eeb3ad7537`,
-est vert : Windows en `3 min 31 s` et Linux en `5 min 06 s`. Le dernier commit de traçabilité doit
-obtenir les mêmes deux checks verts avant la revue propriétaire ; aucune fusion n'est autorisée.
+sans conflit. Ses runs `33817549423` et `33818064414` sont verts ; sur le HEAD final validé
+`deb404cbb93bd7135d820aab2b8eebcecf87117c`, Windows passe en `3 min 35 s` et Linux en
+`5 min 20 s`. Le propriétaire reconnaît la readiness locale et CI de WO-042. Aucune fusion n'est
+autorisée.
 
-La PR `#25` reste ouverte jusqu'à l'obtention de checks verts sur la remplaçante. Aucune fusion,
-fermeture prématurée de `#25`, donnée J7 réelle, opération fournisseur/receiver réelle ou distante,
+La revue de la PR `#26` conserve un P2 ouvert sur le rollback du certificat client du harnais E2E
+WO-036. Sa correction relève d'un Work Order distinct ; la validation de WO-042 ne le résout pas.
+
+La PR `#25` reste ouverte malgré les checks verts de la remplaçante. Aucune fusion, fermeture de
+`#25`, donnée J7 réelle, opération fournisseur/receiver réelle ou distante,
 VPS, production, PR ou validation INT-001 n'est autorisée par WO-042.
 
 Le run neuf R6 de

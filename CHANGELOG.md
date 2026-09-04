@@ -28,6 +28,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - premier run distant `33817549423` vert sur `ef4fbe69c06b007e4bf96a80971576eeb3ad7537` : Windows
   `PASS` en `3 min 31 s` et Linux `PASS` en `5 min 06 s`, avec une seconde passe requise sur le
   commit documentaire final ;
+- run final `33818064414` vert sur `deb404cbb93bd7135d820aab2b8eebcecf87117c` : Windows `PASS`
+  en `3 min 35 s` et Linux `PASS` en `5 min 20 s` ;
+- validation propriétaire, reconnaissance de la readiness locale et autorisation de classement de
+  WO-042 dans `docs/work_orders/completed` ;
+- remarque P2 du review conservée ouverte et explicitement renvoyée à un Work Order distinct, sans
+  fusion de `#26` ni fermeture de `#25` ;
 - préparation autorisée d'une PR de remplacement, sans fermeture de la PR `#25` avant obtention de
   checks verts et sans autorisation de fusion ;
 - aucune permission officielle, donnée J7 réelle, réseau fournisseur ou receiver réel/distant, VPS,

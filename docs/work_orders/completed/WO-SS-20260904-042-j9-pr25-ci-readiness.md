@@ -1,6 +1,6 @@
 # WO-SS-20260904-042 — Readiness CI de la PR de remplacement WO-036
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `VALIDATED`
 - **Jalon :** après J9 — préparation de fusion de WO-036
 - **Ouvert le :** 2026-09-04
 - **Ouverture UTC :** `2026-09-03T22:36:17.9770318Z`
@@ -13,6 +13,9 @@
   [`#26`](https://github.com/djothepirate/betting-sofascore-local-lab/pull/26)
 - **Run CI diagnostiqué :** `33812551196`
 - **Premier run CI vert de la remplaçante :** `33817549423`
+- **Run CI vert du HEAD final :** `33818064414`
+- **Validation propriétaire UTC :** `2026-09-04T07:03:12.8320404Z`
+- **Validation propriétaire Europe/Paris :** `2026-09-04T09:03:12.8320404+02:00`
 - **Commit d'ouverture :** `ec3def51ae4936eb7d0c689d4bfa773070102262`
 - **Commit d'implémentation :** `63cfa6e0187f24d3393e8f846036aa078c3f94a6`
 - **Rapport local :**
@@ -199,3 +202,48 @@ MERGE_EXECUTED=NO
 Le présent ajout de traçabilité change le HEAD de la PR après cette première passe verte. La
 readiness propriétaire annoncée en tête exige donc que les mêmes deux checks soient également verts
 sur ce HEAD documentaire final. Aucun échec ne peut être masqué par la passe précédente.
+
+## 9. Validation propriétaire et classement
+
+Le HEAD documentaire final `deb404cbb93bd7135d820aab2b8eebcecf87117c` a obtenu les deux checks
+verts du run `33818064414` : Windows en `3 min 35 s` et Linux en `5 min 20 s`. La Pull Request
+`#26` est restée ouverte, sans conflit, et la PR historique `#25` n'a pas été fermée.
+
+Le propriétaire valide WO-042, reconnaît sa readiness locale et autorise son déplacement dans les
+Work Orders terminés :
+
+```text
+J9_WO042_OWNER_REVIEW_DECISION=VALIDATE
+J9_WO042_WORK_ORDER=WO-SS-20260904-042-j9-pr25-ci-readiness
+J9_WO042_BASE_COMMIT=ad343d5f1ed131b9a766c60ffd0086dc354ee839
+J9_WO042_IMPLEMENTATION_COMMIT=63cfa6e0187f24d3393e8f846036aa078c3f94a6
+J9_WO042_FINAL_BRANCH_HEAD=deb404cbb93bd7135d820aab2b8eebcecf87117c
+J9_WO042_QUALIFICATION_RESULT=PASS_LOCAL_AND_CI
+J9_WO042_QUALIFICATION_REPORT_SHA256=cd278b5d3c9698030bee54ee3cefb01458c192c02761238c1111d7af19a9fc58
+J9_WO042_REPLACEMENT_PULL_REQUEST=26
+J9_WO042_FINAL_CI_RUN=33818064414
+J9_WO042_FINAL_WINDOWS_CHECK=PASS_3M35S
+J9_WO042_FINAL_LINUX_CHECK=PASS_5M20S
+J9_WO042_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO042_WORK_ORDER_MOVE_TO_COMPLETED=YES
+
+J9_PR26_REVIEW_FINDING_STATUS=P2_OPEN_REQUIRES_DISTINCT_WORK_ORDER
+J9_PR26_MERGE_AUTHORIZED=NO
+J9_PR25_STATUS=OPEN
+J9_PR25_CLOSE_AUTHORIZED=NO
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_REAL_J7_EXPORT_TEST_AUTHORIZED=NO
+J9_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+REAL_RECEIVER_NETWORK_AUTHORIZED=NO
+REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+LIVE_DELIVERY_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+INT001_PULL_REQUEST_AUTHORIZED=NO
+INT001_VALIDATION_AUTHORIZED=NO
+```
+
+Cette validation clôt le périmètre propre à WO-042. Elle ne résout pas la remarque P2 relative au
+certificat client, n'autorise aucune fusion et ne ferme aucune Pull Request. Le P2 doit être traité
+dans un Work Order distinct avant toute nouvelle proposition de fusion.
