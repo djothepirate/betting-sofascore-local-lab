@@ -76,10 +76,10 @@ Le chemin `$jar` ne portait aucune protection explicite. Un chemin contenant un 
 donc être découpé en plusieurs arguments et ne plus être reçu comme l'unique valeur suivant
 `-jar`.
 
-Les qualifications existantes utilisent un worktree sans espace et ne prouvent pas cette
-frontière. Le lanceur qualifié WO-041 protège déjà son chemin helper transmis à `-File` par des
-guillemets explicites ; ce précédent ne constitue toutefois pas à lui seul une preuve pour le
-lancement Java WO-036.
+Les qualifications antérieures à WO-044 utilisaient un worktree sans espace et ne prouvaient pas
+cette frontière. Le lanceur qualifié WO-041 protégeait déjà son chemin helper transmis à `-File`
+par des guillemets explicites ; ce précédent ne constituait toutefois pas à lui seul une preuve
+pour le lancement Java WO-036.
 
 ## 3. Objectif
 
