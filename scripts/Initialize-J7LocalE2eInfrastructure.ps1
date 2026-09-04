@@ -1,7 +1,14 @@
 [CmdletBinding()]
 param(
     [switch]$StartDatabases,
-    [string]$DockerExecutablePath = ''
+    [string]$DockerExecutablePath = '',
+    [ValidateSet(
+        'NONE',
+        'AFTER_CLIENT_CERTIFICATE_CREATION_BEFORE_OWNERSHIP',
+        'AFTER_CLIENT_CERTIFICATE_OWNERSHIP_IN_MEMORY',
+        'AFTER_CLIENT_CERTIFICATE_OWNERSHIP_PERSISTED',
+        'BEFORE_CLIENT_CERTIFICATE_EXPORT')]
+    [string]$QualificationFailurePoint = 'NONE'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -16,6 +23,8 @@ $script:statePath = $null
 $script:runRoot = $null
 $script:serverRootCertificateThumbprint = $null
 $script:clientCertificateThumbprint = $null
+$script:clientCertificate = $null
+$script:preRegistrationClientCleanupStatus = 'NOT_REQUIRED'
 $script:phase = 'PREFLIGHT'
 $script:resolvedDockerExecutable = $null
 $script:resolvedDockerEndpoint = $null
@@ -199,6 +208,44 @@ function Exit-PrivateToolsLock {
         $script:toolsLock.Dispose()
         $script:toolsLock = $null
     }
+}
+
+function Invoke-WO043QualificationFailurePoint {
+    param([Parameter(Mandatory = $true)][string]$Point)
+
+    if ($script:QualificationFailurePoint -eq $Point) {
+        throw "WO-043 injected client-certificate rollback qualification failure at $Point."
+    }
+}
+
+function Remove-ExactReturnedClientCertificate {
+    param(
+        [Parameter(Mandatory = $true)]
+        [System.Security.Cryptography.X509Certificates.X509Certificate2]$Certificate
+    )
+
+    $thumbprint = $Certificate.Thumbprint.ToUpperInvariant()
+    $sha256 = Get-CertificateSha256 -Certificate $Certificate
+    $subject = $Certificate.Subject
+    if ($thumbprint -notmatch '^[0-9A-F]{40}$' -or
+        $sha256 -notmatch '^[0-9a-f]{64}$' -or
+        [string]::IsNullOrWhiteSpace($subject)) {
+        throw 'The returned WO-036 client certificate identity is incomplete.'
+    }
+
+    $certificatePath = Join-Path 'Cert:\CurrentUser\My' $thumbprint
+    $storedCertificate = Get-Item -LiteralPath $certificatePath -ErrorAction SilentlyContinue
+    if ($null -eq $storedCertificate -or
+        (Get-CertificateSha256 -Certificate $storedCertificate) -ne $sha256 -or
+        $storedCertificate.Subject -ne $subject) {
+        throw 'The returned WO-036 client certificate failed exact store ownership verification.'
+    }
+
+    # Release the CNG key handle before asking the certificate provider to
+    # remove both the exact store entry and its exact private key container.
+    $Certificate.Dispose()
+    Remove-Item -LiteralPath $certificatePath -DeleteKey -Force
+    Assert-CurrentUserCertificateRemoved -StoreName My -Thumbprint $thumbprint
 }
 
 function Assert-NotReparsePoint {
@@ -446,6 +493,9 @@ function Start-OwnedDatabases {
 
 if (-not $IsWindows) {
     throw 'WO-036 infrastructure initialization is supported only on Windows.'
+}
+if ($StartDatabases -and $QualificationFailurePoint -ne 'NONE') {
+    throw 'WO-043 failure injection cannot be combined with database startup.'
 }
 if (-not (Test-Path -LiteralPath $composePath -PathType Leaf) -or
     -not (Test-Path -LiteralPath $cleanupPath -PathType Leaf)) {
@@ -727,7 +777,7 @@ Write-PrivateState
 
     $script:phase = 'CLIENT_CERTIFICATE'
     $clientSubject = "CN=WO036 sender $($runId.ToString('D')),OU=WO-036,O=Betting Project Local Qualification"
-    $clientCertificate = New-SelfSignedCertificate `
+    $script:clientCertificate = New-SelfSignedCertificate `
         -Type Custom `
         -Subject $clientSubject `
         -CertStoreLocation 'Cert:\CurrentUser\My' `
@@ -741,18 +791,50 @@ Write-PrivateState
             '2.5.29.19={critical}{text}CA=false',
             '2.5.29.37={critical}{text}1.3.6.1.5.5.7.3.2') `
         -NotAfter ([DateTime]::UtcNow.AddDays(7))
-    if ($null -eq $clientCertificate -or -not $clientCertificate.HasPrivateKey) {
+    if ($null -eq $script:clientCertificate) {
+        throw 'The WO-036 sender client certificate was not created.'
+    }
+    try {
+        Invoke-WO043QualificationFailurePoint `
+            -Point 'AFTER_CLIENT_CERTIFICATE_CREATION_BEFORE_OWNERSHIP'
+        $script:clientCertificateThumbprint = $script:clientCertificate.Thumbprint.ToUpperInvariant()
+        $clientCertificateSha256 = Get-CertificateSha256 -Certificate $script:clientCertificate
+        $script:state.OwnedCertificates = @($script:state.OwnedCertificates) + [pscustomobject]@{
+            Role = 'sender-client'
+            StoreLocation = 'CurrentUser\My'
+            Thumbprint = $script:clientCertificateThumbprint
+            Sha256 = $clientCertificateSha256
+            Subject = $script:clientCertificate.Subject
+        }
+    }
+    catch {
+        $preRegistrationFailure = $_
+        try {
+            Remove-ExactReturnedClientCertificate -Certificate $script:clientCertificate
+            $script:preRegistrationClientCleanupStatus = 'PASS'
+        }
+        catch {
+            $script:preRegistrationClientCleanupStatus = 'FAILED'
+        }
+        finally {
+            $script:clientCertificate.Dispose()
+            $script:clientCertificate = $null
+        }
+        throw $preRegistrationFailure
+    }
+    Invoke-WO043QualificationFailurePoint -Point 'AFTER_CLIENT_CERTIFICATE_OWNERSHIP_IN_MEMORY'
+    Write-PrivateState
+    Invoke-WO043QualificationFailurePoint -Point 'AFTER_CLIENT_CERTIFICATE_OWNERSHIP_PERSISTED'
+    if (-not $script:clientCertificate.HasPrivateKey) {
         throw 'The WO-036 sender client certificate does not own a private key.'
     }
-    $script:clientCertificateThumbprint = $clientCertificate.Thumbprint.ToUpperInvariant()
-    $clientCertificateSha256 = Get-CertificateSha256 -Certificate $clientCertificate
-    $clientEku = $clientCertificate.Extensions |
+    $clientEku = $script:clientCertificate.Extensions |
         Where-Object { $_ -is [System.Security.Cryptography.X509Certificates.X509EnhancedKeyUsageExtension] }
     if ($null -eq $clientEku -or
         -not ($clientEku.EnhancedKeyUsages.Value -contains '1.3.6.1.5.5.7.3.2')) {
         throw 'The WO-036 sender client certificate is missing clientAuth EKU.'
     }
-    $clientKeyUsage = $clientCertificate.Extensions |
+    $clientKeyUsage = $script:clientCertificate.Extensions |
         Where-Object { $_ -is [System.Security.Cryptography.X509Certificates.X509KeyUsageExtension] }
     if ($null -eq $clientKeyUsage -or
         ($clientKeyUsage.KeyUsages -band
@@ -760,7 +842,7 @@ Write-PrivateState
         throw 'The WO-036 sender client certificate is missing digitalSignature key usage.'
     }
     $clientPrivateKey = [System.Security.Cryptography.X509Certificates.RSACertificateExtensions]::GetRSAPrivateKey(
-        $clientCertificate)
+        $script:clientCertificate)
     try {
         if ($clientPrivateKey -isnot [System.Security.Cryptography.RSACng] -or
             $clientPrivateKey.Key.ExportPolicy -ne [System.Security.Cryptography.CngExportPolicies]::None) {
@@ -772,15 +854,8 @@ Write-PrivateState
             $clientPrivateKey.Dispose()
         }
     }
-    Export-Certificate -Cert $clientCertificate -FilePath $clientPublicPath -Type CERT | Out-Null
-    $script:state.OwnedCertificates = @($script:state.OwnedCertificates) + [pscustomobject]@{
-        Role = 'sender-client'
-        StoreLocation = 'CurrentUser\My'
-        Thumbprint = $script:clientCertificateThumbprint
-        Sha256 = $clientCertificateSha256
-        Subject = $clientCertificate.Subject
-    }
-    Write-PrivateState
+    Invoke-WO043QualificationFailurePoint -Point 'BEFORE_CLIENT_CERTIFICATE_EXPORT'
+    Export-Certificate -Cert $script:clientCertificate -FilePath $clientPublicPath -Type CERT | Out-Null
 
     $script:phase = 'RECEIVER_TRUST_STORE'
     $previousTrustStorePassword = [Environment]::GetEnvironmentVariable(
@@ -812,7 +887,8 @@ Write-PrivateState
     $script:state.receiver.clientCertificateSha256 = $clientCertificateSha256
     $script:state.localLab.clientCertificateSha256 = $clientCertificateSha256
     Write-PrivateState
-    $clientCertificate.Dispose()
+    $script:clientCertificate.Dispose()
+    $script:clientCertificate = $null
 
     $script:phase = 'PRIVATE_ENVIRONMENT'
     $environmentLines = @(
@@ -899,6 +975,10 @@ catch {
     else {
         ''
     }
+    if ($null -ne $script:clientCertificate) {
+        $script:clientCertificate.Dispose()
+        $script:clientCertificate = $null
+    }
     $rollback = 'NOT_ATTEMPTED'
     try {
         if (-not [string]::IsNullOrWhiteSpace($script:statePath) -and
@@ -966,7 +1046,7 @@ catch {
                                 -Thumbprint $ownedCertificate.Thumbprint
                         }
                         else {
-                            Remove-Item -LiteralPath $certificatePath -Force
+                            Remove-Item -LiteralPath $certificatePath -DeleteKey -Force
                             Assert-CurrentUserCertificateRemoved `
                                 -StoreName My `
                                 -Thumbprint $ownedCertificate.Thumbprint
@@ -978,6 +1058,9 @@ catch {
                 $rollback = 'FAILED_PRIVATE_CERTIFICATE_RETAINED'
             }
         }
+    }
+    if ($script:preRegistrationClientCleanupStatus -eq 'FAILED') {
+        $rollback = 'FAILED_PRIVATE_CERTIFICATE_RETAINED'
     }
     throw "WO-036 initialization failed closed during $script:phase ($failureType, line=$failureLine, parameter=$failureParameter); rollback=$rollback."
 }

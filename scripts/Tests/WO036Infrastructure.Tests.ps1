@@ -2,9 +2,12 @@ $repositoryRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
 $composePath = Join-Path $repositoryRoot 'compose.wo036.yml'
 $initializePath = Join-Path $repositoryRoot 'scripts\Initialize-J7LocalE2eInfrastructure.ps1'
 $removePath = Join-Path $repositoryRoot 'scripts\Remove-J7LocalE2eInfrastructure.ps1'
+$wo043QualificationPath = Join-Path $repositoryRoot `
+    'scripts\Invoke-WO043ClientCertificateRollbackQualification.ps1'
 $compose = Get-Content -LiteralPath $composePath -Raw
 $initialize = Get-Content -LiteralPath $initializePath -Raw
 $remove = Get-Content -LiteralPath $removePath -Raw
+$wo043Qualification = Get-Content -LiteralPath $wo043QualificationPath -Raw
 
 Describe 'WO-036 isolated PostgreSQL compose model' {
     It 'uses the two exact qualified PostgreSQL images' {
@@ -38,7 +41,7 @@ Describe 'WO-036 isolated PostgreSQL compose model' {
 
 Describe 'WO-036 initialization and cleanup scripts' {
     It 'parses both scripts without PowerShell syntax errors' {
-        foreach ($path in @($initializePath, $removePath)) {
+        foreach ($path in @($initializePath, $removePath, $wo043QualificationPath)) {
             $tokens = $null
             $parseErrors = $null
             [System.Management.Automation.Language.Parser]::ParseFile(
@@ -59,6 +62,67 @@ Describe 'WO-036 initialization and cleanup scripts' {
         $initialize | Should Match "KeyExportPolicy NonExportable"
         $initialize | Should Match "Cert:\\CurrentUser\\Root"
         $initialize | Should Match "Cert:\\CurrentUser\\My"
+    }
+
+    It 'registers exact client-certificate ownership before every fallible post-creation check' {
+        $creation = $initialize.IndexOf('$script:clientCertificate = New-SelfSignedCertificate')
+        $registration = $initialize.IndexOf("Role = 'sender-client'", $creation)
+        $memoryFailure = $initialize.IndexOf(
+            "Invoke-WO043QualificationFailurePoint -Point 'AFTER_CLIENT_CERTIFICATE_OWNERSHIP_IN_MEMORY'",
+            $creation)
+        $persistence = $initialize.IndexOf('    Write-PrivateState', $memoryFailure)
+        $persistedFailure = $initialize.IndexOf(
+            "Invoke-WO043QualificationFailurePoint -Point 'AFTER_CLIENT_CERTIFICATE_OWNERSHIP_PERSISTED'",
+            $creation)
+        $privateKeyCheck = $initialize.IndexOf(
+            'if (-not $script:clientCertificate.HasPrivateKey)',
+            $creation)
+        $ekuCheck = $initialize.IndexOf('$clientEku = $script:clientCertificate.Extensions', $creation)
+        $keyUsageCheck = $initialize.IndexOf(
+            '$clientKeyUsage = $script:clientCertificate.Extensions',
+            $creation)
+        $cngCheck = $initialize.IndexOf(
+            '$clientPrivateKey.Key.ExportPolicy',
+            $creation)
+        $export = $initialize.IndexOf(
+            'Export-Certificate -Cert $script:clientCertificate',
+            $creation)
+
+        $creation | Should BeGreaterThan -1
+        $registration | Should BeGreaterThan $creation
+        $memoryFailure | Should BeGreaterThan $registration
+        $persistence | Should BeGreaterThan $memoryFailure
+        $persistedFailure | Should BeGreaterThan $persistence
+        $privateKeyCheck | Should BeGreaterThan $persistedFailure
+        $ekuCheck | Should BeGreaterThan $persistedFailure
+        $keyUsageCheck | Should BeGreaterThan $persistedFailure
+        $cngCheck | Should BeGreaterThan $persistedFailure
+        $export | Should BeGreaterThan $cngCheck
+    }
+
+    It 'deletes the exact CurrentUser My certificate together with its private key' {
+        $initialize | Should Match ([regex]::Escape(
+            'Remove-Item -LiteralPath $certificatePath -DeleteKey -Force'))
+        $remove | Should Match ([regex]::Escape(
+            'Remove-Item -LiteralPath $certificatePath -DeleteKey -Force'))
+        $initialize | Should Match 'AFTER_CLIENT_CERTIFICATE_CREATION_BEFORE_OWNERSHIP'
+        $initialize | Should Match 'AFTER_CLIENT_CERTIFICATE_OWNERSHIP_IN_MEMORY'
+        $initialize | Should Match 'AFTER_CLIENT_CERTIFICATE_OWNERSHIP_PERSISTED'
+        $initialize | Should Match 'BEFORE_CLIENT_CERTIFICATE_EXPORT'
+    }
+
+    It 'qualifies four injected failures and one nominal cleanup without application network' {
+        $wo043Qualification | Should Match 'AFTER_CLIENT_CERTIFICATE_CREATION_BEFORE_OWNERSHIP'
+        $wo043Qualification | Should Match 'AFTER_CLIENT_CERTIFICATE_OWNERSHIP_IN_MEMORY'
+        $wo043Qualification | Should Match 'AFTER_CLIENT_CERTIFICATE_OWNERSHIP_PERSISTED'
+        $wo043Qualification | Should Match 'BEFORE_CLIENT_CERTIFICATE_EXPORT'
+        $wo043Qualification | Should Match 'Get-WO043HostSnapshot'
+        $wo043Qualification | Should Match 'UserPrivateKeyFiles'
+        $wo043Qualification | Should Match 'WO043_CLIENT_CERTIFICATE_AND_PRIVATE_KEY_RESIDUE=0'
+        $wo043Qualification | Should Match 'WO043_DATABASES_STARTED=NO'
+        $wo043Qualification | Should Match 'WO043_PROVIDER_CALLS=0'
+        $wo043Qualification | Should Match 'WO043_RECEIVER_HTTP_CALLS=0'
+        $wo043Qualification | Should Not Match '-StartDatabases'
     }
 
     It 'records the shared campaign state without printing secrets or fingerprints' {
@@ -166,8 +230,11 @@ Describe 'WO-036 initialization and cleanup scripts' {
     }
 
     It 'contains no provider endpoint or non-loopback network target' {
-        ($compose + $initialize + $remove) | Should Not Match '(?i)api\.sofascore\.com'
-        ($compose + $initialize + $remove) | Should Not Match '51\.255\.167\.32'
-        ($compose + $initialize + $remove) | Should Not Match '0\.0\.0\.0'
+        ($compose + $initialize + $remove + $wo043Qualification) |
+            Should Not Match '(?i)api\.sofascore\.com'
+        ($compose + $initialize + $remove + $wo043Qualification) |
+            Should Not Match '51\.255\.167\.32'
+        ($compose + $initialize + $remove + $wo043Qualification) |
+            Should Not Match '0\.0\.0\.0'
     }
 }

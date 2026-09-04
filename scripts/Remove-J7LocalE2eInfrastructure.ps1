@@ -486,7 +486,7 @@ function Remove-ExactOwnedCertificates {
                     -Thumbprint $ownedCertificate.Thumbprint
             }
             else {
-                Remove-Item -LiteralPath $certificatePath -Force
+                Remove-Item -LiteralPath $certificatePath -DeleteKey -Force
                 Assert-CurrentUserCertificateRemoved `
                     -StoreName My `
                     -Thumbprint $ownedCertificate.Thumbprint
