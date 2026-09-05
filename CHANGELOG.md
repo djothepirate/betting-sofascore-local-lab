@@ -4,6 +4,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — clôture propriétaire WO-051 et publication du correctif CI
+
+- validation du correctif `992423055091276914555104bb299ef3ce76d2c9` et de sa qualification
+  `PASS_LOCAL_SYNTHETIC_MTLS_FAIL_CLOSED`, rapport et empreinte conservés ;
+- WO-051 déplacé vers completed ; publication et PR vers main autorisées, sans fusion ;
+- aucun changement runtime, nouvelle campagne fournisseur, POST réel ou déploiement.
+
 ### Après J9 — WO-051 : assertion portable du refus mTLS distant
 
 - diagnostic du run main 33961252984 : identité cliente refusée, IO_FAILURE observé au lieu
