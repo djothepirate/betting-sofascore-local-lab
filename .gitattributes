@@ -18,3 +18,6 @@ scripts/wo046/WO046-LaunchPreparation.psm1 text eol=lf
 *.pdf binary
 *.zip binary
 *.bundle binary
+
+# Frozen SKL-002 installation and evaluation evidence: preserve original bytes.
+docs/skills/evaluations/SKL-002/** -text whitespace=blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof

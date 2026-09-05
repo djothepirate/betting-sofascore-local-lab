@@ -1,5 +1,10 @@
 # SofaScore Local Lab
 
+**Skills du lot 1 validés — 5 septembre 2026 :** les cinq skills `ss-*` sont livrés avec
+leur [guide et installateur personnel](docs/skills/README.md), sous
+[WO-054](docs/work_orders/completed/WO-SS-20260905-054-skills-lot1.md).
+Le paquet est autonome ; son installation utilisateur permet l'usage depuis les worktrees du Lab.
+
 **WO-053 terminé — 5 septembre 2026 :** [validation et clôture propriétaires](docs/work_orders/completed/WO-SS-20260905-053-j9-j6-ctrl-break-diagnostics.md). Correctif `43ac194` fusionné par PR #29, commit `d187d50` ; CI de PR et [CI post-fusion 33976519624](https://github.com/djothepirate/betting-sofascore-local-lab/actions/runs/33976519624) vertes. Classement documentaire local post-fusion ; aucune cause initiale déclarée corrigée.
 
 **Historique diagnostique WO-053 :** [instrumentation initiale](docs/validation/J9-WO053-CTRL-BREAK-DIAGNOSTIC-20260905.md) et [correction des deux P2](docs/validation/J9-WO053-REVIEW-HARDENING-20260905.md). Ces rapports conservent les états observés avant publication et fusion ; leurs mentions d'attente sont supersédées par la clôture ci-dessus. Délais et pipeline runtime inchangés ; cause initiale non établie.
