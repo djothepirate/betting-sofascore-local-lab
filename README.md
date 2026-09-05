@@ -4,6 +4,14 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
+Le [WO-051](docs/work_orders/completed/WO-SS-20260905-051-j9-mtls-peer-rejection-ci.md)
+traite l'échec CI Linux post-fusion #27 : distinguer le refus de confiance local
+(TLS_FAILURE strict) du refus de l'identité cliente par le pair (TLS_FAILURE ou IO_FAILURE).
+Le test conserve l'absence de nouvelle requête/effet et la fermeture du transport, avec un
+contrôle positif sur le même listener. Aucun changement de code de production ou de mTLS.
+Correctif validé par le propriétaire, WO-051 clôturé ; push et PR vers main autorisés,
+sans fusion ni nouvelle campagne fournisseur ou livraison réelle.
+
 Le [WO-050](docs/work_orders/completed/WO-SS-20260905-050-j9-non-provider-launcher-owner-go-isolation.md)
 traite la P2 de la PR #27 : les six lanceurs sans livraison fournisseur sauvegardent,
 neutralisent puis restaurent les deux références owner-go héritées de l'environnement.

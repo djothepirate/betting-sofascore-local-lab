@@ -175,6 +175,18 @@ class BettingProjectJ7DeliveryHttpTransportTest {
     }
 
     @Test
+    void classifiesPeerDisconnectWithoutInventingTlsEvidenceFromDiagnosticText() {
+        assertFailure(new IOException("synthetic TLS connection closed"),
+                J7DeliveryTransportFailure.IO_FAILURE);
+        assertFailure(new IOException("synthetic peer close",
+                new java.net.SocketException("synthetic connection reset")),
+                J7DeliveryTransportFailure.IO_FAILURE);
+        assertFailure(new IOException("synthetic outer",
+                new javax.net.ssl.SSLHandshakeException("synthetic peer rejection")),
+                J7DeliveryTransportFailure.TLS_FAILURE);
+    }
+
+    @Test
     void refusesASecondBodySubscriptionWithoutPublishingAnyReplay() {
         HttpRequest.BodyPublisher publisher =
                 BettingProjectJ7DeliveryHttpTransport.oneShotBodyPublisher(
