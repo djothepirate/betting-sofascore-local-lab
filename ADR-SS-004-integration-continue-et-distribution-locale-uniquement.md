@@ -6,6 +6,7 @@
 - **Portée :** SofaScore Local Lab
 - **Décision parente :** ADR-008 du dépôt `djothepirate/betting-project`
 - **Work Order :** WO-SS-20260901-031
+- **Amendement :** 2026-09-05 — WO-SS-20260905-055, trains de version et promotion feature/release
 
 ## Contexte
 
@@ -15,14 +16,79 @@ locale et non critique.
 
 ## Décision
 
-GitHub reste la source canonique. Le projet GitLab privé
-`djothepirate-betting-project/betting-sofascore-local-lab` exécute les validations Linux et conserve
-des distributions locales. La synchronisation GitHub vers GitLab reste unidirectionnelle et n'est
-activée qu'après une CI verte et les protections administratives décrites par ADR-008.
+GitHub reste la source canonique de `main`, des trains `feature/*`, des branches de Work Order, des
+Pull Requests et des tags. Le projet GitLab privé
+`djothepirate-betting-project/betting-sofascore-local-lab` reçoit les SHA GitHub qualifiés, exécute
+les validations Linux, conserve les distributions locales et porte seul les branches
+`release/V*`. La synchronisation reste unidirectionnelle de GitHub vers GitLab et publie désormais
+le SHA qualifié de `main`, du train feature courant ou d'un tag commun.
 
-Le dépôt suit son propre SemVer. Les tags `vX.Y.Z[-rc.N]` et les versions du dépôt principal sont
-indépendants. Un snapshot porte l'IID du pipeline et le SHA court.
-Toute base Maven snapshot hors `X.Y.Z[-rc.N]-SNAPSHOT` est refusée avant packaging.
+Un cycle part d'un commit exact de `main`. Un train prend exactement l'une des formes suivantes :
+
+```text
+VX.Y.Z
+VX.Y.Z-RCnn
+VX.Y.Z-RCnn-SNAPSHOT
+```
+
+Le cœur `X.Y.Z` interdit les zéros initiaux et `nn` contient exactement deux chiffres entre `01`
+et `99`. Le `V` et `RC` des branches sont majuscules. La branche GitLab protégée
+`release/<TRAIN>` et la branche canonique GitHub `feature/<TRAIN>` sont initialisées sur le même
+commit ; le train feature descend donc de sa release cible. Les branches de travail portent
+exactement :
+
+```text
+feature/<TRAIN>-(CODEX|HUMAN)-WO-SS-YYYYMMDD-NNN
+```
+
+Tout nouveau Work Order part du train correspondant. Sa PR GitHub cible exclusivement le train de
+même version et sa clôture ne devient effective qu'après fusion. Une PR peut fermer une suite de
+Work Orders si elle les énumère sans ambiguïté et fournit leurs preuves. Les branches historiques
+antérieures à cet amendement restent en lecture seule ; elles ne deviennent ni sources de nouveau
+travail, ni sources de snapshot durable, ni sources de promotion.
+
+Après intégration des Work Orders, une PR finale `feature/<TRAIN>` vers `main` exige la version
+Maven finale correspondant exactement au train — `X.Y.Z`, et non `X.Y.Z-SNAPSHOT`, pour un train
+stable — puis est fusionnée par merge commit. Le train est ensuite avancé en fast-forward jusqu'à
+ce merge commit, de sorte que
+`main` et `feature/<TRAIN>` portent le même SHA. Ces deux références sont synchronisées vers
+GitLab. La seule MR GitLab admise promeut alors `feature/<TRAIN>` vers la branche protégée
+`release/<TRAIN>` strictement identique. Elle reste interne au projet, exige une cible protégée,
+la version Maven attendue, un historique complet, un sommet source égal au SHA source canonique et
+à `origin/main`, ainsi qu'une cible release ancêtre de ce sommet. Elle interdit squash et rebase.
+Après promotion,
+`main`, le train et la release désignent le même commit.
+
+Le dépôt suit son propre SemVer. La notation de branche est traduite sans ambiguïté vers Maven et
+les tags :
+
+- `VX.Y.Z` porte `X.Y.Z-SNAPSHOT` pendant le développement puis `X.Y.Z` pour la promotion finale ;
+- `VX.Y.Z-RC01` porte Maven `X.Y.Z-rc.1` et peut être scellé par `vX.Y.Z-rc.1` ;
+- `VX.Y.Z-RC01-SNAPSHOT` porte Maven `X.Y.Z-rc.1-SNAPSHOT` et ne peut pas être tagué.
+
+La même conversion s'applique jusqu'à `RC99` / `rc.99`. Le format SemVer des tags reste
+`vX.Y.Z` ou `vX.Y.Z-rc.N`, avec `v` et `rc` minuscules et `N` sans zéro initial. Un tag `rc.100` ou
+supérieur reste syntaxiquement SemVer mais ne possède aucun train branché canonique et sa
+promotion est refusée. Le tag n'est créé qu'après la promotion et désigne le commit commun de
+`main`, du train et de la release GitLab. Le pipeline tagué GitLab récupère explicitement
+`origin/main`, `origin/feature/<TRAIN>` et `origin/release/<TRAIN>`, puis exige que chacune désigne
+exactement le commit tagué et extrait. Une release déjà scellée par son tag ne peut plus avancer.
+Toute autre base Maven est refusée avant packaging.
+
+Un snapshot durable porte l'IID du pipeline et le SHA court. Il est conservé uniquement depuis un
+push d'une branche d'intégration `feature/<TRAIN>` exacte, jamais depuis une PR, une branche WO,
+`main` ou `release/V*`. La construction effectuée sur ces autres références reste une preuve
+éphémère. L'exception de bootstrap autorise seulement
+`codex/ss-20260905-055-version-branch-workflow` vers `main` sur la base
+`054fa4ca9301224aa5f96f478136208d2327d7f0`, avec la version Maven exacte
+`0.1.0-SNAPSHOT` ; elle ne crée aucun précédent.
+Le garde reçoit aussi le SHA de tête source, le résout dans le graphe et exige que cette base soit
+son ancêtre et sa merge-base exacte.
+Sur GitLab, tout pipeline de branche — push, Web, planifié, API, trigger ou pipeline enfant —
+accepte uniquement `main`, un train `feature/<TRAIN>` exact ou une branche
+`release/<TRAIN>` exacte. Les branches WO, le bootstrap et les références historiques restent
+propres à GitHub ou en lecture seule et sont refusés par ce contexte. Les pipelines de MR et de tag
+suivent leurs routes dédiées ; toute source ou référence indéterminée échoue fermée.
 
 Toute CI conserve les statuts :
 
@@ -66,6 +132,15 @@ au plus 3 % de duplication et Javadoc valide pour toute nouvelle API publique ou
 ## Conséquences
 
 - GitHub Actions couvre Windows et Linux ; GitLab Free couvre Linux/Testcontainers et les rapports.
+- GitHub qualifie les PR de Work Orders vers leur train et la PR finale du train vers `main` ; les
+  contrôles de topologie refusent les autres couples source/cible.
+- GitLab protège uniquement `release/V*`. `main` et `feature/*` restent non protégées afin de
+  recevoir la synchronisation contrôlée ; les paramètres projet imposent fast-forward et
+  `squash=never`.
+- La règle GitLab distincte de tags protégés `v*` est obligatoire pour exécuter une promotion
+  taguée ; elle ne constitue pas une protection de branche supplémentaire.
+- La protection GitHub n'est pas utilisée pour matérialiser la clôture : la PR fusionnée, sa revue
+  humaine et son SHA qualifié constituent la preuve.
 - Une preuve PowerShell 7.4 complète pourra nécessiter un runner Windows dédié, jamais le VPS.
 - Les campagnes Playwright réelles restent locales, manuelles, opt-in et hors CI.
 - Toute tentative d'ajouter un déploiement de production exige un nouvel ADR et contredit les
@@ -76,5 +151,14 @@ au plus 3 % de duplication et Javadoc valide pour toute nouvelle API publique ou
 - [ ] Zéro appel SofaScore ou receiver réel pendant les pipelines.
 - [ ] Tests standards et intégration PostgreSQL verts.
 - [ ] Distribution explicitement locale avec SBOM, provenance et SHA-256.
+- [ ] Toute PR GitHub suit `WO -> feature identique` ou `feature -> main`, vérifie sa version Maven
+  et, hors routes normales, borne le bootstrap WO-055 à son graphe base/tête exact.
+- [ ] Toute MR GitLab suit `feature/<TRAIN> -> release/<TRAIN>` dans le même projet, avec train
+  strictement identique, cible protégée, version Maven correctement convertie, source alignée avec
+  `origin/main`, cible ancêtre, historique complet et aucun squash/rebase.
+- [ ] Les branches protégées sont limitées à `release/V*` et la règle séparée de tags protégés `v*`
+  est active.
+- [ ] Seul un push du train feature exact conserve un snapshot durable.
+- [ ] Le tag commun désigne le même commit que `main`, le train et la release GitLab.
 - [ ] Aucun job ou artefact déployable sur VPS.
 - [ ] Baseline qualité mesurée puis verrouillée sans régression.

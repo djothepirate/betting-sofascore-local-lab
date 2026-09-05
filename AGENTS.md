@@ -83,8 +83,44 @@ Avant proposition de changement :
 
 ## Workflow Git
 
-- branche principale : `main` ;
-- une branche ou un worktree par Work Order ;
+- GitHub est canonique pour `main`, les branches `feature/*`, les branches de Work Order, les Pull
+  Requests et les tags ; les branches `release/V*` existent uniquement sur GitLab ;
+- un train de version porte l'une des formes exactes `feature/VX.Y.Z`,
+  `feature/VX.Y.Z-RCnn` ou `feature/VX.Y.Z-RCnn-SNAPSHOT`, avec `nn` compris entre `01` et `99`,
+  et part du même commit que sa branche GitLab protégée de même train sous `release/`, elle-même
+  créée depuis `main` ;
+- tout nouveau Work Order part du train feature correspondant, dans un worktree distinct, et porte
+  exactement `feature/<TRAIN>-(CODEX|HUMAN)-WO-SS-YYYYMMDD-NNN` ;
+- une PR de Work Order cible exclusivement le train feature de même version. Sa clôture, ou celle
+  d'une suite de Work Orders explicitement listée, ne devient effective qu'après fusion de la PR ;
+- la PR finale du train cible `main`, exige la version Maven finale correspondant exactement au
+  train et utilise un merge commit. Un train stable ne peut donc pas entrer dans `main` avec
+  `X.Y.Z-SNAPSHOT`. Le train est ensuite avancé en fast-forward jusqu'à ce merge commit de `main`,
+  puis `main` et le train sont synchronisés vers GitLab ;
+- la seule MR GitLab autorisée est `feature/<TRAIN>` vers la branche protégée
+  `release/<TRAIN>` strictement identique, en fast-forward, sans squash ni rebase. Son garde exige
+  un historique complet, le sommet source égal au SHA source canonique et à `origin/main`, et la
+  release cible ancêtre de ce sommet ;
+- les snapshots durables proviennent uniquement d'un push du train feature exact. Les bundles de
+  PR, de branche WO, de `main` et de `release/V*` restent éphémères ; tous les artefacts du Lab
+  conservent `LOCAL_ONLY` et `vps.deployable=false` ;
+- les versions Maven et tags conservent SemVer 2A : `RC01` se traduit par `rc.1`, donc une branche
+  `VX.Y.Z-RC01` porte Maven `X.Y.Z-rc.1` et le tag `vX.Y.Z-rc.1` ; une branche
+  `VX.Y.Z-RC01-SNAPSHOT` porte Maven `X.Y.Z-rc.1-SNAPSHOT` et n'est jamais taguée ;
+- les tags communs GitHub/GitLab utilisent uniquement `vX.Y.Z` ou `vX.Y.Z-rc.N`, avec `v` et `rc`
+  minuscules, après alignement exact de `main`, du train et de la release GitLab ; le pipeline tagué
+  GitLab récupère et compare explicitement ces trois références au commit extrait. Seuls les RC 1 à
+  99 disposent d'un train branché promouvable ;
+- GitLab protège uniquement les branches `release/V*`. La règle distincte de tags protégés `v*`
+  est néanmoins un prérequis obligatoire de toute promotion et ne protège aucune branche de plus ;
+- l'unique exception de bootstrap est
+  `codex/ss-20260905-055-version-branch-workflow` vers `main` sur la base exacte `054fa4c` ; le SHA
+  source doit être résolu et descendre de cette base avec une merge-base strictement identique, et
+  la version Maven doit rester exactement `0.1.0-SNAPSHOT` ;
+- les branches antérieures restent des références historiques en lecture seule : elles ne créent
+  aucun nouveau Work Order, snapshot durable ou promotion. Un pipeline de branche GitLab accepte seulement
+  `main`, un train `feature/<TRAIN>` exact ou une branche `release/<TRAIN>` exacte, jamais une
+  branche WO, bootstrap ou historique ;
 - état propre avant délégation ;
 - aucun changement simultané par Eclipse et un agent dans le même worktree ;
 - commits petits, explicites et reliés au Work Order ;

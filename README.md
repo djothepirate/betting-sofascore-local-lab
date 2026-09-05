@@ -15,6 +15,42 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
+## Workflow Git versionné
+
+Le développement canonique reste sur GitHub. Un train porte exactement `VX.Y.Z`,
+`VX.Y.Z-RCnn` ou `VX.Y.Z-RCnn-SNAPSHOT`, où `nn` va de `01` à `99`. Sa branche
+`feature/<TRAIN>` part du même commit de `main` que sa release GitLab protégée
+`release/<TRAIN>`. Chaque nouveau Work Order utilise une branche
+`feature/<TRAIN>-(CODEX|HUMAN)-WO-SS-YYYYMMDD-NNN` issue de ce train et une PR vers le train exact ;
+sa clôture ne devient effective qu'après fusion.
+
+Une PR finale exige la version Maven finale du train et fusionne vers `main` par merge commit ; un
+train stable ne peut donc pas entrer avec `X.Y.Z-SNAPSHOT`. Le train avance ensuite en fast-forward
+sur ce merge commit. Après synchronisation de `main` et du train, une MR GitLab fast-forward, sans
+squash ni rebase, promeut `feature/<TRAIN>` vers `release/<TRAIN>` strictement identique. Son garde
+exige que la source soit le sommet exact de `origin/main` et que la release soit son ancêtre. Maven
+et les tags gardent la préversion SemVer en minuscules : `RC01` devient `rc.1`. Les seuls tags
+communs sont `vX.Y.Z` et `vX.Y.Z-rc.N` ; aucune branche `*-SNAPSHOT` n'est taguée et seuls les RC 1
+à 99 ont un train promouvable. Les branches historiques restent en lecture seule.
+
+Le pipeline du tag GitLab récupère `origin/main`, `origin/feature/<TRAIN>` et
+`origin/release/<TRAIN>` et refuse la distribution si l'une de ces références est absente ou ne
+désigne pas exactement le commit tagué et extrait.
+
+Seules les branches `release/V*` sont protégées. Indépendamment des branches, une règle de tags
+protégés `v*` est requise sur GitLab pour autoriser le pipeline de promotion ; elle ne protège ni
+`main` ni `feature/*`.
+
+Tout pipeline de branche GitLab, quel que soit son déclencheur, accepte uniquement `main`, un
+train feature exact ou sa release exacte. Les branches WO, le bootstrap et les références
+historiques sont refusés ; les MR et tags suivent leurs contrôles dédiés et un contexte sans source
+ou référence déterminée échoue fermé.
+
+Seul un push du train feature exact conserve un snapshot exécutable. Les bundles des PR, des
+branches WO, de `main` et des releases restent éphémères. « Exécutable » signifie toujours local :
+`production.approved=false`, `vps.deployable=false`, aucun déploiement ou accès fournisseur n'est
+autorisé par ce workflow.
+
 ## État consolidé J9 — 5 septembre 2026
 
 Revue PR #29 : [résolution P1/P2](docs/validation/J9-WO052-PR29-REVIEW-RESOLUTION-20260905.md), avec vérification Maven complète sans exclusions et renvoi historique WO-019 préservant la synthèse gelée. La CI du correctif reste distincte des checks du candidat initial.

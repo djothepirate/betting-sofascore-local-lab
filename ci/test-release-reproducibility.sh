@@ -14,6 +14,9 @@ trap 'exit 143' TERM
 
 mkdir -p "$fixture/ci/distribution" "$fixture/target" "$fixture/scripts"
 cp "$repository/ci/package-local-only.sh" "$fixture/ci/package-local-only.sh"
+cp "$repository/ci/check-branch-name.sh" "$fixture/ci/check-branch-name.sh"
+cp "$repository/ci/check-durable-snapshot-source.sh" \
+    "$fixture/ci/check-durable-snapshot-source.sh"
 cp "$repository/ci/distribution/README.md" "$fixture/ci/distribution/README.md"
 cp "$repository/ci/distribution/Preflight-Local.ps1" \
     "$fixture/ci/distribution/Preflight-Local.ps1"
@@ -119,6 +122,8 @@ chmod +x "$fixture/mvnw"
         commit --allow-empty -qm 'release fixture head'
     head_commit=$(git rev-parse HEAD)
     git update-ref refs/remotes/origin/main "$head_commit"
+    git update-ref refs/remotes/origin/feature/V1.2.3 "$head_commit"
+    git update-ref refs/remotes/origin/release/V1.2.3 "$head_commit"
 
     invalid_version_output=$(mktemp)
     if env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=foo-SNAPSHOT \
@@ -134,6 +139,47 @@ chmod +x "$fixture/mvnw"
         exit 1
     fi
     rm -f "$invalid_version_output"
+
+    branch_version_output=$(mktemp)
+    if env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-SNAPSHOT \
+        SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=99 \
+        GITHUB_REF_TYPE=branch GITHUB_REF_NAME=feature/V1.2.4 \
+        sh ci/package-local-only.sh >"$branch_version_output" 2>&1; then
+        echo 'FAIL: une version Maven différente du train feature a été acceptée.' >&2
+        exit 1
+    fi
+    if ! grep -Fq 'exige la version Maven 1.2.4' "$branch_version_output"; then
+        echo 'FAIL: le refus de divergence branche/version Maven est ambigu.' >&2
+        cat "$branch_version_output" >&2
+        exit 1
+    fi
+    rm -f "$branch_version_output"
+
+    rc_version_output=$(mktemp)
+    if env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-RC01-SNAPSHOT \
+        SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=99 \
+        GITHUB_REF_TYPE=branch GITHUB_REF_NAME=feature/V1.2.3-RC01-SNAPSHOT \
+        sh ci/package-local-only.sh >"$rc_version_output" 2>&1; then
+        echo 'FAIL: une version Maven RC en casse branche a été acceptée.' >&2
+        exit 1
+    fi
+    if ! grep -Fq 'version Maven snapshot hors convention SemVer' "$rc_version_output"; then
+        echo 'FAIL: le refus de la casse RC non SemVer est ambigu.' >&2
+        cat "$rc_version_output" >&2
+        exit 1
+    fi
+    rm -f "$rc_version_output"
+
+    umask 077
+    env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-rc.1-SNAPSHOT \
+        SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=97 \
+        GITHUB_REF_TYPE=branch GITHUB_REF_NAME=feature/V1.2.3-RC01-SNAPSHOT \
+        DURABLE_SNAPSHOT_SOURCE=true sh ci/package-local-only.sh >/dev/null
+    rc_snapshot_bundle=$(pwd)/target/distribution/betting-sofascore-local-lab-1.2.3-rc.1-snapshot.p97.g$(printf '%.12s' "$head_commit")-local-only.zip
+    if [ ! -f "$rc_snapshot_bundle" ]; then
+        echo 'FAIL: le mapping du train RC01-SNAPSHOT vers Maven rc.1-SNAPSHOT est absent.' >&2
+        exit 1
+    fi
 
     invalid_sbom_output=$(mktemp)
     if env -i PATH="$PATH" FIXTURE_SBOM_MODE=invalid \
@@ -154,7 +200,7 @@ chmod +x "$fixture/mvnw"
     # reste un snapshot LOCAL_ONLY tant qu'aucun tag ne désigne le commit.
     umask 077
     env -i PATH="$PATH" SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=100 \
-        GITHUB_REF_TYPE=branch GITHUB_REF_NAME=release/1.2.3 \
+        GITHUB_REF_TYPE=branch GITHUB_REF_NAME=feature/V1.2.3 \
         sh ci/package-local-only.sh >/dev/null
     untagged_bundle=$(pwd)/target/distribution/betting-sofascore-local-lab-1.2.3-snapshot.p100.g$(printf '%.12s' "$head_commit")-local-only.zip
     if [ ! -f "$untagged_bundle" ]; then
@@ -205,44 +251,49 @@ chmod +x "$fixture/mvnw"
         rm -f "$shallow_output"
     )
 
-    real_git=$(command -v git)
-    git_shim="$fixture/git-shim"
-    mkdir -p "$git_shim"
-    cat >"$git_shim/git" <<'GIT'
-#!/usr/bin/env sh
-if [ "$1" = merge-base ] && [ "${2:-}" = --is-ancestor ]; then
-    exit 2
-fi
-exec "$REAL_GIT" "$@"
-GIT
-    chmod +x "$git_shim/git"
-    git_error_output=$(mktemp)
-    if env -i PATH="$git_shim:$PATH" REAL_GIT="$real_git" \
-        SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=100 \
-        GITHUB_REF_TYPE=tag GITHUB_REF_NAME=v1.2.3 \
-        sh ci/package-local-only.sh >"$git_error_output" 2>&1; then
-        echo 'FAIL: une erreur interne Git a été acceptée pendant la qualification du tag local.' >&2
-        exit 1
-    fi
-    if ! grep -Fq "impossible de vérifier l'appartenance" "$git_error_output"; then
-        echo 'FAIL: le refus de l’erreur interne Git est ambigu.' >&2
-        cat "$git_error_output" >&2
-        exit 1
-    fi
-    rm -f "$git_error_output"
-
     umask 002
     env -i PATH="$PATH" SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=101 \
-        GITHUB_REF_TYPE=tag GITHUB_REF_NAME=v1.2.3 \
+        GITHUB_REF_TYPE=tag GITHUB_REF_NAME=v1.2.3 SOURCE_BRANCH_NAME= \
         sh ci/package-local-only.sh >/dev/null
     cp target/distribution/betting-sofascore-local-lab-1.2.3-local-only.zip \
         release-github.zip
 
     umask 077
     env -i PATH="$PATH" CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG=v1.2.3 \
-        CI_PIPELINE_IID=909 sh ci/package-local-only.sh >/dev/null
+        CI_COMMIT_BRANCH= CI_PIPELINE_IID=909 PROMOTION_TAG_PROOF=true \
+        FEATURE_BRANCH_REF=refs/remotes/origin/feature/V1.2.3 \
+        RELEASE_BRANCH_REF=refs/remotes/origin/release/V1.2.3 \
+        sh ci/package-local-only.sh >/dev/null
     cp target/distribution/betting-sofascore-local-lab-1.2.3-local-only.zip \
         release-gitlab.zip
+
+    git tag v1.2.3-rc.1
+    git update-ref refs/remotes/origin/feature/V1.2.3-RC01 "$head_commit"
+    git update-ref refs/remotes/origin/release/V1.2.3-RC01 "$head_commit"
+    env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-rc.1 \
+        CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG=v1.2.3-rc.1 CI_PIPELINE_IID=910 \
+        PROMOTION_TAG_PROOF=true \
+        FEATURE_BRANCH_REF=refs/remotes/origin/feature/V1.2.3-RC01 \
+        RELEASE_BRANCH_REF=refs/remotes/origin/release/V1.2.3-RC01 \
+        sh ci/package-local-only.sh >/dev/null
+    if [ ! -f target/distribution/betting-sofascore-local-lab-1.2.3-rc.1-local-only.zip ]; then
+        echo 'FAIL: le tag rc.1 n’est pas lié au train release RC01.' >&2
+        exit 1
+    fi
+
+    git tag v1.2.3-rc.99
+    git update-ref refs/remotes/origin/feature/V1.2.3-RC99 "$head_commit"
+    git update-ref refs/remotes/origin/release/V1.2.3-RC99 "$head_commit"
+    env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-rc.99 \
+        CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG=v1.2.3-rc.99 CI_PIPELINE_IID=911 \
+        PROMOTION_TAG_PROOF=true \
+        FEATURE_BRANCH_REF=refs/remotes/origin/feature/V1.2.3-RC99 \
+        RELEASE_BRANCH_REF=refs/remotes/origin/release/V1.2.3-RC99 \
+        sh ci/package-local-only.sh >/dev/null
+    if [ ! -f target/distribution/betting-sofascore-local-lab-1.2.3-rc.99-local-only.zip ]; then
+        echo 'FAIL: le tag rc.99 n’est pas lié au train feature/release RC99.' >&2
+        exit 1
+    fi
 )
 
 if ! cmp -s "$fixture/release-github.zip" "$fixture/release-gitlab.zip"; then
@@ -275,6 +326,10 @@ if grep -Eq '^build\.pipeline\.' "$provenance"; then
 fi
 if ! grep -Fxq 'artifact.version=1.2.3' "$provenance"; then
     echo 'FAIL: la version canonique locale est absente de la provenance.' >&2
+    exit 1
+fi
+if ! grep -Fxq 'source.branch=' "$provenance"; then
+    echo 'FAIL: un événement tag ne doit pas être présenté comme une branche dans la provenance.' >&2
     exit 1
 fi
 if ! cmp -s "$repository/ci/distribution/README.md" "$fixture/inspect/README.md" ||

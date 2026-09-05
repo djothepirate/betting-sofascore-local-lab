@@ -4,6 +4,31 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-055 — trains de version, PR GitHub et promotions GitLab
+
+- Convention stricte de trains `VX.Y.Z`, `VX.Y.Z-RCnn` ou `VX.Y.Z-RCnn-SNAPSHOT` (`01 <= nn <= 99`),
+  déclinée sous `feature/`, `release/` et
+  `feature/<TRAIN>-(CODEX|HUMAN)-WO-SS-YYYYMMDD-NNN`, avec exception de bootstrap WO-055 bornée au
+  dernier SHA `main` de l'ancienne convention et à Maven `0.1.0-SNAPSHOT`.
+- Conversion explicite des trains `RCnn` vers les versions Maven et tags SemVer `rc.N`; aucun tag
+  snapshot et aucun train branché promouvable au-delà de `rc.99`.
+- Gardes CI des couples PR GitHub `WO -> feature` et `feature -> main`, puis MR GitLab interne
+  `feature -> release` de même version, vers une cible protégée et non scellée par son tag ; version
+  Maven finale exigée avant `feature -> main`, preuve Git du bootstrap et graphe fast-forward MR
+  contrôlé sur les références distantes.
+- Le packaging d'un tag GitLab exige l'égalité exacte du commit extrait avec `origin/main`, la
+  feature canonique et la release protégée correspondantes ; une référence absente ou divergente
+  arrête la promotion.
+- Seules les branches `release/V*` sont protégées ; la règle distincte de tags protégés `v*` est un
+  prérequis fail-closed du pipeline de promotion.
+- Snapshots durables limités au train feature exact ; ceux de PR, de branche WO, de `main` et de
+  release restent éphémères. Les distributions conservent `EXPERIMENTAL_LOCAL_ONLY`,
+  `production.approved=false` et `vps.deployable=false`.
+- Tous les pipelines de branche GitLab — push, Web, planifiés, API, trigger ou pipeline enfant —
+  refusent les branches WO, bootstrap et historiques ; seuls `main`, les trains feature exacts et
+  les releases exactes sont admis. Les MR et tags suivent leurs routes dédiées, et tout contexte
+  sans source ou référence déterminée échoue fermé.
+
 ### WO-054 — livraison des cinq skills validés du lot 1
 
 - Ajout du paquet autonome `ss-work-order`, `ss-verify`, `ss-postgres-change`, `ss-data-contract-replay`, `ss-review-closeout`, identique aux dix fichiers validés sous SKL-002.
