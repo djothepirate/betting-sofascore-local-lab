@@ -1,7 +1,12 @@
 package com.bettingproject.sofascorelocal.security;
 
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryConfirmationAction;
+import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryConfirmationCapabilityVerifier;
+import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryConfirmationReceipt;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryConfirmationRequest;
+import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryError;
+import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryException;
+import com.bettingproject.sofascorelocal.domain.delivery.J7ProviderDerivedOwnerGo;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.StandardCharsets;
@@ -12,8 +17,10 @@ import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.IdentityHashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.OptionalInt;
 import java.util.UUID;
 import java.util.regex.Pattern;
@@ -30,7 +37,8 @@ import java.util.regex.Pattern;
  * calls.</p>
  */
 @Component
-public final class J7DeliveryConfirmationService {
+public final class J7DeliveryConfirmationService
+        implements J7DeliveryConfirmationCapabilityVerifier {
 
     public static final Duration DEFAULT_TTL = Duration.ofMinutes(5);
 
@@ -44,6 +52,8 @@ public final class J7DeliveryConfirmationService {
 
     private final Object lock = new Object();
     private final Map<String, StoredConfirmation> confirmations = new HashMap<>();
+    private final Map<J7DeliveryConfirmationReceipt, Instant> runtimeCapabilities =
+            new IdentityHashMap<>();
     private final SecureRandom secureRandom;
     private final Clock preparationClock;
     private final Duration ttl;
@@ -72,13 +82,35 @@ public final class J7DeliveryConfirmationService {
             UUID exportId,
             String fileSha256,
             OptionalInt attemptNumber) {
+        return prepare(
+                sessionKey,
+                action,
+                canonicalEventId,
+                exportId,
+                fileSha256,
+                attemptNumber,
+                Optional.empty());
+    }
+
+    /**
+     * Prepares one request whose hidden identity includes the exact server-selected owner go.
+     */
+    public J7DeliveryConfirmationRequest prepare(
+            String sessionKey,
+            J7DeliveryConfirmationAction action,
+            UUID canonicalEventId,
+            UUID exportId,
+            String fileSha256,
+            OptionalInt attemptNumber,
+            Optional<J7ProviderDerivedOwnerGo.Reference> providerOwnerGoReference) {
         String sessionDigest = sessionDigest(sessionKey);
         ConfirmationIdentity identity = requireIdentity(
                 action,
                 canonicalEventId,
                 exportId,
                 fileSha256,
-                attemptNumber);
+                attemptNumber,
+                providerOwnerGoReference);
         Instant preparedAt = preparationClock.instant();
         Instant expiresAt;
         try {
@@ -111,7 +143,7 @@ public final class J7DeliveryConfirmationService {
     /**
      * Atomically consumes the exact request. Every call burns the session's current request.
      */
-    public void consume(
+    public J7DeliveryConfirmationReceipt consume(
             String sessionKey,
             J7DeliveryConfirmationAction action,
             UUID canonicalEventId,
@@ -136,7 +168,8 @@ public final class J7DeliveryConfirmationService {
                 canonicalEventId,
                 exportId,
                 fileSha256,
-                attemptNumber);
+                attemptNumber,
+                stored.identity().providerOwnerGoReference());
         byte[] submittedRequestDigest = requestIdDigestOrZero(requestId);
         String expectedText = confirmationText(stored.identity());
         Instant now = clock.instant();
@@ -149,6 +182,42 @@ public final class J7DeliveryConfirmationService {
                 && constantTimeEquals(expectedText, confirmationText);
         if (!valid) {
             throw invalidConfirmation();
+        }
+        J7DeliveryConfirmationReceipt receipt = new J7DeliveryConfirmationReceipt(
+                stored.identity().action(),
+                stored.identity().canonicalEventId(),
+                stored.identity().exportId(),
+                stored.identity().fileSha256(),
+                stored.identity().attemptNumber().intValue(),
+                stored.identity().providerOwnerGoReference());
+        if (receipt.action() == J7DeliveryConfirmationAction.DELIVERY) {
+            synchronized (lock) {
+                runtimeCapabilities.entrySet().removeIf(entry ->
+                        !now.isBefore(entry.getValue()));
+                if (runtimeCapabilities.size() >= MAXIMUM_ACTIVE_SESSIONS) {
+                    throw new J7DeliveryConfirmationException(
+                            J7DeliveryConfirmationError.CONFIRMATION_CAPACITY_EXCEEDED);
+                }
+                runtimeCapabilities.put(receipt, stored.expiresAt());
+            }
+        }
+        return receipt;
+    }
+
+    @Override
+    public void consumeRuntimeCapability(
+            J7DeliveryConfirmationReceipt receipt,
+            Instant verifiedAt) {
+        Objects.requireNonNull(receipt, "receipt");
+        Objects.requireNonNull(verifiedAt, "verifiedAt");
+        Instant expiresAt;
+        synchronized (lock) {
+            expiresAt = runtimeCapabilities.remove(receipt);
+            runtimeCapabilities.entrySet().removeIf(entry ->
+                    !verifiedAt.isBefore(entry.getValue()));
+        }
+        if (expiresAt == null || !verifiedAt.isBefore(expiresAt)) {
+            throw new J7DeliveryException(J7DeliveryError.INVALID_CONFIRMATION);
         }
     }
 
@@ -167,8 +236,11 @@ public final class J7DeliveryConfirmationService {
             UUID canonicalEventId,
             UUID exportId,
             String fileSha256,
-            OptionalInt attemptNumber) {
-        if (action == null || attemptNumber == null) {
+            OptionalInt attemptNumber,
+            Optional<J7ProviderDerivedOwnerGo.Reference> providerOwnerGoReference) {
+        if (action == null
+                || attemptNumber == null
+                || providerOwnerGoReference == null) {
             throw new J7DeliveryConfirmationException(
                     J7DeliveryConfirmationError.INVALID_ACTION_CONTEXT);
         }
@@ -183,12 +255,18 @@ public final class J7DeliveryConfirmationService {
             throw new J7DeliveryConfirmationException(
                     J7DeliveryConfirmationError.INVALID_ACTION_CONTEXT);
         }
+        if (action == J7DeliveryConfirmationAction.RECONCILIATION
+                && providerOwnerGoReference.isPresent()) {
+            throw new J7DeliveryConfirmationException(
+                    J7DeliveryConfirmationError.INVALID_ACTION_CONTEXT);
+        }
         return new ConfirmationIdentity(
                 action,
                 canonicalEventId,
                 exportId,
                 fileSha256,
-                Integer.valueOf(attemptNumber.getAsInt()));
+                Integer.valueOf(attemptNumber.getAsInt()),
+                providerOwnerGoReference);
     }
 
     private static ConfirmationIdentity identityOrInvalidConfirmation(
@@ -196,14 +274,16 @@ public final class J7DeliveryConfirmationService {
             UUID canonicalEventId,
             UUID exportId,
             String fileSha256,
-            OptionalInt attemptNumber) {
+            OptionalInt attemptNumber,
+            Optional<J7ProviderDerivedOwnerGo.Reference> providerOwnerGoReference) {
         try {
             return requireIdentity(
                     action,
                     canonicalEventId,
                     exportId,
                     fileSha256,
-                    attemptNumber);
+                    attemptNumber,
+                    providerOwnerGoReference);
         }
         catch (J7DeliveryConfirmationException exception) {
             throw invalidConfirmation();
@@ -298,7 +378,8 @@ public final class J7DeliveryConfirmationService {
             UUID canonicalEventId,
             UUID exportId,
             String fileSha256,
-            Integer attemptNumber) {
+            Integer attemptNumber,
+            Optional<J7ProviderDerivedOwnerGo.Reference> providerOwnerGoReference) {
     }
 
     private static final class StoredConfirmation {

@@ -23,6 +23,8 @@ scripts/Invoke-WO034PermissionRequestWithPreflight.ps1 text eol=lf
 scripts/Invoke-WO034PermissionRequestWithPreflight.Tests.ps1 text eol=lf
 scripts/Test-WO034PermissionRequestInput.ps1 text eol=lf
 scripts/Test-WO034PermissionRequestInput.Tests.ps1 text eol=lf
+
+scripts/wo046/WO046-LaunchPreparation.psm1 text eol=lf
 *.pdf binary
 *.zip binary
 *.bundle binary

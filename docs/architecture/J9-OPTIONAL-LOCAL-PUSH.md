@@ -1,5 +1,82 @@
 # J9 — Contrat d’architecture du push local optionnel v1.0
 
+## Amendement WO-047 — audit fournisseur séparé de la gouvernance du transfert J7
+
+ADR-SS-003 v0.2, acceptée sur la proposition immuable
+`e1ec9936467dd570f7ed00c51227c8e7d5a35945` dont le fichier porte le SHA-256
+`ded6a4da8a3161caae491f62919f4f5c3569c69c821be5a807772cc542cede3f`, supersède la règle v0.1
+uniquement pour l'éligibilité du transfert J7 local. Le statut officiel SofaScore reste un fait
+d'audit exact : `NOT_EVIDENCED` ne devient ni une permission ni un veto automatique pour ce
+transfert. `EVIDENCED_INCOMPATIBLE` et toute valeur inconnue ou invalide restent bloquantes avant
+claim, certificat, transport et socket.
+
+WO-047 conserve le format canonique V1 et la migration V31 strictement immuables. Les lignes V1
+continuent d'exiger `EVIDENCED_COMPATIBLE`. Le format
+`J7_PROVIDER_DERIVED_OWNER_GO_V2` et la migration append-only V32 séparent le statut d'audit de la
+base de gouvernance du transfert ; une ligne V2 doit lier exactement ces deux dimensions, le
+manifeste, l'export, le receiver, le certificat et l'ordinal. Cette éligibilité technique n'accorde
+aucun POST réel : acquisition fournisseur, receiver distant, déploiement VPS et production restent
+interdits, et les portes officielles J3/J4/J5 ne changent pas.
+
+Les contraintes V32 refusent les formes croisées V1/V2, les champs obligatoires `NULL` et toute
+divergence de gouvernance. La fonction canonique V2 et le dispatcher fixent leur `search_path` et
+qualifient les objets SQL. V1 et V2 empruntent ensuite le même cycle durable : révocation et claim
+s'excluent, consommation, tentative et `IN_FLIGHT` sont atomiques, une course ne produit qu'un
+vainqueur et aucun échec post-claim ne rembourse le go.
+
+## Extension historique WO-045 — grant fournisseur exact, durable et consommable une fois
+
+WO-045 ajoute une frontière d'autorité distincte pour `PROVIDER_DERIVED`. Elle ne réalise aucun
+envoi réel et n'ouvre pas WO-046. Un futur envoi ne deviendra éligible qu'après enregistrement
+explicite d'un grant propriétaire immuable lié à un manifeste de campagne neuf et gelé. Aucun
+grant n'est créé au démarrage de l'application, par la génération d'un export, par sa validation
+humaine ou par une recherche permissive d'une autorisation disponible.
+
+Le grant porte une identité UUID et le SHA-256 de son bloc de décision canonique. Il fixe le Work
+Order et le manifeste de campagne, les commits qualifiés des deux dépôts, la preuve officielle
+référencée, l'acteur, l'événement canonique et fournisseur, l'export, ses deux hashes et sa taille,
+le schéma J7, l'origine receiver, l'empreinte publique du certificat client, l'ordinal `1`, un seul
+appel au plus et une fenêtre UTC semi-ouverte de 60 minutes maximum. Les valeurs constantes sont
+`PROVIDER_DERIVED`, `HUMAN_VALIDATED` et `ONE_TIME`.
+
+Le préimage normatif est celui de la section 4 du Work Order WO-045 : clés et ordre fixes,
+UTF-8 sans BOM, séparateurs LF et LF final, UUID minuscules, URI ASCII, booléens `YES`/`NO` et
+instants UTC à exactement six chiffres de microsecondes. Le champ externe
+`OWNER_GO_DOCUMENT_SHA256` est exclu du préimage pour éviter l'autoréférence. Java et PostgreSQL
+recalculent séparément le même SHA-256 avant d'accepter le grant.
+
+La préparation de confirmation lie côté serveur la référence exacte du grant à la session, à
+l'événement, à l'export, au hash et à l'ordinal. Cette référence n'est jamais un champ de formulaire
+et n'est pas affichée. Une confirmation humaine réussie émet en outre une capacité mémoire liée à
+l'instance exacte du reçu, expirant avec la demande et consommable une seule fois par le runtime.
+Un reçu construit ou copié par un autre appelant JVM ne possède pas cette capacité et est refusé
+avant toute lecture d'export, de grant ou de transport. Lors de l'exécution, PostgreSQL relit le
+grant exact sous verrou, évalue son
+état avec l'horloge de la base et compare de nouveau toutes les identités. L'insertion de la
+consommation, l'insertion de la tentative et le passage du ledger à `IN_FLIGHT` forment une seule
+transaction. L'ouverture du transport, la lecture du magasin de certificats et tout socket sont
+postérieurs à son commit.
+
+```text
+OWNER_GO_MAXIMUM_WINDOW=60m
+OWNER_GO_EXPECTED_ATTEMPT_NUMBER=1
+OWNER_GO_MAXIMUM_DIRECT_IMPORT_CALLS=1
+OWNER_GO_CONSUMPTION_AND_LEDGER_CLAIM=ONE_POSTGRESQL_TRANSACTION
+OWNER_GO_REFERENCE_IN_HTML=NO
+CONFIRMATION_RUNTIME_CAPABILITY=EXACT_INSTANCE_ONE_TIME_IN_MEMORY
+FORGED_OR_COPIED_CONFIRMATION_RECEIPT=REJECT_BEFORE_EXPORT_OR_GRANT
+TRANSPORT_OPEN_BEFORE_OWNER_GO_COMMIT=NO
+OWNER_GO_REUSABLE_AFTER_FAILURE_OR_RESTART=NO
+WO045_PROVIDER_DERIVED_REAL_POSTS=0
+WO046_OPENING_AUTHORIZED=NO
+```
+
+Les grants, révocations et consommations sont append-only. Une révocation et une consommation
+s'excluent mutuellement. Une défaillance avant le commit atomique ne laisse ni consommation seule,
+ni tentative seule. Après ce commit, tout échec de factory, certificat, TLS, HTTP, ACK ou cleanup
+laisse le grant définitivement consommé ; le résultat est persisté de façon bornée ou reste
+`IN_FLIGHT` jusqu'à une réconciliation manuelle, sans retry automatique.
+
 ## 1. Statut, autorité et portée
 
 Ce document fige le contrat technique v1.0 du sender local prévu par ADR-SS-003. Le socle a été
@@ -48,11 +125,15 @@ PROVIDER_NETWORK_AUTHORIZED=NO
 LIVE_DELIVERY_AUTHORIZED=NO
 VPS_DEPLOYMENT_AUTHORIZED=NO
 PRODUCTION_AUTHORIZED=NO
+WO047_SYNTHETIC_LOOPBACK_QUALIFICATION_AUTHORIZED=YES
+WO047_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
 ```
 
-Tant que la permission officielle reste `NOT_EVIDENCED`, le runtime doit refuser tout export
-`PROVIDER_DERIVED` avant création du client, résolution ou ouverture de socket. WO-035 fixe une
-seule origine runtime, `https://127.0.0.1:8444`. Les qualifications historiques de WO-027 restent
+Sous WO-035 et ADR-SS-003 v0.1, le runtime devait refuser tout export `PROVIDER_DERIVED` tant que
+la permission officielle restait `NOT_EVIDENCED`, avant création du client, résolution ou
+ouverture de socket. ADR-SS-003 v0.2 et WO-047 supersèdent ce seul veto pour le transfert J7 local,
+selon l'allow-list d'audit et la gouvernance V2 décrites à la section 10. WO-035 fixe une seule
+origine runtime, `https://127.0.0.1:8444`. Les qualifications historiques de WO-027 restent
 synthétiques, liées à `127.0.0.1` et à un port éphémère. La reprise R2 de WO-036 a contacté sur
 loopback le receiver INT-001 réel avec un export entièrement synthétique : `201/IMPORTED`, puis
 `200/DUPLICATE` côté receiver. Elle s'est arrêtée avant `409`, car le sender a rejeté la sémantique
@@ -119,7 +200,7 @@ nouvel échange ni de cible réelle.
                     | action opérateur distincte
                     | confirmation exacte à usage unique
                     v
-[éligibilité + taille + schéma + hash + permission]
+[éligibilité + taille + schéma + hash + audit fournisseur + gouvernance du transfert]
                     |
                     | échec => aucun socket, NOT_ATTEMPTED
                     v
@@ -432,33 +513,42 @@ exacte n’ont pas été franchies.
 Le modèle de menace associé est décrit dans
 [`J9-OPTIONAL-LOCAL-PUSH-THREAT-MODEL.md`](../security/J9-OPTIONAL-LOCAL-PUSH-THREAT-MODEL.md).
 
-## 10. Porte de permission et absence de réseau réel
+## 10. Audit fournisseur, gouvernance du transfert et absence de réseau réel
 
-`J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED` est une porte exécutoire, pas une simple mention
-documentaire. La classification des cinq sources vérifiées impose la matrice suivante :
+La règle historique WO-035/ADR-SS-003 v0.1 traitait
+`J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED` comme une porte exécutoire. ADR-SS-003 v0.2 la
+supersède uniquement pour le transfert J7 local : le runtime admet comme statuts d'audit
+`NOT_EVIDENCED` et `EVIDENCED_COMPATIBLE`, sans transformer le premier en preuve de permission.
+`EVIDENCED_INCOMPATIBLE` et toute valeur inconnue ou invalide sont refusées avant transport. La
+classification des cinq sources vérifiées impose désormais la matrice suivante :
 
-| Provenance | Mode exigé | Effet sous WO-035 |
+| Provenance | Mode exigé | Effet après ADR-SS-003 v0.2 / WO-047 |
 |---|---|---|
 | `SYNTHETIC_ONLY` | `SYNTHETIC_LOOPBACK` | `201/200` confirmés par R3 ; `409` non qualifié ; correction, qualification, autorisation et campagne neuves requises avant tout nouvel échange |
-| `PROVIDER_DERIVED` | `PROVIDER_DERIVED` | Toujours bloqué par permission, autorisation distante et surtout `PROVIDER_OWNER_GO_REQUIRED` |
+| `PROVIDER_DERIVED` | `PROVIDER_DERIVED` | `NOT_EVIDENCED` est audit-only et non bloquant ; l'allow-list d'audit, l'autorisation de livraison, un grant exact V1 ou V2 et toutes les autres portes restent obligatoires |
 | `MIXED_OR_UNKNOWN` | Aucun | Refus `PAYLOAD_PROVENANCE_NOT_ELIGIBLE` avant transport |
 
 Pour tout refus runtime :
 
 1. le sender vérifie provenance, mode, qualifications, profil mTLS et, pour une provenance
-   fournisseur, permission et autorisation propriétaire avant de créer le client réseau ;
+   fournisseur, allow-list du statut d'audit, gouvernance du transfert et autorisation propriétaire
+   exacte avant de créer le client réseau ;
 2. il refuse une URI absente, réelle ou non autorisée ;
 3. il ne résout aucun hôte et n’ouvre aucun socket ;
 4. il ne crée aucune ligne ; l’absence de livraison reste l’état conceptuel `NOT_ATTEMPTED` et le
    ledger demeure inchangé ;
-5. il expose uniquement un code local minimisé, sans donnée du fichier.
+5. il expose uniquement un code local minimisé, sans donnée du fichier :
+   `OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE` ou `OFFICIAL_PERMISSION_STATUS_INVALID` pour ces
+   deux refus. Le code legacy `OFFICIAL_PERMISSION_NOT_EVIDENCED` peut rester source-compatible,
+   mais n'est plus émis sur le chemin J7.
 
 Le harness WO-027, lié à un port éphémère, reste test-only. Le profil runtime local WO-035, lié à
 `8444`, n'est pas une autorisation d'échange. R3 confirme `201/200`, mais n'a pas qualifié le
 `409` : son troisième appel est consommé et ne peut être rejoué. Seules une correction de harnais
 distincte, sa qualification, une nouvelle décision propriétaire et une campagne entièrement neuve
-pourront achever la qualification des deux applications Windows. Aucun export dérivé de SofaScore
-n'est admissible.
+pourront achever la qualification des deux applications Windows. WO-047 rend une provenance
+fournisseur techniquement éligible sous les portes V1/V2 appropriées, mais n'autorise aucun export
+réel, aucun POST et aucune ouverture de réseau.
 
 La méthode applicative dédiée au mode `SYNTHETIC_LOOPBACK` impose explicitement
 `expectedPayloadClass=SYNTHETIC_ONLY` avant claim et avant construction du transport. Elle ne

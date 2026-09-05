@@ -183,10 +183,10 @@ class J7DeliveryMutualTlsLoopbackIT {
                             J7DeliveryTransportException.class,
                             exception -> {
                                 assertThat(exception.failure())
-                                        .isEqualTo(J7DeliveryTransportFailure.TLS_FAILURE);
+                                        .isIn(J7DeliveryTransportFailure.TLS_FAILURE,
+                                                J7DeliveryTransportFailure.IO_FAILURE);
                                 assertThat(exception.getMessage())
-                                        .isEqualTo(
-                                                J7DeliveryTransportFailure.TLS_FAILURE.name());
+                                        .isEqualTo(exception.failure().name());
                             });
         }
         assertThat(unauthenticatedTransport.isTerminated()).isTrue();
@@ -223,10 +223,11 @@ class J7DeliveryMutualTlsLoopbackIT {
         IdempotentSyntheticReceiver receiver = new IdempotentSyntheticReceiver();
         URI origin = startMutualTlsLoopbackServer(tls.server(), receiver);
 
-        assertTlsFailureBeforeAnyApplicationRequest(
+        assertFailureWithoutNewApplicationRequest(
                 origin,
                 tls.clientTrustingOnlyAnUnrelatedServer(),
-                receiver);
+                receiver,
+                J7DeliveryTransportFailure.TLS_FAILURE);
     }
 
     @Test
@@ -239,10 +240,11 @@ class J7DeliveryMutualTlsLoopbackIT {
         URI origin = startMutualTlsLoopbackServer(
                 tls.hostnameMismatchServer(), receiver);
 
-        assertTlsFailureBeforeAnyApplicationRequest(
+        assertFailureWithoutNewApplicationRequest(
                 origin,
                 tls.clientTrustingHostnameMismatchServer(),
-                receiver);
+                receiver,
+                J7DeliveryTransportFailure.TLS_FAILURE);
     }
 
     @Test
@@ -254,16 +256,34 @@ class J7DeliveryMutualTlsLoopbackIT {
         IdempotentSyntheticReceiver receiver = new IdempotentSyntheticReceiver();
         URI origin = startMutualTlsLoopbackServer(tls.server(), receiver);
 
-        assertTlsFailureBeforeAnyApplicationRequest(
+        // Positive control on the very same listener: an unavailable server must not
+        // make this negative authentication test pass merely by returning IO_FAILURE.
+        var accepted = executeAuthenticatedAttempt(origin, tls.authenticatedClient(),
+                Clock.fixed(ACKNOWLEDGED_AT, ZoneOffset.UTC),
+                new J7DeliveryTransportRequest(IDENTITY, DATA_SHA256, SYNTHETIC_EXPORT));
+        assertThat(accepted.httpStatus()).isEqualTo(201);
+        assertThat(receiver.requestCount()).isEqualTo(1);
+        assertThat(receiver.effectCount()).isEqualTo(1);
+        assertThat(receiver.clientIdentityObserved()).isTrue();
+
+        // A peer rejecting our identity can close the connection without HttpClient
+        // retaining an SSLException. Do not turn opaque I/O into a runtime TLS claim.
+        assertFailureWithoutNewApplicationRequest(
                 origin,
                 tls.unapprovedClient(),
-                receiver);
+                receiver,
+                J7DeliveryTransportFailure.TLS_FAILURE,
+                J7DeliveryTransportFailure.IO_FAILURE);
     }
 
-    private static void assertTlsFailureBeforeAnyApplicationRequest(
+    private static void assertFailureWithoutNewApplicationRequest(
             URI origin,
             SSLContext clientContext,
-            IdempotentSyntheticReceiver receiver) {
+            IdempotentSyntheticReceiver receiver,
+            J7DeliveryTransportFailure... allowedFailures) {
+        int requestsBefore = receiver.requestCount();
+        int effectsBefore = receiver.effectCount();
+        boolean identityBefore = receiver.clientIdentityObserved();
         var transport = BettingProjectJ7DeliveryHttpTransport
                 .forSyntheticLoopback(
                         origin,
@@ -280,16 +300,15 @@ class J7DeliveryMutualTlsLoopbackIT {
                             J7DeliveryTransportException.class,
                             exception -> {
                                 assertThat(exception.failure())
-                                        .isEqualTo(J7DeliveryTransportFailure.TLS_FAILURE);
+                                        .isIn(Arrays.asList(allowedFailures));
                                 assertThat(exception.getMessage())
-                                        .isEqualTo(
-                                                J7DeliveryTransportFailure.TLS_FAILURE.name());
+                                        .isEqualTo(exception.failure().name());
                             });
         }
         assertThat(transport.isTerminated()).isTrue();
-        assertThat(receiver.requestCount()).isZero();
-        assertThat(receiver.effectCount()).isZero();
-        assertThat(receiver.clientIdentityObserved()).isFalse();
+        assertThat(receiver.requestCount()).isEqualTo(requestsBefore);
+        assertThat(receiver.effectCount()).isEqualTo(effectsBefore);
+        assertThat(receiver.clientIdentityObserved()).isEqualTo(identityBefore);
     }
 
     private URI startMutualTlsLoopbackServer(

@@ -303,11 +303,20 @@ de livraison est déterministe :
 | Toutes les sources disponibles sont `PROVIDER_SNAPSHOT`, sans fixture synthétique | `PROVIDER_DERIVED` |
 | Mélange, source invalide, incohérente ou classification impossible | `MIXED_OR_UNKNOWN` |
 
-`MIXED_OR_UNKNOWN` est toujours refusé. `PROVIDER_DERIVED` reste bloqué sous WO-035 par la
-permission `NOT_EVIDENCED`, l’absence d’autorisation de livraison réelle et la porte structurelle
-`PROVIDER_OWNER_GO_REQUIRED`. Seul le futur WO-036 pourra exécuter un échange
+`MIXED_OR_UNKNOWN` est toujours refusé. Dans l'état historique WO-035/ADR-SS-003 v0.1,
+`PROVIDER_DERIVED` restait bloqué par la permission `NOT_EVIDENCED`, l’absence d’autorisation de
+livraison réelle et la porte structurelle `PROVIDER_OWNER_GO_REQUIRED`. Seul le futur WO-036
+pouvait alors exécuter un échange
 `SYNTHETIC_ONLY` vers l’origine exacte `https://127.0.0.1:8444`, sous un go et une qualification
 séparés. WO-035 n’effectue aucun appel receiver, fournisseur ou VPS.
+
+ADR-SS-003 v0.2 et WO-047 supersèdent uniquement le veto `NOT_EVIDENCED` pour le transfert J7
+local. `NOT_EVIDENCED` et `EVIDENCED_COMPATIBLE` sont des statuts d'audit admis ;
+`EVIDENCED_INCOMPATIBLE` et toute valeur inconnue ou invalide restent bloquants. Le format V1 et
+les lignes V31 demeurent strictement immuables et V1 exige toujours `EVIDENCED_COMPATIBLE`. Un go
+V2/V32 sépare l'audit de la base de gouvernance et doit correspondre exactement au manifeste, à
+l'export, au receiver, au certificat et à l'ordinal. Toutes les autres portes restent obligatoires :
+WO-047 n'autorise aucun POST réel et ne modifie aucune porte officielle J3/J4/J5.
 
 La voie applicative synthétique accepte elle-même exclusivement la classe calculée
 `SYNTHETIC_ONLY`. Elle transmet cette classe attendue au contrôle de politique avant claim et avant
