@@ -4,6 +4,23 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-046 R1 arrêté avant import, go V2 révoqué inutilisé
+
+- autorité propriétaire de préparation/soumission du go V2 et d'exécution unique ; bloc privé
+  canonique de 2087 octets, SHA-256
+  `1c03c0d97dbbf6f240182dc4aa53eebe610605d4b83d17c280481b221bc28e79`,
+  enregistré avant sa fenêtre, contrôles Java et PostgreSQL concordants ;
+- receiver neuf sur loopback, V008, health mTLS `200/UP`, zéro import ; démarrage Local Lab
+  refusé avant listener car le lanceur Codex emploie des noms de variables sender erronés ;
+- diagnostic hors ligne sur les classes du JAR exact : binding R1 incohérent, noms séparés
+  synthétiques cohérents ; aucune correction silencieuse du lanceur ni relance applicative ;
+- révocation durable avant validité, zéro consommation/livraison/tentative/import ; arrêt
+  receiver gracieux par POST administratif, base arrêtée avec volume conservé, primaire sain ;
+- rapport d'arrêt distinct, anomalie secondaire de sérialisation du justificatif technique
+  explicitée et preuve de révocation corroborée en base ; manifeste et rapports gelés inchangés ;
+- WO-046 reste actif ; toute reprise exige qualification d'outillage, autorité distincte,
+  manifeste successeur gelé et nouveau go ; aucun fournisseur, receiver distant, VPS ou production.
+
 ### Après J9 — manifeste WO-046 gelé localement sans exécution
 
 - autorisation propriétaire distincte de création, gel et commit local du seul manifeste,

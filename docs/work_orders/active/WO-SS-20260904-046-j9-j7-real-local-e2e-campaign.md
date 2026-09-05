@@ -1,6 +1,6 @@
 # WO-SS-20260904-046 — Campagne E2E J7 réelle locale Windows/Windows
 
-- **Statut :** `MANIFEST_FROZEN_PENDING_SEPARATE_OWNER_GO_PREPARATION_AUTHORIZATION`
+- **Statut :** `STOPPED_PRE_IMPORT_LOCAL_LAB_CONFIGURATION_BINDING_REFUSED`
 - **Jalon :** après J9 — campagne locale d'une livraison J7 dérivée fournisseur
 - **Ouvert le :** 2026-09-04
 - **Ouverture UTC :** `2026-09-04T13:59:22.9943521Z`
@@ -704,3 +704,71 @@ V2 lié au manifeste gelé, puis l'autorisation future, exacte et à usage uniqu
 Le statut officiel reste `NOT_EVIDENCED` comme audit non bloquant pour ce transfert local sous
 ADR-SS-003 v0.2 ; `EVIDENCED_INCOMPATIBLE` reste bloquant. Aucun accord SofaScore, appel
 fournisseur, réseau distant, VPS, production ou transfert réel n'est inféré de ce gel.
+
+## 16. R1 — go V2 enregistré, arrêt avant import et révocation inutilisée
+
+Après le gel, le propriétaire autorise la préparation et la soumission du bloc owner-go V2 lié
+à ce manifeste, puis l'exécution à usage unique. L'agent prépare le bloc complet privé, le soumet
+dans la conversation et l'enregistre avant la fenêtre. Le présent historique consigne cette
+instruction ; il n'invente pas une confirmation propriétaire ultérieure des octets générés.
+
+Le [rapport distinct R1](../../validation/J9-WO046-J7-REAL-LOCAL-E2E-R1-STOPPED-20260905.md)
+contient `15490` octets, SHA-256
+`819572974a6f43c28da4e4191766932c46c43102895ad58e3e436d4b90a783bd`.
+Le manifeste du commit `2cdb93d2236955a34528a11cc982fc01f4554b46` reste byte-identique,
+SHA-256 `6590603286c6c422588bbc3f6a46f502716fa2e2df18b6ad0df741cbd1cbf277`.
+
+Le bloc V2 canonique de `2087` octets, SHA-256
+`1c03c0d97dbbf6f240182dc4aa53eebe610605d4b83d17c280481b221bc28e79`, utilise le go
+`2739de83-ae45-45f0-99f1-d527d00cf8db` et la fenêtre demi-ouverte
+`[2026-09-05T00:10:00.000000Z,2026-09-05T01:10:00.000000Z)`, soit 02:10–03:10 à Paris.
+L'enregistrement à `2026-09-04T23:57:22.012607Z` est corroboré par le hash canonique PostgreSQL
+et le validateur Java V2. Le bloc privé contenant l'identité mTLS réelle n'est pas ajouté à Git.
+
+Le receiver a passé la readiness mTLS `200/UP` sur `127.0.0.1:8444`, avec sa nouvelle base V008
+et zéro import. Local Lab a ensuite refusé une matrice d'activation incohérente avant listener
+8087. L'erreur vient des noms de variables dans le lanceur ad hoc préparé par Codex ; le
+diagnostic de binding hors ligne reproduit le refus et identifie les noms corrects avec des
+valeurs synthétiques. Il ne qualifie pas un lanceur corrigé et ne constitue pas une reprise.
+
+Le go est révoqué sans consommation à `2026-09-05T00:07:48.997834Z`, avant sa validité. Le
+receiver est arrêté gracieusement par un unique POST administratif mTLS à `/actuator/shutdown`,
+distinct de l'import J7. Sa base est arrêtée avec son volume conservé et sans redémarrage
+automatique ; le primaire demeure sain, l'export inchangé, sans purge. Le contrôle final en
+lecture seule à `2026-09-05T00:16:42.061765Z` confirme l'absence de livraison/tentative et
+l'absence des listeners 8087/8444/5433. La preuve technique d'arrêt présente deux valeurs sur
+leurs lignes suivantes ; cette anomalie de sérialisation est documentée, non réécrite, et la
+révocation est corroborée indépendamment en base. Le bloc owner-go V2 n'est pas affecté.
+
+```text
+J9_WO046_STATUS=STOPPED_PRE_IMPORT_LOCAL_LAB_CONFIGURATION_BINDING_REFUSED
+J9_WO046_R1_OWNER_GO_STATUS=REVOKED_UNUSED
+J9_WO046_OWNER_GO_GRANT_COUNT=1
+J9_WO046_OWNER_GO_REVOCATION_COUNT=1
+J9_WO046_OWNER_GO_CONSUMPTION_COUNT=0
+J9_WO046_DELIVERY_COUNT=0
+J9_WO046_DELIVERY_ATTEMPT_COUNT=0
+J9_WO046_DIRECT_IMPORT_POST_COUNT=0
+J9_WO046_RECEIVER_IMPORT_COUNT=0
+J9_WO046_RECEIVER_HEALTH_GET_COUNT=1
+J9_WO046_RECEIVER_ADMINISTRATIVE_SHUTDOWN_POST_COUNT=1
+J9_WO046_PRIMARY_DATABASE=RUNNING_HEALTHY_NOT_STOPPED
+J9_WO046_RECEIVER_DATABASE=STOPPED_VOLUME_RETAINED
+J9_WO046_RESIDUAL_LISTENERS_8087_8444_5433=0
+J9_WO046_WORK_ORDER_MOVE_TO_COMPLETED=NO
+J9_WO046_REAL_IMPORT_AUTHORIZED=NO_STOPPED_GO_REVOKED
+J9_WO046_NEW_MANIFEST_AUTHORIZED=NO
+J9_WO046_NEW_OWNER_GO_GRANTED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+La suite nécessite un périmètre d'outillage distinct pour corriger/qualifier le binding complet
+du lanceur et le justificatif d'arrêt. La contrainte unique du hash de manifeste ne permet pas
+un second grant sur le manifeste R1 révoqué ; toute reprise exige ensuite une décision
+propriétaire distincte pour un nouveau manifeste gelé et un nouveau go. Aucun retry, nouveau
+manifeste ou go n'est créé. Aucun changement applicatif, de protocole, de migration, de PDF ou
+des rapports qualifiés n'est effectué ; les contrôles de ce lot et leurs limites sont détaillés
+dans le rapport R1, sans nouveau PASS Maven ni qualification réelle revendiqués.

@@ -4,18 +4,30 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
+La [tentative réelle WO-046 R1](docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-R1-STOPPED-20260905.md)
+est **arrêtée avant tout POST d'import J7**. Le owner-go V2 a été préparé, soumis et enregistré,
+mais le lanceur Codex utilisait des noms de variables sender erronés : le Local Lab a refusé
+une matrice d'activation incohérente avant ouverture du listener. Le diagnostic de binding hors
+ligne reproduit cette erreur ; aucun correctif runtime ni nouvelle exécution n'est effectué.
+Le go est révoqué sans consommation, avec zéro livraison, tentative et import receiver.
+
+Le receiver a passé sa readiness mTLS `200/UP` sur loopback avant l'échec du Local Lab ; il a
+ensuite été arrêté gracieusement par un POST administratif distinct de l'import. Sa base V008
+neuve est arrêtée, son volume conservé, sans redémarrage automatique. Le primaire est toujours
+sain ; son export est inchangé et aucun listener 8087/8444/5433 ne subsiste. Les seules nouvelles
+écritures primaires de gouvernance sont un grant et sa révocation. WO-046 reste actif, état
+`STOPPED_PRE_IMPORT_LOCAL_LAB_CONFIGURATION_BINDING_REFUSED`.
+
 La [préparation primaire WO-046](docs/validation/J9-WO046-PRIMARY-V30-V32-PREPARATION-20260905.md)
-est achevée : sauvegarde/restauration V30 qualifiée, migrations V31 puis V32 par démarrage
-transitoire non-web bloqué, puis sauvegarde/restauration V32 qualifiée. L'export J7 déjà validé,
-ses métadonnées et les empreintes historiques comparées sont inchangés. Aucun listener
-applicatif ne subsiste ; grants, consommations, livraisons et tentatives restent à zéro.
+reste la preuve historique achevée : sauvegarde/restauration V30 qualifiée, migrations V31 puis
+V32 par démarrage transitoire non-web bloqué, puis sauvegarde/restauration V32 qualifiée.
 Le [manifeste WO-046](docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-CAMPAIGN-MANIFEST-20260904.md)
-est ensuite créé et gelé par commit local sous autorisation distincte, après recontrôle en
-lecture seule des métadonnées de l'export et de l'identité mTLS. Il contient `18380` octets,
+est gelé au commit `2cdb93d2236955a34528a11cc982fc01f4554b46`. Il contient `18380` octets,
 SHA-256 `6590603286c6c422588bbc3f6a46f502716fa2e2df18b6ad0df741cbd1cbf277`.
-WO-046 reste actif : préparation du owner-go V2 et exécution restent soumises à leurs décisions
-séparées. **Ce gel ne crée aucun owner-go et n'autorise ni démarrage du receiver ni POST.**
-Les ressources futures du receiver sont seulement planifiées ; aucun push n'est réalisé.
+Ses octets sont inchangés. Toute reprise exige une correction/qualification distincte du
+lanceur, puis une décision propriétaire pour un manifeste successeur et un nouveau go : le hash
+du manifeste ne peut être réutilisé pour un second grant. Aucun appel SofaScore, receiver distant,
+VPS, production, nouveau POST d'import ou push Git n'est autorisé par ce compte rendu d'arrêt.
 
 Le Work Order
 [WO-SS-20260904-048](docs/work_orders/completed/WO-SS-20260904-048-j9-wo046-local-mtls-identity-provisioning.md)
@@ -74,7 +86,7 @@ Le Work Order
 porte historiquement dans son document v0.1 l'état `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`,
 depuis le commit exact de clôture de WO-045
 `8a1225fc4b85d8e8b55af536fcbc7955676131ff`. L'état effectif de la séquence est désormais
-`MANIFEST_FROZEN_PENDING_SEPARATE_OWNER_GO_PREPARATION_AUTHORIZATION`. Il prépare la future campagne
+`STOPPED_PRE_IMPORT_LOCAL_LAB_CONFIGURATION_BINDING_REFUSED`. Il porte la campagne
 Windows/Windows d'une livraison manuelle unique d'un export J7 fournisseur déjà
 `HUMAN_VALIDATED` vers le receiver Betting Project sur `https://127.0.0.1:8444`.
 
