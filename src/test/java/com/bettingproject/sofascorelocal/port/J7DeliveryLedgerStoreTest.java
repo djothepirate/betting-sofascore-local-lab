@@ -1,8 +1,12 @@
 package com.bettingproject.sofascorelocal.port;
 
+import com.bettingproject.sofascorelocal.domain.delivery.J7ProviderDerivedOwnerGo;
 import org.junit.jupiter.api.Test;
 
+import java.net.URI;
 import java.time.Instant;
+import java.util.Optional;
+import java.util.OptionalInt;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -141,5 +145,139 @@ class J7DeliveryLedgerStoreTest {
                 STARTED_AT))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("non-nil RFC 4122 UUID");
+    }
+
+    @Test
+    void validatesOneExactProviderDerivedOwnerGoWithoutSecretsOrPayloads() {
+        J7ProviderDerivedOwnerGo.Grant grant = validGrant();
+        var claim = new J7ProviderDerivedOwnerGo.Claim(grant, KEY, STARTED_AT);
+        var snapshot = new J7ProviderDerivedOwnerGo.Snapshot(
+                grant,
+                J7ProviderDerivedOwnerGo.Status.AVAILABLE,
+                STARTED_AT.minusSeconds(1),
+                STARTED_AT,
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                OptionalInt.empty());
+
+        assertThat(grant.reference()).isEqualTo(new J7ProviderDerivedOwnerGo.Reference(
+                grant.goId(), grant.ownerDecisionBlockSha256()));
+        assertThat(claim.idempotencyKey()).isEqualTo(KEY);
+        assertThat(snapshot.status()).isEqualTo(J7ProviderDerivedOwnerGo.Status.AVAILABLE);
+        assertThat(grant.toString())
+                .doesNotContain(grant.ownerDecisionBlockSha256())
+                .doesNotContain(grant.clientCertificateSha256());
+        assertThat(grant.reference().toString())
+                .doesNotContain(grant.ownerDecisionBlockSha256());
+        assertThat(claim.toString()).doesNotContain(KEY, FILE_SHA);
+        assertThat(snapshot.toString()).doesNotContain(FILE_SHA, DATA_SHA);
+        assertThat(J7ProviderDerivedOwnerGo.Grant.class.getRecordComponents())
+                .extracting(java.lang.reflect.RecordComponent::getName)
+                .doesNotContain("payload", "body", "privateKey", "certificate");
+    }
+
+    @Test
+    void confinesOwnerGoReferencesAndRequiresTheThreeQualifiedGates() {
+        assertThatThrownBy(() -> grantWithReferences(
+                "../manifest.md", "docs/validation/permission.md"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("confined docs/validation reference");
+        assertThatThrownBy(() -> grantWithReferences(
+                "docs/validation/manifest.md", "https://example.test/evidence"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("confined docs/validation reference");
+        assertThatThrownBy(() -> new J7ProviderDerivedOwnerGo.Grant(
+                validGrant().goId(),
+                validGrant().ownerDecisionBlockSha256(),
+                validGrant().workOrder(),
+                validGrant().campaignManifestReference(),
+                validGrant().campaignManifestSha256(),
+                validGrant().localLabCommit(),
+                validGrant().receiverCommit(),
+                validGrant().officialPermissionEvidenceReference(),
+                validGrant().officialPermissionEvidenceSha256(),
+                "NOT_EVIDENCED",
+                "PASS",
+                "PASS",
+                validGrant().executionActor(),
+                validGrant().canonicalEventId(),
+                validGrant().providerEventId(),
+                validGrant().exportId(),
+                validGrant().fileSha256(),
+                validGrant().dataSha256(),
+                validGrant().fileSizeBytes(),
+                validGrant().schemaId(),
+                validGrant().schemaVersion(),
+                validGrant().receiverOrigin(),
+                validGrant().clientCertificateSha256(),
+                1,
+                1,
+                validGrant().validFrom(),
+                validGrant().validUntil(),
+                "GRANT",
+                "ONE_TIME",
+                "PROVIDER_DERIVED",
+                "HUMAN_VALIDATED",
+                true,
+                false,
+                false,
+                false,
+                false,
+                false))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("officialPermissionStatus");
+    }
+
+    private static J7ProviderDerivedOwnerGo.Grant validGrant() {
+        return grantWithReferences(
+                "docs/validation/J9-WO046-PROVIDER-DERIVED-DELIVERY-MANIFEST.md",
+                "docs/validation/J9-OFFICIAL-PERMISSION-EVIDENCE.md");
+    }
+
+    private static J7ProviderDerivedOwnerGo.Grant grantWithReferences(
+            String manifestReference,
+            String permissionReference) {
+        J7ProviderDerivedOwnerGo.Grant draft = new J7ProviderDerivedOwnerGo.Grant(
+                UUID.fromString("45000000-0000-4000-8000-000000000001"),
+                "1".repeat(64),
+                "WO-SS-20260904-046-provider-derived-real-delivery",
+                manifestReference,
+                "2".repeat(64),
+                "3".repeat(40),
+                "4".repeat(40),
+                permissionReference,
+                "5".repeat(64),
+                "EVIDENCED_COMPATIBLE",
+                "PASS",
+                "PASS",
+                "CODEX_LOCAL_UI",
+                UUID.fromString("45000000-0000-4000-8000-000000000002"),
+                16_310_945L,
+                EXPORT_ID,
+                FILE_SHA,
+                DATA_SHA,
+                1024,
+                J7ProviderDerivedOwnerGo.EXPECTED_SCHEMA_ID,
+                J7ProviderDerivedOwnerGo.EXPECTED_SCHEMA_VERSION,
+                URI.create("https://127.0.0.1:8444"),
+                "6".repeat(64),
+                1,
+                1,
+                STARTED_AT.minusSeconds(60),
+                STARTED_AT.plusSeconds(60),
+                "GRANT",
+                "ONE_TIME",
+                "PROVIDER_DERIVED",
+                "HUMAN_VALIDATED",
+                true,
+                false,
+                false,
+                false,
+                false,
+                false);
+        return draft.withOwnerDecisionBlockSha256(
+                draft.computedOwnerDecisionBlockSha256());
     }
 }

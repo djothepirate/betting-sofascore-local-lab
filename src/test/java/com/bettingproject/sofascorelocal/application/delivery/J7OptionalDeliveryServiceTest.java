@@ -19,6 +19,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
@@ -89,6 +90,7 @@ class J7OptionalDeliveryServiceTest {
                 FILE_SHA256,
                 DATA_SHA256,
                 identity.idempotencyKey(),
+                1,
                 NOW))
                 .thenReturn(new J7DeliveryLedgerStore.ClaimReceipt(
                         DELIVERY_ID, 1, J7DeliveryLedgerStore.DeliveryState.IN_FLIGHT,
@@ -114,7 +116,8 @@ class J7OptionalDeliveryServiceTest {
         J7DeliveryExecutionResult result = service.deliverSyntheticLoopback(
                 CANONICAL_EVENT_ID,
                 EXPORT_ID,
-                J7OptionalDeliveryService.confirmationFor(identity));
+                J7OptionalDeliveryService.confirmationFor(identity),
+                1);
 
         assertThat(result.state()).isEqualTo(J7DeliveryState.DELIVERED);
         assertThat(result.httpStatus()).hasValue(201);
@@ -125,7 +128,12 @@ class J7OptionalDeliveryServiceTest {
         deliveryOrder.verify(exportService)
                 .loadHumanValidatedForDelivery(CANONICAL_EVENT_ID, EXPORT_ID);
         deliveryOrder.verify(ledgerStore).claim(
-                EXPORT_ID, FILE_SHA256, DATA_SHA256, identity.idempotencyKey(), NOW);
+                EXPORT_ID,
+                FILE_SHA256,
+                DATA_SHA256,
+                identity.idempotencyKey(),
+                1,
+                NOW);
         deliveryOrder.verify(transport).execute(request.capture());
         deliveryOrder.verify(ledgerStore).complete(
                 eq(DELIVERY_ID),
@@ -144,8 +152,43 @@ class J7OptionalDeliveryServiceTest {
     }
 
     @Test
+    void alreadyClaimedExecutionPostsOnceCompletesAndNeverClaimsAgain() {
+        when(transport.execute(any())).thenReturn(response(201, ack("IMPORTED")));
+        J7DeliveryLedgerStore.ClaimReceipt existingClaim =
+                new J7DeliveryLedgerStore.ClaimReceipt(
+                        DELIVERY_ID,
+                        1,
+                        J7DeliveryLedgerStore.DeliveryState.IN_FLIGHT,
+                        identity.idempotencyKey(),
+                        NOW);
+
+        J7DeliveryExecutionResult result = service.executeAlreadyClaimed(
+                artifact(), existingClaim);
+
+        assertThat(result.state()).isEqualTo(J7DeliveryState.DELIVERED);
+        verify(ledgerStore, never()).claim(
+                any(), anyString(), anyString(), anyString(), anyInt(), any());
+        verify(transport, times(1)).execute(any());
+        verify(ledgerStore).complete(
+                eq(DELIVERY_ID),
+                eq(1),
+                eq(J7DeliveryLedgerStore.DeliveryState.DELIVERED),
+                eq(OptionalInt.of(201)),
+                eq("HTTP_201_IMPORTED"),
+                any(),
+                eq(Optional.of(REMOTE_IMPORT_ID)),
+                eq(Optional.of(NOW)),
+                eq(NOW));
+    }
+
+    @Test
     void exactDuplicateAcknowledgementIsSeparateAndDoesNotBecomeDelivered() {
-        when(transport.execute(any())).thenReturn(response(200, ack("DUPLICATE")));
+        Instant initialDurableReceivedAt = NOW.minusSeconds(86_400);
+        when(transport.execute(any())).thenReturn(response(
+                200,
+                J7DeliveryContract.ACKNOWLEDGEMENT_MEDIA_TYPE,
+                ack("DUPLICATE", initialDurableReceivedAt),
+                NOW));
 
         J7DeliveryExecutionResult result = deliver();
 
@@ -158,8 +201,9 @@ class J7OptionalDeliveryServiceTest {
                 eq("HTTP_DUPLICATE_CONFIRMED"),
                 any(),
                 eq(Optional.of(REMOTE_IMPORT_ID)),
-                eq(Optional.of(NOW)),
+                eq(Optional.of(initialDurableReceivedAt)),
                 eq(NOW));
+        verify(transport, times(1)).execute(any());
     }
 
     @ParameterizedTest
@@ -209,6 +253,32 @@ class J7OptionalDeliveryServiceTest {
         verify(transport, times(1)).execute(any());
     }
 
+    @Test
+    void nonPersistableReceiverTimestampRemainsUnknownWithoutRetryOrAckEvidence() {
+        byte[] nonPersistable = new String(
+                ack("IMPORTED"), StandardCharsets.UTF_8)
+                .replace(NOW.toString(), "2026-09-01T12:00:00.123456789Z")
+                .getBytes(StandardCharsets.UTF_8);
+        when(transport.execute(any())).thenReturn(response(201, nonPersistable));
+
+        J7DeliveryExecutionResult result = deliver();
+
+        assertThat(result.state())
+                .isEqualTo(J7DeliveryState.UNKNOWN_RECONCILIATION_REQUIRED);
+        assertThat(result.safeResultCode()).isEqualTo("ACK_INVALID_OR_MISMATCHED");
+        verify(ledgerStore).complete(
+                eq(DELIVERY_ID),
+                eq(1),
+                eq(J7DeliveryLedgerStore.DeliveryState.UNKNOWN_RECONCILIATION_REQUIRED),
+                eq(OptionalInt.of(201)),
+                eq("ACK_INVALID_OR_MISMATCHED"),
+                eq(Optional.empty()),
+                eq(Optional.empty()),
+                eq(Optional.empty()),
+                eq(NOW));
+        verify(transport, times(1)).execute(any());
+    }
+
     @ParameterizedTest
     @CsvSource({"200, IMPORTED", "201, DUPLICATE"})
     void incompatibleHttpAndAcknowledgementStatusesRemainUnknownWithoutRetry(
@@ -223,6 +293,16 @@ class J7OptionalDeliveryServiceTest {
                 .isEqualTo(J7DeliveryState.UNKNOWN_RECONCILIATION_REQUIRED);
         assertThat(result.httpStatus()).hasValue(httpStatus);
         assertThat(result.safeResultCode()).isEqualTo("ACK_HTTP_STATUS_MISMATCH");
+        verify(ledgerStore).complete(
+                eq(DELIVERY_ID),
+                eq(1),
+                eq(J7DeliveryLedgerStore.DeliveryState.UNKNOWN_RECONCILIATION_REQUIRED),
+                eq(OptionalInt.of(httpStatus)),
+                eq("ACK_HTTP_STATUS_MISMATCH"),
+                eq(Optional.empty()),
+                eq(Optional.empty()),
+                eq(Optional.empty()),
+                eq(NOW));
         verify(transport, times(1)).execute(any());
     }
 
@@ -242,20 +322,31 @@ class J7OptionalDeliveryServiceTest {
     }
 
     @ParameterizedTest
-    @ValueSource(longs = {-1L, 1L})
-    void acknowledgementOutsideTheClaimAndReceiveWindowRemainsUnknownWithoutRetry(
-            long acknowledgementOffsetSeconds) {
+    @ValueSource(strings = {"1900-01-01T00:00:00Z", "2100-01-01T00:00:00Z"})
+    void importedAcknowledgementUsesTheIndependentReceiverClockWithoutLocalOrdering(
+            String receiverTimestamp) {
+        Instant receiverReceivedAt = Instant.parse(receiverTimestamp);
         when(transport.execute(any())).thenReturn(response(
                 201,
                 J7DeliveryContract.ACKNOWLEDGEMENT_MEDIA_TYPE,
-                ack("IMPORTED", NOW.plusSeconds(acknowledgementOffsetSeconds)),
+                ack("IMPORTED", receiverReceivedAt),
                 NOW));
 
         J7DeliveryExecutionResult result = deliver();
 
-        assertThat(result.state())
-                .isEqualTo(J7DeliveryState.UNKNOWN_RECONCILIATION_REQUIRED);
-        assertThat(result.safeResultCode()).isEqualTo("ACK_HTTP_STATUS_MISMATCH");
+        assertThat(result.state()).isEqualTo(J7DeliveryState.DELIVERED);
+        assertThat(result.httpStatus()).hasValue(201);
+        assertThat(result.safeResultCode()).isEqualTo("HTTP_201_IMPORTED");
+        verify(ledgerStore).complete(
+                eq(DELIVERY_ID),
+                eq(1),
+                eq(J7DeliveryLedgerStore.DeliveryState.DELIVERED),
+                eq(OptionalInt.of(201)),
+                eq("HTTP_201_IMPORTED"),
+                any(),
+                eq(Optional.of(REMOTE_IMPORT_ID)),
+                eq(Optional.of(receiverReceivedAt)),
+                eq(NOW));
         verify(transport, times(1)).execute(any());
     }
 
@@ -286,17 +377,44 @@ class J7OptionalDeliveryServiceTest {
     @Test
     void wrongConfirmationStopsBeforeClaimOrTransportAndDoesNotLeakIt() {
         assertThatThrownBy(() -> service.deliverSyntheticLoopback(
-                CANONICAL_EVENT_ID, EXPORT_ID, "wrong-sensitive-confirmation"))
+                CANONICAL_EVENT_ID,
+                EXPORT_ID,
+                "wrong-sensitive-confirmation",
+                1))
                 .isInstanceOf(J7DeliveryException.class)
                 .hasMessage(J7DeliveryError.INVALID_CONFIRMATION.name());
 
-        verify(ledgerStore, never()).claim(any(), anyString(), anyString(), anyString(), any());
+        verify(ledgerStore, never()).claim(
+                any(), anyString(), anyString(), anyString(), anyInt(), any());
+        verify(transport, never()).execute(any());
+    }
+
+    @ParameterizedTest
+    @EnumSource(
+            value = J7DeliveryPayloadClass.class,
+            names = {"PROVIDER_DERIVED", "MIXED_OR_UNKNOWN"})
+    void syntheticQualificationRejectsEveryNonSyntheticProvenanceBeforeClaimOrTransport(
+            J7DeliveryPayloadClass payloadClass) {
+        when(exportService.loadHumanValidatedForDelivery(CANONICAL_EVENT_ID, EXPORT_ID))
+                .thenReturn(artifact(payloadClass));
+
+        assertThatThrownBy(() -> service.deliverSyntheticLoopback(
+                CANONICAL_EVENT_ID,
+                EXPORT_ID,
+                J7OptionalDeliveryService.confirmationFor(identity),
+                1))
+                .isInstanceOf(J7DeliveryException.class)
+                .hasMessage(J7DeliveryError.PAYLOAD_PROVENANCE_NOT_ELIGIBLE.name());
+
+        verify(ledgerStore, never()).claim(
+                any(), anyString(), anyString(), anyString(), anyInt(), any());
         verify(transport, never()).execute(any());
     }
 
     @Test
     void aLedgerClaimFailureStopsBeforeTransport() {
-        when(ledgerStore.claim(any(), anyString(), anyString(), anyString(), any()))
+        when(ledgerStore.claim(
+                any(), anyString(), anyString(), anyString(), anyInt(), any()))
                 .thenThrow(new J7DeliveryLedgerStore.LedgerException(
                         J7DeliveryLedgerStore.LedgerFailure.ANOTHER_DELIVERY_IN_FLIGHT));
 
@@ -324,7 +442,8 @@ class J7OptionalDeliveryServiceTest {
         assertThatThrownBy(() -> blockedService.deliverSyntheticLoopback(
                 CANONICAL_EVENT_ID,
                 EXPORT_ID,
-                J7OptionalDeliveryService.confirmationFor(identity)))
+                J7OptionalDeliveryService.confirmationFor(identity),
+                1))
                 .isInstanceOf(J7DeliveryException.class)
                 .hasMessage(J7DeliveryError.LOOPBACK_QUALIFICATION_DISABLED.name());
         verifyNoInteractions(blockedExportService, blockedLedgerStore, blockedTransport);
@@ -354,7 +473,8 @@ class J7OptionalDeliveryServiceTest {
         assertThatThrownBy(() -> service.deliverSyntheticLoopback(
                 CANONICAL_EVENT_ID,
                 EXPORT_ID,
-                J7OptionalDeliveryService.confirmationFor(identity)))
+                J7OptionalDeliveryService.confirmationFor(identity),
+                1))
                 .isInstanceOf(J7DeliveryException.class)
                 .hasMessage(J7DeliveryError.INVALID_LOOPBACK_ORIGIN.name());
         verifyNoInteractions(exportService, ledgerStore, transport);
@@ -364,10 +484,16 @@ class J7OptionalDeliveryServiceTest {
         return service.deliverSyntheticLoopback(
                 CANONICAL_EVENT_ID,
                 EXPORT_ID,
-                J7OptionalDeliveryService.confirmationFor(identity));
+                J7OptionalDeliveryService.confirmationFor(identity),
+                1);
     }
 
     private static J7ValidatedExportArtifact artifact() {
+        return artifact(J7DeliveryPayloadClass.SYNTHETIC_ONLY);
+    }
+
+    private static J7ValidatedExportArtifact artifact(
+            J7DeliveryPayloadClass payloadClass) {
         return new J7ValidatedExportArtifact(
                 EXPORT_ID,
                 CANONICAL_EVENT_ID,
@@ -375,6 +501,7 @@ class J7OptionalDeliveryServiceTest {
                 J7ExportContract.SCHEMA_VERSION,
                 DATA_SHA256,
                 FILE_SHA256,
+                payloadClass,
                 CONTENT);
     }
 

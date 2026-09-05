@@ -796,6 +796,15 @@ from (
     union all
     select 'J7_DELIVERY_ATTEMPT_RESULT|' || to_jsonb(attempt_result)::text as value
     from j7_delivery_attempt_result attempt_result
+    union all
+    select 'J7_PROVIDER_OWNER_GO_GRANT|' || to_jsonb(owner_go)::text as value
+    from j7_provider_delivery_owner_go_grant owner_go
+    union all
+    select 'J7_PROVIDER_OWNER_GO_REVOCATION|' || to_jsonb(revocation)::text as value
+    from j7_provider_delivery_owner_go_revocation revocation
+    union all
+    select 'J7_PROVIDER_OWNER_GO_CONSUMPTION|' || to_jsonb(consumption)::text as value
+    from j7_provider_delivery_owner_go_consumption consumption
 ) j7_delivery_ledger
 '@
 
@@ -835,8 +844,8 @@ try {
     }
 
     $sourceFlywayVersion = Invoke-PrimaryScalar -Sql $flywaySql
-    if ($sourceFlywayVersion -cne '29') {
-        throw 'Flyway V29 must be applied before the J6 backup/restore qualification.'
+    if ($sourceFlywayVersion -cne '32') {
+        throw 'Flyway V32 must be applied before the J6 backup/restore qualification.'
     }
     $coverageReceivedSql = @'
 select coalesce(
@@ -860,6 +869,9 @@ from provider_snapshot
         j7DeliveryCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j7_delivery')
         j7DeliveryAttemptCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j7_delivery_attempt')
         j7DeliveryAttemptResultCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j7_delivery_attempt_result')
+        j7ProviderOwnerGoGrantCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j7_provider_delivery_owner_go_grant')
+        j7ProviderOwnerGoRevocationCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j7_provider_delivery_owner_go_revocation')
+        j7ProviderOwnerGoConsumptionCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j7_provider_delivery_owner_go_consumption')
         coverageMaxSnapshotId = [long](Invoke-PrimaryScalar -Sql 'select coalesce(max(id), 0) from provider_snapshot')
         coverageReceivedAt = Invoke-PrimaryScalar -Sql $coverageReceivedSql
         rawPayloadIntegrityFailures = [long](Invoke-PrimaryScalar -Sql "select count(*) from provider_snapshot where payload_raw is not null and encode(sha256(payload_raw), 'hex') <> payload_sha256")
@@ -988,6 +1000,9 @@ from provider_snapshot
         j7DeliveryCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j7_delivery')
         j7DeliveryAttemptCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j7_delivery_attempt')
         j7DeliveryAttemptResultCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j7_delivery_attempt_result')
+        j7ProviderOwnerGoGrantCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j7_provider_delivery_owner_go_grant')
+        j7ProviderOwnerGoRevocationCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j7_provider_delivery_owner_go_revocation')
+        j7ProviderOwnerGoConsumptionCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j7_provider_delivery_owner_go_consumption')
         coverageMaxSnapshotId = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select coalesce(max(id), 0) from provider_snapshot')
         coverageReceivedAt = Invoke-RestoreScalar -Database $restoreDatabase -Sql $coverageReceivedSql
         rawPayloadIntegrityFailures = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql "select count(*) from provider_snapshot where payload_raw is not null and encode(sha256(payload_raw), 'hex') <> payload_sha256")

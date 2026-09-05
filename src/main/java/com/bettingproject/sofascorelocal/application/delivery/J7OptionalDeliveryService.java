@@ -27,8 +27,9 @@ import java.util.OptionalInt;
 import java.util.UUID;
 
 /**
- * Explicit one-shot orchestration used only by the synthetic WO-027 qualification. It is not a
- * Spring bean and exposes no HTTP route under the current permission gate.
+ * Explicit one-shot orchestration shared by the synthetic qualification and the manually invoked
+ * WO-035 runtime boundary. It remains a plain object: only {@link J7DeliveryRuntimeService} is
+ * Spring-composed, after all policy and confirmation gates.
  */
 public final class J7OptionalDeliveryService {
 
@@ -58,10 +59,43 @@ public final class J7OptionalDeliveryService {
     public J7DeliveryExecutionResult deliverSyntheticLoopback(
             UUID canonicalEventId,
             UUID exportId,
-            String confirmation) {
+            String confirmation,
+            int expectedAttemptNumber) {
         policy.requireSyntheticLoopbackQualification();
+        return deliverPreparedTransport(
+                canonicalEventId,
+                exportId,
+                confirmation,
+                J7DeliveryPayloadClass.SYNTHETIC_ONLY,
+                expectedAttemptNumber);
+    }
+
+    J7DeliveryExecutionResult deliverPreparedTransport(
+            UUID canonicalEventId,
+            UUID exportId,
+            String confirmation,
+            J7DeliveryPayloadClass expectedPayloadClass,
+            int expectedAttemptNumber) {
         J7ValidatedExportArtifact artifact = exportService.loadHumanValidatedForDelivery(
                 canonicalEventId, exportId);
+        return deliverVerifiedArtifact(
+                artifact,
+                confirmation,
+                expectedPayloadClass,
+                expectedAttemptNumber);
+    }
+
+    J7DeliveryExecutionResult deliverVerifiedArtifact(
+            J7ValidatedExportArtifact artifact,
+            String confirmation,
+            J7DeliveryPayloadClass expectedPayloadClass,
+            int expectedAttemptNumber) {
+        Objects.requireNonNull(artifact, "artifact");
+        if (expectedPayloadClass != null
+                && artifact.payloadClass() != expectedPayloadClass) {
+            throw new J7DeliveryException(
+                    J7DeliveryError.PAYLOAD_PROVENANCE_NOT_ELIGIBLE);
+        }
         J7DeliveryIdentity identity = new J7DeliveryIdentity(
                 artifact.exportId(), artifact.fileSha256());
         requireExactConfirmation(confirmation, confirmationFor(identity));
@@ -72,23 +106,45 @@ public final class J7OptionalDeliveryService {
                 identity.fileSha256(),
                 artifact.dataSha256(),
                 identity.idempotencyKey(),
+                expectedAttemptNumber,
                 startedAt);
+        return executeAlreadyClaimed(artifact, claim);
+    }
+
+    /**
+     * Executes exactly one transport call for a claim already persisted by the caller. This is
+     * the WO-045 boundary used after provider owner-go consumption; it deliberately performs no
+     * second claim and no confirmation lookup.
+     */
+    J7DeliveryExecutionResult executeAlreadyClaimed(
+            J7ValidatedExportArtifact artifact,
+            J7DeliveryLedgerStore.ClaimReceipt claim) {
+        Objects.requireNonNull(artifact, "artifact");
+        Objects.requireNonNull(claim, "claim");
+        J7DeliveryIdentity identity = new J7DeliveryIdentity(
+                artifact.exportId(), artifact.fileSha256());
+        if (!identity.idempotencyKey().equals(claim.idempotencyKey())) {
+            throw new J7DeliveryException(J7DeliveryError.PROVIDER_OWNER_GO_MISMATCH);
+        }
+        Completion completion;
         try {
             J7DeliveryTransportResponse response = transport.execute(
                     new J7DeliveryTransportRequest(
                             identity, artifact.dataSha256(), artifact.content()));
-            Completion completion = classify(
-                    identity, artifact.dataSha256(), claim.startedAt(), response);
-            return complete(claim, completion, now());
+            completion = classify(
+                    identity, artifact.dataSha256(), response);
         }
         catch (J7DeliveryTransportException exception) {
-            return complete(
-                    claim,
-                    Completion.unknown(
-                            OptionalInt.empty(),
-                            "TRANSPORT_" + exception.failure().name()),
-                    now());
+            completion = Completion.unknown(
+                    OptionalInt.empty(),
+                    "TRANSPORT_" + exception.failure().name());
         }
+        catch (RuntimeException exception) {
+            completion = Completion.unknown(
+                    OptionalInt.empty(),
+                    "TRANSPORT_RUNTIME_FAILURE");
+        }
+        return complete(claim, completion, now());
     }
 
     public static String confirmationFor(J7DeliveryIdentity identity) {
@@ -100,7 +156,6 @@ public final class J7OptionalDeliveryService {
     private Completion classify(
             J7DeliveryIdentity identity,
             String dataSha256,
-            Instant startedAt,
             J7DeliveryTransportResponse response) {
         int status = response.httpStatus();
         if (status >= 200 && status <= 299) {
@@ -119,13 +174,13 @@ public final class J7OptionalDeliveryService {
                 boolean duplicate = status == 200
                         && acknowledgement.status()
                         == J7DeliveryAcknowledgementStatus.DUPLICATE;
-                if (!imported
-                        && !duplicate
-                        || acknowledgement.receivedAt().isBefore(startedAt)
-                        || acknowledgement.receivedAt().isAfter(response.receivedAt())) {
+                if (!imported && !duplicate) {
                     return Completion.unknown(
                             OptionalInt.of(status), "ACK_HTTP_STATUS_MISMATCH");
                 }
+                // receivedAt is declared by the receiver's independent wall clock. In
+                // particular, DUPLICATE reuses the first durable import time. Its canonical
+                // value is retained verbatim but cannot be ordered against local attempt times.
                 return new Completion(
                         imported
                                 ? J7DeliveryState.DELIVERED
@@ -187,7 +242,7 @@ public final class J7OptionalDeliveryService {
                 .equalsIgnoreCase(contentType.trim());
     }
 
-    private static void requireExactConfirmation(String actual, String expected) {
+    static void requireExactConfirmation(String actual, String expected) {
         if (actual == null
                 || actual.length() > 256
                 || !MessageDigest.isEqual(

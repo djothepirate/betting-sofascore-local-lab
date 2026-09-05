@@ -15,6 +15,8 @@ J7_SELECTION_MODE=LATEST_AVAILABLE
 J7_PROVIDER_TRANSPORT=ABSENT
 J7_AUTOMATIC_EXPORT=ABSENT
 J7_BETTING_PROJECT_IMPORT=ABSENT
+J7_OPTIONAL_DELIVERY=SEPARATE_MANUAL_FAIL_CLOSED
+J7_PROVIDER_DERIVED_DELIVERY=BLOCKED_UNDER_WO035
 ```
 
 Les provenances `SYNTHETIC_FIXTURE` et `PROVIDER_SNAPSHOT` sont acceptées, mais restent visibles
@@ -229,11 +231,37 @@ GET  /events/{canonicalEventId}/exports/{exportId}
 POST /events/{canonicalEventId}/exports/{exportId}/validate
 POST /events/{canonicalEventId}/exports/{exportId}/reject
 GET  /events/{canonicalEventId}/exports/{exportId}/download
+POST /events/{canonicalEventId}/exports/{exportId}/delivery/prepare
+POST /events/{canonicalEventId}/exports/{exportId}/delivery/execute
+POST /events/{canonicalEventId}/exports/{exportId}/delivery/reconciliation/prepare
+POST /events/{canonicalEventId}/exports/{exportId}/delivery/reconciliation/execute
 ```
 
-Les trois POST consomment le jeton local à usage unique existant. L'aperçu est rendu par
-Thymeleaf avec échappement. Toutes les réponses portent `no-store`, `no-cache`, une expiration
-immédiate et `X-Robots-Tag: noindex, nofollow, noarchive`.
+Les trois POST de décision J7 et les quatre POST optionnels de livraison consomment les contrôles
+locaux à usage unique applicables. L'aperçu est rendu par Thymeleaf avec échappement. Toutes les
+réponses portent `no-store`, `no-cache`, une expiration immédiate et
+`X-Robots-Tag: noindex, nofollow, noarchive`.
+
+Les routes de livraison ne changent pas la décision J7. Elles n’apparaissent comme action
+préparable que pour `HUMAN_VALIDATED`, puis exigent une confirmation de livraison ou de
+réconciliation séparée, exacte, liée au `fileSha256`, à la session et à l’ordinal de tentative
+attendu, et consommable une seule fois. Pour une livraison, cet ordinal est lié à la demande sans
+être ajouté à la phrase publique. Toute évolution concurrente du ledger périme donc la demande.
+L’ordinal est également revalidé atomiquement au claim avant tout nouvel `IN_FLIGHT` ou socket.
+Une simple visite, génération ou validation n’ouvre aucun transport.
+
+La frontière navigateur de ces routes est appliquée à partir du `HandlerMethod` résolu, et non par
+comparaison textuelle de l’URI brute. Toute méthode du `J7DeliveryController` exige exactement un
+en-tête `Host: 127.0.0.1:8087`. Si `Origin` est présent, il doit être unique et exactement égal à
+`http://127.0.0.1:8087`. Tout en-tête `Forwarded`, `X-Forwarded-Host` ou `X-Forwarded-Proto`, tout
+doublon ou toute valeur différente est refusé avant le contrôleur. Les réponses ajoutent aussi
+`Content-Security-Policy: frame-ancestors 'none'` et `X-Frame-Options: DENY`, en plus des contrôles
+`no-store`, afin de rendre le geste local non intégrable dans une frame distante.
+
+La réconciliation ne relit pas le fichier J7 et ne dépend pas de sa présence. Sa préparation et
+son exécution utilisent exclusivement l’identité et les hashes immuables déjà persistés dans les
+métadonnées de l’export et dans le ledger de livraison. Elle ne constitue donc jamais une voie de
+relecture, de téléchargement ou de renvoi du payload.
 
 Le téléchargement exige `HUMAN_VALIDATED`, résout de nouveau le chemin sous la racine sans suivre
 de lien, recalcule taille et SHA-256 et revalide le schéma avant de servir `application/json` en
@@ -244,16 +272,17 @@ pièce jointe. Un candidat répond `409`; un rejet ou un export inconnu n'est pa
 Les journaux J7 sont limités aux UUID canonique/export, statut, tailles et hashes. Ils ne doivent
 jamais contenir le document JSON ni le motif intégral du rejet.
 
-J7 n'ajoute aucun client HTTP, endpoint fournisseur, scheduler, polling, retry réseau, transport
-sortant ou appel SofaScore. Les configurations et verrous J3/J4/J5 ne sont ni ouverts ni modifiés
-par l'export. Il n'existe aucun endpoint JSON de consultation générale et aucune intégration au
-Betting Project.
+Le cœur de génération et de décision J7 n’ajoute aucun appel fournisseur, scheduler, polling ou
+retry réseau. WO-035 compose un sender optionnel séparé ; il n’est jamais invoqué par la génération
+ou la validation. Les configurations et verrous J3/J4/J5 ne sont ni ouverts ni modifiés par
+l'export. Il n'existe aucun endpoint JSON de consultation générale, aucun callback d’acquisition et
+aucun couplage critique au Betting Project.
 
 ## 11. Limites et décisions différées
 
 - export de l'historique complet J6 ;
 - lots par date ou multi-événements ;
-- import ou transport vers le Betting Project ;
+- import côté Betting Project, E2E Windows/Windows et livraison dérivée fournisseur ;
 - signature externe, publication, VPS ou production ;
 - génération planifiée ou automatique ;
 - purge primaire J6.
@@ -261,3 +290,48 @@ Betting Project.
 Ces évolutions exigeraient un Work Order distinct. `HUMAN_VALIDATED` signifie seulement « fichier
 local inspecté et éligible à un usage externe ultérieur » ; il ne donne aucune autorisation de
 transfert.
+
+## 12. Extension de provenance et livraison optionnelle WO-035
+
+Avant d’exposer l’état du sender, le Local Lab relit l’artefact `HUMAN_VALIDATED`, revérifie son
+schéma, sa taille, ses hashes, son confinement et les cinq entrées de `manifest.sources`. La classe
+de livraison est déterministe :
+
+| Sources vérifiées | Classe |
+|---|---|
+| Toutes les sources disponibles sont `SYNTHETIC_FIXTURE`, sans source fournisseur | `SYNTHETIC_ONLY` |
+| Toutes les sources disponibles sont `PROVIDER_SNAPSHOT`, sans fixture synthétique | `PROVIDER_DERIVED` |
+| Mélange, source invalide, incohérente ou classification impossible | `MIXED_OR_UNKNOWN` |
+
+`MIXED_OR_UNKNOWN` est toujours refusé. Dans l'état historique WO-035/ADR-SS-003 v0.1,
+`PROVIDER_DERIVED` restait bloqué par la permission `NOT_EVIDENCED`, l’absence d’autorisation de
+livraison réelle et la porte structurelle `PROVIDER_OWNER_GO_REQUIRED`. Seul le futur WO-036
+pouvait alors exécuter un échange
+`SYNTHETIC_ONLY` vers l’origine exacte `https://127.0.0.1:8444`, sous un go et une qualification
+séparés. WO-035 n’effectue aucun appel receiver, fournisseur ou VPS.
+
+ADR-SS-003 v0.2 et WO-047 supersèdent uniquement le veto `NOT_EVIDENCED` pour le transfert J7
+local. `NOT_EVIDENCED` et `EVIDENCED_COMPATIBLE` sont des statuts d'audit admis ;
+`EVIDENCED_INCOMPATIBLE` et toute valeur inconnue ou invalide restent bloquants. Le format V1 et
+les lignes V31 demeurent strictement immuables et V1 exige toujours `EVIDENCED_COMPATIBLE`. Un go
+V2/V32 sépare l'audit de la base de gouvernance et doit correspondre exactement au manifeste, à
+l'export, au receiver, au certificat et à l'ordinal. Toutes les autres portes restent obligatoires :
+WO-047 n'autorise aucun POST réel et ne modifie aucune porte officielle J3/J4/J5.
+
+La voie applicative synthétique accepte elle-même exclusivement la classe calculée
+`SYNTHETIC_ONLY`. Elle transmet cette classe attendue au contrôle de politique avant claim et avant
+création du transport : un artefact `PROVIDER_DERIVED` ou `MIXED_OR_UNKNOWN` présenté à cette API
+est refusé sans ligne de ledger et sans socket, même si un appelant interne contournait l’interface
+HTML.
+
+Une gate d’exécution singleton partage les états `IDLE`, `ACTIVE` et `POISONED` entre livraison et
+réconciliation. La livraison conserve son lease `ACTIVE` pendant toutes ses phases, y compris
+après la mise à jour terminale du ledger et jusqu’à la fin effective de `transport.close()`. La
+réconciliation doit acquérir la même gate avant de relire ou modifier le ledger : elle ne peut donc
+pas classer comme stale une tentative dont le processus est encore actif. Si la fermeture du
+transport échoue, la gate passe à `POISONED` et refuse toute nouvelle livraison ou réconciliation
+jusqu’au redémarrage du processus ; aucun état en mémoire n’est réarmé opportunément.
+
+Chaque instance du transport est en outre mono-exécution : un garde atomique refuse un second
+appel à `execute`, tandis que le body publisher n’autorise qu’une seule souscription aux octets
+vérifiés. Ces deux contrôles se complètent et ne remplacent pas les propriétés JVM anti-retry.

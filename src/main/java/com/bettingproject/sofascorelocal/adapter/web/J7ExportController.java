@@ -2,6 +2,7 @@ package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.export.J7CanonicalExportService;
 import com.bettingproject.sofascorelocal.application.export.J7ExportDownload;
+import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryQueryService;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportError;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportException;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportStatus;
@@ -32,12 +33,15 @@ public class J7ExportController {
             "no-store, no-cache, must-revalidate, max-age=0";
 
     private final J7CanonicalExportService exportService;
+    private final J7DeliveryQueryService deliveryQueryService;
     private final LocalFormTokenService formTokenService;
 
     public J7ExportController(
             J7CanonicalExportService exportService,
+            J7DeliveryQueryService deliveryQueryService,
             LocalFormTokenService formTokenService) {
         this.exportService = exportService;
+        this.deliveryQueryService = deliveryQueryService;
         this.formTokenService = formTokenService;
     }
 
@@ -99,6 +103,7 @@ public class J7ExportController {
             model.addAttribute("canonicalEventId", canonicalEventId);
             model.addAttribute("exportId", exportId);
             model.addAttribute("exportPreview", preview);
+            model.addAttribute("deliveryView", deliveryQueryService.view(preview));
             model.addAttribute("localFormToken", formTokenService.issue(session));
             return "event-export-preview";
         }

@@ -14,6 +14,7 @@
 mvnw text eol=lf
 *.cmd text eol=crlf
 *.ps1 text eol=crlf
+scripts/wo046/WO046-LaunchPreparation.psm1 text eol=lf
 *.pdf binary
 *.zip binary
 *.bundle binary

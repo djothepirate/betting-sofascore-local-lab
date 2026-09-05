@@ -1,6 +1,5 @@
 package com.bettingproject.sofascorelocal.domain.delivery;
 
-import java.time.Instant;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -30,10 +29,4 @@ final class J7DeliveryValueGuard {
         return value;
     }
 
-    static Instant requireInstant(Instant value, J7DeliveryError error) {
-        if (value == null) {
-            throw new J7DeliveryException(error);
-        }
-        return value;
-    }
 }
