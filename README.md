@@ -1,6 +1,6 @@
 # SofaScore Local Lab
 
-**Décision actuelle — 2026-09-05 : WO-032/033/034 abandonnés par le propriétaire.** Les attentes de saisie, rendu, reprise et fusion mentionnées dans les sections historiques sont supersédées. Aucun de ces lots ne doit être poursuivi sur la base de ses anciennes autorisations. Preuves et branches conservées ; aucun envoi, nettoyage privé ou nouveau POST effectué.
+**Décision actuelle — 2026-09-05 : WO-032/033/034 abandonnés par le propriétaire.** Les attentes de saisie, rendu, reprise et fusion mentionnées dans les sections historiques sont supersédées. Aucun de ces lots ne doit être poursuivi sur la base de ses anciennes autorisations. Preuves et branches conservées ; nettoyage privé WO-034 achevé au commit 3b9eeda, aucun envoi ni nouveau POST effectué. Publication des branches autorisée pour audit, sans reprise fonctionnelle.
 
 Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’intérêt de données SofaScore comme enrichissement **facultatif** du Betting Project.
 

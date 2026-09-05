@@ -7,8 +7,9 @@
 > sont historiques : aucune saisie complémentaire, production de rendu ou fusion de
 > clôture n'est désormais attendue. Aucun résultat technique antérieur n'est effacé.
 > Classement administratif completed ; aucun envoi ni permission fournisseur créé.
-> Pour WO-034, le nettoyage privé prévu historiquement reste distinct : non exécuté,
-> aucune absence de données privées attestée ; suppression à décider explicitement.
+> Nettoyage privé WO-034 achevé par autorisation distincte le 2026-09-05 :
+> six fichiers et deux répertoires supprimés, racine exacte absente.
+> Preuve conservée au commit WO-034 3b9eeda46af51c97e82b0b1489b37ab7e0c8b349.
 - **Jalon :** après J9 — cohérence documentaire du référentiel de décision
 - **Ouvert le :** 2026-09-01
 - **Ouverture UTC :** `2026-09-01T17:12:33.2592273Z`
