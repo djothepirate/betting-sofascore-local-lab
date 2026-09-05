@@ -1,5 +1,7 @@
 # SofaScore Local Lab
 
+**WO-034 — reprise du 5 septembre :** clôture par fusion autorisée après réalisation et qualification ; [préflight courant](docs/validation/J9-WO034-RESUME-PREFLIGHT-20260905.md) à 14/30, 16 champs vides et une incohérence conditionnelle. Rendu et fusion de clôture en attente des déclarations propriétaire ; aucun envoi autorisé.
+
 Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’intérêt de données SofaScore comme enrichissement **facultatif** du Betting Project.
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`

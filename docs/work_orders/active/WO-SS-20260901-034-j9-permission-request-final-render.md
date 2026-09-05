@@ -1,6 +1,12 @@
 # WO-SS-20260901-034 — Rendu final local de la demande de permission fournisseur
 
 - **Statut :** `WAITING_FOR_OWNER_INPUT`
+
+> Reprise propriétaire du 2026-09-05 : réalisation jusqu'à publication/PR/fusion autorisée,
+> fusion faisant office de clôture officielle, sans envoi de demande. Le préflight courant
+> constate 14/30 champs, 16 vides et une incohérence conditionnelle ; aucun renderer lancé.
+> Voir le [suivi expurgé de reprise](../../validation/J9-WO034-RESUME-PREFLIGHT-20260905.md).
+> Les blocs historiques 9/30 ci-dessous restent des preuves datées, pas l'état courant.
 - **Jalon :** après J9 — rendu exact préalable à une éventuelle demande de permission
 - **Ouvert le :** 2026-09-01
 - **Ouverture UTC :** `2026-09-01T18:42:17.3534554Z`

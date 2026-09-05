@@ -4,6 +4,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-034 — reprise avant clôture par fusion
+
+- Reprise jusqu'à fusion autorisée par le propriétaire, sans envoi de demande ; préflight expurgé actualisé à 14/30, 16 champs vides et une incohérence conditionnelle.
+- Aucune valeur privée, ancien manifeste, template ou script modifié ; renderer non exécuté et clôture non anticipée.
+
 ### WO-034 — réalignement local sur main, 2026-09-05
 
 - Merge de dfe34b3 conservant l'historique qualifié ; conflits documentaires résolus sans perte des deux séries d'entrées.
