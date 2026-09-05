@@ -5,10 +5,14 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 Le [WO-049](docs/work_orders/active/WO-SS-20260905-049-j9-wo046-launcher-stop-proof.md)
-est ouvert pour corriger et qualifier **hors ligne** la préparation du lanceur WO-046 et le
-justificatif technique d'arrêt. Ce travail distinct ne démarre aucune application, base ou
-connexion, ne lit aucune identité privée et ne crée ni manifeste, ni go, ni POST réel.
-WO-046 reste arrêté ; sa reprise et la validation de WO-049 demeurent des décisions distinctes.
+est **qualifié `PASS_OFFLINE_FAIL_CLOSED`, en attente de revue propriétaire** : préparation
+du lanceur WO-046, mapping vérifié par Spring et justificatif technique d'arrêt canonique.
+Le [rapport](docs/validation/J9-WO049-LAUNCHER-STOP-PROOF-OFFLINE-QUALIFICATION-20260905.md)
+consigne 20 tests Pester, 7 tests Java ciblés et un build final borné réussi. Il expose aussi
+l'écart initial : Failsafe a lancé des tests PostgreSQL isolés avant interruption, hors du
+périmètre autorisé ; aucun conteneur Testcontainers ne subsiste au contrôle final. Cet écart
+requiert reconnaissance propriétaire. Aucun manifeste, go ou POST réel n'a été créé ;
+WO-046 reste arrêté et sa reprise demeure une décision distincte.
 
 La [tentative réelle WO-046 R1](docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-R1-STOPPED-20260905.md)
 est **arrêtée avant tout POST d'import J7**. Le owner-go V2 a été préparé, soumis et enregistré,

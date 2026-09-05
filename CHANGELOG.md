@@ -4,6 +4,17 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-049 qualifié, en attente de revue propriétaire
+
+- préparation pure du lanceur : noms d'environnement exacts, matrice fail-closed, arguments
+  Java séparés et isolation de l'environnement ; aucun changement de l'application Java ;
+- justificatif d'arrêt UTF-8 sans BOM, ordre fixe, LF final, corrélation et relecture stricte ;
+- 20 tests Pester et 7 tests Java ciblés réussis ; Maven final borné : 1185 tests, zéro échec,
+  zéro erreur, quatre ignorés, Failsafe explicitement désactivé ;
+- écart initial consigné : tests PostgreSQL isolés déclenchés par Failsafe hérité, puis
+  interrompus ; zéro résidu Testcontainers au contrôle final, reconnaissance propriétaire requise ;
+- aucune reprise WO-046, aucun nouveau manifeste/go ni POST réel ; Work Order encore actif.
+
 ### Après J9 — ouverture WO-049 : préparation du lanceur et preuve d'arrêt hors ligne
 
 - Work Order et worktree distincts depuis l'arrêt WO-046 `a4dabd8`, numéro 049 libre ;

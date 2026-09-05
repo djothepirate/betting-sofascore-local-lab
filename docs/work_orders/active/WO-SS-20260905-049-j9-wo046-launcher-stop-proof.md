@@ -1,6 +1,6 @@
 # WO-SS-20260905-049 — Lanceur WO-046 et justificatif d'arrêt hors ligne
 
-- **Statut :** `IN_DEVELOPMENT`
+- **Statut :** `READY_FOR_OWNER_REVIEW`
 - **Ouvert le :** 2026-09-05
 - **Base exacte :** `a4dabd8023e957bee23c84c00fba0088146a5d49`
 - **Branche :** `codex/ss-20260905-049-j9-wo046-launcher-stop-proof`
@@ -84,3 +84,41 @@ Même après validation de WO-049, WO-046 ne redémarre pas automatiquement. Un 
 successeur doit traiter explicitement le volume receiver conservé et les prérequis exacts ;
 il exige une décision distincte, puis un nouveau go lié aux octets gelés avant l'import unique.
 La contrainte d'unicité du manifeste et le grant R1 révoqué restent intacts.
+
+## 6. Résultat soumis à la revue propriétaire
+
+- Ouverture : `abd5e9be541a8f1d30ea0426e674477959ea3893`.
+- Implémentation : `22130d16781cce41a370cbcdbf6cd1b7b91546c2`.
+- [Rapport de qualification](../../validation/J9-WO049-LAUNCHER-STOP-PROOF-OFFLINE-QUALIFICATION-20260905.md),
+  13960 octets, SHA-256 `e273d917ca07b3a9a1cd303d93868ee22d2ab35e0b3b5a253cad271dbdf11ad8`.
+- Résultat technique : `PASS_OFFLINE_FAIL_CLOSED` ; 20 tests Pester et 7 tests Java ciblés
+  réussis ; build final borné : 1185 tests, zéro échec, zéro erreur, quatre tests ignorés.
+- Mapping PowerShell qualifié par le Binder Spring réel ; arguments Java séparés et
+  justificatif technique strictement canonique. Aucun changement Java applicatif ou SQL.
+- La préparation reste sans lancement : elle ne remplace pas la vérification fraîche des
+  autorisations, des fichiers, de la PKI ou de l'état persistant dans une future campagne.
+
+**Écart d'exécution à reconnaître explicitement :** la première vérification Maven hôte,
+sans `-DskipITs=true`, a hérité des exécutions Failsafe du parent Spring Boot et lancé des
+tests PostgreSQL isolés, hors du périmètre hors ligne autorisé. L'agent a interrompu cette
+exécution après constat ; le rapport conserve les preuves partielles, sans les transformer
+en qualification autorisée. La vérification finale exclut explicitement les IT, le test
+J6 natif et les profils de qualification réseau. Le contrôle final constate zéro conteneur
+Testcontainers, zéro processus Java WO-049, zéro listener 8087/8444/5433 ; les métadonnées
+Docker du primaire indiquent `healthy`, sans requête SQL de contrôle sur celui-ci.
+
+```text
+QUALIFICATION_RESULT=PASS_OFFLINE_FAIL_CLOSED
+OWNER_REVIEW_REQUIRED=YES
+EXECUTION_DEVIATION_ACKNOWLEDGEMENT_REQUIRED=YES
+WORK_ORDER_MOVE_TO_COMPLETED=NO
+WO046_RESUME_AUTHORIZED=NO
+WO046_NEW_MANIFEST_AUTHORIZED=NO
+WO046_NEW_OWNER_GO_GRANTED=NO
+WO046_REAL_POST_AUTHORIZED=NO
+PROVIDER_NETWORK_AUTHORIZED=NO
+REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+VPS_DEPLOYMENT_AUTHORIZED=NO
+PRODUCTION_AUTHORIZED=NO
+PUSH_OR_MERGE=NO
+```
