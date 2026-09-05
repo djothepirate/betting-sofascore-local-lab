@@ -4,6 +4,17 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-051 : assertion portable du refus mTLS distant
+
+- diagnostic du run main 33961252984 : identité cliente refusée, IO_FAILURE observé au lieu
+  du seul TLS_FAILURE attendu dans J7DeliveryMutualTlsLoopbackIT ;
+- tests uniquement : distinction rejet du pair/validation locale, contrôle positif du même
+  listener, aucune nouvelle requête ni effet après refus, message expurgé et cleanup conservés ;
+- classification runtime inchangée, tests déterministes prouvant qu'un diagnostic textuel TLS
+  ou un reset sans SSLException reste IO_FAILURE ; aucun retry, contournement ou assouplissement mTLS ;
+- qualification synthétique loopback sans base primaire ni receiver réel ; revue propriétaire
+  avant clôture/publication, sans prétendre à un nouveau PASS GitHub Linux.
+
 ### Après J9 — clôture propriétaire WO-050 et publication du correctif P2
 
 - validation de l'implémentation `87deb475007c853ed5f06752756183078f2e404f` et du résultat
