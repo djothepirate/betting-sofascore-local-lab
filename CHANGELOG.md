@@ -4,6 +4,15 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — clôture propriétaire WO-049 et autorité préparatoire WO-046
+
+- validation des commits `22130d1` / `78cc5ce` et du rapport qualifié inchangé ; écart
+  Testcontainers explicitement reconnu, Work Order déplacé dans `completed` ;
+- reprise préparatoire WO-046 et manifeste successeur autorisés ; accord pour un nouveau go
+  consigné sans prétendre à un bloc V2 exact enregistré ou consommable ;
+- POST réel toujours interdit : le champ obligatoire V2 autorisant le POST ne sera pas
+  activé implicitement ; aucun push, fusion main ou démarrage de campagne.
+
 ### Après J9 — WO-049 qualifié, en attente de revue propriétaire
 
 - préparation pure du lanceur : noms d'environnement exacts, matrice fail-closed, arguments

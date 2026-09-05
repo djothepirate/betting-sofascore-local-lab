@@ -1,6 +1,6 @@
 # WO-SS-20260905-049 — Lanceur WO-046 et justificatif d'arrêt hors ligne
 
-- **Statut :** `READY_FOR_OWNER_REVIEW`
+- **Statut :** `COMPLETED_OWNER_VALIDATED`
 - **Ouvert le :** 2026-09-05
 - **Base exacte :** `a4dabd8023e957bee23c84c00fba0088146a5d49`
 - **Branche :** `codex/ss-20260905-049-j9-wo046-launcher-stop-proof`
@@ -87,6 +87,8 @@ La contrainte d'unicité du manifeste et le grant R1 révoqué restent intacts.
 
 ## 6. Résultat soumis à la revue propriétaire
 
+Cette section conserve l'état soumis avant la décision de clôture de la section 7.
+
 - Ouverture : `abd5e9be541a8f1d30ea0426e674477959ea3893`.
 - Implémentation : `22130d16781cce41a370cbcdbf6cd1b7b91546c2`.
 - [Rapport de qualification](../../validation/J9-WO049-LAUNCHER-STOP-PROOF-OFFLINE-QUALIFICATION-20260905.md),
@@ -122,3 +124,46 @@ VPS_DEPLOYMENT_AUTHORIZED=NO
 PRODUCTION_AUTHORIZED=NO
 PUSH_OR_MERGE=NO
 ```
+
+## 7. Validation propriétaire et clôture
+
+Décision reçue et consignée le `2026-09-05T08:29:43Z` (`10:29:43+02:00`, Europe/Paris).
+Cet instant est celui de consignation, pas un horodatage propriétaire inventé.
+Le propriétaire confirme les références exactes et reconnaît l'écart d'exécution décrit
+dans le rapport ; celui-ci reste inchangé à son empreinte qualifiée.
+
+```text
+J9_WO049_OWNER_REVIEW_DECISION=VALIDATE
+J9_WO049_WORK_ORDER=WO-SS-20260905-049-j9-wo046-launcher-stop-proof
+J9_WO049_IMPLEMENTATION_COMMIT=22130d16781cce41a370cbcdbf6cd1b7b91546c2
+J9_WO049_DOCUMENTATION_COMMIT=78cc5cefc184a8ddaf01099f7ef1f847cb51fb4a
+J9_WO049_QUALIFICATION_RESULT=PASS_OFFLINE_FAIL_CLOSED
+J9_WO049_QUALIFICATION_REPORT_SHA256=e273d917ca07b3a9a1cd303d93868ee22d2ab35e0b3b5a253cad271dbdf11ad8
+J9_WO049_EXECUTION_DEVIATION_ACKNOWLEDGED=YES
+J9_WO049_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO049_WORK_ORDER_MOVE_TO_COMPLETED=YES
+
+J9_WO046_RESUME_AFTER_WO049_VALIDATION=YES
+J9_WO046_NEW_MANIFEST_AUTHORIZED=YES
+J9_WO046_NEW_OWNER_GO_GRANTED=YES
+J9_WO046_REAL_POST_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+WO-049 est déplacé dans `completed` ; aucun changement de son implémentation qualifiée.
+La reprise documentaire et le manifeste successeur relèvent du worktree WO-046. L'accord
+pour un nouveau go est conservé comme décision propriétaire, sans le confondre avec un
+bloc V2 exact déjà construit, enregistré ou consommable : aucun nouveau manifeste n'est
+encore gelé au moment de cette clôture, et le POST reste explicitement interdit.
+Le format V2 impose `PROVIDER_DERIVED_REAL_POST_AUTHORIZED=YES` ; il ne peut pas être rendu
+exécutoire avec la présente interdiction. Ne pas changer ce contrat ou inverser ce `NO`.
+Aucun push, fusion vers main, démarrage de campagne ou nouvelle écriture de grant.
+
+Vérification de clôture le `2026-09-05T08:32:13Z` : la commande bornée de la section 4.2
+du rapport (`clean verify --offline`, `skipITs=true`, exclusion J6 natif et profils réseau)
+est rejouée sous Java 25.0.4, cache existant : `BUILD SUCCESS`, `56.137 s`, 1185 tests,
+zéro échec/erreur, quatre ignorés ; les deux goals Failsafe sont explicitement ignorés.
+Contrôles UTF-8 sans BOM/NUL, diff et empreinte du rapport inchangé réussis.
