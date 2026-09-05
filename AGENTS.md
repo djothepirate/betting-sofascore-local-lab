@@ -104,6 +104,11 @@ Avant proposition de changement :
 - les snapshots durables proviennent uniquement d'un push du train feature exact. Les bundles de
   PR, de branche WO, de `main` et de `release/V*` restent éphémères ; tous les artefacts du Lab
   conservent `LOCAL_ONLY` et `vps.deployable=false` ;
+- le seul décalage temporaire entre train et version Maven est le push qui crée
+  `feature/<TRAIN>` exactement au sommet canonique de `origin/main`. Sa provenance porte
+  `source.train.seed=true` ; tout push ultérieur, PR ou lancement manuel exige le mapping Maven du
+  train. GitHub accepte `main`, les features d'intégration et les branches WO valides, jamais une
+  branche `release/V*` ni une feature approchante ;
 - les versions Maven et tags conservent SemVer 2A : `RC01` se traduit par `rc.1`, donc une branche
   `VX.Y.Z-RC01` porte Maven `X.Y.Z-rc.1` et le tag `vX.Y.Z-rc.1` ; une branche
   `VX.Y.Z-RC01-SNAPSHOT` porte Maven `X.Y.Z-rc.1-SNAPSHOT` et n'est jamais taguée ;

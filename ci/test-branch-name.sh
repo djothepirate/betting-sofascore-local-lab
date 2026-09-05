@@ -58,6 +58,8 @@ done
 for branch_name in \
     main \
     feature/V0.1.0 \
+    feature/V0.1.0-RC01 \
+    feature/V0.1.0-RC01-SNAPSHOT \
     feature/V1.20.300-RC04 \
     feature/V1.20.300-RC99-SNAPSHOT \
     release/V0.1.0 \
@@ -77,6 +79,34 @@ for branch_name in \
     develop; do
     if sh ci/check-branch-name.sh "$branch_name" gitlab-branch >/dev/null 2>&1; then
         echo "FAIL: branche interdite acceptée dans un pipeline de branche GitLab : $branch_name" >&2
+        exit 1
+    fi
+done
+
+for branch_name in \
+    main \
+    feature/V0.1.0 \
+    feature/V0.1.0-RC01 \
+    feature/V0.1.0-RC01-SNAPSHOT \
+    feature/V1.20.300-RC04 \
+    feature/V1.20.300-RC99-SNAPSHOT \
+    feature/V0.1.0-CODEX-WO-SS-20260905-056 \
+    feature/V1.20.300-RC04-HUMAN-WO-SS-20260906-057; do
+    if ! sh ci/check-branch-name.sh "$branch_name" github-branch >/dev/null; then
+        echo "FAIL: branche GitHub valide refusée : $branch_name" >&2
+        exit 1
+    fi
+done
+
+for branch_name in \
+    release/V0.1.0 \
+    release/V1.20.300-RC04 \
+    release/V1.20.300-RC99-SNAPSHOT \
+    feature/V1.2.3-RC00 \
+    codex/ss-20260905-055-version-branch-workflow \
+    codex/ci-001; do
+    if sh ci/check-branch-name.sh "$branch_name" github-branch >/dev/null 2>&1; then
+        echo "FAIL: branche interdite acceptée par GitHub : $branch_name" >&2
         exit 1
     fi
 done

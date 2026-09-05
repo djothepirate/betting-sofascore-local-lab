@@ -23,6 +23,14 @@ Le développement canonique reste sur GitHub. Un train porte exactement `VX.Y.Z`
 `release/<TRAIN>`. Chaque nouveau Work Order utilise une branche
 `feature/<TRAIN>-(CODEX|HUMAN)-WO-SS-YYYYMMDD-NNN` issue de ce train et une PR vers le train exact ;
 sa clôture ne devient effective qu'après fusion.
+Les deux exemples `feature/V0.1.0-RC01` et `feature/V0.1.0-RC01-SNAPSHOT` sont donc valides et
+correspondent respectivement aux versions Maven `0.1.0-rc.1` et `0.1.0-rc.1-SNAPSHOT`.
+
+Le push initial d'un train peut conserver la version Maven héritée du `main` qualifié uniquement
+si la nouvelle branche `feature/<TRAIN>` désigne exactement ce sommet. La provenance du snapshot
+local porte alors `source.train.seed=true`. Les pushes suivants, PR et lancements manuels exigent
+le mapping Maven exact du train. GitHub refuse toute branche `release/V*` — elles restent
+GitLab-only — ainsi que les formes feature approchantes, y compris via `workflow_dispatch`.
 
 Une PR finale exige la version Maven finale du train et fusionne vers `main` par merge commit ; un
 train stable ne peut donc pas entrer avec `X.Y.Z-SNAPSHOT`. Le train avance ensuite en fast-forward

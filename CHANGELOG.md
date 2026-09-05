@@ -28,6 +28,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   refusent les branches WO, bootstrap et historiques ; seuls `main`, les trains feature exacts et
   les releases exactes sont admis. Les MR et tags suivent leurs routes dédiées, et tout contexte
   sans source ou référence déterminée échoue fermé.
+- La fixture du bootstrap GitHub réinstalle ses garde-fous après le checkout de la base historique,
+  afin que la contre-épreuve valide le graphe ancien sans perdre les scripts du candidat courant.
+- Le seed stable, RC ou RC-SNAPSHOT accepte la version Maven héritée uniquement lors du push qui
+  crée `feature/<TRAIN>` au sommet exact de `origin/main`, avec `source.train.seed=true` dans la
+  provenance. Les rejeux et divergences restent bloqués ; GitHub refuse explicitement les branches
+  `release/V*` et les noms feature invalides, y compris en lancement manuel.
 
 ### WO-054 — livraison des cinq skills validés du lot 1
 

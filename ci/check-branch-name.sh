@@ -7,7 +7,7 @@ context=${2:-general}
 train_version='(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-RC(0[1-9]|[1-9][0-9])(-SNAPSHOT)?)?'
 
 case "$context" in
-    general|gitlab-branch) ;;
+    general|github-branch|gitlab-branch) ;;
     *)
         echo "FAIL: contexte de validation de branche inconnu : $context." >&2
         exit 1
@@ -16,6 +16,15 @@ esac
 
 accept_branch() {
     kind=$1
+    if [ "$context" = github-branch ]; then
+        case "$kind" in
+            MAIN|FEATURE_INTEGRATION|WORK_ORDER) ;;
+            *)
+                echo "FAIL: la branche $branch_name de type $kind est interdite sur GitHub." >&2
+                exit 1
+                ;;
+        esac
+    fi
     if [ "$context" = gitlab-branch ]; then
         case "$kind" in
             MAIN|FEATURE_INTEGRATION|RELEASE_GITLAB_ONLY) ;;

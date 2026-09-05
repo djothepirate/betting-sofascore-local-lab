@@ -8,6 +8,16 @@ commit_sha=${CI_COMMIT_SHA:-${SOURCE_COMMIT_SHA:-${GITHUB_SHA:-}}}
 pipeline_iid=${CI_PIPELINE_IID:-${GITHUB_RUN_NUMBER:-0}}
 tag=${CI_COMMIT_TAG:-}
 source_branch=${SOURCE_BRANCH_NAME:-${CI_COMMIT_BRANCH:-}}
+source_ref_created=${SOURCE_REF_CREATED:-false}
+case "$source_ref_created" in
+    true|false) ;;
+    '') source_ref_created=false ;;
+    *)
+        echo 'FAIL: SOURCE_REF_CREATED doit valoir true ou false.' >&2
+        exit 1
+        ;;
+esac
+train_seed=false
 
 if [ -z "$commit_sha" ]; then
     commit_sha=$(git rev-parse HEAD)
@@ -72,7 +82,39 @@ case "$source_epoch" in
         ;;
 esac
 source_iso=$(date -u -d "@$source_epoch" '+%Y-%m-%dT%H:%M:%SZ')
+branch_creation_push=false
+zero_sha=0000000000000000000000000000000000000000
+if [ -n "${CI_PIPELINE_SOURCE:-}" ]; then
+    if [ "$CI_PIPELINE_SOURCE" = push ] &&
+       [ "${CI_COMMIT_BEFORE_SHA:-}" = "$zero_sha" ]; then
+        branch_creation_push=true
+    fi
+elif [ "${GITHUB_EVENT_NAME:-}" = push ] &&
+     [ "$source_ref_created" = true ]; then
+    branch_creation_push=true
+fi
+
 channel=snapshot-local-only
+accept_train_seed() {
+    if [ "${branch_kind:-}" != feature-integration ] ||
+       [ "$branch_creation_push" != true ]; then
+        return 1
+    fi
+    seed_main_ref=refs/remotes/origin/main
+    if ! seed_main_commit=$(git rev-parse --verify "${seed_main_ref}^{commit}" 2>/dev/null); then
+        echo "FAIL: l'amorçage du train exige la référence canonique $seed_main_ref." >&2
+        exit 1
+    fi
+    if [ "$commit_sha" != "$seed_main_commit" ]; then
+        echo "FAIL: l'amorçage du train exige que le commit source $commit_sha soit le sommet canonique exact de $seed_main_ref ($seed_main_commit)." >&2
+        exit 1
+    fi
+    train_seed=true
+    printf 'PACKAGE_VERSION_POLICY=PASS:exact-train-seed:%s@%s\n' \
+        "$source_branch" "$commit_sha"
+    return 0
+}
+
 if [ -n "$tag" ]; then
     if ! printf '%s' "$tag" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.[1-9][0-9]*)?$'; then
         echo "FAIL: tag hors convention SemVer : $tag" >&2
@@ -208,6 +250,7 @@ else
         exit 1
     fi
     branch_version=
+    branch_kind=
     case "$source_branch" in
         feature/V*)
             if ! sh ci/check-branch-name.sh "$source_branch" >/dev/null 2>&1; then
@@ -215,6 +258,11 @@ else
                 exit 1
             fi
             branch_version=${source_branch#feature/V}
+            if sh ci/check-durable-snapshot-source.sh "$source_branch" >/dev/null 2>&1; then
+                branch_kind=feature-integration
+            else
+                branch_kind=feature-work-order
+            fi
             case "$branch_version" in
                 *-CODEX-WO-SS-*) branch_version=${branch_version%%-CODEX-WO-SS-*} ;;
                 *-HUMAN-WO-SS-*) branch_version=${branch_version%%-HUMAN-WO-SS-*} ;;
@@ -226,6 +274,7 @@ else
                 exit 1
             fi
             branch_version=${source_branch#release/V}
+            branch_kind=gitlab-release
             ;;
     esac
     if [ -n "$branch_version" ]; then
@@ -250,7 +299,8 @@ else
                 fi
                 ;;
         esac
-        if [ "$version" != "$valid_version" ]; then
+        if [ "$version" != "$valid_version" ] &&
+           ! accept_train_seed; then
             echo "FAIL: la branche $source_branch exige la version Maven $valid_version, reçue : $version." >&2
             exit 1
         fi
@@ -467,6 +517,7 @@ source.commit=$commit_sha
 source.epoch=$source_epoch
 source.branch=$source_branch
 source.tag=$tag
+source.train.seed=$train_seed
 maven.version=$version
 artifact.version=$artifact_version
 java.target=25

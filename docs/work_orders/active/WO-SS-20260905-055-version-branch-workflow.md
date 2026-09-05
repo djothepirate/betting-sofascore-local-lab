@@ -52,6 +52,9 @@ locaux depuis le seul train qualifié sans créer de canal VPS ou production.
    squash/rebase.
 7. Seul un push du train feature exact conserve un snapshot durable. Tout autre bundle reste
    éphémère.
+   Le push créant ce train peut conserver la version Maven héritée uniquement si son SHA est le
+   sommet canonique exact de `origin/main`; sa provenance porte `source.train.seed=true`. Tout
+   push ultérieur, PR, lancement manuel, branche WO ou divergence réactive le mapping strict.
 8. Le bootstrap courant est la seule exception de nommage : il cible `main` sur la base exacte de
    ce WO avec Maven `0.1.0-SNAPSHOT`, et son SHA source doit en descendre avec la même merge-base
    exacte. Les branches historiques sont read-only et inéligibles aux nouveaux travaux, snapshots
@@ -62,6 +65,9 @@ locaux depuis le seul train qualifié sans créer de canal VPS ou production.
    tag ; seuls les trains `RC01` à `RC99` sont promouvables.
 10. Seules les branches `release/V*` sont protégées. La règle de tags protégés `v*`, distincte des
     protections de branches, est obligatoire avant toute promotion taguée GitLab.
+11. Un pipeline de branche GitHub accepte seulement `main`, une feature d'intégration exacte ou une
+    branche WO conforme. Il refuse `release/V*`, le bootstrap, les branches historiques et toute
+    feature approchante, y compris en lancement manuel.
 
 ## Périmètre
 
@@ -93,6 +99,11 @@ locaux depuis le seul train qualifié sans créer de canal VPS ou production.
   avec cible protégée, conversion Maven `RCnn -> rc.N` exacte, source/main/SHA alignés, release
   ancêtre, historique complet et release non scellée.
 - [x] GitHub et GitLab conservent un snapshot uniquement depuis le train feature exact.
+- [x] Le seed stable, RC ou RC-SNAPSHOT n'accepte une version Maven héritée que lors de la création
+  de `feature/<TRAIN>` au SHA exact de `origin/main`; les rejeux, contextes non-push, branches WO et
+  divergences sont refusés, et la provenance porte `source.train.seed=true`.
+- [x] Les pipelines de branche GitHub refusent les releases GitLab-only et les noms de feature
+  invalides, notamment via `workflow_dispatch`.
 - [x] Les pipelines de branche GitLab acceptent seulement `main`, les trains feature exacts et les
   releases exactes ; ils refusent les branches WO, bootstrap et historiques, quel que soit leur
   déclencheur, tandis que MR et tags suivent leurs contrôles dédiés.
@@ -100,7 +111,7 @@ locaux depuis le seul train qualifié sans créer de canal VPS ou production.
   exige que `origin/main`, `origin/feature/<TRAIN>` et `origin/release/<TRAIN>` existent et désignent
   exactement le commit tagué et extrait. Il refuse explicitement tout tag `rc.100` ou supérieur
   faute de train canonique.
-- [ ] Les tests shell ciblés, le scan local-only, le contrôle de secrets du diff et
+- [x] Les tests shell ciblés, le scan local-only, le contrôle de secrets du diff et
   `git diff --check` réussissent.
 - [x] Les quatre statuts du Lab et `production.approved=false` / `vps.deployable=false` restent
   présents et bloquants.
@@ -140,9 +151,25 @@ Sur l'état de travail du 2026-09-05, avant publication de la branche de bootstr
   `PACKAGE_GIT_GUARDS=PASS_LOCAL_ONLY` ;
 - syntaxe des scripts shell modifiés et `git diff --check` : succès.
 
-Le scan de secrets sera exécuté sur le commit candidat afin d'examiner ses blobs Git. Les suites
-Maven et PostgreSQL/Testcontainers restent à prouver sur ce même commit par les checks GitHub
-Windows/Linux ; elles ne sont pas revendiquées comme exécutées localement.
+Le premier job Linux de la PR #32 (`33994559658`, HEAD `433fa925582b962d9e306c6d9811840d92bab8d9`)
+a révélé que la fixture copiait les scripts candidats avant de checkout la base historique, ce qui
+les retirait du worktree avant l'assertion. La copie est désormais effectuée après ce checkout ; le
+test ciblé repasse avec `GITHUB_PR_POLICY_TESTS=PASS` et l'agrégat complet avec
+`PACKAGE_GIT_GUARDS=PASS_LOCAL_ONLY`. Le scan du diff corrigé et `git diff --check` réussissent ; le
+scan des blobs du commit corrigé sera consigné sur la PR. La matrice distante sur ce nouveau commit
+reste à obtenir avant revue.
+
+Le même agrégat correctif, réexécuté le 2026-09-06, termine avec code `0` et les marqueurs
+`RELEASE_REPRODUCIBILITY=PASS_LOCAL_ONLY` puis `PACKAGE_GIT_GUARDS=PASS_LOCAL_ONLY`. La matrice
+nomme explicitement `feature/V0.1.0-RC01` et `feature/V0.1.0-RC01-SNAPSHOT`, couvre les seeds stable,
+RC et RC-SNAPSHOT sur les deux forges, et refuse les rejeux, divergences, références `main`
+absentes, lancements manuels et branches Work Order. La syntaxe shell finale et
+`git diff --check` réussissent également.
+
+Le scan post-commit du premier candidat `433fa925582b962d9e306c6d9811840d92bab8d9` a réussi avec
+`SECRET_SCAN=PASS_HIGH_CONFIDENCE`. Le scan sera rejoué sur le commit correctif afin d'examiner ses
+blobs Git. Les suites Maven et PostgreSQL/Testcontainers restent à prouver sur ce même commit par
+les checks GitHub Windows/Linux ; elles ne sont pas revendiquées comme exécutées localement.
 
 ## Preuves restantes hors de ce worktree
 

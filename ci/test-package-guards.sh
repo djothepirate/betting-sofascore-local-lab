@@ -172,6 +172,21 @@ if ! grep -Fq 'sh ci/check-durable-snapshot-source.sh "$BRANCH_NAME"' \
     echo 'FAIL: GitHub doit borner le snapshot durable au train feature exact.' >&2
     exit 1
 fi
+if ! grep -Fq 'check-branch-name.sh "$BRANCH_NAME" github-branch' \
+    .github/workflows/ci.yml ||
+   ! grep -Fq "github.event_name != 'pull_request' && github.ref_type == 'branch'" \
+    .github/workflows/ci.yml; then
+    echo 'FAIL: tout pipeline de branche GitHub doit refuser les releases et noms hors convention.' >&2
+    exit 1
+fi
+if ! grep -Fq 'SOURCE_REF_CREATED: ${{ github.event.created }}' \
+    .github/workflows/ci.yml ||
+   ! grep -Fq 'SOURCE_REF_CREATED' ci/package-local-only.sh ||
+   ! grep -Fq 'CI_COMMIT_BEFORE_SHA' ci/package-local-only.sh ||
+   ! grep -Fq 'source.train.seed=$train_seed' ci/package-local-only.sh; then
+    echo 'FAIL: l’amorçage d’un train doit rester borné à sa création exacte depuis main.' >&2
+    exit 1
+fi
 if grep -Fq "github.ref == 'refs/heads/main'" .github/workflows/ci.yml; then
     echo 'FAIL: main ne doit plus publier de snapshot durable.' >&2
     exit 1

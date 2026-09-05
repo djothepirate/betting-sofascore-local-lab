@@ -244,6 +244,8 @@ security:dependencies:
           RELEASE_BRANCH_REF="$release_ref" \
           sh ci/package-local-only.sh
       else
+        git fetch --no-tags origin \
+          "+refs/heads/main:refs/remotes/origin/main"
         sh ci/package-local-only.sh
       fi
   artifacts:

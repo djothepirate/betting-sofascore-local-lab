@@ -47,6 +47,15 @@ Work Orders si elle les énumère sans ambiguïté et fournit leurs preuves. Les
 antérieures à cet amendement restent en lecture seule ; elles ne deviennent ni sources de nouveau
 travail, ni sources de snapshot durable, ni sources de promotion.
 
+Le seul décalage temporaire entre le nom du train et la version Maven est le push qui crée
+`feature/<TRAIN>` exactement au sommet canonique de `origin/main`. GitHub exige le témoin de
+création de la référence ; GitLab combine `CI_PIPELINE_SOURCE=push` avec le before-SHA nul de la
+première synchronisation. Le snapshot conserve sa vraie version Maven et sa provenance porte
+`source.train.seed=true`. Tout push ultérieur, Pull Request, lancement manuel, branche Work Order
+ou divergence de `main` réactive le mapping Maven strict. Sur GitHub, seules `main`, les features
+d'intégration et les branches Work Order conformes sont des branches exécutables ; `release/V*`
+reste refusée et exclusivement GitLab.
+
 Après intégration des Work Orders, une PR finale `feature/<TRAIN>` vers `main` exige la version
 Maven finale correspondant exactement au train — `X.Y.Z`, et non `X.Y.Z-SNAPSHOT`, pour un train
 stable — puis est fusionnée par merge commit. Le train est ensuite avancé en fast-forward jusqu'à

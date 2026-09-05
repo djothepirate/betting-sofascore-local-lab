@@ -55,13 +55,14 @@ cleanup() {
 trap cleanup EXIT HUP INT TERM
 
 git clone -q --no-local "$repository" "$fixture"
-cp "$repository/ci/check-branch-name.sh" \
-   "$repository/ci/check-github-pull-request.sh" "$fixture/ci/"
 (
     cd "$fixture"
     git config user.name ci-fixture
     git config user.email ci-fixture.invalid@example.test
     git checkout -q --detach "$bootstrap_base"
+    mkdir -p ci
+    cp "$repository/ci/check-branch-name.sh" \
+       "$repository/ci/check-github-pull-request.sh" ci/
     git commit --allow-empty -qm 'bootstrap descendant'
     bootstrap_head=$(git rev-parse HEAD)
 

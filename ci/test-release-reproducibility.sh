@@ -121,6 +121,7 @@ chmod +x "$fixture/mvnw"
     git -c user.name=ci-fixture -c user.email=ci-fixture.invalid@example.test \
         commit --allow-empty -qm 'release fixture head'
     head_commit=$(git rev-parse HEAD)
+    parent_commit=$(git rev-parse HEAD^)
     git update-ref refs/remotes/origin/main "$head_commit"
     git update-ref refs/remotes/origin/feature/V1.2.3 "$head_commit"
     git update-ref refs/remotes/origin/release/V1.2.3 "$head_commit"
@@ -154,6 +155,195 @@ chmod +x "$fixture/mvnw"
         exit 1
     fi
     rm -f "$branch_version_output"
+
+    # Seul le push qui crée une feature d'intégration exactement au sommet de
+    # main peut conserver temporairement la version Maven héritée.
+    env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-SNAPSHOT \
+        SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=95 \
+        GITHUB_EVENT_NAME=push SOURCE_REF_CREATED=true \
+        GITHUB_REF_TYPE=branch GITHUB_REF_NAME=feature/V1.3.0 \
+        DURABLE_SNAPSHOT_SOURCE=true sh ci/package-local-only.sh >/dev/null
+    seed_bundle=$(pwd)/target/distribution/betting-sofascore-local-lab-1.2.3-snapshot.p95.g$(printf '%.12s' "$head_commit")-local-only.zip
+    if [ ! -f "$seed_bundle" ]; then
+        echo 'FAIL: l’amorçage exact du nouveau train GitHub ne produit pas son snapshot local.' >&2
+        exit 1
+    fi
+    mkdir inspect-train-seed
+    (
+        cd inspect-train-seed
+        jar --extract --file "$seed_bundle"
+    )
+    if ! grep -Fxq 'artifact.channel=snapshot-local-only' \
+        inspect-train-seed/provenance.properties ||
+       ! grep -Fxq 'source.train.seed=true' \
+        inspect-train-seed/provenance.properties; then
+        echo 'FAIL: le snapshot local d’amorçage n’est pas identifié explicitement.' >&2
+        exit 1
+    fi
+
+    for seed_branch in feature/V1.3.0-RC01 feature/V1.3.0-RC01-SNAPSHOT; do
+        seed_output=$(mktemp)
+        env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-SNAPSHOT \
+            SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=94 \
+            GITHUB_EVENT_NAME=push SOURCE_REF_CREATED=true \
+            GITHUB_REF_TYPE=branch GITHUB_REF_NAME="$seed_branch" \
+            DURABLE_SNAPSHOT_SOURCE=true \
+            sh ci/package-local-only.sh >"$seed_output"
+        if ! grep -Fq "PACKAGE_VERSION_POLICY=PASS:exact-train-seed:${seed_branch}@${head_commit}" \
+            "$seed_output"; then
+            echo "FAIL: l’amorçage GitHub du train $seed_branch n’a pas emprunté la voie bornée." >&2
+            cat "$seed_output" >&2
+            exit 1
+        fi
+        rm -f "$seed_output"
+    done
+
+    env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-SNAPSHOT \
+        CI_COMMIT_SHA="$head_commit" CI_COMMIT_BRANCH=feature/V1.3.0 \
+        CI_PIPELINE_IID=95 CI_PIPELINE_SOURCE=push \
+        CI_COMMIT_BEFORE_SHA=0000000000000000000000000000000000000000 \
+        DURABLE_SNAPSHOT_SOURCE=true sh ci/package-local-only.sh >/dev/null
+    for seed_branch in feature/V1.3.0-RC01 feature/V1.3.0-RC01-SNAPSHOT; do
+        seed_output=$(mktemp)
+        env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-SNAPSHOT \
+            CI_COMMIT_SHA="$head_commit" CI_COMMIT_BRANCH="$seed_branch" \
+            CI_PIPELINE_IID=94 CI_PIPELINE_SOURCE=push \
+            CI_COMMIT_BEFORE_SHA=0000000000000000000000000000000000000000 \
+            DURABLE_SNAPSHOT_SOURCE=true \
+            sh ci/package-local-only.sh >"$seed_output"
+        if ! grep -Fq "PACKAGE_VERSION_POLICY=PASS:exact-train-seed:${seed_branch}@${head_commit}" \
+            "$seed_output"; then
+            echo "FAIL: l’amorçage GitLab du train $seed_branch n’a pas emprunté la voie bornée." >&2
+            cat "$seed_output" >&2
+            exit 1
+        fi
+        rm -f "$seed_output"
+    done
+
+    github_replay_output=$(mktemp)
+    if env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-SNAPSHOT \
+        SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=95 \
+        GITHUB_EVENT_NAME=push SOURCE_REF_CREATED=false \
+        GITHUB_REF_TYPE=branch GITHUB_REF_NAME=feature/V1.3.0 \
+        DURABLE_SNAPSHOT_SOURCE=true \
+        sh ci/package-local-only.sh >"$github_replay_output" 2>&1; then
+        echo 'FAIL: un push GitHub ultérieur a usurpé l’amorçage du train.' >&2
+        exit 1
+    fi
+    if ! grep -Fq 'exige la version Maven 1.3.0' "$github_replay_output"; then
+        echo 'FAIL: le refus du rejeu GitHub est ambigu.' >&2
+        cat "$github_replay_output" >&2
+        exit 1
+    fi
+    rm -f "$github_replay_output"
+
+    gitlab_replay_output=$(mktemp)
+    if env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-SNAPSHOT \
+        CI_COMMIT_SHA="$head_commit" CI_COMMIT_BRANCH=feature/V1.3.0 \
+        CI_PIPELINE_IID=95 CI_PIPELINE_SOURCE=push \
+        CI_COMMIT_BEFORE_SHA="$parent_commit" DURABLE_SNAPSHOT_SOURCE=true \
+        sh ci/package-local-only.sh >"$gitlab_replay_output" 2>&1; then
+        echo 'FAIL: un push GitLab ultérieur a usurpé l’amorçage du train.' >&2
+        exit 1
+    fi
+    if ! grep -Fq 'exige la version Maven 1.3.0' "$gitlab_replay_output"; then
+        echo 'FAIL: le refus du rejeu GitLab est ambigu.' >&2
+        cat "$gitlab_replay_output" >&2
+        exit 1
+    fi
+    rm -f "$gitlab_replay_output"
+
+    git update-ref refs/remotes/origin/main "$parent_commit"
+    divergent_seed_output=$(mktemp)
+    if env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-SNAPSHOT \
+        SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=95 \
+        GITHUB_EVENT_NAME=push SOURCE_REF_CREATED=true \
+        GITHUB_REF_TYPE=branch GITHUB_REF_NAME=feature/V1.3.0 \
+        DURABLE_SNAPSHOT_SOURCE=true \
+        sh ci/package-local-only.sh >"$divergent_seed_output" 2>&1; then
+        echo 'FAIL: un amorçage divergent du sommet canonique de main a été accepté.' >&2
+        exit 1
+    fi
+    if ! grep -Fq 'sommet canonique exact de refs/remotes/origin/main' \
+        "$divergent_seed_output"; then
+        echo 'FAIL: le refus de l’amorçage divergent est ambigu.' >&2
+        cat "$divergent_seed_output" >&2
+        exit 1
+    fi
+    rm -f "$divergent_seed_output"
+    git update-ref refs/remotes/origin/main "$head_commit"
+
+    git update-ref -d refs/remotes/origin/main
+    missing_seed_main_output=$(mktemp)
+    if env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-SNAPSHOT \
+        SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=95 \
+        GITHUB_EVENT_NAME=push SOURCE_REF_CREATED=true \
+        GITHUB_REF_TYPE=branch GITHUB_REF_NAME=feature/V1.3.0 \
+        DURABLE_SNAPSHOT_SOURCE=true \
+        sh ci/package-local-only.sh >"$missing_seed_main_output" 2>&1; then
+        echo 'FAIL: un amorçage sans référence canonique main a été accepté.' >&2
+        exit 1
+    fi
+    if ! grep -Fq "exige la référence canonique refs/remotes/origin/main" \
+        "$missing_seed_main_output"; then
+        echo 'FAIL: le refus de l’amorçage sans main est ambigu.' >&2
+        cat "$missing_seed_main_output" >&2
+        exit 1
+    fi
+    rm -f "$missing_seed_main_output"
+    git update-ref refs/remotes/origin/main "$head_commit"
+
+    dispatch_seed_output=$(mktemp)
+    if env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-SNAPSHOT \
+        SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=95 \
+        GITHUB_EVENT_NAME=workflow_dispatch SOURCE_REF_CREATED=true \
+        GITHUB_REF_TYPE=branch GITHUB_REF_NAME=feature/V1.3.0 \
+        DURABLE_SNAPSHOT_SOURCE=true \
+        sh ci/package-local-only.sh >"$dispatch_seed_output" 2>&1; then
+        echo 'FAIL: un workflow_dispatch GitHub a usurpé l’amorçage du train.' >&2
+        exit 1
+    fi
+    if ! grep -Fq 'exige la version Maven 1.3.0' "$dispatch_seed_output"; then
+        echo 'FAIL: le refus de l’amorçage GitHub manuel est ambigu.' >&2
+        cat "$dispatch_seed_output" >&2
+        exit 1
+    fi
+    rm -f "$dispatch_seed_output"
+
+    web_seed_output=$(mktemp)
+    if env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-SNAPSHOT \
+        CI_COMMIT_SHA="$head_commit" CI_COMMIT_BRANCH=feature/V1.3.0 \
+        CI_PIPELINE_IID=95 CI_PIPELINE_SOURCE=web \
+        CI_COMMIT_BEFORE_SHA=0000000000000000000000000000000000000000 \
+        DURABLE_SNAPSHOT_SOURCE=true \
+        sh ci/package-local-only.sh >"$web_seed_output" 2>&1; then
+        echo 'FAIL: un pipeline Web GitLab a usurpé l’amorçage du train.' >&2
+        exit 1
+    fi
+    if ! grep -Fq 'exige la version Maven 1.3.0' "$web_seed_output"; then
+        echo 'FAIL: le refus de l’amorçage GitLab hors push est ambigu.' >&2
+        cat "$web_seed_output" >&2
+        exit 1
+    fi
+    rm -f "$web_seed_output"
+
+    work_order_seed_output=$(mktemp)
+    if env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=2.0.0-SNAPSHOT \
+        SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=95 \
+        GITHUB_EVENT_NAME=push SOURCE_REF_CREATED=true \
+        GITHUB_REF_TYPE=branch \
+        GITHUB_REF_NAME=feature/V1.2.3-HUMAN-WO-SS-20260906-059 \
+        sh ci/package-local-only.sh >"$work_order_seed_output" 2>&1; then
+        echo 'FAIL: une branche de Work Order a usurpé l’amorçage du train.' >&2
+        exit 1
+    fi
+    if ! grep -Fq 'exige la version Maven 1.2.3' \
+        "$work_order_seed_output"; then
+        echo 'FAIL: le refus de l’amorçage par une branche Work Order est ambigu.' >&2
+        cat "$work_order_seed_output" >&2
+        exit 1
+    fi
+    rm -f "$work_order_seed_output"
 
     rc_version_output=$(mktemp)
     if env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-RC01-SNAPSHOT \
