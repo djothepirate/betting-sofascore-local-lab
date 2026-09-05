@@ -4,6 +4,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — clôture propriétaire WO-050 et publication du correctif P2
+
+- validation de l'implémentation `87deb475007c853ed5f06752756183078f2e404f` et du résultat
+  `PASS_OFFLINE_FAIL_CLOSED`, rapport qualifié et empreinte conservés ;
+- WO-050 déplacé vers completed, README actualisé ; push et mise à jour linéaire de la
+  PR #27 autorisés avec réponse et résolution de la discussion P2 ;
+- aucune fusion, nouvelle campagne, réutilisation de go, livraison ou autorité réseau métier.
+
 ### Après J9 — WO-050 : isolation owner-go des lanceurs sans livraison fournisseur
 
 - P2 PR #27 : ajout des deux références owner-go aux sauvegardes d'environnement des

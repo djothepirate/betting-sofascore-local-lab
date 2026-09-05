@@ -4,12 +4,13 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-Le [WO-050](docs/work_orders/active/WO-SS-20260905-050-j9-non-provider-launcher-owner-go-isolation.md)
+Le [WO-050](docs/work_orders/completed/WO-SS-20260905-050-j9-non-provider-launcher-owner-go-isolation.md)
 traite la P2 de la PR #27 : les six lanceurs sans livraison fournisseur sauvegardent,
 neutralisent puis restaurent les deux références owner-go héritées de l'environnement.
 La correction est qualifiée hors ligne, sans assouplir la validation Java ni modifier
-le lanceur de livraison PROVIDER_DERIVED. Elle reste soumise à revue propriétaire avant
-publication ; WO-046 et ses preuves sont gelés, aucun nouveau POST ni go n'est autorisé.
+le lanceur de livraison PROVIDER_DERIVED. Le propriétaire l'a validée et WO-050 est clôturé ;
+publication et résolution de la P2 sur la PR #27 autorisées, sans fusion. WO-046 et ses
+preuves sont gelés, aucun nouveau POST ni go n'est autorisé.
 
 La [campagne réelle WO-046 R2](docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-R2-CAMPAIGN-20260905.md)
 a effectué l'unique POST J7 local explicitement autorisé : `201/IMPORTED`, sender `DELIVERED`,

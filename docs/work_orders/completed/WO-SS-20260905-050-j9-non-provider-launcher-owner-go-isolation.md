@@ -1,6 +1,6 @@
 # WO-SS-20260905-050 — Isolation owner-go des lanceurs sans livraison fournisseur
 
-- Statut : `IMPLEMENTED_PENDING_OWNER_REVIEW`.
+- Statut : `COMPLETED_OWNER_VALIDATED`.
 - Ouverture : 2026-09-05.
 - Base : `facb4b51f23b09b07e46653ca8a40dac6f543f59` (PR #27).
 - Branche : `codex/wo-050-non-provider-launcher-owner-go-isolation`.
@@ -52,7 +52,7 @@ d'une seule de ces valeurs peut faire échouer un démarrage légitime.
 Les statuts EXPERIMENTAL, LOCAL_ONLY, NOT_PRODUCTION_APPROVED et NO_CRITICAL_DEPENDENCY
 restent inchangés. La permission officielle reste NOT_EVIDENCED, le go WO-046 consommé.
 
-## Résultat local
+## Résultat local soumis avant validation (historique)
 
 - Six lanceurs corrigés, aucune modification Java applicative.
 - Avant correctif : échec attendu `WO050_AMBIENT_GO_LEAK:Start-Local.ps1:1`.
@@ -73,3 +73,40 @@ SHA-256 `c6b1acd4f0b3866fe6db1b7fce6c68986c6007844a63a348c4f8dcacca5a7ccd`.
 Résultat soumis : `PASS_OFFLINE_FAIL_CLOSED`.
 WO-050 reste actif ; aucun push, aucune mise à jour/résolution GitHub, aucune fusion ni
 nouvelle campagne. Le correctif ne sera publié qu'après validation propriétaire.
+
+## Validation propriétaire et clôture — 2026-09-05
+
+Le propriétaire valide explicitement le correctif, sa qualification et le déplacement de
+WO-050 vers les Work Orders terminés. Le rapport qualifié et son empreinte restent inchangés.
+
+```text
+J9_WO050_OWNER_REVIEW_DECISION=VALIDATE
+J9_WO050_WORK_ORDER=WO-SS-20260905-050-j9-non-provider-launcher-owner-go-isolation
+J9_WO050_IMPLEMENTATION_COMMIT=87deb475007c853ed5f06752756183078f2e404f
+J9_WO050_DOCUMENTATION_COMMIT=c8548249dc42ad25ab23bbe4bdfebefa474c42e5
+J9_WO050_QUALIFICATION_RESULT=PASS_OFFLINE_FAIL_CLOSED
+J9_WO050_QUALIFICATION_REPORT_SHA256=c6b1acd4f0b3866fe6db1b7fce6c68986c6007844a63a348c4f8dcacca5a7ccd
+J9_WO050_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO050_WORK_ORDER_MOVE_TO_COMPLETED=YES
+J9_PR27_MERGE_AUTHORIZED=NO
+J9_WO046_NEW_POST_AUTHORIZED=NO
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+Instruction complémentaire : pousser le correctif et reprendre la PR #27 avec résolution
+de la P2 à partir du correctif réalisé. Publication de la branche WO-050 et avance
+fast-forward de la branche de PR autorisées, sans squash, rebase ou modification de main.
+La réponse de revue doit référencer l'implémentation et la qualification ; la résolution
+de discussion n'est ni une fusion ni une nouvelle autorisation de campagne.
+
+Cette section remplace les attentes de validation et publication des sections historiques.
+Les résultats CI antérieurs à la publication ne qualifient pas le nouveau HEAD.
+
+Réexécution avant publication : `clean verify --offline` avec les mêmes exclusions
+explicites que le rapport qualifié (pipeline natif J6, superviseur JVM/sockets, IT et profils
+de qualification réseau) : BUILD SUCCESS, 1148 tests, 0 échec, 0 erreur, 4 ignorés,
+56,592 s, fin 2026-09-05T10:30:52Z. Contrôles politique locale, UTF-8, diff indexé et
+neuf règles de secrets sur le lot WO-050 réussis. Aucune application métier ni base lancée.
