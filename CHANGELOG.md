@@ -4,6 +4,15 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — reprise préparatoire WO-046 R2, sans POST
+
+- intégration fast-forward de WO-049 validé et clôturé, sans réécriture des preuves R1 ;
+- nouveau manifeste autorisé, gel en attente du choix explicite sur le volume receiver R1 ;
+- vérification métadonnées : receiver arrêté, volume conservé, primaire sain, zéro listener
+  8087/8444/5433 ; aucun SQL, démarrage, certificat privé ou payload consulté ;
+- accord propriétaire pour un nouveau go consigné séparément de sa matérialisation V2 :
+  le POST explicitement interdit empêche un bloc exécutoire ; aucun grant ou POST créé.
+
 ### Après J9 — clôture propriétaire WO-049 et autorité préparatoire WO-046
 
 - validation des commits `22130d1` / `78cc5ce` et du rapport qualifié inchangé ; écart

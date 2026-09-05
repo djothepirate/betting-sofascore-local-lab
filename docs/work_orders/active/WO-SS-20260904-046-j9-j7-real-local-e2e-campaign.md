@@ -1,6 +1,6 @@
 # WO-SS-20260904-046 — Campagne E2E J7 réelle locale Windows/Windows
 
-- **Statut :** `STOPPED_PRE_IMPORT_LOCAL_LAB_CONFIGURATION_BINDING_REFUSED`
+- **Statut :** `PREPARATION_RESUMED_PENDING_RECEIVER_RESOURCE_DECISION`
 - **Jalon :** après J9 — campagne locale d'une livraison J7 dérivée fournisseur
 - **Ouvert le :** 2026-09-04
 - **Ouverture UTC :** `2026-09-04T13:59:22.9943521Z`
@@ -772,3 +772,21 @@ propriétaire distincte pour un nouveau manifeste gelé et un nouveau go. Aucun 
 manifeste ou go n'est créé. Aucun changement applicatif, de protocole, de migration, de PDF ou
 des rapports qualifiés n'est effectué ; les contrôles de ce lot et leurs limites sont détaillés
 dans le rapport R1, sans nouveau PASS Maven ni qualification réelle revendiqués.
+
+## 17. Reprise préparatoire R2 après clôture WO-049
+
+Le propriétaire valide WO-049 avec reconnaissance de l'écart d'exécution et autorise
+`J9_WO046_RESUME_AFTER_WO049_VALIDATION=YES`, `J9_WO046_NEW_MANIFEST_AUTHORIZED=YES` et
+`J9_WO046_NEW_OWNER_GO_GRANTED=YES`. Il maintient `J9_WO046_REAL_POST_AUTHORIZED=NO` et
+les interdictions fournisseur, receiver distant, VPS et production.
+
+La clôture WO-049 `516a955de1033ddfe546b934fc7e3b2490ed486c` est intégrée par fast-forward
+dans ce worktree propre. Le [compte rendu préparatoire R2](../../validation/J9-WO046-R2-PREPARATION-AFTER-WO049-20260905.md)
+consigne l'autorité, le module qualifié, les contrôles Docker purement métadonnées et les
+portes restantes. Le manifeste successeur est autorisé, mais pas encore créé ou gelé : le
+volume receiver R1 conservé nécessite le choix explicite prévu par le rapport d'arrêt.
+
+Le nouveau go est accordé en intention propriétaire, pas enregistré comme document canonique
+exécutoire. V2 impose l'autorisation de POST à `YES` ; aucun tel bloc n'est fabriqué contre
+le `NO` maintenu. Aucun grant, SQL, nouveau manifeste, démarrage ou POST n'est effectué par
+ce lot. Le run R1 et ses preuves restent gelés ; WO-046 reste actif.

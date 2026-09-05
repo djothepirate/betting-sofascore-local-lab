@@ -4,6 +4,12 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
+La [reprise préparatoire WO-046 R2](docs/validation/J9-WO046-R2-PREPARATION-AFTER-WO049-20260905.md)
+est engagée après validation WO-049. Le manifeste successeur est autorisé ; son gel attend
+le choix explicite concernant le volume receiver conservé après R1. L'accord pour un nouveau
+go est consigné, mais aucun bloc V2 exécutoire n'est créé : le POST réel reste interdit.
+Aucune application ou base n'est démarrée par cette reprise documentaire.
+
 Le [WO-049](docs/work_orders/completed/WO-SS-20260905-049-j9-wo046-launcher-stop-proof.md)
 est **validé par le propriétaire et clôturé**, résultat `PASS_OFFLINE_FAIL_CLOSED` : préparation
 du lanceur WO-046, mapping vérifié par Spring et justificatif technique d'arrêt canonique.
