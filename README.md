@@ -1,6 +1,8 @@
 # SofaScore Local Lab
 
-**WO-034 — reprise du 5 septembre :** clôture par fusion autorisée après réalisation et qualification ; [préflight courant](docs/validation/J9-WO034-RESUME-PREFLIGHT-20260905.md) à 14/30, 16 champs vides et une incohérence conditionnelle. Rendu et fusion de clôture en attente des déclarations propriétaire ; aucun envoi autorisé.
+**Décision actuelle — 2026-09-05 : WO-032/033/034 abandonnés par le propriétaire.** Les attentes de saisie, rendu, reprise et fusion mentionnées dans les sections historiques sont supersédées. Aucun de ces lots ne doit être poursuivi sur la base de ses anciennes autorisations. Preuves et branches conservées ; aucun envoi, nettoyage privé ou nouveau POST effectué.
+
+**Historique WO-034 supersédé par l'abandon :** le [préflight du 5 septembre](docs/validation/J9-WO034-RESUME-PREFLIGHT-20260905.md) constatait 14/30 et une incohérence conditionnelle. Aucune correction de saisie ni fusion n'est désormais attendue pour ce lot abandonné.
 
 Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’intérêt de données SofaScore comme enrichissement **facultatif** du Betting Project.
 
@@ -227,7 +229,7 @@ réseaux fournisseur et receiver distant, le VPS et la production restent interd
 ses commits restent locaux ; aucun push ni merge n'est réalisé par cette clôture.
 
 Le Work Order
-[WO-SS-20260901-034](docs/work_orders/active/WO-SS-20260901-034-j9-permission-request-final-render.md)
+[WO-SS-20260901-034 abandonné](docs/work_orders/completed/WO-SS-20260901-034-j9-permission-request-final-render.md)
 prépare localement le rendu final exact de la demande de permission issue de WO-033. Les valeurs
 d'identité, de contact, d'usage, de receiver, d'hébergement et de cadence sont collectées hors du
 dépôt, sous `%USERPROFILE%\Documents\SofaScoreLocalLab-private\permission-requests\WO-SS-20260901-034`.

@@ -1,6 +1,10 @@
 # WO-SS-20260901-033 — Préparation de la demande de permission fournisseur et du receiver concurrent
 
-- **Statut :** `VALIDATED`
+- **Statut courant :** `ABANDONED_BY_OWNER` — décision du 2026-09-05.
+
+> Abandon propriétaire WO-032/033/034 : validations historiques conservées, aucune
+> poursuite ou fusion attendue. Cette annotation synchronise la copie de WO-033
+> héritée par WO-034 sans modifier les deux livrables qualifiés v1.2.
 - **Jalon :** après J9 — levée documentaire de la porte de permission et préparation end-to-end
 - **Ouvert le :** 2026-09-01
 - **Ouverture UTC :** `2026-09-01T15:41:29.1426445Z`

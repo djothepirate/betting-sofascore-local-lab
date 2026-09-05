@@ -1,6 +1,14 @@
 # WO-SS-20260901-034 — Rendu final local de la demande de permission fournisseur
 
-- **Statut :** `WAITING_FOR_OWNER_INPUT`
+- **Statut courant :** `ABANDONED_BY_OWNER` — décision du 2026-09-05.
+
+> Le propriétaire déclare obsolètes les conditions de poursuite et abandonne WO-032,
+> WO-033 et WO-034. Les validations, préflights et autorisations de reprise ci-dessous
+> sont historiques : aucune saisie complémentaire, production de rendu ou fusion de
+> clôture n'est désormais attendue. Aucun résultat technique antérieur n'est effacé.
+> Classement administratif completed ; aucun envoi ni permission fournisseur créé.
+> Pour WO-034, le nettoyage privé prévu historiquement reste distinct : non exécuté,
+> aucune absence de données privées attestée ; suppression à décider explicitement.
 
 > Reprise propriétaire du 2026-09-05 : réalisation jusqu'à publication/PR/fusion autorisée,
 > fusion faisant office de clôture officielle, sans envoi de demande. Le préflight courant

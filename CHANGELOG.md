@@ -4,6 +4,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-034 — abandon propriétaire, 2026-09-05
+
+- Conditions de poursuite déclarées obsolètes ; abandon WO-032/033/034, sans fusion de clôture ni reprise du rendu.
+- Preuves et validations historiques conservées. Classement administratif completed ; aucun effacement privé, envoi ou nouveau droit réseau.
+
 ### WO-034 — reprise avant clôture par fusion
 
 - Reprise jusqu'à fusion autorisée par le propriétaire, sans envoi de demande ; préflight expurgé actualisé à 14/30, 16 champs vides et une incohérence conditionnelle.
