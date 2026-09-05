@@ -45,3 +45,25 @@ Journaux bruts ignorés hors Git. Les totaux ne prouvent pas une reproduction Wi
 ## Reproduction distante
 
 Le workflow CI existant sera déclenché sur la branche diagnostique pour reproduire sur windows-2022 avec Temurin 25 et la même chaîne de lancement que le run fautif. Son job Linux associé effectue ses tests PostgreSQL isolés habituels, sans accès primaire. Aucune modification de PR #29 ni fusion. Résultat distant à consigner après observation, aucune cause précise du run initial encore prouvée.
+
+### Essai GitHub 1 — résultat observé
+
+Run 33973934317, commit 5f3dea2b72c0751174ea389891397e11bd9e08ae, job Windows 101327214290 : SUCCESS. Windows Server 2022, Temurin 25.0.4.1, workflow_dispatch sur branche diagnostique (pas le merge synthétique pull_request de #29).
+
+Commande inchangée powershell.exe -NoProfile -ExecutionPolicy Bypass -File scripts/Verify-Local.ps1, Maven interne -DskipITs clean verify comme le job original. Aucun filtre/exclusion supplémentaire. Total 1193 tests, zéro échec/erreur, un skip natif. Qualification J6 : quatre tests, zéro échec/erreur, un skip opt-in Docker ; durée 63.73 s. BUILD SUCCESS en 02:30, fin 2026-09-05T15:12:33Z. Les contrôles du lanceur de bundle et du commit sont également réussis.
+
+Le défaut CTRL_BREAK initial n'est pas reproduit sur cet essai. Les marqueurs sont instrumentés ; ce résultat n'est pas un correctif de cause et ne prouve pas la disparition d'une intermittence. L'ajout d'observations peut influer sur l'ordonnancement.
+
+Job Linux associé 101327214159 : FAILURE avant les tests, scan sensible sur scripts/Invoke-J5PlaywrightLoopbackQualification.ps1 dans les commits historiques 50e5bca4d5f3, 5d9b6e1939f4 et 67268d805a4b. SECRET_SCAN_BASE vide pour workflow_dispatch ; aucun de ces fichiers n'est modifié sous WO-053. Ne pas présenter ce run global comme vert, ne pas qualifier l'alerte de faux positif sans examen dédié. Aucun contenu signalé reproduit dans le rapport, aucune réécriture d'historique ni suppression de contrôle.
+
+Un second et dernier essai explicite du seul job Windows, même commit et bornes, est déclenché pour contrôler la répétabilité ; il ne relance pas Linux. Ce n'est ni un retry de pipeline fournisseur ni une nouvelle campagne.
+
+### Essai GitHub 2 — résultat et conclusion bornée
+
+Même run, attempt 2, job Windows 101327999530 : SUCCESS. Total 1193 tests, zéro échec/erreur, un skip natif. Qualification J6 en 64.03 s, quatre tests, zéro échec/erreur, un skip Docker opt-in. BUILD SUCCESS en 02:20, fin 2026-09-05T15:18:20Z ; job terminé 15:18:26Z. L'état Linux de l'essai 1 est conservé dans cette tentative, pas réexécuté (horaires initiaux inchangés).
+
+Deux essais sur le vrai runner Windows, instrumentation identique et délais inchangés, n'ont pas reproduit le défaut original. La cause précise du run 33972681012 demeure NOT_ESTABLISHED ; aucune panne de readiness, signal, résultat ou cleanup ne peut être déduite rétroactivement de UNCLASSIFIED_FAIL_CLOSED. Aucun troisième essai automatique. Aucun correctif comportemental ni stabilité générale qualifiée.
+
+Les différences pertinentes avec le run original sont l'instrumentation et le déclenchement workflow_dispatch sur branche, au lieu du merge synthétique PR. Le code fonctionnel, le workflow Windows, Temurin, les flags, le script Verify-Local et les bornes restent inchangés. Une preuve verte de cette branche ne remplace pas la CI de PR #29.
+
+État proposé : DIAGNOSTIC_INSTRUMENTED_NOT_REPRODUCED. Revue propriétaire avant toute intégration dans la PR documentaire ; WO-053 demeure actif, PR #29 et main inchangés. L'alerte historique du scan Linux est un sujet distinct, sans suppression de garde ni affichage de contenu sensible. Qualification locale du contrat, UTF-8 sans NUL et diff --check passés ; pas de nouvelle commande locale sans skipITs ou qualification primaire revendiquée sous WO-053.

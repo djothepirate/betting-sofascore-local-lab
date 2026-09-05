@@ -1,6 +1,7 @@
 # WO-SS-20260905-053 — Diagnostic expurgé CTRL_BREAK J6
 
-- Statut : IN_PROGRESS_DIAGNOSTIC.
+- Statut : DIAGNOSTIC_INSTRUMENTED_NOT_REPRODUCED — revue propriétaire en attente.
+- Preuve : [suivi expurgé](../../validation/J9-WO053-CTRL-BREAK-DIAGNOSTIC-20260905.md). Instrumentation publiée au commit 5f3dea2 ; deux essais Windows CI réussis sans reproduction du défaut initial, run global non vert à cause du scan historique Linux. Aucun correctif causal ou clôture revendiqué.
 - Autorité : demande propriétaire de poursuivre le diagnostic avec marqueurs stables, compilation/readiness/signal/harness/nettoyage séparés et reproduction Windows CI, sans relever les délais ni exclure le test.
 - Base : bbce3c5e643c4cc0840e2654a30142ea9ba136f4.
 - Branche : codex/wo-053-j6-ctrl-break-diagnostics ; worktree .tmp/w53.

@@ -10,6 +10,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - Dix-sept portes d'assertion classifiées, contre-épreuves de filtrage et d'expurgation ajoutées.
 - Première reproduction locale arrêtée par la garde HAR sur le vocabulaire HARNESS ; vocabulaire corrigé sans assouplissement de garde. Seconde reproduction de la chaîne Windows CI réussie ; défaut initial du runner non reproduit localement.
 - Aucun délai, retry, exclusion, runtime primaire, migration ou permission réseau changé.
+- Deux essais Windows CI réussis au commit 5f3dea2, 1193 tests chacun ; incident initial non reproduit et non déclaré corrigé. Échec Linux distinct au scan historique avant tests, conservé sans contournement.
 
 ### WO-052 — revue PR #29
 

@@ -1,6 +1,6 @@
 # SofaScore Local Lab
 
-**Diagnostic distinct en cours — WO-053 :** instrumentation expurgée du scénario CTRL_BREAK J6 après l'échec Windows de la PR #29. Délais et pipeline runtime inchangés ; aucune correction causale ni qualification sur l'image GitHub ne sont encore revendiquées.
+**Diagnostic distinct — WO-053 :** [instrumentation expurgée CTRL_BREAK et résultats](docs/validation/J9-WO053-CTRL-BREAK-DIAGNOSTIC-20260905.md). Deux essais sur Windows CI réussis, défaut initial non reproduit, cause non établie. Délais et pipeline runtime inchangés ; run global non vert à cause d'une alerte historique du scan Linux. Revue en attente, PR #29 inchangée.
 
 **Décision actuelle — 5 septembre 2026 :** WO-032/033/034 sont abandonnés par le propriétaire ; aucune saisie, reprise ou fusion de ces lots n'est attendue. Voir le [suivi d'abandon](docs/validation/J9-WO032-033-034-OWNER-ABANDONMENT-20260905.md), qui supersède les suites envisagées dans les synthèses historiques. Les preuves sont conservées ; nettoyage privé WO-034 achevé, avec absence vérifiée de son seul conteneur exact.
 
