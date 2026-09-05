@@ -4,6 +4,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### J9 — abandon propriétaire WO-032/033/034
+
+- Conditions de poursuite obsolètes : abandon des trois pistes, sans annuler leurs preuves historiques ni les acquis J9/INT-001.
+- Suivi distinct de la synthèse validée ; aucune fusion, suppression privée ou nouvelle campagne.
+
 ### WO-052 — validation propriétaire et abandon administratif WO-019
 
 - Revue documentaire validée ; WO-052 classé dans completed, synthèse et empreinte conservées.

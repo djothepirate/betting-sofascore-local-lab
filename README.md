@@ -1,5 +1,7 @@
 # SofaScore Local Lab
 
+**Décision actuelle — 5 septembre 2026 :** WO-032/033/034 sont abandonnés par le propriétaire ; aucune saisie, reprise ou fusion de ces lots n'est attendue. Voir le [suivi d'abandon](docs/validation/J9-WO032-033-034-OWNER-ABANDONMENT-20260905.md), qui supersède les suites envisagées dans les synthèses historiques. Les preuves sont conservées ; nettoyage privé WO-034 non effectué et absence de données privées non attestée.
+
 Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’intérêt de données SofaScore comme enrichissement **facultatif** du Betting Project.
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
