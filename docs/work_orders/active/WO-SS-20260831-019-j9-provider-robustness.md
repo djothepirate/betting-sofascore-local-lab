@@ -1,5 +1,14 @@
 # WO-SS-20260831-019 — Preuve bornée de robustesse fournisseur pour J9
 
+> Réconciliation administrative WO-052 — 2026-09-05 : `STOPPED_SUPERSEDED_BY_WO023`.
+> Série historique arrêtée, 20 tentatives figées, go consommé/terminé non réutilisable ;
+> aucune reprise. WO-023 est une nouvelle série PASS validée ; WO-018 porte la décision
+> finale PREPARE_OPTIONAL_INTEGRATION. KEEP_LOCAL dans le rapport historique n'est pas
+> la décision finale propriétaire. Ce WO reste dans active uniquement pour revue du
+> classement administratif arrêté/remplacé, jamais comme campagne exécutable. Aucun
+> rapport/manifeste ou texte historique ci-dessous n'est réécrit. Voir la
+> [synthèse consolidée](../../validation/J9-CONSOLIDATION-20260905.md).
+
 - **Statut :** `STOPPED`
 - **Date d'ouverture :** 2026-08-31
 - **Jalon :** J9 — Preuve préalable à la décision

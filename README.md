@@ -4,6 +4,16 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
+## État consolidé J9 — 5 septembre 2026
+
+La [synthèse unique J9](docs/validation/J9-CONSOLIDATION-20260905.md) distingue décisions historiques et état courant : PR #27/#28 fusionnées, INT-001 fusionné par sa PR #11, CI post-fusion des deux main vertes. Le transfert J7 réel Windows/Windows WO-046 R2 est qualifié et clôturé ; aucun enrichissement analytique ni nouveau POST n'est autorisé par ce résultat.
+
+WO-019 est une campagne STOPPED remplacée par WO-023, jamais un go réutilisable. WO-032 index est publié sans PR ; WO-033/034 restent locaux non fusionnés. ADR-SS-003 v0.2 conserve NOT_EVIDENCED en audit non bloquant à lui seul pour le transfert local V2, sans changer les portes fournisseur. WO-052 reste soumis à revue ; aucune publication ou clôture implicite.
+
+### Historique des lots (états à leur date)
+
+Les paragraphes suivants conservent la chronologie. Leurs mentions « sans fusion » ou « en attente » ne remplacent pas l'état Git vérifié et les décisions ultérieures consignés dans la synthèse ci-dessus.
+
 Le [WO-051](docs/work_orders/completed/WO-SS-20260905-051-j9-mtls-peer-rejection-ci.md)
 traite l'échec CI Linux post-fusion #27 : distinguer le refus de confiance local
 (TLS_FAILURE strict) du refus de l'identité cliente par le pair (TLS_FAILURE ou IO_FAILURE).

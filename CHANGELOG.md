@@ -4,6 +4,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-052 — consolidation documentaire J9
+
+- Synthèse unique acquis/limites/portes ; fusions Lab #19–22/#25–28 et Betting Project #11, CI post-fusion vérifiées.
+- WO-019 annoté STOPPED/remplacé par WO-023, 20 tentatives figées, sans réhabilitation ni réarmement ; classement administratif soumis à revue.
+- Sort Git 032/033/034 établi : 032 publié sans PR, 033/034 locaux non fusionnés ; distinction WO-032 Maven et WO-031 CI hors J9.
+- Aucun runtime, ADR, contrat, PDF, rapport gelé, configuration privée, campagne ou dépôt Betting Project modifié.
+
 ### Après J9 — clôture propriétaire WO-051 et publication du correctif CI
 
 - validation du correctif `992423055091276914555104bb299ef3ce76d2c9` et de sa qualification
