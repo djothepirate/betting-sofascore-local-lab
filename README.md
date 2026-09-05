@@ -8,7 +8,7 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 La [synthèse unique J9](docs/validation/J9-CONSOLIDATION-20260905.md) distingue décisions historiques et état courant : PR #27/#28 fusionnées, INT-001 fusionné par sa PR #11, CI post-fusion des deux main vertes. Le transfert J7 réel Windows/Windows WO-046 R2 est qualifié et clôturé ; aucun enrichissement analytique ni nouveau POST n'est autorisé par ce résultat.
 
-WO-019 est une campagne STOPPED remplacée par WO-023, jamais un go réutilisable. WO-032 index est publié sans PR ; WO-033/034 restent locaux non fusionnés. ADR-SS-003 v0.2 conserve NOT_EVIDENCED en audit non bloquant à lui seul pour le transfert local V2, sans changer les portes fournisseur. WO-052 reste soumis à revue ; aucune publication ou clôture implicite.
+WO-052 est validé et clôturé. WO-019 est abandonné administrativement par le propriétaire et classé dans completed, résultat historique STOPPED et preuves conservées ; J9 lui-même n'est pas abandonné. Les branches WO-032/033/034 sont réalignées localement sur main sans push ni fusion inverse : voir le [suivi de clôture et de réalignement](docs/validation/J9-WO052-CLOSEOUT-REALIGNMENT-20260905.md). La synthèse validée reste une photographie immuable antérieure à ces décisions. ADR-SS-003 v0.2 conserve NOT_EVIDENCED en audit non bloquant à lui seul pour le transfert local V2, sans changer les portes fournisseur.
 
 ### Historique des lots (états à leur date)
 
@@ -1779,7 +1779,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Validation finale J8](docs/validation/J8-FINAL-VALIDATION-20260830.md)
 - [Work Order J8 validé](docs/work_orders/completed/WO-SS-20260829-016-benchmark-j8.md)
 - [Work Order validé de décision J9](docs/work_orders/completed/WO-SS-20260831-018-decision-j9.md)
-- [Work Order actif de preuve de robustesse J9](docs/work_orders/active/WO-SS-20260831-019-j9-provider-robustness.md)
+- [WO-019 abandonné — preuve historique de robustesse J9](docs/work_orders/completed/WO-SS-20260831-019-j9-provider-robustness.md)
 - [Rapport arrêté de la campagne J9](docs/validation/J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831.md)
 - [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md)
 - [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay.md)

@@ -1,6 +1,6 @@
 # WO-SS-20260905-052 — Consolidation documentaire J9
 
-- Statut : `READY_FOR_OWNER_REVIEW`.
+- Statut : `COMPLETED_OWNER_VALIDATED`.
 - Autorité : demande propriétaire du 5 septembre 2026 : fusions, historique WO-019, sort Git WO-032/033/034, liste unique acquis/limites/portes.
 - Base main distante vérifiée : `dfe34b3ab6881823a8e8601764cb99a63727810b`.
 - Branche : `codex/wo-052-j9-documentary-consolidation` ; worktree neuf `.tmp/w52`.
@@ -36,3 +36,11 @@ Revue propriétaire nécessaire pour clôturer WO-052 ; aucun renouvellement de 
 - Aucun push/PR/fusion, campagne, modification de Betting Project ou lecture privée. Les checks main distants sont des preuves des bases, pas du candidat WO-052.
 
 Le commit de revue est celui qui introduit ces livrables ; son identifiant est remis au propriétaire avec le SHA-256 de la synthèse, hors autoréférence dans le document.
+
+## Validation propriétaire et clôture — 2026-09-05
+
+Le propriétaire valide la revue WO-052 au commit `cd825cbd5a122060f8b585a6c2afb0dd801053d0` et autorise l'abandon administratif de WO-019. La synthèse validée est conservée byte-identique au SHA-256 `8ea7ca3bbd54a11aecc2b2d8d5f272558245113ea2ecc2bf0b0d9f8cbfd574a1` ; ses attentes historiques sont supersédées par cette décision et le suivi de réalignement, sans réécriture de la preuve.
+
+WO-052 rejoint completed. WO-019 rejoint completed comme ABANDONED_BY_OWNER, jamais comme PASS ni comme abandon du jalon J9 entier. Réalignement des branches 032/033/034 sur main autorisé par merges locaux préservant les commits ; aucun push, PR, fusion vers main, rendu privé, fournisseur ou POST autorisé.
+
+Les trois merges sont réalisés ; commits et contrôles de clôture sont consignés dans le [suivi de réalignement](../../validation/J9-WO052-CLOSEOUT-REALIGNMENT-20260905.md). Build commun de clôture : 1149 tests, 0 échec/erreur, 4 ignorés ; intégration et suites natives explicitement omises. Aucune nouvelle CI distante revendiquée.

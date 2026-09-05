@@ -4,6 +4,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-052 — validation propriétaire et abandon administratif WO-019
+
+- Revue documentaire validée ; WO-052 classé dans completed, synthèse et empreinte conservées.
+- WO-019 abandonné par décision propriétaire, classé completed sans effacement des 20 tentatives ni transformation de STOPPED en PASS ; aucun abandon global de J9.
+- Réalignement local WO-032/033/034 sur main autorisé, sans rebase/squash, publication ou nouvelle campagne.
+
 ### WO-052 — consolidation documentaire J9
 
 - Synthèse unique acquis/limites/portes ; fusions Lab #19–22/#25–28 et Betting Project #11, CI post-fusion vérifiées.

@@ -1,5 +1,11 @@
 # WO-SS-20260831-019 — Preuve bornée de robustesse fournisseur pour J9
 
+> Décision propriétaire du 2026-09-05 : `ABANDONED_BY_OWNER`, clôture administrative et
+> classement dans completed autorisés (« WO-019 peut être abandonné »).
+> Cette décision supersède l'attente de classement ci-dessous. Le résultat technique
+> historique demeure STOPPED, 20 tentatives figées, go terminé ; aucune suppression de
+> preuve ni reprise. Seul WO-019 est abandonné, pas la décision J9 ni WO-023.
+
 > Réconciliation administrative WO-052 — 2026-09-05 : `STOPPED_SUPERSEDED_BY_WO023`.
 > Série historique arrêtée, 20 tentatives figées, go consommé/terminé non réutilisable ;
 > aucune reprise. WO-023 est une nouvelle série PASS validée ; WO-018 porte la décision
