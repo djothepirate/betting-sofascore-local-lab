@@ -18,9 +18,13 @@ Import-Module -Name $modulePath -Force
 function Assert-J6Qualification {
     param(
         [Parameter(Mandatory = $true)][bool]$Condition,
-        [Parameter(Mandatory = $true)][string]$Message
+        [Parameter(Mandatory = $true)][string]$Message,
+        [string]$FailureMarker
     )
     if (-not $Condition) {
+        if ($FailureMarker) {
+            throw (New-J6QualificationSanitizedException -Classification $FailureMarker)
+        }
         throw $Message
     }
 }
@@ -1516,6 +1520,38 @@ public static class J6SyntheticAge
         'The synthetic age executable was not created.'
 }
 
+function Write-J6CtrlBreakNativeEvidence {
+    [CmdletBinding()]
+    param([Parameter(ValueFromPipeline)][AllowEmptyCollection()][AllowNull()][object[]]$Lines)
+    begin {
+    # Exact finite vocabulary: never forward arbitrary native output.
+    $allowed = @(
+        'J6_CTRL_BREAK_NATIVE_PHASE=PROCESS_CREATE',
+        'J6_CTRL_BREAK_NATIVE_PHASE=READINESS_WAIT',
+        'J6_CTRL_BREAK_NATIVE_PHASE=SIGNAL_SEND',
+        'J6_CTRL_BREAK_NATIVE_PHASE=CHILD_WAIT',
+        'J6_CTRL_BREAK_NATIVE_PHASE=CLEANUP',
+        'J6_CTRL_BREAK_NATIVE_CLEANUP=PASS',
+        'J6_CTRL_BREAK_NATIVE_CLEANUP=FAIL',
+        'J6_CTRL_BREAK_NATIVE_SIGNAL=SENT',
+        'J6_CTRL_BREAK_NATIVE_FAILURE=ARGUMENT_COUNT',
+        'J6_CTRL_BREAK_NATIVE_FAILURE=PROCESS_CREATE',
+        'J6_CTRL_BREAK_NATIVE_FAILURE=HANDLER_INSTALL',
+        'J6_CTRL_BREAK_NATIVE_FAILURE=EARLY_EXIT',
+        'J6_CTRL_BREAK_NATIVE_FAILURE=READINESS_TIMEOUT',
+        'J6_CTRL_BREAK_NATIVE_FAILURE=SIGNAL_SEND',
+        'J6_CTRL_BREAK_NATIVE_FAILURE=CHILD_TIMEOUT',
+        'J6_CTRL_BREAK_NATIVE_FAILURE=CHILD_WAIT',
+        'J6_CTRL_BREAK_NATIVE_FAILURE=EXIT_CODE_READ'
+    )
+    }
+    process {
+    foreach ($line in $Lines) {
+        if ($line -is [string] -and $line -cin $allowed) { Write-Host $line }
+    }
+    }
+}
+
 function New-J6CtrlBreakLauncherExecutable {
     param([Parameter(Mandatory = $true)][string]$DestinationPath)
 
@@ -1632,10 +1668,20 @@ public static class J6CtrlBreakLauncher
         return quoted.ToString();
     }
 
+    private static void WriteDiagnostic(string marker)
+    {
+        // Observation must never prevent exact-handle cleanup or replace its error.
+        try { Console.WriteLine(marker); }
+        catch (IOException) { }
+        catch (ObjectDisposedException) { }
+        catch (InvalidOperationException) { }
+    }
+
     public static int Main(string[] args)
     {
         if (args.Length != 8)
         {
+            WriteDiagnostic("J6_CTRL_BREAK_NATIVE_FAILURE=ARGUMENT_COUNT");
             return 64;
         }
         string commandLine = Quote(args[0]) +
@@ -1650,6 +1696,7 @@ public static class J6CtrlBreakLauncher
             cb = (uint)Marshal.SizeOf(typeof(STARTUPINFO))
         };
         PROCESS_INFORMATION process;
+        WriteDiagnostic("J6_CTRL_BREAK_NATIVE_PHASE=PROCESS_CREATE");
         if (!CreateProcessW(
                 args[0],
                 new StringBuilder(commandLine),
@@ -1662,6 +1709,7 @@ public static class J6CtrlBreakLauncher
                 ref startup,
                 out process))
         {
+            WriteDiagnostic("J6_CTRL_BREAK_NATIVE_FAILURE=PROCESS_CREATE");
             return 66;
         }
         bool handlerInstalled = false;
@@ -1669,40 +1717,51 @@ public static class J6CtrlBreakLauncher
         {
             if (!SetConsoleCtrlHandler(IgnoreLauncherControlEvent, true))
             {
+                WriteDiagnostic("J6_CTRL_BREAK_NATIVE_FAILURE=HANDLER_INSTALL");
                 return 75;
             }
             handlerInstalled = true;
             File.WriteAllText(args[5], process.dwProcessId.ToString());
+            WriteDiagnostic("J6_CTRL_BREAK_NATIVE_PHASE=READINESS_WAIT");
             DateTime readyDeadline = DateTime.UtcNow.AddSeconds(10);
             while (!File.Exists(args[3]) && DateTime.UtcNow < readyDeadline)
             {
                 uint earlyCode;
                 if (GetExitCodeProcess(process.hProcess, out earlyCode) && earlyCode != STILL_ACTIVE)
                 {
+                    WriteDiagnostic("J6_CTRL_BREAK_NATIVE_FAILURE=EARLY_EXIT");
                     return 67;
                 }
                 Thread.Sleep(25);
             }
             if (!File.Exists(args[3]))
             {
+                WriteDiagnostic("J6_CTRL_BREAK_NATIVE_FAILURE=READINESS_TIMEOUT");
                 return 68;
             }
+            WriteDiagnostic("J6_CTRL_BREAK_NATIVE_PHASE=SIGNAL_SEND");
             if (!GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, process.dwProcessId))
             {
+                WriteDiagnostic("J6_CTRL_BREAK_NATIVE_FAILURE=SIGNAL_SEND");
                 return 69;
             }
+            WriteDiagnostic("J6_CTRL_BREAK_NATIVE_PHASE=CHILD_WAIT");
+            WriteDiagnostic("J6_CTRL_BREAK_NATIVE_SIGNAL=SENT");
             uint wait = WaitForSingleObject(process.hProcess, 10000);
             if (wait == WAIT_TIMEOUT)
             {
+                WriteDiagnostic("J6_CTRL_BREAK_NATIVE_FAILURE=CHILD_TIMEOUT");
                 return 70;
             }
             if (wait != WAIT_OBJECT_0)
             {
+                WriteDiagnostic("J6_CTRL_BREAK_NATIVE_FAILURE=CHILD_WAIT");
                 return 71;
             }
             uint exitCode;
             if (!GetExitCodeProcess(process.hProcess, out exitCode))
             {
+                WriteDiagnostic("J6_CTRL_BREAK_NATIVE_FAILURE=EXIT_CODE_READ");
                 return 72;
             }
             File.WriteAllText(
@@ -1712,6 +1771,7 @@ public static class J6CtrlBreakLauncher
         }
         finally
         {
+            WriteDiagnostic("J6_CTRL_BREAK_NATIVE_PHASE=CLEANUP");
             bool cleanupVerified = true;
             uint exitCode;
             if (!GetExitCodeProcess(process.hProcess, out exitCode))
@@ -1735,9 +1795,11 @@ public static class J6CtrlBreakLauncher
             bool processClosed = CloseHandle(process.hProcess);
             if (!cleanupVerified || !threadClosed || !processClosed)
             {
+                WriteDiagnostic("J6_CTRL_BREAK_NATIVE_CLEANUP=FAIL");
                 throw new InvalidOperationException(
                     "The exact CTRL_BREAK harness cleanup could not be confirmed.");
             }
+            WriteDiagnostic("J6_CTRL_BREAK_NATIVE_CLEANUP=PASS");
         }
     }
 }
@@ -1749,14 +1811,17 @@ public static class J6CtrlBreakLauncher
             'Microsoft.NET\Framework\v4.0.30319\csc.exe'
     }
     Assert-J6Qualification (Test-Path -LiteralPath $compilerPath -PathType Leaf) `
-        'The local Windows C# compiler is required for CTRL_BREAK qualification.'
+        'The local Windows C# compiler is required for CTRL_BREAK qualification.' -FailureMarker 'CTRL_BREAK_COMPILATION_GATE_1'
     $sourcePath = [IO.Path]::ChangeExtension($DestinationPath, '.cs')
     [IO.File]::WriteAllText($sourcePath, $source, [Text.UTF8Encoding]::new($false))
-    & $compilerPath /nologo /target:exe "/out:$DestinationPath" $sourcePath
-    Assert-J6Qualification ($LASTEXITCODE -eq 0) `
-        'The CTRL_BREAK launcher compilation failed.'
+    $script:j6CtrlBreakStage = 'COMPILATION_EXECUTION'
+    $compilerOutput = @(& $compilerPath /nologo /target:exe "/out:$DestinationPath" $sourcePath 2>&1)
+    $compilerExit = $LASTEXITCODE
+    Write-Host ("J6_CTRL_BREAK_COMPILER_EXIT=" + [int]$compilerExit)
+    Assert-J6Qualification ($compilerExit -eq 0) `
+        'The CTRL_BREAK launcher compilation failed.' -FailureMarker 'CTRL_BREAK_COMPILATION_GATE_2'
     Assert-J6Qualification (Test-Path -LiteralPath $DestinationPath -PathType Leaf) `
-        'The CTRL_BREAK launcher was not created.'
+        'The CTRL_BREAK launcher was not created.' -FailureMarker 'CTRL_BREAK_COMPILATION_GATE_3'
 }
 
 function Invoke-J6QualificationDockerScalar {
@@ -2618,8 +2683,13 @@ exit 0
         'The cooperative interruption left an owned process root.'
     Write-Host 'J6_PIPELINE_COOPERATIVE_CANCELLATION_CLEANUP=PASS'
 
+    & (Join-Path $PSScriptRoot 'Test-J6CtrlBreakDiagnosticContract.ps1')
+    $script:j6CtrlBreakStage = 'COMPILATION_PREPARE'
+    Write-Host 'J6_CTRL_BREAK_COMPILATION=START'
     $ctrlBreakLauncherPath = Join-Path $resolvedQualificationRoot 'j6-ctrl-break-launcher.exe'
     New-J6CtrlBreakLauncherExecutable -DestinationPath $ctrlBreakLauncherPath
+    Write-Host 'J6_CTRL_BREAK_COMPILATION=PASS'
+    $script:j6CtrlBreakStage = 'CHILD_PREPARE'
     $ctrlBreakHarnessPath = Join-Path $resolvedQualificationRoot 'j6-ctrl-break-harness.ps1'
     $ctrlBreakReadyPath = Join-Path $resolvedQualificationRoot 'ctrl-break.ready'
     $ctrlBreakResultPath = Join-Path $resolvedQualificationRoot 'ctrl-break-result.json'
@@ -2711,12 +2781,12 @@ exit $exitCode
         $ctrlBreakHarnessPath,
         $ctrlBreakHarness,
         [Text.UTF8Encoding]::new($false))
-    $ctrlBreakLauncherOutput = $null
     $ctrlBreakLauncherExitCode = $null
     $ctrlBreakProducerIdentity = $null
     $ctrlBreakConsumerIdentity = $null
     try {
-        $ctrlBreakLauncherOutput = @(& $ctrlBreakLauncherPath `
+        $script:j6CtrlBreakStage = 'LAUNCHER_EXECUTION'
+        & $ctrlBreakLauncherPath `
             $pwshPath `
             $ctrlBreakHarnessPath `
             $modulePath `
@@ -2724,29 +2794,31 @@ exit $exitCode
             $ctrlBreakResultPath `
             $ctrlBreakHarnessPidPath `
             $ctrlBreakProducerIdentityPath `
-            $ctrlBreakConsumerIdentityPath 2>&1)
+            $ctrlBreakConsumerIdentityPath 2>&1 | Write-J6CtrlBreakNativeEvidence
         $ctrlBreakLauncherExitCode = $LASTEXITCODE
+        Write-Host ("J6_CTRL_BREAK_LAUNCHER_EXIT=" + [int]$ctrlBreakLauncherExitCode)
+        $script:j6CtrlBreakStage = 'CHILD_ASSERTIONS'
         Assert-J6Qualification ($ctrlBreakLauncherExitCode -eq 0) `
-            "The real CTRL_BREAK launcher failed with exit code $ctrlBreakLauncherExitCode."
+            "The real CTRL_BREAK launcher failed with exit code $ctrlBreakLauncherExitCode." -FailureMarker 'CTRL_BREAK_CHILD_GATE_01'
         Assert-J6Qualification (Test-Path -LiteralPath $ctrlBreakReadyPath -PathType Leaf) `
-            'The real CTRL_BREAK harness never reached its ready state.'
+            'The real CTRL_BREAK harness never reached its ready state.' -FailureMarker 'CTRL_BREAK_CHILD_GATE_02'
         Assert-J6Qualification (Test-Path -LiteralPath $ctrlBreakResultPath -PathType Leaf) `
-            'The real CTRL_BREAK harness did not produce bounded result evidence.'
+            'The real CTRL_BREAK harness did not produce bounded result evidence.' -FailureMarker 'CTRL_BREAK_CHILD_GATE_03'
         Assert-J6Qualification (Test-Path -LiteralPath $ctrlBreakHarnessPidPath -PathType Leaf) `
-            'The real CTRL_BREAK harness PID was not captured by its exact-handle launcher.'
+            'The real CTRL_BREAK harness PID was not captured by its exact-handle launcher.' -FailureMarker 'CTRL_BREAK_CHILD_GATE_04'
         Assert-J6Qualification (Test-Path -LiteralPath $ctrlBreakExactHarnessExitPath -PathType Leaf) `
-            'The CTRL_BREAK launcher did not confirm exact-handle harness termination.'
+            'The CTRL_BREAK launcher did not confirm exact-handle harness termination.' -FailureMarker 'CTRL_BREAK_CHILD_GATE_05'
         Assert-J6Qualification (Test-Path -LiteralPath $ctrlBreakProducerIdentityPath -PathType Leaf) `
-            'The CTRL_BREAK producer identity was not captured.'
+            'The CTRL_BREAK producer identity was not captured.' -FailureMarker 'CTRL_BREAK_CHILD_GATE_06'
         Assert-J6Qualification (Test-Path -LiteralPath $ctrlBreakConsumerIdentityPath -PathType Leaf) `
-            'The CTRL_BREAK consumer identity was not captured.'
+            'The CTRL_BREAK consumer identity was not captured.' -FailureMarker 'CTRL_BREAK_CHILD_GATE_07'
 
         $ctrlBreakHarnessPid = [int]([IO.File]::ReadAllText($ctrlBreakHarnessPidPath))
         $ctrlBreakExactHarnessExit = [IO.File]::ReadAllText(
             $ctrlBreakExactHarnessExitPath).Trim()
         Assert-J6Qualification (
             $ctrlBreakExactHarnessExit -eq ('{0}:0' -f $ctrlBreakHarnessPid)) `
-            'The exact CTRL_BREAK harness handle did not terminate with the qualified result.'
+            'The exact CTRL_BREAK harness handle did not terminate with the qualified result.' -FailureMarker 'CTRL_BREAK_CHILD_GATE_08'
 
         $ctrlBreakProducerIdentity = Get-Content `
             -LiteralPath $ctrlBreakProducerIdentityPath `
@@ -2763,20 +2835,20 @@ exit $exitCode
                     'ABSENT_ALL_VIEWS'
             }).Count
         Assert-J6Qualification ($ctrlBreakResidualBeforeFallbackCleanup -eq 0) `
-            'A CTRL_BREAK-owned exact process identity survived before fallback teardown.'
+            'A CTRL_BREAK-owned exact process identity survived before fallback teardown.' -FailureMarker 'CTRL_BREAK_CHILD_GATE_09'
 
         $ctrlBreakResult = Get-Content -LiteralPath $ctrlBreakResultPath -Raw | ConvertFrom-Json
         Add-J6OwnedPipelineProcessEvidence -Collection $ownedProcesses -Result $ctrlBreakResult
         Assert-J6Qualification ($ctrlBreakResult.TokenCancelled -eq $true) `
-            'The real CTRL_BREAK event did not cancel the registered token.'
+            'The real CTRL_BREAK event did not cancel the registered token.' -FailureMarker 'CTRL_BREAK_CHILD_GATE_10'
         Assert-J6Qualification ($ctrlBreakResult.PipelineResult -eq 'CANCELLED') `
-            'The real CTRL_BREAK event was not classified as CANCELLED.'
+            'The real CTRL_BREAK event was not classified as CANCELLED.' -FailureMarker 'CTRL_BREAK_CHILD_GATE_11'
         Assert-J6Qualification ($ctrlBreakResult.LocalProcessTreeCleanup -eq 'PASS') `
-            'The real CTRL_BREAK event left an owned process root.'
+            'The real CTRL_BREAK event left an owned process root.' -FailureMarker 'CTRL_BREAK_CHILD_GATE_12'
         Assert-J6Qualification ($ctrlBreakResult.ProducerRootAliveAtCleanupStart -eq $true) `
-            'The CTRL_BREAK signal terminated the producer wrapper before supervisor cleanup.'
+            'The CTRL_BREAK signal terminated the producer wrapper before supervisor cleanup.' -FailureMarker 'CTRL_BREAK_CHILD_GATE_13'
         Assert-J6Qualification ($ctrlBreakResult.ConsumerRootAliveAtCleanupStart -eq $true) `
-            'The CTRL_BREAK signal terminated the consumer wrapper before supervisor cleanup.'
+            'The CTRL_BREAK signal terminated the consumer wrapper before supervisor cleanup.' -FailureMarker 'CTRL_BREAK_CHILD_GATE_14'
         Write-Host 'J6_CTRL_BREAK_WRAPPER_ROOTS_ALIVE_BEFORE_SUPERVISOR_CLEANUP=PASS'
         Write-Host 'J6_CONSOLE_RESIDUAL_BEFORE_FALLBACK_CLEANUP=0'
         Write-Host 'J6_CTRL_BREAK_NEW_CONSOLE_REQUESTED=NO'
@@ -2785,6 +2857,8 @@ exit $exitCode
         Write-Host 'J6_PIPELINE_INTERRUPTION_CLEANUP=PASS'
     }
     finally {
+        Write-Host 'J6_CTRL_BREAK_FALLBACK_CLEANUP=START'
+        try {
         if ($null -eq $ctrlBreakProducerIdentity -and
             (Test-Path -LiteralPath $ctrlBreakProducerIdentityPath -PathType Leaf)) {
             try {
@@ -2835,7 +2909,15 @@ exit $exitCode
                 $residual.Dispose()
             }
         }
+        Write-Host 'J6_CTRL_BREAK_FALLBACK_CLEANUP=COMPLETED'
+        }
+        catch {
+            Write-Host 'J6_CTRL_BREAK_FALLBACK_CLEANUP=FAIL'
+            throw
+        }
     }
+
+    $script:j6CtrlBreakStage = 'COMPLETE'
 
     if ($WithDocker) {
         if (Get-NetTCPConnection -LocalPort 8087 -State Listen -ErrorAction SilentlyContinue) {
@@ -3248,6 +3330,9 @@ catch {
         else {
             'UNCLASSIFIED_FAIL_CLOSED'
         }
+    }
+    if (Get-Variable j6CtrlBreakStage -Scope Script -ErrorAction SilentlyContinue) {
+        Write-Host ('J6_CTRL_BREAK_LAST_STAGE=' + $script:j6CtrlBreakStage)
     }
     Write-Host (
         'J6_QUALIFICATION_PRIMARY_FAILURE_CLASS=' +

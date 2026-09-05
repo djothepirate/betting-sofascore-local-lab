@@ -4,6 +4,50 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-053 — diagnostic synthétique CTRL_BREAK J6
+
+- Revue : correction des deux P2, écrivain diagnostique isolé du nettoyage natif et restitution progressive des marqueurs allowlistés. Contre-épreuves d'erreur de sortie et d'interruption raccordées à la qualification J6 ; délais inchangés. Voir le suivi de revue WO-053, qualification distante du nouveau diff non revendiquée.
+
+- Compilation, readiness, émission du signal, attente/sortie et nettoyage exact distingués par marqueurs fixes ; filtrage explicite des sorties natives.
+- Dix-sept portes d'assertion classifiées, contre-épreuves de filtrage et d'expurgation ajoutées.
+- Première reproduction locale arrêtée par la garde HAR sur le vocabulaire HARNESS ; vocabulaire corrigé sans assouplissement de garde. Seconde reproduction de la chaîne Windows CI réussie ; défaut initial du runner non reproduit localement.
+- Aucun délai, retry, exclusion, runtime primaire, migration ou permission réseau changé.
+- Deux essais Windows CI réussis au commit 5f3dea2, 1193 tests chacun ; incident initial non reproduit et non déclaré corrigé. Échec Linux distinct au scan historique avant tests, conservé sans contournement.
+
+### WO-052 — revue PR #29
+
+- P2 : document de renvoi à l'ancien chemin WO-019 ; le Work Order canonique reste abandonné dans completed, la synthèse gelée conserve ses octets.
+- P1 : mvnw.cmd clean verify sans exclusions réussi ; 1193 tests Surefire (5 skips natifs) et 106 Failsafe (aucun skip), zéro échec/erreur. Preuve complète ajoutée au suivi de revue.
+
+### WO-052 — reprise du suivi après publication des abandons
+
+- Branches WO-032/033/034 poussées sans force et HEAD distants vérifiés ; abandons administratifs effectifs, nettoyage WO-034 terminé.
+- Inventaire unique des acquis, limites et portes actualisé dans un suivi distinct ; preuves gelées conservées.
+- Publication WO-052 autorisée, sans fusion vers main ni réactivation de campagne.
+
+### J9 — nettoyage privé WO-034 terminé
+
+- Décision distincte de suppression exécutée : six fichiers, deux répertoires ; conteneur exact absent et inventaire voisin inchangé.
+- Suivi d'abandon actualisé, sans réécriture des preuves gelées ni nouvelle opération réseau.
+
+### J9 — abandon propriétaire WO-032/033/034
+
+- Conditions de poursuite obsolètes : abandon des trois pistes, sans annuler leurs preuves historiques ni les acquis J9/INT-001.
+- Suivi distinct de la synthèse validée ; aucune fusion, suppression privée ou nouvelle campagne.
+
+### WO-052 — validation propriétaire et abandon administratif WO-019
+
+- Revue documentaire validée ; WO-052 classé dans completed, synthèse et empreinte conservées.
+- WO-019 abandonné par décision propriétaire, classé completed sans effacement des 20 tentatives ni transformation de STOPPED en PASS ; aucun abandon global de J9.
+- Réalignement local WO-032/033/034 sur main autorisé, sans rebase/squash, publication ou nouvelle campagne.
+
+### WO-052 — consolidation documentaire J9
+
+- Synthèse unique acquis/limites/portes ; fusions Lab #19–22/#25–28 et Betting Project #11, CI post-fusion vérifiées.
+- WO-019 annoté STOPPED/remplacé par WO-023, 20 tentatives figées, sans réhabilitation ni réarmement ; classement administratif soumis à revue.
+- Sort Git 032/033/034 établi : 032 publié sans PR, 033/034 locaux non fusionnés ; distinction WO-032 Maven et WO-031 CI hors J9.
+- Aucun runtime, ADR, contrat, PDF, rapport gelé, configuration privée, campagne ou dépôt Betting Project modifié.
+
 ### Après J9 — clôture propriétaire WO-051 et publication du correctif CI
 
 - validation du correctif `992423055091276914555104bb299ef3ce76d2c9` et de sa qualification

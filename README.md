@@ -1,8 +1,26 @@
 # SofaScore Local Lab
 
+**Reprise de revue WO-053 :** [correction locale des deux P2 de l'instrumentation](docs/validation/J9-WO053-REVIEW-HARDENING-20260905.md), sans intégration automatique à PR #29 ni cause initiale déclarée corrigée.
+
+**Diagnostic distinct — WO-053 :** [instrumentation expurgée CTRL_BREAK et résultats](docs/validation/J9-WO053-CTRL-BREAK-DIAGNOSTIC-20260905.md). Deux essais sur Windows CI réussis, défaut initial non reproduit, cause non établie. Délais et pipeline runtime inchangés ; run global non vert à cause d'une alerte historique du scan Linux. Revue en attente, PR #29 inchangée.
+
+**Décision actuelle — 5 septembre 2026 :** WO-032/033/034 sont abandonnés par le propriétaire ; aucune saisie, reprise ou fusion de ces lots n'est attendue. Voir le [suivi d'abandon](docs/validation/J9-WO032-033-034-OWNER-ABANDONMENT-20260905.md), qui supersède les suites envisagées dans les synthèses historiques. Les preuves sont conservées ; nettoyage privé WO-034 achevé, avec absence vérifiée de son seul conteneur exact.
+
 Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’intérêt de données SofaScore comme enrichissement **facultatif** du Betting Project.
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
+
+## État consolidé J9 — 5 septembre 2026
+
+Revue PR #29 : [résolution P1/P2](docs/validation/J9-WO052-PR29-REVIEW-RESOLUTION-20260905.md), avec vérification Maven complète sans exclusions et renvoi historique WO-019 préservant la synthèse gelée. La CI du correctif reste distincte des checks du candidat initial.
+
+La [synthèse unique J9](docs/validation/J9-CONSOLIDATION-20260905.md) distingue décisions historiques et état courant : PR #27/#28 fusionnées, INT-001 fusionné par sa PR #11, CI post-fusion des deux main vertes. Le transfert J7 réel Windows/Windows WO-046 R2 est qualifié et clôturé ; aucun enrichissement analytique ni nouveau POST n'est autorisé par ce résultat.
+
+WO-052 est validé et clôturé, avec un [suivi courant de publication des abandons](docs/validation/J9-WO052-ABANDONMENT-PUBLICATION-20260905.md). WO-019 est abandonné administrativement et classé dans completed, résultat historique STOPPED conservé ; J9 lui-même n'est pas abandonné. Les branches WO-032/033/034 sont publiées sur GitHub avec leur abandon, sans fusion vers main ; WO-034 a terminé son nettoyage privé. La synthèse validée et le suivi initial de réalignement restent des photographies historiques. ADR-SS-003 v0.2 conserve NOT_EVIDENCED en audit non bloquant à lui seul pour le transfert local V2, sans changer les portes fournisseur.
+
+### Historique des lots (états à leur date)
+
+Les paragraphes suivants conservent la chronologie. Leurs mentions « sans fusion » ou « en attente » ne remplacent pas l'état Git vérifié et les décisions ultérieures consignés dans la synthèse ci-dessus.
 
 Le [WO-051](docs/work_orders/completed/WO-SS-20260905-051-j9-mtls-peer-rejection-ci.md)
 traite l'échec CI Linux post-fusion #27 : distinguer le refus de confiance local
@@ -1769,7 +1787,7 @@ une décision de gouvernance explicite et une qualification humaine dédiée.
 - [Validation finale J8](docs/validation/J8-FINAL-VALIDATION-20260830.md)
 - [Work Order J8 validé](docs/work_orders/completed/WO-SS-20260829-016-benchmark-j8.md)
 - [Work Order validé de décision J9](docs/work_orders/completed/WO-SS-20260831-018-decision-j9.md)
-- [Work Order actif de preuve de robustesse J9](docs/work_orders/active/WO-SS-20260831-019-j9-provider-robustness.md)
+- [WO-019 abandonné — preuve historique de robustesse J9](docs/work_orders/completed/WO-SS-20260831-019-j9-provider-robustness.md)
 - [Rapport arrêté de la campagne J9](docs/validation/J9-PROVIDER-ROBUSTNESS-CAMPAIGN-20260831.md)
 - [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-020-j9-playwright-graceful-close.md)
 - [Work Order runtime J9 validé](docs/work_orders/completed/WO-SS-20260831-021-j9-playwright-minimum-on-wire-delay.md)
