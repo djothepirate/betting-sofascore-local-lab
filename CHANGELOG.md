@@ -4,6 +4,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-052 — reprise du suivi après publication des abandons
+
+- Branches WO-032/033/034 poussées sans force et HEAD distants vérifiés ; abandons administratifs effectifs, nettoyage WO-034 terminé.
+- Inventaire unique des acquis, limites et portes actualisé dans un suivi distinct ; preuves gelées conservées.
+- Publication WO-052 autorisée, sans fusion vers main ni réactivation de campagne.
+
 ### J9 — nettoyage privé WO-034 terminé
 
 - Décision distincte de suppression exécutée : six fichiers, deux répertoires ; conteneur exact absent et inventaire voisin inchangé.

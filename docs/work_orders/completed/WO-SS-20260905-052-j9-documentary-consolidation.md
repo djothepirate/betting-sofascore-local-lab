@@ -1,6 +1,7 @@
 # WO-SS-20260905-052 — Consolidation documentaire J9
 
 - Statut : `COMPLETED_OWNER_VALIDATED`.
+- Suivi courant : [publication des abandons WO-032/033/034](../../validation/J9-WO052-ABANDONMENT-PUBLICATION-20260905.md), demandée et exécutée après la clôture initiale ; reprise documentaire uniquement, sans réouverture fonctionnelle.
 - Autorité : demande propriétaire du 5 septembre 2026 : fusions, historique WO-019, sort Git WO-032/033/034, liste unique acquis/limites/portes.
 - Base main distante vérifiée : `dfe34b3ab6881823a8e8601764cb99a63727810b`.
 - Branche : `codex/wo-052-j9-documentary-consolidation` ; worktree neuf `.tmp/w52`.

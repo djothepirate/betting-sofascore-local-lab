@@ -2,6 +2,8 @@
 
 ## Décision actuelle
 
+Suite courante : les trois branches d'abandon sont désormais publiées et vérifiées sur GitHub. Voir le [suivi de publication WO-052](J9-WO052-ABANDONMENT-PUBLICATION-20260905.md). Les mentions sans push ci-dessous décrivent la clôture administrative initiale.
+
 Le propriétaire déclare : « Les conditions de poursuite de WO-034 sont obsolètes. WO-032 WO-033 et WO-034 peuvent donc être abandonnés. »
 
 Les trois lots sont ABANDONED_BY_OWNER. WO-032/033 conservent leurs validations historiques sans nouvelle livraison prévue. WO-034 quitte active pour completed à titre administratif, sans PASS de rendu ni clôture par fusion. La dernière décision supersède la précédente demande de poursuite jusqu'à fusion : aucune saisie complémentaire n'est requise pour ces lots abandonnés.
