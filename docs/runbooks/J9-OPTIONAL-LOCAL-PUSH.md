@@ -1,9 +1,66 @@
 # Runbook J9 — Qualification offline et préparation du sender local optionnel v1.0
 
+## Amendement WO-047 — qualifier V2/V32 sans autoriser de livraison réelle
+
+ADR-SS-003 v0.2 supersède la règle v0.1 uniquement pour le transfert J7 local. Conserver
+`NOT_EVIDENCED` comme statut d'audit exact n'empêche plus, à lui seul, d'atteindre les portes de
+gouvernance suivantes. `EVIDENCED_COMPATIBLE` est également admis ; `EVIDENCED_INCOMPATIBLE` et
+toute valeur inconnue ou invalide doivent être refusés avant claim, certificat, transport et
+socket. Cette allow-list ne constitue jamais une preuve de permission.
+
+Pour `PROVIDER_DERIVED`, le format canonique V1 et les lignes V31 restent strictement historiques
+et immuables : V1 exige toujours `EVIDENCED_COMPATIBLE`. Un go V2 doit porter exactement le statut
+d'audit, sa preuve ou son absence constatée, la base de gouvernance J7 issue d'ADR-SS-003 v0.2 et
+les liaisons owner-go déjà exigées. V32 discrimine les deux formats sans réécrire V31 ni les lignes
+V1. WO-047 autorise seulement la qualification hors ligne, PostgreSQL isolée et le POST loopback
+synthétique ; aucun POST réel, accès fournisseur, receiver distant, VPS ou production n'est
+autorisé. Les portes d'acquisition J3/J4/J5 sont inchangées.
+
+## Extension historique WO-045 — préparer sans exécuter un futur go fournisseur
+
+WO-045 qualifie uniquement la frontière logicielle et PostgreSQL. Il ne permet pas de créer le
+manifeste WO-046, d'enregistrer une autorisation réelle, d'ouvrir le receiver pour un export réel
+ou d'effectuer un POST. Les jeux d'essai sont fabriqués localement ; aucun identifiant, export ou
+payload observé auprès de SofaScore ne doit être utilisé.
+
+Un futur Work Order de campagne devra, dans cet ordre :
+
+1. geler et committer un manifeste neuf avant toute tentative ;
+2. produire le préimage canonique défini à la section 4 de WO-045, dans l'ordre exact, en UTF-8
+   sans BOM avec LF final, puis calculer son SHA-256 ; le champ
+   `OWNER_GO_DOCUMENT_SHA256` accompagne le bloc mais n'appartient jamais au préimage ;
+3. référencer une preuve officielle applicable, expurgée et hashée ;
+4. fixer l'export `HUMAN_VALIDATED`, son événement fournisseur, ses hashes, sa taille, les commits
+   des deux dépôts, l'origine `https://127.0.0.1:8444`, l'empreinte du certificat et l'ordinal `1` ;
+5. limiter la fenêtre à 60 minutes et le nombre d'appels d'import à un ;
+6. enregistrer explicitement le grant, sans création automatique au démarrage ;
+7. sélectionner sa référence exacte dans la configuration locale privée ;
+8. demander un nouveau go propriétaire lié au manifeste ;
+9. seulement après toutes les portes, préparer puis consommer la confirmation UI.
+
+Le reçu remis au runtime doit être l'instance exacte émise par le service de confirmation : une
+copie contenant les mêmes champs est invalide. Sa capacité mémoire est consommée avant tout accès
+à l'export ou au grant et disparaît à l'expiration, à la première tentative runtime ou au
+redémarrage. Il n'existe aucun mécanisme de restitution ou de reconstruction de cette capacité.
+
+L'état affichable se limite à `AVAILABLE`, `NOT_YET_VALID`, `EXPIRED`, `REVOKED`, `CONSUMED` ou
+un refus générique. Ne jamais copier dans une capture ou un journal le SHA du bloc propriétaire,
+l'empreinte du certificat, la clé d'idempotence, un chemin privé, le payload ou un ACK brut.
+
+```text
+WO045_PROVIDER_DERIVED_REAL_POST_AUTHORIZED=NO
+WO045_PROVIDER_NETWORK_AUTHORIZED=NO
+WO045_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+WO046_OPENING_AUTHORIZED=NO
+WO046_NEW_MANIFEST_BOUND_OWNER_GO_REQUIRED=YES
+```
+
 ## 1. Objet et limite d’emploi
 
 Ce runbook conserve la qualification du socle fail-closed v1.0 réalisée sous WO-027 et documente
-la préparation runtime de WO-035. Il ne permet aucune livraison de données dérivées. Le premier
+la préparation runtime historique de WO-035. Sous ADR-SS-003 v0.1, il ne permettait aucune
+livraison de données dérivées. La supersession bornée WO-047 ci-dessus ne vaut pas autorisation
+d'exécuter une livraison. Le premier
 échange synthétique entre les deux applications relève de WO-036. Après l’arrêt de son premier
 essai avant receiver et la validation de WO-037, sa reprise a été autorisée puis consommée par un
 run neuf. Cette reprise s’est arrêtée après `201/IMPORTED`, puis `200/DUPLICATE` côté receiver : le
@@ -13,7 +70,7 @@ qualifiée et validée localement. R3 a ensuite confirmé `201/IMPORTED`, `200/D
 L'autorisation et le plafond R3 sont consommés ; aucun nouvel échange n'est autorisé.
 
 ```text
-RUNBOOK_SCOPE=WO027_OFFLINE_LOOPBACK_WO035_RUNTIME_WO036_SYNTHETIC_E2E_WO037_BROWSER_BOUNDARY_AND_WO038_ACK_TIME
+RUNBOOK_SCOPE=WO027_OFFLINE_LOOPBACK_WO035_RUNTIME_WO036_SYNTHETIC_E2E_WO037_BROWSER_BOUNDARY_WO038_ACK_TIME_WO045_OWNER_GO_AND_WO047_GOVERNANCE_SEPARATION
 CONTRACT_VERSION=1.0
 J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
 WO035_LOCAL_RECEIVER_ORIGIN=https://127.0.0.1:8444
@@ -50,10 +107,15 @@ PROVIDER_NETWORK_AUTHORIZED=NO
 LIVE_DELIVERY_AUTHORIZED=NO
 VPS_DEPLOYMENT_AUTHORIZED=NO
 PRODUCTION_AUTHORIZED=NO
+WO047_SYNTHETIC_LOOPBACK_QUALIFICATION_AUTHORIZED=YES
+WO047_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
 ```
 
-Avec l’état actuel, toute tentative `PROVIDER_DERIVED` doit être refusée avant création du client
-et avant socket. L’origine locale exacte est versionnée, mais WO-035 n’autorise pas à la contacter.
+Sous WO-035/ADR-SS-003 v0.1, toute tentative `PROVIDER_DERIVED` devait être refusée avant création
+du client et avant socket. Sous WO-047, `NOT_EVIDENCED` franchit seulement la porte d'audit ; la
+tentative reste refusée à la prochaine porte manquante, et aucune livraison réelle n'est autorisée.
+L’origine locale exacte est versionnée, mais WO-047 n’autorise pas à la contacter avec un export
+réel.
 Ne pas ajouter une autre URI, un fichier de clé, un proxy, une exception de confiance ou un flag de
 contournement pour « essayer » le parcours.
 
@@ -165,10 +227,18 @@ dans cet ordre :
    - UUID canonique minuscule ;
    - clé idempotente de 111 octets ;
    - concordance manifeste, en-têtes, hashes et clé.
-5. **Porte de permission**
-   - refus avant construction du transport ;
-   - aucune ligne de livraison créée, ledger inchangé (`NOT_ATTEMPTED` conceptuel) ;
-   - aucune résolution DNS, aucun socket et aucun appel Playwright.
+5. **Audit fournisseur et gouvernance du transfert**
+   - `NOT_EVIDENCED` et `EVIDENCED_COMPATIBLE` sont les deux valeurs d'audit admises pour le seul
+     chemin J7 ; la première ne vaut pas permission ;
+   - `EVIDENCED_INCOMPATIBLE` ou une valeur inconnue/invalide est refusée avant construction du
+     transport ;
+   - l'UI et l'API conservent respectivement le code sûr
+     `OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE` ou `OFFICIAL_PERMISSION_STATUS_INVALID` ; le code
+     legacy `OFFICIAL_PERMISSION_NOT_EVIDENCED` n'est pas émis ;
+   - une demande V2 doit correspondre exactement à la gouvernance acceptée et au owner-go lié ;
+   - pour chacun de ces refus, aucune ligne de livraison n'est créée et le ledger reste inchangé
+     (`NOT_ATTEMPTED` conceptuel) ;
+   - pour chacun de ces refus, aucune résolution DNS, aucun socket et aucun appel Playwright.
 6. **Schéma ACK**
    - `IMPORTED` et `DUPLICATE` seuls ;
    - propriétés inconnues, version inconnue, UUID/hash/clé/date invalides refusés ;
@@ -183,7 +253,8 @@ Résultat attendu :
 ```text
 OFFLINE_PROVIDER_CALLS=0
 OFFLINE_REAL_RECEIVER_CALLS=0
-PERMISSION_REFUSAL_BEFORE_SOCKET=PASS
+INCOMPATIBLE_OR_INVALID_AUDIT_REFUSAL_BEFORE_SOCKET=PASS
+NOT_EVIDENCED_REACHES_NEXT_J7_GATE_WITHOUT_NETWORK=PASS
 J7_VALIDATION_STATE_UNCHANGED=PASS
 ```
 
@@ -316,7 +387,7 @@ clé.
 
 ## 7. Commandes standard de vérification
 
-Depuis la racine du worktree WO-027 :
+Depuis la racine du worktree WO-027, les commandes historiques de qualification complète étaient :
 
 ```powershell
 .\mvnw.cmd clean verify
@@ -324,6 +395,45 @@ Depuis la racine du worktree WO-027 :
 docker compose --env-file .env config
 git diff --check
 ```
+
+Ces deux commandes Maven historiques ne doivent pas être reprises telles quelles sous WO-047.
+L'interdiction propriétaire de backup/restore natif exclut la classe de pipeline J6 du parcours
+standard et le scénario Flyway qui exécute `pg_dump`/`pg_restore` du parcours d'intégration. La
+qualification WO-047 emploie donc les commandes bornées suivantes :
+
+```powershell
+# Parcours standard, avec exclusion native explicite.
+.\mvnw.cmd --offline `
+  "-Dmaven.repo.local=C:\Users\geoff\.m2\repository" `
+  "-Dsurefire.excludes=**/J6NativeBinaryPipelineQualificationTest.java" `
+  -DskipITs=true clean verify
+
+# Intégrations *IT autorisées ; Flyway est qualifié séparément.
+.\mvnw.cmd --offline `
+  "-Dmaven.repo.local=C:\Users\geoff\.m2\repository" `
+  -Pintegration-tests `
+  "-Dfailsafe.excludes=**/FlywayMigrationIT.java" `
+  failsafe:integration-test failsafe:verify
+
+# Trois méthodes Flyway sûres, sans le scénario pg_dump/pg_restore.
+.\mvnw.cmd --offline `
+  "-Dmaven.repo.local=C:\Users\geoff\.m2\repository" `
+  -Pintegration-tests `
+  "-Dit.test=FlywayMigrationIT#createsTheJ3RawSnapshotSchemaAndKeepsNetworkDisabled+executesJ6BackupFingerprintQueriesAgainstTheMigratedSchema+j6RetentionLauncherRequiresCurrentFlywayAndDisablesTournamentDiscovery" `
+  failsafe:integration-test failsafe:verify
+
+# Deux contrôles J6 statiques, sans lancer le pipeline natif.
+.\mvnw.cmd --offline `
+  "-Dmaven.repo.local=C:\Users\geoff\.m2\repository" `
+  "-Dtest=J6NativeBinaryPipelineQualificationTest#backupRestoreScriptUsesTheFailClosedSupervisorForBothBinaryPipelines+retentionAcceptsOnlyAV32QualifiedManifestWithoutRunningNativeTools" `
+  surefire:test
+git diff --check
+```
+
+Ne pas lancer ni revendiquer le profil `integration-tests` intégral sous WO-047. Ne pas lancer
+`J6NativeBinaryPipelineQualificationTest#syntheticNativePipelineFailsClosedWithoutHumanPassphraseInput`
+ni `FlywayMigrationIT#restoresJ8AndJ7DeliveryEvidenceWithIdenticalFingerprints` : ces scénarios
+appellent le pipeline natif ou `pg_dump`/`pg_restore` et exigent une autre autorisation.
 
 Ces commandes Maven utilisent les arguments JVM anti-retry définis dans `pom.xml`. Pour une
 configuration Eclipse directe, reprendre exactement les trois valeurs de la section 3 avant de
@@ -410,8 +520,11 @@ reprise réelle requerrait la porte réseau distincte applicable.
 Ne pas transformer les résultats loopback en go réel. Une première livraison exige cumulativement :
 
 ```text
-J9_OFFICIAL_PERMISSION_STATUS=EVIDENCED_COMPATIBLE
-ADR_SS_003_REVIEW_STATUS=SATISFIED_FOR_REAL_DELIVERY
+J7_PROVIDER_PERMISSION_AUDIT_STATUS=NOT_EVIDENCED_OR_EVIDENCED_COMPATIBLE
+J7_PROVIDER_PERMISSION_AUDIT_VETO=EVIDENCED_INCOMPATIBLE_OR_UNKNOWN
+J7_TRANSFER_GOVERNANCE_BASIS=EXACT_ADR_SS_003_V0_2_ACCEPTED
+OWNER_GO_FORMAT=V1_STRICT_OR_V2_FORMAT_DISCRIMINATED
+NOT_EVIDENCED_OWNER_GO_FORMAT=J7_PROVIDER_DERIVED_OWNER_GO_V2
 BETTING_PROJECT_RECEIVER_WORK_ORDER=VALIDATED
 BETTING_PROJECT_RECEIVER_IMPLEMENTATION=QUALIFIED
 REAL_IMPORT_ENDPOINT_URI=EXPLICITLY_AUTHORIZED
@@ -507,10 +620,14 @@ séparés de `HUMAN_VALIDATED` : `NOT_ATTEMPTED`, `IN_FLIGHT`, `DELIVERED`,
 
 ### 14.3 Matrice de provenance
 
-| Classe calculée | Mode runtime exigé | État sous WO-035 |
+La colonne suivante décrit l'état courant après la supersession bornée v0.2. L'ancien blocage de
+`PROVIDER_DERIVED` par `NOT_EVIDENCED` demeure une propriété historique de WO-035/v0.1, pas une
+condition courante du transfert J7.
+
+| Classe calculée | Mode runtime exigé | État après ADR-SS-003 v0.2 / WO-047 |
 |---|---|---|
 | `SYNTHETIC_ONLY` | `SYNTHETIC_LOOPBACK` | `201/200` confirmés par R3 ; `409` non qualifié ; correction, qualification, autorisation et campagne neuves requises |
-| `PROVIDER_DERIVED` | `PROVIDER_DERIVED` | Bloqué par `NOT_EVIDENCED`, autorisation distante absente et `PROVIDER_OWNER_GO_REQUIRED` |
+| `PROVIDER_DERIVED` | `PROVIDER_DERIVED` | `NOT_EVIDENCED` est audit-only ; statut allow-listé, gouvernance V2 exacte si nécessaire, grant lié, autorisation de livraison et toutes les autres portes restent obligatoires ; aucun POST réel n'est autorisé sous WO-047 |
 | `MIXED_OR_UNKNOWN` | Aucun | Refus `PAYLOAD_PROVENANCE_NOT_ELIGIBLE` |
 
 Le mode synthétique n’accepte que l’origine exacte `https://127.0.0.1:8444`, les qualifications

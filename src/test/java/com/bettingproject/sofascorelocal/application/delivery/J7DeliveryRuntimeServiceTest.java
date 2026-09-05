@@ -9,6 +9,7 @@ import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryError;
 import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryException;
 import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryIdentity;
 import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryState;
+import com.bettingproject.sofascorelocal.domain.delivery.J7ProviderDerivedOwnerGo;
 import com.bettingproject.sofascorelocal.port.J7DeliveryLedgerStore;
 import com.bettingproject.sofascorelocal.port.J7DeliveryTransportFactory;
 import com.bettingproject.sofascorelocal.port.J7DeliveryTransportRequest;
@@ -17,10 +18,13 @@ import com.bettingproject.sofascorelocal.port.OwnedJ7DeliveryTransport;
 import com.bettingproject.sofascorelocal.security.Sha256;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InOrder;
 
 import java.nio.charset.StandardCharsets;
+import java.net.URI;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -37,6 +41,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -55,11 +60,14 @@ class J7DeliveryRuntimeServiceTest {
             UUID.fromString("30000000-0000-4000-8000-000000000003");
     private static final UUID REMOTE_IMPORT_ID =
             UUID.fromString("40000000-0000-4000-8000-000000000004");
+    private static final UUID GO_ID =
+            UUID.fromString("50000000-0000-4000-8000-000000000005");
     private static final byte[] CONTENT =
             "{\"manifest\":{},\"data\":{}}\n".getBytes(StandardCharsets.UTF_8);
     private static final String FILE_SHA256 = Sha256.hex(CONTENT);
     private static final String DATA_SHA256 = "b".repeat(64);
     private static final String CERTIFICATE_SHA256 = "c".repeat(64);
+    private static final String OWNER_GO_SHA256 = "d".repeat(64);
     private static final Instant NOW = Instant.parse("2026-09-02T08:00:00Z");
 
     private J7CanonicalExportService exportService;
@@ -67,6 +75,7 @@ class J7DeliveryRuntimeServiceTest {
     private J7DeliveryTransportFactory transportFactory;
     private OwnedJ7DeliveryTransport transport;
     private J7DeliveryExecutionGate executionGate;
+    private J7DeliveryConfirmationCapabilityVerifier confirmationCapabilityVerifier;
     private J7DeliveryRuntimeService service;
     private J7DeliveryIdentity identity;
 
@@ -77,6 +86,8 @@ class J7DeliveryRuntimeServiceTest {
         transportFactory = mock(J7DeliveryTransportFactory.class);
         transport = mock(OwnedJ7DeliveryTransport.class);
         executionGate = new J7DeliveryExecutionGate();
+        confirmationCapabilityVerifier = mock(
+                J7DeliveryConfirmationCapabilityVerifier.class);
         identity = new J7DeliveryIdentity(EXPORT_ID, FILE_SHA256);
         when(exportService.deliveryCandidate(CANONICAL_EVENT_ID, EXPORT_ID))
                 .thenReturn(candidate(J7DeliveryPayloadClass.SYNTHETIC_ONLY));
@@ -248,6 +259,235 @@ class J7DeliveryRuntimeServiceTest {
                 .loadHumanValidatedForDelivery(any(), any());
         verifyNoInteractions(transportFactory, ledgerStore, transport);
         assertGateIdle();
+    }
+
+    @Test
+    void legacyOverloadCannotUseEvenACompleteConfiguredProviderGo() {
+        J7ProviderDerivedOwnerGo.Grant grant = providerGrant();
+        when(exportService.deliveryCandidate(CANONICAL_EVENT_ID, EXPORT_ID))
+                .thenReturn(candidate(J7DeliveryPayloadClass.PROVIDER_DERIVED));
+
+        assertError(
+                () -> service(providerProperties(grant)).deliver(
+                        CANONICAL_EVENT_ID,
+                        EXPORT_ID,
+                        confirmation(),
+                        1),
+                J7DeliveryError.PROVIDER_OWNER_GO_REQUIRED);
+
+        verify(exportService, never()).loadHumanValidatedForDelivery(any(), any());
+        verifyNoInteractions(transportFactory, ledgerStore, transport);
+    }
+
+    @Test
+    void providerReceiptLoadsExactGrantClaimsAtomicallyBeforeFactoryAndPostsOnce() {
+        J7ProviderDerivedOwnerGo.Grant grant = providerGrant();
+        prepareProvider(grant, J7ProviderDerivedOwnerGo.Status.AVAILABLE);
+        when(transport.execute(any())).thenReturn(response(201, ack("IMPORTED")));
+
+        J7DeliveryExecutionResult result = service(providerProperties(grant)).deliver(
+                providerReceipt(grant.reference()), confirmation());
+
+        assertThat(result.state()).isEqualTo(J7DeliveryState.DELIVERED);
+        InOrder order = inOrder(exportService, ledgerStore, transportFactory, transport);
+        order.verify(exportService).deliveryCandidate(CANONICAL_EVENT_ID, EXPORT_ID);
+        order.verify(exportService).loadHumanValidatedForDelivery(
+                CANONICAL_EVENT_ID, EXPORT_ID);
+        order.verify(ledgerStore).findProviderDerivedOwnerGo(grant.reference());
+        order.verify(ledgerStore).claimProviderDerived(any());
+        order.verify(transportFactory).open(any());
+        order.verify(transport).execute(any());
+        order.verify(ledgerStore).complete(
+                eq(DELIVERY_ID),
+                eq(1),
+                eq(J7DeliveryLedgerStore.DeliveryState.DELIVERED),
+                eq(OptionalInt.of(201)),
+                eq("HTTP_201_IMPORTED"),
+                any(),
+                eq(Optional.of(REMOTE_IMPORT_ID)),
+                eq(Optional.of(NOW)),
+                eq(NOW));
+        order.verify(transport).close();
+        verify(ledgerStore, never()).claim(
+                any(), anyString(), anyString(), anyString(), anyInt(), any());
+        verify(transport, times(1)).execute(any());
+        verify(confirmationCapabilityVerifier).consumeRuntimeCapability(any(), eq(NOW));
+    }
+
+    @Test
+    void notEvidencedV2GrantStillClaimsBeforeOpeningTheLoopbackTransport() {
+        J7ProviderDerivedOwnerGo.Grant grant = providerGrantV2();
+        prepareProvider(grant, J7ProviderDerivedOwnerGo.Status.AVAILABLE);
+        when(transport.execute(any())).thenReturn(response(201, ack("IMPORTED")));
+
+        J7DeliveryExecutionResult result = service(providerProperties(grant)).deliver(
+                providerReceipt(grant.reference()), confirmation());
+
+        assertThat(result.state()).isEqualTo(J7DeliveryState.DELIVERED);
+        ArgumentCaptor<J7ProviderDerivedOwnerGo.Claim> claim =
+                ArgumentCaptor.forClass(J7ProviderDerivedOwnerGo.Claim.class);
+        InOrder order = inOrder(ledgerStore, transportFactory, transport);
+        order.verify(ledgerStore).findProviderDerivedOwnerGo(grant.reference());
+        order.verify(ledgerStore).claimProviderDerived(claim.capture());
+        order.verify(transportFactory).open(any());
+        order.verify(transport).execute(any());
+        assertThat(claim.getValue().grant()).isEqualTo(grant);
+        assertThat(claim.getValue().grant().format())
+                .isEqualTo(J7ProviderDerivedOwnerGo.FORMAT_V2);
+        assertThat(claim.getValue().grant().permissionAuditStatus())
+                .isEqualTo("NOT_EVIDENCED");
+    }
+
+    @Test
+    void evidencedIncompatibleStopsBeforeArtifactCertificateClaimAndTransport() {
+        J7ProviderDerivedOwnerGo.Grant grant = providerGrantV2();
+        when(exportService.deliveryCandidate(CANONICAL_EVENT_ID, EXPORT_ID))
+                .thenReturn(candidate(J7DeliveryPayloadClass.PROVIDER_DERIVED));
+        OptionalLocalPushProperties properties = providerProperties(grant);
+        properties.setOfficialPermissionStatus(
+                OptionalLocalPushProperties.PermissionStatus.EVIDENCED_INCOMPATIBLE);
+
+        assertError(
+                () -> service(properties).deliver(
+                        providerReceipt(grant.reference()), confirmation()),
+                J7DeliveryError.OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE);
+
+        verify(exportService, never()).loadHumanValidatedForDelivery(any(), any());
+        verifyNoInteractions(ledgerStore, transportFactory, transport);
+        assertGateIdle();
+    }
+
+    @Test
+    void unknownPermissionAuditStopsBeforeArtifactCertificateClaimAndTransport() {
+        J7ProviderDerivedOwnerGo.Grant grant = providerGrantV2();
+        when(exportService.deliveryCandidate(CANONICAL_EVENT_ID, EXPORT_ID))
+                .thenReturn(candidate(J7DeliveryPayloadClass.PROVIDER_DERIVED));
+        OptionalLocalPushProperties properties = providerProperties(grant);
+        properties.setOfficialPermissionStatus(null);
+
+        assertError(
+                () -> service(properties).deliver(
+                        providerReceipt(grant.reference()), confirmation()),
+                J7DeliveryError.OFFICIAL_PERMISSION_STATUS_INVALID);
+
+        verify(exportService, never()).loadHumanValidatedForDelivery(any(), any());
+        verifyNoInteractions(ledgerStore, transportFactory, transport);
+        assertGateIdle();
+    }
+
+    @Test
+    void forgedProviderReceiptStopsBeforeExportGrantClaimFactoryAndPost() {
+        J7ProviderDerivedOwnerGo.Grant grant = providerGrant();
+        J7DeliveryConfirmationReceipt forged = providerReceipt(grant.reference());
+        doThrow(new J7DeliveryException(J7DeliveryError.INVALID_CONFIRMATION))
+                .when(confirmationCapabilityVerifier)
+                .consumeRuntimeCapability(forged, NOW);
+        assertError(
+                () -> service(providerProperties(grant)).deliver(forged, confirmation()),
+                J7DeliveryError.INVALID_CONFIRMATION);
+
+        verifyNoInteractions(exportService, ledgerStore, transportFactory, transport);
+        assertGateIdle();
+    }
+    @Test
+    void providerReceiptWithDifferentReferenceStopsBeforeGrantLookupClaimAndFactory() {
+        J7ProviderDerivedOwnerGo.Grant grant = providerGrant();
+        J7ProviderDerivedOwnerGo.Reference otherReference =
+                new J7ProviderDerivedOwnerGo.Reference(
+                        UUID.fromString("60000000-0000-4000-8000-000000000006"),
+                        "e".repeat(64));
+        when(exportService.deliveryCandidate(CANONICAL_EVENT_ID, EXPORT_ID))
+                .thenReturn(candidate(J7DeliveryPayloadClass.PROVIDER_DERIVED));
+        when(exportService.loadHumanValidatedForDelivery(CANONICAL_EVENT_ID, EXPORT_ID))
+                .thenReturn(artifact(J7DeliveryPayloadClass.PROVIDER_DERIVED));
+
+        assertError(
+                () -> service(providerProperties(grant)).deliver(
+                        providerReceipt(otherReference), confirmation()),
+                J7DeliveryError.PROVIDER_OWNER_GO_MISMATCH);
+
+        verify(ledgerStore, never()).findProviderDerivedOwnerGo(any());
+        verify(ledgerStore, never()).claimProviderDerived(any());
+        verifyNoInteractions(transportFactory, transport);
+    }
+
+    @Test
+    void unavailableProviderGrantStopsBeforeAtomicClaimFactoryAndPost() {
+        J7ProviderDerivedOwnerGo.Grant grant = providerGrant();
+        prepareProvider(grant, J7ProviderDerivedOwnerGo.Status.EXPIRED);
+
+        assertError(
+                () -> service(providerProperties(grant)).deliver(
+                        providerReceipt(grant.reference()), confirmation()),
+                J7DeliveryError.PROVIDER_OWNER_GO_NOT_AVAILABLE);
+
+        verify(ledgerStore, never()).claimProviderDerived(any());
+        verifyNoInteractions(transportFactory, transport);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(OwnerGoTestFormat.class)
+    void providerFactoryFailureAfterAtomicClaimIsPersistedUnknownWithoutPost(
+            OwnerGoTestFormat format) {
+        J7ProviderDerivedOwnerGo.Grant grant = format == OwnerGoTestFormat.V1
+                ? providerGrant()
+                : providerGrantV2();
+        prepareProvider(grant, J7ProviderDerivedOwnerGo.Status.AVAILABLE);
+        when(transportFactory.open(any())).thenThrow(
+                new IllegalStateException("sensitive certificate detail"));
+
+        J7DeliveryExecutionResult result = service(providerProperties(grant)).deliver(
+                providerReceipt(grant.reference()), confirmation());
+
+        assertThat(result.state())
+                .isEqualTo(J7DeliveryState.UNKNOWN_RECONCILIATION_REQUIRED);
+        assertThat(result.safeResultCode())
+                .isEqualTo("TRANSPORT_CONFIGURATION_FAILED");
+        InOrder order = inOrder(ledgerStore, transportFactory);
+        order.verify(ledgerStore).findProviderDerivedOwnerGo(grant.reference());
+        order.verify(ledgerStore).claimProviderDerived(any());
+        order.verify(transportFactory).open(any());
+        order.verify(ledgerStore).complete(
+                eq(DELIVERY_ID),
+                eq(1),
+                eq(J7DeliveryLedgerStore.DeliveryState.UNKNOWN_RECONCILIATION_REQUIRED),
+                eq(OptionalInt.empty()),
+                eq("TRANSPORT_CONFIGURATION_FAILED"),
+                eq(Optional.empty()),
+                eq(Optional.empty()),
+                eq(Optional.empty()),
+                eq(NOW));
+        verifyNoInteractions(transport);
+    }
+
+    @Test
+    void providerFactoryAndUnknownCompletionFailurePoisonRuntimeWithoutRefundOrPost() {
+        J7ProviderDerivedOwnerGo.Grant grant = providerGrant();
+        prepareProvider(grant, J7ProviderDerivedOwnerGo.Status.AVAILABLE);
+        when(transportFactory.open(any())).thenThrow(
+                new IllegalStateException("sensitive certificate detail"));
+        when(ledgerStore.complete(
+                eq(DELIVERY_ID),
+                eq(1),
+                eq(J7DeliveryLedgerStore.DeliveryState.UNKNOWN_RECONCILIATION_REQUIRED),
+                eq(OptionalInt.empty()),
+                eq("TRANSPORT_CONFIGURATION_FAILED"),
+                eq(Optional.empty()),
+                eq(Optional.empty()),
+                eq(Optional.empty()),
+                eq(NOW)))
+                .thenThrow(new J7DeliveryLedgerStore.LedgerException(
+                        J7DeliveryLedgerStore.LedgerFailure.STORAGE_UNAVAILABLE));
+
+        assertError(
+                () -> service(providerProperties(grant)).deliver(
+                        providerReceipt(grant.reference()), confirmation()),
+                J7DeliveryError.TRANSPORT_CONFIGURATION_FAILED);
+
+        verify(ledgerStore, times(1)).claimProviderDerived(any());
+        verifyNoInteractions(transport);
+        assertThat(executionGate.state())
+                .isEqualTo(J7DeliveryExecutionGate.State.POISONED);
     }
 
     @Test
@@ -502,7 +742,8 @@ class J7DeliveryRuntimeServiceTest {
                 new J7DeliveryAcknowledgementParser(),
                 new J7DeliveryPolicy(properties),
                 Clock.fixed(NOW, ZoneOffset.UTC),
-                executionGate);
+                executionGate,
+                confirmationCapabilityVerifier);
     }
 
     private static OptionalLocalPushProperties syntheticProperties() {
@@ -518,6 +759,153 @@ class J7DeliveryRuntimeServiceTest {
                 OptionalLocalPushProperties.QualificationStatus.PASS);
         properties.getMtls().setClientCertificateSha256(CERTIFICATE_SHA256);
         return properties;
+    }
+
+    private static OptionalLocalPushProperties providerProperties(
+            J7ProviderDerivedOwnerGo.Grant grant) {
+        OptionalLocalPushProperties properties = syntheticProperties();
+        properties.setExecutionMode(
+                OptionalLocalPushProperties.ExecutionMode.PROVIDER_DERIVED);
+        properties.setRemoteDeliveryAuthorized(true);
+        properties.setOfficialPermissionStatus(
+                OptionalLocalPushProperties.PermissionStatus.valueOf(
+                        grant.permissionAuditStatus()));
+        properties.getProviderOwnerGo().setGoId(grant.goId().toString());
+        properties.getProviderOwnerGo().setOwnerGoDocumentSha256(
+                grant.ownerDecisionBlockSha256());
+        return properties;
+    }
+
+    private void prepareProvider(
+            J7ProviderDerivedOwnerGo.Grant grant,
+            J7ProviderDerivedOwnerGo.Status status) {
+        when(exportService.deliveryCandidate(CANONICAL_EVENT_ID, EXPORT_ID))
+                .thenReturn(candidate(J7DeliveryPayloadClass.PROVIDER_DERIVED));
+        when(exportService.loadHumanValidatedForDelivery(CANONICAL_EVENT_ID, EXPORT_ID))
+                .thenReturn(artifact(J7DeliveryPayloadClass.PROVIDER_DERIVED));
+        when(ledgerStore.findProviderDerivedOwnerGo(grant.reference()))
+                .thenReturn(Optional.of(providerSnapshot(grant, status)));
+        when(ledgerStore.claimProviderDerived(any()))
+                .thenReturn(new J7DeliveryLedgerStore.ClaimReceipt(
+                        DELIVERY_ID,
+                        1,
+                        J7DeliveryLedgerStore.DeliveryState.IN_FLIGHT,
+                        identity.idempotencyKey(),
+                        NOW));
+    }
+
+    private static J7DeliveryConfirmationReceipt providerReceipt(
+            J7ProviderDerivedOwnerGo.Reference reference) {
+        return new J7DeliveryConfirmationReceipt(
+                J7DeliveryConfirmationAction.DELIVERY,
+                CANONICAL_EVENT_ID,
+                EXPORT_ID,
+                FILE_SHA256,
+                1,
+                Optional.of(reference));
+    }
+
+    private static J7ProviderDerivedOwnerGo.Grant providerGrant() {
+        return new J7ProviderDerivedOwnerGo.Grant(
+                GO_ID,
+                OWNER_GO_SHA256,
+                "WO-SS-20260904-046-j9-provider-derived-real-j7-delivery",
+                "docs/validation/J9-WO046-CAMPAIGN-MANIFEST.md",
+                "e".repeat(64),
+                "1".repeat(40),
+                "2".repeat(40),
+                "docs/validation/J9-OFFICIAL-PERMISSION-EVIDENCE.md",
+                "f".repeat(64),
+                "EVIDENCED_COMPATIBLE",
+                "PASS",
+                "PASS",
+                "CODEX_LOCAL_UI",
+                CANONICAL_EVENT_ID,
+                16_310_945L,
+                EXPORT_ID,
+                FILE_SHA256,
+                DATA_SHA256,
+                CONTENT.length,
+                J7ExportContract.SCHEMA_ID,
+                J7ExportContract.SCHEMA_VERSION,
+                URI.create(OptionalLocalPushProperties.LOCAL_RECEIVER_ORIGIN),
+                CERTIFICATE_SHA256,
+                1,
+                1,
+                NOW.minusSeconds(60),
+                NOW.plusSeconds(60),
+                "GRANT",
+                "ONE_TIME",
+                "PROVIDER_DERIVED",
+                "HUMAN_VALIDATED",
+                true,
+                false,
+                false,
+                false,
+                false,
+                false);
+    }
+
+    private static J7ProviderDerivedOwnerGo.Grant providerGrantV2() {
+        J7ProviderDerivedOwnerGo.Grant draft = J7ProviderDerivedOwnerGo.Grant.v2(
+                GO_ID,
+                OWNER_GO_SHA256,
+                "WO-SS-20260904-046-j9-provider-derived-real-j7-delivery",
+                "docs/validation/J9-WO046-CAMPAIGN-MANIFEST.md",
+                "e".repeat(64),
+                "1".repeat(40),
+                "2".repeat(40),
+                "docs/validation/J9-WO046-OFFICIAL-PERMISSION-RECONCILIATION-20260904.md",
+                "707e0fd9b07dc0944225be80a590792e5e8ab0631dab964a465335f283ac1473",
+                "NOT_EVIDENCED",
+                J7ProviderDerivedOwnerGo.EXPECTED_TRANSFER_GOVERNANCE_BASIS_REFERENCE,
+                J7ProviderDerivedOwnerGo.EXPECTED_TRANSFER_GOVERNANCE_BASIS_COMMIT,
+                J7ProviderDerivedOwnerGo.EXPECTED_TRANSFER_GOVERNANCE_BASIS_SHA256,
+                J7ProviderDerivedOwnerGo.EXPECTED_TRANSFER_GOVERNANCE_BASIS_STATUS,
+                "PASS",
+                "PASS",
+                "CODEX_LOCAL_UI",
+                CANONICAL_EVENT_ID,
+                16_310_945L,
+                EXPORT_ID,
+                FILE_SHA256,
+                DATA_SHA256,
+                CONTENT.length,
+                J7ExportContract.SCHEMA_ID,
+                J7ExportContract.SCHEMA_VERSION,
+                URI.create(OptionalLocalPushProperties.LOCAL_RECEIVER_ORIGIN),
+                CERTIFICATE_SHA256,
+                1,
+                1,
+                NOW.minusSeconds(60),
+                NOW.plusSeconds(60),
+                "GRANT",
+                "ONE_TIME",
+                "PROVIDER_DERIVED",
+                "HUMAN_VALIDATED",
+                true,
+                false,
+                false,
+                false,
+                false,
+                false);
+        return draft.withOwnerDecisionBlockSha256(
+                draft.computedOwnerDecisionBlockSha256());
+    }
+
+    private static J7ProviderDerivedOwnerGo.Snapshot providerSnapshot(
+            J7ProviderDerivedOwnerGo.Grant grant,
+            J7ProviderDerivedOwnerGo.Status status) {
+        return new J7ProviderDerivedOwnerGo.Snapshot(
+                grant,
+                status,
+                NOW.minusSeconds(120),
+                NOW,
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                Optional.empty(),
+                OptionalInt.empty());
     }
 
     private static J7ValidatedExportArtifact artifact(
@@ -540,6 +928,11 @@ class J7DeliveryRuntimeServiceTest {
                 CANONICAL_EVENT_ID,
                 FILE_SHA256,
                 payloadClass);
+    }
+
+    private enum OwnerGoTestFormat {
+        V1,
+        V2
     }
 
     private static J7DeliveryLedgerStore.DeliverySnapshot snapshot(

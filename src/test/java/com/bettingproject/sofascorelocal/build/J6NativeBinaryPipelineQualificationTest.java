@@ -24,6 +24,23 @@ class J6NativeBinaryPipelineQualificationTest {
     }
 
     @Test
+    void retentionAcceptsOnlyAV32QualifiedManifestWithoutRunningNativeTools()
+            throws IOException {
+        String retention = Files.readString(
+                Path.of("").toAbsolutePath().normalize()
+                        .resolve("scripts/Invoke-J6Retention.ps1"),
+                StandardCharsets.UTF_8);
+
+        assertThat(retention)
+                .contains(
+                        "$manifest.source.flywayVersion.ToString() -cne '32'",
+                        "valid Flyway V32 raw-payload, J8 evidence and metadata-only J7 delivery and owner-go restore")
+                .doesNotContain(
+                        "$manifest.source.flywayVersion.ToString() -cne '31'",
+                        "valid Flyway V31 raw-payload, J8 evidence and metadata-only J7 delivery and owner-go restore");
+    }
+
+    @Test
     void backupRestoreScriptUsesTheFailClosedSupervisorForBothBinaryPipelines() throws IOException {
         Path repository = Path.of("").toAbsolutePath().normalize();
         String script = Files.readString(
@@ -76,11 +93,15 @@ class J6NativeBinaryPipelineQualificationTest {
                         "J6_DOCKER_EXECUTABLE_IDENTITY=AUTHENTICODE_DOCKER_INC",
                         "Get-AuthenticodeSignature",
                         "AggregateException",
+                        "if ($sourceFlywayVersion -cne '32')",
+                        "Flyway V32 must be applied before the J6 backup/restore qualification.",
                         "J6_POSTGRES_SESSION_CLEANUP_IDEMPOTENT_REUSE=PASS",
                         "dropdb --username \"$POSTGRES_USER\" --force --if-exists",
                         "$manifestStagingPath",
                         "$QualificationInjectCleanupFailureAfterSuccessfulCleanup")
                 .doesNotContain(
+                        "if ($sourceFlywayVersion -cne '31')",
+                        "Flyway V31 must be applied before the J6 backup/restore qualification.",
                         "'pg_dump --username \"$POSTGRES_USER\" --dbname \"$POSTGRES_DB\" --format=custom --no-owner --no-privileges' |",
                         "& $ageExecutable -d $destinationPath |");
         assertThat(module)

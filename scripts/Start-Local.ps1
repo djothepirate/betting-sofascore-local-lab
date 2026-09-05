@@ -51,7 +51,9 @@ try {
             'OPTIONAL_INTEGRATION_LOOPBACK_QUALIFICATION',
             'OPTIONAL_INTEGRATION_LOOPBACK_ORIGIN',
             'OPTIONAL_INTEGRATION_AUTOMATIC_RETRY_ENABLED',
-            'OPTIONAL_INTEGRATION_MTLS_CLIENT_CERTIFICATE_SHA256'
+            'OPTIONAL_INTEGRATION_MTLS_CLIENT_CERTIFICATE_SHA256',
+            'OPTIONAL_INTEGRATION_PROVIDER_OWNER_GO_GO_ID',
+            'OPTIONAL_INTEGRATION_PROVIDER_OWNER_GO_OWNER_GO_DOCUMENT_SHA256'
         )
         $previousOptionalIntegrationEnvironment = @{}
         foreach ($name in $optionalIntegrationEnvironment) {
@@ -71,6 +73,8 @@ try {
             $env:OPTIONAL_INTEGRATION_LOOPBACK_ORIGIN = ''
             $env:OPTIONAL_INTEGRATION_AUTOMATIC_RETRY_ENABLED = 'false'
             $env:OPTIONAL_INTEGRATION_MTLS_CLIENT_CERTIFICATE_SHA256 = ''
+            $env:OPTIONAL_INTEGRATION_PROVIDER_OWNER_GO_GO_ID = ''
+            $env:OPTIONAL_INTEGRATION_PROVIDER_OWNER_GO_OWNER_GO_DOCUMENT_SHA256 = ''
 
             & .\mvnw.cmd '-Dspring-boot.run.profiles=local' 'spring-boot:run'
             $applicationExitCode = $LASTEXITCODE

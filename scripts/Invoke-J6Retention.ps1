@@ -47,7 +47,9 @@ $environmentNames = @(
     'OPTIONAL_INTEGRATION_LOOPBACK_QUALIFICATION',
     'OPTIONAL_INTEGRATION_LOOPBACK_ORIGIN',
     'OPTIONAL_INTEGRATION_AUTOMATIC_RETRY_ENABLED',
-    'OPTIONAL_INTEGRATION_MTLS_CLIENT_CERTIFICATE_SHA256'
+    'OPTIONAL_INTEGRATION_MTLS_CLIENT_CERTIFICATE_SHA256',
+    'OPTIONAL_INTEGRATION_PROVIDER_OWNER_GO_GO_ID',
+    'OPTIONAL_INTEGRATION_PROVIDER_OWNER_GO_OWNER_GO_DOCUMENT_SHA256'
 )
 $previousEnvironment = @{}
 foreach ($name in $environmentNames) {
@@ -68,6 +70,8 @@ try {
     Set-ProcessEnvironment -Name 'OPTIONAL_INTEGRATION_RECEIVER_ORIGIN' -Value ''
     Set-ProcessEnvironment -Name 'OPTIONAL_INTEGRATION_LOOPBACK_ORIGIN' -Value ''
     Set-ProcessEnvironment -Name 'OPTIONAL_INTEGRATION_MTLS_CLIENT_CERTIFICATE_SHA256' -Value ''
+    Set-ProcessEnvironment -Name 'OPTIONAL_INTEGRATION_PROVIDER_OWNER_GO_GO_ID' -Value ''
+    Set-ProcessEnvironment -Name 'OPTIONAL_INTEGRATION_PROVIDER_OWNER_GO_OWNER_GO_DOCUMENT_SHA256' -Value ''
     foreach ($name in @(
             'SOFASCORE_ENABLED',
             'SOFASCORE_J3_QUALIFICATION_ENABLED',
@@ -129,6 +133,9 @@ try {
             'j7DeliveryCount',
             'j7DeliveryAttemptCount',
             'j7DeliveryAttemptResultCount',
+            'j7ProviderOwnerGoGrantCount',
+            'j7ProviderOwnerGoRevocationCount',
+            'j7ProviderOwnerGoConsumptionCount',
             'coverageMaxSnapshotId',
             'coverageReceivedAt',
             'rawPayloadIntegrityFailures',
@@ -149,13 +156,16 @@ try {
                 throw "The qualified manifest source/restore evidence differs: $field"
             }
         }
-        if ($manifest.source.flywayVersion.ToString() -cne '30' -or
+        if ($manifest.source.flywayVersion.ToString() -cne '32' -or
                 [long]$manifest.source.rawPayloadIntegrityFailures -ne 0 -or
                 [long]$manifest.source.j7DeliveryCount -lt 0 -or
                 [long]$manifest.source.j7DeliveryAttemptCount -lt 0 -or
                 [long]$manifest.source.j7DeliveryAttemptResultCount -lt 0 -or
+                [long]$manifest.source.j7ProviderOwnerGoGrantCount -lt 0 -or
+                [long]$manifest.source.j7ProviderOwnerGoRevocationCount -lt 0 -or
+                [long]$manifest.source.j7ProviderOwnerGoConsumptionCount -lt 0 -or
                 $manifest.source.j7DeliveryLedgerSha256.ToString() -cnotmatch '^[0-9a-f]{64}$') {
-            throw 'The qualified manifest does not prove a valid Flyway V30 raw-payload, J8 evidence and metadata-only J7 delivery-ledger restore.'
+            throw 'The qualified manifest does not prove a valid Flyway V32 raw-payload, J8 evidence and metadata-only J7 delivery and owner-go restore.'
         }
         $cipherPath = [IO.Path]::GetFullPath((Join-Path `
             (Split-Path -Parent $manifestPath) $cipherFileName))

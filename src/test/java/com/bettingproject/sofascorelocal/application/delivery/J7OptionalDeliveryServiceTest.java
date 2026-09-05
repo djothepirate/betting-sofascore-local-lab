@@ -152,6 +152,36 @@ class J7OptionalDeliveryServiceTest {
     }
 
     @Test
+    void alreadyClaimedExecutionPostsOnceCompletesAndNeverClaimsAgain() {
+        when(transport.execute(any())).thenReturn(response(201, ack("IMPORTED")));
+        J7DeliveryLedgerStore.ClaimReceipt existingClaim =
+                new J7DeliveryLedgerStore.ClaimReceipt(
+                        DELIVERY_ID,
+                        1,
+                        J7DeliveryLedgerStore.DeliveryState.IN_FLIGHT,
+                        identity.idempotencyKey(),
+                        NOW);
+
+        J7DeliveryExecutionResult result = service.executeAlreadyClaimed(
+                artifact(), existingClaim);
+
+        assertThat(result.state()).isEqualTo(J7DeliveryState.DELIVERED);
+        verify(ledgerStore, never()).claim(
+                any(), anyString(), anyString(), anyString(), anyInt(), any());
+        verify(transport, times(1)).execute(any());
+        verify(ledgerStore).complete(
+                eq(DELIVERY_ID),
+                eq(1),
+                eq(J7DeliveryLedgerStore.DeliveryState.DELIVERED),
+                eq(OptionalInt.of(201)),
+                eq("HTTP_201_IMPORTED"),
+                any(),
+                eq(Optional.of(REMOTE_IMPORT_ID)),
+                eq(Optional.of(NOW)),
+                eq(NOW));
+    }
+
+    @Test
     void exactDuplicateAcknowledgementIsSeparateAndDoesNotBecomeDelivered() {
         Instant initialDurableReceivedAt = NOW.minusSeconds(86_400);
         when(transport.execute(any())).thenReturn(response(

@@ -1,5 +1,52 @@
 # J9 — Modèle de menace du push local optionnel v1.0
 
+## Amendement WO-047 — séparation de l'audit fournisseur et de l'autorité de transfert
+
+ADR-SS-003 v0.2 supersède le veto v0.1 `NOT_EVIDENCED` uniquement pour le transfert J7 local.
+Cette valeur reste un fait d'audit exact ; elle n'est ni promue en permission, ni interprétée comme
+un accord SofaScore. Le contrôle courant admet `NOT_EVIDENCED` et `EVIDENCED_COMPATIBLE`, mais
+refuse `EVIDENCED_INCOMPATIBLE` et toute valeur inconnue ou invalide avant claim, certificat,
+transport et socket.
+
+Le format V1 et les preuves V31 restent strictement immuables et continuent d'exiger
+`EVIDENCED_COMPATIBLE`. V2/V32 ajoutent une frontière distincte : le statut d'audit, la base de
+gouvernance acceptée, le manifeste et toutes les identités owner-go doivent correspondre
+exactement. Un statut admis ne suffit donc ni à créer un grant, ni à autoriser un réseau ou un
+POST. WO-047 ne modifie aucune porte J3/J4/J5 et n'autorise ni livraison réelle, ni receiver
+distant, ni VPS, ni production.
+
+## Extension historique WO-045 — frontière d'autorité d'une donnée dérivée fournisseur
+
+WO-045 remplace le simple obstacle structurel `PROVIDER_OWNER_GO_REQUIRED` par une frontière
+durable sans toutefois autoriser de POST réel. L'autorité future est un grant exact, immuable,
+référencé par UUID et SHA-256 de décision, enregistré explicitement et consommable une fois. Sa
+fenêtre est évaluée par l'horloge PostgreSQL après acquisition des verrous ; elle est semi-ouverte
+et ne dépasse pas 60 minutes.
+
+La référence du grant est liée à la confirmation côté serveur et n'est ni fournie par le navigateur
+ni rendue dans le modèle HTML. La consommation et le claim `IN_FLIGHT` sont atomiques. Les triggers
+refusent un grant divergent, révoqué, prématuré, expiré ou déjà consommé, une tentative fournisseur
+orpheline, une mutation des preuves append-only et toute association à un autre export ou ordinal.
+La construction du transport n'intervient qu'après commit. Le grant n'est jamais remboursé après
+une erreur ou un redémarrage.
+
+Le SHA-256 du bloc propriétaire n'est pas une valeur déclarative libre : Java et PostgreSQL le
+recalculent sur le même préimage normatif UTF-8/LF final. Le champ SHA lui-même est exclu du
+préimage. Les gardes SQL fixent leur `search_path` et qualifient les objets applicatifs afin qu'un
+schéma placé en tête par une session ne puisse détourner la fonction canonique ou les relations.
+
+| Menace WO-045 | Contrôle | Effet fail-closed attendu |
+|---|---|---|
+| Drapeau copié ou relancé après redémarrage | Grant PostgreSQL immuable et consommation unique | Refus avant factory et socket |
+| Substitution entre préparation et exécution | Référence exacte conservée dans la confirmation session-bound | La confirmation est brûlée, aucun claim |
+| Reçu construit ou copié dans la JVM sans geste humain | Capacité mémoire liée par identité à l'instance exacte, même expiration et consommation atomique one-shot | Refus avant export, politique, grant, factory et socket |
+| Course révocation/consommation | Verrous et écritures append-only mutuellement exclusives | Un seul résultat durable |
+| Expiration pendant l'attente du verrou | `clock_timestamp()` relu après l'attente | `EXPIRED`, aucune tentative |
+| Crash entre autorisation et claim | Une transaction pour consommation, tentative et `IN_FLIGHT` | Rollback total ou état durable cohérent |
+| Échec après claim | Transport ouvert seulement après commit ; zéro retry | Grant consommé et état terminal borné ou réconciliation |
+| Bypass SQL | Contraintes et triggers corrélant grant, manifeste, tentative et delivery | Transaction rejetée |
+| Fuite de gouvernance | Aucun payload, ACK, secret, clé, certificat ou référence privée dans l'UI/log | Métadonnées minimales uniquement |
+
 ## 1. Décision de sécurité
 
 Ce modèle couvre le socle qualifié par WO-027, le sender runtime fail-closed préparé par WO-035, la
@@ -7,9 +54,10 @@ frontière d’origine navigateur qualifiée localement par WO-037, la correctio
 qualifiée et validée localement, ainsi que la preuve partielle WO-036 de trois appels synthétiques
 avec le receiver loopback réel. R3 confirme `201/200`, mais son appel de collision non-`409` ne
 qualifie pas la séquence complète `201/200/409`. Il ne qualifie ni un déploiement, ni aucune donnée
-dérivée du fournisseur. La permission officielle
-demeure `NOT_EVIDENCED`; par conséquent, toute livraison `PROVIDER_DERIVED` est bloquée avant
-création du transport et avant réseau.
+dérivée du fournisseur. Sous WO-035 et ADR-SS-003 v0.1, la permission officielle demeurant
+`NOT_EVIDENCED`, toute livraison `PROVIDER_DERIVED` était bloquée avant création du transport et
+avant réseau. ADR-SS-003 v0.2/WO-047 supersède ce seul veto pour l'éligibilité J7 locale, sans
+autoriser de livraison réelle.
 
 ```text
 SECURITY_MODEL_VERSION=1.0
@@ -48,6 +96,8 @@ REAL_NETWORK_AUTHORIZED=NO
 PROVIDER_NETWORK_AUTHORIZED=NO
 MTLS_REQUIRED_FOR_ANY_FUTURE_REAL_TARGET=YES
 DEFAULT_FAIL_CLOSED=YES
+WO047_SYNTHETIC_LOOPBACK_QUALIFICATION_AUTHORIZED=YES
+WO047_PROVIDER_DERIVED_REAL_DELIVERY_AUTHORIZED=NO
 ```
 
 Ce document n’est pas un avis juridique et ne transforme ni une documentation publique, ni une
@@ -93,7 +143,8 @@ décision interne en permission d’usage.
 6. preuve d’audit locale sans payload ni secret ;
 7. absence de dépendance critique du Betting Project ;
 8. garantie qu’aucune livraison ne déclenche une acquisition fournisseur ;
-9. blocage de toute cible réelle tant que la permission reste `NOT_EVIDENCED`.
+9. séparation vérifiable entre statut d'audit fournisseur et autorité de transfert, avec veto
+   fail-closed de `EVIDENCED_INCOMPATIBLE` et de toute valeur inconnue ou invalide.
 
 ## 3. Frontières de confiance
 
@@ -138,9 +189,9 @@ est non fiable jusqu’à validation. Un code HTTP `2xx` n’est pas une preuve 
 
 ## 5. Menaces, contrôles et preuve attendue
 
-| Menace | Scénario | Contrôle obligatoire | Preuve WO-027/WO-035/WO-036/WO-037/WO-038 |
+| Menace | Scénario | Contrôle obligatoire | Preuve WO-027/WO-035/WO-036/WO-037/WO-038/WO-045/WO-047 |
 |---|---|---|---|
-| Livraison sans permission | Une configuration fournisseur est activée alors que la permission est `NOT_EVIDENCED` | Porte de permission, autorisation distante et `PROVIDER_OWNER_GO_REQUIRED` avant création du transport ou socket | Test sans listener : refus local, aucune interaction ledger et aucune ligne créée (`NOT_ATTEMPTED` conceptuel) |
+| Confusion audit/autorité | `NOT_EVIDENCED` est transformé en permission, conservé comme veto v0.1 automatique, ou une gouvernance V2 divergente est présentée | Allow-list d'audit, veto incompatible/inconnu, format V2 discriminé et correspondance exacte de la base de gouvernance et du owner-go avant claim | `NOT_EVIDENCED` atteint seulement la porte suivante ; incompatible/invalide et gouvernance divergente sont refusés sans lookup owner-go, claim, certificat, transport ni socket |
 | Confusion de provenance | Un export mixte, incohérent ou fournisseur est présenté comme synthétique | Classification à partir des cinq sources vérifiées ; `MIXED_OR_UNKNOWN` toujours refusé ; mode exact par classe | Matrice entièrement synthétique, entièrement fournisseur, mixte, emplacement absent et valeur inconnue |
 | Bypass interne du mode synthétique | Un appelant invoque directement la voie synthétique avec un artefact fournisseur ou mixte | La voie impose `expectedPayloadClass=SYNTHETIC_ONLY` avant claim, factory et socket | Appels directs `PROVIDER_DERIVED` et `MIXED_OR_UNKNOWN` refusés sans ledger ni transport |
 | Contournement de la frontière navigateur | Une URI encodée, un Host/Origin dupliqué ou un proxy tente d’atteindre une action locale | Intercepteur fondé sur le `HandlerMethod`; Host/Origin exacts, en-têtes forwarded interdits, `frame-ancestors 'none'` et `DENY` | Handler de livraison avec URI brute hostile, doublons et forwarded refusé avant contrôleur |
@@ -261,7 +312,7 @@ Windows. Le sender ne consulte ces magasins qu’après les portes runtime et un
 
 | Risque | Statut WO-027/WO-035/WO-036/WO-037/WO-038 | Condition de réduction |
 |---|---|---|
-| Permission ou licence applicable | `NOT_EVIDENCED` | Source ou autorisation versionnée et revue qualifiée |
+| Permission ou licence applicable | `NOT_EVIDENCED`, conservé comme fait d'audit non bloquant pour le seul transfert J7 local | Surveiller et versionner toute nouvelle preuve ; `EVIDENCED_INCOMPATIBLE` redevient immédiatement un veto, sans confondre audit et autorisation de livraison |
 | Receiver et idempotence transactionnelle | `PARTIAL_BOUNDED_201_AND_200_CONFIRMED_409_NOT_QUALIFIED` | Correction du probe puis nouvelle campagne complète incluant `409` |
 | URI et exposition | `PASS_BOUNDED_SYNTHETIC_LOOPBACK_THREE_CALLS_STOPPED` | Aucune cible réelle ; nouvelle autorisation requise pour tout échange |
 | Compatibilité navigateur/frontière locale | `PASS_LOCAL_FAIL_CLOSED_VALIDATED` | Frontière qualifiée par WO-037 et exercée par WO-036 |
@@ -277,7 +328,8 @@ Windows. Le sender ne consulte ces magasins qu’après les portes runtime et un
 
 Arrêter le lot et revenir à `KEEP_LOCAL_NO_INTEGRATION` si une implémentation exige :
 
-- un contournement de permission ou de certificat ;
+- un contournement du veto `EVIDENCED_INCOMPATIBLE`, de la gouvernance exacte, du owner-go ou du
+  certificat ;
 - une URI réelle codée en dur ou une cible de secours ;
 - une redirection, un proxy rotatif, un challenge bypass ou une session persistante ;
 - l’export d’une clé privée ;
@@ -291,7 +343,8 @@ Arrêter le lot et revenir à `KEEP_LOCAL_NO_INTEGRATION` si une implémentation
 
 ## 10. Portes avant toute cible réelle
 
-Toutes les portes suivantes sont cumulatives :
+Toutes les portes suivantes restent cumulatives pour une acquisition fournisseur, une cible non
+loopback, un receiver distant, un VPS ou la production :
 
 1. permission officielle ou base d’usage applicable suffisamment établie et versionnée ;
 2. revue compétente lorsque nécessaire, sans présomption favorable ;
@@ -304,6 +357,12 @@ Toutes les portes suivantes sont cumulatives :
 9. tests offline puis loopback intégralement verts ;
 10. décision propriétaire distincte autorisant une livraison réelle d’un export déjà validé.
 
+Pour le seul transfert J7 local visé par ADR-SS-003 v0.2, la première porte ne signifie plus
+« obtenir une réponse officielle SofaScore » : elle devient la combinaison d'un statut d'audit
+allow-listé, de la base de gouvernance V2 exacte et d'un owner-go séparé lié au manifeste. Les
+portes receiver, mTLS, qualification et décision de livraison restent inchangées. WO-047 ne les
+satisfait pas et n'autorise aucun POST réel.
+
 R2 a été arrêtée après un premier `201/IMPORTED` et un duplicate durable que le sender a classé
 inconnu en raison d'un invariant temporel incompatible avec le contrat receiver. WO-038 a corrigé
 ce défaut à `PASS_LOCAL_FAIL_CLOSED`. R3 a ensuite confirmé le premier import, le duplicate,
@@ -315,8 +374,10 @@ l'absence de rejeu et le cleanup complet ont préservé les frontières de sécu
 campagne exige un correctif de harnais distinct, sa qualification, une nouvelle décision et un
 manifeste neuf.
 
-WO-036 ne satisfera que la qualification synthétique Windows/Windows. Même verte, elle ne change
-ni `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED`, ni le blocage `PROVIDER_OWNER_GO_REQUIRED`.
+WO-036 ne satisfaisait que la qualification synthétique Windows/Windows. Même verte, elle ne
+changeait historiquement ni `J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED`, ni le blocage
+`PROVIDER_OWNER_GO_REQUIRED`. ADR-SS-003 v0.2 et WO-047 supersèdent ensuite ce seul blocage
+`NOT_EVIDENCED` pour J7 local ; ils ne réautorisent aucun run WO-036 et ne valent pas owner-go.
 
 Une qualification loopback ne satisfait aucune de ces portes par elle-même.
 

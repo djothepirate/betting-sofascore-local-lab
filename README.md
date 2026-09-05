@@ -4,6 +4,216 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
+Le [WO-050](docs/work_orders/completed/WO-SS-20260905-050-j9-non-provider-launcher-owner-go-isolation.md)
+traite la P2 de la PR #27 : les six lanceurs sans livraison fournisseur sauvegardent,
+neutralisent puis restaurent les deux références owner-go héritées de l'environnement.
+La correction est qualifiée hors ligne, sans assouplir la validation Java ni modifier
+le lanceur de livraison PROVIDER_DERIVED. Le propriétaire l'a validée et WO-050 est clôturé ;
+publication et résolution de la P2 sur la PR #27 autorisées, sans fusion. WO-046 et ses
+preuves sont gelés, aucun nouveau POST ni go n'est autorisé.
+
+La [campagne réelle WO-046 R2](docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-R2-CAMPAIGN-20260905.md)
+a effectué l'unique POST J7 local explicitement autorisé : `201/IMPORTED`, sender `DELIVERED`,
+35 663 octets inbox byte-identiques, go V2 consommé une fois, audit et outbox durables.
+Les applications sont arrêtées proprement, le volume receiver et son audit conservés,
+le primaire sain ; aucun appel SofaScore et aucun listener de campagne résiduel.
+[WO-046 est validé et clôturé](docs/work_orders/completed/WO-SS-20260904-046-j9-j7-real-local-e2e-campaign.md),
+avec reconnaissance propriétaire de l'écart de minimisation des restitutions navigateur.
+Le rapport qualifié reste inchangé. Push et PR vers `main` sont autorisés, pas la fusion,
+un nouveau POST ou un déploiement. Le [manifeste R2 gelé](docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-R2-MANIFEST-20260905.md)
+et les preuves R1 restent inchangés. Les paragraphes suivants relatent les étapes historiques.
+
+Le [WO-049](docs/work_orders/completed/WO-SS-20260905-049-j9-wo046-launcher-stop-proof.md)
+est **validé par le propriétaire et clôturé**, résultat `PASS_OFFLINE_FAIL_CLOSED` : préparation
+du lanceur WO-046, mapping vérifié par Spring et justificatif technique d'arrêt canonique.
+Le [rapport](docs/validation/J9-WO049-LAUNCHER-STOP-PROOF-OFFLINE-QUALIFICATION-20260905.md)
+consigne 20 tests Pester, 7 tests Java ciblés et un build final borné réussi. Il expose aussi
+l'écart initial : Failsafe a lancé des tests PostgreSQL isolés avant interruption, hors du
+périmètre autorisé ; aucun conteneur Testcontainers ne subsiste au contrôle final. Cet écart
+a été explicitement reconnu par le propriétaire. La reprise préparatoire WO-046 et un nouveau
+manifeste sont autorisés, ainsi qu'un accord pour un nouveau go ; aucun bloc V2 exécutoire
+n'en est déduit tant que l'autorisation de POST demeure absente, même après le gel R2.
+Le POST réel reste interdit ; aucune campagne n'est redémarrée par la clôture de WO-049.
+
+La [tentative réelle WO-046 R1](docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-R1-STOPPED-20260905.md)
+est **arrêtée avant tout POST d'import J7**. Le owner-go V2 a été préparé, soumis et enregistré,
+mais le lanceur Codex utilisait des noms de variables sender erronés : le Local Lab a refusé
+une matrice d'activation incohérente avant ouverture du listener. Le diagnostic de binding hors
+ligne reproduit cette erreur ; aucun correctif runtime ni nouvelle exécution n'est effectué.
+Le go est révoqué sans consommation, avec zéro livraison, tentative et import receiver.
+
+Le receiver a passé sa readiness mTLS `200/UP` sur loopback avant l'échec du Local Lab ; il a
+ensuite été arrêté gracieusement par un POST administratif distinct de l'import. Sa base V008
+neuve est arrêtée, son volume conservé, sans redémarrage automatique. Le primaire est toujours
+sain ; son export est inchangé et aucun listener 8087/8444/5433 ne subsistait. Les seules nouvelles
+écritures primaires de gouvernance R1 étaient un grant et sa révocation. WO-046 restait actif, état
+`STOPPED_PRE_IMPORT_LOCAL_LAB_CONFIGURATION_BINDING_REFUSED`.
+
+La [préparation primaire WO-046](docs/validation/J9-WO046-PRIMARY-V30-V32-PREPARATION-20260905.md)
+reste la preuve historique achevée : sauvegarde/restauration V30 qualifiée, migrations V31 puis
+V32 par démarrage transitoire non-web bloqué, puis sauvegarde/restauration V32 qualifiée.
+Le [manifeste WO-046](docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-CAMPAIGN-MANIFEST-20260904.md)
+est gelé au commit `2cdb93d2236955a34528a11cc982fc01f4554b46`. Il contient `18380` octets,
+SHA-256 `6590603286c6c422588bbc3f6a46f502716fa2e2df18b6ad0df741cbd1cbf277`.
+Ses octets sont inchangés. Toute reprise exige une correction/qualification distincte du
+lanceur, puis une décision propriétaire pour un manifeste successeur et un nouveau go : le hash
+du manifeste ne peut être réutilisé pour un second grant. Aucun appel SofaScore, receiver distant,
+VPS, production, nouveau POST d'import ou push Git n'est autorisé par ce compte rendu d'arrêt.
+
+Le Work Order
+[WO-SS-20260904-048](docs/work_orders/completed/WO-SS-20260904-048-j9-wo046-local-mtls-identity-provisioning.md)
+est `VALIDATED`, classé et qualifié `PASS_LOCAL_FAIL_CLOSED` sur la branche distincte
+`codex/j9-wo048-wo046-local-mtls-identity-provisioning`, au runtime exact
+`063c91f2de57330ca2b6baf3753d7de4ea921881`. Il fournit à WO-046 un outillage PKI-only
+fail-closed et un unique jeu d'identités mTLS locales neuf, éphémère et lié au run, sans démarrer
+Docker, PostgreSQL, le Local Lab ou INT-001 et sans ouvrir de socket ou effectuer de handshake.
+Seuls les exécutables Java 25 épinglés et un probe SunMSCAPI hors ligne ont été exécutés.
+
+La qualification injecte sept échecs distincts : les sept rollbacks passent avec zéro résidu. Le
+run nominal, lui, est volontairement conservé et un audit post-processus confirme exactement une
+identité cliente et une identité receiver persistantes. Le profil CNG a été corrigé pour employer
+`KeySpec=None`/`KeyUsageProperty=Sign`, puis le chemin instable `Import-Certificate`
+(`0x80070057`) a été remplacé par une mutation `X509Store.Add` précédée d'une autorité de cleanup
+durable et suivie de contrôles exacts. Les parseurs PowerShell et les `54/54` tests Pester passent ;
+aucun finding P0/P1/P2 ne reste ouvert.
+
+Le
+[rapport expurgé WO-048](docs/validation/J9-WO048-LOCAL-MTLS-IDENTITY-PROVISIONING-QUALIFICATION-20260904.md),
+taille `12844` octets et SHA-256
+`c704961530020216bfbc644f2fa928357466eccf54ef4e3d80f5705a95ef109d`, consigne aussi une
+déviation Testcontainers contenue et nettoyée, sans accès à la base primaire. Le propriétaire a
+validé la readiness, reconnu les tentatives hôte, la déviation et la conservation du run nominal ;
+la clôture est consignée le `2026-09-04T22:10:44Z` (`2026-09-05T00:10:44+02:00` Europe/Paris).
+Le rapport et les commits qualifiés restent immuables. La branche historique sera publiée avec
+l'alias de PR conforme `codex/ss-20260904-048-j9-wo046-local-mtls-identity-provisioning` au même
+commit, afin de respecter la convention CI sans réécrire l'historique.
+
+Le UUID du run, les certificats, empreintes réelles, clés, stores, mots de passe et chemins privés
+restent hors Git dans un état externe protégé. Cet état contient des secrets sous ACL ; seul son
+engagement SHA-256, et non son contenu, est versionné avec les statuts expurgés. La qualification
+de WO-048 n'autorise ni le manifeste WO-046, ni un
+owner-go, ni un POST réel ; les réseaux fournisseur/distant, le VPS et la production restent
+interdits.
+
+Le Work Order
+[WO-SS-20260904-047](docs/work_orders/completed/WO-SS-20260904-047-j9-j7-delivery-governance-separation.md)
+est `VALIDATED` et classé sur la branche distincte
+`codex/j9-wo047-j7-delivery-governance-separation`. ADR-SS-003 v0.2 a été acceptée sur la
+proposition immuable `e1ec9936467dd570f7ed00c51227c8e7d5a35945` afin de corriger un
+couplage erroné : l'absence de réponse officielle SofaScore reste un fait d'audit
+`NOT_EVIDENCED`, mais ne doit pas bloquer le transfert local d'un J7 déjà `HUMAN_VALIDATED` vers
+Betting Project, lequel ne contacte jamais SofaScore.
+
+L'implémentation V2/V32 hors ligne et synthétique est qualifiée sous WO-047 au commit
+`ddb41e8fd0dfe32e9c2aa5fdb4a50d9fcd90cb93`. Le propriétaire a validé sa readiness locale,
+reconnu la déviation de sélection contenue et autorisé son classement le
+`2026-09-04T16:37:53.4738879Z`. La reprise séparée de WO-046 est maintenant autorisée et sa
+branche a intégré WO-047 par fast-forward exact jusqu'au commit de clôture publié
+`73881ebf2c673d347b63e8be982572e70b6429ae`. Aucun manifeste, go ou POST réel n'est pour autant
+autorisé.
+
+Le Work Order
+[WO-SS-20260904-046](docs/work_orders/completed/WO-SS-20260904-046-j9-j7-real-local-e2e-campaign.md)
+porte historiquement dans son document v0.1 l'état `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`,
+depuis le commit exact de clôture de WO-045
+`8a1225fc4b85d8e8b55af536fcbc7955676131ff`. Après l'arrêt R1 et le succès R2, son état
+effectif est désormais `VALIDATED`, classé dans les Work Orders terminés. Il porte la campagne
+Windows/Windows d'une livraison manuelle unique d'un export J7 fournisseur déjà
+`HUMAN_VALIDATED` vers le receiver Betting Project sur `https://127.0.0.1:8444`.
+
+L'autorisation historique propre à WO-046 couvre uniquement l'ouverture documentaire et
+l'inventaire hors ligne.
+Le receiver INT-001 est désormais validé par le propriétaire, localement qualifié et non publié au
+commit documentaire `de06153f0908a1bb2dc9bbd2c8e22f7fd14dacfd` de son dépôt. La
+[réconciliation officielle](docs/validation/J9-WO046-OFFICIAL-PERMISSION-RECONCILIATION-20260904.md),
+taille `7273` octets et SHA-256
+`707e0fd9b07dc0944225be80a590792e5e8ab0631dab964a465335f283ac1473`, ne trouve toutefois aucune
+réponse, licence ou convention SofaScore exacte corroborant la déclaration propriétaire
+`EVIDENCED_COMPATIBLE`. Le résultat exécutoire reste `NOT_EVIDENCED`.
+
+La conclusion de blocage du rapport WO-046 reste la preuve exacte de la règle v0.1 alors effective,
+mais ADR-SS-003 v0.2 la supersède pour le seul transfert J7 local. Le statut officiel reste
+`NOT_EVIDENCED` comme fait d'audit et n'est pas présenté comme un accord. L'étape 3 a sélectionné
+hors ligne les métadonnées de l'export `a8d40d57-98c5-4e01-8ecc-4f1f9b5feabc`, classé
+`PROVIDER_DERIVED` et `HUMAN_VALIDATED`, taille `35663` octets, SHA-256 fichier
+`d4aba249231bb9d575f40b5c23a629b938f685ee7d4cc479bfa7d846d61be3f6`. La concordance du ledger
+primaire a été corroborée sous autorisation de lecture seule par le
+[préflight primaire WO-046](docs/validation/J9-WO046-PRIMARY-READONLY-PREFLIGHT-20260905.md) :
+export unique `HUMAN_VALIDATED`, fichier inchangé, métadonnées structurées identiques et aucune
+livraison/tentative pour cet export. Ce préflight historique constatait V1 à V30 réussies,
+V31/V32 non appliquées. La préparation primaire distincte référencée en tête de page a depuis
+qualifié V31 puis V32 et la sauvegarde/restauration V32, avant le gel du manifeste.
+
+Le
+[rapport de reprise WO-046](docs/validation/J9-WO046-RESUME-EXPORT-AND-MTLS-SELECTION-20260904.md),
+taille `6215` octets et SHA-256
+`18152301fbb4caa49218f7562f2a1ceb35b9e451dd6c6c5b02dc5b845eba574a`, constate que
+`CurrentUser\\My` contenait zéro certificat lors de cet inventaire historique. WO-048 a depuis
+provisionné et qualifié un jeu neuf lié au run. Après intégration par fast-forward de sa clôture
+`5f7756b17c42d14bc97c7ddd7fcbde616b2241e0`, les deux identités ont été revalidées par leurs seules
+métadonnées publiques, sans clé privée, mutation ou socket. L'étape 4 est désormais
+`SELECTED_RUN_BOUND_WO048_VALIDATED_PUBLIC_METADATA_REVALIDATED`. Le préflight du ledger et du
+schéma primaire, la protection préalable V30, la migration séquentielle V31/V32 et la
+sauvegarde/restauration isolée V32 sont terminés et documentés. Une décision distincte a ensuite
+autorisé le seul gel du manifeste WO-046 ; les métadonnées et l'identité mTLS ont été recontrôlées.
+Aucun nouveau go propriétaire n'est construit, accordé ou enregistré.
+Aucun receiver n'est démarré, aucun POST ou appel SofaScore n'est autorisé, et les réseaux distant
+et fournisseur, le VPS et la production restent bloqués.
+
+Le Work Order
+[WO-SS-20260904-045](docs/work_orders/completed/WO-SS-20260904-045-j9-provider-derived-owner-go-boundary.md)
+est `VALIDATED` et classé. Son commit d'implémentation
+`67467d5dbd63fa54d11b2d1cd701a31edf4454e0` ajoute la frontière durable, exacte, atomique et à
+usage unique V1 historique exigée avant toute future livraison J7 dérivée de données fournisseur.
+La voie `SYNTHETIC_ONLY` reste inchangée ; `MIXED_OR_UNKNOWN` reste refusée.
+
+Le grant propriétaire est lié par UUID et SHA-256 à un document canonique qui fixe le futur Work
+Order/manifeste, les commits des deux dépôts, la preuve officielle, l'événement, l'export et ses
+hashes, le schéma, le receiver loopback, le certificat client, l'ordinal `1`, un seul appel et une
+fenêtre de 60 minutes maximum. Java et PostgreSQL recalculent le même préimage UTF-8/LF. La
+migration V31 conserve les grants, révocations et consommations append-only ; consommation,
+tentative et passage `IN_FLIGHT` sont committés dans une seule transaction avant toute ouverture du
+transport.
+
+La confirmation locale émet désormais une capacité mémoire liée à l'instance exacte du reçu,
+expirante et consommable une seule fois. Une copie présentant les mêmes champs est refusée avant
+toute lecture d'export ou de grant. Après claim, aucun échec ne rembourse le go et aucun retry
+automatique n'est possible. Les fonctions SQL fixent leur `search_path`, et la sauvegarde J6 alors
+qualifiée en V31 empreinte également les trois journaux owner-go.
+
+WO-047 conserve ce format V1 et V31 byte-identiques, puis ajoute un format V2 et une migration V32
+append-only qui discriminent explicitement audit fournisseur et gouvernance du transfert. Les
+contrôles J6 courants exigent V32. Sous l'autorisation WO-047, leur qualification reste cependant
+statique et ciblée : aucun `pg_dump`, `pg_restore`, pipeline natif, backup/restore ou contact de la
+base primaire n'est autorisé. Le
+[rapport WO-047](docs/validation/J9-WO047-J7-DELIVERY-GOVERNANCE-SEPARATION-QUALIFICATION-20260904.md),
+taille `12033` octets et SHA-256
+`75b55109c0705a44026376d7f0bdadf76d979dcd4268c1430d5ed8008d693540`, conclut
+`PASS_LOCAL_FAIL_CLOSED`. Le propriétaire a validé cette readiness, reconnu la déviation de
+sélection contenue et autorisé le classement du Work Order. Aucun profil `integration-tests`
+intégral n'est revendiqué. La clôture seule n'autorisait pas la reprise de WO-046 ; cette reprise
+a depuis été accordée par une décision propriétaire séparée et reste bornée par les portes
+consignées dans le Work Order actif.
+
+Pour la qualification historique WO-045, les parcours Maven standard et `integration-tests`
+passent chacun à Surefire `1167/0/0/5` et
+Failsafe `100/0/0/0`, incluant PostgreSQL, concurrence, mTLS et E2E synthétique strictement
+loopback. Les revues adversariales finales comptent zéro P1/P2. Le
+[rapport WO-045](docs/validation/J9-WO045-PROVIDER-DERIVED-OWNER-GO-BOUNDARY-QUALIFICATION-20260904.md),
+taille `11471` octets, porte le SHA-256
+`5146c18542f0376a60bac5d4a25b68ff3f2fec9d7da700b32ee0aac60e16d946` et conclut
+`PASS_LOCAL_FAIL_CLOSED`.
+
+Le propriétaire a validé WO-045, reconnu sa readiness locale et autorisé son classement le
+`2026-09-04T13:56:44.6887667Z`, soit `2026-09-04T15:56:44.6887667+02:00` en Europe/Paris.
+
+Aucun grant réel, POST fournisseur, appel SofaScore, receiver distant, accès VPS ou usage de
+production n'a été effectué. Le propriétaire autorise séparément l'ouverture de WO-046, mais
+n'accorde aucun go lié au futur manifeste et n'autorise aucun POST réel. Le nouveau manifeste gelé
+et un nouveau go propriétaire exactement lié restent obligatoires avant toute tentative. Les
+réseaux fournisseur et receiver distant, le VPS et la production restent interdits. La branche et
+ses commits restent locaux ; aucun push ni merge n'est réalisé par cette clôture.
+
 Le Work Order
 [WO-SS-20260904-044](docs/work_orders/completed/WO-SS-20260904-044-j9-wo036-java-jar-path-argument-boundary.md)
 est `VALIDATED` et classé. Le commit
@@ -1187,6 +1397,13 @@ http://127.0.0.1:8087/actuator/metrics
 Le démarrage depuis Eclipse nécessite que PostgreSQL ait déjà été lancé par `Start-Local.ps1` ou `docker compose up -d postgres`.
 
 ## Commandes de validation
+
+Les commandes ci-dessous décrivent le socle général du dépôt. Elles ne valent pas autorisation
+d'exécuter les scénarios natifs sous WO-047 : pour ce Work Order, utiliser uniquement le
+`clean verify` avec exclusion explicite de `J6NativeBinaryPipelineQualificationTest` et les
+sélections positives du profil `integration-tests` consignées dans le
+[WO-047](docs/work_orders/completed/WO-SS-20260904-047-j9-j7-delivery-governance-separation.md).
+Le test Flyway `pg_dump`/`pg_restore`, le pipeline natif et le profil intégral restent interdits.
 
 ### Tests standards hors ligne fournisseur
 

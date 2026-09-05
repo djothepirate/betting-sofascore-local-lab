@@ -1,8 +1,12 @@
 # ADR-SS-003 — Topologie d’intégration optionnelle du SofaScore Local Lab
 
-- **Statut :** v0.1 `ACCEPTED` — direction d’architecture sélectionnée, aucun effet
-  d’implémentation ou de réseau
-- **Version acceptée :** 0.1
+- **Statut effectif :** v0.2 `ACCEPTED` — séparation de l'audit de permission fournisseur et du
+  transfert J7 local ; aucune autorisation de POST réel ou de réseau fournisseur
+- **Version acceptée :** 0.2
+- **Proposition v0.2 acceptée :** commit
+  `e1ec9936467dd570f7ed00c51227c8e7d5a35945`, SHA-256
+  `ded6a4da8a3161caae491f62919f4f5c3569c69c821be5a807772cc542cede3f`
+- **Acceptation v0.2 consignée le :** `2026-09-04T15:27:21.4106846Z`
 - **Clarification factuelle courante :** v0.1 + `WO-SS-20260901-028` — identité/version J7
   explicitées sans nouvelle décision de version, de topologie ou d’autorisation
 - **Date de proposition :** 2026-09-01
@@ -446,6 +450,7 @@ Order. Elle n’autorise pas :
 | 0.1 | 2026-09-01 | `PROPOSED_NOT_ACCEPTED` | Proposition issue de J9 : option A comme direction d’un futur Work Order, option B différée et bloquée par la gouvernance actuelle, option C comme repli ; aucun effet runtime ou réseau |
 | 0.1 | 2026-09-01 | `ACCEPTED` | Draft immuable `ca789a3a…` / `0edcc1e7…` accepté à `07:25:25.4809414Z` ; `OPTIONAL_LOCAL_PUSH` sélectionné, option VPS différée, toutes les autorisations d’implémentation, de réseau, de livraison, de déploiement et de production maintenues à `NO` |
 | 0.1 (clarification factuelle WO-028) | 2026-09-01 | `CORRECTIVE_CLARIFICATION` | Remplacement de l’affectation ambiguë `J7_CANONICAL_EXPORT_V1` par la paire manifeste canonique `urn:betting-project:sofascore-local-lab:j7:canonical-event-export:v1` / `1.0.0` ; version et décision v0.1 ainsi que non-autorisations inchangées |
+| 0.2 | 2026-09-04 | `ACCEPTED` | Proposition immuable `e1ec9936467dd570f7ed00c51227c8e7d5a35945` / `ded6a4da8a3161caae491f62919f4f5c3569c69c821be5a807772cc542cede3f` acceptée ; séparation de l'audit de permission fournisseur et de la gouvernance du transfert J7 local, owner-go V2 discriminé, V1/V31 stricts et immuables ; implémentation autorisée sous WO-047, POST réel et réseaux fournisseur/distant maintenus à `NO` |
 
 ## 18. Références
 
@@ -461,3 +466,136 @@ Order. Elle n’autorise pas :
 9. [Architecture générale](docs/architecture/ARCHITECTURE.md).
 10. [Règles du dépôt](AGENTS.md).
 11. [Clarification corrective WO-028](docs/work_orders/completed/WO-SS-20260901-028-adr-ss-003-j7-schema-identity-clarification.md).
+
+## 19. Amendement v0.2 accepté — portée de la permission et transfert J7 local
+
+### 19.1 Motif du réexamen
+
+Le propriétaire confirme qu'il n'existe aucune réponse ni aucun accord SofaScore officiel et que
+ce fait n'est pas une condition de réception, par Betting Project, d'un export J7 provenant du
+Local Lab. Le Local Lab est la seule application susceptible d'appeler les endpoints fournisseur
+J3/J4/J5 ; Betting Project reçoit seulement l'enveloppe J7 et n'appelle jamais SofaScore.
+
+ADR-SS-003 v0.1 et sa traduction runtime ont relié à tort la provenance fournisseur de l'export à
+une permission officielle positive pour son transport local. L'amendement accepté corrige cette
+relation sans fabriquer d'accord et sans autoriser un appel fournisseur.
+
+### 19.2 Séparation normative acceptée
+
+```text
+SOFASCORE_OFFICIAL_RESPONSE=NONE
+SOFASCORE_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+NOT_EVIDENCED_EFFECT=AUDIT_ONLY_NON_BLOCKING_FOR_LOCAL_J7_TRANSFER
+EVIDENCED_COMPATIBLE_EFFECT=AUDIT_ONLY_NON_BLOCKING_FOR_LOCAL_J7_TRANSFER
+EVIDENCED_INCOMPATIBLE_EFFECT=SAFETY_VETO_FOR_LOCAL_J7_TRANSFER
+LOCAL_LAB_PROVIDER_ENDPOINT_SCOPE=J3_J4_J5
+BETTING_PROJECT_PROVIDER_ACCESS=NONE
+BETTING_PROJECT_CURRENT_ROLE=RECEIVE_J7_EXPORTS_FROM_LOCAL_LAB
+J7_LOCAL_TRANSFER_REQUIRES_SOFASCORE_OFFICIAL_RESPONSE=NO
+J7_LOCAL_TRANSFER_REQUIRES_EXACT_OWNER_GO=YES
+J7_DELIVERY_TRIGGERS_PROVIDER_ACQUISITION=NO
+```
+
+`NOT_EVIDENCED` n'est ni une permission ni une incompatibilité. Il reste consigné et hashé comme
+fait d'audit, mais ne décide plus du POST J7 local. Une valeur future
+`EVIDENCED_INCOMPATIBLE` reste disqualifiante et bloque le transfert. Cet amendement ne crée aucune
+nouvelle porte ni aucune nouvelle autorisation pour les acquisitions J3/J4/J5 : elles restent
+gouvernées séparément par ADR-SS-001, leurs Work Orders, allowlists, préparations, confirmations et
+décisions réseau propres.
+
+### 19.3 Traduction runtime autorisée sous WO-047
+
+Le format canonique `J7_PROVIDER_DERIVED_OWNER_GO_V1` reste strictement inchangé et conserve la
+sémantique validée par WO-045 : une ligne V1 exige exactement `EVIDENCED_COMPATIBLE`. Il n'est ni
+élargi ni réinterprété.
+
+Un format `J7_PROVIDER_DERIVED_OWNER_GO_V2` séparera explicitement le fait d'audit fournisseur de
+la base de gouvernance du transfert. Il reprendra toutes les autres lignes et protections V1,
+mais remplacera les trois lignes ambiguës par :
+
+```text
+FORMAT=J7_PROVIDER_DERIVED_OWNER_GO_V2
+PROVIDER_PERMISSION_AUDIT_REFERENCE=docs/validation/J9-WO046-OFFICIAL-PERMISSION-RECONCILIATION-20260904.md
+PROVIDER_PERMISSION_AUDIT_SHA256=707e0fd9b07dc0944225be80a590792e5e8ab0631dab964a465335f283ac1473
+PROVIDER_PERMISSION_AUDIT_STATUS=NOT_EVIDENCED
+J7_TRANSFER_GOVERNANCE_BASIS_REFERENCE=ADR-SS-003-optional-integration-topology.md
+J7_TRANSFER_GOVERNANCE_BASIS_COMMIT=e1ec9936467dd570f7ed00c51227c8e7d5a35945
+J7_TRANSFER_GOVERNANCE_BASIS_SHA256=ded6a4da8a3161caae491f62919f4f5c3569c69c821be5a807772cc542cede3f
+J7_TRANSFER_GOVERNANCE_BASIS_STATUS=ADR_ACCEPTED_NO_EXECUTION_AUTHORITY
+```
+
+Le commit et le SHA-256 de gouvernance identifieront les octets exacts de la proposition v0.2
+acceptée sans lui attribuer un droit d'exécution. L'autorisation spécifique restera portée par les
+lignes `OWNER_DECISION=GRANT`, `GO_USE=ONE_TIME` et
+`PROVIDER_DERIVED_REAL_POST_AUTHORIZED=YES` du bloc owner-go lui-même, lié au manifeste et
+authentifié par son SHA-256 externe. Toutes les autres lignes et protections demeurent obligatoires, notamment :
+export `PROVIDER_DERIVED` et `HUMAN_VALIDATED`, manifeste gelé, commits exacts, hashes, origine
+loopback, mTLS exact, ordinal `1`, un seul appel, fenêtre de 60 minutes maximum, go à usage unique,
+`PROVIDER_NETWORK_AUTHORIZED=NO`, receiver distant/VPS/production à `NO` et zéro retry.
+
+V31 reste immuable. Un futur Work Order autorisé devra ajouter une migration V32 append-only avec
+un discriminant strict de format, une fonction canonique V2 et les champs de gouvernance V2. V1 restera
+byte-identique et limité à `EVIDENCED_COMPATIBLE`; V2 admettra comme audit fournisseur
+`NOT_EVIDENCED` ou `EVIDENCED_COMPATIBLE`, refusera `EVIDENCED_INCOMPATIBLE` et toute valeur
+inconnue, et exigera l'autorité de transfert exacte. Aucune donnée, fonction V1 ni empreinte
+historique ne sera réécrite.
+
+### 19.4 Clauses v0.1 supersédées par l'acceptation
+
+La table suivante aura priorité normative sur les formulations v0.1 indiquées, exclusivement pour
+`OPTIONAL_LOCAL_PUSH`. Toutes les autres clauses restent effectives.
+
+| Clause v0.1 | Texte ou effet v0.1 | Effet v0.2 accepté pour `OPTIONAL_LOCAL_PUSH` | `VPS_PLAYWRIGHT` |
+|---|---|---|---|
+| §6, ligne « Permission officielle » | `NOT_EVIDENCED` est une porte dure pour les deux options | fait d'audit, pas une porte du POST J7 local | porte dure inchangée |
+| §9.2, premier item | permission/licence/base d'usage établie avant implémentation | item supprimé pour le seul transfert J7 local | sans objet ; §9.3 inchangé |
+| §10.2, « permission non résolue » | risque commun de l'option A | risque d'acquisition, sans effet d'admission sur la livraison J7 | risque inchangé |
+| §11, dernier item | incompatibilité ou consentement requis non obtenu disqualifiants | seule une incompatibilité officielle établie disqualifie le transfert | règle inchangée |
+| §12, `PROVIDER_PERMISSION=NOT_EVIDENCED` | paramètre factuel sans portée séparée | renommé conceptuellement `PROVIDER_PERMISSION_AUDIT=NOT_EVIDENCED` | paramètre inchangé |
+| §15, permission nouvelle | déclencheur de réexamen | inchangé ; une réponse future met à jour l'audit et peut bloquer si incompatible | inchangé |
+
+L'acceptation v0.2 est liée au commit et au SHA-256 exacts consignés dans l'en-tête et dans
+l'historique. Les effets v0.2 de la table ci-dessus sont désormais normatifs pour
+`OPTIONAL_LOCAL_PUSH`; les autres clauses v0.1 demeurent effectives.
+
+### 19.5 Effet limité de l'acceptation
+
+L'acceptation de v0.2 autorise uniquement l'implémentation sous WO-047, explicitement autorisé par
+la même décision propriétaire. Elle ne vaut pas :
+
+- autorisation de créer ou geler le manifeste WO-046 ;
+- sélection ou lecture d'une clé privée ;
+- go propriétaire WO-046 ;
+- démarrage du Local Lab ou du receiver pour la campagne réelle ;
+- POST réel, appel J3/J4/J5 ou réseau non-loopback ;
+- modification d'ADR-SS-001 ;
+- receiver distant, VPS, production, live, polling, scheduler, retry ou fallback.
+
+Après qualification et validation propriétaire de WO-047, WO-046 pourrait reprendre à l'étape 3
+de la séquence : sélection des seules métadonnées d'un export `PROVIDER_DERIVED` déjà
+`HUMAN_VALIDATED`. Une décision séparée resterait obligatoire pour chaque porte ultérieure.
+
+### 19.6 Décision propriétaire reçue
+
+```text
+ADR_SS_003_V0_2_OWNER_DECISION=ACCEPT
+ADR_SS_003_V0_2_PROPOSAL_COMMIT=e1ec9936467dd570f7ed00c51227c8e7d5a35945
+ADR_SS_003_V0_2_FILE_SHA256=ded6a4da8a3161caae491f62919f4f5c3569c69c821be5a807772cc542cede3f
+ADR_SS_003_V0_2_SELECTED_TOPOLOGY=OPTIONAL_LOCAL_PUSH
+ADR_SS_003_V0_2_NOT_EVIDENCED_AUDIT_STATUS_PRESERVED=YES
+ADR_SS_003_V0_2_NOT_EVIDENCED_EFFECT=AUDIT_ONLY_NON_BLOCKING_FOR_LOCAL_J7_TRANSFER
+ADR_SS_003_V0_2_EVIDENCED_INCOMPATIBLE_REMAINS_BLOCKING=YES
+ADR_SS_003_V0_2_J3_J4_J5_OFFICIAL_PERMISSION_GATE_CHANGE=NO
+ADR_SS_003_V0_2_OWNER_GO_FORMAT=J7_PROVIDER_DERIVED_OWNER_GO_V2
+ADR_SS_003_V0_2_V1_COMPATIBILITY=STRICT_LEGACY_UNCHANGED
+ADR_SS_003_V0_2_MIGRATION_POLICY=V32_APPEND_ONLY_FORMAT_DISCRIMINATED_V31_IMMUTABLE
+ADR_SS_003_V0_2_ACCEPTANCE_AUTHORIZES_REAL_POST=NO
+ADR_SS_003_V0_2_PROVIDER_NETWORK_AUTHORIZED=NO
+ADR_SS_003_V0_2_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+ADR_SS_003_V0_2_VPS_DEPLOYMENT_AUTHORIZED=NO
+ADR_SS_003_V0_2_PRODUCTION_AUTHORIZED=NO
+```
+
+La décision a été reçue sans placeholder et vérifiée contre le commit et le SHA-256 proposés.
+ADR-SS-003 v0.2 est la version effective. Cette acceptation autorise WO-047 mais ne constitue ni
+un go WO-046, ni une autorisation de POST réel.

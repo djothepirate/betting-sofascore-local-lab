@@ -2,7 +2,9 @@ package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryConfirmationAction;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryConfirmationRequest;
+import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryConfirmationReceipt;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryExecutionGate;
+import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryPreparation;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryQueryService;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryRuntimeService;
 import com.bettingproject.sofascorelocal.application.delivery.J7DeliveryView;
@@ -84,9 +86,10 @@ public final class J7DeliveryController {
         formTokenService.consume(session, localFormToken);
         try {
             var preview = exportService.preview(canonicalEventId, exportId);
-            J7DeliveryView view = queryService.view(preview);
+            J7DeliveryPreparation preparation = queryService.preparation(preview);
+            J7DeliveryView view = preparation.view();
             if (!view.preparationAllowed()) {
-                throw new J7DeliveryException(J7DeliveryError.DELIVERY_DISABLED);
+                throw new J7DeliveryException(blockedPreparationError(view));
             }
             if (view.unknownOutcomeReconciliationRequired()
                     && !unknownOutcomeReconciled) {
@@ -100,7 +103,8 @@ public final class J7DeliveryController {
                             canonicalEventId,
                             exportId,
                             preview.manifest().currentContentSha256(),
-                            nextDeliveryAttempt(view.ledger()));
+                            nextDeliveryAttempt(view.ledger()),
+                            preparation.providerOwnerGoReference());
             populatePreview(model, canonicalEventId, exportId, session, preview, view);
             model.addAttribute("deliveryConfirmationRequest", confirmationRequest);
             return "event-export-preview";
@@ -130,7 +134,8 @@ public final class J7DeliveryController {
                     canonicalEventId, exportId);
             OptionalInt nextAttempt = nextDeliveryAttempt(ledgerStore.find(
                     exportId, candidate.fileSha256()));
-            confirmationService.consume(
+            J7DeliveryConfirmationReceipt confirmationReceipt =
+                    confirmationService.consume(
                     session.getId(),
                     J7DeliveryConfirmationAction.DELIVERY,
                     canonicalEventId,
@@ -142,10 +147,8 @@ public final class J7DeliveryController {
                     acknowledged,
                     Clock.systemUTC());
             runtimeService.deliver(
-                    canonicalEventId,
-                    exportId,
-                    confirmationText,
-                    nextAttempt.getAsInt());
+                    confirmationReceipt,
+                    confirmationText);
             return "redirect:/events/{canonicalEventId}/exports/{exportId}";
         }
         catch (J7DeliveryException | J7DeliveryConfirmationException
@@ -304,6 +307,18 @@ public final class J7DeliveryController {
             return "LEDGER_" + ledgerException.failure().name();
         }
         return "DELIVERY_REFUSED";
+    }
+
+    private static J7DeliveryError blockedPreparationError(J7DeliveryView view) {
+        if (view.policyBlockers().contains(
+                J7DeliveryError.OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE.name())) {
+            return J7DeliveryError.OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE;
+        }
+        if (view.policyBlockers().contains(
+                J7DeliveryError.OFFICIAL_PERMISSION_STATUS_INVALID.name())) {
+            return J7DeliveryError.OFFICIAL_PERMISSION_STATUS_INVALID;
+        }
+        return J7DeliveryError.DELIVERY_DISABLED;
     }
 
     private static void applyNoStoreHeaders(HttpServletResponse response) {

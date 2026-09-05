@@ -3,12 +3,14 @@ package com.bettingproject.sofascorelocal.application.delivery;
 import com.bettingproject.sofascorelocal.config.OptionalLocalPushProperties;
 import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryError;
 import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryException;
+import com.bettingproject.sofascorelocal.domain.delivery.J7ProviderDerivedOwnerGo;
 import com.bettingproject.sofascorelocal.port.J7DeliveryTransportFactory;
 
 import java.net.URI;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.UUID;
 
 /** Runtime gate kept separate from every SofaScore acquisition property. */
 public final class J7DeliveryPolicy {
@@ -32,22 +34,21 @@ public final class J7DeliveryPolicy {
         if (properties.isAutomaticRetryEnabled()) {
             throw new J7DeliveryException(J7DeliveryError.REMOTE_DELIVERY_NOT_AUTHORIZED);
         }
+        if (!providerOwnerGoIsAbsent()) {
+            throw new J7DeliveryException(J7DeliveryError.PROVIDER_OWNER_GO_NOT_ALLOWED);
+        }
     }
 
     public void requireRealDelivery() {
         if (!properties.isEnabled()) {
             throw new J7DeliveryException(J7DeliveryError.DELIVERY_DISABLED);
         }
-        if (properties.getOfficialPermissionStatus()
-                != OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE) {
-            throw new J7DeliveryException(
-                    J7DeliveryError.OFFICIAL_PERMISSION_NOT_EVIDENCED);
-        }
+        requireJ7TransferEligiblePermissionAudit();
         if (!properties.isRemoteDeliveryAuthorized()) {
             throw new J7DeliveryException(
                     J7DeliveryError.REMOTE_DELIVERY_NOT_AUTHORIZED);
         }
-        throw new J7DeliveryException(J7DeliveryError.REMOTE_DELIVERY_NOT_AUTHORIZED);
+        providerOwnerGoReference();
     }
 
     public List<String> realDeliveryBlockers() {
@@ -55,14 +56,18 @@ public final class J7DeliveryPolicy {
         if (!properties.isEnabled()) {
             blockers.add("DELIVERY_DISABLED");
         }
-        if (properties.getOfficialPermissionStatus()
-                != OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE) {
-            blockers.add("OFFICIAL_PERMISSION_NOT_EVIDENCED");
-        }
+        addPermissionAuditBlocker(blockers);
         if (!properties.isRemoteDeliveryAuthorized()) {
             blockers.add("REMOTE_DELIVERY_NOT_AUTHORIZED");
         }
-        blockers.add("REAL_RECEIVER_WORK_ORDER_NOT_SATISFIED");
+        OptionalLocalPushProperties.ProviderOwnerGo configured =
+                properties.getProviderOwnerGo();
+        if (configured == null || configured.isAbsent()) {
+            blockers.add("PROVIDER_OWNER_GO_REQUIRED");
+        }
+        else if (!configured.isComplete()) {
+            blockers.add("PROVIDER_OWNER_GO_INVALID");
+        }
         return List.copyOf(blockers);
     }
 
@@ -72,9 +77,11 @@ public final class J7DeliveryPolicy {
     }
 
     /**
-     * Applies the WO-035 runtime gates without consulting a certificate store or opening a client.
-     * Provider-derived delivery deliberately remains structurally blocked until a later Work Order
-     * supplies a durable, exact and one-time owner-go consumption boundary.
+     * Applies the WO-035 runtime gates as amended by WO-047, without consulting a certificate
+     * store or opening a client. Provider-derived delivery admits only the explicit permission
+     * audit allow-list and requires the complete public reference of the owner-go document.
+     * Durable availability, identity and one-time consumption are enforced later by the
+     * persistence boundary, before transport creation.
      */
     public void requireRuntimeDelivery(J7DeliveryPayloadClass payloadClass) {
         Objects.requireNonNull(payloadClass, "payloadClass");
@@ -119,18 +126,18 @@ public final class J7DeliveryPolicy {
                 throw new J7DeliveryException(
                         J7DeliveryError.REMOTE_DELIVERY_NOT_AUTHORIZED);
             }
+            if (!providerOwnerGoIsAbsent()) {
+                throw new J7DeliveryException(
+                        J7DeliveryError.PROVIDER_OWNER_GO_NOT_ALLOWED);
+            }
             return;
         }
-        if (properties.getOfficialPermissionStatus()
-                != OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE) {
-            throw new J7DeliveryException(
-                    J7DeliveryError.OFFICIAL_PERMISSION_NOT_EVIDENCED);
-        }
+        requireJ7TransferEligiblePermissionAudit();
         if (!properties.isRemoteDeliveryAuthorized()) {
             throw new J7DeliveryException(
                     J7DeliveryError.REMOTE_DELIVERY_NOT_AUTHORIZED);
         }
-        throw new J7DeliveryException(J7DeliveryError.PROVIDER_OWNER_GO_REQUIRED);
+        providerOwnerGoReference();
     }
 
     public List<String> runtimeBlockers(J7DeliveryPayloadClass payloadClass) {
@@ -171,19 +178,65 @@ public final class J7DeliveryPolicy {
             blockers.add("AUTOMATIC_RETRY_NOT_ALLOWED");
         }
         if (payloadClass == J7DeliveryPayloadClass.PROVIDER_DERIVED) {
-            if (properties.getOfficialPermissionStatus()
-                    != OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE) {
-                blockers.add("OFFICIAL_PERMISSION_NOT_EVIDENCED");
-            }
+            addPermissionAuditBlocker(blockers);
             if (!properties.isRemoteDeliveryAuthorized()) {
                 blockers.add("REMOTE_DELIVERY_NOT_AUTHORIZED");
             }
-            blockers.add("PROVIDER_OWNER_GO_REQUIRED");
+            OptionalLocalPushProperties.ProviderOwnerGo configured =
+                    properties.getProviderOwnerGo();
+            if (configured == null || configured.isAbsent()) {
+                blockers.add("PROVIDER_OWNER_GO_REQUIRED");
+            }
+            else if (!configured.isComplete()) {
+                blockers.add("PROVIDER_OWNER_GO_INVALID");
+            }
         }
         else if (properties.isRemoteDeliveryAuthorized()) {
             blockers.add("REMOTE_DELIVERY_NOT_AUTHORIZED");
         }
+        else if (!providerOwnerGoIsAbsent()) {
+            blockers.add("PROVIDER_OWNER_GO_NOT_ALLOWED");
+        }
         return List.copyOf(blockers);
+    }
+
+    public J7ProviderDerivedOwnerGo.Reference providerOwnerGoReference() {
+        OptionalLocalPushProperties.ProviderOwnerGo configured =
+                properties.getProviderOwnerGo();
+        if (configured == null || configured.isAbsent()) {
+            throw new J7DeliveryException(J7DeliveryError.PROVIDER_OWNER_GO_REQUIRED);
+        }
+        if (!configured.isComplete()) {
+            throw new J7DeliveryException(J7DeliveryError.PROVIDER_OWNER_GO_INVALID);
+        }
+        try {
+            return new J7ProviderDerivedOwnerGo.Reference(
+                    UUID.fromString(configured.getGoId()),
+                    configured.getOwnerGoDocumentSha256());
+        }
+        catch (IllegalArgumentException exception) {
+            throw new J7DeliveryException(J7DeliveryError.PROVIDER_OWNER_GO_INVALID);
+        }
+    }
+
+    /** Verifies that the durable grant repeats every current non-secret activation gate. */
+    public void requireProviderOwnerGoGrantConfiguration(
+            J7ProviderDerivedOwnerGo.Grant grant) {
+        Objects.requireNonNull(grant, "grant");
+        requireRuntimeDelivery(J7DeliveryPayloadClass.PROVIDER_DERIVED);
+        if (!grant.reference().equals(providerOwnerGoReference())
+                || !grant.permissionAuditStatus()
+                .equals(properties.getOfficialPermissionStatus().name())
+                || !grant.receiverQualification()
+                .equals(properties.getReceiverQualification().name())
+                || !grant.senderQualification()
+                .equals(properties.getSenderQualification().name())
+                || !grant.receiverOrigin().toString()
+                .equals(properties.getReceiverOrigin())
+                || !grant.clientCertificateSha256()
+                .equals(properties.getMtls().getClientCertificateSha256())) {
+            throw new J7DeliveryException(J7DeliveryError.PROVIDER_OWNER_GO_MISMATCH);
+        }
     }
 
     public J7DeliveryTransportFactory.Configuration runtimeTransportConfiguration(
@@ -194,5 +247,43 @@ public final class J7DeliveryPolicy {
                 properties.getMtls().getClientCertificateSha256(),
                 properties.getConnectTimeout(),
                 properties.getRequestTimeout());
+    }
+
+    private boolean providerOwnerGoIsAbsent() {
+        return properties.getProviderOwnerGo() != null
+                && properties.getProviderOwnerGo().isAbsent();
+    }
+
+    private void requireJ7TransferEligiblePermissionAudit() {
+        OptionalLocalPushProperties.PermissionStatus status =
+                properties.getOfficialPermissionStatus();
+        if (status == OptionalLocalPushProperties.PermissionStatus.NOT_EVIDENCED
+                || status
+                == OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE) {
+            return;
+        }
+        if (status == OptionalLocalPushProperties.PermissionStatus.EVIDENCED_INCOMPATIBLE) {
+            throw new J7DeliveryException(
+                    J7DeliveryError.OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE);
+        }
+        throw new J7DeliveryException(
+                J7DeliveryError.OFFICIAL_PERMISSION_STATUS_INVALID);
+    }
+
+    private void addPermissionAuditBlocker(List<String> blockers) {
+        OptionalLocalPushProperties.PermissionStatus status =
+                properties.getOfficialPermissionStatus();
+        if (status == OptionalLocalPushProperties.PermissionStatus.NOT_EVIDENCED
+                || status
+                == OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE) {
+            return;
+        }
+        if (status
+                == OptionalLocalPushProperties.PermissionStatus.EVIDENCED_INCOMPATIBLE) {
+            blockers.add(
+                    J7DeliveryError.OFFICIAL_PERMISSION_EVIDENCED_INCOMPATIBLE.name());
+            return;
+        }
+        blockers.add(J7DeliveryError.OFFICIAL_PERMISSION_STATUS_INVALID.name());
     }
 }
