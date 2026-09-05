@@ -1,6 +1,7 @@
 # WO-SS-20260905-052 — Consolidation documentaire J9
 
 - Statut : `COMPLETED_OWNER_VALIDATED`.
+- Revue PR #29 : [P1/P2 corrigées et qualification complète](../../validation/J9-WO052-PR29-REVIEW-RESOLUTION-20260905.md). Commande directe mvnw.cmd clean verify sans exclusions : SUCCESS, Surefire 1193/0 échec/0 erreur/5 skips natifs, Failsafe 106/0/0/0 ; fin 14:41:57Z. Les résultats bornés ci-dessous restent historiques.
 - Suivi courant : [publication des abandons WO-032/033/034](../../validation/J9-WO052-ABANDONMENT-PUBLICATION-20260905.md), demandée et exécutée après la clôture initiale ; reprise documentaire uniquement, sans réouverture fonctionnelle.
 - Autorité : demande propriétaire du 5 septembre 2026 : fusions, historique WO-019, sort Git WO-032/033/034, liste unique acquis/limites/portes.
 - Base main distante vérifiée : `dfe34b3ab6881823a8e8601764cb99a63727810b`.

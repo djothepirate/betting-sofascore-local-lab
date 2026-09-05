@@ -8,6 +8,8 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 ## État consolidé J9 — 5 septembre 2026
 
+Revue PR #29 : [résolution P1/P2](docs/validation/J9-WO052-PR29-REVIEW-RESOLUTION-20260905.md), avec vérification Maven complète sans exclusions et renvoi historique WO-019 préservant la synthèse gelée. La CI du correctif reste distincte des checks du candidat initial.
+
 La [synthèse unique J9](docs/validation/J9-CONSOLIDATION-20260905.md) distingue décisions historiques et état courant : PR #27/#28 fusionnées, INT-001 fusionné par sa PR #11, CI post-fusion des deux main vertes. Le transfert J7 réel Windows/Windows WO-046 R2 est qualifié et clôturé ; aucun enrichissement analytique ni nouveau POST n'est autorisé par ce résultat.
 
 WO-052 est validé et clôturé, avec un [suivi courant de publication des abandons](docs/validation/J9-WO052-ABANDONMENT-PUBLICATION-20260905.md). WO-019 est abandonné administrativement et classé dans completed, résultat historique STOPPED conservé ; J9 lui-même n'est pas abandonné. Les branches WO-032/033/034 sont publiées sur GitHub avec leur abandon, sans fusion vers main ; WO-034 a terminé son nettoyage privé. La synthèse validée et le suivi initial de réalignement restent des photographies historiques. ADR-SS-003 v0.2 conserve NOT_EVIDENCED en audit non bloquant à lui seul pour le transfert local V2, sans changer les portes fournisseur.

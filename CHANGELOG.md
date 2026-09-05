@@ -4,6 +4,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-052 — revue PR #29
+
+- P2 : document de renvoi à l'ancien chemin WO-019 ; le Work Order canonique reste abandonné dans completed, la synthèse gelée conserve ses octets.
+- P1 : mvnw.cmd clean verify sans exclusions réussi ; 1193 tests Surefire (5 skips natifs) et 106 Failsafe (aucun skip), zéro échec/erreur. Preuve complète ajoutée au suivi de revue.
+
 ### WO-052 — reprise du suivi après publication des abandons
 
 - Branches WO-032/033/034 poussées sans force et HEAD distants vérifiés ; abandons administratifs effectifs, nettoyage WO-034 terminé.
