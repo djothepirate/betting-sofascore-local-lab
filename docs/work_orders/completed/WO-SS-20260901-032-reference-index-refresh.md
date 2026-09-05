@@ -1,6 +1,14 @@
 # WO-SS-20260901-032 — Actualisation de l’index des références de cadrage
 
-- **Statut :** `VALIDATED`
+- **Statut courant :** `ABANDONED_BY_OWNER` — décision du 2026-09-05.
+
+> Le propriétaire déclare obsolètes les conditions de poursuite et abandonne WO-032,
+> WO-033 et WO-034. Les validations, préflights et autorisations de reprise ci-dessous
+> sont historiques : aucune saisie complémentaire, production de rendu ou fusion de
+> clôture n'est désormais attendue. Aucun résultat technique antérieur n'est effacé.
+> Classement administratif completed ; aucun envoi ni permission fournisseur créé.
+> Pour WO-034, le nettoyage privé prévu historiquement reste distinct : non exécuté,
+> aucune absence de données privées attestée ; suppression à décider explicitement.
 - **Jalon :** après J9 — cohérence documentaire du référentiel de décision
 - **Ouvert le :** 2026-09-01
 - **Ouverture UTC :** `2026-09-01T17:12:33.2592273Z`
