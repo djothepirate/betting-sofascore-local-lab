@@ -1,8 +1,8 @@
 # SofaScore Local Lab
 
-**Reprise de revue WO-053 :** [correction locale des deux P2 de l'instrumentation](docs/validation/J9-WO053-REVIEW-HARDENING-20260905.md), sans intégration automatique à PR #29 ni cause initiale déclarée corrigée.
+**WO-053 terminé — 5 septembre 2026 :** [validation et clôture propriétaires](docs/work_orders/completed/WO-SS-20260905-053-j9-j6-ctrl-break-diagnostics.md). Correctif `43ac194` fusionné par PR #29, commit `d187d50` ; CI de PR et [CI post-fusion 33976519624](https://github.com/djothepirate/betting-sofascore-local-lab/actions/runs/33976519624) vertes. Classement documentaire local post-fusion ; aucune cause initiale déclarée corrigée.
 
-**Diagnostic distinct — WO-053 :** [instrumentation expurgée CTRL_BREAK et résultats](docs/validation/J9-WO053-CTRL-BREAK-DIAGNOSTIC-20260905.md). Deux essais sur Windows CI réussis, défaut initial non reproduit, cause non établie. Délais et pipeline runtime inchangés ; run global non vert à cause d'une alerte historique du scan Linux. Revue en attente, PR #29 inchangée.
+**Historique diagnostique WO-053 :** [instrumentation initiale](docs/validation/J9-WO053-CTRL-BREAK-DIAGNOSTIC-20260905.md) et [correction des deux P2](docs/validation/J9-WO053-REVIEW-HARDENING-20260905.md). Ces rapports conservent les états observés avant publication et fusion ; leurs mentions d'attente sont supersédées par la clôture ci-dessus. Délais et pipeline runtime inchangés ; cause initiale non établie.
 
 **Décision actuelle — 5 septembre 2026 :** WO-032/033/034 sont abandonnés par le propriétaire ; aucune saisie, reprise ou fusion de ces lots n'est attendue. Voir le [suivi d'abandon](docs/validation/J9-WO032-033-034-OWNER-ABANDONMENT-20260905.md), qui supersède les suites envisagées dans les synthèses historiques. Les preuves sont conservées ; nettoyage privé WO-034 achevé, avec absence vérifiée de son seul conteneur exact.
 

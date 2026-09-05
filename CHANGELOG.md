@@ -6,6 +6,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-053 — diagnostic synthétique CTRL_BREAK J6
 
+- Clôture propriétaire le 2026-09-05 : WO déplacé vers completed après fusion PR #29 (`d187d50`) et CI post-fusion `33976519624` verte, Windows 3:07 et Linux 4:54. Rapports historiques conservés, mentions d'attente ci-dessous supersédées ; cause initiale toujours non établie. Classement documentaire local, sans nouvelle opération runtime.
+
 - Revue : correction des deux P2, écrivain diagnostique isolé du nettoyage natif et restitution progressive des marqueurs allowlistés. Contre-épreuves d'erreur de sortie et d'interruption raccordées à la qualification J6 ; délais inchangés. Voir le suivi de revue WO-053, qualification distante du nouveau diff non revendiquée.
 
 - Compilation, readiness, émission du signal, attente/sortie et nettoyage exact distingués par marqueurs fixes ; filtrage explicite des sorties natives.
