@@ -4,6 +4,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### J9 — nettoyage privé WO-034 terminé
+
+- Décision distincte de suppression exécutée : six fichiers, deux répertoires ; conteneur exact absent et inventaire voisin inchangé.
+- Suivi d'abandon actualisé, sans réécriture des preuves gelées ni nouvelle opération réseau.
+
 ### J9 — abandon propriétaire WO-032/033/034
 
 - Conditions de poursuite obsolètes : abandon des trois pistes, sans annuler leurs preuves historiques ni les acquis J9/INT-001.

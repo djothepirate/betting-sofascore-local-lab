@@ -10,10 +10,18 @@ La [synthèse validée](J9-CONSOLIDATION-20260905.md), le [suivi de réalignemen
 
 Périmètre exact : WO-SS-20260901-032-reference-index-refresh, WO-SS-20260901-033-j9-provider-permission-request-preparation, WO-SS-20260901-034-j9-permission-request-final-render. Le WO Maven du 20260902 portant aussi 032 et le WO-031 CI sont exclus.
 
-## Rétention privée distincte
+## Rétention privée — état historique avant autorisation de nettoyage
 
 WO-034 prévoit historiquement un nettoyage lors d'un abandon. Aucun fichier privé n'est lu ou supprimé dans cette clôture administrative. Cette obligation n'est pas déclarée satisfaite : PRIVATE_CLEANUP=NOT_PERFORMED, PRIVATE_ARTIFACT_ABSENCE=NOT_ATTESTED. Une décision explicite de suppression et des contrôles de propriété/confinement sont nécessaires avant toute suppression. L'abandon ne vaut ni prolongation illimitée de rétention ni preuve d'absence.
 
 ## Contrôles et limites
+
+### Suivi courant : nettoyage autorisé et achevé
+
+Le propriétaire a ensuite autorisé explicitement le nettoyage privé WO-034. Il a été achevé le 2026-09-05 à 14:11:08 UTC (16:11:08 Europe/Paris) : six fichiers et deux répertoires supprimés sous le seul conteneur privé WO-034. Propriété bootstrap et ACL, confinement canonique, absence de reparse et inventaire exact vérifiés ; verrou renderer exclusif acquis. Suppressions natives par chemins littéraux puis retrait des répertoires vides. Aucun contenu de saisie lu. Racine cible absente, parent conservé et inventaire voisin inchangé.
+
+PRIVATE_CLEANUP=PASS ; EXACT_ROOT_ABSENT=YES. L'obligation est satisfaite pour cette racine exacte, sans attestation d'effacement forensique ni d'absence de copies ailleurs. Suppression directe, sans Corbeille. Preuve détaillée dans la branche codex/j9-wo034-permission-final-render : docs/validation/J9-WO034-PRIVATE-CLEANUP-20260905.md. Aucun envoi, POST, accès base ou mutation mTLS.
+
+### Contrôles de la clôture administrative initiale
 
 Modifications documentaires seulement ; UTF-8, diff --check, état Git et liens courants contrôlés. Aucun nouveau build applicatif pour cette décision seule : les qualifications antérieures restent historiques, aucun nouveau PASS runtime/CI revendiqué. Aucun rendu, envoi SofaScore, POST J7, acquisition, base, certificat ou VPS exécuté. NOT_EVIDENCED et ADR-SS-003 v0.2 inchangés. J9, INT-001 et les transferts déjà qualifiés ne sont pas abandonnés.
