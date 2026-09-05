@@ -1,6 +1,6 @@
 # WO-SS-20260904-046 — Campagne E2E J7 réelle locale Windows/Windows
 
-- **Statut :** `PREPARATION_RESUMED_PENDING_RECEIVER_RESOURCE_DECISION`
+- **Statut :** `R2_MANIFEST_FROZEN_PENDING_REAL_POST_OWNER_DECISION`
 - **Jalon :** après J9 — campagne locale d'une livraison J7 dérivée fournisseur
 - **Ouvert le :** 2026-09-04
 - **Ouverture UTC :** `2026-09-04T13:59:22.9943521Z`
@@ -790,3 +790,36 @@ Le nouveau go est accordé en intention propriétaire, pas enregistré comme doc
 exécutoire. V2 impose l'autorisation de POST à `YES` ; aucun tel bloc n'est fabriqué contre
 le `NO` maintenu. Aucun grant, SQL, nouveau manifeste, démarrage ou POST n'est effectué par
 ce lot. Le run R1 et ses preuves restent gelés ; WO-046 reste actif.
+
+## 18. Volume receiver R1 autorisé pour R2 et manifeste successeur gelé
+
+Le propriétaire autorise la réutilisation de `betting-project_betting-postgres-data`, avec
+conservation intégrale de l'audit et recontrôle préalable, sans purge ni POST. La section 6
+du [compte rendu R2](../../validation/J9-WO046-R2-PREPARATION-AFTER-WO049-20260905.md)
+consigne les contrôles frais et leur portée. PostgreSQL receiver seul est démarré pour une
+transaction en lecture seule puis arrêté ; V008, huit migrations réussies, zéro import,
+payload, audit, tombstone ou outbox. Aucune application Java n'est démarrée.
+
+Métadonnées de l'export primaire, hashes du fichier/JAR, preuves qualifiées et identité PKI
+publique recontrôlés ; aucun payload ou secret publié. Le grant R1 demeure révoqué sans
+consommation ; les compteurs historiques ne sont pas remis à zéro. Le volume est conservé
+avec ses labels R1, sans migration ou relabellisation. Le primaire demeure sain et actif.
+
+```text
+J9_WO046_R2_MANIFEST_REFERENCE=docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-R2-MANIFEST-20260905.md
+J9_WO046_R2_MANIFEST_COMMIT=642e0e5ac42cdd476969e40cd3b5137d7d56b01d
+J9_WO046_R2_MANIFEST_SIZE_BYTES=15737
+J9_WO046_R2_MANIFEST_SHA256=ba21dfd8ac9cfa6284eab686b3206c5676736ac035c9b38096fb656376baef65
+J9_WO046_R2_MANIFEST_FROZEN=YES
+J9_WO046_R2_RECEIVER_VOLUME_REUSE=OWNER_AUTHORIZED_EXACT_VOLUME_AUDIT_PRESERVED
+J9_WO046_R2_RECEIVER_DATABASE=STOPPED_VOLUME_RETAINED_AFTER_READONLY_RECHECK
+J9_WO046_R2_CANONICAL_OWNER_GO_CREATED=NO
+J9_WO046_R2_OWNER_GO_REGISTERED=NO
+J9_WO046_REAL_POST_AUTHORIZED=NO
+J9_WO046_WORK_ORDER_MOVE_TO_COMPLETED=NO
+```
+
+L'accord général pour un nouveau go reste consigné. Le passage à un bloc V2 exécutoire,
+avec fenêtre future exacte, requiert la décision levant explicitement l'interdiction du
+POST ; aucun tel bloc n'est créé contre le `NO`. Aucun push, fusion main, réseau fournisseur,
+receiver distant, VPS ou production. Le gel de ce manifeste ne vaut aucune exécution.

@@ -5,10 +5,11 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
 La [reprise préparatoire WO-046 R2](docs/validation/J9-WO046-R2-PREPARATION-AFTER-WO049-20260905.md)
-est engagée après validation WO-049. Le manifeste successeur est autorisé ; son gel attend
-le choix explicite concernant le volume receiver conservé après R1. L'accord pour un nouveau
-go est consigné, mais aucun bloc V2 exécutoire n'est créé : le POST réel reste interdit.
-Aucune application ou base n'est démarrée par cette reprise documentaire.
+dispose désormais d'un [manifeste R2 gelé](docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-R2-MANIFEST-20260905.md).
+La réutilisation du volume receiver R1 est explicitement autorisée et recontrôlée : PostgreSQL
+seul a été démarré temporairement, interrogé en lecture seule puis arrêté, volume/audit
+conservés. Export, JAR et PKI publique concordent. Aucun receiver Java ou Local Lab démarré,
+aucun nouveau go enregistré : le POST réel reste interdit et exige une décision distincte.
 
 Le [WO-049](docs/work_orders/completed/WO-SS-20260905-049-j9-wo046-launcher-stop-proof.md)
 est **validé par le propriétaire et clôturé**, résultat `PASS_OFFLINE_FAIL_CLOSED` : préparation
@@ -19,7 +20,7 @@ l'écart initial : Failsafe a lancé des tests PostgreSQL isolés avant interrup
 périmètre autorisé ; aucun conteneur Testcontainers ne subsiste au contrôle final. Cet écart
 a été explicitement reconnu par le propriétaire. La reprise préparatoire WO-046 et un nouveau
 manifeste sont autorisés, ainsi qu'un accord pour un nouveau go ; aucun bloc V2 exécutoire
-n'en est déduit tant que les références exactes et l'autorisation de POST manquent.
+n'en est déduit tant que l'autorisation de POST demeure absente, même après le gel R2.
 Le POST réel reste interdit ; aucune campagne n'est redémarrée par la clôture de WO-049.
 
 La [tentative réelle WO-046 R1](docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-R1-STOPPED-20260905.md)

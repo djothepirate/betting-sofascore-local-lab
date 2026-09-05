@@ -4,6 +4,16 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — manifeste WO-046 R2 gelé, volume receiver réutilisable recontrôlé
+
+- choix propriétaire explicite de `betting-project_betting-postgres-data`, sans purge ni POST ;
+- identité R1 exacte vérifiée ; seul PostgreSQL receiver temporairement démarré puis arrêté ;
+  transaction en lecture seule : V008, zéro import/payload/audit/tombstone/outbox, volume conservé ;
+- export primaire déjà HUMAN_VALIDATED, hashes, JAR, rapports et PKI publique recontrôlés ;
+  grant R1 révoqué inchangé, aucune clé privée utilisée ou donnée J7 publiée ;
+- manifeste successeur gelé au commit `642e0e5`, 15737 octets, sans placeholder ni clé dupliquée ;
+- aucun nouveau go enregistré, aucune application Java ou requête HTTP ; POST toujours interdit.
+
 ### Après J9 — reprise préparatoire WO-046 R2, sans POST
 
 - intégration fast-forward de WO-049 validé et clôturé, sans réécriture des preuves R1 ;
