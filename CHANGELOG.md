@@ -4,6 +4,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-034 — nettoyage privé d'abandon achevé
+
+- Suppression autorisée des six fichiers et deux répertoires du conteneur privé exact, après contrôles de propriété, confinement et verrou exclusif.
+- Racine absente ; parents et inventaire voisin préservés. Preuve expurgée ajoutée ; aucun envoi, POST ou changement runtime.
+
 ### WO-034 — abandon propriétaire, 2026-09-05
 
 - Conditions de poursuite déclarées obsolètes ; abandon WO-032/033/034, sans fusion de clôture ni reprise du rendu.

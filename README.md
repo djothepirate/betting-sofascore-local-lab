@@ -1,6 +1,6 @@
 # SofaScore Local Lab
 
-**Décision actuelle — 2026-09-05 : WO-032/033/034 abandonnés par le propriétaire.** Les attentes de saisie, rendu, reprise et fusion mentionnées dans les sections historiques sont supersédées. Aucun de ces lots ne doit être poursuivi sur la base de ses anciennes autorisations. Preuves et branches conservées ; aucun envoi, nettoyage privé ou nouveau POST effectué.
+**Décision actuelle — 2026-09-05 : WO-032/033/034 abandonnés par le propriétaire.** Les attentes de saisie, rendu, reprise et fusion mentionnées dans les sections historiques sont supersédées. Aucun de ces lots ne doit être poursuivi sur la base de ses anciennes autorisations. Preuves et branches conservées ; [nettoyage privé WO-034 achevé](docs/validation/J9-WO034-PRIVATE-CLEANUP-20260905.md), aucun envoi ni nouveau POST effectué.
 
 **Historique WO-034 supersédé par l'abandon :** le [préflight du 5 septembre](docs/validation/J9-WO034-RESUME-PREFLIGHT-20260905.md) constatait 14/30 et une incohérence conditionnelle. Aucune correction de saisie ni fusion n'est désormais attendue pour ce lot abandonné.
 

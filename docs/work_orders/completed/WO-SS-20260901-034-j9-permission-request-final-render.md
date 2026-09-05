@@ -7,8 +7,9 @@
 > sont historiques : aucune saisie complémentaire, production de rendu ou fusion de
 > clôture n'est désormais attendue. Aucun résultat technique antérieur n'est effacé.
 > Classement administratif completed ; aucun envoi ni permission fournisseur créé.
-> Pour WO-034, le nettoyage privé prévu historiquement reste distinct : non exécuté,
-> aucune absence de données privées attestée ; suppression à décider explicitement.
+> Nettoyage privé explicitement autorisé puis achevé le 2026-09-05 : six fichiers
+> et deux répertoires supprimés, racine exacte absente, parents et voisins préservés.
+> Voir la [preuve de nettoyage](../../validation/J9-WO034-PRIVATE-CLEANUP-20260905.md).
 
 > Reprise propriétaire du 2026-09-05 : réalisation jusqu'à publication/PR/fusion autorisée,
 > fusion faisant office de clôture officielle, sans envoi de demande. Le préflight courant
