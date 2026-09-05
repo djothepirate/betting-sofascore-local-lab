@@ -1,6 +1,6 @@
 # WO-SS-20260905-050 — Isolation owner-go des lanceurs sans livraison fournisseur
 
-- Statut : `OPEN_OWNER_AUTHORIZED`.
+- Statut : `IMPLEMENTED_PENDING_OWNER_REVIEW`.
 - Ouverture : 2026-09-05.
 - Base : `facb4b51f23b09b07e46653ca8a40dac6f543f59` (PR #27).
 - Branche : `codex/wo-050-non-provider-launcher-owner-go-isolation`.
@@ -51,3 +51,21 @@ d'une seule de ces valeurs peut faire échouer un démarrage légitime.
 
 Les statuts EXPERIMENTAL, LOCAL_ONLY, NOT_PRODUCTION_APPROVED et NO_CRITICAL_DEPENDENCY
 restent inchangés. La permission officielle reste NOT_EVIDENCED, le go WO-046 consommé.
+
+## Résultat local
+
+- Six lanceurs corrigés, aucune modification Java applicative.
+- Avant correctif : échec attendu `WO050_AMBIENT_GO_LEAK:Start-Local.ps1:1`.
+- Après correctif : 72 scénarios PowerShell réussis (6 x 4 héritages x 3 issues),
+  avec neutralisation pendant l'appel simulé et restauration exacte après succès/échec.
+- 19 tests Java ciblés réussis, dont les 72 bindings Spring issus des observations PowerShell,
+  les 7 tests de non-régression WO-049 et les 9 tests OptionalLocalPushProperties.
+- `clean verify` hors ligne borné réussi : 1148 tests, zéro échec/erreur, 4 ignorés.
+  Tests natifs J6, superviseur JVM/sockets et tests d'intégration explicitement exclus.
+- Politique locale, convention de branche, UTF-8, diff et neuf règles de secrets : PASS.
+- Première compilation sandbox interrompue par un défaut d'accès à une dépendance du cache ;
+  relance hôte hors ligne réussie. Aucun téléchargement ni service métier lancé.
+- Le rapport R2 WO-046 conserve son SHA-256 validé, aucune preuve gelée réécrite.
+
+Rapport détaillé et empreinte soumis dans le commit documentaire suivant. WO-050 reste actif ;
+aucun push, aucune mise à jour/résolution GitHub, aucune fusion ni nouvelle campagne.

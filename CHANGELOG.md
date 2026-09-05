@@ -4,6 +4,17 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-050 : isolation owner-go des lanceurs sans livraison fournisseur
+
+- P2 PR #27 : ajout des deux références owner-go aux sauvegardes d'environnement des
+  lanceurs Start-Local, J3/J4/J5 Playwright, benchmark J8 et rétention J6 ; neutralisation
+  pendant l'exécution et restauration dans les finally existants ;
+- qualification hors ligne des sections PowerShell originales avec commandes métier
+  simulées, héritage absent/partiel/complet et sorties réussies/échouées ; binding et
+  validation Spring réels, sans application, base, Playwright ni receiver ;
+- aucune modification de validation Java applicative, migration, ADR, protocole ou preuve
+  gelée WO-046 ; validation propriétaire requise avant mise à jour de la PR #27.
+
 ### Après J9 — clôture propriétaire WO-046 et préparation de la PR vers main
 
 - validation explicite du résultat R2 `PASS_REAL_LOCAL_J7_E2E`, commit `8478567` et rapport
