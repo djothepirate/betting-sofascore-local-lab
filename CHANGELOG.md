@@ -7,7 +7,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 ### WO-054 — livraison des cinq skills validés du lot 1
 
 - Ajout du paquet autonome `ss-work-order`, `ss-verify`, `ss-postgres-change`, `ss-data-contract-replay`, `ss-review-closeout`, identique aux dix fichiers validés sous SKL-002.
-- Installateur personnel avec vérification préalable des dix empreintes, idempotence, contrôle sans écriture et refus de remplacement des variantes locales ; six scénarios isolés qualifiés.
+- Installateur personnel avec vérification préalable des dix empreintes, idempotence, contrôle sans écriture et refus de remplacement des variantes locales ; sept scénarios isolés qualifiés après correction de la P2 de revue sur la casse des chemins relatifs. Une casse différente du préfixe absolu Windows reste acceptée lorsque le système résout le même dossier.
 - Guide d'usage, preuves historiques figées et suivi WO-054. Pas de seconde installation homonyme dans `.agents/skills` du dépôt ; aucune dépendance du Betting Project principal au Lab.
 - Validation standard Windows réussie : 1193 tests, zéro échec/erreur, cinq skips, intégration non exécutée localement. La CI du candidat publié demeure une preuve distincte.
 

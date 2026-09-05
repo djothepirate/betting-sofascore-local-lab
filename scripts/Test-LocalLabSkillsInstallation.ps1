@@ -45,6 +45,16 @@ $before = Get-FileState $nominal
 $result = & $installer -Destination $nominal
 Assert-True ($result -like '*COPIED=0;*') 'The second installation should not copy files.'
 Assert-True (@(Compare-Object $before (Get-FileState $nominal)).Count -eq 0) 'Idempotent installation changed existing bytes or timestamps.'
+$alternatePrefix = $nominal.ToUpperInvariant()
+if (Test-Path -LiteralPath $alternatePrefix -PathType Container) {
+    $result = & $installer -Destination $alternatePrefix -VerifyOnly
+    Assert-True ($result -like '*COPIED=0; VERIFY_ONLY=True') 'Windows destination prefix casing caused a false conflict.'
+    Assert-True (@(Compare-Object $before (Get-FileState $nominal)).Count -eq 0) 'Alternate destination casing changed files.'
+    Write-Output 'PASS Windows destination prefix case variation'
+}
+else {
+    Write-Output 'NOT_APPLICABLE destination prefix case variation on a case-sensitive filesystem'
+}
 Write-Output 'PASS idempotence without rewriting files'
 
 $result = & $installer -Destination $nominal -VerifyOnly
@@ -64,6 +74,14 @@ $before = Get-FileState $conflict
 Assert-Refused { & $installer -Destination $conflict } '*Local skill differs*'
 Assert-True (@(Compare-Object $before (Get-FileState $conflict)).Count -eq 0) 'A conflict caused a partial installation or replacement.'
 Write-Output 'PASS late local conflict refused before any copy'
+
+$caseVariant = Join-Path $TestRoot 'case-variant'
+New-Item -ItemType Directory -Path (Join-Path $caseVariant 'ss-work-order') -Force | Out-Null
+Copy-Item -LiteralPath (Join-Path $repositoryRoot 'docs/skills/local-lab/ss-work-order/SKILL.md') -Destination (Join-Path $caseVariant 'ss-work-order/skill.md')
+$before = Get-FileState $caseVariant
+Assert-Refused { & $installer -Destination $caseVariant } '*unapproved file*'
+Assert-True (@(Compare-Object $before (Get-FileState $caseVariant)).Count -eq 0) 'A case-only local variant was accepted or caused a partial installation.'
+Write-Output 'PASS case-only local file variant refused before any copy'
 
 $extra = Join-Path $nominal 'ss-work-order/local-notes.txt'
 [System.IO.File]::WriteAllText($extra, 'local additional file', $utf8)
@@ -85,4 +103,4 @@ $badDestination = Join-Path $TestRoot 'must-remain-absent'
 Assert-Refused { & (Join-Path $badRepository 'scripts/Install-LocalLabSkills.ps1') -Destination $badDestination } '*source hash or size mismatch*'
 Assert-True (-not (Test-Path -LiteralPath $badDestination)) 'Bad source validation created a destination.'
 Write-Output 'PASS source hash mismatch refused before any copy'
-Write-Output 'LOCAL_LAB_SKILLS_INSTALLER_TESTS=PASS; CASES=6; USER_INSTALLATION_TOUCHED=NO'
+Write-Output 'LOCAL_LAB_SKILLS_INSTALLER_TESTS=PASS; CASES=7; USER_INSTALLATION_TOUCHED=NO'

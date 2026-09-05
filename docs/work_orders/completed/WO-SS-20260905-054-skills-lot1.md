@@ -19,7 +19,7 @@ Les statuts EXPERIMENTAL, LOCAL_ONLY, NOT_PRODUCTION_APPROVED et NO_CRITICAL_DEP
 - [x] Dix fichiers de skills identiques au manifeste SKL-002 ; métadonnées et validation officielle conformes.
 - [x] Preuves historiques conservées sans réécriture de leurs octets ou résultats ; références de tête portables.
 - [x] Installateur avec préflight complet des sources/destinations, idempotence et refus des variantes locales.
-- [x] Essais isolés nominal, idempotent, vérification sans écriture, conflit local, fichier supplémentaire et source altérée.
+- [x] Sept scénarios isolés : nominal, idempotent, vérification sans écriture, conflit local, variante de casse du fichier, fichier supplémentaire et source altérée. Variation de casse du préfixe absolu Windows vérifiée également ; correction P2 de la PR #31 qualifiée.
 - [x] Vérification standard Windows prescrite exécutée : 1193 tests, zéro échec/erreur, cinq skips. Failsafe explicitement ignoré localement.
 - [x] Guide, README, changelog, WO et [rapport de livraison](../../validation/WO054-SKILLS-DELIVERY-20260905.md) cohérents.
 

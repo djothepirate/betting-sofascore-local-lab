@@ -75,16 +75,19 @@ foreach ($name in $skillNames) {
         if (-not (Test-Path -LiteralPath $skillDirectory -PathType Container)) {
             throw "Local skill path is not a directory: $name"
         }
-        $allowed = @($entries | Where-Object {
+        $allowedRelativePaths = @($entries | Where-Object {
             $_.Evidence.path.StartsWith("docs/skills/local-lab/$name/", [StringComparison]::Ordinal)
-        } | ForEach-Object { $_.Target })
-        $children = @(Get-ChildItem -LiteralPath $skillDirectory -Force)
+        } | ForEach-Object { $_.Evidence.path.Substring("docs/skills/local-lab/$name/".Length) })
+        $skillRootPath = (Get-Item -LiteralPath $skillDirectory -Force).FullName
+        $children = @(Get-ChildItem -LiteralPath $skillRootPath -Force)
         foreach ($child in $children) {
             Assert-NoLinkedAncestor -Path $child.FullName
         }
-        foreach ($child in @(Get-ChildItem -LiteralPath $skillDirectory -Recurse -Force)) {
+        foreach ($child in @(Get-ChildItem -LiteralPath $skillRootPath -Recurse -Force)) {
             Assert-NoLinkedAncestor -Path $child.FullName
-            if (-not $child.PSIsContainer -and $child.FullName -notin $allowed) {
+            # The file spelling is exact; the absolute Windows prefix may differ in case.
+            $relativePath = $child.FullName.Substring($skillRootPath.Length + 1).Replace('\', '/')
+            if (-not $child.PSIsContainer -and $relativePath -cnotin $allowedRelativePaths) {
                 throw "Local skill contains an unapproved file: $name"
             }
         }
