@@ -4,6 +4,12 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
+Le [WO-049](docs/work_orders/active/WO-SS-20260905-049-j9-wo046-launcher-stop-proof.md)
+est ouvert pour corriger et qualifier **hors ligne** la préparation du lanceur WO-046 et le
+justificatif technique d'arrêt. Ce travail distinct ne démarre aucune application, base ou
+connexion, ne lit aucune identité privée et ne crée ni manifeste, ni go, ni POST réel.
+WO-046 reste arrêté ; sa reprise et la validation de WO-049 demeurent des décisions distinctes.
+
 La [tentative réelle WO-046 R1](docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-R1-STOPPED-20260905.md)
 est **arrêtée avant tout POST d'import J7**. Le owner-go V2 a été préparé, soumis et enregistré,
 mais le lanceur Codex utilisait des noms de variables sender erronés : le Local Lab a refusé

@@ -4,6 +4,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — ouverture WO-049 : préparation du lanceur et preuve d'arrêt hors ligne
+
+- Work Order et worktree distincts depuis l'arrêt WO-046 `a4dabd8`, numéro 049 libre ;
+- correction autorisée des noms de variables du lanceur et de la sérialisation du justificatif
+  d'arrêt ; qualification hors ligne avec valeurs synthétiques et refus fail-closed ;
+- aucune reprise WO-046, application, base, PKI, connexion, nouveau manifeste, go ou POST.
+
 ### Après J9 — WO-046 R1 arrêté avant import, go V2 révoqué inutilisé
 
 - autorité propriétaire de préparation/soumission du go V2 et d'exécution unique ; bloc privé
