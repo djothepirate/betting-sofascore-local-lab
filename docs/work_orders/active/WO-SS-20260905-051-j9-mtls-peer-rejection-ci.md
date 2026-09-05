@@ -44,3 +44,8 @@ cette preuve. Le log ne donne pas la chaîne native et ne prouve pas son détail
 - Politique locale, branche, UTF-8, diff et neuf règles de secrets : PASS.
 - Pas de qualification Linux distante revendiquée ; le run GitHub historique reste en échec.
 - Correctif local prêt à revue, aucun push, PR, fusion ou nouvelle campagne réelle.
+
+Implémentation : `992423055091276914555104bb299ef3ce76d2c9`.
+[Rapport de qualification](../../validation/J9-WO051-MTLS-PEER-REJECTION-CI-QUALIFICATION-20260905.md),
+SHA-256 `83468174d27cb5339690fcd3e947e495a228aa603e82f69816be4cf2be83d41f`.
+Résultat soumis : `PASS_LOCAL_SYNTHETIC_MTLS_FAIL_CLOSED`. Revue propriétaire requise.
