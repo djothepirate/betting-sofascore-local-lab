@@ -4,6 +4,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Abandon J9 — suivi de publication
+
+- Abandon administratif confirmé ; nettoyage privé WO-034 achevé et référencé au commit 3b9eeda.
+- Publication de la branche autorisée pour audit, sans reprise fonctionnelle ni fusion vers main.
+
 ### WO-033 — abandon propriétaire, 2026-09-05
 
 - Conditions de poursuite déclarées obsolètes ; abandon WO-032/033/034, sans fusion de clôture ni reprise du rendu.
