@@ -9,9 +9,10 @@ a effectué l'unique POST J7 local explicitement autorisé : `201/IMPORTED`, sen
 35 663 octets inbox byte-identiques, go V2 consommé une fois, audit et outbox durables.
 Les applications sont arrêtées proprement, le volume receiver et son audit conservés,
 le primaire sain ; aucun appel SofaScore et aucun listener de campagne résiduel.
-WO-046 attend la revue propriétaire, y compris la reconnaissance de l'écart de minimisation
-des restitutions navigateur décrit dans le rapport. Aucun nouveau POST, push ou déploiement
-n'est autorisé. Le [manifeste R2 gelé](docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-R2-MANIFEST-20260905.md)
+[WO-046 est validé et clôturé](docs/work_orders/completed/WO-SS-20260904-046-j9-j7-real-local-e2e-campaign.md),
+avec reconnaissance propriétaire de l'écart de minimisation des restitutions navigateur.
+Le rapport qualifié reste inchangé. Push et PR vers `main` sont autorisés, pas la fusion,
+un nouveau POST ou un déploiement. Le [manifeste R2 gelé](docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-R2-MANIFEST-20260905.md)
 et les preuves R1 restent inchangés. Les paragraphes suivants relatent les étapes historiques.
 
 Le [WO-049](docs/work_orders/completed/WO-SS-20260905-049-j9-wo046-launcher-stop-proof.md)
@@ -104,11 +105,11 @@ branche a intégré WO-047 par fast-forward exact jusqu'au commit de clôture pu
 autorisé.
 
 Le Work Order
-[WO-SS-20260904-046](docs/work_orders/active/WO-SS-20260904-046-j9-j7-real-local-e2e-campaign.md)
+[WO-SS-20260904-046](docs/work_orders/completed/WO-SS-20260904-046-j9-j7-real-local-e2e-campaign.md)
 porte historiquement dans son document v0.1 l'état `BLOCKED_OFFICIAL_PERMISSION_NOT_EVIDENCED`,
 depuis le commit exact de clôture de WO-045
-`8a1225fc4b85d8e8b55af536fcbc7955676131ff`. L'état effectif de la séquence est désormais
-`STOPPED_PRE_IMPORT_LOCAL_LAB_CONFIGURATION_BINDING_REFUSED`. Il porte la campagne
+`8a1225fc4b85d8e8b55af536fcbc7955676131ff`. Après l'arrêt R1 et le succès R2, son état
+effectif est désormais `VALIDATED`, classé dans les Work Orders terminés. Il porte la campagne
 Windows/Windows d'une livraison manuelle unique d'un export J7 fournisseur déjà
 `HUMAN_VALIDATED` vers le receiver Betting Project sur `https://127.0.0.1:8444`.
 

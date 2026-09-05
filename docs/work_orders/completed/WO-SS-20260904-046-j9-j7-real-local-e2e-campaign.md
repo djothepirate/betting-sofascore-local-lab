@@ -1,6 +1,6 @@
 # WO-SS-20260904-046 — Campagne E2E J7 réelle locale Windows/Windows
 
-- **Statut :** `READY_FOR_OWNER_REVIEW_R2_REAL_LOCAL_E2E`
+- **Statut :** `VALIDATED` — terminé sur décision propriétaire
 - **Jalon :** après J9 — campagne locale d'une livraison J7 dérivée fournisseur
 - **Ouvert le :** 2026-09-04
 - **Ouverture UTC :** `2026-09-04T13:59:22.9943521Z`
@@ -872,3 +872,70 @@ La section 7 du rapport expose les restitutions navigateur contenant l'aperçu n
 et des URL de session. Aucun contenu de cette nature n'est copié dans Git. Le résultat
 technique est démontré ; sa revue doit reconnaître cet écart de minimisation. Le lot reste
 documentaire, sans nouveau build, modification runtime, push, fusion ou clôture propriétaire.
+
+## 20. Validation propriétaire, clôture et publication autorisée
+
+Décision consignée le `2026-09-05T09:38:18Z` (`11:38:18+02:00`, Europe/Paris) : cet
+instant est celui de consignation, pas un horodatage de signature propriétaire inventé.
+Le commit documentaire et le SHA-256 du rapport sont recontrôlés avant classement.
+Le rapport R2 demeure immuable, y compris son état historique « revue en attente » et
+l'écart de minimisation des sorties navigateur. La présente section porte la décision
+ultérieure : l'écart est explicitement reconnu, non effacé ni requalifié comme inexistant.
+
+```text
+J9_WO046_OWNER_REVIEW_DECISION=VALIDATE
+J9_WO046_WORK_ORDER=WO-SS-20260904-046-j9-j7-real-local-e2e-campaign
+J9_WO046_R2_DOCUMENTATION_COMMIT=84785671fb90c6dd963ba5017e2e76a28ad67b94
+J9_WO046_R2_QUALIFICATION_RESULT=PASS_REAL_LOCAL_J7_E2E
+J9_WO046_R2_QUALIFICATION_REPORT_SHA256=3b128cab84c384f5901215042d554e935730ce146565687677ddb1c2a39eddf1
+J9_WO046_BROWSER_OBSERVATION_DEVIATION_ACKNOWLEDGED=YES
+J9_WO046_LOCAL_READINESS_ACKNOWLEDGED=YES
+J9_WO046_WORK_ORDER_MOVE_TO_COMPLETED=YES
+J9_WO046_OWNER_GO_STATUS=CONSUMED_ONCE_NOT_REUSABLE
+J9_WO046_NEW_POST_AUTHORIZED=NO
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+Le propriétaire autorise ensuite le push et la création d'une PR vers `main`, sans
+autoriser sa fusion. La branche historique reste `codex/j9-wo046-j7-real-local-e2e-campaign`.
+L'alias de publication `codex/wo-046-j7-real-local-e2e-campaign` respecte la convention CI
+1A et pointe sur le même commit ; aucun squash, rebase ou changement des hashes qualifiés.
+La comparaison à `origin/main` (`400900410dfa751521ce387fbadcc4b5ca95a94a`) inclut la chaîne
+WO-045/046/047/048/049 : 37 commits avant cette clôture, et non seulement ce lot documentaire.
+
+Le classement et la publication ne réarment aucune campagne, aucun go ou flag réseau.
+La permission officielle reste `NOT_EVIDENCED` ; le receiver et le VPS ne sont pas démarrés.
+
+### Vérification documentaire de clôture
+
+Le `2026-09-05T09:43:38Z`, un `mvnw.cmd clean verify --offline` borné réussit sous
+Java 25.0.4 dans une archive isolée des sources `8478567` : 1185 tests, zéro échec,
+zéro erreur, quatre ignorés, durée affichée `01:26 min`. Paramètres : cache Maven local
+existant, `-DskipITs=true`, `-Dsurefire.excludes=**/J6NativeBinaryPipelineQualificationTest.java`
+et désactivation explicite des profils `integration-tests`, `provider-playwright-local-qualification`,
+`j7-browser-origin-loopback-qualification`, `provider-playwright-runtime`. Les goals Failsafe
+sont ignorés. Ce contrôle n'est pas un nouveau PASS d'intégration ou de campagne native.
+Le nouveau JAR de vérification reste dans cette archive et n'est jamais exécuté ou substitué
+au JAR gelé. Journal local ignoré : SHA-256
+`f718d9b9d0b0c21b7bbf338b48b3f20027b880f06dec75a4238a81366e20dcd5`.
+
+`ci/assert-local-only.sh` passe dans cette copie sans `.env`, avec les outils Git Bash
+explicitement accessibles. Son premier lancement dans le worktree opérationnel avait
+correctement refusé la présence de `.env` ; la configuration privée n'a pas été supprimée
+ou déplacée pour contourner ce contrôle. La convention 1A passe pour l'alias de publication.
+Les nouveaux états documentaires n'altèrent ni le rapport R2 qualifié, ni les manifestes,
+ni le JAR exécuté, ni les références PDF.
+
+Avant publication, les neuf règles exactes de `ci/check-no-secrets.sh` sont également
+appliquées avec `git grep` natif à HEAD et à toutes les révisions `origin/main..HEAD`
+(38 révisions contrôlées avant clôture, dont HEAD répété) : PASS. L'unique fixture
+synthétique exemptée par le scanner CI conserve son blob approuvé dans chaque révision.
+Le parcours shell, particulièrement lent, est arrêté sur son arbre de processus possédé
+après ce contrôle équivalent ; aucun PASS du parcours shell incomplet n'est revendiqué.
+Le contrôle complémentaire des 71 fichiers contre les valeurs privées exactes ne trouve
+aucun mot de passe ou fingerprint. Les seules correspondances sont le libellé constant
+du profil receiver dans son code/tests qualifiés, pas une identité privée spécifique au run.

@@ -4,6 +4,17 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — clôture propriétaire WO-046 et préparation de la PR vers main
+
+- validation explicite du résultat R2 `PASS_REAL_LOCAL_J7_E2E`, commit `8478567` et rapport
+  SHA-256 `3b128cab84c384f5901215042d554e935730ce146565687677ddb1c2a39eddf1` inchangés ;
+- reconnaissance de l'écart de restitution navigateur consignée sans réécrire les preuves ;
+  WO-046 déplacé de `active` à `completed`, liens et état courant du README actualisés ;
+- publication GitHub et PR vers main autorisées, historique intégral conservé ; alias
+  `codex/wo-046-j7-real-local-e2e-campaign` conforme 1A, sans squash ni rebase ;
+- go consommé non réutilisable, aucun nouveau POST, réseau fournisseur, receiver distant,
+  déploiement VPS ou production ; la fusion de la PR reste non autorisée.
+
 ### Après J9 — WO-046 R2 : un POST J7 réel local reçu durablement
 
 - go V2 explicitement autorisé, enregistré avant sa fenêtre et consommé atomiquement une fois ;
