@@ -4,6 +4,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-054 — livraison des cinq skills validés du lot 1
+
+- Ajout du paquet autonome `ss-work-order`, `ss-verify`, `ss-postgres-change`, `ss-data-contract-replay`, `ss-review-closeout`, identique aux dix fichiers validés sous SKL-002.
+- Installateur personnel avec vérification préalable des dix empreintes, idempotence, contrôle sans écriture et refus de remplacement des variantes locales ; sept scénarios isolés qualifiés après correction de la P2 de revue sur la casse des chemins relatifs. Une casse différente du préfixe absolu Windows reste acceptée lorsque le système résout le même dossier.
+- Guide d'usage, preuves historiques figées et suivi WO-054. Pas de seconde installation homonyme dans `.agents/skills` du dépôt ; aucune dépendance du Betting Project principal au Lab.
+- Validation standard Windows réussie : 1193 tests, zéro échec/erreur, cinq skips, intégration non exécutée localement. La CI du candidat publié demeure une preuve distincte.
+
 ### WO-053 — diagnostic synthétique CTRL_BREAK J6
 
 - Clôture propriétaire le 2026-09-05 : WO déplacé vers completed après fusion PR #29 (`d187d50`) et CI post-fusion `33976519624` verte, Windows 3:07 et Linux 4:54. Rapports historiques conservés, mentions d'attente ci-dessous supersédées ; cause initiale toujours non établie. Classement documentaire local, sans nouvelle opération runtime.
