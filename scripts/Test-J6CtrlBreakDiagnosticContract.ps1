@@ -29,3 +29,56 @@ foreach ($marker in $markers) {
 'J6_DIAGNOSTIC_NATIVE_ALLOWLIST=PASS'
 'J6_DIAGNOSTIC_FAILURE_GATES=17'
 'J6_DIAGNOSTIC_FAILURE_SANITIZATION=PASS'
+
+# Observe the marker before the producer resumes, then retain it on interruption.
+$observed = [Collections.Generic.List[string]]::new()
+$interruption = $null
+try {
+    & {
+        $good
+        if ($observed.Count -ne 1) { throw 'DIAGNOSTIC_RELAY_BUFFERED' }
+        'SYNTHETIC_SECRET'
+        throw 'DIAGNOSTIC_SYNTHETIC_INTERRUPTION'
+    } | Write-J6CtrlBreakNativeEvidence 6>&1 | ForEach-Object { $observed.Add($_.ToString()) }
+} catch { $interruption = $_.Exception.Message }
+if ($interruption -cne 'DIAGNOSTIC_SYNTHETIC_INTERRUPTION' -or $observed.Count -ne 1 -or $observed[0] -cne $good) {
+    throw 'DIAGNOSTIC_INTERRUPTED_RELAY_FAILED'
+}
+if ($source.Contains('$ctrlBreakLauncherOutput') -or -not $source.Contains('$ctrlBreakConsumerIdentityPath 2>&1 | Write-J6CtrlBreakNativeEvidence')) {
+    throw 'DIAGNOSTIC_LAUNCHER_STREAMING_WIRING_FAILED'
+}
+'J6_DIAGNOSTIC_INTERRUPTED_RELAY=PASS'
+
+# Compile the actual diagnostic method only: no Win32 process or socket call.
+$method = [regex]::Match($source, '(?s)    private static void WriteDiagnostic\(string marker\).*?(?=    public static int Main)')
+if (-not $method.Success -or $source.Contains('Console.WriteLine("J6_CTRL_BREAK_NATIVE_')) { throw 'DIAGNOSTIC_SAFE_WRITER_WIRING_FAILED' }
+$probe = @'
+using System;
+using System.IO;
+using System.Text;
+public static class J6DiagnosticWriterContract {
+    private sealed class FaultWriter : TextWriter {
+        public override Encoding Encoding { get { return Encoding.UTF8; } }
+        public override void WriteLine(string value) { throw new IOException("SYNTHETIC_SECRET"); }
+    }
+    public static bool Run() {
+        TextWriter saved = Console.Out;
+        bool cleanupReached = false;
+        try {
+            Console.SetOut(new FaultWriter());
+            try { throw new InvalidOperationException("PRIMARY_SENTINEL"); }
+            finally {
+                WriteDiagnostic("J6_CTRL_BREAK_NATIVE_PHASE=CLEANUP");
+                cleanupReached = true;
+                WriteDiagnostic("J6_CTRL_BREAK_NATIVE_CLEANUP=PASS");
+            }
+        } catch (InvalidOperationException ex) {
+            return cleanupReached && ex.Message == "PRIMARY_SENTINEL";
+        } finally { Console.SetOut(saved); }
+    }
+METHOD
+}
+'@
+Add-Type -TypeDefinition ($probe.Replace('METHOD', $method.Value))
+if (-not [J6DiagnosticWriterContract]::Run()) { throw 'DIAGNOSTIC_OUTPUT_FAILURE_ISOLATION_FAILED' }
+'J6_DIAGNOSTIC_OUTPUT_FAILURE_ISOLATION=PASS'

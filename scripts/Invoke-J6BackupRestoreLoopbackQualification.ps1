@@ -1521,7 +1521,9 @@ public static class J6SyntheticAge
 }
 
 function Write-J6CtrlBreakNativeEvidence {
-    param([AllowEmptyCollection()][object[]]$Lines)
+    [CmdletBinding()]
+    param([Parameter(ValueFromPipeline)][AllowEmptyCollection()][AllowNull()][object[]]$Lines)
+    begin {
     # Exact finite vocabulary: never forward arbitrary native output.
     $allowed = @(
         'J6_CTRL_BREAK_NATIVE_PHASE=PROCESS_CREATE',
@@ -1542,8 +1544,11 @@ function Write-J6CtrlBreakNativeEvidence {
         'J6_CTRL_BREAK_NATIVE_FAILURE=CHILD_WAIT',
         'J6_CTRL_BREAK_NATIVE_FAILURE=EXIT_CODE_READ'
     )
+    }
+    process {
     foreach ($line in $Lines) {
         if ($line -is [string] -and $line -cin $allowed) { Write-Host $line }
+    }
     }
 }
 
@@ -1663,11 +1668,20 @@ public static class J6CtrlBreakLauncher
         return quoted.ToString();
     }
 
+    private static void WriteDiagnostic(string marker)
+    {
+        // Observation must never prevent exact-handle cleanup or replace its error.
+        try { Console.WriteLine(marker); }
+        catch (IOException) { }
+        catch (ObjectDisposedException) { }
+        catch (InvalidOperationException) { }
+    }
+
     public static int Main(string[] args)
     {
         if (args.Length != 8)
         {
-            Console.WriteLine("J6_CTRL_BREAK_NATIVE_FAILURE=ARGUMENT_COUNT");
+            WriteDiagnostic("J6_CTRL_BREAK_NATIVE_FAILURE=ARGUMENT_COUNT");
             return 64;
         }
         string commandLine = Quote(args[0]) +
@@ -1682,7 +1696,7 @@ public static class J6CtrlBreakLauncher
             cb = (uint)Marshal.SizeOf(typeof(STARTUPINFO))
         };
         PROCESS_INFORMATION process;
-        Console.WriteLine("J6_CTRL_BREAK_NATIVE_PHASE=PROCESS_CREATE");
+        WriteDiagnostic("J6_CTRL_BREAK_NATIVE_PHASE=PROCESS_CREATE");
         if (!CreateProcessW(
                 args[0],
                 new StringBuilder(commandLine),
@@ -1695,7 +1709,7 @@ public static class J6CtrlBreakLauncher
                 ref startup,
                 out process))
         {
-            Console.WriteLine("J6_CTRL_BREAK_NATIVE_FAILURE=PROCESS_CREATE");
+            WriteDiagnostic("J6_CTRL_BREAK_NATIVE_FAILURE=PROCESS_CREATE");
             return 66;
         }
         bool handlerInstalled = false;
@@ -1703,51 +1717,51 @@ public static class J6CtrlBreakLauncher
         {
             if (!SetConsoleCtrlHandler(IgnoreLauncherControlEvent, true))
             {
-                Console.WriteLine("J6_CTRL_BREAK_NATIVE_FAILURE=HANDLER_INSTALL");
+                WriteDiagnostic("J6_CTRL_BREAK_NATIVE_FAILURE=HANDLER_INSTALL");
                 return 75;
             }
             handlerInstalled = true;
             File.WriteAllText(args[5], process.dwProcessId.ToString());
-            Console.WriteLine("J6_CTRL_BREAK_NATIVE_PHASE=READINESS_WAIT");
+            WriteDiagnostic("J6_CTRL_BREAK_NATIVE_PHASE=READINESS_WAIT");
             DateTime readyDeadline = DateTime.UtcNow.AddSeconds(10);
             while (!File.Exists(args[3]) && DateTime.UtcNow < readyDeadline)
             {
                 uint earlyCode;
                 if (GetExitCodeProcess(process.hProcess, out earlyCode) && earlyCode != STILL_ACTIVE)
                 {
-                    Console.WriteLine("J6_CTRL_BREAK_NATIVE_FAILURE=EARLY_EXIT");
+                    WriteDiagnostic("J6_CTRL_BREAK_NATIVE_FAILURE=EARLY_EXIT");
                     return 67;
                 }
                 Thread.Sleep(25);
             }
             if (!File.Exists(args[3]))
             {
-                Console.WriteLine("J6_CTRL_BREAK_NATIVE_FAILURE=READINESS_TIMEOUT");
+                WriteDiagnostic("J6_CTRL_BREAK_NATIVE_FAILURE=READINESS_TIMEOUT");
                 return 68;
             }
-            Console.WriteLine("J6_CTRL_BREAK_NATIVE_PHASE=SIGNAL_SEND");
+            WriteDiagnostic("J6_CTRL_BREAK_NATIVE_PHASE=SIGNAL_SEND");
             if (!GenerateConsoleCtrlEvent(CTRL_BREAK_EVENT, process.dwProcessId))
             {
-                Console.WriteLine("J6_CTRL_BREAK_NATIVE_FAILURE=SIGNAL_SEND");
+                WriteDiagnostic("J6_CTRL_BREAK_NATIVE_FAILURE=SIGNAL_SEND");
                 return 69;
             }
-            Console.WriteLine("J6_CTRL_BREAK_NATIVE_PHASE=CHILD_WAIT");
-            Console.WriteLine("J6_CTRL_BREAK_NATIVE_SIGNAL=SENT");
+            WriteDiagnostic("J6_CTRL_BREAK_NATIVE_PHASE=CHILD_WAIT");
+            WriteDiagnostic("J6_CTRL_BREAK_NATIVE_SIGNAL=SENT");
             uint wait = WaitForSingleObject(process.hProcess, 10000);
             if (wait == WAIT_TIMEOUT)
             {
-                Console.WriteLine("J6_CTRL_BREAK_NATIVE_FAILURE=CHILD_TIMEOUT");
+                WriteDiagnostic("J6_CTRL_BREAK_NATIVE_FAILURE=CHILD_TIMEOUT");
                 return 70;
             }
             if (wait != WAIT_OBJECT_0)
             {
-                Console.WriteLine("J6_CTRL_BREAK_NATIVE_FAILURE=CHILD_WAIT");
+                WriteDiagnostic("J6_CTRL_BREAK_NATIVE_FAILURE=CHILD_WAIT");
                 return 71;
             }
             uint exitCode;
             if (!GetExitCodeProcess(process.hProcess, out exitCode))
             {
-                Console.WriteLine("J6_CTRL_BREAK_NATIVE_FAILURE=EXIT_CODE_READ");
+                WriteDiagnostic("J6_CTRL_BREAK_NATIVE_FAILURE=EXIT_CODE_READ");
                 return 72;
             }
             File.WriteAllText(
@@ -1757,7 +1771,7 @@ public static class J6CtrlBreakLauncher
         }
         finally
         {
-            Console.WriteLine("J6_CTRL_BREAK_NATIVE_PHASE=CLEANUP");
+            WriteDiagnostic("J6_CTRL_BREAK_NATIVE_PHASE=CLEANUP");
             bool cleanupVerified = true;
             uint exitCode;
             if (!GetExitCodeProcess(process.hProcess, out exitCode))
@@ -1781,11 +1795,11 @@ public static class J6CtrlBreakLauncher
             bool processClosed = CloseHandle(process.hProcess);
             if (!cleanupVerified || !threadClosed || !processClosed)
             {
-                Console.WriteLine("J6_CTRL_BREAK_NATIVE_CLEANUP=FAIL");
+                WriteDiagnostic("J6_CTRL_BREAK_NATIVE_CLEANUP=FAIL");
                 throw new InvalidOperationException(
                     "The exact CTRL_BREAK harness cleanup could not be confirmed.");
             }
-            Console.WriteLine("J6_CTRL_BREAK_NATIVE_CLEANUP=PASS");
+            WriteDiagnostic("J6_CTRL_BREAK_NATIVE_CLEANUP=PASS");
         }
     }
 }
@@ -2669,6 +2683,7 @@ exit 0
         'The cooperative interruption left an owned process root.'
     Write-Host 'J6_PIPELINE_COOPERATIVE_CANCELLATION_CLEANUP=PASS'
 
+    & (Join-Path $PSScriptRoot 'Test-J6CtrlBreakDiagnosticContract.ps1')
     $script:j6CtrlBreakStage = 'COMPILATION_PREPARE'
     Write-Host 'J6_CTRL_BREAK_COMPILATION=START'
     $ctrlBreakLauncherPath = Join-Path $resolvedQualificationRoot 'j6-ctrl-break-launcher.exe'
@@ -2766,13 +2781,12 @@ exit $exitCode
         $ctrlBreakHarnessPath,
         $ctrlBreakHarness,
         [Text.UTF8Encoding]::new($false))
-    $ctrlBreakLauncherOutput = $null
     $ctrlBreakLauncherExitCode = $null
     $ctrlBreakProducerIdentity = $null
     $ctrlBreakConsumerIdentity = $null
     try {
         $script:j6CtrlBreakStage = 'LAUNCHER_EXECUTION'
-        $ctrlBreakLauncherOutput = @(& $ctrlBreakLauncherPath `
+        & $ctrlBreakLauncherPath `
             $pwshPath `
             $ctrlBreakHarnessPath `
             $modulePath `
@@ -2780,9 +2794,8 @@ exit $exitCode
             $ctrlBreakResultPath `
             $ctrlBreakHarnessPidPath `
             $ctrlBreakProducerIdentityPath `
-            $ctrlBreakConsumerIdentityPath 2>&1)
+            $ctrlBreakConsumerIdentityPath 2>&1 | Write-J6CtrlBreakNativeEvidence
         $ctrlBreakLauncherExitCode = $LASTEXITCODE
-        Write-J6CtrlBreakNativeEvidence -Lines $ctrlBreakLauncherOutput
         Write-Host ("J6_CTRL_BREAK_LAUNCHER_EXIT=" + [int]$ctrlBreakLauncherExitCode)
         $script:j6CtrlBreakStage = 'CHILD_ASSERTIONS'
         Assert-J6Qualification ($ctrlBreakLauncherExitCode -eq 0) `
