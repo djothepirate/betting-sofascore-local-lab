@@ -67,5 +67,9 @@ restent inchangés. La permission officielle reste NOT_EVIDENCED, le go WO-046 c
   relance hôte hors ligne réussie. Aucun téléchargement ni service métier lancé.
 - Le rapport R2 WO-046 conserve son SHA-256 validé, aucune preuve gelée réécrite.
 
-Rapport détaillé et empreinte soumis dans le commit documentaire suivant. WO-050 reste actif ;
-aucun push, aucune mise à jour/résolution GitHub, aucune fusion ni nouvelle campagne.
+Implémentation : `87deb475007c853ed5f06752756183078f2e404f`.
+[Rapport détaillé](../../validation/J9-WO050-NON-PROVIDER-LAUNCHER-OWNER-GO-ISOLATION-20260905.md),
+SHA-256 `c6b1acd4f0b3866fe6db1b7fce6c68986c6007844a63a348c4f8dcacca5a7ccd`.
+Résultat soumis : `PASS_OFFLINE_FAIL_CLOSED`.
+WO-050 reste actif ; aucun push, aucune mise à jour/résolution GitHub, aucune fusion ni
+nouvelle campagne. Le correctif ne sera publié qu'après validation propriétaire.
