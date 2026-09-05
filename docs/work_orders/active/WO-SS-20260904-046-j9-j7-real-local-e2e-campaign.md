@@ -1,6 +1,6 @@
 # WO-SS-20260904-046 — Campagne E2E J7 réelle locale Windows/Windows
 
-- **Statut :** `R2_MANIFEST_FROZEN_PENDING_REAL_POST_OWNER_DECISION`
+- **Statut :** `READY_FOR_OWNER_REVIEW_R2_REAL_LOCAL_E2E`
 - **Jalon :** après J9 — campagne locale d'une livraison J7 dérivée fournisseur
 - **Ouvert le :** 2026-09-04
 - **Ouverture UTC :** `2026-09-04T13:59:22.9943521Z`
@@ -823,3 +823,52 @@ L'accord général pour un nouveau go reste consigné. Le passage à un bloc V2 
 avec fenêtre future exacte, requiert la décision levant explicitement l'interdiction du
 POST ; aucun tel bloc n'est créé contre le `NO`. Aucun push, fusion main, réseau fournisseur,
 receiver distant, VPS ou production. Le gel de ce manifeste ne vaut aucune exécution.
+
+## 19. Go V2 R2 autorisé, consommé une fois et réception réelle confirmée
+
+Le propriétaire autorise explicitement « le go v2 lié à ce manifeste et l'unique POST ».
+Le [rapport réel R2](../../validation/J9-WO046-J7-REAL-LOCAL-E2E-R2-CAMPAIGN-20260905.md)
+consigne le bloc privé exact, le préflight, la fenêtre future, l'enregistrement durable,
+le parcours UI et les contrôles de réception/cleanup. Aucun champ du manifeste gelé ou
+des rapports historiques n'est modifié pour refléter rétroactivement cette décision.
+
+```text
+J9_WO046_R2_OWNER_GO_ID=5ae693fc-8832-43d6-a02a-10086bbdd61e
+J9_WO046_R2_OWNER_GO_SHA256=d3f8c4a1a73ab0a344e0e87d3f494caadf2586d365ff245fa3c72fb17c47a313
+J9_WO046_R2_OWNER_GO_REGISTERED_AT_UTC=2026-09-05T09:02:21.756602Z
+J9_WO046_R2_OWNER_GO_WINDOW_UTC=[2026-09-05T09:15:00Z,2026-09-05T10:15:00Z)
+J9_WO046_R2_OWNER_GO_CONSUMED_AT_UTC=2026-09-05T09:20:10.677477Z
+J9_WO046_R2_OWNER_GO_STATUS=CONSUMED_ONCE_NOT_REUSABLE
+J9_WO046_R2_DIRECT_IMPORT_POST_COUNT=1
+J9_WO046_R2_HTTP_STATUS=201
+J9_WO046_R2_SENDER_STATE=DELIVERED
+J9_WO046_R2_RECEIVER_IMPORT_ID=9093ae49-a182-40f8-9504-32872f0b32f0
+J9_WO046_R2_INBOX_BYTE_IDENTICAL=YES
+J9_WO046_R2_AUDIT=IMPORTED_ACCEPTED
+J9_WO046_R2_OUTBOX=J7_IMPORT_ACCEPTED_PENDING
+J9_WO046_R2_EVIDENCE_RESULT=PASS
+J9_WO046_R2_QUALIFICATION_RESULT=PASS_REAL_LOCAL_J7_E2E
+J9_WO046_R2_QUALIFICATION_REPORT=docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-R2-CAMPAIGN-20260905.md
+J9_WO046_R2_QUALIFICATION_REPORT_SIZE_BYTES=14020
+J9_WO046_R2_QUALIFICATION_REPORT_SHA256=3b128cab84c384f5901215042d554e935730ce146565687677ddb1c2a39eddf1
+J9_WO046_R2_BROWSER_OBSERVATION_MINIMIZATION=DEVIATION_DISCLOSED_PENDING_OWNER_ACKNOWLEDGEMENT
+J9_WO046_OWNER_REVIEW_DECISION=PENDING
+J9_WO046_WORK_ORDER_MOVE_TO_COMPLETED=NO
+J9_WO046_NEW_POST_AUTHORIZED=NO
+J9_OFFICIAL_PERMISSION_STATUS=NOT_EVIDENCED
+J9_PROVIDER_NETWORK_AUTHORIZED=NO
+J9_REMOTE_RECEIVER_NETWORK_AUTHORIZED=NO
+J9_VPS_DEPLOYMENT_AUTHORIZED=NO
+J9_PRODUCTION_AUTHORIZED=NO
+```
+
+Les deux Java sont arrêtés gracieusement, code 0 corroboré par leurs superviseurs.
+Le receiver PostgreSQL exact est arrêté avec volume/inbox/audit/outbox conservés ; aucun
+listener 8087/8444/5433 ne subsiste, primaire toujours sain, réseau fournisseur bloqué.
+Aucune nouvelle acquisition, aucune purge ou mutation PKI. Le résultat de livraison ne
+supprime ni l'avertissement de complétude de l'export ni le statut officiel NOT_EVIDENCED.
+
+La section 7 du rapport expose les restitutions navigateur contenant l'aperçu normalisé
+et des URL de session. Aucun contenu de cette nature n'est copié dans Git. Le résultat
+technique est démontré ; sa revue doit reconnaître cet écart de minimisation. Le lot reste
+documentaire, sans nouveau build, modification runtime, push, fusion ou clôture propriétaire.

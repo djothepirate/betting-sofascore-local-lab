@@ -4,6 +4,18 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### Après J9 — WO-046 R2 : un POST J7 réel local reçu durablement
+
+- go V2 explicitement autorisé, enregistré avant sa fenêtre et consommé atomiquement une fois ;
+- parcours UI exact, `201/IMPORTED`, `DELIVERED`, une tentative ; inbox 35 663 octets
+  byte-identiques, hashes/identité mTLS/accusé corrélés, audit et outbox J7 durables ;
+- rétention receiver 30 jours, enrichissement encore en attente ; aucun appel SofaScore ;
+- deux arrêts gracieux Java code 0, receiver PostgreSQL arrêté, volume/audit conservés,
+  primaire sain, zéro listener de campagne résiduel ; aucun retry ni nouveau POST autorisé ;
+- écart de minimisation des sorties navigateur exposé, distinct des flux applicatifs expurgés ;
+  rapport soumis à revue propriétaire, WO-046 actif, aucune clôture/push/fusion automatique ;
+- manifeste, JAR, rapports gelés et runtime inchangés ; aucun nouveau build revendiqué.
+
 ### Après J9 — manifeste WO-046 R2 gelé, volume receiver réutilisable recontrôlé
 
 - choix propriétaire explicite de `betting-project_betting-postgres-data`, sans purge ni POST ;

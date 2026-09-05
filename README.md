@@ -4,12 +4,15 @@ Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’i
 
 > **Statut :** `EXPERIMENTAL` · `LOCAL_ONLY` · `NOT_PRODUCTION_APPROVED` · `NO_CRITICAL_DEPENDENCY`
 
-La [reprise préparatoire WO-046 R2](docs/validation/J9-WO046-R2-PREPARATION-AFTER-WO049-20260905.md)
-dispose désormais d'un [manifeste R2 gelé](docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-R2-MANIFEST-20260905.md).
-La réutilisation du volume receiver R1 est explicitement autorisée et recontrôlée : PostgreSQL
-seul a été démarré temporairement, interrogé en lecture seule puis arrêté, volume/audit
-conservés. Export, JAR et PKI publique concordent. Aucun receiver Java ou Local Lab démarré,
-aucun nouveau go enregistré : le POST réel reste interdit et exige une décision distincte.
+La [campagne réelle WO-046 R2](docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-R2-CAMPAIGN-20260905.md)
+a effectué l'unique POST J7 local explicitement autorisé : `201/IMPORTED`, sender `DELIVERED`,
+35 663 octets inbox byte-identiques, go V2 consommé une fois, audit et outbox durables.
+Les applications sont arrêtées proprement, le volume receiver et son audit conservés,
+le primaire sain ; aucun appel SofaScore et aucun listener de campagne résiduel.
+WO-046 attend la revue propriétaire, y compris la reconnaissance de l'écart de minimisation
+des restitutions navigateur décrit dans le rapport. Aucun nouveau POST, push ou déploiement
+n'est autorisé. Le [manifeste R2 gelé](docs/validation/J9-WO046-J7-REAL-LOCAL-E2E-R2-MANIFEST-20260905.md)
+et les preuves R1 restent inchangés. Les paragraphes suivants relatent les étapes historiques.
 
 Le [WO-049](docs/work_orders/completed/WO-SS-20260905-049-j9-wo046-launcher-stop-proof.md)
 est **validé par le propriétaire et clôturé**, résultat `PASS_OFFLINE_FAIL_CLOSED` : préparation
@@ -33,8 +36,8 @@ Le go est révoqué sans consommation, avec zéro livraison, tentative et import
 Le receiver a passé sa readiness mTLS `200/UP` sur loopback avant l'échec du Local Lab ; il a
 ensuite été arrêté gracieusement par un POST administratif distinct de l'import. Sa base V008
 neuve est arrêtée, son volume conservé, sans redémarrage automatique. Le primaire est toujours
-sain ; son export est inchangé et aucun listener 8087/8444/5433 ne subsiste. Les seules nouvelles
-écritures primaires de gouvernance sont un grant et sa révocation. WO-046 reste actif, état
+sain ; son export est inchangé et aucun listener 8087/8444/5433 ne subsistait. Les seules nouvelles
+écritures primaires de gouvernance R1 étaient un grant et sa révocation. WO-046 restait actif, état
 `STOPPED_PRE_IMPORT_LOCAL_LAB_CONFIGURATION_BINDING_REFUSED`.
 
 La [préparation primaire WO-046](docs/validation/J9-WO046-PRIMARY-V30-V32-PREPARATION-20260905.md)
