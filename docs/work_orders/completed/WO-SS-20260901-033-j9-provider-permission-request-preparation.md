@@ -1,6 +1,14 @@
 # WO-SS-20260901-033 — Préparation de la demande de permission fournisseur et du receiver concurrent
 
-- **Statut :** `VALIDATED`
+- **Statut courant :** `ABANDONED_BY_OWNER` — décision du 2026-09-05.
+
+> Le propriétaire déclare obsolètes les conditions de poursuite et abandonne WO-032,
+> WO-033 et WO-034. Les validations, préflights et autorisations de reprise ci-dessous
+> sont historiques : aucune saisie complémentaire, production de rendu ou fusion de
+> clôture n'est désormais attendue. Aucun résultat technique antérieur n'est effacé.
+> Classement administratif completed ; aucun envoi ni permission fournisseur créé.
+> Pour WO-034, le nettoyage privé prévu historiquement reste distinct : non exécuté,
+> aucune absence de données privées attestée ; suppression à décider explicitement.
 - **Jalon :** après J9 — levée documentaire de la porte de permission et préparation end-to-end
 - **Ouvert le :** 2026-09-01
 - **Ouverture UTC :** `2026-09-01T15:41:29.1426445Z`
