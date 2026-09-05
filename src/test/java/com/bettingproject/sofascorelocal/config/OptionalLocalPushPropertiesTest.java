@@ -3,6 +3,9 @@ package com.bettingproject.sofascorelocal.config;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.Test;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.boot.test.context.runner.ApplicationContextRunner;
+import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
 
@@ -11,16 +14,25 @@ import static org.assertj.core.api.Assertions.assertThat;
 class OptionalLocalPushPropertiesTest {
 
     private final Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
+    private final ApplicationContextRunner contextRunner = new ApplicationContextRunner()
+            .withUserConfiguration(BindingConfiguration.class);
 
     @Test
     void defaultsAreFailClosedBoundedAndPermissionIsNotEvidenced() {
         OptionalLocalPushProperties properties = new OptionalLocalPushProperties();
 
         assertThat(properties.isEnabled()).isFalse();
+        assertThat(properties.getExecutionMode())
+                .isEqualTo(OptionalLocalPushProperties.ExecutionMode.DISABLED);
         assertThat(properties.isRemoteDeliveryAuthorized()).isFalse();
         assertThat(properties.getOfficialPermissionStatus())
                 .isEqualTo(OptionalLocalPushProperties.PermissionStatus.NOT_EVIDENCED);
         assertThat(properties.isLoopbackQualification()).isFalse();
+        assertThat(properties.getReceiverQualification())
+                .isEqualTo(OptionalLocalPushProperties.QualificationStatus.NOT_QUALIFIED);
+        assertThat(properties.getSenderQualification())
+                .isEqualTo(OptionalLocalPushProperties.QualificationStatus.NOT_QUALIFIED);
+        assertThat(properties.getReceiverOrigin()).isEmpty();
         assertThat(properties.getLoopbackOrigin()).isEmpty();
         assertThat(properties.getMaximumConcurrency()).isEqualTo(1);
         assertThat(properties.getMaximumPayloadBytes()).isEqualTo(5 * 1024 * 1024);
@@ -32,20 +44,114 @@ class OptionalLocalPushPropertiesTest {
         assertThat(properties.getMtls().isRequired()).isTrue();
         assertThat(properties.getMtls().getKeyStoreType()).isEqualTo("Windows-MY");
         assertThat(properties.getMtls().getClientCertificateSha256()).isEmpty();
+        assertThat(properties.getProviderOwnerGo().isAbsent()).isTrue();
         assertThat(validator.validate(properties)).isEmpty();
     }
 
     @Test
-    void realDeliveryCannotBeArmedByConfigurationUnderWo027() {
+    void acceptsOnlyACompleteSyntheticRuntimeProfile() {
         OptionalLocalPushProperties properties = new OptionalLocalPushProperties();
-        properties.setOfficialPermissionStatus(
-                OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE);
         properties.setEnabled(true);
-        properties.setRemoteDeliveryAuthorized(true);
+        properties.setExecutionMode(
+                OptionalLocalPushProperties.ExecutionMode.SYNTHETIC_LOOPBACK);
+        properties.setReceiverOrigin(OptionalLocalPushProperties.LOCAL_RECEIVER_ORIGIN);
+        properties.setReceiverQualification(
+                OptionalLocalPushProperties.QualificationStatus.PASS);
+        properties.setSenderQualification(
+                OptionalLocalPushProperties.QualificationStatus.PASS);
+        properties.getMtls().setClientCertificateSha256("a".repeat(64));
+
+        assertThat(validator.validate(properties)).isEmpty();
+
+        properties.setReceiverOrigin("https://127.0.0.1:8445");
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getPropertyPath().toString()
+                        .equals("receiverOriginSafe"));
+
+        properties.setReceiverOrigin(OptionalLocalPushProperties.LOCAL_RECEIVER_ORIGIN);
+        properties.getMtls().setClientCertificateSha256("");
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getPropertyPath().toString()
+                        .equals("runtimeActivationCoherent"));
+    }
+
+    @Test
+    void providerDerivedConfigurationTreatsNotEvidencedAsAuditOnly() {
+        OptionalLocalPushProperties properties = new OptionalLocalPushProperties();
+        properties.setEnabled(true);
+        properties.setExecutionMode(
+                OptionalLocalPushProperties.ExecutionMode.PROVIDER_DERIVED);
+        properties.setReceiverOrigin(OptionalLocalPushProperties.LOCAL_RECEIVER_ORIGIN);
+        properties.setReceiverQualification(
+                OptionalLocalPushProperties.QualificationStatus.PASS);
+        properties.setSenderQualification(
+                OptionalLocalPushProperties.QualificationStatus.PASS);
+        properties.getMtls().setClientCertificateSha256("a".repeat(64));
 
         assertThat(validator.validate(properties))
                 .anyMatch(violation -> violation.getPropertyPath().toString()
-                        .equals("realDeliveryFailClosed"));
+                        .equals("runtimeActivationCoherent"));
+
+        properties.setRemoteDeliveryAuthorized(true);
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getPropertyPath().toString()
+                        .equals("runtimeActivationCoherent"));
+
+        properties.getProviderOwnerGo().setGoId(
+                "50000000-0000-4000-8000-000000000005");
+        properties.getProviderOwnerGo().setOwnerGoDocumentSha256("b".repeat(64));
+        assertThat(validator.validate(properties)).isEmpty();
+
+        properties.setOfficialPermissionStatus(
+                OptionalLocalPushProperties.PermissionStatus.EVIDENCED_COMPATIBLE);
+        assertThat(validator.validate(properties)).isEmpty();
+
+        properties.setOfficialPermissionStatus(
+                OptionalLocalPushProperties.PermissionStatus.EVIDENCED_INCOMPATIBLE);
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getPropertyPath().toString()
+                        .equals("runtimeActivationCoherent"));
+
+        properties.setOfficialPermissionStatus(null);
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getPropertyPath().toString()
+                        .equals("officialPermissionStatus"))
+                .anyMatch(violation -> violation.getPropertyPath().toString()
+                        .equals("runtimeActivationCoherent"));
+    }
+
+    @Test
+    void unknownPermissionStatusCannotBindOrActivateTheSpringConfiguration() {
+        contextRunner.withPropertyValues(
+                        "optional-integration.enabled=true",
+                        "optional-integration.execution-mode=PROVIDER_DERIVED",
+                        "optional-integration.official-permission-status=FUTURE_UNKNOWN")
+                .run(context -> {
+                    assertThat(context).hasFailed();
+                    assertThat(context.getStartupFailure())
+                            .hasRootCauseInstanceOf(IllegalArgumentException.class)
+                            .hasStackTraceContaining(
+                                    "optional-integration.official-permission-status")
+                            .hasStackTraceContaining("FUTURE_UNKNOWN");
+                });
+    }
+
+    @Test
+    void ownerGoReferenceIsAbsentByDefaultCompleteForProviderAndForbiddenElsewhere() {
+        OptionalLocalPushProperties properties = new OptionalLocalPushProperties();
+        properties.getProviderOwnerGo().setGoId(
+                "50000000-0000-4000-8000-000000000005");
+
+        assertThat(properties.getProviderOwnerGo().isAbsentOrComplete()).isFalse();
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getPropertyPath().toString()
+                        .equals("providerOwnerGo.absentOrComplete"));
+
+        properties.getProviderOwnerGo().setOwnerGoDocumentSha256("b".repeat(64));
+        assertThat(properties.getProviderOwnerGo().isComplete()).isTrue();
+        assertThat(validator.validate(properties))
+                .anyMatch(violation -> violation.getPropertyPath().toString()
+                        .equals("runtimeActivationCoherent"));
     }
 
     @Test
@@ -124,5 +230,10 @@ class OptionalLocalPushPropertiesTest {
 
         properties.getMtls().setClientCertificateSha256("not-a-fingerprint");
         assertThat(validator.validate(properties)).isNotEmpty();
+    }
+
+    @Configuration(proxyBeanMethods = false)
+    @EnableConfigurationProperties(OptionalLocalPushProperties.class)
+    static class BindingConfiguration {
     }
 }

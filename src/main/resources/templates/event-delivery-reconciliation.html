@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Réconciliation J7 — SofaScore Local Lab</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head>
+<body>
+<header class="topbar compact-topbar">
+  <div class="shell">
+    <p class="eyebrow">J7 · Réconciliation locale</p>
+    <h1>Qualifier une tentative IN_FLIGHT stale</h1>
+  </div>
+</header>
+<main class="shell event-page">
+  <section class="status-banner status-danger">
+    <div>
+      <p class="label">Action sans réseau</p>
+      <p class="status-value">Le résultat distant restera explicitement inconnu.</p>
+    </div>
+    <span class="chip chip-warning">IN_FLIGHT</span>
+  </section>
+
+  <section class="panel j7-delivery-panel">
+    <div class="panel-heading">
+      <div>
+        <p class="label">Métadonnées persistées uniquement</p>
+        <h2 th:text="${deliveryCandidate.exportId}">export-id</h2>
+      </div>
+      <span class="chip chip-warning" th:text="${deliverySnapshot.state}">IN_FLIGHT</span>
+    </div>
+    <p>Aucun fichier J7 n’a été ouvert et aucun payload n’est nécessaire pour préparer cette action.</p>
+    <dl class="detail-grid">
+      <div><dt>Provenance</dt><dd class="mono" th:text="${deliveryCandidate.payloadClass}">SYNTHETIC_ONLY</dd></div>
+      <div><dt>Tentative</dt><dd th:text="${deliverySnapshot.attemptCount}">1</dd></div>
+      <div><dt>État modifié à</dt><dd class="mono" th:text="${deliverySnapshot.stateChangedAt}">instant</dd></div>
+      <div><dt>SHA-256 du fichier</dt><dd class="mono hash-value" th:text="${deliveryCandidate.fileSha256}">sha256</dd></div>
+    </dl>
+
+    <div class="control-stage">
+      <h3>Confirmation éphémère à usage unique</h3>
+      <p>Expire à
+        <span class="mono" th:text="${reconciliationConfirmationRequest.expiresAt}">instant</span>.
+        Recopiez exactement :</p>
+      <code class="confirmation-phrase"
+            th:text="${reconciliationConfirmationRequest.confirmationText}">RECONCILIER J7</code>
+      <form method="post" class="control-form"
+            th:action="@{/events/{id}/exports/{exportId}/delivery/reconciliation/execute(id=${canonicalEventId},exportId=${exportId})}">
+        <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+        <input type="hidden" name="reconciliationRequestId"
+               th:value="${reconciliationConfirmationRequest.requestId}">
+        <label for="j7-reconciliation-confirmation">Confirmation exacte</label>
+        <input id="j7-reconciliation-confirmation" type="text" name="confirmationText"
+               maxlength="256" autocomplete="off" spellcheck="false" required>
+        <label><input type="checkbox" name="acknowledged" value="true" required>
+          Je reconnais que le résultat distant reste inconnu.</label>
+        <button class="button-danger" type="submit">Réconcilier localement vers UNKNOWN</button>
+      </form>
+    </div>
+  </section>
+
+  <a th:href="@{/events/{id}/exports/{exportId}(id=${canonicalEventId},exportId=${exportId})}"
+     href="/events/00000000-0000-0000-0000-000000000000/exports/00000000-0000-0000-0000-000000000000">
+    Annuler et revenir à l’export
+  </a>
+</main>
+</body>
+</html>

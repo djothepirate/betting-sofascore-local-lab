@@ -1,0 +1,76 @@
+services:
+  local-lab-postgres:
+    image: postgres:18.4-alpine
+    pull_policy: never
+    restart: "no"
+    shm_size: 128mb
+    environment:
+      POSTGRES_DB: ${WO036_LOCAL_LAB_POSTGRES_DB:?WO036 private environment is required}
+      POSTGRES_USER: ${WO036_LOCAL_LAB_POSTGRES_USER:?WO036 private environment is required}
+      POSTGRES_PASSWORD: ${WO036_LOCAL_LAB_POSTGRES_PASSWORD:?WO036 private environment is required}
+      POSTGRES_INITDB_ARGS: --data-checksums --auth-host=scram-sha-256
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - local_lab_postgres_data:/var/lib/postgresql
+    labels:
+      com.bettingproject.work-order: WO-SS-20260902-036-j9-j7-local-e2e-qualification
+      com.bettingproject.wo036.run-id: ${WO036_RUN_ID:?WO036 private environment is required}
+      com.bettingproject.wo036.ownership-sha256: ${WO036_OWNERSHIP_SHA256:?WO036 private environment is required}
+      com.bettingproject.wo036.role: local-lab-postgres
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          pg_isready --host 127.0.0.1 --username "$${POSTGRES_USER}"
+          --dbname "$${POSTGRES_DB}"
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    stop_grace_period: 30s
+
+  betting-project-postgres:
+    image: postgres:17-alpine
+    pull_policy: never
+    restart: "no"
+    shm_size: 128mb
+    environment:
+      POSTGRES_DB: ${WO036_BETTING_PROJECT_POSTGRES_DB:?WO036 private environment is required}
+      POSTGRES_USER: ${WO036_BETTING_PROJECT_POSTGRES_USER:?WO036 private environment is required}
+      POSTGRES_PASSWORD: ${WO036_BETTING_PROJECT_POSTGRES_PASSWORD:?WO036 private environment is required}
+      POSTGRES_INITDB_ARGS: --data-checksums --auth-host=scram-sha-256
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - betting_project_postgres_data:/var/lib/postgresql/data
+    labels:
+      com.bettingproject.work-order: WO-SS-20260902-036-j9-j7-local-e2e-qualification
+      com.bettingproject.wo036.run-id: ${WO036_RUN_ID:?WO036 private environment is required}
+      com.bettingproject.wo036.ownership-sha256: ${WO036_OWNERSHIP_SHA256:?WO036 private environment is required}
+      com.bettingproject.wo036.role: betting-project-postgres
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          pg_isready --host 127.0.0.1 --username "$${POSTGRES_USER}"
+          --dbname "$${POSTGRES_DB}"
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    stop_grace_period: 30s
+
+volumes:
+  local_lab_postgres_data:
+    labels:
+      com.bettingproject.work-order: WO-SS-20260902-036-j9-j7-local-e2e-qualification
+      com.bettingproject.wo036.run-id: ${WO036_RUN_ID:?WO036 private environment is required}
+      com.bettingproject.wo036.ownership-sha256: ${WO036_OWNERSHIP_SHA256:?WO036 private environment is required}
+      com.bettingproject.wo036.role: local-lab-postgres-data
+  betting_project_postgres_data:
+    labels:
+      com.bettingproject.work-order: WO-SS-20260902-036-j9-j7-local-e2e-qualification
+      com.bettingproject.wo036.run-id: ${WO036_RUN_ID:?WO036 private environment is required}
+      com.bettingproject.wo036.ownership-sha256: ${WO036_OWNERSHIP_SHA256:?WO036 private environment is required}
+      com.bettingproject.wo036.role: betting-project-postgres-data

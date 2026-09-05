@@ -2,6 +2,7 @@ package com.bettingproject.sofascorelocal.adapter.bettingproject.transport;
 
 import org.junit.jupiter.api.Test;
 
+import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedKeyManager;
 import java.net.Socket;
 import java.security.KeyStore;
@@ -16,6 +17,8 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.same;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 class WindowsUserCertificateSslContextFactoryTest {
@@ -36,6 +39,22 @@ class WindowsUserCertificateSslContextFactoryTest {
                         .WindowsUserCertificateException) exception).error())
                 .isEqualTo(WindowsUserCertificateSslContextFactory
                         .WindowsUserCertificateError.INVALID_CERTIFICATE_FINGERPRINT);
+    }
+
+    @Test
+    void usesExplicitWindowsRootTrustInsteadOfTheRedirectableJvmDefault() throws Exception {
+        TrustManagerFactory trustManagerFactory = mock(TrustManagerFactory.class);
+        KeyStore trustStore = mock(KeyStore.class);
+
+        WindowsUserCertificateSslContextFactory.initializeExplicitTrustStore(
+                trustManagerFactory,
+                trustStore);
+
+        assertThat(WindowsUserCertificateSslContextFactory.TRUST_STORE_TYPE)
+                .isEqualTo("Windows-ROOT");
+        assertThat(WindowsUserCertificateSslContextFactory.TRUST_STORE_PROVIDER)
+                .isEqualTo("SunMSCAPI");
+        verify(trustManagerFactory).init(same(trustStore));
     }
 
     @Test

@@ -37,6 +37,8 @@ public final class WindowsUserCertificateSslContextFactory {
 
     public static final String KEY_STORE_TYPE = "Windows-MY";
     public static final String KEY_STORE_PROVIDER = "SunMSCAPI";
+    public static final String TRUST_STORE_TYPE = "Windows-ROOT";
+    public static final String TRUST_STORE_PROVIDER = "SunMSCAPI";
     public static final String CLIENT_AUTH_EKU = "1.3.6.1.5.5.7.3.2";
 
     private static final Pattern SHA_256 = Pattern.compile("[0-9a-f]{64}");
@@ -54,9 +56,13 @@ public final class WindowsUserCertificateSslContextFactory {
             X509ExtendedKeyManager delegate = extendedKeyManager(
                     keyManagerFactory.getKeyManagers());
 
+            KeyStore trustStore = KeyStore.getInstance(
+                    TRUST_STORE_TYPE,
+                    TRUST_STORE_PROVIDER);
+            trustStore.load(null, null);
             TrustManagerFactory trustManagerFactory = TrustManagerFactory.getInstance(
                     TrustManagerFactory.getDefaultAlgorithm());
-            trustManagerFactory.init((KeyStore) null);
+            initializeExplicitTrustStore(trustManagerFactory, trustStore);
 
             SSLContext context = SSLContext.getInstance("TLS");
             context.init(
@@ -70,6 +76,14 @@ public final class WindowsUserCertificateSslContextFactory {
                     WindowsUserCertificateError.CERTIFICATE_STORE_UNAVAILABLE,
                     exception);
         }
+    }
+
+    static void initializeExplicitTrustStore(
+            TrustManagerFactory trustManagerFactory,
+            KeyStore trustStore) throws GeneralSecurityException {
+        Objects.requireNonNull(trustManagerFactory, "trustManagerFactory");
+        Objects.requireNonNull(trustStore, "trustStore");
+        trustManagerFactory.init(trustStore);
     }
 
     static String selectExactJavaOpaqueClientAlias(

@@ -77,6 +77,7 @@ import com.bettingproject.sofascorelocal.domain.eventdata.J5UnavailableFamily;
 import com.bettingproject.sofascorelocal.domain.eventdata.LineupSide;
 import com.bettingproject.sofascorelocal.domain.eventdata.TeamLineup;
 import com.bettingproject.sofascorelocal.domain.history.J6HistoryStream;
+import com.bettingproject.sofascorelocal.domain.delivery.J7ProviderDerivedOwnerGo;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportError;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportException;
 import com.bettingproject.sofascorelocal.domain.export.J7ExportStatus;
@@ -129,14 +130,18 @@ import org.springframework.aop.framework.Advised;
 import org.springframework.aop.support.AopUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.jdbc.datasource.DriverManagerDataSource;
+import org.springframework.jdbc.support.JdbcTransactionManager;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.interceptor.TransactionInterceptor;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -333,7 +338,7 @@ class FlywayMigrationIT {
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(deliveryTable).isEqualTo("j7_delivery");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("29");
+        assertThat(flywayVersion).isEqualTo("32");
         assertThat(rawColumn).isEqualTo("bytea");
     }
 
@@ -962,6 +967,326 @@ class FlywayMigrationIT {
                 .containsEntry("minute", null)
                 .containsEntry("incident_type", "penaltyShootout")
                 .containsEntry("shootout_sequence", 1);
+    }
+
+    @Test
+    void upgradesV29ToV30WithoutRewritingTheLedgerAndRemovesOnlyCrossClockOrdering() {
+        String schema = "upgrade_v29_to_v30_ack_receipt_time";
+        String separator = POSTGRES.getJdbcUrl().contains("?") ? "&" : "?";
+        var upgradeDataSource = new DriverManagerDataSource(
+                POSTGRES.getJdbcUrl() + separator + "currentSchema=" + schema,
+                POSTGRES.getUsername(),
+                POSTGRES.getPassword());
+        Flyway flywayV29 = Flyway.configure()
+                .dataSource(upgradeDataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .createSchemas(true)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("29"))
+                .load();
+
+        assertThat(flywayV29.migrate().migrationsExecuted).isEqualTo(29);
+        assertThat(flywayV29.info().current().getVersion().getVersion()).isEqualTo("29");
+        JdbcTemplate upgradeJdbc = new JdbcTemplate(upgradeDataSource);
+        Map<String, Object> v29HistoryBefore = upgradeJdbc.queryForMap("""
+                select installed_rank, version, description, type, script, checksum, success
+                from flyway_schema_history
+                where version = '29'
+                """);
+        assertThat(v29HistoryBefore.get("checksum")).isNotNull();
+        assertThat(upgradeJdbc.queryForObject(
+                "select count(*) from flyway_schema_history where version is not null",
+                Long.class)).isEqualTo(29L);
+
+        String v29GuardDefinition = upgradeJdbc.queryForObject("""
+                select pg_get_functiondef(routine.oid)
+                from pg_proc routine
+                join pg_namespace namespace on namespace.oid = routine.pronamespace
+                where namespace.nspname = ?
+                  and routine.proname = 'guard_j7_delivery_attempt_result_insert'
+                """, String.class, schema);
+        assertThat(v29GuardDefinition)
+                .contains("new.completed_at < attempt_record.started_at")
+                .contains("new.acknowledgement_received_at < attempt_record.started_at")
+                .contains("new.acknowledgement_received_at > new.completed_at");
+
+        UUID canonicalEventId = UUID.fromString(
+                "30000000-0000-4000-8000-000000000001");
+        UUID exportId = UUID.fromString(
+                "30000000-0000-4000-8000-000000000002");
+        UUID deliveryId = UUID.fromString(
+                "30000000-0000-4000-8000-000000000003");
+        UUID attemptId = UUID.fromString(
+                "30000000-0000-4000-8000-000000000004");
+        UUID remoteImportId = UUID.fromString(
+                "30000000-0000-4000-8000-000000000005");
+        String dataSha256 = "a".repeat(64);
+        String sourceSetSha256 = "b".repeat(64);
+        String fileSha256 = "c".repeat(64);
+        String idempotencyKey = "j7:" + exportId + ":sha256:" + fileSha256;
+        Instant validatedAt = Instant.parse("2026-09-03T11:59:00Z");
+        Instant deliveryCreatedAt = Instant.parse("2026-09-03T12:00:00Z");
+        Instant attemptStartedAt = deliveryCreatedAt.plusSeconds(1);
+        String validatedPath = "j7-" + canonicalEventId + "-" + exportId
+                + ".validated.json";
+
+        upgradeJdbc.update("""
+                insert into canonical_event (id, provider, provider_event_id)
+                values (?, 'SOFASCORE', 19999930)
+                """, canonicalEventId);
+        insertJ7Candidate(
+                upgradeJdbc,
+                canonicalEventId,
+                exportId,
+                dataSha256,
+                sourceSetSha256,
+                fileSha256);
+        recordJ7DecisionIntent(
+                upgradeJdbc,
+                exportId,
+                J7ExportStatus.HUMAN_VALIDATED,
+                validatedAt,
+                null,
+                validatedPath,
+                fileSha256,
+                1024);
+        assertThat(upgradeJdbc.update("""
+                update export_manifest
+                set export_path = ?,
+                    content_sha256 = ?,
+                    content_size_bytes = 1024,
+                    validation_status = 'HUMAN_VALIDATED',
+                    decided_at = ?,
+                    decision_reason = null
+                where export_uuid = ?
+                """,
+                validatedPath,
+                fileSha256,
+                Timestamp.from(validatedAt),
+                exportId)).isOne();
+        Long exportManifestId = upgradeJdbc.queryForObject(
+                "select id from export_manifest where export_uuid = ?",
+                Long.class,
+                exportId);
+        Long deliveryDatabaseId = upgradeJdbc.queryForObject("""
+                insert into j7_delivery (
+                    delivery_uuid, export_manifest_id, export_uuid,
+                    file_sha256, data_sha256, file_size_bytes,
+                    idempotency_key, protocol_version, current_state,
+                    created_at, state_changed_at
+                ) values (?, ?, ?, ?, ?, 1024, ?, '1.0', 'NOT_ATTEMPTED', ?, ?)
+                returning id
+                """,
+                Long.class,
+                deliveryId,
+                exportManifestId,
+                exportId,
+                fileSha256,
+                dataSha256,
+                idempotencyKey,
+                Timestamp.from(deliveryCreatedAt),
+                Timestamp.from(deliveryCreatedAt));
+        Long attemptDatabaseId = upgradeJdbc.queryForObject("""
+                insert into j7_delivery_attempt (
+                    attempt_uuid, delivery_id, attempt_number, started_at
+                ) values (?, ?, 1, ?)
+                returning id
+                """,
+                Long.class,
+                attemptId,
+                deliveryDatabaseId,
+                Timestamp.from(attemptStartedAt));
+
+        Map<String, Object> ledgerCountsBefore = upgradeJdbc.queryForMap("""
+                select
+                    (select count(*) from j7_delivery) as delivery_count,
+                    (select count(*) from j7_delivery_attempt) as attempt_count,
+                    (select count(*) from j7_delivery_attempt_result) as result_count
+                """);
+        String ledgerFingerprintSql = """
+                select coalesce(string_agg(value, E'\\n' order by value), '')
+                from (
+                    select 'DELIVERY|' || to_jsonb(delivery)::text as value
+                    from j7_delivery delivery
+                    union all
+                    select 'ATTEMPT|' || to_jsonb(attempt)::text as value
+                    from j7_delivery_attempt attempt
+                    union all
+                    select 'RESULT|' || to_jsonb(result)::text as value
+                    from j7_delivery_attempt_result result
+                ) evidence
+                """;
+        String ledgerFingerprintBefore = upgradeJdbc.queryForObject(
+                ledgerFingerprintSql, String.class);
+
+        Flyway flywayV30 = Flyway.configure()
+                .dataSource(upgradeDataSource)
+                .schemas(schema)
+                .defaultSchema(schema)
+                .locations("classpath:db/migration")
+                .target(MigrationVersion.fromVersion("30"))
+                .load();
+
+        assertThat(flywayV30.migrate().migrationsExecuted).isOne();
+        assertThat(flywayV30.info().current().getVersion().getVersion()).isEqualTo("30");
+        assertThat(upgradeJdbc.queryForObject(
+                "select count(*) from flyway_schema_history where version is not null",
+                Long.class)).isEqualTo(30L);
+        assertThat(upgradeJdbc.queryForMap("""
+                select installed_rank, version, description, type, script, checksum, success
+                from flyway_schema_history
+                where version = '29'
+                """)).containsExactlyInAnyOrderEntriesOf(v29HistoryBefore);
+        assertThat(upgradeJdbc.queryForMap("""
+                select
+                    (select count(*) from j7_delivery) as delivery_count,
+                    (select count(*) from j7_delivery_attempt) as attempt_count,
+                    (select count(*) from j7_delivery_attempt_result) as result_count
+                """)).containsExactlyInAnyOrderEntriesOf(ledgerCountsBefore);
+        assertThat(upgradeJdbc.queryForObject(ledgerFingerprintSql, String.class))
+                .isEqualTo(ledgerFingerprintBefore);
+
+        String v30GuardDefinition = upgradeJdbc.queryForObject("""
+                select pg_get_functiondef(routine.oid)
+                from pg_proc routine
+                join pg_namespace namespace on namespace.oid = routine.pronamespace
+                where namespace.nspname = ?
+                  and routine.proname = 'guard_j7_delivery_attempt_result_insert'
+                """, String.class, schema);
+        assertThat(v30GuardDefinition)
+                .contains("delivery_state <> 'IN_FLIGHT'")
+                .contains("latest_attempt_id is distinct from new.attempt_id")
+                .contains("new.completed_at < attempt_record.started_at")
+                .contains("not isfinite(new.acknowledgement_received_at)")
+                .contains("timestamptz '0001-01-01 00:00:00+00'")
+                .contains("timestamptz '9999-12-31 23:59:59.999999+00'")
+                .doesNotContain(
+                        "new.acknowledgement_received_at < attempt_record.started_at",
+                        "new.acknowledgement_received_at > new.completed_at");
+
+        String insertResultSql = """
+                insert into j7_delivery_attempt_result (
+                    attempt_id, terminal_state, http_status, safe_result_code,
+                    acknowledgement_sha256, remote_import_id,
+                    acknowledgement_received_at, completed_at
+                ) values (?, 'DUPLICATE_CONFIRMED', 200, 'V30_REMOTE_CLOCK',
+                          repeat('d', 64), ?, ?, ?)
+                """;
+        Instant remoteReceivedAt = attemptStartedAt.minusSeconds(86_400);
+        Instant completedAt = attemptStartedAt.plusSeconds(1);
+
+        assertThatThrownBy(() -> upgradeJdbc.update(
+                insertResultSql,
+                attemptDatabaseId,
+                remoteImportId,
+                Timestamp.from(remoteReceivedAt),
+                Timestamp.from(completedAt)))
+                .isInstanceOf(DataAccessException.class);
+        assertThat(upgradeJdbc.queryForObject(
+                "select count(*) from j7_delivery_attempt_result",
+                Long.class)).isZero();
+
+        assertThat(upgradeJdbc.update("""
+                update j7_delivery
+                set current_state = 'IN_FLIGHT', state_changed_at = ?
+                where id = ?
+                """, Timestamp.from(attemptStartedAt), deliveryDatabaseId)).isOne();
+        assertThatThrownBy(() -> upgradeJdbc.update(
+                insertResultSql,
+                attemptDatabaseId,
+                remoteImportId,
+                Timestamp.from(remoteReceivedAt),
+                Timestamp.from(attemptStartedAt.minusMillis(1))))
+                .isInstanceOf(DataAccessException.class);
+        assertThat(upgradeJdbc.queryForObject(
+                "select count(*) from j7_delivery_attempt_result",
+                Long.class)).isZero();
+
+        for (String nonFinite : new String[] {"infinity", "-infinity"}) {
+            assertThatThrownBy(() -> upgradeJdbc.update(
+                    """
+                    insert into j7_delivery_attempt_result (
+                        attempt_id, terminal_state, http_status, safe_result_code,
+                        acknowledgement_sha256, remote_import_id,
+                        acknowledgement_received_at, completed_at
+                    ) values (?, 'DUPLICATE_CONFIRMED', 200, 'V30_NON_FINITE_CLOCK',
+                              repeat('d', 64), ?, ?::timestamptz, ?)
+                    """,
+                    attemptDatabaseId,
+                    remoteImportId,
+                    nonFinite,
+                    Timestamp.from(completedAt)))
+                    .isInstanceOf(DataAccessException.class)
+                    .rootCause()
+                    .hasMessageContaining("J7 delivery attempt result is not current");
+            assertThat(upgradeJdbc.queryForObject(
+                    "select count(*) from j7_delivery_attempt_result",
+                    Long.class)).isZero();
+        }
+        for (String outsideCanonicalRange : new String[] {
+                "0001-01-01 00:00:00 BC",
+                "10000-01-01T00:00:00Z"
+        }) {
+            assertThatThrownBy(() -> upgradeJdbc.update(
+                    """
+                    insert into j7_delivery_attempt_result (
+                        attempt_id, terminal_state, http_status, safe_result_code,
+                        acknowledgement_sha256, remote_import_id,
+                        acknowledgement_received_at, completed_at
+                    ) values (?, 'DUPLICATE_CONFIRMED', 200, 'V30_OUT_OF_RANGE_CLOCK',
+                              repeat('d', 64), ?, ?::timestamptz, ?)
+                    """,
+                    attemptDatabaseId,
+                    remoteImportId,
+                    outsideCanonicalRange,
+                    Timestamp.from(completedAt)))
+                    .isInstanceOf(DataAccessException.class)
+                    .rootCause()
+                    .hasMessageContaining("J7 delivery attempt result is not current");
+            assertThat(upgradeJdbc.queryForObject(
+                    "select count(*) from j7_delivery_attempt_result",
+                    Long.class)).isZero();
+        }
+
+        assertThat(upgradeJdbc.update(
+                insertResultSql,
+                attemptDatabaseId,
+                remoteImportId,
+                Timestamp.from(remoteReceivedAt),
+                Timestamp.from(completedAt))).isOne();
+        assertThat(upgradeJdbc.update("""
+                update j7_delivery
+                set current_state = 'DUPLICATE_CONFIRMED', state_changed_at = ?
+                where id = ?
+                """, Timestamp.from(completedAt), deliveryDatabaseId)).isOne();
+        assertThat(upgradeJdbc.queryForMap("""
+                select delivery.current_state, result.terminal_state
+                from j7_delivery delivery
+                join j7_delivery_attempt attempt on attempt.delivery_id = delivery.id
+                join j7_delivery_attempt_result result on result.attempt_id = attempt.id
+                where delivery.id = ?
+                """, deliveryDatabaseId))
+                .containsEntry("current_state", "DUPLICATE_CONFIRMED")
+                .containsEntry("terminal_state", "DUPLICATE_CONFIRMED");
+        assertThat(upgradeJdbc.queryForObject("""
+                select result.acknowledgement_received_at
+                from j7_delivery_attempt_result result
+                where result.attempt_id = ?
+                """, java.time.OffsetDateTime.class, attemptDatabaseId).toInstant())
+                .isEqualTo(remoteReceivedAt);
+
+        assertThatThrownBy(() -> upgradeJdbc.update("""
+                update j7_delivery_attempt_result
+                set safe_result_code = 'FORBIDDEN_MUTATION'
+                where attempt_id = ?
+                """, attemptDatabaseId))
+                .isInstanceOf(DataAccessException.class);
+        assertThat(upgradeJdbc.queryForObject("""
+                select safe_result_code
+                from j7_delivery_attempt_result
+                where attempt_id = ?
+                """, String.class, attemptDatabaseId)).isEqualTo("V30_REMOTE_CLOCK");
     }
 
     @Test
@@ -6433,7 +6758,7 @@ class FlywayMigrationIT {
 
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$flywaySql"),
-                String.class)).isEqualTo("29");
+                String.class)).isEqualTo("32");
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$snapshotFingerprintSql"),
                 String.class)).isNotNull();
@@ -6455,6 +6780,9 @@ class FlywayMigrationIT {
                 .contains("from j7_delivery delivery")
                 .contains("from j7_delivery_attempt attempt")
                 .contains("from j7_delivery_attempt_result attempt_result")
+                .contains("from j7_provider_delivery_owner_go_grant owner_go")
+                .contains("from j7_provider_delivery_owner_go_revocation revocation")
+                .contains("from j7_provider_delivery_owner_go_consumption consumption")
                 .doesNotContain("export_manifest", "provider_snapshot", "payload_raw");
         assertThat(script)
                 .contains("j8CampaignCount")
@@ -6465,8 +6793,11 @@ class FlywayMigrationIT {
                 .contains("j7DeliveryCount")
                 .contains("j7DeliveryAttemptCount")
                 .contains("j7DeliveryAttemptResultCount")
+                .contains("j7ProviderOwnerGoGrantCount")
+                .contains("j7ProviderOwnerGoRevocationCount")
+                .contains("j7ProviderOwnerGoConsumptionCount")
                 .contains("j7DeliveryLedgerSha256")
-                .contains("$sourceFlywayVersion -cne '29'");
+                .contains("$sourceFlywayVersion -cne '32'");
     }
 
     @Test
@@ -6494,8 +6825,8 @@ class FlywayMigrationIT {
                     .dataSource(sourceDataSource)
                     .locations("classpath:db/migration")
                     .load();
-            assertThat(sourceFlyway.migrate().migrationsExecuted).isEqualTo(29);
-            assertThat(sourceFlyway.info().current().getVersion().getVersion()).isEqualTo("29");
+            assertThat(sourceFlyway.migrate().migrationsExecuted).isEqualTo(32);
+            assertThat(sourceFlyway.info().current().getVersion().getVersion()).isEqualTo("32");
 
             JdbcTemplate sourceJdbc = new JdbcTemplate(sourceDataSource);
             UUID campaignId = UUID.randomUUID();
@@ -6549,7 +6880,16 @@ class FlywayMigrationIT {
                     exportId,
                     dataSha256,
                     sourceSetSha256,
-                    candidateContentSha256);
+                    candidateContentSha256,
+                    """
+                    [
+                      {"component":"EVENT_STATE","availability":"PRESENT","sourceKind":"PROVIDER_SNAPSHOT","snapshotId":null},
+                      {"component":"EVENT_DETAILS","availability":"PRESENT","sourceKind":"PROVIDER_SNAPSHOT","snapshotId":null},
+                      {"component":"EVENT_STATISTICS","availability":"UNAVAILABLE","sourceKind":"PROVIDER_SNAPSHOT","snapshotId":null},
+                      {"component":"EVENT_INCIDENTS","availability":"MISSING","sourceKind":null,"snapshotId":null},
+                      {"component":"EVENT_LINEUPS","availability":"MISSING","sourceKind":null,"snapshotId":null}
+                    ]
+                    """);
             Instant validatedAt = startedAt.plusSeconds(5);
             String validatedPath =
                     "j7-" + canonicalEventId + "-" + exportId + ".validated.json";
@@ -6576,65 +6916,51 @@ class FlywayMigrationIT {
                     validatedContentSha256,
                     Timestamp.from(validatedAt),
                     exportId)).isOne();
-            Long exportManifestId = sourceJdbc.queryForObject("""
-                    select id from export_manifest where export_uuid = ?
-                    """, Long.class, exportId);
-
-            UUID deliveryUuid = UUID.randomUUID();
-            Instant deliveryCreatedAt = startedAt.plusSeconds(6);
             String idempotencyKey = "j7:" + exportId
                     + ":sha256:" + validatedContentSha256;
-            Long deliveryId = sourceJdbc.queryForObject("""
-                    insert into j7_delivery (
-                        delivery_uuid, export_manifest_id, export_uuid,
-                        file_sha256, data_sha256, file_size_bytes,
-                        idempotency_key, protocol_version, current_state,
-                        created_at, state_changed_at
-                    ) values (?, ?, ?, ?, ?, ?, ?, '1.0', 'NOT_ATTEMPTED', ?, ?)
-                    returning id
-                    """,
-                    Long.class,
-                    deliveryUuid,
-                    exportManifestId,
+            JdbcJ7DeliveryLedgerStore sourceStore = new JdbcJ7DeliveryLedgerStore(
+                    new NamedParameterJdbcTemplate(sourceDataSource));
+            TransactionTemplate sourceTransaction = new TransactionTemplate(
+                    new JdbcTransactionManager(sourceDataSource));
+            Instant sourceNow = sourceJdbc.queryForObject(
+                    "select clock_timestamp()", java.time.OffsetDateTime.class).toInstant();
+            J7ProviderDerivedOwnerGo.Grant consumedGrant = backupProviderOwnerGoGrant(
+                    canonicalEventId,
+                    19_999_999L,
                     exportId,
                     validatedContentSha256,
                     dataSha256,
-                    2048L,
-                    idempotencyKey,
-                    Timestamp.from(deliveryCreatedAt),
-                    Timestamp.from(deliveryCreatedAt));
-            Instant attemptStartedAt = startedAt.plusSeconds(7);
-            Long deliveryAttemptId = sourceJdbc.queryForObject("""
-                    insert into j7_delivery_attempt (
-                        attempt_uuid, delivery_id, attempt_number, started_at
-                    ) values (?, ?, 1, ?)
-                    returning id
-                    """,
-                    Long.class,
-                    UUID.randomUUID(),
-                    deliveryId,
-                    Timestamp.from(attemptStartedAt));
-            assertThat(sourceJdbc.update("""
-                    update j7_delivery
-                    set current_state = 'IN_FLIGHT', state_changed_at = ?
-                    where id = ?
-                    """, Timestamp.from(attemptStartedAt), deliveryId)).isOne();
-            Instant attemptCompletedAt = startedAt.plusSeconds(8);
-            assertThat(sourceJdbc.update("""
-                    insert into j7_delivery_attempt_result (
-                        attempt_id, terminal_state, http_status, safe_result_code,
-                        acknowledgement_sha256, remote_import_id,
-                        acknowledgement_received_at, completed_at
-                    ) values (?, 'REJECTED_TERMINAL', 422,
-                              'BACKUP_RESTORE_TEST', null, null, null, ?)
-                    """,
-                    deliveryAttemptId,
-                    Timestamp.from(attemptCompletedAt))).isOne();
-            assertThat(sourceJdbc.update("""
-                    update j7_delivery
-                    set current_state = 'REJECTED_TERMINAL', state_changed_at = ?
-                    where id = ?
-                    """, Timestamp.from(attemptCompletedAt), deliveryId)).isOne();
+                    sourceNow,
+                    1);
+            J7DeliveryLedgerStore.ClaimReceipt providerClaim = sourceTransaction.execute(status -> {
+                sourceStore.registerProviderDerivedOwnerGo(consumedGrant);
+                return sourceStore.claimProviderDerived(new J7ProviderDerivedOwnerGo.Claim(
+                        consumedGrant, idempotencyKey, sourceNow));
+            });
+            assertThat(providerClaim).isNotNull();
+            sourceTransaction.executeWithoutResult(status -> sourceStore.complete(
+                    providerClaim.deliveryId(),
+                    1,
+                    J7DeliveryLedgerStore.DeliveryState.REJECTED_TERMINAL,
+                    OptionalInt.of(422),
+                    "BACKUP_RESTORE_TEST",
+                    Optional.empty(),
+                    Optional.empty(),
+                    Optional.empty(),
+                    providerClaim.startedAt().plusSeconds(1)));
+            J7ProviderDerivedOwnerGo.Grant revokedGrant = backupProviderOwnerGoGrant(
+                    canonicalEventId,
+                    19_999_999L,
+                    exportId,
+                    validatedContentSha256,
+                    dataSha256,
+                    sourceNow,
+                    2);
+            sourceTransaction.executeWithoutResult(status -> {
+                sourceStore.registerProviderDerivedOwnerGo(revokedGrant);
+                sourceStore.revokeProviderDerivedOwnerGo(
+                        revokedGrant.reference(), "f".repeat(64));
+            });
 
             String sourceJ8Fingerprint =
                     sourceJdbc.queryForObject(j8FingerprintSql, String.class);
@@ -6660,6 +6986,15 @@ class FlywayMigrationIT {
                         "select count(*) from " + table,
                         Long.class)).isOne();
             }
+            assertThat(sourceJdbc.queryForObject(
+                    "select count(*) from j7_provider_delivery_owner_go_grant",
+                    Long.class)).isEqualTo(2L);
+            assertThat(sourceJdbc.queryForObject(
+                    "select count(*) from j7_provider_delivery_owner_go_revocation",
+                    Long.class)).isOne();
+            assertThat(sourceJdbc.queryForObject(
+                    "select count(*) from j7_provider_delivery_owner_go_consumption",
+                    Long.class)).isOne();
             assertThat(sourceJdbc.queryForObject("""
                     select count(*)
                     from information_schema.columns
@@ -6671,8 +7006,11 @@ class FlywayMigrationIT {
                       )
                       and (
                           data_type in ('bytea', 'json', 'jsonb', 'text')
-                          or column_name ~
-                              '(payload|body|content|cookie|token|secret|private_key|certificate|diagnostic)'
+                          or (
+                              column_name ~
+                                  '(payload|body|content|cookie|token|secret|private_key|certificate|diagnostic)'
+                              and column_name <> 'payload_class'
+                          )
                       )
                     """, Long.class)).isZero();
 
@@ -6707,7 +7045,7 @@ class FlywayMigrationIT {
                     order by installed_rank desc
                     limit 1
                     """,
-                    String.class)).isEqualTo("29");
+                    String.class)).isEqualTo("32");
             assertThat(restoreJdbc.queryForObject(j8FingerprintSql, String.class))
                     .isEqualTo(sourceJ8Fingerprint);
             assertThat(restoreJdbc.queryForObject(
@@ -6731,6 +7069,15 @@ class FlywayMigrationIT {
                         "select count(*) from " + table,
                         Long.class)).isOne();
             }
+            assertThat(restoreJdbc.queryForObject(
+                    "select count(*) from j7_provider_delivery_owner_go_grant",
+                    Long.class)).isEqualTo(2L);
+            assertThat(restoreJdbc.queryForObject(
+                    "select count(*) from j7_provider_delivery_owner_go_revocation",
+                    Long.class)).isOne();
+            assertThat(restoreJdbc.queryForObject(
+                    "select count(*) from j7_provider_delivery_owner_go_consumption",
+                    Long.class)).isOne();
         }
         finally {
             assertContainerCommandSucceeded(POSTGRES.execInContainer(
@@ -6796,14 +7143,17 @@ class FlywayMigrationIT {
                 StandardCharsets.UTF_8);
 
         assertThat(script)
-                .contains("$manifest.source.flywayVersion.ToString() -cne '29'")
-                .contains("valid Flyway V29 raw-payload, J8 evidence and metadata-only J7 delivery-ledger restore");
+                .contains("$manifest.source.flywayVersion.ToString() -cne '32'")
+                .contains("valid Flyway V32 raw-payload, J8 evidence and metadata-only J7 delivery and owner-go restore");
 
         String qualificationFields = powerShellArray(script, "$qualificationFields");
         assertThat(qualificationFields)
                 .contains("'j7DeliveryCount'")
                 .contains("'j7DeliveryAttemptCount'")
                 .contains("'j7DeliveryAttemptResultCount'")
+                .contains("'j7ProviderOwnerGoGrantCount'")
+                .contains("'j7ProviderOwnerGoRevocationCount'")
+                .contains("'j7ProviderOwnerGoConsumptionCount'")
                 .contains("'j7DeliveryLedgerSha256'");
 
         String environmentNames = powerShellArray(script, "$environmentNames");
@@ -9673,6 +10023,32 @@ class FlywayMigrationIT {
             String dataSha256,
             String sourceSetSha256,
             String contentSha256) {
+        insertJ7Candidate(
+                jdbcTemplate,
+                canonicalEventId,
+                exportId,
+                dataSha256,
+                sourceSetSha256,
+                contentSha256,
+                """
+                        [
+                          {"component":"EVENT_STATE","snapshotId":null},
+                          {"component":"EVENT_DETAILS","snapshotId":null},
+                          {"component":"EVENT_STATISTICS","snapshotId":null},
+                          {"component":"EVENT_INCIDENTS","snapshotId":null},
+                          {"component":"EVENT_LINEUPS","snapshotId":null}
+                        ]
+                        """);
+    }
+
+    private static void insertJ7Candidate(
+            JdbcTemplate jdbcTemplate,
+            UUID canonicalEventId,
+            UUID exportId,
+            String dataSha256,
+            String sourceSetSha256,
+            String contentSha256,
+            String sourceObservations) {
         String relativePath =
                 "j7-" + canonicalEventId + "-" + exportId + ".candidate.json";
         jdbcTemplate.update("""
@@ -9717,17 +10093,62 @@ class FlywayMigrationIT {
                 dataSha256,
                 sourceSetSha256,
                 contentSha256,
-                """
-                        [
-                          {"component":"EVENT_STATE","snapshotId":null},
-                          {"component":"EVENT_DETAILS","snapshotId":null},
-                          {"component":"EVENT_STATISTICS","snapshotId":null},
-                          {"component":"EVENT_INCIDENTS","snapshotId":null},
-                          {"component":"EVENT_LINEUPS","snapshotId":null}
-                        ]
-                        """,
+                sourceObservations,
                 relativePath,
                 contentSha256);
+    }
+
+    private static J7ProviderDerivedOwnerGo.Grant backupProviderOwnerGoGrant(
+            UUID canonicalEventId,
+            long providerEventId,
+            UUID exportId,
+            String fileSha256,
+            String dataSha256,
+            Instant now,
+            int sequence) {
+        J7ProviderDerivedOwnerGo.Grant draft = new J7ProviderDerivedOwnerGo.Grant(
+                UUID.nameUUIDFromBytes(
+                        ("j6-backup-owner-go-" + sequence)
+                                .getBytes(StandardCharsets.UTF_8)),
+                "0".repeat(64),
+                "WO-SS-20260904-046-j6-backup-restore-evidence",
+                "docs/validation/J9-WO046-J6-BACKUP-OWNER-GO-"
+                        + sequence + ".md",
+                Integer.toString(sequence).repeat(64),
+                "3".repeat(40),
+                "4".repeat(40),
+                "docs/validation/J9-OFFICIAL-PERMISSION-EVIDENCE.md",
+                "5".repeat(64),
+                "EVIDENCED_COMPATIBLE",
+                "PASS",
+                "PASS",
+                "CODEX_LOCAL_UI",
+                canonicalEventId,
+                providerEventId,
+                exportId,
+                fileSha256,
+                dataSha256,
+                2048,
+                J7ProviderDerivedOwnerGo.EXPECTED_SCHEMA_ID,
+                J7ProviderDerivedOwnerGo.EXPECTED_SCHEMA_VERSION,
+                J7ProviderDerivedOwnerGo.EXPECTED_RECEIVER_ORIGIN,
+                (sequence == 1 ? "6" : "7").repeat(64),
+                1,
+                1,
+                now.minusSeconds(30),
+                now.plusSeconds(300),
+                "GRANT",
+                "ONE_TIME",
+                "PROVIDER_DERIVED",
+                "HUMAN_VALIDATED",
+                true,
+                false,
+                false,
+                false,
+                false,
+                false);
+        return draft.withOwnerDecisionBlockSha256(
+                draft.computedOwnerDecisionBlockSha256());
     }
 
     private static void recordJ7DecisionIntent(

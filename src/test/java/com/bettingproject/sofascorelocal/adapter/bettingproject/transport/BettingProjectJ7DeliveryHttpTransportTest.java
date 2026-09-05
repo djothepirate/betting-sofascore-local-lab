@@ -104,6 +104,26 @@ class BettingProjectJ7DeliveryHttpTransportTest {
     }
 
     @Test
+    void refusesASecondExecutionOnTheSameTransportWithoutASecondExchange() {
+        HttpClient client = mock(HttpClient.class);
+        stubResponse(
+                client,
+                201,
+                J7DeliveryContract.ACKNOWLEDGEMENT_MEDIA_TYPE,
+                null,
+                "{\"status\":\"IMPORTED\"}".getBytes(StandardCharsets.UTF_8));
+        var transport = transport(client);
+
+        assertThat(transport.execute(request()).httpStatus()).isEqualTo(201);
+        assertThatThrownBy(() -> transport.execute(request()))
+                .isInstanceOf(J7DeliveryTransportException.class)
+                .extracting(exception ->
+                        ((J7DeliveryTransportException) exception).failure())
+                .isEqualTo(J7DeliveryTransportFailure.AUTOMATIC_REPLAY_BLOCKED);
+        verify(client, times(1)).sendAsync(any(), anyByteArrayHandler());
+    }
+
+    @Test
     void boundsTheWholeExchangeWhenTheAcknowledgementNeverReachesEof() {
         HttpClient client = mock(HttpClient.class);
         AtomicReference<CompletableFuture<HttpResponse<byte[]>>> exchange =
@@ -152,6 +172,18 @@ class BettingProjectJ7DeliveryHttpTransportTest {
         assertThat(Thread.currentThread().isInterrupted()).isTrue();
         assertThat(pending).isCancelled();
         verify(client, times(1)).sendAsync(any(), anyByteArrayHandler());
+    }
+
+    @Test
+    void classifiesPeerDisconnectWithoutInventingTlsEvidenceFromDiagnosticText() {
+        assertFailure(new IOException("synthetic TLS connection closed"),
+                J7DeliveryTransportFailure.IO_FAILURE);
+        assertFailure(new IOException("synthetic peer close",
+                new java.net.SocketException("synthetic connection reset")),
+                J7DeliveryTransportFailure.IO_FAILURE);
+        assertFailure(new IOException("synthetic outer",
+                new javax.net.ssl.SSLHandshakeException("synthetic peer rejection")),
+                J7DeliveryTransportFailure.TLS_FAILURE);
     }
 
     @Test

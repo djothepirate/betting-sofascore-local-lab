@@ -9,6 +9,7 @@ import com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryState;
 import com.bettingproject.sofascorelocal.port.J7DeliveryTransportException;
 import com.bettingproject.sofascorelocal.port.J7DeliveryTransportFailure;
 import com.bettingproject.sofascorelocal.port.J7DeliveryTransportRequest;
+import com.bettingproject.sofascorelocal.port.J7DeliveryTransportResponse;
 import com.bettingproject.sofascorelocal.security.Sha256;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -76,6 +77,7 @@ class J7DeliveryMutualTlsLoopbackIT {
     private static final String DATA_SHA256 = Sha256.hex(
             "{\"syntheticData\":true}"
                     .getBytes(StandardCharsets.UTF_8));
+    private static final String COLLISION_DATA_SHA256 = "c".repeat(64);
     private static final J7DeliveryIdentity IDENTITY =
             new J7DeliveryIdentity(EXPORT_ID, FILE_SHA256);
 
@@ -114,76 +116,102 @@ class J7DeliveryMutualTlsLoopbackIT {
         URI origin = startMutualTlsLoopbackServer(tls.server(), receiver);
         Clock clock = Clock.fixed(ACKNOWLEDGED_AT, ZoneOffset.UTC);
 
-        try (var authenticatedTransport = BettingProjectJ7DeliveryHttpTransport
-                .forSyntheticLoopback(
-                        origin,
-                        tls.authenticatedClient(),
-                        TRANSPORT_TIMEOUT,
-                        TRANSPORT_TIMEOUT,
-                        clock)) {
-            J7DeliveryTransportRequest request = new J7DeliveryTransportRequest(
-                    IDENTITY, DATA_SHA256, SYNTHETIC_EXPORT);
-            J7DeliveryAcknowledgementParser parser =
-                    new J7DeliveryAcknowledgementParser();
+        J7DeliveryTransportRequest request = new J7DeliveryTransportRequest(
+                IDENTITY, DATA_SHA256, SYNTHETIC_EXPORT);
+        J7DeliveryAcknowledgementParser parser =
+                new J7DeliveryAcknowledgementParser();
 
-            var firstResponse = authenticatedTransport.execute(request);
-            var firstAcknowledgement = parser.parse(firstResponse.acknowledgement());
+        var firstResponse = executeAuthenticatedAttempt(
+                origin, tls.authenticatedClient(), clock, request);
+        var firstAcknowledgement = parser.parse(firstResponse.acknowledgement());
 
-            assertThat(firstResponse.httpStatus()).isEqualTo(201);
-            assertThat(firstResponse.contentType())
-                    .isEqualTo(J7DeliveryContract.ACKNOWLEDGEMENT_MEDIA_TYPE);
-            assertThat(firstAcknowledgement.status())
-                    .isEqualTo(J7DeliveryAcknowledgementStatus.IMPORTED);
-            assertThat(firstAcknowledgement.remoteImportId()).isEqualTo(REMOTE_IMPORT_ID);
-            assertThat(J7DeliveryContract.acknowledgedState(
-                    J7DeliveryState.IN_FLIGHT,
-                    IDENTITY,
-                    DATA_SHA256,
-                    firstAcknowledgement)).isEqualTo(J7DeliveryState.DELIVERED);
+        assertThat(firstResponse.httpStatus()).isEqualTo(201);
+        assertThat(firstResponse.contentType())
+                .isEqualTo(J7DeliveryContract.ACKNOWLEDGEMENT_MEDIA_TYPE);
+        assertThat(firstAcknowledgement.status())
+                .isEqualTo(J7DeliveryAcknowledgementStatus.IMPORTED);
+        assertThat(firstAcknowledgement.remoteImportId()).isEqualTo(REMOTE_IMPORT_ID);
+        assertThat(J7DeliveryContract.acknowledgedState(
+                J7DeliveryState.IN_FLIGHT,
+                IDENTITY,
+                DATA_SHA256,
+                firstAcknowledgement)).isEqualTo(J7DeliveryState.DELIVERED);
 
-            var repeatedResponse = authenticatedTransport.execute(request);
-            var repeatedAcknowledgement = parser.parse(
-                    repeatedResponse.acknowledgement());
+        var repeatedResponse = executeAuthenticatedAttempt(
+                origin, tls.authenticatedClient(), clock, request);
+        var repeatedAcknowledgement = parser.parse(
+                repeatedResponse.acknowledgement());
 
-            assertThat(repeatedResponse.httpStatus()).isEqualTo(200);
-            assertThat(repeatedAcknowledgement.status())
-                    .isEqualTo(J7DeliveryAcknowledgementStatus.DUPLICATE);
-            assertThat(repeatedAcknowledgement.remoteImportId())
-                    .isEqualTo(firstAcknowledgement.remoteImportId());
-            assertThat(J7DeliveryContract.acknowledgedState(
-                    J7DeliveryState.IN_FLIGHT,
-                    IDENTITY,
-                    DATA_SHA256,
-                    repeatedAcknowledgement))
-                    .isEqualTo(J7DeliveryState.DUPLICATE_CONFIRMED);
+        assertThat(repeatedResponse.httpStatus()).isEqualTo(200);
+        assertThat(repeatedAcknowledgement.status())
+                .isEqualTo(J7DeliveryAcknowledgementStatus.DUPLICATE);
+        assertThat(repeatedAcknowledgement.remoteImportId())
+                .isEqualTo(firstAcknowledgement.remoteImportId());
+        assertThat(J7DeliveryContract.acknowledgedState(
+                J7DeliveryState.IN_FLIGHT,
+                IDENTITY,
+                DATA_SHA256,
+                repeatedAcknowledgement))
+                .isEqualTo(J7DeliveryState.DUPLICATE_CONFIRMED);
 
-            assertThat(receiver.requestCount()).isEqualTo(2);
-            assertThat(receiver.effectCount()).isEqualTo(1);
-            assertThat(receiver.clientIdentityObserved()).isTrue();
-        }
+        J7DeliveryTransportRequest collisionRequest =
+                new J7DeliveryTransportRequest(
+                        IDENTITY,
+                        COLLISION_DATA_SHA256,
+                        SYNTHETIC_EXPORT);
+        var collisionResponse = executeAuthenticatedAttempt(
+                origin,
+                tls.authenticatedClient(),
+                clock,
+                collisionRequest);
+        assertThat(collisionResponse.httpStatus()).isEqualTo(409);
 
-        try (var unauthenticatedTransport = BettingProjectJ7DeliveryHttpTransport
+        assertThat(receiver.requestCount()).isEqualTo(3);
+        assertThat(receiver.effectCount()).isEqualTo(1);
+        assertThat(receiver.clientIdentityObserved()).isTrue();
+
+        var unauthenticatedTransport = BettingProjectJ7DeliveryHttpTransport
                 .forSyntheticLoopback(
                         origin,
                         tls.trustOnlyClient(),
                         TRANSPORT_TIMEOUT,
                         TRANSPORT_TIMEOUT,
-                        clock)) {
-            J7DeliveryTransportRequest request = new J7DeliveryTransportRequest(
-                    IDENTITY, DATA_SHA256, SYNTHETIC_EXPORT);
+                        clock);
+        try (unauthenticatedTransport) {
             assertThatThrownBy(() -> unauthenticatedTransport.execute(request))
                     .isInstanceOfSatisfying(
                             J7DeliveryTransportException.class,
                             exception -> {
                                 assertThat(exception.failure())
-                                        .isEqualTo(J7DeliveryTransportFailure.TLS_FAILURE);
+                                        .isIn(J7DeliveryTransportFailure.TLS_FAILURE,
+                                                J7DeliveryTransportFailure.IO_FAILURE);
                                 assertThat(exception.getMessage())
-                                        .isEqualTo(
-                                                J7DeliveryTransportFailure.TLS_FAILURE.name());
+                                        .isEqualTo(exception.failure().name());
                             });
         }
-        assertThat(receiver.requestCount()).isEqualTo(2);
+        assertThat(unauthenticatedTransport.isTerminated()).isTrue();
+        assertThat(receiver.requestCount()).isEqualTo(3);
         assertThat(receiver.effectCount()).isEqualTo(1);
+    }
+
+    private static J7DeliveryTransportResponse executeAuthenticatedAttempt(
+            URI origin,
+            SSLContext clientContext,
+            Clock clock,
+            J7DeliveryTransportRequest request) {
+        var transport = BettingProjectJ7DeliveryHttpTransport
+                .forSyntheticLoopback(
+                        origin,
+                        clientContext,
+                        TRANSPORT_TIMEOUT,
+                        TRANSPORT_TIMEOUT,
+                        clock);
+        try (transport) {
+            return transport.execute(request);
+        }
+        finally {
+            assertThat(transport.isTerminated()).isTrue();
+        }
     }
 
     @Test
@@ -195,10 +223,11 @@ class J7DeliveryMutualTlsLoopbackIT {
         IdempotentSyntheticReceiver receiver = new IdempotentSyntheticReceiver();
         URI origin = startMutualTlsLoopbackServer(tls.server(), receiver);
 
-        assertTlsFailureBeforeAnyApplicationRequest(
+        assertFailureWithoutNewApplicationRequest(
                 origin,
                 tls.clientTrustingOnlyAnUnrelatedServer(),
-                receiver);
+                receiver,
+                J7DeliveryTransportFailure.TLS_FAILURE);
     }
 
     @Test
@@ -211,10 +240,11 @@ class J7DeliveryMutualTlsLoopbackIT {
         URI origin = startMutualTlsLoopbackServer(
                 tls.hostnameMismatchServer(), receiver);
 
-        assertTlsFailureBeforeAnyApplicationRequest(
+        assertFailureWithoutNewApplicationRequest(
                 origin,
                 tls.clientTrustingHostnameMismatchServer(),
-                receiver);
+                receiver,
+                J7DeliveryTransportFailure.TLS_FAILURE);
     }
 
     @Test
@@ -226,23 +256,42 @@ class J7DeliveryMutualTlsLoopbackIT {
         IdempotentSyntheticReceiver receiver = new IdempotentSyntheticReceiver();
         URI origin = startMutualTlsLoopbackServer(tls.server(), receiver);
 
-        assertTlsFailureBeforeAnyApplicationRequest(
+        // Positive control on the very same listener: an unavailable server must not
+        // make this negative authentication test pass merely by returning IO_FAILURE.
+        var accepted = executeAuthenticatedAttempt(origin, tls.authenticatedClient(),
+                Clock.fixed(ACKNOWLEDGED_AT, ZoneOffset.UTC),
+                new J7DeliveryTransportRequest(IDENTITY, DATA_SHA256, SYNTHETIC_EXPORT));
+        assertThat(accepted.httpStatus()).isEqualTo(201);
+        assertThat(receiver.requestCount()).isEqualTo(1);
+        assertThat(receiver.effectCount()).isEqualTo(1);
+        assertThat(receiver.clientIdentityObserved()).isTrue();
+
+        // A peer rejecting our identity can close the connection without HttpClient
+        // retaining an SSLException. Do not turn opaque I/O into a runtime TLS claim.
+        assertFailureWithoutNewApplicationRequest(
                 origin,
                 tls.unapprovedClient(),
-                receiver);
+                receiver,
+                J7DeliveryTransportFailure.TLS_FAILURE,
+                J7DeliveryTransportFailure.IO_FAILURE);
     }
 
-    private static void assertTlsFailureBeforeAnyApplicationRequest(
+    private static void assertFailureWithoutNewApplicationRequest(
             URI origin,
             SSLContext clientContext,
-            IdempotentSyntheticReceiver receiver) {
-        try (var transport = BettingProjectJ7DeliveryHttpTransport
+            IdempotentSyntheticReceiver receiver,
+            J7DeliveryTransportFailure... allowedFailures) {
+        int requestsBefore = receiver.requestCount();
+        int effectsBefore = receiver.effectCount();
+        boolean identityBefore = receiver.clientIdentityObserved();
+        var transport = BettingProjectJ7DeliveryHttpTransport
                 .forSyntheticLoopback(
                         origin,
                         clientContext,
                         TRANSPORT_TIMEOUT,
                         TRANSPORT_TIMEOUT,
-                        Clock.fixed(ACKNOWLEDGED_AT, ZoneOffset.UTC))) {
+                        Clock.fixed(ACKNOWLEDGED_AT, ZoneOffset.UTC));
+        try (transport) {
             J7DeliveryTransportRequest request = new J7DeliveryTransportRequest(
                     IDENTITY, DATA_SHA256, SYNTHETIC_EXPORT);
 
@@ -251,15 +300,15 @@ class J7DeliveryMutualTlsLoopbackIT {
                             J7DeliveryTransportException.class,
                             exception -> {
                                 assertThat(exception.failure())
-                                        .isEqualTo(J7DeliveryTransportFailure.TLS_FAILURE);
+                                        .isIn(Arrays.asList(allowedFailures));
                                 assertThat(exception.getMessage())
-                                        .isEqualTo(
-                                                J7DeliveryTransportFailure.TLS_FAILURE.name());
+                                        .isEqualTo(exception.failure().name());
                             });
         }
-        assertThat(receiver.requestCount()).isZero();
-        assertThat(receiver.effectCount()).isZero();
-        assertThat(receiver.clientIdentityObserved()).isFalse();
+        assertThat(transport.isTerminated()).isTrue();
+        assertThat(receiver.requestCount()).isEqualTo(requestsBefore);
+        assertThat(receiver.effectCount()).isEqualTo(effectsBefore);
+        assertThat(receiver.clientIdentityObserved()).isEqualTo(identityBefore);
     }
 
     private URI startMutualTlsLoopbackServer(
@@ -717,7 +766,8 @@ class J7DeliveryMutualTlsLoopbackIT {
                         || !J7DeliveryContract.PROTOCOL_VERSION.equals(protocol)
                         || !EXPORT_ID.toString().equals(exportId)
                         || !FILE_SHA256.equals(fileSha256)
-                        || !DATA_SHA256.equals(dataSha256)
+                        || !(DATA_SHA256.equals(dataSha256)
+                                || COLLISION_DATA_SHA256.equals(dataSha256))
                         || !FILE_SHA256.equals(Sha256.hex(body))) {
                     send(exchange, 422, "{\"error\":\"EVIDENCE_MISMATCH\"}");
                     return;
