@@ -4,6 +4,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-053 — diagnostic synthétique CTRL_BREAK J6
+
+- Compilation, readiness, émission du signal, attente/sortie et nettoyage exact distingués par marqueurs fixes ; filtrage explicite des sorties natives.
+- Dix-sept portes d'assertion classifiées, contre-épreuves de filtrage et d'expurgation ajoutées.
+- Première reproduction locale arrêtée par la garde HAR sur le vocabulaire HARNESS ; vocabulaire corrigé sans assouplissement de garde. Seconde reproduction de la chaîne Windows CI réussie ; défaut initial du runner non reproduit localement.
+- Aucun délai, retry, exclusion, runtime primaire, migration ou permission réseau changé.
+
 ### WO-052 — revue PR #29
 
 - P2 : document de renvoi à l'ancien chemin WO-019 ; le Work Order canonique reste abandonné dans completed, la synthèse gelée conserve ses octets.

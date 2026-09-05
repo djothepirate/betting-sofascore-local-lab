@@ -1,5 +1,7 @@
 # SofaScore Local Lab
 
+**Diagnostic distinct en cours — WO-053 :** instrumentation expurgée du scénario CTRL_BREAK J6 après l'échec Windows de la PR #29. Délais et pipeline runtime inchangés ; aucune correction causale ni qualification sur l'image GitHub ne sont encore revendiquées.
+
 **Décision actuelle — 5 septembre 2026 :** WO-032/033/034 sont abandonnés par le propriétaire ; aucune saisie, reprise ou fusion de ces lots n'est attendue. Voir le [suivi d'abandon](docs/validation/J9-WO032-033-034-OWNER-ABANDONMENT-20260905.md), qui supersède les suites envisagées dans les synthèses historiques. Les preuves sont conservées ; nettoyage privé WO-034 achevé, avec absence vérifiée de son seul conteneur exact.
 
 Laboratoire Java local et contrôlé destiné à évaluer, depuis Windows, l’intérêt de données SofaScore comme enrichissement **facultatif** du Betting Project.
