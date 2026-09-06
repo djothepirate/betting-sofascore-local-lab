@@ -4,6 +4,17 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-057 — isolation des fixtures de packaging vis-à-vis de la CI appelante
+
+- Les assertions de packaging exécutent leur scénario avec `env -i PATH=...` et uniquement ses
+  paramètres explicites ; le nom de feature du runner ne remplace plus la branche `main` d'une
+  contre-épreuve et les variables de tag, seed ou promotion héritées restent isolées.
+- Chaque assertion vérifie son résultat et son motif de refus dans huit contextes : appelant,
+  GitHub feature/WO/PR, GitLab feature/MR/tag et valeurs invalides. Un contrôle positif conserve
+  l'éligibilité d'une feature valide fournie explicitement à travers la même frontière.
+- Correction de la fixture révélée après fusion de PR #33 ; aucun garde de production, workflow,
+  version Maven, snapshot, permission fournisseur ou règle de promotion modifié.
+
 ### WO-056 — cycle snapshot du premier train RC01
 
 - Maven `0.1.0-rc.1-SNAPSHOT` et métadonnées courantes cohérentes ; la feature RC01 et ses WO
