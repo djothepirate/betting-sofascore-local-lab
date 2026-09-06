@@ -83,13 +83,36 @@ validate:local-only:
     - |
       secret_scan_base="${CI_MERGE_REQUEST_DIFF_BASE_SHA:-${CI_COMMIT_BEFORE_SHA:-}}"
       sh ci/check-no-secrets.sh "$secret_scan_base"
+    - sh ci/check-gitlab-pipeline-ref.sh
     - sh ci/test-package-guards.sh
     - |
-      ref="${CI_MERGE_REQUEST_SOURCE_BRANCH_NAME:-${CI_COMMIT_BRANCH:-}}"
       if [ -n "${CI_COMMIT_TAG:-}" ]; then
+        if ! printf '%s' "$CI_COMMIT_TAG" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.[1-9][0-9]*)?$'; then
+          echo "FAIL: tag hors convention SemVer : $CI_COMMIT_TAG" >&2
+          exit 1
+        fi
+        if [ "${CI_COMMIT_REF_PROTECTED:-false}" != true ]; then
+          echo "FAIL: le tag $CI_COMMIT_TAG doit correspondre à la règle de tags protégés v*." >&2
+          exit 1
+        fi
         printf 'TAG_REF=%s\n' "$CI_COMMIT_TAG"
-      else
-        sh ci/check-branch-name.sh "$ref"
+      fi
+    - |
+      if [ "$CI_PIPELINE_SOURCE" = merge_request_event ]; then
+        source_branch=$CI_MERGE_REQUEST_SOURCE_BRANCH_NAME
+        target_branch=$CI_MERGE_REQUEST_TARGET_BRANCH_NAME
+        sh ci/check-branch-name.sh "$source_branch"
+        sh ci/check-branch-name.sh "$target_branch"
+        source_ref="refs/remotes/origin/$source_branch"
+        target_ref="refs/remotes/origin/$target_branch"
+        git fetch --force --no-tags origin \
+          "+refs/heads/main:refs/remotes/origin/main" \
+          "+refs/heads/$source_branch:$source_ref" \
+          "+refs/heads/$target_branch:$target_ref" \
+          "+refs/tags/*:refs/tags/*"
+        source_sha=${CI_MERGE_REQUEST_SOURCE_BRANCH_SHA:-$CI_COMMIT_SHA}
+        project_version=$(./mvnw -q -DforceStdout help:evaluate -Dexpression=project.version)
+        sh ci/check-gitlab-merge-request.sh "$project_version" "$source_sha"
       fi
     - |
       diff_base="${CI_MERGE_REQUEST_DIFF_BASE_SHA:-${CI_COMMIT_BEFORE_SHA:-}}"
@@ -189,23 +212,57 @@ security:dependencies:
       -Dproject.build.outputTimestamp="$source_epoch" clean package
     - |
       if [ -n "${CI_COMMIT_TAG:-}" ]; then
+        tag_version=${CI_COMMIT_TAG#v}
+        case "$tag_version" in
+          *-rc.*)
+            release_core=${tag_version%-rc.*}
+            release_rc=${tag_version##*-rc.}
+            case "$release_rc" in
+              [1-9]) release_rc="0$release_rc" ;;
+              ??) ;;
+              *)
+                echo "FAIL: le tag $CI_COMMIT_TAG ne possède aucun train release canonique (rc.1 à rc.99 uniquement)." >&2
+                exit 1
+                ;;
+            esac
+            branch_train="V${release_core}-RC${release_rc}"
+            ;;
+          *)
+            branch_train="V${tag_version}"
+            ;;
+        esac
+        feature_branch="feature/$branch_train"
+        release_branch="release/$branch_train"
+        feature_ref="refs/remotes/origin/$feature_branch"
+        release_ref="refs/remotes/origin/$release_branch"
+        git fetch --no-tags origin \
+          "+refs/heads/main:refs/remotes/origin/main" \
+          "+refs/heads/$feature_branch:$feature_ref" \
+          "+refs/heads/$release_branch:$release_ref"
+        PROMOTION_TAG_PROOF=true \
+          FEATURE_BRANCH_REF="$feature_ref" \
+          RELEASE_BRANCH_REF="$release_ref" \
+          sh ci/package-local-only.sh
+      else
         git fetch --no-tags origin \
           "+refs/heads/main:refs/remotes/origin/main"
+        sh ci/package-local-only.sh
       fi
-      sh ci/package-local-only.sh
   artifacts:
     paths:
       - target/distribution/
 
 package:snapshot-local-only:
   extends: .package-local-only
+  variables:
+    DURABLE_SNAPSHOT_SOURCE: "true"
   artifacts:
     name: "sofascore-local-only-snapshot-${CI_PIPELINE_IID}-${CI_COMMIT_SHORT_SHA}"
     expire_in: 30 days
     paths:
       - target/distribution/
   rules:
-    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH =~ /^feature\/V(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-RC(0[1-9]|[1-9][0-9])(-SNAPSHOT)?)?$/'
 
 package:release-local-only:
   extends: .package-local-only

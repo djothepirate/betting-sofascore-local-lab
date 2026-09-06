@@ -33,7 +33,8 @@ assert_rejected() {
 }
 
 mkdir -p "$guard_fixture/ci"
-cp ci/package-local-only.sh "$guard_fixture/ci/package-local-only.sh"
+cp ci/package-local-only.sh ci/check-branch-name.sh \
+    ci/check-durable-snapshot-source.sh "$guard_fixture/ci/"
 git init -q -b main "$guard_fixture"
 git -C "$guard_fixture" config user.name ci-fixture
 git -C "$guard_fixture" config user.email ci-fixture.invalid@example.test
@@ -46,8 +47,17 @@ git -C "$guard_fixture" commit --allow-empty -qm 'package guard fixture head'
     head_commit=$(git rev-parse 'HEAD^{commit}')
     parent_commit=$(git rev-parse 'HEAD^{commit}^')
     canonical_main_ref=refs/remotes/origin/main
+    canonical_feature_ref=refs/remotes/origin/feature/V999999.999999.999999-RC01
+    canonical_release_ref=refs/remotes/origin/release/V999999.999999.999999-RC01
     test_tag=v999999.999999.999999-rc.1
     test_tag_ref="refs/tags/$test_tag"
+
+    assert_rejected 'aucun train canonique' \
+        env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG=v999999.999999.999999-rc.100 \
+        CI_PIPELINE_IID=1 sh ci/package-local-only.sh
+    assert_rejected 'tag hors convention SemVer' \
+        env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG=v999999.999999.999999-RC01 \
+        CI_PIPELINE_IID=1 sh ci/package-local-only.sh
 
     assert_rejected 'ne correspond pas au commit extrait' \
         env CI_COMMIT_SHA="$parent_commit" CI_PIPELINE_IID=1 \
@@ -64,7 +74,7 @@ git -C "$guard_fixture" commit --allow-empty -qm 'package guard fixture head'
         sh ci/package-local-only.sh
 
     git update-ref "$canonical_main_ref" "$parent_commit"
-    assert_rejected "n'est pas atteignable depuis" \
+    assert_rejected 'sommet canonique exact' \
         env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG="$test_tag" CI_PIPELINE_IID=1 \
         sh ci/package-local-only.sh
 
@@ -72,6 +82,48 @@ git -C "$guard_fixture" commit --allow-empty -qm 'package guard fixture head'
     assert_rejected 'ne désigne pas le commit source' \
         env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG="$test_tag" CI_PIPELINE_IID=1 \
         sh ci/package-local-only.sh
+
+    git update-ref "$test_tag_ref" "$head_commit"
+    git update-ref "$canonical_main_ref" "$head_commit"
+    assert_rejected 'référence feature canonique introuvable' \
+        env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG="$test_tag" CI_PIPELINE_IID=1 \
+        PROMOTION_TAG_PROOF=true FEATURE_BRANCH_REF="$canonical_feature_ref" \
+        RELEASE_BRANCH_REF="$canonical_release_ref" sh ci/package-local-only.sh
+    git update-ref "$canonical_feature_ref" "$parent_commit"
+    assert_rejected 'sommet canonique exact' \
+        env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG="$test_tag" CI_PIPELINE_IID=1 \
+        PROMOTION_TAG_PROOF=true FEATURE_BRANCH_REF="$canonical_feature_ref" \
+        RELEASE_BRANCH_REF="$canonical_release_ref" sh ci/package-local-only.sh
+
+    git update-ref "$canonical_feature_ref" "$head_commit"
+    assert_rejected 'exige PROMOTION_TAG_PROOF=true' \
+        env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG="$test_tag" CI_PIPELINE_IID=1 \
+        sh ci/package-local-only.sh
+    assert_rejected 'référence feature de promotion inattendue' \
+        env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG="$test_tag" CI_PIPELINE_IID=1 \
+        PROMOTION_TAG_PROOF=true RELEASE_BRANCH_REF="$canonical_release_ref" \
+        sh ci/package-local-only.sh
+    assert_rejected 'référence release de promotion inattendue' \
+        env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG="$test_tag" CI_PIPELINE_IID=1 \
+        PROMOTION_TAG_PROOF=true FEATURE_BRANCH_REF="$canonical_feature_ref" \
+        sh ci/package-local-only.sh
+    assert_rejected 'référence release GitLab introuvable' \
+        env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG="$test_tag" CI_PIPELINE_IID=1 \
+        PROMOTION_TAG_PROOF=true FEATURE_BRANCH_REF="$canonical_feature_ref" \
+        RELEASE_BRANCH_REF="$canonical_release_ref" sh ci/package-local-only.sh
+    git update-ref "$canonical_release_ref" "$parent_commit"
+    assert_rejected 'doivent désigner le même commit exact' \
+        env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG="$test_tag" CI_PIPELINE_IID=1 \
+        PROMOTION_TAG_PROOF=true FEATURE_BRANCH_REF="$canonical_feature_ref" \
+        RELEASE_BRANCH_REF="$canonical_release_ref" sh ci/package-local-only.sh
+    assert_rejected 'PROMOTION_TAG_PROOF doit valoir true ou false' \
+        env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG="$test_tag" CI_PIPELINE_IID=1 \
+        PROMOTION_TAG_PROOF=invalid FEATURE_BRANCH_REF="$canonical_feature_ref" \
+        RELEASE_BRANCH_REF="$canonical_release_ref" sh ci/package-local-only.sh
+
+    assert_rejected "un snapshot durable exige une branche d'intégration" \
+        env CI_COMMIT_SHA="$head_commit" CI_COMMIT_BRANCH=main CI_PIPELINE_IID=1 \
+        DURABLE_SNAPSHOT_SOURCE=true sh ci/package-local-only.sh
 )
 
 if grep -Fq 'build.pipeline.iid=' ci/package-local-only.sh; then
@@ -113,23 +165,87 @@ if grep -Fq 'target/*.jar' .gitlab-ci.yml; then
     echo 'FAIL: un JAR exécutable ne doit pas être conservé depuis les tests GitLab de branches ou MR.' >&2
     exit 1
 fi
-if ! grep -Fq "github.event_name == 'push' && github.ref == 'refs/heads/main'" \
+if ! grep -Fq 'sh ci/check-durable-snapshot-source.sh "$BRANCH_NAME"' \
+    .github/workflows/ci.yml ||
+   ! grep -Fq "steps.durable-snapshot.outputs.eligible == 'true'" \
     .github/workflows/ci.yml; then
-    echo 'FAIL: GitHub ne doit conserver un snapshot exécutable que depuis un push de main.' >&2
+    echo 'FAIL: GitHub doit borner le snapshot durable au train feature exact.' >&2
+    exit 1
+fi
+if ! grep -Fq 'check-branch-name.sh "$BRANCH_NAME" github-branch' \
+    .github/workflows/ci.yml ||
+   ! grep -Fq "github.event_name != 'pull_request' && github.ref_type == 'branch'" \
+    .github/workflows/ci.yml; then
+    echo 'FAIL: tout pipeline de branche GitHub doit refuser les releases et noms hors convention.' >&2
+    exit 1
+fi
+if ! grep -Fq 'SOURCE_REF_CREATED: ${{ github.event.created }}' \
+    .github/workflows/ci.yml ||
+   ! grep -Fq 'SOURCE_REF_CREATED' ci/package-local-only.sh ||
+   ! grep -Fq 'CI_COMMIT_BEFORE_SHA' ci/package-local-only.sh ||
+   ! grep -Fq 'source.train.seed=$train_seed' ci/package-local-only.sh; then
+    echo 'FAIL: l’amorçage d’un train doit rester borné à sa création exacte depuis main.' >&2
+    exit 1
+fi
+if grep -Fq "github.ref == 'refs/heads/main'" .github/workflows/ci.yml; then
+    echo 'FAIL: main ne doit plus publier de snapshot durable.' >&2
+    exit 1
+fi
+if ! grep -Fq "github.event_name == 'pull_request' && github.head_ref" \
+    .github/workflows/ci.yml ||
+   ! grep -Fq "github.ref_type == 'branch' && github.ref_name" \
+    .github/workflows/ci.yml; then
+    echo 'FAIL: SOURCE_BRANCH_NAME doit rester vide sur les événements tag GitHub.' >&2
+    exit 1
+fi
+if ! grep -Fq '"$SOURCE_BRANCH" "$TARGET_BRANCH" "$BASE_SHA" "$HEAD_SHA" "$project_version"' \
+    .github/workflows/ci.yml; then
+    echo 'FAIL: le garde PR GitHub doit recevoir base, tête et version Maven exactes.' >&2
     exit 1
 fi
 if grep -Fq "!startsWith(github.ref, 'refs/tags/')" .github/workflows/ci.yml; then
     echo 'FAIL: GitHub doit valider le bundle local d’un tag sans le téléverser.' >&2
     exit 1
 fi
-if ! grep -Fq '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH' \
-    .gitlab-ci.yml; then
-    echo 'FAIL: GitLab ne doit conserver un snapshot que depuis un push de la branche par défaut.' >&2
+if ! grep -Fq '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH =~ /^feature\/V' \
+    .gitlab-ci.yml ||
+   ! grep -Fq 'DURABLE_SNAPSHOT_SOURCE: "true"' .gitlab-ci.yml; then
+    echo 'FAIL: GitLab doit conserver un snapshot uniquement depuis un train feature exact.' >&2
+    exit 1
+fi
+if ! grep -Fq 'sh ci/check-gitlab-pipeline-ref.sh' .gitlab-ci.yml ||
+   ! grep -Fq 'sh "$script_dir/check-branch-name.sh" "$branch_name" gitlab-branch' \
+       ci/check-gitlab-pipeline-ref.sh; then
+    echo 'FAIL: tout pipeline de branche GitLab doit refuser les branches WO, bootstrap et historiques.' >&2
     exit 1
 fi
 if ! grep -Fq '$CI_COMMIT_REF_PROTECTED == "true" && $CI_COMMIT_TAG =~' \
     .gitlab-ci.yml; then
     echo 'FAIL: une release locale GitLab exige un tag protégé.' >&2
+    exit 1
+fi
+if ! grep -Fq 'sh ci/check-gitlab-merge-request.sh "$project_version"' \
+    .gitlab-ci.yml; then
+    echo 'FAIL: la topologie des MR GitLab doit être contrôlée avant promotion.' >&2
+    exit 1
+fi
+if ! grep -Fq '"+refs/heads/$source_branch:$source_ref"' .gitlab-ci.yml ||
+   ! grep -Fq '"+refs/heads/$target_branch:$target_ref"' .gitlab-ci.yml ||
+   ! grep -Fq '"+refs/tags/*:refs/tags/*"' .gitlab-ci.yml ||
+   ! grep -Fq 'sh ci/check-gitlab-merge-request.sh "$project_version" "$source_sha"' \
+    .gitlab-ci.yml; then
+    echo 'FAIL: le garde MR GitLab exige les sommets main/source/cible, les tags et le SHA source.' >&2
+    exit 1
+fi
+if ! grep -Fq 'doit correspondre à la règle de tags protégés v*' .gitlab-ci.yml; then
+    echo 'FAIL: un tag de promotion GitLab doit être couvert par la règle de tags protégés v*.' >&2
+    exit 1
+fi
+if ! grep -Fq '"+refs/heads/$feature_branch:$feature_ref"' .gitlab-ci.yml ||
+   ! grep -Fq 'PROMOTION_TAG_PROOF=true' .gitlab-ci.yml ||
+   ! grep -Fq 'FEATURE_BRANCH_REF="$feature_ref"' .gitlab-ci.yml ||
+   ! grep -Fq 'RELEASE_BRANCH_REF="$release_ref"' .gitlab-ci.yml; then
+    echo 'FAIL: le tag GitLab doit prouver les sommets exacts main, feature et release.' >&2
     exit 1
 fi
 cat >"$guard_fixture/workflow.expected" <<'YAML'
@@ -181,6 +297,10 @@ if ! cmp -s "$guard_fixture/secret-detection.expected" \
 fi
 sh ci/test-check-no-secrets-signals.sh
 sh ci/test-branch-name.sh
+sh ci/test-gitlab-pipeline-ref.sh
+sh ci/test-github-pull-request.sh
+sh ci/test-gitlab-merge-request.sh
+sh ci/test-durable-snapshot-source.sh
 sh ci/test-release-reproducibility.sh
 
 printf 'PACKAGE_GIT_GUARDS=PASS_LOCAL_ONLY\n'

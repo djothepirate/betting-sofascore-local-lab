@@ -7,6 +7,17 @@ cd "$repository"
 commit_sha=${CI_COMMIT_SHA:-${SOURCE_COMMIT_SHA:-${GITHUB_SHA:-}}}
 pipeline_iid=${CI_PIPELINE_IID:-${GITHUB_RUN_NUMBER:-0}}
 tag=${CI_COMMIT_TAG:-}
+source_branch=${SOURCE_BRANCH_NAME:-${CI_COMMIT_BRANCH:-}}
+source_ref_created=${SOURCE_REF_CREATED:-false}
+case "$source_ref_created" in
+    true|false) ;;
+    '') source_ref_created=false ;;
+    *)
+        echo 'FAIL: SOURCE_REF_CREATED doit valoir true ou false.' >&2
+        exit 1
+        ;;
+esac
+train_seed=false
 
 if [ -z "$commit_sha" ]; then
     commit_sha=$(git rev-parse HEAD)
@@ -14,6 +25,28 @@ fi
 if [ -z "$tag" ] && [ "${GITHUB_REF_TYPE:-}" = tag ]; then
     tag=${GITHUB_REF_NAME:-}
 fi
+if [ -z "$source_branch" ] && [ "${GITHUB_REF_TYPE:-}" = branch ]; then
+    source_branch=${GITHUB_REF_NAME:-}
+fi
+if [ -n "$tag" ]; then
+    # Un tag n'est pas une branche. Cette normalisation garde une provenance
+    # byte-identique entre GitHub (github.ref_name) et GitLab (CI_COMMIT_BRANCH vide).
+    source_branch=
+fi
+
+case "${DURABLE_SNAPSHOT_SOURCE:-false}" in
+    true)
+        if ! sh ci/check-durable-snapshot-source.sh "$source_branch"; then
+            echo 'FAIL: publication durable refusée hors branche feature d’intégration.' >&2
+            exit 1
+        fi
+        ;;
+    false|'') ;;
+    *)
+        echo 'FAIL: DURABLE_SNAPSHOT_SOURCE doit valoir true ou false.' >&2
+        exit 1
+        ;;
+esac
 
 case "$commit_sha" in
     *[!0-9a-f]*|'')
@@ -49,12 +82,61 @@ case "$source_epoch" in
         ;;
 esac
 source_iso=$(date -u -d "@$source_epoch" '+%Y-%m-%dT%H:%M:%SZ')
+branch_creation_push=false
+zero_sha=0000000000000000000000000000000000000000
+if [ -n "${CI_PIPELINE_SOURCE:-}" ]; then
+    if [ "$CI_PIPELINE_SOURCE" = push ] &&
+       [ "${CI_COMMIT_BEFORE_SHA:-}" = "$zero_sha" ]; then
+        branch_creation_push=true
+    fi
+elif [ "${GITHUB_EVENT_NAME:-}" = push ] &&
+     [ "$source_ref_created" = true ]; then
+    branch_creation_push=true
+fi
+
 channel=snapshot-local-only
+accept_train_seed() {
+    if [ "${branch_kind:-}" != feature-integration ] ||
+       [ "$branch_creation_push" != true ]; then
+        return 1
+    fi
+    seed_main_ref=refs/remotes/origin/main
+    if ! seed_main_commit=$(git rev-parse --verify "${seed_main_ref}^{commit}" 2>/dev/null); then
+        echo "FAIL: l'amorçage du train exige la référence canonique $seed_main_ref." >&2
+        exit 1
+    fi
+    if [ "$commit_sha" != "$seed_main_commit" ]; then
+        echo "FAIL: l'amorçage du train exige que le commit source $commit_sha soit le sommet canonique exact de $seed_main_ref ($seed_main_commit)." >&2
+        exit 1
+    fi
+    train_seed=true
+    printf 'PACKAGE_VERSION_POLICY=PASS:exact-train-seed:%s@%s\n' \
+        "$source_branch" "$commit_sha"
+    return 0
+}
+
 if [ -n "$tag" ]; then
     if ! printf '%s' "$tag" | grep -Eq '^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.[1-9][0-9]*)?$'; then
         echo "FAIL: tag hors convention SemVer : $tag" >&2
         exit 1
     fi
+    tag_version=${tag#v}
+    case "$tag_version" in
+        *-rc.*)
+            tag_core=${tag_version%-rc.*}
+            tag_rc=${tag_version##*-rc.}
+            case "$tag_rc" in
+                ???*)
+                    echo "FAIL: le tag $tag ne possède aucun train canonique : seuls rc.1 à rc.99 sont promouvables." >&2
+                    exit 1
+                    ;;
+                [1-9]) branch_rc="0$tag_rc" ;;
+                *) branch_rc=$tag_rc ;;
+            esac
+            branch_train="${tag_core}-RC${branch_rc}"
+            ;;
+        *) branch_train=$tag_version ;;
+    esac
     if ! tagged_commit=$(git rev-parse --verify "refs/tags/${tag}^{commit}" 2>/dev/null); then
         echo "FAIL: le tag $tag est absent du checkout." >&2
         exit 1
@@ -76,17 +158,68 @@ if [ -n "$tag" ]; then
         echo "FAIL: référence canonique main introuvable : $canonical_main_ref." >&2
         exit 1
     fi
-    if git merge-base --is-ancestor "$tagged_commit" "$canonical_main_commit"; then
-        :
-    else
-        ancestry_status=$?
-        if [ "$ancestry_status" -eq 1 ]; then
-            echo "FAIL: le commit tagué $tagged_commit n'est pas atteignable depuis $canonical_main_ref." >&2
-        else
-            echo "FAIL: impossible de vérifier l'appartenance du tag $tag à $canonical_main_ref." >&2
-        fi
+    if [ "$tagged_commit" != "$canonical_main_commit" ]; then
+        echo "FAIL: le tag $tag ne désigne pas le sommet canonique exact de $canonical_main_ref." >&2
         exit 1
     fi
+
+    canonical_feature_ref="refs/remotes/origin/feature/V${branch_train}"
+    if ! canonical_feature_commit=$(git rev-parse --verify "${canonical_feature_ref}^{commit}" 2>/dev/null); then
+        echo "FAIL: référence feature canonique introuvable : $canonical_feature_ref." >&2
+        exit 1
+    fi
+    if [ "$tagged_commit" != "$canonical_feature_commit" ]; then
+        echo "FAIL: le tag $tag ne désigne pas le sommet canonique exact de $canonical_feature_ref." >&2
+        exit 1
+    fi
+
+    promotion_tag_proof=${PROMOTION_TAG_PROOF:-false}
+    feature_branch_ref=${FEATURE_BRANCH_REF:-}
+    release_branch_ref=${RELEASE_BRANCH_REF:-}
+    case "$promotion_tag_proof" in
+        true)
+            expected_feature_ref=$canonical_feature_ref
+            expected_release_ref="refs/remotes/origin/release/V${branch_train}"
+            if [ "$feature_branch_ref" != "$expected_feature_ref" ]; then
+                echo "FAIL: référence feature de promotion inattendue : ${feature_branch_ref:-<vide>}, attendue : $expected_feature_ref." >&2
+                exit 1
+            fi
+            if [ "$release_branch_ref" != "$expected_release_ref" ]; then
+                echo "FAIL: référence release de promotion inattendue : ${release_branch_ref:-<vide>}, attendue : $expected_release_ref." >&2
+                exit 1
+            fi
+            if ! feature_commit=$(git rev-parse --verify "${feature_branch_ref}^{commit}" 2>/dev/null); then
+                echo "FAIL: référence feature GitLab introuvable : $feature_branch_ref." >&2
+                exit 1
+            fi
+            if [ "$feature_commit" != "$tagged_commit" ]; then
+                echo "FAIL: le tag $tag et $feature_branch_ref doivent désigner le même commit exact." >&2
+                exit 1
+            fi
+            if ! release_commit=$(git rev-parse --verify "${release_branch_ref}^{commit}" 2>/dev/null); then
+                echo "FAIL: référence release GitLab introuvable : $release_branch_ref." >&2
+                exit 1
+            fi
+            if [ "$release_commit" != "$tagged_commit" ]; then
+                echo "FAIL: le tag $tag et $release_branch_ref doivent désigner le même commit exact." >&2
+                exit 1
+            fi
+            ;;
+        false|'')
+            if [ -n "${CI_COMMIT_TAG:-}" ]; then
+                echo 'FAIL: un tag GitLab exige PROMOTION_TAG_PROOF=true et la preuve explicite des branches feature et release.' >&2
+                exit 1
+            fi
+            if [ -n "$feature_branch_ref" ] || [ -n "$release_branch_ref" ]; then
+                echo 'FAIL: les références de promotion exigent PROMOTION_TAG_PROOF=true.' >&2
+                exit 1
+            fi
+            ;;
+        *)
+            echo 'FAIL: PROMOTION_TAG_PROOF doit valoir true ou false.' >&2
+            exit 1
+            ;;
+    esac
 fi
 
 sh ci/assert-local-only.sh
@@ -105,9 +238,9 @@ else
             base_version=${version%-SNAPSHOT}
             ;;
         *)
-            # La PR de préparation puis le build de main valident la version
-            # finale avant le tag. Sans tag, le payload reste un snapshot local
-            # non promouvable ; seul GitLab publie la release locale taguée.
+            # La PR finale puis le build de main valident la version avant le tag.
+            # Sans tag, le payload reste un snapshot local non promouvable ; seul
+            # GitLab publie la release locale taguée.
             base_version=$version
             ;;
     esac
@@ -115,6 +248,62 @@ else
         '^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)(-rc\.[1-9][0-9]*)?$'; then
         echo "FAIL: version Maven snapshot hors convention SemVer : $version." >&2
         exit 1
+    fi
+    branch_version=
+    branch_kind=
+    case "$source_branch" in
+        feature/V*)
+            if ! sh ci/check-branch-name.sh "$source_branch" >/dev/null 2>&1; then
+                echo "FAIL: branche source feature invalide : $source_branch." >&2
+                exit 1
+            fi
+            branch_version=${source_branch#feature/V}
+            if sh ci/check-durable-snapshot-source.sh "$source_branch" >/dev/null 2>&1; then
+                branch_kind=feature-integration
+            else
+                branch_kind=feature-work-order
+            fi
+            case "$branch_version" in
+                *-CODEX-WO-SS-*) branch_version=${branch_version%%-CODEX-WO-SS-*} ;;
+                *-HUMAN-WO-SS-*) branch_version=${branch_version%%-HUMAN-WO-SS-*} ;;
+            esac
+            ;;
+        release/V*)
+            if ! sh ci/check-branch-name.sh "$source_branch" >/dev/null 2>&1; then
+                echo "FAIL: branche source release invalide : $source_branch." >&2
+                exit 1
+            fi
+            branch_version=${source_branch#release/V}
+            branch_kind=gitlab-release
+            ;;
+    esac
+    if [ -n "$branch_version" ]; then
+        case "$branch_version" in
+            *-RC??-SNAPSHOT)
+                branch_core=${branch_version%%-RC*}
+                branch_rc=${branch_version#*-RC}
+                branch_rc=${branch_rc%-SNAPSHOT}
+                branch_rc=${branch_rc#0}
+                valid_version="${branch_core}-rc.${branch_rc}-SNAPSHOT"
+                ;;
+            *-RC??)
+                branch_core=${branch_version%%-RC*}
+                branch_rc=${branch_version#*-RC}
+                branch_rc=${branch_rc#0}
+                valid_version="${branch_core}-rc.${branch_rc}"
+                ;;
+            *)
+                valid_version=$branch_version
+                if [ "$version" = "${branch_version}-SNAPSHOT" ]; then
+                    valid_version=$version
+                fi
+                ;;
+        esac
+        if [ "$version" != "$valid_version" ] &&
+           ! accept_train_seed; then
+            echo "FAIL: la branche $source_branch exige la version Maven $valid_version, reçue : $version." >&2
+            exit 1
+        fi
     fi
     artifact_version="${base_version}-snapshot.p${pipeline_iid}.g${short_sha}"
 fi
@@ -326,7 +515,9 @@ optional.integration.authorized=false
 source.repository=djothepirate/betting-sofascore-local-lab
 source.commit=$commit_sha
 source.epoch=$source_epoch
+source.branch=$source_branch
 source.tag=$tag
+source.train.seed=$train_seed
 maven.version=$version
 artifact.version=$artifact_version
 java.target=25
