@@ -7,6 +7,7 @@
 - **Décision parente :** ADR-008 du dépôt `djothepirate/betting-project`
 - **Work Order :** WO-SS-20260901-031
 - **Amendement :** 2026-09-05 — WO-SS-20260905-055, trains de version et promotion feature/release
+- **Amendement :** 2026-09-06 — WO-SS-20260906-056, développement RC snapshot et finalisation versionnée
 
 ## Contexte
 
@@ -72,7 +73,11 @@ Le dépôt suit son propre SemVer. La notation de branche est traduite sans ambi
 les tags :
 
 - `VX.Y.Z` porte `X.Y.Z-SNAPSHOT` pendant le développement puis `X.Y.Z` pour la promotion finale ;
-- `VX.Y.Z-RC01` porte Maven `X.Y.Z-rc.1` et peut être scellé par `vX.Y.Z-rc.1` ;
+- `feature/VX.Y.Z-RC01` et ses WO portent Maven `X.Y.Z-rc.1-SNAPSHOT` en développement, puis
+  `X.Y.Z-rc.1` après une PR GitHub de finalisation du POM vers cette feature. La PR du train vers
+  `main`, la MR vers `release/VX.Y.Z-RC01` et le tag `vX.Y.Z-rc.1` exigent la version finalisée.
+  Le POM n'est pas transformé au build GitLab et aucun commit de retrait de suffixe n'est ajouté
+  directement à la release, afin de préserver le fast-forward et l'identité du SHA qualifié ;
 - `VX.Y.Z-RC01-SNAPSHOT` porte Maven `X.Y.Z-rc.1-SNAPSHOT` et ne peut pas être tagué.
 
 La même conversion s'applique jusqu'à `RC99` / `rc.99`. Le format SemVer des tags reste
@@ -87,7 +92,13 @@ Toute autre base Maven est refusée avant packaging.
 Un snapshot durable porte l'IID du pipeline et le SHA court. Il est conservé uniquement depuis un
 push d'une branche d'intégration `feature/<TRAIN>` exacte, jamais depuis une PR, une branche WO,
 `main` ou `release/V*`. La construction effectuée sur ces autres références reste une preuve
-éphémère. L'exception de bootstrap autorise seulement
+éphémère. La même version Maven snapshot peut être reconstruite autant de fois que nécessaire ;
+chaque pipeline conserve sa provenance et le rejeu d'un même build demeure reproductible. Un push
+ultérieur conforme utilise la politique normale avec `source.train.seed=false`, même si la
+feature a avancé au-delà de `main`.
+Les durées de rétention demeurent 14 jours sur GitHub et 30 jours sur GitLab pour les snapshots ;
+le rebuild sans limite de nombre n'implique pas une rétention illimitée.
+L'exception de bootstrap autorise seulement
 `codex/ss-20260905-055-version-branch-workflow` vers `main` sur la base
 `054fa4ca9301224aa5f96f478136208d2327d7f0`, avec la version Maven exacte
 `0.1.0-SNAPSHOT` ; elle ne crée aucun précédent.
@@ -111,6 +122,11 @@ NO_CRITICAL_DEPENDENCY
 Les tests standards et d'intégration sont exécutés sans appel fournisseur. Les profils
 `sofascore-live-test`, `provider-playwright-runtime` et les qualifications fournisseur ne sont
 jamais lancés en CI. Les drapeaux réseau et d'intégration optionnelle restent désactivés.
+
+Dependency-Check 13 utilise le flux JSON 2.0 NVD officiel public sans clé API, avec une base propre
+au job, sans restauration ni publication de cache GitLab. `failOnError=true` restitue les erreurs
+effectives. Le job reste en observation (`allow_failure=true`, seuil CVSS 11) : son résultat doit
+être rapporté séparément de la réussite globale et ne constitue pas un gate de vulnérabilités.
 
 Un artefact autorisé contient le JAR, le SBOM, une provenance, `SHA256SUMS` et les fichiers
 d'exploitation locale. Son manifeste impose :

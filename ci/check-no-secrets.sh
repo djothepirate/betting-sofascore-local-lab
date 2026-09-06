@@ -40,13 +40,16 @@ is_vetted_synthetic_fixture() {
     case "$path" in
         scripts/Invoke-J5PlaywrightLoopbackQualification.ps1)
             expected_blob=62c2eba3fb980d68589a9804d2fa81bcc865a039
+            # Version historique J5 : les mêmes canaris synthétiques, avant
+            # l'extension des tests de délai et d'observation réseau.
+            historical_blob=ba6e319cc14b05417157522b8dd90e7abd3e2528
             ;;
         *)
             return 1
             ;;
     esac
     actual_blob=$(git rev-parse "$revision:$path" 2>/dev/null || true)
-    [ "$actual_blob" = "$expected_blob" ]
+    [ "$actual_blob" = "$expected_blob" ] || [ "$actual_blob" = "$historical_blob" ]
 }
 
 scan_blob() {
@@ -80,7 +83,7 @@ git -c core.quotepath=false ls-files >"$candidate_file"
 while IFS= read -r path; do
     [ -n "$path" ] || continue
     case "$path" in target/*|exports/*|docs/reference/*) continue ;; esac
-    # Ce blob audité contient les valeurs synthétiques du test de fuite J5.
+    # Ces deux blobs audités contiennent les valeurs synthétiques du test de fuite J5.
     # La moindre modification change son SHA et réactive le scan fail-closed.
     if is_vetted_synthetic_fixture "$path" HEAD; then continue; fi
     if ! git cat-file blob "HEAD:$path" >"$blob_file" 2>/dev/null; then

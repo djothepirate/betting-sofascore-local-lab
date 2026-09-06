@@ -31,6 +31,8 @@ assert_rejected() {
 assert_allowed feature/V0.1.0-CODEX-WO-SS-20260905-056 feature/V0.1.0 0.1.0-SNAPSHOT
 assert_allowed feature/V0.1.0-HUMAN-WO-SS-20260905-057 feature/V0.1.0 0.1.0
 assert_allowed feature/V1.2.3-RC04-HUMAN-WO-SS-20260906-057 feature/V1.2.3-RC04 1.2.3-rc.4
+assert_allowed feature/V0.1.0-RC01-CODEX-WO-SS-20260906-056 feature/V0.1.0-RC01 0.1.0-rc.1-SNAPSHOT
+assert_allowed feature/V1.2.3-RC99-HUMAN-WO-SS-20260906-057 feature/V1.2.3-RC99 1.2.3-rc.99-SNAPSHOT
 assert_allowed feature/V1.2.3-RC99-SNAPSHOT-CODEX-WO-SS-20260906-058 feature/V1.2.3-RC99-SNAPSHOT 1.2.3-rc.99-SNAPSHOT
 assert_allowed feature/V0.1.0 main 0.1.0
 assert_allowed feature/V1.2.3-RC04 main 1.2.3-rc.4
@@ -42,6 +44,12 @@ assert_rejected feature/V0.1.0-HUMAN-WO-SS-20260905-056 release/V0.1.0 0.1.0-SNA
 assert_rejected feature/V0.1.0 release/V0.1.0 0.1.0
 assert_rejected feature/V0.1.0 main 0.1.0-SNAPSHOT
 assert_rejected feature/V1.2.3-RC04 main 1.2.3-RC04
+assert_rejected feature/V0.1.0-RC01 main 0.1.0-rc.1-SNAPSHOT
+for invalid_version in 0.1.0-SNAPSHOT 0.1.0-rc.2-SNAPSHOT 0.1.1-rc.1-SNAPSHOT \
+    0.1.0-RC01-SNAPSHOT 0.1.0-rc.01-SNAPSHOT 0.1.0-rc.1-SNAPSHOT-SNAPSHOT; do
+    assert_rejected feature/V0.1.0-RC01-CODEX-WO-SS-20260906-056 \
+        feature/V0.1.0-RC01 "$invalid_version"
+done
 assert_rejected feature/V1.2.3-RC04-SNAPSHOT main 1.2.3-rc.4
 assert_rejected feature/V1.2.3-RC04-SNAPSHOT-CODEX-WO-SS-20260906-058 feature/V1.2.3-RC04 1.2.3-rc.4-SNAPSHOT
 assert_rejected feature/V1.2.3-rc.4-HUMAN-WO-SS-20260906-057 feature/V1.2.3-rc.4 1.2.3-rc.4

@@ -77,6 +77,10 @@ jobs:
         shell: pwsh
         run: ./ci/test-distribution-launchers.ps1
 
+      - name: Vérifier la résolution du worker hors ligne
+        shell: pwsh
+        run: ./scripts/wo056/Test-WO056WorkerArtifact.ps1
+
       - name: Vérifier le commit
         shell: powershell
         run: git show --check --format= HEAD

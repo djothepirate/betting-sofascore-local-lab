@@ -138,7 +138,11 @@ private_prefix='-----BEGIN '
 private_suffix='PRIVATE KEY-----'
 printf '%s%s\n' "$private_prefix" "$private_suffix" >"$canary_repository/$canary_path"
 canary_blob=$(git hash-object "$canary_repository/$canary_path")
-sed "s/62c2eba3fb980d68589a9804d2fa81bcc865a039/$canary_blob/" \
+printf '# Historical synthetic scanner canary\n%s%s\n' \
+    "$private_prefix" "$private_suffix" >"$fixture/historical-canary.txt"
+historical_canary_blob=$(git hash-object "$fixture/historical-canary.txt")
+sed -e "s/62c2eba3fb980d68589a9804d2fa81bcc865a039/$canary_blob/" \
+    -e "s/ba6e319cc14b05417157522b8dd90e7abd3e2528/$historical_canary_blob/" \
     "$repository/ci/check-no-secrets.sh" >"$canary_repository/ci/check-no-secrets.sh"
 git init -q -b main "$canary_repository"
 git -C "$canary_repository" config user.name ci-fixture
@@ -155,6 +159,20 @@ if ! (
     cat "$fixture/canary-exact.log" >&2
     exit 1
 fi
+
+cp "$fixture/historical-canary.txt" "$canary_repository/$canary_path"
+git -C "$canary_repository" add "$canary_path"
+git -C "$canary_repository" commit -qm 'historical audited synthetic canary'
+if ! (
+    cd "$canary_repository"
+    sh ci/check-no-secrets.sh 0000000000000000000000000000000000000000
+) >"$fixture/canary-historical.log" 2>&1; then
+    echo 'FAIL: les deux blobs audités du canari sont refusés dans l’historique complet.' >&2
+    cat "$fixture/canary-historical.log" >&2
+    exit 1
+fi
+
+printf 'SECRET_SCAN_CANARY_HISTORY=PASS_TWO_EXACT_VETTED_BLOBS\n'
 
 printf '%s%s\n' "$token_prefix" "$token_suffix" \
     >>"$canary_repository/$canary_path"
@@ -189,3 +207,19 @@ if [ "$restored_canary_status" -ne 1 ] \
 fi
 
 printf 'SECRET_SCAN_CANARY_HISTORY=PASS_TRANSIENT_MODIFICATION\n'
+
+git -C "$canary_repository" mv "$canary_path" scripts/unvetted-canary.ps1
+git -C "$canary_repository" commit -qm 'move canary outside audited path'
+moved_canary_status=0
+(
+    cd "$canary_repository"
+    sh ci/check-no-secrets.sh HEAD
+) >"$fixture/canary-moved.log" 2>&1 || moved_canary_status=$?
+if [ "$moved_canary_status" -ne 1 ] \
+   || ! grep -Fq 'scripts/unvetted-canary.ps1 [HEAD]' "$fixture/canary-moved.log"; then
+    echo 'FAIL: un blob audité hors de son chemin exact est resté exempté.' >&2
+    cat "$fixture/canary-moved.log" >&2
+    exit 1
+fi
+
+printf 'SECRET_SCAN_CANARY_ALLOWLIST=PASS_EXACT_PATH_ONLY\n'

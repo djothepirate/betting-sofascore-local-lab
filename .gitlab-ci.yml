@@ -193,14 +193,15 @@ security:dependencies:
   stage: observe
   allow_failure: true
   timeout: 30m
+  cache: []
   script:
-    - ./mvnw -B -ntp -DskipTests -DfailBuildOnCVSS=11
-      org.owasp:dependency-check-maven:13.0.0:check
+    - sh ci/run-dependency-check.sh
   artifacts:
     when: always
     expire_in: 30 days
     paths:
       - target/dependency-check-report.*
+      - target/dependency-check-gitlab.json
 
 .package-local-only:
   extends: .maven-java25

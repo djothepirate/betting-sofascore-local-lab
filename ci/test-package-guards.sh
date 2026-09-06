@@ -134,7 +134,12 @@ if ! grep -Fq 'artifact.version=$artifact_version' ci/package-local-only.sh; the
     echo 'FAIL: la provenance doit porter la version canonique de l’artefact.' >&2
     exit 1
 fi
-if grep -Eq 'MAVEN_CACHE_POLICY|^[[:space:]]*cache:' .gitlab-ci.yml; then
+cache_count=$(awk '/^[[:space:]]*cache:/ { count++ } END { print count + 0 }' .gitlab-ci.yml)
+dependency_job=$(awk '/^security:dependencies:$/ { capture=1 }
+    capture && /^\.package-local-only:$/ { exit }
+    capture { print }' .gitlab-ci.yml)
+if grep -Fq 'MAVEN_CACHE_POLICY' .gitlab-ci.yml || [ "$cache_count" -ne 1 ] ||
+   ! printf '%s\n' "$dependency_job" | grep -Fxq '  cache: []'; then
     echo 'FAIL: le cache GitLab partagé reste interdit sans isolation serveur qualifiée.' >&2
     exit 1
 fi
@@ -302,5 +307,6 @@ sh ci/test-github-pull-request.sh
 sh ci/test-gitlab-merge-request.sh
 sh ci/test-durable-snapshot-source.sh
 sh ci/test-release-reproducibility.sh
+sh ci/test-dependency-check.sh
 
 printf 'PACKAGE_GIT_GUARDS=PASS_LOCAL_ONLY\n'

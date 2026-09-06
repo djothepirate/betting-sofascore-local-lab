@@ -371,6 +371,87 @@ chmod +x "$fixture/mvnw"
         exit 1
     fi
 
+    # Un RC simple développe la même version Maven snapshot autant de fois que
+    # nécessaire. Ce chemin normal ne dépend ni du seed, ni du sommet de main.
+    git update-ref refs/remotes/origin/main "$parent_commit"
+    for build in 1 2; do
+        env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-rc.1-SNAPSHOT \
+            SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=96 \
+            GITHUB_EVENT_NAME=push SOURCE_REF_CREATED=false \
+            GITHUB_REF_TYPE=branch GITHUB_REF_NAME=feature/V1.2.3-RC01 \
+            DURABLE_SNAPSHOT_SOURCE=true sh ci/package-local-only.sh >/dev/null
+        rebuild_bundle=$(pwd)/target/distribution/betting-sofascore-local-lab-1.2.3-rc.1-snapshot.p96.g$(printf '%.12s' "$head_commit")-local-only.zip
+        if [ "$build" = 1 ]; then
+            cp "$rebuild_bundle" first-rc-snapshot.zip
+        elif ! cmp -s first-rc-snapshot.zip "$rebuild_bundle"; then
+            echo 'FAIL: le rebuild de la même snapshot RC n’est pas reproductible.' >&2
+            exit 1
+        fi
+    done
+    env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-rc.1-SNAPSHOT \
+        CI_COMMIT_SHA="$head_commit" CI_COMMIT_BRANCH=feature/V1.2.3-RC01 \
+        CI_PIPELINE_IID=96 CI_PIPELINE_SOURCE=push CI_COMMIT_BEFORE_SHA="$parent_commit" \
+        DURABLE_SNAPSHOT_SOURCE=true sh ci/package-local-only.sh >/dev/null
+    if ! cmp -s first-rc-snapshot.zip "$rebuild_bundle"; then
+        echo 'FAIL: les snapshots RC GitHub et GitLab divergent à source et IID identiques.' >&2
+        exit 1
+    fi
+    mkdir inspect-rc-rebuild
+    (cd inspect-rc-rebuild && jar --extract --file "$rebuild_bundle")
+    if ! grep -Fxq 'source.train.seed=false' inspect-rc-rebuild/provenance.properties ||
+       ! grep -Fxq 'artifact.channel=snapshot-local-only' inspect-rc-rebuild/provenance.properties; then
+        echo 'FAIL: le rebuild RC utilise le seed ou se présente comme une release.' >&2
+        exit 1
+    fi
+    git update-ref refs/remotes/origin/main "$head_commit"
+
+    # Les bundles de WO restent éphémères ; rc.1 final reste accepté sur feature.
+    env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-rc.1-SNAPSHOT \
+        SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=96 \
+        GITHUB_REF_TYPE=branch GITHUB_REF_NAME=feature/V1.2.3-RC01-CODEX-WO-SS-20260906-056 \
+        sh ci/package-local-only.sh >/dev/null
+    env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-rc.1 \
+        SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=96 \
+        GITHUB_REF_TYPE=branch GITHUB_REF_NAME=feature/V1.2.3-RC01 \
+        sh ci/package-local-only.sh >/dev/null
+    for invalid_version in 1.2.3-SNAPSHOT 1.2.3-rc.2-SNAPSHOT 1.2.4-rc.1-SNAPSHOT \
+        1.2.3-rc.01-SNAPSHOT 1.2.3-RC01-SNAPSHOT 1.2.3-rc.1-SNAPSHOT-SNAPSHOT; do
+        if env -i PATH="$PATH" FIXTURE_MAVEN_VERSION="$invalid_version" \
+            SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=96 \
+            GITHUB_EVENT_NAME=push SOURCE_REF_CREATED=false \
+            GITHUB_REF_TYPE=branch GITHUB_REF_NAME=feature/V1.2.3-RC01 \
+            sh ci/package-local-only.sh >invalid-rc.log 2>&1; then
+            echo "FAIL: une version RC incompatible a été acceptée : $invalid_version." >&2
+            exit 1
+        fi
+    done
+    if env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-rc.1-SNAPSHOT \
+        CI_COMMIT_SHA="$head_commit" CI_COMMIT_BRANCH=release/V1.2.3-RC01 \
+        CI_PIPELINE_IID=96 CI_PIPELINE_SOURCE=push \
+        sh ci/package-local-only.sh >release-rc-snapshot.log 2>&1; then
+        echo 'FAIL: une release RC simple accepte encore Maven SNAPSHOT.' >&2
+        exit 1
+    fi
+    if ! grep -Fq 'exige la version Maven 1.2.3-rc.1' release-rc-snapshot.log; then
+        echo 'FAIL: la preuve de refus release RC snapshot est ambiguë.' >&2
+        exit 1
+    fi
+    git tag v1.2.3-rc.1
+    git update-ref refs/remotes/origin/feature/V1.2.3-RC01 "$head_commit"
+    git update-ref refs/remotes/origin/release/V1.2.3-RC01 "$head_commit"
+    if env -i PATH="$PATH" FIXTURE_MAVEN_VERSION=1.2.3-rc.1-SNAPSHOT \
+        SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=96 \
+        GITHUB_REF_TYPE=tag GITHUB_REF_NAME=v1.2.3-rc.1 \
+        sh ci/package-local-only.sh >tag-rc-snapshot.log 2>&1; then
+        echo 'FAIL: un tag RC accepte Maven SNAPSHOT.' >&2
+        exit 1
+    fi
+    if ! grep -Fq 'ne correspond pas à la version Maven' tag-rc-snapshot.log; then
+        echo 'FAIL: la preuve de refus du tag RC snapshot est ambiguë.' >&2
+        exit 1
+    fi
+    git update-ref -d refs/tags/v1.2.3-rc.1
+
     invalid_sbom_output=$(mktemp)
     if env -i PATH="$PATH" FIXTURE_SBOM_MODE=invalid \
         SOURCE_COMMIT_SHA="$head_commit" GITHUB_RUN_NUMBER=98 \
