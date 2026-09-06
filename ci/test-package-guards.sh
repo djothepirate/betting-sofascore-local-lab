@@ -14,22 +14,83 @@ trap 'exit 129' HUP
 trap 'exit 130' INT
 trap 'exit 143' TERM
 
+run_fixture() {
+    # Only the scenario's explicit assignments may reach production scripts.
+    # In particular SOURCE_BRANCH_NAME must not shadow CI_COMMIT_BRANCH=main.
+    env -i PATH="$PATH" "$@"
+}
+
+inherit_ci_context() {
+    case "$1" in
+        caller) ;;
+        github-feature|github-work-order|github-pr)
+            SOURCE_BRANCH_NAME=feature/V0.1.0-RC01
+            GITHUB_EVENT_NAME=push
+            GITHUB_REF_NAME=$SOURCE_BRANCH_NAME
+            if [ "$1" != github-feature ]; then
+                SOURCE_BRANCH_NAME=feature/V0.1.0-RC01-CODEX-WO-SS-20260906-057
+                GITHUB_REF_NAME=$SOURCE_BRANCH_NAME
+            fi
+            if [ "$1" = github-pr ]; then
+                GITHUB_EVENT_NAME=pull_request
+                GITHUB_REF_NAME=34/merge
+            fi
+            export SOURCE_BRANCH_NAME GITHUB_EVENT_NAME GITHUB_REF_NAME
+            export SOURCE_COMMIT_SHA=1111111111111111111111111111111111111111
+            export GITHUB_SHA=1111111111111111111111111111111111111111
+            export GITHUB_REF_TYPE=branch GITHUB_RUN_NUMBER=57 SOURCE_REF_CREATED=false
+            ;;
+        gitlab-feature|gitlab-mr|gitlab-tag)
+            export CI_COMMIT_SHA=2222222222222222222222222222222222222222
+            export CI_PIPELINE_IID=57 CI_PIPELINE_SOURCE=push
+            export CI_COMMIT_BRANCH=feature/V0.1.0-RC01
+            export CI_COMMIT_BEFORE_SHA=3333333333333333333333333333333333333333
+            export CI_COMMIT_TAG= SOURCE_BRANCH_NAME=
+            if [ "$1" = gitlab-mr ]; then
+                export CI_PIPELINE_SOURCE=merge_request_event CI_COMMIT_BRANCH=
+                export CI_MERGE_REQUEST_SOURCE_BRANCH_NAME=feature/V0.1.0-RC01
+                export CI_MERGE_REQUEST_TARGET_BRANCH_NAME=release/V0.1.0-RC01
+            elif [ "$1" = gitlab-tag ]; then
+                export CI_COMMIT_BRANCH= CI_COMMIT_TAG=v0.1.0-rc.1
+            fi
+            export MAVEN_USER_HOME=/runner/cache/maven
+            ;;
+        invalid)
+            export SOURCE_BRANCH_NAME=feature/V0.1.0-RC01 SOURCE_REF_CREATED=invalid
+            export CI_COMMIT_TAG=invalid CI_PIPELINE_IID=invalid DURABLE_SNAPSHOT_SOURCE=invalid
+            export PROMOTION_TAG_PROOF=invalid FEATURE_BRANCH_REF=invalid RELEASE_BRANCH_REF=invalid
+            ;;
+        *) echo 'FAIL: contexte synthétique inconnu.' >&2; exit 1 ;;
+    esac
+}
+
+assert_fixture_result() {
+    expected_status=$1
+    expected=$2
+    shift 2
+    output_file=$(mktemp "${TMPDIR:-/tmp}/package-guard.XXXXXX")
+    for context in caller github-feature github-work-order github-pr \
+        gitlab-feature gitlab-mr gitlab-tag invalid; do
+        actual_status=accepted
+        (
+            inherit_ci_context "$context"
+            run_fixture "$@"
+        ) >"$output_file" 2>&1 || actual_status=rejected
+        if [ "$actual_status" != "$expected_status" ] ||
+           ! grep -Fq "$expected" "$output_file"; then
+            echo "FAIL: résultat de fixture incorrect ($context, $expected_status attendu) : $expected" >&2
+            cat "$output_file" >&2
+            rm -f "$output_file"
+            exit 1
+        fi
+    done
+    rm -f "$output_file"
+}
+
 assert_rejected() {
     expected=$1
     shift
-    output_file=$(mktemp "${TMPDIR:-/tmp}/package-guard.XXXXXX")
-    if "$@" >"$output_file" 2>&1; then
-        echo "FAIL: le scénario devait être refusé : $expected" >&2
-        rm -f "$output_file"
-        exit 1
-    fi
-    if ! grep -Fq "$expected" "$output_file"; then
-        echo "FAIL: motif de refus absent : $expected" >&2
-        cat "$output_file" >&2
-        rm -f "$output_file"
-        exit 1
-    fi
-    rm -f "$output_file"
+    assert_fixture_result rejected "$expected" "$@"
 }
 
 mkdir -p "$guard_fixture/ci"
@@ -51,6 +112,12 @@ git -C "$guard_fixture" commit --allow-empty -qm 'package guard fixture head'
     canonical_release_ref=refs/remotes/origin/release/V999999.999999.999999-RC01
     test_tag=v999999.999999.999999-rc.1
     test_tag_ref="refs/tags/$test_tag"
+
+    # Positive control through the same isolation boundary: an explicit valid
+    # feature remains eligible even when the runner exports conflicting values.
+    assert_fixture_result accepted 'DURABLE_SNAPSHOT_SOURCE=PASS:feature/V0.1.0-RC01' \
+        env SOURCE_BRANCH_NAME=feature/V0.1.0-RC01 \
+        sh -c 'sh ci/check-durable-snapshot-source.sh "$SOURCE_BRANCH_NAME"'
 
     assert_rejected 'aucun train canonique' \
         env CI_COMMIT_SHA="$head_commit" CI_COMMIT_TAG=v999999.999999.999999-rc.100 \
@@ -125,6 +192,7 @@ git -C "$guard_fixture" commit --allow-empty -qm 'package guard fixture head'
         env CI_COMMIT_SHA="$head_commit" CI_COMMIT_BRANCH=main CI_PIPELINE_IID=1 \
         DURABLE_SNAPSHOT_SOURCE=true sh ci/package-local-only.sh
 )
+printf 'PACKAGE_FIXTURE_ENVIRONMENT=PASS_EXPLICIT_INPUTS_ONLY\n'
 
 if grep -Fq 'build.pipeline.iid=' ci/package-local-only.sh; then
     echo 'FAIL: une provenance immuable ne doit pas contenir l’IID de la forge.' >&2

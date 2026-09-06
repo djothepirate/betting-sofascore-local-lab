@@ -28,6 +28,9 @@ portent Maven `0.1.0-rc.1-SNAPSHOT` pendant le développement. Le train RC01 sim
 `0.1.0-rc.1` après sa finalisation ; la variante RC01-SNAPSHOT conserve son mapping snapshot strict.
 Le [WO-056](docs/work_orders/active/WO-SS-20260906-056-rc-snapshot-lifecycle.md) amorce le premier
 train RC01 depuis `main` qualifié au SHA `3d2f9da1479898e19df7fcfe8ccacdaf17ce8452`.
+Le [WO-057](docs/work_orders/active/WO-SS-20260906-057-package-fixture-ci-isolation.md) corrige
+l'isolation des fixtures révélée au premier pipeline feature post-fusion de PR #33 ; la
+qualification du futur snapshot reste distincte des checks de cette correction.
 
 Le push initial d'un train peut conserver la version Maven héritée du `main` qualifié uniquement
 si la nouvelle branche `feature/<TRAIN>` désigne exactement ce sommet. La provenance du snapshot
