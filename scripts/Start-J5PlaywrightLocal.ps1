@@ -11,8 +11,6 @@ $browserCache = $BrowserCachePath
 if ([string]::IsNullOrWhiteSpace($browserCache)) {
     $browserCache = Join-Path $repositoryRoot '.tmp\provider-playwright-browsers'
 }
-$workerJar = Join-Path $repositoryRoot `
-    'target\betting-sofascore-local-lab-0.1.0-SNAPSHOT-provider-playwright-worker.jar'
 
 if (-not (Test-Path -LiteralPath $browserCache -PathType Container)) {
     throw 'The dedicated Playwright browser cache is absent; run Install-J3PlaywrightRuntime.ps1 explicitly first'
@@ -47,14 +45,18 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw 'The explicit J5 Playwright worker package failed'
     }
+    $workerFinalName = @(& .\mvnw.cmd '-q' '-Pprovider-playwright-runtime' `
+        '-DforceStdout' '-Dexpression=project.build.finalName' help:evaluate)
+    if ($LASTEXITCODE -ne 0 -or $workerFinalName.Count -ne 1) {
+        throw 'The Maven worker finalName could not be resolved exactly'
+    }
+    $workerJar = & (Join-Path $PSScriptRoot 'Resolve-ProviderWorkerJar.ps1') `
+        -RepositoryRoot $repositoryRoot -FinalName $workerFinalName[0]
 }
 finally {
     Pop-Location
 }
 
-if (-not (Test-Path -LiteralPath $workerJar -PathType Leaf)) {
-    throw 'The classified J5 Playwright worker jar is absent after packaging'
-}
 $legacyRestClassRelativePath = `
     'com\bettingproject\sofascorelocal\adapter\sofascore\transport\ProviderJ5EventDataRestTransport.class'
 $legacyRestClasses = @(

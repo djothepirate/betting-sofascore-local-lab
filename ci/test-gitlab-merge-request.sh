@@ -83,6 +83,8 @@ cp "$repository/ci/check-branch-name.sh" \
     set_train_refs 1.2.3-RC04
     assert_allowed 'RC04 alignée' feature/V1.2.3-RC04 release/V1.2.3-RC04 \
         1.2.3-rc.4 "$source_commit"
+    assert_rejected 'RC simple non finalisée par PR GitHub' \
+        feature/V1.2.3-RC04 release/V1.2.3-RC04 1.2.3-rc.4-SNAPSHOT "$source_commit"
     set_train_refs 1.2.3-RC99-SNAPSHOT
     assert_allowed 'RC99-SNAPSHOT alignée' \
         feature/V1.2.3-RC99-SNAPSHOT release/V1.2.3-RC99-SNAPSHOT \

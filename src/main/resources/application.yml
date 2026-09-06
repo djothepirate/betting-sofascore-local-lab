@@ -73,7 +73,7 @@ management:
 info:
   app:
     name: SofaScore Local Lab
-    version: 0.1.0-SNAPSHOT
+    version: 0.1.0-rc.1-SNAPSHOT
     phase: J8-BENCHMARK-VALIDATED
     status: EXPERIMENTAL_LOCAL_ONLY
 

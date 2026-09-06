@@ -4,6 +4,22 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-056 — cycle snapshot du premier train RC01
+
+- Maven `0.1.0-rc.1-SNAPSHOT` et métadonnées courantes cohérentes ; la feature RC01 et ses WO
+  acceptent `rc.1-SNAPSHOT` pendant le développement et `rc.1` après finalisation. Les PR finales,
+  MR GitLab, branches release RC simples et tags gardent leur exigence de version finale.
+- Rebuilds répétés de la même snapshot autorisés depuis la feature d'intégration exacte, avec IID,
+  SHA et provenance `source.train.seed=false` ; la variante `RCnn-SNAPSHOT` reste inchangée.
+- Finalisation par PR GitHub du POM versionné avant `feature -> main`, puis MR fast-forward
+  `feature -> release`, sans transformation de version pendant le build GitLab.
+- Les lanceurs J3/J4/J5 résolvent le worker exact depuis le `finalName` Maven et refusent un ancien
+  JAR d'une autre version ; qualification hors ligne, sans lancement de campagne fournisseur.
+- Le scan initial complet reconnaît aussi le blob historique exact des canaris J5 déjà audités
+  au seul chemin de qualification autorisé ; toute mutation ou déplacement reste détecté.
+- Dependency-Check 13 utilise le flux JSON 2.0 public NVD sans clé et une base éphémère propre au
+  job, sans cache restauré ; erreurs d'analyse propagées et niveau d'observation conservé.
+
 ### WO-055 — trains de version, PR GitHub et promotions GitLab
 
 - Convention stricte de trains `VX.Y.Z`, `VX.Y.Z-RCnn` ou `VX.Y.Z-RCnn-SNAPSHOT` (`01 <= nn <= 99`),

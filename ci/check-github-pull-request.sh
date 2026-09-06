@@ -110,7 +110,7 @@ if printf '%s' "$source_branch" | grep -Eq \
     train=${expected_target#feature/V}
     expected_version=$(train_maven_version "$train")
     case "$train" in
-        *-RC*) valid_version=$expected_version ;;
+        *-RC??-SNAPSHOT) valid_version=$expected_version ;;
         *)
             valid_version=$expected_version
             if [ "$project_version" = "${expected_version}-SNAPSHOT" ]; then

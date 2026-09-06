@@ -291,6 +291,13 @@ else
                 branch_rc=${branch_version#*-RC}
                 branch_rc=${branch_rc#0}
                 valid_version="${branch_core}-rc.${branch_rc}"
+                case "$branch_kind" in
+                    feature-integration|feature-work-order)
+                        if [ "$version" = "${valid_version}-SNAPSHOT" ]; then
+                            valid_version=$version
+                        fi
+                        ;;
+                esac
                 ;;
             *)
                 valid_version=$branch_version

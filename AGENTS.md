@@ -110,8 +110,13 @@ Avant proposition de changement :
   train. GitHub accepte `main`, les features d'intégration et les branches WO valides, jamais une
   branche `release/V*` ni une feature approchante ;
 - les versions Maven et tags conservent SemVer 2A : `RC01` se traduit par `rc.1`, donc une branche
-  `VX.Y.Z-RC01` porte Maven `X.Y.Z-rc.1` et le tag `vX.Y.Z-rc.1` ; une branche
+  feature ou WO `VX.Y.Z-RC01` porte Maven `X.Y.Z-rc.1-SNAPSHOT` pendant le développement ou
+  `X.Y.Z-rc.1` après une PR GitHub de finalisation du POM versionné vers le train. La PR finale
+  vers `main`, la MR vers `release/VX.Y.Z-RC01` et le tag `vX.Y.Z-rc.1` exigent `X.Y.Z-rc.1` ;
+  aucun retrait de suffixe dans le build GitLab ni commit direct sur release. Une branche
   `VX.Y.Z-RC01-SNAPSHOT` porte Maven `X.Y.Z-rc.1-SNAPSHOT` et n'est jamais taguée ;
+- une même version Maven snapshot peut être reconstruite sans limite sur sa feature d'intégration.
+  Les bundles conservent l'IID et le SHA ; un rebuild conforme utilise `source.train.seed=false` ;
 - les tags communs GitHub/GitLab utilisent uniquement `vX.Y.Z` ou `vX.Y.Z-rc.N`, avec `v` et `rc`
   minuscules, après alignement exact de `main`, du train et de la release GitLab ; le pipeline tagué
   GitLab récupère et compare explicitement ces trois références au commit extrait. Seuls les RC 1 à

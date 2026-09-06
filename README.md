@@ -24,16 +24,24 @@ Le développement canonique reste sur GitHub. Un train porte exactement `VX.Y.Z`
 `feature/<TRAIN>-(CODEX|HUMAN)-WO-SS-YYYYMMDD-NNN` issue de ce train et une PR vers le train exact ;
 sa clôture ne devient effective qu'après fusion.
 Les deux exemples `feature/V0.1.0-RC01` et `feature/V0.1.0-RC01-SNAPSHOT` sont donc valides et
-correspondent respectivement aux versions Maven `0.1.0-rc.1` et `0.1.0-rc.1-SNAPSHOT`.
+portent Maven `0.1.0-rc.1-SNAPSHOT` pendant le développement. Le train RC01 simple accepte aussi
+`0.1.0-rc.1` après sa finalisation ; la variante RC01-SNAPSHOT conserve son mapping snapshot strict.
+Le [WO-056](docs/work_orders/active/WO-SS-20260906-056-rc-snapshot-lifecycle.md) amorce le premier
+train RC01 depuis `main` qualifié au SHA `3d2f9da1479898e19df7fcfe8ccacdaf17ce8452`.
 
 Le push initial d'un train peut conserver la version Maven héritée du `main` qualifié uniquement
 si la nouvelle branche `feature/<TRAIN>` désigne exactement ce sommet. La provenance du snapshot
 local porte alors `source.train.seed=true`. Les pushes suivants, PR et lancements manuels exigent
-le mapping Maven exact du train. GitHub refuse toute branche `release/V*` — elles restent
+le mapping Maven du train, y compris `rc.N-SNAPSHOT` sur une feature RC simple en développement.
+GitHub refuse toute branche `release/V*` — elles restent
 GitLab-only — ainsi que les formes feature approchantes, y compris via `workflow_dispatch`.
 
 Une PR finale exige la version Maven finale du train et fusionne vers `main` par merge commit ; un
-train stable ne peut donc pas entrer avec `X.Y.Z-SNAPSHOT`. Le train avance ensuite en fast-forward
+train stable ne peut donc pas entrer avec `X.Y.Z-SNAPSHOT`. Pour RC01, une PR GitHub de
+finalisation vers la feature modifie d'abord le
+POM versionné de `0.1.0-rc.1-SNAPSHOT` vers `0.1.0-rc.1`, puis la PR du train cible `main`.
+Le retrait de `-SNAPSHOT` est ainsi revu avant la MR GitLab, sans modification du POM dans le build
+ni commit direct sur la release. Le train avance en fast-forward
 sur ce merge commit. Après synchronisation de `main` et du train, une MR GitLab fast-forward, sans
 squash ni rebase, promeut `feature/<TRAIN>` vers `release/<TRAIN>` strictement identique. Son garde
 exige que la source soit le sommet exact de `origin/main` et que la release soit son ancêtre. Maven
@@ -58,6 +66,18 @@ Seul un push du train feature exact conserve un snapshot exécutable. Les bundle
 branches WO, de `main` et des releases restent éphémères. « Exécutable » signifie toujours local :
 `production.approved=false`, `vps.deployable=false`, aucun déploiement ou accès fournisseur n'est
 autorisé par ce workflow.
+La même version Maven snapshot peut être reconstruite sans limite de nombre : chaque nouvelle
+exécution conserve son IID de pipeline et le SHA dans le nom du bundle. Le rejeu d'un même build
+reste reproductible et ne réactive pas l'exception d'amorçage (`source.train.seed=false`).
+Cette possibilité de rebuild ne change pas la rétention : 14 jours sur GitHub et 30 jours sur
+GitLab pour les snapshots ; la conservation des releases taguées reste distincte.
+Les lanceurs J3/J4/J5 résolvent le worker exact depuis `project.build.finalName` du profil Maven,
+avec refus si le JAR manque, même lorsqu'un ancien worker subsiste ; leur invocation demeure
+manuelle et soumise aux autorisations fournisseur existantes.
+
+Le job d'observation Dependency-Check 13 lit le flux JSON 2.0 public NVD sans clé API, avec une
+base propre au job et sans cache GitLab partagé. Les erreurs restent visibles ; le seuil CVSS 11
+et `allow_failure=true` demeurent une mesure d'observation, pas une validation de sécurité bloquante.
 
 ## État consolidé J9 — 5 septembre 2026
 
