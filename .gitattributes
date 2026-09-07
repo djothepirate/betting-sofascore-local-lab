@@ -21,3 +21,6 @@ scripts/wo046/WO046-LaunchPreparation.psm1 text eol=lf
 
 # Frozen SKL-002 installation and evaluation evidence: preserve original bytes.
 docs/skills/evaluations/SKL-002/** -text whitespace=blank-at-eol,space-before-tab,cr-at-eol,-blank-at-eof
+
+# Exact ADR-SS-005 v0.1 proposal accepted by the owner: preserve original bytes.
+docs/validation/ADR-SS-005-v0.1-accepted-proposal-20260907.txt -text

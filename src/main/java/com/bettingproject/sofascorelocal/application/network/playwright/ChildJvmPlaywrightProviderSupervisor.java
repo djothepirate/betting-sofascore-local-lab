@@ -398,7 +398,8 @@ public final class ChildJvmPlaywrightProviderSupervisor
 
     private PlaywrightProviderResponse execute(
             CampaignState state,
-            PlaywrightProviderRequest request) {
+            PlaywrightProviderRequest request,
+            PlaywrightDispatchAdmission admission) {
         Objects.requireNonNull(request, "request");
         requireActive(state);
         if (!state.allowedEndpoints.contains(request.endpoint())) {
@@ -412,9 +413,11 @@ public final class ChildJvmPlaywrightProviderSupervisor
             try {
                 DataOutputStream output = Objects.requireNonNull(state.output, "output");
                 DataInputStream input = Objects.requireNonNull(state.input, "input");
-                providerNetworkStartDelayGate.awaitNextDispatch(() -> requireActive(state));
-                state.dispatchLock.lock();
-                try {
+                providerNetworkStartDelayGate.awaitNextDispatch(() -> { requireActive(state); admission.check(); });
+                try (PlaywrightDispatchAdmission.Permit permit = admission.acquireDispatchPermit()) {
+                    // Admission may perform durable checks. Never hold the supervisor stop lock during SQL.
+                    state.dispatchLock.lock();
+                    try {
                     requireActive(state);
                     state.providerDispatchStarted.set(true);
                     dispatchStarted = true;
@@ -436,9 +439,9 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     }
                     output.writeInt(toMillis(properties.getRequestTimeout()));
                     output.flush();
-                }
-                finally {
-                    state.dispatchLock.unlock();
+                    } finally {
+                        state.dispatchLock.unlock();
+                    }
                 }
                 int frame = input.readUnsignedByte();
                 if (frame == FAILURE) {
@@ -496,6 +499,9 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 finally {
                     Arrays.fill(body, (byte) 0);
                 }
+            }
+            catch (PlaywrightDispatchCancelledException exception) {
+                throw exception;
             }
             catch (PlaywrightProviderException exception) {
                 throw exception;
@@ -1457,12 +1463,17 @@ public final class ChildJvmPlaywrightProviderSupervisor
 
         @Override
         public PlaywrightProviderResponse execute(PlaywrightProviderRequest request) {
+            return execute(request, PlaywrightDispatchAdmission.UNRESTRICTED);
+        }
+
+        @Override
+        public PlaywrightProviderResponse execute(PlaywrightProviderRequest request, PlaywrightDispatchAdmission admission) {
             ChildJvmPlaywrightProviderSupervisor current = owner;
             if (current == null || closeRequested) {
                 throw new PlaywrightProviderException(
                         PlaywrightProviderFailure.OPERATOR_STOP);
             }
-            return current.execute(state, request);
+            return current.execute(state, request, Objects.requireNonNull(admission));
         }
 
         @Override

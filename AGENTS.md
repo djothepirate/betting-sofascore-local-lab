@@ -39,7 +39,7 @@ Sous Windows, utiliser les variantes `mvnw.cmd` et les scripts `scripts/*.ps1`.
 
 1. Aucun appel réel vers SofaScore dans les tests standards.
 2. Aucun endpoint réel ajouté sans Work Order et revue de l’ADR-SS-001.
-3. Aucun proxy rotatif, changement automatique d’adresse, mécanisme furtif, résolution de challenge ou réutilisation de cookie/jeton. Playwright est le seul transport cible autorisé vers les endpoints SofaScore : il reste local, manuel, opt-in et limité aux parcours J3, J4, J5 ou futurs couverts par un Work Order et l'ADR-SS-001 v1.4. Chaque nouvel endpoint exige une allowlist et une revue dédiées. FlareSolverr est écarté comme transport et fallback ; ses preuves historiques restent conservées pour audit et toute réintroduction exige une nouvelle décision propriétaire explicite.
+3. Aucun proxy rotatif, changement automatique d'adresse, mécanisme furtif, résolution de challenge ou réutilisation de cookie/jeton. Playwright est le seul transport cible autorisé vers les endpoints SofaScore : il reste local, à lancement manuel, opt-in et limité aux parcours J3, J4, J5 ou futurs couverts par un Work Order et l'ADR-SS-001 v1.4, avec l'exception live bornée d'[ADR-SS-005 v0.1](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md) pour WO-058. Chaque nouvel endpoint exige une allowlist et une revue dédiées. FlareSolverr est écarté comme transport et fallback ; ses preuves historiques restent conservées pour audit et toute réintroduction exige une nouvelle décision propriétaire explicite.
 4. Aucun payload complet, cookie, jeton ou secret dans les logs.
 5. Aucune écoute sur `0.0.0.0`, une IP LAN ou une interface publique.
 6. Aucune dépendance du Betting Project principal à ce dépôt.
@@ -47,7 +47,7 @@ Sous Windows, utiliser les variantes `mvnw.cmd` et les scripts `scripts/*.ps1`.
 8. Aucune activation de polling, live ou tâche planifiée au J0/J1.
 9. Les données brutes et normalisées restent séparées.
 10. Toute donnée normalisée conserve le snapshot, le hash, le parseur et l’heure de réception.
-11. Playwright ne démarre jamais automatiquement : ni au démarrage normal, ni pendant les tests standards, ni via scheduler ou polling. Chaque lancement exige une action opérateur explicite.
+11. Playwright ne démarre jamais automatiquement : ni au démarrage normal, ni pendant les tests standards, ni via scheduler ou polling. Chaque lancement exige une action opérateur explicite. Pour le seul parcours live couvert par [ADR-SS-005 v0.1](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), une campagne lancée explicitement par l'opérateur peut exécuter les cycles automatiques de son manifeste dans sa fenêtre et ses budgets. Aucun tick ne crée ou recrée un navigateur ; perte du contexte, veille, panne ou redémarrage terminent la session sans reprise automatique.
 12. Chaque campagne Playwright utilise un contexte non persistant neuf ; aucun profil, cookie, `storageState`, HAR, trace, vidéo, capture ou téléchargement n'est conservé, journalisé ou ajouté à Git.
 
 ## Règles du jalon J1

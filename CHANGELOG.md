@@ -4,6 +4,58 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — réalisation des campagnes live locales J4/J5
+
+- Validation propriétaire du WO enregistrée le 7 septembre, après ADR-SS-005 v0.1 accepté.
+  Réalisation locale sur la branche issue du train RC01, sans commit ni publication.
+- Sélection dans les résultats normalisés, manifeste immuable valable cinq minutes, lancement
+  explicite d'une session Playwright unique et ordonnanceur J4/J5 borné. Admission conservatrice
+  à un match, paliers qualifiés 2/3, réserve de clôture, budgets et contrôle du volume PostgreSQL.
+- Ledger V33 append-only et garde fournisseur durable partagé avec les parcours manuels.
+  Réception brute avant parsing, publications atomiques et curseurs par occurrence A→A/A→B→A.
+  Projections versionnées du score J4 et des signaux J5, fraîcheur par famille et erreurs isolées.
+- Contrôles locaux de préparation/lancement/arrêt, lectures MVC toutes les cinq secondes,
+  conservation du focus et des sélections, révisions anciennes ignorées, CSP limitée aux pages live.
+- Replay synthétique, qualification PostgreSQL isolée, tests Web et Chromium loopback dédiés.
+  J6 prend en compte V33, les huit tables du lot et le garde. Le lanceur historique J5 corrige son
+  compteur de protocole devenu obsolète, avec présence obligatoire du cas TCP ajouté antérieurement.
+- Les résultats et limites exacts sont dans le
+  [rapport de réalisation](docs/validation/WO058-LIVE-J4-J5-IMPLEMENTATION-20260907.md).
+  Aucune migration sur la base de l'opérateur ni campagne fournisseur n'est effectuée.
+- Lot `READY_FOR_REVIEW` : les deux commandes Maven demandées passent avec 1 302 tests
+  Surefire et 122 Failsafe chacune (5 skips standards distincts). Qualifications Chromium live,
+  navigateur final et lanceur J5 corrigé vertes ; aucun classement terminé anticipé.
+
+### WO-058 — historique du cadrage, avant validation du WO
+
+- Acceptation formelle propriétaire d'ADR-SS-005 v0.1 enregistrée le 7 septembre : version
+  conservée, copie exacte de la proposition figée et protégée des conversions Git par une règle
+  `-text` ciblée ; empreinte acceptée et empreinte administrative distinctes dans la preuve.
+- WO-058 passé à `READY_FOR_OWNER_REVIEW`, sur la branche issue du train RC01 à `6dfd142` ;
+  acceptation ADR acquise, validation du WO et réalisation toujours distinctes. Renvoi ajouté à
+  ADR-SS-001, invariants 3/11 d'AGENTS.md alignés sur le lancement manuel et les cycles bornés.
+- ADR-SS-002 à 004, code, migrations et configuration runtime inchangés ; aucun nouveau build,
+  commit, push ou lancement de collecte. Preuve Maven initiale non verte conservée.
+- Historique de préparation ci-dessous : les états proposés décrivent la phase antérieure à
+  l'acceptation, sans rouvrir les arbitrages acquis.
+- Création d'ADR-SS-005 v0.1 au statut `PROPOSED — ARBITRAGES_FONCTIONNELS_VALIDÉS`, avec
+  supersession ciblée proposée, alternatives, critères et historique des choix propriétaires.
+- Choix validés transcrits : pilote 1→2/3, quatre heures, 1 000/3 000 tentatives, J4 sur signaux
+  avec secours cinq minutes, dernier cycle J5 et rééchantillonnage du 404 J5 au cycle normal.
+- Remplacement de la proposition initiale d'arrêt global sur tout schéma incompatible par
+  l'arrêt du seul match pour erreur métier isolable ; sécurité, identité, contenu inattendu,
+  exception interne du parseur, transport et stockage restent globaux. WO, matrices et AC10 alignés.
+- À cette phase de proposition, acceptation formelle d'ADR-SS-005 et validation de WO-058 en attente ;
+  ADR-SS-001 à 004, AGENTS.md et runtime alors inchangés. Revue documentaire complétée, preuve Maven non verte conservée.
+- Work Order proposé pour sélectionner des rencontres dans `/events`, suivre J4 jusqu'au début,
+  collecter les trois familles J5 à la minute et confirmer la fin avec J4, avec vue locale dynamique.
+- Règles explicites pour injuryTime, mi-temps/prolongations, absence de signal, dernier cycle J5,
+  admission selon la capacité, budgets, arrêt et absence de reprise automatique.
+- Contrat de fraîcheur par occurrence, révisions A→B→A, persistance append-only et matrice de
+  qualification ; réalisation et acceptation du nouvel ADR live alors soumises à décision, sans changement runtime/SQL.
+- Cadrage depuis le train RC01 `6dfd142` ; `clean verify` exécuté, non vert : un contrôle J6 exige
+  le port 8087 libre alors que le Lab local l'utilise. Résultats exacts dans la preuve WO-058.
+
 ### WO-057 — isolation des fixtures de packaging vis-à-vis de la CI appelante
 
 - Les assertions de packaging exécutent leur scénario avec `env -i PATH=...` et uniquement ses

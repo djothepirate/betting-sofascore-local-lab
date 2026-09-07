@@ -1,0 +1,270 @@
+(() => {
+  "use strict";
+
+  const monitor = document.querySelector("[data-live-monitor]");
+  if (!monitor) return;
+  const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  const revisions = new Map();
+  const eventCampaigns = new Map();
+  const tableVersions = new WeakMap();
+  const status = monitor.querySelector("[data-live-refresh-status]");
+  let timer;
+  let request;
+  let generation = 0;
+  if (monitor.dataset.liveCampaignId) {
+    revisions.set(monitor.dataset.liveCampaignId, Number(monitor.dataset.liveRevision));
+  }
+
+  const text = (root, selector, value) => {
+    const element = root.querySelector(selector);
+    const next = value === null || value === undefined || value === "" ? "—" : String(value);
+    if (element && element.textContent !== next) element.textContent = next;
+  };
+  const create = (tag, label, attribute) => {
+    const element = document.createElement(tag);
+    if (label !== undefined) element.textContent = label;
+    if (attribute) element.setAttribute(attribute, "");
+    return element;
+  };
+  const eventNodes = () => {
+    const nodes = Array.from(monitor.querySelectorAll("[data-live-event-id]"));
+    if (monitor.dataset.liveEventId) nodes.unshift(monitor);
+    return nodes;
+  };
+  const campaignAuthority = campaign => {
+    const startedAt = Date.parse(campaign.startedAt);
+    return {campaignId: campaign.campaignId,
+      priority: ["RUNNING", "CLEANUP_REQUIRED"].includes(campaign.state) ? 0 : Number.isFinite(startedAt) ? 1 : 2,
+      startedAt: Number.isFinite(startedAt) ? startedAt : -Infinity,
+      preparedAt: Date.parse(campaign.preparedAt)};
+  };
+  const precedes = (candidate, previous) => {
+    if (candidate.priority !== previous.priority) return candidate.priority < previous.priority;
+    if (candidate.startedAt !== previous.startedAt) return candidate.startedAt > previous.startedAt;
+    if (candidate.preparedAt !== previous.preparedAt) return candidate.preparedAt > previous.preparedAt;
+    return candidate.campaignId < previous.campaignId;
+  };
+  const updateSelection = () => {
+    const checked = document.querySelectorAll('input[form="live-selection"][name="eventId"]:checked').length;
+    text(monitor, "[data-live-selection-count]", `${checked} rencontre${checked > 1 ? "s" : ""} sélectionnée${checked > 1 ? "s" : ""}`);
+    const button = monitor.querySelector("[data-live-prepare]");
+    if (button) button.disabled = checked === 0;
+  };
+  document.querySelectorAll('input[form="live-selection"][name="eventId"]').forEach(input => {
+    input.addEventListener("change", updateSelection);
+  });
+  updateSelection();
+
+  function familyNode(container, family) {
+    let section = Array.from(container.children).find(node => node.dataset.liveFamily === family.endpoint);
+    if (section) return section;
+    section = create("section");
+    section.dataset.liveFamily = family.endpoint;
+    section.append(create("h3", family.label));
+    const result = create("p");
+    ["outcome", "code", "scope"].forEach(key => {
+      result.append(create("span", "", `data-live-family-${key}`), document.createTextNode(" "));
+    });
+    section.append(result, create("p", "", "data-live-family-previous"), create("p", "", "data-live-freshness"));
+    const metadata = create("dl");
+    metadata.className = "detail-grid";
+    [
+      ["Dernière tentative réservée", "attempted"], ["Retard à l’autorisation transport", "delay"],
+      ["Dernière réception", "received"], ["Dernier succès", "successful"],
+      ["Dernier changement", "changed"], ["Âge depuis réception", "age"],
+      ["Complétude dernière tentative", "completeness"], ["Snapshot reçu / donnée lisible", "snapshots"],
+      ["Occurrence reçue", "occurrence"], ["Parseur de la donnée lisible", "parser"],
+      ["Hash source de la donnée lisible", "payload-hash"], ["Hash normalisé", "hash"]
+    ].forEach(([label, key]) => {
+      const item = create("div");
+      const value = create("dd", "—", `data-live-${key}`);
+      if (key === "hash" || key === "payload-hash") value.className = "mono hash-value";
+      item.append(create("dt", label), value);
+      metadata.append(item);
+    });
+    section.append(metadata);
+    container.append(section);
+    return section;
+  }
+
+  function renderTable(section, table) {
+    if (!table || !Array.isArray(table.columns) || table.columns.length === 0) return;
+    const version = JSON.stringify(table);
+    if (tableVersions.get(section) === version) return;
+    let body = section.querySelector("[data-live-table-body]");
+    if (!body) {
+      const details = create("details");
+      details.open = true;
+      details.append(create("summary", "Données normalisées"));
+      const scroll = create("div");
+      scroll.className = "table-scroll";
+      const grid = create("table");
+      const head = create("thead");
+      const row = create("tr");
+      table.columns.forEach(column => row.append(create("th", column)));
+      head.append(row);
+      body = create("tbody", undefined, "data-live-table-body");
+      grid.append(head, body);
+      scroll.append(grid);
+      details.append(scroll, create("p", "", "data-live-empty"));
+      section.append(details);
+    }
+    const rows = table.rows.map(values => {
+      const row = create("tr");
+      values.forEach(value => row.append(create("td", value)));
+      return row;
+    });
+    body.replaceChildren(...rows);
+    text(section, "[data-live-empty]", rows.length === 0 ? "Collection normalisée vide." : " ");
+    tableVersions.set(section, version);
+  }
+
+  function renderFamily(container, family) {
+    const section = familyNode(container, family);
+    text(section, "[data-live-family-outcome]", family.outcome);
+    text(section, "[data-live-family-code]", family.code);
+    text(section, "[data-live-family-scope]", family.scope);
+    if (family.freshness) {
+      text(section, "[data-live-freshness]", family.freshness.label);
+      const freshness = section.querySelector("[data-live-freshness]");
+      if (freshness) freshness.className = family.freshness.state === "STALE" ? "notice notice-warning" : "muted";
+    }
+    text(section, "[data-live-attempted]", family.lastAttemptAt);
+    text(section, "[data-live-delay]", family.authorizationDelayMillis === null
+      || family.authorizationDelayMillis === undefined ? "—" : `${family.authorizationDelayMillis} ms`);
+    text(section, "[data-live-family-previous]", family.previousData
+      ? "Dernière donnée lisible conservée : elle ne décrit pas la dernière tentative." : " ");
+    text(section, "[data-live-received]", family.lastReceivedAt);
+    text(section, "[data-live-successful]", family.lastSuccessfulAt);
+    text(section, "[data-live-changed]", family.lastChangedAt);
+    text(section, "[data-live-completeness]", family.completeness
+      ? `${family.completeness}${family.completenessScore === null ? "" : ` · ${family.completenessScore} %`}` : "—");
+    text(section, "[data-live-snapshots]", `${family.receivedSnapshotId ?? "—"} / ${family.dataSnapshotId ?? "—"}`);
+    text(section, "[data-live-parser]", family.parserVersion);
+    text(section, "[data-live-occurrence]", family.receivedOccurrenceId);
+    text(section, "[data-live-payload-hash]", family.payloadSha256);
+    text(section, "[data-live-hash]", family.normalizedSha256);
+    const age = section.querySelector("[data-live-age]");
+    if (age) {
+      age.dataset.liveReceivedAt = family.lastReceivedAt || "";
+      age.dataset.liveAgeFrozen = String(family.freshness?.frozen === true);
+      age.dataset.liveAgeAsOf = family.freshness?.ageAsOf || "";
+    }
+    renderTable(section, family.table);
+  }
+
+  function renderCampaign(campaign) {
+    if (!campaign || !uuid.test(campaign.campaignId) || !Number.isSafeInteger(campaign.revision)) return;
+    if (campaign.revision < (revisions.get(campaign.campaignId) ?? -1)) return;
+    revisions.set(campaign.campaignId, campaign.revision);
+    if (monitor.dataset.liveCampaignId === campaign.campaignId) {
+      text(monitor, "[data-live-campaign-state]", campaign.state);
+      text(monitor, "[data-live-campaign-reason]", campaign.reason);
+      text(monitor, "[data-live-started-at]", campaign.startedAt || "En attente de lancement");
+      text(monitor, "[data-live-ends-at]", campaign.endsAt || "Fixée au lancement");
+      text(monitor, "[data-live-calls]", `${campaign.reservedCalls} / ${campaign.maximumCalls}`);
+      text(monitor, "[data-live-bytes]", `${campaign.receivedBytes} / ${campaign.maximumBytes}`);
+      monitor.querySelectorAll("[data-live-stop-form] button").forEach(button => {
+        button.disabled = campaign.state !== "RUNNING";
+      });
+      const preparation = monitor.querySelector("[data-live-preparation]");
+      if (preparation) preparation.hidden = campaign.state !== "PREPARED";
+    }
+    campaign.events.forEach(event => {
+      if (!uuid.test(event.canonicalEventId)) return;
+      const previous = eventCampaigns.get(event.canonicalEventId);
+      const authority = campaignAuthority(campaign);
+      if (previous && previous.campaignId !== campaign.campaignId && !precedes(authority, previous)) return;
+      eventCampaigns.set(event.canonicalEventId, authority);
+      eventNodes().filter(node => node.dataset.liveEventId === event.canonicalEventId).forEach(node => {
+        const displayedAt = Date.parse(node.dataset.liveCanonicalReceivedAt);
+        const incomingAt = Date.parse(event.sourceReceivedAt);
+        const canReplaceCanonical = !node.hasAttribute("data-live-mirror-canonical")
+          || event.canonicalCurrent === true && Number.isFinite(incomingAt)
+            && (!Number.isFinite(displayedAt) || incomingAt >= displayedAt);
+        if (canReplaceCanonical) {
+          text(node, "[data-live-sport-status]", event.sportStatus);
+          text(node, "[data-live-score]", event.score);
+          if (Number.isFinite(incomingAt)) node.dataset.liveCanonicalReceivedAt = event.sourceReceivedAt;
+          if (event.sourceSnapshotId !== null && event.sourceSnapshotId !== undefined) {
+            text(node, "[data-live-source-ref]", `snapshot:${event.sourceSnapshotId}`);
+            text(node, "[data-live-source-received]", event.sourceReceivedAt);
+          }
+        }
+        text(node, "[data-live-event-state]", event.state);
+        text(node, "[data-live-event-reason]", event.reason);
+        text(node, "[data-live-next-due]", event.nextDueAt);
+        text(node, "[data-live-event-calls]", `${event.reservedCalls} / ${event.maximumCalls}`);
+        text(node, "[data-live-missed-cycles]", event.missedCycles);
+        text(node, "[data-live-final-complete]", event.finalComplete ? "Oui" : "Non établi");
+        const link = node.querySelector("[data-live-link]");
+        if (link) {
+          const stateUrl = new URL(monitor.dataset.liveStateUrl, location.href);
+          const prefix = stateUrl.pathname.split("/events")[0];
+          link.href = `${prefix}/live-campaigns/${campaign.campaignId}`;
+          link.hidden = false;
+        }
+        if (event.state.startsWith("STOPPED") || event.state === "FINISHED_CONFIRMED") {
+          node.querySelectorAll("[data-live-stop-form] button").forEach(button => { button.disabled = true; });
+        }
+        const families = node.querySelector("[data-live-families]");
+        if (families) event.families.forEach(family => renderFamily(families, family));
+      });
+    });
+  }
+
+  function updateAges() {
+    monitor.querySelectorAll("[data-live-age]").forEach(element => {
+      const received = Date.parse(element.dataset.liveReceivedAt);
+      const now = element.dataset.liveAgeFrozen === "true" ? Date.parse(element.dataset.liveAgeAsOf) : Date.now();
+      element.textContent = Number.isFinite(received)
+        && Number.isFinite(now) ? `${Math.max(0, Math.floor((now - received) / 1000))} s` : "—";
+    });
+  }
+
+  async function refresh() {
+    if (document.hidden || request) return;
+    const currentGeneration = generation;
+    request = new AbortController();
+    try {
+      const url = new URL(monitor.dataset.liveStateUrl, location.href);
+      if (url.origin !== location.origin) throw new Error("LOCAL_URL_REQUIRED");
+      if (url.pathname.endsWith("/events/state")) {
+        eventNodes().forEach(node => {
+          if (uuid.test(node.dataset.liveEventId)) url.searchParams.append("eventId", node.dataset.liveEventId);
+        });
+      }
+      const response = await fetch(url, {method: "GET", mode: "same-origin", credentials: "same-origin",
+        cache: "no-store", redirect: "error", headers: {Accept: "application/json"}, signal: request.signal});
+      if (!response.ok) throw new Error("LOCAL_READ_UNAVAILABLE");
+      const state = await response.json();
+      if (document.hidden || currentGeneration !== generation) return;
+      const campaigns = Array.isArray(state) ? state : [state];
+      campaigns.forEach(renderCampaign);
+      if (status) status.textContent = campaigns.length === 0 ? "Aucune campagne live enregistrée pour cette sélection."
+        : `Lecture locale à ${new Date().toLocaleTimeString("fr-FR", {timeZone: "Europe/Paris"})} · Europe/Paris`;
+    } catch (error) {
+      if (error.name !== "AbortError" && status) status.textContent = "Lecture locale indisponible ; les dernières données affichées sont conservées.";
+    } finally {
+      request = null;
+      updateAges();
+      if (!document.hidden) timer = setTimeout(refresh, 5000);
+    }
+  }
+
+  document.addEventListener("visibilitychange", () => {
+    clearTimeout(timer);
+    generation += 1;
+    if (document.hidden) {
+      if (request) request.abort();
+      if (status) status.textContent = "Lecture locale suspendue pendant que l’onglet est masqué.";
+    } else if (!request) refresh();
+  });
+  window.addEventListener("pagehide", () => {
+    clearTimeout(timer);
+    generation += 1;
+    if (request) request.abort();
+  });
+  updateAges();
+  refresh();
+})();

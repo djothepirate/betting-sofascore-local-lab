@@ -19,6 +19,10 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
             "^/j5-import-batches(?:;[^/]*)?(?:/.*)?$");
     private static final Pattern J8_BENCHMARK_PATH = Pattern.compile(
             "^/benchmark(?:;[^/]*)?/?$");
+    private static final Pattern LIVE_PAGE_PATH = Pattern.compile(
+            "^/(?:live-campaigns(?:/[^/;]+)?|events(?:/[0-9a-fA-F-]{36})?)(?:;[^/]*)?/?$");
+    private static final Pattern LIVE_STATE_PATH = Pattern.compile(
+            "^/(?:live-campaigns(?:/.*)?|events/(?:[0-9a-fA-F-]{36}/)?state)(?:;[^/]*)?/?$");
     private static final String STRICT_CACHE_CONTROL =
             "no-store, no-cache, must-revalidate, max-age=0";
     private static final String DEFAULT_REFERRER_POLICY = "no-referrer";
@@ -45,7 +49,7 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
         response.setHeader(
                 "Content-Security-Policy",
                 CONTENT_SECURITY_POLICY_PREFIX
-                        + (isJ5OfflineBatchRequest(request)
+                        + (isJ5OfflineBatchRequest(request) || isLivePageRequest(request)
                                 ? "script-src 'self'"
                                 : "script-src 'none'")
                         + CONTENT_SECURITY_POLICY_SUFFIX);
@@ -63,7 +67,13 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
         String applicationPath = applicationPath(request);
         return J7_EXPORT_PATH.matcher(applicationPath).matches()
                 || J5_OFFLINE_BATCH_PATH.matcher(applicationPath).matches()
-                || J8_BENCHMARK_PATH.matcher(applicationPath).matches();
+                || J8_BENCHMARK_PATH.matcher(applicationPath).matches()
+                || LIVE_PAGE_PATH.matcher(applicationPath).matches()
+                || LIVE_STATE_PATH.matcher(applicationPath).matches();
+    }
+
+    private static boolean isLivePageRequest(HttpServletRequest request) {
+        return LIVE_PAGE_PATH.matcher(applicationPath(request)).matches();
     }
 
     private static boolean isJ7ExportRequest(HttpServletRequest request) {

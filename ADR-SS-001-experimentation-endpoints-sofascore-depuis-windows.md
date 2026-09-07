@@ -10,6 +10,14 @@
 - **Document associé :** `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf`
 - **Décision de référence qualifiée :** document de cadrage du Betting Project v0.5.1, sections 2.3, 8.8 et 15.1
 
+**Renvoi documentaire — 7 septembre 2026 :** [ADR-SS-005 v0.1](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md),
+formellement acceptée, définit l'exception limitée aux campagnes live J4/J5 de WO-058. Sa table
+de portée précise les adaptations des §§3.4, 3.5, 3.6.1, 3.6.1.1 et du critère live du §8 ;
+toutes les autres dispositions du présent ADR restent applicables. Le lancement Playwright
+demeure manuel et les cycles automatiques restent confinés à la session bornée. Les §§3.10 et 9
+restent les règles de réexamen des extensions futures. La version historique 1.4 et ses décisions
+ci-dessous sont conservées ; ce renvoi n'active aucun parcours ni campagne.
+
 ## 1. Contexte
 
 Le document de cadrage du Betting Project v0.5.1 retient une règle de prudence : le coeur du projet et les composants exécutés sur le VPS ne doivent pas appeler directement des endpoints privés SofaScore. SofaScore y est traité comme une source visuelle facultative, exploitée au moyen d'observations validées, et son indisponibilité ne doit bloquer aucune fonction permanente.

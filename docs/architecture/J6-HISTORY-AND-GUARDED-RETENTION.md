@@ -49,6 +49,27 @@ ne laisse aucun de ces éléments pour le lot échoué. Le plan, l'état du cont
 restent uniquement en mémoire et ne créent aucun historique durable de lot ; cette absence de suivi
 du contrôle ne supprime pas l'historique métier J6 des données effectivement committées.
 
+### 2.2 Réceptions live WO-058 — Flyway V33
+
+WO-058 réutilise les snapshots et occurrences J6 dans un ledger distinct des campagnes J8.
+`live_call` conserve la réservation de budget et `live_call_dispatch` l'autorisation de départ.
+Cette autorisation ne constitue pas une preuve de passage sur le réseau. Une réponse reçue est
+committée avec son snapshot brut, sa nouvelle occurrence et le lien `live_call_receipt` dans une
+transaction unique, avant parsing. Le parsing se déroule ensuite hors transaction ; une seconde
+transaction publie les observations normalisées, leurs références, le résultat versionné
+`live_call_result` et la transition de campagne. Aucun verrou SQL n'est tenu pendant un appel
+fournisseur.
+
+Deux réponses identiques conservent un seul snapshot et des observations dédupliquées, mais deux
+occurrences et deux réceptions. La fraîcheur live provient donc de la réception et du résultat de
+la tentative, pas de la date de création de l'observation historique. La lecture des familles
+distingue dernière réception, dernier succès et dernier changement métier. Une séquence A→B→A
+peut référencer de nouveau l'ancienne observation A avec une réception récente ; un 404 ou un
+échec de schéma conserve les références et la date du dernier succès lisible.
+
+Les chronologies J6 existantes gardent leur sémantique d'observations historiques. V33 ne les
+réécrit pas et ne crée aucune campagne live à partir d'anciennes collectes.
+
 ## 3. Flux historiques
 
 La chronologie agrège les tables append-only existantes en cinq flux :
@@ -169,6 +190,13 @@ L'exécution reconstitue et verrouille le plan dans une transaction `SERIALIZABL
 plan, une couverture de sauvegarde insuffisante, une restauration non qualifiée, une phrase
 incorrecte ou une différence de nombre de lignes annule toute la transaction.
 
+Depuis V33, l'aperçu et l'exécution exigent aussi le garde fournisseur commun à `FREE` et aucune
+campagne live `RUNNING` ou `CLEANUP_REQUIRED`. Sinon le store refuse avec
+`PROVIDER_CAMPAIGN_ACTIVE`. Pendant la purge, le verrou de ligne sur `provider_campaign_guard`
+empêche une acquisition fournisseur concurrente jusqu'à la fin de la transaction. Le trigger
+`provider_snapshot_live_retention_guard` applique le même contrôle aux suppressions d'octets en
+complément de la preuve d'audit V22.
+
 ## 8. Défense PostgreSQL et preuve de sauvegarde
 
 `j6_raw_payload_purge_audit` est append-only. Une ligne d'audit conserve, sans payload :
@@ -187,6 +215,37 @@ Un trigger protège `provider_snapshot` après V22. Il autorise seulement :
 
 Toute suppression de snapshot et toute autre modification sont refusées. La contrainte SQL exige
 en outre que la preuve de sauvegarde couvre l'identifiant et l'heure du snapshot audité.
+
+### 8.1 Couverture des campagnes live et du garde commun
+
+La sauvegarde/restauration courante exige Flyway V33. Ses preuves source et restauration incluent
+les sept compteurs des tables `live_campaign`, `live_event`, `live_call`, `live_call_dispatch`,
+`live_call_receipt`, `live_call_result` et `live_transition`, l'état du garde fournisseur et le
+nombre de campagnes `RUNNING` ou `CLEANUP_REQUIRED`. `liveLedgerSha256` couvre toutes les colonnes
+des lignes de ces sept tables et de `provider_campaign_guard`, soit huit tables. Les lignes
+`to_jsonb` sont préfixées par leur table, triées puis hashées ; le manifeste conserve uniquement
+l'empreinte et les compteurs, sans reproduire les lignes.
+
+Le manifeste live immuable comprend notamment les cibles et leur provenance, les plafonds, le TTL,
+la capacité et le profil d'admission qualifié : enveloppes de requête et de traitement conservées
+exactement en nanosecondes, plus SHA-256 de qualification. Les résultats versionnés, leurs liens
+snapshot/occurrence et normalisés, les projections d'état, les compteurs et les générations sont
+ainsi tous comparés à la restauration. Les preuves historiques V32 restent conservées ; elles ne
+remplacent pas la couverture V33 exigée par la rétention courante.
+
+Une sauvegarde qualifiée exige `providerGuardState=FREE` et `activeLiveCount=0`. Une restauration
+n'arme aucun worker ni reprise. Un ancien propriétaire de garde, identifié par instance, PID et
+instant de démarrage, ne peut pas être remplacé à l'expiration d'un délai. Si sa disparition est
+prouvée, la reprise locale peut classer les résultats manquants `UNKNOWN` et la campagne
+`INTERRUPTED`, puis conserver le garde à `CLEANUP_REQUIRED`. Sa libération exige une preuve de
+nettoyage des ressources exactes ; ni rétention ni restauration ne constituent cette preuve.
+
+La purge qualifiée conserve intégralement les lignes live, leurs références et leurs projections.
+Si une future réception déduplique vers un snapshot dont les octets ont déjà été purgés, le store
+live refuse `LIVE_RAW_PREVIOUSLY_PURGED` et annule sa transaction de réception, nouvelle occurrence
+comprise. L'ancienne preuve et son audit restent inchangés ; aucune normalisation de cette
+nouvelle réception n'est publiée. Cette limite respecte l'ordre brut avant parsing sans
+réhydrater les données purgées hors de la gouvernance J6.
 
 ## 9. Commande opérateur non Web
 
@@ -235,6 +294,8 @@ n'est planifié ou appelé par l'application.
 - l'encodage Base64 des arguments de l'hôte est un transport, pas un chiffrement. Aucun secret ou
   credential ne doit y être placé ;
 - aucune purge de la base primaire n'est autorisée par le Work Order sans décision distincte ;
+- le live WO-058 s'arrête si une réception retrouve un brut précédemment purgé ; sa réhydratation
+  ou une autre politique de conservation nécessite une décision J6 distincte ;
 - l'export canonique reste réservé à J7 ;
 - les mesures agrégées et coûts d'appels restent réservés à J8 ;
 - aucune dépendance du Betting Project principal n'est créée.

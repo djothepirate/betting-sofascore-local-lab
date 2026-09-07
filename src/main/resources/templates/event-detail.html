@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Détail local — SofaScore Local Lab</title>
   <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+  <script defer th:src="@{/js/live-campaign.js}" src="/js/live-campaign.js"></script>
 </head>
 <body>
 <header class="topbar compact-topbar">
@@ -34,7 +35,8 @@
     La base PostgreSQL locale n’est pas disponible.
   </p>
 
-  <div th:if="${detail != null}">
+  <div th:if="${detail != null}" data-live-monitor data-live-mirror-canonical
+       th:attr="data-live-state-url=@{/events/{id}/state(id=${detail.current.event.identity.value})},data-live-event-id=${detail.current.event.identity.value},data-live-canonical-received-at=${detail.current.event.source.receivedAt}">
     <section class="panel event-panel">
       <div class="panel-heading">
         <div>
@@ -45,7 +47,7 @@
             <span th:text="${detail.current.event.awayTeam.name}">Away</span>
           </h2>
         </div>
-        <span class="chip chip-safe" th:text="${detail.current.event.status.type}">notstarted</span>
+        <span class="chip chip-safe" data-live-sport-status th:text="${detail.current.event.status.type}">notstarted</span>
       </div>
       <dl class="detail-grid">
         <div><dt>UUID local</dt><dd class="mono" th:text="${detail.current.event.identity.value}">UUID</dd></div>
@@ -72,6 +74,23 @@
           Export canonique J7
         </a>
       </div>
+    </section>
+
+    <section class="panel" aria-labelledby="live-event-title">
+      <p class="label">Observations de la dernière campagne live</p><h2 id="live-event-title">Suivi dynamique local</h2>
+      <p data-live-refresh-status role="status" aria-live="polite">Recherche des observations locales, puis lecture toutes les cinq secondes.</p>
+      <dl class="detail-grid">
+        <div><dt>Score courant J4</dt><dd data-live-score>—</dd></div>
+        <div><dt>État de collecte</dt><dd data-live-event-state>—</dd></div>
+        <div><dt>Motif</dt><dd data-live-event-reason>—</dd></div>
+        <div><dt>Prochaine échéance (UTC)</dt><dd data-live-next-due>—</dd></div>
+        <div><dt>Cycles manqués</dt><dd data-live-missed-cycles>—</dd></div>
+        <div><dt>Dernier cycle J5 complet</dt><dd data-live-final-complete>Non établi</dd></div>
+        <div><dt>Source du statut J4</dt><dd data-live-source-ref>—</dd></div>
+        <div><dt>Réception du statut J4 (UTC)</dt><dd data-live-source-received>—</dd></div>
+      </dl>
+      <a class="button button-secondary" data-live-link hidden>Ouvrir la campagne</a>
+      <div data-live-families></div>
     </section>
 
     <section class="panel event-detail-panel" th:if="${offlineDetail != null}">

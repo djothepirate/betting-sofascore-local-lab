@@ -1,0 +1,10 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org"><head>
+  <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Campagne locale indisponible — SofaScore Local Lab</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+</head><body><main class="shell event-page"><section class="panel">
+  <p class="label">Campagne live locale</p><h1>La demande n’a pas pu aboutir</h1>
+  <p class="notice notice-danger" th:text="${liveError}">Demande indisponible.</p>
+  <a class="button button-secondary" th:href="@{/events}">Revenir aux rencontres</a>
+</section></main></body></html>

@@ -1,5 +1,21 @@
 # SofaScore Local Lab
 
+**Réalisation live J4/J5 — 7 septembre 2026 :** le
+[WO-058](docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md) est aligné sur
+[ADR-SS-005 v0.1](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md),
+formellement **accepté** : pilote 1→2/3, quatre heures, 1 000/3 000 tentatives,
+J4 sur signaux avec secours cinq minutes, trois familles J5 à la minute et dernier cycle borné.
+Un schéma métier incompatible arrête le seul match ; un incident technique/sécurité reste global.
+Le WO a été validé par le propriétaire et est désormais `READY_FOR_REVIEW` pour sa réalisation.
+La réalisation locale ajoute sélection et manifeste,
+session bornée, ledger V33, arrêt individuel/global et consultation dynamique. Les preuves et
+limites figurent dans le [rapport de réalisation](docs/validation/WO058-LIVE-J4-J5-IMPLEMENTATION-20260907.md),
+l'[architecture](docs/architecture/LIVE-J4-J5-CAMPAIGNS.md) et le
+[runbook live](docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md).
+La [preuve de cadrage](docs/validation/WO058-LIVE-J4-J5-SCOPING-20260907.md) et la
+[copie exacte acceptée](docs/validation/ADR-SS-005-v0.1-accepted-proposal-20260907.txt) restent conservées.
+Le fournisseur reste désactivé par défaut ; migration de la base opérateur et pilote réel sont distincts.
+
 **Skills du lot 1 validés — 5 septembre 2026 :** les cinq skills `ss-*` sont livrés avec
 leur [guide et installateur personnel](docs/skills/README.md), sous
 [WO-054](docs/work_orders/completed/WO-SS-20260905-054-skills-lot1.md).

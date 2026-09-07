@@ -1,0 +1,3720 @@
+{
+  "workOrder": "WO-058",
+  "head": "6dfd14286d4f269cbe100bd965257c20298538db",
+  "runs": [
+    {
+      "command": "mvnw.cmd clean verify",
+      "finishedAt": "2026-09-07T10:54:23Z",
+      "exitCode": 0,
+      "suites": [
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.bettingproject.transport.BettingProjectJ7DeliveryHttpTransportTest",
+          "group": "surefire-reports",
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d630361cf7df79462f4f571f1f43d7ccda14957a546272206960763f3b81d89c",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.bettingproject.transport.JdkHttpClientNoAutomaticRetryPolicyTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "015d59abd13406ff3266f3fafa9c09945d2ea82c963b7dbaf668035b997253d6",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.bettingproject.transport.WindowsBettingProjectJ7DeliveryTransportFactoryTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "1e030e879046497307070bad07bacf30d7dafefe56264c4c4f084e6c2d08c651",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.bettingproject.transport.WindowsUserCertificateSslContextFactoryTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "362c359c7321cb92558bed6d7057be4735b10eaa2256efe465450db0af0c9451",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.file.LocalJ7ExportFileStoreTest",
+          "group": "surefire-reports",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 2,
+          "xmlSha256": "581753eb4cc15854ddedaa85de14261079c78b9402369f7a1b9055568e17e81f",
+          "ignoredCases": [
+            "refusesASymbolicLinkInsteadOfFollowingIt",
+            "refusesAMatchingCandidateSymlinkDuringOrphanEnumeration"
+          ]
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.persistence.JdbcJ8BenchmarkReadStoreTest",
+          "group": "surefire-reports",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "c43ab2db6753c02f0483c6b1d8bb542792b52b01dfed4919a808b686eaf1b628",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.persistence.JdbcTournamentScheduledEventsCacheTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "59af46cb91721fe5f937e48c0eca43483fe010b45173c40b2218d064f8a6fbd1",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.ConnectorGateTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "177385590f0d7d05ab8d3af3b9d2cf1094a75dfec9b75c6c0afc08f6d2f95e90",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.DisabledSofascoreDataProviderTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "4bbb9cbb1610033cd82124e41cfaac9d3bd883f02eccf2266bf893373c751784",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV10ParserTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "5f80f9e640d063a7b4c772f8deb80418c22bbc0255593be71e6bf10594a06f1f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV11ParserTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d0a61d21b9389ff2102c25c76c72647a213ad95b08c6663d9286702197a7d409",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV12ParserTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "c600ea73dcdf82405ef6ff08299e39b3ca57015147e37ec9260ecf2701b7e1c2",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV13ParserTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "e83500af637278950547cfb97f1df2b8926fea857681703003c8f94de4a5521c",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV14ParserTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "42ccada0b8ff4167a80962d6b3e64de193910761b7b00573f6060391928f7ef5",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV15ParserTest",
+          "group": "surefire-reports",
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "615a05ebf12cb1e0be83ec55726f683a83aaa1c5089a76e2df759a49cf4bd283",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV1ParserTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "6bcb8f9e4991c0aea900bdf6f52da3921605409857cc1b59487b99581219b9c4",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV2ParserTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "93b075400bc0865a334007dae43f03d05de26215ed65d6a07e2fe1b2cfb47bda",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV3ParserTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "19cd2ecf465d0e181a5e0d0d9bcdb64936d6841cfd58a9bef50c3a1fb0c96ed5",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV4ParserTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "3afee024c709d15cb321aa68bb1ca8d6ab79b69eddbe3271bf215037fb2744e3",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV5ParserTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "c7e32cb1a9514286a2077f4654ea3834ca30350dac7223d5a8f596951e6aaa51",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV6ParserTest",
+          "group": "surefire-reports",
+          "tests": 47,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "f5c83c68087529b6a766a2a4e82c635df8b592c2eff93ab263fc67c662030e32",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV7ParserTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "b564c32685bd2ba612dcf528cad915a2ca521950dacf66593e30f8778442dc8b",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV8ParserTest",
+          "group": "surefire-reports",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "37007b99dc0bde9ec14d7f566fbb428e1af30143d14c15f210236c59cf644690",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV9ParserTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "db62593fff05b6b4767cf13a848097bf580f68affe2bdb664f2363e0621250d4",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV1ParserTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "a289df3506a4d1812200813a178f93b439ebc43f3194e0245aa2fd663a1c3f81",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2ParserTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "2c62d061a2e89a677b59e7667293bd0481a8164540db723c86f212c4f9fc3ec0",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV1ParserTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "02e82c9cac7fa2d015d0b21db2c610bc9142b3faab0816e367359b7599089fa2",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2ParserTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "5893d021760f73124eb73ef3f9ab11443bb4a52b1a5da9f7ebc41020ed4269fb",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV1ParserTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "c19d8affbd926e65e780ce57a923e30370f0156e9701480e3f661fb57641113d",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV1SchemaIncompatibilityTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "f14f13f3d6df71af5e4a380e8111a8a9c15bd652a739e7ef294ce12802ffc45a",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV2ParserTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "961606e0770ab902a1ff67073217f8981b978313838c0326faac0a597b87182d",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.live.LivePayloadNormalizerTest",
+          "group": "surefire-reports",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "be9a46fe35a43ba38cc937f9d58ec7600deccf49d434e7ee63490bb3a383f1e4",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1ParserTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "a1898d81feaec621cfa6d0bb035c9680a885dba52802b789e1cab4bbccec009f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1SchemaIncompatibilityTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "7d7ebedb97146ae27bad6d797602408f0fcda4b51e81d1c7710500a03c121c7f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.SofascoreEndpointCatalogTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "e0c2ea94146ddbba1e76d9d256e92a1302bfb506db584dd76368ff83d192af19",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.tournamentevents.TournamentScheduledEventsV1ParserTest",
+          "group": "surefire-reports",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "c05c017a8a5774a63be49361c60c421474f10f3f6d2b8ed441b29052907f1180",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.transport.LoopbackScheduledEventsRestTransportTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d56c86a4a5e132f59e47e6c40de043e660fb4720c9b3362faf18f0b8b0691c47",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.transport.ProviderEventDetailsPlaywrightTransportTest",
+          "group": "surefire-reports",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "c7d850896c26fe3696ffac5cf9a5f4fe8d0c92d5a3f32655d312baec5e0fb5a5",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.transport.ProviderJ5EventDataPlaywrightTransportTest",
+          "group": "surefire-reports",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "e36adeee32fe5646dd636bdb0a40ebade45ed5695b5243acf94ed2d99dc6c67c",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.transport.ProviderScheduledEventsPlaywrightTransportTest",
+          "group": "surefire-reports",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "928322122627e19808dfdaacf23b065b6fe138fb33f7cad5495700338aeff608",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.transport.ProviderTournamentScheduledEventsPlaywrightTransportTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "9027533052387ab73434358c8ebe1a1601e32d9c5635e79a06c2886549458568",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.DashboardControllerTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "70df7fda1b3438021dcfa8eaf86b73f251833e754ed9c9560f6d24873af63ba3",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.DashboardServiceTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "213e2e7ff538df460209031014ba85f1defd739a90b567ba5b27407bcc327ea2",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.EventExplorerControllerTest",
+          "group": "surefire-reports",
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d25efb82c82e4484782f7a1b5afd1433b6b7da23dfcac9bf48753e675623dc58",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.J5EventDataControllerTest",
+          "group": "surefire-reports",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "3844de984ca594660d3bf02bd5efefe8271540979bd2623e92a0578deb1541c6",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.J5OfflineBatchControllerTest",
+          "group": "surefire-reports",
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "bb29133b6f53a724bc56c76e69858fac7e8b1a3e9362cedd8959a2e63d23294a",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.J5OfflineBatchMultipartExceptionHandlerTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "dab8641e433c3eca95393ec1c5f5c4a220a1072014587846796777f6dc7281b0",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.J6HistoryControllerTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "b4b466ec43dfe9803da5709ce59282b0127e7d7817aa425b488830fb3eb0290f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.J7DeliveryControllerTest",
+          "group": "surefire-reports",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "7cb32900198e7e25fe73a0749cee784ac15b00498135af63c00acde4b4aab21c",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.J7ExportControllerTest",
+          "group": "surefire-reports",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "57278d3d143a1927fda8914d929fd8e205b3f17965556787b9571c6802d7757b",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.J8BenchmarkControllerTest",
+          "group": "surefire-reports",
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "490eb0db982396b1885779c230ed8726144a55a4d1fdc7483afa126f9577573e",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.LiveCampaignControllerTest",
+          "group": "surefire-reports",
+          "tests": 24,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "eca6000962915aa6daa9e1540b43dec77385b088added6fff85fb5cd3c07d566",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.LiveCampaignPresentationTest",
+          "group": "surefire-reports",
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "8f8b05d28b24ef67335669aa28664c4f2292fbbdfeca2a449af529466a6bd78f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.ManualCallControllerTest",
+          "group": "surefire-reports",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "288947c95fd8b7efd3ae5377e65c20dbc5466c9a71bb60265c58846890b6fc51",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.ManualCallControlViewTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "b70ad0214ae36b3fa4dfabdc7b1faab89a9fde046d2cea6292fbef24d028d759",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.SnapshotInspectionControllerTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d6c6f788300086657a47702a709fdad04bc9c6f27193d968d1f3235760ea997a",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.TournamentEventDiscoveryControllerTest",
+          "group": "surefire-reports",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "33e370ce5c5561877c95d74cc008aa7909cacb8d3abec8f7f5ebbc6222b02940",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.benchmark.J8BenchmarkMarkdownRendererTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "1128861153687592790a97d3ac448cafd38d7d642de2546fa82ac2c38f44868f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.benchmark.J8BenchmarkReportTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "f9254148e6eba9aae7e273d49109189e0ce838108958debea7909b5774133714",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.benchmark.J8BenchmarkServiceTest",
+          "group": "surefire-reports",
+          "tests": 31,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "fa791af3921c3ab0196ab6adac831cb07710d92aa7a41c5096eee00dcda542cf",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.benchmark.J8BenchmarkWindowTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "9efca34cfcf13595704f9363304fba3d4df91f08fbb3771f24b9397018a584e2",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.delivery.J7DeliveryAcknowledgementParserTest",
+          "group": "surefire-reports",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "b86e905626235ce6321528d349afa422eb2e416d229699652a367015813e1c17",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.delivery.J7DeliveryContractTest",
+          "group": "surefire-reports",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "98fe8738b28730fce6d1f4c8734dd2b441848ab112c5879a31a2bc89ce3a8bbf",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.delivery.J7DeliveryExecutionGateTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "cdbcea030db9da64b824998d6daf5198e31a078998eb1d5da9b6ef0cc2f607e4",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.delivery.J7DeliveryPolicyTest",
+          "group": "surefire-reports",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "b77acdbb8c2e78f072dbb0d4db8d227f85f857634846ae3dd78e0bcc0241c998",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.delivery.J7DeliveryQueryServiceTest",
+          "group": "surefire-reports",
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "4bc3ff43b6bc97e63a767ad0855075670d4bac09c2b39f73b97ae5c98b0d4995",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.delivery.J7DeliveryRuntimeServiceTest",
+          "group": "surefire-reports",
+          "tests": 24,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "22dca7a7696e6ba3b58e3e822315e1476dc6df00c5db58a1f908d09cf6b7085d",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.delivery.J7OptionalDeliveryServiceTest",
+          "group": "surefire-reports",
+          "tests": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "aec3fcf399fa015f9b701494362124c7785e6fb43dfade4039703b3969e1c84f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J4EventQueryServiceTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "628abb8554e4a7e5c4614aa11cc7f4c626f1ee4bb710552161da8ce59e496193",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportServiceTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "5803707bb4a7e035c6b1e3c89e4d82dd273786011b31668c4a5e8ccbaf4a7c49",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J4ScheduledEventsSnapshotNormalizationServiceTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d6110e9e9e040325794a7d452ba4959305fb1ae5a996c9fa5d4831e7064e995e",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J5EventDataQueryServiceTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "ae9bb55281de7f784fcb85ea24668221f215051fb2c7f5b040cca0e23c76e308",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J5OfflineBatchControlServiceTest",
+          "group": "surefire-reports",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "11b8a6e27ee734c13d3786e8149651d97f1a32389dc854a1bcea50d0eff59707",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J5OfflineBatchImportServiceTest",
+          "group": "surefire-reports",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "95c0f188889bc140bf39b389a7983436d492f3108d48bce203a8f44d51b5861f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J5OfflineBatchPlanServiceTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "6b549f3062783a23aa51c03d7ba5eea53dec7471d5cb7fc287d9e1aa66db1671",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J5OfflineBatchPolicyTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "a80a53f026d0969160f4b5819c28453f3204f79a70427dde5d35786c29784bca",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J5OfflineBatchTransactionalImporterTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "59d356a19f7772c6237d5281bb539d8bc0fe7be7bafca7513eda6156fd00995d",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J5OfflineBatchUploadServiceTest",
+          "group": "surefire-reports",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "bf5e7c2877a777bd5726ab0d2df055bd2907020b5cd17c3f8397cba70aa8649b",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J5OfflineFixtureImportServiceTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "4731edee0b769203d79a86e643b886de8e8d82b297bc27fbec36b58c82b7bab7",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.export.J7CanonicalExportServiceTest",
+          "group": "surefire-reports",
+          "tests": 21,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "3faf706753facbef525e670a5da012632a5712ebda617969ea105c43a9678fa3",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.export.J7CurrentEventSelectionReaderTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "81406d318fcd0f8aca962e5718012c06eed324e4f23cb3a4b42d6e5efc4123b7",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.export.J7DeliveryPayloadClassifierTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "be1c5ba0b2dda4bca1e76c1261575f62f9efb2d39183243b527c70acfe4737da",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.export.J7EnvelopeAssemblerTest",
+          "group": "surefire-reports",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "c9285ac6c13746faae8e925428757707256c971c18fe68cccfff5f0fa21531b8",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.export.J7ValidatedExportArtifactTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "3234436b31d3beef2517954cbba226b6a942c49dda27337a4a29fda9e9996e8d",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.fixture.OfflineFixtureCorpusServiceTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "a6cb6626093e80a3ebbca497ca3bbee2e7e2975293c9f7010fbba795658bf86e",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.history.J6HistoryClassifierTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "89f89812515667c82960f59208e637aee89ffec13373cf378a8bff98768a3a36",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.history.J6HistoryQueryServiceTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "f30836bf3854b031465c4acffbeedcf0f2540c0fccbe4306ea9517f25b41c1cd",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.history.J6OfflineHistoryDemoServiceTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "0752e00bdb85ecfa9418b1c2bebb697b871e0eaf47b77aedd4dd965db69d040b",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.history.J6SemanticDiffServiceTest",
+          "group": "surefire-reports",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "69c69f52cbfcd2397842a9dd1c69b30c941c32fdd31d7e765463a304595fd74e",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.live.LiveAdmissionPolicyTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "f309ca142be5c81ebba579bb252d847a13656fe8d5145ee02aa202ff4bfb3d8a",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.live.LiveCampaignServiceTest",
+          "group": "surefire-reports",
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "89a24a8bfb77578d79bbdbe9e15488f9704e1dc48cfced821854c2e8bdc87b90",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.live.LiveReplayRunnerTest",
+          "group": "surefire-reports",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "0486eb7a8acdee976ad784bae1c13617c8bae4c2bd065b352c6d597464081dda",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.live.LiveResponseProcessorTest",
+          "group": "surefire-reports",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "3739dd729cdf6cfd53e86cdd6fb1278caa4c048c741dbc869f44581137a17a47",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.live.LiveScheduleTest",
+          "group": "surefire-reports",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "ae2cc06dc18f65a1f6b0a73b5759a79d56368b3c21cc3753434a8dc570baf4dc",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3DynamicManualCallServiceTest",
+          "group": "surefire-reports",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "394af03ccc3b5b24fc71585716e188f2725b5aac4a9321dd12e586f1ae9ed52d",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3GuardedScheduledEventsTransportTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "9689ba766867a1be32982a2ca752f7d0632c7ad2941eb517a23ad5b36f4da91a",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3LocalJsonImportServiceTest",
+          "group": "surefire-reports",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "6053038b1df04a76bf6822a4657af8b71381571efbe82ae2827bf6646f401491",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3ManualCallControlServiceTest",
+          "group": "surefire-reports",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d1f5a91f980ab43d8d8a8f51ddab56be5c5c3ed0f9b7502d4f097d1dcde9b614",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3ManualCallPolicyTest",
+          "group": "surefire-reports",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "0ed498b4da6ab85cb9512141776707f858847c70bbe7993f6750dafd16adfdf0",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3NetworkCircuitTest",
+          "group": "surefire-reports",
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "81612c4f186d5309abaaa09f1042c52321688cf91b5e4fb65bf7d78436d04be6",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3ProviderCampaignStopServiceTest",
+          "group": "surefire-reports",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "ff0eb7445640ef98285a15c6c2af30c05d7e776c3684aa2bcb0a97a5938344fc",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3ProviderQualificationPolicyTest",
+          "group": "surefire-reports",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "2178620cae6c5c10466832d74714da2ba5d9b293ddbe9dd5673588a745d054ff",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3QualificationCheckpointReparserTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "3e2e2a9be8c2b96cf4e46f813d7e69cad995be223167ca7896e2e8d0ab9ca9a1",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3QualificationResumePolicyTest",
+          "group": "surefire-reports",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "8b786f1d52010ad51896e509978b68e20f9d0e932ff16e1aff49088d9429c0f2",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3SingleCallGuardTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "ac52e2de0645f6cba63ec13a7259748f339b2b09b9618b660a5f268181a53cf7",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3TournamentCatalogServiceTest",
+          "group": "surefire-reports",
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "ee3e4e00c0ba90a8b0b3707a3ec218112b132e798eed1f525632b8a71c815b12",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3TransportStopAndIncidentPoliciesTest",
+          "group": "surefire-reports",
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "b0b59b416749445882176b4a311b5beecb661646ff722d215370349f5eae3d4a",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J4EventDetailsPhase2QualificationPolicyTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "376954a19bc86bc9ab88078ad84507a861d1f351d6352a9df7cb4c23f5fbe5c2",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J4J5CombinedQualificationSessionTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "9f4c07656e5f3bd6a9794f99de3f3c7c897a480630ec32ccb29d797dfc430855",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J4Phase1SharedLeaseExclusivityTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "a0f46777e393515bfcb310b2939dfc367db3317cf59741916f894beaab6cd1da",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J4ProviderCampaignStopServiceTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "e6dd179695b8a41211ac9bc6b8e86f969263cb80ade3e25bd24df64121f738f6",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase1ServiceTest",
+          "group": "surefire-reports",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "e9beb5e09a9f9edba168f6339c32328e6cf916d8ca769f2d1602bd120f6499c9",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase2ServiceTest",
+          "group": "surefire-reports",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "7b03e447065216bd519385064c7e325297bba998deca5867fbb9d519a72e20e0",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsResultTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "79e3237573ce6064d59d0b83bbdb3fdd26b9bbb1b73fdbaa88c7067e09445809",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J4RealPhase1ControlServiceTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "169d1cd87beafb4f5e582ce8660c238efcefaf357321c8649b2bcafeadc44aaa",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J4RealPhase2ControlServiceTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "5013bc13aa4f69fb7fc4cc7ca6065299b9e635c106cb91e728cc1793550a07bf",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J5LocalJsonImportProcessorTest",
+          "group": "surefire-reports",
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d56881ff1cc8223db2b7b92792658de5657cae68eabc5eac4f730466f0e03320",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J5LocalJsonImportServiceTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "a12a4182d69e220fbd98e499c275ab6f2355dd878e6e450ba743e52df5dad056",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J5ProviderCampaignStopServiceTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "39dcfdab540df0b4984239c40491ea5a5822f263712871431df2e7dd2cd4a0d6",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J5RealControlServiceTest",
+          "group": "surefire-reports",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "80d360ed254ecaae46cc0b5494cdb177c75cb7d2d7c7b1b32c1fb5084ca82205",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J5RealEventDataServiceTest",
+          "group": "surefire-reports",
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "661c9365dcf59ac914c63333d2680eaa7bb542538da45812965bdc1b40c019d5",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J5RealQualificationPolicyTest",
+          "group": "surefire-reports",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "f67715ce3cf74804386896694f3533fb990905878f20d654caf8a1c293f5bdb7",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J5SharedLeaseExclusivityTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "3c1975af4c184ae8d8be2cb94fb13ba69a5359f02755c0b978b0925324934f40",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J8BenchmarkAuditServiceTest",
+          "group": "surefire-reports",
+          "tests": 35,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "92bac35831985e1b8711640c3169ef597eb70cf12e87c2fcba00f827d0c356db",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.ManualProviderRequestCoordinatorTest",
+          "group": "surefire-reports",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "cd28e53c653180e0ed3ba275968eac27ddd6e248262bc146381963019f759ed6",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.playwright.ChildJvmPlaywrightProviderSupervisorSpringContextTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "96a602b45092c24a37b78540a059a1b6af712b4894967ff2053983e33de2118b",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.playwright.ChildJvmPlaywrightProviderSupervisorTest",
+          "group": "surefire-reports",
+          "tests": 40,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "f89bc12a6564892dddbe0d73cf53dc210e9ea2eb183c86cffb36154781ff81bc",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderRequestTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "71c3f79196701575ff83ba86f594cc397af413292529cd3a2bc117292330d869",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryControlServiceTest",
+          "group": "surefire-reports",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "aac575fc8bbfbc15de0082fe6f99988deece5a48136270dc04c6c35f48fbf628",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryQualificationPolicyTest",
+          "group": "surefire-reports",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "67b9a1bf241ae474f770e35521073373a1f1c9e5bae059efa4a9e15745de626a",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryServiceTest",
+          "group": "surefire-reports",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "0a20225290180a199a6d15de5678b11e8644233ba0e6bea835d3b418a7eb08e1",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.TournamentScheduledEventsProjectionServiceTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "5f81f423bb2f6048711a957044b2c8adf717b963ed913d2a364007a915fdf817",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.retention.J6RawPayloadRetentionServiceTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "bce080fb3fde36d9f35afd87a5f3e83938e278ea0bd024d01aca7a26d218a5a4",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.retention.J6RetentionPlanHasherTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "773f0a1663f2507558e9d672b8fa13ef66484f684d85bf1dbb7d774714db5363",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionServiceTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "210f45df17a1be3cf8040cba1768faa92e695551c5b03f8c8a5e8f89e0d3067b",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.build.BuildIdentityTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d802b8839a1daaedce49443155d76dad9d1d874468e0d358f048a36b26210ac8",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.build.J6NativeBinaryPipelineQualificationTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1,
+          "xmlSha256": "2a7f54b855445e4b4ed042c98b71610a182d431834a33922ad83372581c306d7",
+          "ignoredCases": [
+            "dockerQualificationPassesThreeSequentialRunsAtEffectiveDefaults"
+          ]
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.cli.J8BenchmarkExportCommandTest",
+          "group": "surefire-reports",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 2,
+          "xmlSha256": "2bd90a19db42b14748c6cbdf0a19cdeb959bfd1c2f9d12bd29deee2f25471e8d",
+          "ignoredCases": [
+            "refusesAnExportsSymbolicLinkOrReparsePointWhenSupported",
+            "refusesAJ8SymbolicLinkOrReparsePointWhenSupported"
+          ]
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.config.J7DeliveryLocalRequestBoundaryInterceptorTest",
+          "group": "surefire-reports",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "e5573b7bf39f43ab0c8486f6ab4863808bd47dcb660c2331002f4d8c5afd767b",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.config.LocalAddressPolicyTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "06172a41a1352db9d0bbdb7b537381c572f1f48ce858f541806647f999b4a7fa",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.config.LocalOnlyBindingGuardTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "19fc635c6165c2a448fbd05fed753dc71d3f6092d372eb3c42cf3ea9e467e925",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.config.OptionalLocalPushPropertiesTest",
+          "group": "surefire-reports",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "6d870135680f830779e2ee9104d8995aa09a7288af9a8ad6b463c2d14391a314",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.config.ProviderPlaywrightPropertiesTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "fdc74c022e857a25b89f43f3c75938bbd01ae9736ca765fe4c6d4baea337af59",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.config.SecurityHeadersFilterTest",
+          "group": "surefire-reports",
+          "tests": 25,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "975d9b1196d5db5c4c2c3344d79d56c7d285a00c87812aa4e994f3d32423d47b",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.config.SofascorePropertiesTest",
+          "group": "surefire-reports",
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d99532ebe96b4666dffd3b3ccad53be048ab87bb852e7b3cd9d8462b366bf11d",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.config.Wo049LauncherOfflineQualificationTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "807eb14448b5cbe76cd2b853cb2ae9cc6c675db0950bcd2d4c8e26123c43afca",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.config.Wo050LauncherOwnerGoIsolationTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d13dbbaceb419ac39b0bf82f7756deec9425d1ee041ca9eadb89ada840e20b40",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkEvidenceTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "947f848fd3ba91d576235f8a609b1730001edf3c6c087e30d9430e7cd6c8e9fe",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryAcknowledgementTest",
+          "group": "surefire-reports",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "13a83c02c397a9f8ab5d7843d02a6dee35490b5e788fec89b4339330e388e572",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryIdentityTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "a3c226cdddf18290d70a55b0dfb33a92c7409e09de943f08eddcfed41810a520",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryStateMachineTest",
+          "group": "surefire-reports",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "20eaa206eeda9117b422c5853e08ff49e0f30223d6645dac4258c9f6caba6a65",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.delivery.J7ProviderDerivedOwnerGoTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d1d594a302c50ecc3be6202c5d3c4bb2be54bf7b1b337045bb5f0731247c41d0",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentityTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "809cd60745fb4ae536a63d5cdb98b3c0933a44ff9bf1e2949b7045f8bcc0290b",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "ccd2957e65ae737bf1a90babc3c2ab35095b0a5de72d7b6c512717edc82af217",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessReportTest",
+          "group": "surefire-reports",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "912fe8113c62f6f0a17d27bce0ccafb44cc912b5cf8477667c18906dcef507ed",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequestTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "8492c402ae65d9cecd78860a56e68aa96708cfb1a6d0a1724d522ccf67fd4538",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.provider.J3ManualCallExecutionResultTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "2bb8170b133312da1577e44818e6b3f214d3ebedaa4d8028cce6bd16039f54c3",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.provider.J5EventDataProviderRequestTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "36fd6f8378f84e36e9940099ad893a919bede5d02937f3012cf3b7ba442964fa",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshotTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "f3f17ce894c68362bd3658d1ac3852c32fb902d9982e331296b0c4bdd12ca28d",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidenceTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "375a44e241a6f3e6d85d68fe223729ec71bc05d004ce9ebf0559d363644a4841",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceResultTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "20544a4e3935486f69de2fca180fc900fcef3cb0fe9211d0aa079a7dbe4848cc",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequestTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "317a1f446e1af7e3ac6f23c7d20ed2c30856cb9931a858ac146eadcc61663b8c",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportRequestTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "72c99cc18015f1b7246338b35feead76a2eb07e832a4baf44f6c1155c55d956f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.provider.TournamentScheduledEventsProviderRequestTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "b623c8714991fcc39da0cf219ba7c761531597fa89b532a36911dc6d26debec3",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.scheduledevents.TournamentScheduledEventCandidateTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "ed0ccdfa4e98988ca68945b6dfcbc2d2a21592a2354a69835f7da8b7a542e8ab",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.fixture.ClasspathFixtureLoaderTest",
+          "group": "surefire-reports",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "a6767663e9a0260db0e6bdbb00f8b1a80465e36bd4bbb6ad91a8abc6ac28ff80",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.fixture.EventDetailsFixtureCorpusTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "c594e30e361339cc5b2c1f7e4b4f5b2995ce9f6378dbb1cd915110c66ed1eafb",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.fixture.FixtureManifestTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "3acf379b81fc2d5e164ae5abfb444fff1dc5647b9ff6219a365f43781fdfe985",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.fixture.FixturePayloadHasherTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "f65d3bd7e73d40ae2f04a4c23de7658ad79a1077377474512b73f4fa7d146c52",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.fixture.J5EventDataFixtureCorpusTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "fa83d47a9436353eb729c1999a97fafba8bd7d82efc657c37095afff3de4f3e9",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.fixture.SyntheticScheduledEventsFixtureCorpusTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "b3a1d82b916efa87d686d132df160bac528abd0413662bd7511f0237ca754949",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.port.J7DeliveryLedgerStoreTest",
+          "group": "surefire-reports",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "2e2fbf7248031778a521053c1c36f708a23796d0929348de704eaad768c480c8",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.port.J7DeliveryTransportRequestTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "73609cbbf2d09e169ff5ca9d11b3030b48ea64ab5bcb4ea8481b95d4fcdba2cb",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.security.J7DeliveryConfirmationServiceTest",
+          "group": "surefire-reports",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "488058273bf68121b3b491d5b2082d0f7855a79006072b7fb6cb0ba0ee87099f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.security.LocalFormTokenServiceTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "726070a195d1fe06006ebe9498935148b855f6f7b17d5983731f76ad59d6026e",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.integration.FlywayMigrationIT",
+          "group": "failsafe-reports",
+          "tests": 69,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "f3b86007073edc174487741a87679fee7ad71524d4b517813c41720ca85f07c1",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.integration.J7DeliveryLedgerMigrationIT",
+          "group": "failsafe-reports",
+          "tests": 29,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "e175afbd38835ebf502375b8e95f3cb14e8a8fb33b8d71c339129678a45e9976",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.integration.J7DeliveryMutualTlsLoopbackIT",
+          "group": "failsafe-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "ceed502d338289f3ff2f0c03494e105b4654700d44b6da9c8c1c53d0b6200b82",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.integration.J7OptionalDeliveryEndToEndIT",
+          "group": "failsafe-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "6b38397161896a09d978cc145d2438788f8b4f373b383231b5477c5e986d89fb",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.integration.J7ProviderOwnerGoV32MigrationIT",
+          "group": "failsafe-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "a01182e6c2a61e4a9173f08a6f33bbc72e15cf82d743ee41d88c12a0e605c0ca",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.integration.LiveCampaignPersistenceIT",
+          "group": "failsafe-reports",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "c436bc3a03baf1ab0b692beedcd9dd60c0b498b4ecef5ad8b810537a8cec8909",
+          "ignoredCases": []
+        }
+      ]
+    },
+    {
+      "command": "mvnw.cmd -Pintegration-tests verify",
+      "finishedAt": "2026-09-07T10:59:36Z",
+      "exitCode": 0,
+      "suites": [
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.bettingproject.transport.BettingProjectJ7DeliveryHttpTransportTest",
+          "group": "surefire-reports",
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "0c4155cc493cde4f295429285cab2b5f05d5201915504200740388e576a0c83f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.bettingproject.transport.JdkHttpClientNoAutomaticRetryPolicyTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "3cdda589bafb99a8ccd7ab6aab9a2657f88d44a5c780f10d85b5614b1a1da15f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.bettingproject.transport.WindowsBettingProjectJ7DeliveryTransportFactoryTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "52c367cc395f0dd0f9aabf2e9f440d472d5a53c6957028648875963799885f2e",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.bettingproject.transport.WindowsUserCertificateSslContextFactoryTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "9a6b26065b1bed2006878f99e5355d04019b65ec5672fa14c56acec2fb8ca57f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.file.LocalJ7ExportFileStoreTest",
+          "group": "surefire-reports",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 2,
+          "xmlSha256": "6077319d8c86f4842fc0c510fc018fed51767e64585be0ffa6daf32e2a8b8547",
+          "ignoredCases": [
+            "refusesASymbolicLinkInsteadOfFollowingIt",
+            "refusesAMatchingCandidateSymlinkDuringOrphanEnumeration"
+          ]
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.persistence.JdbcJ8BenchmarkReadStoreTest",
+          "group": "surefire-reports",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d04455b0dd4618058265662fdbb50f64628076d21a4af857f73ae1c4a3cd6793",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.persistence.JdbcTournamentScheduledEventsCacheTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "2059398892bd283a6461e6cb66e2988e416e18d643ee068292fdb211b92dbedc",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.ConnectorGateTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "2d85b15741087e02713754f315dfc1ff53fd962ce560b3e5412b7615426db61d",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.DisabledSofascoreDataProviderTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "bbf21b08ee59599739d3f11a59f7a4b9ae11b7afe4fab0de09a3a468ed56f390",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV10ParserTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "f79f7a2eafbac711aec89166a89883353f648d5089b9763a8c7324f74755408f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV11ParserTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "9565834b78a5b916ff380241230d3f86b4f538ac021575e30c5b09f42e599394",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV12ParserTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "6cf7a8a018dea897e8ac7762a1c2022263afd28c36784e4668d926a2c1150507",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV13ParserTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "af0abbb40bcc20ad86a279dacd02635935b4aeaa066dcac7ee20c3b544119997",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV14ParserTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "c18b51ba461487e5643a545ab85be7b555a927fd3ebc7c88cdf669920cb935d2",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV15ParserTest",
+          "group": "surefire-reports",
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "e7da8e0d1f926aa4d01f06bc578e76329f3b4751c5a856a1d6456779dcffbea1",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV1ParserTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "a790321379862bb69de87078f05a32e249d3a80c8c29534e5056abd97f62f1c3",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV2ParserTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "3c4cd09f7a60533fa54163f98536f32cdb82727d27d176d25baeae8bd8a688f4",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV3ParserTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "7c98c1059c3158339b1825a772a800f7e36c1207c8fd947c87d6e713eea5c8f5",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV4ParserTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "b39bf9aeb98a34ca69a05fda61410eb67af99807fd61adc56474215c8062ad24",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV5ParserTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "b6342b6919dae4e4b7cde429ec127ca58b7e15bed6d1af78cf4943fa7884e59d",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV6ParserTest",
+          "group": "surefire-reports",
+          "tests": 47,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "833737f9c3aa738a44e291cb80d8425b9ec50c55b7ef947df85a07d75b4a1daf",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV7ParserTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "9d33cff8e876ae33a590b6e5ff911b6553250baa20617850d51dd838a89b6ece",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV8ParserTest",
+          "group": "surefire-reports",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "2a1dbb0ff45517a1622d08e8cc74beea3368297aea9ecb03a12d8fcda95257ae",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV9ParserTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "cd9212653dbb3b5903c46b0cbdbffc588f2307be0e47cf6c0ea038a9899ab847",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV1ParserTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "856b33a8506107de7176a039481346c1311de4e94272efa800e80d73837c9b48",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2ParserTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "ac8fd3550152b0ecbdfd47dfc1ae84a35a192f1ce6cb4f90f6c9c6663e13123f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV1ParserTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "34ff4a7dd6a72d9c0a5fdf986e13dff91fc309b663f6f296652be18853064af4",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2ParserTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "81fd55952caeb8b1799c7c683c896f11db967df2f390d4aa6afa5863c1e6045b",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV1ParserTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "12474a6c62d516c068141c160166cb821b42f4d267a91cd691f91afbc18c423a",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV1SchemaIncompatibilityTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "2731cc4abdb903e04b2af1d0725ca842bf5629637cb6490cf6cfbe7d7fe6306a",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV2ParserTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "67e5e3c6e69b217b52e2b2264743955c0e0a8eaccb2dd2ff56732fa2e0ebe4c4",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.live.LivePayloadNormalizerTest",
+          "group": "surefire-reports",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "60305a6f26db8a3dafd036607548c22f729e447f8b124f85c12ed8a4d3cc247f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1ParserTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "a77428fca81bf5d1279f04c7ce383dbe4515d14a6b1abe71ee9bf13975a35cba",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.ScheduledEventsV1SchemaIncompatibilityTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "1b717bd06d68bd3520a1b87ebd89780b1f15ba4a7229b17ec7a511ab3a07bc10",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.SofascoreEndpointCatalogTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "da8dc0be4f2c74e11b8a54f0b922db4a8a6e84806e72c9782339950ae886a825",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.tournamentevents.TournamentScheduledEventsV1ParserTest",
+          "group": "surefire-reports",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "63bae00742e9429e3c60bf345d089841e9f72a812ecf2e553259858017f91408",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.transport.LoopbackScheduledEventsRestTransportTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "f9956ef50c38567eb92cc032eff6feb035bdfb93563343712cc360fc6962e024",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.transport.ProviderEventDetailsPlaywrightTransportTest",
+          "group": "surefire-reports",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "5bef7ad8c8df33a369be942d312c140292a6ba9e678ae7d31e166a260b0b2a27",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.transport.ProviderJ5EventDataPlaywrightTransportTest",
+          "group": "surefire-reports",
+          "tests": 20,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "4d49302e4f36c61dc984f9dcbb9a8a4adb9d9fa5492dad873d530935f61fe18e",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.transport.ProviderScheduledEventsPlaywrightTransportTest",
+          "group": "surefire-reports",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d872d600f4d2be3ce51954fbbba0df7f2dac722388647d911537b64e0a5ad688",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.sofascore.transport.ProviderTournamentScheduledEventsPlaywrightTransportTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "3bdeafd5f5f712831e7a8f353b15e2c5993e0ff66980e80a1f2e6be251f9abac",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.DashboardControllerTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "70e464ce3ff57f9cd4c06d203122ca268772d6a1ed66547d5349b70083ddf236",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.DashboardServiceTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "9967a00c00cc37f93bfbd729e4088bdc1b283d0b6129fb686fdd445da6fbb27d",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.EventExplorerControllerTest",
+          "group": "surefire-reports",
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "322a438d51e837b2f9e50117f8ad6e1fe1b7325d5739229bb9aa617b6696132f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.J5EventDataControllerTest",
+          "group": "surefire-reports",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "3908c82bdd616a3ddb22a6b93b6b0eab00bad6068283c5021d5fc1b0f9f57256",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.J5OfflineBatchControllerTest",
+          "group": "surefire-reports",
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "3470fdc6d24126d64da61f7d156067f39db630278a4b25a285bc7042b3b4a5cc",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.J5OfflineBatchMultipartExceptionHandlerTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "3b83cd7cf8bec3254d89b80006a45a2c7d66b603ced906b4c20fcba435c339f5",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.J6HistoryControllerTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "02fab436707e1fe818ea8424f6d623ca32e6eb5f77fe72b7e637811ee392cca8",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.J7DeliveryControllerTest",
+          "group": "surefire-reports",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "152a4a4fa3b142bbeefd11644dcf135f00ded09e95d60c92dcefc48ce5ab4f4c",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.J7ExportControllerTest",
+          "group": "surefire-reports",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "6afb5774dd3c81b74c33b9f34385a35fb6b9f197ecc4669dc1414463ab15b950",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.J8BenchmarkControllerTest",
+          "group": "surefire-reports",
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "8ff7ddb8c3a0d3b82b0a55ba7957e2f9377d811f44e2c4171c36fa681bbf4e32",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.LiveCampaignControllerTest",
+          "group": "surefire-reports",
+          "tests": 24,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "def92c1203864ac4a525e71da42237d7ea6192e824e438dce08ef4c03549e1d0",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.LiveCampaignPresentationTest",
+          "group": "surefire-reports",
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "63b5b44c05a65ab5463451249f80185d4915b3b675cb193828712ee4c22da6eb",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.ManualCallControllerTest",
+          "group": "surefire-reports",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "2edd71b59f6b0920e0f956404235e234ab24f6c708d8cea943511aa689c29dd5",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.ManualCallControlViewTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d0e1c7487161900ea30e2ee9a5a96903a3f7e274fdf7dd2555034396200f94ab",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.SnapshotInspectionControllerTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "0139808c9bd4924cc409d73aefe53f6efc5bf77ba660a3334bd5fe526ddcdc2e",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.TournamentEventDiscoveryControllerTest",
+          "group": "surefire-reports",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "55b32cabc009d63276cc066b4dac8857631d4585ab81fa1202ae6870746672b0",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.benchmark.J8BenchmarkMarkdownRendererTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "833e4f6ca1c4a75a700a82b657576064da3ddf9a0f2c0dcbdd9d502ca3921e0e",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.benchmark.J8BenchmarkReportTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "c6bb5b8c72cd0fa656698327608f7b18826c26da5cef3db5a1ee3c59f652dfd4",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.benchmark.J8BenchmarkServiceTest",
+          "group": "surefire-reports",
+          "tests": 31,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d75b4fa1cb8920c4b7735c9881943911a1b4309b3be00ad90260b42c24c8b7e5",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.benchmark.J8BenchmarkWindowTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "b9afb2650f08faa230e00a79578106619ca305e67dabbfb9de6ff87665b7b753",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.delivery.J7DeliveryAcknowledgementParserTest",
+          "group": "surefire-reports",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "2cfe686ed86f5c0f8aad51a56d7770a3fd533d9558be425c2380c9dfd16dc2be",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.delivery.J7DeliveryContractTest",
+          "group": "surefire-reports",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "317ffe211a5ba611d8ada9d11e181496931aaf276863f38243f3d95a16638bb5",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.delivery.J7DeliveryExecutionGateTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "fddba97435b59466729d878e7f3011fc64b56d03bdefdc99851d9565d063e1e5",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.delivery.J7DeliveryPolicyTest",
+          "group": "surefire-reports",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "6272d2760ebc7de812589f60d6a69e9fd72a2a82aaf3d0ae167d1b9b31e02af1",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.delivery.J7DeliveryQueryServiceTest",
+          "group": "surefire-reports",
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "cd885740d1c8a5e01b6d1ffac1a7b86abb6261e0c50f7c2312fe509595b0ed29",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.delivery.J7DeliveryRuntimeServiceTest",
+          "group": "surefire-reports",
+          "tests": 24,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "983ad935d7d07610c71b526b62cb43be2c21cea934033e4d6605cace2750ab67",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.delivery.J7OptionalDeliveryServiceTest",
+          "group": "surefire-reports",
+          "tests": 33,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "8296fa3a7ae18436f2a0be357a8897889e118eb9a66bcdab5739162fecb92c25",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J4EventQueryServiceTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "ffa8d76e31ab9feb0171ab20b8fbb65476f2ad3153d5269b1e84ad8816e25de8",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportServiceTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "72b67a2f3d0bf615191ad0742a526ad2cde3b5ae63c5855418bc89350e18aa29",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J4ScheduledEventsSnapshotNormalizationServiceTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "6cb42932bb3b2c480dfc5ea9dbc9440d44b16036c3f80dbcf19ce22fcbd287e1",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J5EventDataQueryServiceTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "88c99233e7e2da1a523bdf4f10701448df605c12d432a83f7d0ab74c466102db",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J5OfflineBatchControlServiceTest",
+          "group": "surefire-reports",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "f55e057a95c1218d98627f9d95eee0cf8453ffb17b6ec5a6f34fb8469354c55b",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J5OfflineBatchImportServiceTest",
+          "group": "surefire-reports",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "9f96ede2aadec371275ad9b32f531be13206e5b4e2d4c4526d211fd5295d3910",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J5OfflineBatchPlanServiceTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "e9a3dec6f05ff02354a9fe26ded76109afb6f18b06f7845c696d4e7ee0ef7957",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J5OfflineBatchPolicyTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "a24be07fe61d0ec060b2b0989e4931f0b295ab2eed8cffbb891db34b753894b0",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J5OfflineBatchTransactionalImporterTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "916f6c0cd9e278bda76c83fcab58e3949d976b73a40f48f58242e920280a75b8",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J5OfflineBatchUploadServiceTest",
+          "group": "surefire-reports",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "a519aa585c1ee2526c1f42cbeae295bc84e534b138b760c8dc3996e18aefd079",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.event.J5OfflineFixtureImportServiceTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "8d472703a7b2c0e9863f8fb0b9d00733a31cbddc010f4a7104f0424a8d927fe8",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.export.J7CanonicalExportServiceTest",
+          "group": "surefire-reports",
+          "tests": 21,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "4cb9afc2eb39fa71a8e121e9f2c307dc6dae5423daeb7f1383a6f868ea36a497",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.export.J7CurrentEventSelectionReaderTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "4ecc998747f83d5316c1c3bb2c93763842fb80c7506a23383cb96ac3c2482f91",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.export.J7DeliveryPayloadClassifierTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "51be9b9ad8b308f658b2b7e3cc9a64332a113f9b5b1a37b5a1a4ec9c83fdd743",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.export.J7EnvelopeAssemblerTest",
+          "group": "surefire-reports",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "9125d3a708c825047823450d6f2c5192864eb5ae17817d76fe557385428cf35d",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.export.J7ValidatedExportArtifactTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "e89088dd81a044034a3347f23bcec770d7c786e4e5258ccf4ba62e2eada94645",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.fixture.OfflineFixtureCorpusServiceTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "6dfa894aa3427bde5238e265d4cc963c01a2960520c146516faa1b7e7b568d94",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.history.J6HistoryClassifierTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "0f42ba589671404ff0a256064fc204d3f026346254ba3cbc443e73d7694cbf96",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.history.J6HistoryQueryServiceTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "fc8bf3ed75d12024936809cceeb1dea76c4f668a550952056ff0b5a1d2d708f9",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.history.J6OfflineHistoryDemoServiceTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "cc97fd681c2f3c7e6134aea055f618bddafea46c19d6ec82d9a39783467b2f0f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.history.J6SemanticDiffServiceTest",
+          "group": "surefire-reports",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "b8393e201dfcd0dadc7b22493a2cccd0b7547dbb07536417729c10bafbcea652",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.live.LiveAdmissionPolicyTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "36f18517fdd94004c1ae15414151e4ca1069a6ce67df315a0e508c489fc30dd2",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.live.LiveCampaignServiceTest",
+          "group": "surefire-reports",
+          "tests": 18,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "9d9e18e11d79ddd0d4060be1f0555e99ebb599d8d5e5f735e1e703c1608edb4b",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.live.LiveReplayRunnerTest",
+          "group": "surefire-reports",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "e15bf684dc2be77e0292edcd59c6b618c075aaa0e705222132d486dd5d64a17e",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.live.LiveResponseProcessorTest",
+          "group": "surefire-reports",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "e4198dbd1759cdf53467e8439b55056f51f44b27833646ce2cde01906ee7550e",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.live.LiveScheduleTest",
+          "group": "surefire-reports",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "8eeaba8f6203590a8bc9bf82b9d980d646806939ebb329cfb59df3574f042e8f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3DynamicManualCallServiceTest",
+          "group": "surefire-reports",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "4bbe8198ca484f8b69b5662585c35092e8c872e40bf470c8170f1e1ecdfdc335",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3GuardedScheduledEventsTransportTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "36f2c34ae23b4cb4044ce65ba698def008adebd0c685eb9dba8a71b116096b12",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3LocalJsonImportServiceTest",
+          "group": "surefire-reports",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "83ab8afbd06fea25b8ba36a45efdc3d803e5d1efd58e554e84e94579ec3da8ac",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3ManualCallControlServiceTest",
+          "group": "surefire-reports",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "67a68e0a5502324b5cb24502f4e50276b765d71f4ea2e73c04263e17eb5645af",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3ManualCallPolicyTest",
+          "group": "surefire-reports",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "379b91a81872fdb0e4d88c321b05c1bfb86e8a1b5b4b3671e9212bf31f6a0585",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3NetworkCircuitTest",
+          "group": "surefire-reports",
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "4297e5e3ed2a6315ecc5eb6ddfc34972a36d6c83bd25d73fb97378ef2b670df6",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3ProviderCampaignStopServiceTest",
+          "group": "surefire-reports",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "74876df15a6b7d0c059966d7093032f88fdd82a9ae89bfa2e306c9cb81bc9ffa",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3ProviderQualificationPolicyTest",
+          "group": "surefire-reports",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "808ef952b57090cfae56b3155159e7178effccd9aedfdcf587b77c4e317b6fec",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3QualificationCheckpointReparserTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "2b34896e62d5379af062624207b6ad5971b6fa8a9312160e573fa20d96fcf7db",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3QualificationResumePolicyTest",
+          "group": "surefire-reports",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "1871b6aef6d81cf2eec565b85543c33a066c3648ff845c02f505a5d968275b31",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3SingleCallGuardTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "86ca70d0696d5240b4fdc339a4a8c25652daab249a24f8bf93f4da98275cb8db",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3TournamentCatalogServiceTest",
+          "group": "surefire-reports",
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "1d15607c93a7bb8fef06fd508e872156c394bf216ea50a263026575a55e9c281",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J3TransportStopAndIncidentPoliciesTest",
+          "group": "surefire-reports",
+          "tests": 19,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "01ada8ba3f022a28fbd61541728c354be1a94d649d7c175573cf76658f8483c9",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J4EventDetailsPhase2QualificationPolicyTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "f6a685ff1ccdc62f6edad609133dbd3e73c0276487db20974e6d7169cd579684",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J4J5CombinedQualificationSessionTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "c158336f9e12801bc04b1794dc3473215a8909c134696f7c655d096ccb2251ec",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J4Phase1SharedLeaseExclusivityTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "93ec58d7cc9523dbb9d21dc0a4f61264b2c114e205da5bfec07d0f01e59b703a",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J4ProviderCampaignStopServiceTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "4ccd2c86365563ccc15a7b336d1618c78ac51754cbb396fe849110a0a0797b1d",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase1ServiceTest",
+          "group": "surefire-reports",
+          "tests": 13,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "cbe4f4832159f654d628453dfb631ed3a2355bb952b3a46e0e159dcdc7e51413",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase2ServiceTest",
+          "group": "surefire-reports",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "00635aa160ff4365e7843894c7d1d6a34bf6c0f8a7851a11b2d61c80e7f3dc52",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsResultTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "0dd98993ad9987b6df554a811d909da89df2a594f0234d75309d8aeb87c4df05",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J4RealPhase1ControlServiceTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "34e29d6e0cc444c15298ca0324b302333aece9cb3102f2438d8d969743bbb697",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J4RealPhase2ControlServiceTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "bad4960716d3b2844d92665bcd2153829b9dea8d02b42de75bee2f395278113b",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J5LocalJsonImportProcessorTest",
+          "group": "surefire-reports",
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "265e5eb8c7ad66fc4866505859a19f24a4e1cc9f50c486b31238aa303fe94926",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J5LocalJsonImportServiceTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "38f4a384746dd6f59d8b7b507e5077c279e744dea19b17e0504aa7cac84da966",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J5ProviderCampaignStopServiceTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "915b4ae241dc5db84119cc4647a7ea69d1f18ff75362bff796a7429b86ed6327",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J5RealControlServiceTest",
+          "group": "surefire-reports",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "7bd8c09d2d54965ba778171a83eb5f3e685ebe36ebe3fc11c2edfe3ada56bf4d",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J5RealEventDataServiceTest",
+          "group": "surefire-reports",
+          "tests": 23,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "219c4369f609b1017287774eeb55336ed21a67605d640855579d75b92e5fceba",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J5RealQualificationPolicyTest",
+          "group": "surefire-reports",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "bfd4597d92ba119abf13f7dfc6c6724eda9e57dd7c38624a0b1ff3758736b996",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J5SharedLeaseExclusivityTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "9798d28e4659a8e26f37b9a8de754ed863018ea515b71c2a2becf8c48be8d4f1",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.J8BenchmarkAuditServiceTest",
+          "group": "surefire-reports",
+          "tests": 35,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "502df0ddb95b5ac00e4174d9d0e54cbe0d3d7bfe5ee466a9f7aa6120c40792e2",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.ManualProviderRequestCoordinatorTest",
+          "group": "surefire-reports",
+          "tests": 8,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "16ae356ba4a4fe887fd77c08c5b9bf2fc59fb92eedb6e401955f9a827ac7a3e4",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.playwright.ChildJvmPlaywrightProviderSupervisorSpringContextTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "c8f7a1e49072d7d012a1158b2fb94c07f0ee5712482df5f320a46937bdfae198",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.playwright.ChildJvmPlaywrightProviderSupervisorTest",
+          "group": "surefire-reports",
+          "tests": 40,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "21b4ca2543bdb5f69ddeb7d9d1807e824e81bced0e4dde3bfcf20eed705f1347",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderRequestTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "3f68fb8154464a68d7d1b820a2bab553c96c54c670a142804d920fbe62bd330a",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryControlServiceTest",
+          "group": "surefire-reports",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "9e59957cd71e73cb57327c52dce30270ff1a57e142beb6e82ae3000f4a148831",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryQualificationPolicyTest",
+          "group": "surefire-reports",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "6f9228df76fa4c59f5d431f388270dc97357e8ceb6d354715e9bce7cfae4c672",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.TournamentEventDiscoveryServiceTest",
+          "group": "surefire-reports",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "11d419ffba2eb06b0ae0c35dea94f6c8a20027cd60d894c022b6c4fd0c19971b",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.TournamentScheduledEventsProjectionServiceTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "63e22b4149d9178c91269672589fa5ba036d3a760bf364147a0e503d49ef0a05",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.retention.J6RawPayloadRetentionServiceTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "2dbe6d35f1328e7cec8c4d85359ae67ed545c8b270e63ff5c39eee9f908d4dcc",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.retention.J6RetentionPlanHasherTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "17f526f0f3749b49aeb94ac63adcada9ba24c7c2c73acdd7864a84085a6192d0",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.snapshot.RawSnapshotJsonInspectionServiceTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "a7aace540abc6cb0cb67e1c5c0d9a75e14eaeb6950d008f4a7f2872a01b5e985",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.build.BuildIdentityTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "17205139c08dc53203b75c0dd9283b1941e70081b11e23e6b1d214300c5bccd4",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.build.J6NativeBinaryPipelineQualificationTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 1,
+          "xmlSha256": "f7dd1204dd19eb6f9fd09e2920b10741497b1f8c670c07950ea0ecf3d0cf1490",
+          "ignoredCases": [
+            "dockerQualificationPassesThreeSequentialRunsAtEffectiveDefaults"
+          ]
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.cli.J8BenchmarkExportCommandTest",
+          "group": "surefire-reports",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 2,
+          "xmlSha256": "33a368b6e77bd9656b9cfde0c644de5c9d678ba4cc4145ea1e85d026e778a4bb",
+          "ignoredCases": [
+            "refusesAnExportsSymbolicLinkOrReparsePointWhenSupported",
+            "refusesAJ8SymbolicLinkOrReparsePointWhenSupported"
+          ]
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.config.J7DeliveryLocalRequestBoundaryInterceptorTest",
+          "group": "surefire-reports",
+          "tests": 12,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "79efb8fa597af33ef8f61fb93b17430ea8ebb6eaf590927803121efa50df3a2f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.config.LocalAddressPolicyTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "3e15b20215f37a53e0bd1893a691b9cc7a3787ba7b521e0b94e2c8c765d31e4c",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.config.LocalOnlyBindingGuardTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "3e02a6c932bb93fde84bc00c17d8604252f55a76a9ffe1ef3677bfa20387b1f2",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.config.OptionalLocalPushPropertiesTest",
+          "group": "surefire-reports",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "7745c4e2a80b0a6cad8e7275921b2efc53a85259465d40bb38f7320eb793d7b2",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.config.ProviderPlaywrightPropertiesTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "9c6f14ce7abe16de8d9c5c9d48f99794de956c0652cb9ebe7291d488ee5c3489",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.config.SecurityHeadersFilterTest",
+          "group": "surefire-reports",
+          "tests": 25,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "f1167fb34667c14a0e7c84c2d39cae119acbbfc4c78789764eeb8db3c7a3760f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.config.SofascorePropertiesTest",
+          "group": "surefire-reports",
+          "tests": 17,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "ab748058e7eae33fdefe3424f60a6e522045ed970329af3427f8bde71a34e292",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.config.Wo049LauncherOfflineQualificationTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "0c81da90bd5afdc97b31c06023aabab62198feb0277ccda1fb16c39f6aa22e51",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.config.Wo050LauncherOwnerGoIsolationTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "9fc7d7c017b5e4281b024fa1dc08f1cc3297ab1ed74dde47847b62fc5b19f8c7",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkEvidenceTest",
+          "group": "surefire-reports",
+          "tests": 7,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "49b6a577c6727f0f8195dd05ea7c0e335e03d4e08f5100100d37fccc5aa0a99a",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryAcknowledgementTest",
+          "group": "surefire-reports",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "99c243b7951477cfc35f08072f7c6bed3f01a5e767fdeb7f4c66f568cc02dc55",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryIdentityTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "cb6dbbf84e0ccc1f83705d9b53fc2961c982d688458c9e74dc6ddf10748384e0",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.delivery.J7DeliveryStateMachineTest",
+          "group": "surefire-reports",
+          "tests": 5,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d9e034f037b13162026c98605ae1a5209a19ad2effa0665374eb2de20133b2d8",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.delivery.J7ProviderDerivedOwnerGoTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "81b92605ad63a439773beedef0c5621f9eccbd4827c3d9cfa166d539a9d26f3f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentityTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "4991e835b7bf0fedb502bc9b8e46d611acf158428b86d44b1c4c8dec6306bf52",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "322ca7591b391963183c47c59080c6b257a4ee2f78bdd8293e4cb9dd7f840035",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessReportTest",
+          "group": "surefire-reports",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "8e4d85cc1e45d40ec8b12aa1d9510d234e042cf937b1b8f9284dabcf2e4036d8",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.provider.EventDetailsProviderRequestTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "9351a0335c0b0c9b3f7b4b7a07ed70860a83ab4b3253729a6ab86ace42aface2",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.provider.J3ManualCallExecutionResultTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "354cd4115d03d360b44ee2963b140c99304999ff5401a77d2c1d2900a8e8586f",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.provider.J5EventDataProviderRequestTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "012a455b59a2f2c39cd5bcb6facebb60a14755281f4931bcad5f8a7071605cab",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.provider.RawManualCallSnapshotTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "f46032e4fb3059c0053b6a788912ddacc441d2798f1f69d041816a0805cfa444",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidenceTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "22cc94440f36a8d5f087dcb9177660df7a6314ee709460d26aebc71c68c5bd73",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceResultTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "ffefcd1f88ab7cfb6cd71d477e4d24575dd09e0bf2a915178e06ec0496cccc0e",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsProviderPageRequestTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "721b0aa5f40b864e802cab20463126c2d6bd3ba11b6c8f8fa8820af2a7ee6d9e",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.provider.ScheduledEventsTransportRequestTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "7720cb830e1fc909a6846f524d9d7ea7414262903048b128f51b3eeb3866cf63",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.provider.TournamentScheduledEventsProviderRequestTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "9826dea27c144695fd836daa8207b9d0b0cdd325a0f9df4a7c96308d683cab94",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.domain.scheduledevents.TournamentScheduledEventCandidateTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "82594736278b84130055bc234ffd9f21ca3c30407362b4f07b973d9aee32ba73",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.fixture.ClasspathFixtureLoaderTest",
+          "group": "surefire-reports",
+          "tests": 9,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "5e444e3021617aa69e99903d67e79e4ae0541405f310f1181210a241bf75ffa9",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.fixture.EventDetailsFixtureCorpusTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "2be8a3b51ffd05903344efdd49ed56e36ef461adaefd00ff12be0a17fa6b2eba",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.fixture.FixtureManifestTest",
+          "group": "surefire-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "e3c2c87ad8d1de4fc95bd60833db6cbc796de43ea832a2128582a0caa3c315f0",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.fixture.FixturePayloadHasherTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "9f7784f44bc53bbaf0828413edcf0cf11b39e3da865716833dc4194f9e059883",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.fixture.J5EventDataFixtureCorpusTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "8a23eff02395ef3bc12ab05f5335e27df335e7ff20479d06da53275b6af8e01b",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.fixture.SyntheticScheduledEventsFixtureCorpusTest",
+          "group": "surefire-reports",
+          "tests": 3,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "dcf8c90b4a60c004f8c828cab959964f221ea3fbfd7868e1e70040a3cec89a90",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.port.J7DeliveryLedgerStoreTest",
+          "group": "surefire-reports",
+          "tests": 6,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "5843130afaea3eb47cf4a6b81c7a7dc6126fd187b075f603e17ec49eb79db6b3",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.port.J7DeliveryTransportRequestTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d38188b8406df1bff15d90193a4e02ec0a624235689fa2365c9e2bf79696ef28",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.security.J7DeliveryConfirmationServiceTest",
+          "group": "surefire-reports",
+          "tests": 15,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "21ff17759fe8029f605d45a00d92b96c894b8191f5dcc9a4c00eb5db517b3ff6",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.security.LocalFormTokenServiceTest",
+          "group": "surefire-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "6c064a08e9a505f99c4520c24face2b736f0cd950e01f2e81ebfcf4869b849ba",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.integration.FlywayMigrationIT",
+          "group": "failsafe-reports",
+          "tests": 69,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "67ff7198603e4a830f0f0fb4346fafa4e1b890f205ff2bb0bca7d90f4db27a7e",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.integration.J7DeliveryLedgerMigrationIT",
+          "group": "failsafe-reports",
+          "tests": 29,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "b2b9e2fe0322964731eeb315070e13a5107c99ee260815e2c7f62e76fa53c185",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.integration.J7DeliveryMutualTlsLoopbackIT",
+          "group": "failsafe-reports",
+          "tests": 4,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d0b77d7b4eee2af7581f61742a5e5cc36995cfaeaf1d5a29b111ec0d537c7c06",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.integration.J7OptionalDeliveryEndToEndIT",
+          "group": "failsafe-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "873cc928963ce2f1edbf907f34ff573bcbb1acf76c09f834c9e84609df1ca421",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.integration.J7ProviderOwnerGoV32MigrationIT",
+          "group": "failsafe-reports",
+          "tests": 2,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "e57aec582da991c3c050ecc17eaa6b90da4cb9b999632f8db13b0c203fc533c5",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.integration.LiveCampaignPersistenceIT",
+          "group": "failsafe-reports",
+          "tests": 16,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "bd97783919f551948e9728f01599b61bc14309209162a625340266110062ea0b",
+          "ignoredCases": []
+        }
+      ]
+    },
+    {
+      "command": "scripts/Invoke-J5PlaywrightLoopbackQualification.ps1",
+      "finishedAt": "2026-09-07T11:01:56Z",
+      "exitCode": 0,
+      "suites": [
+        {
+          "suite": "com.bettingproject.sofascorelocal.provider.playwright.worker.ProviderPlaywrightWorkerNetworkObservationTest",
+          "group": "surefire-reports",
+          "tests": 10,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "d87842675fb6b5830bfbed6c497317b70248110d4792ecf2c5b5b540849b34cf",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.provider.playwright.worker.ProviderPlaywrightWorkerProtocolTest",
+          "group": "surefire-reports",
+          "tests": 11,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "e2119611af47b29a7217e27c7e2079dca98aea470d403933bc80f9b9b114624e",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.provider.playwright.worker.ProviderPlaywrightWorkerSecurityContractTest",
+          "group": "surefire-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "b9d6ea6d419e0835aaa9f17e3a469097550a5d83a8f3a6c2d02817cc7462e4e8",
+          "ignoredCases": []
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.application.network.playwright.ProviderPlaywrightLocalQualificationIT",
+          "group": "failsafe-reports",
+          "tests": 14,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "0c9067ddf471b578c6419658ed098f6c405899854ba450cca43dcb7c48c20b13",
+          "ignoredCases": []
+        }
+      ]
+    },
+    {
+      "command": "mvnw.cmd -Pprovider-playwright-runtime,provider-playwright-local-qualification -DskipTests=false -DskipITs=false -Dit.test=LiveCampaignBrowserQualificationIT -Dprovider.playwright.browser-cache=C:\\Dev\\BettingProject\\codex\\betting-sofascore-local-lab\\.tmp\\wo058-live-j4-j5\\.tmp\\provider-playwright-browsers failsafe:integration-test@provider-playwright-loopback-qualification failsafe:verify@provider-playwright-loopback-qualification",
+      "finishedAt": "2026-09-07T11:02:59Z",
+      "exitCode": 0,
+      "suites": [
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.web.LiveCampaignBrowserQualificationIT",
+          "group": "failsafe-reports",
+          "tests": 1,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0,
+          "xmlSha256": "5cb019d52d4781bd4f577d8abf5bfea72f797699c5a3d0a6dd00efe6ab537438",
+          "ignoredCases": []
+        }
+      ]
+    }
+  ]
+}

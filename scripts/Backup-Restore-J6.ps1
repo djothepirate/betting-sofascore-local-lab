@@ -807,6 +807,19 @@ from (
     from j7_provider_delivery_owner_go_consumption consumption
 ) j7_delivery_ledger
 '@
+$liveLedgerFingerprintSql = @'
+select coalesce(string_agg(value, E'\n' order by value), '')
+from (
+    select 'LIVE_CAMPAIGN|' || to_jsonb(t)::text as value from live_campaign t
+    union all select 'LIVE_EVENT|' || to_jsonb(t)::text from live_event t
+    union all select 'LIVE_CALL|' || to_jsonb(t)::text from live_call t
+    union all select 'LIVE_DISPATCH|' || to_jsonb(t)::text from live_call_dispatch t
+    union all select 'LIVE_RECEIPT|' || to_jsonb(t)::text from live_call_receipt t
+    union all select 'LIVE_RESULT|' || to_jsonb(t)::text from live_call_result t
+    union all select 'LIVE_TRANSITION|' || to_jsonb(t)::text from live_transition t
+    union all select 'PROVIDER_GUARD|' || to_jsonb(t)::text from provider_campaign_guard t
+) live_evidence
+'@
 
 Push-Location $repositoryRoot
 $operatorCancellation = New-J6ConsoleCancellationRegistration
@@ -844,8 +857,13 @@ try {
     }
 
     $sourceFlywayVersion = Invoke-PrimaryScalar -Sql $flywaySql
-    if ($sourceFlywayVersion -cne '32') {
-        throw 'Flyway V32 must be applied before the J6 backup/restore qualification.'
+    if ($sourceFlywayVersion -cne '33') {
+        throw 'Flyway V33 must be applied before the J6 backup/restore qualification.'
+    }
+    $providerGuardState = Invoke-PrimaryScalar -Sql 'select state from provider_campaign_guard where singleton_id=1'
+    $activeLiveCount = [long](Invoke-PrimaryScalar -Sql "select count(*) from live_campaign where state in ('RUNNING','CLEANUP_REQUIRED')")
+    if ($providerGuardState -cne 'FREE' -or $activeLiveCount -ne 0) {
+        throw 'Stop provider campaigns and verify cleanup before J6 backup; the durable provider guard must be FREE.'
     }
     $coverageReceivedSql = @'
 select coalesce(
@@ -872,6 +890,15 @@ from provider_snapshot
         j7ProviderOwnerGoGrantCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j7_provider_delivery_owner_go_grant')
         j7ProviderOwnerGoRevocationCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j7_provider_delivery_owner_go_revocation')
         j7ProviderOwnerGoConsumptionCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from j7_provider_delivery_owner_go_consumption')
+        liveCampaignCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from live_campaign')
+        liveEventCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from live_event')
+        liveCallCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from live_call')
+        liveDispatchCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from live_call_dispatch')
+        liveReceiptCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from live_call_receipt')
+        liveResultCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from live_call_result')
+        liveTransitionCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from live_transition')
+        providerGuardState = $providerGuardState
+        activeLiveCount = $activeLiveCount
         coverageMaxSnapshotId = [long](Invoke-PrimaryScalar -Sql 'select coalesce(max(id), 0) from provider_snapshot')
         coverageReceivedAt = Invoke-PrimaryScalar -Sql $coverageReceivedSql
         rawPayloadIntegrityFailures = [long](Invoke-PrimaryScalar -Sql "select count(*) from provider_snapshot where payload_raw is not null and encode(sha256(payload_raw), 'hex') <> payload_sha256")
@@ -880,6 +907,7 @@ from provider_snapshot
         normalizedProvenanceSha256 = Get-TextSha256 (Invoke-PrimaryScalar -Sql $normalizedFingerprintSql)
         j8BenchmarkSha256 = Get-TextSha256 (Invoke-PrimaryScalar -Sql $j8BenchmarkFingerprintSql)
         j7DeliveryLedgerSha256 = Get-TextSha256 (Invoke-PrimaryScalar -Sql $j7DeliveryLedgerFingerprintSql)
+        liveLedgerSha256 = Get-TextSha256 (Invoke-PrimaryScalar -Sql $liveLedgerFingerprintSql)
     }
     if ($source.rawPayloadIntegrityFailures -ne 0) {
         throw 'At least one retained payload does not match its persisted SHA-256.'
@@ -1003,6 +1031,15 @@ from provider_snapshot
         j7ProviderOwnerGoGrantCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j7_provider_delivery_owner_go_grant')
         j7ProviderOwnerGoRevocationCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j7_provider_delivery_owner_go_revocation')
         j7ProviderOwnerGoConsumptionCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from j7_provider_delivery_owner_go_consumption')
+        liveCampaignCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from live_campaign')
+        liveEventCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from live_event')
+        liveCallCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from live_call')
+        liveDispatchCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from live_call_dispatch')
+        liveReceiptCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from live_call_receipt')
+        liveResultCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from live_call_result')
+        liveTransitionCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from live_transition')
+        providerGuardState = Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select state from provider_campaign_guard where singleton_id=1'
+        activeLiveCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql "select count(*) from live_campaign where state in ('RUNNING','CLEANUP_REQUIRED')")
         coverageMaxSnapshotId = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select coalesce(max(id), 0) from provider_snapshot')
         coverageReceivedAt = Invoke-RestoreScalar -Database $restoreDatabase -Sql $coverageReceivedSql
         rawPayloadIntegrityFailures = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql "select count(*) from provider_snapshot where payload_raw is not null and encode(sha256(payload_raw), 'hex') <> payload_sha256")
@@ -1011,6 +1048,7 @@ from provider_snapshot
         normalizedProvenanceSha256 = Get-TextSha256 (Invoke-RestoreScalar -Database $restoreDatabase -Sql $normalizedFingerprintSql)
         j8BenchmarkSha256 = Get-TextSha256 (Invoke-RestoreScalar -Database $restoreDatabase -Sql $j8BenchmarkFingerprintSql)
         j7DeliveryLedgerSha256 = Get-TextSha256 (Invoke-RestoreScalar -Database $restoreDatabase -Sql $j7DeliveryLedgerFingerprintSql)
+        liveLedgerSha256 = Get-TextSha256 (Invoke-RestoreScalar -Database $restoreDatabase -Sql $liveLedgerFingerprintSql)
     }
     foreach ($key in $source.Keys) {
         if ($source[$key].ToString() -cne $restored[$key].ToString()) {

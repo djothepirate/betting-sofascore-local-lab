@@ -32,6 +32,8 @@ $environmentNames = @(
     'SOFASCORE_J6_BACKUP_COVERAGE_RECEIVED_AT',
     'SOFASCORE_J6_BACKUP_RESTORED_AND_QUALIFIED',
     'SOFASCORE_ENABLED',
+    'SOFASCORE_LIVE_ENABLED',
+    'SOFASCORE_PLAYWRIGHT_ENABLED',
     'SOFASCORE_J3_QUALIFICATION_ENABLED',
     'SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED',
     'SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED',
@@ -74,6 +76,8 @@ try {
     Set-ProcessEnvironment -Name 'OPTIONAL_INTEGRATION_PROVIDER_OWNER_GO_OWNER_GO_DOCUMENT_SHA256' -Value ''
     foreach ($name in @(
             'SOFASCORE_ENABLED',
+            'SOFASCORE_LIVE_ENABLED',
+            'SOFASCORE_PLAYWRIGHT_ENABLED',
             'SOFASCORE_J3_QUALIFICATION_ENABLED',
             'SOFASCORE_J4_EVENT_DETAILS_QUALIFICATION_ENABLED',
             'SOFASCORE_J4_EVENT_DETAILS_PHASE2_ENABLED',
@@ -136,6 +140,15 @@ try {
             'j7ProviderOwnerGoGrantCount',
             'j7ProviderOwnerGoRevocationCount',
             'j7ProviderOwnerGoConsumptionCount',
+            'liveCampaignCount',
+            'liveEventCount',
+            'liveCallCount',
+            'liveDispatchCount',
+            'liveReceiptCount',
+            'liveResultCount',
+            'liveTransitionCount',
+            'providerGuardState',
+            'activeLiveCount',
             'coverageMaxSnapshotId',
             'coverageReceivedAt',
             'rawPayloadIntegrityFailures',
@@ -143,7 +156,8 @@ try {
             'occurrenceSha256',
             'normalizedProvenanceSha256',
             'j8BenchmarkSha256',
-            'j7DeliveryLedgerSha256'
+            'j7DeliveryLedgerSha256',
+            'liveLedgerSha256'
         )
         if ($null -eq $manifest.source -or $null -eq $manifest.restored) {
             throw 'The qualified manifest must contain source and restored evidence.'
@@ -156,7 +170,7 @@ try {
                 throw "The qualified manifest source/restore evidence differs: $field"
             }
         }
-        if ($manifest.source.flywayVersion.ToString() -cne '32' -or
+        if ($manifest.source.flywayVersion.ToString() -cne '33' -or
                 [long]$manifest.source.rawPayloadIntegrityFailures -ne 0 -or
                 [long]$manifest.source.j7DeliveryCount -lt 0 -or
                 [long]$manifest.source.j7DeliveryAttemptCount -lt 0 -or
@@ -164,8 +178,11 @@ try {
                 [long]$manifest.source.j7ProviderOwnerGoGrantCount -lt 0 -or
                 [long]$manifest.source.j7ProviderOwnerGoRevocationCount -lt 0 -or
                 [long]$manifest.source.j7ProviderOwnerGoConsumptionCount -lt 0 -or
-                $manifest.source.j7DeliveryLedgerSha256.ToString() -cnotmatch '^[0-9a-f]{64}$') {
-            throw 'The qualified manifest does not prove a valid Flyway V32 raw-payload, J8 evidence and metadata-only J7 delivery and owner-go restore.'
+                $manifest.source.j7DeliveryLedgerSha256.ToString() -cnotmatch '^[0-9a-f]{64}$' -or
+                $manifest.source.liveLedgerSha256.ToString() -cnotmatch '^[0-9a-f]{64}$' -or
+                $manifest.source.providerGuardState.ToString() -cne 'FREE' -or
+                [long]$manifest.source.activeLiveCount -ne 0) {
+            throw 'The qualified manifest does not prove a valid Flyway V33 raw-payload, J8, J7 and quiescent live ledger restore.'
         }
         $cipherPath = [IO.Path]::GetFullPath((Join-Path `
             (Split-Path -Parent $manifestPath) $cipherFileName))

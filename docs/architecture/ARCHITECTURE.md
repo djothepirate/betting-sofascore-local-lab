@@ -74,10 +74,10 @@ VPS       : aucune connexion
 | `domain.benchmark` | campagnes, unités, tentatives et résultats J8 à vocabulaire fermé |
 | `application` | politiques réseau, orchestration manuelle et lot J5 hors ligne, normalisation, historique, diff, rétention, export J7 et agrégation J8 |
 | `adapter.sofascore` | catalogue fermé, adaptateurs Playwright bornés J3/J4/J5 et parseurs hors ligne J2/J4/J5/découverte tournoi |
-| `adapter.persistence` | preuves brutes, occurrences, observations normalisées, historique, rétention, manifestes J7 et preuves J8 |
+| `adapter.persistence` | preuves brutes, occurrences, observations normalisées, historique, rétention, manifestes J7, preuves J8 et ledger live V33 |
 | `adapter.file` | publication J7 create-new par lien physique atomique, bornée à la racine locale |
 | `adapter.web` | tableau de bord, recherche, contrôle de lot et vues J4/J5/J6/J7/J8 locales |
-| `resources/db/migration` | schémas V1 à V30, migrations append-only et triggers d’immuabilité |
+| `resources/db/migration` | schémas V1 à V33, migrations append-only et triggers d’immuabilité |
 | `fixtures` | corpus synthétiques hors ligne J2, J4, J5 et J6 |
 
 Le connecteur général demeure bloqué. Le chemin manuel J3 borné délègue ses deux familles
@@ -340,6 +340,55 @@ le contrôle et le résultat du lot restent uniquement en mémoire, tandis que s
 observations conservent leur modèle append-only existant. La migration transverse V26 étend
 ultérieurement la version du parseur d'incidents J5 sans créer de stockage propre au lot.
 
+### 5.11 Campagnes live bornées WO-058 — V33
+
+V33 ajoute huit tables sans modifier V1 à V32 ni reconstituer de campagnes à partir des anciennes
+collectes. Le périmètre fonctionnel est défini par l'ADR-SS-005 ; le garde est partagé par les
+campagnes manuelles et live.
+
+| Table | Preuve ou état conservé |
+|---|---|
+| `provider_campaign_guard` | propriétaire unique, instance, PID et début du processus, génération, `FREE`/`OWNED`/`CLEANUP_REQUIRED` |
+| `live_campaign` | manifeste immuable, bornes, profil qualifié, état d'exécution, compteurs et révision |
+| `live_event` | sélection immuable et provenance exacte, état individuel, échéance, cycles manqués et complétude finale |
+| `live_call` | tentative réservée, événement, cycle, famille, échéance, finalité et génération propriétaire |
+| `live_call_dispatch` | autorisation de départ unique, sans prétendre mesurer le passage sur le réseau |
+| `live_call_receipt` | snapshot brut et occurrence exacte de la réponse, dates, taille et hash |
+| `live_call_result` | résultat de traitement, parseur, projection métier versionnée et références normalisées |
+| `live_transition` | transitions append-only dans l'ordre de révision de la campagne |
+
+`LiveCampaignStore` expose la préparation, le lancement idempotent, la réservation, la réception,
+la publication et la lecture cohérente. `ProviderCampaignGuardStore` porte l'exclusion durable.
+Le profil d'admission du manifeste conserve les enveloppes de requête et de traitement à la
+nanoseconde, le SHA-256 de qualification et la capacité admise. Il ne peut être modifié après
+préparation. Les instants du manifeste sont normalisés à la microseconde avant leur hash et leur
+stockage PostgreSQL.
+
+Les transactions restent courtes : garde, campagne et événement sont verrouillés pour réserver
+une tentative et débiter ses budgets ; le réseau se déroule ensuite sans transaction SQL. La
+réception committe brut, occurrence et lien live avant parsing. Le parseur travaille hors
+transaction, puis une publication atomique conserve les observations normalisées, leurs
+références, le résultat et la transition. L'échec de publication laisse la réception brute
+committée, sans enfant normalisé partiel. Un arrêt interdit de nouveaux départs sans empêcher la
+conservation d'une réponse déjà engagée.
+
+Les lectures `REPEATABLE_READ` reconstruisent la dernière réception, le dernier succès et le
+dernier changement de chaque famille depuis les tentatives, avec les références du dernier
+succès lisible. La déduplication A→A conserve deux occurrences ; A→B→A peut réutiliser l'ancienne
+observation A sans perdre la nouvelle fraîcheur. Un échec ou un 404 ne remplace pas les dernières
+données lisibles par une fausse absence. Le résultat live conserve la projection score/phase
+versionnée séparément des observations historiques.
+
+Le redémarrage n'autorise aucune reprise automatique et aucun transfert de garde après délai.
+Une disparition du propriétaire prouvée peut produire `UNKNOWN`, `INTERRUPTED` et
+`CLEANUP_REQUIRED` ; la libération attend une preuve de nettoyage exacte. J6 refuse la sauvegarde
+et la rétention lorsque le garde n'est pas libre ou qu'une campagne reste active. La preuve J6
+inclut les sept compteurs live et l'empreinte complète des huit tables. Une purge qualifiée ne
+supprime aucune de leurs lignes. Si une nouvelle réception déduplique vers un brut déjà purgé,
+`LIVE_RAW_PREVIOUSLY_PURGED` annule cette réception et impose l'arrêt ; aucune réhydratation n'est
+introduite. Le détail figure dans
+[`J6-HISTORY-AND-GUARDED-RETENTION.md`](J6-HISTORY-AND-GUARDED-RETENTION.md).
+
 ## 6. Catalogue logique
 
 | Type | Cache initial | Déclenchement prévu | Appelable actuellement |
@@ -410,7 +459,7 @@ canoniques sont écrites dans une transaction unique ; un conflit d'identité ou
 ### Intégration
 
 `mvnw -Pintegration-tests verify` démarre PostgreSQL avec Testcontainers et vérifie les migrations
-V1 à V30, les upgrades historiques, la fidélité binaire, les contraintes, la déduplication et
+V1 à V33, les upgrades historiques, la fidélité binaire, les contraintes, la déduplication et
 l'immuabilité. J6 ajoute les occurrences prospectives, les exclusions de rétention, la purge des
 seuls octets dans une base éphémère, l'audit et la conservation de la provenance. Aucun appel
 SofaScore n'est exécuté. J7 ajoute l'upgrade V22→V23 prérempli, ses contraintes de cycle et la
@@ -431,6 +480,11 @@ Elle ne crée aucune table et ne réécrit ni observation, ni snapshot, ni occur
 V30 remplace uniquement le trigger de résultat J7 : l’ordre local entre début et fin de tentative
 reste gardé, tandis que l’instant canonique déclaré par l’horloge indépendante du receiver est
 persisté exactement sans le comparer aux horodatages du Local Lab. Elle ne réécrit aucune donnée.
+V33 ajoute l'installation neuve et l'upgrade V32 prérempli avec égalité des preuves historiques,
+l'immuabilité du manifeste et de son profil, les transactions réception/publication et leurs
+rollbacks, A→A→B→A, les références conservées après 404, les réservations concurrentes et les
+générations du garde. La qualification PostgreSQL synthétique vérifie aussi la rétention gardée,
+le refus d'un brut précédemment purgé et la restauration exacte des huit tables sans réarmement.
 V15 assimile propriété d'actions absente et tableau exactement vide uniquement dans une séance
 terminale non minutée déjà cohérente ; les types erronés, listes non vides incohérentes et séances
 temporellement mixtes restent incompatibles.
@@ -459,8 +513,8 @@ nouvelle recette réelle.
 - ajout d’autres endpoints, sports ou origines au-delà du chemin J3 qualifié ;
 - export de l'historique complet, lots par date ou multi-événements ;
 - push HTTPS vers le Betting Project ;
-- tout polling ou rafraîchissement automatique ; les rappels `EVENT_DETAILS` autorisés restent
-  manuels, unitaires et nouvellement confirmés.
+- les collectes automatiques au-delà des campagnes locales explicitement lancées et bornées de
+  l'ADR-SS-005/WO-058 ; les voies manuelles historiques conservent leurs confirmations unitaires.
 
 Chaque décision doit être introduite par un Work Order, avec critères d’acceptation et tests de non-régression des garde-fous.
 

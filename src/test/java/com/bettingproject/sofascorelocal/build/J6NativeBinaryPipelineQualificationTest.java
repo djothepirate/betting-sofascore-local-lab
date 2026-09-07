@@ -24,7 +24,7 @@ class J6NativeBinaryPipelineQualificationTest {
     }
 
     @Test
-    void retentionAcceptsOnlyAV32QualifiedManifestWithoutRunningNativeTools()
+    void retentionAcceptsOnlyAV33QualifiedManifestWithoutRunningNativeTools()
             throws IOException {
         String retention = Files.readString(
                 Path.of("").toAbsolutePath().normalize()
@@ -33,8 +33,9 @@ class J6NativeBinaryPipelineQualificationTest {
 
         assertThat(retention)
                 .contains(
-                        "$manifest.source.flywayVersion.ToString() -cne '32'",
-                        "valid Flyway V32 raw-payload, J8 evidence and metadata-only J7 delivery and owner-go restore")
+                        "$manifest.source.flywayVersion.ToString() -cne '33'",
+                        "valid Flyway V33 raw-payload, J8, J7 and quiescent live ledger restore",
+                        "'SOFASCORE_LIVE_ENABLED'", "'providerGuardState'", "'liveLedgerSha256'")
                 .doesNotContain(
                         "$manifest.source.flywayVersion.ToString() -cne '31'",
                         "valid Flyway V31 raw-payload, J8 evidence and metadata-only J7 delivery and owner-go restore");
@@ -93,8 +94,9 @@ class J6NativeBinaryPipelineQualificationTest {
                         "J6_DOCKER_EXECUTABLE_IDENTITY=AUTHENTICODE_DOCKER_INC",
                         "Get-AuthenticodeSignature",
                         "AggregateException",
-                        "if ($sourceFlywayVersion -cne '32')",
-                        "Flyway V32 must be applied before the J6 backup/restore qualification.",
+                        "if ($sourceFlywayVersion -cne '33')",
+                        "Flyway V33 must be applied before the J6 backup/restore qualification.",
+                        "$liveLedgerFingerprintSql", "provider_campaign_guard", "$providerGuardState -cne 'FREE'",
                         "J6_POSTGRES_SESSION_CLEANUP_IDEMPOTENT_REUSE=PASS",
                         "dropdb --username \"$POSTGRES_USER\" --force --if-exists",
                         "$manifestStagingPath",

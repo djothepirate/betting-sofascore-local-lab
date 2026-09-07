@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Événements locaux — SofaScore Local Lab</title>
   <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+  <script defer th:src="@{/js/live-campaign.js}" src="/js/live-campaign.js"></script>
 </head>
 <body>
 <header class="topbar compact-topbar">
@@ -498,7 +499,8 @@
     </div>
   </section>
 
-  <section class="panel event-results" th:if="${search != null}" aria-labelledby="results-title">
+  <section class="panel event-results" th:if="${search != null}" aria-labelledby="results-title"
+           data-live-monitor th:attr="data-live-state-url=@{/events/state}">
     <div class="panel-heading">
       <div>
         <p class="label">Résultats normalisés</p>
@@ -515,10 +517,20 @@
       snapshot local compatible.
     </p>
 
+    <form id="live-selection" th:unless="${search.events.isEmpty()}" method="post"
+          th:action="@{/live-campaigns/prepare}" data-live-selection-form>
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <p>Sélectionner les rencontres pour préparer une campagne live locale. La préparation vérifie la capacité disponible et ne fait aucun appel fournisseur.</p>
+      <p class="muted">Les observations de corpus synthétiques restent consultables ; seules les rencontres issues d’un snapshot fournisseur sont éligibles.</p>
+      <div class="actions"><button type="submit" class="button" data-live-prepare>Préparer la campagne live</button>
+        <span data-live-selection-count role="status">0 rencontre sélectionnée</span></div>
+    </form>
+    <p class="muted" data-live-refresh-status role="status" aria-live="polite">Suivi local toutes les cinq secondes ; la sélection reste conservée.</p>
     <div class="table-scroll" th:unless="${search.events.isEmpty()}">
       <table>
         <thead>
         <tr>
+          <th>Campagne live</th>
           <th>Heure locale</th>
           <th>Rencontre</th>
           <th>Compétition</th>
@@ -529,7 +541,14 @@
         </tr>
         </thead>
         <tbody>
-        <tr th:each="item : ${search.events}">
+        <tr th:each="item : ${search.events}" data-live-mirror-canonical
+            th:attr="data-live-event-id=${item.event.identity.value},data-live-canonical-received-at=${item.event.source.receivedAt}">
+          <td><label><input type="checkbox" name="eventId" form="live-selection"
+                           th:value="${item.event.identity.value}"
+                           th:disabled="${item.event.source.kind.name() != 'PROVIDER_SNAPSHOT'}"
+                           th:attr="aria-label=${'Sélectionner ' + item.event.homeTeam.name + ' — ' + item.event.awayTeam.name}"> Sélectionner</label>
+            <br><a data-live-link hidden>Suivre la campagne</a><br>
+            <span class="muted" data-live-event-state></span></td>
           <td class="mono" th:text="${item.startsAtInZone}">2026-08-12T16:00+02:00</td>
           <td>
             <strong th:text="${item.event.homeTeam.name}">Home</strong>
@@ -537,14 +556,15 @@
             <strong th:text="${item.event.awayTeam.name}">Away</strong>
           </td>
           <td th:text="${item.event.tournament.isPresent() ? item.event.tournament.get().name : '—'}">—</td>
-          <td><span class="chip chip-warning" th:text="${item.event.status.type}">notstarted</span></td>
+          <td><span class="chip chip-warning" data-live-sport-status th:text="${item.event.status.type}">notstarted</span><br><span data-live-score></span></td>
           <td>
             <span class="mono" th:text="${item.event.identity.value}">UUID</span><br>
             <span class="muted" th:text="${'providerEventId=' + item.event.identity.providerEventId}">providerEventId</span>
           </td>
           <td>
             <span th:text="${item.event.source.kind}">SYNTHETIC_FIXTURE</span><br>
-            <span class="mono" th:text="${item.event.source.sourceReference()}">source</span><br>
+            <span class="mono" data-live-source-ref th:text="${item.event.source.sourceReference()}">source</span><br>
+            <span class="muted" data-live-source-received th:text="${item.event.source.receivedAt}">réception</span><br>
             <span class="muted" th:text="${item.event.observationCount} + ' version(s)'">1 version</span>
           </td>
           <td>
@@ -565,7 +585,8 @@
     <ul>
       <li>la sous-étape 1 reste limitée aux IDs `16386245` et `16421052` ;</li>
       <li>la sous-étape 2 accepte un seul identifiant numérique lié à chaque confirmation ;</li>
-      <li>chaque rappel est manuel, unitaire et sans cache, polling, retry ni planification ;</li>
+      <li>les rappels des sous-étapes de qualification J4 restent manuels et unitaires ;</li>
+      <li>la campagne live WO-058 exige son propre lancement manuel et respecte sa durée et ses plafonds ;</li>
       <li>aucune réécriture ou suppression d’une observation historique ;</li>
       <li>aucun payload brut rendu, journalisé ou envoyé hors du poste Windows ;</li>
       <li>les définitions du catalogue restent `callable=false`.</li>

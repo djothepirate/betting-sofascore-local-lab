@@ -53,7 +53,9 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
@@ -163,8 +165,29 @@ class EventExplorerControllerTest {
                 .andExpect(content().string(containsString("16386245")))
                 .andExpect(content().string(containsString(
                         "Une identité canonique, un appel confirmé")))
-                .andExpect(content().string(org.hamcrest.Matchers.not(
-                        containsString("name=\"eventId\""))))
+                .andExpect(result -> {
+                    String html = result.getResponse().getContentAsString();
+                    var searchForm = Pattern.compile(
+                            "(?s)<form\\b[^>]*class=\"event-search-form\"[^>]*>.*?</form>").matcher(html);
+                    assertThat(searchForm.find()).as("local date search form").isTrue();
+                    assertThat(searchForm.group()).contains("method=\"get\"", "action=\"/events\"",
+                                    "name=\"date\"", "name=\"zone\"")
+                            .doesNotContain("name=\"eventId\"", "name=\"providerEventId\"",
+                                    "name=\"canonicalEventId\"");
+
+                    var liveForm = Pattern.compile(
+                            "(?s)<form\\b[^>]*id=\"live-selection\"[^>]*>.*?</form>").matcher(html);
+                    assertThat(liveForm.find()).as("dedicated live preparation form").isTrue();
+                    assertThat(liveForm.group()).contains("method=\"post\"",
+                            "action=\"/live-campaigns/prepare\"", "name=\"localFormToken\"");
+                    var liveSelection = Pattern.compile(
+                            "(?s)<input\\b[^>]*name=\"eventId\"[^>]*>").matcher(html);
+                    assertThat(liveSelection.find()).as("canonical UUID selection for live preparation").isTrue();
+                    assertThat(liveSelection.group()).contains("type=\"checkbox\"", "form=\"live-selection\"",
+                                    "value=\"" + event.identity().value() + "\"", "disabled=\"disabled\"")
+                            .doesNotContain("value=\"" + event.identity().providerEventId() + "\"");
+                    assertThat(liveSelection.find()).as("one live control for the one fixture event").isFalse();
+                })
                 .andExpect(content().string(containsString("name=\"canonicalEventId\"")))
                 .andExpect(content().string(containsString(
                         "J4_EVENT_DETAILS_PHASE_2_DISABLED")));

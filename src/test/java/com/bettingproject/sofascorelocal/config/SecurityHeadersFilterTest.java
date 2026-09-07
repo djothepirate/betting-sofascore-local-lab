@@ -36,12 +36,23 @@ class SecurityHeadersFilterTest {
     }
 
     @Test
-    void keepsAllScriptsDisabledOutsideTheOfflineBatchRoute() throws Exception {
-        MockHttpServletResponse response = filter("/events");
+    void keepsAllScriptsDisabledOutsideTheExplicitLocalInteractiveRoutes() throws Exception {
+        MockHttpServletResponse response = filter("/events/event-id/exports");
 
         assertThat(response.getHeader("Content-Security-Policy"))
                 .contains("script-src 'none'")
                 .doesNotContain("script-src 'self'");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/events", "/events/12345678-1234-1234-1234-123456789012",
+            "/live-campaigns/12345678-1234-1234-1234-123456789012"})
+    void permitsOnlyLocalExternalScriptsForLiveObservationPages(String path) throws Exception {
+        MockHttpServletResponse response = filter(path);
+        assertThat(response.getHeader("Content-Security-Policy"))
+                .contains("script-src 'self'", "frame-ancestors 'none'", "form-action 'self'")
+                .doesNotContain("'unsafe-inline'", "'unsafe-eval'");
+        assertThat(response.getHeader("Cache-Control")).contains("no-store", "no-cache");
     }
 
     @Test

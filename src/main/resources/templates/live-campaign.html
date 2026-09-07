@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Campagne live locale — SofaScore Local Lab</title>
+  <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+  <script defer th:src="@{/js/live-campaign.js}" src="/js/live-campaign.js"></script>
+</head>
+<body>
+<header class="topbar compact-topbar"><div class="shell">
+  <p class="eyebrow">EXPERIMENTAL · LOCAL_ONLY · WO-058</p>
+  <h1>Campagne live J4 / J5</h1>
+  <p class="subtitle">Lancement manuel, suivi automatique borné et observations locales.</p>
+</div></header>
+<main class="shell event-page" data-live-monitor
+      th:attr="data-live-state-url=@{/live-campaigns/{id}/state(id=${campaign.campaignId})},data-live-campaign-id=${campaign.campaignId},data-live-revision=${campaign.revision}">
+  <nav class="links page-links" aria-label="Navigation locale"><a th:href="@{/events}">← Rencontres</a></nav>
+  <section class="panel" aria-labelledby="campaign-title">
+    <div class="panel-heading"><div><p class="label">Campagne locale</p>
+      <h2 id="campaign-title" class="mono" th:text="${campaign.campaignId}">UUID</h2></div>
+      <span class="chip chip-safe" data-live-campaign-state th:text="${campaign.state}">PREPARED</span>
+    </div>
+    <p data-live-campaign-reason th:text="${campaign.reason ?: '—'}">—</p>
+    <dl class="detail-grid">
+      <div><dt>Démarrage</dt><dd data-live-started-at th:text="${campaign.startedAt ?: 'En attente de lancement'}">En attente</dd></div>
+      <div><dt>Fin au plus tard (UTC)</dt><dd data-live-ends-at th:text="${campaign.endsAt ?: 'Fixée au lancement'}">—</dd></div>
+      <div><dt>Appels réservés / plafond</dt><dd data-live-calls th:text="${campaign.reservedCalls + ' / ' + campaign.maximumCalls}">0</dd></div>
+      <div><dt>Octets reçus / plafond</dt><dd data-live-bytes th:text="${campaign.receivedBytes + ' / ' + campaign.maximumBytes}">0</dd></div>
+    </dl>
+    <p class="muted" data-live-refresh-status role="status" aria-live="polite">Lecture locale toutes les cinq secondes, suspendue lorsque l’onglet est masqué.</p>
+    <form th:if="${campaign.state == 'RUNNING'}" data-live-stop-form method="post"
+          th:action="@{/live-campaigns/{id}/stop(id=${campaign.campaignId})}">
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <button type="submit" class="button button-danger">Arrêter toute la campagne</button>
+      <p class="muted">L’arrêt global interrompt la collecte. Les observations déjà reçues restent consultables.</p>
+    </form>
+    <p class="notice notice-danger" th:if="${campaign.state == 'CLEANUP_REQUIRED'}">
+      Le nettoyage de la session précédente doit être vérifié avant tout nouveau lancement.
+    </p>
+  </section>
+
+  <section class="panel" th:if="${campaign.state == 'PREPARED'}" data-live-preparation aria-labelledby="manifest-title">
+    <p class="label">Préparation sans réseau</p><h2 id="manifest-title">Vérifier et lancer cette sélection</h2>
+    <p>La sélection ci-dessous est figée. Le lancement manuel autorise ses appels automatiques pendant la fenêtre indiquée.</p>
+    <dl class="detail-grid">
+      <div><dt>Rencontres retenues</dt><dd th:text="${manifest.targets.size()}">1</dd></div>
+      <div><dt>Capacité qualifiée</dt><dd th:text="${manifest.qualifiedMatchCapacity}">1</dd></div>
+      <div><dt>Durée maximale</dt><dd th:text="${manifest.duration.toMinutes() + ' minutes'}">240 minutes</dd></div>
+      <div><dt>Expiration de la préparation (UTC)</dt><dd th:text="${manifest.expiresAt}">—</dd></div>
+      <div><dt>Appels maximum par rencontre</dt><dd th:text="${manifest.maximumCallsPerEvent}">1000</dd></div>
+      <div><dt>Politique</dt><dd th:text="${manifest.policyVersion}">live-v1</dd></div>
+      <div><dt>Empreinte du manifeste</dt><dd class="mono hash-value" th:text="${manifest.manifestSha256}">SHA-256</dd></div>
+    </dl>
+    <details>
+      <summary>Profil de capacité utilisé pour cette préparation</summary>
+      <dl class="detail-grid">
+        <div><dt>Durée retenue par appel fournisseur</dt><dd th:text="${manifest.admissionProfile.requestEnvelope.toMillis() + ' ms'}">10000 ms</dd></div>
+        <div><dt>Traitement local retenu par appel</dt><dd th:text="${manifest.admissionProfile.processingEnvelope.toMillis() + ' ms'}">1000 ms</dd></div>
+        <div><dt>Preuve de qualification</dt><dd class="mono hash-value"
+          th:text="${#strings.isEmpty(manifest.admissionProfile.qualificationSha256) ? 'Profil initial conservateur' : manifest.admissionProfile.qualificationSha256}">Profil initial conservateur</dd></div>
+      </dl>
+    </details>
+    <p>J4 vérifie le statut avant le match chaque minute. En cours de match, J5 collecte statistiques, incidents et compositions chaque minute ; J4 confirme ensuite la fin. Les appels sont sérialisés. Une lecture de cette page ne lance aucune collecte.</p>
+    <form method="post" th:action="@{/live-campaigns/{id}/launch(id=${campaign.campaignId})}">
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <input type="hidden" name="manifestHash" th:value="${manifest.manifestSha256}">
+      <label><input type="checkbox" name="confirmation" value="true" required>
+        Je lance cette campagne locale avec cette sélection, cette durée et ces plafonds.</label>
+      <div class="actions"><button type="submit" class="button">Lancer la campagne live</button>
+        <a class="button button-secondary" th:href="@{/events}">Revenir à la sélection</a></div>
+    </form>
+  </section>
+
+  <section class="panel" th:each="event : ${campaign.events}" th:attr="data-live-event-id=${event.canonicalEventId}">
+    <div class="panel-heading"><div><p class="label" th:text="${event.competition}">Compétition</p>
+      <h2 th:text="${event.title}">Rencontre</h2><p class="mono" th:text="${event.startsAtParis}">Europe/Paris</p></div>
+      <span class="chip chip-safe" data-live-sport-status th:text="${event.sportStatus}">notstarted</span>
+    </div>
+    <dl class="detail-grid">
+      <div><dt>Score courant J4</dt><dd data-live-score th:text="${event.score}">—</dd></div>
+      <div><dt>État de collecte</dt><dd data-live-event-state th:text="${event.state}">WAITING_START</dd></div>
+      <div><dt>Motif</dt><dd data-live-event-reason th:text="${event.reason ?: '—'}">—</dd></div>
+      <div><dt>Prochaine échéance (UTC)</dt><dd data-live-next-due th:text="${event.nextDueAt ?: '—'}">—</dd></div>
+      <div><dt>Appels réservés / plafond</dt><dd data-live-event-calls th:text="${event.reservedCalls + ' / ' + event.maximumCalls}">0</dd></div>
+      <div><dt>Cycles manqués</dt><dd data-live-missed-cycles th:text="${event.missedCycles}">0</dd></div>
+      <div><dt>Dernier cycle J5 complet</dt><dd data-live-final-complete th:text="${event.finalComplete ? 'Oui' : 'Non établi'}">Non établi</dd></div>
+      <div><dt>Source du statut J4</dt><dd data-live-source-ref th:text="${event.sourceSnapshotId != null ? 'snapshot:' + event.sourceSnapshotId : '—'}">—</dd></div>
+      <div><dt>Réception du statut J4 (UTC)</dt><dd data-live-source-received th:text="${event.sourceReceivedAt ?: '—'}">—</dd></div>
+      <div><dt>Identité</dt><dd class="mono" th:text="${event.canonicalEventId}">UUID</dd><dd th:text="${'providerEventId=' + event.providerEventId}">ID</dd></div>
+    </dl>
+    <div class="actions">
+      <a class="button button-secondary" th:href="@{/events/{id}(id=${event.canonicalEventId})}">Détail et historique</a>
+      <form th:if="${campaign.state == 'RUNNING' and !#strings.startsWith(event.state, 'STOPPED') and event.state != 'FINISHED_CONFIRMED'}"
+            data-live-stop-form method="post" th:action="@{/live-campaigns/{id}/events/{eventId}/stop(id=${campaign.campaignId},eventId=${event.canonicalEventId})}">
+        <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+        <button type="submit" class="button button-secondary">Arrêter cette rencontre</button>
+      </form>
+    </div>
+    <div data-live-families>
+      <section th:each="family : ${event.families}" th:attr="data-live-family=${family.endpoint}">
+        <h3 th:text="${family.label}">Famille</h3>
+        <p><strong data-live-family-outcome th:text="${family.outcome}">PENDING</strong>
+          <span data-live-family-code th:text="${family.code ?: ''}"></span>
+          <span data-live-family-scope th:text="${family.scope ?: ''}"></span></p>
+        <p data-live-family-previous th:text="${family.previousData ? 'Dernière donnée lisible conservée : elle ne décrit pas la dernière tentative.' : ''}"></p>
+        <p data-live-freshness th:class="${family.freshness.state == 'STALE' ? 'notice notice-warning' : 'muted'}"
+           th:text="${family.freshness.label}">Fraîcheur</p>
+        <dl class="detail-grid">
+          <div><dt>Dernière tentative réservée</dt><dd data-live-attempted th:text="${family.lastAttemptAt ?: '—'}">—</dd></div>
+          <div><dt>Retard à l’autorisation transport</dt><dd data-live-delay th:text="${family.authorizationDelayMillis != null ? family.authorizationDelayMillis + ' ms' : '—'}">—</dd></div>
+          <div><dt>Dernière réception</dt><dd data-live-received th:text="${family.lastReceivedAt ?: '—'}">—</dd></div>
+          <div><dt>Dernier succès</dt><dd data-live-successful th:text="${family.lastSuccessfulAt ?: '—'}">—</dd></div>
+          <div><dt>Dernier changement</dt><dd data-live-changed th:text="${family.lastChangedAt ?: '—'}">—</dd></div>
+          <div><dt>Âge depuis réception</dt><dd data-live-age
+            th:attr="data-live-received-at=${family.lastReceivedAt},data-live-age-frozen=${family.freshness.frozen},data-live-age-as-of=${family.freshness.ageAsOf}"
+            th:text="${family.freshness.receivedAgeSeconds != null ? family.freshness.receivedAgeSeconds + ' s' : '—'}">—</dd></div>
+          <div><dt>Complétude dernière tentative</dt><dd data-live-completeness th:text="${family.completeness ?: '—'}">—</dd></div>
+          <div><dt>Snapshot reçu / donnée lisible</dt><dd data-live-snapshots th:text="${(family.receivedSnapshotId ?: '—') + ' / ' + (family.dataSnapshotId ?: '—')}">—</dd></div>
+          <div><dt>Occurrence reçue</dt><dd data-live-occurrence th:text="${family.receivedOccurrenceId ?: '—'}">—</dd></div>
+          <div><dt>Parseur de la donnée lisible</dt><dd data-live-parser th:text="${family.parserVersion ?: '—'}">—</dd></div>
+          <div><dt>Hash source de la donnée lisible</dt><dd class="mono hash-value" data-live-payload-hash th:text="${family.payloadSha256 ?: '—'}">—</dd></div>
+          <div><dt>Hash normalisé</dt><dd class="mono hash-value" data-live-hash th:text="${family.normalizedSha256 ?: '—'}">—</dd></div>
+        </dl>
+        <details th:if="${!family.table.columns.isEmpty()}" open>
+          <summary>Données normalisées</summary>
+          <div class="table-scroll"><table><thead><tr><th th:each="column : ${family.table.columns}" th:text="${column}">Colonne</th></tr></thead>
+            <tbody data-live-table-body><tr th:each="row : ${family.table.rows}"><td th:each="cell : ${row}" th:text="${cell}">Valeur</td></tr></tbody>
+          </table></div>
+          <p class="muted" data-live-empty th:text="${family.table.rows.isEmpty() ? 'Collection normalisée vide.' : ''}"></p>
+        </details>
+      </section>
+    </div>
+  </section>
+</main>
+<footer><div class="shell">NOT_PRODUCTION_APPROVED · NO_CRITICAL_DEPENDENCY</div></footer>
+</body></html>

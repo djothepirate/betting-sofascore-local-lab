@@ -2,6 +2,10 @@ package com.bettingproject.sofascorelocal.application.network;
 
 import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.ObjectProvider;
+import com.bettingproject.sofascorelocal.port.ProviderCampaignGuardStore;
+import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData;
+import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderSupervisor;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
@@ -26,14 +30,31 @@ public final class ManualProviderRequestCoordinator {
     private final Pause pause;
     private boolean started;
     private long lastStartedAtNanos;
+    private ProviderCampaignGuardStore durableGuard;
+    private PlaywrightProviderSupervisor supervisor;
+    private final LiveCampaignData.Owner instanceOwner = new LiveCampaignData.Owner(UUID.randomUUID(),
+            ProcessHandle.current().pid(), ProcessHandle.current().info().startInstant().orElseThrow());
+    private volatile boolean liveCampaign;
 
-    @Autowired
     public ManualProviderRequestCoordinator(SofascoreProperties properties) {
         this(
                 System::nanoTime,
                 Objects.requireNonNull(properties, "properties").getMinimumDelay(),
                 ManualProviderRequestCoordinator::sleepSafely);
     }
+
+    @Autowired
+    public ManualProviderRequestCoordinator(SofascoreProperties properties,
+            ObjectProvider<ProviderCampaignGuardStore> guard,
+            ObjectProvider<PlaywrightProviderSupervisor> supervisor) {
+        this(properties);
+        this.durableGuard = guard.getIfAvailable();
+        this.supervisor = supervisor.getIfAvailable();
+    }
+
+    public LiveCampaignData.Owner instanceOwner() { return instanceOwner; }
+
+    public CampaignLease acquireLiveCampaign(UUID campaignId) { return acquireCampaign(campaignId, true); }
 
     ManualProviderRequestCoordinator(Clock clock, Duration minimumDelay, Pause pause) {
         this(() -> epochNanos(Objects.requireNonNull(clock, "clock").instant()),
@@ -63,13 +84,26 @@ public final class ManualProviderRequestCoordinator {
     }
 
     public CampaignLease acquireCampaign(UUID campaignId) {
+        return acquireCampaign(campaignId, false);
+    }
+
+    private CampaignLease acquireCampaign(UUID campaignId, boolean live) {
         Objects.requireNonNull(campaignId, "campaignId");
+        if (liveCampaign) throw new CoordinationException("live provider campaign is active");
         if (requestLock.isHeldByCurrentThread()) {
             throw new CoordinationException("nested provider campaign acquisition is forbidden");
         }
         try {
-            requestLock.lockInterruptibly();
-            return new CampaignLease(this, campaignId, Thread.currentThread());
+            if (live) {
+                if (!requestLock.tryLock()) throw new CoordinationException("provider campaign is active");
+            } else requestLock.lockInterruptibly();
+            try {
+                LiveCampaignData.Ownership ownership = durableGuard == null ? null
+                        : durableGuard.tryAcquire(campaignId, instanceOwner, java.time.Instant.now())
+                            .orElseThrow(() -> new CoordinationException("durable provider guard is occupied")).ownership();
+                liveCampaign = live;
+                return new CampaignLease(this, campaignId, Thread.currentThread(), ownership);
+            } catch (RuntimeException failure) { requestLock.unlock(); throw failure; }
         }
         catch (InterruptedException exception) {
             Thread.currentThread().interrupt();
@@ -98,7 +132,15 @@ public final class ManualProviderRequestCoordinator {
         }
     }
 
-    private void release() {
+    private void release(LiveCampaignData.Ownership ownership) {
+        if (ownership != null) {
+            if (supervisor != null && supervisor.activeCampaignId().filter(ownership.campaignId()::equals).isPresent()) {
+                durableGuard.requireCleanup(ownership, java.time.Instant.now());
+                throw new CoordinationException("provider cleanup is not verified");
+            }
+            durableGuard.releaseAfterVerifiedCleanup(ownership, java.time.Instant.now());
+        }
+        liveCampaign = false;
         requestLock.unlock();
     }
 
@@ -154,14 +196,21 @@ public final class ManualProviderRequestCoordinator {
         private ManualProviderRequestCoordinator owner;
         private final UUID campaignId;
         private final Thread ownerThread;
+        private final LiveCampaignData.Ownership ownership;
 
         private CampaignLease(
                 ManualProviderRequestCoordinator owner,
                 UUID campaignId,
-                Thread ownerThread) {
+                Thread ownerThread, LiveCampaignData.Ownership ownership) {
             this.owner = owner;
             this.campaignId = campaignId;
             this.ownerThread = ownerThread;
+            this.ownership = ownership;
+        }
+
+        public LiveCampaignData.Ownership ownership() {
+            if (ownership == null) throw new IllegalStateException("durable provider guard required for live");
+            return ownership;
         }
 
         public UUID campaignId() {
@@ -180,8 +229,8 @@ public final class ManualProviderRequestCoordinator {
                 return;
             }
             requireOwnerThread();
+            current.release(ownership);
             owner = null;
-            current.release();
         }
 
         private ManualProviderRequestCoordinator requireOpenOnOwnerThread() {
