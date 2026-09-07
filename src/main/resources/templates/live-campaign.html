@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Campagne live locale — SofaScore Local Lab</title>
   <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+  <link rel="stylesheet" th:href="@{/css/statistics.css}" href="/css/statistics.css">
+  <script defer th:src="@{/js/statistics.js}" src="/js/statistics.js"></script>
   <script defer th:src="@{/js/live-campaign.js}" src="/js/live-campaign.js"></script>
 </head>
 <body>
@@ -147,7 +149,10 @@
           <div><dt>Hash source de la donnée lisible</dt><dd class="mono hash-value" data-live-payload-hash th:text="${family.payloadSha256 ?: '—'}">—</dd></div>
           <div><dt>Hash normalisé</dt><dd class="mono hash-value" data-live-hash th:text="${family.normalizedSha256 ?: '—'}">—</dd></div>
         </dl>
-        <details th:if="${!family.table.columns.isEmpty()}" open>
+        <div th:if="${family.statistics != null}">
+          <div th:replace="~{fragments/statistics :: view(${family.statistics})}"></div>
+        </div>
+        <details th:if="${family.statistics == null and !family.table.columns.isEmpty()}" open>
           <summary>Données normalisées</summary>
           <div class="table-scroll"><table><thead><tr><th th:each="column : ${family.table.columns}" th:text="${column}">Colonne</th></tr></thead>
             <tbody data-live-table-body><tr th:each="row : ${family.table.rows}"><td th:each="cell : ${row}" th:text="${cell}">Valeur</td></tr></tbody>

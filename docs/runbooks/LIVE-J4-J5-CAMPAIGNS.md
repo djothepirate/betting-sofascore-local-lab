@@ -32,16 +32,20 @@ un script de réponses épuisé. Aucun replay ne lance Playwright ni ne modifie 
 
 ## Préparer l'application de l'opérateur
 
-L'application de V35/V36 à la base utilisée par l'opérateur est une opération distincte de ces tests.
+Pour une base déjà en V36, la sauvegarde/restauration préalable emploie les scripts V36 du
+commit `b4e85d613004e74d3a071e8af7c56ef86e74359e`, puis les scripts courants V37 après upgrade.
+Ne pas falsifier la version d'un manifeste pour satisfaire les gardes.
+
+L'application de V35/V36/V37 à la base utilisée par l'opérateur est une opération distincte de ces tests.
 Préparer d'abord la sauvegarde, les empreintes et la restauration isolée selon
 [J6](J6-BACKUP-RESTORE-AND-RETENTION.md), avec le conteneur et la base exacts. Ne pas faire pointer
 une simple validation Spring/Flyway vers la base de l'opérateur pour obtenir un test vert.
 
 Pour une base opérateur en V34, utiliser pour la sauvegarde préalable l'outillage J6 et ses
 dépendances du commit `e98f7a74e39a1c57e601efb3d346ae55829fce73`, dans un checkout distinct.
-Valider une restauration isolée V34 avant l'upgrade ; utiliser ensuite les outils courants V36
+Valider une restauration isolée V34 avant l'upgrade ; utiliser ensuite les outils courants V37
 pour la nouvelle preuve. V35 ajoute la contrainte de cadence `live-v3` sans réécrire les anciens
-manifestes ; V36 autorise le parseur incidents V16 (`inGamePenalty/awarded`). Les essais ci-dessous
+manifestes ; V36 autorise le parseur incidents V16 (`inGamePenalty/awarded`), puis V37 ajoute V17 (`Professional handball`). Les essais ci-dessous
 n'ont pas appliqué ces migrations à la base de l'opérateur.
 
 Procédure historique V33 vers V34 : utiliser pour la sauvegarde préalable l'outillage J6 et ses

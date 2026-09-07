@@ -1390,6 +1390,16 @@ Ci-dessous des exemples de blocs définissant un carton distribué au cours d'un
     11. "Other reason" : Autre motif déclaré par le fournisseur.
     12. "Off the ball foul" : Obstruction ou faute commise loin du ballon.
     13. "Leaving field" : Joueur quittant le terrain sans autorisation préalable.
+    14. "Professional handball" : Main volontaire, libellé français confirmé par le propriétaire ; valeur fournisseur conservée exactement (V17).
+
+La campagne opérateur du 07/09 a observé le motif exact `Professional handball` sur un
+`card/red` de l'équipe extérieure à la minute 64, événement 16416319, snapshot 2427.
+V16 rejette `$.incidents[13].reason` ; V17 ajoute uniquement cette valeur au vocabulaire des
+motifs de carton. Cette acceptation ne déduit ni qualification juridique, ni but, ni penalty,
+ni changement de couleur ; les autres attributs sont conservés et validés selon leurs règles.
+Les motifs inconnus restent incompatibles, et l'emploi de ce texte sur un penalty ne devient
+pas valide. V1–V16 conservent leur comportement et les observations historiques restent intactes.
+
 A noter : cet attribut peut ne pas être fourni dans certaines compétitions. Son absence ou sa valeur
 `null` est acceptée, persistée sans motif et affichée par `—`. Lorsqu'il est présent, il doit rester
 dans le vocabulaire ci-dessus ; une valeur inconnue reste `SCHEMA_INCOMPATIBLE`.

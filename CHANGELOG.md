@@ -4,6 +4,19 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — motif de carton Elche et statistiques applicatives
+
+- Ajoute incidents V17 et V37 pour le motif exact `Professional handball`, identifié dans le
+  snapshot 2427 d'Elche–Real Sociedad ; V16 et les anciennes preuves restent inchangés.
+- Affiche ce motif de carton comme « Main volontaire », conformément à la précision propriétaire,
+  tout en conservant la valeur fournisseur dans les données normalisées.
+- Intègre les statistiques par période aux vues live/J5, avec possession et fractions X/Y,
+  en conservant les valeurs source et leur provenance. Le prototype seul ne constituait pas
+  une amélioration des pages de l'application.
+- Conserve les libellés de phase fournisseur, dont `2nd half`, conformément à la précision opérateur.
+- Documente la fin de la campagne du 07/09 : trois collectes terminées et un arrêt de schéma
+  isolé dans une campagne dont l'exécution globale est terminée.
+
 ### WO-058 — compositions prématch, phases et reprise après incident local
 
 - Corrige le rejet du penalty accordé `inGamePenalty/awarded` : parseur incidents V16 et migration
@@ -18,7 +31,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - Fournit une extraction de métadonnées et un analyseur temporel offline, avec âges réels,
   réceptions identiques, dernier changement et dispersion par match/famille, sans seuil métier arbitraire.
 - Propose un aperçu HTML des statistiques par période, avec possession et fractions ; les périodes
-  et fractions illustratives sont identifiées comme synthétiques. Intégration applicative à venir.
+  et fractions illustratives sont identifiées comme synthétiques. Aperçu historique précédant l’intégration applicative décrite ci-dessus.
 - Documente la coupure liée au redémarrage Docker, la correction ponctuelle du verrou orphelin et
   le nouveau lancement opérateur à sept : [preuves et limites](docs/validation/WO058-PREMATCH-TEMPORAL-20260907.md).
 

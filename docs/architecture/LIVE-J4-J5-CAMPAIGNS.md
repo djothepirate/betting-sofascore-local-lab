@@ -163,6 +163,10 @@ V36 ajoute le parseur `event-incidents-v16` à la contrainte J5 : la variante
 `inGamePenalty/awarded` conserve son sens d'attribution et n'invente pas un résultat de tir.
 Les versions et observations antérieures restent intactes ; le snapshot 2340 est seulement
 rejoué hors persistance pour la [preuve de correction](../validation/WO058-INCIDENT-AWARDED-20260907.md).
+V37 ajoute `event-incidents-v17` pour le seul motif de carton `Professional handball`,
+observé dans le snapshot 2427 d'Elche–Real Sociedad. Le corps et le rejet V16 historique sont
+conservés ; le replay correctif demeure local, sans réécriture ni nouvelle collecte.
+
 Le lancement conserve D même si certaines cibles sont devenues `finished` ; l'admission vérifie
 la charge restante sur cet intervalle consenti, sans accélérer la campagne en cours.
 
@@ -215,6 +219,18 @@ La fin du suivi fige leur âge à la transition terminale persistée.
 Le libellé sportif affiche la description J4 pour `inprogress`, avec repli sur le type si elle
 manque. Type, score, description et provenance restent associés à la même observation de campagne.
 Une observation manuelle plus récente ne remplace pas silencieusement cette preuve.
+
+Les statistiques de ce curseur sont présentées par `StatisticsPresentation` et le fragment
+Thymeleaf partagé `fragments/statistics` dans les vues campagne live et statistiques J5.
+Le détail de rencontre reçoit le même composant par son polling JavaScript et conserve son lien J5.
+Les périodes reçues sont sélectionnables (ALL par défaut lorsqu'elle existe) et les groupes
+conservent leurs métriques source. Aucune somme entre périodes n'est calculée. Les valeurs source
+restent visibles ; possession valide et fractions X/Y calculables disposent de jauges HTML
+`meter`, sans styles inline. Une absence, zéro et 0/0 restent distincts. `statistics.js` conserve
+le sélecteur, le focus et la période tant qu'elle reste présente ; sinon le repli est annoncé.
+Sans JavaScript toutes les périodes restent lisibles dans les pages campagne et statistiques J5.
+Cette présentation ne déclenche aucun appel fournisseur et ne modifie ni parseur
+statistique, ni normalisation, ni provenance. Le libellé sportif fournisseur `2nd half` est conservé.
 
 La fraîcheur d'exploitation ci-dessus mesure la santé de collecte. Elle ne qualifie pas la
 fraîcheur métier d'un benchmark. L'outil offline `scripts/Analyze-LiveTemporalEvidence.py`

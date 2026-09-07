@@ -69,6 +69,10 @@ class LiveCampaignPresentationTest {
         assertThat(result.dataSnapshotId()).isEqualTo(3L);
         assertThat(result.completeness()).isEqualTo("UNAVAILABLE");
         assertThat(result.table().rows()).containsExactly(List.of("ALL", "Match", "Tirs", "3", "4"));
+        assertThat(result.statistics().periods()).singleElement().satisfies(period -> {
+            assertThat(period.code()).isEqualTo("ALL");
+            assertThat(period.groups().getFirst().metrics().getFirst().home().text()).isEqualTo("3");
+        });
         assertThat(result.payloadSha256()).isEqualTo("b".repeat(64));
         verify(data).findByObservationId(EVENT, SofascoreEndpointType.EVENT_STATISTICS, 11L);
         verifyNoMoreInteractions(data);

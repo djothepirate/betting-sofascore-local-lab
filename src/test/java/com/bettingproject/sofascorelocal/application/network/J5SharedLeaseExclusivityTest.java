@@ -1,6 +1,6 @@
 package com.bettingproject.sofascorelocal.application.network;
 
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV16Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV17Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderSupervisor;
@@ -188,7 +188,7 @@ class J5SharedLeaseExclusivityTest {
                 canonicalStore,
                 dataStore,
                 new EventStatisticsV2Parser(),
-                new EventIncidentsV16Parser(),
+                new EventIncidentsV17Parser(),
                 new EventLineupsV2Parser(),
                 coordinator,
                 providerSupervisor);

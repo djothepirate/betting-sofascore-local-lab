@@ -401,7 +401,7 @@ public final class LiveCampaignService {
                 }
             });
             String parser = due.endpoint() == SofascoreEndpointType.EVENT_DETAILS ? "event-details-v2"
-                    : due.endpoint() == SofascoreEndpointType.EVENT_INCIDENTS ? "event-incidents-v16"
+                    : due.endpoint() == SofascoreEndpointType.EVENT_INCIDENTS ? "event-incidents-v17"
                     : due.endpoint() == SofascoreEndpointType.EVENT_STATISTICS ? "event-statistics-v2" : "event-lineups-v2";
             RawManualCallSnapshot raw = new RawManualCallSnapshot(due.endpoint(), due.endpoint().name() + "|eventId=" + attempt.providerEventId(),
                     response.requestedAt(), response.receivedAt(), response.httpStatus(), response.contentType(), response.latency(),

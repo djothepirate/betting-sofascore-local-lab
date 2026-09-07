@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Statistiques J5 — SofaScore Local Lab</title>
   <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+  <link rel="stylesheet" th:href="@{/css/statistics.css}" href="/css/statistics.css">
+  <script defer th:src="@{/js/statistics.js}" src="/js/statistics.js"></script>
 </head>
 <body>
 <header class="topbar compact-topbar">
@@ -317,20 +319,8 @@
       <ul th:if="${!statistics.completeness.missingPaths.isEmpty()}">
         <li class="mono" th:each="path : ${statistics.completeness.missingPaths}" th:text="${path}">path</li>
       </ul>
-      <div class="table-scroll"
-           th:unless="${statistics.completeness.status.name() == 'UNAVAILABLE'}">
-        <table>
-          <thead><tr><th>Période</th><th>Groupe</th><th>Métrique</th><th>Domicile</th><th>Extérieur</th></tr></thead>
-          <tbody>
-          <tr th:each="metric : ${statisticsData.metrics}">
-            <td th:text="${metric.period}">ALL</td>
-            <td th:text="${metric.groupName}">Overview</td>
-            <td><span th:text="${metric.metricName}">Metric</span><br><code th:text="${metric.metricCode}">code</code></td>
-            <td th:text="${metric.homeValue.orElse('—')}">—</td>
-            <td th:text="${metric.awayValue.orElse('—')}">—</td>
-          </tr>
-          </tbody>
-        </table>
+      <div th:unless="${statistics.completeness.status.name() == 'UNAVAILABLE'}">
+        <div th:replace="~{fragments/statistics :: view(${statisticsView})}"></div>
       </div>
     </section>
 
@@ -378,7 +368,7 @@
           </tr>
           </thead>
           <tbody>
-          <tr th:each="incident : ${incidentsData.incidents}">
+          <tr th:each="incident, incidentIndex : ${incidentsData.incidents}">
             <td th:text="${incident.minuteLabel()}">18</td>
             <td th:text="${incident.incidentType}">goal</td>
             <td th:text="${incident.incidentClass.orElse('—')}">—</td>
@@ -387,7 +377,7 @@
             <td th:text="${incident.playerInName.orElse('—')}">—</td>
             <td th:text="${incident.playerOutName.orElse('—')}">—</td>
             <td th:text="${incident.assistName.orElse('—')}">—</td>
-            <td th:text="${incident.motifLabel()}">—</td>
+            <td th:text="${incidentMotifs[incidentIndex.index]}">—</td>
             <td th:text="${incident.detailLabel()}">—</td>
             <td th:text="${incident.shootoutSequence.isPresent() ? incident.shootoutSequence.get() : '—'}">—</td>
             <td th:text="${incident.homeScore.isPresent() ? incident.homeScore.get() + '–' + incident.awayScore.get() : '—'}">—</td>

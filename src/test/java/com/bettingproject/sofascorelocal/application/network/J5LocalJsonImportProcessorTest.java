@@ -1,6 +1,6 @@
 package com.bettingproject.sofascorelocal.application.network;
 
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV16Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV17Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
@@ -103,7 +103,7 @@ class J5LocalJsonImportProcessorTest {
                 canonicalStore,
                 dataStore,
                 new EventStatisticsV2Parser(),
-                new EventIncidentsV16Parser(),
+                new EventIncidentsV17Parser(),
                 new EventLineupsV2Parser(),
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
@@ -141,8 +141,31 @@ class J5LocalJsonImportProcessorTest {
                         SofascoreEndpointType.EVENT_LINEUPS);
         assertThat(observations).hasSize(3);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV16Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV17Parser.PARSER_VERSION);
         verify(canonicalStore, times(2)).findLatestByCanonicalId(IDENTITY.value());
+    }
+
+    @Test
+    void importsProfessionalHandballWithV17AndPreservesItsRawEvidence() {
+        RawPayloadEvidence incidentsPayload = payload("""
+                {"incidents":[{"incidentType":"card","incidentClass":"red",
+                  "reason":"Professional handball","time":64,"isHome":false,
+                  "rescinded":false,"player":{"name":"Synthetic player"}}]}
+                """);
+        J5LocalJsonImportProcessingPlan prepared = processor.prepare(
+                IDENTITY.value(), EVENT_ID, payload("{\"statistics\":[]}"),
+                incidentsPayload, payload("{\"confirmed\":false}"));
+
+        var result = processor.execute(prepared, () -> true);
+
+        assertThat(result.localJsonImports()).isEqualTo(3);
+        assertThat(observations.get(1).source().parserVersion()).isEqualTo(EventIncidentsV17Parser.PARSER_VERSION);
+        assertThat(observations.get(1).data()).isInstanceOfSatisfying(EventIncidents.class,
+                incidents -> assertThat(incidents.incidents().getFirst().reason()).contains("Professional handball"));
+        assertThat(rawSnapshots.get(1).parserVersion()).isEqualTo(EventIncidentsV17Parser.PARSER_VERSION);
+        assertThat(rawSnapshots.get(1).payload().sha256()).isEqualTo(incidentsPayload.sha256());
+        assertThat(rawSnapshots).extracting(RawManualCallSnapshot::acquisitionMode)
+                .containsOnly(RawSnapshotAcquisitionMode.MANUAL_LOCAL_JSON_IMPORT);
     }
 
     @Test
@@ -161,7 +184,7 @@ class J5LocalJsonImportProcessorTest {
         assertThat(result.endpoints().get(1).completenessStatus())
                 .isEqualTo(J5CompletenessStatus.PARTIAL);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV16Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV17Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -195,7 +218,7 @@ class J5LocalJsonImportProcessorTest {
         assertThat(result.endpoints().get(1).endpointType())
                 .isEqualTo(SofascoreEndpointType.EVENT_INCIDENTS);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV16Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV17Parser.PARSER_VERSION);
         assertThat(observations.get(1).data())
                 .isInstanceOfSatisfying(
                         com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents.class,

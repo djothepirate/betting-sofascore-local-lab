@@ -142,12 +142,16 @@ public class LiveCampaignPresentation {
                 .filter(a -> a.attempt().attemptId().equals(cursor.lastAttemptId()))
                 .findFirst().orElse(null);
         Table table = new Table(List.of(), List.of());
+        StatisticsPresentation.View statistics = null;
         String payloadSha256 = null;
         if (cursor.normalized() != null && cursor.normalized().j5ObservationId() != null) {
             var observation = data.findByObservationId(event.target().canonicalEventId(), cursor.endpoint(),
                     cursor.normalized().j5ObservationId());
             if (observation.isPresent()) {
                 table = table(observation.orElseThrow().data());
+                if (observation.orElseThrow().data() instanceof EventStatistics values) {
+                    statistics = StatisticsPresentation.from(values);
+                }
                 payloadSha256 = observation.orElseThrow().source().payloadSha256();
             }
         } else if (cursor.normalized() != null && cursor.normalized().canonicalObservationId() != null) {
@@ -174,7 +178,7 @@ public class LiveCampaignPresentation {
                 pending ? null : latest.completenessScore(),
                 cursor.lastSuccessfulAttemptId() != null
                         && !cursor.lastSuccessfulAttemptId().equals(cursor.lastAttemptId()),
-                freshness(campaign, event, cursor, observedAt), table);
+                freshness(campaign, event, cursor, observedAt), table, statistics);
     }
 
     private static Freshness freshness(CampaignView campaign, EventView event, FamilyCursor cursor, Instant now) {
@@ -254,7 +258,8 @@ public class LiveCampaignPresentation {
                                     ? i.playerOutName().orElse("—") + " → " + i.playerInName().orElse("—")
                                     : i.playerName().orElse("—"),
                             i.homeScore().isPresent() ? i.homeScore().orElseThrow() + "–"
-                                    + i.awayScore().orElseThrow() : "—", i.detailLabel(), i.motifLabel())).toList());
+                                    + i.awayScore().orElseThrow() : "—", i.detailLabel(),
+                            IncidentPresentation.motifLabel(i))).toList());
         }
         EventLineups lineups = (EventLineups) value;
         List<List<String>> rows = new ArrayList<>();
@@ -285,7 +290,8 @@ public class LiveCampaignPresentation {
                          Long receivedSnapshotId, Long receivedOccurrenceId, Long dataSnapshotId,
                          String parserVersion, String payloadSha256,
                          String normalizedSha256, String completeness, Integer completenessScore,
-                         boolean previousData, Freshness freshness, Table table) { }
+                         boolean previousData, Freshness freshness, Table table,
+                         StatisticsPresentation.View statistics) { }
     public record Freshness(String state, String label, long expectedIntervalSeconds,
                             Long receivedAgeSeconds, Instant ageAsOf, boolean frozen) { }
     public record Table(List<String> columns, List<List<String>> rows) { }

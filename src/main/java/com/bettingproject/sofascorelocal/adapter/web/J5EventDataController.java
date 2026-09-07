@@ -88,10 +88,13 @@ public class J5EventDataController {
                 page.data().statistics().ifPresent(value -> {
                     model.addAttribute("statistics", value);
                     model.addAttribute("statisticsData", (EventStatistics) value.data());
+                    model.addAttribute("statisticsView", StatisticsPresentation.from((EventStatistics) value.data()));
                 });
                 page.data().incidents().ifPresent(value -> {
                     model.addAttribute("incidents", value);
                     model.addAttribute("incidentsData", (EventIncidents) value.data());
+                    model.addAttribute("incidentMotifs", ((EventIncidents) value.data()).incidents().stream()
+                            .map(IncidentPresentation::motifLabel).toList());
                 });
                 page.data().lineups().ifPresent(value -> {
                     model.addAttribute("lineups", value);

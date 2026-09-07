@@ -170,7 +170,7 @@ try {
                 throw "The qualified manifest source/restore evidence differs: $field"
             }
         }
-        if ($manifest.source.flywayVersion.ToString() -cne '36' -or
+        if ($manifest.source.flywayVersion.ToString() -cne '37' -or
                 [long]$manifest.source.rawPayloadIntegrityFailures -ne 0 -or
                 [long]$manifest.source.j7DeliveryCount -lt 0 -or
                 [long]$manifest.source.j7DeliveryAttemptCount -lt 0 -or
@@ -182,7 +182,7 @@ try {
                 $manifest.source.liveLedgerSha256.ToString() -cnotmatch '^[0-9a-f]{64}$' -or
                 $manifest.source.providerGuardState.ToString() -cne 'FREE' -or
                 [long]$manifest.source.activeLiveCount -ne 0) {
-            throw 'The qualified manifest does not prove a valid Flyway V36 raw-payload, J8, J7 and quiescent live ledger restore.'
+            throw 'The qualified manifest does not prove a valid Flyway V37 raw-payload, J8, J7 and quiescent live ledger restore.'
         }
         $cipherPath = [IO.Path]::GetFullPath((Join-Path `
             (Split-Path -Parent $manifestPath) $cipherFileName))

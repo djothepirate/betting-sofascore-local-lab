@@ -93,13 +93,13 @@ class LivePayloadNormalizerTest {
     }
 
     @Test
-    void anAwardedInGamePenaltyUsesV16WithoutInventingAGoalOrAFinishSignal() {
+    void anAwardedInGamePenaltyUsesTheCurrentParserWithoutInventingAGoalOrAFinishSignal() {
         var result = incidents("""
                 {"incidentType":"inGamePenalty","incidentClass":"awarded",
                  "time":83,"isHome":true,"confirmed":true}
                 """);
         assertThat(result.status()).isEqualTo(LiveNormalizedPayload.Status.PARSED);
-        assertThat(result.parserVersion()).isEqualTo("event-incidents-v16");
+        assertThat(result.parserVersion()).isEqualTo("event-incidents-v17");
         assertThat(result.signals()).isEmpty();
         assertThat(result.details()).isEmpty();
         assertThat(result.eventData()).hasValueSatisfying(data -> {
@@ -110,6 +110,23 @@ class LivePayloadNormalizerTest {
                 assertThat(incident.homeScore()).isEmpty();
                 assertThat(incident.awayScore()).isEmpty();
             });
+        });
+    }
+
+    @Test
+    void aProfessionalHandballCardUsesV17WithoutInventingASportingSignal() {
+        var result = incidents("""
+                {"incidentType":"card","incidentClass":"red","reason":"Professional handball",
+                 "time":64,"isHome":false,"rescinded":false,"player":{"name":"Synthetic player"}}
+                """);
+        assertThat(result.status()).isEqualTo(LiveNormalizedPayload.Status.PARSED);
+        assertThat(result.parserVersion()).isEqualTo("event-incidents-v17");
+        assertThat(result.signals()).isEmpty();
+        assertThat(result.details()).isEmpty();
+        assertThat(result.eventData()).hasValueSatisfying(data -> {
+            var incidents = (com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents) data;
+            assertThat(incidents.incidents().getFirst().reason()).contains("Professional handball");
+            assertThat(incidents.incidents().getFirst().incidentClass()).contains("red");
         });
     }
 

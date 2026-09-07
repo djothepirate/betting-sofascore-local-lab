@@ -15,7 +15,7 @@ import java.util.Set;
  * existing atomic-field problem for a one-sided score before attempting domain construction;
  * it does not complete or normalize away that incomplete pair.</p>
  */
-public final class EventIncidentsV16Parser extends EventIncidentsV15Parser {
+public class EventIncidentsV16Parser extends EventIncidentsV15Parser {
 
     public static final String PARSER_VERSION = "event-incidents-v16";
 

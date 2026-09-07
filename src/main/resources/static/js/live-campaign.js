@@ -160,7 +160,20 @@
       age.dataset.liveAgeFrozen = String(family.freshness?.frozen === true);
       age.dataset.liveAgeAsOf = family.freshness?.ageAsOf || "";
     }
-    renderTable(section, family.table);
+    if (family.endpoint === "EVENT_STATISTICS" && window.StatisticsView) {
+      let host = section.querySelector("[data-statistics]");
+      if (!family.statistics) {
+        host?.remove();
+      } else {
+        if (!host) {
+          host = create("div", undefined, "data-statistics");
+          section.append(host);
+        }
+        window.StatisticsView.update(host, family.statistics);
+      }
+    } else {
+      renderTable(section, family.table);
+    }
   }
 
   function renderCampaign(campaign) {

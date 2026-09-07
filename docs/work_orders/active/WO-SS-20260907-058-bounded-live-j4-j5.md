@@ -1,6 +1,6 @@
 # WO-SS-20260907-058 — Campagnes live locales J4/J5 sur sélection de rencontres
 
-- **Statut :** `IN_PROGRESS` — correctifs prématch, phases, clôture et incidents V16 qualifiés localement ; campagne à seize interrompue après coupure PostgreSQL, puis nouveau lancement opérateur à sept ; revue humaine et fusion distinctes, aucune clôture.
+- **Statut :** `IN_PROGRESS` — correctifs prématch, clôture, incidents V17 et statistiques applicatives qualifiés localement ; collecte opérateur du 07/09 terminée avec un arrêt de schéma historique Elche conservé ; revue humaine et fusion distinctes, aucune clôture.
 - **Date :** 2026-09-07.
 - **Jalon :** expérimentation live locale après J9, distincte des parcours manuels existants.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
@@ -11,13 +11,41 @@
 - **ADR live courant :** [ADR-SS-005 v0.3](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), compositions prématch initiales puis périodiques explicitement confirmées ; capacité et cadence de la v0.2 conservées. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
 - **Livrable présent :** ADR accepté, WO validé, réalisation locale et qualification hors fournisseur ; état des preuves dans le rapport de réalisation.
 - **Alignement de gouvernance :** renvois ciblés dans ADR-SS-001 et AGENTS.md ; ADR-SS-002 à 004 inchangés.
-- **Réalisation applicative :** réalisée et qualifiée hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés ; compléments prématch/phase/clôture décrits dans le septième retour ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur :** essai à 8 arrêté volontairement, essai à 16 interrompu après coupure PostgreSQL, puis nouveau lancement manuel à 7 ; observations distinctes des qualifications locales.
+- **Réalisation applicative :** réalisée et qualifiée hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés ; compléments prématch/phase/clôture et incidents V16/V17 décrits dans les retours ci-dessous, statistiques intégrées aux pages ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur :** essai à 8 arrêté volontairement, essai à 16 interrompu après coupure PostgreSQL, puis nouveaux lancements manuels à 7 et à 4 ; dernière exécution terminée, observations distinctes des qualifications locales.
 
 Les statuts restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 `NO_CRITICAL_DEPENDENCY`. Le socle reste Java 25 LTS, Spring Boot 4.1.0, Maven wrapper,
 PostgreSQL local Docker Desktop et application sur `127.0.0.1:8087`, textes UTF-8.
 
 ## 1. Objectif et origine du besoin
+
+### Neuvième retour — fin du 07/09, Elche et statistiques applicatives
+
+Le propriétaire constate une nouvelle incompatibilité pour Elche–Real Sociedad, confirme la
+fin des collectes du 07/09, et demande que les améliorations graphiques des statistiques soient
+visibles dans l'application. Il précise ensuite que le libellé fournisseur `2nd half` est conforme
+et doit rester inchangé. L'intégration porte donc sur les statistiques par période, possession
+et indicateurs X/Y, à partir des seules données normalisées existantes.
+
+La campagne `ce33a3a5-af5a-4080-94e0-4e87aa7337ae` est enregistrée `COMPLETED`, 15 appels,
+558 672 octets : trois rencontres `FINISHED_CONFIRMED` et Elche `STOPPED_SCHEMA_INCOMPATIBLE`.
+`COMPLETED` désigne ici la fin de l'exécution ; ce n'est pas une complétude de toutes les familles.
+Elche, événement 16416319, échoue sur J5 Incidents, snapshot 2427/occurrence 2394 reçu à
+23:39:41.935 Europe/Paris. V16 isole `VALUE_OUT_OF_RANGE` sur `$.incidents[13].reason`,
+`Professional handball`, carton rouge extérieur à la minute 64. V17 ajoute ce motif exact,
+V37 conserve toutes les anciennes versions admises. Aucun appel fournisseur ni reparse persistant.
+Le propriétaire confirme « Main volontaire » pour son affichage français ; la valeur fournisseur
+reste conservée dans les données normalisées et le libellé sportif `2nd half` n'est pas traduit.
+
+Le port 8087 est à nouveau libéré par le propriétaire pour qualifier les correctifs.
+Le [rapport de cette reprise](../../validation/WO058-ELCHE-STATISTICS-20260907.md) distingue
+les preuves opérateur, le replay local, les tests et l'intégration graphique réelle.
+Aucune nouvelle collecte n'est démarrée pour compléter la journée.
+Qualification finale du 08/09 à 00:20:31 Paris : `mvnw.cmd clean verify -Pintegration-tests`,
+code zéro, 1 590 cas Surefire (cinq ignorés documentés) et 138 cas PostgreSQL sans échec/erreur.
+Trois tests UI Chromium ciblés passent ; le replay exact V17 produit 26 incidents, 98/98 signaux,
+zéro erreur et deux avertissements conservés. Un premier passage a détecté une attente V16
+obsolète dans le test d'import courant ; sa correction est couverte par la relance complète.
 
 ### Huitième retour — incident `inGamePenalty/awarded` incompatible
 
