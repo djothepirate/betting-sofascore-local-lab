@@ -17,6 +17,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.cache.CacheManager;
@@ -323,6 +324,40 @@ class LiveCampaignControllerTest {
     }
 
     @Test
+    void missingDockerConfigurationExplainsPreparationRefusalWithoutSuggestingProviderOptIn() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        when(service.prepareSelection(List.of(EVENT_ID)))
+                .thenThrow(new IllegalStateException("LIVE_STORAGE_PROBE_NOT_CONFIGURED"));
+        mvc.perform(post("/live-campaigns/prepare").header("Host", HOST).session(session)
+                        .param("localFormToken", tokens.issue(session)).param("eventId", EVENT_ID.toString()))
+                .andExpect(status().isConflict())
+                .andExpect(model().attribute("liveErrorCode", "LIVE_STORAGE_PROBE_NOT_CONFIGURED"))
+                .andExpect(content().string(containsString("SOFASCORE_LIVE_DOCKER_EXECUTABLE")))
+                .andExpect(content().string(containsString("SOFASCORE_LIVE_POSTGRES_CONTAINER")))
+                .andExpect(content().string(containsString("Aucun appel fournisseur")))
+                .andExpect(content().string(not(containsString("l’opt-in"))));
+        verify(service).prepareSelection(List.of(EVENT_ID));
+        verifyNoMoreInteractions(service);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"LIVE_STORAGE_PROBE_TIMEOUT,délai prévu", "LIVE_STORAGE_PROBE_FAILED,ne peut pas être mesuré",
+            "LIVE_STORAGE_PROBE_INVALID,ne peut pas être mesuré", "LIVE_STORAGE_PROBE_INTERRUPTED,interrompu",
+            "LIVE_STORAGE_CAPACITY_REFUSED,insuffisant", "LIVE_POLICY_INVALID,limites",
+            "LIVE_CAPACITY_QUALIFICATION_REQUIRED,preuve de qualification"})
+    void localPreparationFailuresExposeOnlyTheirKnownCodeAndAction(String code, String action) throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        when(service.prepareSelection(List.of(EVENT_ID))).thenThrow(new IllegalStateException(code));
+        mvc.perform(post("/live-campaigns/prepare").header("Host", HOST).session(session)
+                        .param("localFormToken", tokens.issue(session)).param("eventId", EVENT_ID.toString()))
+                .andExpect(status().isConflict())
+                .andExpect(model().attribute("liveErrorCode", code))
+                .andExpect(content().string(containsString(code)))
+                .andExpect(content().string(containsString(action)));
+        verify(service, never()).launch(any(), any());
+    }
+
+    @Test
     void capacityRefusalSuggestsReducedSelectionAndNeverEchoesArbitraryExceptionText() throws Exception {
         MockHttpSession session = new MockHttpSession();
         when(service.prepareSelection(List.of(EVENT_ID))).thenThrow(
@@ -335,6 +370,7 @@ class LiveCampaignControllerTest {
         mvc.perform(post("/live-campaigns/prepare").header("Host", HOST).session(session)
                         .param("localFormToken", tokens.issue(session)).param("eventId", EVENT_ID.toString()))
                 .andExpect(status().isConflict())
+                .andExpect(model().attribute("liveErrorCode", "LIVE_REQUEST_REJECTED"))
                 .andExpect(content().string(not(containsString("SECRET_PRIVATE_RUNTIME"))));
     }
 

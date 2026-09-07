@@ -1,6 +1,6 @@
 # WO-SS-20260907-058 — Campagnes live locales J4/J5 sur sélection de rencontres
 
-- **Statut :** `READY_FOR_REVIEW` — retour fonctionnel du 7 septembre 2026 corrigé et qualifié hors fournisseur ; reprise des essais opérateur et revue de réalisation attendues, aucune clôture.
+- **Statut :** `READY_FOR_REVIEW` — exclusion des matchs terminés confirmée par l'opérateur ; correctif d'admission locale qualifié après le deuxième retour, reprise des essais Eclipse à effectuer, aucune clôture.
 - **Date :** 2026-09-07.
 - **Jalon :** expérimentation live locale après J9, distincte des parcours manuels existants.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
@@ -38,6 +38,27 @@ Les contrôles locaux sont répétés après acquisition avant ouverture du navi
 
 La preuve du correctif figure dans le [rapport de retour fonctionnel](../../validation/WO058-FUNCTIONAL-FEEDBACK-20260907.md).
 L'ADR accepté et les inventaires/preuves initiaux restent inchangés.
+
+### Deuxième retour opérateur, après commit `017888b`
+
+L'opérateur confirme les résultats conformes pour un puis trois événements déjà `finished`.
+Il constate ensuite un refus de préparation pour une observation ancienne `notstarted`, ainsi
+que pour une sélection mixte avec un événement resté `notstarted`. Aucune campagne n'a été
+lancée. Un J4 manuel sur Olympique Lyonnais — Auxerre (`providerEventId=16310940`) publie
+`finished` avec le snapshot 1246 et actualise la liste. L'essai d'un vrai match futur n'a pas
+encore été effectué ; la boucle automatique J4/J5 n'est pas validée par ce retour.
+
+Le propriétaire confirme que les paramètres Docker du live ne sont pas renseignés. Le chemin
+manquant bloque la mesure du volume PostgreSQL sous `LIVE_STORAGE_PROBE_NOT_CONFIGURED`,
+masquée jusque-là par le message générique. La correction précise cette cause et les autres
+refus locaux connus, puis documente/teste les deux variables Eclipse explicites. La préparation
+reste sans réseau et aucun statut sportif n'est inféré à partir de la date d'un match.
+Après libération du port 8087 par le propriétaire, `mvnw.cmd clean verify` réussit le 7 septembre
+à 12:44:01Z : 1 341 tests Surefire (0 échec, 0 erreur, 5 ignorés) et 122 tests Failsafe
+(0 échec, 0 erreur, 0 ignoré). Le premier échec J6 de cette reprise, lié au port occupé, reste
+consigné séparément. Le propriétaire demande un commit local comme dernière action avant remise
+en main ; la configuration du lanceur et les prochains essais opérateur restent à effectuer.
+Preuves et reprise : [rapport d'admission locale](../../validation/WO058-OPERATOR-RETEST-STORAGE-20260907.md).
 
 Depuis le bloc **Résultats normalisés** de `/events`, sélectionner une ou plusieurs rencontres,
 préparer puis lancer explicitement une campagne locale. Pour chaque rencontre, suivre J4 jusqu'à

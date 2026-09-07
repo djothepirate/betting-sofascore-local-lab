@@ -132,12 +132,28 @@ public class LiveCampaignController {
     @ExceptionHandler(IllegalStateException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
     public String rejected(IllegalStateException exception, Model model) {
-        String message = switch (String.valueOf(exception.getMessage())) {
+        String code = switch (String.valueOf(exception.getMessage())) {
+            case "LIVE_DISABLED", "LIVE_PROVIDER_BUSY", "LIVE_STORAGE_PROBE_NOT_CONFIGURED",
+                 "LIVE_STORAGE_PROBE_TIMEOUT", "LIVE_STORAGE_PROBE_FAILED", "LIVE_STORAGE_PROBE_INVALID",
+                 "LIVE_STORAGE_PROBE_INTERRUPTED", "LIVE_STORAGE_CAPACITY_REFUSED", "LIVE_POLICY_INVALID",
+                 "LIVE_CAPACITY_QUALIFICATION_REQUIRED", "LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY" -> exception.getMessage();
+            default -> "LIVE_REQUEST_REJECTED";
+        };
+        String message = switch (code) {
+            case "LIVE_STORAGE_PROBE_NOT_CONFIGURED" -> "Le contrôle d’espace PostgreSQL n’est pas configuré : renseigner SOFASCORE_LIVE_DOCKER_EXECUTABLE avec le chemin absolu de docker.exe dans le lanceur Eclipse, puis redémarrer l’application. Vérifier aussi SOFASCORE_LIVE_POSTGRES_CONTAINER. Aucun appel fournisseur n’a été effectué par cette demande.";
+            case "LIVE_STORAGE_PROBE_TIMEOUT" -> "Le contrôle d’espace PostgreSQL n’a pas répondu dans le délai prévu. Vérifier Docker Desktop et le conteneur configuré, puis préparer à nouveau la campagne. Aucun appel fournisseur n’a été effectué par cette demande.";
+            case "LIVE_STORAGE_PROBE_FAILED", "LIVE_STORAGE_PROBE_INVALID" -> "L’espace du volume PostgreSQL ne peut pas être mesuré. Vérifier le chemin Docker, Docker Desktop et le nom du conteneur SOFASCORE_LIVE_POSTGRES_CONTAINER. Aucun appel fournisseur n’a été effectué par cette demande.";
+            case "LIVE_STORAGE_PROBE_INTERRUPTED" -> "Le contrôle local d’espace PostgreSQL a été interrompu. Préparer à nouveau la campagne. Aucun appel fournisseur n’a été effectué par cette demande.";
+            case "LIVE_STORAGE_CAPACITY_REFUSED" -> "L’espace libre du volume PostgreSQL est insuffisant pour le budget de cette sélection et sa réserve de sécurité. Prévoir davantage d’espace ou réduire la sélection avant une nouvelle préparation. Aucun appel fournisseur n’a été effectué par cette demande.";
+            case "LIVE_POLICY_INVALID" -> "Les limites de la campagne locale sont invalides. Vérifier la durée, la capacité, les délais et la réserve de stockage dans la configuration live avant une nouvelle préparation.";
+            case "LIVE_CAPACITY_QUALIFICATION_REQUIRED" -> "Cette capacité ou cette cadence exige une preuve de qualification. Pour le pilote initial, conserver une rencontre et l’enveloppe de requête de dix secondes.";
+            case "LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY" -> "Le délai maximal d’une requête live doit être compris entre zéro exclu et dix secondes. Corriger le délai Playwright avant le lancement.";
             case "LIVE_DISABLED" -> "Le lancement live est désactivé. Activer l’opt-in local dédié avant de lancer une campagne préparée.";
             case "LIVE_PROVIDER_BUSY" -> "Une collecte fournisseur occupe déjà la session locale. Attendre sa fin avant de lancer cette campagne.";
-            default -> "La campagne ne peut pas démarrer dans son état actuel. Vérifier sa préparation, l’opt-in et la disponibilité de la session locale.";
+            default -> "La demande locale a été refusée. Revenir aux rencontres et préparer à nouveau la sélection ; si le refus persiste, conserver ce code pour le diagnostic.";
         };
         model.addAttribute("liveError", message);
+        model.addAttribute("liveErrorCode", code);
         return "live-campaign-error";
     }
 

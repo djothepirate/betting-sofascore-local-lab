@@ -4,6 +4,18 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — admission locale et deuxième retour opérateur
+
+- Essais opérateur conformes après `017888b` : un puis trois matchs déjà `finished` sont exclus
+  avec une explication, sans campagne. Le cas d'une rencontre future reste à essayer par l'opérateur.
+- Identifie le refus des sélections encore localement `notstarted` : le chemin Docker requis pour
+  mesurer le volume PostgreSQL n'était pas renseigné. Ce refus d'admission est indépendant de
+  l'âge du snapshot et des opt-ins fournisseur.
+- Affiche les causes connues de refus local avec un code et une action précise ; les exceptions
+  arbitraires restent masquées. Relie explicitement les variables Eclipse de chemin Docker et de
+  conteneur PostgreSQL à la configuration, sans activation réseau par défaut.
+- Diagnostic et nouvelle qualification : [rapport de reprise](docs/validation/WO058-OPERATOR-RETEST-STORAGE-20260907.md).
+
 ### WO-058 — retour opérateur : préparation locale et rencontres terminées
 
 - Corrige le refus 403 des formulaires live Chromium : les pages locales concernées utilisent

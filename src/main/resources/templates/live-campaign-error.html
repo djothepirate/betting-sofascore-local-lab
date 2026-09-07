@@ -6,5 +6,6 @@
 </head><body><main class="shell event-page"><section class="panel">
   <p class="label">Campagne live locale</p><h1>La demande n’a pas pu aboutir</h1>
   <p class="notice notice-danger" th:text="${liveError}">Demande indisponible.</p>
+  <p class="muted" th:if="${liveErrorCode != null}">Code du contrôle local : <code th:text="${liveErrorCode}">LIVE_REQUEST_REJECTED</code></p>
   <a class="button button-secondary" th:href="@{/events}">Revenir aux rencontres</a>
 </section></main></body></html>

@@ -69,6 +69,34 @@ octets de réponses possibles ; la marge d'espace exige deux fois cette envelopp
 Les plafonds de 1 000/3 000 tentatives sont locaux et ne décrivent pas un quota fournisseur connu.
 Les anciennes propriétés `automatic-refresh-enabled` et `live-polling-enabled` restent désactivées.
 
+### Paramètres du lanceur Eclipse pour le contrôle de stockage
+
+Dans **External Tools Configurations → Environment**, renseigner les variables explicitement
+reliées par `application.yml` :
+
+| Variable | Valeur |
+|---|---|
+| `SOFASCORE_LIVE_DOCKER_EXECUTABLE` | Chemin absolu de `docker.exe`, sans ajouter de guillemets dans la valeur Eclipse ; l'obtenir avec `(Get-Command docker).Source` dans PowerShell |
+| `SOFASCORE_LIVE_POSTGRES_CONTAINER` | `betting-sofascore-local-lab-postgres` pour le conteneur de `compose.yaml`, ou le nom exact du conteneur utilisé |
+
+Le chemin reste non configuré par défaut ; aucun exécutable n'est recherché ni lancé automatiquement
+au démarrage du Lab. La préparation mesure l'espace uniquement lorsqu'une sélection contient
+au moins une rencontre éligible. Le nom de conteneur possède déjà le défaut ci-dessus, mais le
+chemin Docker doit être fourni. Après modification du lanceur, redémarrer l'application et
+recharger `/events`. Les opt-ins fournisseur ne remplacent pas cette configuration locale.
+
+Un refus de préparation affiche désormais un code de contrôle connu et une action adaptée :
+chemin manquant (`LIVE_STORAGE_PROBE_NOT_CONFIGURED`), mesure impossible, délai dépassé,
+espace insuffisant ou limites non qualifiées. Les messages n'exposent jamais le contenu arbitraire
+d'une exception. Une préparation réussie affiche le manifeste à confirmer ; elle ne lance pas
+Playwright et ne rafraîchit pas J4.
+
+Un ancien snapshot `notstarted` décrit l'état reçu à sa date, même si le match est maintenant
+terminé. La préparation ne déduit pas `finished` à partir du calendrier. Le rafraîchissement J4
+manuel peut mettre à jour cette observation ; la prochaine préparation exclura alors le match.
+Pour une campagne explicitement lancée avec une observation ancienne encore éligible, le premier
+J4 réseau établit le statut et conserve les transitions/finalisation bornées de l'ADR.
+
 ## Parcours depuis /events
 
 Une rencontre déjà `finished` dans la dernière observation locale est exclue, avant tout contrôle
