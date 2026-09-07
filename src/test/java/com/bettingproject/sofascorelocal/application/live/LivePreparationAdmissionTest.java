@@ -114,7 +114,7 @@ class LivePreparationAdmissionTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"2,false", "2,true", "3,false", "3,true"})
+    @CsvSource({"2,false", "2,true", "3,false", "3,true", "4,true", "5,true", "10,true", "25,true"})
     void qualifiedMultipleSelectionPreservesEveryEligibleTargetAndExcludesFinishedBeforeAdmission(int count, boolean mixed) {
         var properties = new LiveCampaignProperties();
         properties.setQualifiedMatchCapacity(count);
@@ -134,11 +134,51 @@ class LivePreparationAdmissionTest {
         assertThat(preparation.manifest().targets()).containsExactlyElementsOf(eligible.stream()
                 .map(e -> new Target(e.identity().value(), e.identity().providerEventId(), e.observationId(), 23)).toList());
         assertThat(preparation.excludedFinished()).containsExactlyElementsOf(mixed ? List.of(selected.getFirst()) : List.of());
-        assertThat(preparation.manifest().maximumBytes()).isEqualTo(count * 1000L * FIVE_MIB);
+        assertThat(preparation.manifest().maximumBytes()).isEqualTo(Math.min(3000L, count * 1000L) * FIVE_MIB);
         assertThat(preparation.manifest().qualifiedMatchCapacity()).isEqualTo(count);
         assertThat(preparation.manifest().admissionProfile().requestEnvelope()).isEqualTo(properties.getRequestEnvelope());
         verify(h.store).prepare(preparation.manifest());
         verify(h.events, never()).save(any());
+        h.verifyNoProviderWork();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"5,1,60", "5,2,60", "5,3,60", "5,4,90", "5,5,120",
+            "10,1,60", "10,10,270", "25,3,60", "25,5,120", "25,25,720", "1000,1,60"})
+    void configuredSelectionCeilingDoesNotInvalidateSmallerEligibleSelections(int ceiling, int count, int seconds) {
+        var properties = new LiveCampaignProperties();
+        properties.setQualifiedMatchCapacity(ceiling);
+        properties.setRequestEnvelope(Duration.ofSeconds(1));
+        properties.setQualificationSha256("b".repeat(64));
+        var h = new Harness(properties, () -> Long.MAX_VALUE);
+        var selected = new ArrayList<CanonicalEventObservationView>();
+        for (int i = 0; i < count; i++) selected.add(observation(PROVIDER_EVENT_ID + i, NOW, "inprogress"));
+        selected.forEach(event -> when(h.events.findLatestByCanonicalId(event.identity().value()))
+                .thenReturn(Optional.of(event)));
+        var prepared = h.service.prepareSelection(selected.stream().map(event -> event.identity().value()).toList());
+        assertThat(prepared.manifest().targets()).hasSize(count);
+        assertThat(prepared.manifest().qualifiedMatchCapacity()).isEqualTo(ceiling);
+        assertThat(prepared.manifest().cycleInterval()).isEqualTo(Duration.ofSeconds(seconds));
+        assertThat(prepared.manifest().policyVersion()).isEqualTo("live-v2");
+        h.verifyNoProviderWork();
+    }
+
+    @ParameterizedTest @ValueSource(ints = {5, 10, 25})
+    void theNextEligibleMatchAboveTheConfiguredCeilingIsRejectedWithoutProviderWork(int ceiling) {
+        var properties = new LiveCampaignProperties();
+        properties.setQualifiedMatchCapacity(ceiling);
+        properties.setRequestEnvelope(Duration.ofSeconds(1));
+        properties.setQualificationSha256("b".repeat(64));
+        var h = new Harness(properties, () -> Long.MAX_VALUE);
+        var selected = new ArrayList<UUID>();
+        for (int i = 0; i <= ceiling; i++) {
+            var event = observation(PROVIDER_EVENT_ID + i, NOW, "inprogress");
+            selected.add(event.identity().value());
+            when(h.events.findLatestByCanonicalId(event.identity().value())).thenReturn(Optional.of(event));
+        }
+        assertThatThrownBy(() -> h.service.prepareSelection(selected))
+                .hasMessage("LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY");
+        verify(h.store, never()).prepare(any());
         h.verifyNoProviderWork();
     }
 

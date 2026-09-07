@@ -45,10 +45,20 @@
     return candidate.campaignId < previous.campaignId;
   };
   const updateSelection = () => {
-    const checked = document.querySelectorAll('input[form="live-selection"][name="eventId"]:checked:not(:disabled)').length;
+    const inputs = Array.from(document.querySelectorAll('input[form="live-selection"][name="eventId"]'));
+    const form = monitor.querySelector("[data-live-selection-form]");
+    const maximum = Number(form?.dataset.liveSelectionMaximum ?? 100);
+    const blocked = input => input.dataset.liveProviderEligible === "false" || input.dataset.liveCampaignBlocked === "true";
+    const selected = inputs.filter(input => input.checked && !blocked(input));
+    const checked = selected.length;
+    const eligible = selected.filter(input => input.dataset.liveFinished !== "true").length;
+    inputs.forEach(input => {
+      input.disabled = blocked(input) || !input.checked && input.dataset.liveFinished !== "true" && eligible >= maximum;
+    });
     text(monitor, "[data-live-selection-count]", `${checked} rencontre${checked > 1 ? "s" : ""} sélectionnée${checked > 1 ? "s" : ""}`);
+    text(monitor, "[data-live-eligible-count]", `${eligible} éligible${eligible > 1 ? "s" : ""} / ${maximum}${eligible > maximum ? " — réduire la sélection" : ""}`);
     const button = monitor.querySelector("[data-live-prepare]");
-    if (button) button.disabled = checked === 0;
+    if (button) button.disabled = checked === 0 || eligible > maximum;
   };
   document.querySelectorAll('input[form="live-selection"][name="eventId"]').forEach(input => {
     input.addEventListener("change", updateSelection);
@@ -194,8 +204,9 @@
         text(node, "[data-live-event-state]", event.state);
         const selection = node.querySelector('input[form="live-selection"][name="eventId"]');
         if (selection) {
-          selection.disabled = selection.dataset.liveProviderEligible !== "true" || event.selectionBlocked === true;
-          if (selection.disabled) selection.checked = false;
+          selection.dataset.liveCampaignBlocked = String(event.selectionBlocked === true);
+          if (canReplaceCanonical) selection.dataset.liveFinished = String(event.sportStatus === "finished");
+          if (selection.dataset.liveProviderEligible !== "true" || event.selectionBlocked === true) selection.checked = false;
           const blocked = node.querySelector("[data-live-selection-blocked]");
           if (blocked) blocked.hidden = event.selectionBlocked !== true;
           updateSelection();

@@ -4,6 +4,23 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — plafond paramétrable et cadence par sélection
+
+- Corrige `LIVE_POLICY_INVALID` quand le plafond de rencontres est supérieur à trois.
+  Le paramètre désigne le maximum de rencontres éligibles par campagne ; les sélections
+  plus petites restent autorisées, notamment avec des plafonds à 5, 10 ou 25.
+- Fige au manifeste l'intervalle selon les cibles retenues : 60 s pour 1–3, puis 30 s
+  supplémentaires par rencontre ; 10 cibles donnent 270 s et 25 donnent 720 s.
+  L'ordonnanceur, les réinterrogations après HTTP 404, la fraîcheur et le récapitulatif
+  utilisent cet intervalle. Les limites de temps, d'appels et de stockage sont conservées.
+- Applique le décompte des seules rencontres éligibles dans J4 et côté serveur ; les
+  `finished` restent exclues et les verrous de campagne conservent l'exception `STOPPED_ERROR`.
+- Ajoute V34 sans modifier V33 : plafond entier paramétrable, sélection jusqu'à 100 identifiants
+  et cadence immuable. Les campagnes historiques gardent leurs empreintes et leur cadence de 60 s.
+  L'outillage J6 est aligné sur V34 ; la sauvegarde préalable V33 utilise la version précédente.
+- Décision propriétaire enregistrée dans ADR-SS-005 v0.2 ;
+  [preuves et résultats](docs/validation/WO058-ADAPTIVE-CAPACITY-20260907.md).
+
 ### WO-058 — indisponibilités J5 et sélection des rencontres suivies
 
 - Corrige la publication live d'un HTTP 404 : le snapshot est classé `ENDPOINT_UNAVAILABLE`

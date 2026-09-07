@@ -32,18 +32,20 @@ un script de réponses épuisé. Aucun replay ne lance Playwright ni ne modifie 
 
 ## Préparer l'application de l'opérateur
 
-L'application de V33 à la base utilisée par l'opérateur est une opération distincte de ces tests.
+L'application de V34 à la base utilisée par l'opérateur est une opération distincte de ces tests.
 Préparer d'abord la sauvegarde, les empreintes et la restauration isolée selon
 [J6](J6-BACKUP-RESTORE-AND-RETENTION.md), avec le conteneur et la base exacts. Ne pas faire pointer
 une simple validation Spring/Flyway vers la base de l'opérateur pour obtenir un test vert.
 
-La base préexistante est encore en V32 : le script J6 de cette réalisation exige V33 et ne peut
-donc pas produire sa sauvegarde préalable. Utiliser pour cette étape l'outillage J6 V32 et ses
-dépendances figés au commit de base `6dfd14286d4f269cbe100bd965257c20298538db`, dans un checkout
-distinct, avec manifeste et cible exacts préparés pour cette opération. Vérifier cette sauvegarde
-par restauration isolée V32 avant d'appliquer V33. Après migration, utiliser l'outillage J6 courant
-V33 pour la nouvelle preuve. Ne pas modifier la version Flyway déclarée ni mélanger les scripts
-V32/V33 pour franchir leur garde. Ces opérations n'ont pas été exécutées dans le présent lot.
+Pour une base opérateur en V33, utiliser pour la sauvegarde préalable l'outillage J6 et ses
+dépendances figés au commit `a7f544cc2f70db2066836107d1e7a21c4feccb4c`, dans un checkout distinct,
+avec manifeste et cible exacts préparés pour cette opération. Vérifier cette sauvegarde par
+restauration isolée V33 avant d'appliquer V34. Après migration, utiliser l'outillage J6 courant
+V34 pour la nouvelle preuve. V34 élargit le plafond et ajoute la cadence ; les anciens manifestes
+gardent leurs SHA et 60 s. Ne pas modifier la version Flyway déclarée ni mélanger les scripts
+V33/V34 pour franchir leur garde. Ces opérations sur la base opérateur n'ont pas été exécutées
+dans le présent correctif. Pour une base encore en V32, la procédure historique de sauvegarde
+au commit `6dfd14286d4f269cbe100bd965257c20298538db` reste nécessaire avant son upgrade.
 
 Une fois cette préparation opérationnelle effectuée, l'application locale utilise les propriétés
 suivantes. Le lot ne modifie aucun fichier `.env` et conserve les défauts désactivés.
@@ -58,10 +60,10 @@ suivantes. Le lot ne modifie aucun fichier `.env` et conserve les défauts désa
 | `PLAYWRIGHT_BROWSERS_PATH` | Cache dédié installé explicitement |
 | `sofascore.live.docker-executable` | Chemin absolu du Docker CLI local |
 | `sofascore.live.postgres-container` | Nom exact du conteneur PostgreSQL dont le volume sera mesuré |
-| `sofascore.live.qualified-match-capacity` | 1 pour le premier pilote |
+| `sofascore.live.qualified-match-capacity` | Maximum de rencontres éligibles par campagne, défaut 1 ; peut être réglé à 5, 10, 25, etc. |
 | `sofascore.live.duration` | Au plus 4 h, attente avant coup d'envoi comprise |
 | `sofascore.live.request-envelope` / `processing-envelope` | 10 s / 1 s, hypothèses d'admission initiales |
-| `sofascore.live.qualification-sha256` | Preuve revue obligatoire pour abaisser l'enveloppe ou passer à 2/3 matchs |
+| `sofascore.live.qualification-sha256` | Preuve revue obligatoire pour abaisser l'enveloppe ou retenir effectivement plusieurs matchs |
 
 L'exécutable Docker et le nom de conteneur servent à lire l'espace du volume PostgreSQL réel,
 avec timeout et refus fermé si la mesure échoue. Le pilote à un match réserve 5 242 880 000
@@ -97,14 +99,14 @@ manuel peut mettre à jour cette observation ; la prochaine préparation exclura
 Pour une campagne explicitement lancée avec une observation ancienne encore éligible, le premier
 J4 réseau établit le statut et conserve les transitions/finalisation bornées de l'ADR.
 
-### Passer aux paliers deux et trois après le pilote initial
+### Profils historiques des paliers deux et trois
 
 Le pilote sur une rencontre découvert `finished` au premier J4 a été confirmé par l'opérateur.
 Les profils suivants disposent désormais d'une [qualification locale](../validation/WO058-MULTIMATCH-CAPACITY-20260907.md)
 et d'une [preuve figée](../validation/WO058-MULTIMATCH-CAPACITY-PROFILE-20260907.json).
 Le défaut reste une rencontre ; les valeurs ci-dessous permettent le passage explicite aux
-paliers prévus par l'ADR. Commencer par deux rencontres, puis utiliser le palier trois pour
-les essais correspondants. La sélection ne peut pas dépasser trois rencontres éligibles.
+paliers initiaux de l'ADR v0.1. Ces profils et leur empreinte restent des preuves historiques ;
+le plafond paramétrable et la nouvelle cadence sont décrits dans la section suivante.
 
 Dans le lanceur Eclipse, ajouter les quatre variables ensemble :
 
@@ -142,6 +144,56 @@ Une sélection de deux ou trois rencontres éligibles atteint alors le récapitu
 si le profil et le stockage sont admissibles. Les rencontres déjà `finished` sont exclues avant
 le calcul : par exemple deux `notstarted` et un `finished` préparent deux cibles au palier deux.
 Le clic de confirmation lance une seule campagne sur les cibles retenues.
+
+### Plafond paramétrable et cadence adaptative (ADR-SS-005 v0.2)
+
+`SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY` désigne désormais le plafond des seules rencontres
+éligibles dans une campagne. Avec la valeur 25, une sélection de 1 à 25 cibles est permise,
+sous réserve du profil temporel et de l'espace disque. Le défaut reste 1. Les `finished`
+ne comptent pas ; les rencontres déjà suivies sont verrouillées, sauf `STOPPED_ERROR`.
+La limite technique de lecture reste 100 identifiants par formulaire, exclus compris.
+
+La cadence est calculée après exclusion des `finished` puis figée au manifeste :
+
+| Cibles retenues N | Intervalle D | Charge de quatre familles, profil 1 s + 1 s + 3 s |
+|---|---|---|
+| 1–3 | 60 s | 20–60 s |
+| 4 | 90 s | 80 s |
+| 5 | 120 s | 100 s |
+| 10 | 270 s (4 min 30 s) | 200 s |
+| 25 | 720 s (12 min) | 500 s |
+
+La règle générale est `D = max(60, 30 × (N − 1))` secondes. Un plafond à 25 avec trois
+cibles garde 60 s. J4 en attente/surveillance de fin et les trois familles J5 utilisent D ;
+le secours J4 utilise `max(300 s, D)`. Une indisponibilité J5 HTTP 404 conserve la prochaine
+échéance normale. L'actualisation de l'écran reste une lecture locale toutes les cinq secondes.
+
+Pour le profil testé avec les valeurs 5, 10 et 25, conserver `SOFASCORE_LIVE_REQUEST_ENVELOPE=1000ms`
+et `SOFASCORE_LIVE_PROCESSING_ENVELOPE=1000ms`. La nouvelle
+[preuve JSON](../validation/WO058-ADAPTIVE-CAPACITY-PROFILE-20260907.json) et les mesures du
+[rapport de capacité adaptative](../validation/WO058-ADAPTIVE-CAPACITY-20260907.md) correspondent
+à cette empreinte à renseigner dans `SOFASCORE_LIVE_QUALIFICATION_SHA256` :
+
+```text
+99bffa13e057a07fd9493d26e8a186ffa25b2262f03f652da2869347850fceea
+```
+
+Vérification de l'empreinte dans le checkout du correctif :
+
+```powershell
+(Get-FileHash -LiteralPath docs/validation/WO058-ADAPTIVE-CAPACITY-PROFILE-20260907.json -Algorithm SHA256).Hash.ToLowerInvariant()
+```
+
+Les anciens profils 2/3 restent admissibles pour leurs sélections ; une simple forme SHA valide
+ne qualifie pas un débit. Les tests Chromium sont locaux, les latences réelles restent surveillées.
+
+J4 affiche le plafond et le nombre éligible. À ce plafond, les autres cases éligibles sont
+désactivées ; décocher une cible permet d'en choisir une autre. Une case `finished` reste
+sélectionnable pour obtenir l'explication d'exclusion. Si un changement local rend la sélection
+trop grande, il faut la réduire avant préparation ; le serveur contrôle toujours le décompte.
+Redémarrer l'application sur le correctif et recharger `/events`, puis préparer un nouveau
+manifeste. Le changement de plafond ou de profil ne modifie jamais une campagne déjà préparée
+ou démarrée ; une nouvelle préparation est requise pour utiliser la nouvelle configuration.
 
 ## Parcours depuis /events
 

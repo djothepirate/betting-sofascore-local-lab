@@ -180,11 +180,12 @@ public class LiveCampaignPresentation {
                             .map(Transition::changedAt).min(Instant::compareTo).orElse(baseline));
         }
         long interval = 0;
+        long cycleSeconds = campaign.manifest().cycleInterval().toSeconds();
         if (!frozen && "RUNNING".equals(campaign.state())) {
             if (cursor.endpoint() == SofascoreEndpointType.EVENT_DETAILS) {
-                interval = "COLLECTING".equals(event.state()) ? 300
-                        : "WAITING_START".equals(event.state()) || "CHECKING_FINISH".equals(event.state()) ? 60 : 0;
-            } else if ("COLLECTING".equals(event.state()) || "CHECKING_FINISH".equals(event.state())) interval = 60;
+                interval = "COLLECTING".equals(event.state()) ? Math.max(300, cycleSeconds)
+                        : "WAITING_START".equals(event.state()) || "CHECKING_FINISH".equals(event.state()) ? cycleSeconds : 0;
+            } else if ("COLLECTING".equals(event.state()) || "CHECKING_FINISH".equals(event.state())) interval = cycleSeconds;
         }
         Instant success = cursor.lastSuccessfulAt();
         Instant anchor = success == null ? phaseStarted : success;

@@ -75,7 +75,7 @@ class LiveCampaignFormBrowserQualificationIT {
 
     @ParameterizedTest
     @ValueSource(strings = {"localhost:8087", "127.0.0.1:8087"})
-    @Timeout(75)
+    @Timeout(120)
     void renderedFormsKeepExactOriginAndOpaquePostStillFails(String host) throws Exception {
         String configured = System.getProperty("provider.playwright.browser-cache", "");
         assertThat(configured).as("explicit browser cache opt-in").isNotBlank();
@@ -143,6 +143,8 @@ class LiveCampaignFormBrowserQualificationIT {
                 }
             });
             Page page = context.newPage();
+            checkSelectionCeilings(page, origin);
+            arrangeLocalObservations();
             Response search = page.navigate(origin + "/events?date=2026-09-07&zone=Europe%2FParis");
             assertThat(search.status()).isEqualTo(200);
             assertThat(search.headerValue("Referrer-Policy")).isEqualTo("same-origin");
@@ -197,6 +199,7 @@ class LiveCampaignFormBrowserQualificationIT {
     }
 
     private void arrangeLocalObservations() {
+        when(campaigns.selectionMaximum()).thenReturn(1);
         showEvent(observation("notstarted"));
         when(phase1Control.snapshot()).thenReturn(new J4RealPhase1ControlSnapshot(J4RealPhase1State.LOCKED,
                 NOW, null, null, null, null, 0, null, false, List.of("QUALIFICATION_DISABLED")));
@@ -205,6 +208,35 @@ class LiveCampaignFormBrowserQualificationIT {
         when(campaigns.prepareSelection(List.of(EVENT_ID)))
                 .thenReturn(new LiveCampaignService.Preparation(manifest(), List.of()));
         when(campaigns.eventStates(any())).thenReturn(List.of());
+    }
+
+    private void checkSelectionCeilings(Page page, String origin) {
+        for (int ceiling : new int[] {5, 10, 25}) {
+            var zone = ZoneId.of("Europe/Paris");
+            var items = new ArrayList<J4EventSearchItem>();
+            for (int i = 0; i < ceiling + 2; i++) {
+                var event = new CanonicalEventObservationView(i + 1L, CanonicalEventIdentity.sofascore(900001L + i), NOW,
+                        new ScheduledTeam(9101L, "Synthetic Home " + i), new ScheduledTeam(9202L, "Synthetic Away"),
+                        new ScheduledEventStatus(i == ceiling + 1 ? "finished" : "notstarted", Optional.empty()),
+                        Optional.empty(), EventSourceTrace.providerSnapshot(1L, HASH, "event-details-v2", NOW), HASH, 1L);
+                items.add(new J4EventSearchItem(event, NOW.atZone(zone)));
+            }
+            when(query.search(LocalDate.of(2026, 9, 7), "Europe/Paris")).thenReturn(new J4EventSearchResult(
+                    LocalDate.of(2026, 9, 7), zone, NOW.minusSeconds(3600), NOW.plusSeconds(3600), items));
+            when(campaigns.selectionMaximum()).thenReturn(ceiling);
+            page.navigate(origin + "/events?date=2026-09-07&zone=Europe%2FParis");
+            var inputs = page.locator("input[form=live-selection][name=eventId]");
+            for (int i = 0; i < ceiling; i++) inputs.nth(i).check();
+            assertThat(inputs.nth(ceiling).isDisabled()).isTrue();
+            assertThat(inputs.nth(ceiling + 1).isEnabled()).isTrue();
+            inputs.nth(ceiling + 1).check();
+            assertThat(page.locator("[data-live-eligible-count]").textContent()).isEqualTo(ceiling + " éligibles / " + ceiling);
+            assertThat(page.locator("[data-live-prepare]").isEnabled()).isTrue();
+            inputs.first().uncheck();
+            assertThat(inputs.nth(ceiling).isEnabled()).isTrue();
+            inputs.nth(ceiling).check();
+            assertThat(inputs.first().isDisabled()).isTrue();
+        }
     }
 
     private static CanonicalEventObservationView observation(String status) {

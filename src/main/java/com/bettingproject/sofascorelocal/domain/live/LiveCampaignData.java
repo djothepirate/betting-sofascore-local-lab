@@ -43,12 +43,14 @@ public final class LiveCampaignData {
     public record Manifest(UUID campaignId, String manifestSha256, String policyVersion,
                            Instant preparedAt, Instant expiresAt, Duration duration,
                            int maximumCallsPerEvent, int maximumCalls, long maximumBytes,
-                           int qualifiedMatchCapacity, List<Target> targets, AdmissionProfile admissionProfile) {
+                           int qualifiedMatchCapacity, List<Target> targets, AdmissionProfile admissionProfile,
+                           Duration cycleInterval) {
         public Manifest {
             Objects.requireNonNull(campaignId); requireHash(manifestSha256);
             requireCode(policyVersion); Objects.requireNonNull(preparedAt);
             Objects.requireNonNull(expiresAt); Objects.requireNonNull(duration);
             Objects.requireNonNull(admissionProfile);
+            LiveCadence.validate(cycleInterval);
             preparedAt = preparedAt.truncatedTo(ChronoUnit.MICROS);
             expiresAt = expiresAt.truncatedTo(ChronoUnit.MICROS);
             targets = List.copyOf(targets);
@@ -57,12 +59,23 @@ public final class LiveCampaignData {
                     || duration.isNegative() || duration.isZero() || duration.compareTo(Duration.ofHours(4)) > 0
                     || duration.toSeconds() < 1 || duration.getNano() != 0 || maximumCallsPerEvent < 4 || maximumCallsPerEvent > 1000
                     || maximumCalls < 4 || maximumCalls > 3000 || maximumBytes < 1
-                    || qualifiedMatchCapacity < 1 || qualifiedMatchCapacity > 3
+                    || qualifiedMatchCapacity < 1
                     || targets.isEmpty() || targets.size() > qualifiedMatchCapacity
+                    || targets.size() > LiveCadence.MAXIMUM_SELECTION_SIZE
+                    || ("live-v2".equals(policyVersion) && !cycleInterval.equals(LiveCadence.forMatches(targets.size())))
                     || maximumCalls < 4 * targets.size()
                     || targets.stream().map(Target::canonicalEventId).distinct().count() != targets.size()) {
                 throw new IllegalArgumentException("live manifest is outside accepted bounds");
             }
+        }
+        /** Pre-adaptive manifests retain their original one-minute schedule. */
+        public Manifest(UUID campaignId, String manifestSha256, String policyVersion,
+                        Instant preparedAt, Instant expiresAt, Duration duration,
+                        int maximumCallsPerEvent, int maximumCalls, long maximumBytes,
+                        int qualifiedMatchCapacity, List<Target> targets, AdmissionProfile admissionProfile) {
+            this(campaignId, manifestSha256, policyVersion, preparedAt, expiresAt, duration,
+                    maximumCallsPerEvent, maximumCalls, maximumBytes, qualifiedMatchCapacity, targets,
+                    admissionProfile, Duration.ofSeconds(60));
         }
         public Manifest(UUID campaignId, String manifestSha256, String policyVersion,
                         Instant preparedAt, Instant expiresAt, Duration duration,

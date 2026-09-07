@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.application.live;
 
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
+import com.bettingproject.sofascorelocal.domain.live.LiveCadence;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -15,14 +16,23 @@ public final class LiveSchedule {
                              long missedCycles, boolean finalComplete) { }
     private final LinkedHashMap<UUID, Event> events = new LinkedHashMap<>();
     private final Instant endsAt;
+    private final Duration interval;
+    private final Duration fallbackInterval;
     private Due inFlight;
     private UUID contiguous;
     private String globalStop;
 
     public LiveSchedule(List<UUID> targets, Instant start, Instant endsAt) {
-        if (targets.isEmpty() || targets.size() > 3 || new HashSet<>(targets).size() != targets.size()
+        this(targets, start, endsAt, Duration.ofSeconds(60));
+    }
+
+    public LiveSchedule(List<UUID> targets, Instant start, Instant endsAt, Duration interval) {
+        if (targets.isEmpty() || targets.size() > LiveCadence.MAXIMUM_SELECTION_SIZE || new HashSet<>(targets).size() != targets.size()
                 || !endsAt.isAfter(start)) throw new IllegalArgumentException("invalid live schedule");
+        LiveCadence.validate(interval);
         this.endsAt = endsAt;
+        this.interval = interval;
+        this.fallbackInterval = interval.compareTo(Duration.ofMinutes(5)) > 0 ? interval : Duration.ofMinutes(5);
         targets.forEach(id -> events.put(id, new Event(id, start)));
     }
 
@@ -33,7 +43,7 @@ public final class LiveSchedule {
             Event e = events.get(contiguous);
             if (!e.active()) contiguous = null;
             else {
-                if (!e.finalizing && !now.isBefore(e.cycleDue.plusSeconds(120))) {
+                if (!e.finalizing && !now.isBefore(e.cycleDue.plus(interval.multipliedBy(2)))) {
                     e.missedCycles += 2; stopAll("STOPPED_CAPACITY"); return Optional.empty();
                 }
                 Due due = j5Due(e);
@@ -46,7 +56,7 @@ public final class LiveSchedule {
             Due candidate;
             if (e.finalizing || e.j5At != null && (e.j4At == null || j5Due(e).dueAt().isBefore(e.j4At))) {
                 candidate = j5Due(e);
-                if (!e.finalizing && !now.isBefore(candidate.dueAt().plusSeconds(120))) {
+                if (!e.finalizing && !now.isBefore(candidate.dueAt().plus(interval.multipliedBy(2)))) {
                     e.missedCycles += 2; stopAll("STOPPED_CAPACITY"); return Optional.empty();
                 }
             } else candidate = new Due(e.id, EVENT_DETAILS, e.serial, e.j4Kind, e.j4At, e.reserveFinish);
@@ -59,7 +69,7 @@ public final class LiveSchedule {
         SofascoreEndpointType endpoint = J5.get(e.familyIndex);
         Instant eligible = e.j5At;
         Instant previous = e.lastStarts.get(endpoint);
-        if (previous != null && eligible.isBefore(previous.plusSeconds(60))) eligible = previous.plusSeconds(60);
+        if (previous != null && eligible.isBefore(previous.plus(interval))) eligible = previous.plus(interval);
         return new Due(e.id, endpoint, e.serial, e.finalizing ? "J5_FINAL" : "J5_NORMAL", eligible, e.finalizing);
     }
 
@@ -73,7 +83,7 @@ public final class LiveSchedule {
         if (inFlight != null || !mayDispatch(due, now)) throw new IllegalStateException("LIVE_DISPATCH_CANCELLED");
         Event e = events.get(due.eventId());
         Instant previous = e.lastStarts.get(due.endpoint());
-        if (previous != null && now.isBefore(previous.plusSeconds(60))) throw new IllegalStateException("LIVE_FAMILY_CADENCE");
+        if (previous != null && now.isBefore(previous.plus(interval))) throw new IllegalStateException("LIVE_FAMILY_CADENCE");
         e.lastStarts.put(due.endpoint(), now);
         if (due.endpoint() != EVENT_DETAILS) { contiguous = e.id; if (e.familyIndex == 0) e.cycleDue = e.j5At; }
         inFlight = due;
@@ -99,10 +109,10 @@ public final class LiveSchedule {
                 e.j5At = now; e.familyIndex = 0; e.finalGood = true;
             } else if (e.reserveFinish) stopEvent(e.id, "STOPPED_LIMIT");
             else if ("notstarted".equals(status)) {
-                e.state = "WAITING_START"; e.j4At = started.plusSeconds(60); e.j4Kind = "J4_WAIT";
+                e.state = "WAITING_START"; e.j4At = started.plus(interval); e.j4Kind = "J4_WAIT";
             } else {
                 e.state = e.checkingFinish ? "CHECKING_FINISH" : "COLLECTING";
-                e.j4At = e.checkingFinish ? started.plusSeconds(60) : now.plusSeconds(300);
+                e.j4At = e.checkingFinish ? started.plus(interval) : now.plus(fallbackInterval);
                 e.j4Kind = e.checkingFinish ? "J4_FINISH" : "J4_FALLBACK";
                 if (e.j5At == null) e.j5At = now;
             }
@@ -111,7 +121,7 @@ public final class LiveSchedule {
         e.finalGood &= !unavailable;
         for (var signal : signals.entrySet()) if (!e.finalizing && e.seenSignals.add(signal.getKey())) {
             if (signal.getValue()) { e.checkingFinish = true; e.state = "CHECKING_FINISH"; }
-            Instant next = e.lastStarts.get(EVENT_DETAILS).plusSeconds(60);
+            Instant next = e.lastStarts.get(EVENT_DETAILS).plus(interval);
             if (next.isBefore(now)) next = now;
             if (e.j4At == null || next.isBefore(e.j4At)) e.j4At = next;
             e.j4Kind = e.checkingFinish ? "J4_FINISH" : "J4_SIGNAL";
@@ -122,12 +132,12 @@ public final class LiveSchedule {
             if (e.finalizing) {
                 e.finalComplete = e.finalGood; e.state = "FINISHED_CONFIRMED"; e.j5At = null; return;
             }
-            if (!now.isBefore(e.cycleDue.plusSeconds(60))) {
+            if (!now.isBefore(e.cycleDue.plus(interval))) {
                 e.missedCycles++; e.consecutiveMisses++;
                 if (e.consecutiveMisses >= 2) { stopAll("STOPPED_CAPACITY"); return; }
             } else e.consecutiveMisses = 0;
-            Instant next = e.j5At.plusSeconds(60);
-            while (!next.plusSeconds(60).isAfter(now)) { next = next.plusSeconds(60); e.missedCycles++; }
+            Instant next = e.j5At.plus(interval);
+            while (!next.plus(interval).isAfter(now)) { next = next.plus(interval); e.missedCycles++; }
             e.j5At = next;
         }
     }
@@ -138,7 +148,7 @@ public final class LiveSchedule {
         if (e.reserveFinish) { stopEvent(id, "STOPPED_LIMIT"); return; }
         e.reserveFinish = true; e.j5At = null; e.familyIndex = 0; contiguous = null;
         Instant previous = e.lastStarts.get(EVENT_DETAILS);
-        e.j4At = previous == null || !now.isBefore(previous.plusSeconds(60)) ? now : previous.plusSeconds(60);
+        e.j4At = previous == null || !now.isBefore(previous.plus(interval)) ? now : previous.plus(interval);
         e.j4Kind = "J4_FINAL_CHECK";
     }
     public synchronized void failed(Due due, String scope, String reason) {

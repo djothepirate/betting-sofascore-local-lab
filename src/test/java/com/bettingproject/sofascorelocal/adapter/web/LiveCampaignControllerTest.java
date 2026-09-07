@@ -376,14 +376,15 @@ class LiveCampaignControllerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {2, 3})
+    @ValueSource(ints = {2, 3, 4, 5, 10, 25})
     void multipleEligibleEventsReachTheConfirmationPageAndLaunchTheSameManifest(int count) throws Exception {
         var targets = IntStream.range(0, count).mapToObj(i -> new Target(
                 CanonicalEventIdentity.sofascore(900001L + i).value(), 900001L + i, i + 1L, i + 1L)).toList();
         var ids = targets.stream().map(Target::canonicalEventId).toList();
-        var manifest = new Manifest(CAMPAIGN_ID, HASH, "live-v1", NOW, NOW.plusSeconds(300), Duration.ofHours(4),
-                1000, 3000, count * 1000L * 5 * 1024 * 1024, count, targets,
-                new AdmissionProfile(Duration.ofMillis(count == 2 ? 3000 : 750), Duration.ofSeconds(1), "b".repeat(64)));
+        var interval = com.bettingproject.sofascorelocal.domain.live.LiveCadence.forMatches(count);
+        var manifest = new Manifest(CAMPAIGN_ID, HASH, "live-v2", NOW, NOW.plusSeconds(300), Duration.ofHours(4),
+                1000, 3000, Math.min(3000L, count * 1000L) * 5 * 1024 * 1024, 25, targets,
+                new AdmissionProfile(Duration.ofSeconds(1), Duration.ofSeconds(1), "b".repeat(64)), interval);
         when(service.prepareSelection(ids)).thenReturn(new LiveCampaignService.Preparation(manifest, List.of()));
         when(service.state(CAMPAIGN_ID)).thenReturn(new CampaignView(manifest, "PREPARED", null, null, null,
                 0, 0, 1, null, targets.stream().map(t -> new EventView(t, "PREPARED", null, 0, 0, null, List.of())).toList(),
@@ -395,7 +396,8 @@ class LiveCampaignControllerTest {
                 .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/live-campaigns/" + CAMPAIGN_ID));
         var page = mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST).session(session))
                 .andExpect(status().isOk()).andExpect(model().attribute("manifest", manifest))
-                .andExpect(content().string(containsString("name=\"confirmation\""))).andReturn();
+                .andExpect(content().string(containsString("name=\"confirmation\"")))
+                .andExpect(content().string(containsString(interval.toSeconds() + " secondes"))).andReturn();
         for (var id : ids) org.assertj.core.api.Assertions.assertThat(page.getResponse().getContentAsString())
                 .contains("data-live-event-id=\"" + id + "\"");
         verify(service, never()).launch(any(), any());

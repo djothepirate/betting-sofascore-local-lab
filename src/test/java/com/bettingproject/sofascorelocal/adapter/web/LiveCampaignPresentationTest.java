@@ -158,6 +158,25 @@ class LiveCampaignPresentationTest {
         assertThat(result.state()).isEqualTo(expected);
     }
 
+    @ParameterizedTest
+    @CsvSource({"4,90,180,FRESH", "4,90,181,STALE", "5,120,240,FRESH", "5,120,241,STALE",
+            "10,270,540,FRESH", "10,270,541,STALE", "25,720,1440,FRESH", "25,720,1441,STALE"})
+    void adaptiveFreshnessUsesThePersistedCadence(int count, int seconds, int elapsed, String expected) {
+        var base = campaignForFreshness(SofascoreEndpointType.EVENT_STATISTICS, "COLLECTING", List.of());
+        var old = base.manifest();
+        var targets = java.util.stream.IntStream.range(0, count).mapToObj(i -> new Target(
+                CanonicalEventIdentity.sofascore(900001L + i).value(), 900001L + i, 1, 1)).toList();
+        var manifest = new Manifest(old.campaignId(), old.manifestSha256(), "live-v2", old.preparedAt(), old.expiresAt(),
+                old.duration(), 1000, 3000, old.maximumBytes(), 25, targets, old.admissionProfile(), Duration.ofSeconds(seconds));
+        var view = new CampaignView(manifest, base.state(), null, base.startedAt(), base.endsAt(), base.reservedCalls(),
+                base.receivedBytes(), base.revision(), null, base.events(), base.attempts(), base.transitions());
+        var freshness = new LiveCampaignPresentation(events, data, Clock.fixed(START.plusSeconds(elapsed), ZoneOffset.UTC))
+                .state(view).events().getFirst().families().stream().filter(f -> f.endpoint().equals("EVENT_STATISTICS"))
+                .findFirst().orElseThrow().freshness();
+        assertThat(freshness.expectedIntervalSeconds()).isEqualTo(seconds);
+        assertThat(freshness.state()).isEqualTo(expected);
+    }
+
     @Test
     void terminalAgeRemainsFrozenAtThePersistedTransition() {
         var view = campaignForFreshness(SofascoreEndpointType.EVENT_STATISTICS, "FINISHED_CONFIRMED",

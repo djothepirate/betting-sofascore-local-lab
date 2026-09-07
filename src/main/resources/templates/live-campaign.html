@@ -33,6 +33,7 @@
       <div><dt>Fin au plus tard (UTC)</dt><dd data-live-ends-at th:text="${campaign.endsAt ?: 'Fixée au lancement'}">—</dd></div>
       <div><dt>Appels réservés / plafond</dt><dd data-live-calls th:text="${campaign.reservedCalls + ' / ' + campaign.maximumCalls}">0</dd></div>
       <div><dt>Octets reçus / plafond</dt><dd data-live-bytes th:text="${campaign.receivedBytes + ' / ' + campaign.maximumBytes}">0</dd></div>
+      <div><dt>Intervalle de collecte</dt><dd th:text="${manifest.cycleInterval.toSeconds() + ' secondes'}">60 secondes</dd></div>
     </dl>
     <p class="muted" data-live-refresh-status role="status" aria-live="polite">Lecture locale toutes les cinq secondes, suspendue lorsque l’onglet est masqué.</p>
     <form th:if="${campaign.state == 'RUNNING'}" data-live-stop-form method="post"
@@ -51,7 +52,8 @@
     <p>La sélection ci-dessous est figée. Le lancement manuel autorise ses appels automatiques pendant la fenêtre indiquée.</p>
     <dl class="detail-grid">
       <div><dt>Rencontres retenues</dt><dd th:text="${manifest.targets.size()}">1</dd></div>
-      <div><dt>Capacité qualifiée</dt><dd th:text="${manifest.qualifiedMatchCapacity}">1</dd></div>
+      <div><dt>Plafond de rencontres éligibles</dt><dd th:text="${manifest.qualifiedMatchCapacity}">1</dd></div>
+      <div><dt>Intervalle de collecte</dt><dd th:text="${manifest.cycleInterval.toSeconds() + ' secondes'}">60 secondes</dd></div>
       <div><dt>Durée maximale</dt><dd th:text="${manifest.duration.toMinutes() + ' minutes'}">240 minutes</dd></div>
       <div><dt>Expiration de la préparation (UTC)</dt><dd th:text="${manifest.expiresAt}">—</dd></div>
       <div><dt>Appels maximum par rencontre</dt><dd th:text="${manifest.maximumCallsPerEvent}">1000</dd></div>
@@ -67,7 +69,9 @@
           th:text="${#strings.isEmpty(manifest.admissionProfile.qualificationSha256) ? 'Profil initial conservateur' : manifest.admissionProfile.qualificationSha256}">Profil initial conservateur</dd></div>
       </dl>
     </details>
-    <p>J4 vérifie le statut avant le match chaque minute. En cours de match, J5 collecte statistiques, incidents et compositions chaque minute ; J4 confirme ensuite la fin. Les appels sont sérialisés. Une lecture de cette page ne lance aucune collecte.</p>
+    <p>J4 vérifie le statut avant le match et J5 collecte statistiques, incidents et compositions en cours de match toutes les
+      <span th:text="${manifest.cycleInterval.toSeconds()}">60</span> secondes. J4 confirme ensuite la fin.
+      Cet intervalle est fixé pour cette sélection. Les appels sont sérialisés. Une lecture de cette page ne lance aucune collecte.</p>
     <form method="post" th:action="@{/live-campaigns/{id}/launch(id=${campaign.campaignId})}">
       <input type="hidden" name="localFormToken" th:value="${localFormToken}">
       <input type="hidden" name="manifestHash" th:value="${manifest.manifestSha256}">

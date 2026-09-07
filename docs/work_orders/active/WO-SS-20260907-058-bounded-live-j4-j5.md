@@ -1,6 +1,6 @@
 # WO-SS-20260907-058 — Campagnes live locales J4/J5 sur sélection de rencontres
 
-- **Statut :** `READY_FOR_REVIEW` — retour opérateur multi-match, publication J5 404 et verrou de sélection J4 corrigés ; suites complète et Chromium vertes, reprise opérateur après correctif à valider, aucune clôture.
+- **Statut :** `READY_FOR_REVIEW` — correctif de plafond paramétrable et cadence adaptative, y compris 10 et 25 rencontres, qualifié hors fournisseur ; aucune clôture.
 - **Date :** 2026-09-07.
 - **Jalon :** expérimentation live locale après J9, distincte des parcours manuels existants.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
@@ -8,16 +8,41 @@
 - **Base exacte :** `6dfd14286d4f269cbe100bd965257c20298538db`, sommet GitHub vérifié le 7 septembre.
 - **Worktree :** `.tmp/wo058-live-j4-j5`, depuis le dossier Codex du Lab ; worktree distinct d'Eclipse.
 - **Autorité reçue :** ADR-SS-005 v0.1 accepté, puis déclaration « Je valide le WO-058 les travaux peuvent commencer » et demande explicite d'exécuter le plan de réalisation ; port 8087 libéré pour les tests.
-- **ADR live :** [ADR-SS-005 v0.1](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), `ACCEPTED` le 7 septembre 2026 ; proposition acceptée de SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
+- **ADR live courant :** [ADR-SS-005 v0.2](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), capacité et cadence demandées par le propriétaire le 7 septembre ; proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
 - **Livrable présent :** ADR accepté, WO validé, réalisation locale et qualification hors fournisseur ; état des preuves dans le rapport de réalisation.
 - **Alignement de gouvernance :** renvois ciblés dans ADR-SS-001 et AGENTS.md ; ADR-SS-002 à 004 inchangés.
-- **Réalisation applicative :** réalisée et qualifiée hors fournisseur, paliers deux et trois et correctif du quatrième retour vérifiés ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur :** finalisation multi-match et cycles actifs observés par l'opérateur, reprise après correction du HTTP 404 J5 encore à valider.
+- **Réalisation applicative :** réalisée et qualifiée hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur :** finalisation multi-match et cycles actifs observés par l'opérateur, nouveaux essais après correctifs restant distincts des qualifications locales.
 
 Les statuts restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 `NO_CRITICAL_DEPENDENCY`. Le socle reste Java 25 LTS, Spring Boot 4.1.0, Maven wrapper,
 PostgreSQL local Docker Desktop et application sur `127.0.0.1:8087`, textes UTF-8.
 
 ## 1. Objectif et origine du besoin
+
+### Cinquième retour opérateur — plafond paramétrable et cadence adaptative
+
+Après `a7f544cc2f70`, le paramètre réglé à 5 provoque `LIVE_POLICY_INVALID`, même avec une
+seule rencontre. Le propriétaire précise que ce paramètre doit porter sur le maximum de
+rencontres éligibles sélectionnables par campagne et confirme les valeurs 10 et 25.
+Il choisit 60 s pour 1–3 cibles, 90 s pour 4 et 120 s pour 5 ; la progression est prolongée
+par `D = max(60, 30 × (N − 1))` secondes selon N cibles retenues. Un plafond à 25 avec
+trois cibles donne 60 s ; 25 cibles donnent 720 s.
+
+Cette décision remplace les seuls paliers 1/2/3 et cadences fixes du cadrage historique
+ci-dessous, et est enregistrée dans ADR-SS-005 v0.2. La préparation filtre `finished` avant
+décompte ; le serveur et J4 appliquent le plafond. Les exceptions de sélection `STOPPED_ERROR`
+et les réinterrogations J5 après HTTP 404 sont conservées. Le manifeste `live-v2` fige D ;
+V34 conserve à 60 s les anciens `live-v1`, sans changer empreintes, provenance ou historiques.
+Le plafond d'entrée de 100 identifiants, les quatre heures, 1 000/3 000 tentatives, délai de
+trois secondes après échange et contexte unique restent applicables.
+
+Validation du correctif : `clean verify -Pintegration-tests`, 1 424 tests Surefire (cinq ignorés
+documentés) et 131 Failsafe, sans échec ni erreur ; 13 cas de charge au profil commun réexécutés
+avec succès ; 12 tests Chromium dédiés réussis. Le passage natif de 25 cibles traite 100 réponses
+de 5 Mio en 351,23 s, dans D = 720 s ; sa récurrence est vérifiée à horloge virtuelle.
+Le PID 37724 a été arrêté après autorisation explicite, libérant le port 8087 requis par J6.
+La base opérateur n'a pas été modifiée. Preuves et limites :
+[rapport de capacité adaptative](../../validation/WO058-ADAPTIVE-CAPACITY-20260907.md).
 
 ### Retour fonctionnel du 7 septembre 2026, après commit `54d1597`
 
@@ -243,12 +268,12 @@ sportif brut J4 et des états de collecte J5. Le fournisseur peut renvoyer d'aut
 | État / observation | Action | Suite |
 |---|---|---|
 | `INITIAL_CHECK` | Un J4 `EVENT_DETAILS` dès la première place admissible après lancement | Classer la réponse reçue, pas l'ancien statut de la liste |
-| J4 `notstarted` | `WAITING_START`, nouvelle échéance J4 à 60 s ; aucun J5 | Répéter jusqu'à statut différent ou borne/arrêt |
-| J4 `inprogress` en `INITIAL_CHECK` ou `WAITING_START` | Arrêter la boucle d'attente ; premier cycle J5 dès disponibilité du coordinateur | `COLLECTING`, puis J5 chaque 60 s |
+| J4 `notstarted` | `WAITING_START`, nouvelle échéance J4 à D ; aucun J5 | Répéter jusqu'à statut différent ou borne/arrêt |
+| J4 `inprogress` en `INITIAL_CHECK` ou `WAITING_START` | Arrêter la boucle d'attente ; premier cycle J5 dès disponibilité du coordinateur | `COLLECTING`, puis J5 chaque D |
 | Signal de première période/mi-prolongation, boucle de fin non armée | Un contrôle J4 ponctuel ; si `inprogress`, maintien en `COLLECTING` | Échéancier J5 inchangé ; pas de nouveau « premier cycle » |
 | J4 `inprogress` ponctuel ou de secours en `COLLECTING` | Conserver l'état et les échéances J5 | Aucun redémarrage ni double cycle |
 | J4 `finished`, même au premier contrôle | Annuler les échéances ordinaires, conserver l'observation de fin | `FINALIZING`, un dernier cycle J5 borné, puis `FINISHED_CONFIRMED` |
-| Signal J5 classé comme fin potentielle selon §6 | Programmer une vérification J4 dans la minute, sans doubler une échéance existante | `CHECKING_FINISH`, J4 chaque 60 s, J5 continue ; le signal de mi-temps ne demande qu'un contrôle ponctuel |
+| Signal J5 classé comme fin potentielle selon §6 | Programmer une vérification J4 à la première échéance respectant D, sans doubler une échéance existante | `CHECKING_FINISH`, J4 chaque D, J5 continue ; le signal de mi-temps ne demande qu'un contrôle ponctuel |
 | J4 toujours `inprogress` pendant vérification de fin | Ne pas conclure ; continuer J4 et J5 bornés | Attendre une preuve J4 `finished` |
 | Statut reporté/annulé/interrompu/suspendu/inconnu, ou régression `inprogress → notstarted` | Conserver le statut brut et cesser les appels de ce match | `STOPPED_REVIEW_REQUIRED`, pas `finished` |
 | J4 404 | Conserver `ENDPOINT_UNAVAILABLE`, aucune preuve de statut | Arrêt de ce match, poursuite possible des autres |
@@ -275,17 +300,17 @@ Cette politique live ne modifie pas les arrêts des campagnes manuelles historiq
 - L'origine est celle déjà autorisée par les contrats Playwright : `https://www.sofascore.com`.
   Les URI viennent des requêtes typées existantes ; l'allowlist reste exacte. Les GET locaux de
   consultation ne peuvent pas demander une URI fournisseur.
-- Chaque famille J5 a une échéance nominale toutes les 60 s, avec des décalages internes dus aux
-  appels séquentiels. Une minute signifie trois requêtes par match, même si les compositions n'ont
+- Chaque famille J5 a une échéance nominale à l'intervalle D du manifeste, avec des décalages internes dus aux
+  appels séquentiels. Un cycle signifie trois requêtes par match, même si les compositions n'ont
   pas changé. Ne pas réduire discrètement leur fréquence au motif qu'elles changeraient moins.
 - Utiliser une horloge monotone pour les délais et UTC pour les instants persistés ; afficher Paris.
-  Cible `t0 + k × 60 s`, délai minimal de 60 s entre deux départs de la même famille/événement et
+  Cible `t0 + k × D`, délai minimal D entre deux départs de la même famille/événement et
   aucun chevauchement de cycles d'un événement. Les familles d'un cycle restent contiguës et ordonnées.
 - Sérialiser tous les départs J3/J4/J5 dans le coordinateur commun, avec son fence conservateur et
   sa preuve temporelle minimale de trois secondes. Interdire les appels manuels concurrents pendant
   la campagne live ; autoriser les lectures locales.
 - Un retard ne produit jamais de rattrapage en rafale. Coalescer les échéances devenues obsolètes,
-  compter les cycles non exécutés et rendre le retard visible. La cible de minute n'est pas garantie
+  compter les cycles non exécutés et rendre le retard visible. La cible D n'est pas garantie
   en cas de réponse lente : qualifier la distribution des écarts réels, pas seulement le timer.
 - Une requête J4 déjà prévue satisfait simultanément un signal d'incident et le contrôle périodique.
   Un signal lu pendant le cycle J5 est traité après ce cycle ; aucune quatrième famille J5 n'est ajoutée.
@@ -306,29 +331,29 @@ Cette politique live ne modifie pas les arrêts des campagnes manuelles historiq
    elle continue jusqu'à la preuve J4 ou une borne ; J5 continue également pendant les tirs au but.
 5. Les incidents étant rediffusés et parfois corrigés/réordonnés, mémoriser le signal et sa
    provenance ; relire le même incident ne recrée pas de boucle ni d'appel supplémentaire.
-6. Prévoir un contrôle J4 de secours toutes les cinq minutes depuis le dernier J4 réussi en phase
+6. Prévoir un contrôle J4 de secours à `max(300 s, D)` depuis le dernier J4 réussi en phase
    active. Il couvre l'absence d'`injuryTime`, un endpoint incidents indisponible et un événement
-   arrêté autrement. Ce contrôle est remplacé par la cadence J4 de 60 s dès `CHECKING_FINISH`.
+   arrêté autrement. Ce contrôle est remplacé par la cadence J4 D dès `CHECKING_FINISH`.
 7. Lorsqu'une fin manque encore, la limite de durée arrête la collecte avec fin **non confirmée**.
    Ni T+90, ni T+120, ni le score, ni une liste d'incidents vide ne suffisent à conclure.
 
 Le dernier cycle J5 est au plus unique, ordonné et compris dans le budget. Il commence après
-réception du J4 `finished`, à sa première échéance respectant les 60 s depuis le dernier départ
+réception du J4 `finished`, à sa première échéance respectant D depuis le dernier départ
 de chaque famille et le délai global, pour obtenir une observation postérieure ; aucune attente de stabilisation
 ou répétition post-match n'est ajoutée. S'il n'est pas exécutable ou échoue, le statut sportif reste
 confirmé et la finalisation est explicitement incomplète.
 
 ## 7. Bornes retenues et contrôle de capacité
 
-Ces bornes sont celles d'ADR-SS-005 v0.1 formellement accepté par le propriétaire. Elles ne
+Ces bornes sont celles d'ADR-SS-005 v0.2, issue des décisions du propriétaire. Elles ne
 constituent pas un quota fournisseur connu ou une garantie de performance déjà mesurée.
 
-| Paramètre | Valeur retenue pour la première version |
+| Paramètre | Valeur courante |
 |---|---|
 | Campagnes actives | Une seule globalement, lease commune conservée |
-| Nombre de matchs | Premier essai réel : 1 ; extension à 2 puis 3 seulement après qualification de charge ; aucune admission automatique des dix lignes |
-| J4 attente / J5 / J4 fin | 60 s par événement/famille |
-| J4 de secours actif | 300 s ; remplacé par J4 fin, jamais cumulé |
+| Nombre de matchs | Maximum éligible configuré par campagne ; 5, 10 et 25 admis avec profil de charge adapté ; limite technique d'entrée de 100 identifiants |
+| J4 attente / J5 / J4 fin | D = max(60, 30 × (N − 1)) s par événement/famille, selon N cibles du manifeste |
+| J4 de secours actif | max(300 s, D) ; remplacé par J4 fin, jamais cumulé |
 | Durée | Au plus 4 h depuis lancement, heure UTC de fin exclusive commune au manifeste |
 | Plafond | Au plus 1 000 tentatives par match et 3 000 par campagne ; la réservation réelle peut être plus basse |
 | Réserve de clôture | Un J4 et trois familles J5 par match, inclus dans le plafond |
@@ -343,17 +368,17 @@ en fin sportive. Elle évite d'épuiser tout le budget dans les cycles ordinaire
 au dernier contrôle disponible, l'événement termine en `STOPPED_LIMIT`.
 
 Pour `W` matchs en attente, `L` actifs dont `F` en contrôle de fin (`F <= L`), la demande nominale
-hors secours est `Q = W + 3L + F` appels/minute. Ajouter les contrôles de secours réellement dus,
-les contrôles ponctuels et la réserve finale. Même avec des réponses instantanées, dix matchs
-actifs exigent 30 appels/minute, soit une cadence moyenne de 2 s incompatible avec le minimum de
-3 s. En vérification de fin, ils en exigent 40. Une heure de J5 seul coûte 180 appels par match ;
-deux heures pour dix matchs coûtent 3 600 appels avant J4.
+hors secours est `Q = W + 3L + F` appels par intervalle D. Ajouter les contrôles de secours
+réellement dus, les contrôles ponctuels et la réserve finale. Dix matchs à D = 270 s demandent
+30 GET J5 par intervalle, jusqu'à 40 GET avec vérification J4 de fin ; 25 matchs à D = 720 s
+demandent jusqu'à 100 GET. À 1 s de requête + 1 s de traitement + 3 s de délai, les charges
+modélisées sont respectivement de 200 s et 500 s, dans leurs intervalles annoncés.
 
 Le fence attend aussi la fin observable du dispatch précédent : le débit réel est inférieur à
 20 appels/minute. Le contrôle d'admission doit simuler les échéances sur la fenêtre, les transitions
 possibles, les durées de requête/traitement qualifiées, les délais et la réserve ; il ne se limite
-pas à `N <= 3`. Le plafond de 3 est un maximum candidat, pas une promesse de cadence. En cas
-d'incompatibilité, refuser le manifeste entier avec le nombre admissible et une proposition de
+pas à `N <= plafond`. Le plafond sélectionnable ne prouve pas la capacité temporelle. En cas
+d'incompatibilité, refuser le manifeste entier avec un motif de capacité et une proposition de
 sélection réduite ; ne pas écarter silencieusement des matchs ni ralentir les appels sans l'annoncer.
 
 Le dimensionnement tient aussi compte des octets : chaque réponse garde la borne de 5 Mio,
@@ -525,7 +550,7 @@ préservent le focus et ne déplacent pas la sélection de l'opérateur.
 |---|---|---|
 | AC01 — sélection exacte | 0/1/N événements, ID forgé, doublon, provenance fixture, manifeste modifié/expiré ; exclusion des statuts locaux `finished` avant admission | Tests contrôleur/service et POST Chromium réel, zéro dispatch refusé ; sélection entièrement terminée expliquée sans campagne |
 | AC02 — lancement unique | Double clic, deux onglets/processus et lease J3 occupée | Une seule campagne admise et une seule tentative par clé |
-| AC03 — attente du début | `notstarted` répété puis `inprogress`, retard du coup d'envoi | J4 à échéances 60 s, aucun J5 avant preuve de début |
+| AC03 — attente du début | `notstarted` répété puis `inprogress`, retard du coup d'envoi | J4 à échéances D, aucun J5 avant preuve de début |
 | AC04 — lancement en cours/fini | Statut local déjà `finished` à la préparation/lancement ; premier J4 réseau déjà `inprogress` ou `finished` pour une cible admise | Aucun appel pour les matchs déjà terminés localement ; chemin réseau direct et finalisation bornée conservés pour les autres |
 | AC05 — cycle J5 | Plusieurs matchs et trois familles, dont lineups inchangées | Ordre et cadence mesurés par famille, aucun overlap |
 | AC06 — fin sans inférence | injuryTime première/seconde période, HT, prolongation, tirs au but, correction VAR | J4 déclenché correctement, fin seulement sur J4 `finished` |
@@ -533,7 +558,7 @@ préservent le focus et ne déplacent pas la sélection de l'opérateur.
 | AC08 — fraîcheur vraie | A→A et A→B→A pour J4 et chaque famille J5 | Occurrences conservées et projection/rendu de la dernière réception |
 | AC09 — indisponibilité partielle | 404 J5 puis succès au cycle normal suivant | Partiel visible, pas de zéro ni retry accéléré |
 | AC10 — portée des erreurs | Deux matchs : schéma métier incompatible admissible sur le premier ; puis contre-épreuves 403, timeout, identité, contenu inattendu, exception interne et stockage | Schéma : seul match arrêté, brut conservé et second poursuivi ; contre-épreuves : arrêt global, pas de fallback/retry/contexte recréé |
-| AC11 — cadence bornée | Réponses lentes, 1/2/3 matchs, dix matchs refusés, signaux simultanés | Mesure monotone/on-wire, respect 3 s, retards/coalescence/arrêt de capacité |
+| AC11 — cadence bornée | Plafond distinct des cibles retenues, 1/2/3/4/5/10/25 cibles, réponses lentes et signaux simultanés | D selon N, mesure monotone/on-wire, respect 3 s, retards/coalescence/arrêt de capacité ; refus si les enveloppes ne tiennent pas dans D |
 | AC12 — arrêt | Stop pendant délai/GET/commit, fin naturelle, budget et volume atteints | Aucun départ post-arrêt, preuve de nettoyage et résultat final distinct |
 | AC13 — panne/reprise | Crash avant GET, après GET avant commit, redémarrage/veille, second processus pendant campagne active | État orphelin interrompu, budget conservateur, zéro reprise réseau/vol de lease |
 | AC14 — PostgreSQL | Neuf, upgrade depuis le précédent prérempli (V32 à l'ouverture), rollback de famille, collisions FK/identités | Tests réels PostgreSQL, aucune perte de provenance ni altération des ledgers |
@@ -589,8 +614,8 @@ Ni la présence d'un test ni un ancien total vert ne vaut nouvelle exécution.
 Les étapes peuvent former des commits séparés de WO-058. Si elles deviennent plusieurs lots,
 réserver leurs identifiants à l'ouverture ; ne pas déclarer dès maintenant des WO enfants créés.
 
-Les arbitrages fonctionnels ne sont plus à redemander : pilote 1→2/3, quatre heures,
-1 000/3 000 tentatives, J4 sur signaux + secours cinq minutes, dernier cycle J5, isolation du
+Les arbitrages fonctionnels ne sont plus à redemander : plafond paramétrable et cadence D, quatre heures,
+1 000/3 000 tentatives, J4 sur signaux + secours max(300 s, D), dernier cycle J5, isolation du
 schéma métier incompatible et nouvel échantillon J5 après 404 au cycle normal. La lecture locale
 cinq secondes et les autres paramètres conservés figurent dans le plan demandé.
 
@@ -599,7 +624,7 @@ Restent les décisions distinctes suivantes :
 1. Relire la réalisation et ses preuves hors fournisseur. L'ADR et le WO sont validés ;
    ces décisions ne sont pas à redemander. La revue de réalisation ne vaut pas clôture.
 2. Après réalisation et qualification hors fournisseur, préparer un manifeste concret et lancer
-   manuellement le pilote. Les paliers 2/3 restent soumis à qualification et admission.
+   manuellement la campagne. Les sélections élargies restent soumises au profil qualifié et à l'admission.
 
 ### Définition de fini
 

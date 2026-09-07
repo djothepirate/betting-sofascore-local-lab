@@ -97,6 +97,7 @@ public class EventExplorerController {
                 "realPhase1EventIds",
                 EventDetailsProviderRequest.PHASE_1_EVENT_IDS);
         model.addAttribute("realPhase2CanonicalSelections", List.of());
+        model.addAttribute("liveSelectionMaximum", liveCampaigns.selectionMaximum());
         try {
             var search = queryService.search(selectedDate, zone);
             model.addAttribute("blockedLiveEventIds", liveCampaigns.selectionBlockedEvents(search.events().stream()

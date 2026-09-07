@@ -518,14 +518,17 @@
     </p>
 
     <form id="live-selection" th:unless="${search.events.isEmpty()}" method="post"
-          th:action="@{/live-campaigns/prepare}" data-live-selection-form>
+          th:action="@{/live-campaigns/prepare}" data-live-selection-form th:attr="data-live-selection-maximum=${liveSelectionMaximum}">
       <input type="hidden" name="localFormToken" th:value="${localFormToken}">
       <p>Sélectionner les rencontres pour préparer une campagne live locale. La préparation vérifie la capacité disponible et ne fait aucun appel fournisseur.</p>
       <p class="muted">Les observations de corpus synthétiques restent consultables ; seules les rencontres issues d’un snapshot fournisseur sont éligibles.</p>
       <p class="muted">Les rencontres déjà terminées (finished) sont exclues de la préparation, sans appel fournisseur. Si toute la sélection est terminée, aucune campagne n’est créée.</p>
       <p class="muted">Les rencontres d’une campagne en cours ne peuvent pas être sélectionnées à nouveau, sauf en cas de STOPPED_ERROR.</p>
+      <p class="muted">Plafond par campagne : <span th:text="${liveSelectionMaximum}">1</span> rencontres éligibles.
+        L’intervalle de collecte dépend du nombre retenu : 60 secondes jusqu’à trois rencontres, puis 30 secondes supplémentaires par rencontre.</p>
       <div class="actions"><button type="submit" class="button" data-live-prepare>Préparer la campagne live</button>
         <span data-live-selection-count role="status">0 rencontre sélectionnée</span></div>
+      <p class="muted" data-live-eligible-count role="status"></p>
     </form>
     <p class="muted" data-live-refresh-status role="status" aria-live="polite">Suivi local toutes les cinq secondes ; la sélection reste conservée.</p>
     <div class="table-scroll" th:unless="${search.events.isEmpty()}">
@@ -548,7 +551,7 @@
           <td><label><input type="checkbox" name="eventId" form="live-selection"
                            th:value="${item.event.identity.value}"
                            th:disabled="${item.event.source.kind.name() != 'PROVIDER_SNAPSHOT' or blockedLiveEventIds.contains(item.event.identity.value)}"
-                           th:attr="data-live-provider-eligible=${item.event.source.kind.name() == 'PROVIDER_SNAPSHOT'},aria-label=${'Sélectionner ' + item.event.homeTeam.name + ' — ' + item.event.awayTeam.name}"> Sélectionner</label>
+                           th:attr="data-live-provider-eligible=${item.event.source.kind.name() == 'PROVIDER_SNAPSHOT'},data-live-campaign-blocked=${blockedLiveEventIds.contains(item.event.identity.value)},data-live-finished=${item.event.status.type == 'finished'},aria-label=${'Sélectionner ' + item.event.homeTeam.name + ' — ' + item.event.awayTeam.name}"> Sélectionner</label>
             <span class="muted" data-live-selection-blocked
                   th:hidden="${!blockedLiveEventIds.contains(item.event.identity.value)}">Déjà dans une campagne en cours</span>
             <br><a data-live-link hidden>Suivre la campagne</a><br>

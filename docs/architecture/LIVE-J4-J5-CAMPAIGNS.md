@@ -1,7 +1,7 @@
 # Campagnes live locales J4/J5 — architecture WO-058
 
 Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
-Décision applicable : [ADR-SS-005 v0.1 accepté](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md).
+Décision applicable : [ADR-SS-005 v0.2](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), évolution propriétaire du plafond et de la cadence.
 Réalisation : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md).
 
 ## Session et autorité
@@ -10,7 +10,7 @@ Réalisation : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4
 refuse les sélections vides, dupliquées, forgées ou issues de fixtures, écarte les statuts locaux
 `finished` avant admission et contrôle de stockage, puis réserve un manifeste
 immuable valable cinq minutes. Le manifeste fige les cibles, la durée, les plafonds et le profil
-de capacité. Sa préparation ne crée ni worker ni contexte. Le lancement confirme son empreinte,
+de capacité ainsi que l'intervalle de collecte. Sa préparation ne crée ni worker ni contexte. Le lancement confirme son empreinte,
 consomme le formulaire local, vérifie les trois opt-ins et refuse une politique modifiée depuis
 la préparation.
 
@@ -49,21 +49,29 @@ du runtime ; il ne reprend jamais les tâches perdues.
 
 ## Ordonnanceur et limites
 
-`LiveSchedule` sépare état sportif, état de collecte et complétude finale. J4 vérifie le statut
-au départ puis toutes les 60 secondes en attente. En jeu, chaque triplet J5 reste contigu dans
-l'ordre statistiques, incidents, compositions. Les départs d'une même famille sont espacés d'au
-moins 60 secondes. Les signaux de phase sont produits par les normaliseurs ; le scheduler ne lit
-pas de JSON. Un signal de première période entraîne un contrôle ponctuel, un signal de fin
-potentielle arme J4 à la minute, et le secours intervient cinq minutes après le dernier J4 réussi.
+`LiveSchedule` sépare état sportif, état de collecte et complétude finale. Avec N cibles retenues,
+`LiveCadence` calcule `D = max(60, 30 × (N − 1))` secondes : 60 s jusqu'à trois cibles,
+90 s pour quatre, 120 s pour cinq, 270 s pour dix et 720 s pour vingt-cinq. Le plafond configuré
+est indépendant de D ; une valeur positive supérieure à trois n'invalide plus la configuration.
+L'entrée reste bornée à 100 identifiants. J4 vérifie le statut au départ puis à l'intervalle D
+en attente. En jeu, chaque triplet J5 reste contigu dans l'ordre statistiques, incidents,
+compositions. Les départs d'une même famille sont espacés d'au moins D. Les signaux de phase
+sont produits par les normaliseurs ; le scheduler ne lit pas de JSON. Un signal de première
+période entraîne un contrôle ponctuel, un signal de fin potentielle arme J4 à l'intervalle D,
+et le secours intervient après `max(300 s, D)` depuis le dernier J4 réussi.
 Seul un J4 `finished` ouvre la finalisation. Son dernier triplet respecte encore l'espacement,
 la fenêtre et les budgets ; une borne peut laisser la finalisation incomplète.
 
 Le coordinateur transport conserve trois secondes après la fin de l'échange précédent. Les
 échéances sont coalescées, sans rafale de rattrapage. Deux cycles successifs non servis avant
 leur échéance suivante arrêtent la campagne pour capacité, y compris au milieu d'un triplet.
-L'admission simule le cas récurrent de trois J5 et un J4 par match/minute. Le profil initial
+L'admission simule le cas récurrent de trois J5 et un J4 par match/intervalle D, en nanosecondes.
+La charge doit tenir dans D ; l'heure de fin exclusive peut tronquer le dernier intervalle,
+sans prolongation de la campagne. Le profil initial
 conservateur compte 10 s de requête, 1 s de traitement et 3 s de délai, soit 56 s pour un match.
-Les paliers 2/3 exigent une preuve de qualification renseignée et un profil qui passe l'admission.
+Une sélection multiple effective exige une preuve de qualification renseignée et un profil qui
+passe l'admission. Relever seulement le plafond ne réclame pas cette preuve pour une sélection
+unique avec l'enveloppe conservatrice ; abaisser cette enveloppe exige toujours sa preuve.
 Le hash déclaré de qualification doit renvoyer à une preuve revue ; sa forme seule ne prouve
 aucune performance du fournisseur.
 
@@ -72,7 +80,10 @@ Les paramètres du palier sont liés explicitement aux variables
 `SOFASCORE_LIVE_PROCESSING_ENVELOPE` et `SOFASCORE_LIVE_QUALIFICATION_SHA256`.
 La [preuve des paliers du 7 septembre](../validation/WO058-MULTIMATCH-CAPACITY-20260907.md)
 relie les mesures Chromium et les simulations aux profils 2 × 4 × (3 + 1 + 3) = 56 s
-et 3 × 4 × (0,75 + 1 + 3) = 57 s par minute. La limite initiale reste le défaut ; son changement
+et 3 × 4 × (0,75 + 1 + 3) = 57 s par minute. Ces preuves historiques restent figées.
+Le [correctif adaptatif](../validation/WO058-ADAPTIVE-CAPACITY-20260907.md) couvre ensuite les
+sélections de 1 à 25 avec un profil de 1 s d'échange, 1 s de traitement et 3 s de délai,
+soit 20 × N secondes par intervalle. La limite initiale reste le défaut ; son changement
 est une configuration opérateur explicite. Le délai de requête du profil est une hypothèse de
 charge, distincte du timeout de transport qui reste borné à dix secondes. Le contrôle des retards
 continue de s'appliquer aux conditions réelles. La preuve de volume mesure des JSON synthétiques
@@ -108,6 +119,13 @@ La migration additive V33 crée sept tables `live_*` et `provider_campaign_guard
 de J8. Les cibles et le manifeste sont immuables ; appels, dispatchs, réceptions, résultats et
 transitions conservent leurs contraintes d'identité, d'unicité et de génération propriétaire.
 Les curseurs par famille sont reconstruits depuis les occurrences et résultats référencés.
+
+V34 est append-only : le plafond devient un entier positif, l'ordre des cibles admet jusqu'à
+100 entrées, et `cycle_interval_seconds` est protégé par le trigger d'immutabilité du manifeste.
+Les anciennes lignes reçoivent le défaut 60 sans réécriture de leur SHA ni des autres colonnes.
+Un manifeste `live-v2` doit porter exactement D calculé sur ses cibles. D entre dans son SHA.
+Le lancement conserve D même si certaines cibles sont devenues `finished` ; l'admission vérifie
+la charge restante sur cet intervalle consenti, sans accélérer la campagne en cours.
 
 1. Une transaction réserve la tentative et consomme son budget avant tout réseau.
 2. Une autorisation de dispatch est tracée. Cette date ne revendique pas un départ on-wire.
@@ -151,8 +169,9 @@ désactivées. `STOPPED_ERROR` rend la case éligible à nouveau sans la recoche
 synthétique reste désactivée indépendamment des états de campagne.
 Les DTO excluent payloads et identité de processus. Le retard affiché est celui de l'autorisation
 transport, explicitement distinct d'une mesure on-wire. Les familles deviennent en retard après
-deux intervalles sans succès : J4 utilise 60 s en attente/contrôle de fin et 300 s en jeu ; J5
-utilise 60 s en jeu. La fin du suivi fige leur âge à la transition terminale persistée.
+deux intervalles sans succès : J4 utilise D en attente/contrôle de fin et `max(300 s, D)` en jeu ;
+J5 utilise D en jeu. D est lu dans le manifeste historique, pas dans la configuration courante.
+La fin du suivi fige leur âge à la transition terminale persistée.
 La CSP autorise `script-src 'self'` sur les pages live. Les lectures héritent de la restriction
 `default-src 'self'` commune au site ; aucune directive `connect-src` explicite n'est déclarée.
 Les scripts inline et l'évaluation dynamique restent interdits.

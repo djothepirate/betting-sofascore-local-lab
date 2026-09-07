@@ -120,9 +120,9 @@ public class LiveCampaignController {
         String message = switch (code) {
             case "LIVE_ALL_EVENTS_FINISHED" -> "Ces rencontres sont déjà terminées (finished). Aucun lancement live ni appel fournisseur n’a été effectué. Revenir aux rencontres pour préparer une autre sélection.";
             case "LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY" ->
-                    "Le nombre de rencontres éligibles dépasse la capacité du profil configuré. Réduire la sélection ou configurer le palier qualifié de deux ou trois rencontres selon le runbook. Les rencontres déjà finished ne comptent pas dans cette limite.";
+                    "Le nombre de rencontres éligibles dépasse le plafond configuré pour une campagne. Réduire la sélection ou ajuster ce plafond dans la configuration live. Les rencontres déjà finished ne comptent pas dans cette limite.";
             case "LIVE_CAPACITY_REFUSED_REDUCE_SELECTION" ->
-                    "Le profil de charge configuré ne permet pas de servir cette sélection à la minute. Réduire la sélection ou utiliser le profil de charge associé à la qualification du palier ; relever seulement le nombre de rencontres ne suffit pas.";
+                    "Le profil de charge configuré ne permet pas de servir cette sélection dans son intervalle de collecte. Réduire la sélection ou utiliser un profil de charge qualifié selon le runbook.";
             default -> "La sélection ou le manifeste est invalide. Préparer une nouvelle campagne.";
         };
         model.addAttribute("liveError", message);

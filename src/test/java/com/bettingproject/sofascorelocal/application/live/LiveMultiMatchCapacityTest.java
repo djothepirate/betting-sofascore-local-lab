@@ -2,6 +2,7 @@ package com.bettingproject.sofascorelocal.application.live;
 
 import com.bettingproject.sofascorelocal.config.LiveCampaignProperties;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
+import com.bettingproject.sofascorelocal.domain.live.LiveCadence;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 
@@ -21,12 +22,13 @@ class LiveMultiMatchCapacityTest {
     private static final Instant START = Instant.parse("2026-09-07T12:00:00Z");
 
     @ParameterizedTest
-    @ValueSource(ints = {2, 3})
+    @ValueSource(ints = {1, 2, 3, 4, 5, 10, 25})
     void qualifiedLoadKeepsEveryFamilySpacedAndFinalizesAllMatchesBeforeFourHours(int count) {
         var properties = profile(count);
         new LiveAdmissionPolicy(properties, () -> Long.MAX_VALUE).admit(count);
         var targets = targets(count);
-        var schedule = new LiveSchedule(targets, START, START.plus(Duration.ofHours(4)));
+        Duration interval = LiveCadence.forMatches(count);
+        var schedule = new LiveSchedule(targets, START, START.plus(Duration.ofHours(4)), interval);
         var starts = new HashMap<String, Instant>();
         var calls = new HashMap<UUID, Integer>();
         var finalCalls = new HashMap<UUID, Integer>();
@@ -39,7 +41,7 @@ class LiveMultiMatchCapacityTest {
             if (next.isEmpty()) { now = now.plusMillis(250); continue; }
             var due = next.orElseThrow();
             String key = due.eventId() + "/" + due.endpoint();
-            if (starts.containsKey(key)) assertThat(Duration.between(starts.get(key), now)).isGreaterThanOrEqualTo(Duration.ofSeconds(60));
+            if (starts.containsKey(key)) assertThat(Duration.between(starts.get(key), now)).isGreaterThanOrEqualTo(interval);
             starts.put(key, now);
             if (due.endpoint() != EVENT_DETAILS) {
                 if (contiguous == null) contiguous = due.eventId();
@@ -51,7 +53,8 @@ class LiveMultiMatchCapacityTest {
             calls.merge(due.eventId(), 1, Integer::sum);
             if (due.finalCycle() && due.endpoint() != EVENT_DETAILS) finalCalls.merge(due.eventId(), 1, Integer::sum);
             now = now.plus(properties.getRequestEnvelope()).plus(properties.getProcessingEnvelope());
-            String status = now.isBefore(START.plus(Duration.ofMinutes(230))) ? "inprogress" : "finished";
+            Instant finish = START.plus(Duration.ofHours(4)).minus(interval.multipliedBy(2)).minusSeconds(600);
+            String status = now.isBefore(finish) ? "inprogress" : "finished";
             schedule.completed(due, due.endpoint() == EVENT_DETAILS ? status : null, false,
                     due.endpoint() == EVENT_INCIDENTS ? Map.of("synthetic-finish-signal", true) : Map.of(), now);
             now = now.plusSeconds(3);
@@ -68,7 +71,7 @@ class LiveMultiMatchCapacityTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {2, 3})
+    @ValueSource(ints = {2, 3, 4, 5, 10, 25})
     void theSameSelectionWithTenSecondResponsesIsRefusedEvenWithAQualificationReference(int count) {
         var properties = profile(count);
         properties.setRequestEnvelope(Duration.ofSeconds(10));
@@ -79,7 +82,7 @@ class LiveMultiMatchCapacityTest {
     private static LiveCampaignProperties profile(int count) {
         var properties = new LiveCampaignProperties();
         properties.setQualifiedMatchCapacity(count);
-        properties.setRequestEnvelope(Duration.ofMillis(count == 2 ? 3000 : 750));
+        properties.setRequestEnvelope(Duration.ofSeconds(1));
         properties.setQualificationSha256("b".repeat(64));
         return properties;
     }

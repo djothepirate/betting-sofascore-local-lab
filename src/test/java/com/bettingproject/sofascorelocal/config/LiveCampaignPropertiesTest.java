@@ -65,7 +65,7 @@ class LiveCampaignPropertiesTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"2,3000ms", "3,750ms"})
+    @CsvSource({"2,3000ms", "3,750ms", "4,1000ms", "5,1000ms", "10,1000ms", "25,1000ms"})
     void eclipseCapacitySettingsBindTogetherAndPassAdmissionWithoutEnablingNetwork(int matches, String request) throws Exception {
         var properties = bind(Map.of(
                 "SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY", String.valueOf(matches),
@@ -73,7 +73,7 @@ class LiveCampaignPropertiesTest {
                 "SOFASCORE_LIVE_PROCESSING_ENVELOPE", "1000ms",
                 "SOFASCORE_LIVE_QUALIFICATION_SHA256", "b".repeat(64)));
         assertThat(properties.getQualifiedMatchCapacity()).isEqualTo(matches);
-        assertThat(properties.getRequestEnvelope().toMillis()).isEqualTo(matches == 2 ? 3000 : 750);
+        assertThat(properties.getRequestEnvelope().toMillis()).isEqualTo(matches == 2 ? 3000 : matches == 3 ? 750 : 1000);
         assertThat(properties.getProcessingEnvelope()).isEqualTo(Duration.ofSeconds(1));
         assertThat(properties.getQualificationSha256()).isEqualTo("b".repeat(64));
         assertThat(properties.isEnabled()).isFalse();
@@ -81,9 +81,12 @@ class LiveCampaignPropertiesTest {
     }
 
     @Test
-    void raisingOnlyTheCapacityDoesNotInventItsQualification() throws Exception {
-        var properties = bind(Map.of("SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY", "3"));
-        assertThatThrownBy(properties::validate).isInstanceOf(IllegalStateException.class)
+    void raisingOnlyTheCeilingAcceptsOneMatchAndDoesNotInventQualificationForAMultipleSelection() throws Exception {
+        var properties = bind(Map.of("SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY", "25"));
+        properties.validate();
+        var policy = new LiveAdmissionPolicy(properties, () -> Long.MAX_VALUE);
+        policy.admit(1);
+        assertThatThrownBy(() -> policy.admit(2)).isInstanceOf(IllegalStateException.class)
                 .hasMessage("LIVE_CAPACITY_QUALIFICATION_REQUIRED");
     }
 

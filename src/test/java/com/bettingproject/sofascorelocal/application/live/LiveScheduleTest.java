@@ -3,6 +3,7 @@ package com.bettingproject.sofascorelocal.application.live;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import java.time.*;
 import java.util.*;
@@ -30,6 +31,29 @@ class LiveScheduleTest {
         cycle(s,start.plusSeconds(121),Map.of());
         assertThat(s.next(start.plusSeconds(180))).isEmpty();
         assertThat(s.next(start.plusSeconds(181))).isPresent();
+    }
+
+    @ParameterizedTest @ValueSource(ints = {60, 90, 120, 270, 720})
+    void delayedKickoffAndEveryUnavailableJ5FamilyKeepTheFrozenInterval(int seconds) {
+        var s = new LiveSchedule(List.of(a), start, start.plusSeconds(14400), Duration.ofSeconds(seconds));
+        execute(s, start, "notstarted", false, Map.of());
+        assertThat(s.next(start.plusSeconds(seconds - 1))).isEmpty();
+        execute(s, start.plusSeconds(seconds), "inprogress", false, Map.of());
+        for (int family = 0; family < 3; family++)
+            assertThat(execute(s, start.plusSeconds(seconds + 1 + family * 3L), null, true, Map.of()).endpoint())
+                    .isEqualTo(LiveSchedule.J5.get(family));
+        assertThat(s.globalStop()).isNull();
+        assertThat(s.states().getFirst().state()).isEqualTo("COLLECTING");
+        // The J4 fallback must not dispatch before the selected family interval either.
+        assertThat(s.next(start.plusSeconds(2L * seconds))).isEmpty();
+        Instant nextCycle = start.plusSeconds(2L * seconds + 1);
+        if (seconds >= 300) {
+            assertThat(execute(s, nextCycle, "inprogress", false, Map.of()).endpoint()).isEqualTo(EVENT_DETAILS);
+            nextCycle = nextCycle.plusSeconds(3);
+        }
+        assertThat(execute(s, nextCycle, null, false, Map.of()).endpoint())
+                .isEqualTo(EVENT_STATISTICS);
+        assertThat(s.states().getFirst().missedCycles()).isZero();
     }
 
     @ParameterizedTest

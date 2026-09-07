@@ -2,6 +2,7 @@ package com.bettingproject.sofascorelocal.application.live;
 
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderResponse;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
+import com.bettingproject.sofascorelocal.domain.live.LiveCadence;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceOutcome;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceResult;
@@ -60,7 +61,7 @@ public final class LiveReplayRunner {
             providerEventIds = List.copyOf(providerEventIds); replies = List.copyOf(replies);
             operatorStops = operatorStops.stream().sorted(Comparator.comparing(OperatorStop::at)).toList();
             if (duration.isZero() || duration.isNegative() || duration.compareTo(Duration.ofHours(4)) > 0
-                    || providerEventIds.isEmpty() || providerEventIds.size() > 3
+                    || providerEventIds.isEmpty() || providerEventIds.size() > LiveCadence.MAXIMUM_SELECTION_SIZE
                     || providerEventIds.stream().distinct().count() != providerEventIds.size()
                     || maximumCallsPerEvent < 4 || maximumCallsPerEvent > 1000
                     || maximumCalls < 4 * providerEventIds.size() || maximumCalls > 3000 || maximumBytes < 1)
@@ -92,7 +93,8 @@ public final class LiveReplayRunner {
                 .map(CanonicalEventIdentity::value).toList();
         Map<UUID, Long> providerIds = new HashMap<>();
         for (int i = 0; i < targets.size(); i++) providerIds.put(targets.get(i), input.providerEventIds().get(i));
-        LiveSchedule schedule = new LiveSchedule(targets, input.startsAt(), input.startsAt().plus(input.duration()));
+        LiveSchedule schedule = new LiveSchedule(targets, input.startsAt(), input.startsAt().plus(input.duration()),
+                LiveCadence.forMatches(targets.size()));
         Map<UUID, Integer> calls = new HashMap<>();
         List<Trace> trace = new ArrayList<>();
         List<OperatorStop> applied = new ArrayList<>();

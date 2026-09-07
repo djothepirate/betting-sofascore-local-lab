@@ -37,16 +37,17 @@ public final class LiveCampaignProperties {
     public long getDiskReserveBytes() { return diskReserveBytes; }
     public void setDiskReserveBytes(long v) { diskReserveBytes = v; }
     public void validate() {
-        if (qualifiedMatchCapacity < 1 || qualifiedMatchCapacity > 3 || duration == null
+        if (qualifiedMatchCapacity < 1 || duration == null
                 || duration.isZero() || duration.isNegative() || duration.compareTo(Duration.ofHours(4)) > 0
                 || requestEnvelope == null || requestEnvelope.isNegative() || requestEnvelope.isZero()
                 || requestEnvelope.compareTo(Duration.ofSeconds(10)) > 0
                 || processingEnvelope == null || processingEnvelope.isNegative()
+                || processingEnvelope.compareTo(Duration.ofMinutes(1)) > 0
                 || diskReserveBytes < 1024L * 1024 * 1024
                 || !postgresContainer.matches("[A-Za-z0-9][A-Za-z0-9_.-]{0,127}"))
             throw new IllegalStateException("LIVE_POLICY_INVALID");
-        if ((qualifiedMatchCapacity > 1 || requestEnvelope.compareTo(Duration.ofSeconds(10)) < 0)
-                && !qualificationSha256.matches("[0-9a-f]{64}"))
+        if (requestEnvelope.compareTo(Duration.ofSeconds(10)) < 0
+                && (qualificationSha256 == null || !qualificationSha256.matches("[0-9a-f]{64}")))
             throw new IllegalStateException("LIVE_CAPACITY_QUALIFICATION_REQUIRED");
     }
 }

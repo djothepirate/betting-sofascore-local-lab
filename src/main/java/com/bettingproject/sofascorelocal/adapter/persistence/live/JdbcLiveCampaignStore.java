@@ -30,13 +30,13 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
         int inserted = jdbc.update("""
             insert into live_campaign(campaign_id,manifest_sha256,policy_version,prepared_at,expires_at,
                 duration_seconds,maximum_calls_per_event,maximum_calls,maximum_bytes,qualified_match_capacity,target_count,
-                request_envelope_nanos,processing_envelope_nanos,qualification_sha256)
-            values (?,?,?,?,?,?,?,?,?,?,?,?,?,?) on conflict(campaign_id) do nothing
+                request_envelope_nanos,processing_envelope_nanos,qualification_sha256,cycle_interval_seconds)
+            values (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?) on conflict(campaign_id) do nothing
             """, manifest.campaignId(), manifest.manifestSha256(), manifest.policyVersion(), time(manifest.preparedAt()),
                 time(manifest.expiresAt()), manifest.duration().toSeconds(), manifest.maximumCallsPerEvent(),
                 manifest.maximumCalls(), manifest.maximumBytes(), manifest.qualifiedMatchCapacity(),manifest.targets().size(),
                 manifest.admissionProfile().requestEnvelope().toNanos(), manifest.admissionProfile().processingEnvelope().toNanos(),
-                manifest.admissionProfile().qualificationSha256());
+                manifest.admissionProfile().qualificationSha256(), manifest.cycleInterval().toSeconds());
         if (inserted == 1) {
             for (int i = 0; i < manifest.targets().size(); i++) {
                 Target t = manifest.targets().get(i);
@@ -354,7 +354,7 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
                 Duration.ofSeconds(number(c,"duration_seconds")),(int)number(c,"maximum_calls_per_event"),(int)number(c,"maximum_calls"),
                 number(c,"maximum_bytes"),(int)number(c,"qualified_match_capacity"),events.stream().map(JdbcLiveCampaignStore::target).toList(),
                 new AdmissionProfile(Duration.ofNanos(number(c,"request_envelope_nanos")),Duration.ofNanos(number(c,"processing_envelope_nanos")),
-                        (String)c.get("qualification_sha256")));
+                        (String)c.get("qualification_sha256")), Duration.ofSeconds(number(c,"cycle_interval_seconds")));
     }
     private static Target target(Map<String,Object> e) { return new Target(uuid(e,"canonical_event_id"),number(e,"provider_event_id"),number(e,"source_observation_id"),number(e,"source_snapshot_id")); }
     private static ReservedAttempt reserved(Map<String,Object> a) { return new ReservedAttempt(uuid(a,"attempt_id"),uuid(a,"canonical_event_id"),number(a,"provider_event_id"),

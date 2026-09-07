@@ -7,6 +7,7 @@ import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceKind;
 import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.*;
+import com.bettingproject.sofascorelocal.domain.live.LiveCadence;
 import com.bettingproject.sofascorelocal.domain.provider.*;
 import com.bettingproject.sofascorelocal.port.*;
 import com.bettingproject.sofascorelocal.security.Sha256;
@@ -80,14 +81,16 @@ public final class LiveCampaignService {
                         event.observationId(), event.source().snapshotId().orElseThrow())).toList();
         if (targets.isEmpty()) return new Preparation(null, excluded);
         admission.admit(targets.size());
+        Duration cycleInterval = LiveCadence.forMatches(targets.size());
         UUID id = UUID.randomUUID(); Instant now = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         long bytes = admission.maximumBytes(targets.size());
-        String material = id + "|live-v1|" + now + "|" + properties.getDuration() + "|1000|3000|" + bytes
+        String material = id + "|live-v2|" + now + "|" + properties.getDuration() + "|1000|3000|" + bytes
                 + "|" + properties.getQualifiedMatchCapacity() + "|" + properties.getQualificationSha256()
-                + "|" + properties.getRequestEnvelope() + "|" + properties.getProcessingEnvelope() + "|" + targets;
-        Manifest manifest = new Manifest(id, Sha256.hex(material.getBytes(StandardCharsets.UTF_8)), "live-v1",
+                + "|" + properties.getRequestEnvelope() + "|" + properties.getProcessingEnvelope()
+                + "|" + cycleInterval + "|" + targets;
+        Manifest manifest = new Manifest(id, Sha256.hex(material.getBytes(StandardCharsets.UTF_8)), "live-v2",
                 now, now.plusSeconds(300), properties.getDuration(), 1000, 3000, bytes,
-                properties.getQualifiedMatchCapacity(), targets, currentAdmissionProfile());
+                properties.getQualifiedMatchCapacity(), targets, currentAdmissionProfile(), cycleInterval);
         return new Preparation(store.prepare(manifest), excluded);
     }
 
@@ -112,6 +115,7 @@ public final class LiveCampaignService {
     }
 
     public CampaignView state(UUID id) { return store.find(id).orElseThrow(() -> new NoSuchElementException("LIVE_CAMPAIGN_NOT_FOUND")); }
+    public int selectionMaximum() { return properties.getQualifiedMatchCapacity(); }
     public Set<UUID> selectionBlockedEvents(Collection<UUID> ids) {
         Set<UUID> blocked = new HashSet<>();
         for (UUID id : ids) {
@@ -151,7 +155,7 @@ public final class LiveCampaignService {
                 || current.manifest().qualifiedMatchCapacity() != properties.getQualifiedMatchCapacity()
                 || !current.manifest().duration().equals(properties.getDuration()))
             throw new IllegalArgumentException("LIVE_PREPARED_POLICY_CHANGED");
-        admission.admit(current.manifest().targets().size() - alreadyFinished.size());
+        admission.admit(current.manifest().targets().size() - alreadyFinished.size(), current.manifest().cycleInterval());
         Session session = new Session(current.manifest());
         session.alreadyFinished.addAll(alreadyFinished);
         if (!active.compareAndSet(null, session)) {
@@ -199,7 +203,8 @@ public final class LiveCampaignService {
             s.ownership = lease.ownership();
             Launch started = store.launch(s.manifest.campaignId(), s.manifest.manifestSha256(), s.ownership, clock.instant());
             s.monotonicOrigin = System.nanoTime(); s.timeOrigin = started.startedAt();
-            s.schedule = new LiveSchedule(s.manifest.targets().stream().map(Target::canonicalEventId).toList(), started.startedAt(), started.endsAt());
+            s.schedule = new LiveSchedule(s.manifest.targets().stream().map(Target::canonicalEventId).toList(),
+                    started.startedAt(), started.endsAt(), s.manifest.cycleInterval());
             // Recheck local observations after admission and acquisition, before any browser exists.
             s.alreadyFinished.addAll(locallyFinished(s.manifest));
             for (UUID eventId : s.alreadyFinished) s.schedule.stopEvent(eventId, "STOPPED_ALREADY_FINISHED");

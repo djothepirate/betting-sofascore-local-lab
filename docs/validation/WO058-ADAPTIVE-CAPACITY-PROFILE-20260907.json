@@ -1,0 +1,450 @@
+{
+  "schema": "wo058-adaptive-capacity-evidence-v1",
+  "status": "QUALIFIED_LOOPBACK_FOR_BOUNDED_LOCAL_PILOTS",
+  "labStatus": [
+    "EXPERIMENTAL",
+    "LOCAL_ONLY",
+    "NOT_PRODUCTION_APPROVED",
+    "NO_CRITICAL_DEPENDENCY"
+  ],
+  "completedAt": "2026-09-07T16:45:14Z",
+  "baseCommit": "a7f544cc2f70db2066836107d1e7a21c4feccb4c",
+  "worktreeChangesNotCommittedDuringQualification": true,
+  "environment": {
+    "os": "Windows",
+    "java": "25.0.4",
+    "springBoot": "4.1.0",
+    "postgres": "18.4",
+    "transport": "dedicated Chromium worker on HTTP loopback",
+    "transportRequestTimeoutMillis": 10000,
+    "providerCallsExecuted": false,
+    "operatorDatabaseModified": false
+  },
+  "policy": {
+    "manifestVersion": "live-v2",
+    "flywayVersion": 34,
+    "configuredCapacityMeaning": "maximum eligible selected matches per campaign",
+    "cadenceSeconds": "max(60, 30 * (selectedMatches - 1))",
+    "technicalInputLimit": 100,
+    "maximumDurationMinutes": 240,
+    "maximumCallsPerEvent": 1000,
+    "maximumCallsPerCampaign": 3000,
+    "legacyLiveV1CadenceSeconds": 60
+  },
+  "standardVerification": [
+    {
+      "suite": "surefire",
+      "reports": 179,
+      "tests": 1424,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 5,
+      "skipDetails": [
+        {
+          "class": "com.bettingproject.sofascorelocal.adapter.file.LocalJ7ExportFileStoreTest",
+          "test": "refusesASymbolicLinkInsteadOfFollowingIt",
+          "reason": "org.opentest4j.TestAbortedException: Symbolic links are unavailable in this test environment"
+        },
+        {
+          "class": "com.bettingproject.sofascorelocal.adapter.file.LocalJ7ExportFileStoreTest",
+          "test": "refusesAMatchingCandidateSymlinkDuringOrphanEnumeration",
+          "reason": "org.opentest4j.TestAbortedException: Symbolic links are unavailable in this test environment"
+        },
+        {
+          "class": "com.bettingproject.sofascorelocal.build.J6NativeBinaryPipelineQualificationTest",
+          "test": "dockerQualificationPassesThreeSequentialRunsAtEffectiveDefaults",
+          "reason": "System property [j6.docker.qualification] does not exist"
+        },
+        {
+          "class": "com.bettingproject.sofascorelocal.cli.J8BenchmarkExportCommandTest",
+          "test": "refusesAnExportsSymbolicLinkOrReparsePointWhenSupported",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: symbolic links are unavailable: java.nio.file.FileSystemException"
+        },
+        {
+          "class": "com.bettingproject.sofascorelocal.cli.J8BenchmarkExportCommandTest",
+          "test": "refusesAJ8SymbolicLinkOrReparsePointWhenSupported",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: symbolic links are unavailable: java.nio.file.FileSystemException"
+        }
+      ]
+    },
+    {
+      "suite": "failsafe",
+      "reports": 6,
+      "tests": 131,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "skipDetails": []
+    }
+  ],
+  "supplementalVerification": {
+    "command": "mvnw.cmd -Dtest=LiveMultiMatchCapacityTest test",
+    "tests": 13,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "profile": "request 1 s, processing 1 s, fence 3 s",
+    "virtualWindowMinutes": 240,
+    "selectedMatches": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      10,
+      25
+    ],
+    "xmlSha256": "7e98d6de5a2d2b691ce62c051cbfca9e967192ce2d3042d694083e7ba601e7c5"
+  },
+  "nativeVerification": [
+    {
+      "class": "com.bettingproject.sofascorelocal.adapter.web.LiveCampaignBrowserQualificationIT",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "elapsedSeconds": 53.73,
+      "xmlSha256": "22cda62a77ecb1a9471f50acdd8cf2944b58e42ba08e14b7247813787a7d6f6f"
+    },
+    {
+      "class": "com.bettingproject.sofascorelocal.adapter.web.LiveCampaignFormBrowserQualificationIT",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "elapsedSeconds": 12.237,
+      "xmlSha256": "358a37bfb02b6f23ac3df2973a4129e4ffcf8a537579ecb6e0b3748a5afed306"
+    },
+    {
+      "class": "com.bettingproject.sofascorelocal.application.network.playwright.LiveProviderSessionQualificationIT",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "elapsedSeconds": 1316.651,
+      "xmlSha256": "3a7f84f478626ee66e32c92c6e11c8747757196c363a8a733df9a767ac1dd0a6"
+    }
+  ],
+  "profiles": [
+    {
+      "selectedMatches": 2,
+      "cycleIntervalSeconds": 60,
+      "requestEnvelopeMillis": 1000,
+      "processingEnvelopeMillis": 1000,
+      "globalFenceMillis": 3000,
+      "modeledFourFamilyCycleMillis": 40000,
+      "measured": {
+        "cycles": 3,
+        "requests": 24,
+        "responseBytesEach": 5242880,
+        "maximumDispatchToValidatedReceiptNanos": 747473500,
+        "maximumNormalizationNanos": 10801600,
+        "maximumFourFamilyCycleNanos": 26305474500,
+        "workerWorkingSetFirstBytes": 117288960,
+        "workerWorkingSetLastBytes": 268771328
+      },
+      "checks": {
+        "oneWorker": true,
+        "threeSecondFence": true,
+        "familySpacingNativeChecked": true,
+        "familySpacingVirtualClockChecked": true,
+        "cleanupConfirmed": true,
+        "noForbiddenArtifacts": true,
+        "offScopeRequests": 0
+      }
+    },
+    {
+      "selectedMatches": 3,
+      "cycleIntervalSeconds": 60,
+      "requestEnvelopeMillis": 1000,
+      "processingEnvelopeMillis": 1000,
+      "globalFenceMillis": 3000,
+      "modeledFourFamilyCycleMillis": 60000,
+      "measured": {
+        "cycles": 3,
+        "requests": 36,
+        "responseBytesEach": 5242880,
+        "maximumDispatchToValidatedReceiptNanos": 800768100,
+        "maximumNormalizationNanos": 9239100,
+        "maximumFourFamilyCycleNanos": 40447151200,
+        "workerWorkingSetFirstBytes": 114651136,
+        "workerWorkingSetLastBytes": 267231232
+      },
+      "checks": {
+        "oneWorker": true,
+        "threeSecondFence": true,
+        "familySpacingNativeChecked": true,
+        "familySpacingVirtualClockChecked": true,
+        "cleanupConfirmed": true,
+        "noForbiddenArtifacts": true,
+        "offScopeRequests": 0
+      }
+    },
+    {
+      "selectedMatches": 4,
+      "cycleIntervalSeconds": 90,
+      "requestEnvelopeMillis": 1000,
+      "processingEnvelopeMillis": 1000,
+      "globalFenceMillis": 3000,
+      "modeledFourFamilyCycleMillis": 80000,
+      "measured": {
+        "cycles": 2,
+        "requests": 32,
+        "responseBytesEach": 5242880,
+        "maximumDispatchToValidatedReceiptNanos": 609361400,
+        "maximumNormalizationNanos": 6685400,
+        "maximumFourFamilyCycleNanos": 53613280900,
+        "workerWorkingSetFirstBytes": 114872320,
+        "workerWorkingSetLastBytes": 266756096
+      },
+      "checks": {
+        "oneWorker": true,
+        "threeSecondFence": true,
+        "familySpacingNativeChecked": true,
+        "familySpacingVirtualClockChecked": true,
+        "cleanupConfirmed": true,
+        "noForbiddenArtifacts": true,
+        "offScopeRequests": 0
+      }
+    },
+    {
+      "selectedMatches": 5,
+      "cycleIntervalSeconds": 120,
+      "requestEnvelopeMillis": 1000,
+      "processingEnvelopeMillis": 1000,
+      "globalFenceMillis": 3000,
+      "modeledFourFamilyCycleMillis": 100000,
+      "measured": {
+        "cycles": 2,
+        "requests": 40,
+        "responseBytesEach": 5242880,
+        "maximumDispatchToValidatedReceiptNanos": 687451000,
+        "maximumNormalizationNanos": 7475400,
+        "maximumFourFamilyCycleNanos": 68798124300,
+        "workerWorkingSetFirstBytes": 114642944,
+        "workerWorkingSetLastBytes": 268247040
+      },
+      "checks": {
+        "oneWorker": true,
+        "threeSecondFence": true,
+        "familySpacingNativeChecked": true,
+        "familySpacingVirtualClockChecked": true,
+        "cleanupConfirmed": true,
+        "noForbiddenArtifacts": true,
+        "offScopeRequests": 0
+      }
+    },
+    {
+      "selectedMatches": 10,
+      "cycleIntervalSeconds": 270,
+      "requestEnvelopeMillis": 1000,
+      "processingEnvelopeMillis": 1000,
+      "globalFenceMillis": 3000,
+      "modeledFourFamilyCycleMillis": 200000,
+      "measured": {
+        "cycles": 1,
+        "requests": 40,
+        "responseBytesEach": 5242880,
+        "maximumDispatchToValidatedReceiptNanos": 747467000,
+        "maximumNormalizationNanos": 6731700,
+        "maximumFourFamilyCycleNanos": 139386477700,
+        "workerWorkingSetFirstBytes": 119595008,
+        "workerWorkingSetLastBytes": 266633216
+      },
+      "checks": {
+        "oneWorker": true,
+        "threeSecondFence": true,
+        "familySpacingNativeChecked": false,
+        "familySpacingVirtualClockChecked": true,
+        "cleanupConfirmed": true,
+        "noForbiddenArtifacts": true,
+        "offScopeRequests": 0
+      }
+    },
+    {
+      "selectedMatches": 25,
+      "cycleIntervalSeconds": 720,
+      "requestEnvelopeMillis": 1000,
+      "processingEnvelopeMillis": 1000,
+      "globalFenceMillis": 3000,
+      "modeledFourFamilyCycleMillis": 500000,
+      "measured": {
+        "cycles": 1,
+        "requests": 100,
+        "responseBytesEach": 5242880,
+        "maximumDispatchToValidatedReceiptNanos": 830268800,
+        "maximumNormalizationNanos": 9361000,
+        "maximumFourFamilyCycleNanos": 351230633700,
+        "workerWorkingSetFirstBytes": 104984576,
+        "workerWorkingSetLastBytes": 267382784
+      },
+      "checks": {
+        "oneWorker": true,
+        "threeSecondFence": true,
+        "familySpacingNativeChecked": false,
+        "familySpacingVirtualClockChecked": true,
+        "cleanupConfirmed": true,
+        "noForbiddenArtifacts": true,
+        "offScopeRequests": 0
+      }
+    }
+  ],
+  "limits": [
+    "Synthetic loopback measurements do not establish provider latency.",
+    "Two/three targets use three native cycles; four/five use two; ten/twenty-five use one full native maximum-body pass.",
+    "Recurrence and finalization for ten/twenty-five targets are verified on a virtual four-hour window, not by a four-hour native session.",
+    "Native processing measurement covers normalization, not a combined Chromium-plus-PostgreSQL wall-clock campaign.",
+    "PostgreSQL integrity, dispatch reservation, migration and restoration are qualified separately.",
+    "The one-second request envelope is an admission assumption; the transport timeout remains bounded at ten seconds.",
+    "Five standard tests are skipped for documented platform or explicit opt-in conditions."
+  ],
+  "sourceHashEncoding": "UTF-8 without BOM, CRLF normalized to LF",
+  "sourceHashes": [
+    {
+      "path": "scripts/Backup-Restore-J6.ps1",
+      "sha256": "3e5f1fc6dc573361140921a5a05d53b31e8ca5ed41ee0b1daec097568850d51d"
+    },
+    {
+      "path": "scripts/Invoke-J6Retention.ps1",
+      "sha256": "15e2c7523cb5b71caeac866398cb14f2457b3ac05358da5e14fd62a003a81d17"
+    },
+    {
+      "path": "scripts/Invoke-LivePlaywrightLoopbackQualification.ps1",
+      "sha256": "1fc1c6a89557cd2ff01140a58f0a1ddcbdcb78faf310b38ebf75efb1d1333bad"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/live/JdbcLiveCampaignStore.java",
+      "sha256": "9a3cbb9a49b7b41df0ba3ccaaafee4388d15f0c0c8c666ae8b6bb0a03db22eef"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/web/EventExplorerController.java",
+      "sha256": "a6b5594a1141a53310e281c5f9dd5e0a098a7f70eb3657491d80899507883c72"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignController.java",
+      "sha256": "ac5c4242b8fd74849d18275c3a0a3617d849e88dc64f129124c73e37d5095803"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignPresentation.java",
+      "sha256": "3f96a5ffa687481373c908e0dfe5d1c44239945785a8b85da36d93722f51b56f"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/live/LiveAdmissionPolicy.java",
+      "sha256": "cdfc1678cc06214b8509abfcc6a34d020370d0d2fd84be3e0cad9f9915b413a1"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignService.java",
+      "sha256": "c0601f29a2478aeaa4cbbf1bed1e6a352df2a06be7471d275708f9b9d90f819d"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/live/LiveReplayRunner.java",
+      "sha256": "92e61cfed4eb4f7b61fe547bfdc760f7a441974764b63f052942cdbc7ba9c4ae"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/live/LiveSchedule.java",
+      "sha256": "62c2f62b055b436a500eefa3ec304e34be0e01b9f9fd6f7618d6473636791c3d"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/config/LiveCampaignProperties.java",
+      "sha256": "0e18e4b9032065b6a6d287da307b328e237786e3fb63afdf2ada96a498571445"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/domain/live/LiveCadence.java",
+      "sha256": "8c8e9635a02f42e364f25e0d644dacc4b40ce7b295a920a298df074f8de6d854"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/domain/live/LiveCampaignData.java",
+      "sha256": "bd302509b20f4ae075994e0af06a0a430d6c0827c9235400cd83f87376dc55c8"
+    },
+    {
+      "path": "src/main/resources/db/migration/V34__live_configurable_selection_and_cadence.sql",
+      "sha256": "62d2be550e5b83f26a151cbdd0f08b082ceb20cd255893b9a743a2d1fe6b5a6d"
+    },
+    {
+      "path": "src/main/resources/static/js/live-campaign.js",
+      "sha256": "1a1fb9217801494a5dd91a08f65c369501f60d2f91e12ea3ee85b04563a5bfea"
+    },
+    {
+      "path": "src/main/resources/templates/events.html",
+      "sha256": "a8b60cb346a2052d18896ac761785461b7b54fa56800529724a470717ec825ad"
+    },
+    {
+      "path": "src/main/resources/templates/live-campaign.html",
+      "sha256": "52e7ab10bd8ecebfd4edb18f21667da3972bc43030b14e7c7a6294fd9e550e5d"
+    },
+    {
+      "path": "src/provider-playwright-qualification-test/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignFormBrowserQualificationIT.java",
+      "sha256": "9a618ad27382b98097256e1de2df07b690a1fb486283a1fb967c6e1915dede0c"
+    },
+    {
+      "path": "src/provider-playwright-qualification-test/java/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderSessionQualificationIT.java",
+      "sha256": "8b2bb451641f89cf320cd8a5d2b5e2a36d7c9ae318e18d245050e0982717d81f"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignControllerTest.java",
+      "sha256": "28b8c32bdee7d2b6f4bea68ff598f175759e36a8f4d4629392073b5f0946fe1a"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignPresentationTest.java",
+      "sha256": "6a8b4ca702124892470daf7fa34f463aad5ef67c78d2dde79d0e8417883aed5d"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/live/LiveMultiMatchCapacityTest.java",
+      "sha256": "0df8f7e079a45cbcbfd4773b82c7ea11815aaaa77aa6dbac8dc7d7f1ccba4e03"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/live/LivePreparationAdmissionTest.java",
+      "sha256": "02b0c9aab02e75737bdeb5281a0fc77f64e2418fa568105607b131ddd8aa8faa"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/live/LiveScheduleTest.java",
+      "sha256": "f81b7d318d48905a315a0588947b8df5fd03cc202893a32d46651eefdac6b706"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/build/J6NativeBinaryPipelineQualificationTest.java",
+      "sha256": "b62698f69acfc99b7baefed5183d4e9bc5d1e1c491646ddafe2ac45c181bafe7"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/config/LiveCampaignPropertiesTest.java",
+      "sha256": "3c8363cbc73967d34ccd8033a27e02f616bf7fa70351afb5ba2556d6f735079e"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/integration/FlywayMigrationIT.java",
+      "sha256": "d4730b7d24f7628d3b360acd74e9f4269c864bc0ba8d7dac38ccbed4e3f3d2af"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/integration/LiveCampaignPersistenceIT.java",
+      "sha256": "688422a240f2064bebf780c3d0256de605dda78e21d8390e083572a5d1c4a236"
+    }
+  ],
+  "localLogs": [
+    {
+      "path": ".tmp/wo058-configurable-capacity-red.log",
+      "sha256": "7afc48718f3784e7650e887ffd06561ccf4bb454ebcb6564204905e8e9ad1066"
+    },
+    {
+      "path": ".tmp/wo058-adaptive-targeted.log",
+      "sha256": "c4f47db96762ae1105a94713d43b00550e7439ea05f872c6302c024e6b43cead"
+    },
+    {
+      "path": ".tmp/wo058-adaptive-full-verify.log",
+      "sha256": "91e17f86096bc8664eecb49477d6cf800fe782cd846035267f32118b934161de"
+    },
+    {
+      "path": ".tmp/wo058-adaptive-full-verify-final.log",
+      "sha256": "688cd6b199eba1a7bc53ddd8bca1a8c7d4a114275516c4591b096d7acb37be92"
+    },
+    {
+      "path": ".tmp/wo058-adaptive-full-verify-complete.log",
+      "sha256": "16009e4077ec7c9bdfc4fead044493bd4e650f8201e9a3192995098b7eae7afc"
+    },
+    {
+      "path": ".tmp/wo058-adaptive-common-profile.log",
+      "sha256": "cb66ed8737542e787fa3b2d0d7c1421a0244303110355907cee86b66711d0f4f"
+    },
+    {
+      "path": ".tmp/wo058-adaptive-loopback.log",
+      "sha256": "24dcfbe150b0bd3adde3725c86203b6e29c02d8d878e9e6640fa84ff2f7dfcf0"
+    }
+  ]
+}
