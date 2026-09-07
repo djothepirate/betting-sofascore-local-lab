@@ -45,7 +45,7 @@
     return candidate.campaignId < previous.campaignId;
   };
   const updateSelection = () => {
-    const checked = document.querySelectorAll('input[form="live-selection"][name="eventId"]:checked').length;
+    const checked = document.querySelectorAll('input[form="live-selection"][name="eventId"]:checked:not(:disabled)').length;
     text(monitor, "[data-live-selection-count]", `${checked} rencontre${checked > 1 ? "s" : ""} sélectionnée${checked > 1 ? "s" : ""}`);
     const button = monitor.querySelector("[data-live-prepare]");
     if (button) button.disabled = checked === 0;
@@ -192,6 +192,14 @@
           }
         }
         text(node, "[data-live-event-state]", event.state);
+        const selection = node.querySelector('input[form="live-selection"][name="eventId"]');
+        if (selection) {
+          selection.disabled = selection.dataset.liveProviderEligible !== "true" || event.selectionBlocked === true;
+          if (selection.disabled) selection.checked = false;
+          const blocked = node.querySelector("[data-live-selection-blocked]");
+          if (blocked) blocked.hidden = event.selectionBlocked !== true;
+          updateSelection();
+        }
         text(node, "[data-live-sport-context]", event.state === "STOPPED_ALREADY_FINISHED"
           ? "Le statut sportif ci-dessus décrit l’observation figée à la préparation. La rencontre a été constatée terminée localement au lancement ; aucune nouvelle collecte n’a eu lieu." : " ");
         text(node, "[data-live-event-reason]", event.reason);

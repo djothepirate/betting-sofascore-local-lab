@@ -9,6 +9,7 @@ import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImpor
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportService;
 import com.bettingproject.sofascorelocal.application.event.J4ScheduledEventsSnapshotNormalizationService;
 import com.bettingproject.sofascorelocal.application.event.J4SnapshotNormalizationResult;
+import com.bettingproject.sofascorelocal.application.live.LiveCampaignService;
 import com.bettingproject.sofascorelocal.application.network.J4ProviderCampaignStopException;
 import com.bettingproject.sofascorelocal.application.network.J4ProviderCampaignStopService;
 import com.bettingproject.sofascorelocal.application.network.J4RealEventDetailsPhase1Service;
@@ -39,6 +40,8 @@ import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.cache.CacheManager;
@@ -52,6 +55,7 @@ import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 import java.util.regex.Pattern;
 
@@ -106,6 +110,9 @@ class EventExplorerControllerTest {
 
     @MockitoBean
     private CacheManager cacheManager;
+
+    @MockitoBean
+    private LiveCampaignService liveCampaigns;
 
     @BeforeEach
     void exposeLockedRealPhaseOneControl() {
@@ -191,6 +198,26 @@ class EventExplorerControllerTest {
                 .andExpect(content().string(containsString("name=\"canonicalEventId\"")))
                 .andExpect(content().string(containsString(
                         "J4_EVENT_DETAILS_PHASE_2_DISABLED")));
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void providerSelectionReflectsCampaignLockInTheInitialHtml(boolean blocked) throws Exception {
+        var event = providerEvent();
+        var date = event.startsAt().atZone(ZoneId.of("Europe/Paris")).toLocalDate();
+        var search = new J4EventSearchResult(date, ZoneId.of("Europe/Paris"),
+                date.atStartOfDay(ZoneId.of("Europe/Paris")).toInstant(),
+                date.plusDays(1).atStartOfDay(ZoneId.of("Europe/Paris")).toInstant(),
+                List.of(new J4EventSearchItem(event, event.startsAt().atZone(ZoneId.of("Europe/Paris")))));
+        when(queryService.search(date, "Europe/Paris")).thenReturn(search);
+        when(liveCampaigns.selectionBlockedEvents(List.of(event.identity().value())))
+                .thenReturn(blocked ? Set.of(event.identity().value()) : Set.of());
+        var response = mockMvc.perform(get("/events").param("date", date.toString()))
+                .andExpect(status().isOk()).andReturn().getResponse();
+        var input = Pattern.compile("<input\\b[^>]*name=\"eventId\"[^>]*>").matcher(response.getContentAsString());
+        assertThat(input.find()).isTrue();
+        assertThat(input.group()).contains("data-live-provider-eligible=\"true\"");
+        assertThat(input.group().contains("disabled=\"disabled\"")).isEqualTo(blocked);
     }
 
     @Test

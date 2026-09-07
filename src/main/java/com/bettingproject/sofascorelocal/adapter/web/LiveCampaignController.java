@@ -141,7 +141,7 @@ public class LiveCampaignController {
     @ResponseStatus(HttpStatus.CONFLICT)
     public String rejected(IllegalStateException exception, Model model) {
         String code = switch (String.valueOf(exception.getMessage())) {
-            case "LIVE_DISABLED", "LIVE_PROVIDER_BUSY", "LIVE_STORAGE_PROBE_NOT_CONFIGURED",
+            case "LIVE_DISABLED", "LIVE_PROVIDER_BUSY", "LIVE_EVENT_ALREADY_IN_CAMPAIGN", "LIVE_STORAGE_PROBE_NOT_CONFIGURED",
                  "LIVE_STORAGE_PROBE_TIMEOUT", "LIVE_STORAGE_PROBE_FAILED", "LIVE_STORAGE_PROBE_INVALID",
                  "LIVE_STORAGE_PROBE_INTERRUPTED", "LIVE_STORAGE_CAPACITY_REFUSED", "LIVE_POLICY_INVALID",
                  "LIVE_CAPACITY_QUALIFICATION_REQUIRED", "LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY" -> exception.getMessage();
@@ -158,6 +158,7 @@ public class LiveCampaignController {
             case "LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY" -> "Le délai maximal d’une requête live doit être compris entre zéro exclu et dix secondes. Corriger le délai Playwright avant le lancement.";
             case "LIVE_DISABLED" -> "Le lancement live est désactivé. Activer l’opt-in local dédié avant de lancer une campagne préparée.";
             case "LIVE_PROVIDER_BUSY" -> "Une collecte fournisseur occupe déjà la session locale. Attendre sa fin avant de lancer cette campagne.";
+            case "LIVE_EVENT_ALREADY_IN_CAMPAIGN" -> "Une rencontre sélectionnée appartient déjà à une campagne en cours. Suivre cette campagne ou retirer la rencontre de la sélection. Une rencontre en STOPPED_ERROR peut être sélectionnée à nouveau.";
             default -> "La demande locale a été refusée. Revenir aux rencontres et préparer à nouveau la sélection ; si le refus persiste, conserver ce code pour le diagnostic.";
         };
         model.addAttribute("liveError", message);

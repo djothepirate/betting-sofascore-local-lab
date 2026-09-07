@@ -14,6 +14,15 @@ de capacité. Sa préparation ne crée ni worker ni contexte. Le lancement confi
 consomme le formulaire local, vérifie les trois opt-ins et refuse une politique modifiée depuis
 la préparation.
 
+Une rencontre d'une campagne `RUNNING` ou `CLEANUP_REQUIRED` est non sélectionnable, sauf
+si son état individuel est `STOPPED_ERROR`. La règle `CampaignView.blocksSelection` est partagée
+par l'affichage initial, le DTO d'actualisation, la préparation et le contrôle d'un ancien
+manifeste au lancement. Un refus porte le code `LIVE_EVENT_ALREADY_IN_CAMPAIGN` et n'ouvre
+aucun transport. Un simple manifeste `PREPARED` ne réserve pas la rencontre. Après une campagne
+terminale, les critères ordinaires de provenance et de statut sportif s'appliquent de nouveau.
+Le garde fournisseur reste l'autorité exclusive au lancement, y compris pour une sélection
+autorisée après erreur : pouvoir préparer ne lève pas un nettoyage encore requis.
+
 Une sélection entièrement terminée ne crée pas de manifeste et affiche une explication locale,
 même si les opt-ins réseau sont désactivés. Pour une sélection mixte, les exclusions sont rendues
 dans le récapitulatif et la capacité porte sur les seules cibles retenues. Le statut local est
@@ -127,9 +136,19 @@ J5 404 conserve l'indisponibilité et attend le cycle normal suivant. Transport,
 404, HTML/challenge, identité, contenu sensible, exception interne, stockage et anomalie non
 classifiable arrêtent globalement. La portée live est distincte du statut renvoyé par un parseur.
 
+Pour chaque famille J5 404, la publication atomique conserve une observation `UNAVAILABLE`,
+le résultat `ENDPOINT_UNAVAILABLE / HTTP_404 / NONE` et la réception courante. Le snapshot brut
+inséré est classé `ENDPOINT_UNAVAILABLE` avec `error_code=null`, conformément au contrat de
+persistance ; un snapshot dédupliqué conserve sa classification historique. Le curseur de
+dernière donnée lisible n'est pas effacé. L'indisponibilité n'ajoute pas de tentative immédiate :
+les autres familles et rencontres continuent, puis l'endpoint est réinterrogé à son échéance.
+
 MVC/Thymeleaf rend la préparation, les commandes et l'historique. Les GET d'état ne font que des
 lectures locales. Le script de même origine lit toutes les cinq secondes, suspend son timer sur
 onglet masqué, ignore une ancienne révision et conserve focus, sélection et dernières données.
+Une case devenue non sélectionnable est désactivée et décochée ; le compteur exclut les cases
+désactivées. `STOPPED_ERROR` rend la case éligible à nouveau sans la recocher. Une fixture
+synthétique reste désactivée indépendamment des états de campagne.
 Les DTO excluent payloads et identité de processus. Le retard affiché est celui de l'autorisation
 transport, explicitement distinct d'une mesure on-wire. Les familles deviennent en retard après
 deux intervalles sans succès : J4 utilise 60 s en attente/contrôle de fin et 300 s en jeu ; J5

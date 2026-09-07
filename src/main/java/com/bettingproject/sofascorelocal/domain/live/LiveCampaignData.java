@@ -157,7 +157,13 @@ public final class LiveCampaignData {
     public record CampaignView(Manifest manifest, String state, String reason, Instant startedAt,
                                Instant endsAt, int reservedCalls, long receivedBytes, long revision,
                                Ownership ownership, List<EventView> events, List<AttemptView> attempts,
-                               List<Transition> transitions) { }
+                               List<Transition> transitions) {
+        public boolean blocksSelection(UUID canonicalEventId) {
+            return ("RUNNING".equals(state) || "CLEANUP_REQUIRED".equals(state))
+                    && events.stream().anyMatch(event -> event.target().canonicalEventId().equals(canonicalEventId)
+                            && !"STOPPED_ERROR".equals(event.state()));
+        }
+    }
 
     public static void requireEndpoint(SofascoreEndpointType endpoint) {
         Objects.requireNonNull(endpoint);

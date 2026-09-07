@@ -1,6 +1,9 @@
 package com.bettingproject.sofascorelocal.application.live;
 
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import java.time.*;
 import java.util.*;
 import static org.assertj.core.api.Assertions.*;
@@ -27,6 +30,45 @@ class LiveScheduleTest {
         cycle(s,start.plusSeconds(121),Map.of());
         assertThat(s.next(start.plusSeconds(180))).isEmpty();
         assertThat(s.next(start.plusSeconds(181))).isPresent();
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = SofascoreEndpointType.class, names = {"EVENT_STATISTICS", "EVENT_INCIDENTS", "EVENT_LINEUPS"})
+    void delayedThirdMatchWithUnavailableFirstFamilyKeepsAllThreeOnTheirOrdinaryCycles(SofascoreEndpointType unavailableFamily) {
+        UUID waiting = UUID.randomUUID();
+        var schedule = new LiveSchedule(List.of(a, b, waiting), start, start.plusSeconds(1000));
+        Map<UUID, List<LiveSchedule.Due>> calls = new HashMap<>();
+        List<Instant> statisticsDispatches = new ArrayList<>();
+        for (int second = 0; second < 240; second++) {
+            Instant at = start.plusSeconds(second);
+            var next = schedule.next(at);
+            if (next.isEmpty()) continue;
+            var due = next.orElseThrow();
+            calls.computeIfAbsent(due.eventId(), ignored -> new ArrayList<>()).add(due);
+            boolean delayed = due.eventId().equals(waiting);
+            if (delayed && due.endpoint() == EVENT_STATISTICS) statisticsDispatches.add(at);
+            boolean unavailable = delayed && due.endpoint() == unavailableFamily
+                    && calls.get(waiting).stream().filter(call -> call.endpoint() == unavailableFamily).count() == 1;
+            String sport = due.endpoint() == EVENT_DETAILS ? delayed && second < 120 ? "notstarted" : "inprogress" : null;
+            schedule.started(due, at);
+            schedule.completed(due, sport, unavailable, Map.of(), at.plusMillis(1));
+        }
+        assertThat(schedule.terminal()).isFalse();
+        assertThat(schedule.states()).allSatisfy(event -> {
+            assertThat(event.state()).isEqualTo("COLLECTING");
+            assertThat(event.missedCycles()).isZero();
+        });
+        var delayedCalls = calls.get(waiting);
+        assertThat(delayedCalls.subList(0, 3)).allSatisfy(call -> assertThat(call.endpoint()).isEqualTo(EVENT_DETAILS));
+        assertThat(delayedCalls.subList(3, 6)).extracting(LiveSchedule.Due::endpoint)
+                .containsExactly(EVENT_STATISTICS, EVENT_INCIDENTS, EVENT_LINEUPS);
+        var statistics = delayedCalls.stream().filter(call -> call.endpoint() == EVENT_STATISTICS).toList();
+        assertThat(statistics).hasSize(2);
+        assertThat(statistics.get(1).dueAt()).isEqualTo(statisticsDispatches.getFirst().plusSeconds(60));
+        assertThat(Duration.between(statisticsDispatches.getFirst(), statisticsDispatches.getLast()))
+                .isEqualTo(Duration.ofSeconds(60));
+        for (UUID active : List.of(a, b)) assertThat(calls.get(active).stream()
+                .filter(call -> call.endpoint() == EVENT_STATISTICS).count()).isEqualTo(4);
     }
     @Test void halftimeIsOneCheckAndDuplicateSignalDoesNotRearm() {
         var s=one(); execute(s,start,"inprogress",false,Map.of());

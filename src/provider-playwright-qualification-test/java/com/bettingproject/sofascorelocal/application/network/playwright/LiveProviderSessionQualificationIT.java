@@ -93,9 +93,7 @@ class LiveProviderSessionQualificationIT {
                 if (initialMemory > 0) assertThat(finalMemory - initialMemory).isLessThan(256L * 1024 * 1024);
                 owned = worker.descendants().toList();
             }
-            assertThat(supervisor.activeCampaignId()).isEmpty();
-            assertThat(f.worker.get().isAlive()).isFalse();
-            assertThat(owned).noneMatch(ProcessHandle::isAlive);
+            assertClosed(supervisor, f.worker.get(), owned);
             assertThat(f.arrivals).hasSize(matches * 4 * 3);
             for (int i = 1; i < f.arrivals.size(); i++) assertThat(f.arrivals.get(i) - f.arrivals.get(i - 1))
                     .isGreaterThanOrEqualTo(TimeUnit.SECONDS.toNanos(3));
@@ -142,9 +140,7 @@ class LiveProviderSessionQualificationIT {
                 System.out.println("WO058_LIVE_WORKER_MEMORY_LAST_BYTES="+finalMemory);
                 owned=worker.descendants().toList();
             }
-            assertThat(supervisor.activeCampaignId()).isEmpty();
-            assertThat(f.worker.get().isAlive()).isFalse();
-            assertThat(owned).noneMatch(ProcessHandle::isAlive);
+            assertClosed(supervisor, f.worker.get(), owned);
             assertThat(f.arrivals).hasSize(24);
             for(int i=1;i<f.arrivals.size();i++) assertThat(f.arrivals.get(i)-f.arrivals.get(i-1)).isGreaterThanOrEqualTo(TimeUnit.SECONDS.toNanos(3));
             assertThat(f.offScope.get()).isZero();
@@ -207,6 +203,16 @@ class LiveProviderSessionQualificationIT {
             awaitCleanup(supervisor, f.worker.get());
             f.assertNoArtifacts();
         }
+    }
+
+    private static void assertClosed(ChildJvmPlaywrightProviderSupervisor supervisor, Process worker,
+                                     List<ProcessHandle> owned) throws Exception {
+        assertThat(supervisor.activeCampaignId()).isEmpty();
+        assertThat(worker.toHandle().isAlive()).isFalse();
+        assertThat(owned).noneMatch(ProcessHandle::isAlive);
+        // The native tree must already be gone; only the Java Process exit notification may lag.
+        assertThat(worker.waitFor(5, TimeUnit.SECONDS)).isTrue();
+        assertThat(worker.isAlive()).isFalse();
     }
 
     private static void awaitCleanup(ChildJvmPlaywrightProviderSupervisor supervisor, Process worker) throws Exception {

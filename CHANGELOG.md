@@ -4,6 +4,20 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — indisponibilités J5 et sélection des rencontres suivies
+
+- Corrige la publication live d'un HTTP 404 : le snapshot est classé `ENDPOINT_UNAVAILABLE`
+  sans code d'erreur de schéma ; `HTTP_404` reste dans le ledger de la tentative. Statistiques,
+  incidents et compositions indisponibles n'arrêtent ni le match ni les autres rencontres.
+  Chaque famille retrouve son cycle planifié et conserve sa dernière donnée lisible.
+- Désactive sur J4 la sélection d'une rencontre appartenant à une campagne en cours, sauf
+  `STOPPED_ERROR`. Le contrôle existe dès le rendu HTML, suit les actualisations et est répété
+  côté serveur à la préparation et au lancement d'un ancien manifeste.
+- Consigne les essais opérateur réussis à trois rencontres et le diagnostic du premier J5
+  après un coup d'envoi différé. Preuves : [rapport 404 et sélection](docs/validation/WO058-J5-404-AND-SELECTION-20260907.md).
+- Fiabilise le contrôle de fermeture dans la qualification Chromium : arbre natif absent
+  immédiatement, puis attente bornée de la notification Java, sans changer le transport.
+
 ### WO-058 — sélection multiple après le premier parcours fournisseur
 
 - Consigne le premier essai opérateur complet : ancienne observation `notstarted`, J4 `finished`,

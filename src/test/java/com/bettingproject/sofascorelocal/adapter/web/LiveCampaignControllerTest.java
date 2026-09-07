@@ -412,6 +412,30 @@ class LiveCampaignControllerTest {
                 1000, 3000, 1_000_000, 1, List.of(new Target(EVENT_ID, 900001L, 1, 1)));
     }
 
+    @Test
+    void staleSelectionReturnsAnExplicitConflictAndNeverLaunches() throws Exception {
+        when(service.prepareSelection(List.of(EVENT_ID))).thenThrow(new IllegalStateException("LIVE_EVENT_ALREADY_IN_CAMPAIGN"));
+        MockHttpSession session = new MockHttpSession();
+        mvc.perform(post("/live-campaigns/prepare").header("Host", HOST).header("Origin", ORIGIN)
+                        .session(session).param("localFormToken", tokens.issue(session)).param("eventId", EVENT_ID.toString()))
+                .andExpect(status().isConflict()).andExpect(model().attribute("liveErrorCode", "LIVE_EVENT_ALREADY_IN_CAMPAIGN"))
+                .andExpect(content().string(containsString("appartient déjà à une campagne en cours")))
+                .andExpect(content().string(containsString("STOPPED_ERROR")));
+        verify(service, never()).launch(any(), any());
+    }
+
+    @ParameterizedTest
+    @CsvSource({"RUNNING,COLLECTING,true", "RUNNING,STOPPED_ERROR,false", "STOPPED_ERROR,STOPPED_ERROR,false"})
+    void stateRefreshIncludesTheSelectionRule(String campaignState, String eventState, boolean blocked) throws Exception {
+        var view = campaign(campaignState, 50);
+        when(service.eventStates(List.of(EVENT_ID))).thenReturn(List.of(new CampaignView(view.manifest(), campaignState,
+                null, NOW, view.endsAt(), 0, 0, 50, null,
+                List.of(new EventView(view.manifest().targets().getFirst(), eventState, null, 0, 0, NOW, List.of())),
+                List.of(), List.of())));
+        mvc.perform(get("/events/state").header("Host", HOST).param("eventId", EVENT_ID.toString()))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].events[0].selectionBlocked").value(blocked));
+    }
+
     private static CampaignView campaign(String state, long revision) {
         return new CampaignView(manifest(), state, null, state.equals("PREPARED") ? null : NOW,
                 state.equals("PREPARED") ? null : NOW.plusSeconds(14400), 0, 0, revision, null,

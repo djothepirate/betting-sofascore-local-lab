@@ -17,8 +17,12 @@ La [preuve de cadrage](docs/validation/WO058-LIVE-J4-J5-SCOPING-20260907.md) et 
 Le fournisseur reste désactivé par défaut ; migration de la base opérateur et pilote réel sont distincts.
 Le [premier retour fournisseur et les paliers multi-match](docs/validation/WO058-MULTIMATCH-CAPACITY-20260907.md)
 consignent maintenant la campagne opérateur complète sur un match découvert `finished` au premier J4,
-ainsi que la qualification et le paramétrage des paliers deux et trois. Cet essai ne valide pas
-encore la boucle pendant un match réellement en cours.
+ainsi que la qualification et le paramétrage des paliers deux et trois.
+Le [retour opérateur suivant](docs/validation/WO058-J5-404-AND-SELECTION-20260907.md) confirme
+la finalisation de trois rencontres et les actualisations de matchs en cours. Le correctif traite
+les HTTP 404 des trois familles J5 comme des indisponibilités à réinterroger au prochain cycle
+planifié, et bloque la sélection J4 d'une rencontre déjà suivie, sauf `STOPPED_ERROR`.
+La reprise fournisseur après ce correctif reste à valider par l'opérateur.
 
 **Skills du lot 1 validés — 5 septembre 2026 :** les cinq skills `ss-*` sont livrés avec
 leur [guide et installateur personnel](docs/skills/README.md), sous

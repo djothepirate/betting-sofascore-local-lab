@@ -9,7 +9,7 @@ import com.bettingproject.sofascorelocal.config.SofascoreProperties;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
-import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.Target;
+import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.*;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEventStatus;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTeam;
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
@@ -27,6 +27,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -139,6 +140,50 @@ class LivePreparationAdmissionTest {
         verify(h.store).prepare(preparation.manifest());
         verify(h.events, never()).save(any());
         h.verifyNoProviderWork();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"RUNNING,INITIAL_CHECK,true", "RUNNING,WAITING_START,true", "RUNNING,COLLECTING,true",
+            "RUNNING,FINALIZING,true", "RUNNING,FINISHED_CONFIRMED,true", "RUNNING,STOPPED_OPERATOR,true",
+            "RUNNING,STOPPED_ERROR,false", "CLEANUP_REQUIRED,COLLECTING,true", "CLEANUP_REQUIRED,STOPPED_ERROR,false",
+            "STOPPED_ERROR,STOPPED_ERROR,false", "COMPLETED,STOPPED_OPERATOR,false", "PREPARED,PREPARED,false"})
+    void selectionAndPreparationRespectCampaignMembershipWithTheExplicitErrorException(
+            String campaignState, String eventState, boolean blocked) {
+        var h = new Harness(new LiveCampaignProperties(), () -> Long.MAX_VALUE);
+        var event = observation(PROVIDER_EVENT_ID, NOW, "inprogress");
+        var id = event.identity().value();
+        var previous = campaign(event, campaignState, eventState);
+        when(h.events.findLatestByCanonicalId(id)).thenReturn(Optional.of(event));
+        when(h.store.latestForEvent(id)).thenReturn(Optional.of(previous));
+        assertThat(h.service.selectionBlockedEvents(List.of(id)).contains(id)).isEqualTo(blocked);
+        if (blocked) {
+            assertThatThrownBy(() -> h.service.prepareSelection(List.of(id)))
+                    .hasMessage("LIVE_EVENT_ALREADY_IN_CAMPAIGN");
+            verify(h.store, never()).prepare(any());
+        } else {
+            assertThat(h.service.prepareSelection(List.of(id)).manifest().targets()).hasSize(1);
+        }
+        h.verifyNoProviderWork();
+    }
+
+    @Test
+    void aManifestPreparedEarlierCannotLaunchAnEventThatHasSinceJoinedARunningCampaign() {
+        var h = new Harness(new LiveCampaignProperties(), () -> Long.MAX_VALUE);
+        var event = observation(PROVIDER_EVENT_ID, NOW, "inprogress");
+        var prepared = campaign(event, "PREPARED", "PREPARED");
+        when(h.store.find(prepared.manifest().campaignId())).thenReturn(Optional.of(prepared));
+        when(h.store.latestForEvent(event.identity().value())).thenReturn(Optional.of(campaign(event, "RUNNING", "COLLECTING")));
+        assertThatThrownBy(() -> h.service.launch(prepared.manifest().campaignId(), prepared.manifest().manifestSha256()))
+                .hasMessage("LIVE_EVENT_ALREADY_IN_CAMPAIGN");
+        h.verifyNoProviderWork();
+    }
+
+    private static CampaignView campaign(CanonicalEventObservationView event, String state, String eventState) {
+        var target = new Target(event.identity().value(), event.identity().providerEventId(), event.observationId(), 23);
+        var manifest = new Manifest(UUID.randomUUID(), "d".repeat(64), "live-v1", NOW, NOW.plusSeconds(300),
+                Duration.ofHours(4), 1000, 3000, 1000L * FIVE_MIB, 1, List.of(target));
+        return new CampaignView(manifest, state, null, "PREPARED".equals(state) ? null : NOW, NOW.plusSeconds(14400),
+                0, 0, 1, null, List.of(new EventView(target, eventState, null, 0, 0, NOW, List.of())), List.of(), List.of());
     }
 
     private static CanonicalEventObservationView observation(long providerEventId, Instant startsAt, String status) {

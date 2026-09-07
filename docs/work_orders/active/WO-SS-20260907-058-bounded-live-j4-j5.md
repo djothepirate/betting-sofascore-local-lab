@@ -1,6 +1,6 @@
 # WO-SS-20260907-058 — Campagnes live locales J4/J5 sur sélection de rencontres
 
-- **Statut :** `READY_FOR_REVIEW` — premier parcours fournisseur J4 finished puis J5 complet confirmé ; paliers deux et trois qualifiés localement et paramétrage Eclipse documenté, prochains essais opérateur à effectuer, aucune clôture.
+- **Statut :** `READY_FOR_REVIEW` — retour opérateur multi-match, publication J5 404 et verrou de sélection J4 corrigés ; suites complète et Chromium vertes, reprise opérateur après correctif à valider, aucune clôture.
 - **Date :** 2026-09-07.
 - **Jalon :** expérimentation live locale après J9, distincte des parcours manuels existants.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
@@ -11,7 +11,7 @@
 - **ADR live :** [ADR-SS-005 v0.1](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), `ACCEPTED` le 7 septembre 2026 ; proposition acceptée de SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
 - **Livrable présent :** ADR accepté, WO validé, réalisation locale et qualification hors fournisseur ; état des preuves dans le rapport de réalisation.
 - **Alignement de gouvernance :** renvois ciblés dans ADR-SS-001 et AGENTS.md ; ADR-SS-002 à 004 inchangés.
-- **Réalisation applicative :** réalisée et qualifiée hors fournisseur, preuve de capacité étendue aux paliers deux et trois ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagne fournisseur :** premier essai lancé par l'opérateur terminé, attente et cycles pendant un match actif non encore validés par cet essai.
+- **Réalisation applicative :** réalisée et qualifiée hors fournisseur, paliers deux et trois et correctif du quatrième retour vérifiés ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur :** finalisation multi-match et cycles actifs observés par l'opérateur, reprise après correction du HTTP 404 J5 encore à valider.
 
 Les statuts restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 `NO_CRITICAL_DEPENDENCY`. Le socle reste Java 25 LTS, Spring Boot 4.1.0, Maven wrapper,
@@ -78,6 +78,31 @@ La suite complète passe avec 1 354 tests Surefire (cinq ignorés) et 122 Failsa
 Chromium dédiés passent après correction d'une fixture de qualification. Les essais multi-match
 réels restent à lancer par l'opérateur avec le profil documenté et un nouveau manifeste.
 Preuves : [rapport de capacité et de retour opérateur](../../validation/WO058-MULTIMATCH-CAPACITY-20260907.md).
+
+### Quatrième retour opérateur, après commit `64b70bf`
+
+Les captures confirment le refus de quatre rencontres éligibles malgré un match `finished`
+supplémentaire, puis la finalisation des trois cibles d'une sélection mixte. Les actualisations
+de la campagne, des détails J5 et du tableau J4 fonctionnent ; l'arrêt global est disponible
+pendant le suivi puis désactivé à la fin. La campagne `eb18a1b6-35f6-4931-83c1-8699d4771ab4`
+termine avec 12 appels et 411 982 octets.
+
+La campagne `62d2249c-de36-4c1a-acd6-9ab20b107a67` suit ensuite deux matchs déjà commencés et
+FC Voluntari — FC Argeș Pitești, attendu à 16 h 30 Europe/Paris. Le J4 constate son démarrage
+à 14:32:06.962Z ; le premier J5 statistiques répond HTTP 404 à 14:32:10.080Z. La publication
+transmettait `HTTP_404` comme erreur de schéma d'un snapshot indisponible, ce que le contrat du port de persistance
+refuse. L'exception déclenche le `STOPPED_ERROR` global confirmé sur les trois rencontres.
+
+Le propriétaire précise que les trois familles J5 404 doivent continuer au prochain cycle
+planifié et demande de bloquer la sélection J4 des rencontres déjà dans une campagne en cours,
+sauf `STOPPED_ERROR`. Le correctif respecte ces deux règles, sans changer l'ADR, les migrations,
+le traitement des pannes internes ou l'exclusion fournisseur. Le port 8087 a été libéré par
+le propriétaire pour les contrôles complets. La suite complète passe avec 1 376 tests Surefire
+(cinq ignorés explicités dans le rapport) et 126 Failsafe, sans échec ni erreur. Les huit tests
+Chromium passent après précision du contrôle natif de fermeture puis de la notification Java ;
+le premier échec de ce contrôle reste conservé. Aucun appel SofaScore n'est exécuté pendant
+ces qualifications. Diagnostic, résultats et limites :
+[rapport 404 et sélection](../../validation/WO058-J5-404-AND-SELECTION-20260907.md).
 
 Depuis le bloc **Résultats normalisés** de `/events`, sélectionner une ou plusieurs rencontres,
 préparer puis lancer explicitement une campagne locale. Pour chaque rencontre, suivre J4 jusqu'à

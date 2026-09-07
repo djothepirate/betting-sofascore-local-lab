@@ -145,6 +145,12 @@ Le clic de confirmation lance une seule campagne sur les cibles retenues.
 
 ## Parcours depuis /events
 
+Une rencontre déjà dans une campagne en cours a sa case désactivée sur J4. L'actualisation
+locale retire aussi une sélection devenue indisponible. L'exception `STOPPED_ERROR` permet
+de la sélectionner de nouveau, sans la recocher automatiquement. Un formulaire ancien ou
+forgé est refusé sous `LIVE_EVENT_ALREADY_IN_CAMPAIGN` ; suivre la campagne existante ou retirer
+la rencontre. Une préparation seule (`PREPARED`) ne verrouille pas la sélection.
+
 Une rencontre déjà `finished` dans la dernière observation locale est exclue, avant tout contrôle
 de capacité ou appel fournisseur. Si toute la sélection est terminée, la page l'explique et aucune
 campagne n'est créée. Une sélection mixte indique les exclusions avant confirmation du manifeste.
@@ -176,6 +182,18 @@ J4 est interrogé dès le lancement puis à la minute tant que `notstarted`. J5 
 Le secours J4 intervient à cinq minutes sans signal ; seule sa réponse `finished` confirme
 la fin. Un dernier triplet J5 peut rester incomplet si la fenêtre, le budget ou l'indisponibilité
 d'une famille l'empêche. Un 404 J5 est rééchantillonné au cycle normal suivant.
+
+Un HTTP 404 de statistiques, incidents ou compositions s'affiche comme `ENDPOINT_UNAVAILABLE`
+avec une complétude `UNAVAILABLE`. Il ne bloque pas la campagne : les autres familles et
+rencontres continuent, et chaque endpoint indisponible est réinterrogé comme planifié.
+La dernière donnée lisible reste visible avec sa propre date. Ce cas est distinct d'un HTTP 404
+J4 qui demande la revue du seul match, et d'une véritable panne technique ou de stockage.
+
+Après installation du correctif du [retour du 7 septembre](../validation/WO058-J5-404-AND-SELECTION-20260907.md),
+redémarrer le Lab et recharger J4 pour recevoir le nouveau HTML/script. Une campagne arrêtée
+reste un historique : sélectionner les rencontres en `STOPPED_ERROR`, préparer un nouveau
+manifeste et le lancer manuellement. Vérifier que le garde a terminé son nettoyage ; aucune
+reprise automatique ni réécriture des tentatives historiques n'est effectuée.
 
 Le rafraîchissement de l'écran est une lecture locale toutes les cinq secondes. Masquer l'onglet
 suspend ces lectures, sans interrompre une campagne déjà lancée dans l'application. Fermer le

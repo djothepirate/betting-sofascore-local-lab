@@ -2,6 +2,10 @@ package com.bettingproject.sofascorelocal.integration;
 
 import com.bettingproject.sofascorelocal.adapter.persistence.*;
 import com.bettingproject.sofascorelocal.adapter.persistence.live.*;
+import com.bettingproject.sofascorelocal.adapter.sofascore.live.LivePayloadNormalizer;
+import com.bettingproject.sofascorelocal.application.live.LiveProcessedResponse;
+import com.bettingproject.sofascorelocal.application.live.LiveResponseProcessor;
+import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderResponse;
 import com.bettingproject.sofascorelocal.domain.event.*;
 import com.bettingproject.sofascorelocal.domain.eventdetails.*;
 import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.*;
@@ -12,6 +16,8 @@ import com.bettingproject.sofascorelocal.port.*;
 import org.flywaydb.core.Flyway;
 import org.flywaydb.core.api.MigrationVersion;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.springframework.aop.framework.ProxyFactory;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
@@ -237,6 +243,90 @@ class LiveCampaignPersistenceIT {
                 .isInstanceOf(IllegalArgumentException.class);
     }
 
+    @ParameterizedTest
+    @EnumSource(value = SofascoreEndpointType.class, names = {
+            "EVENT_STATISTICS", "EVENT_INCIDENTS", "EVENT_LINEUPS"})
+    void live404PublicationSurvivesDeduplicationAndRecoveryWithoutLosingLastGoodData(SofascoreEndpointType endpoint) {
+        Fixture f = fixture("33"); Manifest m = f.manifest(f.seed(EVENT), 100); Ownership own = f.start(m);
+        String available = switch (endpoint) {
+            case EVENT_STATISTICS -> "{\"statistics\":[]}";
+            case EVENT_INCIDENTS -> "{\"incidents\":[]}";
+            case EVENT_LINEUPS -> "{\"confirmed\":false,\"home\":{\"players\":[]},\"away\":{\"players\":[]}}";
+            default -> throw new AssertionError(endpoint);
+        };
+        List<Long> snapshots = new ArrayList<>(); Set<Long> occurrences = new HashSet<>();
+        Result good = null;
+        for (int cycle = 0; cycle < 4; cycle++) {
+            boolean success = cycle == 2;
+            ReservedAttempt attempt = f.reserve(own, m.targets().getFirst(), cycle, endpoint);
+            Instant at = T0.plusSeconds(10 + 60L * cycle);
+            f.store.recordDispatch(own, attempt.attemptId(), at);
+            var response = new PlaywrightProviderResponse(at, at.plusMillis(100), success ? 200 : 404,
+                    "application/json", Duration.ofMillis(100), RawPayloadEvidence.capture(
+                            (success ? available : "{\"error\":\"unavailable\"}").getBytes(StandardCharsets.UTF_8)));
+            var receipt = f.store.saveReceipt(own, attempt.attemptId(), new RawManualCallSnapshot(endpoint,
+                    endpoint.name() + "|eventId=" + EVENT, at, response.receivedAt(), response.httpStatus(),
+                    response.contentType(), Duration.ofMillis(100), response.payload(),
+                    LivePayloadNormalizer.parserVersion(endpoint), RawSnapshotSchemaStatus.RAW_ONLY, null));
+            var processed = f.processor.process(CanonicalEventIdentity.sofascore(EVENT), endpoint, response, receipt);
+            assertThat(processed.scope()).isEqualTo(LiveProcessedResponse.FailureScope.NONE);
+            var publication = new Publication(processed.outcome().name(), processed.scope().name(), processed.code(),
+                    processed.receivedAt(), processed.parserVersion(), success, "COLLECTING", null,
+                    processed.projectionJson(), processed.projectionVersion(),
+                    processed.completeness().orElseThrow().status().name(),
+                    processed.completeness().orElseThrow().scorePercent());
+            Result result = f.store.publishResult(own, attempt.attemptId(), publication,
+                    () -> f.processor.persistProcessed(processed));
+            assertThat(result.normalized().j5ObservationId()).isPositive();
+            assertThat(f.jdbc.queryForMap("select schema_status,error_code from provider_snapshot where id=?", receipt.snapshotId()))
+                    .containsEntry("schema_status", success ? "PARSED" : "ENDPOINT_UNAVAILABLE").containsEntry("error_code", null);
+            if (success) good = result;
+            else {
+                assertThat(result.publication().code()).isEqualTo("HTTP_404");
+                assertThat(f.jdbc.queryForObject("select completeness_status from j5_event_data_observation where id=?",
+                        String.class, result.normalized().j5ObservationId())).isEqualTo("UNAVAILABLE");
+            }
+            CampaignView state = f.store.find(m.campaignId()).orElseThrow();
+            assertThat(state.state()).isEqualTo("RUNNING");
+            FamilyCursor cursor = state.events().getFirst().families().getFirst();
+            assertThat(cursor.lastReceivedAt()).isEqualTo(response.receivedAt());
+            if (good == null) assertThat(cursor.latestSuccessfulResult()).isNull();
+            else {
+                assertThat(cursor.lastSuccessfulAttemptId()).isEqualTo(good.attemptId());
+                assertThat(cursor.latestSuccessfulResult().normalized()).isEqualTo(good.normalized());
+                assertThat(cursor.latestSuccessfulResult().publication().resolvedAt()).isEqualTo(good.publication().resolvedAt());
+            }
+            snapshots.add(receipt.snapshotId()); occurrences.add(receipt.occurrenceId().orElseThrow());
+        }
+        assertThat(snapshots.get(0)).isEqualTo(snapshots.get(1)).isEqualTo(snapshots.get(3));
+        assertThat(occurrences).hasSize(4);
+        FamilyCursor cursor = f.store.find(m.campaignId()).orElseThrow().events().getFirst().families().getFirst();
+        assertThat(cursor.normalized()).isEqualTo(good.normalized());
+        assertThat(cursor.lastSuccessfulAt()).isEqualTo(T0.plusSeconds(130).plusMillis(100));
+    }
+
+    @Test
+    void j4UnavailablePublicationKeepsItsEventScopeInsteadOfBecomingAStorageFailure() {
+        Fixture f = fixture("33"); Manifest m = f.manifest(f.seed(EVENT), 100); Ownership own = f.start(m);
+        var attempt = f.reserve(own, m.targets().getFirst(), 0, SofascoreEndpointType.EVENT_DETAILS);
+        Instant at = T0.plusSeconds(10); f.store.recordDispatch(own, attempt.attemptId(), at);
+        var response = new PlaywrightProviderResponse(at, at.plusMillis(100), 404, "application/json",
+                Duration.ofMillis(100), RawPayloadEvidence.capture("{}".getBytes(StandardCharsets.UTF_8)));
+        var receipt = f.store.saveReceipt(own, attempt.attemptId(), new RawManualCallSnapshot(SofascoreEndpointType.EVENT_DETAILS,
+                "EVENT_DETAILS|eventId=" + EVENT, at, response.receivedAt(), 404, "application/json", Duration.ofMillis(100),
+                response.payload(), "event-details-v2", RawSnapshotSchemaStatus.RAW_ONLY, null));
+        var processed = f.processor.process(CanonicalEventIdentity.sofascore(EVENT), SofascoreEndpointType.EVENT_DETAILS, response, receipt);
+        assertThat(processed.scope()).isEqualTo(LiveProcessedResponse.FailureScope.EVENT);
+        Result result = f.store.publishResult(own, attempt.attemptId(), new Publication(processed.outcome().name(),
+                processed.scope().name(), processed.code(), processed.receivedAt(), processed.parserVersion(), false,
+                "STOPPED_REVIEW_REQUIRED"), () -> f.processor.persistProcessed(processed));
+        assertThat(result.publication().code()).isEqualTo("HTTP_404");
+        assertThat(result.normalized()).isEqualTo(NormalizedReferences.none());
+        assertThat(f.jdbc.queryForObject("select schema_status from provider_snapshot where id=?", String.class, receipt.snapshotId()))
+                .isEqualTo("ENDPOINT_UNAVAILABLE");
+        assertThat(f.store.find(m.campaignId()).orElseThrow().state()).isEqualTo("RUNNING");
+    }
+
     @Test
     void admissionProfileIsReadExactlyAndCannotChangeAfterPreparation() {
         Fixture f=fixture("33"); Target target=f.seed(EVENT);
@@ -392,6 +482,7 @@ class LiveCampaignPersistenceIT {
         final DriverManagerDataSource ds; final JdbcTemplate jdbc; final RawManualCallSnapshotStore rawStore;
         final CanonicalEventStore canonical; final EventDetailsStore details; final LiveCampaignStore store; final ProviderCampaignGuardStore guard;
         final J6RawPayloadRetentionStore retention;
+        final LiveResponseProcessor processor;
         Fixture(DriverManagerDataSource ds) {
             this.ds=ds;jdbc=new JdbcTemplate(ds);var named=new NamedParameterJdbcTemplate(ds);var tx=new JdbcTransactionManager(ds);
             rawStore=transactional(new JdbcRawManualCallSnapshotStore(named),RawManualCallSnapshotStore.class,tx);
@@ -400,6 +491,8 @@ class LiveCampaignPersistenceIT {
             store=transactional(new JdbcLiveCampaignStore(jdbc,rawStore),LiveCampaignStore.class,tx);
             guard=transactional(new JdbcProviderCampaignGuardStore(jdbc),ProviderCampaignGuardStore.class,tx);
             retention=transactional(new JdbcJ6RawPayloadRetentionStore(named),J6RawPayloadRetentionStore.class,tx);
+            J5EventDataStore data = transactional(new JdbcJ5EventDataStore(named), J5EventDataStore.class, tx);
+            processor = transactional(new LiveResponseProcessor(canonical, details, data, rawStore), LiveResponseProcessor.class, tx);
         }
         org.flywaydb.core.api.output.MigrateResult migrate(String version) {
             return Flyway.configure().dataSource(ds).locations("classpath:db/migration").target(MigrationVersion.fromVersion(version)).load().migrate();

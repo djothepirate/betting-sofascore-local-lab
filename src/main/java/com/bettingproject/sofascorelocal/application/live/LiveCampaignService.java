@@ -72,6 +72,7 @@ public final class LiveCampaignService {
         Objects.requireNonNull(selected);
         if (selected.isEmpty() || selected.size() > 100 || new HashSet<>(selected).size() != selected.size())
             throw new IllegalArgumentException("LIVE_SELECTION_INVALID");
+        requireSelectable(selected);
         List<CanonicalEventObservationView> observations = selected.stream().map(this::latestEligibleSource).toList();
         List<CanonicalEventObservationView> excluded = observations.stream().filter(LiveCampaignService::finished).toList();
         List<Target> targets = observations.stream().filter(event -> !finished(event))
@@ -111,6 +112,18 @@ public final class LiveCampaignService {
     }
 
     public CampaignView state(UUID id) { return store.find(id).orElseThrow(() -> new NoSuchElementException("LIVE_CAMPAIGN_NOT_FOUND")); }
+    public Set<UUID> selectionBlockedEvents(Collection<UUID> ids) {
+        Set<UUID> blocked = new HashSet<>();
+        for (UUID id : ids) {
+            if (store.latestForEvent(id).filter(campaign -> campaign.blocksSelection(id)).isPresent()) blocked.add(id);
+        }
+        return Set.copyOf(blocked);
+    }
+
+    private void requireSelectable(Collection<UUID> ids) {
+        if (!selectionBlockedEvents(ids).isEmpty()) throw new IllegalStateException("LIVE_EVENT_ALREADY_IN_CAMPAIGN");
+    }
+
     public List<CampaignView> eventStates(List<UUID> ids) {
         Set<UUID> wanted = Set.copyOf(ids);
         if (wanted.size() > 100) throw new IllegalArgumentException("LIVE_SELECTION_INVALID");
@@ -123,6 +136,7 @@ public final class LiveCampaignService {
         CampaignView current = state(id);
         if (!current.manifest().manifestSha256().equals(hash)) throw new IllegalArgumentException("LIVE_MANIFEST_MISMATCH");
         if (!"PREPARED".equals(current.state())) return current;
+        requireSelectable(current.manifest().targets().stream().map(Target::canonicalEventId).toList());
         List<UUID> alreadyFinished = locallyFinished(current.manifest());
         if (alreadyFinished.size() == current.manifest().targets().size())
             throw new IllegalArgumentException("LIVE_ALL_EVENTS_FINISHED");

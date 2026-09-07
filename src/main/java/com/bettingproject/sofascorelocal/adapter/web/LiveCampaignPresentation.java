@@ -84,6 +84,7 @@ public class LiveCampaignPresentation {
                         : event.reason(), event.nextDueAt(), event.reservedCalls(),
                 campaign.manifest().maximumCallsPerEvent(), event.receivedBytes(), event.missedCycles(),
                 event.finalComplete(), sourceSnapshot, sourceReceivedAt, canonicalCurrent,
+                campaign.blocksSelection(event.target().canonicalEventId()),
                 FAMILIES.stream().map(endpoint -> event.families().stream()
                         .filter(f -> f.endpoint() == endpoint).findFirst().orElseGet(() ->
                                 new FamilyCursor(endpoint, null, null, null, null, null, null, null,
@@ -253,7 +254,7 @@ public class LiveCampaignPresentation {
                         String startsAtParis, String sportStatus, String score, String state, String reason,
                         Instant nextDueAt, int reservedCalls, int maximumCalls, long receivedBytes,
                         long missedCycles, boolean finalComplete, Long sourceSnapshotId,
-                        Instant sourceReceivedAt, boolean canonicalCurrent, List<Family> families) { }
+                        Instant sourceReceivedAt, boolean canonicalCurrent, boolean selectionBlocked, List<Family> families) { }
     public record Family(String endpoint, String label, String outcome, String code, String scope,
                          Instant lastAttemptAt, Long authorizationDelayMillis,
                          Instant lastReceivedAt, Instant lastSuccessfulAt, Instant lastChangedAt,

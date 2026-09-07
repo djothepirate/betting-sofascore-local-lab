@@ -163,8 +163,11 @@ public class LiveResponseProcessor {
         }
         if (processed.raw().outcome() == RawSnapshotPersistenceOutcome.INSERTED) {
             // A deduplicated snapshot is immutable historical evidence. Its new result is in the live ledger.
+            // HTTP_404 belongs to the attempt ledger; an unavailable raw snapshot has no schema error.
             rawStore.classify(processed.raw().snapshotId(), schemaStatus(processed),
-                    processed.outcome() == LiveProcessedResponse.Outcome.PARSED ? null : processed.code());
+                    processed.outcome() == LiveProcessedResponse.Outcome.PARSED
+                            || processed.outcome() == LiveProcessedResponse.Outcome.ENDPOINT_UNAVAILABLE
+                            ? null : processed.code());
         }
         return references;
     }
