@@ -197,6 +197,15 @@ ou démarrée ; une nouvelle préparation est requise pour utiliser la nouvelle 
 
 ## Parcours depuis /events
 
+Une seule campagne fournisseur peut être active globalement, même si une autre sélection
+contient des rencontres entièrement différentes. `SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY`
+limite les rencontres de chaque campagne ; il n'augmente pas le nombre de campagnes simultanées.
+Préparer une autre sélection reste possible si ses rencontres sont éligibles, mais son lancement
+renvoie `LIVE_PROVIDER_BUSY` tant que la session fournisseur est occupée. Attendre la fin ou
+l'arrêt et le nettoyage de la campagne active. Refaire ensuite la préparation si sa validité
+de cinq minutes a expiré. Ce comportement a été observé lors du
+[retour opérateur à huit puis seize rencontres](../validation/WO058-OPERATOR-EIGHT-SIXTEEN-20260907.md).
+
 Une rencontre déjà dans une campagne en cours a sa case désactivée sur J4. L'actualisation
 locale retire aussi une sélection devenue indisponible. L'exception `STOPPED_ERROR` permet
 de la sélectionner de nouveau, sans la recocher automatiquement. Un formulaire ancien ou
@@ -215,7 +224,7 @@ La préparation et l'exclusion des matchs terminés ne nécessitent aucun opt-in
 opt-ins restent requis pour lancer les rencontres éligibles. Utiliser une même adresse
 (`localhost:8087` ou `127.0.0.1:8087`) durant tout le parcours.
 
-1. Dans les résultats normalisés, sélectionner le match du pilote puis préparer la campagne.
+1. Dans les résultats normalisés, sélectionner les rencontres éligibles puis préparer la campagne.
    Le serveur vérifie UUID, ID fournisseur et snapshot source ; aucune requête fournisseur ne part.
 2. Relire la sélection figée, les heures, la fenêtre, les plafonds, le profil de capacité et
    l'empreinte du manifeste. La préparation expire après cinq minutes ; toute modification de
@@ -229,9 +238,9 @@ opt-ins restent requis pour lancer les rencontres éligibles. Utiliser une même
    son éventuel GET engagé ; l'arrêt global annule le transport partagé. Attendre la preuve de
    nettoyage avant un nouveau lancement.
 
-J4 est interrogé dès le lancement puis à la minute tant que `notstarted`. J5 commence après
+J4 est interrogé dès le lancement puis à l'intervalle D du manifeste tant que `notstarted`. J5 commence après
 `inprogress`. Les incidents déclenchent des contrôles, jamais une conclusion sportive.
-Le secours J4 intervient à cinq minutes sans signal ; seule sa réponse `finished` confirme
+Le secours J4 intervient après `max(300 s, D)` sans J4 réussi ; seule sa réponse `finished` confirme
 la fin. Un dernier triplet J5 peut rester incomplet si la fenêtre, le budget ou l'indisponibilité
 d'une famille l'empêche. Un 404 J5 est rééchantillonné au cycle normal suivant.
 

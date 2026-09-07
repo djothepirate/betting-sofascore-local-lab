@@ -20,6 +20,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   L'outillage J6 est aligné sur V34 ; la sauvegarde préalable V33 utilise la version précédente.
 - Décision propriétaire enregistrée dans ADR-SS-005 v0.2 ;
   [preuves et résultats](docs/validation/WO058-ADAPTIVE-CAPACITY-20260907.md).
+- Consigne le retour fournisseur à huit rencontres (210 s, arrêt volontaire après environ
+  34 minutes, quatre fins confirmées, aucun cycle manqué) et le relevé d'une campagne à seize
+  encore active (450 s). Précise dans le guide l'exclusivité globale `LIVE_PROVIDER_BUSY`,
+  indépendante du plafond de rencontres par campagne. Aucune modification du moteur live ;
+  [constats et limites](docs/validation/WO058-OPERATOR-EIGHT-SIXTEEN-20260907.md).
 
 ### WO-058 — indisponibilités J5 et sélection des rencontres suivies
 

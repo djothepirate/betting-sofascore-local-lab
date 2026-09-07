@@ -1,6 +1,6 @@
 # WO-SS-20260907-058 — Campagnes live locales J4/J5 sur sélection de rencontres
 
-- **Statut :** `READY_FOR_REVIEW` — correctif de plafond paramétrable et cadence adaptative, y compris 10 et 25 rencontres, qualifié hors fournisseur ; aucune clôture.
+- **Statut :** `READY_FOR_REVIEW` — capacité adaptative qualifiée hors fournisseur ; retour opérateur positif à 8 rencontres, observation à 16 en cours au relevé du 7 septembre à 19 h 41 Paris ; aucune clôture.
 - **Date :** 2026-09-07.
 - **Jalon :** expérimentation live locale après J9, distincte des parcours manuels existants.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
@@ -11,13 +11,35 @@
 - **ADR live courant :** [ADR-SS-005 v0.2](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), capacité et cadence demandées par le propriétaire le 7 septembre ; proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
 - **Livrable présent :** ADR accepté, WO validé, réalisation locale et qualification hors fournisseur ; état des preuves dans le rapport de réalisation.
 - **Alignement de gouvernance :** renvois ciblés dans ADR-SS-001 et AGENTS.md ; ADR-SS-002 à 004 inchangés.
-- **Réalisation applicative :** réalisée et qualifiée hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur :** finalisation multi-match et cycles actifs observés par l'opérateur, nouveaux essais après correctifs restant distincts des qualifications locales.
+- **Réalisation applicative :** réalisée et qualifiée hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur :** essai à 8 arrêté volontairement après environ 34 minutes, quatre fins confirmées et zéro cycle manqué ; essai à 16 en cours au relevé de 19 h 41, distinct des qualifications locales.
 
 Les statuts restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 `NO_CRITICAL_DEPENDENCY`. Le socle reste Java 25 LTS, Spring Boot 4.1.0, Maven wrapper,
 PostgreSQL local Docker Desktop et application sur `127.0.0.1:8087`, textes UTF-8.
 
 ## 1. Objectif et origine du besoin
+
+### Sixième retour opérateur — huit rencontres puis seize, session unique confirmée
+
+Après le correctif de capacité adaptative, le propriétaire rapporte environ trente minutes
+sans problème sur huit rencontres puis un arrêt volontaire. Le relevé GET du 7 septembre à
+19 h 41 Paris confirme `STOPPED_OPERATOR`, 181 appels, 4 665 254 octets et zéro cycle manqué.
+Les trois statuts locaux anciens encore `inprogress` ont été finalisés après leur premier J4
+`finished` ; Al-Khaleej — Al-Riyadh a ensuite terminé pendant le suivi. Les quatre dernières
+collectes de finalisation J5 sont complètes. La cadence du manifeste est de 210 s pour huit cibles.
+
+Une autre préparation à cinq rencontres différentes a été refusée au lancement sous
+`LIVE_PROVIDER_BUSY` : comportement conforme à l'unique campagne fournisseur active globale
+d'ADR-SS-005 v0.2, indépendant du plafond par campagne. Après arrêt de la première, la sélection
+de vingt rencontres en exclut quatre déjà `finished` et retient seize cibles à 450 s. À 19 h 41,
+la seconde campagne reste `RUNNING`, avec 83 appels, neuf rencontres en collecte, sept en attente
+et zéro cycle manqué. Le propriétaire poursuit l'observation ; aucun arrêt ou redémarrage n'est
+effectué pour ce relevé documentaire.
+
+La capture Eclipse conserve l'empreinte historique 2/3 ; la référence adaptative à utiliser
+pour une nouvelle préparation après l'observation est précisée dans le
+[rapport opérateur à huit et seize rencontres](../../validation/WO058-OPERATOR-EIGHT-SIXTEEN-20260907.md).
+Ce retour positif borné ne clôture pas le WO et ne vaut pas bilan final de la campagne à seize.
 
 ### Cinquième retour opérateur — plafond paramétrable et cadence adaptative
 
