@@ -4,6 +4,18 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — sélection multiple après le premier parcours fournisseur
+
+- Consigne le premier essai opérateur complet : ancienne observation `notstarted`, J4 `finished`,
+  trois familles J5, score 1–1 et campagne `COMPLETED` ; quatre appels, aucun cycle manqué.
+- Relie les paramètres Eclipse de capacité, de charge et de preuve à la configuration live.
+  Les profils des paliers deux et trois suivent la qualification ; le pilote initial et les
+  opt-ins désactivés restent les défauts. Les matchs terminés sont exclus avant admission.
+- Distingue un plafond de sélection dépassé d'un profil de charge incompatible avec la minute.
+  Ajoute les tests de préparation/confirmation multiple, la simulation de longue durée et la
+  qualification Chromium de plusieurs matchs avec réponses de taille maximale.
+- Résultats et limites : [preuve des paliers](docs/validation/WO058-MULTIMATCH-CAPACITY-20260907.md).
+
 ### WO-058 — admission locale et deuxième retour opérateur
 
 - Essais opérateur conformes après `017888b` : un puis trois matchs déjà `finished` sont exclus

@@ -97,6 +97,52 @@ manuel peut mettre à jour cette observation ; la prochaine préparation exclura
 Pour une campagne explicitement lancée avec une observation ancienne encore éligible, le premier
 J4 réseau établit le statut et conserve les transitions/finalisation bornées de l'ADR.
 
+### Passer aux paliers deux et trois après le pilote initial
+
+Le pilote sur une rencontre découvert `finished` au premier J4 a été confirmé par l'opérateur.
+Les profils suivants disposent désormais d'une [qualification locale](../validation/WO058-MULTIMATCH-CAPACITY-20260907.md)
+et d'une [preuve figée](../validation/WO058-MULTIMATCH-CAPACITY-PROFILE-20260907.json).
+Le défaut reste une rencontre ; les valeurs ci-dessous permettent le passage explicite aux
+paliers prévus par l'ADR. Commencer par deux rencontres, puis utiliser le palier trois pour
+les essais correspondants. La sélection ne peut pas dépasser trois rencontres éligibles.
+
+Dans le lanceur Eclipse, ajouter les quatre variables ensemble :
+
+| Variable | Palier deux | Palier trois |
+|---|---|---|
+| `SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY` | `2` | `3` |
+| `SOFASCORE_LIVE_REQUEST_ENVELOPE` | `3000ms` | `750ms` |
+| `SOFASCORE_LIVE_PROCESSING_ENVELOPE` | `1000ms` | `1000ms` |
+| `SOFASCORE_LIVE_QUALIFICATION_SHA256` | Empreinte ci-dessous | Même empreinte |
+
+Empreinte SHA-256 du fichier de preuve, à copier sans guillemets :
+
+```text
+0f1ae6ad44190ae965bec3ad670ffb3c45a140a29856d217f28e71b5db262679
+```
+
+La vérifier depuis le checkout qui contient ce correctif :
+
+```powershell
+(Get-FileHash -LiteralPath docs/validation/WO058-MULTIMATCH-CAPACITY-PROFILE-20260907.json -Algorithm SHA256).Hash.ToLowerInvariant()
+```
+
+Le fichier est protégé des conversions de fins de ligne Git. Une empreinte de forme correcte
+ne remplace pas une preuve : ne pas inventer sa valeur. Redémarrer l'application après changement,
+recharger `/events` et préparer un nouveau manifeste. Les paramètres Docker et les opt-ins déjà
+configurés restent nécessaires. Une préparation antérieure ne peut pas adopter un nouveau profil.
+
+Le palier deux modélise 56 s par minute ; le palier trois, 57 s, avec les quatre familles et le
+délai global de trois secondes. L'enveloppe de requête sert au calcul d'admission ; le timeout
+transport reste au maximum dix secondes. Les mesures loopback ne garantissent pas la latence
+du fournisseur. Les retards restent visibles et deux cycles successifs manqués arrêtent la campagne.
+Les budgets, la réserve de clôture et le contrôle du volume PostgreSQL restent applicables.
+
+Une sélection de deux ou trois rencontres éligibles atteint alors le récapitulatif du manifeste
+si le profil et le stockage sont admissibles. Les rencontres déjà `finished` sont exclues avant
+le calcul : par exemple deux `notstarted` et un `finished` préparent deux cibles au palier deux.
+Le clic de confirmation lance une seule campagne sur les cibles retenues.
+
 ## Parcours depuis /events
 
 Une rencontre déjà `finished` dans la dernière observation locale est exclue, avant tout contrôle

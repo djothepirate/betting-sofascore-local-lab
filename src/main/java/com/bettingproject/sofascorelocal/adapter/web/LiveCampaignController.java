@@ -112,13 +112,21 @@ public class LiveCampaignController {
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public String invalid(IllegalArgumentException exception, Model model) {
-        String message = switch (String.valueOf(exception.getMessage())) {
+        String code = switch (String.valueOf(exception.getMessage())) {
+            case "LIVE_ALL_EVENTS_FINISHED", "LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY",
+                 "LIVE_CAPACITY_REFUSED_REDUCE_SELECTION" -> exception.getMessage();
+            default -> "LIVE_SELECTION_INVALID";
+        };
+        String message = switch (code) {
             case "LIVE_ALL_EVENTS_FINISHED" -> "Ces rencontres sont déjà terminées (finished). Aucun lancement live ni appel fournisseur n’a été effectué. Revenir aux rencontres pour préparer une autre sélection.";
-            case "LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY", "LIVE_CAPACITY_REFUSED_REDUCE_SELECTION" ->
-                    "Cette sélection dépasse la capacité qualifiée ou la cadence admissible. Réduire la sélection ; le premier pilote porte sur une rencontre.";
+            case "LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY" ->
+                    "Le nombre de rencontres éligibles dépasse la capacité du profil configuré. Réduire la sélection ou configurer le palier qualifié de deux ou trois rencontres selon le runbook. Les rencontres déjà finished ne comptent pas dans cette limite.";
+            case "LIVE_CAPACITY_REFUSED_REDUCE_SELECTION" ->
+                    "Le profil de charge configuré ne permet pas de servir cette sélection à la minute. Réduire la sélection ou utiliser le profil de charge associé à la qualification du palier ; relever seulement le nombre de rencontres ne suffit pas.";
             default -> "La sélection ou le manifeste est invalide. Préparer une nouvelle campagne.";
         };
         model.addAttribute("liveError", message);
+        model.addAttribute("liveErrorCode", code);
         return "live-campaign-error";
     }
 

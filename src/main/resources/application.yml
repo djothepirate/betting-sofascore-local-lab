@@ -83,6 +83,10 @@ sofascore:
     enabled: ${SOFASCORE_LIVE_ENABLED:false}
     docker-executable: ${SOFASCORE_LIVE_DOCKER_EXECUTABLE:}
     postgres-container: ${SOFASCORE_LIVE_POSTGRES_CONTAINER:betting-sofascore-local-lab-postgres}
+    qualified-match-capacity: ${SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY:1}
+    qualification-sha256: ${SOFASCORE_LIVE_QUALIFICATION_SHA256:}
+    request-envelope: ${SOFASCORE_LIVE_REQUEST_ENVELOPE:10s}
+    processing-envelope: ${SOFASCORE_LIVE_PROCESSING_ENVELOPE:1s}
   playwright:
     enabled: ${SOFASCORE_PLAYWRIGHT_ENABLED:false}
     worker-jar: ${SOFASCORE_PLAYWRIGHT_WORKER_JAR:}

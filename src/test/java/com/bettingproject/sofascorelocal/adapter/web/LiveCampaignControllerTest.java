@@ -32,6 +32,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
@@ -372,6 +373,38 @@ class LiveCampaignControllerTest {
                 .andExpect(status().isConflict())
                 .andExpect(model().attribute("liveErrorCode", "LIVE_REQUEST_REJECTED"))
                 .andExpect(content().string(not(containsString("SECRET_PRIVATE_RUNTIME"))));
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {2, 3})
+    void multipleEligibleEventsReachTheConfirmationPageAndLaunchTheSameManifest(int count) throws Exception {
+        var targets = IntStream.range(0, count).mapToObj(i -> new Target(
+                CanonicalEventIdentity.sofascore(900001L + i).value(), 900001L + i, i + 1L, i + 1L)).toList();
+        var ids = targets.stream().map(Target::canonicalEventId).toList();
+        var manifest = new Manifest(CAMPAIGN_ID, HASH, "live-v1", NOW, NOW.plusSeconds(300), Duration.ofHours(4),
+                1000, 3000, count * 1000L * 5 * 1024 * 1024, count, targets,
+                new AdmissionProfile(Duration.ofMillis(count == 2 ? 3000 : 750), Duration.ofSeconds(1), "b".repeat(64)));
+        when(service.prepareSelection(ids)).thenReturn(new LiveCampaignService.Preparation(manifest, List.of()));
+        when(service.state(CAMPAIGN_ID)).thenReturn(new CampaignView(manifest, "PREPARED", null, null, null,
+                0, 0, 1, null, targets.stream().map(t -> new EventView(t, "PREPARED", null, 0, 0, null, List.of())).toList(),
+                List.of(), List.of()));
+        MockHttpSession session = new MockHttpSession();
+        mvc.perform(post("/live-campaigns/prepare").header("Host", HOST).header("Origin", ORIGIN)
+                        .session(session).param("localFormToken", tokens.issue(session))
+                        .param("eventId", ids.stream().map(UUID::toString).toArray(String[]::new)))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/live-campaigns/" + CAMPAIGN_ID));
+        var page = mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST).session(session))
+                .andExpect(status().isOk()).andExpect(model().attribute("manifest", manifest))
+                .andExpect(content().string(containsString("name=\"confirmation\""))).andReturn();
+        for (var id : ids) org.assertj.core.api.Assertions.assertThat(page.getResponse().getContentAsString())
+                .contains("data-live-event-id=\"" + id + "\"");
+        verify(service, never()).launch(any(), any());
+        mvc.perform(post("/live-campaigns/" + CAMPAIGN_ID + "/launch").header("Host", HOST).header("Origin", ORIGIN)
+                        .session(session).param("localFormToken", tokens.issue(session))
+                        .param("manifestHash", HASH).param("confirmation", "true"))
+                .andExpect(status().is3xxRedirection());
+        verify(service).prepareSelection(ids);
+        verify(service).launch(CAMPAIGN_ID, HASH);
     }
 
     private static Manifest manifest() {

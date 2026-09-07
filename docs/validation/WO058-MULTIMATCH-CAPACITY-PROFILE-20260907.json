@@ -1,0 +1,169 @@
+{
+  "schema": "wo058-local-capacity-evidence-v1",
+  "status": "QUALIFIED_LOOPBACK_FOR_BOUNDED_LOCAL_PILOTS",
+  "labStatus": [
+    "EXPERIMENTAL",
+    "LOCAL_ONLY",
+    "NOT_PRODUCTION_APPROVED",
+    "NO_CRITICAL_DEPENDENCY"
+  ],
+  "completedAt": "2026-09-07T13:47:53Z",
+  "baseCommit": "4edc8bba2a74c21aabeae2179619c4c96c0c881e",
+  "worktreeChangesNotCommittedDuringQualification": true,
+  "environment": {
+    "os": "Windows",
+    "java": "25.0.4",
+    "springBoot": "4.1.0",
+    "providerCallsExecuted": false,
+    "transport": "dedicated Chromium worker on HTTP loopback",
+    "transportRequestTimeoutMillis": 10000
+  },
+  "profiles": [
+    {
+      "qualifiedMatchCapacity": 2,
+      "requestEnvelopeMillis": 3000,
+      "processingEnvelopeMillis": 1000,
+      "globalFenceMillis": 3000,
+      "familyCadenceMillis": 60000,
+      "modeledFourFamilyMinuteMillis": 56000,
+      "maximumDurationMinutes": 240,
+      "maximumCallsPerEvent": 1000,
+      "maximumCallsPerCampaign": 3000,
+      "measured": {
+        "cycles": 3,
+        "requests": 24,
+        "responseBytesEach": 5242880,
+        "maximumDispatchToValidatedReceiptNanos": 787016400,
+        "maximumNormalizationNanos": 10686900,
+        "maximumFourFamilyCycleNanos": 26512659300,
+        "workerWorkingSetFirstBytes": 113807360,
+        "workerWorkingSetLastBytes": 268955648
+      },
+      "checks": {
+        "oneWorker": true,
+        "threeSecondFence": true,
+        "sixtySecondPerFamilySpacing": true,
+        "cleanupConfirmed": true,
+        "noForbiddenArtifacts": true,
+        "offScopeRequests": 0
+      }
+    },
+    {
+      "qualifiedMatchCapacity": 3,
+      "requestEnvelopeMillis": 750,
+      "processingEnvelopeMillis": 1000,
+      "globalFenceMillis": 3000,
+      "familyCadenceMillis": 60000,
+      "modeledFourFamilyMinuteMillis": 57000,
+      "maximumDurationMinutes": 240,
+      "maximumCallsPerEvent": 1000,
+      "maximumCallsPerCampaign": 3000,
+      "measured": {
+        "cycles": 3,
+        "requests": 36,
+        "responseBytesEach": 5242880,
+        "maximumDispatchToValidatedReceiptNanos": 700719800,
+        "maximumNormalizationNanos": 9961100,
+        "maximumFourFamilyCycleNanos": 40766365200,
+        "workerWorkingSetFirstBytes": 123932672,
+        "workerWorkingSetLastBytes": 271826944
+      },
+      "checks": {
+        "oneWorker": true,
+        "threeSecondFence": true,
+        "sixtySecondPerFamilySpacing": true,
+        "cleanupConfirmed": true,
+        "noForbiddenArtifacts": true,
+        "offScopeRequests": 0
+      }
+    }
+  ],
+  "deterministicQualification": {
+    "test": "LiveMultiMatchCapacityTest",
+    "matches": [
+      2,
+      3
+    ],
+    "inprogressMinutes": 230,
+    "finalCycleCallsPerEvent": 3,
+    "missedCycles": 0,
+    "budgetsRespected": true
+  },
+  "standardVerification": {
+    "command": "mvnw.cmd clean verify",
+    "completedAt": "2026-09-07T13:32:11Z",
+    "surefire": {
+      "tests": 1354,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 5
+    },
+    "failsafe": {
+      "tests": 122,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "logSha256": "fbd974f1a7e7d7fe0388612e9c03a05f23ca81595bf048bedbd0c99a9e0658d1"
+  },
+  "loopbackVerification": {
+    "command": "scripts/Invoke-LivePlaywrightLoopbackQualification.ps1",
+    "logSha256": "c2093768f5258ebcff92856580ad8faf5fbd3b8a37a065c4446021908552ed18",
+    "reports": [
+      {
+        "path": "target/failsafe-reports/TEST-com.bettingproject.sofascorelocal.application.network.playwright.LiveProviderSessionQualificationIT.xml",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "sha256": "199900897725874891996d5e77ce9b53e8890e668e4f6a88e581af4fd0aa1321"
+      },
+      {
+        "path": "target/failsafe-reports/TEST-com.bettingproject.sofascorelocal.adapter.web.LiveCampaignBrowserQualificationIT.xml",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "sha256": "ffccc00b2698804145af7ac54b6fc774d306665d35c61dd39c91b9774af2c2fa"
+      },
+      {
+        "path": "target/failsafe-reports/TEST-com.bettingproject.sofascorelocal.adapter.web.LiveCampaignFormBrowserQualificationIT.xml",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "sha256": "d8fe4ccf4da194967b910b92cfd70a4fe02770814f9c2c2898310e4dfef42b9f"
+      }
+    ]
+  },
+  "sourceHashScope": "exact measured worktree file bytes",
+  "sources": [
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/live/LiveAdmissionPolicy.java",
+      "sha256": "c7068a29f8f0b88f2b464434fba82632cd9c516f83044d9dd1203112757444ac"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/live/LiveSchedule.java",
+      "sha256": "b8642d0ad79ea8ea520585255d4647b03fb0a113f516d6bcb143ae5f71d8e176"
+    },
+    {
+      "path": "src/main/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignService.java",
+      "sha256": "a2e5e473c44f06b7bb885b92026b9be70df25ab503b300dc3a8a16ee965d1f7b"
+    },
+    {
+      "path": "src/provider-playwright-qualification-test/java/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderSessionQualificationIT.java",
+      "sha256": "796f34de3f7a3c3e518d21a3f904b2223aa5395740d1545ff46fa3f82782b783"
+    },
+    {
+      "path": "src/test/java/com/bettingproject/sofascorelocal/application/live/LiveMultiMatchCapacityTest.java",
+      "sha256": "9b9e7035e4cbbb835c6863b7b9edf11507df970cc6b6f57227d846825c225397"
+    }
+  ],
+  "limitations": [
+    "Synthetic minimal JSON padded with spaces to the five-MiB raw limit measures transport volume and normalization, not all possible semantic payload complexity.",
+    "The one-second processing allowance is the unchanged conservative admission model; this transport test does not time the complete PostgreSQL persistence path.",
+    "These measurements are not a real-provider latency guarantee. Existing timeout, missed-cycle, storage, budget and shutdown controls remain applicable.",
+    "No provider campaign, operator database mutation or automatic enablement is authorized by this evidence. Each pilot requires its exact manifest and manual launch.",
+    "The preceding failed fixture qualification remains recorded separately in WO058-MULTIMATCH-CAPACITY-20260907.md."
+  ]
+}

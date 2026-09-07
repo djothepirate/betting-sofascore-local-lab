@@ -1,8 +1,11 @@
 package com.bettingproject.sofascorelocal.config;
 
 import com.bettingproject.sofascorelocal.application.live.DockerLiveStorageCapacityProbe;
+import com.bettingproject.sofascorelocal.application.live.LiveAdmissionPolicy;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.boot.context.properties.bind.Bindable;
 import org.springframework.boot.context.properties.bind.Binder;
 import org.springframework.boot.context.properties.source.ConfigurationPropertySources;
@@ -59,6 +62,29 @@ class LiveCampaignPropertiesTest {
         assertThat(properties.isEnabled()).isTrue();
         assertThatThrownBy(() -> new DockerLiveStorageCapacityProbe(properties).availableBytes())
                 .isInstanceOf(IllegalStateException.class).hasMessage("LIVE_STORAGE_PROBE_NOT_CONFIGURED");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"2,3000ms", "3,750ms"})
+    void eclipseCapacitySettingsBindTogetherAndPassAdmissionWithoutEnablingNetwork(int matches, String request) throws Exception {
+        var properties = bind(Map.of(
+                "SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY", String.valueOf(matches),
+                "SOFASCORE_LIVE_REQUEST_ENVELOPE", request,
+                "SOFASCORE_LIVE_PROCESSING_ENVELOPE", "1000ms",
+                "SOFASCORE_LIVE_QUALIFICATION_SHA256", "b".repeat(64)));
+        assertThat(properties.getQualifiedMatchCapacity()).isEqualTo(matches);
+        assertThat(properties.getRequestEnvelope().toMillis()).isEqualTo(matches == 2 ? 3000 : 750);
+        assertThat(properties.getProcessingEnvelope()).isEqualTo(Duration.ofSeconds(1));
+        assertThat(properties.getQualificationSha256()).isEqualTo("b".repeat(64));
+        assertThat(properties.isEnabled()).isFalse();
+        new LiveAdmissionPolicy(properties, () -> Long.MAX_VALUE).admit(matches);
+    }
+
+    @Test
+    void raisingOnlyTheCapacityDoesNotInventItsQualification() throws Exception {
+        var properties = bind(Map.of("SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY", "3"));
+        assertThatThrownBy(properties::validate).isInstanceOf(IllegalStateException.class)
+                .hasMessage("LIVE_CAPACITY_QUALIFICATION_REQUIRED");
     }
 
     private static LiveCampaignProperties bind(Map<String, Object> values) throws Exception {

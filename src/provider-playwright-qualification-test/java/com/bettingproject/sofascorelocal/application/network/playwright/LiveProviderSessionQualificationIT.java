@@ -1,10 +1,16 @@
 package com.bettingproject.sofascorelocal.application.network.playwright;
 
 import com.bettingproject.sofascorelocal.application.live.LiveProviderSession;
+import com.bettingproject.sofascorelocal.adapter.sofascore.live.LivePayloadNormalizer;
+import com.bettingproject.sofascorelocal.adapter.sofascore.live.LiveNormalizedPayload;
+import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
+import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.config.ProviderPlaywrightProperties;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
@@ -17,6 +23,91 @@ import static org.assertj.core.api.Assertions.*;
 
 /** Explicit Chromium qualification only. Excluded from standard Maven and the historical 14-test suite. */
 class LiveProviderSessionQualificationIT {
+    @ParameterizedTest @ValueSource(ints = {2, 3}) @Timeout(220)
+    void multiMatchCapacityIncludesMaximumBodiesAndLocalNormalization(int matches) throws Exception {
+        try (Fixture f = new Fixture(true)) {
+            var supervisor = f.supervisor();
+            var normalizer = new LivePayloadNormalizer();
+            for (var entry : f.bodies.entrySet()) {
+                String path = entry.getKey();
+                long eventId = Long.parseLong(path.split("/")[4]);
+                var endpoint = path.endsWith("/statistics") ? SofascoreEndpointType.EVENT_STATISTICS
+                        : path.endsWith("/incidents") ? SofascoreEndpointType.EVENT_INCIDENTS
+                        : path.endsWith("/lineups") ? SofascoreEndpointType.EVENT_LINEUPS : SofascoreEndpointType.EVENT_DETAILS;
+                var parsed = normalizer.normalize(eventId, endpoint, 1, 1,
+                        RawPayloadEvidence.capture(entry.getValue()), Instant.now());
+                assertThat(parsed.status()).as("synthetic fixture %s: %s", path, parsed.code())
+                        .isEqualTo(LiveNormalizedPayload.Status.PARSED);
+            }
+            long maximumExchange = 0, maximumProcessing = 0, maximumCycle = 0;
+            long exchangeLimit = TimeUnit.MILLISECONDS.toNanos(matches == 2 ? 3000 : 750);
+            var lastStarts = new HashMap<String, Long>();
+            var requestOrder = List.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_STATISTICS,
+                    SofascoreEndpointType.EVENT_INCIDENTS, SofascoreEndpointType.EVENT_LINEUPS);
+            List<ProcessHandle> owned;
+            long initialMemory, finalMemory;
+            try (var campaign = supervisor.open(UUID.randomUUID(), LiveProviderSession.ENDPOINTS)) {
+                Process worker = f.worker.get();
+                initialMemory = memory(worker);
+                for (int cycle = 0; cycle < 3; cycle++) {
+                    long cycleStart = 0;
+                    for (int event = 0; event < matches; event++) {
+                        long eventId = 17_000_001L + event;
+                        for (var endpoint : requestOrder) {
+                            String key = eventId + "/" + endpoint;
+                            if (lastStarts.containsKey(key)) {
+                                long wait = lastStarts.get(key) + TimeUnit.SECONDS.toNanos(60) - System.nanoTime();
+                                if (wait > 0) TimeUnit.NANOSECONDS.sleep(wait);
+                            }
+                            AtomicLong dispatched = new AtomicLong();
+                            var response = campaign.execute(new PlaywrightProviderRequest(endpoint, null, 0, 0, eventId),
+                                    new PlaywrightDispatchAdmission() {
+                                        public void check() { }
+                                        public Permit acquireDispatchPermit() { dispatched.set(System.nanoTime()); return () -> {}; }
+                                    });
+                            long exchangeNanos = System.nanoTime() - dispatched.get();
+                            if (cycleStart == 0) cycleStart = dispatched.get();
+                            if (lastStarts.containsKey(key)) assertThat(dispatched.get() - lastStarts.get(key))
+                                    .isGreaterThanOrEqualTo(TimeUnit.SECONDS.toNanos(60));
+                            lastStarts.put(key, dispatched.get());
+                            maximumExchange = Math.max(maximumExchange, exchangeNanos);
+                            assertThat(response.httpStatus()).isEqualTo(200);
+                            assertThat(response.payload().sizeBytes()).isEqualTo(RawPayloadEvidence.MAXIMUM_BYTES);
+                            long parsingStart = System.nanoTime();
+                            var parsed = normalizer.normalize(eventId, endpoint, cycle + 1L, cycle + 1L,
+                                    response.payload(), response.receivedAt());
+                            long processingNanos = System.nanoTime() - parsingStart;
+                            maximumProcessing = Math.max(maximumProcessing, processingNanos);
+                            assertThat(parsed.status()).as("normalized %s: %s", key, parsed.code())
+                                    .isEqualTo(LiveNormalizedPayload.Status.PARSED);
+                            assertThat(exchangeNanos).as("dispatch through validated receipt: %s", key).isLessThanOrEqualTo(exchangeLimit);
+                            assertThat(processingNanos).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(1));
+                            assertThat(f.worker.get()).isSameAs(worker);
+                        }
+                    }
+                    long cycleNanos = System.nanoTime() - cycleStart;
+                    maximumCycle = Math.max(maximumCycle, cycleNanos);
+                    assertThat(cycleNanos).isLessThan(TimeUnit.SECONDS.toNanos(60));
+                }
+                finalMemory = memory(worker);
+                if (initialMemory > 0) assertThat(finalMemory - initialMemory).isLessThan(256L * 1024 * 1024);
+                owned = worker.descendants().toList();
+            }
+            assertThat(supervisor.activeCampaignId()).isEmpty();
+            assertThat(f.worker.get().isAlive()).isFalse();
+            assertThat(owned).noneMatch(ProcessHandle::isAlive);
+            assertThat(f.arrivals).hasSize(matches * 4 * 3);
+            for (int i = 1; i < f.arrivals.size(); i++) assertThat(f.arrivals.get(i) - f.arrivals.get(i - 1))
+                    .isGreaterThanOrEqualTo(TimeUnit.SECONDS.toNanos(3));
+            assertThat(f.offScope.get()).isZero();
+            f.assertNoArtifacts();
+            System.out.println("WO058_CAPACITY_MATCHES=" + matches + ";CYCLES=3;REQUESTS=" + f.arrivals.size()
+                    + ";BODY_BYTES=" + RawPayloadEvidence.MAXIMUM_BYTES
+                    + ";MAX_EXCHANGE_NS=" + maximumExchange + ";MAX_NORMALIZATION_NS=" + maximumProcessing
+                    + ";MAX_CYCLE_NS=" + maximumCycle + ";MEMORY_FIRST=" + initialMemory + ";MEMORY_LAST=" + finalMemory);
+        }
+    }
+
     @Test @Timeout(210)
     void repeatedFourFamiliesShareOneContextAcrossThreeMinutesAnd404ReturnsNormally() throws Exception {
         try (Fixture f = new Fixture()) {
@@ -140,23 +231,41 @@ class LiveProviderSessionQualificationIT {
         final HttpServer server; final AtomicReference<Process> worker=new AtomicReference<>();
         final List<Long> arrivals=new CopyOnWriteArrayList<>(); final AtomicInteger offScope=new AtomicInteger();
         final AtomicInteger incidents=new AtomicInteger(); final Path sandbox;
+        final Map<String, byte[]> bodies = new HashMap<>();
         final ExecutorService executor=Executors.newVirtualThreadPerTaskExecutor();
-        Fixture() throws Exception {
+        Fixture() throws Exception { this(false); }
+        Fixture(boolean maximumBodies) throws Exception {
             sandbox=Files.createTempDirectory(Files.createDirectories(Path.of("target/provider-playwright-runtime/live-qualification")),"session-").toAbsolutePath();
             server=HttpServer.create(new InetSocketAddress(InetAddress.getByName("127.0.0.1"),0),0);
             server.setExecutor(executor);
+            if (maximumBodies) for (long event = 17_000_001L; event <= 17_000_003L; event++) {
+                String base = "/api/v1/event/" + event;
+                bodies.put(base, maximumBody("{\"event\":{\"id\":" + event
+                        + ",\"startTimestamp\":1788796800,\"homeTeam\":{\"id\":1,\"name\":\"Home\"},"
+                        + "\"awayTeam\":{\"id\":2,\"name\":\"Away\"},\"status\":{\"type\":\"inprogress\"}}}"));
+                bodies.put(base + "/statistics", maximumBody("{\"statistics\":[]}"));
+                bodies.put(base + "/incidents", maximumBody("{\"incidents\":[]}"));
+                bodies.put(base + "/lineups", maximumBody("{\"confirmed\":true,\"home\":{\"players\":[]},\"away\":{\"players\":[]}}"));
+            }
             server.createContext("/", exchange -> {
                 String path=exchange.getRequestURI().getPath();
-                if(!path.matches("/api/v1/event/1700000[12](/statistics|/incidents|/lineups)?") || !"GET".equals(exchange.getRequestMethod())) {
+                if(!path.matches("/api/v1/event/1700000[123](/statistics|/incidents|/lineups)?") || !"GET".equals(exchange.getRequestMethod())) {
                     offScope.incrementAndGet(); exchange.sendResponseHeaders(403,-1); exchange.close(); return;
                 }
                 arrivals.add(System.nanoTime());
-                int code=path.equals("/api/v1/event/17000001/incidents") && incidents.getAndIncrement()==0 ? 404 : 200;
-                byte[] body=(code==404 ? "{\"error\":{\"code\":404}}" : "{\"localFixture\":true}").getBytes(StandardCharsets.UTF_8);
+                int code=!maximumBodies && path.equals("/api/v1/event/17000001/incidents") && incidents.getAndIncrement()==0 ? 404 : 200;
+                byte[] body=maximumBodies ? bodies.get(path) : (code==404 ? "{\"error\":{\"code\":404}}" : "{\"localFixture\":true}").getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().set("Content-Type","application/json");
                 exchange.sendResponseHeaders(code,body.length);
                 try(var out=exchange.getResponseBody()) { out.write(body); } finally { exchange.close(); }
             }); server.start();
+        }
+        private static byte[] maximumBody(String json) {
+            byte[] body = new byte[RawPayloadEvidence.MAXIMUM_BYTES];
+            Arrays.fill(body, (byte) ' ');
+            byte[] content = json.getBytes(StandardCharsets.UTF_8);
+            System.arraycopy(content, 0, body, 0, content.length);
+            return body;
         }
         ChildJvmPlaywrightProviderSupervisor supervisor() {
             var p=new ProviderPlaywrightProperties(); p.setEnabled(true);

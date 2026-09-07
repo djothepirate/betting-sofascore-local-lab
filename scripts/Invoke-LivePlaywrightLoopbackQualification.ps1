@@ -19,7 +19,7 @@ try {
         'failsafe:integration-test@provider-playwright-loopback-qualification' 'failsafe:verify@provider-playwright-loopback-qualification'
     if ($LASTEXITCODE -ne 0) { throw 'Live loopback qualification failed' }
     $reports = @(
-        [pscustomobject]@{ Path = 'target/failsafe-reports/TEST-com.bettingproject.sofascorelocal.application.network.playwright.LiveProviderSessionQualificationIT.xml'; Tests = 3 },
+        [pscustomobject]@{ Path = 'target/failsafe-reports/TEST-com.bettingproject.sofascorelocal.application.network.playwright.LiveProviderSessionQualificationIT.xml'; Tests = 5 },
         [pscustomobject]@{ Path = 'target/failsafe-reports/TEST-com.bettingproject.sofascorelocal.adapter.web.LiveCampaignBrowserQualificationIT.xml'; Tests = 1 },
         [pscustomobject]@{ Path = 'target/failsafe-reports/TEST-com.bettingproject.sofascorelocal.adapter.web.LiveCampaignFormBrowserQualificationIT.xml'; Tests = 2 }
     )

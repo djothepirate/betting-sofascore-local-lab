@@ -58,6 +58,18 @@ Les paliers 2/3 exigent une preuve de qualification renseignée et un profil qui
 Le hash déclaré de qualification doit renvoyer à une preuve revue ; sa forme seule ne prouve
 aucune performance du fournisseur.
 
+Les paramètres du palier sont liés explicitement aux variables
+`SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY`, `SOFASCORE_LIVE_REQUEST_ENVELOPE`,
+`SOFASCORE_LIVE_PROCESSING_ENVELOPE` et `SOFASCORE_LIVE_QUALIFICATION_SHA256`.
+La [preuve des paliers du 7 septembre](../validation/WO058-MULTIMATCH-CAPACITY-20260907.md)
+relie les mesures Chromium et les simulations aux profils 2 × 4 × (3 + 1 + 3) = 56 s
+et 3 × 4 × (0,75 + 1 + 3) = 57 s par minute. La limite initiale reste le défaut ; son changement
+est une configuration opérateur explicite. Le délai de requête du profil est une hypothèse de
+charge, distincte du timeout de transport qui reste borné à dix secondes. Le contrôle des retards
+continue de s'appliquer aux conditions réelles. La preuve de volume mesure des JSON synthétiques
+minimaux complétés d'espaces à 5 Mio ; elle ne constitue pas une garantie de latence fournisseur
+ou de coût SQL pour toutes les formes de réponse.
+
 La fenêtre maximale est de quatre heures depuis le lancement. Les 1 000 tentatives par match
 et 3 000 par campagne incluent les appels annulés après réservation et les issues inconnues.
 Quatre places sont réservées pour une vérification J4 et les trois dernières familles J5.

@@ -18,12 +18,14 @@ import com.bettingproject.sofascorelocal.port.ProviderCampaignGuardStore;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.util.List;
+import java.util.ArrayList;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 
@@ -107,6 +109,35 @@ class LivePreparationAdmissionTest {
         verify(h.store, never()).prepare(any());
         verify(h.events, never()).save(any());
         assertThat(stale.status().type()).isEqualTo("notstarted");
+        h.verifyNoProviderWork();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"2,false", "2,true", "3,false", "3,true"})
+    void qualifiedMultipleSelectionPreservesEveryEligibleTargetAndExcludesFinishedBeforeAdmission(int count, boolean mixed) {
+        var properties = new LiveCampaignProperties();
+        properties.setQualifiedMatchCapacity(count);
+        properties.setRequestEnvelope(Duration.ofMillis(count == 2 ? 3000 : 750));
+        properties.setQualificationSha256("b".repeat(64));
+        var h = new Harness(properties, () -> Long.MAX_VALUE);
+        var selected = new ArrayList<CanonicalEventObservationView>();
+        if (mixed) selected.add(observation(PROVIDER_EVENT_ID - 1, NOW.minus(Duration.ofDays(3)), "finished"));
+        for (int i = 0; i < count; i++) selected.add(observation(PROVIDER_EVENT_ID + i,
+                NOW.plus(Duration.ofDays(i - 1)), "notstarted"));
+        selected.forEach(event -> when(h.events.findLatestByCanonicalId(event.identity().value()))
+                .thenReturn(Optional.of(event)));
+
+        var preparation = h.service.prepareSelection(selected.stream().map(e -> e.identity().value()).toList());
+
+        var eligible = selected.stream().filter(e -> !e.status().type().equals("finished")).toList();
+        assertThat(preparation.manifest().targets()).containsExactlyElementsOf(eligible.stream()
+                .map(e -> new Target(e.identity().value(), e.identity().providerEventId(), e.observationId(), 23)).toList());
+        assertThat(preparation.excludedFinished()).containsExactlyElementsOf(mixed ? List.of(selected.getFirst()) : List.of());
+        assertThat(preparation.manifest().maximumBytes()).isEqualTo(count * 1000L * FIVE_MIB);
+        assertThat(preparation.manifest().qualifiedMatchCapacity()).isEqualTo(count);
+        assertThat(preparation.manifest().admissionProfile().requestEnvelope()).isEqualTo(properties.getRequestEnvelope());
+        verify(h.store).prepare(preparation.manifest());
+        verify(h.events, never()).save(any());
         h.verifyNoProviderWork();
     }
 

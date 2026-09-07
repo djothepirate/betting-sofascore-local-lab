@@ -1,6 +1,6 @@
 # WO-SS-20260907-058 — Campagnes live locales J4/J5 sur sélection de rencontres
 
-- **Statut :** `READY_FOR_REVIEW` — exclusion des matchs terminés confirmée par l'opérateur ; correctif d'admission locale qualifié après le deuxième retour, reprise des essais Eclipse à effectuer, aucune clôture.
+- **Statut :** `READY_FOR_REVIEW` — premier parcours fournisseur J4 finished puis J5 complet confirmé ; paliers deux et trois qualifiés localement et paramétrage Eclipse documenté, prochains essais opérateur à effectuer, aucune clôture.
 - **Date :** 2026-09-07.
 - **Jalon :** expérimentation live locale après J9, distincte des parcours manuels existants.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
@@ -11,7 +11,7 @@
 - **ADR live :** [ADR-SS-005 v0.1](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), `ACCEPTED` le 7 septembre 2026 ; proposition acceptée de SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
 - **Livrable présent :** ADR accepté, WO validé, réalisation locale et qualification hors fournisseur ; état des preuves dans le rapport de réalisation.
 - **Alignement de gouvernance :** renvois ciblés dans ADR-SS-001 et AGENTS.md ; ADR-SS-002 à 004 inchangés.
-- **Réalisation applicative :** réalisée et qualifiée hors fournisseur ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagne fournisseur :** non exécutée.
+- **Réalisation applicative :** réalisée et qualifiée hors fournisseur, preuve de capacité étendue aux paliers deux et trois ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagne fournisseur :** premier essai lancé par l'opérateur terminé, attente et cycles pendant un match actif non encore validés par cet essai.
 
 Les statuts restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 `NO_CRITICAL_DEPENDENCY`. Le socle reste Java 25 LTS, Spring Boot 4.1.0, Maven wrapper,
@@ -59,6 +59,25 @@ Après libération du port 8087 par le propriétaire, `mvnw.cmd clean verify` r�
 consigné séparément. Le propriétaire demande un commit local comme dernière action avant remise
 en main ; la configuration du lanceur et les prochains essais opérateur restent à effectuer.
 Preuves et reprise : [rapport d'admission locale](../../validation/WO058-OPERATOR-RETEST-STORAGE-20260907.md).
+
+### Troisième retour opérateur, après commit `4edc8bb`
+
+Le propriétaire confirme le parcours d'US Boulogne Côte-d'Opale — Dijon : observation locale
+ancienne `notstarted`, préparation, confirmation manuelle, J4 `finished`, trois familles J5,
+mise à jour du score et des consultations, arrêt devenu indisponible après complétion.
+La lecture locale de la campagne `a556dbef-4c56-48a3-8ed5-08735f024e5f` confirme `COMPLETED`,
+quatre appels, 133 667 octets, score 1–1, `finalComplete=true`, zéro cycle manqué et snapshots
+1270 à 1273. Aucun appel fournisseur supplémentaire n'est déclenché par cette vérification.
+
+L'attendu suivant porte sur plusieurs rencontres éligibles. Le profil initial est encore limité
+à un match : 4 × (10 s de requête + 1 s de traitement + 3 s de délai) = 56 s par minute.
+Les paliers deux et trois nécessitent le profil de charge et sa preuve, en plus du plafond de
+sélection. Les matchs `finished` restent exclus avant ce calcul. La reprise qualifie ces paliers
+hors fournisseur et expose leurs paramètres Eclipse, sans augmenter le plafond accepté de trois.
+La suite complète passe avec 1 354 tests Surefire (cinq ignorés) et 122 Failsafe ; les huit tests
+Chromium dédiés passent après correction d'une fixture de qualification. Les essais multi-match
+réels restent à lancer par l'opérateur avec le profil documenté et un nouveau manifeste.
+Preuves : [rapport de capacité et de retour opérateur](../../validation/WO058-MULTIMATCH-CAPACITY-20260907.md).
 
 Depuis le bloc **Résultats normalisés** de `/events`, sélectionner une ou plusieurs rencontres,
 préparer puis lancer explicitement une campagne locale. Pour chaque rencontre, suivre J4 jusqu'à
