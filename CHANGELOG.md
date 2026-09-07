@@ -4,6 +4,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — périodes et groupes statistiques repliables
+
+- Rend les en-têtes verts des périodes et gris des groupes ouvrables/repliables au clic et
+  au clavier, ouverts par défaut, avec des contrôles HTML natifs utilisables sans JavaScript.
+- Conserve l'état de chaque période et de chaque groupe lors des rafraîchissements live,
+  ainsi que le focus de l'en-tête utilisé ; fermer une période conserve l'état de ses groupes.
+- Retour opérateur et qualification : [encadrés statistiques](docs/validation/WO058-COLLAPSIBLE-STATISTICS-20260908.md).
+
 ### WO-058 — motif de carton Elche et statistiques applicatives
 
 - Ajoute incidents V17 et V37 pour le motif exact `Professional handball`, identifié dans le

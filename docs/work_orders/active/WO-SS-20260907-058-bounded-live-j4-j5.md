@@ -19,6 +19,21 @@ PostgreSQL local Docker Desktop et application sur `127.0.0.1:8087`, textes UTF-
 
 ## 1. Objectif et origine du besoin
 
+### Dixième retour — encadrés statistiques repliables
+
+Le 08/09, le propriétaire confirme que les améliorations graphiques sont visibles et demande
+de pouvoir dérouler/enrouler les encadrés verts des périodes et les sous-encadrés gris des groupes.
+Les deux niveaux deviennent des contrôles HTML natifs ouverts par défaut, actionnables au clic
+et au clavier, avec états indépendants conservés pendant les rafraîchissements live. Fermer
+une période conserve l'état de ses sous-groupes. Données, graphiques, provenance et collectes
+restent inchangés ; aucune migration. Base du retour : `f0a32ff72d6eb21ec1c0ac2883b37a6c0cfea8f1`.
+Qualification Chromium : 3 tests verts. Après un premier échec J6 dû à l'application opérateur
+en écoute sur 8087, le propriétaire libère le port et `mvnw.cmd clean verify` réussit le 08/09
+à 00:57:38 Europe/Paris : 1 590 tests Surefire (0 échec, 0 erreur, 5 ignorés) et 138 tests Failsafe
+(0 échec, 0 erreur, 0 ignoré). Le premier résultat reste consigné séparément ; aucun processus
+opérateur n'est arrêté par l'agent. Les captures bureau/mobile et la revue indépendante sont conformes.
+Les preuves figurent dans le [rapport de repli des statistiques](../../validation/WO058-COLLAPSIBLE-STATISTICS-20260908.md).
+
 ### Neuvième retour — fin du 07/09, Elche et statistiques applicatives
 
 Le propriétaire constate une nouvelle incompatibilité pour Elche–Real Sociedad, confirme la

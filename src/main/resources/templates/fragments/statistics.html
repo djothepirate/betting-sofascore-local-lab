@@ -13,12 +13,13 @@
   <p class="statistics-announcement" data-stat-announcement role="status" aria-live="polite"></p>
   <div data-stat-periods>
     <p th:if="${stats.periods.isEmpty()}">Collection normalisée vide : aucune statistique disponible.</p>
-    <section th:each="period : ${stats.periods}" class="statistics-period"
+    <details th:each="period : ${stats.periods}" class="statistics-period" open
              th:attr="data-stat-period=${period.code}" th:aria-label="${period.label}">
-      <h4 th:text="${period.label}">Période</h4>
+      <summary><h4 th:text="${period.label}">Période</h4></summary>
       <div class="statistics-teams"><span>Domicile</span><span>Extérieur</span></div>
-      <section th:each="group : ${period.groups}" class="statistics-group">
-        <h5 th:text="${group.name}">Groupe</h5>
+      <details th:each="group : ${period.groups}" class="statistics-group" open
+               th:attr="data-stat-group=${group.name}">
+        <summary><h5 th:text="${group.name}">Groupe</h5></summary>
         <article th:each="metric : ${group.metrics}" class="statistics-metric">
           <h6 th:text="${metric.label}">Statistique</h6>
           <div class="statistics-values">
@@ -41,8 +42,8 @@
                  min="0" max="100" th:value="${metric.possessionHome}" aria-hidden="true"></meter>
           <p th:if="${!metric.note.isEmpty()}" class="statistics-note" th:text="${metric.note}">Précision</p>
         </article>
-      </section>
-    </section>
+      </details>
+    </details>
   </div>
 </div>
 </body>

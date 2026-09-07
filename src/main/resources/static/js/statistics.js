@@ -46,17 +46,24 @@
     return node;
   }
 
-  function periodNode(period) {
-    const panel = create("section", "statistics-period");
+  function periodNode(period, state) {
+    const panel = create("details", "statistics-period");
+    panel.open = state?.open ?? true;
     panel.dataset.statPeriod = period.code;
     panel.setAttribute("aria-label", period.label);
-    panel.append(create("h4", "", period.label));
+    const heading = create("summary");
+    heading.append(create("h4", "", period.label));
+    panel.append(heading);
     const teams = create("div", "statistics-teams");
     teams.append(create("span", "", "Domicile"), create("span", "", "Extérieur"));
     panel.append(teams);
     period.groups.forEach(group => {
-      const section = create("section", "statistics-group");
-      section.append(create("h5", "", group.name));
+      const section = create("details", "statistics-group");
+      section.open = state?.groups.get(group.name) ?? true;
+      section.dataset.statGroup = group.name;
+      const heading = create("summary");
+      heading.append(create("h5", "", group.name));
+      section.append(heading);
       group.metrics.forEach(metric => {
         const article = create("article", "statistics-metric");
         article.append(create("h6", "", metric.label));
@@ -107,6 +114,18 @@
     const select = host.querySelector("[data-stat-select]");
     const previous = select.value;
     const wasEnhanced = host.dataset.statEnhanced === "true";
+    const states = new Map(Array.from(host.querySelectorAll("[data-stat-period]"), panel => [
+      panel.dataset.statPeriod, {
+        open: panel.open,
+        groups: new Map(Array.from(panel.querySelectorAll("[data-stat-group]"), group =>
+          [group.dataset.statGroup, group.open]))
+      }
+    ]));
+    const focused = document.activeElement;
+    const focusedPeriod = focused?.matches("summary") && host.contains(focused)
+      ? focused.closest("[data-stat-period]")?.dataset.statPeriod : undefined;
+    const focusedGroup = focusedPeriod === undefined ? undefined
+      : focused.closest("[data-stat-group]")?.dataset.statGroup;
     const chosen = view.periods.some(period => period.code === previous) ? previous
       : view.periods.some(period => period.code === view.defaultPeriod) ? view.defaultPeriod
       : view.periods[0]?.code || "";
@@ -115,13 +134,22 @@
       option.value = period.code;
       return option;
     }));
-    const panels = view.periods.map(periodNode);
+    const panels = view.periods.map(period => periodNode(period, states.get(period.code)));
     host.querySelector("[data-stat-periods]").replaceChildren(...(panels.length ? panels
       : [create("p", "", "Collection normalisée vide : aucune statistique disponible.")]));
     host.dataset.statDefault = view.defaultPeriod;
     host.querySelector("[data-stat-control]").hidden = view.periods.length === 0;
     enhance(host);
     selectPeriod(host, chosen, false);
+    if (focusedPeriod !== undefined) {
+      const panel = panels.find(candidate => candidate.dataset.statPeriod === focusedPeriod);
+      const group = focusedGroup === undefined ? null
+        : Array.from(panel?.querySelectorAll("[data-stat-group]") || [])
+          .find(candidate => candidate.dataset.statGroup === focusedGroup);
+      const target = panel && !panel.hidden
+        ? (group || panel).querySelector(":scope > summary") : select;
+      target?.focus({preventScroll: true});
+    }
     if (wasEnhanced && previous && previous !== chosen) {
       host.querySelector("[data-stat-announcement]").textContent =
         "La période choisie n’est plus présente dans cette observation. "

@@ -5,11 +5,18 @@
 .statistics-selector select:focus-visible { outline: 3px solid var(--stats-home); outline-offset: 3px; }
 .statistics-note { font-size: .85rem; color: var(--muted); margin: .55rem 0; }
 .statistics-period { border: 1px solid var(--line); border-radius: 9px; overflow: hidden; margin-top: 1rem; background: var(--paper); }
-.statistics-period h4 { padding: .8rem 1rem; margin: 0; background: var(--teal-soft); font-size: 1rem; }
+.statistics-period > summary { padding: .8rem 1rem; background: var(--teal-soft); }
+.statistics-period > summary > h4 { display: inline; margin: 0; font-size: 1rem; }
+.statistics-view summary { cursor: pointer; overflow-wrap: anywhere; }
+.statistics-view summary::marker { color: var(--stats-home); }
+.statistics-view summary:hover { text-decoration: underline; }
+.statistics-view summary:focus-visible { outline: 3px solid var(--stats-home); outline-offset: -3px; }
 .statistics-teams { display: flex; justify-content: space-between; padding: .7rem 1rem; font-weight: 700; border-bottom: 1px solid var(--line); }
 .statistics-teams span:first-child { color: var(--stats-home); }
 .statistics-teams span:last-child { color: var(--stats-away); }
-.statistics-group h5 { margin: 0; padding: .65rem 1rem; background: var(--canvas); font-size: .9rem; }
+.statistics-group > summary { padding: .65rem 1rem; background: var(--canvas); }
+.statistics-group > summary > h5 { display: inline; margin: 0; font-size: .9rem; }
+.statistics-group + .statistics-group > summary { border-top: 1px solid var(--line); }
 .statistics-metric { padding: .75rem 1rem; border-top: 1px solid var(--line); }
 .statistics-metric h6 { margin: 0 0 .35rem; text-align: center; font-size: .9rem; font-weight: 600; overflow-wrap: anywhere; }
 .statistics-values { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.5rem; }
@@ -30,6 +37,6 @@
   .statistics-selector { display: block; }
   .statistics-selector select { display: block; width: 100%; margin-top: .4rem; }
   .statistics-values { gap: .8rem; }
-  .statistics-metric, .statistics-group h5, .statistics-period h4, .statistics-teams { padding-left: .65rem; padding-right: .65rem; }
+  .statistics-metric, .statistics-group > summary, .statistics-period > summary, .statistics-teams { padding-left: .65rem; padding-right: .65rem; }
 }
 @media (forced-colors: active) { .statistics-track, .statistics-possession { border: 1px solid CanvasText; } }

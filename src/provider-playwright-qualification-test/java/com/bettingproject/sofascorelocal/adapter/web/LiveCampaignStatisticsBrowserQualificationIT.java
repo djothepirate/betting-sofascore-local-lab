@@ -60,6 +60,8 @@ class LiveCampaignStatisticsBrowserQualificationIT {
     private static final String ORIGIN = "http://127.0.0.1:8087";
     private static final String PAGE = ORIGIN + "/live-campaigns/" + CAMPAIGN_ID;
     private static final String INERT_MARKUP = "<img src=x onerror=alert(1)>";
+    private static final String OVERVIEW_GROUP = "Données synthétiques · vue d’ensemble";
+    private static final String ACTIONS_GROUP = "Données synthétiques · actions et ratios";
     @Autowired private MockMvc mvc;
     @MockitoBean private LiveCampaignService campaigns;
     @MockitoBean private CanonicalEventStore events;
@@ -68,7 +70,7 @@ class LiveCampaignStatisticsBrowserQualificationIT {
 
     @Test
     @Timeout(120)
-    void actualStatisticsRenderWithoutScriptsAndKeepPeriodFocusAcrossOfflineRefreshes() throws Exception {
+    void actualStatisticsKeepNativeDisclosureStateAndFocusAcrossOfflineRefreshes() throws Exception {
         String configured = System.getProperty("provider.playwright.browser-cache", "");
         assertThat(configured).as("explicit browser cache opt-in").isNotBlank();
         assertThat(Path.of(configured).toRealPath()).isEqualTo(
@@ -95,12 +97,31 @@ class LiveCampaignStatisticsBrowserQualificationIT {
                 Locator host = page.locator("[data-statistics]");
                 assertThat(host.count()).isOne();
                 assertThat(host.locator("[data-stat-control]").isHidden()).isTrue();
-                for (String period : List.of("ALL", "1ST", "2ND"))
+                for (String period : List.of("ALL", "1ST", "2ND")) {
                     assertThat(period(host, period).isVisible()).isTrue();
+                    assertOpen(period(host, period), true);
+                }
+                for (Locator group : host.locator("[data-stat-group]").all()) assertOpen(group, true);
                 assertThat(metric(period(host, "ALL"), "Possession").locator(".statistics-home strong").textContent()).isEqualTo("50%");
                 assertMeterValue(metric(period(host, "ALL"), "Possession").locator("meter.statistics-possession"), 50);
                 assertThat(host.locator("[style]").count()).as("SSR remains compatible with style-src self").isZero();
                 assertSpecialValues(period(host, "1ST"));
+                Locator firstPeriod = period(host, "1ST");
+                Locator firstActions = group(firstPeriod, ACTIONS_GROUP);
+                summary(firstActions).click();
+                assertOpen(firstActions, false);
+                assertThat(metric(firstPeriod, "Tacles").isHidden()).isTrue();
+                assertThat(metric(firstPeriod, "Tirs").isVisible()).isTrue();
+                summary(firstPeriod).press("Space");
+                assertOpen(firstPeriod, false);
+                assertThat(metric(firstPeriod, "Tirs").isHidden()).isTrue();
+                summary(firstPeriod).press("Enter");
+                assertOpen(firstPeriod, true);
+                assertOpen(firstActions, false);
+                assertOpen(group(firstPeriod, OVERVIEW_GROUP), true);
+                summary(firstActions).press("Enter");
+                assertOpen(firstActions, true);
+                assertSpecialValues(firstPeriod);
                 capture(host, "statistics-runtime-ssr-desktop.png");
             }
 
@@ -141,11 +162,64 @@ class LiveCampaignStatisticsBrowserQualificationIT {
                 assertThat(page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1")).isEqualTo(true);
                 capture(host, "statistics-runtime-mobile.png");
 
+                page.setViewportSize(1440, 1000);
+                Locator firstPeriod = period(host, "1ST");
+                Locator firstActions = group(firstPeriod, ACTIONS_GROUP);
+                Locator firstOverview = group(firstPeriod, OVERVIEW_GROUP);
+                assertOpen(firstPeriod, true);
+                assertOpen(firstActions, true);
+                assertOpen(firstOverview, true);
+                summary(firstActions).click();
+                assertOpen(firstActions, false);
+                assertThat(metric(firstPeriod, "Tacles").isHidden()).isTrue();
+                assertThat(metric(firstPeriod, "Tirs").isVisible()).isTrue();
+                summary(firstPeriod).click();
+                assertOpen(firstPeriod, false);
+                summary(firstPeriod).focus();
+                revision.set(3);
+                page.waitForCondition(() -> "3".equals(metric(firstPeriod, "Tirs").locator(".statistics-home strong").textContent()));
+                assertOpen(firstPeriod, false);
+                assertOpen(firstActions, false);
+                assertOpen(firstOverview, true);
+                assertThat(summary(firstPeriod).evaluate("element => document.activeElement === element")).isEqualTo(true);
+                summary(firstPeriod).press("Space");
+                assertOpen(firstPeriod, true);
+                assertOpen(firstActions, false);
+                assertThat(metric(firstPeriod, "Tirs").isVisible()).isTrue();
+                capture(host, "statistics-collapsed-desktop.png");
+
+                summary(firstActions).focus();
+                revision.set(4);
+                page.waitForCondition(() -> "4".equals(metric(firstPeriod, "Tirs").locator(".statistics-home strong").textContent()));
+                assertOpen(firstActions, false);
+                assertOpen(firstOverview, true);
+                assertThat(summary(firstActions).evaluate("element => document.activeElement === element")).isEqualTo(true);
+                assertOpen(group(period(host, "ALL"), ACTIONS_GROUP), true);
+                assertOpen(group(period(host, "2ND"), OVERVIEW_GROUP), true);
+                selector.selectOption("ALL");
+                assertOpen(period(host, "ALL"), true);
+                assertOpen(group(period(host, "ALL"), ACTIONS_GROUP), true);
+                selector.selectOption("1ST");
+                assertOpen(firstPeriod, true);
+                assertOpen(firstActions, false);
+                page.setViewportSize(390, 844);
+                summary(firstPeriod).press("Enter");
+                assertOpen(firstPeriod, false);
+                assertThat(host.evaluate("element => element.scrollWidth <= element.clientWidth + 1")).isEqualTo(true);
+                assertThat(page.evaluate("document.documentElement.scrollWidth <= innerWidth + 1")).isEqualTo(true);
+                capture(host, "statistics-collapsed-mobile.png");
+                summary(firstPeriod).press("Space");
+                assertOpen(firstPeriod, true);
+                assertOpen(firstActions, false);
+                summary(firstActions).press("Enter");
+                assertOpen(firstActions, true);
+                assertSpecialValues(firstPeriod);
+
                 selector.selectOption("2ND");
                 Locator incompletePossession = metric(period(host, "2ND"), "Possession");
                 assertThat(incompletePossession.locator(".statistics-home strong").textContent()).isEqualTo("—");
                 assertThat(incompletePossession.locator("meter").count()).isZero();
-                revision.set(3);
+                revision.set(5);
                 page.waitForCondition(() -> selector.locator("option").count() == 2);
                 assertThat(selector.inputValue()).isEqualTo("ALL");
                 assertThat(period(host, "ALL").isVisible()).isTrue();
@@ -207,6 +281,15 @@ class LiveCampaignStatisticsBrowserQualificationIT {
     }
 
     private static Locator period(Locator host, String code) { return host.locator("[data-stat-period='" + code + "']"); }
+    private static Locator group(Locator period, String name) {
+        return period.locator("[data-stat-group='" + name + "']");
+    }
+    private static Locator summary(Locator details) { return details.locator(":scope > summary"); }
+    private static void assertOpen(Locator details, boolean open) {
+        assertThat(details.count()).isOne();
+        assertThat(details.evaluate("element => element.tagName")).isEqualTo("DETAILS");
+        assertThat(details.evaluate("element => element.open")).isEqualTo(open);
+    }
     private static Locator metric(Locator period, String label) {
         return period.locator(".statistics-metric").filter(new Locator.FilterOptions().setHasText(label));
     }
@@ -234,7 +317,7 @@ class LiveCampaignStatisticsBrowserQualificationIT {
     }
 
     private static void capture(Locator host, String file) throws Exception {
-        Path directory = Path.of("target", "ui-qualification").toAbsolutePath().normalize();
+        Path directory = Path.of("target", "ui-qualification", "statistics-disclosures").toAbsolutePath().normalize();
         Files.createDirectories(directory);
         host.screenshot(new Locator.ScreenshotOptions().setPath(directory.resolve(file)));
     }
@@ -282,15 +365,15 @@ class LiveCampaignStatisticsBrowserQualificationIT {
                 value("1ST", "dribbles", "Dribbles", "4/9 (44%)", "3/4 (75%)"),
                 value("1ST", "cornerKicks", "Corners", null, "0"),
                 value("1ST", "totalTackles", "Tacles", "0/0", "0/4"),
-                value("1ST", "totalShotsOnGoal", "Tirs", revision > 1 ? "2" : "1", "0"),
+                value("1ST", "totalShotsOnGoal", "Tirs", Integer.toString(revision), "0"),
                 value("1ST", "invalidRatio", "Ratio incohérent", "5/4", "1/2 (90%)"),
                 value("1ST", "inertMarkup", INERT_MARKUP, "<script>alert(1)</script>", "3")));
-        if (revision < 3) {
+        if (revision < 5) {
             metrics.add(value("2ND", "ballPossession", "Possession", null, "50%"));
             metrics.add(value("2ND", "totalShotsOnGoal", "Tirs", "3", "5"));
         }
-        int missing = revision < 3 ? 2 : 1;
-        List<String> paths = revision < 3 ? List.of("$.synthetic.firstHalf.corners.home", "$.synthetic.secondHalf.possession.home")
+        int missing = revision < 5 ? 2 : 1;
+        List<String> paths = revision < 5 ? List.of("$.synthetic.firstHalf.corners.home", "$.synthetic.secondHalf.possession.home")
                 : List.of("$.synthetic.firstHalf.corners.home");
         return new J5EventDataObservationView(10L + revision, CanonicalEventIdentity.sofascore(PROVIDER_EVENT_ID),
                 new EventStatistics(PROVIDER_EVENT_ID, metrics),
@@ -301,7 +384,11 @@ class LiveCampaignStatisticsBrowserQualificationIT {
     private static String revisionHash(int revision) { return Integer.toHexString(revision).repeat(64); }
 
     private static EventStatisticMetric value(String period, String code, String label, String home, String away) {
-        return new EventStatisticMetric(period, "Données synthétiques · vérification de l’interface", code, label,
+        String group = switch (code) {
+            case "dribbles", "cornerKicks", "totalTackles", "invalidRatio", "inertMarkup" -> ACTIONS_GROUP;
+            default -> OVERVIEW_GROUP;
+        };
+        return new EventStatisticMetric(period, group, code, label,
                 Optional.ofNullable(home), Optional.ofNullable(away));
     }
 }

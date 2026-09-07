@@ -229,6 +229,13 @@ restent visibles ; possession valide et fractions X/Y calculables disposent de j
 `meter`, sans styles inline. Une absence, zéro et 0/0 restent distincts. `statistics.js` conserve
 le sélecteur, le focus et la période tant qu'elle reste présente ; sinon le repli est annoncé.
 Sans JavaScript toutes les périodes restent lisibles dans les pages campagne et statistiques J5.
+Les périodes et leurs groupes utilisent des `details/summary` imbriqués, ouverts par défaut.
+Le bandeau vert replie la période entière ; le bandeau gris replie seulement son groupe.
+Ces actions fonctionnent au clic et au clavier, même sans JavaScript. Le rafraîchissement
+conserve les états ouverts/repliés par période et nom de groupe, séparément pour chaque composant,
+et restitue le focus d'un en-tête remplacé. Les groupes conservent leur état lorsque leur période
+est fermée puis rouverte. Un élément nouvellement reçu est ouvert par défaut ; aucun état n'est
+écrit en base ni conservé après rechargement complet de la page.
 Cette présentation ne déclenche aucun appel fournisseur et ne modifie ni parseur
 statistique, ni normalisation, ni provenance. Le libellé sportif fournisseur `2nd half` est conservé.
 
