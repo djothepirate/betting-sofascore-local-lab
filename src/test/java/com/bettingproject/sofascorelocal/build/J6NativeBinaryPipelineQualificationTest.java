@@ -24,7 +24,7 @@ class J6NativeBinaryPipelineQualificationTest {
     }
 
     @Test
-    void retentionAcceptsOnlyAV34QualifiedManifestWithoutRunningNativeTools()
+    void retentionAcceptsOnlyAV36QualifiedManifestWithoutRunningNativeTools()
             throws IOException {
         String retention = Files.readString(
                 Path.of("").toAbsolutePath().normalize()
@@ -33,8 +33,8 @@ class J6NativeBinaryPipelineQualificationTest {
 
         assertThat(retention)
                 .contains(
-                        "$manifest.source.flywayVersion.ToString() -cne '34'",
-                        "valid Flyway V34 raw-payload, J8, J7 and quiescent live ledger restore",
+                        "$manifest.source.flywayVersion.ToString() -cne '36'",
+                        "valid Flyway V36 raw-payload, J8, J7 and quiescent live ledger restore",
                         "'SOFASCORE_LIVE_ENABLED'", "'providerGuardState'", "'liveLedgerSha256'")
                 .doesNotContain(
                         "$manifest.source.flywayVersion.ToString() -cne '31'",
@@ -94,8 +94,8 @@ class J6NativeBinaryPipelineQualificationTest {
                         "J6_DOCKER_EXECUTABLE_IDENTITY=AUTHENTICODE_DOCKER_INC",
                         "Get-AuthenticodeSignature",
                         "AggregateException",
-                        "if ($sourceFlywayVersion -cne '34')",
-                        "Flyway V34 must be applied before the J6 backup/restore qualification.",
+                        "if ($sourceFlywayVersion -cne '36')",
+                        "Flyway V36 must be applied before the J6 backup/restore qualification.",
                         "$liveLedgerFingerprintSql", "provider_campaign_guard", "$providerGuardState -cne 'FREE'",
                         "J6_POSTGRES_SESSION_CLEANUP_IDEMPOTENT_REUSE=PASS",
                         "dropdb --username \"$POSTGRES_USER\" --force --if-exists",

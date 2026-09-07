@@ -1,6 +1,6 @@
 # WO-SS-20260907-058 — Campagnes live locales J4/J5 sur sélection de rencontres
 
-- **Statut :** `READY_FOR_REVIEW` — capacité adaptative qualifiée hors fournisseur ; retour opérateur positif à 8 rencontres, observation à 16 en cours au relevé du 7 septembre à 19 h 41 Paris ; aucune clôture.
+- **Statut :** `IN_PROGRESS` — correctifs prématch, phases, clôture et incidents V16 qualifiés localement ; campagne à seize interrompue après coupure PostgreSQL, puis nouveau lancement opérateur à sept ; revue humaine et fusion distinctes, aucune clôture.
 - **Date :** 2026-09-07.
 - **Jalon :** expérimentation live locale après J9, distincte des parcours manuels existants.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
@@ -8,16 +8,64 @@
 - **Base exacte :** `6dfd14286d4f269cbe100bd965257c20298538db`, sommet GitHub vérifié le 7 septembre.
 - **Worktree :** `.tmp/wo058-live-j4-j5`, depuis le dossier Codex du Lab ; worktree distinct d'Eclipse.
 - **Autorité reçue :** ADR-SS-005 v0.1 accepté, puis déclaration « Je valide le WO-058 les travaux peuvent commencer » et demande explicite d'exécuter le plan de réalisation ; port 8087 libéré pour les tests.
-- **ADR live courant :** [ADR-SS-005 v0.2](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), capacité et cadence demandées par le propriétaire le 7 septembre ; proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
+- **ADR live courant :** [ADR-SS-005 v0.3](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), compositions prématch initiales puis périodiques explicitement confirmées ; capacité et cadence de la v0.2 conservées. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
 - **Livrable présent :** ADR accepté, WO validé, réalisation locale et qualification hors fournisseur ; état des preuves dans le rapport de réalisation.
 - **Alignement de gouvernance :** renvois ciblés dans ADR-SS-001 et AGENTS.md ; ADR-SS-002 à 004 inchangés.
-- **Réalisation applicative :** réalisée et qualifiée hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur :** essai à 8 arrêté volontairement après environ 34 minutes, quatre fins confirmées et zéro cycle manqué ; essai à 16 en cours au relevé de 19 h 41, distinct des qualifications locales.
+- **Réalisation applicative :** réalisée et qualifiée hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés ; compléments prématch/phase/clôture décrits dans le septième retour ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur :** essai à 8 arrêté volontairement, essai à 16 interrompu après coupure PostgreSQL, puis nouveau lancement manuel à 7 ; observations distinctes des qualifications locales.
 
 Les statuts restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 `NO_CRITICAL_DEPENDENCY`. Le socle reste Java 25 LTS, Spring Boot 4.1.0, Maven wrapper,
 PostgreSQL local Docker Desktop et application sur `127.0.0.1:8087`, textes UTF-8.
 
 ## 1. Objectif et origine du besoin
+
+### Huitième retour — incident `inGamePenalty/awarded` incompatible
+
+Le propriétaire demande l'analyse du JSON de CE Sabadell — Córdoba après identification de
+`GET /api/v1/event/16418278/incidents`, snapshot 2340, occurrence 2307, reçu à 22:26:03.170 Paris.
+Le replay exact V15 isole `VALUE_OUT_OF_RANGE` sur `$.incidents[5].incidentClass` : `awarded`,
+pour un `inGamePenalty` à la minute 83. V16 accepte cette attribution sans lui inventer de
+résultat, tireur ou score ; le même corps produit 27 incidents et une complétude de 107/107.
+Les règles des anciennes versions et les observations historiques sont conservées. V36 ajoute
+la version à l'allowlist SQL, sans modifier les migrations appliquées. Le correctif est raccordé
+au live, au J5 manuel et à l'import local. La base opérateur n'est pas migrée dans ce travail.
+
+Le port 8087 a été libéré explicitement par le propriétaire pour reprendre la vérification
+complète sans exclusion de méthode. Le [rapport d'incident V16](../../validation/WO058-INCIDENT-AWARDED-20260907.md)
+conserve les octets identifiés par hash, le diagnostic, les limites et les résultats exécutés.
+Qualification finale : `mvnw.cmd clean verify -Pintegration-tests`, code zéro à 23:27:44 Paris ;
+1 530 tests Surefire sans échec/erreur (cinq ignorés documentés) et 136 Failsafe sans
+échec/erreur/ignoré. Les 42 cas V16, l'upgrade prérempli et la concurrence SQL sont inclus.
+La base opérateur et son checkout Eclipse restent distincts du candidat qualifié.
+
+### Septième retour — compositions prématch, temporalité et interruption Docker
+
+Le propriétaire demande une collecte LINEUPS avant le début et confirme « Oui, collecte initiale
+puis périodique ». Les nouveaux manifestes `live-v3` déclenchent donc LINEUPS après J4 `notstarted`,
+puis à D ; statistiques et incidents attendent J4 `inprogress`. Les politiques historiques et
+la formule de D sont conservées. V35 ajoute leur contrainte sans modifier V33/V34.
+
+La description du statut J4 remplace le seul libellé `inprogress` sur les vues sportives, avec
+repli sur le type et provenance inchangée. La demande graphique statistiques par période et
+composants possession/X-Y est matérialisée par un aperçu HTML autonome, avec données synthétiques
+signalées. Ce prototype ne remplace pas encore le tableau applicatif.
+
+La temporalité est analysée par couple match/famille : réception, changement, répétitions
+identiques et dispersion, sans seuil métier arbitraire. Les 937 tentatives des deux premières
+campagnes servent au replay documentaire. L'écart Elche à 21 h 19 correspond à l'absence de requête
+LINEUPS dans la politique v2 ; aucune conclusion fournisseur comparative n'en est déduite.
+
+La campagne à seize a cessé de recevoir après 21:54:27.534 Paris (756 appels). Les erreurs Hikari
+à 21:54:30 et le démarrage du conteneur à 21:55:26 concordent avec la mise à jour/redémarrage Docker
+confirmé par l'opérateur. Le worker a disparu, mais l'état durable était encore RUNNING.
+Au redémarrage opérateur vers 22 h 17, la campagne devient INTERRUPTED / OWNER_PROCESS_ABSENT ;
+le garde CLEANUP_REQUIRED est horodaté 22:16:58.770678. Après preuve locale d'absence des processus, seule cette exclusion orpheline
+a été libérée conditionnellement à 22:23:59.691819. Le nouveau lancement manuel à sept a réussi
+à 22:25:12.506282, sous un autre identifiant ; l'histoire précédente est conservée.
+
+Le correctif de clôture sépare l'arrêt d'exécution de l'état durable si PostgreSQL est indisponible,
+et permet une nouvelle tentative locale de clôture sur commande explicite, sans reprise fournisseur.
+Preuves, commandes, limites et bilan : [rapport prématch et temporalité](../../validation/WO058-PREMATCH-TEMPORAL-20260907.md).
 
 ### Sixième retour opérateur — huit rencontres puis seize, session unique confirmée
 

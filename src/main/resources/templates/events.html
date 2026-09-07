@@ -305,7 +305,7 @@
               <strong th:text="${event.details.awayTeam.name}">Away</strong><br>
               <span class="muted" th:text="${event.details.startsAt}">Instant</span>
             </td>
-            <td th:text="${event.details.status.type}">status</td>
+            <td th:text="${event.details.status.type == 'inprogress' ? event.details.status.description.orElse(event.details.status.type) : event.details.status.type}">status</td>
             <td th:text="${event.resolutionSource}">PROVIDER</td>
             <td>
               <span class="mono" th:text="${event.snapshotId}">0</span><br>
@@ -453,7 +453,7 @@
               <strong th:text="${event.details.awayTeam.name}">Away</strong><br>
               <span class="muted" th:text="${event.details.startsAt}">Instant</span>
             </td>
-            <td th:text="${event.details.status.type}">status</td>
+            <td th:text="${event.details.status.type == 'inprogress' ? event.details.status.description.orElse(event.details.status.type) : event.details.status.type}">status</td>
             <td th:text="${event.eventObservationInserted ? 'NOUVELLE_VERSION' : 'DÉDUPLIQUÉE'}">
               NOUVELLE_VERSION
             </td>
@@ -555,7 +555,8 @@
             <span class="muted" data-live-selection-blocked
                   th:hidden="${!blockedLiveEventIds.contains(item.event.identity.value)}">Déjà dans une campagne en cours</span>
             <br><a data-live-link hidden>Suivre la campagne</a><br>
-            <span class="muted" data-live-event-state></span></td>
+            <span class="muted" data-live-event-state></span>
+            <span class="notice notice-warning" data-live-runtime-status role="status" hidden></span></td>
           <td class="mono" th:text="${item.startsAtInZone}">2026-08-12T16:00+02:00</td>
           <td>
             <strong th:text="${item.event.homeTeam.name}">Home</strong>
@@ -563,7 +564,7 @@
             <strong th:text="${item.event.awayTeam.name}">Away</strong>
           </td>
           <td th:text="${item.event.tournament.isPresent() ? item.event.tournament.get().name : '—'}">—</td>
-          <td><span class="chip chip-warning" data-live-sport-status th:text="${item.event.status.type}">notstarted</span><br><span data-live-score></span></td>
+          <td><span class="chip chip-warning" data-live-sport-status th:text="${item.event.status.type == 'inprogress' ? item.event.status.description.orElse(item.event.status.type) : item.event.status.type}">notstarted</span><br><span data-live-score></span></td>
           <td>
             <span class="mono" th:text="${item.event.identity.value}">UUID</span><br>
             <span class="muted" th:text="${'providerEventId=' + item.event.identity.providerEventId}">providerEventId</span>

@@ -144,6 +144,30 @@ public final class ManualProviderRequestCoordinator {
         requestLock.unlock();
     }
 
+    private void releaseAfterFailedClose(LiveCampaignData.Ownership ownership) {
+        if (ownership == null || durableGuard == null) {
+            release(ownership);
+            return;
+        }
+        LiveCampaignData.Guard current = durableGuard.snapshot();
+        if (current == null || current.generation() != ownership.generation())
+            throw new CoordinationException("provider cleanup generation cannot be verified");
+        if ("FREE".equals(current.state())) {
+            // A previous SQL release may have committed before its response was lost. Only the
+            // unchanged generation, cleared ownership and absent supervisor prove this close.
+            if (current.campaignId() != null || current.owner() != null || supervisor == null
+                    || supervisor.activeCampaignId().isPresent())
+                throw new CoordinationException("provider cleanup cannot be verified");
+            liveCampaign = false;
+            requestLock.unlock();
+            return;
+        }
+        if (!ownership.campaignId().equals(current.campaignId()) || current.owner() == null
+                || !ownership.instanceId().equals(current.owner().instanceId()))
+            throw new CoordinationException("provider cleanup ownership changed");
+        release(ownership);
+    }
+
     private static Duration requireAtLeastThreeSeconds(Duration value) {
         Objects.requireNonNull(value, "minimumDelay");
         if (value.compareTo(Duration.ofSeconds(3)) < 0) {
@@ -197,6 +221,7 @@ public final class ManualProviderRequestCoordinator {
         private final UUID campaignId;
         private final Thread ownerThread;
         private final LiveCampaignData.Ownership ownership;
+        private boolean closeAttempted;
 
         private CampaignLease(
                 ManualProviderRequestCoordinator owner,
@@ -229,7 +254,18 @@ public final class ManualProviderRequestCoordinator {
                 return;
             }
             requireOwnerThread();
+            closeAttempted = true;
             current.release(ownership);
+            owner = null;
+        }
+
+        /** Explicit local recovery only; never transfers ownership or starts a provider request. */
+        public void retryCloseAfterVerifiedCleanup() {
+            requireOwnerThread();
+            ManualProviderRequestCoordinator current = owner;
+            if (current == null) return;
+            if (!closeAttempted) throw new CoordinationException("provider close has not been attempted");
+            current.releaseAfterFailedClose(ownership);
             owner = null;
         }
 

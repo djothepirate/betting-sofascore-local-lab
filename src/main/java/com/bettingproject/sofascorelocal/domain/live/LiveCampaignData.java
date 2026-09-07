@@ -62,7 +62,8 @@ public final class LiveCampaignData {
                     || qualifiedMatchCapacity < 1
                     || targets.isEmpty() || targets.size() > qualifiedMatchCapacity
                     || targets.size() > LiveCadence.MAXIMUM_SELECTION_SIZE
-                    || ("live-v2".equals(policyVersion) && !cycleInterval.equals(LiveCadence.forMatches(targets.size())))
+                    || (("live-v2".equals(policyVersion) || "live-v3".equals(policyVersion))
+                        && !cycleInterval.equals(LiveCadence.forMatches(targets.size())))
                     || maximumCalls < 4 * targets.size()
                     || targets.stream().map(Target::canonicalEventId).distinct().count() != targets.size()) {
                 throw new IllegalArgumentException("live manifest is outside accepted bounds");

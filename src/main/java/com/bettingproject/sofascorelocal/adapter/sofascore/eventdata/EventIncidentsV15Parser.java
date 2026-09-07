@@ -11,7 +11,7 @@ import tools.jackson.databind.JsonNode;
  * shootout. Explicit {@code null}, non-array values and non-empty arrays are not widened by this
  * version. Mixed timed and unminuted shootouts remain schema incompatibilities.</p>
  */
-public final class EventIncidentsV15Parser extends EventIncidentsV14Parser {
+public class EventIncidentsV15Parser extends EventIncidentsV14Parser {
 
     public static final String PARSER_VERSION = "event-incidents-v15";
 

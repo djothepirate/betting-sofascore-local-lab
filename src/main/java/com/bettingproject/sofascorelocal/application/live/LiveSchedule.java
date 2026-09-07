@@ -18,6 +18,7 @@ public final class LiveSchedule {
     private final Instant endsAt;
     private final Duration interval;
     private final Duration fallbackInterval;
+    private final boolean prematchLineups;
     private Due inFlight;
     private UUID contiguous;
     private String globalStop;
@@ -27,11 +28,17 @@ public final class LiveSchedule {
     }
 
     public LiveSchedule(List<UUID> targets, Instant start, Instant endsAt, Duration interval) {
+        this(targets, start, endsAt, interval, "live-v2");
+    }
+
+    public LiveSchedule(List<UUID> targets, Instant start, Instant endsAt, Duration interval,
+                        String policyVersion) {
         if (targets.isEmpty() || targets.size() > LiveCadence.MAXIMUM_SELECTION_SIZE || new HashSet<>(targets).size() != targets.size()
                 || !endsAt.isAfter(start)) throw new IllegalArgumentException("invalid live schedule");
         LiveCadence.validate(interval);
         this.endsAt = endsAt;
         this.interval = interval;
+        this.prematchLineups = "live-v3".equals(policyVersion);
         this.fallbackInterval = interval.compareTo(Duration.ofMinutes(5)) > 0 ? interval : Duration.ofMinutes(5);
         targets.forEach(id -> events.put(id, new Event(id, start)));
     }
@@ -54,7 +61,12 @@ public final class LiveSchedule {
         for (Event e : events.values()) {
             if (!e.active()) continue;
             Due candidate;
-            if (e.finalizing || e.j5At != null && (e.j4At == null || j5Due(e).dueAt().isBefore(e.j4At))) {
+            if (e.prematchLineupsAt != null && e.prematchLineupsAt.isBefore(e.j4At)) {
+                candidate = prematchDue(e);
+                if (!now.isBefore(candidate.dueAt().plus(interval.multipliedBy(2)))) {
+                    e.missedCycles += 2; stopAll("STOPPED_CAPACITY"); return Optional.empty();
+                }
+            } else if (e.finalizing || e.j5At != null && (e.j4At == null || j5Due(e).dueAt().isBefore(e.j4At))) {
                 candidate = j5Due(e);
                 if (!e.finalizing && !now.isBefore(candidate.dueAt().plus(interval.multipliedBy(2)))) {
                     e.missedCycles += 2; stopAll("STOPPED_CAPACITY"); return Optional.empty();
@@ -73,6 +85,22 @@ public final class LiveSchedule {
         return new Due(e.id, endpoint, e.serial, e.finalizing ? "J5_FINAL" : "J5_NORMAL", eligible, e.finalizing);
     }
 
+    private Due prematchDue(Event e) {
+        return new Due(e.id, EVENT_LINEUPS, e.serial, "J5_PREMATCH_LINEUPS", e.prematchLineupsAt, false);
+    }
+
+    private Instant firstTripletAt(Event e, Instant now) {
+        // A recent prematch lineup still owns its D interval. Align the triplet before
+        // it begins so a later lineup cannot hold the shared contiguous worker idle.
+        if (!prematchLineups) return now;
+        Instant eligible = now;
+        for (SofascoreEndpointType family : J5) {
+            Instant previous = e.lastStarts.get(family);
+            if (previous != null && previous.plus(interval).isAfter(eligible)) eligible = previous.plus(interval);
+        }
+        return eligible;
+    }
+
     public synchronized boolean mayDispatch(Due due, Instant now) {
         Event e = events.get(due.eventId());
         return globalStop == null && e != null && e.active() && now.isBefore(endsAt)
@@ -85,7 +113,9 @@ public final class LiveSchedule {
         Instant previous = e.lastStarts.get(due.endpoint());
         if (previous != null && now.isBefore(previous.plus(interval))) throw new IllegalStateException("LIVE_FAMILY_CADENCE");
         e.lastStarts.put(due.endpoint(), now);
-        if (due.endpoint() != EVENT_DETAILS) { contiguous = e.id; if (e.familyIndex == 0) e.cycleDue = e.j5At; }
+        if (due.endpoint() != EVENT_DETAILS && !"J5_PREMATCH_LINEUPS".equals(due.kind())) {
+            contiguous = e.id; if (e.familyIndex == 0) e.cycleDue = e.j5At;
+        }
         inFlight = due;
     }
 
@@ -105,17 +135,31 @@ public final class LiveSchedule {
             e.serial++;
             Instant started = e.lastStarts.get(EVENT_DETAILS);
             if ("finished".equals(status)) {
+                e.prematchLineupsAt = null;
                 e.finalizing = true; e.state = "FINALIZING"; e.j4At = null;
-                e.j5At = now; e.familyIndex = 0; e.finalGood = true;
+                e.j5At = firstTripletAt(e, now); e.familyIndex = 0; e.finalGood = true;
             } else if (e.reserveFinish) stopEvent(e.id, "STOPPED_LIMIT");
             else if ("notstarted".equals(status)) {
                 e.state = "WAITING_START"; e.j4At = started.plus(interval); e.j4Kind = "J4_WAIT";
+                if (prematchLineups && e.prematchLineupsAt == null) e.prematchLineupsAt = now;
             } else {
+                e.prematchLineupsAt = null;
                 e.state = e.checkingFinish ? "CHECKING_FINISH" : "COLLECTING";
                 e.j4At = e.checkingFinish ? started.plus(interval) : now.plus(fallbackInterval);
                 e.j4Kind = e.checkingFinish ? "J4_FINISH" : "J4_FALLBACK";
-                if (e.j5At == null) e.j5At = now;
+                if (e.j5At == null) e.j5At = firstTripletAt(e, now);
             }
+            return;
+        }
+        if ("J5_PREMATCH_LINEUPS".equals(due.kind())) {
+            // A 404 is an observed unavailability; the next ordinary poll remains at D.
+            // This separate phase must not advance the statistics/incidents/lineups triplet.
+            if (!now.isBefore(due.dueAt().plus(interval))) {
+                e.missedCycles++; e.consecutiveMisses++;
+                if (e.consecutiveMisses >= 2) { stopAll("STOPPED_CAPACITY"); return; }
+            } else e.consecutiveMisses = 0;
+            e.prematchLineupsAt = e.lastStarts.get(EVENT_LINEUPS).plus(interval);
+            e.serial++;
             return;
         }
         e.finalGood &= !unavailable;
@@ -146,7 +190,7 @@ public final class LiveSchedule {
         Event e = events.get(id);
         if (!e.active() || e.finalizing) return;
         if (e.reserveFinish) { stopEvent(id, "STOPPED_LIMIT"); return; }
-        e.reserveFinish = true; e.j5At = null; e.familyIndex = 0; contiguous = null;
+        e.reserveFinish = true; e.j5At = null; e.prematchLineupsAt = null; e.familyIndex = 0; contiguous = null;
         Instant previous = e.lastStarts.get(EVENT_DETAILS);
         e.j4At = previous == null || !now.isBefore(previous.plus(interval)) ? now : previous.plus(interval);
         e.j4Kind = "J4_FINAL_CHECK";
@@ -174,15 +218,21 @@ public final class LiveSchedule {
     public synchronized String globalStop() { return globalStop; }
     public synchronized List<EventState> states() {
         return events.values().stream().map(e -> new EventState(e.id, e.state, e.sport,
-                !e.active() ? null : e.j4At == null ? j5Due(e).dueAt() : e.j5At == null ? e.j4At
-                        : e.j4At.isBefore(j5Due(e).dueAt()) ? e.j4At : j5Due(e).dueAt(),
+                !e.active() ? null : nextDueAt(e),
                 e.missedCycles, e.finalComplete)).toList();
+    }
+
+    private Instant nextDueAt(Event e) {
+        Instant next = e.j4At;
+        if (e.j5At != null && (next == null || j5Due(e).dueAt().isBefore(next))) next = j5Due(e).dueAt();
+        if (e.prematchLineupsAt != null && (next == null || e.prematchLineupsAt.isBefore(next))) next = e.prematchLineupsAt;
+        return next;
     }
     private static final class Event {
         final UUID id; final EnumMap<SofascoreEndpointType, Instant> lastStarts = new EnumMap<>(SofascoreEndpointType.class);
         final Set<String> seenSignals = new HashSet<>();
         String state = "WAITING_START", sport, j4Kind = "J4_INITIAL";
-        Instant j4At, j5At, cycleDue; long serial, missedCycles; int familyIndex, consecutiveMisses;
+        Instant j4At, j5At, cycleDue, prematchLineupsAt; long serial, missedCycles; int familyIndex, consecutiveMisses;
         boolean checkingFinish, finalizing, reserveFinish, finalGood = true, finalComplete;
         Event(UUID id, Instant start) { this.id = id; j4At = start; }
         boolean active() { return !state.startsWith("STOPPED") && !state.equals("FINISHED_CONFIRMED"); }

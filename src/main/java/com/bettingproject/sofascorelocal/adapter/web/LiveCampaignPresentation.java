@@ -1,5 +1,6 @@
 package com.bettingproject.sofascorelocal.adapter.web;
 
+import com.bettingproject.sofascorelocal.application.live.LiveCampaignService.RuntimeStatus;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.eventdata.*;
 import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.*;
@@ -43,11 +44,20 @@ public class LiveCampaignPresentation {
     }
 
     public Campaign state(CampaignView view) {
+        return state(view, null);
+    }
+
+    public Campaign state(CampaignView view, RuntimeStatus runtimeStatus) {
         Instant observedAt = clock.instant();
         return new Campaign(view.manifest().campaignId(), view.revision(), view.state(), view.reason(),
                 view.manifest().preparedAt(), view.startedAt(), view.endsAt(), view.reservedCalls(),
                 view.manifest().maximumCalls(), view.receivedBytes(), view.manifest().maximumBytes(),
-                view.events().stream().map(event -> event(view, event, observedAt)).toList());
+                view.events().stream().map(event -> event(view, event, observedAt)).toList(),
+                runtimeStatus == null ? null : new RuntimeObservation(runtimeStatus.state(), runtimeStatus.reason(),
+                        runtimeStatus.collectionStopped(), runtimeStatus.cleanupPending(), runtimeStatus.cleanupInProgress(),
+                        runtimeStatus.cleanupInProgress() ? "Collecte arrêtée / clôture locale en cours."
+                                : runtimeStatus.cleanupPending() ? "Collecte arrêtée / clôture locale requise."
+                                : "Collecte arrêtée."));
     }
 
     private Event event(CampaignView campaign, EventView event, Instant observedAt) {
@@ -79,7 +89,7 @@ public class LiveCampaignPresentation {
                         : identity.homeTeam().name() + " — " + identity.awayTeam().name(),
                 identity == null ? "—" : identity.tournament().map(t -> t.name()).orElse("—"),
                 identity == null ? "—" : identity.startsAt().atZone(ZoneId.of("Europe/Paris")).toString(),
-                sportStatus, score(j4), event.state(), "STOPPED_ALREADY_FINISHED".equals(event.reason())
+                sportStatus, sportStatusLabel(sportStatus, identity), score(j4), event.state(), "STOPPED_ALREADY_FINISHED".equals(event.reason())
                         ? "Rencontre déjà terminée dans les observations locales au lancement ; aucun appel fournisseur."
                         : event.reason(), event.nextDueAt(), event.reservedCalls(),
                 campaign.manifest().maximumCallsPerEvent(), event.receivedBytes(), event.missedCycles(),
@@ -90,6 +100,13 @@ public class LiveCampaignPresentation {
                                 new FamilyCursor(endpoint, null, null, null, null, null, null, null,
                                         NormalizedReferences.none(), null, null)))
                         .map(f -> family(campaign, event, f, observedAt)).toList());
+    }
+
+    private static String sportStatusLabel(String sportStatus, CanonicalEventObservationView identity) {
+        // Use the same persisted observation as the campaign, never a newer manual observation.
+        return "inprogress".equals(sportStatus) && identity != null
+                && sportStatus.equals(identity.status().type())
+                ? identity.status().description().orElse(sportStatus) : sportStatus;
     }
 
     private static String score(FamilyCursor j4) {
@@ -185,7 +202,10 @@ public class LiveCampaignPresentation {
             if (cursor.endpoint() == SofascoreEndpointType.EVENT_DETAILS) {
                 interval = "COLLECTING".equals(event.state()) ? Math.max(300, cycleSeconds)
                         : "WAITING_START".equals(event.state()) || "CHECKING_FINISH".equals(event.state()) ? cycleSeconds : 0;
-            } else if ("COLLECTING".equals(event.state()) || "CHECKING_FINISH".equals(event.state())) interval = cycleSeconds;
+            } else if ("COLLECTING".equals(event.state()) || "CHECKING_FINISH".equals(event.state())
+                    || cursor.endpoint() == SofascoreEndpointType.EVENT_LINEUPS
+                        && "WAITING_START".equals(event.state())
+                        && "live-v3".equals(campaign.manifest().policyVersion())) interval = cycleSeconds;
         }
         Instant success = cursor.lastSuccessfulAt();
         Instant anchor = success == null ? phaseStarted : success;
@@ -208,7 +228,7 @@ public class LiveCampaignPresentation {
 
     private static boolean terminal(String state) {
         return state.startsWith("STOPPED") || "FINISHED_CONFIRMED".equals(state)
-                || "COMPLETED".equals(state) || "CLEANUP_REQUIRED".equals(state);
+                || "COMPLETED".equals(state) || "CLEANUP_REQUIRED".equals(state) || "INTERRUPTED".equals(state);
     }
 
     private static String label(SofascoreEndpointType endpoint) {
@@ -250,9 +270,12 @@ public class LiveCampaignPresentation {
 
     public record Campaign(UUID campaignId, long revision, String state, String reason, Instant preparedAt,
                            Instant startedAt, Instant endsAt, int reservedCalls, int maximumCalls,
-                           long receivedBytes, long maximumBytes, List<Event> events) { }
+                           long receivedBytes, long maximumBytes, List<Event> events, RuntimeObservation runtimeStatus) { }
+    /** Local process observation kept separate from the persisted campaign and event states. */
+    public record RuntimeObservation(String state, String reason, boolean collectionStopped,
+                                     boolean cleanupPending, boolean cleanupInProgress, String label) { }
     public record Event(UUID canonicalEventId, long providerEventId, String title, String competition,
-                        String startsAtParis, String sportStatus, String score, String state, String reason,
+                        String startsAtParis, String sportStatus, String sportStatusLabel, String score, String state, String reason,
                         Instant nextDueAt, int reservedCalls, int maximumCalls, long receivedBytes,
                         long missedCycles, boolean finalComplete, Long sourceSnapshotId,
                         Instant sourceReceivedAt, boolean canonicalCurrent, boolean selectionBlocked, List<Family> families) { }

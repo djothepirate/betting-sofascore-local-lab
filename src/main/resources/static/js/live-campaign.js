@@ -165,18 +165,39 @@
 
   function renderCampaign(campaign) {
     if (!campaign || !uuid.test(campaign.campaignId) || !Number.isSafeInteger(campaign.revision)) return;
+    // The process observation can change while the durable ledger revision remains equal.
     if (campaign.revision < (revisions.get(campaign.campaignId) ?? -1)) return;
     revisions.set(campaign.campaignId, campaign.revision);
+    const runtime = campaign.runtimeStatus;
+    const collectionStopped = runtime?.collectionStopped === true;
+    const cleanupPending = runtime?.cleanupPending === true;
+    const cleanupInProgress = runtime?.cleanupInProgress === true;
+    const renderRuntime = root => {
+      const notice = root.querySelector("[data-live-runtime-status]");
+      if (notice) {
+        notice.hidden = !runtime;
+        notice.textContent = runtime?.label || "";
+      }
+    };
     if (monitor.dataset.liveCampaignId === campaign.campaignId) {
+      renderRuntime(monitor);
       text(monitor, "[data-live-campaign-state]", campaign.state);
       text(monitor, "[data-live-campaign-reason]", campaign.reason);
       text(monitor, "[data-live-started-at]", campaign.startedAt || "En attente de lancement");
       text(monitor, "[data-live-ends-at]", campaign.endsAt || "Fixée au lancement");
       text(monitor, "[data-live-calls]", `${campaign.reservedCalls} / ${campaign.maximumCalls}`);
       text(monitor, "[data-live-bytes]", `${campaign.receivedBytes} / ${campaign.maximumBytes}`);
-      monitor.querySelectorAll("[data-live-stop-form] button").forEach(button => {
-        button.disabled = campaign.state !== "RUNNING";
-      });
+      const globalStop = monitor.querySelector("[data-live-global-stop-form]");
+      if (globalStop) {
+        globalStop.hidden = campaign.state !== "RUNNING" && !cleanupPending;
+        const button = globalStop.querySelector("button");
+        if (button) {
+          button.disabled = cleanupInProgress || collectionStopped && !cleanupPending
+            || campaign.state !== "RUNNING" && !cleanupPending;
+          button.textContent = cleanupInProgress ? "Clôture locale en cours"
+            : cleanupPending ? "Finaliser la clôture locale" : "Arrêter toute la campagne";
+        }
+      }
       const preparation = monitor.querySelector("[data-live-preparation]");
       if (preparation) preparation.hidden = campaign.state !== "PREPARED";
     }
@@ -187,13 +208,14 @@
       if (previous && previous.campaignId !== campaign.campaignId && !precedes(authority, previous)) return;
       eventCampaigns.set(event.canonicalEventId, authority);
       eventNodes().filter(node => node.dataset.liveEventId === event.canonicalEventId).forEach(node => {
+        renderRuntime(node);
         const displayedAt = Date.parse(node.dataset.liveCanonicalReceivedAt);
         const incomingAt = Date.parse(event.sourceReceivedAt);
         const canReplaceCanonical = !node.hasAttribute("data-live-mirror-canonical")
           || event.canonicalCurrent === true && Number.isFinite(incomingAt)
             && (!Number.isFinite(displayedAt) || incomingAt >= displayedAt);
         if (canReplaceCanonical) {
-          text(node, "[data-live-sport-status]", event.sportStatus);
+          text(node, "[data-live-sport-status]", event.sportStatusLabel || event.sportStatus);
           text(node, "[data-live-score]", event.score);
           if (Number.isFinite(incomingAt)) node.dataset.liveCanonicalReceivedAt = event.sourceReceivedAt;
           if (event.sourceSnapshotId !== null && event.sourceSnapshotId !== undefined) {
@@ -225,9 +247,12 @@
           link.href = `${prefix}/live-campaigns/${campaign.campaignId}`;
           link.hidden = false;
         }
-        if (event.state.startsWith("STOPPED") || event.state === "FINISHED_CONFIRMED") {
-          node.querySelectorAll("[data-live-stop-form] button").forEach(button => { button.disabled = true; });
-        }
+        node.querySelectorAll("[data-live-stop-form]").forEach(form => {
+          form.hidden = collectionStopped || campaign.state !== "RUNNING"
+            || event.state.startsWith("STOPPED") || event.state === "FINISHED_CONFIRMED";
+          const button = form.querySelector("button");
+          if (button) button.disabled = form.hidden;
+        });
         const families = node.querySelector("[data-live-families]");
         if (families) event.families.forEach(family => renderFamily(families, family));
       });

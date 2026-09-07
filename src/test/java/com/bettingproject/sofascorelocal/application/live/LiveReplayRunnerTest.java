@@ -31,6 +31,31 @@ class LiveReplayRunnerTest {
     private final LiveReplayRunner runner = new LiveReplayRunner(new LiveResponseProcessor(events, details, j5, raw));
 
     @Test
+    void v3ReplaysPrematchUnavailableThenFreshLineupsAndKeepsOlderPoliciesExplicit() {
+        ReplayInput input = input(List.of(A), List.of(
+                j4(A, "notstarted"), unavailable(A, EVENT_LINEUPS),
+                j4(A, "notstarted"), reply(A, EVENT_LINEUPS, 200, "{\"confirmed\":false}"),
+                j4(A, "finished"), unavailable(A, EVENT_STATISTICS), unavailable(A, EVENT_INCIDENTS),
+                unavailable(A, EVENT_LINEUPS)), List.of());
+        var first = runner.run(input, "live-v3");
+        assertThat(runner.run(input, "live-v3")).isEqualTo(first);
+        assertThat(first.complete()).isTrue();
+        assertThat(first.unusedReplies()).isZero();
+        assertThat(first.trace()).hasSize(8);
+        var prematch = first.trace().stream().filter(t -> "J5_PREMATCH_LINEUPS".equals(t.kind())).toList();
+        assertThat(prematch).hasSize(2);
+        assertThat(prematch.getFirst().code()).isEqualTo("HTTP_404");
+        assertThat(prematch.getLast().outcome()).isEqualTo("PARSED");
+        assertThat(Duration.between(prematch.getFirst().requestedAt(), prematch.getLast().requestedAt()))
+                .isGreaterThanOrEqualTo(Duration.ofSeconds(60));
+        assertThat(first.trace().get(5).requestedAt()).isAfterOrEqualTo(prematch.getLast().requestedAt().plusSeconds(60));
+        assertThat(first.trace().stream().filter(t -> t.finalCycle()).count()).isEqualTo(3);
+        assertThatThrownBy(() -> runner.run(input, "live-v2"))
+                .hasMessage("REPLAY_REPLY_DOES_NOT_MATCH_NEXT_DISPATCH_2");
+        verifyNoInteractions(events, details, j5, raw);
+    }
+
+    @Test
     void theSameHashedScriptReplaysIdenticallyWithPeriodThenFinishSignalsAndExplicitFinalCompleteness() {
         ReplayInput input = input(List.of(A), List.of(
                 j4(A, "inprogress"), unavailable(A, EVENT_STATISTICS), injury(45), unavailable(A, EVENT_LINEUPS),

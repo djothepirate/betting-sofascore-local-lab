@@ -93,6 +93,27 @@ class LivePayloadNormalizerTest {
     }
 
     @Test
+    void anAwardedInGamePenaltyUsesV16WithoutInventingAGoalOrAFinishSignal() {
+        var result = incidents("""
+                {"incidentType":"inGamePenalty","incidentClass":"awarded",
+                 "time":83,"isHome":true,"confirmed":true}
+                """);
+        assertThat(result.status()).isEqualTo(LiveNormalizedPayload.Status.PARSED);
+        assertThat(result.parserVersion()).isEqualTo("event-incidents-v16");
+        assertThat(result.signals()).isEmpty();
+        assertThat(result.details()).isEmpty();
+        assertThat(result.eventData()).hasValueSatisfying(data -> {
+            var incidents = (com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents) data;
+            assertThat(incidents.incidents()).singleElement().satisfies(incident -> {
+                assertThat(incident.incidentType()).isEqualTo("inGamePenalty");
+                assertThat(incident.incidentClass()).contains("awarded");
+                assertThat(incident.homeScore()).isEmpty();
+                assertThat(incident.awayScore()).isEmpty();
+            });
+        });
+    }
+
+    @Test
     void keepsSignalIdentityStableAcrossOrderChangesAndAnnouncedLengthRevisions() {
         var a = incidents(injury(45, 2) + "," + injury(90, 4));
         var b = incidents(injury(90, 6) + "," + injury(45, 2));

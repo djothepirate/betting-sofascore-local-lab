@@ -1,5 +1,6 @@
 package com.bettingproject.sofascorelocal.adapter.web;
 
+import com.bettingproject.sofascorelocal.application.live.LiveCampaignService.RuntimeStatus;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
@@ -92,6 +93,40 @@ class LiveCampaignPresentationTest {
 
         assertThat(event.score()).isEqualTo("0 – —");
         assertThat(event.sportStatus()).isEqualTo("inprogress");
+        assertThat(event.sportStatusLabel()).isEqualTo("inprogress");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"inprogress,1st half,1st half", "inprogress,Halftime,Halftime",
+            "inprogress,2nd half,2nd half", "inprogress,,inprogress", "finished,Ended,finished"})
+    void periodLabelUsesTheCampaignsExactObservationWithoutChangingItsTechnicalType(
+            String type, String description, String label) {
+        var identity = new CanonicalEventObservationView(2, IDENTITY, START,
+                new ScheduledTeam(1, "Home"), new ScheduledTeam(2, "Away"),
+                new ScheduledEventStatus(type, Optional.ofNullable(description)), Optional.empty(),
+                EventSourceTrace.providerSnapshot(2, "a".repeat(64), "event-details-v2", START),
+                "b".repeat(64), 2);
+        var newerManual = new CanonicalEventObservationView(3, IDENTITY, START,
+                identity.homeTeam(), identity.awayTeam(),
+                new ScheduledEventStatus("inprogress", Optional.of("Newer manual description")), Optional.empty(),
+                EventSourceTrace.providerSnapshot(3, "c".repeat(64), "event-details-v2", START.plusSeconds(60)),
+                "d".repeat(64), 3);
+        when(events.findByObservationId(EVENT, 2)).thenReturn(Optional.of(identity));
+        when(events.findLatestByCanonicalId(EVENT)).thenReturn(Optional.of(newerManual));
+        UUID id = UUID.randomUUID();
+        var refs = new NormalizedReferences(2L, 2L, null, "a".repeat(64));
+        var result = new Result(id, new Publication("PARSED", "EVENT", "OK", START,
+                "event-details-v2", true, "COLLECTING", type, null, null, null, null), refs);
+        var family = new FamilyCursor(SofascoreEndpointType.EVENT_DETAILS, id, id, id, id,
+                START, START, START, refs, result, result);
+
+        var event = presentation.state(campaign(List.of(family),
+                List.of(attempt(id, SofascoreEndpointType.EVENT_DETAILS, 2, START, result)))).events().getFirst();
+
+        assertThat(event.sportStatus()).isEqualTo(type);
+        assertThat(event.sportStatusLabel()).isEqualTo(label);
+        assertThat(event.sourceSnapshotId()).isEqualTo(2L);
+        assertThat(event.canonicalCurrent()).isFalse();
     }
 
     @Test
@@ -189,6 +224,68 @@ class LiveCampaignPresentationTest {
             assertThat(result.receivedAgeSeconds()).isEqualTo(90L);
             assertThat(result.expectedIntervalSeconds()).isZero();
         }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"live-v2,EVENT_LINEUPS,NOT_EXPECTED,0", "live-v3,EVENT_LINEUPS,FRESH,60",
+            "live-v3,EVENT_STATISTICS,NOT_EXPECTED,0", "live-v3,EVENT_INCIDENTS,NOT_EXPECTED,0"})
+    void prematchExpectationsFollowTheFrozenPolicy(String policy, String endpoint, String expected, long interval) {
+        var base = campaignForFreshness(SofascoreEndpointType.valueOf(endpoint), "WAITING_START", List.of());
+        var old = base.manifest();
+        var manifest = new Manifest(old.campaignId(), old.manifestSha256(), policy, old.preparedAt(), old.expiresAt(),
+                old.duration(), old.maximumCallsPerEvent(), old.maximumCalls(), old.maximumBytes(),
+                old.qualifiedMatchCapacity(), old.targets(), old.admissionProfile(), old.cycleInterval());
+        var view = new CampaignView(manifest, base.state(), null, base.startedAt(), base.endsAt(),
+                base.reservedCalls(), base.receivedBytes(), base.revision(), null, base.events(), base.attempts(), base.transitions());
+        var freshness = new LiveCampaignPresentation(events, data, Clock.fixed(START.plusSeconds(60), ZoneOffset.UTC))
+                .state(view).events().getFirst().families().stream().filter(f -> f.endpoint().equals(endpoint))
+                .findFirst().orElseThrow().freshness();
+        assertThat(freshness.state()).isEqualTo(expected);
+        assertThat(freshness.expectedIntervalSeconds()).isEqualTo(interval);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"false,false,Collecte arrêtée.", "true,false,Collecte arrêtée / clôture locale requise.",
+            "true,true,Collecte arrêtée / clôture locale en cours."})
+    void runtimeObservationDoesNotReplaceDurableStateOrCreateATerminalTransition(
+            boolean cleanupPending, boolean cleanupInProgress, String label) {
+        var view = campaignForFreshness(SofascoreEndpointType.EVENT_DETAILS, "COLLECTING", List.of());
+        var at = START.plusSeconds(45);
+        var fixed = new LiveCampaignPresentation(events, data, Clock.fixed(at, ZoneOffset.UTC));
+        var durable = fixed.state(view);
+        var projected = fixed.state(view, new RuntimeStatus("STOPPED_ERROR", "LOCAL_CLEANUP_PENDING",
+                true, cleanupPending, cleanupInProgress));
+
+        assertThat(durable.runtimeStatus()).isNull();
+        assertThat(projected.state()).isEqualTo("RUNNING");
+        assertThat(projected.revision()).isEqualTo(durable.revision());
+        assertThat(projected.reason()).isEqualTo(durable.reason());
+        assertThat(projected.events()).isEqualTo(durable.events());
+        assertThat(projected.runtimeStatus().state()).isEqualTo("STOPPED_ERROR");
+        assertThat(projected.runtimeStatus().label()).isEqualTo(label);
+        assertThat(projected.runtimeStatus().collectionStopped()).isTrue();
+        assertThat(projected.runtimeStatus().cleanupPending()).isEqualTo(cleanupPending);
+        assertThat(projected.runtimeStatus().cleanupInProgress()).isEqualTo(cleanupInProgress);
+        assertThat(projected.events().getFirst().families().getFirst().freshness().frozen()).isFalse();
+        assertThat(projected.events().getFirst().families().getFirst().freshness().ageAsOf()).isEqualTo(at);
+    }
+
+    @Test
+    void interruptedCampaignFreezesAtItsPersistedRecoveryTransition() {
+        var base = campaignForFreshness(SofascoreEndpointType.EVENT_STATISTICS, "COLLECTING", List.of());
+        var interruptedAt = START.plusSeconds(125);
+        var view = new CampaignView(base.manifest(), "INTERRUPTED", "INTERRUPTED", base.startedAt(),
+                base.endsAt(), base.reservedCalls(), base.receivedBytes(), 11, null, base.events(), base.attempts(),
+                List.of(new Transition(11, null, "INTERRUPTED", "INTERRUPTED", interruptedAt, null)));
+
+        var result = new LiveCampaignPresentation(events, data, Clock.fixed(START.plusSeconds(7200), ZoneOffset.UTC))
+                .state(view).events().getFirst().families().stream()
+                .filter(f -> f.endpoint().equals("EVENT_STATISTICS")).findFirst().orElseThrow().freshness();
+
+        assertThat(result.state()).isEqualTo("FROZEN");
+        assertThat(result.ageAsOf()).isEqualTo(interruptedAt);
+        assertThat(result.receivedAgeSeconds()).isEqualTo(125);
+        assertThat(result.expectedIntervalSeconds()).isZero();
     }
 
     private static CampaignView campaignForFreshness(SofascoreEndpointType endpoint, String phase,

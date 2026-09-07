@@ -1,6 +1,6 @@
 package com.bettingproject.sofascorelocal.application.network;
 
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV15Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV16Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
@@ -103,7 +103,7 @@ class J5LocalJsonImportProcessorTest {
                 canonicalStore,
                 dataStore,
                 new EventStatisticsV2Parser(),
-                new EventIncidentsV15Parser(),
+                new EventIncidentsV16Parser(),
                 new EventLineupsV2Parser(),
                 Clock.fixed(NOW, ZoneOffset.UTC));
     }
@@ -141,7 +141,7 @@ class J5LocalJsonImportProcessorTest {
                         SofascoreEndpointType.EVENT_LINEUPS);
         assertThat(observations).hasSize(3);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV15Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV16Parser.PARSER_VERSION);
         verify(canonicalStore, times(2)).findLatestByCanonicalId(IDENTITY.value());
     }
 
@@ -161,7 +161,7 @@ class J5LocalJsonImportProcessorTest {
         assertThat(result.endpoints().get(1).completenessStatus())
                 .isEqualTo(J5CompletenessStatus.PARTIAL);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV15Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV16Parser.PARSER_VERSION);
         assertThat(observations.get(1).data()).isInstanceOfSatisfying(
                 EventIncidents.class,
                 incidents -> {
@@ -195,7 +195,7 @@ class J5LocalJsonImportProcessorTest {
         assertThat(result.endpoints().get(1).endpointType())
                 .isEqualTo(SofascoreEndpointType.EVENT_INCIDENTS);
         assertThat(observations.get(1).source().parserVersion())
-                .isEqualTo(EventIncidentsV15Parser.PARSER_VERSION);
+                .isEqualTo(EventIncidentsV16Parser.PARSER_VERSION);
         assertThat(observations.get(1).data())
                 .isInstanceOfSatisfying(
                         com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents.class,

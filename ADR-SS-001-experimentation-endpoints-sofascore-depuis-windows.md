@@ -10,8 +10,8 @@
 - **Document associé :** `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf`
 - **Décision de référence qualifiée :** document de cadrage du Betting Project v0.5.1, sections 2.3, 8.8 et 15.1
 
-**Renvoi documentaire — 7 septembre 2026 :** [ADR-SS-005 v0.2](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md),
-issue de la v0.1 formellement acceptée puis de l'évolution de capacité demandée par le propriétaire,
+**Renvoi documentaire — 7 septembre 2026 :** [ADR-SS-005 v0.3](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md),
+issue de la v0.1 formellement acceptée puis des évolutions de capacité et de compositions prématch demandées par le propriétaire,
 définit l'exception limitée aux campagnes live J4/J5 de WO-058. Sa table
 de portée précise les adaptations des §§3.4, 3.5, 3.6.1, 3.6.1.1 et du critère live du §8 ;
 toutes les autres dispositions du présent ADR restent applicables. Le lancement Playwright

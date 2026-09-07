@@ -27,6 +27,7 @@ import org.springframework.jdbc.datasource.DriverManagerDataSource;
 import org.springframework.jdbc.support.JdbcTransactionManager;
 import org.springframework.transaction.annotation.AnnotationTransactionAttributeSource;
 import org.springframework.transaction.interceptor.TransactionInterceptor;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.postgresql.PostgreSQLContainer;
@@ -120,7 +121,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void launchIsIdempotentAndManifestSelectionAndEvidenceAreImmutable() {
-        Fixture f=fixture("34"); Manifest m=f.manifest(f.seed(EVENT),100); f.store.prepare(m);
+        Fixture f=fixture("36"); Manifest m=f.manifest(f.seed(EVENT),100); f.store.prepare(m);
         Ownership own=f.acquire(m);
         assertThat(f.store.launch(m.campaignId(),m.manifestSha256(),own,T0.plusSeconds(1)).newlyLaunched()).isTrue();
         assertThat(f.store.launch(m.campaignId(),m.manifestSha256(),own,T0.plusSeconds(2)).newlyLaunched()).isFalse();
@@ -135,8 +136,139 @@ class LiveCampaignPersistenceIT {
     }
 
     @Test
+    void v35PreservesPopulatedV2EvidenceAndEnforcesV3Cadence() {
+        Fixture f=fixture("34"); Target target=f.seed(EVENT);
+        Manifest legacy=new Manifest(UUID.randomUUID(),"a".repeat(64),"live-v2",T0,T0.plusSeconds(300),
+                Duration.ofHours(4),100,100,100000000,1,List.of(target));
+        Ownership own=f.start(legacy);
+        ReservedAttempt a=f.reserve(own,target,0,SofascoreEndpointType.EVENT_DETAILS);
+        f.store.recordDispatch(own,a.attemptId(),T0.plusSeconds(10));
+        RawManualCallSnapshot raw=f.raw(EVENT,"before-v35",T0.plusSeconds(10));
+        var receipt=f.store.saveReceipt(own,a.attemptId(),raw);
+        f.store.publishResult(own,a.attemptId(),f.success(raw.receivedAt(),"before-v35"),
+                ()->f.normalize(EVENT,"before-v35",raw,receipt));
+        Map<String,List<Map<String,Object>>> before=new LinkedHashMap<>();
+        for(String table:List.of("live_campaign","live_event","live_call","live_call_dispatch","live_call_receipt",
+                "live_call_result","live_transition","provider_campaign_guard","provider_snapshot","provider_snapshot_occurrence"))
+            before.put(table,f.jdbc.queryForList("select to_jsonb(t)::text as row from "+table+" t order by to_jsonb(t)::text"));
+        assertThat(f.migrate("35").migrationsExecuted).isEqualTo(1);
+        before.forEach((table,rows)->assertThat(f.jdbc.queryForList("select to_jsonb(t)::text as row from "+table+" t order by to_jsonb(t)::text")).isEqualTo(rows));
+        assertThat(f.store.find(legacy.campaignId()).orElseThrow().manifest()).isEqualTo(legacy);
+        Manifest current=new Manifest(UUID.randomUUID(),"c".repeat(64),"live-v3",T0,T0.plusSeconds(300),
+                Duration.ofHours(4),100,100,100000000,1,List.of(target));
+        f.store.prepare(current);
+        assertThat(f.store.find(current.campaignId()).orElseThrow().manifest()).isEqualTo(current);
+        assertThatThrownBy(()->f.jdbc.update("""
+            insert into live_campaign select (jsonb_populate_record(null::live_campaign,
+                to_jsonb(c) || jsonb_build_object('campaign_id',?::text,'cycle_interval_seconds',90))).*
+            from live_campaign c where campaign_id=?
+            """,UUID.randomUUID().toString(),current.campaignId()))
+                .hasMessageContaining("live_campaign_v3_adaptive_cadence_check");
+        assertThat(f.migrate("35").migrationsExecuted).isZero();
+    }
+
+    @Test
+    void v3PrematchLineupsPersistExactCyclesAndProvenanceWhileRepeatedReceiptsRefreshTheCursor() {
+        Fixture f = fixture("36");
+        String detailsJson = """
+                {"event":{"id":%d,"startTimestamp":%d,
+                "homeTeam":{"id":11,"name":"Home"},"awayTeam":{"id":22,"name":"Away"},
+                "status":{"type":"notstarted"}}}
+                """.formatted(EVENT, T0.plusSeconds(3600).getEpochSecond());
+        Instant seedAt = T0.minusSeconds(100);
+        var seedResponse = new PlaywrightProviderResponse(seedAt, seedAt.plusMillis(100), 200,
+                "application/json", Duration.ofMillis(100), RawPayloadEvidence.capture(detailsJson.getBytes(StandardCharsets.UTF_8)));
+        var seedReceipt = f.rawStore.save(new RawManualCallSnapshot(SofascoreEndpointType.EVENT_DETAILS,
+                "EVENT_DETAILS|eventId=" + EVENT, seedAt, seedResponse.receivedAt(), 200, "application/json",
+                seedResponse.latency(), seedResponse.payload(), "event-details-v2", RawSnapshotSchemaStatus.RAW_ONLY, null));
+        var initialEvent = new ScheduledEvent(EVENT, T0.plusSeconds(3600), new ScheduledTeam(11, "Home"),
+                new ScheduledTeam(22, "Away"), new ScheduledEventStatus("notstarted", Optional.empty()), Optional.empty());
+        var seed = f.canonical.save(CanonicalEventObservation.from(initialEvent, EventSourceTrace.providerSnapshot(
+                seedReceipt.snapshotId(), seedReceipt.payloadSha256(), "event-details-v2", seedResponse.receivedAt())));
+        f.rawStore.classify(seedReceipt.snapshotId(), RawSnapshotSchemaStatus.PARSED, null);
+        Target target = new Target(CanonicalEventIdentity.sofascore(EVENT).value(), EVENT,
+                seed.observationId(), seedReceipt.snapshotId());
+        Manifest m = new Manifest(UUID.randomUUID(), "e".repeat(64), "live-v3", T0, T0.plusSeconds(300),
+                Duration.ofHours(4), 100, 100, 100_000_000L, 1, List.of(target));
+        Ownership own = f.start(m);
+        List<AttemptView> lineups = new ArrayList<>();
+        for (int cycle = 0; cycle < 4; cycle++) {
+            boolean prematch = cycle % 2 == 1;
+            SofascoreEndpointType endpoint = prematch ? SofascoreEndpointType.EVENT_LINEUPS : SofascoreEndpointType.EVENT_DETAILS;
+            String kind = prematch ? "J5_PREMATCH_LINEUPS" : cycle == 0 ? "J4_INITIAL" : "J4_WAIT";
+            Instant at = T0.plusSeconds(10 + 60L * (cycle / 2) + (prematch ? 3 : 0));
+            Instant due = cycle == 0 ? T0.plusSeconds(1) : cycle == 1 ? T0.plusSeconds(10).plusMillis(100) : at;
+            AttemptRequest request = new AttemptRequest(own, UUID.randomUUID(), target.canonicalEventId(),
+                    cycle, endpoint, kind, due, at, false);
+            ReservedAttempt attempt = f.store.reserveAttempt(request).orElseThrow();
+            assertThat(f.store.reserveAttempt(request)).contains(attempt);
+            f.store.recordDispatch(own, attempt.attemptId(), at);
+            String body = prematch ? "{\"confirmed\":false,\"home\":{\"players\":[]},\"away\":{\"players\":[]}}" : detailsJson;
+            var response = new PlaywrightProviderResponse(at, at.plusMillis(100), 200,
+                    "application/json", Duration.ofMillis(100), RawPayloadEvidence.capture(body.getBytes(StandardCharsets.UTF_8)));
+            var raw = new RawManualCallSnapshot(endpoint, endpoint.name() + "|eventId=" + EVENT, at,
+                    response.receivedAt(), 200, "application/json", Duration.ofMillis(100), response.payload(),
+                    LivePayloadNormalizer.parserVersion(endpoint), RawSnapshotSchemaStatus.RAW_ONLY, null);
+            var receipt = f.store.saveReceipt(own, attempt.attemptId(), raw);
+            assertThat(f.store.saveReceipt(own, attempt.attemptId(), raw)).isEqualTo(receipt);
+            var processed = f.processor.process(CanonicalEventIdentity.sofascore(EVENT), endpoint, response, receipt);
+            assertThat(processed.scope()).isEqualTo(LiveProcessedResponse.FailureScope.NONE);
+            var completeness = processed.completeness().orElse(null);
+            var publication = new Publication(processed.outcome().name(), processed.scope().name(), processed.code(),
+                    processed.receivedAt(), processed.parserVersion(), true, "WAITING_START", prematch ? null : "notstarted",
+                    processed.projectionJson(), processed.projectionVersion(),
+                    completeness == null ? null : completeness.status().name(), completeness == null ? null : completeness.scorePercent());
+            Result result = f.store.publishResult(own, attempt.attemptId(), publication, () -> f.processor.persistProcessed(processed));
+            CampaignView state = f.store.find(m.campaignId()).orElseThrow();
+            AttemptView persisted = state.attempts().stream().filter(a -> a.attempt().attemptId().equals(attempt.attemptId())).findFirst().orElseThrow();
+            assertThat(persisted.attempt()).isEqualTo(attempt);
+            assertThat(persisted.dispatchAuthorizedAt()).isEqualTo(at);
+            assertThat(persisted.snapshotId()).isEqualTo(receipt.snapshotId());
+            assertThat(persisted.occurrenceId()).isEqualTo(receipt.occurrenceId().orElseThrow());
+            assertThat(persisted.receivedAt()).isEqualTo(response.receivedAt());
+            assertThat(persisted.result().normalized()).isEqualTo(result.normalized());
+            assertThat(state.state()).isEqualTo("RUNNING");
+            assertThat(state.events().getFirst().state()).isEqualTo("WAITING_START");
+            assertThat(state.reservedCalls()).isEqualTo(cycle + 1);
+            assertThat(state.events().getFirst().reservedCalls()).isEqualTo(cycle + 1);
+            if (prematch) {
+                lineups.add(persisted);
+                assertThat(f.jdbc.queryForMap("""
+                        select canonical_event_id,endpoint_type,source_kind,source_reference,source_snapshot_id,
+                               source_payload_sha256,parser_version,normalized_sha256,
+                               source_received_at = ? as original_reception
+                        from j5_event_data_observation where id=?
+                        """, java.sql.Timestamp.from(T0.plusSeconds(13).plusMillis(100)), result.normalized().j5ObservationId()))
+                        .containsEntry("canonical_event_id", target.canonicalEventId()).containsEntry("endpoint_type", endpoint.name())
+                        .containsEntry("source_kind", "PROVIDER_SNAPSHOT").containsEntry("source_reference", "snapshot:" + receipt.snapshotId())
+                        .containsEntry("source_snapshot_id", receipt.snapshotId()).containsEntry("source_payload_sha256", receipt.payloadSha256())
+                        .containsEntry("parser_version", LivePayloadNormalizer.parserVersion(endpoint))
+                        .containsEntry("normalized_sha256", result.normalized().normalizedSha256()).containsEntry("original_reception", true);
+            }
+        }
+        assertThat(lineups).hasSize(2);
+        assertThat(lineups).extracting(a -> a.attempt().cycleNumber()).containsExactly(1L, 3L);
+        assertThat(lineups).extracting(a -> a.attempt().kind()).containsOnly("J5_PREMATCH_LINEUPS");
+        assertThat(lineups).allSatisfy(a -> assertThat(a.attempt().finalCycle()).isFalse());
+        assertThat(lineups.get(1).snapshotId()).isEqualTo(lineups.get(0).snapshotId());
+        assertThat(lineups.get(1).occurrenceId()).isNotEqualTo(lineups.get(0).occurrenceId());
+        assertThat(lineups.get(1).result().normalized()).isEqualTo(lineups.get(0).result().normalized());
+        CampaignView state = f.store.find(m.campaignId()).orElseThrow();
+        FamilyCursor cursor = state.events().getFirst().families().stream()
+                .filter(c -> c.endpoint() == SofascoreEndpointType.EVENT_LINEUPS).findFirst().orElseThrow();
+        assertThat(cursor.lastSuccessfulAttemptId()).isEqualTo(lineups.get(1).attempt().attemptId());
+        assertThat(cursor.lastChangedAttemptId()).isEqualTo(lineups.get(0).attempt().attemptId());
+        assertThat(cursor.lastReceivedAt()).isEqualTo(T0.plusSeconds(73).plusMillis(100));
+        assertThat(cursor.lastSuccessfulAt()).isEqualTo(cursor.lastReceivedAt());
+        assertThat(cursor.lastChangedAt()).isEqualTo(T0.plusSeconds(13).plusMillis(100));
+        assertThat(state.events().getFirst().families()).extracting(FamilyCursor::endpoint)
+                .containsExactly(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_LINEUPS);
+        assertThat(state.events().getFirst().finalComplete()).isFalse();
+    }
+
+    @Test
     void identicalReceiptsAndAToBToAReturnToTheCorrectOldObservationWithNewFreshness() {
-        Fixture f=fixture("34"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
+        Fixture f=fixture("36"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
         List<Long> snapshots=new ArrayList<>(); List<Long> occurrences=new ArrayList<>(); List<Long> observations=new ArrayList<>();
         List<UUID> attempts=new ArrayList<>();
         for(int cycle=0;cycle<4;cycle++) {
@@ -163,7 +295,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void publicationRollbackKeepsRawReceiptAndDoesNotLeakNormalizedChildrenOrSuccessfulState() {
-        Fixture f=fixture("34"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
+        Fixture f=fixture("36"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
         ReservedAttempt a=f.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS);
         f.store.recordDispatch(own,a.attemptId(),T0.plusSeconds(10));
         RawManualCallSnapshot raw=f.raw(EVENT,"rollback",T0.plusSeconds(10));
@@ -180,7 +312,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void receiptCorrelationFailureRollsBackNewRawOccurrenceAndCounter() {
-        Fixture f=fixture("34"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
+        Fixture f=fixture("36"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
         ReservedAttempt a=f.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS);
         long before=f.jdbc.queryForObject("select count(*) from provider_snapshot_occurrence",Long.class);
         // No dispatch row: FK must reject receipt, including the inner raw save in the same transaction.
@@ -191,7 +323,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void realConcurrentConnectionsCannotSpendLastOrdinaryBudgetTwice() throws Exception {
-        Fixture f=fixture("34"); Manifest m=f.manifest(f.seed(EVENT),5); Ownership own=f.start(m);
+        Fixture f=fixture("36"); Manifest m=f.manifest(f.seed(EVENT),5); Ownership own=f.start(m);
         CountDownLatch ready=new CountDownLatch(2),go=new CountDownLatch(1);
         try(var pool=Executors.newFixedThreadPool(2)) {
             var first=pool.submit(()->{ready.countDown();go.await();return f.store.reserveAttempt(f.request(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS));});
@@ -204,7 +336,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void cleanupAndOldGenerationRemainFailClosedAndOrphanRecoveryNeverRearms() {
-        Fixture f=fixture("34"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
+        Fixture f=fixture("36"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
         ReservedAttempt a=f.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS);
         f.store.recordDispatch(own,a.attemptId(),T0.plusSeconds(10));
         Owner other=new Owner(UUID.randomUUID(),1235,T0.minusSeconds(30));
@@ -229,7 +361,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void lateReceiptAfterIndividualStopPreservesEvidenceWithoutReactivatingEvent() {
-        Fixture f=fixture("34"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
+        Fixture f=fixture("36"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
         ReservedAttempt a=f.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS);
         f.store.recordDispatch(own,a.attemptId(),T0.plusSeconds(10));
         f.store.transition(own,m.targets().getFirst().canonicalEventId(),"STOPPED_OPERATOR","OPERATOR_STOP",T0.plusSeconds(10),null);
@@ -244,7 +376,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void unavailableJ5FamilyRetainsLastGoodObservationAndItsOwnReceptionDate() {
-        Fixture f=fixture("34");Manifest m=f.manifest(f.seed(EVENT),100);Ownership own=f.start(m);
+        Fixture f=fixture("36");Manifest m=f.manifest(f.seed(EVENT),100);Ownership own=f.start(m);
         ReservedAttempt first=f.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_STATISTICS);
         Instant firstAt=T0.plusSeconds(10);f.store.recordDispatch(own,first.attemptId(),firstAt);
         RawManualCallSnapshot raw=new RawManualCallSnapshot(SofascoreEndpointType.EVENT_STATISTICS,"EVENT_STATISTICS|eventId="+EVENT,
@@ -276,7 +408,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void preparationNormalizesMicrosecondsAndScheduleMetricsOnlyReviseWhenChanged() {
-        Fixture f=fixture("34");Target target=f.seed(EVENT);
+        Fixture f=fixture("36");Target target=f.seed(EVENT);
         Manifest m=new Manifest(UUID.randomUUID(),"a".repeat(64),"live-v1",T0.plusNanos(123456789),T0.plusSeconds(300),
                 Duration.ofHours(4),100,100,100_000_000L,1,List.of(target));
         assertThat(m.preparedAt().getNano()).isEqualTo(123456000);
@@ -297,7 +429,7 @@ class LiveCampaignPersistenceIT {
     @EnumSource(value = SofascoreEndpointType.class, names = {
             "EVENT_STATISTICS", "EVENT_INCIDENTS", "EVENT_LINEUPS"})
     void live404PublicationSurvivesDeduplicationAndRecoveryWithoutLosingLastGoodData(SofascoreEndpointType endpoint) {
-        Fixture f = fixture("34"); Manifest m = f.manifest(f.seed(EVENT), 100); Ownership own = f.start(m);
+        Fixture f = fixture("36"); Manifest m = f.manifest(f.seed(EVENT), 100); Ownership own = f.start(m);
         String available = switch (endpoint) {
             case EVENT_STATISTICS -> "{\"statistics\":[]}";
             case EVENT_INCIDENTS -> "{\"incidents\":[]}";
@@ -357,7 +489,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void j4UnavailablePublicationKeepsItsEventScopeInsteadOfBecomingAStorageFailure() {
-        Fixture f = fixture("34"); Manifest m = f.manifest(f.seed(EVENT), 100); Ownership own = f.start(m);
+        Fixture f = fixture("36"); Manifest m = f.manifest(f.seed(EVENT), 100); Ownership own = f.start(m);
         var attempt = f.reserve(own, m.targets().getFirst(), 0, SofascoreEndpointType.EVENT_DETAILS);
         Instant at = T0.plusSeconds(10); f.store.recordDispatch(own, attempt.attemptId(), at);
         var response = new PlaywrightProviderResponse(at, at.plusMillis(100), 404, "application/json",
@@ -379,7 +511,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void admissionProfileIsReadExactlyAndCannotChangeAfterPreparation() {
-        Fixture f=fixture("34"); Target target=f.seed(EVENT);
+        Fixture f=fixture("36"); Target target=f.seed(EVENT);
         AdmissionProfile profile=new AdmissionProfile(Duration.ofSeconds(3).plusNanos(123),Duration.ofMillis(500).plusNanos(456),"d".repeat(64));
         Manifest m=new Manifest(UUID.randomUUID(),"a".repeat(64),"live-v1",T0,T0.plusSeconds(300),
                 Duration.ofHours(4),100,100,100_000_000L,1,List.of(target),profile);
@@ -397,7 +529,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void preparationDoesNotHideRunningOrPreviouslyLaunchedEventData() {
-        Fixture f=fixture("34"); Target target=f.seed(EVENT);
+        Fixture f=fixture("36"); Target target=f.seed(EVENT);
         Manifest first=f.manifest(target,100); Ownership own=f.start(first);
         Manifest prepared=new Manifest(UUID.randomUUID(),"b".repeat(64),"live-v1",T0.plusSeconds(20),T0.plusSeconds(320),
                 Duration.ofHours(4),100,100,100_000_000L,1,List.of(target));
@@ -414,7 +546,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void projectionHashCoversTheStoredJsonbRepresentationAndRejectsAnUnrelatedHash() {
-        Fixture f=fixture("34");Manifest m=f.manifest(f.seed(EVENT),100);Ownership own=f.start(m);
+        Fixture f=fixture("36");Manifest m=f.manifest(f.seed(EVENT),100);Ownership own=f.start(m);
         ReservedAttempt a=f.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS);
         f.store.recordDispatch(own,a.attemptId(),T0.plusSeconds(10));
         RawManualCallSnapshot raw=f.raw(EVENT,"hash",T0.plusSeconds(10));
@@ -435,7 +567,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void retentionRefusesActiveProviderAndPreservesLiveReferencesAfterQualifiedTerminalPurge() throws Exception {
-        Fixture f=fixture("34");Manifest m=f.manifest(f.seed(EVENT),100);Ownership own=f.start(m);
+        Fixture f=fixture("36");Manifest m=f.manifest(f.seed(EVENT),100);Ownership own=f.start(m);
         ReservedAttempt a=f.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS);
         f.store.recordDispatch(own,a.attemptId(),T0.plusSeconds(10));
         RawManualCallSnapshot raw=f.raw(EVENT,"retention",T0.plusSeconds(10));
@@ -469,7 +601,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void restoresAllLiveEvidenceAndFreeGuardWithoutRearmingExecution() throws Exception {
-        Fixture source=fixture("34");Manifest m=source.manifest(source.seed(EVENT),100);Ownership own=source.start(m);
+        Fixture source=fixture("36");Manifest m=source.manifest(source.seed(EVENT),100);Ownership own=source.start(m);
         ReservedAttempt a=source.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS);
         source.store.recordDispatch(own,a.attemptId(),T0.plusSeconds(10));
         RawManualCallSnapshot raw=source.raw(EVENT,"restore",T0.plusSeconds(10));
@@ -493,7 +625,7 @@ class LiveCampaignPersistenceIT {
             String url=POSTGRES.getJdbcUrl().substring(0,POSTGRES.getJdbcUrl().lastIndexOf('/')+1)+restoredDatabase;
             Fixture restored=new Fixture(new DriverManagerDataSource(url,POSTGRES.getUsername(),POSTGRES.getPassword()));
             assertThat(restored.jdbc.queryForObject(sql,String.class)).isEqualTo(before);
-            assertThat(restored.migrate("34").migrationsExecuted).isZero();
+            assertThat(restored.migrate("36").migrationsExecuted).isZero();
             assertThat(restored.guard.snapshot().state()).isEqualTo("FREE");
             assertThat(restored.store.find(m.campaignId()).orElseThrow().state()).isEqualTo("COMPLETED");
             assertThat(restored.store.find(m.campaignId()).orElseThrow().attempts()).hasSize(1);
@@ -504,8 +636,81 @@ class LiveCampaignPersistenceIT {
     }
 
     @Test
+    void cleanupBarrierWaitsForAnUnresolvedLaunchCommitBeforeAcceptingPreparationEvidence() throws Exception {
+        Fixture f = fixture("36");
+        Manifest manifest = f.manifest(f.seed(EVENT), 100);
+        f.store.prepare(manifest);
+        Ownership ownership = f.acquire(manifest);
+        CountDownLatch launchWritten = new CountDownLatch(1), allowCommit = new CountDownLatch(1);
+        CountDownLatch barrierStarted = new CountDownLatch(1);
+        AtomicInteger launchBackend = new AtomicInteger(), barrierBackend = new AtomicInteger();
+
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            try {
+                var launch = pool.submit(() -> new TransactionTemplate(new JdbcTransactionManager(f.ds)).execute(status -> {
+                    launchBackend.set(f.jdbc.queryForObject("select pg_backend_pid()", Integer.class));
+                    Launch result = f.store.launch(manifest.campaignId(), manifest.manifestSha256(), ownership, T0.plusSeconds(1));
+                    launchWritten.countDown();
+                    try {
+                        if (!allowCommit.await(30, TimeUnit.SECONDS)) throw new IllegalStateException("launch commit was not released");
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                        throw new IllegalStateException("launch commit wait interrupted", interrupted);
+                    }
+                    return result;
+                }));
+                assertThat(launchWritten.await(5, TimeUnit.SECONDS)).isTrue();
+
+                // A normal MVCC read can still report PREPARED while launch owns the guard lock.
+                CampaignView stalePreparation = f.store.find(manifest.campaignId()).orElseThrow();
+                assertThat(stalePreparation.state()).isEqualTo("PREPARED");
+                assertThat(stalePreparation.ownership()).isNull();
+                assertThat(stalePreparation.startedAt()).isNull();
+                assertThat(stalePreparation.attempts()).isEmpty();
+
+                var barrier = pool.submit(() -> {
+                    new TransactionTemplate(new JdbcTransactionManager(f.ds)).executeWithoutResult(status -> {
+                        barrierBackend.set(f.jdbc.queryForObject("select pg_backend_pid()", Integer.class));
+                        barrierStarted.countDown();
+                        f.guard.requireCleanup(ownership, T0.plusSeconds(2));
+                    });
+                    return f.store.find(manifest.campaignId()).orElseThrow();
+                });
+                assertThat(barrierStarted.await(5, TimeUnit.SECONDS)).isTrue();
+                boolean blockedByLaunch = false;
+                long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(5);
+                while (!blockedByLaunch && System.nanoTime() < deadline) {
+                    blockedByLaunch = Boolean.TRUE.equals(f.jdbc.queryForObject(
+                            "select ? = any(pg_blocking_pids(?))", Boolean.class, launchBackend.get(), barrierBackend.get()));
+                    if (!blockedByLaunch) Thread.sleep(10);
+                }
+                assertThat(blockedByLaunch).as("cleanup must wait on the unresolved launch transaction").isTrue();
+                assertThat(barrier.isDone()).isFalse();
+
+                allowCommit.countDown();
+                assertThat(launch.get(5, TimeUnit.SECONDS).newlyLaunched()).isTrue();
+                CampaignView committedLaunch = barrier.get(5, TimeUnit.SECONDS);
+                assertThat(committedLaunch.state()).isEqualTo("RUNNING");
+                assertThat(committedLaunch.ownership()).isEqualTo(ownership);
+                assertThat(committedLaunch.startedAt()).isEqualTo(T0.plusSeconds(1));
+                assertThat(committedLaunch.events()).singleElement().satisfies(event -> {
+                    assertThat(event.state()).isEqualTo("INITIAL_CHECK");
+                    assertThat(event.nextDueAt()).isEqualTo(T0.plusSeconds(1));
+                });
+                assertThat(f.guard.snapshot().state()).isEqualTo("CLEANUP_REQUIRED");
+                assertThat(f.guard.isOwned(ownership)).isFalse();
+                assertThatThrownBy(() -> f.reserve(ownership, manifest.targets().getFirst(), 0, SofascoreEndpointType.EVENT_DETAILS))
+                        .hasMessageContaining("ownership is stale or closed");
+                assertThat(f.store.find(manifest.campaignId()).orElseThrow().reservedCalls()).isZero();
+            } finally {
+                allowCommit.countDown();
+            }
+        }
+    }
+
+    @Test
     void concurrentProviderOwnersCannotAcquireTheSameDurableGuard() throws Exception {
-        Fixture f=fixture("34");CountDownLatch ready=new CountDownLatch(2),go=new CountDownLatch(1);
+        Fixture f=fixture("36");CountDownLatch ready=new CountDownLatch(2),go=new CountDownLatch(1);
         try(var pool=Executors.newFixedThreadPool(2)) {
             var first=pool.submit(()->{ready.countDown();go.await();return f.guard.tryAcquire(UUID.randomUUID(),new Owner(UUID.randomUUID(),1234,T0),T0);});
             var second=pool.submit(()->{ready.countDown();go.await();return f.guard.tryAcquire(UUID.randomUUID(),new Owner(UUID.randomUUID(),1235,T0),T0);});

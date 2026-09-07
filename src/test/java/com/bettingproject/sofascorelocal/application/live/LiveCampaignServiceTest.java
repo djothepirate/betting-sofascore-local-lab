@@ -27,6 +27,8 @@ import com.bettingproject.sofascorelocal.port.LiveCampaignStore;
 import com.bettingproject.sofascorelocal.port.ProviderCampaignGuardStore;
 import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -577,6 +579,39 @@ class LiveCampaignServiceTest {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"live-v1", "live-v2", "live-v3"})
+    void launchRespectsThePreparedPolicyForPrematchLineupsAndPersistsUnavailableEvidence(String policy) throws Exception {
+        try (Harness h = new Harness(false, policy)) {
+            AtomicInteger details = new AtomicInteger(), lineups = new AtomicInteger();
+            h.reply = request -> {
+                if (request.endpoint() == EVENT_DETAILS) {
+                    if (details.incrementAndGet() == 2 && !"live-v3".equals(policy))
+                        h.service.stop(h.manifest.campaignId(), null);
+                    return response("""
+                            {"event":{"id":%d,"startTimestamp":1788796800,
+                            "homeTeam":{"id":1,"name":"Home"},"awayTeam":{"id":2,"name":"Away"},
+                            "status":{"type":"notstarted"}}}
+                            """.formatted(request.eventId()), 200);
+                }
+                assertThat(request.endpoint()).isEqualTo(EVENT_LINEUPS);
+                if (lineups.incrementAndGet() == 2) h.service.stop(h.manifest.campaignId(), null);
+                return response("unavailable", 404);
+            };
+            h.launch();
+            h.awaitFinished();
+            assertThat(details).hasValue(2);
+            assertThat(lineups).hasValue("live-v3".equals(policy) ? 2 : 0);
+            assertThat(h.dispatched).noneSatisfy(request ->
+                    assertThat(request.endpoint()).isIn(EVENT_STATISTICS, EVENT_INCIDENTS));
+            assertThat(h.receipts).hasSize("live-v3".equals(policy) ? 4 : 2);
+            assertThat(h.publications.stream().filter(p -> "HTTP_404".equals(p.code())).count())
+                    .isEqualTo("live-v3".equals(policy) ? 2 : 0);
+            assertThat(h.eventStates.values()).containsOnly("STOPPED_OPERATOR");
+            verify(h.factory, times(1)).open(h.manifest.campaignId(), LiveProviderSession.ENDPOINTS);
+        }
+    }
+
     private static UUID id(long providerId) { return CanonicalEventIdentity.sofascore(providerId).value(); }
 
     private static CanonicalEventObservationView observation(long providerId, EventSourceTrace source) {
@@ -650,13 +685,16 @@ class LiveCampaignServiceTest {
 
         Harness() { this(false); }
         Harness(boolean expired) {
+            this(expired, "live-v1");
+        }
+        Harness(boolean expired, String policy) {
             Instant now = Instant.now().minusSeconds(expired ? 600 : 0);
             properties.setEnabled(true);
             properties.setDuration(Duration.ofMinutes(5));
             properties.setQualifiedMatchCapacity(2);
             properties.setRequestEnvelope(Duration.ofSeconds(3));
             properties.setQualificationSha256("a".repeat(64));
-            manifest = new Manifest(UUID.randomUUID(), "a".repeat(64), "live-v1", now, now.plusSeconds(300),
+            manifest = new Manifest(UUID.randomUUID(), "a".repeat(64), policy, now, now.plusSeconds(300),
                     Duration.ofMinutes(5), 1000, 3000, 20_000_000, 2,
                     List.of(new Target(id(A), A, 1, 1), new Target(id(B), B, 2, 2)),
                     new AdmissionProfile(properties.getRequestEnvelope(), properties.getProcessingEnvelope(),

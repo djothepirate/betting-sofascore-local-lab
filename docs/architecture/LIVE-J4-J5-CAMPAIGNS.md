@@ -1,7 +1,7 @@
 # Campagnes live locales J4/J5 — architecture WO-058
 
 Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
-Décision applicable : [ADR-SS-005 v0.2](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), évolution propriétaire du plafond et de la cadence.
+Décision applicable : [ADR-SS-005 v0.3](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), capacité adaptative et compositions avant le début.
 Réalisation : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md).
 
 ## Session et autorité
@@ -54,7 +54,13 @@ du runtime ; il ne reprend jamais les tâches perdues.
 90 s pour quatre, 120 s pour cinq, 270 s pour dix et 720 s pour vingt-cinq. Le plafond configuré
 est indépendant de D ; une valeur positive supérieure à trois n'invalide plus la configuration.
 L'entrée reste bornée à 100 identifiants. J4 vérifie le statut au départ puis à l'intervalle D
-en attente. En jeu, chaque triplet J5 reste contigu dans l'ordre statistiques, incidents,
+en attente. Les nouvelles préparations `live-v3` ajoutent après J4 `notstarted` une tâche
+`J5_PREMATCH_LINEUPS`, initiale puis périodique à D. Les statistiques et incidents attendent
+le début. Un HTTP 404 conserve son indisponibilité jusqu'à la prochaine échéance ordinaire.
+Le passage J4 à `inprogress` ou `finished` supprime la tâche prématch et aligne le premier
+triplet sur l'éligibilité de ses trois familles. Une LINEUPS récente peut imposer jusqu'à D
+d'attente avant éligibilité, sans réserver le transport ; la file commune peut ajouter du retard.
+Les politiques `live-v1`/`live-v2` ne changent pas. En jeu, chaque triplet J5 reste contigu dans l'ordre statistiques, incidents,
 compositions. Les départs d'une même famille sont espacés d'au moins D. Les signaux de phase
 sont produits par les normaliseurs ; le scheduler ne lit pas de JSON. Un signal de première
 période entraîne un contrôle ponctuel, un signal de fin potentielle arme J4 à l'intervalle D,
@@ -113,6 +119,31 @@ Au redémarrage, seule l'absence prouvée du processus propriétaire (PID et dat
 permet de marquer une campagne orpheline interrompue. Une identité inaccessible n'est pas une preuve.
 Le garde devient alors `CLEANUP_REQUIRED` ; aucune expiration ne le libère automatiquement.
 
+Une défaillance SQL pendant l'arrêt ne devient pas un succès en mémoire. L'observation runtime
+est exposée séparément de l'état durable et de sa révision : collecte arrêtée, clôture requise
+ou clôture en cours. L'écran accepte une évolution de cette observation à révision SQL égale,
+mais refuse un état durable plus ancien. Les transitions ne sont mises en cache qu'après leur
+persistance réussie. Les commandes d'arrêt individuelles sont retirées quand la collecte cesse.
+
+Le thread propriétaire conserve le lease en cas d'échec et attend une commande explicite de
+clôture. Cette commande ne rouvre aucun contexte et ne relance aucun GET. Elle vérifie l'absence
+du superviseur, relit l'ownership durable, conserve les réceptions et publie un résultat
+`UNKNOWN / LOCAL_CLEANUP_UNRESOLVED` pour chaque seule tentative restée sans résultat, puis les
+états terminaux. Le lease est libéré en dernier. Les demandes concurrentes sont fusionnées ;
+il n'y a ni minuterie de réessai SQL ni transfert du verrou à un autre thread.
+
+Si la libération SQL a été validée mais sa réponse perdue, une clôture explicite ultérieure
+n'accepte un garde `FREE` que dans la même génération, avec tous les champs propriétaires vidés
+et aucun superviseur actif. Un garde illisible ou une génération différente conserve le blocage.
+Cette vérification locale ne constitue pas une libération générique de garde orphelin après crash.
+
+Avant la première réconciliation, `requireCleanup` prend le verrou SQL du garde également
+utilisé par le lancement et contrôle propriétaire et génération. La lecture suivante distingue
+ainsi un lancement validé dont la réponse a été perdue d'une préparation jamais lancée ; elle
+ne peut pas utiliser une ancienne vue PREPARED pendant qu'un commit de lancement est en vol.
+Si cette barrière échoue, la clôture reste en attente. Elle n'est pas répétée après réconciliation
+réussie, pour permettre la vérification d'une libération déjà validée dont la réponse a été perdue.
+
 ## Transactions et provenance
 
 La migration additive V33 crée sept tables `live_*` et `provider_campaign_guard`, distinctes
@@ -124,6 +155,14 @@ V34 est append-only : le plafond devient un entier positif, l'ordre des cibles a
 100 entrées, et `cycle_interval_seconds` est protégé par le trigger d'immutabilité du manifeste.
 Les anciennes lignes reçoivent le défaut 60 sans réécriture de leur SHA ni des autres colonnes.
 Un manifeste `live-v2` doit porter exactement D calculé sur ses cibles. D entre dans son SHA.
+V35 ajoute la même contrainte pour `live-v3`, sans transformer les lignes antérieures.
+La version de politique entre dans l'empreinte ; les nouveaux manifestes ne modifient pas
+les campagnes déjà préparées ou lancées. Le replay conserve `live-v2` par défaut et accepte
+explicitement `live-v3` pour qualifier la nouvelle séquence.
+V36 ajoute le parseur `event-incidents-v16` à la contrainte J5 : la variante
+`inGamePenalty/awarded` conserve son sens d'attribution et n'invente pas un résultat de tir.
+Les versions et observations antérieures restent intactes ; le snapshot 2340 est seulement
+rejoué hors persistance pour la [preuve de correction](../validation/WO058-INCIDENT-AWARDED-20260907.md).
 Le lancement conserve D même si certaines cibles sont devenues `finished` ; l'admission vérifie
 la charge restante sur cet intervalle consenti, sans accélérer la campagne en cours.
 
@@ -170,8 +209,20 @@ synthétique reste désactivée indépendamment des états de campagne.
 Les DTO excluent payloads et identité de processus. Le retard affiché est celui de l'autorisation
 transport, explicitement distinct d'une mesure on-wire. Les familles deviennent en retard après
 deux intervalles sans succès : J4 utilise D en attente/contrôle de fin et `max(300 s, D)` en jeu ;
-J5 utilise D en jeu. D est lu dans le manifeste historique, pas dans la configuration courante.
+J5 utilise D en jeu ; LINEUPS utilise aussi D en attente de début pour `live-v3` seulement.
+D est lu dans le manifeste historique, pas dans la configuration courante.
 La fin du suivi fige leur âge à la transition terminale persistée.
+Le libellé sportif affiche la description J4 pour `inprogress`, avec repli sur le type si elle
+manque. Type, score, description et provenance restent associés à la même observation de campagne.
+Une observation manuelle plus récente ne remplace pas silencieusement cette preuve.
+
+La fraîcheur d'exploitation ci-dessus mesure la santé de collecte. Elle ne qualifie pas la
+fraîcheur métier d'un benchmark. L'outil offline `scripts/Analyze-LiveTemporalEvidence.py`
+recalcule à un instant T l'âge réel de chaque couple match/famille, les réceptions identiques
+consécutives et les dispersions temporelles. Il distingue les quatre familles d'une comparaison
+dynamique J4/statistiques/incidents et laisse les classes `UNCLASSIFIED`. Les résultats résolus
+après T restent exclus. Le changement sémantique reprend la clé du curseur (hash normalisé,
+version et contenu de projection) ; le changement brut ne suffit pas à lui seul.
 La CSP autorise `script-src 'self'` sur les pages live. Les lectures héritent de la restriction
 `default-src 'self'` commune au site ; aucune directive `connect-src` explicite n'est déclarée.
 Les scripts inline et l'évaluation dynamique restent interdits.

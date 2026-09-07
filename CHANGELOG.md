@@ -4,6 +4,24 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — compositions prématch, phases et reprise après incident local
+
+- Corrige le rejet du penalty accordé `inGamePenalty/awarded` : parseur incidents V16 et migration
+  V36, sans confusion avec un tir raté ou un but. Le snapshot historique 2340 reste inchangé.
+- Ajoute la politique `live-v3` : J4 confirme `notstarted`, puis LINEUPS initial et périodique
+  à l'intervalle du manifeste. Statistiques et incidents commencent après J4 `inprogress`.
+  Le premier triplet respecte l'éligibilité de toutes ses familles ; les politiques v1/v2 restent figées.
+- Affiche la description J4 de la phase en cours, issue de la même observation que le statut sportif.
+- Ajoute V35 et aligne les gardes J6 ; les preuves et sauvegardes historiques V34 restent distinctes.
+- Sépare l'arrêt local de collecte et l'état durable lors d'une panne de stockage ; la clôture locale
+  peut être redemandée explicitement, sans nouveau GET fournisseur ni reprise automatique.
+- Fournit une extraction de métadonnées et un analyseur temporel offline, avec âges réels,
+  réceptions identiques, dernier changement et dispersion par match/famille, sans seuil métier arbitraire.
+- Propose un aperçu HTML des statistiques par période, avec possession et fractions ; les périodes
+  et fractions illustratives sont identifiées comme synthétiques. Intégration applicative à venir.
+- Documente la coupure liée au redémarrage Docker, la correction ponctuelle du verrou orphelin et
+  le nouveau lancement opérateur à sept : [preuves et limites](docs/validation/WO058-PREMATCH-TEMPORAL-20260907.md).
+
 ### WO-058 — plafond paramétrable et cadence par sélection
 
 - Corrige `LIVE_POLICY_INVALID` quand le plafond de rencontres est supérieur à trois.

@@ -32,7 +32,7 @@
     - card : définit l'attribution d'un carton dans la rencontre ;
     - injuryTime : définit le temps additionnel ;
     - varDecision : définit une décision arbitrale prise avec l'aide de la VAR ;
-    - inGamePenalty : définit un penalty tiré sans qu'il soit marqué ;
+    - inGamePenalty : définit un penalty accordé (`awarded`, parseur V16) ou tiré sans être marqué (`missed`) ;
     - penaltyShootout : définit un tir au but (cas particulier d'un match se terminant sur une séance de tirs au but) ;
 
 ## 3. Période (period)
@@ -1721,7 +1721,35 @@ Ci-dessous les valeurs à afficher impérativement pour les incidents de type D�
 - incidentClass (colonne CLASSE, conditionné par la valeur de confirmed) ;
 - confirmed (colonne DÉTAIL).
 
-## 9. Penalty tiré sans qu'il soit marqué (inGamePenalty)
+## 9. Penalty en cours de match (inGamePenalty)
+
+### 9.0 Attribution observée — classe awarded (V16)
+
+WO-058 ajoute la variante exacte `incidentType="inGamePenalty"` et
+`incidentClass="awarded"`, observée dans le snapshot 2340 de CE Sabadell — Córdoba
+(événement 16418278, reçu le 7 septembre 2026 à 22:26:03.170 Europe/Paris).
+Les sections 9.1 à 9.3 suivantes décrivent la classe historique `missed`.
+
+Exemple minimal synthétique reproduisant la forme qui a déclenché le rejet V15 :
+
+```json
+{"incidents":[{"incidentType":"inGamePenalty","incidentClass":"awarded",
+  "time":83,"isHome":true,"confirmed":true}]}
+```
+
+`awarded` représente l'attribution du penalty. Le parseur conserve ce type et cette classe,
+la minute et le côté ; il ne fabrique ni but, ni score, ni résultat de tir. Cette classe n'est
+admise pour aucun autre type, notamment pas `penaltyShootout`. La minute reste obligatoire.
+Le tireur, `reason` et `description` de résultat ne sont pas requis pour mesurer la complétude
+de cette simple attribution. Si un joueur est fourni, son bloc reste validé et conservé.
+Le côté absent reste une donnée manquante mesurée ; il n'est jamais converti en domicile.
+
+Une raison ou description de tir raté contredit `awarded` et reste incompatible. Les classes
+inconnues, champs structurels invalides, couples de scores incomplets et règles historiques
+de tirs au but restent refusés. La classe `missed` conserve sa propre mesure de complétude.
+Les structures auxiliaires `penaltyHistory` et `goalkeeperPenaltyHistory`, ainsi que le champ
+`confirmed` de cette attribution, restent dans le brut ; aucune sémantique VAR n'est déduite
+de ce dernier. Le résultat V15 historique n'est pas réécrit.
 
 ### 9.1 Structure JSON d'un penalty tiré sans qu'il soit marqué
 

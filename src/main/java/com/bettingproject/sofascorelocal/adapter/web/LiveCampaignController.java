@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.live.LiveCampaignService;
+import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.CampaignView;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.dao.DataAccessException;
@@ -15,7 +16,7 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
-/** POSTs control the manually launched session. All GETs only read local persisted evidence. */
+/** POSTs control the manually launched session. GETs read local evidence and process observations only. */
 @Controller
 public class LiveCampaignController {
     private final LiveCampaignService campaigns;
@@ -48,7 +49,7 @@ public class LiveCampaignController {
     public String view(@PathVariable UUID campaignId, HttpSession session, Model model) {
         var campaign = campaigns.state(campaignId);
         if (campaign == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        model.addAttribute("campaign", presentation.state(campaign));
+        model.addAttribute("campaign", present(campaign));
         model.addAttribute("manifest", campaign.manifest());
         model.addAttribute("localFormToken", tokens.issue(session));
         return "live-campaign";
@@ -90,7 +91,7 @@ public class LiveCampaignController {
     public LiveCampaignPresentation.Campaign state(@PathVariable UUID campaignId) {
         var campaign = campaigns.state(campaignId);
         if (campaign == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        return presentation.state(campaign);
+        return present(campaign);
     }
 
     @GetMapping("/events/state")
@@ -100,13 +101,17 @@ public class LiveCampaignController {
         if (eventIds == null || eventIds.isEmpty()) return List.of();
         if (eventIds.size() > 100 || eventIds.stream().distinct().count() != eventIds.size())
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_LIVE_SELECTION");
-        return campaigns.eventStates(eventIds).stream().map(presentation::state).toList();
+        return campaigns.eventStates(eventIds).stream().map(this::present).toList();
     }
 
     @GetMapping("/events/{canonicalEventId}/state")
     @ResponseBody
     public List<LiveCampaignPresentation.Campaign> eventState(@PathVariable UUID canonicalEventId) {
-        return campaigns.eventStates(List.of(canonicalEventId)).stream().map(presentation::state).toList();
+        return campaigns.eventStates(List.of(canonicalEventId)).stream().map(this::present).toList();
+    }
+
+    private LiveCampaignPresentation.Campaign present(CampaignView campaign) {
+        return presentation.state(campaign, campaigns.runtimeStatus(campaign.manifest().campaignId()).orElse(null));
     }
 
     @ExceptionHandler(IllegalArgumentException.class)
@@ -141,7 +146,8 @@ public class LiveCampaignController {
     @ResponseStatus(HttpStatus.CONFLICT)
     public String rejected(IllegalStateException exception, Model model) {
         String code = switch (String.valueOf(exception.getMessage())) {
-            case "LIVE_DISABLED", "LIVE_PROVIDER_BUSY", "LIVE_EVENT_ALREADY_IN_CAMPAIGN", "LIVE_STORAGE_PROBE_NOT_CONFIGURED",
+            case "LIVE_DISABLED", "LIVE_PROVIDER_BUSY", "LIVE_PROVIDER_CLEANUP_REQUIRED", "LIVE_LAUNCH_FAILED",
+                 "LIVE_EVENT_ALREADY_IN_CAMPAIGN", "LIVE_STORAGE_PROBE_NOT_CONFIGURED",
                  "LIVE_STORAGE_PROBE_TIMEOUT", "LIVE_STORAGE_PROBE_FAILED", "LIVE_STORAGE_PROBE_INVALID",
                  "LIVE_STORAGE_PROBE_INTERRUPTED", "LIVE_STORAGE_CAPACITY_REFUSED", "LIVE_POLICY_INVALID",
                  "LIVE_CAPACITY_QUALIFICATION_REQUIRED", "LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY" -> exception.getMessage();
@@ -158,6 +164,8 @@ public class LiveCampaignController {
             case "LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY" -> "Le délai maximal d’une requête live doit être compris entre zéro exclu et dix secondes. Corriger le délai Playwright avant le lancement.";
             case "LIVE_DISABLED" -> "Le lancement live est désactivé. Activer l’opt-in local dédié avant de lancer une campagne préparée.";
             case "LIVE_PROVIDER_BUSY" -> "Une collecte fournisseur occupe déjà la session locale. Attendre sa fin avant de lancer cette campagne.";
+            case "LIVE_PROVIDER_CLEANUP_REQUIRED" -> "La session fournisseur précédente reste verrouillée en attente de clôture locale. Finaliser sa clôture depuis sa campagne si cette action est disponible ; après un redémarrage, faire vérifier le verrou local et l’absence de collecte active avant sa régularisation. Ce lancement n’a pas démarré de nouvelle collecte.";
+            case "LIVE_LAUNCH_FAILED" -> "Le lancement de la campagne a échoué. Consulter son état local et finaliser sa clôture si elle est requise avant de préparer un nouveau lancement.";
             case "LIVE_EVENT_ALREADY_IN_CAMPAIGN" -> "Une rencontre sélectionnée appartient déjà à une campagne en cours. Suivre cette campagne ou retirer la rencontre de la sélection. Une rencontre en STOPPED_ERROR peut être sélectionnée à nouveau.";
             default -> "La demande locale a été refusée. Revenir aux rencontres et préparer à nouveau la sélection ; si le refus persiste, conserver ce code pour le diagnostic.";
         };

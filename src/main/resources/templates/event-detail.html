@@ -47,7 +47,7 @@
             <span th:text="${detail.current.event.awayTeam.name}">Away</span>
           </h2>
         </div>
-        <span class="chip chip-safe" data-live-sport-status th:text="${detail.current.event.status.type}">notstarted</span>
+        <span class="chip chip-safe" data-live-sport-status th:text="${detail.current.event.status.type == 'inprogress' ? detail.current.event.status.description.orElse(detail.current.event.status.type) : detail.current.event.status.type}">notstarted</span>
       </div>
       <dl class="detail-grid">
         <div><dt>UUID local</dt><dd class="mono" th:text="${detail.current.event.identity.value}">UUID</dd></div>
@@ -79,9 +79,10 @@
     <section class="panel" aria-labelledby="live-event-title">
       <p class="label">Observations de la dernière campagne live</p><h2 id="live-event-title">Suivi dynamique local</h2>
       <p data-live-refresh-status role="status" aria-live="polite">Recherche des observations locales, puis lecture toutes les cinq secondes.</p>
+      <p class="notice notice-warning" data-live-runtime-status role="status" hidden></p>
       <dl class="detail-grid">
         <div><dt>Score courant J4</dt><dd data-live-score>—</dd></div>
-        <div><dt>État de collecte</dt><dd data-live-event-state>—</dd></div>
+        <div><dt>État de collecte enregistré</dt><dd data-live-event-state>—</dd></div>
         <div><dt>Motif</dt><dd data-live-event-reason>—</dd></div>
         <div><dt>Prochaine échéance (UTC)</dt><dd data-live-next-due>—</dd></div>
         <div><dt>Cycles manqués</dt><dd data-live-missed-cycles>—</dd></div>
@@ -148,7 +149,7 @@
             <td class="mono" th:text="${item.event.source.receivedAt}">instant</td>
             <td class="mono" th:text="${item.startsAtInZone}">date</td>
             <td th:text="${item.event.homeTeam.name + ' — ' + item.event.awayTeam.name}">match</td>
-            <td th:text="${item.event.status.type}">status</td>
+            <td th:text="${item.event.status.type == 'inprogress' ? item.event.status.description.orElse(item.event.status.type) : item.event.status.type}">status</td>
             <td class="mono" th:text="${item.event.source.sourceReference()}">source</td>
             <td class="mono" th:text="${item.event.source.parserVersion}">parser</td>
             <td class="mono hash-value" th:text="${item.event.source.payloadSha256}">hash</td>

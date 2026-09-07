@@ -32,15 +32,22 @@ un script de réponses épuisé. Aucun replay ne lance Playwright ni ne modifie 
 
 ## Préparer l'application de l'opérateur
 
-L'application de V34 à la base utilisée par l'opérateur est une opération distincte de ces tests.
+L'application de V35/V36 à la base utilisée par l'opérateur est une opération distincte de ces tests.
 Préparer d'abord la sauvegarde, les empreintes et la restauration isolée selon
 [J6](J6-BACKUP-RESTORE-AND-RETENTION.md), avec le conteneur et la base exacts. Ne pas faire pointer
 une simple validation Spring/Flyway vers la base de l'opérateur pour obtenir un test vert.
 
-Pour une base opérateur en V33, utiliser pour la sauvegarde préalable l'outillage J6 et ses
+Pour une base opérateur en V34, utiliser pour la sauvegarde préalable l'outillage J6 et ses
+dépendances du commit `e98f7a74e39a1c57e601efb3d346ae55829fce73`, dans un checkout distinct.
+Valider une restauration isolée V34 avant l'upgrade ; utiliser ensuite les outils courants V36
+pour la nouvelle preuve. V35 ajoute la contrainte de cadence `live-v3` sans réécrire les anciens
+manifestes ; V36 autorise le parseur incidents V16 (`inGamePenalty/awarded`). Les essais ci-dessous
+n'ont pas appliqué ces migrations à la base de l'opérateur.
+
+Procédure historique V33 vers V34 : utiliser pour la sauvegarde préalable l'outillage J6 et ses
 dépendances figés au commit `a7f544cc2f70db2066836107d1e7a21c4feccb4c`, dans un checkout distinct,
 avec manifeste et cible exacts préparés pour cette opération. Vérifier cette sauvegarde par
-restauration isolée V33 avant d'appliquer V34. Après migration, utiliser l'outillage J6 courant
+restauration isolée V33 avant d'appliquer V34. Après migration, utiliser l'outillage J6 historique
 V34 pour la nouvelle preuve. V34 élargit le plafond et ajoute la cadence ; les anciens manifestes
 gardent leurs SHA et 60 s. Ne pas modifier la version Flyway déclarée ni mélanger les scripts
 V33/V34 pour franchir leur garde. Ces opérations sur la base opérateur n'ont pas été exécutées
@@ -238,8 +245,14 @@ opt-ins restent requis pour lancer les rencontres éligibles. Utiliser une même
    son éventuel GET engagé ; l'arrêt global annule le transport partagé. Attendre la preuve de
    nettoyage avant un nouveau lancement.
 
-J4 est interrogé dès le lancement puis à l'intervalle D du manifeste tant que `notstarted`. J5 commence après
-`inprogress`. Les incidents déclenchent des contrôles, jamais une conclusion sportive.
+J4 est interrogé dès le lancement puis à l'intervalle D du manifeste tant que `notstarted`.
+Les nouvelles préparations `live-v3` collectent alors LINEUPS seul : une première réception dès
+la place admissible, puis un rafraîchissement à D jusqu'au début constaté. Statistiques et incidents
+commencent après J4 `inprogress`. Le premier triplet peut attendre l'éligibilité d'une LINEUPS
+récente (jusqu'à D, puis attente de service), afin de respecter l'espacement de cette famille.
+Les préparations historiques `live-v1`/`live-v2` restent J4 seules avant le début. Un redémarrage
+ne convertit pas leur politique ; préparer un nouveau manifeste pour utiliser `live-v3`.
+Les incidents déclenchent des contrôles, jamais une conclusion sportive.
 Le secours J4 intervient après `max(300 s, D)` sans J4 réussi ; seule sa réponse `finished` confirme
 la fin. Un dernier triplet J5 peut rester incomplet si la fenêtre, le budget ou l'indisponibilité
 d'une famille l'empêche. Un 404 J5 est rééchantillonné au cycle normal suivant.
@@ -266,11 +279,35 @@ Un schéma métier incompatible admissible arrête le seul match. Un refus HTTP 
 contenu inattendu, défaut d'identité, exception interne ou erreur de stockage arrête globalement.
 La dernière donnée acquise reste visible avec sa date ; aucune erreur n'est transformée en zéro.
 
+Avec le correctif de clôture, si PostgreSQL devient indisponible alors que le processus applicatif
+reste vivant, la page indique séparément que la collecte a cessé et que sa clôture reste à
+enregistrer. Après rétablissement de PostgreSQL, utiliser **« Finaliser la clôture locale »**.
+Cette commande ferme et vérifie les ressources, résout les seules tentatives sans résultat,
+enregistre les états terminaux et libère le garde ; elle n'effectue aucun appel fournisseur.
+Le bouton est désactivé pendant cette opération. Un nouvel échec laisse la clôture disponible
+pour une autre commande explicite ; aucun réessai périodique n'est déclenché.
+
+Une fois la clôture confirmée, revenir aux rencontres, préparer les cibles encore éligibles et
+confirmer un nouveau lancement. Un redémarrage entre-temps relève du cas d'orphelin ci-dessous :
+le nouveau processus ne possède pas le lease de l'ancien et ne peut pas utiliser cette clôture
+runtime. Les codes `LIVE_PROVIDER_CLEANUP_REQUIRED` et `LIVE_LAUNCH_FAILED` distinguent le garde
+à vérifier d'un autre échec local de lancement, sans exposer le texte arbitraire des exceptions.
+
 Après crash ou nettoyage incertain, `CLEANUP_REQUIRED` conserve l'exclusion fournisseur. Aucun
 délai, redémarrage ou nouvelle préparation ne la lève. Consulter les preuves de campagne et faire
 vérifier l'identité et la disparition de l'arbre de processus avant toute intervention locale
 sur ce garde. Ce lot ne fournit pas de bouton de libération aveugle ; aucun GET n'est rejoué.
 Un processus propriétaire encore actif ou d'identité inaccessible demeure protégé.
+
+Une mise à jour de Docker Desktop peut interrompre PostgreSQL et donc arrêter la collecte
+avant que son état terminal puisse être enregistré. Le retour de PostgreSQL ne relance aucun
+appel fournisseur. Le redémarrage du 7 septembre a marqué `INTERRUPTED / OWNER_PROCESS_ABSENT`,
+mais a conservé le garde `CLEANUP_REQUIRED` : les sept matchs étaient préparables, leur lancement
+restait refusé. La libération ponctuelle de ce garde a nécessité une preuve locale de disparition
+du propriétaire et des composants Playwright, puis une transaction sur son identité/génération
+exactes. Ce contrôle ne doit jamais être remplacé par une remise à zéro inconditionnelle.
+Le [rapport de l'incident](../validation/WO058-PREMATCH-TEMPORAL-20260907.md) conserve avant/après
+et le lancement opérateur qui a suivi ; aucune campagne historique n'a été reprise ou réécrite.
 
 `LIVE_RAW_PREVIOUSLY_PURGED` signifie qu'une réception identique rencontre une ancienne preuve
 dont J6 a purgé le corps. La réception nouvelle est annulée atomiquement ; la campagne s'arrête

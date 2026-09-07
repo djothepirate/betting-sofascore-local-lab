@@ -32,10 +32,12 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 import java.util.stream.IntStream;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -162,6 +164,7 @@ class LiveCampaignControllerTest {
                 .andExpect(header().string("Cache-Control", containsString("no-store")))
                 .andExpect(header().string("Content-Security-Policy", containsString("script-src 'self'")));
         verify(service).state(CAMPAIGN_ID);
+        verify(service).runtimeStatus(CAMPAIGN_ID);
         verifyNoMoreInteractions(service);
     }
 
@@ -259,17 +262,91 @@ class LiveCampaignControllerTest {
                 .andExpect(jsonPath("$.manifest").doesNotExist())
                 .andExpect(header().string("Cache-Control", containsString("no-store")));
         verify(service).state(CAMPAIGN_ID);
+        verify(service).runtimeStatus(CAMPAIGN_ID);
         verifyNoMoreInteractions(service);
+    }
+
+    @Test
+    void periodDescriptionIsEscapedInHtmlAndSeparateFromTheTechnicalStateInJson() throws Exception {
+        when(service.state(CAMPAIGN_ID)).thenReturn(campaign("RUNNING", 42));
+        when(events.findByObservationId(EVENT_ID, 1)).thenReturn(Optional.of(
+                new CanonicalEventObservationView(1, CanonicalEventIdentity.sofascore(900001L), NOW,
+                        new ScheduledTeam(1, "Home"), new ScheduledTeam(2, "Away"),
+                        new ScheduledEventStatus("inprogress", Optional.of("<b>Halftime</b>")), Optional.empty(),
+                        EventSourceTrace.providerSnapshot(1, HASH, "event-details-v2", NOW), HASH, 1)));
+
+        mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("&lt;b&gt;Halftime&lt;/b&gt;")))
+                .andExpect(content().string(not(containsString("<b>Halftime</b>"))));
+        mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID + "/state").header("Host", HOST))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.events[0].sportStatus").value("inprogress"))
+                .andExpect(jsonPath("$.events[0].sportStatusLabel").value("<b>Halftime</b>"));
+        verify(service, never()).launch(any(), any());
     }
 
     @Test
     void eventRoutesReadOnlyTheRequestedIdentities() throws Exception {
         when(service.eventStates(List.of(EVENT_ID))).thenReturn(List.of(campaign("RUNNING", 43)));
+        when(service.runtimeStatus(CAMPAIGN_ID)).thenReturn(Optional.of(new LiveCampaignService.RuntimeStatus(
+                "STOPPED_ERROR", "LOCAL_CLEANUP_PENDING", true, true, false)));
         mvc.perform(get("/events/state").header("Host", HOST).param("eventId", EVENT_ID.toString()))
-                .andExpect(status().isOk()).andExpect(jsonPath("$[0].revision").value(43));
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].revision").value(43))
+                .andExpect(jsonPath("$[0].state").value("RUNNING"))
+                .andExpect(jsonPath("$[0].runtimeStatus.cleanupPending").value(true));
         mvc.perform(get("/events/" + EVENT_ID + "/state").header("Host", "127.0.0.1:8087"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].state").value("RUNNING"))
+                .andExpect(jsonPath("$[0].runtimeStatus.collectionStopped").value(true));
         verify(service, times(2)).eventStates(List.of(EVENT_ID));
+        verify(service, times(2)).runtimeStatus(CAMPAIGN_ID);
+        verifyNoMoreInteractions(service);
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {false, true})
+    void stoppedCollectionOffersOnlyGlobalCleanupAndPreservesTheDurableState(boolean cleanupInProgress) throws Exception {
+        when(service.state(CAMPAIGN_ID)).thenReturn(campaign("RUNNING", 43));
+        when(service.runtimeStatus(CAMPAIGN_ID)).thenReturn(Optional.of(new LiveCampaignService.RuntimeStatus(
+                "STOPPED_ERROR", "LOCAL_CLEANUP_PENDING", true, true, cleanupInProgress)));
+
+        var page = mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("État enregistré")))
+                .andExpect(content().string(containsString(cleanupInProgress
+                        ? "Collecte arrêtée / clôture locale en cours." : "Collecte arrêtée / clôture locale requise.")))
+                .andExpect(content().string(not(containsString("Arrêter cette rencontre"))))
+                .andReturn().getResponse().getContentAsString();
+        var button = Pattern.compile("(?s)<form\\b[^>]*\\bdata-live-global-stop-form\\b[^>]*>.*?<button\\b([^>]*)>([^<]*)</button>")
+                .matcher(page);
+        assertThat(button.find()).isTrue();
+        assertThat(button.group(2)).isEqualTo(cleanupInProgress ? "Clôture locale en cours" : "Finaliser la clôture locale");
+        assertThat(button.group(1).contains("disabled")).isEqualTo(cleanupInProgress);
+        mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID + "/state").header("Host", HOST))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.revision").value(43))
+                .andExpect(jsonPath("$.state").value("RUNNING"))
+                .andExpect(jsonPath("$.events[0].state").value("WAITING_START"))
+                .andExpect(jsonPath("$.runtimeStatus.cleanupInProgress").value(cleanupInProgress));
+        verify(service, times(2)).state(CAMPAIGN_ID);
+        verify(service, times(2)).runtimeStatus(CAMPAIGN_ID);
+        verifyNoMoreInteractions(service);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"LIVE_PROVIDER_CLEANUP_REQUIRED,session fournisseur précédente reste verrouillée",
+            "LIVE_LAUNCH_FAILED,lancement de la campagne a échoué"})
+    void launchLifecycleFailuresExposeTheirKnownCodeAndAction(String code, String message) throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        when(service.launch(CAMPAIGN_ID, HASH)).thenThrow(new IllegalStateException(code));
+        mvc.perform(post("/live-campaigns/" + CAMPAIGN_ID + "/launch").header("Host", HOST)
+                        .session(session).param("localFormToken", tokens.issue(session))
+                        .param("manifestHash", HASH).param("confirmation", "true"))
+                .andExpect(status().isConflict())
+                .andExpect(model().attribute("liveErrorCode", code))
+                .andExpect(content().string(containsString(message)));
+        verify(service).launch(CAMPAIGN_ID, HASH);
         verifyNoMoreInteractions(service);
     }
 

@@ -88,13 +88,20 @@ public final class LiveReplayRunner {
     }
 
     public ReplayResult run(ReplayInput input) {
+        return run(input, "live-v2");
+    }
+
+    public ReplayResult run(ReplayInput input, String policyVersion) {
         Objects.requireNonNull(input);
+        if (!List.of("live-v1", "live-v2", "live-v3").contains(policyVersion))
+            throw new IllegalArgumentException("unsupported replay policy");
         List<UUID> targets = input.providerEventIds().stream().map(CanonicalEventIdentity::sofascore)
                 .map(CanonicalEventIdentity::value).toList();
         Map<UUID, Long> providerIds = new HashMap<>();
         for (int i = 0; i < targets.size(); i++) providerIds.put(targets.get(i), input.providerEventIds().get(i));
         LiveSchedule schedule = new LiveSchedule(targets, input.startsAt(), input.startsAt().plus(input.duration()),
-                LiveCadence.forMatches(targets.size()));
+                "live-v1".equals(policyVersion) ? Duration.ofSeconds(60) : LiveCadence.forMatches(targets.size()),
+                policyVersion);
         Map<UUID, Integer> calls = new HashMap<>();
         List<Trace> trace = new ArrayList<>();
         List<OperatorStop> applied = new ArrayList<>();
@@ -158,7 +165,9 @@ public final class LiveReplayRunner {
                     processed.sportStatus().orElse(null), List.copyOf(signals.keySet()), processed.projectionVersion(),
                     processed.projectionJson(), eventCalls, consumed, bytes));
         }
-        return new ReplayResult(SOURCE, input.fixtureId(), manifestHash(input), now, schedule.terminal(),
+        String manifestHash = manifestHash(input);
+        if (!"live-v2".equals(policyVersion)) manifestHash = sha(manifestHash + "|" + policyVersion);
+        return new ReplayResult(SOURCE, input.fixtureId(), manifestHash, now, schedule.terminal(),
                 input.replies().size() - consumed, trace, applied, schedule.states());
     }
 

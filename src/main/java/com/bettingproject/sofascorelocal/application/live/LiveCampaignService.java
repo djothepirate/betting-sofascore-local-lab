@@ -84,11 +84,11 @@ public final class LiveCampaignService {
         Duration cycleInterval = LiveCadence.forMatches(targets.size());
         UUID id = UUID.randomUUID(); Instant now = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         long bytes = admission.maximumBytes(targets.size());
-        String material = id + "|live-v2|" + now + "|" + properties.getDuration() + "|1000|3000|" + bytes
+        String material = id + "|live-v3|" + now + "|" + properties.getDuration() + "|1000|3000|" + bytes
                 + "|" + properties.getQualifiedMatchCapacity() + "|" + properties.getQualificationSha256()
                 + "|" + properties.getRequestEnvelope() + "|" + properties.getProcessingEnvelope()
                 + "|" + cycleInterval + "|" + targets;
-        Manifest manifest = new Manifest(id, Sha256.hex(material.getBytes(StandardCharsets.UTF_8)), "live-v2",
+        Manifest manifest = new Manifest(id, Sha256.hex(material.getBytes(StandardCharsets.UTF_8)), "live-v3",
                 now, now.plusSeconds(300), properties.getDuration(), 1000, 3000, bytes,
                 properties.getQualifiedMatchCapacity(), targets, currentAdmissionProfile(), cycleInterval);
         return new Preparation(store.prepare(manifest), excluded);
@@ -115,6 +115,21 @@ public final class LiveCampaignService {
     }
 
     public CampaignView state(UUID id) { return store.find(id).orElseThrow(() -> new NoSuchElementException("LIVE_CAMPAIGN_NOT_FOUND")); }
+
+    /** Process observation only: never replaces or fabricates a durable ledger state. */
+    public record RuntimeStatus(String state, String reason, boolean collectionStopped,
+                                boolean cleanupPending, boolean cleanupInProgress) { }
+
+    public Optional<RuntimeStatus> runtimeStatus(UUID campaignId) {
+        Session s = active.get();
+        if (s == null || !s.manifest.campaignId().equals(campaignId)
+                || s.stopReason == null && !s.finished) return Optional.empty();
+        String state = s.stopReason != null ? s.stopReason
+                : s.cleanupPending ? "CLEANUP_REQUIRED" : "COMPLETED";
+        return Optional.of(new RuntimeStatus(state,
+                s.cleanupPending ? "LOCAL_CLEANUP_PENDING" : state,
+                true, s.cleanupPending, s.cleanupInProgress));
+    }
     public int selectionMaximum() { return properties.getQualifiedMatchCapacity(); }
     public Set<UUID> selectionBlockedEvents(Collection<UUID> ids) {
         Set<UUID> blocked = new HashSet<>();
@@ -156,6 +171,7 @@ public final class LiveCampaignService {
                 || !current.manifest().duration().equals(properties.getDuration()))
             throw new IllegalArgumentException("LIVE_PREPARED_POLICY_CHANGED");
         admission.admit(current.manifest().targets().size() - alreadyFinished.size(), current.manifest().cycleInterval());
+        if (providerCleanupRequired()) throw new IllegalStateException("LIVE_PROVIDER_CLEANUP_REQUIRED");
         Session session = new Session(current.manifest());
         session.alreadyFinished.addAll(alreadyFinished);
         if (!active.compareAndSet(null, session)) {
@@ -167,6 +183,9 @@ public final class LiveCampaignService {
         try { session.launched.get(5, TimeUnit.SECONDS); }
         catch (Exception failure) {
             session.stopAll("STOPPED_ERROR");
+            if (failure instanceof InterruptedException) Thread.currentThread().interrupt();
+            if (failure instanceof ExecutionException && failure.getCause() instanceof IllegalStateException cause
+                    && "LIVE_PROVIDER_CLEANUP_REQUIRED".equals(cause.getMessage())) throw cause;
             throw new IllegalStateException("LIVE_LAUNCH_FAILED");
         }
         return state(id);
@@ -174,6 +193,11 @@ public final class LiveCampaignService {
 
     private AdmissionProfile currentAdmissionProfile() {
         return new AdmissionProfile(properties.getRequestEnvelope(), properties.getProcessingEnvelope(), properties.getQualificationSha256());
+    }
+
+    private boolean providerCleanupRequired() {
+        Guard current = guard.snapshot();
+        return current != null && "CLEANUP_REQUIRED".equals(current.state());
     }
 
     public void stop(UUID campaignId, UUID eventId) {
@@ -184,6 +208,11 @@ public final class LiveCampaignService {
         }
         if (eventId != null && s.manifest.targets().stream().noneMatch(t -> t.canonicalEventId().equals(eventId)))
             throw new IllegalArgumentException("LIVE_EVENT_NOT_SELECTED");
+        if (s.finished) {
+            // One explicit, coalesced local command; the lease still belongs to its original thread.
+            if (eventId == null) s.requestCleanup();
+            return;
+        }
         if (eventId == null) {
             s.stopAll("STOPPED_OPERATOR");
             supervisor.stopCampaign(campaignId, LiveProviderSession.ENDPOINTS);
@@ -202,9 +231,10 @@ public final class LiveCampaignService {
             lease = coordinator.acquireLiveCampaign(s.manifest.campaignId());
             s.ownership = lease.ownership();
             Launch started = store.launch(s.manifest.campaignId(), s.manifest.manifestSha256(), s.ownership, clock.instant());
+            s.launchConfirmed = true;
             s.monotonicOrigin = System.nanoTime(); s.timeOrigin = started.startedAt();
             s.schedule = new LiveSchedule(s.manifest.targets().stream().map(Target::canonicalEventId).toList(),
-                    started.startedAt(), started.endsAt(), s.manifest.cycleInterval());
+                    started.startedAt(), started.endsAt(), s.manifest.cycleInterval(), s.manifest.policyVersion());
             // Recheck local observations after admission and acquisition, before any browser exists.
             s.alreadyFinished.addAll(locallyFinished(s.manifest));
             for (UUID eventId : s.alreadyFinished) s.schedule.stopEvent(eventId, "STOPPED_ALREADY_FINISHED");
@@ -232,28 +262,107 @@ public final class LiveCampaignService {
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt(); s.stopAll("STOPPED_INTERRUPTED");
         } catch (RuntimeException failure) {
-            s.stopAll("STOPPED_ERROR"); s.launched.completeExceptionally(new IllegalStateException("LIVE_LAUNCH_FAILED"));
+            s.stopAll("STOPPED_ERROR");
+            String code = "LIVE_LAUNCH_FAILED";
+            if (s.ownership == null && failure instanceof ManualProviderRequestCoordinator.CoordinationException) {
+                try { if (providerCleanupRequired()) code = "LIVE_PROVIDER_CLEANUP_REQUIRED"; }
+                catch (RuntimeException ignored) { /* an unreadable guard is not evidence of cleanup state */ }
+            }
+            s.launched.completeExceptionally(new IllegalStateException(code));
         } finally {
             s.finished = true;
             if (s.schedule != null && s.stopReason != null) s.schedule.stopAll(s.stopReason);
-            boolean cleaned = false;
+            s.beginCleanup();
+            boolean cleaned = cleanup(s, transport, lease);
+            // Never return a thread-owned lease to an HTTP thread. A failed close leaves this
+            // owner waiting without provider work, a scheduler, or timed SQL retries.
+            boolean interrupted = Thread.interrupted();
             try {
-                if (transport != null) transport.close();
-                cleaned = supervisor.activeCampaignId().filter(s.manifest.campaignId()::equals).isEmpty();
-                if (s.ownership != null) {
-                    publishStates(s);
-                    String terminal = cleaned ? s.stopReason != null ? s.stopReason
-                            : s.schedule != null && s.schedule.globalStop() != null ? s.schedule.globalStop() : "COMPLETED" : "CLEANUP_REQUIRED";
+                while (!cleaned && lease != null && s.awaitCleanupRequest())
+                    cleaned = cleanup(s, transport, lease);
+            } finally {
+                if (interrupted) Thread.currentThread().interrupt();
+            }
+        }
+    }
+
+    private boolean cleanup(Session s, LiveProviderSession transport,
+                            ManualProviderRequestCoordinator.CampaignLease lease) {
+        boolean absent = false, cleaned = false, exclusionRequested = false;
+        try {
+            if (!s.transportClosed && transport != null) transport.close();
+            absent = supervisor.activeCampaignId().filter(s.manifest.campaignId()::equals).isEmpty();
+            if (!absent) throw new IllegalStateException("LIVE_PROVIDER_CLEANUP_UNVERIFIED");
+            s.transportClosed = true;
+            if (s.ownership != null && !s.executionReconciled) {
+                // This transaction locks the same guard row as launch. Its successful return
+                // settles any earlier commit whose response was lost before PREPARED can be
+                // used as evidence, and closes further dispatch admission for this owner.
+                exclusionRequested = true;
+                guard.requireCleanup(s.ownership, clock.instant());
+                CampaignView current = state(s.manifest.campaignId());
+                if (!unlaunchedPreparation(s, current)) {
+                    if (!s.ownership.equals(current.ownership()))
+                        throw new IllegalStateException("LIVE_CLEANUP_OWNERSHIP_CHANGED");
+                    String terminal = s.stopReason != null ? s.stopReason
+                            : s.schedule != null && s.schedule.globalStop() != null ? s.schedule.globalStop() : "COMPLETED";
+                    if (s.schedule != null) publishStates(s);
+                    else {
+                        // The launch may have committed before its response was lost. Its durable
+                        // owner and events are authoritative even though no schedule was created.
+                        for (EventView event : current.events()) {
+                            publishState(s, new LiveSchedule.EventState(event.target().canonicalEventId(), terminal,
+                                    null, null, event.missedCycles(), event.finalComplete()));
+                        }
+                    }
+                    resolveUnpublishedAttempts(s, current);
                     store.transition(s.ownership, null, terminal, terminal, clock.instant(), null);
                 }
-            } catch (RuntimeException cleanupFailure) { cleaned = false; }
-            if (!cleaned && s.ownership != null) {
-                try { guard.requireCleanup(s.ownership, clock.instant()); } catch (RuntimeException ignored) { /* durable exclusion is not released */ }
+                // An untouched preparation has no execution ledger to close: release only its
+                // acquired guard/lease, without inventing a launch or a terminal transition.
+                s.executionReconciled = true;
             }
-            if (cleaned && lease != null) {
-                try { lease.close(); } catch (RuntimeException failure) { cleaned = false; }
+            if (lease != null) {
+                if (s.leaseCloseAttempted) lease.retryCloseAfterVerifiedCleanup();
+                else { s.leaseCloseAttempted = true; lease.close(); }
             }
-            if (cleaned || lease == null) active.compareAndSet(s, null);
+            cleaned = true;
+            active.compareAndSet(s, null);
+            return true;
+        } catch (RuntimeException failure) {
+            if (!absent) {
+                try { supervisor.stopCampaign(s.manifest.campaignId(), LiveProviderSession.ENDPOINTS); }
+                catch (RuntimeException ignored) { /* unverifiable transport remains excluded */ }
+            }
+            if (s.ownership != null && !exclusionRequested) {
+                try { guard.requireCleanup(s.ownership, clock.instant()); }
+                catch (RuntimeException ignored) { /* SQL failure must never release durable exclusion */ }
+            }
+            if (lease == null) active.compareAndSet(s, null);
+            return false;
+        } finally {
+            s.completeCleanup(cleaned);
+        }
+    }
+
+    private boolean unlaunchedPreparation(Session s, CampaignView current) {
+        return !s.launchConfirmed && current.manifest().equals(s.manifest) && "PREPARED".equals(current.state())
+                && current.ownership() == null && current.startedAt() == null && current.endsAt() == null
+                && current.reservedCalls() == 0 && current.receivedBytes() == 0 && current.attempts().isEmpty()
+                && current.events().stream().map(EventView::target).toList().equals(s.manifest.targets())
+                && current.events().stream().allMatch(event -> "PREPARED".equals(event.state())
+                        && event.reservedCalls() == 0 && event.receivedBytes() == 0 && event.nextDueAt() == null);
+    }
+
+    private void resolveUnpublishedAttempts(Session s, CampaignView current) {
+        for (AttemptView attempt : current.attempts()) {
+            if (attempt.result() == null) {
+                // Absence of a result proves neither transport success nor failure. Preserve any
+                // existing receipt and append only local uncertainty, without parsing or replay.
+                store.publishResult(s.ownership, attempt.attempt().attemptId(),
+                        new Publication("UNKNOWN", "CAMPAIGN", "LOCAL_CLEANUP_UNRESOLVED",
+                                clock.instant(), null, false, null), NormalizedReferences::none);
+            }
         }
     }
 
@@ -292,7 +401,7 @@ public final class LiveCampaignService {
                 }
             });
             String parser = due.endpoint() == SofascoreEndpointType.EVENT_DETAILS ? "event-details-v2"
-                    : due.endpoint() == SofascoreEndpointType.EVENT_INCIDENTS ? "event-incidents-v15"
+                    : due.endpoint() == SofascoreEndpointType.EVENT_INCIDENTS ? "event-incidents-v16"
                     : due.endpoint() == SofascoreEndpointType.EVENT_STATISTICS ? "event-statistics-v2" : "event-lineups-v2";
             RawManualCallSnapshot raw = new RawManualCallSnapshot(due.endpoint(), due.endpoint().name() + "|eventId=" + attempt.providerEventId(),
                     response.requestedAt(), response.receivedAt(), response.httpStatus(), response.contentType(), response.latency(),
@@ -332,11 +441,18 @@ public final class LiveCampaignService {
 
     private void publishStates(Session s) {
         if (s.schedule == null || s.ownership == null) return;
-        for (var state : s.schedule.states()) {
-            String previous = s.publishedStates.put(state.eventId(), state.state());
-            if (!state.state().equals(previous)) store.transition(s.ownership, state.eventId(), state.state(), state.state(), clock.instant(), null);
-            if (!state.equals(s.publishedMetrics.put(state.eventId(), state)))
-                store.updateScheduleMetrics(s.ownership, state.eventId(), state.nextDueAt(), state.missedCycles(), state.finalComplete(), clock.instant());
+        for (var state : s.schedule.states()) publishState(s, state);
+    }
+
+    private void publishState(Session s, LiveSchedule.EventState state) {
+        String previous = s.publishedStates.get(state.eventId());
+        if (!state.state().equals(previous)) {
+            store.transition(s.ownership, state.eventId(), state.state(), state.state(), clock.instant(), null);
+            s.publishedStates.put(state.eventId(), state.state());
+        }
+        if (!state.equals(s.publishedMetrics.get(state.eventId()))) {
+            store.updateScheduleMetrics(s.ownership, state.eventId(), state.nextDueAt(), state.missedCycles(), state.finalComplete(), clock.instant());
+            s.publishedMetrics.put(state.eventId(), state);
         }
     }
 
@@ -345,6 +461,7 @@ public final class LiveCampaignService {
             long before = System.nanoTime(); Instant wall = clock.instant();
             while (!s.finished && s.stopReason == null) {
                 try { Thread.sleep(200); } catch (InterruptedException ignored) { Thread.currentThread().interrupt(); return; }
+                if (s.finished || s.stopReason != null) return;
                 long now = System.nanoTime(); Instant next = clock.instant();
                 long monotonic = TimeUnit.NANOSECONDS.toMillis(now - before);
                 if (monotonic > 2500 || Math.abs(Duration.between(wall, next).toMillis() - monotonic) > 2000) {
@@ -374,16 +491,51 @@ public final class LiveCampaignService {
             guard.requireCleanup(g.ownership(), clock.instant());
         }
     }
-    @PreDestroy public void shutdown() { Session s = active.get(); if (s != null) { s.stopAll("STOPPED_INTERRUPTED"); supervisor.stopCampaign(s.manifest.campaignId(), LiveProviderSession.ENDPOINTS); } }
+    @PreDestroy public void shutdown() {
+        Session s = active.get();
+        if (s != null) {
+            s.endCleanupWait();
+            if (!s.finished) s.stopAll("STOPPED_INTERRUPTED");
+            supervisor.stopCampaign(s.manifest.campaignId(), LiveProviderSession.ENDPOINTS);
+        }
+    }
     private static final class Session {
         final Manifest manifest; final CompletableFuture<Void> launched = new CompletableFuture<>();
         final Set<UUID> alreadyFinished = new HashSet<>();
         final ReentrantLock dispatchLock = new ReentrantLock(); final Set<UUID> stoppedEvents = ConcurrentHashMap.newKeySet();
         final Map<UUID,String> publishedStates = new HashMap<>(); final Map<UUID,LiveSchedule.EventState> publishedMetrics = new HashMap<>();
         volatile String stopReason; volatile LiveSchedule schedule; volatile Ownership ownership; volatile boolean finished;
+        volatile boolean cleanupPending, cleanupInProgress;
+        final Object cleanupMonitor = new Object();
+        boolean cleanupRequested, shuttingDown, transportClosed, executionReconciled, leaseCloseAttempted, launchConfirmed;
         volatile long monotonicOrigin; volatile Instant timeOrigin;
         Session(Manifest manifest) { this.manifest = manifest; }
         Instant now() { return timeOrigin.plusNanos(System.nanoTime() - monotonicOrigin); }
         void stopAll(String reason) { dispatchLock.lock(); try { stopReason = reason; if (schedule != null) schedule.stopAll(reason); } finally { dispatchLock.unlock(); } }
+        void beginCleanup() { synchronized (cleanupMonitor) { cleanupInProgress = true; } }
+        void completeCleanup(boolean cleaned) {
+            synchronized (cleanupMonitor) { cleanupPending = !cleaned; cleanupInProgress = false; }
+        }
+        void requestCleanup() {
+            synchronized (cleanupMonitor) {
+                if (cleanupPending && !cleanupInProgress && !shuttingDown) {
+                    cleanupRequested = true;
+                    cleanupMonitor.notifyAll();
+                }
+            }
+        }
+        boolean awaitCleanupRequest() {
+            synchronized (cleanupMonitor) {
+                while (!cleanupRequested && !shuttingDown) {
+                    try { cleanupMonitor.wait(); }
+                    catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); return false; }
+                }
+                if (shuttingDown) return false;
+                cleanupRequested = false;
+                cleanupInProgress = true;
+                return true;
+            }
+        }
+        void endCleanupWait() { synchronized (cleanupMonitor) { shuttingDown = true; cleanupMonitor.notifyAll(); } }
     }
 }

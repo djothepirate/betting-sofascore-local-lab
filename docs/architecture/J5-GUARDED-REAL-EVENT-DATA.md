@@ -9,7 +9,11 @@ NOT_PRODUCTION_APPROVED
 NO_CRITICAL_DEPENDENCY
 V13_PROVIDER_SCHEMA_VALIDATED=YES
 V13_PROVIDER_SCHEMA_VALIDATION_SCOPE=EVENTS_16691018_AND_16851672
-CURRENT_INCIDENT_PARSER=event-incidents-v15
+CURRENT_INCIDENT_PARSER=event-incidents-v16
+V16_SCOPE=WO058_IN_GAME_PENALTY_AWARDED
+V16_PROVIDER_CALLS_DURING_IMPLEMENTATION_AND_TESTS=0
+V16_PERSISTED_HISTORICAL_REPARSE=NO
+V16_PROVIDER_SCHEMA_VALIDATED=NO_NEW_HUMAN_QUALIFICATION
 V14_PROVIDER_SCHEMA_VALIDATED=YES_OWNER_LOCAL_JSON_IMPORT
 V14_PROVIDER_SCHEMA_VALIDATION_SCOPE=EVENT_16809018_OBSERVATIONS_567_AND_570
 V14_HUMAN_FUNCTIONAL_QUALIFICATION=PASS
@@ -284,7 +288,12 @@ Pour chaque famille, qu'elle soit acquise directement ou importée localement :
    reste immuable et le résultat du parseur courant est porté uniquement par l'observation
    normalisée append-only.
 
-Les parseurs courants sont `event-statistics-v2`, `event-incidents-v15` et `event-lineups-v2`.
+Les parseurs courants sont `event-statistics-v2`, `event-incidents-v16` et `event-lineups-v2`.
+V16 ajoute la seule classe `awarded` pour `inGamePenalty`, avec complétude adaptée à l'attribution
+et sans résultat de tir inféré. V36 ajoute cette version à la contrainte PostgreSQL tout en
+conservant les versions précédentes. Le [diagnostic WO-058](../validation/WO058-INCIDENT-AWARDED-20260907.md)
+sépare replay exact local, tests synthétiques et historique V15 ; les qualifications V15
+consignées ci-dessus restent historiques et ne sont pas transférées à V16.
 L'identifiant d'événement vient du claim et non du JSON. Les champs inconnus génèrent au plus 256
 avertissements.
 Une liste vide structurellement valide reste `EMPTY_VALID`; une absence facultative mesurée reste

@@ -25,9 +25,11 @@
   <section class="panel" aria-labelledby="campaign-title">
     <div class="panel-heading"><div><p class="label">Campagne locale</p>
       <h2 id="campaign-title" class="mono" th:text="${campaign.campaignId}">UUID</h2></div>
-      <span class="chip chip-safe" data-live-campaign-state th:text="${campaign.state}">PREPARED</span>
+      <span>État enregistré : <span class="chip chip-safe" data-live-campaign-state th:text="${campaign.state}">PREPARED</span></span>
     </div>
     <p data-live-campaign-reason th:text="${campaign.reason ?: '—'}">—</p>
+    <p class="notice notice-warning" data-live-runtime-status role="status"
+       th:hidden="${campaign.runtimeStatus == null}" th:text="${campaign.runtimeStatus?.label}"></p>
     <dl class="detail-grid">
       <div><dt>Démarrage</dt><dd data-live-started-at th:text="${campaign.startedAt ?: 'En attente de lancement'}">En attente</dd></div>
       <div><dt>Fin au plus tard (UTC)</dt><dd data-live-ends-at th:text="${campaign.endsAt ?: 'Fixée au lancement'}">—</dd></div>
@@ -36,10 +38,13 @@
       <div><dt>Intervalle de collecte</dt><dd th:text="${manifest.cycleInterval.toSeconds() + ' secondes'}">60 secondes</dd></div>
     </dl>
     <p class="muted" data-live-refresh-status role="status" aria-live="polite">Lecture locale toutes les cinq secondes, suspendue lorsque l’onglet est masqué.</p>
-    <form th:if="${campaign.state == 'RUNNING'}" data-live-stop-form method="post"
+    <form th:if="${campaign.state == 'RUNNING' or (campaign.runtimeStatus != null and campaign.runtimeStatus.cleanupPending)}"
+          data-live-stop-form data-live-global-stop-form method="post"
           th:action="@{/live-campaigns/{id}/stop(id=${campaign.campaignId})}">
       <input type="hidden" name="localFormToken" th:value="${localFormToken}">
-      <button type="submit" class="button button-danger">Arrêter toute la campagne</button>
+      <button type="submit" class="button button-danger"
+              th:disabled="${campaign.runtimeStatus != null and (campaign.runtimeStatus.cleanupInProgress or (campaign.runtimeStatus.collectionStopped and !campaign.runtimeStatus.cleanupPending))}"
+              th:text="${campaign.runtimeStatus != null and campaign.runtimeStatus.cleanupInProgress ? 'Clôture locale en cours' : (campaign.runtimeStatus != null and campaign.runtimeStatus.cleanupPending ? 'Finaliser la clôture locale' : 'Arrêter toute la campagne')}">Arrêter toute la campagne</button>
       <p class="muted">L’arrêt global interrompt la collecte. Les observations déjà reçues restent consultables.</p>
     </form>
     <p class="notice notice-danger" th:if="${campaign.state == 'CLEANUP_REQUIRED'}">
@@ -69,6 +74,12 @@
           th:text="${#strings.isEmpty(manifest.admissionProfile.qualificationSha256) ? 'Profil initial conservateur' : manifest.admissionProfile.qualificationSha256}">Profil initial conservateur</dd></div>
       </dl>
     </details>
+    <p th:if="${manifest.policyVersion == 'live-v3'}">Avant le coup d’envoi, dès que J4 confirme
+      <strong>notstarted</strong>, les compositions sont collectées puis réinterrogées toutes les
+      <span th:text="${manifest.cycleInterval.toSeconds()}">60</span> secondes.
+      Statistiques et incidents commencent après confirmation du début par J4.
+      Au passage en jeu, le premier triplet attend si nécessaire la prochaine collecte admissible
+      des compositions, sans bloquer les autres rencontres.</p>
     <p>J4 vérifie le statut avant le match et J5 collecte statistiques, incidents et compositions en cours de match toutes les
       <span th:text="${manifest.cycleInterval.toSeconds()}">60</span> secondes. J4 confirme ensuite la fin.
       Cet intervalle est fixé pour cette sélection. Les appels sont sérialisés. Une lecture de cette page ne lance aucune collecte.</p>
@@ -85,13 +96,15 @@
   <section class="panel" th:each="event : ${campaign.events}" th:attr="data-live-event-id=${event.canonicalEventId}">
     <div class="panel-heading"><div><p class="label" th:text="${event.competition}">Compétition</p>
       <h2 th:text="${event.title}">Rencontre</h2><p class="mono" th:text="${event.startsAtParis}">Europe/Paris</p></div>
-      <span class="chip chip-safe" data-live-sport-status th:text="${event.sportStatus}">notstarted</span>
+      <span class="chip chip-safe" data-live-sport-status th:text="${event.sportStatusLabel}">notstarted</span>
     </div>
     <p class="muted" data-live-sport-context
        th:text="${event.state == 'STOPPED_ALREADY_FINISHED' ? 'Le statut sportif ci-dessus décrit l’observation figée à la préparation. La rencontre a été constatée terminée localement au lancement ; aucune nouvelle collecte n’a eu lieu.' : ''}"></p>
+    <p class="notice notice-warning" data-live-runtime-status role="status"
+       th:hidden="${campaign.runtimeStatus == null}" th:text="${campaign.runtimeStatus?.label}"></p>
     <dl class="detail-grid">
       <div><dt>Score courant J4</dt><dd data-live-score th:text="${event.score}">—</dd></div>
-      <div><dt>État de collecte</dt><dd data-live-event-state th:text="${event.state}">WAITING_START</dd></div>
+      <div><dt>État de collecte enregistré</dt><dd data-live-event-state th:text="${event.state}">WAITING_START</dd></div>
       <div><dt>Motif</dt><dd data-live-event-reason th:text="${event.reason ?: '—'}">—</dd></div>
       <div><dt>Prochaine échéance (UTC)</dt><dd data-live-next-due th:text="${event.nextDueAt ?: '—'}">—</dd></div>
       <div><dt>Appels réservés / plafond</dt><dd data-live-event-calls th:text="${event.reservedCalls + ' / ' + event.maximumCalls}">0</dd></div>
@@ -103,7 +116,7 @@
     </dl>
     <div class="actions">
       <a class="button button-secondary" th:href="@{/events/{id}(id=${event.canonicalEventId})}">Détail et historique</a>
-      <form th:if="${campaign.state == 'RUNNING' and !#strings.startsWith(event.state, 'STOPPED') and event.state != 'FINISHED_CONFIRMED'}"
+      <form th:if="${campaign.state == 'RUNNING' and (campaign.runtimeStatus == null or !campaign.runtimeStatus.collectionStopped) and !#strings.startsWith(event.state, 'STOPPED') and event.state != 'FINISHED_CONFIRMED'}"
             data-live-stop-form method="post" th:action="@{/live-campaigns/{id}/events/{eventId}/stop(id=${campaign.campaignId},eventId=${event.canonicalEventId})}">
         <input type="hidden" name="localFormToken" th:value="${localFormToken}">
         <button type="submit" class="button button-secondary">Arrêter cette rencontre</button>

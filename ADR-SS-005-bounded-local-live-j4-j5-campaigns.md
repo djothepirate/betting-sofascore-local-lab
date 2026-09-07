@@ -1,13 +1,15 @@
 # ADR-SS-005 — Campagnes live locales et bornées J4/J5
 
-- **Version :** 0.2.
-- **Statut :** `ACCEPTED` — v0.1 formellement acceptée ; évolution du plafond et de la cadence explicitement demandée par le propriétaire le 7 septembre.
+- **Version :** 0.3.
+- **Statut :** `ACCEPTED` — v0.1 formellement acceptée ; capacité adaptative puis collecte des compositions avant le début explicitement demandées par le propriétaire le 7 septembre.
 - **Date :** 2026-09-07.
 - **Décideur :** propriétaire du Betting Project.
 - **Acceptation formelle initiale, v0.1 :** `OWNER_ACCEPTED_2026_09_07` — « Je valide formellement la v0.1 de l'ADR ».
 - **Observation de l'acceptation :** `2026-09-07T09:23:14Z` ; l'heure exacte du message n'est pas disponible.
 - **Document accepté figé :** [copie exacte de la proposition v0.1](docs/validation/ADR-SS-005-v0.1-accepted-proposal-20260907.txt), SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e` ; draft non committé.
 - **Autorité de la v0.2 :** plafond paramétrable demandé, y compris à 10 et 25 rencontres ; cadence selon le nombre retenu, 60 s pour 1–3, 90 s pour 4, 120 s pour 5, choisie explicitement dans la conversation. La progression de 30 s par rencontre supplémentaire est appliquée aux sélections plus grandes.
+- **Autorité de la v0.3 :** demande de J5 LINEUPS pour les rencontres initialement `notstarted` et non débutées au lancement, puis réponse explicite « Oui, collecte initiale puis périodique ». La première collecte suit le J4 `notstarted` ; sa répétition utilise D tant que le début n'est pas constaté. Aucune nouvelle cadence n'est décidée.
+- **Référence historique v0.2 :** contenu Git au commit `e98f7a74e39a1c57e601efb3d346ae55829fce73`, conservé sans réécriture.
 - **Work Order :** [WO-SS-20260907-058](docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md), validé par le propriétaire ; correctif et qualification de réalisation distincts de cette décision.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
 - **Base :** `6dfd14286d4f269cbe100bd965257c20298538db`, train `feature/V0.1.0-RC01` vérifié à l'ouverture.
@@ -18,6 +20,8 @@ d'architecture ; la validation du WO et la qualification de la réalisation rest
 avant le manifeste concret et le lancement opérateur d'une campagne. La v0.2 remplace seulement
 les limites de sélection et les cadences correspondantes de la v0.1. Les autres garanties restent
 applicables ; la copie exacte acceptée de la v0.1 et les preuves de ses paliers sont conservées.
+La v0.3 ajoute seulement la collecte prématch LINEUPS au manifeste `live-v3`. Les manifestes
+historiques `live-v1` et `live-v2` gardent leur comportement, leurs échéances et leurs empreintes.
 
 ## 1. Contexte et problème
 
@@ -73,6 +77,7 @@ pas des quotas SofaScore connus ni une qualification de débit.
 | Capacité | `SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY` est le maximum de rencontres éligibles retenues par campagne, défaut 1 ; 5, 10 et 25 sont des configurations admises. Une seule campagne fournisseur active globalement. |
 | Cadence D | Selon N cibles retenues après exclusion des `finished` : `D = max(60, 30 × (N − 1))` secondes ; 1–3 → 60 s, 4 → 90 s, 5 → 120 s, 10 → 270 s, 25 → 720 s. D est figé au manifeste, indépendant du plafond configuré. |
 | J4 avant début | Premier contrôle au lancement, puis cible D tant que `notstarted`. |
+| J5 avant début, live-v3 | LINEUPS seul après J4 `notstarted`, première place admissible puis D ; statistiques et incidents attendent J4 `inprogress`. |
 | J5 pendant le jeu | Cible D, trois familles conservées à chaque cycle normal dans l'ordre statistiques → incidents → compositions. |
 | J4 pendant le jeu | Sur signaux pertinents, secours à `max(300 s, D)` depuis le dernier J4 réussi, puis D en surveillance de fin. |
 | Fenêtre | Au plus 4 h depuis le lancement, attente prématch comprise ; fin UTC exclusive, affichée aussi en heure de Paris. |
@@ -136,9 +141,15 @@ pour capacité insuffisante. Une seule requête J4 satisfait un signal et un sec
 ## 5. Début, surveillance de fin et finalisation
 
 1. Exécuter J4 dès la première place admissible après lancement. `notstarted` entretient la boucle
-   J4 à l'intervalle D, sans J5 ; l'heure prévue du coup d'envoi n'est pas une preuve de début.
+   J4 à l'intervalle D et, pour `live-v3`, une collecte LINEUPS initiale puis périodique à D.
+   Statistiques et incidents ne sont pas interrogés dans cette phase. Les anciens manifestes
+   `live-v1`/`live-v2` restent J4 seuls ; l'heure prévue du coup d'envoi n'est pas une preuve de début.
 2. Dès J4 `inprogress`, arrêter cette boucle d'attente et démarrer J5. Les contrôles J4 ultérieurs
    ne redémarrent pas un « premier cycle » J5. Un match déjà commencé suit ce chemin immédiatement.
+   Annuler la prochaine LINEUPS prématch. Pour conserver le triplet contigu et D entre deux
+   départs LINEUPS, aligner le premier triplet sur l'éligibilité de toutes ses familles : l'attente
+   due à une composition récente peut atteindre D, puis s'ajoute l'attente de service partagée.
+   Cette attente ne réserve pas le transport et laisse les autres rencontres progresser.
 3. Un nouvel `injuryTime` à 45, un `HT` ou un signal de mi-prolongation à 105 déclenche un J4
    ponctuel. Si J4 reste `inprogress`, conserver les échéances J5 sans armer une boucle de fin.
 4. Un signal de fin potentielle à 90/120, `FT`, fin de prolongation/séance ou signal ambigu de fin
@@ -288,6 +299,7 @@ humaine et à la fusion vers le train exact.
 | 2026-09-07 | Demande de réaliser le plan d'enregistrement de l'acceptation | Copie exacte figée, métadonnées actualisées sans changement normatif, renvois ciblés et WO prêt pour revue ; aucune validation implicite de réalisation ou clôture. |
 | 2026-09-07 | « SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY paramétrable doit servir au nombre maximum de rencontres éligibles sélectionnable pour une même campagne live » | Le plafond configuré porte sur la sélection ; il ne doit pas invalider une campagne plus petite. |
 | 2026-09-07 | Choix « Adapter selon le nombre retenu : 60 s pour 1–3 matchs, 90 s pour 4, 120 s pour 5 » puis demande explicite de 10 et 25 rencontres | Autorité de la v0.2. La progression est prolongée par D = max(60, 30 × (N − 1)) s ; l'heure exacte de ces messages n'est pas disponible. |
+| 2026-09-07 | Demande de LINEUPS avant coup d'envoi, confirmée « Oui, collecte initiale puis périodique » | Autorité de la v0.3 ; J4 confirme `notstarted`, puis LINEUPS à D jusqu'au début constaté. Pas de statistiques/incidents prématch, ni de réduction de D. |
 
 État historique au moment de l'enregistrement de l'acceptation v0.1, avant réalisation :
 
@@ -311,12 +323,14 @@ normative ultérieure exige une nouvelle version et une décision traçable.
 État de décision courant, distinct de la qualification et de la clôture Git du WO :
 
 ```text
-ADR_SS_005_VERSION=0.2
+ADR_SS_005_VERSION=0.3
 ADR_SS_005_STATUS=ACCEPTED
 CAPACITY_CHANGE_AUTHORITY=EXPLICIT_OWNER_REQUEST_2026_09_07
 CADENCE_1_TO_5=OWNER_SELECTED
 CADENCE_ABOVE_5=CONTINUATION_OF_SELECTED_PROGRESSION
 SELECTION_MAXIMUM=CONFIGURED_ELIGIBLE_MATCHES
+PREMATCH_LINEUPS=OWNER_CONFIRMED_INITIAL_AND_PERIODIC
+NEW_MANIFEST_POLICY=live-v3
 RUNTIME_IMPLEMENTATION=SEE_WO058_VALIDATION_REPORTS
 PROVIDER_CAMPAIGN=NOT_AUTHORIZED_BY_THIS_DOCUMENT
 ```

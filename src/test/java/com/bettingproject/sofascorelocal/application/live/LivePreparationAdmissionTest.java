@@ -159,7 +159,7 @@ class LivePreparationAdmissionTest {
         assertThat(prepared.manifest().targets()).hasSize(count);
         assertThat(prepared.manifest().qualifiedMatchCapacity()).isEqualTo(ceiling);
         assertThat(prepared.manifest().cycleInterval()).isEqualTo(Duration.ofSeconds(seconds));
-        assertThat(prepared.manifest().policyVersion()).isEqualTo("live-v2");
+        assertThat(prepared.manifest().policyVersion()).isEqualTo("live-v3");
         h.verifyNoProviderWork();
     }
 

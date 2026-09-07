@@ -41,6 +41,7 @@ import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
@@ -259,6 +260,34 @@ class EventExplorerControllerTest {
                         "Cet endpoint ne fournit aucune rencontre programm")))
                 .andExpect(content().string(containsString(
                         "aucune observation J4 n")));
+    }
+
+    @ParameterizedTest
+    @CsvSource({"1st half,1st half", "Halftime,Halftime", "2nd half,2nd half",
+            ",inprogress", "<b>Halftime</b>,&lt;b&gt;Halftime&lt;/b&gt;"})
+    void eventListAndDetailShowObservedPeriodWithEscapingAndMissingDescriptionFallback(
+            String description, String expected) throws Exception {
+        var base = providerEvent();
+        var event = new CanonicalEventObservationView(base.observationId(), base.identity(), base.startsAt(),
+                base.homeTeam(), base.awayTeam(), new ScheduledEventStatus("inprogress", Optional.ofNullable(description)),
+                base.tournament(), base.source(), base.normalizedSha256(), base.observationCount());
+        var zone = ZoneId.of("Europe/Paris");
+        var date = event.startsAt().atZone(zone).toLocalDate();
+        var item = new J4EventSearchItem(event, event.startsAt().atZone(zone));
+        when(queryService.search(date, "Europe/Paris")).thenReturn(new J4EventSearchResult(date, zone,
+                date.atStartOfDay(zone).toInstant(), date.plusDays(1).atStartOfDay(zone).toInstant(), List.of(item)));
+        when(queryService.findDetail(event.identity().value(), "Europe/Paris"))
+                .thenReturn(Optional.of(new J4EventDetailResult(zone, item, List.of(item), Optional.empty())));
+
+        for (String path : List.of("/events", "/events/" + event.identity().value())) {
+            String html = mockMvc.perform(get(path).param("date", date.toString()))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            var badge = Pattern.compile("<span\\b[^>]*data-live-sport-status[^>]*>(.*?)</span>").matcher(html);
+            assertThat(badge.find()).isTrue();
+            assertThat(badge.group(1)).isEqualTo(expected);
+            assertThat(html).doesNotContain("<b>Halftime</b>");
+            if (path.equals("/events")) assertThat(html).contains("data-live-finished=\"false\"");
+        }
     }
 
     @Test
