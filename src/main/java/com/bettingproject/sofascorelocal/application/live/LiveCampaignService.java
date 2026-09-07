@@ -4,6 +4,7 @@ import com.bettingproject.sofascorelocal.application.network.ManualProviderReque
 import com.bettingproject.sofascorelocal.application.network.playwright.*;
 import com.bettingproject.sofascorelocal.config.*;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
+import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceKind;
 import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.*;
 import com.bettingproject.sofascorelocal.domain.provider.*;
@@ -57,19 +58,27 @@ public final class LiveCampaignService {
         this.clock = Objects.requireNonNull(clock);
     }
 
+    public record Preparation(Manifest manifest, List<CanonicalEventObservationView> excludedFinished) {
+        public Preparation { excludedFinished = List.copyOf(excludedFinished); }
+    }
+
     public Manifest prepare(List<UUID> selected) {
+        Manifest manifest = prepareSelection(selected).manifest();
+        if (manifest == null) throw new IllegalArgumentException("LIVE_ALL_EVENTS_FINISHED");
+        return manifest;
+    }
+
+    public Preparation prepareSelection(List<UUID> selected) {
         Objects.requireNonNull(selected);
-        if (selected.isEmpty() || selected.size() > 3 || new HashSet<>(selected).size() != selected.size())
+        if (selected.isEmpty() || selected.size() > 100 || new HashSet<>(selected).size() != selected.size())
             throw new IllegalArgumentException("LIVE_SELECTION_INVALID");
-        admission.admit(selected.size());
-        List<Target> targets = selected.stream().map(id -> {
-            var event = events.findLatestByCanonicalId(id).orElseThrow(() -> new IllegalArgumentException("LIVE_EVENT_NOT_FOUND"));
-            if (event.source().kind() != EventSourceKind.PROVIDER_SNAPSHOT)
-                throw new IllegalArgumentException("LIVE_PROVIDER_PROVENANCE_REQUIRED");
-            if (event.identity().providerEventId() > EventDetailsProviderRequest.MAXIMUM_PARAMETERIZED_EVENT_ID)
-                throw new IllegalArgumentException("LIVE_EVENT_ID_OUT_OF_RANGE");
-            return new Target(id, event.identity().providerEventId(), event.observationId(), event.source().snapshotId().orElseThrow());
-        }).toList();
+        List<CanonicalEventObservationView> observations = selected.stream().map(this::latestEligibleSource).toList();
+        List<CanonicalEventObservationView> excluded = observations.stream().filter(LiveCampaignService::finished).toList();
+        List<Target> targets = observations.stream().filter(event -> !finished(event))
+                .map(event -> new Target(event.identity().value(), event.identity().providerEventId(),
+                        event.observationId(), event.source().snapshotId().orElseThrow())).toList();
+        if (targets.isEmpty()) return new Preparation(null, excluded);
+        admission.admit(targets.size());
         UUID id = UUID.randomUUID(); Instant now = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         long bytes = admission.maximumBytes(targets.size());
         String material = id + "|live-v1|" + now + "|" + properties.getDuration() + "|1000|3000|" + bytes
@@ -78,7 +87,27 @@ public final class LiveCampaignService {
         Manifest manifest = new Manifest(id, Sha256.hex(material.getBytes(StandardCharsets.UTF_8)), "live-v1",
                 now, now.plusSeconds(300), properties.getDuration(), 1000, 3000, bytes,
                 properties.getQualifiedMatchCapacity(), targets, currentAdmissionProfile());
-        return store.prepare(manifest);
+        return new Preparation(store.prepare(manifest), excluded);
+    }
+
+    private CanonicalEventObservationView latestEligibleSource(UUID id) {
+        var event = events.findLatestByCanonicalId(id)
+                .orElseThrow(() -> new IllegalArgumentException("LIVE_EVENT_NOT_FOUND"));
+        if (!event.identity().value().equals(id)) throw new IllegalArgumentException("LIVE_EVENT_IDENTITY_MISMATCH");
+        if (event.source().kind() != EventSourceKind.PROVIDER_SNAPSHOT)
+            throw new IllegalArgumentException("LIVE_PROVIDER_PROVENANCE_REQUIRED");
+        if (event.identity().providerEventId() > EventDetailsProviderRequest.MAXIMUM_PARAMETERIZED_EVENT_ID)
+            throw new IllegalArgumentException("LIVE_EVENT_ID_OUT_OF_RANGE");
+        return event;
+    }
+
+    private static boolean finished(CanonicalEventObservationView event) {
+        return "finished".equals(event.status().type());
+    }
+
+    private List<UUID> locallyFinished(Manifest manifest) {
+        return manifest.targets().stream().map(Target::canonicalEventId)
+                .filter(id -> finished(latestEligibleSource(id))).toList();
     }
 
     public CampaignView state(UUID id) { return store.find(id).orElseThrow(() -> new NoSuchElementException("LIVE_CAMPAIGN_NOT_FOUND")); }
@@ -94,6 +123,9 @@ public final class LiveCampaignService {
         CampaignView current = state(id);
         if (!current.manifest().manifestSha256().equals(hash)) throw new IllegalArgumentException("LIVE_MANIFEST_MISMATCH");
         if (!"PREPARED".equals(current.state())) return current;
+        List<UUID> alreadyFinished = locallyFinished(current.manifest());
+        if (alreadyFinished.size() == current.manifest().targets().size())
+            throw new IllegalArgumentException("LIVE_ALL_EVENTS_FINISHED");
         if (!properties.isEnabled() || !provider.isEnabled() || !playwright.isEnabled())
             throw new IllegalStateException("LIVE_DISABLED");
         if (playwright.getRequestTimeout() == null || playwright.getRequestTimeout().isNegative()
@@ -105,8 +137,9 @@ public final class LiveCampaignService {
                 || current.manifest().qualifiedMatchCapacity() != properties.getQualifiedMatchCapacity()
                 || !current.manifest().duration().equals(properties.getDuration()))
             throw new IllegalArgumentException("LIVE_PREPARED_POLICY_CHANGED");
-        admission.admit(current.manifest().targets().size());
+        admission.admit(current.manifest().targets().size() - alreadyFinished.size());
         Session session = new Session(current.manifest());
+        session.alreadyFinished.addAll(alreadyFinished);
         if (!active.compareAndSet(null, session)) {
             Session existing = active.get();
             if (existing != null && existing.manifest.campaignId().equals(id)) return state(id);
@@ -153,8 +186,12 @@ public final class LiveCampaignService {
             Launch started = store.launch(s.manifest.campaignId(), s.manifest.manifestSha256(), s.ownership, clock.instant());
             s.monotonicOrigin = System.nanoTime(); s.timeOrigin = started.startedAt();
             s.schedule = new LiveSchedule(s.manifest.targets().stream().map(Target::canonicalEventId).toList(), started.startedAt(), started.endsAt());
+            // Recheck local observations after admission and acquisition, before any browser exists.
+            s.alreadyFinished.addAll(locallyFinished(s.manifest));
+            for (UUID eventId : s.alreadyFinished) s.schedule.stopEvent(eventId, "STOPPED_ALREADY_FINISHED");
+            publishStates(s);
             s.launched.complete(null);
-            if (s.stopReason != null) return;
+            if (s.stopReason != null || s.schedule.terminal()) return;
             startWatchdog(s);
             transport = new LiveProviderSession(factory, s.manifest.campaignId());
             long lastWake = System.nanoTime(); Instant lastWall = clock.instant();
@@ -321,6 +358,7 @@ public final class LiveCampaignService {
     @PreDestroy public void shutdown() { Session s = active.get(); if (s != null) { s.stopAll("STOPPED_INTERRUPTED"); supervisor.stopCampaign(s.manifest.campaignId(), LiveProviderSession.ENDPOINTS); } }
     private static final class Session {
         final Manifest manifest; final CompletableFuture<Void> launched = new CompletableFuture<>();
+        final Set<UUID> alreadyFinished = new HashSet<>();
         final ReentrantLock dispatchLock = new ReentrantLock(); final Set<UUID> stoppedEvents = ConcurrentHashMap.newKeySet();
         final Map<UUID,String> publishedStates = new HashMap<>(); final Map<UUID,LiveSchedule.EventState> publishedMetrics = new HashMap<>();
         volatile String stopReason; volatile LiveSchedule schedule; volatile Ownership ownership; volatile boolean finished;

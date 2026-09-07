@@ -522,6 +522,7 @@
       <input type="hidden" name="localFormToken" th:value="${localFormToken}">
       <p>Sélectionner les rencontres pour préparer une campagne live locale. La préparation vérifie la capacité disponible et ne fait aucun appel fournisseur.</p>
       <p class="muted">Les observations de corpus synthétiques restent consultables ; seules les rencontres issues d’un snapshot fournisseur sont éligibles.</p>
+      <p class="muted">Les rencontres déjà terminées (finished) sont exclues de la préparation, sans appel fournisseur. Si toute la sélection est terminée, aucune campagne n’est créée.</p>
       <div class="actions"><button type="submit" class="button" data-live-prepare>Préparer la campagne live</button>
         <span data-live-selection-count role="status">0 rencontre sélectionnée</span></div>
     </form>

@@ -3,10 +3,13 @@ package com.bettingproject.sofascorelocal.adapter.web;
 import com.bettingproject.sofascorelocal.application.live.LiveCampaignService;
 import com.bettingproject.sofascorelocal.config.LiveCampaignWebMvcConfiguration;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
+import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
 import com.bettingproject.sofascorelocal.domain.eventdata.*;
 import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.*;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
+import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEventStatus;
+import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTeam;
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
@@ -62,14 +65,88 @@ class LiveCampaignControllerTest {
     @Test
     void preparationPreservesExactSelectionAndNeverLaunches() throws Exception {
         MockHttpSession session = new MockHttpSession();
-        when(service.prepare(List.of(EVENT_ID))).thenReturn(manifest());
+        when(service.prepareSelection(List.of(EVENT_ID))).thenReturn(new LiveCampaignService.Preparation(manifest(), List.of()));
         mvc.perform(post("/live-campaigns/prepare").header("Host", HOST).header("Origin", ORIGIN)
                         .session(session).param("localFormToken", tokens.issue(session))
                         .param("eventId", EVENT_ID.toString()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/live-campaigns/" + CAMPAIGN_ID));
-        verify(service).prepare(List.of(EVENT_ID));
+        verify(service).prepareSelection(List.of(EVENT_ID));
         verifyNoMoreInteractions(service);
+    }
+
+    @Test
+    void finishedOnlySelectionExplainsWhyNoCampaignIsCreated() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        var excluded = List.of(finishedEvent());
+        when(service.prepareSelection(List.of(EVENT_ID)))
+                .thenReturn(new LiveCampaignService.Preparation(null, excluded));
+        mvc.perform(post("/live-campaigns/prepare").header("Host", HOST).header("Origin", ORIGIN)
+                        .session(session).param("localFormToken", tokens.issue(session))
+                        .param("eventId", EVENT_ID.toString()))
+                .andExpect(status().isOk()).andExpect(view().name("live-campaign-ineligible"))
+                .andExpect(model().attribute("excludedFinished", excluded))
+                .andExpect(content().string(containsString("Aucune campagne live n’a été créée")))
+                .andExpect(content().string(containsString("&lt;Home&gt; — Away · finished")))
+                .andExpect(content().string(not(containsString("<Home>"))))
+                .andExpect(content().string(not(containsString("name=\"confirmation\""))));
+        verify(service).prepareSelection(List.of(EVENT_ID));
+        verifyNoMoreInteractions(service);
+    }
+
+    @Test
+    void mixedSelectionExplainsExcludedEventsBeforeLaunchConfirmation() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        UUID eligible = CanonicalEventIdentity.sofascore(900002L).value();
+        var excluded = List.of(finishedEvent());
+        when(service.prepareSelection(List.of(EVENT_ID, eligible)))
+                .thenReturn(new LiveCampaignService.Preparation(manifest(), excluded));
+        mvc.perform(post("/live-campaigns/prepare").header("Host", HOST).header("Origin", ORIGIN)
+                        .session(session).param("localFormToken", tokens.issue(session))
+                        .param("eventId", EVENT_ID.toString(), eligible.toString()))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/live-campaigns/" + CAMPAIGN_ID))
+                .andExpect(flash().attribute("excludedFinished", excluded));
+        when(service.state(CAMPAIGN_ID)).thenReturn(campaign("PREPARED", 1));
+        mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST)
+                        .flashAttr("excludedFinished", excluded))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Elles ont été exclues du manifeste")))
+                .andExpect(content().string(containsString("&lt;Home&gt; — Away")));
+        verify(service, never()).launch(any(), any());
+    }
+
+    @Test
+    void skippedEventLabelsItsHistoricalSportStatusWithoutInventingAnObservation() throws Exception {
+        var base = campaign("RUNNING", 2);
+        when(service.state(CAMPAIGN_ID)).thenReturn(new CampaignView(base.manifest(), "RUNNING", null,
+                NOW, NOW.plusSeconds(14400), 0, 0, 2, null,
+                List.of(new EventView(base.manifest().targets().getFirst(), "STOPPED_ALREADY_FINISHED",
+                        "STOPPED_ALREADY_FINISHED", 0, 0, null, List.of())), List.of(), List.of()));
+        mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("décrit l’observation figée à la préparation")))
+                .andExpect(content().string(containsString("aucun appel fournisseur.")))
+                .andExpect(content().string(not(containsString("Arrêter cette rencontre"))));
+    }
+
+    @Test
+    void eventFinishedAfterPreparationHasAnActionableLaunchRefusal() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        when(service.launch(CAMPAIGN_ID, HASH)).thenThrow(new IllegalArgumentException("LIVE_ALL_EVENTS_FINISHED"));
+        mvc.perform(post("/live-campaigns/" + CAMPAIGN_ID + "/launch").header("Host", HOST)
+                        .session(session).param("localFormToken", tokens.issue(session))
+                        .param("manifestHash", HASH).param("confirmation", "true"))
+                .andExpect(status().isBadRequest())
+                .andExpect(content().string(containsString("déjà terminées (finished)")))
+                .andExpect(content().string(containsString("Aucun lancement live ni appel fournisseur")));
+    }
+
+    private static CanonicalEventObservationView finishedEvent() {
+        return new CanonicalEventObservationView(17, CanonicalEventIdentity.sofascore(900001L), NOW,
+                new ScheduledTeam(1, "<Home>"), new ScheduledTeam(2, "Away"),
+                new ScheduledEventStatus("finished", Optional.empty()), Optional.empty(),
+                EventSourceTrace.providerSnapshot(23, HASH, "event-details-v2", NOW), HASH, 1);
     }
 
     @Test
@@ -248,13 +325,13 @@ class LiveCampaignControllerTest {
     @Test
     void capacityRefusalSuggestsReducedSelectionAndNeverEchoesArbitraryExceptionText() throws Exception {
         MockHttpSession session = new MockHttpSession();
-        when(service.prepare(List.of(EVENT_ID))).thenThrow(
+        when(service.prepareSelection(List.of(EVENT_ID))).thenThrow(
                 new IllegalArgumentException("LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY"));
         mvc.perform(post("/live-campaigns/prepare").header("Host", HOST).session(session)
                         .param("localFormToken", tokens.issue(session)).param("eventId", EVENT_ID.toString()))
                 .andExpect(status().isBadRequest())
                 .andExpect(content().string(containsString("Réduire la sélection")));
-        doThrow(new IllegalStateException("SECRET_PRIVATE_RUNTIME")).when(service).prepare(List.of(EVENT_ID));
+        doThrow(new IllegalStateException("SECRET_PRIVATE_RUNTIME")).when(service).prepareSelection(List.of(EVENT_ID));
         mvc.perform(post("/live-campaigns/prepare").header("Host", HOST).session(session)
                         .param("localFormToken", tokens.issue(session)).param("eventId", EVENT_ID.toString()))
                 .andExpect(status().isConflict())

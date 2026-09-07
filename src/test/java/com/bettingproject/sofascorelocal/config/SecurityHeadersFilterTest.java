@@ -53,6 +53,18 @@ class SecurityHeadersFilterTest {
                 .contains("script-src 'self'", "frame-ancestors 'none'", "form-action 'self'")
                 .doesNotContain("'unsafe-inline'", "'unsafe-eval'");
         assertThat(response.getHeader("Cache-Control")).contains("no-store", "no-cache");
+        assertThat(response.getHeader("Referrer-Policy")).isEqualTo("same-origin");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "/events;jsessionid=LOCAL_TEST_SESSION",
+        "/live-campaigns/12345678-1234-1234-1234-123456789012;jsessionid=LOCAL_TEST_SESSION",
+        "/live-campaigns/prepare"
+    })
+    void keepsAnExactOriginWhenLiveFormsAreRenderedAfterSessionRewritingOrAnError(String path)
+            throws Exception {
+        assertThat(filter(path).getHeader("Referrer-Policy")).isEqualTo("same-origin");
     }
 
     @Test
@@ -114,15 +126,19 @@ class SecurityHeadersFilterTest {
 
     @ParameterizedTest
     @ValueSource(strings = {
-        "/events",
         "/events/event-id/statistics",
         "/events/event-id/export",
         "/events/event-id/exports-adjacent",
         "/prefix/events/event-id/exports",
         "/j5-import-batches",
-        "/benchmark"
+        "/benchmark",
+        "/events/state",
+        "/events/12345678-1234-1234-1234-123456789012/state",
+        "/live-campaigns/12345678-1234-1234-1234-123456789012/state",
+        "/live-campaigns-adjacent",
+        "/prefix/live-campaigns/12345678-1234-1234-1234-123456789012"
     })
-    void keepsNoReferrerOutsideTheJ7ExportSubtree(String path) throws Exception {
+    void keepsNoReferrerOutsideJ7ExportsAndExplicitLivePages(String path) throws Exception {
         MockHttpServletResponse response = filter(path);
 
         assertThat(response.getHeader("Referrer-Policy"))

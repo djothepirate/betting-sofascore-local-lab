@@ -26,7 +26,7 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
     private static final String STRICT_CACHE_CONTROL =
             "no-store, no-cache, must-revalidate, max-age=0";
     private static final String DEFAULT_REFERRER_POLICY = "no-referrer";
-    private static final String J7_EXPORT_REFERRER_POLICY = "same-origin";
+    private static final String LOCAL_FORM_REFERRER_POLICY = "same-origin";
     private static final String CONTENT_SECURITY_POLICY_PREFIX =
             "default-src 'self'; style-src 'self'; img-src 'self'; ";
     private static final String CONTENT_SECURITY_POLICY_SUFFIX =
@@ -43,8 +43,10 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
         response.setHeader("X-Frame-Options", "DENY");
         response.setHeader(
                 "Referrer-Policy",
-                isJ7ExportRequest(request)
-                        ? J7_EXPORT_REFERRER_POLICY
+                // Chromium sends Origin: null for navigation POSTs under no-referrer.
+                // Preserve an exact origin for local forms without disclosing cross-origin referrers.
+                isJ7ExportRequest(request) || isLivePageRequest(request)
+                        ? LOCAL_FORM_REFERRER_POLICY
                         : DEFAULT_REFERRER_POLICY);
         response.setHeader(
                 "Content-Security-Policy",

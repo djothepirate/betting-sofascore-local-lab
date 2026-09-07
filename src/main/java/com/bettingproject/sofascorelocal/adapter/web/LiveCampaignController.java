@@ -9,6 +9,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -31,10 +32,16 @@ public class LiveCampaignController {
     @PostMapping("/live-campaigns/prepare")
     public String prepare(@RequestParam(name = "eventId", required = false) List<UUID> eventIds,
                           @RequestParam(name = "localFormToken", required = false) String token,
-                          HttpSession session) {
+                          HttpSession session, Model model, RedirectAttributes redirect) {
         tokens.consume(session, token);
-        var manifest = campaigns.prepare(eventIds == null ? List.of() : eventIds);
-        return "redirect:/live-campaigns/" + manifest.campaignId();
+        var preparation = campaigns.prepareSelection(eventIds == null ? List.of() : eventIds);
+        if (preparation.manifest() == null) {
+            model.addAttribute("excludedFinished", preparation.excludedFinished());
+            return "live-campaign-ineligible";
+        }
+        if (!preparation.excludedFinished().isEmpty())
+            redirect.addFlashAttribute("excludedFinished", preparation.excludedFinished());
+        return "redirect:/live-campaigns/" + preparation.manifest().campaignId();
     }
 
     @GetMapping("/live-campaigns/{campaignId}")
@@ -106,6 +113,7 @@ public class LiveCampaignController {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public String invalid(IllegalArgumentException exception, Model model) {
         String message = switch (String.valueOf(exception.getMessage())) {
+            case "LIVE_ALL_EVENTS_FINISHED" -> "Ces rencontres sont déjà terminées (finished). Aucun lancement live ni appel fournisseur n’a été effectué. Revenir aux rencontres pour préparer une autre sélection.";
             case "LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY", "LIVE_CAPACITY_REFUSED_REDUCE_SELECTION" ->
                     "Cette sélection dépasse la capacité qualifiée ou la cadence admissible. Réduire la sélection ; le premier pilote porte sur une rencontre.";
             default -> "La sélection ou le manifeste est invalide. Préparer une nouvelle campagne.";

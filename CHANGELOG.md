@@ -4,10 +4,24 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — retour opérateur : préparation locale et rencontres terminées
+
+- Corrige le refus 403 des formulaires live Chromium : les pages locales concernées utilisent
+  `Referrer-Policy: same-origin`, avec maintien du rejet des origines nulles ou étrangères.
+- Exclut les rencontres déjà `finished` dans les observations locales avant l'admission.
+  Une sélection entièrement terminée affiche une explication sans créer de campagne ; une
+  sélection mixte prépare uniquement les rencontres restantes et indique les exclusions.
+- Revérifie les statuts locaux au lancement et avant l'ouverture du navigateur. Un match
+  devenu terminé ne reçoit aucun appel ; les autres peuvent continuer. Le premier J4 d'une
+  rencontre admise qui découvre `finished` conserve sa finalisation bornée.
+- Le commit initial `54d1597` et ses preuves sont conservés. Qualification de ce correctif :
+  [retour fonctionnel](docs/validation/WO058-FUNCTIONAL-FEEDBACK-20260907.md).
+
 ### WO-058 — réalisation des campagnes live locales J4/J5
 
 - Validation propriétaire du WO enregistrée le 7 septembre, après ADR-SS-005 v0.1 accepté.
-  Réalisation locale sur la branche issue du train RC01, sans commit ni publication.
+  Réalisation locale sur la branche issue du train RC01, enregistrée dans `54d1597` sur demande
+  propriétaire pour les essais Eclipse ; aucune publication effectuée par ce lot.
 - Sélection dans les résultats normalisés, manifeste immuable valable cinq minutes, lancement
   explicite d'une session Playwright unique et ordonnanceur J4/J5 borné. Admission conservatrice
   à un match, paliers qualifiés 2/3, réserve de clôture, budgets et contrôle du volume PostgreSQL.

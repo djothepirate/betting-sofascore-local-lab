@@ -192,6 +192,8 @@
           }
         }
         text(node, "[data-live-event-state]", event.state);
+        text(node, "[data-live-sport-context]", event.state === "STOPPED_ALREADY_FINISHED"
+          ? "Le statut sportif ci-dessus décrit l’observation figée à la préparation. La rencontre a été constatée terminée localement au lancement ; aucune nouvelle collecte n’a eu lieu." : " ");
         text(node, "[data-live-event-reason]", event.reason);
         text(node, "[data-live-next-due]", event.nextDueAt);
         text(node, "[data-live-event-calls]", `${event.reservedCalls} / ${event.maximumCalls}`);

@@ -16,6 +16,12 @@
 <main class="shell event-page" data-live-monitor
       th:attr="data-live-state-url=@{/live-campaigns/{id}/state(id=${campaign.campaignId})},data-live-campaign-id=${campaign.campaignId},data-live-revision=${campaign.revision}">
   <nav class="links page-links" aria-label="Navigation locale"><a th:href="@{/events}">← Rencontres</a></nav>
+  <section class="panel" th:if="${excludedFinished != null}" aria-label="Rencontres exclues">
+    <p class="notice" role="status">Les rencontres suivantes sont déjà terminées (finished).
+      Elles ont été exclues du manifeste ; aucun appel fournisseur ne sera effectué pour elles.</p>
+    <ul><li th:each="event : ${excludedFinished}"
+            th:text="${event.homeTeam.name + ' — ' + event.awayTeam.name}">Rencontre terminée</li></ul>
+  </section>
   <section class="panel" aria-labelledby="campaign-title">
     <div class="panel-heading"><div><p class="label">Campagne locale</p>
       <h2 id="campaign-title" class="mono" th:text="${campaign.campaignId}">UUID</h2></div>
@@ -77,6 +83,8 @@
       <h2 th:text="${event.title}">Rencontre</h2><p class="mono" th:text="${event.startsAtParis}">Europe/Paris</p></div>
       <span class="chip chip-safe" data-live-sport-status th:text="${event.sportStatus}">notstarted</span>
     </div>
+    <p class="muted" data-live-sport-context
+       th:text="${event.state == 'STOPPED_ALREADY_FINISHED' ? 'Le statut sportif ci-dessus décrit l’observation figée à la préparation. La rencontre a été constatée terminée localement au lancement ; aucune nouvelle collecte n’a eu lieu.' : ''}"></p>
     <dl class="detail-grid">
       <div><dt>Score courant J4</dt><dd data-live-score th:text="${event.score}">—</dd></div>
       <div><dt>État de collecte</dt><dd data-live-event-state th:text="${event.state}">WAITING_START</dd></div>

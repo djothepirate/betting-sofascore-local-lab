@@ -19,6 +19,7 @@ import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceOutcome;
 import com.bettingproject.sofascorelocal.domain.provider.RawSnapshotPersistenceResult;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
+import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEventStatus;
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
@@ -46,6 +47,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Supplier;
+import java.util.stream.LongStream;
 
 import static com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType.*;
 import static org.assertj.core.api.Assertions.assertThat;
@@ -125,6 +127,192 @@ class LiveCampaignServiceTest {
             assertThat(prepared.manifestSha256()).matches("[0-9a-f]{64}");
             assertThat(Duration.between(prepared.preparedAt(), prepared.expiresAt())).isEqualTo(Duration.ofMinutes(5));
             verifyNoInteractions(h.factory, h.coordinator);
+        }
+    }
+
+    @Test
+    void aLocallyFinishedMatchIsExcludedWithoutAdmissionEvenWhenAllProviderSwitchesAreDisabled() throws Exception {
+        try (Harness h = new Harness()) {
+            var finished = providerObservation(A, "finished");
+            when(h.events.findLatestByCanonicalId(id(A))).thenReturn(Optional.of(finished));
+            h.provider.setEnabled(false);
+            h.playwright.setEnabled(false);
+            h.properties.setEnabled(false);
+
+            var preparation = h.service.prepareSelection(List.of(id(A)));
+
+            assertThat(preparation.manifest()).isNull();
+            assertThat(preparation.excludedFinished()).containsExactly(finished);
+            verifyNoInteractions(h.admission, h.factory, h.coordinator);
+            verify(h.store, never()).prepare(any());
+            assertThat(h.dispatched).isEmpty();
+        }
+    }
+
+    @Test
+    void anEntireHistoricalDayIsExcludedBeforeTheOneMatchCapacityAndStorageChecks() throws Exception {
+        try (Harness h = new Harness()) {
+            h.properties.setQualifiedMatchCapacity(1);
+            var finished = LongStream.range(A, A + 15).mapToObj(providerId -> {
+                var event = providerObservation(providerId, "finished");
+                when(h.events.findLatestByCanonicalId(id(providerId))).thenReturn(Optional.of(event));
+                return event;
+            }).toList();
+
+            var preparation = h.service.prepareSelection(finished.stream().map(event -> event.identity().value()).toList());
+
+            assertThat(preparation.manifest()).isNull();
+            assertThat(preparation.excludedFinished()).containsExactlyElementsOf(finished);
+            verifyNoInteractions(h.admission, h.factory, h.coordinator);
+            verify(h.store, never()).prepare(any());
+        }
+    }
+
+    @Test
+    void mixedSelectionAdmitsAndFreezesOnlyTheUnfinishedMatch() throws Exception {
+        try (Harness h = new Harness()) {
+            h.properties.setQualifiedMatchCapacity(1);
+            var finished = providerObservation(A, "finished");
+            var active = providerObservation(B, "inprogress");
+            when(h.events.findLatestByCanonicalId(id(A))).thenReturn(Optional.of(finished));
+            when(h.events.findLatestByCanonicalId(id(B))).thenReturn(Optional.of(active));
+            when(h.admission.maximumBytes(1)).thenReturn(5_242_880_000L);
+            when(h.store.prepare(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+            var preparation = h.service.prepareSelection(List.of(id(A), id(B)));
+
+            assertThat(preparation.excludedFinished()).containsExactly(finished);
+            assertThat(preparation.manifest().targets()).containsExactly(new Target(id(B), B, 17, 23));
+            assertThat(preparation.manifest().maximumBytes()).isEqualTo(5_242_880_000L);
+            assertThat(preparation.manifest().qualifiedMatchCapacity()).isEqualTo(1);
+            verify(h.admission).admit(1);
+            verify(h.admission, never()).admit(2);
+            verify(h.store).prepare(preparation.manifest());
+            verifyNoInteractions(h.factory, h.coordinator);
+        }
+    }
+
+    @Test
+    void aForgedEventInAMixedSelectionIsRejectedBeforeAdmissionAndPersistence() throws Exception {
+        try (Harness h = new Harness()) {
+            h.observe(A, "finished");
+            UUID missing = id(B + 1);
+            when(h.events.findLatestByCanonicalId(missing)).thenReturn(Optional.empty());
+
+            assertThatThrownBy(() -> h.service.prepareSelection(List.of(id(A), id(B), missing)))
+                    .isInstanceOf(IllegalArgumentException.class).hasMessage("LIVE_EVENT_NOT_FOUND");
+
+            verifyNoInteractions(h.admission, h.factory, h.coordinator);
+            verify(h.store, never()).prepare(any());
+        }
+    }
+
+    @Test
+    void theRawSelectionLimitStillRejectsMoreThanOneHundredEventsBeforeLookingThemUp() throws Exception {
+        try (Harness h = new Harness()) {
+            var selected = LongStream.range(A, A + 101).mapToObj(LiveCampaignServiceTest::id).toList();
+            assertThatThrownBy(() -> h.service.prepareSelection(selected))
+                    .isInstanceOf(IllegalArgumentException.class).hasMessage("LIVE_SELECTION_INVALID");
+            verifyNoInteractions(h.events, h.admission, h.factory, h.coordinator);
+            verify(h.store, never()).prepare(any());
+        }
+    }
+
+    @Test
+    void theManifestOnlyPreparationApiDoesNotReturnAnEmptyCampaignForFinishedMatches() throws Exception {
+        try (Harness h = new Harness()) {
+            h.observe(A, "finished");
+            assertThatThrownBy(() -> h.service.prepare(List.of(id(A))))
+                    .isInstanceOf(IllegalArgumentException.class).hasMessage("LIVE_ALL_EVENTS_FINISHED");
+            verifyNoInteractions(h.admission, h.factory, h.coordinator);
+            verify(h.store, never()).prepare(any());
+        }
+    }
+
+    @Test
+    void matchesFinishedSincePreparationPreventLaunchBeforeOptInAdmissionAndOwnership() throws Exception {
+        try (Harness h = new Harness()) {
+            h.observe(A, "finished");
+            h.observe(B, "finished");
+            h.provider.setEnabled(false);
+            h.playwright.setEnabled(false);
+            h.properties.setEnabled(false);
+
+            assertThatThrownBy(h::launch).isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("LIVE_ALL_EVENTS_FINISHED");
+
+            verifyNoInteractions(h.admission, h.factory, h.coordinator);
+            verify(h.store, never()).launch(any(), any(), any(), any());
+            assertThat(h.dispatched).isEmpty();
+        }
+    }
+
+    @Test
+    void aMatchFinishedSincePreparationIsSkippedWhileTheOtherMatchCompletes() throws Exception {
+        try (Harness h = new Harness()) {
+            h.observe(A, "finished");
+            h.reply = LiveCampaignServiceTest::normalFinishedReply;
+
+            h.launch();
+            h.awaitFinished();
+
+            assertThat(h.dispatched).extracting(PlaywrightProviderRequest::eventId).containsExactly(B, B, B, B);
+            assertThat(h.eventStates.get(id(A))).isEqualTo("STOPPED_ALREADY_FINISHED");
+            assertThat(h.eventStates.get(id(B))).isEqualTo("FINISHED_CONFIRMED");
+            assertThat(h.receipts).hasSize(4);
+            assertThat(h.reservations.get()).isEqualTo(4);
+            verify(h.factory, times(1)).open(h.manifest.campaignId(), LiveProviderSession.ENDPOINTS);
+            verify(h.campaign).close();
+        }
+    }
+
+    @Test
+    void completionDuringOwnerLaunchIsRecheckedBeforeTheBrowserCanOpen() throws Exception {
+        try (Harness h = new Harness()) {
+            h.afterOwnerLaunch = () -> {
+                h.observe(A, "finished");
+                h.observe(B, "finished");
+            };
+
+            h.launch();
+            h.awaitFinished();
+
+            assertThat(h.eventStates.get(id(A))).isEqualTo("STOPPED_ALREADY_FINISHED");
+            assertThat(h.eventStates.get(id(B))).isEqualTo("STOPPED_ALREADY_FINISHED");
+            assertThat(h.dispatched).isEmpty();
+            assertThat(h.reservations.get()).isZero();
+            assertThat(h.receipts).isEmpty();
+            verifyNoInteractions(h.factory, h.campaign);
+        }
+    }
+
+    @Test
+    void completionOfOneMatchDuringOwnerLaunchCannotDispatchThatMatch() throws Exception {
+        try (Harness h = new Harness()) {
+            h.afterOwnerLaunch = () -> h.observe(A, "finished");
+            h.reply = LiveCampaignServiceTest::normalFinishedReply;
+
+            h.launch();
+            h.awaitFinished();
+
+            assertThat(h.dispatched).extracting(PlaywrightProviderRequest::eventId).containsExactly(B, B, B, B);
+            assertThat(h.eventStates.get(id(A))).isEqualTo("STOPPED_ALREADY_FINISHED");
+            assertThat(h.eventStates.get(id(B))).isEqualTo("FINISHED_CONFIRMED");
+            assertThat(h.reservations.get()).isEqualTo(4);
+        }
+    }
+
+    @Test
+    void aMissingLocalObservationCannotAuthorizeLaunchingAnOlderManifest() throws Exception {
+        try (Harness h = new Harness()) {
+            when(h.events.findLatestByCanonicalId(id(A))).thenReturn(Optional.empty());
+
+            assertThatThrownBy(h::launch).isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("LIVE_EVENT_NOT_FOUND");
+
+            verifyNoInteractions(h.admission, h.factory, h.coordinator);
+            verify(h.store, never()).launch(any(), any(), any(), any());
+            assertThat(h.dispatched).isEmpty();
         }
     }
 
@@ -396,6 +584,14 @@ class LiveCampaignServiceTest {
         when(event.observationId()).thenReturn(17L);
         when(event.identity()).thenReturn(CanonicalEventIdentity.sofascore(providerId));
         when(event.source()).thenReturn(source);
+        when(event.status()).thenReturn(new ScheduledEventStatus("notstarted", Optional.empty()));
+        return event;
+    }
+
+    private static CanonicalEventObservationView providerObservation(long providerId, String status) {
+        var event = observation(providerId,
+                EventSourceTrace.providerSnapshot(23, "b".repeat(64), "event-details-v2", Instant.now()));
+        when(event.status()).thenReturn(new ScheduledEventStatus(status, Optional.empty()));
         return event;
     }
 
@@ -426,6 +622,7 @@ class LiveCampaignServiceTest {
         final PlaywrightProviderCampaignFactory factory = mock(PlaywrightProviderCampaignFactory.class);
         final LiveCampaignProperties properties = new LiveCampaignProperties();
         final ProviderPlaywrightProperties playwright = new ProviderPlaywrightProperties();
+        final SofascoreProperties provider = new SofascoreProperties();
         final LiveCampaignService service;
         final Manifest manifest;
         final Ownership ownership;
@@ -448,6 +645,7 @@ class LiveCampaignServiceTest {
         final CountDownLatch getInFlight = new CountDownLatch(1), releaseGet = new CountDownLatch(1);
         final CountDownLatch finished = new CountDownLatch(1);
         volatile Function<PlaywrightProviderRequest, PlaywrightProviderResponse> reply;
+        volatile Runnable afterOwnerLaunch = () -> {};
         boolean launched;
 
         Harness() { this(false); }
@@ -465,7 +663,9 @@ class LiveCampaignServiceTest {
                             properties.getQualificationSha256()));
             ownership = new Ownership(manifest.campaignId(), UUID.randomUUID(), 1);
             eventStates.put(id(A), "WAITING_START"); eventStates.put(id(B), "WAITING_START");
-            SofascoreProperties provider = new SofascoreProperties(); provider.setEnabled(true);
+            provider.setEnabled(true);
+            observe(A, "notstarted");
+            observe(B, "notstarted");
             playwright.setEnabled(true);
             var lease = mock(ManualProviderRequestCoordinator.CampaignLease.class);
             when(coordinator.acquireLiveCampaign(manifest.campaignId())).thenReturn(lease);
@@ -478,6 +678,7 @@ class LiveCampaignServiceTest {
             when(store.launch(eq(manifest.campaignId()), eq(manifest.manifestSha256()), eq(ownership), any()))
                     .thenAnswer(invocation -> {
                         campaignState.set("RUNNING"); Instant start = invocation.getArgument(3);
+                        afterOwnerLaunch.run();
                         return new Launch(ownership, start, start.plus(manifest.duration()), true);
                     });
             when(store.reserveAttempt(any())).thenAnswer(invocation -> {
@@ -544,6 +745,11 @@ class LiveCampaignServiceTest {
             when(clock.instant()).thenAnswer(invocation -> Instant.now().plusSeconds(clockOffsetSeconds.get()));
             service = new LiveCampaignService(provider, playwright, properties, admission, store, events,
                     coordinator, guard, factory, supervisor, processor, clock);
+        }
+
+        void observe(long providerId, String status) {
+            var event = providerObservation(providerId, status);
+            when(events.findLatestByCanonicalId(id(providerId))).thenReturn(Optional.of(event));
         }
 
         CampaignView view() {

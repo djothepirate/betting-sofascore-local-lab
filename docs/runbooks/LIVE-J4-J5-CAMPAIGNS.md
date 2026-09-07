@@ -71,6 +71,18 @@ Les anciennes propriétés `automatic-refresh-enabled` et `live-polling-enabled`
 
 ## Parcours depuis /events
 
+Une rencontre déjà `finished` dans la dernière observation locale est exclue, avant tout contrôle
+de capacité ou appel fournisseur. Si toute la sélection est terminée, la page l'explique et aucune
+campagne n'est créée. Une sélection mixte indique les exclusions avant confirmation du manifeste.
+Les statuts sont revérifiés au lancement pour ne pas appeler une rencontre devenue terminée.
+
+Après mise à jour de ce correctif et redémarrage de l'application dans Eclipse, recharger `/events`
+pour recevoir la nouvelle politique de formulaire et un jeton local neuf. Le refus 403 observé avec
+l'ancienne page `no-referrer` n'est pas corrigé par l'activation de `SOFASCORE_PLAYWRIGHT_ENABLED`.
+La préparation et l'exclusion des matchs terminés ne nécessitent aucun opt-in réseau. Les trois
+opt-ins restent requis pour lancer les rencontres éligibles. Utiliser une même adresse
+(`localhost:8087` ou `127.0.0.1:8087`) durant tout le parcours.
+
 1. Dans les résultats normalisés, sélectionner le match du pilote puis préparer la campagne.
    Le serveur vérifie UUID, ID fournisseur et snapshot source ; aucune requête fournisseur ne part.
 2. Relire la sélection figée, les heures, la fenêtre, les plafonds, le profil de capacité et

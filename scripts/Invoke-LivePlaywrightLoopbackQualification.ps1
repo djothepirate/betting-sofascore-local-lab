@@ -14,13 +14,14 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Live qualification package failed' }
     $qualificationStartedAt = [DateTime]::UtcNow
     & .\mvnw.cmd '-Pprovider-playwright-runtime,provider-playwright-local-qualification' '-DskipTests=false' '-DskipITs=false' `
-        '-Dit.test=LiveProviderSessionQualificationIT,LiveCampaignBrowserQualificationIT' `
+        '-Dit.test=LiveProviderSessionQualificationIT,LiveCampaignBrowserQualificationIT,LiveCampaignFormBrowserQualificationIT' `
         "-Dprovider.playwright.browser-cache=$browserCache" `
         'failsafe:integration-test@provider-playwright-loopback-qualification' 'failsafe:verify@provider-playwright-loopback-qualification'
     if ($LASTEXITCODE -ne 0) { throw 'Live loopback qualification failed' }
     $reports = @(
         [pscustomobject]@{ Path = 'target/failsafe-reports/TEST-com.bettingproject.sofascorelocal.application.network.playwright.LiveProviderSessionQualificationIT.xml'; Tests = 3 },
-        [pscustomobject]@{ Path = 'target/failsafe-reports/TEST-com.bettingproject.sofascorelocal.adapter.web.LiveCampaignBrowserQualificationIT.xml'; Tests = 1 }
+        [pscustomobject]@{ Path = 'target/failsafe-reports/TEST-com.bettingproject.sofascorelocal.adapter.web.LiveCampaignBrowserQualificationIT.xml'; Tests = 1 },
+        [pscustomobject]@{ Path = 'target/failsafe-reports/TEST-com.bettingproject.sofascorelocal.adapter.web.LiveCampaignFormBrowserQualificationIT.xml'; Tests = 2 }
     )
     foreach ($report in $reports) {
         $item = Get-Item -LiteralPath $report.Path

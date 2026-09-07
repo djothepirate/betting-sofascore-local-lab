@@ -6,12 +6,25 @@ Réalisation : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4
 
 ## Session et autorité
 
-`LiveCampaignService.prepare` lit les identités canoniques et leur provenance fournisseur,
-refuse les sélections vides, dupliquées, forgées ou issues de fixtures, puis réserve un manifeste
+`LiveCampaignService.prepareSelection` lit les identités canoniques et leur provenance fournisseur,
+refuse les sélections vides, dupliquées, forgées ou issues de fixtures, écarte les statuts locaux
+`finished` avant admission et contrôle de stockage, puis réserve un manifeste
 immuable valable cinq minutes. Le manifeste fige les cibles, la durée, les plafonds et le profil
 de capacité. Sa préparation ne crée ni worker ni contexte. Le lancement confirme son empreinte,
 consomme le formulaire local, vérifie les trois opt-ins et refuse une politique modifiée depuis
 la préparation.
+
+Une sélection entièrement terminée ne crée pas de manifeste et affiche une explication locale,
+même si les opt-ins réseau sont désactivés. Pour une sélection mixte, les exclusions sont rendues
+dans le récapitulatif et la capacité porte sur les seules cibles retenues. Le statut local est
+revérifié au lancement puis dans le thread propriétaire avant ouverture du navigateur : un match
+devenu terminé est arrêté sous `STOPPED_ALREADY_FINISHED`, sans modifier le manifeste ni fabriquer
+une nouvelle observation sportive. Si tous sont terminés, aucun transport n'est ouvert.
+Le premier J4 d'un match admis qui découvre ensuite `finished` conserve le dernier cycle J5 borné.
+
+Les pages de formulaire live utilisent `Referrer-Policy: same-origin` : Chromium conserve ainsi
+l'origine exacte du POST. Les politiques d'origine/host, les jetons à usage unique et le refus
+d'`Origin: null` restent applicables. La politique des autres pages reste inchangée.
 
 Un seul thread propriétaire acquiert `ManualProviderRequestCoordinator`, puis le garde durable
 commun aux parcours manuels et live. `LiveProviderSession` ouvre une fois la factory Playwright

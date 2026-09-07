@@ -1,6 +1,6 @@
 # WO-SS-20260907-058 — Campagnes live locales J4/J5 sur sélection de rencontres
 
-- **Statut :** `READY_FOR_REVIEW` — WO validé par le propriétaire le 7 septembre 2026 ; réalisation qualifiée hors fournisseur, revue de réalisation requise, aucune clôture.
+- **Statut :** `READY_FOR_REVIEW` — retour fonctionnel du 7 septembre 2026 corrigé et qualifié hors fournisseur ; reprise des essais opérateur et revue de réalisation attendues, aucune clôture.
 - **Date :** 2026-09-07.
 - **Jalon :** expérimentation live locale après J9, distincte des parcours manuels existants.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
@@ -18,6 +18,26 @@ Les statuts restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 PostgreSQL local Docker Desktop et application sur `127.0.0.1:8087`, textes UTF-8.
 
 ## 1. Objectif et origine du besoin
+
+### Retour fonctionnel du 7 septembre 2026, après commit `54d1597`
+
+Le propriétaire confirme le comportement du bouton selon la sélection, signale un 403 au POST
+de préparation depuis Chromium et précise : un événement dont le statut local initial est
+`finished` ne doit pas démarrer de campagne live. Cette précision porte sur l'éligibilité locale,
+avant le premier appel fournisseur. Elle complète AC01/AC04 ; elle ne modifie pas la finalisation
+d'un match admis dont le premier J4 réseau découvre ensuite la fin.
+
+Les rencontres terminées sont exclues avant admission et gel du manifeste. Une sélection
+entièrement terminée affiche la liste et l'absence de campagne/appel. Pour une sélection mixte,
+le récapitulatif indique les exclusions et ne retient que les autres rencontres. Le plafond
+d'entrée de 100 identifiants protège la lecture locale ; la capacité qualifiée 1/2/3 porte seulement
+sur les cibles retenues. Identités, doublons et provenance restent vérifiés côté serveur.
+Au lancement d'un ancien manifeste, une rencontre devenue terminée est arrêtée sans appel
+(`STOPPED_ALREADY_FINISHED`) ; si toutes sont terminées, aucun navigateur n'est ouvert.
+Les contrôles locaux sont répétés après acquisition avant ouverture du navigateur.
+
+La preuve du correctif figure dans le [rapport de retour fonctionnel](../../validation/WO058-FUNCTIONAL-FEEDBACK-20260907.md).
+L'ADR accepté et les inventaires/preuves initiaux restent inchangés.
 
 Depuis le bloc **Résultats normalisés** de `/events`, sélectionner une ou plusieurs rencontres,
 préparer puis lancer explicitement une campagne locale. Pour chaque rencontre, suivre J4 jusqu'à
@@ -438,10 +458,10 @@ préservent le focus et ne déplacent pas la sélection de l'opérateur.
 
 | Critère | Scénario discriminant | Preuve attendue |
 |---|---|---|
-| AC01 — sélection exacte | 0/1/N événements, ID forgé, doublon, provenance fixture, manifeste modifié/expiré | Tests contrôleur/service, zéro dispatch refusé |
+| AC01 — sélection exacte | 0/1/N événements, ID forgé, doublon, provenance fixture, manifeste modifié/expiré ; exclusion des statuts locaux `finished` avant admission | Tests contrôleur/service et POST Chromium réel, zéro dispatch refusé ; sélection entièrement terminée expliquée sans campagne |
 | AC02 — lancement unique | Double clic, deux onglets/processus et lease J3 occupée | Une seule campagne admise et une seule tentative par clé |
 | AC03 — attente du début | `notstarted` répété puis `inprogress`, retard du coup d'envoi | J4 à échéances 60 s, aucun J5 avant preuve de début |
-| AC04 — lancement en cours/fini | Premier J4 déjà `inprogress` ou `finished` | Chemin direct correct, sans attente artificielle |
+| AC04 — lancement en cours/fini | Statut local déjà `finished` à la préparation/lancement ; premier J4 réseau déjà `inprogress` ou `finished` pour une cible admise | Aucun appel pour les matchs déjà terminés localement ; chemin réseau direct et finalisation bornée conservés pour les autres |
 | AC05 — cycle J5 | Plusieurs matchs et trois familles, dont lineups inchangées | Ordre et cadence mesurés par famille, aucun overlap |
 | AC06 — fin sans inférence | injuryTime première/seconde période, HT, prolongation, tirs au but, correction VAR | J4 déclenché correctement, fin seulement sur J4 `finished` |
 | AC07 — incident absent | Incidents vides/404 ou signal manquant | J4 secours, limite atteinte sans faux `finished` |

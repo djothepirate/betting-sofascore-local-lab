@@ -79,7 +79,9 @@ public class LiveCampaignPresentation {
                         : identity.homeTeam().name() + " — " + identity.awayTeam().name(),
                 identity == null ? "—" : identity.tournament().map(t -> t.name()).orElse("—"),
                 identity == null ? "—" : identity.startsAt().atZone(ZoneId.of("Europe/Paris")).toString(),
-                sportStatus, score(j4), event.state(), event.reason(), event.nextDueAt(), event.reservedCalls(),
+                sportStatus, score(j4), event.state(), "STOPPED_ALREADY_FINISHED".equals(event.reason())
+                        ? "Rencontre déjà terminée dans les observations locales au lancement ; aucun appel fournisseur."
+                        : event.reason(), event.nextDueAt(), event.reservedCalls(),
                 campaign.manifest().maximumCallsPerEvent(), event.receivedBytes(), event.missedCycles(),
                 event.finalComplete(), sourceSnapshot, sourceReceivedAt, canonicalCurrent,
                 FAMILIES.stream().map(endpoint -> event.families().stream()
