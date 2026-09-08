@@ -82,6 +82,32 @@ class LiveCampaignCleanupTest {
     }
 
     @ParameterizedTest @ValueSource(strings={"live-v3","live-v4"})
+    void cancellationWinningAfterLeaseAcquisitionReleasesOnlyTheGuardAndNeverOpensABrowser(String policyVersion) throws Exception {
+        try (Harness h = new Harness(policyVersion)) {
+            h.cancelBeforeLaunchCommit.set(true);
+            assertThatThrownBy(() -> h.service.launch(h.id(), h.manifest.manifestSha256()))
+                    .isInstanceOf(IllegalStateException.class).hasMessage("LIVE_LAUNCH_FAILED");
+            h.awaitReleased();
+            assertThat(h.service.state(h.id())).satisfies(view->{
+                assertThat(view.state()).isEqualTo("STOPPED_OPERATOR");
+                assertThat(view.reason()).isEqualTo("PREPARATION_CANCELLED");
+                assertThat(view.ownership()).isNull();assertThat(view.startedAt()).isNull();assertThat(view.endsAt()).isNull();
+                assertThat(view.reservedCalls()).isZero();assertThat(view.receivedBytes()).isZero();
+                assertThat(view.attempts()).isEmpty();
+                assertThat(view.events()).singleElement().satisfies(event->{
+                    assertThat(event.state()).isEqualTo("STOPPED_OPERATOR");
+                    assertThat(event.reason()).isEqualTo("PREPARATION_CANCELLED");assertThat(event.nextDueAt()).isNull();
+                });
+            });
+            assertThat(h.guardState.get()).isEqualTo("FREE");
+            assertThat(h.terminalTransitions).hasValue(0);
+            verify(h.store,never()).transition(any(),any(),any(),any(),any(),any());
+            verify(h.store,never()).updateFamilySchedule(any(),any(),any(),any());
+            verifyNoInteractions(h.factory,h.campaign);
+        }
+    }
+
+    @ParameterizedTest @ValueSource(strings={"live-v3","live-v4"})
     void aCommittedLaunchWithALostReplyTerminatesItsDurableEventsWithoutCreatingAScheduleOrTransport(String policyVersion) throws Exception {
         try (Harness h = new Harness(policyVersion)) {
             h.failLaunchAfterCommit.set(true);
@@ -472,6 +498,7 @@ class LiveCampaignCleanupTest {
         final AtomicLong guardGeneration = new AtomicLong(1);
         final AtomicBoolean failMetricsOnce = new AtomicBoolean(), pauseNextCleanup = new AtomicBoolean();
         final AtomicBoolean failLaunchBeforeCommit = new AtomicBoolean(), failLaunchAfterCommit = new AtomicBoolean();
+        final AtomicBoolean cancelBeforeLaunchCommit = new AtomicBoolean();
         final AtomicBoolean failLaunchWithCommitPending = new AtomicBoolean(), pendingLaunchCommit = new AtomicBoolean();
         final AtomicBoolean failCleanupBarrier = new AtomicBoolean();
         final AtomicBoolean failAfterReceipt = new AtomicBoolean(), failUnknownAfterCommit = new AtomicBoolean();
@@ -573,6 +600,12 @@ class LiveCampaignCleanupTest {
             });
             when(store.launch(eq(id()), eq(manifest.manifestSha256()), any(), any())).thenAnswer(call -> {
                 database(); requireOwner(call.getArgument(2)); owner.set(Thread.currentThread());
+                if (cancelBeforeLaunchCommit.get()) {
+                    // The competing local cancellation committed after the service's first read
+                    // and lease acquisition, before the SQL launch locked this preparation.
+                    campaignState.set("STOPPED_OPERATOR");eventState.set("STOPPED_OPERATOR");
+                    throw new IllegalStateException("live preparation is expired or closed");
+                }
                 if (failLaunchBeforeCommit.get()) {
                     databaseUnavailable.set(true); throw new IllegalStateException("launch transaction rolled back");
                 }
@@ -673,9 +706,11 @@ class LiveCampaignCleanupTest {
                     dispatchAuthorizedAt.get(), raw == null ? null : 1L, raw == null ? null : 1L,
                     raw == null ? null : raw.receivedAt(), result.get()));
             Instant start = durableStartedAt.get();
-            return new CampaignView(manifest, campaignState.get(), null, start, start == null ? null : start.plus(manifest.duration()),
+            String cancellationReason=cancelBeforeLaunchCommit.get() && "STOPPED_OPERATOR".equals(campaignState.get())
+                    ? "PREPARATION_CANCELLED" : null;
+            return new CampaignView(manifest, campaignState.get(), cancellationReason, start, start == null ? null : start.plus(manifest.duration()),
                     dispatches.get(), 0, 0, durableOwner.get(),
-                    List.of(new EventView(manifest.targets().getFirst(), eventState.get(), null, 0, 0, nextDue.get(), List.of())),
+                    List.of(new EventView(manifest.targets().getFirst(), eventState.get(), cancellationReason, 0, 0, nextDue.get(), List.of())),
                     attempts, List.of());
         }
         void failDuringFirstReceipt() throws InterruptedException {

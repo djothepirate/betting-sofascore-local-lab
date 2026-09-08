@@ -11,6 +11,8 @@ import java.util.function.Supplier;
 
 public interface LiveCampaignStore {
     Manifest prepare(Manifest manifest);
+    /** Local-only cancellation; serialized with launch and idempotent for the same manifest. */
+    void cancelPreparation(UUID campaignId, String expectedManifestSha256, Instant cancelledAt);
     Optional<CampaignView> find(UUID campaignId);
     /** Production implementations read current counters without materializing the campaign ledger. */
     default DispatchBudget dispatchBudget(Ownership ownership, UUID canonicalEventId) {

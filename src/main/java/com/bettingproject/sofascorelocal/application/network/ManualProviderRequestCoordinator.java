@@ -5,12 +5,15 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.ObjectProvider;
 import com.bettingproject.sofascorelocal.port.ProviderCampaignGuardStore;
 import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData;
+import com.bettingproject.sofascorelocal.domain.provider.J5EventDataProviderRequest;
+import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderSupervisor;
 import org.springframework.stereotype.Component;
 
 import java.time.Clock;
 import java.time.Duration;
 import java.util.Objects;
+import java.util.List;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
@@ -85,6 +88,14 @@ public final class ManualProviderRequestCoordinator {
 
     public CampaignLease acquireCampaign(UUID campaignId) {
         return acquireCampaign(campaignId, false);
+    }
+
+    /** Explicitly claimed, single-event manual J5 collection; no caller-supplied delay policy. */
+    public CampaignLease acquireManualJ5Campaign(UUID campaignId, long eventId) {
+        if (eventId < 1 || eventId > 999_999_999L) throw new IllegalArgumentException("eventId");
+        CampaignLease lease = acquireCampaign(campaignId, false);
+        lease.manualJ5EventId = eventId;
+        return lease;
     }
 
     private CampaignLease acquireCampaign(UUID campaignId, boolean live) {
@@ -222,6 +233,11 @@ public final class ManualProviderRequestCoordinator {
         private final Thread ownerThread;
         private final LiveCampaignData.Ownership ownership;
         private boolean closeAttempted;
+        private long manualJ5EventId;
+        private int manualJ5NextEndpoint;
+        private static final List<SofascoreEndpointType> MANUAL_J5_ORDER = List.of(
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_LINEUPS);
 
         private CampaignLease(
                 ManualProviderRequestCoordinator owner,
@@ -244,7 +260,46 @@ public final class ManualProviderRequestCoordinator {
 
         public void beginRequest() {
             ManualProviderRequestCoordinator current = requireOpenOnOwnerThread();
+            if (manualJ5EventId != 0) throw new CoordinationException("manual J5 request context required");
             current.beginRequest();
+        }
+
+        public void beginManualJ5Request(J5EventDataProviderRequest request) {
+            ManualProviderRequestCoordinator current = requireOpenOnOwnerThread();
+            checkManualJ5Identity(request);
+            if (manualJ5NextEndpoint >= MANUAL_J5_ORDER.size()
+                    || request.endpointType() != MANUAL_J5_ORDER.get(manualJ5NextEndpoint))
+                throw new CoordinationException("manual J5 request order rejected");
+            checkAuthority(current);
+            if (manualJ5NextEndpoint == 0) current.beginRequest();
+            else {
+                current.lastStartedAtNanos = current.nanoTime.getAsLong();
+                current.started = true;
+            }
+            manualJ5NextEndpoint++;
+        }
+
+        /** Rechecked immediately before the worker GET, including after the inter-group fence. */
+        public void checkManualJ5Request(J5EventDataProviderRequest request) {
+            ManualProviderRequestCoordinator current = requireOpenOnOwnerThread();
+            checkManualJ5Identity(request);
+            if (manualJ5NextEndpoint == 0
+                    || request.endpointType() != MANUAL_J5_ORDER.get(manualJ5NextEndpoint - 1))
+                throw new CoordinationException("manual J5 request was not admitted");
+            checkAuthority(current);
+        }
+
+        private void checkManualJ5Identity(J5EventDataProviderRequest request) {
+            Objects.requireNonNull(request, "request");
+            if (manualJ5EventId == 0 || request.eventId() != manualJ5EventId)
+                throw new CoordinationException("manual J5 event context rejected");
+        }
+
+        private void checkAuthority(ManualProviderRequestCoordinator current) {
+            if (Thread.currentThread().isInterrupted())
+                throw new CoordinationException("manual J5 request interrupted");
+            if (ownership != null && !current.durableGuard.isOwned(ownership))
+                throw new CoordinationException("manual J5 provider ownership lost");
         }
 
         @Override

@@ -91,6 +91,7 @@ class J5RealEventDataServiceTest {
         control = mock(J5RealControlService.class);
         transport = mock(J5EventDataProviderTransport.class);
         campaign = mock(J5EventDataProviderTransport.Campaign.class);
+        when(campaign.execute(any(), any())).thenCallRealMethod();
         when(transport.openCampaign(REQUEST_ID)).thenReturn(campaign);
         rawStore = mock(RawManualCallSnapshotStore.class);
         canonicalStore = mock(CanonicalEventStore.class);
@@ -230,9 +231,7 @@ class J5RealEventDataServiceTest {
         verifySingleCampaignLifecycle();
         verify(control, times(3)).recordEndpointCompleted(any(), any());
         verify(control).complete(REQUEST_ID);
-        assertThat(pauses).containsExactly(
-                Duration.ofSeconds(3),
-                Duration.ofSeconds(3));
+        assertThat(pauses).isEmpty();
     }
 
     @Test
@@ -404,7 +403,7 @@ class J5RealEventDataServiceTest {
         assertThat(result.localJsonImports()).isZero();
         assertThat(result.endpoints()).extracting(J5RealEndpointResult::endpointType)
                 .containsExactlyElementsOf(J5RealControlService.ORDERED_ENDPOINTS);
-        assertThat(pauses).containsExactly(Duration.ofSeconds(3), Duration.ofSeconds(3));
+        assertThat(pauses).isEmpty();
         assertThat(operations).containsExactly(
                 "transport:EVENT_STATISTICS",
                 "raw:EVENT_STATISTICS",
@@ -676,9 +675,7 @@ class J5RealEventDataServiceTest {
         verifySingleCampaignLifecycle();
         verify(control, times(3)).recordEndpointCompleted(any(), any());
         verify(control).complete(REQUEST_ID);
-        assertThat(pauses).containsExactly(
-                Duration.ofSeconds(3),
-                Duration.ofSeconds(3));
+        assertThat(pauses).isEmpty();
     }
 
     @Test

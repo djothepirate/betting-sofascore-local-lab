@@ -83,6 +83,34 @@ class LiveProviderGroupTrackerTest {
         assertInvalid(() -> tracker.isContinuation(PlaywrightProviderRequest.eventDetails(event), context(CHECK)));
     }
 
+    @Test
+    void manualAuthorityIsOneExactJ5TripletAndCannotBeUsedForLiveOrJ4() {
+        var manual = new LiveProviderGroupTracker(campaign, LiveProviderGroupTracker.Authority.MANUAL_J5);
+        var scope = context(MANUAL_J5);
+        assertInvalid(() -> manual.isContinuation(PlaywrightProviderRequest.eventStatistics(event), null));
+        assertInvalid(() -> manual.isContinuation(PlaywrightProviderRequest.eventDetails(event), context(CHECK)));
+        assertInvalid(() -> manual.isContinuation(PlaywrightProviderRequest.eventIncidents(event), scope));
+        assertInvalid(() -> tracker.isContinuation(PlaywrightProviderRequest.eventStatistics(event), scope));
+        assertThat(manual.isContinuation(PlaywrightProviderRequest.eventStatistics(event), scope)).isFalse();
+        manual.dispatched(PlaywrightProviderRequest.eventStatistics(event), scope);
+        assertInvalid(() -> manual.isContinuation(PlaywrightProviderRequest.eventIncidents(event), scope));
+        manual.finished(true);
+        assertInvalid(() -> manual.isContinuation(PlaywrightProviderRequest.eventLineups(event), scope));
+        assertInvalid(() -> manual.isContinuation(PlaywrightProviderRequest.eventIncidents(event + 1),
+                new LiveProviderDispatchGroup(campaign, group, event + 1, MANUAL_J5)));
+        assertInvalid(() -> manual.isContinuation(PlaywrightProviderRequest.eventIncidents(event),
+                new LiveProviderDispatchGroup(campaign, UUID.randomUUID(), event, MANUAL_J5)));
+        for (var request : java.util.List.of(PlaywrightProviderRequest.eventIncidents(event),
+                PlaywrightProviderRequest.eventLineups(event))) {
+            assertThat(manual.isContinuation(request, scope)).isTrue();
+            manual.dispatched(request, scope);
+            manual.finished(true);
+        }
+        assertInvalid(() -> manual.isContinuation(PlaywrightProviderRequest.eventLineups(event), scope));
+        assertInvalid(() -> manual.isContinuation(PlaywrightProviderRequest.eventStatistics(event),
+                new LiveProviderDispatchGroup(campaign, UUID.randomUUID(), event, MANUAL_J5)));
+    }
+
     private LiveProviderDispatchGroup context(LiveProviderDispatchGroup.Phase phase) {
         return new LiveProviderDispatchGroup(campaign, group, event, phase);
     }

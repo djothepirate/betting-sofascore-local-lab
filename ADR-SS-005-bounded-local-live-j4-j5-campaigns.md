@@ -1,6 +1,6 @@
 # ADR-SS-005 — Campagnes live locales et bornées J4/J5
 
-- **Version :** 0.4.
+- **Version :** 0.5.
 - **Statut :** `ACCEPTED` — v0.1 formellement acceptée ; capacité adaptative puis collecte des compositions avant le début explicitement demandées par le propriétaire le 7 septembre.
 - **Date :** 2026-09-08.
 - **Décideur :** propriétaire du Betting Project.
@@ -10,6 +10,7 @@
 - **Autorité de la v0.2 :** plafond paramétrable demandé, y compris à 10 et 25 rencontres ; cadence selon le nombre retenu, 60 s pour 1–3, 90 s pour 4, 120 s pour 5, choisie explicitement dans la conversation. La progression de 30 s par rencontre supplémentaire est appliquée aux sélections plus grandes.
 - **Autorité de la v0.3 :** demande de J5 LINEUPS pour les rencontres initialement `notstarted` et non débutées au lancement, puis réponse explicite « Oui, collecte initiale puis périodique ». La première collecte suit le J4 `notstarted` ; sa répétition utilise D tant que le début n'est pas constaté. Aucune nouvelle cadence n'est décidée.
 - **Autorité de la v0.4 :** demande explicite « PLEASE IMPLEMENT THIS PLAN: Campagnes live à 60 secondes par match, avec appels regroupés », le 8 septembre 2026. Cette décision autorise l’exception de délai décrite au §0, la politique `live-v4`, V39 et leur qualification hors fournisseur ; elle ne lance aucune campagne fournisseur.
+- **Autorité de la v0.5 :** demande explicite du 8 septembre « La suppression de cette intervalle doit se faire aussi en mode collecte manuelle », pour J5. Le propriétaire signale également l’absence d’annulation d’une préparation live non lancée. Cette révision étend le regroupement à une collecte J5 manuelle bornée et autorise son contrôle distinct ; elle ne crée aucun polling manuel ni nouvelle famille fournisseur.
 - **Référence historique v0.2 :** contenu Git au commit `e98f7a74e39a1c57e601efb3d346ae55829fce73`, conservé sans réécriture.
 - **Work Order :** [WO-SS-20260907-058](docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md), validé par le propriétaire ; correctif et qualification de réalisation distincts de cette décision.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
@@ -24,7 +25,7 @@ applicables ; la copie exacte acceptée de la v0.1 et les preuves de ses paliers
 La v0.3 ajoute seulement la collecte prématch LINEUPS au manifeste `live-v3`. Les manifestes
 historiques `live-v1` et `live-v2` gardent leur comportement, leurs échéances et leurs empreintes.
 
-## 0. Décision courante v0.4 — groupes live et minute fixe
+## 0. Décision live-v4 — groupes live et minute fixe
 
 Cette section remplace, **pour les nouvelles préparations `live-v4` uniquement**, les cadences,
 l’ordre des familles, l’admission et le délai par appel décrits plus bas. Les §§1–12 conservent
@@ -85,6 +86,33 @@ dix secondes en fonctionnement normal. Tester aussi interruptions/rejeu de group
 budget, concurrence, upgrade V38 prérempli et sauvegarde/restauration. Les tests standards
 n’appellent jamais SofaScore. Une campagne opérateur distincte reste nécessaire pour comparer
 la fraîcheur externe réelle ; les mesures loopback ne la prouvent pas.
+
+### 0.1. Complément v0.5 — collecte J5 manuelle et annulation d’une préparation
+
+Une collecte J5 manuelle explicitement confirmée pour un événement forme un seul groupe
+serveur : **statistiques → incidents → compositions**. Chaque appel attend la réception
+et le traitement du précédent. Les deux pauses artificielles entre ces familles sont
+supprimées ; aucun chevauchement de requêtes n’est autorisé. Une autorité dédiée à J5 manuel
+lie campagne, événement, ordre et endpoints, distinctement des manifestes `live-v4`.
+Ni un champ HTTP ni une simple ouverture historique de session ne peut activer l’exception.
+
+Le coordinateur et le superviseur contrôlent la même portée. Arrêt opérateur, propriété de
+lease et admissibilité sont revérifiés avant chaque dispatch. La fin de chaque échange
+actualise le repère commun, même si le groupe s’interrompt : trois secondes restent exigées
+avant une autre collecte J5, une campagne live ou tout autre parcours. Les groupes interrompus,
+réutilisés, d’un autre événement ou comportant un endpoint répété sont refusés.
+J3, J4 manuel et les campagnes live v1–v3 conservent leur délai historique ; `live-v4`
+conserve ses paramètres, échéances et preuve de capacité. Les limites, confirmations,
+traitements des erreurs et HTTP 404 du parcours J5 manuel gardent leur portée.
+
+Une préparation live en état `PREPARED` peut être annulée par une action locale explicite,
+sans ouvrir de navigateur ni réserver d’appel. Le manifeste et l’historique restent conservés.
+L’annulation et le lancement sont sérialisés : une préparation annulée ne peut plus démarrer,
+et une campagne déjà lancée utilise son action d’arrêt existante.
+
+Ce complément exige des tests d’annulation/concurrence PostgreSQL et une qualification
+Chromium loopback du groupe J5 manuel, des frontières de trois secondes, de la sérialisation
+et des interruptions. Il ne transforme pas une mesure locale en preuve de fraîcheur SofaScore.
 
 ## 1. Contexte et problème
 
@@ -383,7 +411,7 @@ La copie figée identifie les octets de la v0.1 effectivement acceptés ; elle n
 par la v0.2. Aucun commit n'est attribué au draft initial non committé. Toute modification
 normative ultérieure exige une nouvelle version et une décision traçable.
 
-État de décision courant, distinct de la qualification et de la clôture Git du WO :
+État historique de la v0.3, distinct de la qualification et de la clôture Git du WO :
 
 ```text
 ADR_SS_005_VERSION=0.3

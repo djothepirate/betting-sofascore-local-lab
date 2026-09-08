@@ -62,7 +62,7 @@ public class LiveCampaignPresentation {
 
     public Campaign state(CampaignView view, RuntimeStatus runtimeStatus) {
         Instant observedAt = clock.instant();
-        return new Campaign(view.manifest().campaignId(), view.revision(), view.state(), view.reason(),
+        return new Campaign(view.manifest().campaignId(), view.revision(), view.state(), reason(view.reason()),
                 view.manifest().preparedAt(), view.startedAt(), view.endsAt(), view.reservedCalls(),
                 view.manifest().maximumCalls(), view.receivedBytes(), view.manifest().maximumBytes(),
                 view.events().stream().map(event -> event(view, event, observedAt)).toList(),
@@ -145,6 +145,7 @@ public class LiveCampaignPresentation {
     private static String reason(String reason) {
         if (reason == null) return null;
         return switch (reason) {
+            case "PREPARATION_CANCELLED" -> "Préparation annulée. Aucune collecte n’a été lancée ; la sélection et son historique restent consultables.";
             case "STOPPED_ALREADY_FINISHED" -> "Rencontre déjà terminée dans les observations locales au lancement ; aucun appel fournisseur.";
             case "STOPPED_ALREADY_POSTPONED" -> "Rencontre reportée dans les observations locales au lancement ; aucun appel fournisseur.";
             case "STOPPED_POSTPONED" -> "Rencontre reportée selon J4 ; suivi arrêté pour cette rencontre.";

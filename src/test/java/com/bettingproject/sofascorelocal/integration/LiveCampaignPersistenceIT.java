@@ -52,6 +52,112 @@ class LiveCampaignPersistenceIT {
     private static final AtomicInteger DATABASE=new AtomicInteger();
     private static final long EVENT=58_001;
 
+    @ParameterizedTest @ValueSource(strings={"live-v1","live-v2","live-v3","live-v4"})
+    void cancellationKeepsExpiredPreparationEvidenceAndIsIdempotentWithoutTakingTheProviderGuard(String policy) {
+        Fixture f=fixture("39"); Target target=f.seed(EVENT);
+        Manifest manifest="live-v4".equals(policy) ? groupedManifest(List.of(target))
+                : new Manifest(UUID.randomUUID(),"a".repeat(64),policy,T0,T0.plusSeconds(300),Duration.ofHours(4),
+                    100,100,100_000_000,1,List.of(target));
+        f.store.prepare(manifest);
+        // Another campaign can own the provider: cancelling a local preparation must leave its lease alone.
+        Manifest other=f.manifest(f.seed(EVENT+1),100); Ownership otherOwner=f.start(other);
+        Guard guardBefore=f.guard.snapshot();
+        Map<String,List<Map<String,Object>>> evidence=new LinkedHashMap<>();
+        for(String table:List.of("provider_snapshot","provider_snapshot_occurrence","canonical_event_observation","event_detail_observation"))
+            evidence.put(table,f.jdbc.queryForList("select to_jsonb(t)::text as row from "+table+" t order by to_jsonb(t)::text"));
+        Instant cancelledAt=T0.plusSeconds(600);
+        f.store.cancelPreparation(manifest.campaignId(),manifest.manifestSha256(),cancelledAt);
+        CampaignView cancelled=f.store.find(manifest.campaignId()).orElseThrow();
+        assertThat(cancelled.manifest()).isEqualTo(manifest);
+        assertThat(cancelled.state()).isEqualTo("STOPPED_OPERATOR");
+        assertThat(cancelled.reason()).isEqualTo("PREPARATION_CANCELLED");
+        assertThat(cancelled.startedAt()).isNull(); assertThat(cancelled.endsAt()).isNull();
+        assertThat(cancelled.ownership()).isNull(); assertThat(cancelled.attempts()).isEmpty();
+        assertThat(cancelled.reservedCalls()).isZero(); assertThat(cancelled.receivedBytes()).isZero();
+        assertThat(cancelled.events()).singleElement().satisfies(event->{
+            assertThat(event.target()).isEqualTo(target); assertThat(event.state()).isEqualTo("STOPPED_OPERATOR");
+            assertThat(event.reason()).isEqualTo("PREPARATION_CANCELLED"); assertThat(event.nextDueAt()).isNull();
+            assertThat(event.reservedCalls()).isZero(); assertThat(event.receivedBytes()).isZero();
+        });
+        assertThat(cancelled.transitions()).hasSize(2).allSatisfy(transition->{
+            assertThat(transition.state()).isEqualTo("STOPPED_OPERATOR");
+            assertThat(transition.reason()).isEqualTo("PREPARATION_CANCELLED");
+            assertThat(transition.changedAt()).isEqualTo(cancelledAt); assertThat(transition.attemptId()).isNull();
+        });
+        f.store.cancelPreparation(manifest.campaignId(),manifest.manifestSha256(),cancelledAt.plusSeconds(1));
+        assertThat(f.store.find(manifest.campaignId())).contains(cancelled);
+        assertThat(f.guard.snapshot()).isEqualTo(guardBefore);
+        assertThat(f.guard.isOwned(otherOwner)).isTrue();
+        evidence.forEach((table,rows)->assertThat(f.jdbc.queryForList("select to_jsonb(t)::text as row from "+table+" t order by to_jsonb(t)::text")).isEqualTo(rows));
+        assertThat(f.jdbc.queryForObject("select count(*) from live_call_group where campaign_id=?",Long.class,manifest.campaignId())).isZero();
+        assertThatThrownBy(()->f.store.cancelPreparation(manifest.campaignId(),"f".repeat(64),cancelledAt))
+                .hasMessage("LIVE_MANIFEST_MISMATCH");
+        assertThat(f.store.find(manifest.campaignId())).contains(cancelled);
+    }
+
+    @Test
+    void cancellationDoesNotStopARunningCampaignOrAcceptAnUnknownManifest() {
+        Fixture f=fixture("39"); Manifest manifest=groupedManifest(List.of(f.seed(EVENT))); f.start(manifest);
+        CampaignView before=f.store.find(manifest.campaignId()).orElseThrow(); Guard guard=f.guard.snapshot();
+        assertThatThrownBy(()->f.store.cancelPreparation(manifest.campaignId(),manifest.manifestSha256(),T0.plusSeconds(2)))
+                .hasMessage("LIVE_PREPARATION_ALREADY_LAUNCHED");
+        assertThatThrownBy(()->f.store.cancelPreparation(UUID.randomUUID(),manifest.manifestSha256(),T0.plusSeconds(2)))
+                .isInstanceOf(NoSuchElementException.class).hasMessage("LIVE_CAMPAIGN_NOT_FOUND");
+        assertThat(f.store.find(manifest.campaignId())).contains(before);
+        assertThat(f.guard.snapshot()).isEqualTo(guard);
+    }
+
+    @ParameterizedTest @ValueSource(booleans={true,false})
+    void launchAndCancellationSerializeOnThePreparationWithExactlyOneOutcome(boolean cancellationFirst) throws Exception {
+        Fixture f=fixture("39"); Manifest manifest=groupedManifest(List.of(f.seed(EVENT)));
+        f.store.prepare(manifest); Ownership owner=f.acquire(manifest);
+        CountDownLatch firstWritten=new CountDownLatch(1),releaseFirst=new CountDownLatch(1),secondStarted=new CountDownLatch(1);
+        AtomicInteger firstBackend=new AtomicInteger(),secondBackend=new AtomicInteger();
+        JdbcTransactionManager transactions=new JdbcTransactionManager(f.ds);
+        try(var pool=Executors.newFixedThreadPool(2)) {
+            try {
+                var first=pool.submit(()->new TransactionTemplate(transactions).execute(status->{
+                    firstBackend.set(f.jdbc.queryForObject("select pg_backend_pid()",Integer.class));
+                    if(cancellationFirst) f.store.cancelPreparation(manifest.campaignId(),manifest.manifestSha256(),T0.plusSeconds(1));
+                    else f.store.launch(manifest.campaignId(),manifest.manifestSha256(),owner,T0.plusSeconds(1));
+                    firstWritten.countDown();
+                    try { if(!releaseFirst.await(10,TimeUnit.SECONDS)) throw new IllegalStateException("first transaction timeout"); }
+                    catch(InterruptedException interrupted) {Thread.currentThread().interrupt();throw new IllegalStateException(interrupted);}
+                    return true;
+                }));
+                assertThat(firstWritten.await(5,TimeUnit.SECONDS)).isTrue();
+                var second=pool.submit(()->{
+                    try {
+                        return new TransactionTemplate(transactions).execute(status->{
+                            secondBackend.set(f.jdbc.queryForObject("select pg_backend_pid()",Integer.class));secondStarted.countDown();
+                            if(cancellationFirst) f.store.launch(manifest.campaignId(),manifest.manifestSha256(),owner,T0.plusSeconds(2));
+                            else f.store.cancelPreparation(manifest.campaignId(),manifest.manifestSha256(),T0.plusSeconds(2));
+                            return "unexpected success";
+                        });
+                    } catch(IllegalStateException rejected) {return rejected.getMessage();}
+                });
+                assertThat(secondStarted.await(5,TimeUnit.SECONDS)).isTrue();
+                boolean blocked=false;long until=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);
+                while(!blocked && System.nanoTime()<until) {
+                    blocked=Boolean.TRUE.equals(f.jdbc.queryForObject("select ? = any(pg_blocking_pids(?))",Boolean.class,firstBackend.get(),secondBackend.get()));
+                    if(!blocked) Thread.sleep(10);
+                }
+                assertThat(blocked).as("the second command waits for the first preparation transaction").isTrue();
+                assertThat(second.isDone()).isFalse();releaseFirst.countDown();
+                assertThat(first.get(5,TimeUnit.SECONDS)).isTrue();
+                assertThat(second.get(5,TimeUnit.SECONDS)).isEqualTo(cancellationFirst
+                        ? "live preparation is expired or closed" : "LIVE_PREPARATION_ALREADY_LAUNCHED");
+                CampaignView saved=f.store.find(manifest.campaignId()).orElseThrow();
+                assertThat(saved.state()).isEqualTo(cancellationFirst ? "STOPPED_OPERATOR" : "RUNNING");
+                assertThat(saved.events()).extracting(EventView::state).containsExactly(cancellationFirst ? "STOPPED_OPERATOR" : "INITIAL_CHECK");
+                assertThat(saved.startedAt()).isEqualTo(cancellationFirst ? null : T0.plusSeconds(1));
+                assertThat(saved.ownership()).isEqualTo(cancellationFirst ? null : owner);
+                assertThat(saved.attempts()).isEmpty();assertThat(saved.reservedCalls()).isZero();
+                assertThat(saved.transitions()).hasSize(cancellationFirst ? 2 : 1);
+            } finally {releaseFirst.countDown();}
+        }
+    }
+
     @Test
     void upgradingV38RetainsHistoricalEvidenceAndRequiresExplicitGroupedPolicyForV4() {
         Fixture f=fixture("38"); Target target=f.seed(EVENT); Manifest old=f.manifest(target,100);

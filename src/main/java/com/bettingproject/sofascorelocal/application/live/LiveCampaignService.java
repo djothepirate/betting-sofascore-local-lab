@@ -231,6 +231,11 @@ public final class LiveCampaignService {
         return current != null && "CLEANUP_REQUIRED".equals(current.state());
     }
 
+    /** Cancels only a durable preparation; provider opt-in, capacity and process ownership are irrelevant. */
+    public void cancelPreparation(UUID campaignId, String manifestHash) {
+        store.cancelPreparation(campaignId,manifestHash,clock.instant());
+    }
+
     public void stop(UUID campaignId, UUID eventId) {
         Session s = active.get();
         if (s == null || !s.manifest.campaignId().equals(campaignId)) {
@@ -349,8 +354,8 @@ public final class LiveCampaignService {
                     resolveUnpublishedAttempts(s, current);
                     store.transition(s.ownership, null, terminal, terminal, clock.instant(), null);
                 }
-                // An untouched preparation has no execution ledger to close: release only its
-                // acquired guard/lease, without inventing a launch or a terminal transition.
+                // A preparation that never launched (including a concurrent cancellation) has
+                // no execution ledger to close. Preserve it and release only the acquired lease.
                 s.executionReconciled = true;
             }
             if (lease != null) {
@@ -377,11 +382,14 @@ public final class LiveCampaignService {
     }
 
     private boolean unlaunchedPreparation(Session s, CampaignView current) {
-        return !s.launchConfirmed && current.manifest().equals(s.manifest) && "PREPARED".equals(current.state())
+        boolean cancelled="STOPPED_OPERATOR".equals(current.state()) && "PREPARATION_CANCELLED".equals(current.reason());
+        return !s.launchConfirmed && current.manifest().equals(s.manifest) && ("PREPARED".equals(current.state()) || cancelled)
                 && current.ownership() == null && current.startedAt() == null && current.endsAt() == null
                 && current.reservedCalls() == 0 && current.receivedBytes() == 0 && current.attempts().isEmpty()
                 && current.events().stream().map(EventView::target).toList().equals(s.manifest.targets())
-                && current.events().stream().allMatch(event -> "PREPARED".equals(event.state())
+                && current.events().stream().allMatch(event -> (cancelled
+                        ? "STOPPED_OPERATOR".equals(event.state()) && "PREPARATION_CANCELLED".equals(event.reason())
+                        : "PREPARED".equals(event.state()))
                         && event.reservedCalls() == 0 && event.receivedBytes() == 0 && event.nextDueAt() == null);
     }
 

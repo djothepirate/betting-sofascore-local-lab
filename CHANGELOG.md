@@ -4,6 +4,16 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — préparation annulable et collecte J5 manuelle groupée
+
+- Ajoute « Annuler la préparation » aux campagnes non lancées ; conserve manifeste et historique,
+  sans appel fournisseur, avec protection contre une course avec le lancement.
+- Supprime les deux pauses internes d’une collecte J5 manuelle confirmée, dans l’ordre
+  statistiques/incidents/compositions, avec requêtes séquentielles et trois secondes entre collectes.
+- Documente le diagnostic d’une capacité live-v4 nulle et l’activation du profil groupé mesuré
+  dans le lanceur Eclipse ; les anciens paramètres de qualification ne suffisent pas.
+- Décision et preuves : ADR-SS-005 v0.5 et [retour opérateur](docs/validation/WO058-PREPARATION-MANUAL-J5-20260908.md).
+
 ### WO-058 — minute fixe et appels regroupés live-v4
 
 - Prépare les nouvelles campagnes à 60 secondes nominales pour J4, incidents et statistiques,

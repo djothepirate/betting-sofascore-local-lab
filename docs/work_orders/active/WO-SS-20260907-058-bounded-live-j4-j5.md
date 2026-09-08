@@ -8,7 +8,7 @@
 - **Base exacte :** `6dfd14286d4f269cbe100bd965257c20298538db`, sommet GitHub vérifié le 7 septembre.
 - **Worktree :** `.tmp/wo058-live-j4-j5`, depuis le dossier Codex du Lab ; worktree distinct d'Eclipse.
 - **Autorité reçue :** ADR-SS-005 v0.1 accepté, puis déclaration « Je valide le WO-058 les travaux peuvent commencer » et demande explicite d'exécuter le plan de réalisation ; port 8087 libéré pour les tests.
-- **ADR live courant :** [ADR-SS-005 v0.4](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), plan d’implémentation explicitement demandé le 08/09 : minute fixe, appels regroupés J4/J5 et qualification soutenue. Les comportements v1–v3 restent historiques. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
+- **ADR courant :** [ADR-SS-005 v0.5](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), plan d’implémentation explicitement demandé le 08/09 : minute fixe et qualification soutenue live-v4, puis regroupement d’une collecte J5 manuelle confirmé par le propriétaire. Les comportements live v1–v3 restent historiques. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
 - **Livrable présent :** ADR accepté, WO validé, réalisation locale et qualification hors fournisseur ; état des preuves dans le rapport de réalisation.
 - **Alignement de gouvernance :** renvois ciblés dans ADR-SS-001 et AGENTS.md ; ADR-SS-002 à 004 inchangés.
 - **Réalisation applicative :** réalisée et qualifiée hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés ; compléments prématch/phase/clôture et incidents V16/V17 décrits dans les retours ci-dessous, statistiques intégrées aux pages ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur :** essai à 8 arrêté volontairement, essai à 16 interrompu après coupure PostgreSQL, puis nouveaux lancements manuels à 7 et à 4 ; dernière exécution terminée, observations distinctes des qualifications locales.
@@ -18,6 +18,33 @@ Les statuts restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 PostgreSQL local Docker Desktop et application sur `127.0.0.1:8087`, textes UTF-8.
 
 ## 1. Objectif et origine du besoin
+
+### Treizième retour — activation du profil, annulation et J5 manuel groupé
+
+Le 08/09, le propriétaire signale les cases `notstarted` désactivées avec capacité `live-v4`
+à zéro, l’absence d’annulation d’une préparation non lancée et demande explicitement de supprimer
+également la pause entre familles d’une collecte J5 manuelle. Ces demandes autorisent le
+complément [ADR-SS-005 v0.5](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md).
+
+Le lanceur Eclipse live conservait le plafond historique 20 sans les neuf nouveaux paramètres
+groupés. Le profil qualifié du 08/09 a été ajouté au seul lanceur live, avec sauvegarde locale,
+sans modifier ses autres paramètres. Un probe utilisant le binding Spring de `application.yml`
+et l’admission de production reproduit zéro depuis la sauvegarde et dix depuis le lanceur corrigé.
+Aucune collecte ni écriture de données sportives n’a été déclenchée par ce réglage.
+
+Le complément applicatif ajoute l’annulation explicite de `PREPARED`, conservée dans l’historique,
+avec sérialisation PostgreSQL face au lancement. J5 manuel conserve son ordre statistiques,
+incidents, compositions et ses contrôles ; seule la pause interne est supprimée dans son groupe
+serveur distinct. Les transitions entre collectes, J3/J4 et les politiques live historiques
+conservent trois secondes. Les mesures et commandes sont consignées dans le
+[rapport de ce retour](../../validation/WO058-PREPARATION-MANUAL-J5-20260908.md).
+
+Les passages `clean verify` et `-Pintegration-tests verify` du 08/09 réussissent chacun
+avec 1 738 cas Surefire (5 ignorés) et 151 cas PostgreSQL sans échec. La qualification
+Chromium ciblée réussit ses six cas ; les quatre enchaînements internes J5 manuels mesurés
+sont de 61 à 63 ms, avec trois secondes entre collectes et aucun appel fournisseur réel.
+Les fichiers et empreintes sont dans le relevé lié au rapport. Le lanceur opérateur reste
+arrêté ; fermer puis rouvrir Eclipse est nécessaire pour recharger le profil ajouté sur disque.
 
 ### Douzième retour — fraîcheur à une minute et groupes live-v4
 

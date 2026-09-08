@@ -61,6 +61,36 @@ par ce profil. Le dépassement provoque un retard visible puis les arrêts prév
 il ne remplace pas la minute par un intervalle plus long. La preuve conserve cette distinction.
 Les paramètres historiques ne sont ni supprimés ni abaissés automatiquement.
 
+### Si les cases `notstarted` sont désactivées
+
+Une capacité affichée à zéro avec l’avertissement de qualification indique que le lanceur
+n’a pas chargé un profil groupé complet et admissible. Rafraîchir J3 ou J4 ne change pas cette
+configuration. Vérifier les neuf variables `SOFASCORE_LIVE_GROUPED_*` ci-dessus : ajouter
+seulement le SHA ne suffit pas si les enveloppes restent à leurs défauts conservateurs.
+Le plafond opérateur et la capacité temporelle sont combinés ; avec le profil ci-dessus,
+un plafond opérateur historique de 20 reste limité à **10** pour `live-v4`.
+
+Après modification du lanceur sur disque, fermer puis rouvrir Eclipse pour garantir qu’il
+relise sa configuration, puis relancer l’application avec le lanceur live. La page doit
+annoncer dix rencontres qualifiées et permettre la sélection des rencontres admissibles.
+Préparer ensuite une nouvelle campagne : les manifestes déjà préparés restent figés.
+
+### Annuler une préparation
+
+Sur la page d’une campagne encore `PREPARED`, **Annuler la préparation** termine cette
+préparation sans appel fournisseur. La campagne reste consultable avec le motif
+`PREPARATION_CANCELLED`, et son lancement est désormais impossible. L’annulation peut être
+répétée sans effet supplémentaire ; si le lancement a déjà gagné la course, utiliser l’arrêt
+de campagne. Les observations et le manifeste restent conservés.
+
+### Délai des collectes J5 manuelles
+
+Une collecte J5 manuelle confirmée enchaîne statistiques, incidents et compositions pour le
+même événement sans pause artificielle entre familles. Les appels restent séquentiels.
+Trois secondes séparent deux collectes distinctes ainsi que leurs transitions avec les
+campagnes live et les autres parcours ; une interruption ne supprime pas cette protection.
+La collecte manuelle reste ponctuelle et ne dépend pas du profil de capacité live-v4.
+
 L’écran indique l’autonomie estimée avec les appels restants et réserves, limitée aussi par la
 fenêtre et les budgets individuels. À dix matchs tous en jeu, environ 32 appels/minute consomment
 3 000 appels en quelque 94 minutes avant ajustement des phases et réserves. Les fins de match

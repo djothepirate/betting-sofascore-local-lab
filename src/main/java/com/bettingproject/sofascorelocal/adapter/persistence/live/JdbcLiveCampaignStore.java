@@ -60,6 +60,34 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
 
     @Override
     @Transactional
+    public void cancelPreparation(UUID campaignId, String expectedManifestSha256, Instant cancelledAt) {
+        Objects.requireNonNull(campaignId); Objects.requireNonNull(expectedManifestSha256); Objects.requireNonNull(cancelledAt);
+        List<Map<String,Object>> rows=jdbc.queryForList("select * from live_campaign where campaign_id=? for update",campaignId);
+        if(rows.isEmpty()) throw new NoSuchElementException("LIVE_CAMPAIGN_NOT_FOUND");
+        Map<String,Object> c=rows.getFirst();
+        if(!expectedManifestSha256.equals(c.get("manifest_sha256"))) throw new IllegalArgumentException("LIVE_MANIFEST_MISMATCH");
+        if(c.get("started_at")!=null) throw new IllegalStateException("LIVE_PREPARATION_ALREADY_LAUNCHED");
+        if("STOPPED_OPERATOR".equals(c.get("state")) && "PREPARATION_CANCELLED".equals(c.get("reason"))) return;
+        if(!"PREPARED".equals(c.get("state")) || c.get("ends_at")!=null || c.get("owner_instance_id")!=null || c.get("generation")!=null
+                || number(c,"reserved_calls")!=0 || number(c,"received_bytes")!=0
+                || Boolean.TRUE.equals(jdbc.queryForObject("select exists(select 1 from live_call where campaign_id=?)",Boolean.class,campaignId)))
+            throw new IllegalStateException("LIVE_PREPARATION_NOT_CANCELABLE");
+        List<Map<String,Object>> targets=eventRows(campaignId);
+        if(targets.size()!=number(c,"target_count") || targets.stream().anyMatch(e -> !"PREPARED".equals(e.get("state"))
+                || number(e,"reserved_calls")!=0 || number(e,"received_bytes")!=0 || e.get("next_due_at")!=null))
+            throw new IllegalStateException("LIVE_PREPARATION_NOT_CANCELABLE");
+        Instant at=cancelledAt.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
+        for(Map<String,Object> e:targets) {
+            UUID eventId=uuid(e,"canonical_event_id");
+            jdbc.update("update live_event set state='STOPPED_OPERATOR',reason='PREPARATION_CANCELLED',next_due_at=null where campaign_id=? and canonical_event_id=?",campaignId,eventId);
+            append(campaignId,eventId,"STOPPED_OPERATOR","PREPARATION_CANCELLED",at,null);
+        }
+        jdbc.update("update live_campaign set state='STOPPED_OPERATOR',reason='PREPARATION_CANCELLED' where campaign_id=?",campaignId);
+        append(campaignId,null,"STOPPED_OPERATOR","PREPARATION_CANCELLED",at,null);
+    }
+
+    @Override
+    @Transactional
     public Launch launch(UUID campaignId, String expectedManifestSha256, Ownership ownership, Instant startedAt) {
         startedAt=startedAt.truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         requireOwnership(ownership, true);

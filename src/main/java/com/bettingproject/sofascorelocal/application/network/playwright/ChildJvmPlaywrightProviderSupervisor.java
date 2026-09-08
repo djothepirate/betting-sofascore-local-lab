@@ -186,7 +186,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
     public PlaywrightProviderCampaign open(
             UUID campaignId,
             Set<SofascoreEndpointType> allowedEndpoints) {
-        return open(campaignId, allowedEndpoints, false);
+        return open(campaignId, allowedEndpoints, null);
     }
 
     @Override
@@ -196,11 +196,20 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS)
                 .equals(allowedEndpoints))
             throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
-        return open(campaignId, allowedEndpoints, true);
+        return open(campaignId, allowedEndpoints, LiveProviderGroupTracker.Authority.LIVE_V4);
+    }
+
+    @Override
+    public PlaywrightProviderCampaign openManualJ5Grouped(
+            UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        if (!Set.of(SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_LINEUPS).equals(allowedEndpoints))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
+        return open(campaignId, allowedEndpoints, LiveProviderGroupTracker.Authority.MANUAL_J5);
     }
 
     private PlaywrightProviderCampaign open(UUID campaignId,
-            Set<SofascoreEndpointType> allowedEndpoints, boolean groupedLive) {
+            Set<SofascoreEndpointType> allowedEndpoints, LiveProviderGroupTracker.Authority groupAuthority) {
         Objects.requireNonNull(campaignId, "campaignId");
         Set<SofascoreEndpointType> allowlist = Set.copyOf(
                 Objects.requireNonNull(allowedEndpoints, "allowedEndpoints"));
@@ -221,7 +230,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
             throw new PlaywrightProviderException(PlaywrightProviderFailure.OPERATOR_STOP);
         }
         Path workerJar = requireWorkerJar();
-        CampaignState state = new CampaignState(campaignId, allowlist, groupedLive);
+        CampaignState state = new CampaignState(campaignId, allowlist, groupAuthority);
         if (!active.compareAndSet(null, state)) {
             throw new PlaywrightProviderException(
                     PlaywrightProviderFailure.CAMPAIGN_ALREADY_ACTIVE);
@@ -1549,10 +1558,10 @@ public final class ChildJvmPlaywrightProviderSupervisor
 
         private CampaignState(
                 UUID campaignId,
-                Set<SofascoreEndpointType> allowedEndpoints, boolean groupedLive) {
+                Set<SofascoreEndpointType> allowedEndpoints, LiveProviderGroupTracker.Authority groupAuthority) {
             this.campaignId = campaignId;
             this.allowedEndpoints = allowedEndpoints;
-            this.liveGroups = groupedLive ? new LiveProviderGroupTracker(campaignId) : null;
+            this.liveGroups = groupAuthority == null ? null : new LiveProviderGroupTracker(campaignId, groupAuthority);
         }
 
         private void publishProcess(Process process, Instant processStartedAt) {

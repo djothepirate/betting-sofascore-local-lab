@@ -11,9 +11,15 @@ public interface PlaywrightProviderCampaignFactory {
             UUID campaignId,
             Set<SofascoreEndpointType> allowedEndpoints);
 
-    /** Explicit live-v4 policy; historical and manual factories remain unchanged. */
+    /** Explicit live-v4 policy; historical factories remain unchanged. */
     default PlaywrightProviderCampaign openLiveGrouped(
             UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
         throw new UnsupportedOperationException("grouped live dispatch is not implemented by this transport");
+    }
+
+    /** One explicitly launched, single-event J5 manual group in statistics/incidents/lineups order. */
+    default PlaywrightProviderCampaign openManualJ5Grouped(
+            UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        throw new UnsupportedOperationException("grouped manual J5 dispatch is not implemented by this transport");
     }
 }

@@ -1,7 +1,7 @@
 # Campagnes live locales J4/J5 — architecture WO-058
 
 Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
-Décision applicable : [ADR-SS-005 v0.4](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), groupes live et minute fixe pour les nouvelles préparations.
+Décision applicable : [ADR-SS-005 v0.5](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), groupes live et minute fixe pour les nouvelles préparations, avec exception distincte pour une collecte J5 manuelle.
 Réalisation : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md).
 
 ## Politique courante live-v4
@@ -25,7 +25,9 @@ ou un statut canonique. Une composition récente ne bloque pas incidents/statist
 changement d’événement, endpoint dupliqué, ordre incorrect et réutilisation d’un groupe fermé.
 Le verrou d’I/O sérialise tout le transport ; le fence commun enregistre chaque fin d’échange
 et ne supprime la pause que pour une continuation reconnue. Interruption, campagne suivante
-ou appel manuel conservent donc la barrière de trois secondes. Chaque admission contrôle
+ou transition vers un parcours manuel conservent donc la barrière de trois secondes. Le groupe
+J5 manuel confirmé dispose de sa propre autorité pour ses continuations, sans modifier les
+manifestes ou le scheduler live. Chaque admission contrôle
 l’arrêt, la fenêtre et la propriété ; chaque appel est réservé, reçu et publié séparément.
 
 V39 ajoute les tables de politique de groupe, groupe, appartenance des tentatives et planning
@@ -39,6 +41,12 @@ selon le budget restant, les réserves, les phases et la fin autorisée. Aucun a
 n’étend cette autonomie. Le lecteur JavaScript conserve ses cinq secondes et ajoute un timeout
 de dix secondes sur toute lecture, corps JSON compris, puis réessaie sans effacer l’écran.
 Les panneaux statistiques et leur focus restent conservés.
+
+Une préparation non lancée s’annule par un POST local portant son hash et le jeton de contrôle.
+La transition `PREPARED` → `STOPPED_OPERATOR`, motif `PREPARATION_CANCELLED`, verrouille la même
+ligne de campagne que le lancement et termine ses événements. Elle ne réserve aucun appel,
+ne renseigne pas de démarrage et conserve manifeste et transitions. Une répétition est sans
+effet supplémentaire ; si le lancement a gagné, l’annulation de préparation est refusée.
 
 Les sections qui suivent documentent les garanties communes et les comportements historiques
 v1–v3. Leurs cadences D, ordre J5 et délai systématique par endpoint ne s’appliquent pas à v4.

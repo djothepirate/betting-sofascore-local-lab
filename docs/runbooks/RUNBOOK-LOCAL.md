@@ -612,8 +612,9 @@ bloquant.
    famille, ou l'absence des deux, sont refusés ;
 6. ne pas recharger, revenir en arrière ou resoumettre le formulaire pendant l'exécution ;
 7. attendre l'état terminal ; la voie Playwright tente au maximum `statistics`, puis `incidents`,
-   puis `lineups`, dans un seul worker, un seul contexte non persistant et une seule lease, avec au
-   moins trois secondes entre deux départs. Le cache fournisseur J5 est `NOT_APPLICABLE`. La voie
+   puis `lineups`, dans un seul worker, un seul contexte non persistant et une seule lease. Depuis
+   WO-058 / ADR-SS-005 v0.5, ces appels restent séquentiels sans pause ajoutée entre familles ;
+   trois secondes séparent les collectes distinctes. Le cache fournisseur J5 est `NOT_APPLICABLE`. La voie
    locale produit zéro appel, `localJsonImports=3`, trois snapshots et trois observations dans le
    même ordre ;
 8. si l'état du contrôle est `COMPLETED_LOCKED`, vérifier les trois panneaux locaux, leur complétude ou
@@ -793,8 +794,9 @@ Effectuer un seul build, puis démarrer PostgreSQL et une seule instance de l'ap
 5. vérifier que la préparation J5 est disponible, puis suivre les étapes 3 à 9 de la section
    3.10 ter ;
 6. ne jamais ouvrir les deux confirmations dans des onglets concurrents. Un coordinateur commun
-   sérialise néanmoins les transports et impose au moins trois secondes entre deux départs, y
-   compris entre J4 et J5 ;
+   sérialise néanmoins les transports et impose au moins trois secondes après la dernière
+   réponse J4 avant la première requête J5 ; les continuations du groupe J5 manuel confirmé
+   ne comportent plus de pause artificielle ;
 7. au premier incident, ne pas réessayer : appliquer uniquement l'arrêt correspondant au jalon en
    cours, puis arrêter l'application ;
 8. après le dernier test, remettre les sept valeurs bloquées de la section 3.10 ter, redémarrer une

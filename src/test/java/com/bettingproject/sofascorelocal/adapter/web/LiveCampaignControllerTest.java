@@ -14,6 +14,7 @@ import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
+import com.bettingproject.sofascorelocal.security.InvalidLocalFormTokenException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -66,6 +67,90 @@ class LiveCampaignControllerTest {
     void localObservationsOnly() {
         clearInvocations(service);
         when(events.findByObservationId(any(), anyLong())).thenReturn(Optional.empty());
+    }
+
+    @Test
+    void preparedPageOffersCancellationAndItsControlledPostOnlyCancelsThePreparation() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        when(service.state(CAMPAIGN_ID)).thenReturn(campaign("PREPARED", 1));
+        mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST).session(session))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Annuler la préparation")))
+                .andExpect(content().string(containsString("/live-campaigns/" + CAMPAIGN_ID + "/cancel-preparation")));
+        clearInvocations(service);
+        String token = tokens.issue(session);
+        mvc.perform(post("/live-campaigns/" + CAMPAIGN_ID + "/cancel-preparation")
+                        .header("Host", HOST).header("Origin", ORIGIN).session(session)
+                        .param("manifestHash", HASH).param("localFormToken", token))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/live-campaigns/" + CAMPAIGN_ID));
+        mvc.perform(post("/live-campaigns/" + CAMPAIGN_ID + "/cancel-preparation")
+                        .header("Host", HOST).header("Origin", ORIGIN).session(session)
+                        .param("manifestHash", HASH).param("localFormToken", token))
+                .andExpect(status().isBadRequest())
+                .andExpect(result -> assertThat(result.getResolvedException()).isInstanceOf(InvalidLocalFormTokenException.class));
+        verify(service).cancelPreparation(CAMPAIGN_ID, HASH);
+        verifyNoMoreInteractions(service);
+    }
+
+    @Test
+    void cancellationRequiresPostSameOriginAndLocalToken() throws Exception {
+        String path = "/live-campaigns/" + CAMPAIGN_ID + "/cancel-preparation";
+        MockHttpSession session = new MockHttpSession();
+        mvc.perform(get(path).header("Host", HOST)).andExpect(status().isMethodNotAllowed());
+        mvc.perform(post(path).header("Host", HOST).header("Origin", ORIGIN)
+                        .session(session).param("manifestHash", HASH))
+                .andExpect(status().isBadRequest())
+                .andExpect(result -> assertThat(result.getResolvedException()).isInstanceOf(InvalidLocalFormTokenException.class));
+        mvc.perform(post(path).header("Host", HOST).header("Origin", "https://foreign.invalid")
+                        .session(session).param("manifestHash", HASH).param("localFormToken", tokens.issue(session)))
+                .andExpect(status().isForbidden());
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void launchedPreparationCancellationExplainsTheConflictWithoutStoppingIt() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        doThrow(new IllegalStateException("LIVE_PREPARATION_ALREADY_LAUNCHED"))
+                .when(service).cancelPreparation(CAMPAIGN_ID, HASH);
+        mvc.perform(post("/live-campaigns/" + CAMPAIGN_ID + "/cancel-preparation")
+                        .header("Host", HOST).header("Origin", ORIGIN).session(session)
+                        .param("manifestHash", HASH).param("localFormToken", tokens.issue(session)))
+                .andExpect(status().isConflict())
+                .andExpect(content().string(containsString("Cette campagne a déjà été lancée")))
+                .andExpect(content().string(containsString("LIVE_PREPARATION_ALREADY_LAUNCHED")));
+        verify(service).cancelPreparation(CAMPAIGN_ID, HASH);
+        verifyNoMoreInteractions(service);
+    }
+
+    @Test
+    void cancelledPreparationRetainsItsSelectionAndExplainsThatItWasNeverLaunched() throws Exception {
+        CampaignView base = campaign("PREPARED", 1);
+        when(service.state(CAMPAIGN_ID)).thenReturn(new CampaignView(base.manifest(), "STOPPED_OPERATOR",
+                "PREPARATION_CANCELLED", null, null, 0, 0, 3, null,
+                List.of(new EventView(base.manifest().targets().getFirst(), "STOPPED_OPERATOR",
+                        "PREPARATION_CANCELLED", 0, 0, null, List.of())), List.of(), List.of()));
+        mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Préparation annulée")))
+                .andExpect(content().string(containsString("Aucune collecte n’a été lancée")))
+                .andExpect(content().string(containsString("Non lancée")))
+                .andExpect(content().string(not(containsString("Fixée au lancement"))))
+                .andExpect(content().string(not(containsString("Annuler la préparation"))))
+                .andExpect(content().string(not(containsString("Lancer la campagne live"))))
+                .andExpect(content().string(not(containsString("Arrêter toute la campagne"))));
+        verify(service, never()).cancelPreparation(any(), any());
+    }
+
+    @Test
+    void runningCampaignDoesNotOfferPreparationCancellation() throws Exception {
+        when(service.state(CAMPAIGN_ID)).thenReturn(campaign("RUNNING", 2));
+        mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST))
+                .andExpect(status().isOk())
+                .andExpect(content().string(not(containsString("Annuler la préparation"))))
+                .andExpect(content().string(not(containsString("/cancel-preparation"))))
+                .andExpect(content().string(containsString("Arrêter toute la campagne")));
+        verify(service, never()).cancelPreparation(any(), any());
     }
 
     @Test

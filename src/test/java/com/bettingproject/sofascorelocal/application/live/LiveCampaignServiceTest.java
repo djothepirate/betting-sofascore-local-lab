@@ -65,6 +65,7 @@ import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -938,6 +939,20 @@ class LiveCampaignServiceTest {
         Instant now = Instant.now();
         return new PlaywrightProviderResponse(now, now, status, "application/json", Duration.ZERO,
                 RawPayloadEvidence.capture(body.getBytes(StandardCharsets.UTF_8)));
+    }
+
+    @Test
+    void cancellingPreparationIsLocalEvenWhenLiveOptInAndQualificationAreDisabled() throws Exception {
+        try (Harness h = new Harness()) {
+            h.provider.setEnabled(false);
+            h.playwright.setEnabled(false);
+            h.properties.setEnabled(false);
+            h.properties.getGrouped().setQualificationSha256("");
+            h.service.cancelPreparation(h.manifest.campaignId(), h.manifest.manifestSha256());
+            verify(h.store).cancelPreparation(eq(h.manifest.campaignId()), eq(h.manifest.manifestSha256()), any(Instant.class));
+            verifyNoMoreInteractions(h.store);
+            verifyNoInteractions(h.factory, h.campaign, h.admission, h.coordinator, h.guard, h.processor);
+        }
     }
 
     private static final class Harness implements AutoCloseable {

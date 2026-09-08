@@ -7,6 +7,7 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatis
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseResult;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportException;
+import com.bettingproject.sofascorelocal.adapter.sofascore.transport.J5EventDataTransportFailure;
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderSupervisor;
 import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignTerminalState;
 import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignType;
@@ -281,7 +282,8 @@ public class J5RealEventDataService {
             }
 
             try {
-                resources.lease = requestCoordinator.acquireCampaign(claim.requestId());
+                resources.lease = requestCoordinator.acquireManualJ5Campaign(
+                        claim.requestId(), claim.eventId());
             }
             catch (ManualProviderRequestCoordinator.CoordinationException exception) {
                 return failAndLock(
@@ -325,7 +327,7 @@ public class J5RealEventDataService {
                         claim.providerOrigin(), claim.eventId(), endpoint);
                 J5EventDataTransportResponse response;
                 try {
-                    resources.lease.beginRequest();
+                    resources.lease.beginManualJ5Request(request);
                     if (!controlService.executionMayContinue(claim.requestId())) {
                         return failAndLock(
                                 claim, "OPERATOR_STOP", attempts, results, resources);
@@ -342,7 +344,13 @@ public class J5RealEventDataService {
                                 resources);
                     }
                     try {
-                        response = resources.campaign.execute(request);
+                        response = resources.campaign.execute(request, () -> {
+                            resources.lease.checkManualJ5Request(request);
+                            if (!controlService.executionMayContinue(claim.requestId())) {
+                                throw new J5EventDataTransportException(
+                                        J5EventDataTransportFailure.OPERATOR_STOP);
+                            }
+                        });
                     }
                     finally {
                         attempts++;

@@ -203,8 +203,8 @@
       renderRuntime(monitor);
       text(monitor, "[data-live-campaign-state]", campaign.state);
       text(monitor, "[data-live-campaign-reason]", campaign.reason);
-      text(monitor, "[data-live-started-at]", campaign.startedAt || "En attente de lancement");
-      text(monitor, "[data-live-ends-at]", campaign.endsAt || "Fixée au lancement");
+      text(monitor, "[data-live-started-at]", campaign.startedAt || (campaign.state === "PREPARED" ? "En attente de lancement" : "Non lancée"));
+      text(monitor, "[data-live-ends-at]", campaign.endsAt || (campaign.state === "PREPARED" ? "Fixée au lancement" : "—"));
       text(monitor, "[data-live-calls]", `${campaign.reservedCalls} / ${campaign.maximumCalls}`);
       text(monitor, "[data-live-bytes]", `${campaign.receivedBytes} / ${campaign.maximumBytes}`);
       if (campaign.cadence) text(monitor, "[data-live-autonomy]",

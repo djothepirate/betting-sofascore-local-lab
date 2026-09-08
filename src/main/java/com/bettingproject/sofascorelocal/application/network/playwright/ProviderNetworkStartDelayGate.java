@@ -107,7 +107,7 @@ final class ProviderNetworkStartDelayGate {
         fenced = true;
     }
 
-    /** Only the supervisor's validated consecutive live-v4 group can omit a pause. */
+    /** Only a supervisor-validated live-v4 or manual-J5 group continuation can omit a pause. */
     void admitGroupContinuation(Runnable continuationGuard) {
         Objects.requireNonNull(continuationGuard, "continuationGuard");
         requireUninterrupted();

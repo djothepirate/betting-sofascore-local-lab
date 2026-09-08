@@ -70,6 +70,16 @@ public class LiveCampaignController {
         return "redirect:/live-campaigns/" + campaignId;
     }
 
+    @PostMapping("/live-campaigns/{campaignId}/cancel-preparation")
+    public String cancelPreparation(@PathVariable UUID campaignId,
+                                    @RequestParam(name="manifestHash") String manifestHash,
+                                    @RequestParam(name="localFormToken",required=false) String token,
+                                    HttpSession session) {
+        tokens.consume(session,token);
+        campaigns.cancelPreparation(campaignId,manifestHash);
+        return "redirect:/live-campaigns/"+campaignId;
+    }
+
     @PostMapping("/live-campaigns/{campaignId}/stop")
     public String stop(@PathVariable UUID campaignId,
                        @RequestParam(name = "eventId", required = false) UUID eventId,
@@ -154,7 +164,8 @@ public class LiveCampaignController {
                  "LIVE_EVENT_ALREADY_IN_CAMPAIGN", "LIVE_STORAGE_PROBE_NOT_CONFIGURED",
                  "LIVE_STORAGE_PROBE_TIMEOUT", "LIVE_STORAGE_PROBE_FAILED", "LIVE_STORAGE_PROBE_INVALID",
                  "LIVE_STORAGE_PROBE_INTERRUPTED", "LIVE_STORAGE_CAPACITY_REFUSED", "LIVE_POLICY_INVALID",
-                 "LIVE_CAPACITY_QUALIFICATION_REQUIRED", "LIVE_GROUPED_QUALIFICATION_REQUIRED", "LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY" -> exception.getMessage();
+                 "LIVE_CAPACITY_QUALIFICATION_REQUIRED", "LIVE_GROUPED_QUALIFICATION_REQUIRED", "LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY",
+                 "LIVE_PREPARATION_ALREADY_LAUNCHED", "LIVE_PREPARATION_NOT_CANCELABLE" -> exception.getMessage();
             default -> "LIVE_REQUEST_REJECTED";
         };
         String message = switch (code) {
@@ -167,6 +178,8 @@ public class LiveCampaignController {
             case "LIVE_CAPACITY_QUALIFICATION_REQUIRED" -> "Cette capacité ou cette cadence exige une preuve de qualification. Pour le pilote initial, conserver une rencontre et l’enveloppe de requête de dix secondes.";
             case "LIVE_GROUPED_QUALIFICATION_REQUIRED" -> "La politique live-v4 exige une preuve de qualification dédiée aux groupes et un coût qualifié pour chaque famille. Capacité actuellement disponible à une minute : zéro. Configurer le profil qualifié décrit dans le runbook, puis préparer une nouvelle sélection.";
             case "LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY" -> "Le délai maximal d’une requête live doit être compris entre zéro exclu et dix secondes. Corriger le délai Playwright avant le lancement.";
+            case "LIVE_PREPARATION_ALREADY_LAUNCHED" -> "Cette campagne a déjà été lancée. Sa préparation ne peut plus être annulée ; utiliser l’arrêt de la campagne si sa collecte est encore en cours.";
+            case "LIVE_PREPARATION_NOT_CANCELABLE" -> "Cette campagne n’est plus en préparation. Actualiser sa page pour consulter son état actuel.";
             case "LIVE_DISABLED" -> "Le lancement live est désactivé. Activer l’opt-in local dédié avant de lancer une campagne préparée.";
             case "LIVE_PROVIDER_BUSY" -> "Une collecte fournisseur occupe déjà la session locale. Attendre sa fin avant de lancer cette campagne.";
             case "LIVE_PROVIDER_CLEANUP_REQUIRED" -> "La session fournisseur précédente reste verrouillée en attente de clôture locale. Finaliser sa clôture depuis sa campagne si cette action est disponible ; après un redémarrage, faire vérifier le verrou local et l’absence de collecte active avant sa régularisation. Ce lancement n’a pas démarré de nouvelle collecte.";

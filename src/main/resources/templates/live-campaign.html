@@ -39,8 +39,8 @@
     <p class="notice notice-warning" data-live-runtime-status role="status"
        th:hidden="${campaign.runtimeStatus == null}" th:text="${campaign.runtimeStatus?.label}"></p>
     <dl class="detail-grid">
-      <div><dt>Démarrage</dt><dd data-live-started-at th:text="${campaign.startedAt ?: 'En attente de lancement'}">En attente</dd></div>
-      <div><dt>Fin au plus tard (UTC)</dt><dd data-live-ends-at th:text="${campaign.endsAt ?: 'Fixée au lancement'}">—</dd></div>
+      <div><dt>Démarrage</dt><dd data-live-started-at th:text="${campaign.startedAt ?: (campaign.state == 'PREPARED' ? 'En attente de lancement' : 'Non lancée')}">En attente</dd></div>
+      <div><dt>Fin au plus tard (UTC)</dt><dd data-live-ends-at th:text="${campaign.endsAt ?: (campaign.state == 'PREPARED' ? 'Fixée au lancement' : '—')}">—</dd></div>
       <div><dt>Appels réservés / plafond</dt><dd data-live-calls th:text="${campaign.reservedCalls + ' / ' + campaign.maximumCalls}">0</dd></div>
       <div><dt>Octets reçus / plafond</dt><dd data-live-bytes th:text="${campaign.receivedBytes + ' / ' + campaign.maximumBytes}">0</dd></div>
       <div><dt>Intervalle de collecte</dt><dd th:text="${manifest.cycleInterval.toSeconds() + ' secondes'}">60 secondes</dd></div>
@@ -117,6 +117,12 @@
         Je lance cette campagne locale avec cette sélection, cette durée et ces plafonds.</label>
       <div class="actions"><button type="submit" class="button">Lancer la campagne live</button>
         <a class="button button-secondary" th:href="@{/events}">Revenir à la sélection</a></div>
+    </form>
+    <form method="post" th:action="@{/live-campaigns/{id}/cancel-preparation(id=${campaign.campaignId})}">
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <input type="hidden" name="manifestHash" th:value="${manifest.manifestSha256}">
+      <button type="submit" class="button button-secondary">Annuler la préparation</button>
+      <p class="muted">La sélection et son historique seront conservés. Aucune collecte ne sera lancée.</p>
     </form>
   </section>
 
