@@ -178,6 +178,17 @@
         }
         window.StatisticsView.update(host, family.statistics);
       }
+    } else if (family.endpoint === "EVENT_LINEUPS" && window.LineupsView) {
+      let host = section.querySelector("[data-lineups]");
+      if (!family.lineups) {
+        host?.remove();
+      } else {
+        if (!host) {
+          host = create("div", undefined, "data-lineups");
+          section.append(host);
+        }
+        window.LineupsView.update(host, family.lineups);
+      }
     } else {
       renderTable(section, family.table);
     }

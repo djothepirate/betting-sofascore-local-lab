@@ -38,6 +38,43 @@ class LiveCampaignPresentationTest {
     private final J5EventDataStore data = mock(J5EventDataStore.class);
     private final LiveCampaignPresentation presentation = new LiveCampaignPresentation(events, data);
 
+    @ParameterizedTest
+    @CsvSource({"false", "true"})
+    void lineupsUseTheReferencedObservationAndKeepProviderAbsenceDistinct(boolean unavailable) {
+        UUID id = UUID.randomUUID();
+        var refs = new NormalizedReferences(null, null, 31L, "a".repeat(64));
+        var result = new Result(id, new Publication(unavailable ? "UNAVAILABLE" : "PARSED", "EVENT", "OK",
+                START, "event-lineups-v2", !unavailable, null, null, null, null,
+                unavailable ? "UNAVAILABLE" : "COMPLETE", unavailable ? 0 : 100), refs);
+        var cursor = new FamilyCursor(SofascoreEndpointType.EVENT_LINEUPS, id, id, id, id,
+                START, START, START, refs, result, result);
+        var values = new EventLineups(900001L, false,
+                new TeamLineup(LineupSide.HOME, Optional.empty(), List.of()),
+                new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of()));
+        when(data.findByObservationId(EVENT, SofascoreEndpointType.EVENT_LINEUPS, 31L))
+                .thenReturn(Optional.of(new J5EventDataObservationView(31, IDENTITY, values,
+                        EventSourceTrace.providerSnapshot(7, "b".repeat(64), "event-lineups-v2", START),
+                        unavailable ? J5CompletenessReport.unavailable() : J5CompletenessReport.measured(1, 1, List.of()),
+                        "a".repeat(64))));
+
+        var projected = presentation.state(campaign(List.of(cursor), List.of(
+                attempt(id, SofascoreEndpointType.EVENT_LINEUPS, 7, START, result))))
+                .events().getFirst().families().getLast();
+
+        assertThat(projected.dataSnapshotId()).isEqualTo(7L);
+        assertThat(projected.payloadSha256()).isEqualTo("b".repeat(64));
+        if (unavailable) assertThat(projected.lineups()).isNull();
+        else {
+            assertThat(projected.lineups().confirmationLabel()).isEqualTo("Provisoire");
+            assertThat(projected.lineups().teams()).hasSize(2).allSatisfy(team -> {
+                assertThat(team.starterCount()).isZero();
+                assertThat(team.substituteCount()).isZero();
+            });
+        }
+        verify(data).findByObservationId(EVENT, SofascoreEndpointType.EVENT_LINEUPS, 31L);
+        verifyNoMoreInteractions(data);
+    }
+
     @Test
     void unavailableLatestReceiptRetainsPreciselyTheLastReadableOccurrence() {
         UUID successfulId = UUID.randomUUID();

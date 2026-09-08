@@ -4,6 +4,18 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — compositions J5 par équipe
+
+- Remplace les longues tables de compositions par un composant commun aux pages J5 manuelle,
+  campagne live et suivi de la fiche d’une rencontre : équipes, formation, confirmation,
+  titulaires regroupés par poste et remplaçants.
+- Ajoute des panneaux repliables au clavier, des compteurs d’effectif et des numéros de maillot
+  visibles ; les deux colonnes deviennent une colonne sur mobile. Les rafraîchissements
+  conservent l’ouverture des panneaux et le focus.
+- Utilise uniquement les données normalisées existantes, sans nouvelle collecte, photo,
+  note, entraîneur ou position tactique déduite. Les indisponibilités et champs absents restent explicites.
+- Détail et vérification : [présentation des compositions](docs/validation/WO058-LINEUPS-PRESENTATION-20260908.md).
+
 ### WO-058 — préparation annulable et collecte J5 manuelle groupée
 
 - Ajoute « Annuler la préparation » aux campagnes non lancées ; conserve manifeste et historique,

@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="view(lineups)" class="lineups-view" data-lineups>
+  <div class="lineups-status">
+    <span class="lineups-confirmation" data-lineups-confirmation
+          th:attr="data-confirmed=${lineups.confirmed}"
+          th:text="${lineups.confirmationLabel}">Compositions provisoires</span>
+  </div>
+  <p class="lineups-empty" data-lineups-empty th:hidden="${!lineups.teams.isEmpty()}">Aucune composition disponible dans cette observation.</p>
+  <div class="lineups-teams" data-lineups-teams>
+    <details th:each="team : ${lineups.teams}" class="lineups-team" open
+             th:attr="data-lineups-team=${team.side}">
+      <summary>
+        <span class="lineups-team-header">
+          <span class="lineups-team-title">
+            <span class="lineups-side" data-lineups-side-label th:text="${team.sideLabel}">Domicile</span>
+            <strong data-lineups-team-name th:text="${team.name}">Équipe</strong>
+          </span>
+          <span class="lineups-formation" data-lineups-formation
+                th:text="${#strings.isEmpty(team.formation) or team.formation == 'Formation non renseignée' ? 'Formation non renseignée' : 'Formation · ' + team.formation}">Formation non renseignée</span>
+        </span>
+      </summary>
+      <div class="lineups-team-body">
+        <details class="lineups-section" data-lineups-section="starters" open>
+          <summary><span class="lineups-section-title">Titulaires</span><span class="lineups-count" data-lineups-count th:text="${team.starterCount}">0</span></summary>
+          <div class="lineups-starters">
+            <p class="lineups-note">Répartition par poste, sans positionnement tactique détaillé.</p>
+            <p class="lineups-empty" data-lineups-starters-empty th:hidden="${team.starterCount > 0}">Aucun titulaire renseigné.</p>
+            <div class="lineups-pitch" data-lineups-groups th:hidden="${team.starterGroups.isEmpty()}">
+              <section th:each="group : ${team.starterGroups}" class="lineups-position-group"
+                       th:attr="data-lineups-group=${group.key}">
+                <h5 class="lineups-position-heading" data-lineups-group-label th:text="${group.label}">Poste non renseigné</h5>
+                <ul class="lineups-players" data-lineups-players>
+                  <th:block th:each="player : ${group.players}">
+                    <li th:replace="~{fragments/lineups :: player(${player})}"></li>
+                  </th:block>
+                </ul>
+              </section>
+            </div>
+          </div>
+        </details>
+        <details class="lineups-section" data-lineups-section="substitutes" open>
+          <summary><span class="lineups-section-title">Remplaçants</span><span class="lineups-count" data-lineups-count th:text="${team.substituteCount}">0</span></summary>
+          <ul class="lineups-players lineups-bench" data-lineups-substitutes>
+            <th:block th:each="player : ${team.substitutes}">
+              <li th:replace="~{fragments/lineups :: player(${player})}"></li>
+            </th:block>
+          </ul>
+          <p class="lineups-empty" data-lineups-substitutes-empty th:hidden="${team.substituteCount > 0}">Aucun remplaçant renseigné.</p>
+        </details>
+      </div>
+    </details>
+  </div>
+</div>
+
+<li th:fragment="player(player)" class="lineups-player" th:attr="data-lineups-player=${player.key}">
+  <span class="lineups-number" data-lineups-number
+        th:attr="aria-label=${#strings.isEmpty(player.shirtNumber) or player.shirtNumber == '—' ? 'Numéro de maillot non renseigné' : 'Numéro de maillot ' + player.shirtNumber}"
+        th:text="${#strings.isEmpty(player.shirtNumber) ? '—' : player.shirtNumber}">—</span>
+  <span class="lineups-player-info">
+    <strong class="lineups-name" data-lineups-name th:text="${player.name}">Joueur</strong>
+    <span class="lineups-player-meta">
+      <span data-lineups-position th:text="${player.positionLabel}">Poste non renseigné</span>
+      <span class="lineups-role" data-lineups-role th:text="${player.roleLabel}">Titulaire</span>
+    </span>
+  </span>
+</li>
+</body>
+</html>

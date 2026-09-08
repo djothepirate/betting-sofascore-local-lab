@@ -7,6 +7,26 @@ Références : [ADR-SS-005 accepté](../../ADR-SS-005-bounded-local-live-j4-j5-c
 
 ## Nouvelles préparations : live-v4
 
+### Lire les compositions
+
+La page de campagne, le suivi de la fiche d’une rencontre et la page J5 manuelle utilisent
+la même présentation. Les équipes apparaissent côte à côte sur écran large et l’une sous
+l’autre sur mobile. Chaque en-tête indique le côté, le nom et la formation reçue ; le badge
+de confirmation décrit la composition entière, indépendamment du taux de complétude.
+
+Cliquer sur l’en-tête d’une équipe, « Titulaires » ou « Remplaçants » replie ou déplie ce
+panneau. Ces commandes fonctionnent aussi avec Entrée/Espace. Le lecteur live conserve
+l’état des panneaux pendant les actualisations, y compris lorsqu’un joueur ou la confirmation
+change. Une recharge complète de la page retrouve les panneaux ouverts initialement.
+
+Le schéma des titulaires regroupe les postes gardien, défenseur, milieu et attaquant ; les
+postes absents ou autres sont distingués. Il ne représente pas les positions tactiques
+précises. Aucun numéro, joueur ou formation n’est ajouté pour compléter les données reçues.
+Une réponse HTTP 404 reste une indisponibilité, distincte d’une liste observée vide. Source,
+hash et heure de réception restent consultables au-dessus de la composition.
+
+### Cadence et admission
+
 Les nouvelles préparations utilisent une cible de **60 secondes par rencontre pour J4,
 incidents et statistiques**. LINEUPS est initial puis nominalement toutes les cinq minutes
 pendant le jeu, avec répartition entre les matchs ; avant le début confirmé, J4 et LINEUPS

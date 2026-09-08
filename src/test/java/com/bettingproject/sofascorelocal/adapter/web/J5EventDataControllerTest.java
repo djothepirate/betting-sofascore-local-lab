@@ -164,6 +164,13 @@ class J5EventDataControllerTest {
                 .andExpect(content().string(containsString("4-3-3")))
                 .andExpect(content().string(containsString("4-4-2")))
                 .andExpect(content().string(containsString("Synthetic Away Defender")))
+                .andExpect(model().attributeExists("lineupsView"))
+                .andExpect(content().string(containsString("data-lineups-team=\"HOME\"")))
+                .andExpect(content().string(containsString("data-lineups-team=\"AWAY\"")))
+                .andExpect(content().string(containsString("data-lineups-section=\"starters\"")))
+                .andExpect(content().string(containsString("data-lineups-section=\"substitutes\"")))
+                .andExpect(content().string(containsString("/css/lineups.css")))
+                .andExpect(content().string(containsString("/js/lineups.js")))
                 .andExpect(content().string(containsString("PROVIDER_SCHEMA_VALIDATED=NO")))
                 .andExpect(content().string(containsString("Trois familles, une confirmation, aucun retry")))
                 .andExpect(content().string(containsString("J5_EVENT_DATA_QUALIFICATION_DISABLED")))
@@ -195,6 +202,27 @@ class J5EventDataControllerTest {
                 .andExpect(content().string(containsString("Aucune statistique locale")))
                 .andExpect(content().string(containsString("Aucun incident local")))
                 .andExpect(content().string(containsString("Aucune composition locale")));
+    }
+
+    @Test
+    void unavailableLineupsNeverRenderAsProvisionalOrEmptyTeamCards() throws Exception {
+        J4EventSearchItem current = currentEvent();
+        var lineups = new J5EventDataObservationView(31L, current.event().identity(),
+                J5UnavailableFamily.emptyObservation(SofascoreEndpointType.EVENT_LINEUPS, 900001L),
+                EventSourceTrace.providerSnapshot(31, "e".repeat(64), "event-lineups-unavailable-v1",
+                        Instant.parse("2026-08-15T19:50:46Z")),
+                J5CompletenessReport.unavailable(), "f".repeat(64));
+        var page = new J5EventDataPage(ZoneId.of("Europe/Paris"), current,
+                new J5EventDataBundle(Optional.empty(), Optional.empty(), Optional.of(lineups)));
+        when(queryService.find(current.event().identity().value(), "Europe/Paris")).thenReturn(Optional.of(page));
+        when(formTokenService.issue(any(HttpSession.class))).thenReturn("one-use-token");
+        mockMvc.perform(get("/events/{id}/statistics", current.event().identity().value()))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeDoesNotExist("lineupsView"))
+                .andExpect(content().string(containsString("Compositions indisponibles chez le fournisseur")))
+                .andExpect(content().string(not(containsString("data-lineups-team"))))
+                .andExpect(content().string(not(containsString("Composition provisoire"))));
+        verifyNoInteractions(realEventDataService, fixtureImportService, localJsonImportService);
     }
 
     @Test

@@ -132,7 +132,7 @@ public class LiveCampaignPresentation {
                         .filter(f -> f.endpoint() == endpoint).findFirst().orElseGet(() ->
                                 new FamilyCursor(endpoint, null, null, null, null, null, null, null,
                                         NormalizedReferences.none(), null, null)))
-                        .map(f -> family(campaign, event, f, observedAt)).toList());
+                        .map(f -> family(campaign, event, f, observedAt, identity)).toList());
     }
 
     private static String sportStatusLabel(String sportStatus, CanonicalEventObservationView identity) {
@@ -187,7 +187,8 @@ public class LiveCampaignPresentation {
                 ? Optional.of(display.path("value").intValue()) : Optional.empty();
     }
 
-    private Family family(CampaignView campaign, EventView event, FamilyCursor cursor, Instant observedAt) {
+    private Family family(CampaignView campaign, EventView event, FamilyCursor cursor, Instant observedAt,
+                          CanonicalEventObservationView identity) {
         Publication latest = cursor.latestResult() == null ? null : cursor.latestResult().publication();
         Publication successful = cursor.latestSuccessfulResult() == null
                 ? null : cursor.latestSuccessfulResult().publication();
@@ -202,6 +203,7 @@ public class LiveCampaignPresentation {
                 .findFirst().orElse(null);
         Table table = new Table(List.of(), List.of());
         StatisticsPresentation.View statistics = null;
+        LineupsPresentation.View lineups = null;
         String payloadSha256 = null;
         if (cursor.normalized() != null && cursor.normalized().j5ObservationId() != null) {
             var observation = data.findByObservationId(event.target().canonicalEventId(), cursor.endpoint(),
@@ -210,6 +212,12 @@ public class LiveCampaignPresentation {
                 table = table(observation.orElseThrow().data());
                 if (observation.orElseThrow().data() instanceof EventStatistics values) {
                     statistics = StatisticsPresentation.from(values);
+                }
+                if (observation.orElseThrow().data() instanceof EventLineups values
+                        && observation.orElseThrow().completeness().status() != J5CompletenessStatus.UNAVAILABLE) {
+                    lineups = LineupsPresentation.from(values,
+                            identity == null ? "Domicile" : identity.homeTeam().name(),
+                            identity == null ? "Extérieur" : identity.awayTeam().name());
                 }
                 payloadSha256 = observation.orElseThrow().source().payloadSha256();
             }
@@ -242,7 +250,8 @@ public class LiveCampaignPresentation {
                         terminal(event.state()) || terminal(campaign.state()) ? null : cursor.schedule().nextDueAt(),
                         cursor.schedule().intervalSeconds(), cursor.schedule().missedCycles(),
                         cursor.schedule().nextDueAt() == null || terminal(event.state()) || terminal(campaign.state())
-                                ? 0 : Math.max(0, Duration.between(cursor.schedule().nextDueAt(), observedAt).toMillis())));
+                                ? 0 : Math.max(0, Duration.between(cursor.schedule().nextDueAt(), observedAt).toMillis())),
+                lineups);
     }
 
     private static Freshness freshness(CampaignView campaign, EventView event, FamilyCursor cursor, Instant now) {
@@ -368,7 +377,19 @@ public class LiveCampaignPresentation {
                          String parserVersion, String payloadSha256,
                          String normalizedSha256, String completeness, Integer completenessScore,
                          boolean previousData, Freshness freshness, Table table,
-                         StatisticsPresentation.View statistics, CollectionSchedule schedule) {
+                         StatisticsPresentation.View statistics, CollectionSchedule schedule,
+                         LineupsPresentation.View lineups) {
+        public Family(String endpoint, String label, String outcome, String code, String scope,
+                Instant lastAttemptAt, Long authorizationDelayMillis, Instant lastReceivedAt,
+                Instant lastSuccessfulAt, Instant lastChangedAt, Long receivedSnapshotId, Long receivedOccurrenceId,
+                Long dataSnapshotId, String parserVersion, String payloadSha256, String normalizedSha256,
+                String completeness, Integer completenessScore, boolean previousData, Freshness freshness,
+                Table table, StatisticsPresentation.View statistics, CollectionSchedule schedule) {
+            this(endpoint, label, outcome, code, scope, lastAttemptAt, authorizationDelayMillis, lastReceivedAt,
+                    lastSuccessfulAt, lastChangedAt, receivedSnapshotId, receivedOccurrenceId, dataSnapshotId,
+                    parserVersion, payloadSha256, normalizedSha256, completeness, completenessScore,
+                    previousData, freshness, table, statistics, schedule, null);
+        }
         public Family(String endpoint, String label, String outcome, String code, String scope,
                 Instant lastAttemptAt, Long authorizationDelayMillis, Instant lastReceivedAt,
                 Instant lastSuccessfulAt, Instant lastChangedAt, Long receivedSnapshotId, Long receivedOccurrenceId,

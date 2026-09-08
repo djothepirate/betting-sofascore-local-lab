@@ -19,6 +19,29 @@ PostgreSQL local Docker Desktop et application sur `127.0.0.1:8087`, textes UTF-
 
 ## 1. Objectif et origine du besoin
 
+### Quatorzième retour — compositions lisibles en live et en J5 manuel
+
+Le 08/09 après `1ba2099`, le propriétaire confirme l’annulation des préparations, l’exclusion
+des rencontres terminées/reportées et un triplet J5 manuel en environ trois secondes contre
+une dizaine auparavant. Sa première campagne v4 à trois rencontres a rapidement reçu trois
+compositions, dont une confirmée. Il poursuit ses observations : ce retour ne qualifie pas
+encore la fraîcheur fournisseur à dix rencontres en jeu.
+
+Il demande ensuite d’améliorer la présentation des compositions des deux parcours. Le
+composant commun sépare domicile et extérieur, affiche noms d’équipes, formation et confirmation,
+regroupe les titulaires selon les postes reçus et distingue le banc. Les panneaux sont
+repliables et les rafraîchissements préservent leur état et le focus. Le terrain est un schéma
+par poste ; aucune position tactique, photo, note, substitution ou information d’entraîneur
+n’est inventée. Les observations, leurs empreintes, les parseurs et les cadences restent inchangés.
+
+Le [rapport de présentation](../../validation/WO058-LINEUPS-PRESENTATION-20260908.md) relie
+les fichiers, les tests standard/Chromium, les captures synthétiques et leurs limites. La
+campagne de l’opérateur n’est pas pilotée par ces contrôles.
+Le port est ensuite libéré par le propriétaire. Qualification : 128 tests ciblés et un
+scénario Chromium réussis ; `clean verify` terminé le 08/09 à 14:31:57 UTC avec 1 740 tests
+standard exécutés, cinq ignorés explicités dans le rapport et 151 tests d’intégration réussis.
+Aucun échec ni erreur. Les vues desktop/mobile ont été inspectées sur données synthétiques.
+
 ### Treizième retour — activation du profil, annulation et J5 manuel groupé
 
 Le 08/09, le propriétaire signale les cases `notstarted` désactivées avec capacité `live-v4`

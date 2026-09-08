@@ -16,6 +16,7 @@ import com.bettingproject.sofascorelocal.application.network.J5RealEventDataServ
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventLineups;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventStatistics;
+import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessStatus;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -99,6 +100,10 @@ public class J5EventDataController {
                 page.data().lineups().ifPresent(value -> {
                     model.addAttribute("lineups", value);
                     model.addAttribute("lineupsData", (EventLineups) value.data());
+                    if (value.completeness().status() != J5CompletenessStatus.UNAVAILABLE) {
+                        model.addAttribute("lineupsView", LineupsPresentation.from((EventLineups) value.data(),
+                                page.current().event().homeTeam().name(), page.current().event().awayTeam().name()));
+                    }
                 });
                 model.addAttribute("localFormToken", formTokenService.issue(session));
                 model.addAttribute("j5RealControl", realControlService.snapshot());

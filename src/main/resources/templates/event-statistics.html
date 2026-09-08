@@ -7,6 +7,8 @@
   <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
   <link rel="stylesheet" th:href="@{/css/statistics.css}" href="/css/statistics.css">
   <script defer th:src="@{/js/statistics.js}" src="/js/statistics.js"></script>
+  <link rel="stylesheet" th:href="@{/css/lineups.css}" href="/css/lineups.css">
+  <script defer th:src="@{/js/lineups.js}" src="/js/lineups.js"></script>
 </head>
 <body>
 <header class="topbar compact-topbar">
@@ -420,36 +422,8 @@
         <div><dt>SHA-256 source</dt><dd class="mono hash-value" th:text="${lineups.source.payloadSha256}">hash</dd></div>
         <div><dt>SHA-256 normalisé</dt><dd class="mono hash-value" th:text="${lineups.normalizedSha256}">hash</dd></div>
       </dl>
-      <div th:unless="${lineups.completeness.status.name() == 'UNAVAILABLE'}">
-      <h3>Domicile · <span th:text="${lineupsData.home.formation.orElse('formation absente')}">4-3-3</span></h3>
-      <div class="table-scroll">
-        <table>
-          <thead><tr><th>Joueur</th><th>Numéro</th><th>Poste</th><th>Rôle</th></tr></thead>
-          <tbody>
-          <tr th:each="player : ${lineupsData.home.players}">
-            <td th:text="${player.name}">Player</td>
-            <td th:text="${player.shirtNumber.orElse(null)}">1</td>
-            <td th:text="${player.position.orElse('—')}">G</td>
-            <td th:text="${player.starter ? 'Titulaire' : 'Banc'}">Titulaire</td>
-          </tr>
-          </tbody>
-        </table>
-      </div>
-
-      <h3>Extérieur · <span th:text="${lineupsData.away.formation.orElse('formation absente')}">4-4-2</span></h3>
-      <div class="table-scroll">
-        <table>
-          <thead><tr><th>Joueur</th><th>Numéro</th><th>Poste</th><th>Rôle</th></tr></thead>
-          <tbody>
-          <tr th:each="player : ${lineupsData.away.players}">
-            <td th:text="${player.name}">Player</td>
-            <td th:text="${player.shirtNumber.orElse(null)}">1</td>
-            <td th:text="${player.position.orElse('—')}">G</td>
-            <td th:text="${player.starter ? 'Titulaire' : 'Banc'}">Titulaire</td>
-          </tr>
-          </tbody>
-        </table>
-      </div>
+      <div th:if="${lineupsView != null}">
+        <div th:replace="~{fragments/lineups :: view(${lineupsView})}"></div>
       </div>
     </section>
 

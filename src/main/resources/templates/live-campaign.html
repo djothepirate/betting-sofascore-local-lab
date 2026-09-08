@@ -7,6 +7,8 @@
   <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
   <link rel="stylesheet" th:href="@{/css/statistics.css}" href="/css/statistics.css">
   <script defer th:src="@{/js/statistics.js}" src="/js/statistics.js"></script>
+  <link rel="stylesheet" th:href="@{/css/lineups.css}" href="/css/lineups.css">
+  <script defer th:src="@{/js/lineups.js}" src="/js/lineups.js"></script>
   <script defer th:src="@{/js/live-campaign.js}" src="/js/live-campaign.js"></script>
 </head>
 <body>
@@ -186,7 +188,10 @@
         <div th:if="${family.statistics != null}">
           <div th:replace="~{fragments/statistics :: view(${family.statistics})}"></div>
         </div>
-        <details th:if="${family.statistics == null and !family.table.columns.isEmpty()}" open>
+        <div th:if="${family.lineups != null}">
+          <div th:replace="~{fragments/lineups :: view(${family.lineups})}"></div>
+        </div>
+        <details th:if="${family.statistics == null and family.endpoint != 'EVENT_LINEUPS' and !family.table.columns.isEmpty()}" open>
           <summary>Données normalisées</summary>
           <div class="table-scroll"><table><thead><tr><th th:each="column : ${family.table.columns}" th:text="${column}">Colonne</th></tr></thead>
             <tbody data-live-table-body><tr th:each="row : ${family.table.rows}"><td th:each="cell : ${row}" th:text="${cell}">Valeur</td></tr></tbody>
