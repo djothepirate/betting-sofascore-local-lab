@@ -17,6 +17,7 @@ import java.util.function.LongSupplier;
 final class ProviderNetworkStartDelayGate {
 
     static final Duration MAXIMUM_PAUSE_SLICE = Duration.ofMillis(20);
+    private static final long LIVE_V5_INTER_GROUP_DELAY_NANOS = Duration.ofSeconds(1).toNanos();
 
     private final long minimumDelayNanos;
     private final LongSupplier nanoTime;
@@ -24,6 +25,7 @@ final class ProviderNetworkStartDelayGate {
     private boolean fenced;
     private long previousDispatchFinishedAtNanos;
     private boolean timingEvidenceLost;
+    private LiveProviderGroupTracker previousGroupSession;
 
     ProviderNetworkStartDelayGate(
             Duration minimumDelay,
@@ -39,6 +41,15 @@ final class ProviderNetworkStartDelayGate {
     }
 
     void awaitNextDispatch(Runnable continuationGuard) {
+        awaitNextGroupDispatch(null, continuationGuard);
+    }
+
+    /**
+     * Only consecutive validated groups of the very same live-v5 session use
+     * one second. A new session, legacy call or authority transition keeps the
+     * global fence, including when a campaign UUID is reused after closing.
+     */
+    void awaitNextGroupDispatch(LiveProviderGroupTracker groupSession, Runnable continuationGuard) {
         Objects.requireNonNull(continuationGuard, "continuationGuard");
         while (true) {
             requireUninterrupted();
@@ -56,7 +67,10 @@ final class ProviderNetworkStartDelayGate {
                     timingEvidenceLost = true;
                     throw new TimingEvidenceException();
                 }
-                remaining = minimumDelayNanos - elapsed;
+                long requiredDelay = groupSession != null && groupSession.isLiveV5()
+                        && previousGroupSession == groupSession
+                        ? LIVE_V5_INTER_GROUP_DELAY_NANOS : minimumDelayNanos;
+                remaining = requiredDelay - elapsed;
             }
             if (remaining <= 0) {
                 requireUninterrupted();
@@ -88,6 +102,11 @@ final class ProviderNetworkStartDelayGate {
     }
 
     synchronized void recordDispatchFinished(boolean usableResponseEvidence) {
+        recordDispatchFinished(usableResponseEvidence, null);
+    }
+
+    synchronized void recordDispatchFinished(boolean usableResponseEvidence,
+            LiveProviderGroupTracker groupSession) {
         if (!usableResponseEvidence) {
             timingEvidenceLost = true;
         }
@@ -105,9 +124,10 @@ final class ProviderNetworkStartDelayGate {
         }
         previousDispatchFinishedAtNanos = observed;
         fenced = true;
+        previousGroupSession = usableResponseEvidence ? groupSession : null;
     }
 
-    /** Only a supervisor-validated live-v4 or manual-J5 group continuation can omit a pause. */
+    /** Only a supervisor-validated live-v4/v5 or manual-J5 group continuation can omit a pause. */
     void admitGroupContinuation(Runnable continuationGuard) {
         Objects.requireNonNull(continuationGuard, "continuationGuard");
         requireUninterrupted();

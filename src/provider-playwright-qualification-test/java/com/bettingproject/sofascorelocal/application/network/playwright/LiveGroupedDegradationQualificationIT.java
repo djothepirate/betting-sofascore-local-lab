@@ -21,7 +21,8 @@ import static org.assertj.core.api.Assertions.*;
 class LiveGroupedDegradationQualificationIT {
     private static final long FIRST_EVENT = 17_000_001L;
     private static final long SECOND_EVENT = 17_000_002L;
-    private static final long THREE_SECONDS = TimeUnit.SECONDS.toNanos(3);
+    private static final boolean V5 = Boolean.getBoolean("wo058.grouped.v5");
+    private static final Duration INTER_GROUP_DELAY = Duration.ofSeconds(V5 ? 1 : 3);
 
     @Test @Timeout(40)
     void delayedIncident404KeepsFourDistinctReceiptsAndOnlyTheNextGroupWaits() throws Exception {
@@ -30,7 +31,7 @@ class LiveGroupedDegradationQualificationIT {
             UUID campaignId = UUID.randomUUID(), firstGroup = UUID.randomUUID();
             var samples = new ArrayList<Sample>();
             List<ProcessHandle> owned;
-            try (var campaign = supervisor.openLiveGrouped(campaignId, LiveProviderSession.ENDPOINTS)) {
+            try (var campaign = open(supervisor, campaignId)) {
                 var endpoints = List.of(EVENT_DETAILS, EVENT_INCIDENTS, EVENT_STATISTICS, EVENT_LINEUPS);
                 long[] delays = {120, 650, 180, 420};
                 for (int i = 0; i < endpoints.size(); i++) {
@@ -64,22 +65,26 @@ class LiveGroupedDegradationQualificationIT {
                             .isGreaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(previous.delayMillis()));
                     if (i < 4) {
                         assertThat(current.dispatchNanos() - previous.completedNanos())
-                                .as("no artificial three-second pause inside the group at request %s", i)
-                                .isLessThan(THREE_SECONDS);
+                                .as("no artificial inter-group pause inside the group at request %s", i)
+                                .isLessThan(INTER_GROUP_DELAY.toNanos());
                     }
                 }
                 Sample lastInGroup = samples.get(3), nextGroup = samples.get(4);
                 assertThat(Duration.between(lastInGroup.response().receivedAt(), nextGroup.response().requestedAt()))
-                        .as("the next group still waits three seconds after the preceding response")
-                        .isGreaterThanOrEqualTo(Duration.ofSeconds(3));
+                        .as("the next group respects its server policy after the preceding response")
+                        .isGreaterThanOrEqualTo(INTER_GROUP_DELAY);
+                if (V5) assertThat(Duration.between(lastInGroup.response().receivedAt(), nextGroup.response().requestedAt()))
+                        .as("the v5 group does not inherit the historical three-second fence")
+                        .isLessThan(Duration.ofSeconds(3));
                 assertThat(fixture.arrivals.get(4) - fixture.arrivals.get(3))
-                        .isGreaterThanOrEqualTo(THREE_SECONDS + TimeUnit.MILLISECONDS.toNanos(lastInGroup.delayMillis()));
+                        .isGreaterThanOrEqualTo(INTER_GROUP_DELAY.toNanos()
+                                + TimeUnit.MILLISECONDS.toNanos(lastInGroup.delayMillis()));
                 owned = ownedProcesses(fixture.worker.get());
             }
             awaitNativeCleanup(supervisor, owned);
             assertThat(fixture.offScope.get()).isZero();
             fixture.assertNoArtifacts();
-            System.out.println("WO058_V4_DEGRADATION_CASE=DELAYED_404;RECEIPTS=5;HTTP_404=1;REAL_PROVIDER_CALLS=0;CLEANUP=PASS");
+            System.out.println("WO058_" + (V5 ? "V5" : "V4") + "_DEGRADATION_CASE=DELAYED_404;RECEIPTS=5;HTTP_404=1;REAL_PROVIDER_CALLS=0;CLEANUP=PASS");
         }
     }
 
@@ -90,7 +95,7 @@ class LiveGroupedDegradationQualificationIT {
             UUID campaignId = UUID.randomUUID(), groupId = UUID.randomUUID();
             List<ProcessHandle> owned;
             AtomicInteger continuationPermits = new AtomicInteger();
-            try (var campaign = supervisor.openLiveGrouped(campaignId, LiveProviderSession.ENDPOINTS)) {
+            try (var campaign = open(supervisor, campaignId)) {
                 Sample first = execute(fixture, campaign, campaignId, groupId, FIRST_EVENT, EVENT_DETAILS, 250);
                 assertThat(first.response().httpStatus()).isEqualTo(200);
                 assertThat(fixture.arrivals).hasSize(1);
@@ -121,8 +126,13 @@ class LiveGroupedDegradationQualificationIT {
             assertThat(fixture.arrivals).hasSize(1);
             assertThat(fixture.offScope.get()).isZero();
             fixture.assertNoArtifacts();
-            System.out.println("WO058_V4_DEGRADATION_CASE=OPERATOR_STOP;RECEIPTS=1;CONTINUATION_DEPARTURES=0;REAL_PROVIDER_CALLS=0;CLEANUP=PASS");
+            System.out.println("WO058_" + (V5 ? "V5" : "V4") + "_DEGRADATION_CASE=OPERATOR_STOP;RECEIPTS=1;CONTINUATION_DEPARTURES=0;REAL_PROVIDER_CALLS=0;CLEANUP=PASS");
         }
+    }
+
+    private static PlaywrightProviderCampaign open(ChildJvmPlaywrightProviderSupervisor supervisor, UUID id) {
+        return V5 ? supervisor.openLiveGroupedV5(id, LiveProviderSession.ENDPOINTS)
+                : supervisor.openLiveGrouped(id, LiveProviderSession.ENDPOINTS);
     }
 
     private static Sample execute(LiveProviderSessionQualificationIT.Fixture fixture,

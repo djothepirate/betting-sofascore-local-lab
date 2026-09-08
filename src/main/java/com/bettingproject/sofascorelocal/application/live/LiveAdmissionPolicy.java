@@ -10,6 +10,8 @@ import org.springframework.stereotype.Component;
 
 @Component
 public final class LiveAdmissionPolicy {
+    public static final int V5_MAXIMUM_SELECTION_SIZE = 20;
+    public static final long V5_MAXIMUM_RAW_BYTES = 15_728_640_000L;
     private final LiveCampaignProperties properties;
     private final LiveStorageCapacityProbe storage;
     public LiveAdmissionPolicy(LiveCampaignProperties properties, LiveStorageCapacityProbe storage) {
@@ -55,6 +57,22 @@ public final class LiveAdmissionPolicy {
         requireStorage(maximumBytes(matches));
     }
 
+    /** V5 keeps a separately bounded byte allowance; increasing call limits does not inflate it. */
+    public long maximumBytesV5(int matches) {
+        if (matches < 1 || matches > V5_MAXIMUM_SELECTION_SIZE)
+            throw new IllegalArgumentException("LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY");
+        return V5_MAXIMUM_RAW_BYTES;
+    }
+
+    public void admitV5(int matches, GroupedAdmissionProfile profile) {
+        properties.validate();
+        if (matches < 1 || matches > properties.getQualifiedMatchCapacity() || matches > V5_MAXIMUM_SELECTION_SIZE)
+            throw new IllegalArgumentException("LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY");
+        if (matches > qualifiedCapacityV5(profile))
+            throw new IllegalArgumentException("LIVE_CAPACITY_REFUSED_REDUCE_SELECTION");
+        requireStorage(maximumBytesV5(matches));
+    }
+
     /**
      * Pure temporal bound, independent of the configured/operator maximum and storage.
      * The established five-minute sequence has five calls to each critical family,
@@ -63,20 +81,30 @@ public final class LiveAdmissionPolicy {
      * are checked separately by the production-scheduler replay below.
      */
     public static int qualifiedCapacityV4(GroupedAdmissionProfile profile) {
+        return qualifiedGroupedCapacity(profile, "live-v4", LiveCadence.MAXIMUM_SELECTION_SIZE);
+    }
+
+    public static int qualifiedCapacityV5(GroupedAdmissionProfile profile) {
+        return qualifiedGroupedCapacity(profile, "live-v5", V5_MAXIMUM_SELECTION_SIZE);
+    }
+
+    private static int qualifiedGroupedCapacity(GroupedAdmissionProfile profile, String policyVersion, int maximumMatches) {
         if (profile == null) throw new IllegalStateException("LIVE_CAPACITY_QUALIFICATION_REQUIRED");
-        long weightedNanos = Math.multiplyExact(profile.interGroupDelay().toNanos(), 5);
+        if (!policyVersion.equals(profile.policyVersion())) throw new IllegalStateException("LIVE_GROUPED_POLICY_MISMATCH");
+        long rounds = profile.lineupInterval().toSeconds() / profile.criticalInterval().toSeconds();
+        long weightedNanos = Math.multiplyExact(profile.interGroupDelay().toNanos(), rounds);
         for (SofascoreEndpointType endpoint : new SofascoreEndpointType[] {
                 SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
                 SofascoreEndpointType.EVENT_STATISTICS}) {
             weightedNanos = Math.addExact(weightedNanos,
-                    Math.multiplyExact(profile.envelope(endpoint).exchangeEnvelope().toNanos(), 5));
+                    Math.multiplyExact(profile.envelope(endpoint).exchangeEnvelope().toNanos(), rounds));
         }
         weightedNanos = Math.addExact(weightedNanos,
                 profile.envelope(SofascoreEndpointType.EVENT_LINEUPS).exchangeEnvelope().toNanos());
         // Work in five-minute integer nanoseconds: no rounded 1/5 lineup duration,
         // and no nanosecond over the headroom boundary can disappear by truncation.
-        long usableNanos = Math.multiplyExact(Math.multiplyExact(profile.criticalInterval().toNanos(), 5), 9) / 10;
-        int capacity = (int) Math.min(LiveCadence.MAXIMUM_SELECTION_SIZE, usableNanos / weightedNanos);
+        long usableNanos = Math.multiplyExact(profile.lineupInterval().toNanos(), 9) / 10;
+        int capacity = (int) Math.min(maximumMatches, usableNanos / weightedNanos);
         while (capacity > 0 && !GroupedLiveAdmissionSimulation.fits(capacity, profile)) capacity--;
         return capacity;
     }
@@ -86,6 +114,13 @@ public final class LiveAdmissionPolicy {
         if (matches < 1 || matches > LiveCadence.MAXIMUM_SELECTION_SIZE)
             throw new IllegalArgumentException("invalid live selection size");
         return matches * 3.2;
+    }
+
+    /** Three critical rounds plus one lineup per five minutes, excluding startup/finalization. */
+    public static double estimatedLiveCallsPerMinuteV5(int matches) {
+        if (matches < 1 || matches > V5_MAXIMUM_SELECTION_SIZE)
+            throw new IllegalArgumentException("invalid live selection size");
+        return matches * 2.0;
     }
     public void requireStorage(long remainingRawBytes) {
         // Two times the remaining raw envelope plus a fixed floor covers index/projection overhead.

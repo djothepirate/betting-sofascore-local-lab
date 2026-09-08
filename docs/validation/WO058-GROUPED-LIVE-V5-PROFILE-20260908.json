@@ -1,0 +1,244 @@
+{
+  "schema": "wo058-grouped-live-capacity-evidence-v1",
+  "status": "QUALIFIED_SYNTHETIC_LOOPBACK_WITH_STATED_SCOPE",
+  "labStatus": [
+    "EXPERIMENTAL",
+    "LOCAL_ONLY",
+    "NOT_PRODUCTION_APPROVED",
+    "NO_CRITICAL_DEPENDENCY"
+  ],
+  "completedAt": "2026-09-08T18:28:31.088553400Z",
+  "baseCommit": "06c7e3d272e8f96873eca822e4bdaa8302cf1b01",
+  "policyVersion": "live-v5",
+  "flywayVersion": 40,
+  "qualifiedCapacity": 20,
+  "envelopeScope": "STEADY_64_KIB_ONLY",
+  "nativeEvidence": {
+    "path": "WO058-GROUPED-LIVE-V5-NATIVE-20260908.json",
+    "sha256": "68f12dcec9449c230f4f1c833c8fdfa7286f5e171abb0bb4c5c50a60d21dc641"
+  },
+  "perEventEvidence": "WO058-GROUPED-LIVE-V5-PER-EVENT-20260908.json",
+  "measuredRuntimeEvidence": "WO058-GROUPED-LIVE-V5-MEASURED-RUNTIME-20260908.json",
+  "measuredRuntimeSha256": "d51d899755fa2622f54dbf5a74e2554d167ccb3d7705a169e0403bd2db9a246b",
+  "endpointEnvelopes": {
+    "EVENT_DETAILS": {
+      "requestMillis": 400,
+      "processingMillis": 600
+    },
+    "EVENT_INCIDENTS": {
+      "requestMillis": 400,
+      "processingMillis": 500
+    },
+    "EVENT_STATISTICS": {
+      "requestMillis": 350,
+      "processingMillis": 500
+    },
+    "EVENT_LINEUPS": {
+      "requestMillis": 350,
+      "processingMillis": 450
+    }
+  },
+  "preservedCostFloorEvidence": {
+    "path": "WO058-GROUPED-LIVE-V5-CANDIDATE-75-PROFILE-20260908.json",
+    "sha256": "184aebda6a0650ff96fc8dde8cac2d375cbf4df6276c398fd414889192eee6fe",
+    "costsMayOnlyIncrease": true
+  },
+  "cadence": {
+    "criticalSeconds": 100,
+    "lineupSeconds": 300,
+    "intraGroupDelayMillis": 0,
+    "interGroupDelayMillis": 1000,
+    "maximumEndpointsPerGroup": 4,
+    "maximumUtilization": 0.9
+  },
+  "admission": {
+    "weightedFiveMinuteSecondsPerMatch": 12.05,
+    "weightedFiveMinuteSecondsAtTwentyMatches": 241.0,
+    "availableFiveMinuteSeconds": 270,
+    "calculatedCapacity": 20,
+    "uncappedMeanBoundCapacity": 22,
+    "calculation": "floor(270000 / (3 * (J4_ms + incidents_ms + statistics_ms + 1000) + lineups_ms)), then capped at twenty; endpoint costs include request plus processing",
+    "productionSchedulerScenarioCount": 24,
+    "productionSchedulerScenarios": "initial in-play wave, prematch, simultaneous kickoff, staggered and simultaneous finalization, three lineup phases and variable costs",
+    "productionSchedulerScenariosExecutedForThisProfile": true,
+    "javaAdmissionReview": "PASS",
+    "profileAppliedAutomatically": false
+  },
+  "budgets": {
+    "maximumCallsPerEvent": 2500,
+    "maximumCallsPerCampaign": 20000,
+    "maximumDurationMinutes": 240,
+    "reservedFinalCallsPerActiveEvent": 4,
+    "maximumRawBytes": 15728640000
+  },
+  "measurement": {
+    "warmupSeconds": 300,
+    "steadyElapsedSeconds": 1800.0102413,
+    "totalElapsedSeconds": 2100.0102413,
+    "totalCalls": 1413,
+    "steadyCalls": 1200,
+    "initialCalls": 213,
+    "missedCycles": 0,
+    "pairsChecked": 80,
+    "criticalReceiptIntervalMaximumSeconds": 100.52,
+    "criticalReceiptIntervalP95Seconds": 100.183,
+    "criticalPublicationIntervalMaximumSeconds": 100.5310211,
+    "criticalPublicationIntervalP95Seconds": 100.1869276,
+    "lineupNominalLatenessP95Seconds": 2.2072459,
+    "lineupNominalLatenessMaximumSeconds": 2.6332459,
+    "minimumBetweenGroupGapSeconds": 1.0660558,
+    "criticalPublicationQueueDebtSeconds": {
+      "count": 1080,
+      "p95": 1.6333321,
+      "maximum": 1.9729708
+    },
+    "queueDebtFirstQuarterP95Seconds": 1.6116799,
+    "queueDebtLastQuarterP95Seconds": 1.6519024,
+    "endpointEstablishedMetrics": {
+      "EVENT_DETAILS": {
+        "samples": 360,
+        "requestSeconds": {
+          "count": 360,
+          "p95": 0.2595717,
+          "maximum": 0.3415849
+        },
+        "processingIncludingSqlSeconds": {
+          "count": 360,
+          "p95": 0.3598213,
+          "maximum": 0.401997
+        },
+        "maximumRequestNanos": 341584900,
+        "maximumProcessingNanos": 401997000,
+        "measuredRequestCeilingMillis": 350,
+        "measuredProcessingCeilingMillis": 450,
+        "preservedRequestFloorMillis": 400,
+        "preservedProcessingFloorMillis": 600
+      },
+      "EVENT_INCIDENTS": {
+        "samples": 360,
+        "requestSeconds": {
+          "count": 360,
+          "p95": 0.2552256,
+          "maximum": 0.2942166
+        },
+        "processingIncludingSqlSeconds": {
+          "count": 360,
+          "p95": 0.355529,
+          "maximum": 0.4002205
+        },
+        "maximumRequestNanos": 294216600,
+        "maximumProcessingNanos": 400220500,
+        "measuredRequestCeilingMillis": 300,
+        "measuredProcessingCeilingMillis": 450,
+        "preservedRequestFloorMillis": 400,
+        "preservedProcessingFloorMillis": 500
+      },
+      "EVENT_STATISTICS": {
+        "samples": 360,
+        "requestSeconds": {
+          "count": 360,
+          "p95": 0.2612515,
+          "maximum": 0.3477739
+        },
+        "processingIncludingSqlSeconds": {
+          "count": 360,
+          "p95": 0.3600345,
+          "maximum": 0.486782
+        },
+        "maximumRequestNanos": 347773900,
+        "maximumProcessingNanos": 486782000,
+        "measuredRequestCeilingMillis": 350,
+        "measuredProcessingCeilingMillis": 500,
+        "preservedRequestFloorMillis": 350,
+        "preservedProcessingFloorMillis": 500
+      },
+      "EVENT_LINEUPS": {
+        "samples": 120,
+        "requestSeconds": {
+          "count": 120,
+          "p95": 0.2529845,
+          "maximum": 0.3449019
+        },
+        "processingIncludingSqlSeconds": {
+          "count": 120,
+          "p95": 0.379074,
+          "maximum": 0.4016104
+        },
+        "maximumRequestNanos": 344901900,
+        "maximumProcessingNanos": 401610400,
+        "measuredRequestCeilingMillis": 350,
+        "measuredProcessingCeilingMillis": 450,
+        "preservedRequestFloorMillis": 300,
+        "preservedProcessingFloorMillis": 400
+      }
+    },
+    "receivedBytes": 506789888,
+    "durableAttempts": 1413,
+    "immutableObservations": 360,
+    "familyScheduleRevisions": 1549,
+    "workerAndChildrenClosed": true,
+    "productionDockerDfProbePerRequest": true,
+    "localJdbcReadSeconds": {
+      "p95": 0.0659809,
+      "count": 420,
+      "maximum": 0.088894
+    },
+    "realProviderCalls": 0,
+    "offScopeRequests": 0,
+    "operatorDatabaseUsed": false
+  },
+  "corpus": {
+    "steadyResponseBytes": 65536,
+    "initialResponseBytes": 5242880,
+    "initialMaximumBodyCalls": 80,
+    "serverDelayPatternMillis": [
+      0,
+      30,
+      80,
+      150
+    ],
+    "statisticMetrics": 135,
+    "statisticSignals": 270,
+    "incidents": 30,
+    "lineupPlayers": 44,
+    "changingAndRepeatedPayloads": true,
+    "statisticsAndLineupsRevisitTwoNormalizedStates": true
+  },
+  "initialWave": {
+    "separatelyMeasured": true,
+    "coveredBySteadyEnvelopes": false,
+    "maximumBodyCalls": 80,
+    "maximumReceiptLatenessSeconds": 19.1332459,
+    "maximumPublicationLatenessSeconds": 19.4479997,
+    "maximumBodyRequestSeconds": {
+      "count": 80,
+      "p95": 0.9218122,
+      "maximum": 0.9738019
+    },
+    "maximumBodyProcessingSeconds": {
+      "count": 80,
+      "p95": 0.5806132,
+      "maximum": 1.8511337
+    }
+  },
+  "limitations": [
+    "Independent Java admission accepts twenty matches and all twenty-four production-scheduler scenarios pass for these exact measured envelopes. This is a synthetic loopback qualification, not a real-provider latency guarantee.",
+    "Calculated capacity is only the rounded-envelope mean-work bound, capped at twenty, and is not an authorization to collect.",
+    "Request and processing envelopes cover measured established maxima rounded up separately to 50 ms and never fall below the preserved 75-second candidate costs; they are assumptions, not future latency guarantees.",
+    "The eighty first 5 MiB responses are a separate initial wave, outside the constant STEADY_64_KIB_ONLY envelopes.",
+    "Recurring 5 MiB responses, continuously novel normalized states, Internet latency, SofaScore quotas and provider-to-screen freshness are not established.",
+    "JDBC reads in this native report are not browser rendering; separate UI20/UI100 evidence describes that different scope.",
+    "No profile is lowered, qualified or applied to Eclipse automatically by this script."
+  ],
+  "independentAdmissionReview": {
+    "reviewedAt": "2026-09-08T18:30:01.0452266+00:00",
+    "pendingProfileSha256": "3ecef60d9c3d65dfddef524a27ab3295e6a6ef71fd0c4c8edc841a6c5dedd203",
+    "probeSource": ".tmp/V5AdmissionProbe.java",
+    "probeSourceSha256": "4102545a97ebd89df74e8eeb23c1fb04c5002e0918e3ad6cddb18df975ea628d",
+    "probeLog": ".tmp/wo058-v5-final-admission.log",
+    "probeLogSha256": "50f707620ea7b908a3da9d62e43baebf591002807244b283750f1398fd0077e1",
+    "capacity": 20,
+    "twentyFourScenariosPassed": true,
+    "exitCode": 0
+  }
+}

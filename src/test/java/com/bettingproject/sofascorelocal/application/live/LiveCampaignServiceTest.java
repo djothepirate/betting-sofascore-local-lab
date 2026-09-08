@@ -57,6 +57,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -121,17 +122,19 @@ class LiveCampaignServiceTest {
             var source = EventSourceTrace.providerSnapshot(23, "b".repeat(64), "event-details-v2", Instant.now());
             var selected = observation(A, source);
             when(h.events.findLatestByCanonicalId(id(A))).thenReturn(Optional.of(selected));
-            when(h.admission.maximumBytes(1)).thenReturn(5_242_880_000L);
+            when(h.admission.maximumBytesV5(1)).thenReturn(15_728_640_000L);
             when(h.store.prepare(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
             Manifest prepared = h.service.prepare(List.of(id(A)));
 
             assertThat(prepared.targets()).containsExactly(new Target(id(A), A, 17, 23));
-            assertThat(prepared.maximumBytes()).isEqualTo(5_242_880_000L);
+            assertThat(prepared.maximumBytes()).isEqualTo(15_728_640_000L);
             assertThat(prepared.manifestSha256()).matches("[0-9a-f]{64}");
-            assertThat(prepared.policyVersion()).isEqualTo("live-v4");
-            assertThat(prepared.cycleInterval()).isEqualTo(Duration.ofSeconds(60));
-            assertThat(prepared.admissionProfile().groupedProfile().qualificationSha256()).isEqualTo("c".repeat(64));
+            assertThat(prepared.policyVersion()).isEqualTo("live-v5");
+            assertThat(prepared.maximumCallsPerEvent()).isEqualTo(2500);
+            assertThat(prepared.maximumCalls()).isEqualTo(20000);
+            assertThat(prepared.cycleInterval()).isEqualTo(Duration.ofSeconds(100));
+            assertThat(prepared.admissionProfile().groupedProfile().qualificationSha256()).isEqualTo("d".repeat(64));
             assertThat(prepared.admissionProfile().qualificationSha256()).isEqualTo("a".repeat(64));
             assertThat(Duration.between(prepared.preparedAt(), prepared.expiresAt())).isEqualTo(Duration.ofMinutes(5));
             verifyNoInteractions(h.factory, h.coordinator);
@@ -184,17 +187,17 @@ class LiveCampaignServiceTest {
             var active = providerObservation(B, "inprogress");
             when(h.events.findLatestByCanonicalId(id(A))).thenReturn(Optional.of(finished));
             when(h.events.findLatestByCanonicalId(id(B))).thenReturn(Optional.of(active));
-            when(h.admission.maximumBytes(1)).thenReturn(5_242_880_000L);
+            when(h.admission.maximumBytesV5(1)).thenReturn(15_728_640_000L);
             when(h.store.prepare(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
             var preparation = h.service.prepareSelection(List.of(id(A), id(B)));
 
             assertThat(preparation.excludedFinished()).containsExactly(finished);
             assertThat(preparation.manifest().targets()).containsExactly(new Target(id(B), B, 17, 23));
-            assertThat(preparation.manifest().maximumBytes()).isEqualTo(5_242_880_000L);
+            assertThat(preparation.manifest().maximumBytes()).isEqualTo(15_728_640_000L);
             assertThat(preparation.manifest().qualifiedMatchCapacity()).isEqualTo(1);
-            verify(h.admission).admitV4(eq(1), any());
-            verify(h.admission, never()).admitV4(eq(2), any());
+            verify(h.admission).admitV5(eq(1), any());
+            verify(h.admission, never()).admitV5(eq(2), any());
             verify(h.store).prepare(preparation.manifest());
             verifyNoInteractions(h.factory, h.coordinator);
         }
@@ -236,7 +239,7 @@ class LiveCampaignServiceTest {
             when(h.events.findLatestByCanonicalId(id(B))).thenReturn(Optional.of(postponed));
             h.observe(eligible, "notstarted");
             h.properties.setQualifiedMatchCapacity(1);
-            when(h.admission.maximumBytes(1)).thenReturn(5_242_880_000L);
+            when(h.admission.maximumBytesV5(1)).thenReturn(15_728_640_000L);
             when(h.store.prepare(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
             var preparation = h.service.prepareSelection(List.of(id(A), id(eligible), id(B)));
@@ -245,10 +248,10 @@ class LiveCampaignServiceTest {
             assertThat(preparation.excludedPostponed()).containsExactly(postponed);
             assertThat(preparation.manifest().targets()).containsExactly(new Target(id(eligible), eligible, 17, 23));
             assertThat(preparation.manifest().qualifiedMatchCapacity()).isEqualTo(1);
-            assertThat(preparation.manifest().cycleInterval()).isEqualTo(Duration.ofSeconds(60));
-            assertThat(preparation.manifest().maximumBytes()).isEqualTo(5_242_880_000L);
-            verify(h.admission).admitV4(eq(1), any());
-            verify(h.admission, never()).admitV4(eq(3), any());
+            assertThat(preparation.manifest().cycleInterval()).isEqualTo(Duration.ofSeconds(100));
+            assertThat(preparation.manifest().maximumBytes()).isEqualTo(15_728_640_000L);
+            verify(h.admission).admitV5(eq(1), any());
+            verify(h.admission, never()).admitV5(eq(3), any());
             verify(h.store).prepare(preparation.manifest());
             verifyNoInteractions(h.factory, h.coordinator);
         }
@@ -273,7 +276,7 @@ class LiveCampaignServiceTest {
     void canceledRemainsAdmissibleToPreparationWithoutExtendingThePostponedRule() throws Exception {
         try (Harness h = new Harness()) {
             h.observe(A, "canceled");
-            when(h.admission.maximumBytes(1)).thenReturn(5_242_880_000L);
+            when(h.admission.maximumBytesV5(1)).thenReturn(15_728_640_000L);
             when(h.store.prepare(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
             var preparation = h.service.prepareSelection(List.of(id(A)));
@@ -281,7 +284,7 @@ class LiveCampaignServiceTest {
             assertThat(preparation.excludedFinished()).isEmpty();
             assertThat(preparation.excludedPostponed()).isEmpty();
             assertThat(preparation.manifest().targets()).containsExactly(new Target(id(A), A, 17, 23));
-            verify(h.admission).admitV4(eq(1), any());
+            verify(h.admission).admitV5(eq(1), any());
             verify(h.store).prepare(preparation.manifest());
             verifyNoInteractions(h.factory, h.coordinator);
         }
@@ -822,7 +825,7 @@ class LiveCampaignServiceTest {
     void historicalProofCannotAuthorizeTenNewGroupedMatches() throws Exception {
         try(Harness h=new Harness()) {
             h.properties.setQualifiedMatchCapacity(10);
-            h.properties.getGrouped().setQualificationSha256("");
+            h.properties.getGroupedV5().setQualificationSha256("");
             List<UUID> selected=LongStream.range(A,A+10).mapToObj(providerId->{h.observe(providerId,"inprogress");return id(providerId);}).toList();
             assertThatThrownBy(()->h.service.prepare(selected)).hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
             verify(h.store,never()).prepare(any());
@@ -830,12 +833,14 @@ class LiveCampaignServiceTest {
         }
     }
 
-    @Test
-    void groupedLaunchRoutesEachEndpointThroughOneOrderedAuditableGroupAndPublishesFamilySchedules() throws Exception {
-        try(Harness h=new Harness(false,"live-v4",1)) {
+    @ParameterizedTest
+    @ValueSource(strings = {"live-v4", "live-v5"})
+    void groupedLaunchRoutesEachEndpointThroughOneOrderedAuditableGroupAndPublishesFamilySchedules(String policy) throws Exception {
+        try(Harness h=new Harness(false,policy,1)) {
             h.reply=LiveCampaignServiceTest::normalFinishedReply;
             h.launch();h.awaitFinished();
-            verify(h.factory).openLiveGrouped(h.manifest.campaignId(),LiveProviderSession.ENDPOINTS);
+            if ("live-v5".equals(policy)) verify(h.factory).openLiveGroupedV5(h.manifest.campaignId(),LiveProviderSession.ENDPOINTS);
+            else verify(h.factory).openLiveGrouped(h.manifest.campaignId(),LiveProviderSession.ENDPOINTS);
             verify(h.factory,never()).open(any(),any());
             assertThat(h.dispatched).extracting(PlaywrightProviderRequest::endpoint)
                     .containsExactly(EVENT_DETAILS,EVENT_INCIDENTS,EVENT_STATISTICS,EVENT_LINEUPS);
@@ -850,9 +855,10 @@ class LiveCampaignServiceTest {
         }
     }
 
-    @Test
-    void groupedPostponementPublishesJ4AndCancelsTheRestOfTheGroup() throws Exception {
-        try(Harness h=new Harness(false,"live-v4",1)) {
+    @ParameterizedTest
+    @ValueSource(strings = {"live-v4", "live-v5"})
+    void groupedPostponementPublishesJ4AndCancelsTheRestOfTheGroup(String policy) throws Exception {
+        try(Harness h=new Harness(false,policy,1)) {
             h.reply=request->response("""
                 {"event":{"id":%d,"startTimestamp":1788796800,"homeTeam":{"id":1,"name":"Home"},
                 "awayTeam":{"id":2,"name":"Away"},"status":{"type":"postponed"}}}
@@ -866,9 +872,10 @@ class LiveCampaignServiceTest {
         }
     }
 
-    @Test
-    void operatorStopBetweenGroupedResponsesPreventsEveryRemainingReservation() throws Exception {
-        try(Harness h=new Harness(false,"live-v4",1)) {
+    @ParameterizedTest
+    @ValueSource(strings = {"live-v4", "live-v5"})
+    void operatorStopBetweenGroupedResponsesPreventsEveryRemainingReservation(String policy) throws Exception {
+        try(Harness h=new Harness(false,policy,1)) {
             h.reply=request->{h.service.stop(h.manifest.campaignId(),id(A));return normalFinishedReply(request);};
             h.launch();h.awaitFinished();
             assertThat(h.dispatched).extracting(PlaywrightProviderRequest::endpoint).containsExactly(EVENT_DETAILS);
@@ -878,9 +885,10 @@ class LiveCampaignServiceTest {
         }
     }
 
-    @Test
-    void aGroupedOrdinaryBudgetRefusalUsesTheProtectedFinalReserveWithoutAnOrdinaryDispatch() throws Exception {
-        try (Harness h = new Harness(false, "live-v4", 1)) {
+    @ParameterizedTest
+    @ValueSource(strings = {"live-v4", "live-v5"})
+    void aGroupedOrdinaryBudgetRefusalUsesTheProtectedFinalReserveWithoutAnOrdinaryDispatch(String policy) throws Exception {
+        try (Harness h = new Harness(false, policy, 1)) {
             when(h.store.dispatchBudget(eq(h.ownership), any())).thenReturn(new DispatchBudget(2992, 0, 20, "COLLECTING"));
             h.refuseReservation = request -> !request.finalCycle();
             h.reply = LiveCampaignServiceTest::normalFinishedReply;
@@ -895,9 +903,10 @@ class LiveCampaignServiceTest {
         }
     }
 
-    @Test
-    void aGroupedFinalReservationRefusalStopsWithoutRetryOrProviderWork() throws Exception {
-        try (Harness h = new Harness(false, "live-v4", 1)) {
+    @ParameterizedTest
+    @ValueSource(strings = {"live-v4", "live-v5"})
+    void aGroupedFinalReservationRefusalStopsWithoutRetryOrProviderWork(String policy) throws Exception {
+        try (Harness h = new Harness(false, policy, 1)) {
             h.refuseReservation = request -> true;
             h.reply = LiveCampaignServiceTest::normalFinishedReply;
             h.launch(); h.awaitFinished();
@@ -905,6 +914,30 @@ class LiveCampaignServiceTest {
             assertThat(h.reservations).hasValue(0);
             assertThat(h.dispatched).isEmpty();
             assertThat(h.eventStates.get(id(A))).isEqualTo("STOPPED_LIMIT");
+        }
+    }
+
+    @Test
+    void aFrozenV4PreparationUsesOnlyItsOwnProfileEvenWithoutAV5Qualification() throws Exception {
+        try (Harness h = new Harness(false, "live-v4", 1)) {
+            h.properties.getGroupedV5().setQualificationSha256("");
+            assertThat(h.service.selectionMaximum()).isZero();
+            h.reply = LiveCampaignServiceTest::normalFinishedReply;
+            h.launch(); h.awaitFinished();
+            verify(h.admission).admitV4(eq(1), eq(h.manifest.admissionProfile().groupedProfile()));
+            verify(h.admission, never()).admitV5(anyInt(), any());
+            verify(h.factory).openLiveGrouped(h.manifest.campaignId(), LiveProviderSession.ENDPOINTS);
+            verify(h.factory, never()).openLiveGroupedV5(any(), any());
+            assertThat(h.manifest.policyVersion()).isEqualTo("live-v4");
+        }
+    }
+
+    @Test
+    void changingOnlyTheV5ProfileRefusesAFrozenV5PreparationBeforeOpeningTransport() throws Exception {
+        try (Harness h = new Harness(false, "live-v5", 1)) {
+            h.properties.getGroupedV5().setQualificationSha256("e".repeat(64));
+            assertThatThrownBy(h::launch).hasMessage("LIVE_PREPARED_POLICY_CHANGED");
+            verifyNoInteractions(h.factory, h.coordinator, h.admission);
         }
     }
 
@@ -947,7 +980,7 @@ class LiveCampaignServiceTest {
             h.provider.setEnabled(false);
             h.playwright.setEnabled(false);
             h.properties.setEnabled(false);
-            h.properties.getGrouped().setQualificationSha256("");
+            h.properties.getGroupedV5().setQualificationSha256("");
             h.service.cancelPreparation(h.manifest.campaignId(), h.manifest.manifestSha256());
             verify(h.store).cancelPreparation(eq(h.manifest.campaignId()), eq(h.manifest.manifestSha256()), any(Instant.class));
             verifyNoMoreInteractions(h.store);
@@ -1014,11 +1047,17 @@ class LiveCampaignServiceTest {
             properties.getGrouped().getEndpoints().values().forEach(budget->{
                 budget.setRequestEnvelope(Duration.ofMillis(500));budget.setProcessingEnvelope(Duration.ofMillis(100));
             });
+            properties.getGroupedV5().setQualificationSha256("d".repeat(64));
+            properties.getGroupedV5().getEndpoints().values().forEach(budget->{
+                budget.setRequestEnvelope(Duration.ofMillis(500));budget.setProcessingEnvelope(Duration.ofMillis(100));
+            });
+            boolean v5 = "live-v5".equals(policy);
             manifest = new Manifest(UUID.randomUUID(), "a".repeat(64), policy, now, now.plusSeconds(300),
-                    Duration.ofMinutes(5), 1000, 3000, 20_000_000, 2,
+                    Duration.ofMinutes(5), v5 ? 2500 : 1000, v5 ? 20000 : 3000, 20_000_000, 2,
                     targetCount==1?List.of(new Target(id(A),A,1,1)):List.of(new Target(id(A), A, 1, 1), new Target(id(B), B, 2, 2)),
                     new AdmissionProfile(properties.getRequestEnvelope(), properties.getProcessingEnvelope(),
-                            properties.getQualificationSha256(),"live-v4".equals(policy)?properties.groupedAdmissionProfile():null));
+                            properties.getQualificationSha256(), v5 ? properties.groupedAdmissionProfileV5()
+                                    : "live-v4".equals(policy)?properties.groupedAdmissionProfile():null), Duration.ofSeconds(v5 ? 100 : 60));
             ownership = new Ownership(manifest.campaignId(), UUID.randomUUID(), 1);
             eventStates.put(id(A), "WAITING_START"); eventStates.put(id(B), "WAITING_START");
             provider.setEnabled(true);
@@ -1032,6 +1071,7 @@ class LiveCampaignServiceTest {
             when(guard.isOwned(ownership)).thenReturn(true);
             when(factory.open(manifest.campaignId(), LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
             when(factory.openLiveGrouped(manifest.campaignId(), LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
+            when(factory.openLiveGroupedV5(manifest.campaignId(), LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
             when(supervisor.activeCampaignId()).thenReturn(Optional.empty());
             when(store.find(manifest.campaignId())).thenAnswer(invocation -> Optional.of(view()));
             when(store.dispatchBudget(eq(ownership),any())).thenAnswer(invocation -> {

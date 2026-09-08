@@ -84,6 +84,22 @@ class LiveProviderGroupTrackerTest {
     }
 
     @Test
+    void liveV5HistoryAllowsExactlyTwentyThousandGroupsWithoutReopeningAny() {
+        var v5 = new LiveProviderGroupTracker(campaign, LiveProviderGroupTracker.Authority.LIVE_V5);
+        var first = context(CHECK);
+        for (int index = 0; index < 20000; index++) {
+            var scope = index == 0 ? first
+                    : new LiveProviderDispatchGroup(campaign, UUID.randomUUID(), event, CHECK);
+            v5.dispatched(PlaywrightProviderRequest.eventDetails(event), scope);
+            v5.finished(true);
+        }
+        assertInvalid(() -> v5.isContinuation(PlaywrightProviderRequest.eventDetails(event), first));
+        assertInvalid(() -> v5.isContinuation(PlaywrightProviderRequest.eventDetails(event),
+                new LiveProviderDispatchGroup(campaign, UUID.randomUUID(), event, CHECK)));
+        assertInvalid(() -> v5.isContinuation(PlaywrightProviderRequest.eventStatistics(event), context(MANUAL_J5)));
+    }
+
+    @Test
     void manualAuthorityIsOneExactJ5TripletAndCannotBeUsedForLiveOrJ4() {
         var manual = new LiveProviderGroupTracker(campaign, LiveProviderGroupTracker.Authority.MANUAL_J5);
         var scope = context(MANUAL_J5);

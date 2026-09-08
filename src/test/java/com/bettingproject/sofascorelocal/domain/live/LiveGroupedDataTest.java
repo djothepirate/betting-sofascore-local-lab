@@ -34,6 +34,18 @@ class LiveGroupedDataTest {
         var incomplete=envelopes();incomplete.remove(SofascoreEndpointType.EVENT_LINEUPS);
         assertThatThrownBy(()->new GroupedAdmissionProfile(incomplete,"a".repeat(64))).isInstanceOf(IllegalArgumentException.class);
     }
+    @Test void policyVersionIsExplicitAndHistoricalConstructorCannotGrantV5Timing() {
+        var historical=new GroupedAdmissionProfile(envelopes(),"a".repeat(64));
+        var v5=new GroupedAdmissionProfile(envelopes(),"a".repeat(64),"live-v5");
+        assertThat(historical.policyVersion()).isEqualTo("live-v4");
+        assertThat(v5).isNotEqualTo(historical);
+        assertThat(v5.criticalInterval()).isEqualTo(Duration.ofSeconds(100));
+        assertThat(v5.lineupInterval()).isEqualTo(Duration.ofSeconds(300));
+        assertThat(v5.interGroupDelay()).isEqualTo(Duration.ofSeconds(1));
+        assertThat(v5.intraGroupDelay()).isZero();
+        assertThatThrownBy(()->new GroupedAdmissionProfile(envelopes(),"a".repeat(64),"live-v6"))
+                .isInstanceOf(IllegalArgumentException.class);
+    }
     @Test void groupedCostsAndFamilySchedulesRejectInvalidBounds() {
         assertThatThrownBy(()->new EndpointEnvelope(Duration.ZERO,Duration.ZERO)).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(()->new EndpointEnvelope(Duration.ofSeconds(11),Duration.ZERO)).isInstanceOf(IllegalArgumentException.class);

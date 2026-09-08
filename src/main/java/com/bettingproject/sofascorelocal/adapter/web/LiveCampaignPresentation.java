@@ -74,22 +74,30 @@ public class LiveCampaignPresentation {
     }
 
     private static Cadence cadence(CampaignView view, Instant now) {
-        if (!"live-v4".equals(view.manifest().policyVersion())) return null;
+        String policyVersion = view.manifest().policyVersion();
+        if (!grouped(policyVersion)) return null;
+        long interval = view.manifest().cycleInterval().toSeconds();
+        double waitingRate = 120.0 / interval;
+        double playingRate = 180.0 / interval + 0.2;
         List<EventView> active = view.events().stream().filter(e -> !terminal(e.state())).toList();
-        double rate = active.stream().mapToDouble(e -> "WAITING_START".equals(e.state()) ? 2 : 3.2).sum();
+        double rate = active.stream().mapToDouble(e -> "WAITING_START".equals(e.state()) ? waitingRate : playingRate).sum();
         long seconds = 0;
         if (rate > 0 && !terminal(view.state())) {
             // Four calls per active match remain reserved for a last status/final-family pass.
             seconds = (long) (Math.max(0, view.manifest().maximumCalls() - view.reservedCalls() - 4 * active.size()) * 60 / rate);
             for (EventView event : active) {
-                double eventRate = "WAITING_START".equals(event.state()) ? 2 : 3.2;
+                double eventRate = "WAITING_START".equals(event.state()) ? waitingRate : playingRate;
                 seconds = Math.min(seconds, (long) (Math.max(0,
                         view.manifest().maximumCallsPerEvent() - event.reservedCalls() - 4) * 60 / eventRate));
             }
             seconds = Math.min(seconds, view.endsAt() == null ? view.manifest().duration().toSeconds()
                     : Math.max(0, Duration.between(now, view.endsAt()).toSeconds()));
         }
-        return new Cadence("live-v4", 60, 300, view.manifest().qualifiedMatchCapacity(), seconds, rate);
+        return new Cadence(policyVersion, interval, 300, view.manifest().qualifiedMatchCapacity(), seconds, rate);
+    }
+
+    private static boolean grouped(String policyVersion) {
+        return "live-v4".equals(policyVersion) || "live-v5".equals(policyVersion);
     }
 
     private Event event(CampaignView campaign, EventView event, Instant observedAt) {
@@ -276,7 +284,7 @@ public class LiveCampaignPresentation {
         long interval = 0;
         long cycleSeconds = campaign.manifest().cycleInterval().toSeconds();
         if (!frozen && "RUNNING".equals(campaign.state())) {
-            if ("live-v4".equals(campaign.manifest().policyVersion())) {
+            if (grouped(campaign.manifest().policyVersion())) {
                 interval = cursor.schedule() == null || cursor.schedule().nextDueAt() == null ? 0 : cursor.schedule().intervalSeconds();
             } else if (cursor.endpoint() == SofascoreEndpointType.EVENT_DETAILS) {
                 interval = "COLLECTING".equals(event.state()) ? Math.max(300, cycleSeconds)

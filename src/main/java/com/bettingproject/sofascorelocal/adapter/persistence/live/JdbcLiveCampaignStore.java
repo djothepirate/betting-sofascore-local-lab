@@ -42,8 +42,10 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
             if (grouped != null) jdbc.update("""
                 insert into live_grouped_policy(campaign_id,critical_interval_seconds,lineup_interval_seconds,
                     intra_group_delay_nanos,inter_group_delay_nanos,maximum_utilization_percent,qualification_sha256,endpoint_envelopes)
-                values (?,60,300,0,3000000000,90,?,cast(? as jsonb))
-                """, manifest.campaignId(), grouped.qualificationSha256(), groupedEnvelopesJson(grouped));
+                values (?,?,?,?,?,90,?,cast(? as jsonb))
+                """, manifest.campaignId(), grouped.criticalInterval().toSeconds(), grouped.lineupInterval().toSeconds(),
+                    grouped.intraGroupDelay().toNanos(), grouped.interGroupDelay().toNanos(),
+                    grouped.qualificationSha256(), groupedEnvelopesJson(grouped));
             for (int i = 0; i < manifest.targets().size(); i++) {
                 Target t = manifest.targets().get(i);
                 jdbc.update("""
@@ -144,13 +146,13 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
                 || number(c,"reserved_calls") + 1 + globalFinalReserve > number(c,"maximum_calls")
                 || number(c,"received_bytes") + RawPayloadEvidence.MAXIMUM_BYTES > number(c,"maximum_bytes")) return Optional.empty();
         if (request.groupId() != null) {
-            if (!"live-v4".equals(c.get("policy_version"))) throw new IllegalArgumentException("groups require live-v4");
+            if (!groupedPolicy(c)) throw new IllegalArgumentException("groups require live-v4 or live-v5");
             if (request.groupOrdinal() == 0) jdbc.update("""
                 insert into live_call_group(group_id,campaign_id,canonical_event_id,group_sequence,owner_instance_id,generation,created_at)
                 values (?,?,?,?,?,?,?)
                 """, request.groupId(), own.campaignId(), request.canonicalEventId(), request.groupSequence(),
                     own.instanceId(), own.generation(), time(request.reservedAt()));
-        } else if ("live-v4".equals(c.get("policy_version"))) throw new IllegalArgumentException("live-v4 requires a group");
+        } else if (groupedPolicy(c)) throw new IllegalArgumentException(c.get("policy_version")+" requires a group");
         if(request.groupId()!=null) jdbc.update("""
             insert into live_call(attempt_id,campaign_id,canonical_event_id,cycle_number,endpoint,kind,due_at,reserved_at,
                 final_cycle,owner_instance_id,generation,group_id,group_sequence,group_ordinal) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
@@ -302,7 +304,7 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
         Objects.requireNonNull(schedule); Objects.requireNonNull(at);
         requireOwnership(ownership,false);
         Map<String,Object> c=campaign(ownership.campaignId(),true); requireExecutionOwner(c,ownership);
-        if (!"live-v4".equals(c.get("policy_version"))) throw new IllegalArgumentException("family schedules require live-v4");
+        if (!groupedPolicy(c)) throw new IllegalArgumentException("family schedules require live-v4 or live-v5");
         Map<String,Object> e=event(ownership.campaignId(),canonicalEventId,true);
         Instant nextDue=terminal((String)e.get("state")) || terminal((String)c.get("state")) ? null : schedule.nextDueAt();
         List<Map<String,Object>> previous=jdbc.queryForList("select * from live_family_schedule where campaign_id=? and canonical_event_id=? and endpoint=?",
@@ -341,7 +343,7 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
         jdbc.update("update live_campaign set state='INTERRUPTED',reason=? where campaign_id=?",reason,ownership.campaignId());
         jdbc.update("update provider_campaign_guard set state='CLEANUP_REQUIRED',changed_at=? where singleton_id=1",time(at));
         append(ownership.campaignId(),null,"INTERRUPTED",reason,at,null);
-        if ("live-v4".equals(c.get("policy_version"))) {
+        if (groupedPolicy(c)) {
             // The former scheduler cannot publish terminal deadlines. Cancel only existing
             // pending projections and preserve each prior decision in the append-only ledger.
             for (Map<String,Object> family : jdbc.queryForList("""
@@ -402,7 +404,7 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
                 || Boolean.TRUE.equals(jdbc.queryForObject("""
                     select exists(select 1 from live_campaign where campaign_id<>? and state in ('RUNNING','CLEANUP_REQUIRED'))
                     """,Boolean.class,campaignId))
-                || ("live-v4".equals(c.get("policy_version")) && Boolean.TRUE.equals(jdbc.queryForObject("""
+                || (groupedPolicy(c) && Boolean.TRUE.equals(jdbc.queryForObject("""
                     select exists(select 1 from live_family_schedule where campaign_id=? and next_due_at is not null)
                     """,Boolean.class,campaignId))))
             throw new IllegalStateException("LIVE_ORPHAN_CLEANUP_INCOMPLETE");
@@ -485,7 +487,7 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
                 boxed(a,"occurrence_id"),instant(a,"received_at"),results.get(uuid(a,"attempt_id")))).toList();
         List<EventView> eventViews=events.stream().map(e->new EventView(target(e),(String)e.get("state"),(String)e.get("reason"),
                 (int)number(e,"reserved_calls"),number(e,"received_bytes"),instant(e,"next_due_at"),number(e,"missed_cycles"),
-                (Boolean)e.get("final_complete"),cursors(campaignId,uuid(e,"canonical_event_id"),attempts,"live-v4".equals(c.get("policy_version"))))).toList();
+                (Boolean)e.get("final_complete"),cursors(campaignId,uuid(e,"canonical_event_id"),attempts,groupedPolicy(c)))).toList();
         List<Transition> transitions=jdbc.queryForList("select * from live_transition where campaign_id=? order by revision",campaignId).stream()
                 .map(t->new Transition(number(t,"revision"),uuid(t,"canonical_event_id"),(String)t.get("state"),(String)t.get("reason"),instant(t,"changed_at"),uuid(t,"attempt_id"))).toList();
         Ownership own=c.get("owner_instance_id")==null?null:new Ownership(campaignId,uuid(c,"owner_instance_id"),number(c,"generation"));
@@ -548,7 +550,7 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
                         (String)c.get("qualification_sha256"),groupedProfile(c)), Duration.ofSeconds(number(c,"cycle_interval_seconds")));
     }
     private GroupedAdmissionProfile groupedProfile(Map<String,Object> campaign) {
-        if(!"live-v4".equals(campaign.get("policy_version"))) return null;
+        if(!groupedPolicy(campaign)) return null;
         Map<String,Object> row=jdbc.queryForMap("select * from live_grouped_policy where campaign_id=?",uuid(campaign,"campaign_id"));
         var tree=tools.jackson.databind.json.JsonMapper.builder().build().readTree(row.get("endpoint_envelopes").toString());
         Map<SofascoreEndpointType,EndpointEnvelope> envelopes=new EnumMap<>(SofascoreEndpointType.class);
@@ -557,7 +559,10 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
             var value=tree.get(endpoint.name());
             envelopes.put(endpoint,new EndpointEnvelope(Duration.ofNanos(value.get("requestNanos").asLong()),Duration.ofNanos(value.get("processingNanos").asLong())));
         }
-        return new GroupedAdmissionProfile(envelopes,(String)row.get("qualification_sha256"));
+        return new GroupedAdmissionProfile(envelopes,(String)row.get("qualification_sha256"),(String)campaign.get("policy_version"));
+    }
+    private static boolean groupedPolicy(Map<String,Object> campaign) {
+        return "live-v4".equals(campaign.get("policy_version")) || "live-v5".equals(campaign.get("policy_version"));
     }
     private static String groupedEnvelopesJson(GroupedAdmissionProfile profile) {
         Map<String,Object> envelopes=new TreeMap<>();

@@ -1,6 +1,6 @@
 # ADR-SS-005 — Campagnes live locales et bornées J4/J5
 
-- **Version :** 0.5.
+- **Version :** 0.6.
 - **Statut :** `ACCEPTED` — v0.1 formellement acceptée ; capacité adaptative puis collecte des compositions avant le début explicitement demandées par le propriétaire le 7 septembre.
 - **Date :** 2026-09-08.
 - **Décideur :** propriétaire du Betting Project.
@@ -11,6 +11,7 @@
 - **Autorité de la v0.3 :** demande de J5 LINEUPS pour les rencontres initialement `notstarted` et non débutées au lancement, puis réponse explicite « Oui, collecte initiale puis périodique ». La première collecte suit le J4 `notstarted` ; sa répétition utilise D tant que le début n'est pas constaté. Aucune nouvelle cadence n'est décidée.
 - **Autorité de la v0.4 :** demande explicite « PLEASE IMPLEMENT THIS PLAN: Campagnes live à 60 secondes par match, avec appels regroupés », le 8 septembre 2026. Cette décision autorise l’exception de délai décrite au §0, la politique `live-v4`, V39 et leur qualification hors fournisseur ; elle ne lance aucune campagne fournisseur.
 - **Autorité de la v0.5 :** demande explicite du 8 septembre « La suppression de cette intervalle doit se faire aussi en mode collecte manuelle », pour J5. Le propriétaire signale également l’absence d’annulation d’une préparation live non lancée. Cette révision étend le regroupement à une collecte J5 manuelle bornée et autorise son contrôle distinct ; elle ne crée aucun polling manuel ni nouvelle famille fournisseur.
+- **Autorité de la v0.6 :** demande du 8 septembre d’augmenter les plafonds à 20 000 appels par campagne et de réduire la pause entre groupes à une seconde, puis arbitrage explicite « Priorité aux 15–20 matchs, avec une cadence explicitement qualifiée ». La cible initialement souhaitée de 20 secondes cède donc la priorité au nombre de rencontres. Le propriétaire précise ensuite un objectif à moyen terme de 50–100 rencontres et demande une visibilité sur les cadences nécessaires ; cet objectif ne constitue pas une qualification de cette capacité.
 - **Référence historique v0.2 :** contenu Git au commit `e98f7a74e39a1c57e601efb3d346ae55829fce73`, conservé sans réécriture.
 - **Work Order :** [WO-SS-20260907-058](docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md), validé par le propriétaire ; correctif et qualification de réalisation distincts de cette décision.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
@@ -25,7 +26,56 @@ applicables ; la copie exacte acceptée de la v0.1 et les preuves de ses paliers
 La v0.3 ajoute seulement la collecte prématch LINEUPS au manifeste `live-v3`. Les manifestes
 historiques `live-v1` et `live-v2` gardent leur comportement, leurs échéances et leurs empreintes.
 
-## 0. Décision live-v4 — groupes live et minute fixe
+## 0. Décision live-v5 — vingt rencontres et cadence qualifiée
+
+Les nouvelles préparations utilisent `live-v5`. Le candidat à qualifier est **20 rencontres
+à 100 secondes nominales** pour J4, incidents et statistiques, avec les compositions en jeu
+toutes les 300 secondes (trois tours). Avant le jeu, J4 et les compositions après
+`notstarted` utilisent 100 secondes. L’initialisation conserve une collecte immédiate des
+compositions éligibles. Une cadence de 20 secondes n’est pas annoncée à vingt rencontres.
+
+Le premier candidat à 75 secondes a tenu sa cadence pendant trente minutes établies à vingt
+rencontres, mais ses maxima mesurés ne permettent d’en admettre que dix-sept avec la marge
+prévue. Le passage à 100 secondes suit la priorité explicite donnée au nombre de rencontres.
+Cette nouvelle cadence est qualifiée séparément ; les preuves du candidat précédent sont conservées.
+
+L’autorité de transport est créée côté serveur pour toute la session v5. Les endpoints,
+l’ordre et la limite de quatre appels distincts par groupe restent ceux de v4. La pause
+après la dernière réponse est ramenée à **une seconde entre deux groupes de cette même
+session v5** ; les continuations valides restent sans pause artificielle. Les transitions
+vers une autre session, les parcours manuels et les politiques historiques conservent leur
+barrière d’au moins trois secondes. L’arrêt, l’admissibilité et la propriété sont revérifiés
+avant chaque dispatch, y compris après l’attente. Aucun réglage HTTP ne peut réduire ces délais.
+
+Le manifeste fige **2 500 appels par rencontre, 20 000 appels par campagne, quatre heures**
+et un plafond brut indépendant de **15 728 640 000 octets**. Les plafonds d’appels ne sont
+pas des volumes promis : l’épuisement de l’un des budgets termine la collecte. La réserve
+finale de quatre appels par rencontre et le contrôle du double de l’espace brut restant,
+plus la réserve disque locale, sont conservés. La capacité de sélection reste plafonnée à
+vingt et limitée par l’admission temporelle.
+
+Un profil v5 séparé, avec son propre SHA-256 et ses enveloppes par famille, est obligatoire.
+Une preuve v4 ne devient pas une preuve v5. L’admission additionne, par rencontre et sur
+300 secondes, trois triplets critiques, une composition et trois pauses d’une seconde ;
+10 % du temps restent non alloués. Les simulations contrôlent aussi initialisation,
+transitions, finalisations et variations de coût. V40 ajoute les contraintes versionnées
+sans réécrire les manifestes, compteurs, observations et politiques historiques.
+
+La qualification dédiée mesure vingt rencontres avec Chromium en loopback et PostgreSQL,
+pendant cinq minutes d’initialisation puis au moins trente minutes établies. Chaque couple
+rencontre/famille critique doit tenir un intervalle de réception et de publication
+P95 ≤105 secondes et un maximum ≤115 secondes. Les compositions restent nominalement à
+300 secondes, avec un retard P95 ≤15 secondes ; la dette de file ne doit pas croître.
+Le délai de publication locale vers l’affichage dynamique est contrôlé séparément sous
+dix secondes. L’écran continue à lire les données locales toutes les cinq secondes.
+
+Le tableau de capacité vers 50–100 rencontres distingue les bornes arithmétiques, les
+contraintes du calendrier et les capacités mesurées. Au-delà de vingt, aucune capacité
+n’est activée par extrapolation. Une évolution du calendrier, du coût des échanges ou de
+la répartition des familles exige une qualification dédiée avant activation. Les mesures
+locales ne qualifient ni la latence Internet ni la fraîcheur des données chez le fournisseur.
+
+### 0.0. Politique historique live-v4 — groupes live et minute fixe
 
 Cette section remplace, **pour les nouvelles préparations `live-v4` uniquement**, les cadences,
 l’ordre des familles, l’admission et le délai par appel décrits plus bas. Les §§1–12 conservent

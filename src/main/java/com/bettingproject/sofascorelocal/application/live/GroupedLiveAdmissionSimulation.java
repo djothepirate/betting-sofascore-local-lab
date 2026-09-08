@@ -10,21 +10,20 @@ import java.util.*;
 
 import static com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType.*;
 
-/** Bounded fake-clock replay of the production V4 scheduler, never a provider call. */
+/** Bounded fake-clock replay of the production grouped scheduler, never a provider call. */
 final class GroupedLiveAdmissionSimulation {
     private static final Instant START = Instant.parse("2030-01-01T00:00:00Z");
     private static final Duration FIFTEEN_SECONDS = Duration.ofSeconds(15);
-    private static final Duration MAX_INTERVAL = Duration.ofSeconds(75);
-    private static final Duration P95_INTERVAL = Duration.ofSeconds(65);
 
     private GroupedLiveAdmissionSimulation() { }
 
     static boolean fits(int matches, GroupedAdmissionProfile profile) {
-        // Forty bounded scenarios: five lineup phases, direct in-play or prematch
+        // Forty V4 or twenty-four V5 bounded scenarios: lineup phases, direct in-play or prematch
         // kickoff, constant or variable exchange durations, then a common finished
         // round or two finished cohorts. Faster exchanges can split a final lineup
-        // from its critical group and expose another three-second fence.
-        for (int phase = 0; phase < 5; phase++) {
+        // from its critical group and expose another policy-specific inter-group fence.
+        int lineupRounds = (int) (profile.lineupInterval().toSeconds() / profile.criticalInterval().toSeconds());
+        for (int phase = 0; phase < lineupRounds; phase++) {
             for (boolean prematch : new boolean[] {false, true}) {
                 for (boolean variableExchanges : new boolean[] {false, true}) {
                     for (boolean simultaneousFinalization : new boolean[] {false, true}) {
@@ -47,7 +46,11 @@ final class GroupedLiveAdmissionSimulation {
             positions.put(id, i);
         }
         LiveSchedule schedule = new LiveSchedule(targets, START, START.plusSeconds(1200),
-                Duration.ofSeconds(60), "live-v4");
+                profile.criticalInterval(), profile.policyVersion());
+        long periodSeconds = profile.criticalInterval().toSeconds();
+        long lineupRounds = profile.lineupInterval().toSeconds() / periodSeconds;
+        Duration maximumInterval = profile.criticalInterval().plusSeconds(15);
+        Duration p95Interval = profile.criticalInterval().plusSeconds(5);
         Map<UUID, Instant> finishedAt = new HashMap<>();
         Map<Key, Instant> previousCritical = new HashMap<>();
         Map<Key, List<Duration>> criticalIntervals = new HashMap<>();
@@ -71,8 +74,8 @@ final class GroupedLiveAdmissionSimulation {
                 continue;
             }
             int index = positions.get(due.eventId());
-            long nominalRound = Math.floorDiv(Duration.between(START, due.dueAt()).toSeconds(), 60);
-            long finalRound = 5L + finalPhase
+            long nominalRound = Math.floorDiv(Duration.between(START, due.dueAt()).toSeconds(), periodSeconds);
+            long finalRound = lineupRounds + finalPhase
                     + (simultaneousFinalization || index < Math.max(1, matches / 2) ? 0 : 3);
             String status = due.endpoint() == EVENT_DETAILS
                     ? nominalRound >= finalRound ? "finished"
@@ -91,7 +94,7 @@ final class GroupedLiveAdmissionSimulation {
                     Instant previous = previousCritical.put(key, now);
                     if (previous != null) {
                         Duration interval = Duration.between(previous, now);
-                        if (interval.compareTo(MAX_INTERVAL) > 0) return false;
+                        if (interval.compareTo(maximumInterval) > 0) return false;
                         criticalIntervals.computeIfAbsent(key, ignored -> new ArrayList<>()).add(interval);
                     }
                 }
@@ -112,7 +115,7 @@ final class GroupedLiveAdmissionSimulation {
         for (List<Duration> intervals : criticalIntervals.values()) {
             intervals.sort(Comparator.naturalOrder());
             int percentile = Math.max(0, (int) Math.ceil(intervals.size() * .95) - 1);
-            if (intervals.get(percentile).compareTo(P95_INTERVAL) > 0) return false;
+            if (intervals.get(percentile).compareTo(p95Interval) > 0) return false;
         }
         return true;
     }

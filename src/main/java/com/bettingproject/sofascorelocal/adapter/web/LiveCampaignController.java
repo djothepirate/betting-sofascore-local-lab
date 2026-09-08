@@ -160,9 +160,9 @@ public class LiveCampaignController {
             case "LIVE_ALL_EVENTS_FINISHED" -> "Ces rencontres sont déjà terminées (finished). Aucun lancement live ni appel fournisseur n’a été effectué. Revenir aux rencontres pour préparer une autre sélection.";
             case "LIVE_ALL_EVENTS_INELIGIBLE" -> "Ces rencontres sont reportées (postponed) ou déjà terminées (finished). Aucun lancement live ni appel fournisseur n’a été effectué. Revenir aux rencontres pour préparer une autre sélection.";
             case "LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY" ->
-                    "La sélection dépasse la capacité qualifiée à 60 secondes : " + campaigns.selectionMaximum() + " rencontres admissibles. Réduire la sélection. Les rencontres terminées ou reportées sont exclues.";
+                    "La sélection dépasse la capacité qualifiée. Pour une nouvelle campagne à 100 secondes : " + campaigns.selectionMaximum() + " rencontres admissibles. Réduire la sélection. Les rencontres terminées ou reportées sont exclues.";
             case "LIVE_CAPACITY_REFUSED_REDUCE_SELECTION" ->
-                    "La cible de 60 secondes ne peut pas être tenue avec ce profil pour cette sélection. Capacité admissible : " + campaigns.selectionMaximum() + " rencontres. Réduire la sélection ; la cadence ne sera pas allongée.";
+                    "La cadence prévue ne peut pas être tenue avec ce profil pour cette sélection. Capacité d’une nouvelle campagne à 100 secondes : " + campaigns.selectionMaximum() + " rencontres. Réduire la sélection ; la cadence ne sera pas allongée.";
             case "LIVE_ORPHAN_CLEANUP_INVALID_GUARD" -> "L’état de la session a changé depuis l’affichage du formulaire. Actualiser la page de la campagne avant de réessayer.";
             default -> "La sélection ou le manifeste est invalide. Préparer une nouvelle campagne.";
         };
@@ -202,7 +202,7 @@ public class LiveCampaignController {
             case "LIVE_STORAGE_CAPACITY_REFUSED" -> "L’espace libre du volume PostgreSQL est insuffisant pour le budget de cette sélection et sa réserve de sécurité. Prévoir davantage d’espace ou réduire la sélection avant une nouvelle préparation. Aucun appel fournisseur n’a été effectué par cette demande.";
             case "LIVE_POLICY_INVALID" -> "Les limites de la campagne locale sont invalides. Vérifier la durée, la capacité, les délais et la réserve de stockage dans la configuration live avant une nouvelle préparation.";
             case "LIVE_CAPACITY_QUALIFICATION_REQUIRED" -> "Cette capacité ou cette cadence exige une preuve de qualification. Pour le pilote initial, conserver une rencontre et l’enveloppe de requête de dix secondes.";
-            case "LIVE_GROUPED_QUALIFICATION_REQUIRED" -> "La politique live-v4 exige une preuve de qualification dédiée aux groupes et un coût qualifié pour chaque famille. Capacité actuellement disponible à une minute : zéro. Configurer le profil qualifié décrit dans le runbook, puis préparer une nouvelle sélection.";
+            case "LIVE_GROUPED_QUALIFICATION_REQUIRED" -> "La politique demandée exige une preuve de qualification dédiée aux groupes et un coût qualifié pour chaque famille. Les nouvelles campagnes live-v5 à 100 secondes utilisent leur propre profil. Configurer le profil qualifié décrit dans le runbook, puis préparer une nouvelle sélection.";
             case "LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY" -> "Le délai maximal d’une requête live doit être compris entre zéro exclu et dix secondes. Corriger le délai Playwright avant le lancement.";
             case "LIVE_PREPARATION_ALREADY_LAUNCHED" -> "Cette campagne a déjà été lancée. Sa préparation ne peut plus être annulée ; utiliser l’arrêt de la campagne si sa collecte est encore en cours.";
             case "LIVE_PREPARATION_NOT_CANCELABLE" -> "Cette campagne n’est plus en préparation. Actualiser sa page pour consulter son état actuel.";

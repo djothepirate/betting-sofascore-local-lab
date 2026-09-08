@@ -48,11 +48,12 @@
       <div><dt>Octets reçus / plafond</dt><dd data-live-bytes th:text="${campaign.receivedBytes + ' / ' + campaign.maximumBytes}">0</dd></div>
       <div><dt>Intervalle de collecte</dt><dd th:text="${manifest.cycleInterval.toSeconds() + ' secondes'}">60 secondes</dd></div>
       <div th:if="${campaign.cadence != null}"><dt>Compositions pendant le jeu</dt><dd>5 minutes nominales</dd></div>
-      <div th:if="${campaign.cadence != null}"><dt>Capacité qualifiée à 60 secondes</dt><dd th:text="${campaign.cadence.qualifiedCapacity + ' rencontres'}">0</dd></div>
+      <div th:if="${campaign.cadence != null}"><dt th:text="${'Capacité qualifiée à ' + campaign.cadence.targetSeconds + ' secondes'}">Capacité qualifiée</dt><dd th:text="${campaign.cadence.qualifiedCapacity + ' rencontres'}">0</dd></div>
       <div th:if="${campaign.cadence != null}"><dt>Autonomie estimée à ce rythme</dt><dd data-live-autonomy th:text="${campaign.cadence.estimatedMinutes() + ' minutes environ'}">—</dd></div>
     </dl>
     <p class="muted" th:if="${campaign.cadence != null}">L’estimation utilise les appels restants, les phases actuelles et les réserves de fin.
-      La cadence reste fixée à une minute ; la collecte s’arrête à l’épuisement des plafonds.</p>
+      La cadence reste fixée à <span th:text="${manifest.cycleInterval.toSeconds()}">100</span> secondes ; la collecte s’arrête à l’épuisement des plafonds.
+      Le plafond d’octets peut être atteint avant l’autonomie estimée en appels.</p>
     <p class="muted" data-live-refresh-status role="status" aria-live="polite">Lecture locale toutes les cinq secondes, suspendue lorsque l’onglet est masqué.</p>
     <form th:if="${campaign.state == 'RUNNING' or (campaign.runtimeStatus != null and campaign.runtimeStatus.cleanupPending)}"
           data-live-stop-form data-live-global-stop-form method="post"
@@ -106,14 +107,15 @@
     </dl>
     <details>
       <summary>Profil de capacité utilisé pour cette préparation</summary>
-      <dl class="detail-grid" th:if="${manifest.policyVersion != 'live-v4'}">
+      <dl class="detail-grid" th:if="${manifest.policyVersion != 'live-v4' and manifest.policyVersion != 'live-v5'}">
         <div><dt>Durée retenue par appel fournisseur</dt><dd th:text="${manifest.admissionProfile.requestEnvelope.toMillis() + ' ms'}">10000 ms</dd></div>
         <div><dt>Traitement local retenu par appel</dt><dd th:text="${manifest.admissionProfile.processingEnvelope.toMillis() + ' ms'}">1000 ms</dd></div>
         <div><dt>Preuve de qualification</dt><dd class="mono hash-value"
           th:text="${#strings.isEmpty(manifest.admissionProfile.qualificationSha256) ? 'Profil initial conservateur' : manifest.admissionProfile.qualificationSha256}">Profil initial conservateur</dd></div>
       </dl>
-      <div th:if="${manifest.policyVersion == 'live-v4'}">
-        <p>Les appels d’un match sont séquentiels et regroupés. Une pause de trois secondes sépare les groupes.</p>
+      <div th:if="${manifest.policyVersion == 'live-v4' or manifest.policyVersion == 'live-v5'}">
+        <p>Les appels d’un match sont séquentiels et regroupés. La pause entre les groupes de cette campagne est de
+          <span th:text="${manifest.admissionProfile.groupedProfile.interGroupDelay.toSeconds()}">3</span> seconde(s).</p>
         <dl class="detail-grid"><div><dt>Preuve de qualification des groupes</dt><dd class="mono hash-value"
           th:text="${manifest.admissionProfile.groupedProfile.qualificationSha256}">SHA-256</dd></div></dl>
         <table><thead><tr><th>Famille</th><th>Appel budgété</th><th>Traitement budgété</th></tr></thead>
@@ -133,7 +135,11 @@
       <strong>60 secondes par rencontre</strong>. Les premières compositions sont collectées à l’initialisation, puis réparties sur cinq tours.
       Avant le début, J4 vérifie le statut chaque minute et les compositions sont collectées dès notstarted, puis chaque minute.
       Dès le début confirmé, les incidents et statistiques deviennent éligibles. La sélection est limitée à la capacité qualifiée et les retards restent visibles.</p>
-    <p th:if="${manifest.policyVersion != 'live-v4'}">J4 vérifie le statut avant le match et J5 collecte statistiques, incidents et compositions en cours de match toutes les
+    <p th:if="${manifest.policyVersion == 'live-v5'}">Pendant le jeu, J4, les incidents et les statistiques visent une actualisation toutes les
+      <strong>100 secondes par rencontre</strong>. Les premières compositions sont collectées à l’initialisation, puis réparties sur trois tours, soit cinq minutes.
+      Avant le début, J4 et les compositions disponibles sont collectés toutes les 100 secondes.
+      Dès le début confirmé, les incidents et statistiques deviennent éligibles. La sélection est limitée à la capacité qualifiée et les retards restent visibles.</p>
+    <p th:if="${manifest.policyVersion != 'live-v4' and manifest.policyVersion != 'live-v5'}">J4 vérifie le statut avant le match et J5 collecte statistiques, incidents et compositions en cours de match toutes les
       <span th:text="${manifest.cycleInterval.toSeconds()}">60</span> secondes. J4 confirme ensuite la fin.
       Cet intervalle est fixé pour cette sélection. Les appels sont sérialisés. Une lecture de cette page ne lance aucune collecte.</p>
     <form method="post" th:action="@{/live-campaigns/{id}/launch(id=${campaign.campaignId})}">

@@ -4,6 +4,22 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — capacité live-v5 et visibilité des remplaçants
+
+- Ajoute une nouvelle politique à 100 secondes pour J4, incidents et statistiques, avec
+  compositions en jeu toutes les cinq minutes et capacité limitée à vingt rencontres selon
+  une qualification synthétique v5 séparée de 35 minutes, 1 413 appels, zéro cycle manqué
+  et vingt-quatre scénarios d'admission réussis. L'observation fournisseur reste distincte.
+- Porte les plafonds à 2 500 appels par rencontre et 20 000 par campagne ; conserve quatre
+  heures et un plafond indépendant de 15 728 640 000 octets bruts.
+- Réduit la pause à une seconde entre groupes de la même session v5, en conservant les
+  contrôles avant chaque appel et les frontières historiques de trois secondes.
+- Ajoute V40 pour les contraintes versionnées ; conserve les campagnes et preuves historiques.
+- Utilise `insertBefore` pour déplacer les cartes de compositions : évite le défaut de
+  visibilité Chromium reproduit, avec conservation des panneaux et du focus.
+- Les mesures de capacité distinguent collecte soutenue, publication locale et rendu dynamique ;
+  l’objectif futur de 50–100 rencontres ne devient pas une capacité activée par extrapolation.
+
 ### WO-058 — clôture d’une session interrompue après redémarrage
 
 - Ajoute « Clôturer la session interrompue » sur la campagne qui détient le verrou orphelin,

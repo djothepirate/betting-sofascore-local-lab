@@ -30,11 +30,13 @@ import java.util.concurrent.atomic.AtomicReference;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Short, explicit Chromium qualification of ten-match rendering from local JSON publication.
+ * Short, explicit Chromium qualification of bounded rendering from local JSON publication.
  * Uses production JavaScript, CSS and statistics presentation. HTTP data is synthetic; this
  * complements the native JDBC qualification and does not measure provider freshness or SQL.
  */
 class LiveTenMatchRefreshBrowserQualificationIT {
+    private static final int MATCHES = Integer.getInteger("wo058.ui.matches", 10);
+    private static final int INTERVAL_SECONDS = Boolean.getBoolean("wo058.grouped.v5") ? 100 : 60;
     private static final String CAMPAIGN = "00000000-0000-0000-0000-000000000058";
     private static final String PAGE_PATH = "/live-campaigns/" + CAMPAIGN;
     private static final String STATE_PATH = PAGE_PATH + "/state";
@@ -45,6 +47,7 @@ class LiveTenMatchRefreshBrowserQualificationIT {
     @Test
     @Timeout(45)
     void tenMatchesRenderChangedAndRepeatedReceiptsWithinTenSecondsOfLocalPublication() throws Exception {
+        assertThat(MATCHES).isBetween(1, 100);
         String configured = System.getProperty("provider.playwright.browser-cache", "");
         assertThat(configured).as("explicit native browser opt-in").isNotBlank();
         assertThat(Path.of(configured).toRealPath())
@@ -101,10 +104,15 @@ class LiveTenMatchRefreshBrowserQualificationIT {
             current.set(publication(1, 1, baseline, baseline));
             assertThat(page.navigate(origin + PAGE_PATH).status()).isEqualTo(200);
             awaitRendered(page, current.get(), 1);
-            assertThat(page.locator("[data-live-event-id]").count()).isEqualTo(10);
-            assertThat(page.locator("[data-live-family]").count()).isEqualTo(30);
-            assertThat(page.locator(".statistics-metric").count()).isEqualTo(1_350);
-            assertThat(page.locator("[data-live-family='EVENT_INCIDENTS'] tbody tr").count()).isEqualTo(300);
+            assertThat(page.locator("[data-live-event-id]").count()).isEqualTo(MATCHES);
+            assertThat(page.locator("[data-live-family]").count()).isEqualTo(MATCHES * 3);
+            assertThat(page.locator(".statistics-metric").count()).isEqualTo(MATCHES * 135);
+            assertThat(page.locator("[data-live-family='EVENT_INCIDENTS'] tbody tr").count()).isEqualTo(MATCHES * 30);
+            assertThat(page.locator("[data-live-family-interval]").allTextContents())
+                    .hasSize(MATCHES * 3).allSatisfy(value -> assertThat(value).isEqualTo(INTERVAL_SECONDS + " s"));
+            assertThat(page.locator("[data-live-family-next-due]").allTextContents())
+                    .hasSize(MATCHES * 3).allSatisfy(value -> assertThat(value)
+                            .isEqualTo(baseline.plusSeconds(INTERVAL_SECONDS).toString()));
 
             Instant changedAt = Instant.now().truncatedTo(ChronoUnit.MILLIS);
             Publication changed = publication(2, 2, changedAt, changedAt);
@@ -147,16 +155,17 @@ class LiveTenMatchRefreshBrowserQualificationIT {
         } finally {
             server.stop(0);
         }
-        System.out.printf("WO058_UI_TEN_MATCHES matches=10 families=30 statistics=1350 incidents=300 "
+        System.out.printf("WO058_UI_MATCHES matches=%d families=%d statistics=%d incidents=%d "
                         + "changedPublicationToRenderedMillis=%d repeatedPublicationToRenderedMillis=%d "
-                        + "realProviderCalls=0 operatorDatabaseUsed=false%n", changedDelayMillis, repeatedDelayMillis);
+                        + "realProviderCalls=0 operatorDatabaseUsed=false%n", MATCHES, MATCHES * 3, MATCHES * 135,
+                MATCHES * 30, changedDelayMillis, repeatedDelayMillis);
     }
 
     private static long awaitRendered(Page page, Publication publication, int contentRevision) {
         page.waitForFunction("""
                 expected => {
                   const nodes = Array.from(document.querySelectorAll('[data-live-event-id]'));
-                  return nodes.length === 10 && nodes.every((node, index) => {
+                  return nodes.length === expected.matches && nodes.every((node, index) => {
                     const score = `${index % 3 + expected.contentRevision} – ${index % 2}`;
                     const families = Array.from(node.querySelectorAll('[data-live-family]'));
                     const incidents = node.querySelector("[data-live-family='EVENT_INCIDENTS'] tbody");
@@ -169,23 +178,23 @@ class LiveTenMatchRefreshBrowserQualificationIT {
                       && incidents?.rows.length === 30
                       && incidents.rows[29].cells[5].textContent === `But synthétique ${index + 1} v${expected.contentRevision}`
                       && incidents.rows[29].checkVisibility()
-                      && possession?.textContent === `${50 + index + expected.contentRevision}%`
+                      && possession?.textContent === `${50 + index % 20 + expected.contentRevision}%`
                       && possession.checkVisibility();
                   });
                 }
-                """, Map.of("receivedAt", publication.receivedAt().toString(), "contentRevision", contentRevision),
+                """, Map.of("receivedAt", publication.receivedAt().toString(), "contentRevision", contentRevision, "matches", MATCHES),
                 new Page.WaitForFunctionOptions().setTimeout(10_000));
         long elapsed = Duration.ofNanos(System.nanoTime() - publication.availableNanos()).toMillis();
-        assertThat(elapsed).as("local JSON publication to all ten rendered matches").isLessThanOrEqualTo(10_000);
+        assertThat(elapsed).as("local JSON publication to all %s rendered matches", MATCHES).isLessThanOrEqualTo(10_000);
         return elapsed;
     }
 
     private static void assertFreshReceipts(Page page, Instant received, Instant changed) {
-        assertThat(page.locator("[data-live-received]").allTextContents()).hasSize(30)
+        assertThat(page.locator("[data-live-received]").allTextContents()).hasSize(MATCHES * 3)
                 .allMatch(received.toString()::equals);
-        assertThat(page.locator("[data-live-changed]").allTextContents()).hasSize(30)
+        assertThat(page.locator("[data-live-changed]").allTextContents()).hasSize(MATCHES * 3)
                 .allMatch(changed.toString()::equals);
-        assertThat(page.locator("[data-live-age]").allTextContents()).hasSize(30)
+        assertThat(page.locator("[data-live-age]").allTextContents()).hasSize(MATCHES * 3)
                 .allMatch(value -> value.matches("\\d+ s") && Integer.parseInt(value.substring(0, value.length() - 2)) <= 10);
         assertThat(page.locator("[data-live-age]").evaluateAll("nodes => nodes.every(node => node.dataset.liveAgeFrozen === 'false')"))
                 .isEqualTo(true);
@@ -193,7 +202,7 @@ class LiveTenMatchRefreshBrowserQualificationIT {
 
     private static Publication publication(int revision, int contentRevision, Instant received, Instant changed) {
         var eventViews = new ArrayList<Map<String, Object>>();
-        for (int index = 0; index < 10; index++) {
+        for (int index = 0; index < MATCHES; index++) {
             var event = new LinkedHashMap<String, Object>();
             event.put("canonicalEventId", eventId(index));
             event.put("sportStatus", "inprogress");
@@ -240,7 +249,7 @@ class LiveTenMatchRefreshBrowserQualificationIT {
         result.put("completenessScore", 100);
         result.put("previousData", false);
         result.put("freshness", Map.of("state", "FRESH", "label", "Dernière réception disponible", "frozen", false));
-        result.put("schedule", Map.of("intervalSeconds", 60, "nextDueAt", received.plusSeconds(60).toString(),
+        result.put("schedule", Map.of("intervalSeconds", INTERVAL_SECONDS, "nextDueAt", received.plusSeconds(INTERVAL_SECONDS).toString(),
                 "missedCycles", 0, "latenessMillis", 0));
         if (endpoint.equals("EVENT_STATISTICS")) {
             result.put("statistics", StatisticsPresentation.from(statistics(index, contentRevision)));
@@ -261,9 +270,9 @@ class LiveTenMatchRefreshBrowserQualificationIT {
             for (int metric = 0; metric < 45; metric++) {
                 String code = metric == 0 ? "ballPossession" : "syntheticMetric" + metric;
                 String label = metric == 0 ? "Possession" : metric % 3 == 0 ? "Passes réussies " + metric : "Tirs " + metric;
-                String home = metric == 0 ? (50 + index + contentRevision) + "%" : metric % 3 == 0 ? "25/40 (63%)"
+                String home = metric == 0 ? (50 + index % 20 + contentRevision) + "%" : metric % 3 == 0 ? "25/40 (63%)"
                         : Integer.toString(metric + index + contentRevision);
-                String away = metric == 0 ? (50 - index - contentRevision) + "%" : metric % 3 == 0 ? "18/30 (60%)"
+                String away = metric == 0 ? (50 - index % 20 - contentRevision) + "%" : metric % 3 == 0 ? "18/30 (60%)"
                         : Integer.toString(metric + 1);
                 metrics.add(new EventStatisticMetric(period, "Groupe synthétique " + metric / 15, code, label,
                         Optional.of(home), Optional.of(away)));
@@ -279,7 +288,7 @@ class LiveTenMatchRefreshBrowserQualificationIT {
                 <script defer src="/js/statistics.js"></script><script defer src="/js/live-campaign.js"></script>
                 </head><body><main data-live-monitor data-live-state-url="%s"><p data-live-refresh-status></p>
                 """.formatted(STATE_PATH));
-        for (int index = 0; index < 10; index++) html.append("""
+        for (int index = 0; index < MATCHES; index++) html.append("""
                 <section class="card" data-live-event-id="%s"><h2>Rencontre synthétique %d</h2>
                 <span data-live-sport-status></span><strong data-live-score></strong><span data-live-event-state></span>
                 <div data-live-families></div></section>

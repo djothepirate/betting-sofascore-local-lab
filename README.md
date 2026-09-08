@@ -1,14 +1,15 @@
 # SofaScore Local Lab
 
-**Politique live-v4 — 8 septembre 2026 :** les nouvelles préparations visent J4, incidents et
-statistiques toutes les 60 secondes par match, avec compositions initiales puis réparties sur
-cinq minutes. Les appels d’un match sont regroupés et séquentiels, avec trois secondes entre
-groupes. La sélection est limitée par une preuve de capacité dédiée ; une minute pour dix
-matchs doit être qualifiée, et les profils historiques ne sont pas abaissés automatiquement.
-V39 conserve les anciennes empreintes et ajoute l’audit des groupes et échéances. Voir
-[ADR-SS-005 v0.4](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), le
+**Politique live-v5 — 8 septembre 2026 :** les nouvelles préparations ciblent J4, incidents et
+statistiques toutes les 100 secondes par match, avec compositions initiales puis réparties sur
+cinq minutes. Le profil synthétique dédié qualifie vingt rencontres après cinq minutes
+d'initialisation et trente minutes établies ; l'observation fournisseur reste distincte.
+Les appels restent séquentiels ; une seconde sépare deux groupes de la même session v5.
+Les plafonds sont de 2 500 appels par rencontre et 20 000 par campagne, avec quatre heures
+au maximum et un plafond brut indépendant. V40 conserve les politiques et preuves historiques.
+Voir [ADR-SS-005 v0.6](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), le
 [runbook actuel](docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md) et les
-[preuves v4](docs/validation/WO058-GROUPED-LIVE-V4-20260908.md).
+[preuves historiques v4](docs/validation/WO058-GROUPED-LIVE-V4-20260908.md).
 
 **Historique live J4/J5 — 7 septembre 2026 :** le
 [WO-058](docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md) est aligné sur

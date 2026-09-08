@@ -20,11 +20,10 @@
     nodes.forEach((node, index) => {
       const before = parent.children[index] || null;
       if (before === node) return;
-      // moveBefore preserves native focus/state on supporting browsers. The fallback
-      // retains node identity, with focus restored once the complete view is reconciled.
-      if (typeof parent.moveBefore === "function" && node.isConnected && parent.isConnected)
-        parent.moveBefore(node, before);
-      else parent.insertBefore(node, before);
+      // Reinsert the existing node so layout is invalidated after a move through
+      // collapsed details. Native moveBefore can retain an invisible layout box.
+      // update() restores focus after reconciling the complete view.
+      parent.insertBefore(node, before);
     });
     Array.from(parent.children).forEach(node => { if (!wanted.has(node)) node.remove(); });
   }

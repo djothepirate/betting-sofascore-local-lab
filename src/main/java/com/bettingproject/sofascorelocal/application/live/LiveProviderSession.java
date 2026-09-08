@@ -15,8 +15,11 @@ public final class LiveProviderSession implements AutoCloseable {
         this(factory, campaignId, "live-v3");
     }
     public LiveProviderSession(PlaywrightProviderCampaignFactory factory, UUID campaignId, String policyVersion) {
-        campaign = "live-v4".equals(policyVersion) ? factory.openLiveGrouped(campaignId, ENDPOINTS)
-                : factory.open(campaignId, ENDPOINTS);
+        campaign = switch (policyVersion) {
+            case "live-v5" -> factory.openLiveGroupedV5(campaignId, ENDPOINTS);
+            case "live-v4" -> factory.openLiveGrouped(campaignId, ENDPOINTS);
+            case null, default -> factory.open(campaignId, ENDPOINTS);
+        };
     }
     public PlaywrightProviderResponse execute(long providerId, SofascoreEndpointType endpoint,
                                                PlaywrightDispatchAdmission admission) {

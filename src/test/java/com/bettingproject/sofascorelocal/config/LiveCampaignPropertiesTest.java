@@ -110,6 +110,8 @@ class LiveCampaignPropertiesTest {
                 "SOFASCORE_LIVE_REQUEST_ENVELOPE", "1000ms"));
         assertThatThrownBy(properties::groupedAdmissionProfile).isInstanceOf(IllegalStateException.class)
                 .hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
+        assertThatThrownBy(properties::groupedAdmissionProfileV5).isInstanceOf(IllegalStateException.class)
+                .hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
     }
 
     @Test
@@ -126,6 +128,42 @@ class LiveCampaignPropertiesTest {
         assertThat(profile.envelope(com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType.EVENT_LINEUPS)
                 .requestEnvelope()).isEqualTo(Duration.ofSeconds(10));
         assertThat(properties.getRequestEnvelope()).isEqualTo(Duration.ofSeconds(10));
+        assertThat(properties.isEnabled()).isFalse();
+    }
+
+    @Test
+    void v4ProofAndCostsNeverImplicitlyQualifyTheFasterV5Transport() throws Exception {
+        var properties = bind(Map.of("SOFASCORE_LIVE_GROUPED_QUALIFICATION_SHA256", "b".repeat(64),
+                "SOFASCORE_LIVE_GROUPED_J4_REQUEST_ENVELOPE", "250ms"));
+        assertThat(properties.groupedAdmissionProfile().policyVersion()).isEqualTo("live-v4");
+        assertThatThrownBy(properties::groupedAdmissionProfileV5).hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
+        assertThat(properties.getGroupedV5().getEndpoints().get(
+                com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType.EVENT_DETAILS).getRequestEnvelope())
+                .isEqualTo(Duration.ofSeconds(10));
+    }
+
+    @Test
+    void v5DedicatedEnvironmentBindsItsProofAndEachFamilyWithoutChangingV4() throws Exception {
+        var values = new java.util.HashMap<String, Object>();
+        values.put("SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY", "20");
+        values.put("SOFASCORE_LIVE_GROUPED_V5_QUALIFICATION_SHA256", "c".repeat(64));
+        for (String family : java.util.List.of("J4", "INCIDENTS", "STATISTICS", "LINEUPS")) {
+            values.put("SOFASCORE_LIVE_GROUPED_V5_" + family + "_REQUEST_ENVELOPE", "400ms");
+            values.put("SOFASCORE_LIVE_GROUPED_V5_" + family + "_PROCESSING_ENVELOPE", "100ms");
+        }
+        var properties = bind(values);
+        var profile = properties.groupedAdmissionProfileV5();
+        assertThat(profile.policyVersion()).isEqualTo("live-v5");
+        assertThat(profile.qualificationSha256()).isEqualTo("c".repeat(64));
+        assertThat(profile.criticalInterval()).isEqualTo(Duration.ofSeconds(100));
+        assertThat(profile.lineupInterval()).isEqualTo(Duration.ofSeconds(300));
+        assertThat(profile.interGroupDelay()).isEqualTo(Duration.ofSeconds(1));
+        assertThat(profile.endpointEnvelopes().values()).allSatisfy(cost -> {
+            assertThat(cost.requestEnvelope()).isEqualTo(Duration.ofMillis(400));
+            assertThat(cost.processingEnvelope()).isEqualTo(Duration.ofMillis(100));
+        });
+        assertThat(LiveAdmissionPolicy.qualifiedCapacityV5(profile)).isEqualTo(20);
+        assertThatThrownBy(properties::groupedAdmissionProfile).hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
         assertThat(properties.isEnabled()).isFalse();
     }
 }

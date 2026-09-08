@@ -77,7 +77,7 @@ VPS       : aucune connexion
 | `adapter.persistence` | preuves brutes, occurrences, observations normalisées, historique, rétention, manifestes J7, preuves J8 et ledger live V33 |
 | `adapter.file` | publication J7 create-new par lien physique atomique, bornée à la racine locale |
 | `adapter.web` | tableau de bord, recherche, contrôle de lot et vues J4/J5/J6/J7/J8 locales |
-| `resources/db/migration` | schémas V1 à V33, migrations append-only et triggers d’immuabilité |
+| `resources/db/migration` | schémas V1 à V40, migrations append-only et triggers d’immuabilité |
 | `fixtures` | corpus synthétiques hors ligne J2, J4, J5 et J6 |
 
 Le connecteur général demeure bloqué. Le chemin manuel J3 borné délègue ses deux familles
@@ -341,6 +341,11 @@ observations conservent leur modèle append-only existant. La migration transver
 ultérieurement la version du parseur d'incidents J5 sans créer de stockage propre au lot.
 
 ### 5.11 Campagnes live bornées WO-058 — V33
+
+Cette section décrit le socle V33. Les extensions V39 ajoutent les profils groupés, groupes
+et échéances par famille ; V40 lie les nouveaux budgets et la cadence au manifeste v5,
+sans convertir les politiques antérieures. La cible v5 de vingt rencontres à 100 secondes
+reste en cours de qualification dédiée. Voir l'[architecture live courante](LIVE-J4-J5-CAMPAIGNS.md).
 
 V33 ajoute huit tables sans modifier V1 à V32 ni reconstituer de campagnes à partir des anciennes
 collectes. Le périmètre fonctionnel est défini par l'ADR-SS-005 ; le garde est partagé par les

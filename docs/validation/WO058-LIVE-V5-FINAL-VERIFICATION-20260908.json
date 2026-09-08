@@ -1,0 +1,252 @@
+{
+  "schema": "wo058-v5-final-verification-summary-v1",
+  "reportedAt": "2026-09-08T19:01:56.1752552+00:00",
+  "status": "PASS_WITH_EXPLICIT_ENVIRONMENT_SKIPS",
+  "labStatus": [
+    "EXPERIMENTAL",
+    "LOCAL_ONLY",
+    "NOT_PRODUCTION_APPROVED",
+    "NO_CRITICAL_DEPENDENCY"
+  ],
+  "runId": "20260908T183834Z-14f76e8f805746f8916f65da8aca920b",
+  "startedAt": "2026-09-08T18:38:34.7656836+00:00",
+  "finishedAt": "2026-09-08T18:56:14.3323125+00:00",
+  "profileSha256": "923c4499d2005d4d2f91499148f749dc7f80ea0868ff1cfc7a42106ac9863225",
+  "verifiedSources": {
+    "sha256": "8838d6033c623cb2780514db531b8d8ec00f8c610dd03c067a419ee18188328c",
+    "fileCount": 965,
+    "head": "06c7e3d272e8f96873eca822e4bdaa8302cf1b01"
+  },
+  "nativeSourceFilesStillIdentical": 607,
+  "nativeEvidence": "WO058-GROUPED-LIVE-V5-NATIVE-20260908.json",
+  "nativeSha256": "68f12dcec9449c230f4f1c833c8fdfa7286f5e171abb0bb4c5c50a60d21dc641",
+  "dynamicUiEvidence": "WO058-DYNAMIC-UI-SCALE-20260908.json",
+  "dynamicUiSha256": "fc4264006ff85179105a9ef7142c8ef5b3e90ed278cbcc36f7a33fda33bda05c",
+  "phases": [
+    {
+      "phase": "standard",
+      "status": "PASS",
+      "command": ".\\mvnw.cmd --offline -Dmaven.repo.local=C:/Users/geoff/.m2/repository clean verify",
+      "startedAt": "2026-09-08T18:38:35.5741497+00:00",
+      "finishedAt": "2026-09-08T18:47:27.0811842+00:00",
+      "exitCode": 0,
+      "counts": [
+        {
+          "runner": "failsafe",
+          "suites": 7,
+          "tests": 166,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "runner": "surefire",
+          "suites": 201,
+          "tests": 1840,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 5
+        }
+      ],
+      "skippedTests": [
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.file.LocalJ7ExportFileStoreTest",
+          "test": "refusesASymbolicLinkInsteadOfFollowingIt",
+          "reason": "org.opentest4j.TestAbortedException: Symbolic links are unavailable in this test environment"
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.file.LocalJ7ExportFileStoreTest",
+          "test": "refusesAMatchingCandidateSymlinkDuringOrphanEnumeration",
+          "reason": "org.opentest4j.TestAbortedException: Symbolic links are unavailable in this test environment"
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.build.J6NativeBinaryPipelineQualificationTest",
+          "test": "dockerQualificationPassesThreeSequentialRunsAtEffectiveDefaults",
+          "reason": "System property [j6.docker.qualification] does not exist"
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.cli.J8BenchmarkExportCommandTest",
+          "test": "refusesAnExportsSymbolicLinkOrReparsePointWhenSupported",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: symbolic links are unavailable: java.nio.file.FileSystemException"
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.cli.J8BenchmarkExportCommandTest",
+          "test": "refusesAJ8SymbolicLinkOrReparsePointWhenSupported",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: symbolic links are unavailable: java.nio.file.FileSystemException"
+        }
+      ],
+      "log": ".tmp\\wo058-v5-final-20260908T183834Z-14f76e8f805746f8916f65da8aca920b\\standard\\maven.log",
+      "logSha256": "98916248cae77bf3793af45c843765c4b07462e65aa56f178972aff69b8360ca",
+      "ignoredOldOrOutOfWindowReports": 0
+    },
+    {
+      "phase": "integration",
+      "status": "PASS",
+      "command": ".\\mvnw.cmd --offline -Dmaven.repo.local=C:/Users/geoff/.m2/repository -Pintegration-tests verify",
+      "startedAt": "2026-09-08T18:47:41.7969080+00:00",
+      "finishedAt": "2026-09-08T18:56:06.7076349+00:00",
+      "exitCode": 0,
+      "counts": [
+        {
+          "runner": "failsafe",
+          "suites": 7,
+          "tests": 166,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 0
+        },
+        {
+          "runner": "surefire",
+          "suites": 201,
+          "tests": 1840,
+          "failures": 0,
+          "errors": 0,
+          "skipped": 5
+        }
+      ],
+      "skippedTests": [
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.file.LocalJ7ExportFileStoreTest",
+          "test": "refusesASymbolicLinkInsteadOfFollowingIt",
+          "reason": "org.opentest4j.TestAbortedException: Symbolic links are unavailable in this test environment"
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.adapter.file.LocalJ7ExportFileStoreTest",
+          "test": "refusesAMatchingCandidateSymlinkDuringOrphanEnumeration",
+          "reason": "org.opentest4j.TestAbortedException: Symbolic links are unavailable in this test environment"
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.build.J6NativeBinaryPipelineQualificationTest",
+          "test": "dockerQualificationPassesThreeSequentialRunsAtEffectiveDefaults",
+          "reason": "System property [j6.docker.qualification] does not exist"
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.cli.J8BenchmarkExportCommandTest",
+          "test": "refusesAnExportsSymbolicLinkOrReparsePointWhenSupported",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: symbolic links are unavailable: java.nio.file.FileSystemException"
+        },
+        {
+          "suite": "com.bettingproject.sofascorelocal.cli.J8BenchmarkExportCommandTest",
+          "test": "refusesAJ8SymbolicLinkOrReparsePointWhenSupported",
+          "reason": "org.opentest4j.TestAbortedException: Assumption failed: symbolic links are unavailable: java.nio.file.FileSystemException"
+        }
+      ],
+      "log": ".tmp\\wo058-v5-final-20260908T183834Z-14f76e8f805746f8916f65da8aca920b\\integration\\maven.log",
+      "logSha256": "e32835b37effd94e98269b69db47d232564e0db1af523d5949b23b0707dbf358",
+      "ignoredOldOrOutOfWindowReports": 0
+    }
+  ],
+  "fullVerificationLocalRecord": ".tmp/wo058-v5-final-verification.json",
+  "fullVerificationRecordSha256": "bbf0326acce079238c4935267e53bd322b7ddcc6a0a517d64cc4332b4d2808e9",
+  "previousFailedVerification": {
+    "runId": "20260908T183155Z-409d3e1a103b4723bd07d5b13843d689",
+    "status": "FAILED",
+    "log": ".tmp\\wo058-v5-final-20260908T183155Z-409d3e1a103b4723bd07d5b13843d689\\standard\\maven.log",
+    "logSha256": "1f1f0c2a20e69df944c77400123498f9cc06e96bf2857df755b3a4bb8a39afbc",
+    "cause": "LivePreparationAdmissionTest still used v4 preparation fixtures; corrected to explicit v5 without modifying production sources or native evidence."
+  },
+  "eclipse": {
+    "updatedAt": "2026-09-08T19:01:46.2113809+00:00",
+    "launcher": "C:/Dev/BettingProject/eclipse-workspaces/human-sofascore/.metadata/.plugins/org.eclipse.debug.core/.launches/SofaScore - PLAYWRIGHT J3-J5 (MANUEL - OPT-IN) (LIVE).launch",
+    "backup": "C:/Dev/BettingProject/eclipse-workspaces/human-sofascore/.metadata/.plugins/org.eclipse.debug.core/.launches/SofaScore - PLAYWRIGHT J3-J5 (MANUEL - OPT-IN) (LIVE).launch.before-live-v5-20260908-190146-2e727976e1b74b32b972f34dbf04b5fc.bak",
+    "originalSha256": "ad97c6195e751027ab22de558488c556b449e7ad81f29058488d362c08f7aa03",
+    "backupSha256": "ad97c6195e751027ab22de558488c556b449e7ad81f29058488d362c08f7aa03",
+    "updatedSha256": "4a8a03ac4508b0e4ee255b530ca34a12708dbc77f1a2c72824caddf90606ece3",
+    "profileSha256": "923c4499d2005d4d2f91499148f749dc7f80ea0868ff1cfc7a42106ac9863225",
+    "verifiedRunId": "20260908T183834Z-14f76e8f805746f8916f65da8aca920b",
+    "verifiedSourcesSha256": "8838d6033c623cb2780514db531b8d8ec00f8c610dd03c067a419ee18188328c",
+    "keys": {
+      "SOFASCORE_LIVE_GROUPED_V5_QUALIFICATION_SHA256": "923c4499d2005d4d2f91499148f749dc7f80ea0868ff1cfc7a42106ac9863225",
+      "SOFASCORE_LIVE_GROUPED_V5_J4_REQUEST_ENVELOPE": "400ms",
+      "SOFASCORE_LIVE_GROUPED_V5_J4_PROCESSING_ENVELOPE": "600ms",
+      "SOFASCORE_LIVE_GROUPED_V5_INCIDENTS_REQUEST_ENVELOPE": "400ms",
+      "SOFASCORE_LIVE_GROUPED_V5_INCIDENTS_PROCESSING_ENVELOPE": "500ms",
+      "SOFASCORE_LIVE_GROUPED_V5_STATISTICS_REQUEST_ENVELOPE": "350ms",
+      "SOFASCORE_LIVE_GROUPED_V5_STATISTICS_PROCESSING_ENVELOPE": "500ms",
+      "SOFASCORE_LIVE_GROUPED_V5_LINEUPS_REQUEST_ENVELOPE": "350ms",
+      "SOFASCORE_LIVE_GROUPED_V5_LINEUPS_PROCESSING_ENVELOPE": "450ms"
+    },
+    "unrelatedSettingsPreserved": true,
+    "applicationStarted": false,
+    "humanCheckoutUpdated": false
+  },
+  "humanCheckout": {
+    "path": "C:/Dev/BettingProject/human/betting-sofascore-local-lab",
+    "lastObservedHead": "06c7e3d272e8f96873eca822e4bdaa8302cf1b01",
+    "lastObservedClean": true,
+    "updatedByThisTask": false
+  },
+  "modifiedFiles": [
+    "ADR-SS-001-experimentation-endpoints-sofascore-depuis-windows.md",
+    "ADR-SS-005-bounded-local-live-j4-j5-campaigns.md",
+    "AGENTS.md",
+    "CHANGELOG.md",
+    "docs/architecture/ARCHITECTURE.md",
+    "docs/architecture/LIVE-J4-J5-CAMPAIGNS.md",
+    "docs/runbooks/J6-BACKUP-RESTORE-AND-RETENTION.md",
+    "docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md",
+    "docs/validation/WO058-CAPACITY-OUTLOOK-20260908.md",
+    "docs/validation/WO058-DYNAMIC-UI-SCALE-20260908.json",
+    "docs/validation/WO058-DYNAMIC-UI-SCALE-20260908.md",
+    "docs/validation/WO058-DYNAMIC-UI-SCALE-CANDIDATE-75-20260908.json",
+    "docs/validation/WO058-DYNAMIC-UI-SCALE-CANDIDATE-75-20260908.md",
+    "docs/validation/WO058-GROUPED-LIVE-V5-20260908.md",
+    "docs/validation/WO058-GROUPED-LIVE-V5-CANDIDATE-75-MEASURED-RUNTIME-20260908.json",
+    "docs/validation/WO058-GROUPED-LIVE-V5-CANDIDATE-75-NATIVE-20260908.json",
+    "docs/validation/WO058-GROUPED-LIVE-V5-CANDIDATE-75-PER-EVENT-20260908.json",
+    "docs/validation/WO058-GROUPED-LIVE-V5-CANDIDATE-75-PROFILE-20260908.json",
+    "docs/validation/WO058-GROUPED-LIVE-V5-MEASURED-RUNTIME-20260908.json",
+    "docs/validation/WO058-GROUPED-LIVE-V5-NATIVE-20260908.json",
+    "docs/validation/WO058-GROUPED-LIVE-V5-PER-EVENT-20260908.json",
+    "docs/validation/WO058-GROUPED-LIVE-V5-PROFILE-20260908.json",
+    "docs/validation/WO058-LINEUPS-VISIBILITY-20260908.md",
+    "docs/validation/WO058-LIVE-V5-FINAL-VERIFICATION-20260908.json",
+    "docs/validation/WO058-LIVE-V5-STATIC-REVIEW-20260908.md",
+    "docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md",
+    "README.md",
+    "scripts/Backup-Restore-J6.ps1",
+    "scripts/Invoke-J6Retention.ps1",
+    "scripts/Invoke-LiveGroupedPlaywrightQualification.ps1",
+    "src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/live/JdbcLiveCampaignStore.java",
+    "src/main/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignController.java",
+    "src/main/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignPresentation.java",
+    "src/main/java/com/bettingproject/sofascorelocal/application/live/GroupedLiveAdmissionSimulation.java",
+    "src/main/java/com/bettingproject/sofascorelocal/application/live/GroupedLiveScheduleV4.java",
+    "src/main/java/com/bettingproject/sofascorelocal/application/live/LiveAdmissionPolicy.java",
+    "src/main/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignService.java",
+    "src/main/java/com/bettingproject/sofascorelocal/application/live/LiveProviderSession.java",
+    "src/main/java/com/bettingproject/sofascorelocal/application/live/LiveSchedule.java",
+    "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisor.java",
+    "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderGroupTracker.java",
+    "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/PlaywrightProviderCampaignFactory.java",
+    "src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ProviderNetworkStartDelayGate.java",
+    "src/main/java/com/bettingproject/sofascorelocal/config/LiveCampaignProperties.java",
+    "src/main/java/com/bettingproject/sofascorelocal/domain/live/LiveCampaignData.java",
+    "src/main/resources/application.yml",
+    "src/main/resources/db/migration/V40__live_v5_cadence_and_independent_budgets.sql",
+    "src/main/resources/static/js/lineups.js",
+    "src/main/resources/templates/events.html",
+    "src/main/resources/templates/live-campaign.html",
+    "src/provider-playwright-qualification-test/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignLineupsBrowserQualificationIT.java",
+    "src/provider-playwright-qualification-test/java/com/bettingproject/sofascorelocal/adapter/web/LiveTenMatchRefreshBrowserQualificationIT.java",
+    "src/provider-playwright-qualification-test/java/com/bettingproject/sofascorelocal/application/network/playwright/LiveGroupedCampaignLocalQualificationIT.java",
+    "src/provider-playwright-qualification-test/java/com/bettingproject/sofascorelocal/application/network/playwright/LiveGroupedDegradationQualificationIT.java",
+    "src/test/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignControllerTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignPresentationTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/application/live/GroupedLiveAdmissionPolicyV5EvidenceTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/application/live/GroupedLiveAdmissionPolicyV5Test.java",
+    "src/test/java/com/bettingproject/sofascorelocal/application/live/GroupedLiveScheduleV5Test.java",
+    "src/test/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignServiceTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/application/live/LivePreparationAdmissionTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/application/live/LiveProviderSessionTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/application/network/playwright/ChildJvmPlaywrightProviderSupervisorTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/application/network/playwright/LiveProviderGroupTrackerTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/application/network/playwright/ProviderLiveV5DelayGateTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/build/J6NativeBinaryPipelineQualificationTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/config/LiveCampaignPropertiesTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/domain/live/LiveGroupedDataTest.java",
+    "src/test/java/com/bettingproject/sofascorelocal/integration/FlywayMigrationIT.java",
+    "src/test/java/com/bettingproject/sofascorelocal/integration/LiveCampaignPersistenceIT.java"
+  ],
+  "scope": "Local candidate verification only. No provider call, operator database mutation, application startup, push, merge or human validation is claimed."
+}

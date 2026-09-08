@@ -9,8 +9,9 @@ import static com.bettingproject.sofascorelocal.application.network.playwright.L
 
 /** Called only under the campaign's I/O lock; no group may be reopened or repeated. */
 final class LiveProviderGroupTracker {
-    enum Authority { LIVE_V4, MANUAL_J5 }
-    private static final int MAXIMUM_GROUPS = 3000;
+    enum Authority { LIVE_V4, LIVE_V5, MANUAL_J5 }
+    private static final int MAXIMUM_V4_GROUPS = 3000;
+    private static final int MAXIMUM_V5_GROUPS = 20000;
     private static final List<SofascoreEndpointType> ORDER = List.of(
             SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
             SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS);
@@ -30,6 +31,9 @@ final class LiveProviderGroupTracker {
         this.authority = authority;
     }
 
+    /** The tracker instance is also the supervisor-owned session identity. */
+    boolean isLiveV5() { return authority == Authority.LIVE_V5; }
+
     boolean isContinuation(PlaywrightProviderRequest request, LiveProviderDispatchGroup group) {
         if (authority == Authority.MANUAL_J5) return manualContinuation(request, group);
         if (group == null) return false;
@@ -43,7 +47,8 @@ final class LiveProviderGroupTracker {
                     || current.phase() != Phase.CHECK && current.phase() != group.phase()) fail();
             return true;
         }
-        if (startedGroups.contains(group.groupId()) || startedGroups.size() >= MAXIMUM_GROUPS) fail();
+        if (startedGroups.contains(group.groupId()) || startedGroups.size()
+                >= (isLiveV5() ? MAXIMUM_V5_GROUPS : MAXIMUM_V4_GROUPS)) fail();
         // Ordinary groups open with J4. Only a pending final collection can open
         // directly on its first remaining J5 family after a previous group ended.
         if (group.phase() != Phase.FINALIZING && (group.phase() != Phase.CHECK || index != 0)) fail();

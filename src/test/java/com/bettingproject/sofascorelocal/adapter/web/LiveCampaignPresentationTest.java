@@ -407,22 +407,24 @@ class LiveCampaignPresentationTest {
                 1, 0, null, List.of(cursor))), base.attempts(), transitions);
     }
 
-    @Test
-    void groupedReceptionAgeAndDeadlineRemainDistinctFromAnUnchangedValueAndLineupCadence() {
+    @ParameterizedTest
+    @CsvSource({"live-v4,60,1000,3000,3.2", "live-v5,100,2500,20000,2.0"})
+    void groupedReceptionAgeAndDeadlineRemainDistinctFromAnUnchangedValueAndLineupCadence(String policy,
+                int interval, int eventCalls, int campaignCalls, double callsPerMinute) {
         var base = campaignForFreshness(SofascoreEndpointType.EVENT_DETAILS, "COLLECTING", List.of());
         var envelopes = new java.util.EnumMap<SofascoreEndpointType, EndpointEnvelope>(SofascoreEndpointType.class);
         for (var endpoint : List.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
                 SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS))
             envelopes.put(endpoint, new EndpointEnvelope(Duration.ofMillis(400), Duration.ofMillis(100)));
-        var manifest = new Manifest(CAMPAIGN, "a".repeat(64), "live-v4", START, START.plusSeconds(300),
-                Duration.ofHours(4), 1000, 3000, 1_000_000, 10, base.manifest().targets(),
+        var manifest = new Manifest(CAMPAIGN, "a".repeat(64), policy, START, START.plusSeconds(300),
+                Duration.ofHours(4), eventCalls, campaignCalls, 1_000_000, 10, base.manifest().targets(),
                 new AdmissionProfile(Duration.ofSeconds(10), Duration.ofSeconds(1), "",
-                        new GroupedAdmissionProfile(envelopes, "b".repeat(64))), Duration.ofSeconds(60));
+                        new GroupedAdmissionProfile(envelopes, "b".repeat(64), policy)), Duration.ofSeconds(interval));
         var original = base.events().getFirst().families().getFirst();
         var j4 = new FamilyCursor(SofascoreEndpointType.EVENT_DETAILS, original.lastAttemptId(), original.lastReceivedAttemptId(),
                 original.lastSuccessfulAttemptId(), original.lastChangedAttemptId(), START.plusSeconds(120), START.plusSeconds(120),
                 START, original.normalized(), original.latestResult(), original.latestSuccessfulResult(),
-                new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS, START.plusSeconds(180), 60, 0));
+                new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS, START.plusSeconds(180), interval, 0));
         var lineups = new FamilyCursor(SofascoreEndpointType.EVENT_LINEUPS, original.lastAttemptId(), original.lastReceivedAttemptId(),
                 original.lastSuccessfulAttemptId(), original.lastChangedAttemptId(), START, START, START,
                 original.normalized(), original.latestResult(), original.latestSuccessfulResult(),
@@ -441,7 +443,9 @@ class LiveCampaignPresentationTest {
         assertThat(lineup.freshness().state()).isEqualTo("FRESH");
         assertThat(lineup.schedule().latenessMillis()).isZero();
         assertThat(projected.cadence().qualifiedCapacity()).isEqualTo(10);
-        assertThat(projected.cadence().targetSeconds()).isEqualTo(60);
+        assertThat(projected.cadence().policyVersion()).isEqualTo(policy);
+        assertThat(projected.cadence().targetSeconds()).isEqualTo(interval);
+        assertThat(projected.cadence().estimatedCallsPerMinute()).isEqualTo(callsPerMinute);
         assertThat(projected.cadence().estimatedRemainingSeconds()).isEqualTo(14215); // authorized window is tighter than call budgets
     }
 

@@ -4,6 +4,8 @@ import com.bettingproject.sofascorelocal.config.ProviderPlaywrightProperties;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -284,8 +286,8 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         assertThat(workerFailures).allSatisfy(failure -> assertThat(failure.get()).isNull());
     }
 
-    @Test
-    void manualJ5GroupRemovesOnlyInnerFencesAcrossManualAndLiveWorkerTransitions() throws Exception {
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void manualJ5GroupRemovesOnlyInnerFencesAcrossManualAndLiveWorkerTransitions(boolean v5) throws Exception {
         var properties = enabledProperties("manual-j5-group-delay.jar");
         var access = new DelayGateProcessTreeAccess();
         List<Long> starts = Collections.synchronizedList(new ArrayList<>());
@@ -332,22 +334,42 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         }
         long closedAt = access.nanoTime();
         UUID liveId = UUID.randomUUID();
-        try (var live = supervisor.openLiveGrouped(liveId, Set.of(SofascoreEndpointType.EVENT_DETAILS,
+        var liveEndpoints = Set.of(SofascoreEndpointType.EVENT_DETAILS,
                 SofascoreEndpointType.EVENT_INCIDENTS, SofascoreEndpointType.EVENT_STATISTICS,
-                SofascoreEndpointType.EVENT_LINEUPS))) {
+                SofascoreEndpointType.EVENT_LINEUPS);
+        try (var live = v5 ? supervisor.openLiveGroupedV5(liveId, liveEndpoints)
+                : supervisor.openLiveGrouped(liveId, liveEndpoints)) {
             live.executeGrouped(PlaywrightProviderRequest.eventDetails(event),
                     new LiveProviderDispatchGroup(liveId, UUID.randomUUID(), event, LiveProviderDispatchGroup.Phase.CHECK),
                     PlaywrightDispatchAdmission.UNRESTRICTED);
             assertThat(starts.getLast()).isGreaterThanOrEqualTo(closedAt + Duration.ofSeconds(3).toNanos());
         }
+        // Closing a live session ends its authority; the next live worker still waits three seconds.
+        closedAt = access.nanoTime();
+        UUID nextLiveId = UUID.randomUUID();
+        try (var live = v5 ? supervisor.openLiveGroupedV5(nextLiveId, liveEndpoints)
+                : supervisor.openLiveGrouped(nextLiveId, liveEndpoints)) {
+            live.executeGrouped(PlaywrightProviderRequest.eventDetails(event),
+                    new LiveProviderDispatchGroup(nextLiveId, UUID.randomUUID(), event, LiveProviderDispatchGroup.Phase.CHECK),
+                    PlaywrightDispatchAdmission.UNRESTRICTED);
+            assertThat(starts.getLast()).isGreaterThanOrEqualTo(closedAt + Duration.ofSeconds(3).toNanos());
+        }
+        closedAt = access.nanoTime();
+        UUID lastManualId = UUID.randomUUID();
+        try (var manual = supervisor.openManualJ5Grouped(lastManualId, manualEndpoints)) {
+            manual.executeGrouped(PlaywrightProviderRequest.eventStatistics(event),
+                    new LiveProviderDispatchGroup(lastManualId, UUID.randomUUID(), event, LiveProviderDispatchGroup.Phase.MANUAL_J5),
+                    PlaywrightDispatchAdmission.UNRESTRICTED);
+            assertThat(starts.getLast()).isGreaterThanOrEqualTo(closedAt + Duration.ofSeconds(3).toNanos());
+        }
         assertThat(starts.get(1) - starts.getFirst()).isEqualTo(Duration.ofMillis(3_033).toNanos());
-        assertThat(gets).hasValue(9);
+        assertThat(gets).hasValue(11);
         for (var worker : workers) { worker.join(2_000); assertThat(worker.isAlive()).isFalse(); }
         assertThat(failures).allSatisfy(failure -> assertThat(failure.get()).isNull());
     }
 
-    @Test
-    void liveGroupHasNoAddedIntraGroupPauseButNextGroupAndNormalCallsKeepTheFence()
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void liveGroupHasNoAddedIntraGroupPauseButNextGroupAndNormalCallsKeepTheFence(boolean v5)
             throws Exception {
         ProviderPlaywrightProperties properties = enabledProperties("live-group-delay.jar");
         Instant rootStartedAt = Instant.parse("2026-09-08T10:00:00Z");
@@ -370,7 +392,8 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                 SofascoreEndpointType.EVENT_LINEUPS);
         UUID campaignId = UUID.randomUUID(), groupId = UUID.randomUUID();
         long event = 16_416_319L;
-        PlaywrightProviderCampaign campaign = supervisor.openLiveGrouped(campaignId, endpoints);
+        PlaywrightProviderCampaign campaign = v5 ? supervisor.openLiveGroupedV5(campaignId, endpoints)
+                : supervisor.openLiveGrouped(campaignId, endpoints);
         var check = new LiveProviderDispatchGroup(campaignId, groupId, event,
                 LiveProviderDispatchGroup.Phase.CHECK);
         var playing = new LiveProviderDispatchGroup(campaignId, groupId, event,
@@ -391,12 +414,13 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(event),
                 new LiveProviderDispatchGroup(campaignId, nextGroup, event, LiveProviderDispatchGroup.Phase.CHECK),
                 PlaywrightDispatchAdmission.UNRESTRICTED);
-        assertThat(observedStarts.getLast()).isEqualTo(Duration.ofMillis(3_132).toNanos());
-        assertThat(access.gatePauseTotal()).isEqualTo(Duration.ofSeconds(3));
+        long groupDelayMillis = v5 ? 1_000 : 3_000;
+        assertThat(observedStarts.getLast()).isEqualTo(Duration.ofMillis(groupDelayMillis + 132).toNanos());
+        assertThat(access.gatePauseTotal()).isEqualTo(Duration.ofMillis(groupDelayMillis));
         // A historical execute invocation cannot inherit the live group's exception.
         campaign.execute(PlaywrightProviderRequest.eventDetails(event));
-        assertThat(observedStarts.getLast()).isEqualTo(Duration.ofMillis(6_165).toNanos());
-        assertThat(access.gatePauseTotal()).isEqualTo(Duration.ofSeconds(6));
+        assertThat(observedStarts.getLast()).isEqualTo(Duration.ofMillis(groupDelayMillis + 3_165).toNanos());
+        assertThat(access.gatePauseTotal()).isEqualTo(Duration.ofMillis(groupDelayMillis + 3_000));
         assertThatThrownBy(() -> campaign.executeGrouped(PlaywrightProviderRequest.eventIncidents(event),
                 new LiveProviderDispatchGroup(campaignId, nextGroup, event, LiveProviderDispatchGroup.Phase.IN_PLAY),
                 PlaywrightDispatchAdmission.UNRESTRICTED))
@@ -480,8 +504,8 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         assertThat(workerFailure.get()).isNull();
     }
 
-    @Test
-    void operatorStopDuringDelayCannotRaceIntoAnotherGet() throws Exception {
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void operatorStopDuringDelayCannotRaceIntoAnotherGet(boolean v5) throws Exception {
         ProviderPlaywrightProperties properties = enabledProperties("stop-during-delay.jar");
         Instant rootStartedAt = Instant.parse("2026-08-31T07:03:00Z");
         OwnedHandle root = ownedHandle(2_105L, rootStartedAt, true, true);
@@ -511,12 +535,22 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                 },
                 access);
         UUID campaignId = UUID.randomUUID();
-        Set<SofascoreEndpointType> allowlist = Set.of(SofascoreEndpointType.EVENT_DETAILS);
-        PlaywrightProviderCampaign campaign = supervisor.open(campaignId, allowlist);
-        campaign.execute(PlaywrightProviderRequest.eventDetails(16_386_245L));
+        Set<SofascoreEndpointType> allowlist = v5
+                ? Set.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                        SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS)
+                : Set.of(SofascoreEndpointType.EVENT_DETAILS);
+        PlaywrightProviderCampaign campaign = v5 ? supervisor.openLiveGroupedV5(campaignId, allowlist)
+                : supervisor.open(campaignId, allowlist);
+        Runnable execute = () -> {
+            if (v5) campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(16_386_245L),
+                    new LiveProviderDispatchGroup(campaignId, UUID.randomUUID(), 16_386_245L,
+                            LiveProviderDispatchGroup.Phase.CHECK), PlaywrightDispatchAdmission.UNRESTRICTED);
+            else campaign.execute(PlaywrightProviderRequest.eventDetails(16_386_245L));
+        };
+        execute.run();
         CompletableFuture<Throwable> delayedExecution = CompletableFuture.supplyAsync(() -> {
             try {
-                campaign.execute(PlaywrightProviderRequest.eventDetails(16_386_245L));
+                execute.run();
                 return null;
             }
             catch (Throwable failure) {

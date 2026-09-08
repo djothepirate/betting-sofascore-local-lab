@@ -45,12 +45,14 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import tools.jackson.databind.json.JsonMapper;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -90,6 +92,157 @@ class LiveCampaignLineupsBrowserQualificationIT {
     @MockitoBean private J5RealEventDataService realData;
     @MockitoBean private J5LocalJsonImportService localImport;
     @MockitoBean private J5ProviderCampaignStopService providerStop;
+
+    @Test
+    @Timeout(90)
+    void benchCardsRemainVisibleThroughReordersAndMovesAcrossCollapsedSections() throws Exception {
+        String configured = System.getProperty("provider.playwright.browser-cache", "");
+        assertThat(configured).as("explicit browser cache opt-in").isNotBlank();
+        assertThat(Path.of(configured).toRealPath()).isEqualTo(
+                Path.of(System.getenv("PLAYWRIGHT_BROWSERS_PATH")).toRealPath());
+        var initial = benchReorderRoster(0);
+        var observation = new J5EventDataObservationView(501, CanonicalEventIdentity.sofascore(PROVIDER_EVENT_ID), initial,
+                EventSourceTrace.providerSnapshot(501, HASH, "event-lineups-v1", NOW),
+                J5CompletenessReport.measured(46, 46, List.of()), HASH);
+        when(queryService.find(eq(EVENT_ID), any())).thenReturn(Optional.of(new J5EventDataPage(ZoneId.of("Europe/Paris"),
+                new J4EventSearchItem(identity(), NOW.atZone(ZoneId.of("Europe/Paris"))),
+                new J5EventDataBundle(Optional.empty(), Optional.empty(), Optional.of(observation)))));
+        when(realControl.snapshot()).thenReturn(new J5RealControlSnapshot(J5RealControlState.LOCKED,
+                NOW, null, null, null, null, null, null, List.of(), null, false, false,
+                List.of("J5_EVENT_DATA_QUALIFICATION_DISABLED")));
+        AtomicInteger posts = new AtomicInteger(), external = new AtomicInteger(), stateReads = new AtomicInteger();
+        AtomicReference<Throwable> bridgeFailure = new AtomicReference<>();
+        List<String> scriptErrors = new ArrayList<>(), policyErrors = new ArrayList<>();
+        JsonMapper json = JsonMapper.builder().build();
+        try (Playwright playwright = Playwright.create();
+             Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+             BrowserContext context = browser.newContext(options(true, 1440, 1000))) {
+            bridge(context, posts, external, stateReads, bridgeFailure);
+            Page page = checkedPage(context, scriptErrors, policyErrors);
+            assertThat(page.navigate(MANUAL_PAGE).status()).isEqualTo(200);
+            // The manual page is intentionally script-free. Evaluate the production live
+            // component against its real SSR fragment; no CSP or application route is changed.
+            page.evaluate(Files.readString(Path.of("src/main/resources/static/js/lineups.js")));
+            Locator host = page.locator("[data-lineups]");
+            assertRenderedBenchProjection(host, LineupsPresentation.from(initial, HOME_NAME, AWAY_NAME));
+            // Stages 1/2 reproduce the reported order changes using anonymous IDs:
+            // [101..112] -> [107,101..106,108..112] -> [107,112,101..106,108..111].
+            // Stages 3/4/5 expose the independently reproduced visibility failure:
+            // reorder, move players across positions/bench, then remove one bench player.
+            for (int stage : List.of(0, 1, 2, 3, 4, 5)) {
+                var projection = LineupsPresentation.from(benchReorderRoster(stage), HOME_NAME, AWAY_NAME);
+                Locator bench = section(team(host, "HOME"), "substitutes");
+                summary(bench).click();
+                assertOpen(bench, false);
+                summary(bench).focus();
+                host.evaluate("""
+                        root => {
+                          window.__benchPreviousCards = new Map([...root.querySelectorAll('[data-lineups-player]')]
+                            .map(node => [node.dataset.lineupsPlayer, node]));
+                          window.__benchPreviousDetails = [...root.querySelectorAll('details')];
+                        }
+                        """);
+                host.evaluate("(root, json) => window.LineupsView.update(root, JSON.parse(json))",
+                        json.writeValueAsString(projection));
+                assertOpen(bench, false);
+                assertFocused(summary(bench));
+                assertThat(host.evaluate("""
+                        root => window.__benchPreviousDetails.every(node => root.contains(node))
+                          && [...root.querySelectorAll('[data-lineups-player]')].every(node =>
+                            !window.__benchPreviousCards.has(node.dataset.lineupsPlayer)
+                              || window.__benchPreviousCards.get(node.dataset.lineupsPlayer) === node)
+                        """)).as("node identity across roster stage %s", stage).isEqualTo(true);
+                summary(bench).press("Enter");
+                assertOpen(bench, true);
+                awaitRenderedBenchProjection(page, host, projection);
+                // Identical content must keep every card visible on the following refresh too.
+                host.evaluate("(root, json) => window.LineupsView.update(root, JSON.parse(json))",
+                        json.writeValueAsString(projection));
+                assertRenderedBenchProjection(host, projection);
+            }
+            for (int stage : List.of(0, 1, 2)) {
+                var projection = LineupsPresentation.from(benchReorderRoster(stage), HOME_NAME, AWAY_NAME);
+                assertOpen(section(team(host, "HOME"), "substitutes"), true);
+                host.evaluate("(root, json) => window.LineupsView.update(root, JSON.parse(json))",
+                        json.writeValueAsString(projection));
+                awaitRenderedBenchProjection(page, host, projection);
+            }
+            page.setViewportSize(390, 844);
+            assertNoHorizontalOverflow(page, host);
+            awaitRenderedBenchProjection(page, host, LineupsPresentation.from(benchReorderRoster(2), HOME_NAME, AWAY_NAME));
+            capture(host, "lineups-twelve-bench-reordered-mobile.png");
+        }
+        assertThat(bridgeFailure.get()).isNull();
+        assertThat(scriptErrors).isEmpty();
+        // The manual SSR blocks these script tags; only their expected CSP messages
+        // are admissible. Live loading and CSP are exercised by the other method.
+        assertThat(policyErrors).allMatch(message -> message.contains("script-src 'none'")
+                && (message.contains("/js/lineups.js") || message.contains("/js/statistics.js")));
+        assertThat(posts.get()).isZero();
+        assertThat(external.get()).isZero();
+        assertThat(stateReads.get()).isZero();
+        verifyNoInteractions(campaigns, fixtureImportService, realData, localImport, providerStop);
+        System.out.println("WO058_LINEUPS_VISIBILITY=PASS;SEVENTH_TO_FIRST=PASS;LAST_TO_SECOND=PASS;"
+                + "COLLAPSED_ROLE_GROUP_REMOVE=PASS;OPEN_BENCH=PASS;NODE_FOCUS_PRESERVED=PASS;VISIBLE_COUNTS=PASS;"
+                + "VIEWPORT_390=PASS;REAL_PROVIDER_CALLS=0;HTTP_POSTS=0;DATABASE_USED=false");
+    }
+
+    private static void awaitRenderedBenchProjection(Page page, Locator host, LineupsPresentation.View projection) {
+        page.evaluate("() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))");
+        for (var expected : projection.teams()) {
+            Locator bench = section(team(host, expected.side()), "substitutes");
+            page.waitForCondition(() -> bench.locator("[data-lineups-player]:visible").count() == expected.substituteCount(),
+                    new Page.WaitForConditionOptions().setTimeout(2000));
+        }
+        assertRenderedBenchProjection(host, projection);
+    }
+
+    private static EventLineups benchReorderRoster(int stage) {
+        EventLineups base = (EventLineups) observation(1).data();
+        List<EventLineupPlayer> home = new ArrayList<>(base.home().players().stream().filter(EventLineupPlayer::starter).toList());
+        List<EventLineupPlayer> away = new ArrayList<>(base.away().players().stream().filter(EventLineupPlayer::starter).toList());
+        List<EventLineupPlayer> substitutes = new ArrayList<>();
+        for (int index = 1; index <= 12; index++) {
+            substitutes.add(lineupPlayer(100L + index, "Remplaçant synthétique " + index, 30 + index, "F", false));
+            away.add(lineupPlayer(200L + index, "Remplaçant extérieur synthétique " + index, 50 + index, "M", false));
+        }
+        if (stage == 1 || stage == 2) substitutes.addFirst(substitutes.remove(6));
+        if (stage == 2) substitutes.add(1, substitutes.removeLast());
+        if (stage == 3) Collections.reverse(substitutes);
+        if (stage == 4) {
+            // Moving a node out of a position group removed in this same update exercises the shared pool.
+            home.replaceAll(player -> player.providerPlayerId() == 1
+                    ? lineupPlayer(1, player.name(), 1, null, true) : player);
+            home.replaceAll(player -> player.providerPlayerId() == 4
+                    ? lineupPlayer(4, player.name(), 9, "F", false) : player);
+            var entering = substitutes.remove(6);
+            home.add(lineupPlayer(entering.providerPlayerId(), entering.name(), 37, "D", true));
+        }
+        if (stage == 5) substitutes.remove(2);
+        home.addAll(substitutes);
+        return new EventLineups(PROVIDER_EVENT_ID, true,
+                new TeamLineup(LineupSide.HOME, Optional.of("4-3-3"), home),
+                new TeamLineup(LineupSide.AWAY, Optional.of("4-3-3"), away));
+    }
+
+    private static void assertRenderedBenchProjection(Locator host, LineupsPresentation.View projection) {
+        for (var expected : projection.teams()) {
+            Locator team = team(host, expected.side());
+            Locator starters = section(team, "starters"), bench = section(team, "substitutes");
+            assertThat(starters.locator("[data-lineups-count]").textContent()).isEqualTo(String.valueOf(expected.starterCount()));
+            assertThat(bench.locator("[data-lineups-count]").textContent()).isEqualTo(String.valueOf(expected.substituteCount()));
+            assertThat(starters.locator("[data-lineups-player]").count()).isEqualTo(expected.starterCount());
+            assertThat(bench.locator("[data-lineups-player]").count()).isEqualTo(expected.substituteCount());
+            assertThat(bench.locator("[data-lineups-player]:visible").count()).isEqualTo(expected.substituteCount());
+            assertThat(bench.locator("[data-lineups-player]").evaluateAll("nodes => nodes.map(node => node.dataset.lineupsPlayer)"))
+                    .isEqualTo(expected.substitutes().stream().map(LineupsPresentation.Player::key).toList());
+            assertThat(starters.locator("[data-lineups-player]").evaluateAll("nodes => nodes.map(node => node.dataset.lineupsPlayer)"))
+                    .isEqualTo(expected.starterGroups().stream().flatMap(group -> group.players().stream())
+                            .map(LineupsPresentation.Player::key).toList());
+            assertThat(bench.locator("[data-lineups-name]").allTextContents())
+                    .containsExactlyElementsOf(expected.substitutes().stream().map(LineupsPresentation.Player::name).toList());
+        }
+    }
 
     @Test
     @Timeout(120)

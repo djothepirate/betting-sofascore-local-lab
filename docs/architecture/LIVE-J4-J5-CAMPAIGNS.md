@@ -1,17 +1,51 @@
 # Campagnes live locales J4/J5 — architecture WO-058
 
 Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
-Décision applicable : [ADR-SS-005 v0.5](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), groupes live et minute fixe pour les nouvelles préparations, avec exception distincte pour une collecte J5 manuelle.
+Décision applicable : [ADR-SS-005 v0.6](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), cible de vingt rencontres soumise à une qualification v5 dédiée, en cours, avec exception distincte pour une collecte J5 manuelle.
 Réalisation : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md).
 
-## Politique courante live-v4
+## Politique courante live-v5
 
-`LiveCampaignService` prépare désormais `live-v4` uniquement. Le manifeste inclut un
+Les nouvelles préparations utilisent `live-v5` et un profil `grouped-v5` séparé. Le manifeste
+fige 100 secondes pour les familles critiques, 300 secondes pour les compositions en jeu,
+trois tours de compositions, une seconde entre groupes, 2 500/20 000 appels et le plafond
+brut indépendant de 15 728 640 000 octets. La limite effective vaut au plus vingt rencontres,
+selon les enveloppes qualifiées, les simulations et le plafond configuré. Le régime établi
+coûte 2 appels par minute et par rencontre ; les réserves finales et budgets sont contrôlés
+séparément. La cadence n’est pas ralentie pour prolonger les budgets.
+
+Le candidat précédent à 75 secondes a tenu sa cadence native, mais les enveloppes mesurées
+n’admettent que dix-sept rencontres avec la marge requise. Sa [preuve reste conservée](../validation/WO058-GROUPED-LIVE-V5-CANDIDATE-75-PROFILE-20260908.json).
+La cible courante de 100 secondes suit la priorité à vingt rencontres. Son admission rejoue
+vingt-quatre scénarios de phases et transitions ; sa qualification native dédiée est en cours,
+avec intervalles critiques P95 ≤105 s et maximum ≤115 s. Le calcul moyen seul ne suffit pas.
+
+`GroupedAdmissionProfile` porte la version de politique ; le constructeur historique à deux
+arguments reste v4. `GroupedLiveScheduleV4` conserve son nom et accepte explicitement les deux
+versions, avec périodes et nombre de tours distincts. Les autres versions utilisent toujours
+l’ordonnanceur historique. Les nouveaux budgets et les paramètres de planning sont contraints
+par V40 en fonction de la version ; les migrations déjà partagées restent intactes.
+
+`openLiveGroupedV5` crée une autorité de transport dédiée. Le repère de fin d’échange demeure
+global, mais la pause d’une seconde est liée à l’identité de la même instance de session v5
+et à une réponse utilisable. Une nouvelle session ou un autre parcours ne peut pas réutiliser
+cette dérogation, même avec le même UUID. Le constructeur de la garde générale reste à au
+moins trois secondes. Les contrôles d’ordre, doublons, arrêt, admissibilité et propriété
+précèdent toujours le dispatch réel.
+
+Les politiques historiques et leur profil sont relus sans conversion. Une préparation v4
+est comparée à sa configuration v4 au lancement ; une configuration v5 ne la remplace pas.
+L’interface lit les paramètres figés pour afficher la cadence et calculer l’autonomie.
+
+## Politique historique live-v4
+
+Les préparations historiques `live-v4` sont conservées. Leur manifeste inclut un
 `GroupedAdmissionProfile` distinct : preuve SHA-256 dédiée, enveloppes requête/traitement
 des quatre familles, cible 60 s, LINEUPS 300 s, délai intra-groupe nul, inter-groupes 3 s,
 ordre J4/incidents/statistiques/LINEUPS et marge 10 %. L’ancien profil ne qualifie jamais le
-nouveau transport. `selectionMaximum` retourne le minimum du plafond opérateur et de la
-capacité temporelle ; sans preuve de groupes la capacité affichée est zéro.
+nouveau transport. Au lancement d’un manifeste v4 conservé, la capacité est recontrôlée avec
+son profil v4 et le plafond opérateur. La capacité proposée aux nouvelles préparations dépend
+du profil v5 ; elle reste nulle sans preuve de groupes v5.
 
 `LiveSchedule` conserve son ordonnanceur historique pour v1–v3 et délègue v4 à
 `GroupedLiveScheduleV4`. Les groupes sont phasés sur la minute, et LINEUPS sur cinq tours
@@ -49,7 +83,7 @@ ne renseigne pas de démarrage et conserve manifeste et transitions. Une répét
 effet supplémentaire ; si le lancement a gagné, l’annulation de préparation est refusée.
 
 Les sections qui suivent documentent les garanties communes et les comportements historiques
-v1–v3. Leurs cadences D, ordre J5 et délai systématique par endpoint ne s’appliquent pas à v4.
+v1–v3. Leurs cadences D, ordre J5 et délai systématique par endpoint ne s’appliquent pas à v4/v5.
 
 ## Session et autorité
 
@@ -105,7 +139,11 @@ observe une suspension de plus de 2,5 secondes ou une divergence UTC/monotone su
 secondes. Ce contrôle conservateur peut aussi arrêter une session après une longue suspension
 du runtime ; il ne reprend jamais les tâches perdues.
 
-## Ordonnanceur et limites
+## Ordonnanceur et limites historiques v1–v3
+
+Le bloc suivant décrit les politiques historiques v1–v3 et leur admission. Les nouvelles
+préparations v5 et les manifestes v4 conservés suivent les politiques distinctes décrites
+en tête de ce document ; les anciennes valeurs ne qualifient pas ces groupes.
 
 `LiveSchedule` sépare état sportif, état de collecte et complétude finale. Avec N cibles retenues,
 `LiveCadence` calcule `D = max(60, 30 × (N − 1))` secondes : 60 s jusqu'à trois cibles,
@@ -309,11 +347,15 @@ onglet masqué, ignore une ancienne révision et conserve focus, sélection et d
 Une case devenue non sélectionnable est désactivée et décochée ; le compteur exclut les cases
 désactivées. `STOPPED_ERROR` rend la case éligible à nouveau sans la recocher. Une fixture
 synthétique reste désactivée indépendamment des états de campagne.
-Les DTO excluent payloads et identité de processus. Le retard affiché est celui de l'autorisation
-transport, explicitement distinct d'une mesure on-wire. Les familles deviennent en retard après
-deux intervalles sans succès : J4 utilise D en attente/contrôle de fin et `max(300 s, D)` en jeu ;
-J5 utilise D en jeu ; LINEUPS utilise aussi D en attente de début pour `live-v3` seulement.
-D est lu dans le manifeste historique, pas dans la configuration courante.
+Les DTO excluent payloads et identité de processus. Le retard d'autorisation transport reste
+explicitement distinct d'une mesure on-wire. Les familles deviennent en retard après deux
+intervalles sans succès. Pour v1–v3, J4 utilise D en attente/contrôle de fin et `max(300 s, D)`
+en jeu ; J5 utilise D en jeu ; LINEUPS utilise aussi D en attente de début pour `live-v3` seulement.
+D est lu dans le manifeste historique, pas dans la configuration courante. Pour v4/v5, la vue
+utilise l'intervalle et la prochaine échéance de chaque famille persistée : respectivement
+60/100 secondes pour les familles critiques et 300 secondes pour LINEUPS en jeu, 60/100 secondes
+pour J4 et LINEUPS en attente de début. Le retard nominal de cette échéance est affiché
+séparément de l'âge de réception et du délai d'autorisation transport.
 La fin du suivi fige leur âge à la transition terminale persistée.
 Le libellé sportif affiche la description J4 pour `inprogress`, avec repli sur le type si elle
 manque. Pour `finished` avec `isAwarded=true`, il affiche « Victoire sur tapis vert », tout en

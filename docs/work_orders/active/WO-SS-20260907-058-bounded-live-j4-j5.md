@@ -1,6 +1,6 @@
 # WO-SS-20260907-058 — Campagnes live locales J4/J5 sur sélection de rencontres
 
-- **Statut :** `IN_PROGRESS` — live-v4/V39 réalisé, cadence locale à dix matchs qualifiée trente minutes après initialisation ; enveloppe historique 1 s/5 Mio non revalidée, échecs conservés ; revue humaine, essai de fraîcheur fournisseur et fusion distincts, aucune clôture.
+- **Statut :** `IN_PROGRESS` — live-v5/V40 réalisé, vingt rencontres à 100 secondes qualifiées en boucle locale synthétique pendant 35 minutes, dont 30 établies ; `clean verify` et `-Pintegration-tests verify` réussis le 08/09. Live-v4/V39 conserve sa preuve historique à dix matchs. Enveloppe historique 1 s/5 Mio non revalidée, échecs conservés ; revue humaine, essai de fraîcheur fournisseur et fusion distincts, aucune clôture.
 - **Date :** 2026-09-07.
 - **Jalon :** expérimentation live locale après J9, distincte des parcours manuels existants.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
@@ -8,16 +8,85 @@
 - **Base exacte :** `6dfd14286d4f269cbe100bd965257c20298538db`, sommet GitHub vérifié le 7 septembre.
 - **Worktree :** `.tmp/wo058-live-j4-j5`, depuis le dossier Codex du Lab ; worktree distinct d'Eclipse.
 - **Autorité reçue :** ADR-SS-005 v0.1 accepté, puis déclaration « Je valide le WO-058 les travaux peuvent commencer » et demande explicite d'exécuter le plan de réalisation ; port 8087 libéré pour les tests.
-- **ADR courant :** [ADR-SS-005 v0.5](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), plan d’implémentation explicitement demandé le 08/09 : minute fixe et qualification soutenue live-v4, puis regroupement d’une collecte J5 manuelle confirmé par le propriétaire. Les comportements live v1–v3 restent historiques. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
-- **Livrable présent :** ADR accepté, WO validé, réalisation locale et qualification hors fournisseur ; état des preuves dans le rapport de réalisation.
+- **ADR courant :** [ADR-SS-005 v0.6](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), capacité de quinze à vingt rencontres privilégiée avec cadence explicitement qualifiée, pause d’une seconde entre groupes v5 et nouveaux budgets. Les comportements live v1–v4 restent historiques. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
+- **Livrable présent :** ADR accepté, WO validé, réalisations historiques et leurs qualifications hors fournisseur conservées ; complément v5/V40 implémenté, qualification synthétique dédiée et deux vérifications Maven finales réussies. La preuve de fraîcheur fournisseur ne découle pas de la qualification locale.
 - **Alignement de gouvernance :** renvois ciblés dans ADR-SS-001 et AGENTS.md ; ADR-SS-002 à 004 inchangés.
-- **Réalisation applicative :** réalisée et qualifiée hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés ; compléments prématch/phase/clôture et incidents V16/V17 décrits dans les retours ci-dessous, statistiques intégrées aux pages ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur :** essai à 8 arrêté volontairement, essai à 16 interrompu après coupure PostgreSQL, puis nouveaux lancements manuels à 7 et à 4 ; dernière exécution terminée, observations distinctes des qualifications locales.
+- **Réalisations historiques :** réalisées et qualifiées hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés sous les anciennes politiques ; compléments prématch/phase/clôture et incidents V16/V17 décrits dans les retours ci-dessous, statistiques intégrées aux pages. Les nouvelles préparations v5 sont limitées à vingt rencontres selon leur propre qualification ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur historiques :** essai à 8 arrêté volontairement, essai à 16 interrompu après coupure PostgreSQL, puis nouveaux lancements manuels à 7 et à 4 ; dernière exécution de cette série terminée, observations distinctes des qualifications locales.
 
 Les statuts restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 `NO_CRITICAL_DEPENDENCY`. Le socle reste Java 25 LTS, Spring Boot 4.1.0, Maven wrapper,
 PostgreSQL local Docker Desktop et application sur `127.0.0.1:8087`, textes UTF-8.
 
 ## 1. Objectif et origine du besoin
+
+### Seizième retour — visibilité des remplaçants et capacité de la prochaine campagne
+
+Après `06c7e3d`, le propriétaire confirme la clôture d’une session interrompue, la nouvelle
+préparation et l’actualisation à la minute. Il signale temporairement douze remplaçants
+comptés mais onze visibles, puis confirme l’apparition du joueur. La lecture seule de
+l’observation concernée et de la projection retrouve les douze joueurs. Un scénario voisin
+reproduit un défaut de visibilité Chromium après déplacement natif des cartes ; le correctif
+et ses limites sont consignés dans le [rapport compositions](../../validation/WO058-LINEUPS-VISIBILITY-20260908.md).
+
+Le propriétaire demande ensuite 15–20 matchs simultanés, 20 000 appels par campagne, une
+hausse du plafond par rencontre, une seconde entre groupes et une cible initiale de vingt
+secondes. Informé de l’incompatibilité de cette combinaison avec la file séquentielle et les
+coûts qualifiés, il arbitre explicitement : **« Priorité aux 15–20 matchs, avec une cadence
+explicitement qualifiée »**. Le candidat retenu est vingt rencontres à 100 secondes, avec
+2 500/20 000 appels et compositions en jeu à 300 secondes, politique `live-v5`.
+
+Le premier candidat à 75 s a tenu sa cadence native sur trente minutes établies, mais ses
+maxima mesurés conduisent à une admission Java de dix-sept rencontres seulement. Le candidat
+est donc porté à 100 s pour respecter la priorité à vingt, sans réduire les coûts retenus.
+Le [profil diagnostique à 75 s](../../validation/WO058-GROUPED-LIVE-V5-CANDIDATE-75-PROFILE-20260908.json)
+est conservé séparément ; il ne qualifie pas vingt rencontres. La politique courante utilise
+trois phases de compositions et vingt-quatre scénarios d’admission.
+
+La mesure dédiée à 100 secondes est terminée le 08/09 à 18:28:31 UTC : 2 100,010 secondes,
+dont 1 800,010 établies, 1 413 appels au total, 1 200 établis, zéro cycle manqué et 80 couples
+rencontre/famille contrôlés. Le [profil final v5](../../validation/WO058-GROUPED-LIVE-V5-PROFILE-20260908.json)
+de SHA-256 `923c4499d2005d4d2f91499148f749dc7f80ea0868ff1cfc7a42106ac9863225`
+est `QUALIFIED_SYNTHETIC_LOOPBACK_WITH_STATED_SCOPE` pour vingt rencontres. Les enveloppes
+requête/traitement sont J4 400/600 ms, incidents 400/500 ms, statistiques 350/500 ms et
+compositions 350/450 ms ; aucune ne descend sous le plancher du candidat précédent.
+Le travail calculé vaut 241 secondes sur 270 allouables par cinq minutes ; les 24 scénarios
+Java passent avec ce profil exact.
+
+La réception critique atteint 100,183 s au P95 et 100,520 s au maximum ; le retard nominal
+des compositions atteint 2,207 s au P95 et 2,633 s au maximum. Ces résultats concernent
+Chromium loopback et PostgreSQL isolé, avec corps établis de 64 Kio. Les quatre-vingts réponses
+initiales de 5 Mio sont mesurées séparément, hors des enveloppes constantes. Aucun appel
+fournisseur ni accès à la base opérateur n’a été effectué. La fraîcheur réelle chez
+l’opérateur reste à observer. Les vérifications Maven finales sont décrites ci-dessous.
+
+Son objectif ultérieur est une bonne opérabilité à 50–100 rencontres. Le bilan doit donc
+présenter les cadences minimales estimées selon la charge et séparer estimation, qualification
+locale et observation fournisseur. La capacité supérieure à vingt n’est pas activée par
+extrapolation. Aucun parallélisme fournisseur ni nouvel endpoint n’est introduit.
+
+Le lot ajoute V40, le profil v5 séparé et la barrière de session à une seconde. Les campagnes
+historiques conservent leur politique, leurs plafonds et leur empreinte. Les mesures ciblent
+Chromium loopback et PostgreSQL isolé. La campagne opérateur a été préservée pendant les
+premiers travaux, puis le propriétaire a libéré le port 8087. Les deux vérifications Maven
+finales ont été exécutées après la qualification dédiée, sans concurrence avec son exécution
+native, sous le run `20260908T183834Z-14f76e8f805746f8916f65da8aca920b` :
+
+| Commande effective | Résultat et fin UTC le 08/09 |
+|---|---|
+| `.\mvnw.cmd --offline -Dmaven.repo.local=C:/Users/geoff/.m2/repository clean verify` | `BUILD SUCCESS`, code 0, 18:47:26 UTC |
+| `.\mvnw.cmd --offline -Dmaven.repo.local=C:/Users/geoff/.m2/repository -Pintegration-tests verify` | `BUILD SUCCESS`, code 0, 18:56:06 UTC |
+
+Chaque commande produit 1 840 cas Surefire, zéro échec, zéro erreur et cinq ignorés, ainsi
+que 166 cas Failsafe, sans échec, erreur ni ignoré. Les suites PostgreSQL comprennent 73 cas
+Flyway et 54 cas de persistance live. Le manifeste de vérification local
+`.tmp/wo058-v5-final-verification.json` conserve les commandes, empreintes et XML archivés ;
+le [rapport v5](../../validation/WO058-GROUPED-LIVE-V5-20260908.md) relie cette preuve à
+la qualification native et à ses limites.
+
+La première passe complète, terminée à 18:34:44 UTC, reste conservée comme échec : les
+fixtures de `LivePreparationAdmissionTest` attendaient encore les nouvelles préparations v4.
+Leur correction vers le profil v5 explicite conserve les refus de capacité, de stockage et
+de preuve manquante ; aucune garde de production n’a été abaissée pour obtenir les passes finales.
 
 ### Quinzième retour — clôture accessible après interruption d’Eclipse
 
@@ -607,12 +676,16 @@ de chaque famille et le délai global, pour obtenir une observation postérieure
 ou répétition post-match n'est ajoutée. S'il n'est pas exécutable ou échoue, le statut sportif reste
 confirmé et la finalisation est explicitement incomplète.
 
-## 7. Bornes retenues et contrôle de capacité
+## 7. Bornes historiques et contrôle de capacité
 
-Ces bornes sont celles d'ADR-SS-005 v0.2, issue des décisions du propriétaire. Elles ne
+Ces bornes sont celles d'ADR-SS-005 v0.2, issue des décisions du propriétaire, conservées pour
+les anciennes politiques. Le complément v5 en tête du WO et le §0 de l'ADR courant définissent
+la cible 100/300 secondes, les limites 20 rencontres et 2 500/20 000 appels, ainsi que le plafond
+brut indépendant ; leur qualification synthétique dédiée est réussie, avec la portée décrite
+en tête du WO. Les valeurs historiques ci-dessous ne
 constituent pas un quota fournisseur connu ou une garantie de performance déjà mesurée.
 
-| Paramètre | Valeur courante |
+| Paramètre | Valeur historique v0.2 |
 |---|---|
 | Campagnes actives | Une seule globalement, lease commune conservée |
 | Nombre de matchs | Maximum éligible configuré par campagne ; 5, 10 et 25 admis avec profil de charge adapté ; limite technique d'entrée de 100 identifiants |
@@ -878,10 +951,14 @@ Ni la présence d'un test ni un ancien total vert ne vaut nouvelle exécution.
 Les étapes peuvent former des commits séparés de WO-058. Si elles deviennent plusieurs lots,
 réserver leurs identifiants à l'ouverture ; ne pas déclarer dès maintenant des WO enfants créés.
 
-Les arbitrages fonctionnels ne sont plus à redemander : plafond paramétrable et cadence D, quatre heures,
-1 000/3 000 tentatives, J4 sur signaux + secours max(300 s, D), dernier cycle J5, isolation du
-schéma métier incompatible et nouvel échantillon J5 après 404 au cycle normal. La lecture locale
-cinq secondes et les autres paramètres conservés figurent dans le plan demandé.
+Les arbitrages fonctionnels historiques ne sont plus à redemander : plafond paramétrable et
+cadence D, quatre heures, 1 000/3 000 tentatives, J4 sur signaux + secours max(300 s, D), dernier
+cycle J5, isolation du schéma métier incompatible et nouvel échantillon J5 après 404 au cycle
+normal. Les nouveaux arbitrages v5 sont également acquis et les remplacent dans leur portée :
+100 secondes pour J4/incidents/statistiques, 300 secondes pour LINEUPS en jeu, vingt rencontres
+au plus, pause d'une seconde entre groupes de la même session et 2 500/20 000 appels. Leur
+qualification synthétique dédiée et les deux vérifications Maven finales sont réussies ;
+l’observation fournisseur reste distincte. La lecture locale cinq secondes est conservée.
 
 Restent les décisions distinctes suivantes :
 
@@ -899,7 +976,8 @@ avec l'[architecture](../../architecture/LIVE-J4-J5-CAMPAIGNS.md) et le
 [runbook](../../runbooks/LIVE-J4-J5-CAMPAIGNS.md). L'ancien rapport de cadrage conserve séparément
 la preuve Maven non verte liée au port 8087. Aucun résultat historique n'est transformé en succès.
 
-Les étapes B–D sont réalisées et qualifiées hors fournisseur ; une
+Les étapes B–D historiques sont réalisées et qualifiées hors fournisseur ; le complément v5/V40
+dispose de sa qualification synthétique dédiée et de ses deux vérifications Maven finales réussies. Une
 campagne fournisseur exige en plus le manifeste concret et le lancement de E. La revue n'est ni une campagne réussie,
 ni la preuve d'une donnée sportive exacte. La clôture et la livraison Git sont séparées : une PR
 du WO cible exclusivement `feature/V0.1.0-RC01`, avec revue humaine et fusion avant classement terminé.

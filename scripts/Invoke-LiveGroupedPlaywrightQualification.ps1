@@ -1,8 +1,13 @@
 [CmdletBinding()]
-param([string]$BrowserCachePath = '', [string]$DockerExecutablePath = '')
+param([string]$BrowserCachePath = '', [string]$DockerExecutablePath = '',
+    [ValidateSet('live-v4', 'live-v5')][string]$PolicyVersion = 'live-v4')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
+$v5 = $PolicyVersion -eq 'live-v5'
+$qualifiedMatches = if ($v5) { 20 } else { 10 }
+$criticalSeconds = if ($v5) { 100 } else { 60 }
+$gapSeconds = if ($v5) { 1 } else { 3 }
 if ([string]::IsNullOrWhiteSpace($BrowserCachePath)) {
     $BrowserCachePath = Join-Path $repositoryRoot '.tmp/provider-playwright-browsers'
 }
@@ -28,6 +33,7 @@ try {
     $qualificationStartedAt = [DateTime]::UtcNow
     & .\mvnw.cmd '-Pprovider-playwright-runtime,provider-playwright-local-qualification' '-DskipTests=false' '-DskipITs=false' `
         '-Dwo058.grouped.sustained=true' '-Dit.test=LiveGroupedCampaignLocalQualificationIT,LiveTenMatchRefreshBrowserQualificationIT' `
+        "-Dwo058.grouped.v5=$($v5.ToString().ToLowerInvariant())" "-Dwo058.ui.matches=$qualifiedMatches" `
         "-Dprovider.playwright.browser-cache=$browserCache" @dockerArgument `
         'failsafe:integration-test@provider-playwright-loopback-qualification' 'failsafe:verify@provider-playwright-loopback-qualification'
     if ($LASTEXITCODE -ne 0) { throw 'Grouped sustained qualification failed; inspect the preserved report' }
@@ -43,10 +49,12 @@ try {
     if ([int]$uiXml.testsuite.tests -ne 1 -or [int]$uiXml.testsuite.failures -ne 0 -or [int]$uiXml.testsuite.errors -ne 0 -or [int]$uiXml.testsuite.skipped -ne 0) {
         throw 'Ten-match UI publication must be qualified without skipped tests'
     }
-    $reportFile = Get-Item -LiteralPath '.tmp/wo058-v4-sustained-qualification.json'
+    $reportFile = Get-Item -LiteralPath ".tmp/wo058-$($PolicyVersion.Replace('live-', ''))-sustained-qualification.json"
     if ($reportFile.LastWriteTimeUtc -lt $qualificationStartedAt) { throw 'Grouped measured report is stale' }
     $report = Get-Content -LiteralPath $reportFile.FullName -Raw | ConvertFrom-Json
-    if ($report.status -ne 'PASSED' -or $report.sustainedQualification -ne $true -or $report.matches -ne 10 `
+    if ($report.status -ne 'PASSED' -or $report.sustainedQualification -ne $true -or $report.matches -ne $qualifiedMatches `
+            -or $report.policyVersion -ne $PolicyVersion -or $report.criticalIntervalSeconds -ne $criticalSeconds `
+            -or $report.interGroupDelaySeconds -ne $gapSeconds `
             -or $report.warmupSeconds -ne 300 -or $report.productionDockerDfProbePerRequest -ne $true `
             -or $report.steadyElapsedSeconds -lt 1800 -or $report.realProviderCalls -ne 0 `
             -or $report.operatorDatabaseUsed -ne $false) {

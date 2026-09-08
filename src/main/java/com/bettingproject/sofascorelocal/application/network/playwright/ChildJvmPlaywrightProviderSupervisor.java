@@ -200,6 +200,16 @@ public final class ChildJvmPlaywrightProviderSupervisor
     }
 
     @Override
+    public PlaywrightProviderCampaign openLiveGroupedV5(
+            UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        if (!Set.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS)
+                .equals(allowedEndpoints))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
+        return open(campaignId, allowedEndpoints, LiveProviderGroupTracker.Authority.LIVE_V5);
+    }
+
+    @Override
     public PlaywrightProviderCampaign openManualJ5Grouped(
             UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
         if (!Set.of(SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_INCIDENTS,
@@ -442,7 +452,8 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 boolean continuation = state.liveGroups != null && state.liveGroups.isContinuation(request, group);
                 Runnable continuationGuard = () -> { requireActive(state); admission.check(); };
                 if (continuation) providerNetworkStartDelayGate.admitGroupContinuation(continuationGuard);
-                else providerNetworkStartDelayGate.awaitNextDispatch(continuationGuard);
+                else providerNetworkStartDelayGate.awaitNextGroupDispatch(
+                        group == null ? null : state.liveGroups, continuationGuard);
                 try (PlaywrightDispatchAdmission.Permit permit = admission.acquireDispatchPermit()) {
                     // Admission may perform durable checks. Never hold the supervisor stop lock during SQL.
                     state.dispatchLock.lock();
@@ -551,7 +562,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
         finally {
             if (dispatchStarted) {
                 providerNetworkStartDelayGate.recordDispatchFinished(
-                        usableResponseEvidence);
+                        usableResponseEvidence, group == null ? null : state.liveGroups);
                 if (state.liveGroups != null) state.liveGroups.finished(usableResponseEvidence);
             }
             state.ioLock.unlock();

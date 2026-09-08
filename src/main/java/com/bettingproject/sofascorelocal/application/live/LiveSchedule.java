@@ -53,8 +53,8 @@ public final class LiveSchedule {
         this.prematchLineups = "live-v3".equals(policyVersion);
         this.fallbackInterval = interval.compareTo(Duration.ofMinutes(5)) > 0 ? interval : Duration.ofMinutes(5);
         targets.forEach(id -> events.put(id, new Event(id, start)));
-        this.grouped = "live-v4".equals(policyVersion)
-                ? new GroupedLiveScheduleV4(targets, start, endsAt, interval, campaignId) : null;
+        this.grouped = "live-v4".equals(policyVersion) || "live-v5".equals(policyVersion)
+                ? new GroupedLiveScheduleV4(targets, start, endsAt, interval, campaignId, policyVersion) : null;
     }
 
     public synchronized Optional<Due> next(Instant now) {

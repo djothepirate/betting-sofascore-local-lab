@@ -45,6 +45,7 @@ class LivePreparationAdmissionTest {
     private static final long PROVIDER_EVENT_ID = 17000001L;
     private static final long SECOND_PROVIDER_EVENT_ID = 17000002L;
     private static final long FIVE_MIB = 5L * 1024 * 1024;
+    private static final long V5_RAW_BYTES = 15_728_640_000L;
 
     @ParameterizedTest
     @ValueSource(ints = {-3, 1})
@@ -53,7 +54,7 @@ class LivePreparationAdmissionTest {
         var capacityReads = new AtomicInteger();
         LiveStorageCapacityProbe capacity = () -> {
             capacityReads.incrementAndGet();
-            return 2 * 1000L * FIVE_MIB + properties.getDiskReserveBytes();
+            return 2 * V5_RAW_BYTES + properties.getDiskReserveBytes();
         };
         var h = new Harness(properties, capacity);
         var event = observation(PROVIDER_EVENT_ID, NOW.plus(Duration.ofDays(daysFromNow)), "notstarted");
@@ -66,7 +67,9 @@ class LivePreparationAdmissionTest {
                 new Target(event.identity().value(), PROVIDER_EVENT_ID, event.observationId(), 23));
         assertThat(preparation.manifest().preparedAt()).isEqualTo(NOW);
         assertThat(preparation.manifest().expiresAt()).isEqualTo(NOW.plusSeconds(300));
-        assertThat(preparation.manifest().maximumBytes()).isEqualTo(1000L * FIVE_MIB);
+        assertThat(preparation.manifest().maximumBytes()).isEqualTo(V5_RAW_BYTES);
+        assertThat(preparation.manifest().policyVersion()).isEqualTo("live-v5");
+        assertThat(preparation.manifest().cycleInterval()).isEqualTo(Duration.ofSeconds(100));
         assertThat(capacityReads.get()).isEqualTo(1);
         assertThat(event.status().type()).isEqualTo("notstarted");
         verify(h.store).prepare(preparation.manifest());
@@ -114,7 +117,7 @@ class LivePreparationAdmissionTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"2,false", "2,true", "3,false", "3,true", "4,true", "5,true", "10,true"})
+    @CsvSource({"2,false", "2,true", "3,false", "3,true", "4,true", "5,true", "10,true", "15,true", "20,true"})
     void qualifiedMultipleSelectionPreservesEveryEligibleTargetAndExcludesFinishedBeforeAdmission(int count, boolean mixed) {
         var properties = qualifiedProperties();
         properties.setQualifiedMatchCapacity(count);
@@ -134,12 +137,14 @@ class LivePreparationAdmissionTest {
         assertThat(preparation.manifest().targets()).containsExactlyElementsOf(eligible.stream()
                 .map(e -> new Target(e.identity().value(), e.identity().providerEventId(), e.observationId(), 23)).toList());
         assertThat(preparation.excludedFinished()).containsExactlyElementsOf(mixed ? List.of(selected.getFirst()) : List.of());
-        assertThat(preparation.manifest().maximumBytes()).isEqualTo(Math.min(3000L, count * 1000L) * FIVE_MIB);
+        assertThat(preparation.manifest().maximumBytes()).isEqualTo(V5_RAW_BYTES);
+        assertThat(preparation.manifest().maximumCallsPerEvent()).isEqualTo(2500);
+        assertThat(preparation.manifest().maximumCalls()).isEqualTo(20000);
         assertThat(preparation.manifest().qualifiedMatchCapacity()).isEqualTo(count);
         assertThat(preparation.manifest().admissionProfile().requestEnvelope()).isEqualTo(properties.getRequestEnvelope());
-        assertThat(preparation.manifest().admissionProfile().groupedProfile()).isEqualTo(properties.groupedAdmissionProfile());
-        assertThat(preparation.manifest().policyVersion()).isEqualTo("live-v4");
-        assertThat(preparation.manifest().cycleInterval()).isEqualTo(Duration.ofSeconds(60));
+        assertThat(preparation.manifest().admissionProfile().groupedProfile()).isEqualTo(properties.groupedAdmissionProfileV5());
+        assertThat(preparation.manifest().policyVersion()).isEqualTo("live-v5");
+        assertThat(preparation.manifest().cycleInterval()).isEqualTo(Duration.ofSeconds(100));
         verify(h.store).prepare(preparation.manifest());
         verify(h.events, never()).save(any());
         h.verifyNoProviderWork();
@@ -147,7 +152,7 @@ class LivePreparationAdmissionTest {
 
     @ParameterizedTest
     @CsvSource({"5,1", "5,2", "5,3", "5,4", "5,5",
-            "10,1", "10,10", "25,3", "25,5", "25,10", "1000,1"})
+            "10,1", "10,10", "20,20", "25,3", "25,5", "25,10", "25,20", "1000,1"})
     void configuredSelectionCeilingDoesNotInvalidateSmallerQualifiedSelections(int ceiling, int count) {
         var properties = qualifiedProperties();
         properties.setQualifiedMatchCapacity(ceiling);
@@ -160,21 +165,21 @@ class LivePreparationAdmissionTest {
                 .thenReturn(Optional.of(event)));
         var prepared = h.service.prepareSelection(selected.stream().map(event -> event.identity().value()).toList());
         assertThat(prepared.manifest().targets()).hasSize(count);
-        assertThat(prepared.manifest().qualifiedMatchCapacity()).isEqualTo(Math.min(ceiling,10));
-        assertThat(prepared.manifest().cycleInterval()).isEqualTo(Duration.ofSeconds(60));
-        assertThat(prepared.manifest().policyVersion()).isEqualTo("live-v4");
+        assertThat(prepared.manifest().qualifiedMatchCapacity()).isEqualTo(Math.min(ceiling,20));
+        assertThat(prepared.manifest().cycleInterval()).isEqualTo(Duration.ofSeconds(100));
+        assertThat(prepared.manifest().policyVersion()).isEqualTo("live-v5");
         h.verifyNoProviderWork();
     }
 
-    @ParameterizedTest @ValueSource(ints = {5, 10, 25})
-    void theNextEligibleMatchAboveTheConfiguredCeilingIsRejectedWithoutProviderWork(int ceiling) {
+    @ParameterizedTest @ValueSource(ints = {5, 10, 20, 25})
+    void theNextEligibleMatchAboveTheEffectiveSelectionCeilingIsRejectedWithoutProviderWork(int ceiling) {
         var properties = qualifiedProperties();
         properties.setQualifiedMatchCapacity(ceiling);
         properties.setRequestEnvelope(Duration.ofSeconds(1));
         properties.setQualificationSha256("b".repeat(64));
         var h = new Harness(properties, () -> Long.MAX_VALUE);
         var selected = new ArrayList<UUID>();
-        for (int i = 0; i <= ceiling; i++) {
+        for (int i = 0; i <= Math.min(ceiling, 20); i++) {
             var event = observation(PROVIDER_EVENT_ID + i, NOW, "inprogress");
             selected.add(event.identity().value());
             when(h.events.findLatestByCanonicalId(event.identity().value())).thenReturn(Optional.of(event));
@@ -222,28 +227,41 @@ class LivePreparationAdmissionTest {
     }
 
     @ParameterizedTest @ValueSource(ints={20,25,1000})
-    void aConfiguredCeilingAboveTheQualifiedCapacityDoesNotSilentlyLengthenTheMinute(int ceiling) {
+    void aConfiguredCeilingAboveTheQualifiedCapacityDoesNotSilentlyLengthenTheHundredSecondCadence(int ceiling) {
         var properties=qualifiedProperties(); properties.setQualifiedMatchCapacity(ceiling);
+        // The mean bound allows twenty, but this synthetic 1.05 s profile passes the phase replay only at nineteen.
+        properties.getGroupedV5().getEndpoints().values().forEach(budget -> {
+            budget.setRequestEnvelope(Duration.ofSeconds(1));
+            budget.setProcessingEnvelope(Duration.ofMillis(50));
+        });
         var h=new Harness(properties,()->Long.MAX_VALUE);
         var selected=new ArrayList<UUID>();
-        for(int i=0;i<11;i++) {
+        for(int i=0;i<20;i++) {
             var event=observation(PROVIDER_EVENT_ID+i,NOW,"inprogress");
             selected.add(event.identity().value());
             when(h.events.findLatestByCanonicalId(event.identity().value())).thenReturn(Optional.of(event));
         }
-        assertThat(h.service.selectionMaximum()).isEqualTo(10);
+        assertThat(h.service.selectionMaximum()).isEqualTo(19);
         assertThatThrownBy(()->h.service.prepareSelection(selected)).hasMessage("LIVE_CAPACITY_REFUSED_REDUCE_SELECTION");
         verify(h.store,never()).prepare(any());
         h.verifyNoProviderWork();
     }
 
-    @Test
-    void historicalQualificationAloneDoesNotAuthorizeANewGroupedPreparation() {
+    @ParameterizedTest @ValueSource(booleans = {false, true})
+    void historicalQualificationAloneDoesNotAuthorizeANewV5Preparation(boolean includeV4Profile) {
         var properties=new LiveCampaignProperties(); properties.setQualificationSha256("b".repeat(64));
+        if (includeV4Profile) {
+            properties.getGrouped().setQualificationSha256("c".repeat(64));
+            properties.getGrouped().getEndpoints().values().forEach(budget -> {
+                budget.setRequestEnvelope(Duration.ofMillis(500));
+                budget.setProcessingEnvelope(Duration.ofMillis(100));
+            });
+        }
         var capacityReads=new AtomicInteger();
         var h=new Harness(properties,()->{capacityReads.incrementAndGet();return Long.MAX_VALUE;});
         var event=observation(PROVIDER_EVENT_ID,NOW,"notstarted");
         when(h.events.findLatestByCanonicalId(event.identity().value())).thenReturn(Optional.of(event));
+        assertThat(h.service.selectionMaximum()).isZero();
         assertThatThrownBy(()->h.service.prepareSelection(List.of(event.identity().value())))
                 .hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
         assertThat(capacityReads).hasValue(0);
@@ -254,8 +272,8 @@ class LivePreparationAdmissionTest {
     /** Synthetic test evidence only; it does not qualify operator traffic or lower runtime defaults. */
     private static LiveCampaignProperties qualifiedProperties() {
         var properties=new LiveCampaignProperties();
-        properties.getGrouped().setQualificationSha256("c".repeat(64));
-        properties.getGrouped().getEndpoints().values().forEach(budget->{
+        properties.getGroupedV5().setQualificationSha256("c".repeat(64));
+        properties.getGroupedV5().getEndpoints().values().forEach(budget->{
             budget.setRequestEnvelope(Duration.ofMillis(500));
             budget.setProcessingEnvelope(Duration.ofMillis(100));
         });

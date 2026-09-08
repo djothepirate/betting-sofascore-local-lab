@@ -19,6 +19,7 @@ public final class LiveCampaignProperties {
     private Duration requestEnvelope = Duration.ofSeconds(10);
     private Duration processingEnvelope = Duration.ofSeconds(1);
     private final Grouped grouped = new Grouped();
+    private final Grouped groupedV5 = new Grouped();
     private Path dockerExecutable;
     private String postgresContainer = "betting-sofascore-local-lab-postgres";
     private Duration duration = Duration.ofHours(4);
@@ -34,13 +35,20 @@ public final class LiveCampaignProperties {
     public Duration getProcessingEnvelope() { return processingEnvelope; }
     public void setProcessingEnvelope(Duration v) { processingEnvelope = v; }
     public Grouped getGrouped() { return grouped; }
+    public Grouped getGroupedV5() { return groupedV5; }
     public GroupedAdmissionProfile groupedAdmissionProfile() {
-        if (grouped.qualificationSha256 == null || !grouped.qualificationSha256.matches("[0-9a-f]{64}"))
+        return groupedAdmissionProfile(grouped, "live-v4");
+    }
+    public GroupedAdmissionProfile groupedAdmissionProfileV5() {
+        return groupedAdmissionProfile(groupedV5, "live-v5");
+    }
+    private static GroupedAdmissionProfile groupedAdmissionProfile(Grouped settings, String policyVersion) {
+        if (settings.qualificationSha256 == null || !settings.qualificationSha256.matches("[0-9a-f]{64}"))
             throw new IllegalStateException("LIVE_GROUPED_QUALIFICATION_REQUIRED");
         var envelopes = new EnumMap<SofascoreEndpointType, EndpointEnvelope>(SofascoreEndpointType.class);
-        grouped.endpoints.forEach((endpoint, budget) -> envelopes.put(endpoint,
+        settings.endpoints.forEach((endpoint, budget) -> envelopes.put(endpoint,
                 new EndpointEnvelope(budget.requestEnvelope, budget.processingEnvelope)));
-        return new GroupedAdmissionProfile(envelopes, grouped.qualificationSha256);
+        return new GroupedAdmissionProfile(envelopes, settings.qualificationSha256, policyVersion);
     }
     /** Separate opt-in evidence and envelopes. Historical settings never qualify grouped traffic. */
     public static final class Grouped {

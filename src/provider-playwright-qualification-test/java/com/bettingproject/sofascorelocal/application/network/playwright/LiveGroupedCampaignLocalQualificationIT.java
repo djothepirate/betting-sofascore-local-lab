@@ -41,7 +41,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /** Explicit, synthetic loopback qualification. No application startup or provider access. */
 class LiveGroupedCampaignLocalQualificationIT {
-    private static final int MATCHES = 10;
+    private static final boolean V5 = Boolean.getBoolean("wo058.grouped.v5");
+    private static final String POLICY = V5 ? "live-v5" : "live-v4";
+    private static final int MATCHES = V5 ? 20 : 10;
+    private static final int CRITICAL_SECONDS = V5 ? 100 : 60;
+    private static final int GROUP_GAP_SECONDS = V5 ? 1 : 3;
     private static final int BODY_BYTES = 64 * 1024;
     private static final List<SofascoreEndpointType> FAMILIES =
             List.of(EVENT_DETAILS, EVENT_INCIDENTS, EVENT_STATISTICS, EVENT_LINEUPS);
@@ -51,24 +55,27 @@ class LiveGroupedCampaignLocalQualificationIT {
 
     @Test @Timeout(value = 4, unit = TimeUnit.MINUTES)
     void smokeIncludesFirstTenGroupsAndTransactionalNormalization() throws Exception {
-        // Forty initial 5 MiB responses can outlast a 70-second smoke window on
-        // a cold local machine. This checks coverage/transactions/cleanup only;
+        // The eighty v5 initial 5 MiB responses need a wider cold-start window.
+        // This checks coverage/transactions/cleanup only;
         // the separate fixed 300+1800-second run qualifies cadence.
-        run(0, 120, false, Path.of(".tmp/wo058-v4-smoke-qualification.json"));
+        run(0, V5 ? 180 : 120, false, Path.of(".tmp/wo058-" + (V5 ? "v5" : "v4") + "-smoke-qualification.json"));
     }
 
     @Test @Timeout(value = 45, unit = TimeUnit.MINUTES)
     @EnabledIfSystemProperty(named = "wo058.grouped.sustained", matches = "true")
     void tenMatchesRemainFreshForThirtyMinutesAfterFiveMinuteWarmup() throws Exception {
         // These durations are deliberately fixed: a short run cannot accidentally qualify production.
-        run(300, 1800, true, Path.of(".tmp/wo058-v4-sustained-qualification.json"));
+        run(300, 1800, true, Path.of(".tmp/wo058-" + (V5 ? "v5" : "v4") + "-sustained-qualification.json"));
     }
 
     private static void run(int warmupSeconds, int steadySeconds, boolean sustained, Path reportPath) throws Exception {
         var samples = new ArrayList<Sample>();
         Map<String, Object> report = new LinkedHashMap<>();
         report.put("scope", "EXPERIMENTAL LOCAL_ONLY SYNTHETIC_LOOPBACK");
-        report.put("policyVersion", "live-v4");
+        report.put("policyVersion", POLICY);
+        report.put("criticalIntervalSeconds", CRITICAL_SECONDS);
+        report.put("lineupsIntervalSeconds", 300);
+        report.put("interGroupDelaySeconds", GROUP_GAP_SECONDS);
         report.put("realProviderCalls", 0);
         report.put("operatorDatabaseUsed", false);
         report.put("matches", MATCHES);
@@ -79,10 +86,20 @@ class LiveGroupedCampaignLocalQualificationIT {
         report.put("requiredSteadySeconds", steadySeconds);
         report.put("sustainedQualification", sustained);
         report.put("manifestProof", "synthetic-test-only; not an existing capacity qualification");
-        report.put("candidateRequestEnvelopeMs", REQUEST_ENVELOPE.toMillis());
-        report.put("candidateProcessingEnvelopeMs", PROCESSING_ENVELOPE.toMillis());
-        report.put("candidateCapacityAtCurrentAdmission", LiveAdmissionPolicy.qualifiedCapacityV4(candidateProfile()));
-        report.put("admissionMode", "10 matches under measurement; temporal admission is calculated separately from measured envelope validity");
+        if (V5) {
+            var candidateEnvelopes = new LinkedHashMap<String, Object>();
+            candidateProfile().endpointEnvelopes().forEach((endpoint, envelope) -> candidateEnvelopes.put(endpoint.name(),
+                    Map.of("requestMillis", envelope.requestEnvelope().toMillis(),
+                            "processingMillis", envelope.processingEnvelope().toMillis())));
+            report.put("candidateEndpointEnvelopes", candidateEnvelopes);
+            report.put("candidateEnvelopeSource", "measured 75-second candidate; unchanged cost floors for the 100-second run");
+        } else {
+            report.put("candidateRequestEnvelopeMs", REQUEST_ENVELOPE.toMillis());
+            report.put("candidateProcessingEnvelopeMs", PROCESSING_ENVELOPE.toMillis());
+        }
+        report.put("candidateCapacityAtCurrentAdmission", V5 ? LiveAdmissionPolicy.qualifiedCapacityV5(candidateProfile())
+                : LiveAdmissionPolicy.qualifiedCapacityV4(candidateProfile()));
+        report.put("admissionMode", MATCHES + " matches under measurement; temporal admission is calculated separately from measured envelope validity");
         report.put("serverDelayPatternMs", SERVER_DELAYS_MILLIS);
         report.put("startedAt", Instant.now().toString());
         report.put("status", "FAILED");
@@ -98,12 +115,12 @@ class LiveGroupedCampaignLocalQualificationIT {
                 var storage = new DockerLiveStorageCapacityProbe(storageProperties);
                 report.put("productionDockerDfProbePerRequest", true);
                 Map<String, String> templates = templates();
-                for (long eventId = 17_000_001; eventId <= 17_000_010; eventId++) {
+                for (long eventId = 17_000_001; eventId <= 17_000_000 + MATCHES; eventId++) {
                     for (var endpoint : FAMILIES)
                         fixture.bodies.put(path(eventId, endpoint), body(templates, eventId, endpoint, 0));
                 }
                 List<Target> targets = new ArrayList<>();
-                for (long eventId = 17_000_001; eventId <= 17_000_010; eventId++)
+                for (long eventId = 17_000_001; eventId <= 17_000_000 + MATCHES; eventId++)
                     targets.add(database.seed(eventId, fixture.bodies.get(path(eventId, EVENT_DETAILS))));
                 var supervisor = fixture.supervisor();
                 Manifest manifest = manifest(targets);
@@ -114,13 +131,14 @@ class LiveGroupedCampaignLocalQualificationIT {
                         .orElseThrow().ownership();
                 List<ProcessHandle> children;
                 long elapsedNanos;
-                try (var campaign = supervisor.openLiveGrouped(manifest.campaignId(), LiveProviderSession.ENDPOINTS)) {
+                try (var campaign = V5 ? supervisor.openLiveGroupedV5(manifest.campaignId(), LiveProviderSession.ENDPOINTS)
+                        : supervisor.openLiveGrouped(manifest.campaignId(), LiveProviderSession.ENDPOINTS)) {
                     // Browser/bootstrap and seed transactions are outside the cadence measurement.
                     Instant origin = Instant.now();
                     long originNano = System.nanoTime();
                     Launch launch = database.store.launch(manifest.campaignId(), manifest.manifestSha256(), ownership, origin);
                     var schedule = new LiveSchedule(targets.stream().map(Target::canonicalEventId).toList(),
-                            origin, launch.endsAt(), Duration.ofSeconds(60), "live-v4", manifest.campaignId());
+                            origin, launch.endsAt(), Duration.ofSeconds(CRITICAL_SECONDS), POLICY, manifest.campaignId());
                     var publishedFamilies = new HashMap<String, FamilySchedule>();
                     var publishedStates = new HashMap<UUID, LiveSchedule.EventState>();
                     var familyVersions = new HashMap<String, Long>();
@@ -145,7 +163,7 @@ class LiveGroupedCampaignLocalQualificationIT {
                         assertThat(budget.reservedCalls()).isLessThan(manifest.maximumCalls() - 4);
                         assertThat(budget.eventReservedCalls()).isLessThan(manifest.maximumCallsPerEvent() - 4);
                         assertThat(storage.availableBytes()).isGreaterThanOrEqualTo(
-                                manifest.maximumBytes() - budget.receivedBytes() + storageProperties.getDiskReserveBytes());
+                                2 * (manifest.maximumBytes() - budget.receivedBytes()) + storageProperties.getDiskReserveBytes());
                         var reservation = database.store.reserveAttempt(new AttemptRequest(ownership, UUID.randomUUID(),
                                 due.eventId(), due.cycle(), due.endpoint(), due.kind(), due.dueAt(), Instant.now(), due.finalCycle(),
                                 due.groupId(), due.groupSequence(), due.groupOrdinal())).orElseThrow();
@@ -276,34 +294,46 @@ class LiveGroupedCampaignLocalQualificationIT {
             var availableIntervals = new ArrayList<Long>();
             var perEventCounts = new LinkedHashMap<Long, Integer>();
             var perEventMetrics = new LinkedHashMap<Long, Object>();
-            for (long id = 17_000_001; id <= 17_000_010; id++) {
+            for (long id = 17_000_001; id <= 17_000_000 + MATCHES; id++) {
                 long eventId = id;
                 var eventSamples = steady.stream().filter(s -> s.providerEventId() == eventId).toList();
                 perEventCounts.put(id, eventSamples.size());
-                checks.add(() -> assertThat(eventSamples).hasSizeGreaterThanOrEqualTo(sustained ? endpoint == EVENT_LINEUPS ? 5 : 28 : 1));
+                checks.add(() -> assertThat(eventSamples).hasSizeGreaterThanOrEqualTo(sustained ? endpoint == EVENT_LINEUPS ? 5 : (V5 ? 17 : 28) : 1));
                 var eventIntervals = new ArrayList<Long>();
                 var eventAvailableIntervals = new ArrayList<Long>();
+                var nominalIntervals = new ArrayList<Long>();
                 for (int i = 1; i < eventSamples.size(); i++) {
                     eventIntervals.add(eventSamples.get(i).receivedNanos() - eventSamples.get(i - 1).receivedNanos());
                     eventAvailableIntervals.add(eventSamples.get(i).committedNanos() - eventSamples.get(i - 1).committedNanos());
+                    nominalIntervals.add(eventSamples.get(i).dueNanos() - eventSamples.get(i - 1).dueNanos());
                 }
                 intervals.addAll(eventIntervals);
                 availableIntervals.addAll(eventAvailableIntervals);
                 var eventLateness = eventSamples.stream().map(s -> Math.max(0, s.receivedNanos() - s.dueNanos())).toList();
                 perEventMetrics.put(id, Map.of("receiptIntervalSeconds", summary(eventIntervals),
                         "availableIntervalSeconds", summary(eventAvailableIntervals),
+                        "nominalIntervalSeconds", summary(nominalIntervals),
                         "nominalLatenessSeconds", summary(eventLateness)));
                 if (sustained) checks.add(() -> {
-                    if (endpoint == EVENT_LINEUPS)
+                    if (endpoint == EVENT_LINEUPS) {
+                        assertThat(nominalIntervals).as("lineup nominal intervals for event %s", eventId)
+                                .isNotEmpty().allSatisfy(interval -> assertThat(interval).isEqualTo(TimeUnit.SECONDS.toNanos(300)));
+                        long eventIndex = eventId - 17_000_001;
+                        long criticalNanos = TimeUnit.SECONDS.toNanos(CRITICAL_SECONDS);
+                        long eventPhase = criticalNanos * eventIndex / MATCHES;
+                        long phaseCount = 300 / CRITICAL_SECONDS;
+                        assertThat(eventSamples).as("lineup phase distribution for event %s", eventId)
+                                .allSatisfy(sample -> assertThat((sample.dueNanos() - eventPhase) / criticalNanos % phaseCount)
+                                        .isEqualTo(eventIndex % phaseCount));
                         assertThat(percentile(eventLateness, .95)).as("lineup lateness for event %s", eventId)
                                 .isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(15));
-                    else {
+                    } else {
                         assertThat(percentile(eventIntervals, .95)).as("receipt interval P95 for %s/%s", eventId, endpoint)
-                                .isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(65));
-                        assertThat(Collections.max(eventIntervals)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(75));
+                                .isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(CRITICAL_SECONDS + 5));
+                        assertThat(Collections.max(eventIntervals)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(CRITICAL_SECONDS + 15));
                         assertThat(percentile(eventAvailableIntervals, .95)).as("publication interval P95 for %s/%s", eventId, endpoint)
-                                .isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(65));
-                        assertThat(Collections.max(eventAvailableIntervals)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(75));
+                                .isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(CRITICAL_SECONDS + 5));
+                        assertThat(Collections.max(eventAvailableIntervals)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(CRITICAL_SECONDS + 15));
                     }
                 });
             }
@@ -316,8 +346,9 @@ class LiveGroupedCampaignLocalQualificationIT {
             endpointMetrics.put("nominalLatenessSeconds", summary(lateness));
             endpointMetrics.put("requestSeconds", summary(steady.stream().map(Sample::requestNanos).toList()));
             endpointMetrics.put("processingIncludingSqlSeconds", summary(steady.stream().map(Sample::processingNanos).toList()));
-            endpointMetrics.put("candidateEnvelopesPassed", steady.stream().allMatch(s -> s.requestNanos() <= REQUEST_ENVELOPE.toNanos()
-                    && s.processingNanos() <= PROCESSING_ENVELOPE.toNanos()));
+            var candidateEnvelope = candidateProfile().envelope(endpoint);
+            endpointMetrics.put("candidateEnvelopesPassed", steady.stream().allMatch(s -> s.requestNanos() <= candidateEnvelope.requestEnvelope().toNanos()
+                    && s.processingNanos() <= candidateEnvelope.processingEnvelope().toNanos()));
             var peak = samples.stream().filter(s -> s.endpoint() == endpoint && s.bodyBytes() == RawPayloadEvidence.MAXIMUM_BYTES).toList();
             endpointMetrics.put("initialMaximumBodyRequestSeconds", summary(peak.stream().map(Sample::requestNanos).toList()));
             endpointMetrics.put("initialMaximumBodyProcessingSeconds", summary(peak.stream().map(Sample::processingNanos).toList()));
@@ -325,10 +356,10 @@ class LiveGroupedCampaignLocalQualificationIT {
             if (sustained) {
                 if (endpoint == EVENT_LINEUPS) checks.add(() -> assertThat(percentile(lateness, .95)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(15)));
                 else checks.add(() -> {
-                    assertThat(percentile(intervals, .95)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(65));
-                    assertThat(Collections.max(intervals)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(75));
-                    assertThat(percentile(availableIntervals, .95)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(65));
-                    assertThat(Collections.max(availableIntervals)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(75));
+                    assertThat(percentile(intervals, .95)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(CRITICAL_SECONDS + 5));
+                    assertThat(Collections.max(intervals)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(CRITICAL_SECONDS + 15));
+                    assertThat(percentile(availableIntervals, .95)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(CRITICAL_SECONDS + 5));
+                    assertThat(Collections.max(availableIntervals)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(CRITICAL_SECONDS + 15));
                 });
             }
         }
@@ -354,7 +385,7 @@ class LiveGroupedCampaignLocalQualificationIT {
             if (!current.groupId().equals(previous.groupId())) {
                 long gap = current.serverArrivalNanos() - previous.responseCompleteNanos();
                 // Server arrival is after the parent's gate completion; allow only clock quantization (1 ms).
-                checks.add(() -> assertThat(gap).isGreaterThanOrEqualTo(TimeUnit.SECONDS.toNanos(3) - TimeUnit.MILLISECONDS.toNanos(1)));
+                checks.add(() -> assertThat(gap).isGreaterThanOrEqualTo(TimeUnit.SECONDS.toNanos(GROUP_GAP_SECONDS) - TimeUnit.MILLISECONDS.toNanos(1)));
                 minBetweenGroups = Math.min(minBetweenGroups, gap);
             }
         }
@@ -386,14 +417,22 @@ class LiveGroupedCampaignLocalQualificationIT {
         var grouped = candidateProfile();
         var profile = new AdmissionProfile(Duration.ofSeconds(1), Duration.ofSeconds(1), "", grouped);
         Instant now = Instant.now();
-        return new Manifest(UUID.randomUUID(), "d".repeat(64), "live-v4", now, now.plusSeconds(300), Duration.ofHours(4),
-                1000, 3000, 3000L * RawPayloadEvidence.MAXIMUM_BYTES, 20, targets, profile, Duration.ofSeconds(60));
+        return new Manifest(UUID.randomUUID(), "d".repeat(64), POLICY, now, now.plusSeconds(300), Duration.ofHours(4),
+                V5 ? 2500 : 1000, V5 ? 20000 : 3000, 3000L * RawPayloadEvidence.MAXIMUM_BYTES, 20, targets, profile,
+                Duration.ofSeconds(CRITICAL_SECONDS));
     }
 
     private static GroupedAdmissionProfile candidateProfile() {
         EnumMap<SofascoreEndpointType, EndpointEnvelope> envelopes = new EnumMap<>(SofascoreEndpointType.class);
-        FAMILIES.forEach(endpoint -> envelopes.put(endpoint, new EndpointEnvelope(REQUEST_ENVELOPE, PROCESSING_ENVELOPE)));
-        return new GroupedAdmissionProfile(envelopes, "b".repeat(64));
+        if (V5) {
+            // Keep the established maxima from the 75-second candidate. A longer
+            // cadence must not manufacture capacity by lowering measured costs.
+            envelopes.put(EVENT_DETAILS, new EndpointEnvelope(Duration.ofMillis(400), Duration.ofMillis(600)));
+            envelopes.put(EVENT_INCIDENTS, new EndpointEnvelope(Duration.ofMillis(400), Duration.ofMillis(500)));
+            envelopes.put(EVENT_STATISTICS, new EndpointEnvelope(Duration.ofMillis(350), Duration.ofMillis(500)));
+            envelopes.put(EVENT_LINEUPS, new EndpointEnvelope(Duration.ofMillis(300), Duration.ofMillis(400)));
+        } else FAMILIES.forEach(endpoint -> envelopes.put(endpoint, new EndpointEnvelope(REQUEST_ENVELOPE, PROCESSING_ENVELOPE)));
+        return new GroupedAdmissionProfile(envelopes, "b".repeat(64), POLICY);
     }
 
     private static Map<String, String> templates() throws Exception {

@@ -5,7 +5,7 @@ Références : [ADR-SS-005 accepté](../../ADR-SS-005-bounded-local-live-j4-j5-c
 [architecture](../architecture/LIVE-J4-J5-CAMPAIGNS.md),
 [qualification](../validation/WO058-LIVE-J4-J5-IMPLEMENTATION-20260907.md).
 
-## Nouvelles préparations : live-v4
+## Nouvelles préparations : live-v5
 
 ### Lire les compositions
 
@@ -25,75 +25,91 @@ précises. Aucun numéro, joueur ou formation n’est ajouté pour compléter le
 Une réponse HTTP 404 reste une indisponibilité, distincte d’une liste observée vide. Source,
 hash et heure de réception restent consultables au-dessus de la composition.
 
-### Cadence et admission
+### Cadence et admission live-v5
 
-Les nouvelles préparations utilisent une cible de **60 secondes par rencontre pour J4,
-incidents et statistiques**. LINEUPS est initial puis nominalement toutes les cinq minutes
-pendant le jeu, avec répartition entre les matchs ; avant le début confirmé, J4 et LINEUPS
-restent à une minute. Les appels d’un même groupe sont séquentiels sans pause ajoutée, puis
-trois secondes séparent les groupes. Les préparations v1–v3 conservent leur ancienne cadence.
+La qualification dédiée de vingt rencontres à 100 secondes est réussie sur Chromium loopback
+et PostgreSQL isolé : cinq minutes d’initialisation puis trente minutes établies, 1 413 appels
+dont 1 200 établis, zéro cycle manqué et 80 couples rencontre/famille contrôlés. Le
+[profil final](../validation/WO058-GROUPED-LIVE-V5-PROFILE-20260908.json) est qualifié dans
+cette portée synthétique ; la fraîcheur fournisseur réelle reste à observer. Les deux commandes
+finales `clean verify` et `-Pintegration-tests verify` réussissent le 08/09, respectivement à
+18:47:26 et 18:56:06 UTC. Chacune produit 1 840 cas Surefire, sans échec ni erreur et avec
+cinq ignorés, ainsi que 166 cas Failsafe sans échec, erreur ni ignoré. Ces résultats et leurs
+commandes effectives sont reliés dans le [rapport v5](../validation/WO058-GROUPED-LIVE-V5-20260908.md).
 
-Un ancien SHA de qualification et les propriétés historiques `REQUEST_ENVELOPE` /
-`PROCESSING_ENVELOPE` **ne qualifient pas v4**. Les défauts ne sont pas abaissés. Une preuve de
-groupes absente affiche une capacité nulle et empêche les nouvelles préparations éligibles.
-Configurer explicitement un profil issu du [rapport v4](../validation/WO058-GROUPED-LIVE-V4-20260908.md)
-dans le lanceur Eclipse, puis redémarrer et préparer un nouveau manifeste. Aucun changement de
-configuration ne remplace le manifeste d’une campagne déjà préparée.
+L’essai précédent à 75 secondes a tenu sa cadence à vingt rencontres, mais ses coûts mesurés
+n’admettent que dix-sept rencontres. Il reste une [preuve distincte](../validation/WO058-GROUPED-LIVE-V5-CANDIDATE-75-PROFILE-20260908.json)
+et ne qualifie pas la cible courante de vingt rencontres à 100 secondes.
 
-| Variable du lanceur | Valeur à reprendre de la qualification retenue |
+Les nouvelles préparations ciblent **100 secondes par rencontre pour J4, incidents et
+statistiques**, jusqu’à vingt rencontres selon la qualification retenue. Les compositions
+sont initiales puis réparties sur trois tours, toutes les cinq minutes pendant le jeu.
+Avant le début confirmé, J4 et les compositions éligibles restent à 100 secondes.
+
+Les appels d’un même groupe sont séquentiels sans pause ajoutée. Une seconde sépare deux
+groupes de la même session v5 ; les frontières avec une autre session, les parcours manuels
+et les campagnes historiques gardent trois secondes. Les politiques v1–v4 restent figées.
+
+Le manifeste indique **2 500 appels par rencontre et 20 000 par campagne**, quatre heures au
+maximum et un plafond indépendant de **15 728 640 000 octets bruts**. Il s’arrête au premier
+budget épuisé. En régime établi, vingt matchs en jeu représentent environ **40 appels/minute** ;
+quatre heures demandent environ 9 600 appels, plus les initialisations et finalisations.
+L’autonomie affichée utilise les compteurs réellement restants et les phases des rencontres.
+
+Un **profil v5 séparé** est obligatoire. Les propriétés de qualification historiques et
+`SOFASCORE_LIVE_GROUPED_*` restent celles de v4 et ne qualifient pas v5. Les défauts
+conservateurs ne sont pas abaissés. Sans preuve v5 complète, la capacité affichée est nulle.
+
+| Variable du lanceur | Valeur du profil final v5 du 8 septembre 2026 |
 |---|---|
-| `SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY` | Plafond opérateur, limité en plus par l’admission temporelle |
-| `SOFASCORE_LIVE_GROUPED_QUALIFICATION_SHA256` | SHA-256 exact de la preuve dédiée de groupes |
-| `SOFASCORE_LIVE_GROUPED_J4_REQUEST_ENVELOPE` / `...J4_PROCESSING_ENVELOPE` | Coût J4 et traitement local, unités explicites `ms` ou `s` |
-| `SOFASCORE_LIVE_GROUPED_INCIDENTS_REQUEST_ENVELOPE` / `...INCIDENTS_PROCESSING_ENVELOPE` | Coûts incidents qualifiés |
-| `SOFASCORE_LIVE_GROUPED_STATISTICS_REQUEST_ENVELOPE` / `...STATISTICS_PROCESSING_ENVELOPE` | Coûts statistiques qualifiés |
-| `SOFASCORE_LIVE_GROUPED_LINEUPS_REQUEST_ENVELOPE` / `...LINEUPS_PROCESSING_ENVELOPE` | Coûts compositions qualifiés |
+| `SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY` | `20` — plafond opérateur, vingt effectifs au maximum |
+| `SOFASCORE_LIVE_GROUPED_V5_QUALIFICATION_SHA256` | `923c4499d2005d4d2f91499148f749dc7f80ea0868ff1cfc7a42106ac9863225` |
+| `SOFASCORE_LIVE_GROUPED_V5_J4_REQUEST_ENVELOPE` | `400ms` |
+| `SOFASCORE_LIVE_GROUPED_V5_J4_PROCESSING_ENVELOPE` | `600ms` |
+| `SOFASCORE_LIVE_GROUPED_V5_INCIDENTS_REQUEST_ENVELOPE` | `400ms` |
+| `SOFASCORE_LIVE_GROUPED_V5_INCIDENTS_PROCESSING_ENVELOPE` | `500ms` |
+| `SOFASCORE_LIVE_GROUPED_V5_STATISTICS_REQUEST_ENVELOPE` | `350ms` |
+| `SOFASCORE_LIVE_GROUPED_V5_STATISTICS_PROCESSING_ENVELOPE` | `500ms` |
+| `SOFASCORE_LIVE_GROUPED_V5_LINEUPS_REQUEST_ENVELOPE` | `350ms` |
+| `SOFASCORE_LIVE_GROUPED_V5_LINEUPS_PROCESSING_ENVELOPE` | `450ms` |
 
-Les trois opt-ins existants et le contrôle d’espace PostgreSQL restent requis. Ne pas augmenter
-le timeout Playwright de dix secondes. Le plafond configuré ne suffit pas : l’admission conserve
-10 % de marge, additionne les coûts de groupe et vérifie les transitions. Une sélection trop grande
-affiche sa capacité admissible ; elle ne remplace jamais les 60 secondes par une cadence plus lente.
-La portée des corps, latences et environnements qualifiés doit accompagner les enveloppes ; une
-mesure loopback ne prouve ni la latence Internet ni un quota accepté par SofaScore.
+Ces enveloppes couvrent les maxima établis mesurés avec des réponses de 64 Kio et conservent
+les planchers de l’essai précédent. La vague initiale de quatre-vingts réponses de 5 Mio est
+mesurée séparément, hors de ces enveloppes constantes. Le profil porte explicitement le
+statut `QUALIFIED_SYNTHETIC_LOOPBACK_WITH_STATED_SCOPE`. Les corps récurrents de 5 Mio et
+la latence Internet ne sont pas qualifiés. Aucun de ces paramètres n’est appliqué
+automatiquement au lanceur par la qualification.
 
-Le [profil mesuré le 08/09](../validation/WO058-GROUPED-LIVE-V4-PROFILE-20260908.json)
-admet **10 rencontres**. Pour l'utiliser explicitement dans le lanceur :
+Les enveloppes utilisent des unités explicites (`ms` ou `s`). Le plafond opérateur ne suffit
+pas : l’admission conserve 10 % de marge et contrôle les transitions simulées. Une sélection
+excessive est refusée ; la cadence n’est pas allongée silencieusement. Les trois opt-ins
+existants et le contrôle d’espace PostgreSQL restent requis. Avec ces coûts, vingt rencontres
+consomment 241 secondes sur les 270 allouables par cinq minutes ; les 24 scénarios Java de
+phases et transitions passent avec ce profil exact.
 
-```text
-SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY=10
-SOFASCORE_LIVE_GROUPED_QUALIFICATION_SHA256=5d34019578a5f1b616f3570aa47d8451afe283eb52dee73e1c94eeb4f370fcc1
-SOFASCORE_LIVE_GROUPED_J4_REQUEST_ENVELOPE=300ms
-SOFASCORE_LIVE_GROUPED_J4_PROCESSING_ENVELOPE=400ms
-SOFASCORE_LIVE_GROUPED_INCIDENTS_REQUEST_ENVELOPE=350ms
-SOFASCORE_LIVE_GROUPED_INCIDENTS_PROCESSING_ENVELOPE=450ms
-SOFASCORE_LIVE_GROUPED_STATISTICS_REQUEST_ENVELOPE=300ms
-SOFASCORE_LIVE_GROUPED_STATISTICS_PROCESSING_ENVELOPE=350ms
-SOFASCORE_LIVE_GROUPED_LINEUPS_REQUEST_ENVELOPE=300ms
-SOFASCORE_LIVE_GROUPED_LINEUPS_PROCESSING_ENVELOPE=350ms
+La qualification est lancée explicitement, sans accès fournisseur, par :
+
+```powershell
+.\scripts\Invoke-LiveGroupedPlaywrightQualification.ps1 -PolicyVersion live-v5
 ```
 
-Ces enveloppes contiennent les maxima observés pendant trente minutes de régime établi :
-réponses synthétiques de 64 Kio, délais serveur de 0/30/80/150 ms, normalisation, PostgreSQL et
-sonde Docker compris. Elles **ne bornent pas les coûts de démarrage de 5 Mio** : cette vague
-initiale de quarante réponses a été mesurée séparément et a aussi passé les critères. Une
-succession durable de corps de 5 Mio ou une latence Internet plus élevée n'est pas qualifiée
-par ce profil. Le dépassement provoque un retard visible puis les arrêts prévus s'il dure ;
-il ne remplace pas la minute par un intervalle plus long. La preuve conserve cette distinction.
-Les paramètres historiques ne sont ni supprimés ni abaissés automatiquement.
+Le profil publié à l’issue de la mesure fixe sa portée : taille des réponses, variations de
+latence, coût SQL et environnement. Une mesure locale ne prouve ni la latence Internet ni
+un quota accepté par SofaScore. L’objectif à moyen terme de 50–100 matchs nécessite une
+qualification supplémentaire ; augmenter seulement le plafond n’active pas cette capacité.
 
-### Si les cases `notstarted` sont désactivées
+### Appliquer un nouveau profil dans Eclipse
 
-Une capacité affichée à zéro avec l’avertissement de qualification indique que le lanceur
-n’a pas chargé un profil groupé complet et admissible. Rafraîchir J3 ou J4 ne change pas cette
-configuration. Vérifier les neuf variables `SOFASCORE_LIVE_GROUPED_*` ci-dessus : ajouter
-seulement le SHA ne suffit pas si les enveloppes restent à leurs défauts conservateurs.
-Le plafond opérateur et la capacité temporelle sont combinés ; avec le profil ci-dessus,
-un plafond opérateur historique de 20 reste limité à **10** pour `live-v4`.
+Arrêter la campagne avec **Arrêter toute la campagne**, attendre sa clôture, puis arrêter
+le lanceur Eclipse avant de charger la nouvelle version. Après modification de son fichier
+de configuration sur disque, fermer puis rouvrir Eclipse pour qu’il le relise, puis lancer
+l’application avec le lanceur live. Préparer une nouvelle campagne et vérifier sa politique,
+sa cadence et sa capacité avant le lancement manuel.
 
-Après modification du lanceur sur disque, fermer puis rouvrir Eclipse pour garantir qu’il
-relise sa configuration, puis relancer l’application avec le lanceur live. La page doit
-annoncer dix rencontres qualifiées et permettre la sélection des rencontres admissibles.
-Préparer ensuite une nouvelle campagne : les manifestes déjà préparés restent figés.
+Une capacité nulle sur des rencontres `notstarted` indique notamment l’absence d’un profil
+v5 complet. Vérifier les neuf variables `SOFASCORE_LIVE_GROUPED_V5_*` : le SHA seul ne suffit
+pas si les enveloppes restent à leurs défauts. Les paramètres historiques v4 restent décrits
+dans le [rapport v4 conservé](../validation/WO058-GROUPED-LIVE-V4-20260908.md).
 
 ### Annuler une préparation
 
@@ -109,26 +125,30 @@ Une collecte J5 manuelle confirmée enchaîne statistiques, incidents et composi
 même événement sans pause artificielle entre familles. Les appels restent séquentiels.
 Trois secondes séparent deux collectes distinctes ainsi que leurs transitions avec les
 campagnes live et les autres parcours ; une interruption ne supprime pas cette protection.
-La collecte manuelle reste ponctuelle et ne dépend pas du profil de capacité live-v4.
+La collecte manuelle reste ponctuelle et ne dépend pas du profil de capacité live.
 
 L’écran indique l’autonomie estimée avec les appels restants et réserves, limitée aussi par la
-fenêtre et les budgets individuels. À dix matchs tous en jeu, environ 32 appels/minute consomment
-3 000 appels en quelque 94 minutes avant ajustement des phases et réserves. Les fins de match
-libèrent des créneaux ; elles n’allongent pas la minute des autres. Chaque famille expose dernière
+fenêtre et les budgets individuels. Les fins de match libèrent des créneaux sans modifier
+la cadence des autres. Chaque famille expose dernière
 réception, dernier changement, prochaine collecte et retard. Un résultat inchangé nouvellement
 reçu reste frais. Une lecture locale bloquée est annulée après dix secondes et réessayée cinq
 secondes plus tard, sans perte de sélection ni d’état des panneaux.
 
-### Migration V38 → V39
+### Portée des migrations historiques et de V40
 
-Avant upgrade d’une base opérateur V38, sauvegarder avec l’outillage J6 du commit `c972d63`
-dans un checkout distinct et vérifier la restauration isolée V38. Les scripts courants sont V39
-et fingerprintent aussi politique, groupes et échéances ; ne pas falsifier le manifeste V38
+Pour le passage historique V38 → V39, sauvegarder avec l’outillage J6 du commit `c972d63`
+dans un checkout distinct et vérifier la restauration isolée V38. Les scripts de ce passage étaient V39
+et fingerprintaient aussi politique, groupes et échéances ; ne pas falsifier le manifeste V38
 pour franchir leur garde. La qualification Testcontainers ne migre jamais la base opérateur.
 V39 est append-only et conserve les empreintes des anciennes préparations et observations.
 
+Les scripts courants exigent désormais V40. Une preuve de sauvegarde/restauration V39 reste
+historique ; elle ne qualifie pas les nouvelles contraintes v5. La procédure et les contrôles
+de version figurent dans le [runbook J6](J6-BACKUP-RESTORE-AND-RETENTION.md).
+
 Les sections historiques ci-dessous restent utiles pour v1–v3 ; leurs valeurs D et profils de
-capacité ne doivent pas être employés pour annoncer une capacité v4 à une minute.
+capacité ne doivent être employés ni pour annoncer une capacité v4 à une minute, ni pour
+qualifier ou préparer une nouvelle campagne v5 à 100 secondes.
 
 ## Qualification hors fournisseur
 
@@ -140,7 +160,7 @@ Ces commandes sont lancées depuis le worktree du WO avec Java 25 et Docker Desk
 .\mvnw.cmd -Pintegration-tests verify
 .\scripts\Install-J3PlaywrightRuntime.ps1
 .\scripts\Invoke-LivePlaywrightLoopbackQualification.ps1
-.\scripts\Invoke-LiveGroupedPlaywrightQualification.ps1
+.\scripts\Invoke-LiveGroupedPlaywrightQualification.ps1 -PolicyVersion live-v5
 ```
 
 L'installation explicite utilise le cache Chromium dédié `.tmp/provider-playwright-browsers`.
@@ -150,9 +170,11 @@ requiert le port 8087 libre ; une application de l'opérateur ne doit pas être 
 Lire les XML Surefire/Failsafe effectifs, les skips et le résultat du lanceur. Un packaging avec
 `-DskipTests` n'est pas une qualification.
 
-Le lanceur groupé exige en plus Docker Desktop et `docker.exe` disponible, exécute un essai court
+Le lanceur groupé v5 exige en plus Docker Desktop et `docker.exe` disponible, exécute un essai court
 puis cinq minutes d’initialisation et au moins trente minutes mesurées sur PostgreSQL isolé,
-ainsi qu'un contrôle Chromium des publications dans dix panneaux de rencontre.
+ainsi qu'un contrôle Chromium des publications dans vingt panneaux de rencontre.
+La variante historique `-PolicyVersion live-v4` conserve ses dix rencontres et ses propres
+critères ; le défaut du script reste v4 et ne doit pas être omis pour qualifier v5.
 Si le CLI Docker n’est pas dans `PATH`, passer son chemin installé avec `-DockerExecutablePath`.
 Il contrôle l’âge des rapports, l’absence de tests ignorés et la durée réelle ; un essai court
 seul ne prouve pas la capacité soutenue. Le rapport JSON conserve les mesures par famille.
@@ -205,15 +227,17 @@ suivantes. Le lot ne modifie aucun fichier `.env` et conserve les défauts désa
 | `PLAYWRIGHT_BROWSERS_PATH` | Cache dédié installé explicitement |
 | `sofascore.live.docker-executable` | Chemin absolu du Docker CLI local |
 | `sofascore.live.postgres-container` | Nom exact du conteneur PostgreSQL dont le volume sera mesuré |
-| `sofascore.live.qualified-match-capacity` | Maximum de rencontres éligibles par campagne, défaut 1 ; peut être réglé à 5, 10, 25, etc. |
+| `sofascore.live.qualified-match-capacity` | Plafond opérateur, défaut 1 ; la capacité effective v5 vaut au plus 20 et dépend aussi de son profil. Les valeurs supérieures restent possibles pour la compatibilité historique, sans ouvrir plus de 20 cibles v5. |
 | `sofascore.live.duration` | Au plus 4 h, attente avant coup d'envoi comprise |
-| `sofascore.live.request-envelope` / `processing-envelope` | 10 s / 1 s, hypothèses d'admission initiales |
-| `sofascore.live.qualification-sha256` | Preuve revue obligatoire pour abaisser l'enveloppe ou retenir effectivement plusieurs matchs |
+| `sofascore.live.request-envelope` / `processing-envelope` | 10 s / 1 s, hypothèses d'admission historiques ; v5 utilise les enveloppes séparées `grouped-v5` décrites plus haut |
+| `sofascore.live.qualification-sha256` | Preuve historique requise pour abaisser ces enveloppes ; ne qualifie pas les groupes v4 ou v5 |
 
 L'exécutable Docker et le nom de conteneur servent à lire l'espace du volume PostgreSQL réel,
-avec timeout et refus fermé si la mesure échoue. Le pilote à un match réserve 5 242 880 000
+avec timeout et refus fermé si la mesure échoue. Le pilote historique v1–v4 à un match réserve 5 242 880 000
 octets de réponses possibles ; la marge d'espace exige deux fois cette enveloppe plus 1 Gio.
-Les plafonds de 1 000/3 000 tentatives sont locaux et ne décrivent pas un quota fournisseur connu.
+Les plafonds historiques de 1 000/3 000 tentatives, comme ceux de 2 500/20 000 pour v5,
+sont locaux et ne décrivent pas un quota fournisseur connu. Le plafond brut v5 est indépendant
+du nombre de rencontres et vaut 15 728 640 000 octets.
 Les anciennes propriétés `automatic-refresh-enabled` et `live-polling-enabled` restent désactivées.
 
 ### Paramètres du lanceur Eclipse pour le contrôle de stockage
@@ -471,6 +495,6 @@ dont J6 a purgé le corps. La réception nouvelle est annulée atomiquement ; la
 pour stockage. Une réhydratation ou une politique de rétention différente exige un travail
 distinct ; ne pas réécrire les dates du snapshot historique.
 
-Le premier pilote fournisseur, la migration de la base de l'opérateur et la montée à deux ou
-trois matchs restent des opérations à préparer avec leur manifeste exact. Le rapport synthétique
-du WO ne vaut ni pilote réel réussi, ni validation de performance sur quatre heures.
+Tout nouveau pilote fournisseur et toute migration de la base de l’opérateur restent des
+opérations à préparer avec leur manifeste exact. Les preuves synthétiques et les mesures
+loopback ne valent ni validation de fraîcheur fournisseur ni essai réel de quatre heures.

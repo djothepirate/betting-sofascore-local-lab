@@ -241,18 +241,130 @@ class LiveCampaignPersistenceIT {
                 .hasMessageContaining("requires a group");
     }
 
-    private static Manifest groupedManifest(List<Target> targets) {
+    private static Map<SofascoreEndpointType,EndpointEnvelope> syntheticGroupedEnvelopes() {
         Map<SofascoreEndpointType,EndpointEnvelope> envelopes=new EnumMap<>(SofascoreEndpointType.class);
         for(SofascoreEndpointType endpoint:List.of(SofascoreEndpointType.EVENT_DETAILS,SofascoreEndpointType.EVENT_INCIDENTS,
                 SofascoreEndpointType.EVENT_STATISTICS,SofascoreEndpointType.EVENT_LINEUPS))
             envelopes.put(endpoint,new EndpointEnvelope(Duration.ofMillis(500),Duration.ofMillis(100)));
+        return envelopes;
+    }
+    private static Manifest groupedManifest(List<Target> targets) {
         return new Manifest(UUID.randomUUID(),"d".repeat(64),"live-v4",T0,T0.plusSeconds(300),Duration.ofHours(4),
                 1000,3000,3000L*5*1024*1024,10,targets,
-                new AdmissionProfile(Duration.ofSeconds(1),Duration.ofSeconds(1),"b".repeat(64),new GroupedAdmissionProfile(envelopes,"e".repeat(64))),Duration.ofSeconds(60));
+                new AdmissionProfile(Duration.ofSeconds(1),Duration.ofSeconds(1),"b".repeat(64),new GroupedAdmissionProfile(syntheticGroupedEnvelopes(),"e".repeat(64))),Duration.ofSeconds(60));
     }
     private static AttemptRequest groupedRequest(Ownership own,Target target,long cycle,SofascoreEndpointType endpoint,UUID group,long sequence,int ordinal) {
         Instant at=T0.plusSeconds(10+cycle*60);
         return new AttemptRequest(own,UUID.randomUUID(),target.canonicalEventId(),cycle,endpoint,"GROUPED",at,at,false,group,sequence,ordinal);
+    }
+
+    private static Manifest v5Manifest(List<Target> targets) {
+        return new Manifest(UUID.randomUUID(),"f".repeat(64),"live-v5",T0,T0.plusSeconds(300),Duration.ofHours(4),
+                2500,20000,15_728_640_000L,20,targets,
+                new AdmissionProfile(Duration.ofSeconds(1),Duration.ofSeconds(1),"b".repeat(64),
+                        new GroupedAdmissionProfile(syntheticGroupedEnvelopes(),"f".repeat(64),"live-v5")),Duration.ofSeconds(100));
+    }
+
+    @Test
+    void upgradeV39ToV40KeepsAllHistoricalPoliciesAndEvidenceByteForByte() {
+        Fixture f=fixture("39"); int eventIndex=0;
+        for(String policy:List.of("live-v1","live-v2","live-v3","live-v4")) {
+            Target target=f.seed(EVENT+eventIndex++);
+            Manifest manifest="live-v4".equals(policy)?groupedManifest(List.of(target))
+                    :new Manifest(UUID.randomUUID(),"a".repeat(64),policy,T0,T0.plusSeconds(300),Duration.ofHours(4),
+                        100,100,100_000_000,1,List.of(target));
+            Ownership own=f.start(manifest);
+            ReservedAttempt call=f.store.reserveAttempt("live-v4".equals(policy)
+                    ?groupedRequest(own,target,0,SofascoreEndpointType.EVENT_DETAILS,UUID.randomUUID(),0,0)
+                    :f.request(own,target,0,SofascoreEndpointType.EVENT_DETAILS)).orElseThrow();
+            f.store.recordDispatch(own,call.attemptId(),T0.plusSeconds(10));
+            RawManualCallSnapshot raw=f.raw(target.providerEventId(),"before-v40",T0.plusSeconds(10));
+            RawSnapshotPersistenceResult receipt=f.store.saveReceipt(own,call.attemptId(),raw);
+            f.store.publishResult(own,call.attemptId(),f.success(raw.receivedAt(),policy),()->f.normalize(target.providerEventId(),policy,raw,receipt));
+            if("live-v4".equals(policy)) f.store.updateFamilySchedule(own,target.canonicalEventId(),
+                    new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS,T0.plusSeconds(70),60,1),T0.plusSeconds(12));
+            f.store.interruptOrphan(own,T0.plusSeconds(20),"OWNER_PROCESS_ABSENT");
+            f.store.completeOrphanCleanup(f.guard.snapshot(),T0.plusSeconds(21));
+        }
+        Map<String,List<String>> before=new LinkedHashMap<>();
+        for(String table:List.of("provider_campaign_guard","live_campaign","live_event","live_transition","live_call","live_call_dispatch",
+                "live_call_receipt","live_call_result","live_grouped_policy","live_call_group","live_family_schedule","live_family_schedule_revision",
+                "provider_snapshot","provider_snapshot_occurrence","canonical_event_observation","event_detail_observation"))
+            before.put(table,f.jdbc.queryForList("select to_jsonb(t)::text from "+table+" t order by to_jsonb(t)::text",String.class));
+        List<CampaignView> campaigns=f.store.findRecent(20);
+        List<String> oldChecksums=f.jdbc.queryForList("select version || ':' || checksum::text from flyway_schema_history where version is not null order by installed_rank",String.class);
+        assertThat(f.migrate("40").migrationsExecuted).isEqualTo(1);
+        before.forEach((table,rows)->assertThat(f.jdbc.queryForList("select to_jsonb(t)::text from "+table+" t order by to_jsonb(t)::text",String.class)).isEqualTo(rows));
+        assertThat(f.store.findRecent(20)).isEqualTo(campaigns);
+        assertThat(f.jdbc.queryForList("select version || ':' || checksum::text from flyway_schema_history where version is not null and version<>'40' order by installed_rank",String.class)).isEqualTo(oldChecksums);
+        assertThat(f.migrate("40").migrationsExecuted).isZero();
+    }
+
+    @Test
+    void v5PersistsTwentyTargetsWithItsIndependentRawBudgetAndEnforcesVersionedBounds() {
+        Fixture f=fixture("40"); List<Target> targets=new ArrayList<>();
+        for(int i=0;i<20;i++) targets.add(f.seed(EVENT+i));
+        Manifest v5=v5Manifest(targets); f.store.prepare(v5);
+        assertThat(f.store.find(v5.campaignId()).orElseThrow().manifest()).isEqualTo(v5);
+        assertThat(v5.maximumBytes()).isLessThan((long)v5.maximumCalls()*RawPayloadEvidence.MAXIMUM_BYTES);
+        assertThat(f.jdbc.queryForMap("select critical_interval_seconds,lineup_interval_seconds,intra_group_delay_nanos,inter_group_delay_nanos from live_grouped_policy where campaign_id=?",v5.campaignId()))
+                .containsEntry("critical_interval_seconds",100).containsEntry("lineup_interval_seconds",300)
+                .containsEntry("intra_group_delay_nanos",0L).containsEntry("inter_group_delay_nanos",1_000_000_000L);
+        // Isolated constraint probes: no claim of 2,500 real provider calls or cadence qualification.
+        UUID eventId=targets.getFirst().canonicalEventId();
+        f.jdbc.update("update live_event set reserved_calls=2500 where campaign_id=? and canonical_event_id=?",v5.campaignId(),eventId);
+        assertThatThrownBy(()->f.jdbc.update("update live_event set reserved_calls=2501 where campaign_id=? and canonical_event_id=?",v5.campaignId(),eventId))
+                .hasMessageContaining("policy budget");
+        f.jdbc.update("update live_campaign set reserved_calls=20000 where campaign_id=?",v5.campaignId());
+        assertThatThrownBy(()->f.jdbc.update("update live_campaign set reserved_calls=20001 where campaign_id=?",v5.campaignId()))
+                .hasMessageContaining("check constraint");
+        for(String policy:List.of("live-v1","live-v2","live-v3","live-v4")) {
+            assertThatThrownBy(()->insertPolicyManifestRow(f,UUID.randomUUID(),policy,1001,3000,15_728_640_000L,20,60))
+                    .hasMessageContaining("live_campaign_maximum_calls_per_event_check");
+            assertThatThrownBy(()->insertPolicyManifestRow(f,UUID.randomUUID(),policy,1000,3001,15_728_640_000L,20,60))
+                    .hasMessageContaining("live_campaign_maximum_calls_check");
+        }
+        Manifest old=groupedManifest(List.of(targets.getFirst())); f.store.prepare(old);
+        assertThatThrownBy(()->f.jdbc.update("update live_event set reserved_calls=1001 where campaign_id=?",old.campaignId()))
+                .hasMessageContaining("policy budget");
+        assertThatThrownBy(()->insertPolicyManifestRow(f,UUID.randomUUID(),"live-v5",2501,20000,15_728_640_000L,20,100))
+                .hasMessageContaining("live_campaign_maximum_calls_per_event_check");
+        assertThatThrownBy(()->insertPolicyManifestRow(f,UUID.randomUUID(),"live-v5",2500,20001,15_728_640_000L,20,100))
+                .hasMessageContaining("live_campaign_maximum_calls_check");
+        for(long[] invalid:List.of(new long[]{15_728_640_001L,20,100},new long[]{15_728_640_000L,21,100},
+                new long[]{15_728_640_000L,20,60},new long[]{15_728_640_000L,20,75}))
+            assertThatThrownBy(()->insertPolicyManifestRow(f,UUID.randomUUID(),"live-v5",2500,20000,invalid[0],(int)invalid[1],(int)invalid[2]))
+                    .hasMessageContaining("live_campaign_v5_policy_bounds_check");
+        assertThatThrownBy(()->insertPolicyManifestRow(f,UUID.randomUUID(),"live-v5",2500,20000,15_728_640_000L,20,100))
+                .hasMessageContaining("live-v5 requires its immutable qualified grouped profile");
+    }
+
+    @ParameterizedTest @ValueSource(strings={"live-v4","live-v5"})
+    void groupedProfileCannotBorrowTheOtherVersionsCadenceOrPause(String policy) {
+        Fixture f=fixture("40"); UUID campaignId=UUID.randomUUID(); boolean v5="live-v5".equals(policy);
+        String envelopes="{\"EVENT_DETAILS\":{\"requestNanos\":500000000,\"processingNanos\":100000000},"
+                +"\"EVENT_INCIDENTS\":{\"requestNanos\":500000000,\"processingNanos\":100000000},"
+                +"\"EVENT_STATISTICS\":{\"requestNanos\":500000000,\"processingNanos\":100000000},"
+                +"\"EVENT_LINEUPS\":{\"requestNanos\":500000000,\"processingNanos\":100000000}}";
+        assertThatThrownBy(()->new TransactionTemplate(new JdbcTransactionManager(f.ds)).executeWithoutResult(status->{
+            insertPolicyManifestRow(f,campaignId,policy,1000,3000,15_728_640_000L,20,v5?100:60);
+            f.jdbc.update("""
+                insert into live_grouped_policy(campaign_id,critical_interval_seconds,lineup_interval_seconds,intra_group_delay_nanos,
+                    inter_group_delay_nanos,maximum_utilization_percent,qualification_sha256,endpoint_envelopes)
+                values (?,?,300,0,?,90,?,cast(? as jsonb))
+                """,campaignId,v5?60:100,v5?3_000_000_000L:1_000_000_000L,"a".repeat(64),envelopes);
+        })).hasMessageContaining("profile cadence and delay must match");
+        assertThat(f.store.find(campaignId)).isEmpty();
+    }
+
+    private static void insertPolicyManifestRow(Fixture f,UUID campaignId,String policy,int perEvent,int total,long bytes,int capacity,int interval) {
+        f.jdbc.update("""
+            insert into live_campaign(campaign_id,manifest_sha256,policy_version,prepared_at,expires_at,duration_seconds,
+                maximum_calls_per_event,maximum_calls,maximum_bytes,qualified_match_capacity,target_count,
+                request_envelope_nanos,processing_envelope_nanos,qualification_sha256,cycle_interval_seconds)
+            values (?,?,?,?,?,14400,?,?,?,?,1,500000000,100000000,'',?)
+            """,campaignId,"b".repeat(64),policy,java.sql.Timestamp.from(T0),java.sql.Timestamp.from(T0.plusSeconds(300)),
+                perEvent,total,bytes,capacity,interval);
     }
 
     @Test
@@ -524,17 +636,37 @@ class LiveCampaignPersistenceIT {
         assertThat(f.store.find(m.campaignId()).orElseThrow().receivedBytes()).isZero();
     }
 
-    @Test
-    void realConcurrentConnectionsCannotSpendLastOrdinaryBudgetTwice() throws Exception {
-        Fixture f=fixture("38"); Manifest m=f.manifest(f.seed(EVENT),5); Ownership own=f.start(m);
+    @ParameterizedTest @ValueSource(strings={"live-v1","live-v5"})
+    void realConcurrentConnectionsCannotSpendLastOrdinaryBudgetTwice(String policy) throws Exception {
+        boolean v5="live-v5".equals(policy); Fixture f=fixture(v5?"40":"38"); Target target=f.seed(EVENT);
+        Manifest base=v5?v5Manifest(List.of(target)):f.manifest(target,5);
+        Manifest m=v5?new Manifest(base.campaignId(),base.manifestSha256(),policy,base.preparedAt(),base.expiresAt(),base.duration(),
+                5,5,base.maximumBytes(),base.qualifiedMatchCapacity(),base.targets(),base.admissionProfile(),base.cycleInterval()):base;
+        Ownership own=f.start(m);
         CountDownLatch ready=new CountDownLatch(2),go=new CountDownLatch(1);
         try(var pool=Executors.newFixedThreadPool(2)) {
-            var first=pool.submit(()->{ready.countDown();go.await();return f.store.reserveAttempt(f.request(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS));});
-            var second=pool.submit(()->{ready.countDown();go.await();return f.store.reserveAttempt(f.request(own,m.targets().getFirst(),1,SofascoreEndpointType.EVENT_DETAILS));});
+            var first=pool.submit(()->{ready.countDown();go.await();return f.store.reserveAttempt(v5
+                    ?groupedRequest(own,target,0,SofascoreEndpointType.EVENT_DETAILS,UUID.randomUUID(),0,0)
+                    :f.request(own,target,0,SofascoreEndpointType.EVENT_DETAILS));});
+            var second=pool.submit(()->{ready.countDown();go.await();return f.store.reserveAttempt(v5
+                    ?groupedRequest(own,target,1,SofascoreEndpointType.EVENT_DETAILS,UUID.randomUUID(),1,0)
+                    :f.request(own,target,1,SofascoreEndpointType.EVENT_DETAILS));});
             assertThat(ready.await(5,TimeUnit.SECONDS)).isTrue();go.countDown();
             assertThat(List.of(first.get(10,TimeUnit.SECONDS),second.get(10,TimeUnit.SECONDS)).stream().filter(Optional::isPresent).count()).isEqualTo(1);
         }
         assertThat(f.store.find(m.campaignId()).orElseThrow().reservedCalls()).isEqualTo(1);
+        if(v5) {
+            UUID finalGroup=UUID.randomUUID(); int ordinal=0;
+            for(SofascoreEndpointType endpoint:List.of(SofascoreEndpointType.EVENT_DETAILS,SofascoreEndpointType.EVENT_INCIDENTS,
+                    SofascoreEndpointType.EVENT_STATISTICS,SofascoreEndpointType.EVENT_LINEUPS)) {
+                Instant at=T0.plusSeconds(160+ordinal);
+                assertThat(f.store.reserveAttempt(new AttemptRequest(own,UUID.randomUUID(),target.canonicalEventId(),2,
+                        endpoint,"FINAL",at,at,true,finalGroup,2,ordinal++))).isPresent();
+            }
+            assertThat(f.store.find(m.campaignId()).orElseThrow().reservedCalls()).isEqualTo(5);
+            assertThat(f.store.reserveAttempt(groupedRequest(own,target,3,SofascoreEndpointType.EVENT_DETAILS,UUID.randomUUID(),3,0))).isEmpty();
+            assertThat(f.jdbc.queryForObject("select count(*) from live_call where campaign_id=? and final_cycle",Long.class,m.campaignId())).isEqualTo(4);
+        }
     }
 
     @Test
@@ -999,19 +1131,22 @@ class LiveCampaignPersistenceIT {
         assertThat(f.jdbc.queryForObject("select count(*) from live_call_receipt where attempt_id=?",Long.class,repeated.attemptId())).isZero();
     }
 
-    @Test
-    void restoresAllLiveEvidenceAndFreeGuardWithoutRearmingExecution() throws Exception {
-        Fixture source=fixture("39");Manifest m=groupedManifest(List.of(source.seed(EVENT)));Ownership own=source.start(m);
+    @ParameterizedTest @ValueSource(strings={"live-v4","live-v5"})
+    void restoresAllLiveEvidenceAndFreeGuardWithoutRearmingExecution(String policy) throws Exception {
+        String schema="live-v5".equals(policy)?"40":"39";
+        Fixture source=fixture(schema); Target target=source.seed(EVENT);
+        Manifest m="live-v5".equals(policy)?v5Manifest(List.of(target)):groupedManifest(List.of(target)); Ownership own=source.start(m);
+        long interval=m.cycleInterval().toSeconds();
         ReservedAttempt a=source.store.reserveAttempt(groupedRequest(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS,UUID.randomUUID(),0,0)).orElseThrow();
         source.store.recordDispatch(own,a.attemptId(),T0.plusSeconds(10));
         RawManualCallSnapshot raw=source.raw(EVENT,"restore",T0.plusSeconds(10));
         RawSnapshotPersistenceResult receipt=source.store.saveReceipt(own,a.attemptId(),raw);
         source.store.publishResult(own,a.attemptId(),source.success(raw.receivedAt(),"restore"),()->source.normalize(EVENT,"restore",raw,receipt));
         source.store.updateFamilySchedule(own,m.targets().getFirst().canonicalEventId(),
-                new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS,T0.plusSeconds(70),60,0),T0.plusSeconds(11));
+                new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS,T0.plusSeconds(10+interval),interval,0),T0.plusSeconds(11));
         source.store.transition(own,m.targets().getFirst().canonicalEventId(),"STOPPED_OPERATOR","OPERATOR_STOP",T0.plusSeconds(12),null);
         source.store.updateFamilySchedule(own,m.targets().getFirst().canonicalEventId(),
-                new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS,null,60,0),T0.plusSeconds(12));
+                new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS,null,interval,0),T0.plusSeconds(12));
         source.store.transition(own,null,"COMPLETED","CLEANUP_VERIFIED",T0.plusSeconds(13),null);
         source.guard.releaseAfterVerifiedCleanup(own,T0.plusSeconds(14));
         String script=Files.readString(Path.of("scripts/Backup-Restore-J6.ps1"),StandardCharsets.UTF_8);
@@ -1029,7 +1164,7 @@ class LiveCampaignPersistenceIT {
             String url=POSTGRES.getJdbcUrl().substring(0,POSTGRES.getJdbcUrl().lastIndexOf('/')+1)+restoredDatabase;
             Fixture restored=new Fixture(new DriverManagerDataSource(url,POSTGRES.getUsername(),POSTGRES.getPassword()));
             assertThat(restored.jdbc.queryForObject(sql,String.class)).isEqualTo(before);
-            assertThat(restored.migrate("39").migrationsExecuted).isZero();
+            assertThat(restored.migrate(schema).migrationsExecuted).isZero();
             assertThat(restored.guard.snapshot().state()).isEqualTo("FREE");
             assertThat(restored.store.find(m.campaignId()).orElseThrow().state()).isEqualTo("COMPLETED");
             assertThat(restored.store.find(m.campaignId()).orElseThrow().attempts()).hasSize(1);
