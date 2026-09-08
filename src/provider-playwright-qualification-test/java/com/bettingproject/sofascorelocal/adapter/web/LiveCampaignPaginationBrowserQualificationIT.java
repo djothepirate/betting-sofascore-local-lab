@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.live.LiveCampaignService;
+import com.bettingproject.sofascorelocal.application.live.LiveCampaignDiagnostic;
 import com.bettingproject.sofascorelocal.config.LiveCampaignWebMvcConfiguration;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
@@ -109,11 +110,26 @@ class LiveCampaignPaginationBrowserQualificationIT {
                 Page page = context.newPage();
                 assertThat(page.navigate(ORIGIN + BASE).status()).isEqualTo(200);
                 assertPage(page, 1);
+                assertThat(page.locator("[data-live-diagnostics]").count()).isOne();
+                assertThat(page.locator("[data-live-diagnostics]").isHidden()).isTrue();
                 page.locator("[data-live-pagination]").first().locator("a[aria-label='Page 2']").click();
                 page.waitForURL(ORIGIN + BASE + "?page=2#campaign-events");
                 assertPage(page, 2);
                 assertThat(polls).as("navigation works without JavaScript or polling").isEmpty();
                 capture(page, "pagination-page-two-no-js.png");
+                // An operator stop may have only a cleanup failure; verify native SSR hiding too.
+                var cleanupOnly = new LiveCampaignDiagnostic(LiveCampaignDiagnostic.Phase.CLEANUP_EXCLUSION,
+                        "RUNTIME_OR_STORAGE_FAILURE", NOW.plusSeconds(2));
+                runtime.set(new LiveCampaignService.RuntimeStatus("STOPPED_ERROR", "LOCAL_CLEANUP_PENDING", true, true, false,
+                        null, cleanupOnly));
+                assertThat(page.reload().status()).isEqualTo(200);
+                Locator diagnostic = page.locator("[data-live-diagnostics]");
+                assertThat(diagnostic.isVisible()).isTrue();
+                diagnostic.locator(":scope > summary").click();
+                assertThat(diagnostic.locator("[data-live-diagnostic='firstFailure']").isHidden()).isTrue();
+                assertDiagnostic(diagnostic.locator("[data-live-diagnostic='cleanupFailure']"), cleanupOnly);
+                assertThat(polls).isEmpty();
+                runtime.set(null);
             }
 
             try (BrowserContext context = browser.newContext(options(true))) {
@@ -149,19 +165,63 @@ class LiveCampaignPaginationBrowserQualificationIT {
 
                 // A process-only stop must be rendered even if the durable revision is unchanged.
                 String lastReceived = firstJ4(page).locator("[data-live-received]").textContent();
-                runtime.set(new LiveCampaignService.RuntimeStatus("STOPPED_ERROR", "LOCAL_CLEANUP_PENDING", true, true, false));
+                var firstFailure = new LiveCampaignDiagnostic(LiveCampaignDiagnostic.Phase.STORAGE_CHECK,
+                        "LIVE_STORAGE_PROBE_TIMEOUT", NOW.plusSeconds(4));
+                runtime.set(new LiveCampaignService.RuntimeStatus("STOPPED_ERROR", "LOCAL_CLEANUP_PENDING", true, true, false,
+                        firstFailure, null));
                 page.waitForCondition(() -> "Collecte arrêtée".equals(page.locator("[data-live-autonomy]").textContent()));
                 assertThat(revision.get()).isEqualTo(3);
                 assertThat(page.locator("[data-live-campaign-state]").textContent()).isEqualTo("RUNNING");
                 assertThat(firstJ4(page).locator("[data-live-received]").textContent()).isEqualTo(lastReceived);
                 assertThat(cardIds(page)).containsExactlyElementsOf(stableIds);
                 assertThat(page.locator("[data-live-global-stop-form] button").textContent()).isEqualTo("Finaliser la clôture locale");
+                Locator diagnostics = page.locator("[data-live-diagnostics]");
+                assertThat(diagnostics.count()).isOne();
+                assertThat(diagnostics.isVisible()).isTrue();
+                assertThat(diagnostics.evaluate("element => element.open")).isEqualTo(false);
+                Locator diagnosticSummary = diagnostics.locator(":scope > summary");
+                assertThat(diagnosticSummary.textContent()).isEqualTo("Diagnostic de l’arrêt");
+                diagnosticSummary.click();
+                Locator firstDiagnostic = diagnostics.locator("[data-live-diagnostic='firstFailure']");
+                Locator cleanupDiagnostic = diagnostics.locator("[data-live-diagnostic='cleanupFailure']");
+                assertDiagnostic(firstDiagnostic, firstFailure);
+                assertThat(cleanupDiagnostic.isHidden()).isTrue();
+
+                var cleanupFailure = new LiveCampaignDiagnostic(LiveCampaignDiagnostic.Phase.CLEANUP_EXCLUSION,
+                        "RUNTIME_OR_STORAGE_FAILURE", NOW.plusSeconds(5));
+                diagnosticSummary.focus();
+                runtime.set(new LiveCampaignService.RuntimeStatus("STOPPED_ERROR", "LOCAL_CLEANUP_PENDING", true, true, false,
+                        firstFailure, cleanupFailure));
+                page.waitForCondition(() -> cleanupFailure.occurredAt().toString().equals(
+                        cleanupDiagnostic.locator("[data-live-diagnostic-time]").textContent()));
+                assertThat(revision.get()).isEqualTo(3);
+                assertThat(diagnostics.evaluate("element => element.open")).isEqualTo(true);
+                assertThat(diagnosticSummary.evaluate("element => document.activeElement === element")).isEqualTo(true);
+                assertDiagnostic(firstDiagnostic, firstFailure);
+                assertDiagnostic(cleanupDiagnostic, cleanupFailure);
+                Path diagnosticCapture = Path.of(".tmp", "live-pagination-qualification", "live-stop-diagnostic.png").toAbsolutePath();
+                Files.createDirectories(diagnosticCapture.getParent());
+                diagnostics.screenshot(new Locator.ScreenshotOptions().setPath(diagnosticCapture));
+
+                diagnosticSummary.click();
+                var latestCleanup = new LiveCampaignDiagnostic(LiveCampaignDiagnostic.Phase.CLEANUP_EXCLUSION,
+                        "RUNTIME_OR_STORAGE_FAILURE", NOW.plusSeconds(6));
+                runtime.set(new LiveCampaignService.RuntimeStatus("STOPPED_ERROR", "LOCAL_CLEANUP_PENDING", true, true, false,
+                        firstFailure, latestCleanup));
+                page.waitForCondition(() -> latestCleanup.occurredAt().toString().equals(
+                        cleanupDiagnostic.locator("[data-live-diagnostic-time]").textContent()));
+                assertThat(diagnostics.evaluate("element => element.open")).isEqualTo(false);
+                assertThat(firstDiagnostic.locator("[data-live-diagnostic-code]").textContent()).isEqualTo(firstFailure.code());
+                assertThat(firstDiagnostic.locator("[data-live-diagnostic-time]").textContent()).isEqualTo(firstFailure.occurredAt().toString());
                 runtime.set(null);
                 page.waitForCondition(() -> page.locator("[data-live-autonomy]").textContent().matches("[1-9][0-9]* minutes environ"));
                 assertThat(revision.get()).isEqualTo(3);
                 assertThat(page.locator("[data-live-campaign-state]").textContent()).isEqualTo("RUNNING");
                 assertThat(firstJ4(page).locator("[data-live-received]").textContent()).isEqualTo(lastReceived);
                 assertThat(page.locator("[data-live-global-stop-form] button").textContent()).isEqualTo("Arrêter toute la campagne");
+                assertThat(diagnostics.isHidden()).isTrue();
+                assertThat(firstDiagnostic.locator("[data-live-diagnostic-code]").textContent()).isEqualTo("—");
+                assertThat(cleanupDiagnostic.locator("[data-live-diagnostic-code]").textContent()).isEqualTo("—");
                 assertPage(page, 2);
                 capture(page, "pagination-page-two-live.png");
 
@@ -204,6 +264,13 @@ class LiveCampaignPaginationBrowserQualificationIT {
             assertThat(post.origin()).isEqualTo(ORIGIN);
             assertThat(post.status()).isEqualTo(302);
         });
+    }
+
+    private static void assertDiagnostic(Locator section, LiveCampaignDiagnostic diagnostic) {
+        assertThat(section.isVisible()).isTrue();
+        assertThat(section.locator("[data-live-diagnostic-phase]").textContent()).isEqualTo(diagnostic.phase().name());
+        assertThat(section.locator("[data-live-diagnostic-code]").textContent()).isEqualTo(diagnostic.code());
+        assertThat(section.locator("[data-live-diagnostic-time]").textContent()).isEqualTo(diagnostic.occurredAt().toString());
     }
 
     private static Browser.NewContextOptions options(boolean javascript) {

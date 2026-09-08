@@ -41,6 +41,28 @@
     <p data-live-campaign-reason th:text="${campaign.reason ?: '—'}">—</p>
     <p class="notice notice-warning" data-live-runtime-status role="status"
        th:hidden="${campaign.runtimeStatus == null}" th:text="${campaign.runtimeStatus?.label}"></p>
+    <details class="notice notice-warning" data-live-diagnostics
+             th:with="first=${campaign.runtimeStatus?.firstFailure},cleanup=${campaign.runtimeStatus?.cleanupFailure}"
+             th:hidden="${first == null and cleanup == null}">
+      <summary>Diagnostic de l’arrêt</summary>
+      <p class="muted">Informations de cette exécution : conservez-les avant de redémarrer l’application.</p>
+      <section data-live-diagnostic="firstFailure" th:hidden="${first == null}">
+        <h3>Première erreur</h3>
+        <dl class="detail-grid">
+          <div><dt>Instant (UTC)</dt><dd data-live-diagnostic-time th:text="${first?.occurredAt ?: '—'}">—</dd></div>
+          <div><dt>Étape</dt><dd data-live-diagnostic-phase th:text="${first?.phase ?: '—'}">—</dd></div>
+          <div><dt>Code</dt><dd class="mono" data-live-diagnostic-code th:text="${first?.code ?: '—'}">—</dd></div>
+        </dl>
+      </section>
+      <section data-live-diagnostic="cleanupFailure" th:hidden="${cleanup == null}">
+        <h3>Dernier échec de clôture</h3>
+        <dl class="detail-grid">
+          <div><dt>Instant (UTC)</dt><dd data-live-diagnostic-time th:text="${cleanup?.occurredAt ?: '—'}">—</dd></div>
+          <div><dt>Étape</dt><dd data-live-diagnostic-phase th:text="${cleanup?.phase ?: '—'}">—</dd></div>
+          <div><dt>Code</dt><dd class="mono" data-live-diagnostic-code th:text="${cleanup?.code ?: '—'}">—</dd></div>
+        </dl>
+      </section>
+    </details>
     <dl class="detail-grid">
       <div><dt>Démarrage</dt><dd data-live-started-at th:text="${campaign.startedAt ?: (campaign.state == 'PREPARED' ? 'En attente de lancement' : 'Non lancée')}">En attente</dd></div>
       <div><dt>Fin au plus tard (UTC)</dt><dd data-live-ends-at th:text="${campaign.endsAt ?: (campaign.state == 'PREPARED' ? 'Fixée au lancement' : '—')}">—</dd></div>

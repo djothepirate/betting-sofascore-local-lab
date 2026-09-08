@@ -989,6 +989,13 @@ pas automatiquement ce complément.
 
 ### Définition de fini
 
+Le 8 septembre, après arrêt du Lab par le propriétaire, l’enquête sur l’arrêt initial
+identifie une perte certaine des diagnostics de la boucle et de la clôture. Le complément
+[diagnostic d’exécution](../../validation/WO058-LIVE-FAILURE-DIAGNOSTICS-20260908.md)
+conserve ces deux observations séparément, sans changer le protocole de collecte ou de
+clôture. La piste historique du contrôle de stockage reste une inférence documentée ;
+elle ne vaut pas identification certaine de l’exception disparue.
+
 Le cadrage et l'autorisation de réalisation sont acquis. La réalisation, ses limites et la
 qualification de B–D sont consignées dans le
 [rapport d'exécution](../../validation/WO058-LIVE-J4-J5-IMPLEMENTATION-20260907.md),

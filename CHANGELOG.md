@@ -4,6 +4,16 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — diagnostic de l’arrêt et de la clôture live
+
+- Conserve séparément la première erreur d’exécution et le dernier échec de clôture,
+  y compris pour une erreur de contrôle local survenue avant la réservation d’un appel.
+- Expose phase, code contrôlé et instant dans les journaux et le lecteur local, avec
+  un encart global de diagnostic actualisé à révision de campagne inchangée.
+- Préserve les plafonds, délais, états persistés et preuves de clôture ; les nouvelles
+  observations ne reconstruisent pas l’exception perdue de la campagne du 8 septembre.
+- Preuves et limites : [diagnostic live](docs/validation/WO058-LIVE-FAILURE-DIAGNOSTICS-20260908.md).
+
 ### WO-058 — pagination des rencontres live et lisibilité après arrêt
 
 - Affiche dix rencontres par page de campagne, avec navigation en haut et en bas dès la

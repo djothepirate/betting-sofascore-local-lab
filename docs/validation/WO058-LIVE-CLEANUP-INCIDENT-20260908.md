@@ -26,6 +26,11 @@ Le journal applicatif communiqué par l'utilisateur a été relu dans le diagnos
 
 ## Lecture du code et limites
 
+Cette lecture porte sur la version `9b96f07` effectivement utilisée lors de l’incident.
+Le [complément de diagnostic](WO058-LIVE-FAILURE-DIAGNOSTICS-20260908.md) préparé après
+l’arrêt du Lab corrige la perte d’information pour les exécutions suivantes ; il ne
+reconstitue pas les exceptions disparues de celle-ci.
+
 Le bouton de clôture de la session encore détenue passe par le POST `/live-campaigns/{campaignId}/stop`, puis [LiveCampaignService.stop](../../src/main/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignService.java#L334). Quand la session est déjà terminée en mémoire, il réveille la demande de cleanup sur le thread propriétaire. La redirection HTTP constate l'acceptation de cette demande, pas son succès ultérieur.
 
 Dans [LiveCampaignService.cleanup](../../src/main/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignService.java#L420), la fermeture du transport et la preuve de disparition du superviseur précèdent la publication des états terminaux, la résolution des tentatives restantes et la libération de la garde. Cette réconciliation n'apparaît pas dans le ledger de l'incident.
@@ -65,6 +70,42 @@ Le dernier exec intervient après la publication `20:18:46.316102Z`, alors que l
 **Inférence bornée :** cette dernière opération locale sans réservation ultérieure renforce la piste du contrôle de stockage avant appel. Le code [DockerLiveStorageCapacityProbe](../../src/main/java/com/bettingproject/sofascorelocal/application/live/DockerLiveStorageCapacityProbe.java) attend au plus deux secondes la commande `docker exec … df -Pk /var/lib/postgresql`, et son échec remonte au `catch` générique de `run`. Le timeout de deux secondes n'est pas démontré : l'heure de lancement du processus Java, la commande exacte et le code de sortie de cet exec ne figurent pas dans le journal récupéré.
 
 **Limite de récupération :** `docker events` borné à `20:18:35–20:19:05Z` et au seul conteneur Lab ne retourne plus les anciens événements `exec_create`, `exec_start`, `exec_die`. L'identifiant du dernier exec, extrait du journal, a fait l'objet d'un unique GET `/v1.55/exec/{id}/json` sur le pipe local `dockerDesktopLinuxEngine` : réponse `404 Not Found`. Aucun exec n'a été créé par cette lecture. Ces archives ne permettent donc pas de récupérer le code de sortie ou l'exception originale. Aucune cause historique certaine supplémentaire ne peut être affirmée à partir de ces sources.
+
+## Complément des captures PostgreSQL et Testcontainers
+
+Les captures Docker Desktop transmises ensuite montrent un checkpoint commencé à
+`20:15:52.820Z` et terminé à `20:18:24.813Z` : 1 510 buffers écrits, `write=151.881 s`,
+`sync=0.090 s`, `total=151.993 s`. Il se termine environ 21,5 secondes **avant** la
+dernière publication réussie de la campagne (`20:18:46.316102Z`). Le checkpoint suivant
+se termine également normalement à `20:21:54.810Z` ; les lignes visibles sont des
+messages `LOG`, sans erreur de checkpoint.
+
+Une lecture de `pg_settings` dans une transaction `READ ONLY` confirme les valeurs
+locales : `checkpoint_completion_target=0.9`, `checkpoint_timeout=300 s`,
+`log_checkpoints=on`, `shared_buffers=16384` unités de 8 KiB (128 MiB). Aucun réglage
+n’a été modifié. PostgreSQL répartit les écritures du checkpoint dans le temps selon
+`checkpoint_completion_target` pour lisser les entrées/sorties : les 152 secondes de
+durée totale **ne désignent pas 152 secondes de blocage de la base**. Référence primaire :
+[documentation PostgreSQL 18 sur les checkpoints](https://www.postgresql.org/docs/18/wal-configuration.html).
+Ces messages ne prouvent pas une cause PostgreSQL ; ils ne remplacent pas non plus
+des mesures historiques de latence disque permettant d’exclure toute contention.
+
+Requête de configuration exécutée dans cette transaction de lecture :
+
+```sql
+SELECT name, setting, unit
+FROM pg_settings
+WHERE name IN ('checkpoint_completion_target', 'checkpoint_timeout',
+               'log_checkpoints', 'shared_buffers')
+ORDER BY name;
+```
+
+Les lignes `testcontainers-ryuk` de `20:52:17Z` (22:52 Europe/Paris) correspondent à la
+vérification complète de la pagination lancée par l’agent après l’arrêt du Lab par
+l’utilisateur. Cette exécution s’est terminée à `20:57:02Z` avec succès. Elle est
+postérieure à l’incident de `20:18Z` et ne peut donc pas l’avoir déclenché. Les résultats
+des tests sont conservés séparément dans les rapports de qualification ; leurs
+conteneurs ne sont pas ceux d’une nouvelle campagne fournisseur.
 
 ## Commandes de lecture exécutées
 

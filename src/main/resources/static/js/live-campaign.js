@@ -212,6 +212,19 @@
     };
     if (monitor.dataset.liveCampaignId === campaign.campaignId) {
       renderRuntime(monitor);
+      const diagnostics = monitor.querySelector("[data-live-diagnostics]");
+      if (diagnostics) {
+        diagnostics.hidden = !runtime?.firstFailure && !runtime?.cleanupFailure;
+        for (const key of ["firstFailure", "cleanupFailure"]) {
+          const section = diagnostics.querySelector(`[data-live-diagnostic="${key}"]`);
+          if (!section) continue;
+          const failure = runtime?.[key];
+          section.hidden = !failure;
+          text(section, "[data-live-diagnostic-time]", failure?.occurredAt);
+          text(section, "[data-live-diagnostic-phase]", failure?.phase);
+          text(section, "[data-live-diagnostic-code]", failure?.code);
+        }
+      }
       text(monitor, "[data-live-campaign-state]", campaign.state);
       text(monitor, "[data-live-campaign-reason]", campaign.reason);
       text(monitor, "[data-live-started-at]", campaign.startedAt || (campaign.state === "PREPARED" ? "En attente de lancement" : "Non lancée"));

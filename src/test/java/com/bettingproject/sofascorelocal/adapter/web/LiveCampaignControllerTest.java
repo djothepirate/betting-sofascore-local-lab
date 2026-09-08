@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.live.LiveCampaignService;
+import com.bettingproject.sofascorelocal.application.live.LiveCampaignDiagnostic;
 import com.bettingproject.sofascorelocal.config.LiveCampaignWebMvcConfiguration;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
@@ -978,6 +979,51 @@ class LiveCampaignControllerTest {
                 .andExpect(jsonPath("$.events.length()").value(17))
                 .andExpect(jsonPath("$.events[0].canonicalEventId").value(view.events().getFirst().target().canonicalEventId().toString()))
                 .andExpect(jsonPath("$.events[16].canonicalEventId").value(view.events().getLast().target().canonicalEventId().toString()));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"NONE", "FIRST", "CLEANUP", "BOTH"})
+    void stopDiagnosticsAreGlobalOptionalAndSeparateFromTheLedgerState(String mode) throws Exception {
+        LiveCampaignDiagnostic first = mode.equals("FIRST") || mode.equals("BOTH")
+                ? new LiveCampaignDiagnostic(LiveCampaignDiagnostic.Phase.STORAGE_CHECK, "LIVE_STORAGE_PROBE_TIMEOUT", NOW) : null;
+        LiveCampaignDiagnostic cleanup = mode.equals("CLEANUP") || mode.equals("BOTH")
+                ? new LiveCampaignDiagnostic(LiveCampaignDiagnostic.Phase.CLEANUP_EXCLUSION,
+                        "RUNTIME_OR_STORAGE_FAILURE", NOW.plusSeconds(5)) : null;
+        when(service.state(CAMPAIGN_ID)).thenReturn(paginatedCampaign("RUNNING", 17));
+        when(service.runtimeStatus(CAMPAIGN_ID)).thenReturn(Optional.of(new LiveCampaignService.RuntimeStatus(
+                "STOPPED_ERROR", "LOCAL_CLEANUP_PENDING", true, true, false, first, cleanup)));
+        String base = "/live-campaigns/" + CAMPAIGN_ID;
+        String body = mvc.perform(get(base).param("page", "2").header("Host", HOST))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        var box = Pattern.compile("(?s)<details\\b([^>]*data-live-diagnostics[^>]*)>(.*?)</details>").matcher(body);
+        assertThat(box.find()).isTrue();
+        assertThat(box.group(1).contains("hidden")).isEqualTo(first == null && cleanup == null);
+        assertThat(Pattern.compile("\\bopen(?:=|\\s|$)").matcher(box.group(1)).find()).isFalse();
+        String diagnosticBody = box.group(2);
+        assertThat(box.find()).as("one global diagnostic box, never one per event").isFalse();
+        assertThat(diagnosticBody).contains("Diagnostic de l’arrêt", "Première erreur", "Dernier échec de clôture",
+                "Instant (UTC)", "conservez-les avant de redémarrer");
+        for (String key : List.of("firstFailure", "cleanupFailure")) {
+            LiveCampaignDiagnostic expected = key.equals("firstFailure") ? first : cleanup;
+            var section = Pattern.compile("(?s)<section\\b([^>]*data-live-diagnostic=\"" + key + "\"[^>]*)>(.*?)</section>")
+                    .matcher(diagnosticBody);
+            assertThat(section.find()).isTrue();
+            assertThat(section.group(1).contains("hidden")).isEqualTo(expected == null);
+            if (expected != null) assertThat(section.group(2)).contains(expected.phase().name(), expected.code(), expected.occurredAt().toString());
+        }
+        var state = mvc.perform(get(base + "/state").param("page", "2").header("Host", HOST))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.revision").value(42))
+                .andExpect(jsonPath("$.state").value("RUNNING"));
+        if (first == null) state.andExpect(jsonPath("$.runtimeStatus.firstFailure").doesNotExist());
+        else state.andExpect(jsonPath("$.runtimeStatus.firstFailure.phase").value("STORAGE_CHECK"))
+                .andExpect(jsonPath("$.runtimeStatus.firstFailure.code").value("LIVE_STORAGE_PROBE_TIMEOUT"))
+                .andExpect(jsonPath("$.runtimeStatus.firstFailure.occurredAt").value(NOW.toString()));
+        if (cleanup == null) state.andExpect(jsonPath("$.runtimeStatus.cleanupFailure").doesNotExist());
+        else state.andExpect(jsonPath("$.runtimeStatus.cleanupFailure.phase").value("CLEANUP_EXCLUSION"))
+                .andExpect(jsonPath("$.runtimeStatus.cleanupFailure.code").value("RUNTIME_OR_STORAGE_FAILURE"))
+                .andExpect(jsonPath("$.runtimeStatus.cleanupFailure.occurredAt").value(NOW.plusSeconds(5).toString()));
+        verify(service, never()).stop(any(), any());
+        verify(service, never()).launch(any(), any());
     }
 
     @Test

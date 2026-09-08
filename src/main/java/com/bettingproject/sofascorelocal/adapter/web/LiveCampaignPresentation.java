@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.live.LiveCampaignService.RuntimeStatus;
+import com.bettingproject.sofascorelocal.application.live.LiveCampaignDiagnostic;
 import com.bettingproject.sofascorelocal.application.event.J4EventResult;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.eventdata.*;
@@ -88,7 +89,8 @@ public class LiveCampaignPresentation {
                         runtimeStatus.collectionStopped(), runtimeStatus.cleanupPending(), runtimeStatus.cleanupInProgress(),
                         runtimeStatus.cleanupInProgress() ? "Collecte arrêtée / clôture locale en cours."
                                 : runtimeStatus.cleanupPending() ? "Collecte arrêtée / clôture locale requise."
-                                : "Collecte arrêtée."), cadence(view, observedAt, runtimeStatus), pagination);
+                                : "Collecte arrêtée.", runtimeStatus.firstFailure(), runtimeStatus.cleanupFailure()),
+                cadence(view, observedAt, runtimeStatus), pagination);
     }
 
     private static Cadence cadence(CampaignView view, Instant now, RuntimeStatus runtimeStatus) {
@@ -402,7 +404,13 @@ public class LiveCampaignPresentation {
     }
     /** Local process observation kept separate from the persisted campaign and event states. */
     public record RuntimeObservation(String state, String reason, boolean collectionStopped,
-                                     boolean cleanupPending, boolean cleanupInProgress, String label) { }
+                                     boolean cleanupPending, boolean cleanupInProgress, String label,
+                                     LiveCampaignDiagnostic firstFailure, LiveCampaignDiagnostic cleanupFailure) {
+        public RuntimeObservation(String state, String reason, boolean collectionStopped,
+                                  boolean cleanupPending, boolean cleanupInProgress, String label) {
+            this(state, reason, collectionStopped, cleanupPending, cleanupInProgress, label, null, null);
+        }
+    }
     public record Event(UUID canonicalEventId, long providerEventId, String title, String competition,
                         String startsAtParis, String sportStatus, String sportStatusLabel, String score, String state, String reason,
                         Instant nextDueAt, int reservedCalls, int maximumCalls, long receivedBytes,

@@ -479,6 +479,21 @@ enregistre les états terminaux et libère le garde ; elle n'effectue aucun appe
 Le bouton est désactivé pendant cette opération. Un nouvel échec laisse la clôture disponible
 pour une autre commande explicite ; aucun réessai périodique n'est déclenché.
 
+Ouvrir **« Diagnostic de l’arrêt »** lorsqu’un diagnostic est disponible. La première
+erreur de collecte et le dernier échec de clôture sont présentés séparément, avec leur
+phase, code et instant UTC. Conserver ces informations avant un redémarrage : elles
+décrivent la session en mémoire et ne sont pas réécrites dans les observations sportives.
+Les mêmes valeurs sont émises dans les journaux et dans `runtimeStatus.firstFailure`
+et `runtimeStatus.cleanupFailure` du JSON local. Un diagnostic absent pour une ancienne
+campagne n’est pas une preuve d’absence d’erreur.
+
+Un échec mémorisé par le superviseur après le début du nettoyage peut empêcher toute
+nouvelle tentative de clôture dans la même JVM. Dans ce cas, le retour de la page avec
+le même bandeau ne prouve pas une libération. Conserver le diagnostic, arrêter le Lab,
+puis utiliser après redémarrage le parcours **« Clôturer la session interrompue »**
+ci-dessous. Le diagnostic seul ne permet jamais de forcer le garde ni de déclarer que
+les processus ont disparu. Voir les [preuves et limites](../validation/WO058-LIVE-FAILURE-DIAGNOSTICS-20260908.md).
+
 Une fois la clôture confirmée, revenir aux rencontres, préparer les cibles encore éligibles et
 confirmer un nouveau lancement. Un redémarrage entre-temps relève du cas d'orphelin ci-dessous :
 le nouveau processus ne possède pas le lease de l'ancien et ne peut pas utiliser cette clôture

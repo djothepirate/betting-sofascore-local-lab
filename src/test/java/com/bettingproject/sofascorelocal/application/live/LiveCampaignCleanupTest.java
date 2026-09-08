@@ -9,9 +9,13 @@ import com.bettingproject.sofascorelocal.domain.provider.*;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEventStatus;
 import com.bettingproject.sofascorelocal.port.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.boot.test.system.CapturedOutput;
+import org.springframework.boot.test.system.OutputCaptureExtension;
 
 import java.nio.charset.StandardCharsets;
 import java.time.*;
@@ -23,9 +27,95 @@ import java.util.function.BooleanSupplier;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import static com.bettingproject.sofascorelocal.application.live.LiveCampaignDiagnostic.Phase.*;
 
 /** Persistence outage recovery uses the real coordinator and its thread-owned lock, without a provider. */
 class LiveCampaignCleanupTest {
+    @ParameterizedTest
+    @CsvSource({"BUDGET_READ,RUNTIME_OR_STORAGE_FAILURE", "STORAGE_CHECK,LIVE_STORAGE_PROBE_TIMEOUT",
+            "ATTEMPT_RESERVATION,RUNTIME_OR_STORAGE_FAILURE"})
+    @ExtendWith(OutputCaptureExtension.class)
+    void aFailureBeforeReservationLeavesNoFictitiousFailedCallAndOnlyControlledDiagnostics(
+            LiveCampaignDiagnostic.Phase phase, String expectedCode, CapturedOutput output) throws Exception {
+        String sensitiveMessage = "private-sql-payload-cookie-fixture-value";
+        try (Harness h = new Harness()) {
+            h.failCleanupBarrier.set(true);
+            RuntimeException failure = new IllegalStateException(phase == STORAGE_CHECK
+                    ? "LIVE_STORAGE_PROBE_TIMEOUT" : sensitiveMessage,
+                    new IllegalStateException(sensitiveMessage));
+            if (phase == BUDGET_READ) doThrow(failure).when(h.store).dispatchBudget(any(), any());
+            else if (phase == STORAGE_CHECK) doThrow(failure).when(h.admission).requireStorage(anyLong());
+            else doThrow(failure).when(h.store).reserveAttempt(any());
+            try {
+                Instant before = Instant.now();
+                h.service.launch(h.id(), h.manifest.manifestSha256());
+                await(h::pending);
+                var runtime = h.service.runtimeStatus(h.id()).orElseThrow();
+                assertThat(runtime.firstFailure()).satisfies(first -> {
+                    assertThat(first.phase()).isEqualTo(phase);
+                    assertThat(first.code()).isEqualTo(expectedCode);
+                    assertThat(first.occurredAt()).isBetween(before, Instant.now());
+                });
+                assertThat(runtime.cleanupFailure().phase()).isEqualTo(CLEANUP_EXCLUSION);
+                assertThat(runtime.state()).isEqualTo("STOPPED_ERROR");
+                assertThat(h.reserved.get()).isNull();
+                assertThat(h.receipt.get()).isNull();
+                assertThat(h.dispatches).hasValue(0);
+                verify(h.store, never()).publishResult(any(), any(), any(), any());
+                verify(h.campaign, never()).execute(any(), any());
+                if (phase != ATTEMPT_RESERVATION) verify(h.store, never()).reserveAttempt(any());
+                assertThat(output.getAll()).contains("LIVE_CAMPAIGN_DIAGNOSTIC", "phase=" + phase,
+                        "code=" + expectedCode).doesNotContain(sensitiveMessage, "guard barrier failed",
+                        "java.lang.IllegalStateException", "Caused by:");
+            } finally { h.failCleanupBarrier.set(false); }
+        }
+    }
+
+    @Test
+    @ExtendWith(OutputCaptureExtension.class)
+    void firstFailureSurvivesChangingCleanupFailuresAndObservationDoesNotRepeatWork(CapturedOutput output) throws Exception {
+        String sensitive = "live-diagnostic-sensitive-cause-fixture";
+        try (Harness h = new Harness()) {
+            h.failCleanupBarrier.set(true);
+            doThrow(new IllegalStateException("LIVE_STORAGE_PROBE_TIMEOUT", new IllegalStateException(sensitive)))
+                    .when(h.admission).requireStorage(anyLong());
+            try {
+                h.service.launch(h.id(), h.manifest.manifestSha256());
+                await(h::pending);
+                var initial = h.service.runtimeStatus(h.id()).orElseThrow();
+                assertThat(initial.firstFailure().phase()).isEqualTo(STORAGE_CHECK);
+                assertThat(initial.firstFailure().code()).isEqualTo("LIVE_STORAGE_PROBE_TIMEOUT");
+                assertThat(initial.cleanupFailure().phase()).isEqualTo(CLEANUP_EXCLUSION);
+
+                h.failCleanupBarrier.set(false);
+                h.failRelease.set(true);
+                int cleanupMarkers = h.cleanupMarkers.get();
+                h.service.stop(h.id(), null);
+                await(() -> h.cleanupMarkers.get() == cleanupMarkers + 1 && h.pending());
+                var retried = h.service.runtimeStatus(h.id()).orElseThrow();
+                assertThat(retried.firstFailure()).isSameAs(initial.firstFailure());
+                assertThat(retried.cleanupFailure().phase()).isEqualTo(CLEANUP_LEASE_RELEASE);
+                assertThat(retried.cleanupFailure().occurredAt()).isAfterOrEqualTo(initial.cleanupFailure().occurredAt());
+                assertThat(retried.cleanupPending()).isTrue();
+                assertThat(h.guardState.get()).isEqualTo("CLEANUP_REQUIRED");
+
+                int writes = h.writes.get();
+                for (int i = 0; i < 10; i++) assertThat(h.service.runtimeStatus(h.id()).orElseThrow()).isEqualTo(retried);
+                Thread.sleep(120);
+                assertThat(h.writes).hasValue(writes);
+                verify(h.admission).requireStorage(anyLong());
+                verify(h.store, never()).reserveAttempt(any());
+                verify(h.campaign, never()).execute(any(), any());
+                assertThat(output.getAll().lines().filter(line -> line.contains("campaignId=" + h.id()))
+                        .filter(line -> line.contains("kind=INITIAL_FAILURE")).count()).isEqualTo(1);
+                assertThat(output.getAll().lines().filter(line -> line.contains("campaignId=" + h.id()))
+                        .filter(line -> line.contains("kind=CLEANUP_FAILURE")).count()).isEqualTo(2);
+                assertThat(output.getAll()).doesNotContain(sensitive, "guard barrier failed", "release transaction failed",
+                        "java.lang.IllegalStateException", "Caused by:");
+            } finally { h.failCleanupBarrier.set(false); h.failRelease.set(false); }
+        }
+    }
+
     @Test
     void cleanupRequiredBeforeLaunchIsReportedWithoutAcquisitionOrTransport() throws Exception {
         try (Harness h = new Harness()) {
@@ -203,6 +293,9 @@ class LiveCampaignCleanupTest {
                 assertThat(runtime.collectionStopped()).isTrue();
                 assertThat(runtime.cleanupPending()).isTrue();
                 assertThat(runtime.cleanupInProgress()).isFalse();
+                assertThat(runtime.firstFailure().phase()).isEqualTo(RAW_SAVE);
+                assertThat(runtime.firstFailure().code()).isEqualTo("RUNTIME_OR_STORAGE_FAILURE");
+                assertThat(runtime.cleanupFailure().phase()).isEqualTo(CLEANUP_EXCLUSION);
             });
             assertThat(h.service.runtimeStatus(UUID.randomUUID())).isEmpty();
             assertThat(h.guardState.get()).isEqualTo("OWNED");
@@ -488,6 +581,7 @@ class LiveCampaignCleanupTest {
     }
 
     private static final class Harness implements AutoCloseable {
+        final LiveAdmissionPolicy admission = mock(LiveAdmissionPolicy.class);
         final LiveCampaignStore store = mock(LiveCampaignStore.class);
         final ProviderCampaignGuardStore guard = mock(ProviderCampaignGuardStore.class);
         final PlaywrightProviderSupervisor supervisor = mock(PlaywrightProviderSupervisor.class);
@@ -682,7 +776,7 @@ class LiveCampaignCleanupTest {
             when(event.status()).thenReturn(new ScheduledEventStatus("notstarted", Optional.empty()));
             when(event.source()).thenReturn(EventSourceTrace.providerSnapshot(1, "a".repeat(64), "event-details-v2", now));
             when(events.findLatestByCanonicalId(identity.value())).thenReturn(Optional.of(event));
-            service = new LiveCampaignService(provider, playwright, properties, mock(LiveAdmissionPolicy.class),
+            service = new LiveCampaignService(provider, playwright, properties, admission,
                     store, events, coordinator, guard, factory, supervisor, mock(LiveResponseProcessor.class), Clock.systemUTC());
         }
 

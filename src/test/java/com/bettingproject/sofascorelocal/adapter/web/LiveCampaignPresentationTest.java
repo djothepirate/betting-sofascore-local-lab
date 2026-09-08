@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.live.LiveCampaignService.RuntimeStatus;
+import com.bettingproject.sofascorelocal.application.live.LiveCampaignDiagnostic;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
@@ -17,6 +18,7 @@ import com.bettingproject.sofascorelocal.port.J5EventDataStore;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.time.Duration;
 import java.time.Instant;
@@ -372,8 +374,35 @@ class LiveCampaignPresentationTest {
         assertThat(projected.runtimeStatus().collectionStopped()).isTrue();
         assertThat(projected.runtimeStatus().cleanupPending()).isEqualTo(cleanupPending);
         assertThat(projected.runtimeStatus().cleanupInProgress()).isEqualTo(cleanupInProgress);
+        assertThat(projected.runtimeStatus().firstFailure()).isNull();
+        assertThat(projected.runtimeStatus().cleanupFailure()).isNull();
         assertThat(projected.events().getFirst().families().getFirst().freshness().frozen()).isFalse();
         assertThat(projected.events().getFirst().families().getFirst().freshness().ageAsOf()).isEqualTo(at);
+    }
+
+    @Test
+    void bothProcessDiagnosticsSurviveProjectionAndJsonWithoutChangingTheDurableLedger() {
+        var view = campaignForFreshness(SofascoreEndpointType.EVENT_DETAILS, "COLLECTING", List.of());
+        var first = new LiveCampaignDiagnostic(LiveCampaignDiagnostic.Phase.STORAGE_CHECK,
+                "LIVE_STORAGE_PROBE_TIMEOUT", START.plusSeconds(45));
+        var cleanup = new LiveCampaignDiagnostic(LiveCampaignDiagnostic.Phase.CLEANUP_EXCLUSION,
+                "RUNTIME_OR_STORAGE_FAILURE", START.plusSeconds(46));
+        var result = presentation.state(view, new RuntimeStatus("STOPPED_ERROR", "LOCAL_CLEANUP_PENDING",
+                true, true, false, first, cleanup));
+
+        assertThat(result.state()).isEqualTo("RUNNING");
+        assertThat(result.revision()).isEqualTo(view.revision());
+        assertThat(result.runtimeStatus().firstFailure()).isSameAs(first);
+        assertThat(result.runtimeStatus().cleanupFailure()).isSameAs(cleanup);
+        var json = JsonMapper.builder().build().valueToTree(result);
+        var runtime = json.path("runtimeStatus");
+        assertThat(runtime.path("firstFailure").path("phase").asString()).isEqualTo("STORAGE_CHECK");
+        assertThat(runtime.path("firstFailure").path("code").asString()).isEqualTo("LIVE_STORAGE_PROBE_TIMEOUT");
+        assertThat(runtime.path("firstFailure").path("occurredAt").asString()).isEqualTo(first.occurredAt().toString());
+        assertThat(runtime.path("cleanupFailure").path("phase").asString()).isEqualTo("CLEANUP_EXCLUSION");
+        assertThat(runtime.path("cleanupFailure").path("occurredAt").asString()).isEqualTo(cleanup.occurredAt().toString());
+        assertThat(runtime.path("firstFailure").size()).isEqualTo(3);
+        assertThat(runtime.path("cleanupFailure").size()).isEqualTo(3);
     }
 
     @Test
