@@ -4,6 +4,7 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.scheduledevents.Sched
 import com.bettingproject.sofascorelocal.application.event.J4EventDetailResult;
 import com.bettingproject.sofascorelocal.application.event.J4EventQueryService;
 import com.bettingproject.sofascorelocal.application.event.J4EventSearchItem;
+import com.bettingproject.sofascorelocal.application.event.J4EventResult;
 import com.bettingproject.sofascorelocal.application.event.J4EventSearchResult;
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportResult;
 import com.bettingproject.sofascorelocal.application.event.J4OfflineFixtureImportService;
@@ -287,6 +288,31 @@ class EventExplorerControllerTest {
             assertThat(badge.group(1)).isEqualTo(expected);
             assertThat(html).doesNotContain("<b>Halftime</b>");
             if (path.equals("/events")) assertThat(html).contains("data-live-finished=\"false\"");
+        }
+    }
+
+    @ParameterizedTest
+    @CsvSource({"finished,true,Victoire sur tapis vert,true", "postponed,false,postponed,true",
+            "canceled,false,canceled,false"})
+    void tableAndDetailRenderAwardAndDisplayPairAndExcludePostponedFromLiveCount(
+            String type, boolean awarded, String label, boolean ineligible) throws Exception {
+        var base = providerEvent();
+        var event = new CanonicalEventObservationView(base.observationId(), base.identity(), base.startsAt(),
+                base.homeTeam(), base.awayTeam(), new ScheduledEventStatus(type, Optional.empty()),
+                base.tournament(), base.source(), base.normalizedSha256(), base.observationCount());
+        var zone = ZoneId.of("Europe/Paris");
+        var date = event.startsAt().atZone(zone).toLocalDate();
+        var item = new J4EventSearchItem(event, event.startsAt().atZone(zone),
+                new J4EventResult(awarded, Optional.of(3), Optional.of(0)));
+        when(queryService.search(date, "Europe/Paris")).thenReturn(new J4EventSearchResult(date, zone,
+                date.atStartOfDay(zone).toInstant(), date.plusDays(1).atStartOfDay(zone).toInstant(), List.of(item)));
+        when(queryService.findDetail(event.identity().value(), "Europe/Paris"))
+                .thenReturn(Optional.of(new J4EventDetailResult(zone, item, List.of(item), Optional.empty())));
+        for (String path : List.of("/events", "/events/" + event.identity().value())) {
+            String html = mockMvc.perform(get(path).param("date", date.toString()))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            assertThat(html).contains(label, "3 – 0");
+            if (path.equals("/events")) assertThat(html).contains("data-live-finished=\"" + ineligible + "\"");
         }
     }
 

@@ -22,7 +22,7 @@ class LiveCampaignBrowserQualificationIT {
     private static final String CAMPAIGN = "00000000-0000-0000-0000-000000000058";
 
     @Test
-    @Timeout(90)
+    @Timeout(120)
     void nativeChromiumPreservesSelectionFocusAndFreshnessAcrossLocalRefreshes() throws Exception {
         String configured = System.getProperty("provider.playwright.browser-cache", "");
         assertThat(configured).as("explicit browser cache opt-in").isNotBlank();
@@ -63,6 +63,7 @@ class LiveCampaignBrowserQualificationIT {
             Page page = context.newPage();
             page.navigate(origin + "/events");
             page.waitForCondition(() -> "10 – 0".equals(page.locator("[data-live-score]").textContent()));
+            assertThat(page.locator("[data-live-campaign-score]").textContent()).isEqualTo("10 – 0");
             page.locator("input[name=eventId]").check();
             page.locator("input[name=eventId]").focus();
             assertThat(page.locator("[data-live-selection-count]").textContent()).contains("1 rencontre sélectionnée");
@@ -73,6 +74,7 @@ class LiveCampaignBrowserQualificationIT {
 
             revision.set(11);
             page.waitForCondition(() -> "11 – 0".equals(page.locator("[data-live-score]").textContent()));
+            assertThat(page.locator("[data-live-campaign-score]").textContent()).isEqualTo("11 – 0");
             assertThat(page.locator("input[name=eventId]").isChecked()).isTrue();
             assertThat(page.evaluate("document.activeElement === document.querySelector('input[name=eventId]')")).isEqualTo(true);
             assertThat(page.locator("[data-live-age]").textContent()).isEqualTo("90 s");
@@ -82,6 +84,7 @@ class LiveCampaignBrowserQualificationIT {
             page.waitForCondition(() -> gets.get() > beforeOldResponse);
             page.waitForTimeout(150);
             assertThat(page.locator("[data-live-score]").textContent()).isEqualTo("11 – 0");
+            assertThat(page.locator("[data-live-campaign-score]").textContent()).isEqualTo("11 – 0");
             assertThat(page.locator("input[name=eventId]").isChecked()).isTrue();
 
             // Control the browser visibility signal without opening an interactive desktop window.
@@ -99,13 +102,17 @@ class LiveCampaignBrowserQualificationIT {
             assertThat(page.evaluate("document.activeElement === document.querySelector('input[name=eventId]')")).isEqualTo(true);
             assertThat(page.locator("[data-live-link]").getAttribute("href")).isEqualTo("/live-campaigns/" + CAMPAIGN);
             assertThat(page.locator("[data-live-age]").textContent()).isEqualTo("90 s");
-            // A newer canonical observation already visible in this document must also win.
-            page.evaluate("document.querySelector('[data-live-event-id]').dataset.liveCanonicalReceivedAt = '2026-09-08T12:00:00Z'");
-            int beforeCanonicalProtection = gets.get();
+            // The canonical header and campaign panel have distinct provenance and score targets.
+            // A newer manual J4 result must survive an older live result, which still updates its own panel.
+            page.evaluate("document.querySelector('[data-live-event-id]').dataset.liveCanonicalReceivedAt = '2026-09-08T12:00:00Z';"
+                    + "document.querySelector('[data-live-score]').textContent = '3 – 0';"
+                    + "document.querySelector('[data-live-sport-status]').textContent = 'Victoire sur tapis vert'");
             revision.set(13);
-            page.waitForCondition(() -> gets.get() > beforeCanonicalProtection);
-            page.waitForTimeout(150);
-            assertThat(page.locator("[data-live-score]").textContent()).isEqualTo("12 – 0");
+            page.waitForCondition(() -> "13 – 0".equals(page.locator("[data-live-campaign-score]").textContent()));
+            assertThat(page.locator("[data-live-score]").textContent()).isEqualTo("3 – 0");
+            assertThat(page.locator("[data-live-sport-status]").textContent()).isEqualTo("Victoire sur tapis vert");
+            assertThat(page.locator("[data-live-event-id]").getAttribute("data-live-canonical-received-at"))
+                    .isEqualTo("2026-09-08T12:00:00Z");
             // A newly launched older preparation outranks a later preparation that never started.
             revision.set(20);
             page.reload();
@@ -139,6 +146,22 @@ class LiveCampaignBrowserQualificationIT {
             page.waitForTimeout(150);
             assertThat(page.locator("input[name=eventId]").isDisabled()).isTrue();
             assertThat(page.locator("input[name=eventId]").isChecked()).isFalse();
+
+            // Canceled retains its existing selection behavior; postponed is excluded from capacity.
+            revision.set(33);
+            page.waitForCondition(() -> "canceled".equals(page.locator("[data-live-sport-status]").textContent()));
+            assertThat(page.locator("input[name=eventId]").isDisabled()).isFalse();
+            page.locator("input[name=eventId]").check();
+            assertThat(page.locator("[data-live-eligible-count]").textContent()).isEqualTo("1 éligible / 100");
+            assertThat(page.locator("[data-live-prepare]").isDisabled()).isFalse();
+            revision.set(34);
+            page.waitForCondition(() -> "postponed".equals(page.locator("[data-live-sport-status]").textContent()));
+            assertThat(page.locator("[data-live-event-state]").textContent()).isEqualTo("STOPPED_POSTPONED");
+            assertThat(page.locator("input[name=eventId]").getAttribute("data-live-finished")).isEqualTo("true");
+            assertThat(page.locator("input[name=eventId]").isChecked()).isTrue();
+            assertThat(page.locator("[data-live-selection-count]").textContent()).isEqualTo("1 rencontre sélectionnée");
+            assertThat(page.locator("[data-live-eligible-count]").textContent()).isEqualTo("0 éligible / 100");
+            assertThat(page.locator("[data-live-sport-context]").textContent()).contains("reportée", "suivi est arrêté");
             assertThat(posts.get()).isZero();
             assertThat(externalRequests.get()).isZero();
         } finally {
@@ -164,12 +187,14 @@ class LiveCampaignBrowserQualificationIT {
                 <section data-live-monitor data-live-state-url="/events/state">
                   <form id="live-selection" action="/live-campaigns/prepare" method="post" data-live-selection-form>
                     <button data-live-prepare>Préparer</button><span data-live-selection-count></span>
+                    <span data-live-eligible-count></span>
                   </form><p data-live-refresh-status></p>
                   <div data-live-event-id="%s" data-live-mirror-canonical
                     data-live-canonical-received-at="2026-09-07T12:00:00Z"><label><input form="live-selection" type="checkbox"
                     name="eventId" value="%s" data-live-provider-eligible="true">Sélectionner</label>
                     <span data-live-selection-blocked hidden>Déjà dans une campagne en cours</span>
                     <span data-live-sport-status></span><span data-live-event-state></span><span data-live-score></span>
+                    <span data-live-campaign-score>—</span><p data-live-sport-context></p>
                     <a data-live-link hidden>Campagne</a><div data-live-families></div>
                   </div>
                 </section></body></html>
@@ -180,7 +205,7 @@ class LiveCampaignBrowserQualificationIT {
         boolean laterPreparation = revision == 20 || revision == 22;
         return """
                 [{"campaignId":"%s","revision":%d,"state":"%s","preparedAt":"%s","startedAt":%s,
-                "events":[{"canonicalEventId":"%s","sportStatus":"inprogress","state":"%s","selectionBlocked":%s,
+                "events":[{"canonicalEventId":"%s","sportStatus":"%s","state":"%s","selectionBlocked":%s,
                 "score":"%d – 0","canonicalCurrent":true,"sourceReceivedAt":"2026-09-07T12:00:00Z",
                 "reservedCalls":3,"maximumCalls":1000,"families":[
                 {"endpoint":"EVENT_STATISTICS","label":"Statistiques","outcome":"PARSED","code":null,
@@ -194,7 +219,10 @@ class LiveCampaignBrowserQualificationIT {
                 revision, laterPreparation ? "PREPARED" : revision == 31 ? "STOPPED_ERROR" : "RUNNING",
                 laterPreparation ? "2026-09-07T12:00:10Z" : "2026-09-07T12:00:00Z",
                 laterPreparation ? "null" : "\"2026-09-07T12:00:20Z\"", EVENT,
-                revision == 31 ? "STOPPED_ERROR" : "COLLECTING", revision == 30 || revision == 32, revision,
+                revision == 33 ? "canceled" : revision == 34 ? "postponed" : "inprogress",
+                revision == 31 ? "STOPPED_ERROR" : revision == 33 ? "STOPPED_REVIEW_REQUIRED"
+                        : revision == 34 ? "STOPPED_POSTPONED" : "COLLECTING",
+                revision == 30 || revision == 32, revision,
                 revision <= 10 ? "STALE" : "FROZEN", revision <= 10 ? "En retard / périmée" : "Âge figé",
                 revision > 10);
     }

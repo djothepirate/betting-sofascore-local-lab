@@ -9,6 +9,7 @@ import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.*;
 import com.bettingproject.sofascorelocal.domain.provider.*;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.*;
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
+import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import com.microsoft.playwright.*;
@@ -62,6 +63,7 @@ class LiveCampaignFormBrowserQualificationIT {
     @Autowired private MockMvc mvc;
     @MockitoBean private LiveCampaignService campaigns;
     @MockitoBean private CanonicalEventStore events;
+    @MockitoBean private EventDetailsStore details;
     @MockitoBean private J5EventDataStore data;
     @MockitoBean private CacheManager cacheManager;
     @MockitoBean private J4EventQueryService query;

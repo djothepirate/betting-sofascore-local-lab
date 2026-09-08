@@ -49,7 +49,7 @@
             <span th:text="${detail.current.event.awayTeam.name}">Away</span>
           </h2>
         </div>
-        <span class="chip chip-safe" data-live-sport-status th:text="${detail.current.event.status.type == 'inprogress' ? detail.current.event.status.description.orElse(detail.current.event.status.type) : detail.current.event.status.type}">notstarted</span>
+        <span class="chip chip-safe" data-live-sport-status th:text="${detail.current.sportStatusLabel()}">notstarted</span>
       </div>
       <dl class="detail-grid">
         <div><dt>UUID local</dt><dd class="mono" th:text="${detail.current.event.identity.value}">UUID</dd></div>
@@ -58,6 +58,7 @@
         <div><dt>Zone</dt><dd th:text="${detail.zoneId.id}">Europe/Paris</dd></div>
         <div><dt>Compétition</dt><dd th:text="${detail.current.event.tournament.isPresent() ? detail.current.event.tournament.get().name : '—'}">—</dd></div>
         <div><dt>Versions conservées</dt><dd th:text="${detail.history.size()}">1</dd></div>
+        <div><dt>Score J4</dt><dd data-live-score th:text="${detail.current.result.score()}">—</dd></div>
       </dl>
       <div class="actions">
         <a class="button button-secondary"
@@ -83,7 +84,7 @@
       <p data-live-refresh-status role="status" aria-live="polite">Recherche des observations locales, puis lecture toutes les cinq secondes.</p>
       <p class="notice notice-warning" data-live-runtime-status role="status" hidden></p>
       <dl class="detail-grid">
-        <div><dt>Score courant J4</dt><dd data-live-score>—</dd></div>
+        <div><dt>Score courant J4</dt><dd data-live-campaign-score>—</dd></div>
         <div><dt>État de collecte enregistré</dt><dd data-live-event-state>—</dd></div>
         <div><dt>Motif</dt><dd data-live-event-reason>—</dd></div>
         <div><dt>Prochaine échéance (UTC)</dt><dd data-live-next-due>—</dd></div>

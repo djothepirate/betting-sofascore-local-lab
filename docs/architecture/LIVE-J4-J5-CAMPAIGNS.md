@@ -8,7 +8,7 @@ Réalisation : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4
 
 `LiveCampaignService.prepareSelection` lit les identités canoniques et leur provenance fournisseur,
 refuse les sélections vides, dupliquées, forgées ou issues de fixtures, écarte les statuts locaux
-`finished` avant admission et contrôle de stockage, puis réserve un manifeste
+`finished` et `postponed` avant admission et contrôle de stockage, puis réserve un manifeste
 immuable valable cinq minutes. Le manifeste fige les cibles, la durée, les plafonds et le profil
 de capacité ainsi que l'intervalle de collecte. Sa préparation ne crée ni worker ni contexte. Le lancement confirme son empreinte,
 consomme le formulaire local, vérifie les trois opt-ins et refuse une politique modifiée depuis
@@ -23,13 +23,24 @@ terminale, les critères ordinaires de provenance et de statut sportif s'appliqu
 Le garde fournisseur reste l'autorité exclusive au lancement, y compris pour une sélection
 autorisée après erreur : pouvoir préparer ne lève pas un nettoyage encore requis.
 
-Une sélection entièrement terminée ne crée pas de manifeste et affiche une explication locale,
+Une sélection entièrement terminée ou reportée ne crée pas de manifeste et affiche une explication locale,
 même si les opt-ins réseau sont désactivés. Pour une sélection mixte, les exclusions sont rendues
 dans le récapitulatif et la capacité porte sur les seules cibles retenues. Le statut local est
 revérifié au lancement puis dans le thread propriétaire avant ouverture du navigateur : un match
-devenu terminé est arrêté sous `STOPPED_ALREADY_FINISHED`, sans modifier le manifeste ni fabriquer
-une nouvelle observation sportive. Si tous sont terminés, aucun transport n'est ouvert.
+devenu terminé est arrêté sous `STOPPED_ALREADY_FINISHED`, un match devenu reporté sous
+`STOPPED_ALREADY_POSTPONED`, sans modifier le manifeste ni fabriquer une nouvelle observation
+sportive. Si toutes les cibles sont désormais terminées ou reportées, aucun transport n'est ouvert.
 Le premier J4 d'un match admis qui découvre ensuite `finished` conserve le dernier cycle J5 borné.
+
+Le statut `postponed` intervient ainsi à trois étapes : exclusion locale pendant la préparation,
+revalidation au lancement et avant ouverture du navigateur, puis arrêt individuel si une réponse
+J4 `PARSED` le révèle pendant la collecte. Dans ce dernier cas, la réponse et sa provenance sont
+publiées, l'état sportif reste `postponed` et l'état de collecte devient `STOPPED_POSTPONED`.
+Ses tâches J4, J5 et LINEUPS prématch sont retirées, sans dernier triplet de finalisation ni reprise
+automatique ; les autres rencontres peuvent continuer. Une nouvelle sélection dépendra d'une
+nouvelle observation locale admissible et d'un nouveau lancement explicite. `canceled` conserve
+son traitement existant : il n'est pas ajouté aux exclusions locales et un J4 qui le retourne
+arrête la rencontre sous `STOPPED_REVIEW_REQUIRED` comme statut non géré.
 
 Les pages de formulaire live utilisent `Referrer-Policy: same-origin` : Chromium conserve ainsi
 l'origine exacte du POST. Les politiques d'origine/host, les jetons à usage unique et le refus
@@ -166,8 +177,11 @@ rejoué hors persistance pour la [preuve de correction](../validation/WO058-INCI
 V37 ajoute `event-incidents-v17` pour le seul motif de carton `Professional handball`,
 observé dans le snapshot 2427 d'Elche–Real Sociedad. Le corps et le rejet V16 historique sont
 conservés ; le replay correctif demeure local, sans réécriture ni nouvelle collecte.
+V38 ajoute au détail J4 les colonnes nullables `is_awarded`, `home_display_score` et
+`away_display_score` et admet `event-details-v3`, sans backfill. Le contrat, ses bornes et
+la compatibilité des hashes historiques sont décrits dans l'[architecture J4](J4-CANONICAL-EVENTS-AND-LOCAL-DETAIL.md).
 
-Le lancement conserve D même si certaines cibles sont devenues `finished` ; l'admission vérifie
+Le lancement conserve D même si certaines cibles sont devenues `finished` ou `postponed` ; l'admission vérifie
 la charge restante sur cet intervalle consenti, sans accélérer la campagne en cours.
 
 1. Une transaction réserve la tentative et consomme son budget avant tout réseau.
@@ -182,6 +196,14 @@ La vue courante suit les occurrences A → A et A → B → A, sans réécrire l
 classification d'un snapshot dédupliqué. Le score est une projection J4 versionnée, datée de sa
 réception ; aucun score courant n'est reconstruit depuis les incidents. Absent, null, zéro et
 indisponible restent distincts. Les signaux J5 conservent une clé indépendante de l'ordre du tableau.
+
+Les nouvelles publications J4 utilisent `event-details-v3` et la projection `j4-live-score-v2`.
+Cette projection conserve les marqueurs `ABSENT`, `NULL` et `VALUE` des objets score et de leurs
+champs, et ajoute `isAwarded` avec les mêmes marqueurs. Les anciennes projections
+`j4-live-score-v1` restent stockées telles quelles. Le curseur compare le hash normalisé,
+la version et le contenu de projection ; aucune publication historique n'est recalculée sous
+`j4-live-score-v2`.
+Les versions des projections statistiques, incidents et compositions ne changent pas.
 
 Un contenu déjà purgé par J6 ne peut pas être silencieusement réhydraté via sa clé dédupliquée :
 `LIVE_RAW_PREVIOUSLY_PURGED` fait échouer la nouvelle réception atomiquement et arrête la campagne
@@ -217,8 +239,17 @@ J5 utilise D en jeu ; LINEUPS utilise aussi D en attente de début pour `live-v3
 D est lu dans le manifeste historique, pas dans la configuration courante.
 La fin du suivi fige leur âge à la transition terminale persistée.
 Le libellé sportif affiche la description J4 pour `inprogress`, avec repli sur le type si elle
-manque. Type, score, description et provenance restent associés à la même observation de campagne.
+manque. Pour `finished` avec `isAwarded=true`, il affiche « Victoire sur tapis vert », tout en
+conservant le type technique `finished`. Le résultat affiche uniquement la paire
+`homeScore.display – awayScore.display`, chaque entier étant borné à 0..999 ; si un côté manque,
+il affiche `—`. Aucun repli vers `current`, `normaltime`, `penalties` ou les incidents ne comble
+cette absence. Le drapeau absent ou `false` ne produit pas de libellé d'attribution.
+Type, score, description et provenance restent associés à la même observation de campagne.
 Une observation manuelle plus récente ne remplace pas silencieusement cette preuve.
+La présentation lit le détail V3 référencé par le curseur, ou la projection J4 conservée par ce
+curseur lorsqu'un détail V3 correspondant n'est pas disponible. Une projection historique qui
+contient les deux champs `display` peut donc encore afficher sa paire, sans inventer un drapeau
+d'attribution manquant. L'affichage du score n'altère ni les échéances ni la machine à états.
 
 Les statistiques de ce curseur sont présentées par `StatisticsPresentation` et le fragment
 Thymeleaf partagé `fragments/statistics` dans les vues campagne live et statistiques J5.

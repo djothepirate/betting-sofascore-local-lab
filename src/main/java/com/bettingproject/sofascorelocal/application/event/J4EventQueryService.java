@@ -61,7 +61,7 @@ public class J4EventQueryService {
                         item(current, zone),
                         canonicalEventStore.findHistory(canonicalEventId)
                                 .stream()
-                                .map(event -> item(event, zone))
+                                .map(event -> new J4EventSearchItem(event, event.startsAt().atZone(zone)))
                                 .toList(),
                         eventDetailsStore.findLatest(canonicalEventId)));
     }
@@ -92,11 +92,18 @@ public class J4EventQueryService {
         }
     }
 
-    private static J4EventSearchItem item(
+    private J4EventSearchItem item(
             CanonicalEventObservationView event,
             ZoneId zone) {
+        // A score from a different J4 snapshot must never be attached to a newer J3/J4 status.
+        J4EventResult result = eventDetailsStore.findLatest(event.identity().value())
+                .filter(detail -> detail.source().sourceReference().equals(event.source().sourceReference()))
+                .filter(detail -> detail.source().payloadSha256().equals(event.source().payloadSha256()))
+                .filter(detail -> detail.details().status().equals(event.status()))
+                .map(detail -> J4EventResult.from(detail.details()))
+                .orElseGet(J4EventResult::absent);
         return new J4EventSearchItem(
                 event,
-                event.startsAt().atZone(zone));
+                event.startsAt().atZone(zone), result);
     }
 }

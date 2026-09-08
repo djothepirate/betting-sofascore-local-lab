@@ -20,6 +20,11 @@ détail ou d’un événement compatible reste un résultat local normal : aucun
 déclenché. Seule l’action humaine de campagne, précédée de l’opt-in exact et de la confirmation,
 peut atteindre les deux requêtes compilées dans l’allowlist.
 
+Cette frontière décrit les parcours J4 historiques. L'exception de campagne automatique bornée
+de WO-058 est décrite dans l'[architecture live J4/J5](LIVE-J4-J5-CAMPAIGNS.md) ; elle conserve
+son lancement opérateur et ses propres budgets. Le contrat J4 courant ajoute ci-dessous une
+normalisation V3 locale des scores affichés et de l'attribution, sans nouvel endpoint.
+
 ## 2. Flux de normalisation
 
 ```text
@@ -28,7 +33,7 @@ SCHEDULED_EVENTS             scheduled + event-details-v1    EVENT_DETAILS, 2 ID
         │                              │                              │
         ├─ taille + SHA-256            ├─ manifests + SHA-256        ├─ cache préalable
         └─ scheduled-events-v1         └─ égalité providerEventId    ├─ brut persisté
-                                                                      └─ event-details-v2
+                                                                      └─ event-details-v3
         │                              │                              │
         └──────────────────────┬───────┴──────────────────────────────┘
                              ▼
@@ -101,9 +106,68 @@ résultats courants de l’ancienne date.
 
 Le contrat `event-details-v1` est décrit séparément dans `EVENT-DETAILS-V1.md` et reste associé aux
 fixtures historiques. `event-details-v2` parse l’enveloppe fournisseur `event` depuis un snapshot
-brut déjà inséré. La ligne de détail stocke les champs normalisés de stade, ville, saison et tour
-avec une provenance exclusive `SYNTHETIC_FIXTURE` ou `PROVIDER_SNAPSHOT`. Dans les deux cas, le
-service exige que l’identifiant du détail corresponde exactement à l’identité canonique ciblée.
+brut déjà inséré ; son implémentation et ses observations restent inchangées. La ligne de détail
+stocke les champs normalisés de stade, ville, saison et tour avec une provenance exclusive
+`SYNTHETIC_FIXTURE` ou `PROVIDER_SNAPSHOT`. Dans les deux cas, le service exige que l’identifiant
+du détail corresponde exactement à l’identité canonique ciblée.
+
+### Contrat courant `event-details-v3`
+
+[`EventDetailsV3Parser`](../../src/main/java/com/bettingproject/sofascorelocal/adapter/sofascore/eventdetails/EventDetailsV3Parser.java)
+réutilise V2 pour la base de l'enveloppe, puis valide trois champs optionnels indépendants :
+
+| Champ fournisseur | Champ du domaine `EventDetails` | Valeur acceptée |
+|---|---|---|
+| `event.isAwarded` | `Optional<Boolean> isAwarded` | Booléen explicite, `false` inclus |
+| `event.homeScore.display` | `Optional<Integer> homeDisplayScore` | Entier de 0 à 999 inclus |
+| `event.awayScore.display` | `Optional<Integer> awayDisplayScore` | Entier de 0 à 999 inclus |
+
+Un champ absent ou `null` reste absent dans le domaine. Un objet `homeScore` ou `awayScore`
+vide, sans `display`, ou avec `display:null` n'apporte aucun score. Un `display:0` reste présent
+et n'est jamais remplacé par une absence. Un drapeau non booléen, un objet score de type incorrect,
+un `display` non entier ou hors bornes produit `SCHEMA_INCOMPATIBLE`, avec le chemin précis et
+sans détail partiel. Les champs `current`, `normaltime`, `penalties` ou les incidents ne servent
+pas de repli au score affiché. Les avertissements V2 restent conservés, sauf les avertissements
+`UNKNOWN_FIELD` des trois nouveaux champs reconnus ; les autres sous-champs des objets score
+restent signalés comme inconnus par V3.
+
+Le constructeur historique de `EventDetails` à neuf arguments initialise les trois extensions
+à une absence. Le constructeur complet conserve séparément chaque côté du score ; un score
+unilatéral valide ne fabrique pas l'autre côté. La présentation `J4EventResult` affiche la paire
+`domicile – extérieur` seulement si les deux `display` sont présents, sinon `—`.
+Pour un statut technique `finished` et `isAwarded=true`, le libellé devient
+« Victoire sur tapis vert ». Ce texte ne change pas le statut `finished`, ne désigne pas un
+vainqueur calculé et n'ajoute aucun score. Un drapeau absent ou `false` ne déclenche pas ce libellé.
+
+La recherche et le détail rattachent ce résultat J4 uniquement à une observation de détail dont
+la référence source, le hash source et le statut correspondent à l'observation canonique affichée.
+Une découverte J3 ne normalise pas ces trois champs : un ancien score J4 n'est pas rattaché à un
+nouveau statut J3 provenant d'une autre source. Aucun score ni attribution n'est inféré à partir
+du calendrier, de l'heure, du nom des équipes ou du contenu J3.
+
+### Empreinte et replay local
+
+`EventDetailObservation` conserve exactement le format binaire `event-detail-observation-v1`
+pour les sources `event-details-v1` et `event-details-v2`. Pour une source `event-details-v3`,
+il utilise le préfixe `event-detail-observation-v2`, conserve les champs antérieurs et ajoute
+les marqueurs de présence puis les valeurs du drapeau, du score domicile et du score extérieur.
+Les variantes absent/`false`, absent/`0` et les deux côtés restent donc distinguées. Le domaine
+et SQL refusent de porter une extension présente sous une provenance de parseur antérieure.
+
+Même si les trois extensions sont absentes, la nouvelle version de hash distingue un replay V3
+de l'observation V2 du même snapshot. Un replay identique V3 reste dédupliqué. Le hash canonique
+`canonical-event-observation-v1` demeure inchangé : la découverte et le statut canonique ne
+reçoivent pas ces champs de résultat.
+
+Une observation V1/V2 déjà persistée conserve ses champs et son hash ; la migration ne la
+reparse pas. Un replay éventuel exige une action locale explicite à partir des octets exacts
+encore disponibles. Il peut produire une nouvelle observation V3 avec son parseur et sa provenance,
+sans réécriture de l'ancienne observation ni nouvelle collecte fournisseur. Aucun replay n'est
+déclenché par le démarrage, la migration ou la consultation d'une page.
+
+J6 compare les trois nouveaux champs dans le détail sémantique. L'export J7 v1 conserve son
+contenu métier antérieur sans ces trois propriétés ; la provenance de l'observation choisie
+conserve toutefois sa version de parseur et son hash. Cette extension J4 n'étend pas le schéma J7.
 
 La page `/events/{canonicalId}` rend :
 
@@ -122,6 +186,15 @@ La migration V4 ajoute `canonical_event` et `canonical_event_observation`. La mi
 suspend uniquement le trigger append-only de `event_detail_observation` pendant le backfill
 transactionnel de `source_kind` et `source_reference`, puis le réactive avant les contraintes
 finales. Les champs métier historiques restent inchangés.
+
+La migration append-only
+[`V38__j4_display_scores_and_award.sql`](../../src/main/resources/db/migration/V38__j4_display_scores_and_award.sql)
+ajoute `is_awarded`, `home_display_score` et `away_display_score`, toutes nullables et sans
+valeur par défaut. Elle admet `event-details-v3` en conservant V1/V2, borne les scores à 0..999
+et réserve les extensions présentes au contrat V3. Elle ne réalise aucun backfill, ne désactive
+aucun trigger et ne modifie aucune ancienne migration. Après upgrade V37 → V38, les nouvelles
+colonnes des anciennes lignes restent `NULL` ; les autres colonnes et les preuves sources restent
+inchangées. `JdbcEventDetailsStore` écrit et relit les trois champs sur un schéma V38.
 
 Les tests Testcontainers vérifient notamment :
 

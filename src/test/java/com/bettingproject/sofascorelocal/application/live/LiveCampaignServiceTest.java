@@ -194,6 +194,93 @@ class LiveCampaignServiceTest {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"postponed", "finished"})
+    void anEntirelyPostponedOrFinishedSelectionCreatesNoCampaignOrProviderWork(String otherStatus) throws Exception {
+        try (Harness h = new Harness()) {
+            var postponed = providerObservation(A, "postponed");
+            var other = providerObservation(B, otherStatus);
+            when(h.events.findLatestByCanonicalId(id(A))).thenReturn(Optional.of(postponed));
+            when(h.events.findLatestByCanonicalId(id(B))).thenReturn(Optional.of(other));
+            h.properties.setQualifiedMatchCapacity(1);
+            h.provider.setEnabled(false);
+            h.playwright.setEnabled(false);
+            h.properties.setEnabled(false);
+
+            var preparation = h.service.prepareSelection(List.of(id(A), id(B)));
+
+            assertThat(preparation.manifest()).isNull();
+            assertThat(preparation.excludedPostponed()).containsExactlyElementsOf(
+                    "postponed".equals(otherStatus) ? List.of(postponed, other) : List.of(postponed));
+            assertThat(preparation.excludedFinished()).containsExactlyElementsOf(
+                    "finished".equals(otherStatus) ? List.of(other) : List.of());
+            verifyNoInteractions(h.admission, h.factory, h.coordinator);
+            verify(h.store, never()).prepare(any());
+            assertThat(h.dispatched).isEmpty();
+        }
+    }
+
+    @Test
+    void mixedSelectionExcludesFinishedAndPostponedBeforeComputingTheManifestCapacityAndCadence() throws Exception {
+        try (Harness h = new Harness()) {
+            var finished = providerObservation(A, "finished");
+            var postponed = providerObservation(B, "postponed");
+            long eligible = B + 1;
+            when(h.events.findLatestByCanonicalId(id(A))).thenReturn(Optional.of(finished));
+            when(h.events.findLatestByCanonicalId(id(B))).thenReturn(Optional.of(postponed));
+            h.observe(eligible, "notstarted");
+            h.properties.setQualifiedMatchCapacity(1);
+            when(h.admission.maximumBytes(1)).thenReturn(5_242_880_000L);
+            when(h.store.prepare(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+            var preparation = h.service.prepareSelection(List.of(id(A), id(eligible), id(B)));
+
+            assertThat(preparation.excludedFinished()).containsExactly(finished);
+            assertThat(preparation.excludedPostponed()).containsExactly(postponed);
+            assertThat(preparation.manifest().targets()).containsExactly(new Target(id(eligible), eligible, 17, 23));
+            assertThat(preparation.manifest().qualifiedMatchCapacity()).isEqualTo(1);
+            assertThat(preparation.manifest().cycleInterval()).isEqualTo(Duration.ofSeconds(60));
+            assertThat(preparation.manifest().maximumBytes()).isEqualTo(5_242_880_000L);
+            verify(h.admission).admit(1);
+            verify(h.admission, never()).admit(3);
+            verify(h.store).prepare(preparation.manifest());
+            verifyNoInteractions(h.factory, h.coordinator);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"postponed", "finished"})
+    void theManifestOnlyApiExplainsThatAPostponedOrMixedExcludedSelectionIsIneligible(String otherStatus) throws Exception {
+        try (Harness h = new Harness()) {
+            h.observe(A, "postponed");
+            h.observe(B, otherStatus);
+
+            assertThatThrownBy(() -> h.service.prepare(List.of(id(A), id(B))))
+                    .isInstanceOf(IllegalArgumentException.class).hasMessage("LIVE_ALL_EVENTS_INELIGIBLE");
+
+            verifyNoInteractions(h.admission, h.factory, h.coordinator);
+            verify(h.store, never()).prepare(any());
+        }
+    }
+
+    @Test
+    void canceledRemainsAdmissibleToPreparationWithoutExtendingThePostponedRule() throws Exception {
+        try (Harness h = new Harness()) {
+            h.observe(A, "canceled");
+            when(h.admission.maximumBytes(1)).thenReturn(5_242_880_000L);
+            when(h.store.prepare(any())).thenAnswer(invocation -> invocation.getArgument(0));
+
+            var preparation = h.service.prepareSelection(List.of(id(A)));
+
+            assertThat(preparation.excludedFinished()).isEmpty();
+            assertThat(preparation.excludedPostponed()).isEmpty();
+            assertThat(preparation.manifest().targets()).containsExactly(new Target(id(A), A, 17, 23));
+            verify(h.admission).admit(1);
+            verify(h.store).prepare(preparation.manifest());
+            verifyNoInteractions(h.factory, h.coordinator);
+        }
+    }
+
     @Test
     void aForgedEventInAMixedSelectionIsRejectedBeforeAdmissionAndPersistence() throws Exception {
         try (Harness h = new Harness()) {
@@ -249,6 +336,49 @@ class LiveCampaignServiceTest {
         }
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {"postponed", "finished"})
+    void postponedLatestObservationsPreventAnEntirelyExcludedLaunchBeforeOptInOrOwnership(String otherStatus) throws Exception {
+        try (Harness h = new Harness()) {
+            h.observe(A, "postponed");
+            h.observe(B, otherStatus);
+            h.provider.setEnabled(false);
+            h.playwright.setEnabled(false);
+            h.properties.setEnabled(false);
+
+            assertThatThrownBy(h::launch).isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("LIVE_ALL_EVENTS_INELIGIBLE");
+
+            assertThat(h.campaignState).hasValue("PREPARED");
+            verifyNoInteractions(h.admission, h.factory, h.coordinator);
+            verify(h.store, never()).launch(any(), any(), any(), any());
+            assertThat(h.dispatched).isEmpty();
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"live-v1", "live-v2", "live-v3"})
+    void aMatchPostponedSincePreparationIsSkippedWithoutRewritingTheManifest(String policy) throws Exception {
+        try (Harness h = new Harness(false, policy)) {
+            h.observe(A, "postponed");
+            h.reply = LiveCampaignServiceTest::normalFinishedReply;
+
+            h.launch();
+            h.awaitFinished();
+
+            assertThat(h.dispatched).extracting(PlaywrightProviderRequest::eventId).containsExactly(B, B, B, B);
+            assertThat(h.eventStates.get(id(A))).isEqualTo("STOPPED_ALREADY_POSTPONED");
+            assertThat(h.eventStates.get(id(B))).isEqualTo("FINISHED_CONFIRMED");
+            assertThat(h.receipts).hasSize(4);
+            assertThat(h.reservations.get()).isEqualTo(4);
+            assertThat(h.service.state(h.manifest.campaignId()).manifest()).isEqualTo(h.manifest);
+            verify(h.admission).admit(1, h.manifest.cycleInterval());
+            verify(h.store, never()).prepare(any());
+            verify(h.factory, times(1)).open(h.manifest.campaignId(), LiveProviderSession.ENDPOINTS);
+            verify(h.campaign).close();
+        }
+    }
+
     @Test
     void aMatchFinishedSincePreparationIsSkippedWhileTheOtherMatchCompletes() throws Exception {
         try (Harness h = new Harness()) {
@@ -285,6 +415,76 @@ class LiveCampaignServiceTest {
             assertThat(h.reservations.get()).isZero();
             assertThat(h.receipts).isEmpty();
             verifyNoInteractions(h.factory, h.campaign);
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"postponed", "finished"})
+    void postponementDuringOwnerLaunchIsRecheckedBeforeAnyBrowserOrReservation(String otherStatus) throws Exception {
+        try (Harness h = new Harness()) {
+            h.afterOwnerLaunch = () -> {
+                h.observe(A, "postponed");
+                h.observe(B, otherStatus);
+            };
+
+            h.launch();
+            h.awaitFinished();
+
+            assertThat(h.eventStates.get(id(A))).isEqualTo("STOPPED_ALREADY_POSTPONED");
+            assertThat(h.eventStates.get(id(B))).isEqualTo("postponed".equals(otherStatus)
+                    ? "STOPPED_ALREADY_POSTPONED" : "STOPPED_ALREADY_FINISHED");
+            assertThat(h.campaignState).hasValue("COMPLETED");
+            assertThat(h.dispatched).isEmpty();
+            assertThat(h.reservations.get()).isZero();
+            assertThat(h.receipts).isEmpty();
+            verifyNoInteractions(h.factory, h.campaign);
+        }
+    }
+
+    @Test
+    void postponementOfOneMatchDuringOwnerLaunchDoesNotDispatchThatMatch() throws Exception {
+        try (Harness h = new Harness()) {
+            h.afterOwnerLaunch = () -> h.observe(A, "postponed");
+            h.reply = LiveCampaignServiceTest::normalFinishedReply;
+
+            h.launch();
+            h.awaitFinished();
+
+            assertThat(h.dispatched).extracting(PlaywrightProviderRequest::eventId).containsExactly(B, B, B, B);
+            assertThat(h.eventStates.get(id(A))).isEqualTo("STOPPED_ALREADY_POSTPONED");
+            assertThat(h.eventStates.get(id(B))).isEqualTo("FINISHED_CONFIRMED");
+            assertThat(h.reservations.get()).isEqualTo(4);
+        }
+    }
+
+    @Test
+    void aPostponedJ4ResponseIsPreservedAndStopsOnlyItsMatchWithoutJ5OrFinalCollection() throws Exception {
+        try (Harness h = new Harness(false, "live-v3")) {
+            h.reply = request -> request.eventId() == A ? response("""
+                    {"event":{"id":%d,"startTimestamp":1788796800,
+                      "homeTeam":{"id":1,"name":"Home"},"awayTeam":{"id":2,"name":"Away"},
+                      "status":{"type":"postponed"}}}
+                    """.formatted(A), 200) : normalFinishedReply(request);
+
+            h.launch();
+            h.awaitFinished();
+
+            assertThat(h.dispatched).extracting(PlaywrightProviderRequest::eventId).containsExactly(A, B, B, B, B);
+            assertThat(h.dispatched.getFirst().endpoint()).isEqualTo(EVENT_DETAILS);
+            assertThat(h.receipts).hasSize(5);
+            assertThat(h.receipts.getFirst().parserVersion()).isEqualTo("event-details-v3");
+            assertThat(h.reservations.get()).isEqualTo(5);
+            assertThat(h.publications).anySatisfy(publication -> {
+                assertThat(publication.sportStatus()).isEqualTo("postponed");
+                assertThat(publication.outcome()).isEqualTo("PARSED");
+                assertThat(publication.successful()).isTrue();
+                assertThat(publication.nextEventState()).isEqualTo("STOPPED_POSTPONED");
+            });
+            assertThat(h.eventStates.get(id(A))).isEqualTo("STOPPED_POSTPONED");
+            assertThat(h.finalCompleteness.get(id(A))).isFalse();
+            assertThat(h.eventStates.get(id(B))).isEqualTo("FINISHED_CONFIRMED");
+            assertThat(h.campaignState).hasValue("COMPLETED");
+            verify(h.campaign).close();
         }
     }
 

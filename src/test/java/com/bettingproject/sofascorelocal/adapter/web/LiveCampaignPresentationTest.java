@@ -4,12 +4,15 @@ import com.bettingproject.sofascorelocal.application.live.LiveCampaignService.Ru
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetails;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservationView;
 import com.bettingproject.sofascorelocal.domain.eventdata.*;
 import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.*;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEventStatus;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTeam;
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
+import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -79,11 +82,11 @@ class LiveCampaignPresentationTest {
     }
 
     @Test
-    void missingScoreRemainsUnknownWhileAnObservedZeroIsDisplayed() {
+    void aMissingDisplayScoreDoesNotProduceAPartialPair() {
         UUID id = UUID.randomUUID();
         String projection = """
                 {"version":"j4-live-score-v1","homeScore":{"presence":"VALUE","value":{
-                "current":{"presence":"VALUE","value":0}}},"awayScore":{"presence":"NULL"}}
+                "display":{"presence":"VALUE","value":0}}},"awayScore":{"presence":"NULL"}}
                 """;
         var refs = new NormalizedReferences(1L, 1L, null, "a".repeat(64));
         var result = new Result(id, new Publication("PARSED", "EVENT", "OK", START,
@@ -95,9 +98,71 @@ class LiveCampaignPresentationTest {
         var event = presentation.state(campaign(List.of(family),
                 List.of(attempt(id, SofascoreEndpointType.EVENT_DETAILS, 1, START, result)))).events().getFirst();
 
-        assertThat(event.score()).isEqualTo("0 – —");
+        assertThat(event.score()).isEqualTo("—");
         assertThat(event.sportStatus()).isEqualTo("inprogress");
         assertThat(event.sportStatusLabel()).isEqualTo("inprogress");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"finished,true,Victoire sur tapis vert", "finished,false,finished",
+            "inprogress,true,inprogress"})
+    void liveResultUsesDisplayPairAndAnExplicitAwardOnlyForFinished(String status, boolean awarded, String label) {
+        UUID id = UUID.randomUUID();
+        String projection = """
+                {"version":"j4-live-score-v2","isAwarded":{"presence":"VALUE","value":%s},
+                 "homeScore":{"presence":"VALUE","value":{"display":{"presence":"VALUE","value":3},
+                   "current":{"presence":"VALUE","value":1}}},
+                 "awayScore":{"presence":"VALUE","value":{"display":{"presence":"VALUE","value":0},
+                   "current":{"presence":"VALUE","value":2}}}}
+                """.formatted(awarded);
+        var refs = new NormalizedReferences(1L, 1L, null, "a".repeat(64));
+        var result = new Result(id, new Publication("PARSED", "EVENT", "OK", START,
+                "event-details-v3", true, "COLLECTING", status, projection, "j4-live-score-v2", null, null), refs);
+        var cursor = new FamilyCursor(SofascoreEndpointType.EVENT_DETAILS, id, id, id, id,
+                START, START, START, refs, result, result);
+
+        var value = presentation.state(campaign(List.of(cursor), List.of())).events().getFirst();
+        assertThat(value.score()).isEqualTo("3 – 0");
+        assertThat(value.sportStatusLabel()).isEqualTo(label);
+        assertThat(value.sportStatus()).isEqualTo(status);
+    }
+
+    @Test
+    void preparedCampaignUsesMatchingManualJ4AndLiveUsesItsExactDetailObservation() {
+        var store = mock(EventDetailsStore.class);
+        var source = EventSourceTrace.providerSnapshot(1, "c".repeat(64), "event-details-v3", START);
+        var status = new ScheduledEventStatus("finished", Optional.empty());
+        var identity = new CanonicalEventObservationView(1, IDENTITY, START, new ScheduledTeam(1, "Home"),
+                new ScheduledTeam(2, "Away"), status, Optional.empty(), source, "d".repeat(64), 1);
+        var values = new EventDetails(900001, START, identity.homeTeam(), identity.awayTeam(), status,
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.of(true), Optional.of(3), Optional.of(0));
+        var detail = new EventDetailObservationView(8, IDENTITY, values, source, "e".repeat(64));
+        when(events.findByObservationId(EVENT, 1)).thenReturn(Optional.of(identity));
+        when(store.findLatest(EVENT)).thenReturn(Optional.of(detail));
+        var withStore = new LiveCampaignPresentation(events, data, store);
+        var prepared = withStore.state(campaign(List.of(), List.of())).events().getFirst();
+        assertThat(prepared.score()).isEqualTo("3 – 0");
+        assertThat(prepared.sportStatusLabel()).isEqualTo("Victoire sur tapis vert");
+
+        clearInvocations(store);
+        when(store.findByObservationId(EVENT, 8)).thenReturn(Optional.of(detail));
+        var id = UUID.randomUUID();
+        var refs = new NormalizedReferences(1L, 8L, null, "e".repeat(64));
+        var result = new Result(id, new Publication("PARSED", "EVENT", "OK", START,
+                "event-details-v3", true, "FINALIZING", "finished", null, null, null, null), refs);
+        var cursor = new FamilyCursor(SofascoreEndpointType.EVENT_DETAILS, id, id, id, id,
+                START, START, START, refs, result, result);
+        var live = withStore.state(campaign(List.of(cursor), List.of())).events().getFirst();
+        assertThat(live.score()).isEqualTo("3 – 0");
+        verify(store).findByObservationId(EVENT, 8);
+        verify(store, never()).findLatest(EVENT);
+
+        when(store.findLatest(EVENT)).thenReturn(Optional.of(new EventDetailObservationView(9, IDENTITY, values,
+                EventSourceTrace.providerSnapshot(2, "f".repeat(64), "event-details-v3", START.plusSeconds(60)), "a".repeat(64))));
+        var stale = withStore.state(campaign(List.of(), List.of())).events().getFirst();
+        assertThat(stale.score()).isEqualTo("—");
+        assertThat(stale.sportStatusLabel()).isEqualTo("finished");
     }
 
     @ParameterizedTest

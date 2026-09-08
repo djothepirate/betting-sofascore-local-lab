@@ -2,7 +2,7 @@ package com.bettingproject.sofascorelocal.application.network;
 
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsParseResult;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsParseStatus;
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV2Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV3Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.EventDetailsTransportException;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.EventDetailsTransportFailure;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceResult;
@@ -41,7 +41,7 @@ public class J4RealEventDetailsPhase2Service {
     private final EventDetailsProviderTransport transport;
     private final RawManualCallSnapshotStore rawSnapshotStore;
     private final J4ParsedEventDetailsPersistenceService parsedPersistenceService;
-    private final EventDetailsV2Parser parser;
+    private final EventDetailsV3Parser parser;
     private final ManualProviderRequestCoordinator requestCoordinator;
     private final J8BenchmarkAuditService benchmarkAuditService;
 
@@ -58,7 +58,7 @@ public class J4RealEventDetailsPhase2Service {
                 transport,
                 rawSnapshotStore,
                 parsedPersistenceService,
-                new EventDetailsV2Parser(),
+                new EventDetailsV3Parser(),
                 requestCoordinator,
                 benchmarkAuditService);
     }
@@ -68,7 +68,7 @@ public class J4RealEventDetailsPhase2Service {
             EventDetailsProviderTransport transport,
             RawManualCallSnapshotStore rawSnapshotStore,
             J4ParsedEventDetailsPersistenceService parsedPersistenceService,
-            EventDetailsV2Parser parser,
+            EventDetailsV3Parser parser,
             Clock clock,
             Duration minimumDelay,
             Pause pause) {
@@ -87,7 +87,7 @@ public class J4RealEventDetailsPhase2Service {
             EventDetailsProviderTransport transport,
             RawManualCallSnapshotStore rawSnapshotStore,
             J4ParsedEventDetailsPersistenceService parsedPersistenceService,
-            EventDetailsV2Parser parser,
+            EventDetailsV3Parser parser,
             Clock clock,
             Duration minimumDelay,
             Pause pause,
@@ -107,7 +107,7 @@ public class J4RealEventDetailsPhase2Service {
             EventDetailsProviderTransport transport,
             RawManualCallSnapshotStore rawSnapshotStore,
             J4ParsedEventDetailsPersistenceService parsedPersistenceService,
-            EventDetailsV2Parser parser,
+            EventDetailsV3Parser parser,
             ManualProviderRequestCoordinator requestCoordinator,
             J8BenchmarkAuditService benchmarkAuditService) {
         this.controlService = Objects.requireNonNull(controlService, "controlService");
@@ -268,7 +268,7 @@ public class J4RealEventDetailsPhase2Service {
         }
         try {
             audit.captureSnapshot(
-                    unit, rawPersistence, EventDetailsV2Parser.PARSER_VERSION);
+                    unit, rawPersistence, EventDetailsV3Parser.PARSER_VERSION);
         }
         catch (RuntimeException exception) {
             RuntimeException cleanupFailure = resources.closeSafely();
@@ -495,7 +495,7 @@ public class J4RealEventDetailsPhase2Service {
                 response.contentType(),
                 response.latency(),
                 response.payload(),
-                EventDetailsV2Parser.PARSER_VERSION,
+                EventDetailsV3Parser.PARSER_VERSION,
                 RawSnapshotSchemaStatus.RAW_ONLY,
                 null);
     }

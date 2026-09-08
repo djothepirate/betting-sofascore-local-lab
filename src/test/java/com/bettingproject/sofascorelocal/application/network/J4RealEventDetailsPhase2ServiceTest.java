@@ -1,6 +1,6 @@
 package com.bettingproject.sofascorelocal.application.network;
 
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV2Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV3Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.EventDetailsTransportException;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.EventDetailsTransportFailure;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceResult;
@@ -99,7 +99,7 @@ class J4RealEventDetailsPhase2ServiceTest {
                 transport,
                 rawStore,
                 parsedPersistence,
-                new EventDetailsV2Parser(),
+                new EventDetailsV3Parser(),
                 clock,
                 Duration.ofSeconds(3),
                 this::pauseAndAdvance);
@@ -346,7 +346,7 @@ class J4RealEventDetailsPhase2ServiceTest {
                 transport,
                 rawStore,
                 parsedPersistence,
-                new EventDetailsV2Parser(),
+                new EventDetailsV3Parser(),
                 clock,
                 Duration.ofSeconds(3),
                 this::pauseAndAdvance,

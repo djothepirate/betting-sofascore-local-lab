@@ -56,6 +56,9 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
                 season_provider_id,
                 season_name,
                 event_round,
+                is_awarded,
+                home_display_score,
+                away_display_score,
                 normalized_sha256
             ) values (
                 :canonicalEventId,
@@ -81,6 +84,9 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
                 :seasonProviderId,
                 :seasonName,
                 :eventRound,
+                :isAwarded,
+                :homeDisplayScore,
+                :awayDisplayScore,
                 :normalizedSha256
             )
             on conflict (
@@ -128,6 +134,9 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
                 d.season_provider_id,
                 d.season_name,
                 d.event_round,
+                d.is_awarded,
+                d.home_display_score,
+                d.away_display_score,
                 d.normalized_sha256
             """;
 
@@ -280,6 +289,9 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
                         Types.BIGINT)
                 .addValue("seasonName", season == null ? null : season.name(), Types.VARCHAR)
                 .addValue("eventRound", details.round().orElse(null), Types.VARCHAR)
+                .addValue("isAwarded", details.isAwarded().orElse(null), Types.BOOLEAN)
+                .addValue("homeDisplayScore", details.homeDisplayScore().orElse(null), Types.INTEGER)
+                .addValue("awayDisplayScore", details.awayDisplayScore().orElse(null), Types.INTEGER)
                 .addValue("normalizedSha256", observation.normalizedSha256());
     }
 
@@ -329,7 +341,10 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
                         : Optional.of(new EventSeason(
                                 seasonId,
                                 resultSet.getString("season_name"))),
-                Optional.ofNullable(resultSet.getString("event_round")));
+                Optional.ofNullable(resultSet.getString("event_round")),
+                Optional.ofNullable(resultSet.getObject("is_awarded", Boolean.class)),
+                Optional.ofNullable(resultSet.getObject("home_display_score", Integer.class)),
+                Optional.ofNullable(resultSet.getObject("away_display_score", Integer.class)));
         EventSourceKind sourceKind = EventSourceKind.valueOf(
                 resultSet.getString("source_kind"));
         EventSourceTrace source = switch (sourceKind) {

@@ -1,14 +1,20 @@
 <!DOCTYPE html>
 <html lang="fr" xmlns:th="http://www.thymeleaf.org"><head>
   <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Rencontres déjà terminées — SofaScore Local Lab</title>
+  <title th:text="${#lists.isEmpty(excludedPostponed) ? 'Rencontres déjà terminées — SofaScore Local Lab' : 'Rencontres non éligibles — SofaScore Local Lab'}">Rencontres non éligibles — SofaScore Local Lab</title>
   <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
 </head><body><main class="shell event-page"><section class="panel">
-  <p class="label">Campagne live locale</p><h1>Ces rencontres sont déjà terminées</h1>
-  <p class="notice" role="status">Toutes les rencontres sélectionnées ont le statut local finished.
+  <p class="label">Campagne live locale</p>
+  <h1 th:text="${#lists.isEmpty(excludedPostponed) ? 'Ces rencontres sont déjà terminées' : (#lists.isEmpty(excludedFinished) ? 'Ces rencontres sont reportées' : 'Ces rencontres ne sont pas éligibles au suivi live')}">Ces rencontres ne sont pas éligibles au suivi live</h1>
+  <p class="notice" role="status">
+    <span th:if="${#lists.isEmpty(excludedPostponed)}">Toutes les rencontres sélectionnées ont le statut local finished.</span>
+    <span th:if="${!#lists.isEmpty(excludedPostponed) and #lists.isEmpty(excludedFinished)}">Toutes les rencontres sélectionnées sont reportées (statut local postponed).</span>
+    <span th:if="${!#lists.isEmpty(excludedPostponed) and !#lists.isEmpty(excludedFinished)}">Les rencontres sélectionnées sont reportées (postponed) ou déjà terminées (finished).</span>
     Aucune campagne live n’a été créée et aucun appel fournisseur n’a été effectué.</p>
-  <ul><li th:each="event : ${excludedFinished}"
+  <ul th:if="${!#lists.isEmpty(excludedFinished)}"><li th:each="event : ${excludedFinished}"
           th:text="${event.homeTeam.name + ' — ' + event.awayTeam.name + ' · finished'}">Rencontre terminée</li></ul>
+  <ul th:if="${!#lists.isEmpty(excludedPostponed)}"><li th:each="event : ${excludedPostponed}"
+          th:text="${event.homeTeam.name + ' — ' + event.awayTeam.name + ' · postponed (reportée)'}">Rencontre reportée</li></ul>
   <p>Les données de ces rencontres restent consultables depuis leurs fiches.</p>
   <a class="button button-secondary" th:href="@{/events}">Revenir aux rencontres</a>
 </section></main></body></html>

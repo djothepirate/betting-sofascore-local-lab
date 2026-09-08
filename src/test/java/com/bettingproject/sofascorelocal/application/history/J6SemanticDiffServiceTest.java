@@ -14,6 +14,7 @@ import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservation
 import com.bettingproject.sofascorelocal.domain.eventdata.LineupSide;
 import com.bettingproject.sofascorelocal.domain.eventdata.TeamLineup;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservationView;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservation;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetails;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventSeason;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventVenue;
@@ -29,6 +30,7 @@ import java.util.Optional;
 import java.util.OptionalLong;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 
 class J6SemanticDiffServiceTest {
 
@@ -66,7 +68,7 @@ class J6SemanticDiffServiceTest {
     }
 
     @Test
-    void keepsEventDetailsFocusedOnVenueSeasonAndRound() {
+    void preservesLegacyDetailChangesWithoutInventingAbsentAwardedFields() {
         EventDetailObservationView before = details(
                 10,
                 Optional.of(new EventVenue(10, "Old stadium", Optional.empty())),
@@ -90,6 +92,54 @@ class J6SemanticDiffServiceTest {
                         "season.name",
                         "round")
                 .doesNotContain("startsAt", "status.type", "homeTeam.name");
+    }
+
+    @Test
+    void distinguishesAbsentAwardedFieldsFromExplicitFalseAndZeroScores() {
+        var before = awardedDetails(12, null, null, null);
+        var after = awardedDetails(13, false, 0, 0);
+
+        assertThat(SERVICE.compareDetails(before, after))
+                .extracting(change -> change.field(), change -> change.beforeValue(),
+                        change -> change.afterValue(), change -> change.kind())
+                .containsExactly(
+                        tuple("isAwarded", Optional.empty(), Optional.of("false"), J6ChangeKind.ADDED),
+                        tuple("homeScore.display", Optional.empty(), Optional.of("0"), J6ChangeKind.ADDED),
+                        tuple("awayScore.display", Optional.empty(), Optional.of("0"), J6ChangeKind.ADDED));
+    }
+
+    @Test
+    void reportsAnAwardAndItsDisplayScoreCorrectionWithoutChangingTheUnchangedSide() {
+        var before = awardedDetails(14, false, 0, 0);
+        var after = awardedDetails(15, true, 3, 0);
+
+        assertThat(SERVICE.compareDetails(before, after))
+                .extracting(change -> change.field(), change -> change.beforeValue(),
+                        change -> change.afterValue(), change -> change.kind())
+                .containsExactly(
+                        tuple("isAwarded", Optional.of("false"), Optional.of("true"), J6ChangeKind.CHANGED),
+                        tuple("homeScore.display", Optional.of("0"), Optional.of("3"), J6ChangeKind.CHANGED));
+    }
+
+    @Test
+    void reportsRemovedAwardedFieldsWithoutReplacingThemWithFalseOrZero() {
+        var before = awardedDetails(16, true, 0, 3);
+        var after = awardedDetails(17, null, null, null);
+
+        assertThat(SERVICE.compareDetails(before, after))
+                .extracting(change -> change.field(), change -> change.beforeValue(),
+                        change -> change.afterValue(), change -> change.kind())
+                .containsExactly(
+                        tuple("isAwarded", Optional.of("true"), Optional.empty(), J6ChangeKind.REMOVED),
+                        tuple("homeScore.display", Optional.of("0"), Optional.empty(), J6ChangeKind.REMOVED),
+                        tuple("awayScore.display", Optional.of("3"), Optional.empty(), J6ChangeKind.REMOVED));
+    }
+
+    @Test
+    void doesNotReportUnchangedAwardedValuesAsSemanticChanges() {
+        assertThat(SERVICE.compareDetails(
+                awardedDetails(18, true, 3, 0),
+                awardedDetails(19, true, 3, 0))).isEmpty();
     }
 
     @Test
@@ -242,6 +292,23 @@ class J6SemanticDiffServiceTest {
                 details,
                 source("details-" + observationId, "event-details-v1", 'b', observationId),
                 hash('d'));
+    }
+
+    private static EventDetailObservationView awardedDetails(
+            long observationId, Boolean awarded, Integer homeDisplay, Integer awayDisplay) {
+        EventDetails details = new EventDetails(
+                PROVIDER_EVENT_ID,
+                Instant.parse("2026-08-20T18:00:00Z"),
+                new ScheduledTeam(1, "Home"),
+                new ScheduledTeam(2, "Away"),
+                new ScheduledEventStatus("finished", Optional.empty()),
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.ofNullable(awarded), Optional.ofNullable(homeDisplay), Optional.ofNullable(awayDisplay));
+        var provenance = source("awarded-details-" + observationId,
+                "event-details-v3", 'a', observationId);
+        var observation = EventDetailObservation.from(IDENTITY, details, provenance);
+        return new EventDetailObservationView(observationId, IDENTITY, details,
+                provenance, observation.normalizedSha256());
     }
 
     private static EventStatisticMetric metric(

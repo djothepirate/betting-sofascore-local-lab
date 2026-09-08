@@ -18,6 +18,7 @@ public record EventDetailObservation(
         String normalizedSha256) {
 
     private static final Pattern SHA_256_PATTERN = Pattern.compile("[0-9a-f]{64}");
+    private static final String DISPLAY_SCORE_PARSER_VERSION = "event-details-v3";
 
     public EventDetailObservation {
         identity = Objects.requireNonNull(identity, "identity");
@@ -27,6 +28,12 @@ public record EventDetailObservation(
         if (identity.providerEventId() != details.providerEventId()) {
             throw new IllegalArgumentException(
                     "event detail provider identity must match its canonical event");
+        }
+        if (!DISPLAY_SCORE_PARSER_VERSION.equals(source.parserVersion())
+                && (details.isAwarded().isPresent() || details.homeDisplayScore().isPresent()
+                    || details.awayDisplayScore().isPresent())) {
+            throw new IllegalArgumentException(
+                    "award and displayed scores require event-details-v3 provenance");
         }
         if (!SHA_256_PATTERN.matcher(normalizedSha256).matches()) {
             throw new IllegalArgumentException("normalizedSha256 must be a lower-case SHA-256");
@@ -54,7 +61,9 @@ public record EventDetailObservation(
                     source).normalizedSha256();
             ByteArrayOutputStream bytes = new ByteArrayOutputStream();
             try (DataOutputStream output = new DataOutputStream(bytes)) {
-                output.writeUTF("event-detail-observation-v1");
+                boolean displayScoreContract = DISPLAY_SCORE_PARSER_VERSION.equals(source.parserVersion());
+                output.writeUTF(displayScoreContract
+                        ? "event-detail-observation-v2" : "event-detail-observation-v1");
                 output.writeUTF(eventHash);
                 output.writeBoolean(details.venue().isPresent());
                 if (details.venue().isPresent()) {
@@ -75,6 +84,20 @@ public record EventDetailObservation(
                 output.writeBoolean(details.round().isPresent());
                 if (details.round().isPresent()) {
                     output.writeUTF(details.round().orElseThrow());
+                }
+                if (displayScoreContract) {
+                    output.writeBoolean(details.isAwarded().isPresent());
+                    if (details.isAwarded().isPresent()) {
+                        output.writeBoolean(details.isAwarded().orElseThrow());
+                    }
+                    output.writeBoolean(details.homeDisplayScore().isPresent());
+                    if (details.homeDisplayScore().isPresent()) {
+                        output.writeInt(details.homeDisplayScore().orElseThrow());
+                    }
+                    output.writeBoolean(details.awayDisplayScore().isPresent());
+                    if (details.awayDisplayScore().isPresent()) {
+                        output.writeInt(details.awayDisplayScore().orElseThrow());
+                    }
                 }
             }
             return Sha256.hex(bytes.toByteArray());

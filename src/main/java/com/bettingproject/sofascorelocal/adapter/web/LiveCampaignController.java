@@ -38,10 +38,13 @@ public class LiveCampaignController {
         var preparation = campaigns.prepareSelection(eventIds == null ? List.of() : eventIds);
         if (preparation.manifest() == null) {
             model.addAttribute("excludedFinished", preparation.excludedFinished());
+            model.addAttribute("excludedPostponed", preparation.excludedPostponed());
             return "live-campaign-ineligible";
         }
         if (!preparation.excludedFinished().isEmpty())
             redirect.addFlashAttribute("excludedFinished", preparation.excludedFinished());
+        if (!preparation.excludedPostponed().isEmpty())
+            redirect.addFlashAttribute("excludedPostponed", preparation.excludedPostponed());
         return "redirect:/live-campaigns/" + preparation.manifest().campaignId();
     }
 
@@ -118,14 +121,15 @@ public class LiveCampaignController {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public String invalid(IllegalArgumentException exception, Model model) {
         String code = switch (String.valueOf(exception.getMessage())) {
-            case "LIVE_ALL_EVENTS_FINISHED", "LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY",
+            case "LIVE_ALL_EVENTS_FINISHED", "LIVE_ALL_EVENTS_INELIGIBLE", "LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY",
                  "LIVE_CAPACITY_REFUSED_REDUCE_SELECTION" -> exception.getMessage();
             default -> "LIVE_SELECTION_INVALID";
         };
         String message = switch (code) {
             case "LIVE_ALL_EVENTS_FINISHED" -> "Ces rencontres sont déjà terminées (finished). Aucun lancement live ni appel fournisseur n’a été effectué. Revenir aux rencontres pour préparer une autre sélection.";
+            case "LIVE_ALL_EVENTS_INELIGIBLE" -> "Ces rencontres sont reportées (postponed) ou déjà terminées (finished). Aucun lancement live ni appel fournisseur n’a été effectué. Revenir aux rencontres pour préparer une autre sélection.";
             case "LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY" ->
-                    "Le nombre de rencontres éligibles dépasse le plafond configuré pour une campagne. Réduire la sélection ou ajuster ce plafond dans la configuration live. Les rencontres déjà finished ne comptent pas dans cette limite.";
+                    "Le nombre de rencontres éligibles dépasse le plafond configuré pour une campagne. Réduire la sélection ou ajuster ce plafond dans la configuration live. Les rencontres terminées (finished) ou reportées (postponed) ne comptent pas dans cette limite.";
             case "LIVE_CAPACITY_REFUSED_REDUCE_SELECTION" ->
                     "Le profil de charge configuré ne permet pas de servir cette sélection dans son intervalle de collecte. Réduire la sélection ou utiliser un profil de charge qualifié selon le runbook.";
             default -> "La sélection ou le manifeste est invalide. Préparer une nouvelle campagne.";

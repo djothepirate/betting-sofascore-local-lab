@@ -4,6 +4,18 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — résultats J4 et rencontres reportées
+
+- Ajoute le contrat `event-details-v3` et V38 : drapeau d'attribution et scores `display`,
+  avec conservation des observations et hashes historiques.
+- Affiche « Victoire sur tapis vert » pour `finished` avec `isAwarded=true`, et le score
+  domicile/extérieur uniquement lorsque les deux valeurs `display` sont présentes.
+- Exclut `postponed` à la préparation et au lancement ; un report reçu par J4 pendant
+  la campagne arrête seulement la rencontre concernée. `canceled` conserve son traitement.
+- Relie les résultats à leur observation J4 exacte, sans réutiliser un ancien score sur
+  une observation plus récente ; J6 compare les nouveaux champs et J7 garde son enveloppe v1.
+- Contrats et qualification : [retour J4 du 08/09](docs/validation/WO058-J4-AWARDED-POSTPONED-20260908.md).
+
 ### WO-058 — périodes et groupes statistiques repliables
 
 - Rend les en-têtes verts des périodes et gris des groupes ouvrables/repliables au clic et

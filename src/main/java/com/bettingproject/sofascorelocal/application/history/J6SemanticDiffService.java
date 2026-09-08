@@ -90,6 +90,15 @@ public class J6SemanticDiffService {
         scalar(changes, "round",
                 before.details().round().orElse(null),
                 after.details().round().orElse(null));
+        scalar(changes, "isAwarded",
+                before.details().isAwarded().orElse(null),
+                after.details().isAwarded().orElse(null));
+        scalar(changes, "homeScore.display",
+                before.details().homeDisplayScore().orElse(null),
+                after.details().homeDisplayScore().orElse(null));
+        scalar(changes, "awayScore.display",
+                before.details().awayDisplayScore().orElse(null),
+                after.details().awayDisplayScore().orElse(null));
         return List.copyOf(changes);
     }
 

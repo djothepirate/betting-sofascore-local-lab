@@ -340,7 +340,7 @@ class FlywayMigrationIT {
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(deliveryTable).isEqualTo("j7_delivery");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("37");
+        assertThat(flywayVersion).isEqualTo("38");
         assertThat(rawColumn).isEqualTo("bytea");
     }
 
@@ -7043,7 +7043,7 @@ class FlywayMigrationIT {
 
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$flywaySql"),
-                String.class)).isEqualTo("37");
+                String.class)).isEqualTo("38");
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$snapshotFingerprintSql"),
                 String.class)).isNotNull();
@@ -7082,7 +7082,7 @@ class FlywayMigrationIT {
                 .contains("j7ProviderOwnerGoRevocationCount")
                 .contains("j7ProviderOwnerGoConsumptionCount")
                 .contains("j7DeliveryLedgerSha256")
-                .contains("$sourceFlywayVersion -cne '37'");
+                .contains("$sourceFlywayVersion -cne '38'");
     }
 
     @Test
@@ -7110,8 +7110,8 @@ class FlywayMigrationIT {
                     .dataSource(sourceDataSource)
                     .locations("classpath:db/migration")
                     .load();
-            assertThat(sourceFlyway.migrate().migrationsExecuted).isEqualTo(37);
-            assertThat(sourceFlyway.info().current().getVersion().getVersion()).isEqualTo("37");
+            assertThat(sourceFlyway.migrate().migrationsExecuted).isEqualTo(38);
+            assertThat(sourceFlyway.info().current().getVersion().getVersion()).isEqualTo("38");
 
             JdbcTemplate sourceJdbc = new JdbcTemplate(sourceDataSource);
             UUID campaignId = UUID.randomUUID();
@@ -7159,6 +7159,36 @@ class FlywayMigrationIT {
                     insert into canonical_event (id, provider, provider_event_id)
                     values (?, 'SOFASCORE', 19999999)
                     """, canonicalEventId);
+            Long detailObservationId = sourceJdbc.queryForObject("""
+                    insert into event_detail_observation (
+                        canonical_event_id, source_kind, source_reference, source_fixture_id,
+                        source_payload_sha256, parser_version, source_received_at,
+                        starts_at, home_team_provider_id, home_team_name,
+                        away_team_provider_id, away_team_name, status_type,
+                        normalized_sha256, is_awarded, home_display_score, away_display_score
+                    ) values (
+                        ?, 'SYNTHETIC_FIXTURE', 'j6-v38-display-roundtrip', 'j6-v38-display-roundtrip',
+                        repeat('e', 64), 'event-details-v3', ?, ?,
+                        19999991, 'Synthetic Home', 19999992, 'Synthetic Away', 'finished',
+                        repeat('f', 64), true, 0, 3
+                    ) returning id
+                    """, Long.class, canonicalEventId, Timestamp.from(startedAt), Timestamp.from(startedAt));
+            // The manifest fingerprint remains provenance/hash based. Compare the three V38
+            // business values separately so a restored zero cannot silently become null.
+            String j4DisplayEvidenceSql = """
+                    select id, canonical_event_id, source_kind, source_reference,
+                        source_fixture_id, source_snapshot_id, source_payload_sha256,
+                        parser_version, source_received_at, normalized_sha256,
+                        is_awarded, home_display_score, away_display_score
+                    from event_detail_observation where id = ?
+                    """;
+            Map<String, Object> sourceJ4DisplayEvidence =
+                    sourceJdbc.queryForMap(j4DisplayEvidenceSql, detailObservationId);
+            assertThat(sourceJ4DisplayEvidence)
+                    .containsEntry("parser_version", "event-details-v3")
+                    .containsEntry("is_awarded", true)
+                    .containsEntry("home_display_score", 0)
+                    .containsEntry("away_display_score", 3);
             insertJ7Candidate(
                     sourceJdbc,
                     canonicalEventId,
@@ -7330,12 +7360,14 @@ class FlywayMigrationIT {
                     order by installed_rank desc
                     limit 1
                     """,
-                    String.class)).isEqualTo("37");
+                    String.class)).isEqualTo("38");
             assertThat(restoreJdbc.queryForObject(j8FingerprintSql, String.class))
                     .isEqualTo(sourceJ8Fingerprint);
             assertThat(restoreJdbc.queryForObject(
                     j7DeliveryFingerprintSql,
                     String.class)).isEqualTo(sourceJ7DeliveryFingerprint);
+            assertThat(restoreJdbc.queryForMap(j4DisplayEvidenceSql, detailObservationId))
+                    .isEqualTo(sourceJ4DisplayEvidence);
             for (String table : List.of(
                     "j8_benchmark_campaign",
                     "j8_benchmark_unit",
@@ -7428,8 +7460,8 @@ class FlywayMigrationIT {
                 StandardCharsets.UTF_8);
 
         assertThat(script)
-                .contains("$manifest.source.flywayVersion.ToString() -cne '37'")
-                .contains("valid Flyway V37 raw-payload, J8, J7 and quiescent live ledger restore");
+                .contains("$manifest.source.flywayVersion.ToString() -cne '38'")
+                .contains("valid Flyway V38 raw-payload, J8, J7 and quiescent live ledger restore");
 
         String qualificationFields = powerShellArray(script, "$qualificationFields");
         assertThat(qualificationFields)
@@ -9269,7 +9301,7 @@ class FlywayMigrationIT {
                 response.contentType(),
                 response.latency(),
                 response.payload(),
-                EventDetailsV2Parser.PARSER_VERSION,
+                com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV3Parser.PARSER_VERSION,
                 RawSnapshotSchemaStatus.RAW_ONLY,
                 null));
         EventDetails details = new EventDetails(
@@ -9299,7 +9331,7 @@ class FlywayMigrationIT {
                             .hasValue(rawPersistence.snapshotId());
                     assertThat(detail.source().fixtureId()).isEmpty();
                     assertThat(detail.source().parserVersion())
-                            .isEqualTo(EventDetailsV2Parser.PARSER_VERSION);
+                            .isEqualTo(com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV3Parser.PARSER_VERSION);
                     assertThat(detail.details().homeTeam().name())
                             .isEqualTo("Saint-Etienne");
                 });
@@ -9307,7 +9339,7 @@ class FlywayMigrationIT {
                 request,
                 response.receivedAt(),
                 Duration.ofMinutes(15),
-                EventDetailsV2Parser.PARSER_VERSION))
+                com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV3Parser.PARSER_VERSION))
                 .hasValueSatisfying(candidate -> {
                     assertThat(candidate.snapshotId())
                             .isEqualTo(rawPersistence.snapshotId());

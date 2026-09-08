@@ -1,11 +1,13 @@
 package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.live.LiveCampaignService.RuntimeStatus;
+import com.bettingproject.sofascorelocal.application.event.J4EventResult;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.eventdata.*;
 import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.*;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
+import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,6 +21,7 @@ import java.time.Duration;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 /** An explicit browser projection: no raw payload, worker identity or transport internals. */
@@ -26,20 +29,30 @@ import java.util.UUID;
 public class LiveCampaignPresentation {
     private final CanonicalEventStore events;
     private final J5EventDataStore data;
+    private final EventDetailsStore details;
     private final Clock clock;
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final List<SofascoreEndpointType> FAMILIES = List.of(SofascoreEndpointType.EVENT_DETAILS,
             SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_INCIDENTS,
             SofascoreEndpointType.EVENT_LINEUPS);
 
-    @Autowired
     public LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data) {
-        this(events, data, Clock.systemUTC());
+        this(events, data, null, Clock.systemUTC());
+    }
+
+    @Autowired
+    public LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, EventDetailsStore details) {
+        this(events, data, details, Clock.systemUTC());
     }
 
     LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, Clock clock) {
+        this(events, data, null, clock);
+    }
+
+    LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, EventDetailsStore details, Clock clock) {
         this.events = events;
         this.data = data;
+        this.details = details;
         this.clock = clock;
     }
 
@@ -84,14 +97,15 @@ public class LiveCampaignPresentation {
         var latestCanonical = events.findLatestByCanonicalId(event.target().canonicalEventId());
         boolean canonicalCurrent = latestCanonical.isEmpty() || sourceReceivedAt != null
                 && !sourceReceivedAt.isBefore(latestCanonical.orElseThrow().source().receivedAt());
+        J4EventResult result = result(j4, identity);
         return new Event(event.target().canonicalEventId(), event.target().providerEventId(),
                 identity == null ? Long.toString(event.target().providerEventId())
                         : identity.homeTeam().name() + " — " + identity.awayTeam().name(),
                 identity == null ? "—" : identity.tournament().map(t -> t.name()).orElse("—"),
                 identity == null ? "—" : identity.startsAt().atZone(ZoneId.of("Europe/Paris")).toString(),
-                sportStatus, sportStatusLabel(sportStatus, identity), score(j4), event.state(), "STOPPED_ALREADY_FINISHED".equals(event.reason())
-                        ? "Rencontre déjà terminée dans les observations locales au lancement ; aucun appel fournisseur."
-                        : event.reason(), event.nextDueAt(), event.reservedCalls(),
+                sportStatus, "finished".equals(sportStatus) && result.awarded() ? "Victoire sur tapis vert"
+                        : sportStatusLabel(sportStatus, identity), result.score(), event.state(), reason(event.reason()),
+                event.nextDueAt(), event.reservedCalls(),
                 campaign.manifest().maximumCallsPerEvent(), event.receivedBytes(), event.missedCycles(),
                 event.finalComplete(), sourceSnapshot, sourceReceivedAt, canonicalCurrent,
                 campaign.blocksSelection(event.target().canonicalEventId()),
@@ -109,23 +123,48 @@ public class LiveCampaignPresentation {
                 ? identity.status().description().orElse(sportStatus) : sportStatus;
     }
 
-    private static String score(FamilyCursor j4) {
-        if (j4 == null || j4.latestSuccessfulResult() == null) return "—";
+    private static String reason(String reason) {
+        if (reason == null) return null;
+        return switch (reason) {
+            case "STOPPED_ALREADY_FINISHED" -> "Rencontre déjà terminée dans les observations locales au lancement ; aucun appel fournisseur.";
+            case "STOPPED_ALREADY_POSTPONED" -> "Rencontre reportée dans les observations locales au lancement ; aucun appel fournisseur.";
+            case "STOPPED_POSTPONED" -> "Rencontre reportée selon J4 ; suivi arrêté pour cette rencontre.";
+            default -> reason;
+        };
+    }
+
+    private J4EventResult result(FamilyCursor j4, CanonicalEventObservationView identity) {
+        if (details != null && identity != null) {
+            var detail = j4 != null && j4.normalized() != null && j4.normalized().detailObservationId() != null
+                    ? details.findByObservationId(identity.identity().value(), j4.normalized().detailObservationId())
+                    : details.findLatest(identity.identity().value());
+            var matching = detail.filter(d -> d.source().sourceReference().equals(identity.source().sourceReference())
+                    && d.source().payloadSha256().equals(identity.source().payloadSha256())
+                    && d.details().status().equals(identity.status())
+                    && "event-details-v3".equals(d.source().parserVersion()));
+            if (matching.isPresent()) return J4EventResult.from(matching.orElseThrow().details());
+        }
+        if (j4 == null || j4.latestSuccessfulResult() == null) return J4EventResult.absent();
         String projection = j4.latestSuccessfulResult().publication().projectionJson();
-        if (projection == null) return "—";
+        if (projection == null) return J4EventResult.absent();
         try {
             JsonNode root = JSON.readTree(projection);
-            return scoreSide(root.path("homeScore")) + " – " + scoreSide(root.path("awayScore"));
+            JsonNode awarded = root.path("isAwarded");
+            return new J4EventResult("VALUE".equals(awarded.path("presence").asText())
+                    && awarded.path("value").isBoolean() && awarded.path("value").booleanValue(),
+                    scoreSide(root.path("homeScore")), scoreSide(root.path("awayScore")));
         } catch (JacksonException exception) {
-            return "—";
+            return J4EventResult.absent();
         }
     }
 
-    private static String scoreSide(JsonNode side) {
-        if (!"VALUE".equals(side.path("presence").asText())) return "—";
-        JsonNode current = side.path("value").path("current");
-        return "VALUE".equals(current.path("presence").asText()) && current.path("value").isIntegralNumber()
-                ? current.path("value").asText() : "—";
+    private static Optional<Integer> scoreSide(JsonNode side) {
+        if (!"VALUE".equals(side.path("presence").asText())) return Optional.empty();
+        JsonNode display = side.path("value").path("display");
+        return "VALUE".equals(display.path("presence").asText()) && display.path("value").isIntegralNumber()
+                && display.path("value").canConvertToInt() && display.path("value").intValue() >= 0
+                && display.path("value").intValue() <= 999
+                ? Optional.of(display.path("value").intValue()) : Optional.empty();
     }
 
     private Family family(CampaignView campaign, EventView event, FamilyCursor cursor, Instant observedAt) {

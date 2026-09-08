@@ -1,6 +1,6 @@
 # WO-SS-20260907-058 — Campagnes live locales J4/J5 sur sélection de rencontres
 
-- **Statut :** `IN_PROGRESS` — correctifs prématch, clôture, incidents V17 et statistiques applicatives qualifiés localement ; collecte opérateur du 07/09 terminée avec un arrêt de schéma historique Elche conservé ; revue humaine et fusion distinctes, aucune clôture.
+- **Statut :** `IN_PROGRESS` — correctifs prématch, clôture, incidents V17, statistiques et résultats/report J4 V3/V38 qualifiés localement ; collecte opérateur du 07/09 terminée avec un arrêt de schéma historique Elche conservé ; revue humaine et fusion distinctes, aucune clôture.
 - **Date :** 2026-09-07.
 - **Jalon :** expérimentation live locale après J9, distincte des parcours manuels existants.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
@@ -18,6 +18,26 @@ Les statuts restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 PostgreSQL local Docker Desktop et application sur `127.0.0.1:8087`, textes UTF-8.
 
 ## 1. Objectif et origine du besoin
+
+### Onzième retour — résultats J4 et report après lancement
+
+Le 08/09, le propriétaire confirme les encadrés statistiques et demande la reconnaissance
+de `finished` + `isAwarded=true` comme « Victoire sur tapis vert », avec les deux scores
+`display`. Il demande également l'inéligibilité de `postponed` et précise qu'un report peut
+survenir après le lancement : une nouvelle réponse J4 arrête alors uniquement cette rencontre.
+Le traitement de `canceled` est explicitement conservé.
+
+Ce complément ajoute `event-details-v3` et V38, sans modifier les parseurs ou migrations
+historiques. Le score visible exige une paire domicile/extérieur complète et ne reprend pas
+`current`. L'attribution n'est jamais inférée depuis une observation J3 `finished`. La préparation
+et le lancement contrôlent les reports ; le manifeste reste immuable et les autres rencontres
+continuent après un report live. Le périmètre et les preuves figurent dans le
+[rapport J4 du 08/09](../../validation/WO058-J4-AWARDED-POSTPONED-20260908.md).
+
+Qualification : `clean verify` et `-Pintegration-tests verify` verts, chacun avec 1 676 tests
+Surefire (0 échec, 0 erreur, 5 ignorés) et 140 tests Failsafe (0 échec, 0 erreur, 0 ignoré).
+Quatre scénarios Chromium passent après correction de la variable de cache du lanceur.
+Les premiers essais non verts restent consignés séparément ; la base opérateur n'est pas modifiée.
 
 ### Dixième retour — encadrés statistiques repliables
 

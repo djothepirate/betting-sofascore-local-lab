@@ -145,7 +145,7 @@ class LiveResponseProcessorTest {
         ArgumentCaptor<CanonicalEventObservation> captured = ArgumentCaptor.forClass(CanonicalEventObservation.class);
         verify(events).save(captured.capture());
         assertThat(captured.getValue().source().receivedAt()).isEqualTo(RECEIVED);
-        assertThat(captured.getValue().source().parserVersion()).isEqualTo("event-details-v2");
+        assertThat(captured.getValue().source().parserVersion()).isEqualTo("event-details-v3");
         verify(rawStore).classify(1, RawSnapshotSchemaStatus.PARSED, null);
         verifyNoInteractions(data);
     }

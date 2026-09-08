@@ -59,14 +59,22 @@ public final class LiveCampaignService {
         this.clock = Objects.requireNonNull(clock);
     }
 
-    public record Preparation(Manifest manifest, List<CanonicalEventObservationView> excludedFinished) {
-        public Preparation { excludedFinished = List.copyOf(excludedFinished); }
+    public record Preparation(Manifest manifest, List<CanonicalEventObservationView> excludedFinished,
+                              List<CanonicalEventObservationView> excludedPostponed) {
+        public Preparation {
+            excludedFinished = List.copyOf(excludedFinished);
+            excludedPostponed = List.copyOf(excludedPostponed);
+        }
+        public Preparation(Manifest manifest, List<CanonicalEventObservationView> excludedFinished) {
+            this(manifest, excludedFinished, List.of());
+        }
     }
 
     public Manifest prepare(List<UUID> selected) {
-        Manifest manifest = prepareSelection(selected).manifest();
-        if (manifest == null) throw new IllegalArgumentException("LIVE_ALL_EVENTS_FINISHED");
-        return manifest;
+        Preparation preparation = prepareSelection(selected);
+        if (preparation.manifest() == null) throw new IllegalArgumentException(
+                preparation.excludedPostponed().isEmpty() ? "LIVE_ALL_EVENTS_FINISHED" : "LIVE_ALL_EVENTS_INELIGIBLE");
+        return preparation.manifest();
     }
 
     public Preparation prepareSelection(List<UUID> selected) {
@@ -75,11 +83,14 @@ public final class LiveCampaignService {
             throw new IllegalArgumentException("LIVE_SELECTION_INVALID");
         requireSelectable(selected);
         List<CanonicalEventObservationView> observations = selected.stream().map(this::latestEligibleSource).toList();
-        List<CanonicalEventObservationView> excluded = observations.stream().filter(LiveCampaignService::finished).toList();
-        List<Target> targets = observations.stream().filter(event -> !finished(event))
+        List<CanonicalEventObservationView> excludedFinished = observations.stream()
+                .filter(event -> "finished".equals(event.status().type())).toList();
+        List<CanonicalEventObservationView> excludedPostponed = observations.stream()
+                .filter(event -> "postponed".equals(event.status().type())).toList();
+        List<Target> targets = observations.stream().filter(event -> exclusionState(event) == null)
                 .map(event -> new Target(event.identity().value(), event.identity().providerEventId(),
                         event.observationId(), event.source().snapshotId().orElseThrow())).toList();
-        if (targets.isEmpty()) return new Preparation(null, excluded);
+        if (targets.isEmpty()) return new Preparation(null, excludedFinished, excludedPostponed);
         admission.admit(targets.size());
         Duration cycleInterval = LiveCadence.forMatches(targets.size());
         UUID id = UUID.randomUUID(); Instant now = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
@@ -91,7 +102,7 @@ public final class LiveCampaignService {
         Manifest manifest = new Manifest(id, Sha256.hex(material.getBytes(StandardCharsets.UTF_8)), "live-v3",
                 now, now.plusSeconds(300), properties.getDuration(), 1000, 3000, bytes,
                 properties.getQualifiedMatchCapacity(), targets, currentAdmissionProfile(), cycleInterval);
-        return new Preparation(store.prepare(manifest), excluded);
+        return new Preparation(store.prepare(manifest), excludedFinished, excludedPostponed);
     }
 
     private CanonicalEventObservationView latestEligibleSource(UUID id) {
@@ -105,13 +116,21 @@ public final class LiveCampaignService {
         return event;
     }
 
-    private static boolean finished(CanonicalEventObservationView event) {
-        return "finished".equals(event.status().type());
+    private static String exclusionState(CanonicalEventObservationView event) {
+        return switch (event.status().type()) {
+            case "finished" -> "STOPPED_ALREADY_FINISHED";
+            case "postponed" -> "STOPPED_ALREADY_POSTPONED";
+            default -> null;
+        };
     }
 
-    private List<UUID> locallyFinished(Manifest manifest) {
-        return manifest.targets().stream().map(Target::canonicalEventId)
-                .filter(id -> finished(latestEligibleSource(id))).toList();
+    private Map<UUID, String> locallyExcluded(Manifest manifest) {
+        Map<UUID, String> excluded = new LinkedHashMap<>();
+        for (Target target : manifest.targets()) {
+            String state = exclusionState(latestEligibleSource(target.canonicalEventId()));
+            if (state != null) excluded.put(target.canonicalEventId(), state);
+        }
+        return excluded;
     }
 
     public CampaignView state(UUID id) { return store.find(id).orElseThrow(() -> new NoSuchElementException("LIVE_CAMPAIGN_NOT_FOUND")); }
@@ -156,9 +175,10 @@ public final class LiveCampaignService {
         if (!current.manifest().manifestSha256().equals(hash)) throw new IllegalArgumentException("LIVE_MANIFEST_MISMATCH");
         if (!"PREPARED".equals(current.state())) return current;
         requireSelectable(current.manifest().targets().stream().map(Target::canonicalEventId).toList());
-        List<UUID> alreadyFinished = locallyFinished(current.manifest());
-        if (alreadyFinished.size() == current.manifest().targets().size())
-            throw new IllegalArgumentException("LIVE_ALL_EVENTS_FINISHED");
+        Map<UUID, String> alreadyExcluded = locallyExcluded(current.manifest());
+        if (alreadyExcluded.size() == current.manifest().targets().size())
+            throw new IllegalArgumentException(alreadyExcluded.containsValue("STOPPED_ALREADY_POSTPONED")
+                    ? "LIVE_ALL_EVENTS_INELIGIBLE" : "LIVE_ALL_EVENTS_FINISHED");
         if (!properties.isEnabled() || !provider.isEnabled() || !playwright.isEnabled())
             throw new IllegalStateException("LIVE_DISABLED");
         if (playwright.getRequestTimeout() == null || playwright.getRequestTimeout().isNegative()
@@ -170,10 +190,10 @@ public final class LiveCampaignService {
                 || current.manifest().qualifiedMatchCapacity() != properties.getQualifiedMatchCapacity()
                 || !current.manifest().duration().equals(properties.getDuration()))
             throw new IllegalArgumentException("LIVE_PREPARED_POLICY_CHANGED");
-        admission.admit(current.manifest().targets().size() - alreadyFinished.size(), current.manifest().cycleInterval());
+        admission.admit(current.manifest().targets().size() - alreadyExcluded.size(), current.manifest().cycleInterval());
         if (providerCleanupRequired()) throw new IllegalStateException("LIVE_PROVIDER_CLEANUP_REQUIRED");
         Session session = new Session(current.manifest());
-        session.alreadyFinished.addAll(alreadyFinished);
+        session.alreadyExcluded.putAll(alreadyExcluded);
         if (!active.compareAndSet(null, session)) {
             Session existing = active.get();
             if (existing != null && existing.manifest.campaignId().equals(id)) return state(id);
@@ -236,8 +256,8 @@ public final class LiveCampaignService {
             s.schedule = new LiveSchedule(s.manifest.targets().stream().map(Target::canonicalEventId).toList(),
                     started.startedAt(), started.endsAt(), s.manifest.cycleInterval(), s.manifest.policyVersion());
             // Recheck local observations after admission and acquisition, before any browser exists.
-            s.alreadyFinished.addAll(locallyFinished(s.manifest));
-            for (UUID eventId : s.alreadyFinished) s.schedule.stopEvent(eventId, "STOPPED_ALREADY_FINISHED");
+            s.alreadyExcluded.putAll(locallyExcluded(s.manifest));
+            s.alreadyExcluded.forEach(s.schedule::stopEvent);
             publishStates(s);
             s.launched.complete(null);
             if (s.stopReason != null || s.schedule.terminal()) return;
@@ -400,7 +420,7 @@ public final class LiveCampaignService {
                     } catch (RuntimeException failure) { s.dispatchLock.unlock(); throw failure; }
                 }
             });
-            String parser = due.endpoint() == SofascoreEndpointType.EVENT_DETAILS ? "event-details-v2"
+            String parser = due.endpoint() == SofascoreEndpointType.EVENT_DETAILS ? "event-details-v3"
                     : due.endpoint() == SofascoreEndpointType.EVENT_INCIDENTS ? "event-incidents-v17"
                     : due.endpoint() == SofascoreEndpointType.EVENT_STATISTICS ? "event-statistics-v2" : "event-lineups-v2";
             RawManualCallSnapshot raw = new RawManualCallSnapshot(due.endpoint(), due.endpoint().name() + "|eventId=" + attempt.providerEventId(),
@@ -501,7 +521,7 @@ public final class LiveCampaignService {
     }
     private static final class Session {
         final Manifest manifest; final CompletableFuture<Void> launched = new CompletableFuture<>();
-        final Set<UUID> alreadyFinished = new HashSet<>();
+        final Map<UUID, String> alreadyExcluded = new LinkedHashMap<>();
         final ReentrantLock dispatchLock = new ReentrantLock(); final Set<UUID> stoppedEvents = ConcurrentHashMap.newKeySet();
         final Map<UUID,String> publishedStates = new HashMap<>(); final Map<UUID,LiveSchedule.EventState> publishedMetrics = new HashMap<>();
         volatile String stopReason; volatile LiveSchedule schedule; volatile Ownership ownership; volatile boolean finished;

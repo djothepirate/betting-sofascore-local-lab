@@ -236,18 +236,23 @@
             text(node, "[data-live-source-received]", event.sourceReceivedAt);
           }
         }
+        text(node, "[data-live-campaign-score]", event.score);
         text(node, "[data-live-event-state]", event.state);
         const selection = node.querySelector('input[form="live-selection"][name="eventId"]');
         if (selection) {
           selection.dataset.liveCampaignBlocked = String(event.selectionBlocked === true);
-          if (canReplaceCanonical) selection.dataset.liveFinished = String(event.sportStatus === "finished");
+          if (canReplaceCanonical) selection.dataset.liveFinished = String(["finished", "postponed"].includes(event.sportStatus));
           if (selection.dataset.liveProviderEligible !== "true" || event.selectionBlocked === true) selection.checked = false;
           const blocked = node.querySelector("[data-live-selection-blocked]");
           if (blocked) blocked.hidden = event.selectionBlocked !== true;
           updateSelection();
         }
         text(node, "[data-live-sport-context]", event.state === "STOPPED_ALREADY_FINISHED"
-          ? "Le statut sportif ci-dessus décrit l’observation figée à la préparation. La rencontre a été constatée terminée localement au lancement ; aucune nouvelle collecte n’a eu lieu." : " ");
+          ? "Le statut sportif ci-dessus décrit l’observation figée à la préparation. La rencontre a été constatée terminée localement au lancement ; aucune nouvelle collecte n’a eu lieu."
+          : event.state === "STOPPED_ALREADY_POSTPONED"
+            ? "Le statut sportif ci-dessus décrit l’observation figée à la préparation. La rencontre a été constatée reportée (postponed) localement au lancement ; aucune nouvelle collecte n’a eu lieu."
+            : event.state === "STOPPED_POSTPONED"
+              ? "La rencontre a été signalée reportée (postponed) par J4. Son suivi est arrêté ; les observations déjà reçues restent consultables." : " ");
         text(node, "[data-live-event-reason]", event.reason);
         text(node, "[data-live-next-due]", event.nextDueAt);
         text(node, "[data-live-event-calls]", `${event.reservedCalls} / ${event.maximumCalls}`);

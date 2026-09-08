@@ -34,8 +34,26 @@ class LivePayloadNormalizerTest {
         assertThat(json(zero).at("/awayScore/value/current/presence").stringValue()).isEqualTo("ABSENT");
         assertThat(json(zero).at("/homeScore/value/period1/value").intValue()).isEqualTo(2);
         assertThat(json(zero).at("/homeScore/value/penalties/value").intValue()).isEqualTo(4);
-        assertThat(zero.parserVersion()).isEqualTo("event-details-v2");
-        assertThat(zero.projectionVersion()).isEqualTo("j4-live-score-v1");
+        assertThat(zero.parserVersion()).isEqualTo("event-details-v3");
+        assertThat(zero.projectionVersion()).isEqualTo("j4-live-score-v2");
+    }
+
+    @Test
+    void preservesAwardAndDisplayScoresIndependentlyOfCurrentScores() {
+        var result = details(",\"isAwarded\":true,\"homeScore\":{\"display\":3,\"current\":1},"
+                + "\"awayScore\":{\"display\":0,\"current\":2}");
+        assertThat(result.status()).isEqualTo(LiveNormalizedPayload.Status.PARSED);
+        assertThat(result.details()).hasValueSatisfying(detail -> {
+            assertThat(detail.isAwarded()).contains(true);
+            assertThat(detail.homeDisplayScore()).contains(3);
+            assertThat(detail.awayDisplayScore()).contains(0);
+        });
+        assertThat(json(result).at("/isAwarded/value").booleanValue()).isTrue();
+        assertThat(json(result).at("/homeScore/value/display/value").intValue()).isEqualTo(3);
+        assertThat(json(result).at("/awayScore/value/display/value").intValue()).isZero();
+        assertThat(json(details("")).at("/isAwarded/presence").stringValue()).isEqualTo("ABSENT");
+        assertThat(json(details(",\"isAwarded\":null")).at("/isAwarded/presence").stringValue()).isEqualTo("NULL");
+        assertThat(json(details(",\"isAwarded\":false")).at("/isAwarded/value").booleanValue()).isFalse();
     }
 
     @Test

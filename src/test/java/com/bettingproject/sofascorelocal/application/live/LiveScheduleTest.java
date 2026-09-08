@@ -131,6 +131,82 @@ class LiveScheduleTest {
         var second=s.next(start).orElseThrow(); s.started(second,start); s.failed(second,"CAMPAIGN","STOPPED_ERROR");
         assertThat(s.terminal()).isTrue();
     }
+
+    @ParameterizedTest @ValueSource(strings = {"notstarted", "inprogress"})
+    void aPostponementReceivedDuringTheCampaignStopsOnlyThatMatchAndNeverSchedulesItsFinalCycle(String initialStatus) {
+        var schedule = new LiveSchedule(List.of(a, b), start, start.plusSeconds(1000),
+                Duration.ofSeconds(60), "live-v3");
+        List<LiveSchedule.Due> calls = new ArrayList<>();
+        Instant postponedAt = null;
+        int detailsForA = 0;
+        for (int second = 0; second <= 390; second += 3) {
+            Instant at = start.plusSeconds(second);
+            var next = schedule.next(at);
+            if (next.isEmpty()) continue;
+            var due = next.orElseThrow();
+            if (postponedAt != null) assertThat(due.eventId()).isEqualTo(b);
+            calls.add(due);
+            String sport = null;
+            if (due.endpoint() == EVENT_DETAILS) {
+                sport = due.eventId().equals(a)
+                        ? ++detailsForA == 1 ? initialStatus : "postponed" : "inprogress";
+                if ("postponed".equals(sport)) postponedAt = at;
+            }
+            schedule.started(due, at);
+            schedule.completed(due, sport, false, Map.of(), at.plusMillis(1));
+        }
+
+        assertThat(postponedAt).isNotNull();
+        assertThat(detailsForA).isEqualTo(2);
+        assertThat(calls).noneMatch(LiveSchedule.Due::finalCycle);
+        Instant stoppedAt = postponedAt;
+        assertThat(calls).anySatisfy(due -> {
+            assertThat(due.eventId()).isEqualTo(b);
+            assertThat(due.endpoint()).isEqualTo(EVENT_STATISTICS);
+            assertThat(due.dueAt()).isAfter(stoppedAt);
+        });
+        assertThat(schedule.states().getFirst()).satisfies(event -> {
+            assertThat(event.state()).isEqualTo("STOPPED_POSTPONED");
+            assertThat(event.sportStatus()).isEqualTo("postponed");
+            assertThat(event.nextDueAt()).isNull();
+            assertThat(event.finalComplete()).isFalse();
+        });
+        assertThat(schedule.states().getLast().state()).isEqualTo("COLLECTING");
+        assertThat(schedule.terminal()).isFalse();
+        assertThat(schedule.globalStop()).isNull();
+    }
+
+    @Test void postponedAtTheFirstJ4StopsWithoutAnyJ5OrFinishedClaim() {
+        var schedule = one();
+        execute(schedule, start, "postponed", false, Map.of());
+
+        assertThat(schedule.terminal()).isTrue();
+        assertThat(schedule.next(start.plusSeconds(60))).isEmpty();
+        assertThat(schedule.states().getFirst().state()).isEqualTo("STOPPED_POSTPONED");
+        assertThat(schedule.states().getFirst().sportStatus()).isEqualTo("postponed");
+        assertThat(schedule.states().getFirst().finalComplete()).isFalse();
+        assertThat(schedule.globalStop()).isNull();
+    }
+
+    @Test void postponedDuringTheReservedFinalCheckDoesNotAuthorizeAFinalJ5Triplet() {
+        var schedule = one();
+        execute(schedule, start, "inprogress", false, Map.of());
+        schedule.reserveFinalCheck(a, start.plusSeconds(1));
+        var finalCheck = execute(schedule, start.plusSeconds(60), "postponed", false, Map.of());
+
+        assertThat(finalCheck.kind()).isEqualTo("J4_FINAL_CHECK");
+        assertThat(schedule.next(start.plusSeconds(120))).isEmpty();
+        assertThat(schedule.states().getFirst().state()).isEqualTo("STOPPED_POSTPONED");
+        assertThat(schedule.states().getFirst().finalComplete()).isFalse();
+    }
+
+    @Test void canceledStillUsesTheExistingReviewState() {
+        var schedule = one();
+        execute(schedule, start, "canceled", false, Map.of());
+
+        assertThat(schedule.states().getFirst().state()).isEqualTo("STOPPED_REVIEW_REQUIRED");
+        assertThat(schedule.terminal()).isTrue();
+    }
     @Test void individualStopDuringOrBeforeGetDoesNotReactivate() {
         var s=one(); var due=s.next(start).orElseThrow();
         s.stopEvent(a,"STOPPED_OPERATOR"); assertThat(s.mayDispatch(due,start)).isFalse();

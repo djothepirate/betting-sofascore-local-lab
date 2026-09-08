@@ -857,8 +857,8 @@ try {
     }
 
     $sourceFlywayVersion = Invoke-PrimaryScalar -Sql $flywaySql
-    if ($sourceFlywayVersion -cne '37') {
-        throw 'Flyway V37 must be applied before the J6 backup/restore qualification.'
+    if ($sourceFlywayVersion -cne '38') {
+        throw 'Flyway V38 must be applied before the J6 backup/restore qualification.'
     }
     $providerGuardState = Invoke-PrimaryScalar -Sql 'select state from provider_campaign_guard where singleton_id=1'
     $activeLiveCount = [long](Invoke-PrimaryScalar -Sql "select count(*) from live_campaign where state in ('RUNNING','CLEANUP_REQUIRED')")

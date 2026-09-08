@@ -127,6 +127,13 @@ public final class LiveSchedule {
         if (!e.active() || globalStop != null) return;
         if (due.endpoint() == EVENT_DETAILS) {
             if (unavailable) { stopEvent(e.id, "STOPPED_REVIEW_REQUIRED"); return; }
+            if ("postponed".equals(status)) {
+                e.sport = status;
+                e.j4At = null; e.j5At = null; e.prematchLineupsAt = null;
+                e.finalComplete = false;
+                stopEvent(e.id, "STOPPED_POSTPONED");
+                return;
+            }
             if (!Set.of("notstarted", "inprogress", "finished").contains(status == null ? "" : status)
                     || "inprogress".equals(e.sport) && "notstarted".equals(status)) {
                 stopEvent(e.id, "STOPPED_REVIEW_REQUIRED"); return;

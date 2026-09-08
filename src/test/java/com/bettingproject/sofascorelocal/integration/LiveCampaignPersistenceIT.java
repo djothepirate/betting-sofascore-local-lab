@@ -54,7 +54,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void installsFreshSchemaAndKeepsV32PrepopulatedEvidenceUnchanged() {
-        Fixture f=fixture("32"); Target target=f.seed(EVENT);
+        Fixture f=fixture("32"); Target target=f.seedHistorical(EVENT);
         f.jdbc.update("""
             insert into j8_benchmark_campaign(campaign_id,campaign_type,execution_mode,started_at,maximum_units)
             values (?,'J4_EVENT_DETAILS_PHASE2','GUARDED_PROVIDER',?,1)
@@ -74,7 +74,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void upgradingAPrepopulatedV33KeepsTheOldManifestAndSourceEvidenceWithItsSixtySecondInterval() {
-        Fixture f = fixture("33"); Target target = f.seed(EVENT);
+        Fixture f = fixture("33"); Target target = f.seedHistorical(EVENT);
         Manifest old = f.manifest(target, 100);
         f.jdbc.update("""
             insert into live_campaign(campaign_id,manifest_sha256,policy_version,prepared_at,expires_at,
@@ -103,7 +103,7 @@ class LiveCampaignPersistenceIT {
     @ParameterizedTest @ValueSource(ints = {4, 5, 10, 25})
     void configuredCeilingAndAdaptiveIntervalRoundTripAndEveryRetainedTargetCanDispatch(int count) {
         Fixture f = fixture("34");
-        List<Target> targets = java.util.stream.IntStream.range(0, count).mapToObj(i -> f.seed(EVENT + i)).toList();
+        List<Target> targets = java.util.stream.IntStream.range(0, count).mapToObj(i -> f.seedHistorical(EVENT + i)).toList();
         Manifest m = new Manifest(UUID.randomUUID(), "c".repeat(64), "live-v2", T0, T0.plusSeconds(300), Duration.ofHours(4),
                 1000, 3000, 3000L * 5 * 1024 * 1024, 25, targets,
                 new AdmissionProfile(Duration.ofSeconds(1), Duration.ofSeconds(1), "b".repeat(64)), LiveCadence.forMatches(count));
@@ -121,7 +121,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void launchIsIdempotentAndManifestSelectionAndEvidenceAreImmutable() {
-        Fixture f=fixture("37"); Manifest m=f.manifest(f.seed(EVENT),100); f.store.prepare(m);
+        Fixture f=fixture("38"); Manifest m=f.manifest(f.seed(EVENT),100); f.store.prepare(m);
         Ownership own=f.acquire(m);
         assertThat(f.store.launch(m.campaignId(),m.manifestSha256(),own,T0.plusSeconds(1)).newlyLaunched()).isTrue();
         assertThat(f.store.launch(m.campaignId(),m.manifestSha256(),own,T0.plusSeconds(2)).newlyLaunched()).isFalse();
@@ -137,7 +137,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void v35PreservesPopulatedV2EvidenceAndEnforcesV3Cadence() {
-        Fixture f=fixture("34"); Target target=f.seed(EVENT);
+        Fixture f=fixture("34"); Target target=f.seedHistorical(EVENT);
         Manifest legacy=new Manifest(UUID.randomUUID(),"a".repeat(64),"live-v2",T0,T0.plusSeconds(300),
                 Duration.ofHours(4),100,100,100000000,1,List.of(target));
         Ownership own=f.start(legacy);
@@ -146,7 +146,7 @@ class LiveCampaignPersistenceIT {
         RawManualCallSnapshot raw=f.raw(EVENT,"before-v35",T0.plusSeconds(10));
         var receipt=f.store.saveReceipt(own,a.attemptId(),raw);
         f.store.publishResult(own,a.attemptId(),f.success(raw.receivedAt(),"before-v35"),
-                ()->f.normalize(EVENT,"before-v35",raw,receipt));
+                ()->f.normalizeHistorical(EVENT,"before-v35",raw,receipt));
         Map<String,List<Map<String,Object>>> before=new LinkedHashMap<>();
         for(String table:List.of("live_campaign","live_event","live_call","live_call_dispatch","live_call_receipt",
                 "live_call_result","live_transition","provider_campaign_guard","provider_snapshot","provider_snapshot_occurrence"))
@@ -169,7 +169,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void v3PrematchLineupsPersistExactCyclesAndProvenanceWhileRepeatedReceiptsRefreshTheCursor() {
-        Fixture f = fixture("37");
+        Fixture f = fixture("38");
         String detailsJson = """
                 {"event":{"id":%d,"startTimestamp":%d,
                 "homeTeam":{"id":11,"name":"Home"},"awayTeam":{"id":22,"name":"Away"},
@@ -268,7 +268,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void identicalReceiptsAndAToBToAReturnToTheCorrectOldObservationWithNewFreshness() {
-        Fixture f=fixture("37"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
+        Fixture f=fixture("38"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
         List<Long> snapshots=new ArrayList<>(); List<Long> occurrences=new ArrayList<>(); List<Long> observations=new ArrayList<>();
         List<UUID> attempts=new ArrayList<>();
         for(int cycle=0;cycle<4;cycle++) {
@@ -295,7 +295,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void publicationRollbackKeepsRawReceiptAndDoesNotLeakNormalizedChildrenOrSuccessfulState() {
-        Fixture f=fixture("37"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
+        Fixture f=fixture("38"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
         ReservedAttempt a=f.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS);
         f.store.recordDispatch(own,a.attemptId(),T0.plusSeconds(10));
         RawManualCallSnapshot raw=f.raw(EVENT,"rollback",T0.plusSeconds(10));
@@ -312,7 +312,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void receiptCorrelationFailureRollsBackNewRawOccurrenceAndCounter() {
-        Fixture f=fixture("37"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
+        Fixture f=fixture("38"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
         ReservedAttempt a=f.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS);
         long before=f.jdbc.queryForObject("select count(*) from provider_snapshot_occurrence",Long.class);
         // No dispatch row: FK must reject receipt, including the inner raw save in the same transaction.
@@ -323,7 +323,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void realConcurrentConnectionsCannotSpendLastOrdinaryBudgetTwice() throws Exception {
-        Fixture f=fixture("37"); Manifest m=f.manifest(f.seed(EVENT),5); Ownership own=f.start(m);
+        Fixture f=fixture("38"); Manifest m=f.manifest(f.seed(EVENT),5); Ownership own=f.start(m);
         CountDownLatch ready=new CountDownLatch(2),go=new CountDownLatch(1);
         try(var pool=Executors.newFixedThreadPool(2)) {
             var first=pool.submit(()->{ready.countDown();go.await();return f.store.reserveAttempt(f.request(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS));});
@@ -336,7 +336,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void cleanupAndOldGenerationRemainFailClosedAndOrphanRecoveryNeverRearms() {
-        Fixture f=fixture("37"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
+        Fixture f=fixture("38"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
         ReservedAttempt a=f.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS);
         f.store.recordDispatch(own,a.attemptId(),T0.plusSeconds(10));
         Owner other=new Owner(UUID.randomUUID(),1235,T0.minusSeconds(30));
@@ -361,7 +361,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void lateReceiptAfterIndividualStopPreservesEvidenceWithoutReactivatingEvent() {
-        Fixture f=fixture("37"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
+        Fixture f=fixture("38"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
         ReservedAttempt a=f.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS);
         f.store.recordDispatch(own,a.attemptId(),T0.plusSeconds(10));
         f.store.transition(own,m.targets().getFirst().canonicalEventId(),"STOPPED_OPERATOR","OPERATOR_STOP",T0.plusSeconds(10),null);
@@ -376,7 +376,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void unavailableJ5FamilyRetainsLastGoodObservationAndItsOwnReceptionDate() {
-        Fixture f=fixture("37");Manifest m=f.manifest(f.seed(EVENT),100);Ownership own=f.start(m);
+        Fixture f=fixture("38");Manifest m=f.manifest(f.seed(EVENT),100);Ownership own=f.start(m);
         ReservedAttempt first=f.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_STATISTICS);
         Instant firstAt=T0.plusSeconds(10);f.store.recordDispatch(own,first.attemptId(),firstAt);
         RawManualCallSnapshot raw=new RawManualCallSnapshot(SofascoreEndpointType.EVENT_STATISTICS,"EVENT_STATISTICS|eventId="+EVENT,
@@ -408,7 +408,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void preparationNormalizesMicrosecondsAndScheduleMetricsOnlyReviseWhenChanged() {
-        Fixture f=fixture("37");Target target=f.seed(EVENT);
+        Fixture f=fixture("38");Target target=f.seed(EVENT);
         Manifest m=new Manifest(UUID.randomUUID(),"a".repeat(64),"live-v1",T0.plusNanos(123456789),T0.plusSeconds(300),
                 Duration.ofHours(4),100,100,100_000_000L,1,List.of(target));
         assertThat(m.preparedAt().getNano()).isEqualTo(123456000);
@@ -429,7 +429,7 @@ class LiveCampaignPersistenceIT {
     @EnumSource(value = SofascoreEndpointType.class, names = {
             "EVENT_STATISTICS", "EVENT_INCIDENTS", "EVENT_LINEUPS"})
     void live404PublicationSurvivesDeduplicationAndRecoveryWithoutLosingLastGoodData(SofascoreEndpointType endpoint) {
-        Fixture f = fixture("37"); Manifest m = f.manifest(f.seed(EVENT), 100); Ownership own = f.start(m);
+        Fixture f = fixture("38"); Manifest m = f.manifest(f.seed(EVENT), 100); Ownership own = f.start(m);
         String available = switch (endpoint) {
             case EVENT_STATISTICS -> "{\"statistics\":[]}";
             case EVENT_INCIDENTS -> "{\"incidents\":[]}";
@@ -489,7 +489,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void j4UnavailablePublicationKeepsItsEventScopeInsteadOfBecomingAStorageFailure() {
-        Fixture f = fixture("37"); Manifest m = f.manifest(f.seed(EVENT), 100); Ownership own = f.start(m);
+        Fixture f = fixture("38"); Manifest m = f.manifest(f.seed(EVENT), 100); Ownership own = f.start(m);
         var attempt = f.reserve(own, m.targets().getFirst(), 0, SofascoreEndpointType.EVENT_DETAILS);
         Instant at = T0.plusSeconds(10); f.store.recordDispatch(own, attempt.attemptId(), at);
         var response = new PlaywrightProviderResponse(at, at.plusMillis(100), 404, "application/json",
@@ -511,7 +511,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void admissionProfileIsReadExactlyAndCannotChangeAfterPreparation() {
-        Fixture f=fixture("37"); Target target=f.seed(EVENT);
+        Fixture f=fixture("38"); Target target=f.seed(EVENT);
         AdmissionProfile profile=new AdmissionProfile(Duration.ofSeconds(3).plusNanos(123),Duration.ofMillis(500).plusNanos(456),"d".repeat(64));
         Manifest m=new Manifest(UUID.randomUUID(),"a".repeat(64),"live-v1",T0,T0.plusSeconds(300),
                 Duration.ofHours(4),100,100,100_000_000L,1,List.of(target),profile);
@@ -529,7 +529,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void preparationDoesNotHideRunningOrPreviouslyLaunchedEventData() {
-        Fixture f=fixture("37"); Target target=f.seed(EVENT);
+        Fixture f=fixture("38"); Target target=f.seed(EVENT);
         Manifest first=f.manifest(target,100); Ownership own=f.start(first);
         Manifest prepared=new Manifest(UUID.randomUUID(),"b".repeat(64),"live-v1",T0.plusSeconds(20),T0.plusSeconds(320),
                 Duration.ofHours(4),100,100,100_000_000L,1,List.of(target));
@@ -546,7 +546,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void projectionHashCoversTheStoredJsonbRepresentationAndRejectsAnUnrelatedHash() {
-        Fixture f=fixture("37");Manifest m=f.manifest(f.seed(EVENT),100);Ownership own=f.start(m);
+        Fixture f=fixture("38");Manifest m=f.manifest(f.seed(EVENT),100);Ownership own=f.start(m);
         ReservedAttempt a=f.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS);
         f.store.recordDispatch(own,a.attemptId(),T0.plusSeconds(10));
         RawManualCallSnapshot raw=f.raw(EVENT,"hash",T0.plusSeconds(10));
@@ -567,7 +567,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void retentionRefusesActiveProviderAndPreservesLiveReferencesAfterQualifiedTerminalPurge() throws Exception {
-        Fixture f=fixture("37");Manifest m=f.manifest(f.seed(EVENT),100);Ownership own=f.start(m);
+        Fixture f=fixture("38");Manifest m=f.manifest(f.seed(EVENT),100);Ownership own=f.start(m);
         ReservedAttempt a=f.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS);
         f.store.recordDispatch(own,a.attemptId(),T0.plusSeconds(10));
         RawManualCallSnapshot raw=f.raw(EVENT,"retention",T0.plusSeconds(10));
@@ -601,7 +601,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void restoresAllLiveEvidenceAndFreeGuardWithoutRearmingExecution() throws Exception {
-        Fixture source=fixture("37");Manifest m=source.manifest(source.seed(EVENT),100);Ownership own=source.start(m);
+        Fixture source=fixture("38");Manifest m=source.manifest(source.seed(EVENT),100);Ownership own=source.start(m);
         ReservedAttempt a=source.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS);
         source.store.recordDispatch(own,a.attemptId(),T0.plusSeconds(10));
         RawManualCallSnapshot raw=source.raw(EVENT,"restore",T0.plusSeconds(10));
@@ -625,7 +625,7 @@ class LiveCampaignPersistenceIT {
             String url=POSTGRES.getJdbcUrl().substring(0,POSTGRES.getJdbcUrl().lastIndexOf('/')+1)+restoredDatabase;
             Fixture restored=new Fixture(new DriverManagerDataSource(url,POSTGRES.getUsername(),POSTGRES.getPassword()));
             assertThat(restored.jdbc.queryForObject(sql,String.class)).isEqualTo(before);
-            assertThat(restored.migrate("37").migrationsExecuted).isZero();
+            assertThat(restored.migrate("38").migrationsExecuted).isZero();
             assertThat(restored.guard.snapshot().state()).isEqualTo("FREE");
             assertThat(restored.store.find(m.campaignId()).orElseThrow().state()).isEqualTo("COMPLETED");
             assertThat(restored.store.find(m.campaignId()).orElseThrow().attempts()).hasSize(1);
@@ -637,7 +637,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void cleanupBarrierWaitsForAnUnresolvedLaunchCommitBeforeAcceptingPreparationEvidence() throws Exception {
-        Fixture f = fixture("37");
+        Fixture f = fixture("38");
         Manifest manifest = f.manifest(f.seed(EVENT), 100);
         f.store.prepare(manifest);
         Ownership ownership = f.acquire(manifest);
@@ -710,7 +710,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void concurrentProviderOwnersCannotAcquireTheSameDurableGuard() throws Exception {
-        Fixture f=fixture("37");CountDownLatch ready=new CountDownLatch(2),go=new CountDownLatch(1);
+        Fixture f=fixture("38");CountDownLatch ready=new CountDownLatch(2),go=new CountDownLatch(1);
         try(var pool=Executors.newFixedThreadPool(2)) {
             var first=pool.submit(()->{ready.countDown();go.await();return f.guard.tryAcquire(UUID.randomUUID(),new Owner(UUID.randomUUID(),1234,T0),T0);});
             var second=pool.submit(()->{ready.countDown();go.await();return f.guard.tryAcquire(UUID.randomUUID(),new Owner(UUID.randomUUID(),1235,T0),T0);});
@@ -757,6 +757,11 @@ class LiveCampaignPersistenceIT {
             NormalizedReferences normalized=normalize(event,"seed",raw,p);
             return new Target(CanonicalEventIdentity.sofascore(event).value(),event,normalized.canonicalObservationId(),p.snapshotId());
         }
+        Target seedHistorical(long event) {
+            RawManualCallSnapshot raw=raw(event,"seed",T0.minusSeconds(100));RawSnapshotPersistenceResult p=rawStore.save(raw);
+            NormalizedReferences normalized=normalizeHistorical(event,"seed",raw,p);
+            return new Target(CanonicalEventIdentity.sofascore(event).value(),event,normalized.canonicalObservationId(),p.snapshotId());
+        }
         Manifest manifest(Target target,int budget) {
             return new Manifest(UUID.randomUUID(),"a".repeat(64),"live-v1",T0,T0.plusSeconds(300),Duration.ofHours(4),budget,budget,100_000_000L,1,List.of(target));
         }
@@ -775,14 +780,48 @@ class LiveCampaignPersistenceIT {
             return new Publication("PARSED","EVENT",null,at,"event-details-v2",true,"COLLECTING","inprogress","{\"value\":\""+value+"\"}","live-phase-v1","COMPLETE",100);
         }
         NormalizedReferences normalize(long event,String value,RawManualCallSnapshot raw,RawSnapshotPersistenceResult p) {
+            return normalize(event,value,raw,p,false);
+        }
+        NormalizedReferences normalizeHistorical(long event,String value,RawManualCallSnapshot raw,RawSnapshotPersistenceResult p) {
+            return normalize(event,value,raw,p,true);
+        }
+        private NormalizedReferences normalize(long event,String value,RawManualCallSnapshot raw,RawSnapshotPersistenceResult p,
+                                               boolean historicalSchema) {
             EventDetails d=new EventDetails(event,T0,new ScheduledTeam(11,"Home"),new ScheduledTeam(22,"Away"),
                     new ScheduledEventStatus("inprogress",Optional.of(value)),Optional.empty(),Optional.empty(),Optional.empty(),Optional.empty());
             EventSourceTrace source=EventSourceTrace.providerSnapshot(p.snapshotId(),p.payloadSha256(),"event-details-v2",raw.receivedAt());
             long canonicalId=canonical.save(CanonicalEventObservation.from(d.asScheduledEvent(),source)).observationId();
             EventDetailObservation observation=EventDetailObservation.from(CanonicalEventIdentity.sofascore(event),d,source);
-            long detailId=details.save(observation).observationId();
+            long detailId=historicalSchema ? saveHistoricalDetails(observation) : details.save(observation).observationId();
             if(p.outcome()==RawSnapshotPersistenceOutcome.INSERTED) rawStore.classify(p.snapshotId(),RawSnapshotSchemaStatus.PARSED,null);
             return new NormalizedReferences(canonicalId,detailId,null,observation.normalizedSha256());
+        }
+        /** Populate the actual pre-V38 schema, without using a store that now names V38 columns. */
+        private long saveHistoricalDetails(EventDetailObservation observation) {
+            EventDetails d=observation.details();EventSourceTrace source=observation.source();
+            assertThat(source.parserVersion()).isEqualTo("event-details-v2");
+            assertThat(d.isAwarded()).isEmpty();
+            assertThat(d.homeDisplayScore()).isEmpty();
+            assertThat(d.awayDisplayScore()).isEmpty();
+            assertThat(d.tournament()).isEmpty();
+            assertThat(d.venue()).isEmpty();
+            assertThat(d.season()).isEmpty();
+            assertThat(d.round()).isEmpty();
+            jdbc.update("""
+                insert into event_detail_observation(canonical_event_id,source_kind,source_reference,source_snapshot_id,
+                    source_payload_sha256,parser_version,source_received_at,starts_at,home_team_provider_id,home_team_name,
+                    away_team_provider_id,away_team_name,status_type,status_description,normalized_sha256)
+                values (?,'PROVIDER_SNAPSHOT',?,?,?,?,?,?,?,?,?,?,?,?,?)
+                on conflict(canonical_event_id,source_kind,source_reference,normalized_sha256) do nothing
+                """,observation.identity().value(),source.sourceReference(),source.snapshotId().orElseThrow(),
+                    source.payloadSha256(),source.parserVersion(),java.sql.Timestamp.from(source.receivedAt()),
+                    java.sql.Timestamp.from(d.startsAt()),d.homeTeam().providerTeamId(),d.homeTeam().name(),
+                    d.awayTeam().providerTeamId(),d.awayTeam().name(),d.status().type(),
+                    d.status().description().orElse(null),observation.normalizedSha256());
+            return jdbc.queryForObject("""
+                select id from event_detail_observation where canonical_event_id=? and source_kind='PROVIDER_SNAPSHOT'
+                    and source_reference=? and normalized_sha256=?
+                """,Long.class,observation.identity().value(),source.sourceReference(),observation.normalizedSha256());
         }
     }
 }

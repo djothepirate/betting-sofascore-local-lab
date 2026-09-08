@@ -3,12 +3,16 @@ package com.bettingproject.sofascorelocal.application.event;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetails;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservationView;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEventStatus;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTeam;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTournament;
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -110,5 +114,47 @@ class J4EventQueryServiceTest {
                         Instant.parse("2026-08-15T00:00:00Z")),
                 "b".repeat(64),
                 2L);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"finished,true,3,0,Victoire sur tapis vert,3 – 0",
+            "finished,false,0,0,finished,0 – 0", "finished,,3,,finished,—",
+            "inprogress,true,1,2,inprogress,1 – 2", "postponed,,0,1,postponed,0 – 1"})
+    void showsOnlyExplicitAwardForFinishedAndBothDisplayScores(
+            String status, Boolean awarded, Integer home, Integer away, String label, String score) {
+        var base = event();
+        var source = EventSourceTrace.providerSnapshot(42, "c".repeat(64), "event-details-v3", base.source().receivedAt());
+        var canonical = new CanonicalEventObservationView(2, base.identity(), base.startsAt(), base.homeTeam(),
+                base.awayTeam(), new ScheduledEventStatus(status, Optional.empty()), base.tournament(), source, "d".repeat(64), 2);
+        var details = new EventDetails(base.identity().providerEventId(), base.startsAt(), base.homeTeam(), base.awayTeam(),
+                canonical.status(), base.tournament(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.ofNullable(awarded), Optional.ofNullable(home), Optional.ofNullable(away));
+        when(canonicalEventStore.findLatestByCanonicalId(base.identity().value())).thenReturn(Optional.of(canonical));
+        when(eventDetailsStore.findLatest(base.identity().value())).thenReturn(Optional.of(
+                new EventDetailObservationView(4, base.identity(), details, source, "e".repeat(64))));
+
+        var current = service.findDetail(base.identity().value(), "UTC").orElseThrow().current();
+        assertThat(current.sportStatusLabel()).isEqualTo(label);
+        assertThat(current.result().score()).isEqualTo(score);
+    }
+
+    @Test
+    void aNewerDiscoveryObservationNeverInheritsAnEarlierJ4AwardOrScore() {
+        var base = event();
+        var status = new ScheduledEventStatus("finished", Optional.empty());
+        var canonical = new CanonicalEventObservationView(2, base.identity(), base.startsAt(), base.homeTeam(),
+                base.awayTeam(), status, base.tournament(), EventSourceTrace.providerSnapshot(44, "f".repeat(64),
+                "tournament-scheduled-v1", base.source().receivedAt().plusSeconds(60)), "d".repeat(64), 2);
+        var details = new EventDetails(base.identity().providerEventId(), base.startsAt(), base.homeTeam(), base.awayTeam(),
+                status, base.tournament(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.of(true), Optional.of(3), Optional.of(0));
+        when(canonicalEventStore.findLatestByCanonicalId(base.identity().value())).thenReturn(Optional.of(canonical));
+        when(eventDetailsStore.findLatest(base.identity().value())).thenReturn(Optional.of(new EventDetailObservationView(
+                4, base.identity(), details, EventSourceTrace.providerSnapshot(42, "c".repeat(64), "event-details-v3",
+                base.source().receivedAt()), "e".repeat(64))));
+
+        var current = service.findDetail(base.identity().value(), "UTC").orElseThrow().current();
+        assertThat(current.sportStatusLabel()).isEqualTo("finished");
+        assertThat(current.result().score()).isEqualTo("—");
     }
 }

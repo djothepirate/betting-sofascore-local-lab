@@ -6,7 +6,7 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatis
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseResult;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsParseStatus;
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV2Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV3Parser;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventData;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
@@ -33,7 +33,7 @@ import java.util.Optional;
  */
 public class LivePayloadNormalizer {
 
-    public static final String SCORE_PROJECTION_VERSION = "j4-live-score-v1";
+    public static final String SCORE_PROJECTION_VERSION = "j4-live-score-v2";
     public static final String SIGNAL_PROJECTION_VERSION = "j5-live-signals-v1";
     public static final String FAMILY_PROJECTION_VERSION = "live-family-v1";
 
@@ -48,7 +48,7 @@ public class LivePayloadNormalizer {
             .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
             .build();
 
-    private final EventDetailsV2Parser detailsParser = new EventDetailsV2Parser();
+    private final EventDetailsV3Parser detailsParser = new EventDetailsV3Parser();
     private final EventStatisticsV2Parser statisticsParser = new EventStatisticsV2Parser();
     private final EventIncidentsV17Parser incidentsParser = new EventIncidentsV17Parser();
     private final EventLineupsV2Parser lineupsParser = new EventLineupsV2Parser();
@@ -86,6 +86,8 @@ public class LivePayloadNormalizer {
                 projection.put("sportStatus", parsed.details().orElseThrow().status().type());
                 projection.put("homeScore", scoreSide(event.get("homeScore")));
                 projection.put("awayScore", scoreSide(event.get("awayScore")));
+                projection.put("isAwarded", presence(event.get("isAwarded"),
+                        parsed.details().orElseThrow().isAwarded().orElse(null)));
                 // Period descriptors remain source observations; no score or clock is calculated.
                 projection.put("period", optionalScalar(event.get("period"), "period"));
                 projection.put("currentPeriod", optionalScalar(event.get("currentPeriod"), "currentPeriod"));
@@ -125,7 +127,7 @@ public class LivePayloadNormalizer {
 
     public static String parserVersion(SofascoreEndpointType endpoint) {
         return switch (endpoint) {
-            case EVENT_DETAILS -> EventDetailsV2Parser.PARSER_VERSION;
+            case EVENT_DETAILS -> EventDetailsV3Parser.PARSER_VERSION;
             case EVENT_STATISTICS -> EventStatisticsV2Parser.PARSER_VERSION;
             case EVENT_INCIDENTS -> EventIncidentsV17Parser.PARSER_VERSION;
             case EVENT_LINEUPS -> EventLineupsV2Parser.PARSER_VERSION;

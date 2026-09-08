@@ -522,7 +522,7 @@
       <input type="hidden" name="localFormToken" th:value="${localFormToken}">
       <p>Sélectionner les rencontres pour préparer une campagne live locale. La préparation vérifie la capacité disponible et ne fait aucun appel fournisseur.</p>
       <p class="muted">Les observations de corpus synthétiques restent consultables ; seules les rencontres issues d’un snapshot fournisseur sont éligibles.</p>
-      <p class="muted">Les rencontres déjà terminées (finished) sont exclues de la préparation, sans appel fournisseur. Si toute la sélection est terminée, aucune campagne n’est créée.</p>
+      <p class="muted">Les rencontres déjà terminées (finished) ou reportées (postponed) sont exclues de la préparation, sans appel fournisseur. Si toute la sélection est exclue, aucune campagne n’est créée. Un report constaté par J4 pendant une campagne arrête le suivi de la rencontre concernée.</p>
       <p class="muted">Les rencontres d’une campagne en cours ne peuvent pas être sélectionnées à nouveau, sauf en cas de STOPPED_ERROR.</p>
       <p class="muted">Plafond par campagne : <span th:text="${liveSelectionMaximum}">1</span> rencontres éligibles.
         L’intervalle de collecte dépend du nombre retenu : 60 secondes jusqu’à trois rencontres, puis 30 secondes supplémentaires par rencontre.</p>
@@ -551,7 +551,7 @@
           <td><label><input type="checkbox" name="eventId" form="live-selection"
                            th:value="${item.event.identity.value}"
                            th:disabled="${item.event.source.kind.name() != 'PROVIDER_SNAPSHOT' or blockedLiveEventIds.contains(item.event.identity.value)}"
-                           th:attr="data-live-provider-eligible=${item.event.source.kind.name() == 'PROVIDER_SNAPSHOT'},data-live-campaign-blocked=${blockedLiveEventIds.contains(item.event.identity.value)},data-live-finished=${item.event.status.type == 'finished'},aria-label=${'Sélectionner ' + item.event.homeTeam.name + ' — ' + item.event.awayTeam.name}"> Sélectionner</label>
+                           th:attr="data-live-provider-eligible=${item.event.source.kind.name() == 'PROVIDER_SNAPSHOT'},data-live-campaign-blocked=${blockedLiveEventIds.contains(item.event.identity.value)},data-live-finished=${item.event.status.type == 'finished' or item.event.status.type == 'postponed'},aria-label=${'Sélectionner ' + item.event.homeTeam.name + ' — ' + item.event.awayTeam.name}"> Sélectionner</label>
             <span class="muted" data-live-selection-blocked
                   th:hidden="${!blockedLiveEventIds.contains(item.event.identity.value)}">Déjà dans une campagne en cours</span>
             <br><a data-live-link hidden>Suivre la campagne</a><br>
@@ -564,7 +564,7 @@
             <strong th:text="${item.event.awayTeam.name}">Away</strong>
           </td>
           <td th:text="${item.event.tournament.isPresent() ? item.event.tournament.get().name : '—'}">—</td>
-          <td><span class="chip chip-warning" data-live-sport-status th:text="${item.event.status.type == 'inprogress' ? item.event.status.description.orElse(item.event.status.type) : item.event.status.type}">notstarted</span><br><span data-live-score></span></td>
+          <td><span class="chip chip-warning" data-live-sport-status th:text="${item.sportStatusLabel()}">notstarted</span><br><span data-live-score th:text="${item.result.score()}">—</span></td>
           <td>
             <span class="mono" th:text="${item.event.identity.value}">UUID</span><br>
             <span class="muted" th:text="${'providerEventId=' + item.event.identity.providerEventId}">providerEventId</span>
