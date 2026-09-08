@@ -4,6 +4,10 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 import java.time.Duration;
 import java.nio.file.Path;
+import java.util.EnumMap;
+import java.util.Map;
+import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.*;
+import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 
 /** Separate opt-in: historical automatic-refresh/live-polling properties remain false. */
 @Component
@@ -14,6 +18,7 @@ public final class LiveCampaignProperties {
     private String qualificationSha256 = "";
     private Duration requestEnvelope = Duration.ofSeconds(10);
     private Duration processingEnvelope = Duration.ofSeconds(1);
+    private final Grouped grouped = new Grouped();
     private Path dockerExecutable;
     private String postgresContainer = "betting-sofascore-local-lab-postgres";
     private Duration duration = Duration.ofHours(4);
@@ -28,6 +33,37 @@ public final class LiveCampaignProperties {
     public void setRequestEnvelope(Duration v) { requestEnvelope = v; }
     public Duration getProcessingEnvelope() { return processingEnvelope; }
     public void setProcessingEnvelope(Duration v) { processingEnvelope = v; }
+    public Grouped getGrouped() { return grouped; }
+    public GroupedAdmissionProfile groupedAdmissionProfile() {
+        if (grouped.qualificationSha256 == null || !grouped.qualificationSha256.matches("[0-9a-f]{64}"))
+            throw new IllegalStateException("LIVE_GROUPED_QUALIFICATION_REQUIRED");
+        var envelopes = new EnumMap<SofascoreEndpointType, EndpointEnvelope>(SofascoreEndpointType.class);
+        grouped.endpoints.forEach((endpoint, budget) -> envelopes.put(endpoint,
+                new EndpointEnvelope(budget.requestEnvelope, budget.processingEnvelope)));
+        return new GroupedAdmissionProfile(envelopes, grouped.qualificationSha256);
+    }
+    /** Separate opt-in evidence and envelopes. Historical settings never qualify grouped traffic. */
+    public static final class Grouped {
+        private String qualificationSha256 = "";
+        private Map<SofascoreEndpointType, EndpointBudget> endpoints = new EnumMap<>(SofascoreEndpointType.class);
+        public Grouped() {
+            for (var endpoint : new SofascoreEndpointType[]{SofascoreEndpointType.EVENT_DETAILS,
+                    SofascoreEndpointType.EVENT_INCIDENTS, SofascoreEndpointType.EVENT_STATISTICS,
+                    SofascoreEndpointType.EVENT_LINEUPS}) endpoints.put(endpoint, new EndpointBudget());
+        }
+        public String getQualificationSha256() { return qualificationSha256; }
+        public void setQualificationSha256(String value) { qualificationSha256 = value; }
+        public Map<SofascoreEndpointType, EndpointBudget> getEndpoints() { return endpoints; }
+        public void setEndpoints(Map<SofascoreEndpointType, EndpointBudget> value) { endpoints = value; }
+    }
+    public static final class EndpointBudget {
+        private Duration requestEnvelope = Duration.ofSeconds(10);
+        private Duration processingEnvelope = Duration.ofSeconds(1);
+        public Duration getRequestEnvelope() { return requestEnvelope; }
+        public void setRequestEnvelope(Duration value) { requestEnvelope = value; }
+        public Duration getProcessingEnvelope() { return processingEnvelope; }
+        public void setProcessingEnvelope(Duration value) { processingEnvelope = value; }
+    }
     public Path getDockerExecutable() { return dockerExecutable; }
     public void setDockerExecutable(Path v) { dockerExecutable = v; }
     public String getPostgresContainer() { return postgresContainer; }

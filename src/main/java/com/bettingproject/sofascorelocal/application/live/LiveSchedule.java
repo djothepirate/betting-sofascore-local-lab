@@ -2,6 +2,7 @@ package com.bettingproject.sofascorelocal.application.live;
 
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.domain.live.LiveCadence;
+import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.FamilySchedule;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -11,7 +12,12 @@ import static com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpoin
 public final class LiveSchedule {
     public static final List<SofascoreEndpointType> J5 = List.of(EVENT_STATISTICS, EVENT_INCIDENTS, EVENT_LINEUPS);
     public record Due(UUID eventId, SofascoreEndpointType endpoint, long cycle, String kind,
-                      Instant dueAt, boolean finalCycle) { }
+                      Instant dueAt, boolean finalCycle, UUID groupId, long groupSequence, int groupOrdinal) {
+        public Due(UUID eventId, SofascoreEndpointType endpoint, long cycle, String kind,
+                   Instant dueAt, boolean finalCycle) {
+            this(eventId, endpoint, cycle, kind, dueAt, finalCycle, null, -1, -1);
+        }
+    }
     public record EventState(UUID eventId, String state, String sportStatus, Instant nextDueAt,
                              long missedCycles, boolean finalComplete) { }
     private final LinkedHashMap<UUID, Event> events = new LinkedHashMap<>();
@@ -22,6 +28,7 @@ public final class LiveSchedule {
     private Due inFlight;
     private UUID contiguous;
     private String globalStop;
+    private final GroupedLiveScheduleV4 grouped;
 
     public LiveSchedule(List<UUID> targets, Instant start, Instant endsAt) {
         this(targets, start, endsAt, Duration.ofSeconds(60));
@@ -33,6 +40,11 @@ public final class LiveSchedule {
 
     public LiveSchedule(List<UUID> targets, Instant start, Instant endsAt, Duration interval,
                         String policyVersion) {
+        this(targets, start, endsAt, interval, policyVersion, null);
+    }
+
+    public LiveSchedule(List<UUID> targets, Instant start, Instant endsAt, Duration interval,
+                        String policyVersion, UUID campaignId) {
         if (targets.isEmpty() || targets.size() > LiveCadence.MAXIMUM_SELECTION_SIZE || new HashSet<>(targets).size() != targets.size()
                 || !endsAt.isAfter(start)) throw new IllegalArgumentException("invalid live schedule");
         LiveCadence.validate(interval);
@@ -41,9 +53,12 @@ public final class LiveSchedule {
         this.prematchLineups = "live-v3".equals(policyVersion);
         this.fallbackInterval = interval.compareTo(Duration.ofMinutes(5)) > 0 ? interval : Duration.ofMinutes(5);
         targets.forEach(id -> events.put(id, new Event(id, start)));
+        this.grouped = "live-v4".equals(policyVersion)
+                ? new GroupedLiveScheduleV4(targets, start, endsAt, interval, campaignId) : null;
     }
 
     public synchronized Optional<Due> next(Instant now) {
+        if (grouped != null) return grouped.next(now);
         if (inFlight != null || globalStop != null) return Optional.empty();
         if (!now.isBefore(endsAt)) { stopAll("STOPPED_LIMIT"); return Optional.empty(); }
         if (contiguous != null) {
@@ -102,12 +117,14 @@ public final class LiveSchedule {
     }
 
     public synchronized boolean mayDispatch(Due due, Instant now) {
+        if (grouped != null) return grouped.mayDispatch(due, now);
         Event e = events.get(due.eventId());
         return globalStop == null && e != null && e.active() && now.isBefore(endsAt)
                 && !now.isBefore(due.dueAt());
     }
 
     public synchronized void started(Due due, Instant now) {
+        if (grouped != null) { grouped.started(due, now); return; }
         if (inFlight != null || !mayDispatch(due, now)) throw new IllegalStateException("LIVE_DISPATCH_CANCELLED");
         Event e = events.get(due.eventId());
         Instant previous = e.lastStarts.get(due.endpoint());
@@ -121,6 +138,7 @@ public final class LiveSchedule {
 
     public synchronized void completed(Due due, String status, boolean unavailable,
                                        Map<String, Boolean> signals, Instant now) {
+        if (grouped != null) { grouped.completed(due, status, unavailable, signals, now); return; }
         if (!Objects.equals(inFlight, due)) throw new IllegalStateException("LIVE_UNEXPECTED_COMPLETION");
         inFlight = null;
         Event e = events.get(due.eventId());
@@ -194,6 +212,7 @@ public final class LiveSchedule {
     }
 
     public synchronized void reserveFinalCheck(UUID id, Instant now) {
+        if (grouped != null) { grouped.reserveFinalCheck(id, now); return; }
         Event e = events.get(id);
         if (!e.active() || e.finalizing) return;
         if (e.reserveFinish) { stopEvent(id, "STOPPED_LIMIT"); return; }
@@ -203,6 +222,7 @@ public final class LiveSchedule {
         e.j4Kind = "J4_FINAL_CHECK";
     }
     public synchronized void failed(Due due, String scope, String reason) {
+        if (grouped != null) { grouped.failed(due, scope, reason); return; }
         inFlight = null;
         // A parsed response is not a durable result until publication commits.
         // In particular, a failed final publication must revoke its provisional completeness.
@@ -213,20 +233,28 @@ public final class LiveSchedule {
         if ("EVENT".equals(scope)) stopEvent(due.eventId(), reason); else stopAll(reason);
     }
     public synchronized void stopEvent(UUID id, String reason) {
+        if (grouped != null) { grouped.stopEvent(id, reason); return; }
         Event e = events.get(id);
         if (e == null) throw new IllegalArgumentException("unknown selected event");
         if (e.active()) e.state = reason;
         if (id.equals(contiguous)) contiguous = null;
     }
     public synchronized void stopAll(String reason) {
+        if (grouped != null) { grouped.stopAll(reason); return; }
         globalStop = reason; events.keySet().forEach(id -> stopEvent(id, reason));
     }
-    public synchronized boolean terminal() { return globalStop != null || events.values().stream().noneMatch(Event::active); }
-    public synchronized String globalStop() { return globalStop; }
+    public synchronized boolean terminal() { return grouped != null ? grouped.terminal() : globalStop != null || events.values().stream().noneMatch(Event::active); }
+    public synchronized String globalStop() { return grouped != null ? grouped.globalStop() : globalStop; }
     public synchronized List<EventState> states() {
+        if (grouped != null) return grouped.states();
         return events.values().stream().map(e -> new EventState(e.id, e.state, e.sport,
                 !e.active() ? null : nextDueAt(e),
                 e.missedCycles, e.finalComplete)).toList();
+    }
+
+    /** V4 family deadlines are durable metadata; legacy campaigns keep their historical event deadline. */
+    public synchronized List<FamilySchedule> familySchedules(UUID eventId) {
+        return grouped == null ? List.of() : grouped.familySchedules(eventId);
     }
 
     private Instant nextDueAt(Event e) {

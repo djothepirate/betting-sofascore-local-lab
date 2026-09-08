@@ -236,10 +236,11 @@ class LiveProviderSessionQualificationIT {
         } finally { if(probe.isAlive()) probe.destroyForcibly(); }
     }
 
-    private static final class Fixture implements AutoCloseable {
+    static final class Fixture implements AutoCloseable {
         final HttpServer server; final AtomicReference<Process> worker=new AtomicReference<>();
         final List<Long> arrivals=new CopyOnWriteArrayList<>(); final AtomicInteger offScope=new AtomicInteger();
         final AtomicInteger incidents=new AtomicInteger(); final Path sandbox;
+        final AtomicLong responseDelayMillis = new AtomicLong();
         final Map<String, byte[]> bodies = new HashMap<>();
         final ExecutorService executor=Executors.newVirtualThreadPerTaskExecutor();
         Fixture() throws Exception { this(false); }
@@ -266,6 +267,11 @@ class LiveProviderSessionQualificationIT {
                     offScope.incrementAndGet(); exchange.sendResponseHeaders(403,-1); exchange.close(); return;
                 }
                 arrivals.add(System.nanoTime());
+                long delay = responseDelayMillis.get();
+                if (delay > 0) {
+                    try { Thread.sleep(delay); }
+                    catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); exchange.close(); return; }
+                }
                 int code=!maximumBodies && path.equals("/api/v1/event/17000001/incidents") && incidents.getAndIncrement()==0 ? 404 : 200;
                 byte[] body=maximumBodies ? bodies.get(path) : (code==404 ? "{\"error\":{\"code\":404}}" : "{\"localFixture\":true}").getBytes(StandardCharsets.UTF_8);
                 exchange.getResponseHeaders().set("Content-Type","application/json");

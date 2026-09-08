@@ -370,6 +370,68 @@ class LiveCampaignPresentationTest {
                 1, 0, null, List.of(cursor))), base.attempts(), transitions);
     }
 
+    @Test
+    void groupedReceptionAgeAndDeadlineRemainDistinctFromAnUnchangedValueAndLineupCadence() {
+        var base = campaignForFreshness(SofascoreEndpointType.EVENT_DETAILS, "COLLECTING", List.of());
+        var envelopes = new java.util.EnumMap<SofascoreEndpointType, EndpointEnvelope>(SofascoreEndpointType.class);
+        for (var endpoint : List.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS))
+            envelopes.put(endpoint, new EndpointEnvelope(Duration.ofMillis(400), Duration.ofMillis(100)));
+        var manifest = new Manifest(CAMPAIGN, "a".repeat(64), "live-v4", START, START.plusSeconds(300),
+                Duration.ofHours(4), 1000, 3000, 1_000_000, 10, base.manifest().targets(),
+                new AdmissionProfile(Duration.ofSeconds(10), Duration.ofSeconds(1), "",
+                        new GroupedAdmissionProfile(envelopes, "b".repeat(64))), Duration.ofSeconds(60));
+        var original = base.events().getFirst().families().getFirst();
+        var j4 = new FamilyCursor(SofascoreEndpointType.EVENT_DETAILS, original.lastAttemptId(), original.lastReceivedAttemptId(),
+                original.lastSuccessfulAttemptId(), original.lastChangedAttemptId(), START.plusSeconds(120), START.plusSeconds(120),
+                START, original.normalized(), original.latestResult(), original.latestSuccessfulResult(),
+                new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS, START.plusSeconds(180), 60, 0));
+        var lineups = new FamilyCursor(SofascoreEndpointType.EVENT_LINEUPS, original.lastAttemptId(), original.lastReceivedAttemptId(),
+                original.lastSuccessfulAttemptId(), original.lastChangedAttemptId(), START, START, START,
+                original.normalized(), original.latestResult(), original.latestSuccessfulResult(),
+                new FamilySchedule(SofascoreEndpointType.EVENT_LINEUPS, START.plusSeconds(300), 300, 0));
+        var view = new CampaignView(manifest, "RUNNING", null, START, START.plusSeconds(14400), 200, 0, 10, null,
+                List.of(new EventView(manifest.targets().getFirst(), "COLLECTING", null, 200, 0,
+                        START.plusSeconds(180), List.of(j4, lineups))), base.attempts(), List.of());
+        var projected = new LiveCampaignPresentation(events, data, Clock.fixed(START.plusSeconds(185), ZoneOffset.UTC)).state(view);
+        var family = projected.events().getFirst().families().getFirst();
+        assertThat(family.freshness().state()).isEqualTo("FRESH");
+        assertThat(family.lastChangedAt()).isEqualTo(START);
+        assertThat(family.freshness().receivedAgeSeconds()).isEqualTo(65);
+        assertThat(family.schedule().latenessMillis()).isEqualTo(5000);
+        var lineup = projected.events().getFirst().families().getLast();
+        assertThat(lineup.freshness().expectedIntervalSeconds()).isEqualTo(300);
+        assertThat(lineup.freshness().state()).isEqualTo("FRESH");
+        assertThat(lineup.schedule().latenessMillis()).isZero();
+        assertThat(projected.cadence().qualifiedCapacity()).isEqualTo(10);
+        assertThat(projected.cadence().targetSeconds()).isEqualTo(60);
+        assertThat(projected.cadence().estimatedRemainingSeconds()).isEqualTo(14215); // authorized window is tighter than call budgets
+    }
+
+    @ParameterizedTest @CsvSource({"INTERRUPTED,COLLECTING","RUNNING,STOPPED_POSTPONED","COMPLETED,FINISHED_CONFIRMED"})
+    void terminalCollectionNeverAdvertisesAnOldFamilyDeadline(String campaignState,String eventState) {
+        var base=campaign(List.of(),List.of());
+        var envelopes=new java.util.EnumMap<SofascoreEndpointType,EndpointEnvelope>(SofascoreEndpointType.class);
+        for(var endpoint:List.of(SofascoreEndpointType.EVENT_DETAILS,SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS,SofascoreEndpointType.EVENT_LINEUPS))
+            envelopes.put(endpoint,new EndpointEnvelope(Duration.ofMillis(500),Duration.ofMillis(100)));
+        var manifest=new Manifest(CAMPAIGN,"a".repeat(64),"live-v4",START,START.plusSeconds(300),
+                Duration.ofHours(4),1000,3000,1_000_000,10,base.manifest().targets(),
+                new AdmissionProfile(Duration.ofSeconds(10),Duration.ofSeconds(1),"",
+                        new GroupedAdmissionProfile(envelopes,"b".repeat(64))),Duration.ofSeconds(60));
+        var cursor=new FamilyCursor(SofascoreEndpointType.EVENT_DETAILS,null,null,null,null,null,null,null,
+                NormalizedReferences.none(),null,null,new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS,START.plusSeconds(60),60,2));
+        var view=new CampaignView(manifest,campaignState,null,START,START.plusSeconds(14400),0,0,10,null,
+                List.of(new EventView(manifest.targets().getFirst(),eventState,null,0,0,null,List.of(cursor))),List.of(),List.of());
+        var family=new LiveCampaignPresentation(events,data,Clock.fixed(START.plusSeconds(180),ZoneOffset.UTC))
+                .state(view).events().getFirst().families().getFirst();
+        assertThat(family.schedule().nextDueAt()).isNull();
+        assertThat(family.schedule().latenessMillis()).isZero();
+        assertThat(family.schedule().missedCycles()).isEqualTo(2);
+        assertThat(family.freshness().state()).isEqualTo("FROZEN");
+        assertThat(cursor.schedule().nextDueAt()).isEqualTo(START.plusSeconds(60));
+    }
+
     private static AttemptView attempt(UUID id, SofascoreEndpointType endpoint, long snapshot,
                                        Instant at, Result result) {
         return new AttemptView(new ReservedAttempt(id, EVENT, 900001L, endpoint, snapshot,

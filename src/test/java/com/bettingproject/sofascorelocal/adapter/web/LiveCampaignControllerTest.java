@@ -596,6 +596,30 @@ class LiveCampaignControllerTest {
     }
 
     @Test
+    void groupedPreparationRendersActualCapacityCadencesProofAndAutonomyBeforeLaunch() throws Exception {
+        var envelopes = new java.util.EnumMap<SofascoreEndpointType, EndpointEnvelope>(SofascoreEndpointType.class);
+        for (var endpoint : List.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS))
+            envelopes.put(endpoint, new EndpointEnvelope(Duration.ofMillis(400), Duration.ofMillis(100)));
+        var target = manifest().targets().getFirst();
+        var grouped = new Manifest(CAMPAIGN_ID, HASH, "live-v4", NOW, NOW.plusSeconds(300), Duration.ofHours(4),
+                1000, 3000, 1_000_000, 10, List.of(target), new AdmissionProfile(Duration.ofSeconds(10),
+                Duration.ofSeconds(1), "", new GroupedAdmissionProfile(envelopes, "b".repeat(64))), Duration.ofSeconds(60));
+        when(service.state(CAMPAIGN_ID)).thenReturn(new CampaignView(grouped, "PREPARED", null, null, null,
+                0, 0, 1, null, List.of(new EventView(target, "PREPARED", null, 0, 0, null, List.of())), List.of(), List.of()));
+        mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("60 secondes par rencontre")))
+                .andExpect(content().string(containsString("5 minutes nominales")))
+                .andExpect(content().string(containsString("10 rencontres")))
+                .andExpect(content().string(containsString("240 minutes environ")))
+                .andExpect(content().string(containsString("b".repeat(64))))
+                .andExpect(content().string(containsString("400 ms")))
+                .andExpect(content().string(not(containsString("le premier triplet attend"))));
+        verify(service, never()).launch(any(), any());
+    }
+
+    @Test
     void staleSelectionReturnsAnExplicitConflictAndNeverLaunches() throws Exception {
         when(service.prepareSelection(List.of(EVENT_ID))).thenThrow(new IllegalStateException("LIVE_EVENT_ALREADY_IN_CAMPAIGN"));
         MockHttpSession session = new MockHttpSession();

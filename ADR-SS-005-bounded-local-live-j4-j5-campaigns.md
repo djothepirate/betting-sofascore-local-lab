@@ -1,14 +1,15 @@
 # ADR-SS-005 — Campagnes live locales et bornées J4/J5
 
-- **Version :** 0.3.
+- **Version :** 0.4.
 - **Statut :** `ACCEPTED` — v0.1 formellement acceptée ; capacité adaptative puis collecte des compositions avant le début explicitement demandées par le propriétaire le 7 septembre.
-- **Date :** 2026-09-07.
+- **Date :** 2026-09-08.
 - **Décideur :** propriétaire du Betting Project.
 - **Acceptation formelle initiale, v0.1 :** `OWNER_ACCEPTED_2026_09_07` — « Je valide formellement la v0.1 de l'ADR ».
 - **Observation de l'acceptation :** `2026-09-07T09:23:14Z` ; l'heure exacte du message n'est pas disponible.
 - **Document accepté figé :** [copie exacte de la proposition v0.1](docs/validation/ADR-SS-005-v0.1-accepted-proposal-20260907.txt), SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e` ; draft non committé.
 - **Autorité de la v0.2 :** plafond paramétrable demandé, y compris à 10 et 25 rencontres ; cadence selon le nombre retenu, 60 s pour 1–3, 90 s pour 4, 120 s pour 5, choisie explicitement dans la conversation. La progression de 30 s par rencontre supplémentaire est appliquée aux sélections plus grandes.
 - **Autorité de la v0.3 :** demande de J5 LINEUPS pour les rencontres initialement `notstarted` et non débutées au lancement, puis réponse explicite « Oui, collecte initiale puis périodique ». La première collecte suit le J4 `notstarted` ; sa répétition utilise D tant que le début n'est pas constaté. Aucune nouvelle cadence n'est décidée.
+- **Autorité de la v0.4 :** demande explicite « PLEASE IMPLEMENT THIS PLAN: Campagnes live à 60 secondes par match, avec appels regroupés », le 8 septembre 2026. Cette décision autorise l’exception de délai décrite au §0, la politique `live-v4`, V39 et leur qualification hors fournisseur ; elle ne lance aucune campagne fournisseur.
 - **Référence historique v0.2 :** contenu Git au commit `e98f7a74e39a1c57e601efb3d346ae55829fce73`, conservé sans réécriture.
 - **Work Order :** [WO-SS-20260907-058](docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md), validé par le propriétaire ; correctif et qualification de réalisation distincts de cette décision.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
@@ -22,6 +23,68 @@ les limites de sélection et les cadences correspondantes de la v0.1. Les autres
 applicables ; la copie exacte acceptée de la v0.1 et les preuves de ses paliers sont conservées.
 La v0.3 ajoute seulement la collecte prématch LINEUPS au manifeste `live-v3`. Les manifestes
 historiques `live-v1` et `live-v2` gardent leur comportement, leurs échéances et leurs empreintes.
+
+## 0. Décision courante v0.4 — groupes live et minute fixe
+
+Cette section remplace, **pour les nouvelles préparations `live-v4` uniquement**, les cadences,
+l’ordre des familles, l’admission et le délai par appel décrits plus bas. Les §§1–12 conservent
+le contexte et les règles historiques `live-v1` à `live-v3` ; leurs autres garanties s’appliquent
+à v4. La révision v0.3 reste consultable au commit `c972d63` sans réécriture d’observations.
+
+La cible pendant le jeu est **60 secondes nominales par événement pour J4, incidents et
+statistiques**. Dix rencontres simultanées sont un critère de qualification, jamais une capacité
+présumée. Les compositions sont initiales, puis réparties sur cinq tours, à 300 secondes nominales.
+Avant le jeu, J4 reste périodique à 60 secondes ; LINEUPS est initial puis périodique à 60 secondes
+après `notstarted`. Une composition récente ne bloque pas les deux autres familles après le début.
+
+Un groupe serveur appartient à une campagne, un événement et une séquence uniques. Il contient
+au plus quatre endpoints distincts : **J4 → incidents → statistiques → compositions si dues**.
+Chaque réponse est reçue, normalisée et publiée avant l’appel suivant. Seule une continuation
+consécutive validée du même groupe supprime le délai artificiel. Aucun champ HTTP ne commande
+ce comportement. La fin de chaque échange actualise le repère commun, y compris si le groupe
+est interrompu : **trois secondes au moins après la dernière réponse** avant tout autre groupe,
+parcours manuel ou campagne historique. Les requêtes restent globalement séquentielles.
+
+J4 est premier quand présent et réévalue immédiatement les familles. `postponed` annule la suite
+du groupe et termine ce seul suivi. `finished` annule les tours ordinaires et programme les
+familles finales dans les réserves ; une famille finale encore inadmissible reste en attente
+individuelle et ne bloque pas les autres matchs. Un groupe de finalisation peut commencer sur
+une famille J5 restante. L’arrêt opérateur, la propriété de session, la fenêtre et les budgets
+sont contrôlés avant **chaque appel**. Les 404 J5 restent locaux à la famille et les portées
+des autres arrêts sont conservées.
+
+Les phases de groupes sont réparties sur la minute. Une seule échéance est conservée par
+événement/famille ; pas de rafale de rattrapage. Le retard reste mesuré et une surcharge durable
+arrête le suivi. La minute est une cible nominale, pas un délai minimal ajouté après chaque
+réponse : les variations de durée ne doivent pas déplacer cumulativement toutes les échéances.
+Quand un match termine, ses créneaux sont libérés sans allonger ceux des autres.
+
+L’admission utilise un **profil de groupes séparé**, avec une preuve SHA-256 dédiée et des coûts
+qualifiés par famille, distincts du profil historique. Chaque groupe coûte la somme de ses
+échanges et traitements, plus une seule pause de trois secondes ; 10 % de la minute restent
+non alloués. Le coût établi est calculé sur cinq tours : cinq J4, cinq incidents, cinq statistiques,
+une composition et cinq pauses par rencontre. Des simulations séparées vérifient les vagues
+d’initialisation, de transitions simultanées et de finalisation. Le régime établi à dix matchs vaut environ 32 appels et dix pauses
+par minute. Une sélection excessive est refusée avec la capacité effectivement admissible ;
+la minute n’est jamais remplacée silencieusement par plusieurs minutes. Aucun profil existant
+n’est abaissé automatiquement.
+
+V39 ajoute la politique figée, les groupes, leurs appels et les échéances par famille. Les
+empreintes des manifestes et observations historiques restent inchangées. L’écran montre cible,
+capacité qualifiée, dernière réception, prochaine collecte, retard et autonomie estimée à partir
+des budgets restants. Les plafonds 1 000/3 000 appels, quatre heures et la réserve finale restent
+inchangés : la fraîcheur est prioritaire, sans ralentissement pour prolonger l’autonomie. La
+lecture locale reste à cinq secondes ; une lecture bloquée est annulée à dix secondes et reprise
+en conservant les dernières données et les panneaux statistiques repliables.
+
+La qualification dédiée exige Chromium loopback et PostgreSQL pendant au moins trente minutes
+en régime établi, séparé de l’initialisation, avec réponses représentatives des quatre familles
+et variations de latence. À dix matchs : P95 des intervalles de réception critiques ≤65 s,
+maximum ≤75 s ; compositions nominales 300 s et retard P95 ≤15 s ; publication visible sous
+dix secondes en fonctionnement normal. Tester aussi interruptions/rejeu de groupe, dégradation,
+budget, concurrence, upgrade V38 prérempli et sauvegarde/restauration. Les tests standards
+n’appellent jamais SofaScore. Une campagne opérateur distincte reste nécessaire pour comparer
+la fraîcheur externe réelle ; les mesures loopback ne la prouvent pas.
 
 ## 1. Contexte et problème
 

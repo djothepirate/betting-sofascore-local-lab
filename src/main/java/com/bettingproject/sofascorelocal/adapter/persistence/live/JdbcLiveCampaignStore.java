@@ -38,6 +38,12 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
                 manifest.admissionProfile().requestEnvelope().toNanos(), manifest.admissionProfile().processingEnvelope().toNanos(),
                 manifest.admissionProfile().qualificationSha256(), manifest.cycleInterval().toSeconds());
         if (inserted == 1) {
+            GroupedAdmissionProfile grouped = manifest.admissionProfile().groupedProfile();
+            if (grouped != null) jdbc.update("""
+                insert into live_grouped_policy(campaign_id,critical_interval_seconds,lineup_interval_seconds,
+                    intra_group_delay_nanos,inter_group_delay_nanos,maximum_utilization_percent,qualification_sha256,endpoint_envelopes)
+                values (?,60,300,0,3000000000,90,?,cast(? as jsonb))
+                """, manifest.campaignId(), grouped.qualificationSha256(), groupedEnvelopesJson(grouped));
             for (int i = 0; i < manifest.targets().size(); i++) {
                 Target t = manifest.targets().get(i);
                 jdbc.update("""
@@ -89,7 +95,9 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
             if (!own.campaignId().equals(uuid(p,"campaign_id")) || !result.canonicalEventId().equals(request.canonicalEventId())
                     || result.cycleNumber()!=request.cycleNumber() || result.endpoint()!=request.endpoint()
                     || !result.kind().equals(request.kind()) || !result.dueAt().equals(request.dueAt())
-                    || result.finalCycle()!=request.finalCycle()) throw new IllegalStateException("live attempt idempotency collision");
+                    || result.finalCycle()!=request.finalCycle() || !Objects.equals(result.groupId(), request.groupId())
+                    || result.groupSequence()!=request.groupSequence() || result.groupOrdinal()!=request.groupOrdinal())
+                throw new IllegalStateException("live attempt idempotency collision");
             return Optional.of(result);
         }
         Map<String,Object> e = event(own.campaignId(),request.canonicalEventId(),true);
@@ -107,16 +115,31 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
         if (number(e,"reserved_calls") + 1 + currentFinalReserve > number(c,"maximum_calls_per_event")
                 || number(c,"reserved_calls") + 1 + globalFinalReserve > number(c,"maximum_calls")
                 || number(c,"received_bytes") + RawPayloadEvidence.MAXIMUM_BYTES > number(c,"maximum_bytes")) return Optional.empty();
-        jdbc.update("""
+        if (request.groupId() != null) {
+            if (!"live-v4".equals(c.get("policy_version"))) throw new IllegalArgumentException("groups require live-v4");
+            if (request.groupOrdinal() == 0) jdbc.update("""
+                insert into live_call_group(group_id,campaign_id,canonical_event_id,group_sequence,owner_instance_id,generation,created_at)
+                values (?,?,?,?,?,?,?)
+                """, request.groupId(), own.campaignId(), request.canonicalEventId(), request.groupSequence(),
+                    own.instanceId(), own.generation(), time(request.reservedAt()));
+        } else if ("live-v4".equals(c.get("policy_version"))) throw new IllegalArgumentException("live-v4 requires a group");
+        if(request.groupId()!=null) jdbc.update("""
+            insert into live_call(attempt_id,campaign_id,canonical_event_id,cycle_number,endpoint,kind,due_at,reserved_at,
+                final_cycle,owner_instance_id,generation,group_id,group_sequence,group_ordinal) values (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            """, request.attemptId(),own.campaignId(),request.canonicalEventId(),request.cycleNumber(),request.endpoint().name(),
+                request.kind(),time(request.dueAt()),time(request.reservedAt()),request.finalCycle(),own.instanceId(),own.generation(),
+                request.groupId(), request.groupId()==null?null:request.groupSequence(), request.groupId()==null?null:request.groupOrdinal());
+        else jdbc.update("""
             insert into live_call(attempt_id,campaign_id,canonical_event_id,cycle_number,endpoint,kind,due_at,reserved_at,
                 final_cycle,owner_instance_id,generation) values (?,?,?,?,?,?,?,?,?,?,?)
-            """, request.attemptId(),own.campaignId(),request.canonicalEventId(),request.cycleNumber(),request.endpoint().name(),
+            """,request.attemptId(),own.campaignId(),request.canonicalEventId(),request.cycleNumber(),request.endpoint().name(),
                 request.kind(),time(request.dueAt()),time(request.reservedAt()),request.finalCycle(),own.instanceId(),own.generation());
         jdbc.update("update live_campaign set reserved_calls=reserved_calls+1 where campaign_id=?",own.campaignId());
         jdbc.update("update live_event set reserved_calls=reserved_calls+1 where campaign_id=? and canonical_event_id=?",own.campaignId(),request.canonicalEventId());
         append(own.campaignId(),request.canonicalEventId(),"RESERVED",request.kind(),request.reservedAt(),request.attemptId());
         return Optional.of(new ReservedAttempt(request.attemptId(),request.canonicalEventId(),number(e,"provider_event_id"),
-                request.endpoint(),request.cycleNumber(),request.kind(),request.dueAt(),request.reservedAt(),request.finalCycle()));
+                request.endpoint(),request.cycleNumber(),request.kind(),request.dueAt(),request.reservedAt(),request.finalCycle(),
+                request.groupId(),request.groupSequence(),request.groupOrdinal()));
     }
 
     @Override
@@ -247,6 +270,38 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
 
     @Override
     @Transactional
+    public void updateFamilySchedule(Ownership ownership, UUID canonicalEventId, FamilySchedule schedule, Instant at) {
+        Objects.requireNonNull(schedule); Objects.requireNonNull(at);
+        requireOwnership(ownership,false);
+        Map<String,Object> c=campaign(ownership.campaignId(),true); requireExecutionOwner(c,ownership);
+        if (!"live-v4".equals(c.get("policy_version"))) throw new IllegalArgumentException("family schedules require live-v4");
+        Map<String,Object> e=event(ownership.campaignId(),canonicalEventId,true);
+        Instant nextDue=terminal((String)e.get("state")) || terminal((String)c.get("state")) ? null : schedule.nextDueAt();
+        List<Map<String,Object>> previous=jdbc.queryForList("select * from live_family_schedule where campaign_id=? and canonical_event_id=? and endpoint=?",
+                ownership.campaignId(),canonicalEventId,schedule.endpoint().name());
+        if(!previous.isEmpty()) {
+            Map<String,Object> p=previous.getFirst();
+            if(schedule.missedCycles()<number(p,"missed_cycles") || at.isBefore(instant(p,"changed_at")))
+                throw new IllegalArgumentException("family schedule metrics cannot move backwards");
+            if(Objects.equals(nextDue,instant(p,"next_due_at")) && schedule.intervalSeconds()==number(p,"interval_seconds")
+                    && schedule.missedCycles()==number(p,"missed_cycles")) return;
+        }
+        jdbc.update("""
+            insert into live_family_schedule(campaign_id,canonical_event_id,endpoint,next_due_at,interval_seconds,missed_cycles,changed_at,owner_instance_id,generation)
+            values (?,?,?,?,?,?,?,?,?) on conflict(campaign_id,canonical_event_id,endpoint) do update
+            set next_due_at=excluded.next_due_at,interval_seconds=excluded.interval_seconds,missed_cycles=excluded.missed_cycles,
+                changed_at=excluded.changed_at,owner_instance_id=excluded.owner_instance_id,generation=excluded.generation
+            """,ownership.campaignId(),canonicalEventId,schedule.endpoint().name(),time(nextDue),schedule.intervalSeconds(),
+                schedule.missedCycles(),time(at),ownership.instanceId(),ownership.generation());
+        append(ownership.campaignId(),canonicalEventId,"FAMILY_SCHEDULED",schedule.endpoint().name(),at,null);
+        jdbc.update("""
+            insert into live_family_schedule_revision(campaign_id,revision,canonical_event_id,endpoint,next_due_at,interval_seconds,missed_cycles)
+            select campaign_id,revision,?,?,?,?,? from live_campaign where campaign_id=?
+            """,canonicalEventId,schedule.endpoint().name(),time(nextDue),schedule.intervalSeconds(),schedule.missedCycles(),ownership.campaignId());
+    }
+
+    @Override
+    @Transactional
     public void interruptOrphan(Ownership ownership, Instant at, String reason) {
         LiveCampaignData.requireCode(reason); requireOwnership(ownership,false);
         Map<String,Object> c=campaign(ownership.campaignId(),true); requireExecutionOwner(c,ownership);
@@ -258,6 +313,36 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
         jdbc.update("update live_campaign set state='INTERRUPTED',reason=? where campaign_id=?",reason,ownership.campaignId());
         jdbc.update("update provider_campaign_guard set state='CLEANUP_REQUIRED',changed_at=? where singleton_id=1",time(at));
         append(ownership.campaignId(),null,"INTERRUPTED",reason,at,null);
+        if ("live-v4".equals(c.get("policy_version"))) {
+            // The former scheduler cannot publish terminal deadlines. Cancel only existing
+            // pending projections and preserve each prior decision in the append-only ledger.
+            for (Map<String,Object> family : jdbc.queryForList("""
+                    select * from live_family_schedule where campaign_id=? and next_due_at is not null
+                    order by canonical_event_id,endpoint
+                    """,ownership.campaignId())) {
+                SofascoreEndpointType endpoint=SofascoreEndpointType.valueOf((String)family.get("endpoint"));
+                updateFamilySchedule(ownership,uuid(family,"canonical_event_id"),
+                        new FamilySchedule(endpoint,null,number(family,"interval_seconds"),number(family,"missed_cycles")),at);
+            }
+        }
+    }
+
+    @Override
+    @Transactional(readOnly=true)
+    public DispatchBudget dispatchBudget(Ownership ownership, UUID canonicalEventId) {
+        Objects.requireNonNull(ownership); Objects.requireNonNull(canonicalEventId);
+        List<Map<String,Object>> rows = jdbc.queryForList("""
+            select c.reserved_calls,c.received_bytes,e.reserved_calls as event_reserved_calls,e.state as event_state
+            from live_campaign c join live_event e using(campaign_id)
+            join provider_campaign_guard g on g.singleton_id=1 and g.campaign_id=c.campaign_id
+            where c.campaign_id=? and e.canonical_event_id=? and g.state='OWNED'
+                and g.owner_instance_id=? and g.generation=?
+                and c.owner_instance_id=g.owner_instance_id and c.generation=g.generation
+            """, ownership.campaignId(),canonicalEventId,ownership.instanceId(),ownership.generation());
+        if (rows.isEmpty()) throw new IllegalStateException("live provider ownership is stale or closed");
+        Map<String,Object> row=rows.getFirst();
+        return new DispatchBudget((int)number(row,"reserved_calls"),number(row,"received_bytes"),
+                (int)number(row,"event_reserved_calls"),(String)row.get("event_state"));
     }
 
     @Override
@@ -299,15 +384,20 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
                 boxed(a,"occurrence_id"),instant(a,"received_at"),results.get(uuid(a,"attempt_id")))).toList();
         List<EventView> eventViews=events.stream().map(e->new EventView(target(e),(String)e.get("state"),(String)e.get("reason"),
                 (int)number(e,"reserved_calls"),number(e,"received_bytes"),instant(e,"next_due_at"),number(e,"missed_cycles"),
-                (Boolean)e.get("final_complete"),cursors(uuid(e,"canonical_event_id"),attempts))).toList();
+                (Boolean)e.get("final_complete"),cursors(campaignId,uuid(e,"canonical_event_id"),attempts,"live-v4".equals(c.get("policy_version"))))).toList();
         List<Transition> transitions=jdbc.queryForList("select * from live_transition where campaign_id=? order by revision",campaignId).stream()
                 .map(t->new Transition(number(t,"revision"),uuid(t,"canonical_event_id"),(String)t.get("state"),(String)t.get("reason"),instant(t,"changed_at"),uuid(t,"attempt_id"))).toList();
         Ownership own=c.get("owner_instance_id")==null?null:new Ownership(campaignId,uuid(c,"owner_instance_id"),number(c,"generation"));
         return new CampaignView(manifest(c,events),(String)c.get("state"),(String)c.get("reason"),instant(c,"started_at"),instant(c,"ends_at"),
                 (int)number(c,"reserved_calls"),number(c,"received_bytes"),number(c,"revision"),own,eventViews,attempts,transitions);
     }
-    private static List<FamilyCursor> cursors(UUID eventId,List<AttemptView> attempts) {
+    private List<FamilyCursor> cursors(UUID campaignId,UUID eventId,List<AttemptView> attempts,boolean grouped) {
         List<FamilyCursor> cursors=new ArrayList<>();
+        Map<SofascoreEndpointType,FamilySchedule> schedules=new EnumMap<>(SofascoreEndpointType.class);
+        if(grouped) for(Map<String,Object> row:jdbc.queryForList("select * from live_family_schedule where campaign_id=? and canonical_event_id=?",campaignId,eventId)) {
+            SofascoreEndpointType endpoint=SofascoreEndpointType.valueOf((String)row.get("endpoint"));
+            schedules.put(endpoint,new FamilySchedule(endpoint,instant(row,"next_due_at"),number(row,"interval_seconds"),number(row,"missed_cycles")));
+        }
         for(SofascoreEndpointType endpoint:List.of(SofascoreEndpointType.EVENT_DETAILS,SofascoreEndpointType.EVENT_STATISTICS,SofascoreEndpointType.EVENT_INCIDENTS,SofascoreEndpointType.EVENT_LINEUPS)) {
             AttemptView last=null,received=null,success=null,changed=null; Result latest=null; String hash=null;
             for(AttemptView a:attempts) if(a.attempt().canonicalEventId().equals(eventId) && a.attempt().endpoint()==endpoint) {
@@ -318,9 +408,9 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
                     if(!Objects.equals(hash,next)){changed=a;hash=next;}
                 }
             }
-            if(last!=null) cursors.add(new FamilyCursor(endpoint,last.attempt().attemptId(),id(received),id(success),id(changed),
+            if(last!=null || schedules.containsKey(endpoint)) cursors.add(new FamilyCursor(endpoint,id(last),id(received),id(success),id(changed),
                     received==null?null:received.receivedAt(),success==null?null:success.receivedAt(),changed==null?null:changed.receivedAt(),
-                    success==null?NormalizedReferences.none():success.result().normalized(),latest,success==null?null:success.result()));
+                    success==null?NormalizedReferences.none():success.result().normalized(),latest,success==null?null:success.result(),schedules.get(endpoint)));
         }
         return List.copyOf(cursors);
     }
@@ -349,16 +439,35 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
         jdbc.update("insert into live_transition(campaign_id,revision,canonical_event_id,state,reason,changed_at,attempt_id) values (?,?,?,?,?,?,?)",
                 campaignId,revision,eventId,state,reason,time(at),attemptId);
     }
-    private static Manifest manifest(Map<String,Object> c,List<Map<String,Object>> events) {
+    private Manifest manifest(Map<String,Object> c,List<Map<String,Object>> events) {
         return new Manifest(uuid(c,"campaign_id"),(String)c.get("manifest_sha256"),(String)c.get("policy_version"),instant(c,"prepared_at"),instant(c,"expires_at"),
                 Duration.ofSeconds(number(c,"duration_seconds")),(int)number(c,"maximum_calls_per_event"),(int)number(c,"maximum_calls"),
                 number(c,"maximum_bytes"),(int)number(c,"qualified_match_capacity"),events.stream().map(JdbcLiveCampaignStore::target).toList(),
                 new AdmissionProfile(Duration.ofNanos(number(c,"request_envelope_nanos")),Duration.ofNanos(number(c,"processing_envelope_nanos")),
-                        (String)c.get("qualification_sha256")), Duration.ofSeconds(number(c,"cycle_interval_seconds")));
+                        (String)c.get("qualification_sha256"),groupedProfile(c)), Duration.ofSeconds(number(c,"cycle_interval_seconds")));
+    }
+    private GroupedAdmissionProfile groupedProfile(Map<String,Object> campaign) {
+        if(!"live-v4".equals(campaign.get("policy_version"))) return null;
+        Map<String,Object> row=jdbc.queryForMap("select * from live_grouped_policy where campaign_id=?",uuid(campaign,"campaign_id"));
+        var tree=tools.jackson.databind.json.JsonMapper.builder().build().readTree(row.get("endpoint_envelopes").toString());
+        Map<SofascoreEndpointType,EndpointEnvelope> envelopes=new EnumMap<>(SofascoreEndpointType.class);
+        for(SofascoreEndpointType endpoint:List.of(SofascoreEndpointType.EVENT_DETAILS,SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS,SofascoreEndpointType.EVENT_LINEUPS)) {
+            var value=tree.get(endpoint.name());
+            envelopes.put(endpoint,new EndpointEnvelope(Duration.ofNanos(value.get("requestNanos").asLong()),Duration.ofNanos(value.get("processingNanos").asLong())));
+        }
+        return new GroupedAdmissionProfile(envelopes,(String)row.get("qualification_sha256"));
+    }
+    private static String groupedEnvelopesJson(GroupedAdmissionProfile profile) {
+        Map<String,Object> envelopes=new TreeMap<>();
+        profile.endpointEnvelopes().forEach((endpoint,envelope)->envelopes.put(endpoint.name(),
+                Map.of("requestNanos",envelope.requestEnvelope().toNanos(),"processingNanos",envelope.processingEnvelope().toNanos())));
+        return tools.jackson.databind.json.JsonMapper.builder().build().writeValueAsString(envelopes);
     }
     private static Target target(Map<String,Object> e) { return new Target(uuid(e,"canonical_event_id"),number(e,"provider_event_id"),number(e,"source_observation_id"),number(e,"source_snapshot_id")); }
     private static ReservedAttempt reserved(Map<String,Object> a) { return new ReservedAttempt(uuid(a,"attempt_id"),uuid(a,"canonical_event_id"),number(a,"provider_event_id"),
-            SofascoreEndpointType.valueOf((String)a.get("endpoint")),number(a,"cycle_number"),(String)a.get("kind"),instant(a,"due_at"),instant(a,"reserved_at"),(Boolean)a.get("final_cycle")); }
+            SofascoreEndpointType.valueOf((String)a.get("endpoint")),number(a,"cycle_number"),(String)a.get("kind"),instant(a,"due_at"),instant(a,"reserved_at"),(Boolean)a.get("final_cycle"),
+            uuid(a,"group_id"),a.get("group_id")==null?-1:number(a,"group_sequence"),a.get("group_id")==null?-1:(int)number(a,"group_ordinal")); }
     private static Result result(Map<String,Object> r) {
         Publication p=new Publication((String)r.get("outcome"),(String)r.get("scope"),(String)r.get("code"),instant(r,"resolved_at"),(String)r.get("parser_version"),
                 (Boolean)r.get("successful"),(String)r.get("next_event_state"),(String)r.get("sport_status"),r.get("projection_json")==null?null:r.get("projection_json").toString(),

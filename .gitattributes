@@ -28,3 +28,4 @@ docs/validation/ADR-SS-005-v0.1-accepted-proposal-20260907.txt -text
 # Capacity evidence referenced by the live manifest: preserve its SHA-256 across checkouts.
 docs/validation/WO058-MULTIMATCH-CAPACITY-PROFILE-20260907.json -text
 docs/validation/WO058-ADAPTIVE-CAPACITY-PROFILE-20260907.json -text
+docs/validation/WO058-GROUPED-LIVE-V4-*-20260908.json -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol

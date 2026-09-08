@@ -107,6 +107,22 @@ final class ProviderNetworkStartDelayGate {
         fenced = true;
     }
 
+    /** Only the supervisor's validated consecutive live-v4 group can omit a pause. */
+    void admitGroupContinuation(Runnable continuationGuard) {
+        Objects.requireNonNull(continuationGuard, "continuationGuard");
+        requireUninterrupted();
+        continuationGuard.run();
+        synchronized (this) {
+            requireTimingEvidence();
+            if (!fenced || readNanoTime() - previousDispatchFinishedAtNanos < 0) {
+                timingEvidenceLost = true;
+                throw new TimingEvidenceException();
+            }
+        }
+        requireUninterrupted();
+        continuationGuard.run();
+    }
+
     synchronized boolean timingEvidenceLost() {
         return timingEvidenceLost;
     }

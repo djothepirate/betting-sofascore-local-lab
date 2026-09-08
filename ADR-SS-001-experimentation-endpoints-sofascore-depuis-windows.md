@@ -10,7 +10,7 @@
 - **Document associé :** `Betting_Project_SofaScore_Local_Lab_Cadrage_v0.1.0.pdf`
 - **Décision de référence qualifiée :** document de cadrage du Betting Project v0.5.1, sections 2.3, 8.8 et 15.1
 
-**Renvoi documentaire — 7 septembre 2026 :** [ADR-SS-005 v0.3](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md),
+**Renvoi documentaire — 8 septembre 2026 :** [ADR-SS-005 v0.4](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md),
 issue de la v0.1 formellement acceptée puis des évolutions de capacité et de compositions prématch demandées par le propriétaire,
 définit l'exception limitée aux campagnes live J4/J5 de WO-058. Sa table
 de portée précise les adaptations des §§3.4, 3.5, 3.6.1, 3.6.1.1 et du critère live du §8 ;
@@ -18,6 +18,14 @@ toutes les autres dispositions du présent ADR restent applicables. Le lancement
 demeure manuel et les cycles automatiques restent confinés à la session bornée. Les §§3.10 et 9
 restent les règles de réexamen des extensions futures. La version historique 1.4 et ses décisions
 ci-dessous sont conservées ; ce renvoi n'active aucun parcours ni campagne.
+
+Le §0 de cette v0.4, explicitement demandé par le propriétaire, ajoute une exception au délai
+interne du §3.4 : uniquement dans un groupe serveur `live-v4` campagne/événement/séquence,
+au plus quatre appels distincts restent séquentiels sans pause artificielle entre eux. Trois
+secondes restent exigées entre groupes et aux transitions vers les parcours historiques/manuels,
+avec mise à jour du repère après chaque échange. Aucun paramètre HTTP libre ne désactive ce
+délai. Cette exception exige son profil de qualification propre, la cible fixe d’une minute et
+les réservations/contrôles séparés avant chaque appel ; les autres parcours restent inchangés.
 
 ## 1. Contexte
 

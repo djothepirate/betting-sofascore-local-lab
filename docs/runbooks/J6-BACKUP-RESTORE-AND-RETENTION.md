@@ -26,12 +26,12 @@ V31/V32 ci-dessus décrivent les décisions et preuves historiques J7 ; elles ne
 schéma courant exigé par les scripts J6. La qualification WO-058 utilise des bases PostgreSQL
 éphémères et des données synthétiques. Elle n'autorise ni sauvegarde ni purge de la base primaire.
 
-Les gardes courants exigent V38 ; une preuve V37 reste historique. Le format du manifeste et
+V39 ajoute la politique groupée immuable, les groupes de requêtes et les échéances par famille. Les gardes courants exigent V39 ; les preuves V38 et antérieures restent historiques. Le format du manifeste et
 l'algorithme `normalizedProvenanceSha256` restent inchangés : cette empreinte porte sur la
 provenance et les hashes normalisés, sans comparer directement chaque colonne métier.
 Le test PostgreSQL de roundtrip vérifie séparément la conservation matérielle des trois
 nouvelles valeurs J4 (`is_awarded=true`, `home_display_score=0`, `away_display_score=3`),
-avec leurs identifiants et leur provenance, après restauration dans une base de test distincte.
+avec leurs identifiants et leur provenance, après restauration dans une base de test distincte. Le fingerprint live couvre également les quatre nouvelles tables V39 ; le roundtrip du ledger restaure une campagne live-v4 avec profil, groupes, projection et révisions des échéances, sans réarmer la collecte. Le format des champs du manifeste J6 reste inchangé, mais une preuve V38 ne valide pas ces nouvelles tables.
 
 ```text
 PROVIDER_CALL_REQUIRED=NO
@@ -46,7 +46,7 @@ NORMALIZED_OBSERVATION_DELETION=IMPOSSIBLE_BY_DESIGN
 - PowerShell 7.4 ou plus récent pour préserver les pipelines binaires natifs ;
 - exécutable `age` disponible dans `PATH` ou fourni avec `-AgePath` ;
 - PostgreSQL local démarré et sain ;
-- Flyway V38 appliqué ; la rétention reste définie par V22, V23 étend seulement
+- Flyway V39 appliqué ; la rétention reste définie par V22, V23 étend seulement
   `export_manifest` pour J7, V24 élargit la portée du cache de découverte tournoi, V25 ajoute
   uniquement la provenance de l'import JSON local, V26 autorise `event-incidents-v14`, V27 ajoute
   le ledger J8 sans étendre le périmètre de purge et V28 autorise uniquement
@@ -191,7 +191,7 @@ PostgreSQL possédée. Elles ne constituent ni une boucle indéfinie ni un budge
 Le script :
 
 1. refuse une application encore à l'écoute sur le port 8087 ;
-2. vérifie Compose, le verrou réseau, la version courante Flyway V38, le garde fournisseur `FREE`
+2. vérifie Compose, le verrou réseau, la version courante Flyway V39, le garde fournisseur `FREE`
    et l'absence de campagne live `RUNNING` ou `CLEANUP_REQUIRED` ;
 3. vérifie le SHA-256 réel de chaque payload retenu ;
 4. vérifie l'exécutable Docker exact ; sous Windows, il doit être un fichier absolu sans reparse
@@ -262,7 +262,7 @@ octets bruts restent couverts séparément par les preuves de snapshots ; ils ne
 dans le ledger live. Aucun payload ni contenu complet du ledger n'est imprimé par le script.
 
 Un manifeste historique V32 reste une preuve de sa qualification historique. Il ne satisfait pas
-la porte de rétention courante V38, car il ne démontre pas la restauration de ces tables.
+la porte de rétention courante V39, car il ne démontre pas la restauration de ces tables.
 Restaurer les preuves live ne déclenche aucun worker ni reprise de campagne : les opt-ins restent
 désactivés et tout nouveau lancement exige une action opérateur. Un garde `OWNED` ou
 `CLEANUP_REQUIRED` ne peut pas être considéré libre du seul fait d'un redémarrage ou d'un délai.
@@ -351,7 +351,7 @@ pwsh -NoProfile -File .\scripts\Invoke-J6Retention.ps1 `
   -ConfirmationPhrase 'PURGER <N> PAYLOADS J6 <J6_RETENTION_PLAN_SHA256>'
 ```
 
-Le script revérifie le nom du fichier chiffré, son hash, Flyway V38, l'égalité complète des preuves
+Le script revérifie le nom du fichier chiffré, son hash, Flyway V39, l'égalité complète des preuves
 source/restauration, les six compteurs et l'empreinte metadata-only du ledger J7 — incluant grant,
 révocation et consommation owner-go — puis les sept compteurs live, le garde libre, l'absence de
 campagne active et `liveLedgerSha256`, ainsi que la couverture. Le service recalcule ensuite le

@@ -285,6 +285,90 @@ class ChildJvmPlaywrightProviderSupervisorTest {
     }
 
     @Test
+    void liveGroupHasNoAddedIntraGroupPauseButNextGroupAndNormalCallsKeepTheFence()
+            throws Exception {
+        ProviderPlaywrightProperties properties = enabledProperties("live-group-delay.jar");
+        Instant rootStartedAt = Instant.parse("2026-09-08T10:00:00Z");
+        OwnedHandle root = ownedHandle(2_106L, rootStartedAt, true, true);
+        Process process = processWithStartInstant(root.handle(), rootStartedAt);
+        var access = new DelayGateProcessTreeAccess();
+        List<Long> observedStarts = Collections.synchronizedList(new ArrayList<>());
+        AtomicInteger getCount = new AtomicInteger();
+        AtomicReference<Thread> workerThread = new AtomicReference<>();
+        AtomicReference<Throwable> workerFailure = new AtomicReference<>();
+        var supervisor = new ChildJvmPlaywrightProviderSupervisor(properties, Clock.systemUTC(),
+                new SecureRandom(), builder -> {
+                    workerThread.set(startRespondingWorker(builder, access::nanoTime,
+                            () -> access.advance(Duration.ofMillis(33)), false,
+                            getCount, observedStarts, workerFailure));
+                    return process;
+                }, access);
+        Set<SofascoreEndpointType> endpoints = Set.of(SofascoreEndpointType.EVENT_DETAILS,
+                SofascoreEndpointType.EVENT_INCIDENTS, SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.EVENT_LINEUPS);
+        UUID campaignId = UUID.randomUUID(), groupId = UUID.randomUUID();
+        long event = 16_416_319L;
+        PlaywrightProviderCampaign campaign = supervisor.openLiveGrouped(campaignId, endpoints);
+        var check = new LiveProviderDispatchGroup(campaignId, groupId, event,
+                LiveProviderDispatchGroup.Phase.CHECK);
+        var playing = new LiveProviderDispatchGroup(campaignId, groupId, event,
+                LiveProviderDispatchGroup.Phase.IN_PLAY);
+
+        campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(event), check,
+                PlaywrightDispatchAdmission.UNRESTRICTED);
+        campaign.executeGrouped(PlaywrightProviderRequest.eventIncidents(event), playing,
+                PlaywrightDispatchAdmission.UNRESTRICTED);
+        campaign.executeGrouped(PlaywrightProviderRequest.eventStatistics(event), playing,
+                PlaywrightDispatchAdmission.UNRESTRICTED);
+        campaign.executeGrouped(PlaywrightProviderRequest.eventLineups(event), playing,
+                PlaywrightDispatchAdmission.UNRESTRICTED);
+        assertThat(access.gatePauseTotal()).isZero();
+        assertThat(observedStarts).containsExactly(0L, 33_000_000L, 66_000_000L, 99_000_000L);
+
+        UUID nextGroup = UUID.randomUUID();
+        campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(event),
+                new LiveProviderDispatchGroup(campaignId, nextGroup, event, LiveProviderDispatchGroup.Phase.CHECK),
+                PlaywrightDispatchAdmission.UNRESTRICTED);
+        assertThat(observedStarts.getLast()).isEqualTo(Duration.ofMillis(3_132).toNanos());
+        assertThat(access.gatePauseTotal()).isEqualTo(Duration.ofSeconds(3));
+        // A historical execute invocation cannot inherit the live group's exception.
+        campaign.execute(PlaywrightProviderRequest.eventDetails(event));
+        assertThat(observedStarts.getLast()).isEqualTo(Duration.ofMillis(6_165).toNanos());
+        assertThat(access.gatePauseTotal()).isEqualTo(Duration.ofSeconds(6));
+        assertThatThrownBy(() -> campaign.executeGrouped(PlaywrightProviderRequest.eventIncidents(event),
+                new LiveProviderDispatchGroup(campaignId, nextGroup, event, LiveProviderDispatchGroup.Phase.IN_PLAY),
+                PlaywrightDispatchAdmission.UNRESTRICTED))
+                .isInstanceOf(PlaywrightProviderException.class).extracting("failure")
+                .isEqualTo(PlaywrightProviderFailure.INVALID_REQUEST);
+        assertThat(getCount).hasValue(6);
+
+        campaign.close();
+        workerThread.get().join(2_000);
+        assertThat(workerThread.get().isAlive()).isFalse();
+        assertThat(workerFailure.get()).isNull();
+    }
+
+    @Test
+    void groupedContinuationStillChecksCancellationAndMonotonicEvidence() {
+        AtomicLong nanoTime = new AtomicLong();
+        AtomicInteger pauses = new AtomicInteger();
+        var gate = new ProviderNetworkStartDelayGate(Duration.ofSeconds(3), nanoTime::get,
+                duration -> pauses.incrementAndGet());
+        gate.recordDispatchFinished(true);
+        assertThatThrownBy(() -> gate.admitGroupContinuation(() -> {
+            throw new PlaywrightDispatchCancelledException();
+        })).isInstanceOf(PlaywrightDispatchCancelledException.class);
+        gate.admitGroupContinuation(() -> { });
+        assertThat(pauses).hasValue(0);
+        nanoTime.set(-1);
+        assertThatThrownBy(() -> gate.admitGroupContinuation(() -> { }))
+                .isInstanceOf(ProviderNetworkStartDelayGate.TimingEvidenceException.class);
+        assertThat(gate.timingEvidenceLost()).isTrue();
+        assertThatThrownBy(() -> gate.awaitNextDispatch(() -> { }))
+                .isInstanceOf(ProviderNetworkStartDelayGate.TimingEvidenceException.class);
+    }
+
+    @Test
     void unusableResponseTimestampPoisonsEveryLaterParentDispatch() throws Exception {
         ProviderPlaywrightProperties properties = enabledProperties("unusable-time.jar");
         Instant rootStartedAt = Instant.parse("2026-08-31T07:02:00Z");

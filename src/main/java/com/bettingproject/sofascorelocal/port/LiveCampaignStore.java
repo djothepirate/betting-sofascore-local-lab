@@ -12,6 +12,14 @@ import java.util.function.Supplier;
 public interface LiveCampaignStore {
     Manifest prepare(Manifest manifest);
     Optional<CampaignView> find(UUID campaignId);
+    /** Production implementations read current counters without materializing the campaign ledger. */
+    default DispatchBudget dispatchBudget(Ownership ownership, UUID canonicalEventId) {
+        CampaignView campaign = find(ownership.campaignId()).orElseThrow();
+        if (!ownership.equals(campaign.ownership())) throw new IllegalStateException("live provider ownership is stale or closed");
+        EventView event = campaign.events().stream().filter(value -> value.target().canonicalEventId().equals(canonicalEventId))
+                .findFirst().orElseThrow();
+        return new DispatchBudget(campaign.reservedCalls(), campaign.receivedBytes(), event.reservedCalls(), event.state());
+    }
     List<CampaignView> findRecent(int limit);
     Optional<CampaignView> latestForEvent(UUID canonicalEventId);
     Launch launch(UUID campaignId, String expectedManifestSha256, Ownership ownership, Instant startedAt);
@@ -26,6 +34,10 @@ public interface LiveCampaignStore {
     void updateNextDueAt(Ownership ownership, UUID canonicalEventId, Instant nextDueAt, Instant at);
     void updateScheduleMetrics(Ownership ownership, UUID canonicalEventId, Instant nextDueAt,
                                long missedCycles, boolean finalComplete, Instant at);
+    /** Scheduler-owned projection, independent of successful publication; never a new collection trigger. */
+    default void updateFamilySchedule(Ownership ownership, UUID canonicalEventId, FamilySchedule schedule, Instant at) {
+        throw new UnsupportedOperationException("family schedules require the V39 store");
+    }
     /** Caller first proves the old owner is absent and holds exclusive recovery authority. Never starts transport. */
     void interruptOrphan(Ownership ownership, Instant at, String reason);
 }

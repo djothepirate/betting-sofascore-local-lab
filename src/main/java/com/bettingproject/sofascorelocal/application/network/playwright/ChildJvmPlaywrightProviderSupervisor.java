@@ -186,6 +186,21 @@ public final class ChildJvmPlaywrightProviderSupervisor
     public PlaywrightProviderCampaign open(
             UUID campaignId,
             Set<SofascoreEndpointType> allowedEndpoints) {
+        return open(campaignId, allowedEndpoints, false);
+    }
+
+    @Override
+    public PlaywrightProviderCampaign openLiveGrouped(
+            UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        if (!Set.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS)
+                .equals(allowedEndpoints))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
+        return open(campaignId, allowedEndpoints, true);
+    }
+
+    private PlaywrightProviderCampaign open(UUID campaignId,
+            Set<SofascoreEndpointType> allowedEndpoints, boolean groupedLive) {
         Objects.requireNonNull(campaignId, "campaignId");
         Set<SofascoreEndpointType> allowlist = Set.copyOf(
                 Objects.requireNonNull(allowedEndpoints, "allowedEndpoints"));
@@ -206,7 +221,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
             throw new PlaywrightProviderException(PlaywrightProviderFailure.OPERATOR_STOP);
         }
         Path workerJar = requireWorkerJar();
-        CampaignState state = new CampaignState(campaignId, allowlist);
+        CampaignState state = new CampaignState(campaignId, allowlist, groupedLive);
         if (!active.compareAndSet(null, state)) {
             throw new PlaywrightProviderException(
                     PlaywrightProviderFailure.CAMPAIGN_ALREADY_ACTIVE);
@@ -399,12 +414,14 @@ public final class ChildJvmPlaywrightProviderSupervisor
     private PlaywrightProviderResponse execute(
             CampaignState state,
             PlaywrightProviderRequest request,
-            PlaywrightDispatchAdmission admission) {
+            PlaywrightDispatchAdmission admission, LiveProviderDispatchGroup group) {
         Objects.requireNonNull(request, "request");
         requireActive(state);
         if (!state.allowedEndpoints.contains(request.endpoint())) {
             throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
         }
+        if (group != null && state.liveGroups == null)
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_REQUEST);
         state.ioLock.lock();
         boolean dispatchStarted = false;
         boolean usableResponseEvidence = false;
@@ -413,12 +430,16 @@ public final class ChildJvmPlaywrightProviderSupervisor
             try {
                 DataOutputStream output = Objects.requireNonNull(state.output, "output");
                 DataInputStream input = Objects.requireNonNull(state.input, "input");
-                providerNetworkStartDelayGate.awaitNextDispatch(() -> { requireActive(state); admission.check(); });
+                boolean continuation = state.liveGroups != null && state.liveGroups.isContinuation(request, group);
+                Runnable continuationGuard = () -> { requireActive(state); admission.check(); };
+                if (continuation) providerNetworkStartDelayGate.admitGroupContinuation(continuationGuard);
+                else providerNetworkStartDelayGate.awaitNextDispatch(continuationGuard);
                 try (PlaywrightDispatchAdmission.Permit permit = admission.acquireDispatchPermit()) {
                     // Admission may perform durable checks. Never hold the supervisor stop lock during SQL.
                     state.dispatchLock.lock();
                     try {
                     requireActive(state);
+                    if (state.liveGroups != null) state.liveGroups.dispatched(request, group);
                     state.providerDispatchStarted.set(true);
                     dispatchStarted = true;
                     output.writeByte(GET);
@@ -522,6 +543,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
             if (dispatchStarted) {
                 providerNetworkStartDelayGate.recordDispatchFinished(
                         usableResponseEvidence);
+                if (state.liveGroups != null) state.liveGroups.finished(usableResponseEvidence);
             }
             state.ioLock.unlock();
         }
@@ -1473,7 +1495,17 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 throw new PlaywrightProviderException(
                         PlaywrightProviderFailure.OPERATOR_STOP);
             }
-            return current.execute(state, request, Objects.requireNonNull(admission));
+            return current.execute(state, request, Objects.requireNonNull(admission), null);
+        }
+
+        @Override
+        public PlaywrightProviderResponse executeGrouped(PlaywrightProviderRequest request,
+                LiveProviderDispatchGroup group, PlaywrightDispatchAdmission admission) {
+            ChildJvmPlaywrightProviderSupervisor current = owner;
+            if (current == null || closeRequested)
+                throw new PlaywrightProviderException(PlaywrightProviderFailure.OPERATOR_STOP);
+            return current.execute(state, request, Objects.requireNonNull(admission),
+                    Objects.requireNonNull(group));
         }
 
         @Override
@@ -1491,6 +1523,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
 
         private final UUID campaignId;
         private final Set<SofascoreEndpointType> allowedEndpoints;
+        private final LiveProviderGroupTracker liveGroups;
         private final ReentrantLock ioLock = new ReentrantLock();
         private final ReentrantLock dispatchLock = new ReentrantLock();
         private final Object processInventoryLock = new Object();
@@ -1516,9 +1549,10 @@ public final class ChildJvmPlaywrightProviderSupervisor
 
         private CampaignState(
                 UUID campaignId,
-                Set<SofascoreEndpointType> allowedEndpoints) {
+                Set<SofascoreEndpointType> allowedEndpoints, boolean groupedLive) {
             this.campaignId = campaignId;
             this.allowedEndpoints = allowedEndpoints;
+            this.liveGroups = groupedLive ? new LiveProviderGroupTracker(campaignId) : null;
         }
 
         private void publishProcess(Process process, Instant processStartedAt) {

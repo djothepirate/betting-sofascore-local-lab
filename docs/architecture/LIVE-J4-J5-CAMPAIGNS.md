@@ -1,8 +1,47 @@
 # Campagnes live locales J4/J5 — architecture WO-058
 
 Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
-Décision applicable : [ADR-SS-005 v0.3](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), capacité adaptative et compositions avant le début.
+Décision applicable : [ADR-SS-005 v0.4](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), groupes live et minute fixe pour les nouvelles préparations.
 Réalisation : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md).
+
+## Politique courante live-v4
+
+`LiveCampaignService` prépare désormais `live-v4` uniquement. Le manifeste inclut un
+`GroupedAdmissionProfile` distinct : preuve SHA-256 dédiée, enveloppes requête/traitement
+des quatre familles, cible 60 s, LINEUPS 300 s, délai intra-groupe nul, inter-groupes 3 s,
+ordre J4/incidents/statistiques/LINEUPS et marge 10 %. L’ancien profil ne qualifie jamais le
+nouveau transport. `selectionMaximum` retourne le minimum du plafond opérateur et de la
+capacité temporelle ; sans preuve de groupes la capacité affichée est zéro.
+
+`LiveSchedule` conserve son ordonnanceur historique pour v1–v3 et délègue v4 à
+`GroupedLiveScheduleV4`. Les groupes sont phasés sur la minute, et LINEUPS sur cinq tours
+après l’initialisation. Une échéance nominale ne dérive pas de la fin du précédent échange.
+Les slots dépassés sont coalescés sans rafale, les retards mesurés et les surcharges durables
+arrêtées. J4 décide du début, du report et de la fin ; aucune famille J5 ne produit un score
+ou un statut canonique. Une composition récente ne bloque pas incidents/statistiques.
+
+`LiveProviderSession` choisit explicitement `openLiveGrouped`. Le contexte serveur
+`LiveProviderDispatchGroup` accompagne chaque appel jusqu’au superviseur. Le tracker refuse
+changement d’événement, endpoint dupliqué, ordre incorrect et réutilisation d’un groupe fermé.
+Le verrou d’I/O sérialise tout le transport ; le fence commun enregistre chaque fin d’échange
+et ne supprime la pause que pour une continuation reconnue. Interruption, campagne suivante
+ou appel manuel conservent donc la barrière de trois secondes. Chaque admission contrôle
+l’arrêt, la fenêtre et la propriété ; chaque appel est réservé, reçu et publié séparément.
+
+V39 ajoute les tables de politique de groupe, groupe, appartenance des tentatives et planning
+des familles, sans modification des anciennes migrations ou empreintes. Les observations
+normalisées gardent leurs stores, provenance et transaction de publication. Le planning des
+familles est persisté par l’owner et révisé avec le ledger ; les écrans n’infèrent pas une
+prochaine collecte depuis la seule date de changement de valeur.
+
+Le DTO affiche la réception, l’échéance et le retard par famille, ainsi que l’autonomie estimée
+selon le budget restant, les réserves, les phases et la fin autorisée. Aucun ajustement de cadence
+n’étend cette autonomie. Le lecteur JavaScript conserve ses cinq secondes et ajoute un timeout
+de dix secondes sur toute lecture, corps JSON compris, puis réessaie sans effacer l’écran.
+Les panneaux statistiques et leur focus restent conservés.
+
+Les sections qui suivent documentent les garanties communes et les comportements historiques
+v1–v3. Leurs cadences D, ordre J5 et délai systématique par endpoint ne s’appliquent pas à v4.
 
 ## Session et autorité
 

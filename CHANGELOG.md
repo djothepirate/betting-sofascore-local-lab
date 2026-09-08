@@ -4,6 +4,24 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — minute fixe et appels regroupés live-v4
+
+- Prépare les nouvelles campagnes à 60 secondes nominales pour J4, incidents et statistiques,
+  avec compositions initiales puis réparties sur cinq minutes pendant le jeu.
+- Ajoute les groupes serveur séquentiels : aucune pause ajoutée entre leurs familles, trois
+  secondes entre groupes et aux transitions vers les parcours historiques ou manuels.
+- Exige un profil qualifié distinct par famille et refuse les sélections qui ne tiennent pas
+  la minute ; préserve les plafonds et la réserve finale sans ralentir pour étendre l’autonomie.
+- Rejoue quarante scénarios d'admission, incluant les dix fins dans le même tour ainsi que
+  les finalisations par cohortes pendant que les autres rencontres continuent.
+- Ajoute V39 pour les politiques, groupes et échéances auditables ; conserve v1–v3 et leurs hashes.
+- Affiche capacité, autonomie restante, prochaine collecte et retard par famille ; annule une
+  lecture locale bloquée à dix secondes puis reprend sans effacer les données ou panneaux.
+- Qualifie dix rencontres sur trente minutes établies de Chromium/PostgreSQL loopback :
+  1 128 appels avec initialisation, zéro cycle manqué, intervalle critique maximal 60,520 s.
+  Le profil de 64 Kio et la vague initiale de 5 Mio ont des portées distinctes explicites.
+- Décision et preuves : ADR-SS-005 v0.4 et [qualification live-v4](docs/validation/WO058-GROUPED-LIVE-V4-20260908.md).
+
 ### WO-058 — résultats J4 et rencontres reportées
 
 - Ajoute le contrat `event-details-v3` et V38 : drapeau d'attribution et scores `display`,

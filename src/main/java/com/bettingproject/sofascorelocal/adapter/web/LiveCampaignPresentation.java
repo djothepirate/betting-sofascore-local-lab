@@ -70,7 +70,26 @@ public class LiveCampaignPresentation {
                         runtimeStatus.collectionStopped(), runtimeStatus.cleanupPending(), runtimeStatus.cleanupInProgress(),
                         runtimeStatus.cleanupInProgress() ? "Collecte arrêtée / clôture locale en cours."
                                 : runtimeStatus.cleanupPending() ? "Collecte arrêtée / clôture locale requise."
-                                : "Collecte arrêtée."));
+                                : "Collecte arrêtée."), cadence(view, observedAt));
+    }
+
+    private static Cadence cadence(CampaignView view, Instant now) {
+        if (!"live-v4".equals(view.manifest().policyVersion())) return null;
+        List<EventView> active = view.events().stream().filter(e -> !terminal(e.state())).toList();
+        double rate = active.stream().mapToDouble(e -> "WAITING_START".equals(e.state()) ? 2 : 3.2).sum();
+        long seconds = 0;
+        if (rate > 0 && !terminal(view.state())) {
+            // Four calls per active match remain reserved for a last status/final-family pass.
+            seconds = (long) (Math.max(0, view.manifest().maximumCalls() - view.reservedCalls() - 4 * active.size()) * 60 / rate);
+            for (EventView event : active) {
+                double eventRate = "WAITING_START".equals(event.state()) ? 2 : 3.2;
+                seconds = Math.min(seconds, (long) (Math.max(0,
+                        view.manifest().maximumCallsPerEvent() - event.reservedCalls() - 4) * 60 / eventRate));
+            }
+            seconds = Math.min(seconds, view.endsAt() == null ? view.manifest().duration().toSeconds()
+                    : Math.max(0, Duration.between(now, view.endsAt()).toSeconds()));
+        }
+        return new Cadence("live-v4", 60, 300, view.manifest().qualifiedMatchCapacity(), seconds, rate);
     }
 
     private Event event(CampaignView campaign, EventView event, Instant observedAt) {
@@ -217,7 +236,12 @@ public class LiveCampaignPresentation {
                 pending ? null : latest.completenessScore(),
                 cursor.lastSuccessfulAttemptId() != null
                         && !cursor.lastSuccessfulAttemptId().equals(cursor.lastAttemptId()),
-                freshness(campaign, event, cursor, observedAt), table, statistics);
+                freshness(campaign, event, cursor, observedAt), table, statistics,
+                cursor.schedule() == null ? null : new CollectionSchedule(
+                        terminal(event.state()) || terminal(campaign.state()) ? null : cursor.schedule().nextDueAt(),
+                        cursor.schedule().intervalSeconds(), cursor.schedule().missedCycles(),
+                        cursor.schedule().nextDueAt() == null || terminal(event.state()) || terminal(campaign.state())
+                                ? 0 : Math.max(0, Duration.between(cursor.schedule().nextDueAt(), observedAt).toMillis())));
     }
 
     private static Freshness freshness(CampaignView campaign, EventView event, FamilyCursor cursor, Instant now) {
@@ -242,7 +266,9 @@ public class LiveCampaignPresentation {
         long interval = 0;
         long cycleSeconds = campaign.manifest().cycleInterval().toSeconds();
         if (!frozen && "RUNNING".equals(campaign.state())) {
-            if (cursor.endpoint() == SofascoreEndpointType.EVENT_DETAILS) {
+            if ("live-v4".equals(campaign.manifest().policyVersion())) {
+                interval = cursor.schedule() == null || cursor.schedule().nextDueAt() == null ? 0 : cursor.schedule().intervalSeconds();
+            } else if (cursor.endpoint() == SofascoreEndpointType.EVENT_DETAILS) {
                 interval = "COLLECTING".equals(event.state()) ? Math.max(300, cycleSeconds)
                         : "WAITING_START".equals(event.state()) || "CHECKING_FINISH".equals(event.state()) ? cycleSeconds : 0;
             } else if ("COLLECTING".equals(event.state()) || "CHECKING_FINISH".equals(event.state())
@@ -314,7 +340,18 @@ public class LiveCampaignPresentation {
 
     public record Campaign(UUID campaignId, long revision, String state, String reason, Instant preparedAt,
                            Instant startedAt, Instant endsAt, int reservedCalls, int maximumCalls,
-                           long receivedBytes, long maximumBytes, List<Event> events, RuntimeObservation runtimeStatus) { }
+                           long receivedBytes, long maximumBytes, List<Event> events, RuntimeObservation runtimeStatus, Cadence cadence) {
+        public Campaign(UUID campaignId, long revision, String state, String reason, Instant preparedAt,
+                Instant startedAt, Instant endsAt, int reservedCalls, int maximumCalls, long receivedBytes,
+                long maximumBytes, List<Event> events, RuntimeObservation runtimeStatus) {
+            this(campaignId, revision, state, reason, preparedAt, startedAt, endsAt, reservedCalls,
+                    maximumCalls, receivedBytes, maximumBytes, events, runtimeStatus, null);
+        }
+    }
+    public record Cadence(String policyVersion, long targetSeconds, long lineupSeconds, int qualifiedCapacity,
+                          long estimatedRemainingSeconds, double estimatedCallsPerMinute) {
+        public long estimatedMinutes() { return estimatedRemainingSeconds / 60; }
+    }
     /** Local process observation kept separate from the persisted campaign and event states. */
     public record RuntimeObservation(String state, String reason, boolean collectionStopped,
                                      boolean cleanupPending, boolean cleanupInProgress, String label) { }
@@ -330,7 +367,20 @@ public class LiveCampaignPresentation {
                          String parserVersion, String payloadSha256,
                          String normalizedSha256, String completeness, Integer completenessScore,
                          boolean previousData, Freshness freshness, Table table,
-                         StatisticsPresentation.View statistics) { }
+                         StatisticsPresentation.View statistics, CollectionSchedule schedule) {
+        public Family(String endpoint, String label, String outcome, String code, String scope,
+                Instant lastAttemptAt, Long authorizationDelayMillis, Instant lastReceivedAt,
+                Instant lastSuccessfulAt, Instant lastChangedAt, Long receivedSnapshotId, Long receivedOccurrenceId,
+                Long dataSnapshotId, String parserVersion, String payloadSha256, String normalizedSha256,
+                String completeness, Integer completenessScore, boolean previousData, Freshness freshness,
+                Table table, StatisticsPresentation.View statistics) {
+            this(endpoint, label, outcome, code, scope, lastAttemptAt, authorizationDelayMillis, lastReceivedAt,
+                    lastSuccessfulAt, lastChangedAt, receivedSnapshotId, receivedOccurrenceId, dataSnapshotId,
+                    parserVersion, payloadSha256, normalizedSha256, completeness, completenessScore,
+                    previousData, freshness, table, statistics, null);
+        }
+    }
+    public record CollectionSchedule(Instant nextDueAt, long intervalSeconds, long missedCycles, long latenessMillis) { }
     public record Freshness(String state, String label, long expectedIntervalSeconds,
                             Long receivedAgeSeconds, Instant ageAsOf, boolean frozen) { }
     public record Table(List<String> columns, List<List<String>> rows) { }

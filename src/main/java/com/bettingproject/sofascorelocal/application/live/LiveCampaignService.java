@@ -91,17 +91,20 @@ public final class LiveCampaignService {
                 .map(event -> new Target(event.identity().value(), event.identity().providerEventId(),
                         event.observationId(), event.source().snapshotId().orElseThrow())).toList();
         if (targets.isEmpty()) return new Preparation(null, excludedFinished, excludedPostponed);
-        admission.admit(targets.size());
-        Duration cycleInterval = LiveCadence.forMatches(targets.size());
+        AdmissionProfile profile = currentAdmissionProfile(true);
+        admission.admitV4(targets.size(), profile.groupedProfile());
+        Duration cycleInterval = Duration.ofSeconds(60);
         UUID id = UUID.randomUUID(); Instant now = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         long bytes = admission.maximumBytes(targets.size());
-        String material = id + "|live-v3|" + now + "|" + properties.getDuration() + "|1000|3000|" + bytes
-                + "|" + properties.getQualifiedMatchCapacity() + "|" + properties.getQualificationSha256()
-                + "|" + properties.getRequestEnvelope() + "|" + properties.getProcessingEnvelope()
-                + "|" + cycleInterval + "|" + targets;
-        Manifest manifest = new Manifest(id, Sha256.hex(material.getBytes(StandardCharsets.UTF_8)), "live-v3",
+        // Fixed order and explicit rules: a historic proof or a changed family envelope cannot
+        // silently authorize a new grouped manifest.
+        String material = id + "|live-v4|" + now + "|" + properties.getDuration() + "|1000|3000|" + bytes
+                + "|" + selectionMaximum() + "|" + profile + "|critical=60|lineups=300|prematch=60"
+                + "|intra=0|inter=3|sequential|maxGroup=4|order=J4,incidents,statistics,lineups"
+                + "|phaseCount=5|utilization=0.9|" + targets;
+        Manifest manifest = new Manifest(id, Sha256.hex(material.getBytes(StandardCharsets.UTF_8)), "live-v4",
                 now, now.plusSeconds(300), properties.getDuration(), 1000, 3000, bytes,
-                properties.getQualifiedMatchCapacity(), targets, currentAdmissionProfile(), cycleInterval);
+                selectionMaximum(), targets, profile, cycleInterval);
         return new Preparation(store.prepare(manifest), excludedFinished, excludedPostponed);
     }
 
@@ -149,7 +152,11 @@ public final class LiveCampaignService {
                 s.cleanupPending ? "LOCAL_CLEANUP_PENDING" : state,
                 true, s.cleanupPending, s.cleanupInProgress));
     }
-    public int selectionMaximum() { return properties.getQualifiedMatchCapacity(); }
+    public int selectionMaximum() {
+        try { return Math.min(properties.getQualifiedMatchCapacity(),
+                LiveAdmissionPolicy.qualifiedCapacityV4(properties.groupedAdmissionProfile())); }
+        catch (IllegalArgumentException | IllegalStateException invalidProfile) { return 0; }
+    }
     public Set<UUID> selectionBlockedEvents(Collection<UUID> ids) {
         Set<UUID> blocked = new HashSet<>();
         for (UUID id : ids) {
@@ -186,11 +193,14 @@ public final class LiveCampaignService {
                 || playwright.getRequestTimeout().compareTo(Duration.ofSeconds(10)) > 0)
             throw new IllegalStateException("LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY");
         if (!clock.instant().isBefore(current.manifest().expiresAt())) throw new IllegalArgumentException("LIVE_MANIFEST_EXPIRED");
-        if (!current.manifest().admissionProfile().equals(currentAdmissionProfile())
-                || current.manifest().qualifiedMatchCapacity() != properties.getQualifiedMatchCapacity()
+        boolean grouped = "live-v4".equals(current.manifest().policyVersion());
+        if (!current.manifest().admissionProfile().equals(currentAdmissionProfile(grouped))
+                || current.manifest().qualifiedMatchCapacity() != (grouped ? selectionMaximum() : properties.getQualifiedMatchCapacity())
                 || !current.manifest().duration().equals(properties.getDuration()))
             throw new IllegalArgumentException("LIVE_PREPARED_POLICY_CHANGED");
-        admission.admit(current.manifest().targets().size() - alreadyExcluded.size(), current.manifest().cycleInterval());
+        if (grouped) admission.admitV4(current.manifest().targets().size() - alreadyExcluded.size(),
+                current.manifest().admissionProfile().groupedProfile());
+        else admission.admit(current.manifest().targets().size() - alreadyExcluded.size(), current.manifest().cycleInterval());
         if (providerCleanupRequired()) throw new IllegalStateException("LIVE_PROVIDER_CLEANUP_REQUIRED");
         Session session = new Session(current.manifest());
         session.alreadyExcluded.putAll(alreadyExcluded);
@@ -211,8 +221,9 @@ public final class LiveCampaignService {
         return state(id);
     }
 
-    private AdmissionProfile currentAdmissionProfile() {
-        return new AdmissionProfile(properties.getRequestEnvelope(), properties.getProcessingEnvelope(), properties.getQualificationSha256());
+    private AdmissionProfile currentAdmissionProfile(boolean grouped) {
+        return new AdmissionProfile(properties.getRequestEnvelope(), properties.getProcessingEnvelope(),
+                properties.getQualificationSha256(), grouped ? properties.groupedAdmissionProfile() : null);
     }
 
     private boolean providerCleanupRequired() {
@@ -254,7 +265,7 @@ public final class LiveCampaignService {
             s.launchConfirmed = true;
             s.monotonicOrigin = System.nanoTime(); s.timeOrigin = started.startedAt();
             s.schedule = new LiveSchedule(s.manifest.targets().stream().map(Target::canonicalEventId).toList(),
-                    started.startedAt(), started.endsAt(), s.manifest.cycleInterval(), s.manifest.policyVersion());
+                    started.startedAt(), started.endsAt(), s.manifest.cycleInterval(), s.manifest.policyVersion(), s.manifest.campaignId());
             // Recheck local observations after admission and acquisition, before any browser exists.
             s.alreadyExcluded.putAll(locallyExcluded(s.manifest));
             s.alreadyExcluded.forEach(s.schedule::stopEvent);
@@ -262,7 +273,7 @@ public final class LiveCampaignService {
             s.launched.complete(null);
             if (s.stopReason != null || s.schedule.terminal()) return;
             startWatchdog(s);
-            transport = new LiveProviderSession(factory, s.manifest.campaignId());
+            transport = new LiveProviderSession(factory, s.manifest.campaignId(), s.manifest.policyVersion());
             long lastWake = System.nanoTime(); Instant lastWall = clock.instant();
             while (!s.schedule.terminal() && s.stopReason == null) {
                 Instant now = clock.instant();
@@ -277,7 +288,7 @@ public final class LiveCampaignService {
                 if (due.isPresent()) execute(s, transport, due.orElseThrow());
                 publishStates(s);
                 lastWake = System.nanoTime(); lastWall = clock.instant();
-                Thread.sleep(100);
+                if (due.isEmpty() || !"live-v4".equals(s.manifest.policyVersion())) Thread.sleep(100);
             }
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt(); s.stopAll("STOPPED_INTERRUPTED");
@@ -387,20 +398,28 @@ public final class LiveCampaignService {
     }
 
     private void execute(Session s, LiveProviderSession transport, LiveSchedule.Due due) {
-        CampaignView view = state(s.manifest.campaignId());
-        EventView event = view.events().stream().filter(e -> e.target().canonicalEventId().equals(due.eventId())).findFirst().orElseThrow();
-        int reservedRemaining = s.manifest.maximumCallsPerEvent() - event.reservedCalls();
-        if (!due.finalCycle() && (reservedRemaining <= 4 || s.manifest.maximumCalls() - view.reservedCalls() <= 4)) {
+        DispatchBudget budget = store.dispatchBudget(s.ownership, due.eventId());
+        int reservedRemaining = s.manifest.maximumCallsPerEvent() - budget.eventReservedCalls();
+        if (!due.finalCycle() && (reservedRemaining <= 4 || s.manifest.maximumCalls() - budget.reservedCalls() <= 4)) {
             s.schedule.reserveFinalCheck(due.eventId(), s.now()); return;
         }
-        admission.requireStorage(s.manifest.maximumBytes() - view.receivedBytes());
+        admission.requireStorage(s.manifest.maximumBytes() - budget.receivedBytes());
         var request = new AttemptRequest(s.ownership, UUID.randomUUID(), due.eventId(), due.cycle(), due.endpoint(),
-                due.kind(), due.dueAt(), clock.instant(), due.finalCycle());
+                due.kind(), due.dueAt(), clock.instant(), due.finalCycle(), due.groupId(), due.groupSequence(), due.groupOrdinal());
         var reservation = store.reserveAttempt(request);
-        if (reservation.isEmpty()) { s.schedule.stopEvent(due.eventId(), "STOPPED_LIMIT"); return; }
+        if (reservation.isEmpty()) {
+            // The ledger protects four final calls for every active event, so its
+            // ordinary budget may end while more than four global calls remain.
+            // A refused attempt has consumed no call or group identity. V4 can
+            // therefore use that event's final reserve without starving its peers.
+            if ("live-v4".equals(s.manifest.policyVersion()) && !due.finalCycle())
+                s.schedule.reserveFinalCheck(due.eventId(), s.now());
+            else s.schedule.stopEvent(due.eventId(), "STOPPED_LIMIT");
+            return;
+        }
         ReservedAttempt attempt = reservation.orElseThrow();
         try {
-            var response = transport.execute(attempt.providerEventId(), due.endpoint(), new PlaywrightDispatchAdmission() {
+            var dispatchAdmission = new PlaywrightDispatchAdmission() {
                 @Override public void check() {
                     if (s.stopReason != null || s.stoppedEvents.contains(due.eventId())
                             || !s.schedule.mayDispatch(due, s.now())
@@ -419,7 +438,14 @@ public final class LiveCampaignService {
                         return s.dispatchLock::unlock;
                     } catch (RuntimeException failure) { s.dispatchLock.unlock(); throw failure; }
                 }
-            });
+            };
+            var response = due.groupId() == null ? transport.execute(attempt.providerEventId(), due.endpoint(), dispatchAdmission)
+                    : transport.executeGrouped(attempt.providerEventId(), due.endpoint(),
+                            new LiveProviderDispatchGroup(s.manifest.campaignId(), due.groupId(), attempt.providerEventId(),
+                                    due.endpoint() == SofascoreEndpointType.EVENT_DETAILS ? LiveProviderDispatchGroup.Phase.CHECK
+                                    : due.finalCycle() || "FINALIZING".equals(budget.eventState()) ? LiveProviderDispatchGroup.Phase.FINALIZING
+                                    : "WAITING_START".equals(budget.eventState()) ? LiveProviderDispatchGroup.Phase.PREMATCH
+                                    : LiveProviderDispatchGroup.Phase.IN_PLAY), dispatchAdmission);
             String parser = due.endpoint() == SofascoreEndpointType.EVENT_DETAILS ? "event-details-v3"
                     : due.endpoint() == SofascoreEndpointType.EVENT_INCIDENTS ? "event-incidents-v17"
                     : due.endpoint() == SofascoreEndpointType.EVENT_STATISTICS ? "event-statistics-v2" : "event-lineups-v2";
@@ -465,6 +491,15 @@ public final class LiveCampaignService {
     }
 
     private void publishState(Session s, LiveSchedule.EventState state) {
+        if (s.schedule != null && "live-v4".equals(s.manifest.policyVersion())) {
+            for (FamilySchedule family : s.schedule.familySchedules(state.eventId())) {
+                String key = state.eventId() + ":" + family.endpoint();
+                if (!family.equals(s.publishedFamilies.get(key))) {
+                    store.updateFamilySchedule(s.ownership, state.eventId(), family, clock.instant());
+                    s.publishedFamilies.put(key, family);
+                }
+            }
+        }
         String previous = s.publishedStates.get(state.eventId());
         if (!state.state().equals(previous)) {
             store.transition(s.ownership, state.eventId(), state.state(), state.state(), clock.instant(), null);
@@ -524,6 +559,7 @@ public final class LiveCampaignService {
         final Map<UUID, String> alreadyExcluded = new LinkedHashMap<>();
         final ReentrantLock dispatchLock = new ReentrantLock(); final Set<UUID> stoppedEvents = ConcurrentHashMap.newKeySet();
         final Map<UUID,String> publishedStates = new HashMap<>(); final Map<UUID,LiveSchedule.EventState> publishedMetrics = new HashMap<>();
+        final Map<String,FamilySchedule> publishedFamilies = new HashMap<>();
         volatile String stopReason; volatile LiveSchedule schedule; volatile Ownership ownership; volatile boolean finished;
         volatile boolean cleanupPending, cleanupInProgress;
         final Object cleanupMonitor = new Object();

@@ -1,6 +1,6 @@
 # WO-SS-20260907-058 — Campagnes live locales J4/J5 sur sélection de rencontres
 
-- **Statut :** `IN_PROGRESS` — correctifs prématch, clôture, incidents V17, statistiques et résultats/report J4 V3/V38 qualifiés localement ; collecte opérateur du 07/09 terminée avec un arrêt de schéma historique Elche conservé ; revue humaine et fusion distinctes, aucune clôture.
+- **Statut :** `IN_PROGRESS` — live-v4/V39 réalisé, cadence locale à dix matchs qualifiée trente minutes après initialisation ; enveloppe historique 1 s/5 Mio non revalidée, échecs conservés ; revue humaine, essai de fraîcheur fournisseur et fusion distincts, aucune clôture.
 - **Date :** 2026-09-07.
 - **Jalon :** expérimentation live locale après J9, distincte des parcours manuels existants.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
@@ -8,7 +8,7 @@
 - **Base exacte :** `6dfd14286d4f269cbe100bd965257c20298538db`, sommet GitHub vérifié le 7 septembre.
 - **Worktree :** `.tmp/wo058-live-j4-j5`, depuis le dossier Codex du Lab ; worktree distinct d'Eclipse.
 - **Autorité reçue :** ADR-SS-005 v0.1 accepté, puis déclaration « Je valide le WO-058 les travaux peuvent commencer » et demande explicite d'exécuter le plan de réalisation ; port 8087 libéré pour les tests.
-- **ADR live courant :** [ADR-SS-005 v0.3](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), compositions prématch initiales puis périodiques explicitement confirmées ; capacité et cadence de la v0.2 conservées. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
+- **ADR live courant :** [ADR-SS-005 v0.4](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), plan d’implémentation explicitement demandé le 08/09 : minute fixe, appels regroupés J4/J5 et qualification soutenue. Les comportements v1–v3 restent historiques. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
 - **Livrable présent :** ADR accepté, WO validé, réalisation locale et qualification hors fournisseur ; état des preuves dans le rapport de réalisation.
 - **Alignement de gouvernance :** renvois ciblés dans ADR-SS-001 et AGENTS.md ; ADR-SS-002 à 004 inchangés.
 - **Réalisation applicative :** réalisée et qualifiée hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés ; compléments prématch/phase/clôture et incidents V16/V17 décrits dans les retours ci-dessous, statistiques intégrées aux pages ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur :** essai à 8 arrêté volontairement, essai à 16 interrompu après coupure PostgreSQL, puis nouveaux lancements manuels à 7 et à 4 ; dernière exécution terminée, observations distinctes des qualifications locales.
@@ -18,6 +18,56 @@ Les statuts restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 PostgreSQL local Docker Desktop et application sur `127.0.0.1:8087`, textes UTF-8.
 
 ## 1. Objectif et origine du besoin
+
+### Douzième retour — fraîcheur à une minute et groupes live-v4
+
+Le propriétaire a validé les correctifs précédents et constaté un retard de plusieurs minutes
+sur les campagnes multi-matchs. Après arbitrage, il demande explicitement l’implémentation du
+plan « Campagnes live à 60 secondes par match, avec appels regroupés ». La cible est J4,
+incidents et statistiques chaque minute pour dix matchs ; les compositions restent à cinq
+minutes pendant le jeu, avec une collecte initiale. Les budgets restent inchangés et la minute
+ne doit pas être allongée pour prolonger la campagne ou admettre une sélection excessive.
+
+Ce complément comprend ADR-SS-005 v0.4, contexte de groupe serveur jusqu’au superviseur,
+ordonnanceur phasé, admission par enveloppes qualifiées de famille, migration append-only V39,
+échéances et retards visibles, autonomie restante et timeout des lectures locales. Les anciennes
+préparations et leurs empreintes restent inchangées ; aucune requête fournisseur n’est autorisée
+par les tests. La qualification Chromium/PostgreSQL doit isoler l’initialisation et mesurer
+au moins trente minutes en régime établi avant toute annonce de capacité à dix matchs.
+
+Critères d’acceptation : P95 des intervalles J4/incidents/statistiques ≤65 s et maximum ≤75 s,
+LINEUPS nominal 300 s avec retard P95 ≤15 s, écran actualisé sous dix secondes en situation
+normale ; dégradation, annulation, budgets, reports, finalisation, équité, upgrade V38 prérempli,
+concurrence et sauvegarde/restauration couverts. Les commandes Maven, mesures, écarts et capacités
+effectivement prouvées sont consignés dans le
+[rapport live-v4](../../validation/WO058-GROUPED-LIVE-V4-20260908.md).
+
+La mesure native terminée le 08/09 à 11:22:23Z couvre 1 128 appels, dont 960 pendant
+1 800,0136 secondes établies après cinq minutes initiales, sans cycle manqué. Les 40 couples
+match/famille passent ; maximum de réception critique 60,520 s, retard LINEUPS P95 1,874 s.
+Le candidat de traitement à 200 ms est rejeté. Le nouveau profil de coûts par famille contient
+les maxima établis sur 64 Kio et admet dix matchs ; la vague initiale de quarante corps de
+5 Mio est prouvée séparément. Les corps récurrents de 5 Mio et le réseau SofaScore ne sont
+pas qualifiés par ces enveloppes. Aucun profil opérateur n'est abaissé automatiquement.
+L'admission finale rejoue quarante scénarios, dont la fin des dix rencontres au même tour,
+en plus des cohortes, cinq phases et variations de durée. Le rendu de trente familles sur
+dix rencontres passe sous dix secondes : 4,940 s puis 4,880 s avec contenu inchangé reçu à nouveau.
+
+`clean verify` final passe à 12:23:20Z (1 725 Surefire, 144 Failsafe), puis
+`-Pintegration-tests verify` à 12:29:12Z avec les mêmes effectifs, sans échec ni erreur.
+Les cinq skips Surefire sont les conditions Windows/opt-in historiques documentées ; aucun
+skip d'intégration. La qualification Chromium finale des parcours historiques et de l'UI
+est consignée dans le rapport de validation avec les empreintes des preuves.
+Le smoke groupé final et l'affichage à dix matchs passent le 08/09 à 12:32:02Z :
+deux tests, zéro échec/erreur/ignoré, 72 appels sur 120 secondes sans cycle manqué ; rendu
+des publications en 4,932 et 4,938 secondes dans la dernière passe.
+La qualification historique de coût des corps de 5 Mio échoue sur sa borne d'une seconde,
+puis échoue encore au recontrôle identique (cas 5/10/25, maximum 1,254 s). Aucune assertion
+n'est affaiblie et le bilan natif global n'est pas déclaré vert. Cette enveloppe historique
+non reproduite est distincte de la preuve live-v4 en régime établi de 64 Kio.
+
+La comparaison avec SofaScore reste une campagne opérateur distincte. Ce travail ne migre pas
+la base de l’opérateur, ne relance pas une ancienne campagne et ne constitue pas la clôture du WO.
 
 ### Onzième retour — résultats J4 et report après lancement
 

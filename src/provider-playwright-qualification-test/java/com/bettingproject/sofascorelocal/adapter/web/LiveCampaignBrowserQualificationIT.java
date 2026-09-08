@@ -22,6 +22,66 @@ class LiveCampaignBrowserQualificationIT {
     private static final String CAMPAIGN = "00000000-0000-0000-0000-000000000058";
 
     @Test
+    @Timeout(60)
+    void blockedLocalReadTimesOutWithoutErasingDataAndPollingRecovers() throws Exception {
+        assertThat(System.getProperty("provider.playwright.browser-cache", "")).isNotBlank();
+        AtomicInteger gets = new AtomicInteger();
+        AtomicInteger revision = new AtomicInteger(10);
+        AtomicInteger external = new AtomicInteger();
+        var release = new java.util.concurrent.CountDownLatch(1);
+        HttpServer server = HttpServer.create(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0), 0);
+        server.setExecutor(java.util.concurrent.Executors.newVirtualThreadPerTaskExecutor());
+        server.createContext("/", exchange -> {
+            String path = exchange.getRequestURI().getPath();
+            if (!"GET".equals(exchange.getRequestMethod())) { send(exchange, 405, "text/plain", ""); return; }
+            if (path.equals("/events/state")) {
+                int number = gets.incrementAndGet();
+                if (number == 2) {
+                    try { release.await(40, java.util.concurrent.TimeUnit.SECONDS); }
+                    catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+                }
+                try { send(exchange, 200, "application/json", state(revision.get())); }
+                catch (IOException cancelledClient) { exchange.close(); }
+            } else if (path.equals("/js/live-campaign.js")) {
+                try (var script = getClass().getResourceAsStream("/static/js/live-campaign.js")) {
+                    send(exchange, 200, "text/javascript", new String(script.readAllBytes(), StandardCharsets.UTF_8));
+                }
+            } else if (path.equals("/events")) send(exchange, 200, "text/html", page());
+            else send(exchange, 404, "text/plain", "");
+        });
+        server.start();
+        String origin = "http://127.0.0.1:" + server.getAddress().getPort();
+        try (Playwright playwright = Playwright.create();
+             Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+             BrowserContext context = browser.newContext(new Browser.NewContextOptions()
+                     .setAcceptDownloads(false).setServiceWorkers(ServiceWorkerPolicy.BLOCK))) {
+            context.route("**/*", route -> {
+                if (route.request().url().startsWith(origin + "/")) route.resume();
+                else { external.incrementAndGet(); route.abort(); }
+            });
+            Page page = context.newPage();
+            page.navigate(origin + "/events");
+            page.waitForCondition(() -> "10 – 0".equals(page.locator("[data-live-score]").textContent()));
+            page.locator("input[name=eventId]").check();
+            page.waitForCondition(() -> gets.get() == 2);
+            long blockedAt = System.nanoTime();
+            page.waitForCondition(() -> page.locator("[data-live-refresh-status]").textContent().contains("dix secondes"),
+                    new Page.WaitForConditionOptions().setTimeout(12500));
+            assertThat(java.time.Duration.ofNanos(System.nanoTime() - blockedAt).toMillis()).isBetween(8500L, 12000L);
+            assertThat(page.locator("[data-live-score]").textContent()).isEqualTo("10 – 0");
+            assertThat(page.locator("input[name=eventId]").isChecked()).isTrue();
+            revision.set(11);
+            long publishedAt = System.nanoTime();
+            page.waitForCondition(() -> "11 – 0".equals(page.locator("[data-live-score]").textContent()),
+                    new Page.WaitForConditionOptions().setTimeout(10000));
+            assertThat(java.time.Duration.ofNanos(System.nanoTime() - publishedAt).toMillis()).isLessThan(10000);
+            assertThat(gets.get()).isGreaterThanOrEqualTo(3);
+            assertThat(page.locator("input[name=eventId]").isChecked()).isTrue();
+            assertThat(external.get()).isZero();
+        } finally { release.countDown(); server.stop(0); }
+    }
+
+    @Test
     @Timeout(120)
     void nativeChromiumPreservesSelectionFocusAndFreshnessAcrossLocalRefreshes() throws Exception {
         String configured = System.getProperty("provider.playwright.browser-cache", "");

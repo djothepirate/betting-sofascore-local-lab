@@ -1,6 +1,16 @@
 # SofaScore Local Lab
 
-**Réalisation live J4/J5 — 7 septembre 2026 :** le
+**Politique live-v4 — 8 septembre 2026 :** les nouvelles préparations visent J4, incidents et
+statistiques toutes les 60 secondes par match, avec compositions initiales puis réparties sur
+cinq minutes. Les appels d’un match sont regroupés et séquentiels, avec trois secondes entre
+groupes. La sélection est limitée par une preuve de capacité dédiée ; une minute pour dix
+matchs doit être qualifiée, et les profils historiques ne sont pas abaissés automatiquement.
+V39 conserve les anciennes empreintes et ajoute l’audit des groupes et échéances. Voir
+[ADR-SS-005 v0.4](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), le
+[runbook actuel](docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md) et les
+[preuves v4](docs/validation/WO058-GROUPED-LIVE-V4-20260908.md).
+
+**Historique live J4/J5 — 7 septembre 2026 :** le
 [WO-058](docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md) est aligné sur
 [ADR-SS-005 v0.2](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), après acceptation formelle
 de la v0.1 puis demande explicite d'un plafond paramétrable, y compris 10 et 25 rencontres.

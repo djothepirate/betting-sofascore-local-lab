@@ -82,6 +82,8 @@
       ["Dernière tentative réservée", "attempted"], ["Retard à l’autorisation transport", "delay"],
       ["Dernière réception", "received"], ["Dernier succès", "successful"],
       ["Dernier changement", "changed"], ["Âge depuis réception", "age"],
+      ["Cadence cible", "family-interval"], ["Prochaine collecte", "family-next-due"],
+      ["Retard de collecte", "family-lateness"],
       ["Complétude dernière tentative", "completeness"], ["Snapshot reçu / donnée lisible", "snapshots"],
       ["Occurrence reçue", "occurrence"], ["Parseur de la donnée lisible", "parser"],
       ["Hash source de la donnée lisible", "payload-hash"], ["Hash normalisé", "hash"]
@@ -147,6 +149,11 @@
     text(section, "[data-live-received]", family.lastReceivedAt);
     text(section, "[data-live-successful]", family.lastSuccessfulAt);
     text(section, "[data-live-changed]", family.lastChangedAt);
+    text(section, "[data-live-family-interval]", family.schedule ? `${family.schedule.intervalSeconds} s` : "—");
+    text(section, "[data-live-family-next-due]", family.schedule
+      ? family.schedule.nextDueAt || "Aucune collecte programmée" : "—");
+    text(section, "[data-live-family-lateness]", family.schedule?.nextDueAt
+      ? `${Math.ceil(family.schedule.latenessMillis / 1000)} s` : "—");
     text(section, "[data-live-completeness]", family.completeness
       ? `${family.completeness}${family.completenessScore === null ? "" : ` · ${family.completenessScore} %`}` : "—");
     text(section, "[data-live-snapshots]", `${family.receivedSnapshotId ?? "—"} / ${family.dataSnapshotId ?? "—"}`);
@@ -200,6 +207,8 @@
       text(monitor, "[data-live-ends-at]", campaign.endsAt || "Fixée au lancement");
       text(monitor, "[data-live-calls]", `${campaign.reservedCalls} / ${campaign.maximumCalls}`);
       text(monitor, "[data-live-bytes]", `${campaign.receivedBytes} / ${campaign.maximumBytes}`);
+      if (campaign.cadence) text(monitor, "[data-live-autonomy]",
+        `${Math.floor(campaign.cadence.estimatedRemainingSeconds / 60)} minutes environ`);
       const globalStop = monitor.querySelector("[data-live-global-stop-form]");
       if (globalStop) {
         globalStop.hidden = campaign.state !== "RUNNING" && !cleanupPending;
@@ -289,7 +298,10 @@
   async function refresh() {
     if (document.hidden || request) return;
     const currentGeneration = generation;
-    request = new AbortController();
+    const controller = new AbortController();
+    request = controller;
+    let timedOut = false;
+    const deadline = setTimeout(() => { timedOut = true; controller.abort(); }, 10000);
     try {
       const url = new URL(monitor.dataset.liveStateUrl, location.href);
       if (url.origin !== location.origin) throw new Error("LOCAL_URL_REQUIRED");
@@ -299,7 +311,7 @@
         });
       }
       const response = await fetch(url, {method: "GET", mode: "same-origin", credentials: "same-origin",
-        cache: "no-store", redirect: "error", headers: {Accept: "application/json"}, signal: request.signal});
+        cache: "no-store", redirect: "error", headers: {Accept: "application/json"}, signal: controller.signal});
       if (!response.ok) throw new Error("LOCAL_READ_UNAVAILABLE");
       const state = await response.json();
       if (document.hidden || currentGeneration !== generation) return;
@@ -308,8 +320,12 @@
       if (status) status.textContent = campaigns.length === 0 ? "Aucune campagne live enregistrée pour cette sélection."
         : `Lecture locale à ${new Date().toLocaleTimeString("fr-FR", {timeZone: "Europe/Paris"})} · Europe/Paris`;
     } catch (error) {
-      if (error.name !== "AbortError" && status) status.textContent = "Lecture locale indisponible ; les dernières données affichées sont conservées.";
+      if (currentGeneration === generation && !document.hidden && status && (timedOut || error.name !== "AbortError"))
+        status.textContent = timedOut
+          ? "Lecture locale interrompue après dix secondes ; dernières données conservées, nouvelle tentative dans cinq secondes."
+          : "Lecture locale indisponible ; les dernières données affichées sont conservées.";
     } finally {
+      clearTimeout(deadline);
       request = null;
       updateAges();
       if (!document.hidden) timer = setTimeout(refresh, 5000);

@@ -12,11 +12,19 @@ public final class LiveProviderSession implements AutoCloseable {
             SofascoreEndpointType.EVENT_INCIDENTS, SofascoreEndpointType.EVENT_LINEUPS);
     private final PlaywrightProviderCampaign campaign;
     public LiveProviderSession(PlaywrightProviderCampaignFactory factory, UUID campaignId) {
-        campaign = factory.open(campaignId, ENDPOINTS);
+        this(factory, campaignId, "live-v3");
+    }
+    public LiveProviderSession(PlaywrightProviderCampaignFactory factory, UUID campaignId, String policyVersion) {
+        campaign = "live-v4".equals(policyVersion) ? factory.openLiveGrouped(campaignId, ENDPOINTS)
+                : factory.open(campaignId, ENDPOINTS);
     }
     public PlaywrightProviderResponse execute(long providerId, SofascoreEndpointType endpoint,
                                                PlaywrightDispatchAdmission admission) {
         return campaign.execute(new PlaywrightProviderRequest(endpoint, null, 0, 0, providerId), admission);
+    }
+    public PlaywrightProviderResponse executeGrouped(long providerId, SofascoreEndpointType endpoint,
+            LiveProviderDispatchGroup group, PlaywrightDispatchAdmission admission) {
+        return campaign.executeGrouped(new PlaywrightProviderRequest(endpoint, null, 0, 0, providerId), group, admission);
     }
     @Override public void close() { campaign.close(); }
 }

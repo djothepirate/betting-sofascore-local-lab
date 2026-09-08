@@ -817,6 +817,10 @@ from (
     union all select 'LIVE_RECEIPT|' || to_jsonb(t)::text from live_call_receipt t
     union all select 'LIVE_RESULT|' || to_jsonb(t)::text from live_call_result t
     union all select 'LIVE_TRANSITION|' || to_jsonb(t)::text from live_transition t
+    union all select 'LIVE_GROUPED_POLICY|' || to_jsonb(t)::text from live_grouped_policy t
+    union all select 'LIVE_CALL_GROUP|' || to_jsonb(t)::text from live_call_group t
+    union all select 'LIVE_FAMILY_SCHEDULE|' || to_jsonb(t)::text from live_family_schedule t
+    union all select 'LIVE_FAMILY_SCHEDULE_REVISION|' || to_jsonb(t)::text from live_family_schedule_revision t
     union all select 'PROVIDER_GUARD|' || to_jsonb(t)::text from provider_campaign_guard t
 ) live_evidence
 '@
@@ -857,8 +861,8 @@ try {
     }
 
     $sourceFlywayVersion = Invoke-PrimaryScalar -Sql $flywaySql
-    if ($sourceFlywayVersion -cne '38') {
-        throw 'Flyway V38 must be applied before the J6 backup/restore qualification.'
+    if ($sourceFlywayVersion -cne '39') {
+        throw 'Flyway V39 must be applied before the J6 backup/restore qualification.'
     }
     $providerGuardState = Invoke-PrimaryScalar -Sql 'select state from provider_campaign_guard where singleton_id=1'
     $activeLiveCount = [long](Invoke-PrimaryScalar -Sql "select count(*) from live_campaign where state in ('RUNNING','CLEANUP_REQUIRED')")

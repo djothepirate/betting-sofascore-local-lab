@@ -524,8 +524,8 @@
       <p class="muted">Les observations de corpus synthétiques restent consultables ; seules les rencontres issues d’un snapshot fournisseur sont éligibles.</p>
       <p class="muted">Les rencontres déjà terminées (finished) ou reportées (postponed) sont exclues de la préparation, sans appel fournisseur. Si toute la sélection est exclue, aucune campagne n’est créée. Un report constaté par J4 pendant une campagne arrête le suivi de la rencontre concernée.</p>
       <p class="muted">Les rencontres d’une campagne en cours ne peuvent pas être sélectionnées à nouveau, sauf en cas de STOPPED_ERROR.</p>
-      <p class="muted">Plafond par campagne : <span th:text="${liveSelectionMaximum}">1</span> rencontres éligibles.
-        L’intervalle de collecte dépend du nombre retenu : 60 secondes jusqu’à trois rencontres, puis 30 secondes supplémentaires par rencontre.</p>
+      <p class="muted">Capacité qualifiée par campagne : <span th:text="${liveSelectionMaximum}">0</span> rencontres à une cible de 60 secondes pour J4, les incidents et les statistiques. Les compositions pendant le jeu sont réparties sur cinq minutes. Une sélection excessive est refusée.</p>
+      <p class="notice notice-warning" th:if="${liveSelectionMaximum == 0}">La politique live-v4 attend un profil de groupes qualifié. Aucune capacité à une minute n’est actuellement disponible.</p>
       <div class="actions"><button type="submit" class="button" data-live-prepare>Préparer la campagne live</button>
         <span data-live-selection-count role="status">0 rencontre sélectionnée</span></div>
       <p class="muted" data-live-eligible-count role="status"></p>

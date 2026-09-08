@@ -1,0 +1,43 @@
+package com.bettingproject.sofascorelocal.domain.live;
+
+import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.*;
+import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
+import java.time.Duration;
+import java.util.EnumMap;
+import java.util.List;
+import java.util.Map;
+import org.junit.jupiter.api.Test;
+import static org.assertj.core.api.Assertions.*;
+
+class LiveGroupedDataTest {
+    private static Map<SofascoreEndpointType,EndpointEnvelope> envelopes() {
+        Map<SofascoreEndpointType,EndpointEnvelope> result=new EnumMap<>(SofascoreEndpointType.class);
+        for(SofascoreEndpointType endpoint:List.of(SofascoreEndpointType.EVENT_DETAILS,SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS,SofascoreEndpointType.EVENT_LINEUPS))
+            result.put(endpoint,new EndpointEnvelope(Duration.ofMillis(500),Duration.ofMillis(100)));
+        return result;
+    }
+    @Test void qualifiedGroupedProfileCopiesAllFourEnvelopesAndRetainsExactPolicy() {
+        var source=envelopes();var profile=new GroupedAdmissionProfile(source,"a".repeat(64));source.clear();
+        assertThat(profile.endpointEnvelopes()).hasSize(4);
+        assertThatThrownBy(()->profile.endpointEnvelopes().clear()).isInstanceOf(UnsupportedOperationException.class);
+        assertThat(profile.envelope(SofascoreEndpointType.EVENT_DETAILS).exchangeEnvelope()).isEqualTo(Duration.ofMillis(600));
+        assertThat(profile.criticalInterval()).isEqualTo(Duration.ofSeconds(60));
+        assertThat(profile.lineupInterval()).isEqualTo(Duration.ofSeconds(300));
+        assertThat(profile.intraGroupDelay()).isEqualTo(Duration.ZERO);
+        assertThat(profile.interGroupDelay()).isEqualTo(Duration.ofSeconds(3));
+        assertThat(profile.maximumUtilization()).isEqualTo(0.9);
+    }
+    @Test void previousAdmissionProofDoesNotGrantGroupedQualification() {
+        assertThat(new AdmissionProfile(Duration.ofSeconds(1),Duration.ofSeconds(1),"a".repeat(64)).groupedProfile()).isNull();
+        assertThatThrownBy(()->new GroupedAdmissionProfile(envelopes(),"")).isInstanceOf(IllegalArgumentException.class);
+        var incomplete=envelopes();incomplete.remove(SofascoreEndpointType.EVENT_LINEUPS);
+        assertThatThrownBy(()->new GroupedAdmissionProfile(incomplete,"a".repeat(64))).isInstanceOf(IllegalArgumentException.class);
+    }
+    @Test void groupedCostsAndFamilySchedulesRejectInvalidBounds() {
+        assertThatThrownBy(()->new EndpointEnvelope(Duration.ZERO,Duration.ZERO)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(()->new EndpointEnvelope(Duration.ofSeconds(11),Duration.ZERO)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(()->new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS,null,0,0)).isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(()->new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS,null,60,-1)).isInstanceOf(IllegalArgumentException.class);
+    }
+}

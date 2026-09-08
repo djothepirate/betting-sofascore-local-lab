@@ -102,4 +102,30 @@ class LiveCampaignPropertiesTest {
         ConfigurationPropertySources.attach(environment);
         return Binder.get(environment).bind("sofascore.live", Bindable.of(LiveCampaignProperties.class)).get();
     }
+
+    @Test
+    void historicQualificationNeverGrantsTheGroupedException() throws Exception {
+        var properties = bind(Map.of("SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY", "20",
+                "SOFASCORE_LIVE_QUALIFICATION_SHA256", "a".repeat(64),
+                "SOFASCORE_LIVE_REQUEST_ENVELOPE", "1000ms"));
+        assertThatThrownBy(properties::groupedAdmissionProfile).isInstanceOf(IllegalStateException.class)
+                .hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
+    }
+
+    @Test
+    void dedicatedProofBindsFamilyCostsWithoutLoweringHistoricalOrUnspecifiedEnvelopes() throws Exception {
+        var properties = bind(Map.of("SOFASCORE_LIVE_GROUPED_QUALIFICATION_SHA256", "b".repeat(64),
+                "SOFASCORE_LIVE_GROUPED_J4_REQUEST_ENVELOPE", "250ms",
+                "SOFASCORE_LIVE_GROUPED_INCIDENTS_PROCESSING_ENVELOPE", "100ms"));
+        var profile = properties.groupedAdmissionProfile();
+        assertThat(profile.qualificationSha256()).isEqualTo("b".repeat(64));
+        assertThat(profile.envelope(com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType.EVENT_DETAILS)
+                .requestEnvelope()).isEqualTo(Duration.ofMillis(250));
+        assertThat(profile.envelope(com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType.EVENT_INCIDENTS)
+                .processingEnvelope()).isEqualTo(Duration.ofMillis(100));
+        assertThat(profile.envelope(com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType.EVENT_LINEUPS)
+                .requestEnvelope()).isEqualTo(Duration.ofSeconds(10));
+        assertThat(properties.getRequestEnvelope()).isEqualTo(Duration.ofSeconds(10));
+        assertThat(properties.isEnabled()).isFalse();
+    }
 }

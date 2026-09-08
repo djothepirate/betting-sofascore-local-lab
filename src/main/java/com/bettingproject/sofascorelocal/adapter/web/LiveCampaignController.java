@@ -129,9 +129,9 @@ public class LiveCampaignController {
             case "LIVE_ALL_EVENTS_FINISHED" -> "Ces rencontres sont déjà terminées (finished). Aucun lancement live ni appel fournisseur n’a été effectué. Revenir aux rencontres pour préparer une autre sélection.";
             case "LIVE_ALL_EVENTS_INELIGIBLE" -> "Ces rencontres sont reportées (postponed) ou déjà terminées (finished). Aucun lancement live ni appel fournisseur n’a été effectué. Revenir aux rencontres pour préparer une autre sélection.";
             case "LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY" ->
-                    "Le nombre de rencontres éligibles dépasse le plafond configuré pour une campagne. Réduire la sélection ou ajuster ce plafond dans la configuration live. Les rencontres terminées (finished) ou reportées (postponed) ne comptent pas dans cette limite.";
+                    "La sélection dépasse la capacité qualifiée à 60 secondes : " + campaigns.selectionMaximum() + " rencontres admissibles. Réduire la sélection. Les rencontres terminées ou reportées sont exclues.";
             case "LIVE_CAPACITY_REFUSED_REDUCE_SELECTION" ->
-                    "Le profil de charge configuré ne permet pas de servir cette sélection dans son intervalle de collecte. Réduire la sélection ou utiliser un profil de charge qualifié selon le runbook.";
+                    "La cible de 60 secondes ne peut pas être tenue avec ce profil pour cette sélection. Capacité admissible : " + campaigns.selectionMaximum() + " rencontres. Réduire la sélection ; la cadence ne sera pas allongée.";
             default -> "La sélection ou le manifeste est invalide. Préparer une nouvelle campagne.";
         };
         model.addAttribute("liveError", message);
@@ -154,7 +154,7 @@ public class LiveCampaignController {
                  "LIVE_EVENT_ALREADY_IN_CAMPAIGN", "LIVE_STORAGE_PROBE_NOT_CONFIGURED",
                  "LIVE_STORAGE_PROBE_TIMEOUT", "LIVE_STORAGE_PROBE_FAILED", "LIVE_STORAGE_PROBE_INVALID",
                  "LIVE_STORAGE_PROBE_INTERRUPTED", "LIVE_STORAGE_CAPACITY_REFUSED", "LIVE_POLICY_INVALID",
-                 "LIVE_CAPACITY_QUALIFICATION_REQUIRED", "LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY" -> exception.getMessage();
+                 "LIVE_CAPACITY_QUALIFICATION_REQUIRED", "LIVE_GROUPED_QUALIFICATION_REQUIRED", "LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY" -> exception.getMessage();
             default -> "LIVE_REQUEST_REJECTED";
         };
         String message = switch (code) {
@@ -165,6 +165,7 @@ public class LiveCampaignController {
             case "LIVE_STORAGE_CAPACITY_REFUSED" -> "L’espace libre du volume PostgreSQL est insuffisant pour le budget de cette sélection et sa réserve de sécurité. Prévoir davantage d’espace ou réduire la sélection avant une nouvelle préparation. Aucun appel fournisseur n’a été effectué par cette demande.";
             case "LIVE_POLICY_INVALID" -> "Les limites de la campagne locale sont invalides. Vérifier la durée, la capacité, les délais et la réserve de stockage dans la configuration live avant une nouvelle préparation.";
             case "LIVE_CAPACITY_QUALIFICATION_REQUIRED" -> "Cette capacité ou cette cadence exige une preuve de qualification. Pour le pilote initial, conserver une rencontre et l’enveloppe de requête de dix secondes.";
+            case "LIVE_GROUPED_QUALIFICATION_REQUIRED" -> "La politique live-v4 exige une preuve de qualification dédiée aux groupes et un coût qualifié pour chaque famille. Capacité actuellement disponible à une minute : zéro. Configurer le profil qualifié décrit dans le runbook, puis préparer une nouvelle sélection.";
             case "LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY" -> "Le délai maximal d’une requête live doit être compris entre zéro exclu et dix secondes. Corriger le délai Playwright avant le lancement.";
             case "LIVE_DISABLED" -> "Le lancement live est désactivé. Activer l’opt-in local dédié avant de lancer une campagne préparée.";
             case "LIVE_PROVIDER_BUSY" -> "Une collecte fournisseur occupe déjà la session locale. Attendre sa fin avant de lancer cette campagne.";

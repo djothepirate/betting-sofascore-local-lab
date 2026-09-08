@@ -9,6 +9,8 @@ import com.bettingproject.sofascorelocal.domain.provider.*;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEventStatus;
 import com.bettingproject.sofascorelocal.port.*;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.ObjectProvider;
 
 import java.nio.charset.StandardCharsets;
@@ -79,9 +81,9 @@ class LiveCampaignCleanupTest {
         }
     }
 
-    @Test
-    void aCommittedLaunchWithALostReplyTerminatesItsDurableEventsWithoutCreatingAScheduleOrTransport() throws Exception {
-        try (Harness h = new Harness()) {
+    @ParameterizedTest @ValueSource(strings={"live-v3","live-v4"})
+    void aCommittedLaunchWithALostReplyTerminatesItsDurableEventsWithoutCreatingAScheduleOrTransport(String policyVersion) throws Exception {
+        try (Harness h = new Harness(policyVersion)) {
             h.failLaunchAfterCommit.set(true);
             assertThatThrownBy(() -> h.service.launch(h.id(), h.manifest.manifestSha256()))
                     .isInstanceOf(IllegalStateException.class).hasMessage("LIVE_LAUNCH_FAILED");
@@ -96,6 +98,7 @@ class LiveCampaignCleanupTest {
             assertThat(h.nextDue.get()).isNull();
             assertThat(h.dispatches).hasValue(0);
             assertThat(h.guardState.get()).isEqualTo("FREE");
+            verify(h.store,never()).updateFamilySchedule(any(),any(),any(),any());
             verifyNoInteractions(h.factory, h.campaign);
         }
     }
@@ -499,19 +502,29 @@ class LiveCampaignCleanupTest {
         final LiveCampaignService service;
         boolean abandonOnShutdown;
 
-        Harness() {
+        Harness() { this("live-v3"); }
+        Harness(String policyVersion) {
             var provider = new SofascoreProperties(); provider.setEnabled(true);
             var playwright = new ProviderPlaywrightProperties(); playwright.setEnabled(true);
             var properties = new LiveCampaignProperties(); properties.setEnabled(true);
             properties.setDuration(Duration.ofMinutes(5)); properties.setQualifiedMatchCapacity(1);
             properties.setQualificationSha256("a".repeat(64));
+            if ("live-v4".equals(policyVersion)) {
+                // Synthetic qualification lets this test reach the uncertain launch;
+                // the conservative production envelope does not qualify fixed-minute traffic.
+                properties.getGrouped().setQualificationSha256("c".repeat(64));
+                properties.getGrouped().getEndpoints().values().forEach(budget->{
+                    budget.setRequestEnvelope(Duration.ofMillis(500));
+                    budget.setProcessingEnvelope(Duration.ofMillis(100));
+                });
+            }
             Instant now = Instant.now();
             var identity = CanonicalEventIdentity.sofascore(17000001L);
-            manifest = new Manifest(UUID.randomUUID(), "b".repeat(64), "live-v3", now, now.plusSeconds(300),
+            manifest = new Manifest(UUID.randomUUID(), "b".repeat(64), policyVersion, now, now.plusSeconds(300),
                     properties.getDuration(), 1000, 3000, 20_000_000, 1,
                     List.of(new Target(identity.value(), identity.providerEventId(), 1, 1)),
                     new AdmissionProfile(properties.getRequestEnvelope(), properties.getProcessingEnvelope(),
-                            properties.getQualificationSha256()));
+                            properties.getQualificationSha256(),"live-v4".equals(policyVersion) ? properties.groupedAdmissionProfile() : null));
             coordinator = new ManualProviderRequestCoordinator(provider, provided(guard), provided(supervisor));
             when(guard.snapshot()).thenAnswer(call -> {
                 database(); boolean free = "FREE".equals(guardState.get());
@@ -553,6 +566,10 @@ class LiveCampaignCleanupTest {
             when(factory.open(id(), LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
             when(store.find(id())).thenAnswer(call -> {
                 database(); return Optional.of(view());
+            });
+            when(store.dispatchBudget(any(),any())).thenAnswer(call -> {
+                database(); requireOwner(call.getArgument(0));
+                return new DispatchBudget(dispatches.get(),0,0,eventState.get());
             });
             when(store.launch(eq(id()), eq(manifest.manifestSha256()), any(), any())).thenAnswer(call -> {
                 database(); requireOwner(call.getArgument(2)); owner.set(Thread.currentThread());

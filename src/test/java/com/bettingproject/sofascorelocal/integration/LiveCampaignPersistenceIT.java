@@ -53,6 +53,103 @@ class LiveCampaignPersistenceIT {
     private static final long EVENT=58_001;
 
     @Test
+    void upgradingV38RetainsHistoricalEvidenceAndRequiresExplicitGroupedPolicyForV4() {
+        Fixture f=fixture("38"); Target target=f.seed(EVENT); Manifest old=f.manifest(target,100);
+        Ownership own=f.start(old); ReservedAttempt historical=f.reserve(own,target,0,SofascoreEndpointType.EVENT_DETAILS);
+        Map<String,List<Map<String,Object>>> before=new LinkedHashMap<>();
+        for(String table:List.of("live_campaign","live_event","provider_snapshot","canonical_event_observation","event_detail_observation"))
+            before.put(table,f.jdbc.queryForList("select to_jsonb(t)::text as row from "+table+" t order by to_jsonb(t)::text"));
+        String oldCall=f.jdbc.queryForObject("select to_jsonb(t)::text from live_call t",String.class);
+        assertThat(f.migrate("39").migrationsExecuted).isEqualTo(1);
+        before.forEach((table,rows)->assertThat(f.jdbc.queryForList("select to_jsonb(t)::text as row from "+table+" t order by to_jsonb(t)::text")).isEqualTo(rows));
+        assertThat(f.jdbc.queryForObject("select (to_jsonb(t)-'group_id'-'group_sequence'-'group_ordinal')::text from live_call t",String.class)).isEqualTo(oldCall);
+        assertThat(f.store.find(old.campaignId()).orElseThrow().manifest()).isEqualTo(old);
+        assertThat(f.store.find(old.campaignId()).orElseThrow().attempts().getFirst().attempt()).isEqualTo(historical);
+        assertThat(f.jdbc.queryForObject("select count(*) from live_grouped_policy",Long.class)).isZero();
+        assertThat(f.migrate("39").migrationsExecuted).isZero();
+        assertThatThrownBy(()->f.jdbc.update("""
+            insert into live_campaign(campaign_id,manifest_sha256,policy_version,prepared_at,expires_at,duration_seconds,
+                maximum_calls_per_event,maximum_calls,maximum_bytes,qualified_match_capacity,target_count,
+                request_envelope_nanos,processing_envelope_nanos,qualification_sha256,cycle_interval_seconds)
+            values (?,?,'live-v4',?,?,14400,100,100,100000000,1,1,500000000,100000000,'',60)
+            """,UUID.randomUUID(),"f".repeat(64),java.sql.Timestamp.from(T0),java.sql.Timestamp.from(T0.plusSeconds(300))))
+                .hasMessageContaining("immutable qualified grouped profile");
+    }
+
+    @Test
+    void groupedPolicyAttemptsAndFamilySchedulesRoundTripWithOwnershipAndImmutableEvidence() {
+        Fixture f=fixture("39"); Target target=f.seed(EVENT); Manifest manifest=groupedManifest(List.of(target));
+        Ownership own=f.start(manifest); UUID group=UUID.randomUUID();
+        assertThat(f.store.find(manifest.campaignId()).orElseThrow().manifest()).isEqualTo(manifest);
+        assertThat(f.store.prepare(manifest)).isEqualTo(manifest);
+        AttemptRequest first=groupedRequest(own,target,0,SofascoreEndpointType.EVENT_DETAILS,group,0,0);
+        ReservedAttempt reserved=f.store.reserveAttempt(first).orElseThrow();
+        assertThat(f.store.reserveAttempt(first)).contains(reserved);
+        assertThat(reserved.groupId()).isEqualTo(group);
+        f.store.reserveAttempt(groupedRequest(own,target,0,SofascoreEndpointType.EVENT_INCIDENTS,group,0,1)).orElseThrow();
+        assertThat(f.store.dispatchBudget(own,target.canonicalEventId())).isEqualTo(new DispatchBudget(2,0,2,"INITIAL_CHECK"));
+        assertThatThrownBy(()->f.store.dispatchBudget(new Ownership(own.campaignId(),own.instanceId(),own.generation()+1),target.canonicalEventId()))
+                .hasMessageContaining("ownership is stale");
+        FamilySchedule schedule=new FamilySchedule(SofascoreEndpointType.EVENT_STATISTICS,T0.plusSeconds(70),60,2);
+        f.store.updateFamilySchedule(own,target.canonicalEventId(),schedule,T0.plusSeconds(11));
+        f.store.updateFamilySchedule(own,target.canonicalEventId(),schedule,T0.plusSeconds(12));
+        assertThat(f.jdbc.queryForObject("select count(*) from live_family_schedule_revision",Long.class)).isEqualTo(1);
+        assertThat(f.store.find(manifest.campaignId()).orElseThrow().events().getFirst().families())
+                .anySatisfy(cursor->{assertThat(cursor.endpoint()).isEqualTo(SofascoreEndpointType.EVENT_STATISTICS);
+                    assertThat(cursor.lastAttemptId()).isNull();assertThat(cursor.schedule()).isEqualTo(schedule);});
+        assertThatThrownBy(()->f.store.updateFamilySchedule(new Ownership(own.campaignId(),UUID.randomUUID(),own.generation()),
+                target.canonicalEventId(),schedule,T0.plusSeconds(13))).hasMessageContaining("ownership is stale");
+        assertThatThrownBy(()->f.store.updateFamilySchedule(own,target.canonicalEventId(),
+                new FamilySchedule(schedule.endpoint(),T0.plusSeconds(80),60,1),T0.plusSeconds(13))).hasMessageContaining("backwards");
+        assertThatThrownBy(()->f.jdbc.update("update live_grouped_policy set qualification_sha256=? where campaign_id=?","b".repeat(64),manifest.campaignId()))
+                .hasMessageContaining("append-only");
+        assertThatThrownBy(()->f.jdbc.update("delete from live_call_group where group_id=?",group)).hasMessageContaining("append-only");
+        assertThatThrownBy(()->f.jdbc.update("delete from live_family_schedule_revision where campaign_id=?",manifest.campaignId())).hasMessageContaining("append-only");
+        f.store.transition(own,target.canonicalEventId(),"STOPPED_POSTPONED","POSTPONED",T0.plusSeconds(14),null);
+        f.store.updateFamilySchedule(own,target.canonicalEventId(),schedule,T0.plusSeconds(15));
+        assertThat(f.store.find(manifest.campaignId()).orElseThrow().events().getFirst().families())
+                .filteredOn(cursor->cursor.endpoint()==schedule.endpoint()).singleElement()
+                .satisfies(cursor->assertThat(cursor.schedule().nextDueAt()).isNull());
+    }
+
+    @Test
+    void groupedReservationRejectsCrossEventOrReusedGroupsAndConcurrentDuplicateOrdinals() throws Exception {
+        Fixture f=fixture("39"); Target one=f.seed(EVENT),two=f.seed(EVENT+1);
+        Manifest manifest=groupedManifest(List.of(one,two));Ownership own=f.start(manifest);UUID group=UUID.randomUUID();
+        f.store.reserveAttempt(groupedRequest(own,one,0,SofascoreEndpointType.EVENT_DETAILS,group,0,0)).orElseThrow();
+        assertThatThrownBy(()->f.store.reserveAttempt(groupedRequest(own,two,0,SofascoreEndpointType.EVENT_INCIDENTS,group,0,1)))
+                .hasMessageContaining("live_call_group_reference_fk");
+        try(var pool=Executors.newFixedThreadPool(2)) {
+            CountDownLatch ready=new CountDownLatch(2),go=new CountDownLatch(1);
+            var a=pool.submit(()->{ready.countDown();go.await();try{return f.store.reserveAttempt(groupedRequest(own,one,0,SofascoreEndpointType.EVENT_INCIDENTS,group,0,1)).isPresent();}catch(RuntimeException rejected){return false;}});
+            var b=pool.submit(()->{ready.countDown();go.await();try{return f.store.reserveAttempt(groupedRequest(own,one,0,SofascoreEndpointType.EVENT_STATISTICS,group,0,1)).isPresent();}catch(RuntimeException rejected){return false;}});
+            assertThat(ready.await(5,TimeUnit.SECONDS)).isTrue();go.countDown();
+            assertThat(List.of(a.get(10,TimeUnit.SECONDS),b.get(10,TimeUnit.SECONDS))).containsExactlyInAnyOrder(true,false);
+        }
+        assertThat(f.jdbc.queryForObject("select count(*) from live_call where group_id=?",Long.class,group)).isEqualTo(2);
+        assertThat(f.store.find(manifest.campaignId()).orElseThrow().reservedCalls()).isEqualTo(2);
+        f.store.reserveAttempt(groupedRequest(own,two,0,SofascoreEndpointType.EVENT_DETAILS,UUID.randomUUID(),1,0)).orElseThrow();
+        assertThatThrownBy(()->f.store.reserveAttempt(groupedRequest(own,one,1,SofascoreEndpointType.EVENT_LINEUPS,group,0,2)))
+                .hasMessageContaining("cannot be resumed");
+        assertThatThrownBy(()->f.store.reserveAttempt(f.request(own,one,2,SofascoreEndpointType.EVENT_DETAILS)))
+                .hasMessageContaining("requires a group");
+    }
+
+    private static Manifest groupedManifest(List<Target> targets) {
+        Map<SofascoreEndpointType,EndpointEnvelope> envelopes=new EnumMap<>(SofascoreEndpointType.class);
+        for(SofascoreEndpointType endpoint:List.of(SofascoreEndpointType.EVENT_DETAILS,SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS,SofascoreEndpointType.EVENT_LINEUPS))
+            envelopes.put(endpoint,new EndpointEnvelope(Duration.ofMillis(500),Duration.ofMillis(100)));
+        return new Manifest(UUID.randomUUID(),"d".repeat(64),"live-v4",T0,T0.plusSeconds(300),Duration.ofHours(4),
+                1000,3000,3000L*5*1024*1024,10,targets,
+                new AdmissionProfile(Duration.ofSeconds(1),Duration.ofSeconds(1),"b".repeat(64),new GroupedAdmissionProfile(envelopes,"e".repeat(64))),Duration.ofSeconds(60));
+    }
+    private static AttemptRequest groupedRequest(Ownership own,Target target,long cycle,SofascoreEndpointType endpoint,UUID group,long sequence,int ordinal) {
+        Instant at=T0.plusSeconds(10+cycle*60);
+        return new AttemptRequest(own,UUID.randomUUID(),target.canonicalEventId(),cycle,endpoint,"GROUPED",at,at,false,group,sequence,ordinal);
+    }
+
+    @Test
     void installsFreshSchemaAndKeepsV32PrepopulatedEvidenceUnchanged() {
         Fixture f=fixture("32"); Target target=f.seedHistorical(EVENT);
         f.jdbc.update("""
@@ -360,6 +457,37 @@ class LiveCampaignPersistenceIT {
     }
 
     @Test
+    void orphanedV4CancelsOnlyPendingFamilySchedulesAndPreservesTheirRevisionHistory() {
+        Fixture f=fixture("39"); Target target=f.seed(EVENT); Manifest manifest=groupedManifest(List.of(target));
+        Ownership own=f.start(manifest);
+        for(SofascoreEndpointType endpoint:List.of(SofascoreEndpointType.EVENT_DETAILS,SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS,SofascoreEndpointType.EVENT_LINEUPS)) {
+            boolean lineups=endpoint==SofascoreEndpointType.EVENT_LINEUPS;
+            f.store.updateFamilySchedule(own,target.canonicalEventId(),
+                    new FamilySchedule(endpoint,lineups?null:T0.plusSeconds(60),lineups?300:60,2),T0.plusSeconds(10));
+        }
+        List<String> prior=f.jdbc.queryForList("select to_jsonb(r)::text from live_family_schedule_revision r order by revision",String.class);
+        assertThat(prior).hasSize(4);
+        f.store.interruptOrphan(own,T0.plusSeconds(20),"OWNER_PROCESS_ABSENT");
+        CampaignView interrupted=f.store.find(manifest.campaignId()).orElseThrow();
+        assertThat(interrupted.state()).isEqualTo("INTERRUPTED");
+        assertThat(interrupted.manifest()).isEqualTo(manifest);
+        assertThat(interrupted.events().getFirst().families()).hasSize(4).allSatisfy(family->{
+            assertThat(family.schedule().nextDueAt()).isNull();
+            assertThat(family.schedule().missedCycles()).isEqualTo(2);
+            assertThat(family.schedule().intervalSeconds()).isEqualTo(family.endpoint()==SofascoreEndpointType.EVENT_LINEUPS?300:60);
+        });
+        List<String> revisions=f.jdbc.queryForList("select to_jsonb(r)::text from live_family_schedule_revision r order by revision",String.class);
+        assertThat(revisions).hasSize(7).startsWith(prior.toArray(String[]::new));
+        assertThat(f.jdbc.queryForObject("select count(*) from live_family_schedule_revision where next_due_at is null",Long.class)).isEqualTo(4);
+        assertThat(f.jdbc.queryForObject("select count(*) from live_transition where state='FAMILY_SCHEDULED' and changed_at=?",
+                Long.class,java.sql.Timestamp.from(T0.plusSeconds(20)))).isEqualTo(3);
+        assertThat(f.guard.snapshot().state()).isEqualTo("CLEANUP_REQUIRED");
+        f.store.interruptOrphan(own,T0.plusSeconds(21),"OWNER_PROCESS_ABSENT");
+        assertThat(f.jdbc.queryForList("select to_jsonb(r)::text from live_family_schedule_revision r order by revision",String.class)).isEqualTo(revisions);
+    }
+
+    @Test
     void lateReceiptAfterIndividualStopPreservesEvidenceWithoutReactivatingEvent() {
         Fixture f=fixture("38"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
         ReservedAttempt a=f.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS);
@@ -567,7 +695,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void retentionRefusesActiveProviderAndPreservesLiveReferencesAfterQualifiedTerminalPurge() throws Exception {
-        Fixture f=fixture("38");Manifest m=f.manifest(f.seed(EVENT),100);Ownership own=f.start(m);
+        Fixture f=fixture("39");Manifest m=f.manifest(f.seed(EVENT),100);Ownership own=f.start(m);
         ReservedAttempt a=f.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS);
         f.store.recordDispatch(own,a.attemptId(),T0.plusSeconds(10));
         RawManualCallSnapshot raw=f.raw(EVENT,"retention",T0.plusSeconds(10));
@@ -601,13 +729,17 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void restoresAllLiveEvidenceAndFreeGuardWithoutRearmingExecution() throws Exception {
-        Fixture source=fixture("38");Manifest m=source.manifest(source.seed(EVENT),100);Ownership own=source.start(m);
-        ReservedAttempt a=source.reserve(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS);
+        Fixture source=fixture("39");Manifest m=groupedManifest(List.of(source.seed(EVENT)));Ownership own=source.start(m);
+        ReservedAttempt a=source.store.reserveAttempt(groupedRequest(own,m.targets().getFirst(),0,SofascoreEndpointType.EVENT_DETAILS,UUID.randomUUID(),0,0)).orElseThrow();
         source.store.recordDispatch(own,a.attemptId(),T0.plusSeconds(10));
         RawManualCallSnapshot raw=source.raw(EVENT,"restore",T0.plusSeconds(10));
         RawSnapshotPersistenceResult receipt=source.store.saveReceipt(own,a.attemptId(),raw);
         source.store.publishResult(own,a.attemptId(),source.success(raw.receivedAt(),"restore"),()->source.normalize(EVENT,"restore",raw,receipt));
+        source.store.updateFamilySchedule(own,m.targets().getFirst().canonicalEventId(),
+                new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS,T0.plusSeconds(70),60,0),T0.plusSeconds(11));
         source.store.transition(own,m.targets().getFirst().canonicalEventId(),"STOPPED_OPERATOR","OPERATOR_STOP",T0.plusSeconds(12),null);
+        source.store.updateFamilySchedule(own,m.targets().getFirst().canonicalEventId(),
+                new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS,null,60,0),T0.plusSeconds(12));
         source.store.transition(own,null,"COMPLETED","CLEANUP_VERIFIED",T0.plusSeconds(13),null);
         source.guard.releaseAfterVerifiedCleanup(own,T0.plusSeconds(14));
         String script=Files.readString(Path.of("scripts/Backup-Restore-J6.ps1"),StandardCharsets.UTF_8);
@@ -625,10 +757,13 @@ class LiveCampaignPersistenceIT {
             String url=POSTGRES.getJdbcUrl().substring(0,POSTGRES.getJdbcUrl().lastIndexOf('/')+1)+restoredDatabase;
             Fixture restored=new Fixture(new DriverManagerDataSource(url,POSTGRES.getUsername(),POSTGRES.getPassword()));
             assertThat(restored.jdbc.queryForObject(sql,String.class)).isEqualTo(before);
-            assertThat(restored.migrate("38").migrationsExecuted).isZero();
+            assertThat(restored.migrate("39").migrationsExecuted).isZero();
             assertThat(restored.guard.snapshot().state()).isEqualTo("FREE");
             assertThat(restored.store.find(m.campaignId()).orElseThrow().state()).isEqualTo("COMPLETED");
             assertThat(restored.store.find(m.campaignId()).orElseThrow().attempts()).hasSize(1);
+            assertThat(restored.store.find(m.campaignId()).orElseThrow().manifest()).isEqualTo(m);
+            assertThat(restored.store.find(m.campaignId()).orElseThrow().attempts().getFirst().attempt().groupId()).isEqualTo(a.groupId());
+            assertThat(restored.jdbc.queryForObject("select count(*) from live_family_schedule_revision",Long.class)).isEqualTo(2);
         } finally {
             POSTGRES.execInContainer("dropdb","--username",POSTGRES.getUsername(),"--if-exists","--force",restoredDatabase);
             POSTGRES.execInContainer("rm","-f",dump);

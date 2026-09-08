@@ -5,6 +5,81 @@ Références : [ADR-SS-005 accepté](../../ADR-SS-005-bounded-local-live-j4-j5-c
 [architecture](../architecture/LIVE-J4-J5-CAMPAIGNS.md),
 [qualification](../validation/WO058-LIVE-J4-J5-IMPLEMENTATION-20260907.md).
 
+## Nouvelles préparations : live-v4
+
+Les nouvelles préparations utilisent une cible de **60 secondes par rencontre pour J4,
+incidents et statistiques**. LINEUPS est initial puis nominalement toutes les cinq minutes
+pendant le jeu, avec répartition entre les matchs ; avant le début confirmé, J4 et LINEUPS
+restent à une minute. Les appels d’un même groupe sont séquentiels sans pause ajoutée, puis
+trois secondes séparent les groupes. Les préparations v1–v3 conservent leur ancienne cadence.
+
+Un ancien SHA de qualification et les propriétés historiques `REQUEST_ENVELOPE` /
+`PROCESSING_ENVELOPE` **ne qualifient pas v4**. Les défauts ne sont pas abaissés. Une preuve de
+groupes absente affiche une capacité nulle et empêche les nouvelles préparations éligibles.
+Configurer explicitement un profil issu du [rapport v4](../validation/WO058-GROUPED-LIVE-V4-20260908.md)
+dans le lanceur Eclipse, puis redémarrer et préparer un nouveau manifeste. Aucun changement de
+configuration ne remplace le manifeste d’une campagne déjà préparée.
+
+| Variable du lanceur | Valeur à reprendre de la qualification retenue |
+|---|---|
+| `SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY` | Plafond opérateur, limité en plus par l’admission temporelle |
+| `SOFASCORE_LIVE_GROUPED_QUALIFICATION_SHA256` | SHA-256 exact de la preuve dédiée de groupes |
+| `SOFASCORE_LIVE_GROUPED_J4_REQUEST_ENVELOPE` / `...J4_PROCESSING_ENVELOPE` | Coût J4 et traitement local, unités explicites `ms` ou `s` |
+| `SOFASCORE_LIVE_GROUPED_INCIDENTS_REQUEST_ENVELOPE` / `...INCIDENTS_PROCESSING_ENVELOPE` | Coûts incidents qualifiés |
+| `SOFASCORE_LIVE_GROUPED_STATISTICS_REQUEST_ENVELOPE` / `...STATISTICS_PROCESSING_ENVELOPE` | Coûts statistiques qualifiés |
+| `SOFASCORE_LIVE_GROUPED_LINEUPS_REQUEST_ENVELOPE` / `...LINEUPS_PROCESSING_ENVELOPE` | Coûts compositions qualifiés |
+
+Les trois opt-ins existants et le contrôle d’espace PostgreSQL restent requis. Ne pas augmenter
+le timeout Playwright de dix secondes. Le plafond configuré ne suffit pas : l’admission conserve
+10 % de marge, additionne les coûts de groupe et vérifie les transitions. Une sélection trop grande
+affiche sa capacité admissible ; elle ne remplace jamais les 60 secondes par une cadence plus lente.
+La portée des corps, latences et environnements qualifiés doit accompagner les enveloppes ; une
+mesure loopback ne prouve ni la latence Internet ni un quota accepté par SofaScore.
+
+Le [profil mesuré le 08/09](../validation/WO058-GROUPED-LIVE-V4-PROFILE-20260908.json)
+admet **10 rencontres**. Pour l'utiliser explicitement dans le lanceur :
+
+```text
+SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY=10
+SOFASCORE_LIVE_GROUPED_QUALIFICATION_SHA256=5d34019578a5f1b616f3570aa47d8451afe283eb52dee73e1c94eeb4f370fcc1
+SOFASCORE_LIVE_GROUPED_J4_REQUEST_ENVELOPE=300ms
+SOFASCORE_LIVE_GROUPED_J4_PROCESSING_ENVELOPE=400ms
+SOFASCORE_LIVE_GROUPED_INCIDENTS_REQUEST_ENVELOPE=350ms
+SOFASCORE_LIVE_GROUPED_INCIDENTS_PROCESSING_ENVELOPE=450ms
+SOFASCORE_LIVE_GROUPED_STATISTICS_REQUEST_ENVELOPE=300ms
+SOFASCORE_LIVE_GROUPED_STATISTICS_PROCESSING_ENVELOPE=350ms
+SOFASCORE_LIVE_GROUPED_LINEUPS_REQUEST_ENVELOPE=300ms
+SOFASCORE_LIVE_GROUPED_LINEUPS_PROCESSING_ENVELOPE=350ms
+```
+
+Ces enveloppes contiennent les maxima observés pendant trente minutes de régime établi :
+réponses synthétiques de 64 Kio, délais serveur de 0/30/80/150 ms, normalisation, PostgreSQL et
+sonde Docker compris. Elles **ne bornent pas les coûts de démarrage de 5 Mio** : cette vague
+initiale de quarante réponses a été mesurée séparément et a aussi passé les critères. Une
+succession durable de corps de 5 Mio ou une latence Internet plus élevée n'est pas qualifiée
+par ce profil. Le dépassement provoque un retard visible puis les arrêts prévus s'il dure ;
+il ne remplace pas la minute par un intervalle plus long. La preuve conserve cette distinction.
+Les paramètres historiques ne sont ni supprimés ni abaissés automatiquement.
+
+L’écran indique l’autonomie estimée avec les appels restants et réserves, limitée aussi par la
+fenêtre et les budgets individuels. À dix matchs tous en jeu, environ 32 appels/minute consomment
+3 000 appels en quelque 94 minutes avant ajustement des phases et réserves. Les fins de match
+libèrent des créneaux ; elles n’allongent pas la minute des autres. Chaque famille expose dernière
+réception, dernier changement, prochaine collecte et retard. Un résultat inchangé nouvellement
+reçu reste frais. Une lecture locale bloquée est annulée après dix secondes et réessayée cinq
+secondes plus tard, sans perte de sélection ni d’état des panneaux.
+
+### Migration V38 → V39
+
+Avant upgrade d’une base opérateur V38, sauvegarder avec l’outillage J6 du commit `c972d63`
+dans un checkout distinct et vérifier la restauration isolée V38. Les scripts courants sont V39
+et fingerprintent aussi politique, groupes et échéances ; ne pas falsifier le manifeste V38
+pour franchir leur garde. La qualification Testcontainers ne migre jamais la base opérateur.
+V39 est append-only et conserve les empreintes des anciennes préparations et observations.
+
+Les sections historiques ci-dessous restent utiles pour v1–v3 ; leurs valeurs D et profils de
+capacité ne doivent pas être employés pour annoncer une capacité v4 à une minute.
+
 ## Qualification hors fournisseur
 
 La réalisation du WO utilise uniquement des données synthétiques et des bases Testcontainers.
@@ -15,14 +90,23 @@ Ces commandes sont lancées depuis le worktree du WO avec Java 25 et Docker Desk
 .\mvnw.cmd -Pintegration-tests verify
 .\scripts\Install-J3PlaywrightRuntime.ps1
 .\scripts\Invoke-LivePlaywrightLoopbackQualification.ps1
+.\scripts\Invoke-LiveGroupedPlaywrightQualification.ps1
 ```
 
 L'installation explicite utilise le cache Chromium dédié `.tmp/provider-playwright-browsers`.
-Le dernier lanceur construit le worker et exécute uniquement les qualifications de transport
+Les lanceurs construisent le worker et exécutent uniquement les qualifications de transport
 et de vue live sur HTTP loopback. Les tests standards n'ouvrent pas de navigateur. Le test J6
 requiert le port 8087 libre ; une application de l'opérateur ne doit pas être arrêtée implicitement.
 Lire les XML Surefire/Failsafe effectifs, les skips et le résultat du lanceur. Un packaging avec
 `-DskipTests` n'est pas une qualification.
+
+Le lanceur groupé exige en plus Docker Desktop et `docker.exe` disponible, exécute un essai court
+puis cinq minutes d’initialisation et au moins trente minutes mesurées sur PostgreSQL isolé,
+ainsi qu'un contrôle Chromium des publications dans dix panneaux de rencontre.
+Si le CLI Docker n’est pas dans `PATH`, passer son chemin installé avec `-DockerExecutablePath`.
+Il contrôle l’âge des rapports, l’absence de tests ignorés et la durée réelle ; un essai court
+seul ne prouve pas la capacité soutenue. Le rapport JSON conserve les mesures par famille.
+La réussite de cadence et l’adéquation des enveloppes candidates sont des résultats distincts.
 
 Le replay local est une API Java `LiveReplayRunner.run(ReplayInput)`, utilisée dans ses tests.
 L'entrée contient identifiant de fixture, heure initiale, durée, sélection, réponses avec SHA-256,
