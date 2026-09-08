@@ -998,6 +998,12 @@ Après libération du port 8087 par le propriétaire, `clean verify` réussit à
 le 8 septembre (00:55:21 Europe/Paris le 9) : 1 913 cas Surefire dont cinq ignorés,
 166 cas Failsafe, zéro échec ou erreur. Les 214 cas ciblés et les deux scénarios Chromium
 réussissent également. Les ignorés et les preuves de ce complément sont détaillés dans le rapport.
+La retouche opérateur suivante remplace la formulation de la zone par « dans le tiers offensif »
+dans les trois libellés des fautes subies, entrées et phases. Sa validation est consignée
+séparément dans le même rapport ; elle ne modifie que ces chaînes d’affichage.
+Ses 29 tests ciblés réussissent ; sa propre passe `clean verify` réussit à 23:14:49 UTC le 8 septembre
+(01:14:49 Europe/Paris le 9), avec 1 913 cas Surefire dont cinq ignorés et 166 cas Failsafe,
+sans échec ni erreur.
 
 Après redémarrage, le propriétaire a clôturé la session interrompue puis lancé un
 rattrapage final de quinze rencontres. La clôture `LOCAL_CLEANUP_VERIFIED` et la nouvelle

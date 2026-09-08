@@ -81,12 +81,12 @@ public final class StatisticsPresentation {
             case "Big chances missed" -> "Grosses occasions manquées";
             case "Through balls" -> "Passes en profondeur";
             case "Touches in penalty area" -> "Touches de balle dans la surface";
-            case "Fouled in final third" -> "Fautes subies dans le dernier tiers";
+            case "Fouled in final third" -> "Fautes subies dans le tiers offensif";
             case "Offsides" -> "Hors-jeu";
             case "Accurate passes" -> "Passes réussies";
             case "Throw-ins" -> "Touches";
-            case "Final third entries" -> "Entrées dans le dernier tiers";
-            case "Final third phase" -> "Phase dans le dernier tiers";
+            case "Final third entries" -> "Entrées dans le tiers offensif";
+            case "Final third phase" -> "Phase dans le tiers offensif";
             case "Long balls" -> "Longs ballons";
             case "Crosses" -> "Centres";
             case "Duels" -> "Duels";

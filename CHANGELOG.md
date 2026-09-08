@@ -6,6 +6,8 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-058 — libellés des statistiques et cartes joueurs
 
+- Précise « dans le tiers offensif » pour les fautes subies, entrées et phases concernées,
+  conformément à la retouche de vocabulaire demandée le 9 septembre.
 - Traduit les sept groupes et les 51 intitulés statistiques observés dans le corpus
   local, sur les pages live et J5. Les noms inconnus restent affichés tels quels ;
   les valeurs, les clés sources et l’ouverture des panneaux sont conservées.

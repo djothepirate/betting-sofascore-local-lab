@@ -85,6 +85,7 @@ hash et heure de réception restent consultables au-dessus de la composition.
 Les pages live et J5 traduisent les groupes et intitulés connus en français : par exemple,
 « Vue d’ensemble du match », « Possession du ballon », « Buts attendus (xG) », « Tirs cadrés »
 et « Arrêts du gardien ». Un nom inconnu reste affiché tel qu’il a été reçu.
+Les fautes subies, entrées et phases dans cette zone utilisent « dans le tiers offensif ».
 La traduction ne change ni les valeurs observées, ni leur ordre, ni les périodes disponibles.
 Les panneaux gardent leur ouverture ou fermeture lors des actualisations live.
 [Portée et validation des libellés](../validation/WO058-UI-LABELS-20260909.md).
