@@ -20,6 +20,7 @@
 <main class="shell event-page" data-live-monitor
       th:attr="data-live-state-url=@{/live-campaigns/{id}/state(id=${campaign.campaignId})},data-live-campaign-id=${campaign.campaignId},data-live-revision=${campaign.revision}">
   <nav class="links page-links" aria-label="Navigation locale"><a th:href="@{/events}">← Rencontres</a></nav>
+  <p class="notice" role="status" th:if="${liveSuccess != null}" th:text="${liveSuccess}"></p>
   <section class="panel" th:if="${excludedFinished != null and !#lists.isEmpty(excludedFinished)}" aria-label="Rencontres terminées exclues">
     <p class="notice" role="status">Les rencontres suivantes sont déjà terminées (finished).
       Elles ont été exclues du manifeste ; aucun appel fournisseur ne sera effectué pour elles.</p>
@@ -65,6 +66,29 @@
     <p class="notice notice-danger" th:if="${campaign.state == 'CLEANUP_REQUIRED'}">
       Le nettoyage de la session précédente doit être vérifié avant tout nouveau lancement.
     </p>
+  </section>
+
+  <section class="panel" th:if="${orphanCleanup != null}" aria-labelledby="interruption-cleanup-title">
+    <p class="label">Session interrompue</p><h2 id="interruption-cleanup-title">Clôturer la session précédente</h2>
+    <p>La session fournisseur reste verrouillée après l’interruption de l’application.
+      La clôture vérifie que les processus précédents sont arrêtés avant de libérer la session.</p>
+    <form method="post" th:action="@{/live-campaigns/{id}/finalize-interruption(id=${campaign.campaignId})}">
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <input type="hidden" name="guardGeneration" th:value="${orphanCleanup.generation}">
+      <button type="submit" class="button">Clôturer la session interrompue</button>
+    </form>
+    <p class="muted" th:text="${'L’historique de cette campagne et son état ' + campaign.state + ' sont conservés. Aucune collecte n’est lancée.'}">L’historique de cette campagne et son état INTERRUPTED sont conservés. Aucune collecte n’est lancée.</p>
+  </section>
+
+  <section class="panel" th:if="${canPrepareAgain == true}" aria-labelledby="prepare-again-title">
+    <p class="label">Nouvelle préparation</p><h2 id="prepare-again-title">Réutiliser cette sélection</h2>
+    <p>Les rencontres de cette campagne seront vérifiées à nouveau. Les rencontres terminées ou reportées seront exclues.
+      La préparation ne lance aucune collecte ; vous pourrez vérifier la sélection avant de la lancer.</p>
+    <form method="post" th:action="@{/live-campaigns/prepare}">
+      <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <input type="hidden" name="eventId" th:each="target : ${manifest.targets}" th:value="${target.canonicalEventId}">
+      <button type="submit" class="button">Préparer une nouvelle campagne avec ces rencontres</button>
+    </form>
   </section>
 
   <section class="panel" th:if="${campaign.state == 'PREPARED'}" data-live-preparation aria-labelledby="manifest-title">

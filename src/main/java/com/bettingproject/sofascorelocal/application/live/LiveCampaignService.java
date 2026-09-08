@@ -37,15 +37,26 @@ public final class LiveCampaignService {
     private final LiveResponseProcessor processor;
     private final AtomicReference<Session> active = new AtomicReference<>();
     private final Clock clock;
+    private final LiveOrphanProcessProbe orphanProcesses;
 
     @org.springframework.beans.factory.annotation.Autowired
     public LiveCampaignService(SofascoreProperties provider, ProviderPlaywrightProperties playwright,
             LiveCampaignProperties properties, LiveAdmissionPolicy admission, LiveCampaignStore store,
             CanonicalEventStore events, ManualProviderRequestCoordinator coordinator,
             ProviderCampaignGuardStore guard, PlaywrightProviderCampaignFactory factory,
+            PlaywrightProviderSupervisor supervisor, LiveResponseProcessor processor,
+            LiveOrphanProcessProbe orphanProcesses) {
+        this(provider, playwright, properties, admission, store, events, coordinator, guard, factory,
+                supervisor, processor, Clock.systemUTC(), orphanProcesses);
+    }
+
+    public LiveCampaignService(SofascoreProperties provider, ProviderPlaywrightProperties playwright,
+            LiveCampaignProperties properties, LiveAdmissionPolicy admission, LiveCampaignStore store,
+            CanonicalEventStore events, ManualProviderRequestCoordinator coordinator,
+            ProviderCampaignGuardStore guard, PlaywrightProviderCampaignFactory factory,
             PlaywrightProviderSupervisor supervisor, LiveResponseProcessor processor) {
         this(provider, playwright, properties, admission, store, events, coordinator, guard, factory,
-                supervisor, processor, Clock.systemUTC());
+                supervisor, processor, Clock.systemUTC(), new LiveOrphanProcessProbe());
     }
 
     LiveCampaignService(SofascoreProperties provider, ProviderPlaywrightProperties playwright,
@@ -53,10 +64,21 @@ public final class LiveCampaignService {
             CanonicalEventStore events, ManualProviderRequestCoordinator coordinator,
             ProviderCampaignGuardStore guard, PlaywrightProviderCampaignFactory factory,
             PlaywrightProviderSupervisor supervisor, LiveResponseProcessor processor, Clock clock) {
+        this(provider, playwright, properties, admission, store, events, coordinator, guard, factory,
+                supervisor, processor, clock, new LiveOrphanProcessProbe());
+    }
+
+    LiveCampaignService(SofascoreProperties provider, ProviderPlaywrightProperties playwright,
+            LiveCampaignProperties properties, LiveAdmissionPolicy admission, LiveCampaignStore store,
+            CanonicalEventStore events, ManualProviderRequestCoordinator coordinator,
+            ProviderCampaignGuardStore guard, PlaywrightProviderCampaignFactory factory,
+            PlaywrightProviderSupervisor supervisor, LiveResponseProcessor processor, Clock clock,
+            LiveOrphanProcessProbe orphanProcesses) {
         this.provider = provider; this.playwright = playwright; this.properties = properties;
         this.admission = admission; this.store = store; this.events = events; this.coordinator = coordinator;
         this.guard = guard; this.factory = factory; this.supervisor = supervisor; this.processor = processor;
         this.clock = Objects.requireNonNull(clock);
+        this.orphanProcesses = Objects.requireNonNull(orphanProcesses);
     }
 
     public record Preparation(Manifest manifest, List<CanonicalEventObservationView> excludedFinished,
@@ -229,6 +251,63 @@ public final class LiveCampaignService {
     private boolean providerCleanupRequired() {
         Guard current = guard.snapshot();
         return current != null && "CLEANUP_REQUIRED".equals(current.state());
+    }
+
+    /** Durable local observation only. No process scan or cleanup is performed by a GET. */
+    public Optional<UUID> providerCleanupCampaignId() {
+        Guard current = guard.snapshot();
+        return current != null && "CLEANUP_REQUIRED".equals(current.state())
+                ? Optional.ofNullable(current.campaignId()) : Optional.empty();
+    }
+
+    public Optional<Guard> orphanCleanupGuard(UUID campaignId) {
+        Session session = active.get();
+        if (session != null) return Optional.empty();
+        Guard current = guard.snapshot();
+        if (current == null || !"CLEANUP_REQUIRED".equals(current.state()) || current.owner() == null
+                || !campaignId.equals(current.campaignId())) return Optional.empty();
+        CampaignView campaign = state(campaignId);
+        return recoverableTerminal(campaign.state()) && current.ownership().equals(campaign.ownership())
+                ? Optional.of(current) : Optional.empty();
+    }
+
+    /** Explicit local closure of an orphan, never a transfer/restart of its provider session. */
+    public void finalizeInterruptedCleanup(UUID campaignId, long expectedGeneration) {
+        if (expectedGeneration < 1) throw new IllegalStateException("LIVE_CLEANUP_STATE_CHANGED");
+        try {
+            coordinator.withExclusiveLocalCleanup(() -> {
+                if (active.get() != null || supervisor.activeCampaignId().isPresent())
+                    throw new IllegalStateException("LIVE_CLEANUP_BUSY");
+                CampaignView campaign = state(campaignId);
+                Guard current = guard.snapshot();
+                if (current == null || current.generation() != expectedGeneration
+                        || campaign.ownership() == null || campaign.ownership().generation() != expectedGeneration
+                        || !recoverableTerminal(campaign.state()))
+                    throw new IllegalStateException("LIVE_CLEANUP_STATE_CHANGED");
+                // An acknowledged or response-lost successful closure is repeatable, but never
+                // across a new acquisition/generation or without this campaign's durable trace.
+                if ("FREE".equals(current.state()) && current.owner() == null && current.campaignId() == null
+                        && campaign.transitions().stream().anyMatch(t -> "LOCAL_CLEANUP_VERIFIED".equals(t.state())))
+                    return;
+                if (!"CLEANUP_REQUIRED".equals(current.state()) || current.owner() == null
+                        || !campaignId.equals(current.campaignId())
+                        || !current.ownership().equals(campaign.ownership()))
+                    throw new IllegalStateException("LIVE_CLEANUP_STATE_CHANGED");
+                orphanProcesses.requireAbsent(current.owner(), playwright.getWorkerJar());
+                if (active.get() != null || supervisor.activeCampaignId().isPresent())
+                    throw new IllegalStateException("LIVE_CLEANUP_BUSY");
+                // SQL takes the guard lock and compares its exact owner/generation before the
+                // audit and release commit together. No store state is inferred from memory.
+                store.completeOrphanCleanup(current, clock.instant());
+            });
+        } catch (ManualProviderRequestCoordinator.CoordinationException busy) {
+            throw new IllegalStateException("LIVE_CLEANUP_BUSY");
+        }
+    }
+
+    private static boolean recoverableTerminal(String state) {
+        return state != null && (state.startsWith("STOPPED_")
+                || "INTERRUPTED".equals(state) || "COMPLETED".equals(state));
     }
 
     /** Cancels only a durable preparation; provider opt-in, capacity and process ownership are irrelevant. */

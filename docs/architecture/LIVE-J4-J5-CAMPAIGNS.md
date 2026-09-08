@@ -195,6 +195,36 @@ n'accepte un garde `FREE` que dans la même génération, avec tous les champs p
 et aucun superviseur actif. Un garde illisible ou une génération différente conserve le blocage.
 Cette vérification locale ne constitue pas une libération générique de garde orphelin après crash.
 
+Après redémarrage, une commande distincte `POST /live-campaigns/{id}/finalize-interruption`
+réalise la clôture explicite du garde orphelin. Le formulaire local lie la campagne et la
+génération observée. Le coordinateur exclut les appels manuels/live pendant la preuve et la
+transaction ; aucun lease fournisseur ni contexte Playwright n’est créé. Le propriétaire
+précédent est contrôlé par PID et date de création. Une sonde Windows bornée à dix secondes
+classe ensuite les processus Java, Node et Chromium pour rechercher un worker ou descendant
+potentiel. Le rapprochement du seul JVM appelant avec CIM respecte la précision milliseconde
+de `ProcessHandle`; celui de l’ancien propriétaire Java conserve la précision persistée.
+Le parent Maven du lanceur `spring-boot:run` est reconnu uniquement par son identité prouvée
+dans la chaîne des ancêtres et par sa commande Maven ; un worker reste bloquant même ancêtre.
+Une autre JVM lisible née strictement avant l’ancien propriétaire ne peut pas être un worker
+neuf créé par sa session ; elle est donc écartée des candidats ambigus. Une égalité de dates
+ne suffit pas. Les marqueurs Playwright restent bloquants indépendamment de l’âge du processus.
+Les lignes de commande restent dans le processus de contrôle : seuls `ABSENT`, `ACTIVE` ou
+`UNVERIFIED` sont retournés. Un JVM non attribuable, un inventaire inaccessible ou une autre
+plateforme refuse la libération. Aucun processus inspecté n’est tué.
+
+`completeOrphanCleanup` verrouille le garde avant la campagne et compare son identité complète,
+sa génération et sa date de changement. Il exige une campagne lancée terminale, des événements
+terminaux, aucune tentative non résolue ni échéance future, et aucune autre campagne active.
+La transition append-only `LOCAL_CLEANUP_VERIFIED` contient l’empreinte SHA-256 du garde vérifié ;
+elle est validée dans la même transaction que sa libération. L’état historique `INTERRUPTED`,
+les résultats, observations et compteurs restent inchangés. Une répétition après réponse perdue
+accepte seulement une libération prouvée de la même génération. Une nouvelle acquisition interdit
+cette répétition. Les tables existantes portent ce parcours sans migration.
+
+Après la clôture, l’interface propose une nouvelle préparation à partir des identités du
+manifeste historique. Les exclusions `finished`/`postponed`, l’admission et la confirmation
+habituelles sont réappliquées. La lecture de la page et la préparation ne déclenchent aucune collecte.
+
 Avant la première réconciliation, `requireCleanup` prend le verrou SQL du garde également
 utilisé par le lancement et contrôle propriétaire et génération. La lecture suivante distingue
 ainsi un lancement validé dont la réponse a été perdue d'une préparation jamais lancée ; elle

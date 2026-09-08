@@ -593,6 +593,172 @@ class LiveCampaignPersistenceIT {
         assertThat(f.jdbc.queryForList("select to_jsonb(r)::text from live_family_schedule_revision r order by revision",String.class)).isEqualTo(revisions);
     }
 
+    @ParameterizedTest @ValueSource(strings={"live-v1","live-v2","live-v3","live-v4"})
+    void verifiedOrphanCleanupPreservesReceiptsUnknownAttemptsAndHistoryWithAnIdempotentAudit(String policy) {
+        Fixture f=fixture("39"); Target target=f.seed(EVENT);
+        Manifest manifest="live-v4".equals(policy)?groupedManifest(List.of(target))
+                :new Manifest(UUID.randomUUID(),"a".repeat(64),policy,T0,T0.plusSeconds(300),Duration.ofHours(4),
+                    100,100,100_000_000,1,List.of(target));
+        Ownership own=f.start(manifest);
+        for(int cycle=0;cycle<3;cycle++) {
+            ReservedAttempt attempt=f.store.reserveAttempt("live-v4".equals(policy)
+                    ?groupedRequest(own,target,cycle,SofascoreEndpointType.EVENT_DETAILS,UUID.randomUUID(),cycle,0)
+                    :f.request(own,target,cycle,SofascoreEndpointType.EVENT_DETAILS)).orElseThrow();
+            if(cycle==2) continue; // A reserved call with no dispatch must remain evidence too.
+            Instant at=attempt.reservedAt(); f.store.recordDispatch(own,attempt.attemptId(),at);
+            RawManualCallSnapshot raw=f.raw(EVENT,"orphan-"+cycle,at);
+            RawSnapshotPersistenceResult receipt=f.store.saveReceipt(own,attempt.attemptId(),raw);
+            if(cycle==0) f.store.publishResult(own,attempt.attemptId(),f.success(raw.receivedAt(),"parsed"),
+                    ()->f.normalize(EVENT,"parsed",raw,receipt));
+            // The second receipt has no publication when the owner exits.
+        }
+        if("live-v4".equals(policy)) f.store.updateFamilySchedule(own,target.canonicalEventId(),
+                new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS,T0.plusSeconds(190),60,2),T0.plusSeconds(140));
+        f.store.interruptOrphan(own,T0.plusSeconds(150),"OWNER_PROCESS_ABSENT");
+        Guard expected=f.guard.snapshot(); CampaignView before=f.store.find(manifest.campaignId()).orElseThrow();
+        Map<String,List<String>> evidence=new LinkedHashMap<>();
+        for(String table:List.of("provider_snapshot","provider_snapshot_occurrence","canonical_event_observation","event_detail_observation",
+                "live_event","live_call","live_call_dispatch","live_call_receipt","live_call_result","live_call_group",
+                "live_grouped_policy","live_family_schedule","live_family_schedule_revision"))
+            evidence.put(table,f.jdbc.queryForList("select to_jsonb(t)::text from "+table+" t order by to_jsonb(t)::text",String.class));
+        // Synthetic process proof belongs to the service tests; this test verifies only its atomic SQL boundary.
+        f.store.completeOrphanCleanup(expected,T0.plusSeconds(160));
+        CampaignView after=f.store.find(manifest.campaignId()).orElseThrow();
+        assertThat(after).usingRecursiveComparison().ignoringFields("revision","transitions").isEqualTo(before);
+        assertThat(after.state()).isEqualTo("INTERRUPTED"); assertThat(after.reason()).isEqualTo("OWNER_PROCESS_ABSENT");
+        assertThat(after.reservedCalls()).isEqualTo(3); assertThat(after.receivedBytes()).isPositive();
+        assertThat(after.attempts()).extracting(a->a.result().publication().outcome()).containsExactly("PARSED","UNKNOWN","UNKNOWN");
+        assertThat(after.attempts().get(1).snapshotId()).isNotNull(); assertThat(after.attempts().get(2).dispatchAuthorizedAt()).isNull();
+        assertThat(after.transitions()).hasSize(before.transitions().size()+1).startsWith(before.transitions().toArray(Transition[]::new));
+        Transition cleanup=after.transitions().getLast();
+        assertThat(cleanup.state()).isEqualTo("LOCAL_CLEANUP_VERIFIED");
+        assertThat(cleanup.reason()).matches("GUARD_[0-9a-f]{64}");
+        assertThat(cleanup.changedAt()).isEqualTo(T0.plusSeconds(160));
+        assertThat(cleanup.canonicalEventId()).isNull(); assertThat(cleanup.attemptId()).isNull();
+        Guard free=f.guard.snapshot(); assertThat(free.state()).isEqualTo("FREE"); assertThat(free.generation()).isEqualTo(expected.generation());
+        assertThat(free.owner()).isNull(); assertThat(free.campaignId()).isNull();
+        f.store.completeOrphanCleanup(expected,T0.plusSeconds(161));
+        assertThat(f.store.find(manifest.campaignId())).contains(after); assertThat(f.guard.snapshot()).isEqualTo(free);
+        evidence.forEach((table,rows)->assertThat(f.jdbc.queryForList("select to_jsonb(t)::text from "+table+" t order by to_jsonb(t)::text",String.class)).isEqualTo(rows));
+        Guard altered=new Guard(expected.state(),expected.campaignId(),
+                new Owner(expected.owner().instanceId(),expected.owner().processId()+1,expected.owner().processStartedAt()),
+                expected.generation(),expected.changedAt());
+        assertThatThrownBy(()->f.store.completeOrphanCleanup(altered,T0.plusSeconds(162)))
+                .hasMessage("LIVE_ORPHAN_CLEANUP_GUARD_CHANGED");
+        Guard newOwner=f.guard.tryAcquire(UUID.randomUUID(),new Owner(UUID.randomUUID(),4321,T0.plusSeconds(160)),T0.plusSeconds(163)).orElseThrow();
+        assertThatThrownBy(()->f.store.completeOrphanCleanup(expected,T0.plusSeconds(164)))
+                .hasMessage("LIVE_ORPHAN_CLEANUP_GUARD_CHANGED");
+        assertThat(f.guard.snapshot()).isEqualTo(newOwner);
+        assertThatThrownBy(()->f.store.reserveAttempt(f.request(own,target,3,SofascoreEndpointType.EVENT_DETAILS)))
+                .hasMessageContaining("ownership is stale or closed");
+    }
+
+    @Test
+    void orphanCleanupChecksEveryGuardIdentityFieldAndCannotClaimAnUnauditedFreeGuard() {
+        Fixture f=fixture("39"); Manifest manifest=f.manifest(f.seed(EVENT),100); Ownership own=f.start(manifest);
+        f.store.interruptOrphan(own,T0.plusSeconds(20),"OWNER_PROCESS_ABSENT");
+        Guard expected=f.guard.snapshot(); Owner owner=expected.owner(); CampaignView before=f.store.find(manifest.campaignId()).orElseThrow();
+        List<Guard> collisions=List.of(
+                new Guard(expected.state(),UUID.randomUUID(),owner,expected.generation(),expected.changedAt()),
+                new Guard(expected.state(),expected.campaignId(),new Owner(UUID.randomUUID(),owner.processId(),owner.processStartedAt()),expected.generation(),expected.changedAt()),
+                new Guard(expected.state(),expected.campaignId(),new Owner(owner.instanceId(),owner.processId()+1,owner.processStartedAt()),expected.generation(),expected.changedAt()),
+                new Guard(expected.state(),expected.campaignId(),new Owner(owner.instanceId(),owner.processId(),owner.processStartedAt().plusSeconds(1)),expected.generation(),expected.changedAt()),
+                new Guard(expected.state(),expected.campaignId(),owner,expected.generation()+1,expected.changedAt()),
+                new Guard(expected.state(),expected.campaignId(),owner,expected.generation(),expected.changedAt().plusSeconds(1)));
+        for(Guard collision:collisions) assertThatThrownBy(()->f.store.completeOrphanCleanup(collision,T0.plusSeconds(30)))
+                .hasMessage("LIVE_ORPHAN_CLEANUP_GUARD_CHANGED");
+        assertThat(f.guard.snapshot()).isEqualTo(expected); assertThat(f.store.find(manifest.campaignId())).contains(before);
+        f.guard.releaseAfterVerifiedCleanup(own,T0.plusSeconds(31));
+        Guard free=f.guard.snapshot();
+        assertThatThrownBy(()->f.store.completeOrphanCleanup(expected,T0.plusSeconds(32)))
+                .hasMessage("LIVE_ORPHAN_CLEANUP_GUARD_CHANGED");
+        assertThat(f.guard.snapshot()).isEqualTo(free); assertThat(f.store.find(manifest.campaignId())).contains(before);
+    }
+
+    @Test
+    void orphanCleanupRefusesUnfinishedRuntimeEvidenceAndPendingFamilySchedules() {
+        Fixture f=fixture("39"); Target target=f.seed(EVENT); Manifest manifest=groupedManifest(List.of(target)); Ownership own=f.start(manifest);
+        ReservedAttempt call=f.store.reserveAttempt(groupedRequest(own,target,0,SofascoreEndpointType.EVENT_DETAILS,UUID.randomUUID(),0,0)).orElseThrow();
+        f.store.updateFamilySchedule(own,target.canonicalEventId(),new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS,T0.plusSeconds(70),60,0),T0.plusSeconds(10));
+        f.guard.requireCleanup(own,T0.plusSeconds(11));
+        Guard expected=f.guard.snapshot();
+        assertThatThrownBy(()->f.store.completeOrphanCleanup(expected,T0.plusSeconds(12))).hasMessage("LIVE_ORPHAN_CLEANUP_INCOMPLETE");
+        f.store.transition(own,null,"INTERRUPTED","OWNER_PROCESS_ABSENT",T0.plusSeconds(13),null);
+        assertThatThrownBy(()->f.store.completeOrphanCleanup(expected,T0.plusSeconds(14))).hasMessage("LIVE_ORPHAN_CLEANUP_INCOMPLETE");
+        f.store.transition(own,target.canonicalEventId(),"INTERRUPTED","OWNER_PROCESS_ABSENT",T0.plusSeconds(15),null);
+        assertThatThrownBy(()->f.store.completeOrphanCleanup(expected,T0.plusSeconds(16))).hasMessage("LIVE_ORPHAN_CLEANUP_INCOMPLETE");
+        f.store.publishResult(own,call.attemptId(),new Publication("UNKNOWN","CAMPAIGN","OWNER_PROCESS_ABSENT",T0.plusSeconds(17),null,false,null),NormalizedReferences::none);
+        assertThatThrownBy(()->f.store.completeOrphanCleanup(expected,T0.plusSeconds(18))).hasMessage("LIVE_ORPHAN_CLEANUP_INCOMPLETE");
+        assertThat(f.guard.snapshot()).isEqualTo(expected);
+        assertThat(f.store.find(manifest.campaignId()).orElseThrow().transitions()).noneMatch(t->"LOCAL_CLEANUP_VERIFIED".equals(t.state()));
+        f.store.updateFamilySchedule(own,target.canonicalEventId(),new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS,null,60,0),T0.plusSeconds(19));
+        f.store.completeOrphanCleanup(expected,T0.plusSeconds(20));
+        assertThat(f.guard.snapshot().state()).isEqualTo("FREE");
+    }
+
+    @Test
+    void orphanCleanupRollsBackItsAuditIfTheGuardReleaseFails() {
+        Fixture f=fixture("39"); Manifest manifest=f.manifest(f.seed(EVENT),100); Ownership own=f.start(manifest);
+        f.store.interruptOrphan(own,T0.plusSeconds(20),"OWNER_PROCESS_ABSENT");
+        Guard expected=f.guard.snapshot(); CampaignView before=f.store.find(manifest.campaignId()).orElseThrow();
+        f.jdbc.execute("""
+            create function reject_test_orphan_release() returns trigger language plpgsql as $$
+            begin if new.state='FREE' then raise exception 'synthetic guard release failure'; end if; return new; end $$
+            """);
+        f.jdbc.execute("create trigger reject_test_orphan_release before update on provider_campaign_guard for each row execute function reject_test_orphan_release()");
+        assertThatThrownBy(()->f.store.completeOrphanCleanup(expected,T0.plusSeconds(21)))
+                .hasMessageContaining("synthetic guard release failure");
+        assertThat(f.guard.snapshot()).isEqualTo(expected); assertThat(f.store.find(manifest.campaignId())).contains(before);
+        f.jdbc.execute("drop trigger reject_test_orphan_release on provider_campaign_guard");
+        f.store.completeOrphanCleanup(expected,T0.plusSeconds(22));
+        assertThat(f.guard.snapshot().state()).isEqualTo("FREE");
+        assertThat(f.store.find(manifest.campaignId()).orElseThrow().transitions()).filteredOn(t->"LOCAL_CLEANUP_VERIFIED".equals(t.state())).hasSize(1);
+    }
+
+    @ParameterizedTest @ValueSource(booleans={true,false})
+    void orphanCleanupSerializesWithARepeatedCleanupOrANewProviderAcquisition(boolean acquireNext) throws Exception {
+        Fixture f=fixture("39"); Manifest manifest=f.manifest(f.seed(EVENT),100); Ownership own=f.start(manifest);
+        f.store.interruptOrphan(own,T0.plusSeconds(20),"OWNER_PROCESS_ABSENT"); Guard expected=f.guard.snapshot();
+        CountDownLatch firstWritten=new CountDownLatch(1),releaseFirst=new CountDownLatch(1),secondStarted=new CountDownLatch(1);
+        AtomicInteger firstBackend=new AtomicInteger(),secondBackend=new AtomicInteger();
+        JdbcTransactionManager transactions=new JdbcTransactionManager(f.ds);
+        try(var pool=Executors.newFixedThreadPool(2)) {
+            try {
+                var first=pool.submit(()->new TransactionTemplate(transactions).execute(status->{
+                    firstBackend.set(f.jdbc.queryForObject("select pg_backend_pid()",Integer.class));
+                    f.store.completeOrphanCleanup(expected,T0.plusSeconds(21)); firstWritten.countDown();
+                    try {if(!releaseFirst.await(10,TimeUnit.SECONDS)) throw new IllegalStateException("cleanup transaction timeout");}
+                    catch(InterruptedException interrupted) {Thread.currentThread().interrupt();throw new IllegalStateException(interrupted);}
+                    return true;
+                }));
+                assertThat(firstWritten.await(5,TimeUnit.SECONDS)).isTrue();
+                var second=pool.submit(()->new TransactionTemplate(transactions).execute(status->{
+                    secondBackend.set(f.jdbc.queryForObject("select pg_backend_pid()",Integer.class)); secondStarted.countDown();
+                    if(acquireNext) return f.guard.tryAcquire(UUID.randomUUID(),new Owner(UUID.randomUUID(),4321,T0.plusSeconds(20)),T0.plusSeconds(22)).isPresent();
+                    f.store.completeOrphanCleanup(expected,T0.plusSeconds(22)); return true;
+                }));
+                assertThat(secondStarted.await(5,TimeUnit.SECONDS)).isTrue();
+                boolean blocked=false; long until=System.nanoTime()+TimeUnit.SECONDS.toNanos(5);
+                while(!blocked && System.nanoTime()<until) {
+                    blocked=Boolean.TRUE.equals(f.jdbc.queryForObject("select ? = any(pg_blocking_pids(?))",Boolean.class,firstBackend.get(),secondBackend.get()));
+                    if(!blocked) Thread.sleep(10);
+                }
+                assertThat(blocked).as("cleanup and acquisition use the same durable exclusion").isTrue();
+                assertThat(second.isDone()).isFalse(); releaseFirst.countDown();
+                assertThat(first.get(5,TimeUnit.SECONDS)).isTrue(); assertThat(second.get(5,TimeUnit.SECONDS)).isTrue();
+                Guard saved=f.guard.snapshot(); assertThat(saved.state()).isEqualTo(acquireNext?"OWNED":"FREE");
+                assertThat(saved.generation()).isEqualTo(expected.generation()+(acquireNext?1:0));
+                CampaignView after=f.store.find(manifest.campaignId()).orElseThrow();
+                assertThat(after.state()).isEqualTo("INTERRUPTED"); assertThat(after.reason()).isEqualTo("OWNER_PROCESS_ABSENT");
+                assertThat(after.transitions()).filteredOn(t->"LOCAL_CLEANUP_VERIFIED".equals(t.state())).hasSize(1);
+                if(acquireNext) {
+                    assertThatThrownBy(()->f.store.completeOrphanCleanup(expected,T0.plusSeconds(23))).hasMessage("LIVE_ORPHAN_CLEANUP_GUARD_CHANGED");
+                    assertThat(f.guard.snapshot()).isEqualTo(saved);
+                }
+            } finally {releaseFirst.countDown();}
+        }
+    }
+
     @Test
     void lateReceiptAfterIndividualStopPreservesEvidenceWithoutReactivatingEvent() {
         Fixture f=fixture("38"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);

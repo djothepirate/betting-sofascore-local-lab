@@ -70,6 +70,254 @@ class LiveCampaignControllerTest {
     }
 
     @Test
+    void orphanCleanupFormClosesOnlyTheExpectedGenerationAndRevealsNewPreparationAfterRedirect() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        Guard guard = new Guard("CLEANUP_REQUIRED", CAMPAIGN_ID,
+                new Owner(UUID.randomUUID(), 654321, NOW), 7, NOW);
+        when(service.state(CAMPAIGN_ID)).thenReturn(campaign("INTERRUPTED", 43));
+        when(service.orphanCleanupGuard(CAMPAIGN_ID)).thenReturn(Optional.of(guard), Optional.empty());
+        String path = "/live-campaigns/" + CAMPAIGN_ID + "/finalize-interruption";
+        String page = mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST).session(session))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("orphanCleanup", guard))
+                .andExpect(model().attribute("canPrepareAgain", false))
+                .andExpect(content().string(containsString("Clôturer la session interrompue")))
+                .andExpect(content().string(containsString("son état INTERRUPTED sont conservés")))
+                .andExpect(content().string(containsString("Aucune collecte n’est lancée")))
+                .andExpect(content().string(not(containsString("Préparer une nouvelle campagne avec ces rencontres"))))
+                .andExpect(content().string(not(containsString("654321"))))
+                .andExpect(content().string(not(containsString(guard.owner().instanceId().toString()))))
+                .andReturn().getResponse().getContentAsString();
+        String form = renderedForm(page, path);
+        String token = hiddenValue(form, "localFormToken");
+        assertThat(hiddenValue(form, "guardGeneration")).isEqualTo("7");
+        var result = mvc.perform(post(path).header("Host", HOST).header("Origin", ORIGIN).session(session)
+                        .param("localFormToken", token).param("guardGeneration", hiddenValue(form, "guardGeneration")))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(redirectedUrl("/live-campaigns/" + CAMPAIGN_ID))
+                .andExpect(flash().attribute("liveSuccess", containsString("aucune collecte n’a été lancée")))
+                .andReturn();
+        mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST).session(session)
+                        .flashAttrs(result.getFlashMap()))
+                .andExpect(status().isOk())
+                .andExpect(model().attribute("canPrepareAgain", true))
+                .andExpect(content().string(containsString("La session interrompue est clôturée")))
+                .andExpect(content().string(containsString(">INTERRUPTED</span>")))
+                .andExpect(content().string(not(containsString("/finalize-interruption"))))
+                .andExpect(content().string(containsString("Préparer une nouvelle campagne avec ces rencontres")));
+        mvc.perform(post(path).header("Host", HOST).header("Origin", ORIGIN).session(session)
+                        .param("localFormToken", token).param("guardGeneration", "7"))
+                .andExpect(status().isBadRequest())
+                .andExpect(resultValue -> assertThat(resultValue.getResolvedException()).isInstanceOf(InvalidLocalFormTokenException.class));
+        verify(service, times(2)).state(CAMPAIGN_ID);
+        verify(service, times(2)).runtimeStatus(CAMPAIGN_ID);
+        verify(service, times(2)).orphanCleanupGuard(CAMPAIGN_ID);
+        verify(service).finalizeInterruptedCleanup(CAMPAIGN_ID, 7);
+        verifyNoMoreInteractions(service);
+    }
+
+    @Test
+    void orphanCleanupRequiresPostSameOriginAndAnUnusedLocalToken() throws Exception {
+        String path = "/live-campaigns/" + CAMPAIGN_ID + "/finalize-interruption";
+        MockHttpSession session = new MockHttpSession();
+        mvc.perform(get(path).header("Host", HOST)).andExpect(status().isMethodNotAllowed());
+        mvc.perform(post(path).header("Host", HOST).header("Origin", ORIGIN)
+                        .session(session).param("guardGeneration", "7"))
+                .andExpect(status().isBadRequest())
+                .andExpect(result -> assertThat(result.getResolvedException()).isInstanceOf(InvalidLocalFormTokenException.class));
+        mvc.perform(post(path).header("Host", HOST).header("Origin", "https://foreign.invalid")
+                        .session(session).param("guardGeneration", "7").param("localFormToken", tokens.issue(session)))
+                .andExpect(status().isForbidden());
+        mvc.perform(post(path).header("Host", HOST).header("Origin", ORIGIN)
+                        .session(session).param("guardGeneration", "7").param("localFormToken", "invalid-token"))
+                .andExpect(status().isBadRequest());
+        verifyNoInteractions(service);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"", "invalid", "0", "-1", "9223372036854775808"})
+    void orphanCleanupRejectsMissingOrInvalidGenerationBeforeServiceMutation(String generation) throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        var request = post("/live-campaigns/" + CAMPAIGN_ID + "/finalize-interruption")
+                .header("Host", HOST).header("Origin", ORIGIN).session(session)
+                .param("localFormToken", tokens.issue(session));
+        if (!generation.isEmpty()) request.param("guardGeneration", generation);
+        mvc.perform(request).andExpect(status().isBadRequest());
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void orphanCleanupRejectsMalformedIdAndPreservesTheRequestedCampaignIdentity() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        mvc.perform(post("/live-campaigns/not-a-uuid/finalize-interruption")
+                        .header("Host", HOST).header("Origin", ORIGIN).session(session)
+                        .param("localFormToken", tokens.issue(session)).param("guardGeneration", "7"))
+                .andExpect(status().isBadRequest());
+        UUID missing = UUID.fromString("00000000-0000-0000-0000-000000000999");
+        doThrow(new NoSuchElementException("LIVE_CAMPAIGN_NOT_FOUND"))
+                .when(service).finalizeInterruptedCleanup(missing, 7);
+        mvc.perform(post("/live-campaigns/" + missing + "/finalize-interruption")
+                        .header("Host", HOST).header("Origin", ORIGIN).session(session)
+                        .param("localFormToken", tokens.issue(session)).param("guardGeneration", "7"))
+                .andExpect(status().isNotFound())
+                .andExpect(content().string(containsString("Cette campagne n’existe pas")));
+        verify(service).finalizeInterruptedCleanup(missing, 7);
+        verifyNoMoreInteractions(service);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"LIVE_CLEANUP_OWNER_ACTIVE,application active",
+            "LIVE_CLEANUP_PROCESS_UNVERIFIED,n’a pas pu être vérifié",
+            "LIVE_CLEANUP_PROCESS_ACTIVE,encore actif",
+            "LIVE_CLEANUP_STATE_CHANGED,Actualiser la page",
+            "LIVE_CLEANUP_BUSY,clôture de session est déjà en cours",
+            "LIVE_ORPHAN_CLEANUP_GUARD_CHANGED,Actualiser la page",
+            "LIVE_ORPHAN_CLEANUP_INCOMPLETE,session reste verrouillée"})
+    void orphanCleanupRefusalsHaveActionableMessagesAndConsumeTheToken(String code, String message) throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        String token = tokens.issue(session);
+        String path = "/live-campaigns/" + CAMPAIGN_ID + "/finalize-interruption";
+        doThrow(new IllegalStateException(code)).when(service).finalizeInterruptedCleanup(CAMPAIGN_ID, 7);
+        mvc.perform(post(path).header("Host", HOST).header("Origin", ORIGIN).session(session)
+                        .param("localFormToken", token).param("guardGeneration", "7"))
+                .andExpect(status().isConflict()).andExpect(model().attribute("liveErrorCode", code))
+                .andExpect(model().attribute("retryCampaignId", CAMPAIGN_ID))
+                .andExpect(content().string(containsString(message)))
+                .andExpect(content().string(containsString("href=\"/live-campaigns/" + CAMPAIGN_ID + "\">Revenir à la campagne</a>")))
+                .andExpect(content().string(not(containsString("Ouvrir la campagne à clôturer"))));
+        mvc.perform(post(path).header("Host", HOST).header("Origin", ORIGIN).session(session)
+                        .param("localFormToken", token).param("guardGeneration", "7"))
+                .andExpect(status().isBadRequest());
+        verify(service).finalizeInterruptedCleanup(CAMPAIGN_ID, 7);
+        verifyNoMoreInteractions(service);
+    }
+
+    @Test
+    void invalidOrphanGuardUsesItsActualArgumentExceptionTypeAndLinksBackToAReadableCampaign() throws Exception {
+        MockHttpSession session = new MockHttpSession();
+        String token = tokens.issue(session);
+        String path = "/live-campaigns/" + CAMPAIGN_ID + "/finalize-interruption";
+        // JdbcLiveCampaignStore.completeOrphanCleanup raises IllegalArgumentException for this code.
+        doThrow(new IllegalArgumentException("LIVE_ORPHAN_CLEANUP_INVALID_GUARD"))
+                .when(service).finalizeInterruptedCleanup(CAMPAIGN_ID, 7);
+        mvc.perform(post(path).header("Host", HOST).header("Origin", ORIGIN).session(session)
+                        .param("localFormToken", token).param("guardGeneration", "7"))
+                .andExpect(status().isBadRequest())
+                .andExpect(result -> assertThat(result.getResolvedException()).isExactlyInstanceOf(IllegalArgumentException.class))
+                .andExpect(model().attribute("liveErrorCode", "LIVE_ORPHAN_CLEANUP_INVALID_GUARD"))
+                .andExpect(model().attribute("retryCampaignId", CAMPAIGN_ID))
+                .andExpect(content().string(containsString("Actualiser la page de la campagne")))
+                .andExpect(content().string(containsString("href=\"/live-campaigns/" + CAMPAIGN_ID + "\">Revenir à la campagne</a>")))
+                .andExpect(content().string(not(containsString("La sélection ou le manifeste est invalide"))));
+        mvc.perform(post(path).header("Host", HOST).header("Origin", ORIGIN).session(session)
+                        .param("localFormToken", token).param("guardGeneration", "7"))
+                .andExpect(status().isBadRequest())
+                .andExpect(result -> assertThat(result.getResolvedException()).isInstanceOf(InvalidLocalFormTokenException.class));
+        when(service.state(CAMPAIGN_ID)).thenReturn(campaign("INTERRUPTED", 43));
+        mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST).session(session))
+                .andExpect(status().isOk()).andExpect(view().name("live-campaign"));
+        verify(service).finalizeInterruptedCleanup(CAMPAIGN_ID, 7);
+        verify(service).state(CAMPAIGN_ID);
+        verify(service).runtimeStatus(CAMPAIGN_ID);
+        verify(service).orphanCleanupGuard(CAMPAIGN_ID);
+        verifyNoMoreInteractions(service);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"INTERRUPTED", "STOPPED_ERROR", "STOPPED_OPERATOR", "STOPPED_LIMIT", "STOPPED_CAPACITY", "COMPLETED"})
+    void terminalCampaignWithoutOrphanGuardOffersPreparationOnly(String state) throws Exception {
+        when(service.state(CAMPAIGN_ID)).thenReturn(campaign(state, 43));
+        mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST))
+                .andExpect(status().isOk()).andExpect(model().attribute("canPrepareAgain", true))
+                .andExpect(content().string(containsString("Préparer une nouvelle campagne avec ces rencontres")))
+                .andExpect(content().string(containsString("Les rencontres terminées ou reportées seront exclues")))
+                .andExpect(content().string(not(containsString("/finalize-interruption"))))
+                .andExpect(content().string(not(containsString("name=\"confirmation\""))))
+                .andExpect(content().string(not(containsString("Lancer la campagne live"))));
+        verify(service).state(CAMPAIGN_ID);
+        verify(service).runtimeStatus(CAMPAIGN_ID);
+        verify(service).orphanCleanupGuard(CAMPAIGN_ID);
+        verifyNoMoreInteractions(service);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"PREPARED", "RUNNING"})
+    void nonTerminalCampaignDoesNotOfferOrphanCleanupOrDuplicatePreparation(String state) throws Exception {
+        when(service.state(CAMPAIGN_ID)).thenReturn(campaign(state, 43));
+        mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST))
+                .andExpect(status().isOk()).andExpect(model().attribute("canPrepareAgain", false))
+                .andExpect(content().string(not(containsString("/finalize-interruption"))))
+                .andExpect(content().string(not(containsString("Préparer une nouvelle campagne avec ces rencontres"))));
+        verify(service).state(CAMPAIGN_ID);
+        verify(service).runtimeStatus(CAMPAIGN_ID);
+        verify(service).orphanCleanupGuard(CAMPAIGN_ID);
+        verifyNoMoreInteractions(service);
+    }
+
+    @Test
+    void prepareAgainFormUsesEveryManifestTargetAndOnlyRequestsNewAdmission() throws Exception {
+        UUID secondId = CanonicalEventIdentity.sofascore(900002L).value();
+        List<UUID> ids = List.of(EVENT_ID, secondId);
+        List<Target> targets = List.of(manifest().targets().getFirst(), new Target(secondId, 900002L, 2, 2));
+        Manifest original = new Manifest(CAMPAIGN_ID, HASH, "live-v1", NOW, NOW.plusSeconds(300), Duration.ofHours(4),
+                1000, 3000, 1_000_000, 2, targets);
+        // The preserved manifest remains authoritative even if the rendered event list is incomplete.
+        when(service.state(CAMPAIGN_ID)).thenReturn(new CampaignView(original, "INTERRUPTED", "OWNER_PROCESS_ABSENT",
+                NOW, NOW.plusSeconds(14400), 42, 1000, 43, null, List.of(), List.of(), List.of()));
+        UUID nextId = UUID.fromString("00000000-0000-0000-0000-000000000059");
+        Manifest next = new Manifest(nextId, HASH, "live-v1", NOW, NOW.plusSeconds(300), Duration.ofHours(4),
+                1000, 3000, 1_000_000, 2, targets);
+        when(service.prepareSelection(ids)).thenReturn(new LiveCampaignService.Preparation(next, List.of()));
+        MockHttpSession session = new MockHttpSession();
+        String page = mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST).session(session))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String form = renderedForm(page, "/live-campaigns/prepare");
+        var values = Pattern.compile("name=\"eventId\"[^>]*value=\"([^\"]+)\"").matcher(form)
+                .results().map(match -> match.group(1)).toList();
+        assertThat(values).containsExactlyElementsOf(ids.stream().map(UUID::toString).toList());
+        assertThat(form).doesNotContain("confirmation", "manifestHash", "/launch");
+        clearInvocations(service);
+        mvc.perform(post("/live-campaigns/prepare").header("Host", HOST).header("Origin", ORIGIN).session(session)
+                        .param("localFormToken", hiddenValue(form, "localFormToken"))
+                        .param("eventId", values.toArray(String[]::new)))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/live-campaigns/" + nextId));
+        verify(service).prepareSelection(ids);
+        verifyNoMoreInteractions(service);
+    }
+
+    @Test
+    void providerCleanupRefusalLinksToTheOtherCampaignThatActuallyOwnsTheGuard() throws Exception {
+        UUID previous = UUID.fromString("00000000-0000-0000-0000-000000000057");
+        when(service.launch(CAMPAIGN_ID, HASH)).thenThrow(new IllegalStateException("LIVE_PROVIDER_CLEANUP_REQUIRED"));
+        when(service.providerCleanupCampaignId()).thenReturn(Optional.of(previous));
+        MockHttpSession session = new MockHttpSession();
+        mvc.perform(post("/live-campaigns/" + CAMPAIGN_ID + "/launch").header("Host", HOST).header("Origin", ORIGIN)
+                        .session(session).param("localFormToken", tokens.issue(session))
+                        .param("manifestHash", HASH).param("confirmation", "true"))
+                .andExpect(status().isConflict()).andExpect(model().attribute("cleanupCampaignId", previous))
+                .andExpect(content().string(containsString("href=\"/live-campaigns/" + previous + "\"")))
+                .andExpect(content().string(containsString("Ouvrir la campagne à clôturer")))
+                .andExpect(content().string(containsString("Clôturer la session interrompue")))
+                .andExpect(content().string(not(containsString("/finalize-interruption"))));
+        verify(service).launch(CAMPAIGN_ID, HASH);
+        verify(service).providerCleanupCampaignId();
+        verifyNoMoreInteractions(service);
+    }
+
+    private static String renderedForm(String page, String action) {
+        var match = Pattern.compile("(?s)<form\\b[^>]*action=\"" + Pattern.quote(action) + "\"[^>]*>.*?</form>").matcher(page);
+        assertThat(match.find()).as("POST form for %s", action).isTrue();
+        assertThat(match.group()).contains("method=\"post\"");
+        return match.group();
+    }
+
+    private static String hiddenValue(String form, String name) {
+        var match = Pattern.compile("<input\\b[^>]*name=\"" + Pattern.quote(name) + "\"[^>]*value=\"([^\"]+)\"").matcher(form);
+        assertThat(match.find()).as("Hidden input %s", name).isTrue();
+        return match.group(1);
+    }
+
+    @Test
     void preparedPageOffersCancellationAndItsControlledPostOnlyCancelsThePreparation() throws Exception {
         MockHttpSession session = new MockHttpSession();
         when(service.state(CAMPAIGN_ID)).thenReturn(campaign("PREPARED", 1));
@@ -354,6 +602,7 @@ class LiveCampaignControllerTest {
                 .andExpect(header().string("Content-Security-Policy", containsString("script-src 'self'")));
         verify(service).state(CAMPAIGN_ID);
         verify(service).runtimeStatus(CAMPAIGN_ID);
+        verify(service).orphanCleanupGuard(CAMPAIGN_ID);
         verifyNoMoreInteractions(service);
     }
 
@@ -520,6 +769,7 @@ class LiveCampaignControllerTest {
                 .andExpect(jsonPath("$.runtimeStatus.cleanupInProgress").value(cleanupInProgress));
         verify(service, times(2)).state(CAMPAIGN_ID);
         verify(service, times(2)).runtimeStatus(CAMPAIGN_ID);
+        verify(service).orphanCleanupGuard(CAMPAIGN_ID);
         verifyNoMoreInteractions(service);
     }
 
@@ -536,6 +786,7 @@ class LiveCampaignControllerTest {
                 .andExpect(model().attribute("liveErrorCode", code))
                 .andExpect(content().string(containsString(message)));
         verify(service).launch(CAMPAIGN_ID, HASH);
+        if (code.equals("LIVE_PROVIDER_CLEANUP_REQUIRED")) verify(service).providerCleanupCampaignId();
         verifyNoMoreInteractions(service);
     }
 

@@ -59,6 +59,20 @@ public final class ManualProviderRequestCoordinator {
 
     public CampaignLease acquireLiveCampaign(UUID campaignId) { return acquireCampaign(campaignId, true); }
 
+    /** Only local inspection/reconciliation; cannot acquire a lease or open a provider session. */
+    public void withExclusiveLocalCleanup(Runnable cleanup) {
+        Objects.requireNonNull(cleanup, "cleanup");
+        if (requestLock.isHeldByCurrentThread() || !requestLock.tryLock())
+            throw new CoordinationException("provider campaign is active");
+        try {
+            if (liveCampaign || supervisor != null && supervisor.activeCampaignId().isPresent())
+                throw new CoordinationException("provider campaign is active");
+            cleanup.run();
+        } finally {
+            requestLock.unlock();
+        }
+    }
+
     ManualProviderRequestCoordinator(Clock clock, Duration minimumDelay, Pause pause) {
         this(() -> epochNanos(Objects.requireNonNull(clock, "clock").instant()),
                 minimumDelay,

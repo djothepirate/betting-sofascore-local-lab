@@ -19,6 +19,37 @@ PostgreSQL local Docker Desktop et application sur `127.0.0.1:8087`, textes UTF-
 
 ## 1. Objectif et origine du besoin
 
+### Quinzième retour — clôture accessible après interruption d’Eclipse
+
+Le 08/09 après `73cba517bb6e81d7e6054192027594fa27238ae6`, le propriétaire valide la
+présentation des compositions et signale le blocage d’un nouveau lancement après avoir
+arrêté Eclipse pour libérer 8087, sans arrêter préalablement la campagne depuis son bouton.
+La campagne `35cae8c0-80e2-48c3-90bd-cd7240157efe` est correctement `INTERRUPTED`, mais le
+garde `CLEANUP_REQUIRED` conservé au redémarrage n’a aucun parcours de clôture dans l’interface.
+
+Le complément ajoute une clôture locale explicite après preuve d’absence du propriétaire
+et des composants Playwright. La transaction compare la génération et toute l’identité du
+garde, vérifie les états et tentatives terminaux, puis inscrit `LOCAL_CLEANUP_VERIFIED` et
+libère le garde atomiquement. L’interruption, les 140 appels observés et les données de la
+campagne restent historiques. Un bouton prépare ensuite une nouvelle sélection avec les
+mêmes rencontres, en réappliquant l’éligibilité et l’admission ; aucune ancienne campagne
+n’est reprise automatiquement. Les contrôles de report pendant la campagne sont conservés.
+
+Le [rapport de clôture après interruption](../../validation/WO058-ORPHAN-CLEANUP-20260908.md)
+consigne les commandes et résultats de ce complément. Le garde opérateur de génération 40
+a seulement été lu ; il reste disponible pour la validation du nouveau bouton après livraison.
+Le propriétaire a libéré le port 8087 pour les vérifications. Aucune migration, modification
+de parseur, collecte fournisseur ni modification d’ADR n’est nécessaire à ce parcours local.
+
+La sonde reconnaît le parent Maven du lanceur Eclipse et les JVM auxiliaires prouvées
+antérieures à l’ancien propriétaire, tout en conservant les refus des workers et des identités
+incertaines. Le test du vrai `spring-boot:run` utilise uniquement un main de diagnostic local :
+verdict `ABSENT` en 1 321 ms, sans démarrer Spring ni accéder à la base. La reconstruction finale
+`-Pintegration-tests clean verify` passe le 08/09 à 15:31:00 UTC : 1 788 tests standard exécutés,
+cinq skips documentés et 160 tests d’intégration réussis, dont les neuf nouveaux cas de
+récupération PostgreSQL. Les onze tests de sonde passent sans ignoré. Le `clean verify`
+précédent est également réussi et son périmètre antérieur aux derniers ajustements est explicité.
+
 ### Quatorzième retour — compositions lisibles en live et en J5 manuel
 
 Le 08/09 après `1ba2099`, le propriétaire confirme l’annulation des préparations, l’exclusion

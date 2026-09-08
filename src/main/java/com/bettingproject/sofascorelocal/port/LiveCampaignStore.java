@@ -42,4 +42,10 @@ public interface LiveCampaignStore {
     }
     /** Caller first proves the old owner is absent and holds exclusive recovery authority. Never starts transport. */
     void interruptOrphan(Ownership ownership, Instant at, String reason);
+    /**
+     * Caller first proves the old owner and provider processes are absent, under local recovery exclusion.
+     * Atomically appends cleanup evidence and releases only the exact terminal orphan's guard.
+     * Repetition is accepted only with the same guard evidence and without a newer acquisition.
+     */
+    void completeOrphanCleanup(Guard expectedGuard, Instant verifiedAt);
 }

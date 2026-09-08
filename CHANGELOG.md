@@ -4,6 +4,17 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — clôture d’une session interrompue après redémarrage
+
+- Ajoute « Clôturer la session interrompue » sur la campagne qui détient le verrou orphelin,
+  et un lien vers cette campagne depuis le refus de lancement.
+- Vérifie explicitement l’absence de l’ancien propriétaire et des composants Playwright sous
+  Windows, puis libère le garde et inscrit sa preuve dans une transaction PostgreSQL.
+  Un processus actif, une identité incertaine ou une génération modifiée conserve le blocage.
+- Conserve `INTERRUPTED`, les compteurs et toutes les observations ; propose ensuite une nouvelle
+  préparation avec les mêmes rencontres, soumise aux contrôles habituels et à un nouveau lancement manuel.
+- Détail et vérification : [clôture après interruption](docs/validation/WO058-ORPHAN-CLEANUP-20260908.md).
+
 ### WO-058 — compositions J5 par équipe
 
 - Remplace les longues tables de compositions par un composant commun aux pages J5 manuelle,

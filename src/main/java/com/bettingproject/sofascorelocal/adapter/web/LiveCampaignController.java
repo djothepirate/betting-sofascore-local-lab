@@ -3,6 +3,7 @@ package com.bettingproject.sofascorelocal.adapter.web;
 import com.bettingproject.sofascorelocal.application.live.LiveCampaignService;
 import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.CampaignView;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
@@ -10,9 +11,11 @@ import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.HandlerMapping;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.UUID;
 
@@ -54,8 +57,26 @@ public class LiveCampaignController {
         if (campaign == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
         model.addAttribute("campaign", present(campaign));
         model.addAttribute("manifest", campaign.manifest());
+        var orphanCleanup = campaigns.orphanCleanupGuard(campaignId);
+        model.addAttribute("orphanCleanup", orphanCleanup.orElse(null));
+        model.addAttribute("canPrepareAgain", orphanCleanup.isEmpty()
+                && (campaign.state().equals("INTERRUPTED") || campaign.state().equals("COMPLETED")
+                    || campaign.state().startsWith("STOPPED_")));
         model.addAttribute("localFormToken", tokens.issue(session));
         return "live-campaign";
+    }
+
+    @PostMapping("/live-campaigns/{campaignId}/finalize-interruption")
+    public String finalizeInterruption(@PathVariable UUID campaignId,
+                                       @RequestParam(name = "guardGeneration") long guardGeneration,
+                                       @RequestParam(name = "localFormToken", required = false) String token,
+                                       HttpSession session, RedirectAttributes redirect) {
+        tokens.consume(session, token);
+        if (guardGeneration < 1)
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "LIVE_CLEANUP_GENERATION_REQUIRED");
+        campaigns.finalizeInterruptedCleanup(campaignId, guardGeneration);
+        redirect.addFlashAttribute("liveSuccess", "La session interrompue est clôturée. Son historique est conservé ; aucune collecte n’a été lancée.");
+        return "redirect:/live-campaigns/" + campaignId;
     }
 
     @PostMapping("/live-campaigns/{campaignId}/launch")
@@ -129,10 +150,10 @@ public class LiveCampaignController {
 
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public String invalid(IllegalArgumentException exception, Model model) {
+    public String invalid(IllegalArgumentException exception, Model model, HttpServletRequest request) {
         String code = switch (String.valueOf(exception.getMessage())) {
             case "LIVE_ALL_EVENTS_FINISHED", "LIVE_ALL_EVENTS_INELIGIBLE", "LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY",
-                 "LIVE_CAPACITY_REFUSED_REDUCE_SELECTION" -> exception.getMessage();
+                 "LIVE_CAPACITY_REFUSED_REDUCE_SELECTION", "LIVE_ORPHAN_CLEANUP_INVALID_GUARD" -> exception.getMessage();
             default -> "LIVE_SELECTION_INVALID";
         };
         String message = switch (code) {
@@ -142,10 +163,12 @@ public class LiveCampaignController {
                     "La sélection dépasse la capacité qualifiée à 60 secondes : " + campaigns.selectionMaximum() + " rencontres admissibles. Réduire la sélection. Les rencontres terminées ou reportées sont exclues.";
             case "LIVE_CAPACITY_REFUSED_REDUCE_SELECTION" ->
                     "La cible de 60 secondes ne peut pas être tenue avec ce profil pour cette sélection. Capacité admissible : " + campaigns.selectionMaximum() + " rencontres. Réduire la sélection ; la cadence ne sera pas allongée.";
+            case "LIVE_ORPHAN_CLEANUP_INVALID_GUARD" -> "L’état de la session a changé depuis l’affichage du formulaire. Actualiser la page de la campagne avant de réessayer.";
             default -> "La sélection ou le manifeste est invalide. Préparer une nouvelle campagne.";
         };
         model.addAttribute("liveError", message);
         model.addAttribute("liveErrorCode", code);
+        if (code.equals("LIVE_ORPHAN_CLEANUP_INVALID_GUARD")) addCleanupReturnLink(request, model);
         return "live-campaign-error";
     }
 
@@ -158,14 +181,17 @@ public class LiveCampaignController {
 
     @ExceptionHandler(IllegalStateException.class)
     @ResponseStatus(HttpStatus.CONFLICT)
-    public String rejected(IllegalStateException exception, Model model) {
+    public String rejected(IllegalStateException exception, Model model, HttpServletRequest request) {
         String code = switch (String.valueOf(exception.getMessage())) {
             case "LIVE_DISABLED", "LIVE_PROVIDER_BUSY", "LIVE_PROVIDER_CLEANUP_REQUIRED", "LIVE_LAUNCH_FAILED",
                  "LIVE_EVENT_ALREADY_IN_CAMPAIGN", "LIVE_STORAGE_PROBE_NOT_CONFIGURED",
                  "LIVE_STORAGE_PROBE_TIMEOUT", "LIVE_STORAGE_PROBE_FAILED", "LIVE_STORAGE_PROBE_INVALID",
                  "LIVE_STORAGE_PROBE_INTERRUPTED", "LIVE_STORAGE_CAPACITY_REFUSED", "LIVE_POLICY_INVALID",
                  "LIVE_CAPACITY_QUALIFICATION_REQUIRED", "LIVE_GROUPED_QUALIFICATION_REQUIRED", "LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY",
-                 "LIVE_PREPARATION_ALREADY_LAUNCHED", "LIVE_PREPARATION_NOT_CANCELABLE" -> exception.getMessage();
+                 "LIVE_PREPARATION_ALREADY_LAUNCHED", "LIVE_PREPARATION_NOT_CANCELABLE",
+                 "LIVE_CLEANUP_OWNER_ACTIVE", "LIVE_CLEANUP_PROCESS_UNVERIFIED", "LIVE_CLEANUP_PROCESS_ACTIVE",
+                 "LIVE_CLEANUP_STATE_CHANGED", "LIVE_CLEANUP_BUSY", "LIVE_ORPHAN_CLEANUP_GUARD_CHANGED",
+                 "LIVE_ORPHAN_CLEANUP_INCOMPLETE" -> exception.getMessage();
             default -> "LIVE_REQUEST_REJECTED";
         };
         String message = switch (code) {
@@ -182,14 +208,35 @@ public class LiveCampaignController {
             case "LIVE_PREPARATION_NOT_CANCELABLE" -> "Cette campagne n’est plus en préparation. Actualiser sa page pour consulter son état actuel.";
             case "LIVE_DISABLED" -> "Le lancement live est désactivé. Activer l’opt-in local dédié avant de lancer une campagne préparée.";
             case "LIVE_PROVIDER_BUSY" -> "Une collecte fournisseur occupe déjà la session locale. Attendre sa fin avant de lancer cette campagne.";
-            case "LIVE_PROVIDER_CLEANUP_REQUIRED" -> "La session fournisseur précédente reste verrouillée en attente de clôture locale. Finaliser sa clôture depuis sa campagne si cette action est disponible ; après un redémarrage, faire vérifier le verrou local et l’absence de collecte active avant sa régularisation. Ce lancement n’a pas démarré de nouvelle collecte.";
+            case "LIVE_PROVIDER_CLEANUP_REQUIRED" -> "La session fournisseur précédente reste verrouillée en attente de clôture locale. Ouvrir la campagne concernée et utiliser « Clôturer la session interrompue ». La clôture vérifie que les processus précédents sont arrêtés. Revenir ensuite à cette sélection pour préparer ou lancer la campagne. Aucun appel fournisseur n’a été effectué par cette demande.";
+            case "LIVE_CLEANUP_OWNER_ACTIVE" -> "La session appartient encore à une application active. Arrêter la campagne depuis cette application avant de demander sa clôture.";
+            case "LIVE_CLEANUP_PROCESS_UNVERIFIED" -> "L’arrêt des processus de la session précédente n’a pas pu être vérifié. La session reste verrouillée. Faire vérifier leur arrêt local avant de réessayer.";
+            case "LIVE_CLEANUP_PROCESS_ACTIVE" -> "Un processus de la session précédente est encore actif. La session reste verrouillée. Attendre son arrêt avant de réessayer.";
+            case "LIVE_CLEANUP_STATE_CHANGED", "LIVE_ORPHAN_CLEANUP_GUARD_CHANGED" -> "L’état de la session a changé depuis l’affichage du formulaire. Actualiser la page de la campagne avant de réessayer.";
+            case "LIVE_ORPHAN_CLEANUP_INCOMPLETE" -> "La clôture de la session précédente n’a pas pu être vérifiée complètement. La session reste verrouillée. Actualiser la page de la campagne et faire vérifier l’arrêt des processus avant de réessayer.";
+            case "LIVE_CLEANUP_BUSY" -> "Une clôture de session est déjà en cours. Attendre sa fin, puis actualiser la page de la campagne.";
             case "LIVE_LAUNCH_FAILED" -> "Le lancement de la campagne a échoué. Consulter son état local et finaliser sa clôture si elle est requise avant de préparer un nouveau lancement.";
             case "LIVE_EVENT_ALREADY_IN_CAMPAIGN" -> "Une rencontre sélectionnée appartient déjà à une campagne en cours. Suivre cette campagne ou retirer la rencontre de la sélection. Une rencontre en STOPPED_ERROR peut être sélectionnée à nouveau.";
             default -> "La demande locale a été refusée. Revenir aux rencontres et préparer à nouveau la sélection ; si le refus persiste, conserver ce code pour le diagnostic.";
         };
         model.addAttribute("liveError", message);
         model.addAttribute("liveErrorCode", code);
+        if (code.equals("LIVE_PROVIDER_CLEANUP_REQUIRED"))
+            campaigns.providerCleanupCampaignId().ifPresent(id -> model.addAttribute("cleanupCampaignId", id));
+        if (code.startsWith("LIVE_CLEANUP_") || code.startsWith("LIVE_ORPHAN_CLEANUP_"))
+            addCleanupReturnLink(request, model);
         return "live-campaign-error";
+    }
+
+    private static void addCleanupReturnLink(HttpServletRequest request, Model model) {
+        Object variables = request.getAttribute(HandlerMapping.URI_TEMPLATE_VARIABLES_ATTRIBUTE);
+        if (variables instanceof Map<?, ?> path && path.get("campaignId") instanceof String campaignId) {
+            try {
+                model.addAttribute("retryCampaignId", UUID.fromString(campaignId));
+            } catch (IllegalArgumentException ignored) {
+                // A return link can only point to a local campaign with a valid UUID.
+            }
+        }
     }
 
     @ExceptionHandler(DataAccessException.class)

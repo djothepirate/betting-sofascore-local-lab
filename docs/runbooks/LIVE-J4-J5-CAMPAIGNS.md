@@ -432,10 +432,29 @@ runtime. Les codes `LIVE_PROVIDER_CLEANUP_REQUIRED` et `LIVE_LAUNCH_FAILED` dist
 à vérifier d'un autre échec local de lancement, sans exposer le texte arbitraire des exceptions.
 
 Après crash ou nettoyage incertain, `CLEANUP_REQUIRED` conserve l'exclusion fournisseur. Aucun
-délai, redémarrage ou nouvelle préparation ne la lève. Consulter les preuves de campagne et faire
-vérifier l'identité et la disparition de l'arbre de processus avant toute intervention locale
-sur ce garde. Ce lot ne fournit pas de bouton de libération aveugle ; aucun GET n'est rejoué.
-Un processus propriétaire encore actif ou d'identité inaccessible demeure protégé.
+délai, redémarrage ou nouvelle préparation ne la lève. Après redémarrage sous Windows :
+
+1. Ouvrir la campagne interrompue. Le refus d’un nouveau lancement fournit aussi le lien
+   **« Ouvrir la campagne à clôturer »**.
+2. Utiliser **« Clôturer la session interrompue »**. La commande locale vérifie que l’ancien
+   propriétaire est absent, qu’aucune collecte ne possède la session et que l’inventaire des
+   processus ne signale aucun worker, pilote ou navigateur Playwright actif ou incertain.
+3. Une fois la clôture confirmée, utiliser **« Préparer une nouvelle campagne avec ces rencontres »**.
+   L’éligibilité et la capacité sont vérifiées à nouveau ; vérifier puis confirmer son lancement.
+
+L’ancienne campagne conserve son état `INTERRUPTED`, ses compteurs et ses observations.
+La clôture ajoute la trace `LOCAL_CLEANUP_VERIFIED` et ne lance aucune collecte. Elle ne reprend
+pas l’ancien manifeste. Le parent Maven du lanceur Eclipse est reconnu par son identité et sa
+commande. Les services Java lisibles antérieurs à l’ancien propriétaire sont distingués des
+workers qu’il a pu créer ; les marqueurs Playwright restent bloquants quel que soit leur âge.
+Un processus actif de la session, une identité inaccessible, un autre JVM non attribuable,
+un garde modifié ou une réconciliation SQL incomplète maintient le verrou avec un message explicite.
+Le contrôle après redémarrage est qualifié sous Windows ; les autres systèmes refusent cette
+preuve automatiquement. Aucun processus inspecté n’est arrêté par le bouton.
+
+Avant un prochain arrêt d’Eclipse, utiliser **« Arrêter toute la campagne »** et attendre sa
+clôture. Le parcours ci-dessus reste disponible après un arrêt brutal. Le
+[rapport du 08/09](../validation/WO058-ORPHAN-CLEANUP-20260908.md) décrit ses contrôles et limites.
 
 Une mise à jour de Docker Desktop peut interrompre PostgreSQL et donc arrêter la collecte
 avant que son état terminal puisse être enregistré. Le retour de PostgreSQL ne relance aucun

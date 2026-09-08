@@ -20,6 +20,30 @@ import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 
 class ManualProviderRequestCoordinatorTest {
 
+    @Test
+    void localRecoveryExcludesAnotherThreadAndNeverResetsTheRequestDelay() throws Exception {
+        MutableTicker ticker = new MutableTicker();
+        List<Duration> pauses = new ArrayList<>();
+        var coordinator = new ManualProviderRequestCoordinator(ticker::read, Duration.ofSeconds(3),
+                delay -> { pauses.add(delay); ticker.advance(delay); });
+        try (var lease = coordinator.acquireCampaign(UUID.randomUUID())) { lease.beginRequest(); }
+        AtomicReference<Throwable> rejection = new AtomicReference<>();
+        coordinator.withExclusiveLocalCleanup(() -> {
+            Thread contender = Thread.ofPlatform().start(() -> {
+                try (var ignored = coordinator.acquireLiveCampaign(UUID.randomUUID())) { }
+                catch (Throwable failure) { rejection.set(failure); }
+            });
+            try { contender.join(2000); }
+            catch (InterruptedException failure) { Thread.currentThread().interrupt(); throw new AssertionError(failure); }
+            assertThat(contender.isAlive()).isFalse();
+        });
+        assertThat(rejection.get()).isInstanceOf(ManualProviderRequestCoordinator.CoordinationException.class);
+        assertThatThrownBy(() -> coordinator.withExclusiveLocalCleanup(() -> { throw new IllegalStateException("probe"); }))
+                .hasMessage("probe");
+        try (var lease = coordinator.acquireCampaign(UUID.randomUUID())) { lease.beginRequest(); }
+        assertThat(pauses).containsExactly(Duration.ofSeconds(3));
+    }
+
     private static final UUID CAMPAIGN_ID = UUID.fromString(
             "c2925098-6f3b-4b19-8d0d-59cc5ef62a2a");
 
