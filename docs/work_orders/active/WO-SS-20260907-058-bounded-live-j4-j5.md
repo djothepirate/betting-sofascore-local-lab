@@ -980,7 +980,7 @@ positive et une notice qui se chevauche dans la liste. Le complément corrige ce
 restitutions sans modifier la clôture ni relancer la collecte. La cause initiale de l’arrêt
 reste distincte de ce correctif d’affichage.
 Le [diagnostic en lecture seule](../../validation/WO058-LIVE-CLEANUP-INCIDENT-20260908.md)
-consigne les preuves et le parcours de récupération opérateur encore à effectuer.
+consigne les preuves et l’attente initiale du parcours de récupération opérateur.
 
 Réalisation et résultats propres à ce complément :
 [pagination et affichage après arrêt](../../validation/WO058-LIVE-PAGINATION-20260908.md).
@@ -988,6 +988,28 @@ Les succès Maven v5 ci-dessus restent les preuves du contenu antérieur ; ils n
 pas automatiquement ce complément.
 
 ### Définition de fini
+
+Après redémarrage, le propriétaire a clôturé la session interrompue puis lancé un
+rattrapage final de quinze rencontres. La clôture `LOCAL_CLEANUP_VERIFIED` et la nouvelle
+campagne `COMPLETED` sont confirmées en lecture seule. La trace opérateur identifie
+séparément la cause du HTTP 500 de l’accueil : le refus de l’aperçu de rétention pendant
+le verrouillage fournisseur échappait au repli du contrôleur. Le
+[complément accueil](../../validation/WO058-RECOVERY-DASHBOARD-20260908.md) corrige
+cette restitution sans modifier l’exclusion ou la purge.
+
+Le propriétaire demande également les améliorations graphiques des incidents dans ce
+lot. Leur périmètre est la présentation commune live/J5, les repères visuels et le
+rafraîchissement de la liste ; les observations normalisées, parseurs, cadences et
+contrats de collecte restent inchangés. Les propositions externes jointes aux axes de
+travail ne constituent pas une autorisation de modifier le transport ou ses limites.
+Le [rapport graphique](../../validation/WO058-INCIDENT-GRAPHICS-20260908.md) décrit
+la présentation, la fidélité aux données et la qualification du complément.
+La convention finale du 9 septembre distingue 🧤 Penalty arrêté et ❌ Penalty manqué.
+Après cette dernière adaptation, `clean verify` réussit à 22:19:24 UTC le 8 septembre
+(00:19:24 Europe/Paris le 9) : 1 912 cas Surefire dont cinq ignorés, 166 cas Failsafe,
+zéro échec ou erreur. La qualification Chromium finale réussit quatre cas à 22:22:33 UTC.
+Les ignorés, commandes et captures sont détaillés dans le rapport graphique ; ces
+résultats valident ce complément sans remplacer les limites du diagnostic historique.
 
 Le 8 septembre, après arrêt du Lab par le propriétaire, l’enquête sur l’arrêt initial
 identifie une perte certaine des diagnostics de la boucle et de la clôture. Le complément

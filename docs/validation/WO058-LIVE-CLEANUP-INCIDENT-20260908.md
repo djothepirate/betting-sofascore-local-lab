@@ -41,14 +41,21 @@ La **cause initiale de l'arrêt demeure inconnue**. La dernière réponse et ses
 
 L'inventaire de descendants actuel n'est **pas** la sonde exhaustive de clôture de l'application : il ne suffit pas à libérer la garde. Le premier essai CIM en sandbox avait été refusé ; seule la lecture autorisée suivante a fourni les identités ci-dessus.
 
-## Parcours de récupération existant — action opérateur en attente
+## Parcours de récupération existant — attente initiale
 
 1. L'utilisateur arrête puis redémarre le lanceur Eclipse du Lab. Ce diagnostic n'a arrêté ni redémarré aucun processus et n'a lancé aucune collecte.
 2. Au démarrage, [markProvenOrphanWithoutRestart](../../src/main/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignService.java#L635) vérifie l'absence de l'ancien propriétaire par PID et date de création. Quand elle est établie, [interruptOrphan](../../src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/live/JdbcLiveCampaignStore.java#L331) enregistre l'interruption, annule les échéances restantes et maintient `CLEANUP_REQUIRED`. Aucun navigateur n'est recréé et la garde n'est pas libérée automatiquement.
 3. L'utilisateur rouvre cette campagne et emploie alors le parcours de clôture d'une session orpheline : POST `/live-campaigns/{campaignId}/finalize-interruption`, distinct du POST `/stop` de la session actuelle. [finalizeInterruptedCleanup](../../src/main/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignService.java#L291) exige le jeton local, la génération attendue, l'exclusion locale, l'absence de session active et la sonde conservative [LiveOrphanProcessProbe](../../src/main/java/com/bettingproject/sofascorelocal/application/live/LiveOrphanProcessProbe.java). Une identité illisible ou un processus candidat résiduel maintient le refus.
 4. Seulement après cette preuve, [completeOrphanCleanup](../../src/main/java/com/bettingproject/sofascorelocal/adapter/persistence/live/JdbcLiveCampaignStore.java#L362) compare sous verrou l'identité exacte et la génération, vérifie les états terminaux et le ledger, puis enregistre `LOCAL_CLEANUP_VERIFIED` et libère la garde atomiquement. Les observations, compteurs et traces antérieures restent conservés. La réussite doit être constatée dans l'interface après l'action, sans la présumer.
 
-Il n'est pas proposé d'effacer `cleanupTerminalFailure`, de forcer la garde en SQL ni de contourner la sonde de processus. Aucun correctif de service, de superviseur ou de persistance n'a été appliqué pour ce diagnostic. La récupération réelle reste **en attente de l'action opérateur** ; aucun succès de clôture n'est déclaré.
+Il n'est pas proposé d'effacer `cleanupTerminalFailure`, de forcer la garde en SQL ni de contourner la sonde de processus. Aucun correctif de service, de superviseur ou de persistance n'a été appliqué pour ce diagnostic initial. À ce stade de l’enquête, la récupération réelle restait **en attente de l'action opérateur**.
+
+**Complément après l’action opérateur :** la clôture orpheline est maintenant confirmée
+par `LOCAL_CLEANUP_VERIFIED` à **23:24:55.679104 Europe/Paris**, révision 11844.
+La campagne conserve son état historique `INTERRUPTED`. Une nouvelle campagne de
+quinze rencontres a ensuite atteint `COMPLETED`, et le verrou fournisseur a été
+constaté `FREE`. Le [rapport de récupération et de l’accueil](WO058-RECOVERY-DASHBOARD-20260908.md)
+consigne ces preuves ainsi que la cause distincte et prouvée du HTTP 500 après redémarrage.
 
 ## Complément historique après arrêt du Lab — 20:54 UTC
 

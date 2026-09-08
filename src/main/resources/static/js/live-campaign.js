@@ -7,6 +7,7 @@
   const revisions = new Map();
   const eventCampaigns = new Map();
   const tableVersions = new WeakMap();
+  const incidentVersions = new WeakMap();
   const status = monitor.querySelector("[data-live-refresh-status]");
   let timer;
   let request;
@@ -106,8 +107,10 @@
     let body = section.querySelector("[data-live-table-body]");
     if (!body) {
       const details = create("details");
-      details.open = true;
-      details.append(create("summary", "Données normalisées"));
+      const incidents = section.dataset.liveFamily === "EVENT_INCIDENTS";
+      details.open = !incidents;
+      if (incidents) details.setAttribute("data-incidents-technical", "true");
+      details.append(create("summary", incidents ? "Tableau normalisé (technique)" : "Données normalisées"));
       const scroll = create("div");
       scroll.className = "table-scroll";
       const grid = create("table");
@@ -129,6 +132,98 @@
     body.replaceChildren(...rows);
     text(section, "[data-live-empty]", rows.length === 0 ? "Collection normalisée vide." : " ");
     tableVersions.set(section, version);
+  }
+
+  function incidentNode() {
+    const item = create("li");
+    item.className = "incidents-item";
+    const minute = create("span", "—", "data-incident-minute");
+    minute.className = "incidents-minute";
+    const icon = create("span", "", "data-incident-icon");
+    icon.className = "incidents-icon";
+    icon.setAttribute("aria-hidden", "true");
+    const content = create("div");
+    content.className = "incidents-content";
+    const heading = create("div");
+    heading.className = "incidents-heading";
+    const side = create("span", "", "data-incident-side");
+    side.className = "incidents-side";
+    heading.append(create("strong", "", "data-incident-label"), side);
+    const player = create("p", undefined, "data-incident-player-line");
+    player.className = "incidents-player-line";
+    player.append(create("span", "", "data-incident-player"));
+    content.append(heading, player);
+    for (const [key, label, arrow] of [["in", "Entrée", "↗"], ["out", "Sortie", "↙"]]) {
+      const change = create("div", undefined, `data-incident-${key}`);
+      change.className = "incidents-change";
+      const changeLabel = create("span");
+      changeLabel.className = "incidents-change-label";
+      const indicator = create("span", arrow);
+      indicator.setAttribute("aria-hidden", "true");
+      changeLabel.append(indicator, document.createTextNode(` ${label}`));
+      change.append(changeLabel, create("span", "", `data-incident-player-${key}`));
+      content.append(change);
+    }
+    for (const key of ["detail", "motif"]) {
+      const note = create("p", "", `data-incident-${key}`);
+      note.className = "incidents-note";
+      content.append(note);
+    }
+    const score = create("span", "", "data-incident-score");
+    score.className = "incidents-score";
+    item.append(minute, icon, content, score);
+    return item;
+  }
+
+  function renderIncidents(section, view) {
+    let host = section.querySelector("[data-incidents]");
+    if (!view || !Array.isArray(view.incidents)) { host?.remove(); return; }
+    const version = JSON.stringify(view);
+    if (host && incidentVersions.get(host) === version) return;
+    if (!host) {
+      host = create("div", undefined, "data-incidents");
+      host.className = "incidents-view";
+      const empty = create("p", "La liste source est explicitement vide.", "data-incidents-empty");
+      empty.className = "incidents-empty";
+      const list = create("ol", undefined, "data-incidents-list");
+      list.className = "incidents-list";
+      list.setAttribute("aria-label", "Incidents dans l’ordre de l’observation");
+      host.append(empty, list);
+      const technical = section.querySelector("[data-incidents-technical]");
+      section.insertBefore(host, technical?.parentElement === section ? technical : null);
+    }
+    const list = host.querySelector("[data-incidents-list]");
+    const existing = new Map(Array.from(list.children).map(node => [node.dataset.incidentKey, node]));
+    view.incidents.forEach((incident, index) => {
+      // An ordinal identifies this displayed occurrence, never a provider incident identity.
+      const key = String(index);
+      const node = existing.get(key) || incidentNode();
+      existing.delete(key);
+      node.dataset.incidentKey = key;
+      node.dataset.incidentTone = incident.tone;
+      node.dataset.incidentTeamSide = incident.teamSide;
+      for (const [field, selector] of [["minuteLabel", "minute"], ["typeLabel", "label"], ["icon", "icon"],
+        ["playerLabel", "player"], ["scoreLabel", "score"], ["detailLabel", "detail"],
+        ["motifLabel", "motif"], ["playerInLabel", "player-in"], ["playerOutLabel", "player-out"]])
+        text(node, `[data-incident-${selector}]`, incident[field]);
+      const sideLabel = incident.teamSide === "HOME" ? "Domicile" : incident.teamSide === "AWAY" ? "Extérieur" : "";
+      text(node, "[data-incident-side]", !sideLabel || incident.teamLabel === sideLabel
+        ? incident.teamLabel : `${sideLabel} · ${incident.teamLabel}`);
+      node.querySelector("[data-incident-side]").hidden = incident.tone === "period";
+      node.querySelector("[data-incident-player-line]").hidden = incident.playerLabel === "—"
+        || incident.tone === "substitution" && (incident.playerInLabel !== "—" || incident.playerOutLabel !== "—");
+      node.querySelector("[data-incident-in]").hidden = incident.playerInLabel === "—";
+      node.querySelector("[data-incident-out]").hidden = incident.playerOutLabel === "—";
+      node.querySelector("[data-incident-detail]").hidden = incident.detailLabel === "—";
+      node.querySelector("[data-incident-motif]").hidden = incident.motifLabel === "—";
+      const score = node.querySelector("[data-incident-score]");
+      score.hidden = incident.scoreLabel === "—";
+      score.setAttribute("aria-label", `Score : ${incident.scoreLabel}`);
+      if (list.children.item(index) !== node) list.insertBefore(node, list.children.item(index));
+    });
+    existing.forEach(node => node.remove());
+    host.querySelector("[data-incidents-empty]").hidden = view.incidents.length > 0;
+    incidentVersions.set(host, version);
   }
 
   function renderFamily(container, family) {
@@ -188,6 +283,14 @@
           section.append(host);
         }
         window.LineupsView.update(host, family.lineups);
+      }
+    } else if (family.endpoint === "EVENT_INCIDENTS") {
+      renderIncidents(section, family.incidents);
+      if (family.incidents) {
+        renderTable(section, family.table);
+      } else {
+        section.querySelector("[data-incidents-technical]")?.remove();
+        tableVersions.delete(section);
       }
     } else {
       renderTable(section, family.table);

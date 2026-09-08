@@ -589,7 +589,11 @@
       peuvent entrer dans un plan. L’exécution reste réservée au script opérateur, après sauvegarde
       chiffrée et restauration qualifiée.</p>
 
-    <p class="notice notice-danger" th:if="${retentionPreviewUnavailable}">
+    <p class="notice notice-warning" th:if="${retentionPreviewProviderBusy == true}">
+      L’aperçu de rétention est indisponible : une session fournisseur est active ou sa clôture reste à finaliser.
+      Actualisez le tableau de bord une fois la session clôturée. Aucun plan de rétention n’a été calculé.
+    </p>
+    <p class="notice notice-danger" th:if="${retentionPreviewUnavailable == true and retentionPreviewProviderBusy != true}">
       L’aperçu de rétention est indisponible ; aucune action n’est possible.
     </p>
 

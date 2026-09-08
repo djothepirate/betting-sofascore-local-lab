@@ -117,6 +117,8 @@ le dernier échec de clôture avec leurs heures. Les journaux permettent de les 
 à l’identifiant de campagne. Un code générique ne permet pas d’affirmer que la cause
 était un timeout Docker, un problème PostgreSQL ou un crash de navigateur.
 
-L’ancienne campagne reste à récupérer par le parcours opérateur après redémarrage,
-décrit dans le [runbook](../runbooks/LIVE-J4-J5-CAMPAIGNS.md). Ce complément ne prouve pas
+L’ancienne campagne a ensuite été clôturée par le parcours opérateur après redémarrage,
+décrit dans le [runbook](../runbooks/LIVE-J4-J5-CAMPAIGNS.md). La transition
+`LOCAL_CLEANUP_VERIFIED` est confirmée à 23:24:55.679104 Europe/Paris dans le
+[rapport de récupération](WO058-RECOVERY-DASHBOARD-20260908.md). Ce résultat ne prouve pas
 qu’un bouton de clôture déjà bloqué deviendrait réessayable dans la même JVM.

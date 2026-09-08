@@ -4,6 +4,19 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — accueil pendant une clôture et présentation des incidents
+
+- Maintient l’accueil accessible lorsque l’aperçu de rétention refuse une campagne
+  active ou une clôture locale en attente ; affiche son indisponibilité sans faux plan.
+- Consigne la clôture orpheline opérateur du 8 septembre à 23:24:55, puis le rattrapage
+  terminé de quinze rencontres en soixante appels.
+- Présente les incidents en liste illustrée : score des buts, cartons distincts,
+  entrant et sortant, passeur, motif, temps additionnel et décisions VAR disponibles.
+  Le tableau technique reste accessible sous un volet ; les actualisations conservent
+  son ouverture et le focus des autres familles.
+- Preuves, portée et qualification : [récupération et accueil](docs/validation/WO058-RECOVERY-DASHBOARD-20260908.md).
+- Qualification visuelle : [présentation des incidents](docs/validation/WO058-INCIDENT-GRAPHICS-20260908.md).
+
 ### WO-058 — diagnostic de l’arrêt et de la clôture live
 
 - Conserve séparément la première erreur d’exécution et le dernier échec de clôture,

@@ -96,6 +96,10 @@ public class J5EventDataController {
                     model.addAttribute("incidentsData", (EventIncidents) value.data());
                     model.addAttribute("incidentMotifs", ((EventIncidents) value.data()).incidents().stream()
                             .map(IncidentPresentation::motifLabel).toList());
+                    if (value.completeness().status() != J5CompletenessStatus.UNAVAILABLE) {
+                        model.addAttribute("incidentsView", IncidentPresentation.from((EventIncidents) value.data(),
+                                page.current().event().homeTeam().name(), page.current().event().awayTeam().name()));
+                    }
                 });
                 page.data().lineups().ifPresent(value -> {
                     model.addAttribute("lineups", value);

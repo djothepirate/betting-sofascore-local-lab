@@ -359,8 +359,12 @@
         <div><dt>SHA-256 source</dt><dd class="mono hash-value" th:text="${incidents.source.payloadSha256}">hash</dd></div>
         <div><dt>SHA-256 normalisé</dt><dd class="mono hash-value" th:text="${incidents.normalizedSha256}">hash</dd></div>
       </dl>
-      <p th:if="${incidentsData.incidents.isEmpty() and incidents.completeness.status.name() != 'UNAVAILABLE'}">La liste source est explicitement vide.</p>
-      <div class="table-scroll" th:unless="${incidentsData.incidents.isEmpty() or incidents.completeness.status.name() == 'UNAVAILABLE'}">
+      <div th:if="${incidentsView != null}">
+        <div th:replace="~{fragments/incidents :: view(${incidentsView})}"></div>
+      </div>
+      <details data-incidents-technical th:unless="${incidentsData.incidents.isEmpty() or incidents.completeness.status.name() == 'UNAVAILABLE'}">
+        <summary>Tableau normalisé (technique)</summary>
+        <div class="table-scroll">
         <table>
           <thead>
           <tr>
@@ -386,7 +390,8 @@
           </tr>
           </tbody>
         </table>
-      </div>
+        </div>
+      </details>
     </section>
 
     <section class="panel" th:unless="${incidents != null}">

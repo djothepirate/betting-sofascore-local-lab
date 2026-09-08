@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org">
+<body>
+<div th:fragment="view(view)" class="incidents-view" data-incidents>
+  <p class="incidents-empty" data-incidents-empty th:hidden="${!view.incidents.isEmpty()}">La liste source est explicitement vide.</p>
+  <ol class="incidents-list" data-incidents-list aria-label="Incidents dans l’ordre de l’observation">
+    <li th:each="item, occurrence : ${view.incidents}" class="incidents-item"
+        th:attr="data-incident-key=${occurrence.index},data-incident-tone=${item.tone},data-incident-team-side=${item.teamSide}">
+      <span class="incidents-minute" data-incident-minute th:text="${item.minuteLabel}">—</span>
+      <span class="incidents-icon" data-incident-icon aria-hidden="true" th:text="${item.icon}">•</span>
+      <div class="incidents-content">
+        <div class="incidents-heading">
+          <strong data-incident-label th:text="${item.typeLabel}">Incident</strong>
+          <span class="incidents-side" data-incident-side th:hidden="${item.tone == 'period'}"
+                th:with="sideLabel=${item.teamSide == 'HOME' ? 'Domicile' : (item.teamSide == 'AWAY' ? 'Extérieur' : '')}"
+                th:text="${sideLabel.isEmpty() or item.teamLabel == sideLabel ? item.teamLabel : sideLabel + ' · ' + item.teamLabel}">Équipe non renseignée</span>
+        </div>
+        <p class="incidents-player-line" data-incident-player-line
+           th:hidden="${item.playerLabel == '—' or (item.tone == 'substitution' and (item.playerInLabel != '—' or item.playerOutLabel != '—'))}">
+          <span data-incident-player th:text="${item.playerLabel}">—</span>
+        </p>
+        <div class="incidents-change" data-incident-in th:hidden="${item.playerInLabel == '—'}">
+          <span class="incidents-change-label"><span aria-hidden="true">↗</span> Entrée</span>
+          <span data-incident-player-in th:text="${item.playerInLabel}">—</span>
+        </div>
+        <div class="incidents-change" data-incident-out th:hidden="${item.playerOutLabel == '—'}">
+          <span class="incidents-change-label"><span aria-hidden="true">↙</span> Sortie</span>
+          <span data-incident-player-out th:text="${item.playerOutLabel}">—</span>
+        </div>
+        <p class="incidents-note" data-incident-detail th:hidden="${item.detailLabel == '—'}" th:text="${item.detailLabel}">—</p>
+        <p class="incidents-note" data-incident-motif th:hidden="${item.motifLabel == '—'}" th:text="${item.motifLabel}">—</p>
+      </div>
+      <span class="incidents-score" data-incident-score th:hidden="${item.scoreLabel == '—'}"
+            th:attr="aria-label=${'Score : ' + item.scoreLabel}" th:text="${item.scoreLabel}">—</span>
+    </li>
+  </ol>
+</div>
+</body>
+</html>

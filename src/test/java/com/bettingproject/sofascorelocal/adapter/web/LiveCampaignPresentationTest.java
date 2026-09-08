@@ -41,6 +41,46 @@ class LiveCampaignPresentationTest {
     private final LiveCampaignPresentation presentation = new LiveCampaignPresentation(events, data);
 
     @ParameterizedTest
+    @CsvSource({"PRESENT", "EMPTY", "UNAVAILABLE"})
+    void incidentsKeepTheirTechnicalTableAndExactObservationWithoutChangingTheJ4Score(String mode) {
+        boolean unavailable = "UNAVAILABLE".equals(mode);
+        UUID id = UUID.randomUUID();
+        var refs = new NormalizedReferences(null, null, 31L, "a".repeat(64));
+        var result = new Result(id, new Publication(unavailable ? "UNAVAILABLE" : "PARSED", "EVENT", "OK",
+                START, "event-incidents-v17", !unavailable, null, null, null, null,
+                unavailable ? "UNAVAILABLE" : "COMPLETE", unavailable ? 0 : 100), refs);
+        var cursor = new FamilyCursor(SofascoreEndpointType.EVENT_INCIDENTS, id, id, id, id,
+                START, START, START, refs, result, result);
+        var card = new EventIncident(0, "card", 64, Optional.empty(), Optional.of(false),
+                Optional.empty(), Optional.of(100L), Optional.of("Joueur source"),
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.of(1), Optional.of(0), Optional.of("red"), Optional.of("Professional handball"));
+        var values = new EventIncidents(900001, "PRESENT".equals(mode) ? List.of(card) : List.of());
+        when(data.findByObservationId(EVENT, SofascoreEndpointType.EVENT_INCIDENTS, 31L))
+                .thenReturn(Optional.of(new J5EventDataObservationView(31, IDENTITY, values,
+                        EventSourceTrace.providerSnapshot(7, "b".repeat(64), "event-incidents-v17", START),
+                        unavailable ? J5CompletenessReport.unavailable() : J5CompletenessReport.measured(1, 1, List.of()),
+                        "a".repeat(64))));
+        var event = presentation.state(campaign(List.of(cursor), List.of(
+                attempt(id, SofascoreEndpointType.EVENT_INCIDENTS, 7, START, result)))).events().getFirst();
+        var family = event.families().stream().filter(value -> value.endpoint().equals("EVENT_INCIDENTS")).findFirst().orElseThrow();
+
+        assertThat(event.score()).isEqualTo("—");
+        assertThat(family.table().columns()).containsExactly("Minute", "Type", "Équipe", "Joueur", "Score", "Détail", "Motif");
+        assertThat(family.dataSnapshotId()).isEqualTo(7L);
+        assertThat(family.parserVersion()).isEqualTo("event-incidents-v17");
+        assertThat(family.payloadSha256()).isEqualTo("b".repeat(64));
+        if (unavailable) assertThat(family.incidents()).isNull();
+        else assertThat(family.incidents()).isEqualTo(IncidentPresentation.from(values, "Domicile", "Extérieur"));
+        if ("PRESENT".equals(mode)) {
+            assertThat(family.table().rows()).containsExactly(List.of("64", "card", "AWAY", "Joueur source", "1–0", "—", "Main volontaire"));
+            assertThat(family.incidents().incidents().getFirst().scoreLabel()).isEqualTo("1–0");
+        } else assertThat(family.table().rows()).isEmpty();
+        verify(data).findByObservationId(EVENT, SofascoreEndpointType.EVENT_INCIDENTS, 31L);
+        verifyNoMoreInteractions(data);
+    }
+
+    @ParameterizedTest
     @CsvSource({"false", "true"})
     void lineupsUseTheReferencedObservationAndKeepProviderAbsenceDistinct(boolean unavailable) {
         UUID id = UUID.randomUUID();

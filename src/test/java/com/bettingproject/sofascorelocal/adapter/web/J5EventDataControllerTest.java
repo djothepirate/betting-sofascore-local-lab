@@ -138,6 +138,9 @@ class J5EventDataControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(view().name("event-statistics"))
                 .andExpect(model().attribute("page", page))
+                .andExpect(model().attribute("incidentsView", IncidentPresentation.from(
+                        (EventIncidents) page.data().incidents().orElseThrow().data(),
+                        page.current().event().homeTeam().name(), page.current().event().awayTeam().name())))
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("no-store")))
                 .andExpect(content().string(containsString("Ball possession")))
                 .andExpect(content().string(containsString("data-statistics")))
@@ -202,6 +205,25 @@ class J5EventDataControllerTest {
                 .andExpect(content().string(containsString("Aucune statistique locale")))
                 .andExpect(content().string(containsString("Aucun incident local")))
                 .andExpect(content().string(containsString("Aucune composition locale")));
+    }
+
+    @Test
+    void unavailableIncidentsDoNotBecomeAnEmptyGraphicalObservation() throws Exception {
+        J4EventSearchItem current = currentEvent();
+        var incidents = new J5EventDataObservationView(31L, current.event().identity(),
+                J5UnavailableFamily.emptyObservation(SofascoreEndpointType.EVENT_INCIDENTS, 900001L),
+                EventSourceTrace.providerSnapshot(31, "e".repeat(64), "event-incidents-unavailable-v1",
+                        Instant.parse("2026-08-15T19:50:46Z")),
+                J5CompletenessReport.unavailable(), "f".repeat(64));
+        var page = new J5EventDataPage(ZoneId.of("Europe/Paris"), current,
+                new J5EventDataBundle(Optional.empty(), Optional.of(incidents), Optional.empty()));
+        when(queryService.find(current.event().identity().value(), "Europe/Paris")).thenReturn(Optional.of(page));
+        when(formTokenService.issue(any(HttpSession.class))).thenReturn("one-use-token");
+        mockMvc.perform(get("/events/{id}/statistics", current.event().identity().value()))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeDoesNotExist("incidentsView"))
+                .andExpect(model().attribute("incidents", incidents));
+        verifyNoInteractions(realEventDataService, fixtureImportService, localJsonImportService);
     }
 
     @Test

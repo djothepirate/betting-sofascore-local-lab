@@ -24,12 +24,19 @@ import com.bettingproject.sofascorelocal.domain.scheduledevents.J3TournamentCata
 import com.bettingproject.sofascorelocal.domain.scheduledevents.J3TournamentCatalogOption;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.TournamentEventCountStatus;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
+import com.bettingproject.sofascorelocal.application.retention.J6RetentionError;
+import com.bettingproject.sofascorelocal.application.retention.J6RetentionException;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpSession;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.cache.CacheManager;
+import org.springframework.dao.DataAccessResourceFailureException;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 
@@ -42,7 +49,11 @@ import java.util.UUID;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -113,6 +124,92 @@ class DashboardControllerTest {
                 Optional.empty(),
                 List.of(),
                 "a".repeat(64)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/", "/dashboard"})
+    void providerActivityMakesOnlyRetentionUnavailableWithoutAnEmptyOrActionablePlan(String path) throws Exception {
+        arrangeDashboardForRetention();
+        when(retentionService.preview()).thenThrow(new J6RetentionException(J6RetentionError.PROVIDER_CAMPAIGN_ACTIVE));
+
+        mockMvc.perform(get(path))
+                .andExpect(status().isOk()).andExpect(view().name("dashboard"))
+                .andExpect(model().attribute("retentionPreviewUnavailable", true))
+                .andExpect(model().attribute("retentionPreviewProviderBusy", true))
+                .andExpect(model().attributeDoesNotExist("retentionPreview", "retentionPreviewCandidates"))
+                .andExpect(content().string(containsString("une session fournisseur est active ou sa clôture reste à finaliser")))
+                .andExpect(content().string(containsString("Actualisez le tableau de bord une fois la session clôturée")))
+                .andExpect(content().string(containsString("Aucun plan de rétention n’a été calculé")))
+                .andExpect(content().string(containsString("EXPERIMENTAL")))
+                .andExpect(content().string(not(containsString("Payloads éligibles"))))
+                .andExpect(content().string(not(containsString("Octets éligibles"))))
+                .andExpect(content().string(not(containsString("Plan SHA-256"))))
+                .andExpect(content().string(not(containsString("Aucun payload ne satisfait actuellement"))))
+                .andExpect(content().string(not(containsString("Phrase exigée par l’outil opérateur"))));
+        verify(retentionService).preview();
+        verifyNoMoreInteractions(retentionService);
+    }
+
+    @Test
+    void refreshedDashboardShowsAGenuinePreviewAfterProviderQuiescenceIsRestored() throws Exception {
+        arrangeDashboardForRetention();
+        Instant now = Instant.parse("2026-09-08T21:27:00Z");
+        var emptyPreview = new J6RetentionPreview(30, now, now.minusSeconds(30L * 86400),
+                0, 0, Optional.empty(), List.of(), "a".repeat(64));
+        when(retentionService.preview()).thenThrow(new J6RetentionException(J6RetentionError.PROVIDER_CAMPAIGN_ACTIVE))
+                .thenReturn(emptyPreview);
+        mockMvc.perform(get("/")).andExpect(status().isOk())
+                .andExpect(model().attribute("retentionPreviewProviderBusy", true))
+                .andExpect(model().attributeDoesNotExist("retentionPreview"));
+        mockMvc.perform(get("/")).andExpect(status().isOk())
+                .andExpect(model().attribute("retentionPreview", emptyPreview))
+                .andExpect(model().attribute("retentionPreviewCandidates", List.of()))
+                .andExpect(model().attributeDoesNotExist("retentionPreviewUnavailable", "retentionPreviewProviderBusy"))
+                .andExpect(content().string(containsString("Aucun payload ne satisfait actuellement toutes les conditions de rétention")))
+                .andExpect(content().string(not(containsString("une session fournisseur est active ou sa clôture reste à finaliser"))));
+    }
+
+    @Test
+    void retentionDatabaseFailureKeepsItsGenericUnavailablePresentationWithoutClaimingProviderActivity() throws Exception {
+        arrangeDashboardForRetention();
+        when(retentionService.preview()).thenThrow(new DataAccessResourceFailureException("synthetic database unavailable"));
+        mockMvc.perform(get("/")).andExpect(status().isOk())
+                .andExpect(model().attribute("retentionPreviewUnavailable", true))
+                .andExpect(model().attributeDoesNotExist("retentionPreviewProviderBusy", "retentionPreview", "retentionPreviewCandidates"))
+                .andExpect(content().string(containsString("L’aperçu de rétention est indisponible ; aucune action n’est possible")))
+                .andExpect(content().string(not(containsString("une session fournisseur est active"))))
+                .andExpect(content().string(not(containsString("synthetic database unavailable"))))
+                .andExpect(content().string(not(containsString("Aucun payload ne satisfait actuellement"))));
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = J6RetentionError.class, names = "PROVIDER_CAMPAIGN_ACTIVE", mode = EnumSource.Mode.EXCLUDE)
+    void unexpectedRetentionBusinessFailuresStillPropagate(J6RetentionError error) {
+        arrangeDashboardForRetention();
+        var failure = new J6RetentionException(error);
+        when(retentionService.preview()).thenThrow(failure);
+        assertThatThrownBy(() -> mockMvc.perform(get("/"))).isInstanceOf(ServletException.class).hasCause(failure);
+    }
+
+    @Test
+    void retentionInvariantFailuresAreNotConvertedIntoAnUnavailableOrEmptyPreview() {
+        arrangeDashboardForRetention();
+        for (RuntimeException failure : List.of(new IllegalArgumentException("synthetic retention invariant"),
+                new IllegalStateException("synthetic retention state"), new RuntimeException("synthetic unexpected failure"))) {
+            doThrow(failure).when(retentionService).preview();
+            assertThatThrownBy(() -> mockMvc.perform(get("/"))).isInstanceOf(ServletException.class).hasCause(failure);
+        }
+    }
+
+    private void arrangeDashboardForRetention() {
+        when(dashboardService.load()).thenReturn(new DashboardView("2026-09-08T21:22:49Z", "EXPERIMENTAL",
+                "LOCKED_OFFLINE_J3_POLICY", false, false, "127.0.0.1:8087", "NON_CONFIGURED", 1, "3 s",
+                "AVAILABLE", "40", 60, 0, new DashboardView.FixtureCorpusView("AVAILABLE_OFFLINE", "SCHEDULED_EVENTS",
+                "SYNTHETIC", true, "scheduled-events-v1", 12, 12, 7, 4, 1, 0), null, List.of()));
+        when(manualCallControlService.snapshot()).thenReturn(new J3ManualCallControlSnapshot(true, J3CircuitState.LOCKED,
+                J3CircuitReason.STARTUP_LOCK, Instant.parse("2026-09-08T21:22:49Z"), null, LocalDate.parse("2026-09-08"),
+                null, false, false, List.of("CONNECTOR_GATE_LOCKED")));
+        when(formTokenService.issue(any(HttpSession.class))).thenReturn("local-form-token");
     }
 
     @Test

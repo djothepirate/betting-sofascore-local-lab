@@ -233,6 +233,7 @@ public class LiveCampaignPresentation {
         Table table = new Table(List.of(), List.of());
         StatisticsPresentation.View statistics = null;
         LineupsPresentation.View lineups = null;
+        IncidentPresentation.View incidents = null;
         String payloadSha256 = null;
         if (cursor.normalized() != null && cursor.normalized().j5ObservationId() != null) {
             var observation = data.findByObservationId(event.target().canonicalEventId(), cursor.endpoint(),
@@ -245,6 +246,12 @@ public class LiveCampaignPresentation {
                 if (observation.orElseThrow().data() instanceof EventLineups values
                         && observation.orElseThrow().completeness().status() != J5CompletenessStatus.UNAVAILABLE) {
                     lineups = LineupsPresentation.from(values,
+                            identity == null ? "Domicile" : identity.homeTeam().name(),
+                            identity == null ? "Extérieur" : identity.awayTeam().name());
+                }
+                if (observation.orElseThrow().data() instanceof EventIncidents values
+                        && observation.orElseThrow().completeness().status() != J5CompletenessStatus.UNAVAILABLE) {
+                    incidents = IncidentPresentation.from(values,
                             identity == null ? "Domicile" : identity.homeTeam().name(),
                             identity == null ? "Extérieur" : identity.awayTeam().name());
                 }
@@ -280,7 +287,7 @@ public class LiveCampaignPresentation {
                         cursor.schedule().intervalSeconds(), cursor.schedule().missedCycles(),
                         cursor.schedule().nextDueAt() == null || terminal(event.state()) || terminal(campaign.state())
                                 ? 0 : Math.max(0, Duration.between(cursor.schedule().nextDueAt(), observedAt).toMillis())),
-                lineups);
+                lineups, incidents);
     }
 
     private static Freshness freshness(CampaignView campaign, EventView event, FamilyCursor cursor, Instant now) {
@@ -424,7 +431,19 @@ public class LiveCampaignPresentation {
                          String normalizedSha256, String completeness, Integer completenessScore,
                          boolean previousData, Freshness freshness, Table table,
                          StatisticsPresentation.View statistics, CollectionSchedule schedule,
-                         LineupsPresentation.View lineups) {
+                         LineupsPresentation.View lineups, IncidentPresentation.View incidents) {
+        public Family(String endpoint, String label, String outcome, String code, String scope,
+                Instant lastAttemptAt, Long authorizationDelayMillis, Instant lastReceivedAt,
+                Instant lastSuccessfulAt, Instant lastChangedAt, Long receivedSnapshotId, Long receivedOccurrenceId,
+                Long dataSnapshotId, String parserVersion, String payloadSha256, String normalizedSha256,
+                String completeness, Integer completenessScore, boolean previousData, Freshness freshness,
+                Table table, StatisticsPresentation.View statistics, CollectionSchedule schedule,
+                LineupsPresentation.View lineups) {
+            this(endpoint, label, outcome, code, scope, lastAttemptAt, authorizationDelayMillis, lastReceivedAt,
+                    lastSuccessfulAt, lastChangedAt, receivedSnapshotId, receivedOccurrenceId, dataSnapshotId,
+                    parserVersion, payloadSha256, normalizedSha256, completeness, completenessScore,
+                    previousData, freshness, table, statistics, schedule, lineups, null);
+        }
         public Family(String endpoint, String label, String outcome, String code, String scope,
                 Instant lastAttemptAt, Long authorizationDelayMillis, Instant lastReceivedAt,
                 Instant lastSuccessfulAt, Instant lastChangedAt, Long receivedSnapshotId, Long receivedOccurrenceId,

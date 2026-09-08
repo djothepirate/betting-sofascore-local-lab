@@ -37,6 +37,29 @@ L’état `LOCAL_CLEANUP_PENDING` n’expose pas la cause primaire de l’erreur
 clôture. Conserver la console de l’application et les horodatages pour le diagnostic ;
 ne pas attribuer automatiquement l’arrêt à un plafond ou au fournisseur.
 
+### Lire les incidents
+
+Les incidents apparaissent dans l’ordre reçu, avec leur minute, l’équipe et le joueur.
+Les buts présentent leur score ; les cartons jaunes, rouges et seconds jaunes ont
+des libellés distincts. Les remplacements séparent le joueur entrant (flèche verte)
+et le sortant (flèche rouge). La mention « Remplacement sur blessure » exige une blessure
+explicitement renseignée dans l’observation. Les motifs, passeurs, décisions VAR et temps additionnel
+sont affichés lorsqu’ils sont renseignés dans l’observation.
+
+Les penalties distinguent « ⚽ But sur penalty », « 🧤 Penalty arrêté » et
+« ❌ Penalty manqué ». Le gant exige le motif `goalkeeperSave` ou la description
+`Goalkeeper save` ; sinon, un échec porte la croix. Cette distinction arrêté/manqué
+s’applique également aux tirs au but.
+
+« Tableau normalisé (technique) » ouvre les colonnes détaillées. Ce volet est replié
+initialement et conserve son ouverture pendant l’actualisation live. Un score sur un
+but décrit cet incident ; le score courant J4 reste dans le résumé de la rencontre.
+Les repères de période conservent la minute fournie.
+
+La page J5 utilise la même présentation. Les sources et la complétude restent
+consultables ; une famille indisponible ne devient pas une liste vide.
+[Portée et qualification graphique](../validation/WO058-INCIDENT-GRAPHICS-20260908.md).
+
 ### Lire les compositions
 
 La page de campagne, le suivi de la fiche d’une rencontre et la page J5 manuelle utilisent
@@ -520,6 +543,17 @@ Un processus actif de la session, une identité inaccessible, un autre JVM non a
 un garde modifié ou une réconciliation SQL incomplète maintient le verrou avec un message explicite.
 Le contrôle après redémarrage est qualifié sous Windows ; les autres systèmes refusent cette
 preuve automatiquement. Aucun processus inspecté n’est arrêté par le bouton.
+
+Le panneau de rétention de l’accueil peut être temporairement indisponible pendant
+une campagne active ou une clôture non finalisée. Le tableau de bord reste accessible ;
+aucun nombre de candidats ni plan de purge n’est alors calculé. Actualiser l’accueil
+après la clôture pour retrouver l’aperçu. Ce message n’autorise aucune purge pendant
+une collecte et ne signifie pas nécessairement qu’un navigateur tourne encore.
+
+Le parcours opérateur du 8 septembre a été constaté jusqu’à `LOCAL_CLEANUP_VERIFIED`,
+puis jusqu’à `COMPLETED` pour une nouvelle sélection de quinze rencontres. Les
+[preuves de récupération](../validation/WO058-RECOVERY-DASHBOARD-20260908.md)
+distinguent cet aboutissement de la cause historique de l’arrêt, toujours non établie.
 
 Avant un prochain arrêt d’Eclipse, utiliser **« Arrêter toute la campagne »** et attendre sa
 clôture. Le parcours ci-dessus reste disponible après un arrêt brutal. Le

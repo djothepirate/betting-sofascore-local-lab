@@ -250,8 +250,13 @@
         <div th:if="${family.lineups != null}">
           <div th:replace="~{fragments/lineups :: view(${family.lineups})}"></div>
         </div>
-        <details th:if="${family.statistics == null and family.endpoint != 'EVENT_LINEUPS' and !family.table.columns.isEmpty()}" open>
-          <summary>Données normalisées</summary>
+        <div th:if="${family.incidents != null}">
+          <div th:replace="~{fragments/incidents :: view(${family.incidents})}"></div>
+        </div>
+        <details th:if="${family.statistics == null and family.endpoint != 'EVENT_LINEUPS' and !family.table.columns.isEmpty() and (family.endpoint != 'EVENT_INCIDENTS' or family.incidents != null)}"
+                 th:open="${family.endpoint != 'EVENT_INCIDENTS'}"
+                 th:attr="data-incidents-technical=${family.endpoint == 'EVENT_INCIDENTS' ? 'true' : null}">
+          <summary th:text="${family.endpoint == 'EVENT_INCIDENTS' ? 'Tableau normalisé (technique)' : 'Données normalisées'}">Données normalisées</summary>
           <div class="table-scroll"><table><thead><tr><th th:each="column : ${family.table.columns}" th:text="${column}">Colonne</th></tr></thead>
             <tbody data-live-table-body><tr th:each="row : ${family.table.rows}"><td th:each="cell : ${row}" th:text="${cell}">Valeur</td></tr></tbody>
           </table></div>

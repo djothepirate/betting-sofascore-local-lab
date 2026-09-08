@@ -1,5 +1,12 @@
 # SofaScore Local Lab
 
+**Complément d’interface live — 8–9 septembre 2026 :** les campagnes affichent dix rencontres
+par page et une liste illustrée des incidents, avec tableau technique repliable. L’accueil
+reste lisible lorsque la rétention attend la libération d’une session fournisseur.
+La clôture opérateur de la campagne interrompue et le rattrapage final de quinze rencontres
+sont consignés dans le [rapport de récupération](docs/validation/WO058-RECOVERY-DASHBOARD-20260908.md).
+Voir également la [présentation des incidents](docs/validation/WO058-INCIDENT-GRAPHICS-20260908.md).
+
 **Politique live-v5 — 8 septembre 2026 :** les nouvelles préparations ciblent J4, incidents et
 statistiques toutes les 100 secondes par match, avec compositions initiales puis réparties sur
 cinq minutes. Le profil synthétique dédié qualifie vingt rencontres après cinq minutes
