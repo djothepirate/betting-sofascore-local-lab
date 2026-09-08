@@ -160,7 +160,7 @@ class LiveCampaignBrowserQualificationIT {
             page.waitForCondition(() -> "12 – 0".equals(page.locator("[data-live-score]").textContent()));
             assertThat(page.locator("input[name=eventId]").isChecked()).isTrue();
             assertThat(page.evaluate("document.activeElement === document.querySelector('input[name=eventId]')")).isEqualTo(true);
-            assertThat(page.locator("[data-live-link]").getAttribute("href")).isEqualTo("/live-campaigns/" + CAMPAIGN);
+            assertThat(page.locator("[data-live-link]").getAttribute("href")).isEqualTo(campaignEventLink());
             assertThat(page.locator("[data-live-age]").textContent()).isEqualTo("90 s");
             // The canonical header and campaign panel have distinct provenance and score targets.
             // A newer manual J4 result must survive an older live result, which still updates its own panel.
@@ -179,7 +179,7 @@ class LiveCampaignBrowserQualificationIT {
             page.waitForCondition(() -> "20 – 0".equals(page.locator("[data-live-score]").textContent()));
             revision.set(21);
             page.waitForCondition(() -> "21 – 0".equals(page.locator("[data-live-score]").textContent()));
-            assertThat(page.locator("[data-live-link]").getAttribute("href")).isEqualTo("/live-campaigns/" + CAMPAIGN);
+            assertThat(page.locator("[data-live-link]").getAttribute("href")).isEqualTo(campaignEventLink());
             int beforeObsoletePreparation = gets.get();
             revision.set(22);
             page.waitForCondition(() -> gets.get() > beforeObsoletePreparation);
@@ -227,6 +227,128 @@ class LiveCampaignBrowserQualificationIT {
         } finally {
             server.stop(0);
         }
+    }
+
+    @Test
+    @Timeout(45)
+    void runtimeWarningStaysInsideItsTableCellAndHiddenStillRemovesItsLayout() throws Exception {
+        String configured = System.getProperty("provider.playwright.browser-cache", "");
+        assertThat(configured).as("explicit browser cache opt-in").isNotBlank();
+        assertThat(Path.of(configured).toRealPath()).isEqualTo(
+                Path.of(System.getenv("PLAYWRIGHT_BROWSERS_PATH")).toRealPath());
+        String html = runtimeWarningPage();
+        String css = resource("/static/css/app.css");
+        String script = resource("/static/js/live-campaign.js");
+        String origin = "http://127.0.0.1:8087";
+        AtomicInteger revision = new AtomicInteger(10);
+        AtomicInteger external = new AtomicInteger();
+        AtomicInteger mutations = new AtomicInteger();
+        try (Playwright playwright = Playwright.create();
+             Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+             BrowserContext context = browser.newContext(new Browser.NewContextOptions()
+                     .setAcceptDownloads(false).setServiceWorkers(ServiceWorkerPolicy.BLOCK))) {
+            // All routes are fulfilled in memory. The operator's listener on 8087 is never contacted.
+            context.route("**/*", route -> {
+                if (!route.request().url().startsWith(origin + "/")) {
+                    external.incrementAndGet(); route.abort(); return;
+                }
+                if (!"GET".equals(route.request().method())) {
+                    mutations.incrementAndGet(); route.abort(); return;
+                }
+                String path = java.net.URI.create(route.request().url()).getPath();
+                String body;
+                String type;
+                switch (path) {
+                    case "/events" -> { body = html; type = "text/html"; }
+                    case "/css/app.css" -> { body = css; type = "text/css"; }
+                    case "/js/live-campaign.js" -> { body = script; type = "text/javascript"; }
+                    case "/events/state" -> { body = runtimeWarningState(revision.get()); type = "application/json"; }
+                    default -> { route.fulfill(new Route.FulfillOptions().setStatus(404).setBody("")); return; }
+                }
+                route.fulfill(new Route.FulfillOptions().setStatus(200).setContentType(type + "; charset=UTF-8")
+                        .setHeaders(java.util.Map.of("Cache-Control", "no-store", "Content-Security-Policy",
+                                "default-src 'self'; script-src 'self'; style-src 'self'; frame-ancestors 'none'; form-action 'self'"))
+                        .setBody(body));
+            });
+            Page page = context.newPage();
+            page.navigate(origin + "/events");
+            Locator notice = page.locator("[data-live-runtime-status]");
+            page.waitForCondition(notice::isVisible);
+            assertThat(notice.textContent()).isEqualTo("Collecte arrêtée / clôture locale requise.");
+            assertThat(notice.getAttribute("role")).isEqualTo("status");
+            for (int width : new int[] {1440, 1024, 390}) {
+                page.setViewportSize(width, 900);
+                var warning = notice.boundingBox();
+                var status = page.locator("[data-live-event-state]").boundingBox();
+                var cell = page.locator("[data-live-event-id] > td").first().boundingBox();
+                var adjacent = page.locator("[data-live-event-id] > td").nth(1).boundingBox();
+                var nextRow = page.locator("[data-notice-next-row]").boundingBox();
+                assertThat(warning).as("warning is laid out at viewport %s", width).isNotNull();
+                assertThat(warning.y).as("warning starts below the status at viewport %s", width)
+                        .isGreaterThanOrEqualTo(status.y + status.height);
+                assertThat(warning.x).isGreaterThanOrEqualTo(cell.x);
+                assertThat(warning.x + warning.width).isLessThanOrEqualTo(adjacent.x + 0.5);
+                assertThat(warning.y + warning.height).isLessThanOrEqualTo(cell.y + cell.height);
+                assertThat(warning.y + warning.height).isLessThanOrEqualTo(nextRow.y);
+            }
+            double nextRowWithWarning = page.locator("[data-notice-next-row]").boundingBox().y;
+            revision.set(11);
+            page.waitForCondition(notice::isHidden);
+            assertThat(notice.getAttribute("hidden")).isNotNull();
+            assertThat(notice.boundingBox()).isNull();
+            assertThat(page.locator("[data-notice-next-row]").boundingBox().y).isLessThan(nextRowWithWarning);
+            assertThat(page.locator("[data-live-event-state]").textContent()).isEqualTo("COLLECTING");
+            assertThat(external.get()).isZero();
+            assertThat(mutations.get()).isZero();
+        }
+    }
+
+    private static String campaignEventLink() {
+        return "/live-campaigns/" + CAMPAIGN + "?eventId=" + EVENT + "#live-event-" + EVENT;
+    }
+
+    private static String resource(String name) throws IOException {
+        try (var input = LiveCampaignBrowserQualificationIT.class.getResourceAsStream(name)) {
+            if (input == null) throw new IOException("required qualification resource missing");
+            return new String(input.readAllBytes(), StandardCharsets.UTF_8);
+        }
+    }
+
+    private static String runtimeWarningPage() throws IOException {
+        String template = resource("/templates/events.html");
+        int row = template.indexOf("<tr th:each=\"item : ${search.events}\" data-live-mirror-canonical");
+        assertThat(row).as("production events row exists").isGreaterThanOrEqualTo(0);
+        int start = template.indexOf("<td>", row);
+        int end = template.indexOf("</td>", start) + "</td>".length();
+        // Keep the production cell's real tag hierarchy, classes and hidden attribute. Only
+        // server expressions are removed; other cells provide representative layout neighbours.
+        String cell = template.substring(start, end)
+                .replaceAll("\\s+th:[\\w-]+=\"[^\"]*\"", "")
+                .replace("name=\"eventId\"", "name=\"eventId\" value=\"" + EVENT
+                        + "\" data-live-provider-eligible=\"true\"");
+        return """
+                <!DOCTYPE html><html lang="fr"><head><meta charset="UTF-8">
+                <link rel="stylesheet" href="/css/app.css"><script defer src="/js/live-campaign.js"></script>
+                </head><body><main class="shell event-page"><section class="panel" data-live-monitor data-live-state-url="/events/state">
+                <form id="live-selection" data-live-selection-form></form><p data-live-refresh-status></p>
+                <div class="table-scroll"><table><thead><tr><th>Campagne live</th><th>Heure locale</th><th>Rencontre</th>
+                <th>Compétition</th><th>Statut</th><th>Identité locale</th><th>Provenance</th><th>Détail</th></tr></thead><tbody>
+                <tr data-live-event-id="%s" data-live-mirror-canonical>%s
+                <td class="mono">2026-09-08T21:00+02:00[Europe/Paris]</td><td><strong>Équipe domicile — Équipe extérieure</strong></td>
+                <td>Compétition locale</td><td>2nd half<br>1 – 0</td><td class="mono">%s</td><td>PROVIDER_SNAPSHOT<br>snapshot:42</td>
+                <td><a class="table-link" href="/events/%s">Ouvrir</a></td></tr>
+                <tr data-notice-next-row><td>Sélectionner</td><td>21:15</td><td>Rencontre suivante</td><td>Compétition locale</td>
+                <td>notstarted</td><td>Identité</td><td>snapshot:43</td><td>Ouvrir</td></tr>
+                </tbody></table></div></section></main></body></html>
+                """.formatted(EVENT, cell, EVENT, EVENT);
+    }
+
+    private static String runtimeWarningState(int revision) {
+        String runtime = revision == 10 ? """
+                {"state":"STOPPED_ERROR","reason":"LOCAL_CLEANUP_PENDING","collectionStopped":true,
+                "cleanupPending":true,"cleanupInProgress":false,"label":"Collecte arrêtée / clôture locale requise."}
+                """ : "null";
+        return state(revision).replace("\"events\":[", "\"runtimeStatus\":" + runtime + ",\"events\":[");
     }
 
     private static void send(HttpExchange exchange, int status, String type, String body) throws IOException {

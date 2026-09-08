@@ -4,6 +4,19 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — pagination des rencontres live et lisibilité après arrêt
+
+- Affiche dix rencontres par page de campagne, avec navigation en haut et en bas dès la
+  onzième rencontre. Les lectures dynamiques utilisent la même page et les liens depuis
+  les rencontres ouvrent directement la page du match concerné.
+- Conserve les compteurs, l’arrêt global et le manifeste de lancement pour toute la campagne ;
+  une nouvelle préparation réutilise toute la sélection. Les arrêts individuels reviennent
+  sur la page consultée. Les rencontres terminées conservent leur place.
+- Suspend l’estimation d’autonomie lorsque le processus indique une collecte arrêtée,
+  même si la clôture locale n’a pas encore publié l’état terminal en base.
+- Corrige le chevauchement du message de clôture dans la liste des rencontres.
+- Qualification du complément : [pagination et affichage après arrêt](docs/validation/WO058-LIVE-PAGINATION-20260908.md).
+
 ### WO-058 — capacité live-v5 et visibilité des remplaçants
 
 - Ajoute une nouvelle politique à 100 secondes pour J4, incidents et statistiques, avec

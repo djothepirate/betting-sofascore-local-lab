@@ -27,6 +27,7 @@ import java.util.UUID;
 /** An explicit browser projection: no raw payload, worker identity or transport internals. */
 @Component
 public class LiveCampaignPresentation {
+    public static final int EVENTS_PER_PAGE = 10;
     private final CanonicalEventStore events;
     private final J5EventDataStore data;
     private final EventDetailsStore details;
@@ -61,26 +62,44 @@ public class LiveCampaignPresentation {
     }
 
     public Campaign state(CampaignView view, RuntimeStatus runtimeStatus) {
+        return state(view, runtimeStatus, view.events(), null);
+    }
+
+    /** Slice before building rich event projections; campaign totals still use the whole ledger. */
+    public Campaign page(CampaignView view, RuntimeStatus runtimeStatus, int requestedPage) {
+        if (requestedPage < 1) throw new IllegalArgumentException("LIVE_PAGE_INVALID");
+        int total = view.events().size();
+        int pages = Math.max(1, (total + EVENTS_PER_PAGE - 1) / EVENTS_PER_PAGE);
+        int number = Math.min(requestedPage, pages);
+        int from = (number - 1) * EVENTS_PER_PAGE;
+        // The store returns the frozen manifest's target_order, including stopped/finished events.
+        return state(view, runtimeStatus, view.events().subList(from, Math.min(from + EVENTS_PER_PAGE, total)),
+                new Pagination(number, EVENTS_PER_PAGE, total, pages));
+    }
+
+    private Campaign state(CampaignView view, RuntimeStatus runtimeStatus,
+                           List<EventView> displayedEvents, Pagination pagination) {
         Instant observedAt = clock.instant();
         return new Campaign(view.manifest().campaignId(), view.revision(), view.state(), reason(view.reason()),
                 view.manifest().preparedAt(), view.startedAt(), view.endsAt(), view.reservedCalls(),
                 view.manifest().maximumCalls(), view.receivedBytes(), view.manifest().maximumBytes(),
-                view.events().stream().map(event -> event(view, event, observedAt)).toList(),
+                displayedEvents.stream().map(event -> event(view, event, observedAt)).toList(),
                 runtimeStatus == null ? null : new RuntimeObservation(runtimeStatus.state(), runtimeStatus.reason(),
                         runtimeStatus.collectionStopped(), runtimeStatus.cleanupPending(), runtimeStatus.cleanupInProgress(),
                         runtimeStatus.cleanupInProgress() ? "Collecte arrêtée / clôture locale en cours."
                                 : runtimeStatus.cleanupPending() ? "Collecte arrêtée / clôture locale requise."
-                                : "Collecte arrêtée."), cadence(view, observedAt));
+                                : "Collecte arrêtée."), cadence(view, observedAt, runtimeStatus), pagination);
     }
 
-    private static Cadence cadence(CampaignView view, Instant now) {
+    private static Cadence cadence(CampaignView view, Instant now, RuntimeStatus runtimeStatus) {
         String policyVersion = view.manifest().policyVersion();
         if (!grouped(policyVersion)) return null;
         long interval = view.manifest().cycleInterval().toSeconds();
         double waitingRate = 120.0 / interval;
         double playingRate = 180.0 / interval + 0.2;
         List<EventView> active = view.events().stream().filter(e -> !terminal(e.state())).toList();
-        double rate = active.stream().mapToDouble(e -> "WAITING_START".equals(e.state()) ? waitingRate : playingRate).sum();
+        boolean stopped = terminal(view.state()) || runtimeStatus != null && runtimeStatus.collectionStopped();
+        double rate = stopped ? 0 : active.stream().mapToDouble(e -> "WAITING_START".equals(e.state()) ? waitingRate : playingRate).sum();
         long seconds = 0;
         if (rate > 0 && !terminal(view.state())) {
             // Four calls per active match remain reserved for a last status/final-family pass.
@@ -358,13 +377,24 @@ public class LiveCampaignPresentation {
 
     public record Campaign(UUID campaignId, long revision, String state, String reason, Instant preparedAt,
                            Instant startedAt, Instant endsAt, int reservedCalls, int maximumCalls,
-                           long receivedBytes, long maximumBytes, List<Event> events, RuntimeObservation runtimeStatus, Cadence cadence) {
+                           long receivedBytes, long maximumBytes, List<Event> events, RuntimeObservation runtimeStatus,
+                           Cadence cadence, Pagination pagination) {
+        public Campaign(UUID campaignId, long revision, String state, String reason, Instant preparedAt,
+                Instant startedAt, Instant endsAt, int reservedCalls, int maximumCalls, long receivedBytes,
+                long maximumBytes, List<Event> events, RuntimeObservation runtimeStatus, Cadence cadence) {
+            this(campaignId, revision, state, reason, preparedAt, startedAt, endsAt, reservedCalls,
+                    maximumCalls, receivedBytes, maximumBytes, events, runtimeStatus, cadence, null);
+        }
         public Campaign(UUID campaignId, long revision, String state, String reason, Instant preparedAt,
                 Instant startedAt, Instant endsAt, int reservedCalls, int maximumCalls, long receivedBytes,
                 long maximumBytes, List<Event> events, RuntimeObservation runtimeStatus) {
             this(campaignId, revision, state, reason, preparedAt, startedAt, endsAt, reservedCalls,
                     maximumCalls, receivedBytes, maximumBytes, events, runtimeStatus, null);
         }
+    }
+    public record Pagination(int number, int size, int totalElements, int totalPages) {
+        public int firstElement() { return totalElements == 0 ? 0 : (number - 1) * size + 1; }
+        public int lastElement() { return Math.min(number * size, totalElements); }
     }
     public record Cadence(String policyVersion, long targetSeconds, long lineupSeconds, int qualifiedCapacity,
                           long estimatedRemainingSeconds, double estimatedCallsPerMinute) {

@@ -875,6 +875,37 @@ button:disabled {
   justify-content: space-between;
 }
 
+.live-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 18px 0;
+  padding: 14px 18px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: white;
+}
+
+.live-pagination p { margin: 0; }
+.live-pagination-links { display: flex; flex-wrap: wrap; gap: 6px; }
+.live-pagination-links a,
+.live-pagination-links span {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border-radius: 8px;
+}
+.live-pagination-links a { color: var(--ink-strong); background: var(--teal-soft); }
+.live-pagination-links a:focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; }
+.live-pagination-links [aria-current="page"] { color: white; background: var(--ink); font-weight: 700; }
+.live-pagination-links [aria-disabled="true"] { color: var(--muted); }
+#campaign-events, [id^="live-event-"] { scroll-margin-top: 18px; }
+
 .table-link {
   display: inline-flex;
   padding: 7px 10px;

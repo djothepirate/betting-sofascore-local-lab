@@ -52,10 +52,25 @@ public class LiveCampaignController {
     }
 
     @GetMapping("/live-campaigns/{campaignId}")
-    public String view(@PathVariable UUID campaignId, HttpSession session, Model model) {
+    public String view(@PathVariable UUID campaignId,
+                       @RequestParam(name = "page", defaultValue = "1") int page,
+                       @RequestParam(name = "eventId", required = false) UUID eventId,
+                       HttpSession session, Model model) {
+        requirePage(page);
         var campaign = campaigns.state(campaignId);
         if (campaign == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        model.addAttribute("campaign", present(campaign));
+        if (eventId != null) {
+            int index = -1;
+            for (int i = 0; i < campaign.events().size(); i++) {
+                if (campaign.events().get(i).target().canonicalEventId().equals(eventId)) {
+                    index = i;
+                    break;
+                }
+            }
+            if (index < 0) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            page = index / LiveCampaignPresentation.EVENTS_PER_PAGE + 1;
+        }
+        model.addAttribute("campaign", presentPage(campaign, page));
         model.addAttribute("manifest", campaign.manifest());
         var orphanCleanup = campaigns.orphanCleanupGuard(campaignId);
         model.addAttribute("orphanCleanup", orphanCleanup.orElse(null));
@@ -70,13 +85,15 @@ public class LiveCampaignController {
     public String finalizeInterruption(@PathVariable UUID campaignId,
                                        @RequestParam(name = "guardGeneration") long guardGeneration,
                                        @RequestParam(name = "localFormToken", required = false) String token,
+                                       @RequestParam(name = "page", defaultValue = "1") int page,
                                        HttpSession session, RedirectAttributes redirect) {
+        requirePage(page);
         tokens.consume(session, token);
         if (guardGeneration < 1)
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "LIVE_CLEANUP_GENERATION_REQUIRED");
         campaigns.finalizeInterruptedCleanup(campaignId, guardGeneration);
         redirect.addFlashAttribute("liveSuccess", "La session interrompue est clôturée. Son historique est conservé ; aucune collecte n’a été lancée.");
-        return "redirect:/live-campaigns/" + campaignId;
+        return campaignRedirect(campaignId, page);
     }
 
     @PostMapping("/live-campaigns/{campaignId}/launch")
@@ -84,48 +101,58 @@ public class LiveCampaignController {
                          @RequestParam(name = "manifestHash") String manifestHash,
                          @RequestParam(name = "confirmation", defaultValue = "false") boolean confirmation,
                          @RequestParam(name = "localFormToken", required = false) String token,
+                         @RequestParam(name = "page", defaultValue = "1") int page,
                          HttpSession session) {
+        requirePage(page);
         tokens.consume(session, token);
         if (!confirmation) throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "LIVE_CONFIRMATION_REQUIRED");
         campaigns.launch(campaignId, manifestHash);
-        return "redirect:/live-campaigns/" + campaignId;
+        return campaignRedirect(campaignId, page);
     }
 
     @PostMapping("/live-campaigns/{campaignId}/cancel-preparation")
     public String cancelPreparation(@PathVariable UUID campaignId,
                                     @RequestParam(name="manifestHash") String manifestHash,
                                     @RequestParam(name="localFormToken",required=false) String token,
+                                    @RequestParam(name = "page", defaultValue = "1") int page,
                                     HttpSession session) {
+        requirePage(page);
         tokens.consume(session,token);
         campaigns.cancelPreparation(campaignId,manifestHash);
-        return "redirect:/live-campaigns/"+campaignId;
+        return campaignRedirect(campaignId, page);
     }
 
     @PostMapping("/live-campaigns/{campaignId}/stop")
     public String stop(@PathVariable UUID campaignId,
                        @RequestParam(name = "eventId", required = false) UUID eventId,
                        @RequestParam(name = "localFormToken", required = false) String token,
+                       @RequestParam(name = "page", defaultValue = "1") int page,
                        HttpSession session) {
+        requirePage(page);
         tokens.consume(session, token);
         campaigns.stop(campaignId, eventId);
-        return "redirect:/live-campaigns/" + campaignId;
+        return campaignRedirect(campaignId, page);
     }
 
     @PostMapping("/live-campaigns/{campaignId}/events/{canonicalEventId}/stop")
     public String stopEvent(@PathVariable UUID campaignId, @PathVariable UUID canonicalEventId,
                             @RequestParam(name = "localFormToken", required = false) String token,
+                            @RequestParam(name = "page", defaultValue = "1") int page,
                             HttpSession session) {
+        requirePage(page);
         tokens.consume(session, token);
         campaigns.stop(campaignId, canonicalEventId);
-        return "redirect:/live-campaigns/" + campaignId;
+        return campaignRedirect(campaignId, page);
     }
 
     @GetMapping("/live-campaigns/{campaignId}/state")
     @ResponseBody
-    public LiveCampaignPresentation.Campaign state(@PathVariable UUID campaignId) {
+    public LiveCampaignPresentation.Campaign state(@PathVariable UUID campaignId,
+            @RequestParam(name = "page", required = false) Integer page) {
+        if (page != null) requirePage(page);
         var campaign = campaigns.state(campaignId);
         if (campaign == null) throw new ResponseStatusException(HttpStatus.NOT_FOUND);
-        return present(campaign);
+        return page == null ? present(campaign) : presentPage(campaign, page);
     }
 
     @GetMapping("/events/state")
@@ -148,15 +175,28 @@ public class LiveCampaignController {
         return presentation.state(campaign, campaigns.runtimeStatus(campaign.manifest().campaignId()).orElse(null));
     }
 
+    private LiveCampaignPresentation.Campaign presentPage(CampaignView campaign, int page) {
+        return presentation.page(campaign, campaigns.runtimeStatus(campaign.manifest().campaignId()).orElse(null), page);
+    }
+
+    private static void requirePage(int page) {
+        if (page < 1) throw new IllegalArgumentException("LIVE_PAGE_INVALID");
+    }
+
+    private static String campaignRedirect(UUID campaignId, int page) {
+        return "redirect:/live-campaigns/" + campaignId + (page == 1 ? "" : "?page=" + page);
+    }
+
     @ExceptionHandler(IllegalArgumentException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public String invalid(IllegalArgumentException exception, Model model, HttpServletRequest request) {
         String code = switch (String.valueOf(exception.getMessage())) {
             case "LIVE_ALL_EVENTS_FINISHED", "LIVE_ALL_EVENTS_INELIGIBLE", "LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY",
-                 "LIVE_CAPACITY_REFUSED_REDUCE_SELECTION", "LIVE_ORPHAN_CLEANUP_INVALID_GUARD" -> exception.getMessage();
+                 "LIVE_CAPACITY_REFUSED_REDUCE_SELECTION", "LIVE_ORPHAN_CLEANUP_INVALID_GUARD", "LIVE_PAGE_INVALID" -> exception.getMessage();
             default -> "LIVE_SELECTION_INVALID";
         };
         String message = switch (code) {
+            case "LIVE_PAGE_INVALID" -> "Le numéro de page doit être un entier supérieur ou égal à 1.";
             case "LIVE_ALL_EVENTS_FINISHED" -> "Ces rencontres sont déjà terminées (finished). Aucun lancement live ni appel fournisseur n’a été effectué. Revenir aux rencontres pour préparer une autre sélection.";
             case "LIVE_ALL_EVENTS_INELIGIBLE" -> "Ces rencontres sont reportées (postponed) ou déjà terminées (finished). Aucun lancement live ni appel fournisseur n’a été effectué. Revenir aux rencontres pour préparer une autre sélection.";
             case "LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY" ->

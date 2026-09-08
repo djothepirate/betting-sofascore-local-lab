@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="fr" xmlns:th="http://www.thymeleaf.org"><body>
+<nav th:fragment="view(campaign)" th:if="${campaign.pagination.totalPages > 1}"
+     class="live-pagination" data-live-pagination aria-label="Pages des rencontres de la campagne">
+  <p th:text="${'Rencontres ' + campaign.pagination.firstElement() + ' à ' + campaign.pagination.lastElement()
+        + ' sur ' + campaign.pagination.totalElements + ' · Page ' + campaign.pagination.number + ' sur ' + campaign.pagination.totalPages}">
+    Rencontres 1 à 10 sur 17 · Page 1 sur 2
+  </p>
+  <div class="live-pagination-links">
+    <a th:if="${campaign.pagination.number > 1}" rel="prev"
+       th:href="@{/live-campaigns/{id}(id=${campaign.campaignId},page=${campaign.pagination.number - 1})} + '#campaign-events'">← Précédente</a>
+    <span th:if="${campaign.pagination.number == 1}" aria-disabled="true">← Précédente</span>
+    <th:block th:each="number : ${#numbers.sequence(1, campaign.pagination.totalPages)}">
+      <span th:if="${number == campaign.pagination.number}" aria-current="page"
+            th:aria-label="${'Page ' + number}" th:text="${number}">1</span>
+      <a th:unless="${number == campaign.pagination.number}" th:aria-label="${'Page ' + number}"
+         th:href="@{/live-campaigns/{id}(id=${campaign.campaignId},page=${number})} + '#campaign-events'" th:text="${number}">2</a>
+    </th:block>
+    <a th:if="${campaign.pagination.number < campaign.pagination.totalPages}" rel="next"
+       th:href="@{/live-campaigns/{id}(id=${campaign.campaignId},page=${campaign.pagination.number + 1})} + '#campaign-events'">Suivante →</a>
+    <span th:if="${campaign.pagination.number == campaign.pagination.totalPages}" aria-disabled="true">Suivante →</span>
+  </div>
+</nav>
+</body></html>

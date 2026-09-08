@@ -556,7 +556,7 @@
                   th:hidden="${!blockedLiveEventIds.contains(item.event.identity.value)}">Déjà dans une campagne en cours</span>
             <br><a data-live-link hidden>Suivre la campagne</a><br>
             <span class="muted" data-live-event-state></span>
-            <span class="notice notice-warning" data-live-runtime-status role="status" hidden></span></td>
+            <div class="notice notice-warning" data-live-runtime-status role="status" hidden></div></td>
           <td class="mono" th:text="${item.startsAtInZone}">2026-08-12T16:00+02:00</td>
           <td>
             <strong th:text="${item.event.homeTeam.name}">Home</strong>

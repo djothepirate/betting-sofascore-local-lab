@@ -18,7 +18,7 @@
   <p class="subtitle">Lancement manuel, suivi automatique borné et observations locales.</p>
 </div></header>
 <main class="shell event-page" data-live-monitor
-      th:attr="data-live-state-url=@{/live-campaigns/{id}/state(id=${campaign.campaignId})},data-live-campaign-id=${campaign.campaignId},data-live-revision=${campaign.revision}">
+      th:attr="data-live-state-url=@{/live-campaigns/{id}/state(id=${campaign.campaignId},page=${campaign.pagination.number})},data-live-campaign-id=${campaign.campaignId},data-live-revision=${campaign.revision}">
   <nav class="links page-links" aria-label="Navigation locale"><a th:href="@{/events}">← Rencontres</a></nav>
   <p class="notice" role="status" th:if="${liveSuccess != null}" th:text="${liveSuccess}"></p>
   <section class="panel" th:if="${excludedFinished != null and !#lists.isEmpty(excludedFinished)}" aria-label="Rencontres terminées exclues">
@@ -49,7 +49,7 @@
       <div><dt>Intervalle de collecte</dt><dd th:text="${manifest.cycleInterval.toSeconds() + ' secondes'}">60 secondes</dd></div>
       <div th:if="${campaign.cadence != null}"><dt>Compositions pendant le jeu</dt><dd>5 minutes nominales</dd></div>
       <div th:if="${campaign.cadence != null}"><dt th:text="${'Capacité qualifiée à ' + campaign.cadence.targetSeconds + ' secondes'}">Capacité qualifiée</dt><dd th:text="${campaign.cadence.qualifiedCapacity + ' rencontres'}">0</dd></div>
-      <div th:if="${campaign.cadence != null}"><dt>Autonomie estimée à ce rythme</dt><dd data-live-autonomy th:text="${campaign.cadence.estimatedMinutes() + ' minutes environ'}">—</dd></div>
+      <div th:if="${campaign.cadence != null}"><dt>Autonomie estimée à ce rythme</dt><dd data-live-autonomy th:text="${campaign.runtimeStatus != null and campaign.runtimeStatus.collectionStopped ? 'Collecte arrêtée' : campaign.cadence.estimatedMinutes() + ' minutes environ'}">—</dd></div>
     </dl>
     <p class="muted" th:if="${campaign.cadence != null}">L’estimation utilise les appels restants, les phases actuelles et les réserves de fin.
       La cadence reste fixée à <span th:text="${manifest.cycleInterval.toSeconds()}">100</span> secondes ; la collecte s’arrête à l’épuisement des plafonds.
@@ -59,6 +59,7 @@
           data-live-stop-form data-live-global-stop-form method="post"
           th:action="@{/live-campaigns/{id}/stop(id=${campaign.campaignId})}">
       <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <input type="hidden" name="page" th:value="${campaign.pagination.number}">
       <button type="submit" class="button button-danger"
               th:disabled="${campaign.runtimeStatus != null and (campaign.runtimeStatus.cleanupInProgress or (campaign.runtimeStatus.collectionStopped and !campaign.runtimeStatus.cleanupPending))}"
               th:text="${campaign.runtimeStatus != null and campaign.runtimeStatus.cleanupInProgress ? 'Clôture locale en cours' : (campaign.runtimeStatus != null and campaign.runtimeStatus.cleanupPending ? 'Finaliser la clôture locale' : 'Arrêter toute la campagne')}">Arrêter toute la campagne</button>
@@ -75,6 +76,7 @@
       La clôture vérifie que les processus précédents sont arrêtés avant de libérer la session.</p>
     <form method="post" th:action="@{/live-campaigns/{id}/finalize-interruption(id=${campaign.campaignId})}">
       <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <input type="hidden" name="page" th:value="${campaign.pagination.number}">
       <input type="hidden" name="guardGeneration" th:value="${orphanCleanup.generation}">
       <button type="submit" class="button">Clôturer la session interrompue</button>
     </form>
@@ -144,6 +146,7 @@
       Cet intervalle est fixé pour cette sélection. Les appels sont sérialisés. Une lecture de cette page ne lance aucune collecte.</p>
     <form method="post" th:action="@{/live-campaigns/{id}/launch(id=${campaign.campaignId})}">
       <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <input type="hidden" name="page" th:value="${campaign.pagination.number}">
       <input type="hidden" name="manifestHash" th:value="${manifest.manifestSha256}">
       <label><input type="checkbox" name="confirmation" value="true" required>
         Je lance cette campagne locale avec cette sélection, cette durée et ces plafonds.</label>
@@ -152,13 +155,16 @@
     </form>
     <form method="post" th:action="@{/live-campaigns/{id}/cancel-preparation(id=${campaign.campaignId})}">
       <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+      <input type="hidden" name="page" th:value="${campaign.pagination.number}">
       <input type="hidden" name="manifestHash" th:value="${manifest.manifestSha256}">
       <button type="submit" class="button button-secondary">Annuler la préparation</button>
       <p class="muted">La sélection et son historique seront conservés. Aucune collecte ne sera lancée.</p>
     </form>
   </section>
 
-  <section class="panel" th:each="event : ${campaign.events}" th:attr="data-live-event-id=${event.canonicalEventId}">
+  <div id="campaign-events">
+  <nav th:replace="~{fragments/live-pagination :: view(${campaign})}"></nav>
+  <section class="panel" th:each="event : ${campaign.events}" th:id="${'live-event-' + event.canonicalEventId}" th:attr="data-live-event-id=${event.canonicalEventId}">
     <div class="panel-heading"><div><p class="label" th:text="${event.competition}">Compétition</p>
       <h2 th:text="${event.title}">Rencontre</h2><p class="mono" th:text="${event.startsAtParis}">Europe/Paris</p></div>
       <span class="chip chip-safe" data-live-sport-status th:text="${event.sportStatusLabel}">notstarted</span>
@@ -184,6 +190,7 @@
       <form th:if="${campaign.state == 'RUNNING' and (campaign.runtimeStatus == null or !campaign.runtimeStatus.collectionStopped) and !#strings.startsWith(event.state, 'STOPPED') and event.state != 'FINISHED_CONFIRMED'}"
             data-live-stop-form method="post" th:action="@{/live-campaigns/{id}/events/{eventId}/stop(id=${campaign.campaignId},eventId=${event.canonicalEventId})}">
         <input type="hidden" name="localFormToken" th:value="${localFormToken}">
+        <input type="hidden" name="page" th:value="${campaign.pagination.number}">
         <button type="submit" class="button button-secondary">Arrêter cette rencontre</button>
       </form>
     </div>
@@ -231,6 +238,8 @@
       </section>
     </div>
   </section>
+  <nav th:replace="~{fragments/live-pagination :: view(${campaign})}"></nav>
+  </div>
 </main>
 <footer><div class="shell">NOT_PRODUCTION_APPROVED · NO_CRITICAL_DEPENDENCY</div></footer>
 </body></html>

@@ -915,8 +915,8 @@ class LiveCampaignControllerTest {
                 .andExpect(status().isOk()).andExpect(model().attribute("manifest", manifest))
                 .andExpect(content().string(containsString("name=\"confirmation\"")))
                 .andExpect(content().string(containsString(interval.toSeconds() + " secondes"))).andReturn();
-        for (var id : ids) org.assertj.core.api.Assertions.assertThat(page.getResponse().getContentAsString())
-                .contains("data-live-event-id=\"" + id + "\"");
+        assertThat(renderedEventIds(page.getResponse().getContentAsString()))
+                .containsExactlyElementsOf(ids.stream().limit(10).map(UUID::toString).toList());
         verify(service, never()).launch(any(), any());
         mvc.perform(post("/live-campaigns/" + CAMPAIGN_ID + "/launch").header("Host", HOST).header("Origin", ORIGIN)
                         .session(session).param("localFormToken", tokens.issue(session))
@@ -924,6 +924,202 @@ class LiveCampaignControllerTest {
                 .andExpect(status().is3xxRedirection());
         verify(service).prepareSelection(ids);
         verify(service).launch(CAMPAIGN_ID, HASH);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"PREPARED", "RUNNING", "COMPLETED", "INTERRUPTED", "STOPPED_OPERATOR", "STOPPED_ERROR", "STOPPED_LIMIT"})
+    void campaignPagesKeepStableSlicesAndTheCompleteManifestForEveryLifecycleState(String state) throws Exception {
+        var view = paginatedCampaign(state, 17);
+        when(service.state(CAMPAIGN_ID)).thenReturn(view);
+        var ids = view.manifest().targets().stream().map(t -> t.canonicalEventId().toString()).toList();
+        String base = "/live-campaigns/" + CAMPAIGN_ID;
+        String first = mvc.perform(get(base).header("Host", HOST)).andExpect(status().isOk())
+                .andExpect(model().attribute("manifest", view.manifest())).andReturn().getResponse().getContentAsString();
+        assertThat(renderedEventIds(first)).containsExactlyElementsOf(ids.subList(0, 10));
+        assertThat(first).contains("data-live-state-url=\"" + base + "/state?page=1\"");
+        String second = mvc.perform(get(base).param("page", "2").header("Host", HOST)).andExpect(status().isOk())
+                .andExpect(model().attribute("manifest", view.manifest())).andReturn().getResponse().getContentAsString();
+        assertThat(renderedEventIds(second)).containsExactlyElementsOf(ids.subList(10, 17));
+        assertThat(second).contains("data-live-state-url=\"" + base + "/state?page=2\"", "aria-current=\"page\"");
+        assertThat(Pattern.compile("<nav\\b[^>]*data-live-pagination").matcher(second).results().count()).isEqualTo(2);
+        assertThat(first).contains("?page=2#campaign-events");
+        assertThat(second).contains("?page=1#campaign-events");
+        String bounded = mvc.perform(get(base).param("page", "2147483647").header("Host", HOST))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(renderedEventIds(bounded)).containsExactlyElementsOf(ids.subList(10, 17));
+        assertThat(bounded).contains("/state?page=2\"");
+        verify(service, never()).launch(any(), any());
+        verify(service, never()).stop(any(), any());
+    }
+
+    @Test
+    void paginatedStateReturnsOnlyTheRequestedSliceAndUnpagedStateRemainsComplete() throws Exception {
+        var view = paginatedCampaign("RUNNING", 17);
+        when(service.state(CAMPAIGN_ID)).thenReturn(view);
+        String path = "/live-campaigns/" + CAMPAIGN_ID + "/state";
+        mvc.perform(get(path).param("page", "1").header("Host", HOST)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.events.length()").value(10)).andExpect(jsonPath("$.pagination.number").value(1))
+                .andExpect(jsonPath("$.pagination.totalElements").value(17)).andExpect(jsonPath("$.reservedCalls").value(123));
+        mvc.perform(get(path).param("page", "2").header("Host", HOST)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.events.length()").value(7))
+                .andExpect(jsonPath("$.events[0].canonicalEventId").value(view.events().get(10).target().canonicalEventId().toString()))
+                .andExpect(jsonPath("$.events[6].canonicalEventId").value(view.events().get(16).target().canonicalEventId().toString()))
+                .andExpect(jsonPath("$.pagination.number").value(2))
+                .andExpect(jsonPath("$.pagination.size").value(10))
+                .andExpect(jsonPath("$.pagination.totalElements").value(17))
+                .andExpect(jsonPath("$.pagination.totalPages").value(2))
+                .andExpect(jsonPath("$.reservedCalls").value(123))
+                .andExpect(jsonPath("$.receivedBytes").value(45678))
+                .andExpect(jsonPath("$.cadence.targetSeconds").value(view.manifest().cycleInterval().toSeconds()))
+                .andExpect(header().string("Cache-Control", containsString("no-store")));
+        mvc.perform(get(path).param("page", "999").header("Host", HOST)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.pagination.number").value(2)).andExpect(jsonPath("$.events.length()").value(7));
+        mvc.perform(get(path).header("Host", HOST)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.events.length()").value(17))
+                .andExpect(jsonPath("$.events[0].canonicalEventId").value(view.events().getFirst().target().canonicalEventId().toString()))
+                .andExpect(jsonPath("$.events[16].canonicalEventId").value(view.events().getLast().target().canonicalEventId().toString()));
+    }
+
+    @Test
+    void pageTwoRendersStoppedAutonomyWithoutRewritingTheRunningLedgerState() throws Exception {
+        var view = paginatedCampaign("RUNNING", 17);
+        when(service.state(CAMPAIGN_ID)).thenReturn(view);
+        when(service.runtimeStatus(CAMPAIGN_ID)).thenReturn(Optional.of(new LiveCampaignService.RuntimeStatus(
+                "STOPPED_ERROR", "LOCAL_CLEANUP_PENDING", true, true, false)));
+        var response = mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST).param("page", "2"))
+                .andExpect(status().isOk()).andExpect(model().attribute("manifest", view.manifest())).andReturn();
+        var projected = (LiveCampaignPresentation.Campaign) response.getModelAndView().getModel().get("campaign");
+        assertThat(projected.state()).isEqualTo("RUNNING");
+        assertThat(projected.revision()).isEqualTo(view.revision());
+        assertThat(projected.pagination().number()).isEqualTo(2);
+        assertThat(projected.pagination().totalElements()).isEqualTo(17);
+        assertThat(projected.cadence().targetSeconds()).isEqualTo(100);
+        assertThat(projected.cadence().estimatedRemainingSeconds()).isZero();
+        String body = response.getResponse().getContentAsString();
+        assertThat(renderedEventIds(body)).containsExactlyElementsOf(view.events().subList(10, 17).stream()
+                .map(event -> event.target().canonicalEventId().toString()).toList());
+        assertThat(Pattern.compile("<dd\\b[^>]*data-live-autonomy[^>]*>\\s*Collecte arrêtée\\s*</dd>")
+                .matcher(body).find()).as("SSR autonomy reflects the stopped process despite RUNNING in the ledger").isTrue();
+        verify(service, never()).stop(any(), any());
+        verify(service, never()).launch(any(), any());
+    }
+
+    @Test
+    void incomingEventLinkSelectsItsPageAndUnknownTargetsReturnNotFound() throws Exception {
+        var view = paginatedCampaign("RUNNING", 17);
+        when(service.state(CAMPAIGN_ID)).thenReturn(view);
+        UUID target = view.events().get(10).target().canonicalEventId();
+        String body = mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST)
+                        .param("eventId", target.toString()).param("page", "1"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(renderedEventIds(body)).containsExactlyElementsOf(view.events().subList(10, 17).stream()
+                .map(event -> event.target().canonicalEventId().toString()).toList());
+        assertThat(body).contains("id=\"live-event-" + target + "\"", "/state?page=2\"");
+        mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST)
+                        .param("eventId", UUID.randomUUID().toString())).andExpect(status().isNotFound());
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"0", "-1", "abc", "1.5", "2147483648"})
+    void invalidPagesFailBeforeAnyMutation(String page) throws Exception {
+        when(service.state(CAMPAIGN_ID)).thenReturn(paginatedCampaign("RUNNING", 17));
+        String base = "/live-campaigns/" + CAMPAIGN_ID;
+        for (String suffix : List.of("", "/state"))
+            mvc.perform(get(base + suffix).param("page", page).header("Host", HOST)).andExpect(status().isBadRequest());
+        MockHttpSession session = new MockHttpSession();
+        mvc.perform(post(base + "/stop").param("page", page).param("localFormToken", tokens.issue(session))
+                        .header("Host", HOST).header("Origin", ORIGIN).session(session)).andExpect(status().isBadRequest());
+        verify(service, never()).stop(any(), any());
+        verify(service, never()).launch(any(), any());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {0, 1, 10})
+    void onePageCampaignsHaveNoPaginationNavigation(int count) throws Exception {
+        when(service.state(CAMPAIGN_ID)).thenReturn(paginatedCampaign("COMPLETED", count));
+        String body = mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).param("page", "2").header("Host", HOST))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(renderedEventIds(body)).hasSize(count);
+        assertThat(body).doesNotContain("data-live-pagination").contains("/state?page=1\"");
+    }
+
+    @Test
+    void everyCampaignActionRetainsPageTwoWithoutChangingItsServiceArguments() throws Exception {
+        String base = "/live-campaigns/" + CAMPAIGN_ID;
+        MockHttpSession session = new MockHttpSession();
+        for (String suffix : List.of("/launch", "/cancel-preparation", "/stop", "/events/" + EVENT_ID + "/stop", "/finalize-interruption")) {
+            mvc.perform(post(base + suffix).header("Host", HOST).header("Origin", ORIGIN).session(session)
+                            .param("localFormToken", tokens.issue(session)).param("page", "2")
+                            .param("manifestHash", HASH).param("confirmation", "true").param("guardGeneration", "7"))
+                    .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl(base + "?page=2"));
+        }
+        verify(service).launch(CAMPAIGN_ID, HASH);
+        verify(service).cancelPreparation(CAMPAIGN_ID, HASH);
+        verify(service).stop(CAMPAIGN_ID, null);
+        verify(service).stop(CAMPAIGN_ID, EVENT_ID);
+        verify(service).finalizeInterruptedCleanup(CAMPAIGN_ID, 7);
+        mvc.perform(post(base + "/stop").header("Host", HOST).header("Origin", ORIGIN).session(session)
+                        .param("localFormToken", tokens.issue(session)).param("page", "1"))
+                .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl(base));
+    }
+
+    @Test
+    void pageTwoFormsKeepTheirPageAndReprepareStillSubmitsAllSeventeenTargets() throws Exception {
+        String base = "/live-campaigns/" + CAMPAIGN_ID;
+        MockHttpSession session = new MockHttpSession();
+        for (String state : List.of("PREPARED", "RUNNING", "INTERRUPTED", "COMPLETED")) {
+            var view = paginatedCampaign(state, 17);
+            when(service.state(CAMPAIGN_ID)).thenReturn(view);
+            when(service.orphanCleanupGuard(CAMPAIGN_ID)).thenReturn(state.equals("INTERRUPTED")
+                    ? Optional.of(new Guard("CLEANUP_REQUIRED", CAMPAIGN_ID,
+                            new Owner(UUID.randomUUID(), 654321, NOW), 7, NOW)) : Optional.empty());
+            String body = mvc.perform(get(base).param("page", "2").header("Host", HOST).session(session))
+                    .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+            var forms = Pattern.compile("(?s)<form\\b[^>]*action=\"" + Pattern.quote(base) + "/[^\"]+\"[^>]*>.*?</form>").matcher(body);
+            int formCount = 0;
+            while (forms.find()) {
+                formCount++;
+                assertThat(hiddenValue(forms.group(), "page")).isEqualTo("2");
+            }
+            assertThat(formCount).isEqualTo(switch (state) {
+                case "PREPARED" -> 2;
+                case "RUNNING" -> 8;
+                case "INTERRUPTED" -> 1;
+                default -> 0;
+            });
+            if (state.equals("COMPLETED")) {
+                String form = renderedForm(body, "/live-campaigns/prepare");
+                var ids = view.manifest().targets().stream().map(Target::canonicalEventId).toList();
+                for (UUID id : ids) assertThat(form).contains("value=\"" + id + "\"");
+                when(service.prepareSelection(ids)).thenReturn(new LiveCampaignService.Preparation(view.manifest(), List.of()));
+                mvc.perform(post("/live-campaigns/prepare").header("Host", HOST).header("Origin", ORIGIN).session(session)
+                                .param("localFormToken", hiddenValue(form, "localFormToken"))
+                                .param("eventId", ids.stream().map(UUID::toString).toArray(String[]::new)))
+                        .andExpect(status().is3xxRedirection());
+                verify(service).prepareSelection(ids);
+            }
+        }
+        verify(service, never()).launch(any(), any());
+    }
+
+    private static List<String> renderedEventIds(String body) {
+        return Pattern.compile("data-live-event-id=\"([^\"]+)\"").matcher(body).results().map(m -> m.group(1)).toList();
+    }
+
+    private static CampaignView paginatedCampaign(String state, int count) {
+        var targets = IntStream.range(0, Math.max(1, count)).mapToObj(i -> new Target(
+                CanonicalEventIdentity.sofascore(900001L + i).value(), 900001L + i, i + 1L, i + 1L)).toList();
+        var envelopes = new java.util.EnumMap<SofascoreEndpointType, EndpointEnvelope>(SofascoreEndpointType.class);
+        for (var endpoint : List.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS))
+            envelopes.put(endpoint, new EndpointEnvelope(Duration.ofMillis(400), Duration.ofMillis(100)));
+        var manifest = new Manifest(CAMPAIGN_ID, HASH, "live-v5", NOW, NOW.plusSeconds(300), Duration.ofHours(4),
+                2500, 20000, 1_000_000, 20, targets, new AdmissionProfile(Duration.ofSeconds(10),
+                Duration.ofSeconds(1), "", new GroupedAdmissionProfile(envelopes, "b".repeat(64), "live-v5")), Duration.ofSeconds(100));
+        return new CampaignView(manifest, state, null, state.equals("PREPARED") ? null : NOW,
+                state.equals("PREPARED") ? null : NOW.plusSeconds(14400), 123, 45678, 42, null,
+                targets.stream().limit(count).map(t -> new EventView(t, state.equals("RUNNING") ? "COLLECTING" : state,
+                        null, 4, 1024, null, List.of())).toList(), List.of(), List.of());
     }
 
     private static Manifest manifest() {

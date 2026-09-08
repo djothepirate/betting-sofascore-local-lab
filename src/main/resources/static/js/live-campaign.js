@@ -219,7 +219,8 @@
       text(monitor, "[data-live-calls]", `${campaign.reservedCalls} / ${campaign.maximumCalls}`);
       text(monitor, "[data-live-bytes]", `${campaign.receivedBytes} / ${campaign.maximumBytes}`);
       if (campaign.cadence) text(monitor, "[data-live-autonomy]",
-        `${Math.floor(campaign.cadence.estimatedRemainingSeconds / 60)} minutes environ`);
+        campaign.runtimeStatus?.collectionStopped ? "Collecte arrêtée"
+          : `${Math.floor(campaign.cadence.estimatedRemainingSeconds / 60)} minutes environ`);
       const globalStop = monitor.querySelector("[data-live-global-stop-form]");
       if (globalStop) {
         globalStop.hidden = campaign.state !== "RUNNING" && !cleanupPending;
@@ -282,7 +283,7 @@
         if (link) {
           const stateUrl = new URL(monitor.dataset.liveStateUrl, location.href);
           const prefix = stateUrl.pathname.split("/events")[0];
-          link.href = `${prefix}/live-campaigns/${campaign.campaignId}`;
+        link.href = `${prefix}/live-campaigns/${campaign.campaignId}?eventId=${event.canonicalEventId}#live-event-${event.canonicalEventId}`;
           link.hidden = false;
         }
         node.querySelectorAll("[data-live-stop-form]").forEach(form => {

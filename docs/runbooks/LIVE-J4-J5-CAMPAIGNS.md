@@ -7,6 +7,36 @@ Références : [ADR-SS-005 accepté](../../ADR-SS-005-bounded-local-live-j4-j5-c
 
 ## Nouvelles préparations : live-v5
 
+### Parcourir une campagne de plus de dix rencontres
+
+Le complément de pagination affiche dix rencontres par page, dans l’ordre de la sélection.
+Les commandes « Précédente », numéros de page et « Suivante » figurent au-dessus et au-dessous
+des rencontres. Une campagne de dix-sept rencontres comporte deux pages de dix et sept cartes.
+La navigation apparaît à partir de onze rencontres et reste disponible après la fin de la campagne.
+
+La lecture automatique conserve la page choisie et actualise ses cartes. Un changement de
+page recharge la page ; les panneaux y retrouvent leur ouverture initiale. Une rencontre
+terminée reste à sa place. Depuis la liste ou le détail d’une rencontre, « Suivre la campagne »
+ou « Ouvrir la campagne » mène directement à cette rencontre, même après la première page.
+
+Le résumé, les plafonds, l’autonomie et « Arrêter toute la campagne » concernent toujours
+l’ensemble de la campagne. L’arrêt individuel conserve la page choisie. Le lancement et
+« Préparer une nouvelle campagne avec ces rencontres » utilisent le manifeste complet.
+Cette pagination ne change ni la sélection collectée ni sa cadence.
+
+### Interpréter un arrêt avec clôture en attente
+
+« Collecte arrêtée / clôture locale requise » décrit l’état du processus. Il peut coexister
+temporairement avec `RUNNING` et des rencontres `COLLECTING` enregistrés en base : ces états
+durables ne sont réconciliés qu’à la clôture. Le complément d’affichage remplace alors
+l’autonomie par « Collecte arrêtée » ; les compteurs et observations restent consultables.
+« Finaliser la clôture locale » termine cette clôture, sans reprendre les appels. Un nouveau
+suivi passe par une nouvelle préparation et un lancement manuel après clôture réussie.
+
+L’état `LOCAL_CLEANUP_PENDING` n’expose pas la cause primaire de l’erreur qui a précédé la
+clôture. Conserver la console de l’application et les horodatages pour le diagnostic ;
+ne pas attribuer automatiquement l’arrêt à un plafond ou au fournisseur.
+
 ### Lire les compositions
 
 La page de campagne, le suivi de la fiche d’une rencontre et la page J5 manuelle utilisent

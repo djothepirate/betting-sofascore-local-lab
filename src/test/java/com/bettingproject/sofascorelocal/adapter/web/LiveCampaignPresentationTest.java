@@ -447,6 +447,17 @@ class LiveCampaignPresentationTest {
         assertThat(projected.cadence().targetSeconds()).isEqualTo(interval);
         assertThat(projected.cadence().estimatedCallsPerMinute()).isEqualTo(callsPerMinute);
         assertThat(projected.cadence().estimatedRemainingSeconds()).isEqualTo(14215); // authorized window is tighter than call budgets
+
+        // Cleanup failure can leave RUNNING in the ledger after the process has stopped collecting.
+        for (boolean closing : List.of(false, true)) {
+            var stopped = new LiveCampaignPresentation(events, data, Clock.fixed(START.plusSeconds(185), ZoneOffset.UTC))
+                    .state(view, new com.bettingproject.sofascorelocal.application.live.LiveCampaignService.RuntimeStatus(
+                            "STOPPED_ERROR", "LOCAL_CLEANUP_PENDING", true, true, closing));
+            assertThat(stopped.state()).isEqualTo("RUNNING");
+            assertThat(stopped.cadence().estimatedRemainingSeconds()).isZero();
+            assertThat(stopped.cadence().estimatedCallsPerMinute()).isZero();
+            assertThat(stopped.cadence().targetSeconds()).isEqualTo(interval);
+        }
     }
 
     @ParameterizedTest @CsvSource({"INTERRUPTED,COLLECTING","RUNNING,STOPPED_POSTPONED","COMPLETED,FINISHED_CONFIRMED"})

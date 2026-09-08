@@ -967,6 +967,26 @@ Restent les décisions distinctes suivantes :
 2. Après réalisation et qualification hors fournisseur, préparer un manifeste concret et lancer
    manuellement la campagne. Les sélections élargies restent soumises au profil qualifié et à l'admission.
 
+### Complément demandé le 8 septembre — pagination et lisibilité après arrêt
+
+Le propriétaire demande dix rencontres par page au-delà de dix rencontres. Le complément
+borne les projections HTML et JSON utilisées par le lecteur de campagne, conserve l’ordre
+du manifeste et les commandes portant sur toute la campagne. Les pages Rencontres et
+Détail gardent leur contrat JSON et leurs liens ciblent la page du match.
+
+Les captures de la campagne `60fd08dd-074e-4994-a0d5-51aff9eaa9db` montrent ensuite une
+collecte arrêtée avec clôture en attente, un état durable encore RUNNING, une autonomie
+positive et une notice qui se chevauche dans la liste. Le complément corrige ces deux
+restitutions sans modifier la clôture ni relancer la collecte. La cause initiale de l’arrêt
+reste distincte de ce correctif d’affichage.
+Le [diagnostic en lecture seule](../../validation/WO058-LIVE-CLEANUP-INCIDENT-20260908.md)
+consigne les preuves et le parcours de récupération opérateur encore à effectuer.
+
+Réalisation et résultats propres à ce complément :
+[pagination et affichage après arrêt](../../validation/WO058-LIVE-PAGINATION-20260908.md).
+Les succès Maven v5 ci-dessus restent les preuves du contenu antérieur ; ils ne valident
+pas automatiquement ce complément.
+
 ### Définition de fini
 
 Le cadrage et l'autorisation de réalisation sont acquis. La réalisation, ses limites et la
