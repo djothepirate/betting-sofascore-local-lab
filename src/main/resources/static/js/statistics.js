@@ -62,7 +62,7 @@
       section.open = state?.groups.get(group.name) ?? true;
       section.dataset.statGroup = group.name;
       const heading = create("summary");
-      heading.append(create("h5", "", group.name));
+      heading.append(create("h5", "", group.label ?? group.name));
       section.append(heading);
       group.metrics.forEach(metric => {
         const article = create("article", "statistics-metric");

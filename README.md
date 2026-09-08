@@ -6,6 +6,9 @@ reste lisible lorsque la rétention attend la libération d’une session fourni
 La clôture opérateur de la campagne interrompue et le rattrapage final de quinze rencontres
 sont consignés dans le [rapport de récupération](docs/validation/WO058-RECOVERY-DASHBOARD-20260908.md).
 Voir également la [présentation des incidents](docs/validation/WO058-INCIDENT-GRAPHICS-20260908.md).
+Les groupes et intitulés statistiques connus sont traduits en français ; les cartes joueurs
+gardent le numéro, le nom et le poste sans répéter leur section Titulaires/Remplaçants.
+[Portée et validation des libellés](docs/validation/WO058-UI-LABELS-20260909.md).
 
 **Politique live-v5 — 8 septembre 2026 :** les nouvelles préparations ciblent J4, incidents et
 statistiques toutes les 100 secondes par match, avec compositions initiales puis réparties sur

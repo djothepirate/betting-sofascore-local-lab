@@ -19,7 +19,7 @@
       <div class="statistics-teams"><span>Domicile</span><span>Extérieur</span></div>
       <details th:each="group : ${period.groups}" class="statistics-group" open
                th:attr="data-stat-group=${group.name}">
-        <summary><h5 th:text="${group.name}">Groupe</h5></summary>
+        <summary><h5 th:text="${group.label}">Groupe</h5></summary>
         <article th:each="metric : ${group.metrics}" class="statistics-metric">
           <h6 th:text="${metric.label}">Statistique</h6>
           <div class="statistics-values">

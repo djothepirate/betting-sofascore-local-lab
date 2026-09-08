@@ -340,8 +340,7 @@ class LiveCampaignLineupsBrowserQualificationIT {
                 assertStableNodes(host);
                 assertThat(homeStarters.locator("[data-lineups-player='HOME:6']").count()).isOne();
                 assertThat(homeSubstitutes.locator("[data-lineups-player='HOME:4']").count()).isOne();
-                assertThat(player(home, 6).locator("[data-lineups-role]").textContent()).isEqualTo("Titulaire");
-                assertThat(player(home, 4).locator("[data-lineups-role]").textContent()).isEqualTo("Remplaçant");
+                assertThat(host.locator("[data-lineups-role]").count()).isZero();
                 assertInertMarkup(page, host);
 
                 summary(home).press("Enter");
@@ -364,6 +363,7 @@ class LiveCampaignLineupsBrowserQualificationIT {
                 assertThat(family.locator("[data-live-changed]").textContent()).isEqualTo(unchangedAt);
                 assertThat(family.locator("[data-live-occurrence]").textContent()).isEqualTo("1003");
                 assertThat(page.evaluate("window.__lineupsMutations.length")).isEqualTo(0);
+                assertThat(host.locator("[data-lineups-role]").count()).isZero();
                 page.evaluate("window.__lineupsObserver.disconnect()");
                 assertOpen(homeSubstitutes, false);
                 assertFocused(summary(homeSubstitutes));
@@ -459,6 +459,9 @@ class LiveCampaignLineupsBrowserQualificationIT {
     }
 
     private static void assertInitialRoster(Locator host) {
+        assertThat(host.locator("[data-lineups-role]").count()).isZero();
+        assertThat(host.locator(".lineups-section-title").allTextContents())
+                .containsExactly("Titulaires", "Remplaçants", "Titulaires", "Remplaçants");
         assertThat(host.locator("[data-lineups-team]").count()).isEqualTo(2);
         assertThat(host.locator("[data-lineups-confirmation]").textContent()).contains("Provisoire");
         Locator home = team(host, "HOME"), away = team(host, "AWAY");

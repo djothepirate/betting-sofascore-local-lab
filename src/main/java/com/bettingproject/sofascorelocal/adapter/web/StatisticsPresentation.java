@@ -41,6 +41,77 @@ public final class StatisticsPresentation {
         };
     }
 
+    private static String groupLabel(String source) {
+        return switch (source) {
+            case "Match overview" -> "Vue d’ensemble du match";
+            case "Shots" -> "Tirs";
+            case "Attack" -> "Attaque";
+            case "Passes" -> "Passes";
+            case "Duels" -> "Duels";
+            case "Defending" -> "Défense";
+            case "Goalkeeping" -> "Gardiens";
+            default -> source;
+        };
+    }
+
+    private static String metricLabel(String source) {
+        // Match only known labels: a new provider name remains visible verbatim for review.
+        return switch (source) {
+            case "Ball possession" -> "Possession du ballon";
+            case "Expected goals" -> "Buts attendus (xG)";
+            case "Big chances" -> "Grosses occasions";
+            case "Total shots" -> "Total des tirs";
+            case "Goalkeeper saves" -> "Arrêts du gardien";
+            case "Corner kicks" -> "Corners";
+            case "Fouls" -> "Fautes";
+            case "Passes" -> "Passes";
+            case "Tackles" -> "Tacles";
+            case "Free kicks" -> "Coups francs";
+            case "Yellow cards" -> "Cartons jaunes";
+            case "Red cards" -> "Cartons rouges";
+            case "Average rating" -> "Note moyenne";
+            case "Shots on target" -> "Tirs cadrés";
+            case "Expected goals on target" -> "Buts attendus sur tirs cadrés (xGOT)";
+            case "Shots off target" -> "Tirs non cadrés";
+            case "Blocked shots" -> "Tirs contrés";
+            case "Shots inside box" -> "Tirs dans la surface";
+            case "Shots outside box" -> "Tirs hors de la surface";
+            case "Hit woodwork" -> "Montants touchés";
+            case "Big chances scored" -> "Grosses occasions converties";
+            case "Big chances missed" -> "Grosses occasions manquées";
+            case "Through balls" -> "Passes en profondeur";
+            case "Touches in penalty area" -> "Touches de balle dans la surface";
+            case "Fouled in final third" -> "Fautes subies dans le dernier tiers";
+            case "Offsides" -> "Hors-jeu";
+            case "Accurate passes" -> "Passes réussies";
+            case "Throw-ins" -> "Touches";
+            case "Final third entries" -> "Entrées dans le dernier tiers";
+            case "Final third phase" -> "Phase dans le dernier tiers";
+            case "Long balls" -> "Longs ballons";
+            case "Crosses" -> "Centres";
+            case "Duels" -> "Duels";
+            case "Ground duels" -> "Duels au sol";
+            case "Aerial duels" -> "Duels aériens";
+            case "Dribbles" -> "Dribbles";
+            case "Dispossessed" -> "Ballons perdus";
+            case "Tackles won" -> "Tacles gagnés";
+            case "Total tackles" -> "Total des tacles";
+            case "Interceptions" -> "Interceptions";
+            case "Recoveries" -> "Récupérations";
+            case "Clearances" -> "Dégagements";
+            case "Errors lead to a shot" -> "Erreurs menant à un tir";
+            case "Errors lead to a goal" -> "Erreurs menant à un but";
+            case "Total saves" -> "Total des arrêts";
+            case "Goals prevented" -> "Buts évités";
+            case "Big saves" -> "Arrêts décisifs";
+            case "High claims" -> "Ballons aériens captés";
+            case "Punches" -> "Dégagements des poings";
+            case "Goal kicks" -> "Coups de pied de but";
+            case "Penalty saves" -> "Penalties arrêtés";
+            default -> source;
+        };
+    }
+
     private static Metric metric(EventStatisticMetric metric) {
         boolean possession = "ballPossession".equals(metric.metricCode());
         Value home = value(metric.homeValue(), possession);
@@ -58,7 +129,7 @@ public final class StatisticsPresentation {
                 note = "Comparaison de possession indisponible : deux pourcentages valides sont nécessaires.";
             }
         }
-        return new Metric(metric.metricCode(), metric.metricName(), home, away, possessionHome, note);
+        return new Metric(metric.metricCode(), metricLabel(metric.metricName()), home, away, possessionHome, note);
     }
 
     static Value value(Optional<String> source, boolean possession) {
@@ -101,7 +172,9 @@ public final class StatisticsPresentation {
 
     public record View(List<Period> periods, String defaultPeriod) { }
     public record Period(String code, String label, List<Group> groups) { }
-    public record Group(String name, List<Metric> metrics) { }
+    public record Group(String name, String label, List<Metric> metrics) {
+        public Group(String name, List<Metric> metrics) { this(name, groupLabel(name), metrics); }
+    }
     public record Metric(String code, String label, Value home, Value away,
                          BigDecimal possessionHome, String note) { }
     public record Value(String text, String note, String state, BigDecimal percentage, boolean ratio) { }

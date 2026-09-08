@@ -30,6 +30,41 @@ class StatisticsPresentationTest {
     }
 
     @Test
+    void translatesKnownLabelsWithoutChangingSourceKeysGroupingOrderOrValues() {
+        var possession = new EventStatisticMetric("ALL", "Match overview", "ballPossession", "Ball possession",
+                Optional.of("59%"), Optional.of("41%"));
+        var expectedGoals = new EventStatisticMetric("ALL", "Match overview", "expectedGoals", "Expected goals",
+                Optional.of("2.47"), Optional.of("0.58"));
+        var shots = new EventStatisticMetric("ALL", "Shots", "shotsOnTarget", "Shots on target",
+                Optional.of("10"), Optional.of("6"));
+        var alreadyFrenchGroup = new EventStatisticMetric("ALL", "Tirs", "totalShots", "Total shots",
+                Optional.of("20"), Optional.empty());
+        var source = new EventStatistics(900001L, List.of(possession, expectedGoals, shots, alreadyFrenchGroup));
+
+        var groups = StatisticsPresentation.from(source).periods().getFirst().groups();
+
+        assertThat(groups).extracting(StatisticsPresentation.Group::name)
+                .as("source group keys remain distinct even when their display labels coincide")
+                .containsExactly("Match overview", "Shots", "Tirs");
+        assertThat(groups).extracting(StatisticsPresentation.Group::label)
+                .containsExactly("Vue d’ensemble du match", "Tirs", "Tirs");
+        assertThat(groups.getFirst().metrics()).extracting(StatisticsPresentation.Metric::code)
+                .containsExactly("ballPossession", "expectedGoals");
+        assertThat(groups.getFirst().metrics()).extracting(StatisticsPresentation.Metric::label)
+                .containsExactly("Possession du ballon", "Buts attendus (xG)");
+        assertThat(groups.getFirst().metrics().getFirst().possessionHome()).isEqualByComparingTo("59");
+        assertThat(groups.get(1).metrics().getFirst().label()).isEqualTo("Tirs cadrés");
+        assertThat(groups.get(2).metrics().getFirst().label()).isEqualTo("Total des tirs");
+        var projected = groups.stream().flatMap(group -> group.metrics().stream()).toList();
+        assertThat(projected).extracting(metric -> metric.home().text()).containsExactly("59%", "2.47", "10", "20");
+        assertThat(projected).extracting(metric -> metric.away().text()).containsExactly("41%", "0.58", "6", "—");
+        assertThat(source.providerEventId()).isEqualTo(900001L);
+        assertThat(source.metrics()).containsExactly(possession, expectedGoals, shots, alreadyFrenchGroup);
+        assertThat(source.metrics()).extracting(EventStatisticMetric::metricName)
+                .containsExactly("Ball possession", "Expected goals", "Shots on target", "Total shots");
+    }
+
+    @Test
     void selectsFirstObservedPeriodWhenAllIsAbsentAndKeepsEmptyCollectionExplicit() {
         var first = StatisticsPresentation.from(new EventStatistics(900001L,
                 List.of(metric("2ND", "Tirs", "shots", "0", "1"))));
@@ -94,7 +129,18 @@ class StatisticsPresentationTest {
 
     @Test
     void preservesUnrecognizedSourceLabelsAndValuesForEscapedRendering() {
-        var row = row(metric("<period>", "<group>", "unknown", "<img src=x onerror=alert(1)>", "0"));
+        var source = new EventStatisticMetric("<period>", "<group>", "expectedGoals", "<new metric>",
+                Optional.of("<img src=x onerror=alert(1)>"), Optional.of("0"));
+        var period = StatisticsPresentation.from(new EventStatistics(900001L, List.of(source))).periods().getFirst();
+        var group = period.groups().getFirst();
+        var row = group.metrics().getFirst();
+        assertThat(period.code()).isEqualTo("<period>");
+        assertThat(period.label()).isEqualTo("<period>");
+        assertThat(group.name()).isEqualTo("<group>");
+        assertThat(group.label()).isEqualTo("<group>");
+        assertThat(row.code()).isEqualTo("expectedGoals");
+        assertThat(row.label()).as("an unfamiliar source name is not replaced using a familiar code")
+                .isEqualTo("<new metric>");
         assertThat(row.home().text()).isEqualTo("<img src=x onerror=alert(1)>");
         assertThat(row.possessionHome()).isNull();
         assertThat(row.home().percentage()).isNull();

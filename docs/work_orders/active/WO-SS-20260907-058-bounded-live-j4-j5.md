@@ -989,6 +989,16 @@ pas automatiquement ce complément.
 
 ### Définition de fini
 
+Le 9 septembre, le propriétaire demande de supprimer les rôles répétés sur les cartes
+joueurs et de traduire les groupes et noms de statistiques. Ce complément concerne
+uniquement la présentation commune live/J5 : sections, valeurs, identifiants, ordre,
+sources et états des panneaux restent conservés. La réalisation et ses résultats propres
+sont consignés dans le [rapport des libellés](../../validation/WO058-UI-LABELS-20260909.md).
+Après libération du port 8087 par le propriétaire, `clean verify` réussit à 22:55:21 UTC
+le 8 septembre (00:55:21 Europe/Paris le 9) : 1 913 cas Surefire dont cinq ignorés,
+166 cas Failsafe, zéro échec ou erreur. Les 214 cas ciblés et les deux scénarios Chromium
+réussissent également. Les ignorés et les preuves de ce complément sont détaillés dans le rapport.
+
 Après redémarrage, le propriétaire a clôturé la session interrompue puis lancé un
 rattrapage final de quinze rencontres. La clôture `LOCAL_CLEANUP_VERIFIED` et la nouvelle
 campagne `COMPLETED` sont confirmées en lecture seule. La trace opérateur identifie

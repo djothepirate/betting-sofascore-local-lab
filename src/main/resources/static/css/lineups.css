@@ -34,7 +34,6 @@
 .lineups-player-info { display: flex; flex-direction: column; gap: .25rem; min-width: 0; overflow-wrap: anywhere; }
 .lineups-name { font-size: .86rem; line-height: 1.4; }
 .lineups-player-meta { display: flex; flex-direction: column; gap: .1rem; font-size: .72rem; line-height: 1.45; color: var(--muted, #607e8c); }
-.lineups-role { font-size: .68rem; }
 .lineups-bench { padding: .75rem; }
 .lineups-bench:empty { display: none; }
 @media (max-width: 760px) {

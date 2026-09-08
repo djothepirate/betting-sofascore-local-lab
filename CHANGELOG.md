@@ -4,6 +4,15 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — libellés des statistiques et cartes joueurs
+
+- Traduit les sept groupes et les 51 intitulés statistiques observés dans le corpus
+  local, sur les pages live et J5. Les noms inconnus restent affichés tels quels ;
+  les valeurs, les clés sources et l’ouverture des panneaux sont conservées.
+- Retire les mentions répétées « Titulaire » et « Remplaçant » sur les cartes joueurs.
+  Les sections « Titulaires » et « Remplaçants », leurs compteurs et les postes restent visibles.
+- Portée et validation : [libellés d’interface](docs/validation/WO058-UI-LABELS-20260909.md).
+
 ### WO-058 — accueil pendant une clôture et présentation des incidents
 
 - Maintient l’accueil accessible lorsque l’aperçu de rétention refuse une campagne

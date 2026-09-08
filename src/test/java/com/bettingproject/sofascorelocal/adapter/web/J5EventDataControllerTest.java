@@ -142,7 +142,7 @@ class J5EventDataControllerTest {
                         (EventIncidents) page.data().incidents().orElseThrow().data(),
                         page.current().event().homeTeam().name(), page.current().event().awayTeam().name())))
                 .andExpect(header().string(HttpHeaders.CACHE_CONTROL, containsString("no-store")))
-                .andExpect(content().string(containsString("Ball possession")))
+                .andExpect(content().string(containsString("Possession du ballon")))
                 .andExpect(content().string(containsString("data-statistics")))
                 .andExpect(content().string(containsString("data-stat-period=\"ALL\"")))
                 .andExpect(content().string(containsString("class=\"statistics-possession\"")))

@@ -61,7 +61,7 @@ class LiveCampaignStatisticsBrowserQualificationIT {
     private static final String ORIGIN = "http://127.0.0.1:8087";
     private static final String PAGE = ORIGIN + "/live-campaigns/" + CAMPAIGN_ID;
     private static final String INERT_MARKUP = "<img src=x onerror=alert(1)>";
-    private static final String OVERVIEW_GROUP = "Données synthétiques · vue d’ensemble";
+    private static final String OVERVIEW_GROUP = "Match overview";
     private static final String ACTIONS_GROUP = "Données synthétiques · actions et ratios";
     @Autowired private MockMvc mvc;
     @MockitoBean private LiveCampaignService campaigns;
@@ -104,8 +104,10 @@ class LiveCampaignStatisticsBrowserQualificationIT {
                     assertOpen(period(host, period), true);
                 }
                 for (Locator group : host.locator("[data-stat-group]").all()) assertOpen(group, true);
-                assertThat(metric(period(host, "ALL"), "Possession").locator(".statistics-home strong").textContent()).isEqualTo("50%");
-                assertMeterValue(metric(period(host, "ALL"), "Possession").locator("meter.statistics-possession"), 50);
+                assertThat(summary(group(period(host, "ALL"), OVERVIEW_GROUP)).textContent())
+                        .isEqualTo("Vue d’ensemble du match");
+                assertThat(metric(period(host, "ALL"), "Possession du ballon").locator(".statistics-home strong").textContent()).isEqualTo("50%");
+                assertMeterValue(metric(period(host, "ALL"), "Possession du ballon").locator("meter.statistics-possession"), 50);
                 assertThat(host.locator("[style]").count()).as("SSR remains compatible with style-src self").isZero();
                 assertSpecialValues(period(host, "1ST"));
                 Locator firstPeriod = period(host, "1ST");
@@ -113,10 +115,10 @@ class LiveCampaignStatisticsBrowserQualificationIT {
                 summary(firstActions).click();
                 assertOpen(firstActions, false);
                 assertThat(metric(firstPeriod, "Tacles").isHidden()).isTrue();
-                assertThat(metric(firstPeriod, "Tirs").isVisible()).isTrue();
+                assertThat(metric(firstPeriod, "Total des tirs").isVisible()).isTrue();
                 summary(firstPeriod).press("Space");
                 assertOpen(firstPeriod, false);
-                assertThat(metric(firstPeriod, "Tirs").isHidden()).isTrue();
+                assertThat(metric(firstPeriod, "Total des tirs").isHidden()).isTrue();
                 summary(firstPeriod).press("Enter");
                 assertOpen(firstPeriod, true);
                 assertOpen(firstActions, false);
@@ -140,9 +142,9 @@ class LiveCampaignStatisticsBrowserQualificationIT {
                 assertThat(period(host, "ALL").isVisible()).isTrue();
                 assertThat(period(host, "1ST").isHidden()).isTrue();
                 assertThat(period(host, "2ND").isHidden()).isTrue();
-                assertThat(metric(period(host, "ALL"), "Buts attendus").locator(".statistics-home strong").textContent())
+                assertThat(metric(period(host, "ALL"), "Buts attendus (xG)").locator(".statistics-home strong").textContent())
                         .isEqualTo("0.00");
-                assertThat(metric(period(host, "ALL"), "Buts attendus").locator(".statistics-away strong").textContent())
+                assertThat(metric(period(host, "ALL"), "Buts attendus (xG)").locator(".statistics-away strong").textContent())
                         .isEqualTo("0.16");
                 capture(host, "statistics-runtime-desktop.png");
 
@@ -153,7 +155,7 @@ class LiveCampaignStatisticsBrowserQualificationIT {
                 assertMeterValue(metric(period(host, "1ST"), "Dribbles").locator(".statistics-home meter"), 44.444444);
                 assertMeterValue(metric(period(host, "1ST"), "Dribbles").locator(".statistics-away meter"), 75);
                 revision.set(2);
-                page.waitForCondition(() -> "2".equals(metric(period(host, "1ST"), "Tirs").locator(".statistics-home strong").textContent()));
+                page.waitForCondition(() -> "2".equals(metric(period(host, "1ST"), "Total des tirs").locator(".statistics-home strong").textContent()));
                 assertThat(selector.inputValue()).isEqualTo("1ST");
                 assertThat(selector.evaluate("element => document.activeElement === element")).isEqualTo(true);
                 assertSpecialValues(period(host, "1ST"));
@@ -174,12 +176,12 @@ class LiveCampaignStatisticsBrowserQualificationIT {
                 summary(firstActions).click();
                 assertOpen(firstActions, false);
                 assertThat(metric(firstPeriod, "Tacles").isHidden()).isTrue();
-                assertThat(metric(firstPeriod, "Tirs").isVisible()).isTrue();
+                assertThat(metric(firstPeriod, "Total des tirs").isVisible()).isTrue();
                 summary(firstPeriod).click();
                 assertOpen(firstPeriod, false);
                 summary(firstPeriod).focus();
                 revision.set(3);
-                page.waitForCondition(() -> "3".equals(metric(firstPeriod, "Tirs").locator(".statistics-home strong").textContent()));
+                page.waitForCondition(() -> "3".equals(metric(firstPeriod, "Total des tirs").locator(".statistics-home strong").textContent()));
                 assertOpen(firstPeriod, false);
                 assertOpen(firstActions, false);
                 assertOpen(firstOverview, true);
@@ -187,15 +189,16 @@ class LiveCampaignStatisticsBrowserQualificationIT {
                 summary(firstPeriod).press("Space");
                 assertOpen(firstPeriod, true);
                 assertOpen(firstActions, false);
-                assertThat(metric(firstPeriod, "Tirs").isVisible()).isTrue();
+                assertThat(metric(firstPeriod, "Total des tirs").isVisible()).isTrue();
                 capture(host, "statistics-collapsed-desktop.png");
 
                 summary(firstActions).focus();
                 revision.set(4);
-                page.waitForCondition(() -> "4".equals(metric(firstPeriod, "Tirs").locator(".statistics-home strong").textContent()));
+                page.waitForCondition(() -> "4".equals(metric(firstPeriod, "Total des tirs").locator(".statistics-home strong").textContent()));
                 assertOpen(firstActions, false);
                 assertOpen(firstOverview, true);
                 assertThat(summary(firstActions).evaluate("element => document.activeElement === element")).isEqualTo(true);
+                assertThat(summary(firstOverview).textContent()).isEqualTo("Vue d’ensemble du match");
                 assertOpen(group(period(host, "ALL"), ACTIONS_GROUP), true);
                 assertOpen(group(period(host, "2ND"), OVERVIEW_GROUP), true);
                 selector.selectOption("ALL");
@@ -218,7 +221,7 @@ class LiveCampaignStatisticsBrowserQualificationIT {
                 assertSpecialValues(firstPeriod);
 
                 selector.selectOption("2ND");
-                Locator incompletePossession = metric(period(host, "2ND"), "Possession");
+                Locator incompletePossession = metric(period(host, "2ND"), "Possession du ballon");
                 assertThat(incompletePossession.locator(".statistics-home strong").textContent()).isEqualTo("—");
                 assertThat(incompletePossession.locator("meter").count()).isZero();
                 revision.set(5);
@@ -352,27 +355,27 @@ class LiveCampaignStatisticsBrowserQualificationIT {
 
     private static J5EventDataObservationView statistics(int revision) {
         List<EventStatisticMetric> metrics = new ArrayList<>(List.of(
-                value("ALL", "ballPossession", "Possession", "50%", "50%"),
-                value("ALL", "expectedGoals", "Buts attendus", "0.00", "0.16"),
-                value("ALL", "bigChanceCreated", "Grandes occasions", "0", "1"),
-                value("ALL", "totalShotsOnGoal", "Tirs", "0", "5"),
-                value("ALL", "goalkeeperSaves", "Arrêts", "1", "0"),
-                value("ALL", "cornerKicks", "Corners", "0", "2"),
-                value("ALL", "fouls", "Fautes", "1", "3"),
+                value("ALL", "ballPossession", "Ball possession", "50%", "50%"),
+                value("ALL", "expectedGoals", "Expected goals", "0.00", "0.16"),
+                value("ALL", "bigChanceCreated", "Big chances", "0", "1"),
+                value("ALL", "totalShotsOnGoal", "Total shots", "0", "5"),
+                value("ALL", "goalkeeperSaves", "Goalkeeper saves", "1", "0"),
+                value("ALL", "cornerKicks", "Corner kicks", "0", "2"),
+                value("ALL", "fouls", "Fouls", "1", "3"),
                 value("ALL", "passes", "Passes", "78", "73"),
-                value("ALL", "totalTackles", "Tacles", "1", "5"),
-                value("ALL", "freeKicks", "Coups francs", "3", "1"),
-                value("ALL", "yellowCards", "Cartons jaunes", "0", "1"),
-                value("1ST", "ballPossession", "Possession", "60%", "40%"),
+                value("ALL", "totalTackles", "Tackles", "1", "5"),
+                value("ALL", "freeKicks", "Free kicks", "3", "1"),
+                value("ALL", "yellowCards", "Yellow cards", "0", "1"),
+                value("1ST", "ballPossession", "Ball possession", "60%", "40%"),
                 value("1ST", "dribbles", "Dribbles", "4/9 (44%)", "3/4 (75%)"),
-                value("1ST", "cornerKicks", "Corners", null, "0"),
-                value("1ST", "totalTackles", "Tacles", "0/0", "0/4"),
-                value("1ST", "totalShotsOnGoal", "Tirs", Integer.toString(revision), "0"),
+                value("1ST", "cornerKicks", "Corner kicks", null, "0"),
+                value("1ST", "totalTackles", "Tackles", "0/0", "0/4"),
+                value("1ST", "totalShotsOnGoal", "Total shots", Integer.toString(revision), "0"),
                 value("1ST", "invalidRatio", "Ratio incohérent", "5/4", "1/2 (90%)"),
                 value("1ST", "inertMarkup", INERT_MARKUP, "<script>alert(1)</script>", "3")));
         if (revision < 5) {
-            metrics.add(value("2ND", "ballPossession", "Possession", null, "50%"));
-            metrics.add(value("2ND", "totalShotsOnGoal", "Tirs", "3", "5"));
+            metrics.add(value("2ND", "ballPossession", "Ball possession", null, "50%"));
+            metrics.add(value("2ND", "totalShotsOnGoal", "Total shots", "3", "5"));
         }
         int missing = revision < 5 ? 2 : 1;
         List<String> paths = revision < 5 ? List.of("$.synthetic.firstHalf.corners.home", "$.synthetic.secondHalf.possession.home")

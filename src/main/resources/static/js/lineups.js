@@ -78,8 +78,7 @@
     player.dataset.lineupsPlayer = key;
     const info = create("span", "lineups-player-info");
     const meta = create("span", "lineups-player-meta");
-    meta.append(create("span", "", "data-lineups-position"),
-      create("span", "lineups-role", "data-lineups-role"));
+    meta.append(create("span", "", "data-lineups-position"));
     info.append(create("strong", "lineups-name", "data-lineups-name"), meta);
     player.append(create("span", "lineups-number", "data-lineups-number"), info);
     return player;
@@ -93,7 +92,6 @@
     if (badge.getAttribute("aria-label") !== numberLabel) badge.setAttribute("aria-label", numberLabel);
     write(node.querySelector("[data-lineups-name]"), text(player.name, "Joueur non renseigné"));
     write(node.querySelector("[data-lineups-position]"), text(player.positionLabel, "Poste non renseigné"));
-    write(node.querySelector("[data-lineups-role]"), text(player.roleLabel));
   }
 
   function updateTeam(node, team) {

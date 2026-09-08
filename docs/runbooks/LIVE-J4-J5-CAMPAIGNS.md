@@ -71,12 +71,23 @@ Cliquer sur l’en-tête d’une équipe, « Titulaires » ou « Remplaçants »
 panneau. Ces commandes fonctionnent aussi avec Entrée/Espace. Le lecteur live conserve
 l’état des panneaux pendant les actualisations, y compris lorsqu’un joueur ou la confirmation
 change. Une recharge complète de la page retrouve les panneaux ouverts initialement.
+Les cartes présentent le numéro, le nom et le poste ; les mentions « Titulaire » et
+« Remplaçant » ne sont pas répétées sous chaque joueur, car les sections indiquent déjà ce rôle.
 
 Le schéma des titulaires regroupe les postes gardien, défenseur, milieu et attaquant ; les
 postes absents ou autres sont distingués. Il ne représente pas les positions tactiques
 précises. Aucun numéro, joueur ou formation n’est ajouté pour compléter les données reçues.
 Une réponse HTTP 404 reste une indisponibilité, distincte d’une liste observée vide. Source,
 hash et heure de réception restent consultables au-dessus de la composition.
+
+### Lire les statistiques
+
+Les pages live et J5 traduisent les groupes et intitulés connus en français : par exemple,
+« Vue d’ensemble du match », « Possession du ballon », « Buts attendus (xG) », « Tirs cadrés »
+et « Arrêts du gardien ». Un nom inconnu reste affiché tel qu’il a été reçu.
+La traduction ne change ni les valeurs observées, ni leur ordre, ni les périodes disponibles.
+Les panneaux gardent leur ouverture ou fermeture lors des actualisations live.
+[Portée et validation des libellés](../validation/WO058-UI-LABELS-20260909.md).
 
 ### Cadence et admission live-v5
 
