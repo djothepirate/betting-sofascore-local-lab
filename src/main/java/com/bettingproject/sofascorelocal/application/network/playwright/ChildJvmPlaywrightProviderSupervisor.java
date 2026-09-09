@@ -57,8 +57,9 @@ public final class ChildJvmPlaywrightProviderSupervisor
         implements PlaywrightProviderCampaignFactory, PlaywrightProviderSupervisor {
 
     static final int MAGIC = 0x53335057;
-    static final int VERSION = 6;
+    static final int VERSION = 7;
     static final byte GET = 1;
+    static final byte GET_LIVE_V6 = 4;
     static final byte CLOSE = 2;
     static final byte START = 3;
     static final byte RESPONSE = 10;
@@ -66,6 +67,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
     static final byte CLOSED = 12;
     static final byte READY = 13;
     static final byte PROGRESS = 14;
+    static final byte TIMEOUT_ENDED = 15;
     static final int MAXIMUM_CONTENT_TYPE_BYTES = 160;
     static final int MAXIMUM_FAILURE_CODE_LENGTH = 64;
     static final Duration STOP_ACKNOWLEDGEMENT_MAX = Duration.ofMillis(500);
@@ -208,6 +210,16 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 .equals(allowedEndpoints))
             throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
         return open(campaignId, allowedEndpoints, LiveProviderGroupTracker.Authority.LIVE_V5);
+    }
+
+    @Override
+    public PlaywrightProviderCampaign openLiveGroupedV6(
+            UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        if (!Set.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS)
+                .equals(allowedEndpoints))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
+        return open(campaignId, allowedEndpoints, LiveProviderGroupTracker.Authority.LIVE_V6);
     }
 
     @Override
@@ -445,6 +457,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
         state.ioLock.lock();
         boolean dispatchStarted = false;
         boolean usableResponseEvidence = false;
+        boolean recoverableTimeoutEvidence = false;
         PlaywrightTransportDiagnostic diagnostic = null;
         try {
             requireActive(state);
@@ -453,6 +466,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 DataInputStream sourceInput = Objects.requireNonNull(state.input, "input");
                 int timeoutMillis = toMillis(properties.getRequestTimeout());
                 long responseDeadline;
+                long requestDeadline;
                 boolean continuation = state.liveGroups != null && state.liveGroups.isContinuation(request, group);
                 Runnable continuationGuard = () -> { requireActive(state); admission.check(); };
                 if (continuation) providerNetworkStartDelayGate.admitGroupContinuation(continuationGuard);
@@ -466,8 +480,10 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     if (state.liveGroups != null) state.liveGroups.dispatched(request, group);
                     state.providerDispatchStarted.set(true);
                     dispatchStarted = true;
-                    responseDeadline = System.nanoTime() + properties.getRequestTimeout().plusSeconds(1).toNanos();
-                    output.writeByte(GET);
+                    boolean liveV6 = state.liveGroups != null && state.liveGroups.isLiveV6();
+                    requestDeadline = System.nanoTime() + properties.getRequestTimeout().toNanos();
+                    responseDeadline = requestDeadline + Duration.ofSeconds(liveV6 ? 3 : 1).toNanos();
+                    output.writeByte(liveV6 ? GET_LIVE_V6 : GET);
                     output.writeUTF(request.endpoint().name());
                     switch (request.endpoint()) {
                         case SCHEDULED_EVENTS -> {
@@ -527,6 +543,20 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     PlaywrightProviderException failure = workerFailure(input.readUTF());
                     state.authenticatedTerminalFrameReceived.set(true);
                     throw new PlaywrightProviderException(failure.failure(), failure, diagnostic);
+                }
+                if (frame == TIMEOUT_ENDED) {
+                    Instant endedAt = diagnosticInstant(input.readLong());
+                    int endReason = input.readUnsignedByte();
+                    if (state.liveGroups == null || !state.liveGroups.isLiveV6() || diagnostic == null
+                            || diagnostic.requestedAt() == null || endedAt == null
+                            || endReason < 1 || endReason > 2 || state.terminationRequested.get()
+                            || System.nanoTime() < requestDeadline || endedAt.isAfter(clock.instant()))
+                        throw new PlaywrightProviderException(PlaywrightProviderFailure.PROTOCOL_ERROR);
+                    diagnostic = diagnostic.withExchangeEnd(endedAt,
+                            endReason == 1 ? PlaywrightTransportDiagnostic.ExchangeEndReason.FINISHED
+                                    : PlaywrightTransportDiagnostic.ExchangeEndReason.ABORTED, true);
+                    recoverableTimeoutEvidence = true;
+                    throw new PlaywrightProviderException(PlaywrightProviderFailure.TIMEOUT, diagnostic);
                 }
                 if (frame != RESPONSE) {
                     throw new PlaywrightProviderException(
@@ -618,12 +648,20 @@ public final class ChildJvmPlaywrightProviderSupervisor
             }
         }
         finally {
-            if (dispatchStarted) {
-                providerNetworkStartDelayGate.recordDispatchFinished(
-                        usableResponseEvidence, group == null ? null : state.liveGroups);
-                if (state.liveGroups != null) state.liveGroups.finished(usableResponseEvidence);
+            try {
+                if (dispatchStarted) {
+                    if (recoverableTimeoutEvidence) {
+                        providerNetworkStartDelayGate.recordRecoverableTimeoutFinished(state.liveGroups);
+                        state.liveGroups.finishedRecoverableTimeout();
+                    } else {
+                        providerNetworkStartDelayGate.recordDispatchFinished(
+                                usableResponseEvidence, group == null ? null : state.liveGroups);
+                        if (state.liveGroups != null) state.liveGroups.finished(usableResponseEvidence);
+                    }
+                }
+            } finally {
+                state.ioLock.unlock();
             }
-            state.ioLock.unlock();
         }
     }
 

@@ -45,7 +45,7 @@
     <details class="notice notice-warning" data-live-diagnostics
              th:with="first=${campaign.runtimeStatus?.firstFailure},cleanup=${campaign.runtimeStatus?.cleanupFailure}"
              th:hidden="${first == null and cleanup == null}">
-      <summary>Diagnostic de l’arrêt</summary>
+      <summary>Diagnostics de collecte et de clôture</summary>
       <p class="muted">Le diagnostic enregistré reste consultable après redémarrage. Les informations non observées,
         notamment pour les campagnes historiques, sont indiquées par « — ».</p>
       <section data-live-diagnostic="firstFailure" th:hidden="${first == null}">
@@ -63,6 +63,9 @@
           <div><dt>Statut HTTP observé</dt><dd data-live-diagnostic-http-status th:text="${first?.transport?.httpStatus ?: '—'}">—</dd></div>
           <div><dt>Attente minimale demandée (UTC)</dt><dd data-live-diagnostic-retry-after th:text="${first?.transport?.retryAfterNotBefore ?: '—'}">—</dd></div>
           <div><dt>Réponse reçue intégralement</dt><dd data-live-diagnostic-complete th:text="${first?.transport == null ? '—' : (first.transport.responseComplete ? 'Oui' : 'Non')}">—</dd></div>
+          <div><dt>Fin du transport prouvée (UTC)</dt><dd data-live-diagnostic-ended th:text="${first?.transport?.exchangeEndedAt ?: '—'}">—</dd></div>
+          <div><dt>Mode de fin observé</dt><dd data-live-diagnostic-end-reason th:text="${first?.transport?.exchangeEndReason ?: '—'}">—</dd></div>
+          <div><dt>Réutilisation du contexte vérifiée</dt><dd data-live-diagnostic-reusable th:text="${first?.transport?.contextReusable == true ? 'Oui' : 'Non établie'}">Non établie</dd></div>
         </dl>
       </section>
       <section data-live-diagnostic="cleanupFailure" th:hidden="${cleanup == null}">
@@ -80,6 +83,9 @@
           <div><dt>Statut HTTP observé</dt><dd data-live-diagnostic-http-status th:text="${cleanup?.transport?.httpStatus ?: '—'}">—</dd></div>
           <div><dt>Attente minimale demandée (UTC)</dt><dd data-live-diagnostic-retry-after th:text="${cleanup?.transport?.retryAfterNotBefore ?: '—'}">—</dd></div>
           <div><dt>Réponse reçue intégralement</dt><dd data-live-diagnostic-complete th:text="${cleanup?.transport == null ? '—' : (cleanup.transport.responseComplete ? 'Oui' : 'Non')}">—</dd></div>
+          <div><dt>Fin du transport prouvée (UTC)</dt><dd data-live-diagnostic-ended th:text="${cleanup?.transport?.exchangeEndedAt ?: '—'}">—</dd></div>
+          <div><dt>Mode de fin observé</dt><dd data-live-diagnostic-end-reason th:text="${cleanup?.transport?.exchangeEndReason ?: '—'}">—</dd></div>
+          <div><dt>Réutilisation du contexte vérifiée</dt><dd data-live-diagnostic-reusable th:text="${cleanup?.transport?.contextReusable == true ? 'Oui' : 'Non établie'}">Non établie</dd></div>
         </dl>
       </section>
     </details>
@@ -253,6 +259,14 @@
           <span data-live-family-code th:text="${family.code ?: ''}"></span>
           <span data-live-family-scope th:text="${family.scope ?: ''}"></span></p>
         <p data-live-family-previous th:text="${family.previousData ? 'Dernière donnée lisible conservée : elle ne décrit pas la dernière tentative.' : ''}"></p>
+        <p class="notice notice-warning" data-live-timeout-retry
+           th:hidden="${family.code != 'PLAYWRIGHT_TIMEOUT_RETRY_DEFERRED' or family.schedule == null or family.schedule.nextDueAt == null}">Le délai de cette tentative a été dépassé.
+          Sa fin et le nettoyage local ont été vérifiés. Une prochaine collecte est différée ; aucune nouvelle donnée n’a été reçue intégralement.</p>
+        <dl class="detail-grid" data-live-timeout-proof th:hidden="${family.transport == null}">
+          <div><dt>Fin du transport prouvée (UTC)</dt><dd data-live-timeout-ended th:text="${family.transport?.exchangeEndedAt ?: '—'}">—</dd></div>
+          <div><dt>Mode de fin observé</dt><dd data-live-timeout-end-reason th:text="${family.transport?.exchangeEndReason ?: '—'}">—</dd></div>
+          <div><dt>Réutilisation du contexte vérifiée</dt><dd data-live-timeout-reusable th:text="${family.transport?.contextReusable == true ? 'Oui' : 'Non établie'}">Non établie</dd></div>
+        </dl>
         <p data-live-freshness th:class="${family.freshness.state == 'STALE' ? 'notice notice-warning' : 'muted'}"
            th:text="${family.freshness.label}">Fraîcheur</p>
         <dl class="detail-grid">

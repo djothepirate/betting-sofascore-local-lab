@@ -61,7 +61,7 @@ class ResilientPlaywrightProviderCampaignFactoryTest {
         assertThat(h.delegate.opens).isEqualTo(1);
     }
 
-    @ParameterizedTest @ValueSource(strings={"historical","v4","v5","manual-j5"})
+    @ParameterizedTest @ValueSource(strings={"historical","v4","v5","v6","manual-j5"})
     void everyOpeningIsBlockedBeforeDelegateWhenTheProviderIsSuspended(String opening) {
         Harness h = new Harness();
         h.state.set(new Snapshot(State.SUSPENDED,1,START,403,START,null,null,UUID.randomUUID(),UUID.randomUUID(),null,null));
@@ -206,9 +206,71 @@ class ResilientPlaywrightProviderCampaignFactoryTest {
         assertThat(h.delegate.emissions).isEqualTo(1);
     }
 
+    @Test void aProvenV6TimeoutReleasesItsChargeBeforeDeferredWorkWithTheSameContext() {
+        Harness h = new Harness();
+        var proof = new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.REQUEST_SENT,
+                30000, START, null, null, null, false, START.plusSeconds(30),
+                PlaywrightTransportDiagnostic.ExchangeEndReason.ABORTED, true);
+        h.delegate.behavior = admission -> {
+            h.clock.advance(Duration.ofSeconds(30));
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.TIMEOUT, proof);
+        };
+        var campaign = h.factory.openLiveGroupedV6(UUID.randomUUID(), ALL);
+        assertThatThrownBy(() -> campaign.execute(PlaywrightProviderRequest.eventDetails(123)))
+                .isInstanceOf(PlaywrightProviderException.class);
+        verify(h.store).markDepartureFinished(any(), eq(START.plusSeconds(30)));
+        assertThat(h.state.get().unresolvedDispatchId()).isNull();
+        assertThat(h.delegate.closes).isZero();
+        Instant fence = h.clock.instant().plusSeconds(2);
+        h.reservation = (id, at) -> at.isBefore(fence)
+                ? new DepartureDecision(false, DepartureReason.RATE_LIMITED, fence, h.state.get()) : h.allow(id, at);
+        h.delegate.behavior = admission -> response();
+        campaign.execute(PlaywrightProviderRequest.eventDetails(456));
+        assertThat(h.paused).isEqualTo(Duration.ofSeconds(2));
+        assertThat(h.delegate.opens).isEqualTo(1);
+        assertThat(h.delegate.emissions).isEqualTo(2);
+        campaign.close();
+        verify(h.store, times(2)).markDepartureFinished(any(), any());
+    }
+
+    @Test void anEndedExchangeWithoutAReusableContextRetainsItsChargeUntilCleanup() {
+        Harness h = new Harness();
+        var proof = new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.REQUEST_SENT,
+                30000, START, null, null, null, false, START.plusSeconds(30),
+                PlaywrightTransportDiagnostic.ExchangeEndReason.ABORTED, false);
+        h.delegate.behavior = admission -> { throw new PlaywrightProviderException(PlaywrightProviderFailure.TIMEOUT, proof); };
+        var campaign = h.factory.openLiveGroupedV6(UUID.randomUUID(), ALL);
+        assertThatThrownBy(() -> campaign.execute(PlaywrightProviderRequest.eventDetails(123)))
+                .isInstanceOf(PlaywrightProviderException.class);
+        verify(h.store, never()).markDepartureFinished(any(), any());
+        campaign.close();
+        verify(h.store).markDepartureFinished(any(), any());
+    }
+
+    @Test void terminalEvidenceIsForwardedEvenIfDurableChargeCompletionFails() {
+        Harness h = new Harness();
+        var proof = new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.REQUEST_SENT,
+                30000, START, null, null, null, false, START.plusSeconds(30),
+                PlaywrightTransportDiagnostic.ExchangeEndReason.ABORTED, true);
+        h.delegate.behavior = admission -> { throw new PlaywrightProviderException(PlaywrightProviderFailure.TIMEOUT, proof); };
+        when(h.store.markDepartureFinished(any(), any())).thenThrow(new IllegalStateException("completion not acknowledged"));
+        AtomicReference<PlaywrightTransportDiagnostic> observed = new AtomicReference<>();
+        var campaign = h.factory.openLiveGroupedV6(UUID.randomUUID(), ALL);
+        assertThatThrownBy(() -> campaign.execute(PlaywrightProviderRequest.eventDetails(123), new PlaywrightDispatchAdmission() {
+            public void check() { }
+            public Permit acquireDispatchPermit() { return () -> { }; }
+            public void onTransportProgress(PlaywrightTransportDiagnostic d) { observed.set(d); }
+        })).hasMessage("completion not acknowledged");
+        assertThat(observed.get()).isEqualTo(proof);
+        assertThat(h.state.get().unresolvedDispatchId()).isNotNull();
+        assertThatThrownBy(() -> h.factory.openLiveGroupedV6(UUID.randomUUID(), ALL))
+                .hasMessage("PROVIDER_DEPARTURE_UNRESOLVED");
+        assertThat(h.delegate.emissions).isEqualTo(1);
+    }
+
     private static PlaywrightProviderCampaign switchOpen(PlaywrightProviderCampaignFactory f,String kind) {
         UUID id=UUID.randomUUID();
-        return switch(kind){case "v4"->f.openLiveGrouped(id,ALL);case "v5"->f.openLiveGroupedV5(id,ALL);
+        return switch(kind){case "v4"->f.openLiveGrouped(id,ALL);case "v5"->f.openLiveGroupedV5(id,ALL);case "v6"->f.openLiveGroupedV6(id,ALL);
             case "manual-j5"->f.openManualJ5Grouped(id,Set.of(SofascoreEndpointType.EVENT_STATISTICS,SofascoreEndpointType.EVENT_INCIDENTS,SofascoreEndpointType.EVENT_LINEUPS));
             default->f.open(id,ALL);};
     }
@@ -273,6 +335,7 @@ class ResilientPlaywrightProviderCampaignFactoryTest {
         }
         public PlaywrightProviderCampaign openLiveGrouped(UUID id,Set<SofascoreEndpointType> e){return open(id,e);}
         public PlaywrightProviderCampaign openLiveGroupedV5(UUID id,Set<SofascoreEndpointType> e){return open(id,e);}
+        public PlaywrightProviderCampaign openLiveGroupedV6(UUID id,Set<SofascoreEndpointType> e){return open(id,e);}
         public PlaywrightProviderCampaign openManualJ5Grouped(UUID id,Set<SofascoreEndpointType> e){return open(id,e);}
     }
 }

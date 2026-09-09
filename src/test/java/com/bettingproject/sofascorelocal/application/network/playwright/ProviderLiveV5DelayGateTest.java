@@ -32,19 +32,21 @@ class ProviderLiveV5DelayGateTest {
     void authorityAndSessionTransitionsAlwaysRetainThreeSeconds() {
         var v4 = session(LiveProviderGroupTracker.Authority.LIVE_V4);
         var v5 = session(LiveProviderGroupTracker.Authority.LIVE_V5);
+        var v6 = session(LiveProviderGroupTracker.Authority.LIVE_V6);
         // Same campaign UUID, different worker/session: no inherited short fence.
         var reopenedV5 = session(LiveProviderGroupTracker.Authority.LIVE_V5);
         var manual = session(LiveProviderGroupTracker.Authority.MANUAL_J5);
-        LiveProviderGroupTracker[] sessions = {null, v4, v5, reopenedV5, manual};
+        var reopenedV6 = session(LiveProviderGroupTracker.Authority.LIVE_V6);
+        LiveProviderGroupTracker[] sessions = {null, v4, v5, reopenedV5, v6, reopenedV6, manual};
         for (var previous : sessions) for (var next : sessions) {
             var clock = new AtomicLong();
             var gate = new ProviderNetworkStartDelayGate(Duration.ofSeconds(3), clock::get,
                     delay -> clock.addAndGet(delay.toNanos()));
             gate.recordDispatchFinished(true, previous);
             gate.awaitNextGroupDispatch(next, () -> {});
-            boolean sameV5 = next != null && next.isLiveV5() && previous == next;
+            boolean sameShortDelaySession = next != null && next.usesOneSecondInterGroupDelay() && previous == next;
             assertThat(clock.get()).as("previous=%s next=%s", previous, next)
-                    .isEqualTo(Duration.ofSeconds(sameV5 ? 1 : 3).toNanos());
+                    .isEqualTo(Duration.ofSeconds(sameShortDelaySession ? 1 : 3).toNanos());
         }
     }
 
@@ -61,6 +63,41 @@ class ProviderLiveV5DelayGateTest {
         assertThat(gate.timingEvidenceLost()).isTrue();
         assertThatThrownBy(() -> new ProviderNetworkStartDelayGate(Duration.ofSeconds(1), clock::get,
                 delay -> {})).isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void provenV6TimeoutEndRetainsThreeSecondsAndCannotRestoreLostTimingEvidence() {
+        var v6 = session(LiveProviderGroupTracker.Authority.LIVE_V6);
+        var clock = new AtomicLong();
+        var gate = new ProviderNetworkStartDelayGate(Duration.ofSeconds(3), clock::get,
+                delay -> clock.addAndGet(delay.toNanos()));
+        gate.recordRecoverableTimeoutFinished(v6);
+        gate.awaitNextGroupDispatch(v6, () -> {});
+        assertThat(clock).hasValue(Duration.ofSeconds(3).toNanos());
+        assertThat(gate.timingEvidenceLost()).isFalse();
+        gate.recordDispatchFinished(false, v6);
+        gate.recordRecoverableTimeoutFinished(v6);
+        assertThatThrownBy(() -> gate.awaitNextGroupDispatch(v6, () -> {}))
+                .isInstanceOf(ProviderNetworkStartDelayGate.TimingEvidenceException.class);
+    }
+
+    @Test
+    void timeoutExceptionCannotRelaxHistoricalAuthoritiesOrARegressingClock() {
+        for (var authority : List.of(LiveProviderGroupTracker.Authority.LIVE_V4,
+                LiveProviderGroupTracker.Authority.LIVE_V5, LiveProviderGroupTracker.Authority.MANUAL_J5)) {
+            var gate = new ProviderNetworkStartDelayGate(Duration.ofSeconds(3), () -> 0L, delay -> {});
+            assertThatThrownBy(() -> gate.recordRecoverableTimeoutFinished(session(authority)))
+                    .isInstanceOf(ProviderNetworkStartDelayGate.TimingEvidenceException.class);
+            assertThat(gate.timingEvidenceLost()).isTrue();
+        }
+        var v6 = session(LiveProviderGroupTracker.Authority.LIVE_V6);
+        var clock = new AtomicLong(1);
+        var gate = new ProviderNetworkStartDelayGate(Duration.ofSeconds(3), clock::get, delay -> {});
+        gate.recordDispatchFinished(true, v6);
+        clock.set(0);
+        gate.recordRecoverableTimeoutFinished(v6);
+        assertThatThrownBy(() -> gate.awaitNextGroupDispatch(v6, () -> {}))
+                .isInstanceOf(ProviderNetworkStartDelayGate.TimingEvidenceException.class);
     }
 
     @Test

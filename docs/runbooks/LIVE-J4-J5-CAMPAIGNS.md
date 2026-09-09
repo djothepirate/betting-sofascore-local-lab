@@ -122,6 +122,78 @@ un utilitaire de preuve hors réseau, sans modification de configuration ou de b
 Les sections suivantes conservent les réglages et qualifications historiques ainsi que
 les commandes de consultation communes ; leurs preuves ne remplacent pas le profil v6.
 
+### Correctif réalisé et qualifié hors fournisseur — réponses lentes et timeouts isolés
+
+Le correctif [ADR-SS-005 v0.9](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md)
+est réalisé ; sa [qualification fonctionnelle hors fournisseur](../validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md)
+est **réussie**. Le timeout configuré n'augmente pas et les plafonds, le profil admis,
+les paramètres du lanceur et le rythme nominal restent distincts de cette tolérance.
+
+La dernière `-Pintegration-tests clean verify` termine le 9 septembre à 17:17:59Z en
+8 min 12 s : 2 068 cas standards, cinq skips explicités et 213 cas PostgreSQL, sans
+échec ni erreur. Les neuf cas Chromium transport/UI et les deux contrôles natifs de
+réception réussissent. Le smoke nominal de trois minutes reste distinct de la preuve
+de capacité de 35 minutes, qui n'est pas renouvelée. L'inventaire et les empreintes des
+logs figurent dans le rapport ; le WO reste `IN_PROGRESS` pour revue humaine. Cette
+qualification n'effectue ni livraison Eclipse, ni démarrage, ni appel fournisseur.
+
+Pour une session v6 déjà lancée, un timeout peut désormais laisser les autres rencontres
+poursuivre **si le transport prouve la fin de l'échange et le nettoyage de la page dans
+le contexte existant**. Les diagnostics doivent porter `exchangeEndedAt`,
+`exchangeEndReason=FINISHED` ou `ABORTED`, et `contextReusable=true`. Ces champs ne sont
+jamais déduits du seul code TIMEOUT ou d'un statut HTTP absent. Avant les en-têtes,
+l'annulation est demandée immédiatement avec terminal `ABORTED` corrélé. Après les
+en-têtes, le worker attend naturellement `FINISHED` dans la même grâce maximale de
+deux secondes, sans `Page.stopLoading` qui peut supprimer le terminal après `COMMIT`.
+Une seconde supplémentaire est réservée à la transmission IPC. Sans terminal dans
+la grâce et nettoyage prouvé, l'arrêt global et la fermeture sont conservés.
+Cette attente n'allonge ni le timeout de collecte ni ses budgets ; un corps terminé
+après timeout reste abandonné, même si sa fin permet de prouver la clôture de l'échange.
+
+Pour une réponse réussie, l'heure de réception est prise immédiatement après `body()`,
+avant le nettoyage local obligatoire. Un timeout n'actualise pas cette heure et ne
+crée aucun snapshot. La livraison exige l'application et son worker reconstruits
+ensemble avec IPC v7 ; V45 sera appliquée au prochain démarrage opérateur. Ce lot ne
+démarre pas l'application et n'applique pas de migration à la base opérateur.
+
+Le corps incomplet est abandonné et la tentative reste comptée, sans snapshot ni donnée
+normalisée nouvelle. Le groupe est fermé. Toutes les familles du match attendent au
+moins **cinq minutes après la fin/nettoyage confirmés**, puis un nouveau J4 réévalue son
+statut avant toute famille J5. La prochaine échéance peut être plus tardive selon les
+limites globales. Les anciennes données restent consultables avec leur date ; un code
+`PLAYWRIGHT_TIMEOUT_RETRY_DEFERRED` signale ce report, sans le transformer en succès.
+
+La session dispose au plus de trois tolérances. Deux timeouts sans `PARSED` intermédiaire
+restent bloquants ; un 404 n'est pas un succès. Le même couple rencontre/famille doit
+également avoir obtenu un `PARSED` depuis son précédent timeout pour bénéficier d'une
+nouvelle tolérance. Le compteur total n'est pas réinitialisé par un succès. En
+finalisation, un timeout admissible arrête seulement le match et laisse la finalisation
+incomplète, sans nouvelle tentative finale. Si les cinq minutes dépassent la fenêtre,
+le match est arrêté ; ni durée, ni budget, ni arrêt opérateur ne sont prolongés.
+Quand tous les matchs sont terminaux, la campagne peut afficher `COMPLETED` même si
+l'un porte `STOPPED_ERROR` : vérifier son état individuel et sa collecte finale.
+Un arrêt opérateur intervenant pendant le nettoyage reste prioritaire : la tentative
+porte `PLAYWRIGHT_TIMEOUT_ABANDONED`, sans reprise programmée ni remplacement du motif
+d'arrêt. La reprise admissible est calculée au moins 300 s après le plus tardif de
+l'instant courant et de la fin observée, après le nettoyage confirmé.
+
+Un **403/429 connu arrête toujours la campagne et suspend durablement les accès**, même
+si le corps de réponse expire ensuite. Le réarmement manuel et la clôture locale restent
+des actions distinctes. Une campagne déjà arrêtée, notamment les anciens essais 651d473e
+et 02ad2380, ne reprend pas avec ce correctif ; ses observations restent inchangées.
+
+Le refus local `INVALID_REQUEST` après une famille J5 différée est corrigé séparément :
+l'autorité v6 autorise les familles admissibles dans leur ordre source, en conservant
+J4 initial, identité du groupe et interdiction des répétitions. Les autorités v4/v5 et
+manuelles gardent leurs contrôles. Cette correction ne prouve aucune amélioration de
+l'acceptation fournisseur et les preuves temporelles nominales antérieures ne couvrent
+pas à elles seules les nouveaux scénarios de timeout.
+
+Ce correctif ajoute V45 aux diagnostics ; les commandes J6 de sauvegarde/restauration
+et rétention doivent donc reconnaître le schéma 45. La qualification temporelle précédente
+reste datée sur PostgreSQL 44 et ses artefacts ne sont pas réécrits. L'installation opérateur
+et ses migrations sont une étape distincte, après qualification du correctif.
+
 ### Historique : attendre une réponse lente — réglage v5 du 9 septembre
 
 Le profil Spring `local` règle désormais le timeout Playwright à **20 secondes**

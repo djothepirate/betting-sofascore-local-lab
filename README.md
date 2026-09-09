@@ -1,5 +1,31 @@
 # SofaScore Local Lab
 
+**Réponses lentes et timeouts isolés — correctif du 9 septembre réalisé et qualifié fonctionnellement hors fournisseur :** le propriétaire
+autorise une tolérance bornée pour la seule session live-v6 déjà lancée. Elle exige une
+preuve terminale de fin d'échange et de nettoyage avant de fermer son groupe, différer
+toutes les familles du match d'au moins cinq minutes puis reprendre par J4 ; les autres
+matchs peuvent continuer. Les limites sont trois tolérances par session, un `PARSED` entre
+deux timeouts et un `PARSED` du même couple avant sa récidive. Les refus 403/429 restent
+globalement bloquants et persistants ; les cas incertains ne sont pas récupérés. Le timeout
+configuré et les plafonds ne changent pas. L'autorité v6 corrige aussi `INVALID_REQUEST`
+lorsqu'une famille J5 encore différée est omise d'un groupe. Voir [ADR-SS-005 v0.9](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md)
+et le [rapport de qualification](docs/validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md).
+Les résultats des lots ci-dessous restent leurs preuves historiques, sans qualifier ce
+nouveau chemin et sans provoquer de reprise d'une campagne déjà arrêtée.
+
+La preuve de clôture suit deux chemins : avant les en-têtes, annulation immédiate et
+terminal `ABORTED` corrélé ; après les en-têtes, attente naturelle de `FINISHED` dans
+la même grâce de deux secondes, sans `Page.stopLoading`. Le corps après timeout reste
+abandonné, même terminé dans cette grâce. Sans terminal et nettoyage prouvés, l'arrêt
+global et la fermeture restent obligatoires ; cette attente n'étend ni timeout ni budget.
+
+La vérification finale `-Pintegration-tests clean verify` réussit à 17:17:59Z :
+2 068 cas standards, cinq skips explicités, et 213 cas PostgreSQL, sans échec ni erreur.
+Les neuf cas Chromium transport/UI et les deux contrôles natifs de réception réussissent.
+Le smoke de trois minutes est conservé séparément ; la preuve de capacité de 35 minutes
+n'est pas renouvelée. Le WO reste `IN_PROGRESS` pour revue humaine, sans livraison
+Eclipse, démarrage opérateur ou appel fournisseur par ce lot.
+
 **Résilience fournisseur — 9 septembre 2026, profil v6 qualifié en boucle locale synthétique :** le premier lot autorisé
 introduit `live-v6`, avec sept rencontres au maximum et un profil de qualification distinct.
 Les cibles 100/300 s restent subordonnées au budget global persistant : deux secondes après
@@ -13,8 +39,8 @@ complètes et les 20 scénarios Chromium loopback réussissent :
 Le [complément temporel v6](docs/validation/WO058-LIVE-V6-CAPACITY-20260909.md) qualifie désormais
 sept rencontres : 35 minutes Chromium/PostgreSQL isolés, dont 30 établies, 494 échanges
 (420 établis), aucun cycle manqué. Le profil porte sur les corps établis de 64 Kio ; les
-premiers corps de 5 Mio sont mesurés séparément. Le plafond opérateur de six rencontres et
-son timeout de 30 s sont à conserver ; la mesure n'applique aucun réglage automatiquement.
+premiers corps de 5 Mio sont mesurés séparément. Lors de cette qualification, le plafond
+opérateur vaut six rencontres et son timeout 30 s ; la mesure n'applique aucun réglage automatiquement.
 La vérification finale du complément et les trois contrôles Chromium de son interface réussissent. Les preuves
 historiques ci-dessous ne qualifient ni ce nouveau profil ni l'acceptation par SofaScore.
 

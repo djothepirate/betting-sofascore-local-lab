@@ -1,16 +1,16 @@
 # WO-SS-20260907-058 — Campagnes live locales J4/J5 sur sélection de rencontres
 
-- **Statut :** `IN_PROGRESS` — premier lot de résilience v6/V42–V44 qualifié fonctionnellement hors fournisseur, puis profil temporel v6 qualifié à sept rencontres en boucle locale synthétique pendant 35 minutes, dont 30 établies ; vérification finale du complément et de son interface en cours. Historique : live-v5/V40 réalisé, vingt rencontres à 100 secondes qualifiées en boucle locale synthétique pendant 35 minutes, dont 30 établies ; `clean verify` et `-Pintegration-tests verify` réussis le 08/09. Complément compositions V3/V41 réalisé le 09/09 : capitaines, statistiques individuelles et indisponibles ; les deux commandes Maven complètes sans exclusion sont réussies, avec 1 944 cas Surefire et 171 intégrations par passe (cinq ignorés Surefire, aucun échec/erreur). Live-v4/V39 conserve sa preuve historique à dix matchs. Enveloppe historique 1 s/5 Mio non revalidée, échecs conservés ; revue humaine, essai de fraîcheur fournisseur et fusion distincts, aucune clôture.
+- **Statut :** `IN_PROGRESS` — correctif v0.9 réponses lentes/timeouts isolés et groupes v6 avec familles différées réalisé et qualifié fonctionnellement hors fournisseur. La vérification finale réussit le 9 septembre à 17:17:59Z. Le premier lot de résilience v6/V42–V44 et son profil temporel à sept rencontres conservent leurs validations réussies, distinctes de ce nouveau chemin. Les réalisations et preuves historiques v4/V39, v5/V40 et compositions V3/V41 restent conservées ci-dessous. Revue humaine, acceptation fournisseur et fusion restent distinctes ; aucune clôture ni livraison Eclipse.
 - **Date :** 2026-09-07.
-- **Complément courant du 09/09 :** premier lot de résilience explicitement autorisé, mise en œuvre `live-v6`/V42–V44 qualifiée fonctionnellement hors fournisseur. Le [complément temporel dédié](../../validation/WO058-LIVE-V6-CAPACITY-20260909.md) qualifie maintenant son propre profil à sept rencontres, avec wrapper partagé, PostgreSQL 44 et ordonnanceur v6 réels ; la vérification finale réussit (2 019 cas Surefire, cinq ignorés, 207 intégrations, trois contrôles Chromium UI sans échec ni erreur). Le plafond opérateur de six et son timeout de 30 s restent distincts de cette capacité. Aucune réussite historique n'est substituée à cette preuve. Le WO reste `IN_PROGRESS`, sans clôture, fusion, livraison Eclipse ou lancement fournisseur induit.
+- **Premier lot du 09/09, antérieur au correctif courant :** résilience `live-v6`/V42–V44 qualifiée fonctionnellement hors fournisseur. Le [complément temporel dédié](../../validation/WO058-LIVE-V6-CAPACITY-20260909.md) qualifie son propre profil à sept rencontres, avec wrapper partagé, PostgreSQL 44 et ordonnanceur v6 réels ; sa vérification finale réussit (2 019 cas Surefire, cinq ignorés, 207 intégrations, trois contrôles Chromium UI sans échec ni erreur). Le plafond opérateur de six et le timeout de 30 s constatés pour cette qualification restent distincts de la capacité prouvée. Ces résultats restent distincts de la qualification fonctionnelle réussie du correctif v0.9.
 - **Jalon :** expérimentation live locale après J9, distincte des parcours manuels existants.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
 - **Cible de PR :** `feature/V0.1.0-RC01`.
 - **Base exacte :** `6dfd14286d4f269cbe100bd965257c20298538db`, sommet GitHub vérifié le 7 septembre.
 - **Worktree :** `.tmp/wo058-live-j4-j5`, depuis le dossier Codex du Lab ; worktree distinct d'Eclipse.
 - **Autorité reçue :** ADR-SS-005 v0.1 accepté, puis déclaration « Je valide le WO-058 les travaux peuvent commencer » et demande explicite d'exécuter le plan de réalisation ; port 8087 libéré pour les tests.
-- **ADR courant :** [ADR-SS-005 v0.8](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), priorité à la robustesse, protection persistante commune J3/J4/J5 et nouvelles préparations v6 au plus sept rencontres selon leur propre preuve. Les manifestes v1–v5 gardent leurs règles ; tout nouvel accès passe par la protection globale. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
-- **Livrable présent :** ADR accepté, WO validé, premier lot de résilience v6 qualifié fonctionnellement et profil temporel dédié mesuré, vérification finale du complément en cours ; réalisations historiques et leurs qualifications hors fournisseur conservées. Le complément v5/V40 dispose de sa qualification synthétique dédiée et de deux vérifications Maven finales réussies. Le complément compositions V3/V41 dispose de son [contrat](../../architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md) et de sa [qualification du 09/09](../../validation/WO058-PLAYER-DETAILS-20260909.md), distincts des preuves v5/V40. La preuve de fraîcheur fournisseur ne découle pas de la qualification locale.
+- **ADR courant :** [ADR-SS-005 v0.9](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), autorisation explicite d'un correctif borné pour timeouts isolés, sous preuve terminale, et groupes v6 avec familles différées. La protection persistante commune J3/J4/J5 et la capacité v6 au plus sept restent applicables ; les manifestes v1–v5 gardent leurs règles. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
+- **Livrable présent :** ADR accepté, WO validé, correctif v0.9 réalisé et [rapport de qualification fonctionnelle](../../validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md), avec inventaire de 56 fichiers, commandes, empreintes et résultats ; premier lot de résilience et profil temporel dédiés déjà qualifiés. Les réalisations et preuves antérieures restent conservées, notamment v5/V40 et le complément compositions V3/V41 avec son [contrat](../../architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md) et sa [qualification du 09/09](../../validation/WO058-PLAYER-DETAILS-20260909.md). La preuve de fraîcheur fournisseur ne découle pas de la qualification locale.
 - **Alignement de gouvernance :** renvois ciblés dans ADR-SS-001 et AGENTS.md ; ADR-SS-002 à 004 inchangés.
 - **Réalisations historiques :** réalisées et qualifiées hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés sous les anciennes politiques ; compléments prématch/phase/clôture et incidents V16/V17 décrits dans les retours ci-dessous, statistiques intégrées aux pages. Les préparations v5 conservées restent limitées à vingt rencontres selon leur propre qualification ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur historiques :** essai à 8 arrêté volontairement, essai à 16 interrompu après coupure PostgreSQL, puis nouveaux lancements manuels à 7 et à 4 ; dernière exécution de cette série terminée, observations distinctes des qualifications locales.
 
@@ -19,6 +19,63 @@ Les statuts restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 PostgreSQL local Docker Desktop et application sur `127.0.0.1:8087`, textes UTF-8.
 
 ## 1. Objectif et origine du besoin
+
+### Correctif courant du 9 septembre — réponses lentes, timeout isolé et groupe différé
+
+Après les campagnes 651d473e et 02ad2380, le propriétaire autorise le correctif et sa
+qualification hors fournisseur, avec maintien de la suspension sur 403/429. Le
+[rapport dédié](../../validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md) distingue le
+timeout historique sans preuve terminale nouvelle et le défaut local de contrôle des
+groupes après un 404 ; aucune ancienne campagne n'est requalifiée ou reprise.
+
+La réalisation v0.9 concerne seulement une session v6 déjà lancée. Un timeout peut être
+toléré si sa fin CDP corrélée est prouvée (`FINISHED`/`ABORTED`), la page fermée, les cookies
+nettoyés et le contexte existant confirmé réutilisable. Avant les en-têtes, l'annulation
+est immédiate et exige `ABORTED` corrélé. Après les en-têtes, le worker attend la fin
+naturelle `FINISHED` sans `Page.stopLoading`, dans la même grâce de deux secondes ;
+cette commande peut supprimer le terminal après `COMMIT`. Sans terminal dans la grâce,
+l'issue reste fatale avec fermeture. La seconde IPC supplémentaire n'allonge ni le
+timeout de collecte ni ses budgets. Le corps après timeout est abandonné sans snapshot,
+même s'il se termine dans cette grâce ; la
+tentative reste chargée, le groupe est définitivement fermé et toutes les familles du
+match sont différées d'au moins 300 secondes après fin/nettoyage. Le prochain groupe
+commence par J4 ; les autres matchs peuvent poursuivre dans leurs budgets.
+
+La politique permet trois tolérances au plus dans la session, refuse deux timeouts
+sans `PARSED` intermédiaire et exige aussi un `PARSED` de la même famille avant sa
+récidive. Un 404 ne réinitialise aucune de ces bornes. Un timeout admissible en
+finalisation arrête le match, sans retry final ; une pause dépassant la fenêtre arrête
+également le match. Les arrêts opérateur, quotas, réserves et durée restent prioritaires.
+Une campagne peut terminer `COMPLETED` quand tous ses matchs sont terminaux, même si
+l'un est `STOPPED_ERROR` : consulter la collecte finale de chaque match, ce statut
+global ne signifie pas que toutes les finalisations ont réussi.
+Après persistance de la preuve, la décision est sérialisée avec l'arrêt opérateur :
+un timeout abandonné ne programme aucun report et n'écrase pas le motif d'arrêt.
+La nouvelle échéance utilise le plus tardif de l'instant courant et de la fin observée,
+puis au moins 300 s, sans contourner la fenêtre ni les quotas.
+
+Les preuves incertaines et les erreurs hors de cette exception restent globales.
+Les 403/429 connus suspendent toujours les accès, même avec un corps incomplet. V45
+conserve la preuve de fin/nettoyage sans transformer les diagnostics historiques.
+Un succès fixe son instant de réception immédiatement après `body()`, avant nettoyage
+local obligatoire ; un timeout n'actualise ni `receivedAt` ni snapshot. Application et
+worker doivent être reconstruits ensemble pour IPC v7. V45 attend le prochain démarrage
+opérateur ; aucun démarrage ni migration de sa base n'est effectué par ce lot.
+L'autorité `LIVE_V6` permet en jeu les familles encore admissibles dans leur ordre
+strictement croissant après J4 ; le groupe avec statistiques différées et compositions
+dues ne produit plus un refus local d'ordre. Les identités, répétitions, groupes fermés
+et autorités historiques restent contrôlés.
+
+Les passes intermédiaires rouges et l'interruption volontaire après revue restent
+conservées dans le rapport. Les corrections finales réussissent leurs qualifications :
+neuf cas Chromium transport/UI, deux contrôles natifs de réception, puis 100 tests
+service/politique incluant deux régressions avec deux rencontres pour acquitter la
+tâche en vol après arrêt individuel pendant timeout sans bloquer l'autre rencontre.
+La dernière `-Pintegration-tests clean verify` réussit à 17:17:59Z en 8 min 12 s :
+2 068 cas standards, cinq skips explicités, 213 cas PostgreSQL, zéro échec et erreur.
+Le smoke nominal de trois minutes réussit ; la preuve de capacité de 35 minutes n'est
+pas renouvelée. Aucun nouveau profil de capacité, hausse de timeout, changement de VPN,
+lancement fournisseur ou livraison Eclipse n'est induit par ce complément.
 
 ### Priorité du 9 septembre — résilience face aux refus fournisseur
 
@@ -823,7 +880,7 @@ La déduplication peut réduire le volume ; ce gain ne doit pas être présumé 
 | J4 `notstarted`, `inprogress`, `finished` | Transitions par statut reçu et dernière occurrence | Série synthétique datée, appels et annulations attendus |
 | Statut inconnu ou champ absent/incompatible dans un JSON admissible | Conservation du brut et arrêt individuel pour revue ou schéma selon la cause | Fixture et classification ; toute anomalie de sécurité garde priorité globale |
 | J5 `incidents: []` valide | Vide valide selon contrat, aucune conclusion automatique sur le match | Fixture vide distincte de champ absent/null |
-| J5 404 | `ENDPOINT_UNAVAILABLE`, cycle suivant à cadence normale tant que match actif | Occurrence 404, familles suivantes traitées, pas de retry immédiat |
+| J5 404 | `ENDPOINT_UNAVAILABLE`, backoff par famille en v6 ou cadence historique conservée | Occurrence 404, familles suivantes traitées, pas de retry immédiat |
 | Statistique absente/null, score non renseigné | Manquant distinct d'un zéro fourni | Zéro réel et absence testés séparément |
 | Score J4 / scores d'incidents, prolongation et tirs au but | Projection versionnée J4, temporalités et natures séparées | Pas de reconstruction par comptage des buts ni dernier index |
 | Compositions partielles/non confirmées | Complétude actuelle préservée | Fixture partielle et rendu explicite |
@@ -833,7 +890,8 @@ La déduplication peut réduire le volume ; ce gain ne doit pas être présumé 
 | Incidents répétés/réordonnés/corrigés | Pas de double déclenchement, révision consultable | Replay de permutations et annulation de but |
 | Statistiques à t1, incidents à t2, compositions à t3 | Triplet explicitement non atomique côté fournisseur | Affichage des trois réceptions et cycle associé |
 | JSON de schéma métier incompatible, sécurité/corrélation satisfaites | Arrêt du seul match ; brut conservé, familles restantes annulées, autres matchs poursuivis | Deux matchs simulés, compteur consommé, aucun retry du match arrêté |
-| Transport/HTML/challenge/401/403/429/5xx/timeout, identité, exception interne du parseur ou stockage | Arrêt global tracé, dernière donnée bonne toujours visible comme ancienne | Contre-épreuve à deux matchs, compteur de tentatives et nettoyage |
+| Timeout v6 avec preuve terminale réutilisable et tolérances disponibles | Groupe abandonné, match différé 300 s puis nouveau J4 ; finalisation arrêtée sans retry | Preuve transport, compteur de tolérances, autres matchs poursuivis, fenêtre/arrêt respectés ; qualification fonctionnelle v0.9 réussie hors fournisseur |
+| Autre erreur transport/timeout, HTML/challenge/401/403/429/5xx, identité, exception interne du parseur ou stockage | Arrêt global tracé, dernière donnée bonne toujours visible comme ancienne ; 403/429 jamais tolérés | Contre-épreuve à deux matchs, compteur de tentatives et nettoyage |
 
 J4 phase 2 et J5 restent sans cache fournisseur. Le cache J3, l'import local multi-match et les
 contrats historiques ne sont pas assouplis. Une réponse identique reçue est une collecte nouvelle,
@@ -962,7 +1020,8 @@ préservent le focus et ne déplacent pas la sélection de l'opérateur.
 | AC07 — incident absent | Incidents vides/404 ou signal manquant | J4 secours, limite atteinte sans faux `finished` |
 | AC08 — fraîcheur vraie | A→A et A→B→A pour J4 et chaque famille J5 | Occurrences conservées et projection/rendu de la dernière réception |
 | AC09 — indisponibilité partielle | 404 J5 puis succès au cycle normal suivant | Partiel visible, pas de zéro ni retry accéléré |
-| AC10 — portée des erreurs | Deux matchs : schéma métier incompatible admissible sur le premier ; puis contre-épreuves 403, timeout, identité, contenu inattendu, exception interne et stockage | Schéma : seul match arrêté, brut conservé et second poursuivi ; contre-épreuves : arrêt global, pas de fallback/retry/contexte recréé |
+| AC10 — portée des erreurs | Deux matchs : schéma métier incompatible admissible sur le premier ; puis contre-épreuves 403, timeout hors exception v0.9, identité, contenu inattendu, exception interne et stockage | Schéma : seul match arrêté, brut conservé et second poursuivi ; contre-épreuves : arrêt global, pas de fallback/retry/contexte recréé |
+| AC10-v0.9 — timeout terminé et isolé | Fin/nettoyage prouvés, tolérances disponibles ; contre-épreuves de récidive, preuve absente, finalisation et fenêtre | Nouveau J4 du match au moins 300 s après nettoyage, autres matchs poursuivis, tentative conservée sans snapshot ; aucune reprise lorsque les conditions sont absentes. Qualification fonctionnelle du correctif réussie hors fournisseur |
 | AC11 — cadence bornée | Plafond distinct des cibles retenues, 1/2/3/4/5/10/25 cibles, réponses lentes et signaux simultanés | D selon N, mesure monotone/on-wire, respect 3 s, retards/coalescence/arrêt de capacité ; refus si les enveloppes ne tiennent pas dans D |
 | AC12 — arrêt | Stop pendant délai/GET/commit, fin naturelle, budget et volume atteints | Aucun départ post-arrêt, preuve de nettoyage et résultat final distinct |
 | AC13 — panne/reprise | Crash avant GET, après GET avant commit, redémarrage/veille, second processus pendant campagne active | État orphelin interrompu, budget conservateur, zéro reprise réseau/vol de lease |

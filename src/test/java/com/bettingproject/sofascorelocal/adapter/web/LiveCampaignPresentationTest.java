@@ -2,6 +2,7 @@ package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.live.LiveCampaignService.RuntimeStatus;
 import com.bettingproject.sofascorelocal.application.live.LiveCampaignDiagnostic;
+import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightTransportDiagnostic;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
@@ -15,6 +16,7 @@ import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTeam;
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
+import com.bettingproject.sofascorelocal.port.LiveDiagnosticStore;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -39,6 +41,46 @@ class LiveCampaignPresentationTest {
     private final CanonicalEventStore events = mock(CanonicalEventStore.class);
     private final J5EventDataStore data = mock(J5EventDataStore.class);
     private final LiveCampaignPresentation presentation = new LiveCampaignPresentation(events, data);
+
+    @ParameterizedTest @CsvSource({"50,FRESH", "700,STALE"})
+    void aDeferredEndedTimeoutKeepsItsDurableProofAndTheActualAgeOfThePreviousData(int elapsed,String expectedFreshness) {
+        UUID successfulId=UUID.randomUUID(),timeoutId=UUID.randomUUID();
+        var success=new Result(successfulId,new Publication("PARSED","NONE","PARSED",START,"event-details-v3",true,null),NormalizedReferences.none());
+        var timeout=new Result(timeoutId,new Publication("FAILED","NONE","PLAYWRIGHT_TIMEOUT_RETRY_DEFERRED",
+                START.plusSeconds(41),null,false,null),NormalizedReferences.none());
+        var cursor=new FamilyCursor(SofascoreEndpointType.EVENT_DETAILS,timeoutId,successfulId,successfulId,successfulId,
+                START,START,START,NormalizedReferences.none(),timeout,success,
+                new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS,START.plusSeconds(340),300,0));
+        var failedAttempt=new AttemptView(new ReservedAttempt(timeoutId,EVENT,900001L,SofascoreEndpointType.EVENT_DETAILS,2,
+                "NORMAL",START.plusSeconds(10),START.plusSeconds(10),false),START.plusSeconds(10),null,null,null,timeout);
+        var proof=new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.READING_BODY,30000,
+                START.plusSeconds(10),START.plusSeconds(12),200,null,false)
+                .withExchangeEnd(START.plusSeconds(40),PlaywrightTransportDiagnostic.ExchangeEndReason.ABORTED,true);
+        var diagnostics=mock(LiveDiagnosticStore.class);
+        when(diagnostics.findTransport(CAMPAIGN,timeoutId)).thenReturn(Optional.of(proof));
+        var restarted=new LiveCampaignPresentation(events,data,null,Clock.fixed(START.plusSeconds(elapsed),ZoneOffset.UTC),diagnostics);
+        var projected=restarted.state(campaign(List.of(cursor),List.of(
+                attempt(successfulId,SofascoreEndpointType.EVENT_DETAILS,1,START,success),failedAttempt)));
+        var family=projected.events().getFirst().families().getFirst();
+        assertThat(projected.state()).isEqualTo("RUNNING");assertThat(projected.runtimeStatus()).isNull();
+        assertThat(family.outcome()).isEqualTo("FAILED");assertThat(family.scope()).isEqualTo("NONE");
+        assertThat(family.code()).isEqualTo("PLAYWRIGHT_TIMEOUT_RETRY_DEFERRED");assertThat(family.transport()).isEqualTo(proof);
+        assertThat(family.previousData()).isTrue();assertThat(family.receivedSnapshotId()).isEqualTo(1L);
+        assertThat(family.lastReceivedAt()).isEqualTo(START);assertThat(family.lastSuccessfulAt()).isEqualTo(START);
+        assertThat(family.schedule().nextDueAt()).isEqualTo(START.plusSeconds(340));
+        assertThat(family.freshness().frozen()).isFalse();assertThat(family.freshness().state()).isEqualTo(expectedFreshness);
+        assertThat(family.freshness().receivedAgeSeconds()).isEqualTo((long)elapsed);
+        verify(diagnostics).findTransport(CAMPAIGN,timeoutId);verifyNoMoreInteractions(diagnostics);
+    }
+
+    @Test
+    void aNonTerminalRuntimeDiagnosticDoesNotClaimThatCollectionStopped() {
+        var diagnostic=new LiveCampaignDiagnostic(LiveCampaignDiagnostic.Phase.TRANSPORT,"PLAYWRIGHT_TIMEOUT",START);
+        var state=presentation.state(campaign(List.of(),List.of()),
+                new RuntimeStatus("RUNNING",null,false,false,false,diagnostic,null));
+        assertThat(state.runtimeStatus().collectionStopped()).isFalse();
+        assertThat(state.runtimeStatus().label()).isEqualTo("Collecte en cours ; un incident a été enregistré.");
+    }
 
     @ParameterizedTest
     @CsvSource({"PRESENT", "EMPTY", "UNAVAILABLE"})

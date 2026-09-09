@@ -47,6 +47,9 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
     @Override public PlaywrightProviderCampaign openLiveGroupedV5(UUID id, Set<SofascoreEndpointType> endpoints) {
         return openProtected(id,()->delegate.openLiveGroupedV5(id,endpoints));
     }
+    @Override public PlaywrightProviderCampaign openLiveGroupedV6(UUID id, Set<SofascoreEndpointType> endpoints) {
+        return openProtected(id,()->delegate.openLiveGroupedV6(id,endpoints),true);
+    }
     @Override public PlaywrightProviderCampaign openManualJ5Grouped(UUID id, Set<SofascoreEndpointType> endpoints) {
         return openProtected(id,()->delegate.openManualJ5Grouped(id,endpoints));
     }
@@ -57,6 +60,11 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
     }
 
     private PlaywrightProviderCampaign openProtected(UUID campaignId, Supplier<PlaywrightProviderCampaign> opening) {
+        return openProtected(campaignId, opening, false);
+    }
+
+    private PlaywrightProviderCampaign openProtected(UUID campaignId, Supplier<PlaywrightProviderCampaign> opening,
+                                                     boolean recoverTimeouts) {
         requireOpen();
         if(store.snapshot().unresolvedDispatchId()!=null) throw new IllegalStateException("PROVIDER_DEPARTURE_UNRESOLVED");
         PlaywrightProviderCampaign campaign=opening.get();
@@ -109,6 +117,12 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
                     return response;
                 } catch(PlaywrightProviderException failure) {
                     observeRefusal(failure.diagnostic(),dispatchId,campaignId,refusal);
+                    // The terminal acknowledgement includes verified page/context cleanup.
+                    // Persist the charge's end before the caller may defer or emit again.
+                    if (recoverTimeouts && failure.recoverableTimeout()) {
+                        admission.onTransportProgress(failure.diagnostic());
+                        finishDeparture();
+                    }
                     throw failure;
                 }
             }

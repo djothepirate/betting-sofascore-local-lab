@@ -1022,6 +1022,10 @@ button:disabled {
   gap: 0 24px;
 }
 
+[data-live-timeout-proof][hidden] {
+  display: none !important;
+}
+
 .hash-value {
   max-width: 320px;
   overflow-wrap: anywhere;

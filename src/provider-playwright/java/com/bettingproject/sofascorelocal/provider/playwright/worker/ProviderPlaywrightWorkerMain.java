@@ -128,7 +128,8 @@ public final class ProviderPlaywrightWorkerMain {
                 ProviderPlaywrightWorkerProtocol.awaitParentTermination(input);
                 return 0;
             }
-            if (command != ProviderPlaywrightWorkerProtocol.GET) {
+            boolean liveV6 = command == ProviderPlaywrightWorkerProtocol.GET_LIVE_V6;
+            if (command != ProviderPlaywrightWorkerProtocol.GET && !liveV6) {
                 ProviderPlaywrightWorkerProtocol.writeFailure(
                         output, ProviderPlaywrightWorkerProtocol.FailureCode.PROTOCOL_ERROR);
                 return 65;
@@ -142,12 +143,23 @@ public final class ProviderPlaywrightWorkerMain {
                 ProviderPlaywrightWorkerProtocol.writeFailure(output, exception.failureCode());
                 return 65;
             }
+            if (liveV6 && (request.timeoutMillis() > 30_000
+                    || request.endpoint() == ProviderPlaywrightWorkerProtocol.Endpoint.SCHEDULED_EVENTS
+                    || request.endpoint() == ProviderPlaywrightWorkerProtocol.Endpoint.TOURNAMENT_SCHEDULED_EVENTS)) {
+                ProviderPlaywrightWorkerProtocol.writeFailure(output,
+                        ProviderPlaywrightWorkerProtocol.FailureCode.PROTOCOL_ERROR);
+                return 65;
+            }
 
             ExecutionResult result = runtime.execute(
-                    configuration.uriFor(request).toASCIIString(), request.timeoutMillis(), frame -> {
+                    configuration.uriFor(request).toASCIIString(), request.timeoutMillis(), liveV6, frame -> {
                         try { ProviderPlaywrightWorkerProtocol.writeProgress(output, frame); }
                         catch (IOException failure) { throw new java.io.UncheckedIOException(failure); }
                     });
+            if (result.timeoutEnded() != null) {
+                ProviderPlaywrightWorkerProtocol.writeTimeoutEnded(output, result.timeoutEnded());
+                continue;
+            }
             if (result.failure() != null) {
                 ProviderPlaywrightWorkerProtocol.writeFailure(output, result.failure());
                 return 66;
@@ -158,14 +170,20 @@ public final class ProviderPlaywrightWorkerMain {
 
     private record ExecutionResult(
             ProviderPlaywrightWorkerProtocol.ResponseFrame response,
-            ProviderPlaywrightWorkerProtocol.FailureCode failure) {
+            ProviderPlaywrightWorkerProtocol.FailureCode failure,
+            ProviderPlaywrightWorkerProtocol.TimeoutEndedFrame timeoutEnded) {
 
         static ExecutionResult success(ProviderPlaywrightWorkerProtocol.ResponseFrame response) {
-            return new ExecutionResult(response, null);
+            return new ExecutionResult(response, null, null);
         }
 
         static ExecutionResult failure(ProviderPlaywrightWorkerProtocol.FailureCode failure) {
-            return new ExecutionResult(null, failure);
+            return new ExecutionResult(null, failure, null);
+        }
+
+        static ExecutionResult timeoutEnded(ProviderMainDocumentNetworkObservation.TerminalProof proof) {
+            return new ExecutionResult(null, null, new ProviderPlaywrightWorkerProtocol.TimeoutEndedFrame(
+                    proof.endedAt().toEpochMilli(), proof.reason()));
         }
     }
 
@@ -212,8 +230,9 @@ public final class ProviderPlaywrightWorkerMain {
             }
         }
 
-        ExecutionResult execute(String exactUri, int timeoutMillis,
+        ExecutionResult execute(String exactUri, int timeoutMillis, boolean liveV6,
                 java.util.function.Consumer<ProviderPlaywrightWorkerProtocol.ProgressFrame> observer) {
+            long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
             if (closed.get()) {
                 return ExecutionResult.failure(ProviderPlaywrightWorkerProtocol.FailureCode.PLAYWRIGHT_FAILURE);
             }
@@ -236,35 +255,39 @@ public final class ProviderPlaywrightWorkerMain {
             });
             CDPSession networkObserver = null;
             CDPSession responseGuard = null;
+            ProviderMainDocumentNetworkObservation networkObservation = null;
+            AtomicBoolean cleanupVerified = new AtomicBoolean();
             try {
                 networkObserver = context.newCDPSession(page);
                 String mainFrameId = ProviderMainDocumentNetworkObservation.requireMainFrameId(
                         networkObserver.send("Page.getFrameTree"));
-                ProviderMainDocumentNetworkObservation networkObservation =
-                        new ProviderMainDocumentNetworkObservation(exactUri, mainFrameId);
+                networkObservation = new ProviderMainDocumentNetworkObservation(exactUri, mainFrameId);
+                ProviderMainDocumentNetworkObservation observation = networkObservation;
                 networkObserver.on(
                         "Network.requestWillBeSent",
                         event -> {
-                            networkObservation.onRequestWillBeSent(event);
-                            Instant started = networkObservation.requestStartedAtIfObserved();
+                            observation.onRequestWillBeSent(event);
+                            Instant started = observation.requestStartedAtIfObserved();
                             if (started != null) progress.sent(started);
                         });
                 networkObserver.on(
                         "Network.requestServedFromCache",
-                        networkObservation::onRequestServedFromCache);
+                        observation::onRequestServedFromCache);
                 networkObserver.on(
                         "Network.responseReceived",
-                        networkObservation::onResponseReceived);
+                        observation::onResponseReceived);
+                networkObserver.on("Network.loadingFinished", observation::onLoadingFinished);
+                networkObserver.on("Network.loadingFailed", observation::onLoadingFailed);
                 networkObserver.send("Network.enable");
 
                 responseGuard = context.newCDPSession(page);
                 CDPSession activeResponseGuard = responseGuard;
                 responseGuard.on("Fetch.requestPaused", event ->
-                        handlePausedResponse(activeResponseGuard, event, networkObservation, progress));
+                        handlePausedResponse(activeResponseGuard, event, observation, progress));
                 responseGuard.send("Fetch.enable", responseStageOnly());
                 Response response = page.navigate(exactUri, new Page.NavigateOptions()
                         .setWaitUntil(WaitUntilState.COMMIT)
-                        .setTimeout((double) timeoutMillis));
+                        .setTimeout(liveV6 ? remainingMillis(deadline) : (double) timeoutMillis));
                 ProviderPlaywrightWorkerProtocol.FailureCode failure = routeFailure.get();
                 if (failure != null) {
                     return ExecutionResult.failure(failure);
@@ -308,11 +331,23 @@ public final class ProviderPlaywrightWorkerMain {
                             ProviderPlaywrightWorkerProtocol.FailureCode.PAYLOAD_TOO_LARGE);
                 }
                 byte[] body;
+                long receivedEpochMillis;
+                progress.readingBody();
+                if (liveV6) {
+                    page.waitForCondition(observation::terminalObserved,
+                            new Page.WaitForConditionOptions().setTimeout(remainingMillis(deadline)));
+                    var terminal = observation.terminalProofIfObserved();
+                    if (terminal == null || terminal.reason() != 1)
+                        return ExecutionResult.failure(ProviderPlaywrightWorkerProtocol.FailureCode.RESPONSE_READ_FAILED);
+                    remainingMillis(deadline); // A response that finishes after the deadline remains abandoned.
+                }
                 try {
-                    progress.readingBody();
                     body = response.body();
+                    receivedEpochMillis = Instant.now().toEpochMilli();
                 }
                 catch (PlaywrightException exception) {
+                    if (liveV6 && isTimeout(exception)) return completeTimedOutExchange(
+                            page, networkObserver, networkObservation, progress, cleanupVerified, deadline);
                     return ExecutionResult.failure(
                             isTimeout(exception)
                                     ? ProviderPlaywrightWorkerProtocol.FailureCode.TIMEOUT
@@ -329,7 +364,10 @@ public final class ProviderPlaywrightWorkerMain {
                     return ExecutionResult.failure(failure);
                 }
                 try {
-                    long receivedEpochMillis = Instant.now().toEpochMilli();
+                    if (liveV6) {
+                        remainingMillis(deadline);
+                        verifyPageCleanup(page, deadline, cleanupVerified);
+                    }
                     if (receivedEpochMillis < requestedEpochMillis) {
                         return ExecutionResult.failure(
                                 ProviderPlaywrightWorkerProtocol.FailureCode.PLAYWRIGHT_FAILURE);
@@ -346,11 +384,15 @@ public final class ProviderPlaywrightWorkerMain {
                 }
             }
             catch (TimeoutError exception) {
+                if (liveV6) return completeTimedOutExchange(page, networkObserver, networkObservation,
+                        progress, cleanupVerified, deadline);
                 return ExecutionResult.failure(ProviderPlaywrightWorkerProtocol.FailureCode.TIMEOUT);
             }
             catch (PlaywrightException exception) {
                 ProviderPlaywrightWorkerProtocol.FailureCode failure = routeFailure.get();
                 if (failure == null && isTimeout(exception)) {
+                    if (liveV6) return completeTimedOutExchange(page, networkObserver, networkObservation,
+                            progress, cleanupVerified, deadline);
                     failure = ProviderPlaywrightWorkerProtocol.FailureCode.TIMEOUT;
                 }
                 return ExecutionResult.failure(failure == null
@@ -360,16 +402,68 @@ public final class ProviderPlaywrightWorkerMain {
             finally {
                 exactAllowedUri.set(null);
                 exactNavigationAdmission.set(false);
-                try {
-                    page.close();
+                if (!cleanupVerified.get()) {
+                    try {
+                        page.close();
+                    }
+                    catch (PlaywrightException ignored) {
+                        // Closing the campaign can terminate Chromium before this request returns.
+                    }
+                    disableAndDetach(responseGuard, "Fetch.disable");
+                    disableAndDetach(networkObserver, "Network.disable");
+                    context.clearCookies();
                 }
-                catch (PlaywrightException ignored) {
-                    // Closing the campaign can terminate Chromium before this request returns.
-                }
-                disableAndDetach(responseGuard, "Fetch.disable");
-                disableAndDetach(networkObserver, "Network.disable");
-                context.clearCookies();
             }
+        }
+
+        private static double remainingMillis(long deadline) {
+            long nanos = deadline - System.nanoTime();
+            if (nanos <= 0) throw new TimeoutError("configured exchange deadline expired");
+            return Math.max(1.0, nanos / 1_000_000.0);
+        }
+
+        private ExecutionResult completeTimedOutExchange(Page page, CDPSession session,
+                ProviderMainDocumentNetworkObservation observation, RequestProgress progress,
+                AtomicBoolean cleanupVerified, long requestDeadline) {
+            try {
+                if (System.nanoTime() < requestDeadline)
+                    return ExecutionResult.failure(ProviderPlaywrightWorkerProtocol.FailureCode.TIMEOUT);
+                long cancellationDeadline = System.nanoTime() + java.util.concurrent.TimeUnit.SECONDS.toNanos(2);
+                if (observation == null || session == null || observation.requestStartedAtIfObserved() == null)
+                    return ExecutionResult.failure(ProviderPlaywrightWorkerProtocol.FailureCode.TIMEOUT);
+                if (!observation.terminalObserved()) {
+                    if (progress.headers < 0) {
+                        observation.beginCancellation();
+                        session.send("Page.stopLoading");
+                    }
+                    // After COMMIT, stopLoading does not reliably emit a correlated terminal
+                    // event in Chromium. The already abandoned body is never read: only a
+                    // natural terminal arriving within the same two-second grace can qualify.
+                    page.waitForCondition(observation::terminalObserved,
+                            new Page.WaitForConditionOptions().setTimeout(remainingMillis(cancellationDeadline)));
+                }
+                var proof = observation.terminalProofIfObserved();
+                if (proof == null || routeFailure.get() != null || progress.status == 403 || progress.status == 429)
+                    return ExecutionResult.failure(ProviderPlaywrightWorkerProtocol.FailureCode.TIMEOUT);
+                // Revoke routing before closing; local checks make no additional provider request.
+                verifyPageCleanup(page, cancellationDeadline, cleanupVerified);
+                return ExecutionResult.timeoutEnded(proof);
+            }
+            catch (RuntimeException ignored) {
+                return ExecutionResult.failure(ProviderPlaywrightWorkerProtocol.FailureCode.TIMEOUT);
+            }
+        }
+
+        private void verifyPageCleanup(Page page, long deadline, AtomicBoolean cleanupVerified) {
+            exactAllowedUri.set(null);
+            exactNavigationAdmission.set(false);
+            page.close();
+            context.clearCookies();
+            if (!page.isClosed() || !context.pages().isEmpty() || !context.cookies().isEmpty()
+                    || !browser.isConnected() || closed.get() || routeFailure.get() != null)
+                throw new PlaywrightException("exact page cleanup could not be verified");
+            remainingMillis(deadline);
+            cleanupVerified.set(true);
         }
 
         private static void disableAndDetach(CDPSession session, String disableCommand) {

@@ -1,10 +1,10 @@
 # Campagnes live locales J4/J5 — architecture WO-058
 
 Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
-Décision applicable : [ADR-SS-005 v0.8](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), premier lot de résilience réalisé et qualifié fonctionnellement hors fournisseur. Voir le [rapport initial](../validation/WO-058-provider-resilience-qualification-20260909.md) puis la [qualification temporelle v6](../validation/WO058-LIVE-V6-CAPACITY-20260909.md). Les preuves v4/v5 restent historiques.
+Décision applicable : [ADR-SS-005 v0.9](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), correctif de réponses lentes/timeouts isolés réalisé et qualifié fonctionnellement hors fournisseur. Le premier lot de résilience et son profil nominal restent qualifiés dans leur portée : [rapport initial](../validation/WO-058-provider-resilience-qualification-20260909.md), [qualification temporelle v6](../validation/WO058-LIVE-V6-CAPACITY-20260909.md). Le [rapport du correctif](../validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md) conserve séparément les validations finales réussies et leurs étapes intermédiaires. Les preuves v4/v5 restent historiques.
 Réalisation : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md).
 
-## Politique courante live-v6 — mécanismes et profil temporel qualifiés hors fournisseur
+## Politique courante live-v6 — profil nominal et correctif v0.9 qualifiés dans leurs portées distinctes
 
 Les nouvelles préparations utilisent `live-v6`, au plus sept rencontres, avec un profil
 `grouped-v6` et un SHA de qualification distincts. La cible reste 100 s pour les familles
@@ -27,7 +27,8 @@ La portée des enveloppes reste le corpus établi de 64 Kio, y compris LINEUPS V
 enrichies ; les 28 premières réponses de 5 Mio sont séparées. Les coûts d'échange,
 le traitement et les attentes du limiteur sont distingués. Le plafond opérateur six
 et son timeout 30 s sont conservés indépendamment ; la mesure ne les modifie pas.
-La vérification finale du complément et de l'interface reste à terminer.
+La vérification finale de ce complément nominal et de son interface est réussie avant
+`7593e36` ; elle ne qualifie pas le nouveau chemin de récupération sur timeout.
 
 `ResilientPlaywrightProviderCampaignFactory` enveloppe les parcours J3/J4/J5, manuels et
 live, sans modifier leur allowlist ni créer de session automatiquement. Chaque départ
@@ -58,7 +59,8 @@ distinct de `provider_campaign_guard`. Le retour de cette garde à FREE ne réar
 l'accès fournisseur. Le réarmement manuel vérifie la version observée, la clôture des
 sessions et l'éventuel `Retry-After` ; il n'émet aucune requête et ne reprend aucune
 campagne. Les délais de départ déjà consommés restent comptés. Un timeout sans statut
-connu garde une cause technique incertaine et l'arrêt global, sans 403 inventé.
+connu ne prouve aucun 403. Hors de l'exception v0.9 décrite ci-dessous, il garde l'arrêt
+global ; aucun classement permissif n'est déduit de l'absence d'en-têtes.
 
 V42 porte quatre tables de pression/suspension, V43 deux tables de diagnostic et V44
 les contraintes de politique v6. Les diagnostics séparent en-têtes reçus et réponse
@@ -67,6 +69,55 @@ Ils ne contiennent ni en-têtes bruts ni payload et ne fabriquent aucune récept
 Les métadonnées historiques absentes restent inconnues. Le plafond de timeout v6 est
 30 s, celui de v5 reste 20 s et ceux de v1–v4 restent 10 s ; le défaut `local` reste 20 s.
 Ces plafonds ne changent pas les coûts d'admission. Aucune preuve v5 n'est renommée en v6.
+
+### Correctif v0.9 : fin d'échange prouvée avant reprise différée du match
+
+La récupération concerne uniquement une session v6 déjà lancée et un timeout accompagné
+d'une fin CDP corrélée `FINISHED`/`ABORTED`, fermeture de page, nettoyage des cookies et
+contexte existant réutilisable. Avant les en-têtes, l'annulation est demandée immédiatement
+avec terminal `ABORTED` corrélé. Après les en-têtes, le worker attend naturellement
+`FINISHED`, sans `Page.stopLoading` qui peut supprimer le terminal après `COMMIT`.
+Ces deux chemins partagent la même grâce maximale de deux secondes ; sans terminal,
+la fermeture fatale est conservée. Une seconde IPC est réservée à la preuve terminale
+authentifiée. Cette attente ne prolonge ni le timeout de collecte ni ses budgets : le
+corps après timeout est abandonné même s'il se termine dans la grâce. Les champs `exchangeEndedAt`,
+`exchangeEndReason` et `contextReusable` sont ajoutés aux diagnostics par V45 ; les
+anciens diagnostics restent sans preuve. Un corps incomplet ne crée ni snapshot ni
+résultat normalisé. Les 403/429 connus restent prioritaires et suspendent les accès.
+
+Pour un succès, `receivedAt` est fixé immédiatement après `body()`, avant le nettoyage
+local obligatoire. La provenance distingue ainsi la réception du coût de nettoyage.
+Un timeout ne produit aucun nouvel instant de réception ni snapshot. Application et
+worker doivent être reconstruits ensemble pour IPC v7 ; V45 sera appliquée lors du
+prochain démarrage opérateur, sans démarrage ni migration opérateur dans ce lot.
+
+Après persistance de cette preuve, la décision de reprise est sérialisée avec l'arrêt
+opérateur. Le groupe est fermé et jamais rouvert ; toutes les familles du match attendent
+au moins 300 secondes après le plus tardif de l'instant courant et de la fin observée,
+puis un nouveau J4 réévalue sa phase. Les autres matchs peuvent progresser. Un arrêt
+demandé entre-temps reste prioritaire : le timeout est publié comme abandonné, sans
+réarmer le match ni remplacer son motif d'arrêt. La protection partagée et le fence
+transport de trois secondes après cette fin exceptionnelle restent applicables.
+
+`LiveTimeoutRecoveryPolicy` borne la session à trois tolérances, exige un `PARSED` entre
+deux timeouts et un `PARSED` du même couple avant sa récidive. Les 404 ne réinitialisent
+pas ces gardes et les succès ne remettent pas le total à zéro. Un timeout admissible
+en finalisation arrête le match, sans nouvelle collecte finale ; les quotas, la fenêtre
+et les arrêts opérateur restent prioritaires. La qualification fonctionnelle dédiée
+réussit : neuf cas Chromium transport/UI, deux contrôles natifs après correction de
+l'horodatage et vérification finale `-Pintegration-tests clean verify` à 17:17:59Z
+(2 068 cas standards, cinq skips explicités, 213 PostgreSQL, zéro échec et erreur).
+L'arrêt individuel pendant timeout acquitte la tâche en vol même abandonnée, sans
+reprogrammer le match arrêté ; deux régressions avec deux rencontres le contrôlent.
+Le smoke de trois minutes ne renouvelle pas la preuve de capacité de 35 minutes.
+Aucune livraison Eclipse ni action fournisseur n'est effectuée par cette qualification.
+
+L'ouverture `openLiveGroupedV6` porte une autorité distincte. Pour les familles en jeu
+différées après 404, elle accepte les sous-ensembles strictement croissants de J5 après
+J4, avec identité de campagne/groupe/événement inchangée. Les répétitions, retours en
+arrière, groupes fermés et phases incompatibles restent refusés ; v4/v5 et J5 manuel
+gardent leur ordre historique. Les nouveaux contrôles n'assouplissent aucun endpoint,
+budget ou seuil de suspension et ne recréent aucun contexte.
 
 ## Politique historique live-v5
 

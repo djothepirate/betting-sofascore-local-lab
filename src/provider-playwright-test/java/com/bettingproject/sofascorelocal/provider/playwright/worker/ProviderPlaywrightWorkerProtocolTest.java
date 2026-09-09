@@ -55,8 +55,25 @@ class ProviderPlaywrightWorkerProtocolTest {
     }
 
     @Test
-    void identifiesTheSixEndpointContractAsProtocolVersionFive() {
-        assertThat(ProviderPlaywrightWorkerProtocol.VERSION).isEqualTo(6);
+    void identifiesBoundedLiveTimeoutCompletionAsProtocolVersionSeven() {
+        assertThat(ProviderPlaywrightWorkerProtocol.VERSION).isEqualTo(7);
+    }
+
+    @Test
+    void timeoutCompletionFrameContainsOnlyBoundedEndTimeAndReason() throws Exception {
+        var bytes = new ByteArrayOutputStream();
+        ProviderPlaywrightWorkerProtocol.writeTimeoutEnded(new DataOutputStream(bytes),
+                new ProviderPlaywrightWorkerProtocol.TimeoutEndedFrame(1_788_173_200_123L, 2));
+        var input = new DataInputStream(new ByteArrayInputStream(bytes.toByteArray()));
+        assertThat(input.readUnsignedByte()).isEqualTo(ProviderPlaywrightWorkerProtocol.TIMEOUT_ENDED);
+        assertThat(input.readLong()).isEqualTo(1_788_173_200_123L);
+        assertThat(input.readUnsignedByte()).isEqualTo(2);
+        assertThat(input.read()).isEqualTo(-1);
+        for (int reason : new int[]{-1, 0, 3, 255}) assertThatThrownBy(() ->
+                new ProviderPlaywrightWorkerProtocol.TimeoutEndedFrame(1_788_173_200_123L, reason))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new ProviderPlaywrightWorkerProtocol.TimeoutEndedFrame(-1, 1))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

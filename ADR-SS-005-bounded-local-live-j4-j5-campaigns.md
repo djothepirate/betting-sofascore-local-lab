@@ -1,6 +1,6 @@
 # ADR-SS-005 — Campagnes live locales et bornées J4/J5
 
-- **Version :** 0.8.
+- **Version :** 0.9.
 - **Statut :** `ACCEPTED` — v0.1 formellement acceptée ; capacité adaptative puis collecte des compositions avant le début explicitement demandées par le propriétaire le 7 septembre.
 - **Date :** 2026-09-09.
 - **Décideur :** propriétaire du Betting Project.
@@ -15,6 +15,7 @@
 - **Référence historique v0.2 :** contenu Git au commit `e98f7a74e39a1c57e601efb3d346ae55829fce73`, conservé sans réécriture.
 - **Autorité de la v0.7 :** demande du propriétaire le 9 septembre d’un timeout Playwright « un peu plus élevé » pour le prochain essai après PLAYWRIGHT_TIMEOUT. La borne retenue est vingt secondes pour live-v5. Ce complément donne davantage de temps à un échange lent ; il ne change ni cadence, ni enveloppes qualifiées, ni budgets et n’autorise aucun lancement par l’agent.
 - **Autorité de la v0.8 :** le 9 septembre, après les essais à 19–20 rencontres interrompus sur refus ou timeout, le propriétaire donne la priorité à la robustesse puis autorise explicitement le premier lot diagnostic/suspension et le lissage/404 hors fournisseur. Cette décision introduit `live-v6` et une protection persistante commune J3/J4/J5. La réalisation est qualifiée fonctionnellement hors fournisseur ; son profil temporel distinct est ensuite qualifié à sept rencontres en boucle locale synthétique le même jour. Aucune capacité fournisseur ni nouvelle campagne réelle ne découle de cette décision.
+- **Autorité de la v0.9 :** le 9 septembre, après de nouveaux retours sur réponses lentes et timeouts isolés, le propriétaire autorise le correctif et sa qualification hors fournisseur, en conservant la suspension sur 403/429. Cette révision permet, pour la seule session live-v6 déjà lancée, une reprise différée du match lorsque la fin de l'échange et la réutilisabilité du contexte sont nouvellement prouvées. Elle corrige aussi le refus local d'un groupe dont une famille est différée après 404. La réalisation est qualifiée fonctionnellement hors fournisseur, avec vérification complète réussie le 9 septembre à 17:17:59Z ; cette décision ne déclenche aucune collecte fournisseur.
 - **Work Order :** [WO-SS-20260907-058](docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md), validé par le propriétaire ; correctif et qualification de réalisation distincts de cette décision.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
 - **Base :** `6dfd14286d4f269cbe100bd965257c20298538db`, train `feature/V0.1.0-RC01` vérifié à l'ouverture.
@@ -72,8 +73,10 @@ processus sans lever cette suspension. Un `Retry-After` valide établit une born
 minimale ; son expiration ne réarme rien. Le réarmement est une action opérateur
 explicite, versionnée, sans requête ni création de navigateur et sans reprise de la
 campagne arrêtée. Il ne constitue pas une preuve de disponibilité du fournisseur.
-Un timeout sans statut connu reste une erreur technique incertaine et ferme la
-campagne ; aucun bannissement n'est déduit et aucun retry n'est introduit.
+Un timeout sans statut connu ne démontre aucun bannissement. En v0.8, il arrêtait
+globalement la campagne. L'exception v0.9 ci-dessous permet une reprise différée
+uniquement avec une nouvelle preuve terminale complète ; tout cas incertain conserve
+l'arrêt global.
 
 Les diagnostics séparent navigation, envoi connu, réception des en-têtes, lecture du
 corps, réponse complète et attente IPC du parent. Le timeout configuré est conservé
@@ -92,7 +95,7 @@ V43 porte les diagnostics ; V44 contraint la nouvelle politique. Les migrations 
 append-only et ne reconstruisent ni refus ni diagnostics historiques. Les manifestes
 v1–v5 restent inchangés, avec leurs règles propres ; la protection fournisseur globale
 s'applique à tout nouvel accès. Les preuves de capacité v4/v5 restent historiques.
-La qualification fonctionnelle du présent lot est **réussie hors fournisseur** : refus
+La qualification fonctionnelle du premier lot v0.8 est **réussie hors fournisseur** : refus
 partiels, concurrence, redémarrage, réarmement sans appel, fenêtres glissantes, 404 et
 nettoyage sont vérifiés par les tests et replays, Chromium loopback et PostgreSQL isolé.
 Le [rapport du 9 septembre](docs/validation/WO-058-provider-resilience-qualification-20260909.md)
@@ -106,6 +109,78 @@ avec ces enveloppes et ses 24 scénarios. Le [rapport du complément](docs/valid
 conserve cette portée et les vérifications finales réussies. Le plafond opérateur
 de six et le timeout de 30 s restent des paramètres distincts, sans application automatique.
 Ce constat de qualification ne change aucune règle de la présente décision.
+
+### 0.1. Correctif v0.9 — timeout terminé avec certitude et reprise différée bornée
+
+Le timeout configuré reste inchangé, strictement positif et au plus trente secondes
+pour v6. Son expiration n'est pas une preuve de fin du trafic. Le worker doit établir
+un événement terminal CDP corrélé à la requête (`FINISHED` ou `ABORTED`), fermer la page,
+achever le nettoyage des cookies et vérifier que le contexte existant reste vivant et
+réutilisable. Avant les en-têtes, le worker demande immédiatement l'annulation et exige
+le terminal `ABORTED` corrélé. Après les en-têtes, il attend la fin naturelle `FINISHED`
+sans `Page.stopLoading`, dans la même grâce maximale de deux secondes ; cette commande
+peut supprimer le terminal d'un corps déjà engagé après `COMMIT`. Aucune lecture ou
+persistance du corps n'est admise après le timeout, même si sa fin est observée dans
+cette grâce. Sans terminal dans la borne, l'issue reste fatale et entraîne la fermeture.
+Une seconde supplémentaire est réservée à la transmission de la preuve au parent,
+sans prolonger le timeout de collecte ni ses budgets. Une trame terminale authentifiée doit porter
+ces faits. Aucune nouvelle instance de navigateur ou de contexte n'est créée pour
+réparer une défaillance. Une fin non prouvée, un nettoyage incertain, une rupture de
+protocole ou une preuve temporelle perdue conservent l'arrêt global et son exclusion.
+
+Une réponse réussie conserve son instant de réception immédiatement après `body()`,
+avant le nettoyage local obligatoire, afin de ne pas attribuer ce coût local à la
+réception fournisseur. Un timeout ne met jamais à jour `receivedAt` et ne crée aucun
+snapshot. La livraison du correctif exige une reconstruction cohérente de l'application
+et du worker IPC v7 ; V45 s'appliquera au prochain démarrage opérateur. Cette décision
+ne lance ni l'application, ni une migration de la base opérateur.
+
+Une réponse incomplète est abandonnée : aucune réception complète, aucun snapshot ni
+résultat normalisé n'est fabriqué. La tentative et sa charge restent conservées, avec
+la preuve de fin et de nettoyage. Le groupe commencé est fermé définitivement ; sa
+famille suivante n'est pas appelée comme continuation. Toutes les familles de ce
+match attendent **au moins 300 secondes après la fin/nettoyage confirmés**, puis un
+nouveau groupe commence par J4. Les autres matchs peuvent continuer dans le même
+contexte prouvé valide. La barrière transport reste au moins trois secondes après
+cette fin exceptionnelle ; le budget partagé de deux secondes, 25/minute et 1 000/h
+s'applique toujours, sans remise à zéro. Une reprise peut donc être plus tardive.
+
+La tolérance reste limitée à **trois timeouts récupérables par session**. Deux timeouts
+sans résultat `PARSED` intermédiaire ne sont pas tolérés ; un 404 ne réinitialise pas
+cette borne. Une récidive sur le même couple rencontre/famille exige aussi un `PARSED`
+de cette famille depuis son précédent timeout. Un succès ne remet pas à zéro le total
+des trois tolérances. Au-delà de ces limites, le traitement reste globalement bloquant.
+Pendant la finalisation, un timeout admissible arrête le match sans nouvelle tentative
+finale et laisse explicitement sa finalisation incomplète. Les quatre heures, budgets
+de tentatives et d'octets, réserve finale, admissibilité et arrêts opérateur restent
+prioritaires ; aucune échéance n'est prolongée et aucune campagne arrêtée ne redémarre.
+La décision est sérialisée avec l'arrêt opérateur après persistance de la preuve. Si
+un arrêt est intervenu, le timeout est conservé comme abandonné : aucun report n'est
+armé et le motif d'arrêt n'est pas écrasé. La borne de 300 secondes part du plus tardif
+de l'instant courant et de la fin observée, après nettoyage confirmé.
+
+Un 403 ou 429 connu garde la priorité : arrêt de la campagne et suspension persistante,
+même si son corps expire ensuite. L'absence de tels en-têtes n'établit aucune acceptation
+fournisseur. Les nouveaux champs `exchangeEndedAt`, `exchangeEndReason` et
+`contextReusable` sont persistés par V45. Les diagnostics historiques restent sans
+preuve de réutilisabilité ; aucune ancienne campagne n'est reclassée comme récupérable.
+
+L'autorité de groupe **LIVE_V6** est distincte de LIVE_V5. En jeu, elle autorise les
+sous-ensembles ordonnés des familles J5 devenues admissibles après backoff, toujours
+après J4 et avec la même identité de campagne, de groupe et d'événement. Les doublons,
+retours en arrière et réouvertures sont interdits. Les autorités historiques, le J5
+manuel et les groupes finaux gardent leur ordre strict. Cette correction ne change
+aucun endpoint, plafond, rythme nominal ou enveloppe de qualification.
+
+La [qualification du correctif](docs/validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md)
+couvre réponses lentes, preuve terminale, poursuite des autres matchs, reprises bornées,
+refus persistants et groupe avec famille différée. Elle est **réussie fonctionnellement
+hors fournisseur** : neuf cas Chromium transport/UI, deux contrôles natifs après
+correction de l'horodatage, puis `-Pintegration-tests clean verify` terminé à 17:17:59Z
+avec 2 068 cas standards (cinq skips explicités) et 213 cas PostgreSQL, sans échec ni
+erreur. Le smoke nominal de trois minutes réussit ; la qualification de capacité de
+35 minutes n'est pas renouvelée. Les passes rouges restent conservées. Aucun nouveau
+profil, livraison Eclipse, appel fournisseur, fusion ou clôture du WO n'en découle.
 
 ## Décision historique live-v5 — vingt rencontres et cadence qualifiée
 
@@ -427,8 +502,9 @@ remplacée, pour ce seul parcours live, par la classification ci-dessous.
 |---|---|
 | JSON reçu, contrôles de sécurité et de corrélation applicables satisfaits, schéma métier incompatible explicitement identifié | Arrêter seulement ce match ; conserver le brut et les familles déjà reçues. Ne plus exécuter ses familles restantes ni ses cycles futurs ; poursuivre les autres matchs dans le même contexte valide. |
 | J4 404, statut non géré ou régression sportive incohérente | Arrêter ce match avec motif de revue, sans inventer `finished`. |
-| J5 404 | Conserver `ENDPOINT_UNAVAILABLE`, traiter les familles suivantes ; au prochain cycle normal, réinterroger la famille indisponible si le match reste actif. |
-| Transport, timeout, HTTP non-2xx hors 404, HTML/challenge, redirection/route inattendue, corps trop grand, incohérence d'identité, contenu sensible, exception interne du parseur, stockage/runtime défaillant | Arrêter globalement, nettoyer et interdire toute reprise automatique. |
+| J5 404 | Conserver `ENDPOINT_UNAVAILABLE`, traiter les familles suivantes ; réinterroger selon le backoff v6 du §0, ou selon le cycle historique de la politique conservée. |
+| Timeout v6 avec preuve de fin/nettoyage réutilisable et tolérances disponibles | Appliquer exclusivement le §0.1 : abandon du groupe, pause du match puis nouveau J4, ou arrêt individuel si finalisation ; aucune réception fictive. |
+| Autre erreur transport ou timeout, HTTP non-2xx hors 404, HTML/challenge, redirection/route inattendue, corps trop grand, incohérence d'identité, contenu sensible, exception interne du parseur, stockage/runtime défaillant | Arrêter globalement, nettoyer et interdire toute reprise automatique. Un 403/429 connu ne relève jamais de la tolérance au timeout. |
 | Anomalie non classifiable avec certitude | Arrêt global ; aucun classement métier permissif par défaut. |
 | Arrêt individuel demandé | Supprimer immédiatement les tâches futures ; laisser son GET engagé terminer sous timeout, conserver son résultat sans réactiver le match. |
 | Arrêt global demandé | Interdire tout nouveau départ et annuler le transport partagé. |
@@ -439,9 +515,10 @@ devient pas une erreur métier isolable. Ne pas utiliser uniquement `status != P
 déterminer la portée. Si le stockage du résultat métier échoue, cet échec reste global.
 
 Un arrêt métier ne corrige pas automatiquement le parseur et ne réessaie pas le match. La future
-reprise exige une nouvelle campagne manuelle après traitement de la cause. Le 404 J5 constitue
-l'unique cas d'indisponibilité explicitement rééchantillonné à cadence normale ; il n'autorise
-aucun retry technique accéléré. Un `Retry-After` ne réarme pas la campagne.
+reprise exige une nouvelle campagne manuelle après traitement de la cause. Le 404 J5 conserve
+son rééchantillonnage selon la politique ; le seul retry technique autorisé est l'exception
+différée v6 du §0.1, dans une session encore valide et les tolérances disponibles. Aucun retry
+accéléré ni réarmement par `Retry-After` n'est ajouté.
 
 L'arrêt de tous les événements termine la campagne et ferme ses ressources. Préserver les
 bornes existantes d'acquittement opérateur ≤500 ms, annulation ≤2 s et nettoyage ≤5 s. Un
@@ -507,8 +584,11 @@ Les critères ci-dessous sont **à qualifier**, pas des résultats acquis par la
 
 - Deux matchs simulés, JSON de schéma incompatible sur le premier : arrêt de ce seul match,
   autres familles du match annulées, brut conservé et second match poursuivi.
-- Même scénario avec 403, timeout, incohérence d'identité, contenu inattendu, exception interne
+- Même scénario avec 403, timeout hors exception prouvée du §0.1, incohérence d'identité, contenu inattendu, exception interne
   ou panne de stockage : arrêt global, sans nouveau départ ni contexte recréé.
+- Timeout v6 admissible du §0.1 : preuve terminale, autres matchs poursuivis, groupe fermé,
+  prochain J4 au moins 300 s après nettoyage ; limites totale/consécutive/par famille,
+  finalisation, fenêtre et arrêt opérateur vérifiés séparément.
 - 404 J5 suivi d'un succès au cycle normal suivant : aucune tentative immédiate ; J4 404 arrête
   seulement le match. Statut sportif et complétude restent distincts.
 - Début retardé, `inprogress`/`finished` initiaux, HT, prolongations, tirs au but et absence de

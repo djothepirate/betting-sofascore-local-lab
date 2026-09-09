@@ -4,6 +4,38 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — tolérance bornée aux timeouts prouvés et groupes v6 avec familles différées
+
+- Consigne l'autorisation explicite du correctif pour réponses lentes et timeouts isolés
+  dans [ADR-SS-005 v0.9](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md). Correctif réalisé
+  et qualifié fonctionnellement hors fournisseur, sans augmentation du timeout configuré.
+- Réserve la récupération à live-v6 avec fin CDP corrélée `FINISHED`/`ABORTED`, page et
+  cookies nettoyés, contexte existant réutilisable et trame authentifiée. Avant les
+  en-têtes, annulation immédiate avec terminal `ABORTED` corrélé ; après les en-têtes,
+  attente naturelle de `FINISHED` dans la même grâce de deux secondes, sans
+  `Page.stopLoading`. Le corps après timeout reste abandonné ; sans terminal dans la
+  borne, arrêt fatal et fermeture. La seconde IPC supplémentaire ne prolonge ni le
+  timeout de collecte ni ses budgets.
+- Abandonne le corps incomplet sans snapshot ni donnée normalisée, conserve la tentative
+  et sa charge, ferme le groupe et reporte le match entier d'au moins cinq minutes avant
+  un nouveau J4. Les autres matchs restent admissibles ; aucune rafale ni extension de
+  fenêtre ou de budget n'est ajoutée. Trois tolérances au plus par session, `PARSED`
+  intermédiaire obligatoire et succès de la même famille exigé avant sa récidive.
+- Conserve l'arrêt global et la suspension persistante sur 403/429. Un timeout admissible
+  en finalisation arrête le match avec collecte finale incomplète, sans retry final.
+- Sépare l'autorité `LIVE_V6` : les familles en jeu différées après 404 peuvent être omises
+  dans leur ordre strictement croissant, sans assouplir les identités, l'unicité, la
+  fermeture des groupes ni les autorités historiques/manuelles.
+- Ajoute la preuve terminale aux diagnostics via V45, sans l'inférer des anciennes
+  observations. Acquitte aussi la tâche en vol après un arrêt individuel pendant timeout,
+  sans reprogrammer le match arrêté ni bloquer les autres rencontres.
+- Conserve dans le [rapport du correctif](docs/validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md)
+  les passes rouges et leur correction, les neuf cas Chromium transport/UI réussis,
+  les deux contrôles natifs de réception et le résultat final `-Pintegration-tests clean verify`
+  du 9 septembre à 17:17:59Z : 2 068 cas standards, cinq skips explicités, 213 cas PostgreSQL,
+  aucun échec ni erreur. Le smoke nominal de trois minutes réussit ; aucune requalification
+  de capacité sur 35 minutes, livraison Eclipse ou collecte fournisseur n'est effectuée.
+
 ### WO-058 — priorité à la résilience face aux refus fournisseur
 
 - Consigne la priorité propriétaire à la robustesse avant accélération de la collecte,

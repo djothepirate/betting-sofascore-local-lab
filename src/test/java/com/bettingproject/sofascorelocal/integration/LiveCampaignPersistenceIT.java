@@ -1114,7 +1114,7 @@ class LiveCampaignPersistenceIT {
         // Exercise the historical ledger first, then upgrade it for the current J6 tooling.
         var campaignBeforeUpgrade=f.store.find(m.campaignId()).orElseThrow();
         var guardBeforeUpgrade=f.guard.snapshot();
-        assertThat(f.migrate("44").migrationsExecuted).isEqualTo(5);
+        assertThat(f.migrate("45").migrationsExecuted).isEqualTo(6);
         assertThat(f.store.find(m.campaignId())).contains(campaignBeforeUpgrade);
         assertThat(f.guard.snapshot()).isEqualTo(guardBeforeUpgrade);
         String script=Files.readString(Path.of("scripts/Backup-Restore-J6.ps1"),StandardCharsets.UTF_8);
@@ -1156,10 +1156,10 @@ class LiveCampaignPersistenceIT {
                 new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS,null,interval,0),T0.plusSeconds(12));
         source.store.transition(own,null,"COMPLETED","CLEANUP_VERIFIED",T0.plusSeconds(13),null);
         source.guard.releaseAfterVerifiedCleanup(own,T0.plusSeconds(14));
-        // Keep v4/v5 execution evidence on its original schema, then qualify today's backup on V44.
+        // Keep v4/v5 execution evidence on its original schema, then qualify today's backup on V45.
         var campaignBeforeUpgrade=source.store.find(m.campaignId()).orElseThrow();
         var guardBeforeUpgrade=source.guard.snapshot();
-        assertThat(source.migrate("44").migrationsExecuted).isEqualTo(44-Integer.parseInt(schema));
+        assertThat(source.migrate("45").migrationsExecuted).isEqualTo(45-Integer.parseInt(schema));
         assertThat(source.store.find(m.campaignId())).contains(campaignBeforeUpgrade);
         assertThat(source.guard.snapshot()).isEqualTo(guardBeforeUpgrade);
         String script=Files.readString(Path.of("scripts/Backup-Restore-J6.ps1"),StandardCharsets.UTF_8);
@@ -1177,7 +1177,7 @@ class LiveCampaignPersistenceIT {
             String url=POSTGRES.getJdbcUrl().substring(0,POSTGRES.getJdbcUrl().lastIndexOf('/')+1)+restoredDatabase;
             Fixture restored=new Fixture(new DriverManagerDataSource(url,POSTGRES.getUsername(),POSTGRES.getPassword()));
             assertThat(restored.jdbc.queryForObject(sql,String.class)).isEqualTo(before);
-            assertThat(restored.migrate("44").migrationsExecuted).isZero();
+            assertThat(restored.migrate("45").migrationsExecuted).isZero();
             assertThat(restored.guard.snapshot().state()).isEqualTo("FREE");
             assertThat(restored.store.find(m.campaignId()).orElseThrow().state()).isEqualTo("COMPLETED");
             assertThat(restored.store.find(m.campaignId()).orElseThrow().attempts()).hasSize(1);

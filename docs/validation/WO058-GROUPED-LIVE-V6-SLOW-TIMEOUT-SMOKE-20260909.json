@@ -1,0 +1,2090 @@
+{
+  "scope" : "EXPERIMENTAL LOCAL_ONLY SYNTHETIC_LOOPBACK",
+  "policyVersion" : "live-v6",
+  "criticalIntervalSeconds" : 100,
+  "lineupsIntervalSeconds" : 300,
+  "interGroupDelaySeconds" : 1,
+  "productionPersistentResilience" : true,
+  "productionTransportDiagnosticPersistence" : true,
+  "minimumPostCompletionDelaySeconds" : 2,
+  "maximumDeparturesPer60Seconds" : 25,
+  "maximumDeparturesPerHour" : 1000,
+  "measurementContract" : "requestSeconds includes eligible dispatch, IPC, transport callbacks and durable completion; processing includes local preflight, deferral publication and authorization work excluding the measured limiter sleep; waiting is reported separately; httpSeconds is the worker exchange latency",
+  "realProviderCalls" : 0,
+  "operatorDatabaseUsed" : false,
+  "matches" : 7,
+  "bodyBytesPerResponse" : 65536,
+  "initialFirstResponsePerFamilyBytes" : 5242880,
+  "normalizedFixtureShape" : {
+    "lineupPlayers" : 44,
+    "statisticSignals" : 270,
+    "statisticMetrics" : 135,
+    "incidents" : 30
+  },
+  "lineupV3Fixture" : {
+    "missingPlayers" : 4,
+    "statisticsPerPlayer" : 20,
+    "playersWithStatistics" : 44,
+    "captains" : 2,
+    "ratingVersionsPerPlayer" : 2
+  },
+  "warmupSeconds" : 0,
+  "requiredSteadySeconds" : 180,
+  "sustainedQualification" : false,
+  "manifestProof" : "synthetic-test-only; not an existing capacity qualification",
+  "candidateEndpointEnvelopes" : {
+    "EVENT_DETAILS" : {
+      "processingMillis" : 600,
+      "requestMillis" : 400
+    },
+    "EVENT_STATISTICS" : {
+      "processingMillis" : 500,
+      "requestMillis" : 350
+    },
+    "EVENT_INCIDENTS" : {
+      "processingMillis" : 500,
+      "requestMillis" : 400
+    },
+    "EVENT_LINEUPS" : {
+      "processingMillis" : 450,
+      "requestMillis" : 350
+    }
+  },
+  "candidateEnvelopeSource" : "historical v5 costs used only as starting hypotheses; no v6 qualification is inferred",
+  "candidateCapacityAtCurrentAdmission" : 7,
+  "admissionMode" : "7 matches under measurement; temporal admission is calculated separately from measured envelope validity",
+  "serverDelayPatternMs" : [ 0, 30, 80, 150 ],
+  "startedAt" : "2026-09-09T16:43:05.678082800Z",
+  "status" : "PASSED",
+  "productionDockerDfProbePerRequest" : true,
+  "effectiveRequestTimeoutMillis" : 30000,
+  "elapsedSeconds" : 180.0024807,
+  "steadyElapsedSeconds" : 180.0024807,
+  "uiReadsEveryFiveSeconds" : {
+    "maximum" : 0.024556,
+    "count" : 36,
+    "p95" : 0.0242108
+  },
+  "missedCycles" : 0,
+  "durableAttempts" : 48,
+  "receivedBytes" : 148111360,
+  "immutableObservations" : 35,
+  "familyScheduleRevisions" : 229,
+  "pressureDeferrals" : 35,
+  "durableDepartures" : 48,
+  "durableDepartureCompletions" : 48,
+  "durableCompleteTransportDiagnostics" : 48,
+  "workerAndChildrenClosed" : true,
+  "offScopeRequests" : 0,
+  "steadyMetrics" : {
+    "EVENT_DETAILS" : {
+      "countsPerEvent" : {
+        "17000001" : 2,
+        "17000002" : 2,
+        "17000003" : 2,
+        "17000004" : 2,
+        "17000005" : 2,
+        "17000006" : 2,
+        "17000007" : 1
+      },
+      "metricsPerEvent" : {
+        "17000001" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.3399362,
+            "count" : 1,
+            "p95" : 100.3399362
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 99.735,
+            "count" : 1,
+            "p95" : 99.735
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 99.0868148,
+            "count" : 1,
+            "p95" : 99.0868148
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 1.0252436,
+            "count" : 2,
+            "p95" : 1.0252436
+          }
+        },
+        "17000002" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.275646215,
+            "count" : 1,
+            "p95" : 100.275646215
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 99.984,
+            "count" : 1,
+            "p95" : 99.984
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 99.7540555,
+            "count" : 1,
+            "p95" : 99.7540555
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 0.794529315,
+            "count" : 2,
+            "p95" : 0.794529315
+          }
+        },
+        "17000003" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.284242129,
+            "count" : 1,
+            "p95" : 100.284242129
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 99.753,
+            "count" : 1,
+            "p95" : 99.753
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 99.5035864,
+            "count" : 1,
+            "p95" : 99.5035864
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 0.874815029,
+            "count" : 2,
+            "p95" : 0.874815029
+          }
+        },
+        "17000004" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.267085343,
+            "count" : 1,
+            "p95" : 100.267085343
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 99.908,
+            "count" : 1,
+            "p95" : 99.908
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 99.65683,
+            "count" : 1,
+            "p95" : 99.65683
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 0.747100743,
+            "count" : 2,
+            "p95" : 0.747100743
+          }
+        },
+        "17000005" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.287506558,
+            "count" : 1,
+            "p95" : 100.287506558
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 99.944,
+            "count" : 1,
+            "p95" : 99.944
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 99.7276488,
+            "count" : 1,
+            "p95" : 99.7276488
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 0.766386458,
+            "count" : 2,
+            "p95" : 0.766386458
+          }
+        },
+        "17000006" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.281059072,
+            "count" : 1,
+            "p95" : 100.281059072
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 100.012,
+            "count" : 1,
+            "p95" : 100.012
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 99.7934821,
+            "count" : 1,
+            "p95" : 99.7934821
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 0.776672172,
+            "count" : 2,
+            "p95" : 0.776672172
+          }
+        },
+        "17000007" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 0.863957886,
+            "count" : 1,
+            "p95" : 0.863957886
+          }
+        }
+      },
+      "receiptIntervalSeconds" : {
+        "maximum" : 100.012,
+        "count" : 6,
+        "p95" : 100.012
+      },
+      "availableIntervalSeconds" : {
+        "maximum" : 99.7934821,
+        "count" : 6,
+        "p95" : 99.7934821
+      },
+      "nominalLatenessSeconds" : {
+        "maximum" : 1.0252436,
+        "count" : 13,
+        "p95" : 1.0252436
+      },
+      "requestSeconds" : {
+        "maximum" : 0.8553123,
+        "count" : 13,
+        "p95" : 0.8553123
+      },
+      "processingIncludingSqlSeconds" : {
+        "maximum" : 0.8158015,
+        "count" : 13,
+        "p95" : 0.8158015
+      },
+      "httpSeconds" : {
+        "maximum" : 0.537,
+        "count" : 13,
+        "p95" : 0.537
+      },
+      "authorizationDelaySeconds" : {
+        "maximum" : 0.0221941,
+        "count" : 13,
+        "p95" : 0.0221941
+      },
+      "schedulerDeferralElapsedSeconds" : {
+        "maximum" : 0.0,
+        "count" : 13,
+        "p95" : 0.0
+      },
+      "limiterSleepSeconds" : {
+        "maximum" : 0.0,
+        "count" : 13,
+        "p95" : 0.0
+      },
+      "resilienceSqlSeconds" : {
+        "maximum" : 0.0367605,
+        "count" : 13,
+        "p95" : 0.0367605
+      },
+      "candidateEnvelopesPassed" : false,
+      "initialMaximumBodyRequestSeconds" : {
+        "maximum" : 0.8553123,
+        "count" : 7,
+        "p95" : 0.8553123
+      },
+      "initialMaximumBodyProcessingSeconds" : {
+        "maximum" : 0.8158015,
+        "count" : 7,
+        "p95" : 0.8158015
+      }
+    },
+    "EVENT_INCIDENTS" : {
+      "countsPerEvent" : {
+        "17000001" : 2,
+        "17000002" : 2,
+        "17000003" : 2,
+        "17000004" : 2,
+        "17000005" : 2,
+        "17000006" : 2,
+        "17000007" : 1
+      },
+      "metricsPerEvent" : {
+        "17000001" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.3399362,
+            "count" : 1,
+            "p95" : 100.3399362
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 99.24,
+            "count" : 1,
+            "p95" : 99.24
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 98.9701306,
+            "count" : 1,
+            "p95" : 98.9701306
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 4.0142436,
+            "count" : 2,
+            "p95" : 4.0142436
+          }
+        },
+        "17000002" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.275646215,
+            "count" : 1,
+            "p95" : 100.275646215
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 99.371,
+            "count" : 1,
+            "p95" : 99.371
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 99.1652813,
+            "count" : 1,
+            "p95" : 99.1652813
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 3.774529315,
+            "count" : 2,
+            "p95" : 3.774529315
+          }
+        },
+        "17000003" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.284242129,
+            "count" : 1,
+            "p95" : 100.284242129
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 99.316,
+            "count" : 1,
+            "p95" : 99.316
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 99.0957545,
+            "count" : 1,
+            "p95" : 99.0957545
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 3.689815029,
+            "count" : 2,
+            "p95" : 3.689815029
+          }
+        },
+        "17000004" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.267085343,
+            "count" : 1,
+            "p95" : 100.267085343
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 99.453,
+            "count" : 1,
+            "p95" : 99.453
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 99.2105487,
+            "count" : 1,
+            "p95" : 99.2105487
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 3.644100743,
+            "count" : 2,
+            "p95" : 3.644100743
+          }
+        },
+        "17000005" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.287506558,
+            "count" : 1,
+            "p95" : 100.287506558
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 99.55,
+            "count" : 1,
+            "p95" : 99.55
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 99.3576488,
+            "count" : 1,
+            "p95" : 99.3576488
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 3.659386458,
+            "count" : 2,
+            "p95" : 3.659386458
+          }
+        },
+        "17000006" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.281059072,
+            "count" : 1,
+            "p95" : 100.281059072
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 99.388,
+            "count" : 1,
+            "p95" : 99.388
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 99.1861335,
+            "count" : 1,
+            "p95" : 99.1861335
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 3.759672172,
+            "count" : 2,
+            "p95" : 3.759672172
+          }
+        },
+        "17000007" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 3.672957886,
+            "count" : 1,
+            "p95" : 3.672957886
+          }
+        }
+      },
+      "receiptIntervalSeconds" : {
+        "maximum" : 99.55,
+        "count" : 6,
+        "p95" : 99.55
+      },
+      "availableIntervalSeconds" : {
+        "maximum" : 99.3576488,
+        "count" : 6,
+        "p95" : 99.3576488
+      },
+      "nominalLatenessSeconds" : {
+        "maximum" : 4.0142436,
+        "count" : 13,
+        "p95" : 4.0142436
+      },
+      "requestSeconds" : {
+        "maximum" : 0.7231396,
+        "count" : 13,
+        "p95" : 0.7231396
+      },
+      "processingIncludingSqlSeconds" : {
+        "maximum" : 0.5457089,
+        "count" : 13,
+        "p95" : 0.5457089
+      },
+      "httpSeconds" : {
+        "maximum" : 0.569,
+        "count" : 13,
+        "p95" : 0.569
+      },
+      "authorizationDelaySeconds" : {
+        "maximum" : 0.0188917,
+        "count" : 13,
+        "p95" : 0.0188917
+      },
+      "schedulerDeferralElapsedSeconds" : {
+        "maximum" : 1.9714131,
+        "count" : 13,
+        "p95" : 1.9714131
+      },
+      "limiterSleepSeconds" : {
+        "maximum" : 0.0,
+        "count" : 13,
+        "p95" : 0.0
+      },
+      "resilienceSqlSeconds" : {
+        "maximum" : 0.0365279,
+        "count" : 13,
+        "p95" : 0.0365279
+      },
+      "candidateEnvelopesPassed" : false,
+      "initialMaximumBodyRequestSeconds" : {
+        "maximum" : 0.7231396,
+        "count" : 7,
+        "p95" : 0.7231396
+      },
+      "initialMaximumBodyProcessingSeconds" : {
+        "maximum" : 0.5457089,
+        "count" : 7,
+        "p95" : 0.5457089
+      }
+    },
+    "EVENT_STATISTICS" : {
+      "countsPerEvent" : {
+        "17000001" : 2,
+        "17000002" : 2,
+        "17000003" : 2,
+        "17000004" : 2,
+        "17000005" : 2,
+        "17000006" : 2,
+        "17000007" : 1
+      },
+      "metricsPerEvent" : {
+        "17000001" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.3399362,
+            "count" : 1,
+            "p95" : 100.3399362
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 98.561,
+            "count" : 1,
+            "p95" : 98.561
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 98.3690154,
+            "count" : 1,
+            "p95" : 98.3690154
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 7.0512436,
+            "count" : 2,
+            "p95" : 7.0512436
+          }
+        },
+        "17000002" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.275646215,
+            "count" : 1,
+            "p95" : 100.275646215
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 98.963,
+            "count" : 1,
+            "p95" : 98.963
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 98.7332724,
+            "count" : 1,
+            "p95" : 98.7332724
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 6.571529315,
+            "count" : 2,
+            "p95" : 6.571529315
+          }
+        },
+        "17000003" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.284242129,
+            "count" : 1,
+            "p95" : 100.284242129
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 98.737,
+            "count" : 1,
+            "p95" : 98.737
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 98.5528554,
+            "count" : 1,
+            "p95" : 98.5528554
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 6.719815029,
+            "count" : 2,
+            "p95" : 6.719815029
+          }
+        },
+        "17000004" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.267085343,
+            "count" : 1,
+            "p95" : 100.267085343
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 99.029,
+            "count" : 1,
+            "p95" : 99.029
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 98.7970409,
+            "count" : 1,
+            "p95" : 98.7970409
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 6.579100743,
+            "count" : 2,
+            "p95" : 6.579100743
+          }
+        },
+        "17000005" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.287506558,
+            "count" : 1,
+            "p95" : 100.287506558
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 98.96,
+            "count" : 1,
+            "p95" : 98.96
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 98.7873557,
+            "count" : 1,
+            "p95" : 98.7873557
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 6.591386458,
+            "count" : 2,
+            "p95" : 6.591386458
+          }
+        },
+        "17000006" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.281059072,
+            "count" : 1,
+            "p95" : 100.281059072
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 98.935,
+            "count" : 1,
+            "p95" : 98.935
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 98.7141234,
+            "count" : 1,
+            "p95" : 98.7141234
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 6.589672172,
+            "count" : 2,
+            "p95" : 6.589672172
+          }
+        },
+        "17000007" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 6.509957886,
+            "count" : 1,
+            "p95" : 6.509957886
+          }
+        }
+      },
+      "receiptIntervalSeconds" : {
+        "maximum" : 99.029,
+        "count" : 6,
+        "p95" : 99.029
+      },
+      "availableIntervalSeconds" : {
+        "maximum" : 98.7970409,
+        "count" : 6,
+        "p95" : 98.7970409
+      },
+      "nominalLatenessSeconds" : {
+        "maximum" : 7.0512436,
+        "count" : 13,
+        "p95" : 7.0512436
+      },
+      "requestSeconds" : {
+        "maximum" : 0.7725107,
+        "count" : 13,
+        "p95" : 0.7725107
+      },
+      "processingIncludingSqlSeconds" : {
+        "maximum" : 0.6687852,
+        "count" : 13,
+        "p95" : 0.6687852
+      },
+      "httpSeconds" : {
+        "maximum" : 0.625,
+        "count" : 13,
+        "p95" : 0.625
+      },
+      "authorizationDelaySeconds" : {
+        "maximum" : 0.0166991,
+        "count" : 13,
+        "p95" : 0.0166991
+      },
+      "schedulerDeferralElapsedSeconds" : {
+        "maximum" : 1.9522933,
+        "count" : 13,
+        "p95" : 1.9522933
+      },
+      "limiterSleepSeconds" : {
+        "maximum" : 0.0,
+        "count" : 13,
+        "p95" : 0.0
+      },
+      "resilienceSqlSeconds" : {
+        "maximum" : 0.0358631,
+        "count" : 13,
+        "p95" : 0.0358631
+      },
+      "candidateEnvelopesPassed" : false,
+      "initialMaximumBodyRequestSeconds" : {
+        "maximum" : 0.7725107,
+        "count" : 7,
+        "p95" : 0.7725107
+      },
+      "initialMaximumBodyProcessingSeconds" : {
+        "maximum" : 0.6687852,
+        "count" : 7,
+        "p95" : 0.6687852
+      }
+    },
+    "EVENT_LINEUPS" : {
+      "countsPerEvent" : {
+        "17000001" : 1,
+        "17000002" : 2,
+        "17000003" : 1,
+        "17000004" : 1,
+        "17000005" : 2,
+        "17000006" : 1,
+        "17000007" : 1
+      },
+      "metricsPerEvent" : {
+        "17000001" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 9.8782436,
+            "count" : 1,
+            "p95" : 9.8782436
+          }
+        },
+        "17000002" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.275646215,
+            "count" : 1,
+            "p95" : 100.275646215
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 98.495,
+            "count" : 1,
+            "p95" : 98.495
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 98.2583345,
+            "count" : 1,
+            "p95" : 98.2583345
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 9.464529315,
+            "count" : 2,
+            "p95" : 9.464529315
+          }
+        },
+        "17000003" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 9.611815029,
+            "count" : 1,
+            "p95" : 9.611815029
+          }
+        },
+        "17000004" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 9.588100743,
+            "count" : 1,
+            "p95" : 9.588100743
+          }
+        },
+        "17000005" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 100.287506558,
+            "count" : 1,
+            "p95" : 100.287506558
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 98.554,
+            "count" : 1,
+            "p95" : 98.554
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 98.3150604,
+            "count" : 1,
+            "p95" : 98.3150604
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 9.383386458,
+            "count" : 2,
+            "p95" : 9.383386458
+          }
+        },
+        "17000006" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 9.437672172,
+            "count" : 1,
+            "p95" : 9.437672172
+          }
+        },
+        "17000007" : {
+          "nominalIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "receiptIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "availableIntervalSeconds" : {
+            "maximum" : 0.0,
+            "count" : 0,
+            "p95" : 0.0
+          },
+          "nominalLatenessSeconds" : {
+            "maximum" : 9.392957886,
+            "count" : 1,
+            "p95" : 9.392957886
+          }
+        }
+      },
+      "receiptIntervalSeconds" : {
+        "maximum" : 98.554,
+        "count" : 2,
+        "p95" : 98.554
+      },
+      "availableIntervalSeconds" : {
+        "maximum" : 98.3150604,
+        "count" : 2,
+        "p95" : 98.3150604
+      },
+      "nominalLatenessSeconds" : {
+        "maximum" : 9.8782436,
+        "count" : 9,
+        "p95" : 9.8782436
+      },
+      "requestSeconds" : {
+        "maximum" : 0.7381921,
+        "count" : 9,
+        "p95" : 0.7381921
+      },
+      "processingIncludingSqlSeconds" : {
+        "maximum" : 0.5653261,
+        "count" : 9,
+        "p95" : 0.5653261
+      },
+      "httpSeconds" : {
+        "maximum" : 0.6,
+        "count" : 9,
+        "p95" : 0.6
+      },
+      "authorizationDelaySeconds" : {
+        "maximum" : 0.0208587,
+        "count" : 9,
+        "p95" : 0.0208587
+      },
+      "schedulerDeferralElapsedSeconds" : {
+        "maximum" : 1.9512837,
+        "count" : 9,
+        "p95" : 1.9512837
+      },
+      "limiterSleepSeconds" : {
+        "maximum" : 0.0,
+        "count" : 9,
+        "p95" : 0.0
+      },
+      "resilienceSqlSeconds" : {
+        "maximum" : 0.0392654,
+        "count" : 9,
+        "p95" : 0.0392654
+      },
+      "candidateEnvelopesPassed" : false,
+      "initialMaximumBodyRequestSeconds" : {
+        "maximum" : 0.7381921,
+        "count" : 7,
+        "p95" : 0.7381921
+      },
+      "initialMaximumBodyProcessingSeconds" : {
+        "maximum" : 0.5653261,
+        "count" : 7,
+        "p95" : 0.5653261
+      }
+    }
+  },
+  "initialMetrics" : {
+    "EVENT_DETAILS" : {
+      "requestSeconds" : {
+        "maximum" : 0.0,
+        "count" : 0,
+        "p95" : 0.0
+      },
+      "nominalLatenessSeconds" : {
+        "maximum" : 0.0,
+        "count" : 0,
+        "p95" : 0.0
+      },
+      "processingIncludingSqlSeconds" : {
+        "maximum" : 0.0,
+        "count" : 0,
+        "p95" : 0.0
+      }
+    },
+    "EVENT_INCIDENTS" : {
+      "requestSeconds" : {
+        "maximum" : 0.0,
+        "count" : 0,
+        "p95" : 0.0
+      },
+      "nominalLatenessSeconds" : {
+        "maximum" : 0.0,
+        "count" : 0,
+        "p95" : 0.0
+      },
+      "processingIncludingSqlSeconds" : {
+        "maximum" : 0.0,
+        "count" : 0,
+        "p95" : 0.0
+      }
+    },
+    "EVENT_STATISTICS" : {
+      "requestSeconds" : {
+        "maximum" : 0.0,
+        "count" : 0,
+        "p95" : 0.0
+      },
+      "nominalLatenessSeconds" : {
+        "maximum" : 0.0,
+        "count" : 0,
+        "p95" : 0.0
+      },
+      "processingIncludingSqlSeconds" : {
+        "maximum" : 0.0,
+        "count" : 0,
+        "p95" : 0.0
+      }
+    },
+    "EVENT_LINEUPS" : {
+      "requestSeconds" : {
+        "maximum" : 0.0,
+        "count" : 0,
+        "p95" : 0.0
+      },
+      "nominalLatenessSeconds" : {
+        "maximum" : 0.0,
+        "count" : 0,
+        "p95" : 0.0
+      },
+      "processingIncludingSqlSeconds" : {
+        "maximum" : 0.0,
+        "count" : 0,
+        "p95" : 0.0
+      }
+    }
+  },
+  "criticalPublicationQueueDebtSeconds" : {
+    "maximum" : 7.3274118,
+    "count" : 39,
+    "p95" : 6.989516029
+  },
+  "queueDebtFirstQuarterP95Seconds" : 7.3274118,
+  "queueDebtLastQuarterP95Seconds" : 5.4241802,
+  "initialPhaseRequests" : 0,
+  "initialPhaseMaximumReceiptLatenessSeconds" : 0.0,
+  "minimumObservedBetweenGroupGapSeconds" : 4.6602714,
+  "observedMinimumPostCompletionDelaySeconds" : 2.312349,
+  "observedMaximumDeparturesPer60Seconds" : 18,
+  "observedMaximumDeparturesPerHour" : 48,
+  "observedMaximumWireArrivalsPer60Seconds" : 18,
+  "observedMaximumWireArrivalsPerHour" : 48,
+  "rollingWindowDefinition" : "requestedAt in (t-window,t], all samples including initialization; sub-hour run does not prove a saturated full hour",
+  "finishedAt" : "2026-09-09T16:46:15.117482400Z",
+  "requests" : 48,
+  "samples" : [ {
+    "providerEventId" : 17000001,
+    "endpoint" : "EVENT_DETAILS",
+    "round" : 0,
+    "groupId" : "743b9055-6631-34f1-8868-d5a52a22f04a",
+    "dueNanos" : 0,
+    "receivedNanos" : 1025243600,
+    "committedNanos" : 1721999400,
+    "requestNanos" : 855312300,
+    "processingNanos" : 815801500,
+    "serverArrivalNanos" : 518874900,
+    "responseCompleteNanos" : 1182546100,
+    "serverDelayMillis" : 30,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 500243600,
+    "httpNanos" : 525000000,
+    "authorizationDelayNanos" : 22194100,
+    "pressureElapsedNanos" : 0,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 36760500,
+    "resilienceFinishedNanos" : 1169840600
+  }, {
+    "providerEventId" : 17000001,
+    "endpoint" : "EVENT_INCIDENTS",
+    "round" : 0,
+    "groupId" : "743b9055-6631-34f1-8868-d5a52a22f04a",
+    "dueNanos" : 0,
+    "receivedNanos" : 4014243600,
+    "committedNanos" : 4356178300,
+    "requestNanos" : 654929100,
+    "processingNanos" : 545708900,
+    "serverArrivalNanos" : 3520188300,
+    "responseCompleteNanos" : 4107520700,
+    "serverDelayMillis" : 80,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 3516243600,
+    "httpNanos" : 498000000,
+    "authorizationDelayNanos" : 17769300,
+    "pressureElapsedNanos" : 1465012700,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 36527900,
+    "resilienceFinishedNanos" : 4098756600
+  }, {
+    "providerEventId" : 17000001,
+    "endpoint" : "EVENT_STATISTICS",
+    "round" : 0,
+    "groupId" : "743b9055-6631-34f1-8868-d5a52a22f04a",
+    "dueNanos" : 0,
+    "receivedNanos" : 7051243600,
+    "committedNanos" : 7327411800,
+    "requestNanos" : 772510700,
+    "processingNanos" : 478183300,
+    "serverArrivalNanos" : 6431114500,
+    "responseCompleteNanos" : 7138511800,
+    "serverDelayMillis" : 150,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 6426243600,
+    "httpNanos" : 625000000,
+    "authorizationDelayNanos" : 16445400,
+    "pressureElapsedNanos" : 1747264500,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 35863100,
+    "resilienceFinishedNanos" : 7128328600
+  }, {
+    "providerEventId" : 17000001,
+    "endpoint" : "EVENT_LINEUPS",
+    "round" : 0,
+    "groupId" : "743b9055-6631-34f1-8868-d5a52a22f04a",
+    "dueNanos" : 0,
+    "receivedNanos" : 9878243600,
+    "committedNanos" : 10248550300,
+    "requestNanos" : 573314400,
+    "processingNanos" : 565326100,
+    "serverArrivalNanos" : 9455039000,
+    "responseCompleteNanos" : 9956100300,
+    "serverDelayMillis" : 0,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 9450243600,
+    "httpNanos" : 428000000,
+    "authorizationDelayNanos" : 14821200,
+    "pressureElapsedNanos" : 1801122800,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 32241500,
+    "resilienceFinishedNanos" : 9946441600
+  }, {
+    "providerEventId" : 17000002,
+    "endpoint" : "EVENT_DETAILS",
+    "round" : 1,
+    "groupId" : "9a293fd1-afde-3e29-b577-b9cf3c9f0214",
+    "dueNanos" : 14285714285,
+    "receivedNanos" : 15080243600,
+    "committedNanos" : 15358218100,
+    "requestNanos" : 604696400,
+    "processingNanos" : 462893500,
+    "serverArrivalNanos" : 14616371700,
+    "responseCompleteNanos" : 15156500400,
+    "serverDelayMillis" : 80,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 14612243600,
+    "httpNanos" : 468000000,
+    "authorizationDelayNanos" : 16342900,
+    "pressureElapsedNanos" : 0,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 28864100,
+    "resilienceFinishedNanos" : 15148216600
+  }, {
+    "providerEventId" : 17000002,
+    "endpoint" : "EVENT_INCIDENTS",
+    "round" : 1,
+    "groupId" : "9a293fd1-afde-3e29-b577-b9cf3c9f0214",
+    "dueNanos" : 14285714285,
+    "receivedNanos" : 18060243600,
+    "committedNanos" : 18344550600,
+    "requestNanos" : 723139600,
+    "processingNanos" : 488014500,
+    "serverArrivalNanos" : 17496693800,
+    "responseCompleteNanos" : 18146556600,
+    "serverDelayMillis" : 150,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 17491243600,
+    "httpNanos" : 569000000,
+    "authorizationDelayNanos" : 15164300,
+    "pressureElapsedNanos" : 1792457000,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 31656100,
+    "resilienceFinishedNanos" : 18138785600
+  }, {
+    "providerEventId" : 17000002,
+    "endpoint" : "EVENT_STATISTICS",
+    "round" : 1,
+    "groupId" : "9a293fd1-afde-3e29-b577-b9cf3c9f0214",
+    "dueNanos" : 14285714285,
+    "receivedNanos" : 20857243600,
+    "committedNanos" : 21159736300,
+    "requestNanos" : 552096600,
+    "processingNanos" : 491009600,
+    "serverArrivalNanos" : 20464434500,
+    "responseCompleteNanos" : 20953734500,
+    "serverDelayMillis" : 0,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 20460243600,
+    "httpNanos" : 397000000,
+    "authorizationDelayNanos" : 16402500,
+    "pressureElapsedNanos" : 1796941800,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 30635600,
+    "resilienceFinishedNanos" : 20945602600
+  }, {
+    "providerEventId" : 17000002,
+    "endpoint" : "EVENT_LINEUPS",
+    "round" : 1,
+    "groupId" : "9a293fd1-afde-3e29-b577-b9cf3c9f0214",
+    "dueNanos" : 14285714285,
+    "receivedNanos" : 23750243600,
+    "committedNanos" : 24094910200,
+    "requestNanos" : 626544900,
+    "processingNanos" : 534875400,
+    "serverArrivalNanos" : 23294644400,
+    "responseCompleteNanos" : 23846522000,
+    "serverDelayMillis" : 30,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 23286243600,
+    "httpNanos" : 464000000,
+    "authorizationDelayNanos" : 20858700,
+    "pressureElapsedNanos" : 1792023600,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 39265400,
+    "resilienceFinishedNanos" : 23836478600
+  }, {
+    "providerEventId" : 17000003,
+    "endpoint" : "EVENT_DETAILS",
+    "round" : 2,
+    "groupId" : "fe0e7229-9d42-3058-baf8-2def40c23846",
+    "dueNanos" : 28571428571,
+    "receivedNanos" : 29446243600,
+    "committedNanos" : 29745574800,
+    "requestNanos" : 674523700,
+    "processingNanos" : 483663700,
+    "serverArrivalNanos" : 28920451400,
+    "responseCompleteNanos" : 29521459000,
+    "serverDelayMillis" : 150,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 28915243600,
+    "httpNanos" : 531000000,
+    "authorizationDelayNanos" : 16552000,
+    "pressureElapsedNanos" : 0,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 29746800,
+    "resilienceFinishedNanos" : 29512844600
+  }, {
+    "providerEventId" : 17000003,
+    "endpoint" : "EVENT_INCIDENTS",
+    "round" : 2,
+    "groupId" : "fe0e7229-9d42-3058-baf8-2def40c23846",
+    "dueNanos" : 28571428571,
+    "receivedNanos" : 32261243600,
+    "committedNanos" : 32548352800,
+    "requestNanos" : 563209000,
+    "processingNanos" : 510066100,
+    "serverArrivalNanos" : 31839473300,
+    "responseCompleteNanos" : 32337384500,
+    "serverDelayMillis" : 0,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 31835243600,
+    "httpNanos" : 426000000,
+    "authorizationDelayNanos" : 15536500,
+    "pressureElapsedNanos" : 1769294000,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 32555100,
+    "resilienceFinishedNanos" : 32329015600
+  }, {
+    "providerEventId" : 17000003,
+    "endpoint" : "EVENT_STATISTICS",
+    "round" : 2,
+    "groupId" : "fe0e7229-9d42-3058-baf8-2def40c23846",
+    "dueNanos" : 28571428571,
+    "receivedNanos" : 35291243600,
+    "committedNanos" : 35560944600,
+    "requestNanos" : 583513900,
+    "processingNanos" : 668785200,
+    "serverArrivalNanos" : 34849562200,
+    "responseCompleteNanos" : 35363734200,
+    "serverDelayMillis" : 30,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 34844243600,
+    "httpNanos" : 447000000,
+    "authorizationDelayNanos" : 14566100,
+    "pressureElapsedNanos" : 1784889100,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 30429800,
+    "resilienceFinishedNanos" : 35355204600
+  }, {
+    "providerEventId" : 17000003,
+    "endpoint" : "EVENT_LINEUPS",
+    "round" : 2,
+    "groupId" : "fe0e7229-9d42-3058-baf8-2def40c23846",
+    "dueNanos" : 28571428571,
+    "receivedNanos" : 38183243600,
+    "committedNanos" : 38517914300,
+    "requestNanos" : 648886000,
+    "processingNanos" : 519803400,
+    "serverArrivalNanos" : 37686203500,
+    "responseCompleteNanos" : 38270882800,
+    "serverDelayMillis" : 80,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 37682243600,
+    "httpNanos" : 501000000,
+    "authorizationDelayNanos" : 15786600,
+    "pressureElapsedNanos" : 1789957500,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 31824300,
+    "resilienceFinishedNanos" : 38262612600
+  }, {
+    "providerEventId" : 17000004,
+    "endpoint" : "EVENT_DETAILS",
+    "round" : 3,
+    "groupId" : "d981fbe4-1e2d-3bf4-8e1f-8699748b543f",
+    "dueNanos" : 42857142857,
+    "receivedNanos" : 43604243600,
+    "committedNanos" : 43903166000,
+    "requestNanos" : 575241000,
+    "processingNanos" : 468167400,
+    "serverArrivalNanos" : 43185675600,
+    "responseCompleteNanos" : 43689566300,
+    "serverDelayMillis" : 0,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 43180243600,
+    "httpNanos" : 424000000,
+    "authorizationDelayNanos" : 17132200,
+    "pressureElapsedNanos" : 0,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 28072700,
+    "resilienceFinishedNanos" : 43681469600
+  }, {
+    "providerEventId" : 17000004,
+    "endpoint" : "EVENT_INCIDENTS",
+    "round" : 3,
+    "groupId" : "d981fbe4-1e2d-3bf4-8e1f-8699748b543f",
+    "dueNanos" : 42857142857,
+    "receivedNanos" : 46501243600,
+    "committedNanos" : 46810589700,
+    "requestNanos" : 630277800,
+    "processingNanos" : 520007400,
+    "serverArrivalNanos" : 46031458300,
+    "responseCompleteNanos" : 46595065400,
+    "serverDelayMillis" : 30,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 46026243600,
+    "httpNanos" : 475000000,
+    "authorizationDelayNanos" : 18891700,
+    "pressureElapsedNanos" : 1786838400,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 35318600,
+    "resilienceFinishedNanos" : 46585299600
+  }, {
+    "providerEventId" : 17000004,
+    "endpoint" : "EVENT_STATISTICS",
+    "round" : 3,
+    "groupId" : "d981fbe4-1e2d-3bf4-8e1f-8699748b543f",
+    "dueNanos" : 42857142857,
+    "receivedNanos" : 49436243600,
+    "committedNanos" : 49751367500,
+    "requestNanos" : 670429300,
+    "processingNanos" : 507113800,
+    "serverArrivalNanos" : 48922156400,
+    "responseCompleteNanos" : 49531913400,
+    "serverDelayMillis" : 80,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 48918243600,
+    "httpNanos" : 518000000,
+    "authorizationDelayNanos" : 16351000,
+    "pressureElapsedNanos" : 1785320500,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 33230100,
+    "resilienceFinishedNanos" : 49523552600
+  }, {
+    "providerEventId" : 17000004,
+    "endpoint" : "EVENT_LINEUPS",
+    "round" : 3,
+    "groupId" : "d981fbe4-1e2d-3bf4-8e1f-8699748b543f",
+    "dueNanos" : 42857142857,
+    "receivedNanos" : 52445243600,
+    "committedNanos" : 52738491700,
+    "requestNanos" : 738192100,
+    "processingNanos" : 485739300,
+    "serverArrivalNanos" : 51849218300,
+    "responseCompleteNanos" : 52527380000,
+    "serverDelayMillis" : 150,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 51845243600,
+    "httpNanos" : 600000000,
+    "authorizationDelayNanos" : 15480100,
+    "pressureElapsedNanos" : 1785013300,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 32077500,
+    "resilienceFinishedNanos" : 52519821600
+  }, {
+    "providerEventId" : 17000005,
+    "endpoint" : "EVENT_DETAILS",
+    "round" : 4,
+    "groupId" : "7b6589d0-08b9-33d5-8fff-617de9a7013b",
+    "dueNanos" : 57142857142,
+    "receivedNanos" : 57909243600,
+    "committedNanos" : 58174290600,
+    "requestNanos" : 572105000,
+    "processingNanos" : 440291200,
+    "serverArrivalNanos" : 57495487600,
+    "responseCompleteNanos" : 57994417400,
+    "serverDelayMillis" : 30,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 57491243600,
+    "httpNanos" : 418000000,
+    "authorizationDelayNanos" : 16769300,
+    "pressureElapsedNanos" : 0,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 28598300,
+    "resilienceFinishedNanos" : 57987337600
+  }, {
+    "providerEventId" : 17000005,
+    "endpoint" : "EVENT_INCIDENTS",
+    "round" : 4,
+    "groupId" : "7b6589d0-08b9-33d5-8fff-617de9a7013b",
+    "dueNanos" : 57142857142,
+    "receivedNanos" : 60802243600,
+    "committedNanos" : 61066974900,
+    "requestNanos" : 615763000,
+    "processingNanos" : 484977500,
+    "serverArrivalNanos" : 60315566200,
+    "responseCompleteNanos" : 60871856200,
+    "serverDelayMillis" : 80,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 60311243600,
+    "httpNanos" : 491000000,
+    "authorizationDelayNanos" : 15333500,
+    "pressureElapsedNanos" : 1821645800,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 31082500,
+    "resilienceFinishedNanos" : 60865542600
+  }, {
+    "providerEventId" : 17000005,
+    "endpoint" : "EVENT_STATISTICS",
+    "round" : 4,
+    "groupId" : "7b6589d0-08b9-33d5-8fff-617de9a7013b",
+    "dueNanos" : 57142857142,
+    "receivedNanos" : 63734243600,
+    "committedNanos" : 63972888400,
+    "requestNanos" : 678250700,
+    "processingNanos" : 458401400,
+    "serverArrivalNanos" : 63192426500,
+    "responseCompleteNanos" : 63804438200,
+    "serverDelayMillis" : 150,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 63187243600,
+    "httpNanos" : 547000000,
+    "authorizationDelayNanos" : 15171700,
+    "pressureElapsedNanos" : 1783826800,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 32759700,
+    "resilienceFinishedNanos" : 63795614600
+  }, {
+    "providerEventId" : 17000005,
+    "endpoint" : "EVENT_LINEUPS",
+    "round" : 4,
+    "groupId" : "7b6589d0-08b9-33d5-8fff-617de9a7013b",
+    "dueNanos" : 57142857142,
+    "receivedNanos" : 66526243600,
+    "committedNanos" : 66872047500,
+    "requestNanos" : 575107900,
+    "processingNanos" : 499422300,
+    "serverArrivalNanos" : 66127724300,
+    "responseCompleteNanos" : 66642496900,
+    "serverDelayMillis" : 0,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 66122243600,
+    "httpNanos" : 404000000,
+    "authorizationDelayNanos" : 15810300,
+    "pressureElapsedNanos" : 1840221600,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 31177600,
+    "resilienceFinishedNanos" : 66635315600
+  }, {
+    "providerEventId" : 17000006,
+    "endpoint" : "EVENT_DETAILS",
+    "round" : 5,
+    "groupId" : "60559722-f88e-3560-aa9d-2b3a981e5cde",
+    "dueNanos" : 71428571428,
+    "receivedNanos" : 72205243600,
+    "committedNanos" : 72478794200,
+    "requestNanos" : 597114700,
+    "processingNanos" : 433923000,
+    "serverArrivalNanos" : 71761442900,
+    "responseCompleteNanos" : 72298014800,
+    "serverDelayMillis" : 80,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 71756243600,
+    "httpNanos" : 449000000,
+    "authorizationDelayNanos" : 15375200,
+    "pressureElapsedNanos" : 0,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 25557100,
+    "resilienceFinishedNanos" : 72291168600
+  }, {
+    "providerEventId" : 17000006,
+    "endpoint" : "EVENT_INCIDENTS",
+    "round" : 5,
+    "groupId" : "60559722-f88e-3560-aa9d-2b3a981e5cde",
+    "dueNanos" : 71428571428,
+    "receivedNanos" : 75188243600,
+    "committedNanos" : 75462471900,
+    "requestNanos" : 716691800,
+    "processingNanos" : 469900300,
+    "serverArrivalNanos" : 74632533600,
+    "responseCompleteNanos" : 75275362500,
+    "serverDelayMillis" : 150,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 74628243600,
+    "httpNanos" : 560000000,
+    "authorizationDelayNanos" : 16610000,
+    "pressureElapsedNanos" : 1826824100,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 30403700,
+    "resilienceFinishedNanos" : 75268495600
+  }, {
+    "providerEventId" : 17000006,
+    "endpoint" : "EVENT_STATISTICS",
+    "round" : 5,
+    "groupId" : "60559722-f88e-3560-aa9d-2b3a981e5cde",
+    "dueNanos" : 71428571428,
+    "receivedNanos" : 78018243600,
+    "committedNanos" : 78321780200,
+    "requestNanos" : 585346600,
+    "processingNanos" : 486747000,
+    "serverArrivalNanos" : 77597324700,
+    "responseCompleteNanos" : 78116422500,
+    "serverDelayMillis" : 0,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 77591243600,
+    "httpNanos" : 427000000,
+    "authorizationDelayNanos" : 16388300,
+    "pressureElapsedNanos" : 1794300500,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 31838200,
+    "resilienceFinishedNanos" : 78108527600
+  }, {
+    "providerEventId" : 17000006,
+    "endpoint" : "EVENT_LINEUPS",
+    "round" : 5,
+    "groupId" : "60559722-f88e-3560-aa9d-2b3a981e5cde",
+    "dueNanos" : 71428571428,
+    "receivedNanos" : 80866243600,
+    "committedNanos" : 81165316700,
+    "requestNanos" : 562595500,
+    "processingNanos" : 506910300,
+    "serverArrivalNanos" : 80442042400,
+    "responseCompleteNanos" : 80941140600,
+    "serverDelayMillis" : 30,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 80438243600,
+    "httpNanos" : 428000000,
+    "authorizationDelayNanos" : 16469600,
+    "pressureElapsedNanos" : 1789255400,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 29982800,
+    "resilienceFinishedNanos" : 80934635600
+  }, {
+    "providerEventId" : 17000007,
+    "endpoint" : "EVENT_DETAILS",
+    "round" : 6,
+    "groupId" : "ae61155d-f4a5-3886-b525-9e3f5b4e5257",
+    "dueNanos" : 85714285714,
+    "receivedNanos" : 86578243600,
+    "committedNanos" : 86863252300,
+    "requestNanos" : 676057300,
+    "processingNanos" : 466077100,
+    "serverArrivalNanos" : 86045359400,
+    "responseCompleteNanos" : 86653829600,
+    "serverDelayMillis" : 150,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 86041243600,
+    "httpNanos" : 537000000,
+    "authorizationDelayNanos" : 15017500,
+    "pressureElapsedNanos" : 0,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 27397700,
+    "resilienceFinishedNanos" : 86645962600
+  }, {
+    "providerEventId" : 17000007,
+    "endpoint" : "EVENT_INCIDENTS",
+    "round" : 6,
+    "groupId" : "ae61155d-f4a5-3886-b525-9e3f5b4e5257",
+    "dueNanos" : 85714285714,
+    "receivedNanos" : 89387243600,
+    "committedNanos" : 89661888800,
+    "requestNanos" : 544932600,
+    "processingNanos" : 480686000,
+    "serverArrivalNanos" : 88984795000,
+    "responseCompleteNanos" : 89469966100,
+    "serverDelayMillis" : 0,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 88981243600,
+    "httpNanos" : 406000000,
+    "authorizationDelayNanos" : 16927100,
+    "pressureElapsedNanos" : 1801426400,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 33502400,
+    "resilienceFinishedNanos" : 89461442600
+  }, {
+    "providerEventId" : 17000007,
+    "endpoint" : "EVENT_STATISTICS",
+    "round" : 6,
+    "groupId" : "ae61155d-f4a5-3886-b525-9e3f5b4e5257",
+    "dueNanos" : 85714285714,
+    "receivedNanos" : 92224243600,
+    "committedNanos" : 92478441400,
+    "requestNanos" : 568050300,
+    "processingNanos" : 461570500,
+    "serverArrivalNanos" : 91785342200,
+    "responseCompleteNanos" : 92293797700,
+    "serverDelayMillis" : 30,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 91780243600,
+    "httpNanos" : 444000000,
+    "authorizationDelayNanos" : 16592700,
+    "pressureElapsedNanos" : 1807967300,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 31773200,
+    "resilienceFinishedNanos" : 92286526600
+  }, {
+    "providerEventId" : 17000007,
+    "endpoint" : "EVENT_LINEUPS",
+    "round" : 6,
+    "groupId" : "ae61155d-f4a5-3886-b525-9e3f5b4e5257",
+    "dueNanos" : 85714285714,
+    "receivedNanos" : 95107243600,
+    "committedNanos" : 95386278300,
+    "requestNanos" : 619003300,
+    "processingNanos" : 474825900,
+    "serverArrivalNanos" : 94622511700,
+    "responseCompleteNanos" : 95179284300,
+    "serverDelayMillis" : 80,
+    "bodyBytes" : 5242880,
+    "requestedNanos" : 94619243600,
+    "httpNanos" : 488000000,
+    "authorizationDelayNanos" : 14920900,
+    "pressureElapsedNanos" : 1829430000,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 28338700,
+    "resilienceFinishedNanos" : 95172711600
+  }, {
+    "providerEventId" : 17000001,
+    "endpoint" : "EVENT_DETAILS",
+    "round" : 7,
+    "groupId" : "4aebee8f-18f5-3c39-bdcc-f2004f23cbe4",
+    "dueNanos" : 100339936200,
+    "receivedNanos" : 100760243600,
+    "committedNanos" : 100808814200,
+    "requestNanos" : 177049100,
+    "processingNanos" : 291402600,
+    "serverArrivalNanos" : 100655550500,
+    "responseCompleteNanos" : 100769421600,
+    "serverDelayMillis" : 80,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 100650243600,
+    "httpNanos" : 110000000,
+    "authorizationDelayNanos" : 13860500,
+    "pressureElapsedNanos" : 0,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 24819800,
+    "resilienceFinishedNanos" : 100761372600
+  }, {
+    "providerEventId" : 17000001,
+    "endpoint" : "EVENT_INCIDENTS",
+    "round" : 7,
+    "groupId" : "4aebee8f-18f5-3c39-bdcc-f2004f23cbe4",
+    "dueNanos" : 100339936200,
+    "receivedNanos" : 103254243600,
+    "committedNanos" : 103326308900,
+    "requestNanos" : 241628200,
+    "processingNanos" : 336200000,
+    "serverArrivalNanos" : 103080287400,
+    "responseCompleteNanos" : 103264164900,
+    "serverDelayMillis" : 150,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 103076243600,
+    "httpNanos" : 178000000,
+    "authorizationDelayNanos" : 14097000,
+    "pressureElapsedNanos" : 1961992600,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 29496800,
+    "resilienceFinishedNanos" : 103256783600
+  }, {
+    "providerEventId" : 17000001,
+    "endpoint" : "EVENT_STATISTICS",
+    "round" : 7,
+    "groupId" : "4aebee8f-18f5-3c39-bdcc-f2004f23cbe4",
+    "dueNanos" : 100339936200,
+    "receivedNanos" : 105612243600,
+    "committedNanos" : 105696427200,
+    "requestNanos" : 96855800,
+    "processingNanos" : 350301200,
+    "serverArrivalNanos" : 105588296400,
+    "responseCompleteNanos" : 105622753200,
+    "serverDelayMillis" : 0,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 105584243600,
+    "httpNanos" : 28000000,
+    "authorizationDelayNanos" : 15962900,
+    "pressureElapsedNanos" : 1940492400,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 30869500,
+    "resilienceFinishedNanos" : 105613598600
+  }, {
+    "providerEventId" : 17000002,
+    "endpoint" : "EVENT_DETAILS",
+    "round" : 8,
+    "groupId" : "8c18964e-e7f3-35f6-9e7d-1df10bd146e6",
+    "dueNanos" : 114561360500,
+    "receivedNanos" : 115064243600,
+    "committedNanos" : 115112273600,
+    "requestNanos" : 243666000,
+    "processingNanos" : 296409900,
+    "serverArrivalNanos" : 114889784600,
+    "responseCompleteNanos" : 115071980500,
+    "serverDelayMillis" : 150,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 114886243600,
+    "httpNanos" : 178000000,
+    "authorizationDelayNanos" : 15812400,
+    "pressureElapsedNanos" : 0,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 26958000,
+    "resilienceFinishedNanos" : 115065743600
+  }, {
+    "providerEventId" : 17000002,
+    "endpoint" : "EVENT_INCIDENTS",
+    "round" : 8,
+    "groupId" : "8c18964e-e7f3-35f6-9e7d-1df10bd146e6",
+    "dueNanos" : 114561360500,
+    "receivedNanos" : 117431243600,
+    "committedNanos" : 117509831900,
+    "requestNanos" : 108794800,
+    "processingNanos" : 356293400,
+    "serverArrivalNanos" : 117395067900,
+    "responseCompleteNanos" : 117441132600,
+    "serverDelayMillis" : 0,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 117391243600,
+    "httpNanos" : 40000000,
+    "authorizationDelayNanos" : 15058800,
+    "pressureElapsedNanos" : 1947405400,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 30299800,
+    "resilienceFinishedNanos" : 117433618600
+  }, {
+    "providerEventId" : 17000002,
+    "endpoint" : "EVENT_STATISTICS",
+    "round" : 8,
+    "groupId" : "8c18964e-e7f3-35f6-9e7d-1df10bd146e6",
+    "dueNanos" : 114561360500,
+    "receivedNanos" : 119820243600,
+    "committedNanos" : 119893008700,
+    "requestNanos" : 124890600,
+    "processingNanos" : 345821200,
+    "serverArrivalNanos" : 119766793100,
+    "responseCompleteNanos" : 119829910900,
+    "serverDelayMillis" : 30,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 119762243600,
+    "httpNanos" : 58000000,
+    "authorizationDelayNanos" : 15230900,
+    "pressureElapsedNanos" : 1936581100,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 30926800,
+    "resilienceFinishedNanos" : 119822038600
+  }, {
+    "providerEventId" : 17000002,
+    "endpoint" : "EVENT_LINEUPS",
+    "round" : 8,
+    "groupId" : "8c18964e-e7f3-35f6-9e7d-1df10bd146e6",
+    "dueNanos" : 114561360500,
+    "receivedNanos" : 122245243600,
+    "committedNanos" : 122353244700,
+    "requestNanos" : 175137500,
+    "processingNanos" : 363747900,
+    "serverArrivalNanos" : 122141512500,
+    "responseCompleteNanos" : 122255745300,
+    "serverDelayMillis" : 80,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 122137243600,
+    "httpNanos" : 108000000,
+    "authorizationDelayNanos" : 13961900,
+    "pressureElapsedNanos" : 1937347000,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 29902900,
+    "resilienceFinishedNanos" : 122248297600
+  }, {
+    "providerEventId" : 17000003,
+    "endpoint" : "EVENT_DETAILS",
+    "round" : 9,
+    "groupId" : "50deb0a9-a5e3-3ea5-a87b-e274bb4f3bc4",
+    "dueNanos" : 128855670700,
+    "receivedNanos" : 129199243600,
+    "committedNanos" : 129249161200,
+    "requestNanos" : 91598400,
+    "processingNanos" : 297838600,
+    "serverArrivalNanos" : 129176667100,
+    "responseCompleteNanos" : 129207900300,
+    "serverDelayMillis" : 0,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 129173243600,
+    "httpNanos" : 26000000,
+    "authorizationDelayNanos" : 13635800,
+    "pressureElapsedNanos" : 0,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 25284200,
+    "resilienceFinishedNanos" : 129200623600
+  }, {
+    "providerEventId" : 17000003,
+    "endpoint" : "EVENT_INCIDENTS",
+    "round" : 9,
+    "groupId" : "50deb0a9-a5e3-3ea5-a87b-e274bb4f3bc4",
+    "dueNanos" : 128855670700,
+    "receivedNanos" : 131577243600,
+    "committedNanos" : 131644107300,
+    "requestNanos" : 121639500,
+    "processingNanos" : 347592400,
+    "serverArrivalNanos" : 131522946600,
+    "responseCompleteNanos" : 131586326300,
+    "serverDelayMillis" : 30,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 131519243600,
+    "httpNanos" : 58000000,
+    "authorizationDelayNanos" : 15025200,
+    "pressureElapsedNanos" : 1951990100,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 32147000,
+    "resilienceFinishedNanos" : 131578675600
+  }, {
+    "providerEventId" : 17000003,
+    "endpoint" : "EVENT_STATISTICS",
+    "round" : 9,
+    "groupId" : "50deb0a9-a5e3-3ea5-a87b-e274bb4f3bc4",
+    "dueNanos" : 128855670700,
+    "receivedNanos" : 134028243600,
+    "committedNanos" : 134113800000,
+    "requestNanos" : 182578400,
+    "processingNanos" : 350927000,
+    "serverArrivalNanos" : 133921720300,
+    "responseCompleteNanos" : 134037249800,
+    "serverDelayMillis" : 80,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 133916243600,
+    "httpNanos" : 112000000,
+    "authorizationDelayNanos" : 16699100,
+    "pressureElapsedNanos" : 1952293300,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 31203700,
+    "resilienceFinishedNanos" : 134029613600
+  }, {
+    "providerEventId" : 17000004,
+    "endpoint" : "EVENT_DETAILS",
+    "round" : 10,
+    "groupId" : "6cdf7b9f-ed5d-3d87-a5af-3f4095425f5a",
+    "dueNanos" : 143124228200,
+    "receivedNanos" : 143512243600,
+    "committedNanos" : 143559996000,
+    "requestNanos" : 122905600,
+    "processingNanos" : 292997100,
+    "serverArrivalNanos" : 143458504600,
+    "responseCompleteNanos" : 143521750000,
+    "serverDelayMillis" : 30,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 143454243600,
+    "httpNanos" : 58000000,
+    "authorizationDelayNanos" : 13916200,
+    "pressureElapsedNanos" : 0,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 26388300,
+    "resilienceFinishedNanos" : 143514583600
+  }, {
+    "providerEventId" : 17000004,
+    "endpoint" : "EVENT_INCIDENTS",
+    "round" : 10,
+    "groupId" : "6cdf7b9f-ed5d-3d87-a5af-3f4095425f5a",
+    "dueNanos" : 143124228200,
+    "receivedNanos" : 145954243600,
+    "committedNanos" : 146021138400,
+    "requestNanos" : 173264800,
+    "processingNanos" : 339128800,
+    "serverArrivalNanos" : 145850299700,
+    "responseCompleteNanos" : 145962825400,
+    "serverDelayMillis" : 80,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 145846243600,
+    "httpNanos" : 108000000,
+    "authorizationDelayNanos" : 15252900,
+    "pressureElapsedNanos" : 1971413100,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 29648000,
+    "resilienceFinishedNanos" : 145955404600
+  }, {
+    "providerEventId" : 17000004,
+    "endpoint" : "EVENT_STATISTICS",
+    "round" : 10,
+    "groupId" : "6cdf7b9f-ed5d-3d87-a5af-3f4095425f5a",
+    "dueNanos" : 143124228200,
+    "receivedNanos" : 148465243600,
+    "committedNanos" : 148548408400,
+    "requestNanos" : 242240700,
+    "processingNanos" : 349511400,
+    "serverArrivalNanos" : 148292216600,
+    "responseCompleteNanos" : 148473966100,
+    "serverDelayMillis" : 150,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 148288243600,
+    "httpNanos" : 177000000,
+    "authorizationDelayNanos" : 15524400,
+    "pressureElapsedNanos" : 1951699100,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 30028000,
+    "resilienceFinishedNanos" : 148467770600
+  }, {
+    "providerEventId" : 17000005,
+    "endpoint" : "EVENT_DETAILS",
+    "round" : 11,
+    "groupId" : "9b965df1-763f-3c37-8401-28084ab8ab72",
+    "dueNanos" : 157430363700,
+    "receivedNanos" : 157853243600,
+    "committedNanos" : 157901939400,
+    "requestNanos" : 172069100,
+    "processingNanos" : 291713900,
+    "serverArrivalNanos" : 157748833300,
+    "responseCompleteNanos" : 157862010300,
+    "serverDelayMillis" : 80,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 157745243600,
+    "httpNanos" : 108000000,
+    "authorizationDelayNanos" : 14501500,
+    "pressureElapsedNanos" : 0,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 25843400,
+    "resilienceFinishedNanos" : 157855200600
+  }, {
+    "providerEventId" : 17000005,
+    "endpoint" : "EVENT_INCIDENTS",
+    "round" : 11,
+    "groupId" : "9b965df1-763f-3c37-8401-28084ab8ab72",
+    "dueNanos" : 157430363700,
+    "receivedNanos" : 160352243600,
+    "committedNanos" : 160424623700,
+    "requestNanos" : 241614700,
+    "processingNanos" : 344569800,
+    "serverArrivalNanos" : 160178833000,
+    "responseCompleteNanos" : 160361963000,
+    "serverDelayMillis" : 150,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 160175243600,
+    "httpNanos" : 177000000,
+    "authorizationDelayNanos" : 14435000,
+    "pressureElapsedNanos" : 1967347000,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 29339600,
+    "resilienceFinishedNanos" : 160353894600
+  }, {
+    "providerEventId" : 17000005,
+    "endpoint" : "EVENT_STATISTICS",
+    "round" : 11,
+    "groupId" : "9b965df1-763f-3c37-8401-28084ab8ab72",
+    "dueNanos" : 157430363700,
+    "receivedNanos" : 162694243600,
+    "committedNanos" : 162760244100,
+    "requestNanos" : 90373500,
+    "processingNanos" : 331955500,
+    "serverArrivalNanos" : 162670673500,
+    "responseCompleteNanos" : 162702973200,
+    "serverDelayMillis" : 0,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 162666243600,
+    "httpNanos" : 28000000,
+    "authorizationDelayNanos" : 14565200,
+    "pressureElapsedNanos" : 1922345500,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 29171100,
+    "resilienceFinishedNanos" : 162695657600
+  }, {
+    "providerEventId" : 17000005,
+    "endpoint" : "EVENT_LINEUPS",
+    "round" : 11,
+    "groupId" : "9b965df1-763f-3c37-8401-28084ab8ab72",
+    "dueNanos" : 157430363700,
+    "receivedNanos" : 165080243600,
+    "committedNanos" : 165187107900,
+    "requestNanos" : 125806600,
+    "processingNanos" : 365285400,
+    "serverArrivalNanos" : 165023761400,
+    "responseCompleteNanos" : 165089226200,
+    "serverDelayMillis" : 30,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 165020243600,
+    "httpNanos" : 60000000,
+    "authorizationDelayNanos" : 14622200,
+    "pressureElapsedNanos" : 1951283700,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 29342400,
+    "resilienceFinishedNanos" : 165081624600
+  }, {
+    "providerEventId" : 17000006,
+    "endpoint" : "EVENT_DETAILS",
+    "round" : 12,
+    "groupId" : "a7f8ebb7-f2f0-300c-8a0b-f26a71514780",
+    "dueNanos" : 171709630500,
+    "receivedNanos" : 172217243600,
+    "committedNanos" : 172272276300,
+    "requestNanos" : 245283300,
+    "processingNanos" : 297119200,
+    "serverArrivalNanos" : 172041466700,
+    "responseCompleteNanos" : 172226599200,
+    "serverDelayMillis" : 150,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 172037243600,
+    "httpNanos" : 180000000,
+    "authorizationDelayNanos" : 13655600,
+    "pressureElapsedNanos" : 0,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 25758800,
+    "resilienceFinishedNanos" : 172219059600
+  }, {
+    "providerEventId" : 17000006,
+    "endpoint" : "EVENT_INCIDENTS",
+    "round" : 12,
+    "groupId" : "a7f8ebb7-f2f0-300c-8a0b-f26a71514780",
+    "dueNanos" : 171709630500,
+    "receivedNanos" : 174576243600,
+    "committedNanos" : 174648605400,
+    "requestNanos" : 94260800,
+    "processingNanos" : 347768000,
+    "serverArrivalNanos" : 174551584500,
+    "responseCompleteNanos" : 174585802000,
+    "serverDelayMillis" : 0,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 174547243600,
+    "httpNanos" : 29000000,
+    "authorizationDelayNanos" : 14231700,
+    "pressureElapsedNanos" : 1963396400,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 30135300,
+    "resilienceFinishedNanos" : 174578360600
+  }, {
+    "providerEventId" : 17000006,
+    "endpoint" : "EVENT_STATISTICS",
+    "round" : 12,
+    "groupId" : "a7f8ebb7-f2f0-300c-8a0b-f26a71514780",
+    "dueNanos" : 171709630500,
+    "receivedNanos" : 176953243600,
+    "committedNanos" : 177035903600,
+    "requestNanos" : 121581200,
+    "processingNanos" : 346196800,
+    "serverArrivalNanos" : 176898962800,
+    "responseCompleteNanos" : 176961951300,
+    "serverDelayMillis" : 30,
+    "bodyBytes" : 65536,
+    "requestedNanos" : 176895243600,
+    "httpNanos" : 58000000,
+    "authorizationDelayNanos" : 13981200,
+    "pressureElapsedNanos" : 1936979800,
+    "limiterSleepNanos" : 0,
+    "resilienceSqlNanos" : 30214000,
+    "resilienceFinishedNanos" : 176954273600
+  } ]
+}

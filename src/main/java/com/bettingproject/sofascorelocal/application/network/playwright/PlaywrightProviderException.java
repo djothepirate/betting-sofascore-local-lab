@@ -31,4 +31,13 @@ public final class PlaywrightProviderException extends RuntimeException {
     }
 
     public PlaywrightTransportDiagnostic diagnostic() { return diagnostic; }
+
+    /** A timeout alone never proves that the exchange ended or that its context is reusable. */
+    public boolean recoverableTimeout() {
+        return failure == PlaywrightProviderFailure.TIMEOUT && diagnostic != null
+                && diagnostic.contextReusable() && diagnostic.exchangeEndedAt() != null
+                && diagnostic.exchangeEndReason() != null && !diagnostic.responseComplete()
+                && !Integer.valueOf(403).equals(diagnostic.httpStatus())
+                && !Integer.valueOf(429).equals(diagnostic.httpStatus());
+    }
 }

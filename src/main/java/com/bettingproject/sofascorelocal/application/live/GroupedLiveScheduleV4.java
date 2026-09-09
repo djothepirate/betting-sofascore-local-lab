@@ -126,6 +126,31 @@ final class GroupedLiveScheduleV4 {
         inFlight = due;
     }
 
+    void deferAfterTimeout(LiveSchedule.Due due, Instant endedAt) {
+        if (!resilient() || !Objects.equals(inFlight, due))
+            throw new IllegalStateException("LIVE_UNEXPECTED_TIMEOUT");
+        Event event = event(due.eventId());
+        inFlight = null;
+        if (!event.active() || globalStop != null) return;
+        event.finalComplete = false;
+        event.familyMisses.merge(due.endpoint(), 1L, Long::sum);
+        event.missedCycles++;
+        event.pending.clear();
+        contiguous = null;
+        if (due.finalCycle() || event.finalizing || event.reserveFinish) {
+            stopEvent(event.id, "STOPPED_ERROR");
+            return;
+        }
+        // No continuation of a partly completed group and no catch-up burst.
+        // Hold every family of this event until a fresh J4 establishes its phase.
+        event.round++;
+        Instant retryAt = endedAt.plus(LiveTimeoutRecoveryPolicy.RETRY_DELAY);
+        if (!retryAt.isBefore(endsAt)) { stopEvent(event.id, "STOPPED_LIMIT"); return; }
+        event.phase = retryAt.minus(period.multipliedBy(event.round));
+        event.consecutiveMisses = 0;
+        event.pressureDeferred = false;
+    }
+
     void completed(LiveSchedule.Due due, String status, boolean unavailable,
                    Map<String, Boolean> signals, Instant now) {
         if (!Objects.equals(inFlight, due)) throw new IllegalStateException("LIVE_UNEXPECTED_COMPLETION");

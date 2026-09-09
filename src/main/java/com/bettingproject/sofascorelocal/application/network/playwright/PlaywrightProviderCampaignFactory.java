@@ -23,6 +23,12 @@ public interface PlaywrightProviderCampaignFactory {
         throw new UnsupportedOperationException("grouped live-v5 dispatch is not implemented by this transport");
     }
 
+    /** Explicit live-v6 authority, allowing unavailable in-play families to be deferred. */
+    default PlaywrightProviderCampaign openLiveGroupedV6(
+            UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        throw new UnsupportedOperationException("grouped live-v6 dispatch is not implemented by this transport");
+    }
+
     /** One explicitly launched, single-event J5 manual group in statistics/incidents/lineups order. */
     default PlaywrightProviderCampaign openManualJ5Grouped(
             UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {

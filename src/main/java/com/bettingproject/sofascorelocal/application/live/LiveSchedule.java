@@ -129,6 +129,12 @@ public final class LiveSchedule {
         grouped.defer(due, notBefore);
     }
 
+    /** Abandon the interrupted group; the next attempt must start a new J4 group. */
+    public synchronized void deferAfterTimeout(Due due, Instant endedAt) {
+        if (grouped == null) throw new IllegalStateException("LIVE_DEFER_UNSUPPORTED_POLICY");
+        grouped.deferAfterTimeout(due, endedAt);
+    }
+
     public synchronized void started(Due due, Instant now) {
         if (grouped != null) { grouped.started(due, now); return; }
         if (inFlight != null || !mayDispatch(due, now)) throw new IllegalStateException("LIVE_DISPATCH_CANCELLED");

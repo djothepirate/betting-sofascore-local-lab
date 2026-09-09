@@ -45,7 +45,7 @@ final class ProviderNetworkStartDelayGate {
     }
 
     /**
-     * Only consecutive validated groups of the very same live-v5 session use
+     * Only consecutive validated groups of the very same live-v5/v6 session use
      * one second. A new session, legacy call or authority transition keeps the
      * global fence, including when a campaign UUID is reused after closing.
      */
@@ -67,7 +67,7 @@ final class ProviderNetworkStartDelayGate {
                     timingEvidenceLost = true;
                     throw new TimingEvidenceException();
                 }
-                long requiredDelay = groupSession != null && groupSession.isLiveV5()
+                long requiredDelay = groupSession != null && groupSession.usesOneSecondInterGroupDelay()
                         && previousGroupSession == groupSession
                         ? LIVE_V5_INTER_GROUP_DELAY_NANOS : minimumDelayNanos;
                 remaining = requiredDelay - elapsed;
@@ -127,7 +127,18 @@ final class ProviderNetworkStartDelayGate {
         previousGroupSession = usableResponseEvidence ? groupSession : null;
     }
 
-    /** Only a supervisor-validated live-v4/v5 or manual-J5 group continuation can omit a pause. */
+    /** A supervisor-proven v6 timeout end retains the full three-second fence, without a response. */
+    synchronized void recordRecoverableTimeoutFinished(LiveProviderGroupTracker groupSession) {
+        if (groupSession == null || !groupSession.isLiveV6()) {
+            timingEvidenceLost = true;
+            throw new TimingEvidenceException();
+        }
+        // The authenticated terminal/cleanup proof establishes an exchange end.
+        // It cannot repair a previously lost clock or timing proof.
+        recordDispatchFinished(true, null);
+    }
+
+    /** Only a supervisor-validated live-v4/v5/v6 or manual-J5 group continuation can omit a pause. */
     void admitGroupContinuation(Runnable continuationGuard) {
         Objects.requireNonNull(continuationGuard, "continuationGuard");
         requireUninterrupted();

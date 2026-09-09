@@ -2,6 +2,7 @@ package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.live.LiveCampaignService.RuntimeStatus;
 import com.bettingproject.sofascorelocal.application.live.LiveCampaignDiagnostic;
+import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightTransportDiagnostic;
 import com.bettingproject.sofascorelocal.application.event.J4EventResult;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
 import com.bettingproject.sofascorelocal.domain.eventdata.*;
@@ -10,6 +11,7 @@ import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
+import com.bettingproject.sofascorelocal.port.LiveDiagnosticStore;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 import tools.jackson.core.JacksonException;
@@ -33,6 +35,7 @@ public class LiveCampaignPresentation {
     private final J5EventDataStore data;
     private final EventDetailsStore details;
     private final Clock clock;
+    private final LiveDiagnosticStore diagnostics;
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final List<SofascoreEndpointType> FAMILIES = List.of(SofascoreEndpointType.EVENT_DETAILS,
             SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_INCIDENTS,
@@ -42,9 +45,14 @@ public class LiveCampaignPresentation {
         this(events, data, null, Clock.systemUTC());
     }
 
-    @Autowired
     public LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, EventDetailsStore details) {
         this(events, data, details, Clock.systemUTC());
+    }
+
+    @Autowired
+    public LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, EventDetailsStore details,
+                                    LiveDiagnosticStore diagnostics) {
+        this(events, data, details, Clock.systemUTC(), diagnostics);
     }
 
     LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, Clock clock) {
@@ -52,10 +60,16 @@ public class LiveCampaignPresentation {
     }
 
     LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, EventDetailsStore details, Clock clock) {
+        this(events, data, details, clock, null);
+    }
+
+    LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, EventDetailsStore details, Clock clock,
+                             LiveDiagnosticStore diagnostics) {
         this.events = events;
         this.data = data;
         this.details = details;
         this.clock = clock;
+        this.diagnostics = diagnostics;
     }
 
     public Campaign state(CampaignView view) {
@@ -89,7 +103,8 @@ public class LiveCampaignPresentation {
                         runtimeStatus.collectionStopped(), runtimeStatus.cleanupPending(), runtimeStatus.cleanupInProgress(),
                         runtimeStatus.cleanupInProgress() ? "Collecte arrêtée / clôture locale en cours."
                                 : runtimeStatus.cleanupPending() ? "Collecte arrêtée / clôture locale requise."
-                                : "Collecte arrêtée.", runtimeStatus.firstFailure(), runtimeStatus.cleanupFailure()),
+                                : runtimeStatus.collectionStopped() ? "Collecte arrêtée."
+                                : "Collecte en cours ; un incident a été enregistré.", runtimeStatus.firstFailure(), runtimeStatus.cleanupFailure()),
                 cadence(view, observedAt, runtimeStatus), pagination);
     }
 
@@ -287,7 +302,11 @@ public class LiveCampaignPresentation {
                         cursor.schedule().intervalSeconds(), cursor.schedule().missedCycles(),
                         cursor.schedule().nextDueAt() == null || terminal(event.state()) || terminal(campaign.state())
                                 ? 0 : Math.max(0, Duration.between(cursor.schedule().nextDueAt(), observedAt).toMillis())),
-                lineups, incidents);
+                lineups, incidents,
+                !pending && latest.code() != null && latest.code().startsWith("PLAYWRIGHT_TIMEOUT")
+                        && diagnostics != null && attempted != null
+                        ? diagnostics.findTransport(campaign.manifest().campaignId(), attempted.attempt().attemptId()).orElse(null)
+                        : null);
     }
 
     private static Freshness freshness(CampaignView campaign, EventView event, FamilyCursor cursor, Instant now) {
@@ -431,7 +450,20 @@ public class LiveCampaignPresentation {
                          String normalizedSha256, String completeness, Integer completenessScore,
                          boolean previousData, Freshness freshness, Table table,
                          StatisticsPresentation.View statistics, CollectionSchedule schedule,
-                         LineupsPresentation.View lineups, IncidentPresentation.View incidents) {
+                         LineupsPresentation.View lineups, IncidentPresentation.View incidents,
+                         PlaywrightTransportDiagnostic transport) {
+        public Family(String endpoint, String label, String outcome, String code, String scope,
+                Instant lastAttemptAt, Long authorizationDelayMillis, Instant lastReceivedAt,
+                Instant lastSuccessfulAt, Instant lastChangedAt, Long receivedSnapshotId, Long receivedOccurrenceId,
+                Long dataSnapshotId, String parserVersion, String payloadSha256, String normalizedSha256,
+                String completeness, Integer completenessScore, boolean previousData, Freshness freshness,
+                Table table, StatisticsPresentation.View statistics, CollectionSchedule schedule,
+                LineupsPresentation.View lineups, IncidentPresentation.View incidents) {
+            this(endpoint, label, outcome, code, scope, lastAttemptAt, authorizationDelayMillis, lastReceivedAt,
+                    lastSuccessfulAt, lastChangedAt, receivedSnapshotId, receivedOccurrenceId, dataSnapshotId,
+                    parserVersion, payloadSha256, normalizedSha256, completeness, completenessScore,
+                    previousData, freshness, table, statistics, schedule, lineups, incidents, null);
+        }
         public Family(String endpoint, String label, String outcome, String code, String scope,
                 Instant lastAttemptAt, Long authorizationDelayMillis, Instant lastReceivedAt,
                 Instant lastSuccessfulAt, Instant lastChangedAt, Long receivedSnapshotId, Long receivedOccurrenceId,

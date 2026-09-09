@@ -15,6 +15,7 @@ import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTeam;
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
+import com.bettingproject.sofascorelocal.port.LiveDiagnosticStore;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import com.bettingproject.sofascorelocal.security.InvalidLocalFormTokenException;
 import org.junit.jupiter.api.BeforeEach;
@@ -62,6 +63,7 @@ class LiveCampaignControllerTest {
     @MockitoBean private LiveCampaignService service;
     @MockitoBean private CanonicalEventStore events;
     @MockitoBean private J5EventDataStore data;
+    @MockitoBean private LiveDiagnosticStore diagnostics;
     @MockitoBean private EventDetailsStore details;
     @MockitoBean private CacheManager cacheManager;
 
@@ -69,6 +71,41 @@ class LiveCampaignControllerTest {
     void localObservationsOnly() {
         clearInvocations(service);
         when(events.findByObservationId(any(), anyLong())).thenReturn(Optional.empty());
+    }
+
+    @ParameterizedTest @ValueSource(booleans={false,true})
+    void deferredTimeoutProofIsVisibleButNoFutureRetryIsPromisedAfterOperatorStop(boolean stopped) throws Exception {
+        UUID attemptId=UUID.randomUUID();
+        var publication=new Publication("FAILED","NONE","PLAYWRIGHT_TIMEOUT_RETRY_DEFERRED",NOW.plusSeconds(41),null,false,null);
+        var result=new Result(attemptId,publication,NormalizedReferences.none());
+        var cursor=new FamilyCursor(SofascoreEndpointType.EVENT_DETAILS,attemptId,null,null,null,null,null,null,
+                NormalizedReferences.none(),result,null,
+                new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS,NOW.plusSeconds(340),300,0));
+        var attempt=new AttemptView(new ReservedAttempt(attemptId,EVENT_ID,900001L,SofascoreEndpointType.EVENT_DETAILS,1,
+                "NORMAL",NOW.plusSeconds(10),NOW.plusSeconds(10),false),NOW.plusSeconds(10),null,null,null,result);
+        var proof=new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.READING_BODY,30000,
+                NOW.plusSeconds(10),NOW.plusSeconds(12),200,null,false)
+                .withExchangeEnd(NOW.plusSeconds(40),PlaywrightTransportDiagnostic.ExchangeEndReason.ABORTED,true);
+        var view=new CampaignView(manifest(),stopped?"STOPPED_OPERATOR":"RUNNING",null,NOW,NOW.plusSeconds(14400),1,0,44,null,
+                List.of(new EventView(manifest().targets().getFirst(),stopped?"STOPPED_OPERATOR":"COLLECTING",null,1,0,
+                        NOW.plusSeconds(340),List.of(cursor))),List.of(attempt),List.of());
+        when(service.state(CAMPAIGN_ID)).thenReturn(view);
+        when(diagnostics.findTransport(CAMPAIGN_ID,attemptId)).thenReturn(Optional.of(proof));
+        String path="/live-campaigns/"+CAMPAIGN_ID;
+        String body=mvc.perform(get(path).header("Host",HOST)).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        var notice=Pattern.compile("<p\\b([^>]*data-live-timeout-retry[^>]*)>").matcher(body);
+        assertThat(notice.find()).isTrue();assertThat(notice.group(1).contains("hidden")).isEqualTo(stopped);
+        assertThat(body).contains("Fin du transport prouvée", "ABORTED", "Réutilisation du contexte vérifiée",NOW.plusSeconds(40).toString());
+        var state=mvc.perform(get(path+"/state").header("Host",HOST)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value(stopped?"STOPPED_OPERATOR":"RUNNING"))
+                .andExpect(jsonPath("$.runtimeStatus").doesNotExist())
+                .andExpect(jsonPath("$.events[0].families[0].transport.contextReusable").value(true))
+                .andExpect(jsonPath("$.events[0].families[0].transport.responseComplete").value(false))
+                .andExpect(jsonPath("$.events[0].families[0].lastReceivedAt").doesNotExist())
+                .andExpect(jsonPath("$.events[0].families[0].lastSuccessfulAt").doesNotExist())
+                .andExpect(jsonPath("$.events[0].families[0].receivedSnapshotId").doesNotExist());
+        if(stopped) state.andExpect(jsonPath("$.events[0].families[0].schedule.nextDueAt").doesNotExist());
+        else state.andExpect(jsonPath("$.events[0].families[0].schedule.nextDueAt").value(NOW.plusSeconds(340).toString()));
     }
 
     @Test
@@ -1002,7 +1039,7 @@ class LiveCampaignControllerTest {
         assertThat(Pattern.compile("\\bopen(?:=|\\s|$)").matcher(box.group(1)).find()).isFalse();
         String diagnosticBody = box.group(2);
         assertThat(box.find()).as("one global diagnostic box, never one per event").isFalse();
-        assertThat(diagnosticBody).contains("Diagnostic de l’arrêt", "Première erreur", "Dernier échec de clôture",
+        assertThat(diagnosticBody).contains("Diagnostics de collecte et de clôture", "Première erreur", "Dernier échec de clôture",
                 "Instant (UTC)", "reste consultable après redémarrage", "informations non observées");
         assertThat(body).contains("href=\"/provider-access\"");
         for (String key : List.of("firstFailure", "cleanupFailure")) {

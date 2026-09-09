@@ -2,6 +2,29 @@
 
 Statuts : EXPERIMENTAL · LOCAL_ONLY · NOT_PRODUCTION_APPROVED · NO_CRITICAL_DEPENDENCY.
 
+**Portée historique : proposition et réalisation du premier lot v0.8, le 9 septembre.**
+Ce document conserve le diagnostic et les choix du premier lot. Le correctif ultérieur
+[ADR-SS-005 v0.9](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md) autorise une tolérance
+différée des seuls timeouts v6 dont la fin/nettoyage sont prouvés et corrige les groupes
+avec familles différées. Sa [qualification fonctionnelle distincte réussit hors fournisseur](../validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md).
+Les mentions ci-dessous d'absence de retry ou de fermeture systématique sur timeout
+décrivent le premier lot ; elles ne remplacent pas les conditions strictes de v0.9.
+
+Le correctif distingue l'annulation immédiate avant les en-têtes, avec terminal
+`ABORTED` corrélé, de l'attente naturelle de `FINISHED` après les en-têtes. Cette attente
+utilise la même grâce maximale de deux secondes sans `Page.stopLoading`, qui peut
+supprimer le terminal après `COMMIT`. Le corps arrivé après timeout reste abandonné ;
+sans terminal et nettoyage prouvés dans leurs bornes, l'issue reste fatale avec
+fermeture. Ni le timeout de collecte, ni les budgets, ni les trois tolérances et le
+report minimal de 300 secondes ne sont étendus par cette précision.
+
+Le correctif est vérifié séparément par neuf cas Chromium transport/UI, deux contrôles
+natifs de réception et la passe finale `-Pintegration-tests clean verify` du 9 septembre
+à 17:17:59Z : 2 068 cas standards (cinq skips explicités), 213 cas PostgreSQL, aucun
+échec ni erreur. Le smoke de trois minutes ne renouvelle pas la preuve de capacité de
+35 minutes. Les anciens résultats ci-dessous gardent leur portée historique ; le WO
+reste ouvert à la revue humaine, sans livraison Eclipse ni appel fournisseur dans ce lot.
+
 **État : premier lot autorisé le 9 septembre 2026, réalisé et qualifié fonctionnellement hors fournisseur.**
 Le [rapport du lot](../validation/WO-058-provider-resilience-qualification-20260909.md) conserve
 les résultats et limites au point `3130e39`. Le [complément temporel v6](../validation/WO058-LIVE-V6-CAPACITY-20260909.md)
@@ -183,8 +206,9 @@ dans le navigateur peut être consigné comme déclaration opérateur distincte.
 
 La réactivation reste une décision opérateur traçable ; pas de sonde périodique cachée,
 recréation automatique du navigateur ou répétition automatique de la requête fautive.
-Conserver le comportement conservateur de fermeture après timeout jusqu'à une étude
-distincte démontrant qu'une continuation est sûre. Changer seulement la portée
+Le premier lot conserve le comportement de fermeture après timeout jusqu'à une étude
+distincte démontrant qu'une continuation est sûre. Le correctif v0.9 répond ensuite à
+ce besoin avec une preuve terminale nouvelle et une qualification séparée. Changer seulement la portée
 CAMPAIGN en EVENT laisserait le transport partagé dans un état non démontré.
 
 L'interface continue de présenter les dernières données disponibles, avec indication
@@ -221,7 +245,7 @@ l'absence de blocage à une autre charge ou une autre heure.
 
 ## 5. Décisions et limites
 
-Le [cadre actuel v0.8](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md) formalise
+Le [cadre du premier lot v0.8](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md) formalise
 la protection globale et la politique v6. Les anciens manifestes gardent leurs règles
 propres, mais tout nouvel accès passe par la protection partagée. Aucun cache J4/J5,
 endpoint, transport supplémentaire ou essai réel n'est ouvert. L'activation du profil

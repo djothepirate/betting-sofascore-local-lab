@@ -2,6 +2,7 @@ package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.live.LiveCampaignService;
 import com.bettingproject.sofascorelocal.application.live.LiveCampaignDiagnostic;
+import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightTransportDiagnostic;
 import com.bettingproject.sofascorelocal.config.LiveCampaignWebMvcConfiguration;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
@@ -13,6 +14,7 @@ import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTeam;
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
+import com.bettingproject.sofascorelocal.port.LiveDiagnosticStore;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.ServiceWorkerPolicy;
@@ -72,6 +74,7 @@ class LiveCampaignPaginationBrowserQualificationIT {
     @MockitoBean private CanonicalEventStore events;
     @MockitoBean private EventDetailsStore details;
     @MockitoBean private J5EventDataStore data;
+    @MockitoBean private LiveDiagnosticStore diagnostics;
     @MockitoBean private CacheManager cacheManager;
 
     @Test
@@ -180,7 +183,7 @@ class LiveCampaignPaginationBrowserQualificationIT {
                 assertThat(diagnostics.isVisible()).isTrue();
                 assertThat(diagnostics.evaluate("element => element.open")).isEqualTo(false);
                 Locator diagnosticSummary = diagnostics.locator(":scope > summary");
-                assertThat(diagnosticSummary.textContent()).isEqualTo("Diagnostic de l’arrêt");
+                assertThat(diagnosticSummary.textContent()).isEqualTo("Diagnostics de collecte et de clôture");
                 diagnosticSummary.click();
                 Locator firstDiagnostic = diagnostics.locator("[data-live-diagnostic='firstFailure']");
                 Locator cleanupDiagnostic = diagnostics.locator("[data-live-diagnostic='cleanupFailure']");
@@ -271,6 +274,125 @@ class LiveCampaignPaginationBrowserQualificationIT {
         assertThat(section.locator("[data-live-diagnostic-phase]").textContent()).isEqualTo(diagnostic.phase().name());
         assertThat(section.locator("[data-live-diagnostic-code]").textContent()).isEqualTo(diagnostic.code());
         assertThat(section.locator("[data-live-diagnostic-time]").textContent()).isEqualTo(diagnostic.occurredAt().toString());
+    }
+
+    @Test
+    @Timeout(45)
+    void pollingShowsDeferredTimeoutProofWithoutRefreshingDataAndRemovesRetryAfterOperatorStop() throws Exception {
+        String cache = System.getProperty("provider.playwright.browser-cache", "");
+        assertThat(cache).as("explicit native browser opt-in").isNotBlank();
+        assertThat(Path.of(cache).toRealPath()).isEqualTo(Path.of(System.getenv("PLAYWRIGHT_BROWSERS_PATH")).toRealPath());
+        UUID successfulId = UUID.fromString("00000000-0000-0000-0000-000000005801");
+        UUID timeoutId = UUID.fromString("00000000-0000-0000-0000-000000005802");
+        AtomicInteger phase = new AtomicInteger();
+        var proof = new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.READING_BODY, 30000,
+                NOW.plusSeconds(10), NOW.plusSeconds(12), 200, null, false)
+                .withExchangeEnd(NOW.plusSeconds(40), PlaywrightTransportDiagnostic.ExchangeEndReason.ABORTED, true);
+        when(campaigns.state(CAMPAIGN_ID)).thenAnswer(ignored -> timeoutCampaign(phase.get(), successfulId, timeoutId));
+        when(campaigns.runtimeStatus(CAMPAIGN_ID)).thenReturn(Optional.empty());
+        when(events.findByObservationId(TARGETS.getFirst().canonicalEventId(), 1L))
+                .thenReturn(Optional.of(identity(TARGETS.getFirst())));
+        when(diagnostics.findTransport(CAMPAIGN_ID, timeoutId)).thenReturn(Optional.of(proof));
+        List<String> polls = new ArrayList<>(), scriptErrors = new ArrayList<>();
+        List<ObservedPost> posts = new ArrayList<>();
+        AtomicInteger external = new AtomicInteger();
+        AtomicReference<Throwable> bridgeFailure = new AtomicReference<>();
+        try (Playwright playwright = Playwright.create();
+             Browser browser = playwright.chromium().launch(new BrowserType.LaunchOptions().setHeadless(true));
+             BrowserContext context = browser.newContext(options(true))) {
+            bridge(context, polls, posts, external, bridgeFailure);
+            Page page = context.newPage();
+            page.setDefaultTimeout(15000);
+            page.onPageError(scriptErrors::add);
+            assertThat(page.navigate(ORIGIN + BASE).status()).isEqualTo(200);
+            page.waitForCondition(() -> !polls.isEmpty());
+            Locator family = firstJ4(page);
+            assertThat(family.locator("[data-live-family-outcome]").textContent()).isEqualTo("PARSED");
+            assertThat(family.locator("[data-live-timeout-retry]").isVisible()).isFalse();
+            assertThat(family.locator("[data-live-timeout-proof]").isVisible()).isFalse();
+            assertRetainedTimeoutData(family);
+
+            phase.set(1);
+            page.waitForCondition(() -> family.locator("[data-live-timeout-retry]").isVisible());
+            assertThat(family.locator("[data-live-family-outcome]").textContent()).isEqualTo("FAILED");
+            assertThat(family.locator("[data-live-family-code]").textContent()).isEqualTo("PLAYWRIGHT_TIMEOUT_RETRY_DEFERRED");
+            assertThat(family.locator("[data-live-family-scope]").textContent()).isEqualTo("NONE");
+            assertThat(family.locator("[data-live-timeout-retry]").textContent())
+                    .contains("Une prochaine collecte est différée", "aucune nouvelle donnée n’a été reçue intégralement");
+            assertTimeoutProof(family, proof);
+            assertRetainedTimeoutData(family);
+            assertThat(family.locator("[data-live-family-next-due]").textContent()).isEqualTo(proof.exchangeEndedAt().plusSeconds(300).toString());
+            assertThat(family.locator("[data-live-age]").getAttribute("data-live-age-frozen")).isEqualTo("false");
+            assertThat(page.locator("[data-live-campaign-state]").textContent()).isEqualTo("RUNNING");
+            assertThat(page.locator("[data-live-runtime-status]").first().isVisible()).isFalse();
+            assertThat(page.locator("[data-live-global-stop-form]").isVisible()).isTrue();
+
+            // An operator stops the campaign from another view: this page must update without navigation.
+            phase.set(2);
+            page.waitForCondition(() -> "STOPPED_OPERATOR".equals(page.locator("[data-live-campaign-state]").textContent()));
+            assertThat(family.locator("[data-live-timeout-retry]").isVisible()).isFalse();
+            assertThat(family.locator("[data-live-family-next-due]").textContent()).isEqualTo("Aucune collecte programmée");
+            assertTimeoutProof(family, proof);
+            assertRetainedTimeoutData(family);
+            assertThat(family.locator("[data-live-family-code]").textContent()).isEqualTo("PLAYWRIGHT_TIMEOUT_RETRY_DEFERRED");
+            assertThat(family.locator("[data-live-age]").getAttribute("data-live-age-frozen")).isEqualTo("true");
+            assertThat(page.locator("[data-live-global-stop-form]").isVisible()).isFalse();
+            assertThat(page.url()).isEqualTo(ORIGIN + BASE);
+        }
+        assertThat(polls).hasSizeGreaterThanOrEqualTo(3).allMatch("page=1"::equals);
+        assertThat(bridgeFailure.get()).as("all browser requests served by production MVC in memory").isNull();
+        assertThat(scriptErrors).isEmpty();
+        assertThat(external.get()).as("zero provider or external requests").isZero();
+        assertThat(posts).as("all transitions reached this page through its polling asset").isEmpty();
+        verify(campaigns, never()).launch(any(), any());
+    }
+
+    private static void assertTimeoutProof(Locator family, PlaywrightTransportDiagnostic proof) {
+        assertThat(family.locator("[data-live-timeout-proof]").isVisible()).isTrue();
+        assertThat(family.locator("[data-live-timeout-ended]").textContent()).isEqualTo(proof.exchangeEndedAt().toString());
+        assertThat(family.locator("[data-live-timeout-end-reason]").textContent()).isEqualTo("ABORTED");
+        assertThat(family.locator("[data-live-timeout-reusable]").textContent()).isEqualTo("Oui");
+    }
+
+    private static void assertRetainedTimeoutData(Locator family) {
+        assertThat(family.locator("[data-live-received]").textContent()).isEqualTo(NOW.toString());
+        assertThat(family.locator("[data-live-successful]").textContent()).isEqualTo(NOW.toString());
+        assertThat(family.locator("[data-live-changed]").textContent()).isEqualTo(NOW.toString());
+        assertThat(family.locator("[data-live-age]").getAttribute("data-live-received-at")).isEqualTo(NOW.toString());
+        assertThat(family.locator("[data-live-snapshots]").textContent()).isEqualTo("1 / 1");
+        assertThat(family.locator("[data-live-occurrence]").textContent()).isEqualTo("1");
+        assertThat(family.locator("[data-live-payload-hash]").textContent()).isEqualTo(HASH);
+        assertThat(family.locator("[data-live-hash]").textContent()).isEqualTo(HASH);
+    }
+
+    private static CampaignView timeoutCampaign(int phase, UUID successfulId, UUID timeoutId) {
+        Target target = TARGETS.getFirst();
+        var refs = new NormalizedReferences(1L, null, null, HASH);
+        var success = new Result(successfulId, new Publication("PARSED", "EVENT", "NONE", NOW,
+                "event-details-v3", true, "COLLECTING"), refs);
+        var timeout = new Result(timeoutId, new Publication("FAILED", "NONE", "PLAYWRIGHT_TIMEOUT_RETRY_DEFERRED",
+                NOW.plusSeconds(41), null, false, null), NormalizedReferences.none());
+        var successAttempt = new AttemptView(new ReservedAttempt(successfulId, target.canonicalEventId(), target.providerEventId(),
+                SofascoreEndpointType.EVENT_DETAILS, 0, "NORMAL", NOW, NOW, false), NOW, 1L, 1L, NOW, success);
+        var timeoutAttempt = new AttemptView(new ReservedAttempt(timeoutId, target.canonicalEventId(), target.providerEventId(),
+                SofascoreEndpointType.EVENT_DETAILS, 1, "NORMAL", NOW.plusSeconds(10), NOW.plusSeconds(10), false),
+                NOW.plusSeconds(10), null, null, null, timeout);
+        Instant nextDue = NOW.plusSeconds(phase == 0 ? 100 : 340);
+        var cursor = new FamilyCursor(SofascoreEndpointType.EVENT_DETAILS, phase == 0 ? successfulId : timeoutId,
+                successfulId, successfulId, successfulId, NOW, NOW, NOW, refs, phase == 0 ? success : timeout, success,
+                new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS, nextDue, 100, 0));
+        var profile = new GroupedAdmissionProfile(manifest().admissionProfile().groupedProfile().endpointEnvelopes(),
+                "c".repeat(64), "live-v6");
+        var manifest = new Manifest(CAMPAIGN_ID, HASH, "live-v6", NOW, NOW.plusSeconds(300), Duration.ofHours(4),
+                2500, 20000, 1_000_000, 7, List.of(target),
+                new AdmissionProfile(Duration.ofSeconds(10), Duration.ofSeconds(1), "", profile), Duration.ofSeconds(100));
+        boolean stopped = phase == 2;
+        return new CampaignView(manifest, stopped ? "STOPPED_OPERATOR" : "RUNNING", null,
+                NOW, NOW.plusSeconds(14400), phase == 0 ? 1 : 2, 128, phase + 1, null,
+                List.of(new EventView(target, stopped ? "STOPPED_OPERATOR" : "COLLECTING", null,
+                        phase == 0 ? 1 : 2, 128, nextDue, List.of(cursor))),
+                phase == 0 ? List.of(successAttempt) : List.of(successAttempt, timeoutAttempt),
+                stopped ? List.of(new Transition(3, null, "STOPPED_OPERATOR", null, NOW.plusSeconds(45), null)) : List.of());
     }
 
     private static Browser.NewContextOptions options(boolean javascript) {

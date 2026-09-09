@@ -50,9 +50,93 @@ class LiveDiagnosticPersistenceIT {
     private static final Instant T0=Instant.parse("2030-09-09T12:00:00Z");
     private static final SofascoreEndpointType DETAILS=SofascoreEndpointType.EVENT_DETAILS;
 
+    @Test
+    void upgradingPopulatedV44DoesNotInferTerminationOrContextReuseForHistoricalTimeouts() {
+        Fixture f=fixture("44");Running running=f.running();
+        f.jdbc.update("""
+                insert into live_attempt_transport_diagnostic(attempt_id,campaign_id,endpoint_type,transport_phase,
+                    timeout_ms,requested_at,headers_received_at,http_status,response_complete)
+                values (?,?,'EVENT_DETAILS','READING_BODY',30000,?,?,200,false)
+                """,running.attempt(),running.campaign(),Timestamp.from(T0.plusSeconds(10)),Timestamp.from(T0.plusSeconds(12)));
+        f.jdbc.update("""
+                insert into live_campaign_diagnostic(campaign_id,kind,phase,code,occurred_at,attempt_id,endpoint_type)
+                values (?,'FIRST_FAILURE','TRANSPORT','PLAYWRIGHT_TIMEOUT',?,?,'EVENT_DETAILS')
+                """,running.campaign(),Timestamp.from(T0.plusSeconds(40)),running.attempt());
+        var before=f.evidence("live_campaign","live_call","live_call_receipt","live_call_result","live_campaign_diagnostic",
+                "provider_campaign_guard","provider_snapshot","provider_snapshot_occurrence");
+        assertThat(f.migrate("45")).isOne();f.assertEvidence(before);
+        var old=f.newDiagnostics().findTransport(running.campaign(),running.attempt()).orElseThrow();
+        assertThat(old).isEqualTo(diagnostic(PlaywrightTransportDiagnostic.Phase.READING_BODY,200));
+        assertThat(old.exchangeEndedAt()).isNull();assertThat(old.exchangeEndReason()).isNull();
+        assertThat(old.contextReusable()).isFalse();
+        assertThat(f.newDiagnostics().find(running.campaign(),LiveDiagnosticStore.Kind.FIRST_FAILURE).orElseThrow().transport()).isEqualTo(old);
+        assertThat(f.migrate("45")).isZero();
+    }
+
+    @ParameterizedTest @ValueSource(strings={"FINISHED","ABORTED"})
+    void endedTimeoutPersistsAcrossRestartWithoutAReceiptOrFreshDataAndCannotBeRewritten(String reason) {
+        Fixture f=fixture("45");Running running=f.running();
+        var before=f.evidence("provider_snapshot","provider_snapshot_occurrence","live_call_receipt",
+                "canonical_event_observation","event_detail_observation","j5_event_data_observation");
+        var headers=diagnostic(PlaywrightTransportDiagnostic.Phase.READING_BODY,200);
+        var proof=headers.withExchangeEnd(T0.plusSeconds(40),PlaywrightTransportDiagnostic.ExchangeEndReason.valueOf(reason),true);
+        f.diagnostics.recordTransport(running.campaign(),running.attempt(),DETAILS,headers);
+        f.diagnostics.recordTransport(running.campaign(),running.attempt(),DETAILS,proof);
+        var campaign=f.campaigns.find(running.campaign()).orElseThrow();
+        f.campaigns.publishResult(campaign.ownership(),running.attempt(),new Publication("FAILED","NONE",
+                "PLAYWRIGHT_TIMEOUT_RETRY_DEFERRED",T0.plusSeconds(41),null,false,null),NormalizedReferences::none);
+        LiveDiagnosticStore restarted=f.newDiagnostics();
+        restarted.recordTransport(running.campaign(),running.attempt(),DETAILS,headers);
+        restarted.recordTransport(running.campaign(),running.attempt(),DETAILS,proof);
+        assertThat(restarted.findTransport(running.campaign(),running.attempt())).contains(proof);
+        assertThat(restarted.findTransport(UUID.randomUUID(),running.attempt())).isEmpty();
+        assertThat(restarted.find(running.campaign(),LiveDiagnosticStore.Kind.FIRST_FAILURE)).isEmpty();
+        var saved=f.campaigns.find(running.campaign()).orElseThrow();
+        assertThat(saved.state()).isEqualTo("RUNNING");assertThat(saved.reservedCalls()).isOne();
+        assertThat(saved.attempts().getFirst().result().publication().successful()).isFalse();
+        assertThat(saved.attempts().getFirst().receivedAt()).isNull();f.assertEvidence(before);
+        assertThatThrownBy(()->restarted.recordTransport(running.campaign(),running.attempt(),DETAILS,
+                proof.withExchangeEnd(T0.plusSeconds(42),proof.exchangeEndReason(),true)))
+                .hasMessage("LIVE_DIAGNOSTIC_EVIDENCE_CONFLICT");
+        for(String sql:List.of("update live_attempt_transport_diagnostic set exchange_ended_at=null,exchange_end_reason=null,context_reusable=false",
+                "update live_attempt_transport_diagnostic set context_reusable=false",
+                "update live_attempt_transport_diagnostic set exchange_end_reason='UNKNOWN'",
+                "update live_attempt_transport_diagnostic set exchange_ended_at=requested_at-interval '1 second'"))
+            assertThatThrownBy(()->f.jdbc.update(sql)).isInstanceOf(DataAccessException.class);
+        assertThat(restarted.findTransport(running.campaign(),running.attempt())).contains(proof);
+    }
+
+    @ParameterizedTest @ValueSource(ints={403,429})
+    void knownRefusalCannotBecomeReusableEvenWhenItsExchangeEnded(int status) {
+        Fixture f=fixture("45");Running running=f.running();
+        var ended=diagnostic(PlaywrightTransportDiagnostic.Phase.READING_BODY,status)
+                .withExchangeEnd(T0.plusSeconds(40),PlaywrightTransportDiagnostic.ExchangeEndReason.ABORTED,false);
+        f.diagnostics.recordTransport(running.campaign(),running.attempt(),DETAILS,ended);
+        assertThatThrownBy(()->ended.withExchangeEnd(ended.exchangeEndedAt(),ended.exchangeEndReason(),true))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(()->f.jdbc.update("update live_attempt_transport_diagnostic set context_reusable=true"))
+                .isInstanceOf(DataAccessException.class);
+        assertThat(f.newDiagnostics().findTransport(running.campaign(),running.attempt())).contains(ended);
+        assertThat(f.count("live_call_receipt")).isZero();
+    }
+
+    @Test
+    void concurrentLateProgressAndTerminationProofConvergeWithoutLosingTheProof() throws Exception {
+        Fixture f=fixture("45");Running running=f.running();CountDownLatch start=new CountDownLatch(1);
+        var headers=diagnostic(PlaywrightTransportDiagnostic.Phase.READING_BODY,200);
+        var proof=headers.withExchangeEnd(T0.plusSeconds(40),PlaywrightTransportDiagnostic.ExchangeEndReason.ABORTED,true);
+        try(var workers=Executors.newFixedThreadPool(2)) {
+            var late=workers.submit(()->{start.await();f.newDiagnostics().recordTransport(running.campaign(),running.attempt(),DETAILS,headers);return true;});
+            var finished=workers.submit(()->{start.await();f.newDiagnostics().recordTransport(running.campaign(),running.attempt(),DETAILS,proof);return true;});
+            start.countDown();assertThat(late.get(10,TimeUnit.SECONDS)).isTrue();assertThat(finished.get(10,TimeUnit.SECONDS)).isTrue();
+        }
+        assertThat(f.newDiagnostics().findTransport(running.campaign(),running.attempt())).contains(proof);
+        assertThat(f.count("live_attempt_transport_diagnostic")).isOne();
+    }
+
     @ParameterizedTest @ValueSource(ints={403,429})
     void partialRefusalAndTimeoutRemainDurableWithoutFabricatingAReceiptOrReplacingTheFirstCause(int status) {
-        Fixture f=fixture("43"); Running running=f.running();
+        Fixture f=fixture("45"); Running running=f.running();
         Map<String,List<Map<String,Object>>> evidence=f.evidence("provider_snapshot","provider_snapshot_occurrence",
                 "live_call_receipt","canonical_event_observation","event_detail_observation","j5_event_data_observation");
         var headers=diagnostic(PlaywrightTransportDiagnostic.Phase.HEADERS_RECEIVED,status);
@@ -75,7 +159,7 @@ class LiveDiagnosticPersistenceIT {
 
     @Test
     void transportProgressIsMonotonicAndAnIpcTimeoutCannotEraseAlreadyObservedHeaders() {
-        Fixture f=fixture("43");Running running=f.running();
+        Fixture f=fixture("45");Running running=f.running();
         var headers=diagnostic(PlaywrightTransportDiagnostic.Phase.HEADERS_RECEIVED,403);
         f.diagnostics.recordTransport(running.campaign(),running.attempt(),DETAILS,headers);
         var ipc=new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.PARENT_IPC_WAIT,30000,null,null,null,null,false);
@@ -94,7 +178,7 @@ class LiveDiagnosticPersistenceIT {
 
     @Test
     void knownHttpStatusTimeoutAndTimestampsCannotBeReplacedByConflictingEvidence() {
-        Fixture f=fixture("43");Running running=f.running();
+        Fixture f=fixture("45");Running running=f.running();
         var headers=diagnostic(PlaywrightTransportDiagnostic.Phase.HEADERS_RECEIVED,403);
         f.diagnostics.recordTransport(running.campaign(),running.attempt(),DETAILS,headers);
         var changedRequest=new PlaywrightTransportDiagnostic(headers.phase(),30000,T0.plusSeconds(11),T0.plusSeconds(12),403,null,false);
@@ -108,7 +192,7 @@ class LiveDiagnosticPersistenceIT {
 
     @Test
     void completed200IsImmutableAndDoesNotItselfClaimASavedPayload() {
-        Fixture f=fixture("43");Running running=f.running();
+        Fixture f=fixture("45");Running running=f.running();
         var before=f.evidence("provider_snapshot","provider_snapshot_occurrence","live_call_receipt","event_detail_observation");
         var complete=diagnostic(PlaywrightTransportDiagnostic.Phase.COMPLETE,200);
         f.diagnostics.recordTransport(running.campaign(),running.attempt(),DETAILS,
@@ -126,7 +210,7 @@ class LiveDiagnosticPersistenceIT {
 
     @Test
     void diagnosticCorrelationMustMatchItsReservedCampaignAttemptAndEndpointInJavaAndPostgres() {
-        Fixture f=fixture("43");Running running=f.running();
+        Fixture f=fixture("45");Running running=f.running();
         UUID otherCampaign=f.prepare("live-v1",List.of(f.seed(58002))).campaignId();
         var headers=diagnostic(PlaywrightTransportDiagnostic.Phase.HEADERS_RECEIVED,403);
         assertThatThrownBy(()->f.diagnostics.recordTransport(otherCampaign,running.attempt(),DETAILS,headers))
@@ -147,7 +231,7 @@ class LiveDiagnosticPersistenceIT {
 
     @Test
     void firstFailureAndTransportEvidenceCannotBeMutatedDeletedOrTruncatedThroughSql() {
-        Fixture f=fixture("43");Running running=f.running();
+        Fixture f=fixture("45");Running running=f.running();
         f.diagnostics.recordFailure(running.campaign(),LiveDiagnosticStore.Kind.FIRST_FAILURE,
                 failure("PLAYWRIGHT_TIMEOUT",running,diagnostic(PlaywrightTransportDiagnostic.Phase.READING_BODY,403)));
         for(String sql:List.of("update live_campaign_diagnostic set code='PLAYWRIGHT_PROTOCOL_ERROR'",
@@ -163,7 +247,7 @@ class LiveDiagnosticPersistenceIT {
 
     @Test
     void cleanupEvidenceKeepsItsLatestTimeWithoutChangingThePrimaryDiagnostic() {
-        Fixture f=fixture("43");Running running=f.running();
+        Fixture f=fixture("45");Running running=f.running();
         var first=failure("PLAYWRIGHT_TIMEOUT",running,null);
         f.diagnostics.recordFailure(running.campaign(),LiveDiagnosticStore.Kind.FIRST_FAILURE,first);
         var latest=new LiveCampaignDiagnostic(LiveCampaignDiagnostic.Phase.CLEANUP_LEASE_RELEASE,
@@ -178,7 +262,7 @@ class LiveDiagnosticPersistenceIT {
 
     @Test
     void diagnosticTransactionRollbackCreatesNeitherFirstFailureNorPartialTransportRow() {
-        Fixture f=fixture("43");Running running=f.running();
+        Fixture f=fixture("45");Running running=f.running();
         assertThatThrownBy(()->new TransactionTemplate(f.transactions).execute(status->{
             f.diagnostics.recordFailure(running.campaign(),LiveDiagnosticStore.Kind.FIRST_FAILURE,
                     failure("PLAYWRIGHT_TIMEOUT",running,diagnostic(PlaywrightTransportDiagnostic.Phase.READING_BODY,403)));
@@ -190,7 +274,7 @@ class LiveDiagnosticPersistenceIT {
 
     @Test
     void concurrentFirstFailuresStoreOneDurableCause() throws Exception {
-        Fixture f=fixture("43");Running running=f.running();CountDownLatch start=new CountDownLatch(1);
+        Fixture f=fixture("45");Running running=f.running();CountDownLatch start=new CountDownLatch(1);
         var one=failure("PLAYWRIGHT_TIMEOUT",running,null);var two=failure("PLAYWRIGHT_IPC_TIMEOUT",running,null);
         try(var pool=Executors.newFixedThreadPool(2)) {
             var first=pool.submit(()->{start.await();f.newDiagnostics().recordFailure(running.campaign(),LiveDiagnosticStore.Kind.FIRST_FAILURE,one);return true;});
@@ -203,7 +287,7 @@ class LiveDiagnosticPersistenceIT {
 
     @Test
     void sqlRejectsArbitraryDiagnosticCodesAndInconsistentPhaseMetadata() {
-        Fixture f=fixture("43");Running running=f.running();
+        Fixture f=fixture("45");Running running=f.running();
         assertThatThrownBy(()->f.jdbc.update("""
             insert into live_campaign_diagnostic(campaign_id,kind,phase,code,occurred_at)
                 values (?,'FIRST_FAILURE','TRANSPORT','ARBITRARY_ERROR_TEXT',?)
@@ -236,7 +320,7 @@ class LiveDiagnosticPersistenceIT {
 
     @Test
     void nativeBackupRestorePreservesAllSixResilienceTablesAndAFreeGuardWithoutRearmingTheProvider() throws Exception {
-        Fixture source=fixture("44");Running running=source.running();
+        Fixture source=fixture("45");Running running=source.running();
         Manifest v6=source.prepare("live-v6",List.of(source.seed(58002)));
         var campaign=source.campaigns.find(running.campaign()).orElseThrow();
         Ownership owner=campaign.ownership();
@@ -247,7 +331,8 @@ class LiveDiagnosticPersistenceIT {
         var headers=diagnostic(PlaywrightTransportDiagnostic.Phase.HEADERS_RECEIVED,403);
         resilience.suspend(running.attempt(),running.campaign(),403,headers.headersReceivedAt(),null);
         var first=new LiveCampaignDiagnostic(LiveCampaignDiagnostic.Phase.TRANSPORT,"PROVIDER_HTTP_403",
-                headers.headersReceivedAt(),running.attempt(),DETAILS,headers.at(PlaywrightTransportDiagnostic.Phase.READING_BODY));
+                headers.headersReceivedAt(),running.attempt(),DETAILS,headers.at(PlaywrightTransportDiagnostic.Phase.READING_BODY)
+                        .withExchangeEnd(T0.plusSeconds(40),PlaywrightTransportDiagnostic.ExchangeEndReason.ABORTED,false));
         source.diagnostics.recordFailure(running.campaign(),LiveDiagnosticStore.Kind.FIRST_FAILURE,first);
         source.campaigns.publishResult(owner,running.attempt(),new Publication("FAILED","CAMPAIGN","PLAYWRIGHT_TIMEOUT",
                 T0.plusSeconds(40),null,false,null),NormalizedReferences::none);
@@ -284,8 +369,8 @@ class LiveDiagnosticPersistenceIT {
             assertThat(after).isEqualTo(before);
             restored.assertEvidence(evidence);
             Flyway.configure().dataSource(restored.ds).locations("classpath:db/migration")
-                    .target(MigrationVersion.fromVersion("44")).load().validate();
-            assertThat(restored.migrate("44")).isZero();
+                    .target(MigrationVersion.fromVersion("45")).load().validate();
+            assertThat(restored.migrate("45")).isZero();
             assertThat(restored.guard.snapshot().state()).isEqualTo("FREE");
             assertThat(restored.campaigns.find(running.campaign()).orElseThrow().state()).isEqualTo("STOPPED_ERROR");
             assertThat(restored.campaigns.find(v6.campaignId()).orElseThrow().manifest()).isEqualTo(v6);

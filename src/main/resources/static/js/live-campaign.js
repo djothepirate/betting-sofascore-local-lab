@@ -78,6 +78,17 @@
       result.append(create("span", "", `data-live-family-${key}`), document.createTextNode(" "));
     });
     section.append(result, create("p", "", "data-live-family-previous"), create("p", "", "data-live-freshness"));
+    const retry = create("p", "", "data-live-timeout-retry");
+    retry.className = "notice notice-warning";
+    const proof = create("dl", "", "data-live-timeout-proof");
+    proof.className = "detail-grid";
+    [["Fin du transport prouvée (UTC)", "ended"], ["Mode de fin observé", "end-reason"],
+      ["Réutilisation du contexte vérifiée", "reusable"]].forEach(([label, key]) => {
+      const item = create("div");
+      item.append(create("dt", label), create("dd", "—", `data-live-timeout-${key}`));
+      proof.append(item);
+    });
+    section.append(retry, proof);
     const metadata = create("dl");
     metadata.className = "detail-grid";
     [
@@ -232,6 +243,16 @@
     text(section, "[data-live-family-outcome]", family.outcome);
     text(section, "[data-live-family-code]", family.code);
     text(section, "[data-live-family-scope]", family.scope);
+    const retry = section.querySelector("[data-live-timeout-retry]");
+    if (retry) {
+      retry.hidden = family.code !== "PLAYWRIGHT_TIMEOUT_RETRY_DEFERRED" || !family.schedule?.nextDueAt;
+      retry.textContent = "Le délai de cette tentative a été dépassé. Sa fin et le nettoyage local ont été vérifiés. Une prochaine collecte est différée ; aucune nouvelle donnée n’a été reçue intégralement.";
+    }
+    const proof = section.querySelector("[data-live-timeout-proof]");
+    if (proof) proof.hidden = !family.transport;
+    text(section, "[data-live-timeout-ended]", family.transport?.exchangeEndedAt);
+    text(section, "[data-live-timeout-end-reason]", family.transport?.exchangeEndReason);
+    text(section, "[data-live-timeout-reusable]", family.transport?.contextReusable === true ? "Oui" : "Non établie");
     if (family.freshness) {
       text(section, "[data-live-freshness]", family.freshness.label);
       const freshness = section.querySelector("[data-live-freshness]");
@@ -339,6 +360,9 @@
           text(section, "[data-live-diagnostic-retry-after]", transport?.retryAfterNotBefore);
           text(section, "[data-live-diagnostic-complete]", transport?.responseComplete === true ? "Oui"
             : transport?.responseComplete === false ? "Non" : null);
+          text(section, "[data-live-diagnostic-ended]", transport?.exchangeEndedAt);
+          text(section, "[data-live-diagnostic-end-reason]", transport?.exchangeEndReason);
+          text(section, "[data-live-diagnostic-reusable]", transport?.contextReusable === true ? "Oui" : "Non établie");
         }
       }
       text(monitor, "[data-live-campaign-state]", campaign.state);

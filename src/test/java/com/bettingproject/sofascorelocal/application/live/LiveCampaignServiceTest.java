@@ -36,6 +36,7 @@ import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
@@ -874,7 +875,8 @@ class LiveCampaignServiceTest {
         try(Harness h=new Harness(false,policy,1)) {
             h.reply=LiveCampaignServiceTest::normalFinishedReply;
             h.launch();h.awaitFinished();
-            if (!"live-v4".equals(policy)) verify(h.factory).openLiveGroupedV5(h.manifest.campaignId(),LiveProviderSession.ENDPOINTS);
+            if ("live-v6".equals(policy)) verify(h.factory).openLiveGroupedV6(h.manifest.campaignId(),LiveProviderSession.ENDPOINTS);
+            else if ("live-v5".equals(policy)) verify(h.factory).openLiveGroupedV5(h.manifest.campaignId(),LiveProviderSession.ENDPOINTS);
             else verify(h.factory).openLiveGrouped(h.manifest.campaignId(),LiveProviderSession.ENDPOINTS);
             verify(h.factory,never()).open(any(),any());
             assertThat(h.dispatched).extracting(PlaywrightProviderRequest::endpoint)
@@ -1051,7 +1053,162 @@ class LiveCampaignServiceTest {
                 assertThat(status.firstFailure().code()).isEqualTo("PROVIDER_HTTP_403");
                 assertThat(status.cleanupFailure()).isNull();
             } finally {restarted.shutdown();}
-            verify(h.factory,times(1)).openLiveGroupedV5(h.manifest.campaignId(),LiveProviderSession.ENDPOINTS);
+            verify(h.factory,times(1)).openLiveGroupedV6(h.manifest.campaignId(),LiveProviderSession.ENDPOINTS);
+        }
+    }
+
+    @Test
+    void aProvenIsolatedTimeoutIsPublishedWithoutReceiptOrStopAndWaitsForANewGroup() throws Exception {
+        try (Harness h = new Harness(false, "live-v6", 1, true, Duration.ofMinutes(15))) {
+            h.reply = request -> { throw endedTimeout(); };
+            h.launch();
+            long until = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+            while (h.publications.isEmpty() && System.nanoTime() < until) Thread.sleep(10);
+            assertThat(h.publications).singleElement().satisfies(p -> {
+                assertThat(p.code()).isEqualTo("PLAYWRIGHT_TIMEOUT_RETRY_DEFERRED");
+                assertThat(p.scope()).isEqualTo("NONE");
+                assertThat(p.successful()).isFalse();
+            });
+            assertThat(h.savedTransport.values()).singleElement().satisfies(d -> assertThat(d.contextReusable()).isTrue());
+            assertThat(h.receipts).isEmpty();
+            verifyNoInteractions(h.processor);
+            assertThat(h.savedDiagnostics).isEmpty();
+            assertThat(h.service.runtimeStatus(h.manifest.campaignId())).isEmpty();
+            assertThat(h.campaignState.get()).isEqualTo("RUNNING");
+            Thread.sleep(150);
+            assertThat(h.dispatched).hasSize(1);
+            h.service.stop(h.manifest.campaignId(), null);
+            h.awaitFinished();
+            assertThat(h.campaignState.get()).isEqualTo("STOPPED_OPERATOR");
+            assertThat(h.savedDiagnostics).isEmpty();
+        }
+    }
+
+    @Test
+    void aProvenFinalTimeoutDoesNotRetryOrClaimFinalCompleteness() throws Exception {
+        try (Harness h = new Harness(false, "live-v6", 1, true)) {
+            h.reply = request -> {
+                if (request.endpoint() != EVENT_DETAILS) throw endedTimeout();
+                return normalFinishedReply(request);
+            };
+            h.launch(); h.awaitFinished();
+            assertThat(h.dispatched).hasSize(2);
+            assertThat(h.receipts).hasSize(1);
+            assertThat(h.publications.getLast().code()).isEqualTo("PLAYWRIGHT_TIMEOUT_FINAL");
+            assertThat(h.publications.getLast().scope()).isEqualTo("EVENT");
+            assertThat(h.eventStates.get(id(A))).isEqualTo("STOPPED_ERROR");
+            assertThat(h.finalCompleteness.get(id(A))).isFalse();
+            assertThat(h.savedDiagnostics).isEmpty();
+        }
+    }
+
+    @Test
+    void failedDurablePublicationOfARecoverableTimeoutPreventsFurtherDispatch() throws Exception {
+        try (Harness h = new Harness(false, "live-v6", 1, true, Duration.ofMinutes(15))) {
+            h.reply = request -> { throw endedTimeout(); };
+            h.failFirstPublication.set(true);
+            h.launch(); h.awaitFinished();
+            assertThat(h.dispatched).hasSize(1);
+            assertThat(h.campaignState.get()).isEqualTo("STOPPED_ERROR");
+            assertThat(h.receipts).isEmpty();
+            assertThat(h.savedDiagnostics.get(LiveDiagnosticStore.Kind.FIRST_FAILURE).phase())
+                    .isEqualTo(LiveCampaignDiagnostic.Phase.RESULT_PUBLICATION);
+        }
+    }
+
+    @Test
+    void evenATerminalTimeoutCannotChangeTheHistoricalV5StopPolicy() throws Exception {
+        try (Harness h = new Harness(false, "live-v5", 1, true)) {
+            h.reply = request -> { throw endedTimeout(); };
+            h.launch(); h.awaitFinished();
+            assertThat(h.campaignState.get()).isEqualTo("STOPPED_ERROR");
+            assertThat(h.publications.getFirst().code()).isEqualTo("PLAYWRIGHT_TIMEOUT");
+        }
+    }
+
+    private static PlaywrightProviderException endedTimeout() {
+        Instant requested = Instant.now().minusSeconds(30);
+        return new PlaywrightProviderException(PlaywrightProviderFailure.TIMEOUT,
+                new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.REQUEST_SENT,
+                        30000, requested, null, null, null, false, requested.plusSeconds(30),
+                        PlaywrightTransportDiagnostic.ExchangeEndReason.ABORTED, true));
+    }
+
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"true,true", "true,false", "false,true", "false,false"})
+    void operatorStopBeforeOrDuringTimeoutPublicationWinsWithoutRetry(boolean global, boolean beforeFailure) throws Exception {
+        try (Harness h = new Harness(false, "live-v6", 1, true, Duration.ofMinutes(15))) {
+            Runnable stop = () -> h.service.stop(h.manifest.campaignId(), global ? null : id(A));
+            if (!beforeFailure) {
+                doAnswer(invocation -> {
+                    PlaywrightTransportDiagnostic proof = invocation.getArgument(3);
+                    h.savedTransport.put(invocation.getArgument(1), proof);
+                    if (proof.contextReusable()) stop.run();
+                    return null;
+                }).when(h.diagnostics).recordTransport(any(), any(), any(), any());
+            }
+            h.reply = request -> {
+                if (beforeFailure) stop.run();
+                throw endedTimeout();
+            };
+            h.launch(); h.awaitFinished();
+            assertThat(h.dispatched).hasSize(1);
+            assertThat(h.publications).singleElement().satisfies(p -> {
+                assertThat(p.code()).isEqualTo("PLAYWRIGHT_TIMEOUT_ABANDONED");
+                assertThat(p.nextEventState()).isEqualTo("STOPPED_OPERATOR");
+            });
+            assertThat(h.savedDiagnostics).isEmpty();
+            assertThat(h.campaignState.get()).isEqualTo(global ? "STOPPED_OPERATOR" : "COMPLETED");
+            assertThat(h.eventStates.get(id(A))).isEqualTo("STOPPED_OPERATOR");
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(booleans = {true, false})
+    void stoppingOneMatchOnProvenTimeoutStillAllowsTheOtherMatchToComplete(boolean beforeFailure) throws Exception {
+        try (Harness h = new Harness(false, "live-v6", 2, true, Duration.ofMinutes(15))) {
+            AtomicBoolean stopped = new AtomicBoolean();
+            Runnable stopFirst = () -> {
+                if (!stopped.compareAndSet(false, true)) return;
+                h.service.stop(h.manifest.campaignId(), id(A));
+                // The second match's nominal phase is 50 seconds later. Advance only the
+                // harness session's monotone origin, retaining the real next/reserve/dispatch path.
+                AtomicReference<?> active = (AtomicReference<?>) ReflectionTestUtils.getField(h.service, "active");
+                Object session = active.get();
+                long origin = (long) ReflectionTestUtils.getField(session, "monotonicOrigin");
+                ReflectionTestUtils.setField(session, "monotonicOrigin", origin - TimeUnit.SECONDS.toNanos(51));
+            };
+            if (!beforeFailure) {
+                doAnswer(invocation -> {
+                    PlaywrightTransportDiagnostic proof = invocation.getArgument(3);
+                    h.savedTransport.put(invocation.getArgument(1), proof);
+                    if (proof.contextReusable()) stopFirst.run();
+                    return null;
+                }).when(h.diagnostics).recordTransport(any(), any(), any(), any());
+            }
+            h.reply = request -> {
+                if (request.eventId() == A) {
+                    if (beforeFailure) stopFirst.run();
+                    throw endedTimeout();
+                }
+                return normalFinishedReply(request);
+            };
+            h.launch(); h.awaitFinished();
+            assertThat(h.dispatched).extracting(PlaywrightProviderRequest::eventId).containsExactly(A, B, B, B, B);
+            assertThat(h.dispatched).extracting(PlaywrightProviderRequest::endpoint)
+                    .containsExactly(EVENT_DETAILS, EVENT_DETAILS, EVENT_INCIDENTS, EVENT_STATISTICS, EVENT_LINEUPS);
+            assertThat(h.attemptRequests).filteredOn(attempt -> attempt.canonicalEventId().equals(id(A))).hasSize(1);
+            assertThat(h.publications.getFirst()).satisfies(p -> {
+                assertThat(p.code()).isEqualTo("PLAYWRIGHT_TIMEOUT_ABANDONED");
+                assertThat(p.scope()).isEqualTo("EVENT");
+                assertThat(p.nextEventState()).isEqualTo("STOPPED_OPERATOR");
+            });
+            assertThat(h.eventStates.get(id(A))).isEqualTo("STOPPED_OPERATOR");
+            assertThat(h.eventStates.get(id(B))).isEqualTo("FINISHED_CONFIRMED");
+            assertThat(h.campaignState.get()).isEqualTo("COMPLETED");
+            assertThat(h.receipts).hasSize(4);
+            assertThat(h.savedDiagnostics).isEmpty();
+            verify(h.supervisor, never()).stopCampaign(any(), any());
         }
     }
 
@@ -1242,10 +1399,13 @@ class LiveCampaignServiceTest {
             this(expired,policy,targetCount,false);
         }
         Harness(boolean expired, String policy, int targetCount, boolean durable) {
+            this(expired, policy, targetCount, durable, Duration.ofMinutes(5));
+        }
+        Harness(boolean expired, String policy, int targetCount, boolean durable, Duration duration) {
             this.durable=durable;
             Instant now = Instant.now().minusSeconds(expired ? 600 : 0);
             properties.setEnabled(true);
-            properties.setDuration(Duration.ofMinutes(5));
+            properties.setDuration(duration);
             properties.setQualifiedMatchCapacity(2);
             properties.setRequestEnvelope(Duration.ofSeconds(3));
             properties.setQualificationSha256("a".repeat(64));
@@ -1264,7 +1424,7 @@ class LiveCampaignServiceTest {
             boolean v5 = "live-v5".equals(policy);
             boolean v6 = "live-v6".equals(policy);
             manifest = new Manifest(UUID.randomUUID(), "a".repeat(64), policy, now, now.plusSeconds(300),
-                    Duration.ofMinutes(5), v5 || v6 ? 2500 : 1000, v5 || v6 ? 20000 : 3000, 20_000_000, 2,
+                    duration, v5 || v6 ? 2500 : 1000, v5 || v6 ? 20000 : 3000, 20_000_000, 2,
                     targetCount==1?List.of(new Target(id(A),A,1,1)):List.of(new Target(id(A), A, 1, 1), new Target(id(B), B, 2, 2)),
                     new AdmissionProfile(properties.getRequestEnvelope(), properties.getProcessingEnvelope(),
                             properties.getQualificationSha256(), v6 ? properties.groupedAdmissionProfileV6()
@@ -1283,6 +1443,7 @@ class LiveCampaignServiceTest {
             when(factory.open(manifest.campaignId(), LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
             when(factory.openLiveGrouped(manifest.campaignId(), LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
             when(factory.openLiveGroupedV5(manifest.campaignId(), LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
+            when(factory.openLiveGroupedV6(manifest.campaignId(), LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
             when(supervisor.activeCampaignId()).thenReturn(Optional.empty());
             when(store.find(manifest.campaignId())).thenAnswer(invocation -> Optional.of(view()));
             when(store.dispatchBudget(eq(ownership),any())).thenAnswer(invocation -> {

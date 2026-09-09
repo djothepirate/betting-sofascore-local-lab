@@ -23,6 +23,7 @@ import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTeam;
 import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
+import com.bettingproject.sofascorelocal.port.LiveDiagnosticStore;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.ServiceWorkerPolicy;
@@ -88,6 +89,7 @@ class LiveCampaignLineupsBrowserQualificationIT {
     @MockitoBean private CanonicalEventStore events;
     @MockitoBean private EventDetailsStore details;
     @MockitoBean private J5EventDataStore data;
+    @MockitoBean private LiveDiagnosticStore diagnostics;
     @MockitoBean private CacheManager cacheManager;
     @MockitoBean private J5EventDataQueryService queryService;
     @MockitoBean private J5OfflineFixtureImportService fixtureImportService;

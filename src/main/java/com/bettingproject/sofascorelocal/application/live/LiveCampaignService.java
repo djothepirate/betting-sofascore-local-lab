@@ -685,12 +685,50 @@ public final class LiveCampaignService {
                     complete.map(c -> c.status().name()).orElse(null), complete.map(c -> c.scorePercent()).orElse(null));
             s.phase = RESULT_PUBLICATION;
             store.publishResult(s.ownership, attempt.attemptId(), publication, () -> processor.persistProcessed(processed));
+            if (processed.outcome().name().equals("PARSED")) s.timeoutRecovery.successful(due.eventId(), due.endpoint());
         } catch (PlaywrightDispatchCancelledException cancelled) {
             s.phase = RESULT_PUBLICATION;
             store.publishResult(s.ownership, attempt.attemptId(), new Publication("NOT_DISPATCHED", "EVENT", "DISPATCH_CANCELLED",
                     clock.instant(), null, false, null), NormalizedReferences::none);
             if (s.schedule.mayDispatch(due, s.now()) && !s.stoppedEvents.contains(due.eventId())) s.stopAll("STOPPED_ERROR");
         } catch (RuntimeException failure) {
+            if (failure instanceof PlaywrightProviderException timeout && timeout.recoverableTimeout()
+                    && "live-v6".equals(s.manifest.policyVersion())) {
+                // A timeout is not a receipt. Keep prior data, the charged attempt and
+                // terminal evidence; publish all of them before another departure.
+                s.currentTransport = timeout.diagnostic();
+                s.phase = RESULT_PUBLICATION;
+                persistCurrentTransport(s);
+                boolean admitted;
+                boolean abandoned;
+                String eventState;
+                s.dispatchLock.lock();
+                try {
+                    abandoned = s.stopReason != null || s.stoppedEvents.contains(due.eventId());
+                    admitted = abandoned || s.firstFailure.get() == null
+                            && s.timeoutRecovery.admit(due.eventId(), due.endpoint());
+                    if (admitted) {
+                        // Also acknowledge a proven end after an operator stop: the
+                        // inactive event is not rescheduled, but its in-flight slot
+                        // must be released so other events can continue.
+                        Instant ended = timeout.diagnostic().exchangeEndedAt();
+                        Instant now = s.now();
+                        s.schedule.deferAfterTimeout(due, now.isAfter(ended) ? now : ended);
+                    }
+                    eventState = s.schedule.states().stream().filter(e -> e.eventId().equals(due.eventId()))
+                            .findFirst().orElseThrow().state();
+                } finally { s.dispatchLock.unlock(); }
+                if (admitted) {
+                    boolean deferred = !abandoned && !eventState.startsWith("STOPPED");
+                    store.publishResult(s.ownership, attempt.attemptId(), new Publication("FAILED",
+                            deferred ? "NONE" : "EVENT", abandoned ? "PLAYWRIGHT_TIMEOUT_ABANDONED"
+                                    : deferred ? "PLAYWRIGHT_TIMEOUT_RETRY_DEFERRED"
+                                    : due.finalCycle() ? "PLAYWRIGHT_TIMEOUT_FINAL" : "PLAYWRIGHT_TIMEOUT_WINDOW_EXHAUSTED",
+                            clock.instant(), null, false, eventState), NormalizedReferences::none);
+                    return;
+                }
+                s.phase = TRANSPORT;
+            }
             // Capture before a failed FAILED publication or cleanup can obscure this cause.
             if (failure instanceof PlaywrightProviderException transportFailure && transportFailure.diagnostic() != null) {
                 s.currentTransport = transportFailure.diagnostic();
@@ -816,6 +854,7 @@ public final class LiveCampaignService {
         final ReentrantLock dispatchLock = new ReentrantLock(); final Set<UUID> stoppedEvents = ConcurrentHashMap.newKeySet();
         final Map<UUID,String> publishedStates = new HashMap<>(); final Map<UUID,LiveSchedule.EventState> publishedMetrics = new HashMap<>();
         final Map<String,FamilySchedule> publishedFamilies = new HashMap<>();
+        final LiveTimeoutRecoveryPolicy timeoutRecovery = new LiveTimeoutRecoveryPolicy();
         volatile String stopReason; volatile LiveSchedule schedule; volatile Ownership ownership; volatile boolean finished;
         volatile LiveCampaignDiagnostic.Phase phase = LEASE_ACQUISITION;
         final AtomicReference<LiveCampaignDiagnostic> firstFailure = new AtomicReference<>();

@@ -152,7 +152,8 @@ class LiveGroupedCampaignLocalQualificationIT {
                         .orElseThrow().ownership();
                 List<ProcessHandle> children;
                 long elapsedNanos;
-                try (var campaign = V6 || V5 ? factory.openLiveGroupedV5(manifest.campaignId(), LiveProviderSession.ENDPOINTS)
+                try (var campaign = V6 ? factory.openLiveGroupedV6(manifest.campaignId(), LiveProviderSession.ENDPOINTS)
+                        : V5 ? factory.openLiveGroupedV5(manifest.campaignId(), LiveProviderSession.ENDPOINTS)
                         : factory.openLiveGrouped(manifest.campaignId(), LiveProviderSession.ENDPOINTS)) {
                     // Browser/bootstrap and seed transactions are outside the cadence measurement.
                     Instant origin = Instant.now();

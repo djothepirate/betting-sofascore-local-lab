@@ -8,6 +8,8 @@ import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Timeout;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -101,6 +103,177 @@ class ProviderPlaywrightLocalQualificationIT {
     private static final byte[] HTML_CHALLENGE_RESPONSE =
             "<!doctype html><title>local challenge fixture</title>"
                     .getBytes(StandardCharsets.UTF_8);
+    private static final Set<SofascoreEndpointType> LIVE_ENDPOINTS = Set.of(
+            SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+            SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS);
+
+    @ParameterizedTest @ValueSource(booleans = {false, true}) @Timeout(60)
+    void liveV6AcceptsDelayedHeadersOrBodyWithinTheUniqueDeadline(boolean delayedBody) throws Exception {
+        exerciseLiveV6Delay(delayedBody, false, false);
+    }
+
+    @ParameterizedTest @ValueSource(booleans = {false, true}) @Timeout(60)
+    void liveV6RequiresTerminalProofBeforeReusingTimedOutContext(boolean delayedBody) throws Exception {
+        exerciseLiveV6Delay(delayedBody, true, false);
+    }
+
+    @Test @Timeout(60)
+    void liveV6DiscardsLateCompletedBodyAndReusesContextOnlyAfterFinishedProof() throws Exception {
+        exerciseLiveV6Delay(true, true, true);
+    }
+
+    private void exerciseLiveV6Delay(boolean delayedBody, boolean timeout, boolean lateCompletion) throws Exception {
+        Path workerJar = requiredRegularFile("provider.playwright.worker-jar");
+        Path browserCache = requiredDirectory("provider.playwright.browser-cache");
+        AtomicReference<Process> worker = new AtomicReference<>();
+        AtomicReference<CompletableFuture<byte[]>> out = new AtomicReference<>(), err = new AtomicReference<>();
+        boolean reusable = !timeout || !delayedBody || lateCompletion;
+        try (FixtureServer fixture = FixtureServer.startDelayedEvent(delayedBody, lateCompletion ? 2_400 : timeout ? 30_000 : 750);
+                ExecutorService readers = Executors.newVirtualThreadPerTaskExecutor()) {
+            var supervisor = new ChildJvmPlaywrightProviderSupervisor(
+                    properties(workerJar, fixture.origin(), Duration.ofSeconds(timeout ? 2 : 5)),
+                    Clock.systemUTC(), new SecureRandom(), builder -> startObservedWorker(
+                            builder, fixture.origin(), browserCache, worker, out, err, readers));
+            UUID id = UUID.randomUUID();
+            var campaign = supervisor.openLiveGroupedV6(id, LIVE_ENDPOINTS);
+            Process exactWorker = worker.get();
+            List<ProcessIdentity> tree = captureOwnedProcessTree(exactWorker);
+            try {
+                var abandonedGroup = new LiveProviderDispatchGroup(id, UUID.randomUUID(), 17_000_006L,
+                        LiveProviderDispatchGroup.Phase.CHECK);
+                long started = System.nanoTime();
+                if (timeout) {
+                    assertThatThrownBy(() -> campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(17_000_006L),
+                            abandonedGroup, PlaywrightDispatchAdmission.UNRESTRICTED))
+                            .isInstanceOfSatisfying(PlaywrightProviderException.class, failure -> {
+                                assertThat(failure.failure()).isEqualTo(PlaywrightProviderFailure.TIMEOUT);
+                                assertThat(failure.recoverableTimeout()).isEqualTo(reusable);
+                                assertThat(failure.diagnostic().exchangeEndReason()).isEqualTo(!reusable ? null
+                                        : lateCompletion ? PlaywrightTransportDiagnostic.ExchangeEndReason.FINISHED
+                                        : PlaywrightTransportDiagnostic.ExchangeEndReason.ABORTED);
+                                assertThat(failure.diagnostic().responseComplete()).isFalse();
+                                assertThat(failure.diagnostic().requestTimeoutMillis()).isEqualTo(2_000);
+                                assertThat(failure.diagnostic().httpStatus()).isEqualTo(delayedBody ? 200 : null);
+                            });
+                    assertThat(Duration.ofNanos(System.nanoTime() - started))
+                            .isGreaterThanOrEqualTo(Duration.ofMillis(1_800)).isLessThan(Duration.ofSeconds(5));
+                    assertThat(fixture.releaseSlowResponse.getCount()).isOne();
+                    if (reusable) {
+                        assertThatThrownBy(() -> campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(17_000_006L),
+                                abandonedGroup, PlaywrightDispatchAdmission.UNRESTRICTED))
+                                .isInstanceOfSatisfying(PlaywrightProviderException.class, failure ->
+                                        assertThat(failure.failure()).isEqualTo(PlaywrightProviderFailure.INVALID_REQUEST));
+                        fixture.releaseSlowResponse();
+                    }
+                } else {
+                    var response = campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(17_000_006L),
+                            abandonedGroup, PlaywrightDispatchAdmission.UNRESTRICTED);
+                    assertExactResponse(response, 200, "application/json", EVENT_DETAILS_STOP_RESPONSE);
+                    assertThat(Duration.ofNanos(System.nanoTime() - started)).isGreaterThan(Duration.ofMillis(650))
+                            .isLessThan(Duration.ofSeconds(5));
+                }
+                var next = new LiveProviderDispatchGroup(id, UUID.randomUUID(), 16_386_245L,
+                        LiveProviderDispatchGroup.Phase.CHECK);
+                if (reusable) {
+                    assertExactResponse(campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(16_386_245L), next,
+                            PlaywrightDispatchAdmission.UNRESTRICTED), 200, "application/json", EVENT_DETAILS_ONE_RESPONSE);
+                    assertThat(exactWorker.isAlive()).isTrue();
+                } else {
+                    // No terminal CDP event was observed for the committed, incomplete document.
+                    // The fatal timeout poisons further admission, even before campaign cleanup.
+                    assertThatThrownBy(() -> campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(16_386_245L), next,
+                            PlaywrightDispatchAdmission.UNRESTRICTED)).isInstanceOf(PlaywrightProviderException.class);
+                    assertThat(fixture.releaseSlowResponse.getCount()).isOne();
+                }
+                assertThat(worker.get()).isSameAs(exactWorker);
+                // The authenticated nonfatal frame required the existing context to pass local cleanup checks.
+                assertThat(supervisor.activeCampaignId()).contains(id);
+                campaign.close();
+                assertWorkerExited(supervisor, exactWorker, tree, out.get(), err.get());
+                if (reusable) fixture.assertExactTraffic(FixtureServer.DELAYED_EVENT_PATH, FixtureServer.EVENT_DETAILS_ONE_PATH);
+                else fixture.assertExactTraffic(FixtureServer.DELAYED_EVENT_PATH);
+                assertThat(fixture.requestCount(FixtureServer.DELAYED_EVENT_PATH)).isOne();
+                assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
+            } finally {
+                supervisor.shutdown(); fixture.releaseSlowResponse();
+            }
+        }
+    }
+
+    @ParameterizedTest @ValueSource(ints = {403, 429}) @Timeout(60)
+    void liveV6RetainsRefusalBeforeSlowBodyAndBlocksAnotherWrapperBeforeWorkerCreation(int status) throws Exception {
+        Path workerJar = requiredRegularFile("provider.playwright.worker-jar");
+        Path browserCache = requiredDirectory("provider.playwright.browser-cache");
+        AtomicReference<Process> worker = new AtomicReference<>();
+        AtomicReference<CompletableFuture<byte[]>> out = new AtomicReference<>(), err = new AtomicReference<>();
+        var store = new LocalRefusalStore();
+        try (FixtureServer fixture = FixtureServer.startIncompleteBody(status);
+                ExecutorService readers = Executors.newVirtualThreadPerTaskExecutor()) {
+            var supervisor = new ChildJvmPlaywrightProviderSupervisor(
+                    properties(workerJar, fixture.origin(), Duration.ofSeconds(2)), Clock.systemUTC(), new SecureRandom(),
+                    builder -> startObservedWorker(builder, fixture.origin(), browserCache, worker, out, err, readers));
+            var factory = new ResilientPlaywrightProviderCampaignFactory(supervisor, store);
+            UUID id = UUID.randomUUID();
+            var campaign = factory.openLiveGroupedV6(id, LIVE_ENDPOINTS);
+            Process exactWorker = worker.get();
+            List<ProcessIdentity> tree = captureOwnedProcessTree(exactWorker);
+            try {
+                var group = new LiveProviderDispatchGroup(id, UUID.randomUUID(), 17_000_005L,
+                        LiveProviderDispatchGroup.Phase.CHECK);
+                assertThatThrownBy(() -> campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(17_000_005L),
+                        group, new PlaywrightDispatchAdmission() {
+                            public void check() { }
+                            public Permit acquireDispatchPermit() { return () -> { }; }
+                            public void onTransportProgress(PlaywrightTransportDiagnostic diagnostic) {
+                                if (diagnostic.httpStatus() != null) {
+                                    assertThat(store.snapshot().state()).isEqualTo(
+                                            com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.State.SUSPENDED);
+                                    assertThat(fixture.releaseSlowResponse.getCount()).isOne();
+                                }
+                            }
+                        })).isInstanceOfSatisfying(PlaywrightProviderException.class, failure -> {
+                            assertThat(failure.failure()).isEqualTo(PlaywrightProviderFailure.TIMEOUT);
+                            assertThat(failure.recoverableTimeout()).isFalse();
+                            assertThat(failure.diagnostic().httpStatus()).isEqualTo(status);
+                            assertThat(failure.diagnostic().retryAfterNotBefore()).isNotNull();
+                        });
+                campaign.close();
+                assertWorkerExited(supervisor, exactWorker, tree, out.get(), err.get());
+                var newWrapper = new ResilientPlaywrightProviderCampaignFactory(supervisor, store);
+                assertThatThrownBy(() -> newWrapper.openLiveGroupedV6(UUID.randomUUID(), LIVE_ENDPOINTS))
+                        .hasMessage("PROVIDER_SUSPENDED");
+                assertThat(worker.get()).isSameAs(exactWorker);
+                assertThat(fixture.releaseSlowResponse.getCount()).isOne();
+                fixture.assertExactTraffic(FixtureServer.INCOMPLETE_BODY_PATH);
+                assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
+            } finally { supervisor.shutdown(); fixture.releaseSlowResponse(); }
+        }
+    }
+
+    /** Deterministic shared store for native transport tests; SQL durability is qualified separately. */
+    private static final class LocalRefusalStore implements com.bettingproject.sofascorelocal.port.ProviderResilienceStore {
+        private com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.Snapshot state =
+                new com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.Snapshot(
+                        com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.State.OPEN,
+                        0, Instant.now(), null, null, null, null, null, null, null, null);
+        public synchronized com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.Snapshot snapshot() { return state; }
+        public synchronized com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.DepartureDecision departureDecision(Instant at) {
+            boolean allowed = state.state() == com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.State.OPEN;
+            return new com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.DepartureDecision(allowed,
+                    allowed ? com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.DepartureReason.ALLOWED
+                            : com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.DepartureReason.PROVIDER_SUSPENDED, at, state);
+        }
+        public synchronized com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.DepartureDecision tryReserveDeparture(UUID id, Instant at) { return departureDecision(at); }
+        public synchronized com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.Snapshot markDepartureFinished(UUID id, Instant at) { return state; }
+        public synchronized com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.Snapshot suspend(UUID evidence, UUID campaign,
+                int status, Instant at, Instant retry) {
+            state = new com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.Snapshot(
+                    com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.State.SUSPENDED,
+                    1, at, status, at, retry, null, evidence, campaign, null, null);
+            return state;
+        }
+        public com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.Snapshot rearm(long version, Instant at) { throw new UnsupportedOperationException(); }
+    }
 
     @Test
     @Timeout(90)
@@ -1543,6 +1716,7 @@ class ProviderPlaywrightLocalQualificationIT {
         private static final String EVENT_DETAILS_NOT_FOUND_PATH = "/api/v1/event/17000001";
         private static final String EVENT_DETAILS_STOP_PATH = "/api/v1/event/17000002";
         private static final String INCOMPLETE_BODY_PATH = "/api/v1/event/17000005";
+        private static final String DELAYED_EVENT_PATH = "/api/v1/event/17000006";
         private static final String J5_STATISTICS_PATH =
                 "/api/v1/event/17000003/statistics";
         private static final String J5_INCIDENTS_PATH =
@@ -1563,6 +1737,8 @@ class ProviderPlaywrightLocalQualificationIT {
         private final boolean slowPageOne;
         private final boolean slowEventDetails;
         private volatile int incompleteBodyStatus;
+        private boolean delayedBody;
+        private long delayMillis;
         private final String sensitiveCanaryValue;
         private final CountDownLatch slowRequestReceived = new CountDownLatch(1);
         private final CountDownLatch releaseSlowResponse = new CountDownLatch(1);
@@ -1599,6 +1775,11 @@ class ProviderPlaywrightLocalQualificationIT {
             return fixture;
         }
 
+        static FixtureServer startDelayedEvent(boolean body, long millis) throws IOException {
+            FixtureServer fixture = start(); fixture.delayedBody = body; fixture.delayMillis = millis;
+            return fixture;
+        }
+
         private static FixtureServer start(
                 boolean slowPageOne,
                 boolean slowEventDetails) throws IOException {
@@ -1631,7 +1812,20 @@ class ProviderPlaywrightLocalQualificationIT {
                         exchange.getRemoteAddress().getAddress().getHostAddress(),
                         containsSensitiveHeader(exchange.getRequestHeaders()),
                         requestBody.length));
-                if (INCOMPLETE_BODY_PATH.equals(exchange.getRequestURI().getRawPath())) {
+                if (DELAYED_EVENT_PATH.equals(exchange.getRequestURI().getRawPath())) {
+                    if (delayedBody) {
+                        exchange.getResponseHeaders().set("Content-Type", "application/json");
+                        exchange.sendResponseHeaders(200, EVENT_DETAILS_STOP_RESPONSE.length);
+                        exchange.getResponseBody().write(EVENT_DETAILS_STOP_RESPONSE, 0, 1);
+                        exchange.getResponseBody().flush();
+                    }
+                    slowRequestReceived.countDown();
+                    try { releaseSlowResponse.await(delayMillis, TimeUnit.MILLISECONDS); }
+                    catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+                    if (delayedBody) exchange.getResponseBody().write(EVENT_DETAILS_STOP_RESPONSE, 1, EVENT_DETAILS_STOP_RESPONSE.length - 1);
+                    else respond(exchange, 200, "application/json", EVENT_DETAILS_STOP_RESPONSE);
+                }
+                else if (INCOMPLETE_BODY_PATH.equals(exchange.getRequestURI().getRawPath())) {
                     exchange.getResponseHeaders().set("Content-Type", "application/json");
                     exchange.getResponseHeaders().set("Retry-After", "60");
                     exchange.sendResponseHeaders(incompleteBodyStatus, 128);
