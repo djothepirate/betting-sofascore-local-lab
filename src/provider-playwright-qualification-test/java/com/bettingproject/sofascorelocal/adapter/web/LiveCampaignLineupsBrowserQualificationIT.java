@@ -90,6 +90,7 @@ class LiveCampaignLineupsBrowserQualificationIT {
     @MockitoBean private EventDetailsStore details;
     @MockitoBean private J5EventDataStore data;
     @MockitoBean private LiveDiagnosticStore diagnostics;
+    @MockitoBean private LineupCountryOverlayResolver lineupCountries;
     @MockitoBean private CacheManager cacheManager;
     @MockitoBean private J5EventDataQueryService queryService;
     @MockitoBean private J5OfflineFixtureImportService fixtureImportService;
@@ -563,7 +564,7 @@ class LiveCampaignLineupsBrowserQualificationIT {
         assertThat(player(home, 3).locator("[data-lineups-captain]").count()).isZero(); // Absent flag.
         assertThat(player(home, 2).locator("summary, details, [data-lineups-statistics-hint]").count()).isZero();
         assertThat(player(home, 6).locator("summary, details, [data-lineups-statistics-hint]").count()).isZero();
-        assertThat(player(home, 2).locator("[data-lineups-country-label]").textContent()).isEqualTo("Pays non renseigné");
+        assertThat(player(home, 2).locator("[data-lineups-country]").count()).isZero();
         assertThat(player(home, 1).locator("[data-lineups-flag]").getAttribute("src")).isEqualTo("/images/flags/4x3/fr.svg");
         assertThat(player(home, 1).locator("[data-lineups-country-label]").textContent()).isEqualTo("France");
         assertThat(player(home, 1).locator("[data-lineups-goal-icon]").count()).isEqualTo(2);

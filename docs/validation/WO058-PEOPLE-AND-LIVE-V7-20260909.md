@@ -75,3 +75,9 @@ Les campagnes existantes conservent le manifeste et la politique avec lesquels e
 redémarrage du Lab de l'opérateur, lancement de campagne réelle, modification de lanceur
 Eclipse, rotation d'adresse ou requête fournisseur n'a été effectué pour cette
 qualification.
+
+Le [profil versionné et son rejeu](WO058-LIVE-V7-CAPACITY-20260910.md) rendent désormais
+la preuve concrète reproductible depuis le dépôt : rapport natif, profil calculé,
+calculateur hors réseau et configuration manuelle du lanceur. Les valeurs restent opt-in
+et fail-closed dans l’application ; ce complément n’écrit pas dans la configuration Eclipse
+de l’opérateur.

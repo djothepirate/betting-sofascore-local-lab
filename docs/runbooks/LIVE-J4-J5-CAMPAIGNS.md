@@ -13,6 +13,29 @@ et les huit enveloppes `SOFASCORE_LIVE_GROUPED_V7_{J4,INCIDENTS,STATISTICS,LINEU
 L’absence de preuve laisse la capacité à zéro. La passe locale dédiée fournit les valeurs
 et le profil ; une empreinte v6 ne vaut pas qualification v7.
 
+### Charger le profil local v7 qualifié
+
+Le [profil v7 versionné](../validation/WO058-LIVE-V7-CAPACITY-20260910.md) qualifie au plus
+**trois rencontres** pour son périmètre synthétique loopback. Il ne mesure ni l’acceptation
+du fournisseur ni une capacité à trois rencontres au-delà de ce périmètre. Avant le prochain
+démarrage manuel du Lab, le lanceur Eclipse doit contenir les onze valeurs suivantes ; elles
+ne sont pas appliquées automatiquement par le code ou par ce document.
+
+| Variable | Valeur qualifiée |
+| --- | --- |
+| `SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY` | conserver la valeur opérateur existante (`10` actuellement) |
+| `SOFASCORE_PLAYWRIGHT_REQUEST_TIMEOUT` | `30s` |
+| `SOFASCORE_LIVE_GROUPED_V7_QUALIFICATION_SHA256` | `7b339ee1664abb744639164aa2e7d69388de22ac49db51edadb3b9b33f619335` |
+| `SOFASCORE_LIVE_GROUPED_V7_J4_REQUEST_ENVELOPE` / `SOFASCORE_LIVE_GROUPED_V7_J4_PROCESSING_ENVELOPE` | `350ms` / `400ms` |
+| `SOFASCORE_LIVE_GROUPED_V7_INCIDENTS_REQUEST_ENVELOPE` / `SOFASCORE_LIVE_GROUPED_V7_INCIDENTS_PROCESSING_ENVELOPE` | `350ms` / `550ms` |
+| `SOFASCORE_LIVE_GROUPED_V7_STATISTICS_REQUEST_ENVELOPE` / `SOFASCORE_LIVE_GROUPED_V7_STATISTICS_PROCESSING_ENVELOPE` | `350ms` / `500ms` |
+| `SOFASCORE_LIVE_GROUPED_V7_LINEUPS_REQUEST_ENVELOPE` / `SOFASCORE_LIVE_GROUPED_V7_LINEUPS_PROCESSING_ENVELOPE` | `350ms` / `500ms` |
+
+L’empreinte est celle du fichier de profil, pas celle du rapport natif. Une valeur opérateur
+supérieure à trois n’augmente pas l’admission v7, qui est déjà bornée à trois ; la valeur
+existante peut donc rester inchangée. Les valeurs par défaut restent invalides afin que
+l’absence d’une qualification explicite conserve la capacité à zéro.
+
 Le profil courant garde les protections partagées 25/min, 1 000/h et deux secondes après
 fin d’échange, et admet trois rencontres au plus. Ce plafond est celui du profil,
 pas une limite définitive de l’architecture. Les plafonds minute/heure sont des paramètres

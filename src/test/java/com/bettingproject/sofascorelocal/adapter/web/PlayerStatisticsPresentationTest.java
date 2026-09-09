@@ -59,4 +59,27 @@ class PlayerStatisticsPresentationTest {
         assertThat(alternativeOnly.ratingVersions()).singleElement()
                 .satisfies(metric -> assertThat(metric.value()).isEqualTo("8,9"));
     }
+
+    @Test
+    void groupsNewlyObservedKeeperAttackAndDefenceMetricsWithFrenchLabels() {
+        Map<String, BigDecimal> values = new LinkedHashMap<>();
+        values.put("accurateKeeperSweeper", BigDecimal.ONE);
+        values.put("totalKeeperSweeper", new BigDecimal("2"));
+        values.put("hitWoodwork", BigDecimal.ONE);
+        values.put("errorLeadToAShot", new BigDecimal("3"));
+        values.put("errorLeadToAGoal", new BigDecimal("4"));
+
+        var metrics = PlayerStatisticsPresentation.from(new PlayerMatchStatistics(values, Map.of()))
+                .groups().stream().flatMap(group -> group.metrics().stream()).toList();
+
+        assertThat(metrics).containsExactlyInAnyOrder(
+                new PlayerStatisticsPresentation.Metric("accurateKeeperSweeper", "Sorties du gardien (réussies)", "1"),
+                new PlayerStatisticsPresentation.Metric("totalKeeperSweeper", "Sorties du gardien (total)", "2"),
+                new PlayerStatisticsPresentation.Metric("hitWoodwork", "Tir sur un montant (poteau ou barre transversale)", "1"),
+                new PlayerStatisticsPresentation.Metric("errorLeadToAShot", "Erreur menant à un tir", "3"),
+                new PlayerStatisticsPresentation.Metric("errorLeadToAGoal", "Erreur provoquant un but", "4"));
+        assertThat(PlayerStatisticsPresentation.from(new PlayerMatchStatistics(values, Map.of())).groups())
+                .extracting(PlayerStatisticsPresentation.Group::label)
+                .containsExactly("Attaque", "Défense", "Gardien");
+    }
 }

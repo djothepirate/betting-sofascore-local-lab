@@ -10,7 +10,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   compact sur petit écran. Une carte sans statistique exploitable reste statique.
 - Affiche les nationalités des joueurs, entraîneurs et arbitre depuis les pays fournis.
   Les drapeaux SVG flag-icons 7.3.2 sont embarqués avec licence MIT et manifeste SHA-256 ;
-  aucune image n’est demandée au fournisseur ou à un CDN. Un pays inconnu garde son texte.
+  aucune image n’est demandée au fournisseur ou à un CDN. Pour les compositions V3 historiques,
+  un overlay de présentation relit uniquement le pays déjà présent dans un snapshot local vérifié ;
+  la donnée normalisée V4 reste prioritaire. Sans pays ou preuve cohérente, la carte omet ce champ.
+- Classe `accurateKeeperSweeper`, `totalKeeperSweeper`, `hitWoodwork`, `errorLeadToAShot` et
+  `errorLeadToAGoal` dans les rubriques Gardien, Attaque ou Défense avec leurs libellés français,
+  sans changer les clés ni valeurs conservées.
 - Versionne `event-details-v4` et `event-lineups-v4`, avec persistance V46. J4 conserve
   les entraîneurs, l’arbitre et le tour nommé, prioritaire sur le numéro de tour.
   Les observations et hashes historiques restent inchangés.
@@ -23,6 +28,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   rencontre ; horaire absent ou régression après `inprogress` restent à revoir. Profil
   distinct, trois rencontres au plus dans les budgets actuels ; aucune conversion de
   campagne existante, suspension persistante 403/429 conservée.
+- Versionne le profil de qualification local `live-v7`, son rapport natif et son
+  calculateur hors réseau ; le runbook publie les onze valeurs opt-in nécessaires au
+  prochain démarrage, sans modifier le lanceur Eclipse ni la configuration par défaut.
 - Traduit dans la projection française les motifs d’indisponibilité observés, y compris
   `red_card_suspension`, épaule, ménisque, hernie, ligaments, cœur, coup, aine et
   `Strain Injury` (« Blessure à l’entraînement »), sans modifier les attributs bruts

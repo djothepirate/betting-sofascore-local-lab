@@ -13,10 +13,12 @@ public final class CountryPresentation {
     private CountryPresentation() { }
 
     public static View of(Optional<ProviderCountry> country) {
-        if (country.isEmpty()) return new View("Pays non renseigné", "", "");
+        if (country.isEmpty()) return View.absent();
         ProviderCountry value = country.orElseThrow();
-        String code = value.alpha2().orElse("");
-        String label = value.name().orElse(code);
+        String code = value.alpha2().map(String::trim).filter(text -> !text.isEmpty())
+                .map(text -> text.toUpperCase(Locale.ROOT)).orElse("");
+        String label = value.name().map(String::trim).filter(text -> !text.isEmpty()).orElse(code);
+        if (label.isEmpty()) return View.absent();
         String asset = "";
         if (ISO_CODES.contains(code) || code.equals("XK")) asset = code.toLowerCase(Locale.ROOT);
         // These provider names designate football associations within the United Kingdom.
@@ -32,8 +34,12 @@ public final class CountryPresentation {
         String emoji = code.length() == 2 && !asset.isEmpty()
                 ? new String(Character.toChars(0x1f1e6 + code.charAt(0) - 'A'))
                     + new String(Character.toChars(0x1f1e6 + code.charAt(1) - 'A')) : "";
-        return new View(label, emoji, asset.isEmpty() ? "" : "/images/flags/4x3/" + asset + ".svg");
+        return new View(true, label, emoji, asset.isEmpty() ? "" : "/images/flags/4x3/" + asset + ".svg");
     }
 
-    public record View(String label, String emoji, String flagPath) { }
+    public record View(boolean available, String label, String emoji, String flagPath) {
+        private static View absent() {
+            return new View(false, "", "", "");
+        }
+    }
 }

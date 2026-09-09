@@ -54,6 +54,7 @@ public final class PlayerStatisticsPresentation {
             case "expectedAssists" -> new Label("Attaque", "Passes décisives attendues (xA)");
             case "bigChanceCreated" -> new Label("Attaque", "Grosses occasions créées");
             case "bigChanceMissed" -> new Label("Attaque", "Grosses occasions manquées");
+            case "hitWoodwork" -> new Label("Attaque", "Tir sur un montant (poteau ou barre transversale)");
             case "keyPass" -> new Label("Attaque", "Passes clés");
             case "totalOffside" -> new Label("Attaque", "Hors-jeu");
             case "totalPass" -> new Label("Passes", "Passes tentées");
@@ -90,11 +91,15 @@ public final class PlayerStatisticsPresentation {
             case "ballRecovery" -> new Label("Défense", "Récupérations");
             case "totalClearance" -> new Label("Défense", "Dégagements");
             case "outfielderBlock" -> new Label("Défense", "Tirs bloqués par le joueur");
+            case "errorLeadToAShot" -> new Label("Défense", "Erreur menant à un tir");
+            case "errorLeadToAGoal" -> new Label("Défense", "Erreur provoquant un but");
             case "saves" -> new Label("Gardien", "Arrêts");
             case "savedFromInsideTheBox", "savedShotsFromInsideTheBox" -> new Label("Gardien", "Arrêts dans la surface");
             case "punches" -> new Label("Gardien", "Dégagements des poings");
             case "goodHighClaim" -> new Label("Gardien", "Ballons aériens captés");
             case "goalsPrevented" -> new Label("Gardien", "Buts évités");
+            case "accurateKeeperSweeper" -> new Label("Gardien", "Sorties du gardien (réussies)");
+            case "totalKeeperSweeper" -> new Label("Gardien", "Sorties du gardien (total)");
             case "keeperSaveValue" -> new Label("Indices fournisseur", "Valeur des arrêts");
             case "defensiveValueNormalized" -> new Label("Indices fournisseur", "Valeur défensive normalisée");
             case "dribbleValueNormalized" -> new Label("Indices fournisseur", "Valeur des dribbles normalisée");

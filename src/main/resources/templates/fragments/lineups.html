@@ -57,9 +57,9 @@
             <li th:each="player : ${team.missingPlayers}" class="lineups-missing-player" th:attr="data-lineups-missing-player=${player.key}">
               <strong data-lineups-missing-name th:text="${player.name}">Joueur</strong>
               <p class="lineups-missing-position" data-lineups-missing-position th:text="${player.positionLabel + ' · N° ' + player.shirtNumber}">Poste</p>
-              <span class="lineups-country" data-lineups-country th:attr="aria-label=${'Pays : ' + player.country.label}">
+              <span th:if="${player.country.available}" class="lineups-country" data-lineups-country th:attr="aria-label=${'Pays : ' + player.country.label}">
                 <img th:if="${!player.country.flagPath.isEmpty()}" class="lineups-flag" data-lineups-flag th:src="${player.country.flagPath}" alt="" width="24" height="18">
-                <span data-lineups-country-label th:text="${player.country.label}">Pays non renseigné</span>
+                <span data-lineups-country-label th:text="${player.country.label}"></span>
               </span>
               <p data-lineups-missing-description th:text="${player.description}">Motif non renseigné</p>
               <p class="lineups-return" data-lineups-missing-return th:hidden="${player.expectedReturn == '—'}"
@@ -122,9 +122,9 @@
     <span class="lineups-player-meta">
       <span data-lineups-position th:text="${player.positionLabel}">Poste non renseigné</span>
     </span>
-    <span class="lineups-country" data-lineups-country th:attr="aria-label=${'Pays : ' + player.country.label}">
+    <span th:if="${player.country.available}" class="lineups-country" data-lineups-country th:attr="aria-label=${'Pays : ' + player.country.label}">
       <img th:if="${!player.country.flagPath.isEmpty()}" class="lineups-flag" data-lineups-flag th:src="${player.country.flagPath}" alt="" width="24" height="18">
-      <span data-lineups-country-label th:text="${player.country.label}">Pays non renseigné</span>
+      <span data-lineups-country-label th:text="${player.country.label}"></span>
     </span>
     <span class="lineups-achievements" data-lineups-achievements th:hidden="${player.achievements.isEmpty()}">
       <span th:each="achievement : ${player.achievements}" class="lineups-achievement" role="img"

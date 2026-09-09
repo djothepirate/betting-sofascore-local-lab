@@ -36,40 +36,47 @@ public class LiveCampaignPresentation {
     private final EventDetailsStore details;
     private final Clock clock;
     private final LiveDiagnosticStore diagnostics;
+    private final LineupCountryOverlayResolver lineupCountries;
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final List<SofascoreEndpointType> FAMILIES = List.of(SofascoreEndpointType.EVENT_DETAILS,
             SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_INCIDENTS,
             SofascoreEndpointType.EVENT_LINEUPS);
 
     public LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data) {
-        this(events, data, null, Clock.systemUTC());
+        this(events, data, null, Clock.systemUTC(), null, LineupCountryOverlayResolver.none());
     }
 
     public LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, EventDetailsStore details) {
-        this(events, data, details, Clock.systemUTC());
+        this(events, data, details, Clock.systemUTC(), null, LineupCountryOverlayResolver.none());
     }
 
     @Autowired
     public LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, EventDetailsStore details,
-                                    LiveDiagnosticStore diagnostics) {
-        this(events, data, details, Clock.systemUTC(), diagnostics);
+                                    LiveDiagnosticStore diagnostics, LineupCountryOverlayResolver lineupCountries) {
+        this(events, data, details, Clock.systemUTC(), diagnostics, lineupCountries);
     }
 
     LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, Clock clock) {
-        this(events, data, null, clock);
+        this(events, data, null, clock, null, LineupCountryOverlayResolver.none());
     }
 
     LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, EventDetailsStore details, Clock clock) {
-        this(events, data, details, clock, null);
+        this(events, data, details, clock, null, LineupCountryOverlayResolver.none());
     }
 
     LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, EventDetailsStore details, Clock clock,
                              LiveDiagnosticStore diagnostics) {
+        this(events, data, details, clock, diagnostics, LineupCountryOverlayResolver.none());
+    }
+
+    LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, EventDetailsStore details, Clock clock,
+                             LiveDiagnosticStore diagnostics, LineupCountryOverlayResolver lineupCountries) {
         this.events = events;
         this.data = data;
         this.details = details;
         this.clock = clock;
         this.diagnostics = diagnostics;
+        this.lineupCountries = lineupCountries == null ? LineupCountryOverlayResolver.none() : lineupCountries;
     }
 
     public Campaign state(CampaignView view) {
@@ -273,7 +280,8 @@ public class LiveCampaignPresentation {
                         && observation.orElseThrow().completeness().status() != J5CompletenessStatus.UNAVAILABLE) {
                     lineups = LineupsPresentation.from(values,
                             identity == null ? "Domicile" : identity.homeTeam().name(),
-                            identity == null ? "Extérieur" : identity.awayTeam().name());
+                            identity == null ? "Extérieur" : identity.awayTeam().name(),
+                            lineupCountries.resolve(observation.orElseThrow()));
                 }
                 if (observation.orElseThrow().data() instanceof EventIncidents values
                         && observation.orElseThrow().completeness().status() != J5CompletenessStatus.UNAVAILABLE) {

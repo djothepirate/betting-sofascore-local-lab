@@ -50,6 +50,7 @@ public class J5EventDataController {
     private final J5LocalJsonImportService localJsonImportService;
     private final J5ProviderCampaignStopService providerCampaignStopService;
     private final LocalFormTokenService formTokenService;
+    private final LineupCountryOverlayResolver lineupCountries;
 
     public J5EventDataController(
             J5EventDataQueryService queryService,
@@ -58,7 +59,8 @@ public class J5EventDataController {
             J5RealEventDataService realEventDataService,
             J5LocalJsonImportService localJsonImportService,
             J5ProviderCampaignStopService providerCampaignStopService,
-            LocalFormTokenService formTokenService) {
+            LocalFormTokenService formTokenService,
+            LineupCountryOverlayResolver lineupCountries) {
         this.queryService = queryService;
         this.fixtureImportService = fixtureImportService;
         this.realControlService = realControlService;
@@ -66,6 +68,7 @@ public class J5EventDataController {
         this.localJsonImportService = localJsonImportService;
         this.providerCampaignStopService = providerCampaignStopService;
         this.formTokenService = formTokenService;
+        this.lineupCountries = lineupCountries == null ? LineupCountryOverlayResolver.none() : lineupCountries;
     }
 
     @GetMapping
@@ -106,7 +109,8 @@ public class J5EventDataController {
                     model.addAttribute("lineupsData", (EventLineups) value.data());
                     if (value.completeness().status() != J5CompletenessStatus.UNAVAILABLE) {
                         model.addAttribute("lineupsView", LineupsPresentation.from((EventLineups) value.data(),
-                                page.current().event().homeTeam().name(), page.current().event().awayTeam().name()));
+                                page.current().event().homeTeam().name(), page.current().event().awayTeam().name(),
+                                lineupCountries.resolve(value)));
                     }
                 });
                 model.addAttribute("localFormToken", formTokenService.issue(session));

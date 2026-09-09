@@ -5,6 +5,7 @@ import com.bettingproject.sofascorelocal.domain.eventdata.EventLineups;
 import com.bettingproject.sofascorelocal.domain.eventdata.LineupSide;
 import com.bettingproject.sofascorelocal.domain.eventdata.MissingLineupPlayer;
 import com.bettingproject.sofascorelocal.domain.eventdata.TeamLineup;
+import com.bettingproject.sofascorelocal.domain.event.ProviderCountry;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -22,22 +23,29 @@ public final class LineupsPresentation {
     private LineupsPresentation() { }
 
     public static View from(EventLineups lineups) {
-        return from(lineups, null, null);
+        return from(lineups, null, null, LineupCountryOverlay.empty());
     }
 
     public static View from(EventLineups lineups, String homeName, String awayName) {
-        return new View(lineups.confirmed(), lineups.confirmed() ? "Confirmée" : "Provisoire",
-                List.of(team(lineups.home(), homeName), team(lineups.away(), awayName)));
+        return from(lineups, homeName, awayName, LineupCountryOverlay.empty());
     }
 
-    private static Team team(TeamLineup lineup, String name) {
+    public static View from(EventLineups lineups, String homeName, String awayName,
+                            LineupCountryOverlay countryOverlay) {
+        LineupCountryOverlay overlay = countryOverlay == null
+                ? LineupCountryOverlay.empty() : countryOverlay;
+        return new View(lineups.confirmed(), lineups.confirmed() ? "Confirmée" : "Provisoire",
+                List.of(team(lineups.home(), homeName, overlay), team(lineups.away(), awayName, overlay)));
+    }
+
+    private static Team team(TeamLineup lineup, String name, LineupCountryOverlay overlay) {
         String side = lineup.side().name();
         String sideLabel = lineup.side() == LineupSide.HOME ? "Domicile" : "Extérieur";
         var starters = new LinkedHashMap<String, List<Player>>();
         var substitutes = new ArrayList<Player>();
         int starterCount = 0;
         for (EventLineupPlayer source : lineup.players()) {
-            Player player = player(side, source);
+            Player player = player(lineup.side(), source, overlay);
             if (source.starter()) {
                 starters.computeIfAbsent(groupKey(source), ignored -> new ArrayList<>()).add(player);
                 starterCount++;
@@ -50,16 +58,17 @@ public final class LineupsPresentation {
         return new Team(side, name == null || name.isBlank() ? sideLabel : name, sideLabel,
                 lineup.formation().orElse("Formation non renseignée"), starterCount, substitutes.size(),
                 groups, List.copyOf(substitutes), lineup.missingPlayers()
-                .map(values -> missingPlayers(side, values)).orElse(null));
+                .map(values -> missingPlayers(lineup.side(), values, overlay)).orElse(null));
     }
 
-    private static Player player(String side, EventLineupPlayer source) {
-        return new Player(side + ":" + source.providerPlayerId(), source.name(),
+    private static Player player(LineupSide side, EventLineupPlayer source, LineupCountryOverlay overlay) {
+        return new Player(side.name() + ":" + source.providerPlayerId(), source.name(),
                 source.shirtNumber().map(String::valueOf).orElse("—"),
                 source.position().map(LineupsPresentation::positionLabel).orElse("Poste non renseigné"),
                 source.starter() ? "Titulaire" : "Remplaçant", source.captain().orElse(false),
                 source.statistics().map(PlayerStatisticsPresentation::from).orElse(null),
-                CountryPresentation.of(source.country()), achievements(source));
+                CountryPresentation.of(preferredCountry(source.country(),
+                        overlay.rosterCountry(side, source.providerPlayerId()))), achievements(source));
     }
 
     private static List<Achievement> achievements(EventLineupPlayer player) {
@@ -79,16 +88,19 @@ public final class LineupsPresentation {
                 java.util.stream.IntStream.range(0, repeats).boxed().toList(), repeats == 1 && !count.equals("1")));
     }
 
-    private static List<MissingPlayer> missingPlayers(String side, List<MissingLineupPlayer> values) {
+    private static List<MissingPlayer> missingPlayers(LineupSide side, List<MissingLineupPlayer> values,
+                                                      LineupCountryOverlay overlay) {
         Map<Long, Integer> occurrences = new LinkedHashMap<>();
         return values.stream().map(value -> {
             int occurrence = occurrences.merge(value.providerPlayerId(), 1, Integer::sum);
-            String key = side + ":" + value.providerPlayerId() + (occurrence == 1 ? "" : "|duplicate:" + occurrence);
-            return missingPlayer(key, value);
+            String key = side.name() + ":" + value.providerPlayerId()
+                    + (occurrence == 1 ? "" : "|duplicate:" + occurrence);
+            return missingPlayer(key, value, side, overlay);
         }).toList();
     }
 
-    private static MissingPlayer missingPlayer(String key, MissingLineupPlayer source) {
+    private static MissingPlayer missingPlayer(String key, MissingLineupPlayer source, LineupSide side,
+                                               LineupCountryOverlay overlay) {
         return new MissingPlayer(key, source.name(),
                 source.shirtNumber().map(String::valueOf).orElse("—"),
                 source.position().map(LineupsPresentation::positionLabel).orElse("Poste non renseigné"),
@@ -96,7 +108,14 @@ public final class LineupsPresentation {
                 source.expectedEndDate().map(value -> value.format(
                         DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm XXX", Locale.FRANCE))).orElse("—"),
                 source.type().map(LineupsPresentation::missingTypeLabel).orElse("—"), source.reason().map(String::valueOf).orElse("—"),
-                source.externalType().map(String::valueOf).orElse("—"), CountryPresentation.of(source.country()));
+                source.externalType().map(String::valueOf).orElse("—"), CountryPresentation.of(preferredCountry(
+                        source.country(), overlay.missingPlayerCountry(side, source.providerPlayerId()))));
+    }
+
+    private static Optional<ProviderCountry> preferredCountry(
+            Optional<ProviderCountry> normalized,
+            Optional<ProviderCountry> overlay) {
+        return normalized.isPresent() ? normalized : overlay;
     }
 
     private static String missingDescriptionLabel(String value) {

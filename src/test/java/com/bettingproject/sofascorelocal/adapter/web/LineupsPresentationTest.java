@@ -18,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class LineupsPresentationTest {
     @Test
-    void unavailablePlayersUseTheirOwnCountryAndKeepAnExplicitFallback() {
+    void unavailablePlayersUseTheirOwnCountryAndOmitAnAbsentCountry() {
         var unavailable = new MissingLineupPlayer(31, "Absent synthétique", Optional.of(42), Optional.of("D"),
                 Optional.of("missing"), Optional.of(1), Optional.of("Knee Injury"), Optional.of(5), Optional.empty(),
                 Optional.of(new com.bettingproject.sofascorelocal.domain.event.ProviderCountry(Optional.of("Argentina"), Optional.of("AR"))));
@@ -29,7 +29,8 @@ class LineupsPresentationTest {
         assertThat(view.teams().getFirst().missingPlayers()).satisfies(players -> {
             assertThat(players.getFirst().country().label()).isEqualTo("Argentina");
             assertThat(players.getFirst().country().flagPath()).isEqualTo("/images/flags/4x3/ar.svg");
-            assertThat(players.getLast().country().label()).isEqualTo("Pays non renseigné");
+            assertThat(players.getLast().country().available()).isFalse();
+            assertThat(players.getLast().country().label()).isEmpty();
             assertThat(players.getLast().country().flagPath()).isEmpty();
             assertThat(players.getFirst().description()).isEqualTo("Blessure au genou");
         });
@@ -76,6 +77,31 @@ class LineupsPresentationTest {
     }
 
     @Test
+    void historicalCountryOverlayFillsOnlyAnAbsentNormalizedCountry() {
+        var france = new com.bettingproject.sofascorelocal.domain.event.ProviderCountry(
+                Optional.of("France"), Optional.of("FR"));
+        var brazil = new com.bettingproject.sofascorelocal.domain.event.ProviderCountry(
+                Optional.of("Brazil"), Optional.of("BR"));
+        var home = new TeamLineup(LineupSide.HOME, Optional.empty(), List.of(new EventLineupPlayer(
+                101L, "Historical roster", Optional.empty(), Optional.of("F"), true)));
+        var away = new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of(), Optional.of(List.of(
+                new MissingLineupPlayer(202L, "Historical unavailable", Optional.empty(), Optional.empty(),
+                        Optional.of("missing"), Optional.empty(), Optional.of("Knee Injury"), Optional.empty(),
+                        Optional.empty(), Optional.of(france)))));
+        var overlay = LineupCountryOverlay.of(Map.of(
+                LineupCountryOverlay.PlayerKey.roster(LineupSide.HOME, 101L), brazil,
+                LineupCountryOverlay.PlayerKey.missingPlayer(LineupSide.AWAY, 202L), brazil));
+
+        var view = LineupsPresentation.from(new EventLineups(900001L, true, home, away),
+                "Home", "Away", overlay);
+
+        assertThat(players(view.teams().getFirst()).findFirst().orElseThrow().country().label()).isEqualTo("Brazil");
+        assertThat(view.teams().getLast().missingPlayers().getFirst().country().label()).isEqualTo("France");
+        assertThat(home.players().getFirst().country()).isEmpty();
+        assertThat(away.missingPlayers().orElseThrow().getFirst().country()).contains(france);
+    }
+
+    @Test
     void emptyStatisticsDoNotOfferDetailsWhileZeroAndRatingVersionsAreDisplayable() {
         var empty = new PlayerStatisticsPresentation.View(List.of(), List.of());
         assertThat(new LineupsPresentation.Player("p", "Joueur", "9", "Attaquant", "Titulaire", false, null).hasStatistics()).isFalse();
@@ -101,7 +127,8 @@ class LineupsPresentationTest {
                 });
             } else assertThat(player.achievements()).isEmpty();
             assertThat(player.country().flagPath()).isEmpty();
-            assertThat(player.country().label()).isEqualTo("Pays non renseigné");
+            assertThat(player.country().available()).isFalse();
+            assertThat(player.country().label()).isEmpty();
         }
     }
 

@@ -56,6 +56,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
 import static org.mockito.ArgumentMatchers.any;
@@ -101,6 +102,9 @@ class J5EventDataControllerTest {
 
     @MockitoBean
     LocalFormTokenService formTokenService;
+
+    @MockitoBean
+    LineupCountryOverlayResolver lineupCountries;
 
     @MockitoBean
     CacheManager cacheManager;
@@ -184,6 +188,30 @@ class J5EventDataControllerTest {
                 .andExpect(content().string(containsString("b".repeat(64))))
                 .andExpect(content().string(containsString("c".repeat(64))))
                 .andExpect(content().string(containsString("d".repeat(64))));
+    }
+
+    @Test
+    void rendersAVerifiedHistoricalLineupCountryOverlayWithoutChangingTheStoredLineup() throws Exception {
+        J5EventDataPage page = pageWithData();
+        var lineups = page.data().lineups().orElseThrow();
+        var france = new com.bettingproject.sofascorelocal.domain.event.ProviderCountry(
+                Optional.of("France"), Optional.of("FR"));
+        var overlay = LineupCountryOverlay.of(java.util.Map.of(
+                LineupCountryOverlay.PlayerKey.roster(LineupSide.HOME, 9701L), france));
+        when(formTokenService.issue(any(HttpSession.class))).thenReturn("one-use-token");
+        when(queryService.find(page.current().event().identity().value(), "Europe/Paris"))
+                .thenReturn(Optional.of(page));
+        when(lineupCountries.resolve(lineups)).thenReturn(overlay);
+
+        mockMvc.perform(get("/events/{id}/statistics", page.current().event().identity().value())
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Synthetic Home Striker")))
+                .andExpect(content().string(containsString("France")))
+                .andExpect(content().string(containsString("/images/flags/4x3/fr.svg")));
+
+        assertThat(((EventLineups) lineups.data()).home().players().getFirst().country()).isEmpty();
+        verify(lineupCountries).resolve(lineups);
     }
 
     @Test

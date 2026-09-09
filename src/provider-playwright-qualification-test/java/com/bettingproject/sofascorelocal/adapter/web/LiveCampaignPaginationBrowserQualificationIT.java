@@ -75,6 +75,7 @@ class LiveCampaignPaginationBrowserQualificationIT {
     @MockitoBean private EventDetailsStore details;
     @MockitoBean private J5EventDataStore data;
     @MockitoBean private LiveDiagnosticStore diagnostics;
+    @MockitoBean private LineupCountryOverlayResolver lineupCountries;
     @MockitoBean private CacheManager cacheManager;
 
     @Test

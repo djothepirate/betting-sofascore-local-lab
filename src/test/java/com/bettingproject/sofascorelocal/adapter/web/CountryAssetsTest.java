@@ -37,6 +37,10 @@ class CountryAssetsTest {
         }
         assertThat(CountryPresentation.of(Optional.of(new ProviderCountry(Optional.of("Pays source"),Optional.of("ZZ"))))
                 .flagPath()).isEmpty();
-        assertThat(CountryPresentation.of(Optional.empty()).flagPath()).isEmpty();
+        assertThat(CountryPresentation.of(Optional.empty())).satisfies(view -> {
+            assertThat(view.available()).isFalse();
+            assertThat(view.label()).isEmpty();
+            assertThat(view.flagPath()).isEmpty();
+        });
     }
 }

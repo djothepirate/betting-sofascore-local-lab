@@ -160,6 +160,48 @@ class LiveCampaignPresentationTest {
     }
 
     @Test
+    void lineupsUseAnOverlayForTheExactHistoricalV3ObservationWithoutChangingItsTrace() {
+        UUID id = UUID.randomUUID();
+        var refs = new NormalizedReferences(null, null, 31L, "a".repeat(64));
+        var result = new Result(id, new Publication("PARSED", "EVENT", "OK", START,
+                "event-lineups-v3", true, null, null, null, null, "COMPLETE", 100), refs);
+        var cursor = new FamilyCursor(SofascoreEndpointType.EVENT_LINEUPS, id, id, id, id,
+                START, START, START, refs, result, result);
+        var values = new EventLineups(900001L, true,
+                new TeamLineup(LineupSide.HOME, Optional.empty(), List.of(new EventLineupPlayer(
+                        101L, "Historic player", Optional.empty(), Optional.of("F"), true))),
+                new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of()));
+        var stored = new J5EventDataObservationView(31L, IDENTITY, values,
+                EventSourceTrace.providerSnapshot(7L, "b".repeat(64), "event-lineups-v3", START),
+                J5CompletenessReport.measured(1, 1, List.of()), "a".repeat(64));
+        when(data.findByObservationId(EVENT, SofascoreEndpointType.EVENT_LINEUPS, 31L))
+                .thenReturn(Optional.of(stored));
+        var france = new com.bettingproject.sofascorelocal.domain.event.ProviderCountry(
+                Optional.of("France"), Optional.of("FR"));
+        var overlay = LineupCountryOverlay.of(java.util.Map.of(
+                LineupCountryOverlay.PlayerKey.roster(LineupSide.HOME, 101L), france));
+        LineupCountryOverlayResolver resolver = observation -> {
+            assertThat(observation).isSameAs(stored);
+            return overlay;
+        };
+        var withOverlay = new LiveCampaignPresentation(events, data, null,
+                Clock.fixed(START, ZoneOffset.UTC), null, resolver);
+
+        var projected = withOverlay.state(campaign(List.of(cursor), List.of(
+                attempt(id, SofascoreEndpointType.EVENT_LINEUPS, 7L, START, result))))
+                .events().getFirst().families().getLast();
+
+        assertThat(projected.lineups().teams().getFirst().starterGroups().getFirst().players().getFirst()
+                .country().label()).isEqualTo("France");
+        assertThat(projected.payloadSha256()).isEqualTo("b".repeat(64));
+        assertThat(projected.normalizedSha256()).isEqualTo("a".repeat(64));
+        assertThat(values.home().players().getFirst().country()).isEmpty();
+        assertThat(stored.source().parserVersion()).isEqualTo("event-lineups-v3");
+        verify(data).findByObservationId(EVENT, SofascoreEndpointType.EVENT_LINEUPS, 31L);
+        verifyNoMoreInteractions(data);
+    }
+
+    @Test
     void unavailableLatestReceiptRetainsPreciselyTheLastReadableOccurrence() {
         UUID successfulId = UUID.randomUUID();
         UUID unavailableId = UUID.randomUUID();

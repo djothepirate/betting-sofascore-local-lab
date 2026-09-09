@@ -169,12 +169,19 @@
 
   function updateCountry(container, view, before) {
     let country = container.querySelector("[data-lineups-country]");
+    const label = text(view?.label);
+    // The source may omit a country. Do not invent one or render a placeholder as a fact.
+    const available = view?.available === true
+      || (view?.available === undefined && label !== "" && label !== "Pays non renseigné");
+    if (!available) {
+      country?.remove();
+      return;
+    }
     if (!country) {
       country = create("span", "lineups-country", "data-lineups-country");
       country.append(create("span", "", "data-lineups-country-label"));
       container.insertBefore(country, before);
     }
-    const label = text(view?.label, "Pays non renseigné");
     country.setAttribute("aria-label", `Pays : ${label}`);
     write(country.querySelector("[data-lineups-country-label]"), label);
     const path = text(view?.flagPath);
