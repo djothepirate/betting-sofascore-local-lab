@@ -998,6 +998,17 @@ Le [contrat détaillé](../../architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md) et l
 [rapport propre au complément](../../validation/WO058-PLAYER-DETAILS-20260909.md) distinguent
 la compatibilité historique, les validations synthétiques et le retour opérateur futur.
 
+Après `51d78e0`, les captures opérateur montrent le badge capitaine, les statistiques
+dépliées et la liste des indisponibles. Elles révèlent aussi cinq libellés encore en anglais :
+« Cruciate Ligament Injury », « Toe Injury », « Muscle Injury », « Unknown » et le motif de
+carton « Other reason ». La présentation commune live/J5 les traduit respectivement en
+« Blessure au ligament croisé », « Blessure à un orteil », « Blessure musculaire »,
+« Motif inconnu » et « Autre motif ». Les descriptions stockées sont conservées ; il n'y a ni
+migration ni nouveau parsing. Voir le [suivi des libellés](../../validation/WO058-FRENCH-REASONS-20260909.md).
+La vérification complète de cette retouche réussit le 09/09 à 09:04:31 heure de Paris :
+1 944 cas Surefire (cinq ignorés) et 171 intégrations, sans échec ni erreur. L'arrêt autorisé
+du Lab occupant 8087 et la passe précédente bloquée sont consignés dans ce suivi.
+
 Le 9 septembre, le propriétaire demande de supprimer les rôles répétés sur les cartes
 joueurs et de traduire les groupes et noms de statistiques. Ce complément concerne
 uniquement la présentation commune live/J5 : sections, valeurs, identifiants, ordre,

@@ -4,6 +4,13 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — motifs d'incidents et d'indisponibilité en français
+
+- Traduit les descriptions observées de ligament croisé, d'orteil et de blessure musculaire,
+  ainsi que « Unknown » en « Motif inconnu » et le motif de carton « Other reason » en « Autre motif ».
+  Les descriptions fournisseur restent conservées ; seul l'affichage commun live/J5 change.
+- Voir le [retour visuel et sa validation](docs/validation/WO058-FRENCH-REASONS-20260909.md).
+
 ### WO-058 — capitaines et détails des joueurs dans les compositions
 
 - Ajoute le badge « C · Capitaine » pour `captain: true`, les statistiques individuelles

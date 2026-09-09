@@ -129,6 +129,7 @@ public final class IncidentPresentation {
             case "Foul" -> "Faute";
             case "Argument" -> "Contestation";
             case "Violent conduct" -> "Comportement violent";
+            case "Other reason" -> "Autre motif";
             default -> label;
         };
     }

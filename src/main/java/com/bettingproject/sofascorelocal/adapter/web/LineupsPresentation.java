@@ -75,9 +75,13 @@ public final class LineupsPresentation {
                 source.description().map(value -> switch (value) {
                     case "Achilles Tendon Injury" -> "Blessure au tendon d’Achille";
                     case "Sprained Knee Injury" -> "Entorse du genou";
+                    case "Cruciate Ligament Injury" -> "Blessure au ligament croisé";
                     case "Dislocated Shoulder" -> "Luxation de l’épaule";
                     case "Hip Injury" -> "Blessure à la hanche";
                     case "Thigh Injury" -> "Blessure à la cuisse";
+                    case "Toe Injury" -> "Blessure à un orteil";
+                    case "Muscle Injury" -> "Blessure musculaire";
+                    case "Unknown" -> "Motif inconnu";
                     case "yellow_or_red_card_suspension" -> "Suspension liée aux cartons";
                     default -> value;
                 }).orElse("Motif non renseigné"),
