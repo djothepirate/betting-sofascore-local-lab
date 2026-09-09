@@ -24,7 +24,7 @@ class J6NativeBinaryPipelineQualificationTest {
     }
 
     @Test
-    void retentionAcceptsOnlyAV41QualifiedManifestWithoutRunningNativeTools()
+    void retentionAcceptsOnlyAV44QualifiedManifestWithoutRunningNativeTools()
             throws IOException {
         String retention = Files.readString(
                 Path.of("").toAbsolutePath().normalize()
@@ -33,10 +33,15 @@ class J6NativeBinaryPipelineQualificationTest {
 
         assertThat(retention)
                 .contains(
-                        "$manifest.source.flywayVersion.ToString() -cne '41'",
-                        "valid Flyway V41 raw-payload, J8, J7 and quiescent live ledger restore",
+                        "$manifest.source.flywayVersion.ToString() -cne '44'",
+                        "valid Flyway V44 raw-payload, J8, J7 and quiescent live ledger restore",
+                        "'providerResilienceStateCount'", "'providerDepartureReservationCount'",
+                        "'providerDepartureCompletionCount'", "'providerResilienceEventCount'",
+                        "'liveAttemptTransportDiagnosticCount'", "'liveCampaignDiagnosticCount'",
+                        "[long]$manifest.source.providerResilienceStateCount -ne 1",
                         "'SOFASCORE_LIVE_ENABLED'", "'providerGuardState'", "'liveLedgerSha256'")
                 .doesNotContain(
+                        "$manifest.source.flywayVersion.ToString() -cne '41'",
                         "$manifest.source.flywayVersion.ToString() -cne '40'",
                         "$manifest.source.flywayVersion.ToString() -cne '31'",
                         "valid Flyway V31 raw-payload, J8 evidence and metadata-only J7 delivery and owner-go restore");
@@ -95,18 +100,28 @@ class J6NativeBinaryPipelineQualificationTest {
                         "J6_DOCKER_EXECUTABLE_IDENTITY=AUTHENTICODE_DOCKER_INC",
                         "Get-AuthenticodeSignature",
                         "AggregateException",
-                        "if ($sourceFlywayVersion -cne '41')",
-                        "Flyway V41 must be applied before the J6 backup/restore qualification.",
+                        "if ($sourceFlywayVersion -cne '44')",
+                        "Flyway V44 must be applied before the J6 backup/restore qualification.",
                         "$liveLedgerFingerprintSql", "provider_campaign_guard", "$providerGuardState -cne 'FREE'",
                         "J6_POSTGRES_SESSION_CLEANUP_IDEMPOTENT_REUSE=PASS",
                         "dropdb --username \"$POSTGRES_USER\" --force --if-exists",
                         "$manifestStagingPath",
                         "$QualificationInjectCleanupFailureAfterSuccessfulCleanup")
                 .doesNotContain(
+                        "if ($sourceFlywayVersion -cne '41')",
                         "if ($sourceFlywayVersion -cne '31')",
                         "Flyway V31 must be applied before the J6 backup/restore qualification.",
                         "'pg_dump --username \"$POSTGRES_USER\" --dbname \"$POSTGRES_DB\" --format=custom --no-owner --no-privileges' |",
                         "& $ageExecutable -d $destinationPath |");
+        // Each new durable table is counted on both sides and included in the ordered full-row hash.
+        for (String table : java.util.List.of("provider_resilience_state", "provider_departure_reservation",
+                "provider_departure_completion", "provider_resilience_event", "live_attempt_transport_diagnostic",
+                "live_campaign_diagnostic")) {
+            assertThat(script).contains(
+                    "Invoke-PrimaryScalar -Sql 'select count(*) from " + table + "'",
+                    "Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from " + table + "'",
+                    "'" + table.toUpperCase(java.util.Locale.ROOT) + "|' || to_jsonb(t)::text from " + table + " t");
+        }
         assertThat(module)
                 .contains(
                         "CopyToAsync",

@@ -147,6 +147,12 @@ try {
             'liveReceiptCount',
             'liveResultCount',
             'liveTransitionCount',
+            'providerResilienceStateCount',
+            'providerDepartureReservationCount',
+            'providerDepartureCompletionCount',
+            'providerResilienceEventCount',
+            'liveAttemptTransportDiagnosticCount',
+            'liveCampaignDiagnosticCount',
             'providerGuardState',
             'activeLiveCount',
             'coverageMaxSnapshotId',
@@ -170,7 +176,7 @@ try {
                 throw "The qualified manifest source/restore evidence differs: $field"
             }
         }
-        if ($manifest.source.flywayVersion.ToString() -cne '41' -or
+        if ($manifest.source.flywayVersion.ToString() -cne '44' -or
                 [long]$manifest.source.rawPayloadIntegrityFailures -ne 0 -or
                 [long]$manifest.source.j7DeliveryCount -lt 0 -or
                 [long]$manifest.source.j7DeliveryAttemptCount -lt 0 -or
@@ -180,9 +186,15 @@ try {
                 [long]$manifest.source.j7ProviderOwnerGoConsumptionCount -lt 0 -or
                 $manifest.source.j7DeliveryLedgerSha256.ToString() -cnotmatch '^[0-9a-f]{64}$' -or
                 $manifest.source.liveLedgerSha256.ToString() -cnotmatch '^[0-9a-f]{64}$' -or
+                [long]$manifest.source.providerResilienceStateCount -ne 1 -or
+                [long]$manifest.source.providerDepartureReservationCount -lt 0 -or
+                [long]$manifest.source.providerDepartureCompletionCount -lt 0 -or
+                [long]$manifest.source.providerResilienceEventCount -lt 0 -or
+                [long]$manifest.source.liveAttemptTransportDiagnosticCount -lt 0 -or
+                [long]$manifest.source.liveCampaignDiagnosticCount -lt 0 -or
                 $manifest.source.providerGuardState.ToString() -cne 'FREE' -or
                 [long]$manifest.source.activeLiveCount -ne 0) {
-            throw 'The qualified manifest does not prove a valid Flyway V41 raw-payload, J8, J7 and quiescent live ledger restore.'
+            throw 'The qualified manifest does not prove a valid Flyway V44 raw-payload, J8, J7 and quiescent live ledger restore.'
         }
         $cipherPath = [IO.Path]::GetFullPath((Join-Path `
             (Split-Path -Parent $manifestPath) $cipherFileName))

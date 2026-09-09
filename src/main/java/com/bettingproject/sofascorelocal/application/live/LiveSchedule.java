@@ -53,7 +53,7 @@ public final class LiveSchedule {
         this.prematchLineups = "live-v3".equals(policyVersion);
         this.fallbackInterval = interval.compareTo(Duration.ofMinutes(5)) > 0 ? interval : Duration.ofMinutes(5);
         targets.forEach(id -> events.put(id, new Event(id, start)));
-        this.grouped = "live-v4".equals(policyVersion) || "live-v5".equals(policyVersion)
+        this.grouped = "live-v4".equals(policyVersion) || "live-v5".equals(policyVersion) || "live-v6".equals(policyVersion)
                 ? new GroupedLiveScheduleV4(targets, start, endsAt, interval, campaignId, policyVersion) : null;
     }
 
@@ -121,6 +121,12 @@ public final class LiveSchedule {
         Event e = events.get(due.eventId());
         return globalStop == null && e != null && e.active() && now.isBefore(endsAt)
                 && !now.isBefore(due.dueAt());
+    }
+
+    /** Shared local pressure can defer V6 dispatch before any network start. */
+    public synchronized void defer(Due due, Instant notBefore) {
+        if (grouped == null) throw new IllegalStateException("LIVE_DEFER_UNSUPPORTED_POLICY");
+        grouped.defer(due, notBefore);
     }
 
     public synchronized void started(Due due, Instant now) {

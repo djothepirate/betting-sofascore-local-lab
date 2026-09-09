@@ -8,7 +8,21 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 - Consigne la priorité propriétaire à la robustesse avant accélération de la collecte,
   avec une [proposition d'architecture](docs/architecture/LIVE-PROVIDER-RESILIENCE-PROPOSAL-20260909.md)
-  et des critères de qualification hors fournisseur. Aucun comportement runtime modifié.
+  désormais autorisée pour le premier lot, et [ADR-SS-005 v0.8](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md).
+- Implémente `live-v6`, admission au plus sept rencontres avec preuve dédiée, cible 100/300 s
+  subordonnée à un budget persistant commun à tous les parcours Playwright J3/J4/J5 :
+  deux secondes après chaque fin d'échange, 25 charges/60 s et 1 000 charges/heure.
+- Suspend les nouveaux accès sur 403/429 connu, conserve les diagnostics de transport
+  même sans corps complet et propose un réarmement manuel sans requête fournisseur.
+- Espace les 404 J5 par rencontre/famille avec paliers bornés et réévaluation aux transitions,
+  sans modifier J4, la finalisation ou les observations historiques. V42–V44 portent les
+  preuves durables ; la sauvegarde/rétention J6 contrôle désormais le schéma 44 et les six tables ajoutées.
+- Qualification fonctionnelle hors fournisseur réussie : deux passes Maven complètes
+  (2 016 cas Surefire, cinq ignorés, 207 intégrations par passe), 40 tests worker/contrôleur
+  et 20 cas Chromium loopback, sans échec ni erreur. Voir le
+  [rapport du lot](docs/validation/WO-058-provider-resilience-qualification-20260909.md).
+  Le profil temporel v6 reste à qualifier avant activation ; aucune capacité fournisseur,
+  livraison Eclipse ou campagne réelle n'est déduite de ces résultats.
 
 ### WO-058 — attente Playwright portée à vingt secondes pour les prochains essais
 

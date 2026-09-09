@@ -126,6 +126,16 @@ final class ProviderMainDocumentNetworkObservation {
         return requestedAt;
     }
 
+    synchronized Instant requestStartedAtIfObserved() {
+        return invalid || cachedOrSynthetic ? null : requestedAt;
+    }
+
+    synchronized Instant requireRequestStartedAt(String networkId) {
+        if (invalid || cachedOrSynthetic || requestedAt == null || requestId == null || !requestId.equals(networkId))
+            throw new IllegalStateException("exact network request correlation unavailable");
+        return requestedAt;
+    }
+
     static String requireMainFrameId(JsonObject frameTreeResponse) {
         JsonObject frameTree = object(frameTreeResponse, "frameTree");
         JsonObject frame = object(frameTree, "frame");

@@ -12,7 +12,13 @@ public record PlaywrightProviderResponse(
         int httpStatus,
         String contentType,
         Duration latency,
-        RawPayloadEvidence payload) {
+        RawPayloadEvidence payload,
+        PlaywrightTransportDiagnostic diagnostic) {
+
+    public PlaywrightProviderResponse(Instant requestedAt, Instant receivedAt, int httpStatus,
+            String contentType, Duration latency, RawPayloadEvidence payload) {
+        this(requestedAt, receivedAt, httpStatus, contentType, latency, payload, null);
+    }
 
     public PlaywrightProviderResponse {
         Objects.requireNonNull(requestedAt, "requestedAt");
@@ -28,5 +34,9 @@ public record PlaywrightProviderResponse(
                 || latency.isNegative()) {
             throw new IllegalArgumentException("invalid bounded Playwright response");
         }
+        if (diagnostic != null && (!diagnostic.responseComplete()
+                || !requestedAt.equals(diagnostic.requestedAt()) || diagnostic.httpStatus() != httpStatus
+                || diagnostic.headersReceivedAt().isAfter(receivedAt)))
+            throw new IllegalArgumentException("response diagnostic mismatch");
     }
 }

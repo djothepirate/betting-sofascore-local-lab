@@ -19,7 +19,8 @@
 </div></header>
 <main class="shell event-page" data-live-monitor
       th:attr="data-live-state-url=@{/live-campaigns/{id}/state(id=${campaign.campaignId},page=${campaign.pagination.number})},data-live-campaign-id=${campaign.campaignId},data-live-revision=${campaign.revision}">
-  <nav class="links page-links" aria-label="Navigation locale"><a th:href="@{/events}">← Rencontres</a></nav>
+  <nav class="links page-links" aria-label="Navigation locale"><a th:href="@{/events}">← Rencontres</a>
+    <a th:href="@{/provider-access}">État de l’accès fournisseur</a></nav>
   <p class="notice" role="status" th:if="${liveSuccess != null}" th:text="${liveSuccess}"></p>
   <section class="panel" th:if="${excludedFinished != null and !#lists.isEmpty(excludedFinished)}" aria-label="Rencontres terminées exclues">
     <p class="notice" role="status">Les rencontres suivantes sont déjà terminées (finished).
@@ -45,13 +46,23 @@
              th:with="first=${campaign.runtimeStatus?.firstFailure},cleanup=${campaign.runtimeStatus?.cleanupFailure}"
              th:hidden="${first == null and cleanup == null}">
       <summary>Diagnostic de l’arrêt</summary>
-      <p class="muted">Informations de cette exécution : conservez-les avant de redémarrer l’application.</p>
+      <p class="muted">Le diagnostic enregistré reste consultable après redémarrage. Les informations non observées,
+        notamment pour les campagnes historiques, sont indiquées par « — ».</p>
       <section data-live-diagnostic="firstFailure" th:hidden="${first == null}">
         <h3>Première erreur</h3>
         <dl class="detail-grid">
           <div><dt>Instant (UTC)</dt><dd data-live-diagnostic-time th:text="${first?.occurredAt ?: '—'}">—</dd></div>
           <div><dt>Étape</dt><dd data-live-diagnostic-phase th:text="${first?.phase ?: '—'}">—</dd></div>
           <div><dt>Code</dt><dd class="mono" data-live-diagnostic-code th:text="${first?.code ?: '—'}">—</dd></div>
+          <div><dt>Tentative</dt><dd class="mono" data-live-diagnostic-attempt th:text="${first?.attemptId ?: '—'}">—</dd></div>
+          <div><dt>Famille</dt><dd data-live-diagnostic-endpoint th:text="${first?.endpoint ?: '—'}">—</dd></div>
+          <div><dt>Étape du transport</dt><dd data-live-diagnostic-transport-phase th:text="${first?.transport?.phase ?: '—'}">—</dd></div>
+          <div><dt>Délai Playwright effectif</dt><dd data-live-diagnostic-timeout th:text="${first?.transport == null ? '—' : first.transport.requestTimeoutMillis + ' ms'}">—</dd></div>
+          <div><dt>Départ observé (UTC)</dt><dd data-live-diagnostic-requested-at th:text="${first?.transport?.requestedAt ?: '—'}">—</dd></div>
+          <div><dt>En-têtes reçus (UTC)</dt><dd data-live-diagnostic-headers-at th:text="${first?.transport?.headersReceivedAt ?: '—'}">—</dd></div>
+          <div><dt>Statut HTTP observé</dt><dd data-live-diagnostic-http-status th:text="${first?.transport?.httpStatus ?: '—'}">—</dd></div>
+          <div><dt>Attente minimale demandée (UTC)</dt><dd data-live-diagnostic-retry-after th:text="${first?.transport?.retryAfterNotBefore ?: '—'}">—</dd></div>
+          <div><dt>Réponse reçue intégralement</dt><dd data-live-diagnostic-complete th:text="${first?.transport == null ? '—' : (first.transport.responseComplete ? 'Oui' : 'Non')}">—</dd></div>
         </dl>
       </section>
       <section data-live-diagnostic="cleanupFailure" th:hidden="${cleanup == null}">
@@ -60,6 +71,15 @@
           <div><dt>Instant (UTC)</dt><dd data-live-diagnostic-time th:text="${cleanup?.occurredAt ?: '—'}">—</dd></div>
           <div><dt>Étape</dt><dd data-live-diagnostic-phase th:text="${cleanup?.phase ?: '—'}">—</dd></div>
           <div><dt>Code</dt><dd class="mono" data-live-diagnostic-code th:text="${cleanup?.code ?: '—'}">—</dd></div>
+          <div><dt>Tentative</dt><dd class="mono" data-live-diagnostic-attempt th:text="${cleanup?.attemptId ?: '—'}">—</dd></div>
+          <div><dt>Famille</dt><dd data-live-diagnostic-endpoint th:text="${cleanup?.endpoint ?: '—'}">—</dd></div>
+          <div><dt>Étape du transport</dt><dd data-live-diagnostic-transport-phase th:text="${cleanup?.transport?.phase ?: '—'}">—</dd></div>
+          <div><dt>Délai Playwright effectif</dt><dd data-live-diagnostic-timeout th:text="${cleanup?.transport == null ? '—' : cleanup.transport.requestTimeoutMillis + ' ms'}">—</dd></div>
+          <div><dt>Départ observé (UTC)</dt><dd data-live-diagnostic-requested-at th:text="${cleanup?.transport?.requestedAt ?: '—'}">—</dd></div>
+          <div><dt>En-têtes reçus (UTC)</dt><dd data-live-diagnostic-headers-at th:text="${cleanup?.transport?.headersReceivedAt ?: '—'}">—</dd></div>
+          <div><dt>Statut HTTP observé</dt><dd data-live-diagnostic-http-status th:text="${cleanup?.transport?.httpStatus ?: '—'}">—</dd></div>
+          <div><dt>Attente minimale demandée (UTC)</dt><dd data-live-diagnostic-retry-after th:text="${cleanup?.transport?.retryAfterNotBefore ?: '—'}">—</dd></div>
+          <div><dt>Réponse reçue intégralement</dt><dd data-live-diagnostic-complete th:text="${cleanup?.transport == null ? '—' : (cleanup.transport.responseComplete ? 'Oui' : 'Non')}">—</dd></div>
         </dl>
       </section>
     </details>
@@ -68,14 +88,17 @@
       <div><dt>Fin au plus tard (UTC)</dt><dd data-live-ends-at th:text="${campaign.endsAt ?: (campaign.state == 'PREPARED' ? 'Fixée au lancement' : '—')}">—</dd></div>
       <div><dt>Appels réservés / plafond</dt><dd data-live-calls th:text="${campaign.reservedCalls + ' / ' + campaign.maximumCalls}">0</dd></div>
       <div><dt>Octets reçus / plafond</dt><dd data-live-bytes th:text="${campaign.receivedBytes + ' / ' + campaign.maximumBytes}">0</dd></div>
-      <div><dt>Intervalle de collecte</dt><dd th:text="${manifest.cycleInterval.toSeconds() + ' secondes'}">60 secondes</dd></div>
+      <div><dt th:text="${manifest.policyVersion == 'live-v6' ? 'Intervalle nominal de collecte' : 'Intervalle de collecte'}">Intervalle de collecte</dt><dd th:text="${manifest.cycleInterval.toSeconds() + ' secondes'}">60 secondes</dd></div>
       <div th:if="${campaign.cadence != null}"><dt>Compositions pendant le jeu</dt><dd>5 minutes nominales</dd></div>
-      <div th:if="${campaign.cadence != null}"><dt th:text="${'Capacité qualifiée à ' + campaign.cadence.targetSeconds + ' secondes'}">Capacité qualifiée</dt><dd th:text="${campaign.cadence.qualifiedCapacity + ' rencontres'}">0</dd></div>
+      <div th:if="${campaign.cadence != null}"><dt th:text="${manifest.policyVersion == 'live-v6' ? 'Capacité admise par le profil' : 'Capacité qualifiée à ' + campaign.cadence.targetSeconds + ' secondes'}">Capacité qualifiée</dt><dd th:text="${campaign.cadence.qualifiedCapacity + ' rencontres'}">0</dd></div>
       <div th:if="${campaign.cadence != null}"><dt>Autonomie estimée à ce rythme</dt><dd data-live-autonomy th:text="${campaign.runtimeStatus != null and campaign.runtimeStatus.collectionStopped ? 'Collecte arrêtée' : campaign.cadence.estimatedMinutes() + ' minutes environ'}">—</dd></div>
     </dl>
     <p class="muted" th:if="${campaign.cadence != null}">L’estimation utilise les appels restants, les phases actuelles et les réserves de fin.
-      La cadence reste fixée à <span th:text="${manifest.cycleInterval.toSeconds()}">100</span> secondes ; la collecte s’arrête à l’épuisement des plafonds.
+      L’intervalle de <span th:text="${manifest.cycleInterval.toSeconds()}">100</span> secondes est une cible nominale ; la collecte s’arrête à l’épuisement des plafonds.
       Le plafond d’octets peut être atteint avant l’autonomie estimée en appels.</p>
+    <p class="muted" th:if="${manifest.policyVersion == 'live-v6'}">Le budget fournisseur partagé et les réponses indisponibles peuvent espacer les collectes.
+      L’intervalle nominal ne garantit pas la fraîcheur réelle. Un refus HTTP 403 ou 429 suspend l’accès fournisseur ;
+      son état et les conditions de réarmement sont consultables dans <a th:href="@{/provider-access}">l’état de l’accès fournisseur</a>.</p>
     <p class="muted" data-live-refresh-status role="status" aria-live="polite">Lecture locale toutes les cinq secondes, suspendue lorsque l’onglet est masqué.</p>
     <form th:if="${campaign.state == 'RUNNING' or (campaign.runtimeStatus != null and campaign.runtimeStatus.cleanupPending)}"
           data-live-stop-form data-live-global-stop-form method="post"
@@ -122,7 +145,7 @@
     <dl class="detail-grid">
       <div><dt>Rencontres retenues</dt><dd th:text="${manifest.targets.size()}">1</dd></div>
       <div><dt>Plafond de rencontres éligibles</dt><dd th:text="${manifest.qualifiedMatchCapacity}">1</dd></div>
-      <div><dt>Intervalle de collecte</dt><dd th:text="${manifest.cycleInterval.toSeconds() + ' secondes'}">60 secondes</dd></div>
+      <div><dt th:text="${manifest.policyVersion == 'live-v6' ? 'Intervalle nominal de collecte' : 'Intervalle de collecte'}">Intervalle de collecte</dt><dd th:text="${manifest.cycleInterval.toSeconds() + ' secondes'}">60 secondes</dd></div>
       <div><dt>Durée maximale</dt><dd th:text="${manifest.duration.toMinutes() + ' minutes'}">240 minutes</dd></div>
       <div><dt>Expiration de la préparation (UTC)</dt><dd th:text="${manifest.expiresAt}">—</dd></div>
       <div><dt>Appels maximum par rencontre</dt><dd th:text="${manifest.maximumCallsPerEvent}">1000</dd></div>
@@ -131,15 +154,17 @@
     </dl>
     <details>
       <summary>Profil de capacité utilisé pour cette préparation</summary>
-      <dl class="detail-grid" th:if="${manifest.policyVersion != 'live-v4' and manifest.policyVersion != 'live-v5'}">
+      <dl class="detail-grid" th:if="${manifest.policyVersion != 'live-v4' and manifest.policyVersion != 'live-v5' and manifest.policyVersion != 'live-v6'}">
         <div><dt>Durée retenue par appel fournisseur</dt><dd th:text="${manifest.admissionProfile.requestEnvelope.toMillis() + ' ms'}">10000 ms</dd></div>
         <div><dt>Traitement local retenu par appel</dt><dd th:text="${manifest.admissionProfile.processingEnvelope.toMillis() + ' ms'}">1000 ms</dd></div>
         <div><dt>Preuve de qualification</dt><dd class="mono hash-value"
           th:text="${#strings.isEmpty(manifest.admissionProfile.qualificationSha256) ? 'Profil initial conservateur' : manifest.admissionProfile.qualificationSha256}">Profil initial conservateur</dd></div>
       </dl>
-      <div th:if="${manifest.policyVersion == 'live-v4' or manifest.policyVersion == 'live-v5'}">
+      <div th:if="${manifest.policyVersion == 'live-v4' or manifest.policyVersion == 'live-v5' or manifest.policyVersion == 'live-v6'}">
         <p>Les appels d’un match sont séquentiels et regroupés. La pause entre les groupes de cette campagne est de
           <span th:text="${manifest.admissionProfile.groupedProfile.interGroupDelay.toSeconds()}">3</span> seconde(s).</p>
+        <p th:if="${manifest.policyVersion == 'live-v6'}">Le budget partagé autorise au plus 25 départs par minute et 1 000 par heure,
+          avec au moins deux secondes après la fin de l’appel précédent. Il est conservé entre les campagnes et les redémarrages.</p>
         <dl class="detail-grid"><div><dt>Preuve de qualification des groupes</dt><dd class="mono hash-value"
           th:text="${manifest.admissionProfile.groupedProfile.qualificationSha256}">SHA-256</dd></div></dl>
         <table><thead><tr><th>Famille</th><th>Appel budgété</th><th>Traitement budgété</th></tr></thead>
@@ -163,7 +188,12 @@
       <strong>100 secondes par rencontre</strong>. Les premières compositions sont collectées à l’initialisation, puis réparties sur trois tours, soit cinq minutes.
       Avant le début, J4 et les compositions disponibles sont collectés toutes les 100 secondes.
       Dès le début confirmé, les incidents et statistiques deviennent éligibles. La sélection est limitée à la capacité qualifiée et les retards restent visibles.</p>
-    <p th:if="${manifest.policyVersion != 'live-v4' and manifest.policyVersion != 'live-v5'}">J4 vérifie le statut avant le match et J5 collecte statistiques, incidents et compositions en cours de match toutes les
+    <p th:if="${manifest.policyVersion == 'live-v6'}">La sélection admet au plus <strong>sept rencontres</strong>, selon le profil qualifié.
+      Pendant le jeu, J4, les incidents et les statistiques visent un intervalle nominal de <strong>100 secondes par rencontre</strong>,
+      et les compositions cinq minutes. Avant le début, J4 et les compositions disponibles visent 100 secondes.
+      Les limites partagées et l’espacement progressif des réponses 404 peuvent repousser les collectes ; les retards restent visibles.
+      Les statistiques et incidents deviennent éligibles lorsque J4 confirme le début du match.</p>
+    <p th:if="${manifest.policyVersion != 'live-v4' and manifest.policyVersion != 'live-v5' and manifest.policyVersion != 'live-v6'}">J4 vérifie le statut avant le match et J5 collecte statistiques, incidents et compositions en cours de match toutes les
       <span th:text="${manifest.cycleInterval.toSeconds()}">60</span> secondes. J4 confirme ensuite la fin.
       Cet intervalle est fixé pour cette sélection. Les appels sont sérialisés. Une lecture de cette page ne lance aucune collecte.</p>
     <form method="post" th:action="@{/live-campaigns/{id}/launch(id=${campaign.campaignId})}">

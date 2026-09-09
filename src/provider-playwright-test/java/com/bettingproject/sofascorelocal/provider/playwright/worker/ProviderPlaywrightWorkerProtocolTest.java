@@ -56,7 +56,7 @@ class ProviderPlaywrightWorkerProtocolTest {
 
     @Test
     void identifiesTheSixEndpointContractAsProtocolVersionFive() {
-        assertThat(ProviderPlaywrightWorkerProtocol.VERSION).isEqualTo(5);
+        assertThat(ProviderPlaywrightWorkerProtocol.VERSION).isEqualTo(6);
     }
 
     @Test
@@ -215,6 +215,29 @@ class ProviderPlaywrightWorkerProtocolTest {
             assertThat(input.readNBytes(length)).containsExactly(body);
             assertThat(input.available()).isZero();
         }
+    }
+
+    @Test
+    void partialHeadersFrameContainsOnlyBoundedNumbersAndNoResponseBody() throws Exception {
+        ByteArrayOutputStream bytes = new ByteArrayOutputStream();
+        try (DataOutputStream output = new DataOutputStream(bytes)) {
+            ProviderPlaywrightWorkerProtocol.writeProgress(output,
+                    new ProviderPlaywrightWorkerProtocol.ProgressFrame(2, 30_000, 100, 110, 429, 60_110));
+        }
+        try (DataInputStream input = new DataInputStream(new ByteArrayInputStream(bytes.toByteArray()))) {
+            assertThat(input.readUnsignedByte()).isEqualTo(ProviderPlaywrightWorkerProtocol.PROGRESS);
+            assertThat(input.readUnsignedByte()).isEqualTo(2);
+            assertThat(input.readInt()).isEqualTo(30_000);
+            assertThat(input.readLong()).isEqualTo(100);
+            assertThat(input.readLong()).isEqualTo(110);
+            assertThat(input.readInt()).isEqualTo(429);
+            assertThat(input.readLong()).isEqualTo(60_110);
+            assertThat(input.available()).isZero();
+        }
+        assertThatThrownBy(() -> new ProviderPlaywrightWorkerProtocol.ProgressFrame(1, 30_000, 100, -1, 403, -1))
+                .isInstanceOf(IllegalArgumentException.class);
+        assertThatThrownBy(() -> new ProviderPlaywrightWorkerProtocol.ProgressFrame(2, 30_000, 100, 90, 403, -1))
+                .isInstanceOf(IllegalArgumentException.class);
     }
 
     @Test

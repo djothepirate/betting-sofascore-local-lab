@@ -44,12 +44,24 @@ format des champs du manifeste J6 reste inchangé ; une preuve V39 ne qualifie p
 bornes ni la restauration d'une campagne `live-v5`.
 
 V41 ajoute les [détails des compositions](../architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md).
-Les gardes courants exigent maintenant V41 ; les preuves V40 et antérieures restent historiques.
+Les gardes de cette révision exigeaient V41 ; ces preuves restent historiques.
 Le champ `normalizedProvenanceSha256` conserve son nom dans le manifeste, mais son calcul V41
 couvre aussi les lignes complètes de `j5_event_lineup_side` et `j5_event_lineup_player`, afin de
 vérifier les capitaines, statistiques individuelles et indisponibles après restauration. Une
-nouvelle preuve de sauvegarde/restauration V41 est donc nécessaire avant une rétention ultérieure.
+preuve de sauvegarde/restauration V41 était donc nécessaire pour cette révision.
 Le complément est qualifié sur PostgreSQL isolé, sans sauvegarde ou purge de la base opérateur.
+
+Le premier lot de résilience V42–V44 est qualifié fonctionnellement hors fournisseur,
+y compris l'upgrade prérempli et `pg_dump`/`pg_restore` en PostgreSQL isolé :
+[rapport](../validation/WO-058-provider-resilience-qualification-20260909.md). Les scripts courants
+exigent désormais **V44** et incluent dans le SHA live les lignes complètes des six tables :
+`provider_resilience_state`, `provider_departure_reservation`, `provider_departure_completion`,
+`provider_resilience_event`, `live_attempt_transport_diagnostic`, `live_campaign_diagnostic`.
+Leurs six compteurs source/restauré sont comparés et requis par la rétention ; le singleton
+doit être présent. La suspension et les budgets ne sont ni effacés ni réarmés pour sauvegarder.
+Les anciens manifestes de sauvegarde ne sont pas modifiés pour franchir la garde V44.
+La purge reste limitée aux octets bruts éligibles : ces tables ne deviennent pas supprimables.
+Aucune sauvegarde, restauration ou purge de la base opérateur n'est autorisée par cette mise à jour.
 
 ```text
 PROVIDER_CALL_REQUIRED=NO
@@ -64,7 +76,7 @@ NORMALIZED_OBSERVATION_DELETION=IMPOSSIBLE_BY_DESIGN
 - PowerShell 7.4 ou plus récent pour préserver les pipelines binaires natifs ;
 - exécutable `age` disponible dans `PATH` ou fourni avec `-AgePath` ;
 - PostgreSQL local démarré et sain ;
-- Flyway V41 appliqué ; la rétention reste définie par V22, V23 étend seulement
+- Flyway V44 appliqué ; la rétention reste définie par V22, V23 étend seulement
   `export_manifest` pour J7, V24 élargit la portée du cache de découverte tournoi, V25 ajoute
   uniquement la provenance de l'import JSON local, V26 autorise `event-incidents-v14`, V27 ajoute
   le ledger J8 sans étendre le périmètre de purge et V28 autorise uniquement
@@ -209,7 +221,7 @@ PostgreSQL possédée. Elles ne constituent ni une boucle indéfinie ni un budge
 Le script :
 
 1. refuse une application encore à l'écoute sur le port 8087 ;
-2. vérifie Compose, le verrou réseau, la version courante Flyway V41, le garde fournisseur `FREE`
+2. vérifie Compose, le verrou réseau, la version courante Flyway V44, le garde fournisseur `FREE`
    et l'absence de campagne live `RUNNING` ou `CLEANUP_REQUIRED` ;
 3. vérifie le SHA-256 réel de chaque payload retenu ;
 4. vérifie l'exécutable Docker exact ; sous Windows, il doit être un fichier absolu sans reparse

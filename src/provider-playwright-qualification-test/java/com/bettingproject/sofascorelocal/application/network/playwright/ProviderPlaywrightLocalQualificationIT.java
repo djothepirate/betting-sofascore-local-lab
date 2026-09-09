@@ -951,6 +951,135 @@ class ProviderPlaywrightLocalQualificationIT {
         }
     }
 
+    @Test
+    void preservesForbiddenHeadersBeforeAnIncompleteBodyTimesOut() throws Exception {
+        assertIncompleteBodyDiagnostic(403, false);
+    }
+
+    @Test
+    void preservesRateLimitAndRetryAfterBeforeAnIncompleteBodyTimesOut() throws Exception {
+        assertIncompleteBodyDiagnostic(429, false);
+    }
+
+    @Test
+    void distinguishesSuccessfulHeadersFromACompleteResponseWhenTheBodyTimesOut() throws Exception {
+        assertIncompleteBodyDiagnostic(200, false);
+    }
+
+    @Test
+    @Timeout(60)
+    void keepsTheCampaignExcludedWhenGracefulCloseCannotAuthenticateAfterAnIncompleteBodyTimeout()
+            throws Exception {
+        assertIncompleteBodyDiagnostic(403, true);
+    }
+
+    private void assertIncompleteBodyDiagnostic(int status, boolean verifyConservativeGracefulClose)
+            throws Exception {
+        Path workerJar = requiredRegularFile("provider.playwright.worker-jar");
+        Path browserCache = requiredDirectory("provider.playwright.browser-cache");
+        AtomicReference<Process> worker = new AtomicReference<>();
+        AtomicReference<CompletableFuture<byte[]>> standardOutput = new AtomicReference<>();
+        AtomicReference<CompletableFuture<byte[]>> standardError = new AtomicReference<>();
+        List<PlaywrightTransportDiagnostic> progress = new CopyOnWriteArrayList<>();
+        CountDownLatch headersObserved = new CountDownLatch(1);
+        try (FixtureServer fixture = FixtureServer.startIncompleteBody(status);
+                ExecutorService readers = Executors.newVirtualThreadPerTaskExecutor()) {
+            var supervisor = new ChildJvmPlaywrightProviderSupervisor(
+                    properties(workerJar, fixture.origin(), Duration.ofSeconds(2)), Clock.systemUTC(), new SecureRandom(),
+                    builder -> startObservedWorker(builder, fixture.origin(), browserCache,
+                            worker, standardOutput, standardError, readers));
+            UUID campaignId = UUID.randomUUID();
+            Set<SofascoreEndpointType> allowlist = Set.of(SofascoreEndpointType.EVENT_DETAILS);
+            var campaign = supervisor.open(campaignId, allowlist);
+            Process exactWorker = worker.get();
+            List<ProcessIdentity> ownedProcesses = captureOwnedProcessTree(exactWorker);
+            try {
+                long started = System.nanoTime();
+                CompletableFuture<Throwable> result = CompletableFuture.supplyAsync(() -> {
+                    try {
+                        campaign.execute(PlaywrightProviderRequest.eventDetails(17_000_005L), new PlaywrightDispatchAdmission() {
+                            public void check() { }
+                            public Permit acquireDispatchPermit() { return () -> { }; }
+                            public void onTransportProgress(PlaywrightTransportDiagnostic diagnostic) {
+                                progress.add(diagnostic);
+                                if (diagnostic.httpStatus() != null) headersObserved.countDown();
+                            }
+                        });
+                        return null;
+                    } catch (Throwable failure) { return failure; }
+                }, readers);
+                assertThat(headersObserved.await(2, TimeUnit.SECONDS)).isTrue();
+                assertThat(result.isDone()).isFalse();
+                var headers = progress.stream().filter(d -> d.httpStatus() != null).findFirst().orElseThrow();
+                assertThat(headers.phase()).isEqualTo(PlaywrightTransportDiagnostic.Phase.HEADERS_RECEIVED);
+                assertThat(headers.httpStatus()).isEqualTo(status);
+                assertThat(headers.responseComplete()).isFalse();
+                assertThat(headers.retryAfterNotBefore()).isEqualTo(headers.headersReceivedAt().plusSeconds(60));
+                assertThat(result.get(5, TimeUnit.SECONDS)).isInstanceOfSatisfying(PlaywrightProviderException.class, failure -> {
+                    assertThat(failure.failure()).isIn(PlaywrightProviderFailure.TIMEOUT, PlaywrightProviderFailure.IPC_TIMEOUT);
+                    if (verifyConservativeGracefulClose) {
+                        assertThat(failure.failure()).isEqualTo(PlaywrightProviderFailure.IPC_TIMEOUT);
+                    }
+                    assertThat(failure.diagnostic().httpStatus()).isEqualTo(status);
+                    assertThat(failure.diagnostic().requestTimeoutMillis()).isEqualTo(2_000);
+                    assertThat(failure.diagnostic().responseComplete()).isFalse();
+                    assertThat(failure.diagnostic().retryAfterNotBefore()).isEqualTo(headers.retryAfterNotBefore());
+                });
+                assertThat(Duration.ofNanos(System.nanoTime() - started)).isLessThan(Duration.ofSeconds(5));
+                assertThat(fixture.releaseSlowResponse.getCount()).isOne();
+                if (verifyConservativeGracefulClose) {
+                    // The ordinary live cleanup uses close(), not an operator-stop upgrade.
+                    // A missing authenticated terminal frame must not release its exclusion.
+                    assertThatThrownBy(campaign::close)
+                            .isInstanceOfSatisfying(PlaywrightProviderException.class, failure ->
+                                    assertThat(failure.failure()).isEqualTo(PlaywrightProviderFailure.RUNTIME_FAILURE));
+                    assertThat(supervisor.activeCampaignId()).contains(campaignId);
+                    assertThat(awaitOwnedProcessAbsence(exactWorker, ownedProcesses, Duration.ofSeconds(5)))
+                            .as("physical process absence does not authenticate graceful cleanup")
+                            .isTrue();
+                    assertThatThrownBy(() -> supervisor.open(UUID.randomUUID(), allowlist))
+                            .isInstanceOfSatisfying(PlaywrightProviderException.class, failure ->
+                                    assertThat(failure.failure()).isEqualTo(PlaywrightProviderFailure.CAMPAIGN_ALREADY_ACTIVE));
+                    assertThatThrownBy(campaign::close)
+                            .isInstanceOfSatisfying(PlaywrightProviderException.class, failure ->
+                                    assertThat(failure.failure()).isEqualTo(PlaywrightProviderFailure.RUNTIME_FAILURE));
+                    assertThat(supervisor.activeCampaignId()).contains(campaignId);
+                    assertThat(standardOutput.get().get(5, TimeUnit.SECONDS)).isEmpty();
+                    assertThat(standardError.get().get(5, TimeUnit.SECONDS)).isEmpty();
+                }
+                else {
+                    // Explicit local cancellation is independently qualified while the fixture
+                    // is still withholding its body. It must not rely on an artificial response.
+                    long stopStartedAt = System.nanoTime();
+                    PlaywrightProviderStopReceipt receipt = supervisor.stopCampaign(campaignId, allowlist);
+                    assertThat(receipt.activeCampaignSignalled()).isTrue();
+                    assertThat(receipt.acknowledgementLatency()).isLessThanOrEqualTo(Duration.ofMillis(500));
+                    assertThat(Duration.ofNanos(System.nanoTime() - stopStartedAt))
+                            .isLessThanOrEqualTo(Duration.ofMillis(500));
+                    assertThat(awaitOwnedProcessAbsence(exactWorker, ownedProcesses, Duration.ofSeconds(2))).isTrue();
+                    assertThat(Duration.ofNanos(System.nanoTime() - stopStartedAt))
+                            .isLessThanOrEqualTo(Duration.ofSeconds(2));
+                    assertThat(awaitCleanup(supervisor, exactWorker, ownedProcesses, Duration.ofSeconds(5))).isTrue();
+                    assertThat(Duration.ofNanos(System.nanoTime() - stopStartedAt))
+                            .isLessThanOrEqualTo(Duration.ofSeconds(5));
+                    campaign.close();
+                    assertWorkerExited(supervisor, exactWorker, ownedProcesses, standardOutput.get(), standardError.get());
+                }
+                assertThat(fixture.releaseSlowResponse.getCount()).isOne();
+                assertThat(worker.get()).isSameAs(exactWorker);
+                fixture.assertExactTraffic(FixtureServer.INCOMPLETE_BODY_PATH);
+                assertThat(fixture.requestCount(FixtureServer.INCOMPLETE_BODY_PATH)).isOne();
+                assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
+            }
+            finally {
+                // Shutdown is cleanup of this exact supervisor only; it never opens a worker.
+                // It also deliberately retains an already inconclusive graceful-close state.
+                supervisor.shutdown();
+                fixture.releaseSlowResponse();
+            }
+        }
+    }
+
     private static void assertFailureAndCleanup(
             FixtureServer fixture,
             Path workerJar,
@@ -1013,6 +1142,13 @@ class ProviderPlaywrightLocalQualificationIT {
                 }
                 assertThat(observed).isNotNull();
                 assertThat(observed.failure()).isEqualTo(expectedFailure);
+                if (expectedFailure == PlaywrightProviderFailure.TIMEOUT) {
+                    assertThat(observed.diagnostic()).isNotNull();
+                    assertThat(observed.diagnostic().phase()).isEqualTo(PlaywrightTransportDiagnostic.Phase.REQUEST_SENT);
+                    assertThat(observed.diagnostic().httpStatus()).isNull();
+                    assertThat(observed.diagnostic().responseComplete()).isFalse();
+                    assertThat(observed.diagnostic().requestTimeoutMillis()).isEqualTo((int) requestTimeout.toMillis());
+                }
                 assertThat(observed.getMessage())
                         .doesNotContain("local-only-value")
                         .doesNotContain("access_token");
@@ -1160,6 +1296,21 @@ class ProviderPlaywrightLocalQualificationIT {
                     && ownedProcesses.stream().noneMatch(ProcessIdentity::isSameProcessAlive)
                     && supervisor.activeCampaignId().isEmpty();
             if (allGone) {
+                return true;
+            }
+            Thread.sleep(10);
+        }
+        return false;
+    }
+
+    private static boolean awaitOwnedProcessAbsence(
+            Process worker,
+            List<ProcessIdentity> ownedProcesses,
+            Duration timeout) throws InterruptedException {
+        long deadline = System.nanoTime() + timeout.toNanos();
+        while (System.nanoTime() < deadline) {
+            if (!worker.isAlive()
+                    && ownedProcesses.stream().noneMatch(ProcessIdentity::isSameProcessAlive)) {
                 return true;
             }
             Thread.sleep(10);
@@ -1391,6 +1542,7 @@ class ProviderPlaywrightLocalQualificationIT {
         private static final String EVENT_DETAILS_TWO_PATH = "/api/v1/event/16421052";
         private static final String EVENT_DETAILS_NOT_FOUND_PATH = "/api/v1/event/17000001";
         private static final String EVENT_DETAILS_STOP_PATH = "/api/v1/event/17000002";
+        private static final String INCOMPLETE_BODY_PATH = "/api/v1/event/17000005";
         private static final String J5_STATISTICS_PATH =
                 "/api/v1/event/17000003/statistics";
         private static final String J5_INCIDENTS_PATH =
@@ -1410,6 +1562,7 @@ class ProviderPlaywrightLocalQualificationIT {
         private final ExecutorService executor;
         private final boolean slowPageOne;
         private final boolean slowEventDetails;
+        private volatile int incompleteBodyStatus;
         private final String sensitiveCanaryValue;
         private final CountDownLatch slowRequestReceived = new CountDownLatch(1);
         private final CountDownLatch releaseSlowResponse = new CountDownLatch(1);
@@ -1438,6 +1591,12 @@ class ProviderPlaywrightLocalQualificationIT {
 
         static FixtureServer startSlowEventDetails() throws IOException {
             return start(false, true);
+        }
+
+        static FixtureServer startIncompleteBody(int status) throws IOException {
+            FixtureServer fixture = start();
+            fixture.incompleteBodyStatus = status;
+            return fixture;
         }
 
         private static FixtureServer start(
@@ -1472,7 +1631,17 @@ class ProviderPlaywrightLocalQualificationIT {
                         exchange.getRemoteAddress().getAddress().getHostAddress(),
                         containsSensitiveHeader(exchange.getRequestHeaders()),
                         requestBody.length));
-                if (PAGE_ONE_PATH.equals(exchange.getRequestURI().getRawPath())) {
+                if (INCOMPLETE_BODY_PATH.equals(exchange.getRequestURI().getRawPath())) {
+                    exchange.getResponseHeaders().set("Content-Type", "application/json");
+                    exchange.getResponseHeaders().set("Retry-After", "60");
+                    exchange.sendResponseHeaders(incompleteBodyStatus, 128);
+                    exchange.getResponseBody().write('{');
+                    exchange.getResponseBody().flush();
+                    slowRequestReceived.countDown();
+                    try { releaseSlowResponse.await(30, TimeUnit.SECONDS); }
+                    catch (InterruptedException interrupted) { Thread.currentThread().interrupt(); }
+                }
+                else if (PAGE_ONE_PATH.equals(exchange.getRequestURI().getRawPath())) {
                     if (slowPageOne) {
                         slowRequestReceived.countDown();
                         try {

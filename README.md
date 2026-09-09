@@ -1,9 +1,22 @@
 # SofaScore Local Lab
 
+**Résilience fournisseur — 9 septembre 2026, mécanismes qualifiés hors fournisseur :** le premier lot autorisé
+introduit `live-v6`, avec sept rencontres au maximum et un profil de qualification distinct.
+Les cibles 100/300 s restent subordonnées au budget global persistant : deux secondes après
+chaque fin d'échange, 25 charges par minute glissante et 1 000 par heure, communs aux collectes
+Playwright J3/J4/J5. Les refus 403/429 suspendent les nouveaux accès jusqu'à un réarmement manuel
+sans requête ; les 404 J5 sont espacés par rencontre et famille. Les diagnostics distinguent
+en-têtes reçus et corps complet. Voir [ADR-SS-005 v0.8](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md)
+et le [runbook courant](docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md). Les deux vérifications Maven
+complètes et les 20 scénarios Chromium loopback réussissent :
+[rapport du lot et limites](docs/validation/WO-058-provider-resilience-qualification-20260909.md).
+L'activation des nouvelles campagnes v6 attend encore la qualification de leur profil temporel ;
+les preuves historiques ci-dessous ne qualifient ni ce profil ni l'acceptation par SofaScore.
+
 **Timeout Playwright local — 9 septembre 2026 :** le profil `local` attend désormais
 jusqu’à vingt secondes par échange Playwright, configurable via
 `SOFASCORE_PLAYWRIGHT_REQUEST_TIMEOUT`. Le lancement live-v5 accepte cette borne ;
-les politiques live historiques gardent dix secondes. Redémarrer le Lab avant
+les politiques live-v1 à live-v4 gardent dix secondes. Redémarrer le Lab avant
 une nouvelle préparation. Les enveloppes de cadence et les arrêts sur erreur
 restent distincts : voir le [runbook](docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md) et la
 [validation ciblée](docs/validation/WO058-PLAYWRIGHT-TIMEOUT-20260909.md).
@@ -24,7 +37,7 @@ Les groupes et intitulés statistiques connus sont traduits en français ; les c
 gardent le numéro, le nom et le poste sans répéter leur section Titulaires/Remplaçants.
 [Portée et validation des libellés](docs/validation/WO058-UI-LABELS-20260909.md).
 
-**Politique live-v5 — 8 septembre 2026 :** les nouvelles préparations ciblent J4, incidents et
+**Politique historique live-v5 — 8 septembre 2026 :** les préparations de cette version ciblent J4, incidents et
 statistiques toutes les 100 secondes par match, avec compositions initiales puis réparties sur
 cinq minutes. Le profil synthétique dédié qualifie vingt rencontres après cinq minutes
 d'initialisation et trente minutes établies ; l'observation fournisseur reste distincte.

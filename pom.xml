@@ -231,6 +231,7 @@
                   <argLine>${j7.no-automatic-retry.jvm-arguments} @{jacoco.agent.argLine}</argLine>
                   <includes>
                     <include>**/integration/**/*IT.java</include>
+                    <include>**/ProviderResilienceTransportPersistenceIT.java</include>
                   </includes>
                 </configuration>
               </execution>

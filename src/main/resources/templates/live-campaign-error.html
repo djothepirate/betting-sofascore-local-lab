@@ -11,5 +11,7 @@
      th:href="@{/live-campaigns/{id}(id=${cleanupCampaignId})}">Ouvrir la campagne à clôturer</a>
   <a class="button" th:if="${retryCampaignId != null}"
      th:href="@{/live-campaigns/{id}(id=${retryCampaignId})}">Revenir à la campagne</a>
+  <a class="button" th:if="${liveErrorCode != null and #strings.startsWith(liveErrorCode, 'PROVIDER_')}"
+     th:href="@{/provider-access}">Consulter l’état de l’accès fournisseur</a>
   <a class="button button-secondary" th:href="@{/events}">Revenir aux rencontres</a>
 </section></main></body></html>

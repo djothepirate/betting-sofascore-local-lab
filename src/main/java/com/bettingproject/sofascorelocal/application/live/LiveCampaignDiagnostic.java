@@ -3,6 +3,9 @@ package com.bettingproject.sofascorelocal.application.live;
 import com.bettingproject.sofascorelocal.application.network.ManualProviderRequestCoordinator;
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderException;
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderFailure;
+import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightTransportDiagnostic;
+import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
+import java.util.UUID;
 
 import java.time.Instant;
 import java.util.Arrays;
@@ -12,12 +15,14 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /** Bounded process evidence. Never retains an exception, message, cause or provider payload. */
-public record LiveCampaignDiagnostic(Phase phase, String code, Instant occurredAt) {
+public record LiveCampaignDiagnostic(Phase phase, String code, Instant occurredAt,
+                                     UUID attemptId, SofascoreEndpointType endpoint,
+                                     PlaywrightTransportDiagnostic transport) {
     public enum Phase {
         LEASE_ACQUISITION, CAMPAIGN_LAUNCH, SELECTION_RECHECK, TRANSPORT_OPEN, SCHEDULING,
         BUDGET_READ, STORAGE_CHECK, ATTEMPT_RESERVATION, TRANSPORT, RAW_SAVE, NORMALIZATION,
         RESULT_PUBLICATION, SCHEDULE_PUBLICATION,
-        CLEANUP_TRANSPORT_CLOSE, CLEANUP_TRANSPORT_ABSENCE, CLEANUP_EXCLUSION,
+        CLEANUP_TRANSPORT_CLOSE, CLEANUP_TRANSPORT_ABSENCE, CLEANUP_DIAGNOSTIC_PUBLICATION, CLEANUP_EXCLUSION,
         CLEANUP_STATE_READ, CLEANUP_OWNERSHIP_CHECK, CLEANUP_SCHEDULE_PUBLICATION,
         CLEANUP_ATTEMPT_RECONCILIATION, CLEANUP_TERMINAL_PUBLICATION, CLEANUP_LEASE_RELEASE
     }
@@ -25,7 +30,9 @@ public record LiveCampaignDiagnostic(Phase phase, String code, Instant occurredA
     private static final Set<String> LOCAL_CODES = Set.of(
             "LIVE_STORAGE_PROBE_NOT_CONFIGURED", "LIVE_STORAGE_PROBE_TIMEOUT", "LIVE_STORAGE_PROBE_FAILED",
             "LIVE_STORAGE_PROBE_INVALID", "LIVE_STORAGE_PROBE_INTERRUPTED", "LIVE_STORAGE_CAPACITY_REFUSED",
-            "LIVE_RAW_PREVIOUSLY_PURGED", "LIVE_PROVIDER_CLEANUP_UNVERIFIED", "LIVE_CLEANUP_OWNERSHIP_CHANGED");
+            "LIVE_RAW_PREVIOUSLY_PURGED", "LIVE_PROVIDER_CLEANUP_UNVERIFIED", "LIVE_CLEANUP_OWNERSHIP_CHANGED",
+            "PROVIDER_SUSPENDED", "PROVIDER_CLOCK_REGRESSION", "PROVIDER_DIAGNOSTIC_PERSISTENCE_FAILED",
+            "PROVIDER_DEPARTURE_UNRESOLVED", "PROVIDER_HTTP_403", "PROVIDER_HTTP_429");
     private static final Set<String> CODES = Stream.concat(LOCAL_CODES.stream(),
             Stream.concat(Stream.of("RUNTIME_OR_STORAGE_FAILURE", "PROVIDER_COORDINATION_FAILURE"),
                     Arrays.stream(PlaywrightProviderFailure.values()).map(value -> "PLAYWRIGHT_" + value.name())))
@@ -35,6 +42,16 @@ public record LiveCampaignDiagnostic(Phase phase, String code, Instant occurredA
         Objects.requireNonNull(phase);
         Objects.requireNonNull(occurredAt);
         if (code == null || !CODES.contains(code)) throw new IllegalArgumentException("LIVE_DIAGNOSTIC_CODE_INVALID");
+        if ((attemptId == null) != (endpoint == null)) throw new IllegalArgumentException("LIVE_DIAGNOSTIC_ATTEMPT_INVALID");
+    }
+
+    public LiveCampaignDiagnostic(Phase phase, String code, Instant occurredAt) {
+        this(phase, code, occurredAt, null, null, null);
+    }
+
+    public LiveCampaignDiagnostic withAttempt(UUID attempt, SofascoreEndpointType family,
+                                              PlaywrightTransportDiagnostic observed) {
+        return new LiveCampaignDiagnostic(phase, code, occurredAt, attempt, family, observed);
     }
 
     static LiveCampaignDiagnostic from(Phase phase, RuntimeException failure, Instant occurredAt) {

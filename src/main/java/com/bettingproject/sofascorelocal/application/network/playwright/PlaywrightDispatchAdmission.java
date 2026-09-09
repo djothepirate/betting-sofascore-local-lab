@@ -8,5 +8,7 @@ public interface PlaywrightDispatchAdmission {
     };
     void check();
     Permit acquireDispatchPermit();
+    /** Called synchronously for authenticated, bounded evidence, before reading the body. */
+    default void onTransportProgress(PlaywrightTransportDiagnostic diagnostic) { }
     interface Permit extends AutoCloseable { @Override void close(); }
 }

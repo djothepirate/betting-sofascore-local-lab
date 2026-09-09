@@ -2,11 +2,23 @@
 
 Statuts : EXPERIMENTAL · LOCAL_ONLY · NOT_PRODUCTION_APPROVED · NO_CRITICAL_DEPENDENCY.
 
-**État : cadrage proposé le 9 septembre 2026, pas une modification du comportement runtime.**
+**État : premier lot autorisé le 9 septembre 2026, réalisé et qualifié fonctionnellement hors fournisseur.**
+Le [rapport du lot](../validation/WO-058-provider-resilience-qualification-20260909.md) conserve
+les résultats et limites. L'activation des nouvelles campagnes attend le profil temporel v6.
 Le propriétaire demande de prioriser la robustesse face aux blocages d'accès avant
 toute nouvelle réduction des délais de rafraîchissement. Cette priorité est retenue.
-Les paramètres, états et algorithmes ci-dessous sont à qualifier dans un lot dédié ;
-ils ne révisent pas implicitement les décisions de transport et de cadence existantes.
+Le propriétaire a ensuite autorisé diagnostic/suspension puis lissage/404 hors fournisseur.
+[ADR-SS-005 v0.8](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md) formalise la décision ;
+le présent document conserve les observations et le cadrage qui l'ont précédée.
+
+Le premier lot met en œuvre `live-v6`, admission au plus sept rencontres avec profil et
+SHA propres, et cible 100/300 s soumise à une protection globale persistante J3/J4/J5 :
+deux secondes après chaque fin d'échange, 25 charges/60 s et 1 000/heure. Il ajoute suspension
+sur 403/429 connu, réarmement manuel sans requête, diagnostics avant corps complet et
+backoff 404 par famille. Les paliers sont 300/600/900 s pour incidents/statistiques/LINEUPS
+prématch et 600/900 s pour LINEUPS en jeu, remis à zéro après PARSED ou transition J4.
+Les budgets 2 500/20 000, quatre heures et 15 728 640 000 octets restent en place. Les preuves
+v4/v5 ne qualifient pas v6 ; la qualification fonctionnelle du lot ne fournit pas le profil temporel opérateur v6.
 
 Rattachement : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md).
 Base de lecture : `f2b28eca276e49476425ee0a12ed7bdda54d32df`, worktree WO-058.
@@ -26,7 +38,7 @@ de blocage. Le volume, sa distribution temporelle et la réputation du réseau s
 des hypothèses à distinguer. Un timeout ne prouve pas un 403, et un 403 ne renseigne
 pas la durée d'une restriction.
 
-Pour vingt rencontres toutes en jeu, le nominal actuel coûte :
+Pour vingt rencontres toutes en jeu, le nominal historique v5 coûte :
 
 `20 × (3 / 100 + 1 / 300) × 60 = 40 appels/minute`.
 
@@ -85,14 +97,19 @@ L'arrêt après refus n'est pas une anomalie à supprimer. Il faut améliorer la
 la précision du diagnostic, la conservation du motif et le comportement entre campagnes.
 La déduplication effectuée après réception économise du stockage, pas des requêtes réseau.
 
-## 3. Ordre de réalisation proposé
+## 3. Cadrage initial et ordre de réalisation autorisé
+
+Cette section conserve les écarts repérés avant implémentation. Les lots de diagnostic,
+suspension, lissage et 404 ont été autorisés ; leurs règles concrètes figurent en tête.
+La réutilisation d'observations et le HTTP conditionnel restent des pistes ultérieures,
+sans mise en œuvre ni permission implicite dans le premier lot.
 
 ### Lot A — rendre chaque arrêt explicable et durable
 
 Étendre les diagnostics bornés du worker et du protocole IPC : attente de navigation,
 réception des en-têtes, lecture du corps, fin de transport, publication locale.
 Reporter le statut HTTP dès qu'il est connu et corrélé à la requête autorisée, même
-si le corps ne finit pas d'arriver. Aujourd'hui le parent ne reçoit ce statut qu'après
+si le corps ne finit pas d'arriver. Au début du cadrage, le parent ne recevait ce statut qu'après
 `response.body()` ; un timeout peut effacer cette distinction.
 
 Enregistrer seulement des identifiants, enums, heures, durées, statut numérique connu
@@ -131,8 +148,8 @@ Ne pas continuer à annoncer 100 s si l'ordonnancement choisi ne peut plus les t
 
 Pour les 404 J5 répétés, porter une indisponibilité temporaire par événement/famille,
 avec délai croissant borné avant le prochain échantillonnage et réévaluation aux
-transitions sportives. Une réponse disponible restaure progressivement le rythme
-consenti. J4 continue de suivre sa propre règle ; son 404 conserve la revue requise.
+transitions sportives. Une réponse disponible rétablit le nominal du couple concerné
+dans le premier lot. J4 continue de suivre sa propre règle ; son 404 conserve la revue requise.
 Tester aussi l'apparition tardive des données pour ne pas figer une absence.
 
 Préserver les distinctions absent, indisponible, vide valide et zéro. Une famille
@@ -181,7 +198,7 @@ B et C ensemble pour obtenir une baisse mesurable des départs ; complément d'a
 | 200 avec corps lent/incomplet | Attente distinguée du parsing ; même délai global borné, nettoyage vérifié |
 | 429 avec Retry-After valide, absent ou invalide | Borne minimale interprétée sans réarmement automatique ; valeur invalide sans extrapolation |
 | Nouvelle campagne, redémarrage, deux demandes concurrentes | Budget global et suspension fournisseur persistants ; aucun départ non admis |
-| Dix-neuf/vingt cibles, initialisation, reprise de file, fin de match | Bornes de départ respectées sur toutes les fenêtres ; pas de rafale compensatrice |
+| Sélection supérieure à sept puis sept cibles admises, initialisation, reprise de file, fin de match | Sélection excessive refusée ; bornes de départ respectées sur toutes les fenêtres ; pas de rafale compensatrice |
 | 404 J5 répétés puis données disponibles | Moins d'appels sur la famille absente, apparition tardive détectée dans la borne choisie |
 | Joueur capitaine et statistiques dans lineups | Aucune perte de données dynamiques causée par une composition déjà confirmée |
 | Lecture UI et réutilisation d'une observation | Aucun départ fournisseur, provenance/âge d'origine conservés |
@@ -199,11 +216,11 @@ l'absence de blocage à une autre charge ou une autre heure.
 
 ## 5. Décisions et limites
 
-Le [cadre actuel](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md) fixe la cadence,
-le rééchantillonnage 404 à chaque cycle et l'absence de cache J4/J5. Les lots B/C et
-les nouvelles règles de suspension devront être formalisés avant activation avec
-version de politique et preuves propres ; les anciens manifestes restent inchangés.
-La présente proposition n'ouvre aucun endpoint, transport, polling ou essai réel.
+Le [cadre actuel v0.8](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md) formalise
+la protection globale et la politique v6. Les anciens manifestes gardent leurs règles
+propres, mais tout nouvel accès passe par la protection partagée. Aucun cache J4/J5,
+endpoint, transport supplémentaire ou essai réel n'est ouvert. L'activation du profil
+v6 dépend de sa preuve dédiée ; aucun succès de qualification n'est présumé ici.
 
 L'objectif est de limiter les causes évitables de refus et leur impact. L'architecture
 ne peut pas garantir un accès que le fournisseur refuse. Si la charge nécessaire reste
@@ -217,5 +234,6 @@ explicitement permis, dans un cadrage séparé ; aucune offre/API SofaScore n'es
 - [RFC 9110 §10.2.3 — Retry-After](https://www.rfc-editor.org/rfc/rfc9110.html#section-10.2.3) : attente exprimée comme délai ou date.
 - [Playwright Java —Request](https://playwright.dev/java/docs/api/class-request) : événements requête, réception des en-têtes, fin ou échec de la requête.
 
-Revue documentaire et calculs hors réseau fournisseur uniquement. Aucun changement de
-code, migration, lanceur Eclipse, cadence ou état de campagne au titre de ce cadrage.
+Les constats initiaux proviennent de lectures et calculs hors réseau fournisseur.
+La mise en œuvre autorisée est désormais suivie dans le WO ; aucun changement de
+lanceur Eclipse, d'état de campagne ou lancement fournisseur ne découle de cette note.

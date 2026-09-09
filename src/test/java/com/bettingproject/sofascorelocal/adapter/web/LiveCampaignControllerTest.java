@@ -2,6 +2,7 @@ package com.bettingproject.sofascorelocal.adapter.web;
 
 import com.bettingproject.sofascorelocal.application.live.LiveCampaignService;
 import com.bettingproject.sofascorelocal.application.live.LiveCampaignDiagnostic;
+import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightTransportDiagnostic;
 import com.bettingproject.sofascorelocal.config.LiveCampaignWebMvcConfiguration;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventObservationView;
@@ -1002,7 +1003,8 @@ class LiveCampaignControllerTest {
         String diagnosticBody = box.group(2);
         assertThat(box.find()).as("one global diagnostic box, never one per event").isFalse();
         assertThat(diagnosticBody).contains("Diagnostic de l’arrêt", "Première erreur", "Dernier échec de clôture",
-                "Instant (UTC)", "conservez-les avant de redémarrer");
+                "Instant (UTC)", "reste consultable après redémarrage", "informations non observées");
+        assertThat(body).contains("href=\"/provider-access\"");
         for (String key : List.of("firstFailure", "cleanupFailure")) {
             LiveCampaignDiagnostic expected = key.equals("firstFailure") ? first : cleanup;
             var section = Pattern.compile("(?s)<section\\b([^>]*data-live-diagnostic=\"" + key + "\"[^>]*)>(.*?)</section>")
@@ -1010,6 +1012,10 @@ class LiveCampaignControllerTest {
             assertThat(section.find()).isTrue();
             assertThat(section.group(1).contains("hidden")).isEqualTo(expected == null);
             if (expected != null) assertThat(section.group(2)).contains(expected.phase().name(), expected.code(), expected.occurredAt().toString());
+            for (String field : List.of("attempt", "endpoint", "transport-phase", "timeout", "requested-at",
+                    "headers-at", "http-status", "retry-after", "complete"))
+                assertThat(Pattern.compile("<dd\\b[^>]*data-live-diagnostic-" + field + "[^>]*>\\s*—\\s*</dd>")
+                        .matcher(section.group(2)).find()).as("unknown historical field %s", field).isTrue();
         }
         var state = mvc.perform(get(base + "/state").param("page", "2").header("Host", HOST))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.revision").value(42))
@@ -1017,13 +1023,48 @@ class LiveCampaignControllerTest {
         if (first == null) state.andExpect(jsonPath("$.runtimeStatus.firstFailure").doesNotExist());
         else state.andExpect(jsonPath("$.runtimeStatus.firstFailure.phase").value("STORAGE_CHECK"))
                 .andExpect(jsonPath("$.runtimeStatus.firstFailure.code").value("LIVE_STORAGE_PROBE_TIMEOUT"))
-                .andExpect(jsonPath("$.runtimeStatus.firstFailure.occurredAt").value(NOW.toString()));
+                .andExpect(jsonPath("$.runtimeStatus.firstFailure.occurredAt").value(NOW.toString()))
+                .andExpect(jsonPath("$.runtimeStatus.firstFailure.attemptId").doesNotExist())
+                .andExpect(jsonPath("$.runtimeStatus.firstFailure.endpoint").doesNotExist())
+                .andExpect(jsonPath("$.runtimeStatus.firstFailure.transport").doesNotExist());
         if (cleanup == null) state.andExpect(jsonPath("$.runtimeStatus.cleanupFailure").doesNotExist());
         else state.andExpect(jsonPath("$.runtimeStatus.cleanupFailure.phase").value("CLEANUP_EXCLUSION"))
                 .andExpect(jsonPath("$.runtimeStatus.cleanupFailure.code").value("RUNTIME_OR_STORAGE_FAILURE"))
-                .andExpect(jsonPath("$.runtimeStatus.cleanupFailure.occurredAt").value(NOW.plusSeconds(5).toString()));
+                .andExpect(jsonPath("$.runtimeStatus.cleanupFailure.occurredAt").value(NOW.plusSeconds(5).toString()))
+                .andExpect(jsonPath("$.runtimeStatus.cleanupFailure.attemptId").doesNotExist())
+                .andExpect(jsonPath("$.runtimeStatus.cleanupFailure.endpoint").doesNotExist())
+                .andExpect(jsonPath("$.runtimeStatus.cleanupFailure.transport").doesNotExist());
         verify(service, never()).stop(any(), any());
         verify(service, never()).launch(any(), any());
+    }
+
+    @Test
+    void durablePartialRefusalMetadataIsVisibleWithoutClaimingACompleteResponse() throws Exception {
+        UUID attemptId=UUID.randomUUID();
+        var transport=new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.PARENT_IPC_WAIT,30_000,
+                NOW.minusSeconds(10),NOW.minusSeconds(9),429,NOW.plusSeconds(60),false);
+        var first=new LiveCampaignDiagnostic(LiveCampaignDiagnostic.Phase.TRANSPORT,"PROVIDER_HTTP_429",NOW,
+                attemptId,SofascoreEndpointType.EVENT_STATISTICS,transport);
+        when(service.state(CAMPAIGN_ID)).thenReturn(paginatedCampaign("STOPPED_ERROR",17));
+        when(service.runtimeStatus(CAMPAIGN_ID)).thenReturn(Optional.of(new LiveCampaignService.RuntimeStatus(
+                "STOPPED_ERROR","STOPPED_ERROR",true,false,false,first,null)));
+        String path="/live-campaigns/"+CAMPAIGN_ID;
+        String html=mvc.perform(get(path).header("Host",HOST)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(html).contains(attemptId.toString(),"EVENT_STATISTICS","PARENT_IPC_WAIT","30000 ms",
+                "data-live-diagnostic-http-status>429</dd>","data-live-diagnostic-complete>Non</dd>",
+                NOW.minusSeconds(10).toString(),NOW.minusSeconds(9).toString(),NOW.plusSeconds(60).toString());
+        mvc.perform(get(path+"/state").header("Host",HOST)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.state").value("STOPPED_ERROR"))
+                .andExpect(jsonPath("$.runtimeStatus.firstFailure.attemptId").value(attemptId.toString()))
+                .andExpect(jsonPath("$.runtimeStatus.firstFailure.endpoint").value("EVENT_STATISTICS"))
+                .andExpect(jsonPath("$.runtimeStatus.firstFailure.transport.phase").value("PARENT_IPC_WAIT"))
+                .andExpect(jsonPath("$.runtimeStatus.firstFailure.transport.requestTimeoutMillis").value(30_000))
+                .andExpect(jsonPath("$.runtimeStatus.firstFailure.transport.httpStatus").value(429))
+                .andExpect(jsonPath("$.runtimeStatus.firstFailure.transport.retryAfterNotBefore").value(NOW.plusSeconds(60).toString()))
+                .andExpect(jsonPath("$.runtimeStatus.firstFailure.transport.responseComplete").value(false));
+        verify(service,never()).stop(any(),any());
+        verify(service,never()).launch(any(),any());
     }
 
     @Test

@@ -1,6 +1,6 @@
 # ADR-SS-005 — Campagnes live locales et bornées J4/J5
 
-- **Version :** 0.7.
+- **Version :** 0.8.
 - **Statut :** `ACCEPTED` — v0.1 formellement acceptée ; capacité adaptative puis collecte des compositions avant le début explicitement demandées par le propriétaire le 7 septembre.
 - **Date :** 2026-09-09.
 - **Décideur :** propriétaire du Betting Project.
@@ -14,6 +14,7 @@
 - **Autorité de la v0.6 :** demande du 8 septembre d’augmenter les plafonds à 20 000 appels par campagne et de réduire la pause entre groupes à une seconde, puis arbitrage explicite « Priorité aux 15–20 matchs, avec une cadence explicitement qualifiée ». La cible initialement souhaitée de 20 secondes cède donc la priorité au nombre de rencontres. Le propriétaire précise ensuite un objectif à moyen terme de 50–100 rencontres et demande une visibilité sur les cadences nécessaires ; cet objectif ne constitue pas une qualification de cette capacité.
 - **Référence historique v0.2 :** contenu Git au commit `e98f7a74e39a1c57e601efb3d346ae55829fce73`, conservé sans réécriture.
 - **Autorité de la v0.7 :** demande du propriétaire le 9 septembre d’un timeout Playwright « un peu plus élevé » pour le prochain essai après PLAYWRIGHT_TIMEOUT. La borne retenue est vingt secondes pour live-v5. Ce complément donne davantage de temps à un échange lent ; il ne change ni cadence, ni enveloppes qualifiées, ni budgets et n’autorise aucun lancement par l’agent.
+- **Autorité de la v0.8 :** le 9 septembre, après les essais à 19–20 rencontres interrompus sur refus ou timeout, le propriétaire donne la priorité à la robustesse puis autorise explicitement le premier lot diagnostic/suspension et le lissage/404 hors fournisseur. Cette décision introduit `live-v6` et une protection persistante commune J3/J4/J5. La réalisation est qualifiée fonctionnellement hors fournisseur ; le profil temporel v6 reste à qualifier. Aucune capacité fournisseur ni nouvelle campagne réelle ne découle de cette décision.
 - **Work Order :** [WO-SS-20260907-058](docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md), validé par le propriétaire ; correctif et qualification de réalisation distincts de cette décision.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
 - **Base :** `6dfd14286d4f269cbe100bd965257c20298538db`, train `feature/V0.1.0-RC01` vérifié à l'ouverture.
@@ -27,7 +28,78 @@ applicables ; la copie exacte acceptée de la v0.1 et les preuves de ses paliers
 La v0.3 ajoute seulement la collecte prématch LINEUPS au manifeste `live-v3`. Les manifestes
 historiques `live-v1` et `live-v2` gardent leur comportement, leurs échéances et leurs empreintes.
 
-## 0. Décision live-v5 — vingt rencontres et cadence qualifiée
+## 0. Décision courante live-v6 — pression bornée et refus conservés
+
+Les nouvelles préparations utilisent **live-v6**, avec un profil d'admission séparé et
+une preuve SHA-256 propre. La sélection effective vaut au plus **sept rencontres** et
+peut être réduite par les coûts mesurés ou la configuration. Le nominal reste 100 s
+pour J4/incidents/statistiques et les compositions prématch, puis 300 s pour les
+compositions en jeu. Cette cible n'est pas garantie lorsque le budget partagé reporte
+une lecture. Les plafonds de 2 500 appels par rencontre, 20 000 par campagne, quatre
+heures et 15 728 640 000 octets bruts restent distincts des plafonds temporels.
+
+La protection commune `provider-resilience-v1` porte sur **tous les parcours Playwright
+J3/J4/J5**, manuels et live. Après chaque fin d'échange prouvée, au moins **deux secondes**
+précèdent le prochain départ. Les charges ne vieillissent qu'à leur fin d'échange :
+au plus **25 sur 60 secondes glissantes** et **1 000 sur une heure glissante**. Cette
+comptabilisation conservatrice évite de comprimer des départs à la suite d'une attente
+interne. Elle est persistante et sérialisée ; changer d'UUID ou redémarrer ne la remet
+pas à zéro. Une réservation non résolue reste bloquante. Les délais plus longs des
+frontières historiques restent applicables. Aucun endpoint ni option HTTP ne peut
+contourner cette protection ; le transport reste séquentiel.
+
+Ces nombres sont des paramètres locaux, sans prétention à représenter un quota du
+fournisseur. La borne d'admission réserve 10 % du budget horaire : 120 appels ordinaires
+par heure et par rencontre, plus quatre initiaux et quatre finaux, donnent
+`7 × 128 = 896 ≤ 900`. Huit rencontres dépasseraient déjà 1 000 dans cette borne.
+Le rejeu tient aussi compte des coûts locaux, des pauses après chaque réponse, des
+transitions et de la finalisation. Un budget consommé par une campagne précédente
+peut encore retarder une sélection admise. Les échéances reportées sont coalescées,
+bornées à la fin de campagne, sans rafale compensatrice ni prolongation des budgets.
+
+Pour live-v6 seulement, un **404 J5** espace les appels de la seule rencontre et de
+la seule famille concernées : incidents, statistiques et compositions prématch à
+300, 600 puis 900 secondes ; compositions en jeu à 600 puis 900 secondes. Le prochain
+tour admissible respecte cette borne, les tours J4 et le budget global. Une réponse
+PARSED réinitialise cette famille ; une transition J4 réévalue les indisponibilités.
+J4 ne bénéficie d'aucun backoff et son 404 garde l'arrêt individuel pour revue.
+La finalisation conserve une tentative par famille dans ses réserves : aucun retry
+final n'est ajouté. Indisponibilité, bloc vide valide, absence et zéro restent distincts.
+
+Un **403 ou 429 confirmé aux en-têtes** suspend durablement les nouveaux accès, même
+si le corps ne s'achève pas. Le nettoyage de la campagne peut libérer la garde de
+processus sans lever cette suspension. Un `Retry-After` valide établit une borne
+minimale ; son expiration ne réarme rien. Le réarmement est une action opérateur
+explicite, versionnée, sans requête ni création de navigateur et sans reprise de la
+campagne arrêtée. Il ne constitue pas une preuve de disponibilité du fournisseur.
+Un timeout sans statut connu reste une erreur technique incertaine et ferme la
+campagne ; aucun bannissement n'est déduit et aucun retry n'est introduit.
+
+Les diagnostics séparent navigation, envoi connu, réception des en-têtes, lecture du
+corps, réponse complète et attente IPC du parent. Le timeout configuré est conservé
+avec ces métadonnées, la cause primaire et le dernier échec de nettoyage. Une réponse
+partielle ne crée aucun snapshot ni résultat normalisé fictif. Les logs et projections
+n'acceptent que des champs bornés : identités locales, codes, instants, timeout et
+statut HTTP connu, jamais de payload, URL complète, cookie, jeton ou en-têtes bruts.
+
+Le plafond de timeout au lancement v6 accepte trente secondes, conformément au dernier
+réglage opérateur ; le défaut `local` reste vingt secondes et le défaut général dix.
+Les plafonds historiques v5 à vingt secondes et v1–v4 à dix secondes sont conservés.
+Ce plafond d'attente ne remplace aucune enveloppe d'admission.
+
+V42 ajoute l'état fournisseur, ses transitions et les réservations/fins d'échange ;
+V43 porte les diagnostics ; V44 contraint la nouvelle politique. Les migrations sont
+append-only et ne reconstruisent ni refus ni diagnostics historiques. Les manifestes
+v1–v5 restent inchangés, avec leurs règles propres ; la protection fournisseur globale
+s'applique à tout nouvel accès. Les preuves de capacité v4/v5 restent historiques.
+La qualification fonctionnelle du présent lot est **réussie hors fournisseur** : refus
+partiels, concurrence, redémarrage, réarmement sans appel, fenêtres glissantes, 404 et
+nettoyage sont vérifiés par les tests et replays, Chromium loopback et PostgreSQL isolé.
+Le [rapport du 9 septembre](docs/validation/WO-058-provider-resilience-qualification-20260909.md)
+conserve les résultats et les limites, dont la clôture gracieuse incertaine après timeout IPC.
+Le profil temporel concret v6 reste à qualifier avant toute activation d'une nouvelle campagne.
+
+## Décision historique live-v5 — vingt rencontres et cadence qualifiée
 
 ### Complément du 9 septembre — timeout de transport à vingt secondes
 
@@ -56,7 +128,7 @@ borne, sans appel fournisseur.
 
 ### Cadence, charge et budgets
 
-Les nouvelles préparations utilisent `live-v5`. Le candidat à qualifier est **20 rencontres
+Lors de cette révision historique, les nouvelles préparations utilisaient `live-v5`. Le candidat était **20 rencontres
 à 100 secondes nominales** pour J4, incidents et statistiques, avec les compositions en jeu
 toutes les 300 secondes (trois tours). Avant le jeu, J4 et les compositions après
 `notstarted` utilisent 100 secondes. L’initialisation conserve une collecte immédiate des

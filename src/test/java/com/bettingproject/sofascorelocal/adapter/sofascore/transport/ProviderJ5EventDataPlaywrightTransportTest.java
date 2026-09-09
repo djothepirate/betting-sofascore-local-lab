@@ -221,7 +221,7 @@ class ProviderJ5EventDataPlaywrightTransportTest {
     private static J5EventDataTransportFailure expectedFailure(
             PlaywrightProviderFailure failure) {
         return switch (failure) {
-            case TIMEOUT -> J5EventDataTransportFailure.TIMEOUT;
+            case TIMEOUT, IPC_TIMEOUT -> J5EventDataTransportFailure.TIMEOUT;
             case PAYLOAD_TOO_LARGE -> J5EventDataTransportFailure.PAYLOAD_TOO_LARGE;
             case SENSITIVE_CONTENT_REJECTED ->
                     J5EventDataTransportFailure.SENSITIVE_CONTENT_REJECTED;

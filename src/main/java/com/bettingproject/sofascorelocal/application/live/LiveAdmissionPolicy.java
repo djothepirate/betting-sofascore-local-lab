@@ -11,6 +11,9 @@ import org.springframework.stereotype.Component;
 @Component
 public final class LiveAdmissionPolicy {
     public static final int V5_MAXIMUM_SELECTION_SIZE = 20;
+    public static final int V6_MAXIMUM_SELECTION_SIZE = 7;
+    public static final int V6_MAXIMUM_CALLS_PER_MINUTE = 25;
+    public static final int V6_MAXIMUM_CALLS_PER_HOUR = 1000;
     public static final long V5_MAXIMUM_RAW_BYTES = 15_728_640_000L;
     private final LiveCampaignProperties properties;
     private final LiveStorageCapacityProbe storage;
@@ -73,6 +76,15 @@ public final class LiveAdmissionPolicy {
         requireStorage(maximumBytesV5(matches));
     }
 
+    public void admitV6(int matches, GroupedAdmissionProfile profile) {
+        properties.validate();
+        if (matches < 1 || matches > properties.getQualifiedMatchCapacity() || matches > V6_MAXIMUM_SELECTION_SIZE)
+            throw new IllegalArgumentException("LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY");
+        if (matches > qualifiedCapacityV6(profile))
+            throw new IllegalArgumentException("LIVE_CAPACITY_REFUSED_REDUCE_SELECTION");
+        requireStorage(maximumBytesV5(matches));
+    }
+
     /**
      * Pure temporal bound, independent of the configured/operator maximum and storage.
      * The established five-minute sequence has five calls to each critical family,
@@ -88,11 +100,26 @@ public final class LiveAdmissionPolicy {
         return qualifiedGroupedCapacity(profile, "live-v5", V5_MAXIMUM_SELECTION_SIZE);
     }
 
+    /**
+     * 120 ordinary calls/hour plus four initial and four final calls per event.
+     * 7 * 128 = 896, inside 90% of the local 1000/hour allowance; 8 would use 1024.
+     * The shared rolling limiter can still postpone calls when earlier campaigns
+     * consumed that allowance. This is not a promise of a 100-second interval.
+     */
+    public static int qualifiedCapacityV6(GroupedAdmissionProfile profile) {
+        int hourlyCapacity = (V6_MAXIMUM_CALLS_PER_HOUR * 9 / 10) / 128;
+        return qualifiedGroupedCapacity(profile, "live-v6", Math.min(V6_MAXIMUM_SELECTION_SIZE, hourlyCapacity));
+    }
+
     private static int qualifiedGroupedCapacity(GroupedAdmissionProfile profile, String policyVersion, int maximumMatches) {
         if (profile == null) throw new IllegalStateException("LIVE_CAPACITY_QUALIFICATION_REQUIRED");
         if (!policyVersion.equals(profile.policyVersion())) throw new IllegalStateException("LIVE_GROUPED_POLICY_MISMATCH");
         long rounds = profile.lineupInterval().toSeconds() / profile.criticalInterval().toSeconds();
         long weightedNanos = Math.multiplyExact(profile.interGroupDelay().toNanos(), rounds);
+        if ("live-v6".equals(policyVersion)) {
+            // The durable limiter waits after every exchange, including same-group calls.
+            weightedNanos = Math.multiplyExact(profile.minimumRequestStartInterval().toNanos(), 3 * rounds + 1);
+        }
         for (SofascoreEndpointType endpoint : new SofascoreEndpointType[] {
                 SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
                 SofascoreEndpointType.EVENT_STATISTICS}) {
@@ -119,6 +146,11 @@ public final class LiveAdmissionPolicy {
     /** Three critical rounds plus one lineup per five minutes, excluding startup/finalization. */
     public static double estimatedLiveCallsPerMinuteV5(int matches) {
         if (matches < 1 || matches > V5_MAXIMUM_SELECTION_SIZE)
+            throw new IllegalArgumentException("invalid live selection size");
+        return matches * 2.0;
+    }
+    public static double estimatedLiveCallsPerMinuteV6(int matches) {
+        if (matches < 1 || matches > V6_MAXIMUM_SELECTION_SIZE)
             throw new IllegalArgumentException("invalid live selection size");
         return matches * 2.0;
     }

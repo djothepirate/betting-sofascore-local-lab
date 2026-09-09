@@ -23,6 +23,7 @@ final class GroupedLiveScheduleV4 {
     private Event contiguous;
     private LiveSchedule.Due inFlight;
     private String globalStop;
+    private Instant deferredUntil;
 
     GroupedLiveScheduleV4(List<UUID> targets, Instant start, Instant endsAt, Duration interval, UUID campaignId) {
         this(targets, start, endsAt, interval, campaignId, "live-v4");
@@ -33,12 +34,17 @@ final class GroupedLiveScheduleV4 {
         this.policyVersion = Objects.requireNonNull(policyVersion);
         this.period = switch (policyVersion) {
             case "live-v4" -> Duration.ofSeconds(60);
-            case "live-v5" -> Duration.ofSeconds(100);
+            case "live-v5", "live-v6" -> Duration.ofSeconds(100);
             default -> throw new IllegalArgumentException("LIVE_GROUPED_POLICY_INVALID");
         };
-        if (!period.equals(interval)) throw new IllegalArgumentException("live-v5".equals(policyVersion)
-                ? "LIVE_V5_INTERVAL_REQUIRED" : "LIVE_V4_INTERVAL_REQUIRED");
+        if (!period.equals(interval)) throw new IllegalArgumentException(switch (policyVersion) {
+            case "live-v6" -> "LIVE_V6_INTERVAL_REQUIRED";
+            case "live-v5" -> "LIVE_V5_INTERVAL_REQUIRED";
+            default -> "LIVE_V4_INTERVAL_REQUIRED";
+        });
         if ("live-v5".equals(policyVersion) && targets.size() > 20)
+            throw new IllegalArgumentException("LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY");
+        if (resilient() && targets.size() > LiveAdmissionPolicy.V6_MAXIMUM_SELECTION_SIZE)
             throw new IllegalArgumentException("LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY");
         this.lineupRounds = (int) (300 / period.toSeconds());
         this.endsAt = endsAt;
@@ -52,8 +58,12 @@ final class GroupedLiveScheduleV4 {
     Optional<LiveSchedule.Due> next(Instant now) {
         if (inFlight != null || globalStop != null) return Optional.empty();
         if (!now.isBefore(endsAt)) { stopAll("STOPPED_LIMIT"); return Optional.empty(); }
+        if (deferredUntil != null) {
+            if (now.isBefore(deferredUntil)) return Optional.empty();
+            deferredUntil = null;
+        }
         for (Event event : events.values()) {
-            if (event.active() && !event.finalizing
+            if (event.active() && !event.finalizing && !event.pressureDeferred
                     && !now.isBefore(event.nominalAt().plus(period.multipliedBy(2)))) {
                 event.missedCycles += 2;
                 stopAll("STOPPED_CAPACITY");
@@ -71,8 +81,11 @@ final class GroupedLiveScheduleV4 {
             if (!event.active()) continue;
             Instant eligible = nextAt(event);
             boolean criticalDue = !event.finalizing && eligible != null && !eligible.isAfter(now);
-            if (eligible != null && (selectedAt == null || criticalDue && !selectedCriticalDue
-                    || criticalDue == selectedCriticalDue && eligible.isBefore(selectedAt))) {
+            // V6 can deliberately remain behind nominal phases under shared pressure.
+            // Serve the oldest eligible work, including a deferred final family, so
+            // recurring critical rounds cannot starve finalization until the hard end.
+            if (eligible != null && (selectedAt == null || !resilient() && criticalDue && !selectedCriticalDue
+                    || (resilient() || criticalDue == selectedCriticalDue) && eligible.isBefore(selectedAt))) {
                 selected = event;
                 selectedAt = eligible;
                 selectedCriticalDue = criticalDue;
@@ -86,9 +99,22 @@ final class GroupedLiveScheduleV4 {
     boolean mayDispatch(LiveSchedule.Due due, Instant now) {
         Event event = events.get(due.eventId());
         return globalStop == null && event != null && event.active() && now.isBefore(endsAt)
+                && (deferredUntil == null || !now.isBefore(deferredUntil))
                 && !now.isBefore(due.dueAt()) && !event.pending.isEmpty()
                 && event.pending.getFirst().equals(due)
                 && (contiguous == null || contiguous == event);
+    }
+
+    void defer(LiveSchedule.Due due, Instant notBefore) {
+        if (!resilient()) throw new IllegalStateException("LIVE_DEFER_UNSUPPORTED_POLICY");
+        Objects.requireNonNull(notBefore);
+        Event event = event(due.eventId());
+        if (inFlight != null || globalStop != null || !event.active() || event.pending.isEmpty()
+                || !event.pending.getFirst().equals(due) || !notBefore.isAfter(due.dueAt()))
+            throw new IllegalStateException("LIVE_DISPATCH_CANCELLED");
+        Instant bounded = notBefore.isAfter(endsAt) ? endsAt : notBefore;
+        if (deferredUntil == null || bounded.isAfter(deferredUntil)) deferredUntil = bounded;
+        for (Event selected : events.values()) if (selected.active()) selected.pressureDeferred = true;
     }
 
     void started(LiveSchedule.Due due, Instant now) {
@@ -108,7 +134,7 @@ final class GroupedLiveScheduleV4 {
         if (!event.active() || globalStop != null) return;
         event.pending.removeFirst();
         long familySeconds = due.endpoint() == EVENT_LINEUPS && !"J5_PREMATCH_LINEUPS".equals(due.kind()) ? 300 : period.toSeconds();
-        if (!due.finalCycle() && !now.isBefore(due.dueAt().plusSeconds(familySeconds)))
+        if (!due.finalCycle() && !event.pressureDeferred && !now.isBefore(due.dueAt().plusSeconds(familySeconds)))
             event.familyMisses.merge(due.endpoint(), 1L, Long::sum);
         if (due.endpoint() == EVENT_DETAILS) {
             if (unavailable) { stopEvent(event.id, "STOPPED_REVIEW_REQUIRED"); return; }
@@ -121,6 +147,13 @@ final class GroupedLiveScheduleV4 {
                     || "inprogress".equals(event.sport) && "notstarted".equals(status)) {
                 stopEvent(event.id, "STOPPED_REVIEW_REQUIRED");
                 return;
+            }
+            if (resilient() && !Objects.equals(event.sport, status)) {
+                boolean lineupWasUnavailable = event.unavailableUntil.containsKey(EVENT_LINEUPS);
+                event.unavailableCounts.clear();
+                event.unavailableUntil.clear();
+                event.unavailableIntervals.clear();
+                if (lineupWasUnavailable) event.nextLineupRound = event.round;
             }
             event.sport = status;
             if ("finished".equals(status)) {
@@ -140,8 +173,8 @@ final class GroupedLiveScheduleV4 {
                 event.state = event.checkingFinish ? "CHECKING_FINISH" : "COLLECTING";
                 // Critical periods are nominal phases, not a sleep between endpoints.
                 // A recent prematch lineup never defers incidents or statistics at kickoff.
-                append(event, EVENT_INCIDENTS, "J5_NORMAL", false, now);
-                append(event, EVENT_STATISTICS, "J5_NORMAL", false, now);
+                if (eligible(event, EVENT_INCIDENTS, now)) append(event, EVENT_INCIDENTS, "J5_NORMAL", false, now);
+                if (eligible(event, EVENT_STATISTICS, now)) append(event, EVENT_STATISTICS, "J5_NORMAL", false, now);
                 if (lineupRoundDue(event) && eligible(event, EVENT_LINEUPS, now))
                     append(event, EVENT_LINEUPS, "J5_NORMAL", false, now);
             }
@@ -154,6 +187,7 @@ final class GroupedLiveScheduleV4 {
                 // same group if it is ready now; never wait inside that group.
                 if (event.pending.isEmpty()) appendFinalEligible(event, now);
             } else {
+                if (resilient()) updateAvailability(event, due, unavailable, now);
                 if (due.endpoint() == EVENT_LINEUPS) event.nextLineupRound = nextLineupPhase(event, event.round);
                 if (signals.values().stream().anyMatch(Boolean.TRUE::equals)) {
                     event.checkingFinish = true;
@@ -169,7 +203,7 @@ final class GroupedLiveScheduleV4 {
         // stable until dispatch or cancellation so group sequences cannot overtake.
         contiguous = event;
         event.sequence = groupSequence++;
-        String groupPolicy = "live-v5".equals(policyVersion) ? policyVersion + "|critical=" + period.toSeconds() : policyVersion;
+        String groupPolicy = !"live-v4".equals(policyVersion) ? policyVersion + "|critical=" + period.toSeconds() : policyVersion;
         event.groupId = UUID.nameUUIDFromBytes((groupPolicy + "|" + campaignScope + "|" + event.id + "|" + event.sequence)
                 .getBytes(StandardCharsets.UTF_8));
         event.ordinal = 0;
@@ -202,6 +236,18 @@ final class GroupedLiveScheduleV4 {
             }
             return;
         }
+        if (resilient() && event.pressureDeferred) {
+            event.round++;
+            Instant next = event.groupNominal.plus(period);
+            Instant lastCheck = event.lastStarts.get(EVENT_DETAILS);
+            if (lastCheck != null && lastCheck.plus(period).isAfter(next)) next = lastCheck.plus(period);
+            if (!next.isAfter(now)) next = now.plus(period);
+            // A held group produces one future round, never a burst of expired rounds.
+            event.phase = next.minus(period.multipliedBy(event.round));
+            event.consecutiveMisses = 0;
+            event.pressureDeferred = false;
+            return;
+        }
         if (!now.isBefore(event.groupNominal.plus(period.multipliedBy(2)))) {
             event.missedCycles += 2;
             stopAll("STOPPED_CAPACITY");
@@ -220,6 +266,10 @@ final class GroupedLiveScheduleV4 {
     }
 
     private Instant nextAt(Event event) {
+        return pressureBound(nextUnrestrictedAt(event));
+    }
+
+    private Instant nextUnrestrictedAt(Event event) {
         if (!event.pending.isEmpty()) return event.pending.getFirst().dueAt();
         if (event.finalizing) return event.finalRemaining.stream()
                 .map(endpoint -> earliest(event, endpoint, event.finalReadyAt)).min(Comparator.naturalOrder()).orElse(null);
@@ -227,6 +277,10 @@ final class GroupedLiveScheduleV4 {
     }
 
     private Instant earliest(Event event, SofascoreEndpointType endpoint, Instant candidate) {
+        if (resilient() && endpoint != EVENT_DETAILS && !event.finalizing) {
+            Instant unavailableUntil = event.unavailableUntil.get(endpoint);
+            if (unavailableUntil != null && unavailableUntil.isAfter(candidate)) candidate = unavailableUntil;
+        }
         if (endpoint != EVENT_LINEUPS || !event.finalizing) return candidate;
         Instant previous = event.lastStarts.get(endpoint);
         return previous != null && previous.plus(period).isAfter(candidate) ? previous.plus(period) : candidate;
@@ -234,6 +288,30 @@ final class GroupedLiveScheduleV4 {
 
     private boolean eligible(Event event, SofascoreEndpointType endpoint, Instant now) {
         return !earliest(event, endpoint, now).isAfter(now);
+    }
+
+    private void updateAvailability(Event event, LiveSchedule.Due due, boolean unavailable, Instant now) {
+        SofascoreEndpointType endpoint = due.endpoint();
+        if (!unavailable) {
+            event.unavailableCounts.remove(endpoint);
+            event.unavailableUntil.remove(endpoint);
+            event.unavailableIntervals.remove(endpoint);
+            return;
+        }
+        int count = Math.min(3, event.unavailableCounts.getOrDefault(endpoint, 0) + 1);
+        long nominal = endpoint == EVENT_LINEUPS && !"J5_PREMATCH_LINEUPS".equals(due.kind()) ? 300 : period.toSeconds();
+        long interval = Math.min(900, Math.max(300, nominal * 2) * (1L << (count - 1)));
+        event.unavailableCounts.put(endpoint, count);
+        event.unavailableIntervals.put(endpoint, interval);
+        event.unavailableUntil.put(endpoint, now.plusSeconds(interval));
+    }
+
+    private boolean resilient() { return "live-v6".equals(policyVersion); }
+
+    private Instant pressureBound(Instant candidate) {
+        if (candidate == null || !resilient()) return candidate;
+        if (deferredUntil != null && candidate.isBefore(deferredUntil)) candidate = deferredUntil;
+        return candidate.isAfter(endsAt) ? endsAt : candidate;
     }
 
     private boolean lineupRoundDue(Event event) {
@@ -306,6 +384,10 @@ final class GroupedLiveScheduleV4 {
                     due = earliest(event, endpoint, due);
                 }
             }
+            if (resilient()) {
+                seconds = event.unavailableIntervals.getOrDefault(endpoint, seconds);
+                due = pressureBound(due);
+            }
             result.add(new FamilySchedule(endpoint, due, seconds, event.familyMisses.getOrDefault(endpoint, 0L)));
         }
         return List.copyOf(result);
@@ -320,9 +402,12 @@ final class GroupedLiveScheduleV4 {
     private final class Event {
         final UUID id;
         final int index;
-        final Instant phase;
+        Instant phase;
         final EnumMap<SofascoreEndpointType, Instant> lastStarts = new EnumMap<>(SofascoreEndpointType.class);
         final EnumMap<SofascoreEndpointType, Long> familyMisses = new EnumMap<>(SofascoreEndpointType.class);
+        final EnumMap<SofascoreEndpointType, Integer> unavailableCounts = new EnumMap<>(SofascoreEndpointType.class);
+        final EnumMap<SofascoreEndpointType, Instant> unavailableUntil = new EnumMap<>(SofascoreEndpointType.class);
+        final EnumMap<SofascoreEndpointType, Long> unavailableIntervals = new EnumMap<>(SofascoreEndpointType.class);
         final EnumSet<SofascoreEndpointType> finalRemaining = EnumSet.noneOf(SofascoreEndpointType.class);
         final List<LiveSchedule.Due> pending = new ArrayList<>();
         String state = "WAITING_START", sport;
@@ -330,7 +415,7 @@ final class GroupedLiveScheduleV4 {
         int ordinal, consecutiveMisses;
         UUID groupId;
         Instant groupNominal, reserveAt, finalReadyAt;
-        boolean checkingFinish, reserveFinish, finalizing, finalGood = true, finalComplete;
+        boolean checkingFinish, reserveFinish, finalizing, finalGood = true, finalComplete, pressureDeferred;
         Event(UUID id, int index, Instant phase) { this.id = id; this.index = index; this.phase = phase; }
         Instant nominalAt() { return phase.plus(period.multipliedBy(round)); }
         boolean active() { return !state.startsWith("STOPPED") && !"FINISHED_CONFIRMED".equals(state); }

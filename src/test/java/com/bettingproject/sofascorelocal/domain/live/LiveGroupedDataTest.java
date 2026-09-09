@@ -43,7 +43,12 @@ class LiveGroupedDataTest {
         assertThat(v5.lineupInterval()).isEqualTo(Duration.ofSeconds(300));
         assertThat(v5.interGroupDelay()).isEqualTo(Duration.ofSeconds(1));
         assertThat(v5.intraGroupDelay()).isZero();
-        assertThatThrownBy(()->new GroupedAdmissionProfile(envelopes(),"a".repeat(64),"live-v6"))
+        var v6 = new GroupedAdmissionProfile(envelopes(),"a".repeat(64),"live-v6");
+        assertThat(v6).isNotEqualTo(v5);
+        assertThat(v6.criticalInterval()).isEqualTo(v5.criticalInterval());
+        assertThat(v6.minimumRequestStartInterval()).isEqualTo(Duration.ofSeconds(2));
+        assertThat(v5.minimumRequestStartInterval()).isZero();
+        assertThatThrownBy(()->new GroupedAdmissionProfile(envelopes(),"a".repeat(64),"live-v7"))
                 .isInstanceOf(IllegalArgumentException.class);
     }
     @Test void groupedCostsAndFamilySchedulesRejectInvalidBounds() {

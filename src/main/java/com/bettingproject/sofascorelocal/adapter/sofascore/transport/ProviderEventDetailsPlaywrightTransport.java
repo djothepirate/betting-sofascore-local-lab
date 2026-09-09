@@ -95,7 +95,7 @@ public final class ProviderEventDetailsPlaywrightTransport
     static EventDetailsTransportException translate(
             PlaywrightProviderException exception) {
         EventDetailsTransportFailure failure = switch (exception.failure()) {
-            case TIMEOUT -> EventDetailsTransportFailure.TIMEOUT;
+            case TIMEOUT, IPC_TIMEOUT -> EventDetailsTransportFailure.TIMEOUT;
             case PAYLOAD_TOO_LARGE -> EventDetailsTransportFailure.PAYLOAD_TOO_LARGE;
             case SENSITIVE_CONTENT_REJECTED ->
                     EventDetailsTransportFailure.SENSITIVE_CONTENT_REJECTED;

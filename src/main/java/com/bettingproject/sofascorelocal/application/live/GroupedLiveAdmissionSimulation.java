@@ -55,6 +55,7 @@ final class GroupedLiveAdmissionSimulation {
         Map<Key, Instant> previousCritical = new HashMap<>();
         Map<Key, List<Duration>> criticalIntervals = new HashMap<>();
         Instant now = START, lastCompletion = null;
+        Deque<Instant> recentCompletions = new ArrayDeque<>();
         UUID previousGroup = null;
         int calls = 0;
         while (!schedule.terminal() && calls < 10000) {
@@ -68,6 +69,17 @@ final class GroupedLiveAdmissionSimulation {
                 continue;
             }
             LiveSchedule.Due due = next.orElseThrow();
+            if ("live-v6".equals(profile.policyVersion())) {
+                Instant allowed = pressureEligibleAt(now, lastCompletion, recentCompletions, profile);
+                if (!due.groupId().equals(previousGroup) && lastCompletion != null
+                        && lastCompletion.plus(profile.interGroupDelay()).isAfter(allowed))
+                    allowed = lastCompletion.plus(profile.interGroupDelay());
+                if (allowed.isAfter(now)) {
+                    schedule.defer(due, allowed);
+                    now = allowed;
+                    continue;
+                }
+            }
             if (!due.groupId().equals(previousGroup) && lastCompletion != null
                     && now.isBefore(lastCompletion.plus(profile.interGroupDelay()))) {
                 now = lastCompletion.plus(profile.interGroupDelay());
@@ -85,6 +97,7 @@ final class GroupedLiveAdmissionSimulation {
             if (variableExchanges && due.endpoint() != EVENT_LINEUPS && nominalRound % 2 == 1)
                 elapsed = Duration.ofNanos(1);
             now = now.plus(elapsed);
+            if ("live-v6".equals(profile.policyVersion())) recentCompletions.addLast(now);
             schedule.completed(due, status, false, Map.of(), now);
             if ("finished".equals(status)) finishedAt.put(due.eventId(), now);
             if (!due.finalCycle()) {
@@ -121,4 +134,29 @@ final class GroupedLiveAdmissionSimulation {
     }
 
     private record Key(UUID eventId, SofascoreEndpointType endpoint) { }
+
+    /** Replay the local rolling ceilings; these are not provider rate limits. */
+    private static Instant pressureEligibleAt(Instant now, Instant lastCompletion, Deque<Instant> completions,
+                                             GroupedAdmissionProfile profile) {
+        // The durable limiter anchors both its gap and rolling charges at exchange completion.
+        Instant candidate = lastCompletion == null ? now : lastCompletion.plus(profile.minimumRequestStartInterval());
+        if (candidate.isBefore(now)) candidate = now;
+        boolean changed;
+        do {
+            changed = false;
+            while (!completions.isEmpty() && !completions.getFirst().plusSeconds(3600).isAfter(candidate)) completions.removeFirst();
+            List<Instant> hour = List.copyOf(completions);
+            if (hour.size() >= LiveAdmissionPolicy.V6_MAXIMUM_CALLS_PER_HOUR) {
+                candidate = hour.get(hour.size() - LiveAdmissionPolicy.V6_MAXIMUM_CALLS_PER_HOUR).plusSeconds(3600);
+                changed = true;
+            }
+            Instant at = candidate;
+            List<Instant> minute = hour.stream().filter(start -> start.plusSeconds(60).isAfter(at)).toList();
+            if (minute.size() >= LiveAdmissionPolicy.V6_MAXIMUM_CALLS_PER_MINUTE) {
+                candidate = minute.get(minute.size() - LiveAdmissionPolicy.V6_MAXIMUM_CALLS_PER_MINUTE).plusSeconds(60);
+                changed = true;
+            }
+        } while (changed);
+        return candidate;
+    }
 }

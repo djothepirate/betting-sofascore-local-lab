@@ -43,6 +43,8 @@ public final class LiveCampaignService {
     private final AtomicReference<Session> active = new AtomicReference<>();
     private final Clock clock;
     private final LiveOrphanProcessProbe orphanProcesses;
+    private final LiveDiagnosticStore diagnostics;
+    private final ProviderResilienceStore resilience;
 
     @org.springframework.beans.factory.annotation.Autowired
     public LiveCampaignService(SofascoreProperties provider, ProviderPlaywrightProperties playwright,
@@ -50,9 +52,9 @@ public final class LiveCampaignService {
             CanonicalEventStore events, ManualProviderRequestCoordinator coordinator,
             ProviderCampaignGuardStore guard, PlaywrightProviderCampaignFactory factory,
             PlaywrightProviderSupervisor supervisor, LiveResponseProcessor processor,
-            LiveOrphanProcessProbe orphanProcesses) {
+            LiveOrphanProcessProbe orphanProcesses, LiveDiagnosticStore diagnostics, ProviderResilienceStore resilience) {
         this(provider, playwright, properties, admission, store, events, coordinator, guard, factory,
-                supervisor, processor, Clock.systemUTC(), orphanProcesses);
+                supervisor, processor, Clock.systemUTC(), orphanProcesses, diagnostics, resilience);
     }
 
     public LiveCampaignService(SofascoreProperties provider, ProviderPlaywrightProperties playwright,
@@ -79,11 +81,22 @@ public final class LiveCampaignService {
             ProviderCampaignGuardStore guard, PlaywrightProviderCampaignFactory factory,
             PlaywrightProviderSupervisor supervisor, LiveResponseProcessor processor, Clock clock,
             LiveOrphanProcessProbe orphanProcesses) {
+        this(provider,playwright,properties,admission,store,events,coordinator,guard,factory,
+                supervisor,processor,clock,orphanProcesses,null,null);
+    }
+
+    LiveCampaignService(SofascoreProperties provider, ProviderPlaywrightProperties playwright,
+            LiveCampaignProperties properties, LiveAdmissionPolicy admission, LiveCampaignStore store,
+            CanonicalEventStore events, ManualProviderRequestCoordinator coordinator,
+            ProviderCampaignGuardStore guard, PlaywrightProviderCampaignFactory factory,
+            PlaywrightProviderSupervisor supervisor, LiveResponseProcessor processor, Clock clock,
+            LiveOrphanProcessProbe orphanProcesses, LiveDiagnosticStore diagnostics, ProviderResilienceStore resilience) {
         this.provider = provider; this.playwright = playwright; this.properties = properties;
         this.admission = admission; this.store = store; this.events = events; this.coordinator = coordinator;
         this.guard = guard; this.factory = factory; this.supervisor = supervisor; this.processor = processor;
         this.clock = Objects.requireNonNull(clock);
         this.orphanProcesses = Objects.requireNonNull(orphanProcesses);
+        this.diagnostics=diagnostics; this.resilience=resilience;
     }
 
     public record Preparation(Manifest manifest, List<CanonicalEventObservationView> excludedFinished,
@@ -118,18 +131,18 @@ public final class LiveCampaignService {
                 .map(event -> new Target(event.identity().value(), event.identity().providerEventId(),
                         event.observationId(), event.source().snapshotId().orElseThrow())).toList();
         if (targets.isEmpty()) return new Preparation(null, excludedFinished, excludedPostponed);
-        AdmissionProfile profile = currentAdmissionProfile("live-v5");
-        admission.admitV5(targets.size(), profile.groupedProfile());
+        AdmissionProfile profile = currentAdmissionProfile("live-v6");
+        admission.admitV6(targets.size(), profile.groupedProfile());
         Duration cycleInterval = Duration.ofSeconds(100);
         UUID id = UUID.randomUUID(); Instant now = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         long bytes = admission.maximumBytesV5(targets.size());
         // Fixed order and explicit rules: a historic proof or a changed family envelope cannot
         // silently authorize a new grouped manifest.
-        String material = id + "|live-v5|" + now + "|" + properties.getDuration() + "|2500|20000|" + bytes
+        String material = id + "|live-v6|" + now + "|" + properties.getDuration() + "|2500|20000|" + bytes
                 + "|" + selectionMaximum() + "|" + profile + "|critical=100|lineups=300|prematch=100"
                 + "|intra=0|inter=1|sequential|maxGroup=4|order=J4,incidents,statistics,lineups"
-                + "|phaseCount=3|utilization=0.9|" + targets;
-        Manifest manifest = new Manifest(id, Sha256.hex(material.getBytes(StandardCharsets.UTF_8)), "live-v5",
+                + "|phaseCount=3|utilization=0.9|provider-resilience-v1|finishFence=2|rate=25/60,1000/3600|404=300,600,900|" + targets;
+        Manifest manifest = new Manifest(id, Sha256.hex(material.getBytes(StandardCharsets.UTF_8)), "live-v6",
                 now, now.plusSeconds(300), properties.getDuration(), 2500, 20000, bytes,
                 selectionMaximum(), targets, profile, cycleInterval);
         return new Preparation(store.prepare(manifest), excludedFinished, excludedPostponed);
@@ -165,7 +178,7 @@ public final class LiveCampaignService {
 
     public CampaignView state(UUID id) { return store.find(id).orElseThrow(() -> new NoSuchElementException("LIVE_CAMPAIGN_NOT_FOUND")); }
 
-    /** Process observation only: never replaces or fabricates a durable ledger state. */
+    /** Runtime cleanup observation with durable diagnostics; the ledger remains authoritative. */
     public record RuntimeStatus(String state, String reason, boolean collectionStopped,
                                 boolean cleanupPending, boolean cleanupInProgress,
                                 LiveCampaignDiagnostic firstFailure, LiveCampaignDiagnostic cleanupFailure) {
@@ -178,7 +191,17 @@ public final class LiveCampaignService {
     public Optional<RuntimeStatus> runtimeStatus(UUID campaignId) {
         Session s = active.get();
         if (s == null || !s.manifest.campaignId().equals(campaignId)
-                || s.stopReason == null && !s.finished) return Optional.empty();
+                || s.stopReason == null && !s.finished) {
+            if(diagnostics==null) return Optional.empty();
+            var first=diagnostics.find(campaignId,LiveDiagnosticStore.Kind.FIRST_FAILURE).orElse(null);
+            var cleanup=diagnostics.find(campaignId,LiveDiagnosticStore.Kind.CLEANUP_FAILURE).orElse(null);
+            if(first==null && cleanup==null) return Optional.empty();
+            CampaignView saved=state(campaignId);
+            Guard owner=guard.snapshot();
+            boolean pending=owner!=null && "CLEANUP_REQUIRED".equals(owner.state()) && campaignId.equals(owner.campaignId());
+            return Optional.of(new RuntimeStatus(saved.state(),saved.reason(),!"RUNNING".equals(saved.state()),
+                    pending,false,first,cleanup));
+        }
         String state = s.stopReason != null ? s.stopReason
                 : s.cleanupPending ? "CLEANUP_REQUIRED" : "COMPLETED";
         return Optional.of(new RuntimeStatus(state,
@@ -186,11 +209,13 @@ public final class LiveCampaignService {
                 true, s.cleanupPending, s.cleanupInProgress, s.firstFailure.get(), s.cleanupFailure));
     }
     public int selectionMaximum() {
-        return selectionMaximum("live-v5");
+        return selectionMaximum(properties.getPreparationPolicyVersion());
     }
     private int selectionMaximum(String policyVersion) {
         try { return Math.min(properties.getQualifiedMatchCapacity(),
-                "live-v5".equals(policyVersion)
+                "live-v6".equals(policyVersion)
+                        ? LiveAdmissionPolicy.qualifiedCapacityV6(properties.groupedAdmissionProfileV6())
+                        : "live-v5".equals(policyVersion)
                         ? LiveAdmissionPolicy.qualifiedCapacityV5(properties.groupedAdmissionProfileV5())
                         : LiveAdmissionPolicy.qualifiedCapacityV4(properties.groupedAdmissionProfile())); }
         catch (IllegalArgumentException | IllegalStateException invalidProfile) { return 0; }
@@ -226,10 +251,17 @@ public final class LiveCampaignService {
                     ? "LIVE_ALL_EVENTS_INELIGIBLE" : "LIVE_ALL_EVENTS_FINISHED");
         if (!properties.isEnabled() || !provider.isEnabled() || !playwright.isEnabled())
             throw new IllegalStateException("LIVE_DISABLED");
+        if (resilience != null) {
+            var access = resilience.snapshot();
+            if (access.state() == ProviderResilienceData.State.SUSPENDED)
+                throw new IllegalStateException("PROVIDER_SUSPENDED");
+            if (access.unresolvedDispatchId() != null)
+                throw new IllegalStateException("PROVIDER_DEPARTURE_UNRESOLVED");
+        }
         String policyVersion = current.manifest().policyVersion();
         // Transport patience is separate from the measured admission envelopes.
         // Historical policies keep their original hard bound.
-        Duration maximumRequestTimeout = Duration.ofSeconds("live-v5".equals(policyVersion) ? 20 : 10);
+        Duration maximumRequestTimeout = Duration.ofSeconds("live-v6".equals(policyVersion) ? 30 : "live-v5".equals(policyVersion) ? 20 : 10);
         if (playwright.getRequestTimeout() == null || playwright.getRequestTimeout().isNegative()
                 || playwright.getRequestTimeout().isZero()
                 || playwright.getRequestTimeout().compareTo(maximumRequestTimeout) > 0)
@@ -240,7 +272,9 @@ public final class LiveCampaignService {
                 || current.manifest().qualifiedMatchCapacity() != (grouped ? selectionMaximum(policyVersion) : properties.getQualifiedMatchCapacity())
                 || !current.manifest().duration().equals(properties.getDuration()))
             throw new IllegalArgumentException("LIVE_PREPARED_POLICY_CHANGED");
-        if ("live-v5".equals(policyVersion)) admission.admitV5(current.manifest().targets().size() - alreadyExcluded.size(),
+        if ("live-v6".equals(policyVersion)) admission.admitV6(current.manifest().targets().size() - alreadyExcluded.size(),
+                current.manifest().admissionProfile().groupedProfile());
+        else if ("live-v5".equals(policyVersion)) admission.admitV5(current.manifest().targets().size() - alreadyExcluded.size(),
                 current.manifest().admissionProfile().groupedProfile());
         else if (grouped) admission.admitV4(current.manifest().targets().size() - alreadyExcluded.size(),
                 current.manifest().admissionProfile().groupedProfile());
@@ -270,12 +304,13 @@ public final class LiveCampaignService {
                 properties.getQualificationSha256(), switch (policyVersion) {
                     case "live-v4" -> properties.groupedAdmissionProfile();
                     case "live-v5" -> properties.groupedAdmissionProfileV5();
+                    case "live-v6" -> properties.groupedAdmissionProfileV6();
                     default -> null;
                 });
     }
 
     private static boolean groupedPolicy(String policyVersion) {
-        return "live-v4".equals(policyVersion) || "live-v5".equals(policyVersion);
+        return "live-v4".equals(policyVersion) || "live-v5".equals(policyVersion) || "live-v6".equals(policyVersion);
     }
 
     private boolean providerCleanupRequired() {
@@ -447,6 +482,8 @@ public final class LiveCampaignService {
             absent = supervisor.activeCampaignId().filter(s.manifest.campaignId()::equals).isEmpty();
             if (!absent) throw new IllegalStateException("LIVE_PROVIDER_CLEANUP_UNVERIFIED");
             s.transportClosed = true;
+            phase = CLEANUP_DIAGNOSTIC_PUBLICATION;
+            persistDiagnostics(s);
             if (s.ownership != null && !s.executionReconciled) {
                 // This transaction locks the same guard row as launch. Its successful return
                 // settles any earlier commit whose response was lost before PREPARED can be
@@ -492,6 +529,10 @@ public final class LiveCampaignService {
         } catch (RuntimeException failure) {
             s.cleanupFailure = LiveCampaignDiagnostic.from(phase, failure, clock.instant());
             logFailure(s, "CLEANUP_FAILURE", s.cleanupFailure);
+            if(diagnostics!=null) {
+                try { diagnostics.recordFailure(s.manifest.campaignId(),LiveDiagnosticStore.Kind.CLEANUP_FAILURE,s.cleanupFailure); }
+                catch(RuntimeException unavailable) { /* Keep evidence in the owning session until explicit local cleanup. */ }
+            }
             if (!absent) {
                 try { supervisor.stopCampaign(s.manifest.campaignId(), LiveProviderSession.ENDPOINTS); }
                 catch (RuntimeException ignored) { /* unverifiable transport remains excluded */ }
@@ -532,6 +573,20 @@ public final class LiveCampaignService {
     }
 
     private void execute(Session s, LiveProviderSession transport, LiveSchedule.Due due) {
+        s.currentAttempt = null;
+        s.currentEndpoint = null;
+        s.currentTransport = null;
+        if(resilience!=null && "live-v6".equals(s.manifest.policyVersion())) {
+            var permission=resilience.departureDecision(clock.instant());
+            if(!permission.allowed()) {
+                if(permission.reason()==ProviderResilienceData.DepartureReason.RATE_LIMITED) {
+                    s.schedule.defer(due,permission.nextAllowedAt()); return;
+                }
+                throw new IllegalStateException(permission.reason()==ProviderResilienceData.DepartureReason.PROVIDER_SUSPENDED
+                        ? "PROVIDER_SUSPENDED" : permission.reason()==ProviderResilienceData.DepartureReason.DEPARTURE_UNRESOLVED
+                        ? "PROVIDER_DEPARTURE_UNRESOLVED" : "PROVIDER_CLOCK_REGRESSION");
+            }
+        }
         s.phase = BUDGET_READ;
         DispatchBudget budget = store.dispatchBudget(s.ownership, due.eventId());
         int reservedRemaining = s.manifest.maximumCallsPerEvent() - budget.eventReservedCalls();
@@ -555,8 +610,20 @@ public final class LiveCampaignService {
             return;
         }
         ReservedAttempt attempt = reservation.orElseThrow();
+        s.currentAttempt=attempt.attemptId(); s.currentEndpoint=due.endpoint(); s.currentTransport=null;
         try {
             var dispatchAdmission = new PlaywrightDispatchAdmission() {
+                @Override public void onTransportProgress(PlaywrightTransportDiagnostic observed) {
+                    s.currentTransport=observed;
+                    if(observed.httpStatus()!=null && (observed.httpStatus()==403 || observed.httpStatus()==429)) {
+                        var cause=new LiveCampaignDiagnostic(TRANSPORT,"PROVIDER_HTTP_"+observed.httpStatus(),clock.instant(),
+                                attempt.attemptId(),due.endpoint(),observed);
+                        s.firstFailure.compareAndSet(null,cause);
+                    }
+                    // Remember a known refusal before SQL can fail; cleanup retries its publication.
+                    if(diagnostics!=null) diagnostics.recordTransport(s.manifest.campaignId(),attempt.attemptId(),due.endpoint(),observed);
+                    if(s.firstFailure.get()!=null) persistDiagnostics(s);
+                }
                 @Override public void check() {
                     if (s.stopReason != null || s.stoppedEvents.contains(due.eventId())
                             || !s.schedule.mayDispatch(due, s.now())
@@ -584,6 +651,12 @@ public final class LiveCampaignService {
                                     : due.finalCycle() || "FINALIZING".equals(budget.eventState()) ? LiveProviderDispatchGroup.Phase.FINALIZING
                                     : "WAITING_START".equals(budget.eventState()) ? LiveProviderDispatchGroup.Phase.PREMATCH
                                     : LiveProviderDispatchGroup.Phase.IN_PLAY), dispatchAdmission);
+            if(response.diagnostic()!=null) dispatchAdmission.onTransportProgress(response.diagnostic());
+            else if(response.httpStatus()==403 || response.httpStatus()==429) {
+                var cause=new LiveCampaignDiagnostic(TRANSPORT,"PROVIDER_HTTP_"+response.httpStatus(),clock.instant(),
+                        attempt.attemptId(),due.endpoint(),null);
+                if(s.firstFailure.compareAndSet(null,cause)) persistDiagnostics(s);
+            }
             s.phase = RAW_SAVE;
             String parser = due.endpoint() == SofascoreEndpointType.EVENT_DETAILS ? "event-details-v3"
                     : due.endpoint() == SofascoreEndpointType.EVENT_INCIDENTS ? "event-incidents-v17"
@@ -619,6 +692,11 @@ public final class LiveCampaignService {
             if (s.schedule.mayDispatch(due, s.now()) && !s.stoppedEvents.contains(due.eventId())) s.stopAll("STOPPED_ERROR");
         } catch (RuntimeException failure) {
             // Capture before a failed FAILED publication or cleanup can obscure this cause.
+            if (failure instanceof PlaywrightProviderException transportFailure && transportFailure.diagnostic() != null) {
+                s.currentTransport = transportFailure.diagnostic();
+                try { persistCurrentTransport(s); }
+                catch (RuntimeException unavailable) { /* Retry local persistence during verified cleanup. */ }
+            }
             recordFirstFailure(s, failure);
             s.schedule.failed(due, "CAMPAIGN", "STOPPED_ERROR");
             String code = failure instanceof PlaywrightProviderException transportFailure
@@ -639,8 +717,27 @@ public final class LiveCampaignService {
 
     private void recordFirstFailure(Session s, RuntimeException failure) {
         if (s.firstFailure.get() != null) return;
-        LiveCampaignDiagnostic diagnostic = LiveCampaignDiagnostic.from(s.phase, failure, clock.instant());
-        if (s.firstFailure.compareAndSet(null, diagnostic)) logFailure(s, "INITIAL_FAILURE", diagnostic);
+        LiveCampaignDiagnostic diagnostic = LiveCampaignDiagnostic.from(s.phase, failure, clock.instant())
+                .withAttempt(s.currentAttempt,s.currentEndpoint,s.currentTransport);
+        if (s.firstFailure.compareAndSet(null, diagnostic)) {
+            logFailure(s, "INITIAL_FAILURE", diagnostic);
+            try { persistDiagnostics(s); }
+            catch(RuntimeException unavailable) { /* Cleanup must persist the same first cause before releasing ownership. */ }
+        }
+    }
+
+    private void persistDiagnostics(Session s) {
+        if(diagnostics==null) return;
+        persistCurrentTransport(s);
+        if(s.firstFailure.get()!=null)
+            diagnostics.recordFailure(s.manifest.campaignId(),LiveDiagnosticStore.Kind.FIRST_FAILURE,s.firstFailure.get());
+        if(s.cleanupFailure!=null)
+            diagnostics.recordFailure(s.manifest.campaignId(),LiveDiagnosticStore.Kind.CLEANUP_FAILURE,s.cleanupFailure);
+    }
+
+    private void persistCurrentTransport(Session s) {
+        if (diagnostics != null && s.currentAttempt != null && s.currentEndpoint != null && s.currentTransport != null)
+            diagnostics.recordTransport(s.manifest.campaignId(), s.currentAttempt, s.currentEndpoint, s.currentTransport);
     }
 
     private static void logFailure(Session s, String kind, LiveCampaignDiagnostic diagnostic) {
@@ -723,6 +820,9 @@ public final class LiveCampaignService {
         volatile LiveCampaignDiagnostic.Phase phase = LEASE_ACQUISITION;
         final AtomicReference<LiveCampaignDiagnostic> firstFailure = new AtomicReference<>();
         volatile LiveCampaignDiagnostic cleanupFailure;
+        volatile UUID currentAttempt;
+        volatile SofascoreEndpointType currentEndpoint;
+        volatile PlaywrightTransportDiagnostic currentTransport;
         volatile boolean cleanupPending, cleanupInProgress;
         final Object cleanupMonitor = new Object();
         boolean cleanupRequested, shuttingDown, transportClosed, executionReconciled, leaseCloseAttempted, launchConfirmed;

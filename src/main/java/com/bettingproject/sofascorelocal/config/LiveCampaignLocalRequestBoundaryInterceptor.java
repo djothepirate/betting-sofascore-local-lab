@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.config;
 
 import com.bettingproject.sofascorelocal.adapter.web.LiveCampaignController;
+import com.bettingproject.sofascorelocal.adapter.web.ProviderAccessController;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.web.method.HandlerMethod;
@@ -16,7 +17,8 @@ public final class LiveCampaignLocalRequestBoundaryInterceptor implements Handle
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) {
         if (!(handler instanceof HandlerMethod method)
-                || !LiveCampaignController.class.isAssignableFrom(method.getBeanType())) {
+                || (!LiveCampaignController.class.isAssignableFrom(method.getBeanType())
+                    && !ProviderAccessController.class.isAssignableFrom(method.getBeanType()))) {
             return true;
         }
         response.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, max-age=0");

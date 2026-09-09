@@ -421,7 +421,7 @@ class LiveCampaignPresentationTest {
     }
 
     @Test
-    void bothProcessDiagnosticsSurviveProjectionAndJsonWithoutChangingTheDurableLedger() {
+    void bothDiagnosticsRetainUnknownHistoricalTransportFieldsWithoutChangingTheDurableLedger() {
         var view = campaignForFreshness(SofascoreEndpointType.EVENT_DETAILS, "COLLECTING", List.of());
         var first = new LiveCampaignDiagnostic(LiveCampaignDiagnostic.Phase.STORAGE_CHECK,
                 "LIVE_STORAGE_PROBE_TIMEOUT", START.plusSeconds(45));
@@ -441,8 +441,11 @@ class LiveCampaignPresentationTest {
         assertThat(runtime.path("firstFailure").path("occurredAt").asString()).isEqualTo(first.occurredAt().toString());
         assertThat(runtime.path("cleanupFailure").path("phase").asString()).isEqualTo("CLEANUP_EXCLUSION");
         assertThat(runtime.path("cleanupFailure").path("occurredAt").asString()).isEqualTo(cleanup.occurredAt().toString());
-        assertThat(runtime.path("firstFailure").size()).isEqualTo(3);
-        assertThat(runtime.path("cleanupFailure").size()).isEqualTo(3);
+        for (String kind : List.of("firstFailure", "cleanupFailure")) {
+            assertThat(runtime.path(kind).size()).isEqualTo(6);
+            for (String field : List.of("attemptId", "endpoint", "transport"))
+                assertThat(runtime.path(kind).path(field).isNull()).as("%s.%s remains unknown", kind, field).isTrue();
+        }
     }
 
     @Test

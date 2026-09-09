@@ -5,9 +5,98 @@ Références : [ADR-SS-005 accepté](../../ADR-SS-005-bounded-local-live-j4-j5-c
 [architecture](../architecture/LIVE-J4-J5-CAMPAIGNS.md),
 [qualification](../validation/WO058-LIVE-J4-J5-IMPLEMENTATION-20260907.md).
 
-## Nouvelles préparations : live-v5
+## Nouvelles préparations : live-v6, profil temporel à qualifier
 
-### Attendre une réponse lente — réglage du 9 septembre
+Le premier lot de résilience est implémenté et qualifié fonctionnellement hors fournisseur :
+[résultats et limites](../validation/WO-058-provider-resilience-qualification-20260909.md).
+Le profil temporel v6 reste à qualifier. Ne pas utiliser les preuves v5 ci-dessous comme preuve v6. Les nouvelles
+préparations nécessitent leur profil `grouped-v6`, son SHA et les huit enveloppes dédiées ;
+sans preuve complète, la capacité proposée reste nulle. Elle est plafonnée à **sept rencontres**,
+même si le plafond opérateur est plus élevé. La cible est 100 s pour J4/incidents/statistiques
+et les compositions prématch, puis 300 s pour les compositions en jeu.
+
+Ces cibles sont soumises à une protection commune à **tous les accès Playwright J3/J4/J5** :
+au moins **deux secondes après chaque fin d'échange**, **25 charges sur 60 s glissantes** et
+**1 000 sur une heure glissante**. Les charges vieillissent depuis la fin de l'échange,
+y compris après un échec ; une réservation non résolue reste bloquante. Les compteurs
+survivent à un changement de campagne ou au redémarrage. Les délais historiques plus longs
+restent appliqués aux frontières concernées. Il s'agit de paramètres locaux conservateurs,
+sans seuil d'acceptation SofaScore connu. Une attente de budget peut réduire la fraîcheur :
+la prochaine collecte est reportée sans rattrapage en rafale ni extension des quatre heures.
+
+La sélection conserve les plafonds 2 500/20 000 appels et 15 728 640 000 octets. Sept matchs
+en jeu représentent nominalement 14 appels/minute, hors initialisation/finalisation.
+La borne d'admission horaire garde 896 appels dans une allocation de 900 ; elle ne garantit
+pas la disponibilité immédiate d'un budget déjà consommé par un autre parcours.
+
+### Consulter la protection et décider du réarmement
+
+La page locale `/provider-access` distingue attente de budget, suspension fournisseur et
+départ non résolu. Sa lecture ne contacte pas SofaScore. Un 403 ou 429 confirmé bloque les
+nouveaux accès, même si le corps de cette réponse n'a pas été reçu complètement. Une
+garde de processus FREE après nettoyage n'efface pas cette suspension.
+
+Après un arrêt, achever d'abord le nettoyage local de la session. Si un départ reste
+incertain, sa clôture locale exige une garde libre et l'absence de session active ;
+elle conserve son coût et ne fabrique aucune réponse. Le réarmement de la suspension
+exige ensuite une confirmation opérateur sur l'état courant et l'expiration de tout
+`Retry-After` valide. **Il ne lance aucune collecte, ne vérifie pas l'accès fournisseur,
+ne remet pas les budgets à zéro et ne reprend pas une campagne arrêtée.** Une éventuelle
+nouvelle campagne nécessite toujours un lancement manuel distinct. L'expiration d'un
+délai ne constitue jamais un réarmement automatique.
+
+### Lire un diagnostic ou une famille indisponible
+
+Les diagnostics indiquent l'étape et le timeout effectif du transport, le statut HTTP
+dès qu'il est connu, et la distinction entre en-têtes reçus et réponse complète. Sans
+réception complète, il n'y a ni snapshot fictif ni nouvelle observation métier. Un timeout
+sans statut connu ne démontre pas un 403 ou un blocage d'adresse. La première cause et le
+dernier échec de nettoyage restent séparés et consultables après redémarrage.
+
+En v6, les 404 J5 retardent la seule famille du seul match concerné : 300, 600 puis 900 s
+pour incidents/statistiques/compositions prématch ; 600 puis 900 s pour les compositions
+en jeu. Le prochain tour admissible peut être plus tardif selon J4 ou le budget partagé.
+Une réponse exploitable rétablit le nominal ; un changement de phase J4 réévalue le délai.
+J4 continue sa politique propre ; son 404 demande une revue individuelle. Le dernier cycle
+reste borné, sans tentative finale supplémentaire. Une ancienne donnée disponible n'est
+pas effacée : consulter son heure reçue, et distinguer UNAVAILABLE, absence, bloc vide et zéro.
+
+### Timeout et profils historiques
+
+La nouvelle garde v6 accepte un timeout strictement positif jusqu'à 30 s. Le défaut `local`
+reste 20 s et `SOFASCORE_PLAYWRIGHT_REQUEST_TIMEOUT` choisit la valeur effective au démarrage.
+Modifier seulement le plafond Java n'augmente pas ce réglage. Les campagnes historiques v5
+gardent leur plafond 20 s et v1–v4 leur plafond 10 s. Les enveloppes de qualification sont des
+coûts mesurés distincts : ne pas les remplacer par ce timeout.
+
+### Profil temporel v6 avant une nouvelle campagne
+
+La qualification fonctionnelle de la résilience ne fournit pas les huit enveloppes
+d'un profil opérateur. Le script historique `Invoke-LiveGroupedPlaywrightQualification.ps1`
+accepte v4/v5 seulement ; son harness ouvre directement le superviseur et ne qualifie pas
+la protection persistante v6. Ne pas utiliser sa sortie comme preuve v6.
+
+La qualification temporelle suivante devra traverser le wrapper partagé et PostgreSQL,
+exercer l'ordonnanceur v6 et distinguer le coût de l'échange, le traitement local et les
+attentes imposées. Son rapport devra déterminer la capacité effectivement admissible,
+qui peut être inférieure à sept, puis fournir les valeurs dédiées suivantes :
+
+| Valeur | Variable d'environnement |
+|---|---|
+| Empreinte de la preuve v6 revue | `SOFASCORE_LIVE_GROUPED_V6_QUALIFICATION_SHA256` |
+| Échange / traitement J4 | `SOFASCORE_LIVE_GROUPED_V6_J4_REQUEST_ENVELOPE` / `SOFASCORE_LIVE_GROUPED_V6_J4_PROCESSING_ENVELOPE` |
+| Échange / traitement incidents | `SOFASCORE_LIVE_GROUPED_V6_INCIDENTS_REQUEST_ENVELOPE` / `SOFASCORE_LIVE_GROUPED_V6_INCIDENTS_PROCESSING_ENVELOPE` |
+| Échange / traitement statistiques | `SOFASCORE_LIVE_GROUPED_V6_STATISTICS_REQUEST_ENVELOPE` / `SOFASCORE_LIVE_GROUPED_V6_STATISTICS_PROCESSING_ENVELOPE` |
+| Échange / traitement compositions | `SOFASCORE_LIVE_GROUPED_V6_LINEUPS_REQUEST_ENVELOPE` / `SOFASCORE_LIVE_GROUPED_V6_LINEUPS_PROCESSING_ENVELOPE` |
+
+L'activation d'une nouvelle campagne v6 reste en attente de cette preuve ; les SHA et
+enveloppes synthétiques des tests ne sont pas des réglages à copier dans Eclipse.
+
+Les sections suivantes conservent les réglages et qualifications historiques ainsi que
+les commandes de consultation communes. Le rapport du lot qualifie ses mécanismes ;
+aucun SHA ni aucune enveloppe d'un profil temporel opérateur v6 n'est présumé ici.
+
+### Historique : attendre une réponse lente — réglage v5 du 9 septembre
 
 Le profil Spring `local` règle désormais le timeout Playwright à **20 secondes**
 par défaut. Redémarrer le Lab avec le lanceur Eclipse habituel, puis préparer et
@@ -128,7 +217,7 @@ La traduction ne change ni les valeurs observées, ni leur ordre, ni les périod
 Les panneaux gardent leur ouverture ou fermeture lors des actualisations live.
 [Portée et validation des libellés](../validation/WO058-UI-LABELS-20260909.md).
 
-### Cadence et admission live-v5
+### Historique : cadence et admission live-v5
 
 La qualification dédiée de vingt rencontres à 100 secondes est réussie sur Chromium loopback
 et PostgreSQL isolé : cinq minutes d’initialisation puis trente minutes établies, 1 413 appels
@@ -142,9 +231,9 @@ commandes effectives sont reliés dans le [rapport v5](../validation/WO058-GROUP
 
 L’essai précédent à 75 secondes a tenu sa cadence à vingt rencontres, mais ses coûts mesurés
 n’admettent que dix-sept rencontres. Il reste une [preuve distincte](../validation/WO058-GROUPED-LIVE-V5-CANDIDATE-75-PROFILE-20260908.json)
-et ne qualifie pas la cible courante de vingt rencontres à 100 secondes.
+et ne qualifie pas la cible v5 de vingt rencontres à 100 secondes.
 
-Les nouvelles préparations ciblent **100 secondes par rencontre pour J4, incidents et
+Les préparations historiques v5 ciblent **100 secondes par rencontre pour J4, incidents et
 statistiques**, jusqu’à vingt rencontres selon la qualification retenue. Les compositions
 sont initiales puis réparties sur trois tours, toutes les cinq minutes pendant le jeu.
 Avant le début confirmé, J4 et les compositions éligibles restent à 100 secondes.
@@ -210,8 +299,8 @@ l’application avec le lanceur live. Préparer une nouvelle campagne et vérifi
 sa cadence et sa capacité avant le lancement manuel.
 
 Une capacité nulle sur des rencontres `notstarted` indique notamment l’absence d’un profil
-v5 complet. Vérifier les neuf variables `SOFASCORE_LIVE_GROUPED_V5_*` : le SHA seul ne suffit
-pas si les enveloppes restent à leurs défauts. Les paramètres historiques v4 restent décrits
+v6 complet. Vérifier les neuf valeurs dédiées au profil `grouped-v6` : le SHA seul ne suffit
+pas si les enveloppes restent à leurs défauts. Un profil v5 ne qualifie pas v6. Les paramètres historiques v4 restent décrits
 dans le [rapport v4 conservé](../validation/WO058-GROUPED-LIVE-V4-20260908.md).
 
 ### Annuler une préparation
@@ -225,7 +314,9 @@ de campagne. Les observations et le manifeste restent conservés.
 ### Délai des collectes J5 manuelles
 
 Une collecte J5 manuelle confirmée enchaîne statistiques, incidents et compositions pour le
-même événement sans pause artificielle entre familles. Les appels restent séquentiels.
+même événement dans un groupe séquentiel. La protection globale courante impose désormais
+deux secondes après chaque fin d'échange, même entre familles de ce groupe, et ses plafonds
+minute/heure restent applicables.
 Trois secondes séparent deux collectes distinctes ainsi que leurs transitions avec les
 campagnes live et les autres parcours ; une interruption ne supprime pas cette protection.
 La collecte manuelle reste ponctuelle et ne dépend pas du profil de capacité live.
@@ -245,13 +336,14 @@ et fingerprintaient aussi politique, groupes et échéances ; ne pas falsifier l
 pour franchir leur garde. La qualification Testcontainers ne migre jamais la base opérateur.
 V39 est append-only et conserve les empreintes des anciennes préparations et observations.
 
-Les scripts courants exigent désormais V40. Une preuve de sauvegarde/restauration V39 reste
-historique ; elle ne qualifie pas les nouvelles contraintes v5. La procédure et les contrôles
+Les scripts courants exigent désormais V44 et vérifient les six tables de résilience/diagnostic
+en plus du ledger existant. Une preuve de sauvegarde/restauration V39/V40/V41 reste
+historique ; elle ne qualifie pas le nouveau schéma. La procédure et les contrôles
 de version figurent dans le [runbook J6](J6-BACKUP-RESTORE-AND-RETENTION.md).
 
 Les sections historiques ci-dessous restent utiles pour v1–v3 ; leurs valeurs D et profils de
 capacité ne doivent être employés ni pour annoncer une capacité v4 à une minute, ni pour
-qualifier ou préparer une nouvelle campagne v5 à 100 secondes.
+qualifier ou préparer une nouvelle campagne v6 avec protection partagée.
 
 ## Qualification hors fournisseur
 
@@ -554,8 +646,11 @@ pour une autre commande explicite ; aucun réessai périodique n'est déclenché
 
 Ouvrir **« Diagnostic de l’arrêt »** lorsqu’un diagnostic est disponible. La première
 erreur de collecte et le dernier échec de clôture sont présentés séparément, avec leur
-phase, code et instant UTC. Conserver ces informations avant un redémarrage : elles
-décrivent la session en mémoire et ne sont pas réécrites dans les observations sportives.
+phase, code et instant UTC. Depuis V43, ces diagnostics sont conservés séparément en base
+et restent consultables après redémarrage ; les observations sportives ne sont pas réécrites.
+Si PostgreSQL refuse leur écriture, la session conserve la preuve en mémoire et la clôture
+reste bloquante jusqu'à publication vérifiée. Les diagnostics historiques absents ne sont
+pas reconstitués.
 Les mêmes valeurs sont émises dans les journaux et dans `runtimeStatus.firstFailure`
 et `runtimeStatus.cleanupFailure` du JSON local. Un diagnostic absent pour une ancienne
 campagne n’est pas une preuve d’absence d’erreur.
@@ -567,7 +662,8 @@ puis utiliser après redémarrage le parcours **« Clôturer la session interrom
 ci-dessous. Le diagnostic seul ne permet jamais de forcer le garde ni de déclarer que
 les processus ont disparu. Voir les [preuves et limites](../validation/WO058-LIVE-FAILURE-DIAGNOSTICS-20260908.md).
 
-Une fois la clôture confirmée, revenir aux rencontres, préparer les cibles encore éligibles et
+Une fois la clôture confirmée, consulter `/provider-access` : une suspension après 403/429
+reste active et exige un réarmement explicite distinct. Revenir ensuite aux rencontres, préparer les cibles encore éligibles et
 confirmer un nouveau lancement. Un redémarrage entre-temps relève du cas d'orphelin ci-dessous :
 le nouveau processus ne possède pas le lease de l'ancien et ne peut pas utiliser cette clôture
 runtime. Les codes `LIVE_PROVIDER_CLEANUP_REQUIRED` et `LIVE_LAUNCH_FAILED` distinguent le garde
@@ -581,7 +677,10 @@ délai, redémarrage ou nouvelle préparation ne la lève. Après redémarrage s
 2. Utiliser **« Clôturer la session interrompue »**. La commande locale vérifie que l’ancien
    propriétaire est absent, qu’aucune collecte ne possède la session et que l’inventaire des
    processus ne signale aucun worker, pilote ou navigateur Playwright actif ou incertain.
-3. Une fois la clôture confirmée, utiliser **« Préparer une nouvelle campagne avec ces rencontres »**.
+3. Une fois la clôture confirmée, consulter `/provider-access` pour résoudre l'éventuel départ
+   incertain puis décider séparément du réarmement d'une suspension. Ces opérations conservent
+   les budgets et ne vérifient pas la disponibilité du fournisseur.
+4. Utiliser **« Préparer une nouvelle campagne avec ces rencontres »**.
    L’éligibilité et la capacité sont vérifiées à nouveau ; vérifier puis confirmer son lancement.
 
 L’ancienne campagne conserve son état `INTERRUPTED`, ses compteurs et ses observations.

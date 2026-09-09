@@ -326,6 +326,18 @@
           text(section, "[data-live-diagnostic-time]", failure?.occurredAt);
           text(section, "[data-live-diagnostic-phase]", failure?.phase);
           text(section, "[data-live-diagnostic-code]", failure?.code);
+          text(section, "[data-live-diagnostic-attempt]", failure?.attemptId);
+          text(section, "[data-live-diagnostic-endpoint]", failure?.endpoint);
+          const transport = failure?.transport;
+          text(section, "[data-live-diagnostic-transport-phase]", transport?.phase);
+          text(section, "[data-live-diagnostic-timeout]", Number.isSafeInteger(transport?.requestTimeoutMillis)
+            ? `${transport.requestTimeoutMillis} ms` : null);
+          text(section, "[data-live-diagnostic-requested-at]", transport?.requestedAt);
+          text(section, "[data-live-diagnostic-headers-at]", transport?.headersReceivedAt);
+          text(section, "[data-live-diagnostic-http-status]", transport?.httpStatus);
+          text(section, "[data-live-diagnostic-retry-after]", transport?.retryAfterNotBefore);
+          text(section, "[data-live-diagnostic-complete]", transport?.responseComplete === true ? "Oui"
+            : transport?.responseComplete === false ? "Non" : null);
         }
       }
       text(monitor, "[data-live-campaign-state]", campaign.state);

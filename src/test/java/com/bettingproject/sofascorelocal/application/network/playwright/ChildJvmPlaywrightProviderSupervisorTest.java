@@ -40,6 +40,7 @@ import java.util.function.LongSupplier;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.assertj.core.api.Assertions.catchThrowable;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -50,6 +51,110 @@ class ChildJvmPlaywrightProviderSupervisorTest {
 
     @TempDir
     private Path temporaryDirectory;
+
+    @ParameterizedTest @ValueSource(strings = {"worker-timeout", "worker-crash", "ipc-timeout", "observer-failure", "malformed",
+            "contradictory-status", "contradictory-requested-at", "contradictory-received-at"})
+    void authenticatesPartialHeadersBeforeTerminalFailureAndPreservesThem(String mode) throws Exception {
+        ProviderPlaywrightProperties properties = enabledProperties("progress-" + mode + ".jar");
+        properties.setRequestTimeout(Duration.ofMillis(250));
+        Instant start = Instant.parse("2026-09-09T12:00:00Z");
+        OwnedHandle root = ownedHandle(2_130L, start, true, true);
+        Process process = processWithStartInstant(root.handle(), start);
+        AtomicReference<Thread> worker = new AtomicReference<>();
+        AtomicReference<Throwable> workerFailure = new AtomicReference<>();
+        List<PlaywrightTransportDiagnostic> observed = new ArrayList<>();
+        RuntimeException storageFailure = new IllegalStateException("local diagnostic publication failed");
+        var supervisor = new ChildJvmPlaywrightProviderSupervisor(properties, Clock.systemUTC(), new SecureRandom(), builder -> {
+            worker.set(Thread.ofPlatform().start(() -> runProgressWorker(builder, mode, workerFailure)));
+            return process;
+        }, new DelayGateProcessTreeAccess());
+        UUID campaignId = UUID.randomUUID();
+        Set<SofascoreEndpointType> allowlist = Set.of(SofascoreEndpointType.EVENT_DETAILS);
+        var campaign = supervisor.open(campaignId, allowlist);
+        try {
+            Throwable failure = catchThrowable(() -> campaign.execute(PlaywrightProviderRequest.eventDetails(16_386_245L),
+                    new PlaywrightDispatchAdmission() {
+                        public void check() { }
+                        public Permit acquireDispatchPermit() { return () -> { }; }
+                        public void onTransportProgress(PlaywrightTransportDiagnostic diagnostic) {
+                            observed.add(diagnostic);
+                            if (mode.equals("observer-failure") && diagnostic.httpStatus() != null) throw storageFailure;
+                        }
+                    }));
+            if (mode.equals("observer-failure")) assertThat(failure).isSameAs(storageFailure);
+            else {
+                assertThat(failure).isInstanceOf(PlaywrightProviderException.class);
+                var transportFailure = (PlaywrightProviderException) failure;
+                assertThat(transportFailure.failure()).isEqualTo(switch (mode) {
+                    case "worker-timeout" -> PlaywrightProviderFailure.TIMEOUT;
+                    case "ipc-timeout" -> PlaywrightProviderFailure.IPC_TIMEOUT;
+                    default -> PlaywrightProviderFailure.PROTOCOL_ERROR;
+                });
+                if (!mode.equals("malformed")) {
+                    assertThat(transportFailure.diagnostic().httpStatus()).isEqualTo(429);
+                    assertThat(transportFailure.diagnostic().responseComplete()).isFalse();
+                    assertThat(transportFailure.diagnostic().retryAfterNotBefore()).isEqualTo(start.plusSeconds(60));
+                    assertThat(transportFailure.diagnostic().phase()).isEqualTo(mode.equals("ipc-timeout")
+                            ? PlaywrightTransportDiagnostic.Phase.PARENT_IPC_WAIT
+                            : PlaywrightTransportDiagnostic.Phase.READING_BODY);
+                }
+            }
+            assertThat(observed.stream().filter(d -> d.httpStatus() != null).findFirst().isPresent())
+                    .isEqualTo(!mode.equals("malformed"));
+        } finally {
+            // A crashed peer or aborted observer has no authenticated terminal frame.
+            // Verify explicit process termination, rather than pretending graceful close succeeded.
+            supervisor.stopCampaign(campaignId, allowlist);
+            awaitNoActiveCampaign(supervisor);
+            campaign.close();
+        }
+        worker.get().join(2_000);
+        assertThat(worker.get().isAlive()).isFalse();
+        assertThat(workerFailure.get()).isNull();
+    }
+
+    private static void runProgressWorker(ProcessBuilder builder, String mode, AtomicReference<Throwable> failure) {
+        try (Socket socket = new Socket("127.0.0.1", Integer.parseInt(builder.environment().get("SOFASCORE_PLAYWRIGHT_IPC_PORT")))) {
+            var output = new DataOutputStream(socket.getOutputStream());
+            var input = new DataInputStream(socket.getInputStream());
+            output.writeInt(ChildJvmPlaywrightProviderSupervisor.MAGIC);
+            output.writeInt(ChildJvmPlaywrightProviderSupervisor.VERSION);
+            output.writeUTF(builder.environment().get("SOFASCORE_PLAYWRIGHT_IPC_TOKEN")); output.flush();
+            assertThat(input.readUnsignedByte()).isEqualTo(ChildJvmPlaywrightProviderSupervisor.START);
+            output.writeByte(ChildJvmPlaywrightProviderSupervisor.READY); output.flush();
+            assertThat(input.readUnsignedByte()).isEqualTo(ChildJvmPlaywrightProviderSupervisor.GET);
+            readProviderRequest(input);
+            long start = Instant.parse("2026-09-09T12:00:00Z").toEpochMilli();
+            for (int stage = 0; stage < 4; stage++) {
+                output.writeByte(ChildJvmPlaywrightProviderSupervisor.PROGRESS);
+                output.writeByte(mode.equals("malformed") ? 2 : stage);
+                output.writeInt(250); output.writeLong(stage == 0 ? -1 : start);
+                output.writeLong(stage < 2 ? -1 : start + 1);
+                output.writeInt(stage < 2 ? 0 : 429);
+                output.writeLong(stage < 2 ? -1 : start + 60_000); output.flush();
+                if (mode.equals("malformed")) break;
+            }
+            if (mode.equals("worker-crash")) return;
+            if (mode.equals("worker-timeout")) {
+                output.writeByte(ChildJvmPlaywrightProviderSupervisor.FAILURE);
+                output.writeUTF("TIMEOUT"); output.flush();
+            }
+            if (mode.startsWith("contradictory-")) {
+                output.writeByte(ChildJvmPlaywrightProviderSupervisor.RESPONSE);
+                output.writeLong(mode.equals("contradictory-requested-at") ? start + 1 : start);
+                output.writeLong(mode.equals("contradictory-received-at") ? start : start + 2);
+                output.writeInt(mode.equals("contradictory-status") ? 200 : 429);
+                // No body is sent: the conflicting terminal metadata must fail before reading it.
+                output.flush();
+            }
+            int command = input.read();
+            if (command == ChildJvmPlaywrightProviderSupervisor.CLOSE) {
+                output.writeByte(ChildJvmPlaywrightProviderSupervisor.CLOSED); output.flush();
+                assertThat(input.read()).isEqualTo(-1);
+            } else assertThat(command).isEqualTo(-1);
+        } catch (java.net.SocketException closed) { /* parent can abort after rejected progress */ }
+        catch (Throwable problem) { failure.set(problem); }
+    }
 
     @Test
     void parentDelayGateWaitsAt2999MillisecondsAndAdmitsAt3000() {
@@ -74,7 +179,7 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         gate.awaitNextDispatch(() -> { });
 
         assertThat(pauses).isEmpty();
-        assertThat(ChildJvmPlaywrightProviderSupervisor.VERSION).isEqualTo(5);
+        assertThat(ChildJvmPlaywrightProviderSupervisor.VERSION).isEqualTo(6);
     }
 
     @Test

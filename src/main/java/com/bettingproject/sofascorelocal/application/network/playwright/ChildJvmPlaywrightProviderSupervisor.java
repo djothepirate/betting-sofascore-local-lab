@@ -57,7 +57,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
         implements PlaywrightProviderCampaignFactory, PlaywrightProviderSupervisor {
 
     static final int MAGIC = 0x53335057;
-    static final int VERSION = 5;
+    static final int VERSION = 6;
     static final byte GET = 1;
     static final byte CLOSE = 2;
     static final byte START = 3;
@@ -65,6 +65,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
     static final byte FAILURE = 11;
     static final byte CLOSED = 12;
     static final byte READY = 13;
+    static final byte PROGRESS = 14;
     static final int MAXIMUM_CONTENT_TYPE_BYTES = 160;
     static final int MAXIMUM_FAILURE_CODE_LENGTH = 64;
     static final Duration STOP_ACKNOWLEDGEMENT_MAX = Duration.ofMillis(500);
@@ -444,11 +445,14 @@ public final class ChildJvmPlaywrightProviderSupervisor
         state.ioLock.lock();
         boolean dispatchStarted = false;
         boolean usableResponseEvidence = false;
+        PlaywrightTransportDiagnostic diagnostic = null;
         try {
             requireActive(state);
             try {
                 DataOutputStream output = Objects.requireNonNull(state.output, "output");
-                DataInputStream input = Objects.requireNonNull(state.input, "input");
+                DataInputStream sourceInput = Objects.requireNonNull(state.input, "input");
+                int timeoutMillis = toMillis(properties.getRequestTimeout());
+                long responseDeadline;
                 boolean continuation = state.liveGroups != null && state.liveGroups.isContinuation(request, group);
                 Runnable continuationGuard = () -> { requireActive(state); admission.check(); };
                 if (continuation) providerNetworkStartDelayGate.admitGroupContinuation(continuationGuard);
@@ -462,6 +466,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     if (state.liveGroups != null) state.liveGroups.dispatched(request, group);
                     state.providerDispatchStarted.set(true);
                     dispatchStarted = true;
+                    responseDeadline = System.nanoTime() + properties.getRequestTimeout().plusSeconds(1).toNanos();
                     output.writeByte(GET);
                     output.writeUTF(request.endpoint().name());
                     switch (request.endpoint()) {
@@ -478,17 +483,50 @@ public final class ChildJvmPlaywrightProviderSupervisor
                         default -> throw new PlaywrightProviderException(
                                 PlaywrightProviderFailure.INVALID_ENDPOINT);
                     }
-                    output.writeInt(toMillis(properties.getRequestTimeout()));
+                    output.writeInt(timeoutMillis);
                     output.flush();
                     } finally {
                         state.dispatchLock.unlock();
                     }
                 }
+                DataInputStream input = deadlineInput(sourceInput, state.socket, responseDeadline);
                 int frame = input.readUnsignedByte();
+                int progressStage = -1;
+                while (frame == PROGRESS) {
+                    int nextStage = input.readUnsignedByte();
+                    int effectiveTimeout = input.readInt();
+                    long requested = input.readLong(), headers = input.readLong();
+                    int status = input.readInt();
+                    long retryAfter = input.readLong();
+                    if (nextStage != progressStage + 1 || nextStage > 3 || effectiveTimeout != timeoutMillis)
+                        throw new PlaywrightProviderException(PlaywrightProviderFailure.PROTOCOL_ERROR);
+                    PlaywrightTransportDiagnostic next = new PlaywrightTransportDiagnostic(
+                            switch (nextStage) {
+                                case 0 -> PlaywrightTransportDiagnostic.Phase.NAVIGATION;
+                                case 1 -> PlaywrightTransportDiagnostic.Phase.REQUEST_SENT;
+                                case 2 -> PlaywrightTransportDiagnostic.Phase.HEADERS_RECEIVED;
+                                case 3 -> PlaywrightTransportDiagnostic.Phase.READING_BODY;
+                                default -> throw new PlaywrightProviderException(PlaywrightProviderFailure.PROTOCOL_ERROR);
+                            }, effectiveTimeout,
+                            diagnosticInstant(requested), diagnosticInstant(headers), status == 0 ? null : status,
+                            diagnosticInstant(retryAfter), false);
+                    if (diagnostic != null && (diagnostic.requestedAt() != null
+                            && !diagnostic.requestedAt().equals(next.requestedAt())
+                            || diagnostic.headersReceivedAt() != null
+                            && (!diagnostic.headersReceivedAt().equals(next.headersReceivedAt())
+                            || !Objects.equals(diagnostic.httpStatus(), next.httpStatus())
+                            || !Objects.equals(diagnostic.retryAfterNotBefore(), next.retryAfterNotBefore()))))
+                        throw new PlaywrightProviderException(PlaywrightProviderFailure.PROTOCOL_ERROR);
+                    diagnostic = next;
+                    progressStage = nextStage;
+                    try { admission.onTransportProgress(next); }
+                    catch (RuntimeException persistenceFailure) { throw new ProgressObserverFailure(persistenceFailure); }
+                    frame = input.readUnsignedByte();
+                }
                 if (frame == FAILURE) {
                     PlaywrightProviderException failure = workerFailure(input.readUTF());
                     state.authenticatedTerminalFrameReceived.set(true);
-                    throw failure;
+                    throw new PlaywrightProviderException(failure.failure(), failure, diagnostic);
                 }
                 if (frame != RESPONSE) {
                     throw new PlaywrightProviderException(
@@ -504,6 +542,11 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 Instant requestedAt = Instant.ofEpochMilli(requestedAtEpochMillis);
                 Instant receivedAt = Instant.ofEpochMilli(receivedAtEpochMillis);
                 int status = input.readInt();
+                if (diagnostic != null && (diagnostic.requestedAt() != null
+                        && !diagnostic.requestedAt().equals(requestedAt)
+                        || diagnostic.headersReceivedAt() != null
+                        && (diagnostic.httpStatus() != status || receivedAt.isBefore(diagnostic.headersReceivedAt()))))
+                    throw new PlaywrightProviderException(PlaywrightProviderFailure.PROTOCOL_ERROR);
                 String contentType = input.readUTF();
                 requireContentType(contentType);
                 int length = input.readInt();
@@ -533,7 +576,9 @@ public final class ChildJvmPlaywrightProviderSupervisor
                             status,
                             contentType,
                             latency,
-                            payload);
+                            payload,
+                            diagnostic != null && diagnostic.httpStatus() != null
+                                    ? diagnostic.at(PlaywrightTransportDiagnostic.Phase.COMPLETE) : null);
                     usableResponseEvidence = true;
                     return response;
                 }
@@ -545,7 +590,20 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 throw exception;
             }
             catch (PlaywrightProviderException exception) {
-                throw exception;
+                throw exception.diagnostic() != null || diagnostic == null ? exception
+                        : new PlaywrightProviderException(exception.failure(), exception, diagnostic);
+            }
+            catch (SocketTimeoutException exception) {
+                PlaywrightTransportDiagnostic timeoutDiagnostic = diagnostic == null
+                        ? new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.PARENT_IPC_WAIT,
+                                toMillis(properties.getRequestTimeout()), null, null, null, null, false)
+                        : diagnostic.at(PlaywrightTransportDiagnostic.Phase.PARENT_IPC_WAIT);
+                throw new PlaywrightProviderException(state.terminationRequested.get()
+                        ? PlaywrightProviderFailure.OPERATOR_STOP : PlaywrightProviderFailure.IPC_TIMEOUT,
+                        exception, timeoutDiagnostic);
+            }
+            catch (ProgressObserverFailure exception) {
+                throw exception.original;
             }
             catch (ProviderNetworkStartDelayGate.TimingEvidenceException exception) {
                 throw new PlaywrightProviderException(
@@ -556,7 +614,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 PlaywrightProviderFailure failure = state.terminationRequested.get()
                         ? PlaywrightProviderFailure.OPERATOR_STOP
                         : PlaywrightProviderFailure.PROTOCOL_ERROR;
-                throw new PlaywrightProviderException(failure, exception);
+                throw new PlaywrightProviderException(failure, exception, diagnostic);
             }
         }
         finally {
@@ -567,6 +625,33 @@ public final class ChildJvmPlaywrightProviderSupervisor
             }
             state.ioLock.unlock();
         }
+    }
+
+    private static Instant diagnosticInstant(long value) {
+        if (value == -1) return null;
+        if (value < 1 || value > 253_402_300_799_999L)
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.PROTOCOL_ERROR);
+        return Instant.ofEpochMilli(value);
+    }
+
+    /** Progress frames cannot restart the configured whole-request deadline. */
+    private static DataInputStream deadlineInput(DataInputStream input, Socket socket, long deadline) {
+        return new DataInputStream(new java.io.InputStream() {
+            private void boundWait() throws IOException {
+                long remaining = deadline - System.nanoTime();
+                if (remaining <= 0) throw new SocketTimeoutException("bounded IPC deadline expired");
+                socket.setSoTimeout((int) Math.max(1, TimeUnit.NANOSECONDS.toMillis(remaining)));
+            }
+            @Override public int read() throws IOException { boundWait(); return input.read(); }
+            @Override public int read(byte[] bytes, int offset, int length) throws IOException {
+                boundWait(); return input.read(bytes, offset, length);
+            }
+        });
+    }
+
+    private static final class ProgressObserverFailure extends RuntimeException {
+        private final RuntimeException original;
+        private ProgressObserverFailure(RuntimeException original) { this.original = original; }
     }
 
     private void closeCampaign(CampaignState state) {

@@ -1,10 +1,60 @@
 # Campagnes live locales J4/J5 — architecture WO-058
 
 Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
-Décision applicable : [ADR-SS-005 v0.7](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), capacité v5 qualifiée en loopback, attente de transport portée à vingt secondes et exception distincte pour une collecte J5 manuelle.
+Décision applicable : [ADR-SS-005 v0.8](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), premier lot de résilience réalisé et qualifié fonctionnellement hors fournisseur. Voir le [rapport](../validation/WO-058-provider-resilience-qualification-20260909.md). Le profil temporel v6 reste à qualifier ; les preuves v4/v5 restent historiques.
 Réalisation : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md).
 
-## Politique courante live-v5
+## Politique courante live-v6 — mécanismes qualifiés, profil temporel à qualifier
+
+Les nouvelles préparations utilisent `live-v6`, au plus sept rencontres, avec un profil
+`grouped-v6` et un SHA de qualification distincts. La cible reste 100 s pour les familles
+critiques et les compositions prématch, 300 s pour les compositions en jeu. La limite
+locale partagée peut reporter ces échéances ; la cible n'est pas une garantie sous pression.
+Les plafonds individuels/campagne restent 2 500/20 000 appels, quatre heures et
+15 728 640 000 octets bruts. L'admission conserve 10 % de marge : sa borne horaire compte
+120 appels ordinaires, quatre initiaux et quatre finaux par rencontre, soit 896 à sept.
+Le rejeu complète cette borne par les coûts et les différentes phases du match.
+
+`ResilientPlaywrightProviderCampaignFactory` enveloppe les parcours J3/J4/J5, manuels et
+live, sans modifier leur allowlist ni créer de session automatiquement. Chaque départ
+est réservé atomiquement auprès de `ProviderResilienceStore`. Après sa fin prouvée,
+deux secondes au moins précèdent le départ suivant ; les réservations résolues restent
+comptées pendant 60 secondes et une heure depuis cette fin, avec plafonds 25 et 1 000.
+Une réservation non résolue bloque tout nouveau départ jusqu'à sa clôture locale prouvée.
+Le contrôle reste acquis après redémarrage ou changement de campagne. Les pauses
+historiques plus longues restent applicables ; aucun parallélisme n'est ajouté.
+
+L'ordonnanceur vérifie la première admissibilité avant de réserver l'appel live ; la
+factory la revérifie atomiquement au départ. `defer(Due, Instant)` conserve le groupe et
+son ordinal, borne l'attente à la fin du manifeste et coalesce les tours expirés après
+une attente de budget. Ce report n'est pas une permission de prolonger la campagne.
+L'intervalle nominal, la prochaine échéance, l'âge reçu et l'attente de transport restent
+des mesures distinctes. Les budgets sont conservés entre campagnes, donc l'admission
+locale seule ne promet pas une place immédiatement disponible dans chaque fenêtre.
+
+V6 espace les 404 J5 par couple rencontre/famille : 300/600/900 s pour incidents,
+statistiques et compositions prématch ; 600/900 s pour les compositions en jeu. Une
+réponse PARSED remet ce couple au nominal et une transition J4 réévalue les absences.
+J4 n'est jamais espacé sur 404. Un 404 final reste une tentative finale incomplète,
+sans répétition supplémentaire. Les snapshots et résultats UNAVAILABLE conservent
+leur contrat ; la dernière observation exploitable reste consultable avec son âge.
+
+Un 403/429 connu aux en-têtes suspend tous les nouveaux accès dans un état persistant,
+distinct de `provider_campaign_guard`. Le retour de cette garde à FREE ne réarme pas
+l'accès fournisseur. Le réarmement manuel vérifie la version observée, la clôture des
+sessions et l'éventuel `Retry-After` ; il n'émet aucune requête et ne reprend aucune
+campagne. Les délais de départ déjà consommés restent comptés. Un timeout sans statut
+connu garde une cause technique incertaine et l'arrêt global, sans 403 inventé.
+
+V42 porte quatre tables de pression/suspension, V43 deux tables de diagnostic et V44
+les contraintes de politique v6. Les diagnostics séparent en-têtes reçus et réponse
+complète, timeout worker et attente IPC parent, cause primaire et dernier échec cleanup.
+Ils ne contiennent ni en-têtes bruts ni payload et ne fabriquent aucune réception.
+Les métadonnées historiques absentes restent inconnues. Le plafond de timeout v6 est
+30 s, celui de v5 reste 20 s et ceux de v1–v4 restent 10 s ; le défaut `local` reste 20 s.
+Ces plafonds ne changent pas les coûts d'admission. Aucune preuve v5 n'est renommée en v6.
+
+## Politique historique live-v5
 
 Depuis le complément du 9 septembre, la garde de lancement live-v5 accepte un
 timeout Playwright strictement positif jusqu’à vingt secondes ; les politiques
@@ -15,7 +65,7 @@ historique ou d’enveloppe n’est réalisé. La valeur de transport est une co
 du processus ; elle doit être jointe aux preuves d’une nouvelle campagne.
 Les contrôles de retard et la fermeture globale sur timeout restent applicables.
 
-Les nouvelles préparations utilisent `live-v5` et un profil `grouped-v5` séparé. Le manifeste
+Les préparations conservées `live-v5` utilisent un profil `grouped-v5` séparé. Leur manifeste
 fige 100 secondes pour les familles critiques, 300 secondes pour les compositions en jeu,
 trois tours de compositions, une seconde entre groupes, 2 500/20 000 appels et le plafond
 brut indépendant de 15 728 640 000 octets. La limite effective vaut au plus vingt rencontres,
@@ -25,14 +75,14 @@ séparément. La cadence n’est pas ralentie pour prolonger les budgets.
 
 Le candidat précédent à 75 secondes a tenu sa cadence native, mais les enveloppes mesurées
 n’admettent que dix-sept rencontres avec la marge requise. Sa [preuve reste conservée](../validation/WO058-GROUPED-LIVE-V5-CANDIDATE-75-PROFILE-20260908.json).
-La cible courante de 100 secondes suit la priorité à vingt rencontres. Son admission rejoue
+La cible v5 de 100 secondes suivait la priorité à vingt rencontres. Son admission rejoue
 vingt-quatre scénarios de phases et transitions ; sa [qualification native dédiée](../validation/WO058-GROUPED-LIVE-V5-20260908.md)
 est acquise en loopback, avec intervalles critiques P95 ≤105 s et maximum ≤115 s.
 Elle ne démontre pas la tenue de cette cadence avec des réponses fournisseur lentes.
 
 `GroupedAdmissionProfile` porte la version de politique ; le constructeur historique à deux
-arguments reste v4. `GroupedLiveScheduleV4` conserve son nom et accepte explicitement les deux
-versions, avec périodes et nombre de tours distincts. Les autres versions utilisent toujours
+arguments reste v4. `GroupedLiveScheduleV4` conserve son nom et accepte explicitement v4/v5/v6,
+avec périodes et règles propres. Les versions v1–v3 utilisent toujours
 l’ordonnanceur historique. Les nouveaux budgets et les paramètres de planning sont contraints
 par V40 en fonction de la version ; les migrations déjà partagées restent intactes.
 
@@ -340,7 +390,7 @@ tables du lot et leurs empreintes. Voir le [runbook J6](../runbooks/J6-BACKUP-RE
 
 Un JSON de schéma métier incompatible n'arrête que son match après contrôle de sécurité et
 corrélation d'identité. J4 404, statut non géré ou régression sportive demandent une revue du match.
-J5 404 conserve l'indisponibilité et attend le cycle normal suivant. Transport, refus HTTP hors
+J5 404 conserve l'indisponibilité : cycle suivant pour l'historique, backoff par famille pour v6. Transport, refus HTTP hors
 404, HTML/challenge, identité, contenu sensible, exception interne, stockage et anomalie non
 classifiable arrêtent globalement. La portée live est distincte du statut renvoyé par un parseur.
 
@@ -367,6 +417,9 @@ utilise l'intervalle et la prochaine échéance de chaque famille persistée : r
 pour J4 et LINEUPS en attente de début. Le retard nominal de cette échéance est affiché
 séparément de l'âge de réception et du délai d'autorisation transport.
 La fin du suivi fige leur âge à la transition terminale persistée.
+Pour v6, ces échéances intègrent aussi le report global et le délai après 404. La protection
+commune est consultable sans appel fournisseur ; une suspension est distincte d'une simple
+attente de budget et d'une clôture de processus encore requise.
 Le libellé sportif affiche la description J4 pour `inprogress`, avec repli sur le type si elle
 manque. Pour `finished` avec `isAwarded=true`, il affiche « Victoire sur tapis vert », tout en
 conservant le type technique `finished`. Le résultat affiche uniquement la paire

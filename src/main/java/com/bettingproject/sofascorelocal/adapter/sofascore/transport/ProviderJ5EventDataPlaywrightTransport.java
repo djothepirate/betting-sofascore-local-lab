@@ -146,7 +146,7 @@ public final class ProviderJ5EventDataPlaywrightTransport
     static J5EventDataTransportException translate(
             PlaywrightProviderException exception) {
         J5EventDataTransportFailure failure = switch (exception.failure()) {
-            case TIMEOUT -> J5EventDataTransportFailure.TIMEOUT;
+            case TIMEOUT, IPC_TIMEOUT -> J5EventDataTransportFailure.TIMEOUT;
             case PAYLOAD_TOO_LARGE -> J5EventDataTransportFailure.PAYLOAD_TOO_LARGE;
             case SENSITIVE_CONTENT_REJECTED ->
                     J5EventDataTransportFailure.SENSITIVE_CONTENT_REJECTED;

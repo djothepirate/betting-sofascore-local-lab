@@ -345,7 +345,12 @@ ultérieurement la version du parseur d'incidents J5 sans créer de stockage pro
 Cette section décrit le socle V33. Les extensions V39 ajoutent les profils groupés, groupes
 et échéances par famille ; V40 lie les nouveaux budgets et la cadence au manifeste v5,
 sans convertir les politiques antérieures. La cible v5 de vingt rencontres à 100 secondes
-reste en cours de qualification dédiée. Voir l'[architecture live courante](LIVE-J4-J5-CAMPAIGNS.md).
+dispose de sa qualification synthétique historique. Le premier lot de résilience V42–V44
+est qualifié fonctionnellement hors fournisseur : nouvelles préparations v6 plafonnées à sept,
+protection commune J3/J4/J5 après chaque fin d'échange (2 s, 25/60 s, 1 000/h), suspension
+durable 403/429 et backoff 404 J5. Le profil temporel v6 reste à qualifier avant activation.
+Voir l'[architecture live courante](LIVE-J4-J5-CAMPAIGNS.md) et le
+[rapport du lot](../validation/WO-058-provider-resilience-qualification-20260909.md).
 
 V33 ajoute huit tables sans modifier V1 à V32 ni reconstituer de campagnes à partir des anciennes
 collectes. Le périmètre fonctionnel est défini par l'ADR-SS-005 ; le garde est partagé par les
@@ -361,6 +366,14 @@ campagnes manuelles et live.
 | `live_call_receipt` | snapshot brut et occurrence exacte de la réponse, dates, taille et hash |
 | `live_call_result` | résultat de traitement, parseur, projection métier versionnée et références normalisées |
 | `live_transition` | transitions append-only dans l'ordre de révision de la campagne |
+
+Les quatre tables V42 conservent `provider_resilience_state`, les réservations et fins
+d'échange `provider_departure_reservation`/`provider_departure_completion`, et l'historique
+`provider_resilience_event`. La suspension est distincte de l'exclusion des processus ;
+son réarmement manuel ne crée aucun accès fournisseur et n'efface pas les budgets.
+V43 ajoute `live_attempt_transport_diagnostic` et `live_campaign_diagnostic`, sans payload :
+un statut connu aux en-têtes ne vaut pas réponse complète ni snapshot sauvegardé.
+V44 borne les manifestes v6, sans réécrire les campagnes et observations historiques.
 
 `LiveCampaignStore` expose la préparation, le lancement idempotent, la réservation, la réception,
 la publication et la lecture cohérente. `ProviderCampaignGuardStore` porte l'exclusion durable.
@@ -388,7 +401,8 @@ Le redémarrage n'autorise aucune reprise automatique et aucun transfert de gard
 Une disparition du propriétaire prouvée peut produire `UNKNOWN`, `INTERRUPTED` et
 `CLEANUP_REQUIRED` ; la libération attend une preuve de nettoyage exacte. J6 refuse la sauvegarde
 et la rétention lorsque le garde n'est pas libre ou qu'une campagne reste active. La preuve J6
-inclut les sept compteurs live et l'empreinte complète des huit tables. Une purge qualifiée ne
+inclut les sept compteurs live, ceux des six tables V42/V43 et l'empreinte complète du ledger,
+des groupes/échéances et des diagnostics/protections, sous schéma V44. Une purge qualifiée ne
 supprime aucune de leurs lignes. Si une nouvelle réception déduplique vers un brut déjà purgé,
 `LIVE_RAW_PREVIOUSLY_PURGED` annule cette réception et impose l'arrêt ; aucune réhydratation n'est
 introduite. Le détail figure dans

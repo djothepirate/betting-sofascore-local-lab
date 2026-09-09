@@ -30,6 +30,7 @@ class LiveCampaignPropertiesTest {
         var properties = bind(Map.of());
 
         assertThat(properties.isEnabled()).isFalse();
+        assertThat(properties.getPreparationPolicyVersion()).isEqualTo("live-v6");
         assertThat(properties.getQualifiedMatchCapacity()).isEqualTo(1);
         assertThat(properties.getPostgresContainer()).isEqualTo("betting-sofascore-local-lab-postgres");
         assertThat(properties.getDuration()).isEqualTo(Duration.ofHours(4));
@@ -164,6 +165,29 @@ class LiveCampaignPropertiesTest {
         });
         assertThat(LiveAdmissionPolicy.qualifiedCapacityV5(profile)).isEqualTo(20);
         assertThatThrownBy(properties::groupedAdmissionProfile).hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
+        assertThat(properties.isEnabled()).isFalse();
+        assertThatThrownBy(properties::groupedAdmissionProfileV6).hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
+    }
+
+    @Test
+    void v6HasSeparateBoundedCostsAndEvidenceWithoutInheritingV5OrEnablingTransport() {
+        var properties = new LiveCampaignProperties();
+        properties.getGroupedV5().setQualificationSha256("a".repeat(64));
+        assertThatThrownBy(properties::groupedAdmissionProfileV6).hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
+        properties.getGroupedV6().setQualificationSha256("d".repeat(64));
+        properties.getGroupedV6().getEndpoints().values().forEach(cost -> {
+            cost.setRequestEnvelope(Duration.ofMillis(400));
+            cost.setProcessingEnvelope(Duration.ofMillis(100));
+        });
+        var profile = properties.groupedAdmissionProfileV6();
+        assertThat(profile.policyVersion()).isEqualTo("live-v6");
+        assertThat(profile.qualificationSha256()).isEqualTo("d".repeat(64));
+        assertThat(profile.criticalInterval()).isEqualTo(Duration.ofSeconds(100));
+        assertThat(profile.lineupInterval()).isEqualTo(Duration.ofSeconds(300));
+        assertThat(profile.minimumRequestStartInterval()).isEqualTo(Duration.ofSeconds(2));
+        assertThat(LiveAdmissionPolicy.qualifiedCapacityV6(profile)).isEqualTo(7);
+        assertThat(properties.groupedAdmissionProfileV5().endpointEnvelopes().values()).allSatisfy(cost ->
+                assertThat(cost.requestEnvelope()).isEqualTo(Duration.ofSeconds(10)));
         assertThat(properties.isEnabled()).isFalse();
     }
 }

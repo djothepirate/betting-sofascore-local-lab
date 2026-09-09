@@ -23,7 +23,11 @@ import java.util.Objects;
  *
  * <p>A successful request response is {@code byte RESPONSE}, two epoch-millisecond timestamps,
  * {@code int HTTP status}, {@code writeUTF(content-type)}, {@code int bodyLength}, and the exact
- * body bytes. A closed failure is {@code byte FAILURE}, {@code writeUTF(failureCode)}. A normal
+ * body bytes. Version 6 may first emit up to four ordered {@code byte PROGRESS} frames,
+ * with a bounded numeric stage, configured timeout, observed network/header timestamps,
+ * HTTP status and a validated Retry-After deadline. Unknown timestamps use -1 and unknown
+ * status uses 0. No raw header crosses IPC. Progress does not complete a response or extend
+ * its deadline. A closed failure is {@code byte FAILURE}, {@code writeUTF(failureCode)}. A normal
  * close is acknowledged with {@code byte CLOSED}. After that acknowledgement the worker remains
  * alive and quiescent until the parent closes the channel or terminates the worker. Commands are
  * strictly sequential, so a request identifier is deliberately absent.</p>
@@ -31,7 +35,7 @@ import java.util.Objects;
 public final class ProviderPlaywrightWorkerProtocol {
 
     public static final int MAGIC = 0x53335057;
-    public static final int VERSION = 5;
+    public static final int VERSION = 6;
 
     public static final byte GET = 1;
     public static final byte CLOSE = 2;
@@ -40,6 +44,7 @@ public final class ProviderPlaywrightWorkerProtocol {
     public static final byte FAILURE = 11;
     public static final byte CLOSED = 12;
     public static final byte READY = 13;
+    public static final byte PROGRESS = 14;
 
     public static final int MAX_BODY_BYTES = 5 * 1024 * 1024;
     public static final int MAX_CONTENT_TYPE_BYTES = 160;
@@ -174,6 +179,36 @@ public final class ProviderPlaywrightWorkerProtocol {
         void clearBody() {
             java.util.Arrays.fill(body, (byte) 0);
         }
+    }
+
+    /** Stages: 0 navigation, 1 request sent, 2 headers, 3 reading body. Unknown time=-1, status=0. */
+    public record ProgressFrame(int stage, int timeoutMillis, long requestedEpochMillis,
+            long headersEpochMillis, int status, long retryAfterEpochMillis) {
+        public ProgressFrame {
+            if (stage < 0 || stage > 3 || timeoutMillis < 1 || timeoutMillis > MAX_TIMEOUT_MILLIS
+                    || status != 0 && (status < 100 || status > 599)
+                    || stage == 0 && requestedEpochMillis != -1
+                    || stage > 0 && requestedEpochMillis < 1
+                    || stage < 2 && (headersEpochMillis != -1 || status != 0 || retryAfterEpochMillis != -1)
+                    || stage >= 2 && (headersEpochMillis < requestedEpochMillis || status == 0)
+                    || retryAfterEpochMillis != -1 && retryAfterEpochMillis < headersEpochMillis)
+                throw new IllegalArgumentException("invalid bounded progress");
+            for (long value : new long[]{requestedEpochMillis, headersEpochMillis, retryAfterEpochMillis})
+                if (value != -1 && (value < 1 || value > 253_402_300_799_999L))
+                    throw new IllegalArgumentException("invalid progress timestamp");
+        }
+    }
+
+    public static void writeProgress(DataOutputStream output, ProgressFrame frame) throws IOException {
+        Objects.requireNonNull(output); Objects.requireNonNull(frame);
+        output.writeByte(PROGRESS);
+        output.writeByte(frame.stage());
+        output.writeInt(frame.timeoutMillis());
+        output.writeLong(frame.requestedEpochMillis());
+        output.writeLong(frame.headersEpochMillis());
+        output.writeInt(frame.status());
+        output.writeLong(frame.retryAfterEpochMillis());
+        output.flush();
     }
 
     public static GetCommand readGetCommand(DataInputStream input) throws IOException {

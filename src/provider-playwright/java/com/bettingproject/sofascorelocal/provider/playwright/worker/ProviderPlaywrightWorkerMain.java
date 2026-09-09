@@ -144,7 +144,10 @@ public final class ProviderPlaywrightWorkerMain {
             }
 
             ExecutionResult result = runtime.execute(
-                    configuration.uriFor(request).toASCIIString(), request.timeoutMillis());
+                    configuration.uriFor(request).toASCIIString(), request.timeoutMillis(), frame -> {
+                        try { ProviderPlaywrightWorkerProtocol.writeProgress(output, frame); }
+                        catch (IOException failure) { throw new java.io.UncheckedIOException(failure); }
+                    });
             if (result.failure() != null) {
                 ProviderPlaywrightWorkerProtocol.writeFailure(output, result.failure());
                 return 66;
@@ -209,13 +212,16 @@ public final class ProviderPlaywrightWorkerMain {
             }
         }
 
-        ExecutionResult execute(String exactUri, int timeoutMillis) {
+        ExecutionResult execute(String exactUri, int timeoutMillis,
+                java.util.function.Consumer<ProviderPlaywrightWorkerProtocol.ProgressFrame> observer) {
             if (closed.get()) {
                 return ExecutionResult.failure(ProviderPlaywrightWorkerProtocol.FailureCode.PLAYWRIGHT_FAILURE);
             }
             exactAllowedUri.set(exactUri);
             routeFailure.set(null);
             exactNavigationAdmission.set(true);
+            RequestProgress progress = new RequestProgress(timeoutMillis, observer);
+            progress.navigation();
             context.clearCookies();
             Page page = context.newPage();
             page.onPopup(popup -> {
@@ -238,7 +244,11 @@ public final class ProviderPlaywrightWorkerMain {
                         new ProviderMainDocumentNetworkObservation(exactUri, mainFrameId);
                 networkObserver.on(
                         "Network.requestWillBeSent",
-                        networkObservation::onRequestWillBeSent);
+                        event -> {
+                            networkObservation.onRequestWillBeSent(event);
+                            Instant started = networkObservation.requestStartedAtIfObserved();
+                            if (started != null) progress.sent(started);
+                        });
                 networkObserver.on(
                         "Network.requestServedFromCache",
                         networkObservation::onRequestServedFromCache);
@@ -250,7 +260,7 @@ public final class ProviderPlaywrightWorkerMain {
                 responseGuard = context.newCDPSession(page);
                 CDPSession activeResponseGuard = responseGuard;
                 responseGuard.on("Fetch.requestPaused", event ->
-                        handlePausedResponse(activeResponseGuard, event));
+                        handlePausedResponse(activeResponseGuard, event, networkObservation, progress));
                 responseGuard.send("Fetch.enable", responseStageOnly());
                 Response response = page.navigate(exactUri, new Page.NavigateOptions()
                         .setWaitUntil(WaitUntilState.COMMIT)
@@ -299,6 +309,7 @@ public final class ProviderPlaywrightWorkerMain {
                 }
                 byte[] body;
                 try {
+                    progress.readingBody();
                     body = response.body();
                 }
                 catch (PlaywrightException exception) {
@@ -379,7 +390,8 @@ public final class ProviderPlaywrightWorkerMain {
             }
         }
 
-        private void handlePausedResponse(CDPSession session, JsonObject event) {
+        private void handlePausedResponse(CDPSession session, JsonObject event,
+                ProviderMainDocumentNetworkObservation networkObservation, RequestProgress progress) {
             String requestId = null;
             try {
                 requestId = event.get("requestId").getAsString();
@@ -392,13 +404,16 @@ public final class ProviderPlaywrightWorkerMain {
                 command.addProperty("requestId", requestId);
                 if (expectedUri == null
                         || !expectedUri.equals(requestUri)
-                        || !"GET".equals(requestMethod)) {
+                        || !"GET".equals(requestMethod)
+                        || !"Document".equals(event.get("resourceType").getAsString())) {
                     routeFailure.compareAndSet(null,
                             ProviderPlaywrightWorkerProtocol.FailureCode.UNEXPECTED_ROUTE);
                     command.addProperty("errorReason", "Aborted");
                     session.send("Fetch.failRequest", command);
                     return;
                 }
+                Instant started = networkObservation.requireRequestStartedAt(event.get("networkId").getAsString());
+                progress.headers(started, responseStatus, event.getAsJsonArray("responseHeaders"));
                 if (responseStatus >= 300 && responseStatus < 400) {
                     routeFailure.compareAndSet(null,
                             ProviderPlaywrightWorkerProtocol.FailureCode.REDIRECT_BLOCKED);
@@ -422,6 +437,45 @@ public final class ProviderPlaywrightWorkerMain {
                         // The failed request or its exact Chromium session can already be closed.
                     }
                 }
+            }
+        }
+
+        private static final class RequestProgress {
+            private final int timeout;
+            private final java.util.function.Consumer<ProviderPlaywrightWorkerProtocol.ProgressFrame> observer;
+            private int stage = -1;
+            private long requested = -1, headers = -1, retryAfter = -1;
+            private int status;
+            RequestProgress(int timeout, java.util.function.Consumer<ProviderPlaywrightWorkerProtocol.ProgressFrame> observer) {
+                this.timeout = timeout; this.observer = observer;
+            }
+            void navigation() { emit(0); }
+            void sent(Instant at) {
+                if (stage >= 1) return;
+                requested = at.toEpochMilli(); emit(1);
+            }
+            void headers(Instant started, int status, JsonArray responseHeaders) {
+                if (stage >= 2) throw new IllegalStateException("duplicate response headers");
+                sent(started);
+                this.status = status;
+                Instant received = Instant.now();
+                headers = received.toEpochMilli();
+                String retry = null; int count = 0;
+                if (responseHeaders != null) for (var value : responseHeaders) {
+                    JsonObject header = value.getAsJsonObject();
+                    if ("retry-after".equalsIgnoreCase(header.get("name").getAsString())) {
+                        count++; retry = header.get("value").getAsString();
+                    }
+                }
+                retryAfter = count == 1 ? ProviderRetryAfter.deadline(retry, received) : -1;
+                emit(2);
+            }
+            void readingBody() { emit(3); }
+            private void emit(int next) {
+                if (next != stage + 1) throw new IllegalStateException("invalid progress sequence");
+                observer.accept(new ProviderPlaywrightWorkerProtocol.ProgressFrame(next, timeout,
+                        requested, headers, status, retryAfter));
+                stage = next;
             }
         }
 

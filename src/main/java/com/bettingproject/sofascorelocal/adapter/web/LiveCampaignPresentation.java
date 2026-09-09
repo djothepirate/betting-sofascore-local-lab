@@ -118,7 +118,7 @@ public class LiveCampaignPresentation {
     }
 
     private static boolean grouped(String policyVersion) {
-        return "live-v4".equals(policyVersion) || "live-v5".equals(policyVersion);
+        return "live-v4".equals(policyVersion) || "live-v5".equals(policyVersion) || "live-v6".equals(policyVersion);
     }
 
     private Event event(CampaignView campaign, EventView event, Instant observedAt) {
