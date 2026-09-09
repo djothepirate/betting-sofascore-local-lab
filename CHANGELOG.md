@@ -21,8 +21,19 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   (2 016 cas Surefire, cinq ignorés, 207 intégrations par passe), 40 tests worker/contrôleur
   et 20 cas Chromium loopback, sans échec ni erreur. Voir le
   [rapport du lot](docs/validation/WO-058-provider-resilience-qualification-20260909.md).
-  Le profil temporel v6 reste à qualifier avant activation ; aucune capacité fournisseur,
-  livraison Eclipse ou campagne réelle n'est déduite de ces résultats.
+  Au point `3130e39`, le profil temporel v6 restait à qualifier ; ce résultat fonctionnel
+  demeure distinct du complément de capacité ci-dessous.
+- Qualifie le [profil temporel v6](docs/validation/WO058-LIVE-V6-CAPACITY-20260909.md) à sept
+  rencontres en 35 minutes Chromium loopback avec wrapper persistant et PostgreSQL V44 :
+  494 échanges dont 420 établis, zéro cycle manqué, maximum observé 18 départs/60 s et
+  délai minimal après fin d'échange de 2,299724 s. Les enveloppes couvrent le régime établi
+  de 64 Kio ; les 28 premiers corps de 5 Mio restent une mesure initiale séparée.
+  L'admission Java rejoue ses 24 scénarios avec les maxima arrondis vers le haut à 50 ms.
+  Le plafond opérateur de six et le timeout de 30 s sont conservés comme réglages distincts.
+  Corrige aussi la sélection à capacité nulle et son ancien message live-v5. Vérification
+  finale réussie : 2 019 cas Surefire (cinq ignorés), 207 intégrations et trois contrôles
+  Chromium de l'interface, sans échec ni erreur. Aucun paramétrage ou lancement automatique ;
+  aucune capacité d'acceptation fournisseur n'est déduite.
 
 ### WO-058 — attente Playwright portée à vingt secondes pour les prochains essais
 

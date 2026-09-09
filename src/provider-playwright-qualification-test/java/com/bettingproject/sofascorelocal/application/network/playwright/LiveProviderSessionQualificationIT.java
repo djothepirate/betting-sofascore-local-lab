@@ -287,7 +287,11 @@ class LiveProviderSessionQualificationIT {
             return body;
         }
         ChildJvmPlaywrightProviderSupervisor supervisor() {
+            return supervisor(Duration.ofSeconds(10));
+        }
+        ChildJvmPlaywrightProviderSupervisor supervisor(Duration requestTimeout) {
             var p=new ProviderPlaywrightProperties(); p.setEnabled(true);
+            p.setRequestTimeout(requestTimeout);
             p.setWorkerJar(Path.of(System.getProperty("provider.playwright.worker-jar")).toAbsolutePath());
             p.setLoopbackQualification(true); p.setLoopbackOrigin("http://127.0.0.1:"+server.getAddress().getPort());
             return new ChildJvmPlaywrightProviderSupervisor(p,Clock.systemUTC(),new SecureRandom(),builder -> {

@@ -1,5 +1,7 @@
 package com.bettingproject.sofascorelocal.adapter.web;
 
+import com.bettingproject.sofascorelocal.domain.eventdata.EventIncident;
+import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventStatisticMetric;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventStatistics;
 import com.microsoft.playwright.*;
@@ -36,7 +38,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class LiveTenMatchRefreshBrowserQualificationIT {
     private static final int MATCHES = Integer.getInteger("wo058.ui.matches", 10);
-    private static final int INTERVAL_SECONDS = Boolean.getBoolean("wo058.grouped.v5") ? 100 : 60;
+    private static final int INTERVAL_SECONDS = Boolean.getBoolean("wo058.grouped.v6")
+            || Boolean.getBoolean("wo058.grouped.v5") ? 100 : 60;
     private static final String CAMPAIGN = "00000000-0000-0000-0000-000000000058";
     private static final String PAGE_PATH = "/live-campaigns/" + CAMPAIGN;
     private static final String STATE_PATH = PAGE_PATH + "/state";
@@ -107,7 +110,10 @@ class LiveTenMatchRefreshBrowserQualificationIT {
             assertThat(page.locator("[data-live-event-id]").count()).isEqualTo(MATCHES);
             assertThat(page.locator("[data-live-family]").count()).isEqualTo(MATCHES * 3);
             assertThat(page.locator(".statistics-metric").count()).isEqualTo(MATCHES * 135);
-            assertThat(page.locator("[data-live-family='EVENT_INCIDENTS'] tbody tr").count()).isEqualTo(MATCHES * 30);
+            assertThat(page.locator("[data-incidents-list] > li").count()).isEqualTo(MATCHES * 30);
+            assertThat(page.locator("[data-incidents-technical]").count()).isEqualTo(MATCHES);
+            assertThat(page.locator("[data-incidents-technical]").evaluateAll("nodes => nodes.every(node => !node.open)"))
+                    .as("the visible incident cards do not require opening the technical fallback table").isEqualTo(true);
             assertThat(page.locator("[data-live-family-interval]").allTextContents())
                     .hasSize(MATCHES * 3).allSatisfy(value -> assertThat(value).isEqualTo(INTERVAL_SECONDS + " s"));
             assertThat(page.locator("[data-live-family-next-due]").allTextContents())
@@ -121,7 +127,7 @@ class LiveTenMatchRefreshBrowserQualificationIT {
             assertFreshReceipts(page, changedAt, changedAt);
             page.evaluate("""
                     window.__qualificationContentNodes = Array.from(document.querySelectorAll(
-                      "[data-live-family='EVENT_INCIDENTS'] tbody, .statistics-metric"));
+                      "[data-incidents-list] > li, .statistics-metric"));
                     window.__qualificationContentHashes = Array.from(document.querySelectorAll(
                       '[data-live-hash]'), node => node.textContent);
                     """);
@@ -137,7 +143,7 @@ class LiveTenMatchRefreshBrowserQualificationIT {
             assertThat(page.evaluate("""
                     (() => {
                       const nodes = Array.from(document.querySelectorAll(
-                        "[data-live-family='EVENT_INCIDENTS'] tbody, .statistics-metric"));
+                        "[data-incidents-list] > li, .statistics-metric"));
                       const hashes = Array.from(document.querySelectorAll('[data-live-hash]'), node => node.textContent);
                       return nodes.length === window.__qualificationContentNodes.length
                         && nodes.every((node, index) => node === window.__qualificationContentNodes[index])
@@ -168,16 +174,16 @@ class LiveTenMatchRefreshBrowserQualificationIT {
                   return nodes.length === expected.matches && nodes.every((node, index) => {
                     const score = `${index % 3 + expected.contentRevision} – ${index % 2}`;
                     const families = Array.from(node.querySelectorAll('[data-live-family]'));
-                    const incidents = node.querySelector("[data-live-family='EVENT_INCIDENTS'] tbody");
+                    const incidents = Array.from(node.querySelectorAll("[data-incidents-list] > li"));
                     const possession = node.querySelector("[data-stat-period='ALL'] .statistics-metric .statistics-home strong");
                     return node.querySelector('[data-live-score]')?.textContent === score
                       && node.querySelector('[data-live-sport-status]')?.textContent === '2nd half'
                       && families.length === 3 && families.every(family => family.checkVisibility()
                         && family.querySelector('[data-live-received]')?.textContent === expected.receivedAt
                         && family.querySelector('[data-live-family-outcome]')?.textContent === 'PARSED')
-                      && incidents?.rows.length === 30
-                      && incidents.rows[29].cells[5].textContent === `But synthétique ${index + 1} v${expected.contentRevision}`
-                      && incidents.rows[29].checkVisibility()
+                      && incidents.length === 30
+                      && incidents[29].querySelector('[data-incident-motif]')?.textContent === `But synthétique ${index + 1} v${expected.contentRevision}`
+                      && incidents.every(incident => incident.checkVisibility())
                       && possession?.textContent === `${50 + index % 20 + expected.contentRevision}%`
                       && possession.checkVisibility();
                   });
@@ -255,10 +261,22 @@ class LiveTenMatchRefreshBrowserQualificationIT {
             result.put("statistics", StatisticsPresentation.from(statistics(index, contentRevision)));
         } else if (endpoint.equals("EVENT_INCIDENTS")) {
             var rows = new ArrayList<List<String>>();
-            for (int incident = 0; incident < 30; incident++) rows.add(List.of(Integer.toString(incident + 35),
-                    incident == 29 ? "goal" : incident % 2 == 0 ? "card" : "substitution",
-                    incident % 2 == 0 ? "HOME" : "AWAY", "Joueur synthétique " + (index + 1) + " / " + incident,
-                    "1–1", incident == 29 ? "But synthétique " + (index + 1) + " v" + contentRevision : "Observation synthétique"));
+            var incidents = new ArrayList<EventIncident>();
+            for (int incident = 0; incident < 30; incident++) {
+                String type = incident == 29 ? "goal" : incident % 2 == 0 ? "card" : "substitution";
+                String player = "Joueur synthétique " + (index + 1) + " / " + incident;
+                String motif = incident == 29 ? "But synthétique " + (index + 1) + " v" + contentRevision
+                        : "Observation synthétique";
+                rows.add(List.of(Integer.toString(incident + 35), type,
+                        incident % 2 == 0 ? "HOME" : "AWAY", player, "1–1", motif));
+                incidents.add(new EventIncident(incident, type, incident + 35, Optional.empty(),
+                        Optional.of(incident % 2 == 0), Optional.empty(), Optional.empty(), Optional.of(player),
+                        Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                        Optional.of(1), Optional.of(1), type.equals("card") ? Optional.of("yellow") : Optional.empty(),
+                        Optional.of(motif)));
+            }
+            result.put("incidents", IncidentPresentation.from(new EventIncidents(17_000_001L + index, incidents),
+                    "Domicile synthétique " + (index + 1), "Extérieur synthétique " + (index + 1)));
             result.put("table", new LiveCampaignPresentation.Table(List.of("Minute", "Type", "Équipe", "Joueur", "Score", "Détail"), rows));
         }
         return result;

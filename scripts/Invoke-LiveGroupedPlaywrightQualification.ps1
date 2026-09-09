@@ -1,11 +1,13 @@
 [CmdletBinding()]
 param([string]$BrowserCachePath = '', [string]$DockerExecutablePath = '',
-    [ValidateSet('live-v4', 'live-v5')][string]$PolicyVersion = 'live-v4')
+    [ValidateSet('live-v4', 'live-v5', 'live-v6')][string]$PolicyVersion = 'live-v4')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
-$v5 = $PolicyVersion -eq 'live-v5'
-$qualifiedMatches = if ($v5) { 20 } else { 10 }
+$v6 = $PolicyVersion -eq 'live-v6'
+# The existing UI publication fixture uses this flag only to select the 100-second nominal.
+$v5 = $PolicyVersion -in @('live-v5', 'live-v6')
+$qualifiedMatches = if ($v6) { 7 } elseif ($v5) { 20 } else { 10 }
 $criticalSeconds = if ($v5) { 100 } else { 60 }
 $gapSeconds = if ($v5) { 1 } else { 3 }
 if ([string]::IsNullOrWhiteSpace($BrowserCachePath)) {
@@ -33,7 +35,8 @@ try {
     $qualificationStartedAt = [DateTime]::UtcNow
     & .\mvnw.cmd '-Pprovider-playwright-runtime,provider-playwright-local-qualification' '-DskipTests=false' '-DskipITs=false' `
         '-Dwo058.grouped.sustained=true' '-Dit.test=LiveGroupedCampaignLocalQualificationIT,LiveTenMatchRefreshBrowserQualificationIT' `
-        "-Dwo058.grouped.v5=$($v5.ToString().ToLowerInvariant())" "-Dwo058.ui.matches=$qualifiedMatches" `
+        "-Dwo058.grouped.v5=$($v5.ToString().ToLowerInvariant())" "-Dwo058.grouped.v6=$($v6.ToString().ToLowerInvariant())" `
+        "-Dwo058.ui.matches=$qualifiedMatches" `
         "-Dprovider.playwright.browser-cache=$browserCache" @dockerArgument `
         'failsafe:integration-test@provider-playwright-loopback-qualification' 'failsafe:verify@provider-playwright-loopback-qualification'
     if ($LASTEXITCODE -ne 0) { throw 'Grouped sustained qualification failed; inspect the preserved report' }
@@ -59,6 +62,20 @@ try {
             -or $report.steadyElapsedSeconds -lt 1800 -or $report.realProviderCalls -ne 0 `
             -or $report.operatorDatabaseUsed -ne $false) {
         throw 'The report does not prove the required sustained loopback scenario'
+    }
+    if ($v6 -and ($report.productionPersistentResilience -ne $true `
+            -or $report.productionTransportDiagnosticPersistence -ne $true `
+            -or $report.minimumPostCompletionDelaySeconds -ne 2 `
+            -or $report.maximumDeparturesPer60Seconds -ne 25 -or $report.maximumDeparturesPerHour -ne 1000 `
+            -or $report.observedMinimumPostCompletionDelaySeconds -lt 1.999 `
+            -or $report.observedMaximumDeparturesPer60Seconds -gt 25 `
+            -or $report.observedMaximumDeparturesPerHour -gt 1000 `
+            -or $report.observedMaximumWireArrivalsPer60Seconds -gt 25 `
+            -or $report.observedMaximumWireArrivalsPerHour -gt 1000 `
+            -or $report.durableDepartures -ne $report.requests `
+            -or $report.durableDepartureCompletions -ne $report.requests `
+            -or $report.durableCompleteTransportDiagnostics -ne $report.requests)) {
+        throw 'The report does not prove the real persistent v6 wrapper and its bounded departures'
     }
     'WO058_GROUPED_CADENCE_LOOPBACK=PASS'
     'SOFASCORE_NETWORK_CALLS_EXECUTED=NO'

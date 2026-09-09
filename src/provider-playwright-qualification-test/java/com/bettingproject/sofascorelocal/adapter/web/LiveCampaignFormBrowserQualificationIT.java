@@ -213,7 +213,7 @@ class LiveCampaignFormBrowserQualificationIT {
     }
 
     private void checkSelectionCeilings(Page page, String origin) {
-        for (int ceiling : new int[] {5, 10, 25}) {
+        for (int ceiling : new int[] {0, 7, 5, 10, 25}) {
             var zone = ZoneId.of("Europe/Paris");
             var items = new ArrayList<J4EventSearchItem>();
             for (int i = 0; i < ceiling + 2; i++) {
@@ -228,16 +228,50 @@ class LiveCampaignFormBrowserQualificationIT {
             when(campaigns.selectionMaximum()).thenReturn(ceiling);
             page.navigate(origin + "/events?date=2026-09-07&zone=Europe%2FParis");
             var inputs = page.locator("input[form=live-selection][name=eventId]");
+            assertThat(inputs.count()).isEqualTo(ceiling + 2);
+            assertThat(page.locator("[data-live-prepare]").isDisabled()).isTrue();
+            if (ceiling == 0) {
+                for (int i = 0; i < inputs.count(); i++) {
+                    assertThat(inputs.nth(i).isDisabled()).isTrue();
+                    assertThat(inputs.nth(i).isChecked()).isFalse();
+                }
+                assertThat(inputs.last().getAttribute("data-live-finished")).isEqualTo("true");
+                assertThat(page.locator("[data-live-eligible-count]").textContent())
+                        .isEqualTo("Sélection indisponible : aucune capacité de collecte qualifiée.")
+                        .doesNotContain("éligible", "/ 0");
+                assertThat(page.locator("[data-live-selection-count]").textContent())
+                        .isEqualTo("0 rencontre sélectionnée");
+                assertThat(page.locator("#live-selection").textContent()).doesNotContain("live-v5");
+                continue;
+            }
             for (int i = 0; i < ceiling; i++) inputs.nth(i).check();
             assertThat(inputs.nth(ceiling).isDisabled()).isTrue();
             assertThat(inputs.nth(ceiling + 1).isEnabled()).isTrue();
             inputs.nth(ceiling + 1).check();
-            assertThat(page.locator("[data-live-eligible-count]").textContent()).isEqualTo(ceiling + " éligibles / " + ceiling);
+            assertThat(page.locator("[data-live-eligible-count]").textContent())
+                    .isEqualTo(ceiling + " rencontres sélectionnées admissibles / " + ceiling);
+            assertThat(page.locator("[data-live-selection-count]").textContent())
+                    .isEqualTo((ceiling + 1) + " rencontres sélectionnées");
             assertThat(page.locator("[data-live-prepare]").isEnabled()).isTrue();
             inputs.first().uncheck();
             assertThat(inputs.nth(ceiling).isEnabled()).isTrue();
+            assertThat(page.locator("[data-live-eligible-count]").textContent())
+                    .isEqualTo((ceiling - 1) + " rencontres sélectionnées admissibles / " + ceiling);
             inputs.nth(ceiling).check();
             assertThat(inputs.first().isDisabled()).isTrue();
+            assertThat(page.locator("[data-live-eligible-count]").textContent())
+                    .isEqualTo(ceiling + " rencontres sélectionnées admissibles / " + ceiling);
+            assertThat(inputs.nth(ceiling + 1).isChecked()).isTrue();
+            if (ceiling == 7) {
+                for (int i = 1; i <= ceiling; i++) inputs.nth(i).uncheck();
+                assertThat(page.locator("[data-live-selection-count]").textContent())
+                        .isEqualTo("1 rencontre sélectionnée");
+                assertThat(page.locator("[data-live-eligible-count]").textContent())
+                        .isEqualTo("0 rencontre sélectionnée admissible / 7");
+                assertThat(page.locator("[data-live-prepare]").isEnabled()).isTrue();
+                inputs.last().uncheck();
+                assertThat(page.locator("[data-live-prepare]").isDisabled()).isTrue();
+            }
         }
     }
 

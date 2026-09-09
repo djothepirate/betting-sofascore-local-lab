@@ -4,7 +4,9 @@ Statuts : EXPERIMENTAL · LOCAL_ONLY · NOT_PRODUCTION_APPROVED · NO_CRITICAL_D
 
 **État : premier lot autorisé le 9 septembre 2026, réalisé et qualifié fonctionnellement hors fournisseur.**
 Le [rapport du lot](../validation/WO-058-provider-resilience-qualification-20260909.md) conserve
-les résultats et limites. L'activation des nouvelles campagnes attend le profil temporel v6.
+les résultats et limites au point `3130e39`. Le [complément temporel v6](../validation/WO058-LIVE-V6-CAPACITY-20260909.md)
+qualifie ensuite sept rencontres en 35 minutes de boucle locale synthétique, dont 30 établies,
+avec wrapper persistant et PostgreSQL V44. La vérification finale de ce complément et les contrôles de son interface réussissent.
 Le propriétaire demande de prioriser la robustesse face aux blocages d'accès avant
 toute nouvelle réduction des délais de rafraîchissement. Cette priorité est retenue.
 Le propriétaire a ensuite autorisé diagnostic/suspension puis lissage/404 hors fournisseur.
@@ -18,7 +20,10 @@ sur 403/429 connu, réarmement manuel sans requête, diagnostics avant corps com
 backoff 404 par famille. Les paliers sont 300/600/900 s pour incidents/statistiques/LINEUPS
 prématch et 600/900 s pour LINEUPS en jeu, remis à zéro après PARSED ou transition J4.
 Les budgets 2 500/20 000, quatre heures et 15 728 640 000 octets restent en place. Les preuves
-v4/v5 ne qualifient pas v6 ; la qualification fonctionnelle du lot ne fournit pas le profil temporel opérateur v6.
+v4/v5 ne qualifient pas v6. La preuve temporelle dédiée conserve 494 échanges, dont 420
+établis, zéro cycle manqué et 24 replays Java avec les enveloppes mesurées. Ces enveloppes
+portent sur le corpus établi de 64 Kio ; les premiers corps de 5 Mio restent séparés.
+Le plafond opérateur six et le timeout 30 s sont à conserver, sans application automatique.
 
 Rattachement : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md).
 Base de lecture : `f2b28eca276e49476425ee0a12ed7bdda54d32df`, worktree WO-058.
@@ -220,7 +225,8 @@ Le [cadre actuel v0.8](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md) f
 la protection globale et la politique v6. Les anciens manifestes gardent leurs règles
 propres, mais tout nouvel accès passe par la protection partagée. Aucun cache J4/J5,
 endpoint, transport supplémentaire ou essai réel n'est ouvert. L'activation du profil
-v6 dépend de sa preuve dédiée ; aucun succès de qualification n'est présumé ici.
+v6 dépend de sa preuve dédiée, désormais publiée dans le [profil du 9 septembre](../validation/WO058-GROUPED-LIVE-V6-PROFILE-20260909.json).
+Cette mesure locale n'établit ni seuil de refus, ni quota, ni acceptation fournisseur.
 
 L'objectif est de limiter les causes évitables de refus et leur impact. L'architecture
 ne peut pas garantir un accès que le fournisseur refuse. Si la charge nécessaire reste

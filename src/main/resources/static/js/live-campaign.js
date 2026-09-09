@@ -54,12 +54,13 @@
     const checked = selected.length;
     const eligible = selected.filter(input => input.dataset.liveFinished !== "true").length;
     inputs.forEach(input => {
-      input.disabled = blocked(input) || !input.checked && input.dataset.liveFinished !== "true" && eligible >= maximum;
+      input.disabled = maximum <= 0 || blocked(input) || !input.checked && input.dataset.liveFinished !== "true" && eligible >= maximum;
     });
     text(monitor, "[data-live-selection-count]", `${checked} rencontre${checked > 1 ? "s" : ""} sélectionnée${checked > 1 ? "s" : ""}`);
-    text(monitor, "[data-live-eligible-count]", `${eligible} éligible${eligible > 1 ? "s" : ""} / ${maximum}${eligible > maximum ? " — réduire la sélection" : ""}`);
+    text(monitor, "[data-live-eligible-count]", maximum <= 0 ? "Sélection indisponible : aucune capacité de collecte qualifiée."
+      : `${eligible} rencontre${eligible > 1 ? "s" : ""} sélectionnée${eligible > 1 ? "s" : ""} admissible${eligible > 1 ? "s" : ""} / ${maximum}${eligible > maximum ? " — réduire la sélection" : ""}`);
     const button = monitor.querySelector("[data-live-prepare]");
-    if (button) button.disabled = checked === 0 || eligible > maximum;
+    if (button) button.disabled = maximum <= 0 || checked === 0 || eligible > maximum;
   };
   document.querySelectorAll('input[form="live-selection"][name="eventId"]').forEach(input => {
     input.addEventListener("change", updateSelection);

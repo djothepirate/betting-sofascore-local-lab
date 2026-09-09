@@ -14,7 +14,7 @@
 - **Autorité de la v0.6 :** demande du 8 septembre d’augmenter les plafonds à 20 000 appels par campagne et de réduire la pause entre groupes à une seconde, puis arbitrage explicite « Priorité aux 15–20 matchs, avec une cadence explicitement qualifiée ». La cible initialement souhaitée de 20 secondes cède donc la priorité au nombre de rencontres. Le propriétaire précise ensuite un objectif à moyen terme de 50–100 rencontres et demande une visibilité sur les cadences nécessaires ; cet objectif ne constitue pas une qualification de cette capacité.
 - **Référence historique v0.2 :** contenu Git au commit `e98f7a74e39a1c57e601efb3d346ae55829fce73`, conservé sans réécriture.
 - **Autorité de la v0.7 :** demande du propriétaire le 9 septembre d’un timeout Playwright « un peu plus élevé » pour le prochain essai après PLAYWRIGHT_TIMEOUT. La borne retenue est vingt secondes pour live-v5. Ce complément donne davantage de temps à un échange lent ; il ne change ni cadence, ni enveloppes qualifiées, ni budgets et n’autorise aucun lancement par l’agent.
-- **Autorité de la v0.8 :** le 9 septembre, après les essais à 19–20 rencontres interrompus sur refus ou timeout, le propriétaire donne la priorité à la robustesse puis autorise explicitement le premier lot diagnostic/suspension et le lissage/404 hors fournisseur. Cette décision introduit `live-v6` et une protection persistante commune J3/J4/J5. La réalisation est qualifiée fonctionnellement hors fournisseur ; le profil temporel v6 reste à qualifier. Aucune capacité fournisseur ni nouvelle campagne réelle ne découle de cette décision.
+- **Autorité de la v0.8 :** le 9 septembre, après les essais à 19–20 rencontres interrompus sur refus ou timeout, le propriétaire donne la priorité à la robustesse puis autorise explicitement le premier lot diagnostic/suspension et le lissage/404 hors fournisseur. Cette décision introduit `live-v6` et une protection persistante commune J3/J4/J5. La réalisation est qualifiée fonctionnellement hors fournisseur ; son profil temporel distinct est ensuite qualifié à sept rencontres en boucle locale synthétique le même jour. Aucune capacité fournisseur ni nouvelle campagne réelle ne découle de cette décision.
 - **Work Order :** [WO-SS-20260907-058](docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md), validé par le propriétaire ; correctif et qualification de réalisation distincts de cette décision.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
 - **Base :** `6dfd14286d4f269cbe100bd965257c20298538db`, train `feature/V0.1.0-RC01` vérifié à l'ouverture.
@@ -97,7 +97,15 @@ partiels, concurrence, redémarrage, réarmement sans appel, fenêtres glissante
 nettoyage sont vérifiés par les tests et replays, Chromium loopback et PostgreSQL isolé.
 Le [rapport du 9 septembre](docs/validation/WO-058-provider-resilience-qualification-20260909.md)
 conserve les résultats et les limites, dont la clôture gracieuse incertaine après timeout IPC.
-Le profil temporel concret v6 reste à qualifier avant toute activation d'une nouvelle campagne.
+Le [profil temporel v6](docs/validation/WO058-GROUPED-LIVE-V6-PROFILE-20260909.json) dispose
+ensuite de sa mesure dédiée, terminée le 9 septembre à 14:41:05 UTC : sept rencontres,
+35 minutes dont 30 établies, 494 échanges et zéro cycle manqué, avec wrapper persistant
+et PostgreSQL V44 isolé. Ses enveloppes couvrent les réponses établies de 64 Kio ;
+les premiers corps de 5 Mio sont mesurés séparément. L'admission Java confirme sept
+avec ces enveloppes et ses 24 scénarios. Le [rapport du complément](docs/validation/WO058-LIVE-V6-CAPACITY-20260909.md)
+conserve cette portée et les vérifications finales réussies. Le plafond opérateur
+de six et le timeout de 30 s restent des paramètres distincts, sans application automatique.
+Ce constat de qualification ne change aucune règle de la présente décision.
 
 ## Décision historique live-v5 — vingt rencontres et cadence qualifiée
 

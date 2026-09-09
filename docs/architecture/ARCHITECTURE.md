@@ -348,7 +348,13 @@ sans convertir les politiques antérieures. La cible v5 de vingt rencontres à 1
 dispose de sa qualification synthétique historique. Le premier lot de résilience V42–V44
 est qualifié fonctionnellement hors fournisseur : nouvelles préparations v6 plafonnées à sept,
 protection commune J3/J4/J5 après chaque fin d'échange (2 s, 25/60 s, 1 000/h), suspension
-durable 403/429 et backoff 404 J5. Le profil temporel v6 reste à qualifier avant activation.
+durable 403/429 et backoff 404 J5. Le [profil temporel v6](../validation/WO058-LIVE-V6-CAPACITY-20260909.md)
+qualifie ensuite sept rencontres en 35 minutes de boucle locale synthétique avec ce wrapper
+et PostgreSQL V44, dont 30 minutes établies : 494 échanges et aucun cycle manqué.
+Les enveloppes portent sur le corpus établi de 64 Kio, avec les pics initiaux de 5 Mio
+mesurés séparément. Le plafond opérateur de six et le timeout de 30 s restent indépendants ;
+la vérification finale du complément réussit et aucune acceptation fournisseur
+n'est déduite de cette mesure.
 Voir l'[architecture live courante](LIVE-J4-J5-CAMPAIGNS.md) et le
 [rapport du lot](../validation/WO-058-provider-resilience-qualification-20260909.md).
 

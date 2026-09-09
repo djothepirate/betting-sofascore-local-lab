@@ -1,8 +1,8 @@
 # WO-SS-20260907-058 — Campagnes live locales J4/J5 sur sélection de rencontres
 
-- **Statut :** `IN_PROGRESS` — premier lot de résilience v6/V42–V44 qualifié fonctionnellement hors fournisseur, profil temporel v6 à qualifier ; historique : live-v5/V40 réalisé, vingt rencontres à 100 secondes qualifiées en boucle locale synthétique pendant 35 minutes, dont 30 établies ; `clean verify` et `-Pintegration-tests verify` réussis le 08/09. Complément compositions V3/V41 réalisé le 09/09 : capitaines, statistiques individuelles et indisponibles ; les deux commandes Maven complètes sans exclusion sont réussies, avec 1 944 cas Surefire et 171 intégrations par passe (cinq ignorés Surefire, aucun échec/erreur). Live-v4/V39 conserve sa preuve historique à dix matchs. Enveloppe historique 1 s/5 Mio non revalidée, échecs conservés ; revue humaine, essai de fraîcheur fournisseur et fusion distincts, aucune clôture.
+- **Statut :** `IN_PROGRESS` — premier lot de résilience v6/V42–V44 qualifié fonctionnellement hors fournisseur, puis profil temporel v6 qualifié à sept rencontres en boucle locale synthétique pendant 35 minutes, dont 30 établies ; vérification finale du complément et de son interface en cours. Historique : live-v5/V40 réalisé, vingt rencontres à 100 secondes qualifiées en boucle locale synthétique pendant 35 minutes, dont 30 établies ; `clean verify` et `-Pintegration-tests verify` réussis le 08/09. Complément compositions V3/V41 réalisé le 09/09 : capitaines, statistiques individuelles et indisponibles ; les deux commandes Maven complètes sans exclusion sont réussies, avec 1 944 cas Surefire et 171 intégrations par passe (cinq ignorés Surefire, aucun échec/erreur). Live-v4/V39 conserve sa preuve historique à dix matchs. Enveloppe historique 1 s/5 Mio non revalidée, échecs conservés ; revue humaine, essai de fraîcheur fournisseur et fusion distincts, aucune clôture.
 - **Date :** 2026-09-07.
-- **Complément courant du 09/09 :** premier lot de résilience explicitement autorisé, mise en œuvre `live-v6`/V42–V44 qualifiée fonctionnellement hors fournisseur. Le profil temporel v6 reste à qualifier avant activation. Aucune réussite historique mentionnée ci-dessus ne vaut qualification de ce lot. Le WO reste `IN_PROGRESS`, sans clôture, fusion, livraison Eclipse ou lancement fournisseur induit.
+- **Complément courant du 09/09 :** premier lot de résilience explicitement autorisé, mise en œuvre `live-v6`/V42–V44 qualifiée fonctionnellement hors fournisseur. Le [complément temporel dédié](../../validation/WO058-LIVE-V6-CAPACITY-20260909.md) qualifie maintenant son propre profil à sept rencontres, avec wrapper partagé, PostgreSQL 44 et ordonnanceur v6 réels ; la vérification finale réussit (2 019 cas Surefire, cinq ignorés, 207 intégrations, trois contrôles Chromium UI sans échec ni erreur). Le plafond opérateur de six et son timeout de 30 s restent distincts de cette capacité. Aucune réussite historique n'est substituée à cette preuve. Le WO reste `IN_PROGRESS`, sans clôture, fusion, livraison Eclipse ou lancement fournisseur induit.
 - **Jalon :** expérimentation live locale après J9, distincte des parcours manuels existants.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
 - **Cible de PR :** `feature/V0.1.0-RC01`.
@@ -10,7 +10,7 @@
 - **Worktree :** `.tmp/wo058-live-j4-j5`, depuis le dossier Codex du Lab ; worktree distinct d'Eclipse.
 - **Autorité reçue :** ADR-SS-005 v0.1 accepté, puis déclaration « Je valide le WO-058 les travaux peuvent commencer » et demande explicite d'exécuter le plan de réalisation ; port 8087 libéré pour les tests.
 - **ADR courant :** [ADR-SS-005 v0.8](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), priorité à la robustesse, protection persistante commune J3/J4/J5 et nouvelles préparations v6 au plus sept rencontres selon leur propre preuve. Les manifestes v1–v5 gardent leurs règles ; tout nouvel accès passe par la protection globale. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
-- **Livrable présent :** ADR accepté, WO validé, réalisations historiques et leurs qualifications hors fournisseur conservées ; complément v5/V40 implémenté, qualification synthétique dédiée et deux vérifications Maven finales réussies. Le complément compositions V3/V41 dispose de son [contrat](../../architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md) et de sa [qualification du 09/09](../../validation/WO058-PLAYER-DETAILS-20260909.md), distincts des preuves v5/V40. La preuve de fraîcheur fournisseur ne découle pas de la qualification locale.
+- **Livrable présent :** ADR accepté, WO validé, premier lot de résilience v6 qualifié fonctionnellement et profil temporel dédié mesuré, vérification finale du complément en cours ; réalisations historiques et leurs qualifications hors fournisseur conservées. Le complément v5/V40 dispose de sa qualification synthétique dédiée et de deux vérifications Maven finales réussies. Le complément compositions V3/V41 dispose de son [contrat](../../architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md) et de sa [qualification du 09/09](../../validation/WO058-PLAYER-DETAILS-20260909.md), distincts des preuves v5/V40. La preuve de fraîcheur fournisseur ne découle pas de la qualification locale.
 - **Alignement de gouvernance :** renvois ciblés dans ADR-SS-001 et AGENTS.md ; ADR-SS-002 à 004 inchangés.
 - **Réalisations historiques :** réalisées et qualifiées hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés sous les anciennes politiques ; compléments prématch/phase/clôture et incidents V16/V17 décrits dans les retours ci-dessous, statistiques intégrées aux pages. Les préparations v5 conservées restent limitées à vingt rencontres selon leur propre qualification ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur historiques :** essai à 8 arrêté volontairement, essai à 16 interrompu après coupure PostgreSQL, puis nouveaux lancements manuels à 7 et à 4 ; dernière exécution de cette série terminée, observations distinctes des qualifications locales.
 
@@ -41,25 +41,38 @@ fonctionnellement hors fournisseur ; cette autorisation ne lance aucune campagne
 | 404 J5 | Par couple : 300/600/900 s, LINEUPS en jeu 600/900 ; reset après PARSED ou transition J4, aucune extension finale |
 | 403/429 connus | Suspension persistante dès statut reçu, même avec corps incomplet ; Retry-After validé, réarmement manuel sans requête |
 | Diagnostic durable | Étape, code, tentative, famille, timeout et instants ; statut reçu distinct de réponse complète, première cause distincte du nettoyage |
-| Budgets de volume | 2 500/20 000 appels, quatre heures, 15 728 640 000 octets ; timeout maximum v6 à 30 s, défaut local 20 s distinct |
+| Budgets de volume | 2 500/20 000 appels, quatre heures, 15 728 640 000 octets ; timeout maximum v6 à 30 s, défaut de base 10 s et réglage explicite opérateur 30 s distincts |
 | V42–V44 et J6 | Six tables nouvelles dans comptes/empreinte de restauration, schéma 44 exigé ; aucune réécriture historique ni purge élargie |
 
 Les tests exécutés couvrent les fenêtres de charge et leur persistance, deux admissions
 concurrentes, les refus connus avant un corps complet, les timeouts sans statut connu,
 la reprise locale sans appel, les 404 puis données disponibles et les reports sans rafale.
-Les deux vérifications Maven générales réussissent avec 2 016 cas Surefire (cinq ignorés)
+Au point `3130e39`, les deux vérifications Maven générales du premier lot réussissent avec 2 016 cas Surefire (cinq ignorés)
 et 207 intégrations chacune. Les 40 tests worker/contrôleur et les 20 scénarios Chromium
 loopback passent sans échec, erreur ni ignoré. Le
-[rapport final du lot](../../validation/WO-058-provider-resilience-qualification-20260909.md)
+[rapport du premier lot au point `3130e39`](../../validation/WO-058-provider-resilience-qualification-20260909.md)
 conserve les commandes, résultats, corrections et limites de nettoyage. Les compteurs, SHA et résultats historiques ne sont pas repris
 comme preuves de succès de v6. Aucun seuil antibot, accès autorisé ou capacité fournisseur
 n'est déduit des paramètres locaux choisis.
 
-La qualification fonctionnelle du premier lot est terminée. Le profil temporel opérateur
-v6 reste à qualifier via le wrapper partagé, PostgreSQL et l'ordonnanceur v6 ; le harness
-temporel v4/v5 existant ne suffit pas. Aucune nouvelle campagne v6 n'est déclarée activable
-avec un SHA synthétique ou une preuve historique. Le WO reste ouvert pour cette suite,
-la revue humaine et la livraison ; ni le checkout Eclipse ni la base opérateur ne sont modifiés.
+La qualification fonctionnelle du premier lot est terminée. Le
+[complément temporel v6 du 09/09](../../validation/WO058-LIVE-V6-CAPACITY-20260909.md)
+ajoute une preuve dédiée avec le wrapper partagé, PostgreSQL 44 et l'ordonnanceur v6 :
+sept rencontres pendant cinq minutes de mise en régime puis trente minutes établies,
+494 échanges dont 420 établis, aucun cycle manqué, au plus 18 départs sur 60 secondes et
+2,299724 s au minimum après la fin précédente. Les enveloppes mesurées arrondies vers le
+haut et les 24 rejeux Java admettent sept rencontres. Le
+[profil JSON](../../validation/WO058-GROUPED-LIVE-V6-PROFILE-20260909.json) porte le SHA-256
+`5986e95306ef9b68cb0a96abdb02a5e312cb626277fd0720f9804b6ff5dd0e04`.
+
+Sa portée est `STEADY_64_KIB_ONLY` : corps établis de 64 Kio avec compositions V3 enrichies ;
+les 28 corps initiaux de 5 Mio sont mesurés séparément et exclus des enveloppes constantes.
+Cette preuve ne qualifie ni des corps de 5 Mio récurrents ni l'acceptation du fournisseur.
+Le plafond opérateur de six et le timeout explicite de 30 s sont conservés ; aucune
+configuration ni collecte n'est activée automatiquement. La vérification finale du
+complément et de son interface réussit. Le WO reste ouvert pour la revue humaine
+et la livraison ; ce document n'annonce aucune modification du checkout Eclipse ou de
+la base opérateur.
 
 ### Complément du 9 septembre — délai Playwright du prochain essai
 
@@ -737,7 +750,7 @@ Ces bornes sont celles d'ADR-SS-005 v0.2, issue des décisions du propriétaire,
 les anciennes politiques. Le complément v5 à vingt rencontres conserve sa qualification
 synthétique historique. Le §0 de l'ADR courant définit désormais v6 : au plus sept rencontres,
 cible 100/300 s soumise au budget temporel global, limites 2 500/20 000 appels et plafond brut
-indépendant ; sa qualification temporelle reste à réaliser avant activation. Les valeurs historiques ci-dessous ne
+indépendant ; son [profil temporel dédié](../../validation/WO058-LIVE-V6-CAPACITY-20260909.md) est désormais qualifié en boucle locale synthétique pour sept rencontres, dans la portée établie de 64 Kio. Les valeurs historiques ci-dessous ne
 constituent pas un quota fournisseur connu ou une garantie de performance déjà mesurée.
 
 | Paramètre | Valeur historique v0.2 |

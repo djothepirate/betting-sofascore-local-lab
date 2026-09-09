@@ -5,11 +5,12 @@ Références : [ADR-SS-005 accepté](../../ADR-SS-005-bounded-local-live-j4-j5-c
 [architecture](../architecture/LIVE-J4-J5-CAMPAIGNS.md),
 [qualification](../validation/WO058-LIVE-J4-J5-IMPLEMENTATION-20260907.md).
 
-## Nouvelles préparations : live-v6, profil temporel à qualifier
+## Nouvelles préparations : live-v6, profil temporel qualifié en boucle locale
 
 Le premier lot de résilience est implémenté et qualifié fonctionnellement hors fournisseur :
 [résultats et limites](../validation/WO-058-provider-resilience-qualification-20260909.md).
-Le profil temporel v6 reste à qualifier. Ne pas utiliser les preuves v5 ci-dessous comme preuve v6. Les nouvelles
+Le [complément temporel v6](../validation/WO058-LIVE-V6-CAPACITY-20260909.md) qualifie désormais
+sept rencontres avec une preuve distincte des anciennes v5. Les nouvelles
 préparations nécessitent leur profil `grouped-v6`, son SHA et les huit enveloppes dédiées ;
 sans preuve complète, la capacité proposée reste nulle. Elle est plafonnée à **sept rencontres**,
 même si le plafond opérateur est plus élevé. La cible est 100 s pour J4/incidents/statistiques
@@ -69,32 +70,57 @@ Modifier seulement le plafond Java n'augmente pas ce réglage. Les campagnes his
 gardent leur plafond 20 s et v1–v4 leur plafond 10 s. Les enveloppes de qualification sont des
 coûts mesurés distincts : ne pas les remplacer par ce timeout.
 
-### Profil temporel v6 avant une nouvelle campagne
+### Profil temporel v6 du 9 septembre et réglages du lanceur
 
-La qualification fonctionnelle de la résilience ne fournit pas les huit enveloppes
-d'un profil opérateur. Le script historique `Invoke-LiveGroupedPlaywrightQualification.ps1`
-accepte v4/v5 seulement ; son harness ouvre directement le superviseur et ne qualifie pas
-la protection persistante v6. Ne pas utiliser sa sortie comme preuve v6.
+Le [profil final](../validation/WO058-GROUPED-LIVE-V6-PROFILE-20260909.json) repose sur
+35 minutes natives, dont cinq d'initialisation et trente établies, via Chromium loopback,
+le wrapper persistant de production, ses diagnostics et PostgreSQL V44 isolé. La mesure
+compte 494 échanges, dont 420 établis, zéro cycle manqué, au plus 18 départs sur 60 s
+et un délai minimal observé après fin d'échange de 2,299724 s. L'admission Java confirme
+sept rencontres avec ses 24 scénarios et les maxima arrondis vers le haut à 50 ms.
 
-La qualification temporelle suivante devra traverser le wrapper partagé et PostgreSQL,
-exercer l'ordonnanceur v6 et distinguer le coût de l'échange, le traitement local et les
-attentes imposées. Son rapport devra déterminer la capacité effectivement admissible,
-qui peut être inférieure à sept, puis fournir les valeurs dédiées suivantes :
+La portée des enveloppes est **`STEADY_64_KIB_ONLY`** : corpus établi de 64 Kio, dont
+compositions V3 enrichies. Les 28 premières réponses de 5 Mio sont mesurées séparément,
+hors de ces enveloppes constantes. Ce profil ne qualifie pas des corps de 5 Mio récurrents,
+des réponses fournisseur lentes ni l'acceptation de cette charge par SofaScore.
+Le run de 35 minutes n'épuise pas la fenêtre horaire ; les invariants sur cette fenêtre
+conservent leurs preuves PostgreSQL/replay distinctes.
 
-| Valeur | Variable d'environnement |
+| Variable d'environnement dédiée | Valeur du profil v6 |
 |---|---|
-| Empreinte de la preuve v6 revue | `SOFASCORE_LIVE_GROUPED_V6_QUALIFICATION_SHA256` |
-| Échange / traitement J4 | `SOFASCORE_LIVE_GROUPED_V6_J4_REQUEST_ENVELOPE` / `SOFASCORE_LIVE_GROUPED_V6_J4_PROCESSING_ENVELOPE` |
-| Échange / traitement incidents | `SOFASCORE_LIVE_GROUPED_V6_INCIDENTS_REQUEST_ENVELOPE` / `SOFASCORE_LIVE_GROUPED_V6_INCIDENTS_PROCESSING_ENVELOPE` |
-| Échange / traitement statistiques | `SOFASCORE_LIVE_GROUPED_V6_STATISTICS_REQUEST_ENVELOPE` / `SOFASCORE_LIVE_GROUPED_V6_STATISTICS_PROCESSING_ENVELOPE` |
-| Échange / traitement compositions | `SOFASCORE_LIVE_GROUPED_V6_LINEUPS_REQUEST_ENVELOPE` / `SOFASCORE_LIVE_GROUPED_V6_LINEUPS_PROCESSING_ENVELOPE` |
+| `SOFASCORE_LIVE_GROUPED_V6_QUALIFICATION_SHA256` | `5986e95306ef9b68cb0a96abdb02a5e312cb626277fd0720f9804b6ff5dd0e04` |
+| `SOFASCORE_LIVE_GROUPED_V6_J4_REQUEST_ENVELOPE` | `250ms` |
+| `SOFASCORE_LIVE_GROUPED_V6_J4_PROCESSING_ENVELOPE` | `350ms` |
+| `SOFASCORE_LIVE_GROUPED_V6_INCIDENTS_REQUEST_ENVELOPE` | `300ms` |
+| `SOFASCORE_LIVE_GROUPED_V6_INCIDENTS_PROCESSING_ENVELOPE` | `400ms` |
+| `SOFASCORE_LIVE_GROUPED_V6_STATISTICS_REQUEST_ENVELOPE` | `300ms` |
+| `SOFASCORE_LIVE_GROUPED_V6_STATISTICS_PROCESSING_ENVELOPE` | `450ms` |
+| `SOFASCORE_LIVE_GROUPED_V6_LINEUPS_REQUEST_ENVELOPE` | `250ms` |
+| `SOFASCORE_LIVE_GROUPED_V6_LINEUPS_PROCESSING_ENVELOPE` | `450ms` |
 
-L'activation d'une nouvelle campagne v6 reste en attente de cette preuve ; les SHA et
-enveloppes synthétiques des tests ne sont pas des réglages à copier dans Eclipse.
+Conserver le choix opérateur `SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY=6` et
+`SOFASCORE_PLAYWRIGHT_REQUEST_TIMEOUT=30s`. La preuve qualifie une capacité locale de sept,
+mais n'augmente pas le plafond choisi à six et n'applique aucune variable automatiquement.
+Le timeout de 30 s a été réellement utilisé dans le run ; il reste une borne d'attente,
+distincte des enveloppes d'échange ci-dessus. Une ancienne instance garde ses valeurs
+jusqu'à son redémarrage. L'application du profil dans Eclipse est une étape de livraison
+distincte, suivie d'une nouvelle préparation et d'un lancement opérateur explicite.
+La vérification finale de ce complément et les trois contrôles Chromium de son interface réussissent.
 
+Le script accepte désormais `live-v6` avec son propre chemin wrapper/PostgreSQL ;
+les branches v4/v5 restent historiques. La commande explicite hors fournisseur est :
+
+```powershell
+.\scripts\Invoke-LiveGroupedPlaywrightQualification.ps1 -PolicyVersion live-v6
+```
+
+Les [octets natifs conservés](../validation/WO058-GROUPED-LIVE-V6-NATIVE-20260909.json)
+portent le SHA-256 `07500b848513cf75254eb110112f89a7b7e6d14cda71b4d5ed25d9fcd3da8683`.
+Le [calculateur archivé](../validation/v6-profile-builder/V6MeasuredProfile.java) lit ce
+rapport, arrondit les maxima établis et appelle l'admission/les replays Java ; il reste
+un utilitaire de preuve hors réseau, sans modification de configuration ou de base.
 Les sections suivantes conservent les réglages et qualifications historiques ainsi que
-les commandes de consultation communes. Le rapport du lot qualifie ses mécanismes ;
-aucun SHA ni aucune enveloppe d'un profil temporel opérateur v6 n'est présumé ici.
+les commandes de consultation communes ; leurs preuves ne remplacent pas le profil v6.
 
 ### Historique : attendre une réponse lente — réglage v5 du 9 septembre
 

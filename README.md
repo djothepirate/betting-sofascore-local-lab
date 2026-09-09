@@ -1,6 +1,6 @@
 # SofaScore Local Lab
 
-**Résilience fournisseur — 9 septembre 2026, mécanismes qualifiés hors fournisseur :** le premier lot autorisé
+**Résilience fournisseur — 9 septembre 2026, profil v6 qualifié en boucle locale synthétique :** le premier lot autorisé
 introduit `live-v6`, avec sept rencontres au maximum et un profil de qualification distinct.
 Les cibles 100/300 s restent subordonnées au budget global persistant : deux secondes après
 chaque fin d'échange, 25 charges par minute glissante et 1 000 par heure, communs aux collectes
@@ -10,8 +10,13 @@ en-têtes reçus et corps complet. Voir [ADR-SS-005 v0.8](ADR-SS-005-bounded-loc
 et le [runbook courant](docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md). Les deux vérifications Maven
 complètes et les 20 scénarios Chromium loopback réussissent :
 [rapport du lot et limites](docs/validation/WO-058-provider-resilience-qualification-20260909.md).
-L'activation des nouvelles campagnes v6 attend encore la qualification de leur profil temporel ;
-les preuves historiques ci-dessous ne qualifient ni ce profil ni l'acceptation par SofaScore.
+Le [complément temporel v6](docs/validation/WO058-LIVE-V6-CAPACITY-20260909.md) qualifie désormais
+sept rencontres : 35 minutes Chromium/PostgreSQL isolés, dont 30 établies, 494 échanges
+(420 établis), aucun cycle manqué. Le profil porte sur les corps établis de 64 Kio ; les
+premiers corps de 5 Mio sont mesurés séparément. Le plafond opérateur de six rencontres et
+son timeout de 30 s sont à conserver ; la mesure n'applique aucun réglage automatiquement.
+La vérification finale du complément et les trois contrôles Chromium de son interface réussissent. Les preuves
+historiques ci-dessous ne qualifient ni ce nouveau profil ni l'acceptation par SofaScore.
 
 **Timeout Playwright local — 9 septembre 2026 :** le profil `local` attend désormais
 jusqu’à vingt secondes par échange Playwright, configurable via

@@ -203,8 +203,8 @@ class EventExplorerControllerTest {
     }
 
     @ParameterizedTest
-    @ValueSource(booleans = {true, false})
-    void providerSelectionReflectsCampaignLockInTheInitialHtml(boolean blocked) throws Exception {
+    @CsvSource({"true, 7", "false, 7", "true, 0", "false, 0"})
+    void providerSelectionReflectsCampaignLockAndCapacityInTheInitialHtml(boolean blocked, int capacity) throws Exception {
         var event = providerEvent();
         var date = event.startsAt().atZone(ZoneId.of("Europe/Paris")).toLocalDate();
         var search = new J4EventSearchResult(date, ZoneId.of("Europe/Paris"),
@@ -212,6 +212,7 @@ class EventExplorerControllerTest {
                 date.plusDays(1).atStartOfDay(ZoneId.of("Europe/Paris")).toInstant(),
                 List.of(new J4EventSearchItem(event, event.startsAt().atZone(ZoneId.of("Europe/Paris")))));
         when(queryService.search(date, "Europe/Paris")).thenReturn(search);
+        when(liveCampaigns.selectionMaximum()).thenReturn(capacity);
         when(liveCampaigns.selectionBlockedEvents(List.of(event.identity().value())))
                 .thenReturn(blocked ? Set.of(event.identity().value()) : Set.of());
         var response = mockMvc.perform(get("/events").param("date", date.toString()))
@@ -219,7 +220,17 @@ class EventExplorerControllerTest {
         var input = Pattern.compile("<input\\b[^>]*name=\"eventId\"[^>]*>").matcher(response.getContentAsString());
         assertThat(input.find()).isTrue();
         assertThat(input.group()).contains("data-live-provider-eligible=\"true\"");
-        assertThat(input.group().contains("disabled=\"disabled\"")).isEqualTo(blocked);
+        assertThat(input.group().contains("disabled=\"disabled\"")).isEqualTo(blocked || capacity == 0);
+        String html = response.getContentAsString();
+        assertThat(html).doesNotContain("La politique live-v5 attend");
+        if (capacity == 0) {
+            assertThat(html).contains("La préparation des campagnes est indisponible", "qualification hors fournisseur");
+            var prepare = Pattern.compile("<button\\b[^>]*data-live-prepare[^>]*>").matcher(html);
+            assertThat(prepare.find()).isTrue();
+            assertThat(prepare.group()).contains("disabled=\"disabled\"");
+        } else {
+            assertThat(html).doesNotContain("La préparation des campagnes est indisponible");
+        }
     }
 
     @Test

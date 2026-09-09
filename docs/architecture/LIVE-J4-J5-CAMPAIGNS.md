@@ -1,10 +1,10 @@
 # Campagnes live locales J4/J5 — architecture WO-058
 
 Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
-Décision applicable : [ADR-SS-005 v0.8](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), premier lot de résilience réalisé et qualifié fonctionnellement hors fournisseur. Voir le [rapport](../validation/WO-058-provider-resilience-qualification-20260909.md). Le profil temporel v6 reste à qualifier ; les preuves v4/v5 restent historiques.
+Décision applicable : [ADR-SS-005 v0.8](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), premier lot de résilience réalisé et qualifié fonctionnellement hors fournisseur. Voir le [rapport initial](../validation/WO-058-provider-resilience-qualification-20260909.md) puis la [qualification temporelle v6](../validation/WO058-LIVE-V6-CAPACITY-20260909.md). Les preuves v4/v5 restent historiques.
 Réalisation : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md).
 
-## Politique courante live-v6 — mécanismes qualifiés, profil temporel à qualifier
+## Politique courante live-v6 — mécanismes et profil temporel qualifiés hors fournisseur
 
 Les nouvelles préparations utilisent `live-v6`, au plus sept rencontres, avec un profil
 `grouped-v6` et un SHA de qualification distincts. La cible reste 100 s pour les familles
@@ -14,6 +14,20 @@ Les plafonds individuels/campagne restent 2 500/20 000 appels, quatre heures et
 15 728 640 000 octets bruts. L'admission conserve 10 % de marge : sa borne horaire compte
 120 appels ordinaires, quatre initiaux et quatre finaux par rencontre, soit 896 à sept.
 Le rejeu complète cette borne par les coûts et les différentes phases du match.
+
+Le [profil mesuré du 9 septembre](../validation/WO058-GROUPED-LIVE-V6-PROFILE-20260909.json)
+qualifie sept rencontres avec 250/350 ms pour J4, 300/400 ms pour les incidents,
+300/450 ms pour les statistiques et 250/450 ms pour les compositions (échange/traitement).
+Ces maxima établis arrondis vers le haut à 50 ms représentent 187,95 s de travail et
+pauses pour sept sur les 270 s allouables par tranche de cinq minutes. Les 24 replays
+de l'ordonnanceur confirment l'admission. La mesure native couvre 35 minutes, dont
+30 établies, avec 494 échanges et aucun cycle manqué ; son wrapper de production,
+ses diagnostics et son stockage PostgreSQL V44 sont réellement exercés.
+La portée des enveloppes reste le corpus établi de 64 Kio, y compris LINEUPS V3
+enrichies ; les 28 premières réponses de 5 Mio sont séparées. Les coûts d'échange,
+le traitement et les attentes du limiteur sont distingués. Le plafond opérateur six
+et son timeout 30 s sont conservés indépendamment ; la mesure ne les modifie pas.
+La vérification finale du complément et de l'interface reste à terminer.
 
 `ResilientPlaywrightProviderCampaignFactory` enveloppe les parcours J3/J4/J5, manuels et
 live, sans modifier leur allowlist ni créer de session automatiquement. Chaque départ

@@ -2,10 +2,14 @@
 
 Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
 
-**Résultat : premier lot implémenté et qualifié fonctionnellement hors fournisseur.**
+**Résultat au point `3130e39` : premier lot implémenté et qualifié fonctionnellement hors fournisseur.**
 Les deux passes Maven complètes et les 20 scénarios Chromium loopback réussissent.
-L'activation des nouvelles campagnes v6 reste en attente de la qualification de leur
-profil temporel concret. Ce rapport ne qualifie aucune charge auprès de SofaScore.
+À ce point, l'activation des nouvelles campagnes v6 attendait encore la qualification
+de leur profil temporel concret. Le [complément ultérieur du même jour](WO058-LIVE-V6-CAPACITY-20260909.md)
+apporte cette preuve : sept rencontres, 35 minutes Chromium/PostgreSQL isolés, dont
+30 établies, 494 échanges et aucun cycle manqué. Sa vérification finale et les contrôles de son interface réussissent.
+Les résultats de ce premier rapport restent rattachés à leur exécution ; aucun de ces
+rapports ne qualifie une charge acceptée par SofaScore.
 
 ## Périmètre et autorité
 
@@ -174,10 +178,13 @@ invariants. Ils ne sont pas placés dans la configuration d'une campagne opérat
 Le nouveau profil v6 exige sa propre empreinte et ses propres enveloppes qualifiées ;
 une preuve v4/v5 ne l'active pas. La qualification fonctionnelle locale du lot reste
 distincte d'une qualification temporelle prolongée d'un profil concret.
-Le script temporel existant et son harness couvrent v4/v5 uniquement, en ouvrant directement
-le superviseur. L'étape suivante devra qualifier un profil v6 via le wrapper partagé,
-PostgreSQL et l'ordonnanceur courant, puis publier les huit enveloppes et leur preuve.
-L'activation des nouvelles campagnes v6 demeure en attente de cette qualification temporelle.
+Au point `3130e39`, le script temporel et son harness couvraient v4/v5 uniquement, en
+ouvrant directement le superviseur : aucune activation v6 n'était établie par ces outils.
+Le [complément de capacité](WO058-LIVE-V6-CAPACITY-20260909.md) étend ensuite ce parcours
+au wrapper partagé, à PostgreSQL V44 et à l'ordonnanceur v6. Son profil distinct
+qualifie sept rencontres avec les enveloppes mesurées de 64 Kio en régime établi ;
+les premiers corps de 5 Mio restent séparés. Le plafond opérateur six et son timeout
+30 s sont conservés comme paramètres indépendants, sans application automatique.
 
 La clôture gracieuse après expiration IPC peut rester en `CLEANUP_REQUIRED` si aucune
 trame terminale authentifiée n'est reçue, même après disparition de l'arbre de processus.
