@@ -300,7 +300,9 @@ Pour chaque famille, qu'elle soit acquise directement ou importée localement :
    reste immuable et le résultat du parseur courant est porté uniquement par l'observation
    normalisée append-only.
 
-Les parseurs courants sont `event-statistics-v2`, `event-incidents-v16` et `event-lineups-v2`.
+Les parseurs courants sont `event-statistics-v2`, `event-incidents-v17` et `event-lineups-v3`.
+Le [contrat compositions V3](J5-LINEUPS-V3-PLAYER-DETAILS.md) ajoute les capitaines,
+statistiques individuelles et indisponibles, avec migration V41 et empreintes historiques conservées.
 V16 ajoute la seule classe `awarded` pour `inGamePenalty`, avec complétude adaptée à l'attribution
 et sans résultat de tir inféré. V36 ajoute cette version à la contrainte PostgreSQL tout en
 conservant les versions précédentes. Le [diagnostic WO-058](../validation/WO058-INCIDENT-AWARDED-20260907.md)

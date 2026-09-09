@@ -484,7 +484,8 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void v3PrematchLineupsPersistExactCyclesAndProvenanceWhileRepeatedReceiptsRefreshTheCursor() {
-        Fixture f = fixture("38");
+        // Historical live policy, current versioned normalizer and current persistence schema.
+        Fixture f = fixture("41");
         String detailsJson = """
                 {"event":{"id":%d,"startTimestamp":%d,
                 "homeTeam":{"id":11,"name":"Home"},"awayTeam":{"id":22,"name":"Away"},
@@ -961,7 +962,7 @@ class LiveCampaignPersistenceIT {
     @EnumSource(value = SofascoreEndpointType.class, names = {
             "EVENT_STATISTICS", "EVENT_INCIDENTS", "EVENT_LINEUPS"})
     void live404PublicationSurvivesDeduplicationAndRecoveryWithoutLosingLastGoodData(SofascoreEndpointType endpoint) {
-        Fixture f = fixture("38"); Manifest m = f.manifest(f.seed(EVENT), 100); Ownership own = f.start(m);
+        Fixture f = fixture("41"); Manifest m = f.manifest(f.seed(EVENT), 100); Ownership own = f.start(m);
         String available = switch (endpoint) {
             case EVENT_STATISTICS -> "{\"statistics\":[]}";
             case EVENT_INCIDENTS -> "{\"incidents\":[]}";

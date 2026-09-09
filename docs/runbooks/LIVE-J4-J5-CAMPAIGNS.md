@@ -74,6 +74,19 @@ change. Une recharge complète de la page retrouve les panneaux ouverts initiale
 Les cartes présentent le numéro, le nom et le poste ; les mentions « Titulaire » et
 « Remplaçant » ne sont pas répétées sous chaque joueur, car les sections indiquent déjà ce rôle.
 
+Le badge « C · Capitaine » apparaît uniquement pour un indicateur fournisseur explicitement vrai.
+Cliquer sur une carte, ou l'activer au clavier, ouvre ses statistiques individuelles regroupées
+en français. Seuls les chiffres présents dans cette observation sont affichés ; une donnée absente
+ne devient pas zéro. La note principale et ses variantes éventuelles restent distinctes. Ouvrir
+ce panneau ne déclenche aucune collecte, et le lecteur conserve son ouverture lors des actualisations.
+
+La section « Joueurs indisponibles » conserve un comptage séparé. Elle indique le motif fourni,
+traduit lorsqu'il est connu, et le retour estimé par le fournisseur s'ils sont présents. Sans
+description, le joueur reste simplement indisponible. Une liste non renseignée est distincte
+d'une liste reçue vide. Ces ajouts concernent les observations interprétées par V3 ; les anciennes
+compositions ne sont pas enrichies automatiquement. Voir le
+[contrat V3 et sa migration V41](../architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md).
+
 Le schéma des titulaires regroupe les postes gardien, défenseur, milieu et attaquant ; les
 postes absents ou autres sont distingués. Il ne représente pas les positions tactiques
 précises. Aucun numéro, joueur ou formation n’est ajouté pour compléter les données reçues.

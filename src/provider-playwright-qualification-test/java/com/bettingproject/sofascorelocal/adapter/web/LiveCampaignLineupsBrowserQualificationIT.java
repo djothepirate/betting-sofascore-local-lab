@@ -44,11 +44,14 @@ import java.nio.file.Path;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
+import java.time.OffsetDateTime;
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
@@ -102,7 +105,7 @@ class LiveCampaignLineupsBrowserQualificationIT {
                 Path.of(System.getenv("PLAYWRIGHT_BROWSERS_PATH")).toRealPath());
         var initial = benchReorderRoster(0);
         var observation = new J5EventDataObservationView(501, CanonicalEventIdentity.sofascore(PROVIDER_EVENT_ID), initial,
-                EventSourceTrace.providerSnapshot(501, HASH, "event-lineups-v1", NOW),
+                EventSourceTrace.providerSnapshot(501, HASH, "event-lineups-v3", NOW),
                 J5CompletenessReport.measured(46, 46, List.of()), HASH);
         when(queryService.find(eq(EVENT_ID), any())).thenReturn(Optional.of(new J5EventDataPage(ZoneId.of("Europe/Paris"),
                 new J4EventSearchItem(identity(), NOW.atZone(ZoneId.of("Europe/Paris"))),
@@ -139,7 +142,8 @@ class LiveCampaignLineupsBrowserQualificationIT {
                         root => {
                           window.__benchPreviousCards = new Map([...root.querySelectorAll('[data-lineups-player]')]
                             .map(node => [node.dataset.lineupsPlayer, node]));
-                          window.__benchPreviousDetails = [...root.querySelectorAll('details')];
+                          window.__benchPreviousDetails = [...root.querySelectorAll('details')]
+                            .map(node => [node.closest('[data-lineups-player]')?.dataset.lineupsPlayer, node]);
                         }
                         """);
                 host.evaluate("(root, json) => window.LineupsView.update(root, JSON.parse(json))",
@@ -147,7 +151,9 @@ class LiveCampaignLineupsBrowserQualificationIT {
                 assertOpen(bench, false);
                 assertFocused(summary(bench));
                 assertThat(host.evaluate("""
-                        root => window.__benchPreviousDetails.every(node => root.contains(node))
+                        root => window.__benchPreviousDetails.every(([key, node]) => root.contains(node)
+                          || (key && ![...root.querySelectorAll('[data-lineups-player]')]
+                            .some(player => player.dataset.lineupsPlayer === key)))
                           && [...root.querySelectorAll('[data-lineups-player]')].every(node =>
                             !window.__benchPreviousCards.has(node.dataset.lineupsPlayer)
                               || window.__benchPreviousCards.get(node.dataset.lineupsPlayer) === node)
@@ -212,7 +218,8 @@ class LiveCampaignLineupsBrowserQualificationIT {
         if (stage == 4) {
             // Moving a node out of a position group removed in this same update exercises the shared pool.
             home.replaceAll(player -> player.providerPlayerId() == 1
-                    ? lineupPlayer(1, player.name(), 1, null, true) : player);
+                    ? lineupPlayer(1, player.name(), 1, null, true, player.captain().orElse(null),
+                            player.statistics().orElse(null)) : player);
             home.replaceAll(player -> player.providerPlayerId() == 4
                     ? lineupPlayer(4, player.name(), 9, "F", false) : player);
             var entering = substitutes.remove(6);
@@ -241,6 +248,10 @@ class LiveCampaignLineupsBrowserQualificationIT {
                             .map(LineupsPresentation.Player::key).toList());
             assertThat(bench.locator("[data-lineups-name]").allTextContents())
                     .containsExactlyElementsOf(expected.substitutes().stream().map(LineupsPresentation.Player::name).toList());
+            assertCaptainPlayers(team, java.util.stream.Stream.concat(
+                            expected.starterGroups().stream().flatMap(group -> group.players().stream()),
+                            expected.substitutes().stream()).filter(LineupsPresentation.Player::captain)
+                    .map(LineupsPresentation.Player::key).toList());
         }
     }
 
@@ -279,8 +290,17 @@ class LiveCampaignLineupsBrowserQualificationIT {
                     Locator host = page.locator("[data-lineups]");
                     assertThat(host.count()).isOne();
                     assertInitialRoster(host);
-                    for (Locator disclosure : host.locator("details").all()) assertOpen(disclosure, true);
+                    for (Locator disclosure : host.locator("[data-lineups-team], [data-lineups-section]").all()) assertOpen(disclosure, true);
+                    for (Locator card : host.locator("[data-lineups-player-details]").all()) assertOpen(card, false);
                     Locator home = team(host, "HOME");
+                    Locator playerDetails = player(home, 1).locator("[data-lineups-player-details]");
+                    summary(playerDetails).click();
+                    assertOpen(playerDetails, true);
+                    assertPlayerStatistics(player(home, 1), "6,25", "45");
+                    Locator ratings = player(home, 1).locator("[data-lineups-rating-versions]");
+                    summary(ratings).click();
+                    assertThat(ratings.locator("[data-lineups-metric='alternative'] dd").textContent()).isEqualTo("8,9");
+                    summary(playerDetails).click();
                     Locator starters = section(home, "starters");
                     summary(starters).click();
                     assertOpen(starters, false);
@@ -315,6 +335,15 @@ class LiveCampaignLineupsBrowserQualificationIT {
 
                 Locator home = team(host, "HOME"), away = team(host, "AWAY");
                 Locator homeStarters = section(home, "starters"), homeSubstitutes = section(home, "substitutes");
+                Locator playerDetails = player(home, 1).locator("[data-lineups-player-details]");
+                summary(playerDetails).click();
+                Locator ratingVersions = player(home, 1).locator("[data-lineups-rating-versions]");
+                summary(ratingVersions).click();
+                assertPlayerStatistics(player(home, 1), "6,25", "45");
+                capture(host, "lineups-player-details-desktop.png");
+                Locator missing = section(home, "missing");
+                Locator missingSource = missing.locator("[data-lineups-missing-source]").first();
+                summary(missingSource).click();
                 summary(homeSubstitutes).click();
                 summary(home).click();
                 summary(home).focus();
@@ -341,10 +370,25 @@ class LiveCampaignLineupsBrowserQualificationIT {
                 assertThat(homeStarters.locator("[data-lineups-player='HOME:6']").count()).isOne();
                 assertThat(homeSubstitutes.locator("[data-lineups-player='HOME:4']").count()).isOne();
                 assertThat(host.locator("[data-lineups-role]").count()).isZero();
+                // The home armband moves to the player entering the starting group;
+                // the away captain becomes unspecified and must lose the badge.
+                assertCaptainPlayers(host, List.of("HOME:6"));
+                assertThat(player(home, 1).locator("[data-lineups-captain]").count()).isZero();
+                assertThat(player(away, 11).locator("[data-lineups-captain]").count()).isZero();
+                assertOpen(playerDetails, true);
+                assertOpen(ratingVersions, true);
+                assertOpen(missingSource, true);
+                assertPlayerStatistics(player(home, 1), "7,4", "60");
+                assertThat(missing.locator("[data-lineups-missing-player]").count()).isEqualTo(4);
+                assertThat(missing.locator("[data-lineups-missing-return]").first().textContent())
+                        .contains("Retour estimé fournisseur", "25/09/2026");
+                assertThat(section(away, "missing").locator("[data-lineups-missing-empty]").textContent())
+                        .isEqualTo("Aucun joueur indisponible signalé.");
                 assertInertMarkup(page, host);
 
                 summary(home).press("Enter");
                 assertOpen(home, true);
+                assertThat(player(home, 6).locator("[data-lineups-captain]").isVisible()).isTrue();
                 assertOpen(homeSubstitutes, false);
                 summary(homeSubstitutes).focus();
                 String unchangedHash = family.locator("[data-live-hash]").textContent();
@@ -364,6 +408,10 @@ class LiveCampaignLineupsBrowserQualificationIT {
                 assertThat(family.locator("[data-live-occurrence]").textContent()).isEqualTo("1003");
                 assertThat(page.evaluate("window.__lineupsMutations.length")).isEqualTo(0);
                 assertThat(host.locator("[data-lineups-role]").count()).isZero();
+                assertCaptainPlayers(host, List.of("HOME:6"));
+                assertOpen(playerDetails, true);
+                assertOpen(ratingVersions, true);
+                assertPlayerStatistics(player(home, 1), "7,4", "60");
                 page.evaluate("window.__lineupsObserver.disconnect()");
                 assertOpen(homeSubstitutes, false);
                 assertFocused(summary(homeSubstitutes));
@@ -373,10 +421,29 @@ class LiveCampaignLineupsBrowserQualificationIT {
                 page.setViewportSize(390, 844);
                 assertNoHorizontalOverflow(page, host);
                 assertInertMarkup(page, host);
+                summary(playerDetails).focus();
+                assertFocused(summary(playerDetails));
                 capture(host, "lineups-live-refreshed-mobile.png");
 
-                // An explicitly empty observation is different from a missing family.
+                // A focused rating control becomes hidden when the source stops
+                // providing versions; the visible player summary takes focus.
+                summary(ratingVersions).focus();
+                assertFocused(summary(ratingVersions));
                 revision.set(4);
+                page.waitForCondition(() -> ratingVersions.isHidden());
+                assertFocused(summary(playerDetails));
+                assertOpen(playerDetails, true);
+                assertThat(player(home, 1).locator("[data-lineups-statistic-groups] [data-lineups-metric='rating'] dd")
+                        .textContent()).isEqualTo("7,4");
+                revision.set(5);
+                page.waitForCondition(() -> player(home, 1).locator("[data-lineups-statistics-empty]").textContent()
+                        .equals("Statistiques non fournies pour ce joueur."));
+                assertFocused(summary(playerDetails));
+                assertOpen(playerDetails, true);
+                assertThat(player(home, 1).locator("[data-lineups-metric]").count()).isZero();
+
+                // An explicitly empty observation is different from a missing family.
+                revision.set(6);
                 page.waitForCondition(() -> host.locator("[data-lineups-player]").count() == 0);
                 assertThat(host.locator("[data-lineups-team]").count()).isEqualTo(2);
                 assertThat(host.locator("[data-lineups-confirmation]").textContent()).contains("Provisoire");
@@ -460,11 +527,28 @@ class LiveCampaignLineupsBrowserQualificationIT {
 
     private static void assertInitialRoster(Locator host) {
         assertThat(host.locator("[data-lineups-role]").count()).isZero();
+        assertCaptainPlayers(host, List.of("HOME:1", "AWAY:11"));
         assertThat(host.locator(".lineups-section-title").allTextContents())
-                .containsExactly("Titulaires", "Remplaçants", "Titulaires", "Remplaçants");
+                .containsExactly("Titulaires", "Remplaçants", "Joueurs indisponibles", "Titulaires", "Remplaçants", "Joueurs indisponibles");
         assertThat(host.locator("[data-lineups-team]").count()).isEqualTo(2);
         assertThat(host.locator("[data-lineups-confirmation]").textContent()).contains("Provisoire");
         Locator home = team(host, "HOME"), away = team(host, "AWAY");
+        assertThat(player(home, 1).locator("[data-lineups-captain]").isVisible()).isTrue();
+        assertThat(player(away, 11).locator("[data-lineups-captain]").isVisible()).isTrue();
+        assertThat(player(home, 6).locator("[data-lineups-captain]").count()).isZero(); // Explicit false.
+        assertThat(player(home, 3).locator("[data-lineups-captain]").count()).isZero(); // Absent flag.
+        assertThat(player(home, 2).locator("[data-lineups-statistics-empty]").textContent())
+                .isEqualTo("Statistiques non fournies pour ce joueur.");
+        assertThat(player(home, 6).locator("[data-lineups-statistics-empty]").textContent())
+                .isEqualTo("Aucune statistique renseignée pour ce joueur.");
+        Locator missing = section(home, "missing");
+        assertThat(missing.locator("[data-lineups-count]").textContent()).isEqualTo("4");
+        assertThat(missing.locator("[data-lineups-missing-description]").allTextContents())
+                .containsExactly("Blessure au tendon d’Achille", "Entorse du genou", "Luxation de l’épaule", UNSAFE_NAME);
+        assertThat(missing.locator("[data-lineups-missing-player]").evaluateAll(
+                "nodes => new Set(nodes.map(node => node.dataset.lineupsMissingPlayer)).size")).isEqualTo(4);
+        assertThat(section(away, "missing").locator("[data-lineups-missing-empty]").textContent())
+                .isEqualTo("Informations sur les joueurs indisponibles non fournies.");
         assertThat(home.locator("[data-lineups-team-name]").textContent()).isEqualTo(HOME_NAME);
         assertThat(away.locator("[data-lineups-team-name]").textContent()).isEqualTo(AWAY_NAME);
         assertThat(home.locator("[data-lineups-formation]").textContent()).contains("4-3-3");
@@ -489,6 +573,26 @@ class LiveCampaignLineupsBrowserQualificationIT {
         assertThat(page.evaluate("window.__lineupsInjected === undefined")).isEqualTo(true);
     }
 
+    private static void assertCaptainPlayers(Locator host, List<String> expectedKeys) {
+        Locator badges = host.locator("[data-lineups-captain]");
+        assertThat(badges.evaluateAll("nodes => nodes.map(node => node.closest('[data-lineups-player]').dataset.lineupsPlayer)"))
+                .isEqualTo(expectedKeys);
+        assertThat(badges.allTextContents()).allSatisfy(label -> assertThat(label).isEqualTo("C · Capitaine"));
+        assertThat(badges.evaluateAll("nodes => nodes.every(node => node.getAttribute('aria-hidden') !== 'true')"))
+                .isEqualTo(true);
+    }
+
+    private static void assertPlayerStatistics(Locator player, String rating, String minutes) {
+        assertThat(player.locator("[data-lineups-statistic-groups] [data-lineups-metric='rating'] dd").textContent()).isEqualTo(rating);
+        assertThat(player.locator("[data-lineups-metric='minutesPlayed'] dd").textContent()).isEqualTo(minutes);
+        assertThat(player.locator("[data-lineups-metric='expectedAssists'] dd").textContent()).isEqualTo("< 0,01");
+        assertThat(player.locator("[data-lineups-metric='futureMetric'] dt").textContent()).isEqualTo("futureMetric");
+        assertThat(player.locator("[data-lineups-metric='totalBallCarriesDistance'] dt").textContent())
+                .contains("unité non précisée");
+        assertThat(player.locator("[data-lineups-rating-versions] [data-lineups-metric='alternative'] dd").textContent())
+                .isEqualTo("8,9");
+    }
+
     private static void assertGroupCounts(Locator team, List<String> positions, List<Integer> counts) {
         for (int index = 0; index < positions.size(); index++)
             assertThat(team.locator("[data-lineups-group='" + positions.get(index) + "'] [data-lineups-player]").count())
@@ -497,6 +601,7 @@ class LiveCampaignLineupsBrowserQualificationIT {
 
     private static void assertEmptyRoster(Locator host) {
         assertThat(host.locator("[data-lineups-player], [data-lineups-group]").count()).isZero();
+        assertThat(host.locator("[data-lineups-captain]").count()).isZero();
         assertThat(host.locator("[data-lineups-team]").count()).isEqualTo(2);
         for (String side : List.of("HOME", "AWAY")) {
             Locator team = team(host, side);
@@ -504,7 +609,9 @@ class LiveCampaignLineupsBrowserQualificationIT {
             assertThat(team.locator("[data-lineups-starters-empty]").textContent()).isEqualTo("Aucun titulaire renseigné.");
             assertThat(team.locator("[data-lineups-substitutes-empty]").isVisible()).isTrue();
             assertThat(team.locator("[data-lineups-substitutes-empty]").textContent()).isEqualTo("Aucun remplaçant renseigné.");
-            assertThat(team.locator("[data-lineups-count]").allTextContents()).containsExactly("0", "0");
+            assertThat(section(team, "starters").locator("[data-lineups-count]").textContent()).isEqualTo("0");
+            assertThat(section(team, "substitutes").locator("[data-lineups-count]").textContent()).isEqualTo("0");
+            assertThat(team.locator("[data-lineups-missing-player]").count()).isZero();
         }
     }
 
@@ -558,8 +665,8 @@ class LiveCampaignLineupsBrowserQualificationIT {
         UUID attemptId = attemptId(revision);
         var refs = new NormalizedReferences(null, null, 10L + contentRevision(revision), revisionHash(revision));
         var result = new Result(attemptId, new Publication("PARSED", "EVENT", "OK", received,
-                "event-lineups-v1", true, "COLLECTING", null, null, null,
-                revision == 4 ? "EMPTY_VALID" : "PARTIAL", revision == 4 ? 100 : 95), refs);
+                "event-lineups-v3", true, "COLLECTING", null, null, null,
+                revision == 6 ? "EMPTY_VALID" : "PARTIAL", revision == 6 ? 100 : 95), refs);
         var family = new FamilyCursor(SofascoreEndpointType.EVENT_LINEUPS, attemptId, attemptId,
                 attemptId, attemptId(contentRevision(revision)), received, received, changed, refs, result, result);
         var attempt = new AttemptView(new ReservedAttempt(attemptId, EVENT_ID, PROVIDER_EVENT_ID,
@@ -585,27 +692,29 @@ class LiveCampaignLineupsBrowserQualificationIT {
 
     private static J5EventDataObservationView observation(int revision) {
         int content = contentRevision(revision);
-        EventLineups lineups = content == 4
+        EventLineups lineups = content == 6
                 ? new EventLineups(PROVIDER_EVENT_ID, false,
                     new TeamLineup(LineupSide.HOME, Optional.empty(), List.of()),
                     new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of()))
                 : new EventLineups(PROVIDER_EVENT_ID, content > 1,
                     new TeamLineup(LineupSide.HOME, Optional.of("4-3-3"), List.of(
-                            lineupPlayer(1, "Malo Gardien synthétique", 1, "G", true),
+                            lineupPlayer(1, "Malo Gardien synthétique", 1, "G", true, content == 1,
+                                    content == 5 ? null : playerStatistics(content)),
                             lineupPlayer(2, content > 1 ? "Inès Défense actualisée" : "Inès Défense synthétique", 4, "D", true),
                             lineupPlayer(3, "Alex Milieu synthétique", 8, "M", true),
                             lineupPlayer(4, "Sam Attaque synthétique", 9, "F", content == 1),
                             lineupPlayer(5, UNSAFE_NAME, null, null, true),
-                            lineupPlayer(6, "Noé Banc synthétique", 19, "F", content > 1),
+                            lineupPlayer(6, "Noé Banc synthétique", 19, "F", content > 1, content > 1,
+                                    new PlayerMatchStatistics(Map.of(), Map.of())),
                             lineupPlayer(7, "Lou Données absentes", null, null, false),
                             lineupPlayer(8, "Julien Arrière synthétique", 5, "D", true),
                             lineupPlayer(9, "Ari Latéral synthétique", 2, "D", true),
                             lineupPlayer(10, "Claude Défense synthétique", 3, "D", true),
                             lineupPlayer(16, "Max Récupération synthétique", 6, "M", true),
                             lineupPlayer(17, "Morgan Création synthétique", 10, "M", true),
-                            lineupPlayer(18, "Andrea Ailier synthétique", 11, "F", true))),
+                            lineupPlayer(18, "Andrea Ailier synthétique", 11, "F", true)), Optional.of(missingPlayers(content))),
                     new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of(
-                            lineupPlayer(11, "Charlie Gardien extérieur", 1, "G", true),
+                            lineupPlayer(11, "Charlie Gardien extérieur", 1, "G", true, content == 1 ? true : null),
                             lineupPlayer(12, "Robin Défense extérieure", 5, "D", true),
                             lineupPlayer(13, "Camille Milieu extérieur", 6, "M", true),
                             lineupPlayer(14, UNSAFE_AWAY, 10, "F", true),
@@ -616,15 +725,48 @@ class LiveCampaignLineupsBrowserQualificationIT {
                             lineupPlayer(24, "Yan Milieu extérieur", 8, "M", true),
                             lineupPlayer(25, "Léon Création extérieure", 7, "M", true),
                             lineupPlayer(26, "Alix Attaque extérieure", 9, "F", true),
-                            lineupPlayer(27, "Louison Ailier extérieur", 11, "F", true))));
-        J5CompletenessReport completeness = content == 4 ? J5CompletenessReport.emptyValid()
+                            lineupPlayer(27, "Louison Ailier extérieur", 11, "F", true)),
+                            content == 1 ? Optional.empty() : Optional.of(List.of())));
+        J5CompletenessReport completeness = content == 6 ? J5CompletenessReport.emptyValid()
                 : J5CompletenessReport.measured(19, 20, List.of("$.synthetic.home.players[4].position"));
         return new J5EventDataObservationView(10L + content, CanonicalEventIdentity.sofascore(PROVIDER_EVENT_ID), lineups,
-                EventSourceTrace.providerSnapshot(100L + content, revisionHash(revision), "event-lineups-v1", NOW.plusSeconds(content)),
+                EventSourceTrace.providerSnapshot(100L + content, revisionHash(revision), "event-lineups-v3", NOW.plusSeconds(content)),
                 completeness, revisionHash(revision));
     }
 
     private static EventLineupPlayer lineupPlayer(long id, String name, Integer number, String position, boolean starter) {
         return new EventLineupPlayer(id, name, Optional.ofNullable(number), Optional.ofNullable(position), starter);
+    }
+
+    private static EventLineupPlayer lineupPlayer(long id, String name, Integer number, String position,
+                                                  boolean starter, Boolean captain) {
+        return new EventLineupPlayer(id, name, Optional.ofNullable(number), Optional.ofNullable(position),
+                starter, Optional.ofNullable(captain));
+    }
+
+    private static EventLineupPlayer lineupPlayer(long id, String name, Integer number, String position,
+                                                  boolean starter, Boolean captain, PlayerMatchStatistics statistics) {
+        return new EventLineupPlayer(id, name, Optional.ofNullable(number), Optional.ofNullable(position), starter,
+                Optional.ofNullable(captain), Optional.ofNullable(statistics));
+    }
+
+    private static PlayerMatchStatistics playerStatistics(int content) {
+        return new PlayerMatchStatistics(Map.of("rating", new BigDecimal(content == 1 ? "6.25" : "7.4"),
+                "minutesPlayed", new BigDecimal(content == 1 ? "45" : "60"),
+                "expectedAssists", new BigDecimal("0.001"), "futureMetric", new BigDecimal("2.345"),
+                "totalBallCarriesDistance", new BigDecimal("123.456")),
+                content >= 4 ? Map.of() : Map.of("original", new BigDecimal("6.25"), "alternative", new BigDecimal("8.9")));
+    }
+
+    private static List<MissingLineupPlayer> missingPlayers(int content) {
+        return List.of(missingPlayer(31, "Achilles Tendon Injury", content),
+                missingPlayer(32, "Sprained Knee Injury", content), missingPlayer(33, "Dislocated Shoulder", content),
+                missingPlayer(33, UNSAFE_NAME, content));
+    }
+
+    private static MissingLineupPlayer missingPlayer(long id, String description, int content) {
+        return new MissingLineupPlayer(id, "Absent synthétique " + id, Optional.empty(), Optional.of("D"),
+                Optional.of("missing"), Optional.of(1), Optional.of(description), Optional.of(5),
+                Optional.of(OffsetDateTime.parse(content == 1 ? "2026-09-20T02:00:00+02:00" : "2026-09-25T02:00:00+02:00")));
     }
 }

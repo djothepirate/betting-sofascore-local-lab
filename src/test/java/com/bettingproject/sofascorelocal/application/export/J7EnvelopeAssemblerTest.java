@@ -15,6 +15,8 @@ import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataBundle;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservation;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservationView;
 import com.bettingproject.sofascorelocal.domain.eventdata.LineupSide;
+import com.bettingproject.sofascorelocal.domain.eventdata.MissingLineupPlayer;
+import com.bettingproject.sofascorelocal.domain.eventdata.PlayerMatchStatistics;
 import com.bettingproject.sofascorelocal.domain.eventdata.TeamLineup;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservation;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservationView;
@@ -58,6 +60,55 @@ class J7EnvelopeAssemblerTest {
     private final J7EnvelopeAssembler assembler = new J7EnvelopeAssembler();
     private final J7ExportIntegrityGuard integrityGuard = new J7ExportIntegrityGuard(
             new J7JsonSchemaValidator());
+
+    @Test
+    void enrichedLineupsKeepTheClosedJ7ProjectionWhileVerifyingTheFullSourceHash() throws Exception {
+        J7CurrentEventSelection previous = completeSyntheticSelection();
+        J5EventDataObservationView previousView = previous.eventData().lineups().orElseThrow();
+        EventLineups original = (EventLineups) previousView.data();
+        var players = original.home().players().stream().map(player -> new EventLineupPlayer(
+                player.providerPlayerId(), player.name(), player.shirtNumber(), player.position(), player.starter(),
+                Optional.of(player.starter()), Optional.of(new PlayerMatchStatistics(
+                        Map.of("goals", java.math.BigDecimal.ZERO, "rating", new java.math.BigDecimal("8.0")),
+                        Map.of("alternative", new java.math.BigDecimal("7.6")))))).toList();
+        EventLineups enriched = new EventLineups(original.providerEventId(), original.confirmed(),
+                new TeamLineup(original.home().side(), original.home().formation(), players,
+                        Optional.of(List.of(new MissingLineupPlayer(777, "Missing Player", Optional.of(42),
+                                Optional.of("D"), Optional.of("missing"), Optional.of(1),
+                                Optional.of("Achilles Tendon Injury"), Optional.of(5),
+                                Optional.of(java.time.OffsetDateTime.parse("2026-09-20T00:00:00Z")))))),
+                original.away());
+        EventSourceTrace trace = EventSourceTrace.providerSnapshot(77L, "9".repeat(64),
+                "event-lineups-v3", RECORDED_AT);
+        J5EventDataObservationView enrichedView = j5View(99, previousView.identity(), enriched, trace,
+                previousView.completeness());
+        var selection = new J7CurrentEventSelection(previous.eventState(), previous.eventDetails(),
+                new J5EventDataBundle(previous.eventData().statistics(), previous.eventData().incidents(),
+                        Optional.of(enrichedView)),
+                Map.of(77L, new J6SnapshotTrace(77L, "9".repeat(64), 1, 0,
+                        J6SnapshotOccurrenceOutcome.BASELINE, Optional.of(RECORDED_AT), J6RawPayloadState.RETAINED)));
+        var before = assembler.assembleCandidate(UUID.randomUUID(), GENERATED_AT, "0.1.0-SNAPSHOT", previous);
+        var after = assembler.assembleCandidate(UUID.randomUUID(), GENERATED_AT, "0.1.0-SNAPSHOT", selection);
+        JsonNode beforeData = JSON_MAPPER.readTree(before.content()).get("data");
+        JsonNode afterRoot = JSON_MAPPER.readTree(after.content());
+
+        assertThat(afterRoot.get("data")).isEqualTo(beforeData);
+        assertThat(after.dataSha256()).isEqualTo(before.dataSha256());
+        assertThat(after.sourceSetSha256()).isNotEqualTo(before.sourceSetSha256());
+        assertThat(enrichedView.normalizedSha256()).isNotEqualTo(previousView.normalizedSha256());
+        assertThat(afterRoot.get("manifest").get("sources").get(4).get("parserVersion").stringValue())
+                .isEqualTo("event-lineups-v3");
+        assertThat(integrityGuard.verify(after.content(), after.canonicalEventId(), after.exportId()).status())
+                .isEqualTo(J7ExportStatus.COHERENCE_CHECKED);
+
+        var tamperedView = new J5EventDataObservationView(99, previousView.identity(), enriched, trace,
+                previousView.completeness(), previousView.normalizedSha256());
+        var tampered = new J7CurrentEventSelection(selection.eventState(), selection.eventDetails(),
+                new J5EventDataBundle(selection.eventData().statistics(), selection.eventData().incidents(),
+                        Optional.of(tamperedView)), selection.snapshotTraces());
+        assertThatThrownBy(() -> assembler.assembleCandidate(UUID.randomUUID(), GENERATED_AT,
+                "0.1.0-SNAPSHOT", tampered)).isInstanceOf(J7ExportException.class);
+    }
 
     @Test
     void integrityGuardAcceptsTheGeneratedCandidate() {

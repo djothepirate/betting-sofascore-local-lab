@@ -764,6 +764,12 @@ from (
         observation.source_payload_sha256, observation.parser_version,
         observation.normalized_sha256) as value
     from j5_event_data_observation observation
+    union all
+    select 'LINEUP_SIDE|' || to_jsonb(side)::text as value
+    from j5_event_lineup_side side
+    union all
+    select 'LINEUP_PLAYER|' || to_jsonb(player)::text as value
+    from j5_event_lineup_player player
 ) normalized
 '@
 $j8BenchmarkFingerprintSql = @'
@@ -861,8 +867,8 @@ try {
     }
 
     $sourceFlywayVersion = Invoke-PrimaryScalar -Sql $flywaySql
-    if ($sourceFlywayVersion -cne '40') {
-        throw 'Flyway V40 must be applied before the J6 backup/restore qualification.'
+    if ($sourceFlywayVersion -cne '41') {
+        throw 'Flyway V41 must be applied before the J6 backup/restore qualification.'
     }
     $providerGuardState = Invoke-PrimaryScalar -Sql 'select state from provider_campaign_guard where singleton_id=1'
     $activeLiveCount = [long](Invoke-PrimaryScalar -Sql "select count(*) from live_campaign where state in ('RUNNING','CLEANUP_REQUIRED')")

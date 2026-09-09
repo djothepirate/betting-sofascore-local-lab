@@ -12,6 +12,8 @@ import com.bettingproject.sofascorelocal.domain.eventdata.EventStatistics;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessReport;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservationView;
 import com.bettingproject.sofascorelocal.domain.eventdata.LineupSide;
+import com.bettingproject.sofascorelocal.domain.eventdata.MissingLineupPlayer;
+import com.bettingproject.sofascorelocal.domain.eventdata.PlayerMatchStatistics;
 import com.bettingproject.sofascorelocal.domain.eventdata.TeamLineup;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservationView;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservation;
@@ -25,7 +27,10 @@ import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledTournam
 import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.math.BigDecimal;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.OptionalLong;
 
@@ -190,6 +195,85 @@ class J6SemanticDiffServiceTest {
         assertThat(lineupChanges.stream()
                 .filter(change -> change.field().equals("lineups[HOME,playerId=101]"))
                 .findFirst().orElseThrow().kind()).isEqualTo(J6ChangeKind.ADDED);
+    }
+
+    @Test
+    void reportsCaptainAndEachIndividualStatisticWithoutTurningAbsenceIntoZero() {
+        EventLineups before = lineups(true, "4-3-3", List.of(
+                new EventLineupPlayer(100, "Alice", Optional.of(9), Optional.of("F"), true,
+                        Optional.of(false), Optional.of(new PlayerMatchStatistics(
+                                Map.of("totalPass", new BigDecimal("69"), "goals", BigDecimal.ZERO),
+                                Map.of("alternative", new BigDecimal("7.6")))))));
+        EventLineups after = lineups(true, "4-3-3", List.of(
+                new EventLineupPlayer(100, "Alice", Optional.of(9), Optional.of("F"), true,
+                        Optional.of(true), Optional.of(new PlayerMatchStatistics(
+                                Map.of("totalPass", new BigDecimal("70"), "totalShots", BigDecimal.ZERO),
+                                Map.of("alternative", new BigDecimal("7.8")))))));
+
+        assertThat(SERVICE.compareEventData(enrichedView(30, before), enrichedView(31, after)))
+                .extracting(change -> change.field(), change -> change.beforeValue(),
+                        change -> change.afterValue(), change -> change.kind())
+                .containsExactly(
+                        tuple("lineups[HOME,playerId=100].captain", Optional.of("false"), Optional.of("true"), J6ChangeKind.CHANGED),
+                        tuple("lineups[HOME,playerId=100].statistics[goals]", Optional.of("0"), Optional.empty(), J6ChangeKind.REMOVED),
+                        tuple("lineups[HOME,playerId=100].statistics[totalPass]", Optional.of("69"), Optional.of("70"), J6ChangeKind.CHANGED),
+                        tuple("lineups[HOME,playerId=100].statistics[totalShots]", Optional.empty(), Optional.of("0"), J6ChangeKind.ADDED),
+                        tuple("lineups[HOME,playerId=100].statistics.ratingVersions[alternative]", Optional.of("7.6"), Optional.of("7.8"), J6ChangeKind.CHANGED));
+    }
+
+    @Test
+    void distinguishesAbsentAndExplicitlyEmptyOptionalLineupBlocks() {
+        EventLineups before = lineups(true, "4-3-3", List.of(player(100, "Alice", 9, "F", true)));
+        EventLineups after = new EventLineups(PROVIDER_EVENT_ID, true,
+                new TeamLineup(LineupSide.HOME, Optional.of("4-3-3"), List.of(
+                        new EventLineupPlayer(100, "Alice", Optional.of(9), Optional.of("F"), true,
+                                Optional.empty(), Optional.of(new PlayerMatchStatistics(Map.of(), Map.of())))),
+                        Optional.of(List.of())), before.away());
+
+        assertThat(SERVICE.compareEventData(enrichedView(32, before), enrichedView(33, after)))
+                .extracting(change -> change.field(), change -> change.beforeValue(), change -> change.afterValue())
+                .containsExactly(
+                        tuple("lineups[HOME].missingPlayers.present", Optional.empty(), Optional.of("true")),
+                        tuple("lineups[HOME,playerId=100].statistics.present", Optional.empty(), Optional.of("true")));
+    }
+
+    @Test
+    void tracksMissingPlayersByIdentityAndReportsReturnEstimateCorrections() {
+        EventLineups empty = lineups(true, "4-3-3", List.of());
+        MissingLineupPlayer original = missing(500, "2026-09-20T00:00:00Z");
+        MissingLineupPlayer corrected = missing(500, "2026-09-30T00:00:00Z");
+        MissingLineupPlayer unchanged = missing(501, "2026-09-20T00:00:00Z");
+        EventLineups before = new EventLineups(PROVIDER_EVENT_ID, true,
+                new TeamLineup(LineupSide.HOME, Optional.of("4-3-3"), List.of(),
+                        Optional.of(List.of(original, unchanged))), empty.away());
+        EventLineups after = new EventLineups(PROVIDER_EVENT_ID, true,
+                new TeamLineup(LineupSide.HOME, Optional.of("4-3-3"), List.of(),
+                        Optional.of(List.of(unchanged, corrected))), empty.away());
+
+        assertThat(SERVICE.compareEventData(enrichedView(34, before), enrichedView(35, after)))
+                .singleElement().satisfies(change -> {
+                    assertThat(change.field()).isEqualTo("lineups[HOME].missingPlayers[playerId=500].expectedEndDate");
+                    assertThat(change.beforeValue()).contains("2026-09-20T00:00Z");
+                    assertThat(change.afterValue()).contains("2026-09-30T00:00Z");
+                });
+        assertThat(SERVICE.compareEventData(enrichedView(35, after), enrichedView(36, after))).isEmpty();
+    }
+
+    private static MissingLineupPlayer missing(long id, String expectedEndDate) {
+        return new MissingLineupPlayer(id, "Absent " + id, Optional.of(42), Optional.of("D"),
+                Optional.of("missing"), Optional.of(1), Optional.of("Achilles Tendon Injury"),
+                Optional.of(5), Optional.of(OffsetDateTime.parse(expectedEndDate)));
+    }
+
+    private static J5EventDataObservationView enrichedView(long id, EventLineups lineups) {
+        EventSourceTrace trace = new EventSourceTrace(
+                com.bettingproject.sofascorelocal.domain.event.EventSourceKind.PROVIDER_SNAPSHOT,
+                OptionalLong.of(id), Optional.empty(), hash('a'), "event-lineups-v3",
+                Instant.parse("2026-09-09T00:00:00Z"));
+        var observation = com.bettingproject.sofascorelocal.domain.eventdata.J5EventDataObservation.from(
+                IDENTITY, lineups, trace, J5CompletenessReport.measured(1, 1, List.of()));
+        return new J5EventDataObservationView(id, IDENTITY, lineups, trace,
+                observation.completeness(), observation.normalizedSha256());
     }
 
     @Test

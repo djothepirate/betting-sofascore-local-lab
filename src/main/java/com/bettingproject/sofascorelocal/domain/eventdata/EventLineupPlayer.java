@@ -8,7 +8,19 @@ public record EventLineupPlayer(
         String name,
         Optional<Integer> shirtNumber,
         Optional<String> position,
-        boolean starter) {
+        boolean starter,
+        Optional<Boolean> captain,
+        Optional<PlayerMatchStatistics> statistics) {
+
+    public EventLineupPlayer(long providerPlayerId, String name, Optional<Integer> shirtNumber,
+            Optional<String> position, boolean starter) {
+        this(providerPlayerId, name, shirtNumber, position, starter, Optional.empty(), Optional.empty());
+    }
+
+    public EventLineupPlayer(long providerPlayerId, String name, Optional<Integer> shirtNumber,
+            Optional<String> position, boolean starter, Optional<Boolean> captain) {
+        this(providerPlayerId, name, shirtNumber, position, starter, captain, Optional.empty());
+    }
 
     public EventLineupPlayer {
         if (providerPlayerId < 1) {
@@ -24,6 +36,8 @@ public record EventLineupPlayer(
         }
         position = Objects.requireNonNull(position, "position")
                 .map(value -> boundedText(value, "position", 32));
+        captain = Objects.requireNonNull(captain, "captain");
+        statistics = Objects.requireNonNull(statistics, "statistics");
     }
 
     private static String boundedText(String value, String fieldName, int maximumLength) {

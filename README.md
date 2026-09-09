@@ -1,5 +1,11 @@
 # SofaScore Local Lab
 
+**Détails des joueurs — 9 septembre 2026 :** les nouvelles compositions V3 signalent les capitaines,
+ouvrent les statistiques individuelles depuis les cartes et présentent les joueurs indisponibles
+avec les informations reçues. Flyway V41 conserve ces ajouts sans réécrire les observations
+historiques. Voir le [contrat](docs/architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md) et la
+[qualification](docs/validation/WO058-PLAYER-DETAILS-20260909.md).
+
 **Complément d’interface live — 8–9 septembre 2026 :** les campagnes affichent dix rencontres
 par page et une liste illustrée des incidents, avec tableau technique repliable. L’accueil
 reste lisible lorsque la rétention attend la libération d’une session fournisseur.

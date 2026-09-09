@@ -24,7 +24,7 @@ class J6NativeBinaryPipelineQualificationTest {
     }
 
     @Test
-    void retentionAcceptsOnlyAV40QualifiedManifestWithoutRunningNativeTools()
+    void retentionAcceptsOnlyAV41QualifiedManifestWithoutRunningNativeTools()
             throws IOException {
         String retention = Files.readString(
                 Path.of("").toAbsolutePath().normalize()
@@ -33,10 +33,11 @@ class J6NativeBinaryPipelineQualificationTest {
 
         assertThat(retention)
                 .contains(
-                        "$manifest.source.flywayVersion.ToString() -cne '40'",
-                        "valid Flyway V40 raw-payload, J8, J7 and quiescent live ledger restore",
+                        "$manifest.source.flywayVersion.ToString() -cne '41'",
+                        "valid Flyway V41 raw-payload, J8, J7 and quiescent live ledger restore",
                         "'SOFASCORE_LIVE_ENABLED'", "'providerGuardState'", "'liveLedgerSha256'")
                 .doesNotContain(
+                        "$manifest.source.flywayVersion.ToString() -cne '40'",
                         "$manifest.source.flywayVersion.ToString() -cne '31'",
                         "valid Flyway V31 raw-payload, J8 evidence and metadata-only J7 delivery and owner-go restore");
     }
@@ -94,8 +95,8 @@ class J6NativeBinaryPipelineQualificationTest {
                         "J6_DOCKER_EXECUTABLE_IDENTITY=AUTHENTICODE_DOCKER_INC",
                         "Get-AuthenticodeSignature",
                         "AggregateException",
-                        "if ($sourceFlywayVersion -cne '40')",
-                        "Flyway V40 must be applied before the J6 backup/restore qualification.",
+                        "if ($sourceFlywayVersion -cne '41')",
+                        "Flyway V41 must be applied before the J6 backup/restore qualification.",
                         "$liveLedgerFingerprintSql", "provider_campaign_guard", "$providerGuardState -cne 'FREE'",
                         "J6_POSTGRES_SESSION_CLEANUP_IDEMPOTENT_REUSE=PASS",
                         "dropdb --username \"$POSTGRES_USER\" --force --if-exists",

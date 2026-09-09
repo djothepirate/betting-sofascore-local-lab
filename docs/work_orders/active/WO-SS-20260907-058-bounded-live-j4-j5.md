@@ -1,6 +1,6 @@
 # WO-SS-20260907-058 — Campagnes live locales J4/J5 sur sélection de rencontres
 
-- **Statut :** `IN_PROGRESS` — live-v5/V40 réalisé, vingt rencontres à 100 secondes qualifiées en boucle locale synthétique pendant 35 minutes, dont 30 établies ; `clean verify` et `-Pintegration-tests verify` réussis le 08/09. Live-v4/V39 conserve sa preuve historique à dix matchs. Enveloppe historique 1 s/5 Mio non revalidée, échecs conservés ; revue humaine, essai de fraîcheur fournisseur et fusion distincts, aucune clôture.
+- **Statut :** `IN_PROGRESS` — live-v5/V40 réalisé, vingt rencontres à 100 secondes qualifiées en boucle locale synthétique pendant 35 minutes, dont 30 établies ; `clean verify` et `-Pintegration-tests verify` réussis le 08/09. Complément compositions V3/V41 réalisé le 09/09 : capitaines, statistiques individuelles et indisponibles ; les deux commandes Maven complètes sans exclusion sont réussies, avec 1 944 cas Surefire et 171 intégrations par passe (cinq ignorés Surefire, aucun échec/erreur). Live-v4/V39 conserve sa preuve historique à dix matchs. Enveloppe historique 1 s/5 Mio non revalidée, échecs conservés ; revue humaine, essai de fraîcheur fournisseur et fusion distincts, aucune clôture.
 - **Date :** 2026-09-07.
 - **Jalon :** expérimentation live locale après J9, distincte des parcours manuels existants.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
@@ -9,7 +9,7 @@
 - **Worktree :** `.tmp/wo058-live-j4-j5`, depuis le dossier Codex du Lab ; worktree distinct d'Eclipse.
 - **Autorité reçue :** ADR-SS-005 v0.1 accepté, puis déclaration « Je valide le WO-058 les travaux peuvent commencer » et demande explicite d'exécuter le plan de réalisation ; port 8087 libéré pour les tests.
 - **ADR courant :** [ADR-SS-005 v0.6](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), capacité de quinze à vingt rencontres privilégiée avec cadence explicitement qualifiée, pause d’une seconde entre groupes v5 et nouveaux budgets. Les comportements live v1–v4 restent historiques. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
-- **Livrable présent :** ADR accepté, WO validé, réalisations historiques et leurs qualifications hors fournisseur conservées ; complément v5/V40 implémenté, qualification synthétique dédiée et deux vérifications Maven finales réussies. La preuve de fraîcheur fournisseur ne découle pas de la qualification locale.
+- **Livrable présent :** ADR accepté, WO validé, réalisations historiques et leurs qualifications hors fournisseur conservées ; complément v5/V40 implémenté, qualification synthétique dédiée et deux vérifications Maven finales réussies. Le complément compositions V3/V41 dispose de son [contrat](../../architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md) et de sa [qualification du 09/09](../../validation/WO058-PLAYER-DETAILS-20260909.md), distincts des preuves v5/V40. La preuve de fraîcheur fournisseur ne découle pas de la qualification locale.
 - **Alignement de gouvernance :** renvois ciblés dans ADR-SS-001 et AGENTS.md ; ADR-SS-002 à 004 inchangés.
 - **Réalisations historiques :** réalisées et qualifiées hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés sous les anciennes politiques ; compléments prématch/phase/clôture et incidents V16/V17 décrits dans les retours ci-dessous, statistiques intégrées aux pages. Les nouvelles préparations v5 sont limitées à vingt rencontres selon leur propre qualification ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur historiques :** essai à 8 arrêté volontairement, essai à 16 interrompu après coupure PostgreSQL, puis nouveaux lancements manuels à 7 et à 4 ; dernière exécution de cette série terminée, observations distinctes des qualifications locales.
 
@@ -988,6 +988,15 @@ Les succès Maven v5 ci-dessus restent les preuves du contenu antérieur ; ils n
 pas automatiquement ce complément.
 
 ### Définition de fini
+
+Le 9 septembre, le propriétaire étend les compositions avec trois attributs déjà reçus dans
+`EVENT_LINEUPS` : indicateur de capitaine, statistiques individuelles accessibles depuis les
+cartes et liste des joueurs indisponibles. Ce complément autorisé inclut leur normalisation et
+conservation V3/V41, le rendu live/J5 et le suivi des différences J6. Le contrat J7 v1 reste sa
+projection fermée existante. Aucun nouveau endpoint ni appel à l'ouverture d'une carte n'est ajouté.
+Le [contrat détaillé](../../architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md) et le
+[rapport propre au complément](../../validation/WO058-PLAYER-DETAILS-20260909.md) distinguent
+la compatibilité historique, les validations synthétiques et le retour opérateur futur.
 
 Le 9 septembre, le propriétaire demande de supprimer les rôles répétés sur les cartes
 joueurs et de traduire les groupes et noms de statistiques. Ce complément concerne

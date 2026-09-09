@@ -4,10 +4,14 @@ import com.bettingproject.sofascorelocal.domain.eventdata.EventLineupPlayer;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventLineups;
 import com.bettingproject.sofascorelocal.domain.eventdata.LineupSide;
 import com.bettingproject.sofascorelocal.domain.eventdata.TeamLineup;
+import com.bettingproject.sofascorelocal.domain.eventdata.PlayerMatchStatistics;
+import com.bettingproject.sofascorelocal.domain.eventdata.MissingLineupPlayer;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.time.OffsetDateTime;
 import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -16,12 +20,12 @@ class LineupsPresentationTest {
     @Test
     void partitionsEveryPlayerByObservedRoleAndPositionWithoutLosingOrderInsideGroups() {
         List<EventLineupPlayer> home = List.of(
-                player(1, "Defender first", 12, "D", true),
-                player(2, "Forward", 9, "F", true),
+                player(1, "Defender first", 12, "D", true, true),
+                player(2, "Forward", 9, "F", true, false),
                 player(3, "Defender second", 2, "D", true),
                 player(4, "Keeper", 1, "G", true),
                 player(5, "Midfielder", 8, "M", true),
-                player(6, "Reserve keeper", 30, "G", false),
+                player(6, "Reserve keeper", 30, "G", false, true),
                 player(7, "Other position", 20, "D/M", true),
                 player(8, "Unknown position", null, null, true),
                 player(9, "Reserve forward", 10, "F", false));
@@ -55,6 +59,10 @@ class LineupsPresentationTest {
                 .allSatisfy(player -> assertThat(player.roleLabel()).isEqualTo("Titulaire"));
         assertThat(team.substitutes()).extracting(LineupsPresentation.Player::key).containsExactly("HOME:6", "HOME:9");
         assertThat(team.substitutes()).allSatisfy(player -> assertThat(player.roleLabel()).isEqualTo("Remplaçant"));
+        assertThat(players(team).filter(LineupsPresentation.Player::captain).map(LineupsPresentation.Player::key))
+                .as("captain follows the explicit flag independently of position or starter role")
+                .containsExactly("HOME:1", "HOME:6");
+        assertThat(players(view.teams().getLast())).noneMatch(LineupsPresentation.Player::captain);
         assertThat(players(team).map(LineupsPresentation.Player::key))
                 .containsExactlyInAnyOrderElementsOf(home.stream().map(player -> "HOME:" + player.providerPlayerId()).toList());
         assertThat(view.teams().getLast().starterGroups()).extracting(LineupsPresentation.Group::key).containsExactly("D");
@@ -79,6 +87,7 @@ class LineupsPresentationTest {
                 assertThat(player.shirtNumber()).isEqualTo("—");
                 assertThat(player.positionLabel()).isEqualTo("Poste non renseigné");
                 assertThat(player.name()).isEqualTo("No optional fields");
+                assertThat(player.captain()).isFalse();
             });
         });
         assertThat(view.teams().getLast()).satisfies(team -> {
@@ -112,22 +121,63 @@ class LineupsPresentationTest {
 
     @Test
     void identityUsesProviderIdAndSideRatherThanNameShirtNumberOrRole() {
-        List<EventLineupPlayer> sameNames = List.of(player(10, "Same name", 8, "M", true),
+        List<EventLineupPlayer> sameNames = List.of(player(10, "Same name", 8, "M", true, true),
                 player(11, "Same name", 8, "M", true));
         var before = LineupsPresentation.from(lineups(false, null, sameNames,
                 List.of(player(10, "Same name", 8, "M", true))));
         assertThat(players(before.teams().getFirst()).map(LineupsPresentation.Player::key))
                 .containsExactly("HOME:10", "HOME:11");
         assertThat(players(before.teams().getLast()).map(LineupsPresentation.Player::key)).containsExactly("AWAY:10");
+        assertThat(players(before.teams().getFirst()).filter(LineupsPresentation.Player::captain)
+                .map(LineupsPresentation.Player::key)).containsExactly("HOME:10");
         var after = LineupsPresentation.from(lineups(true, null,
-                List.of(player(10, "New display name", 22, "F", false)), List.of()));
+                List.of(player(10, "New display name", 22, "F", false, false)), List.of()));
         assertThat(after.teams().getFirst().substitutes()).singleElement()
-                .satisfies(player -> assertThat(player.key()).isEqualTo("HOME:10"));
+                .satisfies(player -> {
+                    assertThat(player.key()).isEqualTo("HOME:10");
+                    assertThat(player.captain()).isFalse();
+                });
         assertThat(after.teams().getFirst().starterGroups()).isEmpty();
     }
 
     private static Stream<LineupsPresentation.Player> players(LineupsPresentation.Team team) {
         return Stream.concat(team.starterGroups().stream().flatMap(group -> group.players().stream()), team.substitutes().stream());
+    }
+
+    @Test
+    void distinguishesAbsentAndEmptyStatisticsAndKeepsMissingPlayersOutsideRosterCounts() {
+        var missing = List.of(
+                missing(20, "Achilles Tendon Injury"), missing(21, "Sprained Knee Injury"),
+                missing(22, "Dislocated Shoulder"), missing(23, "<unknown description>"), missing(20, "Achilles Tendon Injury"));
+        var home = new TeamLineup(LineupSide.HOME, Optional.empty(), List.of(
+                player(1, "No statistics", 1, "G", true),
+                new EventLineupPlayer(2, "Empty statistics", Optional.empty(), Optional.empty(), false,
+                        Optional.empty(), Optional.of(new PlayerMatchStatistics(Map.of(), Map.of())))), Optional.of(missing));
+        var away = new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of(), Optional.of(List.of()));
+        var view = LineupsPresentation.from(new EventLineups(900001, false, home, away));
+        var team = view.teams().getFirst();
+        assertThat(team.starterCount()).isOne();
+        assertThat(team.substituteCount()).isOne();
+        assertThat(team.starterGroups().getFirst().players().getFirst().statistics()).isNull();
+        assertThat(team.substitutes().getFirst().statistics().groups()).isEmpty();
+        assertThat(team.missingPlayers()).extracting(LineupsPresentation.MissingPlayer::description)
+                .containsExactly("Blessure au tendon d’Achille", "Entorse du genou", "Luxation de l’épaule", "<unknown description>", "Blessure au tendon d’Achille");
+        assertThat(team.missingPlayers()).extracting(LineupsPresentation.MissingPlayer::key)
+                .containsExactly("HOME:20", "HOME:21", "HOME:22", "HOME:23", "HOME:20|duplicate:2");
+        assertThat(team.missingPlayers()).allSatisfy(player -> {
+            assertThat(player.expectedReturn()).isEqualTo("20/09/2026 à 02:00 +02:00");
+            assertThat(player.reason()).isEqualTo("99");
+            assertThat(player.externalType()).isEqualTo("5");
+        });
+        assertThat(view.teams().getLast().missingPlayers()).isEmpty();
+        assertThat(LineupsPresentation.from(lineups(false, null, List.of(), List.of())).teams().getFirst().missingPlayers()).isNull();
+        assertThat(home.missingPlayers().orElseThrow().getFirst().description()).contains("Achilles Tendon Injury");
+    }
+
+    private static MissingLineupPlayer missing(long id, String description) {
+        return new MissingLineupPlayer(id, "Missing " + id, Optional.empty(), Optional.empty(), Optional.of("missing"),
+                Optional.of(99), Optional.of(description), Optional.of(5),
+                Optional.of(OffsetDateTime.parse("2026-09-20T02:00:00+02:00")));
     }
 
     private static EventLineups lineups(boolean confirmed, String formation, List<EventLineupPlayer> home, List<EventLineupPlayer> away) {
@@ -137,5 +187,11 @@ class LineupsPresentationTest {
 
     private static EventLineupPlayer player(long id, String name, Integer shirt, String position, boolean starter) {
         return new EventLineupPlayer(id, name, Optional.ofNullable(shirt), Optional.ofNullable(position), starter);
+    }
+
+    private static EventLineupPlayer player(long id, String name, Integer shirt, String position,
+                                            boolean starter, Boolean captain) {
+        return new EventLineupPlayer(id, name, Optional.ofNullable(shirt), Optional.ofNullable(position),
+                starter, Optional.ofNullable(captain));
     }
 }

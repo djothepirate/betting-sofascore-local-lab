@@ -3,11 +3,15 @@ package com.bettingproject.sofascorelocal.adapter.web;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventLineupPlayer;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventLineups;
 import com.bettingproject.sofascorelocal.domain.eventdata.LineupSide;
+import com.bettingproject.sofascorelocal.domain.eventdata.MissingLineupPlayer;
 import com.bettingproject.sofascorelocal.domain.eventdata.TeamLineup;
 
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 
 /** Display-only roster grouping. Rendering escapes text; no pitch position is inferred from formation. */
 public final class LineupsPresentation {
@@ -43,14 +47,44 @@ public final class LineupsPresentation {
                 .map(key -> new Group(key, groupLabel(key), List.copyOf(starters.get(key)))).toList();
         return new Team(side, name == null || name.isBlank() ? sideLabel : name, sideLabel,
                 lineup.formation().orElse("Formation non renseignée"), starterCount, substitutes.size(),
-                groups, List.copyOf(substitutes));
+                groups, List.copyOf(substitutes), lineup.missingPlayers()
+                .map(values -> missingPlayers(side, values)).orElse(null));
     }
 
     private static Player player(String side, EventLineupPlayer source) {
         return new Player(side + ":" + source.providerPlayerId(), source.name(),
                 source.shirtNumber().map(String::valueOf).orElse("—"),
                 source.position().map(LineupsPresentation::positionLabel).orElse("Poste non renseigné"),
-                source.starter() ? "Titulaire" : "Remplaçant");
+                source.starter() ? "Titulaire" : "Remplaçant", source.captain().orElse(false),
+                source.statistics().map(PlayerStatisticsPresentation::from).orElse(null));
+    }
+
+    private static List<MissingPlayer> missingPlayers(String side, List<MissingLineupPlayer> values) {
+        Map<Long, Integer> occurrences = new LinkedHashMap<>();
+        return values.stream().map(value -> {
+            int occurrence = occurrences.merge(value.providerPlayerId(), 1, Integer::sum);
+            String key = side + ":" + value.providerPlayerId() + (occurrence == 1 ? "" : "|duplicate:" + occurrence);
+            return missingPlayer(key, value);
+        }).toList();
+    }
+
+    private static MissingPlayer missingPlayer(String key, MissingLineupPlayer source) {
+        return new MissingPlayer(key, source.name(),
+                source.shirtNumber().map(String::valueOf).orElse("—"),
+                source.position().map(LineupsPresentation::positionLabel).orElse("Poste non renseigné"),
+                source.description().map(value -> switch (value) {
+                    case "Achilles Tendon Injury" -> "Blessure au tendon d’Achille";
+                    case "Sprained Knee Injury" -> "Entorse du genou";
+                    case "Dislocated Shoulder" -> "Luxation de l’épaule";
+                    case "Hip Injury" -> "Blessure à la hanche";
+                    case "Thigh Injury" -> "Blessure à la cuisse";
+                    case "yellow_or_red_card_suspension" -> "Suspension liée aux cartons";
+                    default -> value;
+                }).orElse("Motif non renseigné"),
+                source.expectedEndDate().map(value -> value.format(
+                        DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm XXX", Locale.FRANCE))).orElse("—"),
+                source.type().orElse("—"), source.reason().map(String::valueOf).orElse("—"),
+                source.externalType().map(String::valueOf).orElse("—"));
     }
 
     private static String groupKey(EventLineupPlayer player) {
@@ -82,7 +116,23 @@ public final class LineupsPresentation {
 
     public record View(boolean confirmed, String confirmationLabel, List<Team> teams) { }
     public record Team(String side, String name, String sideLabel, String formation,
-                       int starterCount, int substituteCount, List<Group> starterGroups, List<Player> substitutes) { }
+                       int starterCount, int substituteCount, List<Group> starterGroups, List<Player> substitutes,
+                       List<MissingPlayer> missingPlayers) {
+        public Team(String side, String name, String sideLabel, String formation, int starterCount,
+                    int substituteCount, List<Group> starterGroups, List<Player> substitutes) {
+            this(side, name, sideLabel, formation, starterCount, substituteCount, starterGroups, substitutes, null);
+        }
+    }
     public record Group(String key, String label, List<Player> players) { }
-    public record Player(String key, String name, String shirtNumber, String positionLabel, String roleLabel) { }
+    public record Player(String key, String name, String shirtNumber, String positionLabel, String roleLabel,
+                         boolean captain, PlayerStatisticsPresentation.View statistics) {
+        public Player(String key, String name, String shirtNumber, String positionLabel, String roleLabel) {
+            this(key, name, shirtNumber, positionLabel, roleLabel, false, null);
+        }
+        public Player(String key, String name, String shirtNumber, String positionLabel, String roleLabel, boolean captain) {
+            this(key, name, shirtNumber, positionLabel, roleLabel, captain, null);
+        }
+    }
+    public record MissingPlayer(String key, String name, String shirtNumber, String positionLabel,
+                                String description, String expectedReturn, String type, String reason, String externalType) { }
 }

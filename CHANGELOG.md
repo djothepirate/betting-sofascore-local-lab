@@ -4,6 +4,17 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — capitaines et détails des joueurs dans les compositions
+
+- Ajoute le badge « C · Capitaine » pour `captain: true`, les statistiques individuelles
+  accessibles sur chaque carte et la liste des joueurs indisponibles sous leur équipe.
+- Conserve les statistiques numériques, variantes de note et attributs d'indisponibilité
+  dans les observations `event-lineups-v3`, avec migration V41 append-only. Les valeurs
+  absentes restent distinctes des zéros et des blocs vides ; les anciennes empreintes restent lisibles.
+- Étend le diff J6 ; conserve la projection fermée J7 v1 et la vérification complète de la source.
+- Contrat et preuves : [compositions V3](docs/architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md),
+  [qualification](docs/validation/WO058-PLAYER-DETAILS-20260909.md).
+
 ### WO-058 — libellés des statistiques et cartes joueurs
 
 - Précise « dans le tiers offensif » pour les fautes subies, entrées et phases concernées,

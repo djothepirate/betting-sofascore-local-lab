@@ -1,6 +1,7 @@
 (() => {
   "use strict";
   const versions = new WeakMap();
+  const statisticVersions = new WeakMap();
   const list = value => Array.isArray(value) ? value : [];
   const text = (value, fallback = "") => value === null || value === undefined || String(value).trim() === ""
     ? fallback : String(value);
@@ -60,7 +61,10 @@
     const substitutes = sectionNode("substitutes", "Remplaçants");
     substitutes.append(create("ul", "lineups-players lineups-bench", "data-lineups-substitutes"),
       create("p", "lineups-empty", "data-lineups-substitutes-empty", "Aucun remplaçant renseigné."));
-    body.append(starters, substitutes);
+    const missing = sectionNode("missing", "Joueurs indisponibles");
+    missing.append(create("p", "lineups-empty", "data-lineups-missing-empty"),
+      create("ul", "lineups-missing-list", "data-lineups-missing-list"));
+    body.append(starters, substitutes, missing);
     team.append(summary, body);
     return team;
   }
@@ -76,11 +80,25 @@
   function playerNode(key) {
     const player = create("li", "lineups-player", "data-lineups-player");
     player.dataset.lineupsPlayer = key;
+    const details = create("details", "lineups-player-details", "data-lineups-player-details");
+    const summary = create("summary", "lineups-player-summary");
     const info = create("span", "lineups-player-info");
+    const title = create("span", "lineups-player-title");
+    title.append(create("strong", "lineups-name", "data-lineups-name"));
     const meta = create("span", "lineups-player-meta");
     meta.append(create("span", "", "data-lineups-position"));
-    info.append(create("strong", "lineups-name", "data-lineups-name"), meta);
-    player.append(create("span", "lineups-number", "data-lineups-number"), info);
+    info.append(title, meta, create("span", "lineups-statistics-hint", "data-lineups-statistics-hint"));
+    summary.append(create("span", "lineups-number", "data-lineups-number"), info);
+    const statistics = create("div", "lineups-player-statistics", "data-lineups-player-statistics");
+    const ratings = create("details", "lineups-source-details", "data-lineups-rating-versions");
+    ratings.append(create("summary", "", "", "Versions de la note fournisseur"),
+      create("dl", "lineups-metrics", "data-lineups-metrics"));
+    statistics.append(create("p", "lineups-statistics-empty", "data-lineups-statistics-empty"),
+      create("div", "", "data-lineups-statistic-groups"), ratings,
+      create("p", "lineups-statistics-note", "data-lineups-statistics-note",
+        "Valeurs arrondies à deux décimales pour l’affichage. Les notes conservent l’échelle du fournisseur."));
+    details.append(summary, statistics);
+    player.append(details);
     return player;
   }
 
@@ -92,6 +110,96 @@
     if (badge.getAttribute("aria-label") !== numberLabel) badge.setAttribute("aria-label", numberLabel);
     write(node.querySelector("[data-lineups-name]"), text(player.name, "Joueur non renseigné"));
     write(node.querySelector("[data-lineups-position]"), text(player.positionLabel, "Poste non renseigné"));
+    const captain = node.querySelector("[data-lineups-captain]");
+    if (player.captain === true) {
+      if (!captain) node.querySelector(".lineups-player-title")
+        .append(create("span", "lineups-captain", "data-lineups-captain", "C · Capitaine"));
+    } else {
+      captain?.remove();
+    }
+    updateStatistics(node, player.statistics);
+  }
+
+  function metricRows(parent, metrics) {
+    const existing = new Map(Array.from(parent.children, node => [node.dataset.lineupsMetric, node]));
+    order(parent, list(metrics).map(metric => {
+      const node = existing.get(metric.key) || create("div", "", "data-lineups-metric");
+      node.dataset.lineupsMetric = metric.key;
+      if (!node.firstElementChild) node.append(create("dt"), create("dd"));
+      write(node.querySelector("dt"), text(metric.label));
+      write(node.querySelector("dd"), text(metric.value));
+      return node;
+    }));
+  }
+
+  function updateStatistics(node, view) {
+    const version = JSON.stringify(view ?? null);
+    if (statisticVersions.get(node) === version) return;
+    const groups = list(view?.groups), ratingVersions = list(view?.ratingVersions);
+    const empty = node.querySelector("[data-lineups-statistics-empty]");
+    write(node.querySelector("[data-lineups-statistics-hint]"), view ? "Statistiques" : "Détails du joueur");
+    write(empty, view ? "Aucune statistique renseignée pour ce joueur." : "Statistiques non fournies pour ce joueur.");
+    empty.hidden = groups.length > 0 || ratingVersions.length > 0;
+    const container = node.querySelector("[data-lineups-statistic-groups]");
+    const existing = new Map(Array.from(container.children, group => [group.dataset.lineupsStatisticGroup, group]));
+    order(container, groups.map(group => {
+      const panel = existing.get(group.key) || create("section", "lineups-statistic-group", "data-lineups-statistic-group");
+      panel.dataset.lineupsStatisticGroup = group.key;
+      if (!panel.firstElementChild) panel.append(create("h6", "", "data-lineups-statistic-group-label"),
+        create("dl", "lineups-metrics", "data-lineups-metrics"));
+      write(panel.querySelector("[data-lineups-statistic-group-label]"), text(group.label));
+      metricRows(panel.querySelector("[data-lineups-metrics]"), group.metrics);
+      return panel;
+    }));
+    const ratings = node.querySelector("[data-lineups-rating-versions]");
+    ratings.hidden = ratingVersions.length === 0;
+    metricRows(ratings.querySelector("[data-lineups-metrics]"), ratingVersions);
+    node.querySelector("[data-lineups-statistics-note]").hidden = groups.length === 0 && ratingVersions.length === 0;
+    statisticVersions.set(node, version);
+  }
+
+  function missingPlayerNode(key) {
+    const player = create("li", "lineups-missing-player", "data-lineups-missing-player");
+    player.dataset.lineupsMissingPlayer = key;
+    player.append(create("strong", "", "data-lineups-missing-name"),
+      create("p", "lineups-missing-position", "data-lineups-missing-position"),
+      create("p", "", "data-lineups-missing-description"),
+      create("p", "lineups-return", "data-lineups-missing-return"));
+    const source = create("details", "lineups-source-details", "data-lineups-missing-source");
+    const fields = create("dl", "lineups-metrics");
+    for (const [key, label] of [["type", "Type"], ["reason", "Code du motif"], ["external", "Type externe"]]) {
+      const field = create("div");
+      field.append(create("dt", "", "", label), create("dd", "", `data-lineups-missing-${key}`));
+      fields.append(field);
+    }
+    source.append(create("summary", "", "", "Informations fournisseur"), fields);
+    player.append(source);
+    return player;
+  }
+
+  function updateMissingPlayers(teamNode, values) {
+    const section = teamNode.querySelector('[data-lineups-section="missing"]');
+    const provided = Array.isArray(values), players = list(values);
+    write(section.querySelector("[data-lineups-count]"), provided ? String(players.length) : "—");
+    const empty = section.querySelector("[data-lineups-missing-empty]");
+    write(empty, provided ? "Aucun joueur indisponible signalé." : "Informations sur les joueurs indisponibles non fournies.");
+    empty.hidden = players.length > 0;
+    const container = section.querySelector("[data-lineups-missing-list]");
+    const existing = new Map(Array.from(container.children, node => [node.dataset.lineupsMissingPlayer, node]));
+    const usedKeys = new Set();
+    order(container, players.map((player, index) => {
+      let key = text(player.key, `missing:${index}`);
+      if (usedKeys.has(key)) key = `${key}|duplicate:${index}`;
+      usedKeys.add(key);
+      const node = existing.get(key) || missingPlayerNode(key);
+      for (const [key, value] of [["name", player.name], ["description", player.description], ["type", player.type],
+        ["reason", player.reason], ["external", player.externalType],
+        ["position", `${player.positionLabel} · N° ${player.shirtNumber}`],
+        ["return", `Retour estimé fournisseur : ${player.expectedReturn}`]])
+        write(node.querySelector(`[data-lineups-missing-${key}]`), text(value));
+      node.querySelector("[data-lineups-missing-return]").hidden = player.expectedReturn === "—";
+      return node;
+    }));
   }
 
   function updateTeam(node, team) {
@@ -136,6 +244,7 @@
     node.querySelector("[data-lineups-starters-empty]").hidden = groups.some(group => list(group.players).length > 0);
     order(node.querySelector("[data-lineups-substitutes]"), playerNodes(bench, "substitutes"));
     node.querySelector("[data-lineups-substitutes-empty]").hidden = bench.length > 0;
+    updateMissingPlayers(node, team.missingPlayers);
   }
 
   function controls(host) {
@@ -167,6 +276,7 @@
     const focused = host.contains(document.activeElement) ? document.activeElement : null;
     const focusTeam = focused?.closest("[data-lineups-team]")?.dataset.lineupsTeam;
     const focusSection = focused?.closest("[data-lineups-section]")?.dataset.lineupsSection;
+    const focusPlayer = focused?.closest("[data-lineups-player]")?.dataset.lineupsPlayer;
     const parts = controls(host);
     write(parts.confirmation, text(view.confirmationLabel,
       view.confirmed === true ? "Compositions confirmées" : "Compositions provisoires"));
@@ -180,13 +290,22 @@
     });
     order(parts.teams, teams);
     parts.empty.hidden = teams.length > 0;
-    if (focused && document.activeElement !== focused) {
-      if (focused.isConnected && host.contains(focused)) focused.focus({preventScroll: true});
-      else {
-        const team = teams.find(panel => panel.dataset.lineupsTeam === focusTeam);
-        const section = Array.from(team?.querySelectorAll("[data-lineups-section]") || [])
+    if (focused) {
+      const team = teams.find(panel => panel.dataset.lineupsTeam === focusTeam);
+      const player = Array.from(team?.querySelectorAll("[data-lineups-player]") || [])
+        .find(node => node.dataset.lineupsPlayer === focusPlayer);
+      const section = player?.closest("[data-lineups-section]")
+        || Array.from(team?.querySelectorAll("[data-lineups-section]") || [])
           .find(panel => panel.dataset.lineupsSection === focusSection);
-        (section || team)?.querySelector(":scope > summary")?.focus({preventScroll: true});
+      // A connected control can become hidden when rating versions disappear or
+      // its player moves into a collapsed section. Confirm focus restoration
+      // succeeded, then fall back through the visible containing summaries.
+      for (const candidate of [focused, player?.querySelector("[data-lineups-player-details] > summary"),
+        section?.querySelector(":scope > summary"), team?.querySelector(":scope > summary")]) {
+        if (!candidate?.isConnected || !host.contains(candidate) || candidate.getClientRects().length === 0
+            || getComputedStyle(candidate).visibility !== "visible") continue;
+        if (document.activeElement !== candidate) candidate.focus({preventScroll: true});
+        if (document.activeElement === candidate) break;
       }
     }
     versions.set(host, version);

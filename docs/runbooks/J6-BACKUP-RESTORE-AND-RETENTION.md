@@ -30,10 +30,9 @@ V39 ajoute la politique groupée immuable, les groupes de requêtes et les éch�
 V40 ajoute les contraintes propres à `live-v5` : cadence de 100 secondes, pause d'une seconde entre
 groupes de cette politique, plafonds de 2 500 appels par rencontre et 20 000 par campagne, budget
 brut indépendant de 15 728 640 000 octets maximum. Aucune ligne ni empreinte historique n'est
-réécrite ; `live-v4` conserve ses paramètres. Les gardes courants exigent V40 ; les preuves V39 et
-antérieures restent historiques. Le format du manifeste et
-l'algorithme `normalizedProvenanceSha256` restent inchangés : cette empreinte porte sur la
-provenance et les hashes normalisés, sans comparer directement chaque colonne métier.
+réécrite ; `live-v4` conserve ses paramètres. Sous V40, le format du manifeste et
+l'algorithme `normalizedProvenanceSha256` conservaient la provenance et les hashes normalisés,
+sans comparer directement chaque colonne métier.
 Le test PostgreSQL de roundtrip vérifie séparément la conservation matérielle des trois
 nouvelles valeurs J4 (`is_awarded=true`, `home_display_score=0`, `away_display_score=3`),
 avec leurs identifiants et leur provenance, après restauration dans une base de test distincte.
@@ -43,6 +42,14 @@ projection et révisions des échéances, sans réarmer la collecte. La montée 
 compare aussi matériellement les manifestes, appels, observations et anciennes empreintes. Le
 format des champs du manifeste J6 reste inchangé ; une preuve V39 ne qualifie pas les nouvelles
 bornes ni la restauration d'une campagne `live-v5`.
+
+V41 ajoute les [détails des compositions](../architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md).
+Les gardes courants exigent maintenant V41 ; les preuves V40 et antérieures restent historiques.
+Le champ `normalizedProvenanceSha256` conserve son nom dans le manifeste, mais son calcul V41
+couvre aussi les lignes complètes de `j5_event_lineup_side` et `j5_event_lineup_player`, afin de
+vérifier les capitaines, statistiques individuelles et indisponibles après restauration. Une
+nouvelle preuve de sauvegarde/restauration V41 est donc nécessaire avant une rétention ultérieure.
+Le complément est qualifié sur PostgreSQL isolé, sans sauvegarde ou purge de la base opérateur.
 
 ```text
 PROVIDER_CALL_REQUIRED=NO
@@ -57,7 +64,7 @@ NORMALIZED_OBSERVATION_DELETION=IMPOSSIBLE_BY_DESIGN
 - PowerShell 7.4 ou plus récent pour préserver les pipelines binaires natifs ;
 - exécutable `age` disponible dans `PATH` ou fourni avec `-AgePath` ;
 - PostgreSQL local démarré et sain ;
-- Flyway V40 appliqué ; la rétention reste définie par V22, V23 étend seulement
+- Flyway V41 appliqué ; la rétention reste définie par V22, V23 étend seulement
   `export_manifest` pour J7, V24 élargit la portée du cache de découverte tournoi, V25 ajoute
   uniquement la provenance de l'import JSON local, V26 autorise `event-incidents-v14`, V27 ajoute
   le ledger J8 sans étendre le périmètre de purge et V28 autorise uniquement
@@ -202,7 +209,7 @@ PostgreSQL possédée. Elles ne constituent ni une boucle indéfinie ni un budge
 Le script :
 
 1. refuse une application encore à l'écoute sur le port 8087 ;
-2. vérifie Compose, le verrou réseau, la version courante Flyway V40, le garde fournisseur `FREE`
+2. vérifie Compose, le verrou réseau, la version courante Flyway V41, le garde fournisseur `FREE`
    et l'absence de campagne live `RUNNING` ou `CLEANUP_REQUIRED` ;
 3. vérifie le SHA-256 réel de chaque payload retenu ;
 4. vérifie l'exécutable Docker exact ; sous Windows, il doit être un fichier absolu sans reparse
@@ -273,7 +280,7 @@ octets bruts restent couverts séparément par les preuves de snapshots ; ils ne
 dans le ledger live. Aucun payload ni contenu complet du ledger n'est imprimé par le script.
 
 Un manifeste historique V32 reste une preuve de sa qualification historique. Il ne satisfait pas
-la porte de rétention courante V40, car il ne démontre pas la restauration de ces tables et politiques.
+la porte de rétention courante V41, car il ne démontre pas la restauration de ces tables, politiques et détails joueurs.
 Restaurer les preuves live ne déclenche aucun worker ni reprise de campagne : les opt-ins restent
 désactivés et tout nouveau lancement exige une action opérateur. Un garde `OWNED` ou
 `CLEANUP_REQUIRED` ne peut pas être considéré libre du seul fait d'un redémarrage ou d'un délai.
@@ -362,7 +369,7 @@ pwsh -NoProfile -File .\scripts\Invoke-J6Retention.ps1 `
   -ConfirmationPhrase 'PURGER <N> PAYLOADS J6 <J6_RETENTION_PLAN_SHA256>'
 ```
 
-Le script revérifie le nom du fichier chiffré, son hash, Flyway V40, l'égalité complète des preuves
+Le script revérifie le nom du fichier chiffré, son hash, Flyway V41, l'égalité complète des preuves
 source/restauration, les six compteurs et l'empreinte metadata-only du ledger J7 — incluant grant,
 révocation et consommation owner-go — puis les sept compteurs live, le garde libre, l'absence de
 campagne active et `liveLedgerSha256`, ainsi que la couverture. Le service recalcule ensuite le

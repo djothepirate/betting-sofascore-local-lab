@@ -49,21 +49,73 @@
           </ul>
           <p class="lineups-empty" data-lineups-substitutes-empty th:hidden="${team.substituteCount > 0}">Aucun remplaçant renseigné.</p>
         </details>
+        <details class="lineups-section" data-lineups-section="missing" open>
+          <summary><span class="lineups-section-title">Joueurs indisponibles</span><span class="lineups-count" data-lineups-count th:text="${team.missingPlayers == null ? '—' : team.missingPlayers.size()}">—</span></summary>
+          <p class="lineups-empty" data-lineups-missing-empty th:hidden="${team.missingPlayers != null and !team.missingPlayers.isEmpty()}"
+             th:text="${team.missingPlayers == null ? 'Informations sur les joueurs indisponibles non fournies.' : 'Aucun joueur indisponible signalé.'}">Informations sur les joueurs indisponibles non fournies.</p>
+          <ul class="lineups-missing-list" data-lineups-missing-list>
+            <li th:each="player : ${team.missingPlayers}" class="lineups-missing-player" th:attr="data-lineups-missing-player=${player.key}">
+              <strong data-lineups-missing-name th:text="${player.name}">Joueur</strong>
+              <p class="lineups-missing-position" data-lineups-missing-position th:text="${player.positionLabel + ' · N° ' + player.shirtNumber}">Poste</p>
+              <p data-lineups-missing-description th:text="${player.description}">Motif non renseigné</p>
+              <p class="lineups-return" data-lineups-missing-return th:hidden="${player.expectedReturn == '—'}"
+                 th:text="${'Retour estimé fournisseur : ' + player.expectedReturn}">Retour estimé fournisseur</p>
+              <details class="lineups-source-details" data-lineups-missing-source>
+                <summary>Informations fournisseur</summary>
+                <dl class="lineups-metrics">
+                  <div><dt>Type</dt><dd data-lineups-missing-type th:text="${player.type}">—</dd></div>
+                  <div><dt>Code du motif</dt><dd data-lineups-missing-reason th:text="${player.reason}">—</dd></div>
+                  <div><dt>Type externe</dt><dd data-lineups-missing-external th:text="${player.externalType}">—</dd></div>
+                </dl>
+              </details>
+            </li>
+          </ul>
+        </details>
       </div>
     </details>
   </div>
 </div>
 
 <li th:fragment="player(player)" class="lineups-player" th:attr="data-lineups-player=${player.key}">
+ <details class="lineups-player-details" data-lineups-player-details>
+  <summary class="lineups-player-summary">
   <span class="lineups-number" data-lineups-number
         th:attr="aria-label=${#strings.isEmpty(player.shirtNumber) or player.shirtNumber == '—' ? 'Numéro de maillot non renseigné' : 'Numéro de maillot ' + player.shirtNumber}"
         th:text="${#strings.isEmpty(player.shirtNumber) ? '—' : player.shirtNumber}">—</span>
   <span class="lineups-player-info">
-    <strong class="lineups-name" data-lineups-name th:text="${player.name}">Joueur</strong>
+    <span class="lineups-player-title">
+      <strong class="lineups-name" data-lineups-name th:text="${player.name}">Joueur</strong>
+      <span class="lineups-captain" data-lineups-captain th:if="${player.captain}">C · Capitaine</span>
+    </span>
     <span class="lineups-player-meta">
       <span data-lineups-position th:text="${player.positionLabel}">Poste non renseigné</span>
     </span>
+    <span class="lineups-statistics-hint" data-lineups-statistics-hint th:text="${player.statistics == null ? 'Détails du joueur' : 'Statistiques'}">Statistiques</span>
   </span>
+  </summary>
+  <div class="lineups-player-statistics" data-lineups-player-statistics>
+    <p class="lineups-statistics-empty" data-lineups-statistics-empty
+       th:hidden="${player.statistics != null and (!player.statistics.groups.isEmpty() or !player.statistics.ratingVersions.isEmpty())}"
+       th:text="${player.statistics == null ? 'Statistiques non fournies pour ce joueur.' : 'Aucune statistique renseignée pour ce joueur.'}">Statistiques non fournies pour ce joueur.</p>
+    <div data-lineups-statistic-groups>
+      <th:block th:if="${player.statistics != null}">
+        <section class="lineups-statistic-group" th:each="group : ${player.statistics.groups}" th:attr="data-lineups-statistic-group=${group.key}">
+          <h6 data-lineups-statistic-group-label th:text="${group.label}">Groupe</h6>
+          <dl class="lineups-metrics" data-lineups-metrics>
+            <div th:each="metric : ${group.metrics}" th:attr="data-lineups-metric=${metric.key}"><dt th:text="${metric.label}">Statistique</dt><dd th:text="${metric.value}">Valeur</dd></div>
+          </dl>
+        </section>
+      </th:block>
+    </div>
+    <details class="lineups-source-details" data-lineups-rating-versions th:hidden="${player.statistics == null or player.statistics.ratingVersions.isEmpty()}">
+      <summary>Versions de la note fournisseur</summary>
+      <dl class="lineups-metrics" data-lineups-metrics>
+        <th:block th:if="${player.statistics != null}"><div th:each="metric : ${player.statistics.ratingVersions}" th:attr="data-lineups-metric=${metric.key}"><dt th:text="${metric.label}">Version</dt><dd th:text="${metric.value}">Valeur</dd></div></th:block>
+      </dl>
+    </details>
+    <p class="lineups-statistics-note" data-lineups-statistics-note th:hidden="${player.statistics == null or (player.statistics.groups.isEmpty() and player.statistics.ratingVersions.isEmpty())}">Valeurs arrondies à deux décimales pour l’affichage. Les notes conservent l’échelle du fournisseur.</p>
+  </div>
+ </details>
 </li>
 </body>
 </html>

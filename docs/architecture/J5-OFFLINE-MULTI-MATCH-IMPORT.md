@@ -286,11 +286,13 @@ Le flux réutilise les parseurs qualifiés :
 ```text
 EVENT_STATISTICS -> EventStatisticsV2Parser
 EVENT_INCIDENTS  -> EventIncidentsV17Parser
-EVENT_LINEUPS    -> EventLineupsV2Parser
+EVENT_LINEUPS    -> EventLineupsV3Parser
 ```
 
 L'injection peut viser leurs interfaces ou super-types existants pour préserver la testabilité.
 Les constantes de version des parseurs restent la source de vérité des métadonnées.
+Les attributs joueurs supplémentaires suivent le [contrat compositions V3](J5-LINEUPS-V3-PLAYER-DETAILS.md),
+y compris l'absence distincte des zéros et le rejeu sans réécriture de V2.
 
 Avant le parser métier, un lecteur JSON strict reconnaît éventuellement l'unique enveloppe 404
 fermée. La racine ne contient que `error`, et l'objet `error` uniquement `code=404` entier plus

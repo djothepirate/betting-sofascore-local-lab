@@ -1,7 +1,7 @@
 package com.bettingproject.sofascorelocal.adapter.sofascore.live;
 
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV17Parser;
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV2Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV3Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseResult;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseStatus;
@@ -51,7 +51,7 @@ public class LivePayloadNormalizer {
     private final EventDetailsV3Parser detailsParser = new EventDetailsV3Parser();
     private final EventStatisticsV2Parser statisticsParser = new EventStatisticsV2Parser();
     private final EventIncidentsV17Parser incidentsParser = new EventIncidentsV17Parser();
-    private final EventLineupsV2Parser lineupsParser = new EventLineupsV2Parser();
+    private final EventLineupsV3Parser lineupsParser = new EventLineupsV3Parser();
 
     public LiveNormalizedPayload normalize(
             long eventId,
@@ -130,7 +130,7 @@ public class LivePayloadNormalizer {
             case EVENT_DETAILS -> EventDetailsV3Parser.PARSER_VERSION;
             case EVENT_STATISTICS -> EventStatisticsV2Parser.PARSER_VERSION;
             case EVENT_INCIDENTS -> EventIncidentsV17Parser.PARSER_VERSION;
-            case EVENT_LINEUPS -> EventLineupsV2Parser.PARSER_VERSION;
+            case EVENT_LINEUPS -> EventLineupsV3Parser.PARSER_VERSION;
             default -> throw new IllegalArgumentException("unsupported live endpoint");
         };
     }
