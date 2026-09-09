@@ -81,7 +81,8 @@
     const player = create("li", "lineups-player", "data-lineups-player");
     player.dataset.lineupsPlayer = key;
     const details = create("details", "lineups-player-details", "data-lineups-player-details");
-    const summary = create("summary", "lineups-player-summary");
+    details.setAttribute("data-lineups-player-shell", "");
+    const summary = create("summary", "lineups-player-summary", "data-lineups-player-header");
     const info = create("span", "lineups-player-info");
     const title = create("span", "lineups-player-title");
     title.append(create("strong", "lineups-name", "data-lineups-name"));
@@ -103,6 +104,7 @@
   }
 
   function updatePlayer(node, player) {
+    playerInteractivity(node, player.statistics);
     const number = text(player.shirtNumber, "—");
     const badge = node.querySelector("[data-lineups-number]");
     write(badge, number);
@@ -117,7 +119,100 @@
     } else {
       captain?.remove();
     }
+    updatePlayerDecorations(node, player);
     updateStatistics(node, player.statistics);
+  }
+
+  const hasStatistics = view => list(view?.groups).some(group => list(group.metrics).length > 0)
+    || list(view?.ratingVersions).length > 0;
+
+  function playerInteractivity(node, view) {
+    const interactive = hasStatistics(view);
+    const old = node.querySelector("[data-lineups-player-shell], [data-lineups-player-details]");
+    if (old.tagName === (interactive ? "DETAILS" : "DIV")) return;
+    const replacement = playerNode(node.dataset.lineupsPlayer).firstElementChild;
+    const freshHeader = replacement.firstElementChild;
+    freshHeader.replaceChildren(...old.firstElementChild.childNodes);
+    if (!interactive) {
+      const shell = create("div", "lineups-player-static", "data-lineups-player-shell");
+      const header = create("div", "lineups-player-summary", "data-lineups-player-header");
+      header.tabIndex = -1;
+      header.append(...freshHeader.childNodes);
+      header.querySelector("[data-lineups-statistics-hint]")?.remove();
+      shell.append(header);
+      node.replaceChildren(shell);
+    } else {
+      if (!freshHeader.querySelector("[data-lineups-statistics-hint]"))
+        freshHeader.querySelector(".lineups-player-info").append(
+          create("span", "lineups-statistics-hint", "data-lineups-statistics-hint", "Statistiques"));
+      node.replaceChildren(replacement);
+    }
+    statisticVersions.delete(node);
+  }
+
+  function bootIcon() {
+    const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svg.setAttribute("viewBox", "0 0 32 24");
+    svg.setAttribute("fill", "none");
+    svg.setAttribute("class", "lineups-boot");
+    svg.setAttribute("data-lineups-assist-icon", "");
+    for (const attributes of [
+      {d: "M4 3h7l3 7 11 4c3 1 4 3 3 5H3V9l1-6Z", fill: "currentColor"},
+      {d: "m12 7 5 1m-4 2 6 1M3 18h25", stroke: "white", "stroke-width": "1.5"},
+      {d: "M6 19v3m7-3v3m9-3v3m5-3v3", stroke: "currentColor", "stroke-width": "2.5"}]) {
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      Object.entries(attributes).forEach(([key, value]) => path.setAttribute(key, value));
+      svg.append(path);
+    }
+    return svg;
+  }
+
+  function updateCountry(container, view, before) {
+    let country = container.querySelector("[data-lineups-country]");
+    if (!country) {
+      country = create("span", "lineups-country", "data-lineups-country");
+      country.append(create("span", "", "data-lineups-country-label"));
+      container.insertBefore(country, before);
+    }
+    const label = text(view?.label, "Pays non renseigné");
+    country.setAttribute("aria-label", `Pays : ${label}`);
+    write(country.querySelector("[data-lineups-country-label]"), label);
+    const path = text(view?.flagPath);
+    let flag = country.querySelector("[data-lineups-flag]");
+    if (/^\/images\/flags\/4x3\/(?:[a-z]{2}|gb-(?:eng|sct|wls))\.svg$/.test(path)) {
+      if (!flag) {
+        flag = create("img", "lineups-flag", "data-lineups-flag");
+        flag.alt = ""; flag.width = 24; flag.height = 18;
+        country.prepend(flag);
+      }
+      if (flag.getAttribute("src") !== path) flag.setAttribute("src", path);
+    } else flag?.remove();
+  }
+
+  function updatePlayerDecorations(node, player) {
+    const info = node.querySelector(".lineups-player-info");
+    updateCountry(info, player.country, info.querySelector("[data-lineups-statistics-hint]"));
+    let achievements = node.querySelector("[data-lineups-achievements]");
+    if (!achievements) {
+      achievements = create("span", "lineups-achievements", "data-lineups-achievements");
+      info.insertBefore(achievements, info.querySelector("[data-lineups-statistics-hint]"));
+    }
+    const badges = list(player.achievements).filter(value => ["goals", "assists"].includes(value.key)
+      && /^[1-9][0-9]{0,95}$/.test(text(value.count)));
+    achievements.hidden = badges.length === 0;
+    achievements.replaceChildren(...badges.map(value => {
+      const badge = create("span", "lineups-achievement", "data-lineups-achievement");
+      badge.dataset.lineupsAchievement = value.key;
+      badge.setAttribute("role", "img"); badge.setAttribute("aria-label", text(value.label));
+      const repetitions = /^[1-5]$/.test(value.count) ? Number(value.count) : 1;
+      badge.dataset.compact = String(repetitions === 1 && value.count !== "1");
+      const icons = create("span", "lineups-achievement-icons"); icons.setAttribute("aria-hidden", "true");
+      for (let index = 0; index < repetitions; index++) icons.append(value.key === "goals"
+        ? create("span", "", "data-lineups-goal-icon", "⚽") : bootIcon());
+      const countLabel = create("span", "lineups-achievement-count", "", `×${value.count}`);
+      countLabel.setAttribute("aria-hidden", "true"); badge.append(icons, countLabel);
+      return badge;
+    }));
   }
 
   function metricRows(parent, metrics) {
@@ -133,6 +228,7 @@
   }
 
   function updateStatistics(node, view) {
+    if (!hasStatistics(view)) return;
     const version = JSON.stringify(view ?? null);
     if (statisticVersions.get(node) === version) return;
     const groups = list(view?.groups), ratingVersions = list(view?.ratingVersions);
@@ -197,6 +293,7 @@
         ["position", `${player.positionLabel} · N° ${player.shirtNumber}`],
         ["return", `Retour estimé fournisseur : ${player.expectedReturn}`]])
         write(node.querySelector(`[data-lineups-missing-${key}]`), text(value));
+      updateCountry(node, player.country, node.querySelector("[data-lineups-missing-description]"));
       node.querySelector("[data-lineups-missing-return]").hidden = player.expectedReturn === "—";
       return node;
     }));
@@ -300,7 +397,7 @@
       // A connected control can become hidden when rating versions disappear or
       // its player moves into a collapsed section. Confirm focus restoration
       // succeeded, then fall back through the visible containing summaries.
-      for (const candidate of [focused, player?.querySelector("[data-lineups-player-details] > summary"),
+      for (const candidate of [focused, player?.querySelector("[data-lineups-player-header]"),
         section?.querySelector(":scope > summary"), team?.querySelector(":scope > summary")]) {
         if (!candidate?.isConnected || !host.contains(candidate) || candidate.getClientRects().length === 0
             || getComputedStyle(candidate).visibility !== "visible") continue;

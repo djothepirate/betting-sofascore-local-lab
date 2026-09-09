@@ -223,6 +223,14 @@ public final class ChildJvmPlaywrightProviderSupervisor
     }
 
     @Override
+    public PlaywrightProviderCampaign openLiveGroupedV7(UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        if (!Set.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS).equals(allowedEndpoints))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
+        return open(campaignId, allowedEndpoints, LiveProviderGroupTracker.Authority.LIVE_V7);
+    }
+
+    @Override
     public PlaywrightProviderCampaign openManualJ5Grouped(
             UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
         if (!Set.of(SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_INCIDENTS,
@@ -480,7 +488,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     if (state.liveGroups != null) state.liveGroups.dispatched(request, group);
                     state.providerDispatchStarted.set(true);
                     dispatchStarted = true;
-                    boolean liveV6 = state.liveGroups != null && state.liveGroups.isLiveV6();
+                    boolean liveV6 = state.liveGroups != null && state.liveGroups.supportsProvenTimeoutRecovery();
                     requestDeadline = System.nanoTime() + properties.getRequestTimeout().toNanos();
                     responseDeadline = requestDeadline + Duration.ofSeconds(liveV6 ? 3 : 1).toNanos();
                     output.writeByte(liveV6 ? GET_LIVE_V6 : GET);
@@ -547,7 +555,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 if (frame == TIMEOUT_ENDED) {
                     Instant endedAt = diagnosticInstant(input.readLong());
                     int endReason = input.readUnsignedByte();
-                    if (state.liveGroups == null || !state.liveGroups.isLiveV6() || diagnostic == null
+                    if (state.liveGroups == null || !state.liveGroups.supportsProvenTimeoutRecovery() || diagnostic == null
                             || diagnostic.requestedAt() == null || endedAt == null
                             || endReason < 1 || endReason > 2 || state.terminationRequested.get()
                             || System.nanoTime() < requestDeadline || endedAt.isAfter(clock.instant()))

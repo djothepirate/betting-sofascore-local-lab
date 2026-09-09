@@ -34,7 +34,7 @@ class LiveGroupedDataTest {
         var incomplete=envelopes();incomplete.remove(SofascoreEndpointType.EVENT_LINEUPS);
         assertThatThrownBy(()->new GroupedAdmissionProfile(incomplete,"a".repeat(64))).isInstanceOf(IllegalArgumentException.class);
     }
-    @Test void policyVersionIsExplicitAndHistoricalConstructorCannotGrantV5Timing() {
+    @Test void policyVersionIsExplicitAndHistoricalConstructorCannotGrantNewerTiming() {
         var historical=new GroupedAdmissionProfile(envelopes(),"a".repeat(64));
         var v5=new GroupedAdmissionProfile(envelopes(),"a".repeat(64),"live-v5");
         assertThat(historical.policyVersion()).isEqualTo("live-v4");
@@ -48,8 +48,12 @@ class LiveGroupedDataTest {
         assertThat(v6.criticalInterval()).isEqualTo(v5.criticalInterval());
         assertThat(v6.minimumRequestStartInterval()).isEqualTo(Duration.ofSeconds(2));
         assertThat(v5.minimumRequestStartInterval()).isZero();
-        assertThatThrownBy(()->new GroupedAdmissionProfile(envelopes(),"a".repeat(64),"live-v7"))
-                .isInstanceOf(IllegalArgumentException.class);
+        var v7 = new GroupedAdmissionProfile(envelopes(),"a".repeat(64),"live-v7");
+        assertThat(v7).isNotEqualTo(v6);
+        assertThat(v7.criticalInterval()).isEqualTo(Duration.ofSeconds(60));
+        assertThat(v7.lineupInterval()).isEqualTo(Duration.ofSeconds(60));
+        assertThat(v7.minimumRequestStartInterval()).isEqualTo(Duration.ofSeconds(2));
+        assertThat(v7.interGroupDelay()).isEqualTo(Duration.ofSeconds(1));
     }
     @Test void groupedCostsAndFamilySchedulesRejectInvalidBounds() {
         assertThatThrownBy(()->new EndpointEnvelope(Duration.ZERO,Duration.ZERO)).isInstanceOf(IllegalArgumentException.class);

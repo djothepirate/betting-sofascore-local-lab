@@ -759,6 +759,9 @@ from (
         observation.parser_version, observation.normalized_sha256) as value
     from event_detail_observation observation
     union all
+    select 'DETAILS_CONTENT|' || to_jsonb(observation)::text as value
+    from event_detail_observation observation
+    union all
     select concat_ws('|', observation.endpoint_type, observation.id,
         observation.source_snapshot_id, observation.source_reference,
         observation.source_payload_sha256, observation.parser_version,
@@ -873,8 +876,8 @@ try {
     }
 
     $sourceFlywayVersion = Invoke-PrimaryScalar -Sql $flywaySql
-    if ($sourceFlywayVersion -cne '45') {
-        throw 'Flyway V45 must be applied before the J6 backup/restore qualification.'
+    if ($sourceFlywayVersion -cne '47') {
+        throw 'Flyway V47 must be applied before the J6 backup/restore qualification.'
     }
     $providerGuardState = Invoke-PrimaryScalar -Sql 'select state from provider_campaign_guard where singleton_id=1'
     $activeLiveCount = [long](Invoke-PrimaryScalar -Sql "select count(*) from live_campaign where state in ('RUNNING','CLEANUP_REQUIRED')")

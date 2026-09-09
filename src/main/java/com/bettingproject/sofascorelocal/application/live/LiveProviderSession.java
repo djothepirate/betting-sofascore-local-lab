@@ -16,6 +16,7 @@ public final class LiveProviderSession implements AutoCloseable {
     }
     public LiveProviderSession(PlaywrightProviderCampaignFactory factory, UUID campaignId, String policyVersion) {
         campaign = switch (policyVersion) {
+            case "live-v7" -> factory.openLiveGroupedV7(campaignId, ENDPOINTS);
             case "live-v6" -> factory.openLiveGroupedV6(campaignId, ENDPOINTS);
             case "live-v5" -> factory.openLiveGroupedV5(campaignId, ENDPOINTS);
             case "live-v4" -> factory.openLiveGrouped(campaignId, ENDPOINTS);

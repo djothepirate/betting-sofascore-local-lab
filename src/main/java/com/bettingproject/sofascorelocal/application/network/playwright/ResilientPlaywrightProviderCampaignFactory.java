@@ -50,6 +50,9 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
     @Override public PlaywrightProviderCampaign openLiveGroupedV6(UUID id, Set<SofascoreEndpointType> endpoints) {
         return openProtected(id,()->delegate.openLiveGroupedV6(id,endpoints),true);
     }
+    @Override public PlaywrightProviderCampaign openLiveGroupedV7(UUID id, Set<SofascoreEndpointType> endpoints) {
+        return openProtected(id,()->delegate.openLiveGroupedV7(id,endpoints),true);
+    }
     @Override public PlaywrightProviderCampaign openManualJ5Grouped(UUID id, Set<SofascoreEndpointType> endpoints) {
         return openProtected(id,()->delegate.openManualJ5Grouped(id,endpoints));
     }

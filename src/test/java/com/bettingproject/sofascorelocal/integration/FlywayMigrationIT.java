@@ -340,7 +340,7 @@ class FlywayMigrationIT {
         assertThat(exportTable).isEqualTo("export_manifest");
         assertThat(deliveryTable).isEqualTo("j7_delivery");
         assertThat(networkEnabled).isFalse();
-        assertThat(flywayVersion).isEqualTo("45");
+        assertThat(flywayVersion).isEqualTo("47");
         assertThat(rawColumn).isEqualTo("bytea");
     }
 
@@ -7043,7 +7043,7 @@ class FlywayMigrationIT {
 
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$flywaySql"),
-                String.class)).isEqualTo("45");
+                String.class)).isEqualTo("47");
         assertThat(jdbcTemplate.queryForObject(
                 powerShellHereString(script, "$snapshotFingerprintSql"),
                 String.class)).isNotNull();
@@ -7082,7 +7082,7 @@ class FlywayMigrationIT {
                 .contains("j7ProviderOwnerGoRevocationCount")
                 .contains("j7ProviderOwnerGoConsumptionCount")
                 .contains("j7DeliveryLedgerSha256")
-                .contains("$sourceFlywayVersion -cne '45'");
+                .contains("$sourceFlywayVersion -cne '47'");
     }
 
     @Test
@@ -7110,8 +7110,8 @@ class FlywayMigrationIT {
                     .dataSource(sourceDataSource)
                     .locations("classpath:db/migration")
                     .load();
-            assertThat(sourceFlyway.migrate().migrationsExecuted).isEqualTo(45);
-            assertThat(sourceFlyway.info().current().getVersion().getVersion()).isEqualTo("45");
+            assertThat(sourceFlyway.migrate().migrationsExecuted).isEqualTo(47);
+            assertThat(sourceFlyway.info().current().getVersion().getVersion()).isEqualTo("47");
 
             JdbcTemplate sourceJdbc = new JdbcTemplate(sourceDataSource);
             UUID campaignId = UUID.randomUUID();
@@ -7360,7 +7360,7 @@ class FlywayMigrationIT {
                     order by installed_rank desc
                     limit 1
                     """,
-                    String.class)).isEqualTo("45");
+                    String.class)).isEqualTo("47");
             assertThat(restoreJdbc.queryForObject(j8FingerprintSql, String.class))
                     .isEqualTo(sourceJ8Fingerprint);
             assertThat(restoreJdbc.queryForObject(
@@ -7460,8 +7460,8 @@ class FlywayMigrationIT {
                 StandardCharsets.UTF_8);
 
         assertThat(script)
-                .contains("$manifest.source.flywayVersion.ToString() -cne '45'")
-                .contains("valid Flyway V45 raw-payload, J8, J7 and quiescent live ledger restore");
+                .contains("$manifest.source.flywayVersion.ToString() -cne '47'")
+                .contains("valid Flyway V47 raw-payload, J8, J7 and quiescent live ledger restore");
 
         String qualificationFields = powerShellArray(script, "$qualificationFields");
         assertThat(qualificationFields)
@@ -9301,7 +9301,7 @@ class FlywayMigrationIT {
                 response.contentType(),
                 response.latency(),
                 response.payload(),
-                com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV3Parser.PARSER_VERSION,
+                com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV4Parser.PARSER_VERSION,
                 RawSnapshotSchemaStatus.RAW_ONLY,
                 null));
         EventDetails details = new EventDetails(
@@ -9331,7 +9331,7 @@ class FlywayMigrationIT {
                             .hasValue(rawPersistence.snapshotId());
                     assertThat(detail.source().fixtureId()).isEmpty();
                     assertThat(detail.source().parserVersion())
-                            .isEqualTo(com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV3Parser.PARSER_VERSION);
+                            .isEqualTo(com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV4Parser.PARSER_VERSION);
                     assertThat(detail.details().homeTeam().name())
                             .isEqualTo("Saint-Etienne");
                 });
@@ -9339,7 +9339,7 @@ class FlywayMigrationIT {
                 request,
                 response.receivedAt(),
                 Duration.ofMinutes(15),
-                com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV3Parser.PARSER_VERSION))
+                com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV4Parser.PARSER_VERSION))
                 .hasValueSatisfying(candidate -> {
                     assertThat(candidate.snapshotId())
                             .isEqualTo(rawPersistence.snapshotId());

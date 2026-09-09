@@ -55,6 +55,15 @@ class ChildJvmPlaywrightProviderSupervisorTest {
     @ParameterizedTest @ValueSource(strings = {"finished", "aborted", "early", "future", "before-headers",
             "unknown-reason", "without-progress", "forbidden", "rate-limited", "historical"})
     void onlyAcceptsAuthenticatedTerminalTimeoutEvidenceForLiveV6(String mode) throws Exception {
+        verifyTerminalTimeoutAuthority(mode, false);
+    }
+
+    @ParameterizedTest @ValueSource(strings = {"finished", "forbidden"})
+    void v7UsesTheSameProvenTimeoutWireProtocolWithoutWeakeningRefusal(String mode) throws Exception {
+        verifyTerminalTimeoutAuthority(mode, true);
+    }
+
+    private void verifyTerminalTimeoutAuthority(String mode, boolean v7) throws Exception {
         var properties = enabledProperties("terminal-" + mode + ".jar");
         properties.setRequestTimeout(Duration.ofMillis(250));
         Instant created = Instant.parse("2020-01-01T00:00:00Z");
@@ -72,7 +81,7 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                 SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS);
         boolean valid = mode.equals("finished") || mode.equals("aborted");
         var campaign = mode.equals("historical") ? supervisor.openLiveGroupedV5(id, endpoints)
-                : supervisor.openLiveGroupedV6(id, endpoints);
+                : v7 ? supervisor.openLiveGroupedV7(id, endpoints) : supervisor.openLiveGroupedV6(id, endpoints);
         try {
             var group = new LiveProviderDispatchGroup(id, UUID.randomUUID(), 16_386_245L,
                     LiveProviderDispatchGroup.Phase.CHECK);

@@ -5,13 +5,51 @@ Références : [ADR-SS-005 accepté](../../ADR-SS-005-bounded-local-live-j4-j5-c
 [architecture](../architecture/LIVE-J4-J5-CAMPAIGNS.md),
 [qualification](../validation/WO058-LIVE-J4-J5-IMPLEMENTATION-20260907.md).
 
-## Nouvelles préparations : live-v6, profil temporel qualifié en boucle locale
+## Nouvelles préparations : live-v7, fenêtres avant le coup d’envoi
+
+Le lot V4/V46 et live-v7/V47 du 9 septembre est qualifié séparément du profil historique
+v6. Les nouvelles préparations demandent `SOFASCORE_LIVE_GROUPED_V7_QUALIFICATION_SHA256`
+et les huit enveloppes `SOFASCORE_LIVE_GROUPED_V7_{J4,INCIDENTS,STATISTICS,LINEUPS}_{REQUEST,PROCESSING}_ENVELOPE`.
+L’absence de preuve laisse la capacité à zéro. La passe locale dédiée fournit les valeurs
+et le profil ; une empreinte v6 ne vaut pas qualification v7.
+
+Le profil courant garde les protections partagées 25/min, 1 000/h et deux secondes après
+fin d’échange, et admet trois rencontres au plus. Ce plafond est celui du profil,
+pas une limite définitive de l’architecture. Les plafonds minute/heure sont des paramètres
+locaux prudents et révisables. Un candidat 40/min et 2 000/h est analysé séparément, sans
+activation ni modification du budget déjà consommé ou de la suspension fournisseur.
+Avec sept rencontres, les deux secondes seules consomment 56 s par minute avant les
+échanges : relever les compteurs ne suffit pas à établir une cadence fiable de 60 s.
+
+| Phase observée | Appels programmés |
+|---|---|
+| Lancement, J4 notstarted | un groupe J4 + incidents + statistiques + compositions |
+| J4 delayed avec nouveau `startTimestamp` | reprendre les fenêtres sur le nouvel horaire, sans arrêter la rencontre |
+| Coup d’envoi à plus d’une heure | attendre T−60 min, puis un groupe complet |
+| Dernière heure, avant T−5 min | compositions seules toutes les 5 min jusqu’à confirmation |
+| De T−5 min au coup d’envoi | aucune répétition ; attente du coup d’envoi |
+| Coup d’envoi atteint, J4 notstarted | J4 seul toutes les 60 s |
+| J4 inprogress | J4 et les trois familles J5 toutes les 60 s nominales |
+| J4 finished | collecte finale bornée puis arrêt de la rencontre |
+
+Un refus 403/429 conserve la suspension persistante. Les 404 J5 en jeu restent espacés
+par famille ; les timeouts admissibles exigent la preuve terminale et reportent le match.
+Une reprise ne traverse pas la pause T−5/T0 : elle attend le coup d’envoi si nécessaire,
+sans raccourcir son délai minimal. Les observations historiques ne sont pas réécrites.
+Un J4 `delayed` doit porter un nouvel horaire lisible. À T−60 exactement, ce J4 sert de
+contrôle horaire et ses trois familles J5 sont ajoutées au même groupe ; dans les autres
+cas, aucune seconde lecture J4 immédiate n’est créée. Un `delayed` sans horaire, ou après
+un `inprogress`, demande une revue. `postponed` reste arrêté. Une campagne déjà terminée
+ou arrêtée n’est jamais relancée automatiquement par ce recalcul.
+Le prochain lancement et le chargement du profil relèvent toujours de l’opérateur.
+
+## Profil historique live-v6, qualifié en boucle locale
 
 Le premier lot de résilience est implémenté et qualifié fonctionnellement hors fournisseur :
 [résultats et limites](../validation/WO-058-provider-resilience-qualification-20260909.md).
 Le [complément temporel v6](../validation/WO058-LIVE-V6-CAPACITY-20260909.md) qualifie désormais
-sept rencontres avec une preuve distincte des anciennes v5. Les nouvelles
-préparations nécessitent leur profil `grouped-v6`, son SHA et les huit enveloppes dédiées ;
+sept rencontres avec une preuve distincte des anciennes v5. Les
+préparations v6 nécessitaient leur profil `grouped-v6`, son SHA et les huit enveloppes dédiées ;
 sans preuve complète, la capacité proposée reste nulle. Elle est plafonnée à **sept rencontres**,
 même si le plafond opérateur est plus élevé. La cible est 100 s pour J4/incidents/statistiques
 et les compositions prématch, puis 300 s pour les compositions en jeu.

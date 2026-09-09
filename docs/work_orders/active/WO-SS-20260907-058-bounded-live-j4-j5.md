@@ -1,6 +1,6 @@
 # WO-SS-20260907-058 — Campagnes live locales J4/J5 sur sélection de rencontres
 
-- **Statut :** `IN_PROGRESS` — correctif v0.9 réponses lentes/timeouts isolés et groupes v6 avec familles différées réalisé et qualifié fonctionnellement hors fournisseur. La vérification finale réussit le 9 septembre à 17:17:59Z. Le premier lot de résilience v6/V42–V44 et son profil temporel à sept rencontres conservent leurs validations réussies, distinctes de ce nouveau chemin. Les réalisations et preuves historiques v4/V39, v5/V40 et compositions V3/V41 restent conservées ci-dessous. Revue humaine, acceptation fournisseur et fusion restent distinctes ; aucune clôture ni livraison Eclipse.
+- **Statut :** `IN_PROGRESS` — lot compositions/personnes V4 et nouvelle cadence live-v7/V47 réalisé et qualifié hors fournisseur ; revue humaine, acceptation fournisseur et fusion restent distinctes. Le correctif v0.9 réponses lentes/timeouts isolés et groupes v6 avec familles différées reste qualifié fonctionnellement hors fournisseur. Le premier lot de résilience v6/V42–V44 et son profil temporel à sept rencontres conservent leurs validations réussies, distinctes de ce nouveau chemin. Les réalisations et preuves historiques v4/V39, v5/V40 et compositions V3/V41 restent conservées ci-dessous ; aucune clôture ni livraison Eclipse.
 - **Date :** 2026-09-07.
 - **Premier lot du 09/09, antérieur au correctif courant :** résilience `live-v6`/V42–V44 qualifiée fonctionnellement hors fournisseur. Le [complément temporel dédié](../../validation/WO058-LIVE-V6-CAPACITY-20260909.md) qualifie son propre profil à sept rencontres, avec wrapper partagé, PostgreSQL 44 et ordonnanceur v6 réels ; sa vérification finale réussit (2 019 cas Surefire, cinq ignorés, 207 intégrations, trois contrôles Chromium UI sans échec ni erreur). Le plafond opérateur de six et le timeout de 30 s constatés pour cette qualification restent distincts de la capacité prouvée. Ces résultats restent distincts de la qualification fonctionnelle réussie du correctif v0.9.
 - **Jalon :** expérimentation live locale après J9, distincte des parcours manuels existants.
@@ -9,14 +9,45 @@
 - **Base exacte :** `6dfd14286d4f269cbe100bd965257c20298538db`, sommet GitHub vérifié le 7 septembre.
 - **Worktree :** `.tmp/wo058-live-j4-j5`, depuis le dossier Codex du Lab ; worktree distinct d'Eclipse.
 - **Autorité reçue :** ADR-SS-005 v0.1 accepté, puis déclaration « Je valide le WO-058 les travaux peuvent commencer » et demande explicite d'exécuter le plan de réalisation ; port 8087 libéré pour les tests.
-- **ADR courant :** [ADR-SS-005 v0.9](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), autorisation explicite d'un correctif borné pour timeouts isolés, sous preuve terminale, et groupes v6 avec familles différées. La protection persistante commune J3/J4/J5 et la capacité v6 au plus sept restent applicables ; les manifestes v1–v5 gardent leurs règles. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
-- **Livrable présent :** ADR accepté, WO validé, correctif v0.9 réalisé et [rapport de qualification fonctionnelle](../../validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md), avec inventaire de 56 fichiers, commandes, empreintes et résultats ; premier lot de résilience et profil temporel dédiés déjà qualifiés. Les réalisations et preuves antérieures restent conservées, notamment v5/V40 et le complément compositions V3/V41 avec son [contrat](../../architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md) et sa [qualification du 09/09](../../validation/WO058-PLAYER-DETAILS-20260909.md). La preuve de fraîcheur fournisseur ne découle pas de la qualification locale.
+- **ADR courant :** [ADR-SS-005 v0.10](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), autorisation explicite du calendrier v7 et de son contrôle hors fournisseur. La protection persistante commune J3/J4/J5, la capacité v6 au plus sept et la capacité v7 au plus trois restent distinctes ; les manifestes v1–v6 gardent leurs règles. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
+- **Livrable présent :** ADR accepté, WO validé, correctif v0.9 réalisé et [rapport de qualification fonctionnelle](../../validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md), avec inventaire de 56 fichiers, commandes, empreintes et résultats ; premier lot de résilience et profil temporel dédiés déjà qualifiés. Le complément V4/V46/v7/V47 est détaillé dans son [rapport hors fournisseur](../../validation/WO058-PEOPLE-AND-LIVE-V7-20260909.md). Les réalisations et preuves antérieures restent conservées, notamment v5/V40 et le complément compositions V3/V41 avec son [contrat](../../architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md) et sa [qualification du 09/09](../../validation/WO058-PLAYER-DETAILS-20260909.md). La preuve de fraîcheur fournisseur ne découle pas de la qualification locale.
 - **Alignement de gouvernance :** renvois ciblés dans ADR-SS-001 et AGENTS.md ; ADR-SS-002 à 004 inchangés.
 - **Réalisations historiques :** réalisées et qualifiées hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés sous les anciennes politiques ; compléments prématch/phase/clôture et incidents V16/V17 décrits dans les retours ci-dessous, statistiques intégrées aux pages. Les préparations v5 conservées restent limitées à vingt rencontres selon leur propre qualification ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur historiques :** essai à 8 arrêté volontairement, essai à 16 interrompu après coupure PostgreSQL, puis nouveaux lancements manuels à 7 et à 4 ; dernière exécution de cette série terminée, observations distinctes des qualifications locales.
 
 Les statuts restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 `NO_CRITICAL_DEPENDENCY`. Le socle reste Java 25 LTS, Spring Boot 4.1.0, Maven wrapper,
 PostgreSQL local Docker Desktop et application sur `127.0.0.1:8087`, textes UTF-8.
+
+## Lot courant du 9 septembre — cartes, personnes J4 et live-v7
+
+Autorité : demande des décorations de cartes, pays/entraîneurs/arbitre/tour nommé,
+périodes d’incidents repliables et nouvelles règles de collecte. La clarification
+« Oui, attendre le coup d’envoi » confirme la pause T−5/T0. Le dernier exemple fourni
+montre des drapeaux chargés comme images ; le Lab utilise des SVG embarqués localement,
+sans nouvel endpoint ou appel d’image fournisseur.
+
+L’[ADR courant v0.10](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md) isole les
+nouvelles préparations v7 des manifestes existants. La qualification du profil 25/min,
+1 000/h et deux secondes après fin d’échange porte sur trois rencontres à 60/60 s.
+Les deux plafonds sont des paramètres locaux révisables : à la demande du propriétaire,
+un candidat 40/min et 2 000/h est analysé séparément, sans activation ou modification
+rétroactive. La rotation automatique d’IP reste exclue et les 403/429 suspendent toujours
+l’accès de façon persistante.
+
+Le [contrat V4](../../architecture/J4-J5-PEOPLE-V4.md) décrit les métadonnées facultatives,
+leur provenance, V46 et les drapeaux locaux. Le [bilan de campagne réelle 4087041a](../../validation/WO058-REAL-CAMPAIGN-4087041A-20260909.md)
+est conservé comme observation opérateur distincte de la qualification synthétique.
+Aucun déploiement Eclipse, redémarrage opérateur, lancement fournisseur ou migration
+de la base opérateur n’est effectué par l’agent. Les résultats de qualification et leurs
+limites sont consignés dans le [rapport V4/V46/v7](../../validation/WO058-PEOPLE-AND-LIVE-V7-20260909.md).
+
+Complément validé pendant ce lot : un statut J4 `delayed` garde la rencontre dans une
+nouvelle campagne `live-v7` lorsque J4 fournit un nouvel `startTimestamp`. Les fenêtres
+T−60/T−5/T0 sont recalculées sur cet horaire ; un report sans horaire et une régression
+`inprogress` → `delayed` restent à revoir. Cette évolution ne réactive pas le suivi
+historique déjà arrêté. Les libellés des indisponibles sont aussi localisés dans la seule
+projection web, y compris `Strain Injury` → « Blessure à l’entraînement », sans changer les
+attributs fournisseur persistés.
 
 ## 1. Objectif et origine du besoin
 
@@ -1191,6 +1222,30 @@ identifie une perte certaine des diagnostics de la boucle et de la clôture. Le 
 conserve ces deux observations séparément, sans changer le protocole de collecte ou de
 clôture. La piste historique du contrôle de stockage reste une inférence documentée ;
 elle ne vaut pas identification certaine de l’exception disparue.
+
+### Complément du 9 septembre — V4/V46 et calendrier live-v7/V47
+
+Le propriétaire autorise les cartes de composition enrichies, les personnes J4, les
+incidents repliables et le calendrier live-v7. La réalisation ajoute les contrats V4,
+les migrations V46/V47 et le profil `live-v7` sans réinterpréter une campagne historique.
+Un J4 `delayed` avant le début poursuit désormais le groupe sur le nouvel horaire lisible ;
+un horaire absent, ou un passage `inprogress` vers `delayed`, reste soumis à revue. La
+traduction française comprend notamment `Strain Injury` → « Blessure à l’entraînement ».
+
+La qualification est terminée hors fournisseur : 33 tests unitaires ciblés, la suite J6,
+`clean verify`, `-Pintegration-tests verify`, sept cas Chromium/loopback et une exécution
+soutenue de 35 minutes avec trois scénarios sont verts. Les commandes et les limites sont
+consignées dans le [rapport V4/V46/v7](../../validation/WO058-PEOPLE-AND-LIVE-V7-20260909.md).
+Les contrôles navigateur n'ont fait aucun appel réel, aucun POST et n'ont utilisé aucune
+base opérateur. Le scénario soutenu ne prouve ni capacité fournisseur ni seuil de refus.
+
+Le profil v7 admet au plus **trois rencontres** ; il reste conditionné à son SHA et à ses
+huit enveloppes de qualification au prochain démarrage. Les sept rencontres concernent le
+profil v6 historique et ne doivent pas être reportées sur v7. L'observation manuelle du
+navigateur — environ 13 requêtes J5/minute pour une page — est documentée dans le
+[relevé des débits historiques](../../validation/WO058-HISTORICAL-DEPARTURE-RATES-20260909.md)
+comme indication de charge, pas comme seuil d'acceptation. Aucun lancement réel, changement
+de VPN ni mécanisme de rotation d'adresse n'est réalisé par ce lot.
 
 Le cadrage et l'autorisation de réalisation sont acquis. La réalisation, ses limites et la
 qualification de B–D sont consignées dans le

@@ -9,6 +9,7 @@
   <script defer th:src="@{/js/statistics.js}" src="/js/statistics.js"></script>
   <link rel="stylesheet" th:href="@{/css/lineups.css}" href="/css/lineups.css">
   <script defer th:src="@{/js/lineups.js}" src="/js/lineups.js"></script>
+  <script defer th:src="@{/js/event-details.js}" src="/js/event-details.js"></script>
   <script defer th:src="@{/js/live-campaign.js}" src="/js/live-campaign.js"></script>
 </head>
 <body>
@@ -110,11 +111,12 @@
               th:classappend="${offlineDetail.source.kind.name() == 'PROVIDER_SNAPSHOT'} ? 'chip-safe' : 'chip-warning'"
               th:text="${offlineDetail.source.kind}">SYNTHETIC_FIXTURE</span>
       </div>
+      <div th:if="${eventInformation != null}" th:insert="~{fragments/event-details :: view(${eventInformation})}"></div>
       <dl class="detail-grid">
-        <div><dt>Stade</dt><dd th:text="${offlineDetail.details.venue.isPresent() ? offlineDetail.details.venue.get().name : '—'}">—</dd></div>
+        <div th:if="${eventInformation == null}"><dt>Stade</dt><dd th:text="${offlineDetail.details.venue.isPresent() ? offlineDetail.details.venue.get().name : '—'}">—</dd></div>
         <div><dt>Ville</dt><dd th:text="${offlineDetail.details.venue.isPresent() && offlineDetail.details.venue.get().city.isPresent() ? offlineDetail.details.venue.get().city.get() : '—'}">—</dd></div>
-        <div><dt>Saison</dt><dd th:text="${offlineDetail.details.season.isPresent() ? offlineDetail.details.season.get().name : '—'}">—</dd></div>
-        <div><dt>Tour</dt><dd th:text="${offlineDetail.details.round.orElse('—')}">—</dd></div>
+        <div th:if="${eventInformation == null}"><dt>Saison</dt><dd th:text="${offlineDetail.details.season.isPresent() ? offlineDetail.details.season.get().name : '—'}">—</dd></div>
+        <div th:if="${eventInformation == null}"><dt>Tour</dt><dd th:text="${offlineDetail.details.round.orElse('—')}">—</dd></div>
         <div><dt>Source</dt><dd class="mono" th:text="${offlineDetail.source.sourceReference()}">source</dd></div>
         <div><dt>Parseur</dt><dd class="mono" th:text="${offlineDetail.source.parserVersion}">event-details-v1</dd></div>
         <div><dt>Réception source</dt><dd class="mono" th:text="${offlineDetail.source.receivedAt}">instant</dd></div>

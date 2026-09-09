@@ -1165,3 +1165,12 @@ footer {
     justify-self: start;
   }
 }
+
+.incidents-disclosure > summary, .incidents-period > summary { cursor: pointer; padding: .7rem; font-weight: 700; overflow-wrap: anywhere; }
+.incidents-disclosure > summary { background: var(--canvas, #f4f8f9); border-radius: .5rem; }
+.incidents-period > summary { border-bottom: 1px solid var(--line, #c7dce2); }
+.incidents-disclosure > summary:focus-visible, .incidents-period > summary:focus-visible { outline: 3px solid var(--accent, #008b8b); outline-offset: -3px; }
+.incidents-count { display: inline-block; margin-left: .4rem; font-size: .85em; color: var(--muted, #607e8c); }
+.event-information dd { overflow-wrap: anywhere; }
+.event-information [data-event-person-country]:not([hidden]) { display: inline-flex; align-items: center; gap: .35rem; margin-left: .35rem; font-weight: 400; }
+.event-information [data-event-person-flag] { flex: 0 0 24px; object-fit: contain; vertical-align: middle; }

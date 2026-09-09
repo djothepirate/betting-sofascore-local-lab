@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
+import java.util.Optional;
+import java.math.BigDecimal;
 
 /** Display-only roster grouping. Rendering escapes text; no pitch position is inferred from formation. */
 public final class LineupsPresentation {
@@ -56,7 +58,25 @@ public final class LineupsPresentation {
                 source.shirtNumber().map(String::valueOf).orElse("—"),
                 source.position().map(LineupsPresentation::positionLabel).orElse("Poste non renseigné"),
                 source.starter() ? "Titulaire" : "Remplaçant", source.captain().orElse(false),
-                source.statistics().map(PlayerStatisticsPresentation::from).orElse(null));
+                source.statistics().map(PlayerStatisticsPresentation::from).orElse(null),
+                CountryPresentation.of(source.country()), achievements(source));
+    }
+
+    private static List<Achievement> achievements(EventLineupPlayer player) {
+        var result = new ArrayList<Achievement>();
+        player.statistics().ifPresent(statistics -> {
+            achievement(result, "goals", statistics.values().get("goals"), "but", "buts");
+            achievement(result, "assists", statistics.values().get("goalAssist"), "passe décisive", "passes décisives");
+        });
+        return List.copyOf(result);
+    }
+
+    private static void achievement(List<Achievement> result, String key, BigDecimal value, String singular, String plural) {
+        if (value == null || value.signum() <= 0 || value.stripTrailingZeros().scale() > 0) return;
+        String count = value.toBigIntegerExact().toString();
+        int repeats = value.compareTo(BigDecimal.valueOf(5)) <= 0 ? value.intValueExact() : 1;
+        result.add(new Achievement(key, count, count + " " + (value.compareTo(BigDecimal.ONE) == 0 ? singular : plural),
+                java.util.stream.IntStream.range(0, repeats).boxed().toList(), repeats == 1 && !count.equals("1")));
     }
 
     private static List<MissingPlayer> missingPlayers(String side, List<MissingLineupPlayer> values) {
@@ -72,26 +92,48 @@ public final class LineupsPresentation {
         return new MissingPlayer(key, source.name(),
                 source.shirtNumber().map(String::valueOf).orElse("—"),
                 source.position().map(LineupsPresentation::positionLabel).orElse("Poste non renseigné"),
-                source.description().map(value -> switch (value) {
-                    case "Achilles Tendon Injury" -> "Blessure au tendon d’Achille";
-                    case "Sprained Knee Injury" -> "Entorse du genou";
-                    case "Knee Injury" -> "Blessure au genou";
-                    case "Back Injury" -> "Blessure au dos";
-                    case "Broken Ankle", "Broken ankle" -> "Fracture de la cheville";
-                    case "Cruciate Ligament Injury" -> "Blessure au ligament croisé";
-                    case "Dislocated Shoulder" -> "Luxation de l’épaule";
-                    case "Hip Injury" -> "Blessure à la hanche";
-                    case "Thigh Injury" -> "Blessure à la cuisse";
-                    case "Toe Injury" -> "Blessure à un orteil";
-                    case "Muscle Injury" -> "Blessure musculaire";
-                    case "Unknown" -> "Motif inconnu";
-                    case "yellow_or_red_card_suspension" -> "Suspension liée aux cartons";
-                    default -> value;
-                }).orElse("Motif non renseigné"),
+                source.description().map(LineupsPresentation::missingDescriptionLabel).orElse("Motif non renseigné"),
                 source.expectedEndDate().map(value -> value.format(
                         DateTimeFormatter.ofPattern("dd/MM/yyyy 'à' HH:mm XXX", Locale.FRANCE))).orElse("—"),
-                source.type().orElse("—"), source.reason().map(String::valueOf).orElse("—"),
-                source.externalType().map(String::valueOf).orElse("—"));
+                source.type().map(LineupsPresentation::missingTypeLabel).orElse("—"), source.reason().map(String::valueOf).orElse("—"),
+                source.externalType().map(String::valueOf).orElse("—"), CountryPresentation.of(source.country()));
+    }
+
+    private static String missingDescriptionLabel(String value) {
+        return switch (value) {
+            case "Achilles Tendon Injury" -> "Blessure au tendon d’Achille";
+            case "Ankle Injury" -> "Blessure à la cheville";
+            case "Back Injury" -> "Blessure au dos";
+            case "Broken Ankle", "Broken ankle" -> "Fracture de la cheville";
+            case "Calf Injury" -> "Blessure au mollet";
+            case "Cruciate Ligament Injury" -> "Blessure au ligament croisé";
+            case "Dislocated Shoulder" -> "Luxation de l’épaule";
+            case "Groin Injury" -> "Blessure à l’aine";
+            case "Hamstring Injury" -> "Blessure aux ischio-jambiers";
+            case "Heart Problems" -> "Problèmes cardiaques";
+            case "Hernia" -> "Hernie";
+            case "Hip Injury" -> "Blessure à la hanche";
+            case "Knee Injury" -> "Blessure au genou";
+            case "Knock Injury" -> "Coup";
+            case "Leg Injury" -> "Blessure à la jambe";
+            case "Ligament Injury" -> "Blessure aux ligaments";
+            case "Meniscus Injury" -> "Blessure au ménisque";
+            case "Muscle Injury" -> "Blessure musculaire";
+            case "Neck Injury" -> "Blessure au cou";
+            case "Shoulder Injury" -> "Blessure à l’épaule";
+            case "Strain Injury" -> "Blessure à l’entraînement";
+            case "Sprained Knee Injury" -> "Entorse du genou";
+            case "Thigh Injury" -> "Blessure à la cuisse";
+            case "Toe Injury" -> "Blessure à un orteil";
+            case "Unknown" -> "Motif inconnu";
+            case "yellow_or_red_card_suspension" -> "Suspension liée aux cartons";
+            case "red_card_suspension" -> "Suspension après carton rouge";
+            default -> value;
+        };
+    }
+
+    private static String missingTypeLabel(String value) {
+        return "missing".equals(value) ? "Indisponible" : value;
     }
 
     private static String groupKey(EventLineupPlayer player) {
@@ -132,7 +174,17 @@ public final class LineupsPresentation {
     }
     public record Group(String key, String label, List<Player> players) { }
     public record Player(String key, String name, String shirtNumber, String positionLabel, String roleLabel,
-                         boolean captain, PlayerStatisticsPresentation.View statistics) {
+                         boolean captain, PlayerStatisticsPresentation.View statistics,
+                         CountryPresentation.View country, List<Achievement> achievements) {
+        public Player(String key, String name, String shirtNumber, String positionLabel, String roleLabel,
+                      boolean captain, PlayerStatisticsPresentation.View statistics) {
+            this(key, name, shirtNumber, positionLabel, roleLabel, captain, statistics,
+                    CountryPresentation.of(Optional.empty()), List.of());
+        }
+        public boolean hasStatistics() {
+            return statistics != null && (statistics.groups().stream().anyMatch(group -> !group.metrics().isEmpty())
+                    || !statistics.ratingVersions().isEmpty());
+        }
         public Player(String key, String name, String shirtNumber, String positionLabel, String roleLabel) {
             this(key, name, shirtNumber, positionLabel, roleLabel, false, null);
         }
@@ -140,6 +192,14 @@ public final class LineupsPresentation {
             this(key, name, shirtNumber, positionLabel, roleLabel, captain, null);
         }
     }
+    public record Achievement(String key, String count, String label, List<Integer> repeats, boolean compact) { }
     public record MissingPlayer(String key, String name, String shirtNumber, String positionLabel,
-                                String description, String expectedReturn, String type, String reason, String externalType) { }
+                                String description, String expectedReturn, String type, String reason, String externalType,
+                                CountryPresentation.View country) {
+        public MissingPlayer(String key, String name, String shirtNumber, String positionLabel,
+                             String description, String expectedReturn, String type, String reason, String externalType) {
+            this(key, name, shirtNumber, positionLabel, description, expectedReturn, type, reason, externalType,
+                    CountryPresentation.of(Optional.empty()));
+        }
+    }
 }

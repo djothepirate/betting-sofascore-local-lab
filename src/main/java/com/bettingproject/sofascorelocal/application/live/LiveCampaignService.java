@@ -131,18 +131,19 @@ public final class LiveCampaignService {
                 .map(event -> new Target(event.identity().value(), event.identity().providerEventId(),
                         event.observationId(), event.source().snapshotId().orElseThrow())).toList();
         if (targets.isEmpty()) return new Preparation(null, excludedFinished, excludedPostponed);
-        AdmissionProfile profile = currentAdmissionProfile("live-v6");
-        admission.admitV6(targets.size(), profile.groupedProfile());
-        Duration cycleInterval = Duration.ofSeconds(100);
+        AdmissionProfile profile = currentAdmissionProfile("live-v7");
+        admission.admitV7(targets.size(), profile.groupedProfile());
+        Duration cycleInterval = Duration.ofSeconds(60);
         UUID id = UUID.randomUUID(); Instant now = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         long bytes = admission.maximumBytesV5(targets.size());
         // Fixed order and explicit rules: a historic proof or a changed family envelope cannot
         // silently authorize a new grouped manifest.
-        String material = id + "|live-v6|" + now + "|" + properties.getDuration() + "|2500|20000|" + bytes
-                + "|" + selectionMaximum() + "|" + profile + "|critical=100|lineups=300|prematch=100"
+        String material = id + "|live-v7|" + now + "|" + properties.getDuration() + "|2500|20000|" + bytes
+                + "|" + selectionMaximum() + "|" + profile + "|critical=60|lineups=60|prematch=initial4,T-60all4,lineups300untilConfirmed,T-5quiet,T0J4each60"
+                + "|delayed=rebaseKickoff,T-60all4,lineups300untilConfirmed,T-5quiet,T0J4each60"
                 + "|intra=0|inter=1|sequential|maxGroup=4|order=J4,incidents,statistics,lineups"
-                + "|phaseCount=3|utilization=0.9|provider-resilience-v1|finishFence=2|rate=25/60,1000/3600|404=300,600,900|" + targets;
-        Manifest manifest = new Manifest(id, Sha256.hex(material.getBytes(StandardCharsets.UTF_8)), "live-v6",
+                + "|phaseCount=1|utilization=0.9|provider-resilience-v1|finishFence=2|rate=25/60,1000/3600|404=300,600,900|" + targets;
+        Manifest manifest = new Manifest(id, Sha256.hex(material.getBytes(StandardCharsets.UTF_8)), "live-v7",
                 now, now.plusSeconds(300), properties.getDuration(), 2500, 20000, bytes,
                 selectionMaximum(), targets, profile, cycleInterval);
         return new Preparation(store.prepare(manifest), excludedFinished, excludedPostponed);
@@ -213,7 +214,9 @@ public final class LiveCampaignService {
     }
     private int selectionMaximum(String policyVersion) {
         try { return Math.min(properties.getQualifiedMatchCapacity(),
-                "live-v6".equals(policyVersion)
+                "live-v7".equals(policyVersion)
+                        ? LiveAdmissionPolicy.qualifiedCapacityV7(properties.groupedAdmissionProfileV7())
+                        : "live-v6".equals(policyVersion)
                         ? LiveAdmissionPolicy.qualifiedCapacityV6(properties.groupedAdmissionProfileV6())
                         : "live-v5".equals(policyVersion)
                         ? LiveAdmissionPolicy.qualifiedCapacityV5(properties.groupedAdmissionProfileV5())
@@ -261,7 +264,7 @@ public final class LiveCampaignService {
         String policyVersion = current.manifest().policyVersion();
         // Transport patience is separate from the measured admission envelopes.
         // Historical policies keep their original hard bound.
-        Duration maximumRequestTimeout = Duration.ofSeconds("live-v6".equals(policyVersion) ? 30 : "live-v5".equals(policyVersion) ? 20 : 10);
+        Duration maximumRequestTimeout = Duration.ofSeconds(resilientPolicy(policyVersion) ? 30 : "live-v5".equals(policyVersion) ? 20 : 10);
         if (playwright.getRequestTimeout() == null || playwright.getRequestTimeout().isNegative()
                 || playwright.getRequestTimeout().isZero()
                 || playwright.getRequestTimeout().compareTo(maximumRequestTimeout) > 0)
@@ -272,7 +275,9 @@ public final class LiveCampaignService {
                 || current.manifest().qualifiedMatchCapacity() != (grouped ? selectionMaximum(policyVersion) : properties.getQualifiedMatchCapacity())
                 || !current.manifest().duration().equals(properties.getDuration()))
             throw new IllegalArgumentException("LIVE_PREPARED_POLICY_CHANGED");
-        if ("live-v6".equals(policyVersion)) admission.admitV6(current.manifest().targets().size() - alreadyExcluded.size(),
+        if ("live-v7".equals(policyVersion)) admission.admitV7(current.manifest().targets().size() - alreadyExcluded.size(),
+                current.manifest().admissionProfile().groupedProfile());
+        else if ("live-v6".equals(policyVersion)) admission.admitV6(current.manifest().targets().size() - alreadyExcluded.size(),
                 current.manifest().admissionProfile().groupedProfile());
         else if ("live-v5".equals(policyVersion)) admission.admitV5(current.manifest().targets().size() - alreadyExcluded.size(),
                 current.manifest().admissionProfile().groupedProfile());
@@ -305,12 +310,17 @@ public final class LiveCampaignService {
                     case "live-v4" -> properties.groupedAdmissionProfile();
                     case "live-v5" -> properties.groupedAdmissionProfileV5();
                     case "live-v6" -> properties.groupedAdmissionProfileV6();
+                    case "live-v7" -> properties.groupedAdmissionProfileV7();
                     default -> null;
                 });
     }
 
     private static boolean groupedPolicy(String policyVersion) {
-        return "live-v4".equals(policyVersion) || "live-v5".equals(policyVersion) || "live-v6".equals(policyVersion);
+        return "live-v4".equals(policyVersion) || "live-v5".equals(policyVersion) || resilientPolicy(policyVersion);
+    }
+
+    private static boolean resilientPolicy(String policyVersion) {
+        return "live-v6".equals(policyVersion) || "live-v7".equals(policyVersion);
     }
 
     private boolean providerCleanupRequired() {
@@ -576,7 +586,7 @@ public final class LiveCampaignService {
         s.currentAttempt = null;
         s.currentEndpoint = null;
         s.currentTransport = null;
-        if(resilience!=null && "live-v6".equals(s.manifest.policyVersion())) {
+        if(resilience!=null && resilientPolicy(s.manifest.policyVersion())) {
             var permission=resilience.departureDecision(clock.instant());
             if(!permission.allowed()) {
                 if(permission.reason()==ProviderResilienceData.DepartureReason.RATE_LIMITED) {
@@ -658,10 +668,10 @@ public final class LiveCampaignService {
                 if(s.firstFailure.compareAndSet(null,cause)) persistDiagnostics(s);
             }
             s.phase = RAW_SAVE;
-            String parser = due.endpoint() == SofascoreEndpointType.EVENT_DETAILS ? "event-details-v3"
+            String parser = due.endpoint() == SofascoreEndpointType.EVENT_DETAILS ? "event-details-v4"
                     : due.endpoint() == SofascoreEndpointType.EVENT_INCIDENTS ? "event-incidents-v17"
                     : due.endpoint() == SofascoreEndpointType.EVENT_STATISTICS ? "event-statistics-v2"
-                    : com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV3Parser.PARSER_VERSION;
+                    : com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV4Parser.PARSER_VERSION;
             RawManualCallSnapshot raw = new RawManualCallSnapshot(due.endpoint(), due.endpoint().name() + "|eventId=" + attempt.providerEventId(),
                     response.requestedAt(), response.receivedAt(), response.httpStatus(), response.contentType(), response.latency(),
                     response.payload(), parser, RawSnapshotSchemaStatus.RAW_ONLY, null);
@@ -673,7 +683,11 @@ public final class LiveCampaignService {
             processed.signals().forEach(signal -> signals.put(signal.key(), signal.kind().name().equals("FINISH_CHECK")));
             boolean unavailable = processed.outcome().name().equals("ENDPOINT_UNAVAILABLE");
             if (processed.scope().name().equals("NONE")) {
-                s.schedule.completed(due, processed.sportStatus().orElse(null), unavailable, signals, s.now());
+                s.schedule.completed(due, processed.sportStatus().orElse(null), unavailable, signals, s.now(),
+                        processed.eventDetails().map(details -> details.startsAt()).orElse(null),
+                        processed.eventData().filter(com.bettingproject.sofascorelocal.domain.eventdata.EventLineups.class::isInstance)
+                                .map(com.bettingproject.sofascorelocal.domain.eventdata.EventLineups.class::cast)
+                                .map(com.bettingproject.sofascorelocal.domain.eventdata.EventLineups::confirmed).orElse(null));
             } else s.schedule.failed(due, processed.scope().name(), processed.scope().name().equals("EVENT")
                     ? processed.outcome().name().equals("SCHEMA_INCOMPATIBLE") ? "STOPPED_SCHEMA_INCOMPATIBLE" : "STOPPED_REVIEW_REQUIRED"
                     : "STOPPED_ERROR");
@@ -693,7 +707,7 @@ public final class LiveCampaignService {
             if (s.schedule.mayDispatch(due, s.now()) && !s.stoppedEvents.contains(due.eventId())) s.stopAll("STOPPED_ERROR");
         } catch (RuntimeException failure) {
             if (failure instanceof PlaywrightProviderException timeout && timeout.recoverableTimeout()
-                    && "live-v6".equals(s.manifest.policyVersion())) {
+                    && resilientPolicy(s.manifest.policyVersion())) {
                 // A timeout is not a receipt. Keep prior data, the charged attempt and
                 // terminal evidence; publish all of them before another departure.
                 s.currentTransport = timeout.diagnostic();

@@ -132,6 +132,21 @@ sofascore:
         EVENT_LINEUPS:
           request-envelope: ${SOFASCORE_LIVE_GROUPED_V6_LINEUPS_REQUEST_ENVELOPE:10s}
           processing-envelope: ${SOFASCORE_LIVE_GROUPED_V6_LINEUPS_PROCESSING_ENVELOPE:1s}
+    grouped-v7:
+      qualification-sha256: ${SOFASCORE_LIVE_GROUPED_V7_QUALIFICATION_SHA256:}
+      endpoints:
+        EVENT_DETAILS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V7_J4_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V7_J4_PROCESSING_ENVELOPE:1s}
+        EVENT_INCIDENTS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V7_INCIDENTS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V7_INCIDENTS_PROCESSING_ENVELOPE:1s}
+        EVENT_STATISTICS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V7_STATISTICS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V7_STATISTICS_PROCESSING_ENVELOPE:1s}
+        EVENT_LINEUPS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V7_LINEUPS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V7_LINEUPS_PROCESSING_ENVELOPE:1s}
   playwright:
     enabled: ${SOFASCORE_PLAYWRIGHT_ENABLED:false}
     worker-jar: ${SOFASCORE_PLAYWRIGHT_WORKER_JAR:}

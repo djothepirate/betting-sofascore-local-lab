@@ -34,7 +34,7 @@
 .lineups-player-details { min-width: 0; }
 .lineups-player-summary { display: flex; align-items: start; gap: .55rem; padding: .65rem .55rem; list-style: none; }
 .lineups-player-summary::-webkit-details-marker { display: none; }
-.lineups-player-summary::after { content: "⌄"; margin-left: auto; color: var(--lineups-accent); }
+summary.lineups-player-summary::after { content: "⌄"; margin-left: auto; color: var(--lineups-accent); }
 .lineups-player-details[open] > .lineups-player-summary::after { transform: rotate(180deg); }
 .lineups-statistics-hint { color: var(--lineups-accent); font-size: .68rem; text-decoration: underline; }
 .lineups-player-statistics { padding: .2rem .75rem .75rem; border-top: 1px solid #d6e3de; overflow-wrap: anywhere; }
@@ -71,4 +71,19 @@
 @media (forced-colors: active) {
   .lineups-number, .lineups-count, .lineups-confirmation { border: 1px solid CanvasText; }
   .lineups-pitch::before { display: none; }
+}
+
+.lineups-player-static .lineups-player-summary { cursor: default; }
+.lineups-player-static .lineups-player-summary:focus { outline: 2px solid var(--lineups-accent); outline-offset: -2px; }
+.lineups-country { display: inline-flex; align-items: center; gap: .35rem; font-size: .72rem; color: var(--muted, #607e8c); overflow-wrap: anywhere; }
+.lineups-flag { flex: 0 0 24px; width: 24px; height: 18px; object-fit: contain; }
+.lineups-achievements { display: flex; flex-wrap: wrap; gap: .4rem .7rem; }
+.lineups-achievement { display: inline-flex; align-items: center; gap: .15rem; color: var(--lineups-accent); font-size: .9rem; min-width: 0; overflow-wrap: anywhere; }
+.lineups-achievement-icons { display: inline-flex; align-items: center; gap: .12rem; }
+.lineups-boot { width: 1.35em; height: 1.05em; }
+.lineups-achievement-count { display: none; }
+.lineups-achievement[data-compact="true"] .lineups-achievement-count { display: inline; }
+@media (max-width: 420px) {
+  .lineups-achievement-icons > :not(:first-child) { display: none; }
+  .lineups-achievement-count { display: inline; }
 }

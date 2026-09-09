@@ -1,12 +1,12 @@
 package com.bettingproject.sofascorelocal.adapter.sofascore.live;
 
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV17Parser;
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV3Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV4Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseResult;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsParseStatus;
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV3Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV4Parser;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventData;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
@@ -48,10 +48,10 @@ public class LivePayloadNormalizer {
             .enable(DeserializationFeature.FAIL_ON_TRAILING_TOKENS)
             .build();
 
-    private final EventDetailsV3Parser detailsParser = new EventDetailsV3Parser();
+    private final EventDetailsV4Parser detailsParser = new EventDetailsV4Parser();
     private final EventStatisticsV2Parser statisticsParser = new EventStatisticsV2Parser();
     private final EventIncidentsV17Parser incidentsParser = new EventIncidentsV17Parser();
-    private final EventLineupsV3Parser lineupsParser = new EventLineupsV3Parser();
+    private final EventLineupsV4Parser lineupsParser = new EventLineupsV4Parser();
 
     public LiveNormalizedPayload normalize(
             long eventId,
@@ -127,10 +127,10 @@ public class LivePayloadNormalizer {
 
     public static String parserVersion(SofascoreEndpointType endpoint) {
         return switch (endpoint) {
-            case EVENT_DETAILS -> EventDetailsV3Parser.PARSER_VERSION;
+            case EVENT_DETAILS -> EventDetailsV4Parser.PARSER_VERSION;
             case EVENT_STATISTICS -> EventStatisticsV2Parser.PARSER_VERSION;
             case EVENT_INCIDENTS -> EventIncidentsV17Parser.PARSER_VERSION;
-            case EVENT_LINEUPS -> EventLineupsV3Parser.PARSER_VERSION;
+            case EVENT_LINEUPS -> EventLineupsV4Parser.PARSER_VERSION;
             default -> throw new IllegalArgumentException("unsupported live endpoint");
         };
     }

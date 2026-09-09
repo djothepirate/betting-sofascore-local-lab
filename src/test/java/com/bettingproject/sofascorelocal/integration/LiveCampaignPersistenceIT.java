@@ -266,6 +266,67 @@ class LiveCampaignPersistenceIT {
     }
 
     @Test
+    void v7UpgradePreservesFrozenV6AndPersistsDistinctMinuteLineupsAndPrematchGroups() {
+        Fixture f=fixture("46"); Target target=f.seed(EVENT);
+        Manifest v6=new Manifest(UUID.randomUUID(),"e".repeat(64),"live-v6",T0,T0.plusSeconds(300),Duration.ofHours(4),
+                2500,20000,15_728_640_000L,7,List.of(target),
+                new AdmissionProfile(Duration.ofSeconds(1),Duration.ofSeconds(1),"b".repeat(64),
+                        new GroupedAdmissionProfile(syntheticGroupedEnvelopes(),"e".repeat(64),"live-v6")),Duration.ofSeconds(100));
+        f.store.prepare(v6);
+        var before=f.store.find(v6.campaignId()).orElseThrow();
+        var rows=f.jdbc.queryForList("select to_jsonb(t)::text from live_grouped_policy t order by campaign_id",String.class);
+        assertThat(f.migrate("47").migrationsExecuted).isEqualTo(1);
+        assertThat(f.store.find(v6.campaignId())).contains(before);
+        assertThat(f.jdbc.queryForList("select to_jsonb(t)::text from live_grouped_policy t order by campaign_id",String.class)).isEqualTo(rows);
+        Manifest v7=new Manifest(UUID.randomUUID(),"f".repeat(64),"live-v7",T0,T0.plusSeconds(300),Duration.ofHours(4),
+                2500,20000,15_728_640_000L,3,List.of(target),
+                new AdmissionProfile(Duration.ofSeconds(1),Duration.ofSeconds(1),"b".repeat(64),
+                        new GroupedAdmissionProfile(syntheticGroupedEnvelopes(),"f".repeat(64),"live-v7")),Duration.ofSeconds(60));
+        Ownership own=f.start(v7);
+        assertThat(f.store.find(v7.campaignId()).orElseThrow().manifest()).isEqualTo(v7);
+        assertThat(f.jdbc.queryForMap("select critical_interval_seconds,lineup_interval_seconds from live_grouped_policy where campaign_id=?",v7.campaignId()))
+                .containsEntry("critical_interval_seconds",60).containsEntry("lineup_interval_seconds",60);
+        UUID initial=UUID.randomUUID(); int ordinal=0;
+        for(var endpoint:List.of(SofascoreEndpointType.EVENT_DETAILS,SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS,SofascoreEndpointType.EVENT_LINEUPS)) {
+            var at=T0.plusSeconds(10+ordinal*3L);
+            assertThat(f.store.reserveAttempt(new AttemptRequest(own,UUID.randomUUID(),target.canonicalEventId(),0,
+                    endpoint,ordinal==0?"J4_INITIAL":"J5_PREMATCH_INITIAL",at,at,false,initial,0,ordinal++))).isPresent();
+        }
+        var at=T0.plusSeconds(319);
+        assertThat(f.store.reserveAttempt(new AttemptRequest(own,UUID.randomUUID(),target.canonicalEventId(),1,
+                SofascoreEndpointType.EVENT_LINEUPS,"J5_PREMATCH_LINEUPS",at,at,false,UUID.randomUUID(),1,0))).isPresent();
+        f.store.updateFamilySchedule(own,target.canonicalEventId(),new FamilySchedule(SofascoreEndpointType.EVENT_LINEUPS,T0.plusSeconds(619),300,0),at);
+        assertThat(f.store.find(v7.campaignId()).orElseThrow().events().getFirst().families().stream().map(FamilyCursor::schedule).toList()).contains(
+                new FamilySchedule(SofascoreEndpointType.EVENT_LINEUPS,T0.plusSeconds(619),300,0));
+        assertThat(f.store.find(v7.campaignId()).orElseThrow().attempts()).hasSize(5);
+        assertThat(f.migrate("47").migrationsExecuted).isZero();
+    }
+
+    @Test
+    void v7SqlRejectsBorrowedLineupCadenceAndCapacityAboveThreeWithoutAStoredManifest() {
+        Fixture f=fixture("47");
+        assertThatThrownBy(()->insertPolicyManifestRow(f,UUID.randomUUID(),"live-v7",2500,20000,15_728_640_000L,4,60))
+                .hasMessageContaining("live_campaign_v7_policy_bounds_check");
+        assertThatThrownBy(()->insertPolicyManifestRow(f,UUID.randomUUID(),"live-v7",2500,20000,15_728_640_000L,3,100))
+                .hasMessageContaining("live_campaign_v7_policy_bounds_check");
+        UUID campaignId=UUID.randomUUID();
+        String envelopes="{\"EVENT_DETAILS\":{\"requestNanos\":500000000,\"processingNanos\":100000000},"
+                +"\"EVENT_INCIDENTS\":{\"requestNanos\":500000000,\"processingNanos\":100000000},"
+                +"\"EVENT_STATISTICS\":{\"requestNanos\":500000000,\"processingNanos\":100000000},"
+                +"\"EVENT_LINEUPS\":{\"requestNanos\":500000000,\"processingNanos\":100000000}}";
+        assertThatThrownBy(()->new TransactionTemplate(new JdbcTransactionManager(f.ds)).executeWithoutResult(status->{
+            insertPolicyManifestRow(f,campaignId,"live-v7",2500,20000,15_728_640_000L,3,60);
+            f.jdbc.update("""
+                insert into live_grouped_policy(campaign_id,critical_interval_seconds,lineup_interval_seconds,intra_group_delay_nanos,
+                    inter_group_delay_nanos,maximum_utilization_percent,qualification_sha256,endpoint_envelopes)
+                values (?,60,300,0,1000000000,90,?,cast(? as jsonb))
+                """,campaignId,"f".repeat(64),envelopes);
+        })).hasMessageContaining("profile cadence and delay must match");
+        assertThat(f.store.find(campaignId)).isEmpty();
+    }
+
+    @Test
     void upgradeV39ToV40KeepsAllHistoricalPoliciesAndEvidenceByteForByte() {
         Fixture f=fixture("39"); int eventIndex=0;
         for(String policy:List.of("live-v1","live-v2","live-v3","live-v4")) {
@@ -485,7 +546,7 @@ class LiveCampaignPersistenceIT {
     @Test
     void v3PrematchLineupsPersistExactCyclesAndProvenanceWhileRepeatedReceiptsRefreshTheCursor() {
         // Historical live policy, current versioned normalizer and current persistence schema.
-        Fixture f = fixture("41");
+        Fixture f = fixture("47");
         String detailsJson = """
                 {"event":{"id":%d,"startTimestamp":%d,
                 "homeTeam":{"id":11,"name":"Home"},"awayTeam":{"id":22,"name":"Away"},
@@ -584,7 +645,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void identicalReceiptsAndAToBToAReturnToTheCorrectOldObservationWithNewFreshness() {
-        Fixture f=fixture("38"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
+        Fixture f=fixture("47"); Manifest m=f.manifest(f.seed(EVENT),100); Ownership own=f.start(m);
         List<Long> snapshots=new ArrayList<>(); List<Long> occurrences=new ArrayList<>(); List<Long> observations=new ArrayList<>();
         List<UUID> attempts=new ArrayList<>();
         for(int cycle=0;cycle<4;cycle++) {
@@ -962,7 +1023,7 @@ class LiveCampaignPersistenceIT {
     @EnumSource(value = SofascoreEndpointType.class, names = {
             "EVENT_STATISTICS", "EVENT_INCIDENTS", "EVENT_LINEUPS"})
     void live404PublicationSurvivesDeduplicationAndRecoveryWithoutLosingLastGoodData(SofascoreEndpointType endpoint) {
-        Fixture f = fixture("41"); Manifest m = f.manifest(f.seed(EVENT), 100); Ownership own = f.start(m);
+        Fixture f = fixture("47"); Manifest m = f.manifest(f.seed(EVENT), 100); Ownership own = f.start(m);
         String available = switch (endpoint) {
             case EVENT_STATISTICS -> "{\"statistics\":[]}";
             case EVENT_INCIDENTS -> "{\"incidents\":[]}";
@@ -1114,7 +1175,7 @@ class LiveCampaignPersistenceIT {
         // Exercise the historical ledger first, then upgrade it for the current J6 tooling.
         var campaignBeforeUpgrade=f.store.find(m.campaignId()).orElseThrow();
         var guardBeforeUpgrade=f.guard.snapshot();
-        assertThat(f.migrate("45").migrationsExecuted).isEqualTo(6);
+        assertThat(f.migrate("47").migrationsExecuted).isEqualTo(8);
         assertThat(f.store.find(m.campaignId())).contains(campaignBeforeUpgrade);
         assertThat(f.guard.snapshot()).isEqualTo(guardBeforeUpgrade);
         String script=Files.readString(Path.of("scripts/Backup-Restore-J6.ps1"),StandardCharsets.UTF_8);
@@ -1156,10 +1217,10 @@ class LiveCampaignPersistenceIT {
                 new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS,null,interval,0),T0.plusSeconds(12));
         source.store.transition(own,null,"COMPLETED","CLEANUP_VERIFIED",T0.plusSeconds(13),null);
         source.guard.releaseAfterVerifiedCleanup(own,T0.plusSeconds(14));
-        // Keep v4/v5 execution evidence on its original schema, then qualify today's backup on V45.
+        // Keep v4/v5 execution evidence on its original schema, then qualify today's backup on V47.
         var campaignBeforeUpgrade=source.store.find(m.campaignId()).orElseThrow();
         var guardBeforeUpgrade=source.guard.snapshot();
-        assertThat(source.migrate("45").migrationsExecuted).isEqualTo(45-Integer.parseInt(schema));
+        assertThat(source.migrate("47").migrationsExecuted).isEqualTo(47-Integer.parseInt(schema));
         assertThat(source.store.find(m.campaignId())).contains(campaignBeforeUpgrade);
         assertThat(source.guard.snapshot()).isEqualTo(guardBeforeUpgrade);
         String script=Files.readString(Path.of("scripts/Backup-Restore-J6.ps1"),StandardCharsets.UTF_8);
@@ -1177,7 +1238,7 @@ class LiveCampaignPersistenceIT {
             String url=POSTGRES.getJdbcUrl().substring(0,POSTGRES.getJdbcUrl().lastIndexOf('/')+1)+restoredDatabase;
             Fixture restored=new Fixture(new DriverManagerDataSource(url,POSTGRES.getUsername(),POSTGRES.getPassword()));
             assertThat(restored.jdbc.queryForObject(sql,String.class)).isEqualTo(before);
-            assertThat(restored.migrate("45").migrationsExecuted).isZero();
+            assertThat(restored.migrate("47").migrationsExecuted).isZero();
             assertThat(restored.guard.snapshot().state()).isEqualTo("FREE");
             assertThat(restored.store.find(m.campaignId()).orElseThrow().state()).isEqualTo("COMPLETED");
             assertThat(restored.store.find(m.campaignId()).orElseThrow().attempts()).hasSize(1);
@@ -1347,11 +1408,15 @@ class LiveCampaignPersistenceIT {
             EventSourceTrace source=EventSourceTrace.providerSnapshot(p.snapshotId(),p.payloadSha256(),"event-details-v2",raw.receivedAt());
             long canonicalId=canonical.save(CanonicalEventObservation.from(d.asScheduledEvent(),source)).observationId();
             EventDetailObservation observation=EventDetailObservation.from(CanonicalEventIdentity.sofascore(event),d,source);
-            long detailId=historicalSchema ? saveHistoricalDetails(observation) : details.save(observation).observationId();
+            // The current JDBC store intentionally names the V46 officials columns. Historical
+            // upgrade fixtures still model their source schema before V46, so keep their seed
+            // on the compatible projection until the migration under test has been applied.
+            long detailId=historicalSchema || !hasEventOfficialsColumns()
+                    ? saveHistoricalDetails(observation) : details.save(observation).observationId();
             if(p.outcome()==RawSnapshotPersistenceOutcome.INSERTED) rawStore.classify(p.snapshotId(),RawSnapshotSchemaStatus.PARSED,null);
             return new NormalizedReferences(canonicalId,detailId,null,observation.normalizedSha256());
         }
-        /** Populate the actual pre-V38 schema, without using a store that now names V38 columns. */
+        /** Populate a pre-V46 schema without asking the current JDBC store for officials columns. */
         private long saveHistoricalDetails(EventDetailObservation observation) {
             EventDetails d=observation.details();EventSourceTrace source=observation.source();
             assertThat(source.parserVersion()).isEqualTo("event-details-v2");
@@ -1377,6 +1442,15 @@ class LiveCampaignPersistenceIT {
                 select id from event_detail_observation where canonical_event_id=? and source_kind='PROVIDER_SNAPSHOT'
                     and source_reference=? and normalized_sha256=?
                 """,Long.class,observation.identity().value(),source.sourceReference(),observation.normalizedSha256());
+        }
+        private boolean hasEventOfficialsColumns() {
+            return Boolean.TRUE.equals(jdbc.queryForObject("""
+                select exists(
+                    select 1 from information_schema.columns
+                    where table_schema='public' and table_name='event_detail_observation'
+                        and column_name='home_manager_name'
+                )
+                """,Boolean.class));
         }
     }
 }

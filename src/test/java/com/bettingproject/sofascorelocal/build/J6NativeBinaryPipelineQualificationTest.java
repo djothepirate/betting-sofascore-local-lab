@@ -24,7 +24,7 @@ class J6NativeBinaryPipelineQualificationTest {
     }
 
     @Test
-    void retentionAcceptsOnlyAV45QualifiedManifestWithoutRunningNativeTools()
+    void retentionAcceptsOnlyAV47QualifiedManifestWithoutRunningNativeTools()
             throws IOException {
         String retention = Files.readString(
                 Path.of("").toAbsolutePath().normalize()
@@ -33,8 +33,8 @@ class J6NativeBinaryPipelineQualificationTest {
 
         assertThat(retention)
                 .contains(
-                        "$manifest.source.flywayVersion.ToString() -cne '45'",
-                        "valid Flyway V45 raw-payload, J8, J7 and quiescent live ledger restore",
+                        "$manifest.source.flywayVersion.ToString() -cne '47'",
+                        "valid Flyway V47 raw-payload, J8, J7 and quiescent live ledger restore",
                         "'providerResilienceStateCount'", "'providerDepartureReservationCount'",
                         "'providerDepartureCompletionCount'", "'providerResilienceEventCount'",
                         "'liveAttemptTransportDiagnosticCount'", "'liveCampaignDiagnosticCount'",
@@ -100,8 +100,8 @@ class J6NativeBinaryPipelineQualificationTest {
                         "J6_DOCKER_EXECUTABLE_IDENTITY=AUTHENTICODE_DOCKER_INC",
                         "Get-AuthenticodeSignature",
                         "AggregateException",
-                        "if ($sourceFlywayVersion -cne '45')",
-                        "Flyway V45 must be applied before the J6 backup/restore qualification.",
+                        "if ($sourceFlywayVersion -cne '47')",
+                        "Flyway V47 must be applied before the J6 backup/restore qualification.",
                         "$liveLedgerFingerprintSql", "provider_campaign_guard", "$providerGuardState -cne 'FREE'",
                         "J6_POSTGRES_SESSION_CLEANUP_IDEMPOTENT_REUSE=PASS",
                         "dropdb --username \"$POSTGRES_USER\" --force --if-exists",
@@ -167,7 +167,11 @@ class J6NativeBinaryPipelineQualificationTest {
                         "Invoke-J6BoundedTasklistObservation",
                         "J6_PROCESS_IDENTITY_FINAL_BATCH=PASS",
                         "J6_TASKLIST_OBSERVER_BOUNDED_JOB_CLEANUP=PASS",
+                        "Get-J6LoopbackListenerSnapshot",
+                        "J6_LOOPBACK_LISTENER_MULTI_SOURCE_BASELINE=PASS",
+                        "J6_LOOPBACK_APPLICATION_LISTENER_BASELINE_PRESERVED=PASS",
                         "LOOPBACK_LISTENER_OBSERVATION_FAILED",
+                        "LOOPBACK_LISTENER_SECONDARY_OBSERVATION_FAILED",
                         "LOOPBACK_APPLICATION_LISTENER_RESIDUAL",
                         "PID_REUSED_NOT_OWNED",
                         "J6_SYNTHETIC_TEMP_ROOT_OWNER_V1",
@@ -378,6 +382,8 @@ class J6NativeBinaryPipelineQualificationTest {
                 "J6_PIPELINE_OWNED_IDENTITIES_INACTIVE_MULTI_API=PASS",
                 "J6_PID_ONLY_TERMINATION_USED=NO",
                 "J6_PIPELINE_RESIDUAL_OWNED_PROCESS_COUNT=0",
+                "J6_LOOPBACK_LISTENER_MULTI_SOURCE_BASELINE=PASS",
+                "J6_LOOPBACK_APPLICATION_LISTENER_BASELINE_PRESERVED=PASS",
                 "J6_LOOPBACK_APPLICATION_LISTENER_RESIDUAL_COUNT=0",
                 "PROVIDER_ACCESS_PERFORMED=NO",
                 "J6_BACKUP_RESTORE_LOOPBACK_QUALIFICATION=PASS",

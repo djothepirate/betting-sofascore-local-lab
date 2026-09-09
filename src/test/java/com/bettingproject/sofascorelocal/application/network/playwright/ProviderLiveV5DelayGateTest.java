@@ -37,7 +37,9 @@ class ProviderLiveV5DelayGateTest {
         var reopenedV5 = session(LiveProviderGroupTracker.Authority.LIVE_V5);
         var manual = session(LiveProviderGroupTracker.Authority.MANUAL_J5);
         var reopenedV6 = session(LiveProviderGroupTracker.Authority.LIVE_V6);
-        LiveProviderGroupTracker[] sessions = {null, v4, v5, reopenedV5, v6, reopenedV6, manual};
+        var v7 = session(LiveProviderGroupTracker.Authority.LIVE_V7);
+        var reopenedV7 = session(LiveProviderGroupTracker.Authority.LIVE_V7);
+        LiveProviderGroupTracker[] sessions = {null, v4, v5, reopenedV5, v6, reopenedV6, v7, reopenedV7, manual};
         for (var previous : sessions) for (var next : sessions) {
             var clock = new AtomicLong();
             var gate = new ProviderNetworkStartDelayGate(Duration.ofSeconds(3), clock::get,

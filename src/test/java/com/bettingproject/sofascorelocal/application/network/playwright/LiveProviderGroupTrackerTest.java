@@ -58,12 +58,13 @@ class LiveProviderGroupTrackerTest {
         assertInvalid(() -> historical.isContinuation(PlaywrightProviderRequest.eventLineups(event), context(IN_PLAY)));
     }
 
-    @Test
-    void liveV6AcceptsEveryOrderedSubsetAfterJ4WithoutAllowingAnyFamilyTwice() {
+    @ParameterizedTest
+    @EnumSource(value = LiveProviderGroupTracker.Authority.class, names = {"LIVE_V6", "LIVE_V7"})
+    void laterLiveAuthoritiesAcceptEveryOrderedSubsetAfterJ4WithoutAllowingAnyFamilyTwice(LiveProviderGroupTracker.Authority authority) {
         var families = java.util.List.of(PlaywrightProviderRequest.eventIncidents(event),
                 PlaywrightProviderRequest.eventStatistics(event), PlaywrightProviderRequest.eventLineups(event));
         for (int selected = 1; selected < 8; selected++) {
-            var v6 = new LiveProviderGroupTracker(campaign, LiveProviderGroupTracker.Authority.LIVE_V6);
+            var v6 = new LiveProviderGroupTracker(campaign, authority);
             assertThat(v6.isContinuation(PlaywrightProviderRequest.eventDetails(event), context(CHECK))).isFalse();
             v6.dispatched(PlaywrightProviderRequest.eventDetails(event), context(CHECK));
             v6.finished(true);
@@ -106,9 +107,10 @@ class LiveProviderGroupTrackerTest {
         assertInvalid(() -> v6.isContinuation(PlaywrightProviderRequest.eventStatistics(event), context(MANUAL_J5)));
     }
 
-    @Test
-    void aProvenV6TimeoutClosesItsGroupPermanentlyButAllowsAFutureGroup() {
-        var v6 = new LiveProviderGroupTracker(campaign, LiveProviderGroupTracker.Authority.LIVE_V6);
+    @ParameterizedTest
+    @EnumSource(value = LiveProviderGroupTracker.Authority.class, names = {"LIVE_V6", "LIVE_V7"})
+    void aProvenTimeoutClosesItsGroupPermanentlyButAllowsAFutureGroup(LiveProviderGroupTracker.Authority authority) {
+        var v6 = new LiveProviderGroupTracker(campaign, authority);
         v6.dispatched(PlaywrightProviderRequest.eventDetails(event), context(CHECK));
         v6.finished(true);
         v6.dispatched(PlaywrightProviderRequest.eventIncidents(event), context(IN_PLAY));
@@ -169,7 +171,7 @@ class LiveProviderGroupTrackerTest {
     }
 
     @ParameterizedTest
-    @EnumSource(value = LiveProviderGroupTracker.Authority.class, names = {"LIVE_V5", "LIVE_V6"})
+    @EnumSource(value = LiveProviderGroupTracker.Authority.class, names = {"LIVE_V5", "LIVE_V6", "LIVE_V7"})
     void laterLiveHistoryAllowsExactlyTwentyThousandGroupsWithoutReopeningAny(LiveProviderGroupTracker.Authority authority) {
         var v5 = new LiveProviderGroupTracker(campaign, authority);
         var first = context(CHECK);
@@ -211,6 +213,31 @@ class LiveProviderGroupTrackerTest {
         assertInvalid(() -> manual.isContinuation(PlaywrightProviderRequest.eventLineups(event), scope));
         assertInvalid(() -> manual.isContinuation(PlaywrightProviderRequest.eventStatistics(event),
                 new LiveProviderDispatchGroup(campaign, UUID.randomUUID(), event, MANUAL_J5)));
+    }
+
+    @Test
+    void v7AloneAllowsPrematchInitialTripletAndLaterStandaloneLineupsWithStrictIdentityAndHistory() {
+        var v7 = new LiveProviderGroupTracker(campaign, LiveProviderGroupTracker.Authority.LIVE_V7);
+        v7.dispatched(PlaywrightProviderRequest.eventDetails(event), context(CHECK)); v7.finished(true);
+        for (var request : java.util.List.of(PlaywrightProviderRequest.eventIncidents(event),
+                PlaywrightProviderRequest.eventStatistics(event), PlaywrightProviderRequest.eventLineups(event))) {
+            assertThat(v7.isContinuation(request, context(PREMATCH))).isTrue();
+            v7.dispatched(request, context(PREMATCH)); v7.finished(true);
+        }
+        var solo = new LiveProviderDispatchGroup(campaign, UUID.randomUUID(), event, PREMATCH);
+        assertThat(v7.isContinuation(PlaywrightProviderRequest.eventLineups(event), solo)).isFalse();
+        assertInvalid(() -> v7.isContinuation(PlaywrightProviderRequest.eventIncidents(event), solo));
+        assertInvalid(() -> v7.isContinuation(PlaywrightProviderRequest.eventLineups(event + 1), solo));
+        v7.dispatched(PlaywrightProviderRequest.eventLineups(event), solo); v7.finished(true);
+        assertInvalid(() -> v7.isContinuation(PlaywrightProviderRequest.eventLineups(event), solo));
+        assertInvalid(() -> v7.isContinuation(PlaywrightProviderRequest.eventLineups(event), context(PREMATCH)));
+        for (var authority : java.util.List.of(LiveProviderGroupTracker.Authority.LIVE_V4,
+                LiveProviderGroupTracker.Authority.LIVE_V5, LiveProviderGroupTracker.Authority.LIVE_V6)) {
+            var old = new LiveProviderGroupTracker(campaign, authority);
+            assertInvalid(() -> old.isContinuation(PlaywrightProviderRequest.eventLineups(event), solo));
+            old.dispatched(PlaywrightProviderRequest.eventDetails(event), context(CHECK)); old.finished(true);
+            assertInvalid(() -> old.isContinuation(PlaywrightProviderRequest.eventIncidents(event), context(PREMATCH)));
+        }
     }
 
     private LiveProviderDispatchGroup context(LiveProviderDispatchGroup.Phase phase) {

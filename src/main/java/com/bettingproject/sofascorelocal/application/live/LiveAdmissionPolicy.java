@@ -12,6 +12,7 @@ import org.springframework.stereotype.Component;
 public final class LiveAdmissionPolicy {
     public static final int V5_MAXIMUM_SELECTION_SIZE = 20;
     public static final int V6_MAXIMUM_SELECTION_SIZE = 7;
+    public static final int V7_MAXIMUM_SELECTION_SIZE = 3;
     public static final int V6_MAXIMUM_CALLS_PER_MINUTE = 25;
     public static final int V6_MAXIMUM_CALLS_PER_HOUR = 1000;
     public static final long V5_MAXIMUM_RAW_BYTES = 15_728_640_000L;
@@ -85,6 +86,20 @@ public final class LiveAdmissionPolicy {
         requireStorage(maximumBytesV5(matches));
     }
 
+    public void admitV7(int matches, GroupedAdmissionProfile profile) {
+        properties.validate();
+        if (matches < 1 || matches > properties.getQualifiedMatchCapacity() || matches > V7_MAXIMUM_SELECTION_SIZE)
+            throw new IllegalArgumentException("LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY");
+        if (matches > qualifiedCapacityV7(profile)) throw new IllegalArgumentException("LIVE_CAPACITY_REFUSED_REDUCE_SELECTION");
+        requireStorage(maximumBytesV5(matches));
+    }
+
+    /** 240 ordinary calls/hour plus four initial and four final calls, with 10% headroom. */
+    public static int qualifiedCapacityV7(GroupedAdmissionProfile profile) {
+        int hourlyCapacity = (V6_MAXIMUM_CALLS_PER_HOUR * 9 / 10) / 248;
+        return qualifiedGroupedCapacity(profile, "live-v7", Math.min(V7_MAXIMUM_SELECTION_SIZE, hourlyCapacity));
+    }
+
     /**
      * Pure temporal bound, independent of the configured/operator maximum and storage.
      * The established five-minute sequence has five calls to each critical family,
@@ -116,7 +131,7 @@ public final class LiveAdmissionPolicy {
         if (!policyVersion.equals(profile.policyVersion())) throw new IllegalStateException("LIVE_GROUPED_POLICY_MISMATCH");
         long rounds = profile.lineupInterval().toSeconds() / profile.criticalInterval().toSeconds();
         long weightedNanos = Math.multiplyExact(profile.interGroupDelay().toNanos(), rounds);
-        if ("live-v6".equals(policyVersion)) {
+        if ("live-v6".equals(policyVersion) || "live-v7".equals(policyVersion)) {
             // The durable limiter waits after every exchange, including same-group calls.
             weightedNanos = Math.multiplyExact(profile.minimumRequestStartInterval().toNanos(), 3 * rounds + 1);
         }
@@ -132,7 +147,9 @@ public final class LiveAdmissionPolicy {
         // and no nanosecond over the headroom boundary can disappear by truncation.
         long usableNanos = Math.multiplyExact(profile.lineupInterval().toNanos(), 9) / 10;
         int capacity = (int) Math.min(maximumMatches, usableNanos / weightedNanos);
-        while (capacity > 0 && !GroupedLiveAdmissionSimulation.fits(capacity, profile)) capacity--;
+        while (capacity > 0 && !("live-v7".equals(policyVersion)
+                ? GroupedLiveAdmissionSimulationV7.fits(capacity, profile)
+                : GroupedLiveAdmissionSimulation.fits(capacity, profile))) capacity--;
         return capacity;
     }
 
@@ -153,6 +170,10 @@ public final class LiveAdmissionPolicy {
         if (matches < 1 || matches > V6_MAXIMUM_SELECTION_SIZE)
             throw new IllegalArgumentException("invalid live selection size");
         return matches * 2.0;
+    }
+    public static double estimatedLiveCallsPerMinuteV7(int matches) {
+        if (matches < 1 || matches > V7_MAXIMUM_SELECTION_SIZE) throw new IllegalArgumentException("invalid live selection size");
+        return matches * 4.0;
     }
     public void requireStorage(long remainingRawBytes) {
         // Two times the remaining raw envelope plus a fixed floor covers index/projection overhead.

@@ -7,6 +7,8 @@ import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservat
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailObservationView;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetailPersistenceResult;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventDetails;
+import com.bettingproject.sofascorelocal.domain.eventdetails.EventPerson;
+import com.bettingproject.sofascorelocal.domain.event.ProviderCountry;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventSeason;
 import com.bettingproject.sofascorelocal.domain.eventdetails.EventVenue;
 import com.bettingproject.sofascorelocal.domain.scheduledevents.ScheduledEventStatus;
@@ -59,6 +61,9 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
                 is_awarded,
                 home_display_score,
                 away_display_score,
+                home_manager_name, home_manager_country_name, home_manager_country_alpha2,
+                away_manager_name, away_manager_country_name, away_manager_country_alpha2,
+                referee_name, referee_country_name, referee_country_alpha2,
                 normalized_sha256
             ) values (
                 :canonicalEventId,
@@ -87,6 +92,9 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
                 :isAwarded,
                 :homeDisplayScore,
                 :awayDisplayScore,
+                :homeManagerName, :homeManagerCountryName, :homeManagerCountryAlpha2,
+                :awayManagerName, :awayManagerCountryName, :awayManagerCountryAlpha2,
+                :refereeName, :refereeCountryName, :refereeCountryAlpha2,
                 :normalizedSha256
             )
             on conflict (
@@ -137,6 +145,9 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
                 d.is_awarded,
                 d.home_display_score,
                 d.away_display_score,
+                d.home_manager_name, d.home_manager_country_name, d.home_manager_country_alpha2,
+                d.away_manager_name, d.away_manager_country_name, d.away_manager_country_alpha2,
+                d.referee_name, d.referee_country_name, d.referee_country_alpha2,
                 d.normalized_sha256
             """;
 
@@ -237,7 +248,7 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
         ScheduledTournament tournament = details.tournament().orElse(null);
         EventVenue venue = details.venue().orElse(null);
         EventSeason season = details.season().orElse(null);
-        return new MapSqlParameterSource()
+        MapSqlParameterSource parameters = new MapSqlParameterSource()
                 .addValue("canonicalEventId", observation.identity().value())
                 .addValue("sourceKind", observation.source().kind().name())
                 .addValue("sourceReference", observation.source().sourceReference())
@@ -293,6 +304,24 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
                 .addValue("homeDisplayScore", details.homeDisplayScore().orElse(null), Types.INTEGER)
                 .addValue("awayDisplayScore", details.awayDisplayScore().orElse(null), Types.INTEGER)
                 .addValue("normalizedSha256", observation.normalizedSha256());
+        addPerson(parameters, "homeManager", details.homeManager());
+        addPerson(parameters, "awayManager", details.awayManager());
+        addPerson(parameters, "referee", details.referee());
+        return parameters;
+    }
+
+    private static void addPerson(MapSqlParameterSource parameters, String prefix, Optional<EventPerson> person) {
+        parameters.addValue(prefix + "Name", person.map(EventPerson::name).orElse(null), Types.VARCHAR)
+                .addValue(prefix + "CountryName", person.flatMap(EventPerson::country).flatMap(ProviderCountry::name).orElse(null), Types.VARCHAR)
+                .addValue(prefix + "CountryAlpha2", person.flatMap(EventPerson::country).flatMap(ProviderCountry::alpha2).orElse(null), Types.VARCHAR);
+    }
+
+    private static Optional<EventPerson> readPerson(ResultSet result, String prefix) throws SQLException {
+        String name = result.getString(prefix + "_name");
+        String countryName = result.getString(prefix + "_country_name"), code = result.getString(prefix + "_country_alpha2");
+        Optional<ProviderCountry> country = countryName == null && code == null ? Optional.empty()
+                : Optional.of(new ProviderCountry(Optional.ofNullable(countryName), Optional.ofNullable(code)));
+        return name == null ? Optional.empty() : Optional.of(new EventPerson(name, country));
     }
 
     private EventDetailObservationView mapView(ResultSet resultSet, int rowNumber)
@@ -344,7 +373,8 @@ public class JdbcEventDetailsStore implements EventDetailsStore {
                 Optional.ofNullable(resultSet.getString("event_round")),
                 Optional.ofNullable(resultSet.getObject("is_awarded", Boolean.class)),
                 Optional.ofNullable(resultSet.getObject("home_display_score", Integer.class)),
-                Optional.ofNullable(resultSet.getObject("away_display_score", Integer.class)));
+                Optional.ofNullable(resultSet.getObject("away_display_score", Integer.class)),
+                readPerson(resultSet, "home_manager"), readPerson(resultSet, "away_manager"), readPerson(resultSet, "referee"));
         EventSourceKind sourceKind = EventSourceKind.valueOf(
                 resultSet.getString("source_kind"));
         EventSourceTrace source = switch (sourceKind) {

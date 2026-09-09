@@ -193,24 +193,54 @@
     const version = JSON.stringify(view);
     if (host && incidentVersions.get(host) === version) return;
     if (!host) {
-      host = create("div", undefined, "data-incidents");
-      host.className = "incidents-view";
-      const empty = create("p", "La liste source est explicitement vide.", "data-incidents-empty");
-      empty.className = "incidents-empty";
-      const list = create("ol", undefined, "data-incidents-list");
-      list.className = "incidents-list";
-      list.setAttribute("aria-label", "Incidents dans l’ordre de l’observation");
-      host.append(empty, list);
+      host = create("div", undefined, "data-incidents"); host.className = "incidents-view";
       const technical = section.querySelector("[data-incidents-technical]");
       section.insertBefore(host, technical?.parentElement === section ? technical : null);
     }
-    const list = host.querySelector("[data-incidents-list]");
-    const existing = new Map(Array.from(list.children).map(node => [node.dataset.incidentKey, node]));
-    view.incidents.forEach((incident, index) => {
-      // An ordinal identifies this displayed occurrence, never a provider incident identity.
-      const key = String(index);
-      const node = existing.get(key) || incidentNode();
-      existing.delete(key);
+    const focused = host.contains(document.activeElement) ? document.activeElement : null;
+    const focusedPeriod = focused?.closest("[data-incidents-period]")?.dataset.incidentsPeriod;
+    const existing = new Map(Array.from(host.querySelectorAll("[data-incident-key]"), node => [node.dataset.incidentKey, node]));
+    let disclosure = host.querySelector("[data-incidents-disclosure]");
+    if (!disclosure) {
+      disclosure = create("details", undefined, "data-incidents-disclosure"); disclosure.className = "incidents-disclosure"; disclosure.open = true;
+      const summary = create("summary", "Incidents du match ");
+      const count = create("span", "0", "data-incidents-count"); count.className = "incidents-count";
+      summary.append(count);
+      const empty = create("p", "La liste source est explicitement vide.", "data-incidents-empty"); empty.className = "incidents-empty";
+      disclosure.append(summary, empty, create("div", undefined, "data-incidents-periods"));
+      host.replaceChildren(disclosure);
+    }
+    text(disclosure, "[data-incidents-count]", String(view.incidents.length));
+    disclosure.querySelector("[data-incidents-empty]").hidden = view.incidents.length > 0;
+    let periods = Array.isArray(view.periods) ? view.periods : [];
+    const indexes = periods.flatMap(period => Array.isArray(period.incidentIndexes) ? period.incidentIndexes : []);
+    const keys = periods.map(period => period.key);
+    if (indexes.length !== view.incidents.length || new Set(indexes).size !== indexes.length
+      || indexes.some(index => !Number.isInteger(index) || index < 0 || index >= view.incidents.length)
+      || new Set(keys).size !== keys.length || keys.some(key => typeof key !== "string" || !/^[A-Z_]+$/.test(key))) {
+      periods = view.incidents.length ? [{key: "ALL", label: "Incidents", incidentIndexes: view.incidents.map((_, index) => index)}] : [];
+    }
+    const container = disclosure.querySelector("[data-incidents-periods]");
+    const existingPeriods = new Map(Array.from(container.children, node => [node.dataset.incidentsPeriod, node]));
+    const desiredPeriods = periods.map((period, periodIndex) => {
+      let panel = existingPeriods.get(period.key);
+      existingPeriods.delete(period.key);
+      if (!panel) {
+        panel = create("details", undefined, "data-incidents-period"); panel.className = "incidents-period";
+        panel.dataset.incidentsPeriod = period.key; panel.open = true;
+        const summary = create("summary");
+        const count = create("span", "0", "data-incidents-period-count"); count.className = "incidents-count";
+        summary.append(create("span", "", "data-incidents-period-label"), count);
+        const list = create("ol", undefined, "data-incidents-list"); list.className = "incidents-list";
+        list.setAttribute("aria-label", "Incidents dans l’ordre de l’observation"); panel.append(summary, list);
+      }
+      text(panel, "[data-incidents-period-label]", period.label);
+      text(panel, "[data-incidents-period-count]", String(period.incidentIndexes.length));
+      const list = panel.querySelector("[data-incidents-list]");
+      const desired = period.incidentIndexes.map((index, position) => {
+        const incident = view.incidents[index], key = String(index);
+        // This is an occurrence ordinal within the source observation, not a provider identity.
+        const node = existing.get(key) || incidentNode(); existing.delete(key);
       node.dataset.incidentKey = key;
       node.dataset.incidentTone = incident.tone;
       node.dataset.incidentTeamSide = incident.teamSide;
@@ -231,10 +261,23 @@
       const score = node.querySelector("[data-incident-score]");
       score.hidden = incident.scoreLabel === "—";
       score.setAttribute("aria-label", `Score : ${incident.scoreLabel}`);
-      if (list.children.item(index) !== node) list.insertBefore(node, list.children.item(index));
+
+        if (list.children.item(position) !== node) list.insertBefore(node, list.children.item(position));
+        return node;
+      });
+      const kept = new Set(desired);
+      Array.from(list.children).forEach(node => { if (!kept.has(node)) node.remove(); });
+      if (container.children.item(periodIndex) !== panel) container.insertBefore(panel, container.children.item(periodIndex));
+      return panel;
     });
-    existing.forEach(node => node.remove());
-    host.querySelector("[data-incidents-empty]").hidden = view.incidents.length > 0;
+    existing.forEach(node => node.remove()); existingPeriods.forEach(node => node.remove());
+    if (focused) {
+      const period = desiredPeriods.find(node => node.dataset.incidentsPeriod === focusedPeriod);
+      for (const candidate of [focused, period?.querySelector(":scope > summary"), disclosure.querySelector(":scope > summary")]) {
+        if (!candidate?.isConnected || !host.contains(candidate) || candidate.getClientRects().length === 0) continue;
+        candidate.focus({preventScroll: true}); if (document.activeElement === candidate) break;
+      }
+    }
     incidentVersions.set(host, version);
   }
 
@@ -284,7 +327,17 @@
       age.dataset.liveAgeFrozen = String(family.freshness?.frozen === true);
       age.dataset.liveAgeAsOf = family.freshness?.ageAsOf || "";
     }
-    if (family.endpoint === "EVENT_STATISTICS" && window.StatisticsView) {
+    if (family.endpoint === "EVENT_DETAILS" && window.EventDetailsView) {
+      let host = section.querySelector("[data-event-details]");
+      if (!family.eventDetails) host?.remove();
+      else {
+        if (!host) {
+          host = create("section", undefined, "data-event-details");
+          section.append(host);
+        }
+        window.EventDetailsView.update(host, family.eventDetails);
+      }
+    } else if (family.endpoint === "EVENT_STATISTICS" && window.StatisticsView) {
       let host = section.querySelector("[data-statistics]");
       if (!family.statistics) {
         host?.remove();

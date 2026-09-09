@@ -6,7 +6,7 @@ du JSON `EVENT_LINEUPS` fourni dans la conversation. Les statuts `EXPERIMENTAL`,
 
 ## Contrat de lecture
 
-Le parseur fournisseur courant devient `event-lineups-v3`. Les parseurs V1 synthétique et V2
+Ce contrat historique est complété par [V4 pour les pays et la présentation](J4-J5-PEOPLE-V4.md). Le parseur fournisseur de ce lot historique devient `event-lineups-v3`. Les parseurs V1 synthétique et V2
 fournisseur restent disponibles pour leurs interprétations historiques. V3 conserve les critères
 de complétude de V2 ; les champs facultatifs ci-dessous n'ajoutent pas de signaux attendus par joueur.
 Ce complément utilise le endpoint déjà couvert : il ne crée ni appel, ni endpoint, ni collecte
@@ -87,6 +87,13 @@ souris et au clavier, avec ou sans JavaScript. Les chiffres affichés sont regro
 l'arrondi d'affichage ne modifie jamais la donnée persistée. Les champs sans unité explicitement
 établie ne reçoivent pas une unité supposée. Un nom de métrique inconnu reste lisible sous sa clé.
 Les panneaux ouverts et le focus sont conservés lors d'une nouvelle observation live.
+
+Les motifs connus des joueurs indisponibles sont traduits uniquement dans la projection française,
+par exemple `red_card_suspension`, épaule, ménisque, hernie, ligaments, cœur, coup, aine et
+`Strain Injury`. La valeur source (`description`, `type`, `reason` et `externalType`) reste
+conservée dans l’observation et dans le volet « Informations fournisseur » ; `missing` s’affiche
+comme « Indisponible ». Une description inconnue reste lisible telle que reçue, sans diagnostic
+inventé.
 
 Voir le [runbook live](../runbooks/LIVE-J4-J5-CAMPAIGNS.md) et le
 [rapport de qualification du complément](../validation/WO058-PLAYER-DETAILS-20260909.md).

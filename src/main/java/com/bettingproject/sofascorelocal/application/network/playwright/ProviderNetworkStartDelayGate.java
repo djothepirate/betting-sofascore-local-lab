@@ -129,7 +129,7 @@ final class ProviderNetworkStartDelayGate {
 
     /** A supervisor-proven v6 timeout end retains the full three-second fence, without a response. */
     synchronized void recordRecoverableTimeoutFinished(LiveProviderGroupTracker groupSession) {
-        if (groupSession == null || !groupSession.isLiveV6()) {
+        if (groupSession == null || !groupSession.supportsProvenTimeoutRecovery()) {
             timingEvidenceLost = true;
             throw new TimingEvidenceException();
         }

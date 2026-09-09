@@ -1,5 +1,24 @@
 # SofaScore Local Lab
 
+**Lot du 9 septembre — qualification hors fournisseur terminée :** les cartes
+affichent buts, passes décisives et drapeaux SVG locaux ; les motifs d’indisponibilité connus
+sont traduits dans la vue française. J4 expose entraîneurs, arbitre et tour nommé, via les
+contrats V4 et V46. Les incidents se replient globalement et par période. Les nouvelles
+préparations v7/V47 utilisent les fenêtres T−60/T−5/T0 puis les quatre familles à 60 s ; un
+J4 `delayed` avec nouvel horaire recale ces fenêtres sans réactiver une campagne historique.
+Les campagnes existantes conservent leurs politiques et leurs preuves. Voir
+[ADR-SS-005 v0.10](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md) et le
+[contrat des personnes/pays](docs/architecture/J4-J5-PEOPLE-V4.md), avec le
+[rapport de qualification](docs/validation/WO058-PEOPLE-AND-LIVE-V7-20260909.md).
+Le profil v7 est plafonné à trois rencontres et sa qualification ne détermine pas un
+seuil d'acceptation SofaScore ; une campagne réelle reste une action manuelle séparée.
+
+La campagne opérateur 4087041a a terminé `COMPLETED` après environ 55 minutes de suivi,
+avec 387 appels et zéro cycle manqué enregistré. Ses sept fins sont confirmées ; deux
+collectes finales restent incomplètes pour statistiques HTTP 404. Le
+[bilan local détaillé](docs/validation/WO058-REAL-CAMPAIGN-4087041A-20260909.md) distingue
+cette observation réelle du profil 60/60 en qualification et de la charge simultanée.
+
 **Réponses lentes et timeouts isolés — correctif du 9 septembre réalisé et qualifié fonctionnellement hors fournisseur :** le propriétaire
 autorise une tolérance bornée pour la seule session live-v6 déjà lancée. Elle exige une
 preuve terminale de fin d'échange et de nettoyage avant de fermer son groupe, différer

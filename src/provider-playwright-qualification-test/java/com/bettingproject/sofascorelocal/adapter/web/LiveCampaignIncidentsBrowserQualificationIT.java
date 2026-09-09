@@ -256,12 +256,17 @@ class LiveCampaignIncidentsBrowserQualificationIT {
                 Locator statistics = page.locator("[data-live-family='EVENT_STATISTICS'] [data-statistics]");
                 Locator otherFamilySummary = statistics.locator("[data-stat-group] > summary").first();
                 assertThat(otherFamilySummary.count()).isOne();
+                Locator firstHalf = host.locator("[data-incidents-period='FIRST_HALF']");
+                Locator firstHalfSummary = firstHalf.locator(":scope > summary");
+                firstHalfSummary.click();
+                assertThat(firstHalf.evaluate("node => node.open")).isEqualTo(false);
                 // Keep both the technical disclosure and another family's focus through real polling.
                 technical.locator(":scope > summary").click();
-                otherFamilySummary.focus();
+                firstHalfSummary.focus();
                 host.evaluate("root => window.__incidentsHost = root");
+                firstHalf.evaluate("root => window.__firstHalfPanel = root");
                 technical.evaluate("root => window.__incidentsTechnical = root");
-                otherFamilySummary.evaluate("root => window.__otherFamilyFocus = root");
+                firstHalfSummary.evaluate("root => window.__otherFamilyFocus = root");
                 String firstReceipt = incidentFamily(page).locator("[data-live-received]").textContent();
                 revision.set(2);
                 page.waitForCondition(() -> host.locator("[data-incident-key]").count() == 11);
@@ -272,7 +277,8 @@ class LiveCampaignIncidentsBrowserQualificationIT {
                         .as("a J5 incident score cannot replace the still unchanged J4 score").isEqualTo("1 – 0");
                 assertDuplicateGoals(host);
                 assertThat(incidentFamily(page).locator("[data-live-received]").textContent()).isNotEqualTo(firstReceipt);
-                assertStableDisclosuresAndFocus(page, host, technical, otherFamilySummary, true);
+                assertStableDisclosuresAndFocus(page, host, technical, firstHalfSummary, true);
+                assertThat(firstHalf.evaluate("node => node === window.__firstHalfPanel && !node.open")).isEqualTo(true);
                 assertInertMarkup(page, host);
                 assertNoOverflow(host, 1440);
                 capture(host, "incidents-live-updated-1440.png");
@@ -280,6 +286,7 @@ class LiveCampaignIncidentsBrowserQualificationIT {
                 // A new reception with unchanged normalized incidents must retain the closed panel too.
                 technical.locator(":scope > summary").click();
                 otherFamilySummary.focus();
+                otherFamilySummary.evaluate("root => window.__otherFamilyFocus = root");
                 String changedReceipt = incidentFamily(page).locator("[data-live-received]").textContent();
                 revision.set(3);
                 page.waitForCondition(() -> !changedReceipt.equals(incidentFamily(page).locator("[data-live-received]").textContent()));
@@ -291,6 +298,18 @@ class LiveCampaignIncidentsBrowserQualificationIT {
                 assertNoOverflow(host, 390);
                 assertInertMarkup(page, host);
                 capture(host, "incidents-live-updated-390.png");
+                Locator disclosure = host.locator("[data-incidents-disclosure]");
+                disclosure.locator(":scope > summary").click();
+                disclosure.locator(":scope > summary").focus();
+                String collapsedReceipt = incidentFamily(page).locator("[data-live-received]").textContent();
+                revision.set(4);
+                page.waitForCondition(() -> !collapsedReceipt.equals(incidentFamily(page).locator("[data-live-received]").textContent()));
+                assertThat(disclosure.evaluate("node => !node.open && document.activeElement === node.firstElementChild")).isEqualTo(true);
+                assertThat(firstHalf.evaluate("node => !node.open")).isEqualTo(true);
+                disclosure.locator(":scope > summary").press("Enter");
+                firstHalfSummary.press("Enter");
+                assertThat(firstHalf.evaluate("node => node.open")).isEqualTo(true);
+                assertNoOverflow(host, 390);
             }
         }
         assertThat(bridgeFailure.get()).as("all page, asset and state requests rendered by MockMvc").isNull();
@@ -347,6 +366,10 @@ class LiveCampaignIncidentsBrowserQualificationIT {
         assertThat(host.count()).isOne();
         assertThat(host.isVisible()).isTrue();
         assertThat(host.locator("[data-incident-key]").count()).isEqualTo(10);
+        assertThat(host.locator("[data-incidents-disclosure]").evaluate("node => node.open")).isEqualTo(true);
+        assertThat(host.locator("[data-incidents-period]").evaluateAll("nodes => nodes.map(node => node.dataset.incidentsPeriod)"))
+                .isEqualTo(List.of("SECOND_HALF", "FIRST_HALF"));
+        assertThat(host.locator("[data-incidents-period-count]").allTextContents()).containsExactly("8", "2");
         assertThat(host.locator("[data-incident-label]").allTextContents()).containsExactly(
                 "But", "But", "Carton jaune", "Carton rouge", "Second carton jaune · Expulsion",
                 "Remplacement", "Penalty arrêté", "Penalty manqué", "Repère de période",

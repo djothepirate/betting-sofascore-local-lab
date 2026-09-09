@@ -138,6 +138,8 @@ public class EventExplorerController {
                         "detailSearchDate",
                         detail.current().startsAtInZone().toLocalDate());
                 model.addAttribute("offlineDetail", detail.offlineDetail().orElse(null));
+                model.addAttribute("eventInformation", detail.offlineDetail()
+                        .map(observation -> EventDetailsPresentation.from(observation.details())).orElse(null));
             }
         }
         catch (IllegalArgumentException exception) {

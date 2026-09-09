@@ -5,6 +5,8 @@ import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.stream.IntStream;
 
 /** Shared display only: provider order, normalized evidence and the technical table stay unchanged. */
 public final class IncidentPresentation {
@@ -15,7 +17,36 @@ public final class IncidentPresentation {
     }
 
     public static View from(EventIncidents incidents, String homeName, String awayName) {
-        return new View(incidents.incidents().stream().map(incident -> item(incident, homeName, awayName)).toList());
+        var grouped = new LinkedHashMap<String, List<Integer>>();
+        for (int index = 0; index < incidents.incidents().size(); index++) {
+            grouped.computeIfAbsent(periodKey(incidents.incidents().get(index)), ignored -> new ArrayList<>()).add(index);
+        }
+        return new View(incidents.incidents().stream().map(incident -> item(incident, homeName, awayName)).toList(),
+                grouped.entrySet().stream().map(entry -> new Period(entry.getKey(), periodLabel(entry.getKey()), entry.getValue())).toList());
+    }
+
+    private static String periodKey(EventIncident incident) {
+        if (incident.incidentType().equals("penaltyShootout") || incident.periodText().filter("PEN"::equals).isPresent())
+            return "SHOOTOUT";
+        if (incident.minute().isEmpty()) return "OTHER";
+        // Added time belongs to its regulation period: 45+N remains the first half.
+        int minute = incident.minute().orElseThrow();
+        if (minute <= 45) return "FIRST_HALF";
+        if (minute <= 90) return "SECOND_HALF";
+        if (minute <= 105) return "EXTRA_FIRST";
+        if (minute <= 120) return "EXTRA_SECOND";
+        return "OTHER";
+    }
+
+    private static String periodLabel(String key) {
+        return switch (key) {
+            case "FIRST_HALF" -> "Première mi-temps";
+            case "SECOND_HALF" -> "Seconde mi-temps";
+            case "EXTRA_FIRST" -> "Prolongation · première période";
+            case "EXTRA_SECOND" -> "Prolongation · seconde période";
+            case "SHOOTOUT" -> "Séance de tirs au but";
+            default -> "Autres repères";
+        };
     }
 
     private static Item item(EventIncident incident, String homeName, String awayName) {
@@ -134,8 +165,15 @@ public final class IncidentPresentation {
         };
     }
 
-    public record View(List<Item> incidents) {
-        public View { incidents = List.copyOf(incidents); }
+    public record View(List<Item> incidents, List<Period> periods) {
+        public View { incidents = List.copyOf(incidents); periods = List.copyOf(periods); }
+        public View(List<Item> incidents) {
+            this(incidents, incidents.isEmpty() ? List.of() : List.of(new Period("ALL", "Incidents",
+                    IntStream.range(0, incidents.size()).boxed().toList())));
+        }
+    }
+    public record Period(String key, String label, List<Integer> incidentIndexes) {
+        public Period { incidentIndexes = List.copyOf(incidentIndexes); }
     }
     public record Item(String minuteLabel, String typeLabel, String icon, String tone,
                        String teamLabel, String teamSide, String playerLabel, String scoreLabel,

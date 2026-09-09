@@ -101,6 +101,14 @@ class J4DisplayScorePersistenceIT {
                 .isEqualTo(expectedHistorical);
         provenanceBefore.forEach((table, rows) -> assertThat(f.rows(table)).isEqualTo(rows));
         assertThat(f.parserConstraint()).contains("event-details-v1", "event-details-v2", "event-details-v3");
+        assertRejected(f, historicalId, "event-details-v4", null, null, null);
+        // Keep the V38 upgrade proof above; use today's schema for today's JDBC reader.
+        assertThat(f.migrate("46").migrationsExecuted).isEqualTo(8);
+        for (String person : List.of("home_manager", "away_manager", "referee")) {
+            expectedHistorical.put(person + "_name", null);
+            expectedHistorical.put(person + "_country_name", null);
+            expectedHistorical.put(person + "_country_alpha2", null);
+        }
         assertThat(f.details.findByObservationId(identity.value(), historicalId)).hasValueSatisfying(view -> {
             assertThat(view.details()).isEqualTo(detailsV2);
             assertThat(view.source()).isEqualTo(sourceV2);
@@ -133,10 +141,10 @@ class J4DisplayScorePersistenceIT {
         provenanceBefore.forEach((table, rows) -> assertThat(f.rows(table)).isEqualTo(rows));
         assertThat(f.jdbc.queryForMap("select * from event_detail_observation where id = ?", historicalId))
                 .isEqualTo(expectedHistorical);
-        assertThat(f.migrate("38").migrationsExecuted).isZero();
+        assertThat(f.migrate("46").migrationsExecuted).isZero();
 
         // Invalid direct SQL cannot bypass the same version and value bounds as the domain/parser.
-        assertRejected(f, first.observationId(), "event-details-v4", null, null, null);
+        assertRejected(f, first.observationId(), "event-details-v5", null, null, null);
         assertRejected(f, first.observationId(), "event-details-v2", false, null, null);
         assertRejected(f, first.observationId(), "event-details-v1", null, 0, null);
         assertRejected(f, first.observationId(), "event-details-v2", null, null, 0);

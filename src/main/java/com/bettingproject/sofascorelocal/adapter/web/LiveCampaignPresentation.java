@@ -112,8 +112,10 @@ public class LiveCampaignPresentation {
         String policyVersion = view.manifest().policyVersion();
         if (!grouped(policyVersion)) return null;
         long interval = view.manifest().cycleInterval().toSeconds();
-        double waitingRate = 120.0 / interval;
-        double playingRate = 180.0 / interval + 0.2;
+        boolean minutePolicy = "live-v7".equals(policyVersion);
+        // Prematch v7 is sparse; one J4/minute at kickoff is the conservative waiting rate.
+        double waitingRate = minutePolicy ? 1 : 120.0 / interval;
+        double playingRate = minutePolicy ? 240.0 / interval : 180.0 / interval + 0.2;
         List<EventView> active = view.events().stream().filter(e -> !terminal(e.state())).toList();
         boolean stopped = terminal(view.state()) || runtimeStatus != null && runtimeStatus.collectionStopped();
         double rate = stopped ? 0 : active.stream().mapToDouble(e -> "WAITING_START".equals(e.state()) ? waitingRate : playingRate).sum();
@@ -129,11 +131,13 @@ public class LiveCampaignPresentation {
             seconds = Math.min(seconds, view.endsAt() == null ? view.manifest().duration().toSeconds()
                     : Math.max(0, Duration.between(now, view.endsAt()).toSeconds()));
         }
-        return new Cadence(policyVersion, interval, 300, view.manifest().qualifiedMatchCapacity(), seconds, rate);
+        return new Cadence(policyVersion, interval, minutePolicy ? 60 : 300,
+                view.manifest().qualifiedMatchCapacity(), seconds, rate);
     }
 
     private static boolean grouped(String policyVersion) {
-        return "live-v4".equals(policyVersion) || "live-v5".equals(policyVersion) || "live-v6".equals(policyVersion);
+        return "live-v4".equals(policyVersion) || "live-v5".equals(policyVersion)
+                || "live-v6".equals(policyVersion) || "live-v7".equals(policyVersion);
     }
 
     private Event event(CampaignView campaign, EventView event, Instant observedAt) {
@@ -205,7 +209,7 @@ public class LiveCampaignPresentation {
             var matching = detail.filter(d -> d.source().sourceReference().equals(identity.source().sourceReference())
                     && d.source().payloadSha256().equals(identity.source().payloadSha256())
                     && d.details().status().equals(identity.status())
-                    && "event-details-v3".equals(d.source().parserVersion()));
+                    && List.of("event-details-v3", "event-details-v4").contains(d.source().parserVersion()));
             if (matching.isPresent()) return J4EventResult.from(matching.orElseThrow().details());
         }
         if (j4 == null || j4.latestSuccessfulResult() == null) return J4EventResult.absent();
@@ -249,7 +253,14 @@ public class LiveCampaignPresentation {
         StatisticsPresentation.View statistics = null;
         LineupsPresentation.View lineups = null;
         IncidentPresentation.View incidents = null;
+        EventDetailsPresentation.View eventDetails = null;
         String payloadSha256 = null;
+        if (details != null && cursor.endpoint() == SofascoreEndpointType.EVENT_DETAILS
+                && cursor.normalized() != null && cursor.normalized().detailObservationId() != null) {
+            eventDetails = details.findByObservationId(event.target().canonicalEventId(),
+                    cursor.normalized().detailObservationId())
+                    .map(observation -> EventDetailsPresentation.from(observation.details())).orElse(null);
+        }
         if (cursor.normalized() != null && cursor.normalized().j5ObservationId() != null) {
             var observation = data.findByObservationId(event.target().canonicalEventId(), cursor.endpoint(),
                     cursor.normalized().j5ObservationId());
@@ -306,7 +317,7 @@ public class LiveCampaignPresentation {
                 !pending && latest.code() != null && latest.code().startsWith("PLAYWRIGHT_TIMEOUT")
                         && diagnostics != null && attempted != null
                         ? diagnostics.findTransport(campaign.manifest().campaignId(), attempted.attempt().attemptId()).orElse(null)
-                        : null);
+                        : null, eventDetails);
     }
 
     private static Freshness freshness(CampaignView campaign, EventView event, FamilyCursor cursor, Instant now) {
@@ -451,7 +462,20 @@ public class LiveCampaignPresentation {
                          boolean previousData, Freshness freshness, Table table,
                          StatisticsPresentation.View statistics, CollectionSchedule schedule,
                          LineupsPresentation.View lineups, IncidentPresentation.View incidents,
-                         PlaywrightTransportDiagnostic transport) {
+                         PlaywrightTransportDiagnostic transport, EventDetailsPresentation.View eventDetails) {
+        public Family(String endpoint, String label, String outcome, String code, String scope,
+                Instant lastAttemptAt, Long authorizationDelayMillis, Instant lastReceivedAt,
+                Instant lastSuccessfulAt, Instant lastChangedAt, Long receivedSnapshotId, Long receivedOccurrenceId,
+                Long dataSnapshotId, String parserVersion, String payloadSha256, String normalizedSha256,
+                String completeness, Integer completenessScore, boolean previousData, Freshness freshness,
+                Table table, StatisticsPresentation.View statistics, CollectionSchedule schedule,
+                LineupsPresentation.View lineups, IncidentPresentation.View incidents,
+                PlaywrightTransportDiagnostic transport) {
+            this(endpoint, label, outcome, code, scope, lastAttemptAt, authorizationDelayMillis, lastReceivedAt,
+                    lastSuccessfulAt, lastChangedAt, receivedSnapshotId, receivedOccurrenceId, dataSnapshotId,
+                    parserVersion, payloadSha256, normalizedSha256, completeness, completenessScore,
+                    previousData, freshness, table, statistics, schedule, lineups, incidents, transport, null);
+        }
         public Family(String endpoint, String label, String outcome, String code, String scope,
                 Instant lastAttemptAt, Long authorizationDelayMillis, Instant lastReceivedAt,
                 Instant lastSuccessfulAt, Instant lastChangedAt, Long receivedSnapshotId, Long receivedOccurrenceId,

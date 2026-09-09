@@ -4,6 +4,31 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — compositions enrichies, informations J4 et cadence live-v7
+
+- Ajoute les buts et passes décisives aux cartes, avec répétition d’icônes et compteur
+  compact sur petit écran. Une carte sans statistique exploitable reste statique.
+- Affiche les nationalités des joueurs, entraîneurs et arbitre depuis les pays fournis.
+  Les drapeaux SVG flag-icons 7.3.2 sont embarqués avec licence MIT et manifeste SHA-256 ;
+  aucune image n’est demandée au fournisseur ou à un CDN. Un pays inconnu garde son texte.
+- Versionne `event-details-v4` et `event-lineups-v4`, avec persistance V46. J4 conserve
+  les entraîneurs, l’arbitre et le tour nommé, prioritaire sur le numéro de tour.
+  Les observations et hashes historiques restent inchangés.
+- Rend les incidents repliables globalement et par période, en conservant les panneaux
+  ouverts et le focus au rafraîchissement.
+- Introduit `live-v7`/V47 pour les nouvelles préparations : groupe initial, contrôle
+  à T−60 min, compositions toutes les cinq minutes jusqu’à confirmation/T−5 min,
+  attente du coup d’envoi, J4 seul jusqu’à `inprogress`, puis quatre familles à 60 s.
+  Un J4 `delayed` avec un nouveau coup d’envoi recale les fenêtres sans arrêter la
+  rencontre ; horaire absent ou régression après `inprogress` restent à revoir. Profil
+  distinct, trois rencontres au plus dans les budgets actuels ; aucune conversion de
+  campagne existante, suspension persistante 403/429 conservée.
+- Traduit dans la projection française les motifs d’indisponibilité observés, y compris
+  `red_card_suspension`, épaule, ménisque, hernie, ligaments, cœur, coup, aine et
+  `Strain Injury` (« Blessure à l’entraînement »), sans modifier les attributs bruts
+  conservés dans l’observation.
+- Qualification hors fournisseur et limites consignées dans le rapport dédié du lot.
+
 ### WO-058 — tolérance bornée aux timeouts prouvés et groupes v6 avec familles différées
 
 - Consigne l'autorisation explicite du correctif pour réponses lentes et timeouts isolés

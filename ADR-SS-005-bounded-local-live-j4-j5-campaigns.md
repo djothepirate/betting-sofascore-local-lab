@@ -1,6 +1,6 @@
 # ADR-SS-005 — Campagnes live locales et bornées J4/J5
 
-- **Version :** 0.9.
+- **Version :** 0.10.
 - **Statut :** `ACCEPTED` — v0.1 formellement acceptée ; capacité adaptative puis collecte des compositions avant le début explicitement demandées par le propriétaire le 7 septembre.
 - **Date :** 2026-09-09.
 - **Décideur :** propriétaire du Betting Project.
@@ -29,9 +29,51 @@ applicables ; la copie exacte acceptée de la v0.1 et les preuves de ses paliers
 La v0.3 ajoute seulement la collecte prématch LINEUPS au manifeste `live-v3`. Les manifestes
 historiques `live-v1` et `live-v2` gardent leur comportement, leurs échéances et leurs empreintes.
 
-## 0. Décision courante live-v6 — pression bornée et refus conservés
+## 0. Décision courante live-v7 — fenêtres avant match et familles à la minute
 
-Les nouvelles préparations utilisent **live-v6**, avec un profil d'admission séparé et
+Autorité : demande explicite du propriétaire le 9 septembre 2026, puis confirmation
+« Oui, attendre le coup d’envoi » pour les cinq dernières minutes. Cette décision
+autorise le nouvel ordonnanceur, son contrat persistant V47 et une qualification
+hors fournisseur. Elle ne lance aucune campagne réelle et ne convertit aucun manifeste
+existant : les politiques v1 à v6 conservent leur identité et leurs règles.
+
+Les nouvelles préparations utilisent `live-v7`, avec profil et empreinte propres.
+La capacité ne dépasse pas trois rencontres : quatre familles par minute représentent
+240 appels par heure et par rencontre. L’admission réserve en plus huit appels par
+rencontre pour initialisation/finalisation et conserve 10 % du budget horaire partagé :
+trois rencontres représentent 744 appels sur une allocation de 900. Les coûts mesurés
+ou le plafond opérateur peuvent réduire cette capacité. Une preuve complète est requise
+avant que la sélection propose une capacité positive.
+
+Pour une rencontre `notstarted`, le groupe initial appelle une fois J4 et les trois
+familles J5. Si le coup d’envoi est éloigné, le prochain groupe complet attend T−60 min.
+Ensuite, seules les compositions sont vérifiées toutes les cinq minutes tant qu’elles
+ne sont pas confirmées. Dès T−5 min, ces contrôles périodiques cessent. Le groupe initial
+demandé au lancement reste distinct de cette répétition. À T0, J4 seul vérifie le début
+toutes les 60 s jusqu’à un retour lisible `inprogress`. En jeu, J4 puis les trois J5
+visent tous 60 s ; l’ancien intervalle de cinq minutes des compositions ne s’applique
+pas à v7. Une confirmation absente ne vaut pas `true`, et un 404 n’est pas une réponse
+vide réussie. L’heure retenue est celle du dernier J4 reçu dans cette campagne.
+
+Un J4 `delayed` reçu avant le début ne ferme pas le suivi `live-v7`. Son
+`startTimestamp` lisible remplace l’horaire précédent et le calendrier est recalculé à
+partir de ce nouveau coup d’envoi : groupe complet à T−60 min, compositions seules
+toutes les cinq minutes jusqu’à T−5 min, silence jusqu’à T0, puis J4 à la minute. Si le
+J4 qui révèle le report tombe exactement à T−60 min du nouvel horaire, les trois familles
+J5 complètent ce même groupe, sans second J4. Un horaire absent, ou un retour
+`delayed` après `inprogress`, reste une incohérence à revoir. `postponed` conserve son
+arrêt individuel. Cette règle ne convertit ni ne réactive une campagne historique déjà
+arrêtée.
+
+Les protections communes ci-dessous restent prioritaires : refus persistants 403/429,
+charges 25/min et 1 000/h, espace minimal après fin d’échange, bornes de session,
+réserves finales, clôture et reprise différée seulement sous preuve terminale.
+Une cible de 60 s n’est ni une promesse de fraîcheur réelle ni une garantie d’accès.
+Les qualifications v6 restent historiques ; elles ne qualifient pas v7.
+
+## 0.1. Décision antérieure live-v6 — pression bornée et refus conservés
+
+Les préparations historiques **live-v6** utilisent un profil d'admission séparé et
 une preuve SHA-256 propre. La sélection effective vaut au plus **sept rencontres** et
 peut être réduite par les coûts mesurés ou la configuration. Le nominal reste 100 s
 pour J4/incidents/statistiques et les compositions prématch, puis 300 s pour les

@@ -28,7 +28,13 @@ public final class EventDetailsV3Parser {
     private final EventDetailsV2Parser baseParser = new EventDetailsV2Parser();
 
     public EventDetailsParseResult parse(long snapshotId, RawPayloadEvidence payload, Instant receivedAt) {
-        EventDetailsParseResult base = baseParser.parse(snapshotId, payload, receivedAt);
+        return parseWithPreferredRound(snapshotId, payload, receivedAt, Optional.empty());
+    }
+
+    // Only V4 uses the preferred-name path. All ordinary V3 calls retain legacy round validation.
+    EventDetailsParseResult parseWithPreferredRound(long snapshotId, RawPayloadEvidence payload,
+            Instant receivedAt, Optional<String> preferredRound) {
+        EventDetailsParseResult base = baseParser.parseWithPreferredRound(snapshotId, payload, receivedAt, preferredRound);
         EventDetailsParseEvidence original = base.evidence();
         EventDetailsParseEvidence evidence = new EventDetailsParseEvidence(
                 original.sourceReference(), original.rawSha256(), original.canonicalJsonSha256(),

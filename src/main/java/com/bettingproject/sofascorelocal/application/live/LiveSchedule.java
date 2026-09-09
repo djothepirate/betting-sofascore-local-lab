@@ -29,6 +29,7 @@ public final class LiveSchedule {
     private UUID contiguous;
     private String globalStop;
     private final GroupedLiveScheduleV4 grouped;
+    private final GroupedLiveScheduleV7 kickoffSchedule;
 
     public LiveSchedule(List<UUID> targets, Instant start, Instant endsAt) {
         this(targets, start, endsAt, Duration.ofSeconds(60));
@@ -55,9 +56,12 @@ public final class LiveSchedule {
         targets.forEach(id -> events.put(id, new Event(id, start)));
         this.grouped = "live-v4".equals(policyVersion) || "live-v5".equals(policyVersion) || "live-v6".equals(policyVersion)
                 ? new GroupedLiveScheduleV4(targets, start, endsAt, interval, campaignId, policyVersion) : null;
+        this.kickoffSchedule = "live-v7".equals(policyVersion)
+                ? new GroupedLiveScheduleV7(targets, start, endsAt, interval, campaignId) : null;
     }
 
     public synchronized Optional<Due> next(Instant now) {
+        if (kickoffSchedule != null) return kickoffSchedule.next(now);
         if (grouped != null) return grouped.next(now);
         if (inFlight != null || globalStop != null) return Optional.empty();
         if (!now.isBefore(endsAt)) { stopAll("STOPPED_LIMIT"); return Optional.empty(); }
@@ -117,6 +121,7 @@ public final class LiveSchedule {
     }
 
     public synchronized boolean mayDispatch(Due due, Instant now) {
+        if (kickoffSchedule != null) return kickoffSchedule.mayDispatch(due, now);
         if (grouped != null) return grouped.mayDispatch(due, now);
         Event e = events.get(due.eventId());
         return globalStop == null && e != null && e.active() && now.isBefore(endsAt)
@@ -125,17 +130,20 @@ public final class LiveSchedule {
 
     /** Shared local pressure can defer V6 dispatch before any network start. */
     public synchronized void defer(Due due, Instant notBefore) {
+        if (kickoffSchedule != null) { kickoffSchedule.defer(due, notBefore); return; }
         if (grouped == null) throw new IllegalStateException("LIVE_DEFER_UNSUPPORTED_POLICY");
         grouped.defer(due, notBefore);
     }
 
     /** Abandon the interrupted group; the next attempt must start a new J4 group. */
     public synchronized void deferAfterTimeout(Due due, Instant endedAt) {
+        if (kickoffSchedule != null) { kickoffSchedule.deferAfterTimeout(due, endedAt); return; }
         if (grouped == null) throw new IllegalStateException("LIVE_DEFER_UNSUPPORTED_POLICY");
         grouped.deferAfterTimeout(due, endedAt);
     }
 
     public synchronized void started(Due due, Instant now) {
+        if (kickoffSchedule != null) { kickoffSchedule.started(due, now); return; }
         if (grouped != null) { grouped.started(due, now); return; }
         if (inFlight != null || !mayDispatch(due, now)) throw new IllegalStateException("LIVE_DISPATCH_CANCELLED");
         Event e = events.get(due.eventId());
@@ -150,6 +158,7 @@ public final class LiveSchedule {
 
     public synchronized void completed(Due due, String status, boolean unavailable,
                                        Map<String, Boolean> signals, Instant now) {
+        if (kickoffSchedule != null) { kickoffSchedule.completed(due, status, unavailable, signals, now, null, null); return; }
         if (grouped != null) { grouped.completed(due, status, unavailable, signals, now); return; }
         if (!Objects.equals(inFlight, due)) throw new IllegalStateException("LIVE_UNEXPECTED_COMPLETION");
         inFlight = null;
@@ -224,6 +233,7 @@ public final class LiveSchedule {
     }
 
     public synchronized void reserveFinalCheck(UUID id, Instant now) {
+        if (kickoffSchedule != null) { kickoffSchedule.reserveFinalCheck(id, now); return; }
         if (grouped != null) { grouped.reserveFinalCheck(id, now); return; }
         Event e = events.get(id);
         if (!e.active() || e.finalizing) return;
@@ -234,6 +244,7 @@ public final class LiveSchedule {
         e.j4Kind = "J4_FINAL_CHECK";
     }
     public synchronized void failed(Due due, String scope, String reason) {
+        if (kickoffSchedule != null) { kickoffSchedule.failed(due, scope, reason); return; }
         if (grouped != null) { grouped.failed(due, scope, reason); return; }
         inFlight = null;
         // A parsed response is not a durable result until publication commits.
@@ -245,6 +256,7 @@ public final class LiveSchedule {
         if ("EVENT".equals(scope)) stopEvent(due.eventId(), reason); else stopAll(reason);
     }
     public synchronized void stopEvent(UUID id, String reason) {
+        if (kickoffSchedule != null) { kickoffSchedule.stopEvent(id, reason); return; }
         if (grouped != null) { grouped.stopEvent(id, reason); return; }
         Event e = events.get(id);
         if (e == null) throw new IllegalArgumentException("unknown selected event");
@@ -252,12 +264,14 @@ public final class LiveSchedule {
         if (id.equals(contiguous)) contiguous = null;
     }
     public synchronized void stopAll(String reason) {
+        if (kickoffSchedule != null) { kickoffSchedule.stopAll(reason); return; }
         if (grouped != null) { grouped.stopAll(reason); return; }
         globalStop = reason; events.keySet().forEach(id -> stopEvent(id, reason));
     }
-    public synchronized boolean terminal() { return grouped != null ? grouped.terminal() : globalStop != null || events.values().stream().noneMatch(Event::active); }
-    public synchronized String globalStop() { return grouped != null ? grouped.globalStop() : globalStop; }
+    public synchronized boolean terminal() { return kickoffSchedule != null ? kickoffSchedule.terminal() : grouped != null ? grouped.terminal() : globalStop != null || events.values().stream().noneMatch(Event::active); }
+    public synchronized String globalStop() { return kickoffSchedule != null ? kickoffSchedule.globalStop() : grouped != null ? grouped.globalStop() : globalStop; }
     public synchronized List<EventState> states() {
+        if (kickoffSchedule != null) return kickoffSchedule.states();
         if (grouped != null) return grouped.states();
         return events.values().stream().map(e -> new EventState(e.id, e.state, e.sport,
                 !e.active() ? null : nextDueAt(e),
@@ -266,7 +280,17 @@ public final class LiveSchedule {
 
     /** V4 family deadlines are durable metadata; legacy campaigns keep their historical event deadline. */
     public synchronized List<FamilySchedule> familySchedules(UUID eventId) {
+        if (kickoffSchedule != null) return kickoffSchedule.familySchedules(eventId);
         return grouped == null ? List.of() : grouped.familySchedules(eventId);
+    }
+
+    /** Provider facts used only by V7; legacy schedules retain their original completion path. */
+    public synchronized void completed(Due due, String status, boolean unavailable,
+                                       Map<String, Boolean> signals, Instant now,
+                                       Instant scheduledKickoff, Boolean lineupsConfirmed) {
+        if (kickoffSchedule != null) kickoffSchedule.completed(due, status, unavailable, signals, now,
+                scheduledKickoff, lineupsConfirmed);
+        else completed(due, status, unavailable, signals, now);
     }
 
     private Instant nextDueAt(Event e) {

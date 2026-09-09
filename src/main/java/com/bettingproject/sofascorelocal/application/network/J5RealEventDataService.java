@@ -2,7 +2,7 @@ package com.bettingproject.sofascorelocal.application.network;
 
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV6Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV17Parser;
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV3Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV4Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseResult;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseStatus;
@@ -58,7 +58,7 @@ public class J5RealEventDataService {
     private final J5EventDataStore eventDataStore;
     private final EventStatisticsV2Parser statisticsParser;
     private final EventIncidentsV6Parser incidentsParser;
-    private final EventLineupsV3Parser lineupsParser;
+    private final EventLineupsV4Parser lineupsParser;
     private final ManualProviderRequestCoordinator requestCoordinator;
     private final PlaywrightProviderSupervisor providerSupervisor;
     private final J8BenchmarkAuditService benchmarkAuditService;
@@ -75,7 +75,7 @@ public class J5RealEventDataService {
             J8BenchmarkAuditService benchmarkAuditService) {
         this(controlService, transport, rawSnapshotStore, canonicalEventStore, eventDataStore,
                 new EventStatisticsV2Parser(), new EventIncidentsV17Parser(),
-                new EventLineupsV3Parser(), requestCoordinator, providerSupervisor,
+                new EventLineupsV4Parser(), requestCoordinator, providerSupervisor,
                 benchmarkAuditService);
     }
 
@@ -87,7 +87,7 @@ public class J5RealEventDataService {
             J5EventDataStore eventDataStore,
             EventStatisticsV2Parser statisticsParser,
             EventIncidentsV6Parser incidentsParser,
-            EventLineupsV3Parser lineupsParser,
+            EventLineupsV4Parser lineupsParser,
             Clock clock,
             Duration minimumDelay,
             Pause pause,
@@ -114,7 +114,7 @@ public class J5RealEventDataService {
             J5EventDataStore eventDataStore,
             EventStatisticsV2Parser statisticsParser,
             EventIncidentsV6Parser incidentsParser,
-            EventLineupsV3Parser lineupsParser,
+            EventLineupsV4Parser lineupsParser,
             ManualProviderRequestCoordinator requestCoordinator,
             PlaywrightProviderSupervisor providerSupervisor) {
         this(
@@ -139,7 +139,7 @@ public class J5RealEventDataService {
             J5EventDataStore eventDataStore,
             EventStatisticsV2Parser statisticsParser,
             EventIncidentsV6Parser incidentsParser,
-            EventLineupsV3Parser lineupsParser,
+            EventLineupsV4Parser lineupsParser,
             ManualProviderRequestCoordinator requestCoordinator,
             PlaywrightProviderSupervisor providerSupervisor,
             J8BenchmarkAuditService benchmarkAuditService) {
@@ -708,7 +708,7 @@ public class J5RealEventDataService {
         return switch (endpoint) {
             case EVENT_STATISTICS -> EventStatisticsV2Parser.PARSER_VERSION;
             case EVENT_INCIDENTS -> EventIncidentsV17Parser.PARSER_VERSION;
-            case EVENT_LINEUPS -> EventLineupsV3Parser.PARSER_VERSION;
+            case EVENT_LINEUPS -> EventLineupsV4Parser.PARSER_VERSION;
             default -> throw new IllegalArgumentException("unsupported J5 endpoint");
         };
     }

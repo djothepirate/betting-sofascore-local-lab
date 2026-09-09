@@ -57,6 +57,10 @@
             <li th:each="player : ${team.missingPlayers}" class="lineups-missing-player" th:attr="data-lineups-missing-player=${player.key}">
               <strong data-lineups-missing-name th:text="${player.name}">Joueur</strong>
               <p class="lineups-missing-position" data-lineups-missing-position th:text="${player.positionLabel + ' · N° ' + player.shirtNumber}">Poste</p>
+              <span class="lineups-country" data-lineups-country th:attr="aria-label=${'Pays : ' + player.country.label}">
+                <img th:if="${!player.country.flagPath.isEmpty()}" class="lineups-flag" data-lineups-flag th:src="${player.country.flagPath}" alt="" width="24" height="18">
+                <span data-lineups-country-label th:text="${player.country.label}">Pays non renseigné</span>
+              </span>
               <p data-lineups-missing-description th:text="${player.description}">Motif non renseigné</p>
               <p class="lineups-return" data-lineups-missing-return th:hidden="${player.expectedReturn == '—'}"
                  th:text="${'Retour estimé fournisseur : ' + player.expectedReturn}">Retour estimé fournisseur</p>
@@ -77,22 +81,11 @@
 </div>
 
 <li th:fragment="player(player)" class="lineups-player" th:attr="data-lineups-player=${player.key}">
- <details class="lineups-player-details" data-lineups-player-details>
-  <summary class="lineups-player-summary">
-  <span class="lineups-number" data-lineups-number
-        th:attr="aria-label=${#strings.isEmpty(player.shirtNumber) or player.shirtNumber == '—' ? 'Numéro de maillot non renseigné' : 'Numéro de maillot ' + player.shirtNumber}"
-        th:text="${#strings.isEmpty(player.shirtNumber) ? '—' : player.shirtNumber}">—</span>
-  <span class="lineups-player-info">
-    <span class="lineups-player-title">
-      <strong class="lineups-name" data-lineups-name th:text="${player.name}">Joueur</strong>
-      <span class="lineups-captain" data-lineups-captain th:if="${player.captain}">C · Capitaine</span>
-    </span>
-    <span class="lineups-player-meta">
-      <span data-lineups-position th:text="${player.positionLabel}">Poste non renseigné</span>
-    </span>
-    <span class="lineups-statistics-hint" data-lineups-statistics-hint th:text="${player.statistics == null ? 'Détails du joueur' : 'Statistiques'}">Statistiques</span>
-  </span>
-  </summary>
+ <div th:unless="${player.hasStatistics()}" class="lineups-player-static" data-lineups-player-shell>
+  <div class="lineups-player-summary" data-lineups-player-header tabindex="-1"><th:block th:replace="~{fragments/lineups :: playerHeader(${player})}"></th:block></div>
+ </div>
+ <details th:if="${player.hasStatistics()}" class="lineups-player-details" data-lineups-player-details data-lineups-player-shell>
+  <summary class="lineups-player-summary" data-lineups-player-header><th:block th:replace="~{fragments/lineups :: playerHeader(${player})}"></th:block></summary>
   <div class="lineups-player-statistics" data-lineups-player-statistics>
     <p class="lineups-statistics-empty" data-lineups-statistics-empty
        th:hidden="${player.statistics != null and (!player.statistics.groups.isEmpty() or !player.statistics.ratingVersions.isEmpty())}"
@@ -117,5 +110,40 @@
   </div>
  </details>
 </li>
+<th:block th:fragment="playerHeader(player)">
+  <span class="lineups-number" data-lineups-number
+        th:attr="aria-label=${#strings.isEmpty(player.shirtNumber) or player.shirtNumber == '—' ? 'Numéro de maillot non renseigné' : 'Numéro de maillot ' + player.shirtNumber}"
+        th:text="${#strings.isEmpty(player.shirtNumber) ? '—' : player.shirtNumber}">—</span>
+  <span class="lineups-player-info">
+    <span class="lineups-player-title">
+      <strong class="lineups-name" data-lineups-name th:text="${player.name}">Joueur</strong>
+      <span class="lineups-captain" data-lineups-captain th:if="${player.captain}">C · Capitaine</span>
+    </span>
+    <span class="lineups-player-meta">
+      <span data-lineups-position th:text="${player.positionLabel}">Poste non renseigné</span>
+    </span>
+    <span class="lineups-country" data-lineups-country th:attr="aria-label=${'Pays : ' + player.country.label}">
+      <img th:if="${!player.country.flagPath.isEmpty()}" class="lineups-flag" data-lineups-flag th:src="${player.country.flagPath}" alt="" width="24" height="18">
+      <span data-lineups-country-label th:text="${player.country.label}">Pays non renseigné</span>
+    </span>
+    <span class="lineups-achievements" data-lineups-achievements th:hidden="${player.achievements.isEmpty()}">
+      <span th:each="achievement : ${player.achievements}" class="lineups-achievement" role="img"
+            th:attr="data-lineups-achievement=${achievement.key},aria-label=${achievement.label},data-compact=${achievement.compact}">
+        <span class="lineups-achievement-icons" aria-hidden="true">
+          <th:block th:each="repeat : ${achievement.repeats}">
+            <span th:if="${achievement.key == 'goals'}" data-lineups-goal-icon>⚽</span>
+            <svg th:unless="${achievement.key == 'goals'}" class="lineups-boot" data-lineups-assist-icon viewBox="0 0 32 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M4 3h7l3 7 11 4c3 1 4 3 3 5H3V9l1-6Z" fill="currentColor"/>
+              <path d="m12 7 5 1m-4 2 6 1M3 18h25" stroke="white" stroke-width="1.5"/>
+              <path d="M6 19v3m7-3v3m9-3v3m5-3v3" stroke="currentColor" stroke-width="2.5"/>
+            </svg>
+          </th:block>
+        </span>
+        <span class="lineups-achievement-count" aria-hidden="true" th:text="${'×' + achievement.count}">×1</span>
+      </span>
+    </span>
+    <span class="lineups-statistics-hint" data-lineups-statistics-hint th:if="${player.hasStatistics()}">Statistiques</span>
+  </span>
+</th:block>
 </body>
 </html>

@@ -6,6 +6,7 @@ public record EventDetailsParseWarning(Code code, String path, String message) {
 
     public enum Code {
         OPTIONAL_FIELD_MISSING,
+        OPTIONAL_FIELD_INVALID,
         UNKNOWN_FIELD
     }
 

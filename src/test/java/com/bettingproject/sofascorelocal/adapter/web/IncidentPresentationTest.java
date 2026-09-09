@@ -14,6 +14,29 @@ import java.util.List;
 import static org.assertj.core.api.Assertions.assertThat;
 
 class IncidentPresentationTest {
+    @Test
+    void periodsKeepSourceIndicesAndAddedTimeInItsRegulationHalf() {
+        var source = new EventIncidents(900001, List.of(
+                timedIncident(0, 90, 8), timedIncident(1, 45, 8), timedIncident(2, 105, 2),
+                timedIncident(3, 120, 1), timedIncident(4, 44, 0),
+                visualIncident(5, "penaltyShootout", "scored", null, null), timedIncident(6, 140, 0)));
+        var view = IncidentPresentation.from(source);
+        assertThat(view.incidents()).extracting(IncidentPresentation.Item::minuteLabel)
+                .containsExactly("90+8", "45+8", "105+2", "120+1", "44", "—", "140");
+        assertThat(view.periods()).extracting(IncidentPresentation.Period::key)
+                .containsExactly("SECOND_HALF", "FIRST_HALF", "EXTRA_FIRST", "EXTRA_SECOND", "SHOOTOUT", "OTHER");
+        assertThat(view.periods().get(1).incidentIndexes()).containsExactly(1, 4);
+        assertThat(view.periods().stream().flatMap(period -> period.incidentIndexes().stream()))
+                .containsExactlyInAnyOrder(0, 1, 2, 3, 4, 5, 6);
+        assertThat(IncidentPresentation.from(new EventIncidents(900001, List.of())).periods()).isEmpty();
+    }
+
+    private static EventIncident timedIncident(int sequence, int minute, int added) {
+        return new EventIncident(sequence, "card", minute, added == 0 ? Optional.empty() : Optional.of(added), Optional.of(false),
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("yellow"), Optional.empty());
+    }
+
     @ParameterizedTest
     @CsvSource({"Foul,Faute", "Argument,Contestation", "Violent conduct,Comportement violent",
             "Professional handball,Main volontaire"})

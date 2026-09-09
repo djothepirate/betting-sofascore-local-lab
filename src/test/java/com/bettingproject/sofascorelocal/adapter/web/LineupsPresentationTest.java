@@ -18,6 +18,94 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class LineupsPresentationTest {
     @Test
+    void unavailablePlayersUseTheirOwnCountryAndKeepAnExplicitFallback() {
+        var unavailable = new MissingLineupPlayer(31, "Absent synthétique", Optional.of(42), Optional.of("D"),
+                Optional.of("missing"), Optional.of(1), Optional.of("Knee Injury"), Optional.of(5), Optional.empty(),
+                Optional.of(new com.bettingproject.sofascorelocal.domain.event.ProviderCountry(Optional.of("Argentina"), Optional.of("AR"))));
+        var home = new TeamLineup(LineupSide.HOME, Optional.empty(), List.of(), Optional.of(List.of(unavailable,
+                missing(32, "Back Injury"))));
+        var view = LineupsPresentation.from(new EventLineups(900001, true, home,
+                new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of())), "Équipe française", "Autre équipe");
+        assertThat(view.teams().getFirst().missingPlayers()).satisfies(players -> {
+            assertThat(players.getFirst().country().label()).isEqualTo("Argentina");
+            assertThat(players.getFirst().country().flagPath()).isEqualTo("/images/flags/4x3/ar.svg");
+            assertThat(players.getLast().country().label()).isEqualTo("Pays non renseigné");
+            assertThat(players.getLast().country().flagPath()).isEmpty();
+            assertThat(players.getFirst().description()).isEqualTo("Blessure au genou");
+        });
+    }
+
+    @Test
+    void unavailablePlayerLabelsTranslateKnownSupplierDescriptionsWithoutChangingTheirSourceValues() {
+        var rawDescriptions = List.of("red_card_suspension", "Shoulder Injury", "Meniscus Injury", "Hernia",
+                "Ligament Injury", "Heart Problems", "Knock Injury", "Groin Injury", "Strain Injury");
+        var home = new TeamLineup(LineupSide.HOME, Optional.empty(), List.of(), Optional.of(List.of(
+                missing(101, rawDescriptions.get(0)), missing(102, rawDescriptions.get(1)),
+                missing(103, rawDescriptions.get(2)), missing(104, rawDescriptions.get(3)),
+                missing(105, rawDescriptions.get(4)), missing(106, rawDescriptions.get(5)),
+                missing(107, rawDescriptions.get(6)), missing(108, rawDescriptions.get(7)),
+                missing(109, rawDescriptions.get(8)))));
+
+        var displayed = LineupsPresentation.from(new EventLineups(900001, true, home,
+                new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of()))).teams().getFirst().missingPlayers();
+
+        assertThat(displayed).extracting(LineupsPresentation.MissingPlayer::description).containsExactly(
+                "Suspension après carton rouge", "Blessure à l’épaule", "Blessure au ménisque", "Hernie",
+                "Blessure aux ligaments", "Problèmes cardiaques", "Coup", "Blessure à l’aine",
+                "Blessure à l’entraînement");
+        assertThat(displayed).allSatisfy(player -> assertThat(player.type()).isEqualTo("Indisponible"));
+        assertThat(home.missingPlayers().orElseThrow()).extracting(MissingLineupPlayer::description)
+                .containsExactlyElementsOf(rawDescriptions.stream().map(Optional::of).toList());
+    }
+
+    @Test
+    void achievementsUseExactPositiveCountsAndCountryComesFromThePlayer() {
+        var statistics = new PlayerMatchStatistics(Map.of("goals", new java.math.BigDecimal("2"),
+                "goalAssist", new java.math.BigDecimal("3")), Map.of());
+        var source = new EventLineupPlayer(1, "Joueur", Optional.of(9), Optional.of("F"), true,
+                Optional.of(true), Optional.of(statistics), Optional.of(new com.bettingproject.sofascorelocal.domain.event.ProviderCountry(
+                        Optional.of("France"), Optional.of("FR"))));
+        var player = players(LineupsPresentation.from(lineups(true, null, List.of(source), List.of())).teams().getFirst()).findFirst().orElseThrow();
+        assertThat(player.hasStatistics()).isTrue();
+        assertThat(player.captain()).isTrue();
+        assertThat(player.country().flagPath()).isEqualTo("/images/flags/4x3/fr.svg");
+        assertThat(player.country().label()).isEqualTo("France");
+        assertThat(player.achievements()).extracting(LineupsPresentation.Achievement::label)
+                .containsExactly("2 buts", "3 passes décisives");
+        assertThat(player.achievements()).extracting(value -> value.repeats().size()).containsExactly(2, 3);
+    }
+
+    @Test
+    void emptyStatisticsDoNotOfferDetailsWhileZeroAndRatingVersionsAreDisplayable() {
+        var empty = new PlayerStatisticsPresentation.View(List.of(), List.of());
+        assertThat(new LineupsPresentation.Player("p", "Joueur", "9", "Attaquant", "Titulaire", false, null).hasStatistics()).isFalse();
+        assertThat(new LineupsPresentation.Player("p", "Joueur", "9", "Attaquant", "Titulaire", false, empty).hasStatistics()).isFalse();
+        for (var stats : List.of(new PlayerMatchStatistics(Map.of("goals", java.math.BigDecimal.ZERO), Map.of()),
+                new PlayerMatchStatistics(Map.of(), Map.of("original", java.math.BigDecimal.ZERO)))) {
+            assertThat(new LineupsPresentation.Player("p", "Joueur", "9", "Attaquant", "Titulaire", false,
+                    PlayerStatisticsPresentation.from(stats)).hasStatistics()).isTrue();
+        }
+    }
+
+    @Test
+    void malformedCountsAreNotRoundedIntoAchievementsAndHugeCountsHaveBoundedIcons() {
+        for (String value : List.of("0", "-1", "1.5", "99999999999999999999999999999999999999")) {
+            var stats = new PlayerMatchStatistics(Map.of("goals", new java.math.BigDecimal(value)), Map.of());
+            var source = new EventLineupPlayer(1, "Joueur", Optional.empty(), Optional.empty(), true,
+                    Optional.empty(), Optional.of(stats));
+            var player = players(LineupsPresentation.from(lineups(true, null, List.of(source), List.of())).teams().getFirst()).findFirst().orElseThrow();
+            if (value.length() > 10) {
+                assertThat(player.achievements()).singleElement().satisfies(badge -> {
+                    assertThat(badge.count()).isEqualTo(value); assertThat(badge.repeats()).hasSize(1);
+                    assertThat(badge.compact()).isTrue();
+                });
+            } else assertThat(player.achievements()).isEmpty();
+            assertThat(player.country().flagPath()).isEmpty();
+            assertThat(player.country().label()).isEqualTo("Pays non renseigné");
+        }
+    }
+
+    @Test
     void partitionsEveryPlayerByObservedRoleAndPositionWithoutLosingOrderInsideGroups() {
         List<EventLineupPlayer> home = List.of(
                 player(1, "Defender first", 12, "D", true, true),

@@ -470,9 +470,34 @@ class LiveDiagnosticPersistenceIT {
             var data=new EventDetails(event,T0,new ScheduledTeam(11,"Home"),new ScheduledTeam(22,"Away"),
                     new ScheduledEventStatus("inprogress",Optional.of("First half")),Optional.empty(),Optional.empty(),Optional.empty(),Optional.empty());
             var source=EventSourceTrace.providerSnapshot(saved.snapshotId(),saved.payloadSha256(),"event-details-v2",receipt.receivedAt());
-            long observation=canonical.save(CanonicalEventObservation.from(data.asScheduledEvent(),source)).observationId();
-            details.save(EventDetailObservation.from(CanonicalEventIdentity.sofascore(event),data,source));
-            return new Target(CanonicalEventIdentity.sofascore(event).value(),event,observation,saved.snapshotId());
+            long canonicalObservation=canonical.save(CanonicalEventObservation.from(data.asScheduledEvent(),source)).observationId();
+            EventDetailObservation detailObservation=EventDetailObservation.from(CanonicalEventIdentity.sofascore(event),data,source);
+            if (hasEventOfficialsColumns()) details.save(detailObservation);
+            else savePreV46Details(detailObservation);
+            return new Target(CanonicalEventIdentity.sofascore(event).value(),event,canonicalObservation,saved.snapshotId());
+        }
+        private void savePreV46Details(EventDetailObservation observation) {
+            EventDetails data=observation.details();EventSourceTrace source=observation.source();
+            jdbc.update("""
+                insert into event_detail_observation(canonical_event_id,source_kind,source_reference,source_snapshot_id,
+                    source_payload_sha256,parser_version,source_received_at,starts_at,home_team_provider_id,home_team_name,
+                    away_team_provider_id,away_team_name,status_type,status_description,normalized_sha256)
+                values (?,'PROVIDER_SNAPSHOT',?,?,?,?,?,?,?,?,?,?,?,?,?)
+                on conflict(canonical_event_id,source_kind,source_reference,normalized_sha256) do nothing
+                """,observation.identity().value(),source.sourceReference(),source.snapshotId().orElseThrow(),
+                    source.payloadSha256(),source.parserVersion(),Timestamp.from(source.receivedAt()),
+                    Timestamp.from(data.startsAt()),data.homeTeam().providerTeamId(),data.homeTeam().name(),
+                    data.awayTeam().providerTeamId(),data.awayTeam().name(),data.status().type(),
+                    data.status().description().orElse(null),observation.normalizedSha256());
+        }
+        private boolean hasEventOfficialsColumns() {
+            return Boolean.TRUE.equals(jdbc.queryForObject("""
+                select exists(
+                    select 1 from information_schema.columns
+                    where table_schema='public' and table_name='event_detail_observation'
+                        and column_name='home_manager_name'
+                )
+                """,Boolean.class));
         }
         Manifest prepare(String policy,List<Target> targets) {
             Manifest manifest;

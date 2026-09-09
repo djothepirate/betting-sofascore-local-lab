@@ -87,6 +87,9 @@ class J5LineupDetailsPersistenceIT {
                 .isEqualTo(checksums);
         assertThat(f.jdbc.queryForObject("select count(*) from j5_event_lineup_player where captain is not null or statistics is not null", Long.class)).isZero();
         assertThat(f.jdbc.queryForObject("select count(*) from j5_event_lineup_side where missing_players is not null", Long.class)).isZero();
+        // The V41 upgrade checks above remain exact; today's JDBC requires V46.
+        assertThat(f.migrate("46")).isEqualTo(5);
+        assertThat(f.evidence(true)).isEqualTo(before);
         J5EventDataObservationView reread = f.store.findByObservationId(IDENTITY.value(), SofascoreEndpointType.EVENT_LINEUPS, previousId).orElseThrow();
         assertThat(reread.data()).isEqualTo(previous.data());
         assertThat(reread.source()).isEqualTo(previous.source());
@@ -118,12 +121,12 @@ class J5LineupDetailsPersistenceIT {
         assertThat(f.evidence(true).get("provider_snapshot_occurrence")).isEqualTo(before.get("provider_snapshot_occurrence"));
         assertEnriched(f.store.findByObservationId(IDENTITY.value(), SofascoreEndpointType.EVENT_LINEUPS,
                 inserted.observationId()).orElseThrow(), current);
-        assertThat(f.migrate("41")).isZero();
+        assertThat(f.migrate("46")).isZero();
     }
 
     @Test
     void preservesUnknownAndExplicitEmptyValuesAndExactDecimalAndOffsetDateValues() {
-        Fixture f = fixture("41");
+        Fixture f = fixture("46");
         var enriched = f.observation(f.source(PAYLOAD, "event-lineups-v3"));
         var inserted = f.store.save(enriched);
         assertEnriched(f.store.findLatest(IDENTITY.value()).lineups().orElseThrow(), enriched);
@@ -156,7 +159,7 @@ class J5LineupDetailsPersistenceIT {
 
     @Test
     void concurrentDuplicateReservationsPublishOneCompleteObservationAndRollbackLeavesNoChildren() throws Exception {
-        Fixture f = fixture("41");
+        Fixture f = fixture("46");
         var observation = f.observation(f.source(PAYLOAD, "event-lineups-v3"));
         CountDownLatch ready = new CountDownLatch(2), start = new CountDownLatch(1);
         try (var pool = Executors.newFixedThreadPool(2)) {
@@ -189,7 +192,7 @@ class J5LineupDetailsPersistenceIT {
 
     @Test
     void constraintsBoundJsonAndTheExistingAppendOnlyAndJ7LocksRemainInForce() throws Exception {
-        Fixture f = fixture("41");
+        Fixture f = fixture("46");
         var inserted = f.store.save(f.observation(f.source(PAYLOAD, "event-lineups-v3")));
         long id = inserted.observationId();
         for (String invalid : List.of("[]", "null", "{}", "{\"values\":{},\"ratingVersions\":{},\"raw\":{}}",
@@ -240,7 +243,7 @@ class J5LineupDetailsPersistenceIT {
 
     @Test
     void backupRestoreRetainsNewPlayerDataSourceEvidenceAndExactRecomputedHashes() throws Exception {
-        Fixture source = fixture("41");
+        Fixture source = fixture("46");
         var observation = source.observation(source.source(PAYLOAD, "event-lineups-v3"));
         source.store.save(observation);
         String restoreDatabase = "lineup_restore_" + DATABASE.incrementAndGet();
@@ -254,7 +257,7 @@ class J5LineupDetailsPersistenceIT {
                     "--exit-on-error", "--no-owner", "--no-privileges", dump));
             Fixture restored = new Fixture(restoreDatabase);
             assertThat(restored.evidence(false)).isEqualTo(before);
-            assertThat(restored.migrate("41")).isZero();
+            assertThat(restored.migrate("46")).isZero();
             assertEnriched(restored.store.findLatest(IDENTITY.value()).lineups().orElseThrow(), observation);
             String script = Files.readString(Path.of("scripts/Backup-Restore-J6.ps1"), StandardCharsets.UTF_8);
             String sql = script.split("\\$normalizedFingerprintSql = @'\\r?\\n", 2)[1].split("\\r?\\n'@", 2)[0];
@@ -390,7 +393,7 @@ class J5LineupDetailsPersistenceIT {
             for (String table : List.of("provider_snapshot", "provider_snapshot_occurrence", "j5_event_data_observation",
                     "j5_event_lineup_side", "j5_event_lineup_player")) {
                 String expression = "to_jsonb(t)";
-                if (ignoreNewFields && table.equals("j5_event_lineup_player")) expression += " - 'captain' - 'statistics'";
+                if (ignoreNewFields && table.equals("j5_event_lineup_player")) expression += " - 'captain' - 'statistics' - 'country_name' - 'country_alpha2'";
                 if (ignoreNewFields && table.equals("j5_event_lineup_side")) expression += " - 'missing_players'";
                 evidence.put(table, jdbc.queryForList("select (" + expression + ")::text from " + table + " t order by (" + expression + ")::text", String.class));
             }

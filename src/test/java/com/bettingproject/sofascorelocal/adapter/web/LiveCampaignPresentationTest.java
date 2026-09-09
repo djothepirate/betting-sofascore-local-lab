@@ -248,10 +248,11 @@ class LiveCampaignPresentationTest {
         assertThat(value.sportStatus()).isEqualTo(status);
     }
 
-    @Test
-    void preparedCampaignUsesMatchingManualJ4AndLiveUsesItsExactDetailObservation() {
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"event-details-v3", "event-details-v4"})
+    void preparedCampaignUsesMatchingManualJ4AndLiveUsesItsExactDetailObservation(String parserVersion) {
         var store = mock(EventDetailsStore.class);
-        var source = EventSourceTrace.providerSnapshot(1, "c".repeat(64), "event-details-v3", START);
+        var source = EventSourceTrace.providerSnapshot(1, "c".repeat(64), parserVersion, START);
         var status = new ScheduledEventStatus("finished", Optional.empty());
         var identity = new CanonicalEventObservationView(1, IDENTITY, START, new ScheduledTeam(1, "Home"),
                 new ScheduledTeam(2, "Away"), status, Optional.empty(), source, "d".repeat(64), 1);
@@ -271,12 +272,13 @@ class LiveCampaignPresentationTest {
         var id = UUID.randomUUID();
         var refs = new NormalizedReferences(1L, 8L, null, "e".repeat(64));
         var result = new Result(id, new Publication("PARSED", "EVENT", "OK", START,
-                "event-details-v3", true, "FINALIZING", "finished", null, null, null, null), refs);
+                parserVersion, true, "FINALIZING", "finished", null, null, null, null), refs);
         var cursor = new FamilyCursor(SofascoreEndpointType.EVENT_DETAILS, id, id, id, id,
                 START, START, START, refs, result, result);
         var live = withStore.state(campaign(List.of(cursor), List.of())).events().getFirst();
         assertThat(live.score()).isEqualTo("3 – 0");
-        verify(store).findByObservationId(EVENT, 8);
+        assertThat(live.families().getFirst().eventDetails()).isEqualTo(EventDetailsPresentation.from(values));
+        verify(store, times(2)).findByObservationId(EVENT, 8);
         verify(store, never()).findLatest(EVENT);
 
         when(store.findLatest(EVENT)).thenReturn(Optional.of(new EventDetailObservationView(9, IDENTITY, values,

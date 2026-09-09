@@ -29,6 +29,50 @@ function Assert-J6Qualification {
     }
 }
 
+function Get-J6LoopbackListenerSnapshot {
+    $dotNetEndpoints = $null
+    try {
+        $dotNetEndpoints = @(
+            [Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().
+                GetActiveTcpListeners() |
+                Where-Object { $_.Port -eq 8087 } |
+                ForEach-Object { ('{0}:{1}' -f $_.Address, $_.Port) } |
+                Sort-Object -Unique)
+    }
+    catch {
+        throw (New-J6QualificationSanitizedException `
+                -Classification 'LOOPBACK_LISTENER_OBSERVATION_FAILED' `
+                -InnerException $_.Exception)
+    }
+
+    $netstatPath = Join-Path $env:WINDIR 'System32\netstat.exe'
+    $netstatOutput = @(& $netstatPath -ano -p tcp 2>&1)
+    if ($LASTEXITCODE -ne 0) {
+        throw (New-J6QualificationSanitizedException `
+                -Classification 'LOOPBACK_LISTENER_SECONDARY_OBSERVATION_FAILED')
+    }
+
+    $netstatEndpoints = [Collections.Generic.List[string]]::new()
+    foreach ($line in $netstatOutput) {
+        if ($line -isnot [string] -or
+            $line -notmatch '^\s*TCP\s+(?<local>\S+)\s+(?<remote>\S+)\s+\S+\s+\d+\s*$') {
+            continue
+        }
+        $localEndpoint = [string]$Matches.local
+        $remoteEndpoint = [string]$Matches.remote
+        if ($remoteEndpoint -inotmatch '^(0\.0\.0\.0|\[::\]):0$' -or
+            -not $localEndpoint.EndsWith(':8087', [StringComparison]::Ordinal)) {
+            continue
+        }
+        $netstatEndpoints.Add($localEndpoint)
+    }
+
+    return [pscustomobject]@{
+        DotNetEndpoints = @($dotNetEndpoints)
+        NetstatEndpoints = @($netstatEndpoints | Sort-Object -Unique)
+    }
+}
+
 function ConvertFrom-J6QualificationCanonicalCount {
     param(
         [Parameter(Mandatory = $true)]
@@ -1866,6 +1910,7 @@ $pwshPath = (Get-Process -Id $PID).Path
 Assert-J6QualificationCanonicalCountParser
 Assert-J6RuntimePostgresCleanupContracts
 Assert-J6ProcessObservationClassifier
+$initialLoopbackListenerSnapshot = Get-J6LoopbackListenerSnapshot
 $qualificationRootOwnership = New-J6OwnedQualificationTempRoot
 $resolvedQualificationRoot = [string]$qualificationRootOwnership.CanonicalPath
 
@@ -3279,25 +3324,37 @@ from (
     }
     Write-Host 'J6_PROCESS_IDENTITY_FINAL_BATCH=PASS'
     Write-Host 'J6_TASKLIST_OBSERVER_BOUNDED_JOB_CLEANUP=PASS'
-    try {
-        $loopbackListeners = @(
-            [Net.NetworkInformation.IPGlobalProperties]::GetIPGlobalProperties().
-                GetActiveTcpListeners() |
-                Where-Object { $_.Port -eq 8087 })
-    }
-    catch {
-        throw (New-J6QualificationSanitizedException `
-                -Classification 'LOOPBACK_LISTENER_OBSERVATION_FAILED' `
-                -InnerException $_.Exception)
-    }
-    if ($loopbackListeners.Count -ne 0) {
+    $finalLoopbackListenerSnapshot = Get-J6LoopbackListenerSnapshot
+    $newNetstatListeners = @(
+        $finalLoopbackListenerSnapshot.NetstatEndpoints |
+            Where-Object { $_ -notin $initialLoopbackListenerSnapshot.NetstatEndpoints })
+    if ($newNetstatListeners.Count -ne 0) {
         throw (New-J6QualificationSanitizedException `
                 -Classification 'LOOPBACK_APPLICATION_LISTENER_RESIDUAL')
+    }
+    $newDotNetListeners = @(
+        $finalLoopbackListenerSnapshot.DotNetEndpoints |
+            Where-Object { $_ -notin $initialLoopbackListenerSnapshot.DotNetEndpoints })
+    if ($newDotNetListeners.Count -ne 0) {
+        Start-Sleep -Milliseconds 250
+        $recheckedLoopbackListenerSnapshot = Get-J6LoopbackListenerSnapshot
+        $recheckedNewNetstatListeners = @(
+            $recheckedLoopbackListenerSnapshot.NetstatEndpoints |
+                Where-Object { $_ -notin $initialLoopbackListenerSnapshot.NetstatEndpoints })
+        if ($recheckedNewNetstatListeners.Count -ne 0) {
+            throw (New-J6QualificationSanitizedException `
+                    -Classification 'LOOPBACK_APPLICATION_LISTENER_RESIDUAL')
+        }
     }
     Write-Host "J6_PIPELINE_UNIQUE_OWNED_IDENTITY_COUNT=$($uniqueOwnedProcesses.Count)"
     Write-Host 'J6_PIPELINE_OWNED_IDENTITIES_INACTIVE_MULTI_API=PASS'
     Write-Host 'J6_PID_ONLY_TERMINATION_USED=NO'
     Write-Host 'J6_PIPELINE_RESIDUAL_OWNED_PROCESS_COUNT=0'
+    Write-Host (
+        'J6_LOOPBACK_APPLICATION_LISTENER_BASELINE_COUNT=' +
+        $initialLoopbackListenerSnapshot.NetstatEndpoints.Count)
+    Write-Host 'J6_LOOPBACK_LISTENER_MULTI_SOURCE_BASELINE=PASS'
+    Write-Host 'J6_LOOPBACK_APPLICATION_LISTENER_BASELINE_PRESERVED=PASS'
     Write-Host 'J6_LOOPBACK_APPLICATION_LISTENER_RESIDUAL_COUNT=0'
     Write-Host 'J6_PIPELINE_HUMAN_INCORRECT_PASSPHRASE_REQUIRED=NO'
     Write-Host 'PROVIDER_ACCESS_PERFORMED=NO'

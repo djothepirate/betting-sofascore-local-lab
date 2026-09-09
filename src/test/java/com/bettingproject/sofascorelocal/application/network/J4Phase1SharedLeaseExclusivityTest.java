@@ -1,7 +1,7 @@
 package com.bettingproject.sofascorelocal.application.network;
 
 import com.bettingproject.sofascorelocal.adapter.sofascore.SofascoreEndpointCatalog;
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV3Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV4Parser;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceResult;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceService;
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
@@ -349,7 +349,7 @@ class J4Phase1SharedLeaseExclusivityTest {
                 "application/json",
                 Duration.ofMillis(25),
                 payload,
-                EventDetailsV3Parser.PARSER_VERSION);
+                EventDetailsV4Parser.PARSER_VERSION);
     }
 
     private static String nominal(long eventId) {

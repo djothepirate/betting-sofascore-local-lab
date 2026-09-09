@@ -21,7 +21,19 @@ public record EventDetails(
         Optional<String> round,
         Optional<Boolean> isAwarded,
         Optional<Integer> homeDisplayScore,
-        Optional<Integer> awayDisplayScore) {
+        Optional<Integer> awayDisplayScore,
+        Optional<EventPerson> homeManager,
+        Optional<EventPerson> awayManager,
+        Optional<EventPerson> referee) {
+
+    /** Historical V3 observations do not identify officials. */
+    public EventDetails(long providerEventId, Instant startsAt, ScheduledTeam homeTeam, ScheduledTeam awayTeam,
+            ScheduledEventStatus status, Optional<ScheduledTournament> tournament, Optional<EventVenue> venue,
+            Optional<EventSeason> season, Optional<String> round, Optional<Boolean> isAwarded,
+            Optional<Integer> homeDisplayScore, Optional<Integer> awayDisplayScore) {
+        this(providerEventId, startsAt, homeTeam, awayTeam, status, tournament, venue, season, round,
+                isAwarded, homeDisplayScore, awayDisplayScore, Optional.empty(), Optional.empty(), Optional.empty());
+    }
 
     /** Historical V1/V2 contract: no award flag or displayed score was normalized. */
     public EventDetails(
@@ -52,6 +64,9 @@ public record EventDetails(
         isAwarded = Objects.requireNonNull(isAwarded, "isAwarded");
         homeDisplayScore = requireDisplayScore(homeDisplayScore, "homeDisplayScore");
         awayDisplayScore = requireDisplayScore(awayDisplayScore, "awayDisplayScore");
+        homeManager = Objects.requireNonNull(homeManager, "homeManager");
+        awayManager = Objects.requireNonNull(awayManager, "awayManager");
+        referee = Objects.requireNonNull(referee, "referee");
         round = Objects.requireNonNull(round, "round").map(value -> {
             String normalized = value.trim();
             if (normalized.isEmpty() || normalized.length() > 64) {

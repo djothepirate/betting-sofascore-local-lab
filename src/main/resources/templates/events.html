@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Événements locaux — SofaScore Local Lab</title>
   <link rel="stylesheet" th:href="@{/css/app.css}" href="/css/app.css">
+  <script defer th:src="@{/js/event-details.js}" src="/js/event-details.js"></script>
   <script defer th:src="@{/js/live-campaign.js}" src="/js/live-campaign.js"></script>
 </head>
 <body>
@@ -524,7 +525,7 @@
       <p class="muted">Les observations de corpus synthétiques restent consultables ; seules les rencontres issues d’un snapshot fournisseur sont éligibles.</p>
       <p class="muted">Les rencontres déjà terminées (finished) ou reportées (postponed) sont exclues de la préparation, sans appel fournisseur. Si toute la sélection est exclue, aucune campagne n’est créée. Un report constaté par J4 pendant une campagne arrête le suivi de la rencontre concernée.</p>
       <p class="muted">Les rencontres d’une campagne en cours ne peuvent pas être sélectionnées à nouveau, sauf en cas de STOPPED_ERROR.</p>
-      <p class="muted">Capacité qualifiée par campagne : <span th:text="${liveSelectionMaximum}">0</span> rencontres à une cible de 100 secondes pour J4, les incidents et les statistiques. Les compositions pendant le jeu sont réparties sur cinq minutes. Une sélection excessive est refusée.</p>
+      <p class="muted">Capacité qualifiée par campagne : <span th:text="${liveSelectionMaximum}">0</span> rencontres à une cible nominale de 60 secondes pour J4, les statistiques, les incidents et les compositions pendant le jeu. Avant le match, les appels sont espacés selon l’heure du coup d’envoi et la confirmation des compositions. Une sélection excessive est refusée.</p>
       <p class="notice notice-warning" th:if="${liveSelectionMaximum == 0}">La préparation des campagnes est indisponible : aucun profil de collecte qualifié n’accorde de capacité à la configuration actuelle. Il faut terminer la qualification hors fournisseur du profil et le charger dans le Lab. Les rencontres restent consultables.</p>
       <div class="actions"><button type="submit" class="button" data-live-prepare th:disabled="${liveSelectionMaximum == 0}">Préparer la campagne live</button>
         <span data-live-selection-count role="status">0 rencontre sélectionnée</span></div>

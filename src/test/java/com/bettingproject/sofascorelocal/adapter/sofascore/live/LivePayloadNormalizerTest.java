@@ -34,7 +34,7 @@ class LivePayloadNormalizerTest {
         assertThat(json(zero).at("/awayScore/value/current/presence").stringValue()).isEqualTo("ABSENT");
         assertThat(json(zero).at("/homeScore/value/period1/value").intValue()).isEqualTo(2);
         assertThat(json(zero).at("/homeScore/value/penalties/value").intValue()).isEqualTo(4);
-        assertThat(zero.parserVersion()).isEqualTo("event-details-v3");
+        assertThat(zero.parserVersion()).isEqualTo("event-details-v4");
         assertThat(zero.projectionVersion()).isEqualTo("j4-live-score-v2");
     }
 

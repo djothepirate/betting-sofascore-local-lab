@@ -1,5 +1,6 @@
 package com.bettingproject.sofascorelocal.domain.eventdata;
 
+import com.bettingproject.sofascorelocal.domain.event.ProviderCountry;
 import java.util.Objects;
 import java.util.Optional;
 
@@ -10,7 +11,13 @@ public record EventLineupPlayer(
         Optional<String> position,
         boolean starter,
         Optional<Boolean> captain,
-        Optional<PlayerMatchStatistics> statistics) {
+        Optional<PlayerMatchStatistics> statistics,
+        Optional<ProviderCountry> country) {
+
+    public EventLineupPlayer(long providerPlayerId, String name, Optional<Integer> shirtNumber,
+            Optional<String> position, boolean starter, Optional<Boolean> captain, Optional<PlayerMatchStatistics> statistics) {
+        this(providerPlayerId, name, shirtNumber, position, starter, captain, statistics, Optional.empty());
+    }
 
     public EventLineupPlayer(long providerPlayerId, String name, Optional<Integer> shirtNumber,
             Optional<String> position, boolean starter) {
@@ -38,6 +45,7 @@ public record EventLineupPlayer(
                 .map(value -> boundedText(value, "position", 32));
         captain = Objects.requireNonNull(captain, "captain");
         statistics = Objects.requireNonNull(statistics, "statistics");
+        country = Objects.requireNonNull(country, "country");
     }
 
     private static String boundedText(String value, String fieldName, int maximumLength) {

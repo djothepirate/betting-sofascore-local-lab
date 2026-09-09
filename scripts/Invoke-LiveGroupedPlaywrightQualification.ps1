@@ -1,15 +1,16 @@
 [CmdletBinding()]
 param([string]$BrowserCachePath = '', [string]$DockerExecutablePath = '',
-    [ValidateSet('live-v4', 'live-v5', 'live-v6')][string]$PolicyVersion = 'live-v4')
+    [ValidateSet('live-v4', 'live-v5', 'live-v6', 'live-v7')][string]$PolicyVersion = 'live-v4')
 $ErrorActionPreference = 'Stop'
 Set-StrictMode -Version Latest
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
+$v7 = $PolicyVersion -eq 'live-v7'
 $v6 = $PolicyVersion -eq 'live-v6'
 # The existing UI publication fixture uses this flag only to select the 100-second nominal.
 $v5 = $PolicyVersion -in @('live-v5', 'live-v6')
-$qualifiedMatches = if ($v6) { 7 } elseif ($v5) { 20 } else { 10 }
+$qualifiedMatches = if ($v7) { 3 } elseif ($v6) { 7 } elseif ($v5) { 20 } else { 10 }
 $criticalSeconds = if ($v5) { 100 } else { 60 }
-$gapSeconds = if ($v5) { 1 } else { 3 }
+$gapSeconds = if ($v5 -or $v7) { 1 } else { 3 }
 if ([string]::IsNullOrWhiteSpace($BrowserCachePath)) {
     $BrowserCachePath = Join-Path $repositoryRoot '.tmp/provider-playwright-browsers'
 }
@@ -35,7 +36,7 @@ try {
     $qualificationStartedAt = [DateTime]::UtcNow
     & .\mvnw.cmd '-Pprovider-playwright-runtime,provider-playwright-local-qualification' '-DskipTests=false' '-DskipITs=false' `
         '-Dwo058.grouped.sustained=true' '-Dit.test=LiveGroupedCampaignLocalQualificationIT,LiveTenMatchRefreshBrowserQualificationIT' `
-        "-Dwo058.grouped.v5=$($v5.ToString().ToLowerInvariant())" "-Dwo058.grouped.v6=$($v6.ToString().ToLowerInvariant())" `
+        "-Dwo058.grouped.v7=$($v7.ToString().ToLowerInvariant())" "-Dwo058.grouped.v5=$($v5.ToString().ToLowerInvariant())" "-Dwo058.grouped.v6=$($v6.ToString().ToLowerInvariant())" `
         "-Dwo058.ui.matches=$qualifiedMatches" `
         "-Dprovider.playwright.browser-cache=$browserCache" @dockerArgument `
         'failsafe:integration-test@provider-playwright-loopback-qualification' 'failsafe:verify@provider-playwright-loopback-qualification'
@@ -63,7 +64,7 @@ try {
             -or $report.operatorDatabaseUsed -ne $false) {
         throw 'The report does not prove the required sustained loopback scenario'
     }
-    if ($v6 -and ($report.productionPersistentResilience -ne $true `
+    if (($v6 -or $v7) -and ($report.productionPersistentResilience -ne $true `
             -or $report.productionTransportDiagnosticPersistence -ne $true `
             -or $report.minimumPostCompletionDelaySeconds -ne 2 `
             -or $report.maximumDeparturesPer60Seconds -ne 25 -or $report.maximumDeparturesPerHour -ne 1000 `
@@ -75,7 +76,7 @@ try {
             -or $report.durableDepartures -ne $report.requests `
             -or $report.durableDepartureCompletions -ne $report.requests `
             -or $report.durableCompleteTransportDiagnostics -ne $report.requests)) {
-        throw 'The report does not prove the real persistent v6 wrapper and its bounded departures'
+        throw 'The report does not prove the real persistent protected wrapper and its bounded departures'
     }
     'WO058_GROUPED_CADENCE_LOOPBACK=PASS'
     'SOFASCORE_NETWORK_CALLS_EXECUTED=NO'

@@ -2,10 +2,15 @@
 <html lang="fr" xmlns:th="http://www.thymeleaf.org">
 <body>
 <div th:fragment="view(view)" class="incidents-view" data-incidents>
+  <details class="incidents-disclosure" data-incidents-disclosure open>
+    <summary>Incidents du match <span class="incidents-count" data-incidents-count th:text="${view.incidents.size()}">0</span></summary>
   <p class="incidents-empty" data-incidents-empty th:hidden="${!view.incidents.isEmpty()}">La liste source est explicitement vide.</p>
+  <div data-incidents-periods>
+   <details th:each="period : ${view.periods}" class="incidents-period" th:attr="data-incidents-period=${period.key}" open>
+    <summary><span data-incidents-period-label th:text="${period.label}">Période</span> <span class="incidents-count" data-incidents-period-count th:text="${period.incidentIndexes.size()}">0</span></summary>
   <ol class="incidents-list" data-incidents-list aria-label="Incidents dans l’ordre de l’observation">
-    <li th:each="item, occurrence : ${view.incidents}" class="incidents-item"
-        th:attr="data-incident-key=${occurrence.index},data-incident-tone=${item.tone},data-incident-team-side=${item.teamSide}">
+    <li th:each="index : ${period.incidentIndexes}" th:with="item=${view.incidents[index]}" class="incidents-item"
+        th:attr="data-incident-key=${index},data-incident-tone=${item.tone},data-incident-team-side=${item.teamSide}">
       <span class="incidents-minute" data-incident-minute th:text="${item.minuteLabel}">—</span>
       <span class="incidents-icon" data-incident-icon aria-hidden="true" th:text="${item.icon}">•</span>
       <div class="incidents-content">
@@ -34,6 +39,9 @@
             th:attr="aria-label=${'Score : ' + item.scoreLabel}" th:text="${item.scoreLabel}">—</span>
     </li>
   </ol>
+   </details>
+  </div>
+ </details>
 </div>
 </body>
 </html>

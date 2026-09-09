@@ -3,7 +3,7 @@ package com.bettingproject.sofascorelocal.application.network;
 import com.bettingproject.sofascorelocal.adapter.sofascore.SofascoreEndpointCatalog;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsParseResult;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsParseStatus;
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV3Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV4Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.EventDetailsTransportException;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.EventDetailsTransportFailure;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceResult;
@@ -48,7 +48,7 @@ public class J4RealEventDetailsPhase1Service {
     private final RawManualCallSnapshotStore rawSnapshotStore;
     private final J4EventDetailsCache cache;
     private final J4ParsedEventDetailsPersistenceService parsedPersistenceService;
-    private final EventDetailsV3Parser parser;
+    private final EventDetailsV4Parser parser;
     private final Clock clock;
     private final Duration cacheTtl;
     private final ManualProviderRequestCoordinator requestCoordinator;
@@ -70,7 +70,7 @@ public class J4RealEventDetailsPhase1Service {
                 rawSnapshotStore,
                 cache,
                 parsedPersistenceService,
-                new EventDetailsV3Parser(),
+                new EventDetailsV4Parser(),
                 Clock.systemUTC(),
                 endpointCatalog.get(SofascoreEndpointType.EVENT_DETAILS).cacheTtl(),
                 requestCoordinator,
@@ -91,7 +91,7 @@ public class J4RealEventDetailsPhase1Service {
                 rawSnapshotStore,
                 cache,
                 parsedPersistenceService,
-                new EventDetailsV3Parser(),
+                new EventDetailsV4Parser(),
                 Clock.systemUTC(),
                 endpointCatalog.get(SofascoreEndpointType.EVENT_DETAILS).cacheTtl(),
                 requestCoordinator,
@@ -104,7 +104,7 @@ public class J4RealEventDetailsPhase1Service {
             RawManualCallSnapshotStore rawSnapshotStore,
             J4EventDetailsCache cache,
             J4ParsedEventDetailsPersistenceService parsedPersistenceService,
-            EventDetailsV3Parser parser,
+            EventDetailsV4Parser parser,
             Clock clock,
             Duration cacheTtl,
             Duration minimumDelay,
@@ -128,7 +128,7 @@ public class J4RealEventDetailsPhase1Service {
             RawManualCallSnapshotStore rawSnapshotStore,
             J4EventDetailsCache cache,
             J4ParsedEventDetailsPersistenceService parsedPersistenceService,
-            EventDetailsV3Parser parser,
+            EventDetailsV4Parser parser,
             Clock clock,
             Duration cacheTtl,
             Duration minimumDelay,
@@ -153,7 +153,7 @@ public class J4RealEventDetailsPhase1Service {
             RawManualCallSnapshotStore rawSnapshotStore,
             J4EventDetailsCache cache,
             J4ParsedEventDetailsPersistenceService parsedPersistenceService,
-            EventDetailsV3Parser parser,
+            EventDetailsV4Parser parser,
             Clock clock,
             Duration cacheTtl,
             ManualProviderRequestCoordinator requestCoordinator,
@@ -268,7 +268,7 @@ public class J4RealEventDetailsPhase1Service {
                             request,
                             clock.instant(),
                             cacheTtl,
-                            EventDetailsV3Parser.PARSER_VERSION);
+                            EventDetailsV4Parser.PARSER_VERSION);
                 }
                 catch (RuntimeException exception) {
                     return failAndLock(
@@ -287,7 +287,7 @@ public class J4RealEventDetailsPhase1Service {
                         audit.captureSnapshot(
                                 auditUnits.get(eventId),
                                 rawPersistence,
-                                EventDetailsV3Parser.PARSER_VERSION);
+                                EventDetailsV4Parser.PARSER_VERSION);
                     }
                     catch (RuntimeException exception) {
                         return failAndLock(
@@ -346,7 +346,7 @@ public class J4RealEventDetailsPhase1Service {
                         audit.captureSnapshot(
                                 auditUnits.get(eventId),
                                 rawPersistence,
-                                EventDetailsV3Parser.PARSER_VERSION);
+                                EventDetailsV4Parser.PARSER_VERSION);
                     }
                     catch (RuntimeException exception) {
                         return failAndLock(
@@ -703,7 +703,7 @@ public class J4RealEventDetailsPhase1Service {
                 response.contentType(),
                 response.latency(),
                 response.payload(),
-                EventDetailsV3Parser.PARSER_VERSION,
+                EventDetailsV4Parser.PARSER_VERSION,
                 RawSnapshotSchemaStatus.RAW_ONLY,
                 null);
     }

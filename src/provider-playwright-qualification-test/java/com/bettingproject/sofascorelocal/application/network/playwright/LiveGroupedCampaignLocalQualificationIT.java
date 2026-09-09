@@ -42,11 +42,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /** Explicit, synthetic loopback qualification. No application startup or provider access. */
 class LiveGroupedCampaignLocalQualificationIT {
-    private static final boolean V6 = Boolean.getBoolean("wo058.grouped.v6");
+    private static final boolean V7 = Boolean.getBoolean("wo058.grouped.v7");
+    private static final boolean V6 = V7 || Boolean.getBoolean("wo058.grouped.v6");
     private static final boolean V5 = Boolean.getBoolean("wo058.grouped.v5");
-    private static final String POLICY = V6 ? "live-v6" : V5 ? "live-v5" : "live-v4";
-    private static final int MATCHES = V6 ? 7 : V5 ? 20 : 10;
-    private static final int CRITICAL_SECONDS = V6 || V5 ? 100 : 60;
+    private static final String POLICY = V7 ? "live-v7" : V6 ? "live-v6" : V5 ? "live-v5" : "live-v4";
+    private static final int MATCHES = V7 ? 3 : V6 ? 7 : V5 ? 20 : 10;
+    private static final int CRITICAL_SECONDS = V7 ? 60 : V6 || V5 ? 100 : 60;
     private static final int GROUP_GAP_SECONDS = V6 || V5 ? 1 : 3;
     private static final int BODY_BYTES = 64 * 1024;
     private static final List<SofascoreEndpointType> FAMILIES =
@@ -76,7 +77,7 @@ class LiveGroupedCampaignLocalQualificationIT {
         report.put("scope", "EXPERIMENTAL LOCAL_ONLY SYNTHETIC_LOOPBACK");
         report.put("policyVersion", POLICY);
         report.put("criticalIntervalSeconds", CRITICAL_SECONDS);
-        report.put("lineupsIntervalSeconds", 300);
+        report.put("lineupsIntervalSeconds", V7 ? 60 : 300);
         report.put("interGroupDelaySeconds", GROUP_GAP_SECONDS);
         report.put("productionPersistentResilience", V6);
         report.put("productionTransportDiagnosticPersistence", V6);
@@ -104,14 +105,14 @@ class LiveGroupedCampaignLocalQualificationIT {
                     Map.of("requestMillis", envelope.requestEnvelope().toMillis(),
                             "processingMillis", envelope.processingEnvelope().toMillis())));
             report.put("candidateEndpointEnvelopes", candidateEnvelopes);
-            report.put("candidateEnvelopeSource", V6
+            report.put("candidateEnvelopeSource", V7 ? "earlier costs used only as a starting hypothesis; V7 requires new measured evidence" : V6
                     ? "historical v5 costs used only as starting hypotheses; no v6 qualification is inferred"
                     : "measured 75-second candidate; unchanged cost floors for the 100-second run");
         } else {
             report.put("candidateRequestEnvelopeMs", REQUEST_ENVELOPE.toMillis());
             report.put("candidateProcessingEnvelopeMs", PROCESSING_ENVELOPE.toMillis());
         }
-        report.put("candidateCapacityAtCurrentAdmission", V6 ? LiveAdmissionPolicy.qualifiedCapacityV6(candidateProfile())
+        report.put("candidateCapacityAtCurrentAdmission", V7 ? LiveAdmissionPolicy.qualifiedCapacityV7(candidateProfile()) : V6 ? LiveAdmissionPolicy.qualifiedCapacityV6(candidateProfile())
                 : V5 ? LiveAdmissionPolicy.qualifiedCapacityV5(candidateProfile())
                 : LiveAdmissionPolicy.qualifiedCapacityV4(candidateProfile()));
         report.put("admissionMode", MATCHES + " matches under measurement; temporal admission is calculated separately from measured envelope validity");
@@ -152,7 +153,8 @@ class LiveGroupedCampaignLocalQualificationIT {
                         .orElseThrow().ownership();
                 List<ProcessHandle> children;
                 long elapsedNanos;
-                try (var campaign = V6 ? factory.openLiveGroupedV6(manifest.campaignId(), LiveProviderSession.ENDPOINTS)
+                try (var campaign = V7 ? factory.openLiveGroupedV7(manifest.campaignId(), LiveProviderSession.ENDPOINTS)
+                        : V6 ? factory.openLiveGroupedV6(manifest.campaignId(), LiveProviderSession.ENDPOINTS)
                         : V5 ? factory.openLiveGroupedV5(manifest.campaignId(), LiveProviderSession.ENDPOINTS)
                         : factory.openLiveGrouped(manifest.campaignId(), LiveProviderSession.ENDPOINTS)) {
                     // Browser/bootstrap and seed transactions are outside the cadence measurement.
@@ -370,7 +372,7 @@ class LiveGroupedCampaignLocalQualificationIT {
                 long eventId = id;
                 var eventSamples = steady.stream().filter(s -> s.providerEventId() == eventId).toList();
                 perEventCounts.put(id, eventSamples.size());
-                checks.add(() -> assertThat(eventSamples).hasSizeGreaterThanOrEqualTo(sustained ? endpoint == EVENT_LINEUPS ? 5 : (V6 || V5 ? 17 : 28) : 1));
+                checks.add(() -> assertThat(eventSamples).hasSizeGreaterThanOrEqualTo(sustained ? V7 ? 28 : endpoint == EVENT_LINEUPS ? 5 : (V6 || V5 ? 17 : 28) : 1));
                 var eventIntervals = new ArrayList<Long>();
                 var eventAvailableIntervals = new ArrayList<Long>();
                 var nominalIntervals = new ArrayList<Long>();
@@ -387,7 +389,7 @@ class LiveGroupedCampaignLocalQualificationIT {
                         "nominalIntervalSeconds", summary(nominalIntervals),
                         "nominalLatenessSeconds", summary(eventLateness)));
                 if (sustained) checks.add(() -> {
-                    if (endpoint == EVENT_LINEUPS) {
+                    if (endpoint == EVENT_LINEUPS && !V7) {
                         if (V6) {
                             // Shared holds intentionally coalesce/rephase v6; old absolute phase
                             // congruences are not its contract. Measure the resulting cadence instead.
@@ -444,7 +446,7 @@ class LiveGroupedCampaignLocalQualificationIT {
             endpointMetrics.put("initialMaximumBodyProcessingSeconds", summary(peak.stream().map(Sample::processingNanos).toList()));
             metrics.put(endpoint.name(), endpointMetrics);
             if (sustained) {
-                if (endpoint == EVENT_LINEUPS) checks.add(() -> assertThat(percentile(lateness, .95)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(15)));
+                if (endpoint == EVENT_LINEUPS && !V7) checks.add(() -> assertThat(percentile(lateness, .95)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(15)));
                 else checks.add(() -> {
                     assertThat(percentile(intervals, .95)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(CRITICAL_SECONDS + 5));
                     assertThat(Collections.max(intervals)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(CRITICAL_SECONDS + 15));
@@ -453,7 +455,7 @@ class LiveGroupedCampaignLocalQualificationIT {
                 });
             }
         }
-        var steadyCritical = samples.stream().filter(s -> s.endpoint() != EVENT_LINEUPS && s.receivedNanos() >= warmupNanos).toList();
+        var steadyCritical = samples.stream().filter(s -> (V7 || s.endpoint() != EVENT_LINEUPS) && s.receivedNanos() >= warmupNanos).toList();
         var queueDebt = steadyCritical.stream().map(s -> Math.max(0, s.committedNanos() - s.dueNanos())).toList();
         int quarter = Math.max(1, steadyCritical.size() / 4);
         long firstDebt = percentile(queueDebt.subList(0, quarter), .95);
@@ -544,7 +546,7 @@ class LiveGroupedCampaignLocalQualificationIT {
         Instant now = Instant.now();
         return new Manifest(UUID.randomUUID(), "d".repeat(64), POLICY, now, now.plusSeconds(300), Duration.ofHours(4),
                 V6 || V5 ? 2500 : 1000, V6 || V5 ? 20000 : 3000, 3000L * RawPayloadEvidence.MAXIMUM_BYTES,
-                V6 ? 7 : 20, targets, profile,
+                V7 ? 3 : V6 ? 7 : 20, targets, profile,
                 Duration.ofSeconds(CRITICAL_SECONDS));
     }
 

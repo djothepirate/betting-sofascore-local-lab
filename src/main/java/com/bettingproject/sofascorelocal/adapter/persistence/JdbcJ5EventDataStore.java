@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.adapter.persistence;
 
 import com.bettingproject.sofascorelocal.domain.event.CanonicalEventIdentity;
+import com.bettingproject.sofascorelocal.domain.event.ProviderCountry;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceKind;
 import com.bettingproject.sofascorelocal.domain.event.EventSourceTrace;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncident;
@@ -363,7 +364,9 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 position,
                 starter,
                 captain,
-                statistics
+                statistics,
+                country_name,
+                country_alpha2
             ) values (
                 :observationId,
                 'EVENT_LINEUPS',
@@ -375,7 +378,9 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 :position,
                 :starter,
                 :captain,
-                cast(:statistics as jsonb)
+                cast(:statistics as jsonb),
+                :countryName,
+                :countryAlpha2
             )
             """;
 
@@ -389,7 +394,9 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 position,
                 starter,
                 captain,
-                statistics::text as statistics
+                statistics::text as statistics,
+                country_name,
+                country_alpha2
             from j5_event_lineup_player
             where observation_id = :observationId
             order by side, player_order
@@ -644,7 +651,9 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                         .addValue("position", player.position().orElse(null), Types.VARCHAR)
                         .addValue("starter", player.starter())
                         .addValue("captain", player.captain().orElse(null), Types.BOOLEAN)
-                        .addValue("statistics", writePlayerStatistics(player.statistics()), Types.VARCHAR));
+                        .addValue("statistics", writePlayerStatistics(player.statistics()), Types.VARCHAR)
+                        .addValue("countryName", player.country().flatMap(ProviderCountry::name).orElse(null), Types.VARCHAR)
+                        .addValue("countryAlpha2", player.country().flatMap(ProviderCountry::alpha2).orElse(null), Types.VARCHAR));
             }
         }
         jdbcTemplate.batchUpdate(INSERT_LINEUP_SIDE_SQL, sideBatches);
@@ -793,7 +802,7 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                                 Optional.ofNullable(resultSet.getString("position")),
                                 resultSet.getBoolean("starter"),
                                 Optional.ofNullable(resultSet.getObject("captain", Boolean.class)),
-                                readPlayerStatistics(resultSet.getString("statistics")))));
+                                readPlayerStatistics(resultSet.getString("statistics")), readCountry(resultSet))));
         TeamLineup home = new TeamLineup(
                 LineupSide.HOME,
                 requireFormationSlot(formations, LineupSide.HOME),
@@ -807,6 +816,12 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                 Objects.requireNonNull(parent.lineupsConfirmed(), "lineupsConfirmed"),
                 home,
                 away);
+    }
+
+    private static Optional<ProviderCountry> readCountry(ResultSet result) throws SQLException {
+        String name = result.getString("country_name"), alpha2 = result.getString("country_alpha2");
+        return name == null && alpha2 == null ? Optional.empty()
+                : Optional.of(new ProviderCountry(Optional.ofNullable(name), Optional.ofNullable(alpha2)));
     }
 
     private static String writePlayerStatistics(Optional<PlayerMatchStatistics> statistics) {
@@ -854,6 +869,13 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
             value.put("description", player.description().orElse(null));
             value.put("externalType", player.externalType().orElse(null));
             value.put("expectedEndDate", player.expectedEndDate().map(OffsetDateTime::toString).orElse(null));
+            // Preserve the historical V3 JSON shape when the optional V4 country is absent.
+            player.country().ifPresent(country -> {
+                Map<String, Object> serialized = new LinkedHashMap<>();
+                serialized.put("name", country.name().orElse(null));
+                serialized.put("alpha2", country.alpha2().orElse(null));
+                value.put("country", serialized);
+            });
             values.add(value);
         }
         return JSON_MAPPER.writeValueAsString(values);
@@ -875,13 +897,19 @@ public class JdbcJ5EventDataStore implements J5EventDataStore {
                         optionalJsonInteger(player, "reason"),
                         optionalJsonText(player, "description"),
                         optionalJsonInteger(player, "externalType"),
-                        optionalJsonText(player, "expectedEndDate").map(OffsetDateTime::parse)));
+                        optionalJsonText(player, "expectedEndDate").map(OffsetDateTime::parse), readJsonCountry(player)));
             }
             return Optional.of(List.copyOf(values));
         }
         catch (RuntimeException exception) {
             throw new IllegalStateException("invalid persisted missing players", exception);
         }
+    }
+
+    private static Optional<ProviderCountry> readJsonCountry(JsonNode player) {
+        JsonNode country = player.get("country");
+        if (country == null) return Optional.empty();
+        return Optional.of(new ProviderCountry(optionalJsonText(country, "name"), optionalJsonText(country, "alpha2")));
     }
 
     private static Optional<Integer> optionalJsonInteger(JsonNode object, String name) {

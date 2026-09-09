@@ -9,7 +9,7 @@ import static com.bettingproject.sofascorelocal.application.network.playwright.L
 
 /** Called only under the campaign's I/O lock; no group may be reopened or repeated. */
 final class LiveProviderGroupTracker {
-    enum Authority { LIVE_V4, LIVE_V5, LIVE_V6, MANUAL_J5 }
+    enum Authority { LIVE_V4, LIVE_V5, LIVE_V6, LIVE_V7, MANUAL_J5 }
     private static final int MAXIMUM_V4_GROUPS = 3000;
     private static final int MAXIMUM_V5_GROUPS = 20000;
     private static final List<SofascoreEndpointType> ORDER = List.of(
@@ -32,8 +32,9 @@ final class LiveProviderGroupTracker {
     }
 
     /** The tracker instance is also the supervisor-owned session identity. */
-    boolean usesOneSecondInterGroupDelay() { return authority == Authority.LIVE_V5 || authority == Authority.LIVE_V6; }
+    boolean usesOneSecondInterGroupDelay() { return authority == Authority.LIVE_V5 || supportsProvenTimeoutRecovery(); }
     boolean isLiveV6() { return authority == Authority.LIVE_V6; }
+    boolean supportsProvenTimeoutRecovery() { return authority == Authority.LIVE_V6 || authority == Authority.LIVE_V7; }
 
     boolean isContinuation(PlaywrightProviderRequest request, LiveProviderDispatchGroup group) {
         if (authority == Authority.MANUAL_J5) return manualContinuation(request, group);
@@ -52,14 +53,15 @@ final class LiveProviderGroupTracker {
                 >= (usesOneSecondInterGroupDelay() ? MAXIMUM_V5_GROUPS : MAXIMUM_V4_GROUPS)) fail();
         // Ordinary groups open with J4. Only a pending final collection can open
         // directly on its first remaining J5 family after a previous group ended.
-        if (group.phase() != Phase.FINALIZING && (group.phase() != Phase.CHECK || index != 0)) fail();
+        boolean standalonePrematchLineups = authority == Authority.LIVE_V7 && group.phase() == Phase.PREMATCH && index == 3;
+        if (!standalonePrematchLineups && group.phase() != Phase.FINALIZING && (group.phase() != Phase.CHECK || index != 0)) fail();
         return false;
     }
 
     private boolean permitsSkippedFamilies(Phase phase) {
         // Only v6 can omit an unavailable in-play family from the server's group.
         // Strictly increasing indices above still reject repeats and backtracking.
-        return phase == Phase.PREMATCH || authority == Authority.LIVE_V6 && phase == Phase.IN_PLAY;
+        return phase == Phase.PREMATCH || supportsProvenTimeoutRecovery() && phase == Phase.IN_PLAY;
     }
 
     private boolean manualContinuation(PlaywrightProviderRequest request, LiveProviderDispatchGroup group) {
@@ -93,17 +95,17 @@ final class LiveProviderGroupTracker {
 
     /** Only after the supervisor proves that a v6 timeout exchange has terminated. */
     void finishedRecoverableTimeout() {
-        if (!isLiveV6()) fail();
+        if (!supportsProvenTimeoutRecovery()) fail();
         // History is deliberately retained: the interrupted group can never reopen.
         current = null;
         previousIndex = -1;
         previousResponseUsable = false;
     }
 
-    private static boolean permitted(Phase phase, int index) {
+    private boolean permitted(Phase phase, int index) {
         return switch (phase) {
             case CHECK -> index == 0;
-            case PREMATCH -> index == 3;
+            case PREMATCH -> authority == Authority.LIVE_V7 ? index >= 1 : index == 3;
             case IN_PLAY, FINALIZING -> index >= 1;
             case MANUAL_J5 -> false;
         };

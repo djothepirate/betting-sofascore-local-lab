@@ -27,7 +27,7 @@ public record TeamLineup(
 
     public boolean hasEnrichedData() {
         return missingPlayers.isPresent() || players.stream()
-                .anyMatch(player -> player.captain().isPresent() || player.statistics().isPresent());
+                .anyMatch(player -> player.captain().isPresent() || player.statistics().isPresent() || player.country().isPresent());
     }
 
     private static String boundedText(String value, String fieldName, int maximumLength) {

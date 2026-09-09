@@ -1,7 +1,7 @@
 package com.bettingproject.sofascorelocal.application.network;
 
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventIncidentsV6Parser;
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV3Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventLineupsV4Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.EventStatisticsV2Parser;
 import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignTerminalState;
 import com.bettingproject.sofascorelocal.domain.benchmark.J8BenchmarkCampaignType;
@@ -80,7 +80,7 @@ public class J5LocalJsonImportService {
             J5EventDataStore eventDataStore,
             EventStatisticsV2Parser statisticsParser,
             EventIncidentsV6Parser incidentsParser,
-            EventLineupsV3Parser lineupsParser,
+            EventLineupsV4Parser lineupsParser,
             Clock clock) {
         this(
                 controlService,

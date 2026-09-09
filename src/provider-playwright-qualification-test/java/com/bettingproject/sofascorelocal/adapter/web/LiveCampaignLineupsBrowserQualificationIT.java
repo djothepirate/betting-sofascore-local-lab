@@ -179,6 +179,26 @@ class LiveCampaignLineupsBrowserQualificationIT {
             assertNoHorizontalOverflow(page, host);
             awaitRenderedBenchProjection(page, host, LineupsPresentation.from(benchReorderRoster(2), HOME_NAME, AWAY_NAME));
             capture(host, "lineups-twelve-bench-reordered-mobile.png");
+            // A disappearing statistics block removes its control; a later observed block
+            // restores a real keyboard-operable disclosure without replacing the player card.
+            Locator card = player(team(host, "HOME"), 1);
+            card.locator("[data-lineups-player-header]").focus();
+            host.evaluate("(root, json) => window.LineupsView.update(root, JSON.parse(json))",
+                    json.writeValueAsString(LineupsPresentation.from((EventLineups) observation(5).data(), HOME_NAME, AWAY_NAME)));
+            assertThat(card.locator("summary, details, [data-lineups-statistics-hint]").count()).isZero();
+            assertFocused(card.locator("[data-lineups-player-header]"));
+            host.evaluate("(root, json) => window.LineupsView.update(root, JSON.parse(json))",
+                    json.writeValueAsString(LineupsPresentation.from((EventLineups) observation(1).data(), HOME_NAME, AWAY_NAME)));
+            assertFocused(card.locator("[data-lineups-player-header]"));
+            card.locator("[data-lineups-player-header]").press("Enter");
+            assertOpen(card.locator("[data-lineups-player-details]"), true);
+            assertPlayerStatistics(card, "6,25", "45");
+            page.waitForCondition(() -> Boolean.TRUE.equals(card.locator("[data-lineups-flag]")
+                    .evaluate("image => image.complete && image.naturalWidth > 0")));
+            assertThat(card.locator("[data-lineups-achievement='goals'] .lineups-achievement-count").isVisible()).isTrue();
+            assertThat(card.locator("[data-lineups-goal-icon]:visible").count()).isOne();
+            assertThat(card.locator("[data-lineups-assist-icon]:visible").count()).isOne();
+            assertNoHorizontalOverflow(page, host);
         }
         assertThat(bridgeFailure.get()).isNull();
         assertThat(scriptErrors).isEmpty();
@@ -381,6 +401,8 @@ class LiveCampaignLineupsBrowserQualificationIT {
                 assertOpen(ratingVersions, true);
                 assertOpen(missingSource, true);
                 assertPlayerStatistics(player(home, 1), "7,4", "60");
+                assertThat(player(home, 1).locator("[data-lineups-goal-icon]").count()).isEqualTo(3);
+                assertThat(player(home, 1).locator("[data-lineups-assist-icon]").count()).isEqualTo(2);
                 assertThat(missing.locator("[data-lineups-missing-player]").count()).isEqualTo(4);
                 assertThat(missing.locator("[data-lineups-missing-return]").first().textContent())
                         .contains("Retour estimé fournisseur", "25/09/2026");
@@ -438,10 +460,10 @@ class LiveCampaignLineupsBrowserQualificationIT {
                 assertThat(player(home, 1).locator("[data-lineups-statistic-groups] [data-lineups-metric='rating'] dd")
                         .textContent()).isEqualTo("7,4");
                 revision.set(5);
-                page.waitForCondition(() -> player(home, 1).locator("[data-lineups-statistics-empty]").textContent()
-                        .equals("Statistiques non fournies pour ce joueur."));
-                assertFocused(summary(playerDetails));
-                assertOpen(playerDetails, true);
+                page.waitForCondition(() -> player(home, 1).locator("[data-lineups-player-details]").count() == 0);
+                assertFocused(player(home, 1).locator("[data-lineups-player-header]"));
+                assertThat(player(home, 1).locator("summary, details, [data-lineups-statistics-hint]").count()).isZero();
+                assertThat(player(home, 1).locator("[data-lineups-achievement]").count()).isZero();
                 assertThat(player(home, 1).locator("[data-lineups-metric]").count()).isZero();
 
                 // An explicitly empty observation is different from a missing family.
@@ -539,10 +561,15 @@ class LiveCampaignLineupsBrowserQualificationIT {
         assertThat(player(away, 11).locator("[data-lineups-captain]").isVisible()).isTrue();
         assertThat(player(home, 6).locator("[data-lineups-captain]").count()).isZero(); // Explicit false.
         assertThat(player(home, 3).locator("[data-lineups-captain]").count()).isZero(); // Absent flag.
-        assertThat(player(home, 2).locator("[data-lineups-statistics-empty]").textContent())
-                .isEqualTo("Statistiques non fournies pour ce joueur.");
-        assertThat(player(home, 6).locator("[data-lineups-statistics-empty]").textContent())
-                .isEqualTo("Aucune statistique renseignée pour ce joueur.");
+        assertThat(player(home, 2).locator("summary, details, [data-lineups-statistics-hint]").count()).isZero();
+        assertThat(player(home, 6).locator("summary, details, [data-lineups-statistics-hint]").count()).isZero();
+        assertThat(player(home, 2).locator("[data-lineups-country-label]").textContent()).isEqualTo("Pays non renseigné");
+        assertThat(player(home, 1).locator("[data-lineups-flag]").getAttribute("src")).isEqualTo("/images/flags/4x3/fr.svg");
+        assertThat(player(home, 1).locator("[data-lineups-country-label]").textContent()).isEqualTo("France");
+        assertThat(player(home, 1).locator("[data-lineups-goal-icon]").count()).isEqualTo(2);
+        assertThat(player(home, 1).locator("[data-lineups-assist-icon]").count()).isEqualTo(2);
+        assertThat(player(home, 1).locator("[data-lineups-achievement='goals']").getAttribute("aria-label")).isEqualTo("2 buts");
+        assertThat(player(home, 1).locator("[data-lineups-achievement='assists']").getAttribute("aria-label")).isEqualTo("2 passes décisives");
         Locator missing = section(home, "missing");
         assertThat(missing.locator("[data-lineups-count]").textContent()).isEqualTo("4");
         assertThat(missing.locator("[data-lineups-missing-description]").allTextContents())
@@ -566,12 +593,12 @@ class LiveCampaignLineupsBrowserQualificationIT {
         assertThat(player(home, 7).locator("[data-lineups-number]").textContent()).isEqualTo("—");
         assertThat(player(home, 7).locator("[data-lineups-position]").textContent()).isEqualTo("Poste non renseigné");
         assertThat(host.textContent()).contains(UNSAFE_NAME, UNSAFE_AWAY);
-        assertThat(host.locator("img, script, iframe, [onerror], [onclick]").count()).isZero();
+        assertThat(host.locator("img:not([data-lineups-flag]), script, iframe, [onerror], [onclick]").count()).isZero();
     }
 
     private static void assertInertMarkup(Page page, Locator host) {
         assertThat(host.textContent()).contains(UNSAFE_NAME, UNSAFE_AWAY);
-        assertThat(host.locator("img, script, iframe, [onerror], [onclick]").count()).isZero();
+        assertThat(host.locator("img:not([data-lineups-flag]), script, iframe, [onerror], [onclick]").count()).isZero();
         assertThat(page.evaluate("window.__lineupsInjected === undefined")).isEqualTo(true);
     }
 
@@ -749,14 +776,17 @@ class LiveCampaignLineupsBrowserQualificationIT {
     private static EventLineupPlayer lineupPlayer(long id, String name, Integer number, String position,
                                                   boolean starter, Boolean captain, PlayerMatchStatistics statistics) {
         return new EventLineupPlayer(id, name, Optional.ofNullable(number), Optional.ofNullable(position), starter,
-                Optional.ofNullable(captain), Optional.ofNullable(statistics));
+                Optional.ofNullable(captain), Optional.ofNullable(statistics), id == 1
+                        ? Optional.of(new com.bettingproject.sofascorelocal.domain.event.ProviderCountry(Optional.of("France"), Optional.of("FR")))
+                        : Optional.empty());
     }
 
     private static PlayerMatchStatistics playerStatistics(int content) {
         return new PlayerMatchStatistics(Map.of("rating", new BigDecimal(content == 1 ? "6.25" : "7.4"),
                 "minutesPlayed", new BigDecimal(content == 1 ? "45" : "60"),
                 "expectedAssists", new BigDecimal("0.001"), "futureMetric", new BigDecimal("2.345"),
-                "totalBallCarriesDistance", new BigDecimal("123.456")),
+                "totalBallCarriesDistance", new BigDecimal("123.456"),
+                "goals", new BigDecimal(content == 1 ? "2" : "3"), "goalAssist", new BigDecimal("2")),
                 content >= 4 ? Map.of() : Map.of("original", new BigDecimal("6.25"), "alternative", new BigDecimal("8.9")));
     }
 

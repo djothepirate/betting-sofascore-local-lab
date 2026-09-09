@@ -1,6 +1,6 @@
 package com.bettingproject.sofascorelocal.application.network;
 
-import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV3Parser;
+import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV4Parser;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.EventDetailsTransportException;
 import com.bettingproject.sofascorelocal.adapter.sofascore.transport.EventDetailsTransportFailure;
 import com.bettingproject.sofascorelocal.application.event.J4ParsedEventDetailsPersistenceResult;
@@ -102,7 +102,7 @@ class J4RealEventDetailsPhase1ServiceTest {
                 rawStore,
                 cache,
                 parsedPersistence,
-                new EventDetailsV3Parser(),
+                new EventDetailsV4Parser(),
                 clock,
                 Duration.ofMinutes(15),
                 Duration.ofSeconds(3),
@@ -162,7 +162,7 @@ class J4RealEventDetailsPhase1ServiceTest {
                     "application/json; charset=utf-8",
                     Duration.ofMillis(250),
                     payload,
-                    EventDetailsV3Parser.PARSER_VERSION));
+                    EventDetailsV4Parser.PARSER_VERSION));
         });
 
         var result = service.execute(claim());
@@ -199,7 +199,7 @@ class J4RealEventDetailsPhase1ServiceTest {
                     "application/json; charset=utf-8",
                     Duration.ofMillis(250),
                     payload,
-                    EventDetailsV3Parser.PARSER_VERSION));
+                    EventDetailsV4Parser.PARSER_VERSION));
         });
         when(providerCampaign.execute(any())).thenAnswer(invocation -> {
             EventDetailsProviderRequest request = invocation.getArgument(0);
@@ -472,7 +472,7 @@ class J4RealEventDetailsPhase1ServiceTest {
                 rawStore,
                 cache,
                 parsedPersistence,
-                new EventDetailsV3Parser(),
+                new EventDetailsV4Parser(),
                 clock,
                 Duration.ofMinutes(15),
                 Duration.ofSeconds(3),
