@@ -4,6 +4,15 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — catégories des statistiques individuelles et motifs des indisponibles
+
+- Classe `savedShotsFromInsideTheBox` et la variante propriétaire `savedFromInsideTheBox`
+  sous « Gardien · Arrêts dans la surface », et `bigChanceMissed` sous « Attaque · Grosses occasions manquées ».
+  Les clés et les valeurs reçues sont conservées, y compris si les deux variantes d'arrêts coexistent.
+- Traduit `Back Injury` en « Blessure au dos », `Broken Ankle`/`Broken ankle` en « Fracture de la cheville »
+  et `Knee Injury` en « Blessure au genou », sans modifier les descriptions fournisseur conservées.
+- Voir la [validation de la présentation](docs/validation/WO058-PLAYER-DISPLAY-LABELS-20260909.md).
+
 ### WO-058 — motifs d'incidents et d'indisponibilité en français
 
 - Traduit les descriptions observées de ligament croisé, d'orteil et de blessure musculaire,

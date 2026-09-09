@@ -75,6 +75,9 @@ public final class LineupsPresentation {
                 source.description().map(value -> switch (value) {
                     case "Achilles Tendon Injury" -> "Blessure au tendon d’Achille";
                     case "Sprained Knee Injury" -> "Entorse du genou";
+                    case "Knee Injury" -> "Blessure au genou";
+                    case "Back Injury" -> "Blessure au dos";
+                    case "Broken Ankle", "Broken ankle" -> "Fracture de la cheville";
                     case "Cruciate Ligament Injury" -> "Blessure au ligament croisé";
                     case "Dislocated Shoulder" -> "Luxation de l’épaule";
                     case "Hip Injury" -> "Blessure à la hanche";

@@ -53,6 +53,7 @@ public final class PlayerStatisticsPresentation {
             case "expectedGoalsOnTarget" -> new Label("Attaque", "Buts attendus sur tirs cadrés (xGOT)");
             case "expectedAssists" -> new Label("Attaque", "Passes décisives attendues (xA)");
             case "bigChanceCreated" -> new Label("Attaque", "Grosses occasions créées");
+            case "bigChanceMissed" -> new Label("Attaque", "Grosses occasions manquées");
             case "keyPass" -> new Label("Attaque", "Passes clés");
             case "totalOffside" -> new Label("Attaque", "Hors-jeu");
             case "totalPass" -> new Label("Passes", "Passes tentées");
@@ -90,6 +91,7 @@ public final class PlayerStatisticsPresentation {
             case "totalClearance" -> new Label("Défense", "Dégagements");
             case "outfielderBlock" -> new Label("Défense", "Tirs bloqués par le joueur");
             case "saves" -> new Label("Gardien", "Arrêts");
+            case "savedFromInsideTheBox", "savedShotsFromInsideTheBox" -> new Label("Gardien", "Arrêts dans la surface");
             case "punches" -> new Label("Gardien", "Dégagements des poings");
             case "goodHighClaim" -> new Label("Gardien", "Ballons aériens captés");
             case "goalsPrevented" -> new Label("Gardien", "Buts évités");

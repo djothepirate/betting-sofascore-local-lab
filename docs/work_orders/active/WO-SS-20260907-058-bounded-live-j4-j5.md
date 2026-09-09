@@ -1009,6 +1009,17 @@ La vérification complète de cette retouche réussit le 09/09 à 09:04:31 heure
 1 944 cas Surefire (cinq ignorés) et 171 intégrations, sans échec ni erreur. L'arrêt autorisé
 du Lab occupant 8087 et la passe précédente bloquée sont consignés dans ce suivi.
 
+Après `2afa484`, le propriétaire précise les catégories de deux statistiques individuelles.
+`savedShotsFromInsideTheBox`, visible sur la capture, et `savedFromInsideTheBox`, indiqué dans
+le message, sont présentés sous « Gardien · Arrêts dans la surface ». `bigChanceMissed` devient
+« Attaque · Grosses occasions manquées ». La correction concerne uniquement le dictionnaire
+de présentation ; les clés et valeurs déjà conservées par V3 restent distinctes. Le même
+retour ajoute « Back Injury » → « Blessure au dos », « Broken Ankle »/« Broken ankle » →
+« Fracture de la cheville » et « Knee Injury » → « Blessure au genou ». Le
+[suivi de la présentation](../../validation/WO058-PLAYER-DISPLAY-LABELS-20260909.md) porte sa qualification :
+`clean verify` réussi le 9 septembre à 07:34:11 UTC, avec 1 944 cas Surefire (cinq ignorés)
+et 171 intégrations, sans échec ni erreur.
+
 Le 9 septembre, le propriétaire demande de supprimer les rôles répétés sur les cartes
 joueurs et de traduire les groupes et noms de statistiques. Ce complément concerne
 uniquement la présentation commune live/J5 : sections, valeurs, identifiants, ordre,
