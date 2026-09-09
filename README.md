@@ -1,5 +1,13 @@
 # SofaScore Local Lab
 
+**Timeout Playwright local — 9 septembre 2026 :** le profil `local` attend désormais
+jusqu’à vingt secondes par échange Playwright, configurable via
+`SOFASCORE_PLAYWRIGHT_REQUEST_TIMEOUT`. Le lancement live-v5 accepte cette borne ;
+les politiques live historiques gardent dix secondes. Redémarrer le Lab avant
+une nouvelle préparation. Les enveloppes de cadence et les arrêts sur erreur
+restent distincts : voir le [runbook](docs/runbooks/LIVE-J4-J5-CAMPAIGNS.md) et la
+[validation ciblée](docs/validation/WO058-PLAYWRIGHT-TIMEOUT-20260909.md).
+
 **Détails des joueurs — 9 septembre 2026 :** les nouvelles compositions V3 signalent les capitaines,
 ouvrent les statistiques individuelles depuis les cartes et présentent les joueurs indisponibles
 avec les informations reçues. Flyway V41 conserve ces ajouts sans réécrire les observations

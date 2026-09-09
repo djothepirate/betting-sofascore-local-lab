@@ -517,6 +517,20 @@ class ProviderPlaywrightLocalQualificationIT {
 
     @Test
     @Timeout(90)
+    void acceptsALiveV5J4ResponseAfterTwelveSecondsWithTwentySecondTimeout()
+            throws Exception {
+        assertLiveV5TwentySecondTimeout(true);
+    }
+
+    @Test
+    @Timeout(90)
+    void timesOutALiveV5J4RequestAtTwentySecondsWithoutRetryAndCleansTheExactProcessTree()
+            throws Exception {
+        assertLiveV5TwentySecondTimeout(false);
+    }
+
+    @Test
+    @Timeout(90)
     void rejectsARealResponseOverFiveMibAndCleansTheExactProcessTree() throws Exception {
         Path workerJar = requiredRegularFile("provider.playwright.worker-jar");
         Path browserCache = requiredDirectory("provider.playwright.browser-cache");
@@ -855,6 +869,85 @@ class ProviderPlaywrightLocalQualificationIT {
             }
 
             assertWorkerExited(supervisor, exactWorker, ownedProcesses, output, error);
+        }
+    }
+
+    private static void assertLiveV5TwentySecondTimeout(boolean releaseAfterTwelveSeconds)
+            throws Exception {
+        Path workerJar = requiredRegularFile("provider.playwright.worker-jar");
+        Path browserCache = requiredDirectory("provider.playwright.browser-cache");
+        AtomicReference<Process> worker = new AtomicReference<>();
+        AtomicReference<CompletableFuture<byte[]>> standardOutput = new AtomicReference<>();
+        AtomicReference<CompletableFuture<byte[]>> standardError = new AtomicReference<>();
+        try (FixtureServer fixture = FixtureServer.startSlowEventDetails();
+             ExecutorService streamReaders = Executors.newVirtualThreadPerTaskExecutor()) {
+            ChildJvmPlaywrightProviderSupervisor supervisor =
+                    new ChildJvmPlaywrightProviderSupervisor(
+                            properties(workerJar, fixture.origin(), Duration.ofSeconds(20)),
+                            Clock.systemUTC(), new SecureRandom(),
+                            builder -> startObservedWorker(builder, fixture.origin(), browserCache,
+                                    worker, standardOutput, standardError, streamReaders));
+            UUID campaignId = UUID.randomUUID();
+            Process exactWorker;
+            List<ProcessIdentity> ownedProcesses;
+            try (PlaywrightProviderCampaign campaign = supervisor.openLiveGroupedV5(campaignId,
+                    Set.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                            SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS))) {
+                exactWorker = worker.get();
+                ownedProcesses = captureOwnedProcessTree(exactWorker);
+                CompletableFuture<Void> responseRelease = releaseAfterTwelveSeconds
+                        ? CompletableFuture.runAsync(() -> {
+                            try {
+                                assertThat(fixture.awaitSlowRequest(Duration.ofSeconds(10))).isTrue();
+                                Thread.sleep(Duration.ofSeconds(12));
+                                fixture.releaseSlowResponse();
+                            }
+                            catch (InterruptedException interrupted) {
+                                Thread.currentThread().interrupt();
+                                throw new IllegalStateException("local fixture release interrupted");
+                            }
+                        }, streamReaders) : CompletableFuture.completedFuture(null);
+                var group = new LiveProviderDispatchGroup(campaignId, UUID.randomUUID(),
+                        17_000_002L, LiveProviderDispatchGroup.Phase.CHECK);
+                long started = System.nanoTime();
+                if (releaseAfterTwelveSeconds) {
+                    PlaywrightProviderResponse response = campaign.executeGrouped(
+                            PlaywrightProviderRequest.eventDetails(17_000_002L), group,
+                            PlaywrightDispatchAdmission.UNRESTRICTED);
+                    Duration elapsed = Duration.ofNanos(System.nanoTime() - started);
+                    responseRelease.get(1, TimeUnit.SECONDS);
+                    assertExactResponse(response, 200, "application/json", EVENT_DETAILS_STOP_RESPONSE);
+                    assertThat(response.latency()).isGreaterThanOrEqualTo(Duration.ofSeconds(12));
+                    assertThat(elapsed).isLessThan(Duration.ofSeconds(20));
+                    System.out.printf(Locale.ROOT,
+                            "LIVE_V5_TIMEOUT_20S delayed_response=RECEIVED_HTTP_200 elapsedMillis=%d%n",
+                            elapsed.toMillis());
+                }
+                else {
+                    assertThatThrownBy(() -> campaign.executeGrouped(
+                            PlaywrightProviderRequest.eventDetails(17_000_002L), group,
+                            PlaywrightDispatchAdmission.UNRESTRICTED))
+                            .isInstanceOfSatisfying(PlaywrightProviderException.class,
+                                    failure -> assertThat(failure.failure())
+                                            .isEqualTo(PlaywrightProviderFailure.TIMEOUT));
+                    Duration elapsed = Duration.ofNanos(System.nanoTime() - started);
+                    assertThat(elapsed).isGreaterThanOrEqualTo(Duration.ofMillis(19_500))
+                            .isLessThan(Duration.ofSeconds(25));
+                    System.out.printf(Locale.ROOT,
+                            "LIVE_V5_TIMEOUT_20S withheld_response=TIMEOUT elapsedMillis=%d%n",
+                            elapsed.toMillis());
+                }
+            }
+            finally {
+                fixture.releaseSlowResponse();
+            }
+            assertThat(awaitCleanup(supervisor, exactWorker, ownedProcesses, Duration.ofSeconds(5)))
+                    .isTrue();
+            assertWorkerExited(supervisor, exactWorker, ownedProcesses,
+                    standardOutput.get(), standardError.get());
+            fixture.assertExactTraffic(FixtureServer.EVENT_DETAILS_STOP_PATH);
+            assertThat(fixture.requestCount(FixtureServer.EVENT_DETAILS_STOP_PATH)).isOne();
+            assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
         }
     }
 

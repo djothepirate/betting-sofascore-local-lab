@@ -4,6 +4,23 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — priorité à la résilience face aux refus fournisseur
+
+- Consigne la priorité propriétaire à la robustesse avant accélération de la collecte,
+  avec une [proposition d'architecture](docs/architecture/LIVE-PROVIDER-RESILIENCE-PROPOSAL-20260909.md)
+  et des critères de qualification hors fournisseur. Aucun comportement runtime modifié.
+
+### WO-058 — attente Playwright portée à vingt secondes pour les prochains essais
+
+- Autorise un timeout strictement positif jusqu’à vingt secondes au lancement live-v5,
+  avec vingt secondes par défaut dans le profil `local` et override
+  `SOFASCORE_PLAYWRIGHT_REQUEST_TIMEOUT`. Le réglage local Playwright est partagé
+  avec les parcours manuels ; les campagnes live-v1 à live-v4 restent limitées à dix secondes.
+- Conserve les enveloppes d’admission, les cadences, les budgets et l’arrêt global
+  sur timeout/403 sans retry. Aucune nouvelle qualification de capacité fournisseur.
+- Voir [ADR-SS-005 v0.7](ADR-SS-005-bounded-local-live-j4-j5-campaigns.md) et la
+  [validation du changement](docs/validation/WO058-PLAYWRIGHT-TIMEOUT-20260909.md).
+
 ### WO-058 — catégories des statistiques individuelles et motifs des indisponibles
 
 - Classe `savedShotsFromInsideTheBox` et la variante propriétaire `savedFromInsideTheBox`

@@ -243,7 +243,7 @@ public class LiveCampaignController {
             case "LIVE_POLICY_INVALID" -> "Les limites de la campagne locale sont invalides. Vérifier la durée, la capacité, les délais et la réserve de stockage dans la configuration live avant une nouvelle préparation.";
             case "LIVE_CAPACITY_QUALIFICATION_REQUIRED" -> "Cette capacité ou cette cadence exige une preuve de qualification. Pour le pilote initial, conserver une rencontre et l’enveloppe de requête de dix secondes.";
             case "LIVE_GROUPED_QUALIFICATION_REQUIRED" -> "La politique demandée exige une preuve de qualification dédiée aux groupes et un coût qualifié pour chaque famille. Les nouvelles campagnes live-v5 à 100 secondes utilisent leur propre profil. Configurer le profil qualifié décrit dans le runbook, puis préparer une nouvelle sélection.";
-            case "LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY" -> "Le délai maximal d’une requête live doit être compris entre zéro exclu et dix secondes. Corriger le délai Playwright avant le lancement.";
+            case "LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY" -> "Le délai Playwright doit être strictement positif et ne pas dépasser vingt secondes pour live-v5, ou dix secondes pour les campagnes historiques. Corriger ce délai avant le lancement.";
             case "LIVE_PREPARATION_ALREADY_LAUNCHED" -> "Cette campagne a déjà été lancée. Sa préparation ne peut plus être annulée ; utiliser l’arrêt de la campagne si sa collecte est encore en cours.";
             case "LIVE_PREPARATION_NOT_CANCELABLE" -> "Cette campagne n’est plus en préparation. Actualiser sa page pour consulter son état actuel.";
             case "LIVE_DISABLED" -> "Le lancement live est désactivé. Activer l’opt-in local dédié avant de lancer une campagne préparée.";

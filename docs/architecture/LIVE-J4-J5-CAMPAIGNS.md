@@ -1,10 +1,19 @@
 # Campagnes live locales J4/J5 — architecture WO-058
 
 Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
-Décision applicable : [ADR-SS-005 v0.6](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), cible de vingt rencontres soumise à une qualification v5 dédiée, en cours, avec exception distincte pour une collecte J5 manuelle.
+Décision applicable : [ADR-SS-005 v0.7](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), capacité v5 qualifiée en loopback, attente de transport portée à vingt secondes et exception distincte pour une collecte J5 manuelle.
 Réalisation : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md).
 
 ## Politique courante live-v5
+
+Depuis le complément du 9 septembre, la garde de lancement live-v5 accepte un
+timeout Playwright strictement positif jusqu’à vingt secondes ; les politiques
+historiques restent à dix secondes. Le profil `local` utilise vingt secondes par
+défaut, avec override d’environnement. Ce plafond d’attente est distinct des coûts
+d’admission gelés dans le profil qualifié. Aucun changement de migration, de hash
+historique ou d’enveloppe n’est réalisé. La valeur de transport est une configuration
+du processus ; elle doit être jointe aux preuves d’une nouvelle campagne.
+Les contrôles de retard et la fermeture globale sur timeout restent applicables.
 
 Les nouvelles préparations utilisent `live-v5` et un profil `grouped-v5` séparé. Le manifeste
 fige 100 secondes pour les familles critiques, 300 secondes pour les compositions en jeu,
@@ -17,8 +26,9 @@ séparément. La cadence n’est pas ralentie pour prolonger les budgets.
 Le candidat précédent à 75 secondes a tenu sa cadence native, mais les enveloppes mesurées
 n’admettent que dix-sept rencontres avec la marge requise. Sa [preuve reste conservée](../validation/WO058-GROUPED-LIVE-V5-CANDIDATE-75-PROFILE-20260908.json).
 La cible courante de 100 secondes suit la priorité à vingt rencontres. Son admission rejoue
-vingt-quatre scénarios de phases et transitions ; sa qualification native dédiée est en cours,
-avec intervalles critiques P95 ≤105 s et maximum ≤115 s. Le calcul moyen seul ne suffit pas.
+vingt-quatre scénarios de phases et transitions ; sa [qualification native dédiée](../validation/WO058-GROUPED-LIVE-V5-20260908.md)
+est acquise en loopback, avec intervalles critiques P95 ≤105 s et maximum ≤115 s.
+Elle ne démontre pas la tenue de cette cadence avec des réponses fournisseur lentes.
 
 `GroupedAdmissionProfile` porte la version de politique ; le constructeur historique à deux
 arguments reste v4. `GroupedLiveScheduleV4` conserve son nom et accepte explicitement les deux

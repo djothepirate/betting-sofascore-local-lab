@@ -547,10 +547,39 @@ class LiveCampaignServiceTest {
         }
     }
 
-    @Test
-    void aLiveRequestTimeoutAboveTenSecondsIsRejectedBeforeProviderAcquisition() throws Exception {
-        try (Harness h = new Harness()) {
+    @ParameterizedTest
+    @ValueSource(strings = {"live-v1", "live-v2", "live-v3", "live-v4"})
+    void historicalTimeoutsAboveTenSecondsAreRejectedBeforeProviderAcquisition(String policy) throws Exception {
+        try (Harness h = new Harness(false, policy)) {
             h.playwright.setRequestTimeout(Duration.ofSeconds(11));
+            assertThatThrownBy(h::launch).isInstanceOf(IllegalStateException.class)
+                    .hasMessage("LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY");
+            verifyNoInteractions(h.factory, h.coordinator, h.admission);
+            verify(h.store, never()).launch(any(), any(), any(), any());
+        }
+    }
+
+    @Test
+    void liveV5AcceptsTwentySecondsAndKeepsThePreparedAdmissionProfile() throws Exception {
+        try (Harness h = new Harness(false, "live-v5", 1)) {
+            h.playwright.setRequestTimeout(Duration.ofSeconds(20));
+            h.reply = LiveCampaignServiceTest::normalFinishedReply;
+            h.launch();
+            h.awaitFinished();
+
+            verify(h.admission).admitV5(1, h.manifest.admissionProfile().groupedProfile());
+            verify(h.factory).openLiveGroupedV5(h.manifest.campaignId(), LiveProviderSession.ENDPOINTS);
+            assertThat(h.dispatched).hasSize(4);
+            assertThat(h.receipts).hasSize(4);
+            assertThat(h.campaignState.get()).isEqualTo("COMPLETED");
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(longs = {-1, 0, 20_001})
+    void liveV5RejectsUnboundedTimeoutsBeforeProviderAcquisition(long millis) throws Exception {
+        try (Harness h = new Harness(false, "live-v5", 1)) {
+            h.playwright.setRequestTimeout(Duration.ofMillis(millis));
             assertThatThrownBy(h::launch).isInstanceOf(IllegalStateException.class)
                     .hasMessage("LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY");
             verifyNoInteractions(h.factory, h.coordinator, h.admission);

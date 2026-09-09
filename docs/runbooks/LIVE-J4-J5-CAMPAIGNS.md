@@ -7,6 +7,31 @@ Références : [ADR-SS-005 accepté](../../ADR-SS-005-bounded-local-live-j4-j5-c
 
 ## Nouvelles préparations : live-v5
 
+### Attendre une réponse lente — réglage du 9 septembre
+
+Le profil Spring `local` règle désormais le timeout Playwright à **20 secondes**
+par défaut. Redémarrer le Lab avec le lanceur Eclipse habituel, puis préparer et
+lancer manuellement une nouvelle campagne. Une instance déjà démarrée conserve
+son ancien réglage. Si `SOFASCORE_PLAYWRIGHT_REQUEST_TIMEOUT` est défini dans
+Eclipse ou l’environnement, cette valeur explicite prime sur le défaut ; utiliser
+`20s` pour cet essai, `10s` pour revenir au délai précédent. Vérifier aussi le
+fichier `.env` importé par Spring : une valeur explicite copiée depuis
+`.env.example` peut conserver dix secondes.
+
+Le service live-v5 refuse zéro, une valeur négative ou supérieure à vingt secondes
+avant d’acquérir le transport. Les manifestes historiques live-v1 à live-v4
+conservent la limite de dix secondes. Le réglage Playwright du profil local est
+partagé avec les parcours manuels. Le défaut hors profil local reste dix secondes.
+
+Ce réglage allonge l’attente du transport, pas le traitement du JSON ou les écritures
+en base. Les enveloppes du profil de capacité ne doivent pas être remplacées par
+vingt secondes : elles correspondent aux coûts qualifiés. Des réponses lentes
+peuvent toujours produire un retard de collecte ; les contrôles de surcharge,
+les budgets et l’arrêt global sur timeout/403 restent actifs, sans retry.
+La valeur du timeout n’est pas enregistrée dans les anciens manifestes : la noter
+avec le réseau utilisé et les heures du prochain essai. Voir la
+[validation ciblée](../validation/WO058-PLAYWRIGHT-TIMEOUT-20260909.md).
+
 ### Parcourir une campagne de plus de dix rencontres
 
 Le complément de pagination affiche dix rencontres par page, dans l’ordre de la sélection.

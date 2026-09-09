@@ -8,7 +8,7 @@
 - **Base exacte :** `6dfd14286d4f269cbe100bd965257c20298538db`, sommet GitHub vérifié le 7 septembre.
 - **Worktree :** `.tmp/wo058-live-j4-j5`, depuis le dossier Codex du Lab ; worktree distinct d'Eclipse.
 - **Autorité reçue :** ADR-SS-005 v0.1 accepté, puis déclaration « Je valide le WO-058 les travaux peuvent commencer » et demande explicite d'exécuter le plan de réalisation ; port 8087 libéré pour les tests.
-- **ADR courant :** [ADR-SS-005 v0.6](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), capacité de quinze à vingt rencontres privilégiée avec cadence explicitement qualifiée, pause d’une seconde entre groupes v5 et nouveaux budgets. Les comportements live v1–v4 restent historiques. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
+- **ADR courant :** [ADR-SS-005 v0.7](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), capacité de quinze à vingt rencontres privilégiée avec cadence explicitement qualifiée, pause d’une seconde entre groupes v5, nouveaux budgets et attente Playwright autorisée jusqu’à vingt secondes pour v5. Les comportements live v1–v4 restent historiques. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
 - **Livrable présent :** ADR accepté, WO validé, réalisations historiques et leurs qualifications hors fournisseur conservées ; complément v5/V40 implémenté, qualification synthétique dédiée et deux vérifications Maven finales réussies. Le complément compositions V3/V41 dispose de son [contrat](../../architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md) et de sa [qualification du 09/09](../../validation/WO058-PLAYER-DETAILS-20260909.md), distincts des preuves v5/V40. La preuve de fraîcheur fournisseur ne découle pas de la qualification locale.
 - **Alignement de gouvernance :** renvois ciblés dans ADR-SS-001 et AGENTS.md ; ADR-SS-002 à 004 inchangés.
 - **Réalisations historiques :** réalisées et qualifiées hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés sous les anciennes politiques ; compléments prématch/phase/clôture et incidents V16/V17 décrits dans les retours ci-dessous, statistiques intégrées aux pages. Les nouvelles préparations v5 sont limitées à vingt rencontres selon leur propre qualification ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur historiques :** essai à 8 arrêté volontairement, essai à 16 interrompu après coupure PostgreSQL, puis nouveaux lancements manuels à 7 et à 4 ; dernière exécution de cette série terminée, observations distinctes des qualifications locales.
@@ -18,6 +18,29 @@ Les statuts restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 PostgreSQL local Docker Desktop et application sur `127.0.0.1:8087`, textes UTF-8.
 
 ## 1. Objectif et origine du besoin
+
+### Priorité du 9 septembre — résilience face aux refus fournisseur
+
+Après les arrêts sur 403 et timeouts à 10/20/30 secondes, le propriétaire demande de
+prioriser la robustesse des campagnes avant toute nouvelle réduction de cadence.
+Le [cadrage proposé](../../architecture/LIVE-PROVIDER-RESILIENCE-PROPOSAL-20260909.md)
+distingue capacité technique qualifiée et acceptation fournisseur, diagnostics de
+transport, protection durable entre campagnes, plafonnement de pression et réduction
+des interrogations indisponibles. Ce recadrage ne change pas le runtime et ne vaut
+ni nouvelle politique approuvée ni autorisation de lancer une campagne fournisseur.
+
+### Complément du 9 septembre — délai Playwright du prochain essai
+
+Après le HTTP 403 de la campagne 08c3cd3d et le PLAYWRIGHT_TIMEOUT de la campagne
+e7e7684b, le propriétaire demande un délai Playwright plus élevé pour le prochain
+essai. Le changement retient vingt secondes dans le profil local et au maximum
+pour live-v5, conformément au complément [ADR-SS-005 v0.7](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md).
+Les limites historiques, budgets et enveloppes d’admission restent distincts.
+La vérification porte sur l’admission de vingt secondes, le refus au-delà, les
+politiques historiques, une réponse loopback lente reçue et un timeout nettoyé.
+Le [rapport ciblé](../../validation/WO058-PLAYWRIGHT-TIMEOUT-20260909.md) distingue
+réalisation, tests locaux et prochain lancement opérateur. Aucun changement de
+persistance ni lancement fournisseur ne fait partie de ce complément.
 
 ### Seizième retour — visibilité des remplaçants et capacité de la prochaine campagne
 

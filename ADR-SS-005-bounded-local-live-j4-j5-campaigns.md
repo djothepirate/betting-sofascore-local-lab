@@ -1,8 +1,8 @@
 # ADR-SS-005 — Campagnes live locales et bornées J4/J5
 
-- **Version :** 0.6.
+- **Version :** 0.7.
 - **Statut :** `ACCEPTED` — v0.1 formellement acceptée ; capacité adaptative puis collecte des compositions avant le début explicitement demandées par le propriétaire le 7 septembre.
-- **Date :** 2026-09-08.
+- **Date :** 2026-09-09.
 - **Décideur :** propriétaire du Betting Project.
 - **Acceptation formelle initiale, v0.1 :** `OWNER_ACCEPTED_2026_09_07` — « Je valide formellement la v0.1 de l'ADR ».
 - **Observation de l'acceptation :** `2026-09-07T09:23:14Z` ; l'heure exacte du message n'est pas disponible.
@@ -13,6 +13,7 @@
 - **Autorité de la v0.5 :** demande explicite du 8 septembre « La suppression de cette intervalle doit se faire aussi en mode collecte manuelle », pour J5. Le propriétaire signale également l’absence d’annulation d’une préparation live non lancée. Cette révision étend le regroupement à une collecte J5 manuelle bornée et autorise son contrôle distinct ; elle ne crée aucun polling manuel ni nouvelle famille fournisseur.
 - **Autorité de la v0.6 :** demande du 8 septembre d’augmenter les plafonds à 20 000 appels par campagne et de réduire la pause entre groupes à une seconde, puis arbitrage explicite « Priorité aux 15–20 matchs, avec une cadence explicitement qualifiée ». La cible initialement souhaitée de 20 secondes cède donc la priorité au nombre de rencontres. Le propriétaire précise ensuite un objectif à moyen terme de 50–100 rencontres et demande une visibilité sur les cadences nécessaires ; cet objectif ne constitue pas une qualification de cette capacité.
 - **Référence historique v0.2 :** contenu Git au commit `e98f7a74e39a1c57e601efb3d346ae55829fce73`, conservé sans réécriture.
+- **Autorité de la v0.7 :** demande du propriétaire le 9 septembre d’un timeout Playwright « un peu plus élevé » pour le prochain essai après PLAYWRIGHT_TIMEOUT. La borne retenue est vingt secondes pour live-v5. Ce complément donne davantage de temps à un échange lent ; il ne change ni cadence, ni enveloppes qualifiées, ni budgets et n’autorise aucun lancement par l’agent.
 - **Work Order :** [WO-SS-20260907-058](docs/work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md), validé par le propriétaire ; correctif et qualification de réalisation distincts de cette décision.
 - **Branche :** `feature/V0.1.0-RC01-CODEX-WO-SS-20260907-058`.
 - **Base :** `6dfd14286d4f269cbe100bd965257c20298538db`, train `feature/V0.1.0-RC01` vérifié à l'ouverture.
@@ -27,6 +28,33 @@ La v0.3 ajoute seulement la collecte prématch LINEUPS au manifeste `live-v3`. L
 historiques `live-v1` et `live-v2` gardent leur comportement, leurs échéances et leurs empreintes.
 
 ## 0. Décision live-v5 — vingt rencontres et cadence qualifiée
+
+### Complément du 9 septembre — timeout de transport à vingt secondes
+
+Le plafond de timeout Playwright autorisé au lancement **live-v5** passe de dix à
+**vingt secondes**, strictement positif. Le profil applicatif `local` prend vingt
+secondes par défaut ; `SOFASCORE_PLAYWRIGHT_REQUEST_TIMEOUT` permet un réglage
+explicite dans cette borne. La configuration Playwright étant partagée, ce défaut
+local concerne aussi les collectes manuelles. Le défaut hors profil local reste
+dix secondes. Les politiques live-v1 à live-v4 gardent leur plafond de dix secondes.
+
+Cette borne concerne l’attente dans le transport Playwright, avant le parsing et
+la persistance métier du Lab. L’enveloppe de coût de chaque famille utilisée pour
+l’admission conserve sa valeur et sa preuve ; elle ne devient pas vingt secondes.
+Une série de réponses lentes peut donc dégrader la cadence ou déclencher l’arrêt
+pour retard. Les critères de fraîcheur et les contrôles de surcharge s’appliquent
+toujours ; aucune qualification à vingt rencontres avec réponses de vingt secondes
+n’est déduite de ce complément.
+
+Le timeout est une configuration du processus de lancement, non un champ historique
+du manifeste. Consigner sa valeur avec les preuves du prochain essai, redémarrer le
+Lab et préparer une nouvelle campagne. L’arrêt global sur timeout ou HTTP 403, les
+fenêtres maximales, le nettoyage et l’absence de retry restent applicables.
+La qualification locale doit démontrer une réponse J4 retardée au-delà de dix
+secondes mais reçue avant vingt, puis l’expiration et le nettoyage à la nouvelle
+borne, sans appel fournisseur.
+
+### Cadence, charge et budgets
 
 Les nouvelles préparations utilisent `live-v5`. Le candidat à qualifier est **20 rencontres
 à 100 secondes nominales** pour J4, incidents et statistiques, avec les compositions en jeu
@@ -228,7 +256,8 @@ pas des quotas SofaScore connus ni une qualification de débit.
 | Finalisation | Un dernier cycle J5 après J4 `finished`, dans les délais, le budget et la fenêtre. |
 
 Paramètres complémentaires conservés du WO : préparation valable cinq minutes ; timeout de
-requête au plus dix secondes ; réponse bornée à 5 Mio ; réserve d'un J4 et trois familles J5 par
+requête au plus dix secondes pour les politiques historiques, vingt pour live-v5 selon le
+complément v0.7 du §0 ; réponse bornée à 5 Mio ; réserve d'un J4 et trois familles J5 par
 match **comprise** dans le budget ; lecture locale d'écran toutes les cinq secondes. Une réserve
 ne permet jamais de dépasser l'heure limite ou de déclarer un match fini sans preuve.
 

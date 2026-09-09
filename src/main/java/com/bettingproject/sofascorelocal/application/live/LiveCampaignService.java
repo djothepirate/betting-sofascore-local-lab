@@ -226,12 +226,15 @@ public final class LiveCampaignService {
                     ? "LIVE_ALL_EVENTS_INELIGIBLE" : "LIVE_ALL_EVENTS_FINISHED");
         if (!properties.isEnabled() || !provider.isEnabled() || !playwright.isEnabled())
             throw new IllegalStateException("LIVE_DISABLED");
+        String policyVersion = current.manifest().policyVersion();
+        // Transport patience is separate from the measured admission envelopes.
+        // Historical policies keep their original hard bound.
+        Duration maximumRequestTimeout = Duration.ofSeconds("live-v5".equals(policyVersion) ? 20 : 10);
         if (playwright.getRequestTimeout() == null || playwright.getRequestTimeout().isNegative()
                 || playwright.getRequestTimeout().isZero()
-                || playwright.getRequestTimeout().compareTo(Duration.ofSeconds(10)) > 0)
+                || playwright.getRequestTimeout().compareTo(maximumRequestTimeout) > 0)
             throw new IllegalStateException("LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY");
         if (!clock.instant().isBefore(current.manifest().expiresAt())) throw new IllegalArgumentException("LIVE_MANIFEST_EXPIRED");
-        String policyVersion = current.manifest().policyVersion();
         boolean grouped = groupedPolicy(policyVersion);
         if (!current.manifest().admissionProfile().equals(currentAdmissionProfile(policyVersion))
                 || current.manifest().qualifiedMatchCapacity() != (grouped ? selectionMaximum(policyVersion) : properties.getQualifiedMatchCapacity())
