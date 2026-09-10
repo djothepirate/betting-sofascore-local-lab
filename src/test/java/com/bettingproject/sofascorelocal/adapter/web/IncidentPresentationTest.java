@@ -39,7 +39,8 @@ class IncidentPresentationTest {
 
     @ParameterizedTest
     @CsvSource({"Foul,Faute", "Argument,Contestation", "Violent conduct,Comportement violent",
-            "Professional handball,Main volontaire"})
+            "Professional handball,Main volontaire",
+            "Professional foul last man,Faute volontaire du dernier défenseur"})
     void graphicalCardMotifsAreFrenchWhileTheTechnicalTableAndAddedMinuteStayFaithful(String reason, String label) {
         var incident = new EventIncident(0, "card", 90, Optional.of(3), Optional.of(false),
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
@@ -49,7 +50,11 @@ class IncidentPresentationTest {
         assertThat(displayed.motifLabel()).isEqualTo(label);
         assertThat(incident.reason()).contains(reason);
         assertThat(IncidentPresentation.motifLabel(incident))
-                .isEqualTo("Professional handball".equals(reason) ? "Main volontaire" : reason);
+                .isEqualTo(switch (reason) {
+                    case "Professional handball" -> "Main volontaire";
+                    case "Professional foul last man" -> "Faute volontaire du dernier défenseur";
+                    default -> reason;
+                });
     }
 
     @ParameterizedTest
@@ -163,13 +168,17 @@ class IncidentPresentationTest {
         assertThat(IncidentPresentation.from(new EventIncidents(900001, List.of())).incidents()).isEmpty();
     }
 
-    @Test
-    void translatesTheExactCardReasonOnlyForDisplay() {
-        EventIncident incident = incident("card", "Professional handball", null);
+    @ParameterizedTest
+    @CsvSource({
+            "Professional handball,Main volontaire",
+            "Professional foul last man,Faute volontaire du dernier défenseur"
+    })
+    void translatesKnownCardReasonsOnlyForDisplay(String sourceReason, String displayedReason) {
+        EventIncident incident = incident("card", sourceReason, null);
 
-        assertThat(IncidentPresentation.motifLabel(incident)).isEqualTo("Main volontaire");
-        assertThat(incident.reason()).contains("Professional handball");
-        assertThat(incident.motifLabel()).isEqualTo("Professional handball");
+        assertThat(IncidentPresentation.motifLabel(incident)).isEqualTo(displayedReason);
+        assertThat(incident.reason()).contains(sourceReason);
+        assertThat(incident.motifLabel()).isEqualTo(sourceReason);
         assertThat(incident.incidentClass()).contains("red");
         assertThat(incident.minute()).contains(64);
         assertThat(incident.home()).contains(false);
@@ -178,26 +187,29 @@ class IncidentPresentationTest {
     @ParameterizedTest
     @NullSource
     @ValueSource(strings = {"professional handball", "Professional Handball", "Handball",
-            "Professional foul last man", "Foul", "2nd half"})
+            "professional foul last man", "Professional foul last Man", "Professional foul last defender",
+            "Professional foul last man future", "Foul", "2nd half"})
     void retainsEveryOtherReasonAndTheMissingValue(String reason) {
         EventIncident incident = incident("card", reason, null);
 
         assertThat(IncidentPresentation.motifLabel(incident)).isEqualTo(incident.motifLabel());
     }
 
-    @Test
-    void doesNotApplyTheCardTranslationToOtherIncidentTypes() {
-        EventIncident incident = incident("inGamePenalty", "Professional handball", null);
+    @ParameterizedTest
+    @ValueSource(strings = {"Professional handball", "Professional foul last man"})
+    void doesNotApplyTheCardTranslationToOtherIncidentTypes(String sourceReason) {
+        EventIncident incident = incident("inGamePenalty", sourceReason, null);
 
-        assertThat(IncidentPresentation.motifLabel(incident)).isEqualTo("Professional handball");
+        assertThat(IncidentPresentation.motifLabel(incident)).isEqualTo(sourceReason);
     }
 
-    @Test
-    void preservesTheExistingDescriptionPrecedence() {
-        EventIncident incident = incident("card", "Professional handball", "Provider description");
+    @ParameterizedTest
+    @ValueSource(strings = {"Professional handball", "Professional foul last man"})
+    void preservesTheExistingDescriptionPrecedence(String sourceReason) {
+        EventIncident incident = incident("card", sourceReason, "Provider description");
 
         assertThat(IncidentPresentation.motifLabel(incident)).isEqualTo("Provider description");
-        assertThat(incident.reason()).contains("Professional handball");
+        assertThat(incident.reason()).contains(sourceReason);
     }
 
     private static EventIncident incident(String type, String reason, String description) {

@@ -1405,8 +1405,20 @@ l'arbre d'accessibilité et reste visible tant que le chargement réel du SVG lo
 confirmé, après une erreur d'image, sans JavaScript et en mode de contraste forcé. La présentation
 ne masque donc jamais une nationalité parce qu'une image n'a pas été chargée.
 
-Le même complément traduit `Physical Discomfort` en « Inconfort physique » parmi les motifs
-d'indisponibilité J5, sans modifier la valeur brute de provenance.
+Le même complément traduit `Physical Discomfort` en « Inconfort physique » et `Abdominal Injury`
+en « Blessure abdominale » parmi les motifs d'indisponibilité J5, sans modifier les valeurs brutes
+de provenance.
+
+Dans la projection des incidents de carte, il traduit aussi exactement `Professional foul last man`
+en « Faute volontaire du dernier défenseur ». La raison brute est conservée ; une description
+fournisseur non vide garde sa priorité, et les autres types d'incident ou variantes proches du
+libellé source restent inchangés.
+
+La régression finale des présentations incident/J5 couvre 135 cas sans échec ni erreur. Les deux
+traductions et la tentative complète `clean verify`, limitée uniquement par les deux contrôles
+Windows fail-closed déjà documentés, sont détaillées dans les rapports
+[motif de carton](../../validation/WO058-PROFESSIONAL-FOUL-LAST-MAN-20260910.md) et
+[blessure abdominale](../../validation/WO058-ABDOMINAL-INJURY-20260910.md).
 
 La syntaxe des deux rafraîchissements JavaScript, la régression Maven ciblée, la qualification
 Chromium conjointe J4/compositions et la tentative `clean verify` sont enregistrées dans la

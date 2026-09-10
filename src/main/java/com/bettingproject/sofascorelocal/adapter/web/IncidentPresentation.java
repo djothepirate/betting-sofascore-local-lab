@@ -146,9 +146,12 @@ public final class IncidentPresentation {
     }
 
     public static String motifLabel(EventIncident incident) {
-        if ("card".equals(incident.incidentType()) && incident.description().isEmpty()
-                && incident.reason().filter("Professional handball"::equals).isPresent()) {
-            return "Main volontaire";
+        if ("card".equals(incident.incidentType()) && incident.description().isEmpty()) {
+            return incident.reason().map(reason -> switch (reason) {
+                case "Professional handball" -> "Main volontaire";
+                case "Professional foul last man" -> "Faute volontaire du dernier défenseur";
+                default -> reason;
+            }).orElseGet(incident::motifLabel);
         }
         return incident.motifLabel();
     }
