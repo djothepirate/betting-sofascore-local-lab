@@ -9,7 +9,7 @@ Ce complément corrige deux écarts de présentation signalés dans les composit
 
 - les cartes ne doivent pas afficher « Pays non renseigné » quand la donnée n'est pas
   présente dans l'observation normalisée ;
-- cinq clés de statistiques individuelles observées doivent recevoir un libellé français et
+- six clés de statistiques individuelles observées doivent recevoir un libellé français et
   une rubrique métier.
 
 Il ne lance aucun transport, ne modifie aucune campagne, ne démarre pas Playwright et ne
@@ -51,9 +51,14 @@ fournisseur.
 | `hitWoodwork` | Attaque | Tir sur un montant (poteau ou barre transversale) |
 | `errorLeadToAShot` | Défense | Erreur menant à un tir |
 | `errorLeadToAGoal` | Défense | Erreur provoquant un but |
+| `clearanceOffLine` | Défense | Sauvetages sur la ligne |
 
 Les clés et valeurs brutes restent inchangées dans `PlayerMatchStatistics`. La traduction
 intervient uniquement dans `PlayerStatisticsPresentation`.
+
+Le complément du 10 septembre ajoute exactement `clearanceOffLine` à cette projection. Cette clé
+reste elle-même inchangée dans `PlayerMatchStatistics` ; aucune statistique absente n'est créée et
+la valeur source n'est pas arrondie ni modifiée hors de la présentation.
 
 ## Qualification hors fournisseur
 
@@ -78,7 +83,15 @@ modifient aucune campagne ni observation existante, et ne démarrent pas le lanc
 
    Résultat : 205 tests, zéro échec et zéro erreur.
 
-4. Qualification Chromium loopback de la vue compositions, avec cache navigateur local
+4. Régression finale de la projection `clearanceOffLine`, de sa vue campagne et de la vue J5,
+   exécutée avec un dépôt Maven et des réglages locaux isolés :
+
+       .\mvnw.cmd "-Dmaven.repo.local=<cache Maven local isolé>" --settings <settings Maven locaux isolés> -q "-Dtest=PlayerStatisticsPresentationTest,LiveCampaignPresentationTest,J5EventDataControllerTest" test
+
+   Résultat : 79 tests, zéro échec, zéro erreur et zéro test ignoré. Aucun transport fournisseur
+   n’est lancé par cette suite standard.
+
+5. Qualification Chromium loopback de la vue compositions, avec cache navigateur local
    explicitement fourni :
 
        .\mvnw.cmd --offline "-Dmaven.repo.local=C:\Users\geoff\.m2\repository" "-Pprovider-playwright-runtime,provider-playwright-local-qualification" "-DskipTests=false" "-DskipITs=false" "-Dit.test=LiveCampaignLineupsBrowserQualificationIT" "-Dprovider.playwright.browser-cache=<cache-local>" "failsafe:integration-test@provider-playwright-loopback-qualification" "failsafe:verify@provider-playwright-loopback-qualification"
@@ -86,7 +99,7 @@ modifient aucune campagne ni observation existante, et ne démarrent pas le lanc
    Résultat : 2 tests, zéro échec, zéro erreur, zéro skip ; les deux scénarios rapportent
    REAL_PROVIDER_CALLS=0, HTTP_POSTS=0 et DATABASE_USED=false.
 
-5. Vérification Maven complète :
+6. Vérification Maven complète :
 
        .\mvnw.cmd --offline "-Dmaven.repo.local=C:\Users\geoff\.m2\repository" clean verify
 
@@ -95,3 +108,22 @@ modifient aucune campagne ni observation existante, et ne démarrent pas le lanc
 
 Aucun appel vers SofaScore, cookie, jeton, payload brut ou donnée de session n’est requis par
 ces contrôles.
+
+## Reprise du 10 septembre — `clearanceOffLine`
+
+La régression finale de la projection, de la vue campagne et de la vue J5 compte **79 tests**,
+zéro échec, zéro erreur et zéro test ignoré. Elle confirme la métrique affichée
+`Sauvetages sur la ligne` dans `Défense`, ainsi que la conservation de la clé
+`clearanceOffLine` et de sa valeur source.
+
+La vérification complète `clean verify`, relancée avec le même cache Maven et les mêmes réglages
+locaux isolés, exécute 2 213 tests puis s'arrête avec deux échecs qui sont distincts de cette
+projection :
+
+- `LiveOrphanProcessProbeTest.currentJavaIdentityMatchesItsRealCimCreationDate` reçoit
+  `UNVERIFIED` au lieu de `ABSENT` pour l'identité du processus Java courant ;
+- `J6NativeBinaryPipelineQualificationTest.syntheticNativePipelineFailsClosedWithoutHumanPassphraseInput`
+  ferme en échec car les sondes Windows rapportent `CIM_ERROR,TASKLIST_ERROR,CLASS_UNVERIFIABLE`.
+
+Ces contrôles d'identité de processus sont hors du périmètre de la statistique et conservent leur
+comportement fail-closed. Ils n'ont pas été contournés, modifiés ou désactivés.

@@ -108,9 +108,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   aucune image n’est demandée au fournisseur ou à un CDN. Pour les compositions V3 historiques,
   un overlay de présentation relit uniquement le pays déjà présent dans un snapshot local vérifié ;
   la donnée normalisée V4 reste prioritaire. Sans pays ou preuve cohérente, la carte omet ce champ.
-- Classe `accurateKeeperSweeper`, `totalKeeperSweeper`, `hitWoodwork`, `errorLeadToAShot` et
-  `errorLeadToAGoal` dans les rubriques Gardien, Attaque ou Défense avec leurs libellés français,
-  sans changer les clés ni valeurs conservées.
+- Classe `accurateKeeperSweeper`, `totalKeeperSweeper`, `hitWoodwork`, `errorLeadToAShot`,
+  `errorLeadToAGoal` et `clearanceOffLine` dans les rubriques Gardien, Attaque ou Défense avec
+  leurs libellés français, sans changer les clés ni valeurs conservées.
 - Versionne `event-details-v4` et `event-lineups-v4`, avec persistance V46. J4 conserve
   les entraîneurs, l’arbitre et le tour nommé, prioritaire sur le numéro de tour.
   Les observations et hashes historiques restent inchangés.

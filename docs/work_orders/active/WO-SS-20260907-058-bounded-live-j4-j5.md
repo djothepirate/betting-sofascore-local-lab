@@ -51,9 +51,9 @@ projection web, y compris `Strain Injury` → « Blessure à l’entraînement �
 attributs fournisseur persistés. Pour les compositions historiques V3, le rendu peut compléter le
 pays uniquement depuis le snapshot local référencé, après vérification stricte du type, de l’identité,
 du hash et du JSON ; aucune observation normalisée ni provenance n’est réécrite. Sans preuve locale
-exploitable, le champ pays est omis. Les cinq métriques individuelles `accurateKeeperSweeper`,
-`totalKeeperSweeper`, `hitWoodwork`, `errorLeadToAShot` et `errorLeadToAGoal` sont localisées dans
-leur rubrique de présentation. Voir le [rapport pays et métriques](../../validation/WO058-LINEUPS-COUNTRY-AND-METRICS-20260910.md).
+exploitable, le champ pays est omis. Les six métriques individuelles `accurateKeeperSweeper`,
+`totalKeeperSweeper`, `hitWoodwork`, `errorLeadToAShot`, `errorLeadToAGoal` et `clearanceOffLine`
+sont localisées dans leur rubrique de présentation. Voir le [rapport pays et métriques](../../validation/WO058-LINEUPS-COUNTRY-AND-METRICS-20260910.md).
 
 ## Révision V8 du 10 septembre — dix rencontres et départs normaux à 60 s
 
@@ -1426,3 +1426,12 @@ Chromium conjointe J4/compositions et la tentative `clean verify` sont enregistr
 La passe générale s'arrête actuellement sur deux contrôles Windows d'identité de processus qui
 ferment en échec sûr ; ils sont distincts des régressions pays et de la qualification loopback.
 Ces contrôles sont entièrement locaux et ne constituent ni collecte ni acceptation fournisseur.
+
+Le même complément classe `clearanceOffLine` sous **Défense** avec le libellé
+« Sauvetages sur la ligne », exclusivement dans `PlayerStatisticsPresentation`. La clé et sa
+valeur source restent inchangées dans `PlayerMatchStatistics`. La régression ciblée de cette
+projection, de la vue campagne et de la vue J5 compte 79 tests sans échec, erreur ni test
+ignoré. Une nouvelle tentative `clean verify` exécute 2 213 tests puis retrouve les deux mêmes
+échecs fail-closed Windows d'identité de processus (`UNVERIFIED` au lieu de `ABSENT`, et
+`CIM_ERROR,TASKLIST_ERROR,CLASS_UNVERIFIABLE`). Ces échecs sont hors périmètre ; ils ne sont ni
+assouplis ni masqués.

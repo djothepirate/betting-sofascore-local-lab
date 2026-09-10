@@ -90,6 +90,7 @@ public final class PlayerStatisticsPresentation {
             case "interceptionWon" -> new Label("Défense", "Interceptions");
             case "ballRecovery" -> new Label("Défense", "Récupérations");
             case "totalClearance" -> new Label("Défense", "Dégagements");
+            case "clearanceOffLine" -> new Label("Défense", "Sauvetages sur la ligne");
             case "outfielderBlock" -> new Label("Défense", "Tirs bloqués par le joueur");
             case "errorLeadToAShot" -> new Label("Défense", "Erreur menant à un tir");
             case "errorLeadToAGoal" -> new Label("Défense", "Erreur provoquant un but");

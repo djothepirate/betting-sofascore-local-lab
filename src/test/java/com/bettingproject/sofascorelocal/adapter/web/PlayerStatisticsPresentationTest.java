@@ -68,6 +68,7 @@ class PlayerStatisticsPresentationTest {
         values.put("hitWoodwork", BigDecimal.ONE);
         values.put("errorLeadToAShot", new BigDecimal("3"));
         values.put("errorLeadToAGoal", new BigDecimal("4"));
+        values.put("clearanceOffLine", new BigDecimal("5"));
 
         var metrics = PlayerStatisticsPresentation.from(new PlayerMatchStatistics(values, Map.of()))
                 .groups().stream().flatMap(group -> group.metrics().stream()).toList();
@@ -77,9 +78,11 @@ class PlayerStatisticsPresentationTest {
                 new PlayerStatisticsPresentation.Metric("totalKeeperSweeper", "Sorties du gardien (total)", "2"),
                 new PlayerStatisticsPresentation.Metric("hitWoodwork", "Tir sur un montant (poteau ou barre transversale)", "1"),
                 new PlayerStatisticsPresentation.Metric("errorLeadToAShot", "Erreur menant à un tir", "3"),
-                new PlayerStatisticsPresentation.Metric("errorLeadToAGoal", "Erreur provoquant un but", "4"));
+                new PlayerStatisticsPresentation.Metric("errorLeadToAGoal", "Erreur provoquant un but", "4"),
+                new PlayerStatisticsPresentation.Metric("clearanceOffLine", "Sauvetages sur la ligne", "5"));
         assertThat(PlayerStatisticsPresentation.from(new PlayerMatchStatistics(values, Map.of())).groups())
                 .extracting(PlayerStatisticsPresentation.Group::label)
                 .containsExactly("Attaque", "Défense", "Gardien");
+        assertThat(values).containsEntry("clearanceOffLine", new BigDecimal("5"));
     }
 }
