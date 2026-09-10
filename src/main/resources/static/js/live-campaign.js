@@ -372,6 +372,36 @@
     }
   }
 
+  function renderPressure(pressure) {
+    const section = monitor.querySelector("[data-live-pressure]");
+    if (!section) return;
+    const observed = Number.isSafeInteger(pressure?.observedDepartures) && pressure.observedDepartures >= 0
+      ? pressure.observedDepartures : 0;
+    const hasObservedDepartures = observed > 0;
+    const empty = section.querySelector("[data-live-pressure-empty]");
+    const data = section.querySelector("[data-live-pressure-data]");
+    if (empty) empty.hidden = hasObservedDepartures;
+    if (data) data.hidden = !hasObservedDepartures;
+    text(section, "[data-live-pressure-count]", observed);
+    text(section, "[data-live-pressure-first]", pressure?.firstObservedDepartureAt);
+    text(section, "[data-live-pressure-last]", pressure?.lastObservedDepartureAt);
+    [["oneMinute", pressure?.oneMinutePeak], ["fiveMinutes", pressure?.fiveMinutePeak]].forEach(([window, peak]) => {
+      const row = section.querySelector(`[data-live-pressure-peak="${window}"]`);
+      if (!row) return;
+      text(row, "[data-live-pressure-peak-count]", Number.isSafeInteger(peak?.observedDepartures)
+        && peak.observedDepartures >= 0 ? peak.observedDepartures : 0);
+      text(row, "[data-live-pressure-peak-end]", peak?.windowEndAt);
+    });
+    const byEndpoint = new Map(Array.isArray(pressure?.families) ? pressure.families
+      .filter(family => family && typeof family.endpoint === "string").map(family => [family.endpoint, family]) : []);
+    section.querySelectorAll("[data-live-pressure-family]").forEach(row => {
+      const family = byEndpoint.get(row.dataset.livePressureFamily);
+      text(row, "[data-live-pressure-family-label]", family?.label || row.dataset.livePressureFamily);
+      text(row, "[data-live-pressure-family-count]", Number.isSafeInteger(family?.observedDepartures)
+        && family.observedDepartures >= 0 ? family.observedDepartures : 0);
+    });
+  }
+
   function renderCampaign(campaign) {
     if (!campaign || !uuid.test(campaign.campaignId) || !Number.isSafeInteger(campaign.revision)) return;
     // The process observation can change while the durable ledger revision remains equal.
@@ -390,6 +420,7 @@
     };
     if (monitor.dataset.liveCampaignId === campaign.campaignId) {
       renderRuntime(monitor);
+      renderPressure(campaign.pressure);
       const diagnostics = monitor.querySelector("[data-live-diagnostics]");
       if (diagnostics) {
         diagnostics.hidden = !runtime?.firstFailure && !runtime?.cleanupFailure;

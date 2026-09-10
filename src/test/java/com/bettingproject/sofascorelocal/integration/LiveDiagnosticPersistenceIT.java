@@ -51,6 +51,44 @@ class LiveDiagnosticPersistenceIT {
     private static final SofascoreEndpointType DETAILS=SofascoreEndpointType.EVENT_DETAILS;
 
     @Test
+    void campaignPressureReadsOnlyDurableWorkerRequestSentEvidenceWithStrictRollingWindows() {
+        Fixture f=fixture("50");Running running=f.running();
+        f.diagnostics.recordTransport(running.campaign(),running.attempt(),DETAILS,requestSent(T0.plusSeconds(10)));
+        // The durable REQUEST_SENT timestamp survives terminal transport progress and remains one departure.
+        f.diagnostics.recordTransport(running.campaign(),running.attempt(),DETAILS,
+                diagnostic(PlaywrightTransportDiagnostic.Phase.COMPLETE,200));
+        assertThat(f.diagnostics.findTransport(running.campaign(),running.attempt()).orElseThrow().phase())
+                .isEqualTo(PlaywrightTransportDiagnostic.Phase.COMPLETE);
+        ReservedAttempt incidents=f.reserve(running,SofascoreEndpointType.EVENT_INCIDENTS,0,T0.plusSeconds(20));
+        ReservedAttempt statistics=f.reserve(running,SofascoreEndpointType.EVENT_STATISTICS,0,T0.plusSeconds(30));
+        ReservedAttempt lineups=f.reserve(running,SofascoreEndpointType.EVENT_LINEUPS,0,T0.plusSeconds(69));
+        ReservedAttempt nextDetails=f.reserve(running,DETAILS,1,T0.plusSeconds(70));
+        f.diagnostics.recordTransport(running.campaign(),incidents.attemptId(),SofascoreEndpointType.EVENT_INCIDENTS,
+                requestSent(T0.plusSeconds(20)));
+        f.diagnostics.recordTransport(running.campaign(),statistics.attemptId(),SofascoreEndpointType.EVENT_STATISTICS,
+                requestSent(T0.plusSeconds(30)));
+        f.diagnostics.recordTransport(running.campaign(),lineups.attemptId(),SofascoreEndpointType.EVENT_LINEUPS,
+                requestSent(T0.plusSeconds(69)));
+        f.diagnostics.recordTransport(running.campaign(),nextDetails.attemptId(),DETAILS,requestSent(T0.plusSeconds(70)));
+        var evidence=f.evidence("live_call","live_attempt_transport_diagnostic");
+
+        var pressure=new JdbcLiveCampaignPressureReadStore(f.jdbc).read(running.campaign());
+
+        assertThat(pressure.observedDepartures()).isEqualTo(5);
+        assertThat(pressure.firstObservedDepartureAt()).isEqualTo(T0.plusSeconds(10));
+        assertThat(pressure.lastObservedDepartureAt()).isEqualTo(T0.plusSeconds(70));
+        // T0+10 is excluded at T0+70 because the rolling interval is (t - 60 s, t].
+        assertThat(pressure.oneMinutePeak().observedDepartures()).isEqualTo(4);
+        assertThat(pressure.oneMinutePeak().windowEndAt()).isEqualTo(T0.plusSeconds(69));
+        assertThat(pressure.fiveMinutePeak().observedDepartures()).isEqualTo(5);
+        assertThat(pressure.families()).extracting(LiveCampaignPressureReadStore.Family::endpoint,
+                LiveCampaignPressureReadStore.Family::observedDepartures).containsExactly(
+                tuple(DETAILS,2),tuple(SofascoreEndpointType.EVENT_STATISTICS,1),
+                tuple(SofascoreEndpointType.EVENT_INCIDENTS,1),tuple(SofascoreEndpointType.EVENT_LINEUPS,1));
+        f.assertEvidence(evidence);
+    }
+
+    @Test
     void upgradingPopulatedV44DoesNotInferTerminationOrContextReuseForHistoricalTimeouts() {
         Fixture f=fixture("44");Running running=f.running();
         f.jdbc.update("""
@@ -446,6 +484,9 @@ class LiveDiagnosticPersistenceIT {
         return new PlaywrightTransportDiagnostic(phase,30000,T0.plusSeconds(10),T0.plusSeconds(12),status,
                 status==429?T0.plusSeconds(120):null,phase==PlaywrightTransportDiagnostic.Phase.COMPLETE);
     }
+    private static PlaywrightTransportDiagnostic requestSent(Instant at) {
+        return new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.REQUEST_SENT,30000,at,null,null,null,false);
+    }
     private static LiveCampaignDiagnostic failure(String code,Running running,PlaywrightTransportDiagnostic transport) {
         return new LiveCampaignDiagnostic(LiveCampaignDiagnostic.Phase.TRANSPORT,code,T0.plusSeconds(40),running.attempt(),DETAILS,transport);
     }
@@ -455,7 +496,7 @@ class LiveDiagnosticPersistenceIT {
                 +"\"EVENT_STATISTICS\":{\"requestNanos\":500000000,\"processingNanos\":100000000},"
                 +"\"EVENT_LINEUPS\":{\"requestNanos\":500000000,\"processingNanos\":100000000}}";
     }
-    private record Running(UUID campaign,UUID attempt) { }
+    private record Running(UUID campaign,UUID attempt,Ownership ownership,Target target) { }
     private static Fixture fixture(String target) {
         String database="diagnostic_it_"+DATABASE.incrementAndGet();
         DriverManagerDataSource admin=new DriverManagerDataSource(POSTGRES.getJdbcUrl(),POSTGRES.getUsername(),POSTGRES.getPassword());
@@ -546,7 +587,11 @@ class LiveDiagnosticPersistenceIT {
             campaigns.launch(manifest.campaignId(),manifest.manifestSha256(),owner,T0.plusSeconds(1));
             ReservedAttempt attempt=campaigns.reserveAttempt(new AttemptRequest(owner,UUID.randomUUID(),target.canonicalEventId(),0,
                     DETAILS,"J4_WAIT",T0.plusSeconds(10),T0.plusSeconds(10),false)).orElseThrow();
-            return new Running(manifest.campaignId(),attempt.attemptId());
+            return new Running(manifest.campaignId(),attempt.attemptId(),owner,target);
+        }
+        ReservedAttempt reserve(Running running,SofascoreEndpointType endpoint,long cycle,Instant at) {
+            return campaigns.reserveAttempt(new AttemptRequest(running.ownership(),UUID.randomUUID(),
+                    running.target().canonicalEventId(),cycle,endpoint,"PRESSURE_READ",at,at,false)).orElseThrow();
         }
         void insertPolicyRow(UUID id,String policy,int capacity,int interval) {
             jdbc.update("""

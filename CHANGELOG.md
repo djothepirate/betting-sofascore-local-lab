@@ -6,6 +6,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-058 — qualification locale de la cadence live-v8, dix rencontres
 
+- Ajoute une vue de pression strictement locale par campagne. Elle compte seulement les
+  instants `REQUEST_SENT` persistés dans les diagnostics worker, puis affiche les pics
+  glissants de 60 secondes et 5 minutes ainsi que la répartition J4/J5. Les réservations,
+  le ledger partagé et le trafic hors du Lab restent exclus ; la vue ne présente pas ces
+  observations comme un quota ou un seuil d’acceptation fournisseur. Le relevé de trois
+  refus HTTP 403 réels du 10 septembre est conservé séparément comme observation
+  opérateur, sans réarmement ni nouvelle collecte :
+  [WO058-REAL-LIVE-V8-403-OBSERVATIONS-20260910](docs/validation/WO058-REAL-LIVE-V8-403-OBSERVATIONS-20260910.md).
 - Corrige le formulaire local `/provider-access` après refus : la page de réarmement est rendue
   avec `Referrer-Policy: same-origin`, afin que Chromium/Brave conserve l'origine loopback exacte
   pour son `POST`. `Origin: null`, les origines étrangères et les en-têtes de proxy restent

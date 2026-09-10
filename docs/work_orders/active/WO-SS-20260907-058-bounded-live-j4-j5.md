@@ -140,6 +140,21 @@ précédent. Le travail ne lance aucune campagne live. Même
 une passe verte locale ne démontre ni délai de réception fournisseur, ni acceptation de 45/min,
 ni absence future de blocage d'adresse.
 
+### Observations opérateur V8 du 10 septembre et diagnostic durable
+
+Trois campagnes `live-v8` lancées manuellement par l’opérateur le 10 septembre ont reçu un
+HTTP 403 complet après 9 min 01 s, 8 min 04 s et 11 min 44 s. Leurs pics locaux documentés
+sur 60 s sont respectivement 37, 29 et 29 départs, sous le budget local de 45/minute. Ces
+éléments ne caractérisent pas un seuil fournisseur : la famille du refus varie entre J4 détails
+et J5 compositions, et l’accès peut être partagé avec du trafic hors du Lab.
+
+Le [relevé opérateur V8](../../validation/WO058-REAL-LIVE-V8-403-OBSERVATIONS-20260910.md)
+conserve les identifiants, instants, pics et limites de l’inférence. Le correctif associé expose
+désormais, en lecture seule pour chaque campagne, les seuls `REQUEST_SENT` persistés par le worker,
+leurs pics glissants de 60 s et cinq minutes, et leur répartition J4/J5. Il exclut les réservations,
+le ledger partagé et le trafic hors du Lab ; il ne modifie ni la cadence, ni les budgets, ni la
+suspension persistante 403/429, et n’exécute aucune collecte fournisseur.
+
 ### Correctif local de réarmement après refus
 
 La page `/provider-access` contient un formulaire de décision locale. Elle recevait par erreur

@@ -12,6 +12,7 @@ import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
 import com.bettingproject.sofascorelocal.port.LiveDiagnosticStore;
+import com.bettingproject.sofascorelocal.port.LiveCampaignPressureReadStore;
 import org.springframework.stereotype.Component;
 import org.springframework.beans.factory.annotation.Autowired;
 import tools.jackson.core.JacksonException;
@@ -37,46 +38,57 @@ public class LiveCampaignPresentation {
     private final Clock clock;
     private final LiveDiagnosticStore diagnostics;
     private final LineupCountryOverlayResolver lineupCountries;
+    private final LiveCampaignPressureReadStore pressure;
     private static final JsonMapper JSON = JsonMapper.builder().build();
     private static final List<SofascoreEndpointType> FAMILIES = List.of(SofascoreEndpointType.EVENT_DETAILS,
             SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_INCIDENTS,
             SofascoreEndpointType.EVENT_LINEUPS);
 
     public LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data) {
-        this(events, data, null, Clock.systemUTC(), null, LineupCountryOverlayResolver.none());
+        this(events, data, null, Clock.systemUTC(), null, LineupCountryOverlayResolver.none(),
+                LiveCampaignPressureReadStore.none());
     }
 
     public LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, EventDetailsStore details) {
-        this(events, data, details, Clock.systemUTC(), null, LineupCountryOverlayResolver.none());
+        this(events, data, details, Clock.systemUTC(), null, LineupCountryOverlayResolver.none(),
+                LiveCampaignPressureReadStore.none());
     }
 
     @Autowired
     public LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, EventDetailsStore details,
-                                    LiveDiagnosticStore diagnostics, LineupCountryOverlayResolver lineupCountries) {
-        this(events, data, details, Clock.systemUTC(), diagnostics, lineupCountries);
+                                    LiveDiagnosticStore diagnostics, LineupCountryOverlayResolver lineupCountries,
+                                    LiveCampaignPressureReadStore pressure) {
+        this(events, data, details, Clock.systemUTC(), diagnostics, lineupCountries, pressure);
     }
 
     LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, Clock clock) {
-        this(events, data, null, clock, null, LineupCountryOverlayResolver.none());
+        this(events, data, null, clock, null, LineupCountryOverlayResolver.none(), LiveCampaignPressureReadStore.none());
     }
 
     LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, EventDetailsStore details, Clock clock) {
-        this(events, data, details, clock, null, LineupCountryOverlayResolver.none());
+        this(events, data, details, clock, null, LineupCountryOverlayResolver.none(), LiveCampaignPressureReadStore.none());
     }
 
     LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, EventDetailsStore details, Clock clock,
                              LiveDiagnosticStore diagnostics) {
-        this(events, data, details, clock, diagnostics, LineupCountryOverlayResolver.none());
+        this(events, data, details, clock, diagnostics, LineupCountryOverlayResolver.none(), LiveCampaignPressureReadStore.none());
     }
 
     LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, EventDetailsStore details, Clock clock,
                              LiveDiagnosticStore diagnostics, LineupCountryOverlayResolver lineupCountries) {
+        this(events, data, details, clock, diagnostics, lineupCountries, LiveCampaignPressureReadStore.none());
+    }
+
+    LiveCampaignPresentation(CanonicalEventStore events, J5EventDataStore data, EventDetailsStore details, Clock clock,
+                             LiveDiagnosticStore diagnostics, LineupCountryOverlayResolver lineupCountries,
+                             LiveCampaignPressureReadStore pressure) {
         this.events = events;
         this.data = data;
         this.details = details;
         this.clock = clock;
         this.diagnostics = diagnostics;
         this.lineupCountries = lineupCountries == null ? LineupCountryOverlayResolver.none() : lineupCountries;
+        this.pressure = pressure == null ? LiveCampaignPressureReadStore.none() : pressure;
     }
 
     public Campaign state(CampaignView view) {
@@ -112,7 +124,27 @@ public class LiveCampaignPresentation {
                                 : runtimeStatus.cleanupPending() ? "Collecte arrêtée / clôture locale requise."
                                 : runtimeStatus.collectionStopped() ? "Collecte arrêtée."
                                 : "Collecte en cours ; un incident a été enregistré.", runtimeStatus.firstFailure(), runtimeStatus.cleanupFailure()),
-                cadence(view, observedAt, runtimeStatus), pagination);
+                cadence(view, observedAt, runtimeStatus), pagination, pressure(view.manifest().campaignId()));
+    }
+
+    private Pressure pressure(UUID campaignId) {
+        LiveCampaignPressureReadStore.Pressure observed = pressure.read(campaignId);
+        if (observed == null) observed = LiveCampaignPressureReadStore.Pressure.noObservedDepartures();
+        return new Pressure(observed.observedDepartures(), observed.firstObservedDepartureAt(),
+                observed.lastObservedDepartureAt(), new PressurePeak(observed.oneMinutePeak().observedDepartures(),
+                observed.oneMinutePeak().windowEndAt()), new PressurePeak(observed.fiveMinutePeak().observedDepartures(),
+                observed.fiveMinutePeak().windowEndAt()), observed.families().stream().map(family ->
+                new PressureFamily(family.endpoint().name(), pressureLabel(family.endpoint()), family.observedDepartures())).toList());
+    }
+
+    private static String pressureLabel(SofascoreEndpointType endpoint) {
+        return switch (endpoint) {
+            case EVENT_DETAILS -> "J4 détails";
+            case EVENT_STATISTICS -> "J5 statistiques";
+            case EVENT_INCIDENTS -> "J5 incidents";
+            case EVENT_LINEUPS -> "J5 compositions";
+            default -> throw new IllegalArgumentException("endpoint outside live scope");
+        };
     }
 
     private static Cadence cadence(CampaignView view, Instant now, RuntimeStatus runtimeStatus) {
@@ -426,18 +458,28 @@ public class LiveCampaignPresentation {
     public record Campaign(UUID campaignId, long revision, String state, String reason, Instant preparedAt,
                            Instant startedAt, Instant endsAt, int reservedCalls, int maximumCalls,
                            long receivedBytes, long maximumBytes, List<Event> events, RuntimeObservation runtimeStatus,
-                           Cadence cadence, Pagination pagination) {
+                           Cadence cadence, Pagination pagination, Pressure pressure) {
+        public Campaign(UUID campaignId, long revision, String state, String reason, Instant preparedAt,
+                Instant startedAt, Instant endsAt, int reservedCalls, int maximumCalls, long receivedBytes,
+                long maximumBytes, List<Event> events, RuntimeObservation runtimeStatus, Cadence cadence,
+                Pagination pagination) {
+            this(campaignId, revision, state, reason, preparedAt, startedAt, endsAt, reservedCalls,
+                    maximumCalls, receivedBytes, maximumBytes, events, runtimeStatus, cadence, pagination,
+                    Pressure.noObservedDepartures());
+        }
         public Campaign(UUID campaignId, long revision, String state, String reason, Instant preparedAt,
                 Instant startedAt, Instant endsAt, int reservedCalls, int maximumCalls, long receivedBytes,
                 long maximumBytes, List<Event> events, RuntimeObservation runtimeStatus, Cadence cadence) {
             this(campaignId, revision, state, reason, preparedAt, startedAt, endsAt, reservedCalls,
-                    maximumCalls, receivedBytes, maximumBytes, events, runtimeStatus, cadence, null);
+                    maximumCalls, receivedBytes, maximumBytes, events, runtimeStatus, cadence, null,
+                    Pressure.noObservedDepartures());
         }
         public Campaign(UUID campaignId, long revision, String state, String reason, Instant preparedAt,
                 Instant startedAt, Instant endsAt, int reservedCalls, int maximumCalls, long receivedBytes,
                 long maximumBytes, List<Event> events, RuntimeObservation runtimeStatus) {
             this(campaignId, revision, state, reason, preparedAt, startedAt, endsAt, reservedCalls,
-                    maximumCalls, receivedBytes, maximumBytes, events, runtimeStatus, null);
+                    maximumCalls, receivedBytes, maximumBytes, events, runtimeStatus, null, null,
+                    Pressure.noObservedDepartures());
         }
     }
     public record Pagination(int number, int size, int totalElements, int totalPages) {
@@ -448,6 +490,17 @@ public class LiveCampaignPresentation {
                           long estimatedRemainingSeconds, double estimatedCallsPerMinute) {
         public long estimatedMinutes() { return estimatedRemainingSeconds / 60; }
     }
+    /** A local post-mortem of authenticated worker starts, never a provider quota or total network traffic meter. */
+    public record Pressure(int observedDepartures, Instant firstObservedDepartureAt, Instant lastObservedDepartureAt,
+                           PressurePeak oneMinutePeak, PressurePeak fiveMinutePeak,
+                           List<PressureFamily> families) {
+        static Pressure noObservedDepartures() {
+            return new Pressure(0, null, null, new PressurePeak(0, null), new PressurePeak(0, null), FAMILIES.stream()
+                    .map(endpoint -> new PressureFamily(endpoint.name(), pressureLabel(endpoint), 0)).toList());
+        }
+    }
+    public record PressurePeak(int observedDepartures, Instant windowEndAt) { }
+    public record PressureFamily(String endpoint, String label, int observedDepartures) { }
     /** Local process observation kept separate from the persisted campaign and event states. */
     public record RuntimeObservation(String state, String reason, boolean collectionStopped,
                                      boolean cleanupPending, boolean cleanupInProgress, String label,

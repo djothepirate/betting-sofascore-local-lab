@@ -16,6 +16,7 @@ import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
 import com.bettingproject.sofascorelocal.port.LiveDiagnosticStore;
+import com.bettingproject.sofascorelocal.port.LiveCampaignPressureReadStore;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import com.bettingproject.sofascorelocal.security.InvalidLocalFormTokenException;
 import org.junit.jupiter.api.BeforeEach;
@@ -64,6 +65,7 @@ class LiveCampaignControllerTest {
     @MockitoBean private CanonicalEventStore events;
     @MockitoBean private J5EventDataStore data;
     @MockitoBean private LiveDiagnosticStore diagnostics;
+    @MockitoBean private LiveCampaignPressureReadStore pressure;
     @MockitoBean private EventDetailsStore details;
     @MockitoBean private LineupCountryOverlayResolver lineupCountries;
     @MockitoBean private CacheManager cacheManager;
@@ -107,6 +109,36 @@ class LiveCampaignControllerTest {
                 .andExpect(jsonPath("$.events[0].families[0].receivedSnapshotId").doesNotExist());
         if(stopped) state.andExpect(jsonPath("$.events[0].families[0].schedule.nextDueAt").doesNotExist());
         else state.andExpect(jsonPath("$.events[0].families[0].schedule.nextDueAt").value(NOW.plusSeconds(340).toString()));
+    }
+
+    @Test
+    void campaignPressureRendersObservedWorkerStartsWithoutTurningThemIntoAProviderQuota() throws Exception {
+        var observed = new LiveCampaignPressureReadStore.Pressure(5, NOW.plusSeconds(10), NOW.plusSeconds(70),
+                new LiveCampaignPressureReadStore.Peak(4, NOW.plusSeconds(69)),
+                new LiveCampaignPressureReadStore.Peak(5, NOW.plusSeconds(70)), List.of(
+                new LiveCampaignPressureReadStore.Family(SofascoreEndpointType.EVENT_DETAILS, 2),
+                new LiveCampaignPressureReadStore.Family(SofascoreEndpointType.EVENT_STATISTICS, 1),
+                new LiveCampaignPressureReadStore.Family(SofascoreEndpointType.EVENT_INCIDENTS, 1),
+                new LiveCampaignPressureReadStore.Family(SofascoreEndpointType.EVENT_LINEUPS, 1)));
+        when(service.state(CAMPAIGN_ID)).thenReturn(campaign("RUNNING", 43));
+        when(pressure.read(CAMPAIGN_ID)).thenReturn(observed);
+        String path = "/live-campaigns/" + CAMPAIGN_ID;
+
+        String html = mvc.perform(get(path).header("Host", HOST)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(html).contains("Pression observée de cette campagne", "REQUEST_SENT", "trafic hors du Lab",
+                "aucun seuil d’acceptation fournisseur", "data-live-pressure-count>5</dd>",
+                "data-live-pressure-family=\"EVENT_LINEUPS\"");
+        assertThat(Pattern.compile("<details\\b([^>]*data-live-pressure[^>]*)>").matcher(html).results()
+                .map(match -> match.group(1))).allSatisfy(attributes -> assertThat(attributes).doesNotContain("open"));
+        mvc.perform(get(path + "/state").header("Host", HOST)).andExpect(status().isOk())
+                .andExpect(jsonPath("$.pressure.observedDepartures").value(5))
+                .andExpect(jsonPath("$.pressure.oneMinutePeak.observedDepartures").value(4))
+                .andExpect(jsonPath("$.pressure.fiveMinutePeak.observedDepartures").value(5))
+                .andExpect(jsonPath("$.pressure.families[0].endpoint").value("EVENT_DETAILS"))
+                .andExpect(jsonPath("$.pressure.families[3].label").value("J5 compositions"));
+        verify(service, never()).launch(any(), any());
+        verify(service, never()).stop(any(), any());
     }
 
     @Test

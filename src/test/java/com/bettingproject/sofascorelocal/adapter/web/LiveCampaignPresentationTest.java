@@ -17,6 +17,7 @@ import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
 import com.bettingproject.sofascorelocal.port.LiveDiagnosticStore;
+import com.bettingproject.sofascorelocal.port.LiveCampaignPressureReadStore;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -80,6 +81,46 @@ class LiveCampaignPresentationTest {
                 new RuntimeStatus("RUNNING",null,false,false,false,diagnostic,null));
         assertThat(state.runtimeStatus().collectionStopped()).isFalse();
         assertThat(state.runtimeStatus().label()).isEqualTo("Collecte en cours ; un incident a été enregistré.");
+    }
+
+    @Test
+    void campaignPressureProjectsOnlyDurableWorkerRequestSentEvidence() {
+        var pressure = mock(LiveCampaignPressureReadStore.class);
+        var observed = new LiveCampaignPressureReadStore.Pressure(5, START.plusSeconds(10), START.plusSeconds(70),
+                new LiveCampaignPressureReadStore.Peak(4, START.plusSeconds(69)),
+                new LiveCampaignPressureReadStore.Peak(5, START.plusSeconds(70)), List.of(
+                new LiveCampaignPressureReadStore.Family(SofascoreEndpointType.EVENT_DETAILS, 2),
+                new LiveCampaignPressureReadStore.Family(SofascoreEndpointType.EVENT_STATISTICS, 1),
+                new LiveCampaignPressureReadStore.Family(SofascoreEndpointType.EVENT_INCIDENTS, 1),
+                new LiveCampaignPressureReadStore.Family(SofascoreEndpointType.EVENT_LINEUPS, 1)));
+        when(pressure.read(CAMPAIGN)).thenReturn(observed);
+
+        var projected = new LiveCampaignPresentation(events, data, null, Clock.fixed(START, ZoneOffset.UTC), null,
+                LineupCountryOverlayResolver.none(), pressure).state(campaign(List.of(), List.of()));
+
+        assertThat(projected.pressure().observedDepartures()).isEqualTo(5);
+        assertThat(projected.pressure().firstObservedDepartureAt()).isEqualTo(START.plusSeconds(10));
+        assertThat(projected.pressure().lastObservedDepartureAt()).isEqualTo(START.plusSeconds(70));
+        assertThat(projected.pressure().oneMinutePeak().observedDepartures()).isEqualTo(4);
+        assertThat(projected.pressure().fiveMinutePeak().observedDepartures()).isEqualTo(5);
+        assertThat(projected.pressure().families()).extracting(LiveCampaignPresentation.PressureFamily::label,
+                LiveCampaignPresentation.PressureFamily::observedDepartures).containsExactly(
+                org.assertj.core.groups.Tuple.tuple("J4 détails", 2),
+                org.assertj.core.groups.Tuple.tuple("J5 statistiques", 1),
+                org.assertj.core.groups.Tuple.tuple("J5 incidents", 1),
+                org.assertj.core.groups.Tuple.tuple("J5 compositions", 1));
+        verify(pressure).read(CAMPAIGN);
+    }
+
+    @Test
+    void missingPressureReadEvidenceRemainsUnknownRatherThanAClaimThatNoRequestWasSent() {
+        var projected = new LiveCampaignPresentation(events, data, null, Clock.fixed(START, ZoneOffset.UTC), null,
+                LineupCountryOverlayResolver.none(), campaignId -> null).state(campaign(List.of(), List.of()));
+
+        assertThat(projected.pressure().observedDepartures()).isZero();
+        assertThat(projected.pressure().firstObservedDepartureAt()).isNull();
+        assertThat(projected.pressure().oneMinutePeak().windowEndAt()).isNull();
+        assertThat(projected.pressure().families()).allSatisfy(family -> assertThat(family.observedDepartures()).isZero());
     }
 
     @ParameterizedTest
