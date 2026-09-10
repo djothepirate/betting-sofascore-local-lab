@@ -120,6 +120,7 @@ public final class LineupsPresentation {
 
     private static String missingDescriptionLabel(String value) {
         return switch (value) {
+            case "ACL Knee Injury" -> "Ligament Croisé Antérieur du genou";
             case "Achilles Tendon Injury" -> "Blessure au tendon d’Achille";
             case "Abdominal Injury" -> "Blessure abdominale";
             case "Ankle Injury" -> "Blessure à la cheville";

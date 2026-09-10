@@ -40,14 +40,15 @@ class LineupsPresentationTest {
     void unavailablePlayerLabelsTranslateKnownSupplierDescriptionsWithoutChangingTheirSourceValues() {
         var rawDescriptions = List.of("red_card_suspension", "Shoulder Injury", "Meniscus Injury", "Hernia",
                 "Ligament Injury", "Heart Problems", "Knock Injury", "Groin Injury", "Strain Injury",
-                "Physical Discomfort", "Abdominal Injury");
+                "Physical Discomfort", "Abdominal Injury", "ACL Knee Injury", "ACL knee injury");
         var home = new TeamLineup(LineupSide.HOME, Optional.empty(), List.of(), Optional.of(List.of(
                 missing(101, rawDescriptions.get(0)), missing(102, rawDescriptions.get(1)),
                 missing(103, rawDescriptions.get(2)), missing(104, rawDescriptions.get(3)),
                 missing(105, rawDescriptions.get(4)), missing(106, rawDescriptions.get(5)),
                 missing(107, rawDescriptions.get(6)), missing(108, rawDescriptions.get(7)),
                 missing(109, rawDescriptions.get(8)), missing(110, rawDescriptions.get(9)),
-                missing(111, rawDescriptions.get(10)))));
+                missing(111, rawDescriptions.get(10)), missing(112, rawDescriptions.get(11)),
+                missing(113, rawDescriptions.get(12)))));
 
         var displayed = LineupsPresentation.from(new EventLineups(900001, true, home,
                 new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of()))).teams().getFirst().missingPlayers();
@@ -55,7 +56,8 @@ class LineupsPresentationTest {
         assertThat(displayed).extracting(LineupsPresentation.MissingPlayer::description).containsExactly(
                 "Suspension après carton rouge", "Blessure à l’épaule", "Blessure au ménisque", "Hernie",
                 "Blessure aux ligaments", "Problèmes cardiaques", "Coup", "Blessure à l’aine",
-                "Blessure à l’entraînement", "Inconfort physique", "Blessure abdominale");
+                "Blessure à l’entraînement", "Inconfort physique", "Blessure abdominale",
+                "Ligament Croisé Antérieur du genou", "ACL knee injury");
         assertThat(displayed).allSatisfy(player -> assertThat(player.type()).isEqualTo("Indisponible"));
         assertThat(home.missingPlayers().orElseThrow()).extracting(MissingLineupPlayer::description)
                 .containsExactlyElementsOf(rawDescriptions.stream().map(Optional::of).toList());

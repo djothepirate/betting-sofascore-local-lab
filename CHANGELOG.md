@@ -84,9 +84,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   Les trois premières gardent leur SVG local dédié ; l'Irlande du Nord emploie le drapeau britannique
   `gb.svg` déjà versionné. Cette exception reste bornée à ces quatre noms, donc les pays ordinaires
   continuent à être résolus par leur propre code ISO.
-- Traduit aussi `Physical Discomfort` par « Inconfort physique » et `Abdominal Injury` par
-  « Blessure abdominale » dans les indisponibilités J5, sans modifier les valeurs brutes
-  conservées.
+- Traduit aussi `Physical Discomfort` par « Inconfort physique », `Abdominal Injury` par
+  « Blessure abdominale » et `ACL Knee Injury` par « Ligament Croisé Antérieur du genou » dans les
+  indisponibilités J5, sans modifier les valeurs brutes conservées.
 - Traduit dans la projection des incidents de carte la raison exacte `Professional foul last man`
   par « Faute volontaire du dernier défenseur ». La valeur fournisseur reste conservée ; une
   `description` fournisseur présente garde sa priorité, et les variantes ou autres types
