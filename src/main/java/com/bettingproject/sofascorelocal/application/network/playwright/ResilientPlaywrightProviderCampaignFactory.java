@@ -1,6 +1,7 @@
 package com.bettingproject.sofascorelocal.application.network.playwright;
 
 import com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.DepartureReason;
+import com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.DepartureProfile;
 import com.bettingproject.sofascorelocal.domain.provider.ProviderResilienceData.State;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.port.ProviderResilienceStore;
@@ -48,10 +49,13 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
         return openProtected(id,()->delegate.openLiveGroupedV5(id,endpoints));
     }
     @Override public PlaywrightProviderCampaign openLiveGroupedV6(UUID id, Set<SofascoreEndpointType> endpoints) {
-        return openProtected(id,()->delegate.openLiveGroupedV6(id,endpoints),true);
+        return openProtected(id,()->delegate.openLiveGroupedV6(id,endpoints),true,DepartureProfile.LEGACY_V1);
     }
     @Override public PlaywrightProviderCampaign openLiveGroupedV7(UUID id, Set<SofascoreEndpointType> endpoints) {
-        return openProtected(id,()->delegate.openLiveGroupedV7(id,endpoints),true);
+        return openProtected(id,()->delegate.openLiveGroupedV7(id,endpoints),true,DepartureProfile.LEGACY_V1);
+    }
+    @Override public PlaywrightProviderCampaign openLiveGroupedV8(UUID id, Set<SofascoreEndpointType> endpoints) {
+        return openProtected(id,()->delegate.openLiveGroupedV8(id,endpoints),true,DepartureProfile.LIVE_V8);
     }
     @Override public PlaywrightProviderCampaign openManualJ5Grouped(UUID id, Set<SofascoreEndpointType> endpoints) {
         return openProtected(id,()->delegate.openManualJ5Grouped(id,endpoints));
@@ -63,11 +67,16 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
     }
 
     private PlaywrightProviderCampaign openProtected(UUID campaignId, Supplier<PlaywrightProviderCampaign> opening) {
-        return openProtected(campaignId, opening, false);
+        return openProtected(campaignId, opening, false, DepartureProfile.LEGACY_V1);
     }
 
     private PlaywrightProviderCampaign openProtected(UUID campaignId, Supplier<PlaywrightProviderCampaign> opening,
                                                      boolean recoverTimeouts) {
+        return openProtected(campaignId, opening, recoverTimeouts, DepartureProfile.LEGACY_V1);
+    }
+
+    private PlaywrightProviderCampaign openProtected(UUID campaignId, Supplier<PlaywrightProviderCampaign> opening,
+                                                     boolean recoverTimeouts, DepartureProfile departureProfile) {
         requireOpen();
         if(store.snapshot().unresolvedDispatchId()!=null) throw new IllegalStateException("PROVIDER_DEPARTURE_UNRESOLVED");
         PlaywrightProviderCampaign campaign=opening.get();
@@ -92,14 +101,20 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
                     @Override public void check() { admission.check(); requireOpen(); }
                     @Override public Permit acquireDispatchPermit() {
                         // The underlying supervisor holds single-flight. No SQL lock survives this method.
-                        awaitReservation(dispatchId,admission);
+                        awaitReservation(dispatchId,admission,departureProfile);
                         unfinished=dispatchId;
                         // Reservation remains charged on cancellation/failure: no duplicate emission is inferred.
                         return admission.acquireDispatchPermit();
                     }
                     @Override public void onTransportProgress(PlaywrightTransportDiagnostic diagnostic) {
                         RuntimeException refusalFailure = null;
-                        try { observeRefusal(diagnostic,dispatchId,campaignId,refusal); }
+                        try {
+                            // A known refusal remains first: an incoherent worker timestamp
+                            // can stop V8, but must never discard a 403/429 suspension.
+                            observeRefusal(diagnostic,dispatchId,campaignId,refusal);
+                            recordAuthenticatedV8Departure(dispatchId,departureProfile,
+                                    diagnostic == null ? null : diagnostic.requestedAt(),clock.instant());
+                        }
                         catch (RuntimeException failure) { refusalFailure = failure; }
                         // Even when the refusal transaction fails, retain the known headers in the
                         // campaign diagnosis. Neither failure authorizes continued transport.
@@ -116,10 +131,16 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
                     observeRefusal(response.diagnostic(),dispatchId,campaignId,refusal);
                     if((response.httpStatus()==403 || response.httpStatus()==429) && refusal.get()==null)
                         persistRefusal(new Refusal(dispatchId,campaignId,response.httpStatus(),response.receivedAt(),null));
+                    // A completed response is an idempotent fallback for transports that
+                    // cannot stream REQUEST_SENT progress.  Its constructor already proves
+                    // requestedAt <= receivedAt; the store also checks the active reservation.
+                    recordAuthenticatedV8Departure(dispatchId,departureProfile,response.requestedAt(),response.receivedAt());
                     finishDeparture();
                     return response;
                 } catch(PlaywrightProviderException failure) {
                     observeRefusal(failure.diagnostic(),dispatchId,campaignId,refusal);
+                    recordAuthenticatedV8Departure(dispatchId,departureProfile,
+                            failure.diagnostic()==null?null:failure.diagnostic().requestedAt(),clock.instant());
                     // The terminal acknowledgement includes verified page/context cleanup.
                     // Persist the charge's end before the caller may defer or emit again.
                     if (recoverTimeouts && failure.recoverableTimeout()) {
@@ -142,10 +163,14 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
         };
     }
 
-    private void awaitReservation(UUID dispatchId, PlaywrightDispatchAdmission admission) {
+    private void awaitReservation(UUID dispatchId, PlaywrightDispatchAdmission admission, DepartureProfile departureProfile) {
         while(true) {
             admission.check(); requireOpen();
-            var decision=store.tryReserveDeparture(dispatchId,clock.instant());
+            // Preserve the legacy method path for pre-V8 callers. This keeps their durable
+            // contract unchanged while V8 explicitly selects its faster local envelope.
+            var decision=departureProfile==DepartureProfile.LEGACY_V1
+                    ? store.tryReserveDeparture(dispatchId,clock.instant())
+                    : store.tryReserveDeparture(dispatchId,departureProfile,clock.instant());
             if(decision.allowed()) return;
             if(decision.reason()!=DepartureReason.RATE_LIMITED)
                 throw new IllegalStateException(decision.reason()==DepartureReason.PROVIDER_SUSPENDED
@@ -171,6 +196,18 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
         Refusal evidence=new Refusal(dispatchId,campaignId,d.httpStatus(),
                 d.headersReceivedAt()==null?clock.instant():d.headersReceivedAt(),d.retryAfterNotBefore());
         if(observed.compareAndSet(null,evidence)) persistRefusal(evidence);
+    }
+    /**
+     * V8 alone upgrades a charged reservation to the worker-side departure
+     * timestamp.  A missing request timestamp is deliberately not inferred:
+     * the completion trigger retains its conservative fallback instead.
+     */
+    private void recordAuthenticatedV8Departure(UUID dispatchId, DepartureProfile profile,
+                                                Instant requestedAt, Instant observedAt) {
+        if (profile != DepartureProfile.LIVE_V8 || requestedAt == null) return;
+        if (observedAt == null || requestedAt.isAfter(observedAt))
+            throw new IllegalStateException("PROVIDER_REQUESTED_TIMESTAMP_INCOHERENT");
+        store.recordAuthenticatedV8Departure(dispatchId,requestedAt,observedAt);
     }
     private void persistRefusal(Refusal refusal) {
         pendingRefusal.compareAndSet(null,refusal);

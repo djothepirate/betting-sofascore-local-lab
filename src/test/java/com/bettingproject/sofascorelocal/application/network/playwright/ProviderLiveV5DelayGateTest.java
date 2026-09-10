@@ -29,7 +29,21 @@ class ProviderLiveV5DelayGateTest {
     }
 
     @Test
-    void authorityAndSessionTransitionsAlwaysRetainThreeSeconds() {
+    void v8SameSessionUsesTheQualifiedHalfSecondFence() {
+        var session = session(LiveProviderGroupTracker.Authority.LIVE_V8);
+        var clock = new AtomicLong();
+        List<Duration> pauses = new ArrayList<>();
+        var gate = new ProviderNetworkStartDelayGate(Duration.ofSeconds(3), clock::get,
+                delay -> { pauses.add(delay); clock.addAndGet(delay.toNanos()); });
+        gate.recordDispatchFinished(true, session);
+        clock.set(Duration.ofMillis(499).toNanos());
+        gate.awaitNextGroupDispatch(session, () -> { });
+        assertThat(pauses).containsExactly(Duration.ofMillis(1));
+        assertThat(clock).hasValue(Duration.ofMillis(500).toNanos());
+    }
+
+    @Test
+    void authorityAndSessionTransitionsRetainTheGlobalFenceUnlessTheSameQualifiedSessionContinues() {
         var v4 = session(LiveProviderGroupTracker.Authority.LIVE_V4);
         var v5 = session(LiveProviderGroupTracker.Authority.LIVE_V5);
         var v6 = session(LiveProviderGroupTracker.Authority.LIVE_V6);
@@ -39,16 +53,19 @@ class ProviderLiveV5DelayGateTest {
         var reopenedV6 = session(LiveProviderGroupTracker.Authority.LIVE_V6);
         var v7 = session(LiveProviderGroupTracker.Authority.LIVE_V7);
         var reopenedV7 = session(LiveProviderGroupTracker.Authority.LIVE_V7);
-        LiveProviderGroupTracker[] sessions = {null, v4, v5, reopenedV5, v6, reopenedV6, v7, reopenedV7, manual};
+        var v8 = session(LiveProviderGroupTracker.Authority.LIVE_V8);
+        var reopenedV8 = session(LiveProviderGroupTracker.Authority.LIVE_V8);
+        LiveProviderGroupTracker[] sessions = {null, v4, v5, reopenedV5, v6, reopenedV6, v7, reopenedV7, v8, reopenedV8, manual};
         for (var previous : sessions) for (var next : sessions) {
             var clock = new AtomicLong();
             var gate = new ProviderNetworkStartDelayGate(Duration.ofSeconds(3), clock::get,
                     delay -> clock.addAndGet(delay.toNanos()));
             gate.recordDispatchFinished(true, previous);
             gate.awaitNextGroupDispatch(next, () -> {});
-            boolean sameShortDelaySession = next != null && next.usesOneSecondInterGroupDelay() && previous == next;
+            Duration expected = next != null && next.interGroupMinimumDelay() != null && previous == next
+                    ? next.interGroupMinimumDelay() : Duration.ofSeconds(3);
             assertThat(clock.get()).as("previous=%s next=%s", previous, next)
-                    .isEqualTo(Duration.ofSeconds(sameShortDelaySession ? 1 : 3).toNanos());
+                    .isEqualTo(expected.toNanos());
         }
     }
 

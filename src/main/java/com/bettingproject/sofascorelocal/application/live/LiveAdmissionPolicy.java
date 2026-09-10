@@ -13,8 +13,12 @@ public final class LiveAdmissionPolicy {
     public static final int V5_MAXIMUM_SELECTION_SIZE = 20;
     public static final int V6_MAXIMUM_SELECTION_SIZE = 7;
     public static final int V7_MAXIMUM_SELECTION_SIZE = 3;
+    /** V8 is separately qualified: ten 60-second four-family groups under the isolated pressure policy. */
+    public static final int V8_MAXIMUM_SELECTION_SIZE = 10;
     public static final int V6_MAXIMUM_CALLS_PER_MINUTE = 25;
     public static final int V6_MAXIMUM_CALLS_PER_HOUR = 1000;
+    public static final int V8_MAXIMUM_CALLS_PER_MINUTE = 45;
+    public static final int V8_MAXIMUM_CALLS_PER_HOUR = 2756;
     public static final long V5_MAXIMUM_RAW_BYTES = 15_728_640_000L;
     private final LiveCampaignProperties properties;
     private final LiveStorageCapacityProbe storage;
@@ -94,10 +98,24 @@ public final class LiveAdmissionPolicy {
         requireStorage(maximumBytesV5(matches));
     }
 
+    public void admitV8(int matches, GroupedAdmissionProfile profile) {
+        properties.validate();
+        if (matches < 1 || matches > properties.getQualifiedMatchCapacity() || matches > V8_MAXIMUM_SELECTION_SIZE)
+            throw new IllegalArgumentException("LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY");
+        if (matches > qualifiedCapacityV8(profile)) throw new IllegalArgumentException("LIVE_CAPACITY_REFUSED_REDUCE_SELECTION");
+        requireStorage(maximumBytesV5(matches));
+    }
+
     /** 240 ordinary calls/hour plus four initial and four final calls, with 10% headroom. */
     public static int qualifiedCapacityV7(GroupedAdmissionProfile profile) {
         int hourlyCapacity = (V6_MAXIMUM_CALLS_PER_HOUR * 9 / 10) / 248;
         return qualifiedGroupedCapacity(profile, "live-v7", Math.min(V7_MAXIMUM_SELECTION_SIZE, hourlyCapacity));
+    }
+
+    /** 240 ordinary calls plus four initial and four final calls per event/hour, with 10% headroom. */
+    public static int qualifiedCapacityV8(GroupedAdmissionProfile profile) {
+        int hourlyCapacity = (V8_MAXIMUM_CALLS_PER_HOUR * 9 / 10) / 248;
+        return qualifiedGroupedCapacity(profile, "live-v8", Math.min(V8_MAXIMUM_SELECTION_SIZE, hourlyCapacity));
     }
 
     /**
@@ -131,7 +149,7 @@ public final class LiveAdmissionPolicy {
         if (!policyVersion.equals(profile.policyVersion())) throw new IllegalStateException("LIVE_GROUPED_POLICY_MISMATCH");
         long rounds = profile.lineupInterval().toSeconds() / profile.criticalInterval().toSeconds();
         long weightedNanos = Math.multiplyExact(profile.interGroupDelay().toNanos(), rounds);
-        if ("live-v6".equals(policyVersion) || "live-v7".equals(policyVersion)) {
+        if ("live-v6".equals(policyVersion) || "live-v7".equals(policyVersion) || "live-v8".equals(policyVersion)) {
             // The durable limiter waits after every exchange, including same-group calls.
             weightedNanos = Math.multiplyExact(profile.minimumRequestStartInterval().toNanos(), 3 * rounds + 1);
         }
@@ -147,7 +165,9 @@ public final class LiveAdmissionPolicy {
         // and no nanosecond over the headroom boundary can disappear by truncation.
         long usableNanos = Math.multiplyExact(profile.lineupInterval().toNanos(), 9) / 10;
         int capacity = (int) Math.min(maximumMatches, usableNanos / weightedNanos);
-        while (capacity > 0 && !("live-v7".equals(policyVersion)
+        while (capacity > 0 && !("live-v8".equals(policyVersion)
+                ? GroupedLiveAdmissionSimulationV8.fits(capacity, profile)
+                : "live-v7".equals(policyVersion)
                 ? GroupedLiveAdmissionSimulationV7.fits(capacity, profile)
                 : GroupedLiveAdmissionSimulation.fits(capacity, profile))) capacity--;
         return capacity;
@@ -173,6 +193,10 @@ public final class LiveAdmissionPolicy {
     }
     public static double estimatedLiveCallsPerMinuteV7(int matches) {
         if (matches < 1 || matches > V7_MAXIMUM_SELECTION_SIZE) throw new IllegalArgumentException("invalid live selection size");
+        return matches * 4.0;
+    }
+    public static double estimatedLiveCallsPerMinuteV8(int matches) {
+        if (matches < 1 || matches > V8_MAXIMUM_SELECTION_SIZE) throw new IllegalArgumentException("invalid live selection size");
         return matches * 4.0;
     }
     public void requireStorage(long remainingRawBytes) {

@@ -4,6 +4,39 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — préparation de la cadence locale live-v8, sous qualification
+
+- Prépare `live-v8` pour les nouvelles préparations, avec dix rencontres au plus, une vague
+  normale de 60 s par couple rencontre/famille et des slots déterministes construits à partir
+  des enveloppes immuables du profil.
+- Prévoit un fence local de 500 ms après une fin d'échange prouvée et des budgets persistants
+  de 45 départs/60 s et 2 756 départs/heure. Les retards dus aux slots, budgets, 404,
+  timeouts ou refus restent visibles et ne sont pas annoncés comme fraîcheur tenue.
+- Lisse la bascule d'un lancement très proche de T0 : après un J4 initial `notstarted` récent,
+  le premier J4 de coup d'envoi est conservé sur son prochain créneau de 60 s au lieu de
+  créer une seconde vague J4/J5 immédiate. Les J5 restent conditionnels à la confirmation
+  `inprogress`, ce qui maintient dix rencontres dans le budget de 45 départs/minute.
+- Compte les fenêtres V8 sur l'horodatage `REQUEST_SENT` authentifié par le worker lorsqu'il
+  est observé. Le départ reste réservé atomiquement avant émission, la preuve est bornée entre
+  cette réservation et son observation parent, et une fin sans preuve conserve le repli
+  conservateur sur l'heure de complétion.
+- Met à niveau la preuve J6 de sauvegarde/restauration vers Flyway V50 :
+  `provider_departure_accounting` entre dans l'empreinte append-only du ledger live et son
+  compteur source/restauration est exigé avant une rétention. L'horodatage
+  `AUTHENTICATED_WORKER_REQUEST` est conservé lorsqu'il est prouvé ;
+  `COMPLETION_FALLBACK` reste le repli conservateur. Cette évolution n'exécute ni sauvegarde,
+  ni purge, ni qualification opérationnelle sur la base opérateur.
+- Transforme un report durable qui franchit un créneau normal en `WAITING_PRESSURE_RECHECK` :
+  le cycle et les familles réellement manqués restent visibles, les autres cibles touchées par
+  le même hold sont requalifiées, puis un J4 explicite reprend après `notBefore`.
+- Conserve la suspension durable sur 403/429, sans réarmement automatique, rotation d'adresse,
+  proxy, VPN ou sonde fournisseur. Les manifestes et profils live-v1 à live-v7 restent
+  historiques et inchangés.
+- Laisse V8 en échec fermé tant qu'une qualification Chromium/worker/PostgreSQL exclusivement
+  loopback n'a pas produit un profil et une empreinte à revoir. Aucun hash, enveloppe ou
+  qualification V8 n'est déclaré dans cette version ; une passe locale ne vaudra pas seuil
+  d'acceptation ou garantie d'accès SofaScore.
+
 ### WO-058 — compositions enrichies, informations J4 et cadence live-v7
 
 - Ajoute les buts et passes décisives aux cartes, avec répétition d’icônes et compteur

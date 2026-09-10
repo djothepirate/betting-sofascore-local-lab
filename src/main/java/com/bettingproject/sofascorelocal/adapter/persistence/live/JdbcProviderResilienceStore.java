@@ -26,21 +26,70 @@ public class JdbcProviderResilienceStore implements ProviderResilienceStore {
     public Snapshot snapshot() { return read(false); }
 
     @Override @Transactional(readOnly=true)
-    public DepartureDecision departureDecision(Instant at) { return decide(read(false),timestamp(at)); }
+    public DepartureDecision departureDecision(Instant at) {
+        return departureDecision(DepartureProfile.LEGACY_V1,at);
+    }
+
+    @Override @Transactional(readOnly=true)
+    public DepartureDecision departureDecision(DepartureProfile profile, Instant at) {
+        return decide(readState(false),Objects.requireNonNull(profile),timestamp(at));
+    }
 
     @Override @Transactional
     public DepartureDecision tryReserveDeparture(UUID dispatchId, Instant at) {
-        Objects.requireNonNull(dispatchId); Instant now=timestamp(at);
-        Snapshot current=read(true);
+        return tryReserveDeparture(dispatchId,DepartureProfile.LEGACY_V1,at);
+    }
+
+    @Override @Transactional
+    public DepartureDecision tryReserveDeparture(UUID dispatchId, DepartureProfile profile, Instant at) {
+        Objects.requireNonNull(dispatchId); Objects.requireNonNull(profile); Instant now=timestamp(at);
+        StateRow current=readState(true);
         if (Boolean.TRUE.equals(jdbc.queryForObject(
                 "select exists(select 1 from provider_departure_reservation where dispatch_id=?)",Boolean.class,dispatchId)))
-            return new DepartureDecision(false,DepartureReason.DISPATCH_ALREADY_RESERVED,null,current);
-        DepartureDecision decision=decide(current,now);
+            return new DepartureDecision(false,DepartureReason.DISPATCH_ALREADY_RESERVED,null,current.snapshot());
+        DepartureDecision decision=decide(current,profile,now);
         if (!decision.allowed()) return decision;
-        jdbc.update("insert into provider_departure_reservation(dispatch_id,reserved_at,policy_version) values (?,?,?)",
-                dispatchId,sql(now),POLICY_VERSION);
+        jdbc.update("insert into provider_departure_reservation(dispatch_id,reserved_at,policy_version,admission_profile) values (?,?,?,?)",
+                dispatchId,sql(now),POLICY_VERSION,profile.persistenceValue());
         jdbc.update("update provider_resilience_state set last_departure_at=?,unresolved_dispatch_id=? where singleton_id=1",sql(now),dispatchId);
         return new DepartureDecision(true,DepartureReason.ALLOWED,now,read(false));
+    }
+
+    @Override @Transactional
+    public void recordAuthenticatedV8Departure(UUID dispatchId, Instant requestedAt, Instant observedAt) {
+        Objects.requireNonNull(dispatchId); Objects.requireNonNull(requestedAt); Objects.requireNonNull(observedAt);
+        if (!supportedTimestamp(requestedAt) || !supportedTimestamp(observedAt))
+            throw new IllegalStateException("PROVIDER_REQUESTED_TIMESTAMP_INVALID");
+        // Compare the unrounded evidence first: PostgreSQL's microsecond storage
+        // must never turn a worker instant that follows the parent observation
+        // into an apparently valid equality.
+        if (requestedAt.isAfter(observedAt))
+            throw new IllegalStateException("PROVIDER_REQUESTED_TIMESTAMP_INCOHERENT");
+        Instant requested=timestamp(requestedAt);
+        StateRow current=readState(true);
+        if (!dispatchId.equals(current.snapshot().unresolvedDispatchId()))
+            throw new IllegalStateException("PROVIDER_DEPARTURE_NOT_CURRENT");
+        List<AccountingRow> existing=jdbc.query("""
+                select departure_at,source from provider_departure_accounting where dispatch_id=?
+                """,(rs,row)->new AccountingRow(at(rs,"departure_at"),rs.getString("source")),dispatchId);
+        if (!existing.isEmpty()) {
+            AccountingRow row=existing.getFirst();
+            if ("AUTHENTICATED_WORKER_REQUEST".equals(row.source()) && row.departureAt().equals(requested)) return;
+            throw new IllegalStateException("PROVIDER_REQUESTED_TIMESTAMP_CONFLICT");
+        }
+        List<ReservationRow> reservations=jdbc.query("""
+                select reserved_at,admission_profile from provider_departure_reservation where dispatch_id=?
+                """,(rs,row)->new ReservationRow(at(rs,"reserved_at"),rs.getString("admission_profile")),dispatchId);
+        if (reservations.isEmpty()) throw new IllegalStateException("PROVIDER_DEPARTURE_RESERVATION_MISSING");
+        ReservationRow reservation=reservations.getFirst();
+        if (DepartureProfile.fromPersistenceValue(reservation.profile()) != DepartureProfile.LIVE_V8)
+            throw new IllegalStateException("PROVIDER_AUTHENTICATED_DEPARTURE_PROFILE_INVALID");
+        if (requested.isBefore(reservation.reservedAt()))
+            throw new IllegalStateException("PROVIDER_REQUESTED_BEFORE_RESERVATION");
+        jdbc.update("""
+                insert into provider_departure_accounting(dispatch_id,departure_at,source)
+                    values (?,?,'AUTHENTICATED_WORKER_REQUEST')
+                """,dispatchId,sql(requested));
     }
 
     @Override @Transactional
@@ -54,10 +103,13 @@ public class JdbcProviderResilienceStore implements ProviderResilienceStore {
         if (!dispatchId.equals(current.unresolvedDispatchId()))
             throw new IllegalStateException("PROVIDER_DEPARTURE_NOT_CURRENT");
         if (finished.isBefore(current.lastDepartureAt())) throw new IllegalStateException("PROVIDER_CLOCK_REGRESSION");
+        DepartureProfile profile=DepartureProfile.fromPersistenceValue(jdbc.queryForObject(
+                "select admission_profile from provider_departure_reservation where dispatch_id=?",String.class,dispatchId));
         jdbc.update("insert into provider_departure_completion(dispatch_id,finished_at) values (?,?)",dispatchId,sql(finished));
         jdbc.update("""
-            update provider_resilience_state set last_departure_finished_at=?,unresolved_dispatch_id=null where singleton_id=1
-            """,sql(finished));
+            update provider_resilience_state set last_departure_finished_at=?,last_departure_admission_profile=?,
+                unresolved_dispatch_id=null where singleton_id=1
+            """,sql(finished),profile.persistenceValue());
         return read(false);
     }
 
@@ -113,7 +165,8 @@ public class JdbcProviderResilienceStore implements ProviderResilienceStore {
         return read(false);
     }
 
-    private DepartureDecision decide(Snapshot state, Instant now) {
+    private DepartureDecision decide(StateRow stateRow, DepartureProfile requestedProfile, Instant now) {
+        Snapshot state=stateRow.snapshot();
         if (state.state()==State.SUSPENDED)
             return new DepartureDecision(false,DepartureReason.PROVIDER_SUSPENDED,state.retryNotBefore(),state);
         if (state.unresolvedDispatchId()!=null)
@@ -123,39 +176,62 @@ public class JdbcProviderResilienceStore implements ProviderResilienceStore {
         if (state.lastDepartureFinishedAt()!=null && now.isBefore(state.lastDepartureFinishedAt()))
             return new DepartureDecision(false,DepartureReason.CLOCK_REGRESSION,null,state);
         Instant eligible=now;
-        if (state.lastDepartureFinishedAt()!=null) eligible=latest(eligible,state.lastDepartureFinishedAt().plus(MINIMUM_DEPARTURE_INTERVAL));
-        eligible=latest(eligible,windowDeadline(now,Duration.ofMinutes(1),MAXIMUM_DEPARTURES_PER_MINUTE));
-        eligible=latest(eligible,windowDeadline(now,Duration.ofHours(1),MAXIMUM_DEPARTURES_PER_HOUR));
+        if (state.lastDepartureFinishedAt()!=null) {
+            Duration fence=requestedProfile.minimumDepartureInterval().compareTo(stateRow.lastDepartureProfile().minimumDepartureInterval())>=0
+                    ? requestedProfile.minimumDepartureInterval() : stateRow.lastDepartureProfile().minimumDepartureInterval();
+            eligible=latest(eligible,state.lastDepartureFinishedAt().plus(fence));
+        }
+        // Pressure is common to all profiles. The incoming profile controls its own
+        // ceiling, while the durable windows include every completed real departure.
+        eligible=latest(eligible,windowDeadline(now,Duration.ofMinutes(1),requestedProfile.maximumDeparturesPerMinute()));
+        eligible=latest(eligible,windowDeadline(now,Duration.ofHours(1),requestedProfile.maximumDeparturesPerHour()));
         boolean allowed=!eligible.isAfter(now);
         return new DepartureDecision(allowed,allowed?DepartureReason.ALLOWED:DepartureReason.RATE_LIMITED,eligible,state);
     }
 
-    /** Rolling windows are (now-window, now]; each reservation ages only from its completion. */
+    /**
+     * Rolling windows are (now-window, now].  V8 charges the immutable worker
+     * request evidence when present; all pre-V50 and unproven exchanges retain
+     * the conservative completion fallback created by the database trigger.
+     */
     private Instant windowDeadline(Instant now, Duration window, int maximum) {
         List<Instant> boundary=jdbc.query("""
-            select finished_at from provider_departure_completion where finished_at>? and finished_at<=?
-                order by finished_at desc offset ? limit 1
-            """,(rs,row)->at(rs,"finished_at"),sql(now.minus(window)),sql(now),maximum-1);
+            select departure_at from provider_departure_accounting where departure_at>? and departure_at<=?
+                order by departure_at desc offset ? limit 1
+            """,(rs,row)->at(rs,"departure_at"),sql(now.minus(window)),sql(now),maximum-1);
         return boundary.isEmpty()?null:boundary.getFirst().plus(window);
     }
 
-    private Snapshot read(boolean lock) {
+    private Snapshot read(boolean lock) { return readState(lock).snapshot(); }
+
+    private StateRow readState(boolean lock) {
         return jdbc.queryForObject("select * from provider_resilience_state where singleton_id=1"+(lock?" for update":""),
                 (rs,row)->{
                     if (!POLICY_VERSION.equals(rs.getString("policy_version")))
                         throw new IllegalStateException("PROVIDER_RESILIENCE_POLICY_UNSUPPORTED");
-                    return new Snapshot(State.valueOf(rs.getString("state")),rs.getLong("version"),at(rs,"changed_at"),
+                    Snapshot snapshot=new Snapshot(State.valueOf(rs.getString("state")),rs.getLong("version"),at(rs,"changed_at"),
                             rs.getObject("http_status",Integer.class),at(rs,"suspended_at"),at(rs,"retry_not_before"),
                             at(rs,"last_departure_at"),rs.getObject("evidence_id",UUID.class),rs.getObject("campaign_id",UUID.class),
                             at(rs,"last_departure_finished_at"),rs.getObject("unresolved_dispatch_id",UUID.class));
+                    return new StateRow(snapshot,DepartureProfile.fromPersistenceValue(
+                            rs.getString("last_departure_admission_profile")));
                 });
     }
+    private record StateRow(Snapshot snapshot, DepartureProfile lastDepartureProfile) { }
+    private record ReservationRow(Instant reservedAt,String profile) { }
+    private record AccountingRow(Instant departureAt,String source) { }
     private record Refusal(String kind,Integer httpStatus,Instant at,Instant retryNotBefore,UUID campaignId) { }
     private static Instant latest(Instant first,Instant second) {
         if (first==null) return second;
         return second==null || first.isAfter(second)?first:second;
     }
     private static Timestamp sql(Instant at) {return at==null?null:Timestamp.from(at);}
+    private static boolean supportedTimestamp(Instant at) {
+        try {
+            long epochMillis=at.toEpochMilli();
+            return epochMillis>=1 && epochMillis<=253_402_300_799_999L;
+        } catch (ArithmeticException invalid) { return false; }
+    }
     private static Instant at(ResultSet rs,String name) throws SQLException {
         Timestamp value=rs.getTimestamp(name);return value==null?null:value.toInstant();
     }

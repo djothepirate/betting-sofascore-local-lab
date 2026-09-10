@@ -1253,9 +1253,10 @@ class LiveCampaignControllerTest {
     }
 
     @ParameterizedTest
-    @CsvSource({"live-v4,60,10,1000,3000", "live-v5,100,20,2500,20000"})
+    @CsvSource({"live-v4,60,10,1000,3000,5 minutes nominales", "live-v5,100,20,2500,20000,5 minutes nominales",
+            "live-v8,60,10,2500,20000,60 secondes nominales"})
     void groupedPreparationRendersActualCapacityCadencesProofAndAutonomyBeforeLaunch(String policy, int interval,
-                int capacity, int eventCalls, int campaignCalls) throws Exception {
+                int capacity, int eventCalls, int campaignCalls, String lineupLabel) throws Exception {
         var envelopes = new java.util.EnumMap<SofascoreEndpointType, EndpointEnvelope>(SofascoreEndpointType.class);
         for (var endpoint : List.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
                 SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS))
@@ -1269,12 +1270,19 @@ class LiveCampaignControllerTest {
         mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST))
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString(interval + " secondes par rencontre")))
-                .andExpect(content().string(containsString("5 minutes nominales")))
+                .andExpect(content().string(containsString(lineupLabel)))
                 .andExpect(content().string(containsString(capacity + " rencontres")))
                 .andExpect(content().string(containsString("240 minutes environ")))
                 .andExpect(content().string(containsString("b".repeat(64))))
                 .andExpect(content().string(containsString("400 ms")))
                 .andExpect(content().string(not(containsString("le premier triplet attend"))));
+        if ("live-v8".equals(policy)) {
+            mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString("500 ms")))
+                    .andExpect(content().string(containsString("45 départs par minute et 2 756 par heure")))
+                    .andExpect(content().string(containsString("créneaux qualifiés de 60 secondes")));
+        }
         verify(service, never()).launch(any(), any());
     }
 

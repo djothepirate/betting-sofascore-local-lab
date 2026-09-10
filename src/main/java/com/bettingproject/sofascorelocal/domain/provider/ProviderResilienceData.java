@@ -14,12 +14,53 @@ public final class ProviderResilienceData {
     public static final Duration MINIMUM_DEPARTURE_INTERVAL = Duration.ofSeconds(2);
     public static final int MAXIMUM_DEPARTURES_PER_MINUTE = 25;
     public static final int MAXIMUM_DEPARTURES_PER_HOUR = 1000;
+    /** A new live policy is explicit; the V1 constants above remain the default everywhere else. */
+    public static final Duration LIVE_V8_MINIMUM_DEPARTURE_INTERVAL = Duration.ofMillis(500);
+    public static final int LIVE_V8_MAXIMUM_DEPARTURES_PER_MINUTE = 45;
+    public static final int LIVE_V8_MAXIMUM_DEPARTURES_PER_HOUR = 2756;
     public static final Duration MAXIMUM_RETRY_AFTER = Duration.ofDays(365);
 
     public enum State { OPEN, SUSPENDED }
     public enum DepartureReason {
         ALLOWED, PROVIDER_SUSPENDED, RATE_LIMITED, DISPATCH_ALREADY_RESERVED, CLOCK_REGRESSION,
         DEPARTURE_UNRESOLVED
+    }
+
+    /**
+     * Closed local pressure profiles. The common durable refusal circuit remains
+     * {@link #POLICY_VERSION}; a profile never creates a separate suspension or a bypass.
+     */
+    public enum DepartureProfile {
+        LEGACY_V1("legacy-v1", MINIMUM_DEPARTURE_INTERVAL,
+                MAXIMUM_DEPARTURES_PER_MINUTE, MAXIMUM_DEPARTURES_PER_HOUR),
+        LIVE_V8("live-v8", LIVE_V8_MINIMUM_DEPARTURE_INTERVAL,
+                LIVE_V8_MAXIMUM_DEPARTURES_PER_MINUTE, LIVE_V8_MAXIMUM_DEPARTURES_PER_HOUR);
+
+        private final String persistenceValue;
+        private final Duration minimumDepartureInterval;
+        private final int maximumDeparturesPerMinute;
+        private final int maximumDeparturesPerHour;
+
+        DepartureProfile(String persistenceValue, Duration minimumDepartureInterval,
+                         int maximumDeparturesPerMinute, int maximumDeparturesPerHour) {
+            this.persistenceValue = persistenceValue;
+            this.minimumDepartureInterval = minimumDepartureInterval;
+            this.maximumDeparturesPerMinute = maximumDeparturesPerMinute;
+            this.maximumDeparturesPerHour = maximumDeparturesPerHour;
+        }
+
+        public String persistenceValue() { return persistenceValue; }
+        public Duration minimumDepartureInterval() { return minimumDepartureInterval; }
+        public int maximumDeparturesPerMinute() { return maximumDeparturesPerMinute; }
+        public int maximumDeparturesPerHour() { return maximumDeparturesPerHour; }
+
+        /** Null is only the pre-V48 durable representation and is conservatively legacy V1. */
+        public static DepartureProfile fromPersistenceValue(String value) {
+            if (value == null) return LEGACY_V1;
+            for (DepartureProfile profile : values())
+                if (profile.persistenceValue.equals(value)) return profile;
+            throw new IllegalStateException("PROVIDER_DEPARTURE_PROFILE_UNSUPPORTED");
+        }
     }
 
     /** Last refusal metadata remains available after manual rearming; state alone grants eligibility. */

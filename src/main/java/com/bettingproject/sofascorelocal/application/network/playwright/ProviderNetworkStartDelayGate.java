@@ -17,7 +17,6 @@ import java.util.function.LongSupplier;
 final class ProviderNetworkStartDelayGate {
 
     static final Duration MAXIMUM_PAUSE_SLICE = Duration.ofMillis(20);
-    private static final long LIVE_V5_INTER_GROUP_DELAY_NANOS = Duration.ofSeconds(1).toNanos();
 
     private final long minimumDelayNanos;
     private final LongSupplier nanoTime;
@@ -45,8 +44,8 @@ final class ProviderNetworkStartDelayGate {
     }
 
     /**
-     * Only consecutive validated groups of the very same live-v5/v6 session use
-     * one second. A new session, legacy call or authority transition keeps the
+     * Only consecutive validated groups of the very same qualified live session use
+     * its policy-specific inter-group delay. A new session, legacy call or authority transition keeps the
      * global fence, including when a campaign UUID is reused after closing.
      */
     void awaitNextGroupDispatch(LiveProviderGroupTracker groupSession, Runnable continuationGuard) {
@@ -67,9 +66,9 @@ final class ProviderNetworkStartDelayGate {
                     timingEvidenceLost = true;
                     throw new TimingEvidenceException();
                 }
-                long requiredDelay = groupSession != null && groupSession.usesOneSecondInterGroupDelay()
-                        && previousGroupSession == groupSession
-                        ? LIVE_V5_INTER_GROUP_DELAY_NANOS : minimumDelayNanos;
+                Duration groupDelay = groupSession == null ? null : groupSession.interGroupMinimumDelay();
+                long requiredDelay = groupDelay != null && previousGroupSession == groupSession
+                        ? groupDelay.toNanos() : minimumDelayNanos;
                 remaining = requiredDelay - elapsed;
             }
             if (remaining <= 0) {

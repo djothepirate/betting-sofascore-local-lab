@@ -618,6 +618,38 @@ class LiveCampaignPresentationTest {
         }
     }
 
+    @Test
+    void liveV8KeepsAllFourInPlayFamiliesAtTheSixtySecondTargetForTenActiveTargets() {
+        var envelopes = new java.util.EnumMap<SofascoreEndpointType, EndpointEnvelope>(SofascoreEndpointType.class);
+        for (var endpoint : List.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS))
+            envelopes.put(endpoint, new EndpointEnvelope(Duration.ofMillis(400), Duration.ofMillis(100)));
+        var targets = java.util.stream.IntStream.range(0, 10).mapToObj(index -> new Target(
+                CanonicalEventIdentity.sofascore(900001L + index).value(), 900001L + index, index + 1L, index + 1L)).toList();
+        var manifest = new Manifest(CAMPAIGN, "8".repeat(64), "live-v8", START, START.plusSeconds(300),
+                Duration.ofHours(4), 2500, 20000, 15_728_640_000L, 10, targets,
+                new AdmissionProfile(Duration.ofSeconds(10), Duration.ofSeconds(1), "",
+                        new GroupedAdmissionProfile(envelopes, "b".repeat(64), "live-v8")), Duration.ofSeconds(60));
+        var families = List.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS).stream()
+                .map(endpoint -> new FamilyCursor(endpoint, null, null, null, null, null, null, null,
+                        NormalizedReferences.none(), null, null,
+                        new FamilySchedule(endpoint, START.plusSeconds(60), 60, 0))).toList();
+        var view = new CampaignView(manifest, "RUNNING", null, START, START.plusSeconds(14_400), 0, 0, 1,
+                null, targets.stream().map(target -> new EventView(target, "COLLECTING", null, 0, 0,
+                        START.plusSeconds(60), families)).toList(), List.of(), List.of());
+
+        var projected = presentation.state(view);
+
+        assertThat(projected.cadence().policyVersion()).isEqualTo("live-v8");
+        assertThat(projected.cadence().targetSeconds()).isEqualTo(60);
+        assertThat(projected.cadence().lineupSeconds()).isEqualTo(60);
+        assertThat(projected.cadence().qualifiedCapacity()).isEqualTo(10);
+        assertThat(projected.cadence().estimatedCallsPerMinute()).isEqualTo(40.0);
+        assertThat(projected.events().stream().flatMap(event -> event.families().stream()).toList())
+                .hasSize(40).allSatisfy(family -> assertThat(family.freshness().expectedIntervalSeconds()).isEqualTo(60));
+    }
+
     @ParameterizedTest @CsvSource({"INTERRUPTED,COLLECTING","RUNNING,STOPPED_POSTPONED","COMPLETED,FINISHED_CONFIRMED"})
     void terminalCollectionNeverAdvertisesAnOldFamilyDeadline(String campaignState,String eventState) {
         var base=campaign(List.of(),List.of());

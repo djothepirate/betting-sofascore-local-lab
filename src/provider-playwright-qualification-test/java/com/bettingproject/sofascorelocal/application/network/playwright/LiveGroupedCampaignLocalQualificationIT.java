@@ -42,13 +42,15 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /** Explicit, synthetic loopback qualification. No application startup or provider access. */
 class LiveGroupedCampaignLocalQualificationIT {
-    private static final boolean V7 = Boolean.getBoolean("wo058.grouped.v7");
-    private static final boolean V6 = V7 || Boolean.getBoolean("wo058.grouped.v6");
-    private static final boolean V5 = Boolean.getBoolean("wo058.grouped.v5");
-    private static final String POLICY = V7 ? "live-v7" : V6 ? "live-v6" : V5 ? "live-v5" : "live-v4";
-    private static final int MATCHES = V7 ? 3 : V6 ? 7 : V5 ? 20 : 10;
-    private static final int CRITICAL_SECONDS = V7 ? 60 : V6 || V5 ? 100 : 60;
-    private static final int GROUP_GAP_SECONDS = V6 || V5 ? 1 : 3;
+    private static final boolean V8 = Boolean.getBoolean("wo058.grouped.v8");
+    private static final boolean V7 = !V8 && Boolean.getBoolean("wo058.grouped.v7");
+    private static final boolean V6 = !V8 && (V7 || Boolean.getBoolean("wo058.grouped.v6"));
+    private static final boolean V6_OR_LATER = V8 || V6;
+    private static final boolean V5 = !V8 && Boolean.getBoolean("wo058.grouped.v5");
+    private static final String POLICY = V8 ? "live-v8" : V7 ? "live-v7" : V6 ? "live-v6" : V5 ? "live-v5" : "live-v4";
+    private static final int MATCHES = V8 ? 10 : V7 ? 3 : V6 ? 7 : V5 ? 20 : 10;
+    private static final int CRITICAL_SECONDS = V8 || V7 ? 60 : V6 || V5 ? 100 : 60;
+    private static final int GROUP_GAP_MILLIS = V8 ? 500 : V6_OR_LATER || V5 ? 1_000 : 3_000;
     private static final int BODY_BYTES = 64 * 1024;
     private static final List<SofascoreEndpointType> FAMILIES =
             List.of(EVENT_DETAILS, EVENT_INCIDENTS, EVENT_STATISTICS, EVENT_LINEUPS);
@@ -61,7 +63,7 @@ class LiveGroupedCampaignLocalQualificationIT {
         // The eighty v5 initial 5 MiB responses need a wider cold-start window.
         // This checks coverage/transactions/cleanup only;
         // the separate fixed 300+1800-second run qualifies cadence.
-        run(0, V6 || V5 ? 180 : 120, false, Path.of(".tmp/wo058-" + POLICY.substring(5) + "-smoke-qualification.json"));
+        run(0, V6_OR_LATER || V5 ? 180 : 120, false, Path.of(".tmp/wo058-" + POLICY.substring(5) + "-smoke-qualification.json"));
     }
 
     @Test @Timeout(value = 45, unit = TimeUnit.MINUTES)
@@ -77,14 +79,27 @@ class LiveGroupedCampaignLocalQualificationIT {
         report.put("scope", "EXPERIMENTAL LOCAL_ONLY SYNTHETIC_LOOPBACK");
         report.put("policyVersion", POLICY);
         report.put("criticalIntervalSeconds", CRITICAL_SECONDS);
-        report.put("lineupsIntervalSeconds", V7 ? 60 : 300);
-        report.put("interGroupDelaySeconds", GROUP_GAP_SECONDS);
-        report.put("productionPersistentResilience", V6);
-        report.put("productionTransportDiagnosticPersistence", V6);
-        if (V6) {
-            report.put("minimumPostCompletionDelaySeconds", 2);
-            report.put("maximumDeparturesPer60Seconds", 25);
-            report.put("maximumDeparturesPerHour", 1000);
+        report.put("lineupsIntervalSeconds", V8 || V7 ? 60 : 300);
+        if (V8) {
+            // V8's hard cadence claim concerns an actual request departure in the
+            // normal path. Receipt and persistence timestamps remain diagnostic
+            // evidence, because a slow response is not a second departure.
+            report.put("normalPathDepartureCadenceSeconds", 60);
+            report.put("normalPathDepartureTimestamp", "requestedNanos");
+            report.put("normalPathDepartureCadenceScope", "per-event-family");
+            report.put("receiptAndPublicationCadence", "observed as latency evidence; not a hard V8 provider receipt SLA");
+        }
+        // V7's already committed builder intentionally reads this legacy field as
+        // an integer. V8 adds the millisecond field for its half-second fence.
+        report.put("interGroupDelaySeconds", V8 ? 0.5d : GROUP_GAP_MILLIS / 1_000);
+        report.put("interGroupDelayMillis", GROUP_GAP_MILLIS);
+        report.put("productionPersistentResilience", V6_OR_LATER);
+        report.put("productionTransportDiagnosticPersistence", V6_OR_LATER);
+        if (V6_OR_LATER) {
+            report.put("minimumPostCompletionDelaySeconds", V8 ? 0.5d : 2);
+            report.put("minimumPostCompletionDelayMillis", V8 ? 500 : 2_000);
+            report.put("maximumDeparturesPer60Seconds", V8 ? 45 : 25);
+            report.put("maximumDeparturesPerHour", V8 ? 2_756 : 1_000);
             report.put("measurementContract", "requestSeconds includes eligible dispatch, IPC, transport callbacks and durable completion; processing includes local preflight, deferral publication and authorization work excluding the measured limiter sleep; waiting is reported separately; httpSeconds is the worker exchange latency");
         }
         report.put("realProviderCalls", 0);
@@ -93,26 +108,28 @@ class LiveGroupedCampaignLocalQualificationIT {
         report.put("bodyBytesPerResponse", BODY_BYTES);
         report.put("initialFirstResponsePerFamilyBytes", RawPayloadEvidence.MAXIMUM_BYTES);
         report.put("normalizedFixtureShape", Map.of("statisticMetrics", 135, "statisticSignals", 270, "incidents", 30, "lineupPlayers", 44));
-        if (V6) report.put("lineupV3Fixture", Map.of("captains", 2, "playersWithStatistics", 44,
+        if (V6_OR_LATER) report.put("lineupV3Fixture", Map.of("captains", 2, "playersWithStatistics", 44,
                 "statisticsPerPlayer", 20, "ratingVersionsPerPlayer", 2, "missingPlayers", 4));
         report.put("warmupSeconds", warmupSeconds);
         report.put("requiredSteadySeconds", steadySeconds);
         report.put("sustainedQualification", sustained);
-        report.put("manifestProof", "synthetic-test-only; not an existing capacity qualification");
-        if (V6 || V5) {
+        report.put("manifestProof", V8
+                ? "local loopback measurement bound to the live-v8 contract; it does not establish provider acceptance"
+                : "synthetic-test-only; not an existing capacity qualification");
+        if (V6_OR_LATER || V5) {
             var candidateEnvelopes = new LinkedHashMap<String, Object>();
             candidateProfile().endpointEnvelopes().forEach((endpoint, envelope) -> candidateEnvelopes.put(endpoint.name(),
                     Map.of("requestMillis", envelope.requestEnvelope().toMillis(),
                             "processingMillis", envelope.processingEnvelope().toMillis())));
             report.put("candidateEndpointEnvelopes", candidateEnvelopes);
-            report.put("candidateEnvelopeSource", V7 ? "earlier costs used only as a starting hypothesis; V7 requires new measured evidence" : V6
+            report.put("candidateEnvelopeSource", V8 ? "V7 steady loopback envelopes reused as the initial V8 local hypothesis; this V8 sustained run is the required independent measurement" : V7 ? "earlier costs used only as a starting hypothesis; V7 requires new measured evidence" : V6
                     ? "historical v5 costs used only as starting hypotheses; no v6 qualification is inferred"
                     : "measured 75-second candidate; unchanged cost floors for the 100-second run");
         } else {
             report.put("candidateRequestEnvelopeMs", REQUEST_ENVELOPE.toMillis());
             report.put("candidateProcessingEnvelopeMs", PROCESSING_ENVELOPE.toMillis());
         }
-        report.put("candidateCapacityAtCurrentAdmission", V7 ? LiveAdmissionPolicy.qualifiedCapacityV7(candidateProfile()) : V6 ? LiveAdmissionPolicy.qualifiedCapacityV6(candidateProfile())
+        report.put("candidateCapacityAtCurrentAdmission", V8 ? LiveAdmissionPolicy.qualifiedCapacityV8(candidateProfile()) : V7 ? LiveAdmissionPolicy.qualifiedCapacityV7(candidateProfile()) : V6 ? LiveAdmissionPolicy.qualifiedCapacityV6(candidateProfile())
                 : V5 ? LiveAdmissionPolicy.qualifiedCapacityV5(candidateProfile())
                 : LiveAdmissionPolicy.qualifiedCapacityV4(candidateProfile()));
         report.put("admissionMode", MATCHES + " matches under measurement; temporal admission is calculated separately from measured envelope validity");
@@ -125,6 +142,11 @@ class LiveGroupedCampaignLocalQualificationIT {
             postgres.start();
             try (Database database = new Database(postgres);
                  var fixture = new LiveProviderSessionQualificationIT.Fixture(true, MATCHES)) {
+                if (V8) {
+                    String loopbackOrigin = "http://127.0.0.1:" + fixture.server.getAddress().getPort();
+                    report.put("loopbackOrigin", loopbackOrigin);
+                    report.put("loopbackTransportOnly", true);
+                }
                 var storageProperties = new LiveCampaignProperties();
                 storageProperties.setDockerExecutable(dockerExecutable());
                 storageProperties.setPostgresContainer(postgres.getContainerName().replaceFirst("^/", ""));
@@ -138,9 +160,9 @@ class LiveGroupedCampaignLocalQualificationIT {
                 List<Target> targets = new ArrayList<>();
                 for (long eventId = 17_000_001; eventId <= 17_000_000 + MATCHES; eventId++)
                     targets.add(database.seed(eventId, fixture.bodies.get(path(eventId, EVENT_DETAILS))));
-                var supervisor = V6 ? fixture.supervisor(Duration.ofSeconds(30)) : fixture.supervisor();
+                var supervisor = V6_OR_LATER ? fixture.supervisor(Duration.ofSeconds(30)) : fixture.supervisor();
                 AtomicLong limiterSleep = new AtomicLong();
-                PlaywrightProviderCampaignFactory factory = V6
+                PlaywrightProviderCampaignFactory factory = V6_OR_LATER
                         ? new ResilientPlaywrightProviderCampaignFactory(supervisor, database.resilience, java.time.Clock.systemUTC(), duration -> {
                             long started = System.nanoTime();
                             try { Thread.sleep(duration); } finally { limiterSleep.addAndGet(System.nanoTime() - started); }
@@ -153,7 +175,8 @@ class LiveGroupedCampaignLocalQualificationIT {
                         .orElseThrow().ownership();
                 List<ProcessHandle> children;
                 long elapsedNanos;
-                try (var campaign = V7 ? factory.openLiveGroupedV7(manifest.campaignId(), LiveProviderSession.ENDPOINTS)
+                try (var campaign = V8 ? factory.openLiveGroupedV8(manifest.campaignId(), LiveProviderSession.ENDPOINTS)
+                        : V7 ? factory.openLiveGroupedV7(manifest.campaignId(), LiveProviderSession.ENDPOINTS)
                         : V6 ? factory.openLiveGroupedV6(manifest.campaignId(), LiveProviderSession.ENDPOINTS)
                         : V5 ? factory.openLiveGroupedV5(manifest.campaignId(), LiveProviderSession.ENDPOINTS)
                         : factory.openLiveGrouped(manifest.campaignId(), LiveProviderSession.ENDPOINTS)) {
@@ -162,7 +185,8 @@ class LiveGroupedCampaignLocalQualificationIT {
                     long originNano = System.nanoTime();
                     Launch launch = database.store.launch(manifest.campaignId(), manifest.manifestSha256(), ownership, origin);
                     var schedule = new LiveSchedule(targets.stream().map(Target::canonicalEventId).toList(),
-                            origin, launch.endsAt(), Duration.ofSeconds(CRITICAL_SECONDS), POLICY, manifest.campaignId());
+                            origin, launch.endsAt(), Duration.ofSeconds(CRITICAL_SECONDS), POLICY, manifest.campaignId(),
+                            V8 ? manifest.admissionProfile().groupedProfile() : null);
                     var publishedFamilies = new HashMap<String, FamilySchedule>();
                     var publishedStates = new HashMap<UUID, LiveSchedule.EventState>();
                     var familyVersions = new HashMap<String, Long>();
@@ -186,8 +210,11 @@ class LiveGroupedCampaignLocalQualificationIT {
                         if (next.isEmpty()) { Thread.sleep(20); continue; }
                         LiveSchedule.Due due = next.orElseThrow();
                         long operationStart = System.nanoTime();
-                        if (V6) {
-                            var decision = database.resilience.departureDecision(Instant.now());
+                        if (V6_OR_LATER) {
+                            var decision = V8
+                                    ? database.resilience.departureDecision(
+                                            ProviderResilienceData.DepartureProfile.LIVE_V8, Instant.now())
+                                    : database.resilience.departureDecision(Instant.now());
                             if (!decision.allowed()) {
                                 assertThat(decision.reason()).isEqualTo(ProviderResilienceData.DepartureReason.RATE_LIMITED);
                                 if (pressureStartedNano == 0) pressureStartedNano = operationStart;
@@ -219,7 +246,8 @@ class LiveGroupedCampaignLocalQualificationIT {
                         AtomicLong sleepBeforeDispatch = new AtomicLong();
                         var admission = new PlaywrightDispatchAdmission() {
                             public void onTransportProgress(PlaywrightTransportDiagnostic observed) {
-                                if (V6) database.diagnostics.recordTransport(manifest.campaignId(), reservation.attemptId(), due.endpoint(), observed);
+                                recordObservedV8Departure(schedule, due, observed.requestedAt());
+                                if (V6_OR_LATER) database.diagnostics.recordTransport(manifest.campaignId(), reservation.attemptId(), due.endpoint(), observed);
                             }
                             public void check() {
                                 if (!schedule.mayDispatch(due, at(origin, originNano))) throw new PlaywrightDispatchCancelledException();
@@ -240,8 +268,12 @@ class LiveGroupedCampaignLocalQualificationIT {
                                 : LiveProviderDispatchGroup.Phase.IN_PLAY;
                         var response = campaign.executeGrouped(new PlaywrightProviderRequest(due.endpoint(), null, 0, 0, eventId),
                                 new LiveProviderDispatchGroup(manifest.campaignId(), due.groupId(), eventId, phase), admission);
+                        // The local loopback transport normally sends REQUEST_SENT progress.  Keep
+                        // the validated response timestamp as an idempotent fallback so this
+                        // qualification exercises the same V8 rephase contract as production.
+                        recordObservedV8Departure(schedule, due, response.requestedAt());
                         long responseNano = System.nanoTime();
-                        if (V6) {
+                        if (V6_OR_LATER) {
                             assertThat(response.diagnostic()).isNotNull();
                             int timeout = response.diagnostic().requestTimeoutMillis();
                             Object previousTimeout = report.putIfAbsent("effectiveRequestTimeoutMillis", timeout);
@@ -258,6 +290,15 @@ class LiveGroupedCampaignLocalQualificationIT {
                         Map<String, Boolean> signals = new LinkedHashMap<>();
                         processed.signals().forEach(s -> signals.put(s.key(), s.kind().name().equals("FINISH_CHECK")));
                         schedule.completed(due, processed.sportStatus().orElse(null), false, signals, at(origin, originNano));
+                        if (V8 && due.endpoint() == EVENT_DETAILS) {
+                            Instant expectedFirstJ5 = response.requestedAt()
+                                    .plus(manifest.admissionProfile().groupedProfile().envelope(EVENT_DETAILS).exchangeEnvelope())
+                                    .plusMillis(GROUP_GAP_MILLIS);
+                            Instant scheduledFirstJ5 = schedule.states().stream()
+                                    .filter(event -> event.eventId().equals(due.eventId())).findFirst().orElseThrow().nextDueAt();
+                            assertThat(scheduledFirstJ5).as("V8 J5 phase must follow authenticated worker departure")
+                                    .isEqualTo(expectedFirstJ5);
+                        }
                         String state = schedule.states().stream().filter(e -> e.eventId().equals(due.eventId())).findFirst().orElseThrow().state();
                         var completeness = processed.completeness();
                         var publication = new Publication(processed.outcome().name(), processed.scope().name(), processed.code(),
@@ -272,7 +313,7 @@ class LiveGroupedCampaignLocalQualificationIT {
                         long authorizationDelayNanos = dispatchStart.get() - beforeTransport;
                         long limiterSleepNanos = sleepBeforeDispatch.get() - beforeAuthorizationSleep;
                         long processingNanos = beforeTransport - operationStart + committedNano - responseNano
-                                + deferredWorkNanos + (V6 ? authorizationDelayNanos - limiterSleepNanos : 0);
+                                + deferredWorkNanos + (V6_OR_LATER ? authorizationDelayNanos - limiterSleepNanos : 0);
                         samples.add(new Sample(eventId, due.endpoint(), due.cycle(), due.groupId().toString(),
                                 Duration.between(origin, due.dueAt()).toNanos(),
                                 Duration.between(origin, response.receivedAt()).toNanos(), committedNano - originNano,
@@ -281,7 +322,7 @@ class LiveGroupedCampaignLocalQualificationIT {
                                 Duration.between(origin, response.requestedAt()).toNanos(), response.latency().toNanos(),
                                 authorizationDelayNanos, pressureElapsedNanos, limiterSleepNanos,
                                 database.resilience.sqlNanos - previousResilienceSql,
-                                V6 ? Duration.between(origin, database.resilience.lastFinished).toNanos() : 0));
+                                V6_OR_LATER ? Duration.between(origin, database.resilience.lastFinished).toNanos() : 0));
                         deferredWorkNanos = 0; pressureStartedNano = 0;
                         previousResilienceSql = database.resilience.sqlNanos;
                         assertThat(fixture.worker.get().isAlive()).isTrue();
@@ -309,7 +350,7 @@ class LiveGroupedCampaignLocalQualificationIT {
                     report.put("receivedBytes", finalView.receivedBytes());
                     report.put("immutableObservations", database.jdbc.queryForObject("select count(*) from j5_event_data_observation", Long.class));
                     report.put("familyScheduleRevisions", database.jdbc.queryForObject("select count(*) from live_family_schedule_revision", Long.class));
-                    if (V6) {
+                    if (V6_OR_LATER) {
                         report.put("pressureDeferrals", pressureDeferrals);
                         long departures = database.jdbc.queryForObject("select count(*) from provider_departure_reservation", Long.class);
                         long completions = database.jdbc.queryForObject("select count(*) from provider_departure_completion", Long.class);
@@ -366,31 +407,41 @@ class LiveGroupedCampaignLocalQualificationIT {
             var steady = samples.stream().filter(s -> s.endpoint() == endpoint && s.receivedNanos() >= warmupNanos).toList();
             var intervals = new ArrayList<Long>();
             var availableIntervals = new ArrayList<Long>();
+            var departureIntervals = new ArrayList<Long>();
             var perEventCounts = new LinkedHashMap<Long, Integer>();
             var perEventMetrics = new LinkedHashMap<Long, Object>();
             for (long id = 17_000_001; id <= 17_000_000 + MATCHES; id++) {
                 long eventId = id;
                 var eventSamples = steady.stream().filter(s -> s.providerEventId() == eventId).toList();
                 perEventCounts.put(id, eventSamples.size());
-                checks.add(() -> assertThat(eventSamples).hasSizeGreaterThanOrEqualTo(sustained ? V7 ? 28 : endpoint == EVENT_LINEUPS ? 5 : (V6 || V5 ? 17 : 28) : 1));
+                checks.add(() -> assertThat(eventSamples).hasSizeGreaterThanOrEqualTo(sustained ? V8 || V7 ? 28 : endpoint == EVENT_LINEUPS ? 5 : (V6 || V5 ? 17 : 28) : 1));
                 var eventIntervals = new ArrayList<Long>();
                 var eventAvailableIntervals = new ArrayList<Long>();
+                var eventDepartureIntervals = new ArrayList<Long>();
                 var nominalIntervals = new ArrayList<Long>();
                 for (int i = 1; i < eventSamples.size(); i++) {
                     eventIntervals.add(eventSamples.get(i).receivedNanos() - eventSamples.get(i - 1).receivedNanos());
                     eventAvailableIntervals.add(eventSamples.get(i).committedNanos() - eventSamples.get(i - 1).committedNanos());
+                    eventDepartureIntervals.add(eventSamples.get(i).requestedNanos() - eventSamples.get(i - 1).requestedNanos());
                     nominalIntervals.add(eventSamples.get(i).dueNanos() - eventSamples.get(i - 1).dueNanos());
                 }
                 intervals.addAll(eventIntervals);
                 availableIntervals.addAll(eventAvailableIntervals);
+                departureIntervals.addAll(eventDepartureIntervals);
                 var eventLateness = eventSamples.stream().map(s -> Math.max(0, s.receivedNanos() - s.dueNanos())).toList();
                 perEventMetrics.put(id, Map.of("receiptIntervalSeconds", summary(eventIntervals),
                         "availableIntervalSeconds", summary(eventAvailableIntervals),
+                        "departureIntervalSeconds", summary(eventDepartureIntervals),
                         "nominalIntervalSeconds", summary(nominalIntervals),
                         "nominalLatenessSeconds", summary(eventLateness)));
                 if (sustained) checks.add(() -> {
-                    if (endpoint == EVENT_LINEUPS && !V7) {
-                        if (V6) {
+                    if (V8) {
+                        assertThat(eventDepartureIntervals).as("V8 normal-path departure intervals for %s/%s", eventId, endpoint)
+                                .isNotEmpty().allSatisfy(interval -> assertThat(interval)
+                                        .isGreaterThan(0)
+                                        .isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(60)));
+                    } else if (endpoint == EVENT_LINEUPS && !V7) {
+                        if (V6_OR_LATER) {
                             // Shared holds intentionally coalesce/rephase v6; old absolute phase
                             // congruences are not its contract. Measure the resulting cadence instead.
                             assertThat(nominalIntervals).isNotEmpty().allSatisfy(interval ->
@@ -428,10 +479,11 @@ class LiveGroupedCampaignLocalQualificationIT {
             endpointMetrics.put("metricsPerEvent", perEventMetrics);
             endpointMetrics.put("receiptIntervalSeconds", summary(intervals));
             endpointMetrics.put("availableIntervalSeconds", summary(availableIntervals));
+            endpointMetrics.put("departureIntervalSeconds", summary(departureIntervals));
             endpointMetrics.put("nominalLatenessSeconds", summary(lateness));
             endpointMetrics.put("requestSeconds", summary(steady.stream().map(Sample::requestNanos).toList()));
             endpointMetrics.put("processingIncludingSqlSeconds", summary(steady.stream().map(Sample::processingNanos).toList()));
-            if (V6) {
+            if (V6_OR_LATER) {
                 endpointMetrics.put("httpSeconds", summary(steady.stream().map(Sample::httpNanos).toList()));
                 endpointMetrics.put("authorizationDelaySeconds", summary(steady.stream().map(Sample::authorizationDelayNanos).toList()));
                 endpointMetrics.put("schedulerDeferralElapsedSeconds", summary(steady.stream().map(Sample::pressureElapsedNanos).toList()));
@@ -445,8 +497,8 @@ class LiveGroupedCampaignLocalQualificationIT {
             endpointMetrics.put("initialMaximumBodyRequestSeconds", summary(peak.stream().map(Sample::requestNanos).toList()));
             endpointMetrics.put("initialMaximumBodyProcessingSeconds", summary(peak.stream().map(Sample::processingNanos).toList()));
             metrics.put(endpoint.name(), endpointMetrics);
-            if (sustained) {
-                if (endpoint == EVENT_LINEUPS && !V7) checks.add(() -> assertThat(percentile(lateness, .95)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(15)));
+            if (sustained && !V8) {
+                if (endpoint == EVENT_LINEUPS && !(V8 || V7)) checks.add(() -> assertThat(percentile(lateness, .95)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(15)));
                 else checks.add(() -> {
                     assertThat(percentile(intervals, .95)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(CRITICAL_SECONDS + 5));
                     assertThat(Collections.max(intervals)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(CRITICAL_SECONDS + 15));
@@ -455,7 +507,7 @@ class LiveGroupedCampaignLocalQualificationIT {
                 });
             }
         }
-        var steadyCritical = samples.stream().filter(s -> (V7 || s.endpoint() != EVENT_LINEUPS) && s.receivedNanos() >= warmupNanos).toList();
+        var steadyCritical = samples.stream().filter(s -> (V8 || V7 || s.endpoint() != EVENT_LINEUPS) && s.receivedNanos() >= warmupNanos).toList();
         var queueDebt = steadyCritical.stream().map(s -> Math.max(0, s.committedNanos() - s.dueNanos())).toList();
         int quarter = Math.max(1, steadyCritical.size() / 4);
         long firstDebt = percentile(queueDebt.subList(0, quarter), .95);
@@ -477,12 +529,12 @@ class LiveGroupedCampaignLocalQualificationIT {
             if (!current.groupId().equals(previous.groupId())) {
                 long gap = current.serverArrivalNanos() - previous.responseCompleteNanos();
                 // Server arrival is after the parent's gate completion; allow only clock quantization (1 ms).
-                checks.add(() -> assertThat(gap).isGreaterThanOrEqualTo(TimeUnit.SECONDS.toNanos(GROUP_GAP_SECONDS) - TimeUnit.MILLISECONDS.toNanos(1)));
+                checks.add(() -> assertThat(gap).isGreaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(GROUP_GAP_MILLIS) - TimeUnit.MILLISECONDS.toNanos(1)));
                 minBetweenGroups = Math.min(minBetweenGroups, gap);
             }
         }
         report.put("minimumObservedBetweenGroupGapSeconds", seconds(minBetweenGroups));
-        if (V6) {
+        if (V6_OR_LATER) {
             long minimumPostCompletion = Long.MAX_VALUE;
             for (int i = 1; i < samples.size(); i++) {
                 Sample previous = samples.get(i - 1), current = samples.get(i);
@@ -490,7 +542,7 @@ class LiveGroupedCampaignLocalQualificationIT {
                 // requests at millisecond precision; SQL rounds completion up to a microsecond.
                 long gap = current.requestedNanos() - previous.resilienceFinishedNanos();
                 minimumPostCompletion = Math.min(minimumPostCompletion, gap);
-                checks.add(() -> assertThat(gap).isGreaterThanOrEqualTo(TimeUnit.SECONDS.toNanos(2) - TimeUnit.MILLISECONDS.toNanos(1)));
+                checks.add(() -> assertThat(gap).isGreaterThanOrEqualTo(TimeUnit.MILLISECONDS.toNanos(V8 ? 500 : 2_000) - TimeUnit.MILLISECONDS.toNanos(1)));
             }
             int minutePeak = rollingPeak(samples, TimeUnit.SECONDS.toNanos(60), Sample::requestedNanos);
             int hourPeak = rollingPeak(samples, TimeUnit.HOURS.toNanos(1), Sample::requestedNanos);
@@ -502,10 +554,10 @@ class LiveGroupedCampaignLocalQualificationIT {
             report.put("observedMaximumWireArrivalsPer60Seconds", wireMinutePeak);
             report.put("observedMaximumWireArrivalsPerHour", wireHourPeak);
             report.put("rollingWindowDefinition", "requestedAt in (t-window,t], all samples including initialization; sub-hour run does not prove a saturated full hour");
-            checks.add(() -> assertThat(minutePeak).isLessThanOrEqualTo(25));
-            checks.add(() -> assertThat(hourPeak).isLessThanOrEqualTo(1000));
-            checks.add(() -> assertThat(wireMinutePeak).isLessThanOrEqualTo(25));
-            checks.add(() -> assertThat(wireHourPeak).isLessThanOrEqualTo(1000));
+            checks.add(() -> assertThat(minutePeak).isLessThanOrEqualTo(V8 ? 45 : 25));
+            checks.add(() -> assertThat(hourPeak).isLessThanOrEqualTo(V8 ? 2_756 : 1_000));
+            checks.add(() -> assertThat(wireMinutePeak).isLessThanOrEqualTo(V8 ? 45 : 25));
+            checks.add(() -> assertThat(wireHourPeak).isLessThanOrEqualTo(V8 ? 2_756 : 1_000));
         }
         checks.forEach(Runnable::run);
     }
@@ -545,14 +597,21 @@ class LiveGroupedCampaignLocalQualificationIT {
         var profile = new AdmissionProfile(Duration.ofSeconds(1), Duration.ofSeconds(1), "", grouped);
         Instant now = Instant.now();
         return new Manifest(UUID.randomUUID(), "d".repeat(64), POLICY, now, now.plusSeconds(300), Duration.ofHours(4),
-                V6 || V5 ? 2500 : 1000, V6 || V5 ? 20000 : 3000, 3000L * RawPayloadEvidence.MAXIMUM_BYTES,
-                V7 ? 3 : V6 ? 7 : 20, targets, profile,
+                V6_OR_LATER || V5 ? 2500 : 1000, V6_OR_LATER || V5 ? 20000 : 3000, 3000L * RawPayloadEvidence.MAXIMUM_BYTES,
+                V8 ? 10 : V7 ? 3 : V6 ? 7 : 20, targets, profile,
                 Duration.ofSeconds(CRITICAL_SECONDS));
     }
 
     private static GroupedAdmissionProfile candidateProfile() {
         EnumMap<SofascoreEndpointType, EndpointEnvelope> envelopes = new EnumMap<>(SofascoreEndpointType.class);
-        if (V6 || V5) {
+        if (V8) {
+            // V8 starts from the independently measured V7 steady envelopes. The
+            // V8 sustained loopback run below must still keep every sample within them.
+            envelopes.put(EVENT_DETAILS, new EndpointEnvelope(Duration.ofMillis(350), Duration.ofMillis(400)));
+            envelopes.put(EVENT_INCIDENTS, new EndpointEnvelope(Duration.ofMillis(350), Duration.ofMillis(550)));
+            envelopes.put(EVENT_STATISTICS, new EndpointEnvelope(Duration.ofMillis(350), Duration.ofMillis(500)));
+            envelopes.put(EVENT_LINEUPS, new EndpointEnvelope(Duration.ofMillis(350), Duration.ofMillis(500)));
+        } else if (V6 || V5) {
             // Keep the established maxima from the 75-second candidate. A longer
             // cadence must not manufacture capacity by lowering measured costs.
             envelopes.put(EVENT_DETAILS, new EndpointEnvelope(Duration.ofMillis(400), Duration.ofMillis(600)));
@@ -605,7 +664,7 @@ class LiveGroupedCampaignLocalQualificationIT {
                 var player = ((ObjectNode) originals.get(i == 0 ? 0 : 1)).deepCopy();
                 player.put("shirtNumber", i + 1); player.put("substitute", i >= 11);
                 ((ObjectNode) player.get("player")).put("id", 10000 + sideIndex * 1000 + i);
-                if (V6) {
+                if (V6_OR_LATER) {
                     player.put("captain", i == 1);
                     var individual = player.putObject("statistics");
                     for (String key : List.of("minutesPlayed", "touches", "totalPass", "accuratePass", "totalShots",
@@ -619,7 +678,7 @@ class LiveGroupedCampaignLocalQualificationIT {
                 }
                 players.add(player);
             }
-            if (V6) {
+            if (V6_OR_LATER) {
                 var missing = side.putArray("missingPlayers");
                 for (int i = 0; i < 2; i++) {
                     var entry = missing.addObject();
@@ -662,6 +721,12 @@ class LiveGroupedCampaignLocalQualificationIT {
                 response.httpStatus(), response.contentType(), response.latency(), response.payload(), LivePayloadNormalizer.parserVersion(endpoint),
                 RawSnapshotSchemaStatus.RAW_ONLY, null);
     }
+
+    /** Mirrors the V8 production path: only authenticated worker request evidence may rephase its schedule. */
+    private static void recordObservedV8Departure(LiveSchedule schedule, LiveSchedule.Due due, Instant requestedAt) {
+        if (V8 && requestedAt != null) schedule.departed(due, requestedAt);
+    }
+
     private static Instant at(Instant origin, long originNano) { return origin.plusNanos(System.nanoTime() - originNano); }
     private static Path dockerExecutable() {
         String configured = System.getProperty("wo058.grouped.docker");
@@ -743,8 +808,25 @@ class LiveGroupedCampaignLocalQualificationIT {
         public ProviderResilienceData.DepartureDecision departureDecision(Instant at) {
             return measured(() -> delegate.departureDecision(at));
         }
+        @Override
+        public ProviderResilienceData.DepartureDecision departureDecision(
+                ProviderResilienceData.DepartureProfile profile, Instant at) {
+            return measured(() -> delegate.departureDecision(profile, at));
+        }
         public ProviderResilienceData.DepartureDecision tryReserveDeparture(UUID id, Instant at) {
             return measured(() -> delegate.tryReserveDeparture(id, at));
+        }
+        @Override
+        public ProviderResilienceData.DepartureDecision tryReserveDeparture(UUID id,
+                ProviderResilienceData.DepartureProfile profile, Instant at) {
+            return measured(() -> delegate.tryReserveDeparture(id, profile, at));
+        }
+        @Override
+        public void recordAuthenticatedV8Departure(UUID id, Instant requestedAt, Instant observedAt) {
+            measured(() -> {
+                delegate.recordAuthenticatedV8Departure(id, requestedAt, observedAt);
+                return null;
+            });
         }
         public ProviderResilienceData.Snapshot markDepartureFinished(UUID id, Instant at) {
             var result = measured(() -> delegate.markDepartureFinished(id, at));

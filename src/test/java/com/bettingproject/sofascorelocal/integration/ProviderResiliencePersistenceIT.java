@@ -46,7 +46,7 @@ class ProviderResiliencePersistenceIT {
     private static final Instant T0=Instant.parse("2030-09-09T12:00:00Z");
 
     @Test
-    void freshInstallAndUpgradeOfPopulatedV41LeaveOldEvidenceAndProviderGuardUntouched() {
+    void freshInstallAndUpgradeOfPopulatedV41ToV50LeaveOldEvidenceAndProviderGuardUntouched() {
         Fixture f=fixture("41");
         RawManualCallSnapshotStore raw=transactional(new JdbcRawManualCallSnapshotStore(new NamedParameterJdbcTemplate(f.jdbc)),
                 RawManualCallSnapshotStore.class,f.transactions);
@@ -61,19 +61,25 @@ class ProviderResiliencePersistenceIT {
         assertThat(f.rows("provider_snapshot")).isEqualTo(before);
         assertThat(f.rows("provider_snapshot_occurrence")).isEqualTo(occurrences);
         assertThat(f.rows("provider_campaign_guard")).isEqualTo(guard);
-        assertThat(f.store.snapshot().state()).isEqualTo(State.OPEN);
-        assertThat(f.store.snapshot().version()).isZero();
-        assertThat(f.store.snapshot().evidenceId()).isNull();
+        assertThat(f.jdbc.queryForObject("select state from provider_resilience_state where singleton_id=1",String.class)).isEqualTo("OPEN");
         assertThat(f.count("provider_resilience_event")).isZero();
         assertThat(f.count("provider_departure_reservation")).isZero();
         assertThat(f.migrate("42")).isZero();
-        Fixture fresh=fixture("42");
+        assertThat(f.migrate("48")).isEqualTo(6);
+        assertThat(f.migrate("48")).isZero();
+        assertThat(f.migrate("50")).isEqualTo(2);
+        assertThat(f.count("provider_departure_accounting")).isZero();
+        assertThat(f.store.snapshot().state()).isEqualTo(State.OPEN);
+        assertThat(f.store.snapshot().version()).isZero();
+        assertThat(f.store.snapshot().evidenceId()).isNull();
+        assertThat(f.migrate("50")).isZero();
+        Fixture fresh=fixture("50");
         assertThat(fresh.store.departureDecision(T0).allowed()).isTrue();
     }
 
     @Test
     void refusalSurvivesARepositoryRestartAndANewCampaignUntilExplicitVersionedRearm() {
-        Fixture f=fixture("42"); UUID evidence=UUID.randomUUID(),manualCampaign=UUID.randomUUID();
+        Fixture f=fixture("50"); UUID evidence=UUID.randomUUID(),manualCampaign=UUID.randomUUID();
         f.exchange(UUID.randomUUID(),T0);
         Snapshot suspended=f.store.suspend(evidence,manualCampaign,403,T0.plusSeconds(1),null);
         assertThat(suspended.state()).isEqualTo(State.SUSPENDED);
@@ -101,7 +107,7 @@ class ProviderResiliencePersistenceIT {
 
     @Test
     void retryAfterIsAnEarliestManualRearmDateAndNeverAnAutomaticResume() {
-        Fixture f=fixture("42"); Instant retry=T0.plusSeconds(3600);
+        Fixture f=fixture("50"); Instant retry=T0.plusSeconds(3600);
         Snapshot suspended=f.store.suspend(UUID.randomUUID(),null,429,T0,retry);
         assertThatThrownBy(()->f.store.rearm(suspended.version(),retry.minusNanos(1000)))
                 .hasMessage("PROVIDER_REARM_TOO_EARLY");
@@ -113,7 +119,7 @@ class ProviderResiliencePersistenceIT {
 
     @Test
     void repeatedRefusalIsIdempotentAndNewEvidenceInvalidatesAStaleRearmWithoutReplacingPrimaryCause() {
-        Fixture f=fixture("42"); UUID evidence=UUID.randomUUID();
+        Fixture f=fixture("50"); UUID evidence=UUID.randomUUID();
         Snapshot first=f.store.suspend(evidence,null,403,T0,null);
         assertThat(f.store.suspend(evidence,null,403,T0,null)).isEqualTo(first);
         assertThat(f.count("provider_resilience_event")).isEqualTo(1);
@@ -133,7 +139,7 @@ class ProviderResiliencePersistenceIT {
 
     @Test
     void aLateDuplicateOfTheSameRefusalDoesNotResuspendAnExplicitlyRearmedProvider() {
-        Fixture f=fixture("42"); UUID evidence=UUID.randomUUID();
+        Fixture f=fixture("50"); UUID evidence=UUID.randomUUID();
         Snapshot refused=f.store.suspend(evidence,null,403,T0,null);
         Snapshot rearmed=f.store.rearm(refused.version(),T0.plusSeconds(1));
         assertThat(f.store.suspend(evidence,null,403,T0,null)).isEqualTo(rearmed);
@@ -142,7 +148,7 @@ class ProviderResiliencePersistenceIT {
 
     @Test
     void reservationIsSingleUseAndReadOnlyPreviewNeitherChargesNorGrantsADispatch() {
-        Fixture f=fixture("42"); UUID dispatch=UUID.randomUUID();
+        Fixture f=fixture("50"); UUID dispatch=UUID.randomUUID();
         assertThat(f.store.departureDecision(T0).allowed()).isTrue();
         assertThat(f.store.departureDecision(T0).allowed()).isTrue();
         assertThat(f.count("provider_departure_reservation")).isZero();
@@ -157,7 +163,7 @@ class ProviderResiliencePersistenceIT {
 
     @Test
     void twentyInitialMatchGroupsCannotBurstBeyondTheRollingMinuteBudgetAndThereIsNoRefundOnRefusal() {
-        Fixture f=fixture("42");
+        Fixture f=fixture("50");
         for(int i=0;i<25;i++) assertThat(f.exchange(UUID.randomUUID(),T0.plusSeconds(i*2L)).allowed()).isTrue();
         DepartureDecision denied=f.store.tryReserveDeparture(UUID.randomUUID(),T0.plusSeconds(50));
         assertThat(denied.reason()).isEqualTo(DepartureReason.RATE_LIMITED);
@@ -172,7 +178,7 @@ class ProviderResiliencePersistenceIT {
 
     @Test
     void hourlyWindowSurvivesRepositoryRestartAndExpiresAtTheExactBoundary() {
-        Fixture f=fixture("42");
+        Fixture f=fixture("50");
         // Synthetic existing pressure: 1,000 calls spaced 3.5 s, all conform to the shorter limits.
         f.jdbc.update("""
             insert into provider_departure_reservation(dispatch_id,reserved_at,policy_version)
@@ -191,7 +197,7 @@ class ProviderResiliencePersistenceIT {
 
     @Test
     void concurrentProcessesAtTheSameDepartureTimeReserveExactlyOneCall() throws Exception {
-        Fixture f=fixture("42"); var start=new CountDownLatch(1);
+        Fixture f=fixture("50"); var start=new CountDownLatch(1);
         try(var pool=Executors.newFixedThreadPool(8)) {
             List<java.util.concurrent.Future<DepartureDecision>> results=new ArrayList<>();
             for(int i=0;i<8;i++) results.add(pool.submit(()->{start.await();return f.newStore().tryReserveDeparture(UUID.randomUUID(),T0);}));
@@ -206,7 +212,7 @@ class ProviderResiliencePersistenceIT {
 
     @Test
     void committedRefusalWinsAgainstAnAdmissionBlockedOnTheSharedDatabaseLock() throws Exception {
-        Fixture f=fixture("42"); CountDownLatch refusalWritten=new CountDownLatch(1),releaseRefusal=new CountDownLatch(1),admissionStarted=new CountDownLatch(1);
+        Fixture f=fixture("50"); CountDownLatch refusalWritten=new CountDownLatch(1),releaseRefusal=new CountDownLatch(1),admissionStarted=new CountDownLatch(1);
         AtomicInteger firstBackend=new AtomicInteger(),secondBackend=new AtomicInteger();
         try(var pool=Executors.newFixedThreadPool(2)) {
             try {
@@ -236,7 +242,7 @@ class ProviderResiliencePersistenceIT {
 
     @Test
     void concurrentManualRearmsCannotBothConsumeTheSameVersion() throws Exception {
-        Fixture f=fixture("42"); Snapshot refusal=f.store.suspend(UUID.randomUUID(),null,403,T0,null);
+        Fixture f=fixture("50"); Snapshot refusal=f.store.suspend(UUID.randomUUID(),null,403,T0,null);
         CountDownLatch start=new CountDownLatch(1);
         try(var pool=Executors.newFixedThreadPool(2)) {
             var one=pool.submit(()->rearmOutcome(f,start,refusal.version()));
@@ -249,7 +255,7 @@ class ProviderResiliencePersistenceIT {
 
     @Test
     void transactionFailureRollsBackBothTheChargeAndTheRefusalAudit() {
-        Fixture f=fixture("42");
+        Fixture f=fixture("50");
         assertThatThrownBy(()->new TransactionTemplate(f.transactions).execute(status->{
             f.store.tryReserveDeparture(UUID.randomUUID(),T0);
             f.store.suspend(UUID.randomUUID(),null,403,T0.plusSeconds(1),null);
@@ -263,7 +269,7 @@ class ProviderResiliencePersistenceIT {
 
     @Test
     void clockRegressionAndMissingPersistentStateFailClosed() {
-        Fixture f=fixture("42");f.exchange(UUID.randomUUID(),T0);
+        Fixture f=fixture("50");f.exchange(UUID.randomUUID(),T0);
         assertThat(f.store.tryReserveDeparture(UUID.randomUUID(),T0.minusSeconds(1)).reason()).isEqualTo(DepartureReason.CLOCK_REGRESSION);
         Snapshot refused=f.store.suspend(UUID.randomUUID(),null,403,T0.plusSeconds(2),null);
         assertThatThrownBy(()->f.store.rearm(refused.version(),T0.plusSeconds(1))).hasMessage("PROVIDER_CLOCK_REGRESSION");
@@ -274,7 +280,7 @@ class ProviderResiliencePersistenceIT {
 
     @ParameterizedTest @ValueSource(ints={200,404,500})
     void onlyConfirmedRefusalsCanSuspendAccess(int status) {
-        Fixture f=fixture("42");
+        Fixture f=fixture("50");
         assertThatThrownBy(()->f.store.suspend(UUID.randomUUID(),null,status,T0,null)).isInstanceOf(IllegalArgumentException.class);
         assertThat(f.count("provider_resilience_event")).isZero();
         assertThat(f.store.snapshot().state()).isEqualTo(State.OPEN);
@@ -282,12 +288,13 @@ class ProviderResiliencePersistenceIT {
 
     @Test
     void persistedEvidenceIsAppendOnlyAndRetryDatesAreBoundedWithoutRawHeaders() {
-        Fixture f=fixture("42");
+        Fixture f=fixture("50");
         assertThatThrownBy(()->f.store.suspend(UUID.randomUUID(),null,429,T0,T0.minusSeconds(1))).isInstanceOf(IllegalArgumentException.class);
         assertThatThrownBy(()->f.store.suspend(UUID.randomUUID(),null,429,T0,T0.plus(Duration.ofDays(366)))).isInstanceOf(IllegalArgumentException.class);
         f.exchange(UUID.randomUUID(),T0);
         f.store.suspend(UUID.randomUUID(),null,429,T0,T0.plus(Duration.ofDays(365)));
-        for(String table:List.of("provider_resilience_event","provider_departure_reservation","provider_departure_completion")) {
+        for(String table:List.of("provider_resilience_event","provider_departure_reservation","provider_departure_completion",
+                "provider_departure_accounting")) {
             assertThatThrownBy(()->f.jdbc.update("delete from "+table)).isInstanceOf(DataAccessException.class);
             assertThatThrownBy(()->f.jdbc.execute("truncate "+table)).isInstanceOf(DataAccessException.class);
         }
@@ -301,7 +308,7 @@ class ProviderResiliencePersistenceIT {
 
     @Test
     void anUnfinishedDepartureCannotAgeOutAcrossRestartAndItsVerifiedClosureChargesTheWholeDelay() {
-        Fixture f=fixture("42"); UUID dispatch=UUID.randomUUID();
+        Fixture f=fixture("50"); UUID dispatch=UUID.randomUUID();
         assertThat(f.store.tryReserveDeparture(dispatch,T0).allowed()).isTrue();
         assertThat(f.newStore().tryReserveDeparture(UUID.randomUUID(),T0.plus(Duration.ofDays(1))).reason())
                 .isEqualTo(DepartureReason.DEPARTURE_UNRESOLVED);
@@ -318,7 +325,7 @@ class ProviderResiliencePersistenceIT {
 
     @Test
     void delayedExchangeCompletionKeepsTheMinuteChargeAfterItsOriginalReservationWouldHaveExpired() {
-        Fixture f=fixture("42");
+        Fixture f=fixture("50");
         for(int i=0;i<24;i++) assertThat(f.exchange(UUID.randomUUID(),T0.plusSeconds(i*2L)).allowed()).isTrue();
         UUID slow=UUID.randomUUID();assertThat(f.store.tryReserveDeparture(slow,T0.plusSeconds(48)).allowed()).isTrue();
         f.store.markDepartureFinished(slow,T0.plusSeconds(58));
@@ -327,6 +334,212 @@ class ProviderResiliencePersistenceIT {
         // Charge the next 23 requests at 2-second intervals; the slow request expires at 118 s, not 108 s.
         for(int i=1;i<24;i++) assertThat(f.exchange(UUID.randomUUID(),T0.plusSeconds(60+i*2L)).allowed()).isTrue();
         assertThat(f.store.departureDecision(T0.plusSeconds(110)).nextAllowedAt()).isEqualTo(T0.plusSeconds(118));
+    }
+
+    @Test
+    void v48AndV50UpgradeExistingV47DepartureHistoryAsLegacyAndBackfillConservativeAccounting() {
+        Fixture f=fixture("47"); UUID historical=UUID.randomUUID();
+        f.jdbc.update("insert into provider_departure_reservation(dispatch_id,reserved_at,policy_version) values (?,?,?)",
+                historical,Timestamp.from(T0),ProviderResilienceData.POLICY_VERSION);
+        f.jdbc.update("insert into provider_departure_completion(dispatch_id,finished_at) values (?,?)",historical,Timestamp.from(T0));
+        f.jdbc.update("update provider_resilience_state set last_departure_at=?,last_departure_finished_at=? where singleton_id=1",
+                Timestamp.from(T0),Timestamp.from(T0));
+        Map<String,Object> before=f.jdbc.queryForMap("select dispatch_id,reserved_at,policy_version from provider_departure_reservation where dispatch_id=?",historical);
+
+        assertThat(f.migrate("48")).isOne();
+        assertThat(f.jdbc.queryForMap("select dispatch_id,reserved_at,policy_version from provider_departure_reservation where dispatch_id=?",historical))
+                .isEqualTo(before);
+        assertThat(f.jdbc.queryForObject("select admission_profile from provider_departure_reservation where dispatch_id=?",String.class,historical))
+                .isEqualTo(DepartureProfile.LEGACY_V1.persistenceValue());
+        assertThat(f.jdbc.queryForObject("select last_departure_admission_profile from provider_resilience_state where singleton_id=1",String.class))
+                .isNull();
+        assertThat(f.migrate("50")).isEqualTo(2);
+        assertThat(f.jdbc.queryForMap("select dispatch_id,departure_at,source from provider_departure_accounting where dispatch_id=?",historical))
+                .containsEntry("dispatch_id",historical).containsEntry("departure_at",Timestamp.from(T0))
+                .containsEntry("source","COMPLETION_FALLBACK");
+        assertThat(f.newStore().departureDecision(DepartureProfile.LIVE_V8,T0.plusMillis(500)).nextAllowedAt())
+                .isEqualTo(T0.plusSeconds(2));
+
+        UUID v8=UUID.randomUUID();
+        assertThat(f.newStore().tryReserveDeparture(v8,DepartureProfile.LIVE_V8,T0.plusSeconds(2)).allowed()).isTrue();
+        f.newStore().markDepartureFinished(v8,T0.plusSeconds(2));
+        assertThat(f.jdbc.queryForObject("select admission_profile from provider_departure_reservation where dispatch_id=?",String.class,v8))
+                .isEqualTo(DepartureProfile.LIVE_V8.persistenceValue());
+        assertThat(f.jdbc.queryForObject("select last_departure_admission_profile from provider_resilience_state where singleton_id=1",String.class))
+                .isEqualTo(DepartureProfile.LIVE_V8.persistenceValue());
+        assertThatThrownBy(()->f.jdbc.update("update provider_departure_reservation set admission_profile='legacy-v1' where dispatch_id=?",v8))
+                .isInstanceOf(DataAccessException.class);
+    }
+
+    @Test
+    void v8ChargesThe46thDepartureFromAuthenticatedRequestedAtEvenWhenCompletionIsLater() {
+        Fixture f=fixture("50"); Instant requested=T0.plusSeconds(10),finished=T0.plusSeconds(20),attempted=T0.plusMillis(20_500);
+        f.jdbc.update("""
+            insert into provider_departure_reservation(dispatch_id,reserved_at,policy_version,admission_profile)
+                select gen_random_uuid(),?,'provider-resilience-v1','live-v8' from generate_series(1,45)
+            """,Timestamp.from(T0));
+        f.jdbc.update("""
+            insert into provider_departure_accounting(dispatch_id,departure_at,source)
+                select dispatch_id,?,'AUTHENTICATED_WORKER_REQUEST' from provider_departure_reservation
+            """,Timestamp.from(requested));
+        f.jdbc.update("""
+            insert into provider_departure_completion(dispatch_id,finished_at)
+                select dispatch_id,? from provider_departure_reservation
+            """,Timestamp.from(finished));
+        f.jdbc.update("""
+            update provider_resilience_state set last_departure_at=?,last_departure_finished_at=?,
+                last_departure_admission_profile='live-v8' where singleton_id=1
+            """,Timestamp.from(T0),Timestamp.from(finished));
+
+        DepartureDecision denied=f.store.tryReserveDeparture(UUID.randomUUID(),DepartureProfile.LIVE_V8,attempted);
+
+        assertThat(denied.reason()).isEqualTo(DepartureReason.RATE_LIMITED);
+        // The 45 durable charges expire from worker REQUEST_SENT (T0+10), not
+        // from the deliberately later completion acknowledgement (T0+20).
+        assertThat(denied.nextAllowedAt()).isEqualTo(requested.plusSeconds(60));
+        assertThat(f.count("provider_departure_accounting")).isEqualTo(45);
+        assertThat(f.count("provider_departure_completion")).isEqualTo(45);
+    }
+
+    @Test
+    void v8RequestEvidenceFailsClosedWithoutReleasingTheUnresolvedReservationAndIsIdempotentWhenValid() {
+        Fixture f=fixture("50"); UUID dispatch=UUID.randomUUID();
+        assertThat(f.store.tryReserveDeparture(dispatch,DepartureProfile.LIVE_V8,T0).allowed()).isTrue();
+
+        assertThatThrownBy(()->f.store.recordAuthenticatedV8Departure(dispatch,T0.minusNanos(1),T0))
+                .hasMessage("PROVIDER_REQUESTED_BEFORE_RESERVATION");
+        assertThatThrownBy(()->f.store.recordAuthenticatedV8Departure(dispatch,T0.plusSeconds(1),T0.plusMillis(999)))
+                .hasMessage("PROVIDER_REQUESTED_TIMESTAMP_INCOHERENT");
+        assertThatThrownBy(()->f.store.recordAuthenticatedV8Departure(dispatch,Instant.MAX,Instant.MAX))
+                .hasMessage("PROVIDER_REQUESTED_TIMESTAMP_INVALID");
+        assertThat(f.store.snapshot().unresolvedDispatchId()).isEqualTo(dispatch);
+        assertThat(f.count("provider_departure_accounting")).isZero();
+
+        Instant requested=T0.plusMillis(250),observed=T0.plusMillis(500);
+        f.store.recordAuthenticatedV8Departure(dispatch,requested,observed);
+        f.store.recordAuthenticatedV8Departure(dispatch,requested,observed);
+        assertThatThrownBy(()->f.store.recordAuthenticatedV8Departure(dispatch,requested.plusMillis(1),observed.plusMillis(1)))
+                .hasMessage("PROVIDER_REQUESTED_TIMESTAMP_CONFLICT");
+        assertThat(f.count("provider_departure_accounting")).isOne();
+        assertThat(f.jdbc.queryForMap("select departure_at,source from provider_departure_accounting where dispatch_id=?",dispatch))
+                .containsEntry("departure_at",Timestamp.from(requested)).containsEntry("source","AUTHENTICATED_WORKER_REQUEST");
+        assertThat(f.store.snapshot().unresolvedDispatchId()).isEqualTo(dispatch);
+
+        f.store.markDepartureFinished(dispatch,T0.plusSeconds(1));
+        assertThat(f.store.snapshot().unresolvedDispatchId()).isNull();
+        assertThat(f.jdbc.queryForObject("select source from provider_departure_accounting where dispatch_id=?",String.class,dispatch))
+                .isEqualTo("AUTHENTICATED_WORKER_REQUEST");
+    }
+
+    @Test
+    void v8UsesTheConservativeCompletionFallbackWhenNoRequestSentEvidenceArrives() {
+        Fixture f=fixture("50"); UUID dispatch=UUID.randomUUID(); Instant finished=T0.plusSeconds(30);
+        assertThat(f.store.tryReserveDeparture(dispatch,DepartureProfile.LIVE_V8,T0).allowed()).isTrue();
+        f.store.markDepartureFinished(dispatch,finished);
+
+        assertThat(f.jdbc.queryForMap("select departure_at,source from provider_departure_accounting where dispatch_id=?",dispatch))
+                .containsEntry("departure_at",Timestamp.from(finished)).containsEntry("source","COMPLETION_FALLBACK");
+        assertThat(f.store.departureDecision(DepartureProfile.LIVE_V8,finished.plusMillis(499)).nextAllowedAt())
+                .isEqualTo(finished.plusMillis(500));
+    }
+
+    @Test
+    void v8UsesItsHalfSecondFenceButCrossPolicyTransitionsKeepTheLongerLegacyFence() {
+        Fixture f=fixture("50");
+        UUID legacy=UUID.randomUUID();
+        assertThat(f.exchange(legacy,DepartureProfile.LEGACY_V1,T0).allowed()).isTrue();
+        assertThat(f.store.departureDecision(DepartureProfile.LIVE_V8,T0.plusMillis(500)).nextAllowedAt())
+                .isEqualTo(T0.plusSeconds(2));
+
+        UUID v8=UUID.randomUUID();
+        assertThat(f.exchange(v8,DepartureProfile.LIVE_V8,T0.plusSeconds(2)).allowed()).isTrue();
+        assertThat(f.store.departureDecision(DepartureProfile.LIVE_V8,T0.plusSeconds(2).plusMillis(499)).nextAllowedAt())
+                .isEqualTo(T0.plusSeconds(2).plusMillis(500));
+        assertThat(f.store.departureDecision(DepartureProfile.LIVE_V8,T0.plusSeconds(2).plusMillis(500)).allowed()).isTrue();
+        assertThat(f.store.departureDecision(DepartureProfile.LEGACY_V1,T0.plusSeconds(2).plusMillis(500)).nextAllowedAt())
+                .isEqualTo(T0.plusSeconds(4));
+    }
+
+    @Test
+    void v8MinuteAndHourlyBudgetsAreDurableAndAllProfilesChargeTheSameWindows() {
+        Fixture minute=fixture("50");
+        for(int i=0;i<45;i++) assertThat(minute.exchange(UUID.randomUUID(),DepartureProfile.LIVE_V8,T0.plusMillis(i*500L)).allowed()).isTrue();
+        DepartureDecision minuteDenied=minute.store.departureDecision(DepartureProfile.LIVE_V8,T0.plusMillis(22500));
+        assertThat(minuteDenied.reason()).isEqualTo(DepartureReason.RATE_LIMITED);
+        assertThat(minuteDenied.nextAllowedAt()).isEqualTo(T0.plusSeconds(60));
+        assertThat(minute.store.tryReserveDeparture(UUID.randomUUID(),DepartureProfile.LIVE_V8,T0.plusSeconds(60)).allowed()).isTrue();
+
+        Fixture mixed=fixture("50");
+        for(int i=0;i<25;i++) assertThat(mixed.exchange(UUID.randomUUID(),DepartureProfile.LIVE_V8,T0.plusMillis(i*500L)).allowed()).isTrue();
+        DepartureDecision legacyDenied=mixed.store.departureDecision(DepartureProfile.LEGACY_V1,T0.plusSeconds(14));
+        assertThat(legacyDenied.reason()).isEqualTo(DepartureReason.RATE_LIMITED);
+        assertThat(legacyDenied.nextAllowedAt()).isEqualTo(T0.plusSeconds(60));
+
+        Fixture hour=fixture("50"); Instant now=T0.plusSeconds(3600),first=T0.plusSeconds(784),last=T0.plusSeconds(3539);
+        hour.jdbc.update("""
+            insert into provider_departure_reservation(dispatch_id,reserved_at,policy_version,admission_profile)
+                select gen_random_uuid(),?::timestamptz+n*interval '1 second','provider-resilience-v1','live-v8'
+                    from generate_series(0,2755) n
+            """,Timestamp.from(first));
+        hour.jdbc.update("insert into provider_departure_completion(dispatch_id,finished_at) select dispatch_id,reserved_at from provider_departure_reservation");
+        hour.jdbc.update("""
+            update provider_resilience_state set last_departure_at=?,last_departure_finished_at=?,
+                last_departure_admission_profile='live-v8' where singleton_id=1
+            """,Timestamp.from(last),Timestamp.from(last));
+        DepartureDecision hourDenied=hour.newStore().departureDecision(DepartureProfile.LIVE_V8,now);
+        assertThat(hourDenied.reason()).isEqualTo(DepartureReason.RATE_LIMITED);
+        assertThat(hourDenied.nextAllowedAt()).isEqualTo(first.plus(Duration.ofHours(1)));
+        assertThat(hour.newStore().tryReserveDeparture(UUID.randomUUID(),DepartureProfile.LIVE_V8,first.plus(Duration.ofHours(1))).allowed()).isTrue();
+    }
+
+    @Test
+    void v8HourlyBoundaryAdmitsThe2756thDepartureRejectsThe2757thAndReopensOnlyAtTheExactExpiry() {
+        Fixture f=fixture("50");
+        Instant first=T0,admittedAt=T0.plusSeconds(3_599),expiry=first.plus(Duration.ofHours(1));
+        // Seed already-completed V8 pressure outside the final minute so this test isolates
+        // the durable rolling-hour boundary; the minute fence is proven independently above.
+        f.jdbc.update("""
+            insert into provider_departure_reservation(dispatch_id,reserved_at,policy_version,admission_profile)
+                select gen_random_uuid(),?,'provider-resilience-v1','live-v8'
+                    from generate_series(1,2755)
+            """,Timestamp.from(first));
+        f.jdbc.update("insert into provider_departure_completion(dispatch_id,finished_at) select dispatch_id,reserved_at from provider_departure_reservation");
+        f.jdbc.update("""
+            update provider_resilience_state set last_departure_at=?,last_departure_finished_at=?,
+                last_departure_admission_profile='live-v8' where singleton_id=1
+            """,Timestamp.from(first),Timestamp.from(first));
+        assertThat(f.count("provider_departure_completion")).isEqualTo(2_755);
+
+        UUID departure2756=UUID.randomUUID();
+        assertThat(f.store.tryReserveDeparture(departure2756,DepartureProfile.LIVE_V8,admittedAt))
+                .extracting(DepartureDecision::allowed,DepartureDecision::reason)
+                .containsExactly(true,DepartureReason.ALLOWED);
+        f.store.markDepartureFinished(departure2756,admittedAt);
+        assertThat(f.count("provider_departure_completion")).isEqualTo(2_756);
+
+        DepartureDecision denied=f.newStore().tryReserveDeparture(UUID.randomUUID(),DepartureProfile.LIVE_V8,admittedAt.plusMillis(500));
+        assertThat(denied.reason()).isEqualTo(DepartureReason.RATE_LIMITED);
+        assertThat(denied.nextAllowedAt()).isEqualTo(expiry);
+        assertThat(f.count("provider_departure_completion")).isEqualTo(2_756);
+        DepartureDecision stillDenied=f.newStore().departureDecision(DepartureProfile.LIVE_V8,expiry.minusNanos(1));
+        assertThat(stillDenied.reason()).isEqualTo(DepartureReason.RATE_LIMITED);
+        assertThat(stillDenied.nextAllowedAt()).isEqualTo(expiry);
+        assertThat(f.newStore().tryReserveDeparture(UUID.randomUUID(),DepartureProfile.LIVE_V8,expiry))
+                .extracting(DepartureDecision::allowed,DepartureDecision::reason)
+                .containsExactly(true,DepartureReason.ALLOWED);
+    }
+
+    @Test
+    void v8RefusalStillSuspendsLegacyAndV8AfterRestart() {
+        Fixture f=fixture("50"); UUID departure=UUID.randomUUID();
+        assertThat(f.exchange(departure,DepartureProfile.LIVE_V8,T0).allowed()).isTrue();
+        Snapshot suspension=f.store.suspend(UUID.randomUUID(),null,429,T0.plusSeconds(1),T0.plus(Duration.ofMinutes(1)));
+        ProviderResilienceStore restarted=f.newStore();
+        assertThat(restarted.tryReserveDeparture(UUID.randomUUID(),DepartureProfile.LIVE_V8,T0.plus(Duration.ofMinutes(2))).reason())
+                .isEqualTo(DepartureReason.PROVIDER_SUSPENDED);
+        assertThat(restarted.tryReserveDeparture(UUID.randomUUID(),DepartureProfile.LEGACY_V1,T0.plus(Duration.ofMinutes(2))).reason())
+                .isEqualTo(DepartureReason.PROVIDER_SUSPENDED);
+        assertThat(restarted.snapshot()).isEqualTo(suspension);
     }
 
     private static String rearmOutcome(Fixture f,CountDownLatch start,long version) throws InterruptedException {
@@ -359,6 +572,11 @@ class ProviderResiliencePersistenceIT {
         ProviderResilienceStore newStore() {return transactional(new JdbcProviderResilienceStore(jdbc),ProviderResilienceStore.class,transactions);}
         DepartureDecision exchange(UUID dispatch,Instant at) {
             DepartureDecision decision=store.tryReserveDeparture(dispatch,at);
+            if(decision.allowed()) store.markDepartureFinished(dispatch,at);
+            return decision;
+        }
+        DepartureDecision exchange(UUID dispatch,DepartureProfile profile,Instant at) {
+            DepartureDecision decision=store.tryReserveDeparture(dispatch,profile,at);
             if(decision.allowed()) store.markDepartureFinished(dispatch,at);
             return decision;
         }

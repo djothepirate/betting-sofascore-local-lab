@@ -54,12 +54,16 @@ Le complément est qualifié sur PostgreSQL isolé, sans sauvegarde ou purge de 
 Le premier lot de résilience V42–V44 est qualifié fonctionnellement hors fournisseur,
 y compris l'upgrade prérempli et `pg_dump`/`pg_restore` en PostgreSQL isolé :
 [rapport](../validation/WO-058-provider-resilience-qualification-20260909.md). Les scripts courants
-exigent désormais **V44** et incluent dans le SHA live les lignes complètes des six tables :
+exigent désormais **V50** et incluent dans le SHA live les lignes complètes des sept tables :
 `provider_resilience_state`, `provider_departure_reservation`, `provider_departure_completion`,
-`provider_resilience_event`, `live_attempt_transport_diagnostic`, `live_campaign_diagnostic`.
-Leurs six compteurs source/restauré sont comparés et requis par la rétention ; le singleton
-doit être présent. La suspension et les budgets ne sont ni effacés ni réarmés pour sauvegarder.
-Les anciens manifestes de sauvegarde ne sont pas modifiés pour franchir la garde V44.
+`provider_departure_accounting`, `provider_resilience_event`,
+`live_attempt_transport_diagnostic`, `live_campaign_diagnostic`.
+Leurs sept compteurs source/restauré sont comparés et requis par la rétention ; le singleton
+doit être présent. `provider_departure_accounting` conserve l'horodatage
+`AUTHENTICATED_WORKER_REQUEST` lorsqu'il est prouvé, sinon le repli
+`COMPLETION_FALLBACK`, et son compteur ne peut pas être inférieur à celui des complétions.
+La suspension et les budgets ne sont ni effacés ni réarmés pour sauvegarder. Les anciens
+manifestes de sauvegarde ne sont pas modifiés pour franchir la garde V50.
 La purge reste limitée aux octets bruts éligibles : ces tables ne deviennent pas supprimables.
 Aucune sauvegarde, restauration ou purge de la base opérateur n'est autorisée par cette mise à jour.
 
@@ -76,7 +80,7 @@ NORMALIZED_OBSERVATION_DELETION=IMPOSSIBLE_BY_DESIGN
 - PowerShell 7.4 ou plus récent pour préserver les pipelines binaires natifs ;
 - exécutable `age` disponible dans `PATH` ou fourni avec `-AgePath` ;
 - PostgreSQL local démarré et sain ;
-- Flyway V44 appliqué ; la rétention reste définie par V22, V23 étend seulement
+- Flyway V50 appliqué ; la rétention reste définie par V22, V23 étend seulement
   `export_manifest` pour J7, V24 élargit la portée du cache de découverte tournoi, V25 ajoute
   uniquement la provenance de l'import JSON local, V26 autorise `event-incidents-v14`, V27 ajoute
   le ledger J8 sans étendre le périmètre de purge et V28 autorise uniquement
@@ -89,7 +93,7 @@ NORMALIZED_OBSERVATION_DELETION=IMPOSSIBLE_BY_DESIGN
   de façon append-only le discriminant V1/V2 et les champs d'audit/gouvernance V2, sans modifier
   V31 ni la fonction canonique V1. L'empreinte `to_jsonb(owner_go)` couvre donc les colonnes V32.
   V33 ajoute les preuves live et le garde fournisseur commun ; elle n'étend pas les données
-  supprimables et ne réécrit aucune preuve V32. V34 ajoute la cadence au manifeste live ; son empreinte complète est couverte par le même to_jsonb, sans étendre la purge ;
+  supprimables et ne réécrit aucune preuve V32. V34 ajoute la cadence au manifeste live ; son empreinte complète est couverte par le même to_jsonb, sans étendre la purge. V35 à V49 étendent les politiques live sans réécrire les preuves ; V50 ajoute le ledger append-only de départs authentifiés et son repli de complétion à la même preuve de sauvegarde/restauration ;
 - application liée uniquement à `127.0.0.1` ;
 - toutes les voies J3/J4/J5, y compris la découverte tournoi, désactivées et
   `connector_control` à `LOCKED` ;
@@ -221,7 +225,7 @@ PostgreSQL possédée. Elles ne constituent ni une boucle indéfinie ni un budge
 Le script :
 
 1. refuse une application encore à l'écoute sur le port 8087 ;
-2. vérifie Compose, le verrou réseau, la version courante Flyway V44, le garde fournisseur `FREE`
+2. vérifie Compose, le verrou réseau, la version courante Flyway V50, le garde fournisseur `FREE`
    et l'absence de campagne live `RUNNING` ou `CLEANUP_REQUIRED` ;
 3. vérifie le SHA-256 réel de chaque payload retenu ;
 4. vérifie l'exécutable Docker exact ; sous Windows, il doit être un fichier absolu sans reparse
@@ -245,9 +249,10 @@ Le script :
 11. crée un manifeste initial non qualifié ;
 12. restaure le flux déchiffré directement dans une base temporaire ;
 13. compare version Flyway, comptes, couverture et empreintes source/restauration, y compris les
-   cinq comptes et le fingerprint déterministe du ledger J8, les trois comptes du ledger J7 et les
-   trois comptes des preuves owner-go append-only intégrées à son empreinte, puis les sept
-   comptes live, l'état du garde, le nombre de campagnes actives et l'empreinte live ;
+    cinq comptes et le fingerprint déterministe du ledger J8, les trois comptes du ledger J7 et les
+    trois comptes des preuves owner-go append-only intégrées à son empreinte, puis les sept
+    comptes live, les sept comptes de résilience/départ/diagnostic, l'état du garde, le nombre de
+    campagnes actives et l'empreinte live ;
 14. inscrit `restoreQualified=true` uniquement après égalité et nettoyage prouvé ;
 15. supprime la base temporaire et tout fichier partiel dans tous les cas ; une preuve de nettoyage
     incomplète rend l'exécution terminalement invalide.
@@ -266,7 +271,7 @@ Deux fichiers restent dans le répertoire externe : le fichier `.age` et
 `<fichier>.age.manifest.json`. Conserver les deux ensemble. Si la qualification échoue, ils ne
 constituent pas une preuve valide et le mode `Execute` doit rester interdit.
 
-### 5.1 Preuve live V33 incluse dans le manifeste
+### 5.1 Preuve live V50 incluse dans le manifeste
 
 Les blocs `source` et `restored` doivent être identiques pour les champs suivants, même lorsqu'il
 n'existe encore aucune campagne live :
@@ -280,9 +285,16 @@ n'existe encore aucune campagne live :
 | `liveReceiptCount` | réceptions liées dans `live_call_receipt` |
 | `liveResultCount` | résultats de `live_call_result` |
 | `liveTransitionCount` | transitions de `live_transition` |
+| `providerResilienceStateCount` | singleton de `provider_resilience_state` |
+| `providerDepartureReservationCount` | réservations de départ de `provider_departure_reservation` |
+| `providerDepartureCompletionCount` | complétions de `provider_departure_completion` |
+| `providerDepartureAccountingCount` | départs comptabilisés de `provider_departure_accounting` |
+| `providerResilienceEventCount` | événements de `provider_resilience_event` |
+| `liveAttemptTransportDiagnosticCount` | diagnostics de transport de `live_attempt_transport_diagnostic` |
+| `liveCampaignDiagnosticCount` | diagnostics de campagne de `live_campaign_diagnostic` |
 | `providerGuardState` | état `FREE` de la ligne unique `provider_campaign_guard` |
 | `activeLiveCount` | nombre nul de campagnes `RUNNING` ou `CLEANUP_REQUIRED` |
-| `liveLedgerSha256` | SHA-256 déterministe des sept tables live et du garde, soit huit tables |
+| `liveLedgerSha256` | SHA-256 déterministe des sept tables live, des quatre tables de politique groupée, du garde et des sept tables de résilience/départ/diagnostic, soit dix-neuf tables |
 
 L'empreinte utilise toutes les colonnes de chaque ligne sous forme `to_jsonb`, avec un préfixe
 identifiant la table et un tri déterministe avant calcul du SHA-256. Elle couvre donc le manifeste
@@ -290,9 +302,13 @@ préparé, les cibles et leur provenance, les bornes, compteurs, générations e
 les liens snapshot/occurrence, les résultats, les projections métier et les transitions. Les
 octets bruts restent couverts séparément par les preuves de snapshots ; ils ne sont pas copiés
 dans le ledger live. Aucun payload ni contenu complet du ledger n'est imprimé par le script.
+Lorsqu'un départ V8 authentifié est observé, son instant `AUTHENTICATED_WORKER_REQUEST` est
+retenu ; une complétion sans cette preuve reçoit `COMPLETION_FALLBACK`. Le nombre de lignes
+comptables doit être au moins égal au nombre de complétions.
 
 Un manifeste historique V32 reste une preuve de sa qualification historique. Il ne satisfait pas
-la porte de rétention courante V41, car il ne démontre pas la restauration de ces tables, politiques et détails joueurs.
+la porte de rétention courante V50, car il ne démontre pas la restauration de ces tables, politiques,
+détails joueurs et du ledger de départs.
 Restaurer les preuves live ne déclenche aucun worker ni reprise de campagne : les opt-ins restent
 désactivés et tout nouveau lancement exige une action opérateur. Un garde `OWNED` ou
 `CLEANUP_REQUIRED` ne peut pas être considéré libre du seul fait d'un redémarrage ou d'un délai.
@@ -381,11 +397,13 @@ pwsh -NoProfile -File .\scripts\Invoke-J6Retention.ps1 `
   -ConfirmationPhrase 'PURGER <N> PAYLOADS J6 <J6_RETENTION_PLAN_SHA256>'
 ```
 
-Le script revérifie le nom du fichier chiffré, son hash, Flyway V41, l'égalité complète des preuves
+Le script revérifie le nom du fichier chiffré, son hash, Flyway V50, l'égalité complète des preuves
 source/restauration, les six compteurs et l'empreinte metadata-only du ledger J7 — incluant grant,
-révocation et consommation owner-go — puis les sept compteurs live, le garde libre, l'absence de
-campagne active et `liveLedgerSha256`, ainsi que la couverture. Le service recalcule ensuite le
-plan, la phrase et la couverture avant que l'adaptateur ne les revérifie sous verrou transactionnel.
+révocation et consommation owner-go — puis les sept compteurs live, les sept compteurs de
+résilience/départ/diagnostic — dont `providerDepartureAccountingCount >=
+providerDepartureCompletionCount` — le garde libre, l'absence de campagne active et
+`liveLedgerSha256`, ainsi que la couverture. Le service recalcule ensuite le plan, la phrase et la
+couverture avant que l'adaptateur ne les revérifie sous verrou transactionnel.
 La purge primaire reste limitée aux octets bruts J6 : elle ne supprime ni livraison, ni tentative,
 ni résultat J7, ni preuve owner-go, ni preuve live, ni référence snapshot/occurrence ou normalisée.
 L'adaptateur verrouille également le garde fournisseur pendant sa courte transaction de purge ;

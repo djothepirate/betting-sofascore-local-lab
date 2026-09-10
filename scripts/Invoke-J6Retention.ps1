@@ -150,6 +150,7 @@ try {
             'providerResilienceStateCount',
             'providerDepartureReservationCount',
             'providerDepartureCompletionCount',
+            'providerDepartureAccountingCount',
             'providerResilienceEventCount',
             'liveAttemptTransportDiagnosticCount',
             'liveCampaignDiagnosticCount',
@@ -176,7 +177,7 @@ try {
                 throw "The qualified manifest source/restore evidence differs: $field"
             }
         }
-        if ($manifest.source.flywayVersion.ToString() -cne '47' -or
+        if ($manifest.source.flywayVersion.ToString() -cne '50' -or
                 [long]$manifest.source.rawPayloadIntegrityFailures -ne 0 -or
                 [long]$manifest.source.j7DeliveryCount -lt 0 -or
                 [long]$manifest.source.j7DeliveryAttemptCount -lt 0 -or
@@ -189,12 +190,14 @@ try {
                 [long]$manifest.source.providerResilienceStateCount -ne 1 -or
                 [long]$manifest.source.providerDepartureReservationCount -lt 0 -or
                 [long]$manifest.source.providerDepartureCompletionCount -lt 0 -or
+                [long]$manifest.source.providerDepartureAccountingCount -lt 0 -or
+                [long]$manifest.source.providerDepartureAccountingCount -lt [long]$manifest.source.providerDepartureCompletionCount -or
                 [long]$manifest.source.providerResilienceEventCount -lt 0 -or
                 [long]$manifest.source.liveAttemptTransportDiagnosticCount -lt 0 -or
                 [long]$manifest.source.liveCampaignDiagnosticCount -lt 0 -or
                 $manifest.source.providerGuardState.ToString() -cne 'FREE' -or
                 [long]$manifest.source.activeLiveCount -ne 0) {
-            throw 'The qualified manifest does not prove a valid Flyway V47 raw-payload, J8, J7 and quiescent live ledger restore.'
+            throw 'The qualified manifest does not prove a valid Flyway V50 raw-payload, J8, J7 and quiescent live ledger restore.'
         }
         $cipherPath = [IO.Path]::GetFullPath((Join-Path `
             (Split-Path -Parent $manifestPath) $cipherFileName))

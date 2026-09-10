@@ -218,20 +218,29 @@ en outre que la preuve de sauvegarde couvre l'identifiant et l'heure du snapshot
 
 ### 8.1 Couverture des campagnes live et du garde commun
 
-La sauvegarde/restauration courante exige Flyway V33. Ses preuves source et restauration incluent
+La sauvegarde/restauration courante exige Flyway V50. Ses preuves source et restauration incluent
 les sept compteurs des tables `live_campaign`, `live_event`, `live_call`, `live_call_dispatch`,
 `live_call_receipt`, `live_call_result` et `live_transition`, l'état du garde fournisseur et le
-nombre de campagnes `RUNNING` ou `CLEANUP_REQUIRED`. `liveLedgerSha256` couvre toutes les colonnes
-des lignes de ces sept tables et de `provider_campaign_guard`, soit huit tables. Les lignes
-`to_jsonb` sont préfixées par leur table, triées puis hashées ; le manifeste conserve uniquement
-l'empreinte et les compteurs, sans reproduire les lignes.
+nombre de campagnes `RUNNING` ou `CLEANUP_REQUIRED`. Elles incluent aussi les sept compteurs de
+résilience/départ : `provider_resilience_state`, `provider_departure_reservation`,
+`provider_departure_completion`, `provider_departure_accounting`, `provider_resilience_event`,
+`live_attempt_transport_diagnostic` et `live_campaign_diagnostic`.
+
+`liveLedgerSha256` couvre toutes les colonnes de ces quatorze tables comptées, des quatre tables
+de politique groupée `live_grouped_policy`, `live_call_group`, `live_family_schedule` et
+`live_family_schedule_revision`, ainsi que de `provider_campaign_guard`, soit dix-neuf tables.
+Les lignes `to_jsonb` sont préfixées par leur table, triées puis hashées ; le manifeste conserve
+uniquement l'empreinte et les compteurs, sans reproduire les lignes. Une entrée
+`provider_departure_accounting` est conservée depuis `AUTHENTICATED_WORKER_REQUEST` lorsqu'il est
+prouvé ; `COMPLETION_FALLBACK` demeure le repli conservateur. La qualification exige au moins
+autant de lignes comptables que de complétions.
 
 Le manifeste live immuable comprend notamment les cibles et leur provenance, les plafonds, le TTL,
 la capacité et le profil d'admission qualifié : enveloppes de requête et de traitement conservées
 exactement en nanosecondes, plus SHA-256 de qualification. Les résultats versionnés, leurs liens
 snapshot/occurrence et normalisés, les projections d'état, les compteurs et les générations sont
 ainsi tous comparés à la restauration. Les preuves historiques V32 restent conservées ; elles ne
-remplacent pas la couverture V33 exigée par la rétention courante.
+remplacent pas la couverture V50 exigée par la rétention courante.
 
 Une sauvegarde qualifiée exige `providerGuardState=FREE` et `activeLiveCount=0`. Une restauration
 n'arme aucun worker ni reprise. Un ancien propriétaire de garde, identifié par instance, PID et

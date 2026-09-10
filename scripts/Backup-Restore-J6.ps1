@@ -834,6 +834,7 @@ from (
     union all select 'PROVIDER_RESILIENCE_STATE|' || to_jsonb(t)::text from provider_resilience_state t
     union all select 'PROVIDER_DEPARTURE_RESERVATION|' || to_jsonb(t)::text from provider_departure_reservation t
     union all select 'PROVIDER_DEPARTURE_COMPLETION|' || to_jsonb(t)::text from provider_departure_completion t
+    union all select 'PROVIDER_DEPARTURE_ACCOUNTING|' || to_jsonb(t)::text from provider_departure_accounting t
     union all select 'PROVIDER_RESILIENCE_EVENT|' || to_jsonb(t)::text from provider_resilience_event t
     union all select 'LIVE_ATTEMPT_TRANSPORT_DIAGNOSTIC|' || to_jsonb(t)::text from live_attempt_transport_diagnostic t
     union all select 'LIVE_CAMPAIGN_DIAGNOSTIC|' || to_jsonb(t)::text from live_campaign_diagnostic t
@@ -876,8 +877,8 @@ try {
     }
 
     $sourceFlywayVersion = Invoke-PrimaryScalar -Sql $flywaySql
-    if ($sourceFlywayVersion -cne '47') {
-        throw 'Flyway V47 must be applied before the J6 backup/restore qualification.'
+    if ($sourceFlywayVersion -cne '50') {
+        throw 'Flyway V50 must be applied before the J6 backup/restore qualification.'
     }
     $providerGuardState = Invoke-PrimaryScalar -Sql 'select state from provider_campaign_guard where singleton_id=1'
     $activeLiveCount = [long](Invoke-PrimaryScalar -Sql "select count(*) from live_campaign where state in ('RUNNING','CLEANUP_REQUIRED')")
@@ -919,6 +920,7 @@ from provider_snapshot
         providerResilienceStateCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from provider_resilience_state')
         providerDepartureReservationCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from provider_departure_reservation')
         providerDepartureCompletionCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from provider_departure_completion')
+        providerDepartureAccountingCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from provider_departure_accounting')
         providerResilienceEventCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from provider_resilience_event')
         liveAttemptTransportDiagnosticCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from live_attempt_transport_diagnostic')
         liveCampaignDiagnosticCount = [long](Invoke-PrimaryScalar -Sql 'select count(*) from live_campaign_diagnostic')
@@ -1069,6 +1071,7 @@ from provider_snapshot
         providerResilienceStateCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from provider_resilience_state')
         providerDepartureReservationCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from provider_departure_reservation')
         providerDepartureCompletionCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from provider_departure_completion')
+        providerDepartureAccountingCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from provider_departure_accounting')
         providerResilienceEventCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from provider_resilience_event')
         liveAttemptTransportDiagnosticCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from live_attempt_transport_diagnostic')
         liveCampaignDiagnosticCount = [long](Invoke-RestoreScalar -Database $restoreDatabase -Sql 'select count(*) from live_campaign_diagnostic')

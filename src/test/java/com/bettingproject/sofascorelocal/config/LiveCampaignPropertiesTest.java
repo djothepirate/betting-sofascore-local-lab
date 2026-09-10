@@ -30,7 +30,7 @@ class LiveCampaignPropertiesTest {
         var properties = bind(Map.of());
 
         assertThat(properties.isEnabled()).isFalse();
-        assertThat(properties.getPreparationPolicyVersion()).isEqualTo("live-v7");
+        assertThat(properties.getPreparationPolicyVersion()).isEqualTo("live-v8");
         assertThat(properties.getQualifiedMatchCapacity()).isEqualTo(1);
         assertThat(properties.getPostgresContainer()).isEqualTo("betting-sofascore-local-lab-postgres");
         assertThat(properties.getDuration()).isEqualTo(Duration.ofHours(4));
@@ -189,6 +189,27 @@ class LiveCampaignPropertiesTest {
         });
         assertThat(LiveAdmissionPolicy.qualifiedCapacityV7(profile)).isEqualTo(3);
         assertThatThrownBy(properties::groupedAdmissionProfileV6).hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
+        assertThat(properties.isEnabled()).isFalse();
+    }
+
+    @Test
+    void v8EnvironmentBindsItsOwnProofAndTheQualifiedHalfSecondPressureProfileWithoutEnablingTransport() throws Exception {
+        var values = new java.util.HashMap<String, Object>();
+        values.put("SOFASCORE_LIVE_GROUPED_V8_QUALIFICATION_SHA256", "9".repeat(64));
+        for (String family : java.util.List.of("J4", "INCIDENTS", "STATISTICS", "LINEUPS")) {
+            values.put("SOFASCORE_LIVE_GROUPED_V8_" + family + "_REQUEST_ENVELOPE", "500ms");
+            values.put("SOFASCORE_LIVE_GROUPED_V8_" + family + "_PROCESSING_ENVELOPE", "100ms");
+        }
+        var properties = bind(values);
+        var profile = properties.groupedAdmissionProfileV8();
+        assertThat(profile.policyVersion()).isEqualTo("live-v8");
+        assertThat(profile.qualificationSha256()).isEqualTo("9".repeat(64));
+        assertThat(profile.criticalInterval()).isEqualTo(Duration.ofSeconds(60));
+        assertThat(profile.lineupInterval()).isEqualTo(Duration.ofSeconds(60));
+        assertThat(profile.minimumRequestStartInterval()).isEqualTo(Duration.ofMillis(500));
+        assertThat(profile.interGroupDelay()).isEqualTo(Duration.ofMillis(500));
+        assertThat(LiveAdmissionPolicy.qualifiedCapacityV8(profile)).isEqualTo(10);
+        assertThatThrownBy(properties::groupedAdmissionProfileV7).hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
         assertThat(properties.isEnabled()).isFalse();
     }
 

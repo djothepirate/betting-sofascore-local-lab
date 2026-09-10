@@ -1,6 +1,6 @@
 # WO-SS-20260907-058 — Campagnes live locales J4/J5 sur sélection de rencontres
 
-- **Statut :** `IN_PROGRESS` — lot compositions/personnes V4 et nouvelle cadence live-v7/V47 réalisé et qualifié hors fournisseur ; revue humaine, acceptation fournisseur et fusion restent distinctes. Le correctif v0.9 réponses lentes/timeouts isolés et groupes v6 avec familles différées reste qualifié fonctionnellement hors fournisseur. Le premier lot de résilience v6/V42–V44 et son profil temporel à sept rencontres conservent leurs validations réussies, distinctes de ce nouveau chemin. Les réalisations et preuves historiques v4/V39, v5/V40 et compositions V3/V41 restent conservées ci-dessous ; aucune clôture ni livraison Eclipse.
+- **Statut :** `IN_PROGRESS` — lot compositions/personnes V4 et cadence live-v7/V47 réalisé et qualifié hors fournisseur ; revue humaine, acceptation fournisseur et fusion restent distinctes. La révision `live-v8` à dix rencontres, 60 s et budget local relevé est en réalisation mais **n'est pas encore qualifiée** : sans son futur profil local complet, la capacité des nouvelles préparations reste volontairement nulle. Le correctif v0.9 réponses lentes/timeouts isolés et groupes v6 avec familles différées reste qualifié fonctionnellement hors fournisseur. Le premier lot de résilience v6/V42–V44 et son profil temporel à sept rencontres conservent leurs validations réussies, distinctes de ce nouveau chemin. Les réalisations et preuves historiques v4/V39, v5/V40 et compositions V3/V41 restent conservées ci-dessous ; aucune clôture ni livraison Eclipse.
 - **Date :** 2026-09-07.
 - **Premier lot du 09/09, antérieur au correctif courant :** résilience `live-v6`/V42–V44 qualifiée fonctionnellement hors fournisseur. Le [complément temporel dédié](../../validation/WO058-LIVE-V6-CAPACITY-20260909.md) qualifie son propre profil à sept rencontres, avec wrapper partagé, PostgreSQL 44 et ordonnanceur v6 réels ; sa vérification finale réussit (2 019 cas Surefire, cinq ignorés, 207 intégrations, trois contrôles Chromium UI sans échec ni erreur). Le plafond opérateur de six et le timeout de 30 s constatés pour cette qualification restent distincts de la capacité prouvée. Ces résultats restent distincts de la qualification fonctionnelle réussie du correctif v0.9.
 - **Jalon :** expérimentation live locale après J9, distincte des parcours manuels existants.
@@ -10,6 +10,7 @@
 - **Worktree :** `.tmp/wo058-live-j4-j5`, depuis le dossier Codex du Lab ; worktree distinct d'Eclipse.
 - **Autorité reçue :** ADR-SS-005 v0.1 accepté, puis déclaration « Je valide le WO-058 les travaux peuvent commencer » et demande explicite d'exécuter le plan de réalisation ; port 8087 libéré pour les tests.
 - **ADR courant :** [ADR-SS-005 v0.10](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), autorisation explicite du calendrier v7 et de son contrôle hors fournisseur. La protection persistante commune J3/J4/J5, la capacité v6 au plus sept et la capacité v7 au plus trois restent distinctes ; les manifestes v1–v6 gardent leurs règles. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
+- **Évolution V8 autorisée :** demande propriétaire du 10 septembre de conserver la cible de fraîcheur à 60 s et de préparer une admission locale plus agressive : dix rencontres au plus, fence local de 500 ms, 45 départs/minute et 2 756 départs/heure. Pour un lancement qui précède T0 de moins d'une minute, le premier contrôle de bascule reste sur la phase stable `max(T0 sérialisé, J4 initial + 60 s)` afin de ne pas créer une seconde vague J4/J5 au même créneau. Elle ne crée aucun endpoint, transport, proxy, rotation d'adresse ou lancement fournisseur ; l'ADR n'est pas modifié dans ce lot documentaire.
 - **Livrable présent :** ADR accepté, WO validé, correctif v0.9 réalisé et [rapport de qualification fonctionnelle](../../validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md), avec inventaire de 56 fichiers, commandes, empreintes et résultats ; premier lot de résilience et profil temporel dédiés déjà qualifiés. Le complément V4/V46/v7/V47 est détaillé dans son [rapport hors fournisseur](../../validation/WO058-PEOPLE-AND-LIVE-V7-20260909.md) et le [profil v7 versionné](../../validation/WO058-LIVE-V7-CAPACITY-20260910.md) rend ses trois rencontres, ses enveloppes et son SHA reproductibles sans réglage automatique. Le [complément pays/métriques](../../validation/WO058-LINEUPS-COUNTRY-AND-METRICS-20260910.md) conserve la frontière de provenance des compositions V3. Les réalisations et preuves antérieures restent conservées, notamment v5/V40 et le complément compositions V3/V41 avec son [contrat](../../architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md) et sa [qualification du 09/09](../../validation/WO058-PLAYER-DETAILS-20260909.md). La preuve de fraîcheur fournisseur ne découle pas de la qualification locale.
 - **Alignement de gouvernance :** renvois ciblés dans ADR-SS-001 et AGENTS.md ; ADR-SS-002 à 004 inchangés.
 - **Réalisations historiques :** réalisées et qualifiées hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés sous les anciennes politiques ; compléments prématch/phase/clôture et incidents V16/V17 décrits dans les retours ci-dessous, statistiques intégrées aux pages. Les préparations v5 conservées restent limitées à vingt rencontres selon leur propre qualification ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur historiques :** essai à 8 arrêté volontairement, essai à 16 interrompu après coupure PostgreSQL, puis nouveaux lancements manuels à 7 et à 4 ; dernière exécution de cette série terminée, observations distinctes des qualifications locales.
@@ -18,7 +19,7 @@ Les statuts restent `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED` et
 `NO_CRITICAL_DEPENDENCY`. Le socle reste Java 25 LTS, Spring Boot 4.1.0, Maven wrapper,
 PostgreSQL local Docker Desktop et application sur `127.0.0.1:8087`, textes UTF-8.
 
-## Lot courant du 9 septembre — cartes, personnes J4 et live-v7
+## Lot historique du 9 septembre — cartes, personnes J4 et live-v7
 
 Autorité : demande des décorations de cartes, pays/entraîneurs/arbitre/tour nommé,
 périodes d’incidents repliables et nouvelles règles de collecte. La clarification
@@ -53,6 +54,83 @@ du hash et du JSON ; aucune observation normalisée ni provenance n’est rééc
 exploitable, le champ pays est omis. Les cinq métriques individuelles `accurateKeeperSweeper`,
 `totalKeeperSweeper`, `hitWoodwork`, `errorLeadToAShot` et `errorLeadToAGoal` sont localisées dans
 leur rubrique de présentation. Voir le [rapport pays et métriques](../../validation/WO058-LINEUPS-COUNTRY-AND-METRICS-20260910.md).
+
+## Révision V8 du 10 septembre — dix rencontres et départs normaux à 60 s
+
+Le propriétaire demande de conserver l'objectif de fraîcheur à **60 secondes** tout en
+préparant un lissage local plus dense. Cette révision porte uniquement sur les nouvelles
+préparations `live-v8` : les manifestes v1–v7, leurs preuves et leurs paramètres restent
+lisibles avec leurs propres règles. Une préparation v8 sans profil complet et vérifié doit
+échouer fermée, avec capacité zéro ; le profil v7 ne devient jamais un repli de v8.
+
+| Élément V8 à qualifier | Règle de conception demandée |
+| --- | --- |
+| Sélection | Au plus **10 rencontres**, sous réserve de l'admission du profil qualifié et des plafonds de campagne déjà figés. |
+| Cadence normale en jeu | Pour **chaque couple rencontre/famille** (J4, incidents, statistiques, compositions), un départ est planifié dans une vague de 60 s. Le départ, et non l'heure d'affichage ni une réception inconnue, est la mesure de la cible. |
+| Lissage local | Un contexte et un départ à la fois ; fence local fixe de **500 ms** après une fin d'échange prouvée. Une attente plus longue peut encore venir du slot déterministe, d'un budget, d'un 404, d'un timeout ou d'une suspension ; elle ne doit pas être masquée comme fraîcheur. |
+| Budgets partagés | Au plus **45 départs sur 60 s glissantes** et **2 756 départs sur une heure glissante**, persistants entre campagnes. Ce sont des budgets locaux choisis par le propriétaire, pas un seuil d'acceptation SofaScore. |
+| Planification | Les slots par rencontre et famille sont dérivés des enveloppes requête/traitement immuables du profil plus le fence. Une variation qui reste dans ces enveloppes doit conserver les départs normaux à 60 s ; un dépassement est une exception explicite, pas une preuve de fraîcheur. |
+
+La révision persiste le fait de départ V8 dans un ledger append-only distinct de la réservation :
+une trame worker `REQUEST_SENT` n'est retenue que si son instant est compris entre la
+réservation atomique et l'observation parent. Sans cette preuve, la complétion conserve une
+entrée de repli plus conservatrice ; le verrou non résolu reste inchangé. Les fenêtres de
+45/minute et 2 756/heure reposent donc sur l'horodatage authentifié lorsqu'il existe, sans
+réinterpréter l'historique. Un budget qui franchit une échéance V8 fait passer la cible et les
+autres cibles en jeu touchées par le même hold à `WAITING_PRESSURE_RECHECK` : les familles
+réellement non parties sont comptées manquées et seul un J4 explicite redémarre à `notBefore`.
+Le chemin normal, les 404, les délais prématch, les timeouts et les refus gardent leurs règles
+propres.
+
+V50 étend aussi la preuve J6 de sauvegarde/restauration au ledger
+`provider_departure_accounting` : son empreinte complète et son compteur source/restauration
+doivent être égaux, avec au moins une ligne comptable par complétion. Cette préparation ne lance
+ni outil natif, ni sauvegarde, ni purge, ni opération sur la base opérateur ; elle ne qualifie
+donc aucune exécution J6.
+
+Les fenêtres prématch V7 sont conservées dans leur portée : groupe initial, éventuel contrôle
+T−60, compositions toutes les cinq minutes entre T−60 et T−5 lorsqu'elles ne sont pas
+confirmées, puis attente du coup d'envoi. Après `inprogress`, les quatre familles utilisent
+la vague V8 de 60 s. Un J4 `delayed` avec un `startTimestamp` lisible recalcule ces fenêtres
+sur le nouvel horaire ; une heure absente ou une régression après `inprogress` reste à revoir.
+Un 404 demeure différé par couple rencontre/famille, sans rattrapage en rafale.
+
+La suspension est indépendante du profil : un **403 ou 429 connu** reste persistant à travers
+la fin de campagne, le redémarrage et une nouvelle sélection. Le réarmement reste manuel,
+consultable et sans sonde fournisseur ; changer d'IP, ajouter un proxy, faire tourner un VPN
+ou recréer un contexte pour contourner un refus ne fait pas partie de ce lot. Les timeouts et
+échanges dont la fin n'est pas prouvée n'autorisent pas une nouvelle vague et ne comptent pas
+comme une réception fraîche.
+
+### Conditions observables de passage V8
+
+| Contrôle hors fournisseur | Résultat exigé avant qu'un profil puisse être proposé |
+| --- | --- |
+| Admission | Dix cibles sont admises seulement par le profil mesuré ; une onzième et un profil absent/incohérent sont refusés sans création de transport. |
+| Cadence normale | Le replay à coûts variables, mais contenus dans les enveloppes, mesure les départs `requestedNanos` de chacun des 40 couples rencontre/famille à 60 s au plus. |
+| Pression et lissage | Aucun chevauchement ; fence de 500 ms, maximum observé ≤45 sur 60 s et ≤2 756 sur une heure, y compris après changement de campagne ou redémarrage simulé. |
+| Réponse lente et absence | Un dépassement d'enveloppe, un timeout ou un 404 est étiqueté et reporté sans rafale ni instant de réception fictif ; la cadence normale n'est pas revendiquée pour ce cas. |
+| Refus | 403/429 aux en-têtes suspend l'accès durablement, même avec corps incomplet ; une nouvelle campagne, un redémarrage ou un délai écoulé ne le réarme pas. |
+| Confinement | Chromium/worker et PostgreSQL de test utilisent exclusivement le serveur loopback ; la preuve compte zéro appel fournisseur, zéro base opérateur et aucun artefact de session persistant. |
+
+### Qualification V8 encore à exécuter, exclusivement hors fournisseur
+
+La réalisation n'a **pas** encore franchi la qualification V8. Aucun SHA-256, aucune enveloppe
+et aucun artefact V8 ne sont ajoutés à la configuration ou aux preuves versionnées tant que la
+passe locale n'a pas produit et lié ces données. Les valeurs
+`SOFASCORE_LIVE_GROUPED_V8_*` restent donc vides par défaut ; elles empêchent volontairement
+la préparation d'une campagne à dix rencontres.
+
+La porte envisagée est le scénario explicitement déclenché
+`Invoke-LiveGroupedPlaywrightQualification.ps1 -PolicyVersion live-v8`, après vérifications
+standard et d'intégration. Il doit exercer le worker de production, le navigateur et PostgreSQL
+**uniquement** contre un serveur éphémère lié à `127.0.0.1`, avec cinq minutes de mise en régime
+et au moins trente minutes établies. Il devra démontrer dix cibles, les quatre familles,
+l'absence d'appel fournisseur et de base opérateur, les plafonds persistants, les slots
+rencontre/famille et le fence de 500 ms. Le répertoire `.tmp` issu de cette passe devra être
+relu avant toute copie manuelle d'un profil ou d'une empreinte dans le dépôt ou le lanceur
+Eclipse. Une passe verte locale ne démontrera ni délai de réception fournisseur, ni acceptation
+de 45/min, ni absence future de blocage d'adresse.
 
 ## 1. Objectif et origine du besoin
 

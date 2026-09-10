@@ -61,6 +61,84 @@ class ResilientPlaywrightProviderCampaignFactoryTest {
         assertThat(h.delegate.opens).isEqualTo(1);
     }
 
+    @ParameterizedTest @ValueSource(ints={403,429})
+    void v8ReservesItsExplicitPressureProfileAndKnownRefusalsSuspendTheSharedStore(int status) {
+        Harness h=new Harness(); UUID campaignId=UUID.randomUUID(); var refusal=headers(status);
+        when(h.store.tryReserveDeparture(any(UUID.class),eq(DepartureProfile.LIVE_V8),any(Instant.class))).thenAnswer(invocation->{
+            h.trace.add("reserve-v8");return h.allow(invocation.getArgument(0),invocation.getArgument(2));
+        });
+        h.delegate.behavior=admission->{admission.onTransportProgress(refusal);return response(status);};
+
+        try(var campaign=h.factory.openLiveGroupedV8(campaignId,ALL)) {
+            assertThat(campaign.execute(PlaywrightProviderRequest.eventDetails(123)).httpStatus()).isEqualTo(status);
+        }
+
+        verify(h.store).tryReserveDeparture(any(UUID.class),eq(DepartureProfile.LIVE_V8),eq(START));
+        verify(h.store,never()).tryReserveDeparture(any(UUID.class),any(Instant.class));
+        verify(h.store).suspend(any(),eq(campaignId),eq(status),eq(refusal.headersReceivedAt()),eq(refusal.retryAfterNotBefore()));
+        verify(h.store,atLeastOnce()).recordAuthenticatedV8Departure(any(),eq(refusal.requestedAt()),eq(START));
+        assertThat(h.state.get().state()).isEqualTo(State.SUSPENDED);
+        assertThatThrownBy(()->h.factory.open(UUID.randomUUID(),ALL)).hasMessage("PROVIDER_SUSPENDED");
+    }
+
+    @Test
+    void v8PersistsDelayedWorkerRequestedAtFromProgressAndValidResponseFallback() {
+        Harness h=new Harness(); Instant requested=START.plusSeconds(7),observed=START.plusSeconds(20),received=START.plusSeconds(21);
+        when(h.store.tryReserveDeparture(any(UUID.class),eq(DepartureProfile.LIVE_V8),any(Instant.class))).thenAnswer(invocation->
+                h.allow(invocation.getArgument(0),invocation.getArgument(2)));
+        var sent=new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.REQUEST_SENT,
+                30_000,requested,null,null,null,false);
+        h.delegate.behavior=admission->{h.clock.advance(Duration.ofSeconds(20));admission.onTransportProgress(sent);
+            return response(requested,received,200);};
+
+        try(var campaign=h.factory.openLiveGroupedV8(UUID.randomUUID(),ALL)) {
+            campaign.execute(PlaywrightProviderRequest.eventDetails(123));
+        }
+
+        verify(h.store).recordAuthenticatedV8Departure(any(),eq(requested),eq(observed));
+        verify(h.store).recordAuthenticatedV8Departure(any(),eq(requested),eq(received));
+        verify(h.store).markDepartureFinished(any(),eq(observed));
+    }
+
+    @Test
+    void v8RateLimitRaceWaitsBeforeTheCallerCanStartItsScheduleOrEmit() {
+        Harness h=new Harness(); AtomicInteger attempts=new AtomicInteger(); Instant eligible=START.plusSeconds(1);
+        when(h.store.tryReserveDeparture(any(UUID.class),eq(DepartureProfile.LIVE_V8),any(Instant.class))).thenAnswer(invocation->{
+            h.trace.add("reserve-v8");
+            if(attempts.getAndIncrement()==0) return new DepartureDecision(false,DepartureReason.RATE_LIMITED,eligible,h.state.get());
+            return h.allow(invocation.getArgument(0),invocation.getArgument(2));
+        });
+        AtomicInteger starts=new AtomicInteger();
+        try(var campaign=h.factory.openLiveGroupedV8(UUID.randomUUID(),ALL)) {
+            campaign.execute(PlaywrightProviderRequest.eventDetails(123),new PlaywrightDispatchAdmission() {
+                public void check() { }
+                public Permit acquireDispatchPermit() { starts.incrementAndGet();h.trace.add("schedule-start");return ()->{ }; }
+            });
+        }
+
+        assertThat(h.paused).isEqualTo(Duration.ofSeconds(1));
+        assertThat(starts).hasValue(1);
+        assertThat(h.trace).containsSubsequence("reserve-v8","reserve-v8","schedule-start","get");
+    }
+
+    @Test
+    void v8PersistsA403BeforeRejectingIncoherentWorkerEvidence() {
+        Harness h=new Harness(); UUID campaign=UUID.randomUUID(); Instant requested=START.plusSeconds(1),headers=START.plusSeconds(2);
+        when(h.store.tryReserveDeparture(any(UUID.class),eq(DepartureProfile.LIVE_V8),any(Instant.class))).thenAnswer(invocation->
+                h.allow(invocation.getArgument(0),invocation.getArgument(2)));
+        var refusal=new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.HEADERS_RECEIVED,
+                30_000,requested,headers,403,null,false);
+        h.delegate.behavior=admission->{admission.onTransportProgress(refusal);return response(403);};
+        var protectedCampaign=h.factory.openLiveGroupedV8(campaign,ALL);
+
+        assertThatThrownBy(()->protectedCampaign.execute(PlaywrightProviderRequest.eventDetails(123)))
+                .hasMessage("PROVIDER_REQUESTED_TIMESTAMP_INCOHERENT");
+        verify(h.store).suspend(any(),eq(campaign),eq(403),eq(headers),isNull());
+        verify(h.store,never()).recordAuthenticatedV8Departure(any(),any(),any());
+        assertThat(h.state.get().state()).isEqualTo(State.SUSPENDED);
+        protectedCampaign.close();
+    }
+
     @ParameterizedTest @ValueSource(strings={"historical","v4","v5","v6","manual-j5"})
     void everyOpeningIsBlockedBeforeDelegateWhenTheProviderIsSuspended(String opening) {
         Harness h = new Harness();
@@ -279,7 +357,13 @@ class ResilientPlaywrightProviderCampaignFactoryTest {
                 START,START.plusMillis(50),status,START.plusSeconds(60),false);
     }
     private static PlaywrightProviderResponse response() {
-        return new PlaywrightProviderResponse(START,START.plusMillis(100),200,"application/json",Duration.ofMillis(100),
+        return response(200);
+    }
+    private static PlaywrightProviderResponse response(int status) {
+        return response(START,START.plusMillis(100),status);
+    }
+    private static PlaywrightProviderResponse response(Instant requested,Instant received,int status) {
+        return new PlaywrightProviderResponse(requested,received,status,"application/json",Duration.between(requested,received),
                 RawPayloadEvidence.capture("{\"ok\":true}".getBytes(StandardCharsets.UTF_8)));
     }
     private static final class Harness {
@@ -336,6 +420,8 @@ class ResilientPlaywrightProviderCampaignFactoryTest {
         public PlaywrightProviderCampaign openLiveGrouped(UUID id,Set<SofascoreEndpointType> e){return open(id,e);}
         public PlaywrightProviderCampaign openLiveGroupedV5(UUID id,Set<SofascoreEndpointType> e){return open(id,e);}
         public PlaywrightProviderCampaign openLiveGroupedV6(UUID id,Set<SofascoreEndpointType> e){return open(id,e);}
+        public PlaywrightProviderCampaign openLiveGroupedV7(UUID id,Set<SofascoreEndpointType> e){return open(id,e);}
+        public PlaywrightProviderCampaign openLiveGroupedV8(UUID id,Set<SofascoreEndpointType> e){return open(id,e);}
         public PlaywrightProviderCampaign openManualJ5Grouped(UUID id,Set<SofascoreEndpointType> e){return open(id,e);}
     }
 }

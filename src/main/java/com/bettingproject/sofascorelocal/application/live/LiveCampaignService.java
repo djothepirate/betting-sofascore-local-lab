@@ -131,19 +131,20 @@ public final class LiveCampaignService {
                 .map(event -> new Target(event.identity().value(), event.identity().providerEventId(),
                         event.observationId(), event.source().snapshotId().orElseThrow())).toList();
         if (targets.isEmpty()) return new Preparation(null, excludedFinished, excludedPostponed);
-        AdmissionProfile profile = currentAdmissionProfile("live-v7");
-        admission.admitV7(targets.size(), profile.groupedProfile());
+        AdmissionProfile profile = currentAdmissionProfile("live-v8");
+        admission.admitV8(targets.size(), profile.groupedProfile());
         Duration cycleInterval = Duration.ofSeconds(60);
         UUID id = UUID.randomUUID(); Instant now = clock.instant().truncatedTo(java.time.temporal.ChronoUnit.MICROS);
         long bytes = admission.maximumBytesV5(targets.size());
         // Fixed order and explicit rules: a historic proof or a changed family envelope cannot
         // silently authorize a new grouped manifest.
-        String material = id + "|live-v7|" + now + "|" + properties.getDuration() + "|2500|20000|" + bytes
+        String material = id + "|live-v8|" + now + "|" + properties.getDuration() + "|2500|20000|" + bytes
                 + "|" + selectionMaximum() + "|" + profile + "|critical=60|lineups=60|prematch=initial4,T-60all4,lineups300untilConfirmed,T-5quiet,T0J4each60"
                 + "|delayed=rebaseKickoff,T-60all4,lineups300untilConfirmed,T-5quiet,T0J4each60"
-                + "|intra=0|inter=1|sequential|maxGroup=4|order=J4,incidents,statistics,lineups"
-                + "|phaseCount=1|utilization=0.9|provider-resilience-v1|finishFence=2|rate=25/60,1000/3600|404=300,600,900|" + targets;
-        Manifest manifest = new Manifest(id, Sha256.hex(material.getBytes(StandardCharsets.UTF_8)), "live-v7",
+                + "|intra=0|inter=0.5|sequential|maxGroup=4|order=J4,incidents,statistics,lineups"
+                + "|phaseCount=1|utilization=0.9|provider-resilience-v1|departureProfile=live-v8"
+                + "|finishFence=0.5|rate=45/60,2756/3600|404=300,600,900|" + targets;
+        Manifest manifest = new Manifest(id, Sha256.hex(material.getBytes(StandardCharsets.UTF_8)), "live-v8",
                 now, now.plusSeconds(300), properties.getDuration(), 2500, 20000, bytes,
                 selectionMaximum(), targets, profile, cycleInterval);
         return new Preparation(store.prepare(manifest), excludedFinished, excludedPostponed);
@@ -214,7 +215,9 @@ public final class LiveCampaignService {
     }
     private int selectionMaximum(String policyVersion) {
         try { return Math.min(properties.getQualifiedMatchCapacity(),
-                "live-v7".equals(policyVersion)
+                "live-v8".equals(policyVersion)
+                        ? LiveAdmissionPolicy.qualifiedCapacityV8(properties.groupedAdmissionProfileV8())
+                        : "live-v7".equals(policyVersion)
                         ? LiveAdmissionPolicy.qualifiedCapacityV7(properties.groupedAdmissionProfileV7())
                         : "live-v6".equals(policyVersion)
                         ? LiveAdmissionPolicy.qualifiedCapacityV6(properties.groupedAdmissionProfileV6())
@@ -275,7 +278,9 @@ public final class LiveCampaignService {
                 || current.manifest().qualifiedMatchCapacity() != (grouped ? selectionMaximum(policyVersion) : properties.getQualifiedMatchCapacity())
                 || !current.manifest().duration().equals(properties.getDuration()))
             throw new IllegalArgumentException("LIVE_PREPARED_POLICY_CHANGED");
-        if ("live-v7".equals(policyVersion)) admission.admitV7(current.manifest().targets().size() - alreadyExcluded.size(),
+        if ("live-v8".equals(policyVersion)) admission.admitV8(current.manifest().targets().size() - alreadyExcluded.size(),
+                current.manifest().admissionProfile().groupedProfile());
+        else if ("live-v7".equals(policyVersion)) admission.admitV7(current.manifest().targets().size() - alreadyExcluded.size(),
                 current.manifest().admissionProfile().groupedProfile());
         else if ("live-v6".equals(policyVersion)) admission.admitV6(current.manifest().targets().size() - alreadyExcluded.size(),
                 current.manifest().admissionProfile().groupedProfile());
@@ -311,6 +316,7 @@ public final class LiveCampaignService {
                     case "live-v5" -> properties.groupedAdmissionProfileV5();
                     case "live-v6" -> properties.groupedAdmissionProfileV6();
                     case "live-v7" -> properties.groupedAdmissionProfileV7();
+                    case "live-v8" -> properties.groupedAdmissionProfileV8();
                     default -> null;
                 });
     }
@@ -320,7 +326,7 @@ public final class LiveCampaignService {
     }
 
     private static boolean resilientPolicy(String policyVersion) {
-        return "live-v6".equals(policyVersion) || "live-v7".equals(policyVersion);
+        return "live-v6".equals(policyVersion) || "live-v7".equals(policyVersion) || "live-v8".equals(policyVersion);
     }
 
     private boolean providerCleanupRequired() {
@@ -426,7 +432,8 @@ public final class LiveCampaignService {
             s.launchConfirmed = true;
             s.monotonicOrigin = System.nanoTime(); s.timeOrigin = started.startedAt();
             s.schedule = new LiveSchedule(s.manifest.targets().stream().map(Target::canonicalEventId).toList(),
-                    started.startedAt(), started.endsAt(), s.manifest.cycleInterval(), s.manifest.policyVersion(), s.manifest.campaignId());
+                    started.startedAt(), started.endsAt(), s.manifest.cycleInterval(), s.manifest.policyVersion(), s.manifest.campaignId(),
+                    s.manifest.admissionProfile().groupedProfile());
             // Recheck local observations after admission and acquisition, before any browser exists.
             s.phase = SELECTION_RECHECK;
             s.alreadyExcluded.putAll(locallyExcluded(s.manifest));
@@ -587,7 +594,11 @@ public final class LiveCampaignService {
         s.currentEndpoint = null;
         s.currentTransport = null;
         if(resilience!=null && resilientPolicy(s.manifest.policyVersion())) {
-            var permission=resilience.departureDecision(clock.instant());
+            // Historical campaign tests and policies retain the legacy store contract. V8 alone
+            // opts into the distinct pressure envelope; the shared 403/429 suspension remains V1.
+            var permission="live-v8".equals(s.manifest.policyVersion())
+                    ? resilience.departureDecision(ProviderResilienceData.DepartureProfile.LIVE_V8, clock.instant())
+                    : resilience.departureDecision(clock.instant());
             if(!permission.allowed()) {
                 if(permission.reason()==ProviderResilienceData.DepartureReason.RATE_LIMITED) {
                     s.schedule.defer(due,permission.nextAllowedAt()); return;
@@ -625,6 +636,7 @@ public final class LiveCampaignService {
             var dispatchAdmission = new PlaywrightDispatchAdmission() {
                 @Override public void onTransportProgress(PlaywrightTransportDiagnostic observed) {
                     s.currentTransport=observed;
+                    recordObservedV8Departure(s, due, observed.requestedAt());
                     if(observed.httpStatus()!=null && (observed.httpStatus()==403 || observed.httpStatus()==429)) {
                         var cause=new LiveCampaignDiagnostic(TRANSPORT,"PROVIDER_HTTP_"+observed.httpStatus(),clock.instant(),
                                 attempt.attemptId(),due.endpoint(),observed);
@@ -661,6 +673,10 @@ public final class LiveCampaignService {
                                     : due.finalCycle() || "FINALIZING".equals(budget.eventState()) ? LiveProviderDispatchGroup.Phase.FINALIZING
                                     : "WAITING_START".equals(budget.eventState()) ? LiveProviderDispatchGroup.Phase.PREMATCH
                                     : LiveProviderDispatchGroup.Phase.IN_PLAY), dispatchAdmission);
+            // In-memory transports and historical diagnostics may not emit a
+            // REQUEST_SENT progress frame.  The validated response timestamp is
+            // the same bounded worker fact and completes the V8 rephase idempotently.
+            recordObservedV8Departure(s, due, response.requestedAt());
             if(response.diagnostic()!=null) dispatchAdmission.onTransportProgress(response.diagnostic());
             else if(response.httpStatus()==403 || response.httpStatus()==429) {
                 var cause=new LiveCampaignDiagnostic(TRANSPORT,"PROVIDER_HTTP_"+response.httpStatus(),clock.instant(),
@@ -790,6 +806,15 @@ public final class LiveCampaignService {
     private void persistCurrentTransport(Session s) {
         if (diagnostics != null && s.currentAttempt != null && s.currentEndpoint != null && s.currentTransport != null)
             diagnostics.recordTransport(s.manifest.campaignId(), s.currentAttempt, s.currentEndpoint, s.currentTransport);
+    }
+
+    /** Keep V8's fixed minute phase tied to an authenticated worker departure, not IPC admission. */
+    private static void recordObservedV8Departure(Session s, LiveSchedule.Due due, Instant requestedAt) {
+        if (requestedAt == null || !"live-v8".equals(s.manifest.policyVersion())) return;
+        s.dispatchLock.lock();
+        try {
+            if (s.schedule != null) s.schedule.departed(due, requestedAt);
+        } finally { s.dispatchLock.unlock(); }
     }
 
     private static void logFailure(Session s, String kind, LiveCampaignDiagnostic diagnostic) {

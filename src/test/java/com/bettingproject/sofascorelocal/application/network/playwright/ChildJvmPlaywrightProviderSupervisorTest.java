@@ -576,8 +576,8 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         assertThat(failures).allSatisfy(failure -> assertThat(failure.get()).isNull());
     }
 
-    @ParameterizedTest @ValueSource(booleans = {false, true})
-    void liveGroupHasNoAddedIntraGroupPauseButNextGroupAndNormalCallsKeepTheFence(boolean v5)
+    @ParameterizedTest @ValueSource(strings = {"live-v4", "live-v5", "live-v8"})
+    void groupedPoliciesKeepHistoricalContinuationsButV8FencesEveryFamilyExchange(String policy)
             throws Exception {
         ProviderPlaywrightProperties properties = enabledProperties("live-group-delay.jar");
         Instant rootStartedAt = Instant.parse("2026-09-08T10:00:00Z");
@@ -600,8 +600,11 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                 SofascoreEndpointType.EVENT_LINEUPS);
         UUID campaignId = UUID.randomUUID(), groupId = UUID.randomUUID();
         long event = 16_416_319L;
-        PlaywrightProviderCampaign campaign = v5 ? supervisor.openLiveGroupedV5(campaignId, endpoints)
-                : supervisor.openLiveGrouped(campaignId, endpoints);
+        PlaywrightProviderCampaign campaign = switch (policy) {
+            case "live-v5" -> supervisor.openLiveGroupedV5(campaignId, endpoints);
+            case "live-v8" -> supervisor.openLiveGroupedV8(campaignId, endpoints);
+            default -> supervisor.openLiveGrouped(campaignId, endpoints);
+        };
         var check = new LiveProviderDispatchGroup(campaignId, groupId, event,
                 LiveProviderDispatchGroup.Phase.CHECK);
         var playing = new LiveProviderDispatchGroup(campaignId, groupId, event,
@@ -615,20 +618,25 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                 PlaywrightDispatchAdmission.UNRESTRICTED);
         campaign.executeGrouped(PlaywrightProviderRequest.eventLineups(event), playing,
                 PlaywrightDispatchAdmission.UNRESTRICTED);
-        assertThat(access.gatePauseTotal()).isZero();
-        assertThat(observedStarts).containsExactly(0L, 33_000_000L, 66_000_000L, 99_000_000L);
+        long continuationFenceMillis = "live-v8".equals(policy) ? 500 : 0;
+        long groupFenceMillis = "live-v5".equals(policy) ? 1_000 : "live-v8".equals(policy) ? 500 : 3_000;
+        assertThat(observedStarts).containsExactly(0L,
+                Duration.ofMillis(33 + continuationFenceMillis).toNanos(),
+                Duration.ofMillis(66 + 2 * continuationFenceMillis).toNanos(),
+                Duration.ofMillis(99 + 3 * continuationFenceMillis).toNanos());
+        assertThat(access.gatePauseTotal()).isEqualTo(Duration.ofMillis(3 * continuationFenceMillis));
 
         UUID nextGroup = UUID.randomUUID();
         campaign.executeGrouped(PlaywrightProviderRequest.eventDetails(event),
                 new LiveProviderDispatchGroup(campaignId, nextGroup, event, LiveProviderDispatchGroup.Phase.CHECK),
                 PlaywrightDispatchAdmission.UNRESTRICTED);
-        long groupDelayMillis = v5 ? 1_000 : 3_000;
-        assertThat(observedStarts.getLast()).isEqualTo(Duration.ofMillis(groupDelayMillis + 132).toNanos());
-        assertThat(access.gatePauseTotal()).isEqualTo(Duration.ofMillis(groupDelayMillis));
+        long nextGroupStartMillis = 132 + 3 * continuationFenceMillis + groupFenceMillis;
+        assertThat(observedStarts.getLast()).isEqualTo(Duration.ofMillis(nextGroupStartMillis).toNanos());
+        assertThat(access.gatePauseTotal()).isEqualTo(Duration.ofMillis(3 * continuationFenceMillis + groupFenceMillis));
         // A historical execute invocation cannot inherit the live group's exception.
         campaign.execute(PlaywrightProviderRequest.eventDetails(event));
-        assertThat(observedStarts.getLast()).isEqualTo(Duration.ofMillis(groupDelayMillis + 3_165).toNanos());
-        assertThat(access.gatePauseTotal()).isEqualTo(Duration.ofMillis(groupDelayMillis + 3_000));
+        assertThat(observedStarts.getLast()).isEqualTo(Duration.ofMillis(nextGroupStartMillis + 3_033).toNanos());
+        assertThat(access.gatePauseTotal()).isEqualTo(Duration.ofMillis(3 * continuationFenceMillis + groupFenceMillis + 3_000));
         assertThatThrownBy(() -> campaign.executeGrouped(PlaywrightProviderRequest.eventIncidents(event),
                 new LiveProviderDispatchGroup(campaignId, nextGroup, event, LiveProviderDispatchGroup.Phase.IN_PLAY),
                 PlaywrightDispatchAdmission.UNRESTRICTED))
@@ -2151,7 +2159,9 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                         assertThat(input.read()).isEqualTo(-1);
                         return;
                     }
-                    assertThat(command).isEqualTo(ChildJvmPlaywrightProviderSupervisor.GET);
+                    assertThat(command).isIn(
+                            Byte.toUnsignedInt(ChildJvmPlaywrightProviderSupervisor.GET),
+                            Byte.toUnsignedInt(ChildJvmPlaywrightProviderSupervisor.GET_LIVE_V6));
                     readProviderRequest(input);
                     observedStarts.add(nanoTime.getAsLong());
                     int requestIndex = getCount.incrementAndGet();

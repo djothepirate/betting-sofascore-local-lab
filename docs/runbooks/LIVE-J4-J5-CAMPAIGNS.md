@@ -5,21 +5,84 @@ Références : [ADR-SS-005 accepté](../../ADR-SS-005-bounded-local-live-j4-j5-c
 [architecture](../architecture/LIVE-J4-J5-CAMPAIGNS.md),
 [qualification](../validation/WO058-LIVE-J4-J5-IMPLEMENTATION-20260907.md).
 
-## Nouvelles préparations : live-v7, fenêtres avant le coup d’envoi
+## Nouvelles préparations : live-v8, activation fermée avant qualification
+
+Les nouvelles préparations sont orientées vers `live-v8`. Cette révision conserve la cible
+de **60 s** pour les départs normaux de **chaque couple rencontre/famille** en jeu — J4,
+incidents, statistiques et compositions — et admet au plus **dix rencontres**. Elle ne
+transforme pas la date d'affichage, une tentative réservée ou une réception incomplète en
+preuve de fraîcheur. Les manifestes v1–v7 restent inchangés et consultables avec leur
+propre politique ; aucun profil plus ancien ne sert de repli à v8.
+
+La configuration V8 reste délibérément incomplète tant que sa qualification locale n'a pas
+abouti. Elle requiert une empreinte
+`SOFASCORE_LIVE_GROUPED_V8_QUALIFICATION_SHA256` et les huit enveloppes
+`SOFASCORE_LIVE_GROUPED_V8_{J4,INCIDENTS,STATISTICS,LINEUPS}_{REQUEST,PROCESSING}_ENVELOPE`.
+Sans cet ensemble cohérent, l'admission retourne une capacité à zéro et la préparation est
+indisponible. Cet état est attendu : **ne pas** recopier un hash V7, inventer une enveloppe
+ou renseigner le lanceur Eclipse afin de lancer une campagne à dix rencontres.
+
+### Règles V8 à qualifier
+
+| Élément | Règle de conception V8 |
+| --- | --- |
+| Capacité de sélection | Au plus **10** rencontres, sous réserve de l'admission du profil V8 et des plafonds de manifeste existants. |
+| Cadence normale | Les quatre familles sont placées dans des slots déterministes par rencontre et par famille. Lorsque les échanges restent dans leurs enveloppes qualifiées, deux départs normaux successifs du même couple sont séparés de **60 s au plus**. |
+| Fence de transport local | Après une fin d'échange prouvée, le fence ajouté est de **500 ms**. Le départ réel peut toutefois être plus tardif lorsqu'un slot, un budget, un 404, un timeout ou une suspension l'impose ; ce retard est visible et ne doit pas être qualifié de fraîcheur. |
+| Budgets locaux persistants | Au plus **45 départs / 60 s glissantes** et **2 756 départs / heure glissante**. Les compteurs sont partagés et survivent aux campagnes ; ils ne sont pas un seuil supposé du fournisseur. |
+| Preuve de départ et pression | La fenêtre V8 utilise `REQUEST_SENT` authentifié quand il est cohérent avec la réservation et l'observation parent ; sans preuve, la complétion est retenue de façon conservatrice. Un hold qui franchit un créneau normal rend les cycles/familles manqués visibles dans `WAITING_PRESSURE_RECHECK`, avant un J4 de reprise à l'échéance autorisée. |
+| Réception et réponse lente | Une réponse qui dépasse l'enveloppe ne permet pas d'affirmer la cadence normale. Elle est diagnostiquée comme exception ; une réception fournisseur reste distincte de l'heure de départ locale. |
+| Refus connus | Un HTTP **403/429** suspend durablement l'accès partagé. Un réarmement demeure manuel, sans sonde, reset de budget, proxy, rotation d'IP/VPN ou reprise automatique. |
+
+Les règles prématch restent celles du calendrier adopté : groupe initial, contrôle T−60 pour
+un coup d'envoi plus lointain, compositions seules toutes les cinq minutes jusqu'à confirmation
+entre T−60 et T−5, puis attente du coup d'envoi. Au coup d'envoi, J4 seul reste à 60 s jusqu'à
+`inprogress`; les quatre familles suivent ensuite la vague V8 de 60 s. Un `delayed` avec un
+nouvel `startTimestamp` recalcule les fenêtres ; horaire manquant ou régression après
+`inprogress` restent à examiner. Les 404 J5 restent différés par rencontre/famille et ne
+créent ni rafale de rattrapage ni contournement du budget.
+
+Lorsqu'un J4 initial `notstarted` est parti moins de 60 s avant T0, V8 ne lance pas une seconde
+vague complète au coup d'envoi. Le premier J4 de bascule attend la plus tardive de la phase
+sérialisée de T0 et de ce départ initial + 60 s ; les J5 restent conditionnels à sa réponse
+`inprogress`. Cette règle conserve la fraîcheur par famille tout en évitant une pointe de 60
+départs/minute pour dix rencontres lors d'un lancement très proche du coup d'envoi.
+
+### Qualifier V8 uniquement avec le fournisseur absent
+
+La qualification V8 est **à faire**, pas accomplie par cette documentation. Après les tests
+standards et d'intégration, le seul parcours prévu est la commande explicite suivante :
+
+```powershell
+.\scripts\Invoke-LiveGroupedPlaywrightQualification.ps1 -PolicyVersion live-v8
+```
+
+Elle doit utiliser le worker de production, Chromium et PostgreSQL de test contre un serveur
+éphémère lié à `127.0.0.1`, avec cinq minutes de mise en régime puis au moins trente minutes
+établies. Elle doit établir dix rencontres, les quatre familles, les départs par
+rencontre/famille, le fence de 500 ms, les budgets persistants et l'absence complète d'appel
+SofaScore ou d'utilisation de la base opérateur. Ses octets sont d'abord produits sous `.tmp`
+pour revue ; le script ne charge pas le lanceur, ne met pas à jour de preuve suivie et ne
+modifie pas la configuration d'une campagne réelle. Une passe favorable reste une preuve de
+planification loopback sous enveloppes ; elle ne mesure ni l'acceptation de 45/min par
+SofaScore, ni la latence Internet, ni la résistance future à un bannissement.
+
+## Profil historique live-v7, qualifié avec ses propres bornes
 
 Le lot V4/V46 et live-v7/V47 du 9 septembre est qualifié séparément du profil historique
-v6. Les nouvelles préparations demandent `SOFASCORE_LIVE_GROUPED_V7_QUALIFICATION_SHA256`
+v6. Son historique demande `SOFASCORE_LIVE_GROUPED_V7_QUALIFICATION_SHA256`
 et les huit enveloppes `SOFASCORE_LIVE_GROUPED_V7_{J4,INCIDENTS,STATISTICS,LINEUPS}_{REQUEST,PROCESSING}_ENVELOPE`.
-L’absence de preuve laisse la capacité à zéro. La passe locale dédiée fournit les valeurs
-et le profil ; une empreinte v6 ne vaut pas qualification v7.
+L'absence de preuve laissait la capacité v7 à zéro. La passe locale dédiée fournit les valeurs
+et le profil ; une empreinte v6 ne valait pas qualification v7, et le profil v7 ne vaut pas
+qualification v8.
 
-### Charger le profil local v7 qualifié
+### Relire le profil local v7 qualifié
 
 Le [profil v7 versionné](../validation/WO058-LIVE-V7-CAPACITY-20260910.md) qualifie au plus
 **trois rencontres** pour son périmètre synthétique loopback. Il ne mesure ni l’acceptation
-du fournisseur ni une capacité à trois rencontres au-delà de ce périmètre. Avant le prochain
-démarrage manuel du Lab, le lanceur Eclipse doit contenir les onze valeurs suivantes ; elles
-ne sont pas appliquées automatiquement par le code ou par ce document.
+du fournisseur ni une capacité à trois rencontres au-delà de ce périmètre. Ces onze valeurs
+restent la trace de cette qualification v7 : elles ne sont pas appliquées automatiquement
+et ne doivent pas être chargées comme un substitut au profil v8 absent.
 
 | Variable | Valeur qualifiée |
 | --- | --- |
@@ -36,8 +99,8 @@ supérieure à trois n’augmente pas l’admission v7, qui est déjà bornée �
 existante peut donc rester inchangée. Les valeurs par défaut restent invalides afin que
 l’absence d’une qualification explicite conserve la capacité à zéro.
 
-Le profil courant garde les protections partagées 25/min, 1 000/h et deux secondes après
-fin d’échange, et admet trois rencontres au plus. Ce plafond est celui du profil,
+Le profil v7 conservait les protections partagées 25/min, 1 000/h et deux secondes après
+fin d’échange, et admettait trois rencontres au plus. Ce plafond est celui du profil,
 pas une limite définitive de l’architecture. Les plafonds minute/heure sont des paramètres
 locaux prudents et révisables. Un candidat 40/min et 2 000/h est analysé séparément, sans
 activation ni modification du budget déjà consommé ou de la suspension fournisseur.
@@ -51,7 +114,7 @@ Avec sept rencontres, les deux secondes seules consomment 56 s par minute avant 
 | Coup d’envoi à plus d’une heure | attendre T−60 min, puis un groupe complet |
 | Dernière heure, avant T−5 min | compositions seules toutes les 5 min jusqu’à confirmation |
 | De T−5 min au coup d’envoi | aucune répétition ; attente du coup d’envoi |
-| Coup d’envoi atteint, J4 notstarted | J4 seul toutes les 60 s |
+| Coup d’envoi atteint, J4 notstarted | J4 seul toutes les 60 s ; si un J4 initial a moins de 60 s, reprendre à sa prochaine phase stable plutôt que dupliquer la vague à T0 |
 | J4 inprogress | J4 et les trois familles J5 toutes les 60 s nominales |
 | J4 finished | collecte finale bornée puis arrêt de la rencontre |
 

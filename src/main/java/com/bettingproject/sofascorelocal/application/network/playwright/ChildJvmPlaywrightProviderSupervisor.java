@@ -231,6 +231,14 @@ public final class ChildJvmPlaywrightProviderSupervisor
     }
 
     @Override
+    public PlaywrightProviderCampaign openLiveGroupedV8(UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        if (!Set.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS).equals(allowedEndpoints))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
+        return open(campaignId, allowedEndpoints, LiveProviderGroupTracker.Authority.LIVE_V8);
+    }
+
+    @Override
     public PlaywrightProviderCampaign openManualJ5Grouped(
             UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
         if (!Set.of(SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_INCIDENTS,
@@ -477,7 +485,11 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 long requestDeadline;
                 boolean continuation = state.liveGroups != null && state.liveGroups.isContinuation(request, group);
                 Runnable continuationGuard = () -> { requireActive(state); admission.check(); };
-                if (continuation) providerNetworkStartDelayGate.admitGroupContinuation(continuationGuard);
+                // Historical grouped continuations retain their no-pause protocol. V8 is
+                // deliberately different: its qualified minute envelope charges a 500 ms
+                // terminal fence after every family exchange, including J5 continuations.
+                if (continuation && !state.liveGroups.requiresPostExchangeFenceForContinuation())
+                    providerNetworkStartDelayGate.admitGroupContinuation(continuationGuard);
                 else providerNetworkStartDelayGate.awaitNextGroupDispatch(
                         group == null ? null : state.liveGroups, continuationGuard);
                 try (PlaywrightDispatchAdmission.Permit permit = admission.acquireDispatchPermit()) {

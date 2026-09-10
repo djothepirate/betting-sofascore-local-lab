@@ -119,8 +119,8 @@ public class LiveCampaignPresentation {
         String policyVersion = view.manifest().policyVersion();
         if (!grouped(policyVersion)) return null;
         long interval = view.manifest().cycleInterval().toSeconds();
-        boolean minutePolicy = "live-v7".equals(policyVersion);
-        // Prematch v7 is sparse; one J4/minute at kickoff is the conservative waiting rate.
+        boolean minutePolicy = "live-v7".equals(policyVersion) || "live-v8".equals(policyVersion);
+        // Prematch V7/V8 is sparse; one J4/minute at kickoff is the conservative waiting rate.
         double waitingRate = minutePolicy ? 1 : 120.0 / interval;
         double playingRate = minutePolicy ? 240.0 / interval : 180.0 / interval + 0.2;
         List<EventView> active = view.events().stream().filter(e -> !terminal(e.state())).toList();
@@ -144,7 +144,8 @@ public class LiveCampaignPresentation {
 
     private static boolean grouped(String policyVersion) {
         return "live-v4".equals(policyVersion) || "live-v5".equals(policyVersion)
-                || "live-v6".equals(policyVersion) || "live-v7".equals(policyVersion);
+                || "live-v6".equals(policyVersion) || "live-v7".equals(policyVersion)
+                || "live-v8".equals(policyVersion);
     }
 
     private Event event(CampaignView campaign, EventView event, Instant observedAt) {

@@ -301,26 +301,50 @@ class LiveDiagnosticPersistenceIT {
     }
 
     @Test
-    void upgradingPopulatedV42ToV44PreservesLegacyPoliciesAndExistingProviderSuspension() {
+    void upgradingPopulatedV42ToV50PreservesLegacyPoliciesExistingProviderSuspensionAndCompletionFallback() {
         Fixture f=fixture("42");Target target=f.seed(58001);
         Manifest v1=f.prepare("live-v1",List.of(target)),v4=f.prepare("live-v4",List.of(target)),v5=f.prepare("live-v5",List.of(target));
-        var resilience=transactional(new JdbcProviderResilienceStore(f.jdbc),ProviderResilienceStore.class,f.transactions);
-        UUID departure=UUID.randomUUID();resilience.tryReserveDeparture(departure,T0);resilience.markDepartureFinished(departure,T0.plusSeconds(1));
-        var suspension=resilience.suspend(UUID.randomUUID(),v5.campaignId(),403,T0.plusSeconds(2),null);
+        UUID departure=UUID.randomUUID(),evidence=UUID.randomUUID();
+        Instant finished=T0.plusSeconds(1),suspendedAt=T0.plusSeconds(2);
+        f.jdbc.update("insert into provider_departure_reservation(dispatch_id,reserved_at,policy_version) values (?,?,?)",
+                departure,Timestamp.from(T0),ProviderResilienceData.POLICY_VERSION);
+        f.jdbc.update("insert into provider_departure_completion(dispatch_id,finished_at) values (?,?)",departure,Timestamp.from(finished));
+        f.jdbc.update("""
+                insert into provider_resilience_event(event_id,kind,state_version,occurred_at,http_status,retry_not_before,campaign_id)
+                    values (?,'REFUSAL',1,?,403,null,?)
+                """,evidence,Timestamp.from(suspendedAt),v5.campaignId());
+        f.jdbc.update("""
+                update provider_resilience_state set state='SUSPENDED',version=1,changed_at=?,http_status=403,
+                    suspended_at=?,retry_not_before=null,last_departure_at=?,last_departure_finished_at=?,
+                    unresolved_dispatch_id=null,evidence_id=?,campaign_id=? where singleton_id=1
+                """,Timestamp.from(suspendedAt),Timestamp.from(suspendedAt),Timestamp.from(T0),Timestamp.from(finished),evidence,v5.campaignId());
+        var suspension=new ProviderResilienceData.Snapshot(ProviderResilienceData.State.SUSPENDED,1,suspendedAt,403,
+                suspendedAt,null,T0,evidence,v5.campaignId(),finished,null);
         var before=f.evidence("live_campaign","live_event","live_grouped_policy","provider_snapshot","provider_snapshot_occurrence",
                 "canonical_event_observation","event_detail_observation","provider_resilience_state","provider_resilience_event",
                 "provider_departure_reservation","provider_departure_completion");
         assertThat(f.migrate("44")).isEqualTo(2);f.assertEvidence(before);
         for(Manifest manifest:List.of(v1,v4,v5)) assertThat(f.campaigns.find(manifest.campaignId()).orElseThrow().manifest()).isEqualTo(manifest);
+        assertThat(f.migrate("48")).isEqualTo(4);
+        assertThat(f.jdbc.queryForObject("select admission_profile from provider_departure_reservation where dispatch_id=?",String.class,departure))
+                .isEqualTo("legacy-v1");
+        assertThat(f.jdbc.queryForObject("select last_departure_admission_profile from provider_resilience_state where singleton_id=1",String.class))
+                .isNull();
+        assertThat(f.migrate("50")).isEqualTo(2);
+        assertThat(f.jdbc.queryForObject("select source from provider_departure_accounting where dispatch_id=?",String.class,departure))
+                .isEqualTo("COMPLETION_FALLBACK");
+        var resilience=transactional(new JdbcProviderResilienceStore(f.jdbc),ProviderResilienceStore.class,f.transactions);
         assertThat(resilience.snapshot()).isEqualTo(suspension);
+        assertThat(resilience.tryReserveDeparture(UUID.randomUUID(),T0.plusSeconds(4)).reason())
+                .isEqualTo(ProviderResilienceData.DepartureReason.PROVIDER_SUSPENDED);
         assertThat(f.count("live_campaign_diagnostic")).isZero();
         assertThat(f.count("live_attempt_transport_diagnostic")).isZero();
-        assertThat(f.migrate("44")).isZero();
+        assertThat(f.migrate("50")).isZero();
     }
 
     @Test
-    void nativeBackupRestorePreservesAllSixResilienceTablesAndAFreeGuardWithoutRearmingTheProvider() throws Exception {
-        Fixture source=fixture("45");Running running=source.running();
+    void nativeBackupRestorePreservesAllSevenResilienceTablesAndAFreeGuardWithoutRearmingTheProvider() throws Exception {
+        Fixture source=fixture("50");Running running=source.running();
         Manifest v6=source.prepare("live-v6",List.of(source.seed(58002)));
         var campaign=source.campaigns.find(running.campaign()).orElseThrow();
         Ownership owner=campaign.ownership();
@@ -345,6 +369,7 @@ class LiveDiagnosticPersistenceIT {
         var suspended=resilience.markDepartureFinished(running.attempt(),T0.plusSeconds(45));
         source.guard.releaseAfterVerifiedCleanup(owner,T0.plusSeconds(46));
         var evidence=source.evidence("provider_resilience_state","provider_departure_reservation","provider_departure_completion",
+                "provider_departure_accounting",
                 "provider_resilience_event","live_attempt_transport_diagnostic","live_campaign_diagnostic");
         evidence.forEach((table,rows)->assertThat(rows).as(table+" is populated before native backup").isNotEmpty());
         String script=Files.readString(Path.of("scripts/Backup-Restore-J6.ps1"),StandardCharsets.UTF_8);
@@ -369,8 +394,8 @@ class LiveDiagnosticPersistenceIT {
             assertThat(after).isEqualTo(before);
             restored.assertEvidence(evidence);
             Flyway.configure().dataSource(restored.ds).locations("classpath:db/migration")
-                    .target(MigrationVersion.fromVersion("45")).load().validate();
-            assertThat(restored.migrate("45")).isZero();
+                    .target(MigrationVersion.fromVersion("50")).load().validate();
+            assertThat(restored.migrate("50")).isZero();
             assertThat(restored.guard.snapshot().state()).isEqualTo("FREE");
             assertThat(restored.campaigns.find(running.campaign()).orElseThrow().state()).isEqualTo("STOPPED_ERROR");
             assertThat(restored.campaigns.find(v6.campaignId()).orElseThrow().manifest()).isEqualTo(v6);
