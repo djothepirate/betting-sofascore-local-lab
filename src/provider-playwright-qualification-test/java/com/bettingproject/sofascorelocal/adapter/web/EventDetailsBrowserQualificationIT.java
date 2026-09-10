@@ -31,9 +31,13 @@ class EventDetailsBrowserQualificationIT {
                     try {route.fulfill(new Route.FulfillOptions().setContentType("image/svg+xml")
                             .setBodyBytes(Files.readAllBytes(Path.of("src/main/resources/static/images/flags/4x3/fr.svg"))));}
                     catch(Exception e){throw new IllegalStateException(e);}
+                } else if(url.equals("http://127.0.0.1/images/flags/4x3/gb-eng.svg")) {
+                    route.abort();
                 } else {external.incrementAndGet();route.abort();}
             });
             Page page=context.newPage();page.onPageError(errors::add);page.navigate("http://127.0.0.1/");
+            page.addStyleTag(new Page.AddStyleTagOptions().setContent(
+                    Files.readString(Path.of("src/main/resources/static/css/app.css"))));
             page.evaluate(Files.readString(Path.of("src/main/resources/static/js/event-details.js")));
             page.locator("#neighbor").focus();
             Map<String,Object> view=new LinkedHashMap<>();
@@ -41,15 +45,20 @@ class EventDetailsBrowserQualificationIT {
             view.put("homeManager",Map.of("name","<img src=x onerror=alert(1)>","country",Map.of("label","France","flagPath","/images/flags/4x3/fr.svg")));
             view.put("awayManager",Map.of("name","Coach B"));view.put("referee",Map.of("name","Arbitre A"));
             page.locator("[data-event-details]").evaluate("(host, view) => window.EventDetailsView.update(host, view)",view);
-            page.waitForFunction("document.querySelector('[data-event-person-flag]')?.naturalWidth > 0");
+            page.waitForFunction("document.querySelector('[data-event-person-country]')?.dataset.countryFlagState === 'ready'");
             assertThat(page.locator("[data-event-person=homeManager] [data-event-person-name]").textContent()).isEqualTo("<img src=x onerror=alert(1)>");
             assertThat(page.locator("[data-event-person=homeManager] img").count()).isEqualTo(1);
+            assertThat(page.locator("[data-event-person=homeManager] [data-event-person-nationality]")
+                    .evaluate("node => getComputedStyle(node).position")).isEqualTo("absolute");
             assertThat(page.locator("[data-event-information=round]").textContent()).isEqualTo("Finale");
-            view.put("homeManager",Map.of("name","Nouveau coach","country",Map.of("label","Pays source","flagPath","https://invalid.example/flag.svg")));
+            view.put("homeManager",Map.of("name","Nouveau coach","country",Map.of("label","Angleterre","flagPath","/images/flags/4x3/gb-eng.svg")));
             view.put("referee",Map.of("name","—"));
             page.locator("[data-event-details]").evaluate("(host, view) => window.EventDetailsView.update(host, view)",view);
-            assertThat(page.locator("[data-event-person=homeManager] img").count()).isZero();
-            assertThat(page.locator("[data-event-person=homeManager] [data-event-person-country]").textContent()).isEqualTo("Pays source");
+            page.waitForFunction("document.querySelector('[data-event-person-country]')?.dataset.countryFlagState === 'fallback'");
+            assertThat(page.locator("[data-event-person=homeManager] img").count()).isEqualTo(1);
+            assertThat(page.locator("[data-event-person=homeManager] [data-event-person-country]").textContent()).isEqualTo("Pays : Angleterre");
+            assertThat(page.locator("[data-event-person=homeManager] [data-event-person-nationality]")
+                    .evaluate("node => getComputedStyle(node).position")).isEqualTo("static");
             assertThat(page.locator("details").getAttribute("open")).isNotNull();
             assertThat(page.evaluate("document.activeElement.id")).isEqualTo("neighbor");
             assertThat(errors).isEmpty();assertThat(external).hasValue(0);assertThat(flags.get()).isPositive();

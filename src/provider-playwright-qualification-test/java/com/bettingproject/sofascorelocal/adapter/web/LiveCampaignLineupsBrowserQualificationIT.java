@@ -24,6 +24,7 @@ import com.bettingproject.sofascorelocal.port.CanonicalEventStore;
 import com.bettingproject.sofascorelocal.port.EventDetailsStore;
 import com.bettingproject.sofascorelocal.port.J5EventDataStore;
 import com.bettingproject.sofascorelocal.port.LiveDiagnosticStore;
+import com.bettingproject.sofascorelocal.port.LiveCampaignPressureReadStore;
 import com.bettingproject.sofascorelocal.security.LocalFormTokenService;
 import com.microsoft.playwright.*;
 import com.microsoft.playwright.options.ServiceWorkerPolicy;
@@ -90,6 +91,7 @@ class LiveCampaignLineupsBrowserQualificationIT {
     @MockitoBean private EventDetailsStore details;
     @MockitoBean private J5EventDataStore data;
     @MockitoBean private LiveDiagnosticStore diagnostics;
+    @MockitoBean private LiveCampaignPressureReadStore pressure;
     @MockitoBean private LineupCountryOverlayResolver lineupCountries;
     @MockitoBean private CacheManager cacheManager;
     @MockitoBean private J5EventDataQueryService queryService;
@@ -131,6 +133,8 @@ class LiveCampaignLineupsBrowserQualificationIT {
             page.evaluate(Files.readString(Path.of("src/main/resources/static/js/lineups.js")));
             Locator host = page.locator("[data-lineups]");
             assertRenderedBenchProjection(host, LineupsPresentation.from(initial, HOME_NAME, AWAY_NAME));
+            page.waitForCondition(() -> "ready".equals(player(team(host, "HOME"), 1)
+                    .locator("[data-lineups-country]").getAttribute("data-country-flag-state")));
             // Stages 1/2 reproduce the reported order changes using anonymous IDs:
             // [101..112] -> [107,101..106,108..112] -> [107,112,101..106,108..111].
             // Stages 3/4/5 expose the independently reproduced visibility failure:
@@ -566,7 +570,8 @@ class LiveCampaignLineupsBrowserQualificationIT {
         assertThat(player(home, 6).locator("summary, details, [data-lineups-statistics-hint]").count()).isZero();
         assertThat(player(home, 2).locator("[data-lineups-country]").count()).isZero();
         assertThat(player(home, 1).locator("[data-lineups-flag]").getAttribute("src")).isEqualTo("/images/flags/4x3/fr.svg");
-        assertThat(player(home, 1).locator("[data-lineups-country-label]").textContent()).isEqualTo("France");
+        assertThat(player(home, 1).locator("[data-lineups-country-label-text]").textContent()).isEqualTo("France");
+        assertThat(player(home, 1).locator(".country-accessible-prefix").textContent()).isEqualTo("Pays : ");
         assertThat(player(home, 1).locator("[data-lineups-goal-icon]").count()).isEqualTo(2);
         assertThat(player(home, 1).locator("[data-lineups-assist-icon]").count()).isEqualTo(2);
         assertThat(player(home, 1).locator("[data-lineups-achievement='goals']").getAttribute("aria-label")).isEqualTo("2 buts");

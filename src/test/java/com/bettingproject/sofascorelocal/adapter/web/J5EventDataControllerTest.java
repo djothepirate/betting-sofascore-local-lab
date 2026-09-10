@@ -208,7 +208,10 @@ class J5EventDataControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().string(containsString("Synthetic Home Striker")))
                 .andExpect(content().string(containsString("France")))
-                .andExpect(content().string(containsString("/images/flags/4x3/fr.svg")));
+                .andExpect(content().string(containsString("/images/flags/4x3/fr.svg")))
+                .andExpect(content().string(containsString("country-fallback-label")))
+                .andExpect(content().string(containsString("country-accessible-prefix")))
+                .andExpect(content().string(containsString("data-lineups-country-label-text")));
 
         assertThat(((EventLineups) lineups.data()).home().players().getFirst().country()).isEmpty();
         verify(lineupCountries).resolve(lineups);

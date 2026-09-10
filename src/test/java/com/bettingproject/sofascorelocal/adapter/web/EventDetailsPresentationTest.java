@@ -31,4 +31,29 @@ class EventDetailsPresentationTest {
         assertThat(view.round()).isEqualTo("Finale");
         assertThat(view.competition()).isEqualTo("—");
     }
+
+    @Test void localizesOfficialsAndMapsEnglandFromItsFootballAssociationCode() {
+        var england = new EventPerson("Coach anglais", Optional.of(new ProviderCountry(
+                Optional.of("England"), Optional.of("EN"))));
+        var greekReferee = new EventPerson("Arbitre grec", Optional.of(new ProviderCountry(
+                Optional.of("Greece"), Optional.of("GR"))));
+        var details = new EventDetails(902, Instant.parse("2026-09-09T20:00:00Z"),
+                new ScheduledTeam(1, "Domicile"), new ScheduledTeam(2, "Extérieur"),
+                new ScheduledEventStatus("notstarted", Optional.empty()), Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.of(england), Optional.empty(), Optional.of(greekReferee));
+
+        var view = EventDetailsPresentation.from(details);
+
+        assertThat(view.homeManager().country()).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Angleterre");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gb-eng.svg");
+        });
+        assertThat(view.referee().country()).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Grèce");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gr.svg");
+        });
+        assertThat(england.country().orElseThrow().name()).contains("England");
+        assertThat(greekReferee.country().orElseThrow().name()).contains("Greece");
+    }
 }

@@ -43,4 +43,63 @@ class CountryAssetsTest {
             assertThat(view.flagPath()).isEmpty();
         });
     }
+
+    @Test void presentsKnownCountriesInFrenchAndKeepsAVisibleCompatibilityFallback() {
+        assertThat(view("Netherlands", "NL")).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Pays-Bas");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/nl.svg");
+        });
+        assertThat(view("Denmark", "DK")).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Danemark");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/dk.svg");
+        });
+        assertThat(view("Greece", "GR")).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Grèce");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gr.svg");
+        });
+        assertThat(view("Argentina", "AR")).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Argentine");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/ar.svg");
+        });
+        assertThat(view("Côte d'Ivoire", "CI")).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Côte d’Ivoire");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/ci.svg");
+        });
+        assertThat(view("Brazil", "")).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Brésil");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/br.svg");
+        });
+        assertThat(view("Pays source", "ZZ")).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Pays source");
+            assertThat(country.flagPath()).isEmpty();
+        });
+    }
+
+    @Test void mapsBritishFootballAssociationsOnlyForTheirExpectedSourcePairs() {
+        assertThat(view("England", "EN")).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Angleterre");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gb-eng.svg");
+        });
+        assertThat(view("Scotland", "SC")).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Écosse");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gb-sct.svg");
+        });
+        assertThat(view("Wales", "WA")).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Pays de Galles");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gb-wls.svg");
+        });
+        assertThat(view("Seychelles", "SC")).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Seychelles");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/sc.svg");
+        });
+        assertThat(view("England", "US")).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("États-Unis");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/us.svg");
+        });
+    }
+
+    private static CountryPresentation.View view(String name, String alpha2) {
+        return CountryPresentation.of(Optional.of(new ProviderCountry(Optional.of(name),
+                alpha2.isEmpty() ? Optional.empty() : Optional.of(alpha2))));
+    }
 }

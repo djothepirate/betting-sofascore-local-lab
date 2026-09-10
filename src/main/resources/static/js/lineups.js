@@ -15,6 +15,7 @@
   const write = (node, value) => { if (node.textContent !== value) node.textContent = value; };
   const direct = (parent, selector) => Array.from(parent.children).find(node => node.matches(selector));
   const count = (value, fallback) => Number.isInteger(value) && value >= 0 ? value : fallback;
+  const localFlag = /^\/images\/flags\/4x3\/(?:[a-z]{2}|gb-(?:eng|sct|wls))\.svg$/;
 
   function order(parent, nodes) {
     const wanted = new Set(nodes);
@@ -167,6 +168,40 @@
     return svg;
   }
 
+  function countryLabel() {
+    const label = create("span", "country-fallback-label", "data-lineups-country-label");
+    label.append(create("span", "country-accessible-prefix", "", "Pays : "),
+      create("span", "", "data-lineups-country-label-text"));
+    return label;
+  }
+
+  function setCountryFlagState(country, state) {
+    country.dataset.countryFlagState = state;
+  }
+
+  function trackCountryFlag(country, flag, path) {
+    const ready = () => {
+      setCountryFlagState(country, flag.isConnected && flag.naturalWidth > 0 ? "ready" : "fallback");
+    };
+    flag.onload = ready;
+    flag.onerror = () => setCountryFlagState(country, "fallback");
+    if (flag.dataset.countryFlagPath !== path) {
+      flag.dataset.countryFlagPath = path;
+      setCountryFlagState(country, "pending");
+      if (flag.getAttribute("src") !== path) flag.setAttribute("src", path);
+    }
+    if (flag.complete) ready();
+  }
+
+  function initializeCountryFlags(root = document) {
+    root.querySelectorAll("[data-lineups-country]").forEach(country => {
+      const flag = country.querySelector("[data-lineups-flag]");
+      const path = flag?.getAttribute("src") || "";
+      if (flag && localFlag.test(path)) trackCountryFlag(country, flag, path);
+      else setCountryFlagState(country, "fallback");
+    });
+  }
+
   function updateCountry(container, view, before) {
     let country = container.querySelector("[data-lineups-country]");
     const label = text(view?.label);
@@ -179,21 +214,33 @@
     }
     if (!country) {
       country = create("span", "lineups-country", "data-lineups-country");
-      country.append(create("span", "", "data-lineups-country-label"));
+      country.append(countryLabel());
       container.insertBefore(country, before);
     }
-    country.setAttribute("aria-label", `Pays : ${label}`);
-    write(country.querySelector("[data-lineups-country-label]"), label);
+    country.removeAttribute("aria-label");
+    let labelText = country.querySelector("[data-lineups-country-label-text]");
+    if (!labelText) {
+      const fallback = country.querySelector("[data-lineups-country-label]") || countryLabel();
+      fallback.classList.add("country-fallback-label");
+      fallback.replaceChildren(create("span", "country-accessible-prefix", "", "Pays : "),
+        create("span", "", "data-lineups-country-label-text"));
+      if (!fallback.isConnected) country.append(fallback);
+      labelText = fallback.querySelector("[data-lineups-country-label-text]");
+    }
+    write(labelText, label);
     const path = text(view?.flagPath);
     let flag = country.querySelector("[data-lineups-flag]");
-    if (/^\/images\/flags\/4x3\/(?:[a-z]{2}|gb-(?:eng|sct|wls))\.svg$/.test(path)) {
+    if (localFlag.test(path)) {
       if (!flag) {
         flag = create("img", "lineups-flag", "data-lineups-flag");
         flag.alt = ""; flag.width = 24; flag.height = 18;
         country.prepend(flag);
       }
-      if (flag.getAttribute("src") !== path) flag.setAttribute("src", path);
-    } else flag?.remove();
+      trackCountryFlag(country, flag, path);
+    } else {
+      flag?.remove();
+      setCountryFlagState(country, "fallback");
+    }
   }
 
   function updatePlayerDecorations(node, player) {
@@ -414,6 +461,9 @@
     }
     versions.set(host, version);
   }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => initializeCountryFlags());
+  else initializeCountryFlags();
 
   window.LineupsView = {update};
 })();

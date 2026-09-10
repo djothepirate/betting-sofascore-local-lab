@@ -68,6 +68,21 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   livraison dans Eclipse, la revue humaine et la fusion restent à faire ; aucune campagne live
   fournisseur n’a été lancée par cette qualification.
 
+### WO-058 — libellés français de pays et repli fiable des drapeaux locaux
+
+- Localise les libellés de pays dans la seule projection web commune aux personnes J4 et aux
+  compositions J5. `ProviderCountry`, les observations normalisées, snapshots, hashes et lignes
+  de persistance restent bruts et inchangés.
+- Résout explicitement les associations de football `England`/`EN`, `Scotland`/`SC` et
+  `Wales`/`WA` vers leurs drapeaux locaux dédiés, sans étendre ces exceptions à des codes ou pays
+  non concordants.
+- Conserve le libellé français comme texte accessible et comme repli visible tant qu’un SVG local
+  n’a pas effectivement terminé son chargement, après une erreur d’image, sans JavaScript ou en
+  mode de contraste forcé. Lorsqu’il est confirmé, le seul SVG local est affiché ; aucune image
+  n’est demandée au fournisseur ni à un CDN. La qualification Chromium locale (3 scénarios) et
+  `clean verify` sont verts et détaillés dans la
+  [note de validation dédiée](docs/validation/WO058-COUNTRY-FRENCH-LABELS-AND-FLAG-FALLBACK-20260910.md).
+
 ### WO-058 — compositions enrichies, informations J4 et cadence live-v7
 
 - Ajoute les buts et passes décisives aux cartes, avec répétition d’icônes et compteur

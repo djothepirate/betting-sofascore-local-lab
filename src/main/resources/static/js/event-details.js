@@ -1,12 +1,50 @@
 (() => {
   "use strict";
   const localFlag = /^\/images\/flags\/4x3\/(?:[a-z]{2}|gb-eng|gb-sct|gb-wls)\.svg$/;
+
   function node(tag, text, attribute, value = "") {
     const element = document.createElement(tag);
     if (text !== undefined) element.textContent = text;
     if (attribute) element.setAttribute(attribute, value);
     return element;
   }
+
+  function countryLabel(label) {
+    const fallback = node("span", undefined, "data-event-person-nationality");
+    fallback.className = "country-fallback-label";
+    const prefix = node("span", "Pays : ");
+    prefix.className = "country-accessible-prefix";
+    fallback.append(prefix, node("span", label, "data-event-person-nationality-label"));
+    return fallback;
+  }
+
+  function setCountryFlagState(country, state) {
+    country.dataset.countryFlagState = state;
+  }
+
+  function trackCountryFlag(country, flag, path) {
+    const ready = () => {
+      setCountryFlagState(country, flag.isConnected && flag.naturalWidth > 0 ? "ready" : "fallback");
+    };
+    flag.onload = ready;
+    flag.onerror = () => setCountryFlagState(country, "fallback");
+    if (flag.dataset.countryFlagPath !== path) {
+      flag.dataset.countryFlagPath = path;
+      setCountryFlagState(country, "pending");
+      if (flag.getAttribute("src") !== path) flag.setAttribute("src", path);
+    }
+    if (flag.complete) ready();
+  }
+
+  function initializeCountryFlags(root = document) {
+    root.querySelectorAll("[data-event-person-country]").forEach(country => {
+      const flag = country.querySelector("[data-event-person-flag]");
+      const path = flag?.getAttribute("src") || "";
+      if (flag && localFlag.test(path)) trackCountryFlag(country, flag, path);
+      else setCountryFlagState(country, "fallback");
+    });
+  }
+
   function update(host, view) {
     if (!view) return;
     let grid = host.querySelector(".detail-grid");
@@ -30,15 +68,26 @@
       row.querySelector("[data-event-person-name]").textContent = view[key]?.name || "—";
       const country = row.querySelector("[data-event-person-country]");
       const model = view[key]?.country;
-      country.hidden = !model;
-      const children = [];
-      if (model && localFlag.test(model.flagPath || "")) {
-        const flag = node("img", undefined, "data-event-person-flag");
-        flag.src = model.flagPath; flag.alt = ""; flag.width = 24; flag.height = 18;
-        children.push(flag, document.createTextNode(" "));
+      const label = model?.label || "";
+      const available = model?.available === true || (model?.available === undefined && label !== "");
+      country.hidden = !available;
+      country.removeAttribute("aria-label");
+      if (!available) {
+        country.replaceChildren();
+        setCountryFlagState(country, "fallback");
+        continue;
       }
-      children.push(node("span", model?.label || "", "data-event-person-nationality"));
-      country.replaceChildren(...children);
+      const path = model?.flagPath || "";
+      const fallback = countryLabel(label);
+      if (localFlag.test(path)) {
+        const flag = node("img", undefined, "data-event-person-flag");
+        flag.alt = ""; flag.width = 24; flag.height = 18;
+        country.replaceChildren(flag, fallback);
+        trackCountryFlag(country, flag, path);
+      } else {
+        country.replaceChildren(fallback);
+        setCountryFlagState(country, "fallback");
+      }
     }
     for (const [key, label] of [["competition", "Compétition"], ["round", "Tour"],
       ["season", "Saison"], ["venue", "Stade"]]) {
@@ -50,5 +99,9 @@
       value.textContent = view[key] || "—";
     }
   }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => initializeCountryFlags());
+  else initializeCountryFlags();
+
   window.EventDetailsView = Object.freeze({update});
 })();

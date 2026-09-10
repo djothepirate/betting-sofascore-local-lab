@@ -1377,3 +1377,24 @@ dispose de sa qualification synthétique dédiée et de ses deux vérifications 
 campagne fournisseur exige en plus le manifeste concret et le lancement de E. La revue n'est ni une campagne réussie,
 ni la preuve d'une donnée sportive exacte. La clôture et la livraison Git sont séparées : une PR
 du WO cible exclusivement `feature/V0.1.0-RC01`, avec revue humaine et fusion avant classement terminé.
+
+### Complément du 10 septembre — libellés français de pays et repli de drapeau local
+
+Le complément corrige exclusivement la projection web des pays dans les personnes J4
+(entraîneurs et arbitre) et dans les compositions J5 (joueurs et indisponibles). Il obtient un
+libellé français depuis le code pays local lorsqu'il est connu. Les cas d'associations de football
+britanniques sont volontairement bornés aux paires `England`/`EN`, `Scotland`/`SC` et
+`Wales`/`WA`, afin de sélectionner les SVG locaux dédiés sans assimiler un code identique à un
+autre pays.
+
+`ProviderCountry`, les données normalisées, les snapshots, hashes, parseurs et écritures de
+persistance ne changent pas. Les drapeaux restent des SVG embarqués et versionnés dans le Lab :
+aucune image, API ou autre appel fournisseur n'est ajouté. Le nom français est conservé dans
+l'arbre d'accessibilité et reste visible tant que le chargement réel du SVG local n'est pas
+confirmé, après une erreur d'image, sans JavaScript et en mode de contraste forcé. La présentation
+ne masque donc jamais une nationalité parce qu'une image n'a pas été chargée.
+
+La syntaxe des deux rafraîchissements JavaScript, la régression Maven ciblée, la qualification
+Chromium conjointe J4/compositions et `clean verify` sont enregistrés dans la
+[note de validation pays](../../validation/WO058-COUNTRY-FRENCH-LABELS-AND-FLAG-FALLBACK-20260910.md).
+Ces contrôles sont entièrement locaux et ne constituent ni collecte ni acceptation fournisseur.

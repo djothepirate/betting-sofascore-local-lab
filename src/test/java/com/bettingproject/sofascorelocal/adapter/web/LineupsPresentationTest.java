@@ -27,7 +27,7 @@ class LineupsPresentationTest {
         var view = LineupsPresentation.from(new EventLineups(900001, true, home,
                 new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of())), "Équipe française", "Autre équipe");
         assertThat(view.teams().getFirst().missingPlayers()).satisfies(players -> {
-            assertThat(players.getFirst().country().label()).isEqualTo("Argentina");
+            assertThat(players.getFirst().country().label()).isEqualTo("Argentine");
             assertThat(players.getFirst().country().flagPath()).isEqualTo("/images/flags/4x3/ar.svg");
             assertThat(players.getLast().country().available()).isFalse();
             assertThat(players.getLast().country().label()).isEmpty();
@@ -95,10 +95,36 @@ class LineupsPresentationTest {
         var view = LineupsPresentation.from(new EventLineups(900001L, true, home, away),
                 "Home", "Away", overlay);
 
-        assertThat(players(view.teams().getFirst()).findFirst().orElseThrow().country().label()).isEqualTo("Brazil");
+        assertThat(players(view.teams().getFirst()).findFirst().orElseThrow().country().label()).isEqualTo("Brésil");
         assertThat(view.teams().getLast().missingPlayers().getFirst().country().label()).isEqualTo("France");
         assertThat(home.players().getFirst().country()).isEmpty();
         assertThat(away.missingPlayers().orElseThrow().getFirst().country()).contains(france);
+    }
+
+    @Test
+    void usesTheSameEnglishAssociationPresentationForRosterAndUnavailablePlayers() {
+        var england = new com.bettingproject.sofascorelocal.domain.event.ProviderCountry(
+                Optional.of("England"), Optional.of("EN"));
+        var roster = new EventLineupPlayer(601, "Joueur anglais", Optional.of(7), Optional.of("M"), true,
+                Optional.empty(), Optional.empty(), Optional.of(england));
+        var unavailable = new MissingLineupPlayer(602, "Indisponible anglais", Optional.of(8), Optional.of("D"),
+                Optional.of("missing"), Optional.of(1), Optional.of("Knee Injury"), Optional.of(5), Optional.empty(),
+                Optional.of(england));
+        var home = new TeamLineup(LineupSide.HOME, Optional.empty(), List.of(roster), Optional.of(List.of(unavailable)));
+
+        var team = LineupsPresentation.from(new EventLineups(900001, true, home,
+                new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of()))).teams().getFirst();
+
+        assertThat(players(team).findFirst().orElseThrow().country()).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Angleterre");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gb-eng.svg");
+        });
+        assertThat(team.missingPlayers().getFirst().country()).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Angleterre");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gb-eng.svg");
+        });
+        assertThat(roster.country()).contains(england);
+        assertThat(unavailable.country()).contains(england);
     }
 
     @Test
