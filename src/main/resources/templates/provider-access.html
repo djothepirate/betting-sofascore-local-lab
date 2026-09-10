@@ -18,8 +18,10 @@
       <div><dt>Attente minimale demandée (UTC)</dt><dd th:text="${access.retryNotBefore ?: 'Non précisée'}"></dd></div>
       <div><dt>Prochain départ admissible au budget (UTC)</dt><dd th:text="${decision.nextAllowedAt ?: 'Non établi'}"></dd></div>
     </dl>
-    <p>Limites locales : 25 appels par minute, 1 000 par heure et au moins deux secondes après la fin de l’échange précédent.
-      Les quotas sont conservés entre campagnes et après redémarrage.</p>
+    <p>Les nouvelles campagnes live-v8 qualifiées utilisent au plus 45 départs par minute,
+      2&nbsp;756 par heure et un délai de protection de 500&nbsp;ms après une fin d’échange prouvée.
+      Les parcours historiques et manuels conservent leur propre profil, éventuellement plus conservateur.
+      Les quotas restent partagés, persistants entre campagnes et après redémarrage.</p>
     <p th:if="${access.campaignId != null}">Identifiant de la session à l’origine du refus : <span class="mono" th:text="${access.campaignId}"></span>.</p>
   </section>
   <section class="panel" th:if="${access.unresolvedDispatchId != null}">

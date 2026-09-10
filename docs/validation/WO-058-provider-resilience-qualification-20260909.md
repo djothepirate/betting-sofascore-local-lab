@@ -165,10 +165,48 @@ partiel qui suit est déjà durable dans le callback des en-têtes. Un nettoyage
 conserve la réservation ; un nettoyage local réussi conserve encore la suspension,
 qui bloque J3, J4 et J5 le lendemain sans créer de worker supplémentaire.
 
+### Complément du 10 septembre — réarmement local après refus
+
+Le parcours de réarmement a révélé un refus **local** distinct du refus HTTP fournisseur
+persisté : la page `/provider-access` était servie sous `Referrer-Policy: no-referrer`.
+Chromium/Brave peut alors soumettre son formulaire de navigation avec `Origin: null`,
+correctement rejeté en 403 par la frontière locale avant le contrôleur. Le correctif sert
+cette page et sa variante `;jsessionid` sous `Referrer-Policy: same-origin`. Il ne rend pas
+`Origin: null` acceptable et ne modifie pas les contrôles d'origine étrangère, d'hôte, de
+proxy, de jeton à usage unique, de version ou de confirmation.
+
+La qualification dédiée `ProviderAccessRearmBrowserLocalQualificationIT` a réussi le
+10 septembre sur deux origines isolées (`localhost:8087` et `127.0.0.1:8087`). Son Chromium
+est hors ligne et toutes ses routes sont satisfaites par MockMvc : il vérifie le header,
+l'origine exacte du `POST`, le `302` versionné de réarmement et le rendu final `200`. Il
+établit l'appel unique à `store.rearm(...)`, l'absence de départ, de réservation, de
+superviseur ou d'URL externe. Il ne lance ni navigateur fournisseur, ni campagne, ni
+réarmement de l'état opérateur réel.
+
+```powershell
+$cache = (Resolve-Path -LiteralPath '.tmp\provider-playwright-browsers').Path
+$env:PLAYWRIGHT_BROWSERS_PATH = $cache
+.\mvnw.cmd --offline '-Dmaven.repo.local=C:\Users\geoff\.m2\repository' `
+  '-Pprovider-playwright-runtime,provider-playwright-local-qualification' `
+  '-DskipTests=false' '-DskipITs=false' `
+  '-Dit.test=ProviderAccessRearmBrowserLocalQualificationIT' `
+  "-Dprovider.playwright.browser-cache=$cache" `
+  test-compile `
+  'failsafe:integration-test@provider-playwright-loopback-qualification' `
+  'failsafe:verify@provider-playwright-loopback-qualification'
+```
+
+`test-compile` est requis lorsque le répertoire `target` vient d'être nettoyé : il rattache
+la source de qualification au profil avant les deux goals Failsafe. Résultat : `BUILD SUCCESS`,
+deux cas, zéro échec, zéro erreur et zéro ignoré.
+
 ## Limites de preuve et suite opérateur
 
-Les plafonds 25/minute et 1 000/heure sont des choix locaux prudents, pas des quotas
-SofaScore connus. La borne de sept réserve 10 % de marge dans le budget horaire :
+Les plafonds historiques de 25/minute et 1 000/heure, ainsi que la borne de sept,
+documentent la qualification v6 initiale ; ils ne sont pas des quotas SofaScore connus.
+Le profil live-v8 qualifié actuellement affiché aux opérateurs est distinct : 45 départs par
+minute, 2 756 par heure et 500 ms après une fin d'échange prouvée. La borne de sept réserve
+10 % de marge dans l'ancien budget horaire :
 `7 × (120 appels ordinaires + 4 initiaux + 4 finaux) = 896 ≤ 900`.
 Le rejeu d'admission peut réduire cette capacité, y compris à zéro pour une enveloppe
 trop lente. Il ne garantit pas la cadence réelle ni l'acceptation par le fournisseur.
@@ -240,6 +278,7 @@ la livraison Eclipse et toute campagne réelle restent des étapes distinctes.
 - `src/main/java/com/bettingproject/sofascorelocal/application/network/playwright/ResilientPlaywrightProviderCampaignFactory.java`
 - `src/main/java/com/bettingproject/sofascorelocal/config/LiveCampaignLocalRequestBoundaryInterceptor.java`
 - `src/main/java/com/bettingproject/sofascorelocal/config/LiveCampaignProperties.java`
+- `src/main/java/com/bettingproject/sofascorelocal/config/SecurityHeadersFilter.java`
 - `src/main/java/com/bettingproject/sofascorelocal/domain/live/LiveCampaignData.java`
 - `src/main/java/com/bettingproject/sofascorelocal/domain/provider/ProviderResilienceData.java`
 - `src/main/java/com/bettingproject/sofascorelocal/port/LiveDiagnosticStore.java`
@@ -253,6 +292,7 @@ la livraison Eclipse et toute campagne réelle restent des étapes distinctes.
 - `src/main/resources/templates/live-campaign.html`
 - `src/main/resources/templates/provider-access.html`
 - `src/provider-playwright-qualification-test/java/com/bettingproject/sofascorelocal/application/network/playwright/ProviderPlaywrightLocalQualificationIT.java`
+- `src/provider-playwright-qualification-test/java/com/bettingproject/sofascorelocal/adapter/web/ProviderAccessRearmBrowserLocalQualificationIT.java`
 - `src/provider-playwright-test/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderPlaywrightWorkerProtocolTest.java`
 - `src/provider-playwright-test/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderRetryAfterTest.java`
 - `src/provider-playwright/java/com/bettingproject/sofascorelocal/provider/playwright/worker/ProviderMainDocumentNetworkObservation.java`
@@ -265,6 +305,7 @@ la livraison Eclipse et toute campagne réelle restent des étapes distinctes.
 - `src/test/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignControllerTest.java`
 - `src/test/java/com/bettingproject/sofascorelocal/adapter/web/LiveCampaignPresentationTest.java`
 - `src/test/java/com/bettingproject/sofascorelocal/adapter/web/ProviderAccessControllerTest.java`
+- `src/test/java/com/bettingproject/sofascorelocal/config/SecurityHeadersFilterTest.java`
 - `src/test/java/com/bettingproject/sofascorelocal/application/live/GroupedLiveAdmissionPolicyV6Test.java`
 - `src/test/java/com/bettingproject/sofascorelocal/application/live/GroupedLiveScheduleV6Test.java`
 - `src/test/java/com/bettingproject/sofascorelocal/application/live/LiveCampaignServiceTest.java`

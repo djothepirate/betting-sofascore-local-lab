@@ -198,6 +198,11 @@ départ non résolu. Sa lecture ne contacte pas SofaScore. Un 403 ou 429 confirm
 nouveaux accès, même si le corps de cette réponse n'a pas été reçu complètement. Une
 garde de processus FREE après nettoyage n'efface pas cette suspension.
 
+La page de ce formulaire est servie avec `Referrer-Policy: same-origin` : Chromium/Brave
+conserve ainsi l'origine loopback exacte pour le `POST` de réarmement. La frontière locale
+continue de refuser `Origin: null`, toute origine étrangère et les en-têtes de proxy ; un
+réarmement valide reste une décision opérateur locale, sans sonde ni appel fournisseur.
+
 Après un arrêt, achever d'abord le nettoyage local de la session. Si un départ reste
 incertain, sa clôture locale exige une garde libre et l'absence de session active ;
 elle conserve son coût et ne fabrique aucune réponse. Le réarmement de la suspension

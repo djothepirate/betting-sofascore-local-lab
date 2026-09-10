@@ -6,6 +6,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-058 — qualification locale de la cadence live-v8, dix rencontres
 
+- Corrige le formulaire local `/provider-access` après refus : la page de réarmement est rendue
+  avec `Referrer-Policy: same-origin`, afin que Chromium/Brave conserve l'origine loopback exacte
+  pour son `POST`. `Origin: null`, les origines étrangères et les en-têtes de proxy restent
+  refusés par la frontière locale ; le réarmement demeure manuel et ne contacte pas le fournisseur.
+  Le libellé affiché indique maintenant les paramètres V8 (45/minute, 2 756/heure, fence 500 ms)
+  et distingue les profils historiques ou manuels plus conservateurs.
 - Qualifie `live-v8` hors fournisseur pour les nouvelles préparations, avec dix rencontres au
   plus, une vague normale de 60 s par couple rencontre/famille et des slots déterministes
   construits à partir des enveloppes immuables du profil. La preuve est exclusivement

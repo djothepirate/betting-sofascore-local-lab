@@ -21,6 +21,9 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
             "^/benchmark(?:;[^/]*)?/?$");
     private static final Pattern LIVE_PAGE_PATH = Pattern.compile(
             "^/(?:live-campaigns(?:/[^/;]+)?|events(?:/[0-9a-fA-F-]{36})?)(?:;[^/]*)?/?$");
+    /** A local form page needs its exact loopback origin preserved for Chromium navigation POSTs. */
+    private static final Pattern PROVIDER_ACCESS_PAGE_PATH = Pattern.compile(
+            "^/provider-access(?:;[^/]*)?/?$");
     private static final Pattern LIVE_STATE_PATH = Pattern.compile(
             "^/(?:live-campaigns(?:/.*)?|events/(?:[0-9a-fA-F-]{36}/)?state)(?:;[^/]*)?/?$");
     private static final String STRICT_CACHE_CONTROL =
@@ -45,7 +48,7 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
                 "Referrer-Policy",
                 // Chromium sends Origin: null for navigation POSTs under no-referrer.
                 // Preserve an exact origin for local forms without disclosing cross-origin referrers.
-                isJ7ExportRequest(request) || isLivePageRequest(request)
+                isJ7ExportRequest(request) || isLocalFormPageRequest(request)
                         ? LOCAL_FORM_REFERRER_POLICY
                         : DEFAULT_REFERRER_POLICY);
         response.setHeader(
@@ -71,7 +74,14 @@ public class SecurityHeadersFilter extends OncePerRequestFilter {
                 || J5_OFFLINE_BATCH_PATH.matcher(applicationPath).matches()
                 || J8_BENCHMARK_PATH.matcher(applicationPath).matches()
                 || LIVE_PAGE_PATH.matcher(applicationPath).matches()
+                || PROVIDER_ACCESS_PAGE_PATH.matcher(applicationPath).matches()
                 || LIVE_STATE_PATH.matcher(applicationPath).matches();
+    }
+
+    private static boolean isLocalFormPageRequest(HttpServletRequest request) {
+        String applicationPath = applicationPath(request);
+        return LIVE_PAGE_PATH.matcher(applicationPath).matches()
+                || PROVIDER_ACCESS_PAGE_PATH.matcher(applicationPath).matches();
     }
 
     private static boolean isLivePageRequest(HttpServletRequest request) {

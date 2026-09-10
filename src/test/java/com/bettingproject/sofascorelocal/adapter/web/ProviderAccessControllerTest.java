@@ -49,7 +49,10 @@ class ProviderAccessControllerTest {
     @Test void observationIsReadOnlyAndDoesNotAuthorizeProviderTraffic() throws Exception {
         mvc.perform(get("/provider-access").header("Host",HOST)).andExpect(status().isOk())
                 .andExpect(view().name("provider-access")).andExpect(model().attribute("suspended",true))
-                .andExpect(header().string("Cache-Control","no-store, no-cache, must-revalidate, max-age=0"));
+                .andExpect(header().string("Cache-Control","no-store, no-cache, must-revalidate, max-age=0"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("45 départs par minute")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("2&nbsp;756 par heure")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("500&nbsp;ms")));
         verify(store,never()).tryReserveDeparture(any(),any());
         verify(store,never()).rearm(anyLong(),any());
         verifyNoInteractions(supervisor,coordinator);
@@ -71,6 +74,7 @@ class ProviderAccessControllerTest {
     @Test void manualRearmDoesNotStartStopOrReserveAnyProviderRequest() throws Exception {
         MockHttpSession session=new MockHttpSession();String token=tokens.issue(session);
         mvc.perform(post("/provider-access/rearm").session(session).header("Host",HOST).header("Origin",ORIGIN)
+                .header("Sec-Fetch-Site","same-origin").header("Sec-Fetch-Dest","document")
                 .param("version","7").param("confirmation","true").param("localFormToken",token))
                 .andExpect(status().is3xxRedirection()).andExpect(redirectedUrl("/provider-access"));
         verify(store).rearm(eq(7L),any());
@@ -111,6 +115,15 @@ class ProviderAccessControllerTest {
     @Test void crossOriginCannotReachRearmEvenWithAnOtherwiseValidToken() throws Exception {
         MockHttpSession session=new MockHttpSession();
         mvc.perform(post("/provider-access/rearm").session(session).header("Host",HOST).header("Origin","https://foreign.example")
+                .param("version","7").param("confirmation","true").param("localFormToken",tokens.issue(session)))
+                .andExpect(status().isForbidden());
+        verify(store,never()).rearm(anyLong(),any());
+        verifyNoInteractions(coordinator,supervisor);
+    }
+
+    @Test void nullOriginCannotReachRearmEvenWithAnOtherwiseValidToken() throws Exception {
+        MockHttpSession session=new MockHttpSession();
+        mvc.perform(post("/provider-access/rearm").session(session).header("Host",HOST).header("Origin","null")
                 .param("version","7").param("confirmation","true").param("localFormToken",tokens.issue(session)))
                 .andExpect(status().isForbidden());
         verify(store,never()).rearm(anyLong(),any());

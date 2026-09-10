@@ -67,6 +67,22 @@ class SecurityHeadersFilterTest {
         assertThat(filter(path).getHeader("Referrer-Policy")).isEqualTo("same-origin");
     }
 
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "/provider-access",
+        "/provider-access;jsessionid=LOCAL_TEST_SESSION"
+    })
+    void keepsAnExactOriginWhenTheProviderAccessRearmFormIsRendered(String path)
+            throws Exception {
+        MockHttpServletResponse response = filter(path);
+
+        assertThat(response.getHeader("Referrer-Policy")).isEqualTo("same-origin");
+        assertThat(response.getHeader("Cache-Control"))
+                .isEqualTo("no-store, no-cache, must-revalidate, max-age=0");
+        assertThat(response.getHeader("Content-Security-Policy"))
+                .contains("script-src 'none'", "form-action 'self'");
+    }
+
     @Test
     void appliesStrictReadOnlyHeadersToTheBenchmarkRoute() throws Exception {
         MockHttpServletResponse response = filter("/benchmark");

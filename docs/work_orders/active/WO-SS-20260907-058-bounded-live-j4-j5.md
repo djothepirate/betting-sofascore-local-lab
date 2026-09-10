@@ -1,6 +1,6 @@
 # WO-SS-20260907-058 — Campagnes live locales J4/J5 sur sélection de rencontres
 
-- **Statut :** `IN_PROGRESS` — lot compositions/personnes V4 et cadence live-v7/V47 réalisé et qualifié hors fournisseur ; revue humaine, acceptation fournisseur et fusion restent distinctes. La révision `live-v8` à dix rencontres, 60 s et budget local relevé est désormais qualifiée sur loopback, avec son profil exact ; elle reste en attente de revue, de fusion et de livraison séparée du lanceur Eclipse. Cette preuve locale ne vaut ni acceptation ni quota du fournisseur. Le correctif v0.9 réponses lentes/timeouts isolés et groupes v6 avec familles différées reste qualifié fonctionnellement hors fournisseur. Le premier lot de résilience v6/V42–V44 et son profil temporel à sept rencontres conservent leurs validations réussies, distinctes de ce nouveau chemin. Les réalisations et preuves historiques v4/V39, v5/V40 et compositions V3/V41 restent conservées ci-dessous ; aucune clôture ni campagne fournisseur n'est effectuée par cette qualification.
+- **Statut :** `IN_PROGRESS` — lot compositions/personnes V4 et cadence live-v7/V47 réalisé et qualifié hors fournisseur ; revue humaine, acceptation fournisseur et fusion restent distinctes. La révision `live-v8` à dix rencontres, 60 s et budget local relevé est désormais qualifiée sur loopback, avec son profil exact ; les neuf variables V8 ont été livrées de façon atomique au lanceur Eclipse local avec sauvegarde, tandis que la revue et la fusion restent distinctes. Cette preuve locale ne vaut ni acceptation ni quota du fournisseur. Le correctif v0.9 réponses lentes/timeouts isolés et groupes v6 avec familles différées reste qualifié fonctionnellement hors fournisseur. Le premier lot de résilience v6/V42–V44 et son profil temporel à sept rencontres conservent leurs validations réussies, distinctes de ce nouveau chemin. Les réalisations et preuves historiques v4/V39, v5/V40 et compositions V3/V41 restent conservées ci-dessous ; aucune clôture ni campagne fournisseur n'est effectuée par cette qualification.
 - **Date :** 2026-09-07.
 - **Premier lot du 09/09, antérieur au correctif courant :** résilience `live-v6`/V42–V44 qualifiée fonctionnellement hors fournisseur. Le [complément temporel dédié](../../validation/WO058-LIVE-V6-CAPACITY-20260909.md) qualifie son propre profil à sept rencontres, avec wrapper partagé, PostgreSQL 44 et ordonnanceur v6 réels ; sa vérification finale réussit (2 019 cas Surefire, cinq ignorés, 207 intégrations, trois contrôles Chromium UI sans échec ni erreur). Le plafond opérateur de six et le timeout de 30 s constatés pour cette qualification restent distincts de la capacité prouvée. Ces résultats restent distincts de la qualification fonctionnelle réussie du correctif v0.9.
 - **Jalon :** expérimentation live locale après J9, distincte des parcours manuels existants.
@@ -134,10 +134,23 @@ bornes immuables DETAILS 300/500 ms, INCIDENTS 300/400 ms, STATISTICS 350/400 ms
 stricte de 6 000 ms, soit dix groupes dans les 60 s. Les plafonds locaux sont 45/minute et
 2 756/heure, dont 2 480 départs horaires planifiés à dix rencontres.
 
-Le WO reste `IN_PROGRESS` : revue humaine, fusion et livraison atomique des neuf variables V8
-dans le lanceur Eclipse sont encore à réaliser. Le travail ne lance aucune campagne live. Même
+Le WO reste `IN_PROGRESS` : revue humaine et fusion restent à réaliser ; les neuf variables V8
+ont été livrées atomiquement dans le lanceur Eclipse local, avec une sauvegarde du fichier
+précédent. Le travail ne lance aucune campagne live. Même
 une passe verte locale ne démontre ni délai de réception fournisseur, ni acceptation de 45/min,
 ni absence future de blocage d'adresse.
+
+### Correctif local de réarmement après refus
+
+La page `/provider-access` contient un formulaire de décision locale. Elle recevait par erreur
+`Referrer-Policy: no-referrer` alors que la frontière de réarmement exige une origine loopback
+exacte : Chromium/Brave peut alors envoyer `Origin: null` et le refus local 403 se produisait
+avant le contrôleur. Le correctif sert cette page, y compris sa variante `;jsessionid`, avec
+`Referrer-Policy: same-origin`. Il ne relâche pas la frontière : `Origin: null`, une origine
+étrangère, les en-têtes de proxy et les jetons invalides restent refusés. Le texte de la page
+indique aussi les paramètres live-v8 réels (45/minute, 2 756/heure, fence 500 ms), sans prétendre
+remplacer les profils plus conservateurs des parcours manuels ou historiques. Le réarmement reste
+manuel, versionné et sans requête fournisseur.
 
 ## 1. Objectif et origine du besoin
 
