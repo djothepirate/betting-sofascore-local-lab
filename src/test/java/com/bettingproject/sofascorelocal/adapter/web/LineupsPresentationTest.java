@@ -39,13 +39,14 @@ class LineupsPresentationTest {
     @Test
     void unavailablePlayerLabelsTranslateKnownSupplierDescriptionsWithoutChangingTheirSourceValues() {
         var rawDescriptions = List.of("red_card_suspension", "Shoulder Injury", "Meniscus Injury", "Hernia",
-                "Ligament Injury", "Heart Problems", "Knock Injury", "Groin Injury", "Strain Injury");
+                "Ligament Injury", "Heart Problems", "Knock Injury", "Groin Injury", "Strain Injury",
+                "Physical Discomfort");
         var home = new TeamLineup(LineupSide.HOME, Optional.empty(), List.of(), Optional.of(List.of(
                 missing(101, rawDescriptions.get(0)), missing(102, rawDescriptions.get(1)),
                 missing(103, rawDescriptions.get(2)), missing(104, rawDescriptions.get(3)),
                 missing(105, rawDescriptions.get(4)), missing(106, rawDescriptions.get(5)),
                 missing(107, rawDescriptions.get(6)), missing(108, rawDescriptions.get(7)),
-                missing(109, rawDescriptions.get(8)))));
+                missing(109, rawDescriptions.get(8)), missing(110, rawDescriptions.get(9)))));
 
         var displayed = LineupsPresentation.from(new EventLineups(900001, true, home,
                 new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of()))).teams().getFirst().missingPlayers();
@@ -53,7 +54,7 @@ class LineupsPresentationTest {
         assertThat(displayed).extracting(LineupsPresentation.MissingPlayer::description).containsExactly(
                 "Suspension après carton rouge", "Blessure à l’épaule", "Blessure au ménisque", "Hernie",
                 "Blessure aux ligaments", "Problèmes cardiaques", "Coup", "Blessure à l’aine",
-                "Blessure à l’entraînement");
+                "Blessure à l’entraînement", "Inconfort physique");
         assertThat(displayed).allSatisfy(player -> assertThat(player.type()).isEqualTo("Indisponible"));
         assertThat(home.missingPlayers().orElseThrow()).extracting(MissingLineupPlayer::description)
                 .containsExactlyElementsOf(rawDescriptions.stream().map(Optional::of).toList());
@@ -125,6 +126,34 @@ class LineupsPresentationTest {
         });
         assertThat(roster.country()).contains(england);
         assertThat(unavailable.country()).contains(england);
+    }
+
+    @Test
+    void usesExactScottishAndNorthernIrishAssociationNamesForRosterAndUnavailablePlayers() {
+        var scotland = new com.bettingproject.sofascorelocal.domain.event.ProviderCountry(
+                Optional.of("Scotland"), Optional.of("SX"));
+        var northernIreland = new com.bettingproject.sofascorelocal.domain.event.ProviderCountry(
+                Optional.of("Northern Ireland"), Optional.of("NI"));
+        var roster = new EventLineupPlayer(603, "Joueur écossais", Optional.of(7), Optional.of("M"), true,
+                Optional.empty(), Optional.empty(), Optional.of(scotland));
+        var unavailable = new MissingLineupPlayer(604, "Indisponible nord-irlandais", Optional.of(8), Optional.of("D"),
+                Optional.of("missing"), Optional.of(1), Optional.of("Knee Injury"), Optional.of(5), Optional.empty(),
+                Optional.of(northernIreland));
+        var home = new TeamLineup(LineupSide.HOME, Optional.empty(), List.of(roster), Optional.of(List.of(unavailable)));
+
+        var team = LineupsPresentation.from(new EventLineups(900001, true, home,
+                new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of()))).teams().getFirst();
+
+        assertThat(players(team).findFirst().orElseThrow().country()).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Écosse");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gb-sct.svg");
+        });
+        assertThat(team.missingPlayers().getFirst().country()).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Irlande du Nord");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gb.svg");
+        });
+        assertThat(roster.country()).contains(scotland);
+        assertThat(unavailable.country()).contains(northernIreland);
     }
 
     @Test

@@ -139,6 +139,7 @@ public final class LineupsPresentation {
             case "Meniscus Injury" -> "Blessure au ménisque";
             case "Muscle Injury" -> "Blessure musculaire";
             case "Neck Injury" -> "Blessure au cou";
+            case "Physical Discomfort" -> "Inconfort physique";
             case "Shoulder Injury" -> "Blessure à l’épaule";
             case "Strain Injury" -> "Blessure à l’entraînement";
             case "Sprained Knee Injury" -> "Entorse du genou";

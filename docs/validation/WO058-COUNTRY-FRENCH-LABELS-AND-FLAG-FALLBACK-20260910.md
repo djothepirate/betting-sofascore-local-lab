@@ -24,10 +24,17 @@ web qui la consomment. Elle ne transforme pas les données de provenance :
 - une valeur absente, inconnue ou ambiguë ne reçoit pas de drapeau inventé.
 
 Lorsqu'un code pays local est identifié sans ambiguïté, son libellé est affiché en français. Les
-exceptions de football britannique restent explicites et limitées : `England`/`EN` devient
-« Angleterre » avec `gb-eng.svg`, `Scotland`/`SC` devient « Écosse » avec `gb-sct.svg`, et
-`Wales`/`WA` devient « Pays de Galles » avec `gb-wls.svg`. Ces associations ne s'appliquent pas
-à un couple nom/code non concordant, afin de ne pas attribuer un drapeau erroné à un autre pays.
+exceptions de football britannique restent explicites et limitées aux noms exacts : `England`
+devient « Angleterre » avec `gb-eng.svg`, `Scotland` devient « Écosse » avec `gb-sct.svg`,
+`Wales` devient « Pays de Galles » avec `gb-wls.svg`, et `Northern Ireland` devient « Irlande du
+Nord » avec `gb.svg`, le drapeau britannique déjà présent dans le pack versionné. Le nom exact
+prévaut seulement pour ces quatre associations lorsqu'un snapshot porte un code contradictoire.
+Les autres pays, notamment les Seychelles (`SC`), la Tchéquie (`CZ`) et Saint-Martin, partie
+néerlandaise (`SX`), restent résolus par leur propre nom et code : l'exception n'est donc pas une
+réinterprétation générale de ces codes.
+
+Les indisponibilités J5 rendent également `Physical Discomfort` sous la forme « Inconfort
+physique », sans modifier la description brute de provenance.
 
 ## Drapeau local et texte de repli
 
@@ -62,13 +69,14 @@ SofaScore.
 
        .\mvnw.cmd --offline "-Dmaven.repo.local=C:\Users\geoff\.m2\repository" -q "-Dtest=CountryAssetsTest,LineupsPresentationTest,EventDetailsPresentationTest,J5EventDataControllerTest" test
 
-   Résultat : 35 tests, zéro échec et zéro erreur.
+   Résultat : 37 tests, zéro échec et zéro erreur.
 
 3. Qualification Chromium conjointe, exclusivement sur loopback, des personnes J4 et des
-   compositions J5 :
+   compositions J5. La passe actuelle du 10 septembre utilise un cache Maven de qualification
+   et un miroir de fichiers local, tous deux ignorés Git :
 
        $env:PLAYWRIGHT_BROWSERS_PATH = (Resolve-Path '.tmp\provider-playwright-browsers').Path
-       .\mvnw.cmd --offline "-Dmaven.repo.local=C:\Users\geoff\.m2\repository" "-Pprovider-playwright-runtime,provider-playwright-local-qualification" "-DskipTests=false" "-DskipITs=false" "-Dit.test=LiveCampaignLineupsBrowserQualificationIT,EventDetailsBrowserQualificationIT" "-Dprovider.playwright.browser-cache=$env:PLAYWRIGHT_BROWSERS_PATH" "failsafe:integration-test@provider-playwright-loopback-qualification" "failsafe:verify@provider-playwright-loopback-qualification"
+       .\mvnw.cmd "-Dmaven.repo.local=<cache-local-de-qualification>" --settings "<miroir-local-Maven>" "-Pprovider-playwright-runtime,provider-playwright-local-qualification" "-DskipTests=false" "-DskipITs=false" "-Dit.test=LiveCampaignLineupsBrowserQualificationIT,EventDetailsBrowserQualificationIT" "-Dprovider.playwright.browser-cache=$env:PLAYWRIGHT_BROWSERS_PATH" test-compile "failsafe:integration-test@provider-playwright-loopback-qualification" "failsafe:verify@provider-playwright-loopback-qualification"
 
    Résultat : 3 tests, zéro échec et zéro erreur (1 pour J4, 2 pour les compositions J5). Les
    scénarios servent les pages et les SVG depuis le worktree, simulent aussi un échec de SVG
@@ -80,9 +88,14 @@ SofaScore.
 
        .\mvnw.cmd --offline "-Dmaven.repo.local=C:\Users\geoff\.m2\repository" clean verify
 
-   Résultat : succès — 2 204 tests unitaires dans 226 suites Surefire et 231 tests
-   d'intégration Failsafe, zéro échec et zéro erreur. L'avertissement de compilation sur
-   `LiveCampaignPresentation` concerne une API dépréciée préexistante, hors de ce complément.
+   Résultat de la passe actuelle : la suite Surefire a atteint 2 206 tests, puis a échoué sur
+   deux sondes d'identité de processus Windows, hors du périmètre de cette modification :
+   `LiveOrphanProcessProbeTest.currentJavaIdentityMatchesItsRealCimCreationDate` et
+   `J6NativeBinaryPipelineQualificationTest.syntheticNativePipelineFailsClosedWithoutHumanPassphraseInput`.
+   L'hôte retourne `Accès refusé` à CIM et `TASKLIST_ERROR`, donc ces contrôles se ferment
+   volontairement en état non vérifiable. Aucun garde-fou J6 n'a été assoupli. Les 74 régressions
+   ciblées et les 3 scénarios Chromium ci-dessus restent verts ; Failsafe général ne démarre pas
+   après cet échec Surefire.
 
 Les contrôles locaux ne collectent aucune donnée fournisseur, ne journalisent ni cookie, ni
 jeton, ni payload brut, et ne modifient aucune campagne existante.

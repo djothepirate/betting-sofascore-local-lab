@@ -32,16 +32,16 @@ class EventDetailsPresentationTest {
         assertThat(view.competition()).isEqualTo("—");
     }
 
-    @Test void localizesOfficialsAndMapsEnglandFromItsFootballAssociationCode() {
+    @Test void localizesOfficialsAndMapsExactBritishAssociationNamesDespiteContradictoryCodes() {
         var england = new EventPerson("Coach anglais", Optional.of(new ProviderCountry(
                 Optional.of("England"), Optional.of("EN"))));
-        var greekReferee = new EventPerson("Arbitre grec", Optional.of(new ProviderCountry(
-                Optional.of("Greece"), Optional.of("GR"))));
+        var scottishReferee = new EventPerson("Arbitre écossais", Optional.of(new ProviderCountry(
+                Optional.of("Scotland"), Optional.of("SX"))));
         var details = new EventDetails(902, Instant.parse("2026-09-09T20:00:00Z"),
                 new ScheduledTeam(1, "Domicile"), new ScheduledTeam(2, "Extérieur"),
                 new ScheduledEventStatus("notstarted", Optional.empty()), Optional.empty(), Optional.empty(),
                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
-                Optional.of(england), Optional.empty(), Optional.of(greekReferee));
+                Optional.of(england), Optional.empty(), Optional.of(scottishReferee));
 
         var view = EventDetailsPresentation.from(details);
 
@@ -50,10 +50,28 @@ class EventDetailsPresentationTest {
             assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gb-eng.svg");
         });
         assertThat(view.referee().country()).satisfies(country -> {
-            assertThat(country.label()).isEqualTo("Grèce");
-            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gr.svg");
+            assertThat(country.label()).isEqualTo("Écosse");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gb-sct.svg");
         });
         assertThat(england.country().orElseThrow().name()).contains("England");
-        assertThat(greekReferee.country().orElseThrow().name()).contains("Greece");
+        assertThat(scottishReferee.country().orElseThrow().name()).contains("Scotland");
+    }
+
+    @Test void presentsNorthernIrelandWithTheVersionedUnitedKingdomFlag() {
+        var northernIrishReferee = new EventPerson("Arbitre nord-irlandais", Optional.of(new ProviderCountry(
+                Optional.of("Northern Ireland"), Optional.of("NI"))));
+        var details = new EventDetails(903, Instant.parse("2026-09-09T20:00:00Z"),
+                new ScheduledTeam(1, "Domicile"), new ScheduledTeam(2, "Extérieur"),
+                new ScheduledEventStatus("notstarted", Optional.empty()), Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                Optional.empty(), Optional.empty(), Optional.of(northernIrishReferee));
+
+        var view = EventDetailsPresentation.from(details);
+
+        assertThat(view.referee().country()).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Irlande du Nord");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gb.svg");
+        });
+        assertThat(northernIrishReferee.country().orElseThrow().name()).contains("Northern Ireland");
     }
 }

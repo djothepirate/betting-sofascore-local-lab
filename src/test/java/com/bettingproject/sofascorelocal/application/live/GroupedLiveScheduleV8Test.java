@@ -253,7 +253,7 @@ class GroupedLiveScheduleV8Test {
     }
 
     @Test
-    void lateWorkerEmissionLeavesTheStrictPathInsteadOfClaimingASixtySecondNormalCycle() {
+    void lateWorkerEmissionLeavesTheStrictPathButRechecksOnTheNextStableMinutePhase() {
         var schedule = schedule(EVENT);
         Instant kickoff = START;
         var initial = schedule.next(START).orElseThrow();
@@ -266,18 +266,33 @@ class GroupedLiveScheduleV8Test {
                 .minus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START)).orElseThrow();
         assertThat(normal.kind()).isEqualTo("J4_CYCLE");
         schedule.started(normal, normal.dueAt());
-        schedule.departed(normal, normal.dueAt().plus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START)
-                .plusNanos(1));
-        Instant completed = normal.dueAt().plus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START)
-                .plus(EXCHANGE).plusNanos(1);
+        Instant requested = normal.dueAt().plus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START).plusNanos(1);
+        schedule.departed(normal, requested);
+        Instant completed = requested.plus(EXCHANGE);
         schedule.completed(normal, "inprogress", false, Map.of(), completed, kickoff, true);
 
         var state = schedule.states().getFirst();
         assertThat(state.state()).isEqualTo("WAITING_CADENCE_RECHECK");
         assertThat(state.missedCycles()).isEqualTo(1);
-        assertThat(state.nextDueAt()).isEqualTo(completed.plusSeconds(300));
+        Instant expectedRecheck = requested.plusSeconds(60).minus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START);
+        assertThat(state.nextDueAt()).isEqualTo(expectedRecheck);
+        assertThat(Duration.between(requested, state.nextDueAt())).isEqualTo(Duration.ofSeconds(60)
+                .minus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START));
+        assertThat(state.nextDueAt()).isBefore(completed.plus(LiveTimeoutRecoveryPolicy.RETRY_DELAY));
         assertThat(schedule.familySchedules(EVENT)).allSatisfy(family -> assertThat(family.missedCycles()).isEqualTo(1));
-        assertThat(nextAtOrAfter(schedule, state.nextDueAt()).kind()).isEqualTo("J4_CADENCE_RECHECK");
+        assertThat(schedule.next(expectedRecheck.minusNanos(1))).isEmpty();
+
+        var recheck = nextAtOrAfter(schedule, state.nextDueAt());
+        assertThat(recheck.endpoint()).isEqualTo(EVENT_DETAILS);
+        assertThat(recheck.kind()).isEqualTo("J4_CADENCE_RECHECK");
+        assertThat(recheck.groupOrdinal()).isZero();
+        assertThat(recheck.groupId()).isNotEqualTo(normal.groupId());
+        schedule.started(recheck, expectedRecheck);
+        schedule.departed(recheck, expectedRecheck);
+        Instant recheckCompleted = expectedRecheck.plus(EXCHANGE);
+        schedule.completed(recheck, "inprogress", false, Map.of(), recheckCompleted, kickoff, true);
+
+        assertFirstJ5FollowsAuthenticatedDeparture(schedule, expectedRecheck, recheckCompleted, 1);
     }
 
     @Test

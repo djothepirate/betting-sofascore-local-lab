@@ -29,8 +29,11 @@ préserve le fence effectif de 500 ms lorsqu'un J4 normal consomme son jitter lo
 les échanges demeurent dans ces bornes, les quatre suites de départ d'une rencontre restent
 dans leur vague de 60 s malgré des coûts variables d'une famille à l'autre. Le J4 normal est
 offert 500 ms avant l'échéance `REQUEST_SENT` : une émission authentifiée plus tardive quitte
-la voie stricte vers `WAITING_CADENCE_RECHECK`; elle ne peut pas être rephasée comme un cycle
-frais.
+la voie stricte vers `WAITING_CADENCE_RECHECK`; son groupe J4/J5 est conservé comme manqué et
+ne peut pas être rephasé comme un cycle frais. Aucun J5 de rattrapage n'est lancé. Le prochain
+J4 est offert sur la prochaine phase stable dérivée de ce départ authentifié (`REQUEST_SENT +
+60 s − 500 ms`) ; cette reprise de cadence ne prend pas le backoff de cinq minutes réservé aux
+timeouts et aux dépassements d'enveloppe. Les J5 ne reprennent qu'après ce nouveau J4 réussi.
 Si une réponse dépasse son enveloppe, l'événement est une exception explicitement visible et
 la prochaine action est différée selon les règles applicables : le système ne prétend pas que
 la fraîcheur est tenue. Une réception fournisseur et la complétude du corps restent des faits
@@ -100,7 +103,7 @@ les fenêtres de pression et les slots rencontre/famille, après quarante répon
 ont produit 1 444 appels, dont 1 203 établis et 40 froids, sans cycle manqué ni requête hors
 périmètre. Les octets versionnés lient le rapport natif
 `f5b70709dcc51d9b40223fde1175d3c507190244562355e675689cb06e9a7fc0` au profil
-`c25d65be2a42969c561eadc631eb3499ee21519990e7b44e790a21410efcc1d6` ; les bornes immuables sont
+`c5cef2745422d70bab769d03a93991af8ce3d685fb9daabb64fd00ab0a1ca3c8` ; les bornes immuables sont
 DETAILS 300/500 ms, INCIDENTS 300/400 ms, STATISTICS 350/400 ms et LINEUPS 300/450 ms. La revue,
 la fusion et la livraison manuelle du lanceur restent séparées. Même cette réussite loopback ne
 prouve ni une latence Internet bornée, ni l'acceptation de 45/min par SofaScore, ni l'absence de

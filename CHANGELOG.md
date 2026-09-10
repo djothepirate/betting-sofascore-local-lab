@@ -54,6 +54,12 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - Transforme un report durable qui franchit un créneau normal en `WAITING_PRESSURE_RECHECK` :
   le cycle et les familles réellement manqués restent visibles, les autres cibles touchées par
   le même hold sont requalifiées, puis un J4 explicite reprend après `notBefore`.
+- Corrige le chemin distinct `WAITING_CADENCE_RECHECK` : lorsqu'une émission J4 authentifiée
+  dépasse sa fenêtre stricte de 500 ms, son groupe J4/J5 reste compté manqué et aucun J5 de
+  rattrapage ne part. Le prochain J4 est proposé sur la phase stable suivante dérivée du dernier
+  `REQUEST_SENT` (`+ 60 s − 500 ms`), au lieu d'hériter du backoff de cinq minutes des timeouts.
+  Le fence, les budgets, les enveloppes et la capacité V8 restent inchangés ; les vrais timeouts
+  et dépassements d'enveloppe conservent leur délai de récupération propre.
 - Conserve la suspension durable sur 403/429, sans réarmement automatique, rotation d'adresse,
   proxy, VPN ou sonde fournisseur. Les manifestes et profils live-v1 à live-v7 restent
   historiques et inchangés.
@@ -62,7 +68,7 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   2 100,0198031 s de voie stricte. Elle compte 1 444 appels au total, dont 1 203 établis et
   40 froids, avec zéro appel fournisseur, hors périmètre ou cycle manqué. Les empreintes exactes
   sont `f5b70709dcc51d9b40223fde1175d3c507190244562355e675689cb06e9a7fc0` pour le rapport natif
-  et `c25d65be2a42969c561eadc631eb3499ee21519990e7b44e790a21410efcc1d6` pour le profil.
+  et `c5cef2745422d70bab769d03a93991af8ce3d685fb9daabb64fd00ab0a1ca3c8` pour le profil.
 - Le profil est qualifié seulement avec ses neuf variables V8, ses bornes immuables
   DETAILS 300/500 ms, INCIDENTS 300/400 ms, STATISTICS 350/400 ms et LINEUPS 300/450 ms. Sa
   livraison dans Eclipse, la revue humaine et la fusion restent à faire ; aucune campagne live
@@ -73,14 +79,19 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - Localise les libellés de pays dans la seule projection web commune aux personnes J4 et aux
   compositions J5. `ProviderCountry`, les observations normalisées, snapshots, hashes et lignes
   de persistance restent bruts et inchangés.
-- Résout explicitement les associations de football `England`/`EN`, `Scotland`/`SC` et
-  `Wales`/`WA` vers leurs drapeaux locaux dédiés, sans étendre ces exceptions à des codes ou pays
-  non concordants.
+- Résout explicitement les associations de football `England`, `Scotland`, `Wales` et
+  `Northern Ireland` d'après leur nom exact, même lorsqu'un snapshot fournit un code contradictoire.
+  Les trois premières gardent leur SVG local dédié ; l'Irlande du Nord emploie le drapeau britannique
+  `gb.svg` déjà versionné. Cette exception reste bornée à ces quatre noms, donc les pays ordinaires
+  continuent à être résolus par leur propre code ISO.
+- Traduit aussi `Physical Discomfort` par « Inconfort physique » dans les indisponibilités J5,
+  sans modifier la valeur brute conservée.
 - Conserve le libellé français comme texte accessible et comme repli visible tant qu’un SVG local
   n’a pas effectivement terminé son chargement, après une erreur d’image, sans JavaScript ou en
   mode de contraste forcé. Lorsqu’il est confirmé, le seul SVG local est affiché ; aucune image
-  n’est demandée au fournisseur ni à un CDN. La qualification Chromium locale (3 scénarios) et
-  `clean verify` sont verts et détaillés dans la
+  n’est demandée au fournisseur ni à un CDN. La qualification Chromium locale (3 scénarios) est
+  verte ; la passe `clean verify` actuelle est bloquée uniquement par deux contrôles Windows
+  d’identité de processus qui ferment en échec sûr, détail dans la
   [note de validation dédiée](docs/validation/WO058-COUNTRY-FRENCH-LABELS-AND-FLAG-FALLBACK-20260910.md).
 
 ### WO-058 — compositions enrichies, informations J4 et cadence live-v7

@@ -23,7 +23,7 @@ public final class CountryPresentation {
         String code = value.alpha2().map(String::trim).filter(text -> !text.isEmpty())
                 .map(text -> text.toUpperCase(Locale.ROOT)).orElse("");
         String sourceName = value.name().map(String::trim).filter(text -> !text.isEmpty()).orElse("");
-        HomeNation homeNation = homeNation(sourceName, code);
+        HomeNation homeNation = homeNation(sourceName);
         String presentationCode = code.isEmpty() ? ISO_CODES_BY_DISPLAY_NAME.getOrDefault(normalize(sourceName), "") : code;
         String label = homeNation != null ? homeNation.label()
                 : frenchLabel(presentationCode, sourceName);
@@ -53,25 +53,20 @@ public final class CountryPresentation {
     }
 
     /**
-     * SofaScore occasionally uses football-association names and non-ISO codes for the
-     * home nations. They are deliberately matched as bounded name/code pairs so an
-     * unrelated explicit ISO code, such as SC for Seychelles, is never reinterpreted.
+     * SofaScore can associate a football-association name with a contradictory ISO code in a
+     * snapshot. These exact association names are therefore authoritative for presentation,
+     * but the exception stays bounded to the four named home associations; ordinary countries
+     * such as Seychelles ({@code SC}), Czechia ({@code CZ}) and Sint Maarten ({@code SX}) still
+     * resolve from their own source name and ISO code.
      */
-    private static HomeNation homeNation(String sourceName, String code) {
+    private static HomeNation homeNation(String sourceName) {
         return switch (normalize(sourceName)) {
-            case "england", "angleterre" -> accepts(code, "", "GB", "EN")
-                    ? new HomeNation("Angleterre", "gb-eng") : null;
-            case "scotland", "ecosse" -> accepts(code, "", "GB", "SC")
-                    ? new HomeNation("Écosse", "gb-sct") : null;
-            case "wales", "pays de galles" -> accepts(code, "", "GB", "WA")
-                    ? new HomeNation("Pays de Galles", "gb-wls") : null;
+            case "england", "angleterre" -> new HomeNation("Angleterre", "gb-eng");
+            case "scotland", "ecosse" -> new HomeNation("Écosse", "gb-sct");
+            case "wales", "pays de galles" -> new HomeNation("Pays de Galles", "gb-wls");
+            case "northern ireland", "irlande du nord" -> new HomeNation("Irlande du Nord", "gb");
             default -> null;
         };
-    }
-
-    private static boolean accepts(String code, String... expected) {
-        for (String value : expected) if (value.equals(code)) return true;
-        return false;
     }
 
     private static Map<String, String> indexIsoDisplayNames() {

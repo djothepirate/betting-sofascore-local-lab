@@ -23,10 +23,28 @@ Les fichiers JSON sont versionnés sans transformation de leurs octets par `.git
 | Artefact | SHA-256 | Rôle |
 | --- | --- | --- |
 | [Rapport natif](WO058-GROUPED-LIVE-V8-NATIVE-20260910.json) | `f5b70709dcc51d9b40223fde1175d3c507190244562355e675689cb06e9a7fc0` | Mesure Chromium/worker/PostgreSQL de test, statut `PASSED`. |
-| [Profil calculé](WO058-GROUPED-LIVE-V8-PROFILE-20260910.json) | `c25d65be2a42969c561eadc631eb3499ee21519990e7b44e790a21410efcc1d6` | Profil local à charger manuellement avec ses huit enveloppes V8. |
+| [Profil calculé](WO058-GROUPED-LIVE-V8-PROFILE-20260910.json) | `c5cef2745422d70bab769d03a93991af8ce3d685fb9daabb64fd00ab0a1ca3c8` | Profil local à charger manuellement avec ses huit enveloppes V8. |
 | [Calculateur de profil](v8-profile-builder/V8MeasuredProfile.java) | `3bcefc3b3f6f49582e03a9ed8bc852d5870832666e1c1e3a86635cb4e522f31f` | Rejeu hors réseau des bornes immuables et des scénarios d'admission V8. |
 
 L’empreinte attendue du lanceur est celle du **profil calculé**, pas celle du rapport natif.
+
+## Rejeu lié au correctif de reprise de cadence
+
+Le 10 septembre, le profil a été régénéré hors réseau après le correctif limité à
+`WAITING_CADENCE_RECHECK`. Le calculateur a relu le rapport loopback versionné sans le modifier,
+puis a rejoué les seize scénarios d'admission avec les classes compilées courantes. Il confirme
+une capacité de **10**, la même géométrie de groupes de 6 000 ms, les mêmes plafonds de 45/minute
+et 2 756/heure, et indique `V8_OPERATOR_CONFIGURATION_CHANGED=NO`.
+
+L'empreinte du rapport natif reste donc inchangée ; celle du profil passe à
+`c5cef2745422d70bab769d03a93991af8ce3d685fb9daabb64fd00ab0a1ca3c8` parce qu'elle lie désormais
+le bytecode de `GroupedLiveScheduleV8` SHA-256
+`ed52e5a53706218cb64233b18cd2567cd0a5e8fb61939b06a4db4846d70931ec`. Ce rejeu ne prétend pas
+être une nouvelle mesure Chromium : il réutilise explicitement la preuve loopback inchangée de
+géométrie normale. La régression unitaire couvre séparément le cas exceptionnel d'un départ
+authentifié au-delà de 500 ms : la vague J4/J5 est comptée manquée, aucun J5 de rattrapage ne
+part, et le J4 suivant est proposé au prochain slot de phase stable. Les délais de cinq minutes
+des timeouts et des dépassements d'enveloppe restent couverts par leurs régressions propres.
 
 ## Protocole réellement exécuté
 

@@ -10,8 +10,8 @@
 - **Worktree :** `.tmp/wo058-live-j4-j5`, depuis le dossier Codex du Lab ; worktree distinct d'Eclipse.
 - **Autorité reçue :** ADR-SS-005 v0.1 accepté, puis déclaration « Je valide le WO-058 les travaux peuvent commencer » et demande explicite d'exécuter le plan de réalisation ; port 8087 libéré pour les tests.
 - **ADR courant :** [ADR-SS-005 v0.10](../../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), autorisation explicite du calendrier v7 et de son contrôle hors fournisseur. La protection persistante commune J3/J4/J5, la capacité v6 au plus sept et la capacité v7 au plus trois restent distinctes ; les manifestes v1–v6 gardent leurs règles. Proposition v0.1 acceptée conservée au SHA-256 `48004b4240138bcc430db0286113fee197a521c8e3548d7674ed410c25348f2e`.
-- **Évolution V8 autorisée :** demande propriétaire du 10 septembre de conserver la cible de fraîcheur à 60 s et de préparer une admission locale plus agressive : dix rencontres au plus, fence local de 500 ms, 45 départs/minute et 2 756 départs/heure. Pour un lancement qui précède T0 de moins d'une minute, le premier contrôle de bascule reste sur la phase stable `max(T0 sérialisé, J4 initial + 60 s)` afin de ne pas créer une seconde vague J4/J5 au même créneau. Elle ne crée aucun endpoint, transport, proxy, rotation d'adresse ou lancement fournisseur ; l'ADR n'est pas modifié dans ce lot documentaire.
-- **Livrable présent :** ADR accepté, WO validé, correctif v0.9 réalisé et [rapport de qualification fonctionnelle](../../validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md), avec inventaire de 56 fichiers, commandes, empreintes et résultats ; premier lot de résilience et profil temporel dédiés déjà qualifiés. La [preuve de capacité V8](../../validation/WO058-LIVE-V8-CAPACITY-20260910.md) versionne aussi le rapport natif et le profil loopback à dix rencontres ; elle reste distincte d'une acceptation fournisseur ou d'une modification du lanceur. Le complément V4/V46/v7/V47 est détaillé dans son [rapport hors fournisseur](../../validation/WO058-PEOPLE-AND-LIVE-V7-20260909.md) et le [profil v7 versionné](../../validation/WO058-LIVE-V7-CAPACITY-20260910.md) rend ses trois rencontres, ses enveloppes et son SHA reproductibles sans réglage automatique. Le [complément pays/métriques](../../validation/WO058-LINEUPS-COUNTRY-AND-METRICS-20260910.md) conserve la frontière de provenance des compositions V3. Les réalisations et preuves antérieures restent conservées, notamment v5/V40 et le complément compositions V3/V41 avec son [contrat](../../architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md) et sa [qualification du 09/09](../../validation/WO058-PLAYER-DETAILS-20260909.md). La preuve de fraîcheur fournisseur ne découle pas de la qualification locale.
+- **Évolution V8 autorisée :** demande propriétaire du 10 septembre de conserver la cible de fraîcheur à 60 s et de préparer une admission locale plus agressive : dix rencontres au plus, fence local de 500 ms, 45 départs/minute et 2 756 départs/heure. Pour un lancement qui précède T0 de moins d'une minute, le premier contrôle de bascule reste sur la phase stable `max(T0 sérialisé, J4 initial + 60 s)` afin de ne pas créer une seconde vague J4/J5 au même créneau. Le constat ultérieur d'un report de cadence de près de six minutes autorise le correctif local associé : une vague J4 dont le départ authentifié sort de la fenêtre stricte reste manquée, mais son prochain J4 est reproposé sur la phase stable suivante au lieu d'hériter du backoff de timeout. Elle ne crée aucun endpoint, transport, proxy, rotation d'adresse ou lancement fournisseur ; l'ADR n'est pas modifié dans ce lot documentaire.
+- **Livrable présent :** ADR accepté, WO validé, correctif v0.9 réalisé et [rapport de qualification fonctionnelle](../../validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md), avec inventaire de 56 fichiers, commandes, empreintes et résultats ; premier lot de résilience et profil temporel dédiés déjà qualifiés. La [preuve de capacité V8](../../validation/WO058-LIVE-V8-CAPACITY-20260910.md) versionne aussi le rapport natif et le profil loopback à dix rencontres ; la [note de reprise de cadence](../../validation/WO058-LIVE-V8-CADENCE-RECHECK-20260910.md) isole son recontrôle J4 sans modifier le transport. Ces preuves restent distinctes d'une acceptation fournisseur ou d'une modification du lanceur. Le complément V4/V46/v7/V47 est détaillé dans son [rapport hors fournisseur](../../validation/WO058-PEOPLE-AND-LIVE-V7-20260909.md) et le [profil v7 versionné](../../validation/WO058-LIVE-V7-CAPACITY-20260910.md) rend ses trois rencontres, ses enveloppes et son SHA reproductibles sans réglage automatique. Le [complément pays/métriques](../../validation/WO058-LINEUPS-COUNTRY-AND-METRICS-20260910.md) conserve la frontière de provenance des compositions V3. Les réalisations et preuves antérieures restent conservées, notamment v5/V40 et le complément compositions V3/V41 avec son [contrat](../../architecture/J5-LINEUPS-V3-PLAYER-DETAILS.md) et sa [qualification du 09/09](../../validation/WO058-PLAYER-DETAILS-20260909.md). La preuve de fraîcheur fournisseur ne découle pas de la qualification locale.
 - **Alignement de gouvernance :** renvois ciblés dans ADR-SS-001 et AGENTS.md ; ADR-SS-002 à 004 inchangés.
 - **Réalisations historiques :** réalisées et qualifiées hors fournisseur, correctifs HTTP 404/sélection puis plafond paramétrable jusqu'à 25 vérifiés sous les anciennes politiques ; compléments prématch/phase/clôture et incidents V16/V17 décrits dans les retours ci-dessous, statistiques intégrées aux pages. Les préparations v5 conservées restent limitées à vingt rencontres selon leur propre qualification ; **validation formelle du WO :** acquise ; **revue de réalisation :** à effectuer ; **campagnes fournisseur historiques :** essai à 8 arrêté volontairement, essai à 16 interrompu après coupure PostgreSQL, puis nouveaux lancements manuels à 7 et à 4 ; dernière exécution de cette série terminée, observations distinctes des qualifications locales.
 
@@ -70,7 +70,7 @@ lisibles avec leurs propres règles. Une préparation v8 sans profil complet et 
 | Lissage local | Un contexte et un départ à la fois ; fence local fixe de **500 ms** après une fin d'échange prouvée. V51 réserve en plus **1 s** entre deux groupes V8, séparément des quatre fences internes, afin de préserver ce fence sous le jitter J4 borné de 500 ms. Une attente plus longue peut encore venir du slot déterministe, d'un budget, d'un 404, d'un timeout ou d'une suspension ; elle ne doit pas être masquée comme fraîcheur. |
 | Budgets partagés | Au plus **45 départs sur 60 s glissantes** et **2 756 départs sur une heure glissante**, persistants entre campagnes. La planification horaire de dix rencontres consomme au plus **2 480 / 2 756** départs (276 restent non alloués) ; cette marge est distincte de la borne temporelle V51 `N × réserve de groupe <= 60 s`. Ce sont des budgets locaux choisis par le propriétaire, pas un seuil d'acceptation SofaScore. |
 | Vague initiale sous lease | Après acquisition du `CampaignLease` exclusif, la prélecture persistante exige une marge locale de **`4 × N` départs** (40 pour dix cibles). Elle est volontairement en lecture seule et ne réserve aucun départ ; chaque émission continue à réserver atomiquement. Cette marge concerne la vague runtime V8 phasée, pas le scénario de stress `INITIAL_COLD_START_STRESS` à quarante réponses de 5 Mio, qui reste séparé et ne revendique pas une place dans les 60 s. |
-| Planification | Les slots par rencontre et famille sont dérivés des enveloppes requête/traitement immuables du profil, des fences et de la réserve V51. Un J4 normal est proposé 500 ms avant son échéance de départ ; une émission authentifiée au-delà de cette borne bascule durablement en `WAITING_CADENCE_RECHECK`, sans prétendre conserver les 60 s. |
+| Planification | Les slots par rencontre et famille sont dérivés des enveloppes requête/traitement immuables du profil, des fences et de la réserve V51. Un J4 normal est proposé 500 ms avant son échéance de départ ; une émission authentifiée au-delà de cette borne bascule en `WAITING_CADENCE_RECHECK`, conserve son groupe J4/J5 manqué et ne lance aucun rattrapage. Le prochain J4 est offert sur la phase stable dérivée de son dernier `REQUEST_SENT` (`+ 60 s − 500 ms`), sans prendre le backoff de cinq minutes réservé aux timeouts et dépassements d'enveloppe. |
 
 La révision persiste le fait de départ V8 dans un ledger append-only distinct de la réservation :
 une trame worker `REQUEST_SENT` n'est retenue que si son instant est compris entre la
@@ -82,6 +82,16 @@ autres cibles en jeu touchées par le même hold à `WAITING_PRESSURE_RECHECK` :
 réellement non parties sont comptées manquées et seul un J4 explicite redémarre à `notBefore`.
 Le chemin normal, les 404, les délais prématch, les timeouts et les refus gardent leurs règles
 propres.
+
+Un dépassement de cadence J4 n'est pas un timeout transport : le groupe concerné et ses J5
+ordinaires restent explicitement manqués, puis seul un J4 `CADENCE_RECHECK` est offert à la
+prochaine phase stable de cette rencontre. Cette reprise n'ajoute aucun départ et reste soumise
+aux slots, au fence et au budget partagé. Les J5 ne reparaissent qu'après la réponse `inprogress`
+de ce nouveau J4. Les délais de cinq minutes restent inchangés pour une fin de transport ambiguë,
+un timeout récupérable ou un dépassement d'enveloppe.
+
+La [note de validation de cette reprise](../../validation/WO058-LIVE-V8-CADENCE-RECHECK-20260910.md)
+lie la régression à `500 ms + 1 ns`, le profil V8 recalculé et les limites qui demeurent inchangées.
 
 V50 étend aussi la preuve J6 de sauvegarde/restauration au ledger
 `provider_departure_accounting` : son empreinte complète et son compteur source/restauration
@@ -127,7 +137,7 @@ effectif est de 30 000 ms ; le replay de production exécute 16 scénarios.
 
 Le [rapport V8](../../validation/WO058-LIVE-V8-CAPACITY-20260910.md) lie les octets du rapport
 natif SHA-256 `f5b70709dcc51d9b40223fde1175d3c507190244562355e675689cb06e9a7fc0` au profil
-SHA-256 `c25d65be2a42969c561eadc631eb3499ee21519990e7b44e790a21410efcc1d6`. Le profil retient les
+SHA-256 `c5cef2745422d70bab769d03a93991af8ce3d685fb9daabb64fd00ab0a1ca3c8`. Le profil retient les
 bornes immuables DETAILS 300/500 ms, INCIDENTS 300/400 ms, STATISTICS 350/400 ms et LINEUPS
 300/450 ms ; les maxima observés arrondis sont respectivement 300/450, 300/400, 300/400 et
 300/400 ms. Les quatre fences de 500 ms et la réserve V51 de 1 000 ms donnent une réservation
@@ -1383,9 +1393,10 @@ du WO cible exclusivement `feature/V0.1.0-RC01`, avec revue humaine et fusion av
 Le complément corrige exclusivement la projection web des pays dans les personnes J4
 (entraîneurs et arbitre) et dans les compositions J5 (joueurs et indisponibles). Il obtient un
 libellé français depuis le code pays local lorsqu'il est connu. Les cas d'associations de football
-britanniques sont volontairement bornés aux paires `England`/`EN`, `Scotland`/`SC` et
-`Wales`/`WA`, afin de sélectionner les SVG locaux dédiés sans assimiler un code identique à un
-autre pays.
+britanniques sont volontairement bornés aux noms exacts `England`, `Scotland`, `Wales` et
+`Northern Ireland`. Ces noms prévalent dans la projection lorsque le snapshot leur associe un code
+contradictoire : les trois premiers choisissent leur SVG local dédié, tandis que l'Irlande du Nord
+emploie `gb.svg`, déjà versionné. Les autres pays continuent à être résolus par leur propre code ISO.
 
 `ProviderCountry`, les données normalisées, les snapshots, hashes, parseurs et écritures de
 persistance ne changent pas. Les drapeaux restent des SVG embarqués et versionnés dans le Lab :
@@ -1394,7 +1405,12 @@ l'arbre d'accessibilité et reste visible tant que le chargement réel du SVG lo
 confirmé, après une erreur d'image, sans JavaScript et en mode de contraste forcé. La présentation
 ne masque donc jamais une nationalité parce qu'une image n'a pas été chargée.
 
+Le même complément traduit `Physical Discomfort` en « Inconfort physique » parmi les motifs
+d'indisponibilité J5, sans modifier la valeur brute de provenance.
+
 La syntaxe des deux rafraîchissements JavaScript, la régression Maven ciblée, la qualification
-Chromium conjointe J4/compositions et `clean verify` sont enregistrés dans la
+Chromium conjointe J4/compositions et la tentative `clean verify` sont enregistrées dans la
 [note de validation pays](../../validation/WO058-COUNTRY-FRENCH-LABELS-AND-FLAG-FALLBACK-20260910.md).
+La passe générale s'arrête actuellement sur deux contrôles Windows d'identité de processus qui
+ferment en échec sûr ; ils sont distincts des régressions pays et de la qualification loopback.
 Ces contrôles sont entièrement locaux et ne constituent ni collecte ni acceptation fournisseur.

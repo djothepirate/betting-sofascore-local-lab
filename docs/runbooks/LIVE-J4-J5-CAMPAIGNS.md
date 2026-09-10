@@ -35,7 +35,7 @@ effectuée. L’empreinte est celle du **profil** versionné, non celle du rappo
 
 | Variable | Valeur qualifiée |
 | --- | --- |
-| `SOFASCORE_LIVE_GROUPED_V8_QUALIFICATION_SHA256` | `c25d65be2a42969c561eadc631eb3499ee21519990e7b44e790a21410efcc1d6` |
+| `SOFASCORE_LIVE_GROUPED_V8_QUALIFICATION_SHA256` | `c5cef2745422d70bab769d03a93991af8ce3d685fb9daabb64fd00ab0a1ca3c8` |
 | `SOFASCORE_LIVE_GROUPED_V8_J4_REQUEST_ENVELOPE` | `300ms` |
 | `SOFASCORE_LIVE_GROUPED_V8_J4_PROCESSING_ENVELOPE` | `500ms` |
 | `SOFASCORE_LIVE_GROUPED_V8_INCIDENTS_REQUEST_ENVELOPE` | `300ms` |
@@ -44,6 +44,10 @@ effectuée. L’empreinte est celle du **profil** versionné, non celle du rappo
 | `SOFASCORE_LIVE_GROUPED_V8_STATISTICS_PROCESSING_ENVELOPE` | `400ms` |
 | `SOFASCORE_LIVE_GROUPED_V8_LINEUPS_REQUEST_ENVELOPE` | `300ms` |
 | `SOFASCORE_LIVE_GROUPED_V8_LINEUPS_PROCESSING_ENVELOPE` | `450ms` |
+
+Cette empreinte lie le profil recalculé au planificateur V8 qui reprend un dépassement de
+cadence au prochain slot J4 stable. Elle doit être livrée avec les huit enveloppes ci-dessus ;
+elle ne modifie pas le manifeste d'une campagne déjà démarrée et ne réarme pas un refus 403/429.
 
 Le plafond opérateur `SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY` doit rester à `10` et
 `SOFASCORE_PLAYWRIGHT_REQUEST_TIMEOUT` à `30s`. Le fence V8 de `500ms` est une borne interne
@@ -62,6 +66,7 @@ aucune campagne fournisseur.
 | Réservation temporelle | Les quatre enveloppes, quatre fences de 500 ms et la réserve statique V51 de 1 000 ms forment une réservation stricte de **6 000 ms** par groupe. Dix groupes occupent exactement les 60 000 ms disponibles. |
 | Budgets locaux persistants | Au plus **45 départs / 60 s glissantes** et **2 756 départs / heure glissante**. Les compteurs sont partagés et survivent aux campagnes ; ils ne sont pas un seuil supposé du fournisseur. |
 | Preuve de départ et pression | La fenêtre V8 utilise `REQUEST_SENT` authentifié quand il est cohérent avec la réservation et l'observation parent ; sans preuve, la complétion est retenue de façon conservatrice. Un hold qui franchit un créneau normal rend les cycles/familles manqués visibles dans `WAITING_PRESSURE_RECHECK`, avant un J4 de reprise à l'échéance autorisée. |
+| Dépassement de cadence J4 | Une émission J4 authentifiée plus de 500 ms après son slot strict conserve le groupe J4/J5 comme manqué dans `WAITING_CADENCE_RECHECK`. Aucun J5 de rattrapage ne part ; seul le prochain J4 est offert sur la phase stable `REQUEST_SENT + 60 s − 500 ms`. Ce chemin ne reçoit pas le backoff de cinq minutes des timeouts ou dépassements d'enveloppe. |
 | Réception et réponse lente | Une réponse qui dépasse l'enveloppe ne permet pas d'affirmer la cadence normale. Elle est diagnostiquée comme exception ; une réception fournisseur reste distincte de l'heure de départ locale. |
 | Refus connus | Un HTTP **403/429** suspend durablement l'accès partagé. Un réarmement demeure manuel, sans sonde, reset de budget, proxy, rotation d'IP/VPN ou reprise automatique. |
 
@@ -99,7 +104,7 @@ Les octets bruts sont conservés dans
 [le rapport natif](../validation/WO058-GROUPED-LIVE-V8-NATIVE-20260910.json)
 `f5b70709dcc51d9b40223fde1175d3c507190244562355e675689cb06e9a7fc0` et
 [le profil](../validation/WO058-GROUPED-LIVE-V8-PROFILE-20260910.json)
-`c25d65be2a42969c561eadc631eb3499ee21519990e7b44e790a21410efcc1d6`. Le script ne charge pas le
+`c5cef2745422d70bab769d03a93991af8ce3d685fb9daabb64fd00ab0a1ca3c8`. Le script ne charge pas le
 lanceur et ne modifie aucune campagne réelle. Une passe favorable reste une preuve de
 planification loopback sous enveloppes ; elle ne mesure ni l'acceptation de 45/min par
 SofaScore, ni la latence Internet, ni la résistance future à un bannissement.

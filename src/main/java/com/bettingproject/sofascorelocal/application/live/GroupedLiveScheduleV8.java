@@ -469,7 +469,15 @@ final class GroupedLiveScheduleV8 {
         if (!event.next.isBefore(endsAt)) stopEvent(event.id, "STOPPED_LIMIT");
     }
 
-    /** A late authenticated normal J4 must be requalified rather than rephased as fresh. */
+    /**
+     * A late authenticated normal J4 must be requalified rather than rephased as fresh.
+     *
+     * The strict group is abandoned, including its ordinary J5 work, but cadence-only
+     * recovery is not a transport timeout. Re-offer the next J4 on the event's normal
+     * authenticated-departure phase. This retains the missed-cycle evidence and avoids
+     * a catch-up burst while preventing the unrelated five-minute timeout backoff from
+     * turning a bounded worker-start overrun into several minutes of stale J5 data.
+     */
     private void deferAfterCadence(Event event, Instant completedAt) {
         event.strictEmissionMissed = false;
         event.pending.clear(); contiguous = null; event.finalComplete = false;
@@ -479,7 +487,8 @@ final class GroupedLiveScheduleV8 {
             event.familyMisses.merge(family, 1L, Long::sum);
         event.mode = Mode.CADENCE_RECHECK;
         event.state = "WAITING_CADENCE_RECHECK";
-        event.next = completedAt.plus(LiveTimeoutRecoveryPolicy.RETRY_DELAY);
+        Instant departure = event.lastStarts.getOrDefault(EVENT_DETAILS, event.groupDue);
+        event.next = nextFutureMinute(departure.minus(PLAY_REQUEST_EMISSION_HEAD_START), completedAt);
         if (!event.next.isBefore(endsAt)) stopEvent(event.id, "STOPPED_LIMIT");
     }
 

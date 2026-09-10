@@ -31,7 +31,7 @@ class CountryAssetsTest {
             assertThat(svg).doesNotContain("<script", "<foreignObject", "<!ENTITY", "<!DOCTYPE");
             assertThat(svg).doesNotMatch("(?is).*\\s(?:on[a-z]+\\s*=|(?:xlink:)?href\\s*=\\s*[\"'](?!#)).*");
         }
-        for(String country:List.of("England","Scotland","Wales")) {
+        for(String country:List.of("England","Scotland","Wales","Northern Ireland")) {
             var view=CountryPresentation.of(Optional.of(new ProviderCountry(Optional.of(country),Optional.of("GB"))));
             assertThat(Files.exists(Path.of("src/main/resources/static"+view.flagPath()))).isTrue();
         }
@@ -75,12 +75,16 @@ class CountryAssetsTest {
         });
     }
 
-    @Test void mapsBritishFootballAssociationsOnlyForTheirExpectedSourcePairs() {
+    @Test void prioritizesExactBritishAssociationNamesOverContradictoryCodesWithoutRewritingOrdinaryCountries() {
         assertThat(view("England", "EN")).satisfies(country -> {
             assertThat(country.label()).isEqualTo("Angleterre");
             assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gb-eng.svg");
         });
-        assertThat(view("Scotland", "SC")).satisfies(country -> {
+        assertThat(view("Scotland", "SX")).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Écosse");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gb-sct.svg");
+        });
+        assertThat(view("Scotland", "CZ")).satisfies(country -> {
             assertThat(country.label()).isEqualTo("Écosse");
             assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gb-sct.svg");
         });
@@ -88,13 +92,30 @@ class CountryAssetsTest {
             assertThat(country.label()).isEqualTo("Pays de Galles");
             assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gb-wls.svg");
         });
+        assertThat(view("Northern Ireland", "NI")).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Irlande du Nord");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gb.svg");
+        });
+        assertThat(view("Northern Ireland", "")).satisfies(country -> {
+            assertThat(country.label()).isEqualTo("Irlande du Nord");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gb.svg");
+        });
         assertThat(view("Seychelles", "SC")).satisfies(country -> {
             assertThat(country.label()).isEqualTo("Seychelles");
             assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/sc.svg");
         });
+        assertThat(view("Czechia", "CZ")).satisfies(country -> {
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/cz.svg");
+        });
+        assertThat(view("Sint Maarten", "SX")).satisfies(country -> {
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/sx.svg");
+        });
+        assertThat(view("Nicaragua", "NI")).satisfies(country -> {
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/ni.svg");
+        });
         assertThat(view("England", "US")).satisfies(country -> {
-            assertThat(country.label()).isEqualTo("États-Unis");
-            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/us.svg");
+            assertThat(country.label()).isEqualTo("Angleterre");
+            assertThat(country.flagPath()).isEqualTo("/images/flags/4x3/gb-eng.svg");
         });
     }
 
