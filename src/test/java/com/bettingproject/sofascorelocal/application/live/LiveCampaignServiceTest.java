@@ -36,6 +36,7 @@ import com.bettingproject.sofascorelocal.port.RawManualCallSnapshotStore;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.InOrder;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.nio.charset.StandardCharsets;
@@ -68,6 +69,7 @@ import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
 import static org.mockito.Mockito.never;
@@ -1069,11 +1071,53 @@ class LiveCampaignServiceTest {
     }
 
     @Test
+    void v8LaunchRechecksSharedPressureOnlyAfterItOwnsTheCampaignLease() throws Exception {
+        try (Harness h = new Harness(false, "live-v8", 1, true)) {
+            ProviderResilienceData.Snapshot open=h.resilience.snapshot();
+            AtomicBoolean sharedTrafficReachedTheLeaseBoundary = new AtomicBoolean();
+            when(h.lease.ownership()).thenAnswer(invocation -> {
+                // Model a completed shared departure between the HTTP-thread
+                // preparation checks and durable live-lease acquisition.
+                sharedTrafficReachedTheLeaseBoundary.set(true);
+                return h.ownership;
+            });
+            when(h.resilience.departureCapacityDecision(eq(ProviderResilienceData.DepartureProfile.LIVE_V8),eq(4),any()))
+                    .thenAnswer(invocation -> new ProviderResilienceData.DepartureDecision(
+                            !sharedTrafficReachedTheLeaseBoundary.get(),
+                            sharedTrafficReachedTheLeaseBoundary.get()
+                                    ? ProviderResilienceData.DepartureReason.RATE_LIMITED
+                                    : ProviderResilienceData.DepartureReason.ALLOWED,
+                            Instant.now().plusSeconds(30),open));
+
+            assertThatThrownBy(h::launch).hasMessage("LIVE_V8_FRESHNESS_CAPACITY_UNAVAILABLE");
+            assertThat(h.finished.await(4, TimeUnit.SECONDS)).isTrue();
+
+            InOrder admissionOrder=inOrder(h.coordinator,h.lease,h.resilience);
+            admissionOrder.verify(h.coordinator).acquireLiveCampaign(h.manifest.campaignId());
+            admissionOrder.verify(h.lease).ownership();
+            admissionOrder.verify(h.resilience).departureCapacityDecision(
+                    eq(ProviderResilienceData.DepartureProfile.LIVE_V8),eq(4),any());
+            verify(h.store,never()).launch(any(),any(),any(),any());
+            verify(h.factory,never()).openLiveGroupedV8(any(),any());
+            verifyNoInteractions(h.campaign);
+            verify(h.lease).close();
+            assertThat(h.campaignState).hasValue("PREPARED");
+        }
+    }
+
+    @Test
     void v8RephasesItsPendingFamiliesFromTheReturnedWorkerRequestedAt() throws Exception {
         try (Harness h = new Harness(false, "live-v8", 1, true)) {
             AtomicReference<Instant> j4RequestedAt = new AtomicReference<>();
             h.reply = request -> {
-                Instant requestedAt = Instant.now().plusMillis(request.endpoint() == EVENT_DETAILS ? 250 : 0);
+                // Bind the worker-side timestamp to the persisted J4 due time,
+                // rather than the wall clock at response construction.  V8
+                // accepts at most its declared 500 ms emission head-start
+                // bound; a scheduling or GC delay in this test must not turn
+                // an otherwise valid fixture into a cadence recheck.
+                Instant requestedAt = request.endpoint() == EVENT_DETAILS
+                        ? h.attemptRequests.getLast().dueAt().plus(LiveSchedule.v8RequestEmissionHeadStart())
+                        : Instant.now();
                 if (request.endpoint() != EVENT_DETAILS) return response("unavailable", 404, requestedAt);
                 j4RequestedAt.set(requestedAt);
                 return response("""
@@ -1175,6 +1219,59 @@ class LiveCampaignServiceTest {
             }
             h.awaitFinished();
             assertThat(h.eventStates.get(id(A))).isEqualTo("STOPPED_OPERATOR");
+        }
+    }
+
+    @Test
+    void v8PostExchangeFenceKeepsThePendingFamilyCollectingWithoutAPressureRecheck() throws Exception {
+        try (Harness h = new Harness(false, "live-v8", 1, true)) {
+            AtomicInteger decisions = new AtomicInteger();
+            AtomicReference<Instant> fenceRelease = new AtomicReference<>();
+            ProviderResilienceData.Snapshot open = h.resilience.snapshot();
+            when(h.resilience.departureDecision(eq(ProviderResilienceData.DepartureProfile.LIVE_V8), any()))
+                    .thenAnswer(invocation -> {
+                        Instant now = invocation.getArgument(1);
+                        if (decisions.incrementAndGet() == 2) {
+                            Instant notBefore = now.plusSeconds(1);
+                            fenceRelease.set(notBefore);
+                            return new ProviderResilienceData.DepartureDecision(false,
+                                    ProviderResilienceData.DepartureReason.POST_EXCHANGE_FENCE, notBefore, open);
+                        }
+                        return new ProviderResilienceData.DepartureDecision(true,
+                                ProviderResilienceData.DepartureReason.ALLOWED, now, open);
+                    });
+            h.reply = request -> request.endpoint() == EVENT_DETAILS
+                    ? response("""
+                            {"event":{"id":%d,"startTimestamp":1788796800,
+                            "homeTeam":{"id":1,"name":"Home"},"awayTeam":{"id":2,"name":"Away"},
+                            "status":{"type":"inprogress"},"homeScore":{"current":0},"awayScore":{"current":0}}}
+                            """.formatted(request.eventId()), 200)
+                    : response("unavailable", 404);
+
+            h.launch();
+            long deadline = System.nanoTime() + TimeUnit.SECONDS.toNanos(3);
+            while (System.nanoTime() < deadline) {
+                Instant notBefore = fenceRelease.get();
+                LiveSchedule schedule = h.activeSchedule();
+                if (notBefore != null && schedule != null && schedule.states().getFirst().state().equals("COLLECTING")
+                        && schedule.states().getFirst().missedCycles() == 0
+                        && notBefore.equals(schedule.states().getFirst().nextDueAt())) break;
+                Thread.sleep(10);
+            }
+
+            assertThat(fenceRelease).hasValueSatisfying(notBefore -> {
+                LiveSchedule schedule = h.activeSchedule();
+                assertThat(schedule.states().getFirst()).satisfies(state -> {
+                    assertThat(state.state()).isEqualTo("COLLECTING");
+                    assertThat(state.missedCycles()).isZero();
+                    assertThat(state.nextDueAt()).isEqualTo(notBefore);
+                });
+                assertThat(schedule.familySchedules(id(A))).extracting(FamilySchedule::missedCycles)
+                        .containsExactly(0L, 0L, 0L, 0L);
+            });
+            assertThat(h.attemptRequests).extracting(AttemptRequest::kind).containsExactly("J4_INITIAL");
+            h.service.stop(h.manifest.campaignId(), null);
+            h.awaitFinished();
         }
     }
 
@@ -1691,6 +1788,10 @@ class LiveCampaignServiceTest {
             when(resilience.departureDecision(eq(ProviderResilienceData.DepartureProfile.LIVE_V8), any())).thenAnswer(invocation->
                     new ProviderResilienceData.DepartureDecision(true,ProviderResilienceData.DepartureReason.ALLOWED,
                             invocation.getArgument(1),open));
+            when(resilience.departureCapacityDecision(eq(ProviderResilienceData.DepartureProfile.LIVE_V8),
+                    eq(manifest.targets().size()*4), any())).thenAnswer(invocation ->
+                    new ProviderResilienceData.DepartureDecision(true,ProviderResilienceData.DepartureReason.ALLOWED,
+                            invocation.getArgument(2),open));
             doAnswer(invocation->{
                 UUID attempt=invocation.getArgument(1);PlaywrightTransportDiagnostic diagnostic=invocation.getArgument(3);
                 savedTransport.put(attempt,diagnostic);return null;
@@ -1729,11 +1830,13 @@ class LiveCampaignServiceTest {
         }
 
         CampaignView view() {
+            String state = campaignState.get();
+            boolean unlaunched = "PREPARED".equals(state);
             List<EventView> events = manifest.targets().stream().map(target -> new EventView(target,
-                    eventStates.get(target.canonicalEventId()), null, 0, 0, null, List.of())).toList();
-            return new CampaignView(manifest, campaignState.get(), null, manifest.preparedAt(),
-                    manifest.preparedAt().plus(manifest.duration()), reservations.get(), 0, publications.size(),
-                    ownership, events, List.of(), List.of());
+                    unlaunched ? "PREPARED" : eventStates.get(target.canonicalEventId()), null, 0, 0, null, List.of())).toList();
+            return new CampaignView(manifest, state, null, unlaunched ? null : manifest.preparedAt(),
+                    unlaunched ? null : manifest.preparedAt().plus(manifest.duration()), reservations.get(), 0, publications.size(),
+                    unlaunched ? null : ownership, events, List.of(), List.of());
         }
 
         void launch() { service.launch(manifest.campaignId(), manifest.manifestSha256()); launched = true; }

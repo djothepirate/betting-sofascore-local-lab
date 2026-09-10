@@ -88,8 +88,15 @@ try {
     }
     if ($v8) {
         if ($report.normalPathDepartureCadenceSeconds -ne 60 -or $report.normalPathDepartureTimestamp -ne 'requestedNanos' `
-                -or $report.normalPathDepartureCadenceScope -ne 'per-event-family') {
+                -or $report.normalPathDepartureCadenceScope -ne 'per-event-family' `
+                -or $report.strictLaneElapsedSeconds -lt 2100) {
             throw 'The V8 report does not identify the strict 60-second normal-path departure cadence'
+        }
+        if ($null -eq $report.strictScheduler -or $report.strictScheduler.interGroupSlotReserveMillis -ne 1000 `
+                -or $report.strictScheduler.requestEmissionHeadStartMillis -ne 500 `
+                -or $report.strictScheduler.groupPhaseReservationMillis -ne 6000 `
+                -or $report.strictScheduler.normalJ4EmissionOverrunState -ne 'WAITING_CADENCE_RECHECK') {
+            throw 'The V8 report does not bind the immutable 6000 ms group reservation and bounded J4 emission contract'
         }
         # The builder reads only the newly generated loopback report.  It emits
         # reviewable bytes under .tmp; it never updates application configuration

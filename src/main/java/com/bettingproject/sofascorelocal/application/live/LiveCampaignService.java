@@ -142,7 +142,9 @@ public final class LiveCampaignService {
                 + "|" + selectionMaximum() + "|" + profile + "|critical=60|lineups=60|prematch=initial4,T-60all4,lineups300untilConfirmed,T-5quiet,T0J4each60"
                 + "|delayed=rebaseKickoff,T-60all4,lineups300untilConfirmed,T-5quiet,T0J4each60"
                 + "|intra=0|inter=0.5|sequential|maxGroup=4|order=J4,incidents,statistics,lineups"
-                + "|phaseCount=1|utilization=0.9|provider-resilience-v1|departureProfile=live-v8"
+                + "|initialWaveHeadroom=4xN-local-under-exclusive-lease-not-reserved"
+                + "|temporalV51=groupReservation*N<=60s|hourlyPlanning=2480/2756"
+                + "|provider-resilience-v1|departureProfile=live-v8"
                 + "|finishFence=0.5|rate=45/60,2756/3600|404=300,600,900|" + targets;
         Manifest manifest = new Manifest(id, Sha256.hex(material.getBytes(StandardCharsets.UTF_8)), "live-v8",
                 now, now.plusSeconds(300), properties.getDuration(), 2500, 20000, bytes,
@@ -278,7 +280,8 @@ public final class LiveCampaignService {
                 || current.manifest().qualifiedMatchCapacity() != (grouped ? selectionMaximum(policyVersion) : properties.getQualifiedMatchCapacity())
                 || !current.manifest().duration().equals(properties.getDuration()))
             throw new IllegalArgumentException("LIVE_PREPARED_POLICY_CHANGED");
-        if ("live-v8".equals(policyVersion)) admission.admitV8(current.manifest().targets().size() - alreadyExcluded.size(),
+        int activeTargetCount=current.manifest().targets().size() - alreadyExcluded.size();
+        if ("live-v8".equals(policyVersion)) admission.admitV8(activeTargetCount,
                 current.manifest().admissionProfile().groupedProfile());
         else if ("live-v7".equals(policyVersion)) admission.admitV7(current.manifest().targets().size() - alreadyExcluded.size(),
                 current.manifest().admissionProfile().groupedProfile());
@@ -303,10 +306,49 @@ public final class LiveCampaignService {
             session.stopAll("STOPPED_ERROR");
             if (failure instanceof InterruptedException) Thread.currentThread().interrupt();
             if (failure instanceof ExecutionException && failure.getCause() instanceof IllegalStateException cause
-                    && "LIVE_PROVIDER_CLEANUP_REQUIRED".equals(cause.getMessage())) throw cause;
+                    && launchFailureMustReachOperator(cause.getMessage())) throw cause;
             throw new IllegalStateException("LIVE_LAUNCH_FAILED");
         }
         return state(id);
+    }
+
+    /**
+     * A launch failure before the durable campaign row exists has no campaign
+     * state to display. Preserve the actionable local admission result for the
+     * preparation page instead of collapsing it into a generic async failure.
+     */
+    private static boolean launchFailureMustReachOperator(String code) {
+        if (code == null) return false;
+        return switch (code) {
+            case "LIVE_PROVIDER_CLEANUP_REQUIRED", "LIVE_V8_FRESHNESS_CAPACITY_UNAVAILABLE",
+                    "PROVIDER_SUSPENDED", "PROVIDER_DEPARTURE_UNRESOLVED", "PROVIDER_CLOCK_REGRESSION",
+                    "PROVIDER_DEPARTURE_CAPACITY_UNAVAILABLE", "PROVIDER_DEPARTURE_CAPACITY_UNSUPPORTED" -> true;
+            default -> false;
+        };
+    }
+
+    /**
+     * V8 starts with four critical families per target. Do not launch any
+     * positive initial wave when traffic already recorded by the shared durable
+     * limiter cannot make room for all of its departures; otherwise the
+     * campaign would present a 60-second profile it cannot hold. Taken after
+     * the exclusive {@code CampaignLease}, this is conservative local headroom
+     * for {@code 4 x N} runtime starts (forty for ten targets), never a multi-
+     * departure reservation: every individual dispatch still reserves atomically.
+     */
+    static void requireV8InitialWaveCapacity(ProviderResilienceStore resilience, int targets, Instant now) {
+        if (resilience == null) throw new IllegalStateException("PROVIDER_DEPARTURE_CAPACITY_UNSUPPORTED");
+        int requiredDepartures=Math.multiplyExact(targets, 4);
+        var capacity=resilience.departureCapacityDecision(ProviderResilienceData.DepartureProfile.LIVE_V8,
+                requiredDepartures, now);
+        if (capacity.allowed()) return;
+        throw new IllegalStateException(switch (capacity.reason()) {
+            case PROVIDER_SUSPENDED -> "PROVIDER_SUSPENDED";
+            case DEPARTURE_UNRESOLVED -> "PROVIDER_DEPARTURE_UNRESOLVED";
+            case RATE_LIMITED -> "LIVE_V8_FRESHNESS_CAPACITY_UNAVAILABLE";
+            case CLOCK_REGRESSION -> "PROVIDER_CLOCK_REGRESSION";
+            default -> "PROVIDER_DEPARTURE_CAPACITY_UNAVAILABLE";
+        });
     }
 
     private AdmissionProfile currentAdmissionProfile(String policyVersion) {
@@ -427,6 +469,13 @@ public final class LiveCampaignService {
             s.phase = LEASE_ACQUISITION;
             lease = coordinator.acquireLiveCampaign(s.manifest.campaignId());
             s.ownership = lease.ownership();
+            // This proof must be taken only after the full live-campaign lease
+            // owns both the local coordinator and durable guard. A preflight on
+            // the HTTP thread can otherwise become stale while another local
+            // provider operation consumes one of the initial V8 slots.
+            int activeTargetCount = s.manifest.targets().size() - s.alreadyExcluded.size();
+            if ("live-v8".equals(s.manifest.policyVersion()) && activeTargetCount > 0)
+                requireV8InitialWaveCapacity(resilience, activeTargetCount, clock.instant());
             s.phase = CAMPAIGN_LAUNCH;
             Launch started = store.launch(s.manifest.campaignId(), s.manifest.manifestSha256(), s.ownership, clock.instant());
             s.launchConfirmed = true;
@@ -466,7 +515,8 @@ public final class LiveCampaignService {
         } catch (RuntimeException failure) {
             recordFirstFailure(s, failure);
             s.stopAll("STOPPED_ERROR");
-            String code = "LIVE_LAUNCH_FAILED";
+            String code = !s.launchConfirmed && launchFailureMustReachOperator(failure.getMessage())
+                    ? failure.getMessage() : "LIVE_LAUNCH_FAILED";
             if (s.ownership == null && failure instanceof ManualProviderRequestCoordinator.CoordinationException) {
                 try { if (providerCleanupRequired()) code = "LIVE_PROVIDER_CLEANUP_REQUIRED"; }
                 catch (RuntimeException ignored) { /* an unreadable guard is not evidence of cleanup state */ }
@@ -600,6 +650,9 @@ public final class LiveCampaignService {
                     ? resilience.departureDecision(ProviderResilienceData.DepartureProfile.LIVE_V8, clock.instant())
                     : resilience.departureDecision(clock.instant());
             if(!permission.allowed()) {
+                if(permission.reason()==ProviderResilienceData.DepartureReason.POST_EXCHANGE_FENCE) {
+                    s.schedule.waitForPostExchangeFence(due,permission.nextAllowedAt()); return;
+                }
                 if(permission.reason()==ProviderResilienceData.DepartureReason.RATE_LIMITED) {
                     s.schedule.defer(due,permission.nextAllowedAt()); return;
                 }

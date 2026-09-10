@@ -38,6 +38,15 @@ class GroupedLiveScheduleV8Test {
         return new GroupedAdmissionProfile(costs, "8".repeat(64), "live-v8");
     }
 
+    private static GroupedAdmissionProfile measuredV8Profile() {
+        var costs = new EnumMap<SofascoreEndpointType, EndpointEnvelope>(SofascoreEndpointType.class);
+        costs.put(EVENT_DETAILS, new EndpointEnvelope(Duration.ofMillis(300), Duration.ofMillis(500)));
+        costs.put(EVENT_INCIDENTS, new EndpointEnvelope(Duration.ofMillis(300), Duration.ofMillis(400)));
+        costs.put(EVENT_STATISTICS, new EndpointEnvelope(Duration.ofMillis(350), Duration.ofMillis(400)));
+        costs.put(EVENT_LINEUPS, new EndpointEnvelope(Duration.ofMillis(300), Duration.ofMillis(450)));
+        return new GroupedAdmissionProfile(costs, "8".repeat(64), "live-v8");
+    }
+
     @Test
     void tenSimultaneousKickoffsKeepEveryFamilyOnItsStableSerialMinutePhase() {
         var ids = IntStream.rangeClosed(1, 10).mapToObj(index -> new UUID(8, index)).toList();
@@ -62,9 +71,11 @@ class GroupedLiveScheduleV8Test {
         }
 
         assertThat(schedule.states()).extracting(LiveSchedule.EventState::nextDueAt)
-                .containsExactly(firstWaveDepartures.stream().map(departure -> departure.plusSeconds(60)).toArray(Instant[]::new));
+                .containsExactly(firstWaveDepartures.stream().map(departure -> departure.plusSeconds(60)
+                        .minus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START)).toArray(Instant[]::new));
         for (int index = 0; index < ids.size(); index++) {
-            Instant departure = firstWaveDepartures.get(index).plusSeconds(60);
+            Instant departure = firstWaveDepartures.get(index).plusSeconds(60)
+                    .minus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START);
             serialDeparture = serialGroup(schedule, departure, ids.get(index), kickoff, true);
         }
         assertThat(schedule.states()).allSatisfy(state -> {
@@ -146,14 +157,15 @@ class GroupedLiveScheduleV8Test {
             complete(schedule, j5, now, "inprogress", false, START, true);
         }
 
-        assertThat(schedule.states().getFirst().nextDueAt()).isEqualTo(departure.plusSeconds(60));
+        assertThat(schedule.states().getFirst().nextDueAt()).isEqualTo(departure.plusSeconds(60)
+                .minus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START));
     }
 
     @Test
-    void authenticatedWorkerDepartureRephasesTheNextNormalMinuteAfterLocalAuthorizationDelay() {
+    void authenticatedWorkerDepartureOffersTheNextNormalJ4BeforeItsActualMinuteDeadline() {
         var schedule = schedule(EVENT);
         var j4 = schedule.next(START).orElseThrow();
-        Instant requestedAt = START.plusMillis(250);
+        Instant requestedAt = START.plus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START);
 
         // Local admission succeeds first, but the worker sends the request later.
         schedule.started(j4, START);
@@ -170,12 +182,152 @@ class GroupedLiveScheduleV8Test {
             schedule.completed(j5, null, false, Map.of(), now, null, endpoint == EVENT_LINEUPS ? true : null);
         }
 
-        var nextJ4 = schedule.next(requestedAt.plusSeconds(60)).orElseThrow();
+        var nextJ4 = schedule.next(requestedAt.plusSeconds(60)
+                .minus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START)).orElseThrow();
         assertThat(nextJ4.endpoint()).isEqualTo(EVENT_DETAILS);
-        assertThat(nextJ4.dueAt()).isEqualTo(requestedAt.plusSeconds(60));
+        assertThat(nextJ4.dueAt()).isEqualTo(requestedAt.plusSeconds(60)
+                .minus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START));
         schedule.started(nextJ4, nextJ4.dueAt());
-        schedule.departed(nextJ4, nextJ4.dueAt());
-        assertThat(Duration.between(requestedAt, nextJ4.dueAt())).isEqualTo(Duration.ofSeconds(60));
+        Instant nextRequestedAt = nextJ4.dueAt().plus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START);
+        schedule.departed(nextJ4, nextRequestedAt);
+        assertThat(Duration.between(requestedAt, nextRequestedAt)).isEqualTo(Duration.ofSeconds(60));
+    }
+
+    @Test
+    void fixedInterGroupReservationKeepsTenMaximumV8GroupsBeyondTheDurableFence() {
+        var profile = measuredV8Profile();
+        var ids = IntStream.rangeClosed(1, 10).mapToObj(index -> new UUID(9, index)).toList();
+        var schedule = new LiveSchedule(ids, START, START.plusSeconds(14_400), Duration.ofSeconds(60),
+                "live-v8", null, profile);
+        Duration reservation = GroupedLiveScheduleV8.strictGroupReservation(profile);
+
+        assertThat(reservation).isEqualTo(Duration.ofMillis(6_000));
+        assertThat(reservation.multipliedBy(ids.size())).isLessThanOrEqualTo(Duration.ofMinutes(1));
+        assertThat(GroupedLiveScheduleV8.INTER_GROUP_SLOT_RESERVE).isEqualTo(Duration.ofSeconds(1));
+
+        Instant previousCompletion = null;
+        for (int index = 0; index < ids.size(); index++) {
+            Instant phase = START.plus(reservation.multipliedBy(index));
+            // Alternate the declared 0/500 ms worker-start bound. The late
+            // predecessor followed by the early successor is the adverse
+            // boundary that the one-second inter-group reservation must retain.
+            Duration workerStartDelay = index % 2 == 0
+                    ? GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START : Duration.ZERO;
+            Instant completion = maximumMeasuredGroup(schedule, phase, ids.get(index), workerStartDelay);
+            if (previousCompletion != null) {
+                assertThat(Duration.between(previousCompletion, phase))
+                        .as("durable fence after group %s", index - 1)
+                        .isGreaterThanOrEqualTo(GroupedLiveScheduleV8.POST_EXCHANGE_FENCE);
+            }
+            previousCompletion = completion;
+        }
+
+        assertThat(schedule.states()).allSatisfy(state -> {
+            assertThat(state.state()).isEqualTo("COLLECTING");
+            assertThat(state.missedCycles()).isZero();
+        });
+    }
+
+    @Test
+    void postExchangeFenceKeepsTheSamePendingDueWithoutAPressureRecheckOrMissedCycle() {
+        var schedule = schedule(EVENT);
+        assertThat(group(schedule, START, "inprogress", START, true)).isEqualTo(FOUR);
+        var due = nextAtOrAfter(schedule, START.plusSeconds(60)
+                .minus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START));
+        Instant fenceRelease = due.dueAt().plus(GroupedLiveScheduleV8.POST_EXCHANGE_FENCE);
+
+        schedule.waitForPostExchangeFence(due, fenceRelease);
+
+        assertThat(schedule.next(fenceRelease.minusNanos(1))).isEmpty();
+        assertThat(schedule.mayDispatch(due, fenceRelease.minusNanos(1))).isFalse();
+        assertThat(schedule.states().getFirst()).satisfies(state -> {
+            assertThat(state.state()).isEqualTo("COLLECTING");
+            assertThat(state.missedCycles()).isZero();
+            assertThat(state.nextDueAt()).isEqualTo(fenceRelease);
+        });
+        assertThat(schedule.familySchedules(EVENT)).allSatisfy(family -> assertThat(family.missedCycles()).isZero());
+
+        var resumed = schedule.next(fenceRelease).orElseThrow();
+        assertThat(resumed).isEqualTo(due);
+        assertThat(schedule.mayDispatch(resumed, fenceRelease)).isTrue();
+    }
+
+    @Test
+    void lateWorkerEmissionLeavesTheStrictPathInsteadOfClaimingASixtySecondNormalCycle() {
+        var schedule = schedule(EVENT);
+        Instant kickoff = START;
+        var initial = schedule.next(START).orElseThrow();
+        schedule.started(initial, START);
+        schedule.departed(initial, START);
+        schedule.completed(initial, "inprogress", false, Map.of(), START.plus(EXCHANGE), kickoff, true);
+        finishJ5AtTheirDueTimes(schedule, START.plus(EXCHANGE), kickoff, true);
+
+        var normal = schedule.next(START.plusSeconds(60)
+                .minus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START)).orElseThrow();
+        assertThat(normal.kind()).isEqualTo("J4_CYCLE");
+        schedule.started(normal, normal.dueAt());
+        schedule.departed(normal, normal.dueAt().plus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START)
+                .plusNanos(1));
+        Instant completed = normal.dueAt().plus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START)
+                .plus(EXCHANGE).plusNanos(1);
+        schedule.completed(normal, "inprogress", false, Map.of(), completed, kickoff, true);
+
+        var state = schedule.states().getFirst();
+        assertThat(state.state()).isEqualTo("WAITING_CADENCE_RECHECK");
+        assertThat(state.missedCycles()).isEqualTo(1);
+        assertThat(state.nextDueAt()).isEqualTo(completed.plusSeconds(300));
+        assertThat(schedule.familySchedules(EVENT)).allSatisfy(family -> assertThat(family.missedCycles()).isEqualTo(1));
+        assertThat(nextAtOrAfter(schedule, state.nextDueAt()).kind()).isEqualTo("J4_CADENCE_RECHECK");
+    }
+
+    @Test
+    void lateInitialWorkerEmissionEstablishesTheFirstPlayWaveFromAuthenticatedDeparture() {
+        var schedule = schedule(EVENT);
+        var initial = schedule.next(START).orElseThrow();
+        assertThat(initial.kind()).isEqualTo("J4_INITIAL");
+        schedule.started(initial, START);
+        Instant requested = initial.dueAt().plus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START).plusNanos(1);
+        schedule.departed(initial, requested);
+        Instant completed = requested.plus(EXCHANGE);
+        schedule.completed(initial, "inprogress", false, Map.of(), completed, START, true);
+
+        assertFirstJ5FollowsAuthenticatedDeparture(schedule, requested, completed, 0);
+    }
+
+    @Test
+    void lateRecoveryWorkerEmissionResumesThePlayWaveFromAuthenticatedDeparture() {
+        var schedule = schedule(EVENT);
+        var initial = schedule.next(START).orElseThrow();
+        schedule.started(initial, START);
+        schedule.deferAfterTimeout(initial, START.plus(EXCHANGE));
+
+        var recovery = nextAtOrAfter(schedule, START.plus(EXCHANGE).plusSeconds(300));
+        assertThat(recovery.kind()).isEqualTo("J4_TIMEOUT_RECHECK");
+        schedule.started(recovery, recovery.dueAt());
+        Instant requested = recovery.dueAt().plus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START).plusNanos(1);
+        schedule.departed(recovery, requested);
+        Instant completed = requested.plus(EXCHANGE);
+        schedule.completed(recovery, "inprogress", false, Map.of(), completed, START, true);
+
+        assertFirstJ5FollowsAuthenticatedDeparture(schedule, requested, completed, 1);
+    }
+
+    @Test
+    void lateKickoffWorkerEmissionEstablishesThePlayWaveFromAuthenticatedDeparture() {
+        var schedule = schedule(EVENT);
+        Instant kickoff = START.plusSeconds(20);
+        assertThat(group(schedule, START, "notstarted", kickoff, true)).isEqualTo(FOUR);
+
+        var kickoffJ4 = nextAtOrAfter(schedule, START.plusSeconds(60));
+        assertThat(kickoffJ4.kind()).isEqualTo("J4_KICKOFF_WAIT");
+        schedule.started(kickoffJ4, kickoffJ4.dueAt());
+        Instant requested = kickoffJ4.dueAt().plus(GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START)
+                .plusNanos(1);
+        schedule.departed(kickoffJ4, requested);
+        Instant completed = requested.plus(EXCHANGE);
+        schedule.completed(kickoffJ4, "inprogress", false, Map.of(), completed, kickoff, true);
+
+        assertFirstJ5FollowsAuthenticatedDeparture(schedule, requested, completed, 0);
     }
 
     @Test
@@ -191,6 +343,19 @@ class GroupedLiveScheduleV8Test {
         assertThatIllegalArgumentException().isThrownBy(() -> new LiveSchedule(List.of(EVENT), START,
                 START.plusSeconds(14_400), Duration.ofSeconds(60), "live-v8"))
                 .withMessage("LIVE_V8_SLOT_PROFILE_REQUIRED");
+    }
+
+    @Test
+    void qualificationSequenceOffsetDoesNotChangeTheNormalV8SequenceOrigin() {
+        var normal = schedule(EVENT);
+        var afterTenDurableGroups = new LiveSchedule(List.of(EVENT), START, START.plusSeconds(14_400),
+                Duration.ofSeconds(60), "live-v8", null, PROFILE, 10);
+
+        assertThat(normal.next(START).orElseThrow().groupSequence()).isZero();
+        assertThat(afterTenDurableGroups.next(START).orElseThrow().groupSequence()).isEqualTo(10);
+        assertThatIllegalArgumentException().isThrownBy(() -> new LiveSchedule(List.of(EVENT), START, START.plusSeconds(14_400),
+                Duration.ofSeconds(60), "live-v8", null, PROFILE, -1))
+                .withMessage("LIVE_V8_GROUP_SEQUENCE_REQUIRED");
     }
 
     @Test
@@ -435,7 +600,58 @@ class GroupedLiveScheduleV8Test {
                     due.endpoint() == EVENT_LINEUPS ? confirmed : null);
             if (endpoint != EVENT_LINEUPS) now = now.plus(GroupedLiveScheduleV8.POST_EXCHANGE_FENCE);
         }
-        return now.plus(GroupedLiveScheduleV8.POST_EXCHANGE_FENCE);
+        return now.plus(GroupedLiveScheduleV8.POST_EXCHANGE_FENCE)
+                .plus(GroupedLiveScheduleV8.INTER_GROUP_SLOT_RESERVE);
+    }
+
+    private static Instant maximumMeasuredGroup(LiveSchedule schedule, Instant phase, UUID expectedEvent,
+                                                Duration workerStartDelay) {
+        var profile = measuredV8Profile();
+        var j4 = nextAtOrAfter(schedule, phase);
+        assertThat(j4.eventId()).isEqualTo(expectedEvent);
+        assertThat(j4.endpoint()).isEqualTo(EVENT_DETAILS);
+        assertThat(j4.dueAt()).isEqualTo(phase);
+        schedule.started(j4, phase);
+        Instant requestedAt = phase.plus(workerStartDelay);
+        schedule.departed(j4, requestedAt);
+        Instant now = requestedAt.plus(profile.envelope(EVENT_DETAILS).exchangeEnvelope());
+        schedule.completed(j4, "inprogress", false, Map.of(), now, START, true);
+
+        for (SofascoreEndpointType endpoint : List.of(EVENT_INCIDENTS, EVENT_STATISTICS, EVENT_LINEUPS)) {
+            var due = nextAtOrAfter(schedule, now);
+            assertThat(due.eventId()).isEqualTo(expectedEvent);
+            assertThat(due.endpoint()).isEqualTo(endpoint);
+            schedule.started(due, due.dueAt());
+            schedule.departed(due, due.dueAt());
+            now = due.dueAt().plus(profile.envelope(endpoint).exchangeEnvelope());
+            schedule.completed(due, null, false, Map.of(), now, null, endpoint == EVENT_LINEUPS);
+        }
+        return now;
+    }
+
+    private static Instant finishJ5AtTheirDueTimes(LiveSchedule schedule, Instant now,
+                                                    Instant kickoff, Boolean confirmed) {
+        for (SofascoreEndpointType endpoint : List.of(EVENT_INCIDENTS, EVENT_STATISTICS, EVENT_LINEUPS)) {
+            var due = nextAtOrAfter(schedule, now);
+            assertThat(due.endpoint()).isEqualTo(endpoint);
+            now = due.dueAt();
+            schedule.started(due, now);
+            schedule.departed(due, now);
+            now = now.plus(EXCHANGE);
+            schedule.completed(due, null, false, Map.of(), now, null, endpoint == EVENT_LINEUPS ? confirmed : null);
+        }
+        return now;
+    }
+
+    private static void assertFirstJ5FollowsAuthenticatedDeparture(LiveSchedule schedule, Instant requested,
+                                                                     Instant completed, long missedCycles) {
+        var state = schedule.states().getFirst();
+        assertThat(state.state()).isEqualTo("COLLECTING");
+        assertThat(state.missedCycles()).isEqualTo(missedCycles);
+        var firstJ5 = nextAtOrAfter(schedule, completed);
+        assertThat(firstJ5.endpoint()).isEqualTo(EVENT_INCIDENTS);
+        assertThat(firstJ5.dueAt()).isEqualTo(requested.plus(EXCHANGE)
+                .plus(GroupedLiveScheduleV8.POST_EXCHANGE_FENCE));
     }
 
     private static LiveSchedule.Due nextAtOrAfter(LiveSchedule schedule, Instant now) {

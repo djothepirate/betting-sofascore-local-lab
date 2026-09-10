@@ -228,6 +228,7 @@ public class LiveCampaignController {
                  "LIVE_STORAGE_PROBE_TIMEOUT", "LIVE_STORAGE_PROBE_FAILED", "LIVE_STORAGE_PROBE_INVALID",
                  "LIVE_STORAGE_PROBE_INTERRUPTED", "LIVE_STORAGE_CAPACITY_REFUSED", "LIVE_POLICY_INVALID",
                  "LIVE_CAPACITY_QUALIFICATION_REQUIRED", "LIVE_GROUPED_QUALIFICATION_REQUIRED", "LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY",
+                 "LIVE_V8_FRESHNESS_CAPACITY_UNAVAILABLE",
                  "LIVE_PREPARATION_ALREADY_LAUNCHED", "LIVE_PREPARATION_NOT_CANCELABLE",
                  "LIVE_CLEANUP_OWNER_ACTIVE", "LIVE_CLEANUP_PROCESS_UNVERIFIED", "LIVE_CLEANUP_PROCESS_ACTIVE",
                  "LIVE_CLEANUP_STATE_CHANGED", "LIVE_CLEANUP_BUSY", "LIVE_ORPHAN_CLEANUP_GUARD_CHANGED",
@@ -246,6 +247,7 @@ public class LiveCampaignController {
             case "LIVE_CAPACITY_QUALIFICATION_REQUIRED" -> "Cette capacité ou cette cadence exige une preuve de qualification. Pour le pilote initial, conserver une rencontre et l’enveloppe de requête de dix secondes.";
             case "LIVE_GROUPED_QUALIFICATION_REQUIRED" -> "La politique demandée exige une preuve de qualification dédiée aux groupes et un coût qualifié pour chaque famille. Les nouvelles campagnes live-v8 utilisent un profil indépendant des campagnes historiques. Configurer SOFASCORE_LIVE_GROUPED_V8_QUALIFICATION_SHA256 et les enveloppes qualifiées décrites dans le runbook, puis préparer une nouvelle sélection.";
             case "LIVE_REQUEST_TIMEOUT_EXCEEDS_POLICY" -> "Le délai Playwright doit être strictement positif et ne pas dépasser trente secondes pour live-v6/v7/v8, vingt secondes pour live-v5 ou dix secondes pour les campagnes antérieures. Corriger SOFASCORE_PLAYWRIGHT_REQUEST_TIMEOUT avant le lancement.";
+            case "LIVE_V8_FRESHNESS_CAPACITY_UNAVAILABLE" -> "La fenêtre partagée des départs ne permet pas de réserver toute la vague initiale nécessaire à cette sélection tout en tenant une fraîcheur de 60 secondes pour chaque famille. Attendre la libération du budget local ou réduire la sélection, puis préparer à nouveau la campagne. Aucun appel fournisseur n’a été effectué par cette demande.";
             case "PROVIDER_SUSPENDED", "PROVIDER_HTTP_403", "PROVIDER_HTTP_429" -> "L’accès fournisseur est suspendu après un refus HTTP 403 ou 429. Consulter l’état de l’accès fournisseur et son diagnostic avant tout réarmement manuel. Une nouvelle campagne ou un redémarrage ne lève pas cette suspension.";
             case "PROVIDER_CLOCK_REGRESSION" -> "L’horloge locale est antérieure au dernier départ enregistré. Le budget fournisseur reste bloquant. Vérifier l’heure du système avant de préparer un nouveau lancement.";
             case "PROVIDER_DEPARTURE_UNRESOLVED" -> "La fin d’un appel précédent n’est pas encore vérifiée. Finaliser la clôture locale, puis consulter l’état de l’accès fournisseur pour résoudre ce départ avant une nouvelle collecte.";

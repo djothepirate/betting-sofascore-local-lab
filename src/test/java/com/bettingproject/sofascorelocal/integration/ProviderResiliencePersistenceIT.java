@@ -439,8 +439,9 @@ class ProviderResiliencePersistenceIT {
 
         assertThat(f.jdbc.queryForMap("select departure_at,source from provider_departure_accounting where dispatch_id=?",dispatch))
                 .containsEntry("departure_at",Timestamp.from(finished)).containsEntry("source","COMPLETION_FALLBACK");
-        assertThat(f.store.departureDecision(DepartureProfile.LIVE_V8,finished.plusMillis(499)).nextAllowedAt())
-                .isEqualTo(finished.plusMillis(500));
+        DepartureDecision fence = f.store.departureDecision(DepartureProfile.LIVE_V8, finished.plusMillis(499));
+        assertThat(fence.reason()).isEqualTo(DepartureReason.POST_EXCHANGE_FENCE);
+        assertThat(fence.nextAllowedAt()).isEqualTo(finished.plusMillis(500));
     }
 
     @Test
@@ -453,8 +454,9 @@ class ProviderResiliencePersistenceIT {
 
         UUID v8=UUID.randomUUID();
         assertThat(f.exchange(v8,DepartureProfile.LIVE_V8,T0.plusSeconds(2)).allowed()).isTrue();
-        assertThat(f.store.departureDecision(DepartureProfile.LIVE_V8,T0.plusSeconds(2).plusMillis(499)).nextAllowedAt())
-                .isEqualTo(T0.plusSeconds(2).plusMillis(500));
+        DepartureDecision v8Fence = f.store.departureDecision(DepartureProfile.LIVE_V8,T0.plusSeconds(2).plusMillis(499));
+        assertThat(v8Fence.reason()).isEqualTo(DepartureReason.POST_EXCHANGE_FENCE);
+        assertThat(v8Fence.nextAllowedAt()).isEqualTo(T0.plusSeconds(2).plusMillis(500));
         assertThat(f.store.departureDecision(DepartureProfile.LIVE_V8,T0.plusSeconds(2).plusMillis(500)).allowed()).isTrue();
         assertThat(f.store.departureDecision(DepartureProfile.LEGACY_V1,T0.plusSeconds(2).plusMillis(500)).nextAllowedAt())
                 .isEqualTo(T0.plusSeconds(4));
@@ -490,6 +492,32 @@ class ProviderResiliencePersistenceIT {
         assertThat(hourDenied.reason()).isEqualTo(DepartureReason.RATE_LIMITED);
         assertThat(hourDenied.nextAllowedAt()).isEqualTo(first.plus(Duration.ofHours(1)));
         assertThat(hour.newStore().tryReserveDeparture(UUID.randomUUID(),DepartureProfile.LIVE_V8,first.plus(Duration.ofHours(1))).allowed()).isTrue();
+    }
+
+    @Test
+    void v8InitialTenMatchWaveNeedsFortyFreeSharedDurableSlotsBeforeLaunch() {
+        Fixture minute=fixture("50"); Instant now=T0.plusSeconds(60);
+        // Five retained completions leave precisely 40 slots in the V8 minute
+        // window. The sixth makes a 10 x 4 initial wave impossible until the
+        // oldest durable departure expires.
+        for(int i=0;i<5;i++) assertThat(minute.exchange(UUID.randomUUID(),DepartureProfile.LIVE_V8,
+                now.minusSeconds(10).plusMillis(i*500L)).allowed()).isTrue();
+        assertThat(minute.store.departureCapacityDecision(DepartureProfile.LIVE_V8,40,now))
+                .extracting(DepartureDecision::allowed,DepartureDecision::reason)
+                .containsExactly(true,DepartureReason.ALLOWED);
+        assertThat(minute.exchange(UUID.randomUUID(),DepartureProfile.LIVE_V8,
+                now.minusSeconds(10).plusMillis(2500)).allowed()).isTrue();
+        DepartureDecision minuteDenied=minute.store.departureCapacityDecision(DepartureProfile.LIVE_V8,40,now);
+        assertThat(minuteDenied.reason()).isEqualTo(DepartureReason.RATE_LIMITED);
+        assertThat(minuteDenied.nextAllowedAt()).isEqualTo(now.plusSeconds(50));
+
+        Fixture hour=fixture("50"); Instant hourNow=T0.plus(Duration.ofHours(1)),hourDeparture=hourNow.minus(Duration.ofMinutes(5));
+        insertClosedV8Departures(hour,2_716,hourDeparture);
+        assertThat(hour.store.departureCapacityDecision(DepartureProfile.LIVE_V8,40,hourNow).allowed()).isTrue();
+        insertClosedV8Departures(hour,1,hourDeparture);
+        DepartureDecision hourDenied=hour.newStore().departureCapacityDecision(DepartureProfile.LIVE_V8,40,hourNow);
+        assertThat(hourDenied.reason()).isEqualTo(DepartureReason.RATE_LIMITED);
+        assertThat(hourDenied.nextAllowedAt()).isEqualTo(hourDeparture.plus(Duration.ofHours(1)));
     }
 
     @Test
@@ -546,6 +574,24 @@ class ProviderResiliencePersistenceIT {
         start.await();
         try {return f.newStore().rearm(version,T0.plusSeconds(1)).state().name();}
         catch(IllegalStateException rejected) {return rejected.getMessage();}
+    }
+    private static void insertClosedV8Departures(Fixture fixture,int count,Instant departureAt) {
+        fixture.jdbc.update("""
+            insert into provider_departure_reservation(dispatch_id,reserved_at,policy_version,admission_profile)
+                select gen_random_uuid(),?,'provider-resilience-v1','live-v8'
+                    from generate_series(1,?)
+            """,Timestamp.from(departureAt),count);
+        fixture.jdbc.update("""
+            insert into provider_departure_completion(dispatch_id,finished_at)
+                select reservation.dispatch_id,reservation.reserved_at
+                    from provider_departure_reservation reservation
+                    where not exists (select 1 from provider_departure_completion completion
+                        where completion.dispatch_id=reservation.dispatch_id)
+            """);
+        fixture.jdbc.update("""
+            update provider_resilience_state set last_departure_at=?,last_departure_finished_at=?,
+                last_departure_admission_profile='live-v8' where singleton_id=1
+            """,Timestamp.from(departureAt),Timestamp.from(departureAt));
     }
     private static void await(CountDownLatch latch) {
         try {if(!latch.await(10,TimeUnit.SECONDS)) throw new IllegalStateException("test lock timeout");}

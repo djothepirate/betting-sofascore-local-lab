@@ -3,9 +3,9 @@
 Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
 Références : [ADR-SS-005 accepté](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md),
 [architecture](../architecture/LIVE-J4-J5-CAMPAIGNS.md),
-[qualification](../validation/WO058-LIVE-J4-J5-IMPLEMENTATION-20260907.md).
+[qualification V8 locale](../validation/WO058-LIVE-V8-CAPACITY-20260910.md).
 
-## Nouvelles préparations : live-v8, activation fermée avant qualification
+## Nouvelles préparations : live-v8, profil local qualifié et activation manuelle distincte
 
 Les nouvelles préparations sont orientées vers `live-v8`. Cette révision conserve la cible
 de **60 s** pour les départs normaux de **chaque couple rencontre/famille** en jeu — J4,
@@ -14,21 +14,52 @@ transforme pas la date d'affichage, une tentative réservée ou une réception i
 preuve de fraîcheur. Les manifestes v1–v7 restent inchangés et consultables avec leur
 propre politique ; aucun profil plus ancien ne sert de repli à v8.
 
-La configuration V8 reste délibérément incomplète tant que sa qualification locale n'a pas
-abouti. Elle requiert une empreinte
+La qualification synthétique loopback V8 du 10 septembre est consignée dans le
+[rapport de capacité](../validation/WO058-LIVE-V8-CAPACITY-20260910.md). Elle couvre dix
+rencontres et les quatre familles, avec le worker de production, Chromium et PostgreSQL de test
+sur `127.0.0.1`; elle n'a fait aucun appel SofaScore, aucune requête hors périmètre et n'a utilisé
+aucune base opérateur. Elle qualifie l'admission locale à dix seulement pour le profil exact ci-dessous.
+
+La configuration V8 requiert une empreinte
 `SOFASCORE_LIVE_GROUPED_V8_QUALIFICATION_SHA256` et les huit enveloppes
 `SOFASCORE_LIVE_GROUPED_V8_{J4,INCIDENTS,STATISTICS,LINEUPS}_{REQUEST,PROCESSING}_ENVELOPE`.
 Sans cet ensemble cohérent, l'admission retourne une capacité à zéro et la préparation est
-indisponible. Cet état est attendu : **ne pas** recopier un hash V7, inventer une enveloppe
-ou renseigner le lanceur Eclipse afin de lancer une campagne à dix rencontres.
+indisponible. Cet échec fermé reste attendu : **ne pas** recopier un hash V7 ni inventer une
+enveloppe.
 
-### Règles V8 à qualifier
+### Profil V8 exact à livrer dans le lanceur après revue et fusion
+
+Les neuf variables V8 suivantes sont les seules valeurs de profil à saisir ensemble dans
+`SofaScore - PLAYWRIGHT J3-J5 (MANUEL - OPT-IN) (LIVE)` lorsque la livraison du lanceur sera
+effectuée. L’empreinte est celle du **profil** versionné, non celle du rapport natif.
+
+| Variable | Valeur qualifiée |
+| --- | --- |
+| `SOFASCORE_LIVE_GROUPED_V8_QUALIFICATION_SHA256` | `c25d65be2a42969c561eadc631eb3499ee21519990e7b44e790a21410efcc1d6` |
+| `SOFASCORE_LIVE_GROUPED_V8_J4_REQUEST_ENVELOPE` | `300ms` |
+| `SOFASCORE_LIVE_GROUPED_V8_J4_PROCESSING_ENVELOPE` | `500ms` |
+| `SOFASCORE_LIVE_GROUPED_V8_INCIDENTS_REQUEST_ENVELOPE` | `300ms` |
+| `SOFASCORE_LIVE_GROUPED_V8_INCIDENTS_PROCESSING_ENVELOPE` | `400ms` |
+| `SOFASCORE_LIVE_GROUPED_V8_STATISTICS_REQUEST_ENVELOPE` | `350ms` |
+| `SOFASCORE_LIVE_GROUPED_V8_STATISTICS_PROCESSING_ENVELOPE` | `400ms` |
+| `SOFASCORE_LIVE_GROUPED_V8_LINEUPS_REQUEST_ENVELOPE` | `300ms` |
+| `SOFASCORE_LIVE_GROUPED_V8_LINEUPS_PROCESSING_ENVELOPE` | `450ms` |
+
+Le plafond opérateur `SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY` doit rester à `10` et
+`SOFASCORE_PLAYWRIGHT_REQUEST_TIMEOUT` à `30s`. Le fence V8 de `500ms` est une borne interne
+du profil : il ne remplace pas `SOFASCORE_MINIMUM_DELAY`. Cette variable globale conserve sa
+valeur inchangée, notamment son défaut de trois secondes ; ne pas lui attribuer `500ms`.
+Cette documentation ne modifie pas le fichier `.launch`, ne redémarre pas le Lab et ne lance
+aucune campagne fournisseur.
+
+### Règles V8 qualifiées localement
 
 | Élément | Règle de conception V8 |
 | --- | --- |
 | Capacité de sélection | Au plus **10** rencontres, sous réserve de l'admission du profil V8 et des plafonds de manifeste existants. |
 | Cadence normale | Les quatre familles sont placées dans des slots déterministes par rencontre et par famille. Lorsque les échanges restent dans leurs enveloppes qualifiées, deux départs normaux successifs du même couple sont séparés de **60 s au plus**. |
 | Fence de transport local | Après une fin d'échange prouvée, le fence ajouté est de **500 ms**. Le départ réel peut toutefois être plus tardif lorsqu'un slot, un budget, un 404, un timeout ou une suspension l'impose ; ce retard est visible et ne doit pas être qualifié de fraîcheur. |
+| Réservation temporelle | Les quatre enveloppes, quatre fences de 500 ms et la réserve statique V51 de 1 000 ms forment une réservation stricte de **6 000 ms** par groupe. Dix groupes occupent exactement les 60 000 ms disponibles. |
 | Budgets locaux persistants | Au plus **45 départs / 60 s glissantes** et **2 756 départs / heure glissante**. Les compteurs sont partagés et survivent aux campagnes ; ils ne sont pas un seuil supposé du fournisseur. |
 | Preuve de départ et pression | La fenêtre V8 utilise `REQUEST_SENT` authentifié quand il est cohérent avec la réservation et l'observation parent ; sans preuve, la complétion est retenue de façon conservatrice. Un hold qui franchit un créneau normal rend les cycles/familles manqués visibles dans `WAITING_PRESSURE_RECHECK`, avant un J4 de reprise à l'échéance autorisée. |
 | Réception et réponse lente | Une réponse qui dépasse l'enveloppe ne permet pas d'affirmer la cadence normale. Elle est diagnostiquée comme exception ; une réception fournisseur reste distincte de l'heure de départ locale. |
@@ -48,22 +79,28 @@ sérialisée de T0 et de ce départ initial + 60 s ; les J5 restent conditionnel
 `inprogress`. Cette règle conserve la fraîcheur par famille tout en évitant une pointe de 60
 départs/minute pour dix rencontres lors d'un lancement très proche du coup d'envoi.
 
-### Qualifier V8 uniquement avec le fournisseur absent
+### Rejouer V8 uniquement avec le fournisseur absent
 
-La qualification V8 est **à faire**, pas accomplie par cette documentation. Après les tests
-standards et d'intégration, le seul parcours prévu est la commande explicite suivante :
+La qualification V8 fraîche a abouti le 10 septembre avec la commande explicite suivante :
 
 ```powershell
 .\scripts\Invoke-LiveGroupedPlaywrightQualification.ps1 -PolicyVersion live-v8
 ```
 
-Elle doit utiliser le worker de production, Chromium et PostgreSQL de test contre un serveur
-éphémère lié à `127.0.0.1`, avec cinq minutes de mise en régime puis au moins trente minutes
-établies. Elle doit établir dix rencontres, les quatre familles, les départs par
-rencontre/famille, le fence de 500 ms, les budgets persistants et l'absence complète d'appel
-SofaScore ou d'utilisation de la base opérateur. Ses octets sont d'abord produits sous `.tmp`
-pour revue ; le script ne charge pas le lanceur, ne met pas à jour de preuve suivie et ne
-modifie pas la configuration d'une campagne réelle. Une passe favorable reste une preuve de
+Elle a utilisé le worker de production, Chromium et PostgreSQL de test contre un serveur
+éphémère lié à `127.0.0.1`, avec 40 réponses froides de 5 Mio, un drain de 60 001 ms, cinq
+minutes de mise en régime, 1 800,0198031 s établies et 2 100,0198031 s de voie stricte. Les
+résultats sont 1 444 appels au total, dont 1 203 établis et 40 froids, zéro appel fournisseur,
+zéro requête hors périmètre, zéro base opérateur et zéro cycle manqué. Le replay de production
+exécute 16 scénarios ; le profil fixe 45/min, 2 756/h et 2 480 départs horaires planifiés pour
+dix rencontres, avec un timeout Playwright effectif de 30 000 ms.
+
+Les octets bruts sont conservés dans
+[le rapport natif](../validation/WO058-GROUPED-LIVE-V8-NATIVE-20260910.json)
+`f5b70709dcc51d9b40223fde1175d3c507190244562355e675689cb06e9a7fc0` et
+[le profil](../validation/WO058-GROUPED-LIVE-V8-PROFILE-20260910.json)
+`c25d65be2a42969c561eadc631eb3499ee21519990e7b44e790a21410efcc1d6`. Le script ne charge pas le
+lanceur et ne modifie aucune campagne réelle. Une passe favorable reste une preuve de
 planification loopback sous enveloppes ; elle ne mesure ni l'acceptation de 45/min par
 SofaScore, ni la latence Internet, ni la résistance future à un bannissement.
 

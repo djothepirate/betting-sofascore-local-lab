@@ -122,6 +122,28 @@ class ResilientPlaywrightProviderCampaignFactoryTest {
     }
 
     @Test
+    void v8PostExchangeFenceWaitsLocallyBeforeTheCallerCanStartItsScheduleOrEmit() {
+        Harness h=new Harness(); AtomicInteger attempts=new AtomicInteger(); Instant eligible=START.plusMillis(500);
+        when(h.store.tryReserveDeparture(any(UUID.class),eq(DepartureProfile.LIVE_V8),any(Instant.class))).thenAnswer(invocation->{
+            h.trace.add("reserve-v8");
+            if(attempts.getAndIncrement()==0)
+                return new DepartureDecision(false,DepartureReason.POST_EXCHANGE_FENCE,eligible,h.state.get());
+            return h.allow(invocation.getArgument(0),invocation.getArgument(2));
+        });
+        AtomicInteger starts=new AtomicInteger();
+        try(var campaign=h.factory.openLiveGroupedV8(UUID.randomUUID(),ALL)) {
+            campaign.execute(PlaywrightProviderRequest.eventDetails(123),new PlaywrightDispatchAdmission() {
+                public void check() { }
+                public Permit acquireDispatchPermit() { starts.incrementAndGet();h.trace.add("schedule-start");return ()->{ }; }
+            });
+        }
+
+        assertThat(h.paused).isEqualTo(Duration.ofMillis(500));
+        assertThat(starts).hasValue(1);
+        assertThat(h.trace).containsSubsequence("reserve-v8","reserve-v8","schedule-start","get");
+    }
+
+    @Test
     void v8PersistsA403BeforeRejectingIncoherentWorkerEvidence() {
         Harness h=new Harness(); UUID campaign=UUID.randomUUID(); Instant requested=START.plusSeconds(1),headers=START.plusSeconds(2);
         when(h.store.tryReserveDeparture(any(UUID.class),eq(DepartureProfile.LIVE_V8),any(Instant.class))).thenAnswer(invocation->

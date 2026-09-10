@@ -112,10 +112,25 @@ public final class LiveAdmissionPolicy {
         return qualifiedGroupedCapacity(profile, "live-v7", Math.min(V7_MAXIMUM_SELECTION_SIZE, hourlyCapacity));
     }
 
-    /** 240 ordinary calls plus four initial and four final calls per event/hour, with 10% headroom. */
+    /**
+     * Ten events use at most 2,480 planned hourly departures (240 ordinary plus four
+     * initial and four final calls each), leaving 276 of the durable 2,756 budget
+     * unallocated. This hourly planning margin is separate from V51's 60-second
+     * group-reservation bound below.
+     */
     public static int qualifiedCapacityV8(GroupedAdmissionProfile profile) {
+        if (profile == null) throw new IllegalStateException("LIVE_CAPACITY_QUALIFICATION_REQUIRED");
+        if (!"live-v8".equals(profile.policyVersion())) throw new IllegalStateException("LIVE_GROUPED_POLICY_MISMATCH");
         int hourlyCapacity = (V8_MAXIMUM_CALLS_PER_HOUR * 9 / 10) / 248;
-        return qualifiedGroupedCapacity(profile, "live-v8", Math.min(V8_MAXIMUM_SELECTION_SIZE, hourlyCapacity));
+        long phaseReservation = LiveSchedule.v8StrictGroupReservation(profile).toNanos();
+        int temporalCapacity = (int) Math.min(V8_MAXIMUM_SELECTION_SIZE,
+                Duration.ofMinutes(1).toNanos() / phaseReservation);
+        int capacity = Math.min(hourlyCapacity, temporalCapacity);
+        // This exact phase formula is also enforced by append-only Flyway V51.
+        // Replay keeps admission honest about actual request emissions and
+        // explicit recovery states, which arithmetic alone cannot establish.
+        while (capacity > 0 && !GroupedLiveAdmissionSimulationV8.fits(capacity, profile)) capacity--;
+        return capacity;
     }
 
     /**

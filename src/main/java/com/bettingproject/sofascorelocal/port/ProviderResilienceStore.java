@@ -19,6 +19,21 @@ public interface ProviderResilienceStore {
             throw new IllegalStateException("PROVIDER_DEPARTURE_PROFILE_UNSUPPORTED");
         return departureDecision(at);
     }
+    /**
+     * Read-only admission for an initial wave that must fit as a whole inside
+     * the shared durable pressure windows. It never reserves a departure.
+     *
+     * <p>An implementation which has not explicitly implemented multi-slot
+     * accounting must fail closed. Treating a single-departure preview as a
+     * capacity proof would let a new V8 campaign advertise freshness that the
+     * already-accounted shared traffic cannot provide.</p>
+     */
+    default DepartureDecision departureCapacityDecision(DepartureProfile profile, int requiredDepartures, Instant at) {
+        Objects.requireNonNull(profile); Objects.requireNonNull(at);
+        if (requiredDepartures < 1) throw new IllegalArgumentException("PROVIDER_DEPARTURE_CAPACITY_INVALID");
+        if (requiredDepartures != 1) throw new IllegalStateException("PROVIDER_DEPARTURE_CAPACITY_UNSUPPORTED");
+        return departureDecision(profile, at);
+    }
     /** Atomic reservation just before sending. A reserved UUID cannot authorize another send. */
     DepartureDecision tryReserveDeparture(UUID dispatchId, Instant at);
     /**

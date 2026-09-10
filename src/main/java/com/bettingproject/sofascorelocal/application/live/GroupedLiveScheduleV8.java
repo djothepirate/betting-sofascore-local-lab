@@ -13,9 +13,25 @@ import static com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpoin
 final class GroupedLiveScheduleV8 {
     private static final Duration MINUTE = Duration.ofSeconds(60);
     static final Duration POST_EXCHANGE_FENCE = Duration.ofMillis(500);
+    /**
+     * A static reservation between adjacent V8 groups.  It is not a fifth
+     * post-exchange fence: it absorbs the supervisor's bounded worker-start
+     * gate before the next group reaches REQUEST_SENT.  Keeping it in the
+     * slot plan makes the ten initial phases safe even when one authenticated
+     * departure is later than its neighbour.
+     */
+    static final Duration INTER_GROUP_SLOT_RESERVE = Duration.ofSeconds(1);
+    /**
+     * Normal in-play J4s are offered this far before their actual
+     * REQUEST_SENT deadline. The bounded worker-start jitter is intentionally
+     * no greater than half the static inter-group slot reserve: a late emission is
+     * explicitly requalified instead of being presented as a 60-second normal
+     * departure.
+     */
+    static final Duration PLAY_REQUEST_EMISSION_HEAD_START = Duration.ofMillis(500);
     private static final List<SofascoreEndpointType> J5 = List.of(EVENT_INCIDENTS, EVENT_STATISTICS, EVENT_LINEUPS);
     private static final List<SofascoreEndpointType> FAMILIES = List.of(EVENT_DETAILS, EVENT_INCIDENTS, EVENT_STATISTICS, EVENT_LINEUPS);
-    private enum Mode { INITIAL, WARMUP, LINEUPS, KICKOFF, PLAY, FINAL, RECHECK, ENVELOPE_RECHECK, PRESSURE_RECHECK }
+    private enum Mode { INITIAL, WARMUP, LINEUPS, KICKOFF, PLAY, FINAL, RECHECK, ENVELOPE_RECHECK, PRESSURE_RECHECK, CADENCE_RECHECK }
     private final LinkedHashMap<UUID, Event> events = new LinkedHashMap<>();
     private final Instant endsAt;
     private final String campaignScope;
@@ -25,15 +41,24 @@ final class GroupedLiveScheduleV8 {
     private LiveSchedule.Due inFlight;
     private String globalStop;
     private Instant deferredUntil;
+    /** A proven local closing fence is transient and never makes a collection missed. */
+    private Instant postExchangeFenceUntil;
 
     GroupedLiveScheduleV8(List<UUID> targets, Instant start, Instant endsAt, Duration interval, UUID campaignId,
-                          GroupedAdmissionProfile profile) {
+                           GroupedAdmissionProfile profile) {
+        this(targets, start, endsAt, interval, campaignId, profile, 0);
+    }
+
+    GroupedLiveScheduleV8(List<UUID> targets, Instant start, Instant endsAt, Duration interval, UUID campaignId,
+                           GroupedAdmissionProfile profile, long initialGroupSequence) {
         if (!MINUTE.equals(interval)) throw new IllegalArgumentException("LIVE_V8_INTERVAL_REQUIRED");
         if (targets.size() > LiveAdmissionPolicy.V8_MAXIMUM_SELECTION_SIZE)
             throw new IllegalArgumentException("LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY");
+        if (initialGroupSequence < 0) throw new IllegalArgumentException("LIVE_V8_GROUP_SEQUENCE_REQUIRED");
         this.endsAt = endsAt;
         slots = SlotPlan.from(profile);
         campaignScope = campaignId == null ? "offline|" + start + "|" + endsAt : campaignId.toString();
+        sequence = initialGroupSequence;
         for (int i = 0; i < targets.size(); i++) {
             Duration phase = slots.groupReservation().multipliedBy(i);
             events.put(targets.get(i), new Event(targets.get(i), start.plus(phase), phase));
@@ -47,6 +72,10 @@ final class GroupedLiveScheduleV8 {
     Optional<LiveSchedule.Due> next(Instant now) {
         if (inFlight != null || globalStop != null) return Optional.empty();
         if (!now.isBefore(endsAt)) { stopAll("STOPPED_LIMIT"); return Optional.empty(); }
+        if (postExchangeFenceUntil != null) {
+            if (now.isBefore(postExchangeFenceUntil)) return Optional.empty();
+            postExchangeFenceUntil = null;
+        }
         if (deferredUntil != null) {
             if (now.isBefore(deferredUntil)) return Optional.empty();
             deferredUntil = null;
@@ -87,9 +116,24 @@ final class GroupedLiveScheduleV8 {
         Event event = events.get(due.eventId());
         return globalStop == null && event != null && event.active() && now.isBefore(endsAt)
                 && !expiredPrematchWindow(event, now)
+                && (postExchangeFenceUntil == null || !now.isBefore(postExchangeFenceUntil))
                 && (deferredUntil == null || !now.isBefore(deferredUntil)) && !now.isBefore(due.dueAt())
                 && !event.pending.isEmpty() && event.pending.getFirst().equals(due)
                 && (contiguous == null || contiguous == event);
+    }
+
+    /**
+     * Hold the active pending due until the completed-exchange fence closes.
+     * This is deliberately distinct from {@link #defer(LiveSchedule.Due, Instant)}:
+     * no state, family schedule, group identity, or missed-cycle counter changes.
+     */
+    void waitForPostExchangeFence(LiveSchedule.Due due, Instant notBefore) {
+        Event event = event(due.eventId());
+        if (inFlight != null || globalStop != null || !event.active() || event.pending.isEmpty()
+                || !event.pending.getFirst().equals(due) || !notBefore.isAfter(due.dueAt()))
+            throw new IllegalStateException("LIVE_DISPATCH_CANCELLED");
+        postExchangeFenceUntil = bounded(postExchangeFenceUntil == null || notBefore.isAfter(postExchangeFenceUntil)
+                ? notBefore : postExchangeFenceUntil);
     }
 
     void defer(LiveSchedule.Due due, Instant notBefore) {
@@ -189,6 +233,17 @@ final class GroupedLiveScheduleV8 {
         }
         event.lastStarts.put(due.endpoint(), requestedAt);
         if (due.groupOrdinal() == 0) event.groupDue = requestedAt;
+        // `dueAt` for a normal J4 already includes the fixed request-emission
+        // head start. Do not silently extend an established PLAY cadence when
+        // the worker consumes more than its bounded jitter: finish this
+        // response for audit, then leave that normal cadence through a durable
+        // requalification state. An initial, kickoff, or recovery J4 has no
+        // prior normal minute to claim; a completed inprogress response from
+        // one of those waves establishes PLAY and rephases J5 from its
+        // authenticated REQUEST_SENT timestamp.
+        if (event.mode == Mode.PLAY && due.endpoint() == EVENT_DETAILS
+                && requestedAt.isAfter(due.dueAt().plus(PLAY_REQUEST_EMISSION_HEAD_START)))
+            event.strictEmissionMissed = true;
     }
 
     void completed(LiveSchedule.Due due, String status, boolean unavailable, Map<String, Boolean> signals,
@@ -209,11 +264,13 @@ final class GroupedLiveScheduleV8 {
                     || "inprogress".equals(event.sport) && waitingForKickoff(status)) {
                 stopEvent(event.id, "STOPPED_REVIEW_REQUIRED"); return;
             }
+            if (!"inprogress".equals(status)) event.strictEmissionMissed = false;
             if (!Objects.equals(event.sport, status)) {
                 event.unavailableUntil.clear(); event.unavailableCounts.clear(); event.unavailableIntervals.clear();
             }
             event.rephasePlaying = "inprogress".equals(status)
-                    && (waitingForKickoff(event.sport) || event.mode == Mode.RECHECK || event.mode == Mode.ENVELOPE_RECHECK);
+                    && (waitingForKickoff(event.sport) || event.mode == Mode.RECHECK || event.mode == Mode.ENVELOPE_RECHECK
+                    || event.mode == Mode.CADENCE_RECHECK);
             if ("delayed".equals(status)) {
                 if (event.reserveFinish) { stopEvent(event.id, "STOPPED_LIMIT"); return; }
                 if (kickoff == null) { stopEvent(event.id, "STOPPED_REVIEW_REQUIRED"); return; }
@@ -251,6 +308,10 @@ final class GroupedLiveScheduleV8 {
                 for (var family : J5) append(event, family, "J5_FINAL", true);
             } else if (event.reserveFinish) { stopEvent(event.id, "STOPPED_LIMIT"); return; }
             else if ("inprogress".equals(status)) {
+                if (event.strictEmissionMissed) {
+                    deferAfterCadence(event, now);
+                    return;
+                }
                 event.mode = Mode.PLAY; event.state = "COLLECTING";
                 for (var family : J5) if (available(event, family, now)) append(event, family, "J5_NORMAL", false);
             } else {
@@ -286,6 +347,7 @@ final class GroupedLiveScheduleV8 {
             case RECHECK -> "J4_TIMEOUT_RECHECK";
             case ENVELOPE_RECHECK -> "J4_ENVELOPE_RECHECK";
             case PRESSURE_RECHECK -> "J4_PRESSURE_RECHECK";
+            case CADENCE_RECHECK -> "J4_CADENCE_RECHECK";
             default -> "J4_CYCLE";
         }, event.reserveFinish);
     }
@@ -308,17 +370,13 @@ final class GroupedLiveScheduleV8 {
             recordCoalescedRounds(event, now);
             event.mode = Mode.PLAY;
             Instant departure = event.lastStarts.getOrDefault(EVENT_DETAILS, event.groupDue);
-            if (event.rephasePlaying) {
-                // Once the shared kickoff wave has completed, retain this group's
-                // actual deadline for the next wave. The single dispatcher then
-                // gives every group the same serial offset on each later minute.
-                // An overrun is deliberately not caught up: qualification must
-                // reject an envelope that cannot finish this wave before its next
-                // nominal deadline.
-                Instant nextWave = departure.plus(MINUTE);
-                event.next = nextWave.isBefore(now) ? nextFutureMinute(departure, now) : nextWave;
-                event.rephasePlaying = false;
-            } else event.next = nextFutureMinute(departure, now);
+            // Rebase from the previous authenticated departure, but offer the
+            // next request 500 ms early. A worker start no later than the
+            // bounded jitter therefore leaves REQUEST_SENT at or before the
+            // strict 60-second deadline. The inter-group slot reservation is
+            // static and remains separate from this per-event head start.
+            event.next = nextFutureMinute(departure.minus(PLAY_REQUEST_EMISSION_HEAD_START), now);
+            event.rephasePlaying = false;
             return;
         }
         if (event.mode == Mode.INITIAL || event.mode == Mode.WARMUP) {
@@ -411,6 +469,20 @@ final class GroupedLiveScheduleV8 {
         if (!event.next.isBefore(endsAt)) stopEvent(event.id, "STOPPED_LIMIT");
     }
 
+    /** A late authenticated normal J4 must be requalified rather than rephased as fresh. */
+    private void deferAfterCadence(Event event, Instant completedAt) {
+        event.strictEmissionMissed = false;
+        event.pending.clear(); contiguous = null; event.finalComplete = false;
+        event.missedCycles++;
+        event.familyMisses.merge(EVENT_DETAILS, 1L, Long::sum);
+        for (var family : J5) if (available(event, family, completedAt))
+            event.familyMisses.merge(family, 1L, Long::sum);
+        event.mode = Mode.CADENCE_RECHECK;
+        event.state = "WAITING_CADENCE_RECHECK";
+        event.next = completedAt.plus(LiveTimeoutRecoveryPolicy.RETRY_DELAY);
+        if (!event.next.isBefore(endsAt)) stopEvent(event.id, "STOPPED_LIMIT");
+    }
+
     void deferAfterTimeout(LiveSchedule.Due due, Instant endedAt) {
         if (!Objects.equals(inFlight, due)) throw new IllegalStateException("LIVE_UNEXPECTED_TIMEOUT");
         inFlight = null;
@@ -464,19 +536,19 @@ final class GroupedLiveScheduleV8 {
                         || endpoint == EVENT_LINEUPS && event.mode == Mode.LINEUPS)) next = event.next;
                 if (next == null && event.pending.isEmpty() && event.next != null
                         && (event.mode == Mode.PLAY || event.mode == Mode.INITIAL || event.mode == Mode.WARMUP
-                        || event.mode == Mode.RECHECK || event.mode == Mode.ENVELOPE_RECHECK
+                        || event.mode == Mode.RECHECK || event.mode == Mode.ENVELOPE_RECHECK || event.mode == Mode.CADENCE_RECHECK
                         || event.mode == Mode.PRESSURE_RECHECK))
                     next = event.next.plus(slots.offset(endpoint));
                 Instant available = event.unavailableUntil.get(endpoint);
                 if (available != null && next != null && event.mode == Mode.PLAY && available.isAfter(next)) next = available;
-                next = pressureBound(next);
+                next = dispatchBound(next);
             }
             interval = event.unavailableIntervals.getOrDefault(endpoint, interval);
             result.add(new FamilySchedule(endpoint, next, interval, event.familyMisses.getOrDefault(endpoint, 0L)));
         }
         return List.copyOf(result);
     }
-    private Instant nextAt(Event event) { return pressureBound(rawNextAt(event)); }
+    private Instant nextAt(Event event) { return dispatchBound(rawNextAt(event)); }
     private Instant rawNextAt(Event event) { return event.pending.isEmpty() ? event.next : event.pending.getFirst().dueAt(); }
     private boolean expiredPrematchWindow(Event event, Instant now) {
         return (event.mode == Mode.LINEUPS || event.mode == Mode.WARMUP
@@ -487,7 +559,13 @@ final class GroupedLiveScheduleV8 {
     private static boolean waitingForKickoff(String status) {
         return "notstarted".equals(status) || "delayed".equals(status);
     }
-    private Instant pressureBound(Instant next) { return next == null ? null : bounded(deferredUntil != null && deferredUntil.isAfter(next) ? deferredUntil : next); }
+    private Instant dispatchBound(Instant next) {
+        if (next == null) return null;
+        Instant candidate = next;
+        if (postExchangeFenceUntil != null && postExchangeFenceUntil.isAfter(candidate)) candidate = postExchangeFenceUntil;
+        if (deferredUntil != null && deferredUntil.isAfter(candidate)) candidate = deferredUntil;
+        return bounded(candidate);
+    }
     private Instant bounded(Instant value) { return value.isAfter(endsAt) ? endsAt : value; }
     private Event event(UUID id) { Event event = events.get(id); if (event == null) throw new IllegalArgumentException("unknown selected event"); return event; }
 
@@ -506,7 +584,11 @@ final class GroupedLiveScheduleV8 {
                 envelopes.put(endpoint, exchange);
                 offset = offset.plus(exchange).plus(POST_EXCHANGE_FENCE);
             }
-            groupReservation = offset;
+            // Preserve the four internal family offsets. The one-second static
+            // reservation applies only before the next event group can begin;
+            // it preserves a 500 ms closing fence even when an adjacent normal
+            // J4 consumes its bounded 500 ms worker-start jitter.
+            groupReservation = offset.plus(INTER_GROUP_SLOT_RESERVE);
         }
 
         static SlotPlan from(GroupedAdmissionProfile profile) { return new SlotPlan(profile); }
@@ -533,7 +615,7 @@ final class GroupedLiveScheduleV8 {
         UUID groupId;
         long groupSequence, missedCycles;
         int ordinal;
-        boolean warmupDone, confirmed, reserveFinish, finalGood = true, finalComplete, rephasePlaying;
+        boolean warmupDone, confirmed, reserveFinish, finalGood = true, finalComplete, rephasePlaying, strictEmissionMissed;
         Event(UUID id, Instant next, Duration kickoffPhase) { this.id = id; this.next = next; this.kickoffPhase = kickoffPhase; }
         boolean active() { return !state.startsWith("STOPPED") && !"FINISHED_CONFIRMED".equals(state); }
     }

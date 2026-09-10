@@ -34,10 +34,31 @@ public final class V8MeasuredProfile {
     private static final List<SofascoreEndpointType> FAMILIES = List.of(
             SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
             SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS);
+    private static final String COLD_START_LANE = "INITIAL_COLD_START_STRESS";
+    private static final String STEADY_LANE = "V8_STEADY";
+    private static final long INTER_GROUP_SLOT_RESERVE_MILLIS = LiveSchedule.v8InterGroupSlotReserve().toMillis();
+    private static final long REQUEST_EMISSION_HEAD_START_MILLIS = LiveSchedule.v8RequestEmissionHeadStart().toMillis();
+    /**
+     * The V8 production profile is an explicit, qualified upper-bound contract.
+     * A new local measurement may prove that a bound is too small, but it must
+     * never silently lower a bound just because one individual run was faster.
+     */
+    private static final Map<SofascoreEndpointType, QualifiedEnvelope> QUALIFIED_V8_ENVELOPES = Map.of(
+            SofascoreEndpointType.EVENT_DETAILS, new QualifiedEnvelope(300, 500),
+            SofascoreEndpointType.EVENT_INCIDENTS, new QualifiedEnvelope(300, 400),
+            SofascoreEndpointType.EVENT_STATISTICS, new QualifiedEnvelope(350, 400),
+            SofascoreEndpointType.EVENT_LINEUPS, new QualifiedEnvelope(300, 450));
+    private static final long QUALIFIED_STRICT_GROUP_RESERVATION_MILLIS = qualifiedStrictGroupReservationMillis();
     private static final String PROFILE_NAME = "WO058-GROUPED-LIVE-V8-PROFILE-20260910.json";
     private static final String NATIVE_NAME = "WO058-GROUPED-LIVE-V8-NATIVE-20260910.json";
 
     private V8MeasuredProfile() { }
+
+    private record QualifiedEnvelope(long requestMillis, long processingMillis) {
+        private EndpointEnvelope toEndpointEnvelope() {
+            return new EndpointEnvelope(Duration.ofMillis(requestMillis), Duration.ofMillis(processingMillis));
+        }
+    }
 
     public static void main(String[] args) throws Exception {
         if (args.length != 2) throw new IllegalArgumentException("expected native-input and fresh ignored-output-directory");
@@ -60,9 +81,11 @@ public final class V8MeasuredProfile {
         // V8's steady boundary and cadence claim use the actual departure
         // timestamp. A response may arrive late without making a second request
         // admissible, so receipt/commit timestamps remain observations only.
-        List<JsonNode> steady = samples.stream().filter(s -> number(s, "requestedNanos") >= 300 * SECOND).toList();
+        List<JsonNode> steady = samples.stream().filter(s -> STEADY_LANE.equals(s.path("executionLane").asString())
+                && number(s, "laneRequestedNanos") >= 300 * SECOND).toList();
         var envelopes = new EnumMap<SofascoreEndpointType, EndpointEnvelope>(SofascoreEndpointType.class);
         var declaredEnvelopes = new LinkedHashMap<String, Object>();
+        var observedRoundedEnvelopes = new LinkedHashMap<String, Object>();
         var measuredFamilies = new LinkedHashMap<String, Object>();
         for (SofascoreEndpointType endpoint : FAMILIES) {
             List<JsonNode> family = steady.stream()
@@ -73,9 +96,14 @@ public final class V8MeasuredProfile {
             long requestMillis = roundUp(requestMaximum);
             long processingMillis = roundUp(processingMaximum);
             require(requestMillis <= 10_000 && processingMillis <= 60_000, "ENVELOPE_EXCEEDS_DOMAIN_BOUND");
-            var envelope = new EndpointEnvelope(Duration.ofMillis(requestMillis), Duration.ofMillis(processingMillis));
+            QualifiedEnvelope qualified = qualifiedEnvelope(endpoint);
+            require(requestMillis <= qualified.requestMillis() && processingMillis <= qualified.processingMillis(),
+                    "STEADY_ENVELOPE_EXCEEDS_QUALIFIED_CANDIDATE_" + endpoint);
+            var envelope = qualified.toEndpointEnvelope();
             envelopes.put(endpoint, envelope);
             declaredEnvelopes.put(endpoint.name(), Map.of(
+                    "requestMillis", qualified.requestMillis(), "processingMillis", qualified.processingMillis()));
+            observedRoundedEnvelopes.put(endpoint.name(), Map.of(
                     "requestMillis", requestMillis, "processingMillis", processingMillis));
 
             var metric = new LinkedHashMap<String, Object>();
@@ -89,7 +117,7 @@ public final class V8MeasuredProfile {
             metric.put("limiterSleepSeconds", summary(family, "limiterSleepNanos"));
             metric.put("resilienceSqlSeconds", summary(family, "resilienceSqlNanos"));
             List<JsonNode> initial = samples.stream().filter(s -> endpoint.name().equals(s.path("endpoint").asString())
-                    && number(s, "requestedNanos") < 300 * SECOND).toList();
+                    && COLD_START_LANE.equals(s.path("executionLane").asString())).toList();
             metric.put("initialRequestSeconds", summary(initial, "requestNanos"));
             metric.put("initialProcessingSeconds", summary(initial, "processingNanos"));
             measuredFamilies.put(endpoint.name(), metric);
@@ -121,31 +149,42 @@ public final class V8MeasuredProfile {
         int capacity = LiveAdmissionPolicy.qualifiedCapacityV8(profile);
         boolean replayPassed = capacity == MATCHES && GroupedLiveAdmissionSimulationV8.fits(capacity, profile);
         require(capacity >= 0 && capacity <= MATCHES, "CALCULATED_CAPACITY_OUT_OF_SCOPE");
-        long weightedMillis = 4 * profile.minimumRequestStartInterval().toMillis();
-        for (SofascoreEndpointType family : FAMILIES)
-            weightedMillis = Math.addExact(weightedMillis, profile.envelope(family).exchangeEnvelope().toMillis());
-        require(weightedMillis * MATCHES <= 54_000, "V8_NINETY_PERCENT_TEMPORAL_BOUND_FAILED");
+        long groupReservationMillis = LiveSchedule.v8StrictGroupReservation(profile).toMillis();
+        require(groupReservationMillis * MATCHES <= 60_000, "V8_STRICT_PHASE_RESERVATION_BOUND_FAILED");
+        require(number(nativeDoc.path("strictScheduler"), "groupPhaseReservationMillis") == groupReservationMillis,
+                "STRICT_SCHEDULER_PHASE_RESERVATION_REQUIRED");
 
         var evidence = new LinkedHashMap<String, Object>();
-        evidence.put("schema", "wo058-grouped-live-capacity-evidence-v2");
+        evidence.put("schema", "wo058-grouped-live-capacity-evidence-v4");
         evidence.put("status", replayPassed ? "QUALIFIED_SYNTHETIC_LOOPBACK_WITH_STATED_SCOPE" : "MEASURED_PROFILE_NOT_ADMISSIBLE");
         evidence.put("labStatus", List.of("EXPERIMENTAL", "LOCAL_ONLY", "NOT_PRODUCTION_APPROVED", "NO_CRITICAL_DEPENDENCY"));
         evidence.put("completedAt", nativeDoc.path("finishedAt").asString());
         evidence.put("policyVersion", "live-v8");
-        evidence.put("flywayVersion", 50);
+        evidence.put("flywayVersion", 51);
         evidence.put("qualifiedCapacity", capacity);
         evidence.put("envelopeScope", "STEADY_64_KIB_ONLY");
         evidence.put("nativeEvidence", Map.of("path", NATIVE_NAME, "sha256", nativeHash));
         evidence.put("endpointEnvelopes", declaredEnvelopes);
+        evidence.put("observedRoundedSteadyEnvelopes", observedRoundedEnvelopes);
+        evidence.put("envelopeBinding", "immutable qualified V8 upper bounds; each observed steady maximum is rounded upward to 50 ms and must remain within its corresponding bound; the profile is never automatically reduced");
         evidence.put("initialWave", Map.of("separatelyMeasured", true, "coveredBySteadyEnvelopes", false,
-                "firstResponseBytesPerPair", 5_242_880, "pairs", 40));
+                "executionLane", COLD_START_LANE, "firstResponseBytesPerPair", 5_242_880, "pairs", 40,
+                "postCompletionFenceMillis", number(nativeDoc.path("initialWave"), "postCompletionFenceMillis"),
+                "strictLaneClearanceMillis", number(nativeDoc, "coldStartToStrictLaneClearanceMillis"),
+                "strictLaneClearanceBasis", nativeDoc.path("initialWave").path("strictLaneClearanceBasis").asString(),
+                "departureToStrictLaneClearanceMillis", number(nativeDoc, "coldStartDepartureToStrictLaneClearanceMillis"),
+                "partOfSteadyV8Scheduler", false));
         var cadence = new LinkedHashMap<String, Object>();
         cadence.put("criticalSeconds", 60);
         cadence.put("lineupSeconds", 60);
         cadence.put("intraGroupDelayMillis", 0);
         cadence.put("interGroupDelayMillis", 500);
+        cadence.put("interGroupSlotReserveMillis", INTER_GROUP_SLOT_RESERVE_MILLIS);
+        cadence.put("requestEmissionHeadStartMillis", REQUEST_EMISSION_HEAD_START_MILLIS);
+        cadence.put("strictGroupPhaseReservationMillis", groupReservationMillis);
         cadence.put("maximumEndpointsPerGroup", 4);
-        cadence.put("maximumUtilization", new BigDecimal("0.9"));
+        cadence.put("maximumTemporalUtilization", BigDecimal.valueOf(groupReservationMillis * capacity)
+                .divide(BigDecimal.valueOf(60_000), 3, java.math.RoundingMode.HALF_UP));
         cadence.put("minimumPostCompletionDelayMillis", 500);
         cadence.put("maximumDeparturesPer60Seconds", 45);
         cadence.put("maximumDeparturesPerHour", 2_756);
@@ -159,14 +198,14 @@ public final class V8MeasuredProfile {
         admission.put("productionSchedulerScenarioCount", GroupedLiveAdmissionSimulationV8.SCENARIOS);
         admission.put("productionSchedulerScenariosExecutedForThisProfile", replayPassed);
         admission.put("profileAppliedAutomatically", false);
-        admission.put("rounding", "each separate observed steady maximum, rounded upward to the next 50 ms boundary; no historical profile floor");
-        admission.put("weightedMinuteMillisPerMatch", weightedMillis);
-        admission.put("weightedMinuteMillisAtQualifiedCapacity", weightedMillis * capacity);
-        admission.put("availableMinuteMillis", 54_000);
-        admission.put("uncappedMeanBoundCapacity", 54_000 / weightedMillis);
+        admission.put("rounding", "each separate observed steady maximum is rounded upward to the next 50 ms boundary and must not exceed its immutable qualified V8 bound; no automatic profile reduction");
+        admission.put("weightedMinuteMillisPerMatch", groupReservationMillis);
+        admission.put("weightedMinuteMillisAtQualifiedCapacity", groupReservationMillis * capacity);
+        admission.put("availableMinuteMillis", 60_000);
+        admission.put("uncappedMeanBoundCapacity", 60_000 / groupReservationMillis);
         admission.put("hourlyCallsPerMatch", HOURLY_CALLS_PER_EVENT);
         admission.put("hourlyHeadroomCallsAtQualifiedCapacity", capacity * HOURLY_CALLS_PER_EVENT);
-        admission.put("calculation", "min(10, floor((2756*9/10)/248), floor(54000/(2000+J4+incidents+statistics+lineups))) followed by production v8 scheduler replay; all endpoint costs are request plus processing milliseconds");
+        admission.put("calculation", "immutable qualified V8 bounds feed min(10, floor((2756*9/10)/248), floor(60000/(sum(exchangeEnvelope + 500 ms terminal fence) + 1000 ms static scheduling reserve))); all rounded observed steady maxima must remain within those bounds before the production v8 scheduler replay; actual normal J4 REQUEST_SENT may be at most 500 ms after its head-start due time");
         evidence.put("admission", admission);
         evidence.put("tenMatchHourlyBoundary", Map.of(
                 "ordinaryCallsPerHourPerMatch", 240, "initialCallsPerMatch", 4, "finalCallsPerMatch", 4,
@@ -178,6 +217,7 @@ public final class V8MeasuredProfile {
         var measurement = new LinkedHashMap<String, Object>();
         measurement.put("totalCalls", samples.size());
         measurement.put("steadyCalls", steady.size());
+        measurement.put("coldStartCalls", samples.stream().filter(s -> COLD_START_LANE.equals(s.path("executionLane").asString())).count());
         measurement.put("pairsChecked", 40);
         measurement.put("effectiveRequestTimeoutMillis", number(nativeDoc, "effectiveRequestTimeoutMillis"));
         measurement.put("minimumPostCompletionDelaySeconds", seconds(minimumGap));
@@ -238,7 +278,8 @@ public final class V8MeasuredProfile {
         require(number(nativeDoc, "matches") == MATCHES && number(nativeDoc, "warmupSeconds") == 300
                 && number(nativeDoc, "requiredSteadySeconds") == 1800, "MEASURED_RUN_SHAPE_MISMATCH");
         require(decimal(nativeDoc.path("steadyElapsedSeconds")).compareTo(BigDecimal.valueOf(1800)) >= 0
-                && decimal(nativeDoc.path("elapsedSeconds")).compareTo(BigDecimal.valueOf(2100)) >= 0, "RUN_TOO_SHORT");
+                && decimal(nativeDoc.path("strictLaneElapsedSeconds")).compareTo(BigDecimal.valueOf(2100)) >= 0,
+                "RUN_TOO_SHORT");
         require(number(nativeDoc, "criticalIntervalSeconds") == 60 && number(nativeDoc, "lineupsIntervalSeconds") == 60
                 && number(nativeDoc, "interGroupDelayMillis") == 500
                 && number(nativeDoc, "minimumPostCompletionDelayMillis") == 500
@@ -251,7 +292,27 @@ public final class V8MeasuredProfile {
                 && "requestedNanos".equals(nativeDoc.path("normalPathDepartureTimestamp").asString())
                 && "per-event-family".equals(nativeDoc.path("normalPathDepartureCadenceScope").asString()),
                 "STRICT_NORMAL_PATH_DEPARTURE_CADENCE_REQUIRED");
+        validateQualifiedCandidateEnvelopes(nativeDoc);
+        JsonNode strictScheduler = nativeDoc.path("strictScheduler");
+        require(number(strictScheduler, "interGroupSlotReserveMillis") == INTER_GROUP_SLOT_RESERVE_MILLIS
+                && number(strictScheduler, "requestEmissionHeadStartMillis") == REQUEST_EMISSION_HEAD_START_MILLIS
+                && number(strictScheduler, "groupPhaseReservationMillis") == QUALIFIED_STRICT_GROUP_RESERVATION_MILLIS
+                && "WAITING_CADENCE_RECHECK".equals(strictScheduler.path("normalJ4EmissionOverrunState").asString()),
+                "STRICT_SCHEDULER_RESERVATION_REQUIRED");
         require(number(nativeDoc, "effectiveRequestTimeoutMillis") == 30_000, "OBSERVED_TIMEOUT_MISMATCH");
+        JsonNode initialWave = nativeDoc.path("initialWave");
+        require(COLD_START_LANE.equals(initialWave.path("executionLane").asString())
+                && number(initialWave, "pairs") == 40
+                && number(initialWave, "firstResponseBytesPerPair") == 5_242_880
+                && number(initialWave, "postCompletionFenceMillis") == 500
+                && number(initialWave, "strictLaneClearanceMillis") >= 60_001
+                && "LAST_COLD_COMPLETION".equals(initialWave.path("strictLaneClearanceBasis").asString())
+                && initialWave.path("partOfSteadyV8Scheduler").isBoolean()
+                && !initialWave.path("partOfSteadyV8Scheduler").asBoolean(), "INITIAL_WAVE_LANE_REQUIRED");
+        flag(nativeDoc, "strictLaneStartedAfterColdDrain", true);
+        require(number(nativeDoc, "coldStartToStrictLaneClearanceMillis") >= 60_001
+                && number(nativeDoc, "coldStartDepartureToStrictLaneClearanceMillis") >= 60_001,
+                "COLD_START_DRAIN_REQUIRED");
         List<JsonNode> samples = array(nativeDoc, "samples");
         require(!samples.isEmpty(), "SAMPLES_EMPTY");
         for (String key : List.of("requests", "durableAttempts", "durableDepartures",
@@ -259,12 +320,33 @@ public final class V8MeasuredProfile {
             require(number(nativeDoc, key) == samples.size(), "DURABLE_COUNT_MISMATCH_" + key);
         require(number(nativeDoc, "receivedBytes") == samples.stream().mapToLong(s -> number(s, "bodyBytes")).sum(),
                 "BYTE_COUNT_MISMATCH");
-        require(samples.stream().filter(s -> number(s, "bodyBytes") == 5_242_880).count() == 40,
-                "INITIAL_WAVE_MISMATCH");
+        List<JsonNode> cold = samples.stream().filter(s -> COLD_START_LANE.equals(s.path("executionLane").asString())).toList();
+        List<JsonNode> strict = samples.stream().filter(s -> STEADY_LANE.equals(s.path("executionLane").asString())).toList();
+        // The cold lane is intentionally outside the strict V8 scheduler and
+        // may itself take longer than five minutes under local transport or
+        // persistence stress.  Its explicit lane, cardinality and 5 MiB body
+        // evidence identify it; the strict warm-up begins only afterwards.
+        require(cold.size() == 40 && number(nativeDoc, "coldStartSamples") == 40
+                && cold.stream().allMatch(s -> number(s, "bodyBytes") == 5_242_880), "INITIAL_WAVE_MISMATCH");
         require(samples.stream().filter(s -> number(s, "bodyBytes") == 5_242_880)
-                .allMatch(s -> number(s, "requestedNanos") < 300 * SECOND), "INITIAL_WAVE_OUTSIDE_WARMUP");
-        require(samples.stream().filter(s -> number(s, "requestedNanos") >= 300 * SECOND)
-                .allMatch(s -> number(s, "bodyBytes") == 65_536), "STEADY_SCOPE_MISMATCH");
+                .allMatch(s -> COLD_START_LANE.equals(s.path("executionLane").asString())), "INITIAL_WAVE_LANE_LEAK");
+        require(!strict.isEmpty() && number(nativeDoc, "strictV8SteadySamples") == strict.size()
+                && strict.stream().allMatch(s -> number(s, "bodyBytes") == 65_536), "STEADY_SCOPE_MISMATCH");
+        require(strict.stream().filter(s -> number(s, "laneRequestedNanos") >= 300 * SECOND)
+                .allMatch(s -> number(s, "bodyBytes") == 65_536), "POST_WARMUP_STEADY_SCOPE_MISMATCH");
+    }
+
+    private static void validateQualifiedCandidateEnvelopes(JsonNode nativeDoc) {
+        JsonNode candidates = nativeDoc.path("candidateEndpointEnvelopes");
+        require(candidates.isObject(), "QUALIFIED_CANDIDATE_ENVELOPES_REQUIRED");
+        for (SofascoreEndpointType endpoint : FAMILIES) {
+            JsonNode candidate = candidates.path(endpoint.name());
+            require(candidate.isObject(), "QUALIFIED_CANDIDATE_ENVELOPE_REQUIRED_" + endpoint);
+            QualifiedEnvelope qualified = qualifiedEnvelope(endpoint);
+            require(number(candidate, "requestMillis") == qualified.requestMillis()
+                    && number(candidate, "processingMillis") == qualified.processingMillis(),
+                    "QUALIFIED_CANDIDATE_ENVELOPE_MISMATCH_" + endpoint);
+        }
     }
 
     private static List<JsonNode> array(JsonNode node, String key) {
@@ -272,6 +354,20 @@ public final class V8MeasuredProfile {
         List<JsonNode> result = new ArrayList<>();
         node.path(key).forEach(result::add);
         return result;
+    }
+
+    private static QualifiedEnvelope qualifiedEnvelope(SofascoreEndpointType endpoint) {
+        QualifiedEnvelope envelope = QUALIFIED_V8_ENVELOPES.get(endpoint);
+        require(envelope != null, "QUALIFIED_CANDIDATE_ENVELOPE_REQUIRED_" + endpoint);
+        return envelope;
+    }
+
+    private static long qualifiedStrictGroupReservationMillis() {
+        var envelopes = new EnumMap<SofascoreEndpointType, EndpointEnvelope>(SofascoreEndpointType.class);
+        for (SofascoreEndpointType endpoint : FAMILIES)
+            envelopes.put(endpoint, qualifiedEnvelope(endpoint).toEndpointEnvelope());
+        var profile = new GroupedAdmissionProfile(envelopes, "0".repeat(64), "live-v8");
+        return LiveSchedule.v8StrictGroupReservation(profile).toMillis();
     }
     private static void checkStrictNormalPathDepartureIntervals(List<JsonNode> pair) {
         List<Long> intervals = new ArrayList<>();

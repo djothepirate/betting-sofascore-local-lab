@@ -8,9 +8,10 @@ import java.util.*;
 import static com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType.*;
 
 /**
- * Offline admission replay for normal V8 windows and persistent-limiter semantics.
- * It proves planned request starts only; delayed kickoffs, 404 spacing and isolated
- * timeout recovery are explicit exception paths covered by the V8 schedule tests.
+ * Offline admission replay for V8 requested-departure windows and persistent-limiter
+ * semantics. It includes bounded alternating worker J4 emission jitter; delayed
+ * kickoffs, 404 spacing and isolated timeout recovery remain explicit exception paths
+ * covered by the V8 schedule tests.
  */
 final class GroupedLiveAdmissionSimulationV8 {
     static final int SCENARIOS = 16;
@@ -32,9 +33,11 @@ final class GroupedLiveAdmissionSimulationV8 {
     }
 
     /**
-     * The terminal fence is counted too: it closes the last exchange of one
-     * minute before the first departure of the next wave may begin. Thus ten
-     * four-family groups need 10 * sum(exchange + 500 ms) within one minute.
+     * The terminal fence closes the last exchange of one group. A second,
+     * independent one-second reservation absorbs the bounded worker-start gate
+     * before the next group can emit REQUEST_SENT. Thus the strict proof uses
+     * ten phase reservations, each sum(exchange + fence) plus the static slot
+     * reserve, within one minute.
      */
     static boolean hasStrictMinuteDepartureBudget(int matches, GroupedAdmissionProfile profile) {
         if (matches < 1 || matches > LiveAdmissionPolicy.V8_MAXIMUM_SELECTION_SIZE) return false;
@@ -67,20 +70,27 @@ final class GroupedLiveAdmissionSimulationV8 {
                 now = next; continue;
             }
             var due = ready.orElseThrow();
-            Instant allowed = nextAllowed(now, lastCompletion, departures);
-            if (allowed.isAfter(now)) { schedule.defer(due, allowed); now = allowed; continue; }
-            boolean playing = !now.isBefore(kickoff) && now.isBefore(finish);
-            String status = due.endpoint() != EVENT_DETAILS ? null : now.isBefore(kickoff) ? "notstarted"
-                    : now.isBefore(finish) ? "inprogress" : "finished";
-            Instant departedAt = now;
-            schedule.started(due, departedAt);
+            Admission admission = nextAllowed(now, lastCompletion, departures);
+            if (admission.notBefore().isAfter(now)) {
+                if (admission.reason() == AdmissionReason.POST_EXCHANGE_FENCE)
+                    schedule.waitForPostExchangeFence(due, admission.notBefore());
+                else schedule.defer(due, admission.notBefore());
+                now = admission.notBefore(); continue;
+            }
+            Instant admittedAt = now;
+            schedule.started(due, admittedAt);
+            Instant departedAt = admittedAt.plus(authenticatedWorkerJ4Delay(due, kickoff, varied));
+            schedule.departed(due, departedAt);
+            boolean playing = !departedAt.isBefore(kickoff) && departedAt.isBefore(finish);
+            String status = due.endpoint() != EVENT_DETAILS ? null : departedAt.isBefore(kickoff) ? "notstarted"
+                    : departedAt.isBefore(finish) ? "inprogress" : "finished";
             Duration cost = profile.envelope(due.endpoint()).exchangeEnvelope();
             // The planned slot uses the qualified maximum envelope. This normal
             // replay alternates lower observed costs to prove that later within-
             // envelope exchanges still retain each family’s planned start phase.
             if (varied && Math.floorDiv(Duration.between(kickoff, now).toSeconds(), 60) % 2 == 1)
                 cost = Duration.ofNanos(1);
-            now = now.plus(cost);
+            now = departedAt.plus(cost);
             schedule.completed(due, status, false, Map.of(), now, kickoff,
                     due.endpoint() == EVENT_LINEUPS ? confirmed : null);
             departures.addLast(departedAt); lastCompletion = now; calls++;
@@ -101,6 +111,14 @@ final class GroupedLiveAdmissionSimulationV8 {
         return familiesWithStrictMinuteIntervals.size() == matches * ACTIVE_FAMILIES.size();
     }
 
+    /** Alternate 0/500 ms J4 emissions per event/wave without exceeding the declared head start. */
+    private static Duration authenticatedWorkerJ4Delay(LiveSchedule.Due due, Instant kickoff, boolean varied) {
+        if (!varied || due.endpoint() != EVENT_DETAILS || !"J4_CYCLE".equals(due.kind())) return Duration.ZERO;
+        long wave = Math.floorDiv(Duration.between(kickoff, due.dueAt()).toSeconds(), 60);
+        long parity = wave + due.eventId().getLeastSignificantBits();
+        return Math.floorMod(parity, 2) == 0 ? Duration.ZERO : GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START;
+    }
+
     /**
      * A group remains serial while its next qualified family slot is still in
      * the future. Its EventState can therefore coexist with another event that
@@ -117,18 +135,22 @@ final class GroupedLiveAdmissionSimulationV8 {
                 .orElse(null);
     }
 
-    private static Instant nextAllowed(Instant now, Instant lastCompletion, Deque<Instant> departures) {
+    private static Admission nextAllowed(Instant now, Instant lastCompletion, Deque<Instant> departures) {
         Instant candidate = lastCompletion != null && lastCompletion.plus(POST_EXCHANGE_FENCE).isAfter(now)
                 ? lastCompletion.plus(POST_EXCHANGE_FENCE) : now;
+        boolean rateLimited = false;
         while (true) {
             Instant at = candidate;
             while (!departures.isEmpty() && !departures.getFirst().plusSeconds(3600).isAfter(at)) departures.removeFirst();
             List<Instant> hour = List.copyOf(departures);
             List<Instant> minute = hour.stream().filter(end -> end.plusSeconds(60).isAfter(at)).toList();
-            if (hour.size() >= MAXIMUM_DEPARTURES_PER_HOUR) { candidate = hour.get(hour.size() - MAXIMUM_DEPARTURES_PER_HOUR).plusSeconds(3600); continue; }
-            if (minute.size() >= MAXIMUM_DEPARTURES_PER_MINUTE) { candidate = minute.get(minute.size() - MAXIMUM_DEPARTURES_PER_MINUTE).plusSeconds(60); continue; }
-            return candidate;
+            if (hour.size() >= MAXIMUM_DEPARTURES_PER_HOUR) { rateLimited = true; candidate = hour.get(hour.size() - MAXIMUM_DEPARTURES_PER_HOUR).plusSeconds(3600); continue; }
+            if (minute.size() >= MAXIMUM_DEPARTURES_PER_MINUTE) { rateLimited = true; candidate = minute.get(minute.size() - MAXIMUM_DEPARTURES_PER_MINUTE).plusSeconds(60); continue; }
+            return new Admission(candidate, rateLimited ? AdmissionReason.RATE_LIMITED
+                    : candidate.isAfter(now) ? AdmissionReason.POST_EXCHANGE_FENCE : AdmissionReason.ALLOWED);
         }
     }
+    private enum AdmissionReason { ALLOWED, POST_EXCHANGE_FENCE, RATE_LIMITED }
+    private record Admission(Instant notBefore, AdmissionReason reason) { }
     private record Key(UUID event, SofascoreEndpointType endpoint) { }
 }

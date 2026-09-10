@@ -902,7 +902,8 @@ class LiveCampaignControllerTest {
     @CsvSource({"LIVE_STORAGE_PROBE_TIMEOUT,délai prévu", "LIVE_STORAGE_PROBE_FAILED,ne peut pas être mesuré",
             "LIVE_STORAGE_PROBE_INVALID,ne peut pas être mesuré", "LIVE_STORAGE_PROBE_INTERRUPTED,interrompu",
             "LIVE_STORAGE_CAPACITY_REFUSED,insuffisant", "LIVE_POLICY_INVALID,limites",
-            "LIVE_CAPACITY_QUALIFICATION_REQUIRED,preuve de qualification"})
+            "LIVE_CAPACITY_QUALIFICATION_REQUIRED,preuve de qualification",
+            "LIVE_V8_FRESHNESS_CAPACITY_UNAVAILABLE,fraîcheur de 60 secondes"})
     void localPreparationFailuresExposeOnlyTheirKnownCodeAndAction(String code, String action) throws Exception {
         MockHttpSession session = new MockHttpSession();
         when(service.prepareSelection(List.of(EVENT_ID))).thenThrow(new IllegalStateException(code));

@@ -378,7 +378,7 @@ class LiveCampaignPersistenceIT {
 
     @Test
     void v8SqlRejectsCapacityCadenceDelayAndMinuteEnvelopeThatWouldMissTheNextWave() {
-        Fixture f=fixture("49");
+        Fixture f=fixture("51");
         assertThatThrownBy(()->insertPolicyManifestRow(f,UUID.randomUUID(),"live-v8",2500,20000,15_728_640_000L,11,60))
                 .hasMessageContaining("live_campaign_v8_policy_bounds_check");
         assertThatThrownBy(()->insertPolicyManifestRow(f,UUID.randomUUID(),"live-v8",2500,20000,15_728_640_000L,10,100))
@@ -403,8 +403,23 @@ class LiveCampaignPersistenceIT {
         assertThatThrownBy(()->new TransactionTemplate(new JdbcTransactionManager(f.ds)).executeWithoutResult(status->{
             insertPolicyManifestRow(f,tooSlow,"live-v8",2500,20000,15_728_640_000L,10,60);
             insertGroupedPolicyRow(f,tooSlow,60,60,500_000_000L,overMinute);
-        })).hasMessageContaining("live-v8 grouped envelopes exceed the sixty-second capacity window");
+        })).hasMessageContaining("live-v8 grouped envelopes plus worker-start reserve exceed the sixty-second capacity window");
         assertThat(f.store.find(tooSlow)).isEmpty();
+
+        // The four exchange envelopes and their terminal fences alone consume
+        // 56 seconds for ten events. V51 additionally proves the fixed one-second
+        // scheduling slot reserve, which makes the same ten-event profile
+        // inadmissible at 66 seconds.
+        String reserveOnlyOverflow="{\"EVENT_DETAILS\":{\"requestNanos\":900000000,\"processingNanos\":0},"
+                +"\"EVENT_INCIDENTS\":{\"requestNanos\":900000000,\"processingNanos\":0},"
+                +"\"EVENT_STATISTICS\":{\"requestNanos\":900000000,\"processingNanos\":0},"
+                +"\"EVENT_LINEUPS\":{\"requestNanos\":900000000,\"processingNanos\":0}}";
+        UUID reserveOverflow=UUID.randomUUID();
+        assertThatThrownBy(()->new TransactionTemplate(new JdbcTransactionManager(f.ds)).executeWithoutResult(status->{
+            insertPolicyManifestRow(f,reserveOverflow,"live-v8",2500,20000,15_728_640_000L,10,60);
+            insertGroupedPolicyRow(f,reserveOverflow,60,60,500_000_000L,reserveOnlyOverflow);
+        })).hasMessageContaining("live-v8 grouped envelopes plus worker-start reserve exceed the sixty-second capacity window");
+        assertThat(f.store.find(reserveOverflow)).isEmpty();
     }
 
     @Test
@@ -1261,10 +1276,10 @@ class LiveCampaignPersistenceIT {
         f.store.transition(own,m.targets().getFirst().canonicalEventId(),"STOPPED_OPERATOR","OPERATOR_STOP",T0.plusSeconds(12),null);
         f.store.transition(own,null,"COMPLETED","CLEANUP_VERIFIED",T0.plusSeconds(13),null);
         f.guard.releaseAfterVerifiedCleanup(own,T0.plusSeconds(14));
-        // Exercise the historical ledger first, then upgrade it for the current V50 J6 tooling.
+        // Exercise the historical ledger first, then upgrade it for the current V51 J6 tooling.
         var campaignBeforeUpgrade=f.store.find(m.campaignId()).orElseThrow();
         var guardBeforeUpgrade=f.guard.snapshot();
-        assertThat(f.migrate("50").migrationsExecuted).isEqualTo(11);
+        assertThat(f.migrate("51").migrationsExecuted).isEqualTo(12);
         assertThat(f.store.find(m.campaignId())).contains(campaignBeforeUpgrade);
         assertThat(f.guard.snapshot()).isEqualTo(guardBeforeUpgrade);
         String script=Files.readString(Path.of("scripts/Backup-Restore-J6.ps1"),StandardCharsets.UTF_8);
@@ -1306,10 +1321,10 @@ class LiveCampaignPersistenceIT {
                 new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS,null,interval,0),T0.plusSeconds(12));
         source.store.transition(own,null,"COMPLETED","CLEANUP_VERIFIED",T0.plusSeconds(13),null);
         source.guard.releaseAfterVerifiedCleanup(own,T0.plusSeconds(14));
-        // Keep v4/v5 execution evidence on its original schema, then qualify today's backup on V50.
+        // Keep v4/v5 execution evidence on its original schema, then qualify today's backup on V51.
         var campaignBeforeUpgrade=source.store.find(m.campaignId()).orElseThrow();
         var guardBeforeUpgrade=source.guard.snapshot();
-        assertThat(source.migrate("50").migrationsExecuted).isEqualTo(50-Integer.parseInt(schema));
+        assertThat(source.migrate("51").migrationsExecuted).isEqualTo(51-Integer.parseInt(schema));
         assertThat(source.store.find(m.campaignId())).contains(campaignBeforeUpgrade);
         assertThat(source.guard.snapshot()).isEqualTo(guardBeforeUpgrade);
         String script=Files.readString(Path.of("scripts/Backup-Restore-J6.ps1"),StandardCharsets.UTF_8);
@@ -1327,7 +1342,7 @@ class LiveCampaignPersistenceIT {
             String url=POSTGRES.getJdbcUrl().substring(0,POSTGRES.getJdbcUrl().lastIndexOf('/')+1)+restoredDatabase;
             Fixture restored=new Fixture(new DriverManagerDataSource(url,POSTGRES.getUsername(),POSTGRES.getPassword()));
             assertThat(restored.jdbc.queryForObject(sql,String.class)).isEqualTo(before);
-            assertThat(restored.migrate("50").migrationsExecuted).isZero();
+            assertThat(restored.migrate("51").migrationsExecuted).isZero();
             assertThat(restored.guard.snapshot().state()).isEqualTo("FREE");
             assertThat(restored.store.find(m.campaignId()).orElseThrow().state()).isEqualTo("COMPLETED");
             assertThat(restored.store.find(m.campaignId()).orElseThrow().attempts()).hasSize(1);

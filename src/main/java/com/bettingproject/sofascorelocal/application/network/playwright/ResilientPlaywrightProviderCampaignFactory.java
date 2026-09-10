@@ -172,7 +172,7 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
                     ? store.tryReserveDeparture(dispatchId,clock.instant())
                     : store.tryReserveDeparture(dispatchId,departureProfile,clock.instant());
             if(decision.allowed()) return;
-            if(decision.reason()!=DepartureReason.RATE_LIMITED)
+            if(decision.reason()!=DepartureReason.RATE_LIMITED && decision.reason()!=DepartureReason.POST_EXCHANGE_FENCE)
                 throw new IllegalStateException(decision.reason()==DepartureReason.PROVIDER_SUSPENDED
                         ? "PROVIDER_SUSPENDED" : decision.reason()==DepartureReason.DEPARTURE_UNRESOLVED
                         ? "PROVIDER_DEPARTURE_UNRESOLVED" : "PROVIDER_CLOCK_REGRESSION");

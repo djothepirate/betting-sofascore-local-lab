@@ -54,16 +54,24 @@ class LiveGroupedCampaignLocalQualificationIT {
     private static final int BODY_BYTES = 64 * 1024;
     private static final List<SofascoreEndpointType> FAMILIES =
             List.of(EVENT_DETAILS, EVENT_INCIDENTS, EVENT_STATISTICS, EVENT_LINEUPS);
+    private static final String COLD_START_LANE = "INITIAL_COLD_START_STRESS";
+    private static final String V8_STEADY_LANE = "V8_STEADY";
+    private static final Duration COLD_START_POST_COMPLETION_FENCE = Duration.ofMillis(500);
+    // The rolling provider budget uses (t-window, t].  One extra millisecond
+    // makes the strict lane's first departure unambiguously outside the cold
+    // lane's final rolling minute.
+    private static final Duration COLD_START_TO_STRICT_CLEARANCE = Duration.ofMinutes(1).plusMillis(1);
     private static final Duration REQUEST_ENVELOPE = Duration.ofMillis(500);
     private static final Duration PROCESSING_ENVELOPE = Duration.ofMillis(200);
     private static final long[] SERVER_DELAYS_MILLIS = {0, 30, 80, 150};
 
-    @Test @Timeout(value = 4, unit = TimeUnit.MINUTES)
+    @Test @Timeout(value = 8, unit = TimeUnit.MINUTES)
     void smokeIncludesFirstTenGroupsAndTransactionalNormalization() throws Exception {
-        // The eighty v5 initial 5 MiB responses need a wider cold-start window.
-        // This checks coverage/transactions/cleanup only;
-        // the separate fixed 300+1800-second run qualifies cadence.
-        run(0, V6_OR_LATER || V5 ? 180 : 120, false, Path.of(".tmp/wo058-" + POLICY.substring(5) + "-smoke-qualification.json"));
+        // V8 first measures its forty 5 MiB first responses in an explicit
+        // cold-start lane, drains its rolling minute, then covers ten normal
+        // 64 KiB groups. This smoke still does not qualify a production cadence.
+        run(0, V8 ? 240 : V6_OR_LATER || V5 ? 180 : 120, false,
+                Path.of(".tmp/wo058-" + POLICY.substring(5) + "-smoke-qualification.json"));
     }
 
     @Test @Timeout(value = 45, unit = TimeUnit.MINUTES)
@@ -88,6 +96,13 @@ class LiveGroupedCampaignLocalQualificationIT {
             report.put("normalPathDepartureTimestamp", "requestedNanos");
             report.put("normalPathDepartureCadenceScope", "per-event-family");
             report.put("receiptAndPublicationCadence", "observed as latency evidence; not a hard V8 provider receipt SLA");
+            var candidate = candidateProfile();
+            report.put("strictScheduler", Map.of(
+                    "interGroupSlotReserveMillis", LiveSchedule.v8InterGroupSlotReserve().toMillis(),
+                    "requestEmissionHeadStartMillis", LiveSchedule.v8RequestEmissionHeadStart().toMillis(),
+                    "groupPhaseReservationMillis", LiveSchedule.v8StrictGroupReservation(candidate).toMillis(),
+                    "groupPhaseReservationFormula", "sum(exchangeEnvelope + 500 ms terminal fence) + 1000 ms static inter-group reserve",
+                    "normalJ4EmissionOverrunState", "WAITING_CADENCE_RECHECK"));
         }
         // V7's already committed builder intentionally reads this legacy field as
         // an integer. V8 adds the millisecond field for its half-second fence.
@@ -107,6 +122,15 @@ class LiveGroupedCampaignLocalQualificationIT {
         report.put("matches", MATCHES);
         report.put("bodyBytesPerResponse", BODY_BYTES);
         report.put("initialFirstResponsePerFamilyBytes", RawPayloadEvidence.MAXIMUM_BYTES);
+        if (V8) report.put("initialWave", Map.of(
+                "executionLane", COLD_START_LANE,
+                "pairs", MATCHES * FAMILIES.size(),
+                "firstResponseBytesPerPair", RawPayloadEvidence.MAXIMUM_BYTES,
+                "postCompletionFenceMillis", COLD_START_POST_COMPLETION_FENCE.toMillis(),
+                "strictLaneClearanceMillis", COLD_START_TO_STRICT_CLEARANCE.toMillis(),
+                "strictLaneClearanceBasis", "LAST_COLD_COMPLETION",
+                "partOfSteadyV8Scheduler", false,
+                "sameLoopbackTransportAndPersistence", true));
         report.put("normalizedFixtureShape", Map.of("statisticMetrics", 135, "statisticSignals", 270, "incidents", 30, "lineupPlayers", 44));
         if (V6_OR_LATER) report.put("lineupV3Fixture", Map.of("captains", 2, "playersWithStatistics", 44,
                 "statisticsPerPlayer", 20, "ratingVersionsPerPlayer", 2, "missingPlayers", 4));
@@ -122,7 +146,7 @@ class LiveGroupedCampaignLocalQualificationIT {
                     Map.of("requestMillis", envelope.requestEnvelope().toMillis(),
                             "processingMillis", envelope.processingEnvelope().toMillis())));
             report.put("candidateEndpointEnvelopes", candidateEnvelopes);
-            report.put("candidateEnvelopeSource", V8 ? "V7 steady loopback envelopes reused as the initial V8 local hypothesis; this V8 sustained run is the required independent measurement" : V7 ? "earlier costs used only as a starting hypothesis; V7 requires new measured evidence" : V6
+            report.put("candidateEnvelopeSource", V8 ? "evidence-bound V8 loopback contract; every steady sample must remain within these envelopes" : V7 ? "earlier costs used only as a starting hypothesis; V7 requires new measured evidence" : V6
                     ? "historical v5 costs used only as starting hypotheses; no v6 qualification is inferred"
                     : "measured 75-second candidate; unchanged cost floors for the 100-second run");
         } else {
@@ -184,20 +208,36 @@ class LiveGroupedCampaignLocalQualificationIT {
                     Instant origin = Instant.now();
                     long originNano = System.nanoTime();
                     Launch launch = database.store.launch(manifest.campaignId(), manifest.manifestSha256(), ownership, origin);
-                    var schedule = new LiveSchedule(targets.stream().map(Target::canonicalEventId).toList(),
-                            origin, launch.endsAt(), Duration.ofSeconds(CRITICAL_SECONDS), POLICY, manifest.campaignId(),
-                            V8 ? manifest.admissionProfile().groupedProfile() : null);
+                    LiveSchedule schedule = V8 ? null : new LiveSchedule(targets.stream().map(Target::canonicalEventId).toList(),
+                            origin, launch.endsAt(), Duration.ofSeconds(CRITICAL_SECONDS), POLICY, manifest.campaignId(), null);
+                    // The 5 MiB first bodies are deliberately not declared as V8
+                    // steady-envelope work.  Exercise them through the identical
+                    // loopback transport, persistence and durable budget first,
+                    // then drain their rolling minute before the sole strict V8
+                    // scheduler is constructed with the qualified 64 KiB profile.
+                    ColdStartPlan coldStart = V8 ? new ColdStartPlan(targets, origin) : null;
+                    Instant strictLaneStartedAt = V8 ? null : origin;
+                    long strictLaneStartedNano = V8 ? -1 : originNano;
                     var publishedFamilies = new HashMap<String, FamilySchedule>();
                     var publishedStates = new HashMap<UUID, LiveSchedule.EventState>();
                     var familyVersions = new HashMap<String, Long>();
                     var uiReadNanos = new ArrayList<Long>();
+                    var pressureDeferralEvents = new ArrayList<Map<String, Object>>();
+                    var postExchangeFenceWaitEvents = new ArrayList<Map<String, Object>>();
+                    report.put("pressureDeferralEvents", pressureDeferralEvents);
+                    report.put("postExchangeFenceWaitEvents", postExchangeFenceWaitEvents);
                     long nextUiRead = originNano;
-                    long deadline = originNano + TimeUnit.SECONDS.toNanos(warmupSeconds + steadySeconds);
+                    // V8 deliberately runs a separate 40-response cold lane and
+                    // drains its rolling minute before constructing the strict
+                    // scheduler. Its five-minute warm-up and sustained window
+                    // begin only at that strict-lane origin.
+                    long deadline = V8 ? Long.MAX_VALUE
+                            : originNano + TimeUnit.SECONDS.toNanos(warmupSeconds + steadySeconds);
                     long nextProgress = originNano + TimeUnit.SECONDS.toNanos(60);
                     long deferredWorkNanos = 0, pressureStartedNano = 0;
                     long previousResilienceSql = database.resilience.sqlNanos;
                     int pressureDeferrals = 0;
-                    while (System.nanoTime() < deadline) {
+                    while (schedule == null || System.nanoTime() < deadline) {
                         if (System.nanoTime() >= nextUiRead) {
                             long uiStart = System.nanoTime();
                             database.store.find(manifest.campaignId()).orElseThrow();
@@ -205,10 +245,39 @@ class LiveGroupedCampaignLocalQualificationIT {
                             nextUiRead += TimeUnit.SECONDS.toNanos(5);
                         }
                         Instant now = at(origin, originNano);
-                        var next = schedule.next(now);
-                        assertThat(schedule.terminal()).as("scheduler must remain active under qualified load").isFalse();
-                        if (next.isEmpty()) { Thread.sleep(20); continue; }
-                        LiveSchedule.Due due = next.orElseThrow();
+                        boolean coldStartLane = V8 && !coldStart.complete();
+                        if (!coldStartLane && schedule == null) {
+                            if (!coldStart.readyForStrictLane(now)) { Thread.sleep(20); continue; }
+                            strictLaneStartedNano = System.nanoTime();
+                            strictLaneStartedAt = origin.plusNanos(strictLaneStartedNano - originNano);
+                            deadline = strictLaneStartedNano + TimeUnit.SECONDS.toNanos(warmupSeconds + steadySeconds);
+                            long clearanceMillis = Duration.between(coldStart.lastCompletedAt(), strictLaneStartedAt).toMillis();
+                            long departureDrainMillis = Duration.between(coldStart.lastAuthenticatedDeparture(), strictLaneStartedAt).toMillis();
+                            assertThat(clearanceMillis).as("V8 strict lane must start after the completed cold lane drains")
+                                    .isGreaterThanOrEqualTo(COLD_START_TO_STRICT_CLEARANCE.toMillis());
+                            assertThat(departureDrainMillis).as("V8 strict lane must also clear the final cold departure")
+                                    .isGreaterThanOrEqualTo(COLD_START_TO_STRICT_CLEARANCE.toMillis());
+                            report.put("coldStartToStrictLaneClearanceMillis", clearanceMillis);
+                            report.put("coldStartDepartureToStrictLaneClearanceMillis", departureDrainMillis);
+                            report.put("strictLaneStartedAfterColdDrain", true);
+                            report.put("strictLaneStartedAt", strictLaneStartedAt.toString());
+                            schedule = new LiveSchedule(targets.stream().map(Target::canonicalEventId).toList(),
+                                    strictLaneStartedAt, launch.endsAt(), Duration.ofSeconds(CRITICAL_SECONDS), POLICY,
+                                    manifest.campaignId(), manifest.admissionProfile().groupedProfile(), coldStart.groupCount());
+                        }
+                        final LiveSchedule activeSchedule = schedule;
+                        final LiveSchedule.Due due;
+                        if (coldStartLane) {
+                            var next = coldStart.next(now);
+                            if (next.isEmpty()) { Thread.sleep(20); continue; }
+                            due = next.orElseThrow();
+                        } else {
+                            var next = activeSchedule.next(now);
+                            assertThat(activeSchedule.terminal()).as("scheduler must remain active under qualified load").isFalse();
+                            if (next.isEmpty()) { Thread.sleep(20); continue; }
+                            due = next.orElseThrow();
+                        }
+                        final Instant laneStartedAt = coldStartLane ? origin : strictLaneStartedAt;
                         long operationStart = System.nanoTime();
                         if (V6_OR_LATER) {
                             var decision = V8
@@ -216,10 +285,44 @@ class LiveGroupedCampaignLocalQualificationIT {
                                             ProviderResilienceData.DepartureProfile.LIVE_V8, Instant.now())
                                     : database.resilience.departureDecision(Instant.now());
                             if (!decision.allowed()) {
+                                if (V8 && decision.reason() == ProviderResilienceData.DepartureReason.POST_EXCHANGE_FENCE) {
+                                    postExchangeFenceWaitEvents.add(Map.of(
+                                            "executionLane", coldStartLane ? COLD_START_LANE : V8_STEADY_LANE,
+                                            "eventId", due.eventId().toString(),
+                                            "endpoint", due.endpoint().name(),
+                                            "kind", due.kind(),
+                                            "groupSequence", due.groupSequence(),
+                                            "dueAt", due.dueAt().toString(),
+                                            "scheduleObservedAt", now.toString(),
+                                            "nextAllowedAt", decision.nextAllowedAt().toString(),
+                                            "lastDepartureAt", String.valueOf(decision.snapshot().lastDepartureAt()),
+                                            "lastDepartureFinishedAt", String.valueOf(decision.snapshot().lastDepartureFinishedAt())));
+                                    if (coldStartLane) coldStart.waitForPostExchangeFence(due, decision.nextAllowedAt());
+                                    else {
+                                        activeSchedule.waitForPostExchangeFence(due, decision.nextAllowedAt());
+                                        publishSchedule(database, ownership, activeSchedule, publishedFamilies, publishedStates);
+                                    }
+                                    deferredWorkNanos += System.nanoTime() - operationStart;
+                                    continue;
+                                }
                                 assertThat(decision.reason()).isEqualTo(ProviderResilienceData.DepartureReason.RATE_LIMITED);
+                                pressureDeferralEvents.add(Map.of(
+                                        "executionLane", coldStartLane ? COLD_START_LANE : V8 ? V8_STEADY_LANE : "LEGACY",
+                                        "eventId", due.eventId().toString(),
+                                        "endpoint", due.endpoint().name(),
+                                        "kind", due.kind(),
+                                        "groupSequence", due.groupSequence(),
+                                        "dueAt", due.dueAt().toString(),
+                                        "scheduleObservedAt", now.toString(),
+                                        "nextAllowedAt", decision.nextAllowedAt().toString(),
+                                        "lastDepartureAt", String.valueOf(decision.snapshot().lastDepartureAt()),
+                                        "lastDepartureFinishedAt", String.valueOf(decision.snapshot().lastDepartureFinishedAt())));
                                 if (pressureStartedNano == 0) pressureStartedNano = operationStart;
-                                schedule.defer(due, decision.nextAllowedAt());
-                                publishSchedule(database, ownership, schedule, publishedFamilies, publishedStates);
+                                if (coldStartLane) coldStart.defer(due, decision.nextAllowedAt());
+                                else {
+                                    activeSchedule.defer(due, decision.nextAllowedAt());
+                                    publishSchedule(database, ownership, activeSchedule, publishedFamilies, publishedStates);
+                                }
                                 deferredWorkNanos += System.nanoTime() - operationStart;
                                 pressureDeferrals++;
                                 continue;
@@ -238,7 +341,7 @@ class LiveGroupedCampaignLocalQualificationIT {
                         // A -> A -> B -> B gives both semantic changes and identical-payload new receipts.
                         String familyKey = path(eventId, due.endpoint());
                         long familyVersion = familyVersions.merge(familyKey, 1L, Long::sum) - 1;
-                        int responseBytes = familyVersion == 0 ? RawPayloadEvidence.MAXIMUM_BYTES : BODY_BYTES;
+                        int responseBytes = coldStartLane ? RawPayloadEvidence.MAXIMUM_BYTES : BODY_BYTES;
                         fixture.bodies.put(familyKey, body(templates, eventId, due.endpoint(), familyVersion / 2, responseBytes));
                         long serverDelay = SERVER_DELAYS_MILLIS[(int) ((familyVersion + eventId + FAMILIES.indexOf(due.endpoint())) % SERVER_DELAYS_MILLIS.length)];
                         fixture.responseDelayMillis.set(serverDelay);
@@ -246,11 +349,15 @@ class LiveGroupedCampaignLocalQualificationIT {
                         AtomicLong sleepBeforeDispatch = new AtomicLong();
                         var admission = new PlaywrightDispatchAdmission() {
                             public void onTransportProgress(PlaywrightTransportDiagnostic observed) {
-                                recordObservedV8Departure(schedule, due, observed.requestedAt());
+                                if (coldStartLane) coldStart.departed(due, observed.requestedAt());
+                                else recordObservedV8Departure(activeSchedule, due, observed.requestedAt());
                                 if (V6_OR_LATER) database.diagnostics.recordTransport(manifest.campaignId(), reservation.attemptId(), due.endpoint(), observed);
                             }
                             public void check() {
-                                if (!schedule.mayDispatch(due, at(origin, originNano))) throw new PlaywrightDispatchCancelledException();
+                                boolean allowed = coldStartLane
+                                        ? coldStart.mayDispatch(due, at(origin, originNano))
+                                        : activeSchedule.mayDispatch(due, at(origin, originNano));
+                                if (!allowed) throw new PlaywrightDispatchCancelledException();
                             }
                             public Permit acquireDispatchPermit() {
                                 dispatchStart.set(System.nanoTime());
@@ -258,7 +365,8 @@ class LiveGroupedCampaignLocalQualificationIT {
                                 check();
                                 if (!database.guard.isOwned(ownership)) throw new PlaywrightDispatchCancelledException();
                                 database.store.recordDispatch(ownership, reservation.attemptId(), Instant.now());
-                                schedule.started(due, at(origin, originNano));
+                                if (coldStartLane) coldStart.started(due, at(origin, originNano));
+                                else activeSchedule.started(due, at(origin, originNano));
                                 return () -> { };
                             }
                         };
@@ -271,7 +379,8 @@ class LiveGroupedCampaignLocalQualificationIT {
                         // The local loopback transport normally sends REQUEST_SENT progress.  Keep
                         // the validated response timestamp as an idempotent fallback so this
                         // qualification exercises the same V8 rephase contract as production.
-                        recordObservedV8Departure(schedule, due, response.requestedAt());
+                        if (coldStartLane) coldStart.departed(due, response.requestedAt());
+                        else recordObservedV8Departure(activeSchedule, due, response.requestedAt());
                         long responseNano = System.nanoTime();
                         if (V6_OR_LATER) {
                             assertThat(response.diagnostic()).isNotNull();
@@ -289,17 +398,21 @@ class LiveGroupedCampaignLocalQualificationIT {
                         assertThat(processed.scope()).isEqualTo(LiveProcessedResponse.FailureScope.NONE);
                         Map<String, Boolean> signals = new LinkedHashMap<>();
                         processed.signals().forEach(s -> signals.put(s.key(), s.kind().name().equals("FINISH_CHECK")));
-                        schedule.completed(due, processed.sportStatus().orElse(null), false, signals, at(origin, originNano));
-                        if (V8 && due.endpoint() == EVENT_DETAILS) {
+                        String state;
+                        if (coldStartLane) state = "WAITING_START";
+                        else {
+                            activeSchedule.completed(due, processed.sportStatus().orElse(null), false, signals, at(origin, originNano));
+                            state = activeSchedule.states().stream().filter(e -> e.eventId().equals(due.eventId())).findFirst().orElseThrow().state();
+                        }
+                        if (!coldStartLane && V8 && due.endpoint() == EVENT_DETAILS) {
                             Instant expectedFirstJ5 = response.requestedAt()
                                     .plus(manifest.admissionProfile().groupedProfile().envelope(EVENT_DETAILS).exchangeEnvelope())
                                     .plusMillis(GROUP_GAP_MILLIS);
-                            Instant scheduledFirstJ5 = schedule.states().stream()
+                            Instant scheduledFirstJ5 = activeSchedule.states().stream()
                                     .filter(event -> event.eventId().equals(due.eventId())).findFirst().orElseThrow().nextDueAt();
                             assertThat(scheduledFirstJ5).as("V8 J5 phase must follow authenticated worker departure")
                                     .isEqualTo(expectedFirstJ5);
                         }
-                        String state = schedule.states().stream().filter(e -> e.eventId().equals(due.eventId())).findFirst().orElseThrow().state();
                         var completeness = processed.completeness();
                         var publication = new Publication(processed.outcome().name(), processed.scope().name(), processed.code(),
                                 Instant.now(), processed.parserVersion(), true, state, processed.sportStatus().orElse(null),
@@ -307,7 +420,8 @@ class LiveGroupedCampaignLocalQualificationIT {
                                 completeness.map(c -> c.scorePercent()).orElse(null));
                         database.store.publishResult(ownership, reservation.attemptId(), publication,
                                 () -> database.processor.persistProcessed(processed));
-                        publishSchedule(database, ownership, schedule, publishedFamilies, publishedStates);
+                        if (coldStartLane) coldStart.completed(due, at(origin, originNano));
+                        else publishSchedule(database, ownership, activeSchedule, publishedFamilies, publishedStates);
                         long committedNano = System.nanoTime();
                         long requestNanos = responseNano - dispatchStart.get();
                         long authorizationDelayNanos = dispatchStart.get() - beforeTransport;
@@ -322,21 +436,40 @@ class LiveGroupedCampaignLocalQualificationIT {
                                 Duration.between(origin, response.requestedAt()).toNanos(), response.latency().toNanos(),
                                 authorizationDelayNanos, pressureElapsedNanos, limiterSleepNanos,
                                 database.resilience.sqlNanos - previousResilienceSql,
-                                V6_OR_LATER ? Duration.between(origin, database.resilience.lastFinished).toNanos() : 0));
+                                V6_OR_LATER ? Duration.between(origin, database.resilience.lastFinished).toNanos() : 0,
+                                coldStartLane ? COLD_START_LANE : V8 ? V8_STEADY_LANE : "LEGACY",
+                                Duration.between(laneStartedAt, response.requestedAt()).toNanos()));
                         deferredWorkNanos = 0; pressureStartedNano = 0;
                         previousResilienceSql = database.resilience.sqlNanos;
                         assertThat(fixture.worker.get().isAlive()).isTrue();
                         if (committedNano >= nextProgress) {
                             System.out.println("WO058_GROUPED_PROGRESS_SECONDS=" + TimeUnit.NANOSECONDS.toSeconds(committedNano - originNano)
-                                    + ";REQUESTS=" + samples.size() + ";MISSED=" + schedule.states().stream().mapToLong(LiveSchedule.EventState::missedCycles).sum());
+                                    + ";REQUESTS=" + samples.size() + ";MISSED="
+                                    + (schedule == null ? 0 : schedule.states().stream().mapToLong(LiveSchedule.EventState::missedCycles).sum()));
                             nextProgress += TimeUnit.SECONDS.toNanos(60);
                         }
                     }
                     elapsedNanos = System.nanoTime() - originNano;
                     report.put("elapsedSeconds", seconds(elapsedNanos));
-                    report.put("steadyElapsedSeconds", seconds(elapsedNanos) - warmupSeconds);
+                    long strictLaneElapsedNanos = V8 ? System.nanoTime() - strictLaneStartedNano : elapsedNanos;
+                    report.put("steadyElapsedSeconds", seconds(strictLaneElapsedNanos) - warmupSeconds);
+                    if (V8) {
+                        var coldSamples = samples.stream().filter(sample -> COLD_START_LANE.equals(sample.executionLane())).toList();
+                        var strictSamples = samples.stream().filter(sample -> V8_STEADY_LANE.equals(sample.executionLane())).toList();
+                        assertThat(coldStart.complete()).as("all initial cold-start pairs must be observed before V8 starts").isTrue();
+                        assertThat(coldSamples).hasSize(MATCHES * FAMILIES.size()).allSatisfy(sample ->
+                                assertThat(sample.bodyBytes()).isEqualTo(RawPayloadEvidence.MAXIMUM_BYTES));
+                        assertThat(strictSamples).isNotEmpty().allSatisfy(sample ->
+                                assertThat(sample.bodyBytes()).isEqualTo(BODY_BYTES));
+                        assertThat(strictLaneStartedAt).as("V8 strict lane must start after cold drain").isNotNull();
+                        report.put("coldStartSamples", coldSamples.size());
+                        report.put("strictV8SteadySamples", strictSamples.size());
+                        report.put("strictLaneElapsedSeconds", seconds(strictLaneElapsedNanos));
+                        assertThat(strictLaneElapsedNanos).as("V8 strict lane must include its own warm-up plus sustained run")
+                                .isGreaterThanOrEqualTo(TimeUnit.SECONDS.toNanos(warmupSeconds + steadySeconds));
+                    }
                     report.put("uiReadsEveryFiveSeconds", summary(uiReadNanos));
-                    assertThat(elapsedNanos).isGreaterThanOrEqualTo(TimeUnit.SECONDS.toNanos(warmupSeconds + steadySeconds));
+                    if (!V8) assertThat(elapsedNanos).isGreaterThanOrEqualTo(TimeUnit.SECONDS.toNanos(warmupSeconds + steadySeconds));
                     report.put("missedCycles", schedule.states().stream().mapToLong(LiveSchedule.EventState::missedCycles).sum());
                     assertThat(schedule.states()).allSatisfy(s -> assertThat(s.missedCycles()).isZero());
                     CampaignView finalView = database.store.find(manifest.campaignId()).orElseThrow();
@@ -400,11 +533,14 @@ class LiveGroupedCampaignLocalQualificationIT {
         var initialMetrics = new LinkedHashMap<String, Object>();
         report.put("initialMetrics", initialMetrics);
         for (var endpoint : FAMILIES) {
-            var initial = samples.stream().filter(s -> s.endpoint() == endpoint && s.receivedNanos() < warmupNanos).toList();
+            var initial = samples.stream().filter(s -> s.endpoint() == endpoint
+                    && (V8 ? COLD_START_LANE.equals(s.executionLane()) : s.receivedNanos() < warmupNanos)).toList();
             initialMetrics.put(endpoint.name(), Map.of("requestSeconds", summary(initial.stream().map(Sample::requestNanos).toList()),
                     "processingIncludingSqlSeconds", summary(initial.stream().map(Sample::processingNanos).toList()),
                     "nominalLatenessSeconds", summary(initial.stream().map(s -> Math.max(0, s.committedNanos() - s.dueNanos())).toList())));
-            var steady = samples.stream().filter(s -> s.endpoint() == endpoint && s.receivedNanos() >= warmupNanos).toList();
+            var steady = samples.stream().filter(s -> s.endpoint() == endpoint
+                    && (V8 ? V8_STEADY_LANE.equals(s.executionLane()) && s.laneRequestedNanos() >= warmupNanos
+                    : s.receivedNanos() >= warmupNanos)).toList();
             var intervals = new ArrayList<Long>();
             var availableIntervals = new ArrayList<Long>();
             var departureIntervals = new ArrayList<Long>();
@@ -507,7 +643,9 @@ class LiveGroupedCampaignLocalQualificationIT {
                 });
             }
         }
-        var steadyCritical = samples.stream().filter(s -> (V8 || V7 || s.endpoint() != EVENT_LINEUPS) && s.receivedNanos() >= warmupNanos).toList();
+        var steadyCritical = samples.stream().filter(s -> (V8 || V7 || s.endpoint() != EVENT_LINEUPS)
+                && (V8 ? V8_STEADY_LANE.equals(s.executionLane()) && s.laneRequestedNanos() >= warmupNanos
+                : s.receivedNanos() >= warmupNanos)).toList();
         var queueDebt = steadyCritical.stream().map(s -> Math.max(0, s.committedNanos() - s.dueNanos())).toList();
         int quarter = Math.max(1, steadyCritical.size() / 4);
         long firstDebt = percentile(queueDebt.subList(0, quarter), .95);
@@ -520,8 +658,8 @@ class LiveGroupedCampaignLocalQualificationIT {
                     .isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(5));
             assertThat(percentile(queueDebt, .95)).isLessThanOrEqualTo(TimeUnit.SECONDS.toNanos(15));
         });
-        report.put("initialPhaseRequests", samples.stream().filter(s -> s.receivedNanos() < warmupNanos).count());
-        report.put("initialPhaseMaximumReceiptLatenessSeconds", seconds(samples.stream().filter(s -> s.receivedNanos() < warmupNanos)
+        report.put("initialPhaseRequests", samples.stream().filter(s -> V8 ? COLD_START_LANE.equals(s.executionLane()) : s.receivedNanos() < warmupNanos).count());
+        report.put("initialPhaseMaximumReceiptLatenessSeconds", seconds(samples.stream().filter(s -> V8 ? COLD_START_LANE.equals(s.executionLane()) : s.receivedNanos() < warmupNanos)
                 .mapToLong(s -> Math.max(0, s.receivedNanos() - s.dueNanos())).max().orElse(0)));
         long minBetweenGroups = Long.MAX_VALUE;
         for (int i = 1; i < samples.size(); i++) {
@@ -605,12 +743,13 @@ class LiveGroupedCampaignLocalQualificationIT {
     private static GroupedAdmissionProfile candidateProfile() {
         EnumMap<SofascoreEndpointType, EndpointEnvelope> envelopes = new EnumMap<>(SofascoreEndpointType.class);
         if (V8) {
-            // V8 starts from the independently measured V7 steady envelopes. The
-            // V8 sustained loopback run below must still keep every sample within them.
-            envelopes.put(EVENT_DETAILS, new EndpointEnvelope(Duration.ofMillis(350), Duration.ofMillis(400)));
-            envelopes.put(EVENT_INCIDENTS, new EndpointEnvelope(Duration.ofMillis(350), Duration.ofMillis(550)));
-            envelopes.put(EVENT_STATISTICS, new EndpointEnvelope(Duration.ofMillis(350), Duration.ofMillis(500)));
-            envelopes.put(EVENT_LINEUPS, new EndpointEnvelope(Duration.ofMillis(350), Duration.ofMillis(500)));
+            // The V8 loopback contract uses the evidence-bound profile that
+            // reserves 6 seconds per group. The sustained run below still
+            // fails closed if any steady sample exceeds one of these envelopes.
+            envelopes.put(EVENT_DETAILS, new EndpointEnvelope(Duration.ofMillis(300), Duration.ofMillis(500)));
+            envelopes.put(EVENT_INCIDENTS, new EndpointEnvelope(Duration.ofMillis(300), Duration.ofMillis(400)));
+            envelopes.put(EVENT_STATISTICS, new EndpointEnvelope(Duration.ofMillis(350), Duration.ofMillis(400)));
+            envelopes.put(EVENT_LINEUPS, new EndpointEnvelope(Duration.ofMillis(300), Duration.ofMillis(450)));
         } else if (V6 || V5) {
             // Keep the established maxima from the 75-second candidate. A longer
             // cadence must not manufacture capacity by lowering measured costs.
@@ -747,11 +886,138 @@ class LiveGroupedCampaignLocalQualificationIT {
     private static Map<String, Object> summary(List<Long> values) {
         return Map.of("count", values.size(), "p95", seconds(percentile(values, .95)), "maximum", seconds(percentile(values, 1)));
     }
+
+    /**
+     * Qualification-only lane for the separately measured first 5 MiB bodies.
+     * It deliberately has no {@link LiveSchedule}: giving this non-steady work a
+     * V8 profile would falsely claim it fits the ten-target 60-second envelope.
+     */
+    private static final class ColdStartPlan {
+        private final List<LiveSchedule.Due> tasks = new ArrayList<>();
+        private int index;
+        private LiveSchedule.Due ready;
+        private LiveSchedule.Due inFlight;
+        private Instant notBefore;
+        private LiveSchedule.Due pendingDepartureDue;
+        private Instant pendingDeparture;
+        private Instant inFlightDeparture;
+        private Instant lastAuthenticatedDeparture;
+        private Instant lastCompletedAt;
+
+        ColdStartPlan(List<Target> targets, Instant start) {
+            notBefore = start;
+            for (int targetIndex = 0; targetIndex < targets.size(); targetIndex++) {
+                Target target = targets.get(targetIndex);
+                UUID group = UUID.nameUUIDFromBytes(("cold-start|" + target.canonicalEventId())
+                        .getBytes(StandardCharsets.UTF_8));
+                for (int ordinal = 0; ordinal < FAMILIES.size(); ordinal++) {
+                    var endpoint = FAMILIES.get(ordinal);
+                    tasks.add(new LiveSchedule.Due(target.canonicalEventId(), endpoint, 0,
+                            "INITIAL_COLD_START_STRESS", start, false, group, targetIndex, ordinal));
+                }
+            }
+        }
+
+        Optional<LiveSchedule.Due> next(Instant now) {
+            if (inFlight != null || complete() || now.isBefore(notBefore)) return Optional.empty();
+            if (ready == null) {
+                LiveSchedule.Due task = tasks.get(index);
+                ready = new LiveSchedule.Due(task.eventId(), task.endpoint(), task.cycle(), task.kind(), notBefore,
+                        task.finalCycle(), task.groupId(), task.groupSequence(), task.groupOrdinal());
+            }
+            return Optional.of(ready);
+        }
+
+        boolean mayDispatch(LiveSchedule.Due due, Instant now) {
+            return ready != null && ready.equals(due) && !now.isBefore(due.dueAt())
+                    && !now.isBefore(notBefore) && inFlight == null;
+        }
+
+        /**
+         * A V8 post-exchange fence is a local completion boundary, not a
+         * pressure deferral.  Preserve the ready due and only hold its dispatch
+         * until the durable store says that the fence has elapsed.
+         */
+        void waitForPostExchangeFence(LiveSchedule.Due due, Instant nextAllowedAt) {
+            if (ready == null || !ready.equals(due) || inFlight != null || !nextAllowedAt.isAfter(notBefore))
+                throw new IllegalStateException("COLD_START_POST_EXCHANGE_FENCE_CANCELLED");
+            notBefore = nextAllowedAt;
+        }
+
+        void defer(LiveSchedule.Due due, Instant nextAllowedAt) {
+            if (ready == null || !ready.equals(due) || inFlight != null || !nextAllowedAt.isAfter(notBefore))
+                throw new IllegalStateException("COLD_START_DEFER_CANCELLED");
+            ready = null;
+            notBefore = nextAllowedAt;
+        }
+
+        void started(LiveSchedule.Due due, Instant now) {
+            if (!mayDispatch(due, now)) throw new IllegalStateException("COLD_START_DISPATCH_CANCELLED");
+            ready = null;
+            inFlight = due;
+            if (pendingDeparture != null) {
+                if (!Objects.equals(pendingDepartureDue, due))
+                    throw new IllegalStateException("COLD_START_DEPARTURE_DUE_MISMATCH");
+                inFlightDeparture = pendingDeparture;
+                pendingDepartureDue = null;
+                pendingDeparture = null;
+            }
+        }
+
+        void departed(LiveSchedule.Due due, Instant requestedAt) {
+            // NAVIGATION progress deliberately has no request timestamp. It is
+            // diagnostic context, not an authenticated provider departure.
+            if (requestedAt == null) return;
+            if (inFlight == null) {
+                // The protected wrapper can relay REQUEST_SENT while its local
+                // durable permit is still returning. Keep that authenticated
+                // timestamp attached to the ready task; `started` consumes it.
+                if (!Objects.equals(ready, due)) throw new IllegalStateException("COLD_START_UNEXPECTED_DEPARTURE");
+                if (pendingDeparture != null && !pendingDeparture.equals(requestedAt))
+                    throw new IllegalStateException("COLD_START_DEPARTURE_TIMESTAMP_MISMATCH");
+                pendingDepartureDue = due;
+                pendingDeparture = requestedAt;
+                return;
+            }
+            if (!Objects.equals(inFlight, due)) throw new IllegalStateException("COLD_START_UNEXPECTED_DEPARTURE");
+            if (inFlightDeparture != null && !inFlightDeparture.equals(requestedAt))
+                throw new IllegalStateException("COLD_START_DEPARTURE_TIMESTAMP_MISMATCH");
+            inFlightDeparture = requestedAt;
+        }
+
+        void completed(LiveSchedule.Due due, Instant completedAt) {
+            if (!Objects.equals(inFlight, due) || inFlightDeparture == null)
+                throw new IllegalStateException("COLD_START_UNEXPECTED_COMPLETION");
+            inFlight = null;
+            lastAuthenticatedDeparture = inFlightDeparture;
+            inFlightDeparture = null;
+            lastCompletedAt = completedAt;
+            index++;
+            notBefore = completedAt.plus(COLD_START_POST_COMPLETION_FENCE);
+        }
+
+        boolean complete() { return index == tasks.size() && inFlight == null; }
+        boolean readyForStrictLane(Instant now) {
+            return complete() && lastAuthenticatedDeparture != null && lastCompletedAt != null
+                    && !now.isBefore(lastCompletedAt.plus(COLD_START_TO_STRICT_CLEARANCE));
+        }
+        Instant lastAuthenticatedDeparture() {
+            if (lastAuthenticatedDeparture == null) throw new IllegalStateException("COLD_START_DEPARTURE_MISSING");
+            return lastAuthenticatedDeparture;
+        }
+        Instant lastCompletedAt() {
+            if (lastCompletedAt == null) throw new IllegalStateException("COLD_START_COMPLETION_MISSING");
+            return lastCompletedAt;
+        }
+        long groupCount() { return tasks.size() / FAMILIES.size(); }
+    }
+
     record Sample(long providerEventId, SofascoreEndpointType endpoint, long round, String groupId, long dueNanos,
                   long receivedNanos, long committedNanos, long requestNanos, long processingNanos,
                   long serverArrivalNanos, long responseCompleteNanos, long serverDelayMillis, int bodyBytes,
                   long requestedNanos, long httpNanos, long authorizationDelayNanos, long pressureElapsedNanos,
-                  long limiterSleepNanos, long resilienceSqlNanos, long resilienceFinishedNanos) { }
+                  long limiterSleepNanos, long resilienceSqlNanos, long resilienceFinishedNanos,
+                  String executionLane, long laneRequestedNanos) { }
 
     private static final class Database implements AutoCloseable {
         final HikariDataSource dataSource;
@@ -812,6 +1078,11 @@ class LiveGroupedCampaignLocalQualificationIT {
         public ProviderResilienceData.DepartureDecision departureDecision(
                 ProviderResilienceData.DepartureProfile profile, Instant at) {
             return measured(() -> delegate.departureDecision(profile, at));
+        }
+        @Override
+        public ProviderResilienceData.DepartureDecision departureCapacityDecision(
+                ProviderResilienceData.DepartureProfile profile, int requiredDepartures, Instant at) {
+            return measured(() -> delegate.departureCapacityDecision(profile, requiredDepartures, at));
         }
         public ProviderResilienceData.DepartureDecision tryReserveDeparture(UUID id, Instant at) {
             return measured(() -> delegate.tryReserveDeparture(id, at));

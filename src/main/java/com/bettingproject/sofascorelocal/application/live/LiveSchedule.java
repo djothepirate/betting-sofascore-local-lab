@@ -12,6 +12,22 @@ import static com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpoin
 /** Pure bounded schedule. All instants are supplied by the session clock; no network or SQL. */
 public final class LiveSchedule {
     public static final List<SofascoreEndpointType> J5 = List.of(EVENT_STATISTICS, EVENT_INCIDENTS, EVENT_LINEUPS);
+
+    /** Public evidence surface for the immutable V8 scheduler reservation. */
+    public static Duration v8InterGroupSlotReserve() {
+        return GroupedLiveScheduleV8.INTER_GROUP_SLOT_RESERVE;
+    }
+
+    /** Maximum bounded worker-start delay accepted for a strict normal V8 J4. */
+    public static Duration v8RequestEmissionHeadStart() {
+        return GroupedLiveScheduleV8.PLAY_REQUEST_EMISSION_HEAD_START;
+    }
+
+    /** Full four-family V8 phase reservation, including fences and static reserve. */
+    public static Duration v8StrictGroupReservation(GroupedAdmissionProfile profile) {
+        return GroupedLiveScheduleV8.strictGroupReservation(profile);
+    }
+
     public record Due(UUID eventId, SofascoreEndpointType endpoint, long cycle, String kind,
                       Instant dueAt, boolean finalCycle, UUID groupId, long groupSequence, int groupOrdinal) {
         public Due(UUID eventId, SofascoreEndpointType endpoint, long cycle, String kind,
@@ -54,8 +70,21 @@ public final class LiveSchedule {
     /** V8 alone receives its immutable qualified envelopes to reserve family slots. */
     public LiveSchedule(List<UUID> targets, Instant start, Instant endsAt, Duration interval,
                         String policyVersion, UUID campaignId, GroupedAdmissionProfile groupedProfile) {
+        this(targets, start, endsAt, interval, policyVersion, campaignId, groupedProfile, 0);
+    }
+
+    /**
+     * V8 qualification can resume after prior durable groups only with their
+     * monotonically increasing sequence offset. Ordinary campaigns always use
+     * the overload above and therefore begin at zero.
+     */
+    public LiveSchedule(List<UUID> targets, Instant start, Instant endsAt, Duration interval,
+                        String policyVersion, UUID campaignId, GroupedAdmissionProfile groupedProfile,
+                        long initialV8GroupSequence) {
         if (targets.isEmpty() || targets.size() > LiveCadence.MAXIMUM_SELECTION_SIZE || new HashSet<>(targets).size() != targets.size()
                 || !endsAt.isAfter(start)) throw new IllegalArgumentException("invalid live schedule");
+        if (initialV8GroupSequence < 0 || (!"live-v8".equals(policyVersion) && initialV8GroupSequence != 0))
+            throw new IllegalArgumentException("LIVE_V8_GROUP_SEQUENCE_REQUIRED");
         LiveCadence.validate(interval);
         this.endsAt = endsAt;
         this.interval = interval;
@@ -67,7 +96,7 @@ public final class LiveSchedule {
         this.kickoffSchedule = "live-v7".equals(policyVersion)
                 ? new GroupedLiveScheduleV7(targets, start, endsAt, interval, campaignId) : null;
         this.kickoffScheduleV8 = "live-v8".equals(policyVersion)
-                ? new GroupedLiveScheduleV8(targets, start, endsAt, interval, campaignId, groupedProfile) : null;
+                ? new GroupedLiveScheduleV8(targets, start, endsAt, interval, campaignId, groupedProfile, initialV8GroupSequence) : null;
     }
 
     public synchronized Optional<Due> next(Instant now) {
@@ -146,6 +175,12 @@ public final class LiveSchedule {
         if (kickoffSchedule != null) { kickoffSchedule.defer(due, notBefore); return; }
         if (grouped == null) throw new IllegalStateException("LIVE_DEFER_UNSUPPORTED_POLICY");
         grouped.defer(due, notBefore);
+    }
+
+    /** A V8 completed-exchange fence retains its pending due without pressure recovery. */
+    public synchronized void waitForPostExchangeFence(Due due, Instant notBefore) {
+        if (kickoffScheduleV8 == null) throw new IllegalStateException("LIVE_FENCE_WAIT_UNSUPPORTED_POLICY");
+        kickoffScheduleV8.waitForPostExchangeFence(due, notBefore);
     }
 
     /** Abandon the interrupted group; the next attempt must start a new J4 group. */

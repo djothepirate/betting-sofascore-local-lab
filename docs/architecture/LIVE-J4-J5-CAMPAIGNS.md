@@ -1,10 +1,10 @@
 # Campagnes live locales J4/J5 — architecture WO-058
 
 Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
-Décisions historiques applicables : [ADR-SS-005 v0.9](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), correctif de réponses lentes/timeouts isolés réalisé et qualifié fonctionnellement hors fournisseur, et le calendrier v7 de l'ADR courant. Le premier lot de résilience et son profil nominal restent qualifiés dans leur portée : [rapport initial](../validation/WO-058-provider-resilience-qualification-20260909.md), [qualification temporelle v6](../validation/WO058-LIVE-V6-CAPACITY-20260909.md). Le [rapport du correctif](../validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md) conserve séparément les validations finales réussies et leurs étapes intermédiaires. La révision V8 est autorisée par la demande propriétaire du 10 septembre, mais sa qualification locale est à faire ; cette mise à jour ne modifie pas l'ADR. Les preuves v4/v5 restent historiques.
+Décisions historiques applicables : [ADR-SS-005 v0.9](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), correctif de réponses lentes/timeouts isolés réalisé et qualifié fonctionnellement hors fournisseur, et le calendrier v7 de l'ADR courant. Le premier lot de résilience et son profil nominal restent qualifiés dans leur portée : [rapport initial](../validation/WO-058-provider-resilience-qualification-20260909.md), [qualification temporelle v6](../validation/WO058-LIVE-V6-CAPACITY-20260909.md). Le [rapport du correctif](../validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md) conserve séparément les validations finales réussies et leurs étapes intermédiaires. La révision V8 est autorisée par la demande propriétaire du 10 septembre et sa [qualification loopback locale](../validation/WO058-LIVE-V8-CAPACITY-20260910.md) est achevée ; elle ne vaut ni acceptation ni seuil du fournisseur et cette mise à jour ne modifie pas l'ADR. Les preuves v4/v5 restent historiques.
 Réalisation : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md).
 
-## Révision live-v8 — nouvelle préparation fermée jusqu'à sa preuve locale
+## Révision live-v8 — profil local qualifié, activation manuelle distincte
 
 `live-v8` est la politique de préparation destinée aux nouvelles campagnes. Elle vise **dix
 rencontres au plus** et une cadence de départ normale de **60 secondes au plus par couple
@@ -13,16 +13,24 @@ rencontre/famille** en jeu. Les familles sont `EVENT_DETAILS`, `EVENT_INCIDENTS`
 déduit jamais la fraîcheur d'une donnée de l'heure de lecture de l'écran, d'une réservation
 ou d'un corps qui n'est pas reçu intégralement.
 
-L'admission V8 reste fermée tant que les neuf entrées de son profil ne sont pas présentes et
-cohérentes : une empreinte `SOFASCORE_LIVE_GROUPED_V8_QUALIFICATION_SHA256` et huit enveloppes
-requête/traitement. La capacité retournée est alors zéro. Un profil V7 qualifié à trois
-rencontres, ou tout profil v4–v6, ne constitue pas un repli acceptable. Les campagnes déjà
-persistées gardent la version et les règles de leur manifeste ; V8 ne les convertit pas.
+Le [profil V8 versionné](../validation/WO058-GROUPED-LIVE-V8-PROFILE-20260910.json) qualifie une
+capacité locale de dix rencontres lorsqu’il est chargé avec ses neuf entrées cohérentes : une
+empreinte `SOFASCORE_LIVE_GROUPED_V8_QUALIFICATION_SHA256` et huit enveloppes
+requête/traitement. Sans cet ensemble exact, l'admission retourne toujours une capacité zéro.
+Un profil V7 qualifié à trois rencontres, ou tout profil v4–v6, ne constitue pas un repli
+acceptable. Les campagnes déjà persistées gardent la version et les règles de leur manifeste ;
+V8 ne les convertit pas.
 
 Le planificateur V8 doit dériver des slots immuables par rencontre et famille à partir des
-quatre enveloppes admises et d'un **fence local de 500 ms** après chaque fin d'échange
-prouvée. Tant que les échanges demeurent dans ces bornes, les quatre suites de départ d'une
-rencontre restent dans leur vague de 60 s malgré des coûts variables d'une famille à l'autre.
+quatre enveloppes admises, d'un **fence local de 500 ms** après chaque fin d'échange
+prouvée, puis d'une **réserve statique inter-groupe de 1 s** ajoutée par V51. Cette réserve
+préserve le fence effectif de 500 ms lorsqu'un J4 normal consomme son jitter local borné de
+500 ms. Tant que
+les échanges demeurent dans ces bornes, les quatre suites de départ d'une rencontre restent
+dans leur vague de 60 s malgré des coûts variables d'une famille à l'autre. Le J4 normal est
+offert 500 ms avant l'échéance `REQUEST_SENT` : une émission authentifiée plus tardive quitte
+la voie stricte vers `WAITING_CADENCE_RECHECK`; elle ne peut pas être rephasée comme un cycle
+frais.
 Si une réponse dépasse son enveloppe, l'événement est une exception explicitement visible et
 la prochaine action est différée selon les règles applicables : le système ne prétend pas que
 la fraîcheur est tenue. Une réception fournisseur et la complétude du corps restent des faits
@@ -30,10 +38,23 @@ distincts du départ normal.
 
 Le transport demeure séquentiel, avec un contexte non persistant créé uniquement par un
 lancement opérateur. Pour V8, les départs sont bornés à **45 par 60 secondes glissantes** et
-**2 756 par heure glissante**, avec les comptes persistants entre campagnes. Le fence local
-ajouté par ce profil vaut 500 ms ; l'attente observée peut être plus longue lorsqu'un slot,
-un budget, une réponse lente, un 404 ou une suspension l'exige. Ces chiffres sont des limites
-locales de pression, pas une mesure ou une autorisation du fournisseur.
+**2 756 par heure glissante**, avec les comptes persistants entre campagnes. La borne
+temporelle V51 est distincte : `N × réserve de groupe <= 60 s`. La planification horaire de
+dix rencontres utilise au plus **2 480 / 2 756** départs, soit 276 départs horaires laissés
+non alloués. Le fence local effectif ajouté par ce profil vaut 500 ms ; l'attente observée peut être
+plus longue lorsqu'un slot, un budget, une réponse lente, un 404 ou une suspension l'exige.
+Ces chiffres sont des limites locales de pression, pas une mesure ou une autorisation du
+fournisseur.
+
+Après acquisition du `CampaignLease` exclusif, le lancement V8 exige que les fenêtres
+persistantes disposent localement d'une marge libre de **`4 × N` départs** pour sa vague
+initiale runtime (40 pour dix cibles). Cette prélecture ne réserve aucun départ : chaque
+émission reste réservée atomiquement juste avant le transport. Elle établit la marge locale
+conservatrice de la vague phasée, sous les enveloppes V8, et ne garantit ni une réponse ni
+l'acceptation du fournisseur. La voie de qualification `INITIAL_COLD_START_STRESS` — quarante
+réponses de 5 Mio suivies de leur drain — est intentionnellement distincte de cette vague
+runtime ; elle mesure le stress froid, sans prétendre le faire tenir dans la fenêtre V51 de
+60 s.
 
 La réservation atomique est prise avant toute émission et laisse un verrou non résolu jusqu'à
 la clôture locale prouvée. Pour V8, l'entrée immuable de fenêtre conserve l'instant
@@ -45,7 +66,10 @@ dont le créneau tombe dans le même hold deviennent `WAITING_PRESSURE_RECHECK`,
 explicite reprend à l'échéance durable autorisée. Il n'existe ni départ de rattrapage ni seconde
 réservation pendant ce délai.
 
-La migration V50 propage cette preuve au contrôle J6 de sauvegarde/restauration :
+La migration V50 propage la preuve de départ au contrôle J6 de sauvegarde/restauration ; V51
+valide séparément la réserve temporelle inter-groupe V8, sans ajouter de table ni réécrire les
+lignes historiques. Le runbook J6 courant exige donc le schéma V51, sans que cette révision V8
+ne requalifie une exécution J6 :
 `provider_departure_accounting` est inclus dans l'empreinte append-only et comparé entre source
 et restauration. Une ligne `AUTHENTICATED_WORKER_REQUEST` est retenue seulement avec sa preuve ;
 sinon `COMPLETION_FALLBACK` demeure l'heure conservatrice. Cette couverture ne lance, ne
@@ -68,13 +92,19 @@ une rotation d'adresse. Le réarmement reste une opération manuelle sans requê
 ne reprend pas une campagne. Aucun proxy, changement automatique d'IP/VPN, challenge ou
 réutilisation de cookie n'est ajouté.
 
-La qualification V8 devra employer le worker de production, Chromium et PostgreSQL de test
-contre une origine éphémère `127.0.0.1`, sans appel fournisseur et sans base opérateur. Elle
-doit couvrir dix rencontres, les quatre familles, les fenêtres de pression, les slots
-rencontre/famille, une mise en régime de cinq minutes et au moins trente minutes établies.
-Le profil, son SHA-256 et les enveloppes ne pourront être soumis à revue qu'après cette passe
-locale ; aucun d'eux n'est déclaré qualifié ici. Même une réussite loopback ne prouvera ni une
-latence Internet bornée, ni l'acceptation de 45/min par SofaScore, ni l'absence de refus futur.
+La [qualification V8 fraîche](../validation/WO058-LIVE-V8-CAPACITY-20260910.md) a employé le
+worker de production, Chromium et PostgreSQL de test contre une origine éphémère `127.0.0.1`,
+sans appel fournisseur ni base opérateur. Elle a couvert dix rencontres, les quatre familles,
+les fenêtres de pression et les slots rencontre/famille, après quarante réponses froides de
+5 Mio et leur drain de 60 001 ms. Ses 1 800,0198031 s établies et 2 100,0198031 s de voie stricte
+ont produit 1 444 appels, dont 1 203 établis et 40 froids, sans cycle manqué ni requête hors
+périmètre. Les octets versionnés lient le rapport natif
+`f5b70709dcc51d9b40223fde1175d3c507190244562355e675689cb06e9a7fc0` au profil
+`c25d65be2a42969c561eadc631eb3499ee21519990e7b44e790a21410efcc1d6` ; les bornes immuables sont
+DETAILS 300/500 ms, INCIDENTS 300/400 ms, STATISTICS 350/400 ms et LINEUPS 300/450 ms. La revue,
+la fusion et la livraison manuelle du lanceur restent séparées. Même cette réussite loopback ne
+prouve ni une latence Internet bornée, ni l'acceptation de 45/min par SofaScore, ni l'absence de
+refus futur.
 
 ## Politique historique live-v6 — profil nominal et correctif v0.9 qualifiés dans leurs portées distinctes
 

@@ -4,14 +4,23 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
-### WO-058 — préparation de la cadence locale live-v8, sous qualification
+### WO-058 — qualification locale de la cadence live-v8, dix rencontres
 
-- Prépare `live-v8` pour les nouvelles préparations, avec dix rencontres au plus, une vague
-  normale de 60 s par couple rencontre/famille et des slots déterministes construits à partir
-  des enveloppes immuables du profil.
-- Prévoit un fence local de 500 ms après une fin d'échange prouvée et des budgets persistants
-  de 45 départs/60 s et 2 756 départs/heure. Les retards dus aux slots, budgets, 404,
-  timeouts ou refus restent visibles et ne sont pas annoncés comme fraîcheur tenue.
+- Qualifie `live-v8` hors fournisseur pour les nouvelles préparations, avec dix rencontres au
+  plus, une vague normale de 60 s par couple rencontre/famille et des slots déterministes
+  construits à partir des enveloppes immuables du profil. La preuve est exclusivement
+  Chromium/worker/PostgreSQL de test sur loopback ; elle n’établit ni acceptation, ni quota,
+  ni absence future de refus du fournisseur.
+- Prévoit un fence local de 500 ms après une fin d'échange prouvée, une réserve statique V51 de
+  1 s entre groupes afin de préserver ce fence sous le jitter J4 borné de 500 ms, et des budgets
+  persistants de 45 départs/60 s et 2 756 départs/heure.
+  La borne V51 `N × réserve de groupe <= 60 s` est distincte de la planification horaire
+  2 480/2 756 à dix rencontres. Les retards dus aux slots, budgets, 404, timeouts ou refus
+  restent visibles et ne sont pas annoncés comme fraîcheur tenue.
+- Après acquisition du `CampaignLease` exclusif, vérifie une marge durable locale de `4 × N`
+  départs pour la vague initiale V8 (40 à dix cibles). La prélecture ne réserve rien : chaque
+  départ reste réservé atomiquement. Le stress froid `INITIAL_COLD_START_STRESS` à quarante
+  réponses de 5 Mio est séparé de cette vague runtime et ne revendique pas sa fenêtre de 60 s.
 - Lisse la bascule d'un lancement très proche de T0 : après un J4 initial `notstarted` récent,
   le premier J4 de coup d'envoi est conservé sur son prochain créneau de 60 s au lieu de
   créer une seconde vague J4/J5 immédiate. Les J5 restent conditionnels à la confirmation
@@ -20,7 +29,9 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   est observé. Le départ reste réservé atomiquement avant émission, la preuve est bornée entre
   cette réservation et son observation parent, et une fin sans preuve conserve le repli
   conservateur sur l'heure de complétion.
-- Met à niveau la preuve J6 de sauvegarde/restauration vers Flyway V50 :
+- Met à niveau la garde courante du runbook J6 vers Flyway V51 : V50 étend la preuve
+  sauvegarde/restauration avec `provider_departure_accounting`, tandis que V51 valide la réserve
+  temporelle V8 sans modifier le périmètre de cette preuve :
   `provider_departure_accounting` entre dans l'empreinte append-only du ledger live et son
   compteur source/restauration est exigé avant une rétention. L'horodatage
   `AUTHENTICATED_WORKER_REQUEST` est conservé lorsqu'il est prouvé ;
@@ -32,10 +43,16 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 - Conserve la suspension durable sur 403/429, sans réarmement automatique, rotation d'adresse,
   proxy, VPN ou sonde fournisseur. Les manifestes et profils live-v1 à live-v7 restent
   historiques et inchangés.
-- Laisse V8 en échec fermé tant qu'une qualification Chromium/worker/PostgreSQL exclusivement
-  loopback n'a pas produit un profil et une empreinte à revoir. Aucun hash, enveloppe ou
-  qualification V8 n'est déclaré dans cette version ; une passe locale ne vaudra pas seuil
-  d'acceptation ou garantie d'accès SofaScore.
+- Fige la [preuve V8 locale](docs/validation/WO058-LIVE-V8-CAPACITY-20260910.md) du 10 septembre :
+  40 réponses froides de 5 Mio et un drain de 60 001 ms, puis 1 800,0198031 s établies et
+  2 100,0198031 s de voie stricte. Elle compte 1 444 appels au total, dont 1 203 établis et
+  40 froids, avec zéro appel fournisseur, hors périmètre ou cycle manqué. Les empreintes exactes
+  sont `f5b70709dcc51d9b40223fde1175d3c507190244562355e675689cb06e9a7fc0` pour le rapport natif
+  et `c25d65be2a42969c561eadc631eb3499ee21519990e7b44e790a21410efcc1d6` pour le profil.
+- Le profil est qualifié seulement avec ses neuf variables V8, ses bornes immuables
+  DETAILS 300/500 ms, INCIDENTS 300/400 ms, STATISTICS 350/400 ms et LINEUPS 300/450 ms. Sa
+  livraison dans Eclipse, la revue humaine et la fusion restent à faire ; aucune campagne live
+  fournisseur n’a été lancée par cette qualification.
 
 ### WO-058 — compositions enrichies, informations J4 et cadence live-v7
 

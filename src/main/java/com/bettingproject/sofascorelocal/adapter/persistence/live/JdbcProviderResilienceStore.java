@@ -35,6 +35,20 @@ public class JdbcProviderResilienceStore implements ProviderResilienceStore {
         return decide(readState(false),Objects.requireNonNull(profile),timestamp(at));
     }
 
+    /**
+     * A campaign-start preview proves that all of its initial departures have
+     * room in the same shared windows. It is deliberately read-only: actual
+     * departures still reserve atomically at worker dispatch time.
+     */
+    @Override @Transactional(readOnly=true)
+    public DepartureDecision departureCapacityDecision(DepartureProfile profile, int requiredDepartures, Instant at) {
+        DepartureProfile requestedProfile=Objects.requireNonNull(profile);
+        if (requiredDepartures < 1 || requiredDepartures > requestedProfile.maximumDeparturesPerMinute()
+                || requiredDepartures > requestedProfile.maximumDeparturesPerHour())
+            throw new IllegalArgumentException("PROVIDER_DEPARTURE_CAPACITY_INVALID");
+        return decide(readState(false),requestedProfile,timestamp(at),requiredDepartures);
+    }
+
     @Override @Transactional
     public DepartureDecision tryReserveDeparture(UUID dispatchId, Instant at) {
         return tryReserveDeparture(dispatchId,DepartureProfile.LEGACY_V1,at);
@@ -166,6 +180,11 @@ public class JdbcProviderResilienceStore implements ProviderResilienceStore {
     }
 
     private DepartureDecision decide(StateRow stateRow, DepartureProfile requestedProfile, Instant now) {
+        return decide(stateRow, requestedProfile, now, 1);
+    }
+
+    private DepartureDecision decide(StateRow stateRow, DepartureProfile requestedProfile, Instant now,
+                                     int requiredDepartures) {
         Snapshot state=stateRow.snapshot();
         if (state.state()==State.SUSPENDED)
             return new DepartureDecision(false,DepartureReason.PROVIDER_SUSPENDED,state.retryNotBefore(),state);
@@ -175,18 +194,31 @@ public class JdbcProviderResilienceStore implements ProviderResilienceStore {
             return new DepartureDecision(false,DepartureReason.CLOCK_REGRESSION,null,state);
         if (state.lastDepartureFinishedAt()!=null && now.isBefore(state.lastDepartureFinishedAt()))
             return new DepartureDecision(false,DepartureReason.CLOCK_REGRESSION,null,state);
-        Instant eligible=now;
+        Instant fenceDeadline=null;
         if (state.lastDepartureFinishedAt()!=null) {
             Duration fence=requestedProfile.minimumDepartureInterval().compareTo(stateRow.lastDepartureProfile().minimumDepartureInterval())>=0
                     ? requestedProfile.minimumDepartureInterval() : stateRow.lastDepartureProfile().minimumDepartureInterval();
-            eligible=latest(eligible,state.lastDepartureFinishedAt().plus(fence));
+            fenceDeadline=state.lastDepartureFinishedAt().plus(fence);
         }
         // Pressure is common to all profiles. The incoming profile controls its own
         // ceiling, while the durable windows include every completed real departure.
-        eligible=latest(eligible,windowDeadline(now,Duration.ofMinutes(1),requestedProfile.maximumDeparturesPerMinute()));
-        eligible=latest(eligible,windowDeadline(now,Duration.ofHours(1),requestedProfile.maximumDeparturesPerHour()));
-        boolean allowed=!eligible.isAfter(now);
-        return new DepartureDecision(allowed,allowed?DepartureReason.ALLOWED:DepartureReason.RATE_LIMITED,eligible,state);
+        Instant rateDeadline=capacityDeadline(now,Duration.ofMinutes(1),
+                requestedProfile.maximumDeparturesPerMinute(),requiredDepartures);
+        rateDeadline=latest(rateDeadline,capacityDeadline(now,Duration.ofHours(1),
+                requestedProfile.maximumDeparturesPerHour(),requiredDepartures));
+        // A rolling-window ceiling is durable pressure even when its release is
+        // shorter than the local fence.  V8 alone exposes a completed-exchange
+        // fence explicitly, so the scheduler can retain the same pending due
+        // without recording a missed collection. Historical policies keep their
+        // established RATE_LIMITED surface.
+        if (rateDeadline!=null && rateDeadline.isAfter(now))
+            return new DepartureDecision(false,DepartureReason.RATE_LIMITED,rateDeadline,state);
+        if (fenceDeadline!=null && fenceDeadline.isAfter(now)) {
+            DepartureReason reason=requestedProfile==DepartureProfile.LIVE_V8
+                    ? DepartureReason.POST_EXCHANGE_FENCE : DepartureReason.RATE_LIMITED;
+            return new DepartureDecision(false,reason,fenceDeadline,state);
+        }
+        return new DepartureDecision(true,DepartureReason.ALLOWED,now,state);
     }
 
     /**
@@ -200,6 +232,23 @@ public class JdbcProviderResilienceStore implements ProviderResilienceStore {
                 order by departure_at desc offset ? limit 1
             """,(rs,row)->at(rs,"departure_at"),sql(now.minus(window)),sql(now),maximum-1);
         return boundary.isEmpty()?null:boundary.getFirst().plus(window);
+    }
+
+    /**
+     * Return the earliest release at which {@code requiredDepartures} free
+     * slots exist. The range is intentionally based on the immutable provider
+     * accounting table, so V8 uses authenticated REQUEST_SENT evidence when it
+     * is available and the conservative completion fallback otherwise.
+     */
+    private Instant capacityDeadline(Instant now, Duration window, int maximum, int requiredDepartures) {
+        if (requiredDepartures == 1) return windowDeadline(now, window, maximum);
+        List<Instant> departures=jdbc.query("""
+            select departure_at from provider_departure_accounting where departure_at>? and departure_at<=?
+                order by departure_at asc
+            """,(rs,row)->at(rs,"departure_at"),sql(now.minus(window)),sql(now));
+        int available=maximum-departures.size();
+        if (available>=requiredDepartures) return null;
+        return departures.get(requiredDepartures-available-1).plus(window);
     }
 
     private Snapshot read(boolean lock) { return readState(lock).snapshot(); }
