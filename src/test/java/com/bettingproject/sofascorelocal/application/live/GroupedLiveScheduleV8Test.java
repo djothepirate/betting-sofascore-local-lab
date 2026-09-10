@@ -325,6 +325,32 @@ class GroupedLiveScheduleV8Test {
     }
 
     @Test
+    void pressureReleaseAtAnotherTenTargetNormalSlotMakesThatTargetExplicitlyMissed() {
+        var ids = IntStream.rangeClosed(1, 10).mapToObj(index -> new UUID(8, index)).toList();
+        var schedule = schedule(ids);
+
+        for (int index = 0; index < ids.size(); index++) {
+            Instant phase = START.plus(GROUP_RESERVATION.multipliedBy(index));
+            assertThat(group(schedule, phase, "inprogress", START, true)).isEqualTo(FOUR);
+        }
+
+        var firstNormal = nextAtOrAfter(schedule, START.plusSeconds(60));
+        assertThat(firstNormal.eventId()).isEqualTo(ids.getFirst());
+        UUID sameReleaseTarget = ids.get(1);
+        Instant sharedRelease = START.plusSeconds(60).plus(GROUP_RESERVATION);
+
+        schedule.defer(firstNormal, sharedRelease);
+
+        var state = schedule.states().stream().filter(value -> value.eventId().equals(sameReleaseTarget))
+                .findFirst().orElseThrow();
+        assertThat(state.state()).isEqualTo("WAITING_PRESSURE_RECHECK");
+        assertThat(state.nextDueAt()).isEqualTo(sharedRelease);
+        assertThat(state.missedCycles()).isEqualTo(1);
+        assertThat(schedule.familySchedules(sameReleaseTarget)).extracting(family -> family.missedCycles())
+                .containsExactly(1L, 1L, 1L, 1L);
+    }
+
+    @Test
     void isolatedTimeoutIsAnExplicitRecoveryExceptionWithoutBlockingAnotherTarget() {
         var schedule = schedule(EVENT, SECOND);
         var timed = schedule.next(START).orElseThrow();

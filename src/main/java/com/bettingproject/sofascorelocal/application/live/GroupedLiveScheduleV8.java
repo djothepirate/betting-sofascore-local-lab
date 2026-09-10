@@ -122,7 +122,12 @@ final class GroupedLiveScheduleV8 {
         for (Event other : events.values()) {
             if (other == event || !other.active() || other.mode != Mode.PLAY) continue;
             Instant normalTarget = rawNextAt(other);
-            if (normalTarget != null && normalTarget.isBefore(deferredUntil))
+            // Equality is pressure too: the first recheck released at this
+            // instant occupies the single dispatcher before this peer could
+            // begin its normal group. Leaving it in PLAY would make its next
+            // departure exceed the 60-second target without a missed-cycle
+            // record or an explicit pressure state.
+            if (normalTarget != null && !normalTarget.isAfter(deferredUntil))
                 deferForPressureRecheck(other, normalTarget);
         }
         if (event.mode == Mode.PRESSURE_RECHECK) return;
