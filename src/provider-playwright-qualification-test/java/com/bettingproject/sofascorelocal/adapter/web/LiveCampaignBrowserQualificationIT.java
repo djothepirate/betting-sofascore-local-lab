@@ -129,6 +129,10 @@ class LiveCampaignBrowserQualificationIT {
             assertThat(page.locator("[data-live-selection-count]").textContent()).contains("1 rencontre sélectionnée");
             assertThat(page.locator("[data-live-table-body]").textContent()).contains("<img src=x onerror=alert(1)>");
             assertThat(page.locator("[data-live-table-body] img").count()).isZero();
+            assertThat(page.locator("[data-live-cache-revalidated]").textContent())
+                    .isEqualTo("2026-09-07T12:01:00Z");
+            assertThat(page.locator("[data-live-families] dt").allTextContents())
+                    .contains("Dernière revalidation du cache (304)");
             assertThat(page.locator("[data-live-freshness]").textContent()).contains("périmée");
             assertThat(page.locator("[data-live-freshness]").getAttribute("class")).contains("notice-warning");
 
@@ -212,7 +216,8 @@ class LiveCampaignBrowserQualificationIT {
             page.waitForCondition(() -> "canceled".equals(page.locator("[data-live-sport-status]").textContent()));
             assertThat(page.locator("input[name=eventId]").isDisabled()).isFalse();
             page.locator("input[name=eventId]").check();
-            assertThat(page.locator("[data-live-eligible-count]").textContent()).isEqualTo("1 éligible / 100");
+            assertThat(page.locator("[data-live-eligible-count]").textContent())
+                    .isEqualTo("1 rencontre sélectionnée admissible / 100");
             assertThat(page.locator("[data-live-prepare]").isDisabled()).isFalse();
             revision.set(34);
             page.waitForCondition(() -> "postponed".equals(page.locator("[data-live-sport-status]").textContent()));
@@ -220,7 +225,8 @@ class LiveCampaignBrowserQualificationIT {
             assertThat(page.locator("input[name=eventId]").getAttribute("data-live-finished")).isEqualTo("true");
             assertThat(page.locator("input[name=eventId]").isChecked()).isTrue();
             assertThat(page.locator("[data-live-selection-count]").textContent()).isEqualTo("1 rencontre sélectionnée");
-            assertThat(page.locator("[data-live-eligible-count]").textContent()).isEqualTo("0 éligible / 100");
+            assertThat(page.locator("[data-live-eligible-count]").textContent())
+                    .isEqualTo("0 rencontre sélectionnée admissible / 100");
             assertThat(page.locator("[data-live-sport-context]").textContent()).contains("reportée", "suivi est arrêté");
             assertThat(posts.get()).isZero();
             assertThat(externalRequests.get()).isZero();
@@ -392,6 +398,7 @@ class LiveCampaignBrowserQualificationIT {
                 "reservedCalls":3,"maximumCalls":1000,"families":[
                 {"endpoint":"EVENT_STATISTICS","label":"Statistiques","outcome":"PARSED","code":null,
                 "scope":"EVENT","lastReceivedAt":"2026-09-07T12:00:00Z","lastSuccessfulAt":"2026-09-07T12:00:00Z",
+                "lastCacheRevalidatedAt":"2026-09-07T12:01:00Z",
                 "lastChangedAt":"2026-09-07T12:00:00Z","receivedSnapshotId":1,"dataSnapshotId":1,
                 "parserVersion":"statistics-v2","normalizedSha256":"abc","completeness":"COMPLETE",
                 "completenessScore":100,"previousData":false,"freshness":{"state":"%s","label":"%s",

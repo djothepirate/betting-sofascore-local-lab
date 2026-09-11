@@ -35,28 +35,36 @@ import java.util.Objects;
  * is {@code byte FAILURE}, {@code writeUTF(failureCode)}. A normal
  * close is acknowledged with {@code byte CLOSED}. After that acknowledgement the worker remains
  * alive and quiescent until the parent closes the channel or terminates the worker. Commands are
- * strictly sequential, so a request identifier is deliberately absent.</p>
+ * strictly sequential, so a request identifier is deliberately absent. Version 9 adds the
+ * explicitly named {@code GET_LIVE_V9} command for the four event endpoints only. Its payload
+ * keeps the endpoint fields and adds a bounded, opaque optional {@code If-None-Match} value
+ * before the final timeout. Its terminal {@code RESPONSE_V9} frame keeps historical
+ * {@code RESPONSE} frames unchanged, and carries an optional bounded response entity tag.
+ * A V9 {@code 304} must carry an empty body.</p>
  */
 public final class ProviderPlaywrightWorkerProtocol {
 
     public static final int MAGIC = 0x53335057;
-    public static final int VERSION = 7;
+    public static final int VERSION = 9;
 
     public static final byte GET = 1;
     public static final byte CLOSE = 2;
     public static final byte START = 3;
     public static final byte GET_LIVE_V6 = 4;
+    public static final byte GET_LIVE_V9 = 5;
     public static final byte RESPONSE = 10;
     public static final byte FAILURE = 11;
     public static final byte CLOSED = 12;
     public static final byte READY = 13;
     public static final byte PROGRESS = 14;
     public static final byte TIMEOUT_ENDED = 15;
+    public static final byte RESPONSE_V9 = 16;
 
     public static final int MAX_BODY_BYTES = 5 * 1024 * 1024;
     public static final int MAX_CONTENT_TYPE_BYTES = 160;
     public static final int MAX_TOKEN_BYTES = 512;
     public static final int MIN_TOKEN_BYTES = 32;
+    public static final int MAX_ENTITY_TAG_BYTES = 512;
     public static final int MAX_TIMEOUT_MILLIS = 60_000;
     public static final long MAX_EVENT_ID = 999_999_999L;
 
@@ -83,6 +91,7 @@ public final class ProviderPlaywrightWorkerProtocol {
         INVALID_TOURNAMENT_ID,
         INVALID_EVENT_ID,
         INVALID_TIMEOUT,
+        INVALID_VALIDATOR,
         SENSITIVE_REQUEST_BLOCKED,
         UNEXPECTED_ROUTE,
         REDIRECT_BLOCKED,
@@ -99,7 +108,18 @@ public final class ProviderPlaywrightWorkerProtocol {
             int page,
             long tournamentId,
             long eventId,
-            int timeoutMillis) {
+            int timeoutMillis,
+            EntityTag ifNoneMatch) {
+
+        public GetCommand(
+                Endpoint endpoint,
+                LocalDate date,
+                int page,
+                long tournamentId,
+                long eventId,
+                int timeoutMillis) {
+            this(endpoint, date, page, tournamentId, eventId, timeoutMillis, null);
+        }
 
         public GetCommand {
             Objects.requireNonNull(endpoint, "endpoint");
@@ -146,12 +166,31 @@ public final class ProviderPlaywrightWorkerProtocol {
                     }
                 }
             }
+            if (ifNoneMatch != null && !isEventEndpoint(endpoint)) {
+                throw new IllegalArgumentException(FailureCode.INVALID_VALIDATOR.name());
+            }
         }
 
         private static void requireDate(LocalDate date) {
             if (date == null) {
                 throw new IllegalArgumentException(FailureCode.INVALID_DATE.name());
             }
+        }
+    }
+
+    /** Opaque, bounded header value whose diagnostic representation never reveals the value. */
+    public record EntityTag(String value) {
+
+        public EntityTag {
+            if (value == null || value.isEmpty() || value.length() > MAX_ENTITY_TAG_BYTES
+                    || value.chars().anyMatch(character -> character < 0x21 || character > 0x7e)) {
+                throw new IllegalArgumentException(FailureCode.INVALID_VALIDATOR.name());
+            }
+        }
+
+        @Override
+        public String toString() {
+            return "EntityTag[redacted]";
         }
     }
 
@@ -254,6 +293,33 @@ public final class ProviderPlaywrightWorkerProtocol {
         }
     }
 
+    /** Reads the V9-only event request shape without changing the historical GET wire shape. */
+    public static GetCommand readLiveV9GetCommand(DataInputStream input) throws IOException {
+        Objects.requireNonNull(input, "input");
+        Endpoint endpoint = readEndpoint(input.readUTF());
+        if (!isEventEndpoint(endpoint)) {
+            throw new ProtocolValidationException(FailureCode.INVALID_ENDPOINT);
+        }
+        try {
+            long eventId = input.readLong();
+            int validatorPresent = input.readUnsignedByte();
+            EntityTag ifNoneMatch;
+            if (validatorPresent == 0) {
+                ifNoneMatch = null;
+            }
+            else if (validatorPresent == 1) {
+                ifNoneMatch = new EntityTag(input.readUTF());
+            }
+            else {
+                throw new IllegalArgumentException(FailureCode.INVALID_VALIDATOR.name());
+            }
+            return new GetCommand(endpoint, null, 0, 0, eventId, input.readInt(), ifNoneMatch);
+        }
+        catch (IllegalArgumentException exception) {
+            throw new ProtocolValidationException(readFailureCode(exception), exception);
+        }
+    }
+
     public static void writeHandshake(DataOutputStream output, String token) throws IOException {
         Objects.requireNonNull(output, "output");
         validateToken(token);
@@ -287,6 +353,37 @@ public final class ProviderPlaywrightWorkerProtocol {
             output.writeLong(response.receivedEpochMillis());
             output.writeInt(response.status());
             output.writeUTF(response.contentType());
+            output.writeInt(body.length);
+            output.write(body);
+            output.flush();
+        }
+        finally {
+            java.util.Arrays.fill(body, (byte) 0);
+            response.clearBody();
+        }
+    }
+
+    /** Writes the V9-only terminal response without changing the historical RESPONSE frame. */
+    public static void writeLiveV9Response(
+            DataOutputStream output,
+            ResponseFrame response,
+            EntityTag entityTag) throws IOException {
+        Objects.requireNonNull(output, "output");
+        Objects.requireNonNull(response, "response");
+        byte[] body = response.body();
+        try {
+            if (response.status() == 304 && body.length != 0) {
+                throw new IllegalArgumentException("invalid V9 304 body");
+            }
+            output.writeByte(RESPONSE_V9);
+            output.writeLong(response.requestedEpochMillis());
+            output.writeLong(response.receivedEpochMillis());
+            output.writeInt(response.status());
+            output.writeUTF(response.contentType());
+            output.writeBoolean(entityTag != null);
+            if (entityTag != null) {
+                output.writeUTF(entityTag.value());
+            }
             output.writeInt(body.length);
             output.write(body);
             output.flush();
@@ -349,6 +446,13 @@ public final class ProviderPlaywrightWorkerProtocol {
         catch (IllegalArgumentException exception) {
             throw new ProtocolValidationException(FailureCode.INVALID_ENDPOINT, exception);
         }
+    }
+
+    private static boolean isEventEndpoint(Endpoint endpoint) {
+        return endpoint == Endpoint.EVENT_DETAILS
+                || endpoint == Endpoint.EVENT_STATISTICS
+                || endpoint == Endpoint.EVENT_INCIDENTS
+                || endpoint == Endpoint.EVENT_LINEUPS;
     }
 
     private static LocalDate readDate(String value) throws ProtocolValidationException {

@@ -34,8 +34,8 @@ import java.util.Optional;
  */
 public class LivePayloadNormalizer {
 
-    /** V3 adds scheduler control facts while retaining the score observation shape. */
-    public static final String SCORE_PROJECTION_VERSION = "j4-live-score-v3";
+    /** V4 retains the scheduler controls and adds the reviewable J4 suspension reason. */
+    public static final String SCORE_PROJECTION_VERSION = "j4-live-score-v4";
     public static final String SIGNAL_PROJECTION_VERSION = "j5-live-signals-v1";
     public static final String FAMILY_PROJECTION_VERSION = "live-family-v1";
 
@@ -226,6 +226,7 @@ public class LivePayloadNormalizer {
         JsonNode tournamentPlayerStatistics = uniqueTournament == null || uniqueTournament.isNull()
                 ? null : uniqueTournament.get("hasEventPlayerStatistics");
         JsonNode description = status == null || status.isNull() ? null : status.get("description");
+        JsonNode statusReason = event.get("statusReason");
 
         Map<String, Object> projection = new LinkedHashMap<>();
         projection.put("finalResultOnly", booleanPresence(finalResultOnly, "LIVE_J4_FINAL_RESULT_ONLY_INCOMPATIBLE"));
@@ -235,13 +236,14 @@ public class LivePayloadNormalizer {
         projection.put("tournamentHasEventPlayerStatistics", booleanPresence(tournamentPlayerStatistics,
                 "LIVE_J4_TOURNAMENT_PLAYER_STATISTICS_INCOMPATIBLE"));
         projection.put("statusDescription", textPresence(description, "LIVE_J4_STATUS_DESCRIPTION_INCOMPATIBLE"));
+        projection.put("statusReason", textPresence(statusReason, "LIVE_J4_STATUS_REASON_INCOMPATIBLE"));
 
         return new J4ControlProjection(new LiveJ4ControlFacts(
                 booleanFact(finalResultOnly, "LIVE_J4_FINAL_RESULT_ONLY_INCOMPATIBLE"),
                 detailIdFact(detailId),
                 booleanFact(eventPlayerStatistics, "LIVE_J4_HAS_EVENT_PLAYER_STATISTICS_INCOMPATIBLE"),
                 booleanFact(tournamentPlayerStatistics, "LIVE_J4_TOURNAMENT_PLAYER_STATISTICS_INCOMPATIBLE"),
-                statusDescription(description)), Map.copyOf(projection));
+                statusDescription(description), statusReason(statusReason)), Map.copyOf(projection));
     }
 
     private static Map<String, Object> booleanPresence(JsonNode node, String code) {
@@ -294,6 +296,13 @@ public class LivePayloadNormalizer {
             case "2nd half" -> LiveJ4ControlFacts.StatusDescription.SECOND_HALF;
             default -> LiveJ4ControlFacts.StatusDescription.OTHER;
         };
+    }
+
+    private static LiveJ4ControlFacts.TextFact statusReason(JsonNode node) {
+        if (node == null) return LiveJ4ControlFacts.TextFact.absent();
+        if (node.isNull()) return LiveJ4ControlFacts.TextFact.nullValue();
+        return LiveJ4ControlFacts.TextFact.value(
+                checkedControlText(node, "LIVE_J4_STATUS_REASON_INCOMPATIBLE"));
     }
 
     private static String checkedControlText(JsonNode node, String code) {

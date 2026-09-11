@@ -57,9 +57,10 @@ public final class ChildJvmPlaywrightProviderSupervisor
         implements PlaywrightProviderCampaignFactory, PlaywrightProviderSupervisor {
 
     static final int MAGIC = 0x53335057;
-    static final int VERSION = 7;
+    static final int VERSION = 9;
     static final byte GET = 1;
     static final byte GET_LIVE_V6 = 4;
+    static final byte GET_LIVE_V9 = 5;
     static final byte CLOSE = 2;
     static final byte START = 3;
     static final byte RESPONSE = 10;
@@ -68,6 +69,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
     static final byte READY = 13;
     static final byte PROGRESS = 14;
     static final byte TIMEOUT_ENDED = 15;
+    static final byte RESPONSE_V9 = 16;
     static final int MAXIMUM_CONTENT_TYPE_BYTES = 160;
     static final int MAXIMUM_FAILURE_CODE_LENGTH = 64;
     static final Duration STOP_ACKNOWLEDGEMENT_MAX = Duration.ofMillis(500);
@@ -476,6 +478,10 @@ public final class ChildJvmPlaywrightProviderSupervisor
         if (!state.allowedEndpoints.contains(request.endpoint())) {
             throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
         }
+        if (request.ifNoneMatch().isPresent()
+                && (state.liveGroups == null || !state.liveGroups.isLiveV9())) {
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_REQUEST);
+        }
         if (group != null && state.liveGroups == null)
             throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_REQUEST);
         state.ioLock.lock();
@@ -491,6 +497,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 int timeoutMillis = toMillis(properties.getRequestTimeout());
                 long responseDeadline;
                 long requestDeadline;
+                boolean liveV9Wire = state.liveGroups != null && state.liveGroups.isLiveV9();
                 boolean continuation = state.liveGroups != null && state.liveGroups.isContinuation(request, group);
                 Runnable continuationGuard = () -> { requireActive(state); admission.check(); };
                 // Historical grouped continuations retain their no-pause protocol. V8 and V9
@@ -513,7 +520,8 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     requestDeadline = System.nanoTime() + properties.getRequestTimeout().toNanos();
                     responseDeadline = requestDeadline + Duration.ofSeconds(
                             supportsProvenTimeoutRecovery ? 3 : 1).toNanos();
-                    output.writeByte(supportsProvenTimeoutRecovery ? GET_LIVE_V6 : GET);
+                    output.writeByte(liveV9Wire ? GET_LIVE_V9
+                            : supportsProvenTimeoutRecovery ? GET_LIVE_V6 : GET);
                     output.writeUTF(request.endpoint().name());
                     switch (request.endpoint()) {
                         case SCHEDULED_EVENTS -> {
@@ -528,6 +536,12 @@ public final class ChildJvmPlaywrightProviderSupervisor
                                 output.writeLong(request.eventId());
                         default -> throw new PlaywrightProviderException(
                                 PlaywrightProviderFailure.INVALID_ENDPOINT);
+                    }
+                    if (liveV9Wire) {
+                        output.writeBoolean(request.ifNoneMatch().isPresent());
+                        if (request.ifNoneMatch().isPresent()) {
+                            output.writeUTF(request.ifNoneMatch().orElseThrow().value());
+                        }
                     }
                     output.writeInt(timeoutMillis);
                     output.flush();
@@ -588,7 +602,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     recoverableTimeoutEvidence = true;
                     throw new PlaywrightProviderException(PlaywrightProviderFailure.TIMEOUT, diagnostic);
                 }
-                if (frame != RESPONSE) {
+                if (frame != (liveV9Wire ? RESPONSE_V9 : RESPONSE)) {
                     throw new PlaywrightProviderException(
                             PlaywrightProviderFailure.PROTOCOL_ERROR);
                 }
@@ -609,10 +623,31 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     throw new PlaywrightProviderException(PlaywrightProviderFailure.PROTOCOL_ERROR);
                 String contentType = input.readUTF();
                 requireContentType(contentType);
+                Optional<PlaywrightProviderEntityTag> entityTag = Optional.empty();
+                if (liveV9Wire) {
+                    int entityTagPresent = input.readUnsignedByte();
+                    if (entityTagPresent != 0 && entityTagPresent != 1) {
+                        throw new PlaywrightProviderException(
+                                PlaywrightProviderFailure.PROTOCOL_ERROR);
+                    }
+                    if (entityTagPresent == 1) {
+                        try {
+                            entityTag = Optional.of(PlaywrightProviderEntityTag.of(input.readUTF()));
+                        }
+                        catch (IllegalArgumentException exception) {
+                            throw new PlaywrightProviderException(
+                                    PlaywrightProviderFailure.PROTOCOL_ERROR, exception);
+                        }
+                    }
+                }
                 int length = input.readInt();
                 if (length < 0 || length > RawPayloadEvidence.MAXIMUM_BYTES) {
                     throw new PlaywrightProviderException(
                             PlaywrightProviderFailure.PAYLOAD_TOO_LARGE);
+                }
+                if (liveV9Wire && status == 304 && length != 0) {
+                    throw new PlaywrightProviderException(
+                            PlaywrightProviderFailure.PROTOCOL_ERROR);
                 }
                 byte[] body = input.readNBytes(length);
                 if (body.length != length) {
@@ -637,6 +672,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
                             contentType,
                             latency,
                             payload,
+                            entityTag,
                             diagnostic != null && diagnostic.httpStatus() != null
                                     ? diagnostic.at(PlaywrightTransportDiagnostic.Phase.COMPLETE) : null);
                     usableResponseEvidence = true;
@@ -1248,7 +1284,7 @@ public final class ChildJvmPlaywrightProviderSupervisor
             case "CONTENT_TYPE_TOO_LONG" -> PlaywrightProviderFailure.UNEXPECTED_CONTENT;
             case "INVALID_ENDPOINT" -> PlaywrightProviderFailure.INVALID_ENDPOINT;
             case "INVALID_DATE", "INVALID_PAGE", "INVALID_TOURNAMENT_ID", "INVALID_EVENT_ID",
-                    "INVALID_TIMEOUT" ->
+                    "INVALID_TIMEOUT", "INVALID_VALIDATOR" ->
                     PlaywrightProviderFailure.INVALID_REQUEST;
             case "INVALID_CONFIGURATION", "RUNTIME_START_FAILED", "IPC_CONNECT_FAILED",
                     "RESPONSE_READ_FAILED", "PLAYWRIGHT_FAILURE" ->

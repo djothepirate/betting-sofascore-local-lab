@@ -139,7 +139,8 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
         long globalFinalReserve=0;
         for(Map<String,Object> target:eventRows(own.campaignId())) if(!terminal((String)target.get("state"))) {
             UUID targetId=uuid(target,"canonical_event_id");
-            long used=number(jdbc.queryForMap("select count(*) as total from live_call where campaign_id=? and canonical_event_id=? and final_cycle=true",own.campaignId(),targetId),"total");
+            long used=number(jdbc.queryForMap("select count(*) as total from live_call where campaign_id=? and canonical_event_id=? and final_cycle=true",
+                    own.campaignId(),targetId),"total");
             globalFinalReserve+=Math.max(0,4-used-(request.finalCycle() && targetId.equals(request.canonicalEventId())?1:0));
         }
         if (number(e,"reserved_calls") + 1 + currentFinalReserve > number(c,"maximum_calls_per_event")
@@ -223,7 +224,7 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
     public Result publishResult(Ownership ownership, UUID attemptId, Publication publication,
                                 Supplier<NormalizedReferences> persistNormalized) {
         Objects.requireNonNull(publication); Objects.requireNonNull(persistNormalized);
-        requireOwnership(ownership,false); campaign(ownership.campaignId(),true);
+        requireOwnership(ownership,false); Map<String,Object> campaign=campaign(ownership.campaignId(),true);
         Map<String,Object> a=attempt(ownership,attemptId);
         List<Map<String,Object>> previous=jdbc.queryForList("select * from live_call_result where attempt_id=?",attemptId);
         if(!previous.isEmpty()) {
@@ -232,6 +233,8 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
             return result;
         }
         NormalizedReferences refs=Objects.requireNonNull(persistNormalized.get());
+        boolean releasesCollectionBudget = !publication.consumesCollectionBudget();
+        if (releasesCollectionBudget) requireVerifiedNotModified(campaign, attemptId, publication, refs);
         jdbc.update("""
             insert into live_call_result(attempt_id,outcome,scope,code,resolved_at,parser_version,successful,next_event_state,
                 sport_status,projection_json,projection_version,projection_sha256,completeness_status,completeness_score,
@@ -243,6 +246,7 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
                 refs.j5ObservationId(),refs.normalizedSha256());
         UUID eventId=uuid(a,"canonical_event_id");
         Map<String,Object> e=event(ownership.campaignId(),eventId,true);
+        if (releasesCollectionBudget) releaseCollectionBudget(ownership, eventId);
         if(publication.nextEventState()!=null && !terminal((String)e.get("state")))
             jdbc.update("update live_event set state=?,reason=?,next_due_at=case when ? then null else next_due_at end where campaign_id=? and canonical_event_id=?",
                     publication.nextEventState(),publication.code(),terminal(publication.nextEventState()),ownership.campaignId(),eventId);
@@ -565,6 +569,46 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
         return "live-v4".equals(campaign.get("policy_version")) || "live-v5".equals(campaign.get("policy_version"))
                 || "live-v6".equals(campaign.get("policy_version")) || "live-v7".equals(campaign.get("policy_version"))
                 || "live-v8".equals(campaign.get("policy_version")) || "live-v9".equals(campaign.get("policy_version"));
+    }
+    /**
+     * The immutable result ledger is the exact-once release proof.  A request whose response
+     * was only 304 must already have the complete, matching worker transport diagnostic; it
+     * never receives a raw receipt or normalized reference.
+     */
+    private void requireVerifiedNotModified(Map<String,Object> campaign, UUID attemptId,
+                                            Publication publication, NormalizedReferences refs) {
+        if (!"live-v9".equals(campaign.get("policy_version")))
+            throw new IllegalArgumentException("conditional live result requires live-v9");
+        if (!refs.equals(NormalizedReferences.none()))
+            throw new IllegalArgumentException("HTTP 304 cannot publish normalized references");
+        Boolean verified=jdbc.queryForObject("""
+                select exists(
+                    select 1
+                    from live_attempt_transport_diagnostic diagnostic
+                    join live_call_dispatch dispatch using(attempt_id)
+                    where diagnostic.attempt_id=? and diagnostic.transport_phase='COMPLETE'
+                      and diagnostic.response_complete=true and diagnostic.http_status=304
+                      and diagnostic.requested_at is not null and diagnostic.headers_received_at is not null
+                      and dispatch.authorized_at <= diagnostic.requested_at
+                )
+                """,Boolean.class,attemptId);
+        if (!Boolean.TRUE.equals(verified)) throw new IllegalStateException("LIVE_NOT_MODIFIED_TRANSPORT_UNVERIFIED");
+        Boolean hasReceipt=jdbc.queryForObject("select exists(select 1 from live_call_receipt where attempt_id=?)",
+                Boolean.class,attemptId);
+        if (Boolean.TRUE.equals(hasReceipt)) throw new IllegalStateException("LIVE_NOT_MODIFIED_HAS_RECEIPT");
+        if (!"NONE".equals(publication.scope()) || !"HTTP_304".equals(publication.code()))
+            throw new IllegalArgumentException("invalid conditional live result");
+    }
+    private void releaseCollectionBudget(Ownership ownership, UUID eventId) {
+        int campaign=jdbc.update("""
+                update live_campaign set reserved_calls=reserved_calls-1
+                where campaign_id=? and reserved_calls>0
+                """,ownership.campaignId());
+        int event=jdbc.update("""
+                update live_event set reserved_calls=reserved_calls-1
+                where campaign_id=? and canonical_event_id=? and reserved_calls>0
+                """,ownership.campaignId(),eventId);
+        if (campaign!=1 || event!=1) throw new IllegalStateException("LIVE_NOT_MODIFIED_BUDGET_RELEASE_INVALID");
     }
     private static String groupedEnvelopesJson(GroupedAdmissionProfile profile) {
         Map<String,Object> envelopes=new TreeMap<>();

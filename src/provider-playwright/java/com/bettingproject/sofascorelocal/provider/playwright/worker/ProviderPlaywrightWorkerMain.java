@@ -26,6 +26,7 @@ import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -129,7 +130,9 @@ public final class ProviderPlaywrightWorkerMain {
                 return 0;
             }
             boolean liveV6 = command == ProviderPlaywrightWorkerProtocol.GET_LIVE_V6;
-            if (command != ProviderPlaywrightWorkerProtocol.GET && !liveV6) {
+            boolean liveV9 = command == ProviderPlaywrightWorkerProtocol.GET_LIVE_V9;
+            boolean boundedLive = liveV6 || liveV9;
+            if (command != ProviderPlaywrightWorkerProtocol.GET && !boundedLive) {
                 ProviderPlaywrightWorkerProtocol.writeFailure(
                         output, ProviderPlaywrightWorkerProtocol.FailureCode.PROTOCOL_ERROR);
                 return 65;
@@ -137,13 +140,15 @@ public final class ProviderPlaywrightWorkerMain {
 
             ProviderPlaywrightWorkerProtocol.GetCommand request;
             try {
-                request = ProviderPlaywrightWorkerProtocol.readGetCommand(input);
+                request = liveV9
+                        ? ProviderPlaywrightWorkerProtocol.readLiveV9GetCommand(input)
+                        : ProviderPlaywrightWorkerProtocol.readGetCommand(input);
             }
             catch (ProviderPlaywrightWorkerProtocol.ProtocolValidationException exception) {
                 ProviderPlaywrightWorkerProtocol.writeFailure(output, exception.failureCode());
                 return 65;
             }
-            if (liveV6 && (request.timeoutMillis() > 30_000
+            if (boundedLive && (request.timeoutMillis() > 30_000
                     || request.endpoint() == ProviderPlaywrightWorkerProtocol.Endpoint.SCHEDULED_EVENTS
                     || request.endpoint() == ProviderPlaywrightWorkerProtocol.Endpoint.TOURNAMENT_SCHEDULED_EVENTS)) {
                 ProviderPlaywrightWorkerProtocol.writeFailure(output,
@@ -152,7 +157,12 @@ public final class ProviderPlaywrightWorkerMain {
             }
 
             ExecutionResult result = runtime.execute(
-                    configuration.uriFor(request).toASCIIString(), request.timeoutMillis(), liveV6, frame -> {
+                    configuration.uriFor(request).toASCIIString(),
+                    request.timeoutMillis(),
+                    boundedLive,
+                    liveV9 && request.ifNoneMatch() != null,
+                    liveV9 ? request.ifNoneMatch() : null,
+                    frame -> {
                         try { ProviderPlaywrightWorkerProtocol.writeProgress(output, frame); }
                         catch (IOException failure) { throw new java.io.UncheckedIOException(failure); }
                     });
@@ -164,27 +174,47 @@ public final class ProviderPlaywrightWorkerMain {
                 ProviderPlaywrightWorkerProtocol.writeFailure(output, result.failure());
                 return 66;
             }
-            ProviderPlaywrightWorkerProtocol.writeResponse(output, result.response());
+            if (liveV9) {
+                ProviderPlaywrightWorkerProtocol.writeLiveV9Response(
+                        output, result.response(), result.entityTag());
+            }
+            else {
+                ProviderPlaywrightWorkerProtocol.writeResponse(output, result.response());
+            }
         }
     }
 
     private record ExecutionResult(
             ProviderPlaywrightWorkerProtocol.ResponseFrame response,
+            ProviderPlaywrightWorkerProtocol.EntityTag entityTag,
             ProviderPlaywrightWorkerProtocol.FailureCode failure,
             ProviderPlaywrightWorkerProtocol.TimeoutEndedFrame timeoutEnded) {
 
-        static ExecutionResult success(ProviderPlaywrightWorkerProtocol.ResponseFrame response) {
-            return new ExecutionResult(response, null, null);
+        static ExecutionResult success(
+                ProviderPlaywrightWorkerProtocol.ResponseFrame response,
+                ProviderPlaywrightWorkerProtocol.EntityTag entityTag) {
+            return new ExecutionResult(response, entityTag, null, null);
         }
 
         static ExecutionResult failure(ProviderPlaywrightWorkerProtocol.FailureCode failure) {
-            return new ExecutionResult(null, failure, null);
+            return new ExecutionResult(null, null, failure, null);
         }
 
         static ExecutionResult timeoutEnded(ProviderMainDocumentNetworkObservation.TerminalProof proof) {
-            return new ExecutionResult(null, null, new ProviderPlaywrightWorkerProtocol.TimeoutEndedFrame(
+            return new ExecutionResult(null, null, null, new ProviderPlaywrightWorkerProtocol.TimeoutEndedFrame(
                     proof.endedAt().toEpochMilli(), proof.reason()));
         }
+    }
+
+    /**
+     * The CDP response-stage evidence needed when Chromium maps a valid conditional 304 document
+     * navigation to {@code net::ERR_ABORTED}. It is held for one exchange only.
+     */
+    private record NotModifiedResponse(
+            long requestedEpochMillis,
+            long receivedEpochMillis,
+            String contentType,
+            ProviderPlaywrightWorkerProtocol.EntityTag entityTag) {
     }
 
     private static final class WorkerRuntime implements AutoCloseable {
@@ -193,6 +223,8 @@ public final class ProviderPlaywrightWorkerMain {
         private final Browser browser;
         private final BrowserContext context;
         private final AtomicReference<String> exactAllowedUri = new AtomicReference<>();
+        private final AtomicReference<ProviderPlaywrightWorkerProtocol.EntityTag> exactIfNoneMatch =
+                new AtomicReference<>();
         private final AtomicReference<ProviderPlaywrightWorkerProtocol.FailureCode> routeFailure =
                 new AtomicReference<>();
         private final AtomicBoolean exactNavigationAdmission = new AtomicBoolean();
@@ -230,13 +262,19 @@ public final class ProviderPlaywrightWorkerMain {
             }
         }
 
-        ExecutionResult execute(String exactUri, int timeoutMillis, boolean liveV6,
+        ExecutionResult execute(
+                String exactUri,
+                int timeoutMillis,
+                boolean boundedLive,
+                boolean acceptsNotModifiedResponse,
+                ProviderPlaywrightWorkerProtocol.EntityTag ifNoneMatch,
                 java.util.function.Consumer<ProviderPlaywrightWorkerProtocol.ProgressFrame> observer) {
             long deadline = System.nanoTime() + java.util.concurrent.TimeUnit.MILLISECONDS.toNanos(timeoutMillis);
             if (closed.get()) {
                 return ExecutionResult.failure(ProviderPlaywrightWorkerProtocol.FailureCode.PLAYWRIGHT_FAILURE);
             }
             exactAllowedUri.set(exactUri);
+            exactIfNoneMatch.set(ifNoneMatch);
             routeFailure.set(null);
             exactNavigationAdmission.set(true);
             RequestProgress progress = new RequestProgress(timeoutMillis, observer);
@@ -257,6 +295,7 @@ public final class ProviderPlaywrightWorkerMain {
             CDPSession responseGuard = null;
             ProviderMainDocumentNetworkObservation networkObservation = null;
             AtomicBoolean cleanupVerified = new AtomicBoolean();
+            AtomicReference<NotModifiedResponse> notModifiedResponse = new AtomicReference<>();
             try {
                 networkObserver = context.newCDPSession(page);
                 String mainFrameId = ProviderMainDocumentNetworkObservation.requireMainFrameId(
@@ -279,24 +318,45 @@ public final class ProviderPlaywrightWorkerMain {
                 networkObserver.on("Network.loadingFinished", observation::onLoadingFinished);
                 networkObserver.on("Network.loadingFailed", observation::onLoadingFailed);
                 networkObserver.send("Network.enable");
+                JsonObject cacheDisabled = new JsonObject();
+                cacheDisabled.addProperty("cacheDisabled", true);
+                networkObserver.send("Network.setCacheDisabled", cacheDisabled);
 
                 responseGuard = context.newCDPSession(page);
                 CDPSession activeResponseGuard = responseGuard;
                 responseGuard.on("Fetch.requestPaused", event ->
-                        handlePausedResponse(activeResponseGuard, event, observation, progress));
+                        handlePausedResponse(activeResponseGuard, event, observation, progress,
+                                acceptsNotModifiedResponse, notModifiedResponse));
                 responseGuard.send("Fetch.enable", responseStageOnly());
-                Response response = page.navigate(exactUri, new Page.NavigateOptions()
-                        .setWaitUntil(WaitUntilState.COMMIT)
-                        .setTimeout(liveV6 ? remainingMillis(deadline) : (double) timeoutMillis));
+                Response response;
+                try {
+                    response = page.navigate(exactUri, new Page.NavigateOptions()
+                            .setWaitUntil(WaitUntilState.COMMIT)
+                            .setTimeout(boundedLive ? remainingMillis(deadline) : (double) timeoutMillis));
+                }
+                catch (PlaywrightException exception) {
+                    NotModifiedResponse captured = notModifiedResponse.get();
+                    if (captured != null && routeFailure.get() == null) {
+                        return completeNotModifiedExchange(
+                                page, captured, progress, cleanupVerified, deadline);
+                    }
+                    throw exception;
+                }
                 ProviderPlaywrightWorkerProtocol.FailureCode failure = routeFailure.get();
                 if (failure != null) {
                     return ExecutionResult.failure(failure);
+                }
+                NotModifiedResponse captured = notModifiedResponse.get();
+                if (captured != null && (response == null || !exactUri.equals(response.url())
+                        || response.status() == 304)) {
+                    return completeNotModifiedExchange(
+                            page, captured, progress, cleanupVerified, deadline);
                 }
                 if (response == null || !exactUri.equals(response.url())) {
                     return ExecutionResult.failure(
                             ProviderPlaywrightWorkerProtocol.FailureCode.UNEXPECTED_ROUTE);
                 }
-                if (response.status() >= 300 && response.status() < 400) {
+                if (isBlockedRedirect(response.status(), acceptsNotModifiedResponse)) {
                     return ExecutionResult.failure(
                             ProviderPlaywrightWorkerProtocol.FailureCode.REDIRECT_BLOCKED);
                 }
@@ -332,8 +392,10 @@ public final class ProviderPlaywrightWorkerMain {
                 }
                 byte[] body;
                 long receivedEpochMillis;
+                ProviderPlaywrightWorkerProtocol.EntityTag entityTag = responseEntityTag(
+                        response.headerValue("etag"));
                 progress.readingBody();
-                if (liveV6) {
+                if (boundedLive) {
                     page.waitForCondition(observation::terminalObserved,
                             new Page.WaitForConditionOptions().setTimeout(remainingMillis(deadline)));
                     var terminal = observation.terminalProofIfObserved();
@@ -342,11 +404,16 @@ public final class ProviderPlaywrightWorkerMain {
                     remainingMillis(deadline); // A response that finishes after the deadline remains abandoned.
                 }
                 try {
-                    body = response.body();
+                    if (response.status() == 304) {
+                        body = new byte[0];
+                    }
+                    else {
+                        body = response.body();
+                    }
                     receivedEpochMillis = Instant.now().toEpochMilli();
                 }
                 catch (PlaywrightException exception) {
-                    if (liveV6 && isTimeout(exception)) return completeTimedOutExchange(
+                    if (boundedLive && isTimeout(exception)) return completeTimedOutExchange(
                             page, networkObserver, networkObservation, progress, cleanupVerified, deadline);
                     return ExecutionResult.failure(
                             isTimeout(exception)
@@ -364,7 +431,7 @@ public final class ProviderPlaywrightWorkerMain {
                     return ExecutionResult.failure(failure);
                 }
                 try {
-                    if (liveV6) {
+                    if (boundedLive) {
                         remainingMillis(deadline);
                         verifyPageCleanup(page, deadline, cleanupVerified);
                     }
@@ -377,21 +444,21 @@ public final class ProviderPlaywrightWorkerMain {
                             receivedEpochMillis,
                             response.status(),
                             contentType,
-                            body));
+                            body), entityTag);
                 }
                 finally {
                     Arrays.fill(body, (byte) 0);
                 }
             }
             catch (TimeoutError exception) {
-                if (liveV6) return completeTimedOutExchange(page, networkObserver, networkObservation,
+                if (boundedLive) return completeTimedOutExchange(page, networkObserver, networkObservation,
                         progress, cleanupVerified, deadline);
                 return ExecutionResult.failure(ProviderPlaywrightWorkerProtocol.FailureCode.TIMEOUT);
             }
             catch (PlaywrightException exception) {
                 ProviderPlaywrightWorkerProtocol.FailureCode failure = routeFailure.get();
                 if (failure == null && isTimeout(exception)) {
-                    if (liveV6) return completeTimedOutExchange(page, networkObserver, networkObservation,
+                    if (boundedLive) return completeTimedOutExchange(page, networkObserver, networkObservation,
                             progress, cleanupVerified, deadline);
                     failure = ProviderPlaywrightWorkerProtocol.FailureCode.TIMEOUT;
                 }
@@ -401,6 +468,7 @@ public final class ProviderPlaywrightWorkerMain {
             }
             finally {
                 exactAllowedUri.set(null);
+                exactIfNoneMatch.set(null);
                 exactNavigationAdmission.set(false);
                 if (!cleanupVerified.get()) {
                     try {
@@ -454,8 +522,40 @@ public final class ProviderPlaywrightWorkerMain {
             }
         }
 
+        private ExecutionResult completeNotModifiedExchange(
+                Page page,
+                NotModifiedResponse response,
+                RequestProgress progress,
+                AtomicBoolean cleanupVerified,
+                long deadline) {
+            try {
+                // Chromium treats a conditional document 304 as a canceled navigation. The exact
+                // response-stage CDP event already proved the response and 304 cannot carry a body.
+                progress.readingBody();
+                remainingMillis(deadline);
+                verifyPageCleanup(page, deadline, cleanupVerified);
+                if (response.receivedEpochMillis() < response.requestedEpochMillis()) {
+                    return ExecutionResult.failure(
+                            ProviderPlaywrightWorkerProtocol.FailureCode.PLAYWRIGHT_FAILURE);
+                }
+                return ExecutionResult.success(new ProviderPlaywrightWorkerProtocol.ResponseFrame(
+                        response.requestedEpochMillis(),
+                        response.receivedEpochMillis(),
+                        304,
+                        response.contentType(),
+                        new byte[0]), response.entityTag());
+            }
+            catch (TimeoutError exception) {
+                return ExecutionResult.failure(ProviderPlaywrightWorkerProtocol.FailureCode.TIMEOUT);
+            }
+            catch (PlaywrightException exception) {
+                return ExecutionResult.failure(ProviderPlaywrightWorkerProtocol.FailureCode.PLAYWRIGHT_FAILURE);
+            }
+        }
+
         private void verifyPageCleanup(Page page, long deadline, AtomicBoolean cleanupVerified) {
             exactAllowedUri.set(null);
+            exactIfNoneMatch.set(null);
             exactNavigationAdmission.set(false);
             page.close();
             context.clearCookies();
@@ -485,7 +585,9 @@ public final class ProviderPlaywrightWorkerMain {
         }
 
         private void handlePausedResponse(CDPSession session, JsonObject event,
-                ProviderMainDocumentNetworkObservation networkObservation, RequestProgress progress) {
+                ProviderMainDocumentNetworkObservation networkObservation, RequestProgress progress,
+                boolean acceptsNotModifiedResponse,
+                AtomicReference<NotModifiedResponse> notModifiedResponse) {
             String requestId = null;
             try {
                 requestId = event.get("requestId").getAsString();
@@ -508,12 +610,32 @@ public final class ProviderPlaywrightWorkerMain {
                 }
                 Instant started = networkObservation.requireRequestStartedAt(event.get("networkId").getAsString());
                 progress.headers(started, responseStatus, event.getAsJsonArray("responseHeaders"));
-                if (responseStatus >= 300 && responseStatus < 400) {
+                if (isBlockedRedirect(responseStatus, acceptsNotModifiedResponse)) {
                     routeFailure.compareAndSet(null,
                             ProviderPlaywrightWorkerProtocol.FailureCode.REDIRECT_BLOCKED);
                     command.addProperty("errorReason", "Aborted");
                     session.send("Fetch.failRequest", command);
                     return;
+                }
+                if (responseStatus == 304) {
+                    NotModifiedResponse captured;
+                    try {
+                        captured = captureNotModifiedResponse(started, event.getAsJsonArray("responseHeaders"));
+                    }
+                    catch (IllegalArgumentException exception) {
+                        routeFailure.compareAndSet(null,
+                                ProviderPlaywrightWorkerProtocol.FailureCode.CONTENT_TYPE_TOO_LONG);
+                        command.addProperty("errorReason", "Aborted");
+                        session.send("Fetch.failRequest", command);
+                        return;
+                    }
+                    if (!notModifiedResponse.compareAndSet(null, captured)) {
+                        routeFailure.compareAndSet(null,
+                                ProviderPlaywrightWorkerProtocol.FailureCode.UNEXPECTED_ROUTE);
+                        command.addProperty("errorReason", "Aborted");
+                        session.send("Fetch.failRequest", command);
+                        return;
+                    }
                 }
                 session.send("Fetch.continueResponse", command);
             }
@@ -602,15 +724,25 @@ public final class ProviderPlaywrightWorkerMain {
                 route.abort();
                 return;
             }
-            if (containsSensitiveRequestHeader(route.request().allHeaders())) {
+            Map<String, String> requestHeaders = route.request().allHeaders();
+            if (containsSensitiveRequestHeader(requestHeaders)
+                    || containsIfNoneMatch(requestHeaders)) {
                 routeFailure.compareAndSet(null,
                         ProviderPlaywrightWorkerProtocol.FailureCode.SENSITIVE_REQUEST_BLOCKED);
                 route.abort();
                 return;
             }
 
+            ProviderPlaywrightWorkerProtocol.EntityTag entityTag = exactIfNoneMatch.get();
             try {
-                route.resume();
+                if (entityTag == null) {
+                    route.resume();
+                }
+                else {
+                    Map<String, String> resumedHeaders = new LinkedHashMap<>(requestHeaders);
+                    resumedHeaders.put("If-None-Match", entityTag.value());
+                    route.resume(new Route.ResumeOptions().setHeaders(resumedHeaders));
+                }
             }
             catch (TimeoutError exception) {
                 routeFailure.compareAndSet(null,
@@ -623,6 +755,9 @@ public final class ProviderPlaywrightWorkerMain {
                         : ProviderPlaywrightWorkerProtocol.FailureCode.PLAYWRIGHT_FAILURE);
                 abortQuietly(route);
             }
+            finally {
+                exactIfNoneMatch.compareAndSet(entityTag, null);
+            }
         }
 
         private static boolean containsSensitiveRequestHeader(Map<String, String> headers) {
@@ -631,6 +766,76 @@ public final class ProviderPlaywrightWorkerMain {
                     .anyMatch(name -> name.equals("authorization")
                             || name.equals("cookie")
                             || name.equals("proxy-authorization"));
+        }
+
+        private static boolean isBlockedRedirect(int status, boolean acceptsNotModifiedResponse) {
+            return status >= 300 && status < 400
+                    && !(status == 304 && acceptsNotModifiedResponse);
+        }
+
+        private static boolean containsIfNoneMatch(Map<String, String> headers) {
+            return headers.keySet().stream()
+                    .map(name -> name.toLowerCase(Locale.ROOT))
+                    .anyMatch(name -> name.equals("if-none-match"));
+        }
+
+        private static NotModifiedResponse captureNotModifiedResponse(
+                Instant requestedAt, JsonArray responseHeaders) {
+            String contentType = responseHeaderValue(responseHeaders, "content-type");
+            if (contentType == null) {
+                contentType = "";
+            }
+            ProviderPlaywrightWorkerProtocol.validateContentType(contentType);
+            Long declaredLength = declaredContentLength(
+                    responseHeaderValue(responseHeaders, "content-length"));
+            if (declaredLength != null
+                    && declaredLength > ProviderPlaywrightWorkerProtocol.MAX_BODY_BYTES) {
+                throw new IllegalArgumentException("invalid V9 304 content length");
+            }
+            return new NotModifiedResponse(
+                    requestedAt.toEpochMilli(),
+                    Instant.now().toEpochMilli(),
+                    contentType,
+                    responseEntityTag(responseHeaderValue(responseHeaders, "etag")));
+        }
+
+        private static String responseHeaderValue(JsonArray responseHeaders, String expectedName) {
+            if (responseHeaders == null) {
+                return null;
+            }
+            String result = null;
+            for (var value : responseHeaders) {
+                if (!value.isJsonObject()) {
+                    throw new IllegalArgumentException("invalid response header");
+                }
+                JsonObject header = value.getAsJsonObject();
+                if (!header.has("name") || !header.has("value")
+                        || !header.get("name").isJsonPrimitive()
+                        || !header.get("value").isJsonPrimitive()) {
+                    throw new IllegalArgumentException("invalid response header");
+                }
+                String name = header.get("name").getAsString();
+                if (expectedName.equalsIgnoreCase(name)) {
+                    if (result != null) {
+                        return null;
+                    }
+                    result = header.get("value").getAsString();
+                }
+            }
+            return result;
+        }
+
+        private static ProviderPlaywrightWorkerProtocol.EntityTag responseEntityTag(String header) {
+            if (header == null) {
+                return null;
+            }
+            try {
+                return new ProviderPlaywrightWorkerProtocol.EntityTag(header);
+            }
+            catch (IllegalArgumentException ignored) {
+                // Entity tags are optional response metadata. An untrusted malformed value is dropped.
+                return null;
+            }
         }
 
         private static Long declaredContentLength(String header) {

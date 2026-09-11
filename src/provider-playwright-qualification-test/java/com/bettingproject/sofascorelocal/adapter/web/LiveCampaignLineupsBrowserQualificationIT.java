@@ -127,20 +127,29 @@ class LiveCampaignLineupsBrowserQualificationIT {
              BrowserContext context = browser.newContext(options(true, 1440, 1000))) {
             bridge(context, posts, external, stateReads, bridgeFailure);
             Page page = checkedPage(context, scriptErrors, policyErrors);
-            assertThat(page.navigate(MANUAL_PAGE).status()).isEqualTo(200);
-            // The manual page is intentionally script-free. Evaluate the production live
-            // component against its real SSR fragment; no CSP or application route is changed.
-            page.evaluate(Files.readString(Path.of("src/main/resources/static/js/lineups.js")));
+            Response manual = page.navigate(MANUAL_PAGE);
+            assertThat(manual.status()).isEqualTo(200);
+            assertThat(manual.headerValue("Content-Security-Policy"))
+                    .contains("script-src 'self'")
+                    .doesNotContain("'unsafe-inline'", "'unsafe-eval'");
+            // The manual J5 view loads the same local component as the live view through its
+            // production script tag. Do not inject the script into the page under qualification.
+            page.waitForFunction("() => typeof window.LineupsView?.update === 'function'");
             Locator host = page.locator("[data-lineups]");
-            assertRenderedBenchProjection(host, LineupsPresentation.from(initial, HOME_NAME, AWAY_NAME));
-            page.waitForCondition(() -> "ready".equals(player(team(host, "HOME"), 1)
-                    .locator("[data-lineups-country]").getAttribute("data-country-flag-state")));
+            var initialProjection = interactiveProjection(initial);
+            host.evaluate("(root, json) => window.LineupsView.update(root, JSON.parse(json))",
+                    json.writeValueAsString(initialProjection));
+            assertRenderedBenchProjection(host, initialProjection);
+            assertPlayerCardsInteractive(host);
+            Locator country = player(team(host, "HOME"), 1).locator("[data-lineups-country]");
+            awaitLocalFlagReady(page, country);
+            assertCountryFallbackVisuallyHiddenAfterReady(country);
             // Stages 1/2 reproduce the reported order changes using anonymous IDs:
             // [101..112] -> [107,101..106,108..112] -> [107,112,101..106,108..111].
             // Stages 3/4/5 expose the independently reproduced visibility failure:
             // reorder, move players across positions/bench, then remove one bench player.
             for (int stage : List.of(0, 1, 2, 3, 4, 5)) {
-                var projection = LineupsPresentation.from(benchReorderRoster(stage), HOME_NAME, AWAY_NAME);
+                var projection = interactiveProjection(benchReorderRoster(stage));
                 Locator bench = section(team(host, "HOME"), "substitutes");
                 summary(bench).click();
                 assertOpen(bench, false);
@@ -174,7 +183,7 @@ class LiveCampaignLineupsBrowserQualificationIT {
                 assertRenderedBenchProjection(host, projection);
             }
             for (int stage : List.of(0, 1, 2)) {
-                var projection = LineupsPresentation.from(benchReorderRoster(stage), HOME_NAME, AWAY_NAME);
+                var projection = interactiveProjection(benchReorderRoster(stage));
                 assertOpen(section(team(host, "HOME"), "substitutes"), true);
                 host.evaluate("(root, json) => window.LineupsView.update(root, JSON.parse(json))",
                         json.writeValueAsString(projection));
@@ -182,18 +191,23 @@ class LiveCampaignLineupsBrowserQualificationIT {
             }
             page.setViewportSize(390, 844);
             assertNoHorizontalOverflow(page, host);
-            awaitRenderedBenchProjection(page, host, LineupsPresentation.from(benchReorderRoster(2), HOME_NAME, AWAY_NAME));
+            awaitRenderedBenchProjection(page, host, interactiveProjection(benchReorderRoster(2)));
             capture(host, "lineups-twelve-bench-reordered-mobile.png");
-            // A disappearing statistics block removes its control; a later observed block
-            // restores a real keyboard-operable disclosure without replacing the player card.
+            // An explicitly interactive projection remains keyboard-operable even when a
+            // particular J5 lineup response does not carry player statistics.
             Locator card = player(team(host, "HOME"), 1);
             card.locator("[data-lineups-player-header]").focus();
             host.evaluate("(root, json) => window.LineupsView.update(root, JSON.parse(json))",
-                    json.writeValueAsString(LineupsPresentation.from((EventLineups) observation(5).data(), HOME_NAME, AWAY_NAME)));
-            assertThat(card.locator("summary, details, [data-lineups-statistics-hint]").count()).isZero();
+                    json.writeValueAsString(interactiveProjection((EventLineups) observation(5).data())));
+            assertOpen(card.locator("[data-lineups-player-details]"), false);
+            assertThat(card.locator("[data-lineups-statistics-empty]")
+                    .evaluate("element => !element.hidden")).isEqualTo(true);
+            assertThat(card.locator("[data-lineups-statistics-empty]").textContent())
+                    .isEqualTo("Statistiques non fournies pour ce joueur.");
+            assertThat(card.locator("[data-lineups-metric]").count()).isZero();
             assertFocused(card.locator("[data-lineups-player-header]"));
             host.evaluate("(root, json) => window.LineupsView.update(root, JSON.parse(json))",
-                    json.writeValueAsString(LineupsPresentation.from((EventLineups) observation(1).data(), HOME_NAME, AWAY_NAME)));
+                    json.writeValueAsString(interactiveProjection((EventLineups) observation(1).data())));
             assertFocused(card.locator("[data-lineups-player-header]"));
             card.locator("[data-lineups-player-header]").press("Enter");
             assertOpen(card.locator("[data-lineups-player-details]"), true);
@@ -207,16 +221,14 @@ class LiveCampaignLineupsBrowserQualificationIT {
         }
         assertThat(bridgeFailure.get()).isNull();
         assertThat(scriptErrors).isEmpty();
-        // The manual SSR blocks these script tags; only their expected CSP messages
-        // are admissible. Live loading and CSP are exercised by the other method.
-        assertThat(policyErrors).allMatch(message -> message.contains("script-src 'none'")
-                && (message.contains("/js/lineups.js") || message.contains("/js/statistics.js")));
+        assertThat(policyErrors).isEmpty();
         assertThat(posts.get()).isZero();
         assertThat(external.get()).isZero();
         assertThat(stateReads.get()).isZero();
         verifyNoInteractions(campaigns, fixtureImportService, realData, localImport, providerStop);
         System.out.println("WO058_LINEUPS_VISIBILITY=PASS;SEVENTH_TO_FIRST=PASS;LAST_TO_SECOND=PASS;"
                 + "COLLAPSED_ROLE_GROUP_REMOVE=PASS;OPEN_BENCH=PASS;NODE_FOCUS_PRESERVED=PASS;VISIBLE_COUNTS=PASS;"
+                + "MANUAL_LOCAL_SCRIPT=PASS;COUNTRY_FALLBACK=PASS;POSITION_ACCESSIBLE=PASS;"
                 + "VIEWPORT_390=PASS;REAL_PROVIDER_CALLS=0;HTTP_POSTS=0;DATABASE_USED=false");
     }
 
@@ -259,6 +271,11 @@ class LiveCampaignLineupsBrowserQualificationIT {
                 new TeamLineup(LineupSide.AWAY, Optional.of("4-3-3"), away));
     }
 
+    private static LineupsPresentation.View interactiveProjection(EventLineups lineups) {
+        return LineupsPresentation.from(lineups, HOME_NAME, AWAY_NAME,
+                LineupCountryOverlay.empty(), LineupIncidentOverlay.empty(), true);
+    }
+
     private static void assertRenderedBenchProjection(Locator host, LineupsPresentation.View projection) {
         for (var expected : projection.teams()) {
             Locator team = team(host, expected.side());
@@ -267,6 +284,8 @@ class LiveCampaignLineupsBrowserQualificationIT {
             assertThat(bench.locator("[data-lineups-count]").textContent()).isEqualTo(String.valueOf(expected.substituteCount()));
             assertThat(starters.locator("[data-lineups-player]").count()).isEqualTo(expected.starterCount());
             assertThat(bench.locator("[data-lineups-player]").count()).isEqualTo(expected.substituteCount());
+            assertAllPlayerPositionsAccessibleButVisuallyHidden(starters);
+            assertAllPlayerPositionsAccessibleButVisuallyHidden(bench);
             assertThat(bench.locator("[data-lineups-player]:visible").count()).isEqualTo(expected.substituteCount());
             assertThat(bench.locator("[data-lineups-player]").evaluateAll("nodes => nodes.map(node => node.dataset.lineupsPlayer)"))
                     .isEqualTo(expected.substitutes().stream().map(LineupsPresentation.Player::key).toList());
@@ -314,20 +333,19 @@ class LiveCampaignLineupsBrowserQualificationIT {
                     assertThat(response.status()).isEqualTo(200);
                     assertThat(response.headerValue("Content-Security-Policy"))
                             .contains("style-src 'self'").doesNotContain("unsafe-inline");
+                    if (url.equals(MANUAL_PAGE)) {
+                        assertThat(response.headerValue("Content-Security-Policy"))
+                                .contains("script-src 'self'")
+                                .doesNotContain("'unsafe-inline'", "'unsafe-eval'");
+                    }
                     Locator host = page.locator("[data-lineups]");
                     assertThat(host.count()).isOne();
                     assertInitialRoster(host);
+                    assertPlayerCardsStaticWithoutJ4Proof(host);
+                    assertCountryFallbackVisibleWithoutJavaScript(player(team(host, "HOME"), 1)
+                            .locator("[data-lineups-country]"));
                     for (Locator disclosure : host.locator("[data-lineups-team], [data-lineups-section]").all()) assertOpen(disclosure, true);
-                    for (Locator card : host.locator("[data-lineups-player-details]").all()) assertOpen(card, false);
                     Locator home = team(host, "HOME");
-                    Locator playerDetails = player(home, 1).locator("[data-lineups-player-details]");
-                    summary(playerDetails).click();
-                    assertOpen(playerDetails, true);
-                    assertPlayerStatistics(player(home, 1), "6,25", "45");
-                    Locator ratings = player(home, 1).locator("[data-lineups-rating-versions]");
-                    summary(ratings).click();
-                    assertThat(ratings.locator("[data-lineups-metric='alternative'] dd").textContent()).isEqualTo("8,9");
-                    summary(playerDetails).click();
                     Locator starters = section(home, "starters");
                     summary(starters).click();
                     assertOpen(starters, false);
@@ -356,18 +374,13 @@ class LiveCampaignLineupsBrowserQualificationIT {
                 Locator host = page.locator("[data-lineups]");
                 Locator family = page.locator("[data-live-family='EVENT_LINEUPS']");
                 assertInitialRoster(host);
+                assertPlayerCardsStaticWithoutJ4Proof(host);
                 page.waitForCondition(() -> stateReads.get() > 0);
                 assertInertMarkup(page, host);
                 capture(host, "lineups-live-desktop.png");
 
                 Locator home = team(host, "HOME"), away = team(host, "AWAY");
                 Locator homeStarters = section(home, "starters"), homeSubstitutes = section(home, "substitutes");
-                Locator playerDetails = player(home, 1).locator("[data-lineups-player-details]");
-                summary(playerDetails).click();
-                Locator ratingVersions = player(home, 1).locator("[data-lineups-rating-versions]");
-                summary(ratingVersions).click();
-                assertPlayerStatistics(player(home, 1), "6,25", "45");
-                capture(host, "lineups-player-details-desktop.png");
                 Locator missing = section(home, "missing");
                 Locator missingSource = missing.locator("[data-lineups-missing-source]").first();
                 summary(missingSource).click();
@@ -402,10 +415,7 @@ class LiveCampaignLineupsBrowserQualificationIT {
                 assertCaptainPlayers(host, List.of("HOME:6"));
                 assertThat(player(home, 1).locator("[data-lineups-captain]").count()).isZero();
                 assertThat(player(away, 11).locator("[data-lineups-captain]").count()).isZero();
-                assertOpen(playerDetails, true);
-                assertOpen(ratingVersions, true);
                 assertOpen(missingSource, true);
-                assertPlayerStatistics(player(home, 1), "7,4", "60");
                 assertThat(player(home, 1).locator("[data-lineups-goal-icon]").count()).isEqualTo(3);
                 assertThat(player(home, 1).locator("[data-lineups-assist-icon]").count()).isEqualTo(2);
                 assertThat(missing.locator("[data-lineups-missing-player]").count()).isEqualTo(4);
@@ -438,9 +448,6 @@ class LiveCampaignLineupsBrowserQualificationIT {
                 assertThat(page.evaluate("window.__lineupsMutations.length")).isEqualTo(0);
                 assertThat(host.locator("[data-lineups-role]").count()).isZero();
                 assertCaptainPlayers(host, List.of("HOME:6"));
-                assertOpen(playerDetails, true);
-                assertOpen(ratingVersions, true);
-                assertPlayerStatistics(player(home, 1), "7,4", "60");
                 page.evaluate("window.__lineupsObserver.disconnect()");
                 assertOpen(homeSubstitutes, false);
                 assertFocused(summary(homeSubstitutes));
@@ -450,23 +457,14 @@ class LiveCampaignLineupsBrowserQualificationIT {
                 page.setViewportSize(390, 844);
                 assertNoHorizontalOverflow(page, host);
                 assertInertMarkup(page, host);
-                summary(playerDetails).focus();
-                assertFocused(summary(playerDetails));
                 capture(host, "lineups-live-refreshed-mobile.png");
 
-                // A focused rating control becomes hidden when the source stops
-                // providing versions; the visible player summary takes focus.
-                summary(ratingVersions).focus();
-                assertFocused(summary(ratingVersions));
-                revision.set(4);
-                page.waitForCondition(() -> ratingVersions.isHidden());
-                assertFocused(summary(playerDetails));
-                assertOpen(playerDetails, true);
-                assertThat(player(home, 1).locator("[data-lineups-statistic-groups] [data-lineups-metric='rating'] dd")
-                        .textContent()).isEqualTo("7,4");
+                // A J5 lineup can stop carrying individual statistics without changing the
+                // no-J4-proof policy: MVC cards remain static and expose no detail controls.
                 revision.set(5);
-                page.waitForCondition(() -> player(home, 1).locator("[data-lineups-player-details]").count() == 0);
-                assertFocused(player(home, 1).locator("[data-lineups-player-header]"));
+                page.waitForCondition(() -> family.locator("[data-live-received]")
+                        .textContent().equals(NOW.plusSeconds(5).toString()));
+                assertPlayerCardsStaticWithoutJ4Proof(host);
                 assertThat(player(home, 1).locator("summary, details, [data-lineups-statistics-hint]").count()).isZero();
                 assertThat(player(home, 1).locator("[data-lineups-achievement]").count()).isZero();
                 assertThat(player(home, 1).locator("[data-lineups-metric]").count()).isZero();
@@ -556,6 +554,7 @@ class LiveCampaignLineupsBrowserQualificationIT {
 
     private static void assertInitialRoster(Locator host) {
         assertThat(host.locator("[data-lineups-role]").count()).isZero();
+        assertAllPlayerPositionsAccessibleButVisuallyHidden(host);
         assertCaptainPlayers(host, List.of("HOME:1", "AWAY:11"));
         assertThat(host.locator(".lineups-section-title").allTextContents())
                 .containsExactly("Titulaires", "Remplaçants", "Joueurs indisponibles", "Titulaires", "Remplaçants", "Joueurs indisponibles");
@@ -594,12 +593,102 @@ class LiveCampaignLineupsBrowserQualificationIT {
         assertThat(section(away, "substitutes").locator("[data-lineups-player]").count()).isOne();
         assertGroupCounts(home, List.of("G", "D", "M", "F", "UNKNOWN"), List.of(1, 4, 3, 2, 1));
         assertGroupCounts(away, List.of("G", "D", "M", "F"), List.of(1, 4, 3, 3));
+        assertPlayerPositionAccessibleButVisuallyHidden(player(home, 1), "Gardien");
         assertThat(player(home, 5).locator("[data-lineups-number]").textContent()).isEqualTo("—");
         assertThat(player(home, 5).locator("[data-lineups-position]").textContent()).isEqualTo("Poste non renseigné");
+        assertPlayerPositionAccessibleButVisuallyHidden(player(home, 5), "Poste non renseigné");
         assertThat(player(home, 7).locator("[data-lineups-number]").textContent()).isEqualTo("—");
         assertThat(player(home, 7).locator("[data-lineups-position]").textContent()).isEqualTo("Poste non renseigné");
         assertThat(host.textContent()).contains(UNSAFE_NAME, UNSAFE_AWAY);
         assertThat(host.locator("img:not([data-lineups-flag]), script, iframe, [onerror], [onclick]").count()).isZero();
+    }
+
+    private static void awaitLocalFlagReady(Page page, Locator country) {
+        page.waitForCondition(() -> "ready".equals(country.getAttribute("data-country-flag-state"))
+                && Boolean.TRUE.equals(country.locator("[data-lineups-flag]")
+                .evaluate("image => image.complete && image.naturalWidth > 0")));
+    }
+
+    private static void assertCountryFallbackVisuallyHiddenAfterReady(Locator country) {
+        assertThat(country.getAttribute("data-country-flag-state")).isEqualTo("ready");
+        Locator fallback = country.locator("[data-lineups-country-label]");
+        assertThat(fallback.count()).isOne();
+        assertThat(fallback.textContent()).isEqualTo("Pays : France");
+        assertThat(fallback.evaluate("""
+                element => {
+                  const style = getComputedStyle(element), rect = element.getBoundingClientRect();
+                  return element.getAttribute('aria-hidden') === null
+                    && style.position === 'absolute'
+                    && style.width === '1px'
+                    && style.height === '1px'
+                    && style.overflow === 'hidden'
+                    && style.clipPath !== 'none'
+                    && rect.width <= 1 && rect.height <= 1;
+                }
+                """)).isEqualTo(true);
+    }
+
+    private static void assertCountryFallbackVisibleWithoutJavaScript(Locator country) {
+        assertThat(country.getAttribute("data-country-flag-state")).isNull();
+        Locator fallback = country.locator("[data-lineups-country-label]");
+        assertThat(fallback.count()).isOne();
+        assertThat(fallback.textContent()).isEqualTo("Pays : France");
+        assertThat(fallback.isVisible()).isTrue();
+        assertThat(fallback.evaluate("""
+                element => {
+                  const style = getComputedStyle(element), rect = element.getBoundingClientRect();
+                  return style.position !== 'absolute' && rect.width > 1 && rect.height > 1;
+                }
+                """)).isEqualTo(true);
+    }
+
+    private static void assertAllPlayerPositionsAccessibleButVisuallyHidden(Locator root) {
+        assertThat(root.locator("[data-lineups-player] .lineups-player-position-accessible").evaluateAll("""
+                elements => elements.length > 0 && elements.every(element => {
+                  const style = getComputedStyle(element), rect = element.getBoundingClientRect();
+                  return element.getAttribute('aria-hidden') === null
+                    && style.position === 'absolute'
+                    && style.width === '1px'
+                    && style.height === '1px'
+                    && style.overflow === 'hidden'
+                    && style.clipPath !== 'none'
+                    && rect.width <= 1 && rect.height <= 1;
+                })
+                """)).isEqualTo(true);
+    }
+
+    private static void assertPlayerPositionAccessibleButVisuallyHidden(Locator player, String expectedPosition) {
+        Locator position = player.locator(".lineups-player-position-accessible");
+        assertThat(position.count()).isOne();
+        assertThat(position.locator(".lineups-player-position-prefix").textContent()).isEqualTo("Poste : ");
+        assertThat(position.locator("[data-lineups-position]").textContent()).isEqualTo(expectedPosition);
+        assertThat(position.evaluate("element => element.getAttribute('aria-hidden') === null")).isEqualTo(true);
+    }
+
+    private static void assertPlayerCardsInteractive(Locator root) {
+        Locator cards = root.locator("[data-lineups-player]");
+        assertThat(cards.count()).isGreaterThan(0);
+        assertThat(root.locator("[data-lineups-player-details]").count()).isEqualTo(cards.count());
+        assertThat(root.locator("[data-lineups-player-shell]").count()).isEqualTo(cards.count());
+        assertThat(root.locator("[data-lineups-player-header]").evaluateAll("""
+                elements => elements.length > 0 && elements.every(element =>
+                  element.tagName === 'SUMMARY'
+                    && element.getAttribute('aria-label') !== null
+                    && element.getAttribute('tabindex') !== '-1')
+                """)).isEqualTo(true);
+    }
+
+    private static void assertPlayerCardsStaticWithoutJ4Proof(Locator root) {
+        Locator cards = root.locator("[data-lineups-player]");
+        assertThat(cards.count()).isGreaterThan(0);
+        assertThat(root.locator("[data-lineups-player-details]").count()).isZero();
+        assertThat(root.locator("[data-lineups-player-shell]").count()).isEqualTo(cards.count());
+        assertThat(root.locator("[data-lineups-player-header]").evaluateAll("""
+                elements => elements.length > 0 && elements.every(element =>
+                  element.tagName === 'DIV'
+                    && element.getAttribute('aria-label') === null
+                    && !element.hasAttribute('tabindex'))
+                """)).isEqualTo(true);
     }
 
     private static void assertInertMarkup(Page page, Locator host) {

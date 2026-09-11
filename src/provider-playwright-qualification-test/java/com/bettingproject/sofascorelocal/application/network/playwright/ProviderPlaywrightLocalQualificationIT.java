@@ -76,6 +76,9 @@ class ProviderPlaywrightLocalQualificationIT {
                     .getBytes(StandardCharsets.UTF_8);
     private static final long J5_EVENT_ID = 17_000_003L;
     private static final long J5_STOP_EVENT_ID = 17_000_004L;
+    private static final long V9_CONDITIONAL_EVENT_ID = 17_000_007L;
+    private static final String V9_REQUEST_ENTITY_TAG = "W/\"loopback-request-v9\"";
+    private static final String V9_RESPONSE_ENTITY_TAG = "W/\"loopback-response-v9\"";
     private static final byte[] J5_STATISTICS_RESPONSE =
             "{\"statistics\":[],\"marker\":\"j5-statistics\"}"
                     .getBytes(StandardCharsets.UTF_8);
@@ -93,6 +96,9 @@ class ProviderPlaywrightLocalQualificationIT {
                     .getBytes(StandardCharsets.UTF_8);
     private static final byte[] J5_STOP_LINEUPS_RESPONSE =
             "{\"confirmed\":true,\"marker\":\"j5-stop-lineups\"}"
+                    .getBytes(StandardCharsets.UTF_8);
+    private static final byte[] V9_INCIDENTS_RESPONSE =
+            "{\"incidents\":[],\"marker\":\"v9-unconditional-follow-up\"}"
                     .getBytes(StandardCharsets.UTF_8);
     private static final byte[] FORBIDDEN_RESPONSE =
             "{\"error\":{\"code\":403}}".getBytes(StandardCharsets.UTF_8);
@@ -570,6 +576,142 @@ class ProviderPlaywrightLocalQualificationIT {
             assertThat(fixture.arrivalGapsNanos())
                     .hasSize(2)
                     .allMatch(gap -> gap >= MINIMUM_PROVIDER_START_GAP.toNanos());
+            assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
+        }
+    }
+
+    @Test
+    @Timeout(90)
+    void liveV9SendsTheConditionalHeaderOnlyForItsExactNavigationAndAccepts304() throws Exception {
+        Path workerJar = requiredRegularFile("provider.playwright.worker-jar");
+        Path browserCache = requiredDirectory("provider.playwright.browser-cache");
+        AtomicReference<Process> worker = new AtomicReference<>();
+        AtomicReference<CompletableFuture<byte[]>> standardOutput = new AtomicReference<>();
+        AtomicReference<CompletableFuture<byte[]>> standardError = new AtomicReference<>();
+
+        try (FixtureServer fixture = FixtureServer.start();
+             ExecutorService streamReaders = Executors.newVirtualThreadPerTaskExecutor()) {
+            ChildJvmPlaywrightProviderSupervisor supervisor =
+                    new ChildJvmPlaywrightProviderSupervisor(
+                            properties(workerJar, fixture.origin()),
+                            Clock.systemUTC(),
+                            new SecureRandom(),
+                            builder -> startObservedWorker(
+                                    builder,
+                                    fixture.origin(),
+                                    browserCache,
+                                    worker,
+                                    standardOutput,
+                                    standardError,
+                                    streamReaders));
+            UUID campaignId = UUID.randomUUID();
+            try (PlaywrightProviderCampaign campaign = supervisor.openLiveGroupedV9(
+                    campaignId, LIVE_ENDPOINTS)) {
+                Process exactWorker = worker.get();
+                List<ProcessIdentity> ownedProcesses = captureOwnedProcessTree(exactWorker);
+                var check = new LiveProviderDispatchGroup(
+                        campaignId,
+                        UUID.randomUUID(),
+                        V9_CONDITIONAL_EVENT_ID,
+                        LiveProviderDispatchGroup.Phase.CHECK);
+                PlaywrightProviderResponse notModified = campaign.executeGrouped(
+                        PlaywrightProviderRequest.eventDetails(
+                                V9_CONDITIONAL_EVENT_ID,
+                                PlaywrightProviderEntityTag.of(V9_REQUEST_ENTITY_TAG)),
+                        check,
+                        PlaywrightDispatchAdmission.UNRESTRICTED);
+                assertThat(notModified.httpStatus()).isEqualTo(304);
+                assertThat(notModified.payload().sizeBytes()).isZero();
+                assertThat(notModified.entityTag())
+                        .contains(PlaywrightProviderEntityTag.of(V9_RESPONSE_ENTITY_TAG));
+                assertThat(notModified.diagnostic()).isNotNull();
+                assertThat(notModified.diagnostic().phase())
+                        .isEqualTo(PlaywrightTransportDiagnostic.Phase.COMPLETE);
+                assertThat(notModified.diagnostic().responseComplete()).isTrue();
+                assertThat(notModified.diagnostic().requestedAt()).isNotNull();
+                assertThat(notModified.diagnostic().headersReceivedAt()).isNotNull();
+                assertThat(notModified.diagnostic().httpStatus()).isEqualTo(304);
+
+                PlaywrightProviderResponse incidents = campaign.executeGrouped(
+                        PlaywrightProviderRequest.eventIncidents(V9_CONDITIONAL_EVENT_ID),
+                        new LiveProviderDispatchGroup(
+                                campaignId,
+                                check.groupId(),
+                                V9_CONDITIONAL_EVENT_ID,
+                                LiveProviderDispatchGroup.Phase.IN_PLAY),
+                        PlaywrightDispatchAdmission.UNRESTRICTED);
+                assertExactResponse(incidents, 200, "application/json", V9_INCIDENTS_RESPONSE);
+
+                campaign.close();
+                assertWorkerExited(
+                        supervisor,
+                        exactWorker,
+                        ownedProcesses,
+                        standardOutput.get(),
+                        standardError.get());
+            }
+            fixture.assertExactTraffic(
+                    FixtureServer.V9_CONDITIONAL_DETAILS_PATH,
+                    FixtureServer.V9_CONDITIONAL_INCIDENTS_PATH);
+            assertThat(fixture.ifNoneMatchValues(FixtureServer.V9_CONDITIONAL_DETAILS_PATH))
+                    .containsExactly(V9_REQUEST_ENTITY_TAG);
+            assertThat(fixture.ifNoneMatchValues(FixtureServer.V9_CONDITIONAL_INCIDENTS_PATH))
+                    .containsExactly((String) null);
+            assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
+        }
+    }
+
+    @Test
+    @Timeout(90)
+    void liveV9Rejects304WithoutAConditionalValidator() throws Exception {
+        Path workerJar = requiredRegularFile("provider.playwright.worker-jar");
+        Path browserCache = requiredDirectory("provider.playwright.browser-cache");
+        AtomicReference<Process> worker = new AtomicReference<>();
+        AtomicReference<CompletableFuture<byte[]>> standardOutput = new AtomicReference<>();
+        AtomicReference<CompletableFuture<byte[]>> standardError = new AtomicReference<>();
+
+        try (FixtureServer fixture = FixtureServer.start();
+             ExecutorService streamReaders = Executors.newVirtualThreadPerTaskExecutor()) {
+            ChildJvmPlaywrightProviderSupervisor supervisor =
+                    new ChildJvmPlaywrightProviderSupervisor(
+                            properties(workerJar, fixture.origin()),
+                            Clock.systemUTC(),
+                            new SecureRandom(),
+                            builder -> startObservedWorker(
+                                    builder,
+                                    fixture.origin(),
+                                    browserCache,
+                                    worker,
+                                    standardOutput,
+                                    standardError,
+                                    streamReaders));
+            UUID campaignId = UUID.randomUUID();
+            Process exactWorker;
+            List<ProcessIdentity> ownedProcesses;
+            CompletableFuture<byte[]> output;
+            CompletableFuture<byte[]> error;
+            try (PlaywrightProviderCampaign campaign = supervisor.openLiveGroupedV9(
+                    campaignId, LIVE_ENDPOINTS)) {
+                exactWorker = worker.get();
+                ownedProcesses = captureOwnedProcessTree(exactWorker);
+                output = standardOutput.get();
+                error = standardError.get();
+                assertThatThrownBy(() -> campaign.executeGrouped(
+                        PlaywrightProviderRequest.eventDetails(V9_CONDITIONAL_EVENT_ID),
+                        new LiveProviderDispatchGroup(
+                                campaignId,
+                                UUID.randomUUID(),
+                                V9_CONDITIONAL_EVENT_ID,
+                                LiveProviderDispatchGroup.Phase.CHECK),
+                        PlaywrightDispatchAdmission.UNRESTRICTED))
+                        .isInstanceOfSatisfying(PlaywrightProviderException.class,
+                                failure -> assertThat(failure.failure())
+                                        .isEqualTo(PlaywrightProviderFailure.REDIRECT_BLOCKED));
+            }
+            assertWorkerExited(supervisor, exactWorker, ownedProcesses, output, error);
+            fixture.assertExactTraffic(FixtureServer.V9_CONDITIONAL_DETAILS_PATH);
+            assertThat(fixture.ifNoneMatchValues(FixtureServer.V9_CONDITIONAL_DETAILS_PATH))
+                    .containsExactly((String) null);
             assertNoForbiddenRuntimeArtifacts(RUNTIME_SANDBOX_ROOT);
         }
     }
@@ -1729,6 +1871,9 @@ class ProviderPlaywrightLocalQualificationIT {
                 "/api/v1/event/17000004/incidents";
         private static final String J5_STOP_LINEUPS_PATH =
                 "/api/v1/event/17000004/lineups";
+        private static final String V9_CONDITIONAL_DETAILS_PATH = "/api/v1/event/17000007";
+        private static final String V9_CONDITIONAL_INCIDENTS_PATH =
+                "/api/v1/event/17000007/incidents";
         private static final String REDIRECT_TARGET_PATH = "/redirect-target";
         private static final String SECONDARY_TARGET_PATH = "/secondary-target";
 
@@ -1743,6 +1888,7 @@ class ProviderPlaywrightLocalQualificationIT {
         private final CountDownLatch slowRequestReceived = new CountDownLatch(1);
         private final CountDownLatch releaseSlowResponse = new CountDownLatch(1);
         private final List<ObservedRequest> requests = new CopyOnWriteArrayList<>();
+        private final List<ObservedConditionalHeader> conditionalHeaders = new CopyOnWriteArrayList<>();
         private final List<Long> arrivalNanos = new CopyOnWriteArrayList<>();
 
         private FixtureServer(
@@ -1812,6 +1958,9 @@ class ProviderPlaywrightLocalQualificationIT {
                         exchange.getRemoteAddress().getAddress().getHostAddress(),
                         containsSensitiveHeader(exchange.getRequestHeaders()),
                         requestBody.length));
+                conditionalHeaders.add(new ObservedConditionalHeader(
+                        exchange.getRequestURI().getRawPath(),
+                        exchange.getRequestHeaders().getFirst("If-None-Match")));
                 if (DELAYED_EVENT_PATH.equals(exchange.getRequestURI().getRawPath())) {
                     if (delayedBody) {
                         exchange.getResponseHeaders().set("Content-Type", "application/json");
@@ -1925,6 +2074,14 @@ class ProviderPlaywrightLocalQualificationIT {
                         }
                     }
                     respond(exchange, 200, "application/json", EVENT_DETAILS_STOP_RESPONSE);
+                }
+                else if (V9_CONDITIONAL_DETAILS_PATH.equals(exchange.getRequestURI().getRawPath())) {
+                    exchange.getResponseHeaders().set("Content-Type", "application/json");
+                    exchange.getResponseHeaders().set("ETag", V9_RESPONSE_ENTITY_TAG);
+                    exchange.sendResponseHeaders(304, -1);
+                }
+                else if (V9_CONDITIONAL_INCIDENTS_PATH.equals(exchange.getRequestURI().getRawPath())) {
+                    respond(exchange, 200, "application/json", V9_INCIDENTS_RESPONSE);
                 }
                 else if (J5_STATISTICS_PATH.equals(exchange.getRequestURI().getRawPath())) {
                     respond(
@@ -2055,6 +2212,13 @@ class ProviderPlaywrightLocalQualificationIT {
             return requests.stream().filter(request -> path.equals(request.path())).count();
         }
 
+        List<String> ifNoneMatchValues(String path) {
+            return conditionalHeaders.stream()
+                    .filter(observed -> path.equals(observed.path()))
+                    .map(ObservedConditionalHeader::value)
+                    .toList();
+        }
+
         List<Long> arrivalGapsNanos() {
             List<Long> result = new ArrayList<>();
             for (int index = 1; index < arrivalNanos.size(); index++) {
@@ -2077,5 +2241,8 @@ class ProviderPlaywrightLocalQualificationIT {
             String remoteAddress,
             boolean sensitiveHeader,
             int requestBodyBytes) {
+    }
+
+    private record ObservedConditionalHeader(String path, String value) {
     }
 }

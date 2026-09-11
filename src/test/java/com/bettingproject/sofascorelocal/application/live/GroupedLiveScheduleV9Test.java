@@ -127,6 +127,44 @@ class GroupedLiveScheduleV9Test {
     }
 
     @Test
+    void suspendedKeepsOnlyJ4AtOneMinuteCadenceUntilInProgressResumesTheThreeJ5Families() {
+        var schedule = schedule();
+        LiveJ4ControlFacts controls = controls(BooleanFact.FALSE, DetailIdFact.ONE,
+                BooleanFact.TRUE, BooleanFact.TRUE, StatusDescription.OTHER);
+
+        completeJ4(schedule, nextAtOrAfter(schedule, START), START, "inprogress", controls);
+        Instant afterInitialJ5 = completeEndpoints(schedule, START, 3).completedAt();
+
+        var firstSuspendedJ4 = nextAtOrAfter(schedule, afterInitialJ5);
+        Instant firstSuspendedAt = firstSuspendedJ4.dueAt();
+        completeJ4(schedule, firstSuspendedJ4, firstSuspendedAt, "suspended", controls);
+
+        assertSuspendedJ4Only(schedule, firstSuspendedAt.plusSeconds(60));
+        assertThat(schedule.next(firstSuspendedAt.plusSeconds(59))).isEmpty();
+
+        var secondSuspendedJ4 = nextAtOrAfter(schedule, firstSuspendedAt.plusSeconds(60));
+        assertThat(secondSuspendedJ4.endpoint()).isEqualTo(EVENT_DETAILS);
+        assertThat(secondSuspendedJ4.dueAt()).isEqualTo(firstSuspendedAt.plusSeconds(60));
+        Instant secondSuspendedAt = secondSuspendedJ4.dueAt();
+        completeJ4(schedule, secondSuspendedJ4, secondSuspendedAt, "suspended", controls);
+
+        assertSuspendedJ4Only(schedule, secondSuspendedAt.plusSeconds(60));
+
+        var resumedJ4 = nextAtOrAfter(schedule, secondSuspendedAt.plusSeconds(60));
+        assertThat(resumedJ4.endpoint()).isEqualTo(EVENT_DETAILS);
+        assertThat(resumedJ4.dueAt()).isEqualTo(secondSuspendedAt.plusSeconds(60));
+        completeJ4(schedule, resumedJ4, resumedJ4.dueAt(), "inprogress", controls);
+
+        assertThat(completeEndpoints(schedule, resumedJ4.dueAt(), 3).endpoints())
+                .containsExactly(EVENT_INCIDENTS, EVENT_STATISTICS, EVENT_LINEUPS);
+        assertThat(schedule.states()).singleElement().satisfies(state -> {
+            assertThat(state.state()).isEqualTo("COLLECTING");
+            assertThat(state.sportStatus()).isEqualTo("inprogress");
+            assertThat(state.missedCycles()).isZero();
+        });
+    }
+
+    @Test
     void interruptedPermitsTheFinalJ5TrioBeforeConfirmingTheEnd() {
         var schedule = schedule();
         completeJ4(schedule, nextAtOrAfter(schedule, START), START, "interrupted", controls(BooleanFact.FALSE,
@@ -318,7 +356,24 @@ class GroupedLiveScheduleV9Test {
                                                 BooleanFact tournamentPlayerStatistics,
                                                 StatusDescription statusDescription) {
         return new LiveJ4ControlFacts(finalResultOnly, detailId, eventPlayerStatistics,
-                tournamentPlayerStatistics, statusDescription);
+                tournamentPlayerStatistics, statusDescription, LiveJ4ControlFacts.TextFact.absent());
+    }
+
+    private static void assertSuspendedJ4Only(LiveSchedule schedule, Instant expectedJ4) {
+        assertThat(schedule.states()).singleElement().satisfies(state -> {
+            assertThat(state.state()).isEqualTo("WAITING_SUSPENDED_RECHECK");
+            assertThat(state.sportStatus()).isEqualTo("suspended");
+            assertThat(state.nextDueAt()).isEqualTo(expectedJ4);
+            assertThat(state.missedCycles()).isZero();
+        });
+        assertThat(schedule.familySchedules(EVENT)).satisfiesExactly(
+                family -> {
+                    assertThat(family.endpoint()).isEqualTo(EVENT_DETAILS);
+                    assertThat(family.nextDueAt()).isEqualTo(expectedJ4);
+                },
+                family -> { assertThat(family.endpoint()).isEqualTo(EVENT_INCIDENTS); assertThat(family.nextDueAt()).isNull(); },
+                family -> { assertThat(family.endpoint()).isEqualTo(EVENT_STATISTICS); assertThat(family.nextDueAt()).isNull(); },
+                family -> { assertThat(family.endpoint()).isEqualTo(EVENT_LINEUPS); assertThat(family.nextDueAt()).isNull(); });
     }
 
     private static Instant completeNormalJ5RoundWithStatistics404(LiveSchedule schedule, Instant now) {

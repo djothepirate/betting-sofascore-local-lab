@@ -42,6 +42,27 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   avec flèche montante verte pour l'entrant et descendante rouge pour le sortant. Une croix médicale
   distingue un remplacement sur blessure explicitement observé. Le tableau des incidents conserve
   sa présentation détaillée et aucune provenance ou observation normalisée n'est modifiée.
+- Maintient une rencontre V9 au statut J4 `suspended` : J4 seul est réévalué chaque minute,
+  les trois familles J5 restent suspendues, puis reprennent seulement après le retour J4
+  `inprogress`. La raison `statusReason` est affichée seulement pendant cette suspension, sans
+  texte de remplacement lorsqu'elle n'est pas fournie.
+- Aligne les cartes de composition live et J5 manuelles : le poste individuel n'est plus affiché
+  dans une section qui le rend déjà évident, tout en restant accessible ; le libellé du pays est
+  visible seulement comme repli lorsque le SVG local du drapeau ne peut pas être rendu.
+- Ajoute pour `live-v9` la révalidation conditionnelle bornée des seules familles J4/J5 live.
+  Un `304` valide réutilise la dernière donnée `200` acceptée sans nouveau corps brut, snapshot,
+  normalisation ni octet métier reçu. Son départ physique reste consigné append-only pour l'audit
+  et la protection de cadence, mais il est exclu des compteurs fonctionnels, du budget et de la
+  pression affichée de la campagne. Le résultat existant
+  `NOT_MODIFIED/NONE/HTTP_304` et le diagnostic `COMPLETE/304` prouvent une libération
+  idempotente sans migration historique. Les validateurs restent volatils, confinés à la campagne
+  et au contexte neuf ; aucun parcours manuel, redémarrage, retry ou réutilisation de session ne
+  les reprend. La vue distingue la dernière réception `200` de la dernière revalidation de cache
+  `304`, horodatée à la réception des en-têtes, afin que le contrôle de fraîcheur ne fasse jamais
+  passer le cache pour une nouvelle donnée fournisseur.
+- Conserve le lissage V9 déterministe déjà qualifié (slots, fences de 500 ms et réserve de 1 s)
+  et n'ajoute pas de jitter aléatoire ou adaptatif à une vague de dix rencontres qui occupe déjà
+  toute sa fenêtre de 60 s.
 - Affiche pour `live-v9` l'état terminal `FINISHED_J5_INCOMPLETE` lorsque J4 confirme le résultat
   mais que le dernier cycle J5 facultatif est incomplet. Les politiques historiques conservent
   leur libellé `FINISHED_CONFIRMED` et aucune nouvelle collecte n'est déclenchée.

@@ -89,9 +89,10 @@
     const info = create("span", "lineups-player-info");
     const title = create("span", "lineups-player-title");
     title.append(create("strong", "lineups-name", "data-lineups-name"));
-    const meta = create("span", "lineups-player-meta");
-    meta.append(create("span", "", "data-lineups-position"));
-    info.append(title, meta);
+    const position = create("span", "lineups-player-position-accessible");
+    position.append(create("span", "lineups-player-position-prefix", "", "Poste : "),
+      create("span", "", "data-lineups-position"));
+    info.append(title, position);
     summary.append(create("span", "lineups-number", "data-lineups-number"), info);
     const statistics = create("div", "lineups-player-statistics", "data-lineups-player-statistics");
     const ratings = create("details", "lineups-source-details", "data-lineups-rating-versions");

@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 import java.util.function.LongFunction;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -103,6 +104,64 @@ class PlaywrightProviderRequestTest {
                 16_386_245L))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("invalid J5 event-data request");
+    }
+
+    @Test
+    void permitsAnOpaqueConditionalValidatorOnlyForTheFourEventEndpoints() {
+        PlaywrightProviderEntityTag validator = PlaywrightProviderEntityTag.of("W/\"event-v1\"");
+
+        assertThat(PlaywrightProviderRequest.eventDetails(16_386_245L, validator).ifNoneMatch())
+                .contains(validator);
+        assertThat(PlaywrightProviderRequest.eventStatistics(16_386_245L, validator).ifNoneMatch())
+                .contains(validator);
+        assertThat(PlaywrightProviderRequest.eventIncidents(16_386_245L, validator).ifNoneMatch())
+                .contains(validator);
+        assertThat(PlaywrightProviderRequest.eventLineups(16_386_245L, validator).ifNoneMatch())
+                .contains(validator);
+        assertThat(PlaywrightProviderRequest.eventDetails(16_386_245L).ifNoneMatch()).isEmpty();
+
+        assertThatThrownBy(() -> new PlaywrightProviderRequest(
+                SofascoreEndpointType.SCHEDULED_EVENTS,
+                LocalDate.of(2026, 8, 27),
+                1,
+                0,
+                0,
+                Optional.of(validator)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("conditional validator is only permitted for event endpoints");
+        assertThatThrownBy(() -> new PlaywrightProviderRequest(
+                SofascoreEndpointType.TOURNAMENT_SCHEDULED_EVENTS,
+                LocalDate.of(2026, 8, 27),
+                0,
+                17,
+                0,
+                Optional.of(validator)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("conditional validator is only permitted for event endpoints");
+    }
+
+    @Test
+    void redactsAndStrictlyBoundsProviderEntityTags() {
+        PlaywrightProviderEntityTag tag = PlaywrightProviderEntityTag.of("W/\"opaque-tag\"");
+
+        assertThat(tag.value()).isEqualTo("W/\"opaque-tag\"");
+        assertThat(tag.toString()).doesNotContain("opaque-tag");
+        assertThat(tag).isEqualTo(PlaywrightProviderEntityTag.of("W/\"opaque-tag\""));
+        assertThat(tag.hashCode()).isEqualTo(PlaywrightProviderEntityTag.of("W/\"opaque-tag\"").hashCode());
+
+        assertThatThrownBy(() -> PlaywrightProviderEntityTag.of(""))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("invalid bounded provider entity tag");
+        assertThatThrownBy(() -> PlaywrightProviderEntityTag.of("W/\"bad\rvalue\""))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("invalid bounded provider entity tag");
+        assertThatThrownBy(() -> PlaywrightProviderEntityTag.of("é"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("invalid bounded provider entity tag");
+        assertThatThrownBy(() -> PlaywrightProviderEntityTag.of("x".repeat(
+                PlaywrightProviderEntityTag.MAXIMUM_VISIBLE_ASCII_CHARACTERS + 1)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("invalid bounded provider entity tag");
     }
 
     private static void assertJ5Request(

@@ -14,7 +14,7 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Live qualification package failed' }
     $qualificationStartedAt = [DateTime]::UtcNow
     & .\mvnw.cmd '-Pprovider-playwright-runtime,provider-playwright-local-qualification' '-DskipTests=false' '-DskipITs=false' `
-        '-Dit.test=LiveProviderSessionQualificationIT,LiveGroupedDegradationQualificationIT,LiveCampaignBrowserQualificationIT,LiveCampaignFormBrowserQualificationIT,LiveCampaignStatisticsBrowserQualificationIT' `
+        '-Dit.test=LiveProviderSessionQualificationIT,LiveGroupedDegradationQualificationIT,LiveCampaignBrowserQualificationIT,LiveCampaignFormBrowserQualificationIT,LiveCampaignStatisticsBrowserQualificationIT,LiveCampaignLineupsBrowserQualificationIT' `
         "-Dprovider.playwright.browser-cache=$browserCache" `
         'failsafe:integration-test@provider-playwright-loopback-qualification' 'failsafe:verify@provider-playwright-loopback-qualification'
     if ($LASTEXITCODE -ne 0) { throw 'Live loopback qualification failed' }
@@ -23,7 +23,8 @@ try {
         [pscustomobject]@{ Path = 'target/failsafe-reports/TEST-com.bettingproject.sofascorelocal.application.network.playwright.LiveGroupedDegradationQualificationIT.xml'; Tests = 2 },
         [pscustomobject]@{ Path = 'target/failsafe-reports/TEST-com.bettingproject.sofascorelocal.adapter.web.LiveCampaignBrowserQualificationIT.xml'; Tests = 2 },
         [pscustomobject]@{ Path = 'target/failsafe-reports/TEST-com.bettingproject.sofascorelocal.adapter.web.LiveCampaignFormBrowserQualificationIT.xml'; Tests = 2 },
-        [pscustomobject]@{ Path = 'target/failsafe-reports/TEST-com.bettingproject.sofascorelocal.adapter.web.LiveCampaignStatisticsBrowserQualificationIT.xml'; Tests = 1 }
+        [pscustomobject]@{ Path = 'target/failsafe-reports/TEST-com.bettingproject.sofascorelocal.adapter.web.LiveCampaignStatisticsBrowserQualificationIT.xml'; Tests = 1 },
+        [pscustomobject]@{ Path = 'target/failsafe-reports/TEST-com.bettingproject.sofascorelocal.adapter.web.LiveCampaignLineupsBrowserQualificationIT.xml'; Tests = 2 }
     )
     foreach ($report in $reports) {
         $item = Get-Item -LiteralPath $report.Path

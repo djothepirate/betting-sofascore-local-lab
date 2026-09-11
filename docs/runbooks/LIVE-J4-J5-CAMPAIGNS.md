@@ -100,6 +100,7 @@ aucune campagne fournisseur.
 | `detailId` absent | Après trois résultats consécutifs exactement `HTTP_404` pour statistiques, cette famille est suspendue ; le premier J4 terminal obtient un dernier essai, unique. Une autre réponse remet le compteur à zéro. |
 | `hasEventPlayerStatistics=false` | J5 compositions est inutile et n'est pas proposé. Une valeur vraie ou absente l'autorise. |
 | `tournament.uniqueTournament.hasEventPlayerStatistics=true` | Les cartes de composition peuvent être ouvrables. Toute autre valeur laisse les cartes statiques et annonce que les statistiques joueur ne sont pas disponibles. |
+| `status=suspended` | J4 seul reste planifié toutes les minutes ; aucune famille J5 n'est proposée tant que ce statut persiste. La raison affichée provient exclusivement de `event.statusReason` de la projection J4 de référence ; une valeur absente ou nulle n'est jamais remplacée par un texte inventé et elle disparaît dès qu'un J4 de référence ne confirme plus `suspended`. |
 | `status=inprogress`, description `halftime` | Aucun J4/J5 pendant 15 minutes. À l'échéance, un J4 seul ; puis J4 seul chaque minute tant que `2nd half` n'est pas confirmé. |
 
 Les cartes joueur fusionnent les faits par type. Les métriques directes J5 lineups `goals` et
@@ -109,6 +110,46 @@ fait et non annulés, associés strictement par `(équipe, providerPlayerId)`. I
 visibles même lorsqu'une carte possède une note ou des minutes J5 lineups, ou lorsque J5
 statistics est disponible. Cette décoration est en lecture seule : elle ne modifie ni le snapshot
 ni les statistiques normalisées de J5 lineups.
+
+### Révalidation HTTP conditionnelle V9
+
+Une campagne `live-v9` peut revalider **uniquement** ses quatre routes de collecte live
+(`J4 détails`, `J5 incidents`, `J5 statistiques` et `J5 compositions`) avec
+`If-None-Match`. Le premier échange de chaque couple rencontre/famille reste inconditionnel.
+Un validateur n'est réutilisable qu'après une réponse réellement reçue, intégralement lisible,
+normalisée et acceptée par cette même campagne. Il demeure volatile, limité à son contexte
+Playwright neuf et non persistant : il n'est ni écrit dans une observation, ni exposé dans les
+logs, ni transmis à une page J5 manuelle, ni repris après un arrêt, un redémarrage ou une autre
+campagne.
+
+Un `304 Not Modified` valide n'apporte ni nouveau corps brut, ni snapshot, ni normalisation, ni
+octet métier reçu. La dernière réponse `200` déjà acceptée reste la source de la vue et garde son
+heure de réception réelle ; le `304` ne fabrique donc ni nouvelle fraîcheur de donnée ni nouvelle
+occurrence fournisseur. Il s'agit toutefois de la réponse à un GET qui est parti du Lab : le
+départ physique est conservé dans les diagnostics append-only et les tentatives, pour l'audit et
+la protection de cadence, avec un diagnostic `COMPLETE/304`. Il n'incrémente cependant ni les
+compteurs fonctionnels de campagne, ni son budget, ni sa pression affichée. La ligne append-only
+existante `live_call_result` `NOT_MODIFIED/NONE/HTTP_304` prouve la libération idempotente de ce
+chemin sans migration des données historiques. Un `304` sans validateur et contexte accepté
+correspondant est traité en échec sûr, sans parsing d'un corps vide, relance immédiate, réarmement
+ou état de remplacement inventé.
+
+Quand la preuve persistée est complète, la présentation expose séparément la dernière
+revalidation du cache à `headersReceivedAt`. Ce contrôle peut maintenir la famille fraîche, mais
+ne modifie ni la dernière réception `200`, ni son âge, ni l'occurrence fournisseur affichée.
+
+Cette révalidation ne vise ni à contourner un refus ni à présumer une prise en charge ou un quota
+fournisseur. Elle n'ajoute ni endpoint, proxy, cookie, `storageState`, session persistante ou
+réutilisation de contexte.
+
+### Lissage V9 des familles
+
+V9 réutilise les slots déterministes, les quatre fences de 500 ms et la réserve statique
+inter-groupe de 1 s de la qualification de pression. La variabilité locale déjà couverte est
+bornée par ces réserves ; elle ne devient pas un jitter aléatoire ou adaptatif. À dix rencontres,
+la réservation qualifiée occupe exactement les 60 secondes disponibles : ajouter une attente
+aléatoire modifierait la borne et ne peut pas être présenté comme une optimisation de la cadence
+ou de la pression.
 
 ### Règles V8 qualifiées localement
 
@@ -510,8 +551,17 @@ Cliquer sur l’en-tête d’une équipe, « Titulaires » ou « Remplaçants »
 panneau. Ces commandes fonctionnent aussi avec Entrée/Espace. Le lecteur live conserve
 l’état des panneaux pendant les actualisations, y compris lorsqu’un joueur ou la confirmation
 change. Une recharge complète de la page retrouve les panneaux ouverts initialement.
-Les cartes présentent le numéro, le nom et le poste ; les mentions « Titulaire » et
-« Remplaçant » ne sont pas répétées sous chaque joueur, car les sections indiquent déjà ce rôle.
+Les cartes présentent le numéro et le nom. Le poste individuel (« Gardien », « Défenseur »,
+« Milieu » ou « Attaquant ») n'est plus répété visuellement : la section de répartition porte ce
+repère. Il reste disponible dans la sémantique d'accessibilité de la carte. Les mentions
+« Titulaire » et « Remplaçant » ne sont pas répétées sous chaque joueur, car les sections
+indiquent déjà ce rôle.
+
+La règle des pays est identique dans la campagne live et dans la page J5 manuelle : lorsque le
+SVG local du drapeau est chargé et vérifié, le libellé de pays ne s'affiche pas visuellement. Son
+nom français reste accessible. Sans drapeau local exploitable, après une erreur de chargement,
+sans JavaScript ou en contraste forcé, le libellé demeure le repli visible ; une nationalité ne
+disparaît donc jamais au seul motif que son image ne peut pas être rendue.
 
 Le badge « C · Capitaine » apparaît uniquement pour un indicateur fournisseur explicitement vrai.
 Sur une page campagne dont la projection J4 détaillée et corrélée confirme

@@ -92,20 +92,20 @@
     </details>
     <details data-live-pressure th:with="pressure=${campaign.pressure}">
       <summary th:text="${manifest.policyVersion == 'live-v9' ? 'Pression observée de cette campagne live-v9' : 'Pression observée de cette campagne'}">Pression observée de cette campagne</summary>
-      <p class="muted">Cette lecture utilise uniquement les instants <code>REQUEST_SENT</code> observés par le worker local.
-        Les appels réservés et le trafic hors du Lab ne sont pas inclus ; ces valeurs ne définissent aucun seuil d’acceptation fournisseur.</p>
-      <p class="muted" th:if="${manifest.policyVersion == 'live-v9'}" data-live-v9-pressure-note>Pour live-v9, les pics observés sont séparés des budgets locaux de protection et des règles J4 qui peuvent réduire les familles planifiées.</p>
-      <p data-live-pressure-empty th:hidden="${pressure.observedDepartures > 0}">Aucun départ worker <code>REQUEST_SENT</code>
-        n’est observé dans le diagnostic local de cette campagne.</p>
+      <p class="muted">Cette lecture utilise les instants <code>REQUEST_SENT</code> des collectes comptabilisées par la campagne.
+        Une revalidation conditionnelle <code>HTTP 304</code> validée réutilise le cache local et est exclue ; sa trace de transport reste consultable dans le diagnostic. Le trafic hors du Lab n’est pas inclus ; ces valeurs ne définissent aucun seuil d’acceptation fournisseur.</p>
+      <p class="muted" th:if="${manifest.policyVersion == 'live-v9'}" data-live-v9-pressure-note>Pour live-v9, les pics de collecte sont séparés des protections locales de cadence et des règles J4 qui peuvent réduire les familles planifiées.</p>
+      <p data-live-pressure-empty th:hidden="${pressure.observedDepartures > 0}">Aucune collecte comptabilisée avec un départ worker <code>REQUEST_SENT</code>
+        n’est observée dans cette campagne.</p>
       <div data-live-pressure-data th:hidden="${pressure.observedDepartures == 0}">
         <dl class="detail-grid">
-          <div><dt>Départs worker <code>REQUEST_SENT</code> observés</dt><dd data-live-pressure-count th:text="${pressure.observedDepartures}">0</dd></div>
+          <div><dt>Collectes comptabilisées avec départ worker <code>REQUEST_SENT</code></dt><dd data-live-pressure-count th:text="${pressure.observedDepartures}">0</dd></div>
           <div><dt>Premier départ observé (UTC)</dt><dd data-live-pressure-first th:text="${pressure.firstObservedDepartureAt ?: '—'}">—</dd></div>
           <div><dt>Dernier départ observé (UTC)</dt><dd data-live-pressure-last th:text="${pressure.lastObservedDepartureAt ?: '—'}">—</dd></div>
         </dl>
         <div class="table-scroll">
           <table>
-            <thead><tr><th>Fenêtre glissante</th><th>Pic de départs observés</th><th>Fin de fenêtre (UTC)</th></tr></thead>
+            <thead><tr><th>Fenêtre glissante</th><th>Pic de collectes comptabilisées</th><th>Fin de fenêtre (UTC)</th></tr></thead>
             <tbody>
               <tr data-live-pressure-peak="oneMinute"><td>60 secondes</td>
                 <td data-live-pressure-peak-count th:text="${pressure.oneMinutePeak.observedDepartures}">0</td>
@@ -118,7 +118,7 @@
         </div>
         <div class="table-scroll">
           <table>
-            <thead><tr><th>Famille</th><th>Départs worker observés</th></tr></thead>
+            <thead><tr><th>Famille</th><th>Collectes comptabilisées</th></tr></thead>
             <tbody>
               <tr th:each="family : ${pressure.families}" th:attr="data-live-pressure-family=${family.endpoint}">
                 <td data-live-pressure-family-label th:text="${family.label}">J4 détails</td>
@@ -132,7 +132,7 @@
     <dl class="detail-grid">
       <div><dt>Démarrage</dt><dd data-live-started-at th:text="${campaign.startedAt ?: (campaign.state == 'PREPARED' ? 'En attente de lancement' : 'Non lancée')}">En attente</dd></div>
       <div><dt>Fin au plus tard (UTC)</dt><dd data-live-ends-at th:text="${campaign.endsAt ?: (campaign.state == 'PREPARED' ? 'Fixée au lancement' : '—')}">—</dd></div>
-      <div><dt>Appels réservés / plafond</dt><dd data-live-calls th:text="${campaign.reservedCalls + ' / ' + campaign.maximumCalls}">0</dd></div>
+      <div><dt>Collectes comptabilisées / plafond</dt><dd data-live-calls th:text="${campaign.reservedCalls + ' / ' + campaign.maximumCalls}">0</dd></div>
       <div><dt>Octets reçus / plafond</dt><dd data-live-bytes th:text="${campaign.receivedBytes + ' / ' + campaign.maximumBytes}">0</dd></div>
       <div><dt th:text="${(manifest.policyVersion == 'live-v6' or manifest.policyVersion == 'live-v7' or manifest.policyVersion == 'live-v8' or manifest.policyVersion == 'live-v9') ? 'Intervalle nominal de collecte' : 'Intervalle de collecte'}">Intervalle de collecte</dt><dd th:text="${manifest.cycleInterval.toSeconds() + ' secondes'}">60 secondes</dd></div>
       <div th:if="${campaign.cadence != null}"><dt>Compositions pendant le jeu</dt><dd th:text="${campaign.cadence.lineupSeconds == 60 ? '60 secondes nominales' : '5 minutes nominales'}">60 secondes nominales</dd></div>
@@ -303,8 +303,9 @@
       <div><dt>Score courant J4</dt><dd data-live-score th:text="${event.score}">—</dd></div>
       <div><dt>État de collecte enregistré</dt><dd data-live-event-state th:text="${event.state}">WAITING_START</dd></div>
       <div><dt>Motif</dt><dd data-live-event-reason th:text="${event.reason ?: '—'}">—</dd></div>
+      <div data-live-status-reason-row th:hidden="${event.statusReason == null}"><dt>Raison de suspension J4</dt><dd data-live-status-reason th:text="${event.statusReason ?: '—'}">—</dd></div>
       <div><dt>Prochaine échéance (UTC)</dt><dd data-live-next-due th:text="${event.nextDueAt ?: '—'}">—</dd></div>
-      <div><dt>Appels réservés / plafond</dt><dd data-live-event-calls th:text="${event.reservedCalls + ' / ' + event.maximumCalls}">0</dd></div>
+      <div><dt>Collectes comptabilisées / plafond</dt><dd data-live-event-calls th:text="${event.reservedCalls + ' / ' + event.maximumCalls}">0</dd></div>
       <div><dt>Cycles manqués</dt><dd data-live-missed-cycles th:text="${event.missedCycles}">0</dd></div>
       <div><dt>Dernier cycle J5 complet</dt><dd data-live-final-complete th:text="${event.finalComplete ? 'Oui' : 'Non établi'}">Non établi</dd></div>
       <div><dt>Source du statut J4</dt><dd data-live-source-ref th:text="${event.sourceSnapshotId != null ? 'snapshot:' + event.sourceSnapshotId : '—'}">—</dd></div>
@@ -342,6 +343,7 @@
           <div><dt>Retard à l’autorisation transport</dt><dd data-live-delay th:text="${family.authorizationDelayMillis != null ? family.authorizationDelayMillis + ' ms' : '—'}">—</dd></div>
           <div><dt>Dernière réception</dt><dd data-live-received th:text="${family.lastReceivedAt ?: '—'}">—</dd></div>
           <div><dt>Dernier succès</dt><dd data-live-successful th:text="${family.lastSuccessfulAt ?: '—'}">—</dd></div>
+          <div><dt>Dernière revalidation du cache (304)</dt><dd data-live-cache-revalidated th:text="${family.lastCacheRevalidatedAt ?: '—'}">—</dd></div>
           <div><dt>Dernier changement</dt><dd data-live-changed th:text="${family.lastChangedAt ?: '—'}">—</dd></div>
           <div><dt>Cadence cible</dt><dd data-live-family-interval th:text="${family.schedule != null ? family.schedule.intervalSeconds + ' s' : '—'}">—</dd></div>
           <div><dt>Prochaine collecte</dt><dd data-live-family-next-due th:text="${family.schedule != null ? (family.schedule.nextDueAt ?: 'Aucune collecte programmée') : '—'}">—</dd></div>

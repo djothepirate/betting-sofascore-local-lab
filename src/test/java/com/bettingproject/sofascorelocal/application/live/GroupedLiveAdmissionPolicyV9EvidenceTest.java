@@ -1,5 +1,6 @@
 package com.bettingproject.sofascorelocal.application.live;
 
+import com.bettingproject.sofascorelocal.adapter.sofascore.live.LivePayloadNormalizer;
 import com.bettingproject.sofascorelocal.config.LiveCampaignProperties;
 import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.EndpointEnvelope;
 import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.GroupedAdmissionProfile;
@@ -33,8 +34,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
  * It does not start a browser, Docker, PostgreSQL, a campaign, or a provider transport.</p>
  */
 class GroupedLiveAdmissionPolicyV9EvidenceTest {
-    private static final String PROFILE_NAME = "WO058-GROUPED-LIVE-V9-PROFILE-20260911.json";
-    private static final String PROFILE_SHA256 = "f994415c00c9d97cb797a9f0b52c773efea044d827abc25282ae7f3ab17365da";
+    private static final String PROFILE_NAME = "WO058-GROUPED-LIVE-V9-SUSPENDED-20260911.json";
+    private static final String PROFILE_SHA256 = "353b6e7c248a73ddbaab0c55a28c9b5e27dae8eaa5594434964b7df265c7d1a2";
     private static final String V8_PROFILE_NAME = "WO058-GROUPED-LIVE-V8-PROFILE-20260910.json";
     private static final String V8_NATIVE_NAME = "WO058-GROUPED-LIVE-V8-NATIVE-20260910.json";
     private static final String V8_PROFILE_SHA256 = "4255f5327681398013dc9a0ab0f2250c7168558a399d164e299bb54b8b856de3";
@@ -47,11 +48,12 @@ class GroupedLiveAdmissionPolicyV9EvidenceTest {
             EVENT_LINEUPS, new EndpointEnvelope(Duration.ofMillis(300), Duration.ofMillis(450)));
     private static final Map<String, String> PRODUCTION_CLASS_SHA256 = Map.of(
             LiveAdmissionPolicy.class.getName(), "3bca981a21b14ec4c4b809e4861e9b2f01c6c5a1adfbe4268f99cb794dbf661d",
-            GroupedLiveAdmissionSimulationV9.class.getName(), "4e3715c8022fcae46749038d45fcc80ae639a4be21d6bd33da100fd718ef465d",
+            GroupedLiveAdmissionSimulationV9.class.getName(), "fba1dcbff3996e97c6b24c2fc771380842991388595a5ed139525772928abb53",
             LiveSchedule.class.getName(), "38af7cc3e909d88c1f1705487ae505f8f0af6ecd9818630a942af7b81d39acce",
-            GroupedLiveScheduleV9.class.getName(), "d045cc5125f5ba0977779b5094ffbb29b2ba7b9baa15978309646cc1f0220d37",
+            GroupedLiveScheduleV9.class.getName(), "a72e74c09a8c966d36758b038caadc2c9d53ea026b9d6648d0ec94fa83c2a7f8",
             GroupedAdmissionProfile.class.getName(), "f803973f03feeef102c351e8da8e36e2dfefd12c5cfbd39b17b13cad242bb43e",
-            LiveJ4ControlFacts.class.getName(), "a54c52557596dda2dc1012eb8372a956c7cbc62bf3781ccdad635a19951e6ea3");
+            LiveJ4ControlFacts.class.getName(), "e6efdbdb5214d63e4e84f3adee19c957aeae34322553110ed68e9e086c32f086",
+            LivePayloadNormalizer.class.getName(), "e83ae7649194194326af43130449baa13a6a576dea3d2e899850db617dab25f0");
 
     @Test
     void committedV9EvidenceBindsASeparateTenMatchProfileWithoutEnablingLiveTransport() throws Exception {
@@ -62,13 +64,13 @@ class GroupedLiveAdmissionPolicyV9EvidenceTest {
         assertThat(PROFILE_SHA256).isNotEqualTo(V8_PROFILE_SHA256);
 
         JsonNode profileDocument = JsonMapper.builder().build().readTree(profileBytes);
-        assertThat(profileDocument.path("schema").asString()).isEqualTo("wo058-grouped-live-v9-capacity-evidence-v1");
+        assertThat(profileDocument.path("schema").asString()).isEqualTo("wo058-grouped-live-v9-capacity-evidence-v2");
         assertThat(profileDocument.path("status").asString()).isEqualTo("QUALIFIED_LOCAL_REPLAY_WITH_STATED_SCOPE");
         assertThat(profileDocument.path("policyVersion").asString()).isEqualTo("live-v9");
         assertThat(integer(profileDocument.path("flywayVersion"))).isEqualTo(52);
         assertThat(integer(profileDocument.path("qualifiedCapacity"))).isEqualTo(QUALIFIED_MATCHES);
         assertThat(profileDocument.path("qualificationMethod").asString())
-                .isEqualTo("V8_LOCAL_LOOPBACK_UPPER_BOUND_AND_V9_OFFLINE_PRODUCTION_SCHEDULER_REPLAY");
+                .isEqualTo("V8_LOCAL_LOOPBACK_UPPER_BOUND_AND_V9_OFFLINE_PRODUCTION_SCHEDULER_REPLAY_WITH_SUSPENDED_J4_ONLY");
         assertThat(array(profileDocument.path("labStatus"))).containsExactly(
                 "EXPERIMENTAL", "LOCAL_ONLY", "NOT_PRODUCTION_APPROVED", "NO_CRITICAL_DEPENDENCY");
 
@@ -77,7 +79,8 @@ class GroupedLiveAdmissionPolicyV9EvidenceTest {
         assertThat(sourceUpperBound.path("v8Profile").path("sha256").asString()).isEqualTo(V8_PROFILE_SHA256);
         assertThat(sourceUpperBound.path("v8NativeEvidence").path("path").asString()).isEqualTo(V8_NATIVE_NAME);
         assertThat(sourceUpperBound.path("v8NativeEvidence").path("sha256").asString()).isEqualTo(V8_NATIVE_SHA256);
-        assertThat(sourceUpperBound.path("assertion").asString()).contains("V9 schedules no more than that upper bound");
+        assertThat(sourceUpperBound.path("assertion").asString()).contains("V9 schedules no more than that upper bound")
+                .contains("suspended status suppresses all J5 families");
         assertThat(Sha256.hex(Files.readAllBytes(profilePath.getParent().resolve(V8_PROFILE_NAME)))).isEqualTo(V8_PROFILE_SHA256);
         assertThat(Sha256.hex(Files.readAllBytes(profilePath.getParent().resolve(V8_NATIVE_NAME)))).isEqualTo(V8_NATIVE_SHA256);
 
@@ -123,6 +126,9 @@ class GroupedLiveAdmissionPolicyV9EvidenceTest {
         assertBoolean(controls.path("lineupsSuppressedWhenPlayerStatisticsExplicitlyFalse"), true);
         assertThat(integer(controls.path("halftimeQuietPeriodMinutes"))).isEqualTo(15);
         assertThat(integer(controls.path("terminalStatistics404RecheckMaximum"))).isEqualTo(1);
+        assertThat(integer(controls.path("suspendedJ4OnlyRecheckSeconds"))).isEqualTo(60);
+        assertBoolean(controls.path("suspendedSuppressesAllJ5Families"), true);
+        assertBoolean(controls.path("suspendedStatusReasonProjected"), true);
 
         assertThat(profileDocument.path("productionClassSha256")).hasSize(PRODUCTION_CLASS_SHA256.size());
         for (Map.Entry<String, String> entry : PRODUCTION_CLASS_SHA256.entrySet()) {

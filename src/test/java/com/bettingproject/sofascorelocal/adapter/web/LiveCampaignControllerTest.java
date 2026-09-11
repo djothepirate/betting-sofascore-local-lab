@@ -43,6 +43,7 @@ import java.util.stream.IntStream;
 
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.not;
+import static org.hamcrest.Matchers.nullValue;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
@@ -707,6 +708,28 @@ class LiveCampaignControllerTest {
                 .andExpect(content().string(not(containsString("<img src=x>"))))
                 .andExpect(content().string(containsString("Arrêter cette rencontre")))
                 .andExpect(content().string(containsString("data-live-occurrence")));
+    }
+
+    @Test
+    void suspensionReasonIsEscapedInHtmlAndClearedFromTheStateJsonAfterJ4Resumes() throws Exception {
+        String reason = "<b>Terrain impraticable</b>";
+        when(service.state(CAMPAIGN_ID)).thenReturn(
+                campaignWithLatestJ4Status("suspended", reason), campaignWithLatestJ4Status("suspended", reason),
+                campaignWithLatestJ4Status("inprogress", reason));
+
+        mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST))
+                .andExpect(status().isOk())
+                .andExpect(content().string(containsString("Raison de suspension J4")))
+                .andExpect(content().string(containsString("&lt;b&gt;Terrain impraticable&lt;/b&gt;")))
+                .andExpect(content().string(not(containsString("<b>Terrain impraticable</b>"))));
+        mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID + "/state").header("Host", HOST))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.events[0].sportStatus").value("suspended"))
+                .andExpect(jsonPath("$.events[0].statusReason").value(reason));
+        mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID + "/state").header("Host", HOST))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.events[0].sportStatus").value("inprogress"))
+                .andExpect(jsonPath("$.events[0].statusReason").value(nullValue()));
     }
 
     @Test
@@ -1408,5 +1431,18 @@ class LiveCampaignControllerTest {
                 state.equals("PREPARED") ? null : NOW.plusSeconds(14400), 0, 0, revision, null,
                 List.of(new EventView(manifest().targets().getFirst(), "WAITING_START", null, 0, 0,
                         NOW, List.of())), List.of(), List.of());
+    }
+
+    private static CampaignView campaignWithLatestJ4Status(String sportStatus, String statusReason) {
+        UUID attemptId = UUID.randomUUID();
+        String projection = "{\"statusReason\":{\"presence\":\"VALUE\",\"value\":\"" + statusReason + "\"}}";
+        var result = new Result(attemptId, new Publication("PARSED", "EVENT", "OK", NOW,
+                "event-details-v4", true, "WAITING_SUSPENDED_RECHECK", sportStatus, projection,
+                "j4-live-score-v4", "COMPLETE", 100), NormalizedReferences.none());
+        var cursor = new FamilyCursor(SofascoreEndpointType.EVENT_DETAILS, attemptId, attemptId,
+                attemptId, attemptId, NOW, NOW, NOW, NormalizedReferences.none(), result, result);
+        return new CampaignView(manifest(), "RUNNING", null, NOW, NOW.plusSeconds(14400), 1, 0, 1, null,
+                List.of(new EventView(manifest().targets().getFirst(), "WAITING_SUSPENDED_RECHECK",
+                        "WAITING_SUSPENDED_RECHECK", 1, 0, NOW.plusSeconds(60), List.of(cursor))), List.of(), List.of());
     }
 }

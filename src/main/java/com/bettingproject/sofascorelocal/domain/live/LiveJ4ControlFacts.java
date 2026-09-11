@@ -13,11 +13,44 @@ public record LiveJ4ControlFacts(
         DetailIdFact detailId,
         BooleanFact hasEventPlayerStatistics,
         BooleanFact tournamentHasEventPlayerStatistics,
-        StatusDescription statusDescription) {
+        StatusDescription statusDescription,
+        TextFact statusReason) {
 
     public enum BooleanFact { ABSENT, NULL, TRUE, FALSE }
     public enum DetailIdFact { ABSENT, NULL, ONE, OTHER }
     public enum StatusDescription { ABSENT, NULL, HALFTIME, SECOND_HALF, OTHER }
+    public enum TextPresence { ABSENT, NULL, VALUE }
+
+    /**
+     * Textual J4 controls retain the provider distinction between an omitted
+     * property, an explicit JSON null, and a usable string.  A reason is not a
+     * scheduling permission; it is kept as a reviewable observation and may
+     * only be presented while the corresponding J4 status is suspended.
+     */
+    public record TextFact(TextPresence presence, String value) {
+        public TextFact {
+            Objects.requireNonNull(presence, "presence");
+            if (presence == TextPresence.VALUE) {
+                if (value == null || value.isBlank()) {
+                    throw new IllegalArgumentException("value is required when presence is VALUE");
+                }
+            } else if (value != null) {
+                throw new IllegalArgumentException("value is only allowed when presence is VALUE");
+            }
+        }
+
+        public static TextFact absent() {
+            return new TextFact(TextPresence.ABSENT, null);
+        }
+
+        public static TextFact nullValue() {
+            return new TextFact(TextPresence.NULL, null);
+        }
+
+        public static TextFact value(String value) {
+            return new TextFact(TextPresence.VALUE, value);
+        }
+    }
 
     public LiveJ4ControlFacts {
         Objects.requireNonNull(finalResultOnly, "finalResultOnly");
@@ -25,6 +58,7 @@ public record LiveJ4ControlFacts(
         Objects.requireNonNull(hasEventPlayerStatistics, "hasEventPlayerStatistics");
         Objects.requireNonNull(tournamentHasEventPlayerStatistics, "tournamentHasEventPlayerStatistics");
         Objects.requireNonNull(statusDescription, "statusDescription");
+        Objects.requireNonNull(statusReason, "statusReason");
     }
 
     /** An explicit provider truth is required before a selected event is excluded. */

@@ -229,7 +229,17 @@ public final class LiveCampaignData {
             if ((projectionJson == null) != (projectionVersion == null)
                     || (projectionJson != null && projectionJson.length() > 262144)
                     || (completenessScore != null && (completenessScore < 0 || completenessScore > 100)))
-                throw new IllegalArgumentException("invalid live projection"); }
+                throw new IllegalArgumentException("invalid live projection");
+            if ("NOT_MODIFIED".equals(outcome) && (!"NONE".equals(scope) || !"HTTP_304".equals(code)
+                    || successful || parserVersion != null || projectionJson != null || projectionVersion != null
+                    || completenessStatus != null || completenessScore != null))
+                throw new IllegalArgumentException("invalid conditional live result");
+        }
+        /**
+         * A strictly validated HTTP 304 reuses an already published local projection.  It is
+         * append-only transport evidence, but does not consume the campaign's collection budget.
+         */
+        public boolean consumesCollectionBudget() { return !"NOT_MODIFIED".equals(outcome); }
         public Publication(String outcome, String scope, String code, Instant resolvedAt,
                            String parserVersion, boolean successful, String nextEventState) {
             this(outcome, scope, code, resolvedAt, parserVersion, successful, nextEventState,

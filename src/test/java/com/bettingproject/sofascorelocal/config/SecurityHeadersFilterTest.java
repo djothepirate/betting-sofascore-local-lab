@@ -46,6 +46,8 @@ class SecurityHeadersFilterTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"/events", "/events/12345678-1234-1234-1234-123456789012",
+            "/events/12345678-1234-1234-1234-123456789012/statistics",
+            "/events/12345678-1234-1234-1234-123456789012/statistics;jsessionid=LOCAL_TEST_SESSION",
             "/live-campaigns/12345678-1234-1234-1234-123456789012"})
     void permitsOnlyLocalExternalScriptsForLiveObservationPages(String path) throws Exception {
         MockHttpServletResponse response = filter(path);

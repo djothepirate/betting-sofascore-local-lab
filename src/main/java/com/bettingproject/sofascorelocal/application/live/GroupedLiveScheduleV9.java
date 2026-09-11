@@ -33,7 +33,7 @@ final class GroupedLiveScheduleV9 {
     private static final List<SofascoreEndpointType> J5 = List.of(EVENT_INCIDENTS, EVENT_STATISTICS, EVENT_LINEUPS);
     private static final List<SofascoreEndpointType> FAMILIES = List.of(EVENT_DETAILS, EVENT_INCIDENTS, EVENT_STATISTICS, EVENT_LINEUPS);
     private enum Mode { INITIAL, WARMUP, LINEUPS, KICKOFF, PLAY, FINAL, RECHECK, ENVELOPE_RECHECK,
-        PRESSURE_RECHECK, CADENCE_RECHECK, HALFTIME_HOLD, HALFTIME_RECHECK }
+        PRESSURE_RECHECK, CADENCE_RECHECK, HALFTIME_HOLD, HALFTIME_RECHECK, SUSPENDED_RECHECK }
     private final LinkedHashMap<UUID, Event> events = new LinkedHashMap<>();
     private final Instant endsAt;
     private final String campaignScope;
@@ -268,7 +268,7 @@ final class GroupedLiveScheduleV9 {
             if (!controls.hasSupportedDetailId()) { stopEvent(event.id, "STOPPED_DETAIL_ID_UNSUPPORTED"); return; }
             if ("postponed".equals(status)) { event.sport = status; stopEvent(event.id, "STOPPED_POSTPONED"); return; }
             boolean recheckingHalftime = event.mode == Mode.HALFTIME_HOLD || event.mode == Mode.HALFTIME_RECHECK;
-            if (!Set.of("notstarted", "delayed", "inprogress", "interrupted", "canceled", "finished")
+            if (!Set.of("notstarted", "delayed", "inprogress", "suspended", "interrupted", "canceled", "finished")
                     .contains(status == null ? "" : status)
                     || "inprogress".equals(event.sport) && waitingForKickoff(status) && !recheckingHalftime) {
                 stopEvent(event.id, "STOPPED_REVIEW_REQUIRED"); return;
@@ -280,13 +280,20 @@ final class GroupedLiveScheduleV9 {
             event.rephasePlaying = "inprogress".equals(status)
                     && (waitingForKickoff(event.sport) || event.mode == Mode.RECHECK || event.mode == Mode.ENVELOPE_RECHECK
                     || event.mode == Mode.CADENCE_RECHECK || event.mode == Mode.HALFTIME_HOLD
-                    || event.mode == Mode.HALFTIME_RECHECK);
+                    || event.mode == Mode.HALFTIME_RECHECK || event.mode == Mode.SUSPENDED_RECHECK);
             if (terminalStatus(status)) {
                 event.sport = status;
                 event.mode = Mode.FINAL; event.state = "FINALIZING"; event.finalGood = true;
                 // A missing-detailId statistics endpoint is deliberately rechecked once at terminal J4,
                 // even after three consecutive observed 404s.  It is still a normal bounded group.
                 appendEligibleJ5(event, status, "J5_FINAL", true);
+            } else if ("suspended".equals(status)) {
+                // A temporary sporting suspension is not a transport failure and must never
+                // terminate the local campaign.  Its J4 observation invalidates any J5 work
+                // remaining in the current group; only another J4 is authorized one minute later.
+                event.sport = status;
+                holdForSuspension(event, now.plus(MINUTE));
+                return;
             } else if (recheckingHalftime && !controls.isSecondHalf(status)) {
                 // The fifteen-minute quiet period has already elapsed.  Until J4 explicitly reports
                 // the second half, this state performs J4 only at a one-minute cadence; it never
@@ -407,6 +414,9 @@ final class GroupedLiveScheduleV9 {
     private static boolean j5Callable(Event event, SofascoreEndpointType endpoint, String status, boolean finalCycle) {
         LiveJ4ControlFacts controls = event.controls;
         if (controls == null || !controls.hasSupportedDetailId()) return false;
+        // The suspension branch keeps its J4 observation active every minute, but all J5
+        // families—including otherwise pre-match-callable lineups—must remain dormant.
+        if ("suspended".equals(status)) return false;
         if (endpoint == EVENT_LINEUPS) return controls.lineupsCallable();
         if (!statisticsOrIncidentsStatus(status)) return false;
         if (endpoint == EVENT_INCIDENTS) return true;
@@ -419,6 +429,14 @@ final class GroupedLiveScheduleV9 {
         if (contiguous == event) contiguous = null;
         event.mode = mode;
         event.state = state;
+        event.next = bounded(next);
+    }
+
+    private void holdForSuspension(Event event, Instant next) {
+        event.pending.clear();
+        if (contiguous == event) contiguous = null;
+        event.mode = Mode.SUSPENDED_RECHECK;
+        event.state = "WAITING_SUSPENDED_RECHECK";
         event.next = bounded(next);
     }
 
@@ -441,6 +459,7 @@ final class GroupedLiveScheduleV9 {
             case PRESSURE_RECHECK -> "J4_PRESSURE_RECHECK";
             case CADENCE_RECHECK -> "J4_CADENCE_RECHECK";
             case HALFTIME_HOLD, HALFTIME_RECHECK -> "J4_HALFTIME_RECHECK";
+            case SUSPENDED_RECHECK -> "J4_SUSPENDED_RECHECK";
             default -> "J4_CYCLE";
         }, event.reserveFinish);
     }
@@ -459,7 +478,8 @@ final class GroupedLiveScheduleV9 {
     private void finishGroup(Event event, Instant now) {
         contiguous = null;
         if (event.mode == Mode.FINAL) { event.finalComplete = event.finalGood; event.state = "FINISHED_CONFIRMED"; event.next = null; return; }
-        if (event.mode == Mode.HALFTIME_HOLD || event.mode == Mode.HALFTIME_RECHECK) return;
+        if (event.mode == Mode.HALFTIME_HOLD || event.mode == Mode.HALFTIME_RECHECK
+                || event.mode == Mode.SUSPENDED_RECHECK) return;
         if ("inprogress".equals(event.sport)) {
             recordCoalescedRounds(event, now);
             event.mode = Mode.PLAY;
@@ -634,7 +654,8 @@ final class GroupedLiveScheduleV9 {
             Instant next = null; long interval = endpoint == EVENT_LINEUPS && !"inprogress".equals(event.sport) ? 300 : 60;
             if (event.active()) {
                 boolean j5Family = endpoint != EVENT_DETAILS;
-                boolean callable = !j5Family || ((event.mode != Mode.HALFTIME_HOLD && event.mode != Mode.HALFTIME_RECHECK)
+                boolean callable = !j5Family || ((event.mode != Mode.HALFTIME_HOLD && event.mode != Mode.HALFTIME_RECHECK
+                        && event.mode != Mode.SUSPENDED_RECHECK)
                         && j5Callable(event, endpoint, event.sport, event.mode == Mode.FINAL));
                 if (callable) {
                     next = event.pending.stream().filter(d -> d.endpoint() == endpoint).map(LiveSchedule.Due::dueAt).findFirst().orElse(null);

@@ -16,8 +16,9 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Per-campaign pressure view sourced only from persistent worker REQUEST_SENT evidence.
- * This intentionally does not read reservations, the shared resilience ledger, or any provider data.
+ * Per-campaign logical collection pressure sourced from persistent worker evidence.  A validated
+ * 304 is still retained in its transport diagnostic, but is excluded here because the campaign
+ * reused its accepted local projection and released the logical collection reservation.
  */
 @Repository
 public class JdbcLiveCampaignPressureReadStore implements LiveCampaignPressureReadStore {
@@ -30,6 +31,44 @@ public class JdbcLiveCampaignPressureReadStore implements LiveCampaignPressureRe
              and diagnostic.endpoint_type = call.endpoint
             where diagnostic.campaign_id = ?
               and diagnostic.requested_at is not null
+              -- A malformed result must never hide an observed worker departure.  The positive
+              -- proof below duplicates the publication boundary deliberately, so this read model
+              -- remains fail-closed even if a row was inserted outside JdbcLiveCampaignStore.
+              and not exists (
+                  select 1
+                  from live_call_result result
+                  join live_call_dispatch dispatch on dispatch.attempt_id = result.attempt_id
+                  join live_attempt_transport_diagnostic verified
+                    on verified.attempt_id = result.attempt_id
+                   and verified.campaign_id = call.campaign_id
+                   and verified.endpoint_type = call.endpoint
+                  join live_campaign campaign on campaign.campaign_id = call.campaign_id
+                  where result.attempt_id = call.attempt_id
+                    and campaign.policy_version = 'live-v9'
+                    and result.outcome = 'NOT_MODIFIED'
+                    and result.scope = 'NONE'
+                    and result.code = 'HTTP_304'
+                    and result.successful = false
+                    and result.parser_version is null
+                    and result.projection_json is null
+                    and result.projection_version is null
+                    and result.projection_sha256 is null
+                    and result.completeness_status is null
+                    and result.completeness_score is null
+                    and result.canonical_observation_id is null
+                    and result.detail_observation_id is null
+                    and result.j5_observation_id is null
+                    and result.normalized_sha256 is null
+                    and verified.transport_phase = 'COMPLETE'
+                    and verified.response_complete = true
+                    and verified.http_status = 304
+                    and verified.requested_at is not null
+                    and verified.headers_received_at is not null
+                    and dispatch.authorized_at <= verified.requested_at
+                    and not exists (
+                        select 1 from live_call_receipt receipt where receipt.attempt_id = result.attempt_id
+                    )
+              )
             order by diagnostic.requested_at asc, call.ordinal asc
             """;
 

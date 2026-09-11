@@ -1,0 +1,116 @@
+{
+  "schema": "wo058-grouped-live-v9-capacity-evidence-v2",
+  "status": "QUALIFIED_LOCAL_REPLAY_WITH_STATED_SCOPE",
+  "labStatus": [
+    "EXPERIMENTAL",
+    "LOCAL_ONLY",
+    "NOT_PRODUCTION_APPROVED",
+    "NO_CRITICAL_DEPENDENCY"
+  ],
+  "completedAt": "2026-09-11T15:16:33.1914142Z",
+  "policyVersion": "live-v9",
+  "flywayVersion": 52,
+  "qualifiedCapacity": 10,
+  "qualificationMethod": "V8_LOCAL_LOOPBACK_UPPER_BOUND_AND_V9_OFFLINE_PRODUCTION_SCHEDULER_REPLAY_WITH_SUSPENDED_J4_ONLY",
+  "sourceUpperBound": {
+    "v8Profile": {
+      "path": "WO058-GROUPED-LIVE-V8-PROFILE-20260910.json",
+      "sha256": "4255f5327681398013dc9a0ab0f2250c7168558a399d164e299bb54b8b856de3"
+    },
+    "v8NativeEvidence": {
+      "path": "WO058-GROUPED-LIVE-V8-NATIVE-20260910.json",
+      "sha256": "f5b70709dcc51d9b40223fde1175d3c507190244562355e675689cb06e9a7fc0"
+    },
+    "assertion": "The V8 sustained local loopback measured the four-family J4 plus incidents, statistics and lineups upper bound. V9 schedules no more than that upper bound; a suspended status suppresses all J5 families and retains only J4 at 60 seconds."
+  },
+  "endpointEnvelopes": {
+    "EVENT_DETAILS": {
+      "requestMillis": 300,
+      "processingMillis": 500
+    },
+    "EVENT_INCIDENTS": {
+      "requestMillis": 300,
+      "processingMillis": 400
+    },
+    "EVENT_STATISTICS": {
+      "requestMillis": 350,
+      "processingMillis": 400
+    },
+    "EVENT_LINEUPS": {
+      "requestMillis": 300,
+      "processingMillis": 450
+    }
+  },
+  "cadence": {
+    "criticalSeconds": 60,
+    "lineupSeconds": 60,
+    "intraGroupDelayMillis": 0,
+    "interGroupDelayMillis": 500,
+    "interGroupSlotReserveMillis": 1000,
+    "requestEmissionHeadStartMillis": 500,
+    "strictGroupPhaseReservationMillis": 6000,
+    "maximumEndpointsPerGroup": 4,
+    "maximumTemporalUtilization": 1.000,
+    "minimumPostCompletionDelayMillis": 500,
+    "maximumDeparturesPer60Seconds": 45,
+    "maximumDeparturesPerHour": 2756,
+    "strictNormalPathDepartureTimestamp": "requestedNanos",
+    "strictNormalPathDepartureCadenceScope": "per-event-family",
+    "strictNormalPathMaximumDepartureIntervalSeconds": 60
+  },
+  "admission": {
+    "calculatedCapacity": 10,
+    "productionSchedulerScenarioCount": 16,
+    "productionSchedulerScenariosExecutedForThisProfile": true,
+    "profileAppliedAutomatically": false,
+    "localReplayOnly": true,
+    "weightedMinuteMillisPerMatch": 6000,
+    "weightedMinuteMillisAtQualifiedCapacity": 60000,
+    "availableMinuteMillis": 60000,
+    "hourlyCallsPerMatch": 248,
+    "hourlyHeadroomCallsAtQualifiedCapacity": 2480,
+    "calculation": "V9 admission evaluates min(10, floor((2756*9/10)/248), floor(60000/(sum(exchangeEnvelope + 500 ms terminal fence) + 1000 ms static scheduling reserve))) and executes all 16 normal four-family production scheduler scenarios. The suspended J4-only path is separately covered by GroupedLiveScheduleV9Test and does not increase this upper bound."
+  },
+  "tenMatchHourlyBoundary": {
+    "ordinaryCallsPerHourPerMatch": 240,
+    "initialCallsPerMatch": 4,
+    "finalCallsPerMatch": 4,
+    "totalCallsPerHourPerMatch": 248,
+    "callsForTenMatches": 2480,
+    "ninetyPercentOfMaximumHourlyDepartures": 2480,
+    "remainingCallsAtIntegerNinetyPercentBoundary": 0
+  },
+  "budgets": {
+    "maximumCallsPerEvent": 2500,
+    "maximumCallsPerCampaign": 20000,
+    "maximumDurationMinutes": 240,
+    "maximumRawBytes": 15728640000,
+    "reservedFinalCallsPerActiveEvent": 4
+  },
+  "v9SchedulingControls": {
+    "finalResultOnlyStopsBeforeJ5": true,
+    "statisticsAndIncidentsSuppressedBeforeEligibleStatus": true,
+    "lineupsSuppressedWhenPlayerStatisticsExplicitlyFalse": true,
+    "halftimeQuietPeriodMinutes": 15,
+    "terminalStatistics404RecheckMaximum": 1,
+    "suspendedJ4OnlyRecheckSeconds": 60,
+    "suspendedSuppressesAllJ5Families": true,
+    "suspendedStatusReasonProjected": true
+  },
+  "productionClassSha256": {
+    "com.bettingproject.sofascorelocal.application.live.LiveAdmissionPolicy": "3bca981a21b14ec4c4b809e4861e9b2f01c6c5a1adfbe4268f99cb794dbf661d",
+    "com.bettingproject.sofascorelocal.application.live.GroupedLiveAdmissionSimulationV9": "fba1dcbff3996e97c6b24c2fc771380842991388595a5ed139525772928abb53",
+    "com.bettingproject.sofascorelocal.application.live.LiveSchedule": "38af7cc3e909d88c1f1705487ae505f8f0af6ecd9818630a942af7b81d39acce",
+    "com.bettingproject.sofascorelocal.application.live.GroupedLiveScheduleV9": "a72e74c09a8c966d36758b038caadc2c9d53ea026b9d6648d0ec94fa83c2a7f8",
+    "com.bettingproject.sofascorelocal.domain.live.LiveCampaignData$GroupedAdmissionProfile": "f803973f03feeef102c351e8da8e36e2dfefd12c5cfbd39b17b13cad242bb43e",
+    "com.bettingproject.sofascorelocal.domain.live.LiveJ4ControlFacts": "e6efdbdb5214d63e4e84f3adee19c957aeae34322553110ed68e9e086c32f086",
+    "com.bettingproject.sofascorelocal.adapter.sofascore.live.LivePayloadNormalizer": "e83ae7649194194326af43130449baa13a6a576dea3d2e899850db617dab25f0"
+  },
+  "limitations": [
+    "This is a local upper-bound qualification only; it does not establish provider acceptance, an IP threshold or a provider quota.",
+    "No provider endpoint, browser, operator database or live campaign was started to create or verify this profile.",
+    "The profile remains inactive until an operator deliberately supplies its own V9 SHA and all eight envelopes to the local launcher after review.",
+    "The source V8 SHA is evidence provenance only. It is not accepted as, copied to, or used as the V9 qualification SHA.",
+    "Suspended-state coverage proves a local J4-only reduction path; it does not characterize any provider suspension reason or acceptance behaviour."
+  ]
+}

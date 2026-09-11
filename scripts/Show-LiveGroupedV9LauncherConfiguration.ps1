@@ -12,7 +12,7 @@ function Require([bool]$Condition, [string]$Message) {
 }
 
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
-$profilePath = Join-Path $repositoryRoot 'docs\validation\WO058-GROUPED-LIVE-V9-PROFILE-20260911.json'
+$profilePath = Join-Path $repositoryRoot 'docs\validation\WO058-GROUPED-LIVE-V9-SUSPENDED-20260911.json'
 Require (Test-Path -LiteralPath $profilePath -PathType Leaf) 'V9 profile evidence is missing.'
 
 $expectedProfilePath = [System.IO.Path]::GetFullPath($profilePath)

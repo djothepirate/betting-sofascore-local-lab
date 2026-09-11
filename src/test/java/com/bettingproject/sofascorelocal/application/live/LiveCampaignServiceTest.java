@@ -1567,6 +1567,31 @@ class LiveCampaignServiceTest {
         return event;
     }
 
+    @Test
+    void uncorrelatedV9NotModifiedResponseStopsSafelyWithoutSavingOrNormalizingABody() throws Exception {
+        try (Harness h = new Harness(false, "live-v9", 1, true)) {
+            h.reply = request -> response("", 304);
+
+            h.launch();
+            h.awaitFinished();
+
+            assertThat(h.dispatched).singleElement().satisfies(request -> {
+                assertThat(request.endpoint()).isEqualTo(EVENT_DETAILS);
+                assertThat(request.ifNoneMatch()).isEmpty();
+            });
+            assertThat(h.receipts).isEmpty();
+            verify(h.store, never()).saveReceipt(any(), any(), any());
+            verifyNoInteractions(h.processor);
+            assertThat(h.publications).singleElement().satisfies(publication -> {
+                assertThat(publication.outcome()).isEqualTo("FAILED");
+                assertThat(publication.scope()).isEqualTo("CAMPAIGN");
+                assertThat(publication.code()).isEqualTo("CONDITIONAL_RESPONSE_UNVERIFIABLE");
+                assertThat(publication.successful()).isFalse();
+            });
+            assertThat(h.eventStates.get(id(A))).isEqualTo("STOPPED_CONDITIONAL_RESPONSE_UNVERIFIABLE");
+        }
+    }
+
     private static PlaywrightProviderResponse normalFinishedReply(PlaywrightProviderRequest request) {
         if (request.endpoint() != EVENT_DETAILS) return response("unavailable", 404);
         return response("""

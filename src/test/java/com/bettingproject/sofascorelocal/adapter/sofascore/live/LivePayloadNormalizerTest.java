@@ -5,6 +5,7 @@ import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.domain.live.LiveJ4ControlFacts.BooleanFact;
 import com.bettingproject.sofascorelocal.domain.live.LiveJ4ControlFacts.DetailIdFact;
 import com.bettingproject.sofascorelocal.domain.live.LiveJ4ControlFacts.StatusDescription;
+import com.bettingproject.sofascorelocal.domain.live.LiveJ4ControlFacts.TextPresence;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -38,7 +39,7 @@ class LivePayloadNormalizerTest {
         assertThat(json(zero).at("/homeScore/value/period1/value").intValue()).isEqualTo(2);
         assertThat(json(zero).at("/homeScore/value/penalties/value").intValue()).isEqualTo(4);
         assertThat(zero.parserVersion()).isEqualTo("event-details-v4");
-        assertThat(zero.projectionVersion()).isEqualTo("j4-live-score-v3");
+        assertThat(zero.projectionVersion()).isEqualTo("j4-live-score-v4");
     }
 
     @Test
@@ -86,6 +87,41 @@ class LivePayloadNormalizerTest {
         assertThat(json(result).at("/hasEventPlayerStatistics/value").booleanValue()).isFalse();
         assertThat(json(result).at("/tournamentHasEventPlayerStatistics/value").booleanValue()).isTrue();
         assertThat(json(result).at("/statusDescription/value").stringValue()).isEqualTo("halftime");
+    }
+
+    @Test
+    void retainsTheJ4SuspensionReasonWithItsDistinctJsonPresence() {
+        var value = normalize(SofascoreEndpointType.EVENT_DETAILS, """
+                {"event":{"id":17000001,"startTimestamp":1788796800,
+                "homeTeam":{"id":1,"name":"Home"},"awayTeam":{"id":2,"name":"Away"},
+                "status":{"type":"suspended"},"statusReason":"Weather conditions"}}
+                """, 1, RECEIVED);
+        var absent = details("");
+        var explicitNull = details(",\"statusReason\":null");
+
+        assertThat(value.status()).isEqualTo(LiveNormalizedPayload.Status.PARSED);
+        assertThat(value.j4Controls()).hasValueSatisfying(controls -> {
+            assertThat(controls.statusReason().presence()).isEqualTo(TextPresence.VALUE);
+            assertThat(controls.statusReason().value()).isEqualTo("Weather conditions");
+        });
+        assertThat(json(value).at("/statusReason/presence").stringValue()).isEqualTo("VALUE");
+        assertThat(json(value).at("/statusReason/value").stringValue()).isEqualTo("Weather conditions");
+        assertThat(absent.j4Controls()).hasValueSatisfying(controls ->
+                assertThat(controls.statusReason().presence()).isEqualTo(TextPresence.ABSENT));
+        assertThat(json(absent).at("/statusReason/presence").stringValue()).isEqualTo("ABSENT");
+        assertThat(explicitNull.j4Controls()).hasValueSatisfying(controls ->
+                assertThat(controls.statusReason().presence()).isEqualTo(TextPresence.NULL));
+        assertThat(json(explicitNull).at("/statusReason/presence").stringValue()).isEqualTo("NULL");
+    }
+
+    @Test
+    void rejectsAnIncompatibleJ4SuspensionReasonWithoutPublishingPartialDetails() {
+        var result = details(",\"statusReason\":42");
+
+        assertThat(result.status()).isEqualTo(LiveNormalizedPayload.Status.SCHEMA_INCOMPATIBLE);
+        assertThat(result.code()).isEqualTo("LIVE_J4_STATUS_REASON_INCOMPATIBLE");
+        assertThat(result.details()).isEmpty();
+        assertThat(result.j4Controls()).isEmpty();
     }
 
     @Test

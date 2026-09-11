@@ -190,7 +190,9 @@ L'utilisation des observations locales peut éviter une collecte initiale redond
 si une politique de réutilisation explicite et bornée l'autorise. Les données réutilisées
 gardent leur réception d'origine ; aucune nouvelle occurrence fournisseur n'est fabriquée.
 Un mécanisme HTTP conditionnel éventuel devra être examiné séparément : il peut réduire
-les octets, mais chaque 304 reste un appel réseau et aucun support fournisseur n'est supposé.
+les octets. Un `304` constitue une preuve technique de transport ; dans la règle V9 introduite
+ultérieurement, une preuve locale complète l'exclut des collectes fonctionnelles, du budget et
+de la pression, le cache local restant la source des données. Aucun support fournisseur n'est supposé.
 
 ### Lot D — protéger durablement après refus et conserver une consultation utile
 

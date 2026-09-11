@@ -94,6 +94,7 @@
     [
       ["Dernière tentative réservée", "attempted"], ["Retard à l’autorisation transport", "delay"],
       ["Dernière réception", "received"], ["Dernier succès", "successful"],
+      ["Dernière revalidation du cache (304)", "cache-revalidated"],
       ["Dernier changement", "changed"], ["Âge depuis réception", "age"],
       ["Cadence cible", "family-interval"], ["Prochaine collecte", "family-next-due"],
       ["Retard de collecte", "family-lateness"],
@@ -308,6 +309,7 @@
       ? "Dernière donnée lisible conservée : elle ne décrit pas la dernière tentative." : " ");
     text(section, "[data-live-received]", family.lastReceivedAt);
     text(section, "[data-live-successful]", family.lastSuccessfulAt);
+    text(section, "[data-live-cache-revalidated]", family.lastCacheRevalidatedAt);
     text(section, "[data-live-changed]", family.lastChangedAt);
     text(section, "[data-live-family-interval]", family.schedule ? `${family.schedule.intervalSeconds} s` : "—");
     text(section, "[data-live-family-next-due]", family.schedule
@@ -488,6 +490,11 @@
         if (canReplaceCanonical) {
           text(node, "[data-live-sport-status]", event.sportStatusLabel || event.sportStatus);
           text(node, "[data-live-score]", event.score);
+          const statusReasonRow = node.querySelector("[data-live-status-reason-row]");
+          if (statusReasonRow) {
+            statusReasonRow.hidden = !event.statusReason;
+            text(statusReasonRow, "[data-live-status-reason]", event.statusReason);
+          }
           if (Number.isFinite(incomingAt)) node.dataset.liveCanonicalReceivedAt = event.sourceReceivedAt;
           if (event.sourceSnapshotId !== null && event.sourceSnapshotId !== undefined) {
             text(node, "[data-live-source-ref]", `snapshot:${event.sourceSnapshotId}`);

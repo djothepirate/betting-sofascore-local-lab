@@ -126,7 +126,8 @@ final class GroupedLiveAdmissionSimulationV9 {
         return new LiveJ4ControlFacts(LiveJ4ControlFacts.BooleanFact.FALSE,
                 LiveJ4ControlFacts.DetailIdFact.ONE, LiveJ4ControlFacts.BooleanFact.TRUE,
                 LiveJ4ControlFacts.BooleanFact.TRUE,
-                LiveJ4ControlFacts.StatusDescription.OTHER);
+                LiveJ4ControlFacts.StatusDescription.OTHER,
+                LiveJ4ControlFacts.TextFact.absent());
     }
 
     /**

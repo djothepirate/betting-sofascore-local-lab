@@ -324,7 +324,8 @@ class LiveCampaignPresentationTest {
             "STOPPED_FINAL_RESULT_ONLY|Résultat final uniquement signalé par J4 ; suivi arrêté avant les familles J5.",
             "STOPPED_DETAIL_ID_UNSUPPORTED|Identifiant de détail J4 non pris en charge ; suivi arrêté sans appel J5.",
             "WAITING_HALFTIME_HOLD|Mi-temps observée ; J4 reprendra après la période de maintien.",
-            "WAITING_HALFTIME_RECHECK|Mi-temps toujours observée ; vérification J4 maintenue toutes les minutes avant la reprise."
+            "WAITING_HALFTIME_RECHECK|Mi-temps toujours observée ; vérification J4 maintenue toutes les minutes avant la reprise.",
+            "WAITING_SUSPENDED_RECHECK|Rencontre suspendue ; vérification J4 maintenue toutes les minutes, sans appel J5."
     })
     void presentsV9ControlStatesWithFrenchOperatorLabels(String reason, String expected) {
         var base = campaign(List.of(), List.of());
@@ -403,6 +404,33 @@ class LiveCampaignPresentationTest {
         assertThat(event.score()).isEqualTo("—");
         assertThat(event.sportStatus()).isEqualTo("inprogress");
         assertThat(event.sportStatusLabel()).isEqualTo("inprogress");
+    }
+
+    @Test
+    void exposesTheJ4SuspensionReasonOnlyWhileItsLatestSuccessfulStatusIsSuspended() {
+        UUID suspendedAttempt = UUID.randomUUID();
+        String projection = """
+                {"statusReason":{"presence":"VALUE","value":"Terrain impraticable"}}
+                """;
+        var suspendedResult = new Result(suspendedAttempt, new Publication("PARSED", "EVENT", "OK", START,
+                "event-details-v4", true, "WAITING_SUSPENDED_RECHECK", "suspended", projection,
+                "j4-live-score-v4", "COMPLETE", 100), NormalizedReferences.none());
+
+        var suspended = presentation.state(campaign(List.of(cursor(SofascoreEndpointType.EVENT_DETAILS, suspendedResult)), List.of()))
+                .events().getFirst();
+
+        assertThat(suspended.sportStatus()).isEqualTo("suspended");
+        assertThat(suspended.statusReason()).isEqualTo("Terrain impraticable");
+
+        UUID resumedAttempt = UUID.randomUUID();
+        var resumedResult = new Result(resumedAttempt, new Publication("PARSED", "EVENT", "OK", START.plusSeconds(60),
+                "event-details-v4", true, "COLLECTING", "inprogress", projection,
+                "j4-live-score-v4", "COMPLETE", 100), NormalizedReferences.none());
+        var resumed = presentation.state(campaign(List.of(cursor(SofascoreEndpointType.EVENT_DETAILS, resumedResult)), List.of()))
+                .events().getFirst();
+
+        assertThat(resumed.sportStatus()).isEqualTo("inprogress");
+        assertThat(resumed.statusReason()).isNull();
     }
 
     @ParameterizedTest
@@ -869,6 +897,105 @@ class LiveCampaignPresentationTest {
         assertThat(projected.pressure().observedDepartures()).isZero();
     }
 
+    @Test
+    void strictLiveV9NotModifiedRevalidatesTheCacheWithoutReplacingThe2xxDataTimes() {
+        UUID successfulId = UUID.randomUUID();
+        UUID revalidatedId = UUID.randomUUID();
+        Instant revalidatedAt = START.plusSeconds(121);
+        var successful = new Result(successfulId, new Publication("PARSED", "EVENT", "OK", START,
+                "event-details-v4", true, "COLLECTING"), NormalizedReferences.none());
+        var notModified = new Result(revalidatedId, new Publication("NOT_MODIFIED", "NONE", "HTTP_304",
+                revalidatedAt.plusSeconds(10), null, false, "COLLECTING"), NormalizedReferences.none());
+        var cursor = new FamilyCursor(SofascoreEndpointType.EVENT_DETAILS, revalidatedId, successfulId,
+                successfulId, successfulId, START, START, START, NormalizedReferences.none(), notModified,
+                successful, new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS, START.plusSeconds(180), 60, 0));
+        var base = campaign(List.of(cursor), List.of(
+                attempt(successfulId, SofascoreEndpointType.EVENT_DETAILS, 1, START, successful),
+                conditionalAttempt(revalidatedId, SofascoreEndpointType.EVENT_DETAILS, 2, revalidatedAt,
+                        revalidatedAt.minusMillis(200), notModified)));
+
+        var diagnostics = mock(LiveDiagnosticStore.class);
+        var proof = new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.COMPLETE, 30_000,
+                revalidatedAt.minusMillis(200), revalidatedAt, 304, null, true, null, null, false);
+        when(diagnostics.findTransport(CAMPAIGN, revalidatedId)).thenReturn(Optional.of(proof));
+        var family = new LiveCampaignPresentation(events, data, null,
+                Clock.fixed(START.plusSeconds(220), ZoneOffset.UTC), diagnostics)
+                .state(withGroupedPolicy(base, "live-v9")).events().getFirst().families().getFirst();
+
+        assertThat(family.outcome()).isEqualTo("NOT_MODIFIED");
+        assertThat(family.code()).isEqualTo("HTTP_304");
+        assertThat(family.lastReceivedAt()).isEqualTo(START);
+        assertThat(family.lastSuccessfulAt()).isEqualTo(START);
+        assertThat(family.lastCacheRevalidatedAt()).isEqualTo(revalidatedAt);
+        assertThat(family.lastChangedAt()).isEqualTo(START);
+        assertThat(family.freshness().state()).isEqualTo("FRESH");
+        assertThat(family.freshness().label()).isEqualTo(
+                "Dans l’intervalle attendu ; cache revalidé sans nouvelle donnée.");
+        assertThat(family.freshness().receivedAgeSeconds()).isEqualTo(220L);
+        verify(diagnostics).findTransport(CAMPAIGN, revalidatedId);
+    }
+
+    @Test
+    void onlyAnExactLiveV9NotModifiedWithoutNewReferencesCanRefreshTheCacheView() {
+        UUID successfulId = UUID.randomUUID();
+        UUID notModifiedId = UUID.randomUUID();
+        Instant revalidatedAt = START.plusSeconds(121);
+        var successful = new Result(successfulId, new Publication("PARSED", "EVENT", "OK", START,
+                "event-details-v4", true, "COLLECTING"), NormalizedReferences.none());
+        var unexpectedReferences = new NormalizedReferences(10L, null, null, "a".repeat(64));
+        var notModified = new Result(notModifiedId, new Publication("NOT_MODIFIED", "NONE", "HTTP_304",
+                revalidatedAt, null, false, "COLLECTING"), unexpectedReferences);
+        var cursor = new FamilyCursor(SofascoreEndpointType.EVENT_DETAILS, notModifiedId, successfulId,
+                successfulId, successfulId, START, START, START, NormalizedReferences.none(), notModified,
+                successful, new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS, START.plusSeconds(180), 60, 0));
+        var base = campaign(List.of(cursor), List.of(
+                attempt(successfulId, SofascoreEndpointType.EVENT_DETAILS, 1, START, successful),
+                conditionalAttempt(notModifiedId, SofascoreEndpointType.EVENT_DETAILS, 2, revalidatedAt,
+                        revalidatedAt.minusMillis(200), notModified)));
+
+        var v9 = new LiveCampaignPresentation(events, data, Clock.fixed(START.plusSeconds(220), ZoneOffset.UTC))
+                .state(withGroupedPolicy(base, "live-v9")).events().getFirst().families().getFirst();
+        var v8 = new LiveCampaignPresentation(events, data, Clock.fixed(START.plusSeconds(220), ZoneOffset.UTC))
+                .state(withGroupedPolicy(base, "live-v8")).events().getFirst().families().getFirst();
+
+        assertThat(v9.lastCacheRevalidatedAt()).isNull();
+        assertThat(v9.freshness().state()).isEqualTo("STALE");
+        assertThat(v8.lastCacheRevalidatedAt()).isNull();
+        assertThat(v8.freshness().state()).isEqualTo("STALE");
+    }
+
+    @Test
+    void cacheRevalidationFreshnessRequiresAComplete304TransportProof() {
+        UUID successfulId = UUID.randomUUID();
+        UUID notModifiedId = UUID.randomUUID();
+        Instant revalidatedAt = START.plusSeconds(121);
+        var successful = new Result(successfulId, new Publication("PARSED", "EVENT", "OK", START,
+                "event-details-v4", true, "COLLECTING"), NormalizedReferences.none());
+        var notModified = new Result(notModifiedId, new Publication("NOT_MODIFIED", "NONE", "HTTP_304",
+                revalidatedAt, null, false, "COLLECTING"), NormalizedReferences.none());
+        var cursor = new FamilyCursor(SofascoreEndpointType.EVENT_DETAILS, notModifiedId, successfulId,
+                successfulId, successfulId, START, START, START, NormalizedReferences.none(), notModified,
+                successful, new FamilySchedule(SofascoreEndpointType.EVENT_DETAILS, START.plusSeconds(180), 60, 0));
+        var base = campaign(List.of(cursor), List.of(
+                attempt(successfulId, SofascoreEndpointType.EVENT_DETAILS, 1, START, successful),
+                conditionalAttempt(notModifiedId, SofascoreEndpointType.EVENT_DETAILS, 2, revalidatedAt,
+                        revalidatedAt.minusMillis(200), notModified)));
+        var diagnostics = mock(LiveDiagnosticStore.class);
+        var headersOnly = new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.HEADERS_RECEIVED,
+                30_000, revalidatedAt.minusMillis(200), revalidatedAt, 304, null, false);
+        when(diagnostics.findTransport(CAMPAIGN, notModifiedId)).thenReturn(Optional.of(headersOnly));
+
+        var family = new LiveCampaignPresentation(events, data, null,
+                Clock.fixed(START.plusSeconds(220), ZoneOffset.UTC), diagnostics)
+                .state(withGroupedPolicy(base, "live-v9")).events().getFirst().families().getFirst();
+
+        assertThat(family.lastCacheRevalidatedAt()).isNull();
+        assertThat(family.freshness().state()).isEqualTo("STALE");
+        assertThat(family.lastReceivedAt()).isEqualTo(START);
+        assertThat(family.lastSuccessfulAt()).isEqualTo(START);
+        verify(diagnostics).findTransport(CAMPAIGN, notModifiedId);
+    }
+
     @ParameterizedTest @CsvSource({"INTERRUPTED,COLLECTING","RUNNING,STOPPED_POSTPONED","COMPLETED,FINISHED_CONFIRMED"})
     void terminalCollectionNeverAdvertisesAnOldFamilyDeadline(String campaignState,String eventState) {
         var base=campaign(List.of(),List.of());
@@ -898,6 +1025,13 @@ class LiveCampaignPresentationTest {
         return new AttemptView(new ReservedAttempt(id, EVENT, 900001L, endpoint, snapshot,
                 "NORMAL", at.minusMillis(12), at.minusMillis(12), false), at,
                 snapshot, snapshot, at, result);
+    }
+
+    private static AttemptView conditionalAttempt(UUID id, SofascoreEndpointType endpoint, long cycle,
+                                                  Instant reservedAt, Instant dispatchAuthorizedAt, Result result) {
+        return new AttemptView(new ReservedAttempt(id, EVENT, 900001L, endpoint, cycle,
+                "NORMAL", reservedAt.minusMillis(12), reservedAt.minusMillis(12), false), dispatchAuthorizedAt,
+                null, null, null, result);
     }
 
     private static FamilyCursor cursor(SofascoreEndpointType endpoint, Result result) {

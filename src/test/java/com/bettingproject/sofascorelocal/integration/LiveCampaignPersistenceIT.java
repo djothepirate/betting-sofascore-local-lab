@@ -6,6 +6,7 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.live.LivePayloadNorma
 import com.bettingproject.sofascorelocal.application.live.LiveProcessedResponse;
 import com.bettingproject.sofascorelocal.application.live.LiveResponseProcessor;
 import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightProviderResponse;
+import com.bettingproject.sofascorelocal.application.network.playwright.PlaywrightTransportDiagnostic;
 import com.bettingproject.sofascorelocal.domain.event.*;
 import com.bettingproject.sofascorelocal.domain.eventdetails.*;
 import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.*;
@@ -272,6 +273,13 @@ class LiveCampaignPersistenceIT {
                         new GroupedAdmissionProfile(syntheticGroupedEnvelopes(),"8".repeat(64),"live-v8")),Duration.ofSeconds(60));
     }
 
+    private static Manifest v9Manifest(List<Target> targets) {
+        return new Manifest(UUID.randomUUID(),"9".repeat(64),"live-v9",T0,T0.plusSeconds(300),Duration.ofHours(4),
+                2500,20000,15_728_640_000L,10,targets,
+                new AdmissionProfile(Duration.ofSeconds(1),Duration.ofSeconds(1),"b".repeat(64),
+                        new GroupedAdmissionProfile(syntheticGroupedEnvelopes(),"9".repeat(64),"live-v9")),Duration.ofSeconds(60));
+    }
+
     @Test
     void v7UpgradePreservesFrozenV6AndPersistsDistinctMinuteLineupsAndPrematchGroups() {
         Fixture f=fixture("46"); Target target=f.seed(EVENT);
@@ -478,6 +486,115 @@ class LiveCampaignPersistenceIT {
             insertGroupedPolicyRow(f,reserveOverflow,60,60,500_000_000L,reserveOnlyOverflow);
         })).hasMessageContaining("live-v8 grouped envelopes plus worker-start reserve exceed the sixty-second capacity window");
         assertThat(f.jdbc.queryForObject("select count(*) from live_campaign where campaign_id=?",Long.class,reserveOverflow)).isZero();
+    }
+
+    @Test
+    void validatedV9NotModifiedReleasesOnlyTheLogicalCollectionBudget() {
+        Fixture f=fixture("52"); Target target=f.seed(EVENT); Manifest manifest=v9Manifest(List.of(target));
+        Ownership ownership=f.start(manifest); UUID group=UUID.randomUUID();
+        ReservedAttempt attempt=f.store.reserveAttempt(groupedRequest(ownership,target,0,
+                SofascoreEndpointType.EVENT_DETAILS,group,0,0)).orElseThrow();
+        Instant requested=T0.plusSeconds(10),received=requested.plusMillis(100);
+        f.store.recordDispatch(ownership,attempt.attemptId(),requested);
+        f.diagnostics.recordTransport(manifest.campaignId(),attempt.attemptId(),SofascoreEndpointType.EVENT_DETAILS,
+                new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.COMPLETE,30_000,
+                        requested,received,304,null,true,null,null,false));
+        Publication noChange=new Publication("NOT_MODIFIED","NONE","HTTP_304",received,null,false,
+                "COLLECTING","inprogress",null,null,null,null);
+
+        Result result=f.store.publishResult(ownership,attempt.attemptId(),noChange,NormalizedReferences::none);
+        CampaignView after=f.store.find(manifest.campaignId()).orElseThrow();
+        assertThat(result.publication()).isEqualTo(noChange);
+        assertThat(after.reservedCalls()).isZero();
+        assertThat(after.events().getFirst().reservedCalls()).isZero();
+        assertThat(after.attempts()).singleElement().satisfies(saved -> {
+            assertThat(saved.attempt()).isEqualTo(attempt);
+            assertThat(saved.dispatchAuthorizedAt()).isEqualTo(requested);
+            assertThat(saved.receivedAt()).isNull();
+            assertThat(saved.result()).isEqualTo(result);
+        });
+        assertThat(f.jdbc.queryForObject("select count(*) from live_call_receipt where attempt_id=?",Long.class,
+                attempt.attemptId())).isZero();
+        assertThat(f.diagnostics.findTransport(manifest.campaignId(),attempt.attemptId())).hasValueSatisfying(diagnostic -> {
+            assertThat(diagnostic.httpStatus()).isEqualTo(304);
+            assertThat(diagnostic.responseComplete()).isTrue();
+        });
+        assertThat(new JdbcLiveCampaignPressureReadStore(f.jdbc).read(manifest.campaignId()).observedDepartures()).isZero();
+
+        // The append-only result is the exact-once release proof; a replay neither creates a
+        // receipt nor releases the same reservation a second time.
+        assertThat(f.store.publishResult(ownership,attempt.attemptId(),noChange,NormalizedReferences::none)).isEqualTo(result);
+        assertThat(f.store.find(manifest.campaignId()).orElseThrow().reservedCalls()).isZero();
+        assertThat(f.store.reserveAttempt(groupedRequest(ownership,target,1,SofascoreEndpointType.EVENT_INCIDENTS,
+                UUID.randomUUID(),1,0))).isPresent();
+
+        ReservedAttempt unverified=f.store.reserveAttempt(groupedRequest(ownership,target,2,
+                SofascoreEndpointType.EVENT_STATISTICS,UUID.randomUUID(),2,0)).orElseThrow();
+        assertThatThrownBy(() -> f.store.publishResult(ownership,unverified.attemptId(),noChange,
+                NormalizedReferences::none)).hasMessageContaining("LIVE_NOT_MODIFIED_TRANSPORT_UNVERIFIED");
+        ReservedAttempt noDispatch=f.store.reserveAttempt(groupedRequest(ownership,target,3,
+                SofascoreEndpointType.EVENT_LINEUPS,UUID.randomUUID(),3,0)).orElseThrow();
+        f.diagnostics.recordTransport(manifest.campaignId(),noDispatch.attemptId(),SofascoreEndpointType.EVENT_LINEUPS,
+                new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.COMPLETE,30_000,
+                        requested,received,304,null,true,null,null,false));
+        assertThatThrownBy(() -> f.store.publishResult(ownership,noDispatch.attemptId(),noChange,
+                NormalizedReferences::none)).hasMessageContaining("LIVE_NOT_MODIFIED_TRANSPORT_UNVERIFIED");
+        assertThat(f.store.find(manifest.campaignId()).orElseThrow().reservedCalls()).isEqualTo(3);
+    }
+
+    @Test
+    void pressureCountsAManuallyInsertedUnverifiedV9NotModifiedResult() {
+        Fixture f=fixture("52"); Target target=f.seed(EVENT); Manifest manifest=v9Manifest(List.of(target));
+        Ownership ownership=f.start(manifest); UUID group=UUID.randomUUID();
+        ReservedAttempt attempt=f.store.reserveAttempt(groupedRequest(ownership,target,0,
+                SofascoreEndpointType.EVENT_DETAILS,group,0,0)).orElseThrow();
+        Instant requested=T0.plusSeconds(10),received=requested.plusMillis(100);
+
+        // This simulates a corrupt direct ledger write that bypassed the publication transaction:
+        // its result has the 304 shape, but no dispatch authorization proves it was eligible.
+        f.diagnostics.recordTransport(manifest.campaignId(),attempt.attemptId(),SofascoreEndpointType.EVENT_DETAILS,
+                new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.COMPLETE,30_000,
+                        requested,received,304,null,true,null,null,false));
+        f.jdbc.update("""
+                insert into live_call_result(attempt_id,outcome,scope,code,resolved_at,successful)
+                values (?,'NOT_MODIFIED','NONE','HTTP_304',?,false)
+                """,attempt.attemptId(),java.sql.Timestamp.from(received));
+
+        var pressure=new JdbcLiveCampaignPressureReadStore(f.jdbc).read(manifest.campaignId());
+        assertThat(pressure.observedDepartures()).isOne();
+        assertThat(pressure.families()).filteredOn(family -> family.endpoint()==SofascoreEndpointType.EVENT_DETAILS)
+                .singleElement().extracting(LiveCampaignPressureReadStore.Family::observedDepartures).isEqualTo(1);
+        assertThat(f.store.find(manifest.campaignId()).orElseThrow().reservedCalls()).isOne();
+    }
+
+    @Test
+    void validatedV9NotModifiedFinalCycleReleasesLogicalBudgetButKeepsThePhysicalFinalSlot() {
+        Fixture f=fixture("52"); Target target=f.seed(EVENT); Manifest manifest=v9Manifest(List.of(target));
+        Ownership ownership=f.start(manifest); Instant requested=T0.plusSeconds(10),received=requested.plusMillis(100);
+        ReservedAttempt attempt=f.store.reserveAttempt(new AttemptRequest(ownership,UUID.randomUUID(),target.canonicalEventId(),0,
+                SofascoreEndpointType.EVENT_DETAILS,"J4_FINAL",requested,requested,true,UUID.randomUUID(),0,0)).orElseThrow();
+        f.store.recordDispatch(ownership,attempt.attemptId(),requested);
+        f.diagnostics.recordTransport(manifest.campaignId(),attempt.attemptId(),SofascoreEndpointType.EVENT_DETAILS,
+                new PlaywrightTransportDiagnostic(PlaywrightTransportDiagnostic.Phase.COMPLETE,30_000,
+                        requested,received,304,null,true,null,null,false));
+        Publication noChange=new Publication("NOT_MODIFIED","NONE","HTTP_304",received,null,false,
+                "COLLECTING","inprogress",null,null,null,null);
+
+        f.store.publishResult(ownership,attempt.attemptId(),noChange,NormalizedReferences::none);
+
+        CampaignView after=f.store.find(manifest.campaignId()).orElseThrow();
+        assertThat(after.reservedCalls()).isZero();
+        assertThat(after.events().getFirst().reservedCalls()).isZero();
+        assertThat(f.jdbc.queryForObject("select count(*) from live_call where campaign_id=? and final_cycle",Long.class,
+                manifest.campaignId())).isEqualTo(1L);
+        assertThat(f.jdbc.queryForObject("select final_cycle from live_call where attempt_id=?",Boolean.class,
+                attempt.attemptId())).isTrue();
+        assertThatThrownBy(() -> f.store.reserveAttempt(new AttemptRequest(ownership,UUID.randomUUID(),target.canonicalEventId(),1,
+                SofascoreEndpointType.EVENT_DETAILS,"J4_FINAL",requested.plusSeconds(60),requested.plusSeconds(60),true,
+                UUID.randomUUID(),1,0))).isInstanceOf(org.springframework.dao.DuplicateKeyException.class);
+        assertThat(f.jdbc.queryForObject("select count(*) from live_call where campaign_id=? and final_cycle",Long.class,
+                manifest.campaignId())).isEqualTo(1L);
+        assertThat(new JdbcLiveCampaignPressureReadStore(f.jdbc).read(manifest.campaignId()).observedDepartures()).isZero();
     }
 
     @Test
@@ -1514,6 +1631,7 @@ class LiveCampaignPersistenceIT {
     private static final class Fixture {
         final DriverManagerDataSource ds; final JdbcTemplate jdbc; final RawManualCallSnapshotStore rawStore;
         final CanonicalEventStore canonical; final EventDetailsStore details; final LiveCampaignStore store; final ProviderCampaignGuardStore guard;
+        final LiveDiagnosticStore diagnostics;
         final J6RawPayloadRetentionStore retention;
         final LiveResponseProcessor processor;
         Fixture(DriverManagerDataSource ds) {
@@ -1523,6 +1641,7 @@ class LiveCampaignPersistenceIT {
             details=transactional(new JdbcEventDetailsStore(named),EventDetailsStore.class,tx);
             store=transactional(new JdbcLiveCampaignStore(jdbc,rawStore),LiveCampaignStore.class,tx);
             guard=transactional(new JdbcProviderCampaignGuardStore(jdbc),ProviderCampaignGuardStore.class,tx);
+            diagnostics=transactional(new JdbcLiveDiagnosticStore(jdbc),LiveDiagnosticStore.class,tx);
             retention=transactional(new JdbcJ6RawPayloadRetentionStore(named),J6RawPayloadRetentionStore.class,tx);
             J5EventDataStore data = transactional(new JdbcJ5EventDataStore(named), J5EventDataStore.class, tx);
             processor = transactional(new LiveResponseProcessor(canonical, details, data, rawStore), LiveResponseProcessor.class, tx);

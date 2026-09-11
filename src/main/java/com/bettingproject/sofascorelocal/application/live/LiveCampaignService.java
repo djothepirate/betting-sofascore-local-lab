@@ -141,7 +141,8 @@ public final class LiveCampaignService {
         String material = id + "|live-v9|" + now + "|" + properties.getDuration() + "|2500|20000|" + bytes
                 + "|" + selectionMaximum() + "|" + profile + "|critical=60|lineups=J4-capability-gated|prematch=J4,optional-lineups,T-5quiet,T0J4each60"
                 + "|finalResultOnly=true=stop-no-J5|detailId=1=normal-J5|detailId=absent=statistics-404x3-suppress-plus-terminal-once"
-                + "|status=notstarted,postponed,delayed:no-statistics-incidents|status=inprogress,interrupted,canceled,finished:statistics-incidents"
+                + "|status=notstarted,postponed,delayed:no-statistics-incidents|status=suspended:J4-only@60s-no-J5-until-inprogress"
+                + "|status=inprogress,interrupted,canceled,finished:statistics-incidents"
                 + "|halftime=J4-only-after-15m-then-every-60s-until-2nd-half"
                 + "|intra=0|inter=0.5|sequential|maxGroup=4|order=J4,incidents,statistics,lineups"
                 + "|initialWaveHeadroom=4xN-local-under-exclusive-lease-not-reserved"
@@ -763,6 +764,10 @@ public final class LiveCampaignService {
                         attempt.attemptId(),due.endpoint(),null);
                 if(s.firstFailure.compareAndSet(null,cause)) persistDiagnostics(s);
             }
+            if (response.httpStatus() == 304) {
+                completeNotModified(s, transport, due, attempt, response);
+                return;
+            }
             s.phase = RAW_SAVE;
             String parser = due.endpoint() == SofascoreEndpointType.EVENT_DETAILS ? "event-details-v4"
                     : due.endpoint() == SofascoreEndpointType.EVENT_INCIDENTS ? "event-incidents-v17"
@@ -775,16 +780,10 @@ public final class LiveCampaignService {
             s.phase = NORMALIZATION;
             LiveProcessedResponse processed = processor.process(CanonicalEventIdentity.sofascore(attempt.providerEventId()), due.endpoint(), response, receipt);
             s.phase = SCHEDULING;
-            Map<String, Boolean> signals = new LinkedHashMap<>();
-            processed.signals().forEach(signal -> signals.put(signal.key(), signal.kind().name().equals("FINISH_CHECK")));
+            LiveProviderSession.ScheduleFacts scheduleFacts = scheduleFacts(processed);
             boolean unavailable = processed.outcome().name().equals("ENDPOINT_UNAVAILABLE");
             if (processed.scope().name().equals("NONE")) {
-                s.schedule.completed(due, processed.sportStatus().orElse(null), unavailable, signals, s.now(),
-                        processed.eventDetails().map(details -> details.startsAt()).orElse(null),
-                        processed.eventData().filter(com.bettingproject.sofascorelocal.domain.eventdata.EventLineups.class::isInstance)
-                                .map(com.bettingproject.sofascorelocal.domain.eventdata.EventLineups.class::cast)
-                                .map(com.bettingproject.sofascorelocal.domain.eventdata.EventLineups::confirmed).orElse(null),
-                        processed.j4Controls().orElse(null), processed.code());
+                completeSchedule(s, due, scheduleFacts, unavailable, processed.code());
             } else s.schedule.failed(due, processed.scope().name(), processed.scope().name().equals("EVENT")
                     ? processed.outcome().name().equals("SCHEMA_INCOMPATIBLE") ? "STOPPED_SCHEMA_INCOMPATIBLE" : "STOPPED_REVIEW_REQUIRED"
                     : "STOPPED_ERROR");
@@ -796,13 +795,18 @@ public final class LiveCampaignService {
                     complete.map(c -> c.status().name()).orElse(null), complete.map(c -> c.scorePercent()).orElse(null));
             s.phase = RESULT_PUBLICATION;
             store.publishResult(s.ownership, attempt.attemptId(), publication, () -> processor.persistProcessed(processed));
-            if (processed.outcome().name().equals("PARSED")) s.timeoutRecovery.successful(due.eventId(), due.endpoint());
+            if (processed.outcome().name().equals("PARSED")) {
+                transport.retainParsed(attempt.providerEventId(), due.endpoint(), response, scheduleFacts);
+                s.timeoutRecovery.successful(due.eventId(), due.endpoint());
+            } else transport.discardConditionalState(attempt.providerEventId(), due.endpoint());
         } catch (PlaywrightDispatchCancelledException cancelled) {
+            transport.discardConditionalState(attempt.providerEventId(), due.endpoint());
             s.phase = RESULT_PUBLICATION;
             store.publishResult(s.ownership, attempt.attemptId(), new Publication("NOT_DISPATCHED", "EVENT", "DISPATCH_CANCELLED",
                     clock.instant(), null, false, null), NormalizedReferences::none);
             if (s.schedule.mayDispatch(due, s.now()) && !s.stoppedEvents.contains(due.eventId())) s.stopAll("STOPPED_ERROR");
         } catch (RuntimeException failure) {
+            transport.discardConditionalState(attempt.providerEventId(), due.endpoint());
             if (failure instanceof PlaywrightProviderException timeout && timeout.recoverableTimeout()
                     && resilientPolicy(s.manifest.policyVersion())) {
                 // A timeout is not a receipt. Keep prior data, the charged attempt and
@@ -856,6 +860,60 @@ public final class LiveCampaignService {
                     clock.instant(), null, false, null), NormalizedReferences::none); } catch (RuntimeException ignored) { /* receipt remains durable */ }
             throw failure;
         }
+    }
+
+    /**
+     * A provider 304 is not a raw provider payload.  It can only advance scheduling with the
+     * facts accepted from the exact earlier 2xx response in this fresh live context.  The
+     * outbound departure was already authorized and recorded before this branch.
+     */
+    private void completeNotModified(Session s, LiveProviderSession transport, LiveSchedule.Due due,
+                                     ReservedAttempt attempt, PlaywrightProviderResponse response) {
+        s.phase = SCHEDULING;
+        Optional<LiveProviderSession.RevalidatedExchange> revalidated = transport.revalidated(
+                attempt.providerEventId(), due.endpoint(), response);
+        if (revalidated.isEmpty()) {
+            transport.discardConditionalState(attempt.providerEventId(), due.endpoint());
+            s.schedule.failed(due, "CAMPAIGN", "STOPPED_CONDITIONAL_RESPONSE_UNVERIFIABLE");
+            String state = s.schedule.states().stream().filter(event -> event.eventId().equals(due.eventId()))
+                    .findFirst().orElseThrow().state();
+            s.phase = RESULT_PUBLICATION;
+            store.publishResult(s.ownership, attempt.attemptId(), new Publication(
+                    "FAILED", "CAMPAIGN", "CONDITIONAL_RESPONSE_UNVERIFIABLE", clock.instant(),
+                    null, false, state), NormalizedReferences::none);
+            return;
+        }
+        LiveProviderSession.RevalidatedExchange exchange = revalidated.orElseThrow();
+        LiveProviderSession.ScheduleFacts facts = exchange.facts();
+        completeSchedule(s, due, facts, false, "HTTP_304");
+        String state = s.schedule.states().stream().filter(event -> event.eventId().equals(due.eventId()))
+                .findFirst().orElseThrow().state();
+        s.phase = RESULT_PUBLICATION;
+        store.publishResult(s.ownership, attempt.attemptId(), new Publication(
+                "NOT_MODIFIED", "NONE", "HTTP_304", clock.instant(), null, false, state,
+                facts.sportStatus(), null, null, null, null), NormalizedReferences::none);
+        // Only now may the transient validator change to the one echoed by the provider's 304.
+        transport.acceptNotModified(exchange);
+    }
+
+    private static LiveProviderSession.ScheduleFacts scheduleFacts(LiveProcessedResponse processed) {
+        Map<String, Boolean> signals = new LinkedHashMap<>();
+        processed.signals().forEach(signal -> signals.put(signal.key(), signal.kind().name().equals("FINISH_CHECK")));
+        return new LiveProviderSession.ScheduleFacts(
+                processed.sportStatus().orElse(null),
+                signals,
+                processed.eventDetails().map(details -> details.startsAt()).orElse(null),
+                processed.eventData().filter(com.bettingproject.sofascorelocal.domain.eventdata.EventLineups.class::isInstance)
+                        .map(com.bettingproject.sofascorelocal.domain.eventdata.EventLineups.class::cast)
+                        .map(com.bettingproject.sofascorelocal.domain.eventdata.EventLineups::confirmed).orElse(null),
+                processed.j4Controls().orElse(null));
+    }
+
+    private static void completeSchedule(Session s, LiveSchedule.Due due,
+                                         LiveProviderSession.ScheduleFacts facts,
+                                         boolean unavailable, String responseCode) {
+        s.schedule.completed(due, facts.sportStatus(), unavailable, facts.signals(), s.now(),
+                facts.scheduledKickoff(), facts.lineupsConfirmed(), facts.j4Controls(), responseCode);
     }
 
     private void publishStates(Session s) {

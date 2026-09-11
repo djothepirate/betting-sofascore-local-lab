@@ -179,6 +179,8 @@ class J5EventDataControllerTest {
                 .andExpect(content().string(containsString("data-lineups-team=\"AWAY\"")))
                 .andExpect(content().string(containsString("data-lineups-section=\"starters\"")))
                 .andExpect(content().string(containsString("data-lineups-section=\"substitutes\"")))
+                .andExpect(content().string(containsString("lineups-player-position-accessible")))
+                .andExpect(content().string(containsString("lineups-position-heading")))
                 .andExpect(content().string(containsString("/css/lineups.css")))
                 .andExpect(content().string(containsString("/js/lineups.js")))
                 .andExpect(content().string(containsString("PROVIDER_SCHEMA_VALIDATED=NO")))

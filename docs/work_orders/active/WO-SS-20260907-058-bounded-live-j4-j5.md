@@ -1598,3 +1598,77 @@ Validation locale sans campagne ni navigateur :
 | `mvnw.cmd --offline -Dmaven.repo.local=C:\\Users\\geoff\\.m2\\repository -q -Dtest=J5EventDataControllerTest,LineupIncidentOverlayTest test` | Réussite : rendu MVC et overlay des incidents couverts. |
 | `node --check src/main/resources/static/js/lineups.js` | Réussite : syntaxe du rafraîchissement dynamique valide. |
 | `mvnw.cmd clean verify` | Réussite : Surefire `2257/0/0/5`, Failsafe `232/0/0/0`, en 9 min 58 s. |
+
+#### Extension V9 — suspension, cartes et révalidation conditionnelle
+
+Le complément demandé le 11 septembre conserve une rencontre dont le statut J4 devient
+`suspended`. La rencontre reste suivie par un J4 seul toutes les minutes ; les familles J5 sont
+retirées tant que ce statut persiste, puis elles sont réintroduites seulement lorsqu'un J4 de
+référence redevient `inprogress`. Le fait J4 `event.statusReason` est conservé typé et affiché
+uniquement pendant cette suspension. Une valeur absente ou nulle n'autorise pas un libellé
+interprété ; une raison de suspension est effacée dès que le statut de référence n'est plus
+`suspended`.
+
+La vue campagne et la consultation J5 manuelle appliquent la même présentation de composition.
+Les sections Gardien, Défenseur, Milieu et Attaquant portent la répartition visible ; les mêmes
+libellés ne sont donc plus répétés visuellement dans chaque carte, mais restent disponibles pour
+les technologies d'assistance. Lorsqu'un SVG local de drapeau est chargé correctement, seul le
+drapeau est visible et le nom français du pays demeure accessible. En cas d'absence de drapeau,
+d'erreur de chargement, de JavaScript désactivé ou de contraste forcé, ce nom redevient le repli
+visible. Cette règle ne crée aucun chargement d'image, endpoint ou donnée fournisseur.
+
+La révision borne aussi une révalidation HTTP conditionnelle à `live-v9`, aux seules quatre
+familles de la campagne (J4 détails, J5 incidents, statistiques et compositions). Un
+`If-None-Match` n'est possible qu'après une réponse du même couple rencontre/famille, reçue,
+normalisée et publiée avec succès dans la même campagne. Son validateur reste volatil dans le
+contexte Playwright neuf : ni observation, snapshot, journal, parcours manuel, campagne suivante
+ni redémarrage ne le récupère. Il n'est pas une permission de réutiliser un cookie, une session ou
+un état de navigateur.
+
+Un `304 Not Modified` avec ce contexte exact laisse la dernière réponse `200` acceptée comme
+source de la consultation. Il ne produit ni corps brut, snapshot, normalisation, nouvelle
+occurrence ni octet métier reçu, et n'altère pas l'heure de réception de cette donnée. En revanche,
+le `304` répond à un GET réellement envoyé par le Lab : son départ physique et sa tentative sont
+conservés append-only pour l'audit et la protection de cadence, avec le diagnostic
+`COMPLETE/304`, mais ne figurent ni dans les compteurs fonctionnels, ni dans le budget, ni dans
+la pression affichée de la campagne. La ligne `live_call_result`
+`NOT_MODIFIED/NONE/HTTP_304` déjà append-only établit une libération idempotente sans migration
+historique. Un `304` non corrélé à un contexte mémoire accepté est refusé sans parsing d'un corps
+vide, retry, boucle, réarmement ou reprise automatique. Cette mesure ne revendique aucune
+acceptation fournisseur, ni réduction garantie des HTTP 403.
+
+Lorsque toutes les preuves persistées sont présentes, la vue affiche séparément la dernière
+revalidation du cache à `headersReceivedAt`. Elle peut maintenir la fraîcheur de contrôle de la
+famille sans toucher à la dernière réception `200`, à son âge ni à l'occurrence fournisseur.
+
+Le lissage reste celui déjà qualifié : slots par famille déterministes, fences de 500 ms et réserve
+statique de 1 s entre groupes. La vague de dix rencontres occupe déjà exactement la fenêtre de
+60 s ; aucun jitter aléatoire ou adaptatif n'est ajouté. Une validation dédiée doit vérifier la
+réponse `304` valide et non corrélée, l'absence de nouveau contenu/normalisation, la conservation
+du seul audit de départ et son exclusion des compteurs fonctionnels, le confinement du validateur,
+la suspension J4/J5 et les deux rendus de composition avant que cette extension soit déclarée
+qualifiée. La preuve V9 déjà versionnée reste historique et n'est ni modifiée ni réinterprétée par
+cette section.
+
+#### Qualification finale de la révision V9 — 11 septembre
+
+La révision finale confirme que le `304` conditionnel strict est une revalidation locale du
+cache, et non une collecte fonctionnelle. La donnée consultée reste la dernière réponse `200`
+publiée ; le budget, les compteurs et la pression n'incluent pas le `304` prouvé. Seule la trace
+technique append-only de départ et de diagnostic subsiste pour l'audit et la cadence. La vue
+distingue explicitement cette revalidation de la dernière réception et du dernier succès `200`,
+y compris lorsqu'une section de famille est créée dynamiquement dans le navigateur.
+
+| Commande | Résultat |
+| --- | --- |
+| `.\mvnw.cmd clean verify` | **BUILD SUCCESS** ; Surefire : **2 274 tests**, zéro échec, zéro erreur, cinq ignorés ; Failsafe : **235 tests**, zéro échec, zéro erreur, zéro ignoré ; durée 10 min 04 s. |
+| `.\mvnw.cmd -Pintegration-tests verify` | **BUILD SUCCESS** ; Surefire : **2 274 tests**, zéro échec, zéro erreur, cinq ignorés ; Failsafe : **235 tests**, zéro échec, zéro erreur, zéro ignoré ; durée 9 min 47 s. |
+| `.\mvnw.cmd --offline "-Pprovider-playwright-runtime,provider-playwright-local-qualification" -DskipTests package` | **BUILD SUCCESS** ; compilation du runtime Playwright local et du worker, sans test ni accès fournisseur. |
+| Qualification Failsafe `LiveCampaignBrowserQualificationIT` avec `PLAYWRIGHT_BROWSERS_PATH` local et `-Dit.test=LiveCampaignBrowserQualificationIT` | **3 tests**, zéro échec, zéro erreur, zéro ignoré ; Chromium headless dialogue uniquement avec le serveur `127.0.0.1` de test et vérifie le champ `Dernière revalidation du cache (304)` créé dynamiquement. |
+| `node --check src/main/resources/static/js/live-campaign.js` et `node --check src/main/resources/static/js/lineups.js` | Réussite : syntaxes JavaScript valides. |
+| `Invoke-Pester -Script .\scripts\Tests\WO058LiveV9LauncherConfiguration.Tests.ps1 -PassThru` | **2 tests**, zéro échec ; le script reste en lecture seule, sans réseau, processus, écriture ni lancement. |
+| Vérification ciblée PostgreSQL de `LiveCampaignPersistenceIT` pour les trois scénarios `304` V9 | **3 tests**, zéro échec ni erreur ; libération logique, pression fail-closed et conservation de la réservation physique finale vérifiées. |
+
+Les tests standards et d'intégration utilisent leurs doubles, fixtures et PostgreSQL local ; la
+qualification Chromium route toutes ses requêtes vers loopback. Aucun endpoint SofaScore, cookie,
+session, proxy, défi ou navigateur persistant n'a été utilisé par cette qualification.

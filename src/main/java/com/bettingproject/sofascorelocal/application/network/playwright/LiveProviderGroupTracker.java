@@ -43,6 +43,7 @@ final class LiveProviderGroupTracker {
         return authority == Authority.LIVE_V8 || authority == Authority.LIVE_V9;
     }
     boolean isLiveV6() { return authority == Authority.LIVE_V6; }
+    boolean isLiveV9() { return authority == Authority.LIVE_V9; }
     boolean supportsProvenTimeoutRecovery() {
         return authority == Authority.LIVE_V6 || authority == Authority.LIVE_V7
                 || authority == Authority.LIVE_V8 || authority == Authority.LIVE_V9;

@@ -55,7 +55,17 @@ summary.lineups-player-summary::after { content: "⌄"; margin-left: auto; color
 .lineups-player-title { display: flex; align-items: baseline; flex-wrap: wrap; gap: .2rem .35rem; min-width: 0; }
 .lineups-name { font-size: .86rem; line-height: 1.4; }
 .lineups-captain { display: inline-block; padding: .08rem .3rem; border: 1px solid currentColor; border-radius: 4px; color: var(--lineups-accent); background: var(--lineups-soft); font-size: .66rem; font-weight: 750; line-height: 1.4; }
-.lineups-player-meta { display: flex; flex-direction: column; gap: .1rem; font-size: .72rem; line-height: 1.45; color: var(--muted, #607e8c); }
+.lineups-player-position-accessible {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
 .lineups-bench { padding: .75rem; }
 .lineups-bench:empty { display: none; }
 @media (max-width: 760px) {

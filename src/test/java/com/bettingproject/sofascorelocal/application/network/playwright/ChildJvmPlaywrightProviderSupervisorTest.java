@@ -282,7 +282,7 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         gate.awaitNextDispatch(() -> { });
 
         assertThat(pauses).isEmpty();
-        assertThat(ChildJvmPlaywrightProviderSupervisor.VERSION).isEqualTo(7);
+        assertThat(ChildJvmPlaywrightProviderSupervisor.VERSION).isEqualTo(9);
     }
 
     @Test
@@ -647,6 +647,50 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         assertThat(getCount).hasValue(6);
 
         campaign.close();
+        workerThread.get().join(2_000);
+        assertThat(workerThread.get().isAlive()).isFalse();
+        assertThat(workerFailure.get()).isNull();
+    }
+
+    @Test
+    void liveV9TransmitsOnlyTheOpaqueConditionalValidatorAndAcceptsAnEmpty304Response()
+            throws Exception {
+        ProviderPlaywrightProperties properties = enabledProperties("live-v9-conditional.jar");
+        Instant rootStartedAt = Instant.parse("2026-09-11T12:00:00Z");
+        OwnedHandle root = ownedHandle(2_109L, rootStartedAt, true, true);
+        Process process = processWithStartInstant(root.handle(), rootStartedAt);
+        var access = new DelayGateProcessTreeAccess();
+        AtomicReference<Thread> workerThread = new AtomicReference<>();
+        AtomicReference<Throwable> workerFailure = new AtomicReference<>();
+        String requestTag = "W/\"request-validator\"";
+        String responseTag = "W/\"response-validator\"";
+        var supervisor = new ChildJvmPlaywrightProviderSupervisor(properties, Clock.systemUTC(),
+                new SecureRandom(), builder -> {
+                    workerThread.set(startLiveV9ConditionalWorker(
+                            builder, requestTag, responseTag, workerFailure));
+                    return process;
+                }, access);
+        Set<SofascoreEndpointType> endpoints = Set.of(SofascoreEndpointType.EVENT_DETAILS,
+                SofascoreEndpointType.EVENT_INCIDENTS, SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.EVENT_LINEUPS);
+        UUID campaignId = UUID.randomUUID();
+        long eventId = 16_416_319L;
+        try (PlaywrightProviderCampaign campaign = supervisor.openLiveGroupedV9(campaignId, endpoints)) {
+            PlaywrightProviderResponse response = campaign.executeGrouped(
+                    PlaywrightProviderRequest.eventDetails(
+                            eventId, PlaywrightProviderEntityTag.of(requestTag)),
+                    new LiveProviderDispatchGroup(
+                            campaignId,
+                            UUID.randomUUID(),
+                            eventId,
+                            LiveProviderDispatchGroup.Phase.CHECK),
+                    PlaywrightDispatchAdmission.UNRESTRICTED);
+
+            assertThat(response.httpStatus()).isEqualTo(304);
+            assertThat(response.payload().sizeBytes()).isZero();
+            assertThat(response.entityTag()).contains(PlaywrightProviderEntityTag.of(responseTag));
+            assertThat(response.entityTag().orElseThrow().toString()).doesNotContain(responseTag);
+        }
         workerThread.get().join(2_000);
         assertThat(workerThread.get().isAlive()).isFalse();
         assertThat(workerFailure.get()).isNull();
@@ -2126,6 +2170,62 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                         failure));
     }
 
+    private static Thread startLiveV9ConditionalWorker(
+            ProcessBuilder builder,
+            String expectedRequestTag,
+            String responseTag,
+            AtomicReference<Throwable> failure) {
+        int port = Integer.parseInt(builder.environment().get(
+                "SOFASCORE_PLAYWRIGHT_IPC_PORT"));
+        String token = builder.environment().get("SOFASCORE_PLAYWRIGHT_IPC_TOKEN");
+        return Thread.ofPlatform()
+                .name("fake-playwright-live-v9-conditional-" + port)
+                .start(() -> {
+                    try (Socket socket = new Socket()) {
+                        socket.connect(new InetSocketAddress(
+                                InetAddress.getByName("127.0.0.1"), port), 1_000);
+                        DataOutputStream output = new DataOutputStream(socket.getOutputStream());
+                        output.writeInt(ChildJvmPlaywrightProviderSupervisor.MAGIC);
+                        output.writeInt(ChildJvmPlaywrightProviderSupervisor.VERSION);
+                        output.writeUTF(token);
+                        output.flush();
+                        try (DataInputStream input = new DataInputStream(
+                                new BufferedInputStream(socket.getInputStream()))) {
+                            assertThat(input.readUnsignedByte())
+                                    .isEqualTo(ChildJvmPlaywrightProviderSupervisor.START);
+                            output.writeByte(ChildJvmPlaywrightProviderSupervisor.READY);
+                            output.flush();
+                            assertThat(input.readUnsignedByte())
+                                    .isEqualTo(ChildJvmPlaywrightProviderSupervisor.GET_LIVE_V9);
+                            assertThat(input.readUTF()).isEqualTo(
+                                    SofascoreEndpointType.EVENT_DETAILS.name());
+                            assertThat(input.readLong()).isEqualTo(16_416_319L);
+                            assertThat(input.readUnsignedByte()).isEqualTo(1);
+                            assertThat(input.readUTF()).isEqualTo(expectedRequestTag);
+                            assertThat(input.readInt()).isEqualTo(2_000);
+                            long requestedAt = Instant.parse("2026-09-11T12:00:01Z").toEpochMilli();
+                            output.writeByte(ChildJvmPlaywrightProviderSupervisor.RESPONSE_V9);
+                            output.writeLong(requestedAt);
+                            output.writeLong(requestedAt + 1);
+                            output.writeInt(304);
+                            output.writeUTF("");
+                            output.writeBoolean(true);
+                            output.writeUTF(responseTag);
+                            output.writeInt(0);
+                            output.flush();
+                            assertThat(input.readUnsignedByte())
+                                    .isEqualTo(ChildJvmPlaywrightProviderSupervisor.CLOSE);
+                            output.writeByte(ChildJvmPlaywrightProviderSupervisor.CLOSED);
+                            output.flush();
+                            assertThat(input.read()).isEqualTo(-1);
+                        }
+                    }
+                    catch (Throwable exception) {
+                        failure.set(exception);
+                    }
+                });
+    }
+
     private static void runRespondingWorker(
             int port,
             String token,
@@ -2163,8 +2263,9 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                     }
                     assertThat(command).isIn(
                             Byte.toUnsignedInt(ChildJvmPlaywrightProviderSupervisor.GET),
-                            Byte.toUnsignedInt(ChildJvmPlaywrightProviderSupervisor.GET_LIVE_V6));
-                    readProviderRequest(input);
+                            Byte.toUnsignedInt(ChildJvmPlaywrightProviderSupervisor.GET_LIVE_V6),
+                            Byte.toUnsignedInt(ChildJvmPlaywrightProviderSupervisor.GET_LIVE_V9));
+                    readProviderRequest(input, command);
                     observedStarts.add(nanoTime.getAsLong());
                     int requestIndex = getCount.incrementAndGet();
                     afterGet.run();
@@ -2175,13 +2276,18 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                             ? requestedAt - 1
                             : requestedAt + 10;
                     byte[] body = "{\"ok\":true}".getBytes(StandardCharsets.UTF_8);
-                    output.writeByte(ChildJvmPlaywrightProviderSupervisor.RESPONSE);
+                    output.writeByte(command == ChildJvmPlaywrightProviderSupervisor.GET_LIVE_V9
+                            ? ChildJvmPlaywrightProviderSupervisor.RESPONSE_V9
+                            : ChildJvmPlaywrightProviderSupervisor.RESPONSE);
                     output.writeLong(requestedAt);
                     output.writeLong(receivedAt);
                     malformedResponseTimestampWritten =
                             malformedFirstTimestamp && requestIndex == 1;
                     output.writeInt(200);
                     output.writeUTF("application/json");
+                    if (command == ChildJvmPlaywrightProviderSupervisor.GET_LIVE_V9) {
+                        output.writeBoolean(false);
+                    }
                     output.writeInt(body.length);
                     output.write(body);
                     output.flush();
@@ -2199,6 +2305,10 @@ class ChildJvmPlaywrightProviderSupervisorTest {
     }
 
     private static void readProviderRequest(DataInputStream input) throws IOException {
+        readProviderRequest(input, ChildJvmPlaywrightProviderSupervisor.GET);
+    }
+
+    private static void readProviderRequest(DataInputStream input, int command) throws IOException {
         SofascoreEndpointType endpoint = SofascoreEndpointType.valueOf(input.readUTF());
         switch (endpoint) {
             case SCHEDULED_EVENTS -> {
@@ -2212,6 +2322,15 @@ class ChildJvmPlaywrightProviderSupervisorTest {
             case EVENT_DETAILS, EVENT_STATISTICS, EVENT_INCIDENTS, EVENT_LINEUPS ->
                     input.readLong();
             default -> throw new AssertionError("unexpected endpoint: " + endpoint);
+        }
+        if (command == ChildJvmPlaywrightProviderSupervisor.GET_LIVE_V9) {
+            int conditionalValidatorPresent = input.readUnsignedByte();
+            if (conditionalValidatorPresent == 1) {
+                input.readUTF();
+            }
+            else if (conditionalValidatorPresent != 0) {
+                throw new AssertionError("unexpected conditional validator marker");
+            }
         }
         input.readInt();
     }

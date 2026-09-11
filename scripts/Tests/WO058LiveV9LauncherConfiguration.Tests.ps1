@@ -1,7 +1,7 @@
 $scriptsRoot = Split-Path -Parent $PSScriptRoot
 $repositoryRoot = Split-Path -Parent $scriptsRoot
 $scriptPath = Join-Path $scriptsRoot 'Show-LiveGroupedV9LauncherConfiguration.ps1'
-$profilePath = Join-Path $repositoryRoot 'docs\validation\WO058-GROUPED-LIVE-V9-PROFILE-20260911.json'
+$profilePath = Join-Path $repositoryRoot 'docs\validation\WO058-GROUPED-LIVE-V9-SUSPENDED-20260911.json'
 
 Describe 'WO-058 V9 launcher configuration display' {
     It 'has a parseable display-only script with no launcher, environment, process or network mutation commands' {

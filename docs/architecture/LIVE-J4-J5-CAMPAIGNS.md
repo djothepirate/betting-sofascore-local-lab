@@ -10,7 +10,8 @@ Réalisation : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4
 et l'enveloppe stricte de pression V8, mais place ou supprime les J5 après un J4 normalisé. Le
 J4 conserve séparément, dans sa projection, les présences et valeurs de `finalResultOnly`,
 `detailId`, `hasEventPlayerStatistics`,
-`tournament.uniqueTournament.hasEventPlayerStatistics` et `status.description`. Le scheduler
+`tournament.uniqueTournament.hasEventPlayerStatistics`, `status.description` et
+`statusReason`. Le scheduler
 utilise le type `LiveJ4ControlFacts`, pas le JSON textuel de la vue, pour chacune de ces
 décisions.
 
@@ -37,12 +38,53 @@ pas `2nd half`, il reste en J4 seul toutes les minutes. La confirmation de la se
 recrée la cadence habituelle; un statut terminal conserve la priorité et déclenche seulement les
 familles finales admissibles.
 
+Un J4 qui fait passer la rencontre de `inprogress` à `suspended` ne l'arrête pas. Il retire les
+trois familles J5 et conserve un J4 seul à chaque minute jusqu'à une réponse J4 de référence
+`inprogress`, qui rétablit alors les familles admissibles. `event.statusReason` est une donnée
+typée distincte de la description : la vue ne l'affiche que lorsque ce même statut de référence
+est `suspended`, ne déduit aucun texte si elle est absente ou nulle, et efface la raison devenue
+obsolète à la reprise.
+
 V9 dispose d'un profil de qualification indépendant, vide par défaut. Il n'est donc jamais
 autorisé de recopier le hash V8 pour le rendre exécutable. En revanche, sa pire vague reste les
 quatre familles V8 : elle réutilise le même `DepartureProfile.LIVE_V8` pour le ledger de pression
 et les mêmes quatre enveloppes, fences de 500 ms et réserve inter-groupe de 1 s. V52 admet le
 manifeste V9 et exprime cette identité de pression sans modifier V48/V50 ni les départs
 historiques. Ce partage ne crée ni hausse de budget, ni nouveau transport, ni sortie réseau.
+Les décalages entre familles restent déterministes et bornés par ces enveloppes : à la capacité
+de dix rencontres, la réservation remplit les 60 secondes. Le terme « jitter » désigne donc la
+variabilité locale déjà absorbée par les fences et la réserve ; aucun délai aléatoire ou adaptatif
+n'est introduit, car il ferait sortir la planification de sa borne qualifiée.
+
+### Révalidation HTTP conditionnelle V9
+
+Le transport V9 peut porter `If-None-Match` seulement après qu'une réponse de la même famille,
+de la même rencontre et de la même campagne a été reçue, lue intégralement, normalisée et
+publiée avec succès. Le validateur associé est conservé en mémoire du contexte Playwright neuf,
+non persistant, puis supprimé à la fin de la campagne. Il ne rejoint ni les snapshots, ni les
+observations, ni les journaux, ni le parcours J5 manuel, et il ne survit ni à un redémarrage ni à
+une autre campagne. Le périmètre se limite aux quatre routes live J4 détails et J5 incidents,
+statistiques et compositions ; les chemins et commandes historiques gardent leur protocole.
+
+Un `304 Not Modified` avec ce contexte exact est une revalidation de la donnée déjà acceptée,
+pas une nouvelle réception de contenu. Le Lab ne persiste pas de corps brut, ne crée pas de
+snapshot, ne normalise pas une seconde fois et n'ajoute pas d'octet métier reçu. La dernière
+réponse `200` réussie reste la source de la projection, avec sa date de réception d'origine.
+Le `304` est néanmoins la réponse à une requête `If-None-Match` qui a quitté le Lab. Son départ
+physique et sa tentative restent des faits append-only d'audit et de protection de cadence,
+portés par le diagnostic `COMPLETE/304`; ils ne sont pas versés dans les compteurs fonctionnels,
+le budget, la pression ou les compteurs affichés de la campagne. La ligne append-only déjà prévue
+dans `live_call_result`, `NOT_MODIFIED/NONE/HTTP_304`, est la preuve de libération idempotente de
+la révalidation. Cette sémantique suffit sans migration des lignes historiques. Le mécanisme ne
+doit ni attribuer une fraîcheur de donnée fictive ni déduire une meilleure acceptation fournisseur.
+Lorsque la preuve durable complète est présente, la vue peut toutefois distinguer la fraîcheur du
+contrôle de cache, datée de `headersReceivedAt`, de la dernière réception `200`. Ce contrôle peut
+rendre une famille fraîche sans modifier son âge depuis réception ni créer une nouvelle donnée.
+
+Un `304` reçu sans contexte mémoire correspondant est non vérifiable : il ne passe pas dans le
+parseur, ne réutilise pas arbitrairement une observation historique et mène à un arrêt sûr sans
+retry, réarmement ni boucle de collecte. Le mécanisme n'ajoute ni endpoint, proxy, cookie,
+réutilisation de session, résolution de challenge ou promesse de réduction des refus HTTP.
 
 Les cartes joueurs utilisent la capacité tournoi J4 vraie comme unique permission de détail. Si
 elle est absente, nulle ou fausse, la carte est statique avec une information explicite. Si J5
@@ -50,6 +92,12 @@ statistiques est indisponible mais J5 incidents et lineups sont lisibles, les in
 enrichir uniquement la présentation d'une carte sans statistiques lineups, via la clé stricte
 `(LineupSide, providerPlayerId)`. Les buts, passes, cartons et substitutions complètes sont
 affichés avec leur minute; aucune observation, statistique réelle ou composition n'est modifiée.
+Les sections de composition rendent déjà le rôle collectif : le poste individuel est donc retiré
+de l'affichage visuel de chaque carte tout en restant disponible aux technologies d'assistance.
+Cette règle est commune à la campagne et à la vue J5 manuelle. De la même manière, les deux vues
+masquent le libellé de pays seulement après le chargement vérifié du SVG local ; le nom français
+reste accessible et redevient le repli visible sans drapeau exploitable, après erreur de
+chargement, sans JavaScript ou en contraste forcé.
 
 `PROVIDER_CLOCK_REGRESSION` reste un refus local de planification avant le transport. Il ne
 représente ni un HTTP 403 ni une action à contourner : le diagnostic conserve l'arrêt et requiert

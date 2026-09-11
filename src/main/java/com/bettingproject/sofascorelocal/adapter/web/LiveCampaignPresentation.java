@@ -211,13 +211,14 @@ public class LiveCampaignPresentation {
         String policyVersion = campaign.manifest().policyVersion();
         String displayedState = displayedState(policyVersion, event);
         String displayedReason = displayedReason(policyVersion, event);
+        String statusReason = suspensionReason(j4, sportStatus);
         return new Event(event.target().canonicalEventId(), event.target().providerEventId(),
                 identity == null ? Long.toString(event.target().providerEventId())
                         : identity.homeTeam().name() + " — " + identity.awayTeam().name(),
                 identity == null ? "—" : identity.tournament().map(t -> t.name()).orElse("—"),
                 identity == null ? "—" : identity.startsAt().atZone(ZoneId.of("Europe/Paris")).toString(),
                 sportStatus, "finished".equals(sportStatus) && result.awarded() ? "Victoire sur tapis vert"
-                        : sportStatusLabel(sportStatus, identity), result.score(), displayedState, displayedReason,
+                        : sportStatusLabel(sportStatus, identity), result.score(), displayedState, displayedReason, statusReason,
                 event.nextDueAt(), event.reservedCalls(),
                 campaign.manifest().maximumCallsPerEvent(), event.receivedBytes(), event.missedCycles(),
                 event.finalComplete(), sourceSnapshot, sourceReceivedAt, canonicalCurrent,
@@ -266,6 +267,32 @@ public class LiveCampaignPresentation {
                     && value.path("value").isBoolean() && value.path("value").booleanValue();
         } catch (JacksonException exception) {
             return false;
+        }
+    }
+
+    /**
+     * A J4 status reason is local review data, not a durable label for later phases.  It is exposed
+     * only when the latest successful J4 result itself still says {@code suspended}, so a following
+     * in-progress observation cannot leave a stale suspension reason on screen.
+     */
+    private static String suspensionReason(FamilyCursor j4, String sportStatus) {
+        if (!"suspended".equals(sportStatus) || j4 == null || j4.latestSuccessfulResult() == null
+                || !"suspended".equals(j4.latestSuccessfulResult().publication().sportStatus())) {
+            return null;
+        }
+        String projection = j4.latestSuccessfulResult().publication().projectionJson();
+        if (projection == null) {
+            return null;
+        }
+        try {
+            JsonNode reason = JSON.readTree(projection).path("statusReason");
+            if (!"VALUE".equals(reason.path("presence").asText()) || !reason.path("value").isString()) {
+                return null;
+            }
+            String value = reason.path("value").stringValue();
+            return value == null || value.isBlank() ? null : value;
+        } catch (JacksonException exception) {
+            return null;
         }
     }
 
@@ -318,6 +345,7 @@ public class LiveCampaignPresentation {
             case "STOPPED_DETAIL_ID_UNSUPPORTED" -> "Identifiant de détail J4 non pris en charge ; suivi arrêté sans appel J5.";
             case "WAITING_HALFTIME_HOLD" -> "Mi-temps observée ; J4 reprendra après la période de maintien.";
             case "WAITING_HALFTIME_RECHECK" -> "Mi-temps toujours observée ; vérification J4 maintenue toutes les minutes avant la reprise.";
+            case "WAITING_SUSPENDED_RECHECK" -> "Rencontre suspendue ; vérification J4 maintenue toutes les minutes, sans appel J5.";
             default -> reason;
         };
     }
@@ -413,6 +441,7 @@ public class LiveCampaignPresentation {
         }
         boolean pending = cursor.latestResult() == null
                 || !cursor.latestResult().attemptId().equals(cursor.lastAttemptId());
+        Instant lastCacheRevalidatedAt = pending ? null : acceptedV9CacheRevalidatedAt(campaign, cursor);
         return new Family(cursor.endpoint().name(), label(cursor.endpoint()),
                 cursor.lastAttemptId() == null ? "NOT_REQUESTED" : pending ? "PENDING" : latest.outcome(),
                 pending ? null : latest.code(),
@@ -421,7 +450,7 @@ public class LiveCampaignPresentation {
                 attempted == null || attempted.dispatchAuthorizedAt() == null ? null
                         : Math.max(0, java.time.Duration.between(attempted.attempt().dueAt(),
                                 attempted.dispatchAuthorizedAt()).toMillis()),
-                cursor.lastReceivedAt(), cursor.lastSuccessfulAt(), cursor.lastChangedAt(),
+                cursor.lastReceivedAt(), cursor.lastSuccessfulAt(), lastCacheRevalidatedAt, cursor.lastChangedAt(),
                 received == null ? null : received.snapshotId(),
                 received == null ? null : received.occurrenceId(),
                 successfulAttempt == null ? null : successfulAttempt.snapshotId(),
@@ -431,7 +460,7 @@ public class LiveCampaignPresentation {
                 pending ? null : latest.completenessScore(),
                 cursor.lastSuccessfulAttemptId() != null
                         && !cursor.lastSuccessfulAttemptId().equals(cursor.lastAttemptId()),
-                freshness(campaign, event, cursor, observedAt), table, statistics,
+                freshness(campaign, event, cursor, lastCacheRevalidatedAt, observedAt), table, statistics,
                 cursor.schedule() == null ? null : new CollectionSchedule(
                         terminal(event.state()) || terminal(campaign.state()) ? null : cursor.schedule().nextDueAt(),
                         cursor.schedule().intervalSeconds(), cursor.schedule().missedCycles(),
@@ -444,7 +473,42 @@ public class LiveCampaignPresentation {
                         : null, eventDetails);
     }
 
-    private static Freshness freshness(CampaignView campaign, EventView event, FamilyCursor cursor, Instant now) {
+    /**
+     * A dispatch-authorized V9 COMPLETE/304 proof confirms that the locally cached projection
+     * remains current. It is deliberately separate from actual 2xx data receipt and success timestamps.
+     */
+    private Instant acceptedV9CacheRevalidatedAt(CampaignView campaign, FamilyCursor cursor) {
+        Result result = cursor.latestResult();
+        if (!"live-v9".equals(campaign.manifest().policyVersion()) || result == null
+                || cursor.lastAttemptId() == null || !cursor.lastAttemptId().equals(result.attemptId())
+                || diagnostics == null) return null;
+        AttemptView attempt = campaign.attempts().stream()
+                .filter(candidate -> result.attemptId().equals(candidate.attempt().attemptId()))
+                .findFirst().orElse(null);
+        if (attempt == null || attempt.dispatchAuthorizedAt() == null || attempt.receivedAt() != null) return null;
+        Publication publication = result.publication();
+        if (publication == null) return null;
+        NormalizedReferences references = result.normalized();
+        boolean noReferences = references != null && references.canonicalObservationId() == null
+                && references.detailObservationId() == null && references.j5ObservationId() == null
+                && references.normalizedSha256() == null;
+        boolean acceptedNotModified = "NOT_MODIFIED".equals(publication.outcome())
+                && "NONE".equals(publication.scope()) && "HTTP_304".equals(publication.code())
+                && !publication.successful() && publication.parserVersion() == null
+                && publication.projectionJson() == null && publication.projectionVersion() == null
+                && publication.completenessStatus() == null && publication.completenessScore() == null;
+        if (!acceptedNotModified || !noReferences) return null;
+        return diagnostics.findTransport(campaign.manifest().campaignId(), result.attemptId()).filter(diagnostic ->
+                diagnostic.phase() == PlaywrightTransportDiagnostic.Phase.COMPLETE
+                        && diagnostic.responseComplete() && Integer.valueOf(304).equals(diagnostic.httpStatus())
+                        && diagnostic.requestedAt() != null && diagnostic.headersReceivedAt() != null
+                        && !attempt.dispatchAuthorizedAt().isAfter(diagnostic.requestedAt())
+                        && !diagnostic.headersReceivedAt().isBefore(diagnostic.requestedAt()))
+                .map(PlaywrightTransportDiagnostic::headersReceivedAt).orElse(null);
+    }
+
+    private static Freshness freshness(CampaignView campaign, EventView event, FamilyCursor cursor,
+                                       Instant lastCacheRevalidatedAt, Instant now) {
         boolean finalJ4 = cursor.endpoint() == SofascoreEndpointType.EVENT_DETAILS
                 && "FINALIZING".equals(event.state());
         boolean frozen = terminal(event.state()) || terminal(campaign.state()) || finalJ4;
@@ -477,7 +541,9 @@ public class LiveCampaignPresentation {
                         && "live-v3".equals(campaign.manifest().policyVersion())) interval = cycleSeconds;
         }
         Instant success = cursor.lastSuccessfulAt();
-        Instant anchor = success == null ? phaseStarted : success;
+        boolean cacheRevalidationIsNewest = lastCacheRevalidatedAt != null
+                && (success == null || !lastCacheRevalidatedAt.isBefore(success));
+        Instant anchor = cacheRevalidationIsNewest ? lastCacheRevalidatedAt : success == null ? phaseStarted : success;
         if (cursor.endpoint() == SofascoreEndpointType.EVENT_DETAILS && "CHECKING_FINISH".equals(event.state())
                 && anchor.isBefore(phaseStarted)) anchor = phaseStarted;
         String state = frozen ? "FROZEN" : interval == 0 ? "NOT_EXPECTED"
@@ -486,9 +552,11 @@ public class LiveCampaignPresentation {
         String label = switch (state) {
             case "FROZEN" -> "Âge figé à la fin du suivi";
             case "NOT_EXPECTED" -> "Aucune collecte périodique attendue dans cette phase";
-            case "STALE" -> "En retard / périmée : aucun succès depuis plus de deux intervalles";
+            case "STALE" -> "En retard / périmée : aucun contrôle valide depuis plus de deux intervalles";
             case "AWAITING_SUCCESS" -> "En attente du premier succès";
-            default -> "Dans l’intervalle attendu";
+            default -> cacheRevalidationIsNewest
+                    ? "Dans l’intervalle attendu ; cache revalidé sans nouvelle donnée."
+                    : "Dans l’intervalle attendu";
         };
         Long age = cursor.lastReceivedAt() == null ? null
                 : Math.max(0, Duration.between(cursor.lastReceivedAt(), ageAsOf).toSeconds());
@@ -595,12 +663,14 @@ public class LiveCampaignPresentation {
     }
     public record Event(UUID canonicalEventId, long providerEventId, String title, String competition,
                         String startsAtParis, String sportStatus, String sportStatusLabel, String score, String state, String reason,
+                        String statusReason,
                         Instant nextDueAt, int reservedCalls, int maximumCalls, long receivedBytes,
                         long missedCycles, boolean finalComplete, Long sourceSnapshotId,
                         Instant sourceReceivedAt, boolean canonicalCurrent, boolean selectionBlocked, List<Family> families) { }
     public record Family(String endpoint, String label, String outcome, String code, String scope,
                          Instant lastAttemptAt, Long authorizationDelayMillis,
-                         Instant lastReceivedAt, Instant lastSuccessfulAt, Instant lastChangedAt,
+                         Instant lastReceivedAt, Instant lastSuccessfulAt, Instant lastCacheRevalidatedAt,
+                         Instant lastChangedAt,
                          Long receivedSnapshotId, Long receivedOccurrenceId, Long dataSnapshotId,
                          String parserVersion, String payloadSha256,
                          String normalizedSha256, String completeness, Integer completenessScore,
@@ -617,7 +687,7 @@ public class LiveCampaignPresentation {
                 LineupsPresentation.View lineups, IncidentPresentation.View incidents,
                 PlaywrightTransportDiagnostic transport) {
             this(endpoint, label, outcome, code, scope, lastAttemptAt, authorizationDelayMillis, lastReceivedAt,
-                    lastSuccessfulAt, lastChangedAt, receivedSnapshotId, receivedOccurrenceId, dataSnapshotId,
+                    lastSuccessfulAt, null, lastChangedAt, receivedSnapshotId, receivedOccurrenceId, dataSnapshotId,
                     parserVersion, payloadSha256, normalizedSha256, completeness, completenessScore,
                     previousData, freshness, table, statistics, schedule, lineups, incidents, transport, null);
         }
