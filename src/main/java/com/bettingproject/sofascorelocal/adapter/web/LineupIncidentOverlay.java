@@ -23,6 +23,10 @@ import java.util.Optional;
 public final class LineupIncidentOverlay {
 
     private static final String SOURCE = "EVENT_INCIDENTS";
+    private static final String SUBSTITUTION_IN = "substitution-in";
+    private static final String SUBSTITUTION_OUT = "substitution-out";
+    private static final String DIRECTION_IN = "IN";
+    private static final String DIRECTION_OUT = "OUT";
     private static final LineupIncidentOverlay EMPTY = new LineupIncidentOverlay(Map.of());
 
     private final Map<PlayerKey, List<Decoration>> decorations;
@@ -104,13 +108,18 @@ public final class LineupIncidentOverlay {
                                      LineupSide side, String minute) {
         // A partial substitution must not decorate just one card: the two observed player ids are
         // the proof that the event has the semantics claimed by its two display facts.
-        if (incident.playerInProviderId().isEmpty() || incident.playerOutProviderId().isEmpty()) {
+        if (incident.playerInProviderId().isEmpty() || incident.playerOutProviderId().isEmpty()
+                || incident.playerInName().isEmpty() || incident.playerOutName().isEmpty()) {
             return;
         }
         decoration(values, side, incident.playerInProviderId(),
-                new Decoration("substitution-in", "Entrée observée", "↗", minute, SOURCE));
+                new Decoration(SUBSTITUTION_IN, "Entrée observée", "↗", minute, SOURCE,
+                        incident.playerOutName().orElseThrow(), DIRECTION_IN,
+                        incident.injury().orElse(false)));
         decoration(values, side, incident.playerOutProviderId(),
-                new Decoration("substitution-out", "Sortie observée", "↘", minute, SOURCE));
+                new Decoration(SUBSTITUTION_OUT, "Sortie observée", "↘", minute, SOURCE,
+                        incident.playerInName().orElseThrow(), DIRECTION_OUT,
+                        incident.injury().orElse(false)));
     }
 
     private static void decoration(Map<PlayerKey, List<Decoration>> values, LineupSide side,
@@ -119,13 +128,45 @@ public final class LineupIncidentOverlay {
                 .add(decoration));
     }
 
-    public record Decoration(String key, String label, String icon, String minuteLabel, String source) {
+    /**
+     * One observed incident fact suitable for a player card.
+     *
+     * <p>For a substitution, {@code counterpartyName} identifies the player on the other side of
+     * the replacement, {@code direction} is {@code IN} or {@code OUT}, and {@code injury} is true
+     * only when the normalized J5 incident explicitly confirms an injury substitution. Other
+     * incident facts leave these three fields empty/false.</p>
+     */
+    public record Decoration(String key, String label, String icon, String minuteLabel, String source,
+                             String counterpartyName, String direction, boolean injury) {
         public Decoration {
             key = bounded(key, "key", 64);
             label = bounded(label, "label", 128);
             icon = bounded(icon, "icon", 16);
             minuteLabel = bounded(minuteLabel, "minuteLabel", 32);
             source = bounded(source, "source", 64);
+            counterpartyName = boundedOptional(counterpartyName, "counterpartyName", 200);
+            direction = boundedOptional(direction, "direction", 8);
+
+            String expectedDirection = switch (key) {
+                case SUBSTITUTION_IN -> DIRECTION_IN;
+                case SUBSTITUTION_OUT -> DIRECTION_OUT;
+                default -> "";
+            };
+            if (expectedDirection.isEmpty()) {
+                if (!counterpartyName.isEmpty() || !direction.isEmpty() || injury) {
+                    throw new IllegalArgumentException(
+                            "only substitution decorations may contain replacement metadata");
+                }
+            } else {
+                if (counterpartyName.isEmpty() || !expectedDirection.equals(direction)) {
+                    throw new IllegalArgumentException(
+                            "substitution decorations require a counterparty name and matching direction");
+                }
+            }
+        }
+
+        public Decoration(String key, String label, String icon, String minuteLabel, String source) {
+            this(key, label, icon, minuteLabel, source, "", "", false);
         }
     }
 
@@ -145,6 +186,17 @@ public final class LineupIncidentOverlay {
         if (normalized.isEmpty() || normalized.length() > maximumLength
                 || normalized.chars().anyMatch(Character::isISOControl)) {
             throw new IllegalArgumentException(name + " must be bounded non-control text");
+        }
+        return normalized;
+    }
+
+    private static String boundedOptional(String value, String name, int maximumLength) {
+        String normalized = Objects.requireNonNull(value, name).trim();
+        if (normalized.isEmpty()) {
+            return "";
+        }
+        if (normalized.length() > maximumLength || normalized.chars().anyMatch(Character::isISOControl)) {
+            throw new IllegalArgumentException(name + " must be bounded non-control text when present");
         }
         return normalized;
     }

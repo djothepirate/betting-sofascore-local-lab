@@ -524,6 +524,15 @@ absent, nul ou faux — en particulier sur la page J5 manuelle qui ne porte pas 
 corrélée — les cartes restent statiques et la composition indique que les statistiques joueur ne
 sont pas disponibles pour ce match.
 
+Les faits de carton et de remplacement provenant de J5 incidents peuvent compléter une carte même
+lorsque la composition fournit déjà une note ou des minutes. Sur une carte, un carton se réduit à
+son icône ; son libellé, sa minute et la mention de provenance ne sont pas affichés. Pour un
+remplacement, le joueur entrant porte une flèche montante verte suivie du nom du sortant et de la
+minute ; le joueur sortant porte une flèche descendante rouge suivie du nom de l'entrant et de la
+minute. Une croix médicale n'est ajoutée qu'avec le fait de blessure explicite de l'incident.
+Cette présentation n'altère pas la table « Incidents » : celle-ci conserve les libellés, les
+joueurs, les équipes, les minutes et les détails fournis.
+
 La section « Joueurs indisponibles » conserve un comptage séparé. Elle indique le motif fourni,
 traduit lorsqu'il est connu, et le retour estimé par le fournisseur s'ils sont présents. Sans
 description, le joueur reste simplement indisponible. Une liste non renseignée est distincte

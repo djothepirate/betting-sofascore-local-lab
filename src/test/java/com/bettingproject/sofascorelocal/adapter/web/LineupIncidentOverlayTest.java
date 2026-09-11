@@ -32,6 +32,9 @@ class LineupIncidentOverlayTest {
                         player(104L, "Rescinded card", Optional.empty()),
                         player(105L, "Partial substitution", Optional.empty()),
                         player(106L, "Missing side", Optional.empty()),
+                        player(107L, "Injury replacement", Optional.of(new PlayerMatchStatistics(
+                                Map.of("rating", new BigDecimal("6.5")), Map.of()))),
+                        player(108L, "Injured player", Optional.empty()),
                         player(200L, "Existing lineup statistics", Optional.of(new PlayerMatchStatistics(
                                 Map.of("goals", BigDecimal.ONE), Map.of()))),
                         player(201L, "Existing lineup assister", Optional.of(new PlayerMatchStatistics(
@@ -66,13 +69,23 @@ class LineupIncidentOverlayTest {
                         Optional.of(201L), Optional.of("Existing lineup assister"), Optional.empty()),
                 incident(8, "card", 77, Optional.of(true), Optional.of(200L), Optional.of("Existing lineup statistics"),
                         Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("yellow"),
-                        Optional.empty(), Optional.empty(), Optional.empty())));
+                        Optional.empty(), Optional.empty(), Optional.empty()),
+                incident(9, "substitution", 82, Optional.of(true), Optional.empty(), Optional.empty(),
+                        Optional.of(107L), Optional.of("Injury replacement"), Optional.of(108L), Optional.of("Injured player"),
+                        Optional.of("injury"), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(true))));
 
         var view = LineupsPresentation.from(lineups, "Home", "Away", LineupCountryOverlay.empty(),
                 LineupIncidentOverlay.from(incidents), true);
 
         assertThat(player(view, "HOME:100").incidentDecorations()).extracting(LineupIncidentOverlay.Decoration::key)
                 .containsExactly("goal", "yellow-card");
+        assertThat(player(view, "HOME:100").incidentDecorations())
+                .filteredOn(decoration -> decoration.key().equals("yellow-card"))
+                .singleElement().satisfies(decoration -> {
+                    assertThat(decoration.counterpartyName()).isEmpty();
+                    assertThat(decoration.direction()).isEmpty();
+                    assertThat(decoration.injury()).isFalse();
+                });
         assertThat(player(view, "HOME:101").incidentDecorations()).singleElement().satisfies(decoration -> {
             assertThat(decoration.key()).isEqualTo("assist");
             assertThat(decoration.label()).isEqualTo("Passe décisive");
@@ -86,17 +99,38 @@ class LineupIncidentOverlayTest {
             assertThat(decoration.key()).isEqualTo("substitution-out");
             assertThat(decoration.label()).isEqualTo("Sortie observée");
             assertThat(decoration.minuteLabel()).isEqualTo("71");
+            assertThat(decoration.counterpartyName()).isEqualTo("Incoming player");
+            assertThat(decoration.direction()).isEqualTo("OUT");
+            assertThat(decoration.injury()).isFalse();
         });
         assertThat(player(view, "HOME:102").statistics()).isNotNull();
         assertThat(player(view, "HOME:103").incidentDecorations()).singleElement().satisfies(decoration -> {
             assertThat(decoration.key()).isEqualTo("substitution-in");
             assertThat(decoration.label()).isEqualTo("Entrée observée");
             assertThat(decoration.minuteLabel()).isEqualTo("71");
+            assertThat(decoration.counterpartyName()).isEqualTo("Outgoing player");
+            assertThat(decoration.direction()).isEqualTo("IN");
+            assertThat(decoration.injury()).isFalse();
         });
         assertThat(player(view, "HOME:103").statistics()).isNotNull();
         assertThat(player(view, "HOME:104").incidentDecorations()).isEmpty();
         assertThat(player(view, "HOME:105").incidentDecorations()).isEmpty();
         assertThat(player(view, "HOME:106").incidentDecorations()).isEmpty();
+        assertThat(player(view, "HOME:107").incidentDecorations()).singleElement().satisfies(decoration -> {
+            assertThat(decoration.key()).isEqualTo("substitution-in");
+            assertThat(decoration.counterpartyName()).isEqualTo("Injured player");
+            assertThat(decoration.minuteLabel()).isEqualTo("82");
+            assertThat(decoration.direction()).isEqualTo("IN");
+            assertThat(decoration.injury()).isTrue();
+        });
+        assertThat(player(view, "HOME:107").statistics()).isNotNull();
+        assertThat(player(view, "HOME:108").incidentDecorations()).singleElement().satisfies(decoration -> {
+            assertThat(decoration.key()).isEqualTo("substitution-out");
+            assertThat(decoration.counterpartyName()).isEqualTo("Injury replacement");
+            assertThat(decoration.minuteLabel()).isEqualTo("82");
+            assertThat(decoration.direction()).isEqualTo("OUT");
+            assertThat(decoration.injury()).isTrue();
+        });
         assertThat(player(view, "HOME:200")).satisfies(player -> {
             assertThat(player.statistics()).isNotNull();
             assertThat(player.achievements()).extracting(LineupsPresentation.Achievement::label).containsExactly("1 but");
@@ -145,9 +179,20 @@ class LineupIncidentOverlayTest {
                                           Optional<Long> playerOutId, Optional<String> playerOutName,
                                           Optional<String> incidentClass, Optional<Long> assistId,
                                           Optional<String> assistName, Optional<Boolean> rescinded) {
+        return incident(sequence, type, minute, home, playerId, playerName, playerInId, playerInName,
+                playerOutId, playerOutName, incidentClass, assistId, assistName, rescinded, Optional.empty());
+    }
+
+    private static EventIncident incident(int sequence, String type, int minute, Optional<Boolean> home,
+                                          Optional<Long> playerId, Optional<String> playerName,
+                                          Optional<Long> playerInId, Optional<String> playerInName,
+                                          Optional<Long> playerOutId, Optional<String> playerOutName,
+                                          Optional<String> incidentClass, Optional<Long> assistId,
+                                          Optional<String> assistName, Optional<Boolean> rescinded,
+                                          Optional<Boolean> injury) {
         return new EventIncident(sequence, type, minute, Optional.empty(), home, Optional.empty(), playerId,
                 playerName, playerInId, playerInName, playerOutId, playerOutName, Optional.empty(), Optional.empty(),
-                incidentClass, Optional.empty(), Optional.empty(), Optional.empty(), assistId, assistName,
+                incidentClass, Optional.empty(), Optional.empty(), injury, assistId, assistName,
                 Optional.empty(), Optional.empty(), Optional.empty(), rescinded, Optional.empty(), Optional.empty());
     }
 

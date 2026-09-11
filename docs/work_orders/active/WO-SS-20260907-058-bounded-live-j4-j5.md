@@ -1563,9 +1563,38 @@ Après ajout délibéré du profil V9 dans son lanceur local, l'opérateur a lan
 `5ab7dd5f-2f03-4181-9281-fe4dfb351e40` et a confirmé que la restitution graphique est conforme.
 Les cartes affichent notamment les sorties observées et un carton jaune issus de `EVENT_INCIDENTS`,
 tandis que le panneau individuel d'un joueur entrant conserve ses minutes, sa note et ses mesures
-J5 lineups avec la mention « Entrée observée · 46′ ». Cette observation couvre le cas réel où les
-compositions comportent déjà des mesures joueur mais omettent les faits de carton ou de remplacement.
+J5 lineups. Cette observation couvre le cas réel où les compositions comportent déjà des mesures
+joueur mais omettent les faits de carton ou de remplacement ; la formulation visuelle des
+remplacements est précisée dans la finition ci-dessous.
 
 Les captures ont été fournies dans le suivi opérateur et ne sont pas copiées dans le dépôt. Ce
 retour valide l'affichage local; il ne constitue ni une preuve d'acceptation fournisseur, ni une
 modification d'opt-in, de quota ou de politique de transport.
+
+#### Retour opérateur et finition visuelle des compositions — 11 septembre
+
+Une campagne distincte observée par l'opérateur s'est arrêtée après une réponse fournisseur
+HTTP 403. Le diagnostic local affichait 190 départs worker observés et les quatre familles J4/J5 ;
+ce compteur local ne permet pas d'attribuer le refus à un seuil fournisseur. Le traitement reste
+un arrêt sûr et persistant, sans nouvelle tentative, réarmement automatique, proxy, changement
+d'adresse, réutilisation de contexte ou résolution de challenge. Cette observation ne déclenche
+aucune action de campagne par le présent lot.
+
+La projection des **compositions**, commune à la campagne et à la consultation manuelle J5,
+allège les décorations provenant d'incidents déjà lisibles. Un carton reste une image seule sur la
+carte du joueur : le libellé, la minute et la provenance ne sont plus affichés visuellement. Un
+remplacement montre la personne opposée et la minute : sur le joueur entrant, une flèche montante
+verte accompagne le nom du sortant ; sur le joueur sortant, une flèche descendante rouge accompagne
+le nom de l'entrant. Une croix médicale supplémentaire n'apparaît que lorsqu'une blessure est
+explicitement fournie par l'incident. Le libellé visuel « Incidents J5 » est retiré de ces
+décorations de carte. Les noms, minutes et le fait de blessure restent des faits incidents J5
+observés ; aucune observation normalisée n'est modifiée. Le tableau des incidents conserve sa
+présentation détaillée existante, y compris ses libellés, équipes et joueurs.
+
+Validation locale sans campagne ni navigateur :
+
+| Commande | Résultat |
+| --- | --- |
+| `mvnw.cmd --offline -Dmaven.repo.local=C:\\Users\\geoff\\.m2\\repository -q -Dtest=J5EventDataControllerTest,LineupIncidentOverlayTest test` | Réussite : rendu MVC et overlay des incidents couverts. |
+| `node --check src/main/resources/static/js/lineups.js` | Réussite : syntaxe du rafraîchissement dynamique valide. |
+| `mvnw.cmd clean verify` | Réussite : Surefire `2257/0/0/5`, Failsafe `232/0/0/0`, en 9 min 58 s. |

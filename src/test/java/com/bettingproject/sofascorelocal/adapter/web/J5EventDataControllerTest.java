@@ -236,7 +236,10 @@ class J5EventDataControllerTest {
                         Optional.empty(), Optional.empty(), Optional.empty()),
                         new EventIncident(1, "substitution", 83, Optional.empty(), Optional.of(true), Optional.empty(),
                                 Optional.empty(), Optional.empty(), Optional.of(9704L), Optional.of("Observed incoming"),
-                                Optional.of(9703L), Optional.of("Observed outgoing"), Optional.empty(), Optional.empty()),
+                                Optional.of(9703L), Optional.of("Observed outgoing"), Optional.empty(), Optional.empty(),
+                                Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(true),
+                                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(),
+                                Optional.empty(), Optional.empty(), Optional.empty()),
                         new EventIncident(2, "card", 58, Optional.empty(), Optional.of(true), Optional.empty(),
                                 Optional.of(9701L), Optional.of("Observed scorer"), Optional.empty(), Optional.empty(),
                                 Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("yellow"),
@@ -276,15 +279,23 @@ class J5EventDataControllerTest {
                 .andExpect(model().attributeExists("lineupsView"))
                 .andExpect(content().string(containsString("But · 18′")))
                 .andExpect(content().string(containsString("Passe décisive · 18′")))
-                .andExpect(content().string(containsString("Carton jaune · 58′")))
-                .andExpect(content().string(containsString("Carton rouge · 59′")))
-                .andExpect(content().string(containsString("Sortie observée · 83′")))
-                .andExpect(content().string(containsString("Entrée observée · 83′")))
+                .andExpect(content().string(not(containsString("Carton jaune · 58′"))))
+                .andExpect(content().string(not(containsString("Carton rouge · 59′"))))
+                .andExpect(content().string(not(containsString("Sortie observée · 83′"))))
+                .andExpect(content().string(not(containsString("Entrée observée · 83′"))))
                 .andExpect(content().string(containsString("data-lineups-incident-decoration=\"yellow-card\"")))
                 .andExpect(content().string(containsString("data-lineups-incident-decoration=\"red-card\"")))
                 .andExpect(content().string(containsString("data-lineups-incident-decoration=\"substitution-out\"")))
                 .andExpect(content().string(containsString("data-lineups-incident-decoration=\"substitution-in\"")))
-                .andExpect(content().string(containsString("Incidents J5")))
+                .andExpect(content().string(containsString("lineups-incident-card-icon")))
+                .andExpect(content().string(containsString("lineups-substitution-arrow\">↑")))
+                .andExpect(content().string(containsString("lineups-substitution-arrow\">↓")))
+                .andExpect(content().string(containsString("lineups-substitution-injury")))
+                .andExpect(content().string(containsString("lineups-substitution-counterparty")))
+                .andExpect(content().string(containsString("Observed outgoing")))
+                .andExpect(content().string(containsString("Observed incoming")))
+                .andExpect(content().string(containsString("· 83′")))
+                .andExpect(content().string(not(containsString("class=\"lineups-incident-source\""))))
                 .andExpect(content().string(containsString("data-lineups-incident-source=\"EVENT_INCIDENTS\"")))
                 .andExpect(content().string(containsString("Statistiques des joueurs non disponibles pour ce match")))
                 .andExpect(content().string(not(containsString("data-lineups-player-details"))))

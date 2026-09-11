@@ -277,17 +277,44 @@
       && /^\d{1,3}(?:\+\d{1,3})?$/.test(text(value.minuteLabel)) && text(value.source) === "EVENT_INCIDENTS");
     incidents.hidden = decorations.length === 0;
     incidents.replaceChildren(...decorations.map(value => {
+      const key = text(value.key);
       const label = text(value.label, "Incident");
       const minute = text(value.minuteLabel);
       const badge = create("span", "lineups-incident-decoration", "data-lineups-incident-decoration");
-      badge.dataset.lineupsIncidentDecoration = text(value.key);
+      badge.dataset.lineupsIncidentDecoration = key;
       badge.dataset.lineupsIncidentSource = "EVENT_INCIDENTS";
       badge.dataset.lineupsIncidentMinute = minute;
+      if (/^(?:yellow-card|red-card|yellow-red-card)$/.test(key)) {
+        badge.setAttribute("role", "img");
+        badge.setAttribute("aria-label", `${label}, ${minute}e minute`);
+        const icon = create("span", "lineups-incident-card-icon", "", text(value.icon, "•"));
+        icon.setAttribute("aria-hidden", "true");
+        badge.append(icon);
+        return badge;
+      }
+      if (/^substitution-(?:in|out)$/.test(key)) {
+        const incoming = key === "substitution-in";
+        const injury = value.injury === true;
+        const counterparty = text(value.counterpartyName ?? value.counterpartName, "Joueur non renseigné");
+        const direction = incoming ? "IN" : "OUT";
+        badge.dataset.lineupsSubstitutionDirection = direction;
+        badge.dataset.lineupsSubstitutionInjury = String(injury);
+        const accessible = create("span", "lineups-incident-accessible", "",
+          incoming ? "Entrée à la place de " : "Sortie remplacée par ");
+        const symbols = create("span", "lineups-substitution-symbols", "");
+        symbols.setAttribute("aria-hidden", "true");
+        symbols.append(create("span", "lineups-substitution-arrow", "", incoming ? "↑" : "↓"));
+        if (injury) symbols.append(create("span", "lineups-substitution-injury", "", "✚"));
+        badge.append(accessible, symbols,
+          create("span", "lineups-substitution-counterparty", "", counterparty),
+          create("span", "lineups-substitution-minute", "", `· ${minute}′`));
+        if (injury) badge.append(create("span", "lineups-incident-accessible", "", ", remplacement sur blessure"));
+        return badge;
+      }
       badge.setAttribute("aria-label", `${label}, ${minute}e minute, observé dans les incidents J5`);
       const icon = create("span", "lineups-incident-icon", "", text(value.icon, "•"));
       icon.setAttribute("aria-hidden", "true");
-      badge.append(icon, create("span", "lineups-incident-label", "", `${label} · ${minute}′`),
-        create("span", "lineups-incident-source", "", "Incidents J5"));
+      badge.append(icon, create("span", "lineups-incident-label", "", `${label} · ${minute}′`));
       return badge;
     }));
   }

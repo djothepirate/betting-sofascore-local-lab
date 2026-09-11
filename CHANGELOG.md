@@ -37,6 +37,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   gardent leur priorité, tandis que les cartons et entrées/sorties observés restent visibles avec
   leur minute même si la carte a déjà une note ou des minutes de jeu, sans réécrire les
   statistiques de composition.
+- Simplifie uniquement les décorations d'incidents sur les cartes des compositions : un carton
+  est représenté par sa seule icône ; un remplacement montre le nom du joueur opposé et sa minute,
+  avec flèche montante verte pour l'entrant et descendante rouge pour le sortant. Une croix médicale
+  distingue un remplacement sur blessure explicitement observé. Le tableau des incidents conserve
+  sa présentation détaillée et aucune provenance ou observation normalisée n'est modifiée.
 - Affiche pour `live-v9` l'état terminal `FINISHED_J5_INCOMPLETE` lorsque J4 confirme le résultat
   mais que le dernier cycle J5 facultatif est incomplet. Les politiques historiques conservent
   leur libellé `FINISHED_CONFIRMED` et aucune nouvelle collecte n'est déclenchée.

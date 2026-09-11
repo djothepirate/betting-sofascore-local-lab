@@ -144,12 +144,46 @@
       </span>
     </span>
     <span class="lineups-incident-decorations" data-lineups-incident-decorations
-          th:hidden="${player.incidentDecorations.isEmpty()}">
+           th:hidden="${player.incidentDecorations.isEmpty()}">
       <span th:each="incident : ${player.incidentDecorations}" class="lineups-incident-decoration"
-            th:attr="data-lineups-incident-decoration=${incident.key},data-lineups-incident-source=${incident.source},data-lineups-incident-minute=${incident.minuteLabel},aria-label=${incident.label + ', ' + incident.minuteLabel + 'e minute, observé dans les incidents J5'}">
-        <span class="lineups-incident-icon" aria-hidden="true" th:text="${incident.icon}">•</span>
-        <span class="lineups-incident-label" th:text="${incident.label + ' · ' + incident.minuteLabel + '′'}">But · 45′</span>
-        <span class="lineups-incident-source">Incidents J5</span>
+            th:attr="data-lineups-incident-decoration=${incident.key},data-lineups-incident-source=${incident.source},data-lineups-incident-minute=${incident.minuteLabel}">
+        <th:block th:switch="${incident.key}">
+          <span th:case="'yellow-card'" class="lineups-incident-card-icon" role="img"
+                th:attr="aria-label=${incident.label + ', ' + incident.minuteLabel + 'e minute'}"
+                th:text="${incident.icon}">🟨</span>
+          <span th:case="'red-card'" class="lineups-incident-card-icon" role="img"
+                th:attr="aria-label=${incident.label + ', ' + incident.minuteLabel + 'e minute'}"
+                th:text="${incident.icon}">🟥</span>
+          <span th:case="'yellow-red-card'" class="lineups-incident-card-icon" role="img"
+                th:attr="aria-label=${incident.label + ', ' + incident.minuteLabel + 'e minute'}"
+                th:text="${incident.icon}">🟨🟥</span>
+          <th:block th:case="'substitution-in'">
+            <span class="lineups-incident-accessible">Entrée à la place de </span>
+            <span class="lineups-substitution-symbols" aria-hidden="true">
+              <span class="lineups-substitution-arrow">↑</span>
+              <span th:if="${incident.injury}" class="lineups-substitution-injury">✚</span>
+            </span>
+            <span class="lineups-substitution-counterparty"
+                  th:text="${#strings.isEmpty(incident.counterpartyName) ? 'Joueur non renseigné' : incident.counterpartyName}">Joueur sortant</span>
+            <span class="lineups-substitution-minute" th:text="${'· ' + incident.minuteLabel + '′'}">· 45′</span>
+            <span th:if="${incident.injury}" class="lineups-incident-accessible">, remplacement sur blessure</span>
+          </th:block>
+          <th:block th:case="'substitution-out'">
+            <span class="lineups-incident-accessible">Sortie remplacée par </span>
+            <span class="lineups-substitution-symbols" aria-hidden="true">
+              <span class="lineups-substitution-arrow">↓</span>
+              <span th:if="${incident.injury}" class="lineups-substitution-injury">✚</span>
+            </span>
+            <span class="lineups-substitution-counterparty"
+                  th:text="${#strings.isEmpty(incident.counterpartyName) ? 'Joueur non renseigné' : incident.counterpartyName}">Joueur entrant</span>
+            <span class="lineups-substitution-minute" th:text="${'· ' + incident.minuteLabel + '′'}">· 45′</span>
+            <span th:if="${incident.injury}" class="lineups-incident-accessible">, remplacement sur blessure</span>
+          </th:block>
+          <th:block th:case="*">
+            <span class="lineups-incident-icon" aria-hidden="true" th:text="${incident.icon}">•</span>
+            <span class="lineups-incident-label" th:text="${incident.label + ' · ' + incident.minuteLabel + '′'}">But · 45′</span>
+          </th:block>
+        </th:block>
       </span>
     </span>
   </span>
