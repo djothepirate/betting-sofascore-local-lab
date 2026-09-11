@@ -6,6 +6,11 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ### WO-058 — règles J4/J5 `live-v9` et cartes joueurs enrichies par les incidents
 
+- Versionne une preuve V9 distincte, liée par SHA-256 au replay local de ses 16 scénarios
+  de planification et à la borne haute quatre-familles déjà mesurée sur loopback. Le script
+  de préparation affiche les neuf variables V9 à reporter manuellement dans Eclipse, sans
+  modifier de lanceur, d'environnement, d'opt-in live, de campagne ou de transport ; le SHA V8
+  n'est jamais employé comme SHA V9.
 - Introduit la politique de campagne locale `live-v9`, avec un profil de qualification propre
   et un refus fermé quand celui-ci est absent ou incohérent. Sa borne maximale reste dix
   rencontres et son enveloppe de départ réutilise strictement celle de `live-v8` (quatre
@@ -27,10 +32,14 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
   minute. Les familles habituelles reprennent seulement après cette confirmation.
 - Rend les compositions dépendantes du fait J4 `hasEventPlayerStatistics` (false exclut J5
   lineups) et rend les cartes cliquables seulement lorsque la capacité tournoi J4 est
-  explicitement vraie. Les cartes peuvent compléter des statistiques absentes avec des
-  observations J5 incidents strictement jointes par équipe et identifiant joueur : buts,
-  passes, cartons et entrées/sorties observées, avec minute, sans réécrire les statistiques
-  de composition.
+  explicitement vraie. Les cartes fusionnent les faits par type avec des observations J5
+  incidents strictement jointes par équipe et identifiant joueur : les buts et passes J5 lineups
+  gardent leur priorité, tandis que les cartons et entrées/sorties observés restent visibles avec
+  leur minute même si la carte a déjà une note ou des minutes de jeu, sans réécrire les
+  statistiques de composition.
+- Affiche pour `live-v9` l'état terminal `FINISHED_J5_INCOMPLETE` lorsque J4 confirme le résultat
+  mais que le dernier cycle J5 facultatif est incomplet. Les politiques historiques conservent
+  leur libellé `FINISHED_CONFIRMED` et aucune nouvelle collecte n'est déclenchée.
 - Ajoute la migration append-only V52 pour accepter `live-v9` tout en conservant
   `admission_profile='live-v8'` dans le ledger de départ partagé. Le runbook J6 exige donc
   désormais Flyway V52 avant une qualification de sauvegarde/restauration.

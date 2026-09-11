@@ -525,7 +525,8 @@
         }
         node.querySelectorAll("[data-live-stop-form]").forEach(form => {
           form.hidden = collectionStopped || campaign.state !== "RUNNING"
-            || event.state.startsWith("STOPPED") || event.state === "FINISHED_CONFIRMED";
+            || event.state.startsWith("STOPPED") || event.state === "FINISHED_CONFIRMED"
+            || event.state === "FINISHED_J5_INCOMPLETE";
           const button = form.querySelector("button");
           if (button) button.disabled = form.hidden;
         });

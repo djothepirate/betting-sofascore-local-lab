@@ -16,11 +16,44 @@ politique ; aucun profil historique, y compris V8, ne sert de repli à V9.
 
 V9 exige son **propre** SHA-256 et ses huit enveloppes
 `SOFASCORE_LIVE_GROUPED_V9_{J4,INCIDENTS,STATISTICS,LINEUPS}_{REQUEST,PROCESSING}_ENVELOPE`.
-Le SHA V9 est volontairement vide par défaut : il rend l'admission nulle tant qu'une
-qualification V9 séparée n'est pas versionnée puis livrée après revue. Les enveloppes disposent
-de valeurs structurelles locales (`10s` pour la requête et `1s` pour le traitement) qui ne
-constituent pas une qualification. Aucune nouvelle campagne V9 ne peut donc être préparée sans
-son propre profil complet. Ne pas recopier le hash ou les valeurs V8 pour contourner cette garde.
+La preuve versionnée [WO058-GROUPED-LIVE-V9-PROFILE-20260911.json](../validation/WO058-GROUPED-LIVE-V9-PROFILE-20260911.json)
+lie le replay hors réseau du planificateur V9 à la borne haute de quatre familles mesurée localement
+pour V8. Elle atteste uniquement la borne locale J4 + incidents + statistiques + compositions :
+les règles V9 ne peuvent que supprimer des appels J5 après un J4 observé. Elle n'affirme ni
+l'acceptation, ni un quota, ni un seuil d'adresse IP du fournisseur.
+
+Le SHA V9 reste volontairement vide dans `application.yml` : le profil ne devient jamais actif
+par défaut. Après revue humaine de cette preuve, l'opérateur peut obtenir les **neuf** entrées
+exactes à reporter manuellement dans l'attribut `environmentVariables` du lanceur Eclipse actif :
+
+```powershell
+.\scripts\Show-LiveGroupedV9LauncherConfiguration.ps1 -OutputFormat Eclipse
+```
+
+Ce script lit seulement la preuve versionnée, recalcule son SHA-256 et affiche des éléments
+`<mapEntry .../>`. Il ne modifie pas le fichier `.launch`, les variables d'environnement, le
+profil Playwright, la base, ni une campagne ; ses trois dernières lignes confirment
+`V9_LAUNCHER_CONFIGURATION=REVIEW_REQUIRED`, `V9_LIVE_OPT_IN_CHANGED=NO` et
+`V9_PROVIDER_CALLS_EXECUTED=NO`.
+
+| Variable V9 | Valeur issue du profil V9 |
+| --- | --- |
+| `SOFASCORE_LIVE_GROUPED_V9_QUALIFICATION_SHA256` | `f994415c00c9d97cb797a9f0b52c773efea044d827abc25282ae7f3ab17365da` |
+| `SOFASCORE_LIVE_GROUPED_V9_J4_REQUEST_ENVELOPE` | `300ms` |
+| `SOFASCORE_LIVE_GROUPED_V9_J4_PROCESSING_ENVELOPE` | `500ms` |
+| `SOFASCORE_LIVE_GROUPED_V9_INCIDENTS_REQUEST_ENVELOPE` | `300ms` |
+| `SOFASCORE_LIVE_GROUPED_V9_INCIDENTS_PROCESSING_ENVELOPE` | `400ms` |
+| `SOFASCORE_LIVE_GROUPED_V9_STATISTICS_REQUEST_ENVELOPE` | `350ms` |
+| `SOFASCORE_LIVE_GROUPED_V9_STATISTICS_PROCESSING_ENVELOPE` | `400ms` |
+| `SOFASCORE_LIVE_GROUPED_V9_LINEUPS_REQUEST_ENVELOPE` | `300ms` |
+| `SOFASCORE_LIVE_GROUPED_V9_LINEUPS_PROCESSING_ENVELOPE` | `450ms` |
+
+Ces neuf variables ne changent pas l'opt-in live : `SOFASCORE_LIVE_ENABLED` reste une décision
+opérateur séparée. Le plafond déjà qualifié doit rester
+`SOFASCORE_LIVE_QUALIFIED_MATCH_CAPACITY=10` et
+`SOFASCORE_PLAYWRIGHT_REQUEST_TIMEOUT=30s`. Aucune nouvelle campagne V9 ne peut être préparée
+tant que l'opérateur n'a pas délibérément ajouté les neuf valeurs revues ; ne pas recopier le SHA
+V8 dans la variable V9 pour contourner cette garde.
 
 La politique V9 n'effectue pas de prélecture autonome et n'altère aucune campagne existante.
 Le premier J4 d'une cible a donc la responsabilité de constater `finalResultOnly=true`; il arrête
@@ -35,7 +68,7 @@ du **profil** V8 versionné, non celle du rapport natif.
 
 | Variable | Valeur qualifiée |
 | --- | --- |
-| `SOFASCORE_LIVE_GROUPED_V8_QUALIFICATION_SHA256` | `c5cef2745422d70bab769d03a93991af8ce3d685fb9daabb64fd00ab0a1ca3c8` |
+| `SOFASCORE_LIVE_GROUPED_V8_QUALIFICATION_SHA256` | `4255f5327681398013dc9a0ab0f2250c7168558a399d164e299bb54b8b856de3` |
 | `SOFASCORE_LIVE_GROUPED_V8_J4_REQUEST_ENVELOPE` | `300ms` |
 | `SOFASCORE_LIVE_GROUPED_V8_J4_PROCESSING_ENVELOPE` | `500ms` |
 | `SOFASCORE_LIVE_GROUPED_V8_INCIDENTS_REQUEST_ENVELOPE` | `300ms` |
@@ -69,11 +102,13 @@ aucune campagne fournisseur.
 | `tournament.uniqueTournament.hasEventPlayerStatistics=true` | Les cartes de composition peuvent être ouvrables. Toute autre valeur laisse les cartes statiques et annonce que les statistiques joueur ne sont pas disponibles. |
 | `status=inprogress`, description `halftime` | Aucun J4/J5 pendant 15 minutes. À l'échéance, un J4 seul ; puis J4 seul chaque minute tant que `2nd half` n'est pas confirmé. |
 
-Les décorations provenant des incidents (buts, passes, cartons, entrées et sorties avec
-minute) s'affichent seulement lorsqu'une carte n'a pas de statistiques lineups et que
-statistiques J5 est explicitement indisponible. Elles sont un complément de présentation
-strictement joint par équipe et identifiant joueur ; elles ne modifient ni le snapshot ni les
-statistiques réellement fournies par J5 lineups.
+Les cartes joueur fusionnent les faits par type. Les métriques directes J5 lineups `goals` et
+`goalAssist` conservent la priorité lorsqu'elles sont présentes, y compris à zéro. Les cartons et
+les entrées/sorties de remplacement proviennent des incidents J5 lisibles, complets au niveau du
+fait et non annulés, associés strictement par `(équipe, providerPlayerId)`. Ils restent donc
+visibles même lorsqu'une carte possède une note ou des minutes J5 lineups, ou lorsque J5
+statistics est disponible. Cette décoration est en lecture seule : elle ne modifie ni le snapshot
+ni les statistiques normalisées de J5 lineups.
 
 ### Règles V8 qualifiées localement
 

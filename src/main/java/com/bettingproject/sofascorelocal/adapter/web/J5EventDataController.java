@@ -104,9 +104,10 @@ public class J5EventDataController {
                                 page.current().event().homeTeam().name(), page.current().event().awayTeam().name()));
                     }
                 });
-                LineupIncidentOverlay incidentOverlay = page.data().statistics()
-                        .filter(value -> value.completeness().status() == J5CompletenessStatus.UNAVAILABLE)
-                        .flatMap(ignored -> page.data().incidents())
+                // A readable match-statistics family does not establish that a particular lineup
+                // card has a card or substitution fact. Merge independently readable incidents
+                // into lineup cards by their own source and player key.
+                LineupIncidentOverlay incidentOverlay = page.data().incidents()
                         .filter(value -> value.completeness().status() != J5CompletenessStatus.UNAVAILABLE)
                         .map(value -> LineupIncidentOverlay.from((EventIncidents) value.data()))
                         .orElse(LineupIncidentOverlay.empty());

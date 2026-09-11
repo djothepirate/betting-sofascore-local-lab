@@ -313,7 +313,7 @@
     </dl>
     <div class="actions">
       <a class="button button-secondary" th:href="@{/events/{id}(id=${event.canonicalEventId})}">Détail et historique</a>
-      <form th:if="${campaign.state == 'RUNNING' and (campaign.runtimeStatus == null or !campaign.runtimeStatus.collectionStopped) and !#strings.startsWith(event.state, 'STOPPED') and event.state != 'FINISHED_CONFIRMED'}"
+      <form th:if="${campaign.state == 'RUNNING' and (campaign.runtimeStatus == null or !campaign.runtimeStatus.collectionStopped) and !#strings.startsWith(event.state, 'STOPPED') and event.state != 'FINISHED_CONFIRMED' and event.state != 'FINISHED_J5_INCOMPLETE'}"
             data-live-stop-form method="post" th:action="@{/live-campaigns/{id}/events/{eventId}/stop(id=${campaign.campaignId},eventId=${event.canonicalEventId})}">
         <input type="hidden" name="localFormToken" th:value="${localFormToken}">
         <input type="hidden" name="page" th:value="${campaign.pagination.number}">

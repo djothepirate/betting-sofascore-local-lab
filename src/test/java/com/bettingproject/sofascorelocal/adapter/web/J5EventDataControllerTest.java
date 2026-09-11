@@ -25,6 +25,7 @@ import com.bettingproject.sofascorelocal.domain.eventdata.EventIncident;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventIncidents;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventLineupPlayer;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventLineups;
+import com.bettingproject.sofascorelocal.domain.eventdata.PlayerMatchStatistics;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventStatisticMetric;
 import com.bettingproject.sofascorelocal.domain.eventdata.EventStatistics;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5CompletenessReport;
@@ -50,9 +51,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.net.URI;
+import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -218,11 +221,11 @@ class J5EventDataControllerTest {
     }
 
     @Test
-    void usesReadableIncidentsAsCardDecorationsOnlyWhenStatisticsAreExplicitlyUnavailable() throws Exception {
+    void usesReadableIncidentsToCompleteCardsWhenStatisticsAndLineupMetricsArePresent() throws Exception {
         J4EventSearchItem current = currentEvent();
         var statistics = new J5EventDataObservationView(41L, current.event().identity(),
-                J5UnavailableFamily.emptyObservation(SofascoreEndpointType.EVENT_STATISTICS, 900001L),
-                source("statistics-unavailable", "event-statistics-v1"), J5CompletenessReport.unavailable(),
+                new EventStatistics(900001L, List.of()),
+                source("statistics-readable", "event-statistics-v1"), J5CompletenessReport.measured(1, 1, List.of()),
                 "a".repeat(64));
         var incidents = new J5EventDataObservationView(42L, current.event().identity(), new EventIncidents(900001L,
                 List.of(new EventIncident(0, "goal", 18, Optional.empty(), Optional.of(true), Optional.empty(),
@@ -233,16 +236,33 @@ class J5EventDataControllerTest {
                         Optional.empty(), Optional.empty(), Optional.empty()),
                         new EventIncident(1, "substitution", 83, Optional.empty(), Optional.of(true), Optional.empty(),
                                 Optional.empty(), Optional.empty(), Optional.of(9704L), Optional.of("Observed incoming"),
-                                Optional.of(9703L), Optional.of("Observed outgoing"), Optional.empty(), Optional.empty()))),
+                                Optional.of(9703L), Optional.of("Observed outgoing"), Optional.empty(), Optional.empty()),
+                        new EventIncident(2, "card", 58, Optional.empty(), Optional.of(true), Optional.empty(),
+                                Optional.of(9701L), Optional.of("Observed scorer"), Optional.empty(), Optional.empty(),
+                                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("yellow"),
+                                Optional.empty()),
+                        new EventIncident(3, "card", 59, Optional.empty(), Optional.of(false), Optional.empty(),
+                                Optional.of(9705L), Optional.of("Observed away defender"), Optional.empty(), Optional.empty(),
+                                Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("red"),
+                                Optional.empty()))),
                 source("incidents-readable", "event-incidents-v1"), J5CompletenessReport.measured(1, 1, List.of()),
                 "b".repeat(64));
         var lineups = new J5EventDataObservationView(43L, current.event().identity(), new EventLineups(900001L, true,
                 new TeamLineup(LineupSide.HOME, Optional.of("4-3-3"), List.of(
-                        new EventLineupPlayer(9701L, "Observed scorer", Optional.empty(), Optional.of("F"), true),
+                        new EventLineupPlayer(9701L, "Observed scorer", Optional.empty(), Optional.of("F"), true,
+                                Optional.empty(), Optional.of(new PlayerMatchStatistics(
+                                        Map.of("rating", new BigDecimal("7.1")), Map.of()))),
                         new EventLineupPlayer(9702L, "Observed assistant", Optional.empty(), Optional.of("F"), true),
-                        new EventLineupPlayer(9703L, "Observed outgoing", Optional.empty(), Optional.of("M"), true),
-                        new EventLineupPlayer(9704L, "Observed incoming", Optional.empty(), Optional.of("M"), false))),
-                new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of())),
+                        new EventLineupPlayer(9703L, "Observed outgoing", Optional.empty(), Optional.of("M"), true,
+                                Optional.empty(), Optional.of(new PlayerMatchStatistics(
+                                        Map.of("rating", new BigDecimal("6.8")), Map.of()))),
+                        new EventLineupPlayer(9704L, "Observed incoming", Optional.empty(), Optional.of("M"), false,
+                                Optional.empty(), Optional.of(new PlayerMatchStatistics(
+                                        Map.of("minutesPlayed", BigDecimal.ZERO), Map.of()))))),
+                new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of(
+                        new EventLineupPlayer(9705L, "Observed away defender", Optional.empty(), Optional.of("D"), true,
+                                Optional.empty(), Optional.of(new PlayerMatchStatistics(
+                                        Map.of("rating", new BigDecimal("6.3")), Map.of())))))),
                 source("lineups-readable", "event-lineups-v1"), J5CompletenessReport.measured(1, 1, List.of()),
                 "c".repeat(64));
         var page = new J5EventDataPage(ZoneId.of("Europe/Paris"), current,
@@ -256,8 +276,14 @@ class J5EventDataControllerTest {
                 .andExpect(model().attributeExists("lineupsView"))
                 .andExpect(content().string(containsString("But · 18′")))
                 .andExpect(content().string(containsString("Passe décisive · 18′")))
+                .andExpect(content().string(containsString("Carton jaune · 58′")))
+                .andExpect(content().string(containsString("Carton rouge · 59′")))
                 .andExpect(content().string(containsString("Sortie observée · 83′")))
                 .andExpect(content().string(containsString("Entrée observée · 83′")))
+                .andExpect(content().string(containsString("data-lineups-incident-decoration=\"yellow-card\"")))
+                .andExpect(content().string(containsString("data-lineups-incident-decoration=\"red-card\"")))
+                .andExpect(content().string(containsString("data-lineups-incident-decoration=\"substitution-out\"")))
+                .andExpect(content().string(containsString("data-lineups-incident-decoration=\"substitution-in\"")))
                 .andExpect(content().string(containsString("Incidents J5")))
                 .andExpect(content().string(containsString("data-lineups-incident-source=\"EVENT_INCIDENTS\"")))
                 .andExpect(content().string(containsString("Statistiques des joueurs non disponibles pour ce match")))

@@ -86,8 +86,33 @@ public final class LineupsPresentation {
                 source.statistics().map(PlayerStatisticsPresentation::from).orElse(null),
                 CountryPresentation.of(preferredCountry(source.country(),
                         overlay.rosterCountry(side, source.providerPlayerId()))), achievements(source),
-                source.statistics().isPresent() ? List.of() : incidents.decorations(side, source.providerPlayerId()),
+                incidentDecorations(side, source, incidents),
                 playerDetailsAllowed);
+    }
+
+    /**
+     * J5 lineups can carry direct, aggregate goal and assist metrics. They remain authoritative
+     * when present, including an observed zero. In contrast, the lineup contract has no
+     * equivalent event fact for a card or for an entry/exit substitution: those readable facts
+     * stay visible from J5 incidents even when the player has unrelated lineup metrics such as a
+     * rating or minutes played. This is a display overlay only; it never changes the lineup data.
+     */
+    private static List<LineupIncidentOverlay.Decoration> incidentDecorations(
+            LineupSide side,
+            EventLineupPlayer source,
+            LineupIncidentOverlay incidents) {
+        List<LineupIncidentOverlay.Decoration> observed = incidents.decorations(side, source.providerPlayerId());
+        if (source.statistics().isEmpty()) {
+            return observed;
+        }
+        var values = source.statistics().orElseThrow().values();
+        return observed.stream().filter(decoration -> switch (decoration.key()) {
+            case "goal" -> !values.containsKey("goals");
+            case "assist" -> !values.containsKey("goalAssist");
+            // There is no equivalent, per-event card/substitution observation in EVENT_LINEUPS.
+            case "yellow-card", "red-card", "yellow-red-card", "substitution-in", "substitution-out" -> true;
+            default -> false;
+        }).toList();
     }
 
     private static List<Achievement> achievements(EventLineupPlayer player) {

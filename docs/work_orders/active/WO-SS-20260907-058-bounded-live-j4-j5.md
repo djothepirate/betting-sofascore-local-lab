@@ -1474,13 +1474,14 @@ termine selon le groupe J5 final permis.
 
 La capacité tournoi J4 est séparée de la présence ponctuelle de mesures dans un retour J5
 lineups. Seule une valeur explicitement vraie rend une carte joueur ouvrable; les autres cas
-restent statiques et affichent que les statistiques des joueurs ne sont pas disponibles. Lorsque
-J5 statistiques est explicitement indisponible mais que J5 incidents et lineups sont lisibles,
-la présentation peut joindre les incidents à une carte par le couple strict
+restent statiques et affichent que les statistiques des joueurs ne sont pas disponibles. Dès que
+J5 incidents et lineups sont lisibles, la présentation joint les faits par le couple strict
 `(équipe, providerPlayerId)`, sans créer de joueur ni remplacer une statistique lineups réelle.
-Les décorations montrent buts, passes, cartons et, à la demande du propriétaire, entrées et
-sorties de joueur avec leur minute observée. Elles restent des faits de présentation sourcés
-`EVENT_INCIDENTS`, non des écritures dans les observations normalisées.
+Les métriques directes `goals` et `goalAssist` de J5 lineups restent prioritaires lorsqu'elles
+sont présentes, y compris à zéro. Les cartons et les entrées/sorties de joueur avec leur minute
+observée restent des faits `EVENT_INCIDENTS` lorsque J5 lineups ne les porte pas, même si une
+note ou des minutes de jeu sont déjà présentes. Cette décoration est en lecture seule, sans
+écriture dans les observations normalisées.
 
 La migration append-only V52 fait accepter le manifeste et le profil V9 tout en gardant le
 ledger de départ sous `admission_profile='live-v8'`, qui désigne l'enveloppe de pression partagée
@@ -1514,8 +1515,44 @@ Les tests V9 couvrent explicitement l'arrêt après le premier J4 `finalResultOn
 statistiques et d'incidents avant le jeu, la désactivation explicite des compositions, les trois
 `HTTP_404` consécutifs suivis d'un unique essai final, la réinitialisation sur une autre réponse
 et le silence de quinze minutes à la mi-temps puis les relectures J4 seules. Les cartes sont
-rendues ouvrables uniquement avec la capacité tournoi J4 explicitement vraie. Lorsque les
-statistiques J5 sont indisponibles mais que compositions et incidents sont lisibles, les
-décorations de buts, passes, cartons et changements complets sont associées par
-`(équipe, providerPlayerId)`, avec minute et provenance `EVENT_INCIDENTS`, sans modifier les
-données normalisées ni écraser une statistique de composition.
+rendues ouvrables uniquement avec la capacité tournoi J4 explicitement vraie. Les incidents et
+les compositions lisibles sont associés par `(équipe, providerPlayerId)` ; les buts et passes
+directement présents dans J5 lineups ont priorité, alors que les cartons et changements complets
+restent visibles depuis `EVENT_INCIDENTS`, avec minute et sans modifier les données normalisées.
+
+#### Finition V9 et complétion des cartes — 11 septembre
+
+Le profil de préparation V9 est maintenant versionné dans
+`docs/validation/WO058-GROUPED-LIVE-V9-PROFILE-20260911.json`. Il porte le SHA-256 immuable
+`f994415c00c9d97cb797a9f0b52c773efea044d827abc25282ae7f3ab17365da`, son statut local
+`QUALIFIED_LOCAL_REPLAY_WITH_STATED_SCOPE`, une capacité de dix rencontres et les neuf valeurs
+à reporter dans le lanceur. La qualification démontre les séquences de planification V9 par
+replay local et par tests de production de l'ordonnanceur ; elle ne revendique aucune acceptation,
+quota ou autorisation du fournisseur.
+
+Le lanceur Eclipse local a été sauvegardé avant de recevoir exactement ces neuf variables V9.
+Les neuf entrées V8 ont été relues après écriture et sont restées inchangées. Le script
+`scripts/Show-LiveGroupedV9LauncherConfiguration.ps1` reste en lecture seule : il vérifie le
+profil versionné et affiche les neuf entrées, sans modifier de configuration, sans démarrer
+l'application ni lancer une campagne.
+
+La restitution complète désormais les cartes dont J5 lineups apporte une note ou des minutes mais
+aucun fait de carton ou de remplacement. Les buts et passes J5 lineups restent la source prioritaire
+lorsque leurs métriques sont présentes, y compris à zéro. Les cartons jaune, rouge ou double jaune,
+ainsi que les entrées et sorties, proviennent des incidents lisibles, complets et non annulés,
+associés par `(équipe, providerPlayerId)`. La vue de campagne et la consultation manuelle J5
+appliquent la même règle, sans double comptage ni écriture dans les données normalisées.
+
+Pour `live-v9` seulement, la présentation rend aussi l'état terminal
+`FINISHED_J5_INCOMPLETE` lorsque J4 confirme le résultat final mais que le dernier cycle J5
+facultatif est incomplet. Cet état reste terminal et ne réarme aucune collecte ; les politiques
+V4 à V8 conservent leur libellé historique `FINISHED_CONFIRMED`.
+
+| Commande | Résultat |
+|---|---|
+| `Invoke-Pester -Path .\scripts\Tests\WO058LiveV9LauncherConfiguration.Tests.ps1` | **2 tests**, zéro échec ; le script est confirmé sans réseau, processus, écriture ou lancement. |
+| `.\mvnw.cmd --offline "-Dmaven.repo.local=C:\Users\geoff\.m2\repository" "-Dtest=GroupedLiveAdmissionPolicyV8EvidenceTest,GroupedLiveAdmissionPolicyV9EvidenceTest,LiveCampaignPropertiesTest,GroupedLiveScheduleV9Test,LineupIncidentOverlayTest,LiveCampaignPresentationTest,LiveCampaignControllerTest,J5EventDataControllerTest" test` | Régressions ciblées vertes : profil V9, état terminal, overlays incidents, vue de campagne et vue J5 manuelle. |
+| `.\mvnw.cmd clean verify` | **BUILD SUCCESS** ; Surefire : **2 257 tests**, zéro échec, zéro erreur, cinq ignorés ; Failsafe : **232 tests**, zéro échec, zéro erreur, zéro ignoré ; durée 10 min 14 s. |
+
+Cette finition n'a démarré ni navigateur, ni application, ni campagne, et les validations ne
+contiennent aucun appel réel au fournisseur.

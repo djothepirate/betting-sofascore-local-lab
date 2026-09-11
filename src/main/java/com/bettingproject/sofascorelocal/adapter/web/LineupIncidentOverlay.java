@@ -16,8 +16,9 @@ import java.util.Optional;
  *
  * <p>The overlay is deliberately keyed by both lineup side and provider player id. It does not
  * create a roster entry, infer a persistent player state, or alter the underlying lineup or
- * incident observations. Callers can therefore apply it only to a card that has no lineup
- * statistics of its own.</p>
+ * incident observations. Callers merge it by fact: direct J5 lineup metrics retain precedence,
+ * while cards and entry/exit substitutions remain readable incident facts when lineup metrics do
+ * not represent them.</p>
  */
 public final class LineupIncidentOverlay {
 

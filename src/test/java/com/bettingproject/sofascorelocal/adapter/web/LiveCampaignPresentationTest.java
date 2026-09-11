@@ -244,13 +244,13 @@ class LiveCampaignPresentationTest {
     }
 
     @Test
-    void unavailableStatisticsUseReadableIncidentsWithoutReplacingLineupStatisticsAndFollowJ4Capability() {
+    void readableLineupsAndIncidentsDecorateCardsDespiteStatisticsAvailability() {
         UUID j4Id = UUID.randomUUID();
         UUID statisticsId = UUID.randomUUID();
         UUID incidentsId = UUID.randomUUID();
         UUID lineupsId = UUID.randomUUID();
-        var statistics = new Result(statisticsId, new Publication("UNAVAILABLE", "EVENT", "HTTP_404", START,
-                "event-statistics-v1", false, null, null, null, null, "UNAVAILABLE", 0),
+        var statistics = new Result(statisticsId, new Publication("PARSED", "EVENT", "OK", START,
+                "event-statistics-v1", true, "COLLECTING", null, null, null, "COMPLETE", 100),
                 NormalizedReferences.none());
         var incidentsReferences = new NormalizedReferences(null, null, 61L, "a".repeat(64));
         var incidentsResult = new Result(incidentsId, new Publication("PARSED", "EVENT", "OK", START,
@@ -599,6 +599,38 @@ class LiveCampaignPresentationTest {
         }
     }
 
+    @Test
+    void liveV9IncompleteFinalJ5CycleUsesADedicatedTerminalPresentationState() {
+        var base = campaignForFreshness(SofascoreEndpointType.EVENT_STATISTICS, "FINISHED_CONFIRMED",
+                List.of(new Transition(10, EVENT, "FINISHED_CONFIRMED", null, START.plusSeconds(90), null)));
+        var view = withGroupedPolicy(base, "live-v9");
+
+        var event = new LiveCampaignPresentation(events, data, Clock.fixed(START.plusSeconds(3_600), ZoneOffset.UTC))
+                .state(view).events().getFirst();
+
+        assertThat(event.state()).isEqualTo("FINISHED_J5_INCOMPLETE");
+        assertThat(event.finalComplete()).isFalse();
+        assertThat(event.reason()).isEqualTo("Résultat final J4 confirmé ; dernier cycle J5 incomplet.");
+        assertThat(event.families()).allSatisfy(family -> {
+            assertThat(family.schedule()).isNull();
+            assertThat(family.freshness().state()).isEqualTo("FROZEN");
+        });
+    }
+
+    @ParameterizedTest
+    @CsvSource({"live-v4", "live-v8"})
+    void incompleteFinalJ5CycleKeepsTheHistoricalFinishedPresentation(String policyVersion) {
+        var base = campaignForFreshness(SofascoreEndpointType.EVENT_STATISTICS, "FINISHED_CONFIRMED",
+                List.of(new Transition(10, EVENT, "FINISHED_CONFIRMED", null, START.plusSeconds(90), null)));
+        var view = withGroupedPolicy(base, policyVersion);
+
+        var event = new LiveCampaignPresentation(events, data, Clock.fixed(START.plusSeconds(3_600), ZoneOffset.UTC))
+                .state(view).events().getFirst();
+
+        assertThat(event.state()).isEqualTo("FINISHED_CONFIRMED");
+        assertThat(event.finalComplete()).isFalse();
+    }
+
     @ParameterizedTest
     @CsvSource({"live-v2,EVENT_LINEUPS,NOT_EXPECTED,0", "live-v3,EVENT_LINEUPS,FRESH,60",
             "live-v3,EVENT_STATISTICS,NOT_EXPECTED,0", "live-v3,EVENT_INCIDENTS,NOT_EXPECTED,0"})
@@ -702,6 +734,22 @@ class LiveCampaignPresentationTest {
         return new CampaignView(base.manifest(), base.state(), null, START, base.endsAt(), 1, 0, 10,
                 null, List.of(new EventView(base.manifest().targets().getFirst(), phase, null,
                 1, 0, null, List.of(cursor))), base.attempts(), transitions);
+    }
+
+    private static CampaignView withGroupedPolicy(CampaignView base, String policyVersion) {
+        var envelopes = new java.util.EnumMap<SofascoreEndpointType, EndpointEnvelope>(SofascoreEndpointType.class);
+        for (var endpoint : List.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_STATISTICS,
+                SofascoreEndpointType.EVENT_INCIDENTS, SofascoreEndpointType.EVENT_LINEUPS))
+            envelopes.put(endpoint, new EndpointEnvelope(Duration.ofMillis(400), Duration.ofMillis(100)));
+        var old = base.manifest();
+        var manifest = new Manifest(old.campaignId(), "9".repeat(64), policyVersion, old.preparedAt(), old.expiresAt(),
+                old.duration(), old.maximumCallsPerEvent(), old.maximumCalls(), old.maximumBytes(),
+                old.qualifiedMatchCapacity(), old.targets(),
+                new AdmissionProfile(Duration.ofSeconds(10), Duration.ofSeconds(1), "",
+                        new GroupedAdmissionProfile(envelopes, "b".repeat(64), policyVersion)), Duration.ofSeconds(60));
+        return new CampaignView(manifest, base.state(), base.reason(), base.startedAt(), base.endsAt(),
+                base.reservedCalls(), base.receivedBytes(), base.revision(), base.ownership(), base.events(),
+                base.attempts(), base.transitions());
     }
 
     @ParameterizedTest

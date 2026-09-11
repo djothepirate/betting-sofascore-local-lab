@@ -20,20 +20,25 @@ import static org.assertj.core.api.Assertions.assertThat;
 class LineupIncidentOverlayTest {
 
     @Test
-    void enrichesOnlyStatisticFreeRosterCardsByObservedSideAndPlayerId() {
+    void keepsDirectLineupGoalsAndAssistsButEnrichesCardsAndSubstitutionsFromIncidents() {
         var lineups = new EventLineups(900001L, true,
                 new TeamLineup(LineupSide.HOME, Optional.empty(), List.of(
                         player(100L, "Home scorer", Optional.empty()),
                         player(101L, "Home assistant", Optional.empty()),
-                        player(102L, "Outgoing player", Optional.empty()),
-                        player(103L, "Incoming player", Optional.empty()),
+                        player(102L, "Outgoing player", Optional.of(new PlayerMatchStatistics(
+                                Map.of("rating", new BigDecimal("6.7")), Map.of()))),
+                        player(103L, "Incoming player", Optional.of(new PlayerMatchStatistics(
+                                Map.of("minutesPlayed", BigDecimal.ZERO), Map.of()))),
                         player(104L, "Rescinded card", Optional.empty()),
                         player(105L, "Partial substitution", Optional.empty()),
                         player(106L, "Missing side", Optional.empty()),
                         player(200L, "Existing lineup statistics", Optional.of(new PlayerMatchStatistics(
-                                Map.of("goals", BigDecimal.ONE), Map.of()))))),
+                                Map.of("goals", BigDecimal.ONE), Map.of()))),
+                        player(201L, "Existing lineup assister", Optional.of(new PlayerMatchStatistics(
+                                Map.of("goalAssist", BigDecimal.ONE), Map.of()))))),
                 new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of(
-                        player(100L, "Away player with same provider id", Optional.empty()))));
+                        player(100L, "Away player with same provider id", Optional.of(new PlayerMatchStatistics(
+                                Map.of("rating", new BigDecimal("6.4")), Map.of()))))));
         var incidents = new EventIncidents(900001L, List.of(
                 incident(0, "goal", 37, Optional.of(true), Optional.of(100L), Optional.of("Home scorer"),
                         Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("regular"),
@@ -58,6 +63,9 @@ class LineupIncidentOverlayTest {
                         Optional.empty(), Optional.empty(), Optional.empty()),
                 incident(7, "goal", 76, Optional.of(true), Optional.of(200L), Optional.of("Existing lineup statistics"),
                         Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("regular"),
+                        Optional.of(201L), Optional.of("Existing lineup assister"), Optional.empty()),
+                incident(8, "card", 77, Optional.of(true), Optional.of(200L), Optional.of("Existing lineup statistics"),
+                        Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("yellow"),
                         Optional.empty(), Optional.empty(), Optional.empty())));
 
         var view = LineupsPresentation.from(lineups, "Home", "Away", LineupCountryOverlay.empty(),
@@ -73,24 +81,34 @@ class LineupIncidentOverlayTest {
         });
         assertThat(player(view, "AWAY:100").incidentDecorations()).singleElement()
                 .extracting(LineupIncidentOverlay.Decoration::key).isEqualTo("red-card");
+        assertThat(player(view, "AWAY:100").statistics()).isNotNull();
         assertThat(player(view, "HOME:102").incidentDecorations()).singleElement().satisfies(decoration -> {
             assertThat(decoration.key()).isEqualTo("substitution-out");
             assertThat(decoration.label()).isEqualTo("Sortie observée");
             assertThat(decoration.minuteLabel()).isEqualTo("71");
         });
+        assertThat(player(view, "HOME:102").statistics()).isNotNull();
         assertThat(player(view, "HOME:103").incidentDecorations()).singleElement().satisfies(decoration -> {
             assertThat(decoration.key()).isEqualTo("substitution-in");
             assertThat(decoration.label()).isEqualTo("Entrée observée");
             assertThat(decoration.minuteLabel()).isEqualTo("71");
         });
+        assertThat(player(view, "HOME:103").statistics()).isNotNull();
         assertThat(player(view, "HOME:104").incidentDecorations()).isEmpty();
         assertThat(player(view, "HOME:105").incidentDecorations()).isEmpty();
         assertThat(player(view, "HOME:106").incidentDecorations()).isEmpty();
         assertThat(player(view, "HOME:200")).satisfies(player -> {
             assertThat(player.statistics()).isNotNull();
             assertThat(player.achievements()).extracting(LineupsPresentation.Achievement::label).containsExactly("1 but");
-            assertThat(player.incidentDecorations()).isEmpty();
+            assertThat(player.incidentDecorations()).extracting(LineupIncidentOverlay.Decoration::key)
+                    .containsExactly("yellow-card");
             assertThat(player.detailsAllowed()).isTrue();
+        });
+        assertThat(player(view, "HOME:201")).satisfies(player -> {
+            assertThat(player.statistics()).isNotNull();
+            assertThat(player.achievements()).extracting(LineupsPresentation.Achievement::label)
+                    .containsExactly("1 passe décisive");
+            assertThat(player.incidentDecorations()).isEmpty();
         });
     }
 

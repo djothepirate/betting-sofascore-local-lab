@@ -36,6 +36,13 @@ class LiveCampaignPropertiesTest {
         assertThat(properties.getDuration()).isEqualTo(Duration.ofHours(4));
         assertThat(properties.getRequestEnvelope()).isEqualTo(Duration.ofSeconds(10));
         assertThat(properties.getProcessingEnvelope()).isEqualTo(Duration.ofSeconds(1));
+        assertThat(properties.getGroupedV9().getQualificationSha256()).isEmpty();
+        assertThat(properties.getGroupedV9().getEndpoints().values()).allSatisfy(envelope -> {
+            assertThat(envelope.getRequestEnvelope()).isEqualTo(Duration.ofSeconds(10));
+            assertThat(envelope.getProcessingEnvelope()).isEqualTo(Duration.ofSeconds(1));
+        });
+        assertThatThrownBy(properties::groupedAdmissionProfileV9)
+                .hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
         assertThat(properties.getDiskReserveBytes()).isEqualTo(1_073_741_824L);
         assertThatThrownBy(() -> new DockerLiveStorageCapacityProbe(properties).availableBytes())
                 .isInstanceOf(IllegalStateException.class).hasMessage("LIVE_STORAGE_PROBE_NOT_CONFIGURED");

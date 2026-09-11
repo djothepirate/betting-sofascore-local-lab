@@ -208,13 +208,16 @@ public class LiveCampaignPresentation {
         J4EventResult result = result(j4, identity);
         boolean playerDetailsAllowed = playerDetailsAllowed(j4);
         LineupIncidentOverlay incidentOverlay = lineupIncidentOverlay(event);
+        String policyVersion = campaign.manifest().policyVersion();
+        String displayedState = displayedState(policyVersion, event);
+        String displayedReason = displayedReason(policyVersion, event);
         return new Event(event.target().canonicalEventId(), event.target().providerEventId(),
                 identity == null ? Long.toString(event.target().providerEventId())
                         : identity.homeTeam().name() + " — " + identity.awayTeam().name(),
                 identity == null ? "—" : identity.tournament().map(t -> t.name()).orElse("—"),
                 identity == null ? "—" : identity.startsAt().atZone(ZoneId.of("Europe/Paris")).toString(),
                 sportStatus, "finished".equals(sportStatus) && result.awarded() ? "Victoire sur tapis vert"
-                        : sportStatusLabel(sportStatus, identity), result.score(), event.state(), reason(event.reason()),
+                        : sportStatusLabel(sportStatus, identity), result.score(), displayedState, displayedReason,
                 event.nextDueAt(), event.reservedCalls(),
                 campaign.manifest().maximumCallsPerEvent(), event.receivedBytes(), event.missedCycles(),
                 event.finalComplete(), sourceSnapshot, sourceReceivedAt, canonicalCurrent,
@@ -225,6 +228,23 @@ public class LiveCampaignPresentation {
                                         NormalizedReferences.none(), null, null)))
                         .map(f -> family(campaign, event, f, observedAt, identity, incidentOverlay,
                                 playerDetailsAllowed)).toList());
+    }
+
+    /**
+     * Live V9 distinguishes a final J4 proof from completion of its final optional J5 cycle. The
+     * durable scheduler state remains terminal; only this policy exposes the incomplete cycle.
+     */
+    private static String displayedState(String policyVersion, EventView event) {
+        return "live-v9".equals(policyVersion) && "FINISHED_CONFIRMED".equals(event.state()) && !event.finalComplete()
+                ? "FINISHED_J5_INCOMPLETE" : event.state();
+    }
+
+    private static String displayedReason(String policyVersion, EventView event) {
+        if ("live-v9".equals(policyVersion) && "FINISHED_CONFIRMED".equals(event.state())
+                && !event.finalComplete()) {
+            return "Résultat final J4 confirmé ; dernier cycle J5 incomplet.";
+        }
+        return reason(event.reason());
     }
 
     /**
@@ -250,9 +270,11 @@ public class LiveCampaignPresentation {
     }
 
     private LineupIncidentOverlay lineupIncidentOverlay(EventView event) {
-        FamilyCursor statistics = familyCursor(event, SofascoreEndpointType.EVENT_STATISTICS);
         FamilyCursor lineups = familyCursor(event, SofascoreEndpointType.EVENT_LINEUPS);
-        if (!unavailable(statistics) || lineups == null || unavailable(lineups)
+        // Player-card facts are sourced per family. A readable EVENT_STATISTICS response does not
+        // prove that EVENT_LINEUPS contains a card or a substitution for an individual player, so
+        // it must not suppress the independently readable EVENT_INCIDENTS overlay.
+        if (lineups == null || unavailable(lineups)
                 || lineups.normalized() == null || lineups.normalized().j5ObservationId() == null) {
             return LineupIncidentOverlay.empty();
         }
