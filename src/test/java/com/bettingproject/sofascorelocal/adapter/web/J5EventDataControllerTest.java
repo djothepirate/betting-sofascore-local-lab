@@ -218,6 +218,54 @@ class J5EventDataControllerTest {
     }
 
     @Test
+    void usesReadableIncidentsAsCardDecorationsOnlyWhenStatisticsAreExplicitlyUnavailable() throws Exception {
+        J4EventSearchItem current = currentEvent();
+        var statistics = new J5EventDataObservationView(41L, current.event().identity(),
+                J5UnavailableFamily.emptyObservation(SofascoreEndpointType.EVENT_STATISTICS, 900001L),
+                source("statistics-unavailable", "event-statistics-v1"), J5CompletenessReport.unavailable(),
+                "a".repeat(64));
+        var incidents = new J5EventDataObservationView(42L, current.event().identity(), new EventIncidents(900001L,
+                List.of(new EventIncident(0, "goal", 18, Optional.empty(), Optional.of(true), Optional.empty(),
+                        Optional.of(9701L), Optional.of("Observed scorer"), Optional.empty(), Optional.empty(),
+                        Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("regular"),
+                        Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(9702L),
+                        Optional.of("Observed assistant"), Optional.empty(), Optional.empty(), Optional.empty(),
+                        Optional.empty(), Optional.empty(), Optional.empty()),
+                        new EventIncident(1, "substitution", 83, Optional.empty(), Optional.of(true), Optional.empty(),
+                                Optional.empty(), Optional.empty(), Optional.of(9704L), Optional.of("Observed incoming"),
+                                Optional.of(9703L), Optional.of("Observed outgoing"), Optional.empty(), Optional.empty()))),
+                source("incidents-readable", "event-incidents-v1"), J5CompletenessReport.measured(1, 1, List.of()),
+                "b".repeat(64));
+        var lineups = new J5EventDataObservationView(43L, current.event().identity(), new EventLineups(900001L, true,
+                new TeamLineup(LineupSide.HOME, Optional.of("4-3-3"), List.of(
+                        new EventLineupPlayer(9701L, "Observed scorer", Optional.empty(), Optional.of("F"), true),
+                        new EventLineupPlayer(9702L, "Observed assistant", Optional.empty(), Optional.of("F"), true),
+                        new EventLineupPlayer(9703L, "Observed outgoing", Optional.empty(), Optional.of("M"), true),
+                        new EventLineupPlayer(9704L, "Observed incoming", Optional.empty(), Optional.of("M"), false))),
+                new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of())),
+                source("lineups-readable", "event-lineups-v1"), J5CompletenessReport.measured(1, 1, List.of()),
+                "c".repeat(64));
+        var page = new J5EventDataPage(ZoneId.of("Europe/Paris"), current,
+                new J5EventDataBundle(Optional.of(statistics), Optional.of(incidents), Optional.of(lineups)));
+        when(formTokenService.issue(any(HttpSession.class))).thenReturn("one-use-token");
+        when(queryService.find(current.event().identity().value(), "Europe/Paris")).thenReturn(Optional.of(page));
+
+        mockMvc.perform(get("/events/{id}/statistics", current.event().identity().value())
+                        .param("zone", "Europe/Paris"))
+                .andExpect(status().isOk())
+                .andExpect(model().attributeExists("lineupsView"))
+                .andExpect(content().string(containsString("But · 18′")))
+                .andExpect(content().string(containsString("Passe décisive · 18′")))
+                .andExpect(content().string(containsString("Sortie observée · 83′")))
+                .andExpect(content().string(containsString("Entrée observée · 83′")))
+                .andExpect(content().string(containsString("Incidents J5")))
+                .andExpect(content().string(containsString("data-lineups-incident-source=\"EVENT_INCIDENTS\"")))
+                .andExpect(content().string(containsString("Statistiques des joueurs non disponibles pour ce match")))
+                .andExpect(content().string(not(containsString("data-lineups-player-details"))))
+                .andExpect(content().string(not(containsString("data-lineups-statistics-hint"))));
+    }
+
+    @Test
     void rendersExplicitAbsenceWithoutAttemptingAnyImport() throws Exception {
         J4EventSearchItem current = currentEvent();
         J5EventDataPage page = new J5EventDataPage(

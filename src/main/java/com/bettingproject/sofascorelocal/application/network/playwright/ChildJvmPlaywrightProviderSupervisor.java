@@ -239,6 +239,14 @@ public final class ChildJvmPlaywrightProviderSupervisor
     }
 
     @Override
+    public PlaywrightProviderCampaign openLiveGroupedV9(UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        if (!Set.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS).equals(allowedEndpoints))
+            throw new PlaywrightProviderException(PlaywrightProviderFailure.INVALID_ENDPOINT);
+        return open(campaignId, allowedEndpoints, LiveProviderGroupTracker.Authority.LIVE_V9);
+    }
+
+    @Override
     public PlaywrightProviderCampaign openManualJ5Grouped(
             UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
         if (!Set.of(SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_INCIDENTS,
@@ -485,9 +493,9 @@ public final class ChildJvmPlaywrightProviderSupervisor
                 long requestDeadline;
                 boolean continuation = state.liveGroups != null && state.liveGroups.isContinuation(request, group);
                 Runnable continuationGuard = () -> { requireActive(state); admission.check(); };
-                // Historical grouped continuations retain their no-pause protocol. V8 is
-                // deliberately different: its qualified minute envelope charges a 500 ms
-                // terminal fence after every family exchange, including J5 continuations.
+                // Historical grouped continuations retain their no-pause protocol. V8 and V9
+                // deliberately share the qualified 500 ms local-pressure fence after every
+                // family exchange, including J5 continuations.
                 if (continuation && !state.liveGroups.requiresPostExchangeFenceForContinuation())
                     providerNetworkStartDelayGate.admitGroupContinuation(continuationGuard);
                 else providerNetworkStartDelayGate.awaitNextGroupDispatch(
@@ -500,10 +508,12 @@ public final class ChildJvmPlaywrightProviderSupervisor
                     if (state.liveGroups != null) state.liveGroups.dispatched(request, group);
                     state.providerDispatchStarted.set(true);
                     dispatchStarted = true;
-                    boolean liveV6 = state.liveGroups != null && state.liveGroups.supportsProvenTimeoutRecovery();
+                    boolean supportsProvenTimeoutRecovery = state.liveGroups != null
+                            && state.liveGroups.supportsProvenTimeoutRecovery();
                     requestDeadline = System.nanoTime() + properties.getRequestTimeout().toNanos();
-                    responseDeadline = requestDeadline + Duration.ofSeconds(liveV6 ? 3 : 1).toNanos();
-                    output.writeByte(liveV6 ? GET_LIVE_V6 : GET);
+                    responseDeadline = requestDeadline + Duration.ofSeconds(
+                            supportsProvenTimeoutRecovery ? 3 : 1).toNanos();
+                    output.writeByte(supportsProvenTimeoutRecovery ? GET_LIVE_V6 : GET);
                     output.writeUTF(request.endpoint().name());
                     switch (request.endpoint()) {
                         case SCHEDULED_EVENTS -> {

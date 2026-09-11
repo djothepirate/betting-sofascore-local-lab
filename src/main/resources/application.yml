@@ -162,6 +162,23 @@ sofascore:
         EVENT_LINEUPS:
           request-envelope: ${SOFASCORE_LIVE_GROUPED_V8_LINEUPS_REQUEST_ENVELOPE:10s}
           processing-envelope: ${SOFASCORE_LIVE_GROUPED_V8_LINEUPS_PROCESSING_ENVELOPE:1s}
+    # V9 is independently qualified. It must not inherit a V8 proof merely
+    # because its J4 facts can suppress optional J5 calls at runtime.
+    grouped-v9:
+      qualification-sha256: ${SOFASCORE_LIVE_GROUPED_V9_QUALIFICATION_SHA256:}
+      endpoints:
+        EVENT_DETAILS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V9_J4_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V9_J4_PROCESSING_ENVELOPE:1s}
+        EVENT_INCIDENTS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V9_INCIDENTS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V9_INCIDENTS_PROCESSING_ENVELOPE:1s}
+        EVENT_STATISTICS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V9_STATISTICS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V9_STATISTICS_PROCESSING_ENVELOPE:1s}
+        EVENT_LINEUPS:
+          request-envelope: ${SOFASCORE_LIVE_GROUPED_V9_LINEUPS_REQUEST_ENVELOPE:10s}
+          processing-envelope: ${SOFASCORE_LIVE_GROUPED_V9_LINEUPS_PROCESSING_ENVELOPE:1s}
   playwright:
     enabled: ${SOFASCORE_PLAYWRIGHT_ENABLED:false}
     worker-jar: ${SOFASCORE_PLAYWRIGHT_WORKER_JAR:}

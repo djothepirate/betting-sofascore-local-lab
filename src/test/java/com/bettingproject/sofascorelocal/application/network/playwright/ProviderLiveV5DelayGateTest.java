@@ -7,6 +7,8 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import static org.assertj.core.api.Assertions.*;
 
 class ProviderLiveV5DelayGateTest {
@@ -28,9 +30,10 @@ class ProviderLiveV5DelayGateTest {
         assertThat(checks.get()).isGreaterThanOrEqualTo(3);
     }
 
-    @Test
-    void v8SameSessionUsesTheQualifiedHalfSecondFence() {
-        var session = session(LiveProviderGroupTracker.Authority.LIVE_V8);
+    @ParameterizedTest
+    @EnumSource(value = LiveProviderGroupTracker.Authority.class, names = {"LIVE_V8", "LIVE_V9"})
+    void v8AndV9SameSessionUseTheQualifiedHalfSecondFence(LiveProviderGroupTracker.Authority authority) {
+        var session = session(authority);
         var clock = new AtomicLong();
         List<Duration> pauses = new ArrayList<>();
         var gate = new ProviderNetworkStartDelayGate(Duration.ofSeconds(3), clock::get,
@@ -55,7 +58,10 @@ class ProviderLiveV5DelayGateTest {
         var reopenedV7 = session(LiveProviderGroupTracker.Authority.LIVE_V7);
         var v8 = session(LiveProviderGroupTracker.Authority.LIVE_V8);
         var reopenedV8 = session(LiveProviderGroupTracker.Authority.LIVE_V8);
-        LiveProviderGroupTracker[] sessions = {null, v4, v5, reopenedV5, v6, reopenedV6, v7, reopenedV7, v8, reopenedV8, manual};
+        var v9 = session(LiveProviderGroupTracker.Authority.LIVE_V9);
+        var reopenedV9 = session(LiveProviderGroupTracker.Authority.LIVE_V9);
+        LiveProviderGroupTracker[] sessions = {null, v4, v5, reopenedV5, v6, reopenedV6, v7, reopenedV7,
+                v8, reopenedV8, v9, reopenedV9, manual};
         for (var previous : sessions) for (var next : sessions) {
             var clock = new AtomicLong();
             var gate = new ProviderNetworkStartDelayGate(Duration.ofSeconds(3), clock::get,

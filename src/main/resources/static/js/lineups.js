@@ -56,6 +56,8 @@
     const starters = sectionNode("starters", "Titulaires");
     const field = create("div", "lineups-starters");
     field.append(create("p", "lineups-note", "", "Répartition par poste, sans positionnement tactique détaillé."),
+      create("p", "lineups-note", "data-lineups-player-statistics-unavailable",
+        "Statistiques des joueurs non disponibles pour ce match"),
       create("p", "lineups-empty", "data-lineups-starters-empty", "Aucun titulaire renseigné."),
       create("div", "lineups-pitch", "data-lineups-groups"));
     starters.append(field);
@@ -89,13 +91,14 @@
     title.append(create("strong", "lineups-name", "data-lineups-name"));
     const meta = create("span", "lineups-player-meta");
     meta.append(create("span", "", "data-lineups-position"));
-    info.append(title, meta, create("span", "lineups-statistics-hint", "data-lineups-statistics-hint"));
+    info.append(title, meta);
     summary.append(create("span", "lineups-number", "data-lineups-number"), info);
     const statistics = create("div", "lineups-player-statistics", "data-lineups-player-statistics");
     const ratings = create("details", "lineups-source-details", "data-lineups-rating-versions");
     ratings.append(create("summary", "", "", "Versions de la note fournisseur"),
       create("dl", "lineups-metrics", "data-lineups-metrics"));
-    statistics.append(create("p", "lineups-statistics-empty", "data-lineups-statistics-empty"),
+    statistics.append(create("p", "lineups-statistics-empty", "data-lineups-statistics-empty",
+      "Statistiques non fournies pour ce joueur."),
       create("div", "", "data-lineups-statistic-groups"), ratings,
       create("p", "lineups-statistics-note", "data-lineups-statistics-note",
         "Valeurs arrondies à deux décimales pour l’affichage. Les notes conservent l’échelle du fournisseur."));
@@ -105,14 +108,19 @@
   }
 
   function updatePlayer(node, player) {
-    playerInteractivity(node, player.statistics);
+    const detailsAllowed = player.detailsAllowed === true;
+    playerInteractivity(node, detailsAllowed);
     const number = text(player.shirtNumber, "—");
     const badge = node.querySelector("[data-lineups-number]");
     write(badge, number);
     const numberLabel = number === "—" ? "Numéro de maillot non renseigné" : `Numéro de maillot ${number}`;
     if (badge.getAttribute("aria-label") !== numberLabel) badge.setAttribute("aria-label", numberLabel);
-    write(node.querySelector("[data-lineups-name]"), text(player.name, "Joueur non renseigné"));
+    const name = text(player.name, "Joueur non renseigné");
+    write(node.querySelector("[data-lineups-name]"), name);
     write(node.querySelector("[data-lineups-position]"), text(player.positionLabel, "Poste non renseigné"));
+    const header = node.querySelector("[data-lineups-player-header]");
+    if (detailsAllowed) header.setAttribute("aria-label", `Ouvrir le détail du joueur ${name}`);
+    else header.removeAttribute("aria-label");
     const captain = node.querySelector("[data-lineups-captain]");
     if (player.captain === true) {
       if (!captain) node.querySelector(".lineups-player-title")
@@ -121,14 +129,11 @@
       captain?.remove();
     }
     updatePlayerDecorations(node, player);
-    updateStatistics(node, player.statistics);
+    if (detailsAllowed) updateStatistics(node, player.statistics);
   }
 
-  const hasStatistics = view => list(view?.groups).some(group => list(group.metrics).length > 0)
-    || list(view?.ratingVersions).length > 0;
-
-  function playerInteractivity(node, view) {
-    const interactive = hasStatistics(view);
+  function playerInteractivity(node, detailsAllowed) {
+    const interactive = detailsAllowed === true;
     const old = node.querySelector("[data-lineups-player-shell], [data-lineups-player-details]");
     if (old.tagName === (interactive ? "DETAILS" : "DIV")) return;
     const replacement = playerNode(node.dataset.lineupsPlayer).firstElementChild;
@@ -137,15 +142,10 @@
     if (!interactive) {
       const shell = create("div", "lineups-player-static", "data-lineups-player-shell");
       const header = create("div", "lineups-player-summary", "data-lineups-player-header");
-      header.tabIndex = -1;
       header.append(...freshHeader.childNodes);
-      header.querySelector("[data-lineups-statistics-hint]")?.remove();
       shell.append(header);
       node.replaceChildren(shell);
     } else {
-      if (!freshHeader.querySelector("[data-lineups-statistics-hint]"))
-        freshHeader.querySelector(".lineups-player-info").append(
-          create("span", "lineups-statistics-hint", "data-lineups-statistics-hint", "Statistiques"));
       node.replaceChildren(replacement);
     }
     statisticVersions.delete(node);
@@ -245,11 +245,11 @@
 
   function updatePlayerDecorations(node, player) {
     const info = node.querySelector(".lineups-player-info");
-    updateCountry(info, player.country, info.querySelector("[data-lineups-statistics-hint]"));
+    updateCountry(info, player.country, null);
     let achievements = node.querySelector("[data-lineups-achievements]");
     if (!achievements) {
       achievements = create("span", "lineups-achievements", "data-lineups-achievements");
-      info.insertBefore(achievements, info.querySelector("[data-lineups-statistics-hint]"));
+      info.append(achievements);
     }
     const badges = list(player.achievements).filter(value => ["goals", "assists"].includes(value.key)
       && /^[1-9][0-9]{0,95}$/.test(text(value.count)));
@@ -267,6 +267,29 @@
       countLabel.setAttribute("aria-hidden", "true"); badge.append(icons, countLabel);
       return badge;
     }));
+    let incidents = node.querySelector("[data-lineups-incident-decorations]");
+    if (!incidents) {
+      incidents = create("span", "lineups-incident-decorations", "data-lineups-incident-decorations");
+      info.append(incidents);
+    }
+    const decorations = list(player.incidentDecorations).filter(value =>
+      /^(?:goal|assist|yellow-card|red-card|yellow-red-card|substitution-in|substitution-out)$/.test(text(value.key))
+      && /^\d{1,3}(?:\+\d{1,3})?$/.test(text(value.minuteLabel)) && text(value.source) === "EVENT_INCIDENTS");
+    incidents.hidden = decorations.length === 0;
+    incidents.replaceChildren(...decorations.map(value => {
+      const label = text(value.label, "Incident");
+      const minute = text(value.minuteLabel);
+      const badge = create("span", "lineups-incident-decoration", "data-lineups-incident-decoration");
+      badge.dataset.lineupsIncidentDecoration = text(value.key);
+      badge.dataset.lineupsIncidentSource = "EVENT_INCIDENTS";
+      badge.dataset.lineupsIncidentMinute = minute;
+      badge.setAttribute("aria-label", `${label}, ${minute}e minute, observé dans les incidents J5`);
+      const icon = create("span", "lineups-incident-icon", "", text(value.icon, "•"));
+      icon.setAttribute("aria-hidden", "true");
+      badge.append(icon, create("span", "lineups-incident-label", "", `${label} · ${minute}′`),
+        create("span", "lineups-incident-source", "", "Incidents J5"));
+      return badge;
+    }));
   }
 
   function metricRows(parent, metrics) {
@@ -282,12 +305,10 @@
   }
 
   function updateStatistics(node, view) {
-    if (!hasStatistics(view)) return;
     const version = JSON.stringify(view ?? null);
     if (statisticVersions.get(node) === version) return;
     const groups = list(view?.groups), ratingVersions = list(view?.ratingVersions);
     const empty = node.querySelector("[data-lineups-statistics-empty]");
-    write(node.querySelector("[data-lineups-statistics-hint]"), view ? "Statistiques" : "Détails du joueur");
     write(empty, view ? "Aucune statistique renseignée pour ce joueur." : "Statistiques non fournies pour ce joueur.");
     empty.hidden = groups.length > 0 || ratingVersions.length > 0;
     const container = node.querySelector("[data-lineups-statistic-groups]");
@@ -362,6 +383,8 @@
       ? `Formation · ${formation}` : "Formation non renseignée");
     const starters = node.querySelector('[data-lineups-section="starters"]');
     const substitutes = node.querySelector('[data-lineups-section="substitutes"]');
+    const unavailable = starters.querySelector("[data-lineups-player-statistics-unavailable]");
+    if (unavailable) unavailable.hidden = team.detailsAllowed === true;
     const groups = list(team.starterGroups);
     const bench = list(team.substitutes);
     write(starters.querySelector("[data-lineups-count]"), String(count(team.starterCount,

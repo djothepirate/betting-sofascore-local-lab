@@ -82,6 +82,21 @@ class ResilientPlaywrightProviderCampaignFactoryTest {
     }
 
     @Test
+    void v9UsesTheExistingV8PressureProfileAndItsExplicitDelegateAuthority() {
+        Harness h = new Harness();
+        when(h.store.tryReserveDeparture(any(UUID.class), eq(DepartureProfile.LIVE_V8), any(Instant.class)))
+                .thenAnswer(invocation -> h.allow(invocation.getArgument(0), invocation.getArgument(2)));
+
+        try (var campaign = h.factory.openLiveGroupedV9(UUID.randomUUID(), ALL)) {
+            assertThat(campaign.execute(PlaywrightProviderRequest.eventDetails(123)).httpStatus()).isEqualTo(200);
+        }
+
+        verify(h.store).tryReserveDeparture(any(UUID.class), eq(DepartureProfile.LIVE_V8), eq(START));
+        verify(h.store, never()).tryReserveDeparture(any(UUID.class), any(Instant.class));
+        verify(h.store, atLeastOnce()).recordAuthenticatedV8Departure(any(), any(), any());
+    }
+
+    @Test
     void v8PersistsDelayedWorkerRequestedAtFromProgressAndValidResponseFallback() {
         Harness h=new Harness(); Instant requested=START.plusSeconds(7),observed=START.plusSeconds(20),received=START.plusSeconds(21);
         when(h.store.tryReserveDeparture(any(UUID.class),eq(DepartureProfile.LIVE_V8),any(Instant.class))).thenAnswer(invocation->
@@ -161,7 +176,7 @@ class ResilientPlaywrightProviderCampaignFactoryTest {
         protectedCampaign.close();
     }
 
-    @ParameterizedTest @ValueSource(strings={"historical","v4","v5","v6","manual-j5"})
+    @ParameterizedTest @ValueSource(strings={"historical","v4","v5","v6","v9","manual-j5"})
     void everyOpeningIsBlockedBeforeDelegateWhenTheProviderIsSuspended(String opening) {
         Harness h = new Harness();
         h.state.set(new Snapshot(State.SUSPENDED,1,START,403,START,null,null,UUID.randomUUID(),UUID.randomUUID(),null,null));
@@ -370,7 +385,7 @@ class ResilientPlaywrightProviderCampaignFactoryTest {
 
     private static PlaywrightProviderCampaign switchOpen(PlaywrightProviderCampaignFactory f,String kind) {
         UUID id=UUID.randomUUID();
-        return switch(kind){case "v4"->f.openLiveGrouped(id,ALL);case "v5"->f.openLiveGroupedV5(id,ALL);case "v6"->f.openLiveGroupedV6(id,ALL);
+        return switch(kind){case "v4"->f.openLiveGrouped(id,ALL);case "v5"->f.openLiveGroupedV5(id,ALL);case "v6"->f.openLiveGroupedV6(id,ALL);case "v9"->f.openLiveGroupedV9(id,ALL);
             case "manual-j5"->f.openManualJ5Grouped(id,Set.of(SofascoreEndpointType.EVENT_STATISTICS,SofascoreEndpointType.EVENT_INCIDENTS,SofascoreEndpointType.EVENT_LINEUPS));
             default->f.open(id,ALL);};
     }
@@ -444,6 +459,7 @@ class ResilientPlaywrightProviderCampaignFactoryTest {
         public PlaywrightProviderCampaign openLiveGroupedV6(UUID id,Set<SofascoreEndpointType> e){return open(id,e);}
         public PlaywrightProviderCampaign openLiveGroupedV7(UUID id,Set<SofascoreEndpointType> e){return open(id,e);}
         public PlaywrightProviderCampaign openLiveGroupedV8(UUID id,Set<SofascoreEndpointType> e){return open(id,e);}
+        public PlaywrightProviderCampaign openLiveGroupedV9(UUID id,Set<SofascoreEndpointType> e){return open(id,e);}
         public PlaywrightProviderCampaign openManualJ5Grouped(UUID id,Set<SofascoreEndpointType> e){return open(id,e);}
     }
 }

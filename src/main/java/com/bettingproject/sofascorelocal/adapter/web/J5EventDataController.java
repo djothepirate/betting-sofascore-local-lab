@@ -104,13 +104,22 @@ public class J5EventDataController {
                                 page.current().event().homeTeam().name(), page.current().event().awayTeam().name()));
                     }
                 });
+                LineupIncidentOverlay incidentOverlay = page.data().statistics()
+                        .filter(value -> value.completeness().status() == J5CompletenessStatus.UNAVAILABLE)
+                        .flatMap(ignored -> page.data().incidents())
+                        .filter(value -> value.completeness().status() != J5CompletenessStatus.UNAVAILABLE)
+                        .map(value -> LineupIncidentOverlay.from((EventIncidents) value.data()))
+                        .orElse(LineupIncidentOverlay.empty());
                 page.data().lineups().ifPresent(value -> {
                     model.addAttribute("lineups", value);
                     model.addAttribute("lineupsData", (EventLineups) value.data());
                     if (value.completeness().status() != J5CompletenessStatus.UNAVAILABLE) {
+                        // J5EventDataPage carries a scheduled J4 observation, not the matching J4 detail
+                        // projection that contains tournament.uniqueTournament.hasEventPlayerStatistics. Do not
+                        // introduce an untraced latest-detail lookup merely to make a card interactive.
                         model.addAttribute("lineupsView", LineupsPresentation.from((EventLineups) value.data(),
                                 page.current().event().homeTeam().name(), page.current().event().awayTeam().name(),
-                                lineupCountries.resolve(value)));
+                                lineupCountries.resolve(value), incidentOverlay, false));
                     }
                 });
                 model.addAttribute("localFormToken", formTokenService.issue(session));

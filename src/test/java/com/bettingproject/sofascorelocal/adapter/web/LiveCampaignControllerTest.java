@@ -935,7 +935,9 @@ class LiveCampaignControllerTest {
             "LIVE_STORAGE_PROBE_INVALID,ne peut pas être mesuré", "LIVE_STORAGE_PROBE_INTERRUPTED,interrompu",
             "LIVE_STORAGE_CAPACITY_REFUSED,insuffisant", "LIVE_POLICY_INVALID,limites",
             "LIVE_CAPACITY_QUALIFICATION_REQUIRED,preuve de qualification",
-            "LIVE_V8_FRESHNESS_CAPACITY_UNAVAILABLE,fraîcheur de 60 secondes"})
+            "LIVE_GROUPED_QUALIFICATION_REQUIRED,SOFASCORE_LIVE_GROUPED_V9_QUALIFICATION_SHA256",
+            "LIVE_V8_FRESHNESS_CAPACITY_UNAVAILABLE,fraîcheur de 60 secondes",
+            "LIVE_V9_FRESHNESS_CAPACITY_UNAVAILABLE,fraîcheur de 60 secondes"})
     void localPreparationFailuresExposeOnlyTheirKnownCodeAndAction(String code, String action) throws Exception {
         MockHttpSession session = new MockHttpSession();
         when(service.prepareSelection(List.of(EVENT_ID))).thenThrow(new IllegalStateException(code));
@@ -948,15 +950,19 @@ class LiveCampaignControllerTest {
         verify(service, never()).launch(any(), any());
     }
 
-    @Test
-    void capacityRefusalSuggestsReducedSelectionAndNeverEchoesArbitraryExceptionText() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY", "LIVE_CAPACITY_REFUSED_REDUCE_SELECTION"})
+    void capacityRefusalSuggestsReducedSelectionThroughTheV9ProfileAndNeverEchoesArbitraryExceptionText(String code)
+            throws Exception {
         MockHttpSession session = new MockHttpSession();
         when(service.prepareSelection(List.of(EVENT_ID))).thenThrow(
-                new IllegalArgumentException("LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY"));
+                new IllegalArgumentException(code));
         mvc.perform(post("/live-campaigns/prepare").header("Host", HOST).session(session)
                         .param("localFormToken", tokens.issue(session)).param("eventId", EVENT_ID.toString()))
                 .andExpect(status().isBadRequest())
-                .andExpect(content().string(containsString("Réduire la sélection")));
+                .andExpect(model().attribute("liveErrorCode", code))
+                .andExpect(content().string(containsString("Réduire la sélection")))
+                .andExpect(content().string(containsString("profil live-v9")));
         doThrow(new IllegalStateException("SECRET_PRIVATE_RUNTIME")).when(service).prepareSelection(List.of(EVENT_ID));
         mvc.perform(post("/live-campaigns/prepare").header("Host", HOST).session(session)
                         .param("localFormToken", tokens.issue(session)).param("eventId", EVENT_ID.toString()))
@@ -1287,7 +1293,7 @@ class LiveCampaignControllerTest {
 
     @ParameterizedTest
     @CsvSource({"live-v4,60,10,1000,3000,5 minutes nominales", "live-v5,100,20,2500,20000,5 minutes nominales",
-            "live-v8,60,10,2500,20000,60 secondes nominales"})
+            "live-v8,60,10,2500,20000,60 secondes nominales", "live-v9,60,10,2500,20000,60 secondes nominales"})
     void groupedPreparationRendersActualCapacityCadencesProofAndAutonomyBeforeLaunch(String policy, int interval,
                 int capacity, int eventCalls, int campaignCalls, String lineupLabel) throws Exception {
         var envelopes = new java.util.EnumMap<SofascoreEndpointType, EndpointEnvelope>(SofascoreEndpointType.class);
@@ -1309,14 +1315,68 @@ class LiveCampaignControllerTest {
                 .andExpect(content().string(containsString("b".repeat(64))))
                 .andExpect(content().string(containsString("400 ms")))
                 .andExpect(content().string(not(containsString("le premier triplet attend"))));
-        if ("live-v8".equals(policy)) {
+        if ("live-v8".equals(policy) || "live-v9".equals(policy)) {
             mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST))
                     .andExpect(status().isOk())
                     .andExpect(content().string(containsString("500 ms")))
                     .andExpect(content().string(containsString("45 départs par minute et 2 756 par heure")))
                     .andExpect(content().string(containsString("créneaux qualifiés de 60 secondes")));
         }
+        if ("live-v9".equals(policy)) {
+            mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString("Pression observée de cette campagne live-v9")))
+                    .andExpect(content().string(containsString("data-live-v9-pressure-note")))
+                    .andExpect(content().string(containsString("data-live-v9-cadence-note")))
+                    .andExpect(content().string(containsString("data-live-v9-policy-note")));
+        }
         verify(service, never()).launch(any(), any());
+    }
+
+    @Test
+    void j4PlayerDetailsCapabilityMakesTheEntirePlayerCardKeyboardAccessibleWithoutAStatisticsLink() throws Exception {
+        UUID detailsAttemptId = UUID.randomUUID();
+        UUID lineupsAttemptId = UUID.randomUUID();
+        var detailsResult = new Result(detailsAttemptId, new Publication("PARSED", "EVENT", "OK", NOW,
+                "event-details-v4", true, "COLLECTING", "inprogress",
+                """
+                {"tournamentHasEventPlayerStatistics":{"presence":"VALUE","value":true}}
+                """, "j4-live-score-v2", "COMPLETE", 100), NormalizedReferences.none());
+        var detailsCursor = new FamilyCursor(SofascoreEndpointType.EVENT_DETAILS, detailsAttemptId,
+                detailsAttemptId, detailsAttemptId, detailsAttemptId, NOW, NOW, NOW,
+                NormalizedReferences.none(), detailsResult, detailsResult);
+        var lineupsReferences = new NormalizedReferences(null, null, 71L, "b".repeat(64));
+        var lineupsResult = new Result(lineupsAttemptId, new Publication("PARSED", "EVENT", "OK", NOW,
+                "event-lineups-v2", true, "COLLECTING", null, null, null, "COMPLETE", 100),
+                lineupsReferences);
+        var lineupsCursor = new FamilyCursor(SofascoreEndpointType.EVENT_LINEUPS, lineupsAttemptId,
+                lineupsAttemptId, lineupsAttemptId, lineupsAttemptId, NOW, NOW, NOW,
+                lineupsReferences, lineupsResult, lineupsResult);
+        var observedLineups = new J5EventDataObservationView(71L, CanonicalEventIdentity.sofascore(900001L),
+                new EventLineups(900001L, true,
+                        new TeamLineup(LineupSide.HOME, Optional.empty(), List.of(
+                                new EventLineupPlayer(701L, "Joueur de test", Optional.of(7), Optional.of("F"), true))),
+                        new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of())),
+                EventSourceTrace.providerSnapshot(71L, "c".repeat(64), "event-lineups-v2", NOW),
+                J5CompletenessReport.measured(1, 1, List.of()), "d".repeat(64));
+        when(data.findByObservationId(EVENT_ID, SofascoreEndpointType.EVENT_LINEUPS, 71L))
+                .thenReturn(Optional.of(observedLineups));
+        when(lineupCountries.resolve(observedLineups)).thenReturn(LineupCountryOverlay.empty());
+        var target = manifest().targets().getFirst();
+        var campaign = new CampaignView(manifest(), "RUNNING", null, NOW, NOW.plusSeconds(14400), 0, 0, 1,
+                null, List.of(new EventView(target, "COLLECTING", null, 0, 0, NOW,
+                        List.of(detailsCursor, lineupsCursor))), List.of(), List.of());
+        when(service.state(CAMPAIGN_ID)).thenReturn(campaign);
+
+        String html = mvc.perform(get("/live-campaigns/" + CAMPAIGN_ID).header("Host", HOST))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+
+        assertThat(html).contains("data-lineups-player-details", "data-lineups-player-header")
+                .doesNotContain("data-lineups-statistics-hint", "lineups-statistics-hint",
+                        "Statistiques des joueurs non disponibles pour ce match");
+        assertThat(Pattern.compile("(?s)<summary\\b(?=[^>]*data-lineups-player-header)"
+                + "(?=[^>]*aria-label=\"Ouvrir le détail du joueur Joueur de test\")[^>]*>")
+                .matcher(html).find()).isTrue();
     }
 
     @Test

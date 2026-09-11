@@ -116,7 +116,7 @@ public class LiveResponseProcessor {
             return new LiveProcessedResponse(identity, endpoint, raw, response.receivedAt(), outcome, scope,
                     parsed.code(), parsed.details().map(details -> details.status().type()), parsed.signals(),
                     parsed.projectionJson(), parsed.parserVersion(), parsed.projectionVersion(),
-                    parsed.completeness(), parsed.details(), parsed.eventData());
+                    parsed.completeness(), parsed.details(), parsed.eventData(), parsed.j4Controls());
         }
         catch (RuntimeException exception) {
             return failed(identity, endpoint, response, raw, "PARSER_FAILURE");

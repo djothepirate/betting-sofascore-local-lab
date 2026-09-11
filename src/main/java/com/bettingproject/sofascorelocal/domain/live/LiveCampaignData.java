@@ -43,7 +43,8 @@ public final class LiveCampaignData {
         public GroupedAdmissionProfile {
             requireHash(qualificationSha256);
             if (!"live-v4".equals(policyVersion) && !"live-v5".equals(policyVersion) && !"live-v6".equals(policyVersion)
-                    && !"live-v7".equals(policyVersion) && !"live-v8".equals(policyVersion))
+                    && !"live-v7".equals(policyVersion) && !"live-v8".equals(policyVersion)
+                    && !"live-v9".equals(policyVersion))
                 throw new IllegalArgumentException("unknown grouped live policy");
             EnumMap<SofascoreEndpointType, EndpointEnvelope> copy = new EnumMap<>(SofascoreEndpointType.class);
             copy.putAll(Objects.requireNonNull(endpointEnvelopes));
@@ -58,18 +59,19 @@ public final class LiveCampaignData {
         public EndpointEnvelope envelope(SofascoreEndpointType endpoint) { requireEndpoint(endpoint); return endpointEnvelopes.get(endpoint); }
         public Duration criticalInterval() {
             return Duration.ofSeconds("live-v4".equals(policyVersion) || "live-v7".equals(policyVersion)
-                    || "live-v8".equals(policyVersion) ? 60 : 100);
+                    || "live-v8".equals(policyVersion) || "live-v9".equals(policyVersion) ? 60 : 100);
         }
         public Duration lineupInterval() {
-            return Duration.ofSeconds("live-v7".equals(policyVersion) || "live-v8".equals(policyVersion) ? 60 : 300);
+            return Duration.ofSeconds("live-v7".equals(policyVersion) || "live-v8".equals(policyVersion)
+                    || "live-v9".equals(policyVersion) ? 60 : 300);
         }
         public Duration intraGroupDelay() { return Duration.ZERO; }
         public Duration minimumRequestStartInterval() {
-            return "live-v8".equals(policyVersion) ? Duration.ofMillis(500)
+            return "live-v8".equals(policyVersion) || "live-v9".equals(policyVersion) ? Duration.ofMillis(500)
                     : Duration.ofSeconds("live-v6".equals(policyVersion) || "live-v7".equals(policyVersion) ? 2 : 0);
         }
         public Duration interGroupDelay() {
-            return "live-v8".equals(policyVersion) ? Duration.ofMillis(500)
+            return "live-v8".equals(policyVersion) || "live-v9".equals(policyVersion) ? Duration.ofMillis(500)
                     : Duration.ofSeconds(!"live-v4".equals(policyVersion) ? 1 : 3);
         }
         public double maximumUtilization() { return 0.9d; }
@@ -113,16 +115,19 @@ public final class LiveCampaignData {
                     || duration.isNegative() || duration.isZero() || duration.compareTo(Duration.ofHours(4)) > 0
                     || duration.toSeconds() < 1 || duration.getNano() != 0 || maximumCallsPerEvent < 4
                     || maximumCallsPerEvent > (("live-v5".equals(policyVersion) || "live-v6".equals(policyVersion)
-                        || "live-v7".equals(policyVersion) || "live-v8".equals(policyVersion)) ? 2500 : 1000)
+                        || "live-v7".equals(policyVersion) || "live-v8".equals(policyVersion)
+                        || "live-v9".equals(policyVersion)) ? 2500 : 1000)
                     || maximumCalls < 4 || maximumCalls > (("live-v5".equals(policyVersion) || "live-v6".equals(policyVersion)
-                        || "live-v7".equals(policyVersion) || "live-v8".equals(policyVersion)) ? 20000 : 3000) || maximumBytes < 1
+                        || "live-v7".equals(policyVersion) || "live-v8".equals(policyVersion)
+                        || "live-v9".equals(policyVersion)) ? 20000 : 3000) || maximumBytes < 1
                     || qualifiedMatchCapacity < 1
                     || targets.isEmpty() || targets.size() > qualifiedMatchCapacity
                     || targets.size() > LiveCadence.MAXIMUM_SELECTION_SIZE
                     || (("live-v2".equals(policyVersion) || "live-v3".equals(policyVersion))
                         && !cycleInterval.equals(LiveCadence.forMatches(targets.size())))
                     || (("live-v4".equals(policyVersion) || "live-v5".equals(policyVersion) || "live-v6".equals(policyVersion)
-                        || "live-v7".equals(policyVersion) || "live-v8".equals(policyVersion))
+                        || "live-v7".equals(policyVersion) || "live-v8".equals(policyVersion)
+                        || "live-v9".equals(policyVersion))
                         && (admissionProfile.groupedProfile() == null
                         || !policyVersion.equals(admissionProfile.groupedProfile().policyVersion())
                         || !cycleInterval.equals(admissionProfile.groupedProfile().criticalInterval())))
@@ -131,6 +136,7 @@ public final class LiveCampaignData {
                     || ("live-v6".equals(policyVersion) && (targets.size() > 7 || qualifiedMatchCapacity > 7 || maximumBytes > 15_728_640_000L))
                     || ("live-v7".equals(policyVersion) && (targets.size() > 3 || qualifiedMatchCapacity > 3 || maximumBytes > 15_728_640_000L))
                     || ("live-v8".equals(policyVersion) && (targets.size() > 10 || qualifiedMatchCapacity > 10 || maximumBytes > 15_728_640_000L))
+                    || ("live-v9".equals(policyVersion) && (targets.size() > 10 || qualifiedMatchCapacity > 10 || maximumBytes > 15_728_640_000L))
                     || maximumCalls < 4 * targets.size()
                     || targets.stream().map(Target::canonicalEventId).distinct().count() != targets.size()) {
                 throw new IllegalArgumentException("live manifest is outside accepted bounds");

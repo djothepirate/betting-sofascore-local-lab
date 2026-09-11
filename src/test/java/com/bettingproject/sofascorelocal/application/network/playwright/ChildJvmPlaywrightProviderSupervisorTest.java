@@ -576,8 +576,8 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         assertThat(failures).allSatisfy(failure -> assertThat(failure.get()).isNull());
     }
 
-    @ParameterizedTest @ValueSource(strings = {"live-v4", "live-v5", "live-v8"})
-    void groupedPoliciesKeepHistoricalContinuationsButV8FencesEveryFamilyExchange(String policy)
+    @ParameterizedTest @ValueSource(strings = {"live-v4", "live-v5", "live-v8", "live-v9"})
+    void groupedPoliciesKeepHistoricalContinuationsButV8AndV9FenceEveryFamilyExchange(String policy)
             throws Exception {
         ProviderPlaywrightProperties properties = enabledProperties("live-group-delay.jar");
         Instant rootStartedAt = Instant.parse("2026-09-08T10:00:00Z");
@@ -601,6 +601,7 @@ class ChildJvmPlaywrightProviderSupervisorTest {
         UUID campaignId = UUID.randomUUID(), groupId = UUID.randomUUID();
         long event = 16_416_319L;
         PlaywrightProviderCampaign campaign = switch (policy) {
+            case "live-v9" -> supervisor.openLiveGroupedV9(campaignId, endpoints);
             case "live-v5" -> supervisor.openLiveGroupedV5(campaignId, endpoints);
             case "live-v8" -> supervisor.openLiveGroupedV8(campaignId, endpoints);
             default -> supervisor.openLiveGrouped(campaignId, endpoints);
@@ -618,8 +619,9 @@ class ChildJvmPlaywrightProviderSupervisorTest {
                 PlaywrightDispatchAdmission.UNRESTRICTED);
         campaign.executeGrouped(PlaywrightProviderRequest.eventLineups(event), playing,
                 PlaywrightDispatchAdmission.UNRESTRICTED);
-        long continuationFenceMillis = "live-v8".equals(policy) ? 500 : 0;
-        long groupFenceMillis = "live-v5".equals(policy) ? 1_000 : "live-v8".equals(policy) ? 500 : 3_000;
+        boolean v8PressureProfile = "live-v8".equals(policy) || "live-v9".equals(policy);
+        long continuationFenceMillis = v8PressureProfile ? 500 : 0;
+        long groupFenceMillis = "live-v5".equals(policy) ? 1_000 : v8PressureProfile ? 500 : 3_000;
         assertThat(observedStarts).containsExactly(0L,
                 Duration.ofMillis(33 + continuationFenceMillis).toNanos(),
                 Duration.ofMillis(66 + 2 * continuationFenceMillis).toNanos(),

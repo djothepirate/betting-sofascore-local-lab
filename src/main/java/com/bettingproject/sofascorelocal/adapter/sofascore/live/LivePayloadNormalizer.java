@@ -8,6 +8,7 @@ import com.bettingproject.sofascorelocal.adapter.sofascore.eventdata.J5ParseStat
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsParseStatus;
 import com.bettingproject.sofascorelocal.adapter.sofascore.eventdetails.EventDetailsV4Parser;
 import com.bettingproject.sofascorelocal.domain.eventdata.J5EventData;
+import com.bettingproject.sofascorelocal.domain.live.LiveJ4ControlFacts;
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.security.Sha256;
@@ -33,7 +34,8 @@ import java.util.Optional;
  */
 public class LivePayloadNormalizer {
 
-    public static final String SCORE_PROJECTION_VERSION = "j4-live-score-v2";
+    /** V3 adds scheduler control facts while retaining the score observation shape. */
+    public static final String SCORE_PROJECTION_VERSION = "j4-live-score-v3";
     public static final String SIGNAL_PROJECTION_VERSION = "j5-live-signals-v1";
     public static final String FAMILY_PROJECTION_VERSION = "live-family-v1";
 
@@ -83,6 +85,7 @@ public class LivePayloadNormalizer {
                             parsed.status().name());
                 }
                 JsonNode event = root.get("event");
+                J4ControlProjection controls = j4Controls(event);
                 projection.put("sportStatus", parsed.details().orElseThrow().status().type());
                 projection.put("homeScore", scoreSide(event.get("homeScore")));
                 projection.put("awayScore", scoreSide(event.get("awayScore")));
@@ -91,10 +94,11 @@ public class LivePayloadNormalizer {
                 // Period descriptors remain source observations; no score or clock is calculated.
                 projection.put("period", optionalScalar(event.get("period"), "period"));
                 projection.put("currentPeriod", optionalScalar(event.get("currentPeriod"), "currentPeriod"));
+                projection.putAll(controls.projection());
                 return new LiveNormalizedPayload(
                         LiveNormalizedPayload.Status.PARSED, "PARSED", parserVersion(endpoint),
                         projectionVersion(endpoint), JSON.writeValueAsString(projection),
-                        parsed.details(), Optional.empty(), Optional.empty(), List.of());
+                        parsed.details(), Optional.empty(), Optional.empty(), List.of(), Optional.of(controls.facts()));
             }
             J5ParseResult<? extends J5EventData> parsed = switch (endpoint) {
                 case EVENT_STATISTICS -> statisticsParser.parse(snapshotId, eventId, payload, receivedAt);
@@ -192,6 +196,115 @@ public class LivePayloadNormalizer {
         }
         return presence(node, values);
     }
+
+    /**
+     * Scheduler facts are parsed independently from the historical EventDetails
+     * model so the old parser remains immutable.  The projection keeps each
+     * value's JSON presence for later review, and the typed record makes a
+     * permission decision without relying on stringly JSON in the scheduler.
+     */
+    private static J4ControlProjection j4Controls(JsonNode event) {
+        if (event == null || !event.isObject()) {
+            throw new ProjectionSchemaException("LIVE_J4_EVENT_TYPE_MISMATCH");
+        }
+        JsonNode status = event.get("status");
+        if (status != null && !status.isNull() && !status.isObject()) {
+            throw new ProjectionSchemaException("LIVE_J4_STATUS_TYPE_MISMATCH");
+        }
+        JsonNode tournament = event.get("tournament");
+        if (tournament != null && !tournament.isNull() && !tournament.isObject()) {
+            throw new ProjectionSchemaException("LIVE_J4_TOURNAMENT_TYPE_MISMATCH");
+        }
+        JsonNode uniqueTournament = tournament == null || tournament.isNull() ? null : tournament.get("uniqueTournament");
+        if (uniqueTournament != null && !uniqueTournament.isNull() && !uniqueTournament.isObject()) {
+            throw new ProjectionSchemaException("LIVE_J4_UNIQUE_TOURNAMENT_TYPE_MISMATCH");
+        }
+
+        JsonNode finalResultOnly = event.get("finalResultOnly");
+        JsonNode detailId = event.get("detailId");
+        JsonNode eventPlayerStatistics = event.get("hasEventPlayerStatistics");
+        JsonNode tournamentPlayerStatistics = uniqueTournament == null || uniqueTournament.isNull()
+                ? null : uniqueTournament.get("hasEventPlayerStatistics");
+        JsonNode description = status == null || status.isNull() ? null : status.get("description");
+
+        Map<String, Object> projection = new LinkedHashMap<>();
+        projection.put("finalResultOnly", booleanPresence(finalResultOnly, "LIVE_J4_FINAL_RESULT_ONLY_INCOMPATIBLE"));
+        projection.put("detailId", detailIdPresence(detailId));
+        projection.put("hasEventPlayerStatistics", booleanPresence(eventPlayerStatistics,
+                "LIVE_J4_HAS_EVENT_PLAYER_STATISTICS_INCOMPATIBLE"));
+        projection.put("tournamentHasEventPlayerStatistics", booleanPresence(tournamentPlayerStatistics,
+                "LIVE_J4_TOURNAMENT_PLAYER_STATISTICS_INCOMPATIBLE"));
+        projection.put("statusDescription", textPresence(description, "LIVE_J4_STATUS_DESCRIPTION_INCOMPATIBLE"));
+
+        return new J4ControlProjection(new LiveJ4ControlFacts(
+                booleanFact(finalResultOnly, "LIVE_J4_FINAL_RESULT_ONLY_INCOMPATIBLE"),
+                detailIdFact(detailId),
+                booleanFact(eventPlayerStatistics, "LIVE_J4_HAS_EVENT_PLAYER_STATISTICS_INCOMPATIBLE"),
+                booleanFact(tournamentPlayerStatistics, "LIVE_J4_TOURNAMENT_PLAYER_STATISTICS_INCOMPATIBLE"),
+                statusDescription(description)), Map.copyOf(projection));
+    }
+
+    private static Map<String, Object> booleanPresence(JsonNode node, String code) {
+        LiveJ4ControlFacts.BooleanFact value = booleanFact(node, code);
+        return switch (value) {
+            case ABSENT -> Map.of("presence", "ABSENT");
+            case NULL -> Map.of("presence", "NULL");
+            case TRUE -> Map.of("presence", "VALUE", "value", true);
+            case FALSE -> Map.of("presence", "VALUE", "value", false);
+        };
+    }
+
+    private static LiveJ4ControlFacts.BooleanFact booleanFact(JsonNode node, String code) {
+        if (node == null) return LiveJ4ControlFacts.BooleanFact.ABSENT;
+        if (node.isNull()) return LiveJ4ControlFacts.BooleanFact.NULL;
+        if (!node.isBoolean()) throw new ProjectionSchemaException(code);
+        return node.booleanValue() ? LiveJ4ControlFacts.BooleanFact.TRUE : LiveJ4ControlFacts.BooleanFact.FALSE;
+    }
+
+    private static Map<String, Object> detailIdPresence(JsonNode node) {
+        LiveJ4ControlFacts.DetailIdFact value = detailIdFact(node);
+        return switch (value) {
+            case ABSENT -> Map.of("presence", "ABSENT");
+            case NULL -> Map.of("presence", "NULL");
+            case ONE, OTHER -> Map.of("presence", "VALUE", "value", node.longValue());
+        };
+    }
+
+    private static LiveJ4ControlFacts.DetailIdFact detailIdFact(JsonNode node) {
+        if (node == null) return LiveJ4ControlFacts.DetailIdFact.ABSENT;
+        if (node.isNull()) return LiveJ4ControlFacts.DetailIdFact.NULL;
+        if (!node.isIntegralNumber() || !node.canConvertToLong()) {
+            throw new ProjectionSchemaException("LIVE_J4_DETAIL_ID_INCOMPATIBLE");
+        }
+        return node.longValue() == 1L ? LiveJ4ControlFacts.DetailIdFact.ONE : LiveJ4ControlFacts.DetailIdFact.OTHER;
+    }
+
+    private static Map<String, Object> textPresence(JsonNode node, String code) {
+        if (node == null) return Map.of("presence", "ABSENT");
+        if (node.isNull()) return Map.of("presence", "NULL");
+        return Map.of("presence", "VALUE", "value", checkedControlText(node, code));
+    }
+
+    private static LiveJ4ControlFacts.StatusDescription statusDescription(JsonNode node) {
+        if (node == null) return LiveJ4ControlFacts.StatusDescription.ABSENT;
+        if (node.isNull()) return LiveJ4ControlFacts.StatusDescription.NULL;
+        String text = checkedControlText(node, "LIVE_J4_STATUS_DESCRIPTION_INCOMPATIBLE").trim().toLowerCase(java.util.Locale.ROOT);
+        return switch (text) {
+            case "halftime" -> LiveJ4ControlFacts.StatusDescription.HALFTIME;
+            case "2nd half" -> LiveJ4ControlFacts.StatusDescription.SECOND_HALF;
+            default -> LiveJ4ControlFacts.StatusDescription.OTHER;
+        };
+    }
+
+    private static String checkedControlText(JsonNode node, String code) {
+        if (!node.isString() || node.stringValue().isBlank() || node.stringValue().length() > 100
+                || node.stringValue().chars().anyMatch(Character::isISOControl)) {
+            throw new ProjectionSchemaException(code);
+        }
+        return node.stringValue();
+    }
+
+    private record J4ControlProjection(LiveJ4ControlFacts facts, Map<String, Object> projection) { }
 
     private static List<Map<String, Object>> phaseObservations(
             JsonNode items, long eventId, List<LivePhaseSignal> signals) {

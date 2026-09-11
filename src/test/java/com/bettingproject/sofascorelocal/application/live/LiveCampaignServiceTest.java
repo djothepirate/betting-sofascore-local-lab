@@ -133,7 +133,7 @@ class LiveCampaignServiceTest {
             when(h.events.findLatestByCanonicalId(id(A))).thenReturn(Optional.of(selected));
             when(h.admission.maximumBytesV5(1)).thenReturn(15_728_640_000L);
             when(h.store.prepare(any())).thenAnswer(invocation -> invocation.getArgument(0));
-            assertThat(h.properties.getGroupedV8().getQualificationSha256()).isEqualTo("8".repeat(64));
+            assertThat(h.properties.getGroupedV9().getQualificationSha256()).isEqualTo("9".repeat(64));
             assertThat(ReflectionTestUtils.getField(h.service, "properties")).isSameAs(h.properties);
 
             Manifest prepared = h.service.prepare(List.of(id(A)));
@@ -141,13 +141,15 @@ class LiveCampaignServiceTest {
             assertThat(prepared.targets()).containsExactly(new Target(id(A), A, 17, 23));
             assertThat(prepared.maximumBytes()).isEqualTo(15_728_640_000L);
             assertThat(prepared.manifestSha256()).matches("[0-9a-f]{64}");
-            assertThat(prepared.policyVersion()).isEqualTo("live-v8");
+            assertThat(prepared.policyVersion()).isEqualTo("live-v9");
             assertThat(prepared.maximumCallsPerEvent()).isEqualTo(2500);
             assertThat(prepared.maximumCalls()).isEqualTo(20000);
             assertThat(prepared.cycleInterval()).isEqualTo(Duration.ofSeconds(60));
-            assertThat(prepared.admissionProfile().groupedProfile().qualificationSha256()).isEqualTo("8".repeat(64));
+            assertThat(prepared.admissionProfile().groupedProfile().qualificationSha256()).isEqualTo("9".repeat(64));
+            assertThat(prepared.admissionProfile().groupedProfile().policyVersion()).isEqualTo("live-v9");
             assertThat(prepared.admissionProfile().qualificationSha256()).isEqualTo("a".repeat(64));
             assertThat(Duration.between(prepared.preparedAt(), prepared.expiresAt())).isEqualTo(Duration.ofMinutes(5));
+            verify(h.admission).admitV9(eq(1), eq(prepared.admissionProfile().groupedProfile()));
             verifyNoInteractions(h.factory, h.coordinator);
         }
     }
@@ -207,8 +209,8 @@ class LiveCampaignServiceTest {
             assertThat(preparation.manifest().targets()).containsExactly(new Target(id(B), B, 17, 23));
             assertThat(preparation.manifest().maximumBytes()).isEqualTo(15_728_640_000L);
             assertThat(preparation.manifest().qualifiedMatchCapacity()).isEqualTo(1);
-            verify(h.admission).admitV8(eq(1), any());
-            verify(h.admission, never()).admitV8(eq(2), any());
+            verify(h.admission).admitV9(eq(1), any());
+            verify(h.admission, never()).admitV9(eq(2), any());
             verify(h.store).prepare(preparation.manifest());
             verifyNoInteractions(h.factory, h.coordinator);
         }
@@ -261,8 +263,8 @@ class LiveCampaignServiceTest {
             assertThat(preparation.manifest().qualifiedMatchCapacity()).isEqualTo(1);
             assertThat(preparation.manifest().cycleInterval()).isEqualTo(Duration.ofSeconds(60));
             assertThat(preparation.manifest().maximumBytes()).isEqualTo(15_728_640_000L);
-            verify(h.admission).admitV8(eq(1), any());
-            verify(h.admission, never()).admitV8(eq(3), any());
+            verify(h.admission).admitV9(eq(1), any());
+            verify(h.admission, never()).admitV9(eq(3), any());
             verify(h.store).prepare(preparation.manifest());
             verifyNoInteractions(h.factory, h.coordinator);
         }
@@ -295,7 +297,7 @@ class LiveCampaignServiceTest {
             assertThat(preparation.excludedFinished()).isEmpty();
             assertThat(preparation.excludedPostponed()).isEmpty();
             assertThat(preparation.manifest().targets()).containsExactly(new Target(id(A), A, 17, 23));
-            verify(h.admission).admitV8(eq(1), any());
+            verify(h.admission).admitV9(eq(1), any());
             verify(h.store).prepare(preparation.manifest());
             verifyNoInteractions(h.factory, h.coordinator);
         }
@@ -890,10 +892,10 @@ class LiveCampaignServiceTest {
     }
 
     @Test
-    void aV7QualificationCannotAuthorizeTenNewV8GroupedMatches() throws Exception {
+    void aV8QualificationCannotAuthorizeTenNewV9GroupedMatches() throws Exception {
         try(Harness h=new Harness()) {
             h.properties.setQualifiedMatchCapacity(10);
-            h.properties.getGroupedV8().setQualificationSha256("");
+            h.properties.getGroupedV9().setQualificationSha256("");
             List<UUID> selected=LongStream.range(A,A+10).mapToObj(providerId->{h.observe(providerId,"inprogress");return id(providerId);}).toList();
             assertThatThrownBy(()->h.service.prepare(selected)).hasMessage("LIVE_GROUPED_QUALIFICATION_REQUIRED");
             verify(h.store,never()).prepare(any());
@@ -990,7 +992,7 @@ class LiveCampaignServiceTest {
     void aFrozenV4PreparationUsesOnlyItsOwnProfileEvenWithoutACurrentV7Qualification() throws Exception {
         try (Harness h = new Harness(false, "live-v4", 1)) {
             h.properties.getGroupedV7().setQualificationSha256("");
-            // New preparations use V8. A frozen V4 launch remains governed by its own profile.
+            // New preparations use V9. A frozen V4 launch remains governed by its own profile.
             assertThat(h.service.selectionMaximum()).isEqualTo(2);
             h.reply = LiveCampaignServiceTest::normalFinishedReply;
             h.launch(); h.awaitFinished();
@@ -1688,15 +1690,20 @@ class LiveCampaignServiceTest {
             properties.getGroupedV8().getEndpoints().values().forEach(budget->{
                 budget.setRequestEnvelope(Duration.ofMillis(500));budget.setProcessingEnvelope(Duration.ofMillis(100));
             });
+            properties.getGroupedV9().setQualificationSha256("9".repeat(64));
+            properties.getGroupedV9().getEndpoints().values().forEach(budget->{
+                budget.setRequestEnvelope(Duration.ofMillis(500));budget.setProcessingEnvelope(Duration.ofMillis(100));
+            });
             boolean v7 = "live-v7".equals(policy);
             boolean v5 = "live-v5".equals(policy);
             boolean v6 = "live-v6".equals(policy);
             boolean v8 = "live-v8".equals(policy);
+            boolean v9 = "live-v9".equals(policy);
             manifest = new Manifest(UUID.randomUUID(), "a".repeat(64), policy, now, now.plusSeconds(300),
-                    duration, v5 || v6 || v7 || v8 ? 2500 : 1000, v5 || v6 || v7 || v8 ? 20000 : 3000, 20_000_000, 2,
+                    duration, v5 || v6 || v7 || v8 || v9 ? 2500 : 1000, v5 || v6 || v7 || v8 || v9 ? 20000 : 3000, 20_000_000, 2,
                     targetCount==1?List.of(new Target(id(A),A,1,1)):List.of(new Target(id(A), A, 1, 1), new Target(id(B), B, 2, 2)),
                     new AdmissionProfile(properties.getRequestEnvelope(), properties.getProcessingEnvelope(),
-                            properties.getQualificationSha256(), v8 ? properties.groupedAdmissionProfileV8() : v7 ? properties.groupedAdmissionProfileV7() : v6 ? properties.groupedAdmissionProfileV6()
+                            properties.getQualificationSha256(), v9 ? properties.groupedAdmissionProfileV9() : v8 ? properties.groupedAdmissionProfileV8() : v7 ? properties.groupedAdmissionProfileV7() : v6 ? properties.groupedAdmissionProfileV6()
                                     : v5 ? properties.groupedAdmissionProfileV5()
                                     : "live-v4".equals(policy)?properties.groupedAdmissionProfile():null), Duration.ofSeconds(v5 || v6 ? 100 : 60));
             ownership = new Ownership(manifest.campaignId(), UUID.randomUUID(), 1);
@@ -1715,6 +1722,7 @@ class LiveCampaignServiceTest {
             when(factory.openLiveGroupedV6(manifest.campaignId(), LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
             when(factory.openLiveGroupedV7(manifest.campaignId(), LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
             when(factory.openLiveGroupedV8(manifest.campaignId(), LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
+            when(factory.openLiveGroupedV9(manifest.campaignId(), LiveProviderSession.ENDPOINTS)).thenReturn(campaign);
             when(supervisor.activeCampaignId()).thenReturn(Optional.empty());
             when(store.find(manifest.campaignId())).thenAnswer(invocation -> Optional.of(view()));
             when(store.dispatchBudget(eq(ownership),any())).thenAnswer(invocation -> {

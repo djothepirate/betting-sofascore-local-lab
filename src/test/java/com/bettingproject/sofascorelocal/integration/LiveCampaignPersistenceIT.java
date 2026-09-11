@@ -423,6 +423,64 @@ class LiveCampaignPersistenceIT {
     }
 
     @Test
+    void v9SqlReusesTheV8PressureBoundsAndRequiresItsOwnImmutableGroupedProfile() {
+        Fixture f=fixture("52");
+        String admitted="{\"EVENT_DETAILS\":{\"requestNanos\":500000000,\"processingNanos\":100000000},"
+                +"\"EVENT_INCIDENTS\":{\"requestNanos\":500000000,\"processingNanos\":100000000},"
+                +"\"EVENT_STATISTICS\":{\"requestNanos\":500000000,\"processingNanos\":100000000},"
+                +"\"EVENT_LINEUPS\":{\"requestNanos\":500000000,\"processingNanos\":100000000}}";
+
+        UUID missingProfile=UUID.randomUUID();
+        assertThatThrownBy(()->insertPolicyManifestRow(f,missingProfile,"live-v9",2500,20000,15_728_640_000L,10,60))
+                .hasMessageContaining("live-v9 requires its immutable qualified grouped profile");
+        assertThat(f.jdbc.queryForObject("select count(*) from live_campaign where campaign_id=?",Long.class,missingProfile)).isZero();
+
+        UUID accepted=UUID.randomUUID();
+        new TransactionTemplate(new JdbcTransactionManager(f.ds)).executeWithoutResult(status->{
+            insertPolicyManifestRow(f,accepted,"live-v9",2500,20000,15_728_640_000L,10,60);
+            insertGroupedPolicyRow(f,accepted,60,60,500_000_000L,admitted);
+        });
+        assertThat(f.jdbc.queryForMap("select critical_interval_seconds,lineup_interval_seconds,inter_group_delay_nanos from live_grouped_policy where campaign_id=?",accepted))
+                .containsEntry("critical_interval_seconds",60).containsEntry("lineup_interval_seconds",60)
+                .containsEntry("inter_group_delay_nanos",500_000_000L);
+        Target target=f.seed(EVENT+9_000);
+        f.jdbc.update("""
+                insert into live_event(campaign_id,canonical_event_id,provider_event_id,target_order,
+                    source_observation_id,source_snapshot_id) values (?,?,?,?,?,?)
+                """,accepted,target.canonicalEventId(),target.providerEventId(),0,target.sourceObservationId(),target.sourceSnapshotId());
+        f.jdbc.update("update live_event set reserved_calls=2500 where campaign_id=? and canonical_event_id=?",
+                accepted,target.canonicalEventId());
+        assertThatThrownBy(()->f.jdbc.update("update live_event set reserved_calls=2501 where campaign_id=? and canonical_event_id=?",
+                accepted,target.canonicalEventId())).hasMessageContaining("policy budget");
+
+        assertThatThrownBy(()->insertPolicyManifestRow(f,UUID.randomUUID(),"live-v9",2500,20000,15_728_640_000L,11,60))
+                .hasMessageContaining("live_campaign_v9_policy_bounds_check");
+        assertThatThrownBy(()->insertPolicyManifestRow(f,UUID.randomUUID(),"live-v9",2500,20000,15_728_640_000L,10,100))
+                .hasMessageContaining("live_campaign_v9_policy_bounds_check");
+
+        UUID wrongDelay=UUID.randomUUID();
+        assertThatThrownBy(()->new TransactionTemplate(new JdbcTransactionManager(f.ds)).executeWithoutResult(status->{
+            insertPolicyManifestRow(f,wrongDelay,"live-v9",2500,20000,15_728_640_000L,10,60);
+            insertGroupedPolicyRow(f,wrongDelay,60,60,1_000_000_000L,admitted);
+        })).hasMessageContaining("profile cadence and delay must match");
+        assertThat(f.jdbc.queryForObject("select count(*) from live_campaign where campaign_id=?",Long.class,wrongDelay)).isZero();
+
+        // Four 900 ms exchanges plus their four 500 ms terminal fences use
+        // 56 seconds for ten matches. The V8/V9 one-second scheduling reserve
+        // makes the profile inadmissible at 66 seconds.
+        String reserveOnlyOverflow="{\"EVENT_DETAILS\":{\"requestNanos\":900000000,\"processingNanos\":0},"
+                +"\"EVENT_INCIDENTS\":{\"requestNanos\":900000000,\"processingNanos\":0},"
+                +"\"EVENT_STATISTICS\":{\"requestNanos\":900000000,\"processingNanos\":0},"
+                +"\"EVENT_LINEUPS\":{\"requestNanos\":900000000,\"processingNanos\":0}}";
+        UUID reserveOverflow=UUID.randomUUID();
+        assertThatThrownBy(()->new TransactionTemplate(new JdbcTransactionManager(f.ds)).executeWithoutResult(status->{
+            insertPolicyManifestRow(f,reserveOverflow,"live-v9",2500,20000,15_728_640_000L,10,60);
+            insertGroupedPolicyRow(f,reserveOverflow,60,60,500_000_000L,reserveOnlyOverflow);
+        })).hasMessageContaining("live-v8 grouped envelopes plus worker-start reserve exceed the sixty-second capacity window");
+        assertThat(f.jdbc.queryForObject("select count(*) from live_campaign where campaign_id=?",Long.class,reserveOverflow)).isZero();
+    }
+
+    @Test
     void upgradeV39ToV40KeepsAllHistoricalPoliciesAndEvidenceByteForByte() {
         Fixture f=fixture("39"); int eventIndex=0;
         for(String policy:List.of("live-v1","live-v2","live-v3","live-v4")) {

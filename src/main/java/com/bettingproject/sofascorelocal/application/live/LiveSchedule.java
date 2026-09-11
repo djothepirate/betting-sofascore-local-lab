@@ -4,6 +4,7 @@ import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
 import com.bettingproject.sofascorelocal.domain.live.LiveCadence;
 import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.FamilySchedule;
 import com.bettingproject.sofascorelocal.domain.live.LiveCampaignData.GroupedAdmissionProfile;
+import com.bettingproject.sofascorelocal.domain.live.LiveJ4ControlFacts;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
@@ -28,6 +29,11 @@ public final class LiveSchedule {
         return GroupedLiveScheduleV8.strictGroupReservation(profile);
     }
 
+    /** Full four-family V9 reservation; optional J5 suppression can only reduce this upper bound. */
+    public static Duration v9StrictGroupReservation(GroupedAdmissionProfile profile) {
+        return GroupedLiveScheduleV9.strictGroupReservation(profile);
+    }
+
     public record Due(UUID eventId, SofascoreEndpointType endpoint, long cycle, String kind,
                       Instant dueAt, boolean finalCycle, UUID groupId, long groupSequence, int groupOrdinal) {
         public Due(UUID eventId, SofascoreEndpointType endpoint, long cycle, String kind,
@@ -48,6 +54,7 @@ public final class LiveSchedule {
     private final GroupedLiveScheduleV4 grouped;
     private final GroupedLiveScheduleV7 kickoffSchedule;
     private final GroupedLiveScheduleV8 kickoffScheduleV8;
+    private final GroupedLiveScheduleV9 kickoffScheduleV9;
 
     public LiveSchedule(List<UUID> targets, Instant start, Instant endsAt) {
         this(targets, start, endsAt, Duration.ofSeconds(60));
@@ -83,8 +90,12 @@ public final class LiveSchedule {
                         long initialV8GroupSequence) {
         if (targets.isEmpty() || targets.size() > LiveCadence.MAXIMUM_SELECTION_SIZE || new HashSet<>(targets).size() != targets.size()
                 || !endsAt.isAfter(start)) throw new IllegalArgumentException("invalid live schedule");
-        if (initialV8GroupSequence < 0 || (!"live-v8".equals(policyVersion) && initialV8GroupSequence != 0))
-            throw new IllegalArgumentException("LIVE_V8_GROUP_SEQUENCE_REQUIRED");
+        if (initialV8GroupSequence < 0 || (!"live-v8".equals(policyVersion) && !"live-v9".equals(policyVersion)
+                && initialV8GroupSequence != 0)) {
+            // Keep the established V8 contract stable while V9 shares the same sequence shape.
+            throw new IllegalArgumentException("live-v8".equals(policyVersion)
+                    ? "LIVE_V8_GROUP_SEQUENCE_REQUIRED" : "LIVE_GROUPED_GROUP_SEQUENCE_REQUIRED");
+        }
         LiveCadence.validate(interval);
         this.endsAt = endsAt;
         this.interval = interval;
@@ -97,9 +108,12 @@ public final class LiveSchedule {
                 ? new GroupedLiveScheduleV7(targets, start, endsAt, interval, campaignId) : null;
         this.kickoffScheduleV8 = "live-v8".equals(policyVersion)
                 ? new GroupedLiveScheduleV8(targets, start, endsAt, interval, campaignId, groupedProfile, initialV8GroupSequence) : null;
+        this.kickoffScheduleV9 = "live-v9".equals(policyVersion)
+                ? new GroupedLiveScheduleV9(targets, start, endsAt, interval, campaignId, groupedProfile, initialV8GroupSequence) : null;
     }
 
     public synchronized Optional<Due> next(Instant now) {
+        if (kickoffScheduleV9 != null) return kickoffScheduleV9.next(now);
         if (kickoffScheduleV8 != null) return kickoffScheduleV8.next(now);
         if (kickoffSchedule != null) return kickoffSchedule.next(now);
         if (grouped != null) return grouped.next(now);
@@ -161,6 +175,7 @@ public final class LiveSchedule {
     }
 
     public synchronized boolean mayDispatch(Due due, Instant now) {
+        if (kickoffScheduleV9 != null) return kickoffScheduleV9.mayDispatch(due, now);
         if (kickoffScheduleV8 != null) return kickoffScheduleV8.mayDispatch(due, now);
         if (kickoffSchedule != null) return kickoffSchedule.mayDispatch(due, now);
         if (grouped != null) return grouped.mayDispatch(due, now);
@@ -171,6 +186,7 @@ public final class LiveSchedule {
 
     /** Shared local pressure can defer grouped dispatch before any network start. */
     public synchronized void defer(Due due, Instant notBefore) {
+        if (kickoffScheduleV9 != null) { kickoffScheduleV9.defer(due, notBefore); return; }
         if (kickoffScheduleV8 != null) { kickoffScheduleV8.defer(due, notBefore); return; }
         if (kickoffSchedule != null) { kickoffSchedule.defer(due, notBefore); return; }
         if (grouped == null) throw new IllegalStateException("LIVE_DEFER_UNSUPPORTED_POLICY");
@@ -179,12 +195,14 @@ public final class LiveSchedule {
 
     /** A V8 completed-exchange fence retains its pending due without pressure recovery. */
     public synchronized void waitForPostExchangeFence(Due due, Instant notBefore) {
+        if (kickoffScheduleV9 != null) { kickoffScheduleV9.waitForPostExchangeFence(due, notBefore); return; }
         if (kickoffScheduleV8 == null) throw new IllegalStateException("LIVE_FENCE_WAIT_UNSUPPORTED_POLICY");
         kickoffScheduleV8.waitForPostExchangeFence(due, notBefore);
     }
 
     /** Abandon the interrupted group; the next attempt must start a new J4 group. */
     public synchronized void deferAfterTimeout(Due due, Instant endedAt) {
+        if (kickoffScheduleV9 != null) { kickoffScheduleV9.deferAfterTimeout(due, endedAt); return; }
         if (kickoffScheduleV8 != null) { kickoffScheduleV8.deferAfterTimeout(due, endedAt); return; }
         if (kickoffSchedule != null) { kickoffSchedule.deferAfterTimeout(due, endedAt); return; }
         if (grouped == null) throw new IllegalStateException("LIVE_DEFER_UNSUPPORTED_POLICY");
@@ -192,6 +210,7 @@ public final class LiveSchedule {
     }
 
     public synchronized void started(Due due, Instant now) {
+        if (kickoffScheduleV9 != null) { kickoffScheduleV9.started(due, now); return; }
         if (kickoffScheduleV8 != null) { kickoffScheduleV8.started(due, now); return; }
         if (kickoffSchedule != null) { kickoffSchedule.started(due, now); return; }
         if (grouped != null) { grouped.started(due, now); return; }
@@ -212,11 +231,13 @@ public final class LiveSchedule {
      * cadence semantics.
      */
     public synchronized void departed(Due due, Instant requestedAt) {
+        if (kickoffScheduleV9 != null) kickoffScheduleV9.departed(due, requestedAt);
         if (kickoffScheduleV8 != null) kickoffScheduleV8.departed(due, requestedAt);
     }
 
     public synchronized void completed(Due due, String status, boolean unavailable,
                                        Map<String, Boolean> signals, Instant now) {
+        if (kickoffScheduleV9 != null) { kickoffScheduleV9.completed(due, status, unavailable, signals, now, null, null, null, null); return; }
         if (kickoffScheduleV8 != null) { kickoffScheduleV8.completed(due, status, unavailable, signals, now, null, null); return; }
         if (kickoffSchedule != null) { kickoffSchedule.completed(due, status, unavailable, signals, now, null, null); return; }
         if (grouped != null) { grouped.completed(due, status, unavailable, signals, now); return; }
@@ -293,6 +314,7 @@ public final class LiveSchedule {
     }
 
     public synchronized void reserveFinalCheck(UUID id, Instant now) {
+        if (kickoffScheduleV9 != null) { kickoffScheduleV9.reserveFinalCheck(id, now); return; }
         if (kickoffScheduleV8 != null) { kickoffScheduleV8.reserveFinalCheck(id, now); return; }
         if (kickoffSchedule != null) { kickoffSchedule.reserveFinalCheck(id, now); return; }
         if (grouped != null) { grouped.reserveFinalCheck(id, now); return; }
@@ -305,6 +327,7 @@ public final class LiveSchedule {
         e.j4Kind = "J4_FINAL_CHECK";
     }
     public synchronized void failed(Due due, String scope, String reason) {
+        if (kickoffScheduleV9 != null) { kickoffScheduleV9.failed(due, scope, reason); return; }
         if (kickoffScheduleV8 != null) { kickoffScheduleV8.failed(due, scope, reason); return; }
         if (kickoffSchedule != null) { kickoffSchedule.failed(due, scope, reason); return; }
         if (grouped != null) { grouped.failed(due, scope, reason); return; }
@@ -318,6 +341,7 @@ public final class LiveSchedule {
         if ("EVENT".equals(scope)) stopEvent(due.eventId(), reason); else stopAll(reason);
     }
     public synchronized void stopEvent(UUID id, String reason) {
+        if (kickoffScheduleV9 != null) { kickoffScheduleV9.stopEvent(id, reason); return; }
         if (kickoffScheduleV8 != null) { kickoffScheduleV8.stopEvent(id, reason); return; }
         if (kickoffSchedule != null) { kickoffSchedule.stopEvent(id, reason); return; }
         if (grouped != null) { grouped.stopEvent(id, reason); return; }
@@ -327,14 +351,16 @@ public final class LiveSchedule {
         if (id.equals(contiguous)) contiguous = null;
     }
     public synchronized void stopAll(String reason) {
+        if (kickoffScheduleV9 != null) { kickoffScheduleV9.stopAll(reason); return; }
         if (kickoffScheduleV8 != null) { kickoffScheduleV8.stopAll(reason); return; }
         if (kickoffSchedule != null) { kickoffSchedule.stopAll(reason); return; }
         if (grouped != null) { grouped.stopAll(reason); return; }
         globalStop = reason; events.keySet().forEach(id -> stopEvent(id, reason));
     }
-    public synchronized boolean terminal() { return kickoffScheduleV8 != null ? kickoffScheduleV8.terminal() : kickoffSchedule != null ? kickoffSchedule.terminal() : grouped != null ? grouped.terminal() : globalStop != null || events.values().stream().noneMatch(Event::active); }
-    public synchronized String globalStop() { return kickoffScheduleV8 != null ? kickoffScheduleV8.globalStop() : kickoffSchedule != null ? kickoffSchedule.globalStop() : grouped != null ? grouped.globalStop() : globalStop; }
+    public synchronized boolean terminal() { return kickoffScheduleV9 != null ? kickoffScheduleV9.terminal() : kickoffScheduleV8 != null ? kickoffScheduleV8.terminal() : kickoffSchedule != null ? kickoffSchedule.terminal() : grouped != null ? grouped.terminal() : globalStop != null || events.values().stream().noneMatch(Event::active); }
+    public synchronized String globalStop() { return kickoffScheduleV9 != null ? kickoffScheduleV9.globalStop() : kickoffScheduleV8 != null ? kickoffScheduleV8.globalStop() : kickoffSchedule != null ? kickoffSchedule.globalStop() : grouped != null ? grouped.globalStop() : globalStop; }
     public synchronized List<EventState> states() {
+        if (kickoffScheduleV9 != null) return kickoffScheduleV9.states();
         if (kickoffScheduleV8 != null) return kickoffScheduleV8.states();
         if (kickoffSchedule != null) return kickoffSchedule.states();
         if (grouped != null) return grouped.states();
@@ -345,6 +371,7 @@ public final class LiveSchedule {
 
     /** V4 family deadlines are durable metadata; legacy campaigns keep their historical event deadline. */
     public synchronized List<FamilySchedule> familySchedules(UUID eventId) {
+        if (kickoffScheduleV9 != null) return kickoffScheduleV9.familySchedules(eventId);
         if (kickoffScheduleV8 != null) return kickoffScheduleV8.familySchedules(eventId);
         if (kickoffSchedule != null) return kickoffSchedule.familySchedules(eventId);
         return grouped == null ? List.of() : grouped.familySchedules(eventId);
@@ -354,7 +381,29 @@ public final class LiveSchedule {
     public synchronized void completed(Due due, String status, boolean unavailable,
                                        Map<String, Boolean> signals, Instant now,
                                        Instant scheduledKickoff, Boolean lineupsConfirmed) {
-        if (kickoffScheduleV8 != null) kickoffScheduleV8.completed(due, status, unavailable, signals, now,
+        completed(due, status, unavailable, signals, now, scheduledKickoff, lineupsConfirmed, null, null);
+    }
+
+    /** V9 receives a typed J4 control observation; historical schedules ignore it. */
+    public synchronized void completed(Due due, String status, boolean unavailable,
+                                       Map<String, Boolean> signals, Instant now,
+                                       Instant scheduledKickoff, Boolean lineupsConfirmed,
+                                       LiveJ4ControlFacts j4Controls) {
+        completed(due, status, unavailable, signals, now, scheduledKickoff, lineupsConfirmed, j4Controls, null);
+    }
+
+    /**
+     * V9 keeps the provider result code separate from the generic unavailable flag so that its
+     * missing-detailId statistics rule counts only consecutive observed HTTP 404 responses.
+     * Historical schedules deliberately ignore this additional diagnostic fact.
+     */
+    public synchronized void completed(Due due, String status, boolean unavailable,
+                                       Map<String, Boolean> signals, Instant now,
+                                       Instant scheduledKickoff, Boolean lineupsConfirmed,
+                                       LiveJ4ControlFacts j4Controls, String responseCode) {
+        if (kickoffScheduleV9 != null) kickoffScheduleV9.completed(due, status, unavailable, signals, now,
+                scheduledKickoff, lineupsConfirmed, j4Controls, responseCode);
+        else if (kickoffScheduleV8 != null) kickoffScheduleV8.completed(due, status, unavailable, signals, now,
                 scheduledKickoff, lineupsConfirmed);
         else if (kickoffSchedule != null) kickoffSchedule.completed(due, status, unavailable, signals, now,
                 scheduledKickoff, lineupsConfirmed);

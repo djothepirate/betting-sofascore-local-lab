@@ -4,9 +4,60 @@ Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_
 Décisions historiques applicables : [ADR-SS-005 v0.9](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md), correctif de réponses lentes/timeouts isolés réalisé et qualifié fonctionnellement hors fournisseur, et le calendrier v7 de l'ADR courant. Le premier lot de résilience et son profil nominal restent qualifiés dans leur portée : [rapport initial](../validation/WO-058-provider-resilience-qualification-20260909.md), [qualification temporelle v6](../validation/WO058-LIVE-V6-CAPACITY-20260909.md). Le [rapport du correctif](../validation/WO058-SLOW-TIMEOUT-RECOVERY-20260909.md) conserve séparément les validations finales réussies et leurs étapes intermédiaires. La révision V8 est autorisée par la demande propriétaire du 10 septembre et sa [qualification loopback locale](../validation/WO058-LIVE-V8-CAPACITY-20260910.md) est achevée ; elle ne vaut ni acceptation ni seuil du fournisseur et cette mise à jour ne modifie pas l'ADR. Les preuves v4/v5 restent historiques.
 Réalisation : [WO-058](../work_orders/active/WO-SS-20260907-058-bounded-live-j4-j5.md).
 
-## Révision live-v8 — profil local qualifié, activation manuelle distincte
+## Révision live-v9 — faits J4, réduction bornée des J5 et activation manuelle distincte
 
-`live-v8` est la politique de préparation destinée aux nouvelles campagnes. Elle vise **dix
+`live-v9` est la politique des nouvelles préparations. Elle conserve la borne de dix rencontres
+et l'enveloppe stricte de pression V8, mais place ou supprime les J5 après un J4 normalisé. Le
+J4 conserve séparément, dans sa projection, les présences et valeurs de `finalResultOnly`,
+`detailId`, `hasEventPlayerStatistics`,
+`tournament.uniqueTournament.hasEventPlayerStatistics` et `status.description`. Le scheduler
+utilise le type `LiveJ4ControlFacts`, pas le JSON textuel de la vue, pour chacune de ces
+décisions.
+
+La cible n'est pas rejetée avant une lecture J4 parce qu'aucune source durable ne prouve alors
+`finalResultOnly`. Dès que le premier J4 l'observe vrai, V9 arrête cette cible sans J5. Les
+statuts `notstarted`, `postponed` et `delayed` excluent incidents/statistiques ; ceux-ci ne
+redeviennent admissibles que pour `inprogress`, `interrupted`, `canceled` ou `finished`.
+Les compositions sont appelables lorsque le fait événement est vrai ou absent, et ne le sont
+pas lorsqu'il est explicitement faux. `detailId` nul, inconnu ou incompatible ne peut pas être
+assimilé à l'absence documentée et arrête la cible en revue sûre. Les autres faits conservent leur
+sémantique propre : seul `finalResultOnly=true` arrête la cible, et seule la description explicite
+`halftime` engage la pause.
+
+`detailId=1` garde le groupe normal. Avec un `detailId` réellement absent, V9 compte seulement
+les résultats dont le code est exactement `HTTP_404` pour J5 statistiques. Trois occurrences
+consécutives suspendent cette famille; tout résultat différent réinitialise le compteur. Le
+premier J4 `interrupted`, `canceled` ou `finished` peut ensuite ajouter un unique dernier J5
+statistiques, sans boucle de reprise après un doublon, une erreur ou un timeout. Cette règle
+spécifique évite le backoff générique qui empêcherait les deuxième et troisième observations.
+
+Lorsqu'un J4 `inprogress` porte `status.description=halftime`, V9 ne propose aucun endpoint
+pendant 15 minutes. À l'issue, il envoie un J4 de vérification seul; si la description ne vaut
+pas `2nd half`, il reste en J4 seul toutes les minutes. La confirmation de la seconde mi-temps
+recrée la cadence habituelle; un statut terminal conserve la priorité et déclenche seulement les
+familles finales admissibles.
+
+V9 dispose d'un profil de qualification indépendant, vide par défaut. Il n'est donc jamais
+autorisé de recopier le hash V8 pour le rendre exécutable. En revanche, sa pire vague reste les
+quatre familles V8 : elle réutilise le même `DepartureProfile.LIVE_V8` pour le ledger de pression
+et les mêmes quatre enveloppes, fences de 500 ms et réserve inter-groupe de 1 s. V52 admet le
+manifeste V9 et exprime cette identité de pression sans modifier V48/V50 ni les départs
+historiques. Ce partage ne crée ni hausse de budget, ni nouveau transport, ni sortie réseau.
+
+Les cartes joueurs utilisent la capacité tournoi J4 vraie comme unique permission de détail. Si
+elle est absente, nulle ou fausse, la carte est statique avec une information explicite. Si J5
+statistiques est indisponible mais J5 incidents et lineups sont lisibles, les incidents peuvent
+enrichir uniquement la présentation d'une carte sans statistiques lineups, via la clé stricte
+`(LineupSide, providerPlayerId)`. Les buts, passes, cartons et substitutions complètes sont
+affichés avec leur minute; aucune observation, statistique réelle ou composition n'est modifiée.
+
+`PROVIDER_CLOCK_REGRESSION` reste un refus local de planification avant le transport. Il ne
+représente ni un HTTP 403 ni une action à contourner : le diagnostic conserve l'arrêt et requiert
+une correction explicite de l'horloge locale avant une prochaine opération d'opérateur.
+
+## Révision live-v8 — profil local historique, activation manuelle distincte
+
+`live-v8` reste la politique historique qualifiée pour les campagnes déjà persistées. Elle vise **dix
 rencontres au plus** et une cadence de départ normale de **60 secondes au plus par couple
 rencontre/famille** en jeu. Les familles sont `EVENT_DETAILS`, `EVENT_INCIDENTS`,
 `EVENT_STATISTICS` et `EVENT_LINEUPS`. Ce contrat est un objectif de départ local : il ne

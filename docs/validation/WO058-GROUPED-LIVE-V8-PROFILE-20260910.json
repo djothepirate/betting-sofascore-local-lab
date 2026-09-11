@@ -304,11 +304,11 @@
     }
   },
   "productionClassSha256" : {
-    "com.bettingproject.sofascorelocal.application.live.LiveAdmissionPolicy" : "c15204a9ede37fa4cf655e5c8c625ddf18e594102d142acbd4ef0c801bfeff1c",
+    "com.bettingproject.sofascorelocal.application.live.LiveAdmissionPolicy" : "3bca981a21b14ec4c4b809e4861e9b2f01c6c5a1adfbe4268f99cb794dbf661d",
     "com.bettingproject.sofascorelocal.application.live.GroupedLiveAdmissionSimulationV8" : "7de9201dceb845360be42cb8101cb17de0bcd3bcf3a5a8abffc3da9426234f16",
-    "com.bettingproject.sofascorelocal.application.live.LiveSchedule" : "f8eec1a5c87ef6a6912d0308b7d8ddbeca4c97e484fdec06a01622b9f34b3757",
+    "com.bettingproject.sofascorelocal.application.live.LiveSchedule" : "38af7cc3e909d88c1f1705487ae505f8f0af6ecd9818630a942af7b81d39acce",
     "com.bettingproject.sofascorelocal.application.live.GroupedLiveScheduleV8" : "ed52e5a53706218cb64233b18cd2567cd0a5e8fb61939b06a4db4846d70931ec",
-    "com.bettingproject.sofascorelocal.domain.live.LiveCampaignData$GroupedAdmissionProfile" : "15089f45b98f2279dce689afdd48785dc74f4915859e4fd832ac4e4005450651"
+    "com.bettingproject.sofascorelocal.domain.live.LiveCampaignData$GroupedAdmissionProfile" : "f803973f03feeef102c351e8da8e36e2dfefd12c5cfbd39b17b13cad242bb43e"
   },
   "profileBuilderSourceSha256" : "3bcefc3b3f6f49582e03a9ed8bc852d5870832666e1c1e3a86635cb4e522f31f",
   "limitations" : [ "Synthetic local loopback only; does not establish provider acceptance or an IP/quota threshold", "Steady 64 KiB response corpus, including LINEUPS V4 and J4 V4; initial 5 MiB responses are measured separately", "The 35-minute run does not saturate a full hourly window; the 2,480-call integer 90% hourly boundary is replayed by the production scheduler", "Nominal cadence remains subordinate to the shared persistent budget and previous campaigns", "Operator selection limit is independent and is neither read nor modified by this utility" ]

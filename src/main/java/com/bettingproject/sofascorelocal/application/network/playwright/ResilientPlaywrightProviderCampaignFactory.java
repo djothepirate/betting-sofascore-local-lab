@@ -57,6 +57,11 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
     @Override public PlaywrightProviderCampaign openLiveGroupedV8(UUID id, Set<SofascoreEndpointType> endpoints) {
         return openProtected(id,()->delegate.openLiveGroupedV8(id,endpoints),true,DepartureProfile.LIVE_V8);
     }
+    @Override public PlaywrightProviderCampaign openLiveGroupedV9(UUID id, Set<SofascoreEndpointType> endpoints) {
+        // V9 skips work according to J4 facts; it never widens the independently qualified
+        // local transport envelope, so it deliberately charges the V8 pressure profile.
+        return openProtected(id,()->delegate.openLiveGroupedV9(id,endpoints),true,DepartureProfile.LIVE_V8);
+    }
     @Override public PlaywrightProviderCampaign openManualJ5Grouped(UUID id, Set<SofascoreEndpointType> endpoints) {
         return openProtected(id,()->delegate.openManualJ5Grouped(id,endpoints));
     }
@@ -198,9 +203,9 @@ public final class ResilientPlaywrightProviderCampaignFactory implements Playwri
         if(observed.compareAndSet(null,evidence)) persistRefusal(evidence);
     }
     /**
-     * V8 alone upgrades a charged reservation to the worker-side departure
-     * timestamp.  A missing request timestamp is deliberately not inferred:
-     * the completion trigger retains its conservative fallback instead.
+     * V8 and V9 share the qualified V8 pressure profile and therefore upgrade a charged
+     * reservation to the worker-side departure timestamp. A missing timestamp is deliberately
+     * not inferred: the completion trigger retains its conservative fallback instead.
      */
     private void recordAuthenticatedV8Departure(UUID dispatchId, DepartureProfile profile,
                                                 Instant requestedAt, Instant observedAt) {

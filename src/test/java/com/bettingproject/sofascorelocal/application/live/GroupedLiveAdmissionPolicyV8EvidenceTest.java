@@ -36,7 +36,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 class GroupedLiveAdmissionPolicyV8EvidenceTest {
     private static final String PROFILE_NAME = "WO058-GROUPED-LIVE-V8-PROFILE-20260910.json";
     private static final String NATIVE_NAME = "WO058-GROUPED-LIVE-V8-NATIVE-20260910.json";
-    private static final String PROFILE_SHA256 = "c5cef2745422d70bab769d03a93991af8ce3d685fb9daabb64fd00ab0a1ca3c8";
+    private static final String PROFILE_SHA256 = "4255f5327681398013dc9a0ab0f2250c7168558a399d164e299bb54b8b856de3";
     private static final String NATIVE_SHA256 = "f5b70709dcc51d9b40223fde1175d3c507190244562355e675689cb06e9a7fc0";
     private static final String PROFILE_BUILDER_SHA256 = "3bcefc3b3f6f49582e03a9ed8bc852d5870832666e1c1e3a86635cb4e522f31f";
     private static final int QUALIFIED_MATCHES = 10;
@@ -50,11 +50,11 @@ class GroupedLiveAdmissionPolicyV8EvidenceTest {
             EVENT_STATISTICS, new EndpointEnvelope(Duration.ofMillis(350), Duration.ofMillis(400)),
             EVENT_LINEUPS, new EndpointEnvelope(Duration.ofMillis(300), Duration.ofMillis(450)));
     private static final Map<String, String> PRODUCTION_CLASS_SHA256 = Map.of(
-            LiveAdmissionPolicy.class.getName(), "c15204a9ede37fa4cf655e5c8c625ddf18e594102d142acbd4ef0c801bfeff1c",
+            LiveAdmissionPolicy.class.getName(), "3bca981a21b14ec4c4b809e4861e9b2f01c6c5a1adfbe4268f99cb794dbf661d",
             GroupedLiveAdmissionSimulationV8.class.getName(), "7de9201dceb845360be42cb8101cb17de0bcd3bcf3a5a8abffc3da9426234f16",
-            LiveSchedule.class.getName(), "f8eec1a5c87ef6a6912d0308b7d8ddbeca4c97e484fdec06a01622b9f34b3757",
+            LiveSchedule.class.getName(), "38af7cc3e909d88c1f1705487ae505f8f0af6ecd9818630a942af7b81d39acce",
             GroupedLiveScheduleV8.class.getName(), "ed52e5a53706218cb64233b18cd2567cd0a5e8fb61939b06a4db4846d70931ec",
-            GroupedAdmissionProfile.class.getName(), "15089f45b98f2279dce689afdd48785dc74f4915859e4fd832ac4e4005450651");
+            GroupedAdmissionProfile.class.getName(), "f803973f03feeef102c351e8da8e36e2dfefd12c5cfbd39b17b13cad242bb43e");
 
     @Test
     void committedV8EvidenceBindsTheImmutableTenMatchProfileWithoutEnablingTransport() throws Exception {

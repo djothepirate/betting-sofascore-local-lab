@@ -23,13 +23,14 @@ public final class LiveCampaignProperties {
     private final Grouped groupedV6 = new Grouped();
     private final Grouped groupedV7 = new Grouped();
     private final Grouped groupedV8 = new Grouped();
+    private final Grouped groupedV9 = new Grouped();
     private Path dockerExecutable;
     private String postgresContainer = "betting-sofascore-local-lab-postgres";
     private Duration duration = Duration.ofHours(4);
     private long diskReserveBytes = 1024L * 1024 * 1024;
     public boolean isEnabled() { return enabled; }
     /** New preparations always use the current safeguards; no configuration rollback exists. */
-    public String getPreparationPolicyVersion() { return "live-v8"; }
+    public String getPreparationPolicyVersion() { return "live-v9"; }
     public void setEnabled(boolean v) { enabled = v; }
     public int getQualifiedMatchCapacity() { return qualifiedMatchCapacity; }
     public void setQualifiedMatchCapacity(int v) { qualifiedMatchCapacity = v; }
@@ -44,6 +45,7 @@ public final class LiveCampaignProperties {
     public Grouped getGroupedV6() { return groupedV6; }
     public Grouped getGroupedV7() { return groupedV7; }
     public Grouped getGroupedV8() { return groupedV8; }
+    public Grouped getGroupedV9() { return groupedV9; }
     public GroupedAdmissionProfile groupedAdmissionProfile() {
         return groupedAdmissionProfile(grouped, "live-v4");
     }
@@ -58,6 +60,9 @@ public final class LiveCampaignProperties {
     }
     public GroupedAdmissionProfile groupedAdmissionProfileV8() {
         return groupedAdmissionProfile(groupedV8, "live-v8");
+    }
+    public GroupedAdmissionProfile groupedAdmissionProfileV9() {
+        return groupedAdmissionProfile(groupedV9, "live-v9");
     }
     private static GroupedAdmissionProfile groupedAdmissionProfile(Grouped settings, String policyVersion) {
         if (settings.qualificationSha256 == null || !settings.qualificationSha256.matches("[0-9a-f]{64}"))

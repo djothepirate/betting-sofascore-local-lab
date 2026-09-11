@@ -564,7 +564,7 @@ public class JdbcLiveCampaignStore implements LiveCampaignStore {
     private static boolean groupedPolicy(Map<String,Object> campaign) {
         return "live-v4".equals(campaign.get("policy_version")) || "live-v5".equals(campaign.get("policy_version"))
                 || "live-v6".equals(campaign.get("policy_version")) || "live-v7".equals(campaign.get("policy_version"))
-                || "live-v8".equals(campaign.get("policy_version"));
+                || "live-v8".equals(campaign.get("policy_version")) || "live-v9".equals(campaign.get("policy_version"));
     }
     private static String groupedEnvelopesJson(GroupedAdmissionProfile profile) {
         Map<String,Object> envelopes=new TreeMap<>();

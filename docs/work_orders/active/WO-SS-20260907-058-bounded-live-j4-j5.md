@@ -1437,3 +1437,85 @@ ignoré. Une nouvelle tentative `clean verify` exécute 2 213 tests puis retrouv
 échecs fail-closed Windows d'identité de processus (`UNVERIFIED` au lieu de `ABSENT`, et
 `CIM_ERROR,TASKLIST_ERROR,CLASS_UNVERIFIABLE`). Ces échecs sont hors périmètre ; ils ne sont ni
 assouplis ni masqués.
+
+### Complément du 11 septembre — politique locale `live-v9`, faits J4 et cartes enrichies
+
+Le propriétaire demande une nouvelle politique de préparation `live-v9` pour réduire les
+appels J5 qui ne sont pas utiles pendant une rencontre. Cette politique conserve le plafond
+de dix rencontres et l'enveloppe locale stricte de `live-v8` : quatre familles, quatre fences
+de 500 ms, une réserve inter-groupe d'une seconde, 45 départs sur 60 secondes et 2 756 sur une
+heure. Elle ne tire aucun quota ou accord du fournisseur de ces bornes, n'ajoute aucun endpoint,
+proxy, cookie, réutilisation de contexte ou mécanisme de résolution de challenge. Son profil
+est indépendant : une preuve V8 ne qualifie jamais automatiquement une préparation V9.
+
+Le premier J4 persistant porte une projection typée de `finalResultOnly`, `detailId`,
+`hasEventPlayerStatistics`,
+`tournament.uniqueTournament.hasEventPlayerStatistics` et de la description de statut. Avant ce
+premier J4, une sélection locale ne dispose d'aucun fait sûr permettant d'écarter une cible ;
+`finalResultOnly=true` arrête donc cette cible dès cette première lecture, sans groupe J5. Les
+statuts `notstarted`, `postponed` et `delayed` n'autorisent ni statistiques ni incidents ;
+`inprogress`, `interrupted`, `canceled` et `finished` les autorisent. Les compositions sont
+autorisées lorsque `hasEventPlayerStatistics` est vrai ou absent, et refusées lorsqu'il est
+explicitement faux.
+
+`detailId=1` conserve le chemin J5 normal. Lorsque `detailId` est réellement absent, seules
+trois réponses consécutives dont le code exact est `HTTP_404` suspendent J5 statistiques pour la
+rencontre. Une autre issue, y compris un succès, remet cette séquence à zéro. Après la
+suspension, un seul essai final de statistiques est prévu au premier J4 terminal
+`interrupted`, `canceled` ou `finished`; un doublon, un timeout ou une autre réponse terminale
+ne crée pas de boucle de relance. Un `detailId=1` ultérieur retire la suppression. Les valeurs
+nulles ou inconnues restent en arrêt de revue sûr et ne sont pas assimilées à l'absence.
+
+Un J4 `inprogress` décrit comme `halftime` met la rencontre en silence local pendant quinze
+minutes. À échéance, V9 exécute un J4 seul. Si la description reste autre que `2nd half`, il
+continue les J4 seuls toutes les minutes; dès la confirmation `2nd half`, les groupes J4/J5
+normaux reprennent. Un statut terminal lors d'une relecture de mi-temps garde sa priorité et
+termine selon le groupe J5 final permis.
+
+La capacité tournoi J4 est séparée de la présence ponctuelle de mesures dans un retour J5
+lineups. Seule une valeur explicitement vraie rend une carte joueur ouvrable; les autres cas
+restent statiques et affichent que les statistiques des joueurs ne sont pas disponibles. Lorsque
+J5 statistiques est explicitement indisponible mais que J5 incidents et lineups sont lisibles,
+la présentation peut joindre les incidents à une carte par le couple strict
+`(équipe, providerPlayerId)`, sans créer de joueur ni remplacer une statistique lineups réelle.
+Les décorations montrent buts, passes, cartons et, à la demande du propriétaire, entrées et
+sorties de joueur avec leur minute observée. Elles restent des faits de présentation sourcés
+`EVENT_INCIDENTS`, non des écritures dans les observations normalisées.
+
+La migration append-only V52 fait accepter le manifeste et le profil V9 tout en gardant le
+ledger de départ sous `admission_profile='live-v8'`, qui désigne l'enveloppe de pression partagée
+et non la version de planification. V48 et V50 ne sont pas réécrites. Les scripts de
+sauvegarde/restauration J6 exigent désormais Flyway V52. Aucune campagne en cours n'est
+réarmée, relancée ou modifiée par ce travail.
+
+L'observation opérateur `PROVIDER_CLOCK_REGRESSION` du 11 septembre reste un refus de
+planification locale avant départ worker : l'écran ne montre ni tentative, ni transport, ni
+statut HTTP. La garde conserve donc l'arrêt en lecture seule et exige de corriger l'horloge
+locale avant toute action opérateur explicite; elle n'est ni contournée ni transformée en
+réarmement automatique.
+
+#### Validation locale V9 — 11 septembre, hors fournisseur
+
+Cette qualification couvre la planification locale `live-v9`, la projection durable des
+faits J4, la migration V52 et la restitution des cartes joueur. Elle n'autorise ni
+acceptation fournisseur, ni contournement de refus ou challenge, ni lancement,
+réarmement, relance ou modification d'une campagne existante. Les scénarios utilisent
+des fixtures, mocks, replays et, lorsque nécessaire, PostgreSQL local dans Docker ;
+aucun appel réel au fournisseur n'est effectué par les tests.
+
+| Commande | Résultat |
+|---|---|
+| `.\mvnw.cmd -q "-Dtest=LivePreparationAdmissionTest,GroupedLiveAdmissionPolicyV8EvidenceTest,GroupedLiveScheduleV8Test,GroupedLiveScheduleV9Test,LiveCampaignPropertiesTest" test` | **101 tests**, zéro échec, zéro erreur et zéro ignoré. Cette commande confirme l'admission V9 indépendante, la compatibilité du profil de pression V8, les séquences V8/V9 et la configuration. |
+| `.\mvnw.cmd --offline "-Dmaven.repo.local=C:\Users\geoff\.m2\repository" "-Dtest=LiveCampaignPersistenceIT#v9SqlReusesTheV8PressureBoundsAndRequiresItsOwnImmutableGroupedProfile" test` | **1 test d'intégration PostgreSQL**, zéro échec ni erreur ; Flyway applique V52 et vérifie que V9 exige son profil immuable tout en réutilisant l'enveloppe de pression V8. |
+| `.\mvnw.cmd clean verify` | **BUILD SUCCESS** ; Surefire : **2 253 tests**, zéro échec, zéro erreur, cinq ignorés ; Failsafe : **232 tests**, zéro échec, zéro erreur, zéro ignoré ; durée 10 min 11 s. |
+| `.\mvnw.cmd -Pintegration-tests verify` | **BUILD SUCCESS** ; Surefire : **2 253 tests**, zéro échec, zéro erreur, cinq ignorés ; Failsafe : **232 tests**, zéro échec, zéro erreur, zéro ignoré ; durée 9 min 24 s. |
+
+Les tests V9 couvrent explicitement l'arrêt après le premier J4 `finalResultOnly`, l'absence de
+statistiques et d'incidents avant le jeu, la désactivation explicite des compositions, les trois
+`HTTP_404` consécutifs suivis d'un unique essai final, la réinitialisation sur une autre réponse
+et le silence de quinze minutes à la mi-temps puis les relectures J4 seules. Les cartes sont
+rendues ouvrables uniquement avec la capacité tournoi J4 explicitement vraie. Lorsque les
+statistiques J5 sont indisponibles mais que compositions et incidents sont lisibles, les
+décorations de buts, passes, cartons et changements complets sont associées par
+`(équipe, providerPlayerId)`, avec minute et provenance `EVENT_INCIDENTS`, sans modifier les
+données normalisées ni écraser une statistique de composition.

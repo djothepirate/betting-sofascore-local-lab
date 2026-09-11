@@ -39,6 +39,14 @@ public interface PlaywrightProviderCampaignFactory {
         throw new UnsupportedOperationException("grouped live-v8 dispatch is not implemented by this transport");
     }
 
+    /**
+     * Explicit V9 J4-controlled authority. Its scheduling gates reduce work, while its
+     * transport pressure remains bounded by the previously qualified V8 local profile.
+     */
+    default PlaywrightProviderCampaign openLiveGroupedV9(UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {
+        throw new UnsupportedOperationException("grouped live-v9 dispatch is not implemented by this transport");
+    }
+
     /** One explicitly launched, single-event J5 manual group in statistics/incidents/lineups order. */
     default PlaywrightProviderCampaign openManualJ5Grouped(
             UUID campaignId, Set<SofascoreEndpointType> allowedEndpoints) {

@@ -23,29 +23,44 @@ public final class LineupsPresentation {
     private LineupsPresentation() { }
 
     public static View from(EventLineups lineups) {
-        return from(lineups, null, null, LineupCountryOverlay.empty());
+        return from(lineups, null, null, LineupCountryOverlay.empty(), LineupIncidentOverlay.empty(), false);
     }
 
     public static View from(EventLineups lineups, String homeName, String awayName) {
-        return from(lineups, homeName, awayName, LineupCountryOverlay.empty());
+        return from(lineups, homeName, awayName, LineupCountryOverlay.empty(), LineupIncidentOverlay.empty(), false);
     }
 
     public static View from(EventLineups lineups, String homeName, String awayName,
                             LineupCountryOverlay countryOverlay) {
-        LineupCountryOverlay overlay = countryOverlay == null
-                ? LineupCountryOverlay.empty() : countryOverlay;
-        return new View(lineups.confirmed(), lineups.confirmed() ? "Confirmée" : "Provisoire",
-                List.of(team(lineups.home(), homeName, overlay), team(lineups.away(), awayName, overlay)));
+        return from(lineups, homeName, awayName, countryOverlay, LineupIncidentOverlay.empty(), false);
     }
 
-    private static Team team(TeamLineup lineup, String name, LineupCountryOverlay overlay) {
+    /**
+     * Projects only already normalized observations. {@code playerDetailsAllowed} is a J4
+     * capability fact; it is intentionally independent from whether a J5 player statistic happens
+     * to be present in this particular lineup observation.
+     */
+    public static View from(EventLineups lineups, String homeName, String awayName,
+                            LineupCountryOverlay countryOverlay, LineupIncidentOverlay incidentOverlay,
+                            boolean playerDetailsAllowed) {
+        LineupCountryOverlay overlay = countryOverlay == null
+                ? LineupCountryOverlay.empty() : countryOverlay;
+        LineupIncidentOverlay incidents = incidentOverlay == null
+                ? LineupIncidentOverlay.empty() : incidentOverlay;
+        return new View(lineups.confirmed(), lineups.confirmed() ? "Confirmée" : "Provisoire",
+                List.of(team(lineups.home(), homeName, overlay, incidents, playerDetailsAllowed),
+                        team(lineups.away(), awayName, overlay, incidents, playerDetailsAllowed)));
+    }
+
+    private static Team team(TeamLineup lineup, String name, LineupCountryOverlay overlay,
+                             LineupIncidentOverlay incidents, boolean playerDetailsAllowed) {
         String side = lineup.side().name();
         String sideLabel = lineup.side() == LineupSide.HOME ? "Domicile" : "Extérieur";
         var starters = new LinkedHashMap<String, List<Player>>();
         var substitutes = new ArrayList<Player>();
         int starterCount = 0;
         for (EventLineupPlayer source : lineup.players()) {
-            Player player = player(lineup.side(), source, overlay);
+            Player player = player(lineup.side(), source, overlay, incidents, playerDetailsAllowed);
             if (source.starter()) {
                 starters.computeIfAbsent(groupKey(source), ignored -> new ArrayList<>()).add(player);
                 starterCount++;
@@ -58,17 +73,21 @@ public final class LineupsPresentation {
         return new Team(side, name == null || name.isBlank() ? sideLabel : name, sideLabel,
                 lineup.formation().orElse("Formation non renseignée"), starterCount, substitutes.size(),
                 groups, List.copyOf(substitutes), lineup.missingPlayers()
-                .map(values -> missingPlayers(lineup.side(), values, overlay)).orElse(null));
+                .map(values -> missingPlayers(lineup.side(), values, overlay)).orElse(null),
+                playerDetailsAllowed);
     }
 
-    private static Player player(LineupSide side, EventLineupPlayer source, LineupCountryOverlay overlay) {
+    private static Player player(LineupSide side, EventLineupPlayer source, LineupCountryOverlay overlay,
+                                 LineupIncidentOverlay incidents, boolean playerDetailsAllowed) {
         return new Player(side.name() + ":" + source.providerPlayerId(), source.name(),
                 source.shirtNumber().map(String::valueOf).orElse("—"),
                 source.position().map(LineupsPresentation::positionLabel).orElse("Poste non renseigné"),
                 source.starter() ? "Titulaire" : "Remplaçant", source.captain().orElse(false),
                 source.statistics().map(PlayerStatisticsPresentation::from).orElse(null),
                 CountryPresentation.of(preferredCountry(source.country(),
-                        overlay.rosterCountry(side, source.providerPlayerId()))), achievements(source));
+                        overlay.rosterCountry(side, source.providerPlayerId()))), achievements(source),
+                source.statistics().isPresent() ? List.of() : incidents.decorations(side, source.providerPlayerId()),
+                playerDetailsAllowed);
     }
 
     private static List<Achievement> achievements(EventLineupPlayer player) {
@@ -188,16 +207,35 @@ public final class LineupsPresentation {
     public record View(boolean confirmed, String confirmationLabel, List<Team> teams) { }
     public record Team(String side, String name, String sideLabel, String formation,
                        int starterCount, int substituteCount, List<Group> starterGroups, List<Player> substitutes,
-                       List<MissingPlayer> missingPlayers) {
+                       List<MissingPlayer> missingPlayers, boolean detailsAllowed) {
+        public Team(String side, String name, String sideLabel, String formation, int starterCount,
+                    int substituteCount, List<Group> starterGroups, List<Player> substitutes,
+                    List<MissingPlayer> missingPlayers) {
+            this(side, name, sideLabel, formation, starterCount, substituteCount, starterGroups, substitutes,
+                    missingPlayers, false);
+        }
         public Team(String side, String name, String sideLabel, String formation, int starterCount,
                     int substituteCount, List<Group> starterGroups, List<Player> substitutes) {
-            this(side, name, sideLabel, formation, starterCount, substituteCount, starterGroups, substitutes, null);
+            this(side, name, sideLabel, formation, starterCount, substituteCount, starterGroups, substitutes,
+                    null, false);
         }
     }
     public record Group(String key, String label, List<Player> players) { }
     public record Player(String key, String name, String shirtNumber, String positionLabel, String roleLabel,
                          boolean captain, PlayerStatisticsPresentation.View statistics,
-                         CountryPresentation.View country, List<Achievement> achievements) {
+                         CountryPresentation.View country, List<Achievement> achievements,
+                         List<LineupIncidentOverlay.Decoration> incidentDecorations,
+                         boolean detailsAllowed) {
+        public Player {
+            achievements = List.copyOf(achievements == null ? List.of() : achievements);
+            incidentDecorations = List.copyOf(incidentDecorations == null ? List.of() : incidentDecorations);
+        }
+        public Player(String key, String name, String shirtNumber, String positionLabel, String roleLabel,
+                      boolean captain, PlayerStatisticsPresentation.View statistics,
+                      CountryPresentation.View country, List<Achievement> achievements) {
+            this(key, name, shirtNumber, positionLabel, roleLabel, captain, statistics, country, achievements,
+                    List.of(), false);
+        }
         public Player(String key, String name, String shirtNumber, String positionLabel, String roleLabel,
                       boolean captain, PlayerStatisticsPresentation.View statistics) {
             this(key, name, shirtNumber, positionLabel, roleLabel, captain, statistics,

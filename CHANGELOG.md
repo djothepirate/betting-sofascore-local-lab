@@ -4,6 +4,37 @@ Les évolutions notables du SofaScore Local Lab sont consignées dans ce fichier
 
 ## [Non publié]
 
+### WO-058 — règles J4/J5 `live-v9` et cartes joueurs enrichies par les incidents
+
+- Introduit la politique de campagne locale `live-v9`, avec un profil de qualification propre
+  et un refus fermé quand celui-ci est absent ou incohérent. Sa borne maximale reste dix
+  rencontres et son enveloppe de départ réutilise strictement celle de `live-v8` (quatre
+  familles, fence de 500 ms et réserve inter-groupe d’une seconde) : aucun plafond local,
+  endpoint ou transport supplémentaire n’est créé.
+- Fait décider le planificateur à partir des faits J4 conservés dans une projection typée :
+  `finalResultOnly`, `detailId`, les deux capacités de statistiques joueur et la description
+  de statut. Un premier J4 `finalResultOnly=true` termine localement la rencontre sans J5 ;
+  `notstarted`, `postponed` et `delayed` ne planifient pas statistiques/incidents ;
+  `inprogress`, `interrupted`, `canceled` et `finished` les autorisent selon les autres
+  règles J4.
+- Traite le contrat `detailId` absent sans rabattre les 404 dans le backoff générique : après
+  trois réponses consécutives exactement `HTTP_404` pour J5 statistiques, cette famille est
+  suspendue pour la rencontre et reçoit une seule vérification terminale sur J4
+  `interrupted`, `canceled` ou `finished`. Un succès ou une autre issue remet le compteur à
+  zéro ; `detailId=1` rétablit le chemin normal.
+- Met la mi-temps en pause locale de quinze minutes sans appel. Le réveil effectue un seul J4 ;
+  tant que J4 ne confirme pas « 2nd half », les relectures suivantes sont J4 seules à une
+  minute. Les familles habituelles reprennent seulement après cette confirmation.
+- Rend les compositions dépendantes du fait J4 `hasEventPlayerStatistics` (false exclut J5
+  lineups) et rend les cartes cliquables seulement lorsque la capacité tournoi J4 est
+  explicitement vraie. Les cartes peuvent compléter des statistiques absentes avec des
+  observations J5 incidents strictement jointes par équipe et identifiant joueur : buts,
+  passes, cartons et entrées/sorties observées, avec minute, sans réécrire les statistiques
+  de composition.
+- Ajoute la migration append-only V52 pour accepter `live-v9` tout en conservant
+  `admission_profile='live-v8'` dans le ledger de départ partagé. Le runbook J6 exige donc
+  désormais Flyway V52 avant une qualification de sauvegarde/restauration.
+
 ### WO-058 — qualification locale de la cadence live-v8, dix rencontres
 
 - Ajoute une vue de pression strictement locale par campagne. Elle compte seulement les

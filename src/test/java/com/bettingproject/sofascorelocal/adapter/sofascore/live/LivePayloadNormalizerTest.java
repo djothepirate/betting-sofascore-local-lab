@@ -2,6 +2,9 @@ package com.bettingproject.sofascorelocal.adapter.sofascore.live;
 
 import com.bettingproject.sofascorelocal.domain.provider.RawPayloadEvidence;
 import com.bettingproject.sofascorelocal.domain.provider.SofascoreEndpointType;
+import com.bettingproject.sofascorelocal.domain.live.LiveJ4ControlFacts.BooleanFact;
+import com.bettingproject.sofascorelocal.domain.live.LiveJ4ControlFacts.DetailIdFact;
+import com.bettingproject.sofascorelocal.domain.live.LiveJ4ControlFacts.StatusDescription;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
@@ -35,13 +38,14 @@ class LivePayloadNormalizerTest {
         assertThat(json(zero).at("/homeScore/value/period1/value").intValue()).isEqualTo(2);
         assertThat(json(zero).at("/homeScore/value/penalties/value").intValue()).isEqualTo(4);
         assertThat(zero.parserVersion()).isEqualTo("event-details-v4");
-        assertThat(zero.projectionVersion()).isEqualTo("j4-live-score-v2");
+        assertThat(zero.projectionVersion()).isEqualTo("j4-live-score-v3");
     }
 
     @Test
     void preservesAwardAndDisplayScoresIndependentlyOfCurrentScores() {
         var result = details(",\"isAwarded\":true,\"homeScore\":{\"display\":3,\"current\":1},"
                 + "\"awayScore\":{\"display\":0,\"current\":2}");
+        assertThat(result.code()).isEqualTo("PARSED");
         assertThat(result.status()).isEqualTo(LiveNormalizedPayload.Status.PARSED);
         assertThat(result.details()).hasValueSatisfying(detail -> {
             assertThat(detail.isAwarded()).contains(true);
@@ -54,6 +58,48 @@ class LivePayloadNormalizerTest {
         assertThat(json(details("")).at("/isAwarded/presence").stringValue()).isEqualTo("ABSENT");
         assertThat(json(details(",\"isAwarded\":null")).at("/isAwarded/presence").stringValue()).isEqualTo("NULL");
         assertThat(json(details(",\"isAwarded\":false")).at("/isAwarded/value").booleanValue()).isFalse();
+    }
+
+    @Test
+    void extractsTypedJ4ControlFactsWhileRetainingTheirReviewableProjectionPresence() {
+        var result = normalize(SofascoreEndpointType.EVENT_DETAILS, """
+                {"event":{"id":17000001,"startTimestamp":1788796800,
+                "homeTeam":{"id":1,"name":"Home"},"awayTeam":{"id":2,"name":"Away"},
+                "status":{"type":"inprogress","description":"halftime"},
+                "finalResultOnly":false,"detailId":1,"hasEventPlayerStatistics":false,
+                "tournament":{"id":3,"name":"League","uniqueTournament":{"hasEventPlayerStatistics":true}}}}
+                """, 1, RECEIVED);
+
+        assertThat(result.code()).isEqualTo("PARSED");
+        assertThat(result.status()).isEqualTo(LiveNormalizedPayload.Status.PARSED);
+        assertThat(result.j4Controls()).hasValueSatisfying(controls -> {
+            assertThat(controls.finalResultOnly()).isEqualTo(BooleanFact.FALSE);
+            assertThat(controls.detailId()).isEqualTo(DetailIdFact.ONE);
+            assertThat(controls.hasEventPlayerStatistics()).isEqualTo(BooleanFact.FALSE);
+            assertThat(controls.tournamentHasEventPlayerStatistics()).isEqualTo(BooleanFact.TRUE);
+            assertThat(controls.statusDescription()).isEqualTo(StatusDescription.HALFTIME);
+            assertThat(controls.lineupsCallable()).isFalse();
+            assertThat(controls.playerCardsClickable()).isTrue();
+        });
+        assertThat(json(result).at("/finalResultOnly/value").booleanValue()).isFalse();
+        assertThat(json(result).at("/detailId/value").longValue()).isEqualTo(1L);
+        assertThat(json(result).at("/hasEventPlayerStatistics/value").booleanValue()).isFalse();
+        assertThat(json(result).at("/tournamentHasEventPlayerStatistics/value").booleanValue()).isTrue();
+        assertThat(json(result).at("/statusDescription/value").stringValue()).isEqualTo("halftime");
+    }
+
+    @Test
+    void rejectsAnInvalidJ4ControlValueWithoutPublishingDetailsOrControls() {
+        var result = normalize(SofascoreEndpointType.EVENT_DETAILS, """
+                {"event":{"id":17000001,"startTimestamp":1788796800,
+                "homeTeam":{"id":1,"name":"Home"},"awayTeam":{"id":2,"name":"Away"},
+                "status":{"type":"inprogress"},"detailId":"1"}}
+                """, 1, RECEIVED);
+
+        assertThat(result.status()).isEqualTo(LiveNormalizedPayload.Status.SCHEMA_INCOMPATIBLE);
+        assertThat(result.code()).isEqualTo("LIVE_J4_DETAIL_ID_INCOMPATIBLE");
+        assertThat(result.details()).isEmpty();
+        assertThat(result.j4Controls()).isEmpty();
     }
 
     @Test

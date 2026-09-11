@@ -26,6 +26,7 @@
           <summary><span class="lineups-section-title">Titulaires</span><span class="lineups-count" data-lineups-count th:text="${team.starterCount}">0</span></summary>
           <div class="lineups-starters">
             <p class="lineups-note">Répartition par poste, sans positionnement tactique détaillé.</p>
+            <p th:if="${!team.detailsAllowed}" class="lineups-note" data-lineups-player-statistics-unavailable>Statistiques des joueurs non disponibles pour ce match</p>
             <p class="lineups-empty" data-lineups-starters-empty th:hidden="${team.starterCount > 0}">Aucun titulaire renseigné.</p>
             <div class="lineups-pitch" data-lineups-groups th:hidden="${team.starterGroups.isEmpty()}">
               <section th:each="group : ${team.starterGroups}" class="lineups-position-group"
@@ -81,11 +82,11 @@
 </div>
 
 <li th:fragment="player(player)" class="lineups-player" th:attr="data-lineups-player=${player.key}">
- <div th:unless="${player.hasStatistics()}" class="lineups-player-static" data-lineups-player-shell>
-  <div class="lineups-player-summary" data-lineups-player-header tabindex="-1"><th:block th:replace="~{fragments/lineups :: playerHeader(${player})}"></th:block></div>
+ <div th:unless="${player.detailsAllowed}" class="lineups-player-static" data-lineups-player-shell>
+  <div class="lineups-player-summary" data-lineups-player-header><th:block th:replace="~{fragments/lineups :: playerHeader(${player})}"></th:block></div>
  </div>
- <details th:if="${player.hasStatistics()}" class="lineups-player-details" data-lineups-player-details data-lineups-player-shell>
-  <summary class="lineups-player-summary" data-lineups-player-header><th:block th:replace="~{fragments/lineups :: playerHeader(${player})}"></th:block></summary>
+ <details th:if="${player.detailsAllowed}" class="lineups-player-details" data-lineups-player-details data-lineups-player-shell>
+  <summary class="lineups-player-summary" data-lineups-player-header th:attr="aria-label=${'Ouvrir le détail du joueur ' + player.name}"><th:block th:replace="~{fragments/lineups :: playerHeader(${player})}"></th:block></summary>
   <div class="lineups-player-statistics" data-lineups-player-statistics>
     <p class="lineups-statistics-empty" data-lineups-statistics-empty
        th:hidden="${player.statistics != null and (!player.statistics.groups.isEmpty() or !player.statistics.ratingVersions.isEmpty())}"
@@ -142,7 +143,15 @@
         <span class="lineups-achievement-count" aria-hidden="true" th:text="${'×' + achievement.count}">×1</span>
       </span>
     </span>
-    <span class="lineups-statistics-hint" data-lineups-statistics-hint th:if="${player.hasStatistics()}">Statistiques</span>
+    <span class="lineups-incident-decorations" data-lineups-incident-decorations
+          th:hidden="${player.incidentDecorations.isEmpty()}">
+      <span th:each="incident : ${player.incidentDecorations}" class="lineups-incident-decoration"
+            th:attr="data-lineups-incident-decoration=${incident.key},data-lineups-incident-source=${incident.source},data-lineups-incident-minute=${incident.minuteLabel},aria-label=${incident.label + ', ' + incident.minuteLabel + 'e minute, observé dans les incidents J5'}">
+        <span class="lineups-incident-icon" aria-hidden="true" th:text="${incident.icon}">•</span>
+        <span class="lineups-incident-label" th:text="${incident.label + ' · ' + incident.minuteLabel + '′'}">But · 45′</span>
+        <span class="lineups-incident-source">Incidents J5</span>
+      </span>
+    </span>
   </span>
 </th:block>
 </body>

@@ -15,6 +15,8 @@ public final class LiveAdmissionPolicy {
     public static final int V7_MAXIMUM_SELECTION_SIZE = 3;
     /** V8 is separately qualified: ten 60-second four-family groups under the isolated pressure policy. */
     public static final int V8_MAXIMUM_SELECTION_SIZE = 10;
+    /** V9 retains the same worst-case four-family envelope; runtime J4 gates only lower traffic. */
+    public static final int V9_MAXIMUM_SELECTION_SIZE = 10;
     public static final int V6_MAXIMUM_CALLS_PER_MINUTE = 25;
     public static final int V6_MAXIMUM_CALLS_PER_HOUR = 1000;
     public static final int V8_MAXIMUM_CALLS_PER_MINUTE = 45;
@@ -106,6 +108,15 @@ public final class LiveAdmissionPolicy {
         requireStorage(maximumBytesV5(matches));
     }
 
+    /** V9 has its own immutable qualification even though its worst-case envelope matches V8. */
+    public void admitV9(int matches, GroupedAdmissionProfile profile) {
+        properties.validate();
+        if (matches < 1 || matches > properties.getQualifiedMatchCapacity() || matches > V9_MAXIMUM_SELECTION_SIZE)
+            throw new IllegalArgumentException("LIVE_SELECTION_EXCEEDS_QUALIFIED_CAPACITY");
+        if (matches > qualifiedCapacityV9(profile)) throw new IllegalArgumentException("LIVE_CAPACITY_REFUSED_REDUCE_SELECTION");
+        requireStorage(maximumBytesV5(matches));
+    }
+
     /** 240 ordinary calls/hour plus four initial and four final calls, with 10% headroom. */
     public static int qualifiedCapacityV7(GroupedAdmissionProfile profile) {
         int hourlyCapacity = (V6_MAXIMUM_CALLS_PER_HOUR * 9 / 10) / 248;
@@ -130,6 +141,23 @@ public final class LiveAdmissionPolicy {
         // Replay keeps admission honest about actual request emissions and
         // explicit recovery states, which arithmetic alone cannot establish.
         while (capacity > 0 && !GroupedLiveAdmissionSimulationV8.fits(capacity, profile)) capacity--;
+        return capacity;
+    }
+
+    /**
+     * V9 admits against a deliberate full-J5 upper bound. Status, halftime and
+     * unavailable-statistics gates never grant additional capacity; they only
+     * remove calls after an observed J4 contract permits that reduction.
+     */
+    public static int qualifiedCapacityV9(GroupedAdmissionProfile profile) {
+        if (profile == null) throw new IllegalStateException("LIVE_CAPACITY_QUALIFICATION_REQUIRED");
+        if (!"live-v9".equals(profile.policyVersion())) throw new IllegalStateException("LIVE_GROUPED_POLICY_MISMATCH");
+        int hourlyCapacity = (V8_MAXIMUM_CALLS_PER_HOUR * 9 / 10) / 248;
+        long phaseReservation = LiveSchedule.v9StrictGroupReservation(profile).toNanos();
+        int temporalCapacity = (int) Math.min(V9_MAXIMUM_SELECTION_SIZE,
+                Duration.ofMinutes(1).toNanos() / phaseReservation);
+        int capacity = Math.min(hourlyCapacity, temporalCapacity);
+        while (capacity > 0 && !GroupedLiveAdmissionSimulationV9.fits(capacity, profile)) capacity--;
         return capacity;
     }
 
@@ -164,7 +192,8 @@ public final class LiveAdmissionPolicy {
         if (!policyVersion.equals(profile.policyVersion())) throw new IllegalStateException("LIVE_GROUPED_POLICY_MISMATCH");
         long rounds = profile.lineupInterval().toSeconds() / profile.criticalInterval().toSeconds();
         long weightedNanos = Math.multiplyExact(profile.interGroupDelay().toNanos(), rounds);
-        if ("live-v6".equals(policyVersion) || "live-v7".equals(policyVersion) || "live-v8".equals(policyVersion)) {
+        if ("live-v6".equals(policyVersion) || "live-v7".equals(policyVersion) || "live-v8".equals(policyVersion)
+                || "live-v9".equals(policyVersion)) {
             // The durable limiter waits after every exchange, including same-group calls.
             weightedNanos = Math.multiplyExact(profile.minimumRequestStartInterval().toNanos(), 3 * rounds + 1);
         }
@@ -180,7 +209,9 @@ public final class LiveAdmissionPolicy {
         // and no nanosecond over the headroom boundary can disappear by truncation.
         long usableNanos = Math.multiplyExact(profile.lineupInterval().toNanos(), 9) / 10;
         int capacity = (int) Math.min(maximumMatches, usableNanos / weightedNanos);
-        while (capacity > 0 && !("live-v8".equals(policyVersion)
+        while (capacity > 0 && !("live-v9".equals(policyVersion)
+                ? GroupedLiveAdmissionSimulationV9.fits(capacity, profile)
+                : "live-v8".equals(policyVersion)
                 ? GroupedLiveAdmissionSimulationV8.fits(capacity, profile)
                 : "live-v7".equals(policyVersion)
                 ? GroupedLiveAdmissionSimulationV7.fits(capacity, profile)

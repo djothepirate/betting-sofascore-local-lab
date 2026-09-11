@@ -30,6 +30,7 @@ import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.stream.Stream;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -240,6 +241,103 @@ class LiveCampaignPresentationTest {
         assertThat(stored.source().parserVersion()).isEqualTo("event-lineups-v3");
         verify(data).findByObservationId(EVENT, SofascoreEndpointType.EVENT_LINEUPS, 31L);
         verifyNoMoreInteractions(data);
+    }
+
+    @Test
+    void unavailableStatisticsUseReadableIncidentsWithoutReplacingLineupStatisticsAndFollowJ4Capability() {
+        UUID j4Id = UUID.randomUUID();
+        UUID statisticsId = UUID.randomUUID();
+        UUID incidentsId = UUID.randomUUID();
+        UUID lineupsId = UUID.randomUUID();
+        var statistics = new Result(statisticsId, new Publication("UNAVAILABLE", "EVENT", "HTTP_404", START,
+                "event-statistics-v1", false, null, null, null, null, "UNAVAILABLE", 0),
+                NormalizedReferences.none());
+        var incidentsReferences = new NormalizedReferences(null, null, 61L, "a".repeat(64));
+        var incidentsResult = new Result(incidentsId, new Publication("PARSED", "EVENT", "OK", START,
+                "event-incidents-v1", true, "COLLECTING", null, null, null, "COMPLETE", 100),
+                incidentsReferences);
+        var lineupsReferences = new NormalizedReferences(null, null, 62L, "b".repeat(64));
+        var lineupsResult = new Result(lineupsId, new Publication("PARSED", "EVENT", "OK", START,
+                "event-lineups-v1", true, "COLLECTING", null, null, null, "COMPLETE", 100),
+                lineupsReferences);
+        var statisticsCursor = cursor(SofascoreEndpointType.EVENT_STATISTICS, statistics);
+        var incidentsCursor = cursor(SofascoreEndpointType.EVENT_INCIDENTS, incidentsResult);
+        var lineupsCursor = cursor(SofascoreEndpointType.EVENT_LINEUPS, lineupsResult);
+        var incidentData = new EventIncidents(900001L, List.of(
+                new EventIncident(0, "goal", 18, Optional.empty(), Optional.of(true), Optional.empty(),
+                        Optional.of(701L), Optional.of("Observed scorer"), Optional.empty(), Optional.empty(),
+                        Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("regular"),
+                        Optional.empty(), Optional.empty(), Optional.empty(), Optional.of(702L),
+                        Optional.of("Observed assistant"), Optional.empty(), Optional.empty(), Optional.empty(),
+                        Optional.empty(), Optional.empty(), Optional.empty()),
+                new EventIncident(1, "card", 42, Optional.empty(), Optional.of(true), Optional.empty(),
+                        Optional.of(701L), Optional.of("Observed scorer"), Optional.empty(), Optional.empty(),
+                        Optional.empty(), Optional.empty(), Optional.empty(), Optional.empty(), Optional.of("yellow"),
+                        Optional.empty()),
+                new EventIncident(2, "substitution", 71, Optional.empty(), Optional.of(true), Optional.empty(),
+                        Optional.empty(), Optional.empty(), Optional.of(704L), Optional.of("Observed incoming"),
+                        Optional.of(703L), Optional.of("Observed outgoing"), Optional.empty(), Optional.empty())));
+        var lineupData = new EventLineups(900001L, true,
+                new TeamLineup(LineupSide.HOME, Optional.empty(), List.of(
+                        new EventLineupPlayer(701L, "Observed scorer", Optional.empty(), Optional.of("F"), true),
+                        new EventLineupPlayer(702L, "Observed assistant", Optional.empty(), Optional.of("F"), true),
+                        new EventLineupPlayer(703L, "Observed outgoing", Optional.empty(), Optional.of("M"), true),
+                        new EventLineupPlayer(704L, "Observed incoming", Optional.empty(), Optional.of("M"), false))),
+                new TeamLineup(LineupSide.AWAY, Optional.empty(), List.of()));
+        var storedIncidents = observation(61L, incidentData, "event-incidents-v1", "c");
+        var storedLineups = observation(62L, lineupData, "event-lineups-v1", "d");
+        when(data.findByObservationId(EVENT, SofascoreEndpointType.EVENT_INCIDENTS, 61L))
+                .thenReturn(Optional.of(storedIncidents));
+        when(data.findByObservationId(EVENT, SofascoreEndpointType.EVENT_LINEUPS, 62L))
+                .thenReturn(Optional.of(storedLineups));
+
+        var enabled = presentation.state(campaign(List.of(detailCursor(j4Id, true), statisticsCursor,
+                incidentsCursor, lineupsCursor), List.of())).events().getFirst().families().getLast().lineups();
+        var disabled = presentation.state(campaign(List.of(detailCursor(j4Id, false), lineupsCursor), List.of()))
+                .events().getFirst().families().getLast().lineups();
+        var absent = presentation.state(campaign(List.of(detailCursor(j4Id, null), lineupsCursor), List.of()))
+                .events().getFirst().families().getLast().lineups();
+
+        assertThat(player(enabled, "HOME:701")).satisfies(player -> {
+            assertThat(player.detailsAllowed()).isTrue();
+            assertThat(player.incidentDecorations()).extracting(LineupIncidentOverlay.Decoration::key)
+                    .containsExactly("goal", "yellow-card");
+        });
+        assertThat(player(enabled, "HOME:702").incidentDecorations()).singleElement()
+                .extracting(LineupIncidentOverlay.Decoration::key).isEqualTo("assist");
+        assertThat(player(enabled, "HOME:703").incidentDecorations()).singleElement().satisfies(decoration -> {
+            assertThat(decoration.key()).isEqualTo("substitution-out");
+            assertThat(decoration.minuteLabel()).isEqualTo("71");
+        });
+        assertThat(player(enabled, "HOME:704").incidentDecorations()).singleElement().satisfies(decoration -> {
+            assertThat(decoration.key()).isEqualTo("substitution-in");
+            assertThat(decoration.minuteLabel()).isEqualTo("71");
+        });
+        assertThat(player(disabled, "HOME:701").detailsAllowed()).isFalse();
+        assertThat(player(absent, "HOME:701").detailsAllowed()).isFalse();
+        verify(data, times(2)).findByObservationId(EVENT, SofascoreEndpointType.EVENT_INCIDENTS, 61L);
+        verify(data, times(3)).findByObservationId(EVENT, SofascoreEndpointType.EVENT_LINEUPS, 62L);
+    }
+
+    @ParameterizedTest
+    @CsvSource(delimiter = '|', value = {
+            "STOPPED_FINAL_RESULT_ONLY|Résultat final uniquement signalé par J4 ; suivi arrêté avant les familles J5.",
+            "STOPPED_DETAIL_ID_UNSUPPORTED|Identifiant de détail J4 non pris en charge ; suivi arrêté sans appel J5.",
+            "WAITING_HALFTIME_HOLD|Mi-temps observée ; J4 reprendra après la période de maintien.",
+            "WAITING_HALFTIME_RECHECK|Mi-temps toujours observée ; vérification J4 maintenue toutes les minutes avant la reprise."
+    })
+    void presentsV9ControlStatesWithFrenchOperatorLabels(String reason, String expected) {
+        var base = campaign(List.of(), List.of());
+        var target = base.manifest().targets().getFirst();
+        var view = new CampaignView(base.manifest(), "RUNNING", null, base.startedAt(), base.endsAt(),
+                0, 0, base.revision(), null,
+                List.of(new EventView(target, "COLLECTING", reason, 0, 0, null, List.of())),
+                List.of(), List.of());
+
+        String rendered = presentation.state(view).events().getFirst().reason();
+
+        assertThat(rendered).isEqualTo(expected);
+        assertThat(rendered).doesNotContain(reason);
     }
 
     @Test
@@ -691,6 +789,38 @@ class LiveCampaignPresentationTest {
                 .hasSize(40).allSatisfy(family -> assertThat(family.freshness().expectedIntervalSeconds()).isEqualTo(60));
     }
 
+    @Test
+    void liveV9UsesItsQualifiedMinuteCadenceWhileKeepingActualPressureSeparate() {
+        var envelopes = new java.util.EnumMap<SofascoreEndpointType, EndpointEnvelope>(SofascoreEndpointType.class);
+        for (var endpoint : List.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS))
+            envelopes.put(endpoint, new EndpointEnvelope(Duration.ofMillis(400), Duration.ofMillis(100)));
+        var targets = java.util.stream.IntStream.range(0, 10).mapToObj(index -> new Target(
+                CanonicalEventIdentity.sofascore(900001L + index).value(), 900001L + index,
+                index + 1L, index + 1L)).toList();
+        var manifest = new Manifest(CAMPAIGN, "9".repeat(64), "live-v9", START, START.plusSeconds(300),
+                Duration.ofHours(4), 2500, 20000, 15_728_640_000L, 10, targets,
+                new AdmissionProfile(Duration.ofSeconds(10), Duration.ofSeconds(1), "",
+                        new GroupedAdmissionProfile(envelopes, "b".repeat(64), "live-v9")), Duration.ofSeconds(60));
+        var families = List.of(SofascoreEndpointType.EVENT_DETAILS, SofascoreEndpointType.EVENT_INCIDENTS,
+                SofascoreEndpointType.EVENT_STATISTICS, SofascoreEndpointType.EVENT_LINEUPS).stream()
+                .map(endpoint -> new FamilyCursor(endpoint, null, null, null, null, null, null, null,
+                        NormalizedReferences.none(), null, null,
+                        new FamilySchedule(endpoint, START.plusSeconds(60), 60, 0))).toList();
+        var view = new CampaignView(manifest, "RUNNING", null, START, START.plusSeconds(14_400), 0, 0, 1,
+                null, targets.stream().map(target -> new EventView(target, "COLLECTING", null, 0, 0,
+                        START.plusSeconds(60), families)).toList(), List.of(), List.of());
+
+        var projected = presentation.state(view);
+
+        assertThat(projected.cadence().policyVersion()).isEqualTo("live-v9");
+        assertThat(projected.cadence().targetSeconds()).isEqualTo(60);
+        assertThat(projected.cadence().lineupSeconds()).isEqualTo(60);
+        assertThat(projected.cadence().qualifiedCapacity()).isEqualTo(10);
+        assertThat(projected.cadence().estimatedCallsPerMinute()).isEqualTo(40.0);
+        assertThat(projected.pressure().observedDepartures()).isZero();
+    }
+
     @ParameterizedTest @CsvSource({"INTERRUPTED,COLLECTING","RUNNING,STOPPED_POSTPONED","COMPLETED,FINISHED_CONFIRMED"})
     void terminalCollectionNeverAdvertisesAnOldFamilyDeadline(String campaignState,String eventState) {
         var base=campaign(List.of(),List.of());
@@ -720,6 +850,37 @@ class LiveCampaignPresentationTest {
         return new AttemptView(new ReservedAttempt(id, EVENT, 900001L, endpoint, snapshot,
                 "NORMAL", at.minusMillis(12), at.minusMillis(12), false), at,
                 snapshot, snapshot, at, result);
+    }
+
+    private static FamilyCursor cursor(SofascoreEndpointType endpoint, Result result) {
+        UUID id = result.attemptId();
+        return new FamilyCursor(endpoint, id, id, id, id, START, START, START,
+                result.normalized(), result, result);
+    }
+
+    private static FamilyCursor detailCursor(UUID attemptId, Boolean playerDetailsAllowed) {
+        String projection = playerDetailsAllowed == null ? "{}" : """
+                {"tournamentHasEventPlayerStatistics":{"presence":"VALUE","value":%s}}
+                """.formatted(playerDetailsAllowed);
+        var result = new Result(attemptId, new Publication("PARSED", "EVENT", "OK", START,
+                "event-details-v4", true, "COLLECTING", "inprogress", projection,
+                "j4-live-score-v2", "COMPLETE", 100), NormalizedReferences.none());
+        return cursor(SofascoreEndpointType.EVENT_DETAILS, result);
+    }
+
+    private static J5EventDataObservationView observation(long observationId, J5EventData values,
+                                                           String parserVersion, String hashCharacter) {
+        String hash = hashCharacter.repeat(64);
+        return new J5EventDataObservationView(observationId, IDENTITY, values,
+                EventSourceTrace.providerSnapshot(1L, hash, parserVersion, START),
+                J5CompletenessReport.measured(1, 1, List.of()), hash);
+    }
+
+    private static LineupsPresentation.Player player(LineupsPresentation.View view, String key) {
+        return view.teams().stream().flatMap(team -> Stream.concat(
+                        team.starterGroups().stream().flatMap(group -> group.players().stream()),
+                        team.substitutes().stream()))
+                .filter(candidate -> key.equals(candidate.key())).findFirst().orElseThrow();
     }
 
     private static CampaignView campaign(List<FamilyCursor> families, List<AttemptView> attempts) {

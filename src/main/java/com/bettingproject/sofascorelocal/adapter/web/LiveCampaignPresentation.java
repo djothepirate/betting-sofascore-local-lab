@@ -151,8 +151,9 @@ public class LiveCampaignPresentation {
         String policyVersion = view.manifest().policyVersion();
         if (!grouped(policyVersion)) return null;
         long interval = view.manifest().cycleInterval().toSeconds();
-        boolean minutePolicy = "live-v7".equals(policyVersion) || "live-v8".equals(policyVersion);
-        // Prematch V7/V8 is sparse; one J4/minute at kickoff is the conservative waiting rate.
+        boolean minutePolicy = "live-v7".equals(policyVersion) || "live-v8".equals(policyVersion)
+                || "live-v9".equals(policyVersion);
+        // Prematch V7/V8/V9 is sparse; one J4/minute at kickoff is the conservative waiting rate.
         double waitingRate = minutePolicy ? 1 : 120.0 / interval;
         double playingRate = minutePolicy ? 240.0 / interval : 180.0 / interval + 0.2;
         List<EventView> active = view.events().stream().filter(e -> !terminal(e.state())).toList();
@@ -177,7 +178,7 @@ public class LiveCampaignPresentation {
     private static boolean grouped(String policyVersion) {
         return "live-v4".equals(policyVersion) || "live-v5".equals(policyVersion)
                 || "live-v6".equals(policyVersion) || "live-v7".equals(policyVersion)
-                || "live-v8".equals(policyVersion);
+                || "live-v8".equals(policyVersion) || "live-v9".equals(policyVersion);
     }
 
     private Event event(CampaignView campaign, EventView event, Instant observedAt) {
@@ -205,6 +206,8 @@ public class LiveCampaignPresentation {
         boolean canonicalCurrent = latestCanonical.isEmpty() || sourceReceivedAt != null
                 && !sourceReceivedAt.isBefore(latestCanonical.orElseThrow().source().receivedAt());
         J4EventResult result = result(j4, identity);
+        boolean playerDetailsAllowed = playerDetailsAllowed(j4);
+        LineupIncidentOverlay incidentOverlay = lineupIncidentOverlay(event);
         return new Event(event.target().canonicalEventId(), event.target().providerEventId(),
                 identity == null ? Long.toString(event.target().providerEventId())
                         : identity.homeTeam().name() + " — " + identity.awayTeam().name(),
@@ -220,7 +223,59 @@ public class LiveCampaignPresentation {
                         .filter(f -> f.endpoint() == endpoint).findFirst().orElseGet(() ->
                                 new FamilyCursor(endpoint, null, null, null, null, null, null, null,
                                         NormalizedReferences.none(), null, null)))
-                        .map(f -> family(campaign, event, f, observedAt, identity)).toList());
+                        .map(f -> family(campaign, event, f, observedAt, identity, incidentOverlay,
+                                playerDetailsAllowed)).toList());
+    }
+
+    /**
+     * The J4 tournament capability controls whether a card is allowed to disclose details. A
+     * missing, malformed, or false fact remains deliberately static even when an old lineup happens
+     * to contain player statistics.
+     */
+    private static boolean playerDetailsAllowed(FamilyCursor j4) {
+        if (j4 == null || j4.latestSuccessfulResult() == null) {
+            return false;
+        }
+        String projection = j4.latestSuccessfulResult().publication().projectionJson();
+        if (projection == null) {
+            return false;
+        }
+        try {
+            JsonNode value = JSON.readTree(projection).path("tournamentHasEventPlayerStatistics");
+            return "VALUE".equals(value.path("presence").asText())
+                    && value.path("value").isBoolean() && value.path("value").booleanValue();
+        } catch (JacksonException exception) {
+            return false;
+        }
+    }
+
+    private LineupIncidentOverlay lineupIncidentOverlay(EventView event) {
+        FamilyCursor statistics = familyCursor(event, SofascoreEndpointType.EVENT_STATISTICS);
+        FamilyCursor lineups = familyCursor(event, SofascoreEndpointType.EVENT_LINEUPS);
+        if (!unavailable(statistics) || lineups == null || unavailable(lineups)
+                || lineups.normalized() == null || lineups.normalized().j5ObservationId() == null) {
+            return LineupIncidentOverlay.empty();
+        }
+        FamilyCursor incidents = familyCursor(event, SofascoreEndpointType.EVENT_INCIDENTS);
+        if (incidents == null || incidents.normalized() == null || incidents.normalized().j5ObservationId() == null) {
+            return LineupIncidentOverlay.empty();
+        }
+        return data.findByObservationId(event.target().canonicalEventId(), SofascoreEndpointType.EVENT_INCIDENTS,
+                        incidents.normalized().j5ObservationId())
+                .filter(observation -> observation.completeness().status() != J5CompletenessStatus.UNAVAILABLE)
+                .filter(observation -> observation.data() instanceof EventIncidents)
+                .map(observation -> LineupIncidentOverlay.from((EventIncidents) observation.data()))
+                .orElse(LineupIncidentOverlay.empty());
+    }
+
+    private static FamilyCursor familyCursor(EventView event, SofascoreEndpointType endpoint) {
+        return event.families().stream().filter(cursor -> cursor.endpoint() == endpoint).findFirst().orElse(null);
+    }
+
+    private static boolean unavailable(FamilyCursor cursor) {
+        return cursor != null && cursor.latestResult() != null
+                && J5CompletenessStatus.UNAVAILABLE.name().equals(
+                        cursor.latestResult().publication().completenessStatus());
     }
 
     private static String sportStatusLabel(String sportStatus, CanonicalEventObservationView identity) {
@@ -237,6 +292,10 @@ public class LiveCampaignPresentation {
             case "STOPPED_ALREADY_FINISHED" -> "Rencontre déjà terminée dans les observations locales au lancement ; aucun appel fournisseur.";
             case "STOPPED_ALREADY_POSTPONED" -> "Rencontre reportée dans les observations locales au lancement ; aucun appel fournisseur.";
             case "STOPPED_POSTPONED" -> "Rencontre reportée selon J4 ; suivi arrêté pour cette rencontre.";
+            case "STOPPED_FINAL_RESULT_ONLY" -> "Résultat final uniquement signalé par J4 ; suivi arrêté avant les familles J5.";
+            case "STOPPED_DETAIL_ID_UNSUPPORTED" -> "Identifiant de détail J4 non pris en charge ; suivi arrêté sans appel J5.";
+            case "WAITING_HALFTIME_HOLD" -> "Mi-temps observée ; J4 reprendra après la période de maintien.";
+            case "WAITING_HALFTIME_RECHECK" -> "Mi-temps toujours observée ; vérification J4 maintenue toutes les minutes avant la reprise.";
             default -> reason;
         };
     }
@@ -276,7 +335,8 @@ public class LiveCampaignPresentation {
     }
 
     private Family family(CampaignView campaign, EventView event, FamilyCursor cursor, Instant observedAt,
-                          CanonicalEventObservationView identity) {
+                          CanonicalEventObservationView identity, LineupIncidentOverlay incidentOverlay,
+                          boolean playerDetailsAllowed) {
         Publication latest = cursor.latestResult() == null ? null : cursor.latestResult().publication();
         Publication successful = cursor.latestSuccessfulResult() == null
                 ? null : cursor.latestSuccessfulResult().publication();
@@ -314,7 +374,8 @@ public class LiveCampaignPresentation {
                     lineups = LineupsPresentation.from(values,
                             identity == null ? "Domicile" : identity.homeTeam().name(),
                             identity == null ? "Extérieur" : identity.awayTeam().name(),
-                            lineupCountries.resolve(observation.orElseThrow()));
+                            lineupCountries.resolve(observation.orElseThrow()), incidentOverlay,
+                            playerDetailsAllowed);
                 }
                 if (observation.orElseThrow().data() instanceof EventIncidents values
                         && observation.orElseThrow().completeness().status() != J5CompletenessStatus.UNAVAILABLE) {

@@ -3,35 +3,35 @@
 Statuts : `EXPERIMENTAL`, `LOCAL_ONLY`, `NOT_PRODUCTION_APPROVED`, `NO_CRITICAL_DEPENDENCY`.
 Références : [ADR-SS-005 accepté](../../ADR-SS-005-bounded-local-live-j4-j5-campaigns.md),
 [architecture](../architecture/LIVE-J4-J5-CAMPAIGNS.md),
-[qualification V8 locale](../validation/WO058-LIVE-V8-CAPACITY-20260910.md).
+[qualification V8 locale historique](../validation/WO058-LIVE-V8-CAPACITY-20260910.md).
 
-## Nouvelles préparations : live-v8, profil local qualifié et activation manuelle distincte
+## Nouvelles préparations : `live-v9`, profil local distinct et activation manuelle
 
-Les nouvelles préparations sont orientées vers `live-v8`. Cette révision conserve la cible
-de **60 s** pour les départs normaux de **chaque couple rencontre/famille** en jeu — J4,
-incidents, statistiques et compositions — et admet au plus **dix rencontres**. Elle ne
-transforme pas la date d'affichage, une tentative réservée ou une réception incomplète en
-preuve de fraîcheur. Les manifestes v1–v7 restent inchangés et consultables avec leur
-propre politique ; aucun profil plus ancien ne sert de repli à v8.
+Les nouvelles préparations visent `live-v9`. Cette politique garde la borne maximale de
+**dix rencontres** et l'enveloppe prudente V8 de départ, mais choisit les familles J5 à partir
+des faits J4 persistés. Les familles restent J4, incidents, statistiques et compositions ; une
+absence de famille est un fait de planification local, jamais une preuve de fraîcheur ou de
+donnée fournisseur. Les manifestes v1–v8 restent immuables et consultables avec leur propre
+politique ; aucun profil historique, y compris V8, ne sert de repli à V9.
 
-La qualification synthétique loopback V8 du 10 septembre est consignée dans le
-[rapport de capacité](../validation/WO058-LIVE-V8-CAPACITY-20260910.md). Elle couvre dix
-rencontres et les quatre familles, avec le worker de production, Chromium et PostgreSQL de test
-sur `127.0.0.1`; elle n'a fait aucun appel SofaScore, aucune requête hors périmètre et n'a utilisé
-aucune base opérateur. Elle qualifie l'admission locale à dix seulement pour le profil exact ci-dessous.
+V9 exige son **propre** SHA-256 et ses huit enveloppes
+`SOFASCORE_LIVE_GROUPED_V9_{J4,INCIDENTS,STATISTICS,LINEUPS}_{REQUEST,PROCESSING}_ENVELOPE`.
+Le SHA V9 est volontairement vide par défaut : il rend l'admission nulle tant qu'une
+qualification V9 séparée n'est pas versionnée puis livrée après revue. Les enveloppes disposent
+de valeurs structurelles locales (`10s` pour la requête et `1s` pour le traitement) qui ne
+constituent pas une qualification. Aucune nouvelle campagne V9 ne peut donc être préparée sans
+son propre profil complet. Ne pas recopier le hash ou les valeurs V8 pour contourner cette garde.
 
-La configuration V8 requiert une empreinte
-`SOFASCORE_LIVE_GROUPED_V8_QUALIFICATION_SHA256` et les huit enveloppes
-`SOFASCORE_LIVE_GROUPED_V8_{J4,INCIDENTS,STATISTICS,LINEUPS}_{REQUEST,PROCESSING}_ENVELOPE`.
-Sans cet ensemble cohérent, l'admission retourne une capacité à zéro et la préparation est
-indisponible. Cet échec fermé reste attendu : **ne pas** recopier un hash V7 ni inventer une
-enveloppe.
+La politique V9 n'effectue pas de prélecture autonome et n'altère aucune campagne existante.
+Le premier J4 d'une cible a donc la responsabilité de constater `finalResultOnly=true`; il arrête
+alors cette cible sans J5. L'opérateur ne doit pas tenter de relancer une campagne arrêtée ou de
+contourner un refus local de l'horloge, du budget ou du fournisseur.
 
-### Profil V8 exact à livrer dans le lanceur après revue et fusion
+### Profil V8 historique : information seulement, pas de copie vers V9
 
-Les neuf variables V8 suivantes sont les seules valeurs de profil à saisir ensemble dans
-`SofaScore - PLAYWRIGHT J3-J5 (MANUEL - OPT-IN) (LIVE)` lorsque la livraison du lanceur sera
-effectuée. L’empreinte est celle du **profil** versionné, non celle du rapport natif.
+Les neuf variables V8 suivantes restent la preuve historique de V8. Elles ne doivent pas être
+copiées dans les variables V9 ni dans le lanceur pour rendre V9 admissible. L’empreinte est celle
+du **profil** V8 versionné, non celle du rapport natif.
 
 | Variable | Valeur qualifiée |
 | --- | --- |
@@ -55,6 +55,25 @@ du profil : il ne remplace pas `SOFASCORE_MINIMUM_DELAY`. Cette variable globale
 valeur inchangée, notamment son défaut de trois secondes ; ne pas lui attribuer `500ms`.
 Cette documentation ne modifie pas le fichier `.launch`, ne redémarre pas le Lab et ne lance
 aucune campagne fournisseur.
+
+### Règles V9 à appliquer après une qualification distincte
+
+| Fait J4 persistant | Décision V9 locale |
+| --- | --- |
+| `event.finalResultOnly=true` | La cible est arrêtée à la fin de ce premier J4, sans J5. Une sélection ne peut pas le savoir avant cette lecture. |
+| `status=notstarted`, `postponed` ou `delayed` | J5 statistiques et incidents ne sont pas proposés. Les compositions gardent leur règle de capacité propre. |
+| `status=inprogress`, `interrupted`, `canceled` ou `finished` | Incidents et statistiques sont admissibles sous les autres règles V9. |
+| `detailId=1` | Les familles J5 normales sont planifiées selon le statut. |
+| `detailId` absent | Après trois résultats consécutifs exactement `HTTP_404` pour statistiques, cette famille est suspendue ; le premier J4 terminal obtient un dernier essai, unique. Une autre réponse remet le compteur à zéro. |
+| `hasEventPlayerStatistics=false` | J5 compositions est inutile et n'est pas proposé. Une valeur vraie ou absente l'autorise. |
+| `tournament.uniqueTournament.hasEventPlayerStatistics=true` | Les cartes de composition peuvent être ouvrables. Toute autre valeur laisse les cartes statiques et annonce que les statistiques joueur ne sont pas disponibles. |
+| `status=inprogress`, description `halftime` | Aucun J4/J5 pendant 15 minutes. À l'échéance, un J4 seul ; puis J4 seul chaque minute tant que `2nd half` n'est pas confirmé. |
+
+Les décorations provenant des incidents (buts, passes, cartons, entrées et sorties avec
+minute) s'affichent seulement lorsqu'une carte n'a pas de statistiques lineups et que
+statistiques J5 est explicitement indisponible. Elles sont un complément de présentation
+strictement joint par équipe et identifiant joueur ; elles ne modifient ni le snapshot ni les
+statistiques réellement fournies par J5 lineups.
 
 ### Règles V8 qualifiées localement
 
@@ -439,14 +458,16 @@ initialement et conserve son ouverture pendant l’actualisation live. Un score 
 but décrit cet incident ; le score courant J4 reste dans le résumé de la rencontre.
 Les repères de période conservent la minute fournie.
 
-La page J5 utilise la même présentation. Les sources et la complétude restent
-consultables ; une famille indisponible ne devient pas une liste vide.
+La page J5 utilise la même présentation visuelle. Les sources et la complétude restent
+consultables ; une famille indisponible ne devient pas une liste vide. Cette page ne possède pas
+nécessairement la projection J4 détaillée corrélée qui atteste la capacité de statistiques joueur :
+ses cartes restent donc statiques, sans collecte ni recherche locale non corrélée.
 [Portée et qualification graphique](../validation/WO058-INCIDENT-GRAPHICS-20260908.md).
 
 ### Lire les compositions
 
 La page de campagne, le suivi de la fiche d’une rencontre et la page J5 manuelle utilisent
-la même présentation. Les équipes apparaissent côte à côte sur écran large et l’une sous
+la même présentation visuelle. Les équipes apparaissent côte à côte sur écran large et l’une sous
 l’autre sur mobile. Chaque en-tête indique le côté, le nom et la formation reçue ; le badge
 de confirmation décrit la composition entière, indépendamment du taux de complétude.
 
@@ -458,10 +479,15 @@ Les cartes présentent le numéro, le nom et le poste ; les mentions « Titulair
 « Remplaçant » ne sont pas répétées sous chaque joueur, car les sections indiquent déjà ce rôle.
 
 Le badge « C · Capitaine » apparaît uniquement pour un indicateur fournisseur explicitement vrai.
-Cliquer sur une carte, ou l'activer au clavier, ouvre ses statistiques individuelles regroupées
-en français. Seuls les chiffres présents dans cette observation sont affichés ; une donnée absente
-ne devient pas zéro. La note principale et ses variantes éventuelles restent distinctes. Ouvrir
-ce panneau ne déclenche aucune collecte, et le lecteur conserve son ouverture lors des actualisations.
+Sur une page campagne dont la projection J4 détaillée et corrélée confirme
+`tournament.uniqueTournament.hasEventPlayerStatistics=true`, cliquer sur une carte, ou l'activer
+au clavier, ouvre ses statistiques individuelles regroupées en français. Seuls les chiffres
+présents dans cette observation sont affichés ; une donnée absente ne devient pas zéro. La note
+principale et ses variantes éventuelles restent distinctes. Ouvrir ce panneau ne déclenche aucune
+collecte, et le lecteur conserve son ouverture lors des actualisations. Lorsque ce fait J4 est
+absent, nul ou faux — en particulier sur la page J5 manuelle qui ne porte pas cette projection
+corrélée — les cartes restent statiques et la composition indique que les statistiques joueur ne
+sont pas disponibles pour ce match.
 
 La section « Joueurs indisponibles » conserve un comptage séparé. Elle indique le motif fourni,
 traduit lorsqu'il est connu, et le retour estimé par le fournisseur s'ils sont présents. Sans
